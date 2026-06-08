@@ -1,9 +1,7 @@
 #pragma once
 
 #include <backends/dvm/dvm_internal_fwd.hpp>
-#include <backends/dvm/repl_lowering_snapshot.hpp>
-#include <lir/lir_structure/lir_structure.hpp>
-#include <tsl/type_layout.hpp>
+#include <lir/lir_structure/lir_structure_fd.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/pointers/box.hpp>
@@ -16,12 +14,18 @@
 
 namespace compiler::backend_vm {
 	/**
-	 * @brief Public API wrapper for REPL that exposes `ProgramLoweringContext` from DVM's
-	 * `src_private`.
+	 * @brief A stateful collection of code lowered into VM bytecode dedicated for REPL/scripts
+	 * compilation use. It exposes an interface for incremental DVM code emission, allowing REPL
+	 * statements to be compiled and loaded one at a time.
+	 *
+	 * @note underneath it uses ProgramLoweringContext snapshot api that was added specifically for
+	 * this use case.
+	 *
+	 * @note If used improperly, query_ctx might become a dangling reference.
 	 *
 	 * This class provides a stable public interface to the DVM backend's internal lowering context,
 	 * preventing REPL and other clients from directly depending on `src_private` implementation
-	 * details. It delegates all actual lowering logic to `ProgramLoweringContext` while
+	 * details. It delegates the actual lowering logic to `ProgramLoweringContext` while
 	 * encapsulating incremental code emission for REPL use cases.
 	 *
 	 * The wrapper maintains a persistent lowering context across REPL statements, allowing
@@ -29,21 +33,20 @@ namespace compiler::backend_vm {
 	 * It exposes snapshot/collection semantics to enable incremental bytecode loading without
 	 * recompiling the entire module.
 	 *
-	 * @note This is purely an encapsulation layer it adds no logic of its own.
-	 *
-	 * @note Feel Free to refactor this class if a better way of managing
-	 * the REPL context is found.
+	 * @TODO: #2872 Move repl specific logic from ProgramLoweringContext into this wrapper, so that
+	 * ProgramLoweringContext can be used for other purposes without carrying unnecessary
+	 * REPL-specific state, logic and API.
 	 */
-	class ReplLoweringContext final {
+	class ReplDVMCodeBuilder final {
 	public:
-		explicit ReplLoweringContext(query::Context& query_ctx);
-		~ReplLoweringContext();
+		explicit ReplDVMCodeBuilder(query::Context& query_ctx);
+		~ReplDVMCodeBuilder();
 
 		// Non-copyable, movable
-		ReplLoweringContext(const ReplLoweringContext&)            = delete;
-		ReplLoweringContext& operator=(const ReplLoweringContext&) = delete;
-		ReplLoweringContext(ReplLoweringContext&&) noexcept;
-		ReplLoweringContext& operator=(ReplLoweringContext&&) noexcept;
+		ReplDVMCodeBuilder(const ReplDVMCodeBuilder&)            = delete;
+		ReplDVMCodeBuilder& operator=(const ReplDVMCodeBuilder&) = delete;
+		ReplDVMCodeBuilder(ReplDVMCodeBuilder&&) noexcept;
+		ReplDVMCodeBuilder& operator=(ReplDVMCodeBuilder&&) noexcept;
 
 
 		/**
@@ -69,30 +72,14 @@ namespace compiler::backend_vm {
 		[[nodiscard]] base::Optional<Ref<query::Context>> getActiveContext() const;
 
 		/**
-		 * @brief Lower a LIR function into DVM bytecode function.
-		 * @note If the function was already lowered, this is a no-op.
+		 * Lowers a LIR unit into DVM bytecode and collects the newly lowered code.
+		 *
+		 * @note The newly lowered code might not include all entities from the LIR unit,
+		 * as some of them might have been lowered in previous statements and are already present in
+		 * the context.
 		 */
-		const vm::code::Function& lowerAndKeepLirFunction(base::CRef<lir::Function> lir_function);
-
-		/**
-		 * @brief Lower a LIR global with its constructor and destructor.
-		 */
-		const vm::code::GlobalData& lowerAndKeepLirGlobal(const lir::LIRGlobalData& lir_global);
-
-
-		/**
-		 * @brief Capture current state of lowered entities.
-		 */
-		[[nodiscard]] LoweredEntitiesSnapshot captureLoweredEntitiesSnapshot() const;
-
-
-		/**
-		 * @brief Collect newly lowered types/functions/extra functions since a snapshot.
-		 */
-		[[nodiscard]] vm::code::CodeCollection collectNewCodeSince(
-			const LoweredEntitiesSnapshot& snapshot
-		) const;
-
+		vm::code::CodeCollection insertLIRUnitAndCollectNewlyLoweredCode(const lir::LIRUnit& lir_unit
+		);
 
 	private:
 		// Pimpl: store pointer to complete type, with details in CPP

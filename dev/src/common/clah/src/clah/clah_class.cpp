@@ -195,8 +195,41 @@ namespace clah {
 	}
 
 	int Clah::execute(usize argc, const char* const* argv) {
+		return execute(
+			[&] { return parse(argc, argv); },
+			[&](const clah::exceptions::ClahException& e) {
+				printer::StreamPrinter::print({
+					{ "[Clah error]: ", printer::Color::Red },
+					{ e.what(), printer::Color::Default },
+					{ "\n", printer::Color::Default },
+					{ "Use \"", printer::Color::Default },
+					{ argv[0], printer::Color::Default },
+					{ " --help\" for available options.\n", printer::Color::Default },
+				});
+			}
+		);
+	}
+
+	int Clah::execute(const std::string& args) {
+		return execute(
+			[&] { return parseArgs(args); },
+			[](const clah::exceptions::ClahException& e) {
+				printer::StreamPrinter::print({
+					{ "[Clah error]: ", printer::Color::Red },
+					{ e.what(), printer::Color::Default },
+					{ "\n", printer::Color::Default },
+					{ "Use \"--help\" for available options.\n", printer::Color::Default },
+				});
+			}
+		);
+	}
+
+	int Clah::execute(
+		const std::function<ParsingResult()>&                          parse,
+		const std::function<void(const exceptions::ClahException& e)>& on_clah_exception
+	) {
 		try {
-			auto parsing_result = parse(argc, argv);
+			auto parsing_result = parse();
 
 			if (pre_handler) pre_handler(parsing_result);
 
@@ -219,14 +252,7 @@ namespace clah {
 		} catch (const exceptions::SuccessExitException& e) {
 			return 0;
 		} catch (const clah::exceptions::ClahException& e) {
-			printer::StreamPrinter::print({
-				{ "[Clah error]: ", printer::Color::Red },
-				{ e.what(), printer::Color::Default },
-				{ "\n", printer::Color::Default },
-				{ "Use \"", printer::Color::Default },
-				{ argv[0], printer::Color::Default },
-				{ " --help\" for available options.\n", printer::Color::Default },
-			});
+			on_clah_exception(e);
 			return 1;
 		}
 	}

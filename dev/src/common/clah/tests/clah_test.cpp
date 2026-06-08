@@ -26,6 +26,7 @@ public:
 		TESTER_ADD_TEST(preHandlerAndHandlerExecutionOrder);
 		TESTER_ADD_TEST(requiredParameterValidation);
 		TESTER_ADD_TEST(executeReturnValueTest);
+		TESTER_ADD_TEST(executeArgsReturnValueTest);
 		TESTER_ADD_TEST(coexistingSubcommandsAndPositionals);
 		TESTER_ADD_TEST(duplicateSubcommand);
 		TESTER_ADD_TEST(conditionalParameterTest);
@@ -360,6 +361,15 @@ private:
 		);
 		std::array argv{ "./prog", "test" };
 		int        exit_code = clah.execute(argv.size(), argv.data());
+		ASSERT_EQUAL(42, exit_code);
+	}
+
+	void executeArgsReturnValueTest() {
+		auto clah = clah::Clah("prog").addSubcommand(
+			clah::Clah("test", "desc").setHandler([](const clah::ParsingResult&) { return 42; })
+		);
+		std::string args      = "test";
+		int         exit_code = clah.execute(args);
 		ASSERT_EQUAL(42, exit_code);
 	}
 

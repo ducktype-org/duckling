@@ -54,7 +54,8 @@ namespace vm::debugger::cli {
 
 	CLIDebugger::CLIDebugger(const fs::File& filepath, const std::vector<std::string>& main_args):
 		  CLIDebugger(main_args) {
-		load_result = debugger.loadFile(filepath);
+		load_result   = debugger.loadFile(filepath);
+		selected_file = filepath;
 	}
 
 	int CLIDebugger::run() {
@@ -126,6 +127,38 @@ namespace vm::debugger::cli {
 				position();
 			} else if (stripped_line == "step" || stripped_line == "next" || stripped_line == "n") {
 				debugger.step();
+			} else if (stripped_line.starts_with("breakpoint ") || stripped_line.starts_with("b ")) {
+				std::stringstream stream(stripped_line.substr(stripped_line.find_first_of(' ')));
+				std::string       option;
+				usize             line_number = -1;
+
+				stream >> option >> line_number;
+
+				if (line_number == -1) {
+					std::lock_guard lk(output_mutex);
+					std::cout << "Invalid line number";
+					continue;
+				}
+
+				if (!selected_file) {
+					std::lock_guard lk(output_mutex);
+					std::cout << "No selected file\n";
+					continue;
+				}
+
+				bool enable = option == "set" || option == "s";
+				auto result = debugger.setBreakpoint(selected_file.value(), line_number, enable)
+				                  .transform_error([&](const api::ApiError& api_error) {
+									  std::lock_guard lk(output_mutex);
+									  std::cout << "Modyfing breakpoint failed...\n";
+									  return api_error;
+								  });
+
+				if (result) {
+					std::lock_guard lk(output_mutex);
+					std::cout << "Breakpoint in " << selected_file->name() << " line "
+							  << line_number << " " << (enable ? "set." : "unset.") << "\n";
+				}
 			}
 		}
 
@@ -146,6 +179,10 @@ namespace vm::debugger::cli {
 
 					 "  (s)tatus    - write current VM status\n"
 					 "  (pos)ition  - write current position\n"
+
+					 "  (b)reakpoint <option> <line>\n"
+					 "              - options: (s)et, remove\n"
+					 "              - line: line nr in file\n"
 				  << "\n";
 	}
 
