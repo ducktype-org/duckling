@@ -15,7 +15,7 @@ use crate::quackpack::util::to_url::ToUrl;
 // **IMPORTANT**
 // Some notes on the tests' structure:
 // * we use [0u64; 0] to create an empty slice of u64; otherwise, there's also a serde_json's Value,
-//   which can be compered against u64, and rustc complains about not-infering the type.
+//   which can be compared against u64, and rustc complains about not-infering the type.
 // * since ID's are random, firstly we collect them by name.
 
 #[test]
