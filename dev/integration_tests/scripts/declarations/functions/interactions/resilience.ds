@@ -1,0 +1,5 @@
+import core.builtins.*;
+
+2 + 2
+fun f() { return 6 }
+2 + 2

@@ -2,6 +2,7 @@
     "packages": [
         {
             "name": "uses_std",
+            "id": "uses_std",
             "version": "0.1.0",
             "dependencies": [],
             "path": "duck_modules/uses_std"
