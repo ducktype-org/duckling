@@ -4,8 +4,10 @@
 
 #include <lexer/token.hpp>
 
+#include <span>
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace formatter {
 	namespace {
@@ -192,33 +194,160 @@ namespace formatter {
 			}
 
 			/**
-			 * Emits a token exactly as it appears in the original source, falling back to its
-			 * lexeme when no source span is available.
+			 * Appends a token to @p buf exactly as it appears in the original source, falling back
+			 * to its lexeme when no source span is available.
 			 */
-			void emitVerbatim(const Token& t) {
+			void appendVerbatim(std::string& buf, const Token& t) const {
 				const auto position = t.getPosition();
 				const auto start    = position.getStart();
 				const auto end      = position.getEnd();
 				if (!source.empty() && start <= end && end < source.size())
-					out += source.substr(start, end - start + 1);
+					buf += source.substr(start, end - start + 1);
 				else
-					out += sv(t);
+					buf += sv(t);
 			}
+
+			/** Current column: characters emitted since the last newline. */
+			[[nodiscard]]
+			usize currentColumn() const {
+				const auto newline = out.rfind('\n');
+				return newline == std::string::npos ? out.size() : out.size() - newline - 1;
+			}
+
+			/**
+			 * Whether a group may be split across lines: a `(...)`, `[...]` or `<...>` group that
+			 * holds at least one top-level comma. (Curly code blocks wrap via emitBlockCurly.)
+			 */
+			[[nodiscard]]
+			bool isBreakable(const Token& t) const {
+				if (!isBracketGroup(t) || t.getBracketType() == Bracket::Curly) return false;
+				for (const auto& child: t.getRecursive())
+					if (isSpecial(child) && isStr(child, ",")) return true;
+				return false;
+			}
+
+			/** One comma-separated group element, plus whether a comma followed it in source. */
+			struct Element final {
+				std::span<const Token> tokens;
+				bool                   trailing_comma;
+			};
+
+			/**
+			 * Splits a group's contents into top-level comma-separated elements, recording each
+			 * trailing comma so the exploded form reproduces the original token stream exactly.
+			 */
+			[[nodiscard]]
+			std::vector<Element> splitElements(const Tokens& tokens) const {
+				std::vector<Element> elements;
+				usize                start = 0;
+				for (usize i = 0; i < tokens.size(); i++) {
+					if (isSpecial(tokens[i]) && isStr(tokens[i], ",")) {
+						elements.push_back({
+							.tokens         = { tokens.data() + start, tokens.data() + i },
+							.trailing_comma = true,
+						});
+						start = i + 1;
+					}
+				}
+				if (start < tokens.size())
+					elements.push_back({
+						.tokens         = { tokens.data() + start, tokens.data() + tokens.size() },
+						.trailing_comma = false,
+					});
+				return elements;
+			}
+
+			/* --- inline rendering: measures groups and emits the ones that fit on one line --- */
+
+			void appendAtomInline(std::string& buf, const Token& t) const {
+				switch (t.getType()) {
+				case Type::BracketGroup:
+					appendGroupInline(buf, t);
+					break;
+				case Type::String:
+					buf += '"';
+					buf += sv(t);
+					buf += '"';
+					break;
+				case Type::Char:
+					buf += '\'';
+					buf += sv(t);
+					buf += '\'';
+					break;
+				case Type::FormatString:
+					appendVerbatim(buf, t);
+					break;
+				default:
+					buf += sv(t);
+					break;
+				}
+			}
+
+			void appendInline(std::string& buf, std::span<const Token> tokens) const {
+				const Token* prev           = nullptr;
+				bool         suppress_space = false;
+				for (const auto& t: tokens) {
+					if (isSkippable(t)) continue;
+					const bool leading = suppress_space ? false : needSpace(prev, t);
+					suppress_space     = false;
+					if (leading) buf += ' ';
+					const bool unary = isSignOperator(t) && isPrefixContext(prev);
+					appendAtomInline(buf, t);
+					if (unary) suppress_space = true;
+					prev = &t;
+				}
+			}
+
+			void appendGroupInline(std::string& buf, const Token& t) const {
+				appendUtf8(buf, static_cast<char32_t>(t.getBracketType()));
+				appendInline(buf, t.getRecursive());
+				appendUtf8(buf, closingBracket(t.getBracketType()));
+			}
+
+			/* --- wrap-aware rendering into the output --- */
 
 			/**
 			 * @brief Renders a bracket group token.
 			 *
-			 * A `{...}` code block is delegated to emitBlockCurly; every other group
-			 * (`(...)`, `[...]`, an inline `{...}` literal) is rendered on the current line as
-			 * its opening bracket, its inline contents, and its closing bracket.
+			 * A `{...}` code block is delegated to emitBlockCurly. Other groups render inline when
+			 * they fit within the configured line length; an over-long breakable group is exploded
+			 * onto one element per line.
 			 */
 			void emitGroup(const Token& t) {
 				if (isBlockCurly(t)) {
 					emitBlockCurly(t);
 					return;
 				}
+
+				std::string inlined;
+				appendGroupInline(inlined, t);
+
+				if (!isBreakable(t)
+				    || currentColumn() + inlined.size() <= config.max_line_length) {
+					out += inlined;
+					return;
+				}
+
+				emitGroupExploded(t);
+			}
+
+			/**
+			 * @brief Explodes a breakable group: opening bracket, one element per indented line,
+			 * then the closing bracket at the current indentation. Adds no tokens, so the output
+			 * re-tokenizes to the same stream.
+			 */
+			void emitGroupExploded(const Token& t) {
 				appendUtf8(out, static_cast<char32_t>(t.getBracketType()));
-				emitInline(t.getRecursive());
+				out += '\n';
+				indent++;
+				for (const auto& element: splitElements(t.getRecursive())) {
+					writeIndent();
+					emitInline(element.tokens);
+					if (element.trailing_comma) out += ',';
+					out += '\n';
+				}
+				indent--;
+				writeIndent();
 				appendUtf8(out, closingBracket(t.getBracketType()));
 			}
 
@@ -234,8 +363,6 @@ namespace formatter {
 				case Type::BracketGroup:
 					emitGroup(t);
 					break;
-				// String/Char lexemes are stored without their delimiters; restore them so the
-				// result re-tokenizes to the same literal rather than an identifier.
 				case Type::String:
 					out += '"';
 					out += sv(t);
@@ -246,10 +373,8 @@ namespace formatter {
 					out += sv(t);
 					out += '\'';
 					break;
-				// Format strings (`f"... {expr} ..."`) cannot be rebuilt from a single lexeme;
-				// reproduce them verbatim from the original source span.
 				case Type::FormatString:
-					emitVerbatim(t);
+					appendVerbatim(out, t);
 					break;
 				default:
 					out += sv(t);
@@ -258,23 +383,20 @@ namespace formatter {
 			}
 
 			/**
-			 * Renders a token sequence as a single inline expression (no statement breaks).
+			 * Renders a token sequence inline into the output, recursing through emitGroup so that
+			 * nested over-long groups still wrap.
 			 */
-			void emitInline(const Tokens& tokens) {
+			void emitInline(std::span<const Token> tokens) {
 				const Token* prev           = nullptr;
 				bool         suppress_space = false;
-
 				for (const auto& t: tokens) {
 					if (isSkippable(t)) continue;
-
 					const bool leading = suppress_space ? false : needSpace(prev, t);
 					suppress_space     = false;
 					if (leading) out += ' ';
-
 					const bool unary = isSignOperator(t) && isPrefixContext(prev);
 					emitAtom(t);
 					if (unary) suppress_space = true;
-
 					prev = &t;
 				}
 			}

@@ -94,6 +94,14 @@ public:
 		TESTER_ADD_TEST(testCommentsPreserved);
 		TESTER_ADD_TEST(testOperatorAdjacency);
 		TESTER_ADD_TEST(testRepoSnippets);
+
+		// Line-wrapping tests.
+		TESTER_ADD_TEST(testWrapLongCall);
+		TESTER_ADD_TEST(testWrapLongSignature);
+		TESTER_ADD_TEST(testWrapNested);
+		TESTER_ADD_TEST(testNoWrapWhenFits);
+		TESTER_ADD_TEST(testNoWrapUnbreakable);
+		TESTER_ADD_TEST(testWrapRoundTripAndIdempotent);
 	}
 
 private:
@@ -360,6 +368,67 @@ private:
 
 			const auto once = fmt(source);
 			ASSERT_EQUAL_PRINT(once, fmt(once));
+		}
+	}
+
+	static FormatConfig narrowConfig(u32 width) {
+		FormatConfig config;
+		config.max_line_length = width;
+		return config;
+	}
+
+	void testWrapLongCall() {
+		check(
+			"foo(aaaa, bbbb, cccc);",
+			"foo(\n\taaaa,\n\tbbbb,\n\tcccc\n);\n",
+			narrowConfig(20)
+		);
+	}
+
+	void testWrapLongSignature() {
+		check(
+			"fun f(aaaa: i32, bbbb: i32) = {x=1;}",
+			"fun f(\n\taaaa: i32,\n\tbbbb: i32\n) = {\n\tx = 1;\n}\n",
+			narrowConfig(20)
+		);
+	}
+
+	void testWrapNested() {
+		// The inner call exceeds the width too, so it explodes one level deeper.
+		check(
+			"foo(bar(aaaa, bbbb, cccc), ddddddd);",
+			"foo(\n\tbar(\n\t\taaaa,\n\t\tbbbb,\n\t\tcccc\n\t),\n\tddddddd\n);\n",
+			narrowConfig(20)
+		);
+	}
+
+	void testNoWrapWhenFits() {
+		// Comfortably under the default 100-column limit: stays on one line.
+		check("foo(a, b, c);", "foo(a, b, c);\n");
+	}
+
+	void testNoWrapUnbreakable() {
+		// No top-level comma to break on, so an over-long group stays inline.
+		check("foo(reallyLongSingleArgument);", "foo(reallyLongSingleArgument);\n", narrowConfig(5));
+	}
+
+	void testWrapRoundTripAndIdempotent() {
+		const auto         config   = narrowConfig(24);
+		const std::vector<std::string_view> samples = {
+			"foo(aaaa, bbbb, cccc, dddd);",
+			"fun f(aaaa: i32, bbbb: i32, cccc: i32) = {return aaaa;}",
+			"foo(bar(aaaa, bbbb, cccc), ddddddd, eeeeeee);",
+			"x = [aaaa, bbbb, cccc, dddd, eeee];",
+		};
+		for (const auto& sample: samples) {
+			const auto before = signatureOf(sample);
+			const auto after  = signatureOf(fmt(sample, config));
+			assertTrue(
+				before == after,
+				base::strConcat("wrapping changed token stream for: ", sample)
+			);
+			const auto once = fmt(sample, config);
+			ASSERT_EQUAL_PRINT(once, fmt(once, config));
 		}
 	}
 
