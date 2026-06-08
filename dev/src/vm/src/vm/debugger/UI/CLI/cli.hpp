@@ -33,8 +33,20 @@ namespace vm::debugger::cli {
 		base::Optional<fs::File>           selected_file;
 		std::expected<void, api::ApiError> load_result = {};
 
-		void help();
-		void status();
-		void position();
+		template<typename... Args>
+		void print(const Args&... content) {
+			std::lock_guard lk(output_mutex);
+			((std::cout << content), ...);
+		}
+
+		template<typename... Args>
+		void printNL(const Args&... content) {
+			std::lock_guard lk(output_mutex);
+			((std::cout << content), ...);
+			std::cout << "\n";
+		}
+
+		void print(const printer::PrinterOStream& content);
+		void printNL(const printer::PrinterOStream& content);
 	};
 }
