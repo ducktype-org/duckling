@@ -42,11 +42,24 @@ from click import command, option
     help="Path to a log file. A log file contains e.g. dumps of program incorrect IO",
 )
 @option(
+    "--determinism-check/--no-determinism-check",
+    is_flag=True,
+    default=None,
+    help="Enable or disable concurrent deterministic compilation checks for all tests.",
+)
+@option(
     "-t",
     "--filter",
     type=str,
     default="",
     help="Run tests under the specified path prefix (e.g., 'tests/C++' or 'tests/C++/Case1').",
+)
+@option(
+    "--custom-values",
+    type=str,
+    default="{}",
+    help="A json dict with configuration values that will override the test defaults. "
+    "Note that boolean values should be of a string type, like \"true\" or \"false\"."
 )
 @verbose(help="Prints some debug information about test cases")
 def itest(*args, **kwargs):
