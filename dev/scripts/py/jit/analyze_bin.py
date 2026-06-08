@@ -153,11 +153,12 @@ def generate_stencils(
 )
 @click.option("-v", "--verbose", is_flag=True)
 @click.option("-s", "--shared", is_flag=True)
+@click.option("-r", "--remove-jumps", is_flag=True)
 @click.option("--order", type=click.File("r"))
-@click.argument("binary", type=click.File("r"))
+@click.argument("binary", type=click.File("rb"))
 @llvm_tools_version_options
 def main(
-    llvm_readobj, output, binary, verbose, accept_all_sections, shared, order, **kwargs
+    llvm_readobj, output, binary, verbose, accept_all_sections, shared, order, remove_jumps, **kwargs
 ):
     stencils = generate_stencils(
         llvm_readobj=llvm_readobj,
@@ -167,6 +168,12 @@ def main(
         shared=shared,
         order=order,
     )
+
+    if remove_jumps:
+        binary_contents = binary.read()
+        print(type(binary_contents))
+        for stencil in stencils:
+            stencil.remove_jump(binary_contents)
 
     output.write(stencils_to_c(stencils))
 

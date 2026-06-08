@@ -121,7 +121,7 @@ process_to_binary(
     $<TARGET_PROPERTY:CommonVMBitcode_sc,VM_COMMON_BC> 
     stencil_holder.cpp 
     "stencils"
-    "--order=opcodes.json"
+    "--order=opcodes.json;--remove-jumps"
     opcodes.json $<TARGET_PROPERTY:CommonVMBitcode_sc,VM_COMMON_BC>)
 
 add_files(

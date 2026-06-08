@@ -68,7 +68,7 @@ class Hole:
                 f".offset = {self.offset}",
                 f".size = 4",
                 f".type = HoleType::Movable",
-                f".value = HoleValue::{to_pascal_case(self.value.name)}"
+                f".value = HoleValue::{to_pascal_case(self.value.name)}",
             ]
         )
 
@@ -92,6 +92,15 @@ class Stencil:
     size: int
     holes: list[Hole]
 
+    def stencil_binary(self, binary):
+        return binary[self.place: self.place + self.size]
+
+    def remove_jump(self, binary):
+        # This only checks `jmp rax`, but that is enough as most stencils end in exaclty this way.
+        # This is very dependant on the compilation method used, and I have my doubts that it is the best way, so I leave it be for now.
+        if self.stencil_binary(binary).endswith((b"\xFF", b"\xE0")):
+            self.size = self.size - 2
+
     def validate(self) -> bool:
         match self.type:
             case StencilType.NO_STENCIL:
@@ -107,10 +116,16 @@ class Stencil:
                 f'.name = "{self.name}"',
                 f".place = {self.place}",
                 f".size = {self.size}",
-                ".to_patch = " + list_quote(hole.to_c() for hole in self.holes if hole.value != HoleValue.ZERO),
+                ".to_patch = "
+                + list_quote(
+                    hole.to_c() for hole in self.holes if hole.value != HoleValue.ZERO
+                ),
                 ".relocation = {}",
             ]
         )
 
+
 def stencils_to_c(stencils) -> str:
-    return f"std::array<StencilData, {len(stencils)}>" + list_quote([stencil.to_c() for stencil in stencils])
+    return f"std::array<StencilData, {len(stencils)}>" + list_quote(
+        [stencil.to_c() for stencil in stencils]
+    )
