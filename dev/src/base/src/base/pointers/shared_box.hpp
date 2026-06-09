@@ -17,8 +17,8 @@ namespace base {
 	 */
 	template<class Deleter>
 	struct ControlBlock final {
-		std::atomic<u64>                         n_owners = 1;
-		[[no_unique_address]] const Deleter deleter;
+		std::atomic<u64>              n_owners = 1;
+		[[no_unique_address]] Deleter deleter;
 
 		ControlBlock(const Deleter& deleter): deleter(deleter) {}
 	};
@@ -76,7 +76,7 @@ namespace base {
 		void renounceOwnership() noexcept {
 			if (isFullyNull()) return;
 			assertNotNull();
-			
+
 			u64 n_owners_before = ctrl_ptr->n_owners.fetch_sub(1, std::memory_order_relaxed);
 
 			if (n_owners_before == 1) {
