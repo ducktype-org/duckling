@@ -8,7 +8,6 @@
 #include <base/types/ints.hpp>
 
 #include <atomic>
-#include <memory>
 
 namespace base {
 	/**
