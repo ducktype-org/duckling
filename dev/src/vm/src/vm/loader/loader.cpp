@@ -3,9 +3,9 @@
 #include "parser/elements.hpp"
 #include "parser/parser.hpp"
 
-#include <base/extend_cpp/vector_utils.hpp>
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
+#include <base/extend_cpp/vector_utils.hpp>
 #include <base/str/str_utils.hpp>
 
 #include <diagnostic/source_position.hpp>

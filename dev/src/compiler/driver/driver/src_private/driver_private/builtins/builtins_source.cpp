@@ -67,11 +67,11 @@ extern "C" {
 
 	// String I/O @TODO: #2636 move to Duckling
 	int64_t print(String s);
-	String     builtin_input_string();
+	String  builtin_input_string();
 	void    builtin_free_string(String s);
-	String     builtin_string_prepended(char c, String s);
-	String     builtin_string_appended(String s, char c);
-	String     builtin_string_concatenated(String s, String t);
+	String  builtin_string_prepended(char c, String s);
+	String  builtin_string_appended(String s, char c);
+	String  builtin_string_concatenated(String s, String t);
 
 	// Runtime Allocators
 	void* builtin_alloc(uint64_t size);
@@ -134,7 +134,9 @@ String builtin_input_string() {
 		// In case of error or EOF, return an empty string.
 		// getline might have allocated memory, so free it.
 		free(line);
-		return String{ .data = nullptr, .length = 0, .memory_begin_offset = 0, .memory_end_offset = 0 };
+		return String{
+			.data = nullptr, .length = 0, .memory_begin_offset = 0, .memory_end_offset = 0
+		};
 	}
 
 	// Strip trailing newline if present

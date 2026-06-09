@@ -155,11 +155,7 @@ private:
 	}
 
 	static compiler::tsh::SymbolType<> stConst(const compiler::tsh::AbstractType abstract_type) {
-		return compiler::tsh::SymbolType{
-			abstract_type,
-			compiler::tsh::ReferenceKind::Direct,
-			Immutable,
-		};
+		return st(abstract_type).withMutability(Immutable);
 	}
 
 	/**
@@ -242,7 +238,7 @@ private:
 			{
 				auto simple_const
 					= getConstValueAs<compiler::tsh::SymbolType<>>("SIMPLE_CONST", root_scope);
-				auto expected = st(i64_type).withMutability(Immutable);
+				auto expected = stConst(i64_type);
 				ASSERT_EQUAL(expected, simple_const);
 			}
 			{
@@ -288,7 +284,7 @@ private:
 			}
 			{
 				auto d_type   = getConstValueAs<compiler::tsh::SymbolType<>>("D", root_scope);
-				auto expected = st(i32_type).withMutability(compiler::tsh::Mutability::Immutable);
+				auto expected = stConst(i32_type);
 				ASSERT_EQUAL(expected, d_type);
 			}
 			{
@@ -643,7 +639,7 @@ private:
 		const auto str_type   = compiler::tsh::getStringType();
 
 		const auto int32_mut_symbol_type   = st(int32_type).withMutability(Mutable);
-		const auto int32_immut_symbol_type = st(int32_type).withMutability(Immutable);
+		const auto int32_immut_symbol_type = stConst(int32_type);
 
 		ASSERT_EQUAL(int32_immut_symbol_type, getSymbolTypeOf("SimpleIntConst", root_scope));
 		ASSERT_EQUAL(int32_immut_symbol_type, getSymbolTypeOf("SimpleIntLet", root_scope));
@@ -1168,7 +1164,7 @@ private:
 		std::stringstream out_vconst;
 		tree_vconst->debugPrint(out_vconst);
 		const auto bool_type       = compiler::tsh::getBoolType();
-		const auto const_bool_type = st(bool_type).withMutability(Immutable);
+		const auto const_bool_type = stConst(bool_type);
 		const auto vconst_type = query::entryPoint<compiler::helios::QueryTypeOfSymbol>(sym_vconst);
 		ASSERT_EQUAL(const_bool_type, vconst_type->valueOrThrow());
 
@@ -3084,20 +3080,15 @@ private:
 				assertEqual(actual_type, expected_type, message);
 			};
 
-			const auto meta_st = st(compiler::tsh::getMetaType()).withMutability(Immutable);
-			const auto unit_st = st(compiler::tsh::getUnitType()).withMutability(Immutable);
-			const auto int_st
-				= st(compiler::tsh::getIntegralType(ctx, 32, Signed)).withMutability(Immutable);
-			const auto tuple_ii_st
-				= st(ctx.query<compiler::tsh::QueryTupleType>(
-						 { { int_st.withMutability(Mutable), int_st.withMutability(Mutable) } }
-					 )
-			    ).withMutability(Immutable);
-			const auto tuple_tt_st
-				= st(ctx.query<compiler::tsh::QueryTupleType>(
-						 { { meta_st.withMutability(Mutable), meta_st.withMutability(Mutable) } }
-					 )
-			    ).withMutability(Immutable);
+			const auto meta_st     = stConst(compiler::tsh::getMetaType());
+			const auto unit_st     = stConst(compiler::tsh::getUnitType());
+			const auto int_st      = stConst(compiler::tsh::getIntegralType(ctx, 32, Signed));
+			const auto tuple_ii_st = stConst(ctx.query<compiler::tsh::QueryTupleType>(
+				{ { int_st.withMutability(Mutable), int_st.withMutability(Mutable) } }
+			));
+			const auto tuple_tt_st = stConst(ctx.query<compiler::tsh::QueryTupleType>(
+				{ { meta_st.withMutability(Mutable), meta_st.withMutability(Mutable) } }
+			));
 
 			check_types(unit1, unit_st, "Unit1 should be of unit type.");
 			check_types(unit2, unit_st, "Unit2 should be of unit type.");

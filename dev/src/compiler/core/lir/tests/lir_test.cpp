@@ -187,7 +187,7 @@ private:
 	void noTest() {
 		auto module = getLIROfModule(path("modules/simple"));
 
-		ASSERT_EQUAL_PRINT(1, module.funcs.size());
+		ASSERT_EQUAL_PRINT(2, module.funcs.size());
 		auto foo_lir = module.lirFunc("foo");
 
 		withContextDo([&](query::Context& ctx) {
@@ -225,7 +225,7 @@ private:
 
 	void simpleBools() {
 		auto module = getLIROfModule(path("modules/booleans"));
-		ASSERT_EQUAL(2, module.funcs.size());
+		ASSERT_EQUAL_PRINT(3, module.funcs.size());
 		auto foo_lir = module.lirFunc("foo");
 
 		// note: it might change where those branch operations are placed:
@@ -403,7 +403,7 @@ private:
 		// We don't count global ctors,
 		// but the LIRUnit, apart from the `foo` function also has inserted tuple constructors for
 		// global_tuple, so we have 2 functions in total.
-		ASSERT_EQUAL_PRINT(2, module.funcs.size());
+		ASSERT_EQUAL_PRINT(3, module.funcs.size());
 
 		auto foo_lir = module.lirFunc("foo");
 		auto g_ctor  = module.lirGlobalData("g").getCtorDtorPair().global_ctor.value();
