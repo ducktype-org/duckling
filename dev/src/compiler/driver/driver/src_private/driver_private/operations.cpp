@@ -76,13 +76,14 @@ namespace compiler::driver {
 	query::QResult<LIRUnitWithBackendName> compileModuleToLIRModuleData(
 		query::Context& ctx, frontend::ModuleID module_id
 	) {
-		const auto& hout_unit = ctx.query<helios::QueryModuleHOUT>(module_id)->valueOrThrow();
+		const auto& hout_unit_qr = ctx.query<helios::QueryModuleHOUT>(module_id);
+		if (hout_unit_qr->hasFailed()) return query::Failed();
 
 		auto module_name = base::StrID(base::strConcat(
 			"module_",
 			compiler::frontend::ModuleTree::getPathComponentHash(module_id).hash.toStringHex()
 		));
 
-		return compileHOUTUnitToLIRModuleData(ctx, hout_unit, module_name);
+		return compileHOUTUnitToLIRModuleData(ctx, hout_unit_qr->valueOrPanic(), module_name);
 	}
 }

@@ -163,7 +163,7 @@ namespace compiler::driver {
 				moduleLog(key, "Compilation failed");
 				return query::Failed();
 			}
-			auto lir_data = std::move(lir_data_result.valueOrThrow());
+			auto lir_data = std::move(lir_data_result).valueOrPanic();
 
 			auto output_names = getModuleOutputName(key);
 			auto code_output  = getQueryArtifactsCollection()->fileArtifactAtOrNew(
