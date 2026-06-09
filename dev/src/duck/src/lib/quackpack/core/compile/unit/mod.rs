@@ -3,8 +3,13 @@
 use std::sync::Arc;
 
 use crate::quackpack::core::compile::compiler_package::CompilerPackage;
-use crate::quackpack::core::storage::package_id::PackageId;
+use crate::quackpack::core::identity::Identity;
 use crate::util::hash::sha256_string;
+
+pub mod graph;
+
+#[cfg(test)]
+mod tests;
 
 #[derive(Debug, Clone)]
 /// Information required to invoke duckc once.
@@ -38,7 +43,7 @@ struct UnitInner {
     /// Which package we're compiling.
     package: CompilerPackage,
     /// How have we got this package.
-    package_id: PackageId,
+    identity: Identity,
     /// ID's of all __direct__ dependencies of this [`Unit`].
     dependencies_by_id: Vec<u64>,
     /// What artifacts should this unit produce.
@@ -50,7 +55,7 @@ impl Unit {
     pub fn new(
         unit_id: u64,
         package: CompilerPackage,
-        package_id: PackageId,
+        identity: Identity,
         dependencies: Vec<u64>,
         package_type: ArtifactsType,
     ) -> Self {
@@ -58,7 +63,7 @@ impl Unit {
             inner: Arc::new(UnitInner {
                 unit_id,
                 package,
-                package_id,
+                identity,
                 dependencies_by_id: dependencies,
                 package_type,
             }),
@@ -85,12 +90,16 @@ impl Unit {
         self.inner.package_type
     }
 
+    /// Get the [`Identity`] of this [`Unit`].
+    pub fn identity(&self) -> Identity {
+        self.inner.identity
+    }
+
     /// Get a unique (in terms of the current compilation graph) name, which can be used as a directory
     /// name for storing artifacts.
     pub fn unique_name(&self) -> String {
-        let id = self.inner.package_id.storage_name();
         // Can we trim this hash?
-        let id = sha256_string(id);
+        let id = sha256_string(self.identity().origin().to_string());
         let name = self.root_package().package().manifest().name();
         let version = self.root_package().package().manifest().version();
         format!("{}-{}-{}", name, version, id)

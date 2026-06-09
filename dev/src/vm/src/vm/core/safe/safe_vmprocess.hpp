@@ -141,8 +141,13 @@ namespace vm {
 
 		std::vector<api::ThreadID> getAllThreadIDs() override;
 
+		void onTerminalStatus(const api::ProcStatus& status) noexcept override;
 		std::expected<api::Response, api::ApiError> setBreakpoint(
 			base::StrID function_name, usize instruction_index, bool enable
+		) override;
+
+		std::expected<api::Response, api::ApiError> mapFileLineToCodeCollectionPosition(
+			const fs::File& file, usize line_number
 		) override;
 
 		/**
@@ -159,6 +164,8 @@ namespace vm {
 		SafeVMProcess(PID my_pid);
 
 		Memory& getMemory();
+
+		[[nodiscard]] api::ProcStatus getCurrentStatus() { return getStatus(); }
 
 		Ref<VmValue> createVmValue(TypeCRef type) override;
 

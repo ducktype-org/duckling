@@ -1043,6 +1043,52 @@ private:
 			"Bigger int should not be coercible into a smaller one."
 		);
 
+		const auto u_int_2 = getIntegralTypeNoContext(8U * (1 << 2), Unsigned);
+		const auto u_int_3 = getIntegralTypeNoContext(8U * (1 << 3), Unsigned);
+		assertTrue(
+			query::entryPoint<QueryImplicitCoercibilityOnAbstractType>({ u_int_2, u_int_3 }),
+			"Smaller unsigned int should be coercible into a bigger one."
+		);
+
+		assertTrue(
+			!query::entryPoint<QueryImplicitCoercibilityOnAbstractType>({ u_int_3, u_int_2 }),
+			"Bigger unsigned int should not be coercible into a smaller one."
+		);
+
+		{
+			assertFalse(
+				query::entryPoint<QueryImplicitCoercibilityOnAbstractType>({ u_int_3, int_3 }),
+				"Unsigned int should not be coercible into a signed int of the same size (positive "
+				"values range is bigger so the coercion is lossy)."
+			);
+
+			assertFalse(
+				query::entryPoint<QueryImplicitCoercibilityOnAbstractType>({ u_int_2, int_2 }),
+				"Unsigned int should not be coercible into a signed int of the same size (positive "
+				"values range is bigger so the coercion is lossy)."
+			);
+		}
+
+		{
+			assertFalse(
+				query::entryPoint<QueryImplicitCoercibilityOnAbstractType>({ int_2, u_int_2 }),
+				"Signed int should not be coercible into an unsigned int of the same size "
+				"(coercion is lossy for negative values)."
+			);
+
+			assertFalse(
+				query::entryPoint<QueryImplicitCoercibilityOnAbstractType>({ int_3, u_int_3 }),
+				"Signed int should not be coercible into an unsigned int of the same size "
+				"(coercion is lossy for negative values)."
+			);
+
+			assertFalse(
+				query::entryPoint<QueryImplicitCoercibilityOnAbstractType>({ int_3, u_int_2 }),
+				"Signed int should not be coercible into an unsigned int of the same size "
+				"(coercion is lossy for negative values)."
+			);
+		}
+
 		const auto void_type = getVoidType();
 		assertTrue(
 			!query::entryPoint<QueryImplicitCoercibilityOnAbstractType>({ void_type, int_2 }),

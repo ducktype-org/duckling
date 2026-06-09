@@ -2,8 +2,6 @@
 
 #include <base/collections/optional.hpp>
 
-#include <diagnostic/source_position.hpp>
-
 namespace query {
 	struct Context;
 }
@@ -82,8 +80,4 @@ namespace pst {
 	base::Optional<AccessLocked<Stmt>> extractSingleDefinition(
 		query::Context& ctx, const AccessLocked<LangElement>& root
 	);
-}
-
-namespace pst::internal {
-	void printHighlight(dia::SourcePosition pos, const std::string& message);
 }

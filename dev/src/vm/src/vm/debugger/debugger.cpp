@@ -22,9 +22,6 @@ namespace vm::debugger {
 		  updater([&](const api::ProcStatus& status) {
 			  on_status_changed.emitEvent(status);
 			  variant_match(status) {
-				  variant_case(api::ExecutionCompleted, completed) {
-					  on_execution_completed.emitEvent(completed.exit_value);
-				  }
 				  variant_case(api::ExecutionPanicked, panicked) {
 					  on_error.emitEvent(panicked.error_message);
 				  }
@@ -66,10 +63,6 @@ namespace vm::debugger {
 
 	void Debugger::attachOnStatusChangedListener(events::Listener<api::ProcStatus>& listener) {
 		on_status_changed.attachListener(listener);
-	}
-
-	void Debugger::attachOnExecutionCompletedListener(events::Listener<api::ExitValue>& listener) {
-		on_execution_completed.attachListener(listener);
 	}
 
 	void Debugger::attachOnErrorListener(events::Listener<std::string>& listener) {
@@ -150,6 +143,15 @@ namespace vm::debugger {
 		base::StrID function_name, u64 instr_number, bool enabled
 	) {
 		return api::setBreakpoint(pid, function_name, instr_number, enabled);
+	}
+
+	std::expected<void, api::ApiError> Debugger::setBreakpoint(
+		fs::File file, usize line, bool enabled
+	) {
+		return api::mapFileLineToCodeCollectionPosition(pid, std::move(file), line)
+		    .and_then([&](const api::response::CodePosition& pos) {
+				return api::setBreakpoint(pid, pos.function_name, pos.instr_number, enabled);
+			});
 	}
 
 	std::expected<void, api::ApiError> Debugger::step() { return api::step(pid); }

@@ -1,36 +1,40 @@
 {
     "packages": [
         {
+            "id": "lib_a",
             "name": "lib_a",
             "version": "0.1.0",
             "path": "modules/packages/lib_a",
             "features": [ "use_mathlib" ]
         },
         {
+            "id": "lib_b",
             "name": "lib_b",
             "version": "0.1.0",
             "path": "modules/packages/lib_b",
             "features": [ "use_mathlib", "use_lib_a" ],
             "dependencies": [
-                { "name": "lib_a", "alias": "lib_a" }
+                { "id": "lib_a", "alias": "lib_a" }
             ]
         },
         {
+            "id": "app1",
             "name": "app1",
             "version": "0.1.0",
             "path": "modules/packages/app1",
             "features": [],
             "dependencies": [
-                { "name": "lib_a", "alias": "lib_a" },
-                { "name": "lib_b", "alias": "lib_b" }
+                { "id": "lib_a", "alias": "lib_a" },
+                { "id": "lib_b", "alias": "lib_b" }
             ]
         },
         {
+            "id": "app2",
             "name": "app2",
             "version": "0.1.0",
             "path": "modules/packages/app2",
             "dependencies": [
-                { "name": "lib_a", "alias": "lib_a" }
+                { "id": "lib_a", "alias": "lib_a" }
             ]
         }
     ],

@@ -1,8 +1,9 @@
+#pragma once
 
 #include "dvm_internal_fwd.hpp"
 
 #include <debug_info/debug_info.hpp>
-#include <lir/lir_structure/lir_structure.hpp>
+#include <lir/lir_structure/lir_structure_fd.hpp>
 
 #include <base/pointers/ref.hpp>
 
@@ -12,7 +13,7 @@
 
 namespace compiler::backend_vm {
 	/**
-	 * @brief A statefull collection of code lowered into VM bytecode.
+	 * @brief A stateful collection of code lowered into VM bytecode.
 	 * @note If used improperly, query_ctx might become a dangling reference.
 	 */
 	class DVMCodeBuilder final {
@@ -26,6 +27,13 @@ namespace compiler::backend_vm {
 		 * compile time evaluation, or for the final output module.
 		 */
 		DVMCodeBuilder(query::Context& query_ctx, bool build_debug_info, bool is_comp_time_lowering);
+
+		/**
+		 * @brief Inserts a LIR unit into the module.
+		 * This acts as a main entry point and a source of truth for lowering LIR to DVM,
+		 * and should be preferred over using the other insert functions.
+		 */
+		void insertLIRUnit(const lir::LIRUnit& lir_unit);
 
 		/**
 		 * @brief Inserts a LIR function into the module.

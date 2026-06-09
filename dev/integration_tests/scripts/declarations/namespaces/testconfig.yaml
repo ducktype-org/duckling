@@ -1,0 +1,18 @@
+# Tests for declarations of namespaces in scripts in Duckling.
+
+Tests:
+  simple_usage:
+    folder: "simple_usage"
+    Cases:
+      direct:
+        mode: direct
+        Output:
+          String: "42\n"
+      vm:
+        mode: vm
+        Output:
+          String: "42\n"
+      exe:
+        mode: exe
+        Output:
+          String: "42\n"
