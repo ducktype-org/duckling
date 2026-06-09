@@ -52,7 +52,7 @@ impl Dependencies {
         self.0.iter().find(|dep| dep.alias() == Some(name))
     }
 
-    /// Check if a dependency exists by a compilatio name.
+    /// Check if a dependency exists by an effective name.
     pub fn has_by_effective_name(&self, name: StrId) -> bool {
         self.get_by_effective_name(name).is_some()
     }

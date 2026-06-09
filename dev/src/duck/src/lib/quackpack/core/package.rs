@@ -4,9 +4,9 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use crate::QuackResult;
-use crate::quackpack::core::Manifest;
 use crate::quackpack::core::compile::artifacts_layout::ArtifactsLayout;
 use crate::quackpack::core::identity::{Identity, Origin};
+use crate::quackpack::core::{Dependencies, Manifest, Profiles};
 use crate::quackpack::schemas::manifest::Manifest as ManifestSchema;
 
 #[derive(Clone)]
@@ -115,15 +115,65 @@ impl fmt::Debug for PackageInner {
     }
 }
 
+#[derive(Debug)]
+pub struct FrontMatterScript {
+    path: PathBuf,
+    original_schema: ManifestSchema,
+    manifest: Manifest,
+}
+
+impl FrontMatterScript {
+    /// Create a new [`FrontMatterScript`].
+    pub fn new(path: PathBuf, original_schema: ManifestSchema, manifest: Manifest) -> Self {
+        Self {
+            path,
+            original_schema,
+            manifest,
+        }
+    }
+
+    /// Get the path of the script.
+    pub fn script_file(&self) -> &Path {
+        &self.path
+    }
+
+    /// Get the schema of the script's frontmatter.
+    pub fn original_schema(&self) -> &ManifestSchema {
+        &self.original_schema
+    }
+
+    /// Get the manifest constructed from the script's frontmatter.
+    pub fn manifest(&self) -> &Manifest {
+        &self.manifest
+    }
+
+    /// Get the dependencies specified in the frontmatter.
+    pub fn dependencies(&self) -> &Dependencies {
+        self.manifest().dependencies()
+    }
+
+    /// Get the dev-dependencies specified in the frontmatter.
+    pub fn dev_dependencies(&self) -> &Dependencies {
+        self.manifest().dev_dependencies()
+    }
+
+    /// Get the profiles specified in the frontmatter.
+    pub fn profiles(&self) -> &Profiles {
+        self.manifest().profiles()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn assert_send_sync_package() {
+    fn assert_send_sync_package_and_frontmatter() {
         fn assert_send<T: Send>() {}
         fn assert_sync<T: Sync>() {}
         assert_send::<Package>();
         assert_sync::<Package>();
+        assert_send::<FrontMatterScript>();
+        assert_sync::<FrontMatterScript>();
     }
 }

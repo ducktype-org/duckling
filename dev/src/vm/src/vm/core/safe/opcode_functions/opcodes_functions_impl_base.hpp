@@ -331,7 +331,7 @@ namespace vm {
 			auto& current_func_obj = *frame->current_function;
 
 			auto  current_func_id  = current_func_obj.id;
-			auto  current_func_entrypoint = current_func_obj.
+			auto  current_func_entrypoint = current_func_obj.jit_entrypoint_offset;
 			auto  instr_offset     = instr - current_func_obj.bc.data();
 			std::cout << "jitEntrypoint at offset " << instr_offset << " in function " << current_func_obj.name.strView() << "\n";
 
@@ -355,7 +355,6 @@ namespace vm {
 				MRef<jit::JitOpFun> compiled = jit::compileLLVM(
 					current_func_obj.cfgs[cfg_id], current_func_obj.bc, current_func_obj.name
 				);
-
 				CORE_ASSERT(compiled, "Compiled function pointer shouldn't be nullptr");
 				my_data.func_ptr = compiled;
 

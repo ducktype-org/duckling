@@ -417,6 +417,12 @@ namespace compiler::repl {
 			return true;
 		}
 
+		if (command == "/complete") {
+			auto prefix = base::strTrim(args);
+			m_frontend.printCompletions(prefix);
+			return true;
+		}
+
 		if (command == "/load") {
 			auto script_path = base::strTrim(args);
 			auto load_result = loadScriptFile(script_path);

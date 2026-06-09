@@ -130,10 +130,10 @@ impl Profiles {
         let Some(profile) = self.0.get(&profile_name) else {
             qp_bail_internal!("Already checked parents exist");
         };
-        if let Some(previous_occurence) = current_visit.get(&profile_name) {
+        if let Some(previous_occurrence) = current_visit.get(&profile_name) {
             return Err(create_cycle_error_msg(
                 current_visit,
-                *previous_occurence,
+                *previous_occurrence,
                 counter,
                 profile_name,
             ));
@@ -157,14 +157,14 @@ impl Profiles {
 /// by extracting the cycle from the subgraph of profiles visited in the current procedure.
 fn create_cycle_error_msg(
     visit: &HashMap<StrId, usize>,
-    previous_occurence: usize,
+    previous_occurrence: usize,
     counter: usize,
     cycling_profile: StrId,
 ) -> QuackError {
-    let mut visit_ord = vec![StrId::new(""); counter - previous_occurence];
+    let mut visit_ord = vec![StrId::new(""); counter - previous_occurrence];
     for (visited_profile, i) in visit.iter() {
-        if *i >= previous_occurence {
-            visit_ord[*i - previous_occurence] = *visited_profile;
+        if *i >= previous_occurrence {
+            visit_ord[*i - previous_occurrence] = *visited_profile;
         }
     }
     qp_err!(
