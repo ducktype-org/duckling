@@ -68,8 +68,6 @@ def pr_validate_impl(
         verbose=False,
         log_file=DEFAULT_LOG_FILE_PATH,
         build_dir=build_dir,
-        determinism_check=None,
-        custom_values="{}",
     )
 
     # Step 8 - clang-tidy
