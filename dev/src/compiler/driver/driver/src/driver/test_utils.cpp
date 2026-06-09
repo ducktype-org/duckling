@@ -31,15 +31,6 @@ namespace compiler::driver::test_utils {
 	}
 
 	base::CheckedOkBad initializeCompilerForTests(
-		const std::vector<PackagePathAndName>& packages, const fs::FilePath& artifacts_path
-	) {
-		options_types::StdLibOptions stdlib_options{
-			.std_lib_type = options_types::StdLibOptions::DefaultStd{},
-		};
-		return initializeCompilerForTests(packages, artifacts_path, stdlib_options);
-	}
-
-	base::CheckedOkBad initializeCompilerForTests(
 		const std::vector<PackagePathAndName>& packages,
 		const fs::FilePath&                    artifacts_path,
 		const options_types::StdLibOptions&    stdlib_options

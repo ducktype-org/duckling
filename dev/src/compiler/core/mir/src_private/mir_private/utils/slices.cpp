@@ -8,7 +8,7 @@
 
 namespace compiler::mir {
 	void sliceBoundsCheck(
-		ExprBuilderContext                             context,
+		BoundsCheckBuilderContext                             context,
 		const helios::SliceTypeData&                   slice_data,
 		const MIRValue&                                index,
 		const MIRValue&                                slice,  // struct { ptr, length }

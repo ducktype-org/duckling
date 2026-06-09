@@ -29,7 +29,23 @@ namespace compiler::helios::defgen {
 		});
 	}
 
-	inline const auto STRING_TYPE = tsh::SymbolType<>::withDefaults(tsh::getStringType());
+	namespace {
+		inline const auto STRING_TYPE = tsh::SymbolType<>::withDefaults(tsh::getStringType());
+
+		SymID stringifySym(
+			query::Context& ctx, const tsh::SymbolType<>& type, const std::string& name
+		) {
+			return ctx.query<QueryGeneratedSymbol>({
+				.name                  = base::StrID(name),
+				.generated_symbol_data = GeneratedSymbolData{ GeneratedSymbolData::BuiltinOperator{
+					.operator_type = ctx.query<tsh::QueryFunctionType>({
+						{ type },
+						STRING_TYPE,
+					}),
+				} },
+			});
+		}
+	}
 
 	SymID concatSym(query::Context& ctx) {
 		return ctx.query<QueryGeneratedSymbol>({
@@ -37,18 +53,6 @@ namespace compiler::helios::defgen {
 			.generated_symbol_data = GeneratedSymbolData{ GeneratedSymbolData::BuiltinOperator{
 				.operator_type = ctx.query<tsh::QueryFunctionType>({
 					{ STRING_TYPE, STRING_TYPE },
-					STRING_TYPE,
-				}),
-			} },
-		});
-	}
-
-	SymID stringifySym(query::Context& ctx, const tsh::SymbolType<>& type, const std::string& name) {
-		return ctx.query<QueryGeneratedSymbol>({
-			.name                  = base::StrID(name),
-			.generated_symbol_data = GeneratedSymbolData{ GeneratedSymbolData::BuiltinOperator{
-				.operator_type = ctx.query<tsh::QueryFunctionType>({
-					{ type },
 					STRING_TYPE,
 				}),
 			} },

@@ -6,7 +6,7 @@
 #include <mir_private/mir_builders.hpp>
 
 namespace compiler::mir {
-	struct ExprBuilderContext final {
+	struct BoundsCheckBuilderContext final {
 		BlockBuilderRef  condition_block;
 		BlockBuilderRef  fail_block;
 		BlockBuilderRef  ok_block;
@@ -15,7 +15,7 @@ namespace compiler::mir {
 	};
 
 	void sliceBoundsCheck(
-		ExprBuilderContext                             context,
+		BoundsCheckBuilderContext                      context,
 		const helios::SliceTypeData&                   slice_data,
 		const MIRValue&                                index,
 		const MIRValue&                                slice,  // struct { ptr, length }

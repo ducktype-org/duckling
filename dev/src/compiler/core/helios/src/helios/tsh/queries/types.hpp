@@ -118,7 +118,7 @@ namespace compiler::tsh {
 
 
 	/**
-	 * @brief Query to get a typed C pointer type.
+	 * @brief Query to get a slice type.
 	 *
 	 * \query_thread_safe
 	 */

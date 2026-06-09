@@ -1,5 +1,6 @@
 #pragma once
 
+#include "driver/options.hpp"
 #include "initialize.hpp"
 
 #include <frontend/module_tree/module_id.hpp>
@@ -15,15 +16,6 @@ namespace compiler::driver::test_utils {
 	using PackagePathAndName = std::pair<fs::FilePath, std::string>;
 
 	/**
-	 * @brief Initializes the compiler for tests with the default standard library enabled.
-	 * @param packages Pairs of (package_path, package_name) for test packages.
-	 * @param artifacts_path Path where compilation artifacts should be stored.
-	 */
-	base::CheckedOkBad initializeCompilerForTests(
-		const std::vector<PackagePathAndName>& packages, const fs::FilePath& artifacts_path
-	);
-
-	/**
 	 * @brief Initializes the compiler for tests with custom standard library options.
 	 * @param packages Pairs of (package_path, package_name) for test packages.
 	 * @param artifacts_path Path where compilation artifacts should be stored.
@@ -33,6 +25,7 @@ namespace compiler::driver::test_utils {
 		const std::vector<PackagePathAndName>& packages,
 		const fs::FilePath&                    artifacts_path,
 		const options_types::StdLibOptions&    stdlib_options
+		= { options_types::StdLibOptions::DefaultStd{} }
 	);
 
 	/**

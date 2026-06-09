@@ -436,6 +436,7 @@ namespace compiler::helios {
 					param_symbol,
 					code::generatedOrigin()
 				);
+				i++;
 			}
 			return HOUTFunctionDeclaration{
 				fun,

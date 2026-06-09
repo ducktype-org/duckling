@@ -160,7 +160,7 @@ namespace compiler::helios {
 				}
 			}
 
-			appendToStringForSimpleTypes(out.functions, ctx);
+			appendMethodForSimpleTypes(out.functions, ctx);
 
 			for (auto class_sym: class_symbols) {
 				// we postpone this past function scheduling, as
@@ -239,7 +239,7 @@ namespace compiler::helios {
 		 * @param out_functions The vector of functions to be modified.
 		 * @param ctx The query context.
 		 */
-		static void appendToStringForSimpleTypes(
+		static void appendMethodForSimpleTypes(
 			std::vector<CRef<HOUTFunction>>& out_functions, Context& ctx
 		) {
 			auto append_to_string_for_simple_type = [&](tsh::AbstractType type) {

@@ -209,7 +209,6 @@ namespace compiler::mir {
 					// Paths are not identical or there would be a scope regression. Create a new
 					// block and insert destructors there.
 					for (auto succ: successors) {
-						auto  succ_begin_scope   = function.blocks[succ].beginScope();
 						auto& succ_ending_scopes = ending_scopes_per_succ.at(succ);
 
 						// If no scope boundary is crossed, the edge is clean.

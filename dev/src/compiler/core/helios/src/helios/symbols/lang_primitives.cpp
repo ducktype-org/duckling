@@ -1,5 +1,7 @@
 #include "lang_primitives.hpp"
 
+#include "helios_private/lookup/interface.hpp"
+
 #include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
@@ -12,9 +14,9 @@ namespace compiler::helios {
 		static query::QResult<SymID> lookupPrimitive(
 			query::Context&          ctx,
 			LanguagePrimitive        primitive,
-			std::string              package_name,
+			const std::string&       package_name,
 			std::vector<std::string> path,
-			std::string              element_name
+			const std::string&       element_name
 		) {
 			std::vector<base::StrID> path_str_ids
 				= path | std::views::transform([](const std::string& s) { return base::StrID(s); })
@@ -35,15 +37,22 @@ namespace compiler::helios {
 			auto module       = module_opt.value();
 			auto linked_scope = queryRootScopeOfMainModuleFile(ctx, module);
 
-			// We don't use lookup machinery here
-			auto symbols = ctx.query<QuerySymbolsInScope>(linked_scope)->valueOrThrow();
-			for (auto sym: symbols)
-				if (name(sym) == base::StrID(element_name)) return sym;
-
-			ctx.logInt(makeBox<dia_int::PlaceholderError>(
-				base::strConcat("Can't find symbol for language primitive '", primitive)
-			));
-			return query::Failed();
+			auto sym_list = HInterface::ofScope(linked_scope)
+			                    .lookup(ctx, base::StrID(element_name), { .with_wildcards = false })
+			                    ->valueOrThrow();
+			if (sym_list.leaves.size() == 0) {
+				ctx.logInt(makeBox<dia_int::PlaceholderError>(
+					base::strConcat("Can't find symbol for language primitive '", primitive, "'")
+				));
+				return query::Failed();
+			} else if (sym_list.leaves.size() > 1) {
+				ctx.logInt(makeBox<dia_int::PlaceholderError>(base::strConcat(
+					"Found multiple primitives with the symbol name '", primitive, "'"
+				)));
+				return query::Failed();
+			} else {
+				return sym_list.leaves.back();
+			}
 		}
 
 		static auto provide(query::Context& ctx, QKey key) -> PResult {
