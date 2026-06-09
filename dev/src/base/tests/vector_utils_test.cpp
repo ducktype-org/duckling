@@ -10,6 +10,7 @@ public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(appendToVectorTest);
 		TESTER_ADD_TEST(filterVectorInPlaceTest);
+		TESTER_ADD_TEST(deduplicateByTest);
 	}
 
 	void appendToVectorTest() {
@@ -35,6 +36,15 @@ public:
 		});
 
 		std::vector<int> expected = { 2, 4, 6 };
+		ASSERT_EQUAL_PRINT(vec.size(), expected.size());
+		assertTrue(vec == expected, "Expected vec to contain only even numbers after filtering");
+	}
+
+	void deduplicateByTest() {
+		std::vector<int> vec = { 1, 2, 3, 4, 5, 6 };
+
+		base::deduplicateBy(vec, [](auto elem) { return elem % 3; });
+		std::vector<int> expected = { 1, 2, 3 };
 		ASSERT_EQUAL_PRINT(vec.size(), expected.size());
 		assertTrue(vec == expected, "Expected vec to contain only even numbers after filtering");
 	}

@@ -24,6 +24,7 @@
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
+#include "base/extend_cpp/vector_utils.hpp"
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
@@ -222,12 +223,9 @@ namespace compiler::helios {
 				}
 			}
 
-			std::set<SymID>                 unique_funcs;
-			std::vector<CRef<HOUTFunction>> deduplicated_functions;
-			for (auto f: out.functions)
-				if (unique_funcs.insert(f->declaration->original_symbol).second)
-					deduplicated_functions.push_back(f);
-			out.functions = std::move(deduplicated_functions);
+			base::deduplicateBy(out.functions, [](CRef<HOUTFunction> f) {
+				return f->declaration->original_symbol;
+			});
 
 			if (is_failed) return query::Failed();
 

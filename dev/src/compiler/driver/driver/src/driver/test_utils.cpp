@@ -42,6 +42,7 @@ namespace compiler::driver::test_utils {
 
 		for (const auto& [package_path, package_name]: packages) {
 			raw_packages.push_back(compiler::frontend::packages::RawPackageInfo{
+				.package_id   = base::StrID(package_name),
 				.package_name = base::StrID(package_name),
 				.version      = base::StrID("0.1.0"),
 				.package_path = package_path,

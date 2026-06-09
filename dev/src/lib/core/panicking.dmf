@@ -3,6 +3,7 @@ import core.builtins.*;
 extern("C") fundecl abort() -> ();
 
 fun panic() -> () = {
+    # @TODO: #2483 once the vm supports string's replace this with better message
     builtin_output_i64(1111);
     abort();
 }

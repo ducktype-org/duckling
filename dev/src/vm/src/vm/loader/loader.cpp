@@ -3,6 +3,7 @@
 #include "parser/elements.hpp"
 #include "parser/parser.hpp"
 
+#include <base/extend_cpp/vector_utils.hpp>
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/str/str_utils.hpp>
@@ -33,24 +34,6 @@ namespace {
 			= vm::code::builders::makeInstructionFromArgs(opcode.opcode_name, opcode.args);
 		instruction.visit([&](auto&& i) { i.bytecode_pos = opcode.position; });
 		return instruction;
-	}
-
-	template<typename Container, typename KeyFunc>
-	void deduplicateBy(Container& c, KeyFunc key_func) {
-		using T   = typename Container::value_type;
-		using Key = std::invoke_result_t<KeyFunc, const T&>;
-
-		std::unordered_set<Key> seen;
-
-		auto it = c.begin();
-		while (it != c.end()) {
-			const auto& key = key_func(*it);
-
-			if (!seen.insert(key).second)
-				it = c.erase(it);  // remove duplicates
-			else
-				++it;
-		}
 	}
 }
 
@@ -106,12 +89,13 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::parseFiles(
 					new_code.functions.emplace_back(function);
 				}
 			}
-			deduplicateBy(new_code.functions, [](const code::Function& func) {
+			base::deduplicateBy(new_code.functions, [](const code::Function& func) {
 				return func.name.str.strView();
 			});
-			deduplicateBy(new_code.external_c_functions, [](const code::ExternalCFunction& func) {
-				return func.name.str.strView();
-			});
+			base::deduplicateBy(
+				new_code.external_c_functions,
+				[](const code::ExternalCFunction& func) { return func.name.str.strView(); }
+			);
 			return new_code;
 		}
 	}
