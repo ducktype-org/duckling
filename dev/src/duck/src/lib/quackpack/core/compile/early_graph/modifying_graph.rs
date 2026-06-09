@@ -6,13 +6,13 @@ use tracing::debug;
 
 use super::*;
 use crate::quackpack::core::FeatureName;
-use crate::quackpack::core::compile::MISSING_DEPENDENCY_IN_MANIFEST_MESSAGE;
+use crate::quackpack::core::compile::missing_depenendcy_in_manifest_message;
 use crate::util::extend::QpExtend;
 
 impl DependencyGraph {
-    /// Same as [`EarlyGraph::remove_disabled_dependencies`].
+    /// Same as [`EarlyGraph::remove_disabled_dependencies`], but return enabled dependencies.
     #[tracing::instrument(skip_all)]
-    pub fn remove_disabled_dependencies(&mut self, packages: &PackagesSet) {
+    fn remove_disabled_dependencies(&mut self, packages: &PackagesSet) -> HashSet<Identity> {
         let mut enabled_deps = HashSet::from([self.root]);
         for (k, v) in self.graph.iter_mut() {
             let mut to_remove = HashSet::new();
@@ -23,7 +23,15 @@ impl DependencyGraph {
                     .manifest()
                     .dependencies()
                     .get_by_name(dep.name())
-                    .expect(MISSING_DEPENDENCY_IN_MANIFEST_MESSAGE)
+                    .unwrap_or_else(|| {
+                        panic!(
+                            "{}",
+                            missing_depenendcy_in_manifest_message(
+                                &this.package().manifest().name(),
+                                &dep.name()
+                            )
+                        )
+                    })
                     .is_enabled_for(this.enabled_features().iter().copied());
                 debug!(
                     "package `{k}` has features `{}` and dependency `{dep}` is {}",
@@ -39,13 +47,14 @@ impl DependencyGraph {
             v.dependencies.retain(|dep| !to_remove.contains(dep));
         }
         self.graph.retain(|dep, _| enabled_deps.contains(dep));
+        enabled_deps
     }
 }
 
 impl EarlyGraph {
     /// Recursively populate enabled features, starting from the root of the graph.
     #[tracing::instrument(skip_all)]
-    pub fn populate_features(&mut self, root_features: &[FeatureName]) -> QuackResult<()> {
+    pub(super) fn populate_features(&mut self, root_features: &[FeatureName]) -> QuackResult<()> {
         let root_package = self.package_mut(&self.graph.root());
         let root_features =
             root_package.features_that_would_be_added(root_features.iter().copied())?;
@@ -75,7 +84,15 @@ impl EarlyGraph {
                         .manifest()
                         .dependencies()
                         .get_by_name(dep.name())
-                        .expect(MISSING_DEPENDENCY_IN_MANIFEST_MESSAGE);
+                        .unwrap_or_else(|| {
+                            panic!(
+                                "{}",
+                                missing_depenendcy_in_manifest_message(
+                                    &this.package().manifest().name(),
+                                    &dep.name()
+                                )
+                            )
+                        });
                     entry_in_dep_manifest.enabled_features(this_features.iter().copied())
                 };
                 debug!(node = %dep, features = ?enabled_features, "adding features to node");
@@ -97,12 +114,16 @@ impl EarlyGraph {
 
     /// Removes disabled dependency from the graph.
     ///
-    /// Note that currently they stay as keys in [`DependencyDag`], although no [`DependencyNode`]
+    /// Note that currently they stay as keys in [`DependencyGraph`], although no [`DependencyNode`]
     /// should point at them.
     ///
     /// This method should be called __after__ [`populate_features`](Self::populate_features).
     #[tracing::instrument(skip_all)]
-    pub fn remove_disabled_dependencies(&mut self) {
-        self.graph.remove_disabled_dependencies(&self.packages)
+    pub(super) fn remove_disabled_dependencies(&mut self) {
+        let enabled_deps = self.graph.remove_disabled_dependencies(&self.packages);
+        // Also clear identity cache.
+        self.packages
+            .inner
+            .retain(|dep, _| enabled_deps.contains(dep));
     }
 }

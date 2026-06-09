@@ -133,7 +133,7 @@ macro_rules! determine_field {
         field_name: $name:ident,
         field_type: $ret:ty $(,)?
     ) => {
-        #[doc = concat!("Detemine the [`", stringify!($name), "`] field of the profile `profile_name`")]
+        #[doc = concat!("Determine the [`", stringify!($name), "`] field of the profile `profile_name`")]
         ///
         /// Note:
         /// -----

@@ -7,7 +7,7 @@ use crate::quackpack::core::version::CompatibilityCheck;
 use crate::quackpack::core::{Dependency, Version};
 use crate::{QuackResult, QuackResultContext};
 
-/// For a given dpendency entry from the manifest and
+/// For a given dependency entry from the manifest and
 /// given all the found versions of a package from some location,
 /// find all the packages satisfying the dependency.
 pub fn get_possible_realizations(
