@@ -7,6 +7,9 @@
 #include <base/pointers/ref.hpp>
 #include <base/types/ints.hpp>
 
+#include <atomic>
+#include <memory>
+
 namespace base {
 	/**
 	 * @brief: A control block of SharedBox type.
@@ -14,10 +17,10 @@ namespace base {
 	 */
 	template<class Deleter>
 	struct ControlBlock final {
-		usize                         n_owners = 1;
-		[[no_unique_address]] Deleter deleter;
+		std::atomic<u64>                         n_owners = 1;
+		[[no_unique_address]] const Deleter deleter;
 
-		ControlBlock(Deleter deleter): deleter(deleter) {}
+		ControlBlock(const Deleter& deleter): deleter(deleter) {}
 	};
 
 	/**
@@ -73,8 +76,10 @@ namespace base {
 		void renounceOwnership() noexcept {
 			if (isFullyNull()) return;
 			assertNotNull();
-			ctrl_ptr->n_owners--;
-			if (ctrl_ptr->n_owners == 0) {
+			
+			u64 n_owners_before = ctrl_ptr->n_owners.fetch_sub(1, std::memory_order_relaxed);
+
+			if (n_owners_before == 1) {
 				ctrl_ptr->deleter.del(data_ptr);
 				delete ctrl_ptr;
 			}
@@ -100,7 +105,7 @@ namespace base {
 		 * For a regular construction use `makeSharedBox` instead.
 		 * It is not a constructor in order to make this call more explicit.
 		 */
-		static SharedBox fromPointerWithCustomDeleter(T* ptr, Deleter deleter) noexcept {
+		static SharedBox fromPointerWithCustomDeleter(T* ptr, const Deleter& deleter) noexcept {
 			return SharedBox(ptr, new ControlBlock(deleter));
 		}
 
@@ -116,7 +121,7 @@ namespace base {
 			  ctrl_ptr{ other.ctrl_ptr } {
 			if (isFullyNull()) return;
 			assertNotNull();
-			ctrl_ptr->n_owners++;
+			ctrl_ptr->n_owners.fetch_add(1, std::memory_order_relaxed);
 		}
 
 		SharedBox(SharedBox&& other) noexcept:
@@ -149,7 +154,7 @@ namespace base {
 			ctrl_ptr = other.ctrl_ptr;
 			if (!isFullyNull()) {
 				assertNotNull();
-				ctrl_ptr->n_owners++;
+				ctrl_ptr->n_owners.fetch_add(1, std::memory_order_relaxed);
 			}
 			return *this;
 		}
