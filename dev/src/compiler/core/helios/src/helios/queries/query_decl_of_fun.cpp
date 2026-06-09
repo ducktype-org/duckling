@@ -128,13 +128,11 @@ namespace compiler::helios {
 					output(expr->expression_type.getSymbolType());
 				} else {
 					// "void" return should actually deduce to unit type:
-					output(
-						tsh::SymbolType<>{
-							tsh::getUnitType(),
-							tsh::ReferenceKind::Direct,
-							tsh::Mutability::Mutable,
-						}
-					);
+					output(tsh::SymbolType<>{
+						tsh::getUnitType(),
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Mutable,
+					});
 				}
 			}
 
@@ -167,13 +165,11 @@ namespace compiler::helios {
 				return *return_collector.out.begin();
 			default:
 				// there are multiple candidates and return type deduction is inconclusive
-				ctx.logInt(
-					makeBox<dia_int::PlaceholderError>(
-						"Function declared with no explicit return type and inconsistent return "
-						"statements.",
-						fun->getStablePosition()
-					)
-				);
+				ctx.logInt(makeBox<dia_int::PlaceholderError>(
+					"Function declared with no explicit return type and inconsistent return "
+					"statements.",
+					fun->getStablePosition()
+				));
 				return query::Failed();
 			}
 		}
@@ -196,7 +192,8 @@ namespace compiler::helios {
 
 			void emplaceDeclaration(
 				pst::AccessLocked<pst::ParamList>                  param_list,
-				base::Optional<pst::AccessLocked<pst::ExprHolder>> ret
+				base::Optional<pst::AccessLocked<pst::ExprHolder>> ret,
+				HOUTFunctionDeclaration::Operatoriness             operatoriness
 			) {
 				// Default return type is a direct unit.
 				auto ret_type = tsh::SymbolType<>{
@@ -211,9 +208,8 @@ namespace compiler::helios {
 					const auto ret_type_ctv
 						= getTypeCTVFromPST(ctx, ret.value().unlock(ctx)->getExpr()).valueOrThrow();
 					ret_type = ret_type_ctv.get<tsh::SymbolType<>>().value();
-					origin   = code::multiplePstOriginOrdered(
-                        { param_list.unlock(ctx), ret.value().unlock(ctx) }
-                    );
+					origin   = code::multiplePstOriginOrdered({ param_list.unlock(ctx),
+					                                            ret.value().unlock(ctx) });
 				}
 				// Deduce return type if not provided.
 				else {
@@ -256,24 +252,28 @@ namespace compiler::helios {
 				}
 
 				HOUTFunctionDeclaration output(
-					original_symbol, ret_type, std::move(parameters), origin
+					original_symbol, operatoriness, ret_type, std::move(parameters), origin
 				);
 
 				this->out.emplace(std::move(output));
 			}
 
+			// @TODO: #2251 Extract operatoriness from declaration.
+			static constexpr auto DUMMY_OPERATORINESS
+				= HOUTFunctionDeclaration::Operatoriness::None;
+
 			// @TODO: #1029 make failure more explicit
 			void visitFun(pst::Access<pst::Fun> stmt) final {
 				// @TODO: #1029 rest, flags, attributes, etc
-				emplaceDeclaration(stmt->getParams(), stmt->getRet());
+				emplaceDeclaration(stmt->getParams(), stmt->getRet(), DUMMY_OPERATORINESS);
 			}
 
 			void visitFunDecl(pst::Access<pst::FunDecl> stmt) final {
-				emplaceDeclaration(stmt->getParams(), stmt->getRet());
+				emplaceDeclaration(stmt->getParams(), stmt->getRet(), DUMMY_OPERATORINESS);
 			}
 
 			void visitMethod(pst::Access<pst::Method> stmt) final {
-				emplaceDeclaration(stmt->getParams(), stmt->getRet());
+				emplaceDeclaration(stmt->getParams(), stmt->getRet(), DUMMY_OPERATORINESS);
 
 				const auto  self_scope  = ctx.query<QueryPrimaryCodeScopeFor>(stmt);
 				const SymID self_symbol = ctx.query<defgen::QueryGeneratedSymbol>({
@@ -367,7 +367,8 @@ namespace compiler::helios {
 					field_origin          = code::pstOrigin(field_pst_data).generatedFrom();
 					auto init_expr_opt    = field_pst_data->getInit();
 					init_expr_coerced_opt = init_expr_opt.map(
-						[&](pst::AccessLocked<pst::ExprHolder> expr_holder) -> BoxOrCRef<code::Expr> {
+						[&](pst::AccessLocked<pst::ExprHolder> expr_holder
+					    ) -> BoxOrCRef<code::Expr> {
 							const auto field_type = field.getType(ctx);
 							auto       expr
 								= getHoutOfExprWithExpectedType(
@@ -408,7 +409,11 @@ namespace compiler::helios {
 
 			// Return the declaration.
 			return HOUTFunctionDeclaration{
-				ctor_symbol, result_symbol_type, std::move(parameters), code::generatedOrigin()
+				ctor_symbol,
+				HOUTFunctionDeclaration::Operatoriness::None,
+				result_symbol_type,
+				std::move(parameters),
+				code::generatedOrigin(),
 			};
 		}
 
@@ -443,6 +448,9 @@ namespace compiler::helios {
 			}
 			return HOUTFunctionDeclaration{
 				fun,
+				// Currently, all builtins *participating in lookup* are binary operators.
+				// TODO (this PR?) differentiate between builtin operators and their C++-defined impls.
+				HOUTFunctionDeclaration::Operatoriness::Infix,
 				return_type,
 				std::move(parameters),
 				code::generatedOrigin(),
@@ -481,7 +489,11 @@ namespace compiler::helios {
 								};
 
 								return HOUTFunctionDeclaration{
-									key, return_type, {}, code::generatedOrigin()
+									key,
+									HOUTFunctionDeclaration::Operatoriness::None,
+									return_type,
+									{},
+									code::generatedOrigin(),
 								};
 							}
 							variant_case(
@@ -493,19 +505,23 @@ namespace compiler::helios {
 									                     tsh::Mutability::Mutable };
 
 								return HOUTFunctionDeclaration{
-									key, return_type, {}, code::generatedOrigin()
+									key,
+									HOUTFunctionDeclaration::Operatoriness::None,
+									return_type,
+									{},
+									code::generatedOrigin(),
 								};
 							}
 							variant_case(
 								defgen::GeneratedSymbolData::ToStringMethod, to_string_data
 							) {
 								const auto self_param = ctx.query<defgen::QueryGeneratedSymbol>(
-									{ .name                  = base::StrID("self"),
-								      .generated_symbol_data = defgen::GeneratedSymbolData{
-										  defgen::GeneratedSymbolData::Parameter{
-											  .function_symbol = key,
-											  .parameter_index = 0,
-										  } } }
+									{ .name = base::StrID("self"),
+								      .generated_symbol_data
+								      = defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::Parameter{
+										  .function_symbol = key,
+										  .parameter_index = 0,
+									  } } }
 								);
 
 								const auto method_type = ctx.query<QueryTypeOfSymbol>(key)
@@ -525,17 +541,21 @@ namespace compiler::helios {
 								);
 
 								return HOUTFunctionDeclaration{
-									key, return_type, std::move(parameters), code::generatedOrigin()
+									key,
+									HOUTFunctionDeclaration::Operatoriness::None,
+									return_type,
+									std::move(parameters),
+									code::generatedOrigin(),
 								};
 							}
 							variant_case(defgen::GeneratedSymbolData::DefaultDestructor, dtor_data) {
 								const auto self_param = ctx.query<defgen::QueryGeneratedSymbol>(
-									{ .name                  = base::StrID("self"),
-								      .generated_symbol_data = defgen::GeneratedSymbolData{
-										  defgen::GeneratedSymbolData::Parameter{
-											  .function_symbol = key,
-											  .parameter_index = 0,
-										  } } }
+									{ .name = base::StrID("self"),
+								      .generated_symbol_data
+								      = defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::Parameter{
+										  .function_symbol = key,
+										  .parameter_index = 0,
+									  } } }
 								);
 
 								const auto method_type = ctx.query<QueryTypeOfSymbol>(key)
@@ -555,7 +575,11 @@ namespace compiler::helios {
 								);
 
 								return HOUTFunctionDeclaration{
-									key, return_type, std::move(parameters), code::generatedOrigin()
+									key,
+									HOUTFunctionDeclaration::Operatoriness::None,
+									return_type,
+									std::move(parameters),
+									code::generatedOrigin(),
 								};
 							}
 							variant_case_novalue(defgen::GeneratedSymbolData::BuiltinOperator) {
@@ -571,6 +595,7 @@ namespace compiler::helios {
 								                         .as<tsh::FunctionAbstractType>();
 								return HOUTFunctionDeclaration{
 									key,
+									HOUTFunctionDeclaration::Operatoriness::None,
 									function_type.getResultType(),
 									{},
 									code::generatedOrigin(),
@@ -586,6 +611,7 @@ namespace compiler::helios {
 								                         .as<tsh::FunctionAbstractType>();
 								return HOUTFunctionDeclaration{
 									key,
+									HOUTFunctionDeclaration::Operatoriness::None,
 									function_type.getResultType(),
 									{},
 									code::generatedOrigin(),

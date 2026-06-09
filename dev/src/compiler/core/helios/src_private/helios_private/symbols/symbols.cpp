@@ -158,6 +158,7 @@ namespace compiler::helios {
 			variant_case(defgen::GeneratedSymbolData, gen_data) {
 				variant_match(gen_data.data) {
 					variant_case_novalue(defgen::GeneratedSymbolData::BuiltinOperator) {
+						// TODO (this PR?) select a better name.
 						// BuiltinOperators (better name pending) are those functions which
 						// are defined in C++, and will need to be declared with external linkage.
 						return false;

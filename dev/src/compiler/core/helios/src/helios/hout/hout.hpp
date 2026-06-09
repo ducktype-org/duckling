@@ -63,7 +63,13 @@ namespace compiler::helios {
 		 * the user defines both a prefix and suffix `++` operator, lookup will return both, but
 		 * the expression can only ever consider at most one of these candidates for resolution.
 		 */
-		enum class Operatoriness { None, Infix, Prefix, Suffix };
+		enum class Operatoriness
+		{
+			None,   ///< The function is not an operator
+			Infix,  ///< The function is a binary, infix operator
+			Prefix, ///< The function is a unary, prefix operator
+			Suffix  ///< The function is a unary, suffix operator
+		};
 
 		// @TODO: decide if HOUT functions declarations should contain its HELIOS SymID
 		// - flags like "pure", "thread safe", "shared-thread-function", etc
