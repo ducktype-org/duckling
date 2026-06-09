@@ -53,7 +53,6 @@ namespace time_stats {
 		 * but based on driver operations.
 		 * Any non-driver operations are not measured.
 		 * @note it may be, in the future, moved to some other, more generic place.
-		 * @TODO: #2246 adjust its usage if needed
 		 */
 		BackendCompilation,
 

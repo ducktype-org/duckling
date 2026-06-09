@@ -162,17 +162,14 @@ namespace lsp {
 		// We run the semantic analysis if there is no parsing errors.
 
 		if (isModuleTreeParsedSuccessfully(root_module)) {
-			auto hout
-				= query::entryPoint<helios::QueryModuleHOUTRecursively>(root_module->getModuleID());
+			query::utils::withContextDo([&](query::Context& ctx) -> void {
+				auto hout
+					= ctx.query<helios::QueryModuleHOUTRecursively>(root_module->getModuleID());
 
-			// Since MIR lowering can produce errors, we have to run MIR lowering as well.
-			if (hout.hasValue()) {
-				for (const auto& item: hout.valueOrPanic()) {
-					query::utils::withContextDo([&](query::Context& ctx) -> void {
-						mir::lowerToMIRUnit(ctx, item);
-					});
-				}
-			}
+				// Since MIR lowering can produce errors, we have to run MIR lowering as well.
+				if (hout.hasValue())
+					for (const auto& item: hout.valueOrPanic()) mir::lowerToMIRUnit(ctx, item);
+			});
 		}
 
 		query::Context::collectAndUpdateAllDiagnostic(

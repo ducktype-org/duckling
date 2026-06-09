@@ -527,8 +527,8 @@ namespace compiler::backend_llvm {
 
 	/**
 	 * Adds a global variable to the module based on the LIRGlobal description.
-	 * For globals is sets the initial value to null (this function does not handle constructors),
-	 * for constants it sets the initial value to the provided constant value.
+	 * Sets the initial value to null (this function does not handle constructors and proper
+	 * initialization),
 	 */
 	Ref<llvm::GlobalVariable> addGlobalVariable(
 		const Ref<llvm::Module> module, const lir::LIRGlobalData& lir_global

@@ -73,22 +73,16 @@ namespace compiler::driver {
 		return lir_module;
 	}
 
-	struct IMPLEMENT_QUERY(CompileToLIRModuleData, query::QResult<LIRUnitWithBackendName>) {
-		QUERY_AUTO_CACHE_CREF
+	query::QResult<LIRUnitWithBackendName> compileModuleToLIRModuleData(
+		query::Context& ctx, frontend::ModuleID module_id
+	) {
+		const auto& hout_unit = ctx.query<helios::QueryModuleHOUT>(module_id)->valueOrThrow();
 
-		static auto provide(query::Context& ctx, frontend::ModuleID module_id) -> PResult {
-			const auto& hout_unit = ctx.query<helios::QueryModuleHOUT>(module_id)->valueOrThrow();
+		auto module_name = base::StrID(base::strConcat(
+			"module_",
+			compiler::frontend::ModuleTree::getPathComponentHash(module_id).hash.toStringHex()
+		));
 
-			auto module_name = base::StrID(base::strConcat(
-				"module_",
-				compiler::frontend::ModuleTree::getPathComponentHash(module_id).hash.toStringHex()
-			));
-
-			// we intentially make copy here, to keep the data in the
-			// cache of this query
-			return compileHOUTUnitToLIRModuleData(ctx, hout_unit, module_name);
-		}
-	};
-
-	QUERY_IMPLEMENTATION_BOILERPLATE(CompileToLIRModuleData);
+		return compileHOUTUnitToLIRModuleData(ctx, hout_unit, module_name);
+	}
 }

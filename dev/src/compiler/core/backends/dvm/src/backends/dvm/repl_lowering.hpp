@@ -19,10 +19,10 @@ namespace compiler::backend_vm {
 	 * compilation use. It exposes an interface for incremental DVM code emission, allowing REPL
 	 * statements to be compiled and loaded one at a time.
 	 *
-	 * @note Underneath it uses ProgramLoweringContext snapshot api that was added specifically for
-	 * this use case, and DVMCodeBuilder lowering api.
+	 * @note Underneath it uses ProgramLoweringContext snapshot API that was added specifically for
+	 * this use case, and DVMCodeBuilder lowering API.
 	 *
-	 * @importnat: It relies, to an extend, on the private implementation details of DVMCodeBuilder.
+	 * @important: It relies, to an extent, on the private implementation details of DVMCodeBuilder.
 	 *
 	 * @note If used improperly, query_ctx might become a dangling reference.
 	 *
