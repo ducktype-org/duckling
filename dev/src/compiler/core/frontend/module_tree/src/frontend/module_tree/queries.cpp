@@ -55,7 +55,7 @@ namespace compiler::frontend {
 			if (not owner_pkg_opt.has_value()) return {};
 			auto owner_pkg = owner_pkg_opt.value();
 
-			if (owner_pkg_id == path.at(0)) {
+			if (owner_pkg->getName() == path.at(0)) {
 				current_module = owner_pkg->getRootModule().unlock(ctx).getID();
 			} else {
 				auto dep_locked_opt

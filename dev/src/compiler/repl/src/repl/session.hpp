@@ -37,7 +37,10 @@ namespace compiler::repl {
 	 */
 	class ReplSession final {
 	public:
-		explicit ReplSession(bool completions_enabled = true);
+		explicit ReplSession(
+			bool completions_enabled     = FRONTEND_DEFAULT_COMPLETIONS_ENABLED,
+			bool bracketed_paste_enabled = FRONTEND_DEFAULT_BRACKETED_PASTE_ENABLED
+		);
 
 		/**
 		 * @brief Load a script file and execute its statements in the current REPL session.
@@ -270,7 +273,7 @@ namespace compiler::repl {
 		 * globals, and types from previous statements to be referenced in new statements.
 		 * Similar to DVMBuilder but with incremental loading semantics for interactive sessions.
 		 */
-		base::Optional<backend_vm::ReplLoweringContext> m_lowering_context;
+		base::Optional<backend_vm::ReplDVMCodeBuilder> m_lowering_context;
 		/**
 		 * Suppress per-statement REPL feedback. This can be useful either when loading scripts
 		 * or when resetting state of the REPL.

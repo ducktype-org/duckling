@@ -449,7 +449,7 @@ private:
 
 			auto& should_add_retvoid_fun
 				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(1) })->valueOrThrow();
-			should_add_retvoid_fun.validateBlockIDs();
+			ASSERT_TRUE(should_add_retvoid_fun.validateBlockIDs().isOk());
 			std::stringstream foo_str;
 			should_add_retvoid_fun.debugPrint(foo_str);
 
@@ -462,7 +462,7 @@ private:
 
 			auto& unreachable_end_fun
 				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(2) })->valueOrThrow();
-			unreachable_end_fun.validateBlockIDs();
+			ASSERT_TRUE(unreachable_end_fun.validateBlockIDs().isOk());
 			unreachable_end_fun.debugPrint(foo_str);
 			ASSERT_EQUAL_PRINT(unreachable_end_fun.block_order.size(), 7);
 

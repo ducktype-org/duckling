@@ -419,9 +419,17 @@ namespace compiler::tsh {
 		bool isImplicitlyCoercible(const AbstractType target, query::Context&) const override {
 			// Implicit coercions allow checking against zero,
 			// as well as promoting to greater sizes
-			return target.getKind() == Kind::Bool
-			    || ((target.getKind() == Kind::Integral)
-			        && (IntegralAbstractType(target).getSize() > size));
+			// signed to unsigned coercions are not allowed
+			auto bool_coercion = (target.getKind() == Kind::Bool);
+			auto int_coercion  = (target.getKind() == Kind::Integral);
+			auto upsize_coercion
+				= (int_coercion && (IntegralAbstractType(target).getSize() > size));
+			auto drop_sign_coercion
+				= (int_coercion && signedness == IntegralAbstractType::Signedness::Signed
+			       && IntegralAbstractType(target).getSignedness()
+			              == IntegralAbstractType::Signedness::Unsigned);
+
+			return bool_coercion || (upsize_coercion && !drop_sign_coercion);
 		}
 
 		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }

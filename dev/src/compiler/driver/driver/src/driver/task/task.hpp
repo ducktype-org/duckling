@@ -34,10 +34,10 @@ namespace compiler::driver {
 		using DiagnosticReporter = js::DiagnosticLogger;
 
 		/**
-		 * @brief Look up a package root module by its raw package name.
+		 * @brief Look up a package root module by its raw package id.
 		 */
-		base::Optional<compiler::frontend::ModuleID> getRootModuleIDForRawPackageName(
-			base::StrID package_name, const DiagnosticReporter& report
+		base::Optional<compiler::frontend::ModuleID> getRootModuleIDForRawPackageId(
+			base::StrID package_id, const DiagnosticReporter& report
 		);
 	}  // namespace task
 
@@ -93,7 +93,7 @@ namespace compiler::driver {
 	 * @brief Represents a task for compiling a package
 	 */
 	struct RawPackageCompilationTask final {
-		base::StrID package_name;
+		base::StrID package_id;
 		BuildTarget build_target;
 
 		/**

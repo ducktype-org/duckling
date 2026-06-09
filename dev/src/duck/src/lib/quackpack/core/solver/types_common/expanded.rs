@@ -1,10 +1,7 @@
 use std::collections::HashSet;
 use std::hash::Hash;
-use std::ops::Deref;
-use std::path::PathBuf;
-use std::sync::{Mutex, OnceLock};
 
-use serde::{Deserialize, Serialize, de, ser};
+use serde::{Deserialize, Serialize};
 use url::Url;
 
 use crate::quackpack::core::solver::gathering::fetch_types::{
@@ -12,130 +9,30 @@ use crate::quackpack::core::solver::gathering::fetch_types::{
 };
 use crate::quackpack::core::solver::types_common::{InternedLocation, Location};
 use crate::quackpack::core::version::CompatibilityCheck;
-use crate::quackpack::core::{BranchOrTag, Dependency, Registry, Source, Version};
-use crate::util::extract::Extract;
+use crate::quackpack::core::{Dependency, GitReference, SourceKind, Version};
+use crate::quackpack::util::interned_url::InternedUrl;
+use crate::quackpack::util::to_path_buf::ToPathBuf;
 use crate::{QuackResult, QuackResultContext, StrId, qp_bail_internal};
 
-static INTERNED_EXPANDED_LOCATION_CACHE: OnceLock<Mutex<HashSet<&'static ExpandedLocation>>> =
-    OnceLock::new();
-
-#[derive(Debug, Clone, Copy)]
-/// Interned version of [`Location`].
-pub struct InternedExpandedLocation {
-    inner: &'static ExpandedLocation,
-}
-
-impl InternedExpandedLocation {
-    pub fn new(source: ExpandedLocation) -> Self {
-        let mut cache = INTERNED_EXPANDED_LOCATION_CACHE
-            .get_or_init(Default::default)
-            .lock()
-            .extract();
-        let reference = cache.get(&source).copied().unwrap_or_else(|| {
-            let static_ref = Box::leak(Box::new(source));
-            cache.insert(static_ref);
-            static_ref
-        });
-        Self { inner: reference }
-    }
-}
-
-impl ser::Serialize for InternedExpandedLocation {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: ser::Serializer,
-    {
-        self.deref().serialize(serializer)
-    }
-}
-
-impl<'de> de::Deserialize<'de> for InternedExpandedLocation {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: de::Deserializer<'de>,
-    {
-        let location = ExpandedLocation::deserialize(deserializer)?;
-        Ok(Self::new(location))
-    }
-}
-
-impl<T: Into<ExpandedLocation>> From<T> for InternedExpandedLocation {
-    fn from(value: T) -> Self {
-        Self::new(value.into())
-    }
-}
-
-impl Deref for InternedExpandedLocation {
-    type Target = ExpandedLocation;
-
-    fn deref(&self) -> &'static Self::Target {
-        self.inner
-    }
-}
-
-impl AsRef<ExpandedLocation> for InternedExpandedLocation {
-    fn as_ref(&self) -> &'static ExpandedLocation {
-        self.inner
-    }
-}
-
-impl PartialEq for InternedExpandedLocation {
-    fn eq(&self, other: &Self) -> bool {
-        // If we have two equal InternedExpandedLocations, their underlying &ExpandedLocation is equal.
-        // That &ExpandedLocation is stored exactly once in INTERNED_EXPANDED_LOCATION_CACHE, so we can compare by comparing pointers,
-        // which is faster.
-        std::ptr::eq(self.inner, other.inner)
-    }
-}
-
-impl Eq for InternedExpandedLocation {}
-
-impl Hash for InternedExpandedLocation {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        std::ptr::hash(self.inner, state);
-    }
-}
-
-#[derive(Clone, Deserialize, Eq, Hash, PartialEq, Serialize)]
+#[derive(Debug, Clone, Copy, Deserialize, Eq, Hash, PartialEq, Serialize)]
 /// Type describing a localization of a dependency.
 /// Can either be:
 /// * registry - a dependency with a given name from a given server;
 /// * git - a dependency on a commit of a git repository at a given URL;
 /// * local - a dependency on a package that is stored locally on disk.
 ///
-/// Diffrence between [`Location`] and [`ExpandedLocation`]
+/// Difference between [`Location`] and [`ExpandedLocation`]
 /// -------------------------------------------------------
 /// [`Location`] directly corresponds to an entry in manifest.
-/// Specyfically, git dependencies can be specified by also tags or branches.
+/// Specifically, git dependencies can be specified by also tags or branches.
 /// Thus different locations can actually specify the same package,
 /// but it can only be known after cloning git repositories.
 /// Thus firstly we use [`Location`] and after all the manifests are gathered,
 /// we transition to using [`ExpandedLocation`].
 pub enum ExpandedLocation {
-    Registry { url: Url, real_name: StrId },
-    Git { url: Url, commit: StrId },
-    Local { absolute_path: PathBuf },
-}
-
-impl std::fmt::Debug for ExpandedLocation {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Registry { url, real_name } => f
-                .debug_struct("Registry")
-                .field("url", &url.as_str())
-                .field("real_name", real_name)
-                .finish(),
-            Self::Git { url, commit } => f
-                .debug_struct("Git")
-                .field("url", &url.as_str())
-                .field("commit", commit)
-                .finish(),
-            Self::Local { absolute_path } => f
-                .debug_struct("Local")
-                .field("absolute_path", absolute_path)
-                .finish(),
-        }
-    }
+    Registry { url: InternedUrl, real_name: StrId },
+    Git { url: InternedUrl, commit: StrId },
+    Local { absolute_path: InternedUrl },
 }
 
 impl ExpandedLocation {
@@ -157,7 +54,11 @@ impl ExpandedLocation {
             Self::Registry { real_name, .. } => format!("`{}", real_name),
             Self::Git { url, .. } => format!("cloned from `{url}`"),
             Self::Local { absolute_path } => {
-                format!("at the directory `{}`", absolute_path.display())
+                if let Ok(path) = absolute_path.to_path_buf() {
+                    format!("at the directory `{}`", path.display())
+                } else {
+                    format!("at the directory `{}`", absolute_path)
+                }
             }
         }
     }
@@ -169,7 +70,7 @@ impl ExpandedLocation {
 /// For git and local dependencies the version field is [`None`] and for registry
 /// dependencies the version field contains the version of the dependency.
 pub struct ExpandedPackage {
-    pub location: InternedExpandedLocation,
+    pub location: ExpandedLocation,
     pub version: Option<Version>,
 }
 
@@ -201,16 +102,18 @@ impl ExpandedPackage {
 
     /// Assuming that [`self`] was a realization of some dependency, checks whether we can be certain it is still true.
     pub fn still_satisfies_dep(&self, dependency: &Dependency) -> QuackResult<bool> {
-        match (self.location.as_ref(), dependency.source().as_ref()) {
-            (ExpandedLocation::Local { absolute_path }, Source::Local(local_source)) => {
-                Ok(absolute_path == local_source.absolute())
+        let source = dependency.source();
+        let dep_url = source.url();
+        match (self.location, source.kind()) {
+            (ExpandedLocation::Local { absolute_path }, SourceKind::Local) => {
+                Ok(absolute_path == dep_url)
             }
-            (ExpandedLocation::Git { url, commit }, Source::Git(git_source)) => {
+            (ExpandedLocation::Git { url, commit }, SourceKind::Git(reference)) => {
                 // If the git dependency specifies tag, branch or nothing (default branch),
                 // some new commits may have appeared.
-                if let Some(required_commit) = git_source.rev()
-                    && *commit == *required_commit
-                    && url == git_source.url()
+                if let GitReference::Rev(required_commit) = reference
+                    && commit == *required_commit
+                    && url == dep_url
                 {
                     if let Some(required_version) = dependency.versions().first() {
                         Ok(self.version == Some(*required_version))
@@ -221,8 +124,8 @@ impl ExpandedPackage {
                     Ok(false)
                 }
             }
-            (ExpandedLocation::Registry { url, real_name }, Source::Registry(registry_source)) => {
-                self.check_satisfaction_for_registry(url, *real_name, registry_source, dependency)
+            (ExpandedLocation::Registry { url, real_name }, SourceKind::Registry) => {
+                self.check_satisfaction_for_registry(&url, real_name, dep_url, dependency)
             }
             _ => Ok(false),
         }
@@ -233,10 +136,10 @@ impl ExpandedPackage {
         &self,
         url: &Url,
         real_name: StrId,
-        registry_source: &Registry,
+        dep_url: InternedUrl,
         dependency: &Dependency,
     ) -> QuackResult<bool> {
-        let location_agreement = (url == registry_source.url()) && (dependency.name() == real_name);
+        let location_agreement = (url == dep_url) && (dependency.name() == real_name);
         let self_version = self
             .version
             .context_internal("Registry package with no version")?;
@@ -257,16 +160,13 @@ impl ExpandedPackage {
 
     /// Creates a [`ManifestsRequest`] for precisely that single package.
     pub fn create_manifest_request(&self) -> QuackResult<ManifestsRequest> {
-        match self.location.as_ref() {
+        match self.location {
             ExpandedLocation::Registry { url, real_name } => {
                 let version = self
                     .version
                     .context_internal("Registry package without version")?;
                 Ok(ManifestsRequest::Pinned(PinnedRequest {
-                    location: InternedLocation::new(Location::Registry {
-                        url: url.clone(),
-                        real_name: *real_name,
-                    }),
+                    location: InternedLocation::new(Location::Registry { url, real_name }),
                     version,
                     features: HashSet::new(),
                 }))
@@ -274,9 +174,8 @@ impl ExpandedPackage {
             ExpandedLocation::Git { url, commit } => {
                 Ok(ManifestsRequest::NotPinned(NotPinnedRequest {
                     location: InternedLocation::new(Location::Git {
-                        url: url.clone(),
-                        branch_or_tag: BranchOrTag::Default,
-                        rev: Some(*commit),
+                        url,
+                        reference: GitReference::Rev(commit.as_str().into()),
                     }),
                     versions: None,
                     features: HashSet::new(),
@@ -285,7 +184,7 @@ impl ExpandedPackage {
             ExpandedLocation::Local { absolute_path } => {
                 Ok(ManifestsRequest::NotPinned(NotPinnedRequest {
                     location: InternedLocation::new(Location::Local {
-                        path: absolute_path.clone(),
+                        path: absolute_path,
                     }),
                     versions: None,
                     features: HashSet::new(),

@@ -3,8 +3,9 @@ use std::path::Path;
 use super::{registry_url_hash, setup_mock_storage};
 use crate::DuckContext;
 use crate::quackpack::core::fetcher::Fetcher;
-use crate::quackpack::core::solver::types_common::ExpandedLocation;
-use crate::quackpack::core::storage::freeze::{FreezeDep, FreezePackage, VenvFreeze};
+use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
+use crate::quackpack::core::identity::{Identity, Origin};
+use crate::quackpack::core::storage::freeze::{FreezePackage, VenvFreeze};
 use crate::quackpack::core::storage::paths::Storage;
 use crate::quackpack::core::storage::tests::{
     create_mock_package_at_tmpdir, create_mock_package_with_deps_at_tmpdir,
@@ -13,6 +14,7 @@ use crate::quackpack::core::storage::venv::Venv;
 use crate::quackpack::core::storage::venv_id::ToVenvId;
 use crate::quackpack::core::storage::{self, StorageSyncOptions, ops};
 use crate::quackpack::core::{PackageLoader, Version};
+use crate::quackpack::util::to_url::ToUrl;
 use crate::util::path_ops_ext::PathOpsExt;
 
 fn check_venvs_exist(root: &Path, names: &[&str]) {
@@ -23,6 +25,7 @@ fn check_venvs_exist(root: &Path, names: &[&str]) {
     }
 }
 
+// cSpell:disable-next-line
 fn check_venvs_dont_exist(root: &Path, names: &[&str]) {
     for name in names {
         assert!(!root.join("venv").join(name).exists());
@@ -49,6 +52,7 @@ fn clean() {
     assert_eq!(output.removed_venvs, ["root3".to_venv_id()]);
     assert_eq!(output.removed_packages, expected_packages);
     check_venvs_exist(&root, &["root1", "root2", "root4"]);
+    // cSpell:disable-next-line
     check_venvs_dont_exist(&root, &["root3"]);
 
     let mut iterator = root.join("pkg").read_dir().unwrap();
@@ -71,19 +75,24 @@ fn delete_venv() {
     let (ctx, _home, root) = setup_mock_storage();
     storage::ops::delete_venv(&ctx, &root, "root1").unwrap();
     check_venvs_exist(&root, &["root2", "root3", "root4"]);
+    // cSpell:disable-next-line
     check_venvs_dont_exist(&root, &["root1"]);
     storage::ops::delete_venv(&ctx, &root, "root2").unwrap();
     check_venvs_exist(&root, &["root3", "root4"]);
+    // cSpell:disable-next-line
     check_venvs_dont_exist(&root, &["root1", "root2"]);
     storage::ops::delete_venv(&ctx, &root, "root3").unwrap();
     check_venvs_exist(&root, &["root4"]);
+    // cSpell:disable-next-line
     check_venvs_dont_exist(&root, &["root1", "root2", "root3"]);
 
     storage::ops::delete_venv(&ctx, &root, "non_existent_venv").unwrap();
     check_venvs_exist(&root, &["root4"]);
+    // cSpell:disable-next-line
     check_venvs_dont_exist(&root, &["root1", "root2", "root3"]);
 
     storage::ops::delete_venv(&ctx, &root, "root4").unwrap();
+    // cSpell:disable-next-line
     check_venvs_dont_exist(&root, &["root1", "root2", "root3", "root4"]);
 
     let mut output = storage::ops::clean_storage(&ctx, &root).unwrap();
@@ -234,7 +243,7 @@ fn assert_can_load_after_save(venv: &Venv, storage: &Storage, ctx: &DuckContext)
         backup.display()
     );
     Venv::fix_and_load(storage, id, ctx)
-        .expect("an error occured")
+        .expect("an error occurred")
         .expect("failed to load venv")
 }
 
@@ -244,23 +253,16 @@ fn save_trims_files() {
     let id = "root1".to_venv_id();
     let storage = Storage::new(ctx.default_storage_root().into_not_locked_path());
     let mut venv = Venv::fix_and_load(&storage, id, &ctx)
-        .expect("an error occured")
+        .expect("an error occurred")
         .expect("failed to load venv");
     let original_venv = venv.clone();
     // Firstly, add a lot of dependencies, to make a file longer (have more bytes).
     let number_of_new_packages = 5;
     for _ in 0..number_of_new_packages {
-        let package = FreezePackage::new(
-            "dep".into(),
-            Version::new(1, 0, 0),
-            vec![],
-            vec![],
-            ExpandedLocation::Registry {
-                url: Fetcher::DEFAULT_REGISTRY_URL.parse().unwrap(),
-                real_name: "dep".into(),
-            }
-            .into(),
-        );
+        let origin = FullOrigin::for_registry(Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap());
+        let mock_identity = |name: &str| FullIdentity::new(name.into(), origin);
+        let package =
+            FreezePackage::new(mock_identity("dep"), Version::new(1, 0, 0), vec![], vec![]);
         venv.data_mut()
             .freeze_mut()
             .dependencies_mut()
@@ -384,6 +386,7 @@ fn sync_overwrite_success() {
 }
 
 #[test]
+// cSpell:disable-next-line
 fn sync_overwrite_doesnt_matter_for_the_same_root() {
     let (ctx, _home, _storage_root) = setup_mock_storage();
     let (_root, pcx) = create_mock_package_at_tmpdir(&ctx, "my-package");
@@ -455,6 +458,16 @@ fn sync_with_deps() {
     let (ctx, _home, storage_root) = setup_mock_storage();
     let (root, pcx) = create_mock_package_with_deps_at_tmpdir(&ctx, "my-package");
 
+    let mock_simple_identity = |name: &str| {
+        let path = root.path().join(name).resolve().unwrap();
+        let simple_origin = Origin::for_local(&path).unwrap();
+        Identity::new(name.into(), simple_origin)
+    };
+    let mock_identity = |name: &str| {
+        let path = root.path().join(name).resolve().unwrap();
+        let origin = FullOrigin::for_local(&path).unwrap();
+        FullIdentity::new(name.into(), origin)
+    };
     let (_lock, venv, storage) = ops::sync(
         &pcx,
         StorageSyncOptions {
@@ -474,21 +487,14 @@ fn sync_with_deps() {
     assert_eq!(root_package.name(), "my-package");
     assert_eq!(root_package.version(), Version::new(1, 0, 0));
     assert!(root_package.features().is_empty());
-    assert_eq!(
-        root_package.dependencies(),
-        [FreezeDep::new("dep".into(), Version::new(1, 0, 0))]
-    );
+    assert_eq!(root_package.dependencies(), [mock_simple_identity("dep")],);
     assert_eq!(
         freeze.dependencies(),
         [FreezePackage::new(
-            "dep".into(),
+            mock_identity("dep"),
             Version::new(1, 0, 0),
             vec![],
             vec![],
-            ExpandedLocation::Local {
-                absolute_path: root.path().join("dep").resolve().unwrap()
-            }
-            .into()
         )]
     );
 }
@@ -497,6 +503,16 @@ fn sync_with_deps() {
 fn sync_with_deps_and_expose_freezefile() {
     let (ctx, _home, storage_root) = setup_mock_storage();
     let (root, _) = create_mock_package_with_deps_at_tmpdir(&ctx, "my-package");
+    let mock_simple_identity = |name: &str| {
+        let path = root.path().join(name).resolve().unwrap();
+        let simple_origin = Origin::for_local(&path).unwrap();
+        Identity::new(name.into(), simple_origin)
+    };
+    let mock_identity = |name: &str| {
+        let path = root.path().join(name).resolve().unwrap();
+        let origin = FullOrigin::for_local(&path).unwrap();
+        FullIdentity::new(name.into(), origin)
+    };
     println!("root: {}", root.path().display());
     root.path()
         .join("root")
@@ -526,21 +542,14 @@ fn sync_with_deps_and_expose_freezefile() {
     assert_eq!(root_package.name(), "my-package");
     assert_eq!(root_package.version(), Version::new(1, 0, 0));
     assert!(root_package.features().is_empty());
-    assert_eq!(
-        root_package.dependencies(),
-        [FreezeDep::new("dep".into(), Version::new(1, 0, 0))]
-    );
+    assert_eq!(root_package.dependencies(), [mock_simple_identity("dep")],);
     assert_eq!(
         freeze.dependencies(),
         [FreezePackage::new(
-            "dep".into(),
+            mock_identity("dep"),
             Version::new(1, 0, 0),
             vec![],
             vec![],
-            ExpandedLocation::Local {
-                absolute_path: root.path().join("dep").resolve().unwrap()
-            }
-            .into()
         )]
     );
     let data = root

@@ -1,5 +1,6 @@
 #include <llvm_helpers/llvm_helpers.hpp>
 
+#include <mutex>
 #include <type_traits>
 
 LLVM_INCLUDE_BEGIN()
@@ -165,16 +166,25 @@ namespace {
 
 namespace compiler::backend_llvm {
 
+	namespace {
+		std::once_flag llvm_init_flag;
+	}
+
 	/**
 	 * @brief Initializes some llvm components.
-	 * @note it *should* be safe to call it multiple times
+	 * @note Thread-safe via std::call_once. LLVM's InitializeNativeTarget() family
+	 *       uses non-thread-safe static bool guards internally, so concurrent calls
+	 *       can register the same target twice, causing "Cannot choose between targets"
+	 *       errors in lookupTarget().
 	 */
 	void init() {
-		const bool v1 = llvm::InitializeNativeTarget();
-		const bool v2 = llvm::InitializeNativeTargetAsmPrinter();
+		std::call_once(llvm_init_flag, []() {
+			const bool v1 = llvm::InitializeNativeTarget();
+			const bool v2 = llvm::InitializeNativeTargetAsmPrinter();
 
-		CORE_ASSERT(not v1, "failed to initialize llvm (1)");
-		CORE_ASSERT(not v2, "failed to initialize llvm (2)");
+			CORE_ASSERT(not v1, "failed to initialize llvm (1)");
+			CORE_ASSERT(not v2, "failed to initialize llvm (2)");
+		});
 	}
 
 	void llvmDeinit() {
@@ -1449,6 +1459,7 @@ namespace compiler::backend_llvm {
 	}
 
 	Box<ModuleImpl> parseIRCodeToModuleImpl(const std::string_view llvm_ir_code) {
+		init();
 		const auto memory_buffer = llvm::MemoryBuffer::getMemBuffer(llvm::StringRef(llvm_ir_code));
 		if (!memory_buffer) CORE_PANIC("failed to create memory buffer");
 		llvm::SMDiagnostic error;
@@ -1465,6 +1476,7 @@ namespace compiler::backend_llvm {
 	}
 
 	Box<ModuleImpl> parseLLVMBCToModuleImpl(const std::span<unsigned char> llvm_bc_data) {
+		init();
 		// Wrap the array in a MemoryBuffer
 		auto buffer = llvm::MemoryBuffer::getMemBuffer(
 			llvm::StringRef(reinterpret_cast<const char*>(llvm_bc_data.data()), llvm_bc_data.size()),

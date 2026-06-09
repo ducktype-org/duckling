@@ -29,10 +29,7 @@ public:
 		TESTER_ADD_TEST(booleanOperationsTest);
 		TESTER_ADD_TEST(comparisonsTest);
 		TESTER_ADD_TEST(referencesTest);
-		// @TODO: #2246 This test works well when compiled with `duckc dvm_run` although fails when
-		// tested here because constructors aren't inserted properly. When this pipeline is unified,
-		// uncomment this test.
-		// TESTER_ADD_TEST(recordsTest);
+		TESTER_ADD_TEST(recordsTest);
 		TESTER_ADD_TEST(staticArrayTest);
 		TESTER_ADD_TEST(unitsTest);
 		TESTER_ADD_TEST(initsDeinitsTest);
@@ -75,10 +72,7 @@ private:
 		auto                     module = driver::test_utils::getModuleIdFromPath(module_path);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			// @TODO: #2246 this duplicates the logic of compileLIRModuleToDVM, try to unify it
-			// @TODO: #2246 remove query top level entities if possible
-
-			auto& top_level = ctx.query<helios::QueryTopLevelEntities>(module)->valueOrPanic();
+			auto& top_level = ctx.query<helios::QueryModuleHOUT>(module)->valueOrPanic();
 
 			auto mir_unit = mir::lowerToMIRUnit(ctx, &top_level);
 			assertTrue(mir_unit.hasValue(), "MIR lowering failed");
@@ -86,10 +80,8 @@ private:
 			auto lir_unit = lir::lowerToLIRUnit(ctx, mir_unit.valueOrPanic());
 
 			backend_vm::DVMCodeBuilder m(ctx, false, false);
+			m.insertLIRUnit(lir_unit);
 
-			for (const auto& global: lir_unit.lir_globals) m.insertLirGlobal(global);
-
-			for (const auto& lir_fun: lir_unit.lir_functions) m.insertLirFunction(lir_fun);
 			code = m.build();
 		});
 		return code;

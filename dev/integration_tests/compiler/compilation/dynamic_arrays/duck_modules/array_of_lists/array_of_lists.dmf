@@ -7,7 +7,7 @@ class Point {
 
 fun printPointList(l: ref List[Point]) -> () = {
     var i = 0;
-    while (i < len l) {
+    while (i < i64(len l)) {
         builtin_output_i64(l[i].x);
         builtin_output_i64(l[i].y);
         i = i + 1;
