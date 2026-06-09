@@ -123,7 +123,7 @@ private:
 			const auto& r = queryConv(ctx, directOf(getRawPointerType(false)));
 			assertFalse(r.abi_type.has_value(), "raw pointer should be rejected");
 			const bool has_c_compat = r.reason.find("c-compatible") != std::string::npos;
-			const bool has_cptr = r.reason.find("cptr") != std::string::npos;
+			const bool has_cptr     = r.reason.find("cptr") != std::string::npos;
 			assertTrue(has_c_compat || has_cptr, "reason should mention C-compatibility or cptr");
 		});
 	}
