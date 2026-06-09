@@ -97,6 +97,11 @@ namespace abi::type_system {
 		std::variant<IntType, PointerType, ArrayType, StructType, OpaqueType> value;
 	};
 
+	// The static analyzer cannot model `base::Box` ownership when a Box is nested
+	// inside a returned value tree, so it reports false-positive leaks for the
+	// allocating helpers below.
+	// NOLINTBEGIN(clang-analyzer-cplusplus.NewDeleteLeaks)
+
 	/** @brief Wraps an AbiType value in an owning box. */
 	inline AbiTypePtr makeAbiType(AbiType type) { return base::makeBox<AbiType>(std::move(type)); }
 
@@ -152,4 +157,6 @@ namespace abi::type_system {
 			type.value
 		);
 	}
+
+	// NOLINTEND(clang-analyzer-cplusplus.NewDeleteLeaks)
 }

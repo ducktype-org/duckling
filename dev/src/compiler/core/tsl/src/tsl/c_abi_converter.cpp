@@ -90,6 +90,8 @@ namespace compiler::tsl {
 			case Kind::Byte:
 				return ok(ats::intType(u8(8), false));
 			case Kind::RawPointer:
+				return fail("raw pointer is not C-compatible; use `cptr T`");
+			case Kind::CPointer:
 				return ok(ats::pointerType());
 			case Kind::StaticArray:
 				return convertStaticArray(tsh::StaticArrayAbstractType(abstract), ctx);
@@ -97,6 +99,8 @@ namespace compiler::tsl {
 				return convertClass(tsh::ClassAbstractType(abstract), ctx);
 			case Kind::Pointer:
 				return fail("typed pointer is not C-compatible; use `cptr T`");
+			case Kind::ManyPointer:
+				return fail("many-pointer is not C-compatible; use `cptr T`");
 			case Kind::Tuple:
 				return fail("tuples are not C-compatible");
 			case Kind::Variant:

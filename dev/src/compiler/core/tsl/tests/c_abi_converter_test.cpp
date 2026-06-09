@@ -48,7 +48,9 @@ public:
 		TESTER_ADD_TEST(integerUnsupportedWidthTest);
 		TESTER_ADD_TEST(byteTest);
 		TESTER_ADD_TEST(rawPointerTest);
+		TESTER_ADD_TEST(cPointerTest);
 		TESTER_ADD_TEST(typedPointerRejectedTest);
+		TESTER_ADD_TEST(manyPointerRejectedTest);
 		TESTER_ADD_TEST(staticArrayOfIntTest);
 		TESTER_ADD_TEST(staticArrayZeroCountRejectedTest);
 		TESTER_ADD_TEST(staticArrayOfRefRejectedTest);
@@ -119,6 +121,20 @@ private:
 	void rawPointerTest() {
 		withContextDo([&](query::Context& ctx) -> void {
 			const auto& r = queryConv(ctx, directOf(getRawPointerType(false)));
+			assertFalse(r.abi_type.has_value(), "raw pointer should be rejected");
+			const bool has_c_compat = r.reason.find("c-compatible") != std::string::npos;
+			const bool has_cptr = r.reason.find("cptr") != std::string::npos;
+			assertTrue(has_c_compat || has_cptr, "reason should mention C-compatibility or cptr");
+		});
+	}
+
+	void cPointerTest() {
+		withContextDo([&](query::Context& ctx) -> void {
+			const auto i32_type
+				= getIntegralType(ctx, 32, IntegralAbstractType::Signedness::Signed);
+			const CPointerAbstractType c_pointer
+				= ctx.query<QueryCPointerType>({ directOf(i32_type) });
+			const auto& r = queryConv(ctx, directOf(c_pointer));
 			ASSERT_TRUE(r.abi_type.has_value());
 			expectPointer(*r.abi_type);
 		});
@@ -132,6 +148,17 @@ private:
 				= ctx.query<QueryPointerType>({ directOf(i32_type) });
 			const auto& r = queryConv(ctx, directOf(typed_pointer));
 			assertFalse(r.abi_type.has_value(), "typed pointer should be rejected");
+		});
+	}
+
+	void manyPointerRejectedTest() {
+		withContextDo([&](query::Context& ctx) -> void {
+			const auto i32_type
+				= getIntegralType(ctx, 32, IntegralAbstractType::Signedness::Signed);
+			const ManyPointerAbstractType many_pointer
+				= ctx.query<QueryManyPointerType>({ directOf(i32_type) });
+			const auto& r = queryConv(ctx, directOf(many_pointer));
+			assertFalse(r.abi_type.has_value(), "many-pointer should be rejected");
 		});
 	}
 
