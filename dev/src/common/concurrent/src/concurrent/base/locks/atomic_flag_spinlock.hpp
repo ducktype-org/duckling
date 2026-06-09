@@ -31,6 +31,9 @@ namespace concurrent {
 	 */
 	class AtomicFlagSpinlock final {
 		std::atomic_flag atomic_flag{};
+		
+		[[maybe_unused]]
+		char padding[128 - sizeof(std::atomic_flag)]; // NOLINT
 
 
 	public:
