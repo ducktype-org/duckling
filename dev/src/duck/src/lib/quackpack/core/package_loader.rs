@@ -194,7 +194,7 @@ metadata:
             PackageLoader::find_from_directory(tmp_file.path(), &ctx, false.into()).unwrap();
         assert_eq!(
             package
-                .package()
+                .into_package()
                 .unwrap_package()
                 .root_directory()
                 .resolve()
@@ -216,7 +216,7 @@ metadata:
         let package = PackageLoader::find_from_directory(&child, &ctx, false.into()).unwrap();
         assert_eq!(
             package
-                .package()
+                .into_package()
                 .unwrap_package()
                 .root_directory()
                 .resolve()
@@ -235,7 +235,7 @@ metadata:
         let package = PackageLoader::find_at_exact_directory(tmp_file.path(), &ctx).unwrap();
         assert_eq!(
             package
-                .package()
+                .into_package()
                 .unwrap_package()
                 .root_directory()
                 .resolve()

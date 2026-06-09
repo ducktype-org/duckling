@@ -1,5 +1,4 @@
 //! A general package abstraction.
-use std::fmt;
 use std::path::{Path, PathBuf};
 
 use crate::QuackResult;
@@ -8,35 +7,117 @@ use crate::quackpack::core::identity::{Identity, Origin};
 use crate::quackpack::core::{Dependencies, Manifest, Profiles};
 use crate::quackpack::schemas::manifest::Manifest as ManifestSchema;
 
+#[derive(Clone, Debug)]
 /// Entities which can be treated as a package by implementing [`AsPackage`] trait.
-pub enum PackageType {
-    Package,
-    Frontmatter,
+pub enum AnyPackage {
+    Package(Package),
+    Frontmatter(FrontMatterScript),
 }
 
-pub trait AsPackage: fmt::Debug + Send + Sync {
+impl AnyPackage {
     /// Get the high-level abstraction over the manifest.
-    fn manifest(&self) -> &Manifest;
+    pub fn manifest(&self) -> &Manifest {
+        match self {
+            Self::Package(package) => package.manifest(),
+            Self::Frontmatter(frontmatter) => frontmatter.manifest(),
+        }
+    }
+
     /// Get the root directory of the package / path of the script.
-    fn root(&self) -> &Path;
+    pub fn root(&self) -> &Path {
+        match self {
+            Self::Package(package) => package.root_directory(),
+            Self::Frontmatter(frontmatter) => frontmatter.script_file(),
+        }
+    }
+
     /// Check if this is the global package.
-    fn is_global(&self) -> bool;
-    /// Get the type of this a la Package.
-    fn kind(&self) -> PackageType;
+    pub fn is_global(&self) -> bool {
+        match self {
+            Self::Package(package) => package.is_global(),
+            Self::Frontmatter(_) => false,
+        }
+    }
+
+    /// Check if this is the global package.
+    pub fn as_a_local_identity(&self) -> QuackResult<Identity> {
+        match self {
+            Self::Package(package) => package.as_a_local_identity(),
+            Self::Frontmatter(frontmatter) => frontmatter.as_a_local_identity(),
+        }
+    }
+
     /// Try to cast `&self` into `&Package`.
-    fn get_package(&self) -> Option<&Package>;
-    /// Try to cast `&self` into `&FrontMatterScript`
-    fn get_frontmatter(&self) -> Option<&FrontMatterScript>;
-    /// As [`AsPackage::get_package`] but panics on failure.
-    fn unwrap_package(&self) -> &Package {
-        self.get_package().unwrap()
+    pub fn try_get_package(&self) -> Option<&Package> {
+        match self {
+            Self::Package(package) => Some(package),
+            Self::Frontmatter(_) => None,
+        }
     }
-    /// As [`AsPackage::get_frontmatter`] but panics on failure.
-    fn unwrap_frontmatter(&self) -> &FrontMatterScript {
-        self.get_frontmatter().unwrap()
+
+    /// Try to cast `&self` into `&FrontMatterScript`.
+    pub fn try_get_frontmatter(&self) -> Option<&FrontMatterScript> {
+        match self {
+            Self::Package(_) => None,
+            Self::Frontmatter(frontmatter) => Some(frontmatter),
+        }
     }
-    /// Convert `self` to an [`Identity`].
-    fn as_a_local_identity(&self) -> QuackResult<Identity>;
+
+    /// Cast `&self` into `&Package` and panic on mismatch.
+    pub fn get_package(&self) -> &Package {
+        match self {
+            Self::Package(package) => package,
+            Self::Frontmatter(_) => {
+                panic!("tried to cast `AnyPackage` with a frontmatter to a package")
+            }
+        }
+    }
+
+    /// Try to cast `&self` into `&FrontMatterScript` and panic on mismatch.
+    pub fn get_frontmatter(&self) -> &FrontMatterScript {
+        match self {
+            Self::Package(_) => {
+                panic!("tried to cast `AnyPackage` with a package to a frontmatter")
+            }
+            Self::Frontmatter(frontmatter) => frontmatter,
+        }
+    }
+
+    /// Try to extract [`Package`] from `self`.
+    pub fn try_into_package(self) -> Option<Package> {
+        match self {
+            Self::Package(package) => Some(package),
+            Self::Frontmatter(_) => None,
+        }
+    }
+
+    /// Try to extract [`FrontMatterScript`] from `self`.
+    pub fn try_into_frontmatter(self) -> Option<FrontMatterScript> {
+        match self {
+            Self::Package(_) => None,
+            Self::Frontmatter(frontmatter) => Some(frontmatter),
+        }
+    }
+
+    /// Extract [`Package`] from `self` and panic on mismatch.
+    pub fn unwrap_package(self) -> Package {
+        match self {
+            Self::Package(package) => package,
+            Self::Frontmatter(_) => {
+                panic!("tried to cast `AnyPackage` with a frontmatter to a package")
+            }
+        }
+    }
+
+    /// Extract [`FrontMatterScript`] from `self` and panic on mismatch.
+    pub fn unwrap_frontmatter(self) -> FrontMatterScript {
+        match self {
+            Self::Package(_) => {
+                panic!("tried to cast `AnyPackage` with a package to a frontmatter")
+            }
+            Self::Frontmatter(frontmatter) => frontmatter,
+        }
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -121,37 +202,7 @@ impl Package {
     }
 }
 
-impl AsPackage for Package {
-    fn manifest(&self) -> &Manifest {
-        self.manifest()
-    }
-
-    fn root(&self) -> &Path {
-        self.root_directory()
-    }
-
-    fn is_global(&self) -> bool {
-        self.is_global()
-    }
-
-    fn kind(&self) -> PackageType {
-        PackageType::Package
-    }
-
-    fn get_package(&self) -> Option<&Package> {
-        Some(self)
-    }
-
-    fn get_frontmatter(&self) -> Option<&FrontMatterScript> {
-        None
-    }
-
-    fn as_a_local_identity(&self) -> QuackResult<Identity> {
-        self.as_a_local_identity()
-    }
-}
-
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct FrontMatterScript {
     path: PathBuf,
     original_schema: ManifestSchema,
@@ -203,36 +254,6 @@ impl FrontMatterScript {
     pub fn as_a_local_identity(&self) -> QuackResult<Identity> {
         let origin = Origin::for_local(self.script_file())?;
         Ok(Identity::new(self.manifest().name(), origin))
-    }
-}
-
-impl AsPackage for FrontMatterScript {
-    fn manifest(&self) -> &Manifest {
-        self.manifest()
-    }
-
-    fn root(&self) -> &Path {
-        self.script_file()
-    }
-
-    fn is_global(&self) -> bool {
-        false
-    }
-
-    fn kind(&self) -> PackageType {
-        PackageType::Frontmatter
-    }
-
-    fn get_package(&self) -> Option<&Package> {
-        None
-    }
-
-    fn get_frontmatter(&self) -> Option<&FrontMatterScript> {
-        Some(self)
-    }
-
-    fn as_a_local_identity(&self) -> QuackResult<Identity> {
-        self.as_a_local_identity()
     }
 }
 

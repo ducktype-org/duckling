@@ -3,9 +3,8 @@
 //! In general, this is [`Package`] + enabled features.
 use std::collections::HashSet;
 use std::fmt;
-use std::sync::Arc;
 
-use crate::quackpack::core::{AsPackage, FeatureName};
+use crate::quackpack::core::{AnyPackage, FeatureName};
 use crate::{QuackResult, QuackResultContext};
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
@@ -45,13 +44,13 @@ impl fmt::Display for PackageType {
 /// An abstraction over complete information required to compile a single package.
 pub struct CompilerPackage {
     enabled_features: HashSet<FeatureName>,
-    package: Arc<dyn AsPackage>,
+    package: AnyPackage,
     pkg_type: PackageType,
 }
 
 impl CompilerPackage {
     /// Create a new [`CompilerPackage`], with empty features.
-    pub fn new(package: Arc<dyn AsPackage>, pkg_type: PackageType) -> Self {
+    pub fn new(package: AnyPackage, pkg_type: PackageType) -> Self {
         Self {
             enabled_features: HashSet::new(),
             package,
@@ -114,8 +113,8 @@ impl CompilerPackage {
     }
 
     /// Get the underlying [`AsPackage`].
-    pub fn package(&self) -> &dyn AsPackage {
-        self.package.as_ref()
+    pub fn package(&self) -> &AnyPackage {
+        &self.package
     }
 
     /// Get the [`PackageType`] of this package.

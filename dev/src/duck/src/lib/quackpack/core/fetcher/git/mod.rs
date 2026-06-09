@@ -75,9 +75,8 @@ impl GitClient {
         let commit = repository.head()?.peel_to_commit()?.id();
         let package = PackageLoader::find_at_exact_directory(destination, ctx)
             .with_context(|| format!("git repository at `{}` is not a duckling package", url))?
-            .package()
-            .unwrap_package()
-            .clone();
+            .into_package()
+            .unwrap_package();
         Ok(GitCloneResponse {
             commit_hash: commit.to_string().into(),
             package,

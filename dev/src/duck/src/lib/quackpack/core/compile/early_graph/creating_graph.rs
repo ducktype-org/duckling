@@ -133,7 +133,7 @@ fn parse_dependency(
                 ),
             },
         )?;
-    let package = ctx.package_arc();
+    let package = ctx.into_package();
     Ok(CompilerPackage::new(package, pkg_type))
 }
 
@@ -150,7 +150,7 @@ impl EarlyGraph {
         let mut packages = HashMap::new();
         packages.insert(
             bcx.root_identity,
-            CompilerPackage::new(bcx.pcx.package_arc(), PackageType::RootPackage),
+            CompilerPackage::new(bcx.pcx.package().clone(), PackageType::RootPackage),
         );
         let direct_dependencies_names = bcx
             .pcx

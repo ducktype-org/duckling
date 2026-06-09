@@ -119,7 +119,7 @@ pub fn sync(
         let json = serde_json::to_string_pretty(venv.data().freeze())?;
         freeze_name(
             pcx.package()
-                .get_package()
+                .try_get_package()
                 .context_internal("expose_freezefile set on frontmatter pseudo package")?,
         )
         .write(json)?;
@@ -212,7 +212,7 @@ fn load_external_freezefile(
     }
     let freeze_path = freeze_name(
         pcx.package()
-            .get_package()
+            .try_get_package()
             .context_internal("expose_freezefile set on frontmatter pseudo package")?,
     );
     if !freeze_path.is_file() {
