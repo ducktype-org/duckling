@@ -92,7 +92,7 @@ def load_config(
 
     if SUBDIRS in config:
         config[SUBDIRS] = [
-            load_config(dir_with_config / subdir, parent=config)
+            load_config(dir_with_config / subdir, parent=config, user_values=user_values)
             for subdir in config[SUBDIRS]
         ]
 
