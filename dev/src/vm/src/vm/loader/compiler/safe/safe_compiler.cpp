@@ -13,8 +13,8 @@
 #include <vm/utils/interpret.hpp>
 
 #ifdef ENABLE_JIT
-#include <vm/core/safe/low_program/cfg/cf_graph.hpp>
-#include <vm/core/safe/low_program/cfg/loop_detector.hpp>
+#include <vm/core/safe/low_program/cfg/cf_analysis.hpp>
+#include <vm/core/safe/low_program/instruction.hpp>
 #endif
 
 namespace vm::loader::compiler::safe {
@@ -207,19 +207,17 @@ namespace vm::loader::compiler::safe {
 			}
 
 #ifdef ENABLE_JIT
-			std::cout << "Calling detectLoops for function " << function.name.str.strView() << "\n";
-			low::cf::FunctionLoopCFGs func_cfgs = low::cf::detectLoopsInFunction(bytecode);
-			std::vector<low::cf::ControlFlowGraph> cfgs = func_cfgs.cfgs;
-			usize function_entrypoint = low::cf::functionEntrypointOffset(bytecode);
-			std::cout << "Function entrypoint offset: " << function_entrypoint << "\n";
+			// Entrypoints have to live in LowVMProgramCopy, but we need a guard so the
+			// function-level entrypoint is never jumped to.
+			usize function_jit_entrypoint = low::cf::functionEntrypointOffset(bytecode);
+			std::cout << "Function entrypoint offset: " << function_jit_entrypoint << "\n";
+			bytecode[function_jit_entrypoint] = makeLowInstruction(low::MicroOpcode::nop, 0, 0);
 #endif
 			usize new_func_id = low_program.functions.insert(
 				low::LowFuncData{ .name = function.name,
 			                      .id   = 0,  // placeholder, replaced immediately
-			                      .id   = 0,  // placeholder, replaced immediately
 #ifdef ENABLE_JIT
-			                      .cfgs = cfgs,
-								  .jit_entrypoint_offset = function_entrypoint,
+								  .jit_entrypoint_offset = function_jit_entrypoint,
 #endif
 			                      .bc                  = std::move(bytecode),
 			                      .local_stack_size    = getIntTypeSize(ctx.local_stack_size),

@@ -329,9 +329,7 @@ namespace vm {
 		{
 			auto& jit_data         = thread.jit_data;
 			auto& current_func_obj = *frame->current_function;
-
 			auto  current_func_id  = current_func_obj.id;
-			auto  current_func_entrypoint = current_func_obj.jit_entrypoint_offset;
 			auto  instr_offset     = instr - current_func_obj.bc.data();
 			std::cout << "jitEntrypoint at offset " << instr_offset << " in function " << current_func_obj.name.strView() << "\n";
 
@@ -340,25 +338,22 @@ namespace vm {
 
 			jit::JitFuncData& my_data = jit_data[current_func_id];
 
-			if (my_data.func_ptr) {
+			if (my_data.compiled_code_ptrs[instr_offset]) {
 				// is already compiled
-				(*my_data.func_ptr)(&instr, &local_stack, &frame, &thread);
-				if (instr_offset != current_func_entrypoint) thread.executeOneStep();
-			} else if (0 < my_data.until_compilation) {
+				(*my_data.compiled_code_ptrs[instr_offset])(&instr, &local_stack, &frame, &thread);
+			} else if (0 < my_data.until_compilation[instr_offset]) {
 				// should be compiled later
-				--my_data.until_compilation;
+				--my_data.until_compilation[instr_offset];
+				thread.executeOneStep();
 			} else {
-				auto cfg_id = 0; // currently only full-function CFGs are supported
-				CORE_ASSERT(0 <= cfg_id && cfg_id < current_func_obj.cfgs.size(), "CFG id is out of bounds");
-
 				// should be compiled now
 				MRef<jit::JitOpFun> compiled = jit::compileLLVM(
-					current_func_obj.cfgs[cfg_id], current_func_obj.bc, current_func_obj.name
+					my_data.cfgs[instr_offset], current_func_obj.bc, current_func_obj.name
 				);
 				CORE_ASSERT(compiled, "Compiled function pointer shouldn't be nullptr");
-				my_data.func_ptr = compiled;
+				my_data.compiled_code_ptrs[instr_offset] = compiled;
 
-				(*my_data.func_ptr)(&instr, &local_stack, &frame, &thread);
+				(*my_data.compiled_code_ptrs[instr_offset])(&instr, &local_stack, &frame, &thread);
 			}
 		}
 		FUNCTION_CONT(0);

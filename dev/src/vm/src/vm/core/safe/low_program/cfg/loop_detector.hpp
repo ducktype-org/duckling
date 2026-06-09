@@ -4,7 +4,8 @@
  */
 #pragma once
 
-#include <vm/core/safe/low_program/cfg/cf_graph.hpp>
+#include "cf_graph.hpp"
+#include "../low_program.hpp"
 
 #include <limits>
 #include <vector>
@@ -15,15 +16,6 @@ namespace vm::low::cf {
 	class LoopDetector;
 
 	/**
-	 * @brief Aggregated function CFG and detected loop CFGs.
-	 * @details Index 0 contains the full function CFG; later entries contain loop subgraphs.
-	 */
-	struct FunctionLoopCFGs {
-		std::vector<BasicBlockID>     start_blocks;
-		std::vector<ControlFlowGraph> cfgs;
-	};
-
-	/**
 	 * @brief Detects loops in control-flow graphs using dominator relations.
 	 */
 	class LoopDetector {
@@ -32,19 +24,17 @@ namespace vm::low::cf {
 
 		/**
 		 * @brief Detects natural loops in a function CFG using dominator relations.
-		 * @return A function-level CFG at index 0 and loop CFGs at later indices.
+         * @param func Bytecode of the function to analyze.
+		 * @return CFG for each instruction in function opcode.
+		 * @details For function entrypoint, full function CFG is returned. For loop headers,
+		 * CFG of the loop is returned. For other instructions, empty CFG is returned.
 		 */
-		FunctionLoopCFGs findLoops(const MicroBytecode& bc) {
-			ControlFlowGraph cfg(bc);
-			FunctionLoopCFGs segs{};
+		std::vector<ControlFlowGraph> findLoops(const LowFuncData& func) {
+			std::vector<ControlFlowGraph> cfgs(func.bc.size());
+			usize function_entrypoint = func.jit_entrypoint_offset;
 
+			ControlFlowGraph cfg(func.bc);
 			std::cout << "Full function CFG:\n" << cfg.toString() << "\n\n";
-
-			// First instruction is JIT entry point for entire function so we add full CFG as the
-			// first segment (to avoid copying, we move it after creating all of the subgraphs,
-			// here we just add an empty placeholder).
-			segs.cfgs.push_back({});
-			segs.start_blocks.push_back(0);
 
 			calcPredecessors(cfg);
 			calcDominators(cfg);
@@ -79,18 +69,17 @@ namespace vm::low::cf {
 				}
 
 				if (stack.size() > 1) {
-					CORE_ASSERT(bid != 0, "Entry block cannot be a loop header");
+					CORE_ASSERT(bid != function_entrypoint, "Function entrypoint cannot be a loop header");
 					auto loop_cfg = cfg.subgraph(std::move(stack));
 					std::cout << "CFG of loop starting at block " << bid << ":\n" << loop_cfg.toString() << "\n\n";
-					segs.cfgs.push_back(std::move(loop_cfg));
-					segs.start_blocks.push_back(bid);
+					cfgs[bid] = std::move(loop_cfg);
 				}
 			}
 
 			// Move full function CFG here to avoid copying it before all the subgraphs are created.
-			segs.cfgs[0] = std::move(cfg);
-			std::cout << "Finished loop detection, total loops found: " << segs.cfgs.size() - 1 << "\n";
-			return segs;
+			cfgs[function_entrypoint] = std::move(cfg);
+			std::cout << "Finished loop detection.\n";
+			return cfgs;
 		}
 
 	private:
@@ -173,7 +162,7 @@ namespace vm::low::cf {
 		 * @brief Computes immediate dominator for each reachable block.
 		 * @param cfg Control-flow graph.
 		 * @note Assumes the only block without a predecessor is the entry block (id 0)
-		 * 		 and that every other block is reachable from it.
+		 * and that every other block is reachable from it.
 		 */
 		void calcImmediateDominators(const ControlFlowGraph& cfg) {
 			imm_dom.assign(cfg.size(), undefined);
@@ -248,16 +237,15 @@ namespace vm::low::cf {
 		}
 	};
 
-	inline FunctionLoopCFGs detectLoopsInFunction(const MicroBytecode& bc) {
+    /**
+     * @brief Detects natural loops in a function CFG using dominator relations.
+     * @param func Function data containing bytecode to analyze.
+     * @return CFG for each instruction in function opcode.
+     * @details For function entrypoint, full function CFG is returned. For loop headers,
+	 * CFG of the loop is returned. For other instructions, empty CFG is returned.
+     */
+	inline std::vector<ControlFlowGraph> detectLoopsInFunction(const LowFuncData& func) {
 		LoopDetector detector;
-		return detector.findLoops(bc);
-	}
-
-	inline usize functionEntrypointOffset(const MicroBytecode& bc) {
-		for (usize i = 0; i < bc.size(); ++i) {
-			if (getInstructionOpcode(bc[i]) == MicroOpcode::jitEntrypoint)
-				return i;
-		}
-		CORE_ASSERT(false, "Function entrypoint (JitEntrypoint opcode) not found in bytecode");
+		return detector.findLoops(func);
 	}
 }  // namespace vm::low::cf

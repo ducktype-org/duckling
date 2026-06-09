@@ -15,7 +15,6 @@
 
 #ifdef ENABLE_JIT
 #include <vm/core/safe/low_program/cfg/cf_graph.hpp>
-#include <vm/core/safe/low_program/cfg/loop_detector.hpp>
 #endif
 
 namespace vm::loader::compiler::safe {
@@ -32,7 +31,6 @@ namespace vm::low {
 		base::StrID name;
 		usize       id;
 #ifdef ENABLE_JIT
-		std::vector<cf::ControlFlowGraph> cfgs;
 		usize jit_entrypoint_offset;
 #endif
 		MicroBytecode bc;
