@@ -4,11 +4,11 @@
 
 namespace query::internal {
 
-	ActiveGraph::NodeHandle ActiveGraph::putNode(NodeID node_id, std::shared_ptr<query::Context> node_context_ref) {
+	ActiveGraph::NodeHandle ActiveGraph::putNode(NodeIDID node_id, std::shared_ptr<query::Context> node_context_ref) {
 		auto out = active_nodes.putGetHandle(
 			node_id,
 			{
-				.active_edge      = base::Optional<NodeID>(),
+				.active_edge      = base::Optional<NodeIDID>(),
 				.node_context_ref = std::move(node_context_ref),
 			}
 		);
@@ -16,7 +16,7 @@ namespace query::internal {
 		return out;
 	}
 
-	void ActiveGraph::removeNode(NodeID node_id) {
+	void ActiveGraph::removeNode(NodeIDID node_id) {
 		auto was_removed = active_nodes.erase(node_id);
 
 		if (was_removed)
@@ -27,7 +27,7 @@ namespace query::internal {
 
 	u64 ActiveGraph::size() const { return active_node_count.load(); }
 
-	void ActiveGraph::removeEdge(NodeID node_id) {
+	void ActiveGraph::removeEdge(NodeIDID node_id) {
 		// Note that callOn will panic here, on a node that does not exist, this is the expected
 		// behavior.
 		active_nodes.callOn(node_id, [](Ref<ActiveData> data_ref) {
@@ -49,7 +49,7 @@ namespace query::internal {
 		});
 	}
 
-	void ActiveGraph::setEdge(NodeID node_id, NodeID edge) {
+	void ActiveGraph::setEdge(NodeIDID node_id, NodeIDID edge) {
 		// Note that callOn will panic here, on a node that does not exist, this is the expected
 		// behavior.
 		active_nodes.callOn(node_id, [edge](Ref<ActiveData> data_ref) {
@@ -61,7 +61,7 @@ namespace query::internal {
 		});
 	}
 
-	void ActiveGraph::setEdgeByHandle(NodeHandle handle, NodeID edge) {
+	void ActiveGraph::setEdgeByHandle(NodeHandle handle, NodeIDID edge) {
 		active_nodes.callOnNodeHandle(handle, [edge](Ref<ActiveData> data_ref) {
 			CORE_ASSERT(
 				data_ref->active_edge.empty(),
@@ -71,27 +71,27 @@ namespace query::internal {
 		});
 	}
 
-	base::Optional<ActiveGraph::QueryCycle> ActiveGraph::cycleCheck(const NodeID initial_node_id
+	base::Optional<ActiveGraph::QueryCycle> ActiveGraph::cycleCheck(const NodeIDID initial_node_id
 	) const {
 		/***********************************************************\
 		| Cycle detection algorithm: Floyd's Tortoise and Hare.     |
 		\***********************************************************/
 
 		// Walks a single edge in the active graph.
-		auto walk = [this](NodeID node_id) -> base::Optional<NodeID> {
+		auto walk = [this](NodeIDID node_id) -> base::Optional<NodeIDID> {
 			auto edge = active_nodes.atMaybeCopy(node_id);
 			if (edge.empty()) return {};
 			return edge.value().active_edge;
 		};
 
-		auto double_walk = [walk](NodeID walk_zero) -> base::Optional<NodeID> {
+		auto double_walk = [walk](NodeIDID walk_zero) -> base::Optional<NodeIDID> {
 			auto walk_one = walk(walk_zero);
 			if (walk_one.empty()) return {};
 			return walk(walk_one.value());
 		};
 
-		base::Optional<NodeID> current_node_slow = initial_node_id;
-		base::Optional<NodeID> current_node_fast = initial_node_id;
+		base::Optional<NodeIDID> current_node_slow = initial_node_id;
+		base::Optional<NodeIDID> current_node_fast = initial_node_id;
 
 		while (true) {
 			current_node_slow = walk(current_node_slow.value());
@@ -129,9 +129,9 @@ namespace query::internal {
 
 		// current_node_slow is guaranteed to be on the cycle, as it is the meeting point of slow
 		// and fast pointers.
-		const NodeID cycle_start = current_node_slow.value();
+		const NodeIDID cycle_start = current_node_slow.value();
 
-		NodeID current_node = cycle_start;
+		NodeIDID current_node = cycle_start;
 
 		while (true) {
 			if (current_node == initial_node_id) is_the_initial_node_on_the_cycle = true;

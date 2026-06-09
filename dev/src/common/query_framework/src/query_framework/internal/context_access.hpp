@@ -11,7 +11,7 @@ namespace query::internal {
 	 * @brief Internal helper struct used to access context private state
 	 */
 	struct ContextAccess final {
-		static auto make(NodeID my_node) { return Context(my_node); }
+		static auto make(NodeIDID my_node) { return Context(my_node); }
 
 		/**
 		 * @brief Create a shared pointer to a new context
@@ -22,7 +22,7 @@ namespace query::internal {
 		 * @param my_node The node ID for the new context
 		 * @return Shared pointer to the new context
 		 */
-		static std::shared_ptr<Context> makeShared(NodeID my_node) {
+		static std::shared_ptr<Context> makeShared(NodeIDID my_node) {
 			return std::shared_ptr<Context>(new Context(my_node));
 		}
 

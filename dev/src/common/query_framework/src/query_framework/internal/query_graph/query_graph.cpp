@@ -21,10 +21,10 @@
 namespace query::internal {
 
 	QueryGraph::QueryGraph():
-		  node_deps(base::makeBox<concurrent::ConHashMap<NodeID, ChildrenData>>()),
-		  node_reverse_deps(base::makeBox<concurrent::ConHashMap<NodeID, std::vector<NodeID>>>()) {}
+		  node_deps(base::makeBox<concurrent::ConHashMap<NodeIDID, ChildrenData>>()),
+		  node_reverse_deps(base::makeBox<concurrent::ConHashMap<NodeIDID, std::vector<NodeIDID>>>()) {}
 
-	void QueryGraph::addDependency(NodeID from, NodeID to) {
+	void QueryGraph::addDependency(NodeIDID from, NodeIDID to) {
 		CORE_ASSERT(
 			node_deps->contains(from), "Node not found in dep graph, call the given query first."
 		);
@@ -36,8 +36,8 @@ namespace query::internal {
 			);
 			node_reverse_deps->maybePutAndUpdate(
 				to,
-				std::vector<NodeID>{},
-				[from](Ref<std::vector<NodeID>> deps) { deps->emplace_back(from); }
+				std::vector<NodeIDID>{},
+				[from](Ref<std::vector<NodeIDID>> deps) { deps->emplace_back(from); }
 			);
 		}
 
@@ -46,14 +46,14 @@ namespace query::internal {
 		children->push_back(to);
 	}
 
-	std::vector<NodeID> QueryGraph::getNodeDeps(internal::NodeID node_id) const {
+	std::vector<NodeIDID> QueryGraph::getNodeDeps(internal::NodeIDID node_id) const {
 		CORE_ASSERT(
 			node_deps->contains(node_id), "Node not found in dep graph, call the given query first."
 		);
 
 		// some simple bfs for now:
-		std::set<NodeID>   visited;
-		std::queue<NodeID> queue;
+		std::set<NodeIDID>   visited;
+		std::queue<NodeIDID> queue;
 		queue.push(node_id);
 
 		while (!queue.empty()) {
@@ -66,9 +66,9 @@ namespace query::internal {
 			CORE_ASSERT(
 				node_deps->contains(visited_node_id),
 				"Node not found in dep graph. Node ID: ",
-				visited_node_id.q_id.getData().name,
+				visited_node_id.getID().q_id.getData().name,
 				" Key: ",
-				visited_node_id.hash.val.toStringHex()
+				visited_node_id.getID().hash.val.toStringHex()
 			);
 
 			const auto node            = node_deps->atMaybe(visited_node_id).value();
@@ -83,16 +83,16 @@ namespace query::internal {
 		return { visited.begin(), visited.end() };
 	}
 
-	std::vector<NodeID> QueryGraph::getNodeDepsFiltered(
-		internal::NodeID node_id, QueryID dependency_id
+	std::vector<NodeIDID> QueryGraph::getNodeDepsFiltered(
+		internal::NodeIDID node_id, QueryID dependency_id
 	) const {
-		return getNodeDeps(node_id) | std::views::filter([dependency_id](const NodeID& id) {
-				   return id.q_id == dependency_id;
+		return getNodeDeps(node_id) | std::views::filter([dependency_id](const NodeIDID& id) {
+				   return id.getID().q_id == dependency_id;
 			   })
-		     | std::ranges::to<std::vector<NodeID>>();
+		     | std::ranges::to<std::vector<NodeIDID>>();
 	}
 
-	const std::vector<NodeID>& QueryGraph::getDirectDependencies(const NodeID& node_id) const {
+	const std::vector<NodeIDID>& QueryGraph::getDirectDependencies(const NodeIDID& node_id) const {
 		CORE_ASSERT(
 			node_deps->contains(node_id),
 			"Node not found in dep graph when requesting direct dependencies."
@@ -106,7 +106,7 @@ namespace query::internal {
 
 	void QueryGraph::debugPrint(std::ostream& out) const {
 		out << "Dep Graph: \n";
-		std::vector<NodeID> all_nodes;
+		std::vector<NodeIDID> all_nodes;
 		for (const auto& [k, _]: *node_deps) all_nodes.push_back(k);
 		debugPrintNodes(all_nodes, out);
 	}
@@ -115,11 +115,11 @@ namespace query::internal {
 		out << "Dep Graph: \n";
 		out << node_deps->size() << "\n";
 
-		std::map<NodeID, u64> index;
+		std::map<NodeIDID, u64> index;
 		u64                   id = 0;
 		for (auto& [k, _]: *node_deps) {
 			index[k] = id++;
-			out << id << " " << k.q_id.getData().name << "\n";
+			out << id << " " << k.getID().q_id.getData().name << "\n";
 		}
 
 		for (auto& [k, v]: *node_deps) {
@@ -128,18 +128,21 @@ namespace query::internal {
 		}
 	}
 
-	void QueryGraph::debugPrintNodes(const std::vector<NodeID>& nodes, std::ostream& out) const {
+	void QueryGraph::debugPrintNodes(const std::vector<NodeIDID>& nodes, std::ostream& out) const {
 		std::string spacing(25, ' ');
-		for (const auto& n: nodes) {
-			auto        children_data   = node_deps->atMaybe(n).value();
+		for (const auto& n_id: nodes) {
+			auto n = n_id.getID();
+
+			auto        children_data   = node_deps->atMaybe(n_id).value();
 			auto        children_holder = children_data->getHolder();
 			const auto& node_data_entry = *children_holder;
 			out << "    > Query - " << std::setw(5) << std::left;
 			out << n.q_id.asInt() << "\"" << n.q_id.getData().name << "\"";
 			out << " Key " << n.hash.val << " :=>\n";
 			for (const auto& dep: node_data_entry) {
-				out << spacing << "(Q: \"" << dep.q_id.getData().name << "\", "
-					<< "K: " << dep.hash.val << "),\n";
+				auto dep_id = dep.getID();
+				out << spacing << "(Q: \"" << dep_id.q_id.getData().name << "\", "
+					<< "K: " << dep_id.hash.val << "),\n";
 			}
 			if (!node_data_entry.empty()) out << '\n';
 		}
@@ -173,9 +176,9 @@ namespace query::internal {
 	}
 
 	std::vector<byte> QueryGraph::serialize() const {
-		std::vector<NodeID> nodes;
+		std::vector<NodeIDID> nodes;
 		nodes.reserve(node_deps->size());
-		base::HashMap<NodeID, usize> node_to_index;
+		base::HashMap<NodeIDID, usize> node_to_index;
 		node_to_index.reserve(node_deps->size());
 
 		usize next_index = 0;
@@ -211,7 +214,7 @@ namespace query::internal {
 		using QIDType = decltype(QueryID::val);
 
 		constexpr usize NODE_ID_SIZE
-			= sizeof(QIDType) + sizeof(HVType);  // Size of NodeID (q_id and hash)
+			= sizeof(QIDType) + sizeof(HVType);  // Size of NodeIDID (q_id and hash)
 
 		auto& nodes     = reduced_graph.nodes;
 		auto& adjacency = reduced_graph.adjacency;
@@ -236,9 +239,10 @@ namespace query::internal {
 			buffer.insert(buffer.end(), serialized_value.begin(), serialized_value.end());
 		};
 
-		auto write_node_id = [&](const NodeID& node) -> void {
-			write(node.q_id.val);
-			write(node.hash.val.data);
+		auto write_node_id = [&](const NodeIDID& node) -> void {
+			auto full_id = node.getID();
+			write(full_id.q_id.val);
+			write(full_id.hash.val.data);
 		};
 
 		// Serialize the size of the node list
@@ -258,9 +262,9 @@ namespace query::internal {
 	}
 
 	QueryGraph QueryGraph::deserialize(
-		std::span<const byte> data, std::function<NodeID(NodeID)> node_mapper
+		std::span<const byte> data, std::function<NodeIDID(NodeIDID)> node_mapper
 	) {
-		if (!node_mapper) node_mapper = [](NodeID node) { return node; };
+		if (!node_mapper) node_mapper = [](NodeIDID node) { return node; };
 		using HType   = decltype(NodeID::hash.val);
 		using HVType  = decltype(NodeID::hash.val.data);
 		using QIDType = decltype(QueryID::val);
@@ -284,25 +288,27 @@ namespace query::internal {
 			offset += sizeof(T);
 		};
 
-		auto read_node_id = [&]() -> NodeID {
+		auto read_node_id = [&]() -> NodeIDID {
 			QIDType q_id = 0;
 			read(q_id);
 
 			HVType hash;
 			read(hash);
 
-			return NodeID(QueryID(q_id), { HType(hash) });
+
+			// CREATION HERE
+			return NodeIDID{NodeID(QueryID(q_id), { HType(hash) })};
 		};
 
 		// Deserialize the size of the node list
 		usize map_size = 0;
 		read(map_size);
 
-		std::vector<NodeID> nodes;
+		std::vector<NodeIDID> nodes;
 		nodes.reserve(map_size);
 		// Deserialize each node entry
 		for (usize i = 0; i < map_size; ++i) {
-			NodeID raw_node = read_node_id();
+			NodeIDID raw_node = read_node_id();
 			nodes.emplace_back(node_mapper(raw_node));
 		}
 
@@ -311,7 +317,7 @@ namespace query::internal {
 			usize deps_size = 0;
 			read(deps_size);
 
-			std::vector<NodeID> children;
+			std::vector<NodeIDID> children;
 			children.reserve(deps_size);
 
 			// Deserialize each dependency index
@@ -335,14 +341,14 @@ namespace query::internal {
 		return graph;
 	}
 
-	std::vector<NodeID> QueryGraph::getAllNodes() const {
-		std::vector<NodeID> nodes;
+	std::vector<NodeIDID> QueryGraph::getAllNodes() const {
+		std::vector<NodeIDID> nodes;
 		nodes.reserve(node_deps->size());
 		for (const auto& [node, _]: *node_deps) nodes.push_back(node);
 		return nodes;
 	}
 
-	bool QueryGraph::hasDependencies(const NodeID& node_id) const {
+	bool QueryGraph::hasDependencies(const NodeIDID& node_id) const {
 		auto it = node_deps->atMaybe(node_id);
 		if (!it.has_value()) return false;
 		auto& deps        = *it.value();
@@ -350,7 +356,7 @@ namespace query::internal {
 		return !deps_holder->empty();
 	}
 
-	QueryGraph::Dependents QueryGraph::getDependentNodes(const std::vector<NodeID>& start_nodes
+	QueryGraph::Dependents QueryGraph::getDependentNodes(const std::vector<NodeIDID>& start_nodes
 	) const {
 		CORE_ASSERT(
 			getTrackReverseGraph(),
@@ -361,12 +367,12 @@ namespace query::internal {
 			PreVisit,
 			PostVisit,
 		};
-		std::vector<std::pair<NodeID, State>> stack;
+		std::vector<std::pair<NodeIDID, State>> stack;
 		stack.reserve(start_nodes.size());
 		for (auto& start_node: start_nodes) stack.emplace_back(start_node, State::PreVisit);
 
-		std::unordered_set<NodeID> visited;
-		std::vector<NodeID>        result;
+		std::unordered_set<NodeIDID> visited;
+		std::vector<NodeIDID>        result;
 
 		while (not stack.empty()) {
 			auto [node, state] = stack.back();

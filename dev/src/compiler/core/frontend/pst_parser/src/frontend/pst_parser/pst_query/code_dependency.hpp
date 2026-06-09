@@ -13,8 +13,9 @@ namespace pst {
 
 	template<typename Query>
 	std::vector<dia::SourcePosition> queryPositionDependencies(typename Query::QKey key) {
-		query::internal::NodeID node_id = query::internal::makeNodeID<Query>(key);
-		return queryPositionDependencies(node_id);
+		CORE_UNREACHABLE();
+		// query::internal::NodeID node_id = query::internal::makeNodeID<Query>(key);
+		// return queryPositionDependencies(node_id);
 	}
 
 	/**
@@ -26,7 +27,8 @@ namespace pst {
 
 	template<typename Query>
 	std::vector<CRef<lexer::Token>> queryTokenDependencies(typename Query::QKey key) {
-		query::internal::NodeID node_id = query::internal::makeNodeID<Query>(key);
-		return queryTokenDependencies(node_id);
+		CORE_UNREACHABLE();
+		// query::internal::NodeID node_id = query::internal::makeNodeID<Query>(key);
+		// return queryTokenDependencies(node_id);
 	}
 }

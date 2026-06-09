@@ -124,7 +124,7 @@ namespace query::internal {
 		return query_graph;
 	}
 
-	void QueryState::addGraphNode(NodeID node_id) {
+	void QueryState::addGraphNode(NodeIDID node_id) {
 		if (query::enable_query_graph) {
 			CORE_ASSERT(
 				!query_graph.node_deps->contains(node_id), "Node already exists in the graph"
@@ -133,14 +133,14 @@ namespace query::internal {
 		}
 	}
 
-	void QueryState::addSideInputNode(NodeID node_id) {
+	void QueryState::addSideInputNode(NodeIDID node_id) {
 		if (query::enable_query_graph) {
-			CORE_ASSERT(node_id.q_id.getData().isInputQuery(), "Node is not an input query");
+			CORE_ASSERT(node_id.getID().q_id.getData().isInputQuery(), "Node is not an input query");
 			query_graph.node_deps->maybePut(node_id, QueryGraph::ChildrenData{});
 		}
 	}
 
-	void QueryState::addDependency(NodeID from, NodeID to) {
+	void QueryState::addDependency(NodeIDID from, NodeIDID to) {
 		if (query::enable_query_graph) query_graph.addDependency(from, to);
 	}
 
@@ -158,7 +158,7 @@ namespace query::internal {
 
 	u64 QueryState::activeQueryCount() const { return active_graph.size(); }
 
-	void QueryState::setPrevNodeColor(internal::NodeID node, PrevColor color) {
+	void QueryState::setPrevNodeColor(internal::NodeIDID node, PrevColor color) {
 		CORE_ASSERT(previous.has_value(), "PreviousCompilation is not set when setting node color");
 		CORE_ASSERT(
 			!previous->node_colors->contains(node),
@@ -167,7 +167,7 @@ namespace query::internal {
 		previous->node_colors->put(node, color);
 	}
 
-	CRef<concurrent::ConHashMap<NodeID, QueryState::PrevColor>> QueryState::getPreviousNodeColors(
+	CRef<concurrent::ConHashMap<NodeIDID, QueryState::PrevColor>> QueryState::getPreviousNodeColors(
 	) const {
 		CORE_ASSERT(
 			previous.has_value(), "PreviousCompilation is not set when accessing node colors"
@@ -205,7 +205,7 @@ namespace query::internal {
 		return CRef<MetadataStorage>(&previous->metadata.value());
 	}
 
-	QueryState::PrevColor QueryState::redGreenSweep(NodeID start_node) {
+	QueryState::PrevColor QueryState::redGreenSweep(NodeIDID start_node) {
 		// @TODO: #2007 Remove this mutex and make it truly thread-safe.
 		static std::mutex red_green_sweep_mutex;
 
@@ -233,13 +233,13 @@ namespace query::internal {
 		// A node becomes Green iff all its direct dependencies are Green; otherwise Red.
 		// Leaf nodes without an assigned color are marked Green by default.
 		struct Frame {
-			NodeID node;
+			NodeIDID node;
 			usize  idx;  // next child index to process
 		};
 
 		VectorStack<Frame> stack;
 
-		IF_BUILD_TYPE_DEV(std::unordered_set<NodeID> in_stack);
+		IF_BUILD_TYPE_DEV(std::unordered_set<NodeIDID> in_stack);
 
 		stack.push(Frame{ .node = start_node, .idx = 0 });
 
@@ -279,7 +279,7 @@ namespace query::internal {
 
 			// Process children one by one ensuring post-order coloring
 			if (frame.idx < deps_holder->size()) {
-				const NodeID& child = (*deps_holder)[frame.idx++];
+				const NodeIDID& child = (*deps_holder)[frame.idx++];
 
 				// If child's color is known already, continue to next child
 				// This is necessary for merging and sweeping algorithm work concurrently
@@ -322,15 +322,18 @@ namespace query::internal {
 
 	bool dummyEraseFunction(QueryStableHash) { return false; }
 
-	NodeID QueryState::remapUnstableOrUnregisteredNodes(NodeID node) {
+	NodeIDID QueryState::remapUnstableOrUnregisteredNodes(NodeIDID node) {
 		static base::VectorMap<QueryID, QueryID> old_to_new;
 
-		if (node.q_id.registered() && node.q_id.getData().usesStableHashing()) return node;
+		auto node_full_id = node.getID();
+
+		if (node_full_id.q_id.registered() && node_full_id.q_id.getData().usesStableHashing()) return node;
 
 		// Here the QueryID is either unregistered or uses unstable hashing, so we do remapping
 
-		if (auto existing = old_to_new.atMaybe(node.q_id); existing.has_value())
-			return { **existing, node.hash };
+		// CREATION HERE:
+		if (auto existing = old_to_new.atMaybe(node_full_id.q_id); existing.has_value())
+			return NodeIDID{NodeID{ **existing, node_full_id.hash }};
 
 
 		QueryData dummy_query_data(
@@ -340,11 +343,11 @@ namespace query::internal {
 			{ .erase_function = dummyEraseFunction }
 		);
 		QueryID new_qid = registerQuery(dummy_query_data);
-		old_to_new.put(node.q_id, new_qid);
-		return { new_qid, node.hash };
+		old_to_new.put(node_full_id.q_id, new_qid);
+		return NodeIDID{NodeID{ new_qid, node_full_id.hash }};
 	}
 
-	void QueryState::mergePreviousGraphIntoCurrentGraph(NodeID start_node) {
+	void QueryState::mergePreviousGraphIntoCurrentGraph(NodeIDID start_node) {
 		// @TODO: #2007 Remove this mutex and make it trully thread-safe.
 		static std::mutex merge_mutex;
 
@@ -357,7 +360,7 @@ namespace query::internal {
 		// NodeID with unstable hash might have diferent ID and graph in previous graph
 		// So merging from such NodeID is not allowed
 		CORE_ASSERT(
-			start_node.q_id.getData().usesStableHashing(),
+			start_node.getID().q_id.getData().usesStableHashing(),
 			"Cannot merge previous graph starting from QueryID that does not have stable hash"
 		);
 
@@ -374,7 +377,7 @@ namespace query::internal {
 
 		// Iterative DFS to copy nodes and their dependencies from previous graph
 		struct Frame {
-			NodeID node;
+			NodeIDID node;
 		};
 
 		std::vector<Frame> stack;
@@ -385,7 +388,7 @@ namespace query::internal {
 			const auto frame = stack.back();
 			stack.pop_back();
 
-			const NodeID node = frame.node;
+			const NodeIDID node = frame.node;
 
 			// Node may already have been merged if it was scheduled multiple times (e.g. duplicate
 			// deps) This can happen when some Node has multiple parents in the previous graph
@@ -426,7 +429,7 @@ namespace query::internal {
 			auto current_deps_holder = key_value_pair->value.getHolder();
 
 			// Merge metadata for nodes with preserve_in_graph = true
-			if (node.q_id.getData().tags.preserve_in_graph && previous->metadata.has_value()) {
+			if (node.getID().q_id.getData().tags.preserve_in_graph && previous->metadata.has_value()) {
 				auto extracted_opt = previous->metadata->extract(node);
 				if (extracted_opt.has_value())
 					metadata_storage.emplace(std::move(extracted_opt).value());
@@ -995,14 +998,14 @@ namespace query::internal {
 		);
 	}
 
-	void QueryState::clearDiagnosticForNode(NodeID node_id) { diagnostic_loggers.erase(node_id); }
+	void QueryState::clearDiagnosticForNode(NodeIDID node_id) { diagnostic_loggers.erase(node_id); }
 
-	CRef<concurrent::ConHashMap<NodeID, Box<dia_int::Logger>>> QueryState::getDiagnosticLoggers(
+	CRef<concurrent::ConHashMap<NodeIDID, Box<dia_int::Logger>>> QueryState::getDiagnosticLoggers(
 	) const {
 		return &diagnostic_loggers;
 	}
 
-	base::Optional<CRef<dia_int::Logger>> QueryState::getDiagnosticForNode(NodeID node_id) const {
+	base::Optional<CRef<dia_int::Logger>> QueryState::getDiagnosticForNode(NodeIDID node_id) const {
 		if (auto it = diagnostic_loggers.atMaybe(node_id); it.has_value()) return it.value()->ref();
 		return {};
 	}

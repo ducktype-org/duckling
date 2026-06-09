@@ -48,7 +48,7 @@ namespace query {
 
 	Box<dia_int::Logger> Context::dumpToOneLoggerAndClear() {
 		Box<dia_int::Logger>          combined_logger = makeBox<dia_int::Logger>();
-		std::vector<internal::NodeID> node_ids;
+		std::vector<internal::NodeIDID> node_ids;
 		for (auto& [node, logger]: *main_query_state.getDiagnosticLoggers()) {
 			combined_logger->logFromLogger(*logger);
 			node_ids.push_back(node);

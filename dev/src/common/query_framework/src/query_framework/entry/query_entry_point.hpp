@@ -31,14 +31,14 @@ namespace query {
 	 */
 	class EntryTaskHandle final {
 	public:
-		/** @brief Returns the NodeID of the scheduled task. */
-		[[nodiscard]] internal::NodeID getID() const { return task_id; }
+		/** @brief Returns the NodeIDID of the scheduled task. */
+		[[nodiscard]] internal::NodeIDID getID() const { return task_id; }
 
 	private:
-		EntryTaskHandle(internal::TaskPool& pool, internal::NodeID id): pool(&pool), task_id(id) {}
+		EntryTaskHandle(internal::TaskPool& pool, internal::NodeIDID id): pool(&pool), task_id(id) {}
 
 		base::Ref<internal::TaskPool> pool;
-		internal::NodeID              task_id;
+		internal::NodeIDID              task_id;
 
 		friend struct internal::EntryPointHelper;
 	};

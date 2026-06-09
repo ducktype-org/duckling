@@ -7,6 +7,7 @@
 #include <base/collections/optional.hpp>
 
 #include <query_framework/context/context_fd.hpp>
+#include <query_framework/internal/node_id_id.hpp>
 
 #include <memory>
 
@@ -30,7 +31,7 @@ namespace query::internal {
 		 */
 		struct QueryCycle final {
 			struct NodeCycleInfo final {
-				NodeID                          node_id;
+				NodeIDID                          node_id;
 				std::shared_ptr<query::Context> node_context_ref;
 			};
 
@@ -43,7 +44,7 @@ namespace query::internal {
 		 * Helper struct representing data stored for each active node in the graph.
 		 */
 		struct ActiveData final {
-			base::Optional<NodeID> active_edge;
+			base::Optional<NodeIDID> active_edge;
 
 			std::shared_ptr<query::Context> node_context_ref;
 
@@ -53,7 +54,7 @@ namespace query::internal {
 			// We might want to store Ref<void> – maybe we need custom base type?.
 		};
 
-		concurrent::ConHashMap<NodeID, ActiveData> active_nodes;
+		concurrent::ConHashMap<NodeIDID, ActiveData> active_nodes;
 		std::atomic<u64>                           active_node_count = 0;
 
 
@@ -64,12 +65,12 @@ namespace query::internal {
 		 * Adds a node to the active query graph.
 		 * Panics if node is already present.
 		 */
-		NodeHandle putNode(NodeID node_id, std::shared_ptr<query::Context> node_context_ref);
+		NodeHandle putNode(NodeIDID node_id, std::shared_ptr<query::Context> node_context_ref);
 
 		/**
 		 * Removes a node from the active query graph.
 		 */
-		void removeNode(NodeID node_id);
+		void removeNode(NodeIDID node_id);
 
 		/**
 		 * @return Current size of the active graph.
@@ -80,7 +81,7 @@ namespace query::internal {
 		 */
 		u64 size() const;
 
-		// NodeHandle getNodeHandle(NodeID node_id) {
+		// NodeHandle getNodeHandle(NodeIDID node_id) {
 		// 	return active_nodes.getNodeHandle(node_id);
 		// }
 
@@ -88,16 +89,16 @@ namespace query::internal {
 		/**
 		 * Removes active edge of a given node.
 		 */
-		void removeEdge(NodeID node_id);
+		void removeEdge(NodeIDID node_id);
 
 		void removeEdgeByHandle(NodeHandle handle);
 
 		/**
 		 * Sets new active edge of a given node.
 		 */
-		void setEdge(NodeID node_id, NodeID edge);
+		void setEdge(NodeIDID node_id, NodeIDID edge);
 
-		void setEdgeByHandle(NodeHandle handle, NodeID edge);
+		void setEdgeByHandle(NodeHandle handle, NodeIDID edge);
 
 		/**
 		 * Walks the given node, until there is a cycle, or it can't walk no more.
@@ -108,6 +109,6 @@ namespace query::internal {
 		 *       It might seem not necessary, since we only detect cycles that node_id is part of,
 		 *       but it is still needed to prevent infinite looping on actual cycles.
 		 */
-		base::Optional<QueryCycle> cycleCheck(const NodeID initial_node_id) const;
+		base::Optional<QueryCycle> cycleCheck(const NodeIDID initial_node_id) const;
 	};
 }

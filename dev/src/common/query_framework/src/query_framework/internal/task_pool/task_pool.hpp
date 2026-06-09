@@ -11,6 +11,7 @@
 #include <base/types/ints.hpp>
 
 #include <query_framework/internal/query_graph/node_id.hpp>
+#include <query_framework/internal/node_id_id.hpp>
 
 #include <atomic>
 #include <concepts>
@@ -50,13 +51,13 @@ namespace query::internal {
 	public:
 		explicit TaskHandle(TaskPool& pool, NodeID id): pool(pool), task_id(id) {}
 
-		[[nodiscard]] NodeID getID() const { return task_id; }
+		[[nodiscard]] NodeIDID getID() const { return task_id; }
 
 		void await();
 
 	private:
 		TaskPool& pool;
-		NodeID    task_id;
+		NodeIDID    task_id;
 	};
 
 	/**

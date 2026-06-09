@@ -18,6 +18,8 @@
 #include <query_framework/internal/query_graph/query_state.hpp>
 #include <query_framework/internal/query_metadata/metadata_storage.hpp>
 
+#include <query_framework/internal/node_id_id.hpp>
+
 #include <atomic>
 
 namespace query {
@@ -49,7 +51,7 @@ namespace query {
 	 */
 	struct Context final {
 	private:
-		internal::NodeID my_node;
+		internal::NodeIDID my_node;
 		base::Optional<internal::ActiveGraph::NodeHandle> my_active_graph_handle;
 		
 		bool             active = true;
@@ -69,7 +71,7 @@ namespace query {
 		 */
 		std::atomic<bool> is_cyclic_node = false;
 
-		Context(internal::NodeID my_node):
+		Context(internal::NodeIDID my_node):
 			my_node(my_node)
 			// my_active_graph_handle(main_query_state.getActiveGraph()->getNodeHandle(my_node))
 		{}
@@ -95,8 +97,8 @@ namespace query {
 		 */
 		struct QueryGraphHandler final {
 		private:
-			internal::NodeID caller;
-			internal::NodeID callee;
+			internal::NodeIDID caller;
+			internal::NodeIDID callee;
 			bool             enable_active_graph_operations;
 			CRef<Context>    this_context_ref;
 		
@@ -115,8 +117,8 @@ namespace query {
 
 			QueryGraphHandler(
 				Context&         this_context,
-				internal::NodeID caller,
-				internal::NodeID callee,
+				internal::NodeIDID caller,
+				internal::NodeIDID callee,
 				bool             active_graph_operations
 			):
 				  caller(caller),
@@ -170,9 +172,9 @@ namespace query {
 						this_context.logInt(makeBox<dia_int::PlaceholderError>(
 							base::strConcat(
 								"Query cycle detected involving query node:",
-								caller.q_id.asInt(),
+								caller.getID().q_id.asInt(),
 								".",
-								caller.hash.val.toStringHex()
+								caller.getID().hash.val.toStringHex()
 							),
 							base::strConcat(
 								"The cycle:\n",
@@ -182,9 +184,9 @@ namespace query {
 									for (const auto& node_info: cycle.cycle_nodes) {
 										result += "  - Query node ";
 										result += base::strConcat(
-											node_info.node_id.q_id.getData().name,
+											node_info.node_id.getID().q_id.getData().name,
 											".",
-											node_info.node_id.hash.val.toStringHex(),
+											node_info.node_id.getID().hash.val.toStringHex(),
 											"\n"
 										);
 									}
@@ -240,22 +242,23 @@ namespace query {
 		auto query(const typename OthQuery::QKey& key) -> decltype(auto) {
 			assertActive();
 
-			internal::NodeID dep_id = internal::makeNodeID<OthQuery>(key);
+			internal::NodeID dep_id = internal::makeFullNodeID<OthQuery>(key);
+			internal::NodeIDID dep_id_id{ dep_id };
 
 			if constexpr (OthQuery::QUERY_DATA.isInputQuery()) {
-				QueryGraphHandler graph_handler(*this, my_node, dep_id, false);
+				QueryGraphHandler graph_handler(*this, my_node, dep_id_id, false);
 				this->active = false;
 				defer({ this->active = true; });
 
 				return OthQuery::internal_query(key);
 			} else {
-				QueryGraphHandler graph_handler(*this, my_node, dep_id, true);
+				QueryGraphHandler graph_handler(*this, my_node, dep_id_id, true);
 				this->active = false;
 				defer({ this->active = true; });
 
 				// note that this will block, until the task is completed
 				main_query_state.getTaskPool()->query(internal::Task{
-					dep_id, [key](concurrent::worker::WRef) { OthQuery::internal_query(key); } });
+					dep_id_id, [key](concurrent::worker::WRef) { OthQuery::internal_query(key); } });
 
 
 				// We would like to throw here, "after the return",
@@ -333,10 +336,10 @@ namespace query {
 
 			// Check that the query has preserve_in_graph = true
 			CORE_ASSERT(
-				my_node.q_id.getData().tags.preserve_in_graph,
+				my_node.getID().q_id.getData().tags.preserve_in_graph,
 				"Cannot add metadata to query without preserve_in_graph = true. "
 				"Query: "
-					+ std::string(my_node.q_id.getData().name)
+					+ std::string(my_node.getID().q_id.getData().name)
 			);
 
 			main_query_state.addMetadataInternal<MetadataT>(my_node, std::forward<Args>(args)...);

@@ -34,7 +34,7 @@ namespace query::internal {
 
 		struct ChildrenData final {
 		private:
-			std::vector<NodeID> children;
+			std::vector<NodeIDID> children;
 			IF_BUILD_TYPE_DEV(mutable base::Box<concurrent::AssertLock> lock
 			                  = base::makeBox<concurrent::AssertLock>();  // protects children vector
 			)
@@ -48,7 +48,7 @@ namespace query::internal {
 			ChildrenData& operator=(const ChildrenData&) = delete;
 			ChildrenData& operator=(ChildrenData&&)      = default;
 
-			ChildrenData(std::vector<NodeID>&& children): children(std::move(children)) {}
+			ChildrenData(std::vector<NodeIDID>&& children): children(std::move(children)) {}
 
 			template<class T>
 			friend struct ChildrenDataHolderImpl;
@@ -103,15 +103,15 @@ namespace query::internal {
 
 			auto operator*() -> std::conditional_t<
 				std::is_const_v<T>,
-				const std::vector<NodeID>&,
-				std::vector<NodeID>&> {
+				const std::vector<NodeIDID>&,
+				std::vector<NodeIDID>&> {
 				return children->children;
 			}
 
 			auto operator->() -> std::conditional_t<
 				std::is_const_v<T>,
-				const std::vector<NodeID>*,
-				std::vector<NodeID>*> {
+				const std::vector<NodeIDID>*,
+				std::vector<NodeIDID>*> {
 				return &children->children;
 			}
 
@@ -159,7 +159,7 @@ namespace query::internal {
 			}
 		};
 
-		base::Box<concurrent::ConHashMap<NodeID, ChildrenData>> node_deps;
+		base::Box<concurrent::ConHashMap<NodeIDID, ChildrenData>> node_deps;
 
 		/**
 		 * Graph that tracks the reversed relation to `node_deps`.
@@ -170,7 +170,7 @@ namespace query::internal {
 		 * Does not take part in any of the additional logic like serialization
 		 * or deserialization.
 		 */
-		base::Box<concurrent::ConHashMap<NodeID, std::vector<NodeID>>> node_reverse_deps;
+		base::Box<concurrent::ConHashMap<NodeIDID, std::vector<NodeIDID>>> node_reverse_deps;
 
 		/*
 		 * for direct access to node_deps
@@ -181,14 +181,14 @@ namespace query::internal {
 		 * @param nodes Vector of NodeIDs to print.
 		 * @param out Output stream to print to.
 		 */
-		void debugPrintNodes(const std::vector<NodeID>& nodes, std::ostream& out) const;
+		void debugPrintNodes(const std::vector<NodeIDID>& nodes, std::ostream& out) const;
 
 	public:
 		/**
 		 * @brief Reduced graph representation used for compact serialization.
 		 */
 		struct ReducedGraphData final {
-			std::vector<NodeID>             nodes;
+			std::vector<NodeIDID>             nodes;
 			std::vector<std::vector<usize>> adjacency;
 		};
 
@@ -202,19 +202,19 @@ namespace query::internal {
 		 * @brief Marks that given query depends on another query.
 		 * Note that @p to does not need to be in the graph at the moment of calling this function.
 		 */
-		void addDependency(internal::NodeID from, internal::NodeID to);
+		void addDependency(internal::NodeIDID from, internal::NodeIDID to);
 
 		/**
 		 * Returns all dependencies of a @p node_id.
 		 */
 		[[nodiscard]]
-		std::vector<NodeID> getNodeDeps(internal::NodeID node_id) const;
+		std::vector<NodeIDID> getNodeDeps(internal::NodeIDID node_id) const;
 
 		/**
 		 * Returns all dependencies of a @p node_id of type @p dependency_id.
 		 */
 		[[nodiscard]]
-		std::vector<NodeID> getNodeDepsFiltered(internal::NodeID node_id, QueryID dependency_id)
+		std::vector<NodeIDID> getNodeDepsFiltered(internal::NodeIDID node_id, QueryID dependency_id)
 			const;
 
 		/**
@@ -222,7 +222,7 @@ namespace query::internal {
 		 * @note This is not thread-safe and should only be used for debugging/testing purposes.
 		 *       Access to the return reference can race with other operations.
 		 */
-		[[nodiscard]] const std::vector<NodeID>& getDirectDependencies(const NodeID& node_id) const;
+		[[nodiscard]] const std::vector<NodeIDID>& getDirectDependencies(const NodeIDID& node_id) const;
 
 		void debugPrint(std::ostream& out) const;
 		void debugPrintForDrawing(std::ostream& out) const;
@@ -232,7 +232,7 @@ namespace query::internal {
 		 */
 		template<class Query>
 		auto getNodeDeps(typename Query::QKey key) const {
-			internal::NodeID node_id = makeNodeID<Query>(key);
+			internal::NodeIDID node_id = makeNodeID<Query>(key);
 			return this->getNodeDeps(node_id);
 		}
 
@@ -241,7 +241,7 @@ namespace query::internal {
 		 */
 		template<class Query>
 		auto getNodeDepsFiltered(typename Query::QKey key, internal::QueryID dependency_id) const {
-			internal::NodeID node_id = makeNodeID<Query>(key);
+			internal::NodeIDID node_id = makeNodeID<Query>(key);
 			return this->getNodeDepsFiltered(node_id, dependency_id);
 		}
 
@@ -255,7 +255,7 @@ namespace query::internal {
 		/**
 		 * @brief Serializes an already reduced graph description.
 		 * @details The provided mapping must mirror the exact structure we intend to persist, i.e.
-		 * each adjacency index references the precomputed NodeID at the same position. This helper
+		 * each adjacency index references the precomputed NodeIDID at the same position. This helper
 		 * is meant for scenarios where another algorithm (e.g. QueryState::reduceOptimizeGraph) has
 		 * already produced a compacted graph representation and we only need to emit bytes without
 		 * rebuilding the mapping.
@@ -271,7 +271,7 @@ namespace query::internal {
 		 * @return A deserialized QueryGraph object.
 		 */
 		static QueryGraph deserialize(
-			std::span<const byte> data, std::function<NodeID(NodeID)> node_mapper = {}
+			std::span<const byte> data, std::function<NodeIDID(NodeIDID)> node_mapper = {}
 		);
 
 		/**
@@ -283,11 +283,11 @@ namespace query::internal {
 
 		/**
 		 * @brief Checks if a node exists in the graph.
-		 * @param node_id The NodeID to check.
+		 * @param node_id The NodeIDID to check.
 		 * @return True if the node exists, false otherwise.
 		 */
 		[[nodiscard]]
-		bool nodeExists(const NodeID& node_id) const {
+		bool nodeExists(const NodeIDID& node_id) const {
 			return node_deps->contains(node_id);
 		}
 
@@ -297,7 +297,7 @@ namespace query::internal {
 		 * the dependent nodes.
 		 */
 		struct Dependents {
-			std::vector<NodeID> dependents_recursive;
+			std::vector<NodeIDID> dependents_recursive;
 		};
 
 		/**
@@ -307,7 +307,7 @@ namespace query::internal {
 		 * @warning This method should not be used when the query graph is being concurrently
 		 * modified.
 		 */
-		[[nodiscard]] Dependents getDependentNodes(const std::vector<NodeID>& start_nodes) const;
+		[[nodiscard]] Dependents getDependentNodes(const std::vector<NodeIDID>& start_nodes) const;
 
 		/**
 		 * @brief Erase the given nodes from the graph. The nodes to erase should be obtained
@@ -319,10 +319,10 @@ namespace query::internal {
 		 */
 		void eraseNodes(const Dependents& nodes_to_erase);
 
-		[[nodiscard]] std::vector<NodeID> getAllNodes() const;
+		[[nodiscard]] std::vector<NodeIDID> getAllNodes() const;
 
 		/** @brief Check if a node has any dependencies. */
-		[[nodiscard]] bool hasDependencies(const NodeID& node_id) const;
+		[[nodiscard]] bool hasDependencies(const NodeIDID& node_id) const;
 
 		~QueryGraph() = default;
 	};

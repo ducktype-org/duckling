@@ -66,7 +66,7 @@ namespace query::internal {
 			 * recomputation
 			 * @note This map should only be written to during the red-green sweep
 			 */
-			base::Box<concurrent::ConHashMap<NodeID, PrevColor>> node_colors;
+			base::Box<concurrent::ConHashMap<NodeIDID, PrevColor>> node_colors;
 
 			/**
 			 * Metadata from previous compilation.
@@ -78,7 +78,7 @@ namespace query::internal {
 			PreviousCompilation() = delete;
 
 			PreviousCompilation(
-				QueryGraph&& g, base::Box<concurrent::ConHashMap<NodeID, PrevColor>>&& colors
+				QueryGraph&& g, base::Box<concurrent::ConHashMap<NodeIDID, PrevColor>>&& colors
 			):
 				  graph(std::move(g)),
 				  node_colors(std::move(colors)),
@@ -86,7 +86,7 @@ namespace query::internal {
 
 			PreviousCompilation(QueryGraph&& g):
 				  graph(std::move(g)),
-				  node_colors(base::makeBox<concurrent::ConHashMap<NodeID, PrevColor>>()),
+				  node_colors(base::makeBox<concurrent::ConHashMap<NodeIDID, PrevColor>>()),
 				  metadata() {}
 		};
 
@@ -123,20 +123,20 @@ namespace query::internal {
 		 * @brief Adds a node to the query graph.
 		 * panics if the node already exists.
 		 */
-		void addGraphNode(NodeID node_id);
+		void addGraphNode(NodeIDID node_id);
 
 		/**
 		 * @brief Adds a node to the query graph that represents a side input query.
 		 * This is needed because SideSinput queries have no cache and can be added multiple times.
 		 */
-		void addSideInputNode(NodeID node_id);
+		void addSideInputNode(NodeIDID node_id);
 
 
 		/**
 		 * @brief Marks that given query depends on another query.
 		 * Note that @p to does not need to be in the graph at the moment of calling this function.
 		 */
-		void addDependency(NodeID from, NodeID to);
+		void addDependency(NodeIDID from, NodeIDID to);
 
 
 		/*********************************\
@@ -173,14 +173,14 @@ namespace query::internal {
 		 * @brief Sets the color of a node from the previous compilation.
 		 * Should only be used by incremental handling logic.
 		 */
-		void setPrevNodeColor(internal::NodeID node, PrevColor color);
+		void setPrevNodeColor(internal::NodeIDID node, PrevColor color);
 
 		/**
 		 * @brief Returns previous_node_colors map. Used for Tests.
 		 * Does not perform any red-green logic, just returns the map as-is.
 		 */
 		[[nodiscard]]
-		base::CRef<concurrent::ConHashMap<NodeID, PrevColor>> getPreviousNodeColors() const;
+		base::CRef<concurrent::ConHashMap<NodeIDID, PrevColor>> getPreviousNodeColors() const;
 
 		/**
 		 * @brief Sets the previous query graph.
@@ -199,7 +199,7 @@ namespace query::internal {
 		 * @note This is for internal use in QueryFramework only. It is used to map nodes when
 		 * deserializing previous graph in incremental compilation.
 		 */
-		NodeID remapUnstableOrUnregisteredNodes(NodeID node);
+		NodeIDID remapUnstableOrUnregisteredNodes(NodeIDID node);
 
 		/**
 		 * Performs a red-green sweep starting from the specified node in the current query graph.
@@ -208,7 +208,7 @@ namespace query::internal {
 		 * @return the color of the start_node after the sweep.
 		 * @param start_node The starting node for the red-green sweep.
 		 */
-		PrevColor redGreenSweep(NodeID start_node);
+		PrevColor redGreenSweep(NodeIDID start_node);
 
 		/**
 		 * Merges the previous query graph into the current query graph.
@@ -223,7 +223,7 @@ namespace query::internal {
 		 * current graph. The new QueryIDs will be a 'dummy' queries. Dummy queries in next
 		 * compilation will be unregistered.
 		 */
-		void mergePreviousGraphIntoCurrentGraph(NodeID start_node);
+		void mergePreviousGraphIntoCurrentGraph(NodeIDID start_node);
 
 
 		/***************************\
@@ -249,13 +249,13 @@ namespace query::internal {
 		 * @brief Get all metadata of a specific type for a node.
 		 *
 		 * @tparam MetadataT The metadata type to retrieve (must derive from BaseMetadata)
-		 * @param node_id The NodeID to get metadata for
+		 * @param node_id The NodeIDID to get metadata for
 		 * @return std::vector<CRef<MetadataT>> References to all metadata of the given type.
 		 *         Returns empty vector if no metadata of this type exists.
 		 */
 		template<typename MetadataT>
 		requires std::derived_from<MetadataT, BaseMetadata> [[nodiscard]]
-		std::vector<CRef<MetadataT>> getMetadata(NodeID node_id) const {
+		std::vector<CRef<MetadataT>> getMetadata(NodeIDID node_id) const {
 			return metadata_storage.getMetadata<MetadataT>(node_id);
 		}
 
@@ -264,12 +264,12 @@ namespace query::internal {
 		 * @note This function is used for tests
 		 *
 		 * @tparam MetadataT The metadata type to check for
-		 * @param node_id The NodeID to check
+		 * @param node_id The NodeIDID to check
 		 * @return true if the node has at least one metadata of this type
 		 */
 		template<typename MetadataT>
 		requires std::derived_from<MetadataT, BaseMetadata> [[nodiscard]]
-		bool hasMetadata(NodeID node_id) const {
+		bool hasMetadata(NodeIDID node_id) const {
 			return metadata_storage.hasMetadata<MetadataT>(node_id);
 		}
 
@@ -277,12 +277,12 @@ namespace query::internal {
 		 * @brief Get count of metadata of a specific type for a node.
 		 *
 		 * @tparam MetadataT The metadata type to count
-		 * @param node_id The NodeID to check
+		 * @param node_id The NodeIDID to check
 		 * @return usize Number of metadata instances of this type
 		 */
 		template<typename MetadataT>
 		requires std::derived_from<MetadataT, BaseMetadata> [[nodiscard]]
-		usize getMetadataCount(NodeID node_id) const {
+		usize getMetadataCount(NodeIDID node_id) const {
 			return metadata_storage.getMetadataCount<MetadataT>(node_id);
 		}
 
@@ -312,21 +312,21 @@ namespace query::internal {
 		 * @brief Logs a diagnostic message for a specific node.
 		 * It creates a logger for the node if it doesn't exist and logs the message to it.
 		 */
-		void logDiagnosticForNode(NodeID node_id, Box<dia_int::MessageBase> diagnostic);
+		void logDiagnosticForNode(NodeIDID node_id, Box<dia_int::MessageBase> diagnostic);
 
 		/**
 		 * @brief Logs diagnostic messages from a Logger for a specific node.
 		 *
-		 * Same as `logDiagnosticForNode(NodeID, Box<MessageBase>)` but
+		 * Same as `logDiagnosticForNode(NodeIDID, Box<MessageBase>)` but
 		 * moves all diagnostics from the provided Logger into the node's logger,
 		 * leaving the provided Logger empty.
 		 */
-		void logDiagnosticFromLoggerForNode(NodeID node_id, dia_int::Logger& src_logger);
+		void logDiagnosticFromLoggerForNode(NodeIDID node_id, dia_int::Logger& src_logger);
 
 		/**
 		 * @brief Clears all diagnostics for a specific node.
 		 */
-		void clearDiagnosticForNode(NodeID node_id);
+		void clearDiagnosticForNode(NodeIDID node_id);
 
 		/**
 		 * @brief Gets a diagnostic logger for a specific node, if it exists.
@@ -334,12 +334,12 @@ namespace query::internal {
 		 *
 		 * Not thread safe.
 		 */
-		base::Optional<CRef<dia_int::Logger>> getDiagnosticForNode(NodeID node_id) const;
+		base::Optional<CRef<dia_int::Logger>> getDiagnosticForNode(NodeIDID node_id) const;
 
 		/**
 		 * @brief Get the entire map of diagnostic loggers for direct access.
 		 */
-		CRef<concurrent::ConHashMap<NodeID, Box<dia_int::Logger>>> getDiagnosticLoggers() const;
+		CRef<concurrent::ConHashMap<NodeIDID, Box<dia_int::Logger>>> getDiagnosticLoggers() const;
 
 	private:
 		friend struct ::query::Context;
@@ -349,18 +349,18 @@ namespace query::internal {
 		 *
 		 * @tparam MetadataT The metadata type (must derive from BaseMetadata)
 		 * @tparam Args Argument types for constructing the metadata
-		 * @param node_id The NodeID to attach metadata to
+		 * @param node_id The NodeIDID to attach metadata to
 		 * @param args Arguments forwarded to MetadataT constructor
 		 */
 		template<typename MetadataT, typename... Args>
 		requires std::derived_from<MetadataT, BaseMetadata>
-		void addMetadataInternal(NodeID node_id, Args&&... args) {
+		void addMetadataInternal(NodeIDID node_id, Args&&... args) {
 			// Check that the query has preserve_in_graph = true
 			CORE_ASSERT(
-				node_id.q_id.getData().tags.preserve_in_graph,
+				node_id.getID().q_id.getData().tags.preserve_in_graph,
 				"Cannot add metadata to query without preserve_in_graph = true. "
 				"Query: "
-					+ std::string(node_id.q_id.getData().name)
+					+ std::string(node_id.getID().q_id.getData().name)
 			);
 
 			metadata_storage.addMetadata<MetadataT>(node_id, std::forward<Args>(args)...);
@@ -371,19 +371,19 @@ namespace query::internal {
 		 *
 		 * @tparam MetadataT The metadata type (must derive from BaseMetadata)
 		 * @tparam Args Argument types for constructing the metadata
-		 * @param node_id The NodeID to attach metadata to
+		 * @param node_id The NodeIDID to attach metadata to
 		 * @param args Arguments forwarded to MetadataT constructor
 		 * @return true if metadata was added, false if it already exists
 		 */
 		template<typename MetadataT, typename... Args>
 		requires std::derived_from<MetadataT, BaseMetadata>
-		bool addMetadataIfNotExistsInternal(NodeID node_id, Args&&... args) {
+		bool addMetadataIfNotExistsInternal(NodeIDID node_id, Args&&... args) {
 			// Check that the query has preserve_in_graph = true
 			CORE_ASSERT(
-				node_id.q_id.getData().tags.preserve_in_graph,
+				node_id.getID().q_id.getData().tags.preserve_in_graph,
 				"Cannot add metadata to query without preserve_in_graph = true. "
 				"Query: "
-					+ std::string(node_id.q_id.getData().name)
+					+ std::string(node_id.getID().q_id.getData().name)
 			);
 			return metadata_storage.addMetadataIfNotExists<MetadataT>(
 				node_id, std::forward<Args>(args)...
@@ -418,6 +418,6 @@ namespace query::internal {
 		/**
 		 * @brief Storage for the diagnostic loggers for each noe.
 		 */
-		concurrent::ConHashMap<NodeID, Box<dia_int::Logger>> diagnostic_loggers;
+		concurrent::ConHashMap<NodeIDID, Box<dia_int::Logger>> diagnostic_loggers;
 	};
 }

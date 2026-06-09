@@ -28,7 +28,7 @@ namespace query::external {
 
 		::query::internal::QueryGraph graph = ::query::internal::QueryGraph::deserialize(
 			graph_raw_bytes,
-			[state](::query::internal::NodeID node) {
+			[state](::query::internal::NodeIDID node) {
 				return state->remapUnstableOrUnregisteredNodes(node);
 			}
 		);
@@ -67,47 +67,49 @@ namespace query::external {
 		base::Optional<std::vector<InputData>>      previous_inputs_opt,
 		base::Optional<Ref<std::vector<InputData>>> invalidated_inputs_opt
 	) {
-		auto state = ::query::internal::ContextAccess::getState();
+		CORE_UNREACHABLE();
 
-		// Step 0: Find start nodes (inputs) from the previous inputs not present in the new inputs.
-		std::vector<internal::NodeID> start_nodes;
+		// auto state = ::query::internal::ContextAccess::getState();
 
-		if_opt_some(previous_inputs_opt, previous_inputs) {
-			// This is the difference: previous_inputs - new_inputs
-			start_nodes = internal::findRemovedInputsFromSelectedInputs(
-				previous_inputs, std::move(new_inputs)
-			);
-		}
-		if_opt_none(previous_inputs_opt) {
-			start_nodes = internal::findRemovedInputsFromCurrentGraph(std::move(new_inputs));
-		}
+		// // Step 0: Find start nodes (inputs) from the previous inputs not present in the new inputs.
+		// std::vector<internal::NodeID> start_nodes;
 
-		// If requested, fill the invalidated_inputs vector with the inputs corresponding to the
-		// invalidated nodes.
-		if_opt_some(invalidated_inputs_opt, invalidated_inputs) {
-			std::ranges::copy(
-				start_nodes | std::views::transform([](const internal::NodeID& node) {
-					return InputData(node.q_id, node.hash.val);
-				}),
-				std::back_inserter(*invalidated_inputs)
-			);
-		}
+		// if_opt_some(previous_inputs_opt, previous_inputs) {
+		// 	// This is the difference: previous_inputs - new_inputs
+		// 	start_nodes = internal::findRemovedInputsFromSelectedInputs(
+		// 		previous_inputs, std::move(new_inputs)
+		// 	);
+		// }
+		// if_opt_none(previous_inputs_opt) {
+		// 	start_nodes = internal::findRemovedInputsFromCurrentGraph(std::move(new_inputs));
+		// }
 
-		// Step 1: Get all nodes to invalidate
-		auto nodes_to_invalidate = state->getGraph().getDependentNodes(start_nodes);
+		// // If requested, fill the invalidated_inputs vector with the inputs corresponding to the
+		// // invalidated nodes.
+		// if_opt_some(invalidated_inputs_opt, invalidated_inputs) {
+		// 	std::ranges::copy(
+		// 		start_nodes | std::views::transform([](const internal::NodeID& node) {
+		// 			return InputData(node.q_id, node.hash.val);
+		// 		}),
+		// 		std::back_inserter(*invalidated_inputs)
+		// 	);
+		// }
 
-		// Step 2: Erase nodes from the graph
-		state->getGraphMutable().eraseNodes(nodes_to_invalidate);
+		// // Step 1: Get all nodes to invalidate
+		// auto nodes_to_invalidate = state->getGraph().getDependentNodes(start_nodes);
 
-		// Step 3: Erase values of the invalidated nodes from their cache
-		for (const auto& node: nodes_to_invalidate.dependents_recursive) {
-			if (not node.q_id.getData().isInputQuery()) {
-				internal::ContextAccess::getState()->getTaskPool()->invalidateTask(node);
-				node.q_id.getData().cache_data.erase_function(node.hash.val);
-			}
+		// // Step 2: Erase nodes from the graph
+		// state->getGraphMutable().eraseNodes(nodes_to_invalidate);
 
-			state->getMetadataStorageMutable()->clearNodeMetadata(node);
-			state->clearDiagnosticForNode(node);
-		}
+		// // Step 3: Erase values of the invalidated nodes from their cache
+		// for (const auto& node: nodes_to_invalidate.dependents_recursive) {
+		// 	if (not node.q_id.getData().isInputQuery()) {
+		// 		internal::ContextAccess::getState()->getTaskPool()->invalidateTask(node);
+		// 		node.q_id.getData().cache_data.erase_function(node.hash.val);
+		// 	}
+
+		// 	state->getMetadataStorageMutable()->clearNodeMetadata(node);
+		// 	state->clearDiagnosticForNode(node);
+		// }
 	}
 }  // namespace query::external
