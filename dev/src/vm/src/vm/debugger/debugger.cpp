@@ -27,17 +27,13 @@ namespace vm::debugger {
 				  }
 			  }
 		  }),
-		  vm_output ([&](const std::string& str) {
-			on_output.emitEvent(str);
-		  }) {
+		  vm_output([&](const std::string& str) { on_output.emitEvent(str); }) {
 		api::spawn()
 			.and_then([&](const api::ProcessInfo& info) {
 				pid = info.pid;
 				return api::attachStatusListener(pid, &updater);
 			})
-			.and_then([&]{
-				return api::attachOutputListener(pid, &vm_output);
-			})
+			.and_then([&] { return api::attachOutputListener(pid, &vm_output); })
 			.transform_error([&](const api::ApiError& api_error) -> std::monostate {
 				throw std::runtime_error(api::errorToString(api_error));
 			});
@@ -74,7 +70,7 @@ namespace vm::debugger {
 	void Debugger::attachOnErrorListener(events::Listener<std::string>& listener) {
 		on_error.attachListener(listener);
 	}
-	
+
 	void Debugger::attachOnOutputListener(events::Listener<std::string>& listener) {
 		on_output.attachListener(listener);
 	}
