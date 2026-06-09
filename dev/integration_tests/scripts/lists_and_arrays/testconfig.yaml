@@ -1,0 +1,39 @@
+# Simplest tests for using lists and arrays in Duckling scripts.
+# @TODO: #2866 Enable the tests after enabling dynamic arrays support.
+
+Tests:
+  list_length:
+    folder: "lists"
+    Cases:
+      direct:
+        Enabled: "false"
+        mode: direct
+        Output: 
+          String: "6\n"
+      vm:
+        Enabled: "false"
+        mode: vm
+        Output: 
+          String: "6\n"
+      exe:
+        mode: exe
+        Output: 
+          String: "6\n"
+
+  list_access:
+    folder: "lists"
+    Cases:
+      direct:
+        Enabled: "false"
+        mode: direct
+        Output: 
+          String: "2\n4\n6\n"
+      vm:
+        Enabled: "false"
+        mode: vm
+        Output: 
+          String: "2\n4\n6\n"
+      exe:
+        mode: exe
+        Output: 
+          String: "2\n4\n6\n"
