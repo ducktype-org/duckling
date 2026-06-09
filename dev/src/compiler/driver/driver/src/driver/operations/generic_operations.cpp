@@ -158,12 +158,12 @@ namespace compiler::driver {
 		static auto provide(query::Context& ctx, QKey key) -> PResult {
 			moduleLog(key, "Recompiling");
 
-			auto lir_data_result = ctx.query<CompileToLIRModuleData>(key.module_id);
-			if (lir_data_result->hasFailed()) {
+			auto lir_data_result = compileModuleToLIRModuleData(ctx, key.module_id);
+			if (lir_data_result.hasFailed()) {
 				moduleLog(key, "Compilation failed");
 				return query::Failed();
 			}
-			CRef lir_data = &lir_data_result->valueOrThrow();
+			auto lir_data = std::move(lir_data_result.valueOrThrow());
 
 			auto output_names = getModuleOutputName(key);
 			auto code_output  = getQueryArtifactsCollection()->fileArtifactAtOrNew(
@@ -175,7 +175,7 @@ namespace compiler::driver {
 
 			switch (key.backend_type) {
 			case BackendType::LLVM: {
-				auto llvm_module = compileLIRModuleToLLVM(ctx, lir_data);
+				auto llvm_module = compileLIRModuleToLLVM(ctx, &lir_data);
 				{
 					// compileLIRModuleToLLVM time is added on its own,
 					// but tracking time of the actual compilation to object file is done here
@@ -188,7 +188,7 @@ namespace compiler::driver {
 
 				if (driver::dump_ir_options.dump_llvm) {
 					auto llvm_ir_artifact = getDebugArtifactCollection()->fileArtifactAtOrNew(
-						base::StrID(lir_data->module_id.str() + ".ll")
+						base::StrID(lir_data.module_id.str() + ".ll")
 					);
 					llvm_module.dumpLLVMToFile(
 						base::StrID(llvm_ir_artifact.file.getFilePath().string())
@@ -196,7 +196,7 @@ namespace compiler::driver {
 				}
 				if (driver::dump_ir_options.dump_asm) {
 					auto asm_artifact = getDebugArtifactCollection()->fileArtifactAtOrNew(
-						base::StrID(lir_data->module_id.str() + ".s")
+						base::StrID(lir_data.module_id.str() + ".s")
 					);
 					llvm_module.compile(
 						asm_artifact.file.getFilePath().getPath(),
@@ -221,7 +221,7 @@ namespace compiler::driver {
 					output_file.close();
 				};
 
-				auto dvm_module_data = compileLIRModuleToDVM(lir_data, ctx, key.build_debug_info);
+				auto dvm_module_data = compileLIRModuleToDVM(&lir_data, ctx, key.build_debug_info);
 
 				serialize_to_artifact(code_output, dvm_module_data.code, vm::code::serializeCode);
 
@@ -906,8 +906,8 @@ namespace compiler::driver {
 	std::expected<RunOutput, std::string> runModuleOnDVM(
 		query::Context& ctx, frontend::ModuleID module_id
 	) {
-		CRef lir_data            = &ctx.query<CompileToLIRModuleData>(module_id)->valueOrPanic();
-		auto dvm_code_collection = compileLIRModuleToDVM(lir_data, ctx, false);
+		auto lir_data            = compileModuleToLIRModuleData(ctx, module_id).valueOrPanic();
+		auto dvm_code_collection = compileLIRModuleToDVM(&lir_data, ctx, false);
 
 		vm::PID pid{};
 
