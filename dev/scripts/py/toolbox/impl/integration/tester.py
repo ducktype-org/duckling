@@ -34,8 +34,8 @@ def tester_impl(
         verbose: bool,
         log_file: str | Path,
         build_dir: str,
-        determinism_check: bool,
-        custom_values: str
+        determinism_check: bool | None = None,
+        custom_values: str = "{}",
 ):
     """
     The driver function of Duckling Integration Tests framework.
