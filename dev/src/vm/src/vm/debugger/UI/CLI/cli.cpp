@@ -14,7 +14,7 @@ namespace {
 namespace vm::debugger::cli {
 	namespace idv = interpreted_data_variant;
 
-	CLIDebugger::CLIDebugger(const std::vector<std::string>& main_args):
+	CLIDebugger::CLIDebugger():
 		  status_change_listener([&](const api::ProcStatus& status) {
 			  variant_match(status) {
 				  variant_case(api::ExecutionCompleted, completed) {
@@ -46,16 +46,29 @@ namespace vm::debugger::cli {
 		  error_listener([&](const std::string& err) {
 			  std::lock_guard lk(output_mutex);
 			  std::cout << "Error: " << err << "\n";
-		  }),
-		  debugger(main_args) {
+		  }) {
 		debugger.attachOnStatusChangedListener(status_change_listener);
 		debugger.attachOnErrorListener(error_listener);
 	}
 
-	CLIDebugger::CLIDebugger(const fs::File& filepath, const std::vector<std::string>& main_args):
-		  CLIDebugger(main_args) {
-		load_result   = debugger.loadFile(filepath);
-		selected_file = filepath;
+	std::expected<void, api::ApiError> CLIDebugger::load(const fs::File& file) {
+		auto response = debugger.loadFile(file);
+		if (!response) return std::unexpected(response.error());
+
+		selected_file = file;
+		return {};
+	}
+
+	std::expected<void, api::ApiError> CLIDebugger::loadDefault() {
+		fs::FilePath fp = "duck_build/package_dvm.dbc";
+		if (!fp.exists())
+			return std::unexpected(api::OtherError{
+				"No compiled program in the current directory." });
+		return load(fp);
+	}
+
+	void CLIDebugger::setDefaultArgs(const ProgramRunArguments& args) {
+		debugger.setDefaultArgs(args);
 	}
 
 	int CLIDebugger::run() {

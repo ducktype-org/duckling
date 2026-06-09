@@ -18,8 +18,8 @@ namespace vm::debugger {
 	 */
 	class Debugger final {
 	private:
-		PID                      pid;
-		std::vector<std::string> main_args;
+		PID                 pid;
+		ProgramRunArguments main_args;
 
 		events::Listener<api::ProcStatus> updater;
 
@@ -36,8 +36,7 @@ namespace vm::debugger {
 		events::Emitter<std::string> on_error;
 
 	public:
-		Debugger(const std::vector<std::string>& main_args = {});
-		Debugger(const fs::File& filepath, const std::vector<std::string>& main_args = {});
+		Debugger();
 		~Debugger();
 		Debugger(const Debugger&)            = delete;
 		Debugger& operator=(const Debugger&) = delete;
@@ -73,6 +72,8 @@ namespace vm::debugger {
 		 * @brief Loads the file
 		 */
 		std::expected<void, api::ApiError> loadFile(const fs::File& filepath);
+
+		void setDefaultArgs(const ProgramRunArguments& args);
 
 		/**
 		 * @brief Returns number of stack frames
