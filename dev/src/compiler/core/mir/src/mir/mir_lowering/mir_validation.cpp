@@ -9,154 +9,47 @@
 #include <base/collections/optional.hpp>
 
 #include <algorithm>
-#include <unordered_set>
 
 namespace compiler::mir {
+
+	class BlockWorklist {
+		std::vector<bool>    present;
+		std::vector<BlockID> stack;
+
+	public:
+		BlockWorklist(usize blocks): present(blocks, false) {}
+
+		void pushBack(BlockID id) {
+			if (not present.at(id.asInt())) {
+				present.at(id.asInt()) = true;
+				stack.push_back(id);
+			}
+		}
+
+		BlockID pop() {
+			auto id = stack.back();
+			stack.pop_back();
+			present.at(id.asInt()) = false;
+			return id;
+		}
+	};
+
+	struct Transfer {
+		std::vector<LocalID> moved_inside;
+		std::vector<LocalID> created_inside;
+	};
+
 	base::OkBad validateMoves(query::Context&, const Function& fun) {
-		using LocalSet      = std::unordered_set<LocalID>;
-		using BlockLocalSet = base::HashMap<BlockID, LocalSet>;
+		enum class Status { Alive, Moved, MaybeMoved };
+		using LocalStatusMap = base::HashMap<LocalID, Status>;
 
-		BlockLocalSet
-			moved_variables;  // Variables moved in Block, they can't be used after this Block,
-		BlockLocalSet used_variables;  // variables which must be valid, at the begining of Block.
+		base::HashMap<BlockID, LocalStatusMap> in_local_status;
+		base::HashMap<BlockID, LocalStatusMap> out_local_status;
+		BlockWorklist                          worklist(fun.blocks.size());
+		base::HashMap<BlockID, Transfer>       block_transfer_functions;
 
-		for (const auto& block: fun.blocks) {  // Fill with blocks.
-			moved_variables.emplace(block.key, LocalSet());
-			used_variables.emplace(block.key, LocalSet());
-		}
-		base::HashMap<LocalID, BlockID>
-			construction_block;  // For each Local store where it is constructed.
-
-		// Analyze each block independently.
-		for (const auto& block: fun.blocks) {
-			auto process_instruction = [&](Instruction instr) {
-				if (instr.operation == Operation::Destruct
-				    || instr.operation == Operation::DestructIf)
-
-					return base::OK;  // LIR decides whether destruction should be performed.
-
-				// Firstly list all arguments - They must be valid.
-				for (const auto& arg: instr.arguments) {
-					if (arg.isLocal()) {
-						used_variables.at(block.key).insert(
-							arg.get<MIRPlace>().getBase<MIRLocalRef>()->id
-						);
-
-						if (moved_variables.at(block.key).contains(
-								arg.get<MIRPlace>().getBase<MIRLocalRef>()->id
-							))
-							return base::BAD;  // It is already moved.
-					}
-				}
-
-				// Output can't be local, already moved, variable.
-				if (instr.output.has_value() && instr.output.value().isLocal()) {
-					used_variables.at(block.key).insert(
-						instr.output.value().getBase<MIRLocalRef>()->id
-					);
-
-					if (moved_variables.at(block.key).contains(
-							instr.output.value().getBase<MIRLocalRef>()->id
-						))
-						return base::BAD;  // It is already moved.
-				}
-
-				for (const auto& flag: instr.flags) {
-					if (flag.flag == OperationFlag::Flag::Move) {
-						// @note Now we assume that variable moved in instruction, must be
-						// its argument and appear exactly one time there. It can't be
-						// output of instruction. It may change in the future.
-
-						if (moved_variables[block.key].contains(flag.local->id))
-							return base::BAD;  // Already moved.
-
-						moved_variables[block.key].insert(flag.local->id);
-
-						if (std::ranges::count_if(
-								instr.arguments,
-								[&](const auto& arg) {
-									return arg.isLocal()
-							            && arg.template get<MIRPlace>()
-							                       .template getBase<MIRLocalRef>()
-							                       ->id
-							                   == flag.local->id;
-								}
-							)
-						    != 1)
-							return base::BAD;  // Used 0 or 2 or more times as argument.
-
-						if (instr.output.has_value() && instr.output.value().isLocal()
-						    && instr.output.value().getBase<MIRLocalRef>()->id == flag.local->id)
-							return base::BAD;  // Moved local used as output.
-					}
-					if (flag.flag == OperationFlag::Flag::Construct) {
-						// Assume constructors are valid (every use is after construct).
-						construction_block.emplace(flag.local->id, block.key);
-					}
-					// Omit destruct flag - LIR will handle it.
-				}
-				return base::OK;
-			};
-
-			for (const auto& instruction: block.value.instructions)
-				if (process_instruction(instruction).isBad()) return base::BAD;
-
-			if (process_instruction(block.value.terminator).isBad()) return base::BAD;
-		}
-
-		// Now we perform global analysis.
-
-		// For each variable start DFS starting in block of its construction. Look for any use after
-		// move, visit all achievable blocks, except for starting one. Each block can be visited in
-		// two states: variable can be used and can't.
-
-
-		constexpr int USABLE = 0, NOT_USABLE = 1;
-
-		struct States final {
-			bool state[2] = { false, false };
-		};
-
-		// It should be HashSet<BlockID, state>, but there is no hash.
-		base::HashMap<BlockID, States> visited;  // with usable and not usable.
-
-		// Insert all blocks.
-		for (const auto& id: fun.block_order) visited.emplace(id, States());
-
-		for (const auto& local: construction_block) {
-			for (const auto& id: fun.block_order)
-				visited[id].state[USABLE] = false, visited[id].state[NOT_USABLE] = false;
-
-			const auto& starting_block = local.second;
-
-			auto visit = [&](this const auto& self, const BlockID& id, const int& cr_state
-			             ) -> base::OkBad {
-				visited[id].state[cr_state] = true;
-				int next_state              = NOT_USABLE;
-				if (cr_state == NOT_USABLE) {
-					if (moved_variables[id].contains(local.first)
-					    || used_variables[id].contains(local.first))
-						return base::BAD;
-					next_state = NOT_USABLE;
-				} else {
-					if (moved_variables[id].contains(local.first))
-						next_state = NOT_USABLE;
-					else
-						next_state = USABLE;
-				}
-
-				for (const auto& next_block: getTerminatorSuccessors(fun.blocks[id].terminator)) {
-					if (next_block != starting_block && !visited[next_block].state[next_state]) {
-						if (self(next_block, next_state).isBad()) return base::BAD;
-					}
-				}
-				return base::OK;
-			};
-
-			if (visit(starting_block, USABLE).isBad()) return base::BAD;
-		}
-
-		return base::OK;
+		for (const auto& block: fun.blocks)  // Fill with blocks.
+		                                     // variables_status.emplace(block.key, LocalSet());
 	}
 
 	base::OkBad validateShadowing(query::Context& ctx, const Function& fun) {
