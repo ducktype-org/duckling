@@ -2,6 +2,8 @@
 
 #include "queries.hpp"
 
+#include <helios/symbols/query_type_of_symbol.hpp>
+
 // @TODO: #2331 Remove these includes
 #include <frontend/pst_parser/elements/hierarchy/class_elements/field.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expr_holders.hpp>
@@ -12,6 +14,7 @@
 #include <helios/tsh/queries/implicit_coercibility.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios_private/hout_creation/definition_generation/default_destructors.hpp>
+#include <helios_private/hout_creation/definition_generation/length_methods.hpp>
 #include <helios_private/hout_creation/definition_generation/to_string_methods.hpp>
 #include <helios_private/symbols/generated_symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
@@ -31,7 +34,20 @@ namespace compiler::tsh {
 	 */
 	TypeInterface getDefaultTypeInterfaceForType(query::Context& ctx, const AbstractType type) {
 		// @TODO: #1956 Methods don't work for zero-sized types yet, due to taking ref to self
-		if (not type.carriesInformation(ctx)) return {};
+		if (not type.carriesInformation(ctx)) {
+			if (type.getKind() == Kind::Unit) {
+				// The unit type has a `toString` method, even though it doesn't carry information,
+				// because it is a simple type and it's passed by value.
+				return TypeInterface{ std::vector{ InterfaceElement{
+					helios::defgen::toStringSymForType(ctx, type),
+					type,
+					0,
+					InterfaceElement::InterfaceElementKind::Method,
+					ClassMemberVisibility::Public,
+				} } };
+			}
+			return {};
+		}
 
 		using helios::defgen::destructSymForType;
 		using helios::defgen::toStringSymForType;
@@ -82,6 +98,7 @@ namespace compiler::tsh {
 		case Float:
 		case Pointer:
 		case RawPointer:
+		case Slice:
 			return true;
 		default:
 			return false;
@@ -128,18 +145,11 @@ namespace compiler::tsh {
 		return &empty;
 	}
 
-	bool PointerAbstractTypeImpl::isImplicitlyCoercible(
-		const AbstractType target, query::Context& ctx
-	) const {
-		// Implicit coercions allow checking against null pointer.
-		// We do not allow casting to another (raw) pointer type,
-		// because we forbid implicit type (de)specification in this context.
-		// We only allow dropping mutability.
-		return target.getKind() == Kind::Bool
-		    || (target.getKind() == Kind::Pointer
-		        && ctx.query<QueryImplicitCoercibilityOnSymbolType>(
-					{ pointee, PointerAbstractType(target).getPointee() }
-				));
+	bool PointerAbstractTypeImpl::isImplicitlyCoercible(const AbstractType, query::Context&) const {
+		// The pointers are generally not the main tool for the job
+		// in our language, but we may in the future allow
+		// implicit coercions to bool to check against null pointer.
+		return false;
 	}
 
 	bool TupleAbstractTypeImpl::isImplicitlyCoercible(
@@ -301,6 +311,55 @@ namespace compiler::tsh {
 		return &empty;
 	}
 
+	CRef<TypeInterface> ManyPointerAbstractTypeImpl::getDeclaredInterface(query::Context&) const {
+		// note: we can extend interface later if needed
+		static TypeInterface empty{};
+		return &empty;
+	}
+
+	CRef<TypeInterface> CPointerAbstractTypeImpl::getDeclaredInterface(query::Context&) const {
+		// note: we can extend interface later if needed
+		static TypeInterface empty{};
+		return &empty;
+	}
+
+	CRef<TypeInterface> SliceAbstractTypeImpl::getDeclaredInterface(query::Context& ctx) const {
+		auto compute_interface = [&]() -> TypeInterface {
+			std::vector<InterfaceElement> elements;
+			elements.reserve(3);
+
+			auto components = ctx.query<helios::QuerySliceTypeData>(toAbstractType());
+			elements.emplace_back(
+				components->ptr,
+				ctx.query<helios::QueryTypeOfSymbol>(components->ptr)->valueOrThrow().getType(),
+				0,
+				InterfaceElement::InterfaceElementKind::Field,
+				ClassMemberVisibility::Private
+			);
+			elements.emplace_back(
+				components->len,
+				ctx.query<helios::QueryTypeOfSymbol>(components->len)->valueOrThrow().getType(),
+				1,
+				InterfaceElement::InterfaceElementKind::Field,
+				ClassMemberVisibility::Private
+			);
+
+			auto length_sym = helios::defgen::lengthMethodForType(ctx, toAbstractType());
+			elements.emplace_back(
+				length_sym,
+				ctx.query<helios::QueryTypeOfSymbol>(length_sym)->valueOrThrow().getType(),
+				2,
+				InterfaceElement::InterfaceElementKind::Method,
+				ClassMemberVisibility::Public
+			);
+
+			auto interface = TypeInterface(elements);
+			return interface;
+		};
+		static const TypeInterface cached_interface = compute_interface();
+		return &cached_interface;
+	}
+
 	CRef<TypeInterface> StringAbstractTypeImpl::getDeclaredInterface(query::Context&) const {
 		throw base::NotYetImplemented("String type interface not yet implemented");
 	}
@@ -402,7 +461,7 @@ namespace compiler::tsh {
 		auto fields = getDeclaredInterface(ctx)->getFieldsView();
 		for (const auto& field: fields) {
 			// @TODO: #2331 Move this logic out of TSH.
-			auto field_pst = helios::symbolPst(field.getSymbol())
+			auto field_pst = helios::maybeSymbolPst(field.getSymbol())
 			                     .value()
 			                     .unlock(ctx)
 			                     .dynamicCast<pst::Field>()
@@ -419,7 +478,7 @@ namespace compiler::tsh {
 		auto fields = getDeclaredInterface(ctx)->getFieldsView();
 		for (const auto& field: fields) {
 			// @TODO: #2331 Move this logic out of TSH.
-			auto field_pst = helios::symbolPst(field.getSymbol())
+			auto field_pst = helios::maybeSymbolPst(field.getSymbol())
 			                     .value()
 			                     .unlock(ctx)
 			                     .dynamicCast<pst::Field>()
@@ -457,6 +516,10 @@ namespace compiler::tsh {
 			return dynamic_array_type.getElementType() == element_type;
 		}
 
+		return false;
+	}
+
+	bool SliceAbstractTypeImpl::isImplicitlyCoercible(AbstractType, query::Context&) const {
 		return false;
 	}
 

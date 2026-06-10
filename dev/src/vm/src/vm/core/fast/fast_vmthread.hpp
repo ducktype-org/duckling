@@ -9,8 +9,11 @@
 
 namespace vm::fast {
 	class FastVMProcess;
+	class FastExecutor;
 
 	class FastVMThread: public vm::IVMThread {
+		friend class FastExecutor;
+
 	public:
 		FastVMThread(
 			api::ThreadID                      thread_id,

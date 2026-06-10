@@ -47,8 +47,10 @@ void fast::FastCompiler::compileNewGlobals(const std::vector<GlobalData>& new_gl
 	}
 }
 
-void fast::FastCompiler::compileNewFunctions(const std::vector<Function>& new_functions) {
-	for (const Function& function: new_functions) {
+void fast::FastCompiler::compileNewFunctions(
+	const std::vector<code::valid_function::ValidFunction>& new_functions
+) {
+	for (const code::valid_function::ValidFunction& function: new_functions) {
 		detail::FunctionStackContext ctx = calculateStackContext(function);
 		program.functions.insert(
 			vm::fast::FunctionInfo{

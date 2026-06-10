@@ -1,5 +1,6 @@
 #include <llvm_helpers/llvm_helpers.hpp>
 
+#include <mutex>
 #include <type_traits>
 
 LLVM_INCLUDE_BEGIN()
@@ -134,15 +135,11 @@ namespace {
 					string_constant
 				);
 
-				// Prepare the global struct
+				// Prepare the char slice struct
 				const u64                          length = str.strView().size();
 				const std::vector<llvm::Constant*> fields{
 					string_global,
 					// length is length
-					llvm::ConstantInt::get(llvm_module->getContext(), llvm::APInt(64, length)),
-					// memory_begin_offset (wrt. data pointer) is 0
-					llvm::ConstantInt::get(llvm_module->getContext(), llvm::APInt(64, 0)),
-					// memory_end_offset (wrt. data pointer) is equal to length
 					llvm::ConstantInt::get(llvm_module->getContext(), llvm::APInt(64, length))
 				};
 				const auto struct_type     = llvm::cast<llvm::StructType>(llvm_type.get());
@@ -169,16 +166,25 @@ namespace {
 
 namespace compiler::backend_llvm {
 
+	namespace {
+		std::once_flag llvm_init_flag;
+	}
+
 	/**
 	 * @brief Initializes some llvm components.
-	 * @note it *should* be safe to call it multiple times
+	 * @note Thread-safe via std::call_once. LLVM's InitializeNativeTarget() family
+	 *       uses non-thread-safe static bool guards internally, so concurrent calls
+	 *       can register the same target twice, causing "Cannot choose between targets"
+	 *       errors in lookupTarget().
 	 */
 	void init() {
-		const bool v1 = llvm::InitializeNativeTarget();
-		const bool v2 = llvm::InitializeNativeTargetAsmPrinter();
+		std::call_once(llvm_init_flag, []() {
+			const bool v1 = llvm::InitializeNativeTarget();
+			const bool v2 = llvm::InitializeNativeTargetAsmPrinter();
 
-		CORE_ASSERT(not v1, "failed to initialize llvm (1)");
-		CORE_ASSERT(not v2, "failed to initialize llvm (2)");
+			CORE_ASSERT(not v1, "failed to initialize llvm (1)");
+			CORE_ASSERT(not v2, "failed to initialize llvm (2)");
+		});
 	}
 
 	void llvmDeinit() {
@@ -499,6 +505,10 @@ namespace compiler::backend_llvm {
 		);
 	}
 
+	/**
+	 * @brief This only inserts a global variable declaration if it doesn't exist.
+	 * It does not set any initializer or linkage.
+	 */
 	Ref<llvm::Constant> getOrInsertGlobalVariable(
 		const Ref<llvm::Module> module, const lir::LIRGlobal& lir_global
 	) {
@@ -513,36 +523,25 @@ namespace compiler::backend_llvm {
 
 	/**
 	 * Adds a global variable to the module based on the LIRGlobal description.
-	 * For globals is sets the initial value to null (this function does not handle constructors),
-	 * for constants it sets the initial value to the provided constant value.
+	 * Sets the initial value to null (this function does not handle constructors and proper
+	 * initialization),
 	 */
 	Ref<llvm::GlobalVariable> addGlobalVariable(
-		const Ref<llvm::Module> module, const lir::LIRGlobal& lir_global
+		const Ref<llvm::Module> module, const lir::LIRGlobalData& lir_global
 	) {
-		getOrInsertGlobalVariable(module, lir_global);
+		getOrInsertGlobalVariable(module, lir_global.global);
+
 		const Ref<llvm::GlobalVariable> global
-			= module->getNamedGlobal(lir_global.mangled_name.strView());
+			= module->getNamedGlobal(lir_global.global.mangled_name.strView());
 
 		CORE_ASSERT(global->isDeclaration(), "Global is not the declaration");
 
 		global->setLinkage(llvm::GlobalValue::ExternalLinkage);
-		global->setConstant(lir_global.type == lir::LIRGlobalType::Constant);
+		global->setConstant(lir_global.global.type == lir::LIRGlobalType::Constant);
 
-		if (lir_global.type == lir::LIRGlobalType::Constant) {
-			CORE_ASSERT(
-				lir_global.initial_value.has_value(), "Expected initial value for constant global"
-			);
-			global->setInitializer(
-				ctvToLLVMConstant(lir_global.initial_value.value(), global->getValueType(), module)
-			);
-		} else {
-			// Initialise the global variable to null, since it will be initialised in the constructor:
-			CORE_ASSERT(
-				not lir_global.initial_value.has_value(),
-				"Non-constant global should not have initial value set"
-			);
-			global->setInitializer(llvm::Constant::getNullValue(global->getValueType()));
-		}
+		// We set null initialization for all globals by default to keep potential uninitialized
+		// memory issues easier to track.
+		global->setInitializer(llvm::Constant::getNullValue(global->getValueType()));
 
 		return global;
 	}
@@ -553,7 +552,7 @@ namespace compiler::backend_llvm {
 	 * and generates LLVM function in given module based
 	 * on provided LIRFunction.
 	 */
-	struct LIRFunction2LLVM {
+	struct LIRFunction2LLVM final {
 		Ref<llvm::Module>   module;
 		llvm::LLVMContext&  context;
 		query::Context&     ctx;
@@ -767,6 +766,21 @@ namespace compiler::backend_llvm {
 
 								// Lastly, update the types and layouts.
 								current_layout = dynamic_array_layout.getElementLayout();
+								current_type   = typeFromLayout(module, current_layout);
+							}
+							variant_case(tsl::PointerTypeLayout, pointer_layout) {
+								// Finish any struct/array GEP first
+								flush_gep();
+
+								// Load the pointer value (because current_ptr points to storage)
+								current_ptr = builder.CreateLoad(builder.getPtrTy(), current_ptr);
+
+								// Add an index for pointer arithmetic
+								gep_indices.push_back(index_value);
+
+
+								// Update layout/type
+								current_layout = pointer_layout.getPointee();
 								current_type   = typeFromLayout(module, current_layout);
 							}
 							variant_default { CORE_PANIC("Indexing into a non-array layout"); }
@@ -1427,6 +1441,7 @@ namespace compiler::backend_llvm {
 	}
 
 	Box<ModuleImpl> parseIRCodeToModuleImpl(const std::string_view llvm_ir_code) {
+		init();
 		const auto memory_buffer = llvm::MemoryBuffer::getMemBuffer(llvm::StringRef(llvm_ir_code));
 		if (!memory_buffer) CORE_PANIC("failed to create memory buffer");
 		llvm::SMDiagnostic error;
@@ -1443,6 +1458,7 @@ namespace compiler::backend_llvm {
 	}
 
 	Box<ModuleImpl> parseLLVMBCToModuleImpl(const std::span<unsigned char> llvm_bc_data) {
+		init();
 		// Wrap the array in a MemoryBuffer
 		auto buffer = llvm::MemoryBuffer::getMemBuffer(
 			llvm::StringRef(reinterpret_cast<const char*>(llvm_bc_data.data()), llvm_bc_data.size()),
@@ -1483,8 +1499,8 @@ namespace compiler::backend_llvm {
 		// 65535 is the default priority for global constructors in LLVM.
 		// There is also a 4-parameter Constant* Data = nullptr, which is the pointer to the
 		// global variable associated with the constructor. However, the problem is that the
-		// order of functions with the same priority is not defined. Therefore, we probably want
-		// to create one global constructor that calls the constructor of each variable in the
+		// order of functions with the same priority is not defined. Therefore, we generally
+		// create one global constructor that calls the constructor of each variable in the
 		// module.
 		llvm::appendToGlobalCtors(*module->module.refMut(), fun, 65'535);
 	}
@@ -1496,7 +1512,20 @@ namespace compiler::backend_llvm {
 		llvm::appendToGlobalDtors(*module->module.refMut(), fun, 65'535);
 	}
 
-	void addGlobalToModuleImpl(const Ref<ModuleImpl> module, const lir::LIRGlobal& lir_global) {
+	void addGlobalDeclarationToModuleImpl(
+		const Ref<ModuleImpl> module, const lir::LIRGlobalData& lir_global
+	) {
 		addGlobalVariable(module->module.refMut(), lir_global);
+	}
+
+	void setGlobalConstantInitializerImpl(
+		Ref<ModuleImpl> module, base::StrID mangled_name, const ctv::CompileTimeValue& constant_value
+	) {
+		const Ref<llvm::GlobalVariable> global
+			= module->module->getNamedGlobal(mangled_name.strView());
+
+		global->setInitializer(
+			ctvToLLVMConstant(constant_value, global->getValueType(), module->module.refMut())
+		);
 	}
 }

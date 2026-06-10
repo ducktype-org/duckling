@@ -419,9 +419,17 @@ namespace compiler::tsh {
 		bool isImplicitlyCoercible(const AbstractType target, query::Context&) const override {
 			// Implicit coercions allow checking against zero,
 			// as well as promoting to greater sizes
-			return target.getKind() == Kind::Bool
-			    || ((target.getKind() == Kind::Integral)
-			        && (IntegralAbstractType(target).getSize() > size));
+			// signed to unsigned coercions are not allowed
+			auto bool_coercion = (target.getKind() == Kind::Bool);
+			auto int_coercion  = (target.getKind() == Kind::Integral);
+			auto upsize_coercion
+				= (int_coercion && (IntegralAbstractType(target).getSize() > size));
+			auto drop_sign_coercion
+				= (int_coercion && signedness == IntegralAbstractType::Signedness::Signed
+			       && IntegralAbstractType(target).getSignedness()
+			              == IntegralAbstractType::Signedness::Unsigned);
+
+			return bool_coercion || (upsize_coercion && !drop_sign_coercion);
 		}
 
 		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
@@ -536,7 +544,7 @@ namespace compiler::tsh {
 		Mutability mutability;
 	};
 
-	class PointerAbstractTypeImpl final: public AbstractTypeImpl {
+	class PointerAbstractTypeImpl: public AbstractTypeImpl {
 		SymbolType<> pointee;
 
 	public:
@@ -561,7 +569,7 @@ namespace compiler::tsh {
 		}
 
 		explicit PointerAbstractTypeImpl(const SymbolType<> component): pointee(component) {
-			representation = base::strConcat("pointer(", component.toString(), ")");
+			representation = base::strConcat("ptr ", component.toString());
 		}
 
 		[[nodiscard]]
@@ -581,6 +589,90 @@ namespace compiler::tsh {
 
 		[[nodiscard]]
 		CRef<TypeInterface> getDeclaredInterface(query::Context& ctx) const override;
+	};
+
+	class ManyPointerAbstractTypeImpl final: public PointerAbstractTypeImpl {
+	public:
+		[[nodiscard]]
+		Kind getKind() const override {
+			return STATIC_KIND;
+		}
+
+		/**
+		 * @brief The Kind of types described by objects of this class.
+		 */
+		static constexpr Kind STATIC_KIND = Kind::ManyPointer;
+
+		explicit ManyPointerAbstractTypeImpl(const SymbolType<> component):
+			  PointerAbstractTypeImpl(component) {
+			representation = base::strConcat("manyptr ", component.toString());
+		}
+
+		[[nodiscard]]
+		CRef<TypeInterface> getDeclaredInterface(query::Context& ctx) const override;
+	};
+
+	class CPointerAbstractTypeImpl final: public PointerAbstractTypeImpl {
+	public:
+		[[nodiscard]]
+		Kind getKind() const override {
+			return STATIC_KIND;
+		}
+
+		/**
+		 * @brief The Kind of types described by objects of this class.
+		 */
+		static constexpr Kind STATIC_KIND = Kind::CPointer;
+
+		explicit CPointerAbstractTypeImpl(const SymbolType<> component):
+			  PointerAbstractTypeImpl(component) {
+			representation = base::strConcat("cptr ", component.toString());
+		}
+
+		[[nodiscard]]
+		CRef<TypeInterface> getDeclaredInterface(query::Context& ctx) const override;
+	};
+
+	class SliceAbstractTypeImpl final: public AbstractTypeImpl {
+		SymbolType<> element;
+
+	public:
+		[[nodiscard]]
+		Kind getKind() const override {
+			return STATIC_KIND;
+		}
+
+		[[nodiscard]]
+		SymbolType<> getElementType() const {
+			return element;
+		}
+
+		/**
+		 * @brief The Kind of types described by objects of this class.
+		 */
+		static constexpr Kind STATIC_KIND = Kind::Slice;
+
+		explicit SliceAbstractTypeImpl(const SymbolType<> element): element(element) {
+			representation = base::strConcat("slice ", element.toString());
+		}
+
+		[[nodiscard]]
+		bool isImplicitlyCoercible(AbstractType target, query::Context& ctx) const override;
+
+		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
+
+		[[nodiscard]] bool isDefaultConstructible(query::Context&) const override { return false; }
+
+		[[nodiscard]] bool isTriviallyZeroInitializable(query::Context&) const override {
+			return false;
+		}
+
+		[[nodiscard]] bool isCopyable(query::Context&) const override { return true; }
+
+		[[nodiscard]] bool isTriviallyCopyable(query::Context&) const override { return true; }
+
+		[[nodiscard]]
+		CRef<TypeInterface> getDeclaredInterface(query::Context&) const override;
 	};
 
 	class StringAbstractTypeImpl final: public AbstractTypeImpl {

@@ -12,11 +12,11 @@ add_library(DVMBackend STATIC
     src_private/operations/call.cpp
     src_private/operations/arithmetic.cpp
     src_private/operations/address_of.cpp
-    
+    src_private/operations/box.cpp
     src/backends/dvm/repl_lowering.cpp
     src/backends/dvm/dvm_backend.cpp
 )
 
 make_module(DVMBackend USES Base QueryFramework LIR LibVM Logger DebugInfo)
 
-duck_add_test(compiler dvm_backend tests/dvm_backend_test.cpp USES DVMBackend LibVM VmTester_sc)
+duck_add_test(compiler dvm_backend tests/dvm_backend_test.cpp USES DVMBackend LibVM VmTester_sc Driver)

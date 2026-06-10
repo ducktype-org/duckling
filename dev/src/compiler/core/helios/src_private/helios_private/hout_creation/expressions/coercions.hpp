@@ -173,4 +173,33 @@ namespace compiler::helios {
 	 * @note This is a wrapper around `canCoerce` for the common case of coercing to the meta type.
 	 */
 	CoercionQResult canCoerceToMeta(query::Context& ctx, tsh::SymbolType<> from);
+
+	/**
+	 * @brief Checks whether `expr` can be coerced to `expected_type`. Returns a coerced expression
+	 * when the coercion is valid, logs an error via `log_error` when `expr` is not coercible to the
+	 * given type.
+	 * @note This is a convenience wrapper around `canCoerce` + `coercion.coerce()` for the common
+	 * case of coercing expressions with a `Box<code::Expr>` in hand, which is usual when handling
+	 * compiler generated code.
+	 * @return The coerced expression or an empty optional on error.
+	 */
+	base::Optional<Box<code::Expr>> coerceFromBox(
+		query::Context&                                      ctx,
+		Box<code::Expr>                                      expr,
+		const tsh::SymbolType<>                              expected_type,
+		dia_int::StablePosition                              source_position,
+		base::Optional<std::function<void(query::Context&)>> log_error = {}
+	);
+
+	/**
+	 * @brief A convenience function for typical coercion error logging based on `CoercionQResult`.
+	 */
+	void logCoercionFailure(
+		query::Context&                                      ctx,
+		const CoercionQResult&                               coercion_qresult,
+		const tsh::SymbolType<>&                             source_symbol_type,
+		const tsh::SymbolType<>&                             expected_type,
+		dia_int::StablePosition                              source_position,
+		base::Optional<std::function<void(query::Context&)>> log_error
+	);
 }

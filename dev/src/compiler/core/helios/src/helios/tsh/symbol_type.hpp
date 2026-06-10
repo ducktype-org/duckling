@@ -117,7 +117,8 @@ namespace compiler::tsh {
 			  leakage(leakage),
 			  uniqueness(uniqueness) {}
 
-		// @TODO: #2348 Use this whenever abstract type is promoted to symbol type.
+		// @TODO: #2348 Use this whenever abstract type is promoted to symbol type and change the
+		// mutability defaults
 		/**
 		 * @brief Creates a SymbolType from an AbstractType with a set of default symbol properties.
 		 *
@@ -136,6 +137,20 @@ namespace compiler::tsh {
 				abstract_type,
 				ReferenceKind::Direct,
 				Mutability::Mutable,
+				Leakage::NonLeaking,
+				Uniqueness::NonUnique
+			);
+		}
+
+		/**
+		 * @brief Same as above, but with immutability.
+		 * @TODO: #2348 change the names to withDefaultsMut and withDefaults, rustlike
+		 */
+		static SymbolType<ABSTRACT_TYPE> withDefaultsConst(const ABSTRACT_TYPE abstract_type) {
+			return SymbolType<ABSTRACT_TYPE>(
+				abstract_type,
+				ReferenceKind::Direct,
+				Mutability::Immutable,
 				Leakage::NonLeaking,
 				Uniqueness::NonUnique
 			);
@@ -288,11 +303,14 @@ namespace compiler::tsh {
 			return SymbolType(abstract_type, reference_kind, new_mutability, leakage, uniqueness);
 		}
 
+		/**
+		 * @brief Utility to get the pointee type from the current symbol type.
+		 * Works both with reference RefKind and pointer abstract types.
+		 * The RefKind of this symbol is considered first and the abstract type is only considered
+		 * if the RefKind is Direct.
+		 */
 		[[nodiscard]]
-		SymbolType getPointeeSymbolType() const {
-			CORE_ASSERT(reference_kind != ReferenceKind::Direct, "Cannot dereference a Direct type");
-			return withReferenceKind(ReferenceKind::Direct);
-		}
+		SymbolType getPointeeSymbolType() const;
 
 		/**
 		 * @brief Three-way comparison with another SymbolType.
@@ -363,4 +381,7 @@ namespace compiler::tsh {
 		Leakage       leakage;
 		Uniqueness    uniqueness;
 	};
+
+	extern template auto SymbolType<AbstractType>::getPointeeSymbolType() const
+		-> SymbolType<AbstractType>;
 }

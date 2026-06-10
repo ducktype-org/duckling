@@ -127,6 +127,15 @@ namespace vm::fast {
 		return std::nullopt;
 	}
 
+	std::expected<api::Response, api::ApiError> FastVMProcess::mapFileLineToCodeCollectionPosition(
+		const fs::File& file, usize line_number
+	) {
+		// @TODO: #2102 Implement this pure virtual method.
+		throw vm::VMNotImplemented(
+			"Method `mapFileLineToCodeCollectionPosition` is not implemented."
+		);
+	}
+
 	std::expected<api::Response, api::ApiError> FastVMProcess::setBreakpoint(
 		base::StrID function_name, usize instruction_index, bool enable
 	) {

@@ -17,6 +17,7 @@
 #include <helios_private/errors/duplicated_definition.hpp>
 #include <helios_private/hout_creation/definition_generation/class_constructors.hpp>
 #include <helios_private/hout_creation/definition_generation/default_constructors.hpp>
+#include <helios_private/hout_creation/definition_generation/length_methods.hpp>
 #include <helios_private/hout_creation/definition_generation/to_string_methods.hpp>
 #include <helios_private/hout_creation/definition_generation/tuple_constructor.hpp>
 #include <helios_private/scopes/scopes.hpp>
@@ -25,6 +26,7 @@
 
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
+#include <base/extend_cpp/vector_utils.hpp>
 
 #include <query_framework/query_errors.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
@@ -72,11 +74,12 @@ namespace compiler::helios {
 			std::vector<SymID>             class_symbols;
 			std::set<SymID>                default_ctors;
 			std::set<SymID>                additional_ctors;
+			std::set<SymID>                additional_methods;
 			// Keeps track of mangled names processed within the current module
 			// to detect duplicated function declarations at the HOUT level.
 			std::set<base::StrID> processed_mangled_names;
 
-			auto register_ctor_if_needed = [&](SymID sym) {
+			auto register_ctor_and_tostring_if_needed = [&](SymID sym) {
 				const auto& symbol_type = ctx.query<QueryTypeOfSymbol>(sym)->valueOrThrow();
 				const auto& type        = symbol_type.getType();
 
@@ -86,6 +89,18 @@ namespace compiler::helios {
 					const auto& tuple_ctor
 						= ctx.query<defgen::QueryTuplePackConstructor>(tuple_type)->valueOrThrow();
 					additional_ctors.insert(tuple_ctor.declaration->original_symbol);
+					const auto& tuple_tostring
+						= ctx.query<defgen::QueryToStringMethod>(tuple_type)->valueOrThrow();
+					additional_methods.insert(tuple_tostring.declaration->original_symbol);
+					return;
+				}
+				if (type.getKind() == tsh::Kind::Slice) {
+					const auto& length_method
+						= ctx.query<defgen::QueryLengthMethod>(type)->valueOrThrow();
+					additional_methods.insert(length_method.declaration->original_symbol);
+					const auto& tostring_method
+						= ctx.query<defgen::QueryToStringMethod>(type)->valueOrThrow();
+					additional_methods.insert(tostring_method.declaration->original_symbol);
 					return;
 				}
 
@@ -107,9 +122,9 @@ namespace compiler::helios {
 					default_ctors.insert(class_ctor.declaration->original_symbol);
 				}
 			};
-			auto register_ctor_if_needed_no_interrupt
-				= [&run_no_interrupt, &register_ctor_if_needed](SymID sym) {
-					  run_no_interrupt([&] { register_ctor_if_needed(sym); });
+			auto register_ctor_and_tostring_if_needed_no_interrupt
+				= [&run_no_interrupt, &register_ctor_and_tostring_if_needed](SymID sym) {
+					  run_no_interrupt([&] { register_ctor_and_tostring_if_needed(sym); });
 				  };
 
 			auto try_append_global_data = [&](SymID sym) {
@@ -132,7 +147,7 @@ namespace compiler::helios {
 					// Register default constructors for all symbols that need them.
 					const auto sym_kind = kind(sym);
 					if (sym_kind == SymbolKind::Variable || sym_kind == SymbolKind::Const)
-						register_ctor_if_needed_no_interrupt(sym);
+						register_ctor_and_tostring_if_needed_no_interrupt(sym);
 
 					// grab constants:
 					if (kind(sym) == SymbolKind::Const) try_append_global_data(sym);
@@ -146,7 +161,7 @@ namespace compiler::helios {
 				}
 			}
 
-			appendToStringForSimpleTypes(out.functions, ctx);
+			appendMethodForSimpleTypes(out.functions, ctx);
 
 			for (auto class_sym: class_symbols) {
 				// we postpone this past function scheduling, as
@@ -163,6 +178,13 @@ namespace compiler::helios {
 				appendDefaultConstructors(out.functions, default_ctors, ctx);
 				for (SymID ctor_sym: additional_ctors) {
 					const auto& hout_res = ctx.query<QueryCodeOfFun>(ctor_sym)->valueOrThrow();
+					out.functions.emplace_back(&hout_res);
+				}
+			});
+
+			run_no_interrupt([&] {
+				for (SymID tostring_sym: additional_methods) {
+					const auto& hout_res = ctx.query<QueryCodeOfFun>(tostring_sym)->valueOrThrow();
 					out.functions.emplace_back(&hout_res);
 				}
 			});
@@ -201,12 +223,9 @@ namespace compiler::helios {
 				}
 			}
 
-			std::set<SymID>                 unique_funcs;
-			std::vector<CRef<HOUTFunction>> deduplicated_functions;
-			for (auto f: out.functions)
-				if (unique_funcs.insert(f->declaration->original_symbol).second)
-					deduplicated_functions.push_back(f);
-			out.functions = std::move(deduplicated_functions);
+			base::deduplicateBy(out.functions, [](CRef<HOUTFunction> f) {
+				return f->declaration->original_symbol;
+			});
 
 			if (is_failed) return query::Failed();
 
@@ -218,7 +237,7 @@ namespace compiler::helios {
 		 * @param out_functions The vector of functions to be modified.
 		 * @param ctx The query context.
 		 */
-		static void appendToStringForSimpleTypes(
+		static void appendMethodForSimpleTypes(
 			std::vector<CRef<HOUTFunction>>& out_functions, Context& ctx
 		) {
 			auto append_to_string_for_simple_type = [&](tsh::AbstractType type) {
@@ -242,6 +261,12 @@ namespace compiler::helios {
 			append_to_string_for_simple_type(tsh::getCharType());
 			append_to_string_for_simple_type(tsh::getBoolType());
 			append_to_string_for_simple_type(tsh::getStringType());
+			append_to_string_for_simple_type(tsh::getUnitType());
+			append_to_string_for_simple_type(tsh::getCharSliceType(ctx));
+			out_functions.emplace_back(&ctx.query<QueryCodeOfFun>(defgen::lengthMethodForType(
+																	  ctx, tsh::getCharSliceType(ctx)
+																  ))
+			                                ->valueOrThrow());
 		}
 
 		/**
@@ -368,7 +393,7 @@ namespace compiler::helios {
 					ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 						"Methods of zero-sized classes are not yet implemented due to ZST not "
 						"being properly supported yet.",
-						symbolPst(method.getSymbol()).map([&](auto pst) {
+						maybeSymbolPst(method.getSymbol()).map([&](auto pst) {
 							return pst.unlock(ctx)->getStablePosition();
 						})
 					));

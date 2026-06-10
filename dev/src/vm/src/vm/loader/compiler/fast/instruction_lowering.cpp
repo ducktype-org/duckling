@@ -26,7 +26,11 @@ namespace {
 		const detail::FunctionStackContext& stack_ctx;
 		const vm::fast::FunctionInfo&       func_info;
 
+		vm::code::StackStateID stack_sid;
+
 		base::HashMap<base::StrID, i64> label_ids{};
+
+		auto getStack() const { return stack_ctx.function.local_stack; }
 	};
 
 	arg::Immediate makeImmediate(Context&, const vm::opargs::Immediate& value) {
@@ -36,7 +40,7 @@ namespace {
 	arg::Immediate makeImmediate(Context&, const u64 value) { return value; }
 
 	arg::Place64 makePlace64(Context& ctx, const vm::opargs::Place64& place) {
-		return getIntTypeSize(ctx.stack_ctx.locals_map.at(place.var_name).offset);
+		return getIntTypeSize(ctx.getStack().getByteOffset(ctx.stack_sid, place.var_name).value());
 	}
 
 	arg::Function makeFunction(Context& ctx, const vm::opargs::FunctionName& func) {
@@ -44,10 +48,10 @@ namespace {
 	}
 
 	arg::PlaceAny makePlaceAny(Context& ctx, const vm::opargs::PlaceAny& place) {
-		return getIntTypeSize(ctx.stack_ctx.locals_map.at(place.var_name).offset);
+		return getIntTypeSize(ctx.getStack().getByteOffset(ctx.stack_sid, place.var_name).value());
 	}
 
-	arg::PlaceAny makePlaceAny(Context&, u64 place_any) { return place_any; }
+	[[maybe_unused]] arg::PlaceAny makePlaceAny(Context&, u64 place_any) { return place_any; }
 
 	/**
 	 * @brief Converts a label argument into a label ID
@@ -130,35 +134,6 @@ namespace {
 			}
 		}
 	}
-
-	class Stack {
-	public:
-		Stack(Context& ctx): ctx(ctx) {
-			for (const vm::fast::TypeID& type: ctx.func_info.return_types) push(type);
-			for (const vm::fast::TypeID& type: ctx.func_info.arg_types) push(type);
-		}
-
-		void push(vm::fast::TypeID type_id) {
-			types.push(type_id);
-			types_size += ctx.program.types.at(type_id)->getSize().asInt();
-		}
-
-		vm::fast::TypeID pop() {
-			auto type = types.top();
-			types.pop();
-			types_size -= ctx.program.types.at(type)->getSize().asInt();
-			return type;
-		}
-
-		[[nodiscard]] vm::fast::TypeID top() const { return types.top(); }
-
-		[[nodiscard]] usize getTypesSize() const { return types_size; }
-
-	private:
-		usize                        types_size = 0;
-		Context&                     ctx;
-		std::stack<vm::fast::TypeID> types{};
-	};
 }
 
 #define PUSH(name, ...)                                                                 \
@@ -178,25 +153,24 @@ std::vector<vm::fast::reloc::Instruction> vm::loader::compiler::fast::lowerInstr
 	Context ctx{ .high_program = high_program,
 		         .program      = program,
 		         .stack_ctx    = stack_ctx,
-		         .func_info    = func_info };
+		         .func_info    = func_info,
+		         .stack_sid    = code::StackStateID(0) };
 
 	namespace high = vm::code::instructions;
 	base::HashMap<i64, usize> label_id_to_offset;
 
-	Stack type_stack(ctx);
-
 	base::Optional<Ref<vm::fast::reloc::Instruction>> prev_instr = std::nullopt;
-	for (const code::Instruction& instruction: stack_ctx.function.body) {
+	for (usize i = 0; i < stack_ctx.function.body.size(); i++) {
+		const vm::code::Instruction& instruction = stack_ctx.function.body[i];
+		ctx.stack_sid                            = stack_ctx.function.stack_states[i];
 		instr_match(instruction) {
 			instr_case(high::Op_init_pany_type, init) {
 				auto type      = high_program.types().at(init.type.type_name);
 				auto type_size = getIntTypeSize(type->getSize());
-				type_stack.push(vm::fast::TypeID(type->getID().asInt()));
 				PUSH(init_pany_imm, init.var, type_size);
 			}
 			instr_case(high::Op_deinit, deinit) {
 				// Skip, no deinit
-				type_stack.pop();
 			}
 			instr_case(high::Op_mov_p64_p64, mov) PUSH(mov_p64_p64, mov.dst, mov.src);
 			instr_case(high::Op_mov_p64_imm, mov) PUSH(mov_p64_imm, mov.dst, mov.src);
@@ -211,9 +185,8 @@ std::vector<vm::fast::reloc::Instruction> vm::loader::compiler::fast::lowerInstr
 					= *program.functions.at(call.function.function_name);
 				const usize func_ret_args_size
 					= (called_func_info.args_size + called_func_info.return_size).asInt();
-				const usize stack_top = type_stack.getTypesSize();
+				const usize stack_top = getIntTypeSize(ctx.getStack().byteSize(ctx.stack_sid));
 				PUSH(call_func_imm, call.function, stack_top - func_ret_args_size);
-				for (usize i = 0; i < func_info.arg_types.size(); i++) type_stack.pop();
 			}
 			instr_case(high::Op_input_p64, input) PUSH(input_p64, input.dst);
 			instr_case(high::Op_output_p64, output) PUSH(output_p64, output.src);

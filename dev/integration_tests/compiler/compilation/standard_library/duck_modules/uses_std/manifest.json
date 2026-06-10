@@ -1,0 +1,23 @@
+{
+    "packages": [
+        {
+            "name": "uses_std",
+            "id": "uses_std",
+            "version": "0.1.0",
+            "dependencies": [],
+            "path": "duck_modules/uses_std"
+        }
+    ],
+    "tasks": [
+        {
+            "package": "uses_std",
+            "strategy": "native",
+            "output_file": "package_llvm"
+        },
+        {
+            "package": "uses_std",
+            "strategy": "dvm",
+            "output_file": "package_dvm"
+        }
+    ]
+}

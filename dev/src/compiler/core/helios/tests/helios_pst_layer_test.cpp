@@ -60,7 +60,7 @@ private:
 
 		auto n_namespace = getChain("N", root_scope).back();
 
-		auto n_pst = compiler::helios::symbolPst(n_namespace)
+		auto n_pst = compiler::helios::maybeSymbolPst(n_namespace)
 		                 ->dynamicCast<pst::Namespace>()
 		                 .illegalAccess()
 		                 .value();

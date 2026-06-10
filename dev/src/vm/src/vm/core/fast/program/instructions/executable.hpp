@@ -6,9 +6,8 @@
 #include <base/comptime/type_traits.hpp>
 #include <base/types/ints.hpp>
 
-#include <vm/core/fast/program/type.hpp>
 #include <vm/core/fast/eval/dispatcher.hpp>
-
+#include <vm/core/fast/program/type.hpp>
 
 namespace vm::fast {
 	struct FunctionInfo;
@@ -39,10 +38,10 @@ namespace vm::fast::exec {
 #define MAKE_INSTRUCTION_UNION
 
 #ifdef USE_TAIL_CALLS
-#define ID_TYPE() ::vm::fast::DispatcherFunction
-#define MAKE_MAKERS_JUST_DEF // @note: No implementation in the .hpp
+	#define ID_TYPE() ::vm::fast::DispatcherFunction
+	#define MAKE_MAKERS_JUST_DEF  // @note: No implementation in the .hpp
 #else
-#define MAKE_MAKERS_FULL
+	#define MAKE_MAKERS_FULL
 #endif
 
 #include "instr_structures.hpp"
@@ -51,7 +50,6 @@ namespace vm::fast::exec {
 #undef MAKE_INSTR_STRUCTS
 #undef MAKE_INSTRUCTION_UNION
 #undef MAKE_MAKERS
-
 
 	struct ExecFunction {
 		std::vector<Instruction> data;

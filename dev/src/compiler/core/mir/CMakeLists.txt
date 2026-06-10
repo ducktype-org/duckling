@@ -3,10 +3,12 @@ add_library(MIR STATIC
 	src_private/mir_private/stmt_lowering.cpp
 	src_private/mir_private/expr_lowering.cpp
 	src_private/mir_private/mir_builders.cpp
+	src_private/mir_private/utils/slices.cpp
 
 	src/mir/mir_lowering/mir_lifetimes.cpp
 	src/mir/mir_lowering/mir_validation.cpp
 	src/mir/mir_lowering/mir_queries.cpp
+	src/mir/mir_lowering/mir_unit.cpp
 	src/mir/mir_structure/mir_structure.cpp
 	src/mir/mir_structure/mir_lifetime_scope.cpp
 )
@@ -14,5 +16,6 @@ add_library(MIR STATIC
 make_module(MIR USES Base QueryFramework HELIOS)
 
 duck_add_test(compiler mir tests/mir_test.cpp USES Base PstParser HELIOS MIR)
+duck_add_test(compiler mir_with_std tests/mir_with_std_test.cpp USES Base PstParser HELIOS MIR Driver)
 duck_add_test(compiler mir_errors tests/mir_errors_test.cpp USES Base PstParser HELIOS MIR)
 duck_add_test(compiler mir_lifetime tests/mir_lifetime_test.cpp USES Base PstParser HELIOS MIR)

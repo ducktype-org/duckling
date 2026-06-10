@@ -299,6 +299,10 @@ namespace compiler::helios::code {
 			// Meta
 			{ { keywordToStr(lang_def::Keyword::Ref), tsh::Kind::Meta }, BuiltinUnary::Ref },
 			{ { keywordToStr(lang_def::Keyword::Box), tsh::Kind::Meta }, BuiltinUnary::Box },
+			{ { keywordToStr(lang_def::Keyword::Ptr), tsh::Kind::Meta }, BuiltinUnary::Ptr },
+			{ { keywordToStr(lang_def::Keyword::ManyPtr), tsh::Kind::Meta }, BuiltinUnary::ManyPtr },
+			{ { keywordToStr(lang_def::Keyword::CPtr), tsh::Kind::Meta }, BuiltinUnary::CPtr },
+			{ { keywordToStr(lang_def::Keyword::Slice), tsh::Kind::Meta }, BuiltinUnary::Slice },
 			{ { keywordToStr(lang_def::Keyword::Const), tsh::Kind::Meta }, BuiltinUnary::Const },
 			// List.
 			{ { keywordToStr(lang_def::Keyword::Len), tsh::Kind::DynamicArray }, BuiltinUnary::Len },

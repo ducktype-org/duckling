@@ -8,6 +8,7 @@
 #include <debug_info/debug_info_builder.hpp>
 #include <tsl/type_layout.hpp>
 
+#include <base/extend_cpp/variant_match.hpp>
 #include <base/str/str_utils.hpp>
 #include <base/types/bits_and_bytes.hpp>
 
@@ -32,6 +33,13 @@ compiler::backend_vm::internal::ProgramLoweringContext::ProgramLoweringContext(
 							  )
                             : base::Optional<debug_info::DebugInfoBuilder>{})
 	  ) {}
+
+CRef<vm::code::TypeOfData> ProgramLoweringContext::keepVMType(vm::code::TypeOfData dvm_type) {
+	auto type_name      = typeName(dvm_type);
+	auto [it, inserted] = type_storage.dvm_types.put(type_name, std::move(dvm_type));
+	if (inserted) lowered_type_order.push_back(type_name);
+	return &it->second;
+}
 
 base::Optional<CRef<vm::code::TypeOfData>> ProgramLoweringContext::lowerAndKeepTslType(
 	CRef<tsl::TypeLayout> layout
@@ -194,55 +202,68 @@ vm::code::CodeCollection ProgramLoweringContext::collectNewCodeSince(
 }
 
 const vm::code::GlobalData& ProgramLoweringContext::lowerAndKeepLirGlobal(
-	const lir::LIRGlobal&               lir_global,
-	base::Optional<CRef<lir::Function>> global_ctor,
-	base::Optional<CRef<lir::Function>> global_dtor
+	const lir::LIRGlobalData& lir_global
 ) {
-	if (auto maybe_global = global_name_to_dvm_data.atMaybe(lir_global.mangled_name))
+	if (auto maybe_global = global_name_to_dvm_data.atMaybe(lir_global.global.mangled_name))
 		return **maybe_global;
 
-	auto& global_type      = **lowerAndKeepTslType(lir_global.layout);
-	auto& dvm_global_place = getLirGlobal(&lir_global);  // Ensure the global is added to the map.
+	auto& global_type = **lowerAndKeepTslType(lir_global.global.layout);
+	auto& dvm_global_place
+		= getLirGlobal(&lir_global.global);  // Ensure the global is added to the map.
 
 	using vm::code::Identifier;
 
 	base::Optional<Identifier> ctor_name;
 	base::Optional<Identifier> dtor_name;
 
-	if (global_ctor.has_value()) {
-		lowerAndKeepLirFunction(global_ctor.value());
-		ctor_name = Identifier(global_ctor.value()->mangled_name);
-	} else if (lir_global.initial_value.has_value()) {
-		auto mini_ctor_name
-			= base::StrID(base::strConcat(lir_global.mangled_name.strView(), "_ctv_ctor"));
+	variant_match(lir_global.data_initialization) {
+		variant_case(lir::LIRGlobalData::CTorDtorPair, ctor_dtor_pair) {
+			if (ctor_dtor_pair.global_ctor.has_value()) {
+				lowerAndKeepLirFunction(ctor_dtor_pair.global_ctor.value());
+				ctor_name = Identifier(ctor_dtor_pair.global_ctor.value()->mangled_name);
+			}
 
-		auto mini_ctor = createMiniGlobalCtorFromCTV(
-			*this,
-			lir_global.layout,
-			global_type,
-			lir_global.initial_value.value(),
-			mini_ctor_name,
-			dvm_global_place
-		);
-		extra_bytecode_functions.push_back(std::move(mini_ctor));
-		ctor_name = Identifier(mini_ctor_name);
-	}
-	if (global_dtor.has_value()) {
-		lowerAndKeepLirFunction(global_dtor.value());
-		dtor_name = Identifier(global_dtor.value()->mangled_name);
+			if (ctor_dtor_pair.global_dtor.has_value()) {
+				lowerAndKeepLirFunction(ctor_dtor_pair.global_dtor.value());
+				dtor_name = Identifier(ctor_dtor_pair.global_dtor.value()->mangled_name);
+			}
+		}
+		variant_case(ctv::CompileTimeValue, ctv_initial_value) {
+			// @TODO: #1553 we create mini-ctors for global variables with CTV initializers for now.
+			// Ideally, we should add proper support for immediate value initializers in the DVM and
+			// avoid this workaround.
+
+			auto mini_ctor_name
+				= base::StrID(base::strConcat(lir_global.global.mangled_name.strView(), "_ctv_ctor")
+			    );
+
+			auto mini_ctor = createMiniGlobalCtorFromCTV(
+				*this,
+				lir_global.global.layout,
+				global_type,
+				ctv_initial_value,
+				mini_ctor_name,
+				dvm_global_place
+			);
+			extra_bytecode_functions.push_back(std::move(mini_ctor));
+			ctor_name = Identifier(mini_ctor_name);
+		}
+		variant_default {
+			CORE_PANIC("Unhandled LIRGlobalData initial value type in lowerAndKeepLirGlobal");
+		}
 	}
 
 	// @TODO: #1553 add a isConst to DVM and initial values, add source position to
 	// GlobalVariables
 	vm::code::GlobalData global_data{};
-	global_data.name      = lir_global.mangled_name;
+	global_data.name      = lir_global.global.mangled_name;
 	global_data.type      = typeName(global_type);
 	global_data.ctor_name = ctor_name;
 	global_data.dtor_name = dtor_name;
 
-	global_name_to_dvm_data.put(lir_global.mangled_name, global_data);
-	lowered_global_order.push_back(lir_global.mangled_name);
-	return global_name_to_dvm_data.at(lir_global.mangled_name);
+	global_name_to_dvm_data.put(lir_global.global.mangled_name, global_data);
+	lowered_global_order.push_back(lir_global.global.mangled_name);
+	return global_name_to_dvm_data.at(lir_global.global.mangled_name);
 }
 
 const vm::code::Function& ProgramLoweringContext::lowerAndKeepLirFunction(
@@ -323,8 +344,38 @@ base::Optional<vm::code::TypeOfData> ProgramLoweringContext::lowerTslTypeInterna
 		variant_case(tsl::PointerTypeLayout, pointer_layout) {
 			const vm::code::TypeOfData& pointee_type
 				= **lowerAndKeepTslType(pointer_layout.getPointee());
-			auto pointer_type_name = base::strConcat("ptr_", typeName(pointee_type));
-			return vm::code::PointerType(base::StrID(pointer_type_name), typeName(pointee_type));
+			switch (pointer_layout.getPointerKind()) {
+			case tsl::PointerTypeLayout::PointerKind::SinglePointer: {
+				auto pointer_type_name = base::strConcat("ptr_", typeName(pointee_type));
+				return vm::code::PointerType(base::StrID(pointer_type_name), typeName(pointee_type));
+			}
+			case tsl::PointerTypeLayout::PointerKind::ManyPointer: {
+				// Many pointer is a pointer to a dynamic table of the pointee type.
+				auto dyntable_type_name = base::strConcat("dyntable_", typeName(pointee_type));
+				vm::code::DynamicTableType dyntable_type(
+					base::StrID(dyntable_type_name), typeName(pointee_type)
+				);
+				// Ensure the dynamic table type is stored in the context.
+				keepVMType(dyntable_type);
+				auto pointer_type_name = base::strConcat("ptr_", dyntable_type_name);
+				return vm::code::PointerType(
+					base::StrID(pointer_type_name), typeName(dyntable_type)
+				);
+			}
+			case tsl::PointerTypeLayout::PointerKind::CPointer: {
+				query_ctx_for_errors.value()->logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					base::strConcat(
+						"CPointer types are not supported in DVM code generation yet: ",
+						layout->toStringDefinition(*query_ctx_for_errors.value())
+					),
+					""
+				));
+				query::throwFailed();
+				break;
+			}
+			default:
+				CORE_PANIC("All cases should be covered.");
+			}
 		}
 		variant_case(tsl::ClassTypeLayout, class_layout) {
 			std::vector<vm::code::Field> fields;
@@ -396,7 +447,7 @@ vm::code::CodeCollection ProgramLoweringContext::produceCodeCollection() {
 	std::ranges::sort(
 		collection.functions,
 		[](const vm::code::Function& lhs, const vm::code::Function& rhs) {
-			return lhs.name.str < rhs.name.str;
+			return lhs.name.str.strView() < rhs.name.str.strView();
 		}
 	);
 	collection.global_data

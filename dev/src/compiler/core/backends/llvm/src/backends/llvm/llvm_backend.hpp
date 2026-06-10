@@ -2,7 +2,8 @@
 
 #include "module_impl_fd.hpp"
 
-#include <lir/lir_structure/function_forward.hpp>
+#include <ctv/ctv_fd.hpp>
+#include <lir/lir_structure/lir_structure_fd.hpp>
 
 #include <base/pointers/box.hpp>
 #include <base/types/ok_bad.hpp>
@@ -47,19 +48,34 @@ namespace compiler::backend_llvm {
 		 */
 		static Module fromLLVMBC(std::span<unsigned char> llvm_bc_data);
 
+		/**
+		 * @brief Creates an LLVM module from LIRUnit.
+		 *
+		 * @return Module created by lowering the given LIRUnit.
+		 */
+		static Module fromLIRUnit(
+			query::Context&, const lir::LIRUnit& lir_unit, base::StrID module_id
+		);
+
 		Module(Box<ModuleImpl> impl): impl(std::move(impl)) {}
 
 		void addFunctionToModule(query::Context&, CRef<lir::Function> lir_function);
 
 		/**
-		 * @brief Adds a global variable declaration to the module.
-		 *
-		 * This function declares a global variable in the LLVM module and initializes it to 0 or
-		 * null. Note: This does not add a constructor for the global variable.
+		 * @brief Adds a global variable declaration to the LLVM module.
+		 * @note It only adds the declaration of the global variable, and does not handle any
+		 * initialization logic.
 		 *
 		 * @param lir_global The global variable to be added to the module.
 		 */
-		void addGlobalToModule(const lir::LIRGlobal& lir_global);
+		void addGlobalDeclarationToModule(const lir::LIRGlobalData& lir_global);
+
+		/**
+		 * @brief Sets the initializer of a global variable to a constant value.
+		 */
+		void setGlobalConstantInitializer(
+			base::StrID global_name, const ctv::CompileTimeValue& constant_value
+		);
 
 		/**
 		 * @brief Adds a function to the LLVM module's list of global constructors.

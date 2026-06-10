@@ -60,10 +60,10 @@ namespace maker {
 	#define MAKER_BODY(NAME, ...)                                               \
 		{                                                                       \
 			Instruction instr{                                                  \
-				.id                = MAKE_ID_FROM_NAME(NAME),                   \
 				.CAT(instr_, NAME) = instr_structs::NAME{ FOR_EACH_CUSTOM_LAST( \
 					HANDLE_CONS EXPAND, HANDLE_CONS_LAST EXPAND, __VA_ARGS__    \
 				) },                                                            \
+				.id                = MAKE_ID_FROM_NAME(NAME),                   \
 			};                                                                  \
 			return instr;                                                       \
 		}

@@ -79,12 +79,18 @@ namespace vm::loader::compiler::safe::detail {
 #endif
 
 	public:
+		code::StackStateID curr_state = code::LocalStackDb::EMPTY;
+
 		SafeMicroBytecodeBuilder(
 			safe::SafeCompiler&                                       compiler,
 			const vm::loader::compiler::detail::FunctionStackContext& ctx
 		):
 			  compiler{ compiler },
-			  ctx{ ctx } {}
+			  ctx{ ctx } {
+#ifdef ENABLE_JIT
+			addLow<Op_jitEntrypoint>();
+#endif
+		}
 
 		std::pair<low::MicroBytecode, decltype(label_id_to_offset)> build() {
 			return { std::move(result), std::move(label_id_to_offset) };
@@ -106,8 +112,11 @@ namespace vm::loader::compiler::safe::detail {
 		bool is_control_flow               = true;
 
 		TypeCRef getPlaceType(const opargs::ArgumentType auto p) const {
-			if (auto maybe_val = ctx.locals_map.atMaybe(p.var_name)) {
-				code::valid_type::ValidTypeID type_id = maybe_val.value()->type;
+			if (auto maybe_val = ctx.function.local_stack.getTypeName(curr_state, p.var_name)) {
+				code::valid_type::ValidTypeID type_id = compiler.high_program.getTypeContext()
+				                                            .getCurrentTypes()
+				                                            .at(*maybe_val)
+				                                            ->getID();
 				return compiler.getLowProgram()->getTypes().at(TypeID(type_id.asInt()));
 			}
 			return compiler.getLowProgram()->getGlobals().at(p.var_name)->type;
@@ -120,7 +129,7 @@ namespace vm::loader::compiler::safe::detail {
 				return u64(arg);
 			} else {
 				return compiler.template lowerArgument<std::remove_cvref_t<HighArg>, LowArg>(
-					ctx, label_name_to_id, arg
+					ctx, label_name_to_id, arg, curr_state
 				);
 			}
 		}
@@ -142,8 +151,14 @@ namespace vm::loader::compiler::safe::detail {
 					makeLowInstruction(T::OPCODE, lowerLowArg<LowArgs>(std::forward<Args>(args))...)
 				);
 #if (BUILD_TYPE_DEV_DEBUG)
-				result.back().opcode_id      = T::OPCODE;
-				result.back().representation = current_high_instruction_representation;
+	#ifdef ENABLE_JIT
+				if constexpr (!std::is_same_v<T, Op_jitEntrypoint>) {
+	#endif
+					result.back().opcode_id      = T::OPCODE;
+					result.back().representation = current_high_instruction_representation;
+	#ifdef ENABLE_JIT
+				}
+	#endif
 #endif
 				next_instruction_index++;
 			}(static_cast<T::ArgTypes*>(nullptr));
@@ -151,7 +166,7 @@ namespace vm::loader::compiler::safe::detail {
 
 		void addLabel(opargs::Label label) {
 			usize lid = compiler.lowerArgument<opargs::Label, low::opargs::Label>(
-				ctx, label_name_to_id, label
+				ctx, label_name_to_id, label, curr_state
 			);
 			label_id_to_offset.put(lid, next_instruction_index);
 		}
@@ -437,13 +452,7 @@ namespace vm::loader::compiler::safe::detail {
 			instr_case(high::Op_jmp_label, i) { addLow<Op_jmp_label>(i.label); }
 			instr_case(high::Op_jmpIf_label, i) { addLow<Op_jmpIf_label>(i.label); }
 			instr_case(high::Op_jmpIfNot_label, i) { addLow<Op_jmpIfNot_label>(i.label); }
-			instr_case(high::Op_call_func, i) {
-#ifdef ENABLE_JIT
-				addLow<Op_jit_call_entrypoint>(i.function);
-#else
-				addLow<Op_call_func>(i.function);
-#endif
-			}
+			instr_case(high::Op_call_func, i) { addLow<Op_call_func>(i.function); }
 			instr_case(high::Op_call_builtinfunc, i) { addLow<Op_call_builtinfunc>(i.function); }
 			instr_case(high::Op_call_cfunc, i) { addLow<Op_call_cfunc>(i.function); }
 			instr_case(high::Op_set_threadctx, i) { addLow<Op_set_threadctx>(i.function); }

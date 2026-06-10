@@ -60,8 +60,7 @@ inline static Ref<vm::Block> getBlockRefFromArg(
 template<typename T>
 [[nodiscard]] [[gnu::always_inline]]
 inline static T readFromPlace(std::byte* local_stack, std::byte* global_buffer, u64 place_arg) {
-	return vm::safeReadPointerBytes<T>(
-		getBytePtrFromPlaceArg(local_stack, global_buffer, place_arg)
+	return vm::safeReadPointerBytes<T>(getBytePtrFromPlaceArg(local_stack, global_buffer, place_arg)
 	);
 }
 

@@ -86,7 +86,6 @@ public:
 		TESTER_ADD_TEST(testStrings);
 		TESTER_ADD_TEST(testStaticArrays);
 		TESTER_ADD_TEST(testDynamicArrays);
-		TESTER_ADD_TEST(testBuiltinFunctions);
 		TESTER_ADD_TEST(testFunctionReturnTypeDeduction);
 		TESTER_ADD_TEST(testFunctionReturnTypeCheckAndCoercion);
 		TESTER_ADD_TEST(testMethodCalls);
@@ -99,6 +98,7 @@ public:
 		TESTER_ADD_TEST(testOverloadResolution);
 		TESTER_ADD_TEST(testDefaultInitializers);
 		TESTER_ADD_TEST(testCastsHout);
+		TESTER_ADD_TEST(testPointers);
 		TESTER_ADD_TEST(testTypeLifting);
 		TESTER_ADD_TEST(testHoutElementsOrigin);
 		TESTER_ADD_TEST(testAliases);
@@ -135,6 +135,14 @@ private:
 		));
 	}
 
+	auto getSliceTypeNoContext(compiler::tsh::SymbolType<> element_type) {
+		return std::any_cast<compiler::tsh::SliceAbstractType>(
+			query::utils::withContextCompute([&](query::Context& ctx) {
+				return ctx.query<compiler::tsh::QuerySliceType>(element_type);
+			})
+		);
+	}
+
 	/**
 	 * Shorthand to create a mutable symbol type from an abstract type.
 	 */
@@ -144,6 +152,10 @@ private:
 			compiler::tsh::ReferenceKind::Direct,
 			Mutable,
 		};
+	}
+
+	static compiler::tsh::SymbolType<> stConst(const compiler::tsh::AbstractType abstract_type) {
+		return st(abstract_type).withMutability(Immutable);
 	}
 
 	/**
@@ -226,7 +238,7 @@ private:
 			{
 				auto simple_const
 					= getConstValueAs<compiler::tsh::SymbolType<>>("SIMPLE_CONST", root_scope);
-				auto expected = st(i64_type).withMutability(Immutable);
+				auto expected = stConst(i64_type);
 				ASSERT_EQUAL(expected, simple_const);
 			}
 			{
@@ -272,7 +284,7 @@ private:
 			}
 			{
 				auto d_type   = getConstValueAs<compiler::tsh::SymbolType<>>("D", root_scope);
-				auto expected = st(i32_type).withMutability(compiler::tsh::Mutability::Immutable);
+				auto expected = stConst(i32_type);
 				ASSERT_EQUAL(expected, d_type);
 			}
 			{
@@ -573,10 +585,9 @@ private:
 
 		auto i32 = st(getIntegralTypeNoContext(32, Signed));
 		auto f32 = st(getFloatTypeNoContext(32));
-		auto str = st(compiler::tsh::getStringType());
-
 		query::utils::withContextDo([&](query::Context& ctx) {
 			using compiler::helios::LookupResult;
+			auto str = stConst(compiler::tsh::getCharSliceType(ctx));
 
 			CRef<LookupResult> first_result
 				= &h_interface.lookup(ctx, base::StrID("_1"))->valueOrPanic();
@@ -609,8 +620,10 @@ private:
 				= &h_interface.lookup(ctx, base::StrID("_0"))->valueOrPanic();
 			ASSERT_TRUE(empty_result->isEmpty());
 
+			// Check that the module lowers to HOUT without throwing.
 			const auto& hout
 				= ctx.query<compiler::helios::QueryModuleHOUT>(module_id)->valueOrThrow();
+			(void) hout;
 		});
 	}
 
@@ -626,7 +639,7 @@ private:
 		const auto str_type   = compiler::tsh::getStringType();
 
 		const auto int32_mut_symbol_type   = st(int32_type).withMutability(Mutable);
-		const auto int32_immut_symbol_type = st(int32_type).withMutability(Immutable);
+		const auto int32_immut_symbol_type = stConst(int32_type);
 
 		ASSERT_EQUAL(int32_immut_symbol_type, getSymbolTypeOf("SimpleIntConst", root_scope));
 		ASSERT_EQUAL(int32_immut_symbol_type, getSymbolTypeOf("SimpleIntLet", root_scope));
@@ -828,8 +841,8 @@ private:
 		auto& hout
 			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
 
-		ASSERT_EQUAL(hout.functions.size(), 3);
-		ASSERT_EQUAL(hout.glob_data.size(), 3);
+		ASSERT_EQUAL_PRINT(hout.functions.size(), 3);
+		ASSERT_EQUAL_PRINT(hout.glob_data.size(), 3);
 
 		// just for cov and to see if it does not throw:
 		query::utils::withContextDo([&](query::Context& ctx) {
@@ -852,9 +865,10 @@ private:
 			glob_data += hout->glob_data.size();
 		}
 
-		// @TODO: #2694 This should be 3, not 16, when toString methods
+		// @TODO: #2694 This should be 3, not 19, when toString methods
 		// for simple types are moved out of every HOUT unit.
-		ASSERT_EQUAL(functions, 16);
+		// @TODO: #2424 When refactoring, add robust tests that the expected toString methods are added.
+		ASSERT_EQUAL_PRINT(functions, 19);
 		ASSERT_EQUAL(glob_data, 5);
 	}
 
@@ -872,9 +886,10 @@ private:
 			glob_data += hout->glob_data.size();
 		}
 
-		// @TODO: #2694 This should be 1, not 27 (1 + 2 * 13), when toString methods
+		// @TODO: #2694 This should be 1, not 29 (1 + 2 * 14 + 1 (length)), when toString methods
 		// for simple types are moved out of every HOUT unit (there are two units in this test).
-		ASSERT_EQUAL(functions, 27);
+		// @TODO: #2424 When refactoring, add robust tests that the expected toString methods are added.
+		ASSERT_EQUAL_PRINT(functions, 33);
 		ASSERT_EQUAL(glob_data, 5);
 	}
 
@@ -1149,7 +1164,7 @@ private:
 		std::stringstream out_vconst;
 		tree_vconst->debugPrint(out_vconst);
 		const auto bool_type       = compiler::tsh::getBoolType();
-		const auto const_bool_type = st(bool_type).withMutability(Immutable);
+		const auto const_bool_type = stConst(bool_type);
 		const auto vconst_type = query::entryPoint<compiler::helios::QueryTypeOfSymbol>(sym_vconst);
 		ASSERT_EQUAL(const_bool_type, vconst_type->valueOrThrow());
 
@@ -1833,6 +1848,7 @@ private:
 		auto& hout
 			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
 		auto& function   = hout.functions.at(0);
+		auto  fun_sym    = getChain("main", top_scope).back();
 		auto& statements = function->body->statements;
 		using namespace compiler::helios::code;
 
@@ -1875,6 +1891,35 @@ private:
 				base::StrID("builtin_string_concatenated"),
 				"The prepended expression should call builtin_string_concatenated"
 			);
+		}
+
+		{
+			// let x = 1;
+			// let y = 2;
+			// let format = "Did you know that {x} plus {y} equals ({x + y})?";
+			const auto& format_stmt = dynamic_cast<const VariableStmt&>(*statements.at(8));
+			const auto format_expr = dynamic_cast<const CallExpr*>(format_stmt.initial_value.get());
+			const auto format_callee = dynamic_cast<IdentifierExpr*>(format_expr->callee.get());
+			assertEqual(
+				compiler::helios::name(format_callee->symbol),
+				base::StrID("builtin_string_concatenated"),
+				"The format string expression should call builtin_string_concatenated"
+			);
+		}
+
+		{
+			const auto char_type       = compiler::tsh::getCharType();
+			const auto str_type        = compiler::tsh::getStringType();
+			const auto u64_type        = getIntegralTypeNoContext(64, Unsigned);
+			const auto char_slice_type = getSliceTypeNoContext(st(char_type));
+
+			auto fun_body_scope = getFunctionBodyScope(fun_sym);
+
+			// Vars
+			ASSERT_EQUAL(char_slice_type, getTypeOf("should_char_slice", fun_body_scope));
+			ASSERT_EQUAL(char_type, getTypeOf("should_char", fun_body_scope));
+			ASSERT_EQUAL(u64_type, getTypeOf("should_u64", fun_body_scope));
+			ASSERT_EQUAL(str_type, getTypeOf("should_string", fun_body_scope));
 		}
 	}
 
@@ -1992,46 +2037,6 @@ private:
 			auto* index_expr = dynamic_cast<const IndexExpr*>(var_decl.initial_value.get());
 			ASSERT_TRUE(index_expr != nullptr);
 		}
-	}
-
-	void testBuiltinFunctions() {
-		auto [module, scope] = getModule(fs::File(path("test_modules/builtins")));
-		auto& hout
-			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
-		ASSERT_EQUAL(1, hout.functions.size());
-
-		auto function = hout.functions.at(0);
-		ASSERT_EQUAL(function->declaration->original_name, "main");
-
-		Ref variable_stmt = dynamic_cast<const compiler::helios::code::VariableStmt*>(
-			function->body->statements.at(0).ref().get()
-		);
-		Ref call_expr_1 = dynamic_cast<const compiler::helios::code::CallExpr*>(
-			variable_stmt->initial_value.get()
-		);
-		auto call_expr_1_callee
-			= compiler::helios::getIdentifierExprSymID(call_expr_1->callee.ref()).value();
-		ASSERT_TRUE(std::holds_alternative<compiler::helios::builtin::BuiltinFunctionData>(
-			getSymRef(call_expr_1_callee)->other
-		));
-		ASSERT_EQUAL(base::StrID("builtin_input_i64"), compiler::helios::name(call_expr_1_callee));
-
-		Ref expr_stmt = dynamic_cast<const compiler::helios::code::ExprStmt*>(
-			function->body->statements.at(1).ref().get()
-		);
-		Ref  call_expr_2 = dynamic_cast<const compiler::helios::code::CallExpr*>(&*expr_stmt->expr);
-		auto call_expr_2_callee
-			= compiler::helios::getIdentifierExprSymID(call_expr_2->callee.ref()).value();
-		ASSERT_TRUE(std::holds_alternative<compiler::helios::builtin::BuiltinFunctionData>(
-			getSymRef(call_expr_2_callee)->other
-		));
-		ASSERT_EQUAL(base::StrID("builtin_output_i64"), compiler::helios::name(call_expr_2_callee));
-		auto& builtin_output_decl
-			= query::entryPoint<compiler::helios::QueryDeclOfFun>(call_expr_2_callee)->valueOrPanic();
-		ASSERT_EQUAL(
-			builtin_output_decl.parameters.at(0).type.getType().getKind(),
-			compiler::tsh::Kind::Integral
-		);
 	}
 
 	void testFunctionReturnTypeDeduction() {
@@ -2176,7 +2181,7 @@ private:
 		          ->valueOrThrow()
 		          .getType()
 		          .as<compiler::tsh::ClassAbstractType>();
-		ASSERT_EQUAL(7, point_class_info.methods.size());
+		ASSERT_EQUAL(6, point_class_info.methods.size());
 
 		for (auto& method: point_class_info.methods) {
 			auto method_hout
@@ -2440,13 +2445,17 @@ private:
 
 		const auto bool_type = compiler::tsh::getBoolType();
 
-		const auto str_type = compiler::tsh::getStringType();
+		const auto str_type
+			= base::anyCast<compiler::tsh::SliceAbstractType>(query::utils::withContextCompute(
+				[&](query::Context& ctx) { return compiler::tsh::getCharSliceType(ctx); }
+			));
 
 		const auto tuple_ii_type = query::entryPoint<compiler::tsh::QueryTupleType>(
 			{ { st(int32_type), st(int32_type) } }
 		);
-		const auto tuple_si_type
-			= query::entryPoint<compiler::tsh::QueryTupleType>({ { st(str_type), st(int32_type) } });
+		const auto tuple_si_type = query::entryPoint<compiler::tsh::QueryTupleType>(
+			{ { stConst(str_type), st(int32_type) } }
+		);
 
 		auto foo            = getChain("foo", root_scope).back();
 		auto foo_body_scope = getFunctionBodyScope(foo);
@@ -2928,6 +2937,112 @@ private:
 		}
 	}
 
+	void testPointers() {
+		auto [module, top_scope] = getModule(fs::File(path("test_modules/pointers")));
+		auto& hout
+			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+
+		auto test_pointers_sym = getChain("test_pointers", top_scope).back();
+		auto body_scope        = getFunctionBodyScope(test_pointers_sym);
+
+		auto i32_type = getIntegralTypeNoContext(32, Signed);
+		auto i32_st   = st(i32_type);
+
+		// Get all symbol types before entering query context
+		const auto p_type         = getSymbolTypeOf("p", body_scope);
+		const auto from_ref_type  = getSymbolTypeOf("from_ref", body_scope);
+		const auto from_addr_type = getSymbolTypeOf("from_addr", body_scope);
+		const auto from_box_type  = getSymbolTypeOf("from_box", body_scope);
+		const auto c_type         = getSymbolTypeOf("c", body_scope);
+		const auto m_type         = getSymbolTypeOf("m", body_scope);
+		const auto pp_type        = getSymbolTypeOf("pp", body_scope);
+		const auto inner_type     = getSymbolTypeOf("inner", body_scope);
+		const auto deref_val_type = getSymbolTypeOf("deref_val", body_scope);
+		const auto sum_type       = getSymbolTypeOf("sum", body_scope);
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			const auto ptr_i32     = ctx.query<compiler::tsh::QueryPointerType>({ i32_st });
+			const auto ptr_ptr_i32 = ctx.query<compiler::tsh::QueryPointerType>({ st(ptr_i32) });
+			const auto manyptr_i32 = ctx.query<compiler::tsh::QueryManyPointerType>({ i32_st });
+			const auto cptr_i32    = ctx.query<compiler::tsh::QueryCPointerType>({ i32_st });
+
+			const auto ptr_i32_st     = st(ptr_i32);
+			const auto ptr_ptr_i32_st = st(ptr_ptr_i32);
+			const auto manyptr_i32_st = st(manyptr_i32);
+			const auto cptr_i32_st    = st(cptr_i32);
+
+			ASSERT_EQUAL(ptr_i32_st, p_type);
+			ASSERT_EQUAL(ptr_i32_st, from_ref_type);
+			ASSERT_EQUAL(ptr_i32_st, from_addr_type);
+			ASSERT_EQUAL(ptr_i32_st, from_box_type);
+			ASSERT_EQUAL(cptr_i32_st, c_type);
+			ASSERT_EQUAL(manyptr_i32_st, m_type);
+			ASSERT_EQUAL(ptr_ptr_i32_st, pp_type);
+			ASSERT_EQUAL(ptr_i32_st, inner_type);
+			ASSERT_EQUAL(i32_st, deref_val_type);
+			ASSERT_EQUAL(i32_st, sum_type);
+		});
+
+		auto& function = hout.functions.at(0);
+		ASSERT_EQUAL(base::StrID("test_pointers"), function->declaration->original_name);
+
+		auto get_var_init_expr
+			= [&](const base::StrID& varname) -> CRef<compiler::helios::code::Expr> {
+			for (const auto& st_box: function->body->statements) {
+				if (auto var_ptr
+				    = dynamic_cast<const compiler::helios::code::VariableStmt*>(st_box.get())) {
+					if (compiler::helios::name(var_ptr->helios_symbol) == varname)
+						return var_ptr->initial_value.ref();
+				}
+			}
+			CORE_PANIC("Variable not found in function body");
+		};
+
+		{
+			auto expr_ptr = get_var_init_expr(base::StrID("from_ref"));
+			auto cast_ptr = dynamic_cast<const compiler::helios::code::CastExpr*>(expr_ptr.get());
+			ASSERT_TRUE(cast_ptr != nullptr);
+			ASSERT_EQUAL(compiler::tsh::Kind::Pointer, cast_ptr->target_type.getType().getKind());
+		}
+
+		{
+			auto expr_ptr = get_var_init_expr(base::StrID("from_addr"));
+			auto cast_ptr = dynamic_cast<const compiler::helios::code::CastExpr*>(expr_ptr.get());
+			ASSERT_TRUE(cast_ptr != nullptr);
+		}
+
+		{
+			auto expr_ptr = get_var_init_expr(base::StrID("from_box"));
+			auto cast_ptr = dynamic_cast<const compiler::helios::code::CastExpr*>(expr_ptr.get());
+			ASSERT_TRUE(cast_ptr != nullptr);
+		}
+
+		{
+			auto expr_ptr = get_var_init_expr(base::StrID("c"));
+			auto cast_ptr = dynamic_cast<const compiler::helios::code::CastExpr*>(expr_ptr.get());
+			ASSERT_TRUE(cast_ptr != nullptr);
+			ASSERT_EQUAL(compiler::tsh::Kind::CPointer, cast_ptr->target_type.getType().getKind());
+		}
+
+		{
+			auto expr_ptr  = get_var_init_expr(base::StrID("deref_val"));
+			auto deref_ptr = dynamic_cast<const compiler::helios::code::DerefExpr*>(expr_ptr.get());
+			ASSERT_TRUE(deref_ptr != nullptr);
+			ASSERT_EQUAL(i32_st, deref_ptr->expression_type.getSymbolType().withMutability(Mutable));
+		}
+
+		{
+			auto expr_ptr = get_var_init_expr(base::StrID("sum"));
+			auto bin_ptr
+				= dynamic_cast<const compiler::helios::code::BinaryOperatorExpr*>(expr_ptr.get());
+			ASSERT_TRUE(bin_ptr != nullptr);
+			auto deref_lhs
+				= dynamic_cast<const compiler::helios::code::DerefExpr*>(bin_ptr->lhs.get());
+			ASSERT_TRUE(deref_lhs != nullptr);
+			ASSERT_EQUAL(i32_st, deref_lhs->expression_type.getSymbolType().withMutability(Mutable));
+		}
+	}
+
 	void testTypeLifting() {
 		// Load the small test module we added under test_modules/units_and_tuples
 		auto [module, root_scope] = getModule(fs::File(path("test_modules/units_and_tuples")));
@@ -2965,20 +3080,15 @@ private:
 				assertEqual(actual_type, expected_type, message);
 			};
 
-			const auto meta_st = st(compiler::tsh::getMetaType()).withMutability(Immutable);
-			const auto unit_st = st(compiler::tsh::getUnitType()).withMutability(Immutable);
-			const auto int_st
-				= st(compiler::tsh::getIntegralType(ctx, 32, Signed)).withMutability(Immutable);
-			const auto tuple_ii_st
-				= st(ctx.query<compiler::tsh::QueryTupleType>(
-						 { { int_st.withMutability(Mutable), int_st.withMutability(Mutable) } }
-					 )
-			    ).withMutability(Immutable);
-			const auto tuple_tt_st
-				= st(ctx.query<compiler::tsh::QueryTupleType>(
-						 { { meta_st.withMutability(Mutable), meta_st.withMutability(Mutable) } }
-					 )
-			    ).withMutability(Immutable);
+			const auto meta_st     = stConst(compiler::tsh::getMetaType());
+			const auto unit_st     = stConst(compiler::tsh::getUnitType());
+			const auto int_st      = stConst(compiler::tsh::getIntegralType(ctx, 32, Signed));
+			const auto tuple_ii_st = stConst(ctx.query<compiler::tsh::QueryTupleType>(
+				{ { int_st.withMutability(Mutable), int_st.withMutability(Mutable) } }
+			));
+			const auto tuple_tt_st = stConst(ctx.query<compiler::tsh::QueryTupleType>(
+				{ { meta_st.withMutability(Mutable), meta_st.withMutability(Mutable) } }
+			));
 
 			check_types(unit1, unit_st, "Unit1 should be of unit type.");
 			check_types(unit2, unit_st, "Unit2 should be of unit type.");

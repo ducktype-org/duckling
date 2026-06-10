@@ -5,6 +5,8 @@
 #include "module_impl.hpp"
 
 #include <backends/llvm/llvm_backend.hpp>
+#include <helios/mangler/mangler.hpp>  // @TODO: #2796 remove this include if possible
+#include <lir/lir_lowering/lir_lowering.hpp>
 
 #include <base/except/exceptions.hpp>
 
@@ -23,12 +25,91 @@ namespace compiler::backend_llvm {
 		return { parseLLVMBCToModuleImpl(llvm_bc_data) };
 	}
 
+	Module Module::fromLIRUnit(
+		query::Context& ctx, const lir::LIRUnit& lir_unit, base::StrID module_id
+	) {
+		backend_llvm::Module mod(module_id);
+
+		std::vector<CRef<lir::Function>> ctors;
+		std::vector<CRef<lir::Function>> dtors;
+
+		for (const auto& global: lir_unit.lir_globals) {
+			mod.addGlobalDeclarationToModule(global);
+
+			variant_match(global.data_initialization) {
+				variant_case(lir::LIRGlobalData::CTorDtorPair, ctor_dtor_pair) {
+					CORE_ASSERT(
+						global.global.type == lir::LIRGlobalType::Variable,
+						"Only variable globals can have ctor/dtor pair as initial value (constants "
+						"should always have CTV initial value)"
+					);
+
+					// Add global constructors and destructors if they exist
+					if (ctor_dtor_pair.global_ctor.has_value()) {
+						mod.addFunctionToModule(ctx, ctor_dtor_pair.global_ctor.value());
+						ctors.push_back(ctor_dtor_pair.global_ctor.value());
+					}
+					if (ctor_dtor_pair.global_dtor.has_value()) {
+						mod.addFunctionToModule(ctx, ctor_dtor_pair.global_dtor.value());
+						dtors.push_back(ctor_dtor_pair.global_dtor.value());
+					}
+				}
+				variant_case(ctv::CompileTimeValue, ctv_initial_value) {
+					mod.setGlobalConstantInitializer(global.global.mangled_name, ctv_initial_value);
+				}
+				variant_default { CORE_UNREACHABLE(); }
+			}
+		}
+
+		if (not ctors.empty()) {
+			auto module_ctor = lir::createFunctionInvoker(
+				ctx,
+				ctors,
+				helios::mangler::getSpecialMangledName<
+					helios::mangler::ManglingSymbolKind::ModuleConstructor>(
+					ctx, helios::mangler::special_symbol_keys::LIRModuleID{ module_id }
+				)
+			);
+			mod.addFunctionToModuleCtors(ctx, CRef<lir::Function>(&module_ctor));
+		}
+
+		if (not dtors.empty()) {
+			// Dtors should be called in reverse order
+			std::vector<CRef<lir::Function>> reversed_dtors(dtors.rbegin(), dtors.rend());
+			auto                             module_dtor = lir::createFunctionInvoker(
+                ctx,
+                reversed_dtors,
+                helios::mangler::getSpecialMangledName<
+												helios::mangler::ManglingSymbolKind::ModuleDestructor>(
+                    ctx, helios::mangler::special_symbol_keys::LIRModuleID{ module_id }
+                )
+            );
+			mod.addFunctionToModuleDtors(ctx, CRef<lir::Function>(&module_dtor));
+		}
+
+		for (const auto& lir_function: lir_unit.lir_functions)
+			mod.addFunctionToModule(ctx, lir_function);
+
+		CORE_ASSERT(
+			mod.verify().isOk(),
+			"LLVM module verification failed (enable Backend dev logs to see details)"
+		);
+
+		return mod;
+	}
+
 	void Module::addFunctionToModule(query::Context& ctx, CRef<lir::Function> lir_function) {
 		addFunctionToModuleImpl(ctx, impl.refMut(), lir_function);
 	}
 
-	void Module::addGlobalToModule(const lir::LIRGlobal& lir_global) {
-		addGlobalToModuleImpl(impl.refMut(), lir_global);
+	void Module::addGlobalDeclarationToModule(const lir::LIRGlobalData& lir_global) {
+		addGlobalDeclarationToModuleImpl(impl.refMut(), lir_global);
+	}
+
+	void Module::setGlobalConstantInitializer(
+		base::StrID global_name, const ctv::CompileTimeValue& constant_value
+	) {
+		setGlobalConstantInitializerImpl(impl.refMut(), global_name, constant_value);
 	}
 
 	void Module::addFunctionToModuleCtors(query::Context& ctx, CRef<lir::Function> lir_function) {

@@ -36,7 +36,6 @@ namespace lang_def {
 		Namespace,
 		Import,
 		Hides,
-		As,
 		Using,
 		Alias,
 		In,
@@ -112,6 +111,7 @@ namespace lang_def {
 		Char,
 		Bool,
 		Str,
+		BigStr,
 		Type,  // ...
 
 		// @TODO: do we need all of them?
@@ -139,6 +139,10 @@ namespace lang_def {
 		      // removed one we can use builtin methods/fields.
 		Ref,
 		Box,
+		Ptr,
+		CPtr,
+		ManyPtr,
+		Slice,
 		Copy,
 		Move,
 		Refof,
@@ -203,6 +207,7 @@ namespace lang_def {
 	enum class NamedOperator {
 		NotAnOperator,
 
+		As,
 		Period,
 		Range,
 		PeriodQuestion,

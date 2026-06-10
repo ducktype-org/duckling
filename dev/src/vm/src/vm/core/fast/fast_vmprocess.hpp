@@ -51,6 +51,10 @@ namespace vm::fast {
 
 
 	protected:
+		std::expected<api::Response, api::ApiError> mapFileLineToCodeCollectionPosition(
+			const fs::File& file, usize line_number
+		) override;
+
 		std::expected<api::Response, api::ApiError> setBreakpoint(
 			base::StrID function_name, usize instruction_index, bool enable
 		) override;

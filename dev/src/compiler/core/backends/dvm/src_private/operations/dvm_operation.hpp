@@ -106,6 +106,15 @@ namespace compiler::backend_vm::internal {
 		base::Optional<DVMPlace> dest;
 	};
 
+	struct BoxAllocOperation {
+		DVMValue                 src;
+		base::Optional<DVMPlace> dest;
+	};
+
+	struct BoxFreeOperation {
+		DVMValue src;
+	};
+
 	/**
 	 * @brief Represents a meta-type operations that require special handling.
 	 * These operations don't map directly to DVM opcodes but are lowered
@@ -171,6 +180,8 @@ namespace compiler::backend_vm::internal {
 		ComparisonOperation,
 		CallOperation,
 		AddressOfOperation,
+		BoxAllocOperation,
+		BoxFreeOperation,
 		CastOperation,
 		MetaOperation,
 		JumpOperation,

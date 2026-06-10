@@ -9,22 +9,19 @@
 
 #define IMPL(NAME) void vm::fast::FastExecutor::Instr_##NAME(INSTRFUN_ARGS(NAME))
 
-// #define PROGRESS_BY(progress_count)             \
-// 	state.incrementInstruction(progress_count); \
-// 	IF_TC(frame->ip->id(state, local_stack, frame, thread, *frame->ip))
-
+// Increments instruction pointer.
+// In tailcalls, the dispatcher calls the next instruction
 #define PROGRESS_BY(progress_count) state.incrementInstruction(progress_count)
 
-#define getBytePtrToPlace(ARG) local_stack + ARG
+// #define getBytePtrToPlace(ARG) local_stack + ARG
 
-#define READ_PLACE(type, arg) *reinterpret_cast<type*>(getBytePtrToPlace(arg))
-#define WRITE_PLACE(arg, val) \
-	*reinterpret_cast<std::remove_cvref_t<decltype(val)>*>(getBytePtrToPlace(arg)) = val
+// #define READ_PLACE(type, arg) *reinterpret_cast<type*>(getBytePtrToPlace(arg))
+// #define WRITE_PLACE(arg, val) \
+// 	*reinterpret_cast<std::remove_cvref_t<decltype(val)>*>(getBytePtrToPlace(arg)) = val
 
-// #define getBytePtrToPlace(ARG) \
-// 	decodePlace(ARG, local_stack, state.global_data_buffer_base)
-// #define READ_PLACE(type, arg) safeReadPointerBytes<type>(getBytePtrToPlace(arg))
-// #define WRITE_PLACE(arg, val) safeWriteBytes(getBytePtrToPlace(arg), val)
+#define getBytePtrToPlace(ARG) decodePlace(ARG, local_stack, state.global_data_buffer_base)
+#define READ_PLACE(type, arg)  safeReadPointerBytes<type>(getBytePtrToPlace(arg))
+#define WRITE_PLACE(arg, val)  safeWriteBytes(getBytePtrToPlace(arg), val)
 
 IMPL(init_pany_imm) {
 	// @note init will never happen for global
@@ -95,10 +92,10 @@ IMPL(output_p64) {
 }
 
 IMPL(input_p64) {
-	thread.getMyProcess().setStatus(api::Sleeping{});
+	thread.setProcessStatus(api::Sleeping{});
 	i64 io_value = thread.getMyProcess().getIO().getInput<i64>(thread);
 	WRITE_PLACE(instr.dst, io_value);
-	thread.getMyProcess().setStatus(api::Running{});
+	thread.setProcessStatus(api::Running{});
 	PROGRESS_BY(1);
 }
 
