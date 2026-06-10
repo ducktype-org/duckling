@@ -137,6 +137,96 @@ namespace compiler::helios::defgen {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDefaultClassConstructor);
 
 	// -----------------------------------------------------------
+	//              Tuple Default Constructors
+	// -----------------------------------------------------------
+
+	struct IMPLEMENT_QUERY(QueryDefaultTupleConstructor, query::QResult<HOUTFunction>) {
+		static PResult provide(Context& ctx, const QKey tuple_type) {
+			// Preamble, get some basic data.
+			auto        tuple_interface = tuple_type.getInterface(ctx);
+
+			using DefaultTupleConstructor = GeneratedSymbolData::DefaultTupleConstructor;
+			using Variable                = GeneratedSymbolData::GeneratedFunctionVariable;
+			using std::ranges::to;
+			using std::views::transform;
+
+			// Construct the constructor's type.
+			const std::vector<tsh::InterfaceElement> fields
+				= tuple_interface->getFieldsView() | to<std::vector>();
+
+			// Prepare the ctor symbol and declaration.
+			const SymID ctor_symbol = ctx.query<QueryGeneratedSymbol>(
+				{ .name = base::StrID("__init_tuple"),
+			      .generated_symbol_data
+			      = GeneratedSymbolData{ DefaultTupleConstructor{ tuple_type } } }
+			);
+
+
+			const auto& ctor_decl = ctx.query<QueryDeclOfFun>(ctor_symbol)->valueOrThrow();
+
+			// Prepare the body of the constructor.
+			std::vector<Box<code::Stmt>> body{};
+			// - One declaration, one assignment per field, one return.
+			body.reserve(1 + fields.size() + 1);
+
+			// - Declare result variable.
+			const auto  result_symbol_type = ctor_decl.return_type;
+			const SymID result_symbol      = ctx.query<QueryGeneratedSymbol>({
+					 .name                  = base::StrID("__result"),
+					 .generated_symbol_data = GeneratedSymbolData{ Variable{
+						 .function_symbol = ctor_symbol,
+						 .variable_index  = 0,
+						 .type            = result_symbol_type,
+                } },
+            });
+
+			// All fields  are zeroed.
+			body.emplace_back(makeBox<code::VariableStmt>(
+				code::generatedOrigin(),
+				makeBox<code::DefaultValueExpr>(
+					ctx, code::generatedOrigin(), result_symbol_type.getType()
+				),
+				result_symbol_type,
+				result_symbol
+			));
+
+			// - Assign each field with the initializing expression or a default value expression.
+			for (const auto& field: fields) {
+				auto init_expr = ctx.query<QueryDefaultInitializerExpr>(field.getType(ctx))->valueOrThrow().ref();
+
+				body.emplace_back(makeBox<code::AssignmentStmt>(
+					code::generatedOrigin(),
+					makeBox<code::AccessExpr>(
+						ctx,
+						code::generatedOrigin(),
+						makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), result_symbol),
+						field.getSymbol()
+					),
+					std::move(init_expr)
+				));
+			}
+
+			body.emplace_back(makeBox<code::ReturnStmt>(
+				code::generatedOrigin(),
+				makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), result_symbol)
+			));
+
+			// Finally, create the HOUTFunction object.
+			return HOUTFunction(
+				code::generatedOrigin(),
+				&ctor_decl,
+				std::make_shared<const code::CodeBlock>(code::CodeBlock{
+					.statements = std::move(body),
+				})
+			);
+		}
+
+		QUERY_AUTO_CACHE_CREF
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDefaultTupleConstructor);
+
+	// -----------------------------------------------------------
 	//              Static Array Default Constructors
 	// -----------------------------------------------------------
 	struct IMPLEMENT_QUERY(QueryDefaultStaticArrayConstructor, query::QResult<HOUTFunction>) {
@@ -318,13 +408,16 @@ namespace compiler::helios::defgen {
 				);
 			}
 			case tsh::Kind::Tuple: {
-				// @TODO: #2319 Add them here.
-				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-					"Generating default constructors for not trivially zero-initializable "
-					"tuple types.",
-					""
-				));
-				return query::Failed();
+				auto tuple_type = type.as<tsh::TupleAbstractType>();
+				auto ctor = ctx.query<QueryDefaultTupleConstructor>(tuple_type)->valueOrThrow();
+				return makeBox<code::CallExpr>(
+					ctx,
+					code::generatedOrigin(),
+					makeBox<code::IdentifierExpr>(
+						ctx, code::generatedOrigin(), ctor.declaration->original_symbol
+					),
+					std::vector<Box<code::Expr>>{}
+				);
 			}
 			case tsh::Kind::Unit: {
 				// Unit is default constructed with a unit.

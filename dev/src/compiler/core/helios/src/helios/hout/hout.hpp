@@ -38,6 +38,7 @@ namespace compiler::helios {
 	namespace defgen {
 		struct ImplementationOf_QueryImplicitClassConstructor;
 		struct ImplementationOf_QueryDefaultClassConstructor;
+		struct ImplementationOf_QueryDefaultTupleConstructor;
 		struct ImplementationOf_QueryDefaultStaticArrayConstructor;
 		struct ImplementationOf_QueryTuplePackConstructor;
 		struct ImplementationOf_QueryToStringMethod;
@@ -111,6 +112,7 @@ namespace compiler::helios {
 		friend defgen::ImplementationOf_QueryImplicitClassConstructor;
 		friend defgen::ImplementationOf_QueryTuplePackConstructor;
 		friend defgen::ImplementationOf_QueryDefaultClassConstructor;
+		friend defgen::ImplementationOf_QueryDefaultTupleConstructor;
 		friend defgen::ImplementationOf_QueryDefaultStaticArrayConstructor;
 		friend defgen::ImplementationOf_QueryToStringMethod;
 		friend defgen::ImplementationOf_QueryDefaultDestructor;
