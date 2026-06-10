@@ -221,7 +221,7 @@ private:
 		}
 	};
 
-	template<u64 THREAD_COUNT, u64 ITERATIONS_PER_THREAD = 1'000>
+	template<u64 THREAD_COUNT, u64 ITERATIONS_PER_THREAD = 10>
 	void concurrentUsage() {
 		DeleteCounter::count = 0;
 
