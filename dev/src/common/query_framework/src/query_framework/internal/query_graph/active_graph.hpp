@@ -63,7 +63,7 @@ namespace query::internal {
 			// We might want to store Ref<void> – maybe we need custom base type?.
 		};
 
-		concurrent::ConHashMap<NodeIDID, ActiveData> active_nodes;
+		NodeIDIDSuperMap<ActiveData> maybe_active_nodes;
 		std::atomic<u64>                           active_node_count = 0;
 
 
@@ -120,6 +120,7 @@ namespace query::internal {
 		 *       It might seem not necessary, since we only detect cycles that node_id is part of,
 		 *       but it is still needed to prevent infinite looping on actual cycles.
 		 */
-		base::Optional<QueryCycle> cycleCheck(const NodeIDID initial_node_id) const;
+		 [[nodiscard]]
+		base::Optional<QueryCycle> cycleCheck(const NodeIDID initial_node_id) ;
 	};
 }
