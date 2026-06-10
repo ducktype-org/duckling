@@ -15,8 +15,8 @@
 namespace query::internal {
 
 	namespace {
-		usize taskHash(const query::internal::NodeID& node) {
-			return std::hash<query::internal::NodeID>{}(node);
+		usize taskHash(const query::internal::NodeIDID& node) {
+			return std::hash<query::internal::NodeIDID>{}(node);
 		}
 	}
 
@@ -64,7 +64,7 @@ namespace query::internal {
 		}
 	}
 
-	void TaskPool::waitForTask(NodeID id) {
+	void TaskPool::waitForTask(NodeIDID id) {
 		auto             task_hash  = taskHash(id);
 		auto&            task_mutex = task_completed_mutexes.at(task_hash % TASK_SHARDS);
 		auto&            task_cv    = task_completed_cv.at(task_hash % TASK_SHARDS);
@@ -72,9 +72,9 @@ namespace query::internal {
 		task_cv.wait(lock, [this, id] { return isTaskDone(id); });
 	}
 
-	void TaskPool::invalidateTask(NodeID id) {
+	void TaskPool::invalidateTask(NodeIDID id) {
 		CORE_ASSERT(
-			!id.q_id.getData().isInputQuery(), "Input query nodes are not present in the task pool."
+			!id.getID().q_id.getData().isInputQuery(), "Input query nodes are not present in the task pool."
 		);
 
 		auto val = task_status_map.extract(id);
@@ -157,7 +157,7 @@ namespace query::internal {
 		return TaskHandle(*this, task_id);
 	}
 
-	void TaskPool::await(NodeID id) {
+	void TaskPool::await(NodeIDID id) {
 		// Fast path check without locking
 		if (auto task_status = task_status_map.atMaybeCopy(id)) {
 			if (task_status.value() == TaskStatus::Done) {
@@ -176,7 +176,7 @@ namespace query::internal {
 		waitForTask(id);
 	}
 
-	bool TaskPool::isTaskDone(NodeID id) const {
+	bool TaskPool::isTaskDone(NodeIDID id) const {
 		auto maybe_copy = task_status_map.atMaybeCopy(id);
 		return maybe_copy.has_value() && maybe_copy.value() == TaskStatus::Done;
 	}
@@ -187,7 +187,7 @@ namespace query::internal {
 		return worker_pools[worker_ref->getID()].tryPop();
 	}
 
-	base::Optional<Task> TaskPool::tryStealFromWorker(WRef worker_ref, NodeID task_id) {
+	base::Optional<Task> TaskPool::tryStealFromWorker(WRef worker_ref, NodeIDID task_id) {
 		auto& worker_pool = worker_pools[worker_ref->getID()];
 		return worker_pool.extractIf([&](base::CRef<Task> task) { return task->id == task_id; });
 	}

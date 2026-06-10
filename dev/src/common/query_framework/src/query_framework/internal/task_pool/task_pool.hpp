@@ -36,12 +36,12 @@ namespace query::internal {
 	 * @brief A task with an associated ID for tracking in the pool.
 	 */
 	struct Task final {
-		NodeID                   id;
+		NodeIDID                   id;
 		concurrent::worker::Task work;
 
 		template<typename F>
 		requires(std::invocable<std::decay_t<F>&, concurrent::worker::WRef>)
-		Task(NodeID id, F&& fn): id(id), work(std::forward<F>(fn)) {}
+		Task(NodeIDID id, F&& fn): id(id), work(std::forward<F>(fn)) {}
 	};
 
 	/**
@@ -49,7 +49,7 @@ namespace query::internal {
 	 */
 	class TaskHandle final {
 	public:
-		explicit TaskHandle(TaskPool& pool, NodeID id): pool(pool), task_id(id) {}
+		explicit TaskHandle(TaskPool& pool, NodeIDID id): pool(pool), task_id(id) {}
 
 		[[nodiscard]] NodeIDID getID() const { return task_id; }
 
@@ -120,7 +120,7 @@ namespace query::internal {
 		 *
 		 * @note Must be called from a worker thread.
 		 */
-		void await(NodeID id);
+		void await(NodeIDID id);
 
 
 		/**
@@ -129,7 +129,7 @@ namespace query::internal {
 		 *
 		 * @return True if the task is done, false otherwise.
 		 */
-		[[nodiscard]] bool isTaskDone(NodeID id) const;
+		[[nodiscard]] bool isTaskDone(NodeIDID id) const;
 
 		/**
 		 * @brief Callback invoked when a worker has no tasks.
@@ -141,9 +141,9 @@ namespace query::internal {
 		/**
 		 * @brief Waits until some worker executed the task.
 		 */
-		void waitForTask(NodeID id);
+		void waitForTask(NodeIDID id);
 
-		void invalidateTask(NodeID id);
+		void invalidateTask(NodeIDID id);
 
 	private:
 		/**
@@ -162,7 +162,7 @@ namespace query::internal {
 		/**
 		 * @brief Same as above but only steals the task of the given ID by @param task_id.
 		 */
-		base::Optional<Task> tryStealFromWorker(WRef worker_ref, NodeID task_id);
+		base::Optional<Task> tryStealFromWorker(WRef worker_ref, NodeIDID task_id);
 
 		/**
 		 * @brief Tries to execute the given task.
@@ -216,7 +216,7 @@ namespace query::internal {
 
 		/// Map from TaskID to TaskStatus (concurrent, lock-free access).
 		/// @TODO: #1988 hash map per query id? Or even stronger, lock free data structure.
-		concurrent::ConHashMap<NodeID, TaskStatus> task_status_map;
+		concurrent::ConHashMap<NodeIDID, TaskStatus> task_status_map;
 
 		static constexpr usize              TASK_SHARDS = 113;
 		std::array<std::mutex, TASK_SHARDS> task_completed_mutexes;

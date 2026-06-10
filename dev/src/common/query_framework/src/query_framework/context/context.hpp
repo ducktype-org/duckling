@@ -305,8 +305,10 @@ namespace query {
 		 */
 		template<typename OthQuery>
 		auto await(internal::TaskHandle& handle) {
+			auto handle_node_full_id = handle.getID().getID();
+
 			CORE_ASSERT(
-				OthQuery::getID() == handle.getID().q_id,
+				OthQuery::getID() == handle_node_full_id.q_id,
 				"Task handle query ID does not match the awaited query type."
 			);
 
@@ -318,7 +320,8 @@ namespace query {
 			// note that this will block, until the task is completed
 			handle.await();
 
-			auto result = OthQuery::internal_load(handle.getID().hash.val);
+			// WE CAN MADE CACHE BASED ON IDID as well:
+			auto result = OthQuery::internal_load(handle_node_full_id.hash.val);
 			if (is_cyclic_node) throw internal::QueryCycleException();
 			return result;
 		}

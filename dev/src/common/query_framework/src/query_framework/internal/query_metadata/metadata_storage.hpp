@@ -20,6 +20,7 @@
 #include <base/pointers/ref.hpp>
 
 #include <query_framework/internal/query_graph/node_id.hpp>
+#include <query_framework/internal/node_id_id.hpp>
 #include <string_id/string_id.hpp>
 
 #include <cstddef>
@@ -107,11 +108,11 @@ namespace query::internal {
 	 * This is used when merging metadata from a previous compilation during graph merging.
 	 */
 	struct ExtractedNodeMetadata final {
-		NodeID                                                                    node_id;
+		NodeIDID                                                                    node_id;
 		base::StableHashMap<BaseMetadata::TypeID, std::vector<Box<BaseMetadata>>> type_map;
 
 		ExtractedNodeMetadata(
-			NodeID                                                                      id,
+			NodeIDID                                                                      id,
 			base::StableHashMap<BaseMetadata::TypeID, std::vector<Box<BaseMetadata>>>&& map
 		):
 			  node_id(id),
@@ -122,25 +123,25 @@ namespace query::internal {
 	 * @brief Storage for metadata associated with query nodes.
 	 *
 	 * This class manages the storage and retrieval of metadata attached to NodeIDs.
-	 * Each NodeID can have multiple metadata values of different types.
-	 * Multiple metadata values of the same type can also be attached to a single NodeID.
+	 * Each NodeIDID can have multiple metadata values of different types.
+	 * Multiple metadata values of the same type can also be attached to a single NodeIDID.
 	 */
 	class MetadataStorage final {
 	private:
 		/**
 		 * @brief The storage structure:
-		 * NodeID -> (TypeID -> vector of metadata instances)
+		 * NodeIDID -> (TypeID -> vector of metadata instances)
 		 */
 		using TypeID = BaseMetadata::TypeID;
 
 		using TypeMap = concurrent::ConHashMap<TypeID, std::vector<Box<BaseMetadata>>>;
 
 		/**
-		 * @brief The main storage map: NodeID -> TypeMap
-		 * For each NodeID, it stores a map of TypeID to vectors of metadata instances.
-		 * This allows multiple metadata instances of the same type per NodeID.
+		 * @brief The main storage map: NodeIDID -> TypeMap
+		 * For each NodeIDID, it stores a map of TypeID to vectors of metadata instances.
+		 * This allows multiple metadata instances of the same type per NodeIDID.
 		 */
-		using MetadataMap = concurrent::ConHashMap<NodeID, TypeMap>;
+		using MetadataMap = concurrent::ConHashMap<NodeIDID, TypeMap>;
 
 		/**
 		 * @brief This actually stores the metadata.
@@ -160,12 +161,12 @@ namespace query::internal {
 		 *
 		 * @tparam MetadataT The metadata type (must derive from BaseMetadata and have TYPE_ID)
 		 * @tparam Args Argument types for constructing the metadata
-		 * @param node_id The NodeID to attach metadata to
+		 * @param node_id The NodeIDID to attach metadata to
 		 * @param args Arguments forwarded to MetadataT constructor
 		 */
 		template<typename MetadataT, typename... Args>
 		requires std::derived_from<MetadataT, BaseMetadata>
-		void addMetadata(NodeID node_id, Args&&... args) {
+		void addMetadata(NodeIDID node_id, Args&&... args) {
 			TypeID type_id = MetadataT::TYPE_ID;
 
 			// Create the metadata instance
@@ -195,13 +196,13 @@ namespace query::internal {
 		 *
 		 * @tparam MetadataT The metadata type (must derive from BaseMetadata and have TYPE_ID)
 		 * @tparam Args Argument types for constructing the metadata
-		 * @param node_id The NodeID to attach metadata to
+		 * @param node_id The NodeIDID to attach metadata to
 		 * @param args Arguments forwarded to MetadataT constructor
 		 * @return true if metadata was added, false if metadata of this type already exists
 		 */
 		template<typename MetadataT, typename... Args>
 		requires std::derived_from<MetadataT, BaseMetadata>
-		bool addMetadataIfNotExists(NodeID node_id, Args&&... args) {
+		bool addMetadataIfNotExists(NodeIDID node_id, Args&&... args) {
 			TypeID type_id = MetadataT::TYPE_ID;
 
 			// Create the metadata instance
@@ -232,13 +233,13 @@ namespace query::internal {
 		 * @brief Get all metadata of a specific type for a node.
 		 *
 		 * @tparam MetadataT The metadata type to retrieve
-		 * @param node_id The NodeID to get metadata for
+		 * @param node_id The NodeIDID to get metadata for
 		 * @return std::vector<CRef<MetadataT>> References to all metadata of the given type.
 		 *         Returns empty vector if no metadata of this type exists.
 		 */
 		template<typename MetadataT>
 		requires std::derived_from<MetadataT, BaseMetadata> [[nodiscard]]
-		std::vector<CRef<MetadataT>> getMetadata(NodeID node_id) const {
+		std::vector<CRef<MetadataT>> getMetadata(NodeIDID node_id) const {
 			std::vector<CRef<MetadataT>> result;
 			TypeID                       type_id = MetadataT::TYPE_ID;
 
@@ -261,12 +262,12 @@ namespace query::internal {
 		}
 
 		/**
-		 * @brief Structure to hold metadata with its associated NodeID.
+		 * @brief Structure to hold metadata with its associated NodeIDID.
 		 * @tparam MetadataT The metadata type.
 		 */
 		template<typename MetadataT>
 		struct MetadataInfo final {
-			NodeID          node_id;
+			NodeIDID          node_id;
 			CRef<MetadataT> value;
 		};
 
@@ -311,12 +312,12 @@ namespace query::internal {
 		 * @brief Check if a node has any metadata of a specific type.
 		 *
 		 * @tparam MetadataT The metadata type to check for
-		 * @param node_id The NodeID to check
+		 * @param node_id The NodeIDID to check
 		 * @return true if the node has at least one metadata of this type
 		 */
 		template<typename MetadataT>
 		requires std::derived_from<MetadataT, BaseMetadata> [[nodiscard]]
-		bool hasMetadata(NodeID node_id) const {
+		bool hasMetadata(NodeIDID node_id) const {
 			TypeID type_id = MetadataT::TYPE_ID;
 
 			bool result = false;
@@ -339,12 +340,12 @@ namespace query::internal {
 		 * @brief Get count of metadata of a specific type for a node.
 		 *
 		 * @tparam MetadataT The metadata type to count
-		 * @param node_id The NodeID to check
+		 * @param node_id The NodeIDID to check
 		 * @return usize Number of metadata instances of this type
 		 */
 		template<typename MetadataT>
 		requires std::derived_from<MetadataT, BaseMetadata> [[nodiscard]]
-		usize getMetadataCount(NodeID node_id) const {
+		usize getMetadataCount(NodeIDID node_id) const {
 			TypeID type_id = MetadataT::TYPE_ID;
 
 			usize result = 0;
@@ -364,11 +365,11 @@ namespace query::internal {
 		/**
 		 * @brief Extract all metadata for a node, removing it from storage.
 		 *
-		 * @param node_id The NodeID to extract metadata for
+		 * @param node_id The NodeIDID to extract metadata for
 		 * @return Optional<ExtractedNodeMetadata> The extracted data, or empty if node not found.
 		 */
 		[[nodiscard]]
-		base::Optional<ExtractedNodeMetadata> extract(NodeID node_id);
+		base::Optional<ExtractedNodeMetadata> extract(NodeIDID node_id);
 
 		/**
 		 * @brief Emplace extracted metadata into storage.
@@ -380,9 +381,9 @@ namespace query::internal {
 		/**
 		 * @brief Clear all metadata for a specific node.
 		 *
-		 * @param node_id The NodeID to clear metadata for
+		 * @param node_id The NodeIDID to clear metadata for
 		 */
-		void clearNodeMetadata(NodeID node_id);
+		void clearNodeMetadata(NodeIDID node_id);
 
 		/**
 		 * @brief Check if storage is empty.
@@ -409,7 +410,7 @@ namespace query::internal {
 		 *
 		 * [node_count: u64]
 		 * For each node:
-		 *   [NodeID: q_id (u64) + hash (Bit256)]
+		 *   [NodeIDID: q_id (u64) + hash (Bit256)]
 		 *   [type_count: u64]
 		 *   For each type:
 		 *     [type_id: u64]                        // Index in type table

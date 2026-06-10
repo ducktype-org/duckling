@@ -60,11 +60,11 @@ namespace query::internal {
 		}
 	}  // namespace
 
-	base::Optional<ExtractedNodeMetadata> MetadataStorage::extract(NodeID node_id) {
+	base::Optional<ExtractedNodeMetadata> MetadataStorage::extract(NodeIDID node_id) {
 		auto extracted = storage.extract(node_id);
 
 		if (!extracted.has_value()) {
-			// NodeID not found, return empty optional
+			// NodeIDID not found, return empty optional
 			return base::Optional<ExtractedNodeMetadata>{};
 		} else {
 			// We have to convert ConHashMap to StableHashMap for the extracted data
@@ -87,7 +87,7 @@ namespace query::internal {
 		storage.put(std::move(extracted).node_id, std::move(type_map));
 	}
 
-	void MetadataStorage::clearNodeMetadata(NodeID node_id) { storage.erase(node_id); }
+	void MetadataStorage::clearNodeMetadata(NodeIDID node_id) { storage.erase(node_id); }
 
 	bool MetadataStorage::empty() const { return storage.size() == 0; }
 
@@ -137,11 +137,12 @@ namespace query::internal {
 		writeU64(result, storage.size());
 
 		for (const auto& [node_id, type_map]: storage) {
-			// Serialize NodeID: QueryID as u64 + KeyHash as Bit256
-			writeU64(result, node_id.q_id.asInt());
+			// Serialize NodeIDID: QueryID as u64 + KeyHash as Bit256
+			writeU64(result, node_id.getID().q_id.asInt());
 
 			// Write Bit256 (4 x u64)
-			auto hash_bytes = std::as_bytes(std::span<const base::Bit256>(&node_id.hash.val, 1));
+			NodeID full_id = node_id.getID();
+			auto hash_bytes = std::as_bytes(std::span<const base::Bit256>(&full_id.hash.val, 1));
 			result.insert(result.end(), hash_bytes.begin(), hash_bytes.end());
 
 			// Write type count
@@ -202,20 +203,20 @@ namespace query::internal {
 		u64 node_count = readU64(data, offset);
 
 		for (u64 i = 0; i < node_count; ++i) {
-			// Read NodeID
+			// Read NodeIDID
 			u64 q_id_val = readU64(data, offset);
 
 			base::Bit256 hash_val;
 			std::memcpy(&hash_val, data.data() + offset, sizeof(base::Bit256));
 			offset += sizeof(base::Bit256);
 
-			// Reconstruct NodeID
-			NodeID node_id{ QueryID{ q_id_val }, KeyHash{ .val = hash_val } };
+			// Reconstruct NodeIDID
+			NodeIDID node_id{ NodeID{QueryID{ q_id_val }, KeyHash{ .val = hash_val } } };
 
-			// Assert that NodeID is registered and has preserve_in_graph = true
+			// Assert that NodeIDID is registered and has preserve_in_graph = true
 			CORE_ASSERT(
-				node_id.q_id.registered() && node_id.q_id.getData().tags.preserve_in_graph,
-				"NodeID must be registered and preserved in graph"
+				node_id.getID().q_id.registered() && node_id.getID().q_id.getData().tags.preserve_in_graph,
+				"NodeIDID must be registered and preserved in graph"
 			);
 
 			// Read type count
@@ -270,7 +271,7 @@ namespace query::internal {
 	void MetadataStorage::prettyPrint(std::ostream& os) const {
 		os << "MetadataStorage with " << storage.size() << " nodes:\n";
 		for (const auto& [node_id, type_map]: storage) {
-			os << "  NodeID(q_id=" << node_id.q_id.getData().name << ", hash=" << node_id.hash.val
+			os << "  NodeIDID(q_id=" << node_id.getID().q_id.getData().name << ", hash=" << node_id.getID().hash.val
 			   << "):\n";
 			for (const auto& [type_id, metadata_vec]: type_map) {
 				os << "    TypeID: " << type_id.strView() << " (" << metadata_vec.size()
