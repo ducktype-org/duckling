@@ -17,14 +17,9 @@ namespace compiler::driver {
 	);
 
 	/**
-	 * @brief Query that produces LIRUnitWithBackendName for given Duckling module.
-	 * @TODO: #2246 Consider removing this query and moving logic from it elsewhere
-	 * or changing it into function (it only adds a module name).
+	 * @brief Produces LIRUnitWithBackendName for given Duckling module.
 	 */
-	DECLARE_QUERY(
-		CompileToLIRModuleData,
-		frontend::ModuleID,
-		CRef<query::QResult<LIRUnitWithBackendName>>,
-		({})
-	)
+	query::QResult<LIRUnitWithBackendName> compileModuleToLIRModuleData(
+		query::Context& ctx, frontend::ModuleID module_id
+	);
 }
