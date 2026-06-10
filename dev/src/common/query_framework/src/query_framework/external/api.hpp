@@ -139,7 +139,7 @@ namespace query::external {
 
 		for (const auto& info: internal_result) {
 			result.push_back(MetadataInfo<MetadataT>{
-				.input_data = InputData(info.node_id.getID().q_id, info.node_id.hash.val),
+				.input_data = InputData(info.node_id.getID().q_id, info.node_id.getID().hash.val),
 				.value      = info.value,
 			});
 		}
