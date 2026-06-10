@@ -20,12 +20,21 @@ namespace {
 	using formatter::IndentStyle;
 	using lexer::Token;
 
-	/** Tokenizes `source` and returns the formatter output. */
+	/** Tokenizes `source` (keeping comments) and returns the formatter output. */
 	std::string fmt(std::string_view source, const FormatConfig& config = FormatConfig::defaults()) {
 		auto token_source
 			= tokenizer::makeTokenSource(fs::FileManager::createRandomVirtualFile(source));
-		token_source->tokenize();
+		token_source->tokenize(/*keep_comments=*/true);
 		return formatter::formatTokens(token_source->getTokenData(), config, source);
+	}
+
+	/**
+	 * Strips the newline right after the opening `R"(` so golden outputs can be written as
+	 * readable multi-line raw string literals starting on their own line.
+	 */
+	std::string_view golden(std::string_view text) {
+		if (!text.empty() && text.front() == '\n') text.remove_prefix(1);
+		return text;
 	}
 
 	using TokenSignature = std::vector<std::pair<i32, std::string>>;
@@ -44,7 +53,7 @@ namespace {
 	TokenSignature signatureOf(std::string_view source) {
 		auto token_source
 			= tokenizer::makeTokenSource(fs::FileManager::createRandomVirtualFile(source));
-		token_source->tokenize();
+		token_source->tokenize(/*keep_comments=*/true);
 		TokenSignature signature;
 		collectSignature(token_source->getTokenData().tokens, signature);
 		return signature;
@@ -95,13 +104,29 @@ public:
 		TESTER_ADD_TEST(testOperatorAdjacency);
 		TESTER_ADD_TEST(testRepoSnippets);
 
-		// Line-wrapping tests.
+		// Line-wrapping tests: bracket groups.
 		TESTER_ADD_TEST(testWrapLongCall);
 		TESTER_ADD_TEST(testWrapLongSignature);
 		TESTER_ADD_TEST(testWrapNested);
+		TESTER_ADD_TEST(testWrapAssignedList);
 		TESTER_ADD_TEST(testNoWrapWhenFits);
 		TESTER_ADD_TEST(testNoWrapUnbreakable);
+
+		// Line-wrapping tests: expressions.
+		TESTER_ADD_TEST(testWrapLongBinaryExpression);
+		TESTER_ADD_TEST(testWrapChainedCalls);
+		TESTER_ADD_TEST(testWrapChainWithArguments);
+		TESTER_ADD_TEST(testWrapDeepIndentation);
 		TESTER_ADD_TEST(testWrapRoundTripAndIdempotent);
+
+		// Comment tests.
+		TESTER_ADD_TEST(testWrapLongComment);
+		TESTER_ADD_TEST(testWrapDocCommentPrefix);
+		TESTER_ADD_TEST(testWrapCommentInBlock);
+		TESTER_ADD_TEST(testNoCommentWrapWhenFits);
+		TESTER_ADD_TEST(testTrailingComment);
+		TESTER_ADD_TEST(testBlockCommentInline);
+		TESTER_ADD_TEST(testCommentWrapIdempotent);
 	}
 
 private:
@@ -158,27 +183,53 @@ private:
 	}
 
 	void testFunctionBlock() {
-		check("fun f()={x=1;y=2;}", "fun f() = {\n\tx = 1;\n\ty = 2;\n}\n");
+		check("fun f()={x=1;y=2;}", golden(R"(
+fun f() = {
+	x = 1;
+	y = 2;
+}
+)"));
 	}
 
 	void testIfElseChain() {
-		check(
-			"if(a){b;}else if(c){d;}else{e;}",
-			"if (a) {\n\tb;\n} else if (c) {\n\td;\n} else {\n\te;\n}\n"
-		);
+		check("if(a){b;}else if(c){d;}else{e;}", golden(R"(
+if (a) {
+	b;
+} else if (c) {
+	d;
+} else {
+	e;
+}
+)"));
 	}
 
-	void testWhileLoop() { check("while(a<b){c;}", "while (a < b) {\n\tc;\n}\n"); }
+	void testWhileLoop() {
+		check("while(a<b){c;}", golden(R"(
+while (a < b) {
+	c;
+}
+)"));
+	}
 
 	void testNestedBlocks() {
-		check("fun f()={if(a){b;}}", "fun f() = {\n\tif (a) {\n\t\tb;\n\t}\n}\n");
+		check("fun f()={if(a){b;}}", golden(R"(
+fun f() = {
+	if (a) {
+		b;
+	}
+}
+)"));
 	}
 
 	void testClassBody() {
-		check(
-			"class C{x:i32;fun m()={y=1;}}",
-			"class C {\n\tx: i32;\n\tfun m() = {\n\t\ty = 1;\n\t}\n}\n"
-		);
+		check("class C{x:i32;fun m()={y=1;}}", golden(R"(
+class C {
+	x: i32;
+	fun m() = {
+		y = 1;
+	}
+}
+)"));
 	}
 
 	void testEmptyBlockInline() {
@@ -188,7 +239,13 @@ private:
 
 	void testCurlyLiteralInline() { check("x={1,2,3};", "x = {1, 2, 3};\n"); }
 
-	void testMultipleStatements() { check("a=1;b=2;c=3;", "a = 1;\nb = 2;\nc = 3;\n"); }
+	void testMultipleStatements() {
+		check("a=1;b=2;c=3;", golden(R"(
+a = 1;
+b = 2;
+c = 3;
+)"));
+	}
 
 	void testTrailingNewline() {
 		const auto out = fmt("a=1;");
@@ -202,10 +259,26 @@ private:
 		FormatConfig config;
 		config.indent_style = IndentStyle::Space;
 		config.indent_width = 2;
-		check("fun f()={x=1;}", "fun f() = {\n  x = 1;\n}\n", config);
+		check(
+			"fun f()={x=1;}",
+			golden(R"(
+fun f() = {
+  x = 1;
+}
+)"),
+			config
+		);
 
 		config.indent_width = 4;
-		check("fun f()={x=1;}", "fun f() = {\n    x = 1;\n}\n", config);
+		check(
+			"fun f()={x=1;}",
+			golden(R"(
+fun f() = {
+    x = 1;
+}
+)"),
+			config
+		);
 	}
 
 	void testNoSpaceAroundOperators() {
@@ -288,9 +361,10 @@ private:
 
 	void testCommentsPreserved() {
 		const std::vector<std::string_view> samples = {
-			"a=1;//trailing\nb=2;",
-			"//leading\nx=1;",
-			"fun f()={//inner\nx=1;}",
+			"a=1;# trailing\nb=2;",
+			"# leading\nx=1;",
+			"fun f()={# inner\nx=1;}",
+			"x = #{ inline block comment #} 1;",
 		};
 		for (const auto& sample: samples) {
 			const auto before = signatureOf(sample);
@@ -337,6 +411,7 @@ private:
 			"actions",
 			"block",
 			"class",
+			"comments",
 			"expressions",
 			"ffi",
 			"for",
@@ -380,7 +455,13 @@ private:
 	void testWrapLongCall() {
 		check(
 			"foo(aaaa, bbbb, cccc);",
-			"foo(\n\taaaa,\n\tbbbb,\n\tcccc\n);\n",
+			golden(R"(
+foo(
+	aaaa,
+	bbbb,
+	cccc
+);
+)"),
 			narrowConfig(20)
 		);
 	}
@@ -388,7 +469,14 @@ private:
 	void testWrapLongSignature() {
 		check(
 			"fun f(aaaa: i32, bbbb: i32) = {x=1;}",
-			"fun f(\n\taaaa: i32,\n\tbbbb: i32\n) = {\n\tx = 1;\n}\n",
+			golden(R"(
+fun f(
+	aaaa: i32,
+	bbbb: i32
+) = {
+	x = 1;
+}
+)"),
 			narrowConfig(20)
 		);
 	}
@@ -397,8 +485,34 @@ private:
 		// The inner call exceeds the width too, so it explodes one level deeper.
 		check(
 			"foo(bar(aaaa, bbbb, cccc), ddddddd);",
-			"foo(\n\tbar(\n\t\taaaa,\n\t\tbbbb,\n\t\tcccc\n\t),\n\tddddddd\n);\n",
+			golden(R"(
+foo(
+	bar(
+		aaaa,
+		bbbb,
+		cccc
+	),
+	ddddddd
+);
+)"),
 			narrowConfig(20)
+		);
+	}
+
+	void testWrapAssignedList() {
+		// The list explodes; the assignment itself stays on the opening line.
+		check(
+			"x = [aaaa, bbbb, cccc, dddd, eeee];",
+			golden(R"(
+x = [
+	aaaa,
+	bbbb,
+	cccc,
+	dddd,
+	eeee
+];
+)"),
+			narrowConfig(24)
 		);
 	}
 
@@ -412,21 +526,169 @@ private:
 		check("foo(reallyLongSingleArgument);", "foo(reallyLongSingleArgument);\n", narrowConfig(5));
 	}
 
+	void testWrapLongBinaryExpression() {
+		// No group to explode, so the expression breaks before binary operators, greedily
+		// filling each line.
+		check(
+			"x = aaaaaa + bbbbbb + cccccc + dddddd;",
+			golden(R"(
+x = aaaaaa + bbbbbb
+	+ cccccc + dddddd;
+)"),
+			narrowConfig(24)
+		);
+	}
+
+	void testWrapChainedCalls() {
+		// A method chain breaks before each `.` that follows a call.
+		check(
+			"value.foo(aa).bar(bb).baz(cc);",
+			golden(R"(
+value.foo(aa)
+	.bar(bb)
+	.baz(cc);
+)"),
+			narrowConfig(16)
+		);
+	}
+
+	void testWrapChainWithArguments() {
+		// The first call explodes its arguments; the rest of the chain fits after the
+		// closing bracket.
+		check(
+			"obj.fetch(aaaa, bbbb, cccc).map(x).run();",
+			golden(R"(
+obj.fetch(
+	aaaa,
+	bbbb,
+	cccc
+).map(x).run();
+)"),
+			narrowConfig(20)
+		);
+	}
+
+	void testWrapDeepIndentation() {
+		// Wrapping respects the indentation of deeply nested blocks.
+		check(
+			"fun f() = {if (a) {while (b) {result = foo(aaaa, bbbb, cccc);}}}",
+			golden(R"(
+fun f() = {
+	if (a) {
+		while (b) {
+			result = foo(
+				aaaa,
+				bbbb,
+				cccc
+			);
+		}
+	}
+}
+)"),
+			narrowConfig(28)
+		);
+	}
+
+	/** Every wrapped form must keep the token stream intact and be stable under re-formatting. */
 	void testWrapRoundTripAndIdempotent() {
-		const auto         config   = narrowConfig(24);
+		const auto                          config  = narrowConfig(24);
 		const std::vector<std::string_view> samples = {
 			"foo(aaaa, bbbb, cccc, dddd);",
 			"fun f(aaaa: i32, bbbb: i32, cccc: i32) = {return aaaa;}",
 			"foo(bar(aaaa, bbbb, cccc), ddddddd, eeeeeee);",
 			"x = [aaaa, bbbb, cccc, dddd, eeee];",
+			"x = aaaaaa + bbbbbb + cccccc + dddddd + eeeeee;",
+			"value.foo(aa).bar(bb).baz(cc).qux(dd);",
+			"obj.fetch(aaaa, bbbb, cccc).map(x).filter(y).run();",
+			"fun f() = {if (a) {result = foo(aaaa, bbbb) + bar(cccc, dddd);}}",
+			"total = first(aaaa, bbbb) + second(cccc, dddd) * third(eeee);",
 		};
 		for (const auto& sample: samples) {
 			const auto before = signatureOf(sample);
 			const auto after  = signatureOf(fmt(sample, config));
 			assertTrue(
-				before == after,
-				base::strConcat("wrapping changed token stream for: ", sample)
+				before == after, base::strConcat("wrapping changed token stream for: ", sample)
 			);
+			const auto once = fmt(sample, config);
+			ASSERT_EQUAL_PRINT(once, fmt(once, config));
+		}
+	}
+
+	void testWrapLongComment() {
+		check(
+			"# this is a very long comment that definitely exceeds the configured maximum "
+			"line length",
+			golden(R"(
+# this is a very long comment that
+# definitely exceeds the configured
+# maximum line length
+)"),
+			narrowConfig(40)
+		);
+	}
+
+	void testWrapDocCommentPrefix() {
+		// Continuation lines repeat the full multi-`#` prefix.
+		check(
+			"## returns the sum of all elements in the given list",
+			golden(R"(
+## returns the sum of all
+## elements in the given list
+)"),
+			narrowConfig(30)
+		);
+	}
+
+	void testWrapCommentInBlock() {
+		// Continuation lines keep the indentation of the comment.
+		check(
+			"fun f() = {# explanation of the tricky part of this code\nx = 1;}",
+			golden(R"(
+fun f() = {
+	# explanation of the tricky
+	# part of this code
+	x = 1;
+}
+)"),
+			narrowConfig(30)
+		);
+	}
+
+	void testNoCommentWrapWhenFits() {
+		// A fitting comment is reproduced verbatim, inner spacing included.
+		check("#  keep   inner   spacing", "#  keep   inner   spacing\n");
+	}
+
+	void testTrailingComment() {
+		// A comment trailing a statement on the same source line stays on that line; a
+		// comment on its own line stays on its own line.
+		check("a=1;# note\nb=2;", golden(R"(
+a = 1; # note
+b = 2;
+)"));
+		check("a=1;\n# standalone\nb=2;", golden(R"(
+a = 1;
+# standalone
+b = 2;
+)"));
+	}
+
+	void testBlockCommentInline() {
+		// A `#{ ... #}` comment is reproduced verbatim and does not end the statement.
+		check("x =   #{ inline note #}   1;", "x = #{ inline note #} 1;\n");
+	}
+
+	void testCommentWrapIdempotent() {
+		const auto                          config  = narrowConfig(40);
+		const std::vector<std::string_view> samples = {
+			"# this is a very long comment that definitely exceeds the configured maximum "
+			"line length",
+			"## a long documentation comment that needs to be wrapped onto several lines",
+			"fun f() = {# a long comment inside a block that needs wrapping to fit\nx = 1;}",
+			"# short comment",
+			"a = 1; # a trailing comment so long that it does not fit on the statement line",
+		};
+		for (const auto& sample: samples) {
 			const auto once = fmt(sample, config);
 			ASSERT_EQUAL_PRINT(once, fmt(once, config));
 		}

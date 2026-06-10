@@ -31,7 +31,12 @@ namespace formatter {
 		/** Number of spaces per indentation level (only used when indent_style == Space). */
 		u32 indent_width = 4;
 
-		/** Soft target for line length. Reserved for future line-wrapping; not yet enforced. */
+		/**
+		 * Soft target for line length. Over-long breakable constructs wrap: bracket groups
+		 * with top-level commas explode one element per line, expressions break at method-chain
+		 * dots or binary operators, and line comments re-flow onto continuation `//` lines.
+		 * Unbreakable content (e.g. a single long literal) may still exceed the limit.
+		 */
 		u32 max_line_length = 100;
 
 		/** Whether binary operators are surrounded by spaces (e.g. `a + b` vs `a+b`). */

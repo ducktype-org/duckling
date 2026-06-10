@@ -119,7 +119,7 @@ namespace tokenizer {
 
 		void countLines();
 
-		void runLexer();
+		void runLexer(bool keep_comments = false);
 
 		/**
 		 * @brief Run the whole lexer and change the keyword mode
@@ -127,17 +127,19 @@ namespace tokenizer {
 		 * call to this function, because we need the same keyword mode
 		 * for tokenizing and parsing.
 		 *
+		 * @param keep_comments Whether comment tokens are kept in the token stream (used by
+		 *                      tools such as the formatter); by default comments are discarded.
 		 * @return If tokenizing process run without errors.
 		 */
 		template<
 			lang_def::KeywordMode keyword_mode = lang_def::KeywordMode::DucklingSource,
 			fs::Encoding          encoding     = fs::Encoding::UTF8>
-		bool tokenize() {
+		bool tokenize(bool keep_comments = false) {
 			lang_def::setKeywordMode(keyword_mode);
 			decode<encoding>();
 			if (int_log.hasErrors()) return false;
 			countLines();
-			runLexer();
+			runLexer(keep_comments);
 			return not int_log.hasErrors();
 		}
 	};

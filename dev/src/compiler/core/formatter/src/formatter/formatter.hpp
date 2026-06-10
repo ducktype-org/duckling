@@ -5,7 +5,13 @@
  * The formatter re-renders the token stream produced by the lexer with
  * normalized whitespace and indentation. Because it works on the full token
  * stream (comments included), the result is round-trip safe: re-tokenizing the
- * formatted output yields the same sequence of significant tokens.
+ * formatted output yields the same sequence of significant tokens. The single
+ * exception is an over-long line comment, which is re-flowed onto several `#`
+ * lines (the comment text is preserved, but one comment token becomes several).
+ *
+ * @note Comments only appear in the token stream when the source is tokenized
+ *       with keep_comments set (`tokenize(true)`); otherwise the lexer discards
+ *       them and formatting would drop them from the output.
  */
 #pragma once
 

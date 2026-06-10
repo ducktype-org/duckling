@@ -3,7 +3,8 @@
 #include <logger/logger.hpp>
 
 namespace lexer {
-	Lexer::Lexer(Ref<tokenizer::TokenSource> file):
+	Lexer::Lexer(Ref<tokenizer::TokenSource> file, bool keep_comments):
+		  keep_comments(keep_comments),
 		  file(file),
 		  logger(file->getIntLogger()),
 		  char_array(file->getChars()) {

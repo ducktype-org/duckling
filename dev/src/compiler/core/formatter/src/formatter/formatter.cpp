@@ -34,7 +34,10 @@ namespace formatter {
 
 		bool isBracketGroup(const Token& t) { return isType(t, Type::BracketGroup); }
 
-		bool isLineComment(const Token& t) { return isComment(t) && sv(t).starts_with("//"); }
+		/** A `# ...` comment that runs to the end of its line (as opposed to `#{ ... #}`). */
+		bool isLineComment(const Token& t) {
+			return isComment(t) && sv(t).starts_with("#") && !sv(t).starts_with("#{");
+		}
 
 		/** Tokens carrying no source text that must never be rendered. */
 		bool isSkippable(const Token& t) {
@@ -207,6 +210,16 @@ namespace formatter {
 					buf += sv(t);
 			}
 
+			/** Whether @p a and @p b sit on the same source line (no newline between them). */
+			[[nodiscard]]
+			bool onSameSourceLine(const Token& a, const Token& b) const {
+				const auto end   = a.getPosition().getEnd();
+				const auto start = b.getPosition().getStart();
+				if (source.empty() || start <= end || start > source.size()) return false;
+				const auto newline = source.find('\n', end);
+				return newline == std::string_view::npos || newline >= start;
+			}
+
 			/** Current column: characters emitted since the last newline. */
 			[[nodiscard]]
 			usize currentColumn() const {
@@ -283,9 +296,15 @@ namespace formatter {
 				}
 			}
 
-			void appendInline(std::string& buf, std::span<const Token> tokens) const {
-				const Token* prev           = nullptr;
-				bool         suppress_space = false;
+			/**
+			 * Renders @p tokens inline into @p buf for measurement. @p prev is the token
+			 * emitted just before the span (if any), so that the leading space and unary
+			 * operators are accounted for exactly as emitTokens would render them.
+			 */
+			void appendInline(
+				std::string& buf, std::span<const Token> tokens, const Token* prev = nullptr
+			) const {
+				bool suppress_space = false;
 				for (const auto& t: tokens) {
 					if (isSkippable(t)) continue;
 					const bool leading = suppress_space ? false : needSpace(prev, t);
@@ -302,6 +321,53 @@ namespace formatter {
 				appendUtf8(buf, static_cast<char32_t>(t.getBracketType()));
 				appendInline(buf, t.getRecursive());
 				appendUtf8(buf, closingBracket(t.getBracketType()));
+			}
+
+			/** First token of @p tokens that carries source text, or nullptr. */
+			static const Token* firstSignificant(std::span<const Token> tokens) {
+				for (const auto& t: tokens)
+					if (!isSkippable(t)) return &t;
+				return nullptr;
+			}
+
+			/**
+			 * Indices of method-chain dots: a `.` that follows a call or index group, as in
+			 * `foo(a).bar`. A line may break before each of them.
+			 */
+			[[nodiscard]]
+			std::vector<usize> chainBreakPoints(std::span<const Token> tokens) const {
+				std::vector<usize> points;
+				const Token*       prev = nullptr;
+				for (usize i = 0; i < tokens.size(); i++) {
+					const Token& t = tokens[i];
+					if (isSkippable(t)) continue;
+					if (prev != nullptr && isOperator(t) && isStr(t, ".") && isBracketGroup(*prev)) {
+						const Bracket b = prev->getBracketType();
+						if (b == Bracket::Round || b == Bracket::Square) points.push_back(i);
+					}
+					prev = &t;
+				}
+				return points;
+			}
+
+			/**
+			 * Indices of binary operators rendered with a space before them, as in `a + b`.
+			 * A line may break before each of them. Member dots are excluded (they bind
+			 * tightly); so are unary operators (their left neighbor is not a value).
+			 */
+			[[nodiscard]]
+			std::vector<usize> operatorBreakPoints(std::span<const Token> tokens) const {
+				std::vector<usize> points;
+				const Token*       prev = nullptr;
+				for (usize i = 0; i < tokens.size(); i++) {
+					const Token& t = tokens[i];
+					if (isSkippable(t)) continue;
+					if (prev != nullptr && isOperator(t) && !isStr(t, ".") && isValueCloser(*prev)
+					    && needSpace(prev, t))
+						points.push_back(i);
+					prev = &t;
+				}
+				return points;
 			}
 
 			/* --- wrap-aware rendering into the output --- */
@@ -322,8 +388,7 @@ namespace formatter {
 				std::string inlined;
 				appendGroupInline(inlined, t);
 
-				if (!isBreakable(t)
-				    || currentColumn() + inlined.size() <= config.max_line_length) {
+				if (!isBreakable(t) || currentColumn() + inlined.size() <= config.max_line_length) {
 					out += inlined;
 					return;
 				}
@@ -342,7 +407,7 @@ namespace formatter {
 				indent++;
 				for (const auto& element: splitElements(t.getRecursive())) {
 					writeIndent();
-					emitInline(element.tokens);
+					emitRun(element.tokens, nullptr);
 					if (element.trailing_comma) out += ',';
 					out += '\n';
 				}
@@ -385,10 +450,17 @@ namespace formatter {
 			/**
 			 * Renders a token sequence inline into the output, recursing through emitGroup so that
 			 * nested over-long groups still wrap.
+			 *
+			 * @param prev The token emitted just before the sequence, for spacing and unary
+			 *             operator decisions across the boundary.
+			 * @param suppress_leading Whether to omit the space before the first token (used when
+			 *                         the sequence starts a fresh line).
+			 * @return The last significant token emitted (or @p prev if there was none).
 			 */
-			void emitInline(std::span<const Token> tokens) {
-				const Token* prev           = nullptr;
-				bool         suppress_space = false;
+			const Token* emitTokens(
+				std::span<const Token> tokens, const Token* prev, bool suppress_leading = false
+			) {
+				bool suppress_space = suppress_leading;
 				for (const auto& t: tokens) {
 					if (isSkippable(t)) continue;
 					const bool leading = suppress_space ? false : needSpace(prev, t);
@@ -398,6 +470,116 @@ namespace formatter {
 					emitAtom(t);
 					if (unary) suppress_space = true;
 					prev = &t;
+				}
+				return prev;
+			}
+
+			/**
+			 * @brief Renders a token run, breaking it across lines when it is over-long.
+			 *
+			 * A run that fits within the line length is rendered inline. An over-long run is
+			 * split at its break points and laid out greedily: each segment that would overflow
+			 * the line starts a new line, indented one level deeper than the run itself.
+			 * Break points are chosen in order of preference:
+			 *   1. method-chain dots (`foo(a).bar(b)` breaks before `.bar`),
+			 *   2. spaced binary operators (`a + b` breaks before `+`) — but only when the run
+			 *      holds no breakable bracket group, since exploding the group (which emitGroup
+			 *      does on its own) yields a better layout than an operator break.
+			 *
+			 * Only whitespace is introduced, so the output re-tokenizes to the same stream.
+			 *
+			 * @return The last significant token emitted (or @p prev if there was none).
+			 */
+			const Token* emitRun(std::span<const Token> tokens, const Token* prev) {
+				if (firstSignificant(tokens) == nullptr) return prev;
+
+				std::string inlined;
+				appendInline(inlined, tokens, prev);
+				if (currentColumn() + inlined.size() <= config.max_line_length)
+					return emitTokens(tokens, prev);
+
+				auto breaks = chainBreakPoints(tokens);
+				if (breaks.empty()) {
+					bool has_breakable_group = false;
+					for (const auto& t: tokens)
+						if (isBreakable(t)) {
+							has_breakable_group = true;
+							break;
+						}
+					if (!has_breakable_group) breaks = operatorBreakPoints(tokens);
+				}
+				if (breaks.empty()) return emitTokens(tokens, prev);
+
+				breaks.push_back(tokens.size());
+				bool  broke         = false;
+				bool  first_segment = true;
+				usize start         = 0;
+				for (const usize end: breaks) {
+					if (end == start) continue;
+					const auto segment = tokens.subspan(start, end - start);
+					start              = end;
+					if (firstSignificant(segment) == nullptr) continue;
+
+					std::string measured;
+					appendInline(measured, segment, prev);
+					if (first_segment
+					    || currentColumn() + measured.size() <= config.max_line_length) {
+						prev = emitTokens(segment, prev);
+					} else {
+						if (!broke) {
+							indent++;
+							broke = true;
+						}
+						out += '\n';
+						writeIndent();
+						prev = emitTokens(segment, prev, /*suppress_leading=*/true);
+					}
+					first_segment = false;
+				}
+				if (broke) indent--;
+				return prev;
+			}
+
+			/**
+			 * @brief Renders a line comment, re-flowing it onto multiple `#` lines when over-long.
+			 *
+			 * A comment that fits is reproduced verbatim. An over-long comment is split at word
+			 * boundaries; every continuation line repeats the comment prefix (`#`, `##`, ...) at
+			 * the current indentation. A single word longer than the line length is kept intact.
+			 * This is the one transformation that changes the token stream: one comment token
+			 * becomes several with the same combined text.
+			 */
+			void emitLineComment(const Token& t) {
+				const std::string_view text = sv(t);
+				if (currentColumn() + text.size() <= config.max_line_length) {
+					out += text;
+					return;
+				}
+
+				usize prefix_end = 0;
+				while (prefix_end < text.size() && text[prefix_end] == '#') prefix_end++;
+				const std::string prefix(text.substr(0, prefix_end));
+
+				out += prefix;
+				bool  line_has_word = false;
+				usize pos           = prefix_end;
+				while (pos < text.size()) {
+					while (pos < text.size() && (text[pos] == ' ' || text[pos] == '\t')) pos++;
+					if (pos >= text.size()) break;
+					usize end = pos;
+					while (end < text.size() && text[end] != ' ' && text[end] != '\t') end++;
+					const auto word = text.substr(pos, end - pos);
+					pos             = end;
+
+					if (line_has_word
+					    && currentColumn() + 1 + word.size() > config.max_line_length) {
+						out += '\n';
+						writeIndent();
+						out += prefix;
+					}
+					out += ' ';
+					out += word;
+					line_has_word = true;
 				}
 			}
 
@@ -455,14 +637,21 @@ namespace formatter {
 			 * `{...}` code block — except that a block followed by `else` continues the same
 			 * statement, so `if/else if/else` chains stay on one logical statement.
 			 *
+			 * Expression runs between those boundaries are rendered through emitRun, so an
+			 * over-long expression wraps at chain dots or binary operators.
+			 *
 			 * @param tokens The enclosing statement list.
 			 * @param i Index of the first token of the statement.
 			 * @return The index of the first token after the emitted statement.
 			 */
 			usize emitStatement(const Tokens& tokens, usize i) {
-				const auto   n              = tokens.size();
-				const Token* prev           = nullptr;
-				bool         suppress_space = false;
+				const auto   n         = tokens.size();
+				const Token* prev      = nullptr;
+				usize        run_start = i;
+
+				const auto flush_run = [&](usize end) {
+					prev = emitRun({ tokens.data() + run_start, tokens.data() + end }, prev);
+				};
 
 				while (i < n) {
 					const Token& t = tokens[i];
@@ -473,20 +662,23 @@ namespace formatter {
 
 					// Statement terminator.
 					if (isSpecial(t) && isStr(t, ";")) {
+						flush_run(i);
 						out += ';';
-						return i + 1;
+						return consumeTrailingComment(tokens, i);
 					}
 
 					// A line comment consumes the rest of its source line, so it must end the line.
 					if (isLineComment(t)) {
-						if (!suppress_space && needSpace(prev, t)) out += ' ';
-						out += sv(t);
+						flush_run(i);
+						if (needSpace(prev, t)) out += ' ';
+						emitLineComment(t);
 						return i + 1;
 					}
 
 					// A code block ends the statement (unless an `else` clause follows).
 					if (isBracketGroup(t) && t.getBracketType() == Bracket::Curly
 					    && isBlockCurly(t)) {
+						flush_run(i);
 						// Separate the brace from a preceding token (`fun f() = {`), but not when
 						// the block opens the statement (the indentation already positions it).
 						if (prev != nullptr) out += ' ';
@@ -496,30 +688,40 @@ namespace formatter {
 						while (j < n && isSkippable(tokens[j])) j++;
 
 						if (j < n && isKeyword(tokens[j]) && isStr(tokens[j], "else")) {
-							prev           = &t;
-							suppress_space = false;
-							i              = j;
+							prev      = &t;
+							run_start = j;
+							i         = j;
 							continue;
 						}
 						if (j < n && isSpecial(tokens[j]) && isStr(tokens[j], ";")) {
 							out += ';';
-							return j + 1;
+							return consumeTrailingComment(tokens, j);
 						}
 						return j;
 					}
 
-					const bool leading = suppress_space ? false : needSpace(prev, t);
-					suppress_space     = false;
-					if (leading) out += ' ';
-
-					const bool unary = isSignOperator(t) && isPrefixContext(prev);
-					emitAtom(t);
-					if (unary) suppress_space = true;
-
-					prev = &t;
 					i++;
 				}
-				return i;
+				flush_run(n);
+				return n;
+			}
+
+			/**
+			 * After a `;` emitted for the token at @p i, also emits a line comment that trails it
+			 * on the same source line (`x = 1; # note` keeps the note on the line).
+			 *
+			 * @return The index of the first token after the statement (and its trailing comment).
+			 */
+			usize consumeTrailingComment(const Tokens& tokens, usize i) {
+				const auto n = tokens.size();
+				usize      j = i + 1;
+				while (j < n && isSkippable(tokens[j])) j++;
+				if (j < n && isLineComment(tokens[j]) && onSameSourceLine(tokens[i], tokens[j])) {
+					out += ' ';
+					emitLineComment(tokens[j]);
+					return j + 1;
+				}
+				return i + 1;
 			}
 		};
 	}

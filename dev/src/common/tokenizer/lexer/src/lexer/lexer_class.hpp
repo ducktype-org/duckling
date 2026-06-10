@@ -25,9 +25,11 @@ namespace lexer {
 	class Lexer final {
 	public:
 		/**
+		 * @param keep_comments Whether comment tokens are kept in the output stream (used by
+		 *                      tools such as the formatter); by default comments are discarded.
 		 * @note if file decoding fails outputs the reason to cerr and throws LogicError
 		 */
-		explicit Lexer(Ref<tokenizer::TokenSource>);
+		explicit Lexer(Ref<tokenizer::TokenSource>, bool keep_comments = false);
 
 		[[nodiscard]]
 		TokenData tokenize();
@@ -119,6 +121,7 @@ namespace lexer {
 		dia::SourcePosition currentPosition() const;
 
 		usize                       where = 0;  ///< Current position in file
+		bool                        keep_comments;
 		Ref<tokenizer::TokenSource> file;
 		Ref<dia_int::Logger>        logger;
 		const CharArray&            char_array;

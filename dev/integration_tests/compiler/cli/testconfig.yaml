@@ -30,22 +30,3 @@ Tests:
       bad-dev-logs:
         run_args: "--dev-logs \"\"  dummy "
         ExitCode: 1
-
-  cli-format:
-    Cases:
-      format-stdout:
-        # Default formatting prints normalized source to stdout.
-        run_args: "format format_unformatted.duck"
-        Output:
-          File: format_formatted.duck
-      format-check-ok:
-        # --check succeeds (exit 0) on an already-formatted file.
-        run_args: "format -k format_formatted.duck"
-      format-check-fail:
-        # --check fails (exit 1) on an unformatted file.
-        run_args: "format -k format_unformatted.duck"
-        ExitCode: 1
-      format-missing-config:
-        # A non-existent config path errors cleanly instead of crashing.
-        run_args: "format -c does_not_exist.json format_unformatted.duck"
-        ExitCode: 1
