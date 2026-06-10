@@ -1,9 +1,0 @@
-function main {} -> { i64 } {
-	init_pany_type			tmp, i64;
-	mov_p64_imm         	tmp, 0;
-	label Loop;
-		cmpEq_p64_imm		tmp, 0;
-		jmpIf_label 	  	Loop;
-
-	ret;
-}
