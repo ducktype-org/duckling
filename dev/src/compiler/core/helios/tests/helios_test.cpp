@@ -841,8 +841,8 @@ private:
 		auto& hout
 			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
 
-		ASSERT_EQUAL(hout.functions.size(), 3);
-		ASSERT_EQUAL(hout.glob_data.size(), 3);
+		ASSERT_EQUAL_PRINT(hout.functions.size(), 3);
+		ASSERT_EQUAL_PRINT(hout.glob_data.size(), 3);
 
 		// just for cov and to see if it does not throw:
 		query::utils::withContextDo([&](query::Context& ctx) {
