@@ -400,7 +400,7 @@ private:
 					arr["index"] = 1;
 				}
 			)",
-				{ "Type `string` cannot be converted to type `const i64`." },
+				{ "Type `const slice char` cannot be converted to type `const i64`." },
 				1
 			);
 
@@ -693,7 +693,7 @@ private:
 					arr["index"] = 1;
 				}
 			)",
-				{ "Type `string` cannot be converted to type `const i64`." },
+				{ "Type `const slice char` cannot be converted to type `const i64`." },
 				1
 			);
 
@@ -727,7 +727,7 @@ private:
 					l -= "sth";
 				}
 			)",
-				{ "Type `string` cannot be converted to type `u64`" },
+				{ "Type `const slice char` cannot be converted to type `u64`" },
 				1
 			);
 
@@ -1200,7 +1200,7 @@ private:
 			R"(
 				expand 1;
 			)",
-			{ "i32", "string" },
+			{ "i32", "const slice char" },
 			1
 		);
 

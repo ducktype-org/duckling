@@ -117,7 +117,8 @@ namespace compiler::tsh {
 			  leakage(leakage),
 			  uniqueness(uniqueness) {}
 
-		// @TODO: #2348 Use this whenever abstract type is promoted to symbol type.
+		// @TODO: #2348 Use this whenever abstract type is promoted to symbol type and change the
+		// mutability defaults
 		/**
 		 * @brief Creates a SymbolType from an AbstractType with a set of default symbol properties.
 		 *
@@ -136,6 +137,20 @@ namespace compiler::tsh {
 				abstract_type,
 				ReferenceKind::Direct,
 				Mutability::Mutable,
+				Leakage::NonLeaking,
+				Uniqueness::NonUnique
+			);
+		}
+
+		/**
+		 * @brief Same as above, but with immutability.
+		 * @TODO: #2348 change the names to withDefaultsMut and withDefaults, rustlike
+		 */
+		static SymbolType<ABSTRACT_TYPE> withDefaultsConst(const ABSTRACT_TYPE abstract_type) {
+			return SymbolType<ABSTRACT_TYPE>(
+				abstract_type,
+				ReferenceKind::Direct,
+				Mutability::Immutable,
 				Leakage::NonLeaking,
 				Uniqueness::NonUnique
 			);

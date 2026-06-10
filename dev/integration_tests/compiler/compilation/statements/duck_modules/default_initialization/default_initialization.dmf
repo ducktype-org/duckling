@@ -44,7 +44,7 @@ class Primitives {
     b: f64;         # 0.0
     c: bool;        # false
     d: char;        # '\0'
-    e: str;         # ""
+    e: String;      # ""
     f: List[i32];   # empty list
     g: type;        # Unit
 }
@@ -54,7 +54,7 @@ class Primitives2 {
     b: f64;         # 0.0
     c: bool;        # false
     d: char;        # '\0'
-    e: str;         # ""
+    e: String;      # ""
     f: List[i32];   # empty list
     g: type;        # Unit
 }
@@ -64,7 +64,7 @@ class InitializedPrimitives {
     b: f64 = 1.0;
     c: bool = true;
     d: char = 'A';
-    e: str = "kajak\n";
+    e: String = "kajak\n".toString();
     f: type = i32;
 }
 
