@@ -18,7 +18,7 @@ impl DependencyGraph {
     /// This method checks that the graph is complete (all edge targets have their neighbours lists),
     /// as well as checking that only local dependencies possibly form cycles.
     #[tracing::instrument(skip_all)]
-    pub fn new(freeze: &VenvFreeze, root_identity: Identity) -> QuackResult<Self> {
+    fn new(freeze: &VenvFreeze, root_identity: Identity) -> QuackResult<Self> {
         let root = freeze.root();
         let mut graph = HashMap::new();
         graph.insert(
@@ -92,7 +92,7 @@ impl DependencyGraph {
 
 impl DependencyNode {
     /// Creates a new [`DependencyNode`] with the given dependencies.
-    pub fn new(dependencies: impl IntoIterator<Item = Identity>) -> Self {
+    pub(super) fn new(dependencies: impl IntoIterator<Item = Identity>) -> Self {
         Self {
             dependencies: dependencies.into_iter().collect(),
         }
@@ -144,7 +144,7 @@ impl EarlyGraph {
     /// - no features are expanded (including the root package),
     /// - no disabled dependencies are removed.
     #[tracing::instrument(skip_all)]
-    pub fn new_early(bcx: &BuildContext<'_, '_>) -> QuackResult<Self> {
+    pub(super) fn new_early(bcx: &BuildContext<'_, '_>) -> QuackResult<Self> {
         // `new` checks for cycles.
         let graph = DependencyGraph::new(&bcx.freeze, bcx.root_identity)?;
         let mut packages = HashMap::new();
@@ -308,4 +308,12 @@ fn reverse_graph(graph: &HashMap<Identity, DependencyNode>) -> HashMap<Identity,
     }
 
     reversed
+}
+
+/// Create a fully-ready [`EarlyGraph`] form the [`BuildContext`].
+pub fn create_early_graph_from_bcx(bcx: &BuildContext<'_, '_>) -> QuackResult<EarlyGraph> {
+    let mut graph = EarlyGraph::new_early(bcx)?;
+    graph.populate_features(&bcx.used_features)?;
+    graph.remove_disabled_dependencies();
+    Ok(graph)
 }

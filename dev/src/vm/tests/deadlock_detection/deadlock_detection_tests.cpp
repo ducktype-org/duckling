@@ -26,26 +26,12 @@ private:
 
 	void deadlockTest() {
 		// Two threads wait on a barrier and when released they deadlock. Main waits for them by joining.
-		assertExecutionPanickedWith(
-			runWithDetection("deterministic_deadlock.dbc"),
-			vm::exceptions::VMDeadlockException::ERR_MSG
-		);
-		assertExecutionPanickedWith(
-			runWithDetection("deterministic_deadlock.dbc"),
-			vm::exceptions::VMDeadlockException::ERR_MSG
-		);
-		assertExecutionPanickedWith(
-			runWithDetection("deterministic_deadlock.dbc"),
-			vm::exceptions::VMDeadlockException::ERR_MSG
-		);
-		assertExecutionPanickedWith(
-			runWithDetection("deterministic_deadlock.dbc"),
-			vm::exceptions::VMDeadlockException::ERR_MSG
-		);
-		assertExecutionPanickedWith(
-			runWithDetection("deterministic_deadlock.dbc"),
-			vm::exceptions::VMDeadlockException::ERR_MSG
-		);
+		for (int i = 0; i < 5; ++i) {
+			assertExecutionPanickedWith(
+				runWithDetection("deterministic_deadlock.dbc"),
+				vm::exceptions::VMDeadlockException::ERR_MSG
+			);
+		}
 	}
 
 	void deadlockWakingFromCv() {

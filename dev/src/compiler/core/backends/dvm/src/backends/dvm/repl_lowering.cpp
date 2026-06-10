@@ -3,6 +3,8 @@
 
 #include <base/pointers/box.hpp>
 
+#include <logger/logger.hpp>
+
 namespace compiler::backend_vm {
 	/**
 	 * @brief Factory function: Create a new persistent lowering context for REPL.
@@ -12,42 +14,77 @@ namespace compiler::backend_vm {
 		return makeBox<internal::ProgramLoweringContext>(query_ctx, false, false);
 	}
 
-	ReplLoweringContext::ReplLoweringContext(query::Context& query_ctx):
+	ReplDVMCodeBuilder::ReplDVMCodeBuilder(query::Context& query_ctx):
 		  m_context(createReplLoweringContext(query_ctx)) {}
 
-	ReplLoweringContext::~ReplLoweringContext()                                         = default;
-	ReplLoweringContext::ReplLoweringContext(ReplLoweringContext&&) noexcept            = default;
-	ReplLoweringContext& ReplLoweringContext::operator=(ReplLoweringContext&&) noexcept = default;
+	ReplDVMCodeBuilder::~ReplDVMCodeBuilder()                                        = default;
+	ReplDVMCodeBuilder::ReplDVMCodeBuilder(ReplDVMCodeBuilder&&) noexcept            = default;
+	ReplDVMCodeBuilder& ReplDVMCodeBuilder::operator=(ReplDVMCodeBuilder&&) noexcept = default;
 
-	void ReplLoweringContext::setContext(query::Context& query_ctx) {
+	void ReplDVMCodeBuilder::setContext(query::Context& query_ctx) {
 		m_context->setContext(query_ctx);
 	}
 
-	void ReplLoweringContext::invalidateContext() { m_context->invalidateContext(); }
+	void ReplDVMCodeBuilder::invalidateContext() { m_context->invalidateContext(); }
 
-	base::Optional<base::Ref<query::Context>> ReplLoweringContext::getActiveContext() const {
+	base::Optional<base::Ref<query::Context>> ReplDVMCodeBuilder::getActiveContext() const {
 		return m_context->getActiveContext();
 	}
 
-	const vm::code::Function& ReplLoweringContext::lowerAndKeepLirFunction(
-		CRef<lir::Function> lir_function
+	vm::code::CodeCollection ReplDVMCodeBuilder::insertLIRUnitAndCollectNewlyLoweredCode(
+		const lir::LIRUnit& lir_unit
 	) {
-		return m_context->lowerAndKeepLirFunction(lir_function);
-	}
+		// @TODO: #2246 check if we can avoid repeating the logic from DVMCodeBuilder::insertLIRUnit.
+		// This is strictly connected to the loading dvm context.
+		// We mimic the same idea as in compiling a single module,
+		// but this time we append the new functions to the lowering context.
 
-	const vm::code::GlobalData& ReplLoweringContext::lowerAndKeepLirGlobal(
-		const lir::LIRGlobalData& lir_global
-	) {
-		return m_context->lowerAndKeepLirGlobal(lir_global);
-	}
+		auto lir_function_deals_with_strings = [](const CRef<lir::Function> lir_function) {
+			auto is_string_layout = [](const CRef<tsl::TypeLayout> layout) -> bool {
+				return layout->getSourceType().getType().getKind() == tsh::Kind::String;
+			};
+			if (is_string_layout(lir_function->return_type_layout)) return true;
+			for (const auto& param_layout: lir_function->parameter_layouts)
+				if (is_string_layout(param_layout)) return true;
+			return false;
+		};
 
-	LoweredEntitiesSnapshot ReplLoweringContext::captureLoweredEntitiesSnapshot() const {
-		return m_context->captureLoweredEntitiesSnapshot();
-	}
 
-	vm::code::CodeCollection ReplLoweringContext::collectNewCodeSince(
-		const LoweredEntitiesSnapshot& snapshot
-	) const {
-		return m_context->collectNewCodeSince(snapshot);
+		auto snapshot = m_context->captureLoweredEntitiesSnapshot();
+
+		CORE_DEV_LOG(
+			REPL,
+			"Lowering context snapshot: types=",
+			snapshot.loweredTypeCount(),
+			", globals=",
+			snapshot.loweredGlobalCount(),
+			", functions=",
+			snapshot.loweredFunctionCount(),
+			", helper_functions=",
+			snapshot.extraBytecodeFunctionCount(),
+			"\n"
+		);
+
+		for (const auto& global: lir_unit.lir_globals)
+			(void) m_context->lowerAndKeepLirGlobal(global);
+
+		// Lower all functions
+		for (const auto& lir_function: lir_unit.lir_functions) {
+			CORE_DEV_LOG(REPL, "Lowering function: ", lir_function->mangled_name.strView(), "\n");
+			// @TODO: #2483 Remove this filter (and the helper function) when strings work in DVM.
+			if (lir_function_deals_with_strings(lir_function)) {
+				CORE_DEV_LOG(
+					REPL,
+					"Lowering function that deals with strings skipped: ",
+					lir_function->mangled_name,
+					"\n"
+				);
+				continue;
+			}
+			(void) m_context->lowerAndKeepLirFunction(lir_function);
+		}
+
+		vm::code::CodeCollection new_code = m_context->collectNewCodeSince(snapshot);
+		return new_code;
 	}
 }

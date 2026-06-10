@@ -443,6 +443,7 @@ clah::Clah getClahForMain() {
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
 							.packages_info = {
 								compiler::frontend::packages::RawPackageInfo{
+									.package_id   = base::StrID(package_name),
 									.package_name = base::StrID(package_name),
 									.version      = base::StrID("not_supported"),
 									.package_path = fs::FilePath(path_to_compile.getFilePath()),
@@ -476,7 +477,8 @@ clah::Clah getClahForMain() {
 
 					CORE_ASSERT(!global_state::getPackages().empty(), "No packages registered");
 					auto root
-						= global_state::getPackages().back().getRootModule().illegalAccess().getID();
+						= global_state::getPackages().front().getRootModule().illegalAccess().getID(
+						);
 
 					(void) query::entryPoint<driver::CompileModule>({ root, backend_type, false });
 
@@ -576,6 +578,7 @@ clah::Clah getClahForMain() {
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
 							.packages_info = {
 								compiler::frontend::packages::RawPackageInfo{
+									.package_id   = base::StrID(package_name),
 									.package_name = base::StrID(package_name),
 									.version      = base::StrID("not_supported"),
 									.package_path = path_to_compile.getFilePath(),
@@ -648,7 +651,7 @@ clah::Clah getClahForMain() {
 					base::OkBad result = compiler::driver::compilePackages({
 						compiler::driver::PackageCompilationTask{
 							.root_module
-							= global_state::getPackages().back().getRootModule().illegalAccess().getID(
+							= global_state::getPackages().front().getRootModule().illegalAccess().getID(
 							),
 							.build_target = build_target,
 						},
@@ -842,6 +845,7 @@ clah::Clah getClahForMain() {
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
 									.packages_info = {
 										compiler::frontend::packages::RawPackageInfo{
+											.package_id   = base::StrID(package_name),
 											.package_name = base::StrID(package_name),
 											.version      = base::StrID("not_supported"),
 											.package_path = path_to_compile.getFilePath(),
