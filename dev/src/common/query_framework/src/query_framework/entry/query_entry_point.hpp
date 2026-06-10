@@ -65,7 +65,7 @@ namespace query {
 
 				pool.addTask(internal::Task{
 					node_id,
-					[key](concurrent::worker::WRef) {
+					[key, node_id](concurrent::worker::WRef) {
 						ContextAccess::setAreWeInsideQuery(true);
 						defer({ ContextAccess::setAreWeInsideQuery(false); });
 						QueryType::internal_query(key, node_id);
