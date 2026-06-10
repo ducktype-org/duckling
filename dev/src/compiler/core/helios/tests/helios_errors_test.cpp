@@ -64,15 +64,10 @@ private:
 		const std::vector<std::string_view>& present_phrases,
 		u64                                  logged_msg_count
 	) {
-		// @TODO: #2246 make sure this is ok
-		frontend::ModuleID module_id
-			= frontend::createModuleTreeFromContents(module_content, "test_package");
+		frontend::ModuleID module_id = frontend::createModuleTreeFromContents(module_content);
 
-		auto result = base::anyCast<CRef<query::QResult<helios::HOUTUnit>>>(
-			query::utils::withContextCompute([&](query::Context& ctx) {
-				return ctx.query<helios::QueryModuleHOUT>(module_id);
-			})
-		);
+		auto result = query::entryPoint<helios::QueryModuleHOUT>(module_id);
+
 		assertTrue(result->hasFailed(), "Expected HOUT query to fail for module content.");
 		auto logger = query::Context::dumpToOneLoggerAndClear();
 
@@ -405,7 +400,7 @@ private:
 					arr["index"] = 1;
 				}
 			)",
-				{ "Type `string` cannot be converted to type `const i64`." },
+				{ "Type `const slice char` cannot be converted to type `const i64`." },
 				1
 			);
 
@@ -698,7 +693,7 @@ private:
 					arr["index"] = 1;
 				}
 			)",
-				{ "Type `string` cannot be converted to type `const i64`." },
+				{ "Type `const slice char` cannot be converted to type `const i64`." },
 				1
 			);
 
@@ -732,7 +727,7 @@ private:
 					l -= "sth";
 				}
 			)",
-				{ "Type `string` cannot be converted to type `u64`" },
+				{ "Type `const slice char` cannot be converted to type `u64`" },
 				1
 			);
 
@@ -1205,7 +1200,7 @@ private:
 			R"(
 				expand 1;
 			)",
-			{ "i32", "string" },
+			{ "i32", "const slice char" },
 			1
 		);
 

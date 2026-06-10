@@ -28,6 +28,7 @@ add_library(Driver
 	src/driver/repl_utils/script_helpers.cpp
 	src/driver/repl_utils/repl_split_helpers.cpp
 	src/driver/repl_utils/repl_statement_helpers.cpp
+	src/driver/test_utils.cpp
 
 	${BUILTINS_EMBEDS}
 )

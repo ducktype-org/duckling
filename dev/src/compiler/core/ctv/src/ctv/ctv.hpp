@@ -16,7 +16,7 @@ namespace compiler::ctv {
 	/**
 	 * @brief Represents a value known at compile time.
 	 */
-	class CompileTimeValue {
+	class CompileTimeValue final {
 	public:
 		struct UnitCTV {};
 
