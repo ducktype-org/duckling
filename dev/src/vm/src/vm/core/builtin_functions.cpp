@@ -192,10 +192,10 @@ namespace vm::builtins {
 	}
 
 	void FunctionHandlers::builtinWaitCV(SafeVMThread& thread, u64 cv_id, u64 mutex_id) {
-		auto cv        = thread.safe_process.getSynchronizationPrimitives().getCV(cv_id);
-		auto mutex     = thread.safe_process.getSynchronizationPrimitives().getMutex(mutex_id);
-		auto thread_id = thread.getThreadID();
-		auto* detector = thread.safe_process.getDeadlockDetector();
+		auto  cv        = thread.safe_process.getSynchronizationPrimitives().getCV(cv_id);
+		auto  mutex     = thread.safe_process.getSynchronizationPrimitives().getMutex(mutex_id);
+		auto  thread_id = thread.getThreadID();
+		auto* detector  = thread.safe_process.getDeadlockDetector();
 
 		// cv->wait atomically unlocks the mutex then relocks it before returning (on any path),
 		// so we mirror that in the detector: release ownership now, reacquire after the wait.

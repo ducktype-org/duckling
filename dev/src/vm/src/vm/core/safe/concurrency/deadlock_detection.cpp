@@ -54,10 +54,11 @@ namespace vm {
 
 	void DeadlockDetector::clearMutexState(usize mutex_id) {
 		mutex_owners.erase(mutex_id);
-		for (auto it = thread_waiting_for_mutex.begin(); it != thread_waiting_for_mutex.end();) {
-			if (it->second == mutex_id) it = thread_waiting_for_mutex.erase(it);
-			else ++it;
-		}
+		for (auto it = thread_waiting_for_mutex.begin(); it != thread_waiting_for_mutex.end();)
+			if (it->second == mutex_id)
+				it = thread_waiting_for_mutex.erase(it);
+			else
+				++it;
 	}
 
 }

@@ -213,7 +213,8 @@ namespace vm {
 	}
 
 	bool IVMProcess::isExecutionPanicked() {
-		return std::holds_alternative<api::ExecutionPanicked>(getStatus());
+		std::shared_lock lock(rw_status);
+		return std::holds_alternative<api::ExecutionPanicked>(status);
 	}
 
 	std::expected<api::Response, api::ApiError> IVMProcess::input(const api::request::Input& request

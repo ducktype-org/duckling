@@ -596,13 +596,14 @@ namespace vm {
 				respondExecutionRequest(current_status);
 			else
 				respondExecutionRequest(api::ExecutionCompleted{ exit_value });
-		} catch (const KillProcessException& e) {
-			auto status = safe_process.getCurrentStatus();
-			if (std::holds_alternative<api::ExecutionPanicked>(status))
-				respondExecutionRequest(status);
-			else
-				respondExecutionRequest(api::ExecutionPanicked{ e.what() });
-		}
+		} catch (const KillProcessException& e) { handleKillProcessException(e); }
+	}
+
+	void SafeVMThread::handleKillProcessException(const KillProcessException& e) {
+		if (safe_process.isExecutionPanicked())
+			respondExecutionRequest(safe_process.getCurrentStatus());
+		else
+			respondExecutionRequest(api::ExecutionPanicked{ e.what() });
 	}
 
 	void SafeVMThread::execGlobalDestructors() {
@@ -622,13 +623,7 @@ namespace vm {
 											);
 					low::LowFuncData start_function = createStartFunctionFor(func, {});
 					executeFunction(start_function, func);
-				} catch (const KillProcessException& e) {
-					auto status = safe_process.getCurrentStatus();
-					if (std::holds_alternative<api::ExecutionPanicked>(status))
-						respondExecutionRequest(status);
-					else
-						respondExecutionRequest(api::ExecutionPanicked{ e.what() });
-				}
+				} catch (const KillProcessException& e) { handleKillProcessException(e); }
 			}
 		}
 	}
