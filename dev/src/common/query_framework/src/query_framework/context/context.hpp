@@ -122,11 +122,11 @@ namespace query {
 				Context&         this_context,
 				internal::NodeIDID caller,
 				internal::NodeIDID callee,
-				bool             active_graph_operations
+				bool             active_graph_operations_param
 			):
 				//   caller(caller),
 				//   callee(callee),
-				  enable_active_graph_operations(active_graph_operations and ENABLE_ACTIVE_GRAPH_OPERATIONS),
+				  enable_active_graph_operations(active_graph_operations_param and ENABLE_ACTIVE_GRAPH_OPERATIONS),
 				  this_context_ref(&this_context)
 			{
 			
