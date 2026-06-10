@@ -48,6 +48,8 @@ namespace query::internal {
 			std::atomic<MaybeNodeIDID> active_edge = MaybeNodeIDID();
 			std::shared_ptr<query::Context> node_context_ref = nullptr;
 
+			static_assert(std::atomic<MaybeNodeIDID>::is_always_lock_free, "active_edge should be lock-free for performance reasons");
+
 			ActiveData() = default;
 			ActiveData(const ActiveData& other):
 				active_edge(other.active_edge.load(std::memory_order_acquire)),

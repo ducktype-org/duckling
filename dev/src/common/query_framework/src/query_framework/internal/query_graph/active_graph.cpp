@@ -14,8 +14,11 @@ namespace query::internal {
 		// );
 		auto ref = maybe_active_nodes.getRef(node_id);
 
+		// doing it before active edge is set, so that cycle detection will not see it and will not be racy with it.
+		// not 100% sure tho, something to check
+		ref->node_context_ref = std::move(node_context_ref); 
+
 		ref->active_edge.store(MaybeNodeIDID(), std::memory_order_release);
-		ref->node_context_ref = std::move(node_context_ref); // This might be racy, not sure, will work for tests
 
 		active_node_count++;
 		return { ref };
@@ -25,7 +28,7 @@ namespace query::internal {
 		auto ref = maybe_active_nodes.getRef(node_id);
 
 		ref->active_edge.store(MaybeNodeIDID(), std::memory_order_release);
-		ref->node_context_ref = nullptr;
+		ref->node_context_ref = nullptr; // this is racy, we should have atomic for it probably
 
 		// This is broken for now:
 		// if (was_removed)

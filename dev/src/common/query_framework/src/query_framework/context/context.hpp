@@ -99,6 +99,7 @@ namespace query {
 		private:
 			// internal::NodeIDID caller;
 			// internal::NodeIDID callee;
+			base::Optional<internal::ActiveGraph::NodeHandle> my_active_graph_handle;
 			bool             enable_active_graph_operations;
 			CRef<Context>    this_context_ref;
 		
@@ -109,7 +110,7 @@ namespace query {
 			void deinitActiveGraph() { 
 				// main_query_state.getActiveGraph()->removeEdge(caller);
 				main_query_state.getActiveGraph()->removeEdgeByHandle(
-					this_context_ref->my_active_graph_handle.value()
+					this->my_active_graph_handle.value()
 				);
 			}
 
@@ -130,6 +131,7 @@ namespace query {
 				main_query_state.addDependency(caller, callee);
 
 				if (enable_active_graph_operations) {
+					my_active_graph_handle = this_context.my_active_graph_handle;
 
 					// we want to do it only when necessary:
 					// if (this_context.my_active_graph_handle.empty()) {
@@ -150,7 +152,7 @@ namespace query {
 					
 					// main_query_state.getActiveGraph()->setEdge(caller, callee);
 					main_query_state.getActiveGraph()->setEdgeByHandle(
-						this_context_ref->my_active_graph_handle.value(), callee
+						this->my_active_graph_handle.value(), callee
 					);
 
 
