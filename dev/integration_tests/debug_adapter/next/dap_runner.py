@@ -29,7 +29,7 @@ try:
     sys.stderr.write("--> SUCCESS: Step 'next' successfully acknowledged!\n")
     sys.stderr.flush()
 
-    # TODO: #2558 Add check if the step was really done by stackTrace request
+    # @TODO: #2558 Add check if the step was really done by stackTrace request
     # Implemented when handling DAP memory requests
 
 finally:
