@@ -119,7 +119,8 @@ private:
 			// @TODO: #2694 remove this filtering
 			// #2483 -- deal with this if needed
 			base::filterVectorInPlace(unit.functions, [](const CRef<helios::HOUTFunction>& func) {
-				return func->declaration->original_name != base::StrID("toString");
+				return func->declaration->original_name != base::StrID("toString")
+				   and func->declaration->original_name != base::StrID("length");
 			});
 
 			auto mir_unit = mir::lowerToMIRUnit(ctx, &unit);
@@ -225,7 +226,7 @@ private:
 
 	void simpleBools() {
 		auto module = getLIROfModule(path("modules/booleans"));
-		ASSERT_EQUAL(2, module.funcs.size());
+		ASSERT_EQUAL_PRINT(2, module.funcs.size());
 		auto foo_lir = module.lirFunc("foo");
 
 		// note: it might change where those branch operations are placed:

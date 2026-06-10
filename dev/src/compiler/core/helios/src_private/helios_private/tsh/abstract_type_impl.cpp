@@ -2,6 +2,8 @@
 
 #include "queries.hpp"
 
+#include <helios/symbols/query_type_of_symbol.hpp>
+
 // @TODO: #2331 Remove these includes
 #include <frontend/pst_parser/elements/hierarchy/class_elements/field.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expr_holders.hpp>
@@ -13,6 +15,7 @@
 #include <helios/tsh/queries/implicit_coercibility.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios_private/hout_creation/definition_generation/default_destructors.hpp>
+#include <helios_private/hout_creation/definition_generation/length_methods.hpp>
 #include <helios_private/hout_creation/definition_generation/to_string_methods.hpp>
 #include <helios_private/symbols/generated_symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
@@ -96,6 +99,7 @@ namespace compiler::tsh {
 		case Float:
 		case Pointer:
 		case RawPointer:
+		case Slice:
 			return true;
 		default:
 			return false;
@@ -320,6 +324,43 @@ namespace compiler::tsh {
 		return &empty;
 	}
 
+	CRef<TypeInterface> SliceAbstractTypeImpl::getDeclaredInterface(query::Context& ctx) const {
+		auto compute_interface = [&]() -> TypeInterface {
+			std::vector<InterfaceElement> elements;
+			elements.reserve(3);
+
+			auto components = ctx.query<helios::QuerySliceTypeData>(toAbstractType());
+			elements.emplace_back(
+				components->ptr,
+				ctx.query<helios::QueryTypeOfSymbol>(components->ptr)->valueOrThrow().getType(),
+				0,
+				InterfaceElement::InterfaceElementKind::Field,
+				ClassMemberVisibility::Private
+			);
+			elements.emplace_back(
+				components->len,
+				ctx.query<helios::QueryTypeOfSymbol>(components->len)->valueOrThrow().getType(),
+				1,
+				InterfaceElement::InterfaceElementKind::Field,
+				ClassMemberVisibility::Private
+			);
+
+			auto length_sym = helios::defgen::lengthMethodForType(ctx, toAbstractType());
+			elements.emplace_back(
+				length_sym,
+				ctx.query<helios::QueryTypeOfSymbol>(length_sym)->valueOrThrow().getType(),
+				2,
+				InterfaceElement::InterfaceElementKind::Method,
+				ClassMemberVisibility::Public
+			);
+
+			auto interface = TypeInterface(elements);
+			return interface;
+		};
+		static const TypeInterface cached_interface = compute_interface();
+		return &cached_interface;
+	}
+
 	CRef<TypeInterface> StringAbstractTypeImpl::getDeclaredInterface(query::Context&) const {
 		throw base::NotYetImplemented("String type interface not yet implemented");
 	}
@@ -480,6 +521,10 @@ namespace compiler::tsh {
 			return dynamic_array_type.getElementType() == element_type;
 		}
 
+		return false;
+	}
+
+	bool SliceAbstractTypeImpl::isImplicitlyCoercible(AbstractType, query::Context&) const {
 		return false;
 	}
 

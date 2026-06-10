@@ -28,6 +28,7 @@ namespace compiler::tsh {
 	class PointerAbstractTypeImpl;
 	class ManyPointerAbstractTypeImpl;
 	class CPointerAbstractTypeImpl;
+	class SliceAbstractTypeImpl;
 	class StringAbstractTypeImpl;
 	class TupleAbstractTypeImpl;
 	class FunctionAbstractTypeImpl;
@@ -286,6 +287,20 @@ namespace compiler::tsh {
 		CONSTRUCT_WITH_CHECKED_CAST(CPointerAbstractType)
 
 		CONSTRUCT_FROM_IMPLEMENTATION(CPointerAbstractType)
+	};
+
+	/**
+	 * @brief The Slice type.
+	 */
+	class SliceAbstractType final: public AbstractType {
+	public:
+		SETUP_TYPE_WITH_BASE(SliceAbstractType, AbstractType)
+
+		[[nodiscard]] SymbolType<> getElementType() const;
+
+		CONSTRUCT_WITH_CHECKED_CAST(SliceAbstractType)
+
+		CONSTRUCT_FROM_IMPLEMENTATION(SliceAbstractType)
 	};
 
 	/*******************\

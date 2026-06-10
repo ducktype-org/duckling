@@ -492,12 +492,13 @@ namespace compiler::tsl {
 			return types;
 		}
 
-		ClassTypeLayoutConstructionHelper(
-			const tsh::ClassAbstractType class_type, query::Context& ctx
-		):
+		template<typename T>
+		requires std::derived_from<T, tsh::AbstractType>
+		ClassTypeLayoutConstructionHelper(const T class_type, query::Context& ctx):
 			  type(class_type),
 			  field_elements(getFieldsOfInterface(class_type.getInterface(ctx))),
 			  field_layouts(getLayoutVector(getElementTypes(field_elements, ctx), ctx)),
+<<<<<<< HEAD
 			  total_size(0),
 			  max_alignment(1) {
 			PickedClassLayout picked
@@ -515,6 +516,8 @@ namespace compiler::tsl {
 			  type(tuple_type),
 			  field_elements(getFieldsOfInterface(tuple_type.getInterface(ctx))),
 			  field_layouts(getLayoutVector(tuple_type.getComponents(), ctx)),
+=======
+>>>>>>> main
 			  field_offsets(alignOffsetsForLayoutVector(field_layouts)),
 			  layout_idx_to_field_idx(offsetsToPermutation(field_offsets)),
 			  layout_idx_to_sym_id(getLayoutIndicesToSymIDs(field_elements, field_offsets)),
@@ -527,6 +530,9 @@ namespace compiler::tsl {
 
 	ClassTypeLayout::ClassTypeLayout(const tsh::TupleAbstractType tuple_type, query::Context& ctx):
 		  ClassTypeLayout(ClassTypeLayoutConstructionHelper(tuple_type, ctx), ctx) {}
+
+	ClassTypeLayout::ClassTypeLayout(const tsh::SliceAbstractType slice_type, query::Context& ctx):
+		  ClassTypeLayout(ClassTypeLayoutConstructionHelper(slice_type, ctx), ctx) {}
 
 	ClassTypeLayout::ClassTypeLayout(ClassTypeLayoutConstructionHelper&& helper, query::Context& ctx):
 		  TypeLayoutABC(

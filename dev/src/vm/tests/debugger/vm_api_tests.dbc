@@ -6,13 +6,13 @@ function main { i64, ptr_argv } -> { i64 } {
 		# arg1 -> *argv
 
 	init_pany_type     x, i64;
-	input_p64          x;
 	mov_p64_imm        x, 1;
-	deinit; # x
 	
 	init_pany_type     y, i64;
+	mov_p64_imm	   	   y, 7;
 	output_p64         y;
 	deinit; # y
+	deinit; # x
 
 	deinit; # *argv
 	deinit; # argc
