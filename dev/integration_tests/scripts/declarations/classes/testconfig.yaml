@@ -1,0 +1,34 @@
+# Tests for declarations of classes in scripts in Duckling.
+
+Tests:
+  basic_declarations:
+    folder: "basic_declarations"
+    Cases:
+      direct:
+        mode: direct
+        Output: 
+          String : "42\n25\n"
+      vm:
+        mode: vm
+        Output:
+          String : "42\n25\n"
+      exe:
+        mode: exe
+        Output:
+          String : "42\n25\n"
+  
+  using_previously_defined_objects:
+    folder: "interactions"
+    Cases:
+      direct:
+        mode: direct
+        Output:
+          String: "12\n"
+      vm:
+        mode: vm
+        Output:
+          String: "12\n"
+      exe:
+        mode: exe
+        Output:
+          String: "12\n"

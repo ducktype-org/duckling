@@ -30,6 +30,10 @@ namespace compiler::helios {
 			return owner_type.queryUnstablePerfectHash();
 		}
 
+		base::Bit256 GeneratedSymbolData::LengthMethod::queryUnstablePerfectHash() const {
+			return { owner_type.queryUnstablePerfectHash() };
+		}
+
 		base::Bit256 GeneratedSymbolData::DefaultDestructor::queryUnstablePerfectHash() const {
 			return owner_type.queryUnstablePerfectHash();
 		}
@@ -158,6 +162,28 @@ namespace compiler::helios {
 						tsh::Mutability::Immutable,
 					};
 				}
+				variant_case(LengthMethod, length_method) {
+					const tsh::SymbolType<> self_type{
+						length_method.owner_type,
+						length_method.owner_type.isSimple() ? tsh::ReferenceKind::Direct
+															: tsh::ReferenceKind::Ref,
+						tsh::Mutability::Immutable,
+					};
+
+					const auto return_type = tsh::SymbolType<>::withDefaults(tsh::getIntegralType(
+						ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned
+					));
+
+					const auto length_method_abstract_type
+						= ctx.query<tsh::QueryFunctionType>({ .parameter_types = { self_type },
+					                                          .result_type     = return_type });
+
+					return tsh::SymbolType<>{
+						length_method_abstract_type,
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Immutable,
+					};
+				}
 				variant_case(DefaultDestructor, dtor) {
 					const tsh::SymbolType<> self_type{
 						dtor.owner_type,
@@ -215,6 +241,21 @@ namespace compiler::helios {
 						return field.parent_type.as<tsh::TupleAbstractType>().getComponents().at(
 							field.index
 						);
+					case tsh::Kind::Slice: {
+						if (field.index == 0) {
+							auto element_type
+								= field.parent_type.as<tsh::SliceAbstractType>().getElementType();
+							auto many_pointer_type
+								= ctx.query<tsh::QueryManyPointerType>({ element_type });
+							return tsh::SymbolType<>::withDefaults(many_pointer_type);
+						}
+						if (field.index == 1) {
+							return tsh::SymbolType<>::withDefaults(tsh::getIntegralType(
+								ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned
+							));
+						}
+						CORE_PANIC("Slice only has fields 0 (element) and 1 (length)");
+					}
 					default:
 						CORE_UNREACHABLE();
 					}
@@ -306,6 +347,7 @@ namespace compiler::helios {
 				variant_case(DefaultStaticArrayConstructor, ctor) { return {}; }
 				variant_case(DefaultDestructor, dtor) { return {}; }
 				variant_case(ToStringMethod, to_string) { return {}; }
+				variant_case(LengthMethod, m) { return {}; }
 				variant_case(BuiltinOperator, op) { return {}; }
 				variant_case(Parameter, param) { return {}; }
 				variant_case(SelfParameter, param) { return param.scope; }
@@ -346,6 +388,7 @@ namespace compiler::helios {
 				defgen::GeneratedSymbolData::ReplInstructionWrapper,
 				defgen::GeneratedSymbolData::ScriptMainWrapper,
 				defgen::GeneratedSymbolData::ToStringMethod,
+				defgen::GeneratedSymbolData::LengthMethod,
 				defgen::GeneratedSymbolData::DefaultDestructor
 			) {
 				kind = SymbolKind::Function;

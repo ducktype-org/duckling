@@ -32,7 +32,7 @@ pub enum FetchResponse {
     Failed(FetchFailure),
 }
 
-/// Type respresenting the result of a successful fetch.
+/// Type representing the result of a successful fetch.
 #[derive(Debug)]
 pub enum FetchSuccess {
     Pinned(PinnedSuccess),

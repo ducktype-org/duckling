@@ -23,7 +23,7 @@ public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(validManifestParsed);
 		TESTER_ADD_TEST(missingPackagesFieldFails);
-		TESTER_ADD_TEST(missingPackageNameFails);
+		TESTER_ADD_TEST(missingPackageFieldsFails);
 		TESTER_ADD_TEST(missingTaskPackageFails);
 		TESTER_ADD_TEST(unknownFieldsWarnNotError);
 		TESTER_ADD_TEST(verifyEmptyPackagesFails);
@@ -57,6 +57,7 @@ private:
 		auto manifest_json = nlohmann::json::parse(R"({
             "packages": [
                 {
+                    "id": "mylib",
                     "name": "mylib",
                     "version": "1.0.0",
                     "path": "pkgs/mylib",
@@ -64,12 +65,13 @@ private:
                     "dependencies": []
                 },
                 {
+                    "id": "app",
                     "name": "app",
                     "version": "2.0.0",
                     "path": "pkgs/app",
                     "features": [],
                     "dependencies": [
-                        { "name": "mylib", "alias": "mylib" }
+                        { "id": "mylib", "alias": "mylib" }
                     ]
                 }
             ],
@@ -91,10 +93,12 @@ private:
 		(void) result->verify(diagnostics::makeGlobalLoggerReporter());
 		ASSERT_EQUAL(result->packages.size(), 2u);
 		ASSERT_EQUAL(result->tasks.size(), 1u);
+		ASSERT_EQUAL(result->packages[0].package_id.str(), std::string("mylib"));
 		ASSERT_EQUAL(result->packages[0].package_name.str(), std::string("mylib"));
+		ASSERT_EQUAL(result->packages[1].package_id.str(), std::string("app"));
 		ASSERT_EQUAL(result->packages[1].package_name.str(), std::string("app"));
 		ASSERT_EQUAL(result->packages[1].dependencies.size(), 1u);
-		ASSERT_EQUAL(result->packages[1].dependencies[0].package_name.str(), std::string("mylib"));
+		ASSERT_EQUAL(result->packages[1].dependencies[0].package_id.str(), std::string("mylib"));
 	}
 
 	void missingPackagesFieldFails() {
@@ -112,7 +116,7 @@ private:
 		ASSERT_TRUE(logger().hasErrors());
 	}
 
-	void missingPackageNameFails() {
+	void missingPackageFieldsFails() {
 		clearLogger();
 
 		auto manifest_json = nlohmann::json::parse(R"({
@@ -159,6 +163,7 @@ private:
 		auto manifest_json = nlohmann::json::parse(R"({
             "packages": [
                 {
+                    "id": "app",
                     "name": "app",
                     "version": "1.0.0",
                     "path": "pkgs/app",
@@ -207,22 +212,24 @@ private:
 		PackageCompilationManifest manifest{
 			.packages = {
 				compiler::frontend::packages::RawPackageInfo{
+					.package_id   = base::StrID("pkg"),
 					.package_name = base::StrID("pkg"),
 					.version      = base::StrID("1"),
 					.package_path = fs::FilePath("/tmp/pkg"),
 					.features     = {},
 					.dependencies = {
 						compiler::frontend::packages::RawDependencyInfo{
-							.package_name = base::StrID("missing"),
-							.alias        = base::StrID("dup"),
+							.package_id = base::StrID("missing"),
+							.alias      = base::StrID("dup"),
 						},
 						compiler::frontend::packages::RawDependencyInfo{
-							.package_name = base::StrID("missing"),
-							.alias        = base::StrID("dup"),
+							.package_id = base::StrID("missing"),
+							.alias      = base::StrID("dup"),
 						},
 					},
 				},
 				compiler::frontend::packages::RawPackageInfo{
+					.package_id   = base::StrID("pkg"),
 					.package_name = base::StrID("pkg"),
 					.version      = base::StrID("1"),
 					.package_path = fs::FilePath("/tmp/pkg2"),
@@ -253,7 +260,7 @@ private:
 		ASSERT_TRUE(std::holds_alternative<BuildTargetDVM>(result->build_target));
 		const auto& target = std::get<BuildTargetDVM>(result->build_target);
 		ASSERT_EQUAL(target.output_file_stem.str(), std::string("bin/mylib_dvm"));
-		ASSERT_EQUAL(result->package_name.str(), std::string("mylib"));
+		ASSERT_EQUAL(result->package_id.str(), std::string("mylib"));
 	}
 
 	void nativeStrategyParsed() {
