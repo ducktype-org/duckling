@@ -498,11 +498,13 @@ namespace compiler::tsl {
 			  type(class_type),
 			  field_elements(getFieldsOfInterface(class_type.getInterface(ctx))),
 			  field_layouts(getLayoutVector(getElementTypes(field_elements, ctx), ctx)),
-<<<<<<< HEAD
 			  total_size(0),
 			  max_alignment(1) {
+			// For class types honor their ABI (C vs natural); pickClassLayout will compute
+			// proper offsets/size/alignment. For other aggregate-like types the
+			// corresponding constructor (e.g. tuple) will handle layout differently.
 			PickedClassLayout picked
-				= pickClassLayout(class_type, field_elements, field_layouts, ctx);
+					= pickClassLayout(class_type, field_elements, field_layouts, ctx);
 			field_offsets           = std::move(picked.offsets);
 			layout_idx_to_field_idx = offsetsToPermutation(field_offsets);
 			layout_idx_to_sym_id    = getLayoutIndicesToSymIDs(field_elements, field_offsets);
@@ -516,8 +518,6 @@ namespace compiler::tsl {
 			  type(tuple_type),
 			  field_elements(getFieldsOfInterface(tuple_type.getInterface(ctx))),
 			  field_layouts(getLayoutVector(tuple_type.getComponents(), ctx)),
-=======
->>>>>>> main
 			  field_offsets(alignOffsetsForLayoutVector(field_layouts)),
 			  layout_idx_to_field_idx(offsetsToPermutation(field_offsets)),
 			  layout_idx_to_sym_id(getLayoutIndicesToSymIDs(field_elements, field_offsets)),
