@@ -56,6 +56,6 @@ base::StrID vm::fast::Type::getName() const {
 
 [[nodiscard]]
 vm::TypeSize vm::fast::Type::getSize() const {
-	CORE_ASSERT(size != TypeSize(-1), "getSize called before type finalization");
+	CORE_ASSERT(size != TypeSize(-1), "getSize called on type without size (e.g. DynamicTable)");
 	return size;
 }

@@ -46,10 +46,11 @@ namespace vm::fast::exec {
 
 #include "instr_structures.hpp"
 #undef ARG_NAMESPACE
-#undef ID_TYPE
 #undef MAKE_INSTR_STRUCTS
 #undef MAKE_INSTRUCTION_UNION
-#undef MAKE_MAKERS
+#undef ID_TYPE
+#undef MAKE_MAKERS_JUST_DEF
+#undef MAKE_MAKERS_FULL
 
 	struct ExecFunction {
 		std::vector<Instruction> data;

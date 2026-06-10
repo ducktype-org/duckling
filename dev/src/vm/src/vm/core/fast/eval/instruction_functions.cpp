@@ -13,12 +13,6 @@
 // In tailcalls, the dispatcher calls the next instruction
 #define PROGRESS_BY(progress_count) state.incrementInstruction(progress_count)
 
-// #define getBytePtrToPlace(ARG) local_stack + ARG
-
-// #define READ_PLACE(type, arg) *reinterpret_cast<type*>(getBytePtrToPlace(arg))
-// #define WRITE_PLACE(arg, val) \
-// 	*reinterpret_cast<std::remove_cvref_t<decltype(val)>*>(getBytePtrToPlace(arg)) = val
-
 #define getBytePtrToPlace(ARG) decodePlace(ARG, local_stack, state.global_data_buffer_base)
 #define READ_PLACE(type, arg)  safeReadPointerBytes<type>(getBytePtrToPlace(arg))
 #define WRITE_PLACE(arg, val)  safeWriteBytes(getBytePtrToPlace(arg), val)

@@ -10,9 +10,6 @@
 	INSTRFUN_ARGS_BASE_SC, [[maybe_unused]] const vm::fast::exec::instr_structs::name& instr
 
 namespace vm::fast {
-	class ThreadRuntimeState;
-	class FastVMThread;
-
 	class FastExecutor {
 	public:
 #define HANDLE_INSTR(NAME) static void Instr_##NAME(INSTRFUN_ARGS(NAME));

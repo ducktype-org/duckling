@@ -1,4 +1,5 @@
 #include "cli.hpp"
+#include <limits>
 
 #include <base/except/exceptions.hpp>
 
@@ -139,7 +140,7 @@ namespace vm::debugger::cli {
 			} else if (stripped_line.starts_with("breakpoint ") || stripped_line.starts_with("b ")) {
 				std::stringstream stream(stripped_line.substr(stripped_line.find_first_of(' ')));
 				std::string       option;
-				usize             line_number = -1;
+				usize             line_number = std::numeric_limits<usize>::max();
 
 				stream >> option >> line_number;
 

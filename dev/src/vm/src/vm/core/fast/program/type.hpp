@@ -60,7 +60,7 @@ namespace vm::fast {
 	struct Type final {
 		base::StrID name;
 		TypeID      id;
-		Bytes       size;
+		TypeSize    size = Bytes(-1);
 		std::variant<
 			base::Monostate,
 			kind::Primitive,
