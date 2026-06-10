@@ -124,7 +124,7 @@ namespace base {
 		SharedBox(const SharedBox& other) noexcept:
 			  data_ptr{ other.data_ptr },
 			  ctrl_ptr{ other.ctrl_ptr } {
-			if (!isFullyNull()) return;
+			if (isFullyNull()) return;
 			assertNotNull();
 			ctrl_ptr->n_owners.fetch_add(1, std::memory_order_relaxed);
 		}
@@ -132,7 +132,7 @@ namespace base {
 		SharedBox(SharedBox&& other) noexcept:
 			  data_ptr{ std::move(other).data_ptr },
 			  ctrl_ptr{ std::move(other).ctrl_ptr } {
-			if (!isFullyNull()) return;
+			if (isFullyNull()) return;
 			assertNotNull();
 			other.nullify();
 		}
