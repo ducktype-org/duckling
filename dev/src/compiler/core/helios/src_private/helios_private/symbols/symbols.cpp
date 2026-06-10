@@ -24,6 +24,7 @@
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 
+#include "base/extend_cpp/vector_utils.hpp"
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
@@ -1117,7 +1118,6 @@ namespace compiler::helios {
 			void visitCallExpr(const code::CallExpr& expr) override {
 				if (const auto* callee_ident
 				    = dynamic_cast<const code::IdentifierExpr*>(expr.callee.get())) {
-					if (callee_ident->expression_type.getType().getKind() == tsh::Kind::Function)
 						called_functions.insert(callee_ident->symbol);
 				}
 
@@ -1191,13 +1191,11 @@ namespace compiler::helios {
 
 			if (kind(key) == SymbolKind::FunctionDeclaration) {
 				std::vector<SymID> result;
-				// For function declarations we return empty dependencies, since they don't have a body.
+				// For function declarations we check if a function declaration is a backend
+				// dependent symbol.
 				if (hasAttribute(key, Attribute::BackendDependent)) {
-					auto symbols = getBackendDependentSymbols(ctx, key);
-					for (auto s: symbols) {
-						auto impl_result = collect_deps(s);
-						result.insert(result.end(), impl_result.begin(), impl_result.end());
-					}
+					// If yes then we append all the results from all implementations.
+					return getBackendDependentSymbols(ctx, key);
 				}
 				return result;
 			}
@@ -1248,9 +1246,8 @@ namespace compiler::helios {
 			while (!worklist.empty()) {
 				SymID current_func = worklist.back();
 				worklist.pop_back();
-				
-				if (kind(key) == SymbolKind::Function || kind(key) == SymbolKind::Method)
-					all_dependencies.push_back(current_func);
+
+				all_dependencies.push_back(current_func);
 
 				Ref direct_dependencies
 					= &ctx.query<QueryDirectFunctionCalls>(current_func)->valueOrThrow();
@@ -1262,6 +1259,10 @@ namespace compiler::helios {
 					}
 				}
 			}
+
+			base::filterVectorInPlace(all_dependencies, [](auto sym) {
+				return kind(sym) != SymbolKind::FunctionDeclaration;
+			});
 			return all_dependencies;
 		}
 

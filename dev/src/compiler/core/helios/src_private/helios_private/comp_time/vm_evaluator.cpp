@@ -284,7 +284,10 @@ namespace {
 		auto comptime_code = comptime_ops::getComptimeTypeOperations(*comptime_dvm.getPID());
 		m.insertRawBytecodeDefinitions(comptime_code);
 
-		for (const auto& lir_function: all_lir_functions) m.insertLIRFunction(lir_function);
+		for (const auto& lir_function: all_lir_functions) {
+			if (lir_function->ignore_on_dvm) continue;
+			m.insertLIRFunction(lir_function);
+		}
 		auto bytecode = m.build();
 
 		return comptime_dvm.loadCode(bytecode);

@@ -822,6 +822,8 @@ namespace compiler::helios {
 			auto lir_unit
 				= lir::lowerToLIRUnit(ctx, mir::lowerToMIRUnit(ctx, &hout_unit).valueOrThrow());
 
+			for (auto f : lir_unit.lir_functions) f->debugPrint(ctx, std::cerr);
+
 			// Note: the assumptions bellow might change,
 			// for example when we will add consts to comp time.
 			CORE_ASSERT(

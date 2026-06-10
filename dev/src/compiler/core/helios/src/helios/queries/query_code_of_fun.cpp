@@ -75,9 +75,9 @@ namespace compiler::helios {
 		}
 
 		static void verifyFunctionAttributes(
-			query::Context& ctx, pst::Access<pst::Fun> stmt, SymID sym_id
+			query::Context& ctx, pst::Access<pst::Fun> pst_stmt, SymID sym_id
 		) {
-			if (stmt->getAttributes().empty()) return;
+			if (pst_stmt->getAttributes().empty()) return;
 
 			if (hasAttribute(sym_id, Attribute::DVMOnlyImpl)
 			    or hasAttribute(sym_id, Attribute::NativeOnlyImpl)) {
@@ -95,7 +95,7 @@ namespace compiler::helios {
 						"declaration in the same scope."
 					);
 					ctx.logInt(
-						makeBox<dia_int::PlaceholderError>(error_msg, stmt->getStablePosition())
+						makeBox<dia_int::PlaceholderError>(error_msg, pst_stmt->getStablePosition())
 					);
 					query::throwFailed();
 				}
@@ -112,8 +112,21 @@ namespace compiler::helios {
 						"`"
 					);
 					ctx.logInt(
-						makeBox<dia_int::PlaceholderError>(error_msg, stmt->getStablePosition())
+						makeBox<dia_int::PlaceholderError>(error_msg, pst_stmt->getStablePosition())
 					);
+					query::throwFailed();
+				}
+
+				if (not hasAttribute(target_sym, Attribute::BackendDependent)
+				    or kind(target_sym) != SymbolKind::FunctionDeclaration) {
+					std::string error_msg = base::strConcat(
+						"Function should have a `",
+						attrToStr(Attribute::BackendDependent),
+						"` attribute and be a `fundecl`."
+					);
+					ctx.logInt(makeBox<dia_int::PlaceholderError>(
+						error_msg, stmt(ctx, target_sym).value()->getStablePosition()
+					));
 					query::throwFailed();
 				}
 			}
