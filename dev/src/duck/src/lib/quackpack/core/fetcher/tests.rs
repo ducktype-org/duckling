@@ -5,6 +5,7 @@ use tempfile::{TempDir, tempdir};
 
 use super::*;
 use crate::quackpack::core::Version;
+use crate::quackpack::util::to_url::ToUrl;
 use crate::util::test_utils::setup_test;
 
 fn setup_duck_ctx() -> (DuckContext, TempDir) {
@@ -178,7 +179,7 @@ fn all_metadata_adds_to_cache() {
     let server = create_mock_server();
     let mut fetcher = Fetcher::new(&ctx).unwrap();
     let response = fetcher
-        .get_package_all_metadata(&server.base_url().parse().unwrap(), "foo".into())
+        .get_package_all_metadata(server.base_url().to_url().unwrap().into(), "foo".into())
         .unwrap();
     let FetcherResponse::Some(response) = response else {
         panic!("Offline response with offline flag not present");

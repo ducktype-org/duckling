@@ -34,9 +34,9 @@ pub struct InitOptions<'duck, 'a> {
 const DEFAULT_SOURCE_FILENAME: &str = "src.dmf";
 
 const DEFAULT_SOURCE_CONTENTS: &str = "\
+import core.builtins.*;
+
 fun main() = {
-    # !TODO: On macOS, builtin_output_string segfaults :^);
-    # builtin_output_string(\"Hello, world!\");
     return 0;
 }
 ";
@@ -228,7 +228,7 @@ fn add_package_structure(ctx: &DuckContext, root_path: &Path) -> QuackResult<()>
         Err(err) => {
             if matches!(err.kind(), ErrorKind::AlreadyExists) {
                 ctx.console().note_verbose(format!(
-                    "the source file {} already exists, not overwiting it",
+                    "the source file {} already exists, not overwriting it",
                     source_file_path.display()
                 ))?;
                 return Ok(());
@@ -255,7 +255,7 @@ fn init_git(ctx: &DuckContext, root_path: &Path) -> QuackResult<()> {
         Err(err) => {
             if matches!(err.kind(), ErrorKind::AlreadyExists) {
                 ctx.console().note_verbose(format!(
-                    "the file {} already exists, not overwiting it",
+                    "the file {} already exists, not overwriting it",
                     gitignore_path.display()
                 ))?;
                 return Ok(());

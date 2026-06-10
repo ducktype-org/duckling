@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../lir_module_data.hpp"
+#include "../lir_unit_with_name.hpp"
 
 #include <backends/llvm/llvm_backend.hpp>
 
@@ -10,9 +10,11 @@
 namespace compiler::driver {
 
 	/**
-	 * @brief Compiles the LIRModuleData to LLVM Module.
+	 * @brief Compiles the LIRUnitWithBackendName to LLVM Module.
 	 */
-	backend_llvm::Module compileLIRModuleToLLVM(query::Context& ctx, CRef<LIRModuleData> lir_module);
+	backend_llvm::Module compileLIRModuleToLLVM(
+		query::Context& ctx, CRef<LIRUnitWithBackendName> lir_module
+	);
 
 
 	/**

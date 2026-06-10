@@ -14,7 +14,7 @@
 #include <vm/bytecode/validator/valid_program.hpp>
 
 namespace compiler::backend_vm::internal {
-	class ProgramLoweringContext {
+	class ProgramLoweringContext final {
 		/**
 		 * @brief Context used purely for throwing NotYetImplemented errors.
 		 * @note This context should not be used for anything other than throwing NotYetImplemented
@@ -64,11 +64,7 @@ namespace compiler::backend_vm::internal {
 		 */
 		const vm::code::Function& lowerAndKeepLirFunction(CRef<lir::Function> lir_function);
 
-		const vm::code::GlobalData& lowerAndKeepLirGlobal(
-			const lir::LIRGlobal&               lir_global,
-			base::Optional<CRef<lir::Function>> global_ctor,
-			base::Optional<CRef<lir::Function>> global_dtor
-		);
+		const vm::code::GlobalData& lowerAndKeepLirGlobal(const lir::LIRGlobalData& lir_global);
 
 		/**
 		 * @brief Lowers a LIR type layout into VM bytecode type representation.

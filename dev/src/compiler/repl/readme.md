@@ -37,12 +37,12 @@ Execution model notes:
 src/repl/
 ├── session.hpp            # REPL session interface
 ├── session.cpp            # Session orchestration and execution flow
-├── helper_structs.hpp     # ReplConfig, ReplResult, ReplStatement
+├── helpers.hpp            # ReplConfig, ReplResult, ReplStatement
 ├── frontend.hpp           # Frontend abstraction
 ├── frontend.cpp           # Frontend delegation
 └── frontend_implementations/
-   ├── replxx.*            # Rich frontend (completions/highlighting/history)
-   └── minimal.*           # Minimal terminal frontend
+   ├── replxx.*            # Rich frontend (completions/highlighting/hints)
+   └── minimal.*           # Minimal terminal frontend (backup)
 ```
 
 ## Usage
@@ -71,17 +71,30 @@ Disable completions/hints:
 |---------|---------|-------------|
 | `/help` | `/?`, `/h` | Show help |
 | `/exit` | `/quit`, `/q` | Exit session |
-| `/history` | `/hist` | Print entered statements |
+| `/history` | `/hist` | Print current session entered statements |
+| `/reset [n\|-n] [--silent]` | - | Resets session's state to the either state with absolute index n(when typing just n, this index can be checked in /hist) or when using -n, to the state n states ago. Turning on --silent suppress output during reset 
+| `/cmds` | `/commands` | Show all inputs history(also previous sessions) |
+| `/commands-reset` | `/cmds-reset` | Resets all inputs history |
 | `/clear` | `/c` | Clear terminal screen |
 | `/load <file.ds>` | - | Load script into current session |
 
 ### Editing
 
-- REPLXX frontend:
-  - `Enter` submits input
-  - `Alt + Enter` inserts newline
-- Minimal frontend:
-  - `Alt + Enter` inserts newline
+- `Enter` submits input
+- `Alt + Enter` inserts newline
+
+#### Replxx
+- syntax highlighting
+- hints
+- completions - use Up/Down arrows+Alt to scroll through. Use Tab to complete
+- reverse search with Ctrl+R
+- scrollable history - use Up arrow when you are at the top line to go up, or Down arrow at the bottom line to go down
+- auto indent
+- pasting from the clipboard - Ctrl + V
+
+#### Minimal
+- scrollable history - use Up/Down arrows + Alt to navigate
+- pasting from the clipboard - Ctrl + V
 
 ### Programmatic Use
 
@@ -144,7 +157,7 @@ For each statement:
 3. The statement is classified as expression, instruction, or definition.
 4. Expression/instruction paths generate wrapper functions; definition path loads module HOUT.
 5. HOUT is lowered to LIR and compiled to DVM bytecode.
-6. Lowering uses `ReplLoweringContext` to emit only newly-lowered entities
+6. Lowering uses `ReplDVMCodeBuilder` to emit only newly-lowered entities
   (see `core/backends/dvm/README.md`).
 7. New code is loaded into current DVM process.
 8. Wrapper executes (for executable statements) and result is printed when supported.

@@ -1,0 +1,52 @@
+# Tests for declaration of macros in scripts in Duckling.
+
+Tests:
+  single_expand:
+    folder: "basic_usage"
+    Cases:
+      direct:
+        mode: direct
+        Output:
+          String: "44\n"
+      vm:
+        mode: vm
+        Output:
+          String: "44\n"
+      exe:
+        mode: exe
+        Output:
+          String: "44\n"
+
+  nested_expand:
+    folder: "basic_usage"
+    Cases:
+      direct:
+        mode: direct
+        Output:
+          String: "17\n"
+      vm:
+        mode: vm
+        Output:
+          String: "17\n"
+      exe:
+        mode: exe
+        Output:
+          String: "17\n"
+
+  duality:
+    Enabled: "false"
+    folder: "macros_and_namespaces"
+    Cases:
+      direct:
+        mode: direct
+        Output:
+          String: "10\n12\n"
+      vm:
+        mode: vm
+        Output:
+          String: "10\n12\n"
+      exe:
+        mode: exe
+        Output:
+          String: "10\n12\n"
+  

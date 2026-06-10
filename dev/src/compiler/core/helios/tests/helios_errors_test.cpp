@@ -14,7 +14,6 @@
 #include <base/except/exceptions.hpp>
 #include <base/pointers/box.hpp>
 
-#include <diagnostic/highlight_positions.hpp>
 #include <filesystem/file.hpp>
 #include <query_framework/context/context.hpp>
 #include <query_framework/entry/query_entry_point.hpp>
@@ -65,14 +64,10 @@ private:
 		const std::vector<std::string_view>& present_phrases,
 		u64                                  logged_msg_count
 	) {
-		frontend::ModuleID module_id
-			= frontend::createModuleTreeFromContents(module_content, "test_package");
+		frontend::ModuleID module_id = frontend::createModuleTreeFromContents(module_content);
 
-		auto result = base::anyCast<CRef<query::QResult<helios::HOUTUnit>>>(
-			query::utils::withContextCompute([&](query::Context& ctx) {
-				return ctx.query<helios::QueryModuleHOUT>(module_id);
-			})
-		);
+		auto result = query::entryPoint<helios::QueryModuleHOUT>(module_id);
+
 		assertTrue(result->hasFailed(), "Expected HOUT query to fail for module content.");
 		auto logger = query::Context::dumpToOneLoggerAndClear();
 
@@ -405,7 +400,7 @@ private:
 					arr["index"] = 1;
 				}
 			)",
-				{ "Type `string` cannot be converted to type `const i64`." },
+				{ "Type `const slice char` cannot be converted to type `const i64`." },
 				1
 			);
 
@@ -463,6 +458,17 @@ private:
 				}
 			)",
 				{ "inconsistent return statements" },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				R"(
+					fun main() = {
+						var i: i64 = 0;
+						var u: u64 = i;
+					}
+				)",
+				{ "Type `i64` cannot be converted to type `u64`." },
 				1
 			);
 		}
@@ -645,7 +651,7 @@ private:
 		{
 			checkForErrorOnCompileModule(
 				R"(
-				fun main(n: u64) = {
+				fun main(n: i64) = {
 					var arr: i32[n];
 				}
 			)",
@@ -657,7 +663,7 @@ private:
 				R"(
 				const ARR_TYPE = i32[10.5];
 			)",
-				{ "Type `f32` cannot be converted to type `const u64`." },
+				{ "Type `f32` cannot be converted to type `const i64`." },
 				1
 			);
 
@@ -665,7 +671,7 @@ private:
 				R"(
 				const ARR_TYPE = i32[-2];
 			)",
-				{ "Value cannot be converted to type `const u64` at compile-time." },
+				{ "Static array size must be a non-negative integral value." },
 				1
 			);
 
@@ -687,7 +693,7 @@ private:
 					arr["index"] = 1;
 				}
 			)",
-				{ "Type `string` cannot be converted to type `const i64`." },
+				{ "Type `const slice char` cannot be converted to type `const i64`." },
 				1
 			);
 
@@ -721,7 +727,7 @@ private:
 					l -= "sth";
 				}
 			)",
-				{ "Type `string` cannot be converted to type `u64`" },
+				{ "Type `const slice char` cannot be converted to type `u64`" },
 				1
 			);
 
@@ -1194,7 +1200,7 @@ private:
 			R"(
 				expand 1;
 			)",
-			{ "i32", "string" },
+			{ "i32", "const slice char" },
 			1
 		);
 

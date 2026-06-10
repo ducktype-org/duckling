@@ -33,21 +33,8 @@
 
 namespace vm {
 
-#if defined(ENABLE_JIT) and not defined(BUILD_TYPE_RELEASE)
-	// When testing JIT, compile all calls from the start function. Specifically main.
-	#define MAKE_BYTECODE_INSTRUCTION(OPCODE_NAME, ARG_0, ARG_1)         \
-		makeLowInstruction(                                              \
-			low::MicroOpcode::OPCODE_NAME == low::MicroOpcode::call_func \
-				? low::MicroOpcode::jit_call_entrypoint                  \
-				: low::MicroOpcode::OPCODE_NAME,                         \
-			ARG_0,                                                       \
-			ARG_1                                                        \
-		)
-
-#else
-	#define MAKE_BYTECODE_INSTRUCTION(OPCODE_NAME, ARG_0, ARG_1) \
-		makeLowInstruction(low::MicroOpcode::OPCODE_NAME, ARG_0, ARG_1)
-#endif
+#define MAKE_BYTECODE_INSTRUCTION(OPCODE_NAME, ARG_0, ARG_1) \
+	makeLowInstruction(low::MicroOpcode::OPCODE_NAME, ARG_0, ARG_1)
 
 	SafeVMThread::SafeVMThread(api::ThreadID thread_id, SafeVMProcess& process):
 		  IVMThread(thread_id, process),
@@ -148,6 +135,7 @@ namespace vm {
 
 		low::LowFuncData start_function{
 			.name = base::StrID("vm_start_function"),
+			.id   = START_FUNCTION_ID,
 #ifdef ENABLE_JIT
 			.cfg
 			= low::cf::ControlFlowGraph(),  // This is okay because we never JIT the start function.
@@ -252,6 +240,7 @@ namespace vm {
 
 		low::LowFuncData start_function{
 			.name = base::StrID("vm_start_function"),
+			.id   = START_FUNCTION_ID,
 #ifdef ENABLE_JIT
 			.cfg
 			= low::cf::ControlFlowGraph(),  // This is okay because we never JIT the start function.
@@ -564,8 +553,15 @@ namespace vm {
 					process_memory.setGlobalInitialized(block_ref);
 				} catch (const KillProcessException& e) {
 					respondExecutionRequest(api::ExecutionPanicked{ e.what() });
+					return;
 				}
 			}
+		}
+
+		const auto terminal_status = safe_process.getCurrentStatus();
+		if (api::isStatusTerminal(terminal_status)) {
+			respondExecutionRequest(terminal_status);
+			return;
 		}
 
 		try {
@@ -590,8 +586,12 @@ namespace vm {
 				CORE_UNREACHABLE();
 			}();
 
-			const auto exit_value = executeFunction(start_function, func);
-			respondExecutionRequest(api::ExecutionCompleted{ exit_value });
+			const auto exit_value     = executeFunction(start_function, func);
+			const auto current_status = safe_process.getCurrentStatus();
+			if (api::isStatusTerminal(current_status))
+				respondExecutionRequest(current_status);
+			else
+				respondExecutionRequest(api::ExecutionCompleted{ exit_value });
 		} catch (const KillProcessException& e) {
 			respondExecutionRequest(api::ExecutionPanicked{ e.what() });
 		}
@@ -668,6 +668,10 @@ namespace vm {
 	}
 
 	void SafeVMThread::setThreadCtx(std::string str) { thread_ctx = std::move(str); }
+
+	bool SafeVMThread::isCallableFunctionID(usize id) {
+		return id != SafeVMThread::START_FUNCTION_ID;
+	}
 
 	u64 SafeVMThread::getNumberOfCurrentStackFrames() const {
 		// +1 because frame_stack_current points to the current frame, not the next free slot.

@@ -69,6 +69,13 @@ namespace compiler::helios::defgen {
 			base::Bit256 queryUnstablePerfectHash() const;
 		};
 
+		struct LengthMethod final {
+			tsh::AbstractType owner_type;
+
+			[[nodiscard]]
+			base::Bit256 queryUnstablePerfectHash() const;
+		};
+
 		struct DefaultDestructor final {
 			tsh::AbstractType owner_type;
 
@@ -231,6 +238,7 @@ namespace compiler::helios::defgen {
 			DefaultStaticArrayConstructor,
 			ToStringMethod,
 			DefaultDestructor,
+			LengthMethod,
 			BuiltinOperator,
 			Parameter,
 			SelfParameter,

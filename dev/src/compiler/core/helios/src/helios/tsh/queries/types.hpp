@@ -68,6 +68,11 @@ namespace compiler::tsh {
 	StringAbstractType getStringType();
 
 	/**
+	 * @brief Get the type of a slice of characters, which is used for string literals and string
+	 * slices.
+	 */
+	SliceAbstractType getCharSliceType(query::Context& ctx);
+	/**
 	 * @brief Simple getter to create and get namespace type.
 	 */
 	NamespaceAbstractType getNamespaceType();
@@ -110,6 +115,14 @@ namespace compiler::tsh {
 	 * \query_thread_safe
 	 */
 	DECLARE_QUERY(QueryCPointerType, SymbolType<>, CPointerAbstractType, ({ .uses_qresult = false }))
+
+
+	/**
+	 * @brief Query to get a slice type.
+	 *
+	 * \query_thread_safe
+	 */
+	DECLARE_QUERY(QuerySliceType, SymbolType<>, SliceAbstractType, ({ .uses_qresult = false }))
 
 
 	/**

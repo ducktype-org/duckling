@@ -1,12 +1,12 @@
-Run: "@{duckc_path} repl"
+disable-bracketed-paste: "--disable-bracketed-paste"
+
+Run: "@{duckc_path} repl @{disable-bracketed-paste}"
 
 prompt: "duckling> "
-beginning: |
-  Duckling REPL
-  Type /help for available commands, /exit to quit.
-  Press Enter to submit. Press Alt+Enter for new line.
-
+welcome_message: "Duckling REPL\nType /help for available commands, /exit to quit.\nPress Enter to submit. Press Alt+Enter for new line.\n"
+beginning: "@{welcome_message}"
 end: "\nGoodbye!\n"
+instruction_prompt: "Instruction executed.\n"
 
 SubDirs:
   - fundamentals

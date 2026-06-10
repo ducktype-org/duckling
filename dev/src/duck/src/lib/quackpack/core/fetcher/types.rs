@@ -1,13 +1,13 @@
 //! Common types used in network communication.
 use serde::{Deserialize, Serialize};
-use url::Url;
 
 use crate::StrId;
 use crate::quackpack::core;
 use crate::quackpack::core::Version;
 use crate::quackpack::schemas::registry;
+use crate::quackpack::util::interned_url::InternedUrl;
 
-#[derive(Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
 /// Represents exact informations required to fetch some data of a package `id` in version
 /// `version` from repository at `url`.
 pub struct PackageWithUrl {
@@ -16,20 +16,10 @@ pub struct PackageWithUrl {
     /// Version of this package.
     pub version: Version,
     /// Url pointing to a Ducknest instance with this package.
-    pub url: Url,
+    pub url: InternedUrl,
 }
 
-impl std::fmt::Debug for PackageWithUrl {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("PackageWithUrl")
-            .field("id", &self.id)
-            .field("version", &self.version)
-            .field("url", &self.url.as_str())
-            .finish()
-    }
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, Serialize)]
 /// This is a helper struct, used mainly for two things:
 /// 1. [`SearchResult`], so we don't copy `url`s around,
 /// 2. for [`UrlExt`](super::ducknest::endpoints::UrlExt) internal trait: when creating an endpoint,
@@ -69,9 +59,9 @@ impl From<&registry::Manifest> for Package {
 #[derive(Debug)]
 /// Response of the [`GitClient::clone_blocking`](super::git::GitClient::clone_blocking).
 pub struct GitCloneResponse {
-    /// Hash of the checkouted repository.
+    /// Hash of the checkout'd repository.
     pub commit_hash: StrId,
-    /// Parsed package at the repository checkouted at the
+    /// Parsed package at the repository checkout'd at the
     /// [`commit_hash`](GitCloneResponse::commit_hash).
     pub package: core::Package,
 }

@@ -3,6 +3,7 @@
 #include <helios/queries/queries.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <mir/mir_lowering/mir_queries.hpp>
+#include <mir/mir_lowering/mir_unit.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/pointers/box.hpp>
@@ -41,6 +42,7 @@ private:
 	) {
 		frontend::ModuleID module_id
 			= frontend::createModuleTreeFromContents(module_content, "test_package");
+
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto hout_result = ctx.query<helios::QueryModuleHOUT>(module_id);
 			assertTrue(
@@ -49,13 +51,9 @@ private:
 			auto logger = query::Context::dumpToOneLoggerAndClear();
 			assertTrue(!logger->hasErrors(), "Expected no errors to be logged by HELIOS.");
 
-			bool some_fun_lowering_failed = false;
-			for (auto fun: hout_result->valueOrPanic().functions) {
-				auto result = ctx.query<mir::LowerToMIRFunction>({ fun });
-				if (result->hasFailed()) some_fun_lowering_failed = true;
-			}
+			auto mir_result = mir::lowerToMIRUnit(ctx, &hout_result->valueOrPanic());
 			assertTrue(
-				some_fun_lowering_failed, "Expected some MIR query to fail for module functions."
+				mir_result.hasFailed(), "Expected some MIR query to fail for module lowering."
 			);
 			logger = query::Context::dumpToOneLoggerAndClear();
 			assertTrue(logger->hasErrors(), "Expected errors to be logged by MIR.");

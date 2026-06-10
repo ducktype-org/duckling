@@ -39,5 +39,11 @@ namespace compiler::backend_llvm {
 		query::Context& ctx, Ref<ModuleImpl> module, CRef<lir::Function> lir_function
 	);
 
-	void addGlobalToModuleImpl(Ref<ModuleImpl> module, const lir::LIRGlobal& lir_global);
+	void addGlobalDeclarationToModuleImpl(
+		Ref<ModuleImpl> module, const lir::LIRGlobalData& lir_global
+	);
+
+	void setGlobalConstantInitializerImpl(
+		Ref<ModuleImpl> module, base::StrID global_name, const ctv::CompileTimeValue& constant_value
+	);
 }

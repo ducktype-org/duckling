@@ -42,6 +42,7 @@ namespace compiler::helios {
 		struct ImplementationOf_QueryTuplePackConstructor;
 		struct ImplementationOf_QueryToStringMethod;
 		struct ImplementationOf_QueryDefaultDestructor;
+		struct ImplementationOf_QueryLengthMethod;
 	}
 
 	namespace code {
@@ -113,6 +114,7 @@ namespace compiler::helios {
 		friend defgen::ImplementationOf_QueryDefaultStaticArrayConstructor;
 		friend defgen::ImplementationOf_QueryToStringMethod;
 		friend defgen::ImplementationOf_QueryDefaultDestructor;
+		friend defgen::ImplementationOf_QueryLengthMethod;
 		friend compiler::repl::ImplementationOf_QueryReplExpressionWrapper;
 		friend compiler::repl::ImplementationOf_QueryReplInstructionWrapper;
 		friend compiler::repl::ScriptMainWrapperBuilder;
@@ -189,10 +191,13 @@ namespace compiler::helios {
 		void debugPrint(query::Context& ctx, std::ostream& out) const;
 	};
 
-	STRONG_TYPEDEF_ID(HOUTUnitID);
-
 	/**
-	 * @brief Structure representing single HOUTUnit
+	 * @brief Structure representing single HOUTUnit.
+	 *
+	 * HOUT unit is an arbitrary code collections represented in HOUT IR.
+	 *
+	 * There are typically created for a given module, but there is no
+	 * assumption on what any given HOUTUnit should contain.
 	 */
 	struct HOUTUnit final {
 		// all first class citizens of module should be here:
@@ -202,7 +207,6 @@ namespace compiler::helios {
 		// * defined templates
 		// * vector/references to hout of submodules? -- not necessarily needed
 		// * what else?
-		HOUTUnitID id = HOUTUnitID::next();
 
 		std::vector<CRef<HOUTGlobalData>> glob_data;
 
@@ -210,10 +214,10 @@ namespace compiler::helios {
 
 		void debugPrint(query::Context& ctx, std::ostream& out) const;
 
-		HOUTUnit()                          = default;
-		HOUTUnit(const HOUTUnit&)           = delete;
-		HOUTUnit operator=(const HOUTUnit&) = delete;
-		HOUTUnit(HOUTUnit&&)                = default;
-		HOUTUnit& operator=(HOUTUnit&&)     = default;
+		HOUTUnit()                           = default;
+		HOUTUnit(const HOUTUnit&)            = default;
+		HOUTUnit& operator=(const HOUTUnit&) = default;
+		HOUTUnit(HOUTUnit&&)                 = default;
+		HOUTUnit& operator=(HOUTUnit&&)      = default;
 	};
 }

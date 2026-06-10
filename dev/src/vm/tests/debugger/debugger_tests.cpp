@@ -5,6 +5,8 @@
 #include <vm/api/vm.hpp>
 
 #include <chrono>
+#include <condition_variable>
+#include <mutex>
 #include <thread>
 
 class VmDebugTest: public tester::TestSuite {
@@ -18,7 +20,9 @@ public:
 		TESTER_ADD_TEST(pausesOnBreakpointAndResumes);
 		TESTER_ADD_TEST(notPausesOnRemovedBreakpoint);
 		TESTER_ADD_TEST(executesStepByStep);
+		TESTER_ADD_TEST(backMapTest);
 		TESTER_ADD_TEST(vmApiMemoryAllTypes);
+		TESTER_ADD_TEST(outputTest);
 	}
 
 
@@ -179,6 +183,40 @@ private:
 	}
 
 	/**
+	 * @brief Checks dbc to cc mapping.
+	 */
+	void backMapTest() {
+		auto pid = loadProgram("vm_api_tests.dbc");
+
+		auto assert_mapping = [&](usize line, usize index) {
+			fs::File file(path("vm_api_tests.dbc"));
+			auto     map_response = vm::api::mapFileLineToCodeCollectionPosition(pid, file, line);
+
+			ASSERT_TRUE(map_response.has_value());
+			auto code_position = map_response.value();
+
+			ASSERT_EQUAL_PRINT(code_position.function_name, "main");
+			ASSERT_EQUAL_PRINT(code_position.instr_number, index);
+		};
+
+		auto assert_no_maping = [&](usize line) {
+			fs::File file(path("vm_api_tests.dbc"));
+			auto     map_response = vm::api::mapFileLineToCodeCollectionPosition(pid, file, line);
+			ASSERT_TRUE(!map_response);
+		};
+
+		assert_mapping(11, 2);
+		assert_mapping(20, 9);
+		assert_mapping(3, 0);
+		assert_mapping(8, 0);
+		assert_no_maping(2);
+		assert_no_maping(4);
+		assert_no_maping(16);
+		assert_no_maping(21);
+		assert_no_maping(22);
+	}
+
+	/**
 	 * @brief Checks if the vm api functions related to memory and stack frames work correctly.
 	 * Checks the number of stack frames, then resumes the program and checks if it finishes
 	 * correctly.
@@ -298,6 +336,32 @@ private:
 			ASSERT_EQUAL(exit_code_response.value().size(), 1);
 			ASSERT_EQUAL_PRINT(exit_code_response.value().at(0)->readBytes<i64>(), 0);
 		}
+	}
+
+	/**
+	 * @brief test if the output emitter works
+	 */
+	void outputTest() {
+		std::atomic_bool        output = false;
+		std::condition_variable cv;
+		std::mutex              m;
+
+		auto                          pid = loadProgram("vm_api_tests.dbc");
+		events::Listener<std::string> output_listener([&](const std::string& str) {
+			ASSERT_EQUAL_PRINT("7", str);
+			output.store(true);
+			cv.notify_all();
+		});
+
+		ASSERT_TRUE(vm::api::attachOutputListener(pid, &output_listener).has_value());
+
+		ASSERT_TRUE(vm::api::run(pid).has_value());
+
+		std::unique_lock lk(m);
+		// Test timeout
+		ASSERT_TRUE(cv.wait_for(lk, std::chrono::milliseconds(100), [&] { return output.load(); }));
+
+		ASSERT_TRUE(vm::api::stop(pid).has_value());
 	}
 };
 
