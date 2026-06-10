@@ -45,9 +45,17 @@ namespace query::internal {
 		 * Helper struct representing data stored for each active node in the graph.
 		 */
 		struct ActiveData final {
-			std::atomic<MaybeNodeIDID> active_edge;
+			std::atomic<MaybeNodeIDID> active_edge = MaybeNodeIDID();
+			std::shared_ptr<query::Context> node_context_ref = nullptr;
 
-			std::shared_ptr<query::Context> node_context_ref;
+			ActiveData() = default;
+			ActiveData(const ActiveData& other):
+				active_edge(other.active_edge.load(std::memory_order_acquire)),
+				node_context_ref(other.node_context_ref)
+			{ };
+
+			ActiveData(MaybeNodeIDID active_edge, std::shared_ptr<query::Context> node_context_ref):
+				active_edge(active_edge), node_context_ref(std::move(node_context_ref)) {}
 
 			// @TODO: #1886 we will also need to store key refs here (in type-erased way),
 			// we might want to put in in multiple hash maps, as key operations will be

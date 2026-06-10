@@ -7,13 +7,13 @@ namespace query::internal {
 	ActiveGraph::NodeHandle ActiveGraph::putNode(NodeIDID node_id, std::shared_ptr<query::Context> node_context_ref) {
 		auto out = active_nodes.put(
 			node_id,
-			{
-				.active_edge      = MaybeNodeIDID(),
-				.node_context_ref = std::move(node_context_ref),
+			ActiveData{
+				MaybeNodeIDID(),
+				std::move(node_context_ref),
 			}
 		);
 		active_node_count++;
-		return {out};
+		return { &out->value };
 	}
 
 	void ActiveGraph::removeNode(NodeIDID node_id) {
