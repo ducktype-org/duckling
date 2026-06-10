@@ -37,7 +37,7 @@ namespace query::internal {
 
             CORE_ASSERT(buffer != nullptr, "Buffer should have been created");
 
-            return Ref<Data>(buffer->data[storage_index]);
+            return Ref<Data>(&buffer->data[storage_index]);
         }
 
     public:
