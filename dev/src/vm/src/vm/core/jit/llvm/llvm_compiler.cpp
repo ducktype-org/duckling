@@ -90,7 +90,9 @@ namespace vm::jit {
 
 		LLVMBuilder(new_module.get(), ctx).lowerCFG(cfg, bc, name);
 
-		optimizeModule(*new_module);
+		// new_module->print(llvm::errs(), nullptr);
+
+		// optimizeModule(*new_module);
 
 		auto&                       lljit = *llvm_data.lljit_instance;
 		llvm::orc::ThreadSafeModule tsm(std::move(new_module), tsctx);
@@ -99,6 +101,7 @@ namespace vm::jit {
 				std::move(err), llvm::errs(), "Error adding module to JIT: "
 			);
 
+std::cout << "Looking up symbol: " << symbol_name << "\n";
 		auto addr_or_err = lljit.lookup(symbol_name);
 		if (!addr_or_err) {
 			llvm::handleAllErrors(addr_or_err.takeError(), [&](const llvm::ErrorInfoBase& eib) {
@@ -106,10 +109,13 @@ namespace vm::jit {
 			});
 			return nullptr;
 		}
-
 		llvm::orc::ExecutorAddr addr = *addr_or_err;
 
 		auto compiled_fn = addr.toPtr<vm::jit::JitOpFun>();
+
+std::cout << "Found at address: " << addr_or_err->getValue() << "\n";
+std::cout << "Compiled fn ptr: " << (void*)compiled_fn << "\n";
+
 
 		return compiled_fn;
 	}

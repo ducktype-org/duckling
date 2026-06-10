@@ -93,6 +93,7 @@ namespace vm::low::cf {
 		createCFG(bc, basicBlockBeginnings(bc));
 	}
 
+	bool ControlFlowGraph::empty() const { return blocks.empty(); }
 	usize ControlFlowGraph::size() const { return blocks.size(); }
 
 	const BasicBlock& ControlFlowGraph::getBlock(BasicBlockID id) const {
@@ -192,8 +193,8 @@ namespace vm::low::cf {
 			subgraph.blocks.emplace_back(new_id, src.start, src.end);
 		}
 		// Add dummy block to redirect edges that go outside the selected subset
-		auto ret_instr_pos = blocks.back().end - 1;
-		subgraph.blocks.emplace_back(dummy_block_id, ret_instr_pos, ret_instr_pos + 1);
+		auto last_instr_pos = blocks.back().end - 1;
+		subgraph.blocks.emplace_back(dummy_block_id, last_instr_pos + 1, last_instr_pos + 1);
 
 		for (BasicBlockID old_id: block_ids) {
 			const BasicBlockID new_id = old_to_new[old_id];

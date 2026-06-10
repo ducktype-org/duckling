@@ -198,6 +198,11 @@ namespace vm::low {
 			ControlFlowGraph(const low::MicroBytecode& bc);
 
 			/**
+			 * @brief Returns whether the graph is empty.
+			 */
+			[[nodiscard]] bool empty() const;
+
+			/**
 			 * @brief Returns number of blocks in the graph.
 			 */
 			[[nodiscard]] usize size() const;

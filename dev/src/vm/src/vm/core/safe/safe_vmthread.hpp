@@ -127,10 +127,6 @@ namespace vm {
 		 */
 		std::string thread_ctx;
 
-#ifdef ENABLE_JIT
-		jit::JitData jit_data;
-#endif
-
 		/**
 		 * @brief RAII object guaranteeing the release of the GIL lock.
 		 */

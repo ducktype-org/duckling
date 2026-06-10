@@ -90,10 +90,13 @@ namespace vm {
 		std::byte* local_stack = frame->local_stack;
 
 		low::MicroOpcode opcode = getInstructionOpcode(*instr);
+		std::cout << "Executing opcode " << vm::low::OPCODE_NAMES[u64(opcode)] << " at offset "
+		          << (instr - &frame->current_function->bc[0]) << " in function "
+		          << frame->current_function->name.strView() << "\n";
 		if (opcode == low::MicroOpcode::breakpoint || opcode == low::MicroOpcode::jitEntrypoint) {
 			const auto* program_copy
 				= dynamic_cast<const low::LowVMProgramCopy*>(process_program.get());
-			CORE_ASSERT(program_copy, "Breakpoints and jitEntrypoints should be only in LowVMProgramCopy.");
+			CORE_ASSERT(program_copy, "Breakpoints and jit entrypoints should be only in LowVMProgramCopy.");
 
 			auto original_instr
 				= program_copy->getOriginalProgram()
@@ -107,9 +110,7 @@ namespace vm {
 		// Execute the instruction by calling the debug opcode function.
 		OpFuns::DEBUG_OPFUNS.at(std::to_underlying(opcode))(instr, local_stack, frame, *this);
 
-		runtime_data.frame_stack_current = frame;
-		frame->local_stack               = local_stack;
-		frame->instr                     = instr;
+		OpFuns::save_execution_state(instr, local_stack, frame, *this);
 	}
 
 	/**

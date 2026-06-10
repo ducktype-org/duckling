@@ -240,16 +240,18 @@ namespace vm::low {
 
 		/**
 		 * @brief Updates itself to reflect original `LowVMProgram` state
+		 * @returns New functions that were not visible before the update, as vector of tuples of
+		 * 	(function data, function id, function name)
 		 */
-		LowVMProgramCopy& selfUpdate() {
-			auto to_add = std::views::drop(
-				original_program->getFunctions().allData(), static_cast<ssize_t>(functions.size())
-			);
+		std::vector<std::tuple<CRef<LowFuncData>, u64, base::StrID>> selfUpdate() {
+			auto old_function_count = static_cast<ssize_t>(functions.size());
+			auto to_add = original_program->getFunctions().dataSuffix(old_function_count);
 
 			for (auto& [low_func_data, oid, sid]: to_add)
 				functions.insert(*low_func_data.get(), sid);
 
-			return *this;
+			auto new_functions = functions.dataSuffix(old_function_count);
+			return new_functions;
 		}
 
 		/**

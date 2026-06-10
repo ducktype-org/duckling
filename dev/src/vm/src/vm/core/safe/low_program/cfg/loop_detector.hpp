@@ -71,8 +71,9 @@ namespace vm::low::cf {
 				if (stack.size() > 1) {
 					CORE_ASSERT(bid != function_entrypoint, "Function entrypoint cannot be a loop header");
 					auto loop_cfg = cfg.subgraph(std::move(stack));
-					std::cout << "CFG of loop starting at block " << bid << ":\n" << loop_cfg.toString() << "\n\n";
-					cfgs[bid] = std::move(loop_cfg);
+					auto loop_start_offset = cfg.getBlock(bid).start;
+					std::cout << "CFG of loop starting at block " << bid << ", instruction offset " << loop_start_offset << ":\n" << loop_cfg.toString() << "\n\n";
+					cfgs[loop_start_offset] = std::move(loop_cfg);
 				}
 			}
 

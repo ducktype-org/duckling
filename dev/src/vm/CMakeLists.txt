@@ -141,7 +141,7 @@ function(add_vm_variant suffix compile_def)
             COMMAND ${LLVM_LINK}
                 $<TARGET_OBJECTS:LibCommonVM_bc>
                 $<TARGET_OBJECTS:${lib_thread_vm_name}_bc>
-                $<TARGET_OBJECTS:cp-stencils_bc>
+                # $<TARGET_OBJECTS:cp-stencils_bc>
                 ${vm_dep_objects_bc}
                 -o ${common_bc}
             COMMAND_EXPAND_LISTS
@@ -172,7 +172,7 @@ function(add_vm_variant suffix compile_def)
 
             VERBATIM
             DEPENDS $<TARGET_OBJECTS:LibCommonVM_bc>
-                    cp-stencils_bc
+                    # cp-stencils_bc
                     ${CMAKE_SOURCE_DIR}/scripts/py/jit/jitable_interface.py
                     $<TARGET_OBJECTS:${lib_thread_vm_name}_bc>
                     # Here dependency to both bc files and targets is necessery.

@@ -181,14 +181,15 @@ namespace vm::jit {
 				auto                        opcode = vm::getInstructionOpcode(mi);
 				switch (opcode) {
 				case vm::low::MicroOpcode::jitEntrypoint:
+					CORE_ASSERT(false, "We should always compile the original code, without entrypoints.");
 					continue;
 				case vm::low::MicroOpcode::call_func:
 				case vm::low::MicroOpcode::virtual_call_pptr_method: {
 					// Trampoline uses VM functions, instructions have to have correct type.
 #ifdef USE_SWITCH_CASE
-					setInstructionPtr<true>(bc, ir_builder, instr_idx, func_or_loop_name);
+					// setInstructionPtr<true>(bc, ir_builder, instr_idx, func_or_loop_name);
 #else
-					setInstructionPtr<false>(bc, ir_builder, instr_idx, func_or_loop_name);
+					// setInstructionPtr<false>(bc, ir_builder, instr_idx, func_or_loop_name);
 #endif
 					ir_builder.CreateCall(
 						llvm_data.types.opfun.get(),
@@ -207,9 +208,12 @@ namespace vm::jit {
 						opt_none { opfun_name = low::OPCODE_NAMES.at(static_cast<u64>(opcode)); }
 					}
 
+std::cout << "About to call opfun: " << opfun_name 
+          << " isDeclaration=" << getOrCreateOpcodeFunction(opfun_name)->isDeclaration()
+          << "\n";
 					// Here we are calling instruction originating from bc file or debug
 					// instruction. Make instruction* point to switch case version of microinstruction.
-					setInstructionPtr<true>(bc, ir_builder, instr_idx, func_or_loop_name);
+					// setInstructionPtr<true>(bc, ir_builder, instr_idx, func_or_loop_name);
 					ir_builder.CreateCall(
 						llvm_data.types.opfun.get(),
 						getOrCreateOpcodeFunction(opfun_name),
@@ -285,6 +289,39 @@ namespace vm::jit {
 				);
 				llvm_blocks.push_back(block);
 			}
+
+			// Declare printf
+llvm::FunctionType* printf_type = llvm::FunctionType::get(
+    llvm::Type::getInt32Ty(llvm_ctx),
+    { llvm::PointerType::getUnqual(llvm_ctx) },
+    true  // variadic
+);
+llvm::Function* printf_func = llvm::Function::Create(
+    printf_type,
+    llvm::Function::ExternalLinkage,
+    "printf",
+    module
+);
+
+// Create the format string global
+llvm::Constant* fmt_str = llvm::ConstantDataArray::getString(llvm_ctx, "JIT compiled function entered\n");
+llvm::GlobalVariable* fmt_global = new llvm::GlobalVariable(
+    *module,
+    fmt_str->getType(),
+    true,
+    llvm::GlobalValue::PrivateLinkage,
+    fmt_str,
+    "fmt_str"
+);
+
+// Insert the printf call at the start of the first basic block
+llvm::IRBuilder<> entry_builder(llvm_blocks[0], llvm_blocks[0]->begin());
+llvm::Value* fmt_ptr = entry_builder.CreateInBoundsGEP(
+    fmt_str->getType(),
+    fmt_global,
+    { entry_builder.getInt32(0), entry_builder.getInt32(0) }
+);
+entry_builder.CreateCall(printf_type, printf_func, { fmt_ptr });
 
 			// Helper structure to track called opfuns.
 			std::unordered_set<std::string> used_opfuns;

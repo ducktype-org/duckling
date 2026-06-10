@@ -53,6 +53,8 @@
 #include <cmath>
 #include <limits>
 
+#include <vm/bytecode/serializer/micro_bytecode_printer.hpp>
+
 // jitable_interface.py depends on the instructions exact, fully-qualified names
 #ifdef DEBUG_OPCODES
 	#define OPCODE_NAME(name)   op_debug_##name
@@ -62,7 +64,12 @@
 #else
 	#define OPCODE_NAME(name)   op_##name
 	#define FUNCTION_ARGS       OPFUN_ARGS
-	#define FUNCTION_CONT(step) OPFUN_CONT(step)
+	#define FUNCTION_CONT(step) \
+		auto& _current_func_obj = *frame->current_function; \
+		auto  _instr_offset     = instr - _current_func_obj.bc.data(); \
+		std::cout << "At end of instruction, instr ptr " << &instr << " at " << instr << \
+			" (offset of " << _instr_offset << "), before step by " << step << " \n"; \
+		OPFUN_CONT(step)
 	#define OP_FUN              vm::OpFun
 #endif
 
@@ -95,6 +102,10 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(check_strategy)(FUNCTION_ARGS) {
 		{
+			auto& current_func_obj = *frame->current_function;
+			auto  instr_offset     = instr - current_func_obj.bc.data();
+			std::cout << "at start of check_strategy, instr ptr " << &instr << " at " << instr <<
+						" (offset of " << instr_offset << ")\n";
 			++instr;
 			if (thread.getExecutionRequestPendingFlag())
 				return handle_execution_break(instr, local_stack, frame, thread);
@@ -104,9 +115,19 @@ namespace vm {
 
 #define DEFINE_MOVE_OPS(BITS_SIZE, TYPE)                                                       \
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_p##BITS_SIZE##_imm)(FUNCTION_ARGS) {                   \
-		{ WRITE_TO_PLACE_ARG(TYPE, instr->arg0, safeReadObjectBytes<TYPE>(instr->arg1)); }     \
-		FUNCTION_CONT(1);                                                                      \
-	}                                                                                          \
+    {			                                                                               \
+        std::cout << "mov_p64_imm: instr=" << instr                                            \
+                  << " arg0=" << instr->arg0                                                   \
+                  << " arg1=" << instr->arg1                                                   \
+                  << " local_stack=" << (void*)local_stack                                     \
+                  << " frame=" << frame                                                        \
+                  << " local_stack_head=" << frame->local_stack_head                           \
+                  << "\n";                                                                     \
+        WRITE_TO_PLACE_ARG(u64, instr->arg0, safeReadObjectBytes<u64>(instr->arg1));           \
+        std::cout << "mov_p64_imm: done\n";                                                    \
+    }                                                                                          \
+    FUNCTION_CONT(1);                                                                          \
+}                                                                                              \
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_p##BITS_SIZE##_p##BITS_SIZE)(FUNCTION_ARGS) {          \
 		{ WRITE_TO_PLACE_ARG(TYPE, instr->arg0, READ_FROM_PLACE_ARG(TYPE, instr->arg1)); }     \
 		FUNCTION_CONT(1);                                                                      \
@@ -327,37 +348,69 @@ namespace vm {
 #ifdef ENABLE_JIT
 	RETURN_TYPE OpFuns::OPCODE_NAME(jitEntrypoint)(FUNCTION_ARGS) {
 		{
-			auto& jit_data         = thread.jit_data;
+			auto& jit_data         = thread.safe_process.getJitData();
 			auto& current_func_obj = *frame->current_function;
 			auto  current_func_id  = current_func_obj.id;
 			auto  instr_offset     = instr - current_func_obj.bc.data();
 			std::cout << "jitEntrypoint at offset " << instr_offset << " in function " << current_func_obj.name.strView() << "\n";
 
-			// @TODO: #2858 manage the size when inserting new code
-			if (jit_data.size() <= current_func_id) jit_data.resize(2 * current_func_id + 2);
-
 			jit::JitFuncData& my_data = jit_data[current_func_id];
 
 			if (my_data.compiled_code_ptrs[instr_offset]) {
 				// is already compiled
+			    std::cout << "Executing compiled code at offset " << instr_offset << " with instr of " << &instr << "\n";
+				std::cout << "Calling compiled ptr: " << (void*)*my_data.compiled_code_ptrs[instr_offset] << "\n";
 				(*my_data.compiled_code_ptrs[instr_offset])(&instr, &local_stack, &frame, &thread);
 			} else if (0 < my_data.until_compilation[instr_offset]) {
 				// should be compiled later
 				--my_data.until_compilation[instr_offset];
+                std::cout << "Only " << my_data.until_compilation[instr_offset] << " repetitions left before compilation\n";
+
+			    save_execution_state(instr, local_stack, frame, thread);
 				thread.executeOneStep();
+
+                // Restore current flow.
+                // They can be changed when doing "step by step" execution.
+                frame       = thread.runtime_data.frame_stack_current;
+                instr       = frame->instr;
+                local_stack = frame->local_stack;
 			} else {
 				// should be compiled now
+				const auto* program_copy
+					= dynamic_cast<const low::LowVMProgramCopy*>(thread.process_program.get());
+				CORE_ASSERT(program_copy, "Jit entrypoints should be only in LowVMProgramCopy.");
+                auto original_function
+					= program_copy->getOriginalProgram()->getFunctions()[current_func_id];
+
+				std::cout << "Compiling the following code:\n";
+				code::printMicroBytecode(original_function, std::cout);
+
 				MRef<jit::JitOpFun> compiled = jit::compileLLVM(
-					my_data.cfgs[instr_offset], current_func_obj.bc, current_func_obj.name
+					my_data.cfgs[instr_offset], original_function.bc, current_func_obj.name
 				);
 				CORE_ASSERT(compiled, "Compiled function pointer shouldn't be nullptr");
 				my_data.compiled_code_ptrs[instr_offset] = compiled;
 
+			    std::cout << "Code at offset " << instr_offset << " compiled\n";
+
+				std::cout << "Calling compiled ptr: " << (void*)*my_data.compiled_code_ptrs[instr_offset] << "\n";
+				// exit(1);
 				(*my_data.compiled_code_ptrs[instr_offset])(&instr, &local_stack, &frame, &thread);
 			}
+			auto  new_instr_offset     = instr - current_func_obj.bc.data();
+			std::cout << "jitEntrypoint at offset " << instr_offset << " exits to offset " << new_instr_offset << "\n";
 		}
 		FUNCTION_CONT(0);
 	}
+
+    /*
+	RETURN_TYPE OpFuns::OPCODE_NAME(jitLoopRet)(FUNCTION_ARGS) {
+		{
+			save_execution_state(instr, local_stack, frame, thread);
+        }
+		FUNCTION_CONT(0);
+    }
+    */
 #endif
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(call_builtinfunc)(FUNCTION_ARGS) {
@@ -1230,7 +1283,13 @@ namespace vm {
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(stepGil)(FUNCTION_ARGS) {
-		{ thread.stepGil(); }
+		{
+			auto& current_func_obj = *frame->current_function;
+			auto  instr_offset     = instr - current_func_obj.bc.data();
+			std::cout << "at start of stepGil, instr ptr " << &instr << " at " << instr <<
+						" (offset of " << instr_offset << ")\n";
+			thread.stepGil();
+		}
 		FUNCTION_CONT(1);
 	}
 

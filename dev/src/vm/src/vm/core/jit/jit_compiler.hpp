@@ -16,8 +16,8 @@ constexpr inline uint FUNC_COMPILATION_THRESHOLD = 10;
 constexpr inline uint LOOP_COMPILATION_THRESHOLD = 10;
 #else
 // During testing compile always to check properly that jit integration works.
-constexpr inline uint FUNC_COMPILATION_THRESHOLD = 0;
-constexpr inline uint LOOP_COMPILATION_THRESHOLD = 0;
+constexpr inline uint FUNC_COMPILATION_THRESHOLD = 10;
+constexpr inline uint LOOP_COMPILATION_THRESHOLD = 10;
 #endif
 
 namespace vm::jit {
