@@ -82,11 +82,13 @@ namespace query {
 			template<typename QueryType>
 			auto static awaitTask(EntryTaskHandle handle) -> decltype(auto) {
 				CORE_ASSERT(
-					QueryType::getID() == handle.task_id.q_id,
+					QueryType::getID() == handle.task_id.getID().q_id,
 					"query::awaitEntryPoint called with handle for different query type!"
 				);
 				handle.pool->waitForTask(handle.task_id);
-				return QueryType::internal_load(handle.task_id.hash.val);
+
+				// MAKE LOAD IDID BASED:
+				return QueryType::internal_load(handle.task_id.getID().hash.val);
 			}
 		};
 	}

@@ -46,6 +46,7 @@ namespace pst {
 		// 	     | transform([](auto opt) { return opt.value(); }) | std::views::join
 		// 	     | filter(file_location) | std::ranges::to<std::vector<CRef<lexer::Token>>>();
 		// }
+		}
 	}
 
 	std::vector<dia::SourcePosition> queryPositionDependencies(query::internal::NodeID id) {
