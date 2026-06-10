@@ -49,6 +49,19 @@ namespace compiler::helios::defgen {
 		};
 
 		/**
+		 * Represents a compiler-generated default constructor for a tuple.
+		 *
+		 * The default constructor is a function that takes no parameters and initializes all tuple
+		 * fields with their default values.
+		 */
+		struct DefaultTupleConstructor final {
+			tsh::AbstractType tuple_type;
+
+			[[nodiscard]]
+			base::Bit256 queryUnstablePerfectHash() const;
+		};
+
+		/**
 		 * Represents a compiler-generated default constructor for a static array type.
 		 *
 		 * The default constructor is a function that doesn't take any parameters and loops through
@@ -235,6 +248,7 @@ namespace compiler::helios::defgen {
 		using GeneratedSymbolDataVariant = std::variant<
 			ImplicitConstructor,
 			DefaultClassConstructor,
+			DefaultTupleConstructor,
 			DefaultStaticArrayConstructor,
 			ToStringMethod,
 			DefaultDestructor,
@@ -264,7 +278,7 @@ namespace compiler::helios::defgen {
 		 */
 		[[nodiscard]] bool isDefaultConstructor() const {
 			variant_match(data) {
-				variant_case_novalue(DefaultClassConstructor, DefaultStaticArrayConstructor) {
+				variant_case_novalue(DefaultClassConstructor, DefaultTupleConstructor, DefaultStaticArrayConstructor) {
 					return true;
 				}
 				variant_default { return false; }

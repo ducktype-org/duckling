@@ -307,6 +307,17 @@ namespace compiler::helios::mangler {
 								return path_to_class + ctor_suffix;
 							}
 							variant_case(
+								defgen::GeneratedSymbolData::DefaultTupleConstructor, ctor
+							) {
+								return "Hdt"
+								     + ctx.query<QueryMangledType>(
+											  tsh::SymbolType<>::withDefaults(ctor.tuple_type)
+									 )
+								           ->valueOrThrow()
+								           .str()
+								     + "E";
+							}
+							variant_case(
 								defgen::GeneratedSymbolData::DefaultStaticArrayConstructor, ctor
 							) {
 								return "Hds"

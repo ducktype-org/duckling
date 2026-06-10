@@ -482,6 +482,18 @@ namespace compiler::helios {
 								};
 							}
 							variant_case(
+								defgen::GeneratedSymbolData::DefaultTupleConstructor, ctor_data
+							) {
+								const auto return_type
+									= tsh::SymbolType<>{ ctor_data.tuple_type,
+									                     tsh::ReferenceKind::Direct,
+									                     tsh::Mutability::Mutable };
+
+								return HOUTFunctionDeclaration{
+									key, return_type, {}, code::generatedOrigin()
+								};
+							}
+							variant_case(
 								defgen::GeneratedSymbolData::DefaultStaticArrayConstructor, ctor_data
 							) {
 								const auto return_type

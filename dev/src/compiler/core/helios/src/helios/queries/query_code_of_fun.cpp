@@ -167,8 +167,11 @@ namespace compiler::helios {
 							return ctx.query<defgen::QueryDefaultClassConstructor>(type)
 							    ->valueOrThrow();
 						}
-						variant_case(defgen::GeneratedSymbolData::DefaultDestructor, dtor) {
-							return ctx.query<defgen::QueryDefaultDestructor>(dtor.owner_type)
+						variant_case(
+							defgen::GeneratedSymbolData::DefaultTupleConstructor, ctor
+						) {
+							return ctx
+							    .query<defgen::QueryDefaultTupleConstructor>(ctor.tuple_type)
 							    ->valueOrThrow();
 						}
 						variant_case(
@@ -176,6 +179,10 @@ namespace compiler::helios {
 						) {
 							return ctx
 							    .query<defgen::QueryDefaultStaticArrayConstructor>(ctor.array_type)
+							    ->valueOrThrow();
+						}
+						variant_case(defgen::GeneratedSymbolData::DefaultDestructor, dtor) {
+							return ctx.query<defgen::QueryDefaultDestructor>(dtor.owner_type)
 							    ->valueOrThrow();
 						}
 						variant_case(defgen::GeneratedSymbolData::ToStringMethod, to_string) {

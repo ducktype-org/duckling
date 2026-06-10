@@ -21,6 +21,11 @@ namespace compiler::helios {
 			return { class_symbol.queryUnstablePerfectHash() };
 		}
 
+		base::Bit256 GeneratedSymbolData::DefaultTupleConstructor::queryUnstablePerfectHash(
+		) const {
+			return { tuple_type.queryUnstablePerfectHash() };
+		}
+
 		base::Bit256 GeneratedSymbolData::DefaultStaticArrayConstructor::queryUnstablePerfectHash(
 		) const {
 			return { array_type.queryUnstablePerfectHash() };
@@ -118,6 +123,19 @@ namespace compiler::helios {
 
 					// @TODO: #1328 Properly handle value categories in class constructors.
 					const auto return_type = tsh::SymbolType<>::withDefaults(class_type);
+
+					const auto ctor_abstract_type
+						= ctx.query<tsh::QueryFunctionType>({ .parameter_types = {},
+					                                          .result_type     = return_type });
+
+					return tsh::SymbolType<>{
+						ctor_abstract_type,
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Immutable,
+					};
+				}
+				variant_case(DefaultTupleConstructor, ctor) {
+					const auto return_type = tsh::SymbolType<>::withDefaults(ctor.tuple_type);
 
 					const auto ctor_abstract_type
 						= ctx.query<tsh::QueryFunctionType>({ .parameter_types = {},
@@ -311,6 +329,9 @@ namespace compiler::helios {
 				variant_case(DefaultClassConstructor, ctor) {
 					CORE_PANIC("Can't get scope of implicit constructor yet.");
 				}
+				variant_case(DefaultTupleConstructor, ctor) {
+					CORE_PANIC("Can't get scope of implicit constructor yet.");
+				}
 				variant_case(DefaultStaticArrayConstructor, ctor) {
 					CORE_PANIC("Can't get scope of implicit constructor yet.");
 				}
@@ -344,6 +365,7 @@ namespace compiler::helios {
 			variant_match(data) {
 				variant_case(ImplicitConstructor, ctor) { return {}; }
 				variant_case(DefaultClassConstructor, ctor) { return {}; }
+				variant_case(DefaultTupleConstructor, ctor) { return {}; }
 				variant_case(DefaultStaticArrayConstructor, ctor) { return {}; }
 				variant_case(DefaultDestructor, dtor) { return {}; }
 				variant_case(ToStringMethod, to_string) { return {}; }
@@ -382,6 +404,7 @@ namespace compiler::helios {
 			variant_case_novalue(
 				defgen::GeneratedSymbolData::ImplicitConstructor,
 				defgen::GeneratedSymbolData::DefaultClassConstructor,
+				defgen::GeneratedSymbolData::DefaultTupleConstructor,
 				defgen::GeneratedSymbolData::DefaultStaticArrayConstructor,
 				defgen::GeneratedSymbolData::BuiltinOperator,
 				defgen::GeneratedSymbolData::ReplExpressionWrapper,
