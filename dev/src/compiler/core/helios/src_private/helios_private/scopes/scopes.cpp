@@ -635,26 +635,6 @@ namespace compiler::helios {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			Ref symbol_list = &ctx.query<QuerySymbolsInScope>(key.scope)->valueOrThrow();
 
-			// here if the scope is the root scope
-			// we pass the lookup to
-			// builtin lookup.
-			// Note that we still calculate symbol_list to assert
-			// that it is empty.
-			auto scope_data = getScopeRef(key.scope);
-			if (scope_data->is_root) {
-				CORE_ASSERT(symbol_list->empty(), "Root scope should not have any symbols.");
-
-				auto       module_id      = scope_data->parent_module;
-				const bool is_repl_module = ctx.query<frontend::QueryIsReplModule>(module_id);
-				const bool repl_has_parent
-					= is_repl_module
-				   && ctx.query<frontend::QueryReplModuleParent>(module_id).has_value();
-
-				// For REPL modules with parents, skip duplicating builtins here.
-				// They will be resolved via the parent chain in QueryLookupInScopeAndParents.
-				return LookupResult{};
-			}
-
 			LookupResult result{ .leaves = {}, .children = {} };
 
 			for (const auto& sym: *symbol_list) {

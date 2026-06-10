@@ -135,6 +135,14 @@ private:
 		));
 	}
 
+	auto getSliceTypeNoContext(compiler::tsh::SymbolType<> element_type) {
+		return std::any_cast<compiler::tsh::SliceAbstractType>(
+			query::utils::withContextCompute([&](query::Context& ctx) {
+				return ctx.query<compiler::tsh::QuerySliceType>(element_type);
+			})
+		);
+	}
+
 	/**
 	 * Shorthand to create a mutable symbol type from an abstract type.
 	 */
@@ -144,6 +152,10 @@ private:
 			compiler::tsh::ReferenceKind::Direct,
 			Mutable,
 		};
+	}
+
+	static compiler::tsh::SymbolType<> stConst(const compiler::tsh::AbstractType abstract_type) {
+		return st(abstract_type).withMutability(Immutable);
 	}
 
 	/**
@@ -226,7 +238,7 @@ private:
 			{
 				auto simple_const
 					= getConstValueAs<compiler::tsh::SymbolType<>>("SIMPLE_CONST", root_scope);
-				auto expected = st(i64_type).withMutability(Immutable);
+				auto expected = stConst(i64_type);
 				ASSERT_EQUAL(expected, simple_const);
 			}
 			{
@@ -272,7 +284,7 @@ private:
 			}
 			{
 				auto d_type   = getConstValueAs<compiler::tsh::SymbolType<>>("D", root_scope);
-				auto expected = st(i32_type).withMutability(compiler::tsh::Mutability::Immutable);
+				auto expected = stConst(i32_type);
 				ASSERT_EQUAL(expected, d_type);
 			}
 			{
@@ -573,10 +585,9 @@ private:
 
 		auto i32 = st(getIntegralTypeNoContext(32, Signed));
 		auto f32 = st(getFloatTypeNoContext(32));
-		auto str = st(compiler::tsh::getStringType());
-
 		query::utils::withContextDo([&](query::Context& ctx) {
 			using compiler::helios::LookupResult;
+			auto str = stConst(compiler::tsh::getCharSliceType(ctx));
 
 			CRef<LookupResult> first_result
 				= &h_interface.lookup(ctx, base::StrID("_1"))->valueOrPanic();
@@ -628,7 +639,7 @@ private:
 		const auto str_type   = compiler::tsh::getStringType();
 
 		const auto int32_mut_symbol_type   = st(int32_type).withMutability(Mutable);
-		const auto int32_immut_symbol_type = st(int32_type).withMutability(Immutable);
+		const auto int32_immut_symbol_type = stConst(int32_type);
 
 		ASSERT_EQUAL(int32_immut_symbol_type, getSymbolTypeOf("SimpleIntConst", root_scope));
 		ASSERT_EQUAL(int32_immut_symbol_type, getSymbolTypeOf("SimpleIntLet", root_scope));
@@ -854,10 +865,10 @@ private:
 			glob_data += hout->glob_data.size();
 		}
 
-		// @TODO: #2694 This should be 3, not 17, when toString methods
+		// @TODO: #2694 This should be 3, not 19, when toString methods
 		// for simple types are moved out of every HOUT unit.
 		// @TODO: #2424 When refactoring, add robust tests that the expected toString methods are added.
-		ASSERT_EQUAL(functions, 17);
+		ASSERT_EQUAL_PRINT(functions, 19);
 		ASSERT_EQUAL(glob_data, 5);
 	}
 
@@ -875,10 +886,10 @@ private:
 			glob_data += hout->glob_data.size();
 		}
 
-		// @TODO: #2694 This should be 1, not 29 (1 + 2 * 14), when toString methods
+		// @TODO: #2694 This should be 1, not 29 (1 + 2 * 14 + 1 (length)), when toString methods
 		// for simple types are moved out of every HOUT unit (there are two units in this test).
 		// @TODO: #2424 When refactoring, add robust tests that the expected toString methods are added.
-		ASSERT_EQUAL(functions, 29);
+		ASSERT_EQUAL_PRINT(functions, 33);
 		ASSERT_EQUAL(glob_data, 5);
 	}
 
@@ -1153,7 +1164,7 @@ private:
 		std::stringstream out_vconst;
 		tree_vconst->debugPrint(out_vconst);
 		const auto bool_type       = compiler::tsh::getBoolType();
-		const auto const_bool_type = st(bool_type).withMutability(Immutable);
+		const auto const_bool_type = stConst(bool_type);
 		const auto vconst_type = query::entryPoint<compiler::helios::QueryTypeOfSymbol>(sym_vconst);
 		ASSERT_EQUAL(const_bool_type, vconst_type->valueOrThrow());
 
@@ -1837,6 +1848,7 @@ private:
 		auto& hout
 			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
 		auto& function   = hout.functions.at(0);
+		auto  fun_sym    = getChain("main", top_scope).back();
 		auto& statements = function->body->statements;
 		using namespace compiler::helios::code;
 
@@ -1893,6 +1905,21 @@ private:
 				base::StrID("builtin_string_concatenated"),
 				"The format string expression should call builtin_string_concatenated"
 			);
+		}
+
+		{
+			const auto char_type       = compiler::tsh::getCharType();
+			const auto str_type        = compiler::tsh::getStringType();
+			const auto u64_type        = getIntegralTypeNoContext(64, Unsigned);
+			const auto char_slice_type = getSliceTypeNoContext(st(char_type));
+
+			auto fun_body_scope = getFunctionBodyScope(fun_sym);
+
+			// Vars
+			ASSERT_EQUAL(char_slice_type, getTypeOf("should_char_slice", fun_body_scope));
+			ASSERT_EQUAL(char_type, getTypeOf("should_char", fun_body_scope));
+			ASSERT_EQUAL(u64_type, getTypeOf("should_u64", fun_body_scope));
+			ASSERT_EQUAL(str_type, getTypeOf("should_string", fun_body_scope));
 		}
 	}
 
@@ -2418,13 +2445,17 @@ private:
 
 		const auto bool_type = compiler::tsh::getBoolType();
 
-		const auto str_type = compiler::tsh::getStringType();
+		const auto str_type
+			= base::anyCast<compiler::tsh::SliceAbstractType>(query::utils::withContextCompute(
+				[&](query::Context& ctx) { return compiler::tsh::getCharSliceType(ctx); }
+			));
 
 		const auto tuple_ii_type = query::entryPoint<compiler::tsh::QueryTupleType>(
 			{ { st(int32_type), st(int32_type) } }
 		);
-		const auto tuple_si_type
-			= query::entryPoint<compiler::tsh::QueryTupleType>({ { st(str_type), st(int32_type) } });
+		const auto tuple_si_type = query::entryPoint<compiler::tsh::QueryTupleType>(
+			{ { stConst(str_type), st(int32_type) } }
+		);
 
 		auto foo            = getChain("foo", root_scope).back();
 		auto foo_body_scope = getFunctionBodyScope(foo);
@@ -3049,20 +3080,15 @@ private:
 				assertEqual(actual_type, expected_type, message);
 			};
 
-			const auto meta_st = st(compiler::tsh::getMetaType()).withMutability(Immutable);
-			const auto unit_st = st(compiler::tsh::getUnitType()).withMutability(Immutable);
-			const auto int_st
-				= st(compiler::tsh::getIntegralType(ctx, 32, Signed)).withMutability(Immutable);
-			const auto tuple_ii_st
-				= st(ctx.query<compiler::tsh::QueryTupleType>(
-						 { { int_st.withMutability(Mutable), int_st.withMutability(Mutable) } }
-					 )
-			    ).withMutability(Immutable);
-			const auto tuple_tt_st
-				= st(ctx.query<compiler::tsh::QueryTupleType>(
-						 { { meta_st.withMutability(Mutable), meta_st.withMutability(Mutable) } }
-					 )
-			    ).withMutability(Immutable);
+			const auto meta_st     = stConst(compiler::tsh::getMetaType());
+			const auto unit_st     = stConst(compiler::tsh::getUnitType());
+			const auto int_st      = stConst(compiler::tsh::getIntegralType(ctx, 32, Signed));
+			const auto tuple_ii_st = stConst(ctx.query<compiler::tsh::QueryTupleType>(
+				{ { int_st.withMutability(Mutable), int_st.withMutability(Mutable) } }
+			));
+			const auto tuple_tt_st = stConst(ctx.query<compiler::tsh::QueryTupleType>(
+				{ { meta_st.withMutability(Mutable), meta_st.withMutability(Mutable) } }
+			));
 
 			check_types(unit1, unit_st, "Unit1 should be of unit type.");
 			check_types(unit2, unit_st, "Unit2 should be of unit type.");
