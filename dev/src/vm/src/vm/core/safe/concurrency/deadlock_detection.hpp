@@ -24,20 +24,6 @@ namespace vm {
 	class DeadlockDetector final {
 	public:
 		/**
-		 * @brief Checks if waiting for `mutex_id` would deadlock and marks thread as waiting.
-		 *
-		 * This method performs two operations: (1) checking for deadlock, and (2) marking the
-		 * thread as waiting. While these are logically atomic from the DVM bytecode perspective,
-		 * the class itself has no internal synchronization. Thread-safety is provided by the
-		 * caller's responsibility to hold the process Global Interpreter Lock (GIL) during
-		 * bytecode execution. See VMProcess::getGIL().
-		 *
-		 * @throws VMDeadlockException if the mutex acquisition would cause a deadlock and
-		 * detection is enabled.
-		 */
-		void beginWaitForMutexOrThrow(api::ThreadID thread_id, usize mutex_id);
-
-		/**
 		 * @brief Checks if acquiring mutex with id `mutex_id` by thread `thread_id` would cause a
 		 * deadlock. If it would, this function should throw an exception to prevent deadlock from
 		 * happening.
