@@ -51,9 +51,11 @@ namespace vm::debugger::cli {
 			  printProcStatus(out, status);
 			  printNL(out.getContents());
 		  }),
-		  error_listener([&](const std::string& err) { printNL("Error: ", err); }) {
+		  error_listener([&](const std::string& err) { printNL("Error: ", err); }),
+		  output_listener([&](const std::string& str) { printNL(str); }){
 		debugger.attachOnStatusChangedListener(status_change_listener);
 		debugger.attachOnErrorListener(error_listener);
+		debugger.attachOnOutputListener(output_listener);
 	}
 
 	std::expected<void, api::ApiError> CLIDebugger::load(const fs::File& file) {
