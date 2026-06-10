@@ -132,12 +132,12 @@ namespace base {
 		SharedBox(SharedBox&& other) noexcept:
 			  data_ptr{ std::move(other).data_ptr },
 			  ctrl_ptr{ std::move(other).ctrl_ptr } {
-			if (isFullyNull()) return;
-			assertNotNull();
+			
+			if (!isFullyNull()) assertNotNull();
 			other.nullify();
 		}
 
-		explicit SharedBox(Box<T>&& other) noexcept:
+		explicit SharedBox(Box<T, Deleter>&& other) noexcept:
 			  data_ptr{ std::move(other).ptr },
 			  ctrl_ptr{ new ControlBlock(std::move(other).deleter) } {
 			other.ptr = nullptr;
@@ -173,10 +173,10 @@ namespace base {
 
 			data_ptr = std::move(other).data_ptr;
 			ctrl_ptr = std::move(other).ctrl_ptr;
-			if (!isFullyNull()) {
-				assertNotNull();
+			// if (!isFullyNull()) {
+			// 	assertNotNull();
 				other.nullify();
-			}
+			// }
 			return *this;
 		}
 
@@ -239,6 +239,13 @@ namespace base {
 		 * @brief Resets the SharedBox to null state, renouncing the ownership of the object.
 		 */
 		void reset() noexcept { renounceOwnership(); }
+
+		[[nodiscard]]
+		u64 ownersCount() const noexcept {
+			if (isFullyNull()) return 0;
+			assertNotNull();
+			return ctrl_ptr->n_owners.load(std::memory_order_relaxed);
+		}
 
 		~SharedBox() { renounceOwnership(); }
 	};

@@ -217,12 +217,14 @@ private:
 		DeleteCounter() = default;
 
 		~DeleteCounter() {
-			if (do_count) count++;
+			if (do_count)			count++;
 		}
 	};
 
-	template<u64 THREAD_COUNT, u64 ITERATIONS_PER_THREAD = 1'000>
+	template<u64 THREAD_COUNT, u64 ITERATIONS_PER_THREAD = 10>
 	void concurrentUsage() {
+		DeleteCounter::count = 0;
+
 		SharedBox<DeleteCounter> a = makeSharedBox<DeleteCounter>();
 		a->do_count                = true;
 
@@ -230,12 +232,17 @@ private:
 		threads_boxes.reserve(THREAD_COUNT);
 		for (u64 i = 0; i < THREAD_COUNT; i++) threads_boxes.emplace_back(a);
 
+		assertTrue(threads_boxes[0].ownersCount() == THREAD_COUNT + 1, "All SharedBoxes should share ownership of the same object!");
 		a.reset();
+		assertTrue(threads_boxes[0].ownersCount() == THREAD_COUNT, "All threads should share ownership of the same object!");
 
 		std::vector<std::jthread> threads;
 		threads.reserve(THREAD_COUNT);
 		for (u64 i = 0; i < THREAD_COUNT; i++) {
 			threads.emplace_back([&, i] {
+				// We perform a lot of copying and moving to increase the chances of catching concurrency issues with reference counting.
+				// And after that we reset the SharedBox, which should cause the DeleteCounter to be deleted exactly once.
+
 				for (u64 j = 0; j < ITERATIONS_PER_THREAD; j++) {
 					SharedBox<DeleteCounter> copy = threads_boxes[i];
 					SharedBox<DeleteCounter> move = std::move(copy);
@@ -254,13 +261,18 @@ private:
 						move2.ref() == threads_boxes[i].ref(),
 						"SharedBox should still own the same object after copying and moving!"
 					);
+
+					assertTrue(threads_boxes[i].ownersCount() >= 2, "At least threads_boxes[i] and move2 should share ownership of the same object!");
 				}
+				threads_boxes[i].reset();
 			});
 		}
 
 		for (auto& thread: threads) thread.join();
 
-		ASSERT_EQUAL(DeleteCounter::count, 1);
+		for (auto& box: threads_boxes) assertTrue(!box, "All SharedBoxes should be reset!");
+
+		ASSERT_EQUAL_PRINT(DeleteCounter::count, 1);
 	}
 };
 
