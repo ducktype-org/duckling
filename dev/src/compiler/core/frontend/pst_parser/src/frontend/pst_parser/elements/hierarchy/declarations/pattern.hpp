@@ -8,6 +8,9 @@ namespace pst {
 	 * @brief Pattern declaration.
 	 */
 	class Pattern final: public Decl {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(Pattern, Decl);
+		CLONE_SUBELEMENTS();
+	protected:
 		NAMED_CHILD(name, IdentifierWrapper);
 		NAMED_CHILD(param, Param);
 		NAMED_CHILD_OPT(ret, CommaExprHolder);

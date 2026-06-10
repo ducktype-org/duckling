@@ -8,10 +8,12 @@ namespace pst {
 	 * @brief Function declaration
 	 */
 	class FunDecl final: public Decl {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(FunDecl, Decl);
+		CLONE_SUBELEMENTS();
+	protected:
 		NAMED_CHILD(name, IdentifierWrapper);
 		NAMED_CHILD(params, ParamList);
 		NAMED_CHILD_OPT(ret, CommaExprHolder);
-
 
 	protected:
 		HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const override;

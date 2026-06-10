@@ -7,6 +7,9 @@ namespace pst {
 	 * @brief For declaration
 	 */
 	class For final: public CodeDecl {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(For, CodeDecl);
+		CLONE_SUBELEMENTS();
+	protected:
 		NAMED_CHILD_OPT(name, IdentifierWrapper);
 		NAMED_CHILD(iterator, IdentifierWrapper);
 		NAMED_CHILD(type, ForTypeExprHolder);

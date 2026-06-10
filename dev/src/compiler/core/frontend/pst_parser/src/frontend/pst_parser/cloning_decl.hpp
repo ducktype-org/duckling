@@ -29,3 +29,11 @@ namespace pst {
 }
 
 #define CLONE_SUBELEMENTS() void cloneSubElements(const ThisClass&)
+
+#define SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(element, parent_class, ...) \
+	public:\
+		ELEMENT_CLONE_DECL(element, __VA_ARGS__);\
+	private:\
+		THIS_CLASS(element);\
+		PARENT_CLASS(parent_class);\
+		CLONE_SIGNATURE_DEFAULT_OVERRIDE()

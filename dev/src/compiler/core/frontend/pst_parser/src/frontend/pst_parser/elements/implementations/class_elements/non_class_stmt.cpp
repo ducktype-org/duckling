@@ -6,6 +6,7 @@ namespace pst {
 	void NonClassStmt::cloneSubElements(const NonClassStmt& other) {
 		ELEMENT_CLONE_SUB_ELEMENT(inner_stmt);
 		inner_decl_symbol_name = inner_stmt.internal()->getDeclSymbolIdentifier();
+		ParentClass::cloneSubElements(other);
 	}
 
 	MBox<NonClassStmt> NonClassStmt::parse(LangParserState& state) {

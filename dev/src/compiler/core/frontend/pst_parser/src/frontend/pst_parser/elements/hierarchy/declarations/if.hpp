@@ -7,6 +7,9 @@ namespace pst {
 	 * @brief If declaration
 	 */
 	class If final: public CodeDecl {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(If, CodeDecl);
+		CLONE_SUBELEMENTS();
+	protected:
 		NAMED_CHILD(condition, RoundGroupExpr);
 		NAMED_CHILD_OPT(name, IdentifierWrapper);
 		NAMED_CHILD(then_body, CodeBlockOrStmt);

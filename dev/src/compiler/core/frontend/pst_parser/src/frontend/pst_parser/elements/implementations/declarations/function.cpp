@@ -4,6 +4,8 @@
 #include "preamble.hpp"
 
 namespace pst {
+	CLONE_SUB_ELEMENTS_DEF(Fun, name, params, ret, body);
+
 	// @TODO: make better
 	MBox<Fun> Fun::parse(LangParserState& state) {
 		auto out = makeBox<Fun>(state);

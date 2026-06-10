@@ -7,6 +7,9 @@ namespace pst {
 	 * @brief While declaration
 	 */
 	class While final: public CodeDecl {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(While, CodeDecl);
+		CLONE_SUBELEMENTS();
+	protected:
 		NAMED_CHILD(condition, RoundGroupExpr);
 		NAMED_CHILD_OPT(name, IdentifierWrapper);
 		NAMED_CHILD(body, CodeBlockOrStmt);
