@@ -104,7 +104,7 @@ namespace vm {
 		 */
 		std::expected<api::Response, api::ApiError> output();
 
-	public:
+	protected:
 		/**
 		 * @brief Gets the status of the process (memory-safe).
 		 *
@@ -112,7 +112,7 @@ namespace vm {
 		 */
 		api::ProcStatus getStatus();
 
-	protected:
+
 		/**
 		 * @brief Returns exit code of the process - i.e. return value of `main` bytecode function.
 		 *
@@ -201,6 +201,8 @@ namespace vm {
 
 	public:
 		ProcIO& getIO();
+
+		[[nodiscard]] bool isExecutionPanicked();
 
 		/**
 		 * @brief Entry point to perform requests on the process.

@@ -16,6 +16,7 @@ namespace vm {
 	}
 
 	void DeadlockDetector::checkForDeadlock(api::ThreadID thread_id, usize mutex_id) {
+		if (!detection_enabled) return;
 		// Thread-safety: No internal locking. Assumes caller holds the process GIL.
 		//
 		// The wait-for graph is a functional graph: each thread waits for at most one mutex,

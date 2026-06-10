@@ -204,6 +204,10 @@ namespace vm {
 		return status;
 	}
 
+	bool IVMProcess::isExecutionPanicked() {
+		return std::holds_alternative<api::ExecutionPanicked>(getStatus());
+	}
+
 	std::expected<api::Response, api::ApiError> IVMProcess::input(const api::request::Input& request
 	) {
 		// @TODO: #2342 https://github.com/ducktype-org/duckling/pull/381#discussion_r1885688218

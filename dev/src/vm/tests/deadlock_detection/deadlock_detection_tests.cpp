@@ -14,6 +14,7 @@ public:
 	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(deadlockTest);
 		TESTER_ADD_TEST(deadlockWakingFromCv);
+		TESTER_ADD_TEST(deadlockWakingFromCvMain);
 		TESTER_ADD_TEST(detectionDisabledAllowsNormalMutexUse);
 	}
 
@@ -39,6 +40,9 @@ private:
 		assertExecutionPanickedWith(
 			runWithDetection("cv_deadlock.dbc"), vm::exceptions::VMDeadlockException::ERR_MSG
 		);
+	}
+
+	void deadlockWakingFromCvMain() {
 		// Two threads deadlock and wake main that will finish execution
 		assertExecutionPanickedWith(
 			runWithDetection("cv_main_deadlock.dbc"), vm::exceptions::VMDeadlockException::ERR_MSG
