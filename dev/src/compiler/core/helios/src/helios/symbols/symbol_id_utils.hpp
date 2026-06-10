@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include "attributes.hpp"
 #include "symbol_id.hpp"
 #include "symbol_kind.hpp"
 
@@ -48,6 +49,11 @@ namespace compiler::helios {
 	bool isGlobalVar(query::Context&, SymID);
 
 	/**
+	 * Whether a symbol is ignored by lookup.
+	 */
+	bool isIgnoredByLookup(SymID);
+
+	/**
 	 * @return kind of the symbol
 	 */
 	SymbolKind kind(SymID);
@@ -69,6 +75,11 @@ namespace compiler::helios {
 	 * E.g. builtin functions don't have a scope.
 	 */
 	base::Optional<ScopeID> maybeScope(SymID);
+
+	/**
+	 * Check if a symbol has some attribute. 
+	 */
+	bool hasAttribute(SymID, Attribute);
 
 	/**
 	 * @return PST Stmt element symbol was created from.

@@ -187,6 +187,13 @@ namespace compiler::helios {
 				} else {
 					auto& func     = hout_function->valueOrPanic();
 					SymID func_sym = func.declaration->original_symbol;
+
+					// Some functions are ignored by the duplicated function check.
+					if (hasAttribute(func_sym, Attribute::DVMOnlyImpl) or hasAttribute(func_sym, Attribute::NativeOnlyImpl)) {
+						out.functions.emplace_back(&func);
+						continue;
+					}
+
 					// NOTE: Utilizing the mangler here is a bit hacky, but should work without issues.
 					base::StrID mangled_name
 						= ctx.query<compiler::helios::mangler::QueryMangledSymbol>({ func_sym });

@@ -833,12 +833,21 @@ namespace compiler::lir {
 					CORE_UNREACHABLE();
 				}();
 
-				auto link_once = [&]() -> bool {
+				auto [link_once, ignore_on_dvm, ignore_on_llvm] = [&]() {
 					variant_match(key.function->helios_id) {
 						variant_case(mir::FunctionSymID, sym) {
-							return helios::shouldLinkOnce(sym.id);
+							bool link_once_val = helios::shouldLinkOnce(sym.id);
+							bool ignore_on_dvm_val
+								= helios::hasAttribute(sym.id, helios::Attribute::NativeOnlyImpl);
+							bool ignore_on_llvm_val
+								= helios::hasAttribute(sym.id, helios::Attribute::DVMOnlyImpl);
+							return std::make_tuple(
+								link_once_val, ignore_on_dvm_val, ignore_on_llvm_val
+							);
 						}
-						variant_case(mir::GlobalVariableCTOR, name) { return false; }
+						variant_case(mir::GlobalVariableCTOR, name) {
+							return std::make_tuple(false, false, false);
+						}
 					}
 					CORE_UNREACHABLE();
 				}();
@@ -870,6 +879,8 @@ namespace compiler::lir {
 				return Function{ .mangled_name       = mangled_name,
 					             .abi                = abi,
 					             .link_once          = link_once,
+					             .ignore_on_dvm      = ignore_on_dvm,
+					             .ignore_on_llvm     = ignore_on_llvm,
 					             .parameter_layouts  = std::move(parameter_types),
 					             .return_type_layout = return_type,
 					             .blocks             = std::move(blocks),
@@ -946,6 +957,8 @@ namespace compiler::lir {
 		return Function{ .mangled_name       = mangled_name,
 			             .abi                = helios::DefaultAbi{},
 			             .link_once          = false,
+			             .ignore_on_dvm      = false,
+			             .ignore_on_llvm     = false,
 			             .parameter_layouts  = {},
 			             .return_type_layout = return_type,
 			             .blocks             = std::move(blocks),

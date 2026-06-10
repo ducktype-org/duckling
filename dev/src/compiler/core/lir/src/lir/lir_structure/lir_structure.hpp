@@ -575,13 +575,12 @@ namespace compiler::lir {
 		base::Optional<base::StrID>             source_code_name;
 	};
 
-	/**
-	 * @brief Function in LIR.
-	 */
 	struct Function final {
 		base::StrID       mangled_name;
 		helios::SymbolABI abi;
 		bool              link_once;
+		bool              ignore_on_dvm;
+		bool              ignore_on_llvm;
 
 		std::vector<CRef<tsl::TypeLayout>> parameter_layouts;
 		CRef<tsl::TypeLayout>              return_type_layout;

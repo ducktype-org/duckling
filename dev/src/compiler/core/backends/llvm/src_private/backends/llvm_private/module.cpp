@@ -87,8 +87,10 @@ namespace compiler::backend_llvm {
 			mod.addFunctionToModuleDtors(ctx, CRef<lir::Function>(&module_dtor));
 		}
 
-		for (const auto& lir_function: lir_unit.lir_functions)
+		for (const auto& lir_function: lir_unit.lir_functions) {
+			if (lir_function->ignore_on_llvm) continue;
 			mod.addFunctionToModule(ctx, lir_function);
+		}
 
 		CORE_ASSERT(
 			mod.verify().isOk(),
