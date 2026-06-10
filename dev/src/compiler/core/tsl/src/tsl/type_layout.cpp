@@ -504,7 +504,7 @@ namespace compiler::tsl {
 			// proper offsets/size/alignment. For other aggregate-like types the
 			// corresponding constructor (e.g. tuple) will handle layout differently.
 			PickedClassLayout picked
-					= pickClassLayout(class_type, field_elements, field_layouts, ctx);
+				= pickClassLayout(class_type, field_elements, field_layouts, ctx);
 			field_offsets           = std::move(picked.offsets);
 			layout_idx_to_field_idx = offsetsToPermutation(field_offsets);
 			layout_idx_to_sym_id    = getLayoutIndicesToSymIDs(field_elements, field_offsets);
@@ -518,6 +518,18 @@ namespace compiler::tsl {
 			  type(tuple_type),
 			  field_elements(getFieldsOfInterface(tuple_type.getInterface(ctx))),
 			  field_layouts(getLayoutVector(tuple_type.getComponents(), ctx)),
+			  field_offsets(alignOffsetsForLayoutVector(field_layouts)),
+			  layout_idx_to_field_idx(offsetsToPermutation(field_offsets)),
+			  layout_idx_to_sym_id(getLayoutIndicesToSymIDs(field_elements, field_offsets)),
+			  total_size(offsetsToTotalSize(field_offsets, field_layouts)),
+			  max_alignment(maxTypeLayoutAlignmentInVector(field_layouts)) {}
+
+		ClassTypeLayoutConstructionHelper(
+			const tsh::SliceAbstractType slice_type, query::Context& ctx
+		):
+			  type(slice_type),
+			  field_elements(getFieldsOfInterface(slice_type.getInterface(ctx))),
+			  field_layouts(getLayoutVector(getElementTypes(field_elements, ctx), ctx)),
 			  field_offsets(alignOffsetsForLayoutVector(field_layouts)),
 			  layout_idx_to_field_idx(offsetsToPermutation(field_offsets)),
 			  layout_idx_to_sym_id(getLayoutIndicesToSymIDs(field_elements, field_offsets)),

@@ -130,6 +130,8 @@ namespace compiler::tsl {
 				return fail("non-runtime type cannot appear as a field type");
 			case Kind::COUNT:
 				CORE_UNREACHABLE();
+			case tsh::Kind::Slice:
+				return fail("`slice` is not C-compatible");
 			}
 			CORE_UNREACHABLE();
 		}
