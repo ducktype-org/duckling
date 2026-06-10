@@ -1,0 +1,51 @@
+import core.builtins.*;
+
+namespace printValue {
+    @backend_dependent
+    fundecl func();
+
+    @dvm_only_impl
+    fun func() = {
+        builtin_output_i64(10);
+    }
+
+    @native_only_impl
+    fun func() = {
+        builtin_output_i64(20);
+    }
+}
+
+namespace getValue {
+    @backend_dependent
+    fundecl func() -> i32;
+
+    @dvm_only_impl
+    fun func() = {
+        return 10;
+    }
+
+    @native_only_impl
+    fun func() = {
+        return 20;
+    }
+}
+
+fun main() -> i64 = {
+    const v = getValue.func();
+    builtin_output_i64(v);
+
+    printValue::func();
+    return 0;
+}
+
+#{
+
+ ./duck_build/package_llvm.exe
+10
+20
+
+./bin/VM run duck_build/package_dvm.dbc
+10
+10
+
+#}
