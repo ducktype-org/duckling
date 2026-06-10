@@ -143,7 +143,7 @@ namespace compiler::helios::defgen {
 	struct IMPLEMENT_QUERY(QueryDefaultTupleConstructor, query::QResult<HOUTFunction>) {
 		static PResult provide(Context& ctx, const QKey tuple_type) {
 			// Preamble, get some basic data.
-			auto        tuple_interface = tuple_type.getInterface(ctx);
+			auto tuple_interface = tuple_type.getInterface(ctx);
 
 			using DefaultTupleConstructor = GeneratedSymbolData::DefaultTupleConstructor;
 			using Variable                = GeneratedSymbolData::GeneratedFunctionVariable;
@@ -155,11 +155,10 @@ namespace compiler::helios::defgen {
 				= tuple_interface->getFieldsView() | to<std::vector>();
 
 			// Prepare the ctor symbol and declaration.
-			const SymID ctor_symbol = ctx.query<QueryGeneratedSymbol>(
-				{ .name = base::StrID("__init_tuple"),
-			      .generated_symbol_data
-			      = GeneratedSymbolData{ DefaultTupleConstructor{ tuple_type } } }
-			);
+			const SymID ctor_symbol
+				= ctx.query<QueryGeneratedSymbol>({ .name = base::StrID("__init_tuple"),
+			                                        .generated_symbol_data = GeneratedSymbolData{
+														DefaultTupleConstructor{ tuple_type } } });
 
 
 			const auto& ctor_decl = ctx.query<QueryDeclOfFun>(ctor_symbol)->valueOrThrow();
@@ -192,7 +191,9 @@ namespace compiler::helios::defgen {
 
 			// - Assign each field with the initializing expression or a default value expression.
 			for (const auto& field: fields) {
-				auto init_expr = ctx.query<QueryDefaultInitializerExpr>(field.getType(ctx))->valueOrThrow().ref();
+				auto init_expr = ctx.query<QueryDefaultInitializerExpr>(field.getType(ctx))
+				                     ->valueOrThrow()
+				                     .ref();
 
 				body.emplace_back(makeBox<code::AssignmentStmt>(
 					code::generatedOrigin(),

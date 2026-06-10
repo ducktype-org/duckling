@@ -167,11 +167,8 @@ namespace compiler::helios {
 							return ctx.query<defgen::QueryDefaultClassConstructor>(type)
 							    ->valueOrThrow();
 						}
-						variant_case(
-							defgen::GeneratedSymbolData::DefaultTupleConstructor, ctor
-						) {
-							return ctx
-							    .query<defgen::QueryDefaultTupleConstructor>(ctor.tuple_type)
+						variant_case(defgen::GeneratedSymbolData::DefaultTupleConstructor, ctor) {
+							return ctx.query<defgen::QueryDefaultTupleConstructor>(ctor.tuple_type)
 							    ->valueOrThrow();
 						}
 						variant_case(

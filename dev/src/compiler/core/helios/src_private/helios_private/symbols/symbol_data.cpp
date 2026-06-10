@@ -21,8 +21,7 @@ namespace compiler::helios {
 			return { class_symbol.queryUnstablePerfectHash() };
 		}
 
-		base::Bit256 GeneratedSymbolData::DefaultTupleConstructor::queryUnstablePerfectHash(
-		) const {
+		base::Bit256 GeneratedSymbolData::DefaultTupleConstructor::queryUnstablePerfectHash() const {
 			return { tuple_type.queryUnstablePerfectHash() };
 		}
 
