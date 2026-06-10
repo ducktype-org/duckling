@@ -46,7 +46,7 @@ public:
 		base::deduplicateBy(vec, [](auto elem) { return elem % 3; });
 		std::vector<int> expected = { 1, 2, 3 };
 		ASSERT_EQUAL_PRINT(vec.size(), expected.size());
-		assertTrue(vec == expected, "Expected vec to contain only even numbers after filtering");
+		assertTrue(vec == expected, "Incorrect result");
 	}
 };
 
