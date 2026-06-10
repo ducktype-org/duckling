@@ -192,19 +192,7 @@ namespace compiler::helios::code {
 			}
 
 			void visitExprFormatStrValue(pst::Access<pst::expr::ExprFormatStrValue> stmt) override {
-				// Helpful preamble
-				static const auto string_type
-					= tsh::SymbolType<>::withDefaults(tsh::getStringType());
-				auto concat_sym = ctx.query<defgen::QueryGeneratedSymbol>({
-					.name = base::StrID("builtin_string_concatenated"),
-					.generated_symbol_data
-					= defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::BuiltinOperator{
-						.operator_type = ctx.query<tsh::QueryFunctionType>({
-							{ string_type, string_type },
-							string_type,
-						}),
-					} },
-				});
+				auto concat_sym = defgen::concatSym(ctx);
 
 				// Construct the expression, initially empty.
 				MBox<Expr> result_expr
@@ -223,8 +211,8 @@ namespace compiler::helios::code {
 						const auto unescape_result = base::unescapeString(escaped_string);
 						match_optional(unescape_result) {
 							opt_some(result) {
-								next_string = makeBox<LiteralStringExpr>(
-									ctx, pstOrigin(sub).generatedFrom(), base::StrID(result.value)
+								next_string = defgen::getStringFromLiteralExpr(
+									ctx, base::StrID(result.value)
 								);
 							}
 							opt_err(error) {
@@ -627,6 +615,11 @@ namespace compiler::helios::code {
 					break;
 
 				case pst::Keyword::Str:
+					node
+						= makeBox<LiteralTypeExpr>(ctx, pstOrigin(stmt), tsh::getCharSliceType(ctx));
+					break;
+
+				case pst::Keyword::BigStr:
 					node = makeBox<LiteralTypeExpr>(ctx, pstOrigin(stmt), tsh::getStringType());
 					break;
 

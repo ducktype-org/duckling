@@ -522,6 +522,8 @@ namespace compiler::tsl {
 
 		ClassTypeLayout(tsh::TupleAbstractType tuple_type, query::Context& ctx);
 
+		ClassTypeLayout(tsh::SliceAbstractType slice_type, query::Context& ctx);
+
 		friend struct ImplementationOf_QueryAbstractTypeLayout;
 
 	public:
