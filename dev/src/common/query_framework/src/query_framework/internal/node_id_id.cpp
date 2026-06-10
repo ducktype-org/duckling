@@ -27,20 +27,24 @@ namespace query::internal {
         auto& id_to_node_id_map = getIDToNodeIDMap();
 
         u64 my_id = 0;
+        bool was_new = false;
 
-        node_id_to_id_map.maybePutAndUpdate(node_id, MAX_ID, [&my_id](Ref<u64> existing_id) {
+        node_id_to_id_map.maybePutAndUpdate(node_id, MAX_ID, [&my_id, &was_new](Ref<u64> existing_id) {
             if (*existing_id != MAX_ID) {
                 my_id = *existing_id;
             }
             else {
                 my_id = next_id.fetch_add(1, std::memory_order_relaxed);
                 *existing_id = my_id;
+                was_new = true;
             }
         });
 
         this->id = my_id;
 
-        id_to_node_id_map.put(my_id, node_id);
+        if (was_new) {
+            id_to_node_id_map.put(my_id, node_id);
+        }
     }
 
     NodeID NodeIDID::getID() const {
