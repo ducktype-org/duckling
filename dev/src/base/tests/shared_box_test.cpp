@@ -2,6 +2,8 @@
 
 #include <tester/tester.hpp>
 
+#include <thread>
+
 // SharedBox asserts:
 static_assert(std::is_copy_constructible_v<SharedBox<int>>, "SharedBox should be copy constructible");
 
@@ -17,7 +19,7 @@ static_assert(
 );
 
 struct InstancesCounter {
-	static inline usize count = 0;
+	constinit static inline usize count = 0;
 
 	int state = 0;
 
@@ -41,6 +43,10 @@ public:
 		TESTER_ADD_TEST(testSharedBox);
 		TESTER_ADD_TEST(testSharedBoxFromPtr);
 		TESTER_ADD_TEST(testCustomDeleter);
+		TESTER_ADD_TEST(testEquality);
+		TESTER_ADD_TEST(concurrentUsage<1>);
+		TESTER_ADD_TEST(concurrentUsage<2>);
+		TESTER_ADD_TEST(concurrentUsage<4>);
 	}
 
 private:
@@ -201,6 +207,60 @@ private:
 		auto c = makeSharedBox<int>(42);
 		ASSERT_EQUAL(a == b, true);
 		ASSERT_EQUAL(a == c, false);
+	}
+
+	struct DeleteCounter {
+		constinit static inline usize count = 0;
+
+		bool do_count = false;
+
+		DeleteCounter() = default;
+
+		~DeleteCounter() {
+			if (do_count) count++;
+		}
+	};
+
+	template<u64 THREAD_COUNT, u64 ITERATIONS_PER_THREAD = 1'000>
+	void concurrentUsage() {
+		SharedBox<DeleteCounter> a = makeSharedBox<DeleteCounter>();
+		a->do_count                = true;
+
+		std::vector<SharedBox<DeleteCounter>> threads_boxes;
+		threads_boxes.reserve(THREAD_COUNT);
+		for (u64 i = 0; i < THREAD_COUNT; i++) threads_boxes.emplace_back(a);
+
+		a.reset();
+
+		std::vector<std::jthread> threads;
+		threads.reserve(THREAD_COUNT);
+		for (u64 i = 0; i < THREAD_COUNT; i++) {
+			threads.emplace_back([&, i] {
+				for (u64 j = 0; j < ITERATIONS_PER_THREAD; j++) {
+					SharedBox<DeleteCounter> copy = threads_boxes[i];
+					SharedBox<DeleteCounter> move = std::move(copy);
+
+					SharedBox<DeleteCounter> copy2 = makeSharedBox<DeleteCounter>();
+					copy2                          = move;
+
+					SharedBox<DeleteCounter> move2 = makeSharedBox<DeleteCounter>();
+					move2                          = std::move(copy2);
+
+					assertTrue(
+						move2 == threads_boxes[i],
+						"SharedBox should still own the same object after copying and moving!"
+					);
+					assertTrue(
+						move2.ref() == threads_boxes[i].ref(),
+						"SharedBox should still own the same object after copying and moving!"
+					);
+				}
+			});
+		}
+
+		for (auto& thread: threads) thread.join();
+
+		ASSERT_EQUAL(DeleteCounter::count, 1);
 	}
 };
 

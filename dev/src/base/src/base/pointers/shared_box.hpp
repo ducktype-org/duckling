@@ -25,6 +25,11 @@ namespace base {
 	/**
 	 * @brief A pointer wrapper type, that shares the ownership of the pointer and deletes it
 	 * when all of the owners go out of scope.
+	 *
+	 * \parallel Concurrent usage of different SharedBox instances owning the same object is safe,
+	 * but concurrent usage of the same SharedBox instance is not. This mimics the behavior of
+	 * std::shared_ptr.
+	 *
 	 * @note: An invariant is kept, that either both `data_ptr` and `ctrl_ptr` are either `nullptr`
 	 * (which initially happens by move and can propagate through copying) or neither is `nullptr`.
 	 *
@@ -71,6 +76,7 @@ namespace base {
 		/**
 		 * @brief: Decrements the number of the owners of the object pointed to.
 		 * If the counter reaches 0, deletes the object and the control block.
+		 * Sets the SharedBox to null state.
 		 */
 		void renounceOwnership() noexcept {
 			if (isFullyNull()) return;
@@ -228,6 +234,11 @@ namespace base {
 			);
 			return data_ptr == other.data_ptr;
 		}
+
+		/**
+		 * @brief Resets the SharedBox to null state, renouncing the ownership of the object.
+		 */
+		void reset() noexcept { renounceOwnership(); }
 
 		~SharedBox() { renounceOwnership(); }
 	};
