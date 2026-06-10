@@ -77,10 +77,10 @@ namespace query::internal {
 			!id.getID().q_id.getData().isInputQuery(), "Input query nodes are not present in the task pool."
 		);
 
-		auto val = task_status_map.extract(id);
-		CORE_ASSERT(val.has_value(), "Task must be present in the task pool");
+		auto val = task_status_map.getRef(id)->status.exchange(TaskStatus::NotStarted);
+		// CORE_ASSERT(val.has_value(), "Task must be present in the task pool");
 		CORE_ASSERT(
-			val.value() == TaskStatus::Done, "Invalidating a task that is not done is not supported"
+			val == TaskStatus::Done, "Invalidating a task that is not done is not supported"
 		);
 	}
 
@@ -95,32 +95,35 @@ namespace query::internal {
 		// preferred by the LLM models (but using `maybePut` has the same semantics but on adding
 		// instead of comparing).
 
-		bool task_already_done = false;
+		// bool task_already_done = false;
 
-		auto change_status_result = task_status_map.maybePutAndUpdate(
-			task.id,
-			TaskStatus::InProgress,
-			[&task_already_done](base::CRef<TaskStatus> existing_status) {
-				if (*existing_status == TaskStatus::Done) {
-					task_already_done = true;
-					return;
-				}
-			}
-		);
+		TaskStatus what_status_was_there = TaskStatus::NotStarted;
+		bool did_we_put_in_progress = task_status_map.getRef(task.id)->status.compare_exchange_strong(what_status_was_there, TaskStatus::InProgress);
+		
+		// task_status_map.maybePutAndUpdate(
+		// 	task.id,
+		// 	TaskStatus::InProgress,
+		// 	[&task_already_done](base::CRef<TaskStatus> existing_status) {
+		// 		if (*existing_status == TaskStatus::Done) {
+		// 			task_already_done = true;
+		// 			return;
+		// 		}
+		// 	}
+		// );
 
-		if (task_already_done) {
+		if (what_status_was_there == TaskStatus::Done) {
 			// The task was already done, we can return immediately
 			return true;
 		}
 
 		// This insert decides who gets to execute the task.
-		if (change_status_result.toOpt().has_value()) {
+		if (did_we_put_in_progress) {
 			// The key was inserted by us, we can execute the task
 			auto wd = concurrent::worker::Worker::getCurrentWorker();
 
 			task.work(wd);
 
-			task_status_map.update(task.id, TaskStatus::Done);
+			task_status_map.getRef(task.id)->status.store(TaskStatus::Done, std::memory_order_release);
 			{
 				auto  task_hash  = taskHash(task.id);
 				auto& task_mutex = task_completed_mutexes.at(task_hash % TASK_SHARDS);
@@ -141,7 +144,7 @@ namespace query::internal {
 		const auto task_id        = task.id;
 
 		// This line is not needed, but it sometimes avoids scheduling duplicate tasks
-		if (task_status_map.contains(task_id)) return TaskHandle(*this, task_id);
+		if (task_status_map.getRef(task_id)->status != TaskStatus::NotStarted) return TaskHandle(*this, task_id);
 
 		// Add to current worker's pool
 		addToWorkerPool(current_worker, std::move(task));
@@ -159,15 +162,14 @@ namespace query::internal {
 
 	void TaskPool::await(NodeIDID id) {
 		// Fast path check without locking
-		if (auto task_status = task_status_map.atMaybeCopy(id)) {
-			if (task_status.value() == TaskStatus::Done) {
-				return;
-			} else if (task_status.value() == TaskStatus::InProgress) {
-				waitForTask(id);
-				return;
-			}
+		auto pre_status = task_status_map.getRef(id)->status.load(std::memory_order_acquire);
+		if (pre_status == TaskStatus::Done) {
+			return;
+		} else if (pre_status == TaskStatus::InProgress) {
+			waitForTask(id);
+			return;
 		}
-
+	
 		auto task_opt = tryStealFromWorker(concurrent::worker::Worker::getCurrentWorker(), id);
 
 		if_opt_some(task_opt, task) {
@@ -176,9 +178,9 @@ namespace query::internal {
 		waitForTask(id);
 	}
 
-	bool TaskPool::isTaskDone(NodeIDID id) const {
-		auto maybe_copy = task_status_map.atMaybeCopy(id);
-		return maybe_copy.has_value() && maybe_copy.value() == TaskStatus::Done;
+	bool TaskPool::isTaskDone(NodeIDID id) {
+		auto status = task_status_map.getRef(id)->status.load(std::memory_order_acquire);
+		return status == TaskStatus::Done;
 	}
 
 	base::Optional<Task> TaskPool::tryStealFromGlobal() { return global_pool.tryPop(); }

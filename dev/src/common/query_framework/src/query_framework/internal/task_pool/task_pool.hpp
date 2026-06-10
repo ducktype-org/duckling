@@ -12,6 +12,7 @@
 
 #include <query_framework/internal/query_graph/node_id.hpp>
 #include <query_framework/internal/node_id_id.hpp>
+#include <query_framework/internal/node_id_id_super_map.hpp>
 
 #include <atomic>
 #include <concepts>
@@ -27,9 +28,15 @@ namespace query::internal {
 	 * @brief Status of a task in the TaskPool.
 	 */
 	enum class TaskStatus : uint8_t {
-		// NotStarted,  ///< Currently if a task is not in the map, it is not started.
+		NotStarted,  ///< Currently if a task is not in the map, it is not started.
 		InProgress,  ///< Task is currently being executed by a worker.
 		Done,        ///< Task has completed execution.
+	};
+
+	struct TaskStatusAtomicWrapper final {
+		std::atomic<TaskStatus> status;
+
+		constexpr TaskStatusAtomicWrapper(): status(TaskStatus::NotStarted) {}
 	};
 
 	/**
@@ -129,7 +136,7 @@ namespace query::internal {
 		 *
 		 * @return True if the task is done, false otherwise.
 		 */
-		[[nodiscard]] bool isTaskDone(NodeIDID id) const;
+		[[nodiscard]] bool isTaskDone(NodeIDID id);
 
 		/**
 		 * @brief Callback invoked when a worker has no tasks.
@@ -215,8 +222,7 @@ namespace query::internal {
 		std::vector<concurrent::ConQueue<Task>> worker_pools;
 
 		/// Map from TaskID to TaskStatus (concurrent, lock-free access).
-		/// @TODO: #1988 hash map per query id? Or even stronger, lock free data structure.
-		concurrent::ConHashMap<NodeIDID, TaskStatus> task_status_map;
+		query::internal::NodeIDIDSuperMap<TaskStatusAtomicWrapper> task_status_map;
 
 		static constexpr usize              TASK_SHARDS = 113;
 		std::array<std::mutex, TASK_SHARDS> task_completed_mutexes;
