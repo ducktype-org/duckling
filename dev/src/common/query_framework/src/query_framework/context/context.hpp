@@ -22,6 +22,8 @@
 
 #include <atomic>
 
+constexpr bool ENABLE_ACTIVE_GRAPH_OPERATIONS = false;
+
 namespace query {
 
 	namespace internal {
@@ -124,7 +126,7 @@ namespace query {
 			):
 				//   caller(caller),
 				//   callee(callee),
-				  enable_active_graph_operations(active_graph_operations),
+				  enable_active_graph_operations(active_graph_operations and ENABLE_ACTIVE_GRAPH_OPERATIONS),
 				  this_context_ref(&this_context)
 			{
 			
@@ -313,7 +315,9 @@ namespace query {
 				"Task handle query ID does not match the awaited query type."
 			);
 
-			QueryGraphHandler graph_handler(*this, my_node, handle.getID(), true);
+			auto node_id = handle.getID();
+
+			QueryGraphHandler graph_handler(*this, my_node, node_id, true);
 
 			this->active = false;
 			defer({ this->active = true; });
@@ -322,7 +326,7 @@ namespace query {
 			handle.await();
 
 			// WE CAN MADE CACHE BASED ON IDID as well:
-			auto result = OthQuery::internal_load(handle.getID());
+			auto result = OthQuery::internal_load(node_id);
 			if (is_cyclic_node) throw internal::QueryCycleException();
 			return result;
 		}
