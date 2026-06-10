@@ -10,12 +10,19 @@ namespace pst {
 	 * @brief Class constructor element.
 	 */
 	class Constructor final: public ClassSpecial {
+		THIS_CLASS(Constructor);
+		PARENT_CLASS(ClassSpecial);
+		CLONE_SUBELEMENTS();
+		CLONE_SIGNATURE_DEFAULT_OVERRIDE();
+	protected:
+
 		NAMED_CHILD_OPT(ident, IdentifierWrapper);  ///< If no value it's "create" is implied
 		NAMED_CHILD(params, ParamList);
 		NAMED_CHILD(inits, InitList);
 		NAMED_CHILD(body, CodeBlock);
 
 	public:
+		ELEMENT_CLONE_DECL(Constructor);
 		CLASS_STMT_SPEC_CONSTRUCTOR(Constructor);
 		CLASS_STMT_PARSE(Constructor);
 

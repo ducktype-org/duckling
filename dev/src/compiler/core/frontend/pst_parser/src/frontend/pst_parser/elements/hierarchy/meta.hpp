@@ -88,6 +88,18 @@ namespace pst {
 	 * @brief A general element that is a common ancestor of all statements.
 	 */
 	class Stmt: public LangElement {
+		PARENT_CLASS(LangElement);
+		THIS_CLASS(Stmt);
+	protected:
+		CLONE_SUBELEMENTS();
+	public:
+	/**
+	 * @todo Need to somehow handle prefixes
+	 */
+		explicit Stmt(const pst::CloneDummy dummy, const Stmt& other): LangElement(dummy, other), kind(other.kind), implicit_return(other.implicit_return) {}
+
+	protected:
+
 		StmtKind kind;
 
 		friend void internal::makeImplicitReturn(MRef<Stmt>);
@@ -133,10 +145,6 @@ namespace pst {
 		void makeImplicitReturn() { implicit_return = true; }
 
 	public:
-	/**
-	 * @todo Need to somehow handle prefixes
-	 */
-		explicit Stmt(const pst::CloneDummy dummy,const Stmt& other): LangElement(dummy, other), kind(other.kind), implicit_return(other.implicit_return) {}
 
 		[[nodiscard]]
 		StmtKind getStmtKind() const {
@@ -235,10 +243,12 @@ namespace pst {
 	 * @brief Statements specific to the inside of a class
 	 */
 	class ClassStmt: public Stmt {
+		PARENT_CLASS(Stmt);
+		THIS_CLASS(ClassStmt);
 	protected:
-		ClassStmt(StmtKind kind, const LangParserState& state): Stmt(kind, state) {}
+		ELEMENT_CLONE_DECL(ClassStmt);
 
-	protected:
+		ClassStmt(StmtKind kind, const LangParserState& state): Stmt(kind, state) {}
 		HashAlg& addGenericDataToHash(HashAlg&) const override;
 
 	public:

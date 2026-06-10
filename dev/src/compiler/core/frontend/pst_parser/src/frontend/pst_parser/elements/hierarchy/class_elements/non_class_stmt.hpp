@@ -13,7 +13,12 @@ namespace pst {
 	 *
 	 * Currently allows: using, alias, class.
 	 */
-	class NonClassStmt: public ClassStmt {
+	class NonClassStmt final: public ClassStmt {
+		THIS_CLASS(NonClassStmt);
+		PARENT_CLASS(ClassStmt);
+		CLONE_SUBELEMENTS();
+		CLONE_SIGNATURE_DEFAULT_OVERRIDE();
+	protected:
 		NAMED_CHILD(inner_stmt, Stmt);
 
 		DeclKind                                        inner_decl_kind = DeclKind::None;
@@ -22,6 +27,10 @@ namespace pst {
 		HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const override;
 
 	public:
+		/**
+		 * @todo handle inner_decl_symbol_name 
+		 */
+		ELEMENT_CLONE_DECL(NonClassStmt, inner_decl_kind)
 		CLASS_STMT_CHILD_CONSTRUCTOR(NonClassStmt, ElementKind::NonClassStmt);
 		CLASS_STMT_PARSE(NonClassStmt);
 

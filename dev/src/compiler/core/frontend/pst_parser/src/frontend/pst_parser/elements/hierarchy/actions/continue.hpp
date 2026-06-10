@@ -5,7 +5,8 @@
 namespace pst {
 	class Continue final: public Action {
 		PARENT_CLASS(Action);
-		CLONE_SIGNATURE(Continue) override;
+		THIS_CLASS(Continue);
+		CLONE_SIGNATURE_DEFAULT_OVERRIDE();
 	public:
 		ELEMENT_CLONE_DECL(Continue);
 

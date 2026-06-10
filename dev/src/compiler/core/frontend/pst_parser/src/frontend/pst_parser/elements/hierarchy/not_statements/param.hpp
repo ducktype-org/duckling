@@ -7,8 +7,11 @@ namespace pst {
 	 * @brief Declaration of a single function or pattern argument.
 	 */
 	class Param final: public NotStmt {
+		THIS_CLASS(Param);
 		PARENT_CLASS(NotStmt);
-		CLONE_SIGNATURE(Param) override;
+		CLONE_SUBELEMENTS();
+		CLONE_SIGNATURE_DEFAULT_OVERRIDE();
+	protected:
 	
 		NAMED_CHILD(name, IdentifierWrapper);
 		NAMED_CHILD(type, UniversalExprHolder);

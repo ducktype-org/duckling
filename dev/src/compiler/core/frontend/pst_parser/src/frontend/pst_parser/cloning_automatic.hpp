@@ -53,24 +53,22 @@ namespace pst::cloning_utils {
 		}
 	}
 
-	template<std::derived_from<LangElement> El, std::derived_from<LangElement> T, base::TemplateStringLiteral name>
-	void clone(El& parent, std::vector<AccessInternal<T, name>>& sink, const std::vector<AccessInternal<T, name>>& source) {
+	template<std::derived_from<LangElement> El, std::derived_from<LangElement> T>
+	void clone(El& parent, std::vector<AccessInternalAnonymous<T>>& sink, const std::vector<AccessInternalAnonymous<T>>& source) {
 		if (source) {
-			if (auto src = source->internal()) {
-				MBox<T> copy = cloneCast(src.toOpt().value());
-				copy->setParent(parent);
-				std::string str_name(name.value);
-				parent->addNamedChild(str_name, copy.refMut());
-				*sink = std::move(copy);
+			for (auto& ref: source) {
+				sink.push_back(nullptr);
+				clone(parent, sink.back(), ref);
 			}
 		}
 	}
 }
 
 #define ELEMENT_CLONE_SUB_ELEMENT(sub_element_name) \
-	pst::cloning_utils::clone(*out, out->sub_element_name, this->sub_element_name);
+	pst::cloning_utils::clone(*this, sub_element_name, other.sub_element_name);
 
 #define CLONE_SUB_ELEMENTS_DEF(element_type, ...) \
-	MBox<LangElement> element_type::cloneSubElements() const {\
+	void element_type::cloneSubElements(const element_type& other) {\
 		FOR_EACH(ELEMENT_CLONE_SUB_ELEMENT, __VA_ARGS__)\
+		ParentClass::cloneSubElements(other);\
 	}

@@ -72,17 +72,22 @@ namespace pst {
 	 * @brief Base Element for all of the PST elements.
 	 */
 	class LangElement: public tpc::Element {
+		THIS_CLASS(LangElement);
 	protected:
 		explicit LangElement(pst::CloneDummy, const LangElement& other):
 			  source_position(other.source_position),
 			  context_hash(other.context_hash),
 			  id(PstID::next()) {}
 
-		virtual CLONE_SIGNATURE(LangElement) = 0;
+		virtual CLONE_SIGNATURE() = 0;
 
 		[[nodiscard]] 
-		virtual MBox<LangElement> clone() const {
+		MBox<LangElement> clone() const {
 			return cloneElement();
+		}
+
+		void cloneSubElements(const LangElement&) {
+			return;
 		}
 
 	public:

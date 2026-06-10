@@ -7,8 +7,10 @@ namespace pst {
 	 * @note Action assumes optional expression before the semicolon.
 	 */
 	class Action: public Stmt {
-	protected:
 		PARENT_CLASS(Stmt);
+		THIS_CLASS(Action);
+	protected:
+		CLONE_SUBELEMENTS();
 
 		NAMED_CHILD_OPT(expr, CommaExprHolder);
 	public:

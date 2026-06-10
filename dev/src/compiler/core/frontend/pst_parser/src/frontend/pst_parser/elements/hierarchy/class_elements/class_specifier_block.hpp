@@ -10,11 +10,17 @@ namespace pst {
 	 * They are used to change the visibility of multiple definitions in a class
 	 */
 	class ClassSpecifierBlock final: public ClassStmt {
+		PARENT_CLASS(ClassStmt);
+		THIS_CLASS(ClassSpecifierBlock);
+		CLONE_SUBELEMENTS();
+		CLONE_SIGNATURE_DEFAULT_OVERRIDE();
+	protected:
 		NAMED_CHILD(block, ClassBlock);
 
 		HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const override;
 
 	public:
+		ELEMENT_CLONE_DECL(ClassSpecifierBlock);
 		CLASS_STMT_CHILD_CONSTRUCTOR(ClassSpecifierBlock, ElementKind::ClassSpecifierBlock);
 		CLASS_STMT_PARSE(ClassSpecifierBlock);
 

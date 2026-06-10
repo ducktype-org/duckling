@@ -5,7 +5,8 @@
 namespace pst {
 	class Restart final: public Action {
 		PARENT_CLASS(Action);
-		CLONE_SIGNATURE(Restart) override;
+		THIS_CLASS(Restart);
+		CLONE_SIGNATURE_DEFAULT_OVERRIDE();
 	public:
 		ELEMENT_CLONE_DECL(Restart);
 

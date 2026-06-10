@@ -5,7 +5,8 @@
 namespace pst {
 	class Break final: public Action {
 		PARENT_CLASS(Action);
-		CLONE_SIGNATURE(Break) override;
+		THIS_CLASS(Break);
+		CLONE_SIGNATURE_DEFAULT_OVERRIDE();
 	public:
 		ELEMENT_CLONE_DECL(Break);
 

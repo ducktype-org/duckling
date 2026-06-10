@@ -5,7 +5,8 @@
 namespace pst {
 	class Return final: public Action {
 		PARENT_CLASS(Action);
-		CLONE_SIGNATURE(Return) override;
+		THIS_CLASS(Return);
+		CLONE_SIGNATURE_DEFAULT_OVERRIDE();
 	public:
 		ELEMENT_CLONE_DECL(Return);
 

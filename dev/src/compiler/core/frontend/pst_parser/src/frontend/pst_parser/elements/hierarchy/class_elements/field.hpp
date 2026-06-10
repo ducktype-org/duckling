@@ -8,6 +8,11 @@ namespace pst {
 	 * @brief Class field element.
 	 */
 	class Field final: public ClassStmt {
+		THIS_CLASS(Field);
+		PARENT_CLASS(ClassStmt);
+		CLONE_SUBELEMENTS();
+		CLONE_SIGNATURE_DEFAULT_OVERRIDE();
+	protected:
 		bool is_mutable = true;
 		NAMED_CHILD(name, IdentifierWrapper);
 		NAMED_CHILD(type, CommaExprHolder);
@@ -16,6 +21,7 @@ namespace pst {
 		HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const override;
 
 	public:
+		ELEMENT_CLONE_DECL(Field, is_mutable);
 		CLASS_STMT_CHILD_CONSTRUCTOR(Field, ElementKind::ClassField);
 		CLASS_STMT_PARSE(Field);
 

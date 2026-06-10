@@ -5,7 +5,8 @@
 namespace pst {
 	class Defer final: public Action {
 		PARENT_CLASS(Action);
-		CLONE_SIGNATURE(Defer) override;
+		THIS_CLASS(Defer);
+		CLONE_SIGNATURE_DEFAULT_OVERRIDE();
 	public:
 		ELEMENT_CLONE_DECL(Defer);
 

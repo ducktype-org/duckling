@@ -12,11 +12,20 @@ namespace pst {
 	constexpr CloneDummy CLONE = makeCloneDummy();
 }
 
+#define THIS_CLASS(this_class) private: using ThisClass = this_class
 #define PARENT_CLASS(parent_class) private: using ParentClass = parent_class
 
-#define ELEMENT_CLONE_DECL(element) \
-	explicit element(const pst::CloneDummy clone, const element& other): ParentClass(clone, other) {}
+#define CONSTRUCTOR_VALUE_COPY(member) , member(other.member)
 
-#define CLONE_SIGNATURE(element_type) MBox<LangElement> cloneElement() const
+#define ELEMENT_CLONE_DECL(element, ...) \
+	explicit element(const pst::CloneDummy clone, const element& other): ParentClass(clone, other) FOR_EACH(CONSTRUCTOR_VALUE_COPY, __VA_ARGS__) {}
 
-#define CLONE_SUBELEMENTS(element_type) void cloneSubElements(const element_type&)
+#define CLONE_SIGNATURE() MBox<LangElement> cloneElement() const
+
+#define CLONE_SIGNATURE_DEFAULT_OVERRIDE() MBox<LangElement> cloneElement() const override {\
+	auto out =  base::makeBox<ThisClass>(pst::makeCloneDummy(), *this);\
+	out->cloneSubElements(*this);\
+	return out;\
+}
+
+#define CLONE_SUBELEMENTS() void cloneSubElements(const ThisClass&)

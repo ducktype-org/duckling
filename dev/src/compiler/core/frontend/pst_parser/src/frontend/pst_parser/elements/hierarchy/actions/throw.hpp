@@ -8,7 +8,8 @@ namespace pst {
 	 */
 	class Throw final: public Action {
 		PARENT_CLASS(Action);
-		CLONE_SIGNATURE(Throw) override;
+		THIS_CLASS(Throw);
+		CLONE_SIGNATURE_DEFAULT_OVERRIDE();
 	public:
 		ELEMENT_CLONE_DECL(Throw);
 
