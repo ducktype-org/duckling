@@ -22,7 +22,7 @@
 
 #include <atomic>
 
-constexpr bool ENABLE_ACTIVE_GRAPH_OPERATIONS = false;
+constexpr bool ENABLE_ACTIVE_GRAPH_OPERATIONS = true;
 
 namespace query {
 
