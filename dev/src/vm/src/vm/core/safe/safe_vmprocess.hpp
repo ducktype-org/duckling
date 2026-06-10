@@ -55,7 +55,7 @@ namespace vm {
 
 		Memory memory;
 
-		DeadlockDetector          deadlock_detector;
+		base::Optional<DeadlockDetector> deadlock_detector;
 		GIL                       gil;
 		SynchronizationPrimitives synchronization_primitives;
 
@@ -165,9 +165,9 @@ namespace vm {
 	public:
 		SafeVMProcess(PID my_pid, bool enable_deadlock_detection = false);
 
-		DeadlockDetector& getDeadlockDetector() { return deadlock_detector; }
+		DeadlockDetector* getDeadlockDetector() { return deadlock_detector ? &*deadlock_detector : nullptr; }
 
-		const DeadlockDetector& getDeadlockDetector() const { return deadlock_detector; }
+		const DeadlockDetector* getDeadlockDetector() const { return deadlock_detector ? &*deadlock_detector : nullptr; }
 
 		Memory& getMemory();
 

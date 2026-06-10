@@ -41,13 +41,7 @@ namespace vm {
 		 */
 		void clearMutexState(usize mutex_id);
 
-		void setEnabled(bool enabled) { detection_enabled = enabled; }
-
-		[[nodiscard]] bool isEnabled() const { return detection_enabled; }
-
 	private:
-		bool detection_enabled = true;
-
 		// thread_id -> mutex_id (Thread is waiting for Mutex)
 		std::unordered_map<api::ThreadID, usize> thread_waiting_for_mutex;
 

@@ -176,7 +176,7 @@ namespace vm {
 		  IVMProcess(my_pid),
 		  loaded_program(&loaded_program_copy),
 		  loaded_program_copy(compiler.getLowProgram()) {
-		deadlock_detector.setEnabled(enable_deadlock_detection);
+		if (enable_deadlock_detection) deadlock_detector.emplace();
 		vm_threads.add(*this);
 	}
 

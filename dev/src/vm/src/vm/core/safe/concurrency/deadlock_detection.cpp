@@ -5,7 +5,6 @@
 namespace vm {
 
 	void DeadlockDetector::checkForDeadlock(api::ThreadID thread_id, usize mutex_id) {
-		if (!detection_enabled) return;
 		// Thread-safety: No internal locking. Assumes caller holds the process GIL.
 		//
 		// The wait-for graph is a functional graph: each thread waits for at most one mutex,
@@ -36,24 +35,20 @@ namespace vm {
 	}
 
 	void DeadlockDetector::markThreadWaitingForMutex(api::ThreadID thread_id, usize mutex_id) {
-		if (!detection_enabled) return;
 		thread_waiting_for_mutex[thread_id] = mutex_id;
 	}
 
 	void DeadlockDetector::markThreadAcquiredMutex(api::ThreadID thread_id, usize mutex_id) {
-		if (!detection_enabled) return;
 		thread_waiting_for_mutex.erase(thread_id);
 		mutex_owners[mutex_id] = thread_id;
 	}
 
 	void DeadlockDetector::markThreadReleasedMutex(api::ThreadID thread_id, usize mutex_id) {
-		if (!detection_enabled) return;
 		auto it = mutex_owners.find(mutex_id);
 		if (it != mutex_owners.end() && it->second == thread_id) mutex_owners.erase(it);
 	}
 
 	void DeadlockDetector::clearMutexState(usize mutex_id) {
-		if (!detection_enabled) return;
 		// A mutex being destroyed cannot be simultaneously awaited by any thread:
 		// a thread can only wait for an owned mutex, and an owned mutex cannot be
 		// destroyed (the owner holds it). So no scan of thread_waiting_for_mutex needed.
