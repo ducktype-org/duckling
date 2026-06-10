@@ -5,15 +5,15 @@
 namespace query::internal {
 
 	ActiveGraph::NodeHandle ActiveGraph::putNode(NodeIDID node_id, std::shared_ptr<query::Context> node_context_ref) {
-		auto out = active_nodes.putGetHandle(
+		auto out = active_nodes.put(
 			node_id,
 			{
-				.active_edge      = base::Optional<NodeIDID>(),
+				.active_edge      = MaybeNodeIDID(),
 				.node_context_ref = std::move(node_context_ref),
 			}
 		);
 		active_node_count++;
-		return out;
+		return {out};
 	}
 
 	void ActiveGraph::removeNode(NodeIDID node_id) {
@@ -30,45 +30,43 @@ namespace query::internal {
 	void ActiveGraph::removeEdge(NodeIDID node_id) {
 		// Note that callOn will panic here, on a node that does not exist, this is the expected
 		// behavior.
-		active_nodes.callOn(node_id, [](Ref<ActiveData> data_ref) {
-			CORE_ASSERT(
-				data_ref->active_edge.has_value(),
-				"Removing edge for node that does not have an active edge"
-			);
-			data_ref->active_edge.reset();
-		});
+		active_nodes.at(node_id)->active_edge.store(MaybeNodeIDID(), std::memory_order_release);
 	}
 
 	void ActiveGraph::removeEdgeByHandle(NodeHandle handle) {
-		active_nodes.callOnNodeHandle(handle, [](Ref<ActiveData> data_ref) {
-			CORE_ASSERT(
-				data_ref->active_edge.has_value(),
-				"Removing edge for node that does not have an active edge"
-			);
-			data_ref->active_edge.reset();
-		});
+		handle.node_data_ref->active_edge.store(MaybeNodeIDID(), std::memory_order_release);
+		// active_nodes.callOnNodeHandle(handle, [](Ref<ActiveData> data_ref) {
+		// 	CORE_ASSERT(
+		// 		data_ref->active_edge.has_value(),
+		// 		"Removing edge for node that does not have an active edge"
+		// 	);
+		// 	data_ref->active_edge.reset();
+		// });
 	}
 
 	void ActiveGraph::setEdge(NodeIDID node_id, NodeIDID edge) {
 		// Note that callOn will panic here, on a node that does not exist, this is the expected
 		// behavior.
-		active_nodes.callOn(node_id, [edge](Ref<ActiveData> data_ref) {
-			CORE_ASSERT(
-				data_ref->active_edge.empty(),
-				"Setting edge for node that already has an active edge"
-			);
-			data_ref->active_edge = edge;
-		});
+		// active_nodes.callOn(node_id, [edge](Ref<ActiveData> data_ref) {
+		// 	CORE_ASSERT(
+		// 		data_ref->active_edge.empty(),
+		// 		"Setting edge for node that already has an active edge"
+		// 	);
+		// 	data_ref->active_edge = edge;
+		// });
+
+		active_nodes.at(node_id)->active_edge.store(MaybeNodeIDID{edge}, std::memory_order_release);
 	}
 
 	void ActiveGraph::setEdgeByHandle(NodeHandle handle, NodeIDID edge) {
-		active_nodes.callOnNodeHandle(handle, [edge](Ref<ActiveData> data_ref) {
-			CORE_ASSERT(
-				data_ref->active_edge.empty(),
-				"Setting edge for node that already has an active edge"
-			);
-			data_ref->active_edge = edge;
-		});
+		// active_nodes.callOnNodeHandle(handle, [edge](Ref<ActiveData> data_ref) {
+		// 	CORE_ASSERT(
+		// 		data_ref->active_edge.empty(),
+		// 		"Setting edge for node that already has an active edge"
+		// 	);
+		// 	data_ref->active_edge = edge;
+		// });
+		handle.node_data_ref->active_edge.store(MaybeNodeIDID{edge}, std::memory_order_release);
 	}
 
 	base::Optional<ActiveGraph::QueryCycle> ActiveGraph::cycleCheck(const NodeIDID initial_node_id
@@ -81,7 +79,7 @@ namespace query::internal {
 		auto walk = [this](NodeIDID node_id) -> base::Optional<NodeIDID> {
 			auto edge = active_nodes.atMaybeCopy(node_id);
 			if (edge.empty()) return {};
-			return edge.value().active_edge;
+			return edge.value().active_edge.load().asOptional();
 		};
 
 		auto double_walk = [walk](NodeIDID walk_zero) -> base::Optional<NodeIDID> {
@@ -147,7 +145,7 @@ namespace query::internal {
 			cycle_nodes.push_back(QueryCycle::NodeCycleInfo{
 				.node_id = current_node, .node_context_ref = node_data.value().node_context_ref });
 
-			auto edge = node_data.value().active_edge;
+			auto edge = node_data.value().active_edge.load().asOptional();
 			if (edge.empty()) {
 				// This is the case described in the comment above, where we cannot reconstruct the
 				// cycle.

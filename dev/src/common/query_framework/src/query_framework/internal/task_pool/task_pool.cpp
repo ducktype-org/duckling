@@ -97,8 +97,10 @@ namespace query::internal {
 
 		// bool task_already_done = false;
 
+		auto task_status_ref = task_status_map.getRef(task.id);
+
 		TaskStatus what_status_was_there = TaskStatus::NotStarted;
-		bool did_we_put_in_progress = task_status_map.getRef(task.id)->status.compare_exchange_strong(what_status_was_there, TaskStatus::InProgress);
+		bool did_we_put_in_progress = task_status_ref->status.compare_exchange_strong(what_status_was_there, TaskStatus::InProgress);
 		
 		// task_status_map.maybePutAndUpdate(
 		// 	task.id,
@@ -123,7 +125,7 @@ namespace query::internal {
 
 			task.work(wd);
 
-			task_status_map.getRef(task.id)->status.store(TaskStatus::Done, std::memory_order_release);
+			task_status_ref->status.store(TaskStatus::Done, std::memory_order_release);
 			{
 				auto  task_hash  = taskHash(task.id);
 				auto& task_mutex = task_completed_mutexes.at(task_hash % TASK_SHARDS);

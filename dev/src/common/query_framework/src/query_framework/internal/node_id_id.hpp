@@ -2,6 +2,9 @@
 
 #include <base/types/ints.hpp>
 #include <vector> // for hash...
+#include <limits>
+#include <base/except/exceptions.hpp>
+#include <base/collections/optional.hpp>
 
 namespace query::internal {
 
@@ -9,6 +12,10 @@ namespace query::internal {
 
     class NodeIDID final {
         u64 id;
+
+        friend class MaybeNodeIDID;
+
+        explicit NodeIDID(u64 id): id(id) {}
 
     public:
         NodeIDID() = delete;
@@ -31,8 +38,43 @@ namespace query::internal {
         u64 getInternalID() const { return id; }
     };
  
-    // + optimized nodeidid -> key concurrent map
-    // for dense cases (e.g. task pool or active graph)
+    class MaybeNodeIDID final {
+        u64 id;
+        constexpr static u64 EMPTY_ID = std::numeric_limits<u64>::max();
+
+    public:
+        MaybeNodeIDID(): id(EMPTY_ID) {}
+        MaybeNodeIDID(NodeIDID node_id_id): id(node_id_id.getInternalID()) {}
+        MaybeNodeIDID(const MaybeNodeIDID&) = default;
+        MaybeNodeIDID(MaybeNodeIDID&&) = default;
+        MaybeNodeIDID& operator=(const MaybeNodeIDID&) = default;
+        MaybeNodeIDID& operator=(MaybeNodeIDID&&) = default;
+
+
+        [[nodiscard]]
+        bool hasValue() const { return id != EMPTY_ID; }
+
+        [[nodiscard]]
+        bool empty() const { return id == EMPTY_ID; }
+
+        [[nodiscard]]
+        base::Optional<NodeIDID> asOptional() const {
+            if (hasValue()) {
+                return NodeIDID(id);
+            }
+            return {};
+        }
+
+        [[nodiscard]]
+        NodeIDID getValue() const {
+            CORE_ASSERT(hasValue(), "Trying to get value from empty MaybeNodeIDID");
+            return NodeIDID(id);
+        }
+    };
+
+
+    static_assert(sizeof(NodeIDID) == sizeof(u64), "NodeIDID should be the same size as u64");
+    static_assert(sizeof(MaybeNodeIDID) == sizeof(u64), "MaybeNodeIDID should be the same size as u64");
 }
 
 template<>

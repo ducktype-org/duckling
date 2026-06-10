@@ -97,8 +97,8 @@ namespace query {
 		 */
 		struct QueryGraphHandler final {
 		private:
-			internal::NodeIDID caller;
-			internal::NodeIDID callee;
+			// internal::NodeIDID caller;
+			// internal::NodeIDID callee;
 			bool             enable_active_graph_operations;
 			CRef<Context>    this_context_ref;
 		
@@ -121,8 +121,8 @@ namespace query {
 				internal::NodeIDID callee,
 				bool             active_graph_operations
 			):
-				  caller(caller),
-				  callee(callee),
+				//   caller(caller),
+				//   callee(callee),
 				  enable_active_graph_operations(active_graph_operations),
 				  this_context_ref(&this_context)
 			{

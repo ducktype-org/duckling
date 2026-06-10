@@ -27,7 +27,7 @@ namespace query::internal {
 	/**
 	 * @brief Status of a task in the TaskPool.
 	 */
-	enum class TaskStatus : uint8_t {
+	enum class TaskStatus : u64 {
 		NotStarted,  ///< Currently if a task is not in the map, it is not started.
 		InProgress,  ///< Task is currently being executed by a worker.
 		Done,        ///< Task has completed execution.

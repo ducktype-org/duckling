@@ -1,6 +1,6 @@
 #pragma once
 
-#include "node_id.hpp"
+// #include "node_id.hpp"
 
 #include <concurrent/base/collections/hash_map.hpp>
 
@@ -8,6 +8,7 @@
 
 #include <query_framework/context/context_fd.hpp>
 #include <query_framework/internal/node_id_id.hpp>
+#include <query_framework/internal/node_id_id_super_map.hpp>
 
 #include <memory>
 
@@ -44,7 +45,7 @@ namespace query::internal {
 		 * Helper struct representing data stored for each active node in the graph.
 		 */
 		struct ActiveData final {
-			base::Optional<NodeIDID> active_edge;
+			std::atomic<MaybeNodeIDID> active_edge;
 
 			std::shared_ptr<query::Context> node_context_ref;
 
@@ -59,7 +60,9 @@ namespace query::internal {
 
 
 	public:
-		using NodeHandle = decltype(active_nodes)::NodeHandle;
+		struct NodeHandle final {
+			Ref<ActiveData> node_data_ref;
+		};
 
 		/**
 		 * Adds a node to the active query graph.
