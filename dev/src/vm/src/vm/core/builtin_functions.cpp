@@ -164,6 +164,7 @@ namespace vm::builtins {
 				// Acquire GIL before throwing: exception handlers and destructors need exclusive
 				// access to process state (memory blocks, primitives, thread metadata) during cleanup.
 				thread.acquireGil();
+				if (detector) detector->markThreadStoppedWaiting(thread_id);
 				throw vm::KillProcessException{};
 			}
 		}

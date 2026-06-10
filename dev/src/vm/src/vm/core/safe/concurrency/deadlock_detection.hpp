@@ -16,6 +16,10 @@ namespace vm {
 	 * edges represent "thread waits for mutex" relationships. It detects cycles in this graph that
 	 * would indicate deadlock conditions.
 	 *
+	 * @note Scope: covers mutex wait-for cycles only. Deadlocks involving condition variable
+	 *       waits or thread joins are not tracked — std::condition_variable has spurious wakeups,
+	 *       making reliable CV-wait edge tracking infeasible.
+	 *
 	 * @note Thread-Safety: This class has no internal synchronization (no locks). It is designed
 	 * to be used exclusively within the context of DVM bytecode execution, where access is
 	 * protected by the process Global Interpreter Lock (GIL). Callers must ensure the GIL is
@@ -31,6 +35,8 @@ namespace vm {
 		void checkForDeadlock(api::ThreadID thread_id, usize mutex_id);
 
 		void markThreadWaitingForMutex(api::ThreadID thread_id, usize mutex_id);
+
+		void markThreadStoppedWaiting(api::ThreadID thread_id);
 
 		void markThreadAcquiredMutex(api::ThreadID thread_id, usize mutex_id);
 

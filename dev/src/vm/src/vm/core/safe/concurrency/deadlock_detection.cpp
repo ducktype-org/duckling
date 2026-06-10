@@ -38,6 +38,10 @@ namespace vm {
 		thread_waiting_for_mutex[thread_id] = mutex_id;
 	}
 
+	void DeadlockDetector::markThreadStoppedWaiting(api::ThreadID thread_id) {
+		thread_waiting_for_mutex.erase(thread_id);
+	}
+
 	void DeadlockDetector::markThreadAcquiredMutex(api::ThreadID thread_id, usize mutex_id) {
 		thread_waiting_for_mutex.erase(thread_id);
 		mutex_owners[mutex_id] = thread_id;
@@ -49,10 +53,11 @@ namespace vm {
 	}
 
 	void DeadlockDetector::clearMutexState(usize mutex_id) {
-		// A mutex being destroyed cannot be simultaneously awaited by any thread:
-		// a thread can only wait for an owned mutex, and an owned mutex cannot be
-		// destroyed (the owner holds it). So no scan of thread_waiting_for_mutex needed.
 		mutex_owners.erase(mutex_id);
+		for (auto it = thread_waiting_for_mutex.begin(); it != thread_waiting_for_mutex.end();) {
+			if (it->second == mutex_id) it = thread_waiting_for_mutex.erase(it);
+			else ++it;
+		}
 	}
 
 }
