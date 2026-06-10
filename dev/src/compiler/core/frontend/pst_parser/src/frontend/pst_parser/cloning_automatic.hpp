@@ -70,9 +70,7 @@ namespace pst::cloning_utils {
 #define ELEMENT_CLONE_SUB_ELEMENT(sub_element_name) \
 	pst::cloning_utils::clone(*out, out->sub_element_name, this->sub_element_name);
 
-#define ELEMENT_CLONE_DEF(element_type, ...) \
-	MBox<LangElement> element_type::cloneElement() const {\
-		Box<element_type> out = base::makeBox<element_type>(makeCloneDummy(), *this);\
+#define CLONE_SUB_ELEMENTS_DEF(element_type, ...) \
+	MBox<LangElement> element_type::cloneSubElements() const {\
 		FOR_EACH(ELEMENT_CLONE_SUB_ELEMENT, __VA_ARGS__)\
-		return {std::move(out)};\
 	}

@@ -18,3 +18,5 @@ namespace pst {
 	explicit element(const pst::CloneDummy clone, const element& other): ParentClass(clone, other) {}
 
 #define CLONE_SIGNATURE(element_type) MBox<LangElement> cloneElement() const
+
+#define CLONE_SUBELEMENTS(element_type) void cloneSubElements(const element_type&)
