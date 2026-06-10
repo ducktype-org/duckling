@@ -14,8 +14,7 @@
  * @TODO: #1887 make it clear what query invocation layers happen here.
  */
 #define IMPLEMENT_QUERY_SIDE_INPUT(query_type)                                                \
-	auto query_type::internal_query(const query_type::QKey& key) -> query_type::QResult {     \
-		auto node_id = ::query::internal::makeNodeID<query_type>(key);                        \
+	auto query_type::internal_query(const query_type::QKey& key, ::query::internal::NodeIDID node_id) -> query_type::QResult {     \
 		::query::internal::ContextAccess::getState()->addSideInputNode(node_id);              \
 		return ::query::internal::SideInputMockValue{};                                       \
 	}                                                                                         \
@@ -59,8 +58,7 @@
  * @endcode
  */
 #define IMPLEMENT_QUERY_SIDE_INPUT_WITH_LOGIC(query_type, ctx_name, key_name, evaluate_body)   \
-	auto query_type::internal_query(const query_type::QKey& key_name) -> query_type::QResult { \
-		auto node_id  = ::query::internal::makeNodeID<query_type>(key_name);                   \
+	auto query_type::internal_query(const query_type::QKey& key_name, ::query::internal::NodeIDID node_id) -> query_type::QResult { \
 		auto ctx_name = ::query::internal::ContextAccess::make(node_id);                       \
 		::query::internal::ContextAccess::getState()->addSideInputNode(node_id);               \
 		evaluate_body return ::query::internal::SideInputMockValue{};                          \

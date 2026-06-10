@@ -45,7 +45,7 @@ namespace query::internal {
 		using QResult   = result_mp;                                                               \
                                                                                                    \
 	private:                                                                                       \
-		static auto                       internal_query(const QKey&) -> QResult;                  \
+		static auto                       internal_query(const QKey&, ::query::internal::NodeIDID) -> QResult;                  \
 		static auto                       internal_load(::query::internal::NodeIDID node) -> QResult; \
 		static auto                       internal_erase(::query::internal::NodeIDID node) -> bool;        \
 		static ::query::internal::QueryID id;                                                      \

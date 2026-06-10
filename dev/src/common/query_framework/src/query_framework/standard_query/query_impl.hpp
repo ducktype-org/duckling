@@ -41,7 +41,7 @@ namespace query::internal {
 	 * @TODO: #1887 think about what should be here, and rename it to inner-layer.
 	 */
 	template<typename QueryImplType>
-	auto standardQueryEntry(const typename QueryImplType::QKey& key) ->
+	auto standardQueryEntry(const typename QueryImplType::QKey& key, ::query::internal::NodeIDID node_id) ->
 		typename QueryImplType::QResult {
 		using QueryIntType = QueryImplType::QueryType;
 
@@ -53,7 +53,7 @@ namespace query::internal {
 
 
 		// const auto perfect_hash = perfectHashKey<QueryImplType::IS_HASH_STABLE>(key);
-		auto node_id = makeNodeID<QueryIntType>(key);
+		// auto node_id = makeNodeID<QueryIntType>(key);
 		auto context = ContextAccess::makeShared(node_id);
 
 		// @TODO: #2026 add note status static assertion if possible.
@@ -272,8 +272,8 @@ namespace query::internal {
  * @param pretty_name Pretty name of the Query
  */
 #define INTERNAL_QUERY_IMPLEMENTATION_BOILERPLATE(type)                                                                                  \
-	auto type::QueryType::internal_query(const type::QKey& key) -> type::QResult {                                                       \
-		return ::query::internal::standardQueryEntry<type>(key);                                                                         \
+	auto type::QueryType::internal_query(const type::QKey& key, ::query::internal::NodeIDID node_id) -> type::QResult {                                                       \
+		return ::query::internal::standardQueryEntry<type>(key, node_id);                                                                         \
 	}                                                                                                                                    \
 	auto type::QueryType::internal_load(::query::internal::NodeIDID node_id) -> type::QResult {                                                \
 		return type::load(node_id).value().data;                                                                               \

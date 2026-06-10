@@ -249,7 +249,7 @@ namespace query {
 				this->active = false;
 				defer({ this->active = true; });
 
-				return OthQuery::internal_query(key);
+				return OthQuery::internal_query(key, dep_id);
 			} else {
 				QueryGraphHandler graph_handler(*this, my_node, dep_id, true);
 				this->active = false;
@@ -257,7 +257,7 @@ namespace query {
 
 				// note that this will block, until the task is completed
 				main_query_state.getTaskPool()->query(internal::Task{
-					dep_id, [key](concurrent::worker::WRef) { OthQuery::internal_query(key); } });
+					dep_id, [key, dep_id](concurrent::worker::WRef) { OthQuery::internal_query(key, dep_id); } });
 
 
 				// We would like to throw here, "after the return",
@@ -287,9 +287,10 @@ namespace query {
 				not OthQuery::QUERY_DATA.isInputQuery(), "Cannot schedule an input query."
 			);
 
+			auto node_id = internal::makeNodeID<OthQuery>(key);
 			auto handle = main_query_state.getTaskPool()->schedule(internal::Task{
-				internal::makeNodeID<OthQuery>(key),
-				[key](concurrent::worker::WRef) { OthQuery::internal_query(key); } });
+				node_id,
+				[key, node_id](concurrent::worker::WRef) { OthQuery::internal_query(key, node_id); } });
 			return handle;
 		}
 

@@ -68,7 +68,7 @@ namespace query {
 					[key](concurrent::worker::WRef) {
 						ContextAccess::setAreWeInsideQuery(true);
 						defer({ ContextAccess::setAreWeInsideQuery(false); });
-						QueryType::internal_query(key);
+						QueryType::internal_query(key, node_id);
 					},
 				});
 
