@@ -192,9 +192,14 @@ namespace vm::builtins {
 	}
 
 	void FunctionHandlers::builtinWaitCV(SafeVMThread& thread, u64 cv_id, u64 mutex_id) {
-		auto cv    = thread.safe_process.getSynchronizationPrimitives().getCV(cv_id);
-		auto mutex = thread.safe_process.getSynchronizationPrimitives().getMutex(mutex_id);
+		auto cv        = thread.safe_process.getSynchronizationPrimitives().getCV(cv_id);
+		auto mutex     = thread.safe_process.getSynchronizationPrimitives().getMutex(mutex_id);
+		auto thread_id = thread.getThreadID();
+		auto* detector = thread.safe_process.getDeadlockDetector();
 
+		// cv->wait atomically unlocks the mutex then relocks it before returning (on any path),
+		// so we mirror that in the detector: release ownership now, reacquire after the wait.
+		if (detector) detector->markThreadReleasedMutex(thread_id, mutex_id);
 		thread.releaseGil();
 		try {
 			const bool interrupted
@@ -204,16 +209,19 @@ namespace vm::builtins {
 			// Acquire GIL: exception handlers and destructors need exclusive access to process
 			// state during cleanup and propagation of VM runtime exceptions.
 			thread.acquireGil();
+			if (detector) detector->markThreadAcquiredMutex(thread_id, mutex_id);
 			throw;
 		} catch (const vm::KillProcessException&) {
 			// Acquire GIL: exception handlers and destructors need exclusive access to process
 			// state.
 			thread.acquireGil();
+			if (detector) detector->markThreadAcquiredMutex(thread_id, mutex_id);
 			throw;
 		} catch (const std::exception& e) {
 			// Acquire GIL: exception handlers and destructors need exclusive access to process
 			// state. Then wrap the exception so the VM can report ExecutionPanicked.
 			thread.acquireGil();
+			if (detector) detector->markThreadAcquiredMutex(thread_id, mutex_id);
 			std::string msg = "builtinWaitCV failed during condition variable wait: ";
 			msg += e.what();
 			throw vm::exceptions::VMRuntimeException(std::move(msg));
@@ -221,12 +229,14 @@ namespace vm::builtins {
 			// Acquire GIL: exception handlers and destructors need exclusive access to process
 			// state. Then convert unknown exceptions into a VMRuntimeException.
 			thread.acquireGil();
+			if (detector) detector->markThreadAcquiredMutex(thread_id, mutex_id);
 			throw vm::exceptions::VMRuntimeException(
 				"builtinWaitCV failed during condition variable wait with an unknown exception"
 			);
 		}
 		// Acquire GIL after blocking: bytecode execution requires holding the GIL.
 		thread.acquireGil();
+		if (detector) detector->markThreadAcquiredMutex(thread_id, mutex_id);
 	}
 
 	void FunctionHandlers::builtinNotifyCV(SafeVMThread& thread, u64 cv_id) {
