@@ -3,13 +3,13 @@
 use std::convert::Infallible;
 use std::fmt;
 use std::path::Path;
-use std::process::Command;
+use std::process::{Command, ExitStatus};
 
 use super::Duckc;
 use crate::quackpack::core::Package;
 use crate::quackpack::core::compile::profiles::{OptLevel, Profile};
 use crate::util::command_ext::CommandExt;
-use crate::{QuackResult, QuackResultContext, qp_bail};
+use crate::{QuackResult, QuackResultContext};
 
 #[non_exhaustive]
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
@@ -17,6 +17,7 @@ use crate::{QuackResult, QuackResultContext, qp_bail};
 pub enum DuckcSubcommand {
     CompilePackage,
     CompileScript,
+    CompilePackages,
     Repl,
 }
 
@@ -26,6 +27,7 @@ impl DuckcSubcommand {
             Self::CompilePackage => "compile_package",
             Self::CompileScript => "compile_script",
             Self::Repl => "repl",
+            Self::CompilePackages => "compile_packages",
         }
     }
 }
@@ -47,6 +49,12 @@ impl DuckcProcessBuilder {
     /// Set [`DuckcSubcommand`] as a main subcommand.
     pub fn set_subcommand(&mut self, subcmd: DuckcSubcommand) -> &mut Self {
         self.inner.arg(subcmd.as_argument());
+        self
+    }
+
+    /// Set path to the manifest.
+    pub fn set_manifest_path(&mut self, path: &Path) -> &mut Self {
+        self.inner.arg(path);
         self
     }
 
@@ -137,16 +145,8 @@ impl DuckcProcessBuilder {
     }
 
     /// Execute the built command.
-    pub fn execute<F, T>(&mut self, on_error_message: F) -> QuackResult<()>
-    where
-        T: fmt::Display,
-        F: FnOnce() -> T,
-    {
-        let code = self.inner.status().context("failed to spawn duckc")?;
-        if !code.success() {
-            qp_bail!("{}", on_error_message())
-        }
-        Ok(())
+    pub fn execute(&mut self) -> QuackResult<ExitStatus> {
+        self.inner.status().context("failed to spawn duckc")
     }
 
     /// Execute the built command by replacing current process.

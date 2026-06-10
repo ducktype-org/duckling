@@ -34,6 +34,16 @@ impl UnitGraph {
     pub fn root_unit(&self) -> &Unit {
         self.unit_for(self.root_id)
     }
+
+    /// Get an iterator over [`Unit`]s, in any order.
+    pub fn any_units_order(&self) -> impl Iterator<Item = &Unit> {
+        self.units.values()
+    }
+
+    /// Check if the given [`Unit`] is the root [`Unit`].
+    pub fn is_root(&self, unit: &Unit) -> bool {
+        unit == self.root_unit()
+    }
 }
 
 /// Lower an [`EarlyGraph`] to the [`UnitGraph`].

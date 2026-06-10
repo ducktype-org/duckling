@@ -6,6 +6,7 @@ use setup::*;
 use crate::quackpack::core::PackageLoader;
 use crate::quackpack::core::compile::BuildContext;
 use crate::quackpack::core::compile::early_graph::{DependencyNode, EarlyGraph};
+use crate::quackpack::core::compile::executor::debug_executor::DebugExecutor;
 use crate::quackpack::core::compile::profiles::Profile;
 use crate::quackpack::core::fetcher::Fetcher;
 use crate::quackpack::core::identity::{Identity, Origin};
@@ -38,6 +39,7 @@ fn creates_valid_initial_graph() {
         used_features: vec![],
         profile,
         script_path: None,
+        executor: Box::new(DebugExecutor),
     };
     let graph = EarlyGraph::new_early(&bcx).unwrap();
     assert_eq!(graph.graph.root, identity_for("root"));
@@ -94,6 +96,7 @@ fn expands_valid_features1() {
         used_features: vec!["use_foo_with_baz".into()],
         profile,
         script_path: None,
+        executor: Box::new(DebugExecutor),
     };
     let mut graph = EarlyGraph::new_early(&bcx).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
@@ -147,6 +150,7 @@ fn expands_valid_features2() {
         used_features: vec!["use_bar_with_baz".into()],
         profile,
         script_path: None,
+        executor: Box::new(DebugExecutor),
     };
     let mut graph = EarlyGraph::new_early(&bcx).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
@@ -200,6 +204,7 @@ fn expands_valid_features3() {
         used_features: vec!["full".into()],
         profile,
         script_path: None,
+        executor: Box::new(DebugExecutor),
     };
     let mut graph = EarlyGraph::new_early(&bcx).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
@@ -251,6 +256,7 @@ fn errors_with_nonexistent_features() {
         used_features: vec!["nonexistent".into()],
         profile,
         script_path: None,
+        executor: Box::new(DebugExecutor),
     };
     let mut graph = EarlyGraph::new_early(&bcx).unwrap();
     let err = graph.populate_features(&bcx.used_features).unwrap_err();
@@ -286,6 +292,7 @@ fn removes_inactive_deps1() {
         used_features: vec![],
         profile,
         script_path: None,
+        executor: Box::new(DebugExecutor),
     };
     let mut graph = EarlyGraph::new_early(&bcx).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
@@ -348,6 +355,7 @@ fn removes_inactive_deps2() {
         used_features: vec!["use_foo_with_baz".into()],
         profile,
         script_path: None,
+        executor: Box::new(DebugExecutor),
     };
     let mut graph = EarlyGraph::new_early(&bcx).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
@@ -420,6 +428,7 @@ fn removes_inactive_deps3() {
         used_features: vec!["use_bar_with_baz".into()],
         profile,
         script_path: None,
+        executor: Box::new(DebugExecutor),
     };
     let mut graph = EarlyGraph::new_early(&bcx).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
@@ -485,6 +494,7 @@ fn removes_inactive_deps4() {
     let root_origin = Origin::for_local(&root.path().join("root")).unwrap();
     let root_identity = Identity::new("root".into(), root_origin);
     let bcx = BuildContext {
+        executor: Box::new(DebugExecutor),
         pcx: &package,
         root_identity,
         freeze: freeze(root.path()),
@@ -560,6 +570,7 @@ fn cycle() {
     let root_origin = Origin::for_local(&root.path().join("root")).unwrap();
     let root_identity = Identity::new("root".into(), root_origin);
     let bcx = BuildContext {
+        executor: Box::new(DebugExecutor),
         pcx: &package,
         root_identity,
         freeze: freeze(root.path()),
@@ -623,6 +634,7 @@ fn missing_direct_dep_in_freeze() {
     let root_origin = Origin::for_local(&root.path().join("root")).unwrap();
     let root_identity = Identity::new("root".into(), root_origin);
     let bcx = BuildContext {
+        executor: Box::new(DebugExecutor),
         pcx: &package,
         root_identity,
         freeze: freeze_without_direct_dep(),
@@ -654,6 +666,7 @@ fn missing_transitive_dep_in_freeze() {
     let root_origin = Origin::for_local(&root.path().join("root")).unwrap();
     let root_identity = Identity::new("root".into(), root_origin);
     let bcx = BuildContext {
+        executor: Box::new(DebugExecutor),
         pcx: &package,
         root_identity,
         freeze: freeze_without_transitive_dep(),
