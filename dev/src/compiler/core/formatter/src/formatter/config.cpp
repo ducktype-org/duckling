@@ -26,6 +26,7 @@ namespace formatter {
 		config.indent_style    = json.value("indentStyle", config.indent_style);
 		config.indent_width    = json.value("indentWidth", config.indent_width);
 		config.max_line_length = json.value("maxLineLength", config.max_line_length);
+		config.max_empty_lines = json.value("maxEmptyLines", config.max_empty_lines);
 		config.space_around_operators
 			= json.value("spaceAroundOperators", config.space_around_operators);
 	}

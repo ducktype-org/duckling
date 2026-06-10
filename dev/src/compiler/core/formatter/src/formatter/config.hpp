@@ -39,6 +39,12 @@ namespace formatter {
 		 */
 		u32 max_line_length = 100;
 
+		/**
+		 * Maximum number of consecutive empty lines kept between statements. Empty lines in the
+		 * source are preserved up to this limit; any beyond it are removed. 0 removes them all.
+		 */
+		u32 max_empty_lines = 2;
+
 		/** Whether binary operators are surrounded by spaces (e.g. `a + b` vs `a+b`). */
 		bool space_around_operators = true;
 
@@ -58,6 +64,7 @@ namespace formatter {
 		 *   - "indentStyle": "tab" | "space"
 		 *   - "indentWidth": u32
 		 *   - "maxLineLength": u32
+		 *   - "maxEmptyLines": u32
 		 *   - "spaceAroundOperators": bool
 		 *
 		 * @throws nlohmann::json::exception if a present key has the wrong type.

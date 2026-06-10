@@ -4,6 +4,7 @@
 
 #include <lexer/token.hpp>
 
+#include <algorithm>
 #include <span>
 #include <string>
 #include <string_view>
@@ -218,6 +219,18 @@ namespace formatter {
 				if (source.empty() || start <= end || start > source.size()) return false;
 				const auto newline = source.find('\n', end);
 				return newline == std::string_view::npos || newline >= start;
+			}
+
+			/** Number of empty source lines separating @p a from @p b. */
+			[[nodiscard]]
+			usize emptyLinesBetween(const Token& a, const Token& b) const {
+				const auto end   = a.getPosition().getEnd();
+				const auto start = b.getPosition().getStart();
+				if (source.empty() || start <= end || start > source.size()) return 0;
+				usize newlines = 0;
+				for (usize i = end + 1; i < start; i++)
+					if (source[i] == '\n') newlines++;
+				return newlines == 0 ? 0 : newlines - 1;
 			}
 
 			/** Current column: characters emitted since the last newline. */
@@ -614,17 +627,32 @@ namespace formatter {
 				out += '}';
 			}
 
-			/** Renders a token sequence as a list of statements, one per line. */
+			/**
+			 * Renders a token sequence as a list of statements, one per line. Empty source lines
+			 * between statements are preserved up to config.max_empty_lines; leading and trailing
+			 * ones are always dropped.
+			 */
 			void emitBlockBody(const Tokens& tokens) {
-				usize      i = 0;
-				const auto n = tokens.size();
+				usize        i         = 0;
+				const auto   n         = tokens.size();
+				const Token* prev_last = nullptr;
 				while (i < n) {
 					if (isSkippable(tokens[i])) {
 						i++;
 						continue;
 					}
+					if (prev_last != nullptr) {
+						const usize empty = emptyLinesBetween(*prev_last, tokens[i]);
+						out.append(std::min<usize>(empty, config.max_empty_lines), '\n');
+					}
 					writeIndent();
-					i = emitStatement(tokens, i);
+					const usize next = emitStatement(tokens, i);
+					for (usize j = next; j > i; j--)
+						if (!isSkippable(tokens[j - 1])) {
+							prev_last = &tokens[j - 1];
+							break;
+						}
+					i = next;
 					out += '\n';
 				}
 			}

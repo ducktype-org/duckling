@@ -127,6 +127,12 @@ public:
 		TESTER_ADD_TEST(testTrailingComment);
 		TESTER_ADD_TEST(testBlockCommentInline);
 		TESTER_ADD_TEST(testCommentWrapIdempotent);
+
+		// Empty line tests.
+		TESTER_ADD_TEST(testEmptyLinesPreserved);
+		TESTER_ADD_TEST(testEmptyLinesCapped);
+		TESTER_ADD_TEST(testEmptyLinesConfigured);
+		TESTER_ADD_TEST(testEmptyLinesIdempotent);
 	}
 
 private:
@@ -292,18 +298,21 @@ fun f() = {
 			"indentStyle": "space",
 			"indentWidth": 2,
 			"maxLineLength": 80,
+			"maxEmptyLines": 1,
 			"spaceAroundOperators": false
 		})");
 		const auto config = FormatConfig::fromJson(json);
 		ASSERT_EQUAL(IndentStyle::Space == config.indent_style, true);
 		ASSERT_EQUAL(2u, config.indent_width);
 		ASSERT_EQUAL(80u, config.max_line_length);
+		ASSERT_EQUAL(1u, config.max_empty_lines);
 		ASSERT_EQUAL(false, config.space_around_operators);
 	}
 
 	void testConfigDefaults() {
 		const auto config = FormatConfig::defaults();
 		ASSERT_EQUAL(IndentStyle::Tab == config.indent_style, true);
+		ASSERT_EQUAL(2u, config.max_empty_lines);
 		ASSERT_EQUAL(true, config.space_around_operators);
 	}
 
@@ -676,6 +685,56 @@ b = 2;
 	void testBlockCommentInline() {
 		// A `#{ ... #}` comment is reproduced verbatim and does not end the statement.
 		check("x =   #{ inline note #}   1;", "x = #{ inline note #} 1;\n");
+	}
+
+	void testEmptyLinesPreserved() {
+		// Empty lines between statements survive formatting, inside blocks too.
+		check("a=1;\n\nb=2;", golden(R"(
+a = 1;
+
+b = 2;
+)"));
+		check("fun f()={x=1;\n\ny=2;}", golden(R"(
+fun f() = {
+	x = 1;
+
+	y = 2;
+}
+)"));
+	}
+
+	void testEmptyLinesCapped() {
+		// More than max_empty_lines (default 2) consecutive empty lines collapse to the limit.
+		check("a=1;\n\n\n\n\n\nb=2;", golden(R"(
+a = 1;
+
+
+b = 2;
+)"));
+		// Leading and trailing empty lines are always dropped.
+		check("\n\n\na=1;\n\n\n", "a = 1;\n");
+	}
+
+	void testEmptyLinesConfigured() {
+		FormatConfig config;
+		config.max_empty_lines = 0;
+		check("a=1;\n\n\nb=2;", "a = 1;\nb = 2;\n", config);
+
+		config.max_empty_lines = 1;
+		check("a=1;\n\n\nb=2;", "a = 1;\n\nb = 2;\n", config);
+	}
+
+	void testEmptyLinesIdempotent() {
+		const std::vector<std::string_view> samples = {
+			"a=1;\n\nb=2;",
+			"a=1;\n\n\n\n\nb=2;\n\nc=3;",
+			"fun f()={x=1;\n\n\n\ny=2;}",
+			"a=1; # note\n\nb=2;",
+		};
+		for (const auto& sample: samples) {
+			const auto once = fmt(sample);
+			ASSERT_EQUAL_PRINT(once, fmt(once));
+		}
 	}
 
 	void testCommentWrapIdempotent() {
