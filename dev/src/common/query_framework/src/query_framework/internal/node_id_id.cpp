@@ -1,6 +1,7 @@
 
 
 #include "node_id_id.hpp"
+#include <query_framework/internal/query_graph/node_id.hpp>
 #include <concurrent/base/collections/hash_map.hpp>
 
 namespace query::internal {

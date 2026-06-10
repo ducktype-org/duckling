@@ -320,7 +320,7 @@ namespace query::internal {
 		return *node_colors->atMaybe(start_node).value();
 	}
 
-	bool dummyEraseFunction(QueryStableHash) { return false; }
+	bool dummyEraseFunction(NodeIDID) { return false; }
 
 	NodeIDID QueryState::remapUnstableOrUnregisteredNodes(NodeIDID node) {
 		static base::VectorMap<QueryID, QueryID> old_to_new;

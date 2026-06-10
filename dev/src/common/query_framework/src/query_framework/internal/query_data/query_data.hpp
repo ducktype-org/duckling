@@ -3,6 +3,7 @@
 #include <base/types/ok_bad.hpp>
 
 #include <query_framework/utils/query_hash.hpp>
+#include <query_framework/internal/node_id_id.hpp>
 
 #include <string_view>
 
@@ -84,7 +85,7 @@ namespace query {
 		 * @brief Struct holding all the data related to query caching, like erase function pointer.
 		 */
 		struct QueryCacheData final {
-			using InternalEraseFunctionType = bool (*)(QueryStableHash);
+			using InternalEraseFunctionType = bool (*)(::query::internal::NodeIDID);
 
 			/**
 			 * Pointer to the function that can erase the query result from its cache based on the

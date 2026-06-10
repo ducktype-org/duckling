@@ -19,10 +19,10 @@
 		::query::internal::ContextAccess::getState()->addSideInputNode(node_id);              \
 		return ::query::internal::SideInputMockValue{};                                       \
 	}                                                                                         \
-	auto query_type::internal_load(::query::QueryStableHash) -> query_type::QResult {         \
+	auto query_type::internal_load(::query::internal::NodeIDID) -> query_type::QResult {         \
 		CORE_UNREACHABLE();                                                                   \
 	}                                                                                         \
-	auto query_type::internal_erase(::query::QueryStableHash) -> bool { CORE_UNREACHABLE(); } \
+	auto query_type::internal_erase(::query::internal::NodeIDID) -> bool { CORE_UNREACHABLE(); } \
 	static_assert(                                                                            \
 		not std::is_reference_v<query_type::QKey>,                                            \
 		"Query key type should not be a reference (use custom struct instead)"                \
@@ -65,7 +65,7 @@
 		::query::internal::ContextAccess::getState()->addSideInputNode(node_id);               \
 		evaluate_body return ::query::internal::SideInputMockValue{};                          \
 	}                                                                                          \
-	auto query_type::internal_erase(::query::QueryStableHash) -> bool { return false; }        \
+	auto query_type::internal_erase(::query::internal::NodeIDID) -> bool { return false; }        \
 	static_assert(                                                                             \
 		not std::is_reference_v<query_type::QKey>,                                             \
 		"Query key type should not be a reference (use custom struct instead)"                 \

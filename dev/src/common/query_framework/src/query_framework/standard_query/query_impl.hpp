@@ -46,20 +46,23 @@ namespace query::internal {
 		using QueryIntType = QueryImplType::QueryType;
 
 		CORE_DEV_LOG(Query, "[QUERY \"", QueryIntType::QUERY_DATA.name, "\"]: Enter.\n");
-
-		const auto perfect_hash = perfectHashKey<QueryImplType::IS_HASH_STABLE>(key);
+		
 
 		[[maybe_unused]]
 		std::conditional_t<USE_STATS, CallStatsObject, NoStats> stat_object{ QueryIntType::getID() };
 
+
+		// const auto perfect_hash = perfectHashKey<QueryImplType::IS_HASH_STABLE>(key);
+		auto node_id = makeNodeID<QueryIntType>(key);
+		auto context = ContextAccess::makeShared(node_id);
+
 		// @TODO: #2026 add note status static assertion if possible.
 
 		CORE_ASSERT(
-			QueryImplType::load(perfect_hash).empty(), "Cache should be empty in standardQueryEntry"
+			QueryImplType::load(node_id).empty(), "Cache should be empty in standardQueryEntry"
 		);
 
-		auto node_id = makeNodeID<QueryIntType>(key);
-		auto context = ContextAccess::makeShared(node_id);
+		
 
 		// @FUTURE: provide legit acd here
 		ACD acd;
@@ -84,7 +87,7 @@ namespace query::internal {
 					// Merge previous graph nodes into current graph
 					// We merge only node_id and its dependencies
 					ContextAccess::getState()->mergePreviousGraphIntoCurrentGraph(node_id);
-					return QueryImplType::store(perfect_hash, loaded.value(), acd);
+					return QueryImplType::store(node_id, loaded.value(), acd);
 				}  // fall through to provide() if loading from disk failure
 
 				CORE_DEV_LOG(
@@ -135,10 +138,10 @@ namespace query::internal {
 					// Here we need to delete artifact from disk
 					QueryImplType::deleteFromDisc(key);
 				}
-				return QueryImplType::store(perfect_hash, provide_result, acd);
+				return QueryImplType::store(node_id, provide_result, acd);
 			} else {
 				return QueryImplType::store(
-					perfect_hash, QueryImplType::provide(*context, key), acd
+					node_id, QueryImplType::provide(*context, key), acd
 				);
 			}
 		} catch (const QueryCycleException& qce) {
@@ -150,7 +153,7 @@ namespace query::internal {
 			);
 
 			if constexpr (QueryImplType::USES_QRESULT and QueryImplType::ALLOW_CYCLES) {
-				return QueryImplType::store(perfect_hash, query::Failed(), acd);
+				return QueryImplType::store(node_id, query::Failed(), acd);
 
 			} else {
 				CORE_PANIC(
@@ -175,7 +178,7 @@ namespace query::internal {
 
 			if constexpr (QueryImplType::USES_QRESULT
 			              && QueryImplType::CATCH_EXCEPTIONS_IF_USING_QRESULT) {
-				return QueryImplType::store(perfect_hash, query::Failed(), acd);
+				return QueryImplType::store(node_id, query::Failed(), acd);
 			} else {
 				CORE_PANIC(qfe.what());
 			}
@@ -272,11 +275,11 @@ namespace query::internal {
 	auto type::QueryType::internal_query(const type::QKey& key) -> type::QResult {                                                       \
 		return ::query::internal::standardQueryEntry<type>(key);                                                                         \
 	}                                                                                                                                    \
-	auto type::QueryType::internal_load(::query::QueryStableHash hash) -> type::QResult {                                                \
-		return type::load(type::KHash(hash)).value().data;                                                                               \
+	auto type::QueryType::internal_load(::query::internal::NodeIDID node_id) -> type::QResult {                                                \
+		return type::load(node_id).value().data;                                                                               \
 	}                                                                                                                                    \
-	auto type::QueryType::internal_erase(::query::QueryStableHash hash) -> bool {                                                        \
-		return type::erase(type::KHash(hash));                                                                                           \
+	auto type::QueryType::internal_erase(::query::internal::NodeIDID node_id) -> bool {                                                        \
+		return type::erase(node_id);                                                                                           \
 	}                                                                                                                                    \
 	static_assert(                                                                                                                       \
 		not std::is_reference_v<type::QResult>,                                                                                          \
@@ -292,7 +295,7 @@ namespace query::internal {
 	);                                                                                                                                   \
 	static_assert(                                                                                                                       \
 		std::is_same_v<                                                                                                                  \
-			std::invoke_result_t<decltype(type::store), type::KHash, type::PResult, ::query::ACD>,                                       \
+			std::invoke_result_t<decltype(type::store), ::query::internal::NodeIDID, type::PResult, ::query::ACD>,                                       \
 			type::QResult>,                                                                                                              \
 		"Bad store result."                                                                                                              \
 	);                                                                                                                                   \
@@ -308,7 +311,7 @@ namespace query::internal {
 	);                                                                                                                                   \
                                                                                                                                          \
 	static_assert(                                                                                                                       \
-		std::is_same_v<std::invoke_result_t<decltype(type::load), type::KHash>, type::LoadResult>,                                       \
+		std::is_same_v<std::invoke_result_t<decltype(type::load), ::query::internal::NodeIDID>, type::LoadResult>,                                       \
 		"Bad load result."                                                                                                               \
 	);                                                                                                                                   \
 	static_assert(type::QueryType::QUERY_DATA.verify().isOk(), "Query data is inconsistent.");                                           \

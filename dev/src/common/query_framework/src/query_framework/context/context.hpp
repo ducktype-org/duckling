@@ -242,23 +242,22 @@ namespace query {
 		auto query(const typename OthQuery::QKey& key) -> decltype(auto) {
 			assertActive();
 
-			internal::NodeID dep_id = internal::makeFullNodeID<OthQuery>(key);
-			internal::NodeIDID dep_id_id{ dep_id };
+			internal::NodeIDID dep_id = internal::makeNodeID<OthQuery>(key);
 
 			if constexpr (OthQuery::QUERY_DATA.isInputQuery()) {
-				QueryGraphHandler graph_handler(*this, my_node, dep_id_id, false);
+				QueryGraphHandler graph_handler(*this, my_node, dep_id, false);
 				this->active = false;
 				defer({ this->active = true; });
 
 				return OthQuery::internal_query(key);
 			} else {
-				QueryGraphHandler graph_handler(*this, my_node, dep_id_id, true);
+				QueryGraphHandler graph_handler(*this, my_node, dep_id, true);
 				this->active = false;
 				defer({ this->active = true; });
 
 				// note that this will block, until the task is completed
 				main_query_state.getTaskPool()->query(internal::Task{
-					dep_id_id, [key](concurrent::worker::WRef) { OthQuery::internal_query(key); } });
+					dep_id, [key](concurrent::worker::WRef) { OthQuery::internal_query(key); } });
 
 
 				// We would like to throw here, "after the return",
@@ -266,7 +265,7 @@ namespace query {
 				// For now we just do this. It should not be a problem since in practice most query
 				// results are trivially copyable anyway, and the compiler should generally use here
 				// copy-elision in non-trivial cases, so it should not be a problem.
-				auto result = OthQuery::internal_load(dep_id.hash.val);
+				auto result = OthQuery::internal_load(dep_id);
 				if (is_cyclic_node) throw internal::QueryCycleException();
 				return result;
 			}
@@ -305,10 +304,9 @@ namespace query {
 		 */
 		template<typename OthQuery>
 		auto await(internal::TaskHandle& handle) {
-			auto handle_node_full_id = handle.getID().getID();
 
 			CORE_ASSERT(
-				OthQuery::getID() == handle_node_full_id.q_id,
+				OthQuery::getID() == handle.getID().getID().q_id,
 				"Task handle query ID does not match the awaited query type."
 			);
 
@@ -321,7 +319,7 @@ namespace query {
 			handle.await();
 
 			// WE CAN MADE CACHE BASED ON IDID as well:
-			auto result = OthQuery::internal_load(handle_node_full_id.hash.val);
+			auto result = OthQuery::internal_load(handle.getID());
 			if (is_cyclic_node) throw internal::QueryCycleException();
 			return result;
 		}

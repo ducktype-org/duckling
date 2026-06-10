@@ -11,6 +11,7 @@
 
 #include <query_framework/context/context_fd.hpp>            // IWYU pragma: export
 #include <query_framework/internal/query_graph/node_id.hpp>  // IWYU pragma: export
+#include <query_framework/internal/node_id_id.hpp>  // IWYU pragma: export
 #include <query_framework/internal/query_data/query_id.hpp>  // IWYU pragma: export
 #include <query_framework/utils/simple_keys.hpp>             // IWYU pragma: export
 #include <query_framework/utils/query_hash.hpp>              // IWYU pragma: export
@@ -45,8 +46,8 @@ namespace query::internal {
                                                                                                    \
 	private:                                                                                       \
 		static auto                       internal_query(const QKey&) -> QResult;                  \
-		static auto                       internal_load(::query::QueryStableHash hash) -> QResult; \
-		static auto                       internal_erase(::query::QueryStableHash) -> bool;        \
+		static auto                       internal_load(::query::internal::NodeIDID node) -> QResult; \
+		static auto                       internal_erase(::query::internal::NodeIDID node) -> bool;        \
 		static ::query::internal::QueryID id;                                                      \
 		friend struct ::query::Context;                                                            \
 		friend struct ::query::internal::EntryPointHelper;                                         \

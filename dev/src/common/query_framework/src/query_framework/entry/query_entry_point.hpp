@@ -88,7 +88,7 @@ namespace query {
 				handle.pool->waitForTask(handle.task_id);
 
 				// MAKE LOAD IDID BASED:
-				return QueryType::internal_load(handle.task_id.getID().hash.val);
+				return QueryType::internal_load(handle.task_id);
 			}
 		};
 	}

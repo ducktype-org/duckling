@@ -1,8 +1,11 @@
 #pragma once
 
-#include "query_graph/node_id.hpp"
+#include <base/types/ints.hpp>
+#include <vector> // for hash...
 
 namespace query::internal {
+
+    struct NodeID;
 
     class NodeIDID final {
         u64 id;
