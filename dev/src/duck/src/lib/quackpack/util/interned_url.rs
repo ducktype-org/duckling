@@ -147,7 +147,7 @@ impl Display for InternedUrl {
 
 impl Debug for InternedUrl {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        // We intenionally use Display for str here: Url's Debug gives internal data, whereas mostly
+        // We intentionally use Display for str here: Url's Debug gives internal data, whereas mostly
         // we want to see the human-friendly Url.
         Display::fmt(self.inner.as_str(), f)
     }

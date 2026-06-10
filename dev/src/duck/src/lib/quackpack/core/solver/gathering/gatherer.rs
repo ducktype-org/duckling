@@ -8,7 +8,7 @@ use crate::quackpack::core::fetcher::Fetcher;
 use crate::quackpack::core::fetcher::types::{
     FetcherResponse, GitCloneResponse, MultiMetadata, PackageWithUrl,
 };
-use crate::quackpack::core::solver::gathering::error_surpression::{
+use crate::quackpack::core::solver::gathering::error_suppression::{
     GathererComputation, GathererResult,
 };
 use crate::quackpack::core::solver::gathering::fetch_types::{
@@ -89,7 +89,7 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
             }
         }
         if !errors.is_empty() {
-            if mode.supress_foreign_manifests_errors {
+            if mode.suppress_foreign_manifests_errors {
                 for e in errors {
                     self.fetcher.ctx().error_console().info_verbose(format!(
                         "Error\n{e}\nsuppressed due to the Merciful mode of the solver",
@@ -124,7 +124,7 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
             versions: None,
             features: root_features,
         };
-        // The action is always RequestActionFetch, so ignore retured value.
+        // The action is always RequestActionFetch, so ignore returned value.
         let action = state.get_request_action(ManifestsRequest::NotPinned(root_request))?;
         if let Some(e) = action.1.into_iter().next() {
             return Err(e)

@@ -216,6 +216,14 @@ namespace vm::api {
 	);
 
 	/**
+	 * @brief Attaches Listener to the output emitter
+	 * @return Nothing if attached succesfully
+	 */
+	std::expected<void, ApiError> attachOutputListener(
+		PID pid, Ref<events::Listener<std::string>> listener
+	);
+
+	/**
 	 * @brief Enables or disables breakpoint on a given instruction in a given function.
 	 * @return Nothing if the breakpoint was set successfully or an API error otherwise.
 	 * @note Enabling a breakpoint on an instruction that already has a breakpoint or disabling a

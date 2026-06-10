@@ -63,7 +63,7 @@ pub type Task = PackageCompilationTask;
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub struct PackageCompilationTask {
     #[serde(rename = "package")]
-    /// ID of a package refered by this task.
+    /// ID of a package referred by this task.
     pub package_id: StrId,
     #[serde(flatten)]
     /// Compilation strategy of this task.
@@ -200,13 +200,14 @@ mod tests {
     use super::*;
 
     #[test]
-    fn basic_json_convertion() {
+    fn basic_json_conversion() {
         let packages = create_mock_packages();
         let tasks = create_mock_tasks();
         let multi_package = MultiPackage { packages, tasks };
         let serialized = serde_json::to_string_pretty(&multi_package).unwrap();
         assert_eq!(
             serialized,
+            // cSpell:disable
             r#"{
   "packages": [
     {
@@ -305,7 +306,7 @@ mod tests {
       "output_file": "out.so"
     }
   ]
-}"#
+}"# // cSpell:enable
         );
 
         let deserialized = serde_json::from_str::<MultiPackage>(&serialized).unwrap();
@@ -361,6 +362,7 @@ mod tests {
                     output_file: PathBuf::from("out.exe"),
                     linking_options: Some(LinkerOptions::Complex(ComplexLinkerOptions {
                         linker: None,
+                        // cSpell:disable-next-line
                         additional_linking_options: Some("-lfoo".into()),
                         link_cstd: Some(true),
                     })),
@@ -370,6 +372,7 @@ mod tests {
                 package_id: "a".into(),
                 strategy: PackageCompilationStrategy::Binary {
                     output_file: PathBuf::from("out.exe"),
+                    // cSpell:disable-next-line
                     linking_options: Some(LinkerOptions::RawLinkerArgs("-lfoo".into())),
                 },
             },
@@ -429,6 +432,7 @@ mod tests {
         let serialized = serde_json::to_string_pretty(&multi_package).unwrap();
         assert_eq!(
             serialized,
+            // cSpell:disable
             r#"{
   "packages": [
     {
@@ -622,7 +626,7 @@ mod tests {
       }
     }
   ]
-}"#
+}"# // cSpell:enable
         );
     }
 
@@ -632,6 +636,7 @@ mod tests {
                 id: "lib_a".into(),
                 import_name: "lib_a".into(),
                 version: Version::new(0, 1, 0),
+                // cSpell:disable-next-line
                 features: vec!["use_mathlib".into()],
                 path_to_the_src_directory: PathBuf::from("duck_modules/multi_package/lib_a"),
                 dependencies: vec![],
@@ -640,6 +645,7 @@ mod tests {
                 id: "lib_b".into(),
                 import_name: "lib_b".into(),
                 version: Version::new(0, 1, 0),
+                // cSpell:disable-next-line
                 features: vec!["use_mathlib".into(), "use_lib_a".into()],
                 path_to_the_src_directory: PathBuf::from("duck_modules/multi_package/lib_b"),
                 dependencies: vec![
