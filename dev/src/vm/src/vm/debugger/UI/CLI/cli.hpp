@@ -46,7 +46,7 @@ namespace vm::debugger::cli {
 			std::cout << "\n";
 		}
 
-		void print(const printer::PrinterOStream& content);
-		void printNL(const printer::PrinterOStream& content);
+		void print(const printer::PrinterContentsSeq& content);
+		void printNL(const printer::PrinterContentsSeq& content);
 	};
 }

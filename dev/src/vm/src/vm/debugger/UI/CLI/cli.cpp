@@ -46,7 +46,7 @@ namespace vm::debugger::cli {
 			  printer::PrinterOStream out;
 			  out << "New status: ";
 			  printProcStatus(out, status);
-			  printNL(out);
+			  printNL(out.getContents());
 		  }),
 		  error_listener([&](const std::string& err) { printNL("Error: ", err); }),
 		  debugger(main_args) {
@@ -129,7 +129,7 @@ namespace vm::debugger::cli {
 											 if_opt_some(pos.source_position, sp) {
 												 printer::PrinterOStream out;
 												 dia::printHighlightedPositions(out, { sp }, 1);
-												 print(out);
+												 print(out.getContents());
 											 }
 										 } else {
 											 printNL("Faild to obtain position!");
@@ -188,14 +188,14 @@ namespace vm::debugger::cli {
 		return 0;
 	}
 
-	void CLIDebugger::print(const printer::PrinterOStream& content) {
+	void CLIDebugger::print(const printer::PrinterContentsSeq& content) {
 		std::lock_guard lk(output_mutex);
-		printer::StreamPrinter::print(content.getContents(), std::cout);
+		printer::StreamPrinter::print(content, std::cout);
 	}
 
-	void CLIDebugger::printNL(const printer::PrinterOStream& content) {
+	void CLIDebugger::printNL(const printer::PrinterContentsSeq& content) {
 		std::lock_guard lk(output_mutex);
-		printer::StreamPrinter::print(content.getContents(), std::cout);
+		printer::StreamPrinter::print(content, std::cout);
 		printer::StreamPrinter::newline(1, std::cout);
 	}
 }
