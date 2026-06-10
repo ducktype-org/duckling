@@ -132,7 +132,8 @@ namespace base {
 		SharedBox(SharedBox&& other) noexcept:
 			  data_ptr{ std::move(other).data_ptr },
 			  ctrl_ptr{ std::move(other).ctrl_ptr } {
-			if (!isFullyNull()) assertNotNull();
+			if (!isFullyNull()) return;
+			assertNotNull();
 			other.nullify();
 		}
 
@@ -172,10 +173,10 @@ namespace base {
 
 			data_ptr = std::move(other).data_ptr;
 			ctrl_ptr = std::move(other).ctrl_ptr;
-			// if (!isFullyNull()) {
-			// 	assertNotNull();
-			other.nullify();
-			// }
+			if (!isFullyNull()) {
+				assertNotNull();
+				other.nullify();
+			}
 			return *this;
 		}
 
@@ -239,6 +240,10 @@ namespace base {
 		 */
 		void reset() noexcept { renounceOwnership(); }
 
+		/**
+		 * @brief Returns the number of SharedBox instances sharing ownership of the same object.
+		 * If the SharedBox is in null state, returns 0.
+		 */
 		[[nodiscard]]
 		u64 ownersCount() const noexcept {
 			if (isFullyNull()) return 0;
