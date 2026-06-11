@@ -331,7 +331,12 @@ namespace vm {
 
 			auto run_compiled = [&]() {
 				performFunctionCall(instr, local_stack, frame, thread, func_id);
-				(*my_data.func_ptr)(&instr, &local_stack, &frame, &thread);
+				(*my_data.func_ptr)(instr, local_stack, frame, thread);
+
+				// Restore values set by copy&patch
+				frame       = thread.runtime_data.frame_stack_current;
+				instr       = frame->instr;
+				local_stack = frame->local_stack;
 			};
 
 			if (my_data.func_ptr) {
@@ -345,25 +350,16 @@ namespace vm {
 				// should be compiled now
 				// @TODO: #2857 Integrate two compilers
 				if constexpr (COMPILE_WITH_CP) {
-					performFunctionCall(instr, local_stack, frame, thread, func_id);
-
-					auto compiled = jit::compileCP(func_obj.cfg, func_obj.bc);
-					auto ptr      = compiled.intoFunc<jit::CPFunc>();
-					(*ptr)(instr, local_stack, frame, thread);
-
-					// Restore values set by copy&patch
-					frame       = thread.runtime_data.frame_stack_current;
-					instr       = frame->instr;
-					local_stack = frame->local_stack;
+					auto compiled    = jit::compileCP(func_obj.cfg, func_obj.bc);
+					my_data.func_ptr = compiled.intoFunc<jit::CPFunc>();
 				} else {
 					MRef<jit::JitOpFun> compiled
 						= jit::compileLLVM(func_obj.cfg, func_obj.bc, func_obj.name);
 
 					CORE_ASSERT(compiled, "Compiled function pointer shouldn't be nullptr");
 					my_data.func_ptr = compiled;
-
-					run_compiled();
 				}
+				run_compiled();
 			}
 		}
 		FUNCTION_CONT(0);
