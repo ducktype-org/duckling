@@ -24,7 +24,7 @@ protected:
 	};
 
 protected:
-	vm::PID initProcess();
+	vm::PID initProcess(bool enable_deadlock_detection = false);
 
 	void handleTestResult(const TestResult& test_result, i64 exit_code);
 

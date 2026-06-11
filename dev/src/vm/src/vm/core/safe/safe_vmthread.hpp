@@ -11,6 +11,7 @@
 #include <vm/core/safe/memory/memory.hpp>
 #include <vm/core/safe/memory/thread_stack.hpp>
 #include <vm/core/thread/ivmthread.hpp>
+#include <vm/core/thread/kill_process_exception.hpp>
 #include <vm/core/vmvalue/vmvalue.hpp>
 
 #include <limits>
@@ -171,6 +172,8 @@ namespace vm {
 		);
 
 		void execGlobalDestructors() override;
+
+		void handleKillProcessException(const KillProcessException& e);
 
 	protected:
 		void executeOneStep() override;

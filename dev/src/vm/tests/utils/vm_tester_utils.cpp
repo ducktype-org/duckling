@@ -9,8 +9,8 @@
 
 #include <variant>
 
-vm::PID VmTestSuite::initProcess() {
-	auto process_pid_response = vm::api::spawn();
+vm::PID VmTestSuite::initProcess(bool enable_deadlock_detection) {
+	auto process_pid_response = vm::api::spawn(enable_deadlock_detection);
 	ASSERT_TRUE(process_pid_response.has_value());
 	return process_pid_response->pid;
 }
