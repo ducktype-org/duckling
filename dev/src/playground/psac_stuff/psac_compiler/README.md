@@ -8,9 +8,11 @@ pipeline. It compiles each function **in parallel** and, when fed new source,
 recompiles **only the functions that changed**.
 
 Supported language subset: functions (calls, recursion, forward references, void),
-`i64`/`bool`, classes with fields, `if`/`while`, compile-time `const`s, global
-variables, namespaces (accessed with `.`), arithmetic/comparison/logical operators
-and compound assignments.
+`i64`/`bool`, classes with fields and default constructors (`Point()`), `if`/`while`,
+compile-time `const`s, global variables with runtime initializers, namespaces
+(accessed with `.`), arithmetic/comparison/logical operators, compound assignments
+and the `builtin_output_i64` runtime builtin. Enough to compile the ~8000-line
+generated benchmark samples.
 
 ## Pipeline
 
@@ -27,9 +29,12 @@ and compound assignments.
 4. **PSAC computation** (`psackling/compiler.cpp`, `compileFunctionsPsac`) compiles
    every work item as an independent parallel task. Each task emits its own object
    file `<output>.fnN.o`.
-5. A dedicated `<output>.globals.o` defines all global variables (with
-   compile-time-evaluated initializers); function modules only *declare* the
-   globals and functions they reference.
+5. A dedicated `<output>.globals.o` defines all global variables
+   (zero-initialized) plus the runtime builtins; global initializer expressions —
+   which may call functions and read other globals — are lowered in declaration
+   order into a synthetic constructor registered in `llvm.global_ctors`, so libc
+   runs it before `main`. Function modules only *declare* the globals and
+   functions they reference.
 6. **Link**: one `clang` invocation over all object files produces the executable.
 
 ## How PSAC is used
@@ -85,6 +90,14 @@ and runs the other branch immediately; idle workers steal from the top of random
 victims' deques. Nothing is statically partitioned — load balancing is dynamic, so
 one huge function does not stall the others.
 
+**Scheduler parking.** parlay's worker pool is created during *static
+initialization* (a global `block_allocator` calls `parallel_for` before `main`)
+and its idle workers busy-spin. Left alone, 16 spinning threads thrash caches and
+cores through the entire serial front-end, roughly doubling parse time. The driver
+therefore parks the pool at a single worker (`parlay::set_num_workers(1)`) and
+expands it only around `psac_run`/`psac_propagate`. This one fix took full
+compiles of the large samples from ~6 s to ~2.8 s.
+
 **What made per-function compilation safe to run concurrently:**
 
 - `Context` is decoupled from LLVM and cheaply copyable — each task takes a
@@ -128,6 +141,7 @@ psacklinger prog.dmf -o prog.out            # parallel build
 psacklinger prog.dmf -j 4                   # 4 worker threads
 psacklinger prog.dmf --sequential           # no PSAC, baseline for benchmarks
 psacklinger prog.dmf -i                     # interactive incremental mode
+PSACKLINGER_TIMING=1 psacklinger prog.dmf   # phase timings on stderr
 ```
 
 Interactive mode reads source paths from stdin after the initial compile — each
@@ -143,9 +157,38 @@ recompiled 1/2 functions
 recompiled 0/2 functions
 ```
 
+## Benchmarks vs duckc
+
+`./bench_compiler.sh [input.dmf ...]` builds both compilers and runs hyperfine
+over `duckc compile_module` (cold, `--no-incremental`, cache wiped per run) and
+psacklinger in `--sequential` mode and at several thread counts (`THREADS`,
+`RUNS`, `WARMUP` env-tunable). Results land next to the script as
+`results_compiler_<name>.{json,md}`.
+
+On the ~8000-line generated samples (`benchmark/data/input`, 5 runs each):
+
+| sample | psacklinger -j8 | duckc | speedup |
+|:---|---:|---:|---:|
+| duck1 (287 functions) | 2.80 s | 5.54 s | **1.98×** |
+| duck2 (153 functions + classes) | 2.72 s | 7.65 s | **2.81×** |
+
+Phase breakdown (`PSACKLINGER_TIMING=1`, duck1 at `-j8`): parse 2.44 s, GlobalPass
+6 ms, collect+hash 48 ms, globals object 3 ms, function lowering 92 ms, link
+44 ms. Two readings follow from it:
+
+- The parallel lowering scales well (533 ms at `-j1` → 69 ms at `-j16`), but it is
+  a small slice of the wall time, so total speedup from threads is modest.
+- ~90% of a full compile is the shared PST front-end — including its mandatory
+  SHA-256 stable-hash calculation, which psacklinger does not use (it has its own
+  dprint hashes). An opt-out in `pst::PST` is the next optimization frontier.
+
+Where the PSAC design pays off unconditionally is incremental recompiles: a
+one-function edit re-runs one ~ms-scale task plus a relink instead of a multi-second
+full compile.
+
 ## Tests
 
-`psacklinger_test` (target `psacklinger_test`) runs ~80 end-to-end tests: each
+`psacklinger_test` (target `psacklinger_test`) runs 84 end-to-end tests: each
 compiles a program through the full parallel pipeline, executes it and checks the
 exit code. The `Incremental*` tests assert the recompile *counts* — e.g. that a
 one-body edit recompiles exactly one function and an unchanged source recompiles
@@ -153,9 +196,10 @@ zero.
 
 ## Known limitations
 
-- No short-circuit `and`/`or`, named/default arguments, subscripts or methods.
-- Global initializers must be compile-time evaluable scalars; struct globals are
-  zero-initialized.
+- No short-circuit `and`/`or`, named/default arguments, subscripts or methods;
+  constructors take no arguments (zero-initialization only).
 - Globals dependency is coarse (one hash for everything non-body).
+- Integer division is unguarded (`sdiv`), matching the real compiler's LLVM
+  backend: division by zero is a SIGFPE, where the DVM backend panics gracefully.
 - Templates (`template{...}`) are not implemented — the Duckling frontend has no
   `template` keyword yet; only the baking-site expression `name:{args}` parses.
