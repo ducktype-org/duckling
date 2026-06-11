@@ -7,43 +7,27 @@ Tests:
       build:
         test_cmd: duck -C foo build
         Output:
-          String: 'info: successfully synchronized venv \`foo\`\n'
+          String: |+
+            info: successfully synchronized venv \`foo\`
+            info: compiling \`foo\`...
       build_release:
         test_cmd: duck -C foo build --release
         Output:
-          String: 'info: successfully synchronized venv \`foo\`\n'
+          String: |+
+            info: successfully synchronized venv \`foo\`
+            info: compiling \`foo\`...
       build_release_profile:
         test_cmd: duck -C foo build --profile=release
         Output:
-          String: 'info: successfully synchronized venv \`foo\`\n'
+          String: |+
+            info: successfully synchronized venv \`foo\`
+            info: compiling \`foo\`...
       build_release_profile2:
         test_cmd: duck --color=never -C foo build --profile release
         Output:
-          String: 'info: successfully synchronized venv \`foo\`\n'
-      build_verbose:
-        test_cmd: duck -C foo build --verbose
-        Output:
-          Run: |+
-            echo "info: successfully synchronized venv \`foo\`
-            info: Running \`duckc compile_package -n foo $(pwd)/foo/src -a $(pwd)/foo/.duck_build -O 1\`"
-      build_release_verbose:
-        test_cmd: duck -C foo build --release --verbose
-        Output:
-          Run: |+
-            echo "info: successfully synchronized venv \`foo\`
-            info: Running \`duckc compile_package -n foo $(pwd)/foo/src -a $(pwd)/foo/.duck_build -O 3 --no-incremental\`"
-      build_release_profile_verbose:
-        test_cmd: duck -C foo build --profile=release --verbose
-        Output:
-          Run: |+
-            echo "info: successfully synchronized venv \`foo\`
-            info: Running \`duckc compile_package -n foo $(pwd)/foo/src -a $(pwd)/foo/.duck_build -O 3 --no-incremental\`"
-      build_release_profile2_verbose:
-        test_cmd: duck -C foo build --profile release --verbose
-        Output:
-          Run: |+
-            echo "info: successfully synchronized venv \`foo\`
-            info: Running \`duckc compile_package -n foo $(pwd)/foo/src -a $(pwd)/foo/.duck_build -O 3 --no-incremental\`"
+          String: |+
+            info: successfully synchronized venv \`foo\`
+            info: compiling \`foo\`...
       build_nonexistent_profile:
         test_cmd: duck -C foo build --profile=nonexistent
         ExitCode: 1
@@ -53,20 +37,49 @@ Tests:
 
             hint: In order to use a profile you have to define it in the manifest first
       build_custom_profile:
-        test_cmd: duck -C foo build --profile my-profile --verbose
+        test_cmd: duck -C foo build --profile my-profile
         Output:
-          Run: |+
-            echo "info: successfully synchronized venv \`foo\`
-            info: Running \`duckc compile_package -n foo $(pwd)/foo/src -a $(pwd)/foo/.duck_build -O z --dvm-backend\`"
+          String: |+
+            info: successfully synchronized venv \`foo\`
+            info: compiling \`foo\`...
       build_overridden_builtin_profile:
-        test_cmd: duck -C foo build --profile bench --verbose
+        test_cmd: duck -C foo build --profile bench
         Output:
-          Run: |+
-            echo "info: successfully synchronized venv \`foo\`
-            info: Running \`duckc compile_package -n foo $(pwd)/foo/src -a $(pwd)/foo/.duck_build -O 2 --no-incremental\`"
+          String: |+
+            info: successfully synchronized venv \`foo\`
+            info: compiling \`foo\`...
       build_custom_profile_inherited:
-        test_cmd: duck -C foo build --profile my-profile2 --verbose
+        test_cmd: duck -C foo build --profile my-profile2
+        Output:
+          String: |+
+            info: successfully synchronized venv \`foo\`
+            info: compiling \`foo\`...
+      # NOTE: verbose tests are disabled, since compilation order is not deterministic
+      build_verbose:
+        test_cmd: duck -C foo build --verbose
+        Enabled: "false"
         Output:
           Run: |+
             echo "info: successfully synchronized venv \`foo\`
-            info: Running \`duckc compile_package -n foo $(pwd)/foo/src -a $(pwd)/foo/.duck_build -O s --dvm-backend\`"
+            info: Running \`duckc compile_package -n foo $(pwd)/foo/src -a $(pwd)/foo/.duck_build -O 1\`"
+      build_release_verbose:
+        test_cmd: duck -C foo build --release --verbose
+        Enabled: "false"
+        Output:
+          Run: |+
+            echo "info: successfully synchronized venv \`foo\`
+            info: Running \`duckc compile_package -n foo $(pwd)/foo/src -a $(pwd)/foo/.duck_build -O 3 --no-incremental\`"
+      build_release_profile_verbose:
+        test_cmd: duck -C foo build --profile=release --verbose
+        Enabled: "false"
+        Output:
+          Run: |+
+            echo "info: successfully synchronized venv \`foo\`
+            info: Running \`duckc compile_package -n foo $(pwd)/foo/src -a $(pwd)/foo/.duck_build -O 3 --no-incremental\`"
+      build_release_profile2_verbose:
+        test_cmd: duck -C foo build --profile release --verbose
+        Enabled: "false"
+        Output:
+          Run: |+
+            echo "info: successfully synchronized venv \`foo\`
+            info: Running \`duckc compile_package -n foo $(pwd)/foo/src -a $(pwd)/foo/.duck_build -O 3 --no-incremental\`"

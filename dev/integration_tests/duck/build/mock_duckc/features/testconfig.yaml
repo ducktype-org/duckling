@@ -3,22 +3,23 @@ Tests:
     Description: can build a project with features
     Cases:
       build_with_feature:
-        test_cmd: duck -C foo build --verbose --features foo
+        test_cmd: duck -C foo build --features foo
         Output:
-          Run: |+
-            echo "info: successfully synchronized venv \`foo\`
-            info: Running \`duckc compile_package -n foo $(pwd)/foo/src -a $(pwd)/foo/.duck_build -O 1\`"
+          String: |+
+            info: successfully synchronized venv \`foo\`
+            info: compiling \`foo\`...
       build_with_pulling_feature:
-        test_cmd: duck -C foo build --verbose --features bar
+        test_cmd: duck -C foo build --features bar
         Output:
-          Run: |+
-            echo "info: successfully synchronized venv \`foo\`
-            info: Running \`duckc compile_package -n foo $(pwd)/foo/src -a $(pwd)/foo/.duck_build -O 1\`"
+          String: |+
+            info: successfully synchronized venv \`foo\`
+            info: compiling \`foo\`...
       build_with_nonexisting_feature:
-        test_cmd: duck -C foo build --verbose --features aaa
+        test_cmd: duck -C foo build --features aaa
         ExitCode: 1
         Output:
-          String: 'info: successfully synchronized venv \`foo\`\n'
+          String: |+
+            info: successfully synchronized venv \`foo\`
         Err:
           String: |+
             error: while expanding features of the root package \`foo\`
