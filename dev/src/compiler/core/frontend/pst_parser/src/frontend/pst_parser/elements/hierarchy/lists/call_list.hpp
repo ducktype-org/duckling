@@ -4,10 +4,15 @@
 #include "preamble.hpp"
 
 namespace pst {
+	namespace {
+		using CallParentList = List<CallArgument, internal::NameGetters::callList>;
+	}
+
 	/**
 	 * @brief Call argument list.
 	 */
-	class CallList final: public List<CallArgument, internal::NameGetters::callList> {
+	class CallList final: public CallParentList {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(CallList, CallParentList);
 	public:
 		explicit CallList(const LangParserState& state): List(state) {
 			this->element_kind = ElementKind::CallList;

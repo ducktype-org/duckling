@@ -3,11 +3,15 @@
 #include "preamble.hpp"
 
 namespace pst {
+	namespace {
+		using AtrArgParentList = List<UniversalExprHolder, internal::NameGetters::attributeArgList>;
+	}
+
 	/**
 	 * @brief Attribute argument list.
 	 */
-	class AtrArgList final:
-		  public List<UniversalExprHolder, internal::NameGetters::attributeArgList> {
+	class AtrArgList final: public AtrArgParentList {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(AtrArgList, AtrArgParentList);
 	public:
 		explicit AtrArgList(const LangParserState& state): List(state) {}
 
