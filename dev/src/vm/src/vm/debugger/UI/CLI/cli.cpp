@@ -148,7 +148,7 @@ namespace vm::debugger::cli {
 		                             .addPositional(clah::IntParser::make("line"))
 		                             .setHandler([&](const clah::ParsingResult& options) -> int {
 										 auto option = options.getPositional<std::string>(0);
-										 auto line   = options.getPositional<usize>(1);
+										 auto line   = (usize) options.getPositional<i64>(1);
 
 										 if (!selected_file) {
 											 printNL("No selected file");
