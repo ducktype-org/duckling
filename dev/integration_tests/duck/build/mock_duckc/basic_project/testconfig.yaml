@@ -1,4 +1,9 @@
-PostCase: python3 check.py
+profile_name: ""
+run_post_case: "true"
+PostCase: |+
+  if [ @{run_post_case} == "true" ]; then
+    python3 check.py @{profile_name}
+  fi
 
 Tests:
   build:
@@ -6,23 +11,27 @@ Tests:
     Cases:
       build:
         test_cmd: duck -C foo build
+        profile_name: dev
         Output:
           String: |+
             info: successfully synchronized venv \`foo\`
             info: compiling \`foo\`...
       build_release:
         test_cmd: duck -C foo build --release
+        profile_name: release
         Output:
           String: |+
             info: successfully synchronized venv \`foo\`
             info: compiling \`foo\`...
       build_release_profile:
+        profile_name: release
         test_cmd: duck -C foo build --profile=release
         Output:
           String: |+
             info: successfully synchronized venv \`foo\`
             info: compiling \`foo\`...
       build_release_profile2:
+        profile_name: release
         test_cmd: duck --color=never -C foo build --profile release
         Output:
           String: |+
@@ -30,6 +39,7 @@ Tests:
             info: compiling \`foo\`...
       build_nonexistent_profile:
         test_cmd: duck -C foo build --profile=nonexistent
+        run_post_case: "false"
         ExitCode: 1
         Err:
           String: |+
@@ -38,18 +48,21 @@ Tests:
             hint: In order to use a profile you have to define it in the manifest first
       build_custom_profile:
         test_cmd: duck -C foo build --profile my-profile
+        profile_name: my-profile
         Output:
           String: |+
             info: successfully synchronized venv \`foo\`
             info: compiling \`foo\`...
       build_overridden_builtin_profile:
         test_cmd: duck -C foo build --profile bench
+        profile_name: bench
         Output:
           String: |+
             info: successfully synchronized venv \`foo\`
             info: compiling \`foo\`...
       build_custom_profile_inherited:
         test_cmd: duck -C foo build --profile my-profile2
+        profile_name: my-profile2
         Output:
           String: |+
             info: successfully synchronized venv \`foo\`
@@ -57,6 +70,7 @@ Tests:
       # NOTE: verbose tests are disabled, since compilation order is not deterministic
       build_verbose:
         test_cmd: duck -C foo build --verbose
+        profile_name: dev
         Enabled: "false"
         Output:
           Run: |+
@@ -64,6 +78,7 @@ Tests:
             info: Running \`duckc compile_package -n foo $(pwd)/foo/src -a $(pwd)/foo/.duck_build -O 1\`"
       build_release_verbose:
         test_cmd: duck -C foo build --release --verbose
+        profile_name: release
         Enabled: "false"
         Output:
           Run: |+
@@ -71,6 +86,7 @@ Tests:
             info: Running \`duckc compile_package -n foo $(pwd)/foo/src -a $(pwd)/foo/.duck_build -O 3 --no-incremental\`"
       build_release_profile_verbose:
         test_cmd: duck -C foo build --profile=release --verbose
+        profile_name: release
         Enabled: "false"
         Output:
           Run: |+
@@ -78,6 +94,7 @@ Tests:
             info: Running \`duckc compile_package -n foo $(pwd)/foo/src -a $(pwd)/foo/.duck_build -O 3 --no-incremental\`"
       build_release_profile2_verbose:
         test_cmd: duck -C foo build --profile release --verbose
+        profile_name: release
         Enabled: "false"
         Output:
           Run: |+

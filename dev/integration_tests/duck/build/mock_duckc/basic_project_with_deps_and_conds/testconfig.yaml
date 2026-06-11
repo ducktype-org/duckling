@@ -1,3 +1,6 @@
+features: ""
+PostCase: python3 check.py @{features}
+
 Tests:
   build:
     Description: can build a project with conditional dependencies
@@ -10,6 +13,7 @@ Tests:
             info: compiling \`foo\`...
       build_with_bar:
         test_cmd: duck -C foo build --features use-bar
+        features: use-bar
         Output:
           String: |+
             info: successfully synchronized venv \`foo\`

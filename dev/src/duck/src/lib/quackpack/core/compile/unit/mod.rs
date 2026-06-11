@@ -137,12 +137,16 @@ impl Unit {
         let package = self.root_package().package();
         let name = package.manifest().name();
         let version = package.manifest().version();
-        let features = self
-            .root_package()
-            .enabled_features()
-            .iter()
-            .copied()
-            .collect();
+        let features = {
+            let mut features = self
+                .root_package()
+                .enabled_features()
+                .iter()
+                .copied()
+                .collect::<Vec<_>>();
+            features.sort();
+            features
+        };
         let dependencies = {
             let mut result = vec![];
             for dep_id in self.deps_by_unit_id() {

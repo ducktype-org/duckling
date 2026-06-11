@@ -8,6 +8,7 @@ use std::path::PathBuf;
 pub mod debug_executor;
 
 use itertools::Itertools;
+use tracing::debug;
 
 use super::BuildContext;
 use super::artifacts_layout::ProfileLayout;
@@ -62,13 +63,17 @@ pub(crate) fn get_linker_options(
     unit: &Unit,
     graph: &UnitGraph,
     layout: &ProfileLayout,
-) -> multipackage_schema::LinkerOptions {
+) -> Option<multipackage_schema::LinkerOptions> {
     let outputs = get_deps_outputs(unit, graph, layout);
+    if outputs.is_empty() {
+        return None;
+    }
     let string = outputs
         .into_iter()
         .map(|output| output.display().to_string())
         .join(" ");
-    multipackage_schema::LinkerOptions::RawLinkerArgs(string)
+    debug!("raw linker args are `{string}`");
+    Some(multipackage_schema::LinkerOptions::RawLinkerArgs(string))
 }
 
 /// Collect outputs of _all_ (including `.a`!) dependencies below this `unit`.
@@ -103,12 +108,14 @@ pub(crate) fn get_deps_outputs(
 
 /// Get a path to the output artifact of this `unit`.
 pub(crate) fn unit_output(unit: &Unit, graph: &UnitGraph, layout: &ProfileLayout) -> PathBuf {
-    if graph.is_root(unit) {
+    let out = if graph.is_root(unit) {
         layout.root_directory().join(unit.output_file_name())
     } else {
         let layout = layout.for_dependency(&unit.unique_name());
         layout.root_directory().join(unit.output_file_name())
-    }
+    };
+    debug!(unit = ?unit, out = %out.display(), "generating output");
+    out
 }
 
 /// Write a manifest into a file.

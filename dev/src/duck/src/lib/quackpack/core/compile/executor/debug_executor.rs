@@ -2,6 +2,8 @@
 
 use std::process::ExitStatus;
 
+use tracing::instrument;
+
 use super::{Executor, ExecutorOutput, unit_output};
 use crate::quackpack::core::compile::BuildContext;
 use crate::quackpack::core::compile::artifacts_layout::ProfileLayout;
@@ -29,6 +31,7 @@ impl Executor for DebugExecutor {
 /// 1. each `deps.json` has only one task,
 /// 2. we compile each [`Unit`] independently, and each gets different artifacts,
 /// 3. root is compiled last.
+#[instrument(skip_all)]
 fn compile(graph: UnitGraph, bcx: &BuildContext<'_, '_>) -> QuackResult<ExecutorOutput> {
     bail_on_unsupported_features(&graph, bcx)?;
     let artifacts_layout = graph
@@ -50,6 +53,7 @@ fn compile(graph: UnitGraph, bcx: &BuildContext<'_, '_>) -> QuackResult<Executor
 }
 
 /// Compile only a single [`Unit`], in a [`compile`] favour.
+#[instrument(skip_all)]
 fn compile_unit(
     unit: &Unit,
     graph: &UnitGraph,
@@ -109,6 +113,7 @@ fn compile_unit_impl(
 }
 
 /// Create a task for a single [`Unit`].
+#[instrument(skip_all)]
 fn create_task(
     unit: &Unit,
     graph: &UnitGraph,
@@ -122,7 +127,7 @@ fn create_task(
             );
             multipackage_schema::PackageCompilationStrategy::Binary {
                 output_file: unit_output(unit, graph, layout),
-                linking_options: Some(get_linker_options(unit, graph, layout)),
+                linking_options: get_linker_options(unit, graph, layout),
             }
         }
         ArtifactsType::Dvm => multipackage_schema::PackageCompilationStrategy::Dvm {

@@ -11,7 +11,15 @@ foo_path = Path.cwd() / "foo"
 
 version = "1.0.0"
 
-profile = sys.argv[1]
+features = sys.argv[1:]
+features = [f'"{feature}"' for feature in features]
+feature_str = ""
+for i, feature in enumerate(features):
+    feature_str += f'        {feature}'
+    if i != len(features) - 1:
+        feature_str += ",\n"
+
+profile = "dev"
 
 layout = artifacts_dir_for_root(foo_path)
 
@@ -35,7 +43,9 @@ expected = f"""{{
       "id": "{foo_name}",
       "name": "foo",
       "version": "1.0.0",
-      "features": [],
+      "features": [
+{feature_str}
+      ],
       "path": "{str(foo_path)}/src",
       "dependencies": []
     }}
