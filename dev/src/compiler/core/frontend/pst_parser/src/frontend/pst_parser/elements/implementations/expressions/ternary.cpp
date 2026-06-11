@@ -4,6 +4,7 @@
 #include "preamble.hpp"
 
 namespace pst::expr {
+	CLONE_SUB_ELEMENTS_DEF(Ternary, condition, if_true, if_false);
 
 	MBox<ExprElement> Ternary::parse(LangParserState& state) {
 		if (!checkNonEmpty(state)) return nullptr;
@@ -83,9 +84,9 @@ namespace pst::expr {
 		out << R"("condition": )";
 		nullAwareDprint(condition, out);
 		out << R"(, "if_true": )";
-		nullAwareDprint(condition, out);
+		nullAwareDprint(if_true, out);
 		out << R"(, "if_false": )";
-		nullAwareDprint(condition, out);
+		nullAwareDprint(if_false, out);
 
 		out << "}";
 	}

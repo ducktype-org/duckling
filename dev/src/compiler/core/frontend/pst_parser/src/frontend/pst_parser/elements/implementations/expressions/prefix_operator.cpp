@@ -3,6 +3,8 @@
 #include "preamble.hpp"
 
 namespace pst::expr {
+	CLONE_SUB_ELEMENTS_DEF(PrefixOperator, op, expr);
+
 	void PrefixOperator::dprint(std::ostream& out) const {
 		out << "{";
 

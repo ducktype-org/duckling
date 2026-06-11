@@ -1,8 +1,11 @@
 #include "../../hierarchy/expressions/suffix_operator.hpp"
+#include "../../hierarchy/not_statements/wrapper_elements/operator_wrapper.hpp"
 
 #include "preamble.hpp"
 
 namespace pst::expr {
+	CLONE_SUB_ELEMENTS_DEF(SuffixOperator, expr, op);
+
 	void SuffixOperator::dprint(std::ostream& out) const {
 		out << "{";
 

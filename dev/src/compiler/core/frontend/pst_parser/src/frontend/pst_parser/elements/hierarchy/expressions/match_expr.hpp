@@ -13,6 +13,9 @@ namespace pst::expr {
 	 * expression, be on the right of assignment or be surrounded by parenthesis)
 	 */
 	class MatchExpr final: public ExprElement {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(MatchExpr, ExprElement);
+		CLONE_SUBELEMENTS();
+	protected:
 		using Lower = Ternary;
 
 		NAMED_CHILD(value_to_match, CommaExprHolder);

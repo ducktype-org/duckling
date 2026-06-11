@@ -8,6 +8,9 @@ namespace pst::expr {
 	 * @brief Element that represents an keyword literal in an expression
 	 */
 	class KeywordLiteral final: public ExprElement {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(KeywordLiteral, ExprElement);
+		CLONE_SUBELEMENTS();
+	protected:
 		NAMED_CHILD(keyword, KeywordWrapper);
 		NAMED_CHILD_OPT(template_specifier, ExprElement);
 

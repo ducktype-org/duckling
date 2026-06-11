@@ -23,6 +23,7 @@ namespace pst {
 #define CLONE_SIGNATURE() MBox<LangElement> cloneElement() const
 
 #define CLONE_SIGNATURE_DEFAULT_OVERRIDE() MBox<LangElement> cloneElement() const override {\
+	static_assert(std::is_final_v<ThisClass> == true);\
 	auto out =  base::makeBox<ThisClass>(pst::makeCloneDummy(), *this);\
 	out->cloneSubElements(*this);\
 	return out;\
