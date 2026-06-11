@@ -42,6 +42,7 @@ use crate::quackpack::core::solver::solver_mode::SolverMode;
 use crate::quackpack::core::solver::solving::solver_engine::{SolverEngine, SolverInput};
 use crate::quackpack::core::solver::types_common::{ExpandedLocation, ExpandedPackage};
 use crate::quackpack::core::{FeatureName, Manifest, PackageContext};
+use crate::quackpack::util::to_url::ToUrl;
 use crate::{QuackResult, qp_bail, qp_bail_internal};
 
 /// A struct designated to finding the full dependency graph of a given package.
@@ -84,14 +85,13 @@ impl<'duck, 'ctx> SolverGathererData<'duck, 'ctx> {
         pcx: &'ctx PackageContext<'duck>,
         current_freeze: SolverFreeze,
         mode: SolverMode,
-    ) -> Self {
-        Self {
+    ) -> QuackResult<Self> {
+        Ok(Self {
             root_pcx: pcx,
             root_pkg: ExpandedPackage {
                 location: ExpandedLocation::Local {
-                    absolute_path: pcx.package().root_directory().to_path_buf(),
-                }
-                .into(),
+                    absolute_path: pcx.package().root_directory().to_url()?.into(),
+                },
                 version: None,
             },
             root_pkg_features: pcx
@@ -104,7 +104,7 @@ impl<'duck, 'ctx> SolverGathererData<'duck, 'ctx> {
                 .collect(),
             current_freeze,
             mode,
-        }
+        })
     }
 
     /// Determines if all the transitive dependencies of the root package are satisfied.

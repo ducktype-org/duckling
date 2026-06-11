@@ -13,6 +13,8 @@
 #include <vm/core/thread/ivmthread.hpp>
 #include <vm/core/vmvalue/vmvalue.hpp>
 
+#include <limits>
+
 #ifdef ENABLE_JIT
 	#include <vm/core/jit/jit_compiler.hpp>
 #endif
@@ -104,6 +106,14 @@ namespace vm {
 		 * @brief True if a thread currently occupies GIL.
 		 */
 		bool has_gil = false;
+
+		/**
+		 * @brief Mock ID of the VM program start function.
+		 * This has to be declared explicitly because the start function object is never
+		 * inserted into the `functions` collection, so it doesn't have a real ID; this ID should
+		 * never be assigned to a real function.
+		 */
+		static constexpr usize START_FUNCTION_ID = std::numeric_limits<usize>::max();
 
 		/**
 		 * @brief Stores exit value of the last ran function. ExecutionCompleted exec status can
@@ -208,6 +218,13 @@ namespace vm {
 		 * @brief Gets name of the function that will be used in builtin spawn thread.
 		 */
 		[[nodiscard]] const std::string& getThreadCtx() const { return thread_ctx; }
+
+		/**
+		 * @brief Checks if the function with the specified ID can be called from the runtime.
+		 * @note By correctness of the compiler, this only checks if the function is not the start
+		 * function.
+		 */
+		static bool isCallableFunctionID(usize id);
 
 		[[nodiscard]] u64 getNumberOfCurrentStackFrames() const override;
 

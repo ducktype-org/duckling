@@ -21,9 +21,7 @@ namespace vm::jit {
 			switch (opcode) {
 			case low::MicroOpcode::virtual_call_pptr_method:
 				[[fallthrough]];
-			case low::MicroOpcode::call_func:
-				[[fallthrough]];
-			case low::MicroOpcode::jit_call_entrypoint: {
+			case low::MicroOpcode::call_func: {
 				return std::to_underlying(SpecialStencils::Trampoline);
 			}
 			default: {

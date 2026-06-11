@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::quackpack::core::Dependency;
 use crate::quackpack::core::solver::types_common::{
-    ExpandedPackage, InternedExpandedLocation, InternedLocation, Location,
+    ExpandedLocation, ExpandedPackage, InternedLocation, Location,
 };
 use crate::{QuackResult, QuackResultContext, StrId};
 
@@ -10,7 +10,7 @@ use crate::{QuackResult, QuackResultContext, StrId};
 /// A struct describing a dependency of a package on some location.
 pub struct DependencyEdge {
     pub parent: ExpandedPackage,
-    pub dependency_loc: InternedExpandedLocation,
+    pub dependency_loc: ExpandedLocation,
     pub manifest_child_name: StrId,
 }
 
@@ -20,7 +20,7 @@ impl DependencyEdge {
     pub fn from_manifest_and_parent(
         parent: ExpandedPackage,
         manifest_dependency: &Dependency,
-        location_resolver: &HashMap<InternedLocation, InternedExpandedLocation>,
+        location_resolver: &HashMap<InternedLocation, ExpandedLocation>,
     ) -> QuackResult<Self> {
         let child_loc = Location::from(manifest_dependency);
         location_resolver

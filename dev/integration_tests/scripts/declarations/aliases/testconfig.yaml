@@ -1,0 +1,54 @@
+# Aliases tests for Duckling scripts.
+
+# @TODO: #2569 Enable the tests after making usage of aliases in REPL and scripts possible.
+
+Tests:
+  basic_declarations:
+    Enabled: "false"
+    folder: "basic_declarations"
+    Cases:
+      direct:
+        mode: direct
+        Output:
+          String: "42\n"
+      vm:
+        mode: vm
+        Output:
+          String: "42\n"
+      exe:
+        mode: exe
+        Output:
+          String: "42\n"
+    
+  function_conflict:
+    Enabled: "false"
+    folder: "possible_conflicts"
+    Cases:
+      direct:
+        mode: direct
+        Output:
+          String: "42\n=> 42\n=> 100\n"
+      vm:
+        mode: vm
+        Output:
+          String: "42\n=> 42\n=> 100\n"
+      exe:
+        mode: exe
+        Output:
+          String: "42\n=> 42\n=> 100\n"
+
+    variable_conflict:
+      Enabled: "false"
+      folder: "possible_conflicts"
+      Cases:
+        direct:
+          mode: direct
+          Output:
+            String: "42\n"
+          mode: vm
+          Output:
+            String: "42\n"
+          exe:
+            mode: exe
+            Output:
+              String: "42\n"

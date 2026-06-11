@@ -16,14 +16,19 @@ using vm::jit::cnp::StencilData;
 using vm::jit::cnp::StencilHole;
 using vm::jit::cnp::Stencils;
 
-static auto stencils = Stencils {
+
+static constexpr char binary[] = {
+#embed "mock_stencils-so"
+};
+
+static auto stencils = Stencils{
+// Linter doesn't actually build mock_stencils-nm so it would be unavailable.
 #if __has_include(<mock_stencils-nm>)
+			.stencils_binary = std::bit_cast<std::array<std::byte, sizeof(binary)>>(binary),
+			.stencils_data =
 	#include <mock_stencils-nm>
 #endif
-// Linter doesn't actually build mock_stencils-nm so it would be unavailable.
-}
-.load();
-
+		}.load();
 
 class JitMemoryTest: public tester::TestSuite {
 #undef TESTER_CLASS

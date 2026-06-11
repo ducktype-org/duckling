@@ -89,12 +89,14 @@ namespace compiler::driver {
 
 			// Adding standard library packages
 			if (auto path = resolveStdPath(stdlib_options)) {
-				if (addStandardLibraryPackages(*path, report).isBad()) return base::BAD;
-				if (addStandardLibraryDependencies(packages_info, report).isBad()) return base::BAD;
+				if (addStandardLibraryPackages(packages_info, *path, report).isBad())
+					return base::BAD;
 			}
 
 			for (const auto& package_info: packages_info) {
-				auto pkg = compiler::frontend::packages::createPackageInfo(package_info, report);
+				auto pkg = compiler::frontend::packages::createPackageInfo(
+					package_info, packages_info, report
+				);
 				if (pkg)
 					global_state::setters::addPackage(*pkg);
 				else
@@ -198,6 +200,7 @@ namespace compiler::driver {
 		auto package_root_file = fs::FileManager::createRandomVirtualFile("", ".dmf");
 		std::vector<compiler::frontend::packages::RawPackageInfo> repl_packages_info{
 			compiler::frontend::packages::RawPackageInfo{
+				.package_id   = base::StrID("repl_session"),
 				.package_name = base::StrID("repl_session"),
 				.version      = base::StrID("0.1.0"),
 				.package_path = package_root_file.getFilePath(),
