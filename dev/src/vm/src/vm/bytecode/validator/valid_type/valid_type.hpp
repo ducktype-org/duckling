@@ -121,7 +121,7 @@ namespace vm::code::valid_type {
 
 		[[nodiscard]] TypeSize getSize() const;
 
-		[[nodiscard]] ShadowSize  getShadowSize()  const;
+		[[nodiscard]] ShadowSize  getShadowSize() const;
 		[[nodiscard]] PointerSize getPointerSize() const;
 
 		// O(1) lookup: shadow entry index for any concrete byte offset within this structure type.
@@ -169,9 +169,9 @@ namespace vm::code::valid_type {
 		 */
 		bool is_trivially_copyable = true;
 
-		TypeSize    size          = TypeSize(Bytes(0), 0);
-		ShadowSize  shadow_size   = 0;
-		PointerSize pointer_size  = 0;
+		TypeSize    size         = TypeSize(Bytes(0), 0);
+		ShadowSize  shadow_size  = 0;
+		PointerSize pointer_size = 0;
 
 		ValidType(base::StrID name, ValidTypeID id);
 

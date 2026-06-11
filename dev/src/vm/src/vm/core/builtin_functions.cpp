@@ -10,9 +10,9 @@
 #include <vm/core/process/proc_io.hpp>
 #include <vm/core/process/vmprocess.hpp>
 #include <vm/core/safe/concurrency/synchronization_primitives.hpp>
+#include <vm/core/safe/fast_track_safe_vmthread.hpp>
 #include <vm/core/safe/safe_vmprocess.hpp>
 #include <vm/core/safe/safe_vmthread.hpp>
-#include <vm/core/safe/fast_track_safe_vmthread.hpp>
 #include <vm/core/safe/type_metadata/definitions.hpp>
 #include <vm/core/thread/kill_process_exception.hpp>
 #include <vm/core/vmvalue/vmvalue.hpp>
@@ -24,14 +24,8 @@ namespace vm::builtins {
 
 	namespace {
 		template<class Ret, class... FunArgs, std::size_t... Is>
-		base::Optional<Box<VmValue>> callUnpackArgsImpl(
-			Ret (*function)(SafeVMThread&, FunArgs...),
-			const std::vector<TypeCRef>&     vm_return_types,
-			IVMProcess&                      process,
-			SafeVMThread&                    thread,
-			const std::vector<Box<VmValue>>& args,
-			std::index_sequence<Is...>
-		) {
+		base::Optional<Box<VmValue>>
+			callUnpackArgsImpl(Ret (*function)(SafeVMThread&, FunArgs...), const std::vector<TypeCRef>& vm_return_types, IVMProcess& process, SafeVMThread& thread, const std::vector<Box<VmValue>>& args, std::index_sequence<Is...>) {
 			if constexpr (std::is_void_v<Ret>) {
 				function(thread, args[Is]->template readBytes<FunArgs>()...);
 				return {};
@@ -147,7 +141,7 @@ namespace vm::builtins {
 		if (thread.safe_process.getSettings().enable_fast_track) {
 			auto target = thread.safe_process.getVMThreadByID(api::ThreadID{ thread_id });
 			if (target) {
-				auto& ft_joinee = static_cast<FastTrackSafeVMThread&>(*target.value());
+				auto& ft_joinee    = static_cast<FastTrackSafeVMThread&>(*target.value());
 				joinee_vc_snapshot = ft_joinee.getFTData().getVC();
 			}
 		}
@@ -206,8 +200,8 @@ namespace vm::builtins {
 	}
 
 	void FunctionHandlers::builtinWaitCV(SafeVMThread& thread, u64 cv_id, u64 mutex_id) {
-		auto cv    = thread.safe_process.getSynchronizationPrimitives().getCV(cv_id);
-		auto mutex = thread.safe_process.getSynchronizationPrimitives().getMutex(mutex_id);
+		auto       cv    = thread.safe_process.getSynchronizationPrimitives().getCV(cv_id);
+		auto       mutex = thread.safe_process.getSynchronizationPrimitives().getMutex(mutex_id);
 		const bool ft_enabled = thread.safe_process.getSettings().enable_fast_track;
 
 		thread.releaseGil();

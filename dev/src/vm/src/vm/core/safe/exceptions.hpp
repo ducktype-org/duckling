@@ -32,11 +32,14 @@ namespace vm::exceptions {
 	VM_RUNTIME_EXCEPTION(VMMemoryAllocationError, "Failed to allocate memory");
 	// @TODO: #1431 remove this
 	VM_RUNTIME_EXCEPTION(VMGlobalNotFoundException, "Global variable not found");
-	struct VMDataRaceException : public VMRuntimeException {
+
+	struct VMDataRaceException: public VMRuntimeException {
 		constexpr static std::string_view ERR_MSG = "[FastTrack] Data race detected";
-		VMDataRaceException() : VMRuntimeException(std::string(ERR_MSG)) {}
-		explicit VMDataRaceException(std::string detail) :
-			VMRuntimeException(std::string(ERR_MSG) + ": " + std::move(detail)) {}
+
+		VMDataRaceException(): VMRuntimeException(std::string(ERR_MSG)) {}
+
+		explicit VMDataRaceException(std::string detail):
+			  VMRuntimeException(std::string(ERR_MSG) + ": " + std::move(detail)) {}
 	};
 
 #define VM_RUNTIME_EXCEPTION_WITH_PARAM(name, msg, type)                 \

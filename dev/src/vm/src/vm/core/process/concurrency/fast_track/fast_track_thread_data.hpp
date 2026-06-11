@@ -1,12 +1,11 @@
 #pragma once
 
+#include <vm/api/data/thread_id.hpp>
 #include <vm/core/process/concurrency/fast_track/epoch.hpp>
 #include <vm/core/process/concurrency/fast_track/shadow_entry.hpp>
 #include <vm/core/process/concurrency/fast_track/vc.hpp>
 #include <vm/core/safe/memory/fast_track_thread_stack.hpp>
 #include <vm/core/safe/memory/frame.hpp>
-
-#include <vm/api/data/thread_id.hpp>
 
 namespace vm {
 
@@ -57,11 +56,7 @@ namespace vm {
 
 		FastTrackThreadData() = default;
 
-		void init(
-			FastTrackThreadStack& stack,
-			api::ThreadID         tid,
-			ShadowEntry*          global_data
-		) {
+		void init(FastTrackThreadStack& stack, api::ThreadID tid, ShadowEntry* global_data) {
 			thread_id  = tid;
 			ft_runtime = FastTrackRuntimeData(&stack, global_data);
 			vc[tid]    = 1;
@@ -90,9 +85,7 @@ namespace vm {
 
 		[[nodiscard]] const VectorClock& getVC() const { return vc; }
 
-		[[nodiscard]] Epoch getCurrentEpoch() const {
-			return Epoch(thread_id, vc[thread_id]);
-		}
+		[[nodiscard]] Epoch getCurrentEpoch() const { return Epoch(thread_id, vc[thread_id]); }
 
 		// ---- Shadow frame / global accessors ----
 

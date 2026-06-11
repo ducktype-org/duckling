@@ -1,19 +1,20 @@
 #pragma once
 
 #include "condition_variable.hpp"
-#include <vm/core/process/concurrency/fast_track/vc.hpp>
 
 #include <base/collections/maps.hpp>
 #include <base/collections/object_pool.hpp>
 #include <base/pointers/ref.hpp>
 #include <base/types/ints.hpp>
 
+#include <vm/core/process/concurrency/fast_track/vc.hpp>
+
 #include <mutex>
 #include <optional>
 
 namespace vm {
 	struct Mutex {
-		std::timed_mutex         m;
+		std::timed_mutex           m;
 		std::optional<VectorClock> vc;  // only populated when FastTrack is enabled
 	};
 

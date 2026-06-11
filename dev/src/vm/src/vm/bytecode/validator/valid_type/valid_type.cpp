@@ -350,9 +350,13 @@ void valid_type::ValidType::finalize(ValidTypeMap& types) {
 		variant_case(defined::DefinedFixedSizeTable, fixed_size_table) {
 			auto inner_type = types.at(fixed_size_table.inner);
 			inner_type->finalize(types);
-			this->size                  = inner_type->getSize() * fixed_size_table.element_count;
-			this->shadow_size  = static_cast<ShadowSize>(inner_type->getShadowSize() * fixed_size_table.element_count);
-			this->pointer_size = static_cast<PointerSize>(inner_type->getPointerSize() * fixed_size_table.element_count);
+			this->size        = inner_type->getSize() * fixed_size_table.element_count;
+			this->shadow_size = static_cast<ShadowSize>(
+				inner_type->getShadowSize() * fixed_size_table.element_count
+			);
+			this->pointer_size = static_cast<PointerSize>(
+				inner_type->getPointerSize() * fixed_size_table.element_count
+			);
 			this->is_trivially_copyable = inner_type->isTriviallyCopyable();
 			state                       = Finalized{ .kind = finalized::FixedSizeTable{
 														 .inner         = fixed_size_table.inner,
@@ -402,8 +406,8 @@ void valid_type::ValidType::finalize(ValidTypeMap& types) {
 			// because technically it's the maximum of the sizes of the alternatives, but we also
 			// need to take into account different pointer sizes. More info in TypeSize's doc-comment.
 			valid_type::TypeSize data_segment_size(Bytes(0), 0);
-			ShadowSize  max_shadow_size  = 0;
-			PointerSize max_pointer_size = 0;
+			ShadowSize           max_shadow_size  = 0;
+			PointerSize          max_pointer_size = 0;
 			for (auto& alternative: variant.alternatives) {
 				auto alternative_type = types.at(alternative);
 				alternative_type->finalize(types);
@@ -427,16 +431,16 @@ void valid_type::ValidType::finalize(ValidTypeMap& types) {
 
 			// Finalize the fields and calculate their offsets.
 			valid_type::TypeSize offset(Bytes(0), 0);
-			u32 shadow_offset  = 0;
-			u32 pointer_offset = 0;
+			u32                  shadow_offset  = 0;
+			u32                  pointer_offset = 0;
 			for (auto& field: new_structure.fields) {
 				auto field_type = types.at(field.type);
 				field_type->finalize(types);
 				field.offset         = offset;
 				field.shadow_offset  = shadow_offset;
 				field.pointer_offset = pointer_offset;
-				offset         += field_type->getSize();
-				shadow_offset  += field_type->getShadowSize();
+				offset += field_type->getSize();
+				shadow_offset += field_type->getShadowSize();
 				pointer_offset += field_type->getPointerSize();
 			}
 			this->size         = offset;
@@ -447,9 +451,10 @@ void valid_type::ValidType::finalize(ValidTypeMap& types) {
 			const u32 total_bytes = static_cast<u32>(offset.assumePointerSize(Bytes(16)));
 			new_structure.byte_to_shadow.assign(total_bytes, 0);
 			for (auto& field: new_structure.fields) {
-				auto field_type   = types.at(field.type);
-				u32  field_start  = static_cast<u32>(field.offset.assumePointerSize(Bytes(16)));
-				u32  field_bytes  = static_cast<u32>(field_type->getSize().assumePointerSize(Bytes(16)));
+				auto field_type  = types.at(field.type);
+				u32  field_start = static_cast<u32>(field.offset.assumePointerSize(Bytes(16)));
+				u32  field_bytes
+					= static_cast<u32>(field_type->getSize().assumePointerSize(Bytes(16)));
 				for (u32 b = field_start; b < field_start + field_bytes; ++b)
 					new_structure.byte_to_shadow[b] = field.shadow_offset;
 			}
@@ -569,7 +574,9 @@ bool valid_type::ValidType::isInstantiable() const {
 	variant_match(state) {
 		variant_case(Finalized, finalized) {
 			const auto* structure = std::get_if<finalized::Structure>(&finalized.kind);
-			CORE_ASSERT(structure != nullptr, "getShadowOffsetForByteOffset called on non-Structure type");
+			CORE_ASSERT(
+				structure != nullptr, "getShadowOffsetForByteOffset called on non-Structure type"
+			);
 			CORE_ASSERT(byte_offset < structure->byte_to_shadow.size(), "byte_offset out of range");
 			return structure->byte_to_shadow[byte_offset];
 		}
@@ -584,9 +591,8 @@ bool valid_type::ValidType::isInstantiable() const {
 		variant_case(Finalized, finalized) {
 			const auto* structure = std::get_if<finalized::Structure>(&finalized.kind);
 			if (!structure) return {};
-			for (const auto& field: structure->fields) {
+			for (const auto& field: structure->fields)
 				if (field.name == field_name) return field.shadow_offset;
-			}
 			return {};
 		}
 		variant_default { CORE_PANIC("getFieldShadowOffsetByName called on non-finalized type"); }
@@ -600,9 +606,8 @@ bool valid_type::ValidType::isInstantiable() const {
 		variant_case(Finalized, finalized) {
 			const auto* structure = std::get_if<finalized::Structure>(&finalized.kind);
 			if (!structure) return {};
-			for (const auto& field: structure->fields) {
+			for (const auto& field: structure->fields)
 				if (field.name == field_name) return field.pointer_offset;
-			}
 			return {};
 		}
 		variant_default { CORE_PANIC("getFieldPointerOffsetByName called on non-finalized type"); }
@@ -619,7 +624,9 @@ bool valid_type::ValidType::isInstantiable() const {
 [[nodiscard]] valid_type::PointerSize valid_type::ValidType::getPointerSize() const {
 	variant_match(state) {
 		variant_case(Finalized, finalized) { return pointer_size; }
-		variant_default { CORE_PANIC("Tried to get pointer size of a type that was not finalized"); }
+		variant_default {
+			CORE_PANIC("Tried to get pointer size of a type that was not finalized");
+		}
 	}
 }
 
