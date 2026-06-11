@@ -8,8 +8,8 @@ namespace query::internal {
 
     template<class Data>
     class NodeIDIDSuperMap final {
-        constexpr static u64 BUFFOR_COUNT = 1024 * 4;
-        constexpr static u64 BUFFOR_SIZE = 1024 * 1024;
+        constexpr static u64 BUFFOR_COUNT = 1024 * 64;
+        constexpr static u64 BUFFOR_SIZE = 1024 * 64;
 
 
         struct Buffer final {

@@ -34,7 +34,7 @@ namespace query::internal {
             if (*existing_id != MAX_ID) {
                 my_id = *existing_id;
             }
-            else {
+            else [[likely]] {
                 my_id = next_id.fetch_add(1, std::memory_order_relaxed);
                 *existing_id = my_id;
                 was_new = true;
