@@ -4,12 +4,7 @@
 
 namespace pst {
 	class Return final: public Action {
-		PARENT_CLASS(Action);
-		THIS_CLASS(Return);
-		CLONE_SIGNATURE_DEFAULT_OVERRIDE();
-	public:
-		ELEMENT_CLONE_DECL(Return);
-
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(Return, Action);
 	public:
 		explicit Return(const LangParserState& state): Action(state) {}
 

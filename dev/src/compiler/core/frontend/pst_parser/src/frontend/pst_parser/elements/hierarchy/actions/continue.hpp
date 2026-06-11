@@ -4,11 +4,8 @@
 
 namespace pst {
 	class Continue final: public Action {
-		PARENT_CLASS(Action);
-		THIS_CLASS(Continue);
-		CLONE_SIGNATURE_DEFAULT_OVERRIDE();
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(Continue, Action);
 	public:
-		ELEMENT_CLONE_DECL(Continue);
 
 		explicit Continue(const LangParserState& state): Action(state) {}
 

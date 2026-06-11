@@ -4,12 +4,7 @@
 
 namespace pst {
 	class Redo final: public Action {
-		PARENT_CLASS(Action);
-		THIS_CLASS(Redo);
-		CLONE_SIGNATURE_DEFAULT_OVERRIDE();
-	public:
-		ELEMENT_CLONE_DECL(Redo);
-
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(Redo, Action);
 	public:
 		explicit Redo(const LangParserState& state): Action(state) {}
 

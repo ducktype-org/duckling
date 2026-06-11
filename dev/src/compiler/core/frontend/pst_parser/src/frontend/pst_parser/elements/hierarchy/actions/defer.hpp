@@ -4,13 +4,9 @@
 
 namespace pst {
 	class Defer final: public Action {
-		PARENT_CLASS(Action);
-		THIS_CLASS(Defer);
-		CLONE_SIGNATURE_DEFAULT_OVERRIDE();
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(Defer, Action);
 	public:
-		ELEMENT_CLONE_DECL(Defer);
 
-	public:
 		explicit Defer(const LangParserState& state): Action(state) {}
 
 		void dprint(std::ostream& out) const final;

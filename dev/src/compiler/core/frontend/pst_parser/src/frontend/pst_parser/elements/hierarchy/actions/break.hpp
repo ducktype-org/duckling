@@ -4,11 +4,8 @@
 
 namespace pst {
 	class Break final: public Action {
-		PARENT_CLASS(Action);
-		THIS_CLASS(Break);
-		CLONE_SIGNATURE_DEFAULT_OVERRIDE();
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(Break, Action);
 	public:
-		ELEMENT_CLONE_DECL(Break);
 
 		explicit Break(const LangParserState& state): Action(state) {}
 

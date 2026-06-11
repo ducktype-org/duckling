@@ -9,9 +9,7 @@ namespace pst {
 	 * @brief Class method element.
 	 */
 	class Method final: public ClassStmt {
-		THIS_CLASS(Method);
-		PARENT_CLASS(ClassStmt);
-		CLONE_SIGNATURE_DEFAULT_OVERRIDE();
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(Method, ClassStmt);
 		CLONE_SUBELEMENTS();
 	protected:
 		NAMED_CHILD(name, IdentifierWrapper);
@@ -22,7 +20,6 @@ namespace pst {
 		HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const override;
 
 	public:
-		ELEMENT_CLONE_DECL(Method);
 		CLASS_STMT_CHILD_CONSTRUCTOR(Method, ElementKind::ClassMethod);
 		CLASS_STMT_PARSE(Method);
 

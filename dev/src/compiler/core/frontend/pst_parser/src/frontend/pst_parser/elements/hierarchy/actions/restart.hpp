@@ -4,12 +4,7 @@
 
 namespace pst {
 	class Restart final: public Action {
-		PARENT_CLASS(Action);
-		THIS_CLASS(Restart);
-		CLONE_SIGNATURE_DEFAULT_OVERRIDE();
-	public:
-		ELEMENT_CLONE_DECL(Restart);
-
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(Restart, Action);
 	public:
 		explicit Restart(const LangParserState& state): Action(state) {}
 
