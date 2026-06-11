@@ -10,6 +10,9 @@ namespace pst {
 	 * @brief Single match case for the match expression.
 	 */
 	class MatchCase final: public NotStmt {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(MatchCase, NotStmt);
+		CLONE_SUBELEMENTS();
+	private:
 		struct CaseBranch {
 			NAMED_CHILD_OPT(condition, UniversalExprHolder);
 			NAMED_CHILD(result, UniversalAllowBlockExprHolder);

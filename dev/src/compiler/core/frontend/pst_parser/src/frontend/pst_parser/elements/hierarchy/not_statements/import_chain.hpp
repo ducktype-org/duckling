@@ -10,7 +10,10 @@ namespace pst {
 	 * used for imports. Examples can be found in specific import chains.
 	 */
 	class ImportChain: public NotStmt {
+		THIS_CLASS(ImportChain);
+		PARENT_CLASS(NotStmt);
 	public:
+		ELEMENT_CLONE_DECL(ImportChain);
 		explicit ImportChain(const LangParserState& state): NotStmt(state) {}
 
 		[[nodiscard]]

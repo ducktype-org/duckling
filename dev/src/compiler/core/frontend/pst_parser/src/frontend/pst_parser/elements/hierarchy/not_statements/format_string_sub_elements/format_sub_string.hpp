@@ -7,6 +7,8 @@ namespace pst {
 	 * @brief Element representing a string value in an expression
 	 */
 	class FormatSubString final: public FormatSubElement {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(FormatSubString, FormatSubElement, string);
+	protected:
 		tpc::StringValue string;
 
 	public:

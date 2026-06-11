@@ -9,6 +9,9 @@ namespace pst {
 	 * used for imports
 	 */
 	class DottedName final: public NotStmt {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(DottedName, NotStmt, star);
+		CLONE_SUBELEMENTS();
+	private:
 		std::vector<AccessInternalAnonymous<IdentifierWrapper>> names;
 		bool                                                    star = false;
 

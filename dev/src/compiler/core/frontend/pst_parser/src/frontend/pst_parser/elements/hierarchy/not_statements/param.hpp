@@ -7,10 +7,8 @@ namespace pst {
 	 * @brief Declaration of a single function or pattern argument.
 	 */
 	class Param final: public NotStmt {
-		THIS_CLASS(Param);
-		PARENT_CLASS(NotStmt);
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(Param, NotStmt);
 		CLONE_SUBELEMENTS();
-		CLONE_SIGNATURE_DEFAULT_OVERRIDE();
 	protected:
 	
 		NAMED_CHILD(name, IdentifierWrapper);
@@ -18,8 +16,6 @@ namespace pst {
 		NAMED_CHILD_OPT(initial, UniversalExprHolder);
 
 	public:
-		ELEMENT_CLONE_DECL(Param);
-
 		explicit Param(const LangParserState& state): NotStmt(state) {
 			this->element_kind = ElementKind::Param;
 		}

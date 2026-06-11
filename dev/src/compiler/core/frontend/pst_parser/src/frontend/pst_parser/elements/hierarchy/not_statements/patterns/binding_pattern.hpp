@@ -6,6 +6,9 @@ namespace pst {
 	 * @brief Represents an binding pattern, which binds a value to a new variable.
 	 */
 	class BindingPattern final: public AnalysisPattern {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(BindingPattern, AnalysisPattern);
+		CLONE_SUBELEMENTS();
+	protected:
 		NAMED_CHILD(name, IdentifierWrapper);
 
 	protected:

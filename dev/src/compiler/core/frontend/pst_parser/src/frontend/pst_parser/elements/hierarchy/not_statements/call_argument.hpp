@@ -9,6 +9,9 @@ namespace pst {
 	 * @brief Call argument, handles both named and normal arguments.
 	 */
 	class CallArgument final: public NotStmt {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(CallArgument, NotStmt);
+		CLONE_SUBELEMENTS();
+	protected:
 		NAMED_CHILD_OPT(arg_name, IdentifierWrapper);
 		NAMED_CHILD(arg, UniversalExprHolderLowerLevel);
 

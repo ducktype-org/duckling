@@ -4,6 +4,8 @@
 
 namespace pst {
 	class OperatorWrapper final: public NotStmt {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(OperatorWrapper, NotStmt, op);
+	protected:
 		lexer::Operator op;
 
 	public:

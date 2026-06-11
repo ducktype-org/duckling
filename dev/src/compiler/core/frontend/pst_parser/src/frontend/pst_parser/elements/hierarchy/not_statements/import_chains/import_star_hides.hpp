@@ -7,6 +7,9 @@ namespace pst {
 	 * @brief Import chain of the form `A.B.*` or `A.B.* hides X, Y`
 	 */
 	class ImportStarHides final: public ImportChain {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(ImportStarHides, ImportChain);
+		CLONE_SUBELEMENTS();
+	protected:
 		std::vector<AccessInternalAnonymous<IdentifierWrapper>>                 names;
 		base::Optional<std::vector<AccessInternalAnonymous<IdentifierWrapper>>> hides;
 

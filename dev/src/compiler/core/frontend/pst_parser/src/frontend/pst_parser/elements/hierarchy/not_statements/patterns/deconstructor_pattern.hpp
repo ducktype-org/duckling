@@ -7,6 +7,9 @@ namespace pst {
 	 * @brief Represents a deconstructor pattern.
 	 */
 	class DeconstructorPattern final: public AnalysisPattern {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(DeconstructorPattern, AnalysisPattern);
+		CLONE_SUBELEMENTS();
+	protected:
 		NAMED_CHILD(deconstructor_name, IdentifierWrapper);
 		NAMED_CHILD(arguments, FlowPatternList);
 
