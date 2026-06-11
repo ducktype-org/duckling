@@ -16,7 +16,7 @@ namespace vm {
 	 * edges represent "thread waits for mutex" relationships. It detects cycles in this graph that
 	 * would indicate deadlock conditions.
 	 *
-	 * @note Scope: covers mutex wait-for cycles only. Deadlocks involving condition variable
+	 * @todo Scope: covers mutex wait-for cycles only. Deadlocks involving condition variable
 	 *       waits or thread joins are not tracked — std::condition_variable has spurious wakeups,
 	 *       making reliable CV-wait edge tracking infeasible.
 	 *

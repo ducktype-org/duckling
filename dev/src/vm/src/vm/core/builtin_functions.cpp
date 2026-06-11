@@ -145,32 +145,32 @@ namespace vm::builtins {
 		// Deadlock check must happen before any acquisition attempt. When enabled and the mutex
 		// is free, checkForDeadlock returns immediately (no owner → no cycle possible), so
 		// there is no cost on the fast path.
-		if (detector) detector->checkForDeadlock(thread_id, mutex_id);
+		if_opt_some(detector, d) d.checkForDeadlock(thread_id, mutex_id);
 
 		// Fast path: mutex is free — grab it with a non-blocking CAS while still holding the
 		// GIL. Skips the GIL release/acquire pair and the expensive timed syscall. We also
 		// skip the intermediate "waiting" state in the detector because we never waited.
 		if (mutex->try_lock()) {
-			if (detector) detector->markThreadAcquiredMutex(thread_id, mutex_id);
+			if_opt_some(detector, d) d.markThreadAcquiredMutex(thread_id, mutex_id);
 			return;
 		}
 
 		// Slow path: mutex is contended. Mark ourselves as waiting, then release the GIL so
 		// other DVM threads can run while we block.
-		if (detector) detector->markThreadWaitingForMutex(thread_id, mutex_id);
+		if_opt_some(detector, d) d.markThreadWaitingForMutex(thread_id, mutex_id);
 		thread.releaseGil();
 		while (!mutex->try_lock_for(std::chrono::milliseconds{ 500 })) {
 			if (thread.isTerminateRequested()) {
 				// Acquire GIL before throwing: exception handlers and destructors need exclusive
 				// access to process state (memory blocks, primitives, thread metadata) during cleanup.
 				thread.acquireGil();
-				if (detector) detector->markThreadStoppedWaiting(thread_id);
+				if_opt_some(detector, d) d.markThreadStoppedWaiting(thread_id);
 				throw vm::KillProcessException{};
 			}
 		}
 		// Acquire GIL after blocking: bytecode execution requires holding the GIL.
 		thread.acquireGil();
-		if (detector) detector->markThreadAcquiredMutex(thread_id, mutex_id);
+		if_opt_some(detector, d) d.markThreadAcquiredMutex(thread_id, mutex_id);
 	}
 
 	void FunctionHandlers::builtinUnlockMutex(SafeVMThread& thread, u64 mutex_id) {
@@ -179,11 +179,11 @@ namespace vm::builtins {
 		auto  thread_id = thread.getThreadID();
 		auto* detector  = thread.safe_process.getDeadlockDetector();
 		mutex->unlock();
-		if (detector) detector->markThreadReleasedMutex(thread_id, mutex_id);
+		if_opt_some(detector, d) d.markThreadReleasedMutex(thread_id, mutex_id);
 	}
 
 	void FunctionHandlers::builtinDestroyMutex(SafeVMThread& thread, u64 mutex_id) {
-		if (auto* d = thread.safe_process.getDeadlockDetector()) d->clearMutexState(mutex_id);
+		if_opt_some(thread.safe_process.getDeadlockDetector(), d) d.clearMutexState(mutex_id);
 		thread.safe_process.getSynchronizationPrimitives().removeMutex(mutex_id);
 	}
 
@@ -199,7 +199,7 @@ namespace vm::builtins {
 
 		// cv->wait atomically unlocks the mutex then relocks it before returning (on any path),
 		// so we mirror that in the detector: release ownership now, reacquire after the wait.
-		if (detector) detector->markThreadReleasedMutex(thread_id, mutex_id);
+		if_opt_some(detector, d) d.markThreadReleasedMutex(thread_id, mutex_id);
 		thread.releaseGil();
 		try {
 			const bool interrupted
@@ -209,19 +209,19 @@ namespace vm::builtins {
 			// Acquire GIL: exception handlers and destructors need exclusive access to process
 			// state during cleanup and propagation of VM runtime exceptions.
 			thread.acquireGil();
-			if (detector) detector->markThreadAcquiredMutex(thread_id, mutex_id);
+			if_opt_some(detector, d) d.markThreadAcquiredMutex(thread_id, mutex_id);
 			throw;
 		} catch (const vm::KillProcessException&) {
 			// Acquire GIL: exception handlers and destructors need exclusive access to process
 			// state.
 			thread.acquireGil();
-			if (detector) detector->markThreadAcquiredMutex(thread_id, mutex_id);
+			if_opt_some(detector, d) d.markThreadAcquiredMutex(thread_id, mutex_id);
 			throw;
 		} catch (const std::exception& e) {
 			// Acquire GIL: exception handlers and destructors need exclusive access to process
 			// state. Then wrap the exception so the VM can report ExecutionPanicked.
 			thread.acquireGil();
-			if (detector) detector->markThreadAcquiredMutex(thread_id, mutex_id);
+			if_opt_some(detector, d) d.markThreadAcquiredMutex(thread_id, mutex_id);
 			std::string msg = "builtinWaitCV failed during condition variable wait: ";
 			msg += e.what();
 			throw vm::exceptions::VMRuntimeException(std::move(msg));
@@ -229,14 +229,14 @@ namespace vm::builtins {
 			// Acquire GIL: exception handlers and destructors need exclusive access to process
 			// state. Then convert unknown exceptions into a VMRuntimeException.
 			thread.acquireGil();
-			if (detector) detector->markThreadAcquiredMutex(thread_id, mutex_id);
+			if_opt_some(detector, d) d.markThreadAcquiredMutex(thread_id, mutex_id);
 			throw vm::exceptions::VMRuntimeException(
 				"builtinWaitCV failed during condition variable wait with an unknown exception"
 			);
 		}
 		// Acquire GIL after blocking: bytecode execution requires holding the GIL.
 		thread.acquireGil();
-		if (detector) detector->markThreadAcquiredMutex(thread_id, mutex_id);
+		if_opt_some(detector, d) d.markThreadAcquiredMutex(thread_id, mutex_id);
 	}
 
 	void FunctionHandlers::builtinNotifyCV(SafeVMThread& thread, u64 cv_id) {
