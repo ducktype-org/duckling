@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="430" viewBox="0 0 980 430" font-family="monospace" font-size="13">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <path d="M0,0 L10,4 L0,8 z" fill="#555"/>
+    </marker>
+  </defs>
+
+  <!-- Sequential front-end -->
+  <rect x="20" y="40" width="130" height="50" rx="8" fill="#dde9ff" stroke="#3b6dbf"/>
+  <text x="85" y="62" text-anchor="middle">source.dmf</text>
+  <text x="85" y="78" text-anchor="middle" fill="#666">(Duckling)</text>
+
+  <rect x="195" y="40" width="120" height="50" rx="8" fill="#dde9ff" stroke="#3b6dbf"/>
+  <text x="255" y="62" text-anchor="middle">PST parse</text>
+  <text x="255" y="78" text-anchor="middle" fill="#666">sequential</text>
+
+  <rect x="360" y="40" width="150" height="50" rx="8" fill="#dde9ff" stroke="#3b6dbf"/>
+  <text x="435" y="62" text-anchor="middle">GlobalPass</text>
+  <text x="435" y="78" text-anchor="middle" fill="#666">symbols &amp; types</text>
+
+  <rect x="555" y="40" width="160" height="50" rx="8" fill="#dde9ff" stroke="#3b6dbf"/>
+  <text x="635" y="62" text-anchor="middle">FunctionCollector</text>
+  <text x="635" y="78" text-anchor="middle" fill="#666">work items + hashes</text>
+
+  <line x1="150" y1="65" x2="190" y2="65" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="315" y1="65" x2="355" y2="65" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="510" y1="65" x2="550" y2="65" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- PSAC computation box -->
+  <rect x="60" y="130" width="660" height="210" rx="10" fill="#f6f0ff" stroke="#7b4fbf" stroke-dasharray="6,3"/>
+  <text x="80" y="152" fill="#7b4fbf">psac_run( compileFunctionsPsac )  —  parlay work-stealing scheduler, -j N threads</text>
+
+  <line x1="635" y1="90" x2="635" y2="126" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- Mods -->
+  <rect x="85" y="170" width="120" height="36" rx="6" fill="#fff3c4" stroke="#b08900"/>
+  <text x="145" y="192" text-anchor="middle">Mod h(f0)</text>
+  <rect x="85" y="214" width="120" height="36" rx="6" fill="#fff3c4" stroke="#b08900"/>
+  <text x="145" y="236" text-anchor="middle">Mod h(f1)</text>
+  <rect x="85" y="258" width="120" height="36" rx="6" fill="#fff3c4" stroke="#b08900"/>
+  <text x="145" y="280" text-anchor="middle">Mod h(fN)</text>
+  <rect x="85" y="298" width="120" height="32" rx="6" fill="#ffe2c4" stroke="#b06000"/>
+  <text x="145" y="318" text-anchor="middle">Mod globals</text>
+
+  <!-- read tasks -->
+  <rect x="280" y="166" width="250" height="40" rx="6" fill="#e2f7e2" stroke="#2f8f2f"/>
+  <text x="405" y="190" text-anchor="middle">psac_read → compile f0 → f0.o</text>
+  <rect x="280" y="212" width="250" height="40" rx="6" fill="#e2f7e2" stroke="#2f8f2f"/>
+  <text x="405" y="236" text-anchor="middle">psac_read → compile f1 → f1.o</text>
+  <rect x="280" y="258" width="250" height="40" rx="6" fill="#e2f7e2" stroke="#2f8f2f"/>
+  <text x="405" y="282" text-anchor="middle">psac_read → compile fN → fN.o</text>
+
+  <line x1="205" y1="188" x2="275" y2="186" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="205" y1="232" x2="275" y2="232" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="205" y1="276" x2="275" y2="278" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="205" y1="314" x2="240" y2="314" stroke="#b06000" stroke-width="1.2"/>
+  <line x1="240" y1="314" x2="240" y2="190" stroke="#b06000" stroke-width="1.2"/>
+  <line x1="240" y1="190" x2="275" y2="190" stroke="#b06000" stroke-width="1.2" marker-end="url(#arrow)"/>
+  <line x1="240" y1="236" x2="275" y2="236" stroke="#b06000" stroke-width="1.2" marker-end="url(#arrow)"/>
+  <line x1="240" y1="282" x2="275" y2="282" stroke="#b06000" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+  <text x="405" y="320" text-anchor="middle" fill="#2f8f2f">each task: copy of Context + own LLVMContext/module</text>
+
+  <!-- per fn objects -->
+  <rect x="570" y="166" width="120" height="40" rx="6" fill="#eee" stroke="#888"/>
+  <text x="630" y="190" text-anchor="middle">out.fn0.o</text>
+  <rect x="570" y="212" width="120" height="40" rx="6" fill="#eee" stroke="#888"/>
+  <text x="630" y="236" text-anchor="middle">out.fn1.o</text>
+  <rect x="570" y="258" width="120" height="40" rx="6" fill="#eee" stroke="#888"/>
+  <text x="630" y="282" text-anchor="middle">out.fnN.o</text>
+
+  <line x1="530" y1="186" x2="565" y2="186" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="530" y1="232" x2="565" y2="232" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="530" y1="278" x2="565" y2="278" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- globals object -->
+  <rect x="750" y="298" width="150" height="40" rx="6" fill="#eee" stroke="#888"/>
+  <text x="825" y="322" text-anchor="middle">out.globals.o</text>
+  <text x="825" y="290" text-anchor="middle" fill="#666">global var definitions</text>
+
+  <!-- linker -->
+  <rect x="760" y="166" width="130" height="86" rx="8" fill="#ffe0e0" stroke="#bf3b3b"/>
+  <text x="825" y="202" text-anchor="middle">clang link</text>
+  <text x="825" y="222" text-anchor="middle" fill="#666">all .o files</text>
+
+  <line x1="690" y1="186" x2="755" y2="196" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="690" y1="232" x2="755" y2="216" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="690" y1="278" x2="755" y2="236" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="825" y1="294" x2="825" y2="256" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- exe -->
+  <rect x="760" y="60" width="130" height="50" rx="8" fill="#e2f7e2" stroke="#2f8f2f"/>
+  <text x="825" y="90" text-anchor="middle">executable</text>
+  <line x1="825" y1="162" x2="825" y2="114" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <text x="490" y="400" text-anchor="middle" fill="#444">Full build: psac_run executes every read once, in parallel. Later updates only re-run reads whose Mods changed.</text>
+</svg>

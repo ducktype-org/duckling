@@ -1,18 +1,18 @@
-#include "concurrent/module_flags/worker_count.hpp"
+#include <concurrent/module_flags/worker_count.hpp>
 
-#include "base/types/ints.hpp"
+#include <base/types/ints.hpp>
 
-#include "init/init.hpp"
-#include "query_framework/context/context.hpp"
-#include "query_framework/entry/query_entry_point.hpp"
-#include "query_framework/external/api.hpp"
-#include "query_framework/input_query/query_input.hpp"
-#include "query_framework/input_query/query_input_impl.hpp"
-#include "query_framework/internal/query_graph/node_making.hpp"
-#include "query_framework/query_int.hpp"
-#include "query_framework/standard_query/query_cache_macros.hpp"
-#include "query_framework/standard_query/query_impl.hpp"
-#include "query_framework/utils/query_hash.hpp"
+#include <init/init.hpp>
+#include <query_framework/context/context.hpp>
+#include <query_framework/entry/query_entry_point.hpp>
+#include <query_framework/external/api.hpp>
+#include <query_framework/input_query/query_input.hpp>
+#include <query_framework/input_query/query_input_impl.hpp>
+#include <query_framework/internal/query_graph/node_making.hpp>
+#include <query_framework/query_int.hpp>
+#include <query_framework/standard_query/query_cache_macros.hpp>
+#include <query_framework/standard_query/query_impl.hpp>
+#include <query_framework/utils/query_hash.hpp>
 
 #include <iostream>
 #include <string>

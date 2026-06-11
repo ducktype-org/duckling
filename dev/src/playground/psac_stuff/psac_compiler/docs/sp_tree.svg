@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="420" viewBox="0 0 980 420" font-family="monospace" font-size="13">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <path d="M0,0 L10,4 L0,8 z" fill="#555"/>
+    </marker>
+  </defs>
+
+  <text x="20" y="30" font-size="15" fill="#333">How the parallelism works: SP tree + work stealing</text>
+
+  <!-- SP tree -->
+  <circle cx="300" cy="80" r="22" fill="#f6f0ff" stroke="#7b4fbf"/>
+  <text x="300" y="85" text-anchor="middle">P</text>
+  <text x="300" y="48" text-anchor="middle" fill="#666">psac_parallel_for [0,4)</text>
+
+  <circle cx="170" cy="170" r="22" fill="#f6f0ff" stroke="#7b4fbf"/>
+  <text x="170" y="175" text-anchor="middle">P</text>
+  <circle cx="430" cy="170" r="22" fill="#f6f0ff" stroke="#7b4fbf"/>
+  <text x="430" y="175" text-anchor="middle">P</text>
+
+  <line x1="285" y1="97" x2="185" y2="155" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="315" y1="97" x2="415" y2="155" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="210" y="120" fill="#666">[0,2)</text>
+  <text x="390" y="120" fill="#666">[2,4)</text>
+
+  <rect x="60" y="240" width="100" height="44" rx="6" fill="#e2f7e2" stroke="#2f8f2f"/>
+  <text x="110" y="259" text-anchor="middle">R: read</text>
+  <text x="110" y="276" text-anchor="middle">compile f0</text>
+  <rect x="190" y="240" width="100" height="44" rx="6" fill="#e2f7e2" stroke="#2f8f2f"/>
+  <text x="240" y="259" text-anchor="middle">R: read</text>
+  <text x="240" y="276" text-anchor="middle">compile f1</text>
+  <rect x="330" y="240" width="100" height="44" rx="6" fill="#e2f7e2" stroke="#2f8f2f"/>
+  <text x="380" y="259" text-anchor="middle">R: read</text>
+  <text x="380" y="276" text-anchor="middle">compile f2</text>
+  <rect x="460" y="240" width="100" height="44" rx="6" fill="#e2f7e2" stroke="#2f8f2f"/>
+  <text x="510" y="259" text-anchor="middle">R: read</text>
+  <text x="510" y="276" text-anchor="middle">compile f3</text>
+
+  <line x1="158" y1="190" x2="118" y2="235" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="182" y1="190" x2="232" y2="235" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="418" y1="190" x2="388" y2="235" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="442" y1="190" x2="502" y2="235" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <text x="300" y="330" text-anchor="middle" fill="#444">P-nodes fork via parlay::par_do; R-nodes are the psac_read leaves.</text>
+  <text x="300" y="350" text-anchor="middle" fill="#444">The tree is kept after the run — propagation walks it to find dirty reads.</text>
+
+  <!-- work stealing -->
+  <rect x="640" y="70" width="300" height="230" rx="10" fill="#fbfbfb" stroke="#999"/>
+  <text x="790" y="95" text-anchor="middle" fill="#333">parlay fork-join scheduler (-j N)</text>
+
+  <rect x="660" y="115" width="120" height="34" rx="6" fill="#dde9ff" stroke="#3b6dbf"/>
+  <text x="720" y="136" text-anchor="middle">worker 0</text>
+  <rect x="800" y="115" width="120" height="34" rx="6" fill="#dde9ff" stroke="#3b6dbf"/>
+  <text x="860" y="136" text-anchor="middle">worker 1</text>
+
+  <rect x="660" y="170" width="120" height="80" rx="6" fill="#fff" stroke="#888"/>
+  <text x="720" y="190" text-anchor="middle" fill="#666">deque</text>
+  <text x="720" y="210" text-anchor="middle">f0 f1</text>
+  <rect x="800" y="170" width="120" height="80" rx="6" fill="#fff" stroke="#888"/>
+  <text x="860" y="190" text-anchor="middle" fill="#666">deque</text>
+  <text x="860" y="210" text-anchor="middle">f2 f3</text>
+
+  <path d="M 800 230 C 770 260 750 260 725 245" stroke="#bf3b3b" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+  <text x="790" y="272" text-anchor="middle" fill="#bf3b3b">idle workers steal</text>
+
+  <text x="790" y="330" text-anchor="middle" fill="#444">Each fork pushes one branch on the local</text>
+  <text x="790" y="348" text-anchor="middle" fill="#444">deque and runs the other; idle workers</text>
+  <text x="790" y="366" text-anchor="middle" fill="#444">steal from random victims.</text>
+</svg>

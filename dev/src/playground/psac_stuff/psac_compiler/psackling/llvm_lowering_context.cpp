@@ -1,14 +1,14 @@
 #include "llvm_lowering_context.hpp"
 
 #include "context.hpp"
-#include "psackling/symbol.hpp"
-#include "psackling/type.hpp"
+#include <psackling/symbol.hpp>
+#include <psackling/type.hpp>
 
-#include "base/except/exceptions.hpp"
-#include "base/extend_cpp/variant_match.hpp"
-#include "base/types/bits_and_bytes.hpp"
+#include <base/except/exceptions.hpp>
+#include <base/extend_cpp/variant_match.hpp>
+#include <base/types/bits_and_bytes.hpp>
 
-#include "llvm/IR/LLVMContext.h"
+#include <llvm/IR/LLVMContext.h>
 
 llvm::Type* pg::LlvmLoweringContext::lowerType(tp::TypeID type_id, Context& ctx) {
 	if (types.contains(type_id)) return types[type_id];

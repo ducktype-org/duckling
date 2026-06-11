@@ -2,11 +2,11 @@
 
 #include "const_eval.hpp"
 #include "context.hpp"
-#include "frontend/pst_parser/access.hpp"
-#include "frontend/pst_parser/pst_visitor.hpp"
+#include <frontend/pst_parser/access.hpp>
+#include <frontend/pst_parser/pst_visitor.hpp>
 #include "llvm.hpp"
-#include "psackling/ids.hpp"
-#include "psackling/type.hpp"
+#include <psackling/ids.hpp>
+#include <psackling/type.hpp>
 #include "type_name_extractor.hpp"
 
 #include <frontend/pst_parser/elements/elements_list.hpp>
@@ -19,7 +19,7 @@
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
 
-#include "string_id/string_id.hpp"
+#include <string_id/string_id.hpp>
 
 namespace pg {
 	class GlobalPass final: public pst::PstVisitorPanicky {

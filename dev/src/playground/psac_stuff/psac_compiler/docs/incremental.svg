@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="470" viewBox="0 0 980 470" font-family="monospace" font-size="13">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <path d="M0,0 L10,4 L0,8 z" fill="#555"/>
+    </marker>
+    <marker id="arrowred" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <path d="M0,0 L10,4 L0,8 z" fill="#bf3b3b"/>
+    </marker>
+  </defs>
+
+  <text x="20" y="30" font-size="15" fill="#333">Compiler::update(new source) — incremental recompilation</text>
+
+  <!-- step 1 -->
+  <rect x="20" y="60" width="170" height="56" rx="8" fill="#dde9ff" stroke="#3b6dbf"/>
+  <text x="105" y="84" text-anchor="middle">parse + analyze</text>
+  <text x="105" y="102" text-anchor="middle" fill="#666">new PST, new hashes</text>
+
+  <!-- step 2 -->
+  <rect x="240" y="60" width="190" height="56" rx="8" fill="#dde9ff" stroke="#3b6dbf"/>
+  <text x="335" y="84" text-anchor="middle">diff content hashes</text>
+  <text x="335" y="102" text-anchor="middle" fill="#666">per function + globals</text>
+
+  <line x1="190" y1="88" x2="235" y2="88" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- function set check -->
+  <rect x="480" y="60" width="210" height="56" rx="8" fill="#fff3c4" stroke="#b08900"/>
+  <text x="585" y="84" text-anchor="middle">function set changed?</text>
+  <text x="585" y="102" text-anchor="middle" fill="#666">added / removed / renamed</text>
+  <line x1="430" y1="88" x2="475" y2="88" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <rect x="750" y="60" width="200" height="56" rx="8" fill="#ffe0e0" stroke="#bf3b3b"/>
+  <text x="850" y="84" text-anchor="middle">full rebuild</text>
+  <text x="850" y="102" text-anchor="middle" fill="#666">fresh psac_run</text>
+  <line x1="690" y1="88" x2="745" y2="88" stroke="#bf3b3b" stroke-width="1.5" marker-end="url(#arrowred)"/>
+  <text x="715" y="78" fill="#bf3b3b">yes</text>
+
+  <!-- no path down -->
+  <line x1="585" y1="116" x2="585" y2="156" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="595" y="142" fill="#2f8f2f">no</text>
+
+  <!-- mods -->
+  <rect x="60" y="160" width="860" height="180" rx="10" fill="#f6f0ff" stroke="#7b4fbf" stroke-dasharray="6,3"/>
+  <text x="80" y="184" fill="#7b4fbf">live PSAC computation (kept from the previous compile)</text>
+
+  <rect x="100" y="210" width="150" height="40" rx="6" fill="#fff3c4" stroke="#b08900"/>
+  <text x="175" y="234" text-anchor="middle">Mod h(f0)  =</text>
+  <rect x="100" y="262" width="150" height="40" rx="6" fill="#ffd6d6" stroke="#bf3b3b" stroke-width="2"/>
+  <text x="175" y="286" text-anchor="middle">Mod h(f1)  ≠ ✎</text>
+  <rect x="290" y="210" width="150" height="40" rx="6" fill="#fff3c4" stroke="#b08900"/>
+  <text x="365" y="234" text-anchor="middle">Mod h(f2)  =</text>
+  <rect x="290" y="262" width="150" height="40" rx="6" fill="#fff3c4" stroke="#b08900"/>
+  <text x="365" y="286" text-anchor="middle">Mod globals  =</text>
+
+  <text x="270" y="328" fill="#666">psac_write only where the hash differs</text>
+
+  <!-- propagate -->
+  <rect x="520" y="210" width="180" height="92" rx="8" fill="#e2f7e2" stroke="#2f8f2f"/>
+  <text x="610" y="244" text-anchor="middle">psac_propagate</text>
+  <text x="610" y="264" text-anchor="middle" fill="#666">re-runs only reads of</text>
+  <text x="610" y="280" text-anchor="middle" fill="#666">dirty Mods, in parallel</text>
+
+  <line x1="255" y1="282" x2="515" y2="262" stroke="#bf3b3b" stroke-width="1.5" marker-end="url(#arrowred)"/>
+
+  <!-- recompiled object -->
+  <rect x="750" y="236" width="140" height="40" rx="6" fill="#eee" stroke="#888"/>
+  <text x="820" y="260" text-anchor="middle">out.fn1.o ✎</text>
+  <line x1="700" y1="256" x2="745" y2="256" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- relink -->
+  <rect x="380" y="380" width="220" height="50" rx="8" fill="#ffe0e0" stroke="#bf3b3b"/>
+  <text x="490" y="402" text-anchor="middle">relink all objects</text>
+  <text x="490" y="420" text-anchor="middle" fill="#666">unchanged .o reused from disk</text>
+  <line x1="820" y1="280" x2="605" y2="392" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <text x="490" y="456" text-anchor="middle" fill="#444">Body edit → 1 function recompiled. Const/class/signature edit → globals Mod dirty → all reads re-run. No edit → nothing.</text>
+</svg>

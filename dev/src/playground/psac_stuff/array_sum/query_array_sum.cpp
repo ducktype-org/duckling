@@ -1,9 +1,9 @@
 #include "array_sum_common.hpp"
-#include "concurrent/module_flags/worker_count.hpp"
+#include <concurrent/module_flags/worker_count.hpp>
 
-#include "base/types/ints.hpp"
+#include <base/types/ints.hpp>
 
-#include "init/init.hpp"
+#include <init/init.hpp>
 #include <query_framework/context/context.hpp>
 #include <query_framework/entry/query_entry_point.hpp>
 #include <query_framework/external/api.hpp>
