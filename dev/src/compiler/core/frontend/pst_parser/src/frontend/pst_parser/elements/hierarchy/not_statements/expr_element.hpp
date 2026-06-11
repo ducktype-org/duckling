@@ -7,6 +7,9 @@ namespace pst {
 	 * @brief Common root for expression sub-elements.
 	 */
 	class ExprElement: public NotStmt {
+		THIS_CLASS(ExprElement);
+		PARENT_CLASS(NotStmt);
+	protected:
 		const i64 PRECEDENCE;
 
 	protected:
@@ -15,6 +18,7 @@ namespace pst {
 		 */
 		static bool checkNonEmpty(LangParserState& state);
 
+		ELEMENT_CLONE_DECL(ExprElement, PRECEDENCE);
 		explicit ExprElement(const LangParserState& state, i64 precedence):
 			  NotStmt(state),
 			  PRECEDENCE(precedence) {

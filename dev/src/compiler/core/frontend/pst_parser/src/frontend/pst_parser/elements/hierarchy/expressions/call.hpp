@@ -8,6 +8,9 @@ namespace pst::expr {
 	 * @brief Represents a single call or subscript expression
 	 */
 	class Call final: public ExprElement {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(Call, ExprElement);
+		CLONE_SUBELEMENTS();
+	protected:
 		lexer::Token::BracketType type
 			= lexer::Token::BracketType::None;  ///< either Round or Square
 		NAMED_CHILD(args, CallList);

@@ -10,6 +10,8 @@ namespace pst::expr {
 	 * Excludes `and`, `or`
 	 */
 	class GeneralBinary final: public BinaryOperator {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(GeneralBinary, BinaryOperator);
+	protected:
 		using Lower = GeneralSuffix;
 		using Self  = GeneralBinary;
 

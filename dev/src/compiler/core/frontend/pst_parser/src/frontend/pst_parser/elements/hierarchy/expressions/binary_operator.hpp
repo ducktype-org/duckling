@@ -8,12 +8,17 @@ namespace pst::expr {
 	 * @brief Common ancestor for binary operator elements.
 	 */
 	class BinaryOperator: public ExprElement {
+		THIS_CLASS(BinaryOperator);
+		PARENT_CLASS(ExprElement);
+	protected:
+		CLONE_SUBELEMENTS();
 	protected:
 		NAMED_CHILD(left, ExprElement);
 		NAMED_CHILD(op, OperatorWrapper);
 		NAMED_CHILD(right, ExprElement);
 
 	public:
+		ELEMENT_CLONE_DECL(BinaryOperator);
 		explicit BinaryOperator(const LangParserState& state, i64 precedence):
 			  ExprElement(state, precedence) {}
 

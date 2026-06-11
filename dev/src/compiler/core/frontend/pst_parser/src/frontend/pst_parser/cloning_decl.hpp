@@ -28,7 +28,7 @@ namespace pst {
 	return out;\
 }
 
-#define CLONE_SUBELEMENTS() void cloneSubElements(const ThisClass&)
+#define CLONE_SUBELEMENTS() protected: void cloneSubElements(const ThisClass&)
 
 #define SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(element, parent_class, ...) \
 	public:\
