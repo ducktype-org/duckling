@@ -87,6 +87,11 @@ function(duck_add_vm_tests suffix)
                 USES ${libvm} Tester ${vmtester})
         duck_disable_tc_when_not_opt("threads_test" ${test_set})
 
+        duck_add_test_custom(vm ${test_set}_deadlock_detection_test deadlock_detection/deadlock_detection_tests.cpp
+                USES ${libvm} Tester ${vmtester})
+        duck_disable_tc_when_not_opt("deadlock_detection_test" ${test_set})
+
+
         duck_add_test_custom(vm ${test_set}_jit_test jit/jit.cpp
                 USES ${libvm} Tester ${vmtester})
 
