@@ -244,7 +244,7 @@ metadata:
         );
     }
 
-    #[test]
+    #[test] // cSpell:disable-next-line
     fn finds_at_exact_directory_notadir() {
         let tmp_file = tempdir().unwrap();
         let file = tmp_file.path().join("xd");

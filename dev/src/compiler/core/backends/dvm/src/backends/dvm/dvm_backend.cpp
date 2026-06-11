@@ -36,7 +36,7 @@ namespace compiler::backend_vm {
 			return false;
 		};
 
-		for (const auto& lir_global: lir_unit.lir_globals) insertLirGlobal(lir_global);
+		for (const auto& lir_global: lir_unit.lir_globals) insertLIRGlobal(lir_global);
 		for (const auto& lir_function: lir_unit.lir_functions) {
 			// @TODO: #2483 Remove this filter (and the helper function) when strings work in DVM.
 			if (lir_function_deals_with_strings(lir_function)) {
@@ -49,11 +49,11 @@ namespace compiler::backend_vm {
 				continue;
 			}
 
-			insertLirFunction(lir_function);
+			insertLIRFunction(lir_function);
 		}
 	}
 
-	void DVMCodeBuilder::insertLirFunction(CRef<lir::Function> lir_function) {
+	void DVMCodeBuilder::insertLIRFunction(CRef<lir::Function> lir_function) {
 		program_context->lowerAndKeepLirFunction(lir_function);
 	}
 
@@ -61,7 +61,7 @@ namespace compiler::backend_vm {
 		program_context->insertExternCFunction(extern_func);
 	}
 
-	void DVMCodeBuilder::insertLirGlobal(const lir::LIRGlobalData& lir_global) {
+	void DVMCodeBuilder::insertLIRGlobal(const lir::LIRGlobalData& lir_global) {
 		program_context->lowerAndKeepLirGlobal(lir_global);
 	}
 
