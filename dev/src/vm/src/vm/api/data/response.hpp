@@ -41,10 +41,10 @@ namespace vm::api {
 
 		struct StackFrameData {
 			struct FrameVar {
-				u64         offset = 0;
+				u64                         offset = 0;
 				base::Optional<base::StrID> name;
 				base::Optional<base::StrID> type;
-				VMValueRef  value;
+				VMValueRef                  value;
 			};
 
 			base::StrID           function_name;

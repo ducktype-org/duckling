@@ -392,23 +392,35 @@ namespace vm {
 
 				if (high_pos) {
 					auto func_name = low_func.name;
-					
-					auto func_opt  = loader.getHighProgram()->functions().atMaybe(func_name);
-					CORE_ASSERT(func_opt, "If we could map low position to high, a high-function should exist");
+
+					auto func_opt = loader.getHighProgram()->functions().atMaybe(func_name);
+					CORE_ASSERT(
+						func_opt,
+						"If we could map low position to high, a high-function should exist"
+					);
 
 					auto func_ref = *func_opt;
 
 					auto stack_state = func_ref->stack_states.at(high_pos->instruction_index);
 
-					for (Block* const& block_ptr:
-					std::span(frame.local_block_ref_stack_base, frame.local_block_ref_stack_end)) {
+					for (Block* const& block_ptr: std::span(
+							 frame.local_block_ref_stack_base, frame.local_block_ref_stack_end
+						 )) {
 						u64 block_offset
 							= base::safeIntConv<u64>(&block_ptr - frame.local_block_ref_stack_base);
 
-						frame_vars.at(block_offset).name   = func_ref->local_stack.getName(stack_state, block_offset);
-						frame_vars.at(block_offset).type   = func_ref->local_stack.getTypeName(stack_state, block_offset);
-						CORE_ASSERT(frame_vars.at(block_offset).type, "we should have a name of a variable on stack");
-						CORE_ASSERT(frame_vars.at(block_offset).name, "we should have a name of a variable on stack");
+						frame_vars.at(block_offset).name
+							= func_ref->local_stack.getName(stack_state, block_offset);
+						frame_vars.at(block_offset).type
+							= func_ref->local_stack.getTypeName(stack_state, block_offset);
+						CORE_ASSERT(
+							frame_vars.at(block_offset).type,
+							"we should have a name of a variable on stack"
+						);
+						CORE_ASSERT(
+							frame_vars.at(block_offset).name,
+							"we should have a name of a variable on stack"
+						);
 					}
 				}
 
