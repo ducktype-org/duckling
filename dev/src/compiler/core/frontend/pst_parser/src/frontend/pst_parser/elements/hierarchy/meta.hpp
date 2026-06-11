@@ -90,13 +90,9 @@ namespace pst {
 	class Stmt: public LangElement {
 		PARENT_CLASS(LangElement);
 		THIS_CLASS(Stmt);
-	protected:
 		CLONE_SUBELEMENTS();
 	public:
-	/**
-	 * @todo Need to somehow handle prefixes
-	 */
-		explicit Stmt(const pst::CloneDummy dummy, const Stmt& other): LangElement(dummy, other), kind(other.kind), implicit_return(other.implicit_return) {}
+		ELEMENT_CLONE_DECL(Stmt, kind, implicit_return);
 
 	protected:
 

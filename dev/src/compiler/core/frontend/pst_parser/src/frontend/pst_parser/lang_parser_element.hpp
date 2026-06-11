@@ -74,9 +74,15 @@ namespace pst {
 	class LangElement: public tpc::Element {
 		THIS_CLASS(LangElement);
 	protected:
+		/**
+		 * @todo Change position handling
+		 * @todo Consider what should happen with context hash
+		 * @todo Consider what should happen with token ownership
+		 */
 		explicit LangElement(pst::CloneDummy, const LangElement& other):
 			  source_position(other.source_position),
 			  context_hash(other.context_hash),
+			  element_kind(other.element_kind),
 			  id(PstID::next()) {}
 
 		virtual CLONE_SIGNATURE() = 0;
