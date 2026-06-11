@@ -95,11 +95,6 @@ function(duck_add_test_custom test_pack test_name test_source)
 		if (vm_tc_pos EQUAL 6)
             set_property(TEST ${test_name} PROPERTY DISABLED TRUE)
 		endif()
-
-		string(FIND "${test_name}" "vm_tc" vm_tc_pos)
-		if (NOT vm_tc_pos EQUAL -1)
-            set_property(TEST ${test_name} PROPERTY DISABLED TRUE)
-		endif()
 	endif()
 endfunction()
 
