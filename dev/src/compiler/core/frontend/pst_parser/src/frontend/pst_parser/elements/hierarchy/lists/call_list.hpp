@@ -13,6 +13,7 @@ namespace pst {
 	 */
 	class CallList final: public CallParentList {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(CallList, CallParentList);
+		CLONE_SUBELEMENTS();
 	public:
 		explicit CallList(const LangParserState& state): List(state) {
 			this->element_kind = ElementKind::CallList;

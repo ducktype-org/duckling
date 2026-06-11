@@ -15,6 +15,7 @@ namespace pst {
 	 */
 	class InitList final: public InitParentList {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(InitList, InitParentList);
+		CLONE_SUBELEMENTS();
 	public:
 		explicit InitList(const LangParserState& state): List(state) {}
 

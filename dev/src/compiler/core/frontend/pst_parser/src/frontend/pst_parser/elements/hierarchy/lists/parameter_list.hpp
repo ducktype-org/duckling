@@ -13,6 +13,7 @@ namespace pst {
 	 */
 	class ParamList final: public ParamParentList {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(ParamList, ParamParentList);
+		CLONE_SUBELEMENTS();
 	public:
 		explicit ParamList(const LangParserState& state): List(state) {
 			this->element_kind = ElementKind::ParamList;

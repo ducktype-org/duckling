@@ -13,6 +13,7 @@ namespace pst {
 	 */
 	class ImplementsList final: public ImplementsParentList {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(ImplementsList, ImplementsParentList);
+		CLONE_SUBELEMENTS();
 	public:
 		explicit ImplementsList(const LangParserState& state): List(state) {}
 

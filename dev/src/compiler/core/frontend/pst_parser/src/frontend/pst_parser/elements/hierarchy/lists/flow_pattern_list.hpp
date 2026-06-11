@@ -14,6 +14,7 @@ namespace pst {
 	 */
 	class FlowPatternList final: public FlowPatternParentList {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(FlowPatternList, FlowPatternParentList);
+		CLONE_SUBELEMENTS();
 	public:
 		explicit FlowPatternList(const LangParserState& state): List(state) {
 			this->element_kind = ElementKind::FlowPatternList;

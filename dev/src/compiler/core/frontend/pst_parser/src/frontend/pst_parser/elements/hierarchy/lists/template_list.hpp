@@ -12,6 +12,7 @@ namespace pst {
 	 */
 	class TemplateList final: public TemplateParentList {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(TemplateList, TemplateParentList);
+		CLONE_SUBELEMENTS();
 	public:
 		explicit TemplateList(const LangParserState& state): List(state) {}
 

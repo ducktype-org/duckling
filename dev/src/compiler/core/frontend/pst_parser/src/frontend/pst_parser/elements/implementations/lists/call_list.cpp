@@ -3,6 +3,8 @@
 #include "impl_template.hpp"
 
 namespace pst {
+	CLONE_SUB_ELEMENTS_DEF(CallList, elements);
+
 	MBox<CallList> CallList::parse(LangParserState& state) {
 		return ListParsingTemplate::parseList<
 			CallArgument,

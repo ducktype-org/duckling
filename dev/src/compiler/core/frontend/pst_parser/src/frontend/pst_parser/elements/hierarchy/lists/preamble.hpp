@@ -18,7 +18,6 @@ namespace pst {
 	class List: public NotStmt {
 		THIS_CLASS(List);
 		PARENT_CLASS(NotStmt);
-		CLONE_SUBELEMENTS();
 	protected:
 		Container elements;
 

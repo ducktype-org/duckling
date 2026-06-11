@@ -12,6 +12,7 @@ namespace pst {
 	 */
 	class AtrArgList final: public AtrArgParentList {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(AtrArgList, AtrArgParentList);
+		CLONE_SUBELEMENTS();
 	public:
 		explicit AtrArgList(const LangParserState& state): List(state) {}
 
