@@ -1,0 +1,25 @@
+# Examples from docs: writing_code/declarations/operators.html
+# Overload of the + binary operator for types T and Q
+fun +(a: T, b: Q) -> i64 = 0;
+
+t + q;
+
+# Overload of suffix and prefix unary operators
+fun ++ (a: T) suffix = {
+	x;
+}
+
+t++;
+--t;
+
+fun () (callee: T, b: i64, c: f16) = {
+	z;
+}
+
+t(2, 3.14);
+
+fun [] (arr: T, b: i64, c: f16) = {
+	w;
+}
+
+t[2, 3.14];

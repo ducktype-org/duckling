@@ -65,8 +65,17 @@ namespace formatter {
 		bool isSignOperator(const Token& t) {
 			if (isKeyword(t) && isStr(t, "not")) return true;
 			if (!isOperator(t)) return false;
-			return isStr(t, "-") || isStr(t, "+") || isStr(t, "!") || isStr(t, "~");
+			return isStr(t, "-") || isStr(t, "+") || isStr(t, "!") || isStr(t, "~") || isStr(t, "&")
+			    || isStr(t, "?") || isStr(t, "++") || isStr(t, "--");
 		}
+
+		/** A `++`/`--` that binds to the preceding value as a suffix: `t++`. */
+		bool isSuffixOperator(const Token& t) {
+			return isOperator(t) && (isStr(t, "++") || isStr(t, "--"));
+		}
+
+		/** The `case` keyword, which starts a new match arm (and so a new statement). */
+		bool isCaseKeyword(const Token& t) { return isKeyword(t) && isStr(t, "case"); }
 
 		/**
 		 * Whether `prev` leaves us at a position where an expression may start
@@ -154,6 +163,8 @@ namespace formatter {
 					if (isBracketGroup(child) && child.getBracketType() == Bracket::Curly)
 						return true;
 					if (isComment(child)) return true;
+					// Match arms need no `;`, yet a match body is still a code block.
+					if (isCaseKeyword(child)) return true;
 				}
 				return false;
 			}
@@ -177,6 +188,9 @@ namespace formatter {
 
 				// Attribute sigil binds to its name: `@Attr`.
 				if (isSpecial(*prev) && isStr(*prev, "@")) return false;
+
+				// Suffix increment/decrement binds to the preceding value: `t++`.
+				if (isSuffixOperator(cur) && isValueCloser(*prev)) return false;
 
 				// Type/label colon: no space before, space after (handled by default).
 				if (isOperator(cur) && isStr(cur, ":")) return false;
@@ -676,6 +690,7 @@ namespace formatter {
 				const auto   n         = tokens.size();
 				const Token* prev      = nullptr;
 				usize        run_start = i;
+				bool         at_start  = true;
 
 				const auto flush_run = [&](usize end) {
 					prev = emitRun({ tokens.data() + run_start, tokens.data() + end }, prev);
@@ -687,6 +702,14 @@ namespace formatter {
 						i++;
 						continue;
 					}
+
+					// A `case` keyword opens the next match arm, ending the current statement
+					// even though no `;` precedes it.
+					if (isCaseKeyword(t) && !at_start) {
+						flush_run(i);
+						return i;
+					}
+					at_start = false;
 
 					// Statement terminator.
 					if (isSpecial(t) && isStr(t, ";")) {

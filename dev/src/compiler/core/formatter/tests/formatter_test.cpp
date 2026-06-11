@@ -80,6 +80,9 @@ public:
 		TESTER_ADD_TEST(testIndexNormalization);
 		TESTER_ADD_TEST(testAttribute);
 		TESTER_ADD_TEST(testUnaryMinus);
+		TESTER_ADD_TEST(testUnaryAddressOfAndOptional);
+		TESTER_ADD_TEST(testIncrementDecrement);
+		TESTER_ADD_TEST(testMatchArms);
 		TESTER_ADD_TEST(testFunctionBlock);
 		TESTER_ADD_TEST(testIfElseChain);
 		TESTER_ADD_TEST(testWhileLoop);
@@ -186,6 +189,32 @@ private:
 		check("x=a- -b;", "x = a - -b;\n");
 		check("x=(-a);", "x = (-a);\n");
 		check("return -1;", "return -1;\n");
+	}
+
+	void testUnaryAddressOfAndOptional() {
+		check("x = &y;", "x = &y;\n");
+		check("f(&a, b & c);", "f(&a, b & c);\n");
+		check(
+			"pattern T(b: ref B) -> ref D = &b.data;", "pattern T(b: ref B) -> ref D = &b.data;\n"
+		);
+		// `?` is a prefix type operator: `?i32` is an optional i32.
+		check("pattern S(r: ref R) -> ?i32 = none;", "pattern S(r: ref R) -> ?i32 = none;\n");
+	}
+
+	void testIncrementDecrement() {
+		check("t++;", "t++;\n");
+		check("--t;", "--t;\n");
+		check("arr[i]++;", "arr[i]++;\n");
+	}
+
+	void testMatchArms() {
+		// Match arms carry no trailing `;`; each `case` still starts its own line.
+		check("match (rect) {case Square(len) = print(a) case _ = print(b)}", golden(R"(
+match (rect) {
+	case Square(len) = print(a)
+	case _ = print(b)
+}
+)"));
 	}
 
 	void testFunctionBlock() {
@@ -421,6 +450,10 @@ fun f() = {
 			"block",
 			"class",
 			"comments",
+			"docs_classes",
+			"docs_let_var",
+			"docs_operators",
+			"docs_patterns",
 			"expressions",
 			"ffi",
 			"for",
