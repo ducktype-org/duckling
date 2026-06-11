@@ -9,6 +9,20 @@
 
 namespace pst {
 
+	namespace {
+		// Set fast hash here, it was probably slowing us down a bit:
+		struct StdHashAssumingSHA256Result final {
+			constexpr u64 operator()(const base::Bit256& value ) noexcept {
+				return value.data[0];
+			}
+		};
+
+
+		concurrent::ConHashMap<query::QueryStableHash, AccessLocked<LangElement>, StdHashAssumingSHA256Result>
+			pst_hash_map{};
+
+	}
+
 	base::Optional<AccessLocked<LangElement>> LangElement::getParent() const { return parent; }
 
 	SourcePositionLocked LangElement::getSourcePosition() const { return { source_position }; }
@@ -194,8 +208,7 @@ namespace pst {
 		CORE_PANIC("PstVisitor not supported for " + elementType());
 	}
 
-	concurrent::ConHashMap<query::QueryStableHash, AccessLocked<LangElement>>
-		LangElement::pst_hash_map{};
+	
 
 	AccessLocked<LangElement> LangElement::getByStableHash(query::QueryStableHash stable_hash) {
 		CORE_ASSERT(pst_hash_map.contains(stable_hash), "Invalid stable hash");

@@ -276,11 +276,11 @@ namespace pst {
 		}
 
 	protected:
-		/**
-		 * @brief Map from stable hash to lang element for all created elements.
-		 * @note Used to view dependent tokens of node in the query graph and for HELIOS PST origin.
-		 */
-		static concurrent::ConHashMap<query::QueryStableHash, AccessLocked<LangElement>> pst_hash_map;
+		// /**
+		//  * @brief Map from stable hash to lang element for all created elements.
+		//  * @note Used to view dependent tokens of node in the query graph and for HELIOS PST origin.
+		//  */
+		// static concurrent::ConHashMap<query::QueryStableHash, AccessLocked<LangElement>> pst_hash_map;
 
 		using InternalChild = Ref<LangElement>;
 
