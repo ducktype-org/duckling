@@ -211,6 +211,7 @@ namespace pst {
 	
 
 	AccessLocked<LangElement> LangElement::getByStableHash(query::QueryStableHash stable_hash) {
+		// throw "For now, for tests\n";
 		CORE_ASSERT(pst_hash_map.contains(stable_hash), "Invalid stable hash");
 		return *pst_hash_map.at(stable_hash);
 	}

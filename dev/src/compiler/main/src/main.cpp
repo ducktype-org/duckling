@@ -1106,6 +1106,16 @@ clah::Clah getClahForMain() {
 }
 
 int main(int argc, const char* argv[]) {
+	std::cerr << "GO!\n";
+	timer::TimeMeasurement total_main_time;
+	total_main_time.startMeasurement();
+	defer({
+		total_main_time.endMeasurement();
+		std::cerr << "Total MAIN execution time: ";
+		timer::printAs(std::cerr, total_main_time.duration(), timer::TimeUnit::Milliseconds);
+		std::cerr << "\n";
+	});
+
 	g_argv.clear();
 	g_argv.reserve(static_cast<usize>(argc));
 	for (int i = 0; i < argc; ++i) g_argv.emplace_back(argv[i]);
