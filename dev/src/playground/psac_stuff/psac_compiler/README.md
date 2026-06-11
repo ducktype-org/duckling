@@ -95,8 +95,15 @@ initialization* (a global `block_allocator` calls `parallel_for` before `main`)
 and its idle workers busy-spin. Left alone, 16 spinning threads thrash caches and
 cores through the entire serial front-end, roughly doubling parse time. The driver
 therefore parks the pool at a single worker (`parlay::set_num_workers(1)`) and
-expands it only around `psac_run`/`psac_propagate`. This one fix took full
-compiles of the large samples from ~6 s to ~2.8 s.
+expands it only around `psac_run`/`psac_propagate`. This one fix roughly halved
+full-compile wall time (first measured on Debug builds: ~6 s → ~2.8 s).
+
+**Building with clang.** The vendored psac headers did not compile under clang
+(`Computation`'s in-class constructor/destructor instantiate
+`unique_ptr<SPNode>` while `SPNode` is still incomplete; GCC defers the
+instantiation, clang rejects it). `dependencies/psac_clang_computation_fix.patch`
+moves those definitions after `SPNode` and is applied automatically by
+`dependencies/Psac.cmake`.
 
 **What made per-function compilation safe to run concurrently:**
 
@@ -159,32 +166,50 @@ recompiled 0/2 functions
 
 ## Benchmarks vs duckc
 
-`./bench_compiler.sh [input.dmf ...]` builds both compilers and runs hyperfine
-over `duckc compile_module` (cold, `--no-incremental`, cache wiped per run) and
-psacklinger in `--sequential` mode and at several thread counts (`THREADS`,
-`RUNS`, `WARMUP` env-tunable). Results land next to the script as
-`results_compiler_<name>.{json,md}`.
+`./bench_compiler.sh [input.dmf ...]` builds both compilers (release builds from
+`build-release` by default; `BUILD_DIR` overridable) and runs hyperfine over:
 
-On the ~8000-line generated samples (`benchmark/data/input`, 5 runs each):
+- `duckc` — `compile_module`, single-threaded, object files only;
+- `duckc-wN` — `compile_packages -w N` (query-framework workers); also compiles
+  the std/core packages and links a real executable, the closest equivalent of
+  what psacklinger does;
+- `psacklinger --sequential` and `psacklinger -j N`.
 
-| sample | psacklinger -j8 | duckc | speedup |
-|:---|---:|---:|---:|
-| duck1 (287 functions) | 2.80 s | 5.54 s | **1.98×** |
-| duck2 (153 functions + classes) | 2.72 s | 7.65 s | **2.81×** |
+Everything is cold: duckc's incremental cache and artifacts are wiped before
+every timed run. `THREADS`, `RUNS`, `WARMUP` are env-tunable; results land next
+to the script as `results_compiler_<name>.{json,md}`.
 
-Phase breakdown (`PSACKLINGER_TIMING=1`, duck1 at `-j8`): parse 2.44 s, GlobalPass
-6 ms, collect+hash 48 ms, globals object 3 ms, function lowering 92 ms, link
-44 ms. Two readings follow from it:
+Release builds, ~8000-line generated samples (`benchmark/data/input`), 5 runs:
 
-- The parallel lowering scales well (533 ms at `-j1` → 69 ms at `-j16`), but it is
-  a small slice of the wall time, so total speedup from threads is modest.
-- ~90% of a full compile is the shared PST front-end — including its mandatory
-  SHA-256 stable-hash calculation, which psacklinger does not use (it has its own
-  dprint hashes). An opt-out in `pst::PST` is the next optimization frontier.
+| threads | duck1: duckc -w | duck1: psacklinger -j | duck2: duckc -w | duck2: psacklinger -j |
+|---:|---:|---:|---:|---:|
+| 1 | 671 ms | 667 ms | 1293 ms | 559 ms |
+| 2 | 639 ms | 508 ms | 1226 ms | 479 ms |
+| 4 | 568 ms | 425 ms | 1201 ms | 454 ms |
+| 8 | 551 ms | 400 ms | 1205 ms | 436 ms |
+| 16 | 560 ms | **392 ms** | 1206 ms | **440 ms** |
+
+Readings:
+
+- psacklinger wins at every width: ~1.4× on duck1 and ~2.8× on duck2 at -j8.
+- duckc's `-w` workers barely help a single big module (1.22× on duck1, flat on
+  duck2) — its parallelism is per-query/per-package and one module is dominated
+  by a serial task chain. psacklinger's per-function fan-out scales ~1.7×.
+- At one thread the two are tied on duck1; on duck2 psacklinger is structurally
+  faster regardless of threads.
+- Build type matters enormously: the same benchmark on Debug builds reads ~2.8 s
+  vs ~5.5–7.6 s — only relative trends survive, absolute Debug numbers don't.
+
+Phase breakdown (`PSACKLINGER_TIMING=1`, duck1 at `-j8`, release): parse 202 ms,
+GlobalPass 1 ms, collect+hash 23 ms, globals object 2 ms, function lowering
+59 ms, link 54 ms. The shared PST front-end is still the biggest slice —
+including its mandatory SHA-256 stable-hash calculation, which psacklinger does
+not use (it has its own dprint hashes); an opt-out in `pst::PST` is the next
+optimization frontier.
 
 Where the PSAC design pays off unconditionally is incremental recompiles: a
-one-function edit re-runs one ~ms-scale task plus a relink instead of a multi-second
-full compile.
+one-function edit re-runs one ~ms-scale task plus a relink instead of a full
+compile.
 
 ## Tests
 

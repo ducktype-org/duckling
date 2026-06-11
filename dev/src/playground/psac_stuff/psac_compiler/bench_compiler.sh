@@ -16,9 +16,11 @@
 # - duckc must run from the dev repo root (the standard library path is relative)
 #   and keeps an incremental cache in ./duck_build — it is wiped before every
 #   timed run (--prepare) so every measurement is a cold, full compile.
-# - duckc compile_module emits object files; psacklinger also links an
-#   executable. The link step is a single clang invocation and is included in
-#   psacklinger's time.
+# - duckc is measured two ways:
+#     * `duckc` — compile_module, single-threaded, object files only (no link);
+#     * `duckc-wN` — compile_packages with N query-framework workers; this also
+#       compiles the std/core packages and links a real executable, so it is the
+#       closest equivalent of what psacklinger does (which also links).
 
 set -euo pipefail
 
@@ -27,7 +29,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Adjust accordingly
 REPO_ROOT="/home/mateusz/code/duckling"
 DEV_ROOT="$REPO_ROOT/dev"
-BUILD_DIR="$DEV_ROOT/build"
+BUILD_DIR="${BUILD_DIR:-$DEV_ROOT/build-release}"  # benchmark optimized builds by default
 BENCH_DATA="/home/mateusz/code/benchmark/data/input"
 
 DUCKC="$BUILD_DIR/bin/duckc"
@@ -71,6 +73,33 @@ for INPUT in "${INPUTS[@]}"; do
     DUCKC_INPUT="$WORK/${NAME}_duckc.dmf"
     { echo "import core.builtins.*;"; echo; cat "$INPUT"; } > "$DUCKC_INPUT"
 
+    # Package + manifest for the multi-worker duckc runs (compile_packages).
+    PKG="${NAME}pkg"
+    PKG_DIR="$WORK/$PKG"
+    ART_DIR="$WORK/${NAME}_artifacts"
+    mkdir -p "$PKG_DIR"
+    cp "$DUCKC_INPUT" "$PKG_DIR/$PKG.dmf"
+    cat > "$WORK/${NAME}_manifest.json" <<EOF
+{
+    "packages": [
+        {
+            "name": "$PKG",
+            "id": "$PKG",
+            "version": "0.1.0",
+            "dependencies": [],
+            "path": "$PKG_DIR"
+        }
+    ],
+    "tasks": [
+        {
+            "package": "$PKG",
+            "strategy": "native",
+            "output_file": "$PKG"
+        }
+    ]
+}
+EOF
+
     COMMANDS=(
         -n "duckc"
         "$DUCKC compile_module $DUCKC_INPUT --no-incremental"
@@ -79,6 +108,8 @@ for INPUT in "${INPUTS[@]}"; do
     )
     for T in $THREADS; do
         COMMANDS+=(
+            -n "duckc-w$T"
+            "$DUCKC compile_packages $WORK/${NAME}_manifest.json -w $T -a $ART_DIR --no-incremental"
             -n "psacklinger-j$T"
             "$PSACKLINGER $INPUT -j $T -o $WORK/$NAME.out"
         )
@@ -87,7 +118,7 @@ for INPUT in "${INPUTS[@]}"; do
     hyperfine \
         --warmup "$WARMUP" \
         --runs "$RUNS" \
-        --prepare "rm -rf $DEV_ROOT/duck_build" \
+        --prepare "rm -rf $DEV_ROOT/duck_build $ART_DIR" \
         --export-json "$SCRIPT_DIR/results_compiler_${NAME}.json" \
         --export-markdown "$SCRIPT_DIR/results_compiler_${NAME}.md" \
         "${COMMANDS[@]}"

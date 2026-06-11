@@ -1,0 +1,35 @@
+--- a/include/psac/types.hpp	2026-06-11 15:13:13.410805376 +0200
++++ include/psac/types.hpp	2026-06-11 15:13:53.650098178 +0200
+@@ -366,8 +366,8 @@
+ // ----------------------------------------------------------------------------
+ 
+ struct Computation {
+-  Computation() : root(nullptr) { }
+-  Computation(std::unique_ptr<SPNode> _root) : root(std::move(_root)) { }
++  Computation();
++  Computation(std::unique_ptr<SPNode> _root);
+ 
+   Computation(const Computation&) = delete;
+   Computation& operator=(const Computation&) = delete;
+@@ -375,7 +375,7 @@
+   Computation(Computation&&);
+   Computation& operator=(Computation&&);
+ 
+-  ~Computation() = default;
++  ~Computation();
+ 
+   size_t treesize() const;
+   size_t memory() const;
+@@ -475,6 +475,12 @@
+   ~SNode() = default;
+ };
+ 
++// Defined after SPNode is complete so that unique_ptr<SPNode>'s deleter can be
++// instantiated (clang instantiates it eagerly for in-class definitions).
++inline Computation::Computation() : root(nullptr) { }
++inline Computation::Computation(std::unique_ptr<SPNode> _root) : root(std::move(_root)) { }
++inline Computation::~Computation() = default;
++
+ struct PNode final : public SPNode {
+ 
+   static void* operator new(size_t sz) {

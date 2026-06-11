@@ -8,6 +8,11 @@ if(NOT psac_POPULATED)
 	FetchContent_Populate(
 		psac
 		URL "https://github.com/poleszc/psac/archive/${PSAC_COMMIT}.zip"
+		# Computation's in-class ctor/dtor instantiate unique_ptr<SPNode> before SPNode
+		# is complete; GCC defers the instantiation, clang rejects it. Remove once the
+		# fix lands upstream.
+		# `|| true` keeps re-population idempotent (patch exits 1 when already applied).
+		PATCH_COMMAND sh -c "patch -p1 --forward -i '${CMAKE_CURRENT_LIST_DIR}/psac_clang_computation_fix.patch' || true"
 		SYSTEM
 		QUIET
 	)
