@@ -40,7 +40,22 @@ namespace pg {
 			  void_type_id(newType(base::StrID("void"), tp::Void{})),
 			  incomplete_type_id(newType(base::StrID("$incomplete"), tp::Incomplete{})),
 			  namespace_type_id(newType(base::StrID("$namespace"), tp::Namespace{})),
-			  i64_type_id(newType(base::StrID("i64"), tp::Integral{ .size = Bytes(8) })) {}
+			  i64_type_id(newType(base::StrID("i64"), tp::Integral{ .size = Bytes(8) })) {
+			// Builtin runtime functions; their definitions live in the globals object file.
+			// Signature matches the real compiler's builtins_source.cpp:
+			// int64_t builtin_output_i64(int64_t v) { return printf("%ld\n", v); }
+			tp::TypeID output_i64_type = newType(
+				base::StrID("$tp_builtin_output_i64"),
+				tp::Function{ .param_types = { i64_type_id }, .return_type = i64_type_id }
+			);
+			insertSymbol(
+				base::StrID("builtin_output_i64"),
+				sym::FunctionSymbol{ .primary_namespace = root_ns_id,
+			                         .argument_symbols  = {},
+			                         .link_name         = base::StrID("builtin_output_i64") },
+				output_i64_type
+			);
+		}
 
 		ns::Namespace& currNs() { return namespaces[namespace_stack.back()]; }
 

@@ -1,10 +1,15 @@
 #include "compiler.hpp"
 
 #include "context.hpp"
+#include "expr_lowering.hpp"
 #include "function_pass.hpp"
 #include "global_pass.hpp"
 #include "llvm.hpp"
 #include "llvm_lowering_context.hpp"
+
+LLVM_INCLUDE_BEGIN()
+#include <llvm/Transforms/Utils/ModuleUtils.h>
+LLVM_INCLUDE_END()
 
 #include <frontend/pst_parser/elements/elements_list.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
@@ -16,15 +21,62 @@
 #include <system_command/system_command.hpp>
 
 #include <atomic>
+#include <chrono>
+#include <cstdlib>
 #include <optional>
 #include <sstream>
+#include <thread>
 
 namespace {
+	/// parlay's scheduler is created during static initialization (a global
+	/// block_allocator calls parallel_for) and its idle workers busy-spin, roughly
+	/// doubling the serial front-end time through core/cache contention. Keep the pool
+	/// parked at a single worker except around the parallel lowering phase.
+	void parkScheduler() { parlay::set_num_workers(1); }
+
+	void unparkScheduler(usize num_threads) {
+		parlay::set_num_workers(
+			num_threads > 0 ? num_threads : usize(std::thread::hardware_concurrency())
+		);
+	}
+
+	/// Wall-clock phase timer, enabled with PSACKLINGER_TIMING=1; prints to stderr.
+	class PhaseTimer final {
+	public:
+		PhaseTimer(const char* phase): phase(phase) {
+			if (enabled()) start = std::chrono::steady_clock::now();
+		}
+
+		~PhaseTimer() {
+			if (!enabled()) return;
+			const auto elapsed = std::chrono::steady_clock::now() - start;
+			std::cerr << "[timing] " << phase << ": "
+					  << std::chrono::duration<double, std::milli>(elapsed).count() << " ms\n";
+		}
+
+		static bool enabled() {
+			// NOLINTNEXTLINE(concurrency-mt-unsafe) — read once before any threads race.
+			static const bool on = std::getenv("PSACKLINGER_TIMING") != nullptr;
+			return on;
+		}
+
+	private:
+		const char*                           phase;
+		std::chrono::steady_clock::time_point start;
+	};
+
 	/// One unit of parallel work: a single function definition together with the
 	/// namespace it was declared in (so lowering resolves symbols in the right scope).
 	struct FunctionWorkItem {
 		pst::Access<pst::Fun> stmt;
 		pg::ns::NamespaceID   enclosing_ns;
+	};
+
+	/// A global variable with an initializer expression. Lowered (in declaration
+	/// order) into the synthetic constructor of the globals object file.
+	struct GlobalInitItem {
+		pst::Access<pst::Variable> stmt;
+		pg::ns::NamespaceID        enclosing_ns;
 	};
 
 	/// Content hash of a PST element: hash of its recursive debug print. The dprint
@@ -55,6 +107,7 @@ namespace {
 		std::vector<FunctionWorkItem> items;
 		std::vector<u64>              fn_hashes;
 		std::vector<std::string>      link_names;
+		std::vector<GlobalInitItem>   global_inits;
 
 		void visitFun(pst::Access<pst::Fun> stmt) override {
 			const base::StrID      name = stmt->getName().illegalAccess().value()->unwrap();
@@ -84,7 +137,11 @@ namespace {
 
 		void visitConst(pst::Access<pst::Const>) override {}
 
-		void visitVariable(pst::Access<pst::Variable>) override {}
+		void visitVariable(pst::Access<pst::Variable> stmt) override {
+			if (stmt->getValue().has_value())
+				global_inits.push_back(GlobalInitItem{ .stmt         = stmt,
+				                                       .enclosing_ns = ctx.currNs().id });
+		}
 
 	private:
 		pg::Context& ctx;
@@ -160,33 +217,101 @@ namespace {
 	}
 
 	/**
-	 * @brief Emits the object file that defines all global variables, with their
-	 * compile-time-evaluated (or zero) initializers. Function modules only declare
-	 * the globals; this is the single definition the linker resolves them against.
+	 * @brief Defines the builtin runtime functions in the globals module. Matches the
+	 * real compiler's builtin: int64_t builtin_output_i64(int64_t v) — prints the value
+	 * and a newline via libc printf and returns printf's result.
 	 */
-	void emitGlobalsObject(const pg::Context& base_ctx, const std::filesystem::path& object_path) {
+	void defineBuiltins(pg::LlvmProgramModule& module) {
+		module.inCtxDo([&](llvm::LLVMContext& llvm_ctx, llvm::Module& mod) {
+			auto* i64_ty = llvm::Type::getInt64Ty(llvm_ctx);
+			auto* i32_ty = llvm::Type::getInt32Ty(llvm_ctx);
+			auto* ptr_ty = llvm::PointerType::getUnqual(llvm_ctx);
+
+			auto* printf_ty = llvm::FunctionType::get(i32_ty, { ptr_ty }, /*isVarArg=*/true);
+			auto* printf_fn
+				= llvm::Function::Create(printf_ty, llvm::Function::ExternalLinkage, "printf", &mod);
+
+			auto* output_ty = llvm::FunctionType::get(i64_ty, { i64_ty }, false);
+			auto* output_fn = llvm::Function::Create(
+				output_ty, llvm::Function::ExternalLinkage, "builtin_output_i64", &mod
+			);
+
+			auto*             entry = llvm::BasicBlock::Create(llvm_ctx, "entry", output_fn);
+			llvm::IRBuilder<> builder(entry);
+			llvm::Value*      format = builder.CreateGlobalStringPtr("%ld\n", "output_i64_fmt");
+			llvm::Value*      printed
+				= builder.CreateCall(printf_ty, printf_fn, { format, output_fn->getArg(0) });
+			builder.CreateRet(builder.CreateSExt(printed, i64_ty));
+		});
+	}
+
+	/**
+	 * @brief Emits the object file that defines all global variables (zero-initialized)
+	 * and the builtin runtime functions. Initializer expressions — which may call user
+	 * functions and read other globals — are lowered in declaration order into a
+	 * synthetic constructor registered in llvm.global_ctors, so libc runs it before
+	 * main. Function modules only declare the globals; this is the single definition
+	 * the linker resolves them against.
+	 */
+	void emitGlobalsObject(
+		const pg::Context&                 base_ctx,
+		const std::vector<GlobalInitItem>& global_inits,
+		const std::filesystem::path&       object_path
+	) {
 		pg::Context             ctx = base_ctx;
 		pg::LlvmProgramModule   module;
 		pg::LlvmLoweringContext lowering(module);
 
+		// Created through the lowering cache so the initializer expressions below reuse
+		// the same llvm::GlobalVariable instead of creating clashing declarations.
 		for (pg::sym::SymbolID global_sym_id: ctx.global_variables) {
-			pg::sym::Symbol& global_sym  = ctx.getSymbol(global_sym_id);
-			const auto&      global_kind = std::get<pg::sym::GlobalVariableSymbol>(global_sym.kind);
+			pg::sym::Symbol&      global_sym = ctx.getSymbol(global_sym_id);
+			llvm::GlobalVariable* global     = lowering.getOrCreateGlobal(global_sym_id, ctx);
+			llvm::Type*           llvm_ty    = lowering.lowerType(global_sym.type_id, ctx);
+			global->setInitializer(llvm::Constant::getNullValue(llvm_ty));
+		}
 
-			llvm::Type* llvm_ty = lowering.lowerType(global_sym.type_id, ctx);
-			module.inCtxDo([&](llvm::LLVMContext&, llvm::Module& mod) {
-				llvm::Constant* initializer
-					= global_kind.init_bits.has_value()
-				        ? llvm::ConstantInt::get(llvm_ty, global_kind.init_bits.value())
-				        : llvm::Constant::getNullValue(llvm_ty);
-				new llvm::GlobalVariable(
-					mod,
-					llvm_ty,
-					/*isConstant=*/false,
-					llvm::GlobalValue::ExternalLinkage,
-					initializer,
-					global_kind.link_name.strView()
+		defineBuiltins(module);
+
+		if (!global_inits.empty()) {
+			module.inCtxDo([&](llvm::LLVMContext& llvm_ctx, llvm::Module& mod) {
+				auto* init_ty = llvm::FunctionType::get(llvm::Type::getVoidTy(llvm_ctx), false);
+				auto* init_fn = llvm::Function::Create(
+					init_ty, llvm::Function::InternalLinkage, "psack_global_init", &mod
 				);
+				auto*             entry = llvm::BasicBlock::Create(llvm_ctx, "entry", init_fn);
+				llvm::IRBuilder<> builder(entry);
+				pg::LocalsMap     no_locals;
+
+				for (const GlobalInitItem& item: global_inits) {
+					const base::StrID name = item.stmt->getName().illegalAccess().value()->unwrap();
+					pg::sym::SymbolID global_sym_id
+						= ctx.lookupInNamespace(item.enclosing_ns, name);
+					pg::sym::Symbol& global_sym = ctx.getSymbol(global_sym_id);
+
+					const pst::ExprElement& init_expr = *item.stmt->getValue()
+					                                         ->illegalAccess()
+					                                         .value()
+					                                         ->getExpr()
+					                                         .illegalAccess()
+					                                         .value();
+
+					if (item.enclosing_ns != ctx.root_ns_id) ctx.enterNamespace(item.enclosing_ns);
+					pg::ExprLowering expr_lowering(ctx, lowering, builder, no_locals);
+					pg::LoweredExpr  init = expr_lowering.lower(init_expr);
+					if (item.enclosing_ns != ctx.root_ns_id) ctx.popNamespace();
+
+					if (init.type_id != global_sym.type_id) {
+						throw std::runtime_error(
+							"Global variable '" + name.str()
+							+ "': initializer type does not match declared type"
+						);
+					}
+					builder.CreateStore(init.value, lowering.getOrCreateGlobal(global_sym_id, ctx));
+				}
+				builder.CreateRetVoid();
+
+				llvm::appendToGlobalCtors(mod, init_fn, /*Priority=*/65'535);
 			});
 		}
 
@@ -231,6 +356,7 @@ namespace pg {
 		std::vector<FunctionWorkItem> items;
 		std::vector<u64>              fn_hashes;
 		std::vector<std::string>      link_names;
+		std::vector<GlobalInitItem>   global_inits;
 		u64                           globals_hash = 0;
 	};
 
@@ -243,6 +369,7 @@ namespace pg {
 		std::vector<FunctionWorkItem> items;
 		std::vector<u64>              fn_hashes;
 		std::vector<std::string>      link_names;
+		std::vector<GlobalInitItem>   global_inits;
 		u64                           globals_hash = 0;
 
 		std::vector<std::filesystem::path> object_paths;
@@ -260,13 +387,17 @@ namespace pg {
 
 	Compiler::Compiler(CompileOptions options): state(std::make_unique<State>()) {
 		state->options = std::move(options);
+		parkScheduler();
 	}
 
 	Compiler::~Compiler() = default;
 
 	Compiler::AnalyzedProgram Compiler::analyze(const fs::File& file) {
 		AnalyzedProgram program;
-		program.pst = std::make_unique<pst::PST<>>(file, pst::PSTType::Program);
+		{
+			PhaseTimer timer("parse");
+			program.pst = std::make_unique<pst::PST<>>(file, pst::PSTType::Program);
+		}
 
 		auto for_each_top_level = [&](auto& visitor) {
 			for (pst::AccessLocked<pst::Stmt> inner_stmt:
@@ -276,19 +407,26 @@ namespace pg {
 		};
 
 		// Pass 1: register top-level declarations (namespaces, functions, structs, consts).
-		GlobalPass global_pass(program.ctx);
-		for_each_top_level(global_pass);
+		{
+			PhaseTimer timer("global_pass");
+			GlobalPass global_pass(program.ctx);
+			for_each_top_level(global_pass);
+		}
 
 		// Pass 2: collect function work items, content hashes and the globals hash.
-		FunctionCollector collector(program.ctx);
-		for_each_top_level(collector);
-		program.items      = std::move(collector.items);
-		program.fn_hashes  = std::move(collector.fn_hashes);
-		program.link_names = std::move(collector.link_names);
+		{
+			PhaseTimer        timer("collect+hash");
+			FunctionCollector collector(program.ctx);
+			for_each_top_level(collector);
+			program.items        = std::move(collector.items);
+			program.fn_hashes    = std::move(collector.fn_hashes);
+			program.link_names   = std::move(collector.link_names);
+			program.global_inits = std::move(collector.global_inits);
 
-		GlobalsHasher globals_hasher;
-		for_each_top_level(globals_hasher);
-		program.globals_hash = globals_hasher.hash;
+			GlobalsHasher globals_hasher;
+			for_each_top_level(globals_hasher);
+			program.globals_hash = globals_hasher.hash;
+		}
 
 		return program;
 	}
@@ -332,6 +470,7 @@ namespace pg {
 		s.items        = std::move(program.items);
 		s.fn_hashes    = std::move(program.fn_hashes);
 		s.link_names   = std::move(program.link_names);
+		s.global_inits = std::move(program.global_inits);
 		s.globals_hash = program.globals_hash;
 
 		s.object_paths.clear();
@@ -343,7 +482,10 @@ namespace pg {
 
 		s.globals_object_path = std::filesystem::path(s.options.output_path);
 		s.globals_object_path += ".globals.o";
-		emitGlobalsObject(s.ctx, s.globals_object_path);
+		{
+			PhaseTimer timer("globals_object");
+			emitGlobalsObject(s.ctx, s.global_inits, s.globals_object_path);
+		}
 
 		s.fn_mods = std::vector<psac::Mod<u64>>(n);
 		for (usize i = 0; i < n; ++i) psac_write(&s.fn_mods[i], s.fn_hashes[i]);
@@ -352,26 +494,34 @@ namespace pg {
 		s.errors.assign(n, "");
 		s.recompile_count.store(0);
 
-		if (s.options.sequential) {
-			for (usize i = 0; i < n; ++i) compileOneFunction(s.ctx, s.items[i], s.object_paths[i]);
-		} else if (n > 0) {
-			if (s.options.num_threads > 0) parlay::set_num_workers(s.options.num_threads);
-			// psac_run expands to a statement (trailing semicolon), so it can't be nested
-			// inside a call expression.
-			auto computation = psac_run(
-								   compileFunctionsPsac,
-								   &s.ctx,
-								   &s.items,
-								   &s.object_paths,
-								   &s.fn_mods,
-								   &s.globals_mod,
-								   &s.errors,
-								   &s.recompile_count
-			) s.computation.emplace(std::move(computation));
+		{
+			PhaseTimer timer("function_lowering");
+			if (s.options.sequential) {
+				for (usize i = 0; i < n; ++i)
+					compileOneFunction(s.ctx, s.items[i], s.object_paths[i]);
+			} else if (n > 0) {
+				unparkScheduler(s.options.num_threads);
+				// psac_run expands to a statement (trailing semicolon), so it can't be nested
+				// inside a call expression.
+				auto computation = psac_run(
+									   compileFunctionsPsac,
+									   &s.ctx,
+									   &s.items,
+									   &s.object_paths,
+									   &s.fn_mods,
+									   &s.globals_mod,
+									   &s.errors,
+									   &s.recompile_count
+				) s.computation.emplace(std::move(computation));
+				parkScheduler();
+			}
 		}
 
 		throwOnErrors();
-		link();
+		{
+			PhaseTimer timer("link");
+			link();
+		}
 		return CompileStats{ .total_functions = n, .recompiled_functions = n };
 	}
 
@@ -391,9 +541,10 @@ namespace pg {
 
 		// Refresh shared state in place — the PSAC read closures point at these. The
 		// old PST is destroyed only after the items referencing it were replaced.
-		s.ctx   = program.ctx;
-		s.items = std::move(program.items);
-		s.pst   = std::move(program.pst);
+		s.ctx          = program.ctx;
+		s.items        = std::move(program.items);
+		s.global_inits = std::move(program.global_inits);
+		s.pst          = std::move(program.pst);
 
 		// Diff hashes and rewrite exactly the Mods that changed; propagation then
 		// re-runs exactly the reads of those Mods.
@@ -406,7 +557,7 @@ namespace pg {
 		}
 		const bool globals_changed = program.globals_hash != s.globals_hash;
 		if (globals_changed) {
-			emitGlobalsObject(s.ctx, s.globals_object_path);
+			emitGlobalsObject(s.ctx, s.global_inits, s.globals_object_path);
 			if (!s.options.sequential) psac_write(&s.globals_mod, program.globals_hash);
 		}
 
@@ -429,8 +580,10 @@ namespace pg {
 				s.recompile_count.store(changed.size());
 			}
 		} else {
+			unparkScheduler(s.options.num_threads);
 			psac_propagate(s.computation.value());
 			psac::GarbageCollector::run();
+			parkScheduler();
 		}
 
 		throwOnErrors();

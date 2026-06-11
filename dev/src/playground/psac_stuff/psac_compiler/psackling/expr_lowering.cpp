@@ -99,14 +99,15 @@ namespace pg {
 		}
 
 		if (std::holds_alternative<sym::FunctionSymbol>(symbol.kind)
-		    || std::holds_alternative<sym::NamespaceSymbol>(symbol.kind)) {
-			// No runtime value; a later chain link (call or `::` access) consumes it.
+		    || std::holds_alternative<sym::NamespaceSymbol>(symbol.kind)
+		    || std::holds_alternative<sym::TypeSymbol>(symbol.kind)) {
+			// No runtime value; a later chain link (call or `.` access) consumes it.
+			// A TypeSymbol is consumed by a constructor call: `Point()`.
 			return LoweredExpr{ .type_id = symbol.type_id, .symbol = sym_id };
 		}
 
 		CORE_PANIC(
-			"Identifier '" + name.str()
-			+ "' names a symbol kind not supported in expressions (type or field)"
+			"Identifier '" + name.str() + "' names a symbol kind not supported in expressions"
 		);
 	}
 
@@ -257,6 +258,24 @@ namespace pg {
 		if (!callee.symbol.has_value()) throw std::runtime_error("Call target is not a function");
 		const sym::SymbolID fun_sym_id = callee.symbol.value();
 		sym::Symbol&        fun_sym    = ctx.getSymbol(fun_sym_id);
+
+		// Constructor call `Point()`: produces a zero-initialized value of the type.
+		// No user-defined constructors yet, so arguments are not allowed.
+		if (std::holds_alternative<sym::TypeSymbol>(fun_sym.kind)) {
+			if (call->getArgs().illegalAccess().value()->size() != 0) {
+				throw std::runtime_error(
+					"Constructor of '" + fun_sym.name.str()
+					+ "' takes no arguments (only default construction is supported)"
+				);
+			}
+			const tp::TypeID type_id = std::get<sym::TypeSymbol>(fun_sym.kind).type_id;
+			llvm::Type*      llvm_ty = lowering.lowerType(type_id, ctx);
+			return LoweredExpr{
+				.value   = llvm::Constant::getNullValue(llvm_ty),
+				.type_id = type_id,
+			};
+		}
+
 		if (!std::holds_alternative<sym::FunctionSymbol>(fun_sym.kind))
 			throw std::runtime_error("'" + fun_sym.name.str() + "' is not a function");
 

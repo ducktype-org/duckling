@@ -1052,6 +1052,53 @@ public:
 			5
 		);
 
+		PS_TEST(
+			ConstructorCall,
+			R"(
+				class Point {
+					x: i64 = 0;
+					y: i64 = 0;
+				}
+				fun main() -> i64 = {
+					var p: Point = Point();
+					p.x = 3;
+					return p.x + p.y;
+				}
+			)",
+			3
+		);
+
+		PS_TEST(
+			BuiltinOutputI64,
+			R"(
+				fun main() -> i64 = {
+					builtin_output_i64(42i64);
+					return 7;
+				}
+			)",
+			7
+		);
+
+		PS_TEST(
+			GlobalVarCallInitializer,
+			R"(
+				fun five() -> i64 = { return 5; }
+				var g: i64 = five() * 2i64;
+				fun main() -> i64 = { return g; }
+			)",
+			10
+		);
+
+		PS_TEST(
+			GlobalVarChainedInitializers,
+			R"(
+				var a: i64 = 3;
+				var b: i64 = a * a;
+				fun main() -> i64 = { return b + a; }
+			)",
+			12
+		);
+
 		// --- Global variables ---
 
 		PS_TEST(

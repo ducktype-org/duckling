@@ -16,13 +16,11 @@ namespace pg::sym {
 
 	struct VariableSymbol {};
 
-	/// Top-level (or namespace-level) variable. Defined once in the dedicated globals
-	/// object file; function modules reference it as an external declaration.
+	/// Top-level (or namespace-level) variable. Defined once (zero-initialized) in the
+	/// dedicated globals object file; initializer expressions run in a synthetic
+	/// constructor before main. Function modules reference it as an external declaration.
 	struct GlobalVariableSymbol {
 		base::StrID link_name;  ///< Namespace-qualified name used for the LLVM symbol.
-		/// Initializer value (raw 64-bit data, interpreted via the symbol's type_id),
-		/// evaluated at compile time. Empty means zero-initialized.
-		base::Optional<u64> init_bits;
 	};
 
 	/// Compile-time constant. The value is stored as raw 64-bit data; the symbol's
