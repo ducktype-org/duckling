@@ -4,8 +4,6 @@
 #include "../../hierarchy/not_statements/code_block_or_statement.hpp"  // IWYU pragma: keep
 #include "preamble.hpp"
 
-#include <diagnostic/message.hpp>
-
 namespace pst {
 	CLONE_SUB_ELEMENTS_DEF(StmtSpecifier, specifier, call_list);
 

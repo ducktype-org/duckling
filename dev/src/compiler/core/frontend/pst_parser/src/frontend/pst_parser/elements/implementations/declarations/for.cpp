@@ -25,6 +25,11 @@ namespace pst {
 		} else {
 			PARSE().goDown();
 
+			if (PARSE().tryEat(Keyword::Var))
+				out->is_const = false;
+			else if (PARSE().tryEat(Keyword::Let))
+				out->is_const = true;
+
 			PARSE().one(&out->iterator);
 
 			if (PARSE().tryEat(NamedOperator::Colon)) {
@@ -56,6 +61,10 @@ namespace pst {
 		}
 		out << R"("identifier": )";
 		nullAwareDprint(iterator, out);
+
+		if (is_const.has_value())
+			out << R"(, "is_const": )" << (is_const.value() ? "true" : "false");
+
 		out << R"(, "type": )";
 		nullAwareDprint(type, out);
 		out << R"(, "iterable": )";
@@ -65,7 +74,11 @@ namespace pst {
 		out << "}";
 	}
 
-	HashAlg& For::addElementDataToStableHash(HashAlg& partial_hash) const { return partial_hash; }
+	HashAlg& For::addElementDataToStableHash(HashAlg& partial_hash) const {
+		addToHash(partial_hash, is_const.has_value());
+		if (is_const.has_value()) addToHash(partial_hash, is_const.value());
+		return partial_hash;
+	}
 
 	void For::acceptVisitor(PstVisitor& visitor) const { visitor.visitFor(*this); }
 }

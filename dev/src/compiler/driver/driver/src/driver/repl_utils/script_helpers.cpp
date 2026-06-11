@@ -1,5 +1,6 @@
 #include "script_helpers.hpp"
 
+#include <base/extend_cpp/vector_utils.hpp>
 #include <base/str/str_utils.hpp>
 
 #include <hashing/component_hash.hpp>
@@ -15,12 +16,10 @@ namespace compiler::repl {
 	}
 
 	void appendScriptLIRModuleData(
-		driver::LIRModuleData& merged, const driver::LIRModuleData& chunk
+		driver::LIRUnitWithBackendName& merged, const driver::LIRUnitWithBackendName& chunk
 	) {
-		merged.functions.insert(
-			merged.functions.end(), chunk.functions.begin(), chunk.functions.end()
-		);
-		merged.globals.insert(merged.globals.end(), chunk.globals.begin(), chunk.globals.end());
+		base::appendToVector(merged.lir_unit.lir_functions, chunk.lir_unit.lir_functions);
+		base::appendToVector(merged.lir_unit.lir_globals, chunk.lir_unit.lir_globals);
 	}
 
 }  // namespace compiler::repl

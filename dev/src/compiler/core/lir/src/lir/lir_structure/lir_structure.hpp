@@ -1,12 +1,12 @@
 #pragma once
 
-#include "function_forward.hpp"  // IWYU pragma: keep
+#include "lir_structure_fd.hpp"  // IWYU pragma: keep
 
 #include <ctv/ctv.hpp>
 #include <diagnostic_interactive/stable_position.hpp>
 #include <helios/hout/hout_fd.hpp>
 #include <helios/symbols/symbol_abi.hpp>
-#include <helios/symbols/symbol_id.hpp>
+#include <helios/symbols/symbol_id.hpp>  // @TODO: #2796 untable this if possible (LIR structure should not depend on symbols if possible)
 #include <mir/mir_structure/mir_local_ref.hpp>
 #include <mir/mir_structure/mir_metadata.hpp>
 #include <tsl/type_layout.hpp>
@@ -148,6 +148,7 @@ namespace compiler::lir {
 	struct FunctionLiteral {
 		base::StrID                                         mangled_name;
 		helios::SymbolABI                                   abi;
+		bool                                                link_once;
 		std::shared_ptr<std::vector<CRef<tsl::TypeLayout>>> parameter_layouts;
 		CRef<tsl::TypeLayout>                               return_type_layout;
 
@@ -242,35 +243,32 @@ namespace compiler::lir {
 	enum class LIRGlobalType { Variable, Constant };
 
 	/**
-	 * @brief Global variable/constant in LIR.
+	 * @brief Lightweight ID-like representation of a global value used in LIR IR code (e.g. in
+	 * LIRPlace). By global-value we refer to a global variable or a global constant.
+	 *
+	 * @important This is not a full IR representation of a global variable.
+	 * LIRGlobalData serves that purpose and contains more information.
+	 *
+	 * This structure is used to reference a global variable in LIR code.
+	 * This structure enables LIR instructions to refer to and manipulate global variables and
+	 * constants.
 	 */
 	struct LIRGlobal final {
-		/**
-		 * @brief HELIOS id of the variable.
-		 */
-		helios::SymID helios_id;
-
 		CRef<tsl::TypeLayout> layout;
 
 		base::StrID mangled_name;
 
 		LIRGlobalType type;
 
-		base::Optional<ctv::CompileTimeValue> initial_value;
-
 	private:
 		LIRGlobal(
-			const helios::SymID                          helios_id,
-			const CRef<tsl::TypeLayout>                  layout,
-			const base::StrID&                           mangled_name,
-			const LIRGlobalType                          type          = LIRGlobalType::Variable,
-			const base::Optional<ctv::CompileTimeValue>& initial_value = {}
+			const CRef<tsl::TypeLayout> layout,
+			const base::StrID&          mangled_name,
+			const LIRGlobalType         type
 		):
-			  helios_id(helios_id),
 			  layout(layout),
 			  mangled_name(mangled_name),
-			  type(type),
-			  initial_value(initial_value) {}
+			  type(type) {}
 
 		friend Function;
 
@@ -279,14 +277,6 @@ namespace compiler::lir {
 		 * @note Do not use this function outside of LIR lowering.
 		 */
 		static LIRGlobal fromMIR(query::Context& ctx, mir::MIRGlobal mir_global);
-
-		/**
-		 * @note Do not use this function outside of LIR lowering / driver.
-		 * This handles both global variables and constants. For constants, it also sets CTV initial
-		 * value of the global.
-		 */
-		static LIRGlobal fromHOUT(query::Context& ctx, const helios::HOUTGlobalData& helios_id);
-
 
 		void debugPrint(query::Context& ctx, std::ostream& os) const;
 	};
@@ -357,6 +347,7 @@ namespace compiler::lir {
 		};
 
 		using BaseVariant = std::variant<LIRLocalRef, LIRGlobal>;
+
 		/**
 		 * @brief Base of the LIR place, either local or global variable.
 		 */
@@ -590,6 +581,7 @@ namespace compiler::lir {
 	struct Function final {
 		base::StrID       mangled_name;
 		helios::SymbolABI abi;
+		bool              link_once;
 
 		std::vector<CRef<tsl::TypeLayout>> parameter_layouts;
 		CRef<tsl::TypeLayout>              return_type_layout;
@@ -634,5 +626,76 @@ namespace compiler::lir {
 		 */
 		[[nodiscard]]
 		base::Map<LIRLocalRef, u64> getLocalVariableIDs() const;
+	};
+
+	/**
+	 * @brief Representation of a global value in LIR (i.e. a global variable or constant).
+	 * See also: LIRGlobal
+	 */
+	struct LIRGlobalData final {
+		struct CTorDtorPair final {
+			base::Optional<CRef<lir::Function>>
+				global_ctor;  ///< Optional, if the global has a constructor.
+			base::Optional<CRef<lir::Function>>
+				global_dtor;  ///< Optional, if the global has a destructor.
+		};
+
+		LIRGlobal                                         global;
+		std::variant<ctv::CompileTimeValue, CTorDtorPair> data_initialization;
+
+		/**
+		 * @brief Returns the constructor and destructor pair for the global.
+		 * Panics if the global does not have a constructor+destructor initialization.
+		 * Use only when you are sure that the global has constructor+destructor initialization (or
+		 * in tests).
+		 *
+		 * @return CTorDtorPair
+		 */
+		[[nodiscard]]
+		CTorDtorPair getCtorDtorPair() const;
+
+		/**
+		 * @brief Returns the constant value for the global.
+		 * Panics if the global does not have a constant initialization.
+		 * Use only when you are sure that the global has a constant initialization (or
+		 * in tests).
+		 *
+		 * @return ctv::CompileTimeValue
+		 */
+		[[nodiscard]]
+		ctv::CompileTimeValue getConstValue() const;
+
+		void debugPrint(query::Context& ctx, std::ostream& out) const;
+	};
+
+	/**
+	 * @brief Structure representing single LIRUnit.
+	 *
+	 * LIR unit is an arbitrary code collections represented in LIR IR.
+	 * There is no assumption on what any given LIRUnit should contain.
+	 *
+	 * @note LIR units are created mostly from MIR units.
+	 */
+	struct LIRUnit final {
+		std::vector<CRef<Function>> lir_functions;
+		std::vector<LIRGlobalData>  lir_globals;
+
+		void debugPrint(query::Context& ctx, std::ostream& out) const;
+
+		/**
+		 * @brief Removes duplicate functions and globals from the LIR unit.
+		 * (based on their mangled names).
+		 *
+		 * @note This is needed to handle the case of multiple script modules in the REPL, which
+		 * might contain duplicated functions and globals.
+		 * @TODO: #2694 #2424 Come back to this and maybe remove or adapt this method accordingly.
+		 *
+		 * @note In this context, don't use this method outside of REPL script compilation, as it
+		 * might hide other issues with duplicated functions and globals in LIR units (unless there
+		 * are good reasons to do so). It is only placed here to avoid potential logic duplication
+		 * should we ever need to handle duplicated functions and globals in LIR units in other
+		 * contexts.
+		 */
+		void deduplicateSymbols();
 	};
 }

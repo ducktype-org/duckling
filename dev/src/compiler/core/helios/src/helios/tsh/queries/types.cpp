@@ -92,6 +92,10 @@ namespace compiler::tsh {
 		return StringAbstractType{ &string_impl };
 	}
 
+	SliceAbstractType getCharSliceType(query::Context& ctx) {
+		return ctx.query<QuerySliceType>(tsh::SymbolType<>::withDefaults(tsh::getCharType()));
+	}
+
 	NamespaceAbstractType getNamespaceType() {
 		static auto namespace_impl = NamespaceAbstractTypeImpl{};
 		return NamespaceAbstractType{ &namespace_impl };
@@ -121,6 +125,36 @@ namespace compiler::tsh {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryPointerType)
+
+	struct IMPLEMENT_QUERY(QueryManyPointerType, ManyPointerAbstractType::Impl) {
+		static auto provide(Context&, const QKey key) -> PResult {
+			return ManyPointerAbstractTypeImpl(key);
+		}
+
+		QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryManyPointerType)
+
+	struct IMPLEMENT_QUERY(QueryCPointerType, CPointerAbstractType::Impl) {
+		static auto provide(Context&, const QKey key) -> PResult {
+			return CPointerAbstractTypeImpl(key);
+		}
+
+		QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryCPointerType)
+
+	struct IMPLEMENT_QUERY(QuerySliceType, SliceAbstractType::Impl) {
+		static auto provide(Context&, const QKey key) -> PResult {
+			return SliceAbstractTypeImpl(key);
+		}
+
+		QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySliceType)
 
 	struct IMPLEMENT_QUERY(QueryDynamicArrayType, DynamicArrayAbstractType::Impl) {
 		static auto provide(Context&, const QKey key) -> PResult { return { key }; }

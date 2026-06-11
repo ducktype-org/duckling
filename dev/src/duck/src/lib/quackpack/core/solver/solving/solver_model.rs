@@ -199,7 +199,7 @@ impl<'a> SolverModel<'a, ProblemCreated> {
         Ok(())
     }
 
-    /// Adds a constaint that forces the package to be present with a feature.
+    /// Adds a constraint that forces the package to be present with a feature.
     pub fn require_package_with_feature(
         &mut self,
         pkg: &ExpandedPackage,
@@ -319,6 +319,24 @@ impl<'a> SolverModel<'a, ProblemCreated> {
                 }
             }
         }
+        Ok(())
+    }
+
+    /// Adds a constraint the pair (pkg, feature) implies the presence of pairs (pkg, F) for any feature F to which `feature` expands.
+    pub fn require_features_expansion(
+        &mut self,
+        pkg: ExpandedPackage,
+        feature: FeatureName,
+        expanded_features: impl IntoIterator<Item = FeatureName>,
+    ) -> QuackResult<()> {
+        let expanded_features_vars: QuackResult<Vec<Rc<Variable>>> = expanded_features
+            .into_iter()
+            .map(|f| self.get_package_variable(&pkg, Some(&f)))
+            .collect();
+        let expanded_features_vars = expanded_features_vars?;
+        let forcing_feature_var = self.get_package_variable(&pkg, Some(&feature))?;
+        self.model
+            .one_implies_all(forcing_feature_var, expanded_features_vars);
         Ok(())
     }
 }

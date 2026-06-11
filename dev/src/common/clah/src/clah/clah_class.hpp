@@ -8,6 +8,7 @@
 
 #pragma once
 
+#include "exceptions.hpp"
 #include "parameter.hpp"
 #include "parsing_result.hpp"
 #include "parsing_state.hpp"
@@ -15,12 +16,17 @@
 
 #include <base/types/ints.hpp>
 
+#include <expected>
 #include <functional>
 #include <ranges>
 #include <string>
 #include <vector>
 
 namespace clah {
+	struct VerificationPassed final {};
+
+	using VerificationResult = std::expected<VerificationPassed, std::string>;
+
 	/**
 	 * @brief Command-line Argument Handler.
 	 *
@@ -44,6 +50,8 @@ namespace clah {
 	public:
 		using PreHandler = std::function<void(const ParsingResult&)>;
 		using Handler    = std::function<int(const ParsingResult&)>;
+
+		using CustomVerification = std::function<VerificationResult(const ParsingResult&)>;
 
 
 		Clah();
@@ -108,6 +116,14 @@ namespace clah {
 		 * @return A reference to self.
 		 */
 		Clah&& setPreHandler(PreHandler pre_handler);
+
+		/**
+		 * @brief Adds a custom verification callback that runs after parsing is complete.
+		 * If any callback returns base::BAD, parsing fails.
+		 * @param verification The verification callback.
+		 * @return A reference to self.
+		 */
+		Clah&& addCustomVerification(CustomVerification verification);
 
 		/**
 		 * @brief Sets the default value parser for the command. Might be a nullptr.
@@ -209,7 +225,7 @@ namespace clah {
 		ParsingResult parseArgs(const std::string& args);
 
 		/**
-		 * @brief Performs the parsing. Then, if the passed arguments where correct if invokes
+		 * @brief Performs the parsing. Then, if the passed arguments were correct it invokes
 		 * the pre handler function (if specified) and then immediately executes the handler for the
 		 * matched command.
 		 *
@@ -223,6 +239,21 @@ namespace clah {
 		 * @return A return value of the handler specified for the matched command.
 		 */
 		int execute(usize argc, const char* const* argv);
+
+		/**
+		 * @brief Performs the parsing on a string of arguments. Then, if the passed arguments where
+		 * correct it invokes the pre handler function (if specified) and then immediately executes
+		 * the handler for the matched command.
+		 *
+		 * @note Program name is expected to NOT exist.
+		 * @note All CLAP exceptions are handled inside the execute function. Nicely formatted
+		 * messages are printed and help messages are generated.
+		 *
+		 * Throws an exception if a handler for the invoked command was not specified.
+		 * @param args A string containing the command line arguments.
+		 * @return A return value of the handler specified for the matched command.
+		 */
+		int execute(const std::string& args);
 
 	private:
 		/**
@@ -248,9 +279,23 @@ namespace clah {
 		 */
 		void validateParsing(ParsingResult& result) const;
 
+		/**
+		 * @brief Internal execute function. Performs the parsing. Then, if the passed arguments
+		 * where correct if invokes the pre handler function (if specified) and then immediately
+		 * executes the handler for the matched command.
+		 * @note All CLAP exceptions are handled inside the execute function. Nicely formatted
+		 * messages are printed and help messages are generated.
+		 * @return A return value of the handler specified for the matched command.
+		 */
+		int execute(
+			const std::function<ParsingResult()>&                          parse,
+			const std::function<void(const exceptions::ClahException& e)>& on_clah_exception
+		);
 
-		std::string name;         // Name of the command.
-		std::string description;  // Description of the command
+
+		std::string                     name;         // Name of the command.
+		std::string                     description;  // Description of the command
+		std::vector<CustomVerification> custom_verifications;
 
 		/**
 		 * @brief A parser used to parse extra arguments. Set to StringParser by default.

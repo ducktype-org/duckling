@@ -25,6 +25,9 @@ namespace compiler::tsh {
 	class FloatAbstractTypeImpl;
 	class RawPointerAbstractTypeImpl;
 	class PointerAbstractTypeImpl;
+	class ManyPointerAbstractTypeImpl;
+	class CPointerAbstractTypeImpl;
+	class SliceAbstractTypeImpl;
 	class StringAbstractTypeImpl;
 	class TupleAbstractTypeImpl;
 	class FunctionAbstractTypeImpl;
@@ -195,7 +198,7 @@ namespace compiler::tsh {
 	};
 
 	/**
-	 * @brief The (typed) Pointer types.
+	 * @brief The (typed) pointer to single types.
 	 *
 	 * A value of this type is simply a memory address.
 	 * However, it is statically known what the type of the pointee is.
@@ -221,6 +224,82 @@ namespace compiler::tsh {
 		CONSTRUCT_WITH_CHECKED_CAST(PointerAbstractType)
 
 		CONSTRUCT_FROM_IMPLEMENTATION(PointerAbstractType)
+	};
+
+	/**
+	 * @brief The pointer to many types.
+	 * It has different layout in the DBC backend than basic pointer.
+	 *
+	 * A value of this type is simply a memory address.
+	 * However, it is statically known what the type of the pointee is.
+	 */
+	class ManyPointerAbstractType final: public AbstractType {
+	public:
+		SETUP_TYPE_WITH_BASE(ManyPointerAbstractType, AbstractType)
+		/**
+		 * @brief A pointer to many values of the same type.
+		 * It has different layout in the DVM than a basic pointer.
+		 *
+		 * A value of this type is simply a memory address.
+		 * It is statically known what the type of the pointee is.
+		 */
+		[[nodiscard]]
+		SymbolType<> getPointee() const;
+
+		/**
+		 * @brief Gets the underlying type of the Pointer type.
+		 * @return The underlying type.
+		 */
+		[[nodiscard]]
+		AbstractType getUnderlyingType() const;
+
+		CONSTRUCT_WITH_CHECKED_CAST(ManyPointerAbstractType)
+
+		CONSTRUCT_FROM_IMPLEMENTATION(ManyPointerAbstractType)
+	};
+
+	/**
+	 * @brief The C pointer type.
+	 * It has different layout in the DBC backend than basic pointer.
+	 *
+	 * A value of this type is simply a memory address.
+	 * However, it is statically known what the type of the pointee is.
+	 */
+	class CPointerAbstractType final: public AbstractType {
+	public:
+		SETUP_TYPE_WITH_BASE(CPointerAbstractType, AbstractType)
+
+		/**
+		 * It has different layout in the DVM than basic pointer.
+		 *
+		 * A value of this type is simply a memory address.
+		 * It is statically known what the type of the pointee is.*/
+		[[nodiscard]] SymbolType<> getPointee() const;
+
+		/**
+		 * @brief Gets the underlying type of the Pointer type.
+		 * @return The underlying type.
+		 */
+		[[nodiscard]]
+		AbstractType getUnderlyingType() const;
+
+		CONSTRUCT_WITH_CHECKED_CAST(CPointerAbstractType)
+
+		CONSTRUCT_FROM_IMPLEMENTATION(CPointerAbstractType)
+	};
+
+	/**
+	 * @brief The Slice type.
+	 */
+	class SliceAbstractType final: public AbstractType {
+	public:
+		SETUP_TYPE_WITH_BASE(SliceAbstractType, AbstractType)
+
+		[[nodiscard]] SymbolType<> getElementType() const;
+
+		CONSTRUCT_WITH_CHECKED_CAST(SliceAbstractType)
+
+		CONSTRUCT_FROM_IMPLEMENTATION(SliceAbstractType)
 	};
 
 	/*******************\

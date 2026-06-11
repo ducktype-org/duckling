@@ -3,7 +3,6 @@ use std::path::PathBuf;
 
 use httpmock::prelude::*;
 use tempfile::{TempDir, tempdir};
-use url::Url;
 
 use crate::DuckContext;
 use crate::quackpack::core::fetcher::{Fetcher, types};
@@ -14,22 +13,24 @@ use crate::quackpack::core::solver::types_common::{ExpandedLocation, ExpandedPac
 use crate::quackpack::core::solver::{ShouldRunSolverEngine, SolverGathererData};
 use crate::quackpack::core::{PackageContext, PackageLoader, Version};
 use crate::quackpack::schemas::registry;
+use crate::quackpack::util::interned_url::InternedUrl;
+use crate::quackpack::util::to_url::ToUrl;
 use crate::util::path_ops_ext::PathOpsExt;
 use crate::util::test_utils::setup_test;
 
 struct MockGitAccess();
 impl GitAccess for MockGitAccess {
-    fn git_path(&self, _url: url::Url, _commit: &str) -> PathBuf {
+    fn git_path(&self, _url: InternedUrl, _commit: &str) -> PathBuf {
         unimplemented!()
     }
 
-    fn is_stored(&self, _url: url::Url, _commit: &str) -> bool {
+    fn is_stored(&self, _url: InternedUrl, _commit: &str) -> bool {
         unimplemented!()
     }
 
     fn store(
         &mut self,
-        _url: url::Url,
+        _url: InternedUrl,
         _commit: &str,
         _source_path: &std::path::Path,
     ) -> crate::QuackResult<()> {
@@ -72,8 +73,8 @@ fn create_mock_server() -> MockServer {
     let a1 = registry::Manifest {
         metadata: registry::Metadata {
             version: Version::new(1, 0, 0),
-            authors: vec!["Patryk Rogalski".into()],
-            license: "GLWTSPL".into(),
+            authors: vec!["Carly Shillingford".into()],
+            license: "MIT".into(),
             name: "a".into(),
             description: "".into(),
         },
@@ -86,8 +87,8 @@ fn create_mock_server() -> MockServer {
     let a2 = registry::Manifest {
         metadata: registry::Metadata {
             version: Version::new(2, 0, 0),
-            authors: vec!["Patryk Rogalski".into()],
-            license: "GLWTSPL".into(),
+            authors: vec!["Carly Shillingford".into()],
+            license: "MIT".into(),
             name: "a".into(),
             description: "".into(),
         },
@@ -100,8 +101,8 @@ fn create_mock_server() -> MockServer {
     let b2 = registry::Manifest {
         metadata: registry::Metadata {
             version: Version::new(2, 0, 0),
-            authors: vec!["Patryk Rogalski".into()],
-            license: "GLWTSPL".into(),
+            authors: vec!["Carly Shillingford".into()],
+            license: "MIT".into(),
             name: "b".into(),
             description: "".into(),
         },
@@ -140,13 +141,13 @@ fn create_mock_server() -> MockServer {
 }
 
 #[test]
-/// Tests a new dependency occuring in the manifest.
+/// Tests a new dependency occurring in the manifest.
 /// Main package depends on *a* and *b*, but only *a* is present in the supplied freeze.
 fn new_dependency() {
     let (ctx, _root) = setup_duck_ctx();
     let server = create_mock_server();
 
-    let url: Url = server.base_url().parse().unwrap();
+    let url = server.base_url().to_url().unwrap().into();
     let mut fetcher = Fetcher::new(&ctx).unwrap();
     let (_dir, manifest_path) = prepare_manifest(&format!(
         r#"
@@ -170,29 +171,26 @@ dependencies:
     let pcx = PackageContext::new(root_path.clone(), &ctx).unwrap();
 
     let loc_root = ExpandedLocation::Local {
-        absolute_path: root_path.clone(),
-    }
-    .into();
+        absolute_path: root_path.to_url().unwrap().into(),
+    };
     let root_pkg = ExpandedPackage {
         location: loc_root,
         version: None,
     };
 
     let loc_a = ExpandedLocation::Registry {
-        url: url.clone(),
+        url,
         real_name: "a".into(),
-    }
-    .into();
+    };
     let a_pkg = ExpandedPackage {
         location: loc_a,
         version: Some(1.into()),
     };
 
     let loc_b = ExpandedLocation::Registry {
-        url: url.clone(),
+        url,
         real_name: "b".into(),
-    }
-    .into();
+    };
     let b_pkg = ExpandedPackage {
         location: loc_b,
         version: Some(2.into()),
@@ -219,7 +217,7 @@ dependencies:
         .into(),
     };
 
-    let solver = SolverGathererData::new(&pcx, previous_freeze, SolverMode::default());
+    let solver = SolverGathererData::new(&pcx, previous_freeze, SolverMode::default()).unwrap();
     let ShouldRunSolverEngine::Yes(solver) = solver
         .prepare_solving(&mut fetcher, &mut MockGitAccess())
         .unwrap()
@@ -227,33 +225,33 @@ dependencies:
         panic!()
     };
     let new_freeze = solver.solve().unwrap().new_freeze;
-    assert!(new_freeze.main_pkg == root_pkg);
-    assert!(
-        new_freeze.package_freezes
-            == [
-                (
-                    root_pkg,
-                    SolverPackageFreeze {
-                        dependencies_realization: [("a".into(), a_pkg), ("b".into(), b_pkg)].into(),
-                        features: [].into()
-                    }
-                ),
-                (
-                    a_pkg,
-                    SolverPackageFreeze {
-                        dependencies_realization: [].into(),
-                        features: [].into()
-                    }
-                ),
-                (
-                    b_pkg,
-                    SolverPackageFreeze {
-                        dependencies_realization: [].into(),
-                        features: [].into()
-                    }
-                ),
-            ]
-            .into()
+    assert_eq!(new_freeze.main_pkg, root_pkg);
+    assert_eq!(
+        new_freeze.package_freezes,
+        [
+            (
+                root_pkg,
+                SolverPackageFreeze {
+                    dependencies_realization: [("a".into(), a_pkg), ("b".into(), b_pkg)].into(),
+                    features: [].into()
+                }
+            ),
+            (
+                a_pkg,
+                SolverPackageFreeze {
+                    dependencies_realization: [].into(),
+                    features: [].into()
+                }
+            ),
+            (
+                b_pkg,
+                SolverPackageFreeze {
+                    dependencies_realization: [].into(),
+                    features: [].into()
+                }
+            ),
+        ]
+        .into()
     )
 }
 
@@ -264,7 +262,7 @@ fn remove_unnecessary_dependency() {
     let (ctx, _root) = setup_duck_ctx();
     let server = create_mock_server();
 
-    let url: Url = server.base_url().parse().unwrap();
+    let url = server.base_url().to_url().unwrap().into();
     let mut fetcher = Fetcher::new(&ctx).unwrap();
     let (_dir, manifest_path) = prepare_manifest(&format!(
         r#"
@@ -284,29 +282,26 @@ dependencies:
     let pcx = PackageContext::new(root_path.clone(), &ctx).unwrap();
 
     let loc_root = ExpandedLocation::Local {
-        absolute_path: root_path.clone(),
-    }
-    .into();
+        absolute_path: root_path.to_url().unwrap().into(),
+    };
     let root_pkg = ExpandedPackage {
         location: loc_root,
         version: None,
     };
 
     let loc_a = ExpandedLocation::Registry {
-        url: url.clone(),
+        url,
         real_name: "a".into(),
-    }
-    .into();
+    };
     let a_pkg = ExpandedPackage {
         location: loc_a,
         version: Some(1.into()),
     };
 
     let loc_b = ExpandedLocation::Registry {
-        url: url.clone(),
+        url,
         real_name: "b".into(),
-    }
-    .into();
+    };
     let b_pkg = ExpandedPackage {
         location: loc_b,
         version: Some(2.into()),
@@ -340,33 +335,33 @@ dependencies:
         .into(),
     };
 
-    let solver = SolverGathererData::new(&pcx, previous_freeze, SolverMode::default());
+    let solver = SolverGathererData::new(&pcx, previous_freeze, SolverMode::default()).unwrap();
     let ShouldRunSolverEngine::No(answer) = solver
         .prepare_solving(&mut fetcher, &mut MockGitAccess())
         .unwrap()
     else {
         panic!()
     };
-    assert!(answer.new_freeze.main_pkg == root_pkg);
-    assert!(
-        answer.new_freeze.package_freezes
-            == [
-                (
-                    root_pkg,
-                    SolverPackageFreeze {
-                        dependencies_realization: [("b".into(), b_pkg)].into(),
-                        features: [].into()
-                    }
-                ),
-                (
-                    b_pkg,
-                    SolverPackageFreeze {
-                        dependencies_realization: [].into(),
-                        features: [].into()
-                    }
-                ),
-            ]
-            .into()
+    assert_eq!(answer.new_freeze.main_pkg, root_pkg);
+    assert_eq!(
+        answer.new_freeze.package_freezes,
+        [
+            (
+                root_pkg,
+                SolverPackageFreeze {
+                    dependencies_realization: [("b".into(), b_pkg)].into(),
+                    features: [].into()
+                }
+            ),
+            (
+                b_pkg,
+                SolverPackageFreeze {
+                    dependencies_realization: [].into(),
+                    features: [].into()
+                }
+            ),
+        ]
+        .into()
     )
 }
 
@@ -377,12 +372,12 @@ dependencies:
 /// Only *a* in version 2.0.0 has that feature and should be chosen to the new freeze.
 ///
 /// Note:
-/// [`SolverMode::Merciful`] is used in this test.
+/// [`SolverMode::suppress_foreign_manifests_errors`] is set to true in this test.
 fn no_longer_working_dependency() {
     let (ctx, _root) = setup_duck_ctx();
     let server = create_mock_server();
 
-    let url: Url = server.base_url().parse().unwrap();
+    let url = server.base_url().to_url().unwrap().into();
     let mut fetcher = Fetcher::new(&ctx).unwrap();
     let (_dir, manifest_path) = prepare_manifest(&format!(
         r#"
@@ -403,19 +398,17 @@ dependencies:
     let pcx = PackageContext::new(root_path.clone(), &ctx).unwrap();
 
     let loc_root = ExpandedLocation::Local {
-        absolute_path: root_path.clone(),
-    }
-    .into();
+        absolute_path: root_path.to_url().unwrap().into(),
+    };
     let root_pkg = ExpandedPackage {
         location: loc_root,
         version: None,
     };
 
     let loc_a = ExpandedLocation::Registry {
-        url: url.clone(),
+        url,
         real_name: "a".into(),
-    }
-    .into();
+    };
     let a1_pkg = ExpandedPackage {
         location: loc_a,
         version: Some(1.into()),
@@ -447,10 +440,10 @@ dependencies:
     };
 
     let mode = SolverMode {
-        supress_foreign_manifests_errors: true,
+        suppress_foreign_manifests_errors: true,
         frozen: false,
     };
-    let solver = SolverGathererData::new(&pcx, previous_freeze, mode);
+    let solver = SolverGathererData::new(&pcx, previous_freeze, mode).unwrap();
     let ShouldRunSolverEngine::Yes(solver) = solver
         .prepare_solving(&mut fetcher, &mut MockGitAccess())
         .unwrap()
@@ -458,25 +451,25 @@ dependencies:
         panic!()
     };
     let new_freeze = solver.solve().unwrap().new_freeze;
-    assert!(new_freeze.main_pkg == root_pkg);
-    assert!(
-        new_freeze.package_freezes
-            == [
-                (
-                    root_pkg,
-                    SolverPackageFreeze {
-                        dependencies_realization: [("a".into(), a2_pkg)].into(),
-                        features: [].into()
-                    }
-                ),
-                (
-                    a2_pkg,
-                    SolverPackageFreeze {
-                        dependencies_realization: [].into(),
-                        features: ["a".into()].into()
-                    }
-                ),
-            ]
-            .into()
+    assert_eq!(new_freeze.main_pkg, root_pkg);
+    assert_eq!(
+        new_freeze.package_freezes,
+        [
+            (
+                root_pkg,
+                SolverPackageFreeze {
+                    dependencies_realization: [("a".into(), a2_pkg)].into(),
+                    features: [].into()
+                }
+            ),
+            (
+                a2_pkg,
+                SolverPackageFreeze {
+                    dependencies_realization: [].into(),
+                    features: ["a".into()].into()
+                }
+            ),
+        ]
+        .into()
     )
 }

@@ -1,3 +1,5 @@
+import core.builtins.*;
+
 fun main() -> u64 = {
     var a: u128;
     if (a != 0u128) {

@@ -24,6 +24,10 @@ add_library(HELIOS STATIC
 	src_private/helios_private/hout_creation/definition_generation/class_constructors.cpp
 	src_private/helios_private/hout_creation/definition_generation/tuple_constructor.cpp
 	src_private/helios_private/hout_creation/definition_generation/default_constructors.cpp
+	src_private/helios_private/hout_creation/definition_generation/default_destructors.cpp
+	src_private/helios_private/hout_creation/definition_generation/length_methods.cpp
+	src_private/helios_private/hout_creation/definition_generation/to_string_methods.cpp
+	src_private/helios_private/hout_creation/desugaring/for.cpp
 	src_private/helios_private/hout_creation/hout_stmt_compilation.cpp
 	src_private/helios_private/errors/dia_interactive_elements.cpp
 	src_private/helios_private/errors/duplicated_definition.cpp
@@ -41,6 +45,7 @@ add_library(HELIOS STATIC
 	src/helios/hout/origin.cpp
 	src/helios/mangler/mangler.cpp
 	src/helios/test_utils/helios_test_utils.cpp
+	src/helios/symbols/lang_primitives.cpp
 	src/helios/symbols/query_type_of_symbol.cpp
 	src/helios/symbols/query_type_symbol_data.cpp
 	src/helios/symbols/query_type_from_definition.cpp
@@ -57,6 +62,7 @@ add_library(HELIOS STATIC
 	src/helios/tsh/queries/types.cpp
 	src/helios/tsh/abstract_type.cpp
 	src/helios/tsh/deductions.cpp
+	src/helios/tsh/symbol_type.cpp
 	src/helios/tsh/types.cpp
 	src/helios/tsh/type_interface.cpp
 	src/helios/tsh/value_category.cpp

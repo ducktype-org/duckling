@@ -1,10 +1,12 @@
+import core.builtins.*;
+
 class Point {
     x: i64 = 1;
     y: i64 = 2;
 }
 
 fun printSeparator() -> () = {
-    builtin_output_string("888888888888888\n");
+    print("888888888888888\n");
 }
 
 fun printPoint(p: ref Point) -> () = {
@@ -14,7 +16,7 @@ fun printPoint(p: ref Point) -> () = {
 
 fun printPointList(list: ref List[Point]) -> () = {
     var i = 0;
-    while(i < len list) {
+    while(i < i64(len list)) {
         printPoint(&list[i]);
         i = i + 1; 
     }
@@ -22,7 +24,7 @@ fun printPointList(list: ref List[Point]) -> () = {
 
 fun printMatrix(list: ref List[i32[3]]) -> () = {
     var i = 0;
-    while(i < len list) {
+    while(i < i64(len list)) {
         var j = 0;
         while (j < 3) {
             builtin_output_i64(list[i][j]);

@@ -10,7 +10,7 @@ namespace pst {
 
 		PARSE().one(&out->pattern);
 
-		if (PARSE().tryEat(Keyword::As)) {
+		if (PARSE().tryEat(NamedOperator::As)) {
 			out->as_identifier.emplace();
 			PARSE().one(&out->as_identifier.value());
 		}

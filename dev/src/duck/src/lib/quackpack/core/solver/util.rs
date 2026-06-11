@@ -1,19 +1,19 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::quackpack::core::solver::types_common::{
-    ExpandedPackage, InternedExpandedLocation, InternedLocation, Location, Package,
+    ExpandedLocation, ExpandedPackage, InternedLocation, Location, Package,
 };
 use crate::quackpack::core::version::CompatibilityCheck;
 use crate::quackpack::core::{Dependency, Version};
 use crate::{QuackResult, QuackResultContext};
 
-/// For a given dpendency entry from the manifest and
+/// For a given dependency entry from the manifest and
 /// given all the found versions of a package from some location,
 /// find all the packages satisfying the dependency.
 pub fn get_possible_realizations(
     dependency_description: &Dependency,
-    versions_for_location: &HashMap<InternedExpandedLocation, HashSet<Option<Version>>>,
-    location_resolver: &HashMap<InternedLocation, InternedExpandedLocation>,
+    versions_for_location: &HashMap<ExpandedLocation, HashSet<Option<Version>>>,
+    location_resolver: &HashMap<InternedLocation, ExpandedLocation>,
 ) -> QuackResult<Vec<ExpandedPackage>> {
     if dependency_description.is_pinned() {
         // For a pinned dependency only one package can be a realization.
@@ -73,13 +73,13 @@ mod test {
     use std::path::PathBuf;
 
     use tempfile::{TempDir, tempdir};
-    use url::Url;
 
     use crate::quackpack::core::solver::types_common::{
         ExpandedLocation, ExpandedPackage, Location,
     };
     use crate::quackpack::core::solver::util::get_possible_realizations;
     use crate::quackpack::core::{Version, parse_manifest};
+    use crate::quackpack::util::to_url::ToUrl;
     use crate::util::path_ops_ext::PathOpsExt;
     use crate::{DuckContext, StrId};
 
@@ -114,15 +114,14 @@ dependencies:
             .get_by_name(StrId::new("b"))
             .unwrap();
         let location_b = Location::Registry {
-            url: Url::parse("http://localhost:9001").unwrap(),
+            url: "http://localhost:9001".to_url().unwrap().into(),
             real_name: StrId::from("b"),
         }
         .into();
         let exp_location_b = ExpandedLocation::Registry {
-            url: Url::parse("http://localhost:9001").unwrap(),
+            url: "http://localhost:9001".to_url().unwrap().into(),
             real_name: StrId::from("b"),
-        }
-        .into();
+        };
         let location_resolver = HashMap::from([(location_b, exp_location_b)]);
         let versions_for_location = HashMap::from([(
             exp_location_b,
@@ -167,15 +166,14 @@ dependencies:
             .get_by_name(StrId::new("b"))
             .unwrap();
         let location_b = Location::Registry {
-            url: Url::parse("http://localhost:9001").unwrap(),
+            url: "http://localhost:9001".to_url().unwrap().into(),
             real_name: StrId::from("b"),
         }
         .into();
         let exp_location_b = ExpandedLocation::Registry {
-            url: Url::parse("http://localhost:9001").unwrap(),
+            url: "http://localhost:9001".to_url().unwrap().into(),
             real_name: StrId::from("b"),
-        }
-        .into();
+        };
         let location_resolver = HashMap::from([(location_b, exp_location_b)]);
         let versions_for_location = HashMap::from([(
             exp_location_b,

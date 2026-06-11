@@ -19,6 +19,9 @@
 #include <helios_private/errors/errors.hpp>
 #include <helios_private/hout_creation/definition_generation/class_constructors.hpp>
 #include <helios_private/hout_creation/definition_generation/default_constructors.hpp>
+#include <helios_private/hout_creation/definition_generation/default_destructors.hpp>
+#include <helios_private/hout_creation/definition_generation/length_methods.hpp>
+#include <helios_private/hout_creation/definition_generation/to_string_methods.hpp>
 #include <helios_private/hout_creation/definition_generation/tuple_constructor.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/hout_creation/hout_stmt_compilation.hpp>
@@ -164,11 +167,23 @@ namespace compiler::helios {
 							return ctx.query<defgen::QueryDefaultClassConstructor>(type)
 							    ->valueOrThrow();
 						}
+						variant_case(defgen::GeneratedSymbolData::DefaultDestructor, dtor) {
+							return ctx.query<defgen::QueryDefaultDestructor>(dtor.owner_type)
+							    ->valueOrThrow();
+						}
 						variant_case(
 							defgen::GeneratedSymbolData::DefaultStaticArrayConstructor, ctor
 						) {
 							return ctx
 							    .query<defgen::QueryDefaultStaticArrayConstructor>(ctor.array_type)
+							    ->valueOrThrow();
+						}
+						variant_case(defgen::GeneratedSymbolData::ToStringMethod, to_string) {
+							return ctx.query<defgen::QueryToStringMethod>(to_string.owner_type)
+							    ->valueOrThrow();
+						}
+						variant_case(defgen::GeneratedSymbolData::LengthMethod, length_method) {
+							return ctx.query<defgen::QueryLengthMethod>(length_method.owner_type)
 							    ->valueOrThrow();
 						}
 						variant_default {

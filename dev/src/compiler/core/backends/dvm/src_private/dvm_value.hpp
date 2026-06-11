@@ -82,10 +82,14 @@ namespace compiler::backend_vm::internal {
 	 * If the access kind is set to `Direct`, a load into the place will be performed by `mov_X_X`.
 	 * If the access kind is set to `Pointer`, a load into the place will be performed by
 	 * `store_pptr_pany`.
+	 * If the access kind is set to `DynTablePointer`, a load into the place will be performed by
+	 * `dynTableStore_pptr_pany_p64`.
+	 * If the access kind is set to `CPointer`, a load into the place will be performed by
+	 * new instruction that is not yet added @TODO: #2745 finish here.
 	 */
 	class DVMPlace {
 	public:
-		enum class AccessKind : uint8_t { Direct, Pointer };
+		enum class AccessKind : uint8_t { Direct, Pointer, DynTablePointer, CPointer };
 
 		/**
 		 * Some places have special meaning, like ReturnValue, knowing this allows for
@@ -110,6 +114,8 @@ namespace compiler::backend_vm::internal {
 		operator vm::opargs::OpCodeArg() const;
 
 		[[nodiscard]] bool isDirect() const { return access_kind == AccessKind::Direct; }
+
+		[[nodiscard]] AccessKind getAccessKind() const { return access_kind; }
 
 		[[nodiscard]] const vm::code::TypeOfData& getType() const;
 

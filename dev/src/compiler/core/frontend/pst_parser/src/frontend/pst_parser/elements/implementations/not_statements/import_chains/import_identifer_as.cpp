@@ -22,7 +22,7 @@ namespace pst {
 			push_id();
 		}
 
-		if (PARSE().tryEat(Keyword::As)) {
+		if (PARSE().tryEat(NamedOperator::As)) {
 			PARSE().all(&id);
 			PARSE().assign(&out->as, std::move(id));
 		}

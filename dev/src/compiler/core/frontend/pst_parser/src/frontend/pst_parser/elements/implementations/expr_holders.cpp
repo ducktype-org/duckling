@@ -56,5 +56,4 @@ namespace pst {
 	MBox<ExprElement> ExprParserHelper::parseTernary(LangParserState& state) {
 		return expr::Ternary::parse(state);
 	}
-
 }

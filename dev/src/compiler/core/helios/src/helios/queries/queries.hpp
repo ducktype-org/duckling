@@ -50,6 +50,7 @@ namespace compiler::helios {
 	 *
 	 * \parallel key helpers like isGlobalVar don’t modify globals
 	 * \query_thread_safe_if_cache
+	 * @TODO: #2878 remove this maybe -- try to replace its usages with QueryModuleHOUT
 	 */
 	DECLARE_QUERY(QueryTopLevelEntities, frontend::ModuleID, CRef<query::QResult<HOUTUnit>>, ({}))
 }

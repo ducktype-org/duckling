@@ -1,39 +1,25 @@
 #pragma once
 
-#include "lir_module_data.hpp"
+#include "lir_unit_with_name.hpp"
 
 #include <frontend/module_tree/module_id.hpp>
 #include <helios/hout/hout_fd.hpp>
 
-#include <functional>
-
 namespace compiler::driver {
 
-	struct CompileHOUTUnitToLIRModuleDataKey final {
-		CRef<helios::HOUTUnit> hout_unit;
-		base::StrID            module_name;
-
-		auto operator<=>(const CompileHOUTUnitToLIRModuleDataKey&) const = default;
-
-		[[nodiscard]] u64 queryUnstablePerfectHash() const {
-			return std::hash<base::StrID>{}(module_name);
-		}
-	};
 
 	/**
-	 * @brief Query that converts HOUTUnit to LIRModuleData.
+	 * @brief Converts HOUTUnit to LIRUnitWithBackendName.
+	 * @note It also prints and/or saves in artifacts IR representations if requested by options.
 	 */
-	DECLARE_QUERY(
-		CompileHOUTUnitToLIRModuleData,
-		CompileHOUTUnitToLIRModuleDataKey,
-		CRef<query::QResult<LIRModuleData>>,
-		({})
-	)
+	query::QResult<LIRUnitWithBackendName> compileHOUTUnitToLIRModuleData(
+		query::Context& ctx, const helios::HOUTUnit& hout_unit, base::StrID module_name
+	);
 
 	/**
-	 * @brief Query that produces LIRModuleData for given Duckling module.
+	 * @brief Produces LIRUnitWithBackendName for given Duckling module.
 	 */
-	DECLARE_QUERY(
-		CompileToLIRModuleData, frontend::ModuleID, CRef<query::QResult<LIRModuleData>>, ({})
-	)
+	query::QResult<LIRUnitWithBackendName> compileModuleToLIRModuleData(
+		query::Context& ctx, frontend::ModuleID module_id
+	);
 }

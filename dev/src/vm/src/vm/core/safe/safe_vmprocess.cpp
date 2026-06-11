@@ -21,6 +21,7 @@
 #include <mutex>
 #include <shared_mutex>
 #include <sstream>
+#include <thread>
 #include <variant>
 
 namespace vm {
@@ -32,13 +33,14 @@ namespace vm {
 		std::unique_lock                          lock(rw_global);
 		std::expected<void, loader::LoaderLogger> code_result = [&] {
 			variant_match(source) {
-				variant_case(std::vector<fs::File>, files) { return loader.loadAndCompile(files); }
-				variant_case(code::CodeCollection, code) { return loader.loadAndCompile(code); }
+				variant_case(std::vector<fs::File>, files) { return loader.loadAndValidate(files); }
+				variant_case(code::CodeCollection, code) { return loader.loadAndValidate(code); }
 			}
 			CORE_UNREACHABLE();
 		}();
 
 		if (code_result.has_value()) {
+			compiler.recompile();
 			loaded_program_copy.selfUpdate();
 			updateGlobalDataMemory(&loaded_program_copy);
 			return api::Response(api::response::Empty());
@@ -108,6 +110,38 @@ namespace vm {
 		return api::response::Empty{};
 	}
 
+	void SafeVMProcess::onTerminalStatus(const api::ProcStatus& status) noexcept {
+		if (!api::isStatusTerminal(status)) return;
+
+		const auto current_thread_id = std::this_thread::get_id();
+
+		// Find which thread is currently executing (calling this hook)
+		api::ThreadID executing_thread_id = api::ThreadID{ ~0ULL };
+		for (auto& thread: vm_threads) {
+			if (thread.exec_thread && thread.exec_thread->get_id() == current_thread_id) {
+				executing_thread_id = thread.getThreadID();
+				break;
+			}
+		}
+
+		// Only auto-stop child threads if the main thread (id=0) triggered the terminal status.
+		// If a child thread panicked, the main thread may be blocked in join() waiting for that
+		// child, so trying to stop the main thread would cause deadlock. In that case, let the
+		// panic propagate and rely on explicit cleanup.
+		if (executing_thread_id.asInt() != 0) return;
+
+		// Main thread became terminal: stop all active child threads
+		for (auto& thread: vm_threads) {
+			if (!thread.hasActiveThread()) continue;
+			if (thread.getThreadID().asInt() == 0) continue;  // Skip main thread
+
+			const bool stop_requested = thread.stop();
+			if (!stop_requested) continue;
+
+			thread.joinExecutionThread();
+		}
+	}
+
 	base::Optional<api::ApiError> SafeVMProcess::assertProcessCanRespond() {
 		api::ProcStatus status = getStatus();
 
@@ -138,10 +172,11 @@ namespace vm {
 		return Box<VmValue>::fromPointer(new VmValue(*this, type, src));
 	}
 
-	SafeVMProcess::SafeVMProcess(const PID my_pid):
+	SafeVMProcess::SafeVMProcess(const PID my_pid, bool enable_deadlock_detection):
 		  IVMProcess(my_pid),
 		  loaded_program(&loaded_program_copy),
-		  loaded_program_copy(loader.getProgram()) {
+		  loaded_program_copy(compiler.getLowProgram()) {
+		if (enable_deadlock_detection) deadlock_detector.emplace();
 		vm_threads.add(*this);
 	}
 
@@ -232,7 +267,7 @@ namespace vm {
 		};
 
 		// Try to obtain high position and optimize instruction range to step over
-		auto maybe_hp = loader.mapLowVMProgramPositionToCodeCollectionPosition(low_position);
+		auto maybe_hp = compiler.mapLowVMProgramPositionToCodeCollectionPosition(low_position);
 		if (maybe_hp) instr_range = mapping[maybe_hp->instruction_index];
 
 		// We do one step, then we go until we're outside the exclusive range (begin, end).
@@ -276,7 +311,7 @@ namespace vm {
 		};
 
 		// Try to obtain high position
-		auto maybe_hp = loader.mapLowVMProgramPositionToCodeCollectionPosition(low_position);
+		auto maybe_hp = compiler.mapLowVMProgramPositionToCodeCollectionPosition(low_position);
 		if (!maybe_hp) return code_position;
 		auto high_position = maybe_hp.value();
 
@@ -412,7 +447,8 @@ namespace vm {
 		base::StrID function_name, usize instruction_index, bool enable
 	) {
 		// Try to obtain original function
-		auto maybe_original_function = loaded_program->getFunctions().atMaybe(function_name);
+		auto maybe_original_function
+			= loaded_program_copy.getOriginalProgram()->getFunctions().atMaybe(function_name);
 		if (!maybe_original_function)
 			return std::unexpected(api::OtherError{ "setBreakpoint: Function does not exist" });
 		auto original_function = *maybe_original_function;
@@ -442,6 +478,24 @@ namespace vm {
 			return std::unexpected(api::OtherError{ "setBreakpoint: Failed to set breakpoint" });
 
 		return api::response::Empty{};
+	}
+
+	std::expected<api::Response, api::ApiError> SafeVMProcess::mapFileLineToCodeCollectionPosition(
+		const fs::File& file, usize line_number
+	) {
+		auto maybe_position = loader.mapFileLineToCodeCollectionPosition(file, line_number);
+		if (!maybe_position)
+			return std::unexpected(api::ApiError{
+				api::OtherError{ "No instruction at given position" } });
+		auto position = maybe_position.value();
+
+		auto source_position = loader.mapCodeCollectionPositionToFilePosition(position).value();
+
+		return api::response::CodePosition{
+			.function_name   = position.function_name,
+			.instr_number    = position.instruction_index,
+			.source_position = source_position,
+		};
 	}
 
 	void SafeVMProcess::updateGlobalDataMemory(CRef<low::ILowVMProgram> program) {

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../lir_module_data.hpp"
+#include "../lir_unit_with_name.hpp"
 
 #include <debug_info/debug_info.hpp>
 
@@ -20,9 +20,9 @@ namespace compiler::driver {
 	};
 
 	/**
-	 * @brief Compiles the LIRModuleData to DVM CodeCollection.
+	 * @brief Compiles the LIRUnitWithBackendName to DVM CodeCollection.
 	 */
 	[[nodiscard]] DVMModuleData compileLIRModuleToDVM(
-		CRef<LIRModuleData> lir_module, query::Context& query_ctx, bool build_debug_info
+		CRef<LIRUnitWithBackendName> lir_module, query::Context& query_ctx, bool build_debug_info
 	);
 }

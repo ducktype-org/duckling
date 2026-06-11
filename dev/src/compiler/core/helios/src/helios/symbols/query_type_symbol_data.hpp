@@ -76,4 +76,19 @@ namespace compiler::helios {
 	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(QueryTupleTypeData, tsh::TupleAbstractType, CRef<QueryTupleTypeData_Result>, ({}))
+
+	struct SliceTypeData {
+		SymID ptr;
+		SymID len;
+	};
+
+	/**
+	 * @brief Query field symbols of a slice type.
+	 * Panics if the given type is not a slice.
+	 *
+	 * \query_thread_safe_if_cache
+	 */
+	DECLARE_QUERY(
+		QuerySliceTypeData, tsh::SliceAbstractType, CRef<SliceTypeData>, ({ .uses_qresult = false })
+	)
 }

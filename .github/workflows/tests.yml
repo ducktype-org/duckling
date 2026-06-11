@@ -211,11 +211,29 @@ jobs:
             ${{ runner.os }}-${{ matrix.compiler.cache-prefix }}-${{ matrix.build-type }}-main
             ${{ runner.os }}-${{ matrix.compiler.cache-prefix }}-${{ matrix.build-type }}
 
+      - name: Restore sccache cache
+        id: restore-sccache-cache
+        uses: actions/cache/restore@v5
+        with:
+          path: |
+            ${{ env.SCCACHE_DIR }}
+          key: ${{ runner.os }}-sccache-${{ env.BRANCH_NAME }}-${{ steps.cache-timestamp.outputs.timestamp }}
+          restore-keys: |
+            ${{ runner.os }}-sccache-${{ env.BRANCH_NAME }}-
+            ${{ runner.os }}-sccache-main-
+            ${{ runner.os }}-sccache-
+
       # Remove ccache folder to prevent cache snowball growth
       - name: Remove ccache on main
         if: ${{ env.BRANCH_NAME == 'main' }}
         id: ccache-main-rm
         run: rm -rf ${CCACHE_DIR}
+
+      # Remove sccache folder to prevent cache snowball growth
+      - name: Remove sccache on main
+        if: ${{ env.BRANCH_NAME == 'main' }}
+        id: sccache-main-rm
+        run: rm -rf ${SCCACHE_DIR}
 
       - name: Initialize project
         working-directory: ${{ env.WORKSPACE }}
@@ -233,9 +251,11 @@ jobs:
       - name: Check should enable JIT
         id: check-jit
         run: |
-          echo jit-flag=$( [ "${{ matrix.build-type }}" = "DevOpt" ] &&
-                              [ "${{ matrix.compiler.name }}" = "clang" ] &&
-                               echo "--enable-jit" || echo "--no-enable-jit" ) >> $GITHUB_OUTPUT
+          echo jit-flag=--no-enable-jit >> $GITHUB_OUTPUT
+      # @TODO: #2780 fix JIT builds
+      #   echo jit-flag=$( [ "${{ matrix.build-type }}" = "DevOpt" ] &&
+      #                       [ "${{ matrix.compiler.name }}" = "clang" ] &&
+      #                        echo "--enable-jit" || echo "--no-enable-jit" ) >> $GITHUB_OUTPUT
 
       # Configure CMake. Using toolbox instead of direct command, because it
       # also enables CMake File API, which is necessary for integration tests.
@@ -294,6 +314,9 @@ jobs:
           echo "ccache:"
           du -hs ${{ env.CCACHE_DIR }}
 
+          echo "sccache:"
+          du -hs ${{ env.SCCACHE_DIR }} || echo 0
+
       # Source:  https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/caching-dependencies-to-speed-up-workflows#force-deleting-cache-entries
       # This step deletes all the cache entries that are related to this branch,
       # and it is done in this moment in the script, right after building, because
@@ -311,7 +334,9 @@ jobs:
           echo "Deleting caches..."
           for cacheKey in $cacheKeysForPR
           do
-            if [[ $cacheKey == ${{ runner.os }}-${{ matrix.compiler.cache-prefix }}-${{ matrix.build-type }}-${{ env.BRANCH_NAME }}* ]]; then
+            if [[ $cacheKey == ${{ runner.os }}-${{ matrix.compiler.cache-prefix }}-${{ matrix.build-type }}-${{ env.BRANCH_NAME }}* ||
+                  $cacheKey == ${{ runner.os }}-sccache-${{ env.BRANCH_NAME }}* ]]; then
+              echo "Deleting cache $cacheKey..."
               gh actions-cache delete $cacheKey -R $REPO --confirm
             fi
           done
@@ -352,6 +377,17 @@ jobs:
         id: integration-tests
         working-directory: ${{ env.WORKSPACE }}
         run: ./toolbox.py itest -b ${{ env.BUILD_DIR }}
+
+      # NOTE: This has to be done **after** integration tests: ONLY when testing duck, we actually build duck in CI,
+      # so we have to save sccache after that, otherwise we'd have nothing to save.
+      - name: Save sccache cache
+        id: save-sccache-cache
+        uses: actions/cache/save@v5
+        with:
+          path: |
+            ${{ env.SCCACHE_DIR }}
+          key: ${{ steps.restore-sccache-cache.outputs.cache-primary-key }}
+
 
       # failure() makes this step run even when a previous step has failed (which would otherwise
       # cause all subsequent steps to be skipped). The additional conditions ensure this step only
@@ -460,7 +496,7 @@ jobs:
           authors: quacker-bot
 
       - name: Post code statistics as github comment
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         if: ${{ env.IF_MAIN_PR == 'true' }}
         env:
           COV_FAIL_MSG: '❌❌❌ - **You have to write some more tests, so the coverage is at least as high as on the main branch!** \n\n 🆘 Run coverage tests: `./toolbox.py coverage` to get more information.'

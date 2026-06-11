@@ -14,6 +14,8 @@
 #include <frontend/pst_parser/lang_parser_element.hpp>
 #include <frontend/pst_parser/pst_visitor.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
+#include <helios/tsh/queries/types.hpp>
+#include <helios_private/hout_creation/desugaring/for.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/lookup/lookup_result.hpp>
 #include <helios_private/pst_layer/for_all.hpp>
@@ -97,6 +99,8 @@ namespace compiler::helios {
 
 		case pst::ElementKind::Import:
 		case pst::ElementKind::ImportIdentifierAs:
+		case pst::ElementKind::ImportStarHides:
+		case pst::ElementKind::ImportNested:
 		case pst::ElementKind::DottedName:
 		// I don't know if this is correct
 		case pst::ElementKind::StmtSpecifier:
@@ -195,6 +199,10 @@ namespace compiler::helios {
 		case pst::ElementKind::Expand:
 			// This is a bit of a special case, we treat it as transparent, since it is
 			// basically just a wrapper around the expanded element.
+			return ElementScopeKind::Transparent;
+
+		case pst::ElementKind::FormatSubExpression:
+		case pst::ElementKind::FormatSubString:
 			return ElementScopeKind::Transparent;
 
 		case pst::ElementKind::KindNotSet:
@@ -532,11 +540,15 @@ namespace compiler::helios {
 				output(std::vector<SymID>{});
 			}
 
-			void visitFor(pst::Access<pst::For>) override {
-				// Scope of "for →(...)← {}"
-				// @TODO: #2096 add for loop variables to the scope
-				// and add them here.
-				output(std::vector<SymID>{});
+			void visitFor(pst::Access<pst::For> for_stmt) override {
+				using namespace desugaring;
+				ForGeneratedSymbols symbols = getForGeneratedSymbols(ctx, for_stmt);
+
+				std::vector<SymID> out;
+				out.emplace_back(symbols.iterator);
+				out.emplace_back(symbols.index);
+				out.emplace_back(symbols.length);
+				output(std::move(out));
 			}
 
 			void visitExprStmt(pst::Access<pst::ExprStmt>) override {
@@ -621,28 +633,6 @@ namespace compiler::helios {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			Ref symbol_list = &ctx.query<QuerySymbolsInScope>(key.scope)->valueOrThrow();
 
-			// here if the scope is the root scope
-			// we pass the lookup to
-			// builtin lookup.
-			// Note that we still calculate symbol_list to assert
-			// that it is empty.
-			auto scope_data = getScopeRef(key.scope);
-			if (scope_data->is_root) {
-				CORE_ASSERT(symbol_list->empty(), "Root scope should not have any symbols.");
-
-				auto       module_id      = scope_data->parent_module;
-				const bool is_repl_module = ctx.query<frontend::QueryIsReplModule>(module_id);
-				const bool repl_has_parent
-					= is_repl_module
-				   && ctx.query<frontend::QueryReplModuleParent>(module_id).has_value();
-
-				if (!repl_has_parent) return builtin::lookupGlobalBuiltins(ctx, key.name);
-
-				// For REPL modules with parents, skip duplicating builtins here.
-				// They will be resolved via the parent chain in QueryLookupInScopeAndParents.
-				return LookupResult{};
-			}
-
 			LookupResult result{ .leaves = {}, .children = {} };
 
 			for (const auto& sym: *symbol_list) {
@@ -651,8 +641,12 @@ namespace compiler::helios {
 						auto wild_result_qresult
 							= HInterface::ofSymbol(sym).lookup(ctx, key.name, { true });
 						UNPACK_QRESULT_CREF(CRef<LookupResult> wild_result = &, wild_result_qresult);
-						if (!wild_result->isEmpty())
-							result.children.push_back(wild_result->toNode(sym));
+						// The correct code that works for using is commented out,
+						// to make the import a.*; work correctly.
+						// @TODO: #1412 fix this properly
+						// if (!wild_result->isEmpty())
+						// 	result.children.push_back(wild_result->toNode(sym));
+						if (!wild_result->isEmpty()) result.merge(*wild_result);
 					}
 				} else if (isAlias(sym) && name(sym) == key.name) {
 					// @TODO: #1412 fix dealias

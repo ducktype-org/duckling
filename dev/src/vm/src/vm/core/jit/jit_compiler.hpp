@@ -7,6 +7,7 @@
 
 #include <base/pointers/ref.hpp>
 
+#include <vm/core/safe/low_program/cfg/cf_graph.hpp>
 #include <vm/core/safe/low_program/low_program.hpp>
 
 #ifdef BUILD_TYPE_RELEASE
@@ -34,7 +35,14 @@ namespace vm::jit {
 	using JitData = std::vector<JitFuncData>;
 
 	/**
-	 * @brief Compile the function on the C2, LLVM-based compiler.
+	 * @brief Compile the contiguous bytecode block (function or loop) on the C2, LLVM-based compiler.
+	 * @param cfg Control flow graph of the block to be compiled.
+	 * @param bc Bytecode of the compiled bytecode block.
+	 * @param name Identifier of the compiled block.
 	 */
-	MRef<JitOpFun> compileLLVM(const vm::low::LowFuncData& func_data);
+	MRef<JitOpFun> compileLLVM(
+		const vm::low::cf::ControlFlowGraph& cfg,
+		const vm::low::MicroBytecode&        bc,
+		const base::StrID&                   name
+	);
 }

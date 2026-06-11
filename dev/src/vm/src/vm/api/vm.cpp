@@ -62,8 +62,8 @@ namespace vm::api {
 		    .and_then(mapOrWrongResponse<response::CodePosition>);
 	}
 
-	std::expected<ProcessInfo, ApiError> spawn() {
-		return Supervisor::get().newProcess().transform([](const auto& x) {
+	std::expected<ProcessInfo, ApiError> spawn(bool enable_deadlock_detection) {
+		return Supervisor::get().newProcess(enable_deadlock_detection).transform([](const auto& x) {
 			return ProcessInfo{ x };
 		});
 	}
@@ -218,6 +218,14 @@ namespace vm::api {
 		    .transform(ignoreResponse);
 	}
 
+	std::expected<void, ApiError> attachOutputListener(
+		PID pid, Ref<events::Listener<std::string>> listener
+	) {
+		return Supervisor::get()
+		    .doRequest(SupervisorRequest(pid, request::AttachOutputListener{ .listener = listener }))
+		    .transform(ignoreResponse);
+	}
+
 	std::expected<void, ApiError> setBreakpoint(
 		PID pid, base::StrID function_name, u64 instruction_index, bool enable
 	) {
@@ -229,5 +237,17 @@ namespace vm::api {
 		                                .enable            = enable }
 			))
 		    .transform(ignoreResponse);
+	}
+
+	std::expected<response::CodePosition, ApiError> mapFileLineToCodeCollectionPosition(
+		PID pid, fs::File file, usize line_number
+	) {
+		return Supervisor::get()
+		    .doRequest(SupervisorRequest(
+				pid,
+				request::MapFileLineToCodeCollectionPosition{ .file        = std::move(file),
+		                                                      .line_number = line_number }
+			))
+		    .and_then(mapOrWrongResponse<response::CodePosition>);
 	}
 }

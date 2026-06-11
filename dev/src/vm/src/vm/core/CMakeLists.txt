@@ -12,6 +12,7 @@ add_files(
 	safe/type_metadata/type_metadata.cpp
 	safe/type_metadata/type.cpp
 	safe/memory/memory.cpp
+	safe/concurrency/deadlock_detection.cpp
 	safe/concurrency/gil.cpp
 	safe/concurrency/condition_variable.cpp
 	safe/concurrency/synchronization_primitives.cpp
@@ -24,6 +25,8 @@ add_files(
 	safe/opcode_functions/opcodes_functions_impl_exec.cpp
 	safe/opcode_functions/opcodes_functions_impl_debug.cpp
 	safe/low_program/instruction.cpp
+	safe/low_program/cfg/cf_graph.cpp
+	safe/low_program/cfg/cf_analysis.cpp
 	safe/safe_vmthread.cpp
 	vmvalue/vmvalue.cpp
 	vmvalue/vmvalueref.cpp

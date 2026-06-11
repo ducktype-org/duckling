@@ -9,10 +9,12 @@
 #include <vm/api/data/status.hpp>
 #include <vm/core/process/interface_types.hpp>
 #include <vm/core/process/vmprocess.hpp>
+#include <vm/core/safe/concurrency/deadlock_detection.hpp>
 #include <vm/core/safe/concurrency/gil.hpp>
 #include <vm/core/safe/concurrency/synchronization_primitives.hpp>
 #include <vm/core/safe/low_program/low_program.hpp>
 #include <vm/core/safe/safe_vmthread.hpp>
+#include <vm/loader/compiler/safe/safe_compiler.hpp>
 #include <vm/loader/loader.hpp>
 
 #include <expected>
@@ -34,12 +36,15 @@ namespace vm {
 
 	private:
 		std::shared_mutex rw_global;
+
 		/**
 		 * @brief A loader instance for this SafeVMProcess. Stores the high level and low level
 		 * representation of the currently executed program. `loaded_program` references the low
 		 * representation which exists in this class.
 		 */
-		loader::Loader loader{};
+		loader::Loader                       loader{};
+		loader::compiler::safe::SafeCompiler compiler{ *loader.getHighProgram() };
+
 		/**
 		 * @brief The program being executed by this process.
 		 * Holds a constant and stable reference.
@@ -50,8 +55,9 @@ namespace vm {
 
 		Memory memory;
 
-		GIL                       gil;
-		SynchronizationPrimitives synchronization_primitives;
+		base::Optional<DeadlockDetector> deadlock_detector;
+		GIL                              gil;
+		SynchronizationPrimitives        synchronization_primitives;
 
 		/**
 		 * @brief Storage for all VmValues which belong to this process.
@@ -137,8 +143,13 @@ namespace vm {
 
 		std::vector<api::ThreadID> getAllThreadIDs() override;
 
+		void onTerminalStatus(const api::ProcStatus& status) noexcept override;
 		std::expected<api::Response, api::ApiError> setBreakpoint(
 			base::StrID function_name, usize instruction_index, bool enable
+		) override;
+
+		std::expected<api::Response, api::ApiError> mapFileLineToCodeCollectionPosition(
+			const fs::File& file, usize line_number
 		) override;
 
 		/**
@@ -152,9 +163,15 @@ namespace vm {
 		void updateGlobalDataMemory(CRef<low::ILowVMProgram> program);
 
 	public:
-		SafeVMProcess(PID my_pid);
+		SafeVMProcess(PID my_pid, bool enable_deadlock_detection = false);
+
+		DeadlockDetector* getDeadlockDetector() {
+			return deadlock_detector ? &*deadlock_detector : nullptr;
+		}
 
 		Memory& getMemory();
+
+		[[nodiscard]] api::ProcStatus getCurrentStatus() { return getStatus(); }
 
 		Ref<VmValue> createVmValue(TypeCRef type) override;
 

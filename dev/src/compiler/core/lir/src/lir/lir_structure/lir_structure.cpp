@@ -10,9 +10,10 @@
 
 #include <base/collections/maps.hpp>
 #include <base/extend_cpp/variant_match.hpp>
+#include <base/extend_cpp/vector_utils.hpp>
 
 #include <iomanip>
-#include <set>
+#include <unordered_set>
 
 namespace compiler::lir {
 	LIRLocal LIRLocal::fromMIR(
@@ -24,7 +25,7 @@ namespace compiler::lir {
 		LIRLocalMetadata metadata;
 		if_opt_some(mir_local->helios_id, helios_id) {
 			metadata.source_code_name = helios::name(helios_id);
-			if_opt_some(helios::symbolPst(helios_id), pst_elem) {
+			if_opt_some(helios::maybeSymbolPst(helios_id), pst_elem) {
 				metadata.position = pst_elem.unlock(ctx)->getStablePosition();
 			}
 		}
@@ -44,41 +45,20 @@ namespace compiler::lir {
 	LIRGlobal LIRGlobal::fromMIR(query::Context& ctx, mir::MIRGlobal mir_global) {
 		auto type_layout = ctx.query<tsl::QuerySymbolTypeLayout>(mir_global.type);
 
-		auto mangled_name = helios::mangler::getSimpleMangledName(ctx, mir_global.helios_id);
+		auto mangled_name  = helios::mangler::getSimpleMangledName(ctx, mir_global.helios_id);
+		LIRGlobalType type = mir_global.kind == mir::MIRGlobal::Kind::Constant
+		                       ? LIRGlobalType::Constant
+		                       : LIRGlobalType::Variable;
 
-		return LIRGlobal{ mir_global.helios_id, type_layout, mangled_name };
-	}
-
-	LIRGlobal LIRGlobal::fromHOUT(query::Context& ctx, const helios::HOUTGlobalData& hout_global) {
-		auto type_layout = ctx.query<tsl::QuerySymbolTypeLayout>(hout_global.type);
-
-		auto mangled_name = helios::mangler::getSimpleMangledName(ctx, hout_global.helios_symbol);
-
-		variant_match(hout_global.value) {
-			variant_case(helios::HOUTGlobalConst, name) {
-				return LIRGlobal{
-					hout_global.helios_symbol, type_layout, mangled_name,
-					LIRGlobalType::Constant,   name.value,
-				};
-			}
-			variant_case(helios::HOUTGlobalVariable, name) {
-				return LIRGlobal{
-					hout_global.helios_symbol, type_layout, mangled_name, LIRGlobalType::Variable
-				};
-			}
-			variant_default {
-				CORE_PANIC(
-					"Unhandled HOUTGlobalData type in LIRGlobal::fromHOUT: ",
-					hout_global.original_name.strView()
-				);
-			}
-		}
-
-		CORE_UNREACHABLE();
+		return LIRGlobal{
+			type_layout,
+			mangled_name,
+			type,
+		};
 	}
 
 	LIRPlace::LIRPlace(BaseVariant base, std::vector<Projection> projection_chain):
-		  base(std::move(base)),
+		  base(base),
 		  layout([&]() -> CRef<tsl::TypeLayout> {
 			  // Calculate the end layout of LIRPlace. Start with the root layout and go through the
 		      // projections.
@@ -100,6 +80,9 @@ namespace compiler::lir {
 							  }
 							  variant_case(tsl::DynamicArrayTypeLayout, dynamic_array_layout) {
 								  current_layout = dynamic_array_layout.getElementLayout();
+							  }
+							  variant_case(tsl::PointerTypeLayout, many_pointer_layout) {
+								  current_layout = many_pointer_layout.getPointee();
 							  }
 							  variant_default {
 								  CORE_PANIC(
@@ -179,7 +162,7 @@ namespace compiler::lir {
 	 *
 	 * @note It should be used only used in lir::Function::debugPrint method
 	 */
-	struct LIRPrinter {
+	struct LIRPrinter final {
 		query::Context& ctx;
 		std::ostream&   output;
 
@@ -313,7 +296,8 @@ namespace compiler::lir {
 			local_id = function.getLocalVariableIDs();
 			block_id = function.getBlockIDs();
 
-			output << "[LIR] Function \"" << function.mangled_name.strView() << "\":\n";
+			output << "[LIR] Function \"" << function.mangled_name.strView() << "\""
+				   << (function.link_once ? " (link once)" : "") << ":\n";
 
 			for (const auto& local: function.local_list) {
 				printLocalDesc(&local);
@@ -345,6 +329,7 @@ namespace compiler::lir {
 		return FunctionLiteral{
 			.mangled_name = function.mangled_name,
 			.abi          = function.abi,
+			.link_once    = function.link_once,
 			.parameter_layouts
 			= std::make_shared<std::vector<CRef<tsl::TypeLayout>>>(function.parameter_layouts),
 			.return_type_layout = function.return_type_layout
@@ -356,7 +341,63 @@ namespace compiler::lir {
 		os << (type == LIRGlobalType::Constant ? "constant" : "variable") << ": ";
 		os << mangled_name.strView() << "\n";
 		os << "Type: " << layout->toStringDefinition(ctx) << "\n";
-		if (initial_value.has_value()) os << "Initial value: " << initial_value->toString() << "\n";
+	}
+
+	void LIRGlobalData::debugPrint(query::Context& ctx, std::ostream& os) const {
+		global.debugPrint(ctx, os);
+		os << "  Data Initialization: ";
+		variant_match(data_initialization) {
+			variant_case(ctv::CompileTimeValue, ctv) { os << ctv.toString(); }
+			variant_case(CTorDtorPair, ctor_dtor_pair) {
+				if_opt_some(ctor_dtor_pair.global_ctor, ctor) {
+					os << "  Global constructor:\n";
+					ctor->debugPrint(ctx, os);
+				}
+				if_opt_some(ctor_dtor_pair.global_dtor, dtor) {
+					os << "  Global destructor:\n";
+					dtor->debugPrint(ctx, os);
+				}
+			}
+		}
+	}
+
+	LIRGlobalData::CTorDtorPair LIRGlobalData::getCtorDtorPair() const {
+		CORE_ASSERT(
+			std::holds_alternative<LIRGlobalData::CTorDtorPair>(data_initialization),
+			"Global does not have constructor/destructor initialization: ",
+			global.mangled_name.strView()
+		);
+		return std::get<LIRGlobalData::CTorDtorPair>(data_initialization);
+	}
+
+	ctv::CompileTimeValue LIRGlobalData::getConstValue() const {
+		CORE_ASSERT(
+			std::holds_alternative<ctv::CompileTimeValue>(data_initialization),
+			"Global does not have constant initialization: ",
+			global.mangled_name.strView()
+		);
+		return std::get<ctv::CompileTimeValue>(data_initialization);
+	}
+
+	void LIRUnit::debugPrint(query::Context& ctx, std::ostream& os) const {
+		os << "LIRUnit: \n";
+		os << "Globals:\n";
+		for (const auto& global: lir_globals) {
+			global.debugPrint(ctx, os);
+			os << "\n";
+		}
+		os << "Functions:\n";
+		for (const auto& func: lir_functions) {
+			func->debugPrint(ctx, os);
+			os << "\n";
+		}
+	}
+
+	void LIRUnit::deduplicateSymbols() {
+		base::deduplicateBy(lir_globals, [](const LIRGlobalData& global_data) {
+			return global_data.global.mangled_name;
+		});
+		base::deduplicateBy(lir_functions, [](CRef<Function> func) { return func->mangled_name; });
 	}
 
 	LIRLocalSpecialKind specialKindFromMIR(const mir::MIRLocal& mir_local) {
