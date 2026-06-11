@@ -189,6 +189,7 @@ namespace lang_def {
 		BCMethodImplementations,
 		BCTrue,
 		BCFalse,
+		BCFrameSpecifier,
 		COUNT,
 	};
 

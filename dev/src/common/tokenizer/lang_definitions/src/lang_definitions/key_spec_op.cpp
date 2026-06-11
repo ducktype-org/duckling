@@ -180,6 +180,7 @@ namespace lang_def {
 			{ Keyword::BCMethodImplementations, "implementations", KeywordFlags() },
 			{ Keyword::BCTrue, "true", KeywordFlags() },
 			{ Keyword::BCFalse, "false", KeywordFlags() },
+			{ Keyword::BCFrameSpecifier, "frame", KeywordFlags() },
 		});
 
 	// `- 1` because of `Keyword::NotAKeyword`

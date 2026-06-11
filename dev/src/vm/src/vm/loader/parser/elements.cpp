@@ -297,6 +297,23 @@ namespace vm::loader::parser {
 		return { arg };                                                             \
 	}
 
+#define HANDLE_PLACE_ARG(TYPE)                                                      \
+	template<>                                                                      \
+	auto parseArg(F8ParserState& state) -> vm::opargs::TYPE {                       \
+		auto  pos   = state.getPosition();                                          \
+		usize frame = 0;                                                            \
+		if (state[0].is(lang_def::Keyword::BCFrameSpecifier)) {                     \
+			state.parse().one(lang_def::Keyword::BCFrameSpecifier);                 \
+			frame = parseNumericLiteral<usize>(state).first;                        \
+		}                                                                           \
+		auto value       = parseStr(state);                                         \
+		auto arg         = vm::opargs::TYPE{ value };                               \
+		arg.frame        = frame;                                                   \
+		arg.bytecode_pos = dia::SourcePosition(                                     \
+			pos.getLocation(), pos.getStart(), pos.getStart() + value.view().size() \
+		);                                                                          \
+		return { arg };                                                             \
+	}
 		FOR_EACH(
 			HANDLE_STR_ARG,
 			Type,
@@ -305,8 +322,9 @@ namespace vm::loader::parser {
 			ExtCFunctionName,
 			MethodName,
 			Label,
-			VM_OPARG_PLACE_TYPES
 		)
+
+		FOR_EACH(HANDLE_PLACE_ARG, VM_OPARG_PLACE_TYPES)
 
 #undef HANDLE_STR_ARG
 

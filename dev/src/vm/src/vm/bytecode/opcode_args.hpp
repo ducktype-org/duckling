@@ -10,10 +10,11 @@
 #include <string_view>
 #include <variant>
 
-#define DEFINE_STR_ARG_TYPE(NAME, FIELD_NAME, OP_SHORT_VALUE)         \
+#define DEFINE_STR_ARG_TYPE(NAME, FIELD_NAME, OP_SHORT_VALUE, ...)    \
 	struct NAME final: code::ElementBase {                            \
 		static constexpr std::string_view OP_SHORT = OP_SHORT_VALUE;  \
-		NAME()                                     = default;         \
+		__VA_ARGS__                                                   \
+		NAME() = default;                                             \
 		NAME(const base::StrID FIELD_NAME): FIELD_NAME(FIELD_NAME) {} \
 		base::StrID    FIELD_NAME;                                    \
 		constexpr bool operator==(const NAME& other) const noexcept { \
@@ -22,7 +23,7 @@
 	}
 
 #define DEFINE_PLACE(SUFFIX, OP_SHORT_VALUE) \
-	DEFINE_STR_ARG_TYPE(Place##SUFFIX, var_name, OP_SHORT_VALUE)
+	DEFINE_STR_ARG_TYPE(Place##SUFFIX, var_name, OP_SHORT_VALUE, usize frame = 0;)
 
 /**
  * @brief This namespace encapsulates types of opcode arguments.
