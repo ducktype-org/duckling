@@ -396,7 +396,11 @@ namespace pg {
 		AnalyzedProgram program;
 		{
 			PhaseTimer timer("parse");
-			program.pst = std::make_unique<pst::PST<>>(file, pst::PSTType::Program);
+			// Skip the PST's SHA-256 stable hashes — incremental diffing here uses its
+			// own dprint-based content hashes instead.
+			program.pst = std::make_unique<pst::PST<>>(
+				file, pst::PSTType::Program, hashing::ComponentHash{}, pst::PSTHashing::Skip
+			);
 		}
 
 		auto for_each_top_level = [&](auto& visitor) {

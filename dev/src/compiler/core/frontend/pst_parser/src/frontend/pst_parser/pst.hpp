@@ -39,6 +39,22 @@ namespace pst {
 	};
 
 	/**
+	 * @brief Whether to calculate the per-element stable hashes after parsing.
+	 *
+	 * Compute - default; required by the query framework (incremental compilation,
+	 *           getByStableHash, ...).
+	 * Skip    - skips element path hashes, SHA-256 stable hashes and the global hash
+	 *           map registration. For standalone consumers that only walk the tree
+	 *           (e.g. the psacklinger playground compiler, which keeps its own content
+	 *           hashes); a sizable chunk of parse time on large files.
+	 *           getHash()/getByStableHash() must not be used on such a PST.
+	 */
+	enum class PSTHashing {
+		Compute,
+		Skip,
+	};
+
+	/**
 	 * @brief PST generation class. Parses on construction if possible.
 	 *
 	 * @note The Element is only required to be derived from LangElement and not necessarily
@@ -95,6 +111,11 @@ namespace pst {
 		 */
 		hashing::ComponentHash hash_ctx_info;
 
+		/**
+		 * Whether the per-element stable hashes are calculated after parsing.
+		 */
+		PSTHashing hashing_mode = PSTHashing::Compute;
+
 		/***********************\
 		|    PRIVATE METHODS    |
 		\***********************/
@@ -121,6 +142,8 @@ namespace pst {
             );
 			element = Parser::parse(*state_box, std::forward<Args>(args)...);
 			internal::finalizeParsing(state_box.refMut());
+
+			if (hashing_mode == PSTHashing::Skip) return;
 
 			// Note: hash calculation should work even on errors in PST.
 			// We let it be calculated to don't worry about hash being unavailable during the
@@ -252,11 +275,15 @@ namespace pst {
 		/**
 		 * @brief Construct a new Pst from file path
 		 */
-		PST(const fs::File& path, PSTContext&& pst_ctx, hashing::ComponentHash hash_ctx = {})
+		PST(const fs::File&        path,
+		    PSTContext&&           pst_ctx,
+		    hashing::ComponentHash hash_ctx = {},
+		    PSTHashing             hashing  = PSTHashing::Compute)
 
 		requires PARSE_ABLE_EMPTY:
 			  file(tokenizer::makeTokenSource(path)),
-			  hash_ctx_info(std::move(hash_ctx)) {
+			  hash_ctx_info(std::move(hash_ctx)),
+			  hashing_mode(hashing) {
 			if (!file->tokenize()) return;
 			parse(makeParserContext(std::move(pst_ctx)));
 		}

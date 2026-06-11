@@ -183,29 +183,33 @@ Release builds, ~8000-line generated samples (`benchmark/data/input`), 5 runs:
 
 | threads | duck1: duckc -w | duck1: psacklinger -j | duck2: duckc -w | duck2: psacklinger -j |
 |---:|---:|---:|---:|---:|
-| 1 | 671 ms | 667 ms | 1293 ms | 559 ms |
-| 2 | 639 ms | 508 ms | 1226 ms | 479 ms |
-| 4 | 568 ms | 425 ms | 1201 ms | 454 ms |
-| 8 | 551 ms | 400 ms | 1205 ms | 436 ms |
-| 16 | 560 ms | **392 ms** | 1206 ms | **440 ms** |
+| 1 | 702 ms | 564 ms | 1304 ms | 439 ms |
+| 2 | 649 ms | 382 ms | 1265 ms | 361 ms |
+| 4 | 583 ms | 304 ms | 1234 ms | 326 ms |
+| 8 | 562 ms | **261 ms** | 1221 ms | **305 ms** |
+| 16 | 575 ms | 264 ms | 1231 ms | 318 ms |
 
 Readings:
 
-- psacklinger wins at every width: ~1.4× on duck1 and ~2.8× on duck2 at -j8.
-- duckc's `-w` workers barely help a single big module (1.22× on duck1, flat on
+- psacklinger wins at every width: ~2.2× on duck1 and ~4.0× on duck2 at -j8.
+- duckc's `-w` workers barely help a single big module (~1.25× on duck1, flat on
   duck2) — its parallelism is per-query/per-package and one module is dominated
-  by a serial task chain. psacklinger's per-function fan-out scales ~1.7×.
-- At one thread the two are tied on duck1; on duck2 psacklinger is structurally
-  faster regardless of threads.
+  by a serial task chain. psacklinger's per-function fan-out scales ~2.2×.
 - Build type matters enormously: the same benchmark on Debug builds reads ~2.8 s
   vs ~5.5–7.6 s — only relative trends survive, absolute Debug numbers don't.
 
-Phase breakdown (`PSACKLINGER_TIMING=1`, duck1 at `-j8`, release): parse 202 ms,
-GlobalPass 1 ms, collect+hash 23 ms, globals object 2 ms, function lowering
-59 ms, link 54 ms. The shared PST front-end is still the biggest slice —
-including its mandatory SHA-256 stable-hash calculation, which psacklinger does
-not use (it has its own dprint hashes); an opt-out in `pst::PST` is the next
-optimization frontier.
+Phase breakdown (`PSACKLINGER_TIMING=1`, duck1 at `-j8`, release): parse 67 ms,
+GlobalPass 1 ms, collect+hash 22 ms, globals object 2 ms, function lowering
+58 ms, link 55 ms. Two front-end optimizations got it here:
+
+- **Scheduler parking** (above) stopped idle workers from thrashing the serial
+  phase.
+- **`pst::PSTHashing::Skip`**: the PST constructor normally computes SHA-256
+  stable hashes for every element (the query framework's incremental inputs).
+  psacklinger keeps its own dprint-based content hashes, so it opts out via a
+  new flag on the `pst::PST` constructor — parse dropped 202 ms → 67 ms.
+  `getHash()`/`getByStableHash()` must not be used on such a PST; the default
+  is unchanged for the rest of the compiler.
 
 Where the PSAC design pays off unconditionally is incremental recompiles: a
 one-function edit re-runs one ~ms-scale task plus a relink instead of a full
