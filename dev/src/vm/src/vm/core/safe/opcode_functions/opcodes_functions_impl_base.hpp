@@ -1280,31 +1280,6 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(ft_memCopy)(FUNCTION_ARGS) {
-		{
-			Pointer  dst  = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
-			Pointer  src  = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
-			TypeCRef type = READ_FROM_DIRECT_ARG(TypeCRef, instr[1].arg0);
-
-			if (!dst.isNull() && !src.isNull()) {
-				ShadowBlock* dst_sb = FT_GLOBALS.getShadow(dst.getBlock()->getID());
-				ShadowBlock* src_sb = FT_GLOBALS.getShadow(src.getBlock()->getID());
-				if (dst_sb && src_sb) {
-					u32 dst_idx    = FT_THREAD.getShadowDataMemory().getBlockType(Ref(dst_sb))->getShadowEntryIndex(dst.getOffset());
-					u32 src_idx    = FT_THREAD.getShadowDataMemory().getBlockType(Ref(src_sb))->getShadowEntryIndex(src.getOffset());
-					u32 shadow_size = type->getShadowSize();
-					auto tid   = FT_DATA.thread_id;
-					auto epoch = FT_DATA.getVC()[tid];
-					for (u32 i = 0; i < shadow_size; ++i) {
-						src_sb->getData()[src_idx + i].processRead(tid, epoch, FT_DATA.getVC());
-						dst_sb->getData()[dst_idx + i].processWrite(tid, epoch, FT_DATA.getVC());
-					}
-				}
-			}
-		}
-		FUNCTION_CONT(2);
-	}
-
 	RETURN_TYPE OpFuns::OPCODE_NAME(ft_init_bany_type)(FUNCTION_ARGS) {
 		{
 			auto* sf         = FT_DATA.getShadowFrame();
@@ -1441,6 +1416,10 @@ namespace vm {
 					auto epoch = FT_DATA.getVC()[tid];
 					for (u32 i = 0; i < shadow_size; ++i)
 						sb->getData()[shadow_idx + i].processRead(tid, epoch, FT_DATA.getVC());
+				} else {
+					Epoch zombie = FT_GLOBALS.getZombie(ptr.getBlock()->getID());
+					if (zombie != Epoch{} && !(zombie <= FT_DATA.getVC()))
+						ShadowEntry::reportRace("Free-Read", zombie, Epoch(FT_DATA.thread_id, FT_DATA.getVC()[FT_DATA.thread_id]));
 				}
 			}
 		}
@@ -1462,15 +1441,8 @@ namespace vm {
 						sb->getData()[shadow_idx + i].processWrite(tid, epoch, FT_DATA.getVC());
 				} else {
 					Epoch zombie = FT_GLOBALS.getZombie(ptr.getBlock()->getID());
-					if (zombie != Epoch{} && !(zombie <= FT_DATA.getVC())) {
-						auto tid   = FT_DATA.thread_id;
-						auto epoch = FT_DATA.getVC()[tid];
-						throw exceptions::VMDataRaceException(
-							std::string("Free-Write") + " — t" + std::to_string(zombie.tid().asInt())
-							+ "@" + std::to_string(zombie.clock()) + " vs t"
-							+ std::to_string(tid.asInt()) + "@" + std::to_string(epoch)
-						);
-					}
+					if (zombie != Epoch{} && !(zombie <= FT_DATA.getVC()))
+						ShadowEntry::reportRace("Free-Write", zombie, Epoch(FT_DATA.thread_id, FT_DATA.getVC()[FT_DATA.thread_id]));
 				}
 			}
 		}
@@ -1492,6 +1464,10 @@ namespace vm {
 					auto epoch = FT_DATA.getVC()[tid];
 					for (u32 i = 0; i < shadow_size; ++i)
 						sb->getData()[shadow_idx + i].processRead(tid, epoch, FT_DATA.getVC());
+				} else {
+					Epoch zombie = FT_GLOBALS.getZombie(ptr.getBlock()->getID());
+					if (zombie != Epoch{} && !(zombie <= FT_DATA.getVC()))
+						ShadowEntry::reportRace("Free-Read", zombie, Epoch(FT_DATA.thread_id, FT_DATA.getVC()[FT_DATA.thread_id]));
 				}
 			}
 		}
@@ -1513,6 +1489,10 @@ namespace vm {
 					auto epoch = FT_DATA.getVC()[tid];
 					for (u32 i = 0; i < shadow_size; ++i)
 						sb->getData()[shadow_idx + i].processWrite(tid, epoch, FT_DATA.getVC());
+				} else {
+					Epoch zombie = FT_GLOBALS.getZombie(ptr.getBlock()->getID());
+					if (zombie != Epoch{} && !(zombie <= FT_DATA.getVC()))
+						ShadowEntry::reportRace("Free-Write", zombie, Epoch(FT_DATA.thread_id, FT_DATA.getVC()[FT_DATA.thread_id]));
 				}
 			}
 		}

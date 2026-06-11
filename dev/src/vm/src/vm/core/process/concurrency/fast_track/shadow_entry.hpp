@@ -141,8 +141,8 @@ namespace vm {
 			last_read_epoch = last_write;  // FastTrack optimization/invariant
 		}
 
-	private:
-		void reportRace(const char* race_type, Epoch epoch_a, Epoch epoch_b) {
+	public:
+		[[noreturn]] static void reportRace(const char* race_type, Epoch epoch_a, Epoch epoch_b) {
 			std::string detail = race_type;
 			detail += " — t";
 			detail += std::to_string(epoch_a.tid().asInt());
