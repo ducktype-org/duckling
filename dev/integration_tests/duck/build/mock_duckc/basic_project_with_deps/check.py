@@ -8,7 +8,7 @@ sys.path.append(str(Path(__file__).resolve().parents[3]))
 from utilities import *
 
 foo_path = Path.cwd() / "foo"
-foo_path = Path.cwd() / "bar"
+bar_path = Path.cwd() / "bar"
 
 version = "1.0.0"
 
@@ -24,16 +24,10 @@ bar_name = unit_dir_name_for("bar", version, bar_path)
 foo_artifacts = layout / foo_name
 bar_artifacts = layout / bar_name
 
-assert locks_path(foo_artifacts).exists()
-check_file_is_empty(locks_path(foo_artifacts))
-
-foo_deps = deps_json_path_for_dep(foo_artifacts)
-assert foo_deps.exists()
-
 assert locks_path(bar_artifacts).exists()
 check_file_is_empty(locks_path(bar_artifacts))
 
-bar_deps = deps_json_path_for_dep(foo_artifacts)
+bar_deps = deps_json_path_for_dep(bar_artifacts)
 assert bar_deps.exists()
 
 text = bar_deps.read_text()
@@ -53,7 +47,7 @@ expected = f"""{{
     {{
       "package": "{bar_name}",
       "strategy": "lib",
-      "output_file": "{str(layout / bar_name / "bar.a")}"
+      "output_file": "{str(layout / bar_name / f"{bar_name}.a")}"
     }}
   ]
 }}"""
@@ -76,7 +70,11 @@ expected = f"""{{
       "version": "1.0.0",
       "features": [],
       "path": "{str(foo_path)}/src",
-      "dependencies": []
+      "dependencies": [
+        {{
+          "id": "{bar_name}"
+        }}
+      ]
     }},
     {{
       "id": "{bar_name}",
@@ -91,7 +89,8 @@ expected = f"""{{
     {{
       "package": "{foo_name}",
       "strategy": "native",
-      "output_file": "{str(layout / "foo")}"
+      "output_file": "{str(layout / "foo")}",
+      "linking_options": "{str(bar_artifacts / f"{bar_name}.a")}"
     }}
   ]
 }}"""
