@@ -7,6 +7,10 @@ namespace pst {
 	 * @brief Statement that is an expression.
 	 */
 	class ExprStmt final: public Stmt {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(ExprStmt, Stmt);
+		CLONE_SUBELEMENTS();
+	protected:
+
 		NAMED_CHILD(expr, AssignmentExprHolder);
 
 	public:

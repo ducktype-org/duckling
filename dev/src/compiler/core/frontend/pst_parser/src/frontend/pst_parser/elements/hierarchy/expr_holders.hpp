@@ -17,6 +17,9 @@ namespace pst {
 	 * It's intended to be the only holder that is visible to further stages of compilation.
 	 */
 	class ExprHolder: public NotStmt {
+		THIS_CLASS(ExprHolder);
+		PARENT_CLASS(NotStmt);
+		CLONE_SUBELEMENTS();
 	protected:
 		NAMED_CHILD(expr, ExprElement);
 		friend void internal::parseExprIntoHolder(
@@ -24,6 +27,7 @@ namespace pst {
 		);
 
 	public:
+		ELEMENT_CLONE_DECL(ExprHolder);
 		explicit ExprHolder(const LangParserState& state): NotStmt(state) {
 			this->element_kind = ElementKind::ExprHolder;
 		}
@@ -77,8 +81,12 @@ namespace pst {
 	 */
 	template<typename Self, ExprParseFun parseFun, TokenStreamCondition until, bool TOP_LEVEL = true>
 	class ExprHolderTemplate: public ExprHolder {
+		THIS_CLASS(ExprHolderTemplate);
+		PARENT_CLASS(ExprHolder);
 	public:
 		using ExprHolder::ExprHolder;
+
+		ELEMENT_CLONE_DECL(ExprHolderTemplate);
 
 		static MBox<Self> parse(LangParserState& state) {
 			auto out = makeBox<Self>(state);
@@ -109,6 +117,7 @@ namespace pst {
 			  ExprParserHelper::parseTernary,
 			  ExprParserHelper::untilUniversalEnd,
 			  true> {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(UniversalExprHolder, ExprHolderTemplate);
 	public:
 		using ExprHolderTemplate::ExprHolderTemplate;
 		~UniversalExprHolder() final = default;
@@ -124,6 +133,7 @@ namespace pst {
 			  ExprParserHelper::parseTernary,
 			  ExprParserHelper::untilUniversalAllowBlockEnd,
 			  true> {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(UniversalAllowBlockExprHolder, ExprHolderTemplate);
 	public:
 		using ExprHolderTemplate::ExprHolderTemplate;
 		~UniversalAllowBlockExprHolder() final = default;
@@ -138,6 +148,7 @@ namespace pst {
 			  ExprParserHelper::parseTernary,
 			  ExprParserHelper::untilUniversalEnd,
 			  false> {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(UniversalExprHolderLowerLevel, ExprHolderTemplate);
 	public:
 		using ExprHolderTemplate::ExprHolderTemplate;
 		~UniversalExprHolderLowerLevel() final = default;
@@ -153,6 +164,7 @@ namespace pst {
 			  ExprParserHelper::parseComma,
 			  ExprParserHelper::untilUniversalAllowCommaAndBlockEnd,
 			  true> {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(CommaAllowBlocksExprHolder, ExprHolderTemplate);
 	public:
 		using ExprHolderTemplate::ExprHolderTemplate;
 		~CommaAllowBlocksExprHolder() final = default;
@@ -168,6 +180,7 @@ namespace pst {
 			  ExprParserHelper::parseComma,
 			  ExprParserHelper::untilUniversalAllowCommaEnd,
 			  true> {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(CommaExprHolder, ExprHolderTemplate);
 	public:
 		using ExprHolderTemplate::ExprHolderTemplate;
 		~CommaExprHolder() final = default;
@@ -183,6 +196,7 @@ namespace pst {
 			  ExprParserHelper::parseAssignment,
 			  ExprParserHelper::untilSemicolon,
 			  true> {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(AssignmentExprHolder, ExprHolderTemplate);
 	public:
 		using ExprHolderTemplate::ExprHolderTemplate;
 		~AssignmentExprHolder() final = default;
@@ -198,6 +212,7 @@ namespace pst {
 			  ExprParserHelper::parseComma,
 			  ExprParserHelper::untilForTypeEnd,
 			  true> {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(ForTypeExprHolder, ExprHolderTemplate);
 	public:
 		using ExprHolderTemplate::ExprHolderTemplate;
 		~ForTypeExprHolder() final = default;
@@ -212,6 +227,7 @@ namespace pst {
 			  ExprParserHelper::parseTernary,
 			  ExprParserHelper::untilExtendsEnd,
 			  true> {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(ExtendsExprHolder, ExprHolderTemplate);
 	public:
 		using ExprHolderTemplate::ExprHolderTemplate;
 		~ExtendsExprHolder() final = default;
@@ -226,6 +242,7 @@ namespace pst {
 			  ExprParserHelper::parseTernary,
 			  ExprParserHelper::untilUniversalEnd,
 			  true> {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(ImplementsElementExprHolder, ExprHolderTemplate);
 	public:
 		using ExprHolderTemplate::ExprHolderTemplate;
 		~ImplementsElementExprHolder() final = default;
@@ -240,6 +257,7 @@ namespace pst {
 			  ExprParserHelper::parseTernary,
 			  ExprParserHelper::untilUniversalAllowBlockEnd,
 			  true> {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(ValuePatternExprHolder, ExprHolderTemplate);
 	public:
 		using ExprHolderTemplate::ExprHolderTemplate;
 		~ValuePatternExprHolder() final = default;

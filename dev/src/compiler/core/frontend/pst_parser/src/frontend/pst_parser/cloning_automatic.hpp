@@ -11,61 +11,79 @@
 #include "pst_automatic.hpp"
 #include "cloning_decl.hpp"
 
-namespace pst::cloning_utils {
-	template<std::derived_from<LangElement> El>
-	MBox<El> cloneCast(Ref<El> original) {
-		MBox<LangElement> lang_element = original.cloneElement();
-		return dynamic_cast<MBox<El>>(lang_element);
-	}
-
-	template<std::derived_from<LangElement> El, std::derived_from<LangElement> T, base::TemplateStringLiteral name>
-	void clone(El& parent, AccessInternal<T, name>& sink, const AccessInternal<T, name>& source) {
-		if (auto src = source.internal()) {
-			MBox<T> copy = cloneCast(src.toOpt().value());
-			copy->setParent(parent);
-			std::string str_name(name.value);
-			parent->addNamedChild(str_name, copy.refMut());
-			*sink = std::move(copy);
+namespace pst{
+	class CloningUtils {
+	public:
+		template<std::derived_from<LangElement> El>
+		static MBox<El> cloneCast(CRef<El> original) {
+			MBox<LangElement> lang_element = original->clone();
+			return lang_element.dynamicCast<El>();
 		}
-	}
 
-	template<std::derived_from<LangElement> El, std::derived_from<LangElement> T, base::TemplateStringLiteral name>
-	void clone(El& parent, base::Optional<AccessInternal<T, name>>& sink, const base::Optional<AccessInternal<T, name>>& source) {
-		if (source) {
-			if (auto src = source->internal()) {
-				MBox<T> copy = cloneCast(src.toOpt().value());
-				copy->setParent(parent);
+		template<std::derived_from<LangElement> El, std::derived_from<LangElement> T, base::TemplateStringLiteral name>
+		static void clone(El& parent, AccessInternal<T, name>& sink, const AccessInternal<T, name>& source) {
+			if (auto src = source.internal()) {
+				MBox<T> copy = std::move(cloneCast(src.toOpt().value()));
+				copy->setParent({&parent});
 				std::string str_name(name.value);
-				parent->addNamedChild(str_name, copy.refMut());
-				*sink = std::move(copy);
+				parent.addNamedChild(str_name, copy.refMut());
+				sink = std::move(copy);
 			}
 		}
-	}
 
-	template<std::derived_from<LangElement> El, std::derived_from<LangElement> T>
-	void clone(El& parent, base::Optional<AccessInternalAnonymous<T>>& sink, const base::Optional<AccessInternalAnonymous<T>>& source) {
-		if (source) {
-			if (auto src = source->internal()) {
-				MBox<T> copy = cloneCast(src.toOpt().value());
-				copy->setParent(parent);
-				*sink = std::move(copy);
+		template<std::derived_from<LangElement> El, std::derived_from<LangElement> T, base::TemplateStringLiteral name>
+		static void clone(El& parent, base::Optional<AccessInternal<T, name>>& sink, const base::Optional<AccessInternal<T, name>>& source) {
+			if (source) {
+				if (auto src = source->internal()) {
+					MBox<T> copy = std::move(cloneCast(src.toOpt().value()));
+					copy->setParent({&parent});
+					std::string str_name(name.value);
+					parent.addNamedChild(str_name, copy.refMut());
+					sink.emplace(std::move(copy));
+				}
 			}
 		}
-	}
 
-	template<std::derived_from<LangElement> El, std::derived_from<LangElement> T>
-	void clone(El& parent, std::vector<AccessInternalAnonymous<T>>& sink, const std::vector<AccessInternalAnonymous<T>>& source) {
-		if (source) {
+		template<std::derived_from<LangElement> El, std::derived_from<LangElement> T>
+		static void clone(El& parent, AccessInternalAnonymous<T>& sink, const AccessInternalAnonymous<T>& source) {
+			if (auto src = source.internal()) {
+				MBox<T> copy = std::move(cloneCast(src.toOpt().value()));
+				copy->setParent({&parent});
+				parent.addChild(copy);
+				sink = std::move(copy);
+			}
+		}
+
+		template<std::derived_from<LangElement> El, std::derived_from<LangElement> T>
+		static void clone(El& parent, base::Optional<AccessInternalAnonymous<T>>& sink, const base::Optional<AccessInternalAnonymous<T>>& source) {
+			if (source) {
+				if (auto src = source->internal()) {
+					MBox<T> copy = std::move(cloneCast(src.toOpt().value()));
+					copy->setParent({&parent});
+					parent.addChild(copy);
+					sink.emplace(std::move(copy));
+				}
+			}
+		}
+
+		template<std::derived_from<LangElement> El, std::derived_from<LangElement> T>
+		static void clone(El& parent, std::vector<AccessInternalAnonymous<T>>& sink, const std::vector<AccessInternalAnonymous<T>>& source) {
 			for (auto& ref: source) {
 				sink.push_back(nullptr);
 				clone(parent, sink.back(), ref);
 			}
 		}
-	}
+		template<std::derived_from<LangElement> El, std::derived_from<LangElement> T>
+		static void clone(El& parent, base::Optional<std::vector<AccessInternalAnonymous<T>>>& sink, const base::Optional<std::vector<AccessInternalAnonymous<T>>>& source) {
+			if (source) {
+				clone(parent, sink.value(), source.value());
+			}
+		}
+	};
 }
 
 #define ELEMENT_CLONE_SUB_ELEMENT(sub_element_name) \
-	pst::cloning_utils::clone(*this, sub_element_name, other.sub_element_name);
+	pst::CloningUtils::clone(*this, sub_element_name, other.sub_element_name);
 
 #define CLONE_SUB_ELEMENTS_DEF(element_type, ...) \
 	void element_type::cloneSubElements(const element_type& other) {\

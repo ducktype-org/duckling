@@ -7,6 +7,10 @@ namespace pst {
 	 * @brief Function declaration
 	 */
 	class SpecifierBlock final: public Stmt {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(SpecifierBlock, Stmt);
+		CLONE_SUBELEMENTS();
+	protected:
+
 		NAMED_CHILD(block, CodeBlock);
 
 	protected:

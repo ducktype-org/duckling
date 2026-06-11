@@ -7,6 +7,10 @@ namespace pst {
 	 * @brief Alias statement.
 	 */
 	class Alias final: public Stmt {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(Alias, Stmt);
+		CLONE_SUBELEMENTS();
+	protected:
+
 		NAMED_CHILD(name, IdentifierWrapper);
 		NAMED_CHILD(points_to, DottedName);
 

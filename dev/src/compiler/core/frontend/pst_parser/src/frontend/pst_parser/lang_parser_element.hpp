@@ -87,16 +87,16 @@ namespace pst {
 
 		virtual CLONE_SIGNATURE() = 0;
 
-		[[nodiscard]] 
-		MBox<LangElement> clone() const {
-			return cloneElement();
-		}
-
 		void cloneSubElements(const LangElement&) {
 			return;
 		}
 
 	public:
+		[[nodiscard]] 
+		MBox<LangElement> clone() const {
+			return cloneElement();
+		}
+
 		using SubToken = base::CRef<lexer::Token>;
 
 		/**
@@ -114,6 +114,10 @@ namespace pst {
 		 * @brief Needed for access to hash methods.
 		 */
 		friend class ClassStmt;
+
+		template<typename X>
+		friend class PSTAutomatic;
+		friend class CloningUtils;
 
 		using Child = AccessLocked<LangElement>;
 
@@ -291,9 +295,6 @@ namespace pst {
 		}
 
 		virtual void acceptVisitor(PstVisitor& visitor) const;
-
-		template<typename X>
-		friend class PSTAutomatic;
 
 		[[nodiscard]]
 		const AdditionalRootData& getAdditionalRootData() const {

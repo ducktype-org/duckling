@@ -332,6 +332,13 @@ namespace base {
 			return *ptr;
 		}
 
+		template<class U>
+		MBox<U> dynamicCast() {
+			auto ret = MBox<U>(dynamic_cast<U*>(ptr));
+			ptr = nullptr;
+			return std::move(ret);
+		}
+
 		/**
 		 * @brief Method that converts MBox to Optional<Box>.
 		 * It leaves MBox in null state.

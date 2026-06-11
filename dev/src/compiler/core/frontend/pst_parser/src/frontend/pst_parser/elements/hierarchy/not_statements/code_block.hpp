@@ -7,7 +7,7 @@ namespace pst {
 	 * @brief Code Block that contains statements.
 	 */
 	class CodeBlock final: public NotStmt {
-		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(CodeBlock, NotStmt);
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(CodeBlock, NotStmt, type);
 		CLONE_SUBELEMENTS();
 	private:
 		std::vector<AccessInternalAnonymous<Stmt>> statements;

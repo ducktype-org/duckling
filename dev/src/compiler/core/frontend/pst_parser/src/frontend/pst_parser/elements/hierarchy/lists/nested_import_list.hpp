@@ -4,15 +4,11 @@
 #include "preamble.hpp"
 
 namespace pst {
-	namespace {
-		using ImportParentList = List<ImportChain, internal::NameGetters::nestedImportList>;
-	}
-
 	/**
 	 * @brief Bracketed import list with import chains as elements.
 	 */
-	class NestedImportList final: public ImportParentList {
-		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(NestedImportList, ImportParentList);
+	class NestedImportList final: public List<ImportChain, internal::NameGetters::nestedImportList> {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(NestedImportList, List);
 		CLONE_SUBELEMENTS();
 	public:
 		explicit NestedImportList(const LangParserState& state): List(state) {
