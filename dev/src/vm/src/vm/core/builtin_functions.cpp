@@ -135,24 +135,19 @@ namespace vm::builtins {
 	}
 
 	i64 FunctionHandlers::builtinJoinThread(SafeVMThread& thread, u64 thread_id) {
-		// Snapshot the joinee's VC while the GIL is still held so the slot
-		// cannot be recycled by a concurrent runFunction between join() and the read.
-		std::optional<VectorClock> joinee_vc_snapshot;
-		if (thread.safe_process.getSettings().enable_fast_track) {
-			auto target = thread.safe_process.getVMThreadByID(api::ThreadID{ thread_id });
-			if (target) {
-				auto& ft_joinee    = static_cast<FastTrackSafeVMThread&>(*target.value());
-				joinee_vc_snapshot = ft_joinee.getFTData().getVC();
-			}
-		}
-
 		thread.releaseGil();
 		auto result = vm::api::join(thread.safe_process.getPID(), api::ThreadID{ thread_id });
 		thread.acquireGil();
 
-		if (result.has_value() && joinee_vc_snapshot) {
-			auto& ft_joiner = static_cast<FastTrackSafeVMThread&>(thread);
-			ft_joiner.getFTData().joinVC(*joinee_vc_snapshot);
+		// Read the joinee's final VC after the join has completed and GIL is held again.
+		// The slot cannot be recycled while we hold the GIL.
+		if (result.has_value() && thread.safe_process.getSettings().enable_fast_track) {
+			auto target = thread.safe_process.getVMThreadByID(api::ThreadID{ thread_id });
+			if (target) {
+				auto& ft_joinee = static_cast<FastTrackSafeVMThread&>(*target.value());
+				auto& ft_joiner = static_cast<FastTrackSafeVMThread&>(thread);
+				ft_joiner.getFTData().joinVC(ft_joinee.getFTData().getVC());
+			}
 		}
 
 		if (!result.has_value()) return -vm::api::errorToErrno(result.error());

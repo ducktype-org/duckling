@@ -30,6 +30,7 @@ public:
 		TESTER_ADD_TEST(block8SharedWriteRaceTest);
 		TESTER_ADD_TEST(block8SharedNoRaceTest);
 		TESTER_ADD_TEST(block9FreeReadRaceTest);
+		TESTER_ADD_TEST(noRaceTest2);
 	}
 
 private:
@@ -298,6 +299,18 @@ private:
 
 	void block9FreeReadRaceTest() {
 		runRaceTest("block9_free_read_race.dbc", "block9FreeReadRaceTest");
+	}
+
+	void noRaceTest2() {
+		vm::api::ProcessSettings settings;
+		settings.enable_fast_track = true;
+		auto pid = initProcess(settings);
+
+		auto file = fs::File(path("no_race_test_2.dbc"));
+		auto load_res = vm::api::loadFiles(pid, { file });
+		ASSERT_TRUE(load_res.has_value());
+
+		runTestOnVm(pid, "", {}, {});
 	}
 };
 
