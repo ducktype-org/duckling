@@ -78,6 +78,8 @@ public:
 		TESTER_ADD_TEST(testTypeAnnotation);
 		TESTER_ADD_TEST(testCallNormalization);
 		TESTER_ADD_TEST(testIndexNormalization);
+		TESTER_ADD_TEST(testImports);
+		TESTER_ADD_TEST(testArrayTypes);
 		TESTER_ADD_TEST(testAttribute);
 		TESTER_ADD_TEST(testUnaryMinus);
 		TESTER_ADD_TEST(testUnaryAddressOfAndOptional);
@@ -167,6 +169,7 @@ private:
 	void testMemberAccess() {
 		check("a.b.c;", "a.b.c;\n");
 		check("std . math . sqrt ;", "std.math.sqrt;\n");
+		check("a .? b;", "a.?b;\n");
 	}
 
 	void testTypeAnnotation() {
@@ -180,6 +183,27 @@ private:
 	}
 
 	void testIndexNormalization() { check("arr [ i ] ;", "arr[i];\n"); }
+
+	void testImports() {
+		check("import a.b.c.d;", "import a.b.c.d;\n");
+		check("import a.b.c as D;", "import a.b.c as D;\n");
+		check("import a.b .* ;", "import a.b.*;\n");
+		check("import A.B.(C, D);", "import A.B.(C, D);\n");
+		check("import A.B .* hides D ,G, C;", "import A.B.* hides D, G, C;\n");
+	}
+
+	void testArrayTypes() {
+		// Built-in type keywords bind tightly to their array/generic group.
+		check("var data : i32 [5] = [1, 2];", "var data: i32[5] = [1, 2];\n");
+		check("var l : List [i32] = [];", "var l: List[i32] = [];\n");
+		// Custom types and parenthesized types do too.
+		check("var p : MyClass [3] = [a, b];", "var p: MyClass[3] = [a, b];\n");
+		check("var g : (box Greeter) [2] = [x, y];", "var g: (box Greeter)[2] = [x, y];\n");
+		// Generic declarations use square brackets after the name.
+		check("fun grab [T] (value : T) -> Holder [T] ;", "fun grab[T](value: T) -> Holder[T];\n");
+		// Non-type keywords keep their separating space.
+		check("return [1, 2];", "return [1, 2];\n");
+	}
 
 	void testAttribute() { check("@Attr\nx=1;", "@Attr x = 1;\n"); }
 

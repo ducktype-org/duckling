@@ -5,6 +5,7 @@
 #include <lexer/token.hpp>
 
 #include <algorithm>
+#include <array>
 #include <span>
 #include <string>
 #include <string_view>
@@ -72,6 +73,23 @@ namespace formatter {
 		/** A `++`/`--` that binds to the preceding value as a suffix: `t++`. */
 		bool isSuffixOperator(const Token& t) {
 			return isOperator(t) && (isStr(t, "++") || isStr(t, "--"));
+		}
+
+		/** Member-access operators that bind tightly to the value on their left: `a.b`, `a.*`,
+		 * `a.?`. */
+		bool isMemberAccessOperator(const Token& t) {
+			return isOperator(t) && (isStr(t, ".") || isStr(t, ".*") || isStr(t, ".?"));
+		}
+
+		/** Built-in type keywords, which bind tightly to a following bracket group: `i32[5]`. */
+		bool isTypeKeyword(const Token& t) {
+			if (!isKeyword(t)) return false;
+			constexpr auto TYPE_KEYWORDS = std::to_array<std::string_view>({
+				"i8",   "i16",  "i32",    "i64",  "i128", "u8",  "u16",  "u32",
+				"u64",  "u128", "f16",    "f32",  "f64",  "f80", "f128", "char",
+				"bool", "str",  "String", "type", "List", "Set", "Dict", "Array",
+			});
+			return std::ranges::find(TYPE_KEYWORDS, sv(t)) != TYPE_KEYWORDS.end();
 		}
 
 		/** The `case` keyword, which starts a new match arm (and so a new statement). */
@@ -182,9 +200,9 @@ namespace formatter {
 				// No space before statement/list punctuation.
 				if (isSpecial(cur) && (isStr(cur, ";") || isStr(cur, ","))) return false;
 
-				// Member access binds tightly on both sides: `a.b`.
-				if (isOperator(cur) && isStr(cur, ".")) return false;
-				if (isOperator(*prev) && isStr(*prev, ".")) return false;
+				// Member access binds tightly to the value on its left: `a.b`, `a.*`, `a.?b`.
+				if (isMemberAccessOperator(cur)) return false;
+				if (isOperator(*prev) && (isStr(*prev, ".") || isStr(*prev, ".?"))) return false;
 
 				// Attribute sigil binds to its name: `@Attr`.
 				if (isSpecial(*prev) && isStr(*prev, "@")) return false;
@@ -199,7 +217,8 @@ namespace formatter {
 				if (isBracketGroup(cur)) {
 					const Bracket b = cur.getBracketType();
 					if (b == Bracket::Round || b == Bracket::Square) {
-						if (isKeyword(*prev)) return true;       // `if (...)`, `while (...)`
+						if (isTypeKeyword(*prev)) return false;  // `i32[5]`, `List[i32]`
+						if (isKeyword(*prev)) return true;       // `if (...)`, `return [...]`
 						if (isValueCloser(*prev)) return false;  // `foo(...)`, `a[...]`
 					}
 					return true;
