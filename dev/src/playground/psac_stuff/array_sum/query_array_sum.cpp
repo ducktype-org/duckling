@@ -1,4 +1,5 @@
 #include "array_sum_common.hpp"
+
 #include <concurrent/module_flags/worker_count.hpp>
 
 #include <base/types/ints.hpp>

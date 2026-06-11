@@ -4,8 +4,8 @@
 
 #include <frontend/pst_parser/pst_visitor.hpp>
 
-#include <base/types/bits_and_bytes.hpp>
 #include <base/extend_cpp/strongly_typed_id.hpp>
+#include <base/types/bits_and_bytes.hpp>
 
 #include <string_id/string_id.hpp>
 

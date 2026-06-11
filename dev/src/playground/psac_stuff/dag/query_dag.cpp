@@ -1,5 +1,6 @@
-#include <concurrent/base/collections/queue.hpp>
 #include "dag_common.hpp"
+
+#include <concurrent/base/collections/queue.hpp>
 
 #include <base/misc/int_conv.hpp>
 #include <base/types/ints.hpp>

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ids.hpp"
+
 #include <psackling/namespace.hpp>
 #include <psackling/symbol.hpp>
 #include <psackling/type.hpp>
