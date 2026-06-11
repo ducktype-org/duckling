@@ -112,3 +112,34 @@ llvm::Function* pg::LlvmLoweringContext::getOrCreateFunction(sym::SymbolID fun_s
 	});
 	return functions[fun_sym_id];
 }
+
+llvm::GlobalVariable* pg::LlvmLoweringContext::getOrCreateGlobal(
+	sym::SymbolID global_sym_id, Context& ctx
+) {
+	if (globals.contains(global_sym_id)) return globals[global_sym_id];
+
+	sym::Symbol& global_sym = ctx.getSymbol(global_sym_id);
+	CORE_ASSERT(
+		std::holds_alternative<sym::GlobalVariableSymbol>(global_sym.kind),
+		"getOrCreateGlobal expects a GlobalVariableSymbol: " + global_sym.name.str()
+	);
+	const auto& global_kind = std::get<sym::GlobalVariableSymbol>(global_sym.kind);
+
+	llvm::Type* llvm_ty = lowerType(global_sym.type_id, ctx);
+	llvm_module.inCtxDo([&](llvm::LLVMContext&, llvm::Module& mod) {
+		// No initializer — this is an external declaration; the definition lives in
+		// the globals object file.
+		globals.insertOrAssign(
+			global_sym_id,
+			new llvm::GlobalVariable(
+				mod,
+				llvm_ty,
+				/*isConstant=*/false,
+				llvm::GlobalValue::ExternalLinkage,
+				/*Initializer=*/nullptr,
+				global_kind.link_name.strView()
+			)
+		);
+	});
+	return globals[global_sym_id];
+}

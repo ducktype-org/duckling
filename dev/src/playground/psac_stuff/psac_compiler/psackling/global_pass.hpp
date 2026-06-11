@@ -98,6 +98,46 @@ namespace pg {
 
 		void visitConst(pst::Access<pst::Const> stmt) override { registerConstSymbol(ctx, stmt); }
 
+		void visitVariable(pst::Access<pst::Variable> stmt) override {
+			const base::StrID name = stmt->getName().illegalAccess().value()->unwrap();
+
+			// Initializers must be compile-time evaluable — the definition lands in the
+			// globals object file as a constant initializer (no runtime constructors).
+			base::Optional<ConstValue> init{};
+			if (stmt->getValue().has_value()) {
+				ConstEval evaluator(ctx);
+				init = evaluator.eval(
+					*stmt->getValue()->illegalAccess().value()->getExpr().illegalAccess().value()
+				);
+			}
+
+			tp::TypeID type_id = ctx.i64_type_id;
+			if (stmt->getType().has_value()) {
+				type_id = resolveTypeExpr(
+					*stmt->getType()->illegalAccess().value()->getExpr().illegalAccess().value(),
+					"Global variable '" + name.str() + "'"
+				);
+			} else if (init.has_value()) {
+				type_id = init->type_id;
+			}
+
+			if (init.has_value() && init->type_id != type_id) {
+				throw std::runtime_error(
+					"Global variable '" + name.str()
+					+ "': initializer type does not match declared type"
+				);
+			}
+
+			sym::SymbolID sym_id = ctx.insertSymbol(
+				name,
+				sym::GlobalVariableSymbol{ .link_name = ctx.qualifyName(name),
+			                               .init_bits
+			                               = init.map([](const ConstValue& v) { return v.bits; }) },
+				type_id
+			);
+			ctx.global_variables.push_back(sym_id);
+		}
+
 		void visitClass(pst::Access<pst::Class> stmt) override {
 			const base::StrID name = stmt->getName().illegalAccess().value()->unwrap();
 

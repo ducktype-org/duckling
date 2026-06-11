@@ -35,6 +35,12 @@ clah::Clah getVmClah() {
 	             .addShortDesc("Compile functions sequentially instead of through PSAC "
 	                           "(baseline for benchmarks).")
 	             .build())
+	    .add(clah::ParamBuilder::ofFlag()
+	             .addShortName('i')
+	             .addLongName("interactive")
+	             .addShortDesc("After the initial compile, read source paths from stdin and "
+	                           "recompile incrementally (only changed functions).")
+	             .build())
 	    .setPreHandler([](const clah::ParsingResult& options) {
 			if (options.isFlag("version")) {
 				showVersion();
@@ -66,7 +72,40 @@ clah::Clah getVmClah() {
 				compile_options.num_threads = base::safeIntConv<usize>(threads.value());
 			}
 			compile_options.sequential = options.isFlag("sequential");
-			pg::compile(options.getPositional<fs::File>(0), compile_options);
+
+			if (!options.isFlag("interactive")) {
+				pg::compile(options.getPositional<fs::File>(0), compile_options);
+				return 0;
+			}
+
+			// Interactive mode: keep the PSAC computation alive and feed it new source.
+		    // Each stdin line is a path to recompile incrementally (empty line repeats
+		    // the previous file, e.g. after editing it in place).
+			pg::Compiler compiler(compile_options);
+
+			auto report = [](const pg::CompileStats& stats) {
+				std::cout << "recompiled " << stats.recompiled_functions << "/"
+						  << stats.total_functions << " functions\n"
+						  << std::flush;
+			};
+
+			std::filesystem::path current_path = options.getPositional<fs::File>(0).getFilePath();
+			report(compiler.compile(options.getPositional<fs::File>(0)));
+
+			std::string line;
+			while (std::getline(std::cin, line)) {
+				if (line == "quit" || line == "exit") break;
+				if (!line.empty()) current_path = line;
+				if (!std::filesystem::exists(current_path)) {
+					std::cout << "no such file: " << current_path.string() << "\n" << std::flush;
+					continue;
+				}
+				try {
+					report(compiler.update(fs::File(current_path)));
+				} catch (const std::exception& e) {
+					std::cout << "compilation failed: " << e.what() << "\n" << std::flush;
+				}
+			}
 			return 0;
 		});
 }

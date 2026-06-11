@@ -175,11 +175,17 @@ namespace pg {
 
 		sym::Symbol& getSymbol(sym::SymbolID id) { return symbols[id]; }
 
-		const ns::NamespaceID root_ns_id;
-		const tp::TypeID      bool_type_id;
-		const tp::TypeID      void_type_id;
-		const tp::TypeID      incomplete_type_id;
-		const tp::TypeID      namespace_type_id;
-		const tp::TypeID      i64_type_id;
+		/// All GlobalVariableSymbols in declaration order; the globals object file
+		/// defines exactly these.
+		std::vector<sym::SymbolID> global_variables;
+
+		// Not const so Context stays copy-assignable: incremental compilation refreshes a
+		// long-lived Context in place (PSAC read closures hold a pointer to it).
+		ns::NamespaceID root_ns_id;
+		tp::TypeID      bool_type_id;
+		tp::TypeID      void_type_id;
+		tp::TypeID      incomplete_type_id;
+		tp::TypeID      namespace_type_id;
+		tp::TypeID      i64_type_id;
 	};
 }

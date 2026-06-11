@@ -2,6 +2,7 @@
 
 #include "ids.hpp"
 
+#include <base/collections/optional.hpp>
 #include <base/extend_cpp/strongly_typed_id.hpp>
 
 #include <string_id/string_id.hpp>
@@ -14,6 +15,15 @@ namespace pg::sym {
 	};
 
 	struct VariableSymbol {};
+
+	/// Top-level (or namespace-level) variable. Defined once in the dedicated globals
+	/// object file; function modules reference it as an external declaration.
+	struct GlobalVariableSymbol {
+		base::StrID link_name;  ///< Namespace-qualified name used for the LLVM symbol.
+		/// Initializer value (raw 64-bit data, interpreted via the symbol's type_id),
+		/// evaluated at compile time. Empty means zero-initialized.
+		base::Optional<u64> init_bits;
+	};
 
 	/// Compile-time constant. The value is stored as raw 64-bit data; the symbol's
 	/// type_id says how to interpret it (i64 or bool for now).
@@ -36,6 +46,7 @@ namespace pg::sym {
 	using SymbolKind = std::variant<
 		FunctionSymbol,
 		VariableSymbol,
+		GlobalVariableSymbol,
 		ConstantSymbol,
 		TypeSymbol,
 		NamespaceSymbol,

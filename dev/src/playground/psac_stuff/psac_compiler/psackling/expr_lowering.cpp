@@ -79,6 +79,16 @@ namespace pg {
 			};
 		}
 
+		if (std::holds_alternative<sym::GlobalVariableSymbol>(symbol.kind)) {
+			llvm::GlobalVariable* global  = lowering.getOrCreateGlobal(sym_id, ctx);
+			llvm::Type*           llvm_ty = lowering.lowerType(symbol.type_id, ctx);
+			return LoweredExpr{
+				.value   = builder.CreateLoad(llvm_ty, global, name.strView()),
+				.type_id = symbol.type_id,
+				.address = global,
+			};
+		}
+
 		if (std::holds_alternative<sym::ConstantSymbol>(symbol.kind)) {
 			llvm::Type* llvm_ty = lowering.lowerType(symbol.type_id, ctx);
 			return LoweredExpr{
