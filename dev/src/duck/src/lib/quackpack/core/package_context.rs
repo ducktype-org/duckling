@@ -59,7 +59,7 @@ impl<'duck> PackageContext<'duck> {
         }))
     }
 
-    /// As [`Self::try_new_from_frontmatter`], but bails internally when no frontmatter at `path`.
+    /// As [`Self::try_new_from_frontmatter`], but bails internally when there is no frontmatter at `path`.
     #[tracing::instrument(skip_all)]
     pub fn new_from_frontmatter(
         path: PathBuf,

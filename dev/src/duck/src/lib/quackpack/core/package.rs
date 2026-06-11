@@ -1,4 +1,5 @@
 //! A general package abstraction.
+use std::fmt;
 use std::path::{Path, PathBuf};
 
 use crate::QuackResult;
@@ -8,7 +9,7 @@ use crate::quackpack::core::{Dependencies, Manifest, Profiles};
 use crate::quackpack::schemas::manifest::Manifest as ManifestSchema;
 
 #[derive(Clone, Debug)]
-/// Entities which can be treated as a package by implementing [`AsPackage`] trait.
+/// Entities which can be treated as a package by implementing [`AnyPackage`] trait.
 pub enum AnyPackage {
     Package(Package),
     Frontmatter(FrontMatterScript),
@@ -73,7 +74,7 @@ impl AnyPackage {
         }
     }
 
-    /// Try to cast `&self` into `&FrontMatterScript` and panic on mismatch.
+    /// Cast `&self` into `&FrontMatterScript` and panic on mismatch.
     pub fn get_frontmatter(&self) -> &FrontMatterScript {
         match self {
             Self::Package(_) => {
@@ -120,7 +121,7 @@ impl AnyPackage {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 /// High-level abstraction over a package we are currently working on.
 pub struct Package {
     original_content: String,
@@ -202,7 +203,19 @@ impl Package {
     }
 }
 
-#[derive(Clone, Debug)]
+impl fmt::Debug for Package {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Package")
+            .field("manifest", &self.manifest)
+            .field("root", &self.root)
+            .field("manifest_path", &self.manifest_path)
+            .field("artifacts_dir", &self.artifacts_dir.root_directory())
+            .field("source_dir", &self.source_dir)
+            .finish_non_exhaustive()
+    }
+}
+
+#[derive(Clone)]
 pub struct FrontMatterScript {
     path: PathBuf,
     original_schema: ManifestSchema,
@@ -254,6 +267,15 @@ impl FrontMatterScript {
     pub fn as_a_local_identity(&self) -> QuackResult<Identity> {
         let origin = Origin::for_local(self.script_file())?;
         Ok(Identity::new(self.manifest().name(), origin))
+    }
+}
+
+impl fmt::Debug for FrontMatterScript {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Script with a frontmatter")
+            .field("manifest", &self.manifest)
+            .field("script path", &self.path)
+            .finish_non_exhaustive()
     }
 }
 

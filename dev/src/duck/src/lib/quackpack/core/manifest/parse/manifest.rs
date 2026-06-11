@@ -1,6 +1,5 @@
 //! Parsing of the manifest from its schema.
 use std::collections::HashMap;
-use std::os::unix::ffi::OsStrExt;
 use std::path::Path;
 
 use tracing::debug;
@@ -53,7 +52,7 @@ pub(crate) fn parse(
             let name = StrId::from(format!(
                 "{} {}",
                 root.file_name().unwrap().display(),
-                sha256_string(root.as_os_str().as_bytes())
+                sha256_string(root.as_os_str().as_encoded_bytes())
             ));
             let version = Version::default();
             let manifest = Manifest::new(

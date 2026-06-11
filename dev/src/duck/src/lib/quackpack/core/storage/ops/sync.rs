@@ -23,7 +23,9 @@ use crate::quackpack::core::storage::package_id::{GitId, RegistryId};
 use crate::quackpack::core::storage::paths::Storage;
 use crate::quackpack::core::storage::venv::{Venv, VenvData};
 use crate::quackpack::core::storage::venv_id::{ToVenvId, VenvId};
-use crate::quackpack::core::{GitReference, Package, PackageContext, PackageLoader, storage};
+use crate::quackpack::core::{
+    AnyPackage, GitReference, Package, PackageContext, PackageLoader, storage,
+};
 use crate::quackpack::util::to_url::ToUrl;
 use crate::util::error::MessageError;
 use crate::util::path_ops_ext::PathOpsExt;
@@ -124,9 +126,7 @@ pub fn sync(
         )
         .write(json)?;
     }
-    pcx.ctx()
-        .console()
-        .info(format!("successfully synchronized venv `{id}`"))?;
+    make_success_message(pcx, id)?;
     Ok((_sync_lock, venv, storage))
 }
 
@@ -355,5 +355,18 @@ fn fetch_source_code(
             pkg_dir.try_fsync_dir()?;
             Ok(true)
         }
+    }
+}
+
+fn make_success_message(pcx: &PackageContext<'_>, id: VenvId) -> QuackResult<()> {
+    match pcx.package() {
+        AnyPackage::Frontmatter(frontmatter) => pcx.ctx().console().info(format!(
+            "successfully synchronized the venv of the script with a frontmatter at `{}`",
+            frontmatter.script_file().display()
+        )),
+        AnyPackage::Package(_) => pcx
+            .ctx()
+            .console()
+            .info(format!("successfully synchronized venv `{id}`")),
     }
 }

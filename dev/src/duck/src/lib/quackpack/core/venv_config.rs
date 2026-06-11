@@ -2,8 +2,8 @@
 use std::fmt::Display;
 use std::path::{Path, PathBuf};
 
-use crate::QuackResult;
 use crate::util::yaml_config::YamlConfig;
+use crate::{QuackResult, QuackResultContext};
 
 #[derive(Debug, Default)]
 /// Configuration of a package's venv.
@@ -22,7 +22,8 @@ impl VenvConfig {
     pub fn for_frontmatter() -> QuackResult<Self> {
         let config = YamlConfig::default();
         let mut this = VenvConfig { config };
-        this.set_ephemeral(true)?;
+        this.set_ephemeral(true)
+            .context_internal("unable to edit a default yaml config")?;
         Ok(this)
     }
 
