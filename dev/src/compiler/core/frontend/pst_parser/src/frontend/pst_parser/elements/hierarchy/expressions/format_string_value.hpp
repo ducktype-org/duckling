@@ -10,6 +10,7 @@ namespace pst::expr {
 	class ExprFormatStrValue final: public ExprElement {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(ExprFormatStrValue, ExprElement);
 		CLONE_SUBELEMENTS();
+
 	protected:
 		std::vector<AccessInternalAnonymous<FormatSubElement>> sub_elements;
 

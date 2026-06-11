@@ -9,10 +9,12 @@ namespace pst {
 	class Action: public Stmt {
 		PARENT_CLASS(Stmt);
 		THIS_CLASS(Action);
+
 	protected:
 		CLONE_SUBELEMENTS();
 
 		NAMED_CHILD_OPT(expr, CommaExprHolder);
+
 	public:
 		/**
 		 * @todo handle expression

@@ -10,6 +10,7 @@ namespace pst {
 	class CallList final: public List<CallArgument, internal::NameGetters::callList> {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(CallList, List);
 		CLONE_SUBELEMENTS();
+
 	public:
 		explicit CallList(const LangParserState& state): List(state) {
 			this->element_kind = ElementKind::CallList;

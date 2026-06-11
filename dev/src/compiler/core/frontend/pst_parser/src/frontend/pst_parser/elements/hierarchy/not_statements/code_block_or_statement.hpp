@@ -14,6 +14,7 @@ namespace pst {
 	class CodeBlockOrStmt final: public NotStmt {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(CodeBlockOrStmt, NotStmt);
 		CLONE_SUBELEMENTS();
+
 	protected:
 		NAMED_CHILD_OPT(stmt, Stmt);
 		NAMED_CHILD_OPT(code_block, CodeBlock);

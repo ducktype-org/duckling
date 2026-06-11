@@ -10,6 +10,7 @@ namespace pst {
 	class Destructor final: public ClassSpecial {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(Destructor, ClassSpecial);
 		CLONE_SUBELEMENTS();
+
 	protected:
 		NAMED_CHILD(body, CodeBlock);
 

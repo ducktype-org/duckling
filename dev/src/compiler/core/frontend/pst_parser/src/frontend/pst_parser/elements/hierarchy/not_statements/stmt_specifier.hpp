@@ -16,6 +16,7 @@ namespace pst {
 	class StmtSpecifier final: public NotStmt {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(StmtSpecifier, NotStmt);
 		CLONE_SUBELEMENTS();
+
 	protected:
 		NAMED_CHILD(specifier, KeywordWrapper);
 		NAMED_CHILD_OPT(call_list, CallList);

@@ -11,8 +11,8 @@ namespace pst {
 	class Import final: public Stmt {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(Import, Stmt);
 		CLONE_SUBELEMENTS();
-	protected:
 
+	protected:
 		NAMED_CHILD(import_chain, ImportChain);
 
 	public:

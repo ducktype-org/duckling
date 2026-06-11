@@ -11,6 +11,7 @@ namespace pst {
 	class Class final: public Decl {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(Class, Decl);
 		CLONE_SUBELEMENTS();
+
 	private:
 		NAMED_CHILD(name, IdentifierWrapper);
 		NAMED_CHILD(base, ExtendsExprHolder);

@@ -10,6 +10,7 @@ namespace pst::expr {
 	class Call final: public ExprElement {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(Call, ExprElement, type);
 		CLONE_SUBELEMENTS();
+
 	protected:
 		lexer::Token::BracketType type
 			= lexer::Token::BracketType::None;  ///< either Round or Square

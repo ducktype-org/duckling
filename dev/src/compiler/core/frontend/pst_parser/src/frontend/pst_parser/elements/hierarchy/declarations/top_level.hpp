@@ -9,6 +9,7 @@ namespace pst {
 	class TopLevel final: public Decl {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(TopLevel, Decl, type);
 		CLONE_SUBELEMENTS();
+
 	protected:
 		std::vector<AccessInternalAnonymous<Stmt>> statements;
 		/**

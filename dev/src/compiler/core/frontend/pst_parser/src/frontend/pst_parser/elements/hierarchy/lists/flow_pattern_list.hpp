@@ -11,6 +11,7 @@ namespace pst {
 	class FlowPatternList final: public List<FlowPattern, internal::NameGetters::flowPatternList> {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(FlowPatternList, List);
 		CLONE_SUBELEMENTS();
+
 	public:
 		explicit FlowPatternList(const LangParserState& state): List(state) {
 			this->element_kind = ElementKind::FlowPatternList;

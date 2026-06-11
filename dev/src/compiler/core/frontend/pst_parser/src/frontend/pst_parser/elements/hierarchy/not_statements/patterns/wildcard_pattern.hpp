@@ -8,6 +8,7 @@ namespace pst {
 
 	class WildcardPattern final: public AnalysisPattern {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(WildcardPattern, AnalysisPattern);
+
 	protected:
 		HashAlg& addElementDataToStableHash(HashAlg&) const override;
 

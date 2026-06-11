@@ -1,6 +1,6 @@
 #include "../../hierarchy/expressions/suffix_operator.hpp"
-#include "../../hierarchy/not_statements/wrapper_elements/operator_wrapper.hpp"
 
+#include "../../hierarchy/not_statements/wrapper_elements/operator_wrapper.hpp"
 #include "preamble.hpp"
 
 namespace pst::expr {

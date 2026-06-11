@@ -5,6 +5,7 @@
 namespace pst {
 	class Return final: public Action {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(Return, Action);
+
 	public:
 		explicit Return(const LangParserState& state): Action(state) {}
 

@@ -9,8 +9,8 @@ namespace pst {
 	class ExprStmt final: public Stmt {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(ExprStmt, Stmt);
 		CLONE_SUBELEMENTS();
-	protected:
 
+	protected:
 		NAMED_CHILD(expr, AssignmentExprHolder);
 
 	public:

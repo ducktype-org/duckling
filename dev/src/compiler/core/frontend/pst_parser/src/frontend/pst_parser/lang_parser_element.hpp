@@ -1,11 +1,11 @@
 #pragma once
 
 #include "access.hpp"
+#include "cloning_decl.hpp"
 #include "element_kind.hpp"
 #include "elements/elements_list.hpp"
 #include "elements/lang_state_unmethods.hpp"
 #include "pst_config.hpp"
-#include "cloning_decl.hpp"
 #include "pst_id.hpp"
 #include "source_position_locked.hpp"
 
@@ -29,7 +29,6 @@
 namespace dia_int {
 	class StablePosition;
 }
-
 
 namespace pst {
 	class Import;
@@ -73,6 +72,7 @@ namespace pst {
 	 */
 	class LangElement: public tpc::Element {
 		THIS_CLASS(LangElement);
+
 	protected:
 		/**
 		 * @todo Change position handling
@@ -87,12 +87,10 @@ namespace pst {
 
 		virtual CLONE_SIGNATURE() = 0;
 
-		void cloneSubElements(const LangElement&) {
-			return;
-		}
+		void cloneSubElements(const LangElement&) { return; }
 
 	public:
-		[[nodiscard]] 
+		[[nodiscard]]
 		MBox<LangElement> clone() const {
 			return cloneElement();
 		}

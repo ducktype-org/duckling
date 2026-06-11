@@ -8,8 +8,10 @@ namespace pst {
 	class AnalysisPattern: public NotStmt {
 		THIS_CLASS(AnalysisPattern);
 		PARENT_CLASS(NotStmt);
+
 	public:
 		ELEMENT_CLONE_DECL(AnalysisPattern);
+
 		explicit AnalysisPattern(const LangParserState& state): NotStmt(state) {
 			this->element_kind = ElementKind::AnalysisPattern;
 		}

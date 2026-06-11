@@ -9,6 +9,7 @@ namespace pst {
 	class FormatSubExpression final: public FormatSubElement {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(FormatSubExpression, FormatSubElement);
 		CLONE_SUBELEMENTS();
+
 	protected:
 		NAMED_CHILD(expr, UniversalAllowBlockExprHolder);
 

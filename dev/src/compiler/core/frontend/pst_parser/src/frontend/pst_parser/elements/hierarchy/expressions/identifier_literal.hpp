@@ -9,6 +9,7 @@ namespace pst::expr {
 	class IdentifierLiteral final: public ExprElement {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(IdentifierLiteral, ExprElement);
 		CLONE_SUBELEMENTS();
+
 	protected:
 		NAMED_CHILD(name, IdentifierWrapper);
 		NAMED_CHILD_OPT(template_specifier, ExprElement);

@@ -335,7 +335,7 @@ namespace base {
 		template<class U>
 		MBox<U> dynamicCast() {
 			auto ret = MBox<U>(dynamic_cast<U*>(ptr));
-			ptr = nullptr;
+			ptr      = nullptr;
 			return std::move(ret);
 		}
 

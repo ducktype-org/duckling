@@ -7,9 +7,11 @@ namespace pst {
 	/**
 	 * @brief Class implements list.
 	 */
-	class ImplementsList final: public List<ImplementsElementExprHolder, internal::NameGetters::inheritanceList> {
+	class ImplementsList final:
+		  public List<ImplementsElementExprHolder, internal::NameGetters::inheritanceList> {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(ImplementsList, List);
 		CLONE_SUBELEMENTS();
+
 	public:
 		explicit ImplementsList(const LangParserState& state): List(state) {}
 

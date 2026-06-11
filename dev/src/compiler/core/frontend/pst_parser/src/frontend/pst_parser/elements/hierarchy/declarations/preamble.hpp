@@ -22,6 +22,7 @@ namespace pst {
 	class CodeDecl: public Decl {
 		THIS_CLASS(CodeDecl);
 		PARENT_CLASS(Decl);
+
 	public:
 		ELEMENT_CLONE_DECL(CodeDecl);
 		DECL_CHILD_CONSTRUCTOR_NO_KIND(CodeDecl);

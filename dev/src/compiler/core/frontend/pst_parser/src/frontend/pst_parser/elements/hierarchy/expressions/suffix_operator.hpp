@@ -10,12 +10,14 @@ namespace pst::expr {
 		THIS_CLASS(SuffixOperator);
 		PARENT_CLASS(ExprElement);
 		CLONE_SUBELEMENTS();
+
 	protected:
 		NAMED_CHILD(op, OperatorWrapper);
 		NAMED_CHILD(expr, ExprElement);
 
 	public:
 		ELEMENT_CLONE_DECL(SuffixOperator);
+
 		explicit SuffixOperator(const LangParserState& state, i64 precedence):
 			  ExprElement(state, precedence) {}
 

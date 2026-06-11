@@ -12,6 +12,7 @@ namespace pst {
 	class InitList final: public List<UniversalExprHolder, internal::NameGetters::classInitList> {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(InitList, List);
 		CLONE_SUBELEMENTS();
+
 	public:
 		explicit InitList(const LangParserState& state): List(state) {}
 

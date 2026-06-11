@@ -9,6 +9,7 @@ namespace pst::expr {
 	 */
 	class LogicAnd final: public BinaryOperator {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(LogicAnd, BinaryOperator);
+
 	protected:
 		using Lower = LogicNot;
 		using Self  = LogicAnd;

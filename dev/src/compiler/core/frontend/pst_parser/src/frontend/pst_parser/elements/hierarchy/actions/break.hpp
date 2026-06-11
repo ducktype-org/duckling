@@ -5,8 +5,8 @@
 namespace pst {
 	class Break final: public Action {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(Break, Action);
-	public:
 
+	public:
 		explicit Break(const LangParserState& state): Action(state) {}
 
 		void dprint(std::ostream& out) const final;

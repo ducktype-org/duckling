@@ -9,8 +9,10 @@ namespace pst {
 	class Decl: public Stmt {
 		THIS_CLASS(Decl);
 		PARENT_CLASS(Stmt);
+
 	public:
 		ELEMENT_CLONE_DECL(Decl);
+
 		Decl(StmtKind kind, const LangParserState& state): Stmt(kind, state) {}
 
 		bool trailingSemicolon() override;

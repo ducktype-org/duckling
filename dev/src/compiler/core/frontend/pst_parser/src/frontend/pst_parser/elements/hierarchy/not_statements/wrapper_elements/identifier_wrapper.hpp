@@ -5,6 +5,7 @@
 namespace pst {
 	class IdentifierWrapper final: public NotStmt {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(IdentifierWrapper, NotStmt, name);
+
 	protected:
 		base::StrID name;
 

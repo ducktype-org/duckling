@@ -9,8 +9,8 @@ namespace pst {
 	class Alias final: public Stmt {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(Alias, Stmt);
 		CLONE_SUBELEMENTS();
-	protected:
 
+	protected:
 		NAMED_CHILD(name, IdentifierWrapper);
 		NAMED_CHILD(points_to, DottedName);
 

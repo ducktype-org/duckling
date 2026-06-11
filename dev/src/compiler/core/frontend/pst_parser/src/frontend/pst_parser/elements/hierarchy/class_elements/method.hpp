@@ -11,6 +11,7 @@ namespace pst {
 	class Method final: public ClassStmt {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(Method, ClassStmt);
 		CLONE_SUBELEMENTS();
+
 	protected:
 		NAMED_CHILD(name, IdentifierWrapper);
 		NAMED_CHILD(params, ParamList);

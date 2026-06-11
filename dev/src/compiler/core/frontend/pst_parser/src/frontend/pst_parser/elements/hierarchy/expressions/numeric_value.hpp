@@ -8,6 +8,7 @@ namespace pst::expr {
 	 */
 	class ExprNumericValue final: public ExprElement {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(ExprNumericValue, ExprElement, value);
+
 	protected:
 		tpc::NumericValue value;
 

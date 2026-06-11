@@ -10,6 +10,7 @@ namespace pst {
 	class Attribute final: public NotStmt {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(Attribute, NotStmt);
 		CLONE_SUBELEMENTS();
+
 	protected:
 		NAMED_CHILD(name, DottedName);
 		NAMED_CHILD(args, AtrArgList);

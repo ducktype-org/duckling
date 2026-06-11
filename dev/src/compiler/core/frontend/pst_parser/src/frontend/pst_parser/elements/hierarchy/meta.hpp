@@ -23,8 +23,10 @@ namespace pst {
 	 */
 	class NotStmt: public LangElement {
 		PARENT_CLASS(LangElement);
+
 	protected:
 		ELEMENT_CLONE_DECL(NotStmt);
+
 	public:
 		explicit NotStmt(const LangParserState& state): LangElement(state) {}
 
@@ -91,11 +93,11 @@ namespace pst {
 		PARENT_CLASS(LangElement);
 		THIS_CLASS(Stmt);
 		CLONE_SUBELEMENTS();
+
 	public:
 		ELEMENT_CLONE_DECL(Stmt, kind, implicit_return);
 
 	protected:
-
 		StmtKind kind;
 
 		friend void internal::makeImplicitReturn(MRef<Stmt>);
@@ -141,7 +143,6 @@ namespace pst {
 		void makeImplicitReturn() { implicit_return = true; }
 
 	public:
-
 		[[nodiscard]]
 		StmtKind getStmtKind() const {
 			return kind;
@@ -241,10 +242,12 @@ namespace pst {
 	class ClassStmt: public Stmt {
 		PARENT_CLASS(Stmt);
 		THIS_CLASS(ClassStmt);
+
 	protected:
 		ELEMENT_CLONE_DECL(ClassStmt);
 
 		ClassStmt(StmtKind kind, const LangParserState& state): Stmt(kind, state) {}
+
 		HashAlg& addGenericDataToHash(HashAlg&) const override;
 
 	public:

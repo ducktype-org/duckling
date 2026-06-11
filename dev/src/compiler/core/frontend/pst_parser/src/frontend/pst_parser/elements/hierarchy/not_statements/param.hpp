@@ -9,8 +9,8 @@ namespace pst {
 	class Param final: public NotStmt {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(Param, NotStmt);
 		CLONE_SUBELEMENTS();
+
 	protected:
-	
 		NAMED_CHILD(name, IdentifierWrapper);
 		NAMED_CHILD(type, UniversalExprHolder);
 		NAMED_CHILD_OPT(initial, UniversalExprHolder);

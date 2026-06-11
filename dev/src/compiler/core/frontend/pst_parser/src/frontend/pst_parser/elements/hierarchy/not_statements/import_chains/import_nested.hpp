@@ -9,6 +9,7 @@ namespace pst {
 	class ImportNested final: public ImportChain {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(ImportNested, ImportChain);
 		CLONE_SUBELEMENTS();
+
 	protected:
 		std::vector<AccessInternalAnonymous<IdentifierWrapper>> names;
 		NAMED_CHILD(nested_import, NestedImportList);

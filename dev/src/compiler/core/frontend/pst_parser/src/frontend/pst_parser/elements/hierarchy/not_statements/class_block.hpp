@@ -9,6 +9,7 @@ namespace pst {
 	class ClassBlock final: public NotStmt {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(ClassBlock, NotStmt);
 		CLONE_SUBELEMENTS();
+
 	protected:
 		std::vector<AccessInternalAnonymous<ClassStmt>> statements;
 

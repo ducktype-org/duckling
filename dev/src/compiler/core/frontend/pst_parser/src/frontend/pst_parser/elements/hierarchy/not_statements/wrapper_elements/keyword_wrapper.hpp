@@ -8,6 +8,7 @@ namespace pst {
 	 */
 	class KeywordWrapper final: public NotStmt {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(KeywordWrapper, NotStmt, key);
+
 	protected:
 		lang_def::Keyword key;
 

@@ -10,6 +10,7 @@ namespace pst {
 	class FunDecl final: public Decl {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(FunDecl, Decl);
 		CLONE_SUBELEMENTS();
+
 	protected:
 		NAMED_CHILD(name, IdentifierWrapper);
 		NAMED_CHILD(params, ParamList);

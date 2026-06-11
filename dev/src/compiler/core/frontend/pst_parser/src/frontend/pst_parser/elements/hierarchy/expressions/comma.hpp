@@ -12,6 +12,7 @@ namespace pst::expr {
 	class Comma final: public ExprElement {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(Comma, ExprElement);
 		CLONE_SUBELEMENTS();
+
 	protected:
 		using Lower = MatchExpr;
 

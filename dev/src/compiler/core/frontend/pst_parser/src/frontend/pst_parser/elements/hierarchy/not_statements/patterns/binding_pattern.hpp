@@ -8,6 +8,7 @@ namespace pst {
 	class BindingPattern final: public AnalysisPattern {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(BindingPattern, AnalysisPattern);
 		CLONE_SUBELEMENTS();
+
 	protected:
 		NAMED_CHILD(name, IdentifierWrapper);
 

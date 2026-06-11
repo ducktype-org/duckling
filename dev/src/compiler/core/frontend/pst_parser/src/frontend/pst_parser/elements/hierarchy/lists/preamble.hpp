@@ -18,6 +18,7 @@ namespace pst {
 	class List: public NotStmt {
 		THIS_CLASS(List);
 		PARENT_CLASS(NotStmt);
+
 	protected:
 		Container elements;
 
@@ -32,6 +33,7 @@ namespace pst {
 		}
 
 		ELEMENT_CLONE_DECL(List)
+
 		explicit List(const LangParserState& state): NotStmt(state) {}
 
 		[[nodiscard]]

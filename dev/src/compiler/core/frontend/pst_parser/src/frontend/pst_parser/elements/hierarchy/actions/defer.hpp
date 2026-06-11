@@ -5,8 +5,8 @@
 namespace pst {
 	class Defer final: public Action {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(Defer, Action);
-	public:
 
+	public:
 		explicit Defer(const LangParserState& state): Action(state) {}
 
 		void dprint(std::ostream& out) const final;

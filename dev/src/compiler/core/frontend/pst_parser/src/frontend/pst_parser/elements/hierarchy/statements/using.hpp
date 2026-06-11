@@ -11,8 +11,8 @@ namespace pst {
 	class Using final: public Stmt {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(Using, Stmt);
 		CLONE_SUBELEMENTS();
-	protected:
 
+	protected:
 		NAMED_CHILD(names, DottedName);
 
 	public:

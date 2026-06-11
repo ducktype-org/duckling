@@ -9,6 +9,7 @@ namespace pst::expr {
 	class ChainExpr final: public ExprElement {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(ChainExpr, ExprElement);
 		CLONE_SUBELEMENTS();
+
 	protected:
 		using Lower = Atom;
 

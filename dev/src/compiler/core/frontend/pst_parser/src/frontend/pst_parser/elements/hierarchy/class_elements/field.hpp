@@ -10,6 +10,7 @@ namespace pst {
 	class Field final: public ClassStmt {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(Field, ClassStmt, is_mutable);
 		CLONE_SUBELEMENTS();
+
 	protected:
 		bool is_mutable = true;
 		NAMED_CHILD(name, IdentifierWrapper);

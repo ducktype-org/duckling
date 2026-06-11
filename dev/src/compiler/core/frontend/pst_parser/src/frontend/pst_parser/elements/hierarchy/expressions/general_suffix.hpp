@@ -9,6 +9,7 @@ namespace pst::expr {
 	 */
 	class GeneralSuffix final: public SuffixOperator {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(GeneralSuffix, SuffixOperator);
+
 	protected:
 		using Lower = GeneralPrefix;
 		using Self  = GeneralSuffix;

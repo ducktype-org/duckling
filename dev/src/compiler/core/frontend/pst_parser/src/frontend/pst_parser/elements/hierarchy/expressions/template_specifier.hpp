@@ -11,6 +11,7 @@ namespace pst::expr {
 	class TemplateSpecifier final: public ExprElement {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(TemplateSpecifier, ExprElement);
 		CLONE_SUBELEMENTS();
+
 	protected:
 		NAMED_CHILD(inner, TemplateList);
 

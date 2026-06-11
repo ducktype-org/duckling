@@ -12,6 +12,7 @@ namespace pst {
 	class ClassSpecifierBlock final: public ClassStmt {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(ClassSpecifierBlock, ClassStmt);
 		CLONE_SUBELEMENTS();
+
 	protected:
 		NAMED_CHILD(block, ClassBlock);
 

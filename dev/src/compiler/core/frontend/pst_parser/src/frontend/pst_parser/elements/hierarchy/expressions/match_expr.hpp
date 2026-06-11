@@ -15,6 +15,7 @@ namespace pst::expr {
 	class MatchExpr final: public ExprElement {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(MatchExpr, ExprElement);
 		CLONE_SUBELEMENTS();
+
 	protected:
 		using Lower = Ternary;
 

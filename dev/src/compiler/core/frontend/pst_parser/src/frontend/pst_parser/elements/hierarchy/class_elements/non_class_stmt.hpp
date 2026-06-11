@@ -16,6 +16,7 @@ namespace pst {
 	class NonClassStmt final: public ClassStmt {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(NonClassStmt, ClassStmt, inner_decl_kind);
 		CLONE_SUBELEMENTS();
+
 	protected:
 		NAMED_CHILD(inner_stmt, Stmt);
 
@@ -26,7 +27,7 @@ namespace pst {
 
 	public:
 		/**
-		 * @todo handle inner_decl_symbol_name 
+		 * @todo handle inner_decl_symbol_name
 		 */
 		CLASS_STMT_CHILD_CONSTRUCTOR(NonClassStmt, ElementKind::NonClassStmt);
 		CLASS_STMT_PARSE(NonClassStmt);

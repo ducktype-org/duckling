@@ -9,6 +9,7 @@ namespace pst {
 	class Variable final: public Decl {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(Variable, Decl, is_const);
 		CLONE_SUBELEMENTS();
+
 	protected:
 		NAMED_CHILD(name, IdentifierWrapper);
 		NAMED_CHILD_OPT(type, CommaExprHolder);

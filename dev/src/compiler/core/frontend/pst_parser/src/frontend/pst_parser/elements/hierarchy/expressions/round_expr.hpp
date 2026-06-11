@@ -9,6 +9,7 @@ namespace pst::expr {
 	class RoundExpr final: public ExprElement {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(RoundExpr, ExprElement);
 		CLONE_SUBELEMENTS();
+
 	protected:
 		NAMED_CHILD(expr, ExprElement);
 

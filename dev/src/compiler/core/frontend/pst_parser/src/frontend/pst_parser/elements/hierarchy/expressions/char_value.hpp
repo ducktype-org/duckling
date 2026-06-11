@@ -8,6 +8,7 @@ namespace pst::expr {
 	 */
 	class ExprCharValue final: public ExprElement {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(ExprCharValue, ExprElement, string);
+
 	protected:
 		tpc::CharValue string;
 

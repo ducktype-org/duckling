@@ -12,8 +12,8 @@ namespace pst::expr {
 	class Assignment final: public ExprElement {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(Assignment, ExprElement);
 		CLONE_SUBELEMENTS();
-	protected:
 
+	protected:
 		using Lower = Comma;
 
 		NAMED_CHILD(variables, ExprElement);

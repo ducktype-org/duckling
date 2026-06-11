@@ -8,6 +8,7 @@ namespace pst {
 	 */
 	class FormatSubString final: public FormatSubElement {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(FormatSubString, FormatSubElement, string);
+
 	protected:
 		tpc::StringValue string;
 

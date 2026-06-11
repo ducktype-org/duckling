@@ -10,6 +10,7 @@ namespace pst::expr {
 	 */
 	class LogicNot final: public PrefixOperator {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(LogicNot, PrefixOperator);
+
 	protected:
 		using Lower = ComparisonChain;
 		using Self  = LogicNot;

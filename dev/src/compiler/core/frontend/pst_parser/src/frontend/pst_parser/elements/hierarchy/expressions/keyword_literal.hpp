@@ -10,6 +10,7 @@ namespace pst::expr {
 	class KeywordLiteral final: public ExprElement {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(KeywordLiteral, ExprElement);
 		CLONE_SUBELEMENTS();
+
 	protected:
 		NAMED_CHILD(keyword, KeywordWrapper);
 		NAMED_CHILD_OPT(template_specifier, ExprElement);

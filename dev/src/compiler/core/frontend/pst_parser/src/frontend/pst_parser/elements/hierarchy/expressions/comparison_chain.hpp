@@ -13,6 +13,7 @@ namespace pst::expr {
 	class ComparisonChain final: public ExprElement {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(ComparisonChain, ExprElement);
 		CLONE_SUBELEMENTS();
+
 	protected:
 		using Lower = GeneralBinary;
 
