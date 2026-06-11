@@ -31,6 +31,10 @@ public:
 		TESTER_ADD_TEST(block8SharedNoRaceTest);
 		TESTER_ADD_TEST(block9FreeReadRaceTest);
 		TESTER_ADD_TEST(noRaceTest2);
+		TESTER_ADD_TEST(block10CvNoRaceTest);
+		TESTER_ADD_TEST(block11ExclusiveSharedNoRaceTest);
+		TESTER_ADD_TEST(block12DyntableReallocRaceTest);
+		TESTER_ADD_TEST(block13DyntableReallocNoRaceTest);
 	}
 
 private:
@@ -307,6 +311,54 @@ private:
 		auto pid = initProcess(settings);
 
 		auto file = fs::File(path("no_race_test_2.dbc"));
+		auto load_res = vm::api::loadFiles(pid, { file });
+		ASSERT_TRUE(load_res.has_value());
+
+		runTestOnVm(pid, "", {}, {});
+	}
+
+	// CV happens-before: write outside lock, signal inside lock, read outside lock after wait.
+	// Verifies no false-positive race when HB flows through mutex lock_vc (pitfall: broken onAcquire).
+	void block10CvNoRaceTest() {
+		vm::api::ProcessSettings settings;
+		settings.enable_fast_track = true;
+		auto pid = initProcess(settings);
+
+		auto file = fs::File(path("block10_cv_no_race.dbc"));
+		auto load_res = vm::api::loadFiles(pid, { file });
+		ASSERT_TRUE(load_res.has_value());
+
+		runTestOnVm(pid, "", {}, {});
+	}
+
+	// Exclusive-to-Shared shadow transition: two readers trigger E->S, writer after join must not race.
+	// Verifies no false-positive after E->S transition (pitfall: stale epoch in Shared VC construction).
+	void block11ExclusiveSharedNoRaceTest() {
+		vm::api::ProcessSettings settings;
+		settings.enable_fast_track = true;
+		auto pid = initProcess(settings);
+
+		auto file = fs::File(path("block11_exclusive_shared_no_race.dbc"));
+		auto load_res = vm::api::loadFiles(pid, { file });
+		ASSERT_TRUE(load_res.has_value());
+
+		runTestOnVm(pid, "", {}, {});
+	}
+
+	// DynTable realloc race: concurrent writes to a newly-added element must be detected.
+	// Verifies ft_dynTableReAlloc properly tracks new elements (pitfall: missing shadow init).
+	void block12DyntableReallocRaceTest() {
+		runRaceTest("block12_dyntable_realloc_race.dbc", "block12DyntableReallocRaceTest");
+	}
+
+	// DynTable realloc no-race: write after join+realloc must not produce a false positive.
+	// Verifies that realloc preserves existing shadow HB (pitfall: realloc wiping old entries).
+	void block13DyntableReallocNoRaceTest() {
+		vm::api::ProcessSettings settings;
+		settings.enable_fast_track = true;
+		auto pid = initProcess(settings);
+
+		auto file = fs::File(path("block13_dyntable_realloc_no_race.dbc"));
 		auto load_res = vm::api::loadFiles(pid, { file });
 		ASSERT_TRUE(load_res.has_value());
 

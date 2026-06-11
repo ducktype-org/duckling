@@ -2,6 +2,8 @@
 #include "server.hpp"
 #include "vm_repl.hpp"
 
+#include <vm/api/settings.hpp>
+
 #include <clah/clah.hpp>
 #include <init/init.hpp>
 #include <logger/logger.hpp>
@@ -64,6 +66,10 @@ clah::Clah getVmClah() {
 						   }))
 	    .addSubcommand(clah::Clah("run", "Run a .dbc file.")
 	                       .addPositional(clah::FileParser::make("file"))
+	                       .add(clah::ParamBuilder::ofFlag()
+	                                .addLongName("fast-track")
+	                                .addShortDesc("Enable FastTrack data-race detection.")
+	                                .build())
 	                       .setDefaultValueParser(clah::StringParser::make("program_argument"))
 	                       .setHandler([](const clah::ParsingResult& options) {
 							   vm::Supervisor::get();
@@ -73,7 +79,9 @@ clah::Clah getVmClah() {
 							   for (usize argc = 0; argc < options.getExtraParameterCount(); argc++)
 								   args.push_back(*options.getExtra<std::string>(argc));
 
-							   return cli(file, args);
+							   vm::api::ProcessSettings settings;
+							   settings.enable_fast_track = options.isFlag("fast-track");
+							   return cli(file, args, settings);
 						   }))
 	    .addSubcommand(clah::Clah("debug", "Start the VM CLI debugger.")
 	                       .addPositional(clah::FileParser::make("file"))

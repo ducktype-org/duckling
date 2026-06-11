@@ -1,0 +1,54 @@
+# Exclusive-to-Shared shadow transition no-race test.
+#
+# Pitfall being tested: when a second thread reads a variable that is in
+# Exclusive-read state, processRead transitions the shadow to Shared mode
+# (a heap-allocated VectorClock). The subsequent write by the main thread,
+# after joining both readers, must not produce a false-positive race.
+#
+# If the Shared VC is seeded with a stale/bad epoch during the E->S
+# transition, the post-join write check could spuriously fail.
+#
+# Timeline:
+#   main:   write shared_val = 100
+#   spawn A, spawn B
+#   A:      read shared_val        (shadow: Exclusive -> Shared {A@1})
+#   B:      read shared_val        (shadow: Shared adds B's epoch)
+#   main:   join A, join B         (main.vc >= A's and B's clocks)
+#   main:   write shared_val = 200 (last_read_vc <= main.vc -> no race)
+
+global_data shared_val i64 {};
+
+function reader {} -> {} {
+    init_pany_type val, i64;
+    mov_p64_p64 val, shared_val;
+    ret;
+}
+
+function main { i64, ptr_argv } -> { i64 } {
+    mov_p64_imm shared_val, 100;
+
+    init_pany_type tA, i64;
+    set_threadctx reader;
+    call_builtinfunc builtin_start_thread;
+
+    init_pany_type tB, i64;
+    set_threadctx reader;
+    call_builtinfunc builtin_start_thread;
+
+    init_pany_type retA, i64;
+    init_pany_type jA, i64;
+    mov_p64_p64 jA, tA;
+    call_builtinfunc builtin_join_thread;
+
+    init_pany_type retB, i64;
+    init_pany_type jB, i64;
+    mov_p64_p64 jB, tB;
+    call_builtinfunc builtin_join_thread;
+
+    # Write after joining both readers — the Shared VC (built during E->S
+    # transition) must satisfy last_read_vc <= main.vc, otherwise FastTrack
+    # would incorrectly report a Write-Read race here.
+    mov_p64_imm shared_val, 200;
+
+    ret;
+}

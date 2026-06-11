@@ -25,12 +25,12 @@ int cli() {
 	return cli(fs::File(filepath));
 }
 
-int cli(const fs::File& filepath, const std::vector<std::string>& args) {
+int cli(const fs::File& filepath, const std::vector<std::string>& args, const vm::api::ProcessSettings& settings) {
 	vm::PID pid{};
 	dia_int::configureTerminalPrinterColors(true);
 
 	std::expected<i64, std::string> result
-		= vm::api::spawn()
+		= vm::api::spawn(settings)
 	          .and_then([&](vm::api::ProcessInfo info) {
 				  pid = info.pid;
 
