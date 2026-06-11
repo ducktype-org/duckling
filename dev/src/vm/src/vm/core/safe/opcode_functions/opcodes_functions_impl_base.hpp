@@ -339,7 +339,7 @@ namespace vm {
 			if (my_data.func_ptr) {
 	// is already compiled
 	#if COMPILE_WITH_CP
-				(*my_data.func_ptr)(instr, local_stack, frame, thread);
+				(*my_data.func_ptr)(instr + 1, local_stack, frame, thread);
 
 				// Restore values set by copy&patch
 				frame       = thread.runtime_data.frame_stack_current;
@@ -357,7 +357,7 @@ namespace vm {
 	#if COMPILE_WITH_CP
 				auto compiled    = jit::compileCP(current_func_obj.cfg, current_func_obj.bc);
 				my_data.func_ptr = compiled.intoFunc<jit::CPFunc>();
-				(*my_data.func_ptr)(instr, local_stack, frame, thread);
+				(*my_data.func_ptr)(instr + 1, local_stack, frame, thread);
 
 				// Restore values set by copy&patch
 				frame       = thread.runtime_data.frame_stack_current;

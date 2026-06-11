@@ -62,7 +62,8 @@ namespace vm::jit {
 			usize& current_offset = block_offsets.back();
 			for (MicroInstruction instr: block.instructions(bc)) {
 				auto opcode = getInstructionOpcode(instr);
-				if (low::isOpcodeNonExecutable(opcode)) continue;
+				if (low::isOpcodeNonExecutable(opcode) || opcode == low::MicroOpcode::jitEntrypoint)
+					continue;
 				current_offset += get_opfunc_size(transform_opcode((opcode)));
 			}
 			auto stencil = std::to_underlying(choose_edge(block));
@@ -92,7 +93,8 @@ namespace vm::jit {
 			);
 			for (MicroInstruction instr: block.instructions(bc)) {
 				auto opcode = getInstructionOpcode(instr);
-				if (low::isOpcodeNonExecutable(opcode)) continue;
+				if (low::isOpcodeNonExecutable(opcode) || opcode == low::MicroOpcode::jitEntrypoint)
+					continue;
 
 				patch_stencil(transform_opcode(opcode), [&instr, &next, &opcode](HoleValue value) {
 					switch (value) {
