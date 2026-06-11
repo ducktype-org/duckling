@@ -3,6 +3,7 @@
 #include <helios/tsh/symbol_type.hpp>
 #include <helios/tsh/types.hpp>
 #include <tsl/c_abi_converter.hpp>
+#include <tsl/c_abi_target.hpp>
 
 #include <query_framework/context/context.hpp>
 #include <query_framework/entry/with_context_do.hpp>
@@ -56,9 +57,10 @@ public:
 		TESTER_ADD_TEST(staticArrayOfRefRejectedTest);
 		TESTER_ADD_TEST(refRejectedTest);
 		TESTER_ADD_TEST(boxRejectedTest);
-		TESTER_ADD_TEST(floatRejectedTest);
-		TESTER_ADD_TEST(boolRejectedTest);
-		TESTER_ADD_TEST(charRejectedTest);
+		TESTER_ADD_TEST(floatWidthsTest);
+		TESTER_ADD_TEST(floatExtendedX87Test);
+		TESTER_ADD_TEST(boolAcceptedTest);
+		TESTER_ADD_TEST(charAcceptedTest);
 		TESTER_ADD_TEST(stringRejectedTest);
 		TESTER_ADD_TEST(unitRejectedTest);
 		TESTER_ADD_TEST(dynamicArrayRejectedTest);
@@ -72,6 +74,12 @@ private:
 		const auto& i = std::get<ats::IntType>(abi_type.value);
 		assertTrue(usize(i.width_bits) == width, "width mismatch");
 		assertTrue(i.is_signed == is_signed, "signedness mismatch");
+	}
+
+	void expectFloat(const ats::AbiType& abi_type, usize width) {
+		ASSERT_TRUE(std::holds_alternative<ats::FloatType>(abi_type.value));
+		const auto& f = std::get<ats::FloatType>(abi_type.value);
+		assertTrue(usize(f.width_bits) == width, "width mismatch");
 	}
 
 	void expectPointer(const ats::AbiType& abi_type) {
@@ -220,25 +228,50 @@ private:
 		});
 	}
 
-	void floatRejectedTest() {
+	void floatWidthsTest() {
+		// IEEE binary formats are C-compatible on every target.
 		withContextDo([&](query::Context& ctx) -> void {
-			const auto  f32_type = getFloatType(ctx, 32);
-			const auto& r        = queryConv(ctx, directOf(f32_type));
-			assertFalse(r.abi_type.has_value(), "float should be rejected");
+			for (usize width: { usize(16), usize(32), usize(64), usize(128) }) {
+				const auto  t = getFloatType(ctx, width);
+				const auto& r = queryConv(ctx, directOf(t));
+				ASSERT_TRUE(r.abi_type.has_value());
+				expectFloat(*r.abi_type, width);
+			}
 		});
 	}
 
-	void boolRejectedTest() {
+	void floatExtendedX87Test() {
+		// f80 (x87 long double) is accepted only on targets with an x87 unit;
+		// elsewhere it is rejected with a clean diagnostic.
+		withContextDo([&](query::Context& ctx) -> void {
+			const auto  f80_type = getFloatType(ctx, 80);
+			const auto& r        = queryConv(ctx, directOf(f80_type));
+			if (compilerTargetABI().data_layout.float_layouts.atMaybe(u8(80)).has_value()) {
+				ASSERT_TRUE(r.abi_type.has_value());
+				expectFloat(*r.abi_type, 80);
+			} else {
+				assertFalse(r.abi_type.has_value(), "f80 should be rejected without an x87 unit");
+			}
+		});
+	}
+
+	void boolAcceptedTest() {
 		withContextDo([&](query::Context& ctx) -> void {
 			const auto& r = queryConv(ctx, directOf(getBoolType()));
-			assertFalse(r.abi_type.has_value(), "bool should be rejected");
+			ASSERT_TRUE(r.abi_type.has_value());
+			assertTrue(
+				std::holds_alternative<ats::BoolType>(r.abi_type->value), "expected BoolType"
+			);
 		});
 	}
 
-	void charRejectedTest() {
+	void charAcceptedTest() {
 		withContextDo([&](query::Context& ctx) -> void {
 			const auto& r = queryConv(ctx, directOf(getCharType()));
-			assertFalse(r.abi_type.has_value(), "char should be rejected");
+			ASSERT_TRUE(r.abi_type.has_value());
+			assertTrue(
+				std::holds_alternative<ats::CharType>(r.abi_type->value), "expected CharType"
+			);
 		});
 	}
 

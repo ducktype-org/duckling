@@ -15,6 +15,7 @@
 #include <helios/tsh/type_interface.hpp>
 #include <helios/tsh/types.hpp>
 
+#include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/pointers/box.hpp>
 
@@ -212,8 +213,10 @@ namespace compiler::tsl {
 		) {
 			auto field_pst = compiler::helios::maybeSymbolPst(field_sym);
 			if (field_pst.has_value()) return field_pst.value().unlock(ctx)->getStablePosition();
-			return compiler::helios::maybeSymbolPst(class_sym).value().unlock(ctx)->getStablePosition(
-			);
+			auto class_pst = compiler::helios::maybeSymbolPst(class_sym);
+			if (class_pst.has_value()) return class_pst.value().unlock(ctx)->getStablePosition();
+			// Class should always have a PST node, even generated one (for now)
+			CORE_UNREACHABLE();
 		}
 
 		/**

@@ -6,16 +6,9 @@
 enable_conc_deterministic_tests: "false"
 
 Tests:
-  extern_c_class_prefix:
+  extern_c_class:
     Cases:
       all:
         backend: all
         Output:
-          String: "7\n42\n"
-
-  extern_c_class_block:
-    Cases:
-      all:
-        backend: all
-        Output:
-          String: "3\n17\n11\n22\n"
+          String: "3\n17\n11\n22\n42\n7\n7\n9\n11\n"

@@ -31,14 +31,6 @@ namespace abi::layout {
 	};
 
 	/**
-	 * @brief Size and alignment of a single `AbiType` under the given target.
-	 */
-	struct SizeAlign final {
-		Bytes size;
-		Bytes alignment;
-	};
-
-	/**
 	 * @brief Computes the size and alignment of a single type. Panics on
 	 * zero-sized constructs (arrays with count 0, empty structs).
 	 */

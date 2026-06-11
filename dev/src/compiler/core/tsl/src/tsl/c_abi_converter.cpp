@@ -2,6 +2,7 @@
 #include <helios/tsh/type_interface.hpp>
 #include <helios/tsh/types.hpp>
 #include <tsl/c_abi_converter.hpp>
+#include <tsl/c_abi_target.hpp>
 #include <tsl/queries.hpp>
 
 #include <base/except/exceptions.hpp>
@@ -37,6 +38,19 @@ namespace compiler::tsl {
 			const bool is_signed
 				= integral.getSignedness() == tsh::IntegralAbstractType::Signedness::Signed;
 			return ok(ats::intType(u8(width), is_signed));
+		}
+
+		CAbiConversionResult convertFloat(tsh::FloatAbstractType flt) {
+			const usize width = usize(flt.getSize());
+			// A float is C-compatible iff the target lists its width: the IEEE
+			// formats everywhere, the x87 80-bit extended only on x87 targets.
+			if (!compilerTargetABI().data_layout.float_layouts.atMaybe(u8(width)).has_value())
+				return fail(base::strConcat(
+					"floating-point width ",
+					std::to_string(width),
+					" bits is not representable on the target ABI"
+				));
+			return ok(ats::floatType(u8(width)));
 		}
 
 		CAbiConversionResult convertStaticArray(
@@ -106,11 +120,11 @@ namespace compiler::tsl {
 			case Kind::Variant:
 				return fail("variants are not C-compatible");
 			case Kind::Float:
-				return fail("floating-point types are not supported");
+				return convertFloat(tsh::FloatAbstractType(abstract));
 			case Kind::Bool:
-				return fail("`bool` is not C-compatible");
+				return ok(ats::boolType());
 			case Kind::Char:
-				return fail("`char` is not C-compatible");
+				return ok(ats::charType());
 			case Kind::String:
 				return fail("`string` is not C-compatible");
 			case Kind::DynamicArray:

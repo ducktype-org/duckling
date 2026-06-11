@@ -44,6 +44,25 @@ namespace abi::type_system {
 	};
 
 	/**
+	 * @brief A C-compatible floating-point type, parameterised by its bit width.
+	 */
+	struct FloatType final {
+		u8 width_bits;
+	};
+
+	/**
+	 * @brief The C `_Bool` type: a well-defined 1-byte ABI type. Carries no
+	 * payload because its size and alignment are fixed.
+	 */
+	struct BoolType final {};
+
+	/**
+	 * @brief The C `char` type: a 1-byte integer. Carries no payload; its
+	 * signedness is implementation-defined in C but does not affect layout.
+	 */
+	struct CharType final {};
+
+	/**
 	 * @brief A C-compatible pointer. Size and alignment of a pointer is fully
 	 * determined by the target, so this variant intentionally carries no
 	 * payload: `int*`, `void*` and `MyStruct*` all share the same layout.
@@ -94,7 +113,8 @@ namespace abi::type_system {
 	 * understands.
 	 */
 	struct AbiType final {
-		std::variant<IntType, PointerType, ArrayType, StructType, OpaqueType> value;
+		std::variant<IntType, FloatType, BoolType, CharType, PointerType, ArrayType, StructType, OpaqueType>
+			value;
 	};
 
 	// The static analyzer cannot model `base::Box` ownership when a Box is nested
@@ -109,6 +129,17 @@ namespace abi::type_system {
 	inline AbiType intType(u8 width_bits, bool is_signed) {
 		return AbiType{ IntType{ .width_bits = width_bits, .is_signed = is_signed } };
 	}
+
+	/** @brief Builds an AbiType from a FloatType. */
+	inline AbiType floatType(u8 width_bits) {
+		return AbiType{ FloatType{ .width_bits = width_bits } };
+	}
+
+	/** @brief Builds a C `_Bool` AbiType. */
+	inline AbiType boolType() { return AbiType{ BoolType{} }; }
+
+	/** @brief Builds a C `char` AbiType. */
+	inline AbiType charType() { return AbiType{ CharType{} }; }
 
 	/** @brief Builds an opaque pointer AbiType. */
 	inline AbiType pointerType() { return AbiType{ PointerType{} }; }
@@ -138,8 +169,9 @@ namespace abi::type_system {
 		return std::visit(
 			[&](const auto& value) -> AbiType {
 				using T = std::decay_t<decltype(value)>;
-				if constexpr (std::is_same_v<T, IntType> || std::is_same_v<T, PointerType>
-			                  || std::is_same_v<T, OpaqueType>) {
+				if constexpr (std::is_same_v<T, IntType> || std::is_same_v<T, FloatType>
+			                  || std::is_same_v<T, BoolType> || std::is_same_v<T, CharType>
+			                  || std::is_same_v<T, PointerType> || std::is_same_v<T, OpaqueType>) {
 					return AbiType{ value };
 				} else if constexpr (std::is_same_v<T, ArrayType>) {
 					return arrayType(cloneAbiType(*value.element), value.count);

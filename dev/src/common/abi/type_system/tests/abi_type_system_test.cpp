@@ -11,6 +11,8 @@ class AbiTypeSystemTest: public tester::TestSuite {
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(intTypeConstructionTest);
+		TESTER_ADD_TEST(floatTypeConstructionTest);
+		TESTER_ADD_TEST(boolAndCharConstructionTest);
 		TESTER_ADD_TEST(pointerTypeIsEmptyTest);
 		TESTER_ADD_TEST(arrayAndStructHelpersTest);
 		TESTER_ADD_TEST(nestedStructTest);
@@ -30,6 +32,35 @@ private:
 		AbiType u8_t = intType(u8(8), false);
 		assertTrue(usize(std::get<IntType>(u8_t.value).width_bits) == 8, "u8 width should be 8");
 		assertTrue(!std::get<IntType>(u8_t.value).is_signed, "u8 should be unsigned");
+	}
+
+	void floatTypeConstructionTest() {
+		using namespace abi::type_system;
+
+		AbiType f32_t = floatType(u8(32));
+		assertTrue(std::holds_alternative<FloatType>(f32_t.value), "f32 should be FloatType");
+		assertTrue(usize(std::get<FloatType>(f32_t.value).width_bits) == 32, "width should be 32");
+
+		AbiType f64_t = floatType(u8(64));
+		assertTrue(usize(std::get<FloatType>(f64_t.value).width_bits) == 64, "width should be 64");
+
+		AbiType cloned = cloneAbiType(f64_t);
+		assertTrue(std::holds_alternative<FloatType>(cloned.value), "clone preserves FloatType");
+		assertTrue(
+			usize(std::get<FloatType>(cloned.value).width_bits) == 64, "clone preserves width"
+		);
+	}
+
+	void boolAndCharConstructionTest() {
+		using namespace abi::type_system;
+
+		AbiType b = boolType();
+		assertTrue(std::holds_alternative<BoolType>(b.value), "should be BoolType");
+		AbiType c = charType();
+		assertTrue(std::holds_alternative<CharType>(c.value), "should be CharType");
+
+		AbiType cloned = cloneAbiType(b);
+		assertTrue(std::holds_alternative<BoolType>(cloned.value), "clone preserves BoolType");
 	}
 
 	void pointerTypeIsEmptyTest() {

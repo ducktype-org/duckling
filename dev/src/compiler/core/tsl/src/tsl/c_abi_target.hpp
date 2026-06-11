@@ -13,10 +13,12 @@ namespace compiler::tsl {
 	/**
 	 * @brief Returns the TargetABI used for C-layout computation in the compiler.
 	 *
-	 * The compiler currently produces code only for the host's default target
-	 * (the LLVM backend also locks to it). When a target configuration is
-	 * introduced, this helper becomes the only place that needs to change.
+	 * The compiler currently produces code only for the host's target, so this
+	 * resolves to `abi::layout::hostTargetABI()`, which is selected at build time
+	 * from the toolchain's architecture macros.
 	 */
-	inline abi::layout::TargetABI compilerTargetABI() { return abi::layout::x86_64Linux(); }
+	inline const abi::layout::TargetABI& compilerTargetABI() {
+		return abi::layout::hostTargetABI();
+	}
 
 }

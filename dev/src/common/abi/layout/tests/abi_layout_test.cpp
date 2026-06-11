@@ -41,6 +41,14 @@ public:
 		TESTER_ADD_TEST(i8ThenI64Test);
 		TESTER_ADD_TEST(i8ThenPointerTest);
 		TESTER_ADD_TEST(pointerThenI8Test);
+		TESTER_ADD_TEST(singleFloatTest);
+		TESTER_ADD_TEST(floatThenDoubleTest);
+		TESTER_ADD_TEST(i8ThenDoubleTest);
+		TESTER_ADD_TEST(quadFloatTest);
+		TESTER_ADD_TEST(x87LongDoubleTest);
+		TESTER_ADD_TEST(i8ThenLongDoubleTest);
+		TESTER_ADD_TEST(singleBoolTest);
+		TESTER_ADD_TEST(boolCharThenI16Test);
 		TESTER_ADD_TEST(arrayOfI32Test);
 		TESTER_ADD_TEST(i8ThenArrayOfI32Test);
 		TESTER_ADD_TEST(nestedStructTest);
@@ -65,6 +73,18 @@ private:
 		assertTrue(a.triple.arch == al::Arch::AArch64, "aarch64 arch");
 		assertTrue(usize(a.data_layout.pointer_size) == 8, "pointer size on aarch64");
 		assertTrue(usize(a.data_layout.pointer_alignment) == 8, "pointer align on aarch64");
+
+		// f80 (x87 long double) is present on x86_64 (16/16) but absent on
+		// aarch64; f128 (IEEE quad) is present on both.
+		const auto x_f80 = x.data_layout.float_layouts.atMaybeCopy(u8(80));
+		assertTrue(x_f80.has_value(), "x86_64 has an f80 entry");
+		assertTrue(usize(x_f80.value().size) == 16, "x86_64 f80 size");
+		assertTrue(usize(x_f80.value().alignment) == 16, "x86_64 f80 align");
+		assertTrue(
+			!a.data_layout.float_layouts.atMaybeCopy(u8(80)).has_value(), "aarch64 has no f80"
+		);
+		assertTrue(x.data_layout.float_layouts.atMaybeCopy(u8(128)).has_value(), "x86_64 has f128");
+		assertTrue(a.data_layout.float_layouts.atMaybeCopy(u8(128)).has_value(), "aarch64 has f128");
 	}
 
 	static void expectLayout(
@@ -125,6 +145,61 @@ private:
 			al::x86_64Linux(), fieldsOf(at::pointerType(), at::intType(u8(8), true))
 		);
 		expectLayout(std::move(layout), 16, 8, { 0, 8 });
+	}
+
+	void singleFloatTest() {
+		auto layout = al::computeCLayout(al::x86_64Linux(), fieldsOf(at::floatType(u8(32))));
+		expectLayout(std::move(layout), 4, 4, { 0 });
+	}
+
+	void floatThenDoubleTest() {
+		// float@0..4, pad 4..8, double@8..16 → total 16, align 8.
+		auto layout = al::computeCLayout(
+			al::x86_64Linux(), fieldsOf(at::floatType(u8(32)), at::floatType(u8(64)))
+		);
+		expectLayout(std::move(layout), 16, 8, { 0, 8 });
+	}
+
+	void i8ThenDoubleTest() {
+		auto layout = al::computeCLayout(
+			al::x86_64Linux(), fieldsOf(at::intType(u8(8), true), at::floatType(u8(64)))
+		);
+		expectLayout(std::move(layout), 16, 8, { 0, 8 });
+	}
+
+	void quadFloatTest() {
+		// f128 (IEEE binary128) is 16/16 and identical across targets.
+		auto x86 = al::computeCLayout(al::x86_64Linux(), fieldsOf(at::floatType(u8(128))));
+		expectLayout(std::move(x86), 16, 16, { 0 });
+		auto arm = al::computeCLayout(al::aarch64Linux(), fieldsOf(at::floatType(u8(128))));
+		expectLayout(std::move(arm), 16, 16, { 0 });
+	}
+
+	void x87LongDoubleTest() {
+		// f80 on x86_64: 80 bits of data stored in 16 bytes, align 16.
+		auto layout = al::computeCLayout(al::x86_64Linux(), fieldsOf(at::floatType(u8(80))));
+		expectLayout(std::move(layout), 16, 16, { 0 });
+	}
+
+	void i8ThenLongDoubleTest() {
+		auto layout = al::computeCLayout(
+			al::x86_64Linux(), fieldsOf(at::intType(u8(8), true), at::floatType(u8(80)))
+		);
+		expectLayout(std::move(layout), 32, 16, { 0, 16 });
+	}
+
+	void singleBoolTest() {
+		// C `_Bool` is a 1-byte type.
+		auto layout = al::computeCLayout(al::x86_64Linux(), fieldsOf(at::boolType()));
+		expectLayout(std::move(layout), 1, 1, { 0 });
+	}
+
+	void boolCharThenI16Test() {
+		// bool@0 (1/1), char@1 (1/1), i16 align 2 → @2..4. Total 4, align 2.
+		auto layout = al::computeCLayout(
+			al::x86_64Linux(), fieldsOf(at::boolType(), at::charType(), at::intType(u8(16), true))
+		);
+		expectLayout(std::move(layout), 4, 2, { 0, 1, 2 });
 	}
 
 	void arrayOfI32Test() {

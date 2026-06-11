@@ -34,6 +34,30 @@ namespace abi::layout {
 				out.size      = Bytes(usize(i.width_bits) / 8);
 				out.alignment = target.data_layout.naturalAlignmentForIntWidth(i.width_bits);
 			}
+			variant_case(type_system::FloatType, f) {
+				// Size and alignment come straight from the target's float table.
+				// The converter rejects widths the target does not list, so a
+				// missing entry here is a bug rather than a user error.
+				const base::Optional<SizeAlign> found
+					= target.data_layout.float_layouts.atMaybeCopy(f.width_bits);
+				CORE_ASSERT(
+					found.has_value(),
+					"float width not representable on this target; reject it in the converter: ",
+					usize(f.width_bits)
+				);
+				out.size      = found.value().size;
+				out.alignment = found.value().alignment;
+			}
+			variant_case_novalue(type_system::BoolType) {
+				// C `_Bool`: a 1-byte ABI type on every supported target.
+				out.size      = Bytes(1);
+				out.alignment = Bytes(1);
+			}
+			variant_case_novalue(type_system::CharType) {
+				// C `char`: a 1-byte integer; signedness does not affect layout.
+				out.size      = Bytes(1);
+				out.alignment = Bytes(1);
+			}
 			variant_case_novalue(type_system::PointerType) {
 				out.size      = target.data_layout.pointer_size;
 				out.alignment = target.data_layout.pointer_alignment;
