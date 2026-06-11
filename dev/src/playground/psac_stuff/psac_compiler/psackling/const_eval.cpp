@@ -90,6 +90,10 @@ namespace pg {
 			if (r == 0) throw std::runtime_error("Division by zero in constant expression");
 			result = as_i64(l / r);
 			return;
+		case lang_def::NamedOperator::Remainder:
+			if (r == 0) throw std::runtime_error("Division by zero in constant expression");
+			result = as_i64(l % r);
+			return;
 		case lang_def::NamedOperator::Equal:
 			result = as_bool(l == r);
 			return;
@@ -178,7 +182,7 @@ namespace pg {
 	}
 
 	void ConstEval::visitChainExpr(pst::Access<pst::expr::ChainExpr> chain) {
-		// Only namespace-qualified constant access (`ns::CONST`) is supported here.
+		// Only namespace-qualified constant access (`ns.CONST`) is supported here.
 		pst::Access<pst::ExprElement> atom = chain->getAtom().illegalAccess().value();
 
 		auto ident_opt = atom.dynamicCast<pst::expr::IdentifierLiteral>();
@@ -192,11 +196,9 @@ namespace pg {
 			pst::Access<pst::ExprElement> element = element_locked.illegalAccess().value();
 
 			auto access_opt = element.dynamicCast<pst::expr::Access>();
-			if (!access_opt.has_value()
-			    || access_opt.value()->getType().illegalAccess().value()->unwrap()
-			           != base::StrID("::")) {
+			if (!access_opt.has_value()) {
 				throw std::runtime_error(
-					"Constant chain expression: only `::` namespace access is supported"
+					"Constant chain expression: only `.` namespace access is supported"
 				);
 			}
 

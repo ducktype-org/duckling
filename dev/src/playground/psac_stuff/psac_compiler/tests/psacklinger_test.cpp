@@ -457,6 +457,85 @@ public:
 			21
 		);  // 0+1+2+3+4+5+6 = 21
 
+		PS_TEST(
+			TimesEquals,
+			R"(
+				fun main() -> i64 = {
+					var x: i64 = 5;
+					x *= 3;
+					return x;
+				}
+			)",
+			15
+		);
+
+		PS_TEST(
+			DivideEquals,
+			R"(
+				fun main() -> i64 = {
+					var x: i64 = 20;
+					x /= 4;
+					return x;
+				}
+			)",
+			5
+		);
+
+		PS_TEST(
+			ModuloEquals,
+			R"(
+				fun main() -> i64 = {
+					var x: i64 = 17;
+					x %= 5;
+					return x;
+				}
+			)",
+			2
+		);
+
+		PS_TEST(
+			ModuloBinary,
+			R"(
+				fun main() -> i64 = {
+					return 17 % 5;
+				}
+			)",
+			2
+		);
+
+		PS_TEST(
+			CompoundOpsCombined,
+			R"(
+				fun main() -> i64 = {
+					var x: i64 = 2;
+					x *= 5;
+					x += 7;
+					x /= 2;
+					x -= 1;
+					x %= 6;
+					return x;
+				}
+			)",
+			1
+		);  // 2*5=10, +7=17, /2=8, -1=7, %6=1
+
+		PS_TEST(
+			FieldCompoundOps,
+			R"(
+				class Box {
+					var v: i64;
+				}
+				fun main() -> i64 = {
+					var b: Box;
+					b.v = 7;
+					b.v *= 3;
+					b.v %= 4;
+					return b.v;
+				}
+			)",
+			1
+		);  // 7*3=21, 21%4=1
+
 		// --- Functions and calls in expressions ---
 
 		PS_TEST(
@@ -746,7 +825,7 @@ public:
 				namespace math {
 					fun add(a: i64, b: i64) -> i64 = { return a + b; }
 				}
-				fun main() -> i64 = { return math::add(2, 3); }
+				fun main() -> i64 = { return math.add(2, 3); }
 			)",
 			5
 		);
@@ -759,7 +838,7 @@ public:
 						fun f() -> i64 = { return 6; }
 					}
 				}
-				fun main() -> i64 = { return a::b::f(); }
+				fun main() -> i64 = { return a.b.f(); }
 			)",
 			6
 		);
@@ -770,7 +849,7 @@ public:
 				namespace m {
 					const PI: i64 = 3;
 				}
-				fun main() -> i64 = { return m::PI; }
+				fun main() -> i64 = { return m.PI; }
 			)",
 			3
 		);
@@ -782,7 +861,7 @@ public:
 				namespace n {
 					fun f() -> i64 = { return 2; }
 				}
-				fun main() -> i64 = { return f() + n::f(); }
+				fun main() -> i64 = { return f() + n.f(); }
 			)",
 			3
 		);
@@ -794,7 +873,7 @@ public:
 					fun a() -> i64 = { return 1; }
 					fun b() -> i64 = { return a() + 1; }
 				}
-				fun main() -> i64 = { return n::b(); }
+				fun main() -> i64 = { return n.b(); }
 			)",
 			2
 		);
@@ -806,7 +885,7 @@ public:
 					const K: i64 = 5;
 					fun get() -> i64 = { return K; }
 				}
-				fun main() -> i64 = { return m::get(); }
+				fun main() -> i64 = { return m.get(); }
 			)",
 			5
 		);

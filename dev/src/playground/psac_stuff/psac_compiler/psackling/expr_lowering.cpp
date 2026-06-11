@@ -147,6 +147,9 @@ namespace pg {
 			// Signed division — i64 is signed in our type system.
 			out_value = builder.CreateSDiv(lhs.value, rhs.value, "divtmp");
 			break;
+		case lang_def::NamedOperator::Remainder:
+			out_value = builder.CreateSRem(lhs.value, rhs.value, "remtmp");
+			break;
 		case lang_def::NamedOperator::Equal:
 			out_value   = builder.CreateICmpEQ(lhs.value, rhs.value, "eqtmp");
 			result_type = ctx.bool_type_id;
@@ -321,18 +324,27 @@ namespace pg {
 
 		if (op == base::StrID("=")) {
 			value_to_store = rhs.value;
-		} else if (op == base::StrID("+=")) {
-			if (lhs.type_id != ctx.i64_type_id)
-				throw std::runtime_error("'+=' currently only supports i64 operands");
-			value_to_store = builder.CreateAdd(lhs.value, rhs.value, "addassigntmp");
-		} else if (op == base::StrID("-=")) {
-			if (lhs.type_id != ctx.i64_type_id)
-				throw std::runtime_error("'-=' currently only supports i64 operands");
-			value_to_store = builder.CreateSub(lhs.value, rhs.value, "subassigntmp");
 		} else {
-			throw std::runtime_error(
-				"Assignment operator '" + op.str() + "' not yet supported (=, +=, -= only)"
-			);
+			// Compound assignments: `a OP= b` lowers as `a = a OP b` on i64 operands.
+			if (lhs.type_id != ctx.i64_type_id)
+				throw std::runtime_error("'" + op.str() + "' currently only supports i64 operands");
+
+			if (op == base::StrID("+=")) {
+				value_to_store = builder.CreateAdd(lhs.value, rhs.value, "addassigntmp");
+			} else if (op == base::StrID("-=")) {
+				value_to_store = builder.CreateSub(lhs.value, rhs.value, "subassigntmp");
+			} else if (op == base::StrID("*=")) {
+				value_to_store = builder.CreateMul(lhs.value, rhs.value, "mulassigntmp");
+			} else if (op == base::StrID("/=")) {
+				value_to_store = builder.CreateSDiv(lhs.value, rhs.value, "divassigntmp");
+			} else if (op == base::StrID("%=")) {
+				value_to_store = builder.CreateSRem(lhs.value, rhs.value, "remassigntmp");
+			} else {
+				throw std::runtime_error(
+					"Assignment operator '" + op.str()
+					+ "' not yet supported (=, +=, -=, *=, /=, %= only)"
+				);
+			}
 		}
 
 		builder.CreateStore(value_to_store, lhs.address);
@@ -358,19 +370,16 @@ namespace pg {
 
 			auto opt_access = element.dynamicCast<pst::expr::Access>();
 			if (!opt_access.has_value())
-				throw std::runtime_error(
-					"Chain expression: only `.`/`::` access and calls are supported"
+				throw std::runtime_error("Chain expression: only `.` access and calls are supported"
 				);
 			auto access = opt_access.value();
 
-			// Namespace member access: `ns::member`.
-			if (access->getType().illegalAccess().value()->unwrap() == base::StrID("::")) {
-				if (!current.symbol.has_value()
-				    || !std::holds_alternative<sym::NamespaceSymbol>(
-						ctx.getSymbol(current.symbol.value()).kind
-					)) {
-					throw std::runtime_error("Left-hand side of `::` is not a namespace");
-				}
+			// Namespace member access uses `.` just like field access, so dispatch on what
+			// the chain has resolved to so far rather than on the operator.
+			if (current.symbol.has_value()
+			    && std::holds_alternative<sym::NamespaceSymbol>(
+					ctx.getSymbol(current.symbol.value()).kind
+				)) {
 				const ns::NamespaceID ns_id
 					= std::get<sym::NamespaceSymbol>(ctx.getSymbol(current.symbol.value()).kind)
 				          .namespace_id;
@@ -381,7 +390,7 @@ namespace pg {
 
 			if (access->getType().illegalAccess().value()->unwrap() != base::StrID(".")) {
 				throw std::runtime_error(
-					"Chain expression: only `.`/`::` access supported, got: "
+					"Chain expression: only `.` access supported, got: "
 					+ access->getType().illegalAccess().value()->unwrap().str()
 				);
 			}
