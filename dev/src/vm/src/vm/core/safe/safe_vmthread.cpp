@@ -33,21 +33,8 @@
 
 namespace vm {
 
-#if defined(ENABLE_JIT) and not defined(BUILD_TYPE_RELEASE)
-	// When testing JIT, compile all calls from the start function. Specifically main.
-	#define MAKE_BYTECODE_INSTRUCTION(OPCODE_NAME, ARG_0, ARG_1)         \
-		makeLowInstruction(                                              \
-			low::MicroOpcode::OPCODE_NAME == low::MicroOpcode::call_func \
-				? low::MicroOpcode::jit_call_entrypoint                  \
-				: low::MicroOpcode::OPCODE_NAME,                         \
-			ARG_0,                                                       \
-			ARG_1                                                        \
-		)
-
-#else
-	#define MAKE_BYTECODE_INSTRUCTION(OPCODE_NAME, ARG_0, ARG_1) \
-		makeLowInstruction(low::MicroOpcode::OPCODE_NAME, ARG_0, ARG_1)
-#endif
+#define MAKE_BYTECODE_INSTRUCTION(OPCODE_NAME, ARG_0, ARG_1) \
+	makeLowInstruction(low::MicroOpcode::OPCODE_NAME, ARG_0, ARG_1)
 
 	SafeVMThread::SafeVMThread(api::ThreadID thread_id, SafeVMProcess& process):
 		  IVMThread(thread_id, process),
@@ -151,6 +138,7 @@ namespace vm {
 
 		low::LowFuncData start_function{
 			.name = base::StrID("vm_start_function"),
+			.id   = START_FUNCTION_ID,
 #ifdef ENABLE_JIT
 			.cfg
 			= low::cf::ControlFlowGraph(),  // This is okay because we never JIT the start function.
@@ -283,6 +271,7 @@ namespace vm {
 
 		low::LowFuncData start_function{
 			.name = base::StrID("vm_start_function"),
+			.id   = START_FUNCTION_ID,
 #ifdef ENABLE_JIT
 			.cfg
 			= low::cf::ControlFlowGraph(),  // This is okay because we never JIT the start function.
@@ -829,6 +818,10 @@ namespace vm {
 	}
 
 	void SafeVMThread::setThreadCtx(std::string str) { thread_ctx = std::move(str); }
+
+	bool SafeVMThread::isCallableFunctionID(usize id) {
+		return id != SafeVMThread::START_FUNCTION_ID;
+	}
 
 	u64 SafeVMThread::getNumberOfCurrentStackFrames() const {
 		// +1 because frame_stack_current points to the current frame, not the next free slot.

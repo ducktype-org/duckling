@@ -86,7 +86,11 @@ namespace vm::loader::compiler::safe::detail {
 			const vm::loader::compiler::detail::FunctionStackContext& ctx
 		):
 			  compiler{ compiler },
-			  ctx{ ctx } {}
+			  ctx{ ctx } {
+#ifdef ENABLE_JIT
+			addLow<Op_jitEntrypoint>();
+#endif
+		}
 
 		std::pair<low::MicroBytecode, decltype(label_id_to_offset)> build() {
 			return { std::move(result), std::move(label_id_to_offset) };
@@ -147,8 +151,14 @@ namespace vm::loader::compiler::safe::detail {
 					makeLowInstruction(T::OPCODE, lowerLowArg<LowArgs>(std::forward<Args>(args))...)
 				);
 #if (BUILD_TYPE_DEV_DEBUG)
-				result.back().opcode_id      = T::OPCODE;
-				result.back().representation = current_high_instruction_representation;
+	#ifdef ENABLE_JIT
+				if constexpr (!std::is_same_v<T, Op_jitEntrypoint>) {
+	#endif
+					result.back().opcode_id      = T::OPCODE;
+					result.back().representation = current_high_instruction_representation;
+	#ifdef ENABLE_JIT
+				}
+	#endif
 #endif
 				next_instruction_index++;
 			}(static_cast<T::ArgTypes*>(nullptr));
@@ -299,12 +309,8 @@ namespace vm::loader::compiler::safe::detail {
 				ftCRead(i.src);
 				ftCWrite(i.dst);
 			}
-			instr_case(high::Op_mov_pptr_pptr, i) {
-				addLow<Op_mov_pptr_pptr>(i.dst, i.src);
-			}
-			instr_case(high::Op_setNull_pptr, i) {
-				addLow<Op_setNull_pptr>(i.dst);
-			}
+			instr_case(high::Op_mov_pptr_pptr, i) { addLow<Op_mov_pptr_pptr>(i.dst, i.src); }
+			instr_case(high::Op_setNull_pptr, i) { addLow<Op_setNull_pptr>(i.dst); }
 			instr_case(high::Op_mov_popq_popq, i) {
 				ftRead(i.src);
 				ftWrite(i.dst);
@@ -1348,14 +1354,7 @@ namespace vm::loader::compiler::safe::detail {
 			instr_case(high::Op_jmp_label, i) { addLow<Op_jmp_label>(i.label); }
 			instr_case(high::Op_jmpIf_label, i) { addLow<Op_jmpIf_label>(i.label); }
 			instr_case(high::Op_jmpIfNot_label, i) { addLow<Op_jmpIfNot_label>(i.label); }
-			instr_case(high::Op_call_func, i) {
-				if (compiler.settings_.enable_fast_track) addLow<Op_ft_call_func>(i.function);
-#ifdef ENABLE_JIT
-				addLow<Op_jit_call_entrypoint>(i.function);
-#else
-				addLow<Op_call_func>(i.function);
-#endif
-			}
+			instr_case(high::Op_call_func, i) { addLow<Op_call_func>(i.function); }
 			instr_case(high::Op_call_builtinfunc, i) { addLow<Op_call_builtinfunc>(i.function); }
 			instr_case(high::Op_call_cfunc, i) { addLow<Op_call_cfunc>(i.function); }
 			instr_case(high::Op_set_threadctx, i) { addLow<Op_set_threadctx>(i.function); }
@@ -1413,12 +1412,8 @@ namespace vm::loader::compiler::safe::detail {
 				}
 				addLow<Op_load_bany_pptr>(i.dst, i.src_ptr);
 			}
-			instr_case(high::Op_ref_pptr_pany, i) {
-				addLow<Op_ref_pptr_bany>(i.dst_ptr, i.src);
-			}
-			instr_case(high::Op_ref_pptr_pvnt, i) {
-				addLow<Op_ref_pptr_bany>(i.dst_ptr, i.src);
-			}
+			instr_case(high::Op_ref_pptr_pany, i) { addLow<Op_ref_pptr_bany>(i.dst_ptr, i.src); }
+			instr_case(high::Op_ref_pptr_pvnt, i) { addLow<Op_ref_pptr_bany>(i.dst_ptr, i.src); }
 			instr_case(high::Op_structLea_pptr_pptr_field, i) {
 				addLow<Op_structLea_pptr_pptr>(i.dst_ptr, i.src_data_ptr);
 				addLow<Op_ext_field>(i.field);
@@ -1430,8 +1425,11 @@ namespace vm::loader::compiler::safe::detail {
 						if_opt_some(struct_type->getFields(), fields) {
 							auto struct_data = struct_type->get<vm::kind::Data>();
 							if (struct_data) {
-								auto idx_opt = (*struct_data)->field_name_map.atMaybe(i.field.field_name);
-								if (idx_opt) return (*fields)[static_cast<std::size_t>(**idx_opt)].type->getName();
+								auto idx_opt
+									= (*struct_data)->field_name_map.atMaybe(i.field.field_name);
+								if (idx_opt)
+									return (*fields)[static_cast<std::size_t>(**idx_opt)]
+									    .type->getName();
 							}
 						}
 						CORE_PANIC("Field not found for ft_structRead");
@@ -1448,8 +1446,11 @@ namespace vm::loader::compiler::safe::detail {
 						if_opt_some(struct_type->getFields(), fields) {
 							auto struct_data = struct_type->get<vm::kind::Data>();
 							if (struct_data) {
-								auto idx_opt = (*struct_data)->field_name_map.atMaybe(i.field.field_name);
-								if (idx_opt) return (*fields)[static_cast<std::size_t>(**idx_opt)].type->getName();
+								auto idx_opt
+									= (*struct_data)->field_name_map.atMaybe(i.field.field_name);
+								if (idx_opt)
+									return (*fields)[static_cast<std::size_t>(**idx_opt)]
+									    .type->getName();
 							}
 						}
 						CORE_PANIC("Field not found for ft_structWrite");

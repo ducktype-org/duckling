@@ -122,4 +122,28 @@ namespace compiler::helios {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTupleTypeData);
+
+	struct IMPLEMENT_QUERY(QuerySliceTypeData, SliceTypeData) {
+		static auto provide(Context& ctx, const QKey key) -> PResult {
+			// The fields of a slice type are always `ptr` and `len`, in that order.
+			SymID ptr = ctx.query<defgen::QueryGeneratedSymbol>(
+				{ .name = base::StrID{ "ptr" },
+			      .generated_symbol_data
+			      = defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::Field{
+					  .parent_type = key, .index = 0 } } }
+			);
+			SymID len = ctx.query<defgen::QueryGeneratedSymbol>(
+				{ .name = base::StrID{ "len" },
+			      .generated_symbol_data
+			      = defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::Field{
+					  .parent_type = key, .index = 1 } } }
+			);
+
+			return SliceTypeData{ .ptr = ptr, .len = len };
+		}
+
+		QUERY_AUTO_CACHE_CREF
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySliceTypeData);
 }

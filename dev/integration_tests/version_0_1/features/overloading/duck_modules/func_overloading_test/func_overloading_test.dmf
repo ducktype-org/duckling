@@ -25,7 +25,7 @@ fun foo(x: bool) -> i64 = {
     else return 0;
 }
 
-fun foo(x: str) -> i64 = {
+fun foo(x: String) -> i64 = {
     if (x == "duckling") return 999;
     return 0;
 }
@@ -35,7 +35,7 @@ fun foo(x: i64, y: i64) -> i64 = {
     return x * y + 20000;
 }
 
-fun foo(x: str, y: i64) -> i64 = {
+fun foo(x: String, y: i64) -> i64 = {
     if (x == "duckling" and y == 42) return 4242;
     return -1;
 }

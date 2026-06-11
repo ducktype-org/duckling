@@ -2,10 +2,10 @@ use std::error::Error;
 
 use crate::{QuackError, QuackResult};
 
-/// Represents a type with a list of surpressed errors, which occured during some computation.
+/// Represents a type with a list of suppressed errors, which occurred during some computation.
 #[derive(Debug)]
 pub struct GathererComputation<T>(pub T, pub Vec<QuackError>);
-/// Represents a type with a list of surpressed errors or a critical, not surpressed error.
+/// Represents a type with a list of suppressed errors or a critical, not suppressed error.
 pub type GathererResult<T> = QuackResult<GathererComputation<T>>;
 
 impl<T: Default> GathererComputation<T> {
