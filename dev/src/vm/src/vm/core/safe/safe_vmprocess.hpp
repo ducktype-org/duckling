@@ -169,9 +169,6 @@ namespace vm {
 			return deadlock_detector ? &*deadlock_detector : nullptr;
 		}
 
-		const DeadlockDetector* getDeadlockDetector() const {
-			return deadlock_detector ? &*deadlock_detector : nullptr;
-		}
 
 		Memory& getMemory();
 
