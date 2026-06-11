@@ -126,9 +126,15 @@ namespace vm {
 			// RW Race
 			if (isShared()) {
 				if (!(*last_read_vc <= thread_vc)) {
-					reportRace(
-						"Read-Write (Shared)", Epoch(), Epoch(tid, clock)
-					);  // Simplified report
+					Epoch conflicting_reader;
+					for (usize i = 0; i < last_read_vc->size(); ++i) {
+						auto t = api::ThreadID(static_cast<u64>(i));
+						if ((*last_read_vc)[t] > thread_vc[t]) {
+							conflicting_reader = Epoch(t, (*last_read_vc)[t]);
+							break;
+						}
+					}
+					reportRace("Read-Write (Shared)", conflicting_reader, Epoch(tid, clock));
 				}
 				last_read_vc->decRef();
 				last_read_vc = nullptr;

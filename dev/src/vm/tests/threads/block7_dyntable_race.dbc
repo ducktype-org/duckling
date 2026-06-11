@@ -1,0 +1,64 @@
+type dynamic_table: dtablei64 i64
+type pointer: ptr_dtablei64 dtablei64
+
+global_data g_tbl_ptr ptr_dtablei64 {};
+
+function child_thread {} -> {} {
+    init_pany_type local_ptr, ptr_dtablei64;
+    mov_pptr_pptr local_ptr, g_tbl_ptr;
+
+    init_pany_type idx, i64;
+    mov_p64_imm idx, 0;
+    init_pany_type val, i64;
+    mov_p64_imm val, 42;
+    dynTableStore_pptr_pany_p64 local_ptr, val, idx;
+
+    deinit;
+    ret;
+}
+
+function main { i64, ptr_argv } -> { i64 } {
+    init_pany_type tbl_ptr, ptr_dtablei64;
+    init_pany_type size, i64;
+    mov_p64_imm size, 3;
+    dynTableReAlloc_pptr_type_p64 tbl_ptr, dtablei64, size;
+
+    mov_pptr_pptr g_tbl_ptr, tbl_ptr;
+
+    init_pany_type thread_id, i64;
+    set_threadctx child_thread;
+    call_builtinfunc builtin_start_thread;
+
+    # Post-spawn write races with child's write regardless of execution order
+    init_pany_type idx, i64;
+    mov_p64_imm idx, 0;
+    init_pany_type val, i64;
+    mov_p64_imm val, 100;
+    dynTableStore_pptr_pany_p64 tbl_ptr, val, idx;
+
+    init_pany_type join_ret, i64;
+    init_pany_type join_id, i64;
+    mov_p64_p64 join_id, thread_id;
+    call_builtinfunc builtin_join_thread;
+
+    cmpLt_p64_imm join_ret, 0;
+    jmpIf_label PanicLabel;
+
+    deinit; # join_id
+    deinit; # join_ret
+    deinit; # thread_id
+    free_pptr tbl_ptr;
+    deinit; # tbl_ptr
+    ret;
+
+    label PanicLabel;
+    init_pany_type zero, i64;
+    mov_p64_imm zero, 0;
+    div_p64_p64 thread_id, zero;
+    deinit; # join_id
+    deinit; # join_ret
+    deinit; # thread_id
+    free_pptr tbl_ptr;
+    deinit; # tbl_ptr
+    ret;
+}

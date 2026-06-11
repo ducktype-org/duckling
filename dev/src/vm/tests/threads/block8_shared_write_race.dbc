@@ -1,0 +1,64 @@
+global_data shared_val i64 {};
+
+function reader_thread {} -> {} {
+    init_pany_type local_val, i64;
+    mov_p64_p64 local_val, shared_val;
+    deinit;
+    ret;
+}
+
+function writer_thread {} -> {} {
+    init_pany_type val, i64;
+    mov_p64_imm val, 99;
+    mov_p64_p64 shared_val, val;
+    deinit;
+    ret;
+}
+
+# Three threads spawned from the same VC baseline (no joins between spawns).
+# r1 and r2 have vc[other]=0 for each other, so whichever reads second triggers
+# the Exclusive->Shared transition.  The writer then races against the readers:
+# - if both readers read first: RW-Shared race detected by processWrite
+# - if writer writes first: WR race detected by processRead of the first reader
+# A race is guaranteed in every execution order.
+function main { i64, ptr_argv } -> { i64 } {
+    init_pany_type init_val, i64;
+    mov_p64_imm init_val, 1;
+    mov_p64_p64 shared_val, init_val;
+
+    init_pany_type r1_id, i64;
+    set_threadctx reader_thread;
+    call_builtinfunc builtin_start_thread;
+
+    init_pany_type r2_id, i64;
+    set_threadctx reader_thread;
+    call_builtinfunc builtin_start_thread;
+
+    init_pany_type w_id, i64;
+    set_threadctx writer_thread;
+    call_builtinfunc builtin_start_thread;
+
+    init_pany_type r1_ret, i64;
+    init_pany_type j1_id, i64;
+    mov_p64_p64 j1_id, r1_id;
+    call_builtinfunc builtin_join_thread;
+
+    init_pany_type r2_ret, i64;
+    init_pany_type j2_id, i64;
+    mov_p64_p64 j2_id, r2_id;
+    call_builtinfunc builtin_join_thread;
+
+    init_pany_type w_ret, i64;
+    init_pany_type jw_id, i64;
+    mov_p64_p64 jw_id, w_id;
+    call_builtinfunc builtin_join_thread;
+
+    deinit; # w_ret
+    deinit; # r2_ret
+    deinit; # r1_ret
+    deinit; # w_id
+    deinit; # r2_id
+    deinit; # r1_id
+    deinit; # init_val
+    ret;
+}

@@ -26,6 +26,10 @@ public:
 		TESTER_ADD_TEST(block4ArrayRaceTest);
 		TESTER_ADD_TEST(block5VariantRaceTest);
 		TESTER_ADD_TEST(block6OpaqueRaceTest);
+		TESTER_ADD_TEST(block7DyntableRaceTest);
+		TESTER_ADD_TEST(block8SharedWriteRaceTest);
+		TESTER_ADD_TEST(block8SharedNoRaceTest);
+		TESTER_ADD_TEST(block9FreeReadRaceTest);
 	}
 
 private:
@@ -270,6 +274,30 @@ private:
 
 	void block6OpaqueRaceTest() {
 		runRaceTest("block6_opaque_race.dbc", "block6OpaqueRaceTest");
+	}
+
+	void block7DyntableRaceTest() {
+		runRaceTest("block7_dyntable_race.dbc", "block7DyntableRaceTest");
+	}
+
+	void block8SharedWriteRaceTest() {
+		runRaceTest("block8_shared_write_race.dbc", "block8SharedWriteRaceTest");
+	}
+
+	void block8SharedNoRaceTest() {
+		vm::api::ProcessSettings settings;
+		settings.enable_fast_track = true;
+		auto pid = initProcess(settings);
+
+		auto file = fs::File(path("block8_shared_no_race.dbc"));
+		auto load_res = vm::api::loadFiles(pid, { file });
+		ASSERT_TRUE(load_res.has_value());
+
+		runTestOnVm(pid, "", {}, {});
+	}
+
+	void block9FreeReadRaceTest() {
+		runRaceTest("block9_free_read_race.dbc", "block9FreeReadRaceTest");
 	}
 };
 

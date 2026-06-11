@@ -1,0 +1,52 @@
+type pointer: ptr_i64 i64
+
+global_data shared_ptr ptr_i64 {};
+
+function child_thread {} -> {} {
+    init_pany_type local_ptr, ptr_i64;
+    mov_pptr_pptr local_ptr, shared_ptr;
+    init_pany_type val, i64;
+    load_pany_pptr val, local_ptr;    # ft_structRead -> zombie check -> race
+    deinit;
+    ret;
+}
+
+function main { i64, ptr_argv } -> { i64 } {
+    init_pany_type heap_ptr, ptr_i64;
+    alloc_pptr_type heap_ptr, i64;
+    init_pany_type val, i64;
+    mov_p64_imm val, 1;
+    store_pptr_pany heap_ptr, val;
+
+    mov_pptr_pptr shared_ptr, heap_ptr;
+
+    init_pany_type thread_id, i64;
+    set_threadctx child_thread;
+    call_builtinfunc builtin_start_thread;
+
+    free_pptr heap_ptr;    # adds zombie at Epoch(main, post-spawn); child's VC lacks this
+
+    init_pany_type join_ret, i64;
+    init_pany_type join_id, i64;
+    mov_p64_p64 join_id, thread_id;
+    call_builtinfunc builtin_join_thread;
+
+    cmpLt_p64_imm join_ret, 0;
+    jmpIf_label PanicLabel;
+
+    deinit; # join_id
+    deinit; # join_ret
+    deinit; # thread_id
+    deinit; # heap_ptr
+    ret;
+
+    label PanicLabel;
+    init_pany_type zero, i64;
+    mov_p64_imm zero, 0;
+    div_p64_p64 thread_id, zero;
+    deinit; # join_id
+    deinit; # join_ret
+    deinit; # thread_id
+    deinit; # heap_ptr
+    ret;
+}

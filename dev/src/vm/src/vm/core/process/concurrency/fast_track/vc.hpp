@@ -87,5 +87,10 @@ namespace vm {
 		 */
 		void increment(api::ThreadID thread_id);
 
+		/**
+		 * @brief Number of tracked threads (size of internal clock array).
+		 */
+		[[nodiscard]] usize size() const { return clocks.size(); }
+
 	};
 }
