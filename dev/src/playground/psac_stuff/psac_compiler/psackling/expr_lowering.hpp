@@ -15,6 +15,10 @@ namespace pg {
 		llvm::Value* value{ nullptr };    // In r-value sense.
 		tp::TypeID   type_id{};
 		llvm::Value* address{ nullptr };  // In l-value sense.
+
+		/// Set when the expression names a function or namespace (no runtime value yet);
+		/// consumed by call and `::` access links in chain expressions.
+		base::Optional<sym::SymbolID> symbol{};
 	};
 
 	/// Per-function map: variable SymbolID -> its stack slot (alloca).
@@ -50,6 +54,12 @@ namespace pg {
 		void visitChainExpr(pst::Access<pst::expr::ChainExpr> chain) override;
 
 	private:
+		/// Turns a resolved symbol into a LoweredExpr: variables load from their slot,
+		/// constants materialize as immediates, functions/namespaces become symbol refs.
+		LoweredExpr symbolRefToExpr(sym::SymbolID sym_id, base::StrID name);
+
+		/// Emits a call to `callee` (which must be a function symbol reference).
+		LoweredExpr          emitCall(const LoweredExpr& callee, pst::Access<pst::expr::Call> call);
 		Context&             ctx;
 		LlvmLoweringContext& lowering;
 		llvm::IRBuilder<>&   builder;

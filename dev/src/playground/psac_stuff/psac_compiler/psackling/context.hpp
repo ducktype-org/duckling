@@ -119,6 +119,30 @@ namespace pg {
 			return id;
 		}
 
+		/// Lookup restricted to a single namespace — used for qualified access (`ns::member`),
+		/// which must not fall back to parent scopes.
+		sym::SymbolID lookupInNamespace(ns::NamespaceID ns_id, base::StrID name) {
+			ns::Namespace& ns = namespaces[ns_id];
+			if (ns.symbols.contains(name)) return ns.symbols[name];
+			throw std::runtime_error(
+				"Symbol " + name.str() + " not found in namespace " + ns.name.str()
+			);
+		}
+
+		/// Builds the namespace-qualified name for a symbol declared in the current scope,
+		/// e.g. `add` inside `namespace math` becomes `math.add`. Used as the LLVM link name
+		/// so same-named functions in different namespaces don't collide.
+		base::StrID qualifyName(base::StrID name) {
+			std::string qualified;
+			for (ns::NamespaceID id: namespace_stack) {
+				if (id == root_ns_id) continue;
+				qualified += namespaces[id].name.str();
+				qualified += '.';
+			}
+			qualified += name.str();
+			return base::StrID(qualified);
+		}
+
 		sym::SymbolID lookupInScopeAndParents(ns::NamespaceID ns_id, base::StrID name) {
 			ns::Namespace& ns = namespaces[ns_id];
 			if (ns.symbols.contains(name)) return ns.symbols[name];

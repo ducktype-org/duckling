@@ -14,9 +14,14 @@ namespace pg {
 
 		llvm::Type* lowerType(tp::TypeID type_id, Context& ctx);
 
+		/// Returns the llvm::Function for a FunctionSymbol, creating a declaration on
+		/// first use (so calls may reference functions defined later in the file).
+		llvm::Function* getOrCreateFunction(sym::SymbolID fun_sym_id, Context& ctx);
+
 	private:
 		LlvmProgramModule& llvm_module;
 
-		base::HashMap<tp::TypeID, llvm::Type*> types;
+		base::HashMap<tp::TypeID, llvm::Type*>        types;
+		base::HashMap<sym::SymbolID, llvm::Function*> functions;
 	};
 }

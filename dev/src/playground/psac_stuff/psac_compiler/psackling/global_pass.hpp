@@ -1,5 +1,6 @@
 #pragma once
 
+#include "const_eval.hpp"
 #include "context.hpp"
 #include "frontend/pst_parser/access.hpp"
 #include "frontend/pst_parser/pst_visitor.hpp"
@@ -36,17 +37,34 @@ namespace pg {
 			ctx.popNamespace();
 		}
 
+		/// Resolves a type expression (bare identifier or type keyword) to a TypeID,
+		/// looked up from the current scope outwards.
+		tp::TypeID resolveTypeExpr(const pst::ExprElement& type_expr, const std::string& what) {
+			const base::StrID type_name = extractTypeName(type_expr);
+			if (type_name == base::StrID()) {
+				throw std::runtime_error(
+					what + ": type expression of kind '" + type_expr.elementType()
+					+ "' is not a bare identifier (not yet supported)"
+				);
+			}
+			return ctx.lookupTypeInScopeAndParents(ctx.currNs().id, type_name);
+		}
+
 		void visitFun(pst::Access<pst::Fun> stmt) override {
+			const base::StrID name = stmt->getName().illegalAccess().value()->unwrap();
+
 			std::vector<tp::TypeID>    param_type_ids;
 			std::vector<sym::SymbolID> argument_symbol_ids;
 			// We are pushing an empty namespace for the function body
-			auto func_ns_id = ctx.pushNamespace(
-				base::StrID("$fn_" + stmt->getName().illegalAccess().value()->unwrap().str())
-			);
+			auto func_ns_id = ctx.pushNamespace(base::StrID("$fn_" + name.str()));
 			for (pst::AccessLocked<pst::Param> param: *stmt->getParams().illegalAccess().value()) {
 				auto       param_accessed = param.illegalAccess().value();
-				tp::TypeID param_type_id
-					= ctx.lookupTypeInScopeAndParents(ctx.currNs().id, base::StrID("i64"));
+				tp::TypeID param_type_id  = resolveTypeExpr(
+                    *param_accessed->getType().illegalAccess().value()->getExpr().illegalAccess().value(
+                    ),
+                    "Parameter '" + param_accessed->getName().illegalAccess().value()->unwrap().str()
+                        + "' of function '" + name.str() + "'"
+                );
 				sym::SymbolID arg_sym_id = ctx.insertSymbol(
 					param_accessed->getName().illegalAccess().value()->unwrap(),
 					sym::VariableSymbol{},
@@ -57,24 +75,28 @@ namespace pg {
 			}
 			ctx.popNamespace();
 
-			tp::TypeID return_type_id
-				= stmt->getRet().has_value()
-			        ? ctx.lookupTypeInScopeAndParents(ctx.currNs().id, base::StrID("i64"))
-			        : ctx.lookupTypeInScopeAndParents(ctx.currNs().id, base::StrID("void"));
+			tp::TypeID return_type_id = ctx.void_type_id;
+			if (stmt->getRet().has_value()) {
+				return_type_id = resolveTypeExpr(
+					*stmt->getRet()->illegalAccess().value()->getExpr().illegalAccess().value(),
+					"Return type of function '" + name.str() + "'"
+				);
+			}
 			auto fun_type_id = ctx.newType(
-				base::StrID(
-					base::strConcat("$tp_", stmt->getName().illegalAccess().value()->unwrap().str())
-				),
+				base::StrID(base::strConcat("$tp_", name.str())),
 				tp::Function{ .param_types = std::move(param_type_ids),
 			                  .return_type = return_type_id }
 			);
 			ctx.insertSymbol(
-				stmt->getName().illegalAccess().value()->unwrap(),
+				name,
 				sym::FunctionSymbol{ .primary_namespace = func_ns_id,
-			                         .argument_symbols  = std::move(argument_symbol_ids) },
+			                         .argument_symbols  = std::move(argument_symbol_ids),
+			                         .link_name         = ctx.qualifyName(name) },
 				fun_type_id
 			);
 		}
+
+		void visitConst(pst::Access<pst::Const> stmt) override { registerConstSymbol(ctx, stmt); }
 
 		void visitClass(pst::Access<pst::Class> stmt) override {
 			const base::StrID name = stmt->getName().illegalAccess().value()->unwrap();

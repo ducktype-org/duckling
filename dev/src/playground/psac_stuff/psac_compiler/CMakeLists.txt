@@ -16,6 +16,8 @@ add_library(libpsackling
     psackling/llvm_lowering_context.cpp
     psackling/expr_lowering.hpp
     psackling/expr_lowering.cpp
+    psackling/const_eval.hpp
+    psackling/const_eval.cpp
     psackling/type_name_extractor.hpp
     psackling/type_name_extractor.cpp
 )

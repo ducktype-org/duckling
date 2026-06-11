@@ -61,31 +61,48 @@ namespace pg {
 		}
 	}
 
+	LoweredExpr ExprLowering::symbolRefToExpr(sym::SymbolID sym_id, base::StrID name) {
+		sym::Symbol& symbol = ctx.getSymbol(sym_id);
+
+		if (std::holds_alternative<sym::VariableSymbol>(symbol.kind)) {
+			if (!locals.contains(sym_id)) {
+				CORE_PANIC(
+					"Variable '" + name.str() + "' has no associated stack slot (locals map miss)"
+				);
+			}
+			llvm::AllocaInst* slot    = locals[sym_id];
+			llvm::Type*       llvm_ty = lowering.lowerType(symbol.type_id, ctx);
+			return LoweredExpr{
+				.value   = builder.CreateLoad(llvm_ty, slot, name.strView()),
+				.type_id = symbol.type_id,
+				.address = slot,
+			};
+		}
+
+		if (std::holds_alternative<sym::ConstantSymbol>(symbol.kind)) {
+			llvm::Type* llvm_ty = lowering.lowerType(symbol.type_id, ctx);
+			return LoweredExpr{
+				.value
+				= llvm::ConstantInt::get(llvm_ty, std::get<sym::ConstantSymbol>(symbol.kind).bits),
+				.type_id = symbol.type_id,
+			};
+		}
+
+		if (std::holds_alternative<sym::FunctionSymbol>(symbol.kind)
+		    || std::holds_alternative<sym::NamespaceSymbol>(symbol.kind)) {
+			// No runtime value; a later chain link (call or `::` access) consumes it.
+			return LoweredExpr{ .type_id = symbol.type_id, .symbol = sym_id };
+		}
+
+		CORE_PANIC(
+			"Identifier '" + name.str()
+			+ "' names a symbol kind not supported in expressions (type or field)"
+		);
+	}
+
 	void ExprLowering::visitIdentifierLiteral(pst::Access<pst::expr::IdentifierLiteral> ident) {
-		const base::StrID name   = ident->getName().illegalAccess().value()->unwrap();
-		sym::SymbolID     sym_id = ctx.lookupInScopeAndParents(ctx.currNs().id, name);
-		sym::Symbol&      symbol = ctx.getSymbol(sym_id);
-
-		if (!std::holds_alternative<sym::VariableSymbol>(symbol.kind)) {
-			CORE_PANIC(
-				"Identifier '" + name.str()
-				+ "' is not a variable (other symbol kinds not yet supported in expressions)"
-			);
-		}
-
-		if (!locals.contains(sym_id)) {
-			CORE_PANIC(
-				"Variable '" + name.str() + "' has no associated stack slot (locals map miss)"
-			);
-		}
-		llvm::AllocaInst* slot = locals[sym_id];
-
-		llvm::Type* llvm_ty = lowering.lowerType(symbol.type_id, ctx);
-		result              = LoweredExpr{
-						 .value   = builder.CreateLoad(llvm_ty, slot, name.strView()),
-						 .type_id = symbol.type_id,
-						 .address = slot,
-		};
+		const base::StrID name = ident->getName().illegalAccess().value()->unwrap();
+		result = symbolRefToExpr(ctx.lookupInScopeAndParents(ctx.currNs().id, name), name);
 	}
 
 	void ExprLowering::visitBinaryOperator(pst::Access<pst::expr::BinaryOperator> op) {
@@ -220,8 +237,66 @@ namespace pg {
 		result = lower(*round->getInner().illegalAccess().value());
 	}
 
-	void ExprLowering::visitCall(pst::Access<pst::expr::Call> call) {
-		CORE_PANIC("Not handling calls just yet");
+	LoweredExpr ExprLowering::emitCall(const LoweredExpr& callee, pst::Access<pst::expr::Call> call) {
+		if (call->getType() != lexer::Token::BracketType::Round)
+			throw std::runtime_error("Subscript expressions are not yet supported");
+
+		if (!callee.symbol.has_value()) throw std::runtime_error("Call target is not a function");
+		const sym::SymbolID fun_sym_id = callee.symbol.value();
+		sym::Symbol&        fun_sym    = ctx.getSymbol(fun_sym_id);
+		if (!std::holds_alternative<sym::FunctionSymbol>(fun_sym.kind))
+			throw std::runtime_error("'" + fun_sym.name.str() + "' is not a function");
+
+		const auto& fn_type = std::get<tp::Function>(ctx.getTypeInfo(fun_sym.type_id).kind);
+
+		std::vector<llvm::Value*> args;
+		for (pst::AccessLocked<pst::CallArgument> arg_locked:
+		     *call->getArgs().illegalAccess().value()) {
+			pst::Access<pst::CallArgument> arg = arg_locked.illegalAccess().value();
+			if (arg->isNamedArg())
+				throw std::runtime_error(
+					"Named call arguments are not yet supported (call to '" + fun_sym.name.str()
+					+ "')"
+				);
+
+			LoweredExpr lowered
+				= lower(*arg->getArg().illegalAccess().value()->getExpr().illegalAccess().value());
+
+			const usize index = args.size();
+			if (index < fn_type.param_types.size()
+			    && lowered.type_id != fn_type.param_types[index]) {
+				throw std::runtime_error(
+					"Call to '" + fun_sym.name.str() + "': argument " + std::to_string(index + 1)
+					+ " has type '" + ctx.getTypeInfo(lowered.type_id).name.str() + "', expected '"
+					+ ctx.getTypeInfo(fn_type.param_types[index]).name.str() + "'"
+				);
+			}
+			args.push_back(lowered.value);
+		}
+
+		if (args.size() != fn_type.param_types.size()) {
+			throw std::runtime_error(
+				"Call to '" + fun_sym.name.str() + "': expected "
+				+ std::to_string(fn_type.param_types.size()) + " arguments, got "
+				+ std::to_string(args.size())
+			);
+		}
+
+		llvm::Function* fn = lowering.getOrCreateFunction(fun_sym_id, ctx);
+		auto*      fn_ty = llvm::cast<llvm::FunctionType>(lowering.lowerType(fun_sym.type_id, ctx));
+		const bool is_void = fn_type.return_type == ctx.void_type_id;
+		llvm::Value* ret   = builder.CreateCall(fn_ty, fn, args, is_void ? "" : "calltmp");
+
+		return LoweredExpr{
+			.value   = is_void ? nullptr : ret,
+			.type_id = fn_type.return_type,
+		};
+	}
+
+	void ExprLowering::visitCall(pst::Access<pst::expr::Call>) {
+		// A Call only carries the argument list; the callee comes from the surrounding
+		// chain expression, so a bare Call can't be lowered on its own.
+		CORE_PANIC("Call expression outside of a chain (no callee available)");
 	}
 
 	void ExprLowering::visitAssignment(pst::Access<pst::expr::Assignment> assignment) {
@@ -275,14 +350,38 @@ namespace pg {
 		for (pst::AccessLocked<pst::ExprElement> element_locked: chain->getChain()) {
 			pst::Access<pst::ExprElement> element = element_locked.illegalAccess().value();
 
+			// Call link: `callee(args)` — callee is whatever the chain resolved so far.
+			if (auto opt_call = element.dynamicCast<pst::expr::Call>(); opt_call.has_value()) {
+				current = emitCall(current, opt_call.value());
+				continue;
+			}
+
 			auto opt_access = element.dynamicCast<pst::expr::Access>();
 			if (!opt_access.has_value())
-				throw std::runtime_error("Chain expression: only `.` field access is supported");
-			auto access = opt_access.value();
-			if (access->getType().illegalAccess().value()->unwrap() != base::StrID(".")) {
-				// TODO: Add function calls here.
 				throw std::runtime_error(
-					"Chain expression: only `.` access supported, got: "
+					"Chain expression: only `.`/`::` access and calls are supported"
+				);
+			auto access = opt_access.value();
+
+			// Namespace member access: `ns::member`.
+			if (access->getType().illegalAccess().value()->unwrap() == base::StrID("::")) {
+				if (!current.symbol.has_value()
+				    || !std::holds_alternative<sym::NamespaceSymbol>(
+						ctx.getSymbol(current.symbol.value()).kind
+					)) {
+					throw std::runtime_error("Left-hand side of `::` is not a namespace");
+				}
+				const ns::NamespaceID ns_id
+					= std::get<sym::NamespaceSymbol>(ctx.getSymbol(current.symbol.value()).kind)
+				          .namespace_id;
+				const base::StrID member_name = access->getName().illegalAccess().value()->unwrap();
+				current = symbolRefToExpr(ctx.lookupInNamespace(ns_id, member_name), member_name);
+				continue;
+			}
+
+			if (access->getType().illegalAccess().value()->unwrap() != base::StrID(".")) {
+				throw std::runtime_error(
+					"Chain expression: only `.`/`::` access supported, got: "
 					+ access->getType().illegalAccess().value()->unwrap().str()
 				);
 			}

@@ -456,16 +456,361 @@ public:
 			)",
 			21
 		);  // 0+1+2+3+4+5+6 = 21
-	}
 
-	// PS_TEST(
-	// 	CallingFunction,
-	// 	R"(
-	// 		fun add(a: i64, b: i64) -> i64 = { return a + b; }
-	// 		fun main() -> i64 = { return add(2, 5); }
-	// 	)",
-	// 	7
-	// );
+		// --- Functions and calls in expressions ---
+
+		PS_TEST(
+			CallingFunction,
+			R"(
+				fun add(a: i64, b: i64) -> i64 = { return a + b; }
+				fun main() -> i64 = { return add(2, 5); }
+			)",
+			7
+		);
+
+		PS_TEST(
+			CallNoArgs,
+			R"(
+				fun five() -> i64 = { return 5; }
+				fun main() -> i64 = { return five(); }
+			)",
+			5
+		);
+
+		PS_TEST(
+			NestedCalls,
+			R"(
+				fun add(a: i64, b: i64) -> i64 = { return a + b; }
+				fun main() -> i64 = { return add(add(1, 2), add(3, 4)); }
+			)",
+			10
+		);
+
+		PS_TEST(
+			CallInArithmetic,
+			R"(
+				fun add(a: i64, b: i64) -> i64 = { return a + b; }
+				fun main() -> i64 = { return add(2, 3) * 2; }
+			)",
+			10
+		);
+
+		PS_TEST(
+			CallWithVariableArgs,
+			R"(
+				fun add(a: i64, b: i64) -> i64 = { return a + b; }
+				fun main() -> i64 = {
+					var x: i64 = 3;
+					return add(x, 4);
+				}
+			)",
+			7
+		);
+
+		PS_TEST(
+			ForwardCall,
+			R"(
+				fun main() -> i64 = { return helper(); }
+				fun helper() -> i64 = { return 9; }
+			)",
+			9
+		);
+
+		PS_TEST(
+			Recursion,
+			R"(
+				fun factorial(n: i64) -> i64 = {
+					if (n < 2) {
+						return 1;
+					}
+					return n * factorial(n - 1);
+				}
+				fun main() -> i64 = { return factorial(5); }
+			)",
+			120
+		);
+
+		PS_TEST(
+			FibRecursion,
+			R"(
+				fun fib(n: i64) -> i64 = {
+					if (n < 2) {
+						return n;
+					}
+					return fib(n - 1) + fib(n - 2);
+				}
+				fun main() -> i64 = { return fib(10); }
+			)",
+			55
+		);
+
+		PS_TEST(
+			VoidFunctionCall,
+			R"(
+				fun nothing() = {
+					var x: i64 = 1;
+					x = 2;
+				}
+				fun main() -> i64 = {
+					nothing();
+					return 7;
+				}
+			)",
+			7
+		);
+
+		PS_TEST(
+			VoidExplicitReturn,
+			R"(
+				fun nothing() = { return; }
+				fun main() -> i64 = {
+					nothing();
+					return 3;
+				}
+			)",
+			3
+		);
+
+		PS_TEST(
+			BoolParamAndReturn,
+			R"(
+				fun isPositive(x: i64) -> bool = { return 0 < x; }
+				fun main() -> i64 = {
+					if (isPositive(5)) {
+						return 1;
+					}
+					return 0;
+				}
+			)",
+			1
+		);
+
+		// --- Constant values ---
+
+		PS_TEST(
+			GlobalConst,
+			R"(
+				const X: i64 = 42;
+				fun main() -> i64 = { return X; }
+			)",
+			42
+		);
+
+		PS_TEST(
+			GlobalConstExprInit,
+			R"(
+				const X: i64 = 2 * 3 + 4;
+				fun main() -> i64 = { return X; }
+			)",
+			10
+		);
+
+		PS_TEST(
+			ConstFromConst,
+			R"(
+				const A: i64 = 5;
+				const B: i64 = A + 2;
+				fun main() -> i64 = { return B; }
+			)",
+			7
+		);
+
+		PS_TEST(
+			LocalConst,
+			R"(
+				fun main() -> i64 = {
+					const Y: i64 = 7;
+					return Y;
+				}
+			)",
+			7
+		);
+
+		PS_TEST(
+			ConstInArithmetic,
+			R"(
+				const X: i64 = 10;
+				fun main() -> i64 = { return X * 2 + 1; }
+			)",
+			21
+		);
+
+		PS_TEST(
+			BoolConst,
+			R"(
+				const T: bool = true;
+				fun main() -> i64 = {
+					if (T) {
+						return 3;
+					}
+					return 0;
+				}
+			)",
+			3
+		);
+
+		// --- Booleans ---
+
+		PS_TEST(
+			BoolVar,
+			R"(
+				fun main() -> i64 = {
+					var b: bool = true;
+					if (b) {
+						return 1;
+					}
+					return 0;
+				}
+			)",
+			1
+		);
+
+		PS_TEST(
+			BoolVarFromComparison,
+			R"(
+				fun main() -> i64 = {
+					var b: bool = 1 < 2;
+					if (b) {
+						return 5;
+					}
+					return 0;
+				}
+			)",
+			5
+		);
+
+		PS_TEST(
+			BoolAssignment,
+			R"(
+				fun main() -> i64 = {
+					var b: bool = false;
+					b = true;
+					if (b) {
+						return 4;
+					}
+					return 0;
+				}
+			)",
+			4
+		);
+
+		PS_TEST(
+			BoolAnd,
+			R"(
+				fun main() -> i64 = {
+					if (true and false) {
+						return 1;
+					}
+					return 2;
+				}
+			)",
+			2
+		);
+
+		PS_TEST(
+			BoolOr,
+			R"(
+				fun main() -> i64 = {
+					if (false or true) {
+						return 3;
+					}
+					return 0;
+				}
+			)",
+			3
+		);
+
+		PS_TEST(
+			BoolAndVars,
+			R"(
+				fun main() -> i64 = {
+					var a: bool = true;
+					var b: bool = false;
+					if (a and b) {
+						return 1;
+					}
+					if (a or b) {
+						return 2;
+					}
+					return 0;
+				}
+			)",
+			2
+		);
+
+		// --- Namespaces ---
+
+		PS_TEST(
+			NamespaceFunction,
+			R"(
+				namespace math {
+					fun add(a: i64, b: i64) -> i64 = { return a + b; }
+				}
+				fun main() -> i64 = { return math::add(2, 3); }
+			)",
+			5
+		);
+
+		PS_TEST(
+			NestedNamespaces,
+			R"(
+				namespace a {
+					namespace b {
+						fun f() -> i64 = { return 6; }
+					}
+				}
+				fun main() -> i64 = { return a::b::f(); }
+			)",
+			6
+		);
+
+		PS_TEST(
+			NamespaceConst,
+			R"(
+				namespace m {
+					const PI: i64 = 3;
+				}
+				fun main() -> i64 = { return m::PI; }
+			)",
+			3
+		);
+
+		PS_TEST(
+			NamespaceShadowsGlobalName,
+			R"(
+				fun f() -> i64 = { return 1; }
+				namespace n {
+					fun f() -> i64 = { return 2; }
+				}
+				fun main() -> i64 = { return f() + n::f(); }
+			)",
+			3
+		);
+
+		PS_TEST(
+			SiblingCallInNamespace,
+			R"(
+				namespace n {
+					fun a() -> i64 = { return 1; }
+					fun b() -> i64 = { return a() + 1; }
+				}
+				fun main() -> i64 = { return n::b(); }
+			)",
+			2
+		);
+
+		PS_TEST(
+			NamespaceConstUsedInFunction,
+			R"(
+				namespace m {
+					const K: i64 = 5;
+					fun get() -> i64 = { return K; }
+				}
+				fun main() -> i64 = { return m::get(); }
+			)",
+			5
+		);
+	}
 };
 
 TESTER_COMMON_MAIN("/src/playground/psac_stuff/psac_compiler/tests");

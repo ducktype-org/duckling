@@ -1,6 +1,7 @@
 #include "llvm_lowering_context.hpp"
 
 #include "context.hpp"
+#include "psackling/symbol.hpp"
 #include "psackling/type.hpp"
 
 #include "base/except/exceptions.hpp"
@@ -88,4 +89,26 @@ llvm::Type* pg::LlvmLoweringContext::lowerType(tp::TypeID type_id, Context& ctx)
 	}
 
 	CORE_UNREACHABLE();
+}
+
+llvm::Function* pg::LlvmLoweringContext::getOrCreateFunction(sym::SymbolID fun_sym_id, Context& ctx) {
+	if (functions.contains(fun_sym_id)) return functions[fun_sym_id];
+
+	sym::Symbol& fun_sym = ctx.getSymbol(fun_sym_id);
+	CORE_ASSERT(
+		std::holds_alternative<sym::FunctionSymbol>(fun_sym.kind),
+		"getOrCreateFunction expects a FunctionSymbol: " + fun_sym.name.str()
+	);
+	const auto& fn_kind = std::get<sym::FunctionSymbol>(fun_sym.kind);
+
+	auto* fn_ty = llvm::cast<llvm::FunctionType>(lowerType(fun_sym.type_id, ctx));
+	llvm_module.inCtxDo([&](llvm::LLVMContext&, llvm::Module& mod) {
+		functions.insertOrAssign(
+			fun_sym_id,
+			llvm::Function::Create(
+				fn_ty, llvm::Function::ExternalLinkage, fn_kind.link_name.strView(), &mod
+			)
+		);
+	});
+	return functions[fun_sym_id];
 }

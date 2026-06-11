@@ -1,5 +1,6 @@
 #include "function_pass.hpp"
 
+#include "const_eval.hpp"
 #include "expr_lowering.hpp"
 #include "type_name_extractor.hpp"
 
@@ -27,18 +28,13 @@ namespace pg {
 		);
 		sym::Symbol& fun_sym = ctx.getSymbol(fun_sym_id);
 
-		llvm::Type* lowered = lowering.lowerType(fun_sym.type_id, ctx);
-		auto*       fn_ty   = llvm::cast<llvm::FunctionType>(lowered);
-
 		const auto& fn_kind = std::get<sym::FunctionSymbol>(fun_sym.kind);
+		const auto& fn_type = std::get<tp::Function>(ctx.getTypeInfo(fun_sym.type_id).kind);
+		current_return_type = fn_type.return_type;
 
-		llvm_module.inCtxDo([&](llvm::LLVMContext& llvm_ctx, llvm::Module& mod) {
-			llvm::Function* fn = llvm::Function::Create(
-				fn_ty,
-				llvm::Function::ExternalLinkage,
-				stmt->getName().illegalAccess().value()->unwrap().strView(),
-				&mod
-			);
+		llvm::Function* fn = lowering.getOrCreateFunction(fun_sym_id, ctx);
+
+		llvm_module.inCtxDo([&](llvm::LLVMContext& llvm_ctx, llvm::Module&) {
 			auto* entry = llvm::BasicBlock::Create(llvm_ctx, "entry", fn);
 			builder_stack.emplace_back(entry);
 			locals.clear();
@@ -47,16 +43,14 @@ namespace pg {
 			// hit local declarations (variables, parameters) before falling back to outer scopes.
 			ctx.enterNamespace(fn_kind.primary_namespace);
 
-			// Insert locals for parameters. They will be used by identifier lookups inside the
-			// function body.
+			// Insert locals for parameters and spill the incoming argument values into them,
+			// so parameters behave like ordinary mutable variables inside the body.
 			for (auto [i, arg_sym_id]: std::views::enumerate(fn_kind.argument_symbols)) {
-				// @note Symbols are just declared at this point, so their type_id is still the
-				// incomplete type. We need to finalize them by assigning the correct type_id before
-				// we can lower to LLVM types and create the alloca.
 				const sym::Symbol& arg_sym = ctx.getSymbol(arg_sym_id);
 				llvm::Type*        llvm_ty = lowering.lowerType(arg_sym.type_id, ctx);
 				llvm::AllocaInst*  slot
 					= builder_stack.back().CreateAlloca(llvm_ty, nullptr, arg_sym.name.strView());
+				builder_stack.back().CreateStore(fn->getArg(static_cast<u32>(i)), slot);
 				locals.insertOrAssign(arg_sym_id, slot);
 			}
 
@@ -64,6 +58,15 @@ namespace pg {
 			for (pst::AccessLocked<pst::Stmt> inner_stmt:
 			     *body->getCodeBlock().illegalAccess().value()) {
 				inner_stmt.illegalAccess().value()->acceptVisitor(*this);
+			}
+
+			// Implicit function end: void functions return, non-void fallthrough is UB
+			// (mark unreachable so the block is still terminated for the verifier).
+			if (builder_stack.back().GetInsertBlock()->getTerminator() == nullptr) {
+				if (fn_type.return_type == ctx.void_type_id)
+					builder_stack.back().CreateRetVoid();
+				else
+					builder_stack.back().CreateUnreachable();
 			}
 
 			ctx.popNamespace();
@@ -103,6 +106,13 @@ namespace pg {
 				= *stmt->getValue()->illegalAccess().value()->getExpr().illegalAccess().value();
 			ExprLowering expr_lowering(ctx, lowering, builder_stack.back(), locals);
 			LoweredExpr  init = expr_lowering.lower(init_expr);
+			if (init.type_id != type_id) {
+				throw std::runtime_error(
+					"Variable '" + stmt->getName().illegalAccess().value()->unwrap().str()
+					+ "': initializer type '" + ctx.getTypeInfo(init.type_id).name.str()
+					+ "' does not match declared type '" + ctx.getTypeInfo(type_id).name.str() + "'"
+				);
+			}
 			builder_stack.back().CreateStore(init.value, slot);
 		}
 	}
@@ -207,14 +217,48 @@ namespace pg {
 	}
 
 	void FunctionPass::visitReturn(pst::Access<pst::Return> stmt) {
+		if (!stmt->getValue().has_value()) {
+			if (current_return_type != ctx.void_type_id)
+				throw std::runtime_error("Return without a value in a non-void function");
+			builder_stack.back().CreateRetVoid();
+			return;
+		}
+
 		const pst::ExprElement& expr
 			= *stmt->getValue()->illegalAccess().value()->getExpr().illegalAccess().value();
 
 		ExprLowering expr_lowering(ctx, lowering, builder_stack.back(), locals);
 		LoweredExpr  lowered = expr_lowering.lower(expr);
 
+		if (lowered.type_id != current_return_type) {
+			throw std::runtime_error(
+				"Return value type '" + ctx.getTypeInfo(lowered.type_id).name.str()
+				+ "' does not match function return type '"
+				+ ctx.getTypeInfo(current_return_type).name.str() + "'"
+			);
+		}
+
 		builder_stack.back().CreateRet(lowered.value);
 	}
 
+	void FunctionPass::visitNamespace(pst::Access<pst::Namespace> stmt) {
+		// GlobalPass already created the namespace; re-enter it so the functions inside
+		// are lowered in the right scope.
+		const base::StrID name = stmt->getName().illegalAccess().value()->unwrap();
+		sym::Symbol& ns_sym    = ctx.getSymbol(ctx.lookupInScopeAndParents(ctx.currNs().id, name));
+		if (!std::holds_alternative<sym::NamespaceSymbol>(ns_sym.kind))
+			throw std::runtime_error("'" + name.str() + "' is not a namespace");
 
+		ctx.enterNamespace(std::get<sym::NamespaceSymbol>(ns_sym.kind).namespace_id);
+		for (pst::AccessLocked<pst::LangElement> child: *stmt->getBody().illegalAccess().value())
+			child.illegalAccess().value()->acceptVisitor(*this);
+		ctx.popNamespace();
+	}
+
+	void FunctionPass::visitConst(pst::Access<pst::Const> stmt) {
+		// Top-level consts (including those in namespaces) were already registered by
+		// GlobalPass; only consts local to a function body are handled here.
+		if (builder_stack.empty()) return;
+		registerConstSymbol(ctx, stmt);
+	}
 }
