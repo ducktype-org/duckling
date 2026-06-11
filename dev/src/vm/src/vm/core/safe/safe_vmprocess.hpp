@@ -169,7 +169,6 @@ namespace vm {
 			return deadlock_detector ? &*deadlock_detector : nullptr;
 		}
 
-
 		Memory& getMemory();
 
 		[[nodiscard]] api::ProcStatus getCurrentStatus() { return getStatus(); }
