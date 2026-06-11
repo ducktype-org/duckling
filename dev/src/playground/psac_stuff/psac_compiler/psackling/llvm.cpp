@@ -1,5 +1,7 @@
 #include "llvm.hpp"
 
+#include <mutex>
+
 pg::LlvmProgramModule::LlvmProgramModule():
 	  context(),
 	  module(std::make_unique<llvm::Module>("psackling", context)) {
@@ -48,10 +50,15 @@ void pg::LlvmProgramModule::emitObjectFile(const std::filesystem::path& output_p
 }
 
 void pg::LlvmProgramModule::initializeTargetMachine() {
-	if (llvm::InitializeNativeTarget())
-		CORE_PANIC("LLVM error: failed to initialize native target");
-	if (llvm::InitializeNativeTargetAsmPrinter())
-		CORE_PANIC("LLVM error: failed to initialize native target asm printer");
+	// Modules are created concurrently by the parallel per-function compilation; the
+	// global target registry must only be initialized once (it is not thread-safe).
+	static std::once_flag llvm_init_once;
+	std::call_once(llvm_init_once, [] {
+		if (llvm::InitializeNativeTarget())
+			CORE_PANIC("LLVM error: failed to initialize native target");
+		if (llvm::InitializeNativeTargetAsmPrinter())
+			CORE_PANIC("LLVM error: failed to initialize native target asm printer");
+	});
 
 	const llvm::Triple target_triple(llvm::sys::getDefaultTargetTriple());
 	std::string        target_error;

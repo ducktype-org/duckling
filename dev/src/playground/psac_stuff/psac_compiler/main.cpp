@@ -12,11 +12,28 @@
 void showVersion() { std::cout << "Psackling version -0.05\n"; }
 
 clah::Clah getVmClah() {
-	return clah::Clah("VM", "The Duckling Virtual Machine.")
+	return clah::Clah("Psackling", "The PSAC-parallelized Duckling benchmark compiler.")
 	    .add(clah::ParamBuilder::ofFlag()
 	             .addShortName('v')
 	             .addLongName("version")
 	             .addShortDesc("Shows version and config")
+	             .build())
+	    .add(clah::ParamBuilder::ofValue(clah::IntParser::make())
+	             .addShortName('j')
+	             .addLongName("threads")
+	             .addShortDesc("Number of PSAC worker threads (default: PARLAY_NUM_THREADS env "
+	                           "or hardware concurrency).")
+	             .build())
+	    .add(clah::ParamBuilder::ofValue(clah::StringParser::make("path"))
+	             .addShortName('o')
+	             .addLongName("output")
+	             .addShortDesc("Output executable path (default: psacklinged.out).")
+	             .build())
+	    .add(clah::ParamBuilder::ofFlag()
+	             .addShortName('s')
+	             .addLongName("sequential")
+	             .addShortDesc("Compile functions sequentially instead of through PSAC "
+	                           "(baseline for benchmarks).")
 	             .build())
 	    .setPreHandler([](const clah::ParsingResult& options) {
 			if (options.isFlag("version")) {
@@ -40,7 +57,16 @@ clah::Clah getVmClah() {
 #endif
 	    .addPositional(clah::FileParser::make("file", std::regex(".*\\.dmf$")))
 	    .setHandler([](const clah::ParsingResult& options) -> int {
-			pg::compile(options.getPositional<fs::File>(0));
+			pg::CompileOptions compile_options;
+			if (auto output = options.getValue<std::string>("output"); output.has_value())
+				compile_options.output_path = output.value();
+			if (auto threads = options.getValue<i64>("threads"); threads.has_value()) {
+				if (threads.value() < 1)
+					throw std::runtime_error("--threads must be a positive number");
+				compile_options.num_threads = base::safeIntConv<usize>(threads.value());
+			}
+			compile_options.sequential = options.isFlag("sequential");
+			pg::compile(options.getPositional<fs::File>(0), compile_options);
 			return 0;
 		});
 }

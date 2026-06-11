@@ -879,6 +879,25 @@ public:
 		);
 
 		PS_TEST(
+			ManyFunctionsParallel,
+			R"(
+				fun f1() -> i64 = { return 1; }
+				fun f2() -> i64 = { return f1() + 1; }
+				fun f3() -> i64 = { return f2() + 1; }
+				fun f4() -> i64 = { return f3() + 1; }
+				fun f5() -> i64 = { return f4() + 1; }
+				fun f6() -> i64 = { return f5() + 1; }
+				fun f7() -> i64 = { return f6() + 1; }
+				fun f8() -> i64 = { return f7() + 1; }
+				namespace deep {
+					fun g(x: i64) -> i64 = { return x * 2; }
+				}
+				fun main() -> i64 = { return deep.g(f8()) + f4(); }
+			)",
+			20
+		);  // f8 = 8, g(8) = 16, f4 = 4 -> 20
+
+		PS_TEST(
 			NamespaceConstUsedInFunction,
 			R"(
 				namespace m {

@@ -1,8 +1,6 @@
 #pragma once
 
 #include "ids.hpp"
-#include "psackling/llvm.hpp"
-#include "psackling/llvm_lowering_context.hpp"
 #include "psackling/namespace.hpp"
 #include "psackling/symbol.hpp"
 #include "psackling/type.hpp"
@@ -13,17 +11,19 @@
 #include <variant>
 
 namespace pg {
+	/**
+	 * @brief Symbol, type and namespace tables. Pure data — no LLVM state — so it is
+	 * cheaply copyable; parallel per-function compilation hands each task its own copy.
+	 */
 	class Context final {
 	private:
-		LlvmLoweringContext&                          llvm_context;
 		std::vector<ns::NamespaceID>                  namespace_stack;
 		base::HashMap<tp::TypeID, tp::TypeInfo>       types;
 		base::HashMap<ns::NamespaceID, ns::Namespace> namespaces;
 		base::HashMap<sym::SymbolID, sym::Symbol>     symbols;
 
 	public:
-		Context(LlvmLoweringContext& llvm_context):
-			  llvm_context(llvm_context),
+		Context():
 			  root_ns_id([this]() {
 				  // Instantiate the top level namespace, it will be used for all top level declarations
 				  ns::NamespaceID id = ns::NamespaceID::next();
@@ -74,6 +74,8 @@ namespace pg {
 			symbols[id].type_id = type_id;
 		}
 
+		// LLVM types are lowered lazily by LlvmLoweringContext on first use, so creating
+		// a type here is purely a symbol-table operation.
 		tp::TypeID newType(base::StrID name, tp::TypeKind kind) {
 			tp::TypeID id = tp::TypeID::next();
 			types.insertOrAssign(
@@ -81,11 +83,6 @@ namespace pg {
 				tp::TypeInfo{
 					.name = name, .kind = std::move(kind), .id = id, .namespace_id = currNs().id }
 			);
-			// Pseudo-types (Incomplete, Namespace) have no LLVM representation; skip lowering.
-			const auto& kind_ref = types[id].kind;
-			if (!std::holds_alternative<tp::Incomplete>(kind_ref)
-			    && !std::holds_alternative<tp::Namespace>(kind_ref))
-				llvm_context.lowerType(id, *this);
 			insertSymbol(name, sym::TypeSymbol{ .type_id = id }, id);
 			return id;
 		}
@@ -101,10 +98,6 @@ namespace pg {
 				tp::TypeInfo{
 					.name = name, .kind = std::move(kind), .id = id, .namespace_id = owner_ns }
 			);
-			const auto& kind_ref = types[id].kind;
-			if (!std::holds_alternative<tp::Incomplete>(kind_ref)
-			    && !std::holds_alternative<tp::Namespace>(kind_ref))
-				llvm_context.lowerType(id, *this);
 			return id;
 		}
 
