@@ -43,6 +43,7 @@ fn compile(graph: UnitGraph, bcx: &BuildContext<'_, '_>) -> QuackResult<Executor
         .root_unit()
         .root_package()
         .package()
+        .get_package()
         .artifacts_directory();
     let profile_layout = artifacts_layout.for_profile(&bcx.profile.name);
     compile_unit(root, &graph, &profile_layout, bcx)?;

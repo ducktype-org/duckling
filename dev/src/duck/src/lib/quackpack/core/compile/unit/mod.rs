@@ -173,7 +173,7 @@ impl Unit {
             import_name: name,
             version,
             features,
-            path_to_the_src_directory: package.source_directory().to_path_buf(),
+            path_to_the_src_directory: package.src().to_path_buf(),
             dependencies,
         }
     }

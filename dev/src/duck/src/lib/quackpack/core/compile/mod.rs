@@ -55,7 +55,7 @@ pub struct BuildContext<'duck, 'ctx> {
 pub fn compile(bcx: BuildContext<'_, '_>) -> QuackResult<ExecutorOutput> {
     debug!(bcx = ?bcx, "compiling");
     // @TODO: #2900 Unmock this.
-    if bcx.script_path.is_some() {
+    if bcx.pcx.package().is_frontmatter() {
         qp_bail_internal!("compiling scripts via Unit and manifest.json is not (yet) supported")
     }
     let graph = create_early_graph_from_bcx(&bcx)?;
