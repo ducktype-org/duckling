@@ -2,6 +2,7 @@
 
 #include <concurrent/base/locks/assert_lock.hpp>
 #include <concurrent/base/locks/with_lock.hpp>
+#include <concurrent/worker/worker_manager.hpp>
 
 #include <query_framework/internal/context_access.hpp>
 #include <query_framework/internal/query_data/query_data.hpp>
@@ -69,10 +70,11 @@ namespace query::external {
 	) {
 		auto state = ::query::internal::ContextAccess::getState();
 
-		// Drop queued no-op duplicates of already executed tasks. After their statuses are erased
-		// below, popping such a duplicate would re-execute the stale query and resurrect
-		// invalidated nodes into the graph.
-		state->getTaskPool()->dropPendingTasks();
+		// Flush queued no-op duplicates of already executed tasks: a worker only becomes free
+		// after draining the task pools, and while the task statuses are still present, executing
+		// a duplicate is a no-op. Without this, a stale duplicate popped after the statuses are
+		// erased below would re-execute the query and resurrect invalidated nodes into the graph.
+		concurrent::worker::WorkerManager::get().waitForAllWorkersFree();
 
 		// Step 0: Find start nodes (inputs) from the previous inputs not present in the new inputs.
 		std::vector<internal::NodeID> start_nodes;

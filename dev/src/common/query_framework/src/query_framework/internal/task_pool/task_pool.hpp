@@ -144,18 +144,6 @@ namespace query::internal {
 
 		void invalidateTask(NodeID id);
 
-		/**
-		 * @brief Drops all tasks that are still queued in the global and per-worker pools.
-		 *
-		 * Scheduling the same node twice (e.g. two entry points for an already computed query)
-		 * leaves a duplicate `Task` in a queue: the duplicate is a no-op while the node's status
-		 * is `Done`, but once invalidation erases that status, a worker that later pops the
-		 * duplicate would re-execute the stale query and resurrect invalidated nodes into the
-		 * graph. Invalidation therefore drops all queued tasks; callers must await all scheduled
-		 * work before invalidating, so at that point every queued task is such a duplicate.
-		 */
-		void dropPendingTasks();
-
 	private:
 		/**
 		 * @brief Try to steal a task from the global pool.
