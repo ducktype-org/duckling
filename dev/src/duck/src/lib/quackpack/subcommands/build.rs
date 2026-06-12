@@ -50,7 +50,6 @@ pub fn compile(options: BuildOptions<'_>) -> QuackResult<()> {
         storage,
         used_features,
         profile,
-        script_path: None,
     };
     compile::compile(bcx)?;
     Ok(())

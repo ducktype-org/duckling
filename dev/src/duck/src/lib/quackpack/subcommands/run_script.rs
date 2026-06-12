@@ -87,11 +87,10 @@ impl<'duck> RunScriptOptions<'duck> {
 }
 
 /// Run script given options.
-///
 #[expect(unreachable_code, unused_variables)]
 pub fn run_script<'duck>(rs_options: RunScriptOptions<'duck>) -> QuackResult<()> {
     // @TODO: #2900 Unmock this.
-    qp_bail_internal!("!TODO: Pass scripts through `Unit`s");
+    qp_bail_internal!("@TODO: #2900 Pass scripts through `Unit`s");
     let RunScriptOptions {
         ctx,
         path,

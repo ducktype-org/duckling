@@ -4,8 +4,6 @@
 //! - [`early_graph`][]: creating and modifying dependency graphs; notably, it checks for cycles,
 //!   expands features, and removes disabled dependencies,
 //! - [`duckc`][]: executing the compiler itself, it handles different compiler execution modes.
-use std::path::PathBuf;
-
 use tracing::debug;
 
 use crate::quackpack::core::compile::profiles::Profile;
@@ -47,7 +45,6 @@ pub struct BuildContext<'duck, 'ctx> {
     pub storage: Storage,
     pub used_features: Vec<FeatureName>,
     pub profile: Profile,
-    pub script_path: Option<PathBuf>,
 }
 
 /// Compile project inside the [`BuildContext`].
