@@ -97,7 +97,8 @@ fn compile_unit_impl(
     builder
         .set_subcommand(DuckcSubcommand::CompilePackages)
         .set_manifest_path(&unit_layout.dependency_json_path())
-        .set_artifacts_dir(&unit_layout.compiler_artifacts());
+        .set_artifacts_dir(&unit_layout.compiler_artifacts())
+        .update_with_profile(&bcx.profile);
     let _lock = unit_layout.acquire_lock(bcx.pcx.ctx())?;
     let locked_manifest_file = unit_layout
         .dependency_json(bcx.pcx.ctx())
