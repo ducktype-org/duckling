@@ -1,7 +1,0 @@
-<frontmatter>
-profiles:
-  script:
-    opt-level: 2
-</frontmatter>
-
-builtin_output_i64(42);
