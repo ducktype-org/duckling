@@ -394,19 +394,10 @@ namespace compiler::lir {
 	}
 
 	void LIRUnit::deduplicateSymbols() {
-		std::unordered_set<base::StrID> seen_globals;
-		base::filterVectorInPlace(lir_globals, [&seen_globals](const LIRGlobalData& global_data) {
-			if (seen_globals.contains(global_data.global.mangled_name)) return false;
-			seen_globals.insert(global_data.global.mangled_name);
-			return true;
+		base::deduplicateBy(lir_globals, [](const LIRGlobalData& global_data) {
+			return global_data.global.mangled_name;
 		});
-
-		std::unordered_set<base::StrID> seen_functions;
-		base::filterVectorInPlace(lir_functions, [&seen_functions](const CRef<Function>& func) {
-			if (seen_functions.contains(func->mangled_name)) return false;
-			seen_functions.insert(func->mangled_name);
-			return true;
-		});
+		base::deduplicateBy(lir_functions, [](CRef<Function> func) { return func->mangled_name; });
 	}
 
 	LIRLocalSpecialKind specialKindFromMIR(const mir::MIRLocal& mir_local) {
