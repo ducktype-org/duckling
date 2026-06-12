@@ -84,6 +84,18 @@ namespace query::internal {
 		);
 	}
 
+	void TaskPool::dropPendingTasks() {
+		// A stale duplicate may also be held inside a worker's own task queue (captured by the
+		// closure scheduled in addTask/schedule/onWorkerNoTasks), where this function cannot
+		// reach it. Waiting for all workers to become free flushes those closures first: while
+		// task statuses are still present, executing a duplicate is a no-op.
+		worker_manager.waitForAllWorkersFree();
+
+		while (global_pool.tryPop().has_value()) {}
+		for (auto& worker_pool: worker_pools)
+			while (worker_pool.tryPop().has_value()) {}
+	}
+
 	void TaskPool::query(const Task& task) {
 		bool task_done = tryExecuteTask(task);
 		if (not task_done) waitForTask(task.id);

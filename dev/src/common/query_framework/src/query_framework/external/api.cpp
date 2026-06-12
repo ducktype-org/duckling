@@ -69,6 +69,11 @@ namespace query::external {
 	) {
 		auto state = ::query::internal::ContextAccess::getState();
 
+		// Drop queued no-op duplicates of already executed tasks. After their statuses are erased
+		// below, popping such a duplicate would re-execute the stale query and resurrect
+		// invalidated nodes into the graph.
+		state->getTaskPool()->dropPendingTasks();
+
 		// Step 0: Find start nodes (inputs) from the previous inputs not present in the new inputs.
 		std::vector<internal::NodeID> start_nodes;
 
