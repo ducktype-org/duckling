@@ -12,6 +12,7 @@
 
 #include <cstring>
 #include <span>
+#include <stdexcept>
 
 namespace query::internal {
 
@@ -22,8 +23,17 @@ namespace query::internal {
 			out.insert(out.end(), bytes.begin(), bytes.end());
 		}
 
+		// The data comes from a persisted artifact, which may be truncated or corrupt;
+		// every read must be bounds-checked (mirrors QueryGraph::deserialize).
+		void checkCanRead(std::span<const std::byte> data, usize offset, usize bytes) {
+			// offset <= data.size() is an invariant here, so this cannot overflow
+			if (bytes > data.size() - offset)
+				throw std::out_of_range("Buffer size exceeded during deserialization");
+		}
+
 		// Helper to read a u64 from a byte span, advancing the offset
 		u64 readU64(std::span<const std::byte> data, usize& offset) {
+			checkCanRead(data, offset, sizeof(u64));
 			u64 value = 0;
 			std::memcpy(&value, data.data() + offset, sizeof(u64));
 			offset += sizeof(u64);
@@ -39,7 +49,8 @@ namespace query::internal {
 
 		// Helper to read a string from a byte span, advancing the offset
 		std::string_view readString(std::span<const std::byte> data, usize& offset) {
-			u64   len = readU64(data, offset);
+			u64 len = readU64(data, offset);
+			checkCanRead(data, offset, len);
 			auto* ptr = reinterpret_cast<const char*>(data.data() + offset);
 			offset += len;
 			return { ptr, len };
@@ -53,7 +64,8 @@ namespace query::internal {
 
 		// Helper to read bytes from a byte span, advancing the offset
 		std::span<const std::byte> readBytes(std::span<const std::byte> data, usize& offset) {
-			u64  len    = readU64(data, offset);
+			u64 len = readU64(data, offset);
+			checkCanRead(data, offset, len);
 			auto result = data.subspan(offset, len);
 			offset += len;
 			return result;
@@ -178,9 +190,14 @@ namespace query::internal {
 
 		usize offset = 0;
 
-		// Read type table
+		// Read type table.
+		// Each table entry occupies at least sizeof(u64) bytes (its length prefix), so
+		// a size larger than the remaining data is corrupt; checking here also keeps a
+		// bogus huge size from being passed to reserve().
 		u64                      type_table_size = readU64(data, offset);
 		std::vector<base::StrID> type_table;
+		if (type_table_size > (data.size() - offset) / sizeof(u64))
+			throw std::out_of_range("Buffer size exceeded during deserialization");
 		type_table.reserve(type_table_size);
 
 		for (u64 i = 0; i < type_table_size; ++i) {
@@ -191,6 +208,8 @@ namespace query::internal {
 		// Read StrID table
 		u64                      strid_table_size = readU64(data, offset);
 		std::vector<base::StrID> strid_table;
+		if (strid_table_size > (data.size() - offset) / sizeof(u64))
+			throw std::out_of_range("Buffer size exceeded during deserialization");
 		strid_table.reserve(strid_table_size);
 
 		for (u64 i = 0; i < strid_table_size; ++i) {
@@ -206,6 +225,7 @@ namespace query::internal {
 			u64 q_id_val = readU64(data, offset);
 
 			base::Bit256 hash_val;
+			checkCanRead(data, offset, sizeof(base::Bit256));
 			std::memcpy(&hash_val, data.data() + offset, sizeof(base::Bit256));
 			offset += sizeof(base::Bit256);
 
