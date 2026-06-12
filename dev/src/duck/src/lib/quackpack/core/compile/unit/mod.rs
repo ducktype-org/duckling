@@ -14,13 +14,9 @@ pub mod graph;
 
 // Missing constants from [`std::env::consts`].
 const STATIC_LIB_SUFFIX: &str = ".a";
-#[allow(dead_code)] // Maybe we'll use them.
-const STATIC_LIB_EXTENSION: &str = "a";
 
 // Duckling specific.
 const DVM_SUFFIX: &str = ".dvm";
-#[allow(dead_code)] // Maybe we'll use them.
-const DVM_EXTENSION: &str = "dvm";
 
 #[cfg(test)]
 mod tests;

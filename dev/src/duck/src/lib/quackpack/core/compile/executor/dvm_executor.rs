@@ -17,9 +17,9 @@ use crate::quackpack::core::compile::unit::{ArtifactsType, Unit};
 use crate::{QuackResult, QuackResultContext, qp_bail};
 
 #[derive(Debug, Clone, Copy)]
-pub struct DebugExecutor;
+pub struct DvmExecutor;
 
-impl Executor for DebugExecutor {
+impl Executor for DvmExecutor {
     fn compile(&self, graph: UnitGraph, bcx: &BuildContext<'_, '_>) -> QuackResult<ExecutorOutput> {
         compile(graph, bcx)
     }
@@ -36,8 +36,8 @@ fn compile(graph: UnitGraph, bcx: &BuildContext<'_, '_>) -> QuackResult<Executor
     let root = graph.root_unit();
     assert_eq!(
         root.artifacts_type(),
-        ArtifactsType::Binary,
-        "debug executor supports only compiling to the binary"
+        ArtifactsType::Dvm,
+        "dvm executor should only compile DVM packages"
     );
     let artifacts_layout = graph
         .root_unit()
@@ -45,10 +45,6 @@ fn compile(graph: UnitGraph, bcx: &BuildContext<'_, '_>) -> QuackResult<Executor
         .package()
         .artifacts_directory();
     let profile_layout = artifacts_layout.for_profile(&bcx.profile.name);
-    // We explicitly compile `root` at the end.
-    for unit in graph.any_units_order().filter(|dep| !graph.is_root(dep)) {
-        compile_unit(unit, &graph, &profile_layout, bcx)?;
-    }
     compile_unit(root, &graph, &profile_layout, bcx)?;
     let output = unit_output(root, &graph, &profile_layout);
     Ok(ExecutorOutput {

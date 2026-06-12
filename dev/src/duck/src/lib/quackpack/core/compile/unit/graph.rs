@@ -89,16 +89,9 @@ fn create_single_unit(
     ids_map: &HashMap<Identity, u64>,
     package: CompilerPackage,
     node: &DependencyNode,
-    _bcx: &BuildContext<'_, '_>,
+    bcx: &BuildContext<'_, '_>,
 ) -> Unit {
-    let is_root = unit_identity == root_identity;
-    // !TODO: Use BuildContext, for maybe a different root artifacts_type?
-    let artifacts_type = if is_root {
-        ArtifactsType::Binary
-    } else {
-        ArtifactsType::IsADependencyArtifact
-    };
-
+    let artifacts_type = infer_artifacts_type(unit_identity, root_identity, bcx);
     let dependencies = node
         .dependencies()
         .iter()
@@ -118,4 +111,22 @@ fn create_single_unit(
         dependencies,
         artifacts_type,
     )
+}
+
+/// Infer an appropriate [`ArtifactsType`].
+fn infer_artifacts_type(
+    unit_identity: Identity,
+    root_identity: Identity,
+    bcx: &BuildContext<'_, '_>,
+) -> ArtifactsType {
+    let is_dvm = bcx.profile.dvm_bytecode;
+    let is_root = unit_identity == root_identity;
+    if is_dvm && is_root {
+        return ArtifactsType::Dvm;
+    }
+    if is_root {
+        return ArtifactsType::Binary;
+    }
+    // NOTE: Dependencies don't get their own tasks when compiling into DVM.
+    ArtifactsType::IsADependencyArtifact
 }

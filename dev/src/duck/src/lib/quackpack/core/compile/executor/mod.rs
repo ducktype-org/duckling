@@ -6,11 +6,13 @@ use std::io::Write;
 use std::path::PathBuf;
 
 pub mod debug_executor;
+pub mod dvm_executor;
 
 use itertools::Itertools;
 use tracing::debug;
 
 use self::debug_executor::DebugExecutor;
+use self::dvm_executor::DvmExecutor;
 
 use super::BuildContext;
 use super::artifacts_layout::ProfileLayout;
@@ -36,6 +38,9 @@ pub struct ExecutorOutput {
 impl BuildContext<'_, '_> {
     /// Get an appropriate executor.
     pub fn executor(&self) -> Box<dyn Executor> {
+        if self.profile.dvm_bytecode {
+            return Box::new(DvmExecutor);
+        }
         Box::new(DebugExecutor)
     }
 }
