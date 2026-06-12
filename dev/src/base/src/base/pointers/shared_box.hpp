@@ -19,7 +19,7 @@ namespace base {
 		std::atomic<u64>              n_owners = 1;
 		[[no_unique_address]] Deleter deleter;
 
-		ControlBlock(const Deleter& deleter): deleter(deleter) {}
+		ControlBlock(Deleter deleter): deleter(std::move(deleter)) {}
 	};
 
 	/**
@@ -82,7 +82,7 @@ namespace base {
 			if (isFullyNull()) return;
 			assertNotNull();
 
-			u64 n_owners_before = ctrl_ptr->n_owners.fetch_sub(1, std::memory_order_relaxed);
+			u64 n_owners_before = ctrl_ptr->n_owners.fetch_sub(1, std::memory_order_acq_rel);
 
 			if (n_owners_before == 1) {
 				ctrl_ptr->deleter.del(data_ptr);
@@ -110,8 +110,8 @@ namespace base {
 		 * For a regular construction use `makeSharedBox` instead.
 		 * It is not a constructor in order to make this call more explicit.
 		 */
-		static SharedBox fromPointerWithCustomDeleter(T* ptr, const Deleter& deleter) noexcept {
-			return SharedBox(ptr, new ControlBlock(deleter));
+		static SharedBox fromPointerWithCustomDeleter(T* ptr, Deleter deleter) noexcept {
+			return SharedBox(ptr, new ControlBlock(std::move(deleter)));
 		}
 
 		/**
@@ -126,7 +126,7 @@ namespace base {
 			  ctrl_ptr{ other.ctrl_ptr } {
 			if (isFullyNull()) return;
 			assertNotNull();
-			ctrl_ptr->n_owners.fetch_add(1, std::memory_order_relaxed);
+			ctrl_ptr->n_owners.fetch_add(1, std::memory_order_acq_rel);
 		}
 
 		SharedBox(SharedBox&& other) noexcept:
@@ -159,7 +159,7 @@ namespace base {
 			ctrl_ptr = other.ctrl_ptr;
 			if (!isFullyNull()) {
 				assertNotNull();
-				ctrl_ptr->n_owners.fetch_add(1, std::memory_order_relaxed);
+				ctrl_ptr->n_owners.fetch_add(1, std::memory_order_acq_rel);
 			}
 			return *this;
 		}
@@ -248,6 +248,8 @@ namespace base {
 		u64 ownersCount() const noexcept {
 			if (isFullyNull()) return 0;
 			assertNotNull();
+
+			// Relaxed ordering here is ok here, since it is only used to get an approximate number of owners.
 			return ctrl_ptr->n_owners.load(std::memory_order_relaxed);
 		}
 

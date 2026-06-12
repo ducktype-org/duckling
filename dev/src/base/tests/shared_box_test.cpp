@@ -205,8 +205,8 @@ private:
 		auto b = a;
 		// NOLINTEND
 		auto c = makeSharedBox<int>(42);
-		ASSERT_EQUAL(a == b, true);
-		ASSERT_EQUAL(a == c, false);
+		ASSERT_TRUE(a == b);
+		ASSERT_TRUE(a != c);
 	}
 
 	struct DeleteCounter {
