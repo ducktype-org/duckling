@@ -10,13 +10,17 @@ namespace vm {
 
 	STRONG_TYPEDEF_ID_DIRECT_CREATION(BlockID);
 
+	template<typename EntryT, typename BlockT>
+	class IMemory;
+
 	/**
 	 * @brief Main block data structure.
 	 *
 	 * Holds all the block metadata and pointers to the real data.
 	 * The blocks are managed by the `vm::Memory` class.
 	 */
-	class Block {
+	template<typename EntryT>
+	class BasicBlock {
 		/**
 		 * @brief The unique identifier for the block.
 		 */
@@ -25,7 +29,7 @@ namespace vm {
 		/**
 		 * @brief The data of the block.
 		 */
-		BlockData data;
+		BlockData<EntryT> data;
 
 		/**
 		 * @brief Flag whether the block has been deallocated.
@@ -46,15 +50,24 @@ namespace vm {
 		// freed at ...
 		// name ...
 
-		friend class Memory;
+		template<typename E, typename B>
+		friend class IMemory;
 
 		// Think of it as a view on parent's bytes that has it's own type and lifetime.
-		base::Map<usize, Ref<Block>> children_blocks{};  // offset to block
-		MRef<Block>                  parent = nullptr;
+		base::Map<usize, Ref<BasicBlock<EntryT>>> children_blocks{};  // offset to block
+		MRef<BasicBlock<EntryT>>                  parent = nullptr;
 
 	public:
-		Block(BlockID id, BlockData data): id(id), data(data) {}
+		BasicBlock(BlockID id, BlockData<EntryT> data): id(id), data(data) {}
+
+		[[nodiscard]] EntryT* getData() { return data.view.getBegin(); }
+		[[nodiscard]] const EntryT* getData() const { return data.view.getBegin(); }
+		[[nodiscard]] bool isDeallocated() const { return deallocated; }
+		[[nodiscard]] BlockID getID() const { return id; }
 	};
+
+	using Block = BasicBlock<std::byte>;
+	using BlockGeneric = Block;
 }
 
 ID_STD_HASH(vm::BlockID);

@@ -10,14 +10,17 @@
 #include <vm/core/safe/type_metadata/type.hpp>
 
 namespace vm {
-	class DummyAllocator final: public AllocatorABC {
+	template<typename EntryT>
+	class DummyAllocator final: public IAllocator<EntryT> {
 	public:
-		BlockData allocate(TypeCRef type, Ref<byte> data) {
-			auto size = type->getSize().asInt();
-			return BlockData{ type, base::ModRawView{ data.get(), size }, this };
+		BlockData<EntryT> allocate(TypeCRef type, Ref<EntryT> data) {
+			usize   size = type->getSize().asInt();
+			return BlockData<EntryT>{
+				type, base::TypedModRawView<EntryT>{ data.get(), size }, this
+			};
 		}
 
-		void deallocate(Ref<BlockData>) final {
+		void deallocate(Ref<BlockData<EntryT>>) final {
 			// Nothing here..
 		}
 	};
