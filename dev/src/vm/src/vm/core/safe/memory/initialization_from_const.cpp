@@ -9,7 +9,9 @@ namespace vm {
 
 	class ConstInitializationVisitor: public code::ConstVisitor {
 		void visitConstantImmediate(const code::ConstantImmediate& value) override {
-			CORE_ASSERT(current_offset.asInt() + value.size.asInt() <= data.size(), "Block overflow");
+			CORE_ASSERT(
+				current_offset.asInt() + value.size.asInt() <= data.size(), "Block overflow"
+			);
 			std::memcpy(
 				data.getBegin() + current_offset.asInt(), value.content.data(), value.size.asInt()
 			);

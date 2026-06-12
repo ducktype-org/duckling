@@ -126,11 +126,9 @@ private:
 		assertTrue(g.is_constant, "Global should be constant");
 		assertTrue(g.initial_value.has_value(), "Global should have initial_value");
 		auto initial_value = *g.initial_value;
-		auto cfst          = dynamic_cast<vm::code::ConstantFixedSizeTable*>(
-            initial_value.data.get()
-        );
+		auto cfst = dynamic_cast<vm::code::ConstantFixedSizeTable*>(initial_value.data.get());
 		assertTrue(cfst, "Pointer has null value");
-		auto cc   = dynamic_cast<vm::code::ConstantClass*>(cfst->elements.at(0).get());
+		auto cc = dynamic_cast<vm::code::ConstantClass*>(cfst->elements.at(0).get());
 		assertTrue(cc, "Pointer has null value");
 		auto cimm = dynamic_cast<vm::code::ConstantImmediate*>(cc->fields.at(0).second.get());
 		assertTrue(cimm, "Pointer has null value");

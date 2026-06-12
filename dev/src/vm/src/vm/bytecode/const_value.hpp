@@ -6,6 +6,7 @@
 #include <base/types/ints.hpp>
 
 #include <string_id/string_id.hpp>
+
 #include <vm/bytecode/element_base.hpp>
 
 #include <array>
@@ -40,7 +41,7 @@ namespace vm::code {
 	class ConstantImmediate final: public ConstantBase {
 	public:
 		alignas(8) std::array<std::byte, 8> content{};
-		Bytes                    size{ 0 };
+		Bytes size{ 0 };
 
 		[[nodiscard]] Box<ConstantBase> clone() const override;
 
@@ -63,7 +64,7 @@ namespace vm::code {
 		 * @param value The numeric value.
 		 */
 		template<typename T>
-		requires (sizeof(T) <= 8 && std::is_trivially_copyable_v<T>)
+		requires(sizeof(T) <= 8 && std::is_trivially_copyable_v<T>)
 		static ConstantImmediate fromValue(T value) {
 			ConstantImmediate result;
 			result.size = Bytes(sizeof(T));
@@ -115,7 +116,7 @@ namespace vm::code {
 	 *   <expr> = fixed_size_table [ <expr>, <expr>, ... ]
 	 *   <expr> = <immediate value>  (fallback: numeric literal)
 	 */
-	struct ConstantValue final : ElementBase {
+	struct ConstantValue final: ElementBase {
 		Box<ConstantBase> data;
 
 		ConstantValue(Box<ConstantBase> d): data(std::move(d)) {}

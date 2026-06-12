@@ -417,7 +417,8 @@ namespace vm::code {
 	class InitialValueTypeMismatchError final: public ValidationError {
 	public:
 		constexpr static std::string_view ERR_MSG
-			= "Initial value type does not match the declared type for global variable. Expected type `";
+			= "Initial value type does not match the declared type for global variable. Expected "
+		      "type `";
 
 		InitialValueTypeMismatchError(
 			Identifier         global_name,

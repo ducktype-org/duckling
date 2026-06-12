@@ -1,6 +1,5 @@
 #include "serializer.hpp"
 
-
 #include <base/misc/int_conv.hpp>
 #include <base/preproc/for_each.hpp>
 
@@ -13,8 +12,8 @@
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/type_of_data.hpp>
 
-#include <iomanip>
 #include <bit>
+#include <iomanip>
 #include <ranges>
 
 namespace vm::code {
@@ -244,8 +243,10 @@ namespace vm::code {
 			std::ostream& out;
 
 			void visitConstantImmediate(const code::ConstantImmediate& val) final {
-				static_assert(std::endian::native == std::endian::little,
-              "Only little-endian platforms are supported");
+				static_assert(
+					std::endian::native == std::endian::little,
+					"Only little-endian platforms are supported"
+				);
 				// Output as hex literal: 0x followed by exactly (2*size) hex digits.
 				// This makes the byte count inferable from the serialized form.
 				out << "0x";
