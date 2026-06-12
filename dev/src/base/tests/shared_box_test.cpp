@@ -272,8 +272,7 @@ private:
 					assertTrue(
 						threads_boxes[i].ownersCount() >= 3,
 						"At least threads_boxes[i], move and move2 should share ownership of the "
-					    "same "
-						"object!"
+					    "same object!"
 					);
 				}
 				threads_boxes[i].reset();
