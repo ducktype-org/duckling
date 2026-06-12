@@ -249,7 +249,8 @@ namespace base {
 			if (isFullyNull()) return 0;
 			assertNotNull();
 
-			// Relaxed ordering here is ok here, since it is only used to get an approximate number of owners.
+			// Relaxed ordering here is ok here, since it is only used to get an approximate number
+			// of owners.
 			return ctrl_ptr->n_owners.load(std::memory_order_relaxed);
 		}
 
