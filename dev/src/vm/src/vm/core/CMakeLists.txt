@@ -13,6 +13,7 @@ add_files(
 	safe/type_metadata/type.cpp
 	safe/memory/initialization_from_const.cpp
 	safe/memory/memory.cpp
+	safe/concurrency/deadlock_detection.cpp
 	safe/concurrency/gil.cpp
 	safe/concurrency/condition_variable.cpp
 	safe/concurrency/synchronization_primitives.cpp

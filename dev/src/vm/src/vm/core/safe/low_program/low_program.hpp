@@ -28,6 +28,7 @@ namespace vm::low {
 	 */
 	struct LowFuncData {
 		base::StrID name;
+		usize       id;
 #ifdef ENABLE_JIT
 		cf::ControlFlowGraph cfg;
 #endif

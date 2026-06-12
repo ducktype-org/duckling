@@ -201,8 +201,9 @@ namespace vm::loader::compiler::safe {
 				result_types.emplace_back(low_program.types->at(ret));
 			}
 
-			low_program.functions.insert(
+			usize new_func_id = low_program.functions.insert(
 				low::LowFuncData{ .name = function.name,
+			                      .id   = 0,  // placeholder, replaced immediately
 #ifdef ENABLE_JIT
 			                      .cfg = vm::low::cf::ControlFlowGraph(bytecode),
 #endif
@@ -216,6 +217,9 @@ namespace vm::loader::compiler::safe {
 			                      .instruction_mapping = std::move(instruction_mapping) },
 				function.name
 			);
+			// This may look awkward, but it allows `LowFuncData` to know its own stable ID in the
+			// map, which makes it possible to avoid hashmap lookups on function calls with JIT.
+			low_program.functions[new_func_id].id = new_func_id;
 		}
 	}
 

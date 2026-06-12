@@ -41,7 +41,13 @@ private:
 		ASSERT_TRUE(main_function_id.has_value());
 
 		vm::low::MicroOpcode opcode = vm::low::MicroOpcode::breakpoint;
-		auto maybe_opcode = program_copy.replaceOpcode(main_function_id.value(), 0, opcode);
+#ifdef ENABLE_JIT
+		usize first_opcode_index = 1;
+#else
+		usize first_opcode_index = 0;
+#endif
+		auto maybe_opcode
+			= program_copy.replaceOpcode(main_function_id.value(), first_opcode_index, opcode);
 
 		ASSERT_TRUE(maybe_opcode.has_value());
 

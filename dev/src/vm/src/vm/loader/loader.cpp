@@ -5,6 +5,7 @@
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
+#include <base/extend_cpp/vector_utils.hpp>
 #include <base/str/str_utils.hpp>
 
 #include <diagnostic/source_position.hpp>
@@ -91,7 +92,13 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::parseFiles(
 					new_code.functions.emplace_back(function);
 				}
 			}
-
+			base::deduplicateBy(new_code.functions, [](const code::Function& func) {
+				return func.name.str.strView();
+			});
+			base::deduplicateBy(
+				new_code.external_c_functions,
+				[](const code::ExternalCFunction& func) { return func.name.str.strView(); }
+			);
 			return new_code;
 		}
 	}
