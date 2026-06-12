@@ -367,9 +367,11 @@ namespace vm {
 						api::OtherError{ "Frame index out of bounds" } });
 				Frame& frame = opt_thread.value()->getStackFrame(frame_index);
 
+				auto block_span
+					= std::span(frame.local_block_ref_stack_base, frame.local_block_ref_stack_end);
+
 				std::vector<api::response::StackFrameData::FrameVar> frame_vars;
-				for (Block* const& block_ptr:
-				     std::span(frame.local_block_ref_stack_base, frame.local_block_ref_stack_end)) {
+				for (Block* const& block_ptr: block_span) {
 					Ref<Block> block  = Ref(block_ptr);
 					u64        offset = base::safeIntConv<u64>(
                         memory.getBlockViewUnsafe(block).getBegin() - frame.local_stack
@@ -382,45 +384,26 @@ namespace vm {
 					});
 				}
 
-				auto& low_func = *frame.current_function;
-				auto  low_pos  = low::LowCodePosition{
-					  .function          = &low_func,
-					  .instruction_index = static_cast<u64>(frame.instr - low_func.bc.data()),
-				};
+				auto opt_low_pos = opt_thread.value()->getCurrentPosition(frame_index);
+				CORE_ASSERT(opt_low_pos.has_value(), "frame index should be valid");
 
-				auto high_pos = compiler.mapLowVMProgramPositionToCodeCollectionPosition(low_pos);
+				if_opt_some(
+					compiler.mapLowVMProgramPositionToCodeCollectionPosition(*opt_low_pos), high_pos
+				) {
+					auto func_opt
+						= loader.getHighProgram()->functions().atMaybe(high_pos.function_name);
+					CORE_ASSERT(func_opt, "We mapped low position to high, high-func should exist");
+					auto  func_ref    = *func_opt;
+					auto  stack_state = func_ref->stack_states.at(high_pos.instruction_index);
+					auto& ls_db       = func_ref->local_stack;
 
-				if (high_pos) {
-					auto func_name = low_func.name;
-
-					auto func_opt = loader.getHighProgram()->functions().atMaybe(func_name);
-					CORE_ASSERT(
-						func_opt,
-						"If we could map low position to high, a high-function should exist"
-					);
-
-					auto func_ref = *func_opt;
-
-					auto stack_state = func_ref->stack_states.at(high_pos->instruction_index);
-
-					for (Block* const& block_ptr: std::span(
-							 frame.local_block_ref_stack_base, frame.local_block_ref_stack_end
-						 )) {
-						u64 block_offset
-							= base::safeIntConv<u64>(&block_ptr - frame.local_block_ref_stack_base);
-
-						frame_vars.at(block_offset).name
-							= func_ref->local_stack.getName(stack_state, block_offset);
-						frame_vars.at(block_offset).type
-							= func_ref->local_stack.getTypeName(stack_state, block_offset);
-						CORE_ASSERT(
-							frame_vars.at(block_offset).type,
-							"we should have a name of a variable on stack"
-						);
-						CORE_ASSERT(
-							frame_vars.at(block_offset).name,
-							"we should have a name of a variable on stack"
-						);
+					using namespace std::views;
+					for (const auto& [block_idx, block_ptr]: zip(iota(0u), block_span)) {
+						auto& frame_var = frame_vars.at(block_idx);
+						frame_var.name  = ls_db.getName(stack_state, block_idx);
+						frame_var.type  = ls_db.getTypeName(stack_state, block_idx);
+						CORE_ASSERT(frame_var.type, "we should have a type of a variable on stack");
+						CORE_ASSERT(frame_var.name, "we should have a name of a variable on stack");
 					}
 				}
 
