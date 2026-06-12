@@ -122,6 +122,7 @@ void vm::IVMThread::runNoSpawn(const std::string& func_name, const RunArguments&
 }
 
 bool vm::IVMThread::pause() {
+	std::unique_lock api_lock(api_request_mutex);
 	{
 		std::unique_lock lock(execution_request_mutex);
 
@@ -134,9 +135,16 @@ bool vm::IVMThread::pause() {
 }
 
 bool vm::IVMThread::resume() {
+	std::unique_lock api_lock(api_request_mutex);
+
 	const u64 request_version = status_machine.getSnapshot().version;
 	{
 		std::unique_lock lock(execution_request_mutex);
+
+		// Fail fast: only a thread parked in the debugger loop consumes a Resume
+		// request. Resuming a running thread would wait forever, and overwriting
+		// a pending Pause/Stop request would panic the executing thread.
+		if (!std::holds_alternative<api::Paused>(getStatus())) return false;
 
 		execution_request = ExecutionRequest::Resume;
 	}
@@ -155,9 +163,14 @@ bool vm::IVMThread::resume() {
 }
 
 bool vm::IVMThread::step() {
+	std::unique_lock api_lock(api_request_mutex);
+
 	const u64 request_version = status_machine.getSnapshot().version;
 	{
 		std::unique_lock lock(execution_request_mutex);
+
+		// Fail fast: stepping is only valid while the thread is paused. See resume().
+		if (!std::holds_alternative<api::Paused>(getStatus())) return false;
 
 		execution_request = ExecutionRequest::ExecuteOneStep;
 		pause_cv.notify_all();
@@ -174,6 +187,8 @@ bool vm::IVMThread::step() {
 }
 
 bool vm::IVMThread::stop() {
+	std::unique_lock api_lock(api_request_mutex);
+
 	// A thread that never started executing will never respond to the request.
 	if (!api::hasExecutionStarted(getStatus())) return false;
 
@@ -228,6 +243,11 @@ void vm::IVMThread::runDebuggerLoop(std::unique_lock<std::mutex>& lock) {
 		switch (execution_request) {
 		case ExecutionRequest::Resume: {
 			execution_request = ExecutionRequest::NoRequest;
+			// The pause that led into this loop may have been requested via the
+			// pending flag (pause request) or set by a breakpoint while the flag
+			// was raised. Clear it on resume, or the execution loop would call
+			// breakActiveExecution with no request pending and panic.
+			execution_request_pending_flag = false;
 			dispatchEvent(lifecycle::Resume{});
 			return;
 		}
@@ -251,6 +271,11 @@ void vm::IVMThread::runDebuggerLoop(std::unique_lock<std::mutex>& lock) {
 
 void vm::IVMThread::handleBreakpoint() {
 	std::unique_lock lock(execution_request_mutex);
+
+	// A Stop that raced in before the breakpoint must win: overwriting it with
+	// Pause below would lose the request and strand the stopper forever.
+	if (execution_request == ExecutionRequest::Stop) throw KillProcessException{};
+
 	dispatchEvent(lifecycle::Pause{});
 	execution_request = ExecutionRequest::Pause;
 	runDebuggerLoop(lock);

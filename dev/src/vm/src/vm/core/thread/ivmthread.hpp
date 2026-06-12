@@ -267,6 +267,19 @@ namespace vm {
 		ExecutionRequest  execution_request              = ExecutionRequest::NoRequest;
 		std::atomic<bool> execution_request_pending_flag = false;
 
+		/**
+		 * @brief Serializes client-side execution requests (pause/resume/step/stop),
+		 * held across the request and the wait for its response.
+		 *
+		 * Without it, concurrent clients interleave on the single execution_request
+		 * slot: e.g. one client's Resume consumes the pause another client's Step is
+		 * waiting to observe, leaving the stepper waiting forever. Each request is
+		 * individually bounded (it completes or fails fast), so serializing them
+		 * keeps every caller bounded as well. The executing thread never takes this
+		 * mutex.
+		 */
+		std::mutex api_request_mutex;
+
 		std::condition_variable pause_cv;
 	};
 }
