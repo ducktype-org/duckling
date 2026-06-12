@@ -572,7 +572,7 @@ namespace vm {
 					}
 					variant_case(low::GlobalInitialValue, value_init) {
 						// Copy the constant initial value bytes directly to the global's memory.
-						process_memory.intializeBlockFromConstValue(block_ref, value_init.value);
+						process_memory.initializeBlockFromConstValue(block_ref, value_init.value);
 					}
 				}
 				process_memory.setGlobalInitialized(block_ref);
@@ -629,7 +629,7 @@ namespace vm {
 			if (ctor_dtor && ctor_dtor->dtor_name.has_value()) {
 				try {
 					const auto& func = *executing_program->getFunctions()
-					                        .atMaybe(base::StrID(ctor_dtor->dtor_name.value()))
+					                        .atMaybe(ctor_dtor->dtor_name.value())
 					                        .expect(
 												"Called function does not exist: "
 												+ ctor_dtor->dtor_name.value().str()

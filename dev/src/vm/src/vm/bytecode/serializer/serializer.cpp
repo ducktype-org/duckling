@@ -1,19 +1,20 @@
 #include "serializer.hpp"
 
-#include <base/extend_cpp/variant_match.hpp>
+
 #include <base/misc/int_conv.hpp>
 #include <base/preproc/for_each.hpp>
 
 #include <lang_definitions/key_spec_op.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
-#include <vm/bytecode/const_pool.hpp>
-#include <vm/bytecode/const_pool_visitor.hpp>
+#include <vm/bytecode/const_value.hpp>
+#include <vm/bytecode/const_value_visitor.hpp>
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/type_of_data.hpp>
 
 #include <iomanip>
+#include <bit>
 #include <ranges>
 
 namespace vm::code {
@@ -243,6 +244,8 @@ namespace vm::code {
 			std::ostream& out;
 
 			void visitConstantImmediate(const code::ConstantImmediate& val) final {
+				static_assert(std::endian::native == std::endian::little,
+              "Only little-endian platforms are supported");
 				// Output as hex literal: 0x followed by exactly (2*size) hex digits.
 				// This makes the byte count inferable from the serialized form.
 				out << "0x";

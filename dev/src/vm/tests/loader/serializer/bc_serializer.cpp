@@ -5,14 +5,13 @@
 #include <filesystem/file.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
-#include <vm/bytecode/const_pool.hpp>
+#include <vm/bytecode/const_value.hpp>
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
 #include <vm/bytecode/type_of_data.hpp>
 #include <vm/loader/loader.hpp>
 
-#include <cmath>
 #include <cstring>
 #include <sstream>
 
@@ -128,10 +127,13 @@ private:
 		assertTrue(g.initial_value.has_value(), "Global should have initial_value");
 		auto initial_value = *g.initial_value;
 		auto cfst          = dynamic_cast<vm::code::ConstantFixedSizeTable*>(
-            initial_value.data.toOpt().value().get()
+            initial_value.data.get()
         );
+		assertTrue(cfst, "Pointer has null value");
 		auto cc   = dynamic_cast<vm::code::ConstantClass*>(cfst->elements.at(0).get());
+		assertTrue(cc, "Pointer has null value");
 		auto cimm = dynamic_cast<vm::code::ConstantImmediate*>(cc->fields.at(0).second.get());
+		assertTrue(cimm, "Pointer has null value");
 		ASSERT_EQUAL_PRINT(cimm->size.asInt(), 4);
 		int decoded_value = 0;
 		std::memcpy(&decoded_value, cimm->content.data(), 4);

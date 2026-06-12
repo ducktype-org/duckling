@@ -15,14 +15,12 @@
 #include <token_parser_core/token_stream.hpp>
 #include <token_source/source.hpp>
 
-#include <vm/bytecode/const_pool.hpp>
-#include <vm/bytecode/const_pool_visitor.hpp>
+#include <vm/bytecode/const_value.hpp>
+#include <vm/bytecode/const_value_visitor.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
 
 #include <cstring>
-#include <iomanip>
-#include <memory>
 
 namespace vm::loader::parser {
 	namespace opargs_parsers {
@@ -405,7 +403,7 @@ namespace vm::loader::parser {
 	ERROR_CHECK()
 
 	namespace {
-		MBox<code::ConstantBase> parseConstantValue(F8ParserState& state) {
+		base::Optional<Box<code::ConstantBase>> parseConstantValue(F8ParserState& state) {
 			using namespace vm::code;
 
 			if (state[0].isNumLiteralGroup()) {
@@ -437,7 +435,7 @@ namespace vm::loader::parser {
 						PARSE_ONE_CHECK(&field_name);
 						PARSE_ONE_CHECK(lang_def::NamedOperator::Colon);
 
-						auto field_value = parseConstantValue(state).toOptBox();
+						auto field_value = parseConstantValue(state);
 						if (!field_value) return {};
 						struct_val->fields.emplace_back(
 							field_name.value, std::move(field_value.value())
@@ -460,7 +458,7 @@ namespace vm::loader::parser {
 					state.goDown();
 					auto array_val = makeBox<ConstantFixedSizeTable>();
 					while (state.notEmpty()) {
-						auto element = parseConstantValue(state).toOptBox();
+						auto element = parseConstantValue(state);
 						if (!element) return {};
 
 						array_val->elements.push_back(std::move(element.value()));
@@ -530,10 +528,16 @@ namespace vm::loader::parser {
 					));
 				}
 			} else if (state[0].is(lang_def::Keyword::BCInitialValue)) {
+				auto start_pos = state.getPosition().getStart();
 				state.parse().one(lang_def::Keyword::BCInitialValue);
 				state.parse().one(lang_def::NamedOperator::Colon);
 				auto value_opt = parseConstantValue(state);
-				if (value_opt) out->initial_value = ConstantValue(std::move(value_opt));
+				auto end_pos   = state.getPosition(-1).getEnd();
+				if (value_opt) {
+					out->initial_value = ConstantValue(std::move(value_opt.value()));
+					out->initial_value->bytecode_pos
+						= dia::SourcePosition(out->position.getLocation(), start_pos, end_pos);
+				}
 			}
 
 			if (state.empty()) break;
@@ -1133,45 +1137,6 @@ namespace vm::loader::parser {
 		for (auto& opcode: opcodes) opcode->dprint(out);
 	}
 
-	namespace {
-		class DprintConstValueVisitor final: public code::ConstVisitor {
-			std::ostream& out;
-
-			void visitConstantImmediate(const code::ConstantImmediate& val) final {
-				out << "0x";
-				for (size_t i = val.size.asInt(); i-- > 0;)
-					out << std::format("{:02X}", std::to_integer<unsigned>(val.content.at(i)));
-			}
-
-			void visitConstantClass(const code::ConstantClass& val) final {
-				out << lang_def::keywordToStr(lang_def::Keyword::BCClass).strView() << " { ";
-				bool first = true;
-				for (const auto& [name, field_val]: val.fields) {
-					if (!first) out << ", ";
-					out << name.strView() << ": ";
-					field_val->acceptVisitor(*this);
-					first = false;
-				}
-				out << " }";
-			}
-
-			void visitConstantFixedSizeTable(const code::ConstantFixedSizeTable& val) final {
-				out << lang_def::keywordToStr(lang_def::Keyword::BCFixedSizeTable).strView()
-					<< " [ ";
-				bool first = true;
-				for (const auto& elem: val.elements) {
-					if (!first) out << ", ";
-					elem->acceptVisitor(*this);
-					first = false;
-				}
-				out << " ]";
-			}
-
-		public:
-			DprintConstValueVisitor(std::ostream& out): out(out) {}
-		};
-	}
-
 	void GlobalData::dprint(std::ostream& out) const {
 		out << lang_def::keywordToStr(lang_def::Keyword::BCGlobalData).strView() << " ";
 		out << name.value.strView() << " " << type.value.strView() << " {";
@@ -1179,13 +1144,7 @@ namespace vm::loader::parser {
 			out << "\n    " << lang_def::keywordToStr(lang_def::Keyword::BCIsConstant).strView()
 				<< ": " << lang_def::keywordToStr(lang_def::Keyword::BCTrue).strView() << ",";
 		}
-		if (initial_value.has_value()) {
-			out << "\n    " << lang_def::keywordToStr(lang_def::Keyword::BCInitialValue).strView()
-				<< ": ";
-			DprintConstValueVisitor value_visitor{ out };
-			initial_value->data->acceptVisitor(value_visitor);
-			out << ",";
-		}
+		if (initial_value.has_value()) code::serializeConstValue(initial_value.value(), out);
 		if (ctor_name.has_value()) {
 			out << "\n    "
 				<< lang_def::keywordToStr(lang_def::Keyword::BCGlobalConstructor).strView() << ": "

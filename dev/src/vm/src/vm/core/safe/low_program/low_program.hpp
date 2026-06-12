@@ -9,7 +9,7 @@
 #include <base/pointers/box.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
-#include <vm/bytecode/const_pool.hpp>
+#include <vm/bytecode/const_value.hpp>
 #include <vm/core/safe/type_metadata/definitions.hpp>
 #include <vm/core/safe/type_metadata/type_metadata.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>

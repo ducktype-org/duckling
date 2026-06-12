@@ -12,7 +12,7 @@
 #include <token_parser_core/common_elements.hpp>
 #include <token_parser_core/parser_state.hpp>
 
-#include <vm/bytecode/const_pool.hpp>
+#include <vm/bytecode/const_value.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/type_of_data.hpp>
 

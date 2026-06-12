@@ -1,6 +1,7 @@
 #pragma once
 
-#include <vm/bytecode/const_pool.hpp>
+#include <vm/bytecode/bytecode.hpp>
+#include <vm/bytecode/const_value.hpp>
 #include <vm/bytecode/validator/valid_type/type_map.hpp>
 
 namespace vm::code::detail {
@@ -16,6 +17,6 @@ namespace vm::code::detail {
 		const ConstantValue&            value,
 		valid_type::ValidTypeID         expected_type_id,
 		const valid_type::ValidTypeMap& types,
-		base::StrID                     global_name
+		Identifier                     global_name
 	);
 }

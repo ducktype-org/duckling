@@ -6,6 +6,7 @@
 #include <base/types/ints.hpp>
 
 #include <string_id/string_id.hpp>
+#include <vm/bytecode/element_base.hpp>
 
 #include <array>
 #include <cstring>
@@ -36,9 +37,9 @@ namespace vm::code {
 	 * are bit-cast into the content array. The `size` field indicates how many
 	 * bytes are actually used, which must match the declared type's byte size.
 	 */
-	class ConstantImmediate: public ConstantBase {
+	class ConstantImmediate final: public ConstantBase {
 	public:
-		std::array<std::byte, 8> content{};
+		alignas(8) std::array<std::byte, 8> content{};
 		Bytes                    size{ 0 };
 
 		[[nodiscard]] Box<ConstantBase> clone() const override;
@@ -62,8 +63,8 @@ namespace vm::code {
 		 * @param value The numeric value.
 		 */
 		template<typename T>
+		requires (sizeof(T) <= 8 && std::is_trivially_copyable_v<T>)
 		static ConstantImmediate fromValue(T value) {
-			static_assert(sizeof(T) <= 8 && std::is_trivially_copyable_v<T>);
 			ConstantImmediate result;
 			result.size = Bytes(sizeof(T));
 			std::memcpy(result.content.data(), &value, sizeof(T));
@@ -73,7 +74,7 @@ namespace vm::code {
 		void acceptVisitor(ConstVisitor&) const final;
 	};
 
-	class ConstantClass: public ConstantBase {
+	class ConstantClass final: public ConstantBase {
 	public:
 		std::vector<std::pair<base::StrID, Box<ConstantBase>>> fields;
 
@@ -86,7 +87,7 @@ namespace vm::code {
 		void acceptVisitor(ConstVisitor&) const final;
 	};
 
-	class ConstantFixedSizeTable: public ConstantBase {
+	class ConstantFixedSizeTable final: public ConstantBase {
 	public:
 		std::vector<Box<ConstantBase>> elements;
 
@@ -114,18 +115,18 @@ namespace vm::code {
 	 *   <expr> = fixed_size_table [ <expr>, <expr>, ... ]
 	 *   <expr> = <immediate value>  (fallback: numeric literal)
 	 */
-	struct ConstantValue {
-		MBox<ConstantBase> data;
+	struct ConstantValue final : ElementBase {
+		Box<ConstantBase> data;
 
-		ConstantValue(MBox<ConstantBase> d): data(std::move(d)) {}
+		ConstantValue(Box<ConstantBase> d): data(std::move(d)) {}
 
-		ConstantValue() = default;
+		// ConstantValue() = default;
 
 		static ConstantValue fromImmediate(ConstantImmediate immediate) {
 			return { makeBox<ConstantImmediate>(std::move(immediate)) };
 		}
 
-		template<typename DataTypeElement>
+		template<std::derived_from<ConstantBase> DataTypeElement>
 		static ConstantValue fromData(Box<DataTypeElement>&& element) {
 			return { std::move(element) };
 		}

@@ -398,36 +398,42 @@ namespace vm::code {
 	DEFINE_ARGUMENT_ERROR(UnknownFieldError, "Given data does not contain this field: ");
 	DEFINE_ARGUMENT_ERROR(NonPrimitiveCastError, "Cannot in-place cast to non-primitive type: ");
 
-	class GlobalCtorAndInitialValueConflictError: public ValidationError {
+	class GlobalCtorAndInitialValueConflictError final: public ValidationError {
 	public:
 		constexpr static std::string_view ERR_MSG
 			= "Global variable cannot have both a constructor and an initial value: ";
 
-		GlobalCtorAndInitialValueConflictError(base::StrID global_name):
-			  ValidationError(base::strConcat(ERR_MSG, global_name)),
+		GlobalCtorAndInitialValueConflictError(Identifier global_name):
+			  ValidationError(base::strConcat(ERR_MSG, global_name.str)),
 			  global_name(global_name) {}
 
-		base::StrID global_name;
+		Identifier global_name;
+
+		[[nodiscard]] base::Optional<CRef<ElementBase>> maybeElement() const override {
+			return &global_name;
+		}
 	};
 
-	class InitialValueTypeMismatchError: public ValidationError {
+	class InitialValueTypeMismatchError final: public ValidationError {
 	public:
 		constexpr static std::string_view ERR_MSG
-			= "Initial value type does not match the declared type for global variable: ";
+			= "Initial value type does not match the declared type for global variable. Expected type `";
 
 		InitialValueTypeMismatchError(
-			base::StrID        global_name,
+			Identifier         global_name,
 			base::StrID        expected_type,
 			const std::string& additional_context = ""
 		):
-			  ValidationError(base::strConcat(
-				  ERR_MSG, global_name, " expected: ", expected_type, ". ", additional_context
-			  )),
+			  ValidationError(base::strConcat(ERR_MSG, expected_type, "'. ", additional_context)),
 			  global_name(global_name),
 			  expected_type(expected_type) {}
 
-		base::StrID global_name;
+		Identifier  global_name;
 		base::StrID expected_type;
+
+		[[nodiscard]] base::Optional<CRef<ElementBase>> maybeElement() const override {
+			return &global_name;
+		}
 	};
 
 	DEFINE_INSTRUCTION_ERROR(

@@ -269,7 +269,7 @@ namespace vm {
 		void setGlobalInitialized(Ref<Block> global_block);
 
 
-		void intializeBlockFromConstValue(Ref<Block> block, const code::ConstantValue& const_value);
+		void initializeBlockFromConstValue(Ref<Block> block, const code::ConstantValue& const_value);
 
 		/**
 		 * @brief Returns a view of block's data

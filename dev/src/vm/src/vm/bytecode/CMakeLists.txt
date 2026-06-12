@@ -1,7 +1,7 @@
 add_files(
     bytecode.cpp
     builtin_types.cpp
-    const_pool.cpp
+    const_value.cpp
     builders/instruction_builder.cpp
     serializer/serializer.cpp
     validator/function_validator.cpp

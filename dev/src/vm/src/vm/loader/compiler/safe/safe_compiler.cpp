@@ -224,6 +224,7 @@ namespace vm::loader::compiler::safe {
 			auto global_init = [&] -> low::GlobalInit {
 				if_opt_some(global.initial_value, initial_value) {
 					// It's a bummer we have to copy here...
+					// @TODO: #1306 Think if we can avoid copying here
 					return low::GlobalInitialValue{ initial_value };
 				}
 				return low::GlobalCtorDtor{

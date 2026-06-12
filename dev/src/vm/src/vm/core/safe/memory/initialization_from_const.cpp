@@ -1,14 +1,15 @@
 
 #include "memory.hpp"
 
-#include <vm/bytecode/const_pool.hpp>
-#include <vm/bytecode/const_pool_visitor.hpp>
+#include <vm/bytecode/const_value.hpp>
+#include <vm/bytecode/const_value_visitor.hpp>
 #include <vm/core/safe/type_metadata/definitions.hpp>
 
 namespace vm {
 
 	class ConstInitializationVisitor: public code::ConstVisitor {
 		void visitConstantImmediate(const code::ConstantImmediate& value) override {
+			CORE_ASSERT(current_offset.asInt() + value.size.asInt() <= data.size(), "Block overflow");
 			std::memcpy(
 				data.getBegin() + current_offset.asInt(), value.content.data(), value.size.asInt()
 			);
@@ -48,7 +49,7 @@ namespace vm {
 			  data(data) {}
 	};
 
-	void Memory::intializeBlockFromConstValue(
+	void Memory::initializeBlockFromConstValue(
 		Ref<Block> block, const code::ConstantValue& const_value
 	) {
 		TypeCRef                   block_type = block->data.element_type;
