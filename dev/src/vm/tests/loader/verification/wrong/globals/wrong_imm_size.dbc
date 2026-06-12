@@ -1,0 +1,4 @@
+
+global_data my_global i16 {
+    initial_value: 0x001111
+}
