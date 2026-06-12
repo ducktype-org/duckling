@@ -1,0 +1,17 @@
+import core.builtins.*;
+
+# A pushed element with its own basic blocks (a ternary) used to be lowered
+# without chaining its blocks into the CFG, pushing an uninitialized temporary.
+
+fun main() -> i64 = {
+    var c = true;
+    var arr: List[i64];
+    arr += if c then 11i64 else 22i64;
+    c = false;
+    arr += if c then 33i64 else 44i64;
+
+    builtin_output_i64(arr[0]);
+    builtin_output_i64(arr[1]);
+
+    return 0;
+}
