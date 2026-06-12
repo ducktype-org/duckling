@@ -7,7 +7,7 @@ use std::process::{Command, ExitStatus};
 
 use super::Duckc;
 use crate::quackpack::core::Package;
-use crate::quackpack::core::compile::profiles::{OptLevel, Profile};
+use crate::quackpack::core::compile::profiles::OptLevel;
 use crate::util::command_ext::CommandExt;
 use crate::{QuackResult, QuackResultContext};
 
@@ -89,58 +89,33 @@ impl DuckcProcessBuilder {
         self
     }
 
-    /// Sets the following arguments:
-    ///  * LLVM opt level,
-    ///  * compilation backend,
-    ///  * whether to use previous compilation artifacts,
-    ///  * whether to link c standard library.
-    pub fn update_with_profile(&mut self, profile: &Profile) -> &mut Self {
-        self.set_opt_level(profile.opt_level);
-        if profile.dvm_bytecode {
-            self.set_dvm_backend();
-        }
-        if !profile.incremental {
-            self.set_no_incremental();
-        }
-        if !profile.c_std {
-            self.set_no_c_std();
-        }
-        self
-    }
-
-    /// As [`Self::update_with_profile`] but does not set `no_incremental`.
-    pub fn update_with_script_profile(&mut self, profile: &Profile) -> &mut Self {
-        self.set_opt_level(profile.opt_level);
-        if profile.dvm_bytecode {
-            self.set_dvm_backend();
-        }
-        if !profile.c_std {
-            self.set_no_c_std();
-        }
-        self
-    }
-
     /// Set LLVM optimization level.
-    fn set_opt_level(&mut self, opt_level: OptLevel) -> &mut Self {
+    pub fn set_opt_level(&mut self, opt_level: OptLevel) -> &mut Self {
         self.inner.arg("-O").arg(opt_level.to_string());
         self
     }
 
     /// Set to use DVM as the backend.
-    fn set_dvm_backend(&mut self) -> &mut Self {
-        self.inner.arg("--dvm-backend");
+    pub fn set_dvm_backend(&mut self, value: bool) -> &mut Self {
+        if value {
+            self.inner.arg("--dvm-backend");
+        }
         self
     }
 
     /// Set not to use cached compilation artifacts.
-    fn set_no_incremental(&mut self) -> &mut Self {
-        self.inner.arg("--no-incremental");
+    pub fn set_incremental(&mut self, value: bool) -> &mut Self {
+        if !value {
+            self.inner.arg("--no-incremental");
+        }
         self
     }
 
     /// Set not to link c standard library.
-    fn set_no_c_std(&mut self) -> &mut Self {
-        self.inner.arg("--no-c-standard-library");
+    pub fn set_c_std(&mut self, value: bool) -> &mut Self {
+        if !value {
+            self.inner.arg("--no-c-standard-library");
+        }
         self
     }
 
