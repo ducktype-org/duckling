@@ -1,6 +1,6 @@
 #pragma once
 
-#include "const_pool.hpp"
+#include "const_value.hpp"
 
 #include <base/extend_cpp/visitor.hpp>
 

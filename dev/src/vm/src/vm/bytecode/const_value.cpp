@@ -1,5 +1,6 @@
-#include "const_pool.hpp"
-#include "const_pool_visitor.hpp"
+#include "const_value.hpp"
+
+#include "const_value_visitor.hpp"
 
 namespace vm::code {
 	Box<ConstantBase> ConstantImmediate::clone() const { return makeBox<ConstantImmediate>(*this); }

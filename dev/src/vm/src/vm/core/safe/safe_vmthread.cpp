@@ -555,10 +555,10 @@ namespace vm {
 								executeFunction(start_function, func);
 							} catch (const KillProcessException& e) {
 								auto status = safe_process.getCurrentStatus();
-					if (std::holds_alternative<api::ExecutionPanicked>(status))
-						respondExecutionRequest(status);
-					else
-						respondExecutionRequest(api::ExecutionPanicked{ e.what() });
+								if (std::holds_alternative<api::ExecutionPanicked>(status))
+									respondExecutionRequest(status);
+								else
+									respondExecutionRequest(api::ExecutionPanicked{ e.what() });
 								return;
 							}
 						}

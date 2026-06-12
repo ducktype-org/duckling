@@ -21,7 +21,7 @@ namespace vm::code::detail {
 				  global_name(global_name) {}
 
 #define THROW_ERROR(ADDITIONAL_CONTEXT) \
-	throw InitialValueTypeMismatchError(global_name, type_ref->getName());
+	throw InitialValueTypeMismatchError(global_name, type_ref->getName(), ADDITIONAL_CONTEXT);
 
 			void visitConstantImmediate(const ConstantImmediate& value) override {
 				if (!type_ref->isKind<valid_type::finalized::Primitive>())
@@ -77,7 +77,7 @@ namespace vm::code::detail {
 				if (value.elements.size() != fst->element_count)
 					THROW_ERROR(base::strConcat(
 						"Got incorrect number of elements. Expected ",
-						fst->element_count.asInt(),
+						fst->element_count,
 						", got ",
 						value.elements.size()
 					));
