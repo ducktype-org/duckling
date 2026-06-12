@@ -28,11 +28,11 @@ namespace vm::persistent {
 		std::vector<std::pair<usize, usize>> ans = {};
 
 		auto [left_idx, _] = inner.getRange(root);
-		auto path          = getPathTo(state, left_idx);
+		auto path          = *getPathTo(state, left_idx);
 
 		do {
 			auto idx = path.idx;
-			auto val = *path.getValue();
+			auto val = path.getValue();
 			ans.emplace_back(idx, val);
 		} while (path.moveToValid(Dir::Right, 0));
 
@@ -130,7 +130,11 @@ namespace vm::persistent {
 
 	base::Optional<usize> Memory::access(MemoryStateID state, usize idx) const {
 		validateInput(state, idx);
-		return getPathTo(state, idx).getValue();
+
+		if_opt_some(getPathTo(state, idx), path) {
+			return path.getValue();
+		}
+		return std::nullopt;
 	}
 
 	MemoryStateID Memory::setMultiple(MemoryStateID state, std::deque<std::pair<usize, usize>> vals) {
@@ -178,7 +182,7 @@ namespace vm::persistent {
 	}
 
 	bool Memory::active(MemoryStateID state, usize idx) const {
-		return getPathTo(state, idx).pointsToValid();
+		return getPathTo(state, idx).has_value();
 	}
 
 	Memory::Memory() = default;
@@ -215,9 +219,6 @@ namespace vm::persistent {
 
 	memIt::MemoryIterator(const Memory& mem, MemoryStateID state, usize idx) {
 		maybe_path = mem.getPathTo(state, idx);
-		if (maybe_path->pointsToValid()) return;
-		if (maybe_path->moveToValid(detail::SegmentTree::Dir::Right) == false)
-			maybe_path = std::nullopt;
 	}
 
 	MemoryStateView::MemoryStateView(const Memory& mem, MemoryStateID id): id{ id }, mem{ mem } {}

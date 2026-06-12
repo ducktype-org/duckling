@@ -88,15 +88,14 @@ namespace vm::persistent {
 
 			auto mem_state = toMemState(state_id);
 			auto [l, r]    = inner.getRangeOf(mem_state);
-			auto iter      = inner.getPathTo(mem_state, l);
+			auto iter      = *inner.getPathTo(mem_state, l);
 
 			base::HashMap<KeyT, ValT, KeyH> ans = {};
 
 			bool keep_going = true;
 
 			while (keep_going) {
-				CORE_ASSERT(iter.pointsToValid(), "this should be a valid path");
-				auto val_id = *iter.getValue();
+				auto val_id = iter.getValue();
 				auto idx    = iter.idx;
 
 				auto [_, success]

@@ -134,18 +134,21 @@ namespace vm::persistent {
 			if (left > right) throw std::invalid_argument("left idx was bigger than right");
 			if (right > size(state_id)) throw std::invalid_argument("right bound is too big");
 
-			auto state = validateState(state_id);
-			auto iter  = inner.getPathTo(state, left);
+			auto state  = validateState(state_id);
+			auto m_iter = inner.getPathTo(state, left, Memory::Dir::Right);
+
+			if_opt_none(m_iter) return {};
+			auto iter = *m_iter;
+
+			if (iter.idx >= right) return {};
 
 			std::vector<VarT> ans        = {};
-			bool              iter_valid = iter.pointsToValid();
+			bool              iter_valid = true;
 
 			for (usize i = 0; i < right - left; i++) {
 				CORE_ASSERT(iter.idx == left + i, "I skipped some fields?!");
-				CORE_ASSERT(iter.pointsToValid(), "I have a real value underneath");
-				CORE_ASSERT(iter_valid, "I somehow invalidated iterator");
 
-				auto val_id = *iter.getValue();
+				auto val_id = iter.getValue();
 				ans.emplace_back(held_values.atRight(val_id));
 				iter_valid &= iter.moveToValid(Memory::Dir::Right);
 			}
