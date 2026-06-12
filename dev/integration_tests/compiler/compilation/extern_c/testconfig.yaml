@@ -1,12 +1,11 @@
 # Tests for `extern("C")` classes: layout compatibility in the prefix and block
 # specifier forms.
 
-# Determinism check trips on the parallel symbol-ABI query for some of these
-# tests; disabling matches the convention used by other class-related tests.
-enable_conc_deterministic_tests: "false"
-
 Tests:
   extern_c_class:
+    # @TODO: #2448 Investigate why deterministic compilation check fails for this test
+    # Determinism check trips on the parallel symbol-ABI query
+    enable_conc_deterministic_tests: "false"
     Cases:
       all:
         backend: all

@@ -6,7 +6,7 @@
 
 namespace abi::layout {
 
-	Bytes DataLayout::naturalAlignmentForIntWidth(u8 width_bits) const {
+	Bytes DataLayout::naturalAlignmentForIntWidth(u8 width_bits) {
 		switch (usize(width_bits)) {
 		case 8:
 			return Bytes(1);

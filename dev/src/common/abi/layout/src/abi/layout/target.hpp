@@ -56,7 +56,7 @@ namespace abi::layout {
 		 * alignment equals the size.
 		 */
 		[[nodiscard]]
-		Bytes naturalAlignmentForIntWidth(u8 width_bits) const;
+		static Bytes naturalAlignmentForIntWidth(u8 width_bits);
 	};
 
 	/**
@@ -78,11 +78,6 @@ namespace abi::layout {
 	/**
 	 * @brief The ABI of the architecture this binary was built for, selected at
 	 * compile time from the toolchain's target macros.
-	 *
-	 * This is the module-wide target: by compiler convention the host
-	 * architecture is a fixed property of the build, so the preset is chosen
-	 * once here rather than threaded through call sites. Adding a new host
-	 * architecture means adding a branch (and a matching preset) below.
 	 */
 	const TargetABI& hostTargetABI();
 

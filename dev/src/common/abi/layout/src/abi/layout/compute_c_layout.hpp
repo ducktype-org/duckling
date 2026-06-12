@@ -1,14 +1,3 @@
-/**
- * @file compute_c_layout.hpp
- *
- * @brief Pure functions that compute the memory layout of a sequence of
- * C-compatible fields under a given target ABI, following standard C
- * struct packing rules.
- *
- * The library does not raise diagnostics: defensive checks (zero-sized
- * fields, zero-length arrays, empty structs) trigger `CORE_PANIC`. Callers
- * are responsible for filtering and validating inputs before calling in.
- */
 #pragma once
 
 #include <abi/layout/target.hpp>

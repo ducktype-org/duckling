@@ -32,12 +32,12 @@ namespace abi::layout {
 					usize(i.width_bits) % 8 == 0, "integer width must be a multiple of 8 bits"
 				);
 				out.size      = Bytes(usize(i.width_bits) / 8);
-				out.alignment = target.data_layout.naturalAlignmentForIntWidth(i.width_bits);
+				out.alignment = DataLayout::naturalAlignmentForIntWidth(i.width_bits);
 			}
 			variant_case(type_system::FloatType, f) {
-				// Size and alignment come straight from the target's float table.
-				// The converter rejects widths the target does not list, so a
+				// Size and alignment come from the target's float table.
 				// missing entry here is a bug rather than a user error.
+				// This should be checked when converting types to ABI types
 				const base::Optional<SizeAlign> found
 					= target.data_layout.float_layouts.atMaybeCopy(f.width_bits);
 				CORE_ASSERT(
