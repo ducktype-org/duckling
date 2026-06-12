@@ -8,6 +8,9 @@ use std::path::PathBuf;
 pub mod debug_executor;
 pub mod dvm_executor;
 
+#[cfg(test)]
+mod tests;
+
 use itertools::Itertools;
 use tracing::debug;
 
