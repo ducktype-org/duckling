@@ -1,5 +1,7 @@
-duckc_path: "@{build_dir}/bin/duckc"
-dvm_path: "@{build_dir}/bin/VM"
+duckc_dir: "@{build_dir}/bin"
+dvm_dir: "@{duckc_dir}"
+duckc_path: "@{duckc_dir}/duckc"
+dvm_path: "@{dvm_path}/VM"
 
 is_jit_enabled: "cmake -L -N @{build_dir} | grep JIT_ENABLED | cut -d \"=\" -f 2"
 

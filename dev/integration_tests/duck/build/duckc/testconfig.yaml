@@ -1,0 +1,13 @@
+before_cmd: export PATH="@{duckc_dir}:$PATH" && export DUCK_HOME=$(pwd)/duck_home
+
+PostTest: rm -rf $(pwd)/duck_home
+
+# @TODO: #2907 Add more tests with many packages (it'll be easier to write them, once we have determinism)
+# @TODO: #2907 Add Output to the tests; this requires duckc output, too...
+SubDirs:
+  - basic_project
+  - basic_project_with_deps
+  - basic_project_with_deps_and_conds
+  - deps_with_dvm
+  - features
+  - with_a_local_cycle
