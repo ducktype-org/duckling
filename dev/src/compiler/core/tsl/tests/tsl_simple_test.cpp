@@ -542,13 +542,14 @@ private:
 	void mutabilityTest() {
 		withContextDo([&](query::Context& ctx) -> void {
 			auto int_symbol_type = st(
-				getIntegralType(ctx, 64, compiler::tsh::IntegralAbstractType::Signedness::Signed)
+				getIntegralType(ctx, 64, compiler::tsh::IntegralAbstractType::Signedness::Signed),
+				true
 			);
 			auto const_int_symbol_type = int_symbol_type.withMutability(Immutable);
 			auto int_layout            = querySymbolLayout(ctx, int_symbol_type);
 			auto const_int_layout      = querySymbolLayout(ctx, const_int_symbol_type);
 			assertTrue(
-				int_layout == const_int_layout, "Symbol mutability should not affect type layout"
+				*int_layout == *const_int_layout, "Symbol mutability should not affect type layout"
 			);
 
 			testPrinting(int_layout, ctx);
