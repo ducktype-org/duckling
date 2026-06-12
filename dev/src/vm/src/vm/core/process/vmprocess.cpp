@@ -72,8 +72,9 @@ namespace vm {
 				waitForBreakpoint();
 				api::ProcStatus stat = getStatus();
 				if (!std::holds_alternative<api::Paused>(stat))
-					return std::unexpected(api::ApiError{
-						api::OtherError{ "unexpected status response" } });
+					return std::unexpected(
+						api::ApiError{ api::OtherError{ "unexpected status response" } }
+					);
 
 				return getVMThreadCurrentPosition(getMainThreadID());
 			}
@@ -180,6 +181,11 @@ namespace vm {
 			on_status_changed.emitEvent(new_status);
 			status_cv.notify_all();
 		}
+		// Emit after releasing rw_status: observers may call isExecutionPanicked() which
+		// takes a shared_lock on rw_status; emitting under the unique_lock would self-deadlock.
+		on_status_changed.emitEvent(new_status);
+		status_cv.notify_all();
+
 		if (api::isStatusTerminal(new_status)) onTerminalStatus(new_status);
 	}
 
@@ -203,6 +209,7 @@ namespace vm {
 			}
 		}
 		if (updated) {
+			// Emit after releasing rw_status: same invariant as setStatus.
 			on_status_changed.emitEvent(emitted_status);
 			status_cv.notify_all();
 			if (api::isStatusTerminal(emitted_status)) onTerminalStatus(emitted_status);
@@ -215,7 +222,13 @@ namespace vm {
 		return status;
 	}
 
-	std::expected<api::Response, api::ApiError> IVMProcess::input(const api::request::Input& request
+	bool IVMProcess::isExecutionPanicked() {
+		std::shared_lock lock(rw_status);
+		return std::holds_alternative<api::ExecutionPanicked>(status);
+	}
+
+	std::expected<api::Response, api::ApiError> IVMProcess::input(
+		const api::request::Input& request
 	) {
 		// @TODO: #2342 https://github.com/ducktype-org/duckling/pull/381#discussion_r1885688218
 		auto lock = io.lock();
@@ -228,8 +241,10 @@ namespace vm {
 		auto lock = io.lock();
 		// @TODO: #2342 Cannot read output from api when IO is being redirected
 		if (io_redirecter)
-			return std::unexpected(api::ApiError{
-				api::IOError{ "Cannot read output from api when IO is being redirected" } });
+			return std::unexpected(
+				api::ApiError{
+					api::IOError{ "Cannot read output from api when IO is being redirected" } }
+			);
 
 		if (isExecuting(status))
 			io.output_empty_cv.wait(lock, [&] { return !io.outputStream().str().empty(); });

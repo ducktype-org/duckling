@@ -114,6 +114,7 @@ namespace vm {
 		 */
 		api::ProcStatus getStatus();
 
+
 		/**
 		 * @brief Returns exit code of the process - i.e. return value of `main` bytecode function.
 		 *
@@ -202,6 +203,8 @@ namespace vm {
 
 	public:
 		ProcIO& getIO();
+
+		[[nodiscard]] bool isExecutionPanicked();
 
 		/**
 		 * @brief Entry point to perform requests on the process.
