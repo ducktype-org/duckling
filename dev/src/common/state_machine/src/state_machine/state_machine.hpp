@@ -70,11 +70,14 @@
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/pointers/ref.hpp>
+#include <base/types/ints.hpp>
 
 #include <array>
+#include <condition_variable>
 #include <expected>
 #include <functional>
 #include <mutex>
+#include <shared_mutex>
 #include <string>
 #include <type_traits>
 #include <utility>
@@ -393,5 +396,169 @@ namespace state_machine {
 	private:
 		mutable std::mutex mutex;
 		InnerMachine       machine;
+	};
+
+	/**
+	 * @brief Thread-safe, waitable wrapper around `StateMachine`.
+	 *
+	 * Like `AtomicStateMachine`, but additionally keeps a monotonic transition
+	 * counter (`version`) and allows callers to block until the machine reaches
+	 * a state (or version) satisfying a predicate. Every successful transition
+	 * bumps the version and wakes all waiters, so a waiter can detect that a
+	 * transition happened even if it raced past the state it was waiting for.
+	 *
+	 * @tparam States Variant of state alternatives. Must match the definition's `States`.
+	 * @tparam Events Variant of event alternatives. Must match the definition's `Events`.
+	 * @tparam ErrorT Error type used by actions. Must match the definition's `ErrorT`.
+	 */
+	template<typename States, typename Events, typename ErrorT = std::string>
+	class WaitableStateMachine final {
+	public:
+		using InnerMachine    = StateMachine<States, Events, ErrorT>;
+		using StateMachineDef = typename InnerMachine::StateMachineDef;
+
+		/**
+		 * @brief State of the machine at a given point in time.
+		 * `version` counts successful transitions since construction.
+		 */
+		struct Snapshot {
+			States state;
+			u64    version;
+		};
+
+		/**
+		 * @brief Result of dispatching an event:
+		 *  * `std::nullopt` - no transition registered for the (state, event) pair (or the
+		 *    `handleEventIf` predicate rejected the current state); the machine is unchanged,
+		 *  * `Snapshot` - the transition fired; holds the new state and version,
+		 *  * `std::unexpected(error)` - the action reported an error; the machine is unchanged.
+		 */
+		using ResultT = base::Optional<std::expected<Snapshot, ErrorT>>;
+
+		WaitableStateMachine(States initial_state, CRef<StateMachineDef> def)
+			requires std::copy_constructible<States>
+			  : machine(std::move(initial_state), def) {}
+
+		WaitableStateMachine(const WaitableStateMachine&)            = delete;
+		WaitableStateMachine& operator=(const WaitableStateMachine&) = delete;
+		WaitableStateMachine(WaitableStateMachine&&)                 = delete;
+		WaitableStateMachine& operator=(WaitableStateMachine&&)      = delete;
+
+		/**
+		 * @brief Dispatches an event to the machine under a lock.
+		 * On success bumps the version and wakes all `waitUntil` waiters.
+		 * See `StateMachine::handleEvent` for the dispatch semantics.
+		 */
+		ResultT handleEvent(const Events& event) {
+			return handleEventIf([](const States&) { return true; }, event);
+		}
+
+		/**
+		 * @brief Like `handleEvent`, but does not wake `waitUntil` waiters.
+		 *
+		 * Use when dependent state must be published elsewhere before waiters may
+		 * observe this transition; call `notifyWaiters` once that is done. Waiters
+		 * that poll the state concurrently still see the new state immediately.
+		 */
+		ResultT handleEventDeferNotify(const Events& event) {
+			return handleEventImpl([](const States&) { return true; }, event, false);
+		}
+
+		/**
+		 * @brief Wakes all `waitUntil` waiters. Pair with `handleEventDeferNotify`.
+		 *
+		 * Acquires the machine's mutex before notifying. Without it, a waiter whose
+		 * predicate depends on external state published between the deferred
+		 * transition and this call could evaluate the predicate, miss the
+		 * notification fired in that window, and sleep forever.
+		 */
+		void notifyWaiters() const {
+			{ std::unique_lock lock(mutex); }
+			cv.notify_all();
+		}
+
+		/**
+		 * @brief Dispatches an event only if `pred(current_state)` holds.
+		 * The predicate is evaluated atomically with the transition, so this can be used
+		 * for compare-and-set style updates (e.g. "panic only if not already terminal").
+		 *
+		 * @return `std::nullopt` if the predicate rejected the state or no transition is
+		 *         registered; otherwise see `handleEvent`.
+		 */
+		template<typename Pred>
+		requires std::predicate<Pred, const States&>
+		ResultT handleEventIf(Pred&& pred, const Events& event) {
+			return handleEventImpl(std::forward<Pred>(pred), event, true);
+		}
+
+		/**
+		 * @brief Returns a copy of the current state.
+		 */
+		[[nodiscard]] States getStateCopy() const requires std::copy_constructible<States> {
+			std::shared_lock lock(mutex);
+			return machine.getState();
+		}
+
+		/**
+		 * @brief Returns the current state together with the transition version.
+		 * Capture a snapshot before requesting a transition, then pass its version to
+		 * `waitUntil` to detect that the transition has happened.
+		 */
+		[[nodiscard]] Snapshot getSnapshot() const requires std::copy_constructible<States> {
+			std::shared_lock lock(mutex);
+			return { machine.getState(), version };
+		}
+
+		/**
+		 * @brief Runs a callback over the current state under a lock.
+		 * @note The reference passed to `f` is only valid for the duration of the call.
+		 * @note `f` must not dispatch events to this machine.
+		 */
+		template<typename F>
+		requires std::is_invocable_v<F, const States&>
+		auto withState(F&& f) const -> decltype(auto) {
+			std::shared_lock lock(mutex);
+			return std::forward<F>(f)(machine.getState());
+		}
+
+		/**
+		 * @brief Blocks until `pred(state, version)` returns true.
+		 * The predicate is re-evaluated after every successful transition.
+		 *
+		 * @return Snapshot of the machine at the moment the predicate held.
+		 */
+		template<typename Pred>
+		requires std::predicate<Pred, const States&, u64>
+		Snapshot waitUntil(const Pred& pred) const requires std::copy_constructible<States> {
+			std::shared_lock lock(mutex);
+			cv.wait(lock, [&] { return pred(machine.getState(), version); });
+			return { machine.getState(), version };
+		}
+
+	private:
+		template<typename Pred>
+		requires std::predicate<Pred, const States&>
+		ResultT handleEventImpl(Pred&& pred, const Events& event, bool notify) {
+			ResultT result;
+			{
+				std::unique_lock lock(mutex);
+				if (!std::forward<Pred>(pred)(machine.getState())) return std::nullopt;
+
+				auto inner_result = machine.handleEvent(event);
+				if (!inner_result.has_value()) return std::nullopt;
+				if (!inner_result.value().has_value())
+					return std::unexpected(std::move(inner_result.value().error()));
+
+				version++;
+				result = Snapshot{ machine.getState(), version };
+			}
+			if (notify) cv.notify_all();
+			return result;
+		}
+
+		mutable std::shared_mutex           mutex;
+		mutable std::condition_variable_any cv;
+		u64                                 version = 0;  ///< Number of successful transitions.
+		InnerMachine                        machine;
 	};
 }

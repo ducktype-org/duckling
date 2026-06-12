@@ -34,6 +34,13 @@ public:
 		TESTER_ADD_TEST(atomicGetStateCopy);
 		TESTER_ADD_TEST(atomicMoveOnlyStateTest);
 		TESTER_ADD_TEST(atomicConcurrentHandleEventTest);
+
+		// WaitableStateMachine
+		TESTER_ADD_TEST(waitableBasicTest);
+		TESTER_ADD_TEST(waitableVersionBumpTest);
+		TESTER_ADD_TEST(waitableHandleEventIfTest);
+		TESTER_ADD_TEST(waitableWaitUntilTest);
+		TESTER_ADD_TEST(waitableWaitUntilVersionTest);
 	}
 
 	~StateMachineTest() override = default;
@@ -347,6 +354,120 @@ private:
 		i32 final_value
 			= m.withState([](const CounterState& s) { return std::get<Counter>(s).value; });
 		assertTrue(final_value == N_THREADS * N_PER_THREAD, "All increments should be performed");
+	}
+
+	using WaitableLightMachine   = state_machine::WaitableStateMachine<LightState, LightEvent>;
+	using WaitableCounterMachine = state_machine::WaitableStateMachine<CounterState, CounterEvent>;
+
+	void waitableBasicTest() {
+		LightDefinition def;
+		def.addTransition<Red, Tick>([](const Red&, const Tick&) -> LightState { return Green{}; });
+
+		WaitableLightMachine m(Red{}, &def);
+		auto                 res = m.handleEvent(Tick{});
+		assertTrue(res.has_value() && res.value().has_value(), "Transition should succeed");
+		assertTrue(
+			std::holds_alternative<Green>(res.value().value().state),
+			"Snapshot should hold the new state"
+		);
+		assertTrue(
+			std::holds_alternative<Green>(m.getStateCopy()), "Machine should hold the new state"
+		);
+
+		// (Green, Tick) is not registered - machine unchanged, no snapshot.
+		auto rejected = m.handleEvent(Tick{});
+		assertTrue(!rejected.has_value(), "Unregistered transition should return nullopt");
+		assertTrue(std::holds_alternative<Green>(m.getStateCopy()), "State should be unchanged");
+	}
+
+	void waitableVersionBumpTest() {
+		LightDefinition def;
+		def.addTransition<Red, Tick>([](const Red&, const Tick&) -> LightState { return Green{}; });
+
+		WaitableLightMachine m(Red{}, &def);
+		assertTrue(m.getSnapshot().version == 0, "Fresh machine should be at version 0");
+
+		m.handleEvent(Tick{});
+		assertTrue(m.getSnapshot().version == 1, "Successful transition should bump the version");
+
+		m.handleEvent(Tick{});  // Not registered for Green.
+		assertTrue(m.getSnapshot().version == 1, "Rejected event must not bump the version");
+	}
+
+	void waitableHandleEventIfTest() {
+		CounterDefinition def;
+		def.addTransition<Empty, Init>([](const Empty&, const Init& init) -> CounterState {
+			return Counter{ init.start };
+		});
+		def.addTransition<Counter, Increment>(
+			[](const Counter& c, const Increment& inc) -> CounterState {
+				return Counter{ c.value + inc.by };
+			}
+		);
+
+		WaitableCounterMachine m(Empty{}, &def);
+		m.handleEvent(Init{ 10 });
+
+		// Predicate rejects: state and version unchanged.
+		auto rejected = m.handleEventIf(
+			[](const CounterState& s) { return std::get<Counter>(s).value > 100; }, Increment{ 5 }
+		);
+		assertTrue(!rejected.has_value(), "Rejected predicate should return nullopt");
+		assertTrue(m.getSnapshot().version == 1, "Rejected predicate must not bump the version");
+
+		// Predicate accepts: transition fires.
+		auto accepted = m.handleEventIf(
+			[](const CounterState& s) { return std::get<Counter>(s).value == 10; }, Increment{ 5 }
+		);
+		assertTrue(accepted.has_value() && accepted.value().has_value(), "Transition should fire");
+		assertTrue(
+			std::get<Counter>(accepted.value().value().state).value == 15,
+			"Snapshot should hold the updated counter"
+		);
+	}
+
+	void waitableWaitUntilTest() {
+		LightDefinition def;
+		def.addTransition<Red, Tick>([](const Red&, const Tick&) -> LightState { return Green{}; });
+
+		WaitableLightMachine m(Red{}, &def);
+
+		std::thread waker([&m] { m.handleEvent(Tick{}); });
+		auto        snapshot = m.waitUntil([](const LightState& s, u64) {
+            return std::holds_alternative<Green>(s);
+        });
+		waker.join();
+
+		assertTrue(std::holds_alternative<Green>(snapshot.state), "Waiter should observe Green");
+		assertTrue(snapshot.version == 1, "Waiter should observe the bumped version");
+	}
+
+	void waitableWaitUntilVersionTest() {
+		// A waiter keyed on the version observes that a transition happened even
+		// if it cannot name the exact state it raced against.
+		CounterDefinition def;
+		def.addTransition<Empty, Init>([](const Empty&, const Init& init) -> CounterState {
+			return Counter{ init.start };
+		});
+		def.addTransition<Counter, Increment>(
+			[](const Counter& c, const Increment& inc) -> CounterState {
+				return Counter{ c.value + inc.by };
+			}
+		);
+
+		WaitableCounterMachine m(Empty{}, &def);
+		const u64              start_version = m.getSnapshot().version;
+
+		std::thread waker([&m] {
+			m.handleEvent(Init{ 1 });
+			m.handleEvent(Increment{ 1 });
+		});
+		auto        snapshot = m.waitUntil([&](const CounterState&, u64 version) {
+            return version > start_version;
+        });
+		waker.join();
+
+		assertTrue(snapshot.version > start_version, "Version should have advanced");
 	}
 };
 
