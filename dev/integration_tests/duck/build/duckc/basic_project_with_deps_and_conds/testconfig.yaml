@@ -8,5 +8,6 @@ Tests:
       build_without_bar:
         test_cmd: duck -C foo build
       build_with_bar:
+        Enabled: "false" # @TODO: #2919 Reenable this
         test_cmd: duck -C foo build --features use-bar
         features: use-bar

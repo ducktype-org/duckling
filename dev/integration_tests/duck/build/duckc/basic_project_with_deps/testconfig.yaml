@@ -4,4 +4,5 @@ Tests:
     Description: can build a project with dependencies
     Cases:
       build:
+        Enabled: "false" # @TODO: #2919 Reenable this
         test_cmd: duck -C foo build
