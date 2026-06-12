@@ -163,7 +163,7 @@ namespace compiler::tsl {
 			case Kind::Function:
 				return fail("function types are not C-compatible");
 			case Kind::Unit:
-				return fail("type has zero size in C ABI");
+				return fail("zero size types are not C-compatible");
 			case Kind::Void:
 				return fail("`void` cannot appear as a field type");
 			case Kind::Meta:

@@ -15,7 +15,7 @@ namespace compiler::helios {
 	 * that cannot be represented in the C ABI.
 	 *
 	 * The `reason` argument, produced by the C-ABI converter, carries a short
-	 * human-readable explanation of why the field's type was rejected.
+	 *  explanation of why the field's type was rejected.
 	 */
 	class FieldNotCCompatibleError final: public dia_int::MessageWithCodeFragmentAndCause {
 		[[nodiscard]] dia_int::Metadata getMetadata() const final {

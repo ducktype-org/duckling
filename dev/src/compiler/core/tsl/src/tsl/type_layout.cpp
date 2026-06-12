@@ -7,6 +7,7 @@
 #include <abi/layout/compute_c_layout.hpp>
 #include <abi/type_system/type.hpp>
 #include <frontend/pst_parser/lang_parser_element.hpp>
+#include <helios/errors/extern_c_class_empty.hpp>
 #include <helios/errors/field_not_c_compatible.hpp>
 #include <helios/mangler/mangler.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
@@ -205,18 +206,29 @@ namespace compiler::tsl {
 		}
 
 		/**
+		 * @brief Source position of the class declaration, used to anchor
+		 * diagnostics about the class itself.
+		 */
+		dia_int::StablePosition classDiagnosticPosition(
+			compiler::helios::SymID class_sym, query::Context& ctx
+		) {
+			auto class_pst = compiler::helios::maybeSymbolPst(class_sym);
+			if (class_pst.has_value()) return class_pst.value().unlock(ctx)->getStablePosition();
+			// Class should always have a PST node, even generated one (for now)
+			CORE_UNREACHABLE();
+		}
+
+		/**
 		 * @brief Source position of the field's declaration, used to anchor
-		 * diagnostics about its type.
+		 * diagnostics about its type. Falls back to the class declaration when
+		 * the field has no PST node.
 		 */
 		dia_int::StablePosition fieldDiagnosticPosition(
 			compiler::helios::SymID field_sym, compiler::helios::SymID class_sym, query::Context& ctx
 		) {
 			auto field_pst = compiler::helios::maybeSymbolPst(field_sym);
 			if (field_pst.has_value()) return field_pst.value().unlock(ctx)->getStablePosition();
-			auto class_pst = compiler::helios::maybeSymbolPst(class_sym);
-			if (class_pst.has_value()) return class_pst.value().unlock(ctx)->getStablePosition();
-			// Class should always have a PST node, even generated one (for now)
-			CORE_UNREACHABLE();
+			return classDiagnosticPosition(class_sym, ctx);
 		}
 
 		/**
@@ -252,6 +264,14 @@ namespace compiler::tsl {
 			const std::vector<tsh::InterfaceElement>& field_elements,
 			query::Context&                           ctx
 		) {
+			if (field_elements.empty()) {
+				ctx.logInt(makeBox<compiler::helios::ExternCClassEmptyError>(
+					classDiagnosticPosition(class_type.getSymbol(), ctx),
+					std::string(compiler::helios::name(class_type.getSymbol()).strView())
+				));
+				query::throwFailed();
+			}
+
 			std::vector<abi::type_system::AbiTypePtr> abi_fields;
 			abi_fields.reserve(field_elements.size());
 			bool any_failed = false;
