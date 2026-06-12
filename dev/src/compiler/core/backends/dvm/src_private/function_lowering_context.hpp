@@ -118,6 +118,16 @@ namespace compiler::backend_vm::internal {
 		DVMPlace forceToPlace(const DVMValue& value, base::Optional<std::string_view> name_hint = {});
 
 		/**
+		 * @brief Copies a given @p value into a fresh temporary place and returns that place.
+		 * Unlike forceToPlace, the returned place never aliases @p value, so it can be used
+		 * as the accumulator of a destructive two-operand opcode without clobbering a live
+		 * local.
+		 */
+		DVMPlace copyToTempPlace(
+			const DVMValue& value, base::Optional<std::string_view> name_hint = {}
+		);
+
+		/**
 		 * @brief Stores a given @p src_value in @p maybe_dest_place, if the destination was given.
 		 * If @p maybe_dest_place is an empty optional it does nothing.
 		 * Depending on the place type, performs a `mov_X_X` or a `store_X_X`. Loads immediates to
