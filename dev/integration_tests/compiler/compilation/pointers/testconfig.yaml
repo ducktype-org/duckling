@@ -88,4 +88,10 @@ Tests:
       llvm:
         backend: llvm
         ExitCode: 134
+  slices_negative_index:
+    enable_conc_deterministic_tests: "false"
+    Cases:
+      llvm:
+        backend: llvm
+        ExitCode: 134
 
