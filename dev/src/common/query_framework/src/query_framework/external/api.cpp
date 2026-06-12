@@ -70,10 +70,8 @@ namespace query::external {
 	) {
 		auto state = ::query::internal::ContextAccess::getState();
 
-		// Flush queued no-op duplicates of already executed tasks: a worker only becomes free
-		// after draining the task pools, and while the task statuses are still present, executing
-		// a duplicate is a no-op. Without this, a stale duplicate popped after the statuses are
-		// erased below would re-execute the query and resurrect invalidated nodes into the graph.
+		// Wait until all query execution has stopped: invalidation mutates the graph, caches and
+		// task statuses, so it must not run concurrently with any query work.
 		concurrent::worker::WorkerManager::get().waitForAllWorkersFree();
 
 		// Step 0: Find start nodes (inputs) from the previous inputs not present in the new inputs.
