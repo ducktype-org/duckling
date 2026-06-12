@@ -11,6 +11,7 @@ add_files(
 	builtin_functions.cpp
 	safe/type_metadata/type_metadata.cpp
 	safe/type_metadata/type.cpp
+	safe/memory/initialization_from_const.cpp
 	safe/memory/memory.cpp
 	safe/concurrency/deadlock_detection.cpp
 	safe/concurrency/gil.cpp

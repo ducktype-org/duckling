@@ -55,6 +55,12 @@ public:
 		TESTER_ADD_TEST(variantWrongType);
 		TESTER_ADD_TEST(fixedSizeTableWrongType);
 		TESTER_ADD_TEST(inplaceCasts);
+
+		// Globals verification
+		TESTER_ADD_TEST(wrongGlobalInitializationMethod);
+		TESTER_ADD_TEST(wrongGlobalImmSize);
+		TESTER_ADD_TEST(wrongGlobalField);
+		TESTER_ADD_TEST(wrongGlobalTblSize);
 	}
 
 private:
@@ -339,6 +345,42 @@ private:
 			"wrong/types/wrong_ptr_mov.dbc",
 			{
 				vm::code::PointerTypeMismatchError::ERR_MSG,
+			}
+		);
+	}
+
+	void wrongGlobalInitializationMethod() {
+		loadInvalidDbc(
+			"wrong/globals/invalid_init.dbc",
+			{
+				vm::code::GlobalCtorAndInitialValueConflictError::ERR_MSG,
+			}
+		);
+	}
+
+	void wrongGlobalImmSize() {
+		loadInvalidDbc(
+			"wrong/globals/wrong_imm_size.dbc",
+			{
+				vm::code::InitialValueTypeMismatchError::ERR_MSG,
+			}
+		);
+	}
+
+	void wrongGlobalField() {
+		loadInvalidDbc(
+			"wrong/globals/wrong_field.dbc",
+			{
+				vm::code::InitialValueTypeMismatchError::ERR_MSG,
+			}
+		);
+	}
+
+	void wrongGlobalTblSize() {
+		loadInvalidDbc(
+			"wrong/globals/wrong_table_size.dbc",
+			{
+				vm::code::InitialValueTypeMismatchError::ERR_MSG,
 			}
 		);
 	}

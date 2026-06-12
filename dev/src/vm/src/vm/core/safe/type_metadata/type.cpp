@@ -221,6 +221,17 @@ namespace vm {
 		);
 	}
 
+	base::Optional<TypeCRef> Type::getFieldTypeByName(base::StrID field_name) const {
+		return get<kind::Data>().flatMap(
+			[field_name](CRef<kind::Data> data) -> base::Optional<TypeCRef> {
+				if_opt_some(data->field_name_map.atMaybe(field_name), field_index) {
+					return data->fields[*field_index].type;
+				}
+				return {};
+			}
+		);
+	}
+
 	base::Optional<CRef<std::vector<kind::FieldDesc>>> Type::getFields() const {
 		return get<kind::Data>().map([](CRef<kind::Data> data) { return CRef(&data->fields); });
 	}
