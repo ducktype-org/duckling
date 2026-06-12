@@ -121,8 +121,6 @@ namespace vm::code {
 
 		ConstantValue(Box<ConstantBase> d): data(std::move(d)) {}
 
-		// ConstantValue() = default;
-
 		static ConstantValue fromImmediate(ConstantImmediate immediate) {
 			return { makeBox<ConstantImmediate>(std::move(immediate)) };
 		}

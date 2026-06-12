@@ -32,9 +32,9 @@ namespace vm::code::detail {
 					THROW_ERROR(base::strConcat(
 						"Primitive of incorrect size. Expected ",
 						primitive->size.asInt(),
-						"bytes, got ",
+						" bytes, got ",
 						value.size.asInt(),
-						"bytes."
+						" bytes."
 					));
 			}
 
