@@ -80,33 +80,35 @@ private:
 		assertTrue(a.count == 4, "count should be 4");
 		assertTrue(std::holds_alternative<IntType>(a.element->value), "element should be IntType");
 
-		std::vector<Field> fs;
-		fs.push_back(field(std::string("x"), intType(u8(64), true)));
-		fs.push_back(field(base::Optional<std::string>{}, pointerType()));
+		std::vector<AbiTypePtr> fs;
+		fs.push_back(makeAbiType(intType(u8(64), true)));
+		fs.push_back(makeAbiType(pointerType()));
 		AbiType s = structType(std::move(fs));
 
 		assertTrue(std::holds_alternative<StructType>(s.value), "should be StructType");
 		const auto& sv = std::get<StructType>(s.value);
 		assertTrue(sv.fields.size() == 2, "should have two fields");
-		assertTrue(sv.fields[0].name.has_value(), "first field has a name");
-		assertTrue(!sv.fields[1].name.has_value(), "second field is anonymous");
+		assertTrue(std::holds_alternative<IntType>(sv.fields[0]->value), "first field is IntType");
+		assertTrue(
+			std::holds_alternative<PointerType>(sv.fields[1]->value), "second field is PointerType"
+		);
 	}
 
 	void nestedStructTest() {
 		using namespace abi::type_system;
 
-		std::vector<Field> inner_fields;
-		inner_fields.push_back(field(std::string("a"), intType(u8(8), true)));
-		inner_fields.push_back(field(std::string("b"), intType(u8(64), true)));
+		std::vector<AbiTypePtr> inner_fields;
+		inner_fields.push_back(makeAbiType(intType(u8(8), true)));
+		inner_fields.push_back(makeAbiType(intType(u8(64), true)));
 
-		std::vector<Field> outer_fields;
-		outer_fields.push_back(field(std::string("x"), intType(u8(64), true)));
-		outer_fields.push_back(field(std::string("y"), structType(std::move(inner_fields))));
+		std::vector<AbiTypePtr> outer_fields;
+		outer_fields.push_back(makeAbiType(intType(u8(64), true)));
+		outer_fields.push_back(makeAbiType(structType(std::move(inner_fields))));
 
 		AbiType     outer = structType(std::move(outer_fields));
 		const auto& sv    = std::get<StructType>(outer.value);
 		assertTrue(sv.fields.size() == 2, "outer should have two fields");
-		const auto& inner = std::get<StructType>(sv.fields[1].type->value);
+		const auto& inner = std::get<StructType>(sv.fields[1]->value);
 		assertTrue(inner.fields.size() == 2, "inner should have two fields");
 	}
 

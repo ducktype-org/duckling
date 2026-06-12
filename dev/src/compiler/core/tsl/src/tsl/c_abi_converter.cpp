@@ -1,19 +1,23 @@
+#include <abi/layout/compute_c_layout.hpp>
+#include <abi/type_system/type.hpp>
+#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/tsh/kind.hpp>
 #include <helios/tsh/type_interface.hpp>
 #include <helios/tsh/types.hpp>
 #include <tsl/c_abi_converter.hpp>
 #include <tsl/c_abi_target.hpp>
-#include <tsl/queries.hpp>
 
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
-#include <base/types/bits_and_bytes.hpp>
 
 #include <query_framework/context/context.hpp>
 #include <query_framework/standard_query/query_cache_macros.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 
-#include <variant>
+#include <expected>
+#include <string>
+#include <utility>
+#include <vector>
 
 namespace compiler::tsl {
 
@@ -21,12 +25,10 @@ namespace compiler::tsl {
 
 	namespace {
 
-		CAbiConversionResult fail(std::string reason) {
-			return CAbiConversionResult{ .abi_type = {}, .reason = std::move(reason) };
-		}
+		CAbiConversionResult fail(std::string reason) { return std::unexpected(std::move(reason)); }
 
 		CAbiConversionResult ok(ats::AbiType type) {
-			return CAbiConversionResult{ .abi_type = std::move(type), .reason = {} };
+			return CAbiConversionResult{ std::move(type) };
 		}
 
 		CAbiConversionResult convertIntegral(tsh::IntegralAbstractType integral) {
@@ -58,28 +60,57 @@ namespace compiler::tsl {
 		) {
 			if (array.getSize() == 0) return fail("zero-length array");
 
-			// Validate the element type; a non-C-compatible element rejects the array.
 			const auto& element_conv
 				= ctx.query<QueryCAbiTypeOf>(array.getElementType())->valueOrThrow();
-			if (!element_conv.abi_type.has_value())
-				return fail(base::strConcat("array element rejected: ", element_conv.reason));
+			if (!element_conv.has_value())
+				return fail(base::strConcat("array element rejected: ", element_conv.error()));
 
-			// Represent the whole array as an opaque blob carrying its computed layout.
-			const auto& layout = ctx.query<QueryAbstractTypeLayout>(array)->valueOrThrow();
-			return ok(
-				ats::opaqueType(base::bits2bytesRoundUp(layout.getSize()), layout.getAlignment())
-			);
+
+			auto array_abi_type = ats::arrayType(ats::cloneAbiType(*element_conv), array.getSize());
+
+			auto size_align = sizeAlignOf(compilerTargetABI(), array_abi_type);
+
+			return ok(ats::AbiType{ ats::OpaqueType{
+				.size      = size_align.size,
+				.alignment = size_align.alignment,
+			} });
 		}
 
 		CAbiConversionResult convertClass(tsh::ClassAbstractType class_type, query::Context& ctx) {
 			const helios::SymbolABI abi = class_type.getABI(ctx);
-			if (!std::holds_alternative<helios::CAbi>(abi))
-				return fail("nested non-extern(\"C\") class");
+			variant_match(abi) {
+				variant_case_novalue(helios::DefaultAbi) {
+					return fail("nested non-extern(\"C\") class");
+				}
+				variant_case_novalue(helios::CAbi) {
+					// Convert the fields to their C-ABI types, compute the class's
+					// C layout from them and return it as an opaque blob.
+					std::vector<ats::AbiTypePtr> fields;
+					for (const auto& element: class_type.getInterface(ctx)->getElements()) {
+						if (!element.isField()) continue;
+						const auto& conversion
+							= ctx.query<QueryCAbiTypeOf>(element.getType(ctx))->valueOrThrow();
+						if (!conversion.has_value())
+							return fail(base::strConcat(
+								"field `",
+								helios::name(element.getSymbol()),
+								"` rejected: ",
+								conversion.error()
+							));
+						fields.push_back(ats::makeAbiType(ats::cloneAbiType(*conversion)));
+					}
+					if (fields.empty()) return fail("class with no fields has zero size in C ABI");
 
-			const auto& layout = ctx.query<QueryAbstractTypeLayout>(class_type)->valueOrThrow();
-			return ok(
-				ats::opaqueType(base::bits2bytesRoundUp(layout.getSize()), layout.getAlignment())
-			);
+					auto size_align
+						= sizeAlignOf(compilerTargetABI(), ats::structType(std::move(fields)));
+
+					return ok(ats::AbiType{ ats::OpaqueType{
+						.size      = size_align.size,
+						.alignment = size_align.alignment,
+					} });
+				}
+			}
+			CORE_PANIC("unknown symbol ABI kind");
 		}
 	}
 

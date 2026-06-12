@@ -14,9 +14,8 @@ namespace compiler::helios {
 	 * @brief Error reported when a field of an `extern("C")` class has a type
 	 * that cannot be represented in the C ABI.
 	 *
-	 * The `reason` argument carries a short human-readable explanation of why
-	 * the field's type was rejected; the converter responsible for mapping a
-	 * Duckling type to the C ABI produces it.
+	 * The `reason` argument, produced by the C-ABI converter, carries a short
+	 * human-readable explanation of why the field's type was rejected.
 	 */
 	class FieldNotCCompatibleError final: public dia_int::MessageWithCodeFragmentAndCause {
 		[[nodiscard]] dia_int::Metadata getMetadata() const final {

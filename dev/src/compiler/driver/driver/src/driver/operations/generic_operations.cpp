@@ -901,10 +901,6 @@ namespace compiler::driver {
 			}
 		}
 
-		auto query_logger = query::Context::dumpToOneLoggerAndClear();
-		if (query_logger->hasErrors()) result = base::BAD;
-		if (global_state::hasGlobalLogger() && global_state::getGlobalLogger()->hasErrors())
-			result = base::BAD;
 		return result;
 	}
 

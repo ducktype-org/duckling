@@ -3,6 +3,7 @@ add_library(TypeSystemLower STATIC
         src/tsl/type_layout.cpp
         src/tsl/queries.cpp
         src/tsl/c_abi_converter.cpp
+        src/tsl/c_abi_target.cpp
 )
 
 make_module(TypeSystemLower USES Base QueryFramework HELIOS AbiLayout AbiTypeSystem)

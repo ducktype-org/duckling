@@ -34,7 +34,7 @@ namespace abi::layout {
 	 * zero-sized inputs beforehand.
 	 */
 	ComputedLayout computeCLayout(
-		const TargetABI& target, const std::vector<type_system::Field>& fields
+		const TargetABI& target, const std::vector<type_system::AbiTypePtr>& fields
 	);
 
 }

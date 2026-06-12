@@ -14,15 +14,11 @@ namespace al = abi::layout;
 
 namespace {
 
-	at::Field anonField(at::AbiType type) {
-		return at::field(base::Optional<std::string>{}, std::move(type));
-	}
-
 	template<class... Ts>
-	std::vector<at::Field> fieldsOf(Ts&&... types) {
-		std::vector<at::Field> out;
+	std::vector<at::AbiTypePtr> fieldsOf(Ts&&... types) {
+		std::vector<at::AbiTypePtr> out;
 		out.reserve(sizeof...(Ts));
-		(out.push_back(anonField(std::forward<Ts>(types))), ...);
+		(out.push_back(at::makeAbiType(std::forward<Ts>(types))), ...);
 		return out;
 	}
 

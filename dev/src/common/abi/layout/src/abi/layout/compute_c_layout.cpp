@@ -90,7 +90,7 @@ namespace abi::layout {
 	}
 
 	ComputedLayout computeCLayout(
-		const TargetABI& target, const std::vector<type_system::Field>& fields
+		const TargetABI& target, const std::vector<type_system::AbiTypePtr>& fields
 	) {
 		CORE_ASSERT(!fields.empty(), "empty structs are not legal in C ABI; filter on caller side");
 
@@ -101,7 +101,7 @@ namespace abi::layout {
 		Bytes max_align(1);
 
 		for (const auto& f: fields) {
-			SizeAlign sa = sizeAlignOf(target, *f.type);
+			SizeAlign sa = sizeAlignOf(target, *f);
 			cursor       = roundUpToAlignment(cursor, sa.alignment);
 			out.field_offsets.push_back(cursor);
 			cursor    = cursor + sa.size;

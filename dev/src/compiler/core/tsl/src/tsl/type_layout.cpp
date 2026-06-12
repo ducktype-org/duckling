@@ -241,25 +241,18 @@ namespace compiler::tsl {
 		}
 
 		/**
-		 * @brief Picks the proper layout for a class: the C-ABI computation
-		 * for classes annotated `extern("C")`, otherwise the natural-alignment
-		 * layout used everywhere else.
+		 * @brief Computes the C-ABI layout for an `extern("C")` class.
 		 *
 		 * On any conversion failure the function reports a diagnostic per
 		 * offending field and fails the layout query, which aborts compilation
 		 * of the offending module.
 		 */
-		PickedClassLayout pickClassLayout(
+		PickedClassLayout cAbiPickedLayout(
 			tsh::ClassAbstractType                    class_type,
 			const std::vector<tsh::InterfaceElement>& field_elements,
-			const std::vector<CRef<TypeLayout>>&      field_layouts,
 			query::Context&                           ctx
 		) {
-			const compiler::helios::SymbolABI abi = class_type.getABI(ctx);
-			if (!std::holds_alternative<compiler::helios::CAbi>(abi))
-				return ducklingPickedLayout(field_layouts);
-
-			std::vector<abi::type_system::Field> abi_fields;
+			std::vector<abi::type_system::AbiTypePtr> abi_fields;
 			abi_fields.reserve(field_elements.size());
 			bool any_failed = false;
 
@@ -267,21 +260,20 @@ namespace compiler::tsl {
 				const auto& conversion
 					= ctx.query<QueryCAbiTypeOf>(element.getType(ctx))->valueOrThrow();
 
-				if (!conversion.abi_type.has_value()) {
+				if (!conversion.has_value()) {
 					any_failed = true;
 					ctx.logInt(makeBox<compiler::helios::FieldNotCCompatibleError>(
 						ctx,
 						fieldDiagnosticPosition(element.getSymbol(), class_type.getSymbol(), ctx),
 						std::string(compiler::helios::name(element.getSymbol()).strView()),
 						element.getType(ctx),
-						conversion.reason
+						conversion.error()
 					));
 					continue;
 				}
-				abi_fields.push_back(abi::type_system::field(
-					base::Optional<std::string>{},
-					abi::type_system::cloneAbiType(*conversion.abi_type)
-				));
+				abi_fields.push_back(
+					abi::type_system::makeAbiType(abi::type_system::cloneAbiType(*conversion))
+				);
 			}
 
 			if (any_failed) query::throwFailed();
@@ -299,6 +291,29 @@ namespace compiler::tsl {
 				.size      = base::bytes2bits(computed.size),
 				.alignment = computed.alignment,
 			};
+		}
+
+		/**
+		 * @brief Picks the proper layout for a class: the C-ABI computation
+		 * for classes annotated `extern("C")`, otherwise the natural-alignment
+		 * layout used everywhere else. Panics on an unknown ABI kind.
+		 */
+		PickedClassLayout pickClassLayout(
+			tsh::ClassAbstractType                    class_type,
+			const std::vector<tsh::InterfaceElement>& field_elements,
+			const std::vector<CRef<TypeLayout>>&      field_layouts,
+			query::Context&                           ctx
+		) {
+			const compiler::helios::SymbolABI abi = class_type.getABI(ctx);
+			variant_match(abi) {
+				variant_case_novalue(compiler::helios::DefaultAbi) {
+					return ducklingPickedLayout(field_layouts);
+				}
+				variant_case_novalue(compiler::helios::CAbi) {
+					return cAbiPickedLayout(class_type, field_elements, ctx);
+				}
+			}
+			CORE_PANIC("unknown symbol ABI kind");
 		}
 	}
 
