@@ -5,7 +5,6 @@ use crate::quackpack::core::PackageLoader;
 use crate::quackpack::core::compile::BuildContext;
 use crate::quackpack::core::compile::early_graph::creating_graph::create_early_graph_from_bcx;
 use crate::quackpack::core::compile::early_graph::tests::cycling::setup::*;
-use crate::quackpack::core::compile::executor::debug_executor::DebugExecutor;
 use crate::quackpack::core::compile::profiles::Profile;
 use crate::quackpack::core::compile::unit::ArtifactsType;
 use crate::quackpack::core::fetcher::Fetcher;
@@ -41,7 +40,6 @@ fn lowers_early_graph() {
     let root_origin = Origin::for_local(&root.path().join("root")).unwrap();
     let root_identity = Identity::new("root".into(), root_origin);
     let bcx = BuildContext {
-        executor: Box::new(DebugExecutor),
         pcx: &package,
         root_identity,
         freeze: freeze(root.path()),
@@ -117,7 +115,6 @@ fn lowers_early_graph_with_cycle() {
     let root_origin = Origin::for_local(&root.path().join("root")).unwrap();
     let root_identity = Identity::new("root".into(), root_origin);
     let bcx = BuildContext {
-        executor: Box::new(DebugExecutor),
         pcx: &package,
         root_identity,
         freeze: freeze(root.path()),

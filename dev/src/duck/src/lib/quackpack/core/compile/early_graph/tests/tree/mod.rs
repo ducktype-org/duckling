@@ -6,7 +6,6 @@ use setup::*;
 use crate::quackpack::core::PackageLoader;
 use crate::quackpack::core::compile::BuildContext;
 use crate::quackpack::core::compile::early_graph::{DependencyNode, EarlyGraph};
-use crate::quackpack::core::compile::executor::debug_executor::DebugExecutor;
 use crate::quackpack::core::compile::profiles::Profile;
 use crate::quackpack::core::fetcher::Fetcher;
 use crate::quackpack::core::identity::{Identity, Origin};
@@ -32,7 +31,6 @@ fn creates_valid_initial_graph() {
     let root_origin = Origin::for_local(&root.path().join("root")).unwrap();
     let root_identity = Identity::new("root".into(), root_origin);
     let bcx = BuildContext {
-        executor: Box::new(DebugExecutor),
         pcx: &package,
         root_identity,
         freeze: freeze(),
@@ -82,7 +80,6 @@ fn expands_valid_features1() {
     let root_origin = Origin::for_local(&root.path().join("root")).unwrap();
     let root_identity = Identity::new("root".into(), root_origin);
     let bcx = BuildContext {
-        executor: Box::new(DebugExecutor),
         pcx: &package,
         root_identity,
         freeze: freeze(),
@@ -137,7 +134,6 @@ fn expands_valid_features2() {
     let root_origin = Origin::for_local(&root.path().join("root")).unwrap();
     let root_identity = Identity::new("root".into(), root_origin);
     let bcx = BuildContext {
-        executor: Box::new(DebugExecutor),
         pcx: &package,
         root_identity,
         freeze: freeze(),
@@ -198,7 +194,6 @@ fn expands_valid_features3() {
     let root_origin = Origin::for_local(&root.path().join("root")).unwrap();
     let root_identity = Identity::new("root".into(), root_origin);
     let bcx = BuildContext {
-        executor: Box::new(DebugExecutor),
         pcx: &package,
         root_identity,
         freeze: freeze(),
@@ -246,7 +241,6 @@ fn errors_with_nonexistent_features() {
     let root_origin = Origin::for_local(&root.path().join("root")).unwrap();
     let root_identity = Identity::new("root".into(), root_origin);
     let bcx = BuildContext {
-        executor: Box::new(DebugExecutor),
         pcx: &package,
         root_identity,
         freeze: freeze(),
@@ -283,7 +277,6 @@ fn removes_inactive_deps1() {
     let root_origin = Origin::for_local(&root.path().join("root")).unwrap();
     let root_identity = Identity::new("root".into(), root_origin);
     let bcx = BuildContext {
-        executor: Box::new(DebugExecutor),
         pcx: &package,
         root_identity,
         freeze: freeze(),
@@ -337,7 +330,6 @@ fn removes_inactive_deps2() {
     let root_origin = Origin::for_local(&root.path().join("root")).unwrap();
     let root_identity = Identity::new("root".into(), root_origin);
     let bcx = BuildContext {
-        executor: Box::new(DebugExecutor),
         pcx: &package,
         root_identity,
         freeze: freeze(),
@@ -401,7 +393,6 @@ fn removes_inactive_deps3() {
     let root_origin = Origin::for_local(&root.path().join("root")).unwrap();
     let root_identity = Identity::new("root".into(), root_origin);
     let bcx = BuildContext {
-        executor: Box::new(DebugExecutor),
         pcx: &package,
         root_identity,
         freeze: freeze(),
@@ -475,7 +466,6 @@ fn removes_inactive_deps4() {
     let root_origin = Origin::for_local(&root.path().join("root")).unwrap();
     let root_identity = Identity::new("root".into(), root_origin);
     let bcx = BuildContext {
-        executor: Box::new(DebugExecutor),
         pcx: &package,
         root_identity,
         freeze: freeze(),
@@ -543,7 +533,6 @@ fn missing_direct_dep_in_freeze() {
     let root_origin = Origin::for_local(&root.path().join("root")).unwrap();
     let root_identity = Identity::new("root".into(), root_origin);
     let bcx = BuildContext {
-        executor: Box::new(DebugExecutor),
         pcx: &package,
         root_identity,
         freeze: freeze_without_direct_dep(),
@@ -575,7 +564,6 @@ fn missing_transitive_dep_in_freeze() {
     let root_origin = Origin::for_local(&root.path().join("root")).unwrap();
     let root_identity = Identity::new("root".into(), root_origin);
     let bcx = BuildContext {
-        executor: Box::new(DebugExecutor),
         pcx: &package,
         root_identity,
         freeze: freeze_without_transitive_dep(),

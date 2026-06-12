@@ -10,6 +10,8 @@ pub mod debug_executor;
 use itertools::Itertools;
 use tracing::debug;
 
+use self::debug_executor::DebugExecutor;
+
 use super::BuildContext;
 use super::artifacts_layout::ProfileLayout;
 use super::duckc::multipackage_schema;
@@ -29,6 +31,13 @@ pub trait Executor: Debug {
 pub struct ExecutorOutput {
     /// Root [`Unit`] and path to its output.
     pub root: (Unit, PathBuf),
+}
+
+impl BuildContext<'_, '_> {
+    /// Get an appropriate executor.
+    pub fn executor(&self) -> Box<dyn Executor> {
+        Box::new(DebugExecutor)
+    }
 }
 
 /// Collect recursively all packages below `unit`.

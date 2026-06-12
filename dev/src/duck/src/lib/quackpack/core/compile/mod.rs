@@ -24,7 +24,7 @@ pub mod profiles;
 pub mod unit;
 
 use self::early_graph::creating_graph::create_early_graph_from_bcx;
-use self::executor::{Executor, ExecutorOutput};
+use self::executor::ExecutorOutput;
 use self::unit::graph::lower_early_graph;
 
 /// A common message for panicking when a manifest is missing a dependency.
@@ -48,7 +48,6 @@ pub struct BuildContext<'duck, 'ctx> {
     pub used_features: Vec<FeatureName>,
     pub profile: Profile,
     pub script_path: Option<PathBuf>,
-    pub executor: Box<dyn Executor>,
 }
 
 /// Compile project inside the [`BuildContext`].
@@ -61,5 +60,5 @@ pub fn compile(bcx: BuildContext<'_, '_>) -> QuackResult<ExecutorOutput> {
     }
     let graph = create_early_graph_from_bcx(&bcx)?;
     let unit_graph = lower_early_graph(graph, &bcx);
-    bcx.executor.compile(unit_graph, &bcx)
+    bcx.executor().compile(unit_graph, &bcx)
 }
