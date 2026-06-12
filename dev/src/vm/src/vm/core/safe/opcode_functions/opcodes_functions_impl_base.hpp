@@ -567,10 +567,10 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(input_p64)(FUNCTION_ARGS) {
 		{
-			thread.setProcessStatus(api::Sleeping{});
+			thread.dispatchEvent(lifecycle::Sleep{});
 			i64 io_value = thread.safe_process.getIO().getInput<i64>(thread);
 			WRITE_TO_PLACE_ARG(i64, instr->arg0, io_value);
-			thread.setProcessStatus(api::Running{});
+			thread.dispatchEvent(lifecycle::Wake{});
 		}
 		FUNCTION_CONT(1);
 	}
@@ -582,10 +582,10 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(input_p32)(FUNCTION_ARGS) {
 		{
-			thread.setProcessStatus(api::Sleeping{});
+			thread.dispatchEvent(lifecycle::Sleep{});
 			i32 io_value = thread.safe_process.getIO().getInput<i32>(thread);
 			WRITE_TO_PLACE_ARG(i32, instr->arg0, io_value);
-			thread.setProcessStatus(api::Running{});
+			thread.dispatchEvent(lifecycle::Wake{});
 		}
 		FUNCTION_CONT(1);
 	}

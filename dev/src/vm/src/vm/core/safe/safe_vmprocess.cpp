@@ -97,6 +97,10 @@ namespace vm {
 
 	std::expected<api::Response, api::ApiError> SafeVMProcess::stop() {
 		for (auto& thread: vm_threads) {
+			// Threads that are not executing and have no OS thread (never started,
+			// or already joined and recycled) have nothing to stop or join.
+			if (!thread.hasActiveThread() && !api::isExecuting(thread.getStatus())) continue;
+
 			auto response = thread.stop();
 
 			if (!thread.joinExecutionThread())
@@ -328,8 +332,12 @@ namespace vm {
 	}
 
 	void SafeVMProcess::waitForBreakpoint() {
-		std::shared_lock lock(rw_status);
-		status_cv.wait(lock, [&] {
+		// Require the thread AND the process status to agree: a waiter can enter
+		// while the thread machine is already updated but the process one is not
+		// yet (events update the thread machine first and notify last). The final
+		// notification always follows the process update, so no wake-up is missed.
+		getMainVMThread().waitUntilPausedOrTerminated([this] {
+			const auto status = getStatus();
 			return std::holds_alternative<api::Paused>(status) || api::isStatusTerminal(status);
 		});
 	}

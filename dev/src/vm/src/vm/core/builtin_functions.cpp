@@ -87,9 +87,9 @@ namespace vm::builtins {
 	// ============================== BUILTIN IMPLEMENTATIONS ==============================
 
 	i64 FunctionHandlers::builtinInputI64(SafeVMThread& thread) {
-		thread.setProcessStatus(api::Sleeping{});
+		thread.dispatchEvent(lifecycle::Sleep{});
 		auto return_value = thread.safe_process.getIO().getInput<i64>(thread);
-		thread.setProcessStatus(api::Running{});
+		thread.dispatchEvent(lifecycle::Wake{});
 		return return_value;
 	}
 

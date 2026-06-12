@@ -9,10 +9,10 @@
 #include <vm/api/data/api_error.hpp>
 #include <vm/api/data/request.hpp>
 #include <vm/api/data/status.hpp>
+#include <vm/core/process/lifecycle.hpp>
 #include <vm/core/process/proc_io.hpp>
 
 #include <expected>
-#include <shared_mutex>
 #include <variant>
 
 namespace vm {
@@ -42,9 +42,11 @@ namespace vm {
 		// See: https://en.cppreference.com/w/cpp/io/ios_base/Init
 		std::ios_base::Init cin_cout_init;
 
-		api::ProcStatus             status;
-		std::shared_mutex           rw_status;
-		std::condition_variable_any status_cv;
+		/**
+		 * @brief Lifecycle state machine holding the status of the process.
+		 * Driven by `applyEvent`; see `lifecycle.hpp` for the allowed transitions.
+		 */
+		lifecycle::Machine status_machine{ api::NotStarted{}, &lifecycle::statusTransitions() };
 
 		/**
 		 * @brief Emits after the process status has changed.
@@ -214,15 +216,16 @@ namespace vm {
 		 */
 		[[nodiscard]] PID getPID() const;
 
-		void setStatus(const api::ProcStatus& new_status, api::ThreadID thread_id) noexcept;
-
 		/**
-		 * @brief Atomically set process status if it is not already terminal.
-		 * @return true if status was updated, false if status was already terminal.
+		 * @brief Applies a lifecycle event to the process status machine.
+		 *
+		 * Only the main thread (id = 0) drives the overall process status. Child
+		 * threads may only publish terminal failures (`Panic` / `Stop`), and only
+		 * while the process is not already terminal - the first failure wins.
+		 * Events that are filtered out, or not allowed in the current state, are
+		 * ignored and the status is unchanged.
 		 */
-		bool setStatusIfNotTerminal(
-			const api::ProcStatus& new_status, api::ThreadID thread_id
-		) noexcept;
+		void applyEvent(const lifecycle::Event& event, api::ThreadID thread_id) noexcept;
 
 		/**
 		 * @brief Creates a VmValue of a given type and registers it in this VMProcess

@@ -538,7 +538,7 @@ namespace vm {
 	 * @brief Starts the execution of a function with a given name and arguments.
 	 */
 	void SafeVMThread::run(const std::string& func_name, const RunArguments& run_arguments) {
-		respondExecutionRequest(api::Running{});
+		dispatchEvent(lifecycle::Start{});
 
 		for (const auto& [global, id, name]: process_program->getGlobals().allData()) {
 			auto block_ref
@@ -552,11 +552,11 @@ namespace vm {
 					executeFunction(start_function, func);
 					process_memory.setGlobalInitialized(block_ref);
 				} catch (const KillProcessException& e) {
-					auto status = safe_process.getCurrentStatus();
+					const auto status = safe_process.getCurrentStatus();
 					if (std::holds_alternative<api::ExecutionPanicked>(status))
-						respondExecutionRequest(status);
+						dispatchEvent(lifecycle::eventForTerminalStatus(status));
 					else
-						respondExecutionRequest(api::ExecutionPanicked{ e.what() });
+						dispatchEvent(lifecycle::Panic{ e.what() });
 					return;
 				}
 			}
@@ -564,7 +564,7 @@ namespace vm {
 
 		const auto terminal_status = safe_process.getCurrentStatus();
 		if (api::isStatusTerminal(terminal_status)) {
-			respondExecutionRequest(terminal_status);
+			dispatchEvent(lifecycle::eventForTerminalStatus(terminal_status));
 			return;
 		}
 
@@ -572,7 +572,7 @@ namespace vm {
 			const auto& maybe_func
 				= process_program->getFunctions().atMaybe(base::StrID(func_name.data()));
 			if (!maybe_func.has_value()) {
-				respondExecutionRequest(api::ExecutionPanicked{
+				dispatchEvent(lifecycle::Panic{
 					base::strConcat("Called function '", func_name, "' does not exist.") });
 				return;
 			}
@@ -593,17 +593,17 @@ namespace vm {
 			const auto exit_value     = executeFunction(start_function, func);
 			const auto current_status = safe_process.getCurrentStatus();
 			if (api::isStatusTerminal(current_status))
-				respondExecutionRequest(current_status);
+				dispatchEvent(lifecycle::eventForTerminalStatus(current_status));
 			else
-				respondExecutionRequest(api::ExecutionCompleted{ exit_value });
+				dispatchEvent(lifecycle::Complete{ exit_value });
 		} catch (const KillProcessException& e) { handleKillProcessException(e); }
 	}
 
 	void SafeVMThread::handleKillProcessException(const KillProcessException& e) {
 		if (safe_process.isExecutionPanicked())
-			respondExecutionRequest(safe_process.getCurrentStatus());
+			dispatchEvent(lifecycle::eventForTerminalStatus(safe_process.getCurrentStatus()));
 		else
-			respondExecutionRequest(api::ExecutionPanicked{ e.what() });
+			dispatchEvent(lifecycle::Panic{ e.what() });
 	}
 
 	void SafeVMThread::execGlobalDestructors() {

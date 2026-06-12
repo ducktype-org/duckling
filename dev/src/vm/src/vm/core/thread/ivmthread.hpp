@@ -8,7 +8,7 @@
 #include <vm/api/data/response.hpp>
 #include <vm/api/data/status.hpp>
 #include <vm/core/process/interface_types.hpp>
-#include <vm/utils/blocking_queue.hpp>
+#include <vm/core/process/lifecycle.hpp>
 
 #include <expected>
 #include <string>
@@ -27,7 +27,7 @@ namespace vm {
 	 */
 	class IVMThread {
 	public:
-		constexpr explicit IVMThread(api::ThreadID thread_id, IVMProcess& my_process):
+		explicit IVMThread(api::ThreadID thread_id, IVMProcess& my_process):
 			  my_process(my_process),
 			  thread_id(thread_id) {}
 
@@ -119,7 +119,35 @@ namespace vm {
 		 */
 		virtual void notifyPaused();
 
-		[[nodiscard]] const api::ProcStatus& getStatus() const { return status; }
+		[[nodiscard]] api::ProcStatus getStatus() const { return status_machine.getStateCopy(); }
+
+		/**
+		 * @brief Blocks until this thread is paused or its execution reached a
+		 * terminal status (completed, stopped, panicked), and the additional
+		 * condition holds.
+		 *
+		 * The extra condition lets callers require consistency with state that the
+		 * executing thread publishes around its own transition (e.g. the process
+		 * status, which is updated before this machine's waiters are notified):
+		 * the predicate is re-evaluated on the post-dispatch notification, so a
+		 * caller that races into the wait mid-dispatch does not return early.
+		 *
+		 * @return The status that satisfied the wait.
+		 */
+		template<class Condition>
+		api::ProcStatus waitUntilPausedOrTerminated(const Condition& condition) const {
+			return status_machine
+			    .waitUntil([&condition](const api::ProcStatus& status, u64) {
+					return (std::holds_alternative<api::Paused>(status)
+				            || api::isStatusTerminal(status))
+				        && condition();
+				})
+			    .state;
+		}
+
+		api::ProcStatus waitUntilPausedOrTerminated() const {
+			return waitUntilPausedOrTerminated([] { return true; });
+		}
 
 		[[nodiscard]] api::ThreadID getThreadID() const { return thread_id; }
 
@@ -143,11 +171,6 @@ namespace vm {
 		 */
 		base::Optional<std::thread> exec_thread;
 
-		/**
-		 * @brief Message queue to send responses to the VMProcess.
-		 */
-		BlockingQueue<api::ProcStatus> execution_response_queue;
-
 		IVMProcess& my_process;
 
 		/**
@@ -161,22 +184,19 @@ namespace vm {
 		 */
 		virtual void safeRun(const std::string& func_name, const RunArguments& run_arguments);
 
-		virtual bool waitForPausedResponse();
-
-		virtual bool waitForStoppedResponse();
-
-		virtual bool waitForRunningResponse();
-
-		/**
-		 * @brief Responds to an execution request by sending a response to the VMProcess.
-		 *
-		 * @param response The response to send.
-		 */
-		virtual void respondExecutionRequest(const api::ProcStatus& response);
-
 		virtual void executeOneStep() = 0;
 
-		void setProcessStatus(const vm::api::ProcStatus& new_status);
+		/**
+		 * @brief Applies a lifecycle event to this thread's status machine and announces
+		 * it to the owning VMProcess.
+		 *
+		 * This is how the executing thread publishes its state: the thread machine is
+		 * the single source of truth for this thread's status, and every transition
+		 * wakes API callers blocked in `pause`/`resume`/`step`/`stop`/`spawnThreadAndRun`.
+		 * The process applies its own main/child-thread policy to the announced event
+		 * (see `IVMProcess::applyEvent`).
+		 */
+		void dispatchEvent(const lifecycle::Event& event);
 
 		/**
 		 * @brief Main function of the VMThread "debug" mode, where the step by step execution can
@@ -198,7 +218,22 @@ namespace vm {
 		 */
 		bool joinExecutionThread();
 
-		void setThreadStatus(const api::ProcStatus& new_status) { status = new_status; }
+		/**
+		 * @brief Applies a lifecycle event to this thread's status machine only,
+		 * without announcing it to the VMProcess. Used for thread-local transitions
+		 * like recycling a joined thread (`Reset`), which must not touch the
+		 * process-wide status.
+		 */
+		void applyThreadEvent(const lifecycle::Event& event);
+
+		/**
+		 * @brief Panics if `result` indicates that the event was rejected by this
+		 * thread's status machine - the executing thread is the only writer of its
+		 * own status, so a rejected event is a transition-table bug.
+		 */
+		void assertLifecycleEventApplied(
+			const lifecycle::Machine::ResultT& result, const lifecycle::Event& event
+		) const;
 
 		/**
 		 * @brief Function to be called when the VMProcess is deinitialized. Calls GlobalData's
@@ -207,8 +242,15 @@ namespace vm {
 		virtual void execGlobalDestructors() = 0;
 
 	private:
-		api::ProcStatus status = api::NotStarted{};
-		api::ThreadID   thread_id;
+		/**
+		 * @brief Lifecycle state machine holding the status of this thread.
+		 * See `lifecycle.hpp` for the allowed transitions. Successful transitions
+		 * are versioned, which lets API callers wait for a response to their
+		 * execution requests without a separate response channel.
+		 */
+		lifecycle::Machine status_machine{ api::NotStarted{}, &lifecycle::statusTransitions() };
+
+		api::ThreadID thread_id;
 
 		/**
 		 * @brief Mutex responsible for setting the execution_request and execution_request_break

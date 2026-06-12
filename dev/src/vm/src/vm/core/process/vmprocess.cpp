@@ -6,7 +6,7 @@
 
 namespace vm {
 
-	IVMProcess::IVMProcess(const PID my_pid): my_pid(my_pid), status(api::NotStarted{}) {}
+	IVMProcess::IVMProcess(const PID my_pid): my_pid(my_pid) {}
 
 	ProcIO& IVMProcess::getIO() { return io; }
 
@@ -155,66 +155,41 @@ namespace vm {
 		return api::Response(api::response::Empty());
 	}
 
-	void IVMProcess::setStatus(const api::ProcStatus& new_status, api::ThreadID thread_id) noexcept {
+	void IVMProcess::applyEvent(const lifecycle::Event& event, api::ThreadID thread_id) noexcept {
 		const bool is_main_thread      = thread_id.asInt() == 0;
-		const bool is_terminal_failure = std::holds_alternative<api::ExecutionPanicked>(new_status)
-		                              || std::holds_alternative<api::ExecutionStopped>(new_status);
+		const bool is_terminal_failure = std::holds_alternative<lifecycle::Panic>(event)
+		                              || std::holds_alternative<lifecycle::Stop>(event);
 
-		// Only main thread can set overall process status
-		if (!is_main_thread) {
-			// Child threads can publish terminal failures if process is not already terminal
-			if (is_terminal_failure) setStatusIfNotTerminal(new_status, thread_id);
-			return;
+		// Only the main thread drives the overall process status. Child threads can
+		// only publish terminal failures, and only while the process is not already
+		// terminal - the first failure wins.
+		lifecycle::Machine::ResultT result;
+		if (is_main_thread) {
+			result = status_machine.handleEvent(event);
+		} else {
+			if (!is_terminal_failure) return;
+			result = status_machine.handleEventIf(
+				[](const api::ProcStatus& status) { return !api::isStatusTerminal(status); }, event
+			);
 		}
 
-		{
-			std::unique_lock<std::shared_mutex> lock(rw_status);
-			status = new_status;
-		}
-		// Emit after releasing rw_status: observers may call isExecutionPanicked() which
-		// takes a shared_lock on rw_status; emitting under the unique_lock would self-deadlock.
+		if (!result.has_value() || !result.value().has_value()) return;
+		const api::ProcStatus& new_status = result.value().value().state;
+
+		// Emit after the machine's internal lock is released: observers may call
+		// getStatus()/isExecutionPanicked() which take the same lock; emitting under
+		// the lock would self-deadlock.
 		on_status_changed.emitEvent(new_status);
-		status_cv.notify_all();
 
 		if (api::isStatusTerminal(new_status)) onTerminalStatus(new_status);
 	}
 
-	bool IVMProcess::setStatusIfNotTerminal(
-		const api::ProcStatus& new_status, api::ThreadID thread_id
-	) noexcept {
-		const bool is_main_thread = thread_id.asInt() == 0;
-
-		// Child threads should not move the whole process into a terminal state.
-		// They may still publish a terminal failure so the process can stop as a whole.
-		if (is_main_thread) return false;
-
-		bool            updated = false;
-		api::ProcStatus emitted_status;
-		{
-			std::unique_lock<std::shared_mutex> lock(rw_status);
-			if (!api::isStatusTerminal(status)) {
-				status         = new_status;
-				emitted_status = new_status;
-				updated        = true;
-			}
-		}
-		if (updated) {
-			// Emit after releasing rw_status: same invariant as setStatus.
-			on_status_changed.emitEvent(emitted_status);
-			status_cv.notify_all();
-			if (api::isStatusTerminal(emitted_status)) onTerminalStatus(emitted_status);
-		}
-		return updated;
-	}
-
-	api::ProcStatus IVMProcess::getStatus() {
-		std::shared_lock lock(rw_status);
-		return status;
-	}
+	api::ProcStatus IVMProcess::getStatus() { return status_machine.getStateCopy(); }
 
 	bool IVMProcess::isExecutionPanicked() {
-		std::shared_lock lock(rw_status);
-		return std::holds_alternative<api::ExecutionPanicked>(status);
+		return status_machine.withState([](const api::ProcStatus& status) {
+			return std::holds_alternative<api::ExecutionPanicked>(status);
+		});
 	}
 
 	std::expected<api::Response, api::ApiError> IVMProcess::input(const api::request::Input& request
@@ -233,7 +208,7 @@ namespace vm {
 			return std::unexpected(api::ApiError{
 				api::IOError{ "Cannot read output from api when IO is being redirected" } });
 
-		if (isExecuting(status))
+		if (isExecuting(getStatus()))
 			io.output_empty_cv.wait(lock, [&] { return !io.outputStream().str().empty(); });
 
 		const std::string content = io.outputStream().str();

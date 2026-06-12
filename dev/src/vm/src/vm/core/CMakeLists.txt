@@ -7,6 +7,7 @@ add_files(
 	supervisor/supervisor.cpp
 	safe/safe_vmprocess.cpp
 	process/vmprocess.cpp
+	process/lifecycle.cpp
 	process/proc_io.cpp
 	builtin_functions.cpp
 	safe/type_metadata/type_metadata.cpp
