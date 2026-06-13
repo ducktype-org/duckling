@@ -162,15 +162,16 @@ def artifacts_for_profile(root: Path, profile: str) -> Path:
 
 
 def unit_dir_name_for(name: str, version: str, source: Path | str) -> str:
-    
     if isinstance(source, Path):
         source = str(source)
         source = f"local+file://{source}"
     hash = hashlib.sha256(source.encode()).hexdigest()
     return f"{name}-{version}-{hash}"
 
+
 def deps_json_path_for_dep(dir: Path) -> Path:
     return dir / "deps.json"
+
 
 def locks_path(dir: Path) -> Path:
     return dir / ".duck_lock"
