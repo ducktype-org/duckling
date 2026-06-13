@@ -4,14 +4,12 @@ use std::process::ExitStatus;
 
 use tracing::instrument;
 
-use super::{Executor, ExecutorOutput, unit_output};
+use super::{
+    Executor, ExecutorOutput, compile_single_unit_with_tasks, get_linker_options, unit_output,
+};
 use crate::quackpack::core::compile::BuildContext;
 use crate::quackpack::core::compile::artifacts_layout::ProfileLayout;
-use crate::quackpack::core::compile::duckc::process_builder::DuckcSubcommand;
-use crate::quackpack::core::compile::duckc::{Duckc, multipackage_schema};
-use crate::quackpack::core::compile::executor::{
-    collect_packages, get_linker_options, write_manifest,
-};
+use crate::quackpack::core::compile::duckc::multipackage_schema;
 use crate::quackpack::core::compile::unit::graph::UnitGraph;
 use crate::quackpack::core::compile::unit::{ArtifactsType, Unit};
 use crate::{QuackResult, QuackResultContext, qp_bail};
@@ -87,38 +85,8 @@ fn compile_unit_impl(
     layout: &ProfileLayout,
     bcx: &BuildContext<'_, '_>,
 ) -> QuackResult<ExitStatus> {
-    let packages = collect_packages(unit, graph);
     let task = create_task(unit, graph, layout);
-    let manifest = multipackage_schema::MultiPackage {
-        packages,
-        tasks: vec![task],
-    };
-    let unit_layout = layout.for_dependency(&unit.unique_name());
-    let profile = &bcx.profile;
-    let mut builder = Duckc::new(bcx.pcx.ctx()).process_builder();
-    builder
-        .set_subcommand(DuckcSubcommand::CompilePackages)
-        .set_manifest_path(&unit_layout.dependency_json_path())
-        .set_artifacts_dir(&unit_layout.compiler_artifacts())
-        .set_c_std(profile.c_std)
-        .set_opt_level(profile.opt_level)
-        .set_incremental(profile.incremental);
-    let _lock = unit_layout.acquire_lock(bcx.pcx.ctx())?;
-    let locked_manifest_file = unit_layout
-        .dependency_json(bcx.pcx.ctx())
-        .context("failed to open manifest.json")?;
-    write_manifest(manifest, &locked_manifest_file)?;
-    // Ensure we flush, by dropping the inner `File`.
-    drop(locked_manifest_file);
-    bcx.pcx.ctx().console().info(format!(
-        "compiling `{}`...",
-        unit.root_package().package().manifest().name()
-    ))?;
-    bcx.pcx
-        .ctx()
-        .console()
-        .info_verbose(format!("Running `{}`", builder))?;
-    builder.execute()
+    compile_single_unit_with_tasks(unit, graph, layout, bcx, vec![task])
 }
 
 /// Create a task for a single [`Unit`].

@@ -1,9 +1,10 @@
 //! [`Executor`] takes a [`UnitGraph`] and compiles it, according to its strategy.
 
 use std::collections::HashSet;
-use std::fmt::Debug;
+use std::fmt::{self, Debug};
 use std::io::Write;
 use std::path::PathBuf;
+use std::process::ExitStatus;
 
 pub mod debug_executor;
 pub mod dvm_executor;
@@ -17,8 +18,10 @@ use tracing::debug;
 use self::debug_executor::DebugExecutor;
 use self::dvm_executor::DvmExecutor;
 use super::BuildContext;
-use super::artifacts_layout::ProfileLayout;
-use super::duckc::multipackage_schema;
+use super::artifacts_layout::{DependencyLayout, ProfileLayout};
+use super::duckc::process_builder::DuckcSubcommand;
+use super::duckc::{Duckc, multipackage_schema, process_builder};
+use super::profiles::Profile;
 use super::unit::Unit;
 use super::unit::graph::UnitGraph;
 use crate::util::file_locks::LockedFile;
@@ -135,11 +138,11 @@ pub(crate) fn unit_output(unit: &Unit, graph: &UnitGraph, layout: &ProfileLayout
 }
 
 /// Write a manifest into a file.
-pub(crate) fn write_manifest(
-    manifest: multipackage_schema::MultiPackage,
+pub(crate) fn write_schema(
+    schema: multipackage_schema::MultiPackage,
     locked_manifest_file: &LockedFile,
 ) -> QuackResult<()> {
-    let manifest_json = serde_json::to_string_pretty(&manifest)
+    let manifest_json = serde_json::to_string_pretty(&schema)
         .context_internal("failed to convert manifest into a JSON string")?;
     locked_manifest_file.file().set_len(0).with_context(|| {
         format!(
@@ -150,6 +153,81 @@ pub(crate) fn write_manifest(
     locked_manifest_file
         .file()
         .write_all(manifest_json.as_bytes())
-        .context("failed to write to manifest.json")?;
+        .with_context(|| {
+            format!(
+                "failed to write manifest to `{}`",
+                locked_manifest_file.path().display()
+            )
+        })?;
     Ok(())
+}
+
+/// Create a basic and shared [`process_builder::DuckcProcessBuilder`].
+pub(crate) fn finished_builder_for_layout_and_profile(
+    bcx: &BuildContext<'_, '_>,
+    layout: &DependencyLayout,
+    profile: &Profile,
+) -> process_builder::DuckcProcessBuilder {
+    let mut builder = Duckc::new(bcx.pcx.ctx()).process_builder();
+    builder
+        .set_subcommand(DuckcSubcommand::CompilePackages)
+        .set_manifest_path(&layout.dependency_json_path())
+        .set_artifacts_dir(&layout.compiler_artifacts())
+        .set_c_std(profile.c_std)
+        .set_opt_level(profile.opt_level)
+        .set_incremental(profile.incremental);
+    builder
+}
+
+/// Execute a builder, and print messages.
+pub(crate) fn compile_and_print(
+    bcx: &BuildContext<'_, '_>,
+    mut builder: process_builder::DuckcProcessBuilder,
+    name: impl fmt::Display,
+) -> QuackResult<ExitStatus> {
+    bcx.pcx
+        .ctx()
+        .console()
+        .info(format!("compiling `{name}`..."))?;
+    bcx.pcx
+        .ctx()
+        .console()
+        .info_verbose(format!("Running `{}`", builder))?;
+    builder.execute()
+}
+
+/// Compile a single [`Unit`] with its finished schema.
+pub(crate) fn compile_single_unit_with_schema(
+    unit: &Unit,
+    layout: &ProfileLayout,
+    bcx: &BuildContext<'_, '_>,
+    schema: multipackage_schema::MultiPackage,
+) -> QuackResult<ExitStatus> {
+    let unit_layout = layout.for_dependency(&unit.unique_name());
+    let builder = finished_builder_for_layout_and_profile(bcx, &unit_layout, &bcx.profile);
+    let _lock = unit_layout.acquire_lock(bcx.pcx.ctx())?;
+    let locked_manifest_file = unit_layout
+        .dependency_json(bcx.pcx.ctx())
+        .context("failed to open `deps.json`")?;
+    write_schema(schema, &locked_manifest_file)?;
+    // Ensure we flush, by dropping the inner `File`.
+    drop(locked_manifest_file);
+    compile_and_print(
+        bcx,
+        builder,
+        unit.root_package().package().manifest().name(),
+    )
+}
+
+/// Compile a single [`Unit`] with its finished tasks.
+pub(crate) fn compile_single_unit_with_tasks(
+    unit: &Unit,
+    graph: &UnitGraph,
+    layout: &ProfileLayout,
+    bcx: &BuildContext<'_, '_>,
+    tasks: Vec<multipackage_schema::Task>,
+) -> QuackResult<ExitStatus> {
+    let packages = collect_packages(unit, graph);
+    let schema = multipackage_schema::MultiPackage { packages, tasks };
+    compile_single_unit_with_schema(unit, layout, bcx, schema)
 }
