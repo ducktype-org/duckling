@@ -68,7 +68,8 @@
 		auto& _current_func_obj = *frame->current_function; \
 		auto  _instr_offset     = instr - _current_func_obj.bc.data(); \
 		std::cerr << "At end of instruction, instr ptr " << &instr << " at " << instr << \
-			" (offset of " << _instr_offset << "), before step by " << step << " \n"; \
+			"\n    offset of " << _instr_offset << ", before step by " << step << \
+			"\n    all args: (" << instr << ", " << local_stack << ", " << frame << ", " << &thread << ")\n"; \
 		OPFUN_CONT(step)
 	#define OP_FUN              vm::OpFun
 #endif
@@ -335,7 +336,7 @@ namespace vm {
 				SafeVMThread::isCallableFunctionID(function_id),
 				"Start function should not be called in the runtime!"
 			);
-			std::cerr << "calling function " << function_id << " with arguments: (" << instr << ", " << local_stack << ", " << frame << ", " << &thread << ", " << function_id << ")\n";
+			std::cerr << "calling function " << function_id << " -  arguments passed to performFunctionCall: (" << instr << ", " << local_stack << ", " << frame << ", " << &thread << ", " << function_id << ")\n";
 			performFunctionCall(instr, local_stack, frame, thread, function_id);
 		}
 		// After acquiring the `executing_code` of the new function we have instruction pointer
@@ -395,7 +396,8 @@ namespace vm {
 
 			    std::cerr << "Code at offset " << instr_offset << " compiled\n";
 
-				std::cerr << "Calling compiled ptr: " << (void*)*my_data.compiled_code_ptrs[instr_offset] << "\n";
+				std::cerr << "Calling compiled ptr " << (void*)*my_data.compiled_code_ptrs[instr_offset] << " with arguments:\n";
+				std::cerr << "    (" << &instr << ", " << &local_stack << ", " << &frame << ", " << &thread << ")\n";
 				// exit(1);
 				(*my_data.compiled_code_ptrs[instr_offset])(&instr, &local_stack, &frame, &thread);
 			}
