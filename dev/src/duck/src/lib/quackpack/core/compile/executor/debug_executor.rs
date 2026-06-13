@@ -1,18 +1,16 @@
 //! An implementation of [`Executor`], which creates a single task per package.
 
-use std::process::ExitStatus;
-
 use tracing::instrument;
 
 use super::{
     Executor, ExecutorOutput, compile_single_unit_with_tasks, get_linker_options, unit_output,
 };
+use crate::QuackResult;
 use crate::quackpack::core::compile::BuildContext;
 use crate::quackpack::core::compile::artifacts_layout::ProfileLayout;
 use crate::quackpack::core::compile::duckc::multipackage_schema;
 use crate::quackpack::core::compile::unit::graph::UnitGraph;
 use crate::quackpack::core::compile::unit::{ArtifactsType, Unit};
-use crate::{QuackResult, QuackResultContext, qp_bail};
 
 #[derive(Debug, Clone, Copy)]
 pub struct DebugExecutor;
@@ -55,36 +53,14 @@ fn compile(graph: UnitGraph, bcx: &BuildContext<'_, '_>) -> QuackResult<Executor
     })
 }
 
-/// Compile only a single [`Unit`], in a [`compile`] favour.
 #[instrument(skip_all)]
+/// Compile only a single [`Unit`], in a [`compile`] favour.
 fn compile_unit(
     unit: &Unit,
     graph: &UnitGraph,
     layout: &ProfileLayout,
     bcx: &BuildContext<'_, '_>,
 ) -> QuackResult<()> {
-    let status = compile_unit_impl(unit, graph, layout, bcx).with_context(|| {
-        format!(
-            "failed to compile `{}`",
-            unit.root_package().package().manifest().name()
-        )
-    })?;
-    if !status.success() {
-        qp_bail!(
-            "failed to compile `{}`",
-            unit.root_package().package().manifest().name()
-        )
-    }
-    Ok(())
-}
-
-/// Helper for [`compile_unit`].
-fn compile_unit_impl(
-    unit: &Unit,
-    graph: &UnitGraph,
-    layout: &ProfileLayout,
-    bcx: &BuildContext<'_, '_>,
-) -> QuackResult<ExitStatus> {
     let task = create_task(unit, graph, layout);
     compile_single_unit_with_tasks(unit, graph, layout, bcx, vec![task])
 }

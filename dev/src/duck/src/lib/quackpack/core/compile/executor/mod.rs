@@ -25,7 +25,7 @@ use super::profiles::Profile;
 use super::unit::Unit;
 use super::unit::graph::UnitGraph;
 use crate::util::file_locks::LockedFile;
-use crate::{QuackResult, QuackResultContext};
+use crate::{QuackResult, QuackResultContext, qp_bail};
 
 /// A generic duckc driver.
 pub trait Executor: Debug {
@@ -202,21 +202,25 @@ pub(crate) fn compile_single_unit_with_schema(
     layout: &ProfileLayout,
     bcx: &BuildContext<'_, '_>,
     schema: multipackage_schema::MultiPackage,
-) -> QuackResult<ExitStatus> {
-    let unit_layout = layout.for_dependency(&unit.unique_name());
-    let builder = finished_builder_for_layout_and_profile(bcx, &unit_layout, &bcx.profile);
-    let _lock = unit_layout.acquire_lock(bcx.pcx.ctx())?;
-    let locked_manifest_file = unit_layout
-        .dependency_json(bcx.pcx.ctx())
-        .context("failed to open `deps.json`")?;
-    write_schema(schema, &locked_manifest_file)?;
-    // Ensure we flush, by dropping the inner `File`.
-    drop(locked_manifest_file);
-    compile_and_print(
-        bcx,
-        builder,
-        unit.root_package().package().manifest().name(),
-    )
+) -> QuackResult<()> {
+    let name = unit.root_package().package().manifest().name();
+    let status = (|| {
+        let unit_layout = layout.for_dependency(&unit.unique_name());
+        let builder = finished_builder_for_layout_and_profile(bcx, &unit_layout, &bcx.profile);
+        let _lock = unit_layout.acquire_lock(bcx.pcx.ctx())?;
+        let locked_manifest_file = unit_layout
+            .dependency_json(bcx.pcx.ctx())
+            .context("failed to open `deps.json`")?;
+        write_schema(schema, &locked_manifest_file)?;
+        // Ensure we flush, by dropping the inner `File`.
+        drop(locked_manifest_file);
+        compile_and_print(bcx, builder, name)
+    })()
+    .with_context(|| format!("failed to compile `{name}`"))?;
+    if !status.success() {
+        qp_bail!("failed to compile `{name}`")
+    }
+    Ok(())
 }
 
 /// Compile a single [`Unit`] with its finished tasks.
@@ -226,7 +230,7 @@ pub(crate) fn compile_single_unit_with_tasks(
     layout: &ProfileLayout,
     bcx: &BuildContext<'_, '_>,
     tasks: Vec<multipackage_schema::Task>,
-) -> QuackResult<ExitStatus> {
+) -> QuackResult<()> {
     let packages = collect_packages(unit, graph);
     let schema = multipackage_schema::MultiPackage { packages, tasks };
     compile_single_unit_with_schema(unit, layout, bcx, schema)
