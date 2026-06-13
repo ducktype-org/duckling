@@ -35,6 +35,7 @@ impl CommandExt for Command {
 
     #[cfg(windows)]
     fn exec_replace(&mut self) -> QuackResult<Infallible> {
+        use std::io;
         use windows_sys::Win32::Foundation::{FALSE, TRUE};
         use windows_sys::Win32::System::Console::SetConsoleCtrlHandler;
         use windows_sys::core::BOOL;
