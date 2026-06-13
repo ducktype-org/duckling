@@ -187,9 +187,9 @@ namespace vm::jit {
 				case vm::low::MicroOpcode::virtual_call_pptr_method: {
 					// Trampoline uses VM functions, instructions have to have correct type.
 #ifdef USE_SWITCH_CASE
-					// setInstructionPtr<true>(bc, ir_builder, instr_idx, func_or_loop_name);
+					setInstructionPtr<true>(bc, ir_builder, instr_idx, func_or_loop_name);
 #else
-					// setInstructionPtr<false>(bc, ir_builder, instr_idx, func_or_loop_name);
+					setInstructionPtr<false>(bc, ir_builder, instr_idx, func_or_loop_name);
 #endif
 					ir_builder.CreateCall(
 						llvm_data.types.opfun.get(),
@@ -213,7 +213,7 @@ std::cerr << "About to call opfun: " << opfun_name
           << "\n";
 					// Here we are calling instruction originating from bc file or debug
 					// instruction. Make instruction* point to switch case version of microinstruction.
-					// setInstructionPtr<true>(bc, ir_builder, instr_idx, func_or_loop_name);
+					setInstructionPtr<true>(bc, ir_builder, instr_idx, func_or_loop_name);
 					ir_builder.CreateCall(
 						llvm_data.types.opfun.get(),
 						getOrCreateOpcodeFunction(opfun_name),
