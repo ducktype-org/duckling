@@ -67,7 +67,7 @@
 	#define FUNCTION_CONT(step) \
 		auto& _current_func_obj = *frame->current_function; \
 		auto  _instr_offset     = instr - _current_func_obj.bc.data(); \
-		std::cout << "At end of instruction, instr ptr " << &instr << " at " << instr << \
+		std::cerr << "At end of instruction, instr ptr " << &instr << " at " << instr << \
 			" (offset of " << _instr_offset << "), before step by " << step << " \n"; \
 		OPFUN_CONT(step)
 	#define OP_FUN              vm::OpFun
@@ -104,7 +104,7 @@ namespace vm {
 		{
 			auto& current_func_obj = *frame->current_function;
 			auto  instr_offset     = instr - current_func_obj.bc.data();
-			std::cout << "at start of check_strategy, instr ptr " << &instr << " at " << instr <<
+			std::cerr << "at start of check_strategy, instr ptr " << &instr << " at " << instr <<
 						" (offset of " << instr_offset << ")\n";
 			++instr;
 			if (thread.getExecutionRequestPendingFlag())
@@ -116,7 +116,7 @@ namespace vm {
 #define DEFINE_MOVE_OPS(BITS_SIZE, TYPE)                                                       \
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_p##BITS_SIZE##_imm)(FUNCTION_ARGS) {                   \
     {			                                                                               \
-        std::cout << "mov_p64_imm: instr=" << instr                                            \
+        std::cerr << "mov_p64_imm: instr=" << instr                                            \
                   << " arg0=" << instr->arg0                                                   \
                   << " arg1=" << instr->arg1                                                   \
                   << " local_stack=" << (void*)local_stack                                     \
@@ -124,7 +124,7 @@ namespace vm {
                   << " local_stack_head=" << frame->local_stack_head                           \
                   << "\n";                                                                     \
         WRITE_TO_PLACE_ARG(u64, instr->arg0, safeReadObjectBytes<u64>(instr->arg1));           \
-        std::cout << "mov_p64_imm: done\n";                                                    \
+        std::cerr << "mov_p64_imm: done\n";                                                    \
     }                                                                                          \
     FUNCTION_CONT(1);                                                                          \
 }                                                                                              \
@@ -335,6 +335,7 @@ namespace vm {
 				SafeVMThread::isCallableFunctionID(function_id),
 				"Start function should not be called in the runtime!"
 			);
+			std::cerr << "calling function " << function_id << " with arguments: (" << instr << ", " << local_stack << ", " << frame << ", " << &thread << ", " << function_id << ")\n";
 			performFunctionCall(instr, local_stack, frame, thread, function_id);
 		}
 		// After acquiring the `executing_code` of the new function we have instruction pointer
@@ -352,19 +353,20 @@ namespace vm {
 			auto& current_func_obj = *frame->current_function;
 			auto  current_func_id  = current_func_obj.id;
 			auto  instr_offset     = instr - current_func_obj.bc.data();
-			std::cout << "jitEntrypoint at offset " << instr_offset << " in function " << current_func_obj.name.strView() << "\n";
+			std::cerr << "jitEntrypoint at offset " << instr_offset << " in function " << current_func_obj.name.strView() << "\n";
 
 			jit::JitFuncData& my_data = jit_data[current_func_id];
 
 			if (my_data.compiled_code_ptrs[instr_offset]) {
 				// is already compiled
-			    std::cout << "Executing compiled code at offset " << instr_offset << " with instr of " << &instr << "\n";
-				std::cout << "Calling compiled ptr: " << (void*)*my_data.compiled_code_ptrs[instr_offset] << "\n";
+			    std::cerr << "Executing compiled code at offset " << instr_offset << " with instr of " << &instr << "\n";
+				std::cerr << "Calling compiled ptr " << (void*)*my_data.compiled_code_ptrs[instr_offset] << " with arguments:\n";
+				std::cerr << "    (" << &instr << ", " << &local_stack << ", " << &frame << ", " << &thread << ")\n";
 				(*my_data.compiled_code_ptrs[instr_offset])(&instr, &local_stack, &frame, &thread);
 			} else if (0 < my_data.until_compilation[instr_offset]) {
 				// should be compiled later
 				--my_data.until_compilation[instr_offset];
-                std::cout << "Only " << my_data.until_compilation[instr_offset] << " repetitions left before compilation\n";
+                std::cerr << "Only " << my_data.until_compilation[instr_offset] << " repetitions left before compilation\n";
 
 			    save_execution_state(instr, local_stack, frame, thread);
 				thread.executeOneStep();
@@ -382,8 +384,8 @@ namespace vm {
                 auto original_function
 					= program_copy->getOriginalProgram()->getFunctions()[current_func_id];
 
-				std::cout << "Compiling the following code:\n";
-				code::printMicroBytecode(original_function, std::cout);
+				std::cerr << "Compiling the following code:\n";
+				code::printMicroBytecode(original_function, std::cerr);
 
 				MRef<jit::JitOpFun> compiled = jit::compileLLVM(
 					my_data.cfgs[instr_offset], original_function.bc, current_func_obj.name
@@ -391,14 +393,14 @@ namespace vm {
 				CORE_ASSERT(compiled, "Compiled function pointer shouldn't be nullptr");
 				my_data.compiled_code_ptrs[instr_offset] = compiled;
 
-			    std::cout << "Code at offset " << instr_offset << " compiled\n";
+			    std::cerr << "Code at offset " << instr_offset << " compiled\n";
 
-				std::cout << "Calling compiled ptr: " << (void*)*my_data.compiled_code_ptrs[instr_offset] << "\n";
+				std::cerr << "Calling compiled ptr: " << (void*)*my_data.compiled_code_ptrs[instr_offset] << "\n";
 				// exit(1);
 				(*my_data.compiled_code_ptrs[instr_offset])(&instr, &local_stack, &frame, &thread);
 			}
 			auto  new_instr_offset     = instr - current_func_obj.bc.data();
-			std::cout << "jitEntrypoint at offset " << instr_offset << " exits to offset " << new_instr_offset << "\n";
+			std::cerr << "jitEntrypoint at offset " << instr_offset << " exits to offset " << new_instr_offset << "\n";
 		}
 		FUNCTION_CONT(0);
 	}
@@ -1286,7 +1288,7 @@ namespace vm {
 		{
 			auto& current_func_obj = *frame->current_function;
 			auto  instr_offset     = instr - current_func_obj.bc.data();
-			std::cout << "at start of stepGil, instr ptr " << &instr << " at " << instr <<
+			std::cerr << "at start of stepGil, instr ptr " << &instr << " at " << instr <<
 						" (offset of " << instr_offset << ")\n";
 			thread.stepGil();
 		}

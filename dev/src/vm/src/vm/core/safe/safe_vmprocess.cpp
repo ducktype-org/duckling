@@ -537,18 +537,18 @@ namespace vm {
 		CRef<low::ILowVMProgram> program,
 		CRef<std::vector<std::tuple<CRef<low::LowFuncData>, u64, base::StrID>>> new_functions
 	) {
-		std::cout << "Updating JIT data for " << new_functions->size() << " new functions\n";
+		std::cerr << "Updating JIT data for " << new_functions->size() << " new functions\n";
 		for (auto& [func_data, func_id, func_name]: *new_functions) {
 			code::printMicroBytecode(*func_data.get(), std::cout);
 			jit_data.emplace_back(*func_data.get());
 			for (usize i = 0; i < jit_data.back().cfgs.size(); i++) {
 				auto& cfg = jit_data.back().cfgs[i];
 				if (cfg.empty()) continue; // Not an entrypoint
-				std::cout << " - CFG for instruction " << i << ":\n" << cfg.toString() << "\n\n";
+				std::cerr << " - CFG for instruction " << i << ":\n" << cfg.toString() << "\n\n";
 				auto maybe_old_opcode = loaded_program_copy.replaceOpcode(
 					func_id, i, vm::low::MicroOpcode::jitEntrypoint
 				);
-				std::cout << "Replaced opcode at offset " << i << " in function " << func_name.strView()
+				std::cerr << "Replaced opcode at offset " << i << " in function " << func_name.strView()
 				          << " with jitEntrypoint\n";
 				CORE_ASSERT(maybe_old_opcode.has_value(), "Failed to replace opcode with jitEntrypoint");
 			}

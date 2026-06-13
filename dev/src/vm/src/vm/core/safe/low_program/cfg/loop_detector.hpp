@@ -34,7 +34,7 @@ namespace vm::low::cf {
 			usize function_entrypoint = func.jit_entrypoint_offset;
 
 			ControlFlowGraph cfg(func.bc);
-			std::cout << "Full function CFG:\n" << cfg.toString() << "\n\n";
+			std::cerr << "Full function CFG:\n" << cfg.toString() << "\n\n";
 
 			calcPredecessors(cfg);
 			calcDominators(cfg);
@@ -72,14 +72,14 @@ namespace vm::low::cf {
 					CORE_ASSERT(bid != function_entrypoint, "Function entrypoint cannot be a loop header");
 					auto loop_cfg = cfg.subgraph(std::move(stack));
 					auto loop_start_offset = cfg.getBlock(bid).start;
-					std::cout << "CFG of loop starting at block " << bid << ", instruction offset " << loop_start_offset << ":\n" << loop_cfg.toString() << "\n\n";
+					std::cerr << "CFG of loop starting at block " << bid << ", instruction offset " << loop_start_offset << ":\n" << loop_cfg.toString() << "\n\n";
 					cfgs[loop_start_offset] = std::move(loop_cfg);
 				}
 			}
 
 			// Move full function CFG here to avoid copying it before all the subgraphs are created.
 			cfgs[function_entrypoint] = std::move(cfg);
-			std::cout << "Finished loop detection.\n";
+			std::cerr << "Finished loop detection.\n";
 			return cfgs;
 		}
 

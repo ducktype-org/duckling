@@ -208,7 +208,7 @@ namespace vm::jit {
 						opt_none { opfun_name = low::OPCODE_NAMES.at(static_cast<u64>(opcode)); }
 					}
 
-std::cout << "About to call opfun: " << opfun_name 
+std::cerr << "About to call opfun: " << opfun_name
           << " isDeclaration=" << getOrCreateOpcodeFunction(opfun_name)->isDeclaration()
           << "\n";
 					// Here we are calling instruction originating from bc file or debug
