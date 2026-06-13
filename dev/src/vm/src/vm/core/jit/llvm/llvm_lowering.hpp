@@ -269,7 +269,11 @@ std::cerr << "About to call opfun: " << opfun_name
 			}
 			case vm::low::cf::OutEdges::Kind::End:
 			default: {
-				ir_builder.CreateRetVoid();
+				// We return the offset the interpreter needs to move it's instruction pointer by.
+				// This is necessary, because we made instr arguments to each opcode constant to
+				// allow for compiler to make better optimizaitons.
+				i64 final_offset = block.ret_value;
+				ir_builder.CreateRet(ir_builder.getInt64(final_offset));
 				break;
 			}
 			}
@@ -326,7 +330,7 @@ std::cerr << "About to call opfun: " << opfun_name
 				entry_builder.CreateBr(first_cfg_block);
 			} else {
 				// Safe fallback for entirely empty functions/CFGs
-				entry_builder.CreateRetVoid();
+				entry_builder.CreateRet(entry_builder.getInt64(0));
 			}
 		}
 

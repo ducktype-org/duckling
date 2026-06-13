@@ -22,7 +22,7 @@ constexpr inline uint LOOP_COMPILATION_THRESHOLD = 10;
 
 namespace vm::jit {
 	using JitOpFun
-		= void(const vm::MicroInstruction**, std::byte**, vm::Frame**, vm::SafeVMThread*);
+		= i64(const vm::MicroInstruction**, std::byte**, vm::Frame**, vm::SafeVMThread*);
 
 	/**
 	 * @brief The data additionally stored per function, by the JIT compiler.

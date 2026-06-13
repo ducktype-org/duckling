@@ -357,17 +357,23 @@ namespace vm {
 			std::cerr << "jitEntrypoint at offset " << instr_offset << " in function " << current_func_obj.name.strView() << "\n";
 
 			jit::JitFuncData& my_data = jit_data[current_func_id];
+			auto& compiled_code_ptr = my_data.compiled_code_ptrs[instr_offset];
+			auto& until_compilation = my_data.until_compilation[instr_offset];
 
-			if (my_data.compiled_code_ptrs[instr_offset]) {
+			if (compiled_code_ptr) {
 				// is already compiled
 			    std::cerr << "Executing compiled code at offset " << instr_offset << " with instr of " << &instr << "\n";
-				std::cerr << "Calling compiled ptr " << (void*)*my_data.compiled_code_ptrs[instr_offset] << " with arguments:\n";
+				std::cerr << "Calling compiled ptr " << (void*)*compiled_code_ptr << " with arguments:\n";
 				std::cerr << "    (" << &instr << ", " << &local_stack << ", " << &frame << ", " << &thread << ")\n";
-				(*my_data.compiled_code_ptrs[instr_offset])(&instr, &local_stack, &frame, &thread);
-			} else if (0 < my_data.until_compilation[instr_offset]) {
+				const MicroInstruction* saved_instr = instr;
+				const Frame*            saved_frame = frame;
+				i64 offset = (*compiled_code_ptr)(&instr, &local_stack, &frame, &thread);
+				std::cerr << "Finished call of compiled function via jitEntrypoint in " << current_func_obj.name.strView() << " at offset " << instr_offset << "\n";
+				if (saved_frame == frame) instr = saved_instr + offset;
+			} else if (0 < until_compilation) {
 				// should be compiled later
-				--my_data.until_compilation[instr_offset];
-                std::cerr << "Only " << my_data.until_compilation[instr_offset] << " repetitions left before compilation\n";
+				--until_compilation;
+                std::cerr << "Only " << until_compilation<< " repetitions left before compilation\n";
 
 			    save_execution_state(instr, local_stack, frame, thread);
 				thread.executeOneStep();
@@ -392,14 +398,23 @@ namespace vm {
 					my_data.cfgs[instr_offset], original_function.bc, current_func_obj.name
 				);
 				CORE_ASSERT(compiled, "Compiled function pointer shouldn't be nullptr");
-				my_data.compiled_code_ptrs[instr_offset] = compiled;
+				compiled_code_ptr = compiled;
 
 			    std::cerr << "Code at offset " << instr_offset << " compiled\n";
 
-				std::cerr << "Calling compiled ptr " << (void*)*my_data.compiled_code_ptrs[instr_offset] << " with arguments:\n";
+				std::cerr << "Calling compiled ptr " << (void*)*compiled_code_ptr << " with arguments:\n";
 				std::cerr << "    (" << &instr << ", " << &local_stack << ", " << &frame << ", " << &thread << ")\n";
-				// exit(1);
-				(*my_data.compiled_code_ptrs[instr_offset])(&instr, &local_stack, &frame, &thread);
+				const MicroInstruction* saved_instr = instr;
+				const Frame*            saved_frame = frame;
+				std::string             saved_func  = frame->current_function->name.str();
+				auto                    saved_bc_start = &frame->current_function->bc[0];
+				i64 offset = (*compiled_code_ptr)(&instr, &local_stack, &frame, &thread);
+				std::cerr << "Finished call of compiled function via jitEntrypoint in " << current_func_obj.name.strView() << " at offset " << instr_offset << "\n";
+				std::cerr << "    saved_instr = " << saved_instr << ", current_instr = " << instr << ", call_offset = " << offset << '\n';
+				std::cerr << "    saved_frame = " << saved_frame << ", current_frame = " << frame << '\n';
+				std::cerr << "    saved_func = " << saved_func << ", current_func = " << frame->current_function->name.strView() << '\n';
+				std::cerr << "    saved_bc_start = " << saved_bc_start << ", current_bc_start = " << &frame->current_function->bc[0] << '\n';
+				if (saved_frame == frame) instr = saved_instr + offset;
 			}
 			auto  new_instr_offset     = instr - current_func_obj.bc.data();
 			std::cerr << "jitEntrypoint at offset " << instr_offset << " exits to offset " << new_instr_offset << "\n";
