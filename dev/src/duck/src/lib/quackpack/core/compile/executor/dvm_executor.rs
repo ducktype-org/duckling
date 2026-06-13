@@ -9,9 +9,7 @@ use crate::quackpack::core::compile::BuildContext;
 use crate::quackpack::core::compile::artifacts_layout::ProfileLayout;
 use crate::quackpack::core::compile::duckc::process_builder::DuckcSubcommand;
 use crate::quackpack::core::compile::duckc::{Duckc, multipackage_schema};
-use crate::quackpack::core::compile::executor::{
-    collect_packages, get_linker_options, write_manifest,
-};
+use crate::quackpack::core::compile::executor::{collect_packages, write_manifest};
 use crate::quackpack::core::compile::unit::graph::UnitGraph;
 use crate::quackpack::core::compile::unit::{ArtifactsType, Unit};
 use crate::{QuackResult, QuackResultContext, qp_bail};
@@ -124,28 +122,17 @@ fn create_task(
     graph: &UnitGraph,
     layout: &ProfileLayout,
 ) -> multipackage_schema::Task {
+    assert!(
+        graph.is_root(unit),
+        "`DvmExecutor` should create task only for the root `Unit`"
+    );
     let strategy = match unit.artifacts_type() {
-        ArtifactsType::Binary => {
-            assert!(
-                graph.is_root(unit),
-                "only root should be compiled to binary"
-            );
-            multipackage_schema::PackageCompilationStrategy::Binary {
-                output_file: unit_output(unit, graph, layout),
-                linking_options: get_linker_options(unit, graph, layout),
-            }
-        }
         ArtifactsType::Dvm => multipackage_schema::PackageCompilationStrategy::Dvm {
             output_file: unit_output(unit, graph, layout),
         },
-        ArtifactsType::IsADependencyArtifact => {
-            let layout = layout.for_dependency(&unit.unique_name());
-            multipackage_schema::PackageCompilationStrategy::Lib {
-                output_file: layout.root_directory().join(unit.output_file_name()),
-                archive_options: None,
-            }
-        }
-        ArtifactsType::Library => unreachable!("guarded earlier, unsupported"),
+        task => unreachable!(
+            "should create only DVM task for the root (attempted to create for `{task:?}`)"
+        ),
     };
     multipackage_schema::Task {
         package_id: unit.unique_name().into(),

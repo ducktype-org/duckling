@@ -139,9 +139,6 @@ fn create_task(
                 linking_options: get_linker_options(unit, graph, layout),
             }
         }
-        ArtifactsType::Dvm => multipackage_schema::PackageCompilationStrategy::Dvm {
-            output_file: unit_output(unit, graph, layout),
-        },
         ArtifactsType::IsADependencyArtifact => {
             let layout = layout.for_dependency(&unit.unique_name());
             multipackage_schema::PackageCompilationStrategy::Lib {
@@ -149,7 +146,8 @@ fn create_task(
                 archive_options: None,
             }
         }
-        ArtifactsType::Library => unreachable!("guarded earlier, unsupported"),
+        ArtifactsType::Dvm => unreachable!("DVM tasks should be handled by the `DvmExecutor`"),
+        ArtifactsType::Library => unreachable!("library tasks are unsupported"),
     };
     multipackage_schema::Task {
         package_id: unit.unique_name().into(),
