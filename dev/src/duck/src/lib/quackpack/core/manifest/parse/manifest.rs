@@ -12,6 +12,7 @@ use crate::quackpack::core::{
 use crate::quackpack::schemas::manifest::{
     Manifest as ManifestSchema, OptLevel as SchemaOptLevel, Profile as ProfileSchema,
 };
+use crate::util::hash::sha256_string;
 use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail, qp_err};
 
 /// Parse [`Manifest`] from given [`ManifestSchema`].
@@ -48,7 +49,11 @@ pub(crate) fn parse(
                 qp_bail!(err);
             }
 
-            let name = StrId::from(root);
+            let name = StrId::from(format!(
+                "{} {}",
+                root.file_name().unwrap().display(),
+                sha256_string(root.as_os_str().as_encoded_bytes())
+            ));
             let version = Version::default();
             let manifest = Manifest::new(
                 name,

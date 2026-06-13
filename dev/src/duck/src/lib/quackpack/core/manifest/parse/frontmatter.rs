@@ -43,7 +43,6 @@ pub static UNCLOSED_FRONTMATTER_REGEX: LazyLock<Regex> =
 
 /// Parse a frontmatter of a script at a given `path`.
 /// If the script does not contain a frontmatter, returns `Ok(None)`.
-#[cfg_attr(not(test), expect(dead_code))]
 pub fn try_parse_frontmatter(
     path: PathBuf,
     ctx: &DuckContext,

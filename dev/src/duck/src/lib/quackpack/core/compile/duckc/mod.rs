@@ -85,7 +85,9 @@ impl Duckc {
             .dependencies_for_package(&graph.graph().root());
         bail_if_has_deps(deps.dependencies())?;
         bail_if_has_explicit_aliases(this)?;
-        let this = this.package();
+        let Some(this) = this.package().try_get_package() else {
+            qp_bail_internal!("tried to compile a frontmatter script as a package");
+        };
         let mut builder = process_builder::DuckcProcessBuilder::new(self);
         builder
             .set_subcommand(process_builder::DuckcSubcommand::CompilePackage)
