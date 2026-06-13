@@ -167,7 +167,7 @@ namespace vm::jit {
 			builder.CreateStore(bc_ptr, instr_arg);
 		}
 
-		void lowerBasicBlock(
+		void lowerBlockBody(
 			const low::MicroBytecode&        bc,
 			llvm::IRBuilder<>&               ir_builder,
 			usize                            start,
@@ -255,7 +255,7 @@ std::cerr << "About to call opfun: " << opfun_name
 			std::unordered_set<std::string>& used_opfuns
 		) {
 			llvm::IRBuilder<> ir_builder(llvm_blocks[block.id]);
-			lowerBasicBlock(bc, ir_builder, block.start, block.end, func_or_loop_name, used_opfuns);
+			lowerBlockBody(bc, ir_builder, block.start, block.end, func_or_loop_name, used_opfuns);
 
 			switch (block.edgeKind()) {
 			case vm::low::cf::OutEdges::Kind::Default: {
@@ -275,6 +275,61 @@ std::cerr << "About to call opfun: " << opfun_name
 			}
 		}
 
+		void emitEntryBlock(llvm::BasicBlock* first_cfg_block) {
+			llvm::BasicBlock* entry_block = llvm::BasicBlock::Create(
+				llvm_ctx, "entry", user_func_wrapper
+			);
+
+			if (first_cfg_block != nullptr) {
+				entry_block->moveBefore(first_cfg_block);
+			}
+
+			llvm::IRBuilder<> entry_builder(entry_block);
+
+			// Set up printf declaration
+			llvm::FunctionType* printf_type = llvm::FunctionType::get(
+				llvm::Type::getInt32Ty(llvm_ctx),
+				{ llvm::PointerType::getUnqual(llvm_ctx) },
+				true // variadic
+			);
+
+			llvm::Function* printf_func = module->getFunction("printf");
+			if (!printf_func) {
+				printf_func = llvm::Function::Create(
+					printf_type,
+					llvm::Function::ExternalLinkage,
+					"printf",
+					module
+				);
+			}
+
+			// Create format string
+			llvm::Constant* fmt_str = llvm::ConstantDataArray::getString(llvm_ctx, "JIT compiled function entered\n");
+			llvm::GlobalVariable* fmt_global = new llvm::GlobalVariable(
+				*module,
+				fmt_str->getType(),
+				true,
+				llvm::GlobalValue::PrivateLinkage,
+				fmt_str,
+				"fmt_str"
+			);
+
+			// Call printf
+			llvm::Value* fmt_ptr = entry_builder.CreateInBoundsGEP(
+				fmt_str->getType(),
+				fmt_global,
+				{ entry_builder.getInt32(0), entry_builder.getInt32(0) }
+			);
+			entry_builder.CreateCall(printf_type, printf_func, { fmt_ptr });
+
+			if (first_cfg_block != nullptr) {
+				entry_builder.CreateBr(first_cfg_block);
+			} else {
+				// Safe fallback for entirely empty functions/CFGs
+				entry_builder.CreateRetVoid();
+			}
+		}
+
 		void lowerCFG(
 			const low::cf::ControlFlowGraph& cfg,
 			const low::MicroBytecode&        bc,
@@ -282,7 +337,7 @@ std::cerr << "About to call opfun: " << opfun_name
 		) {
 			auto& llvm_data = llvmData();
 
-			// Create LLVM basic blocks for each VM block
+			// Create LLVM basic blocks for each VM block normally
 			for (usize block_idx = 0; block_idx < cfg.size(); ++block_idx) {
 				llvm::BasicBlock* block = llvm::BasicBlock::Create(
 					llvm_ctx, "block_" + std::to_string(block_idx), user_func_wrapper
@@ -290,46 +345,18 @@ std::cerr << "About to call opfun: " << opfun_name
 				llvm_blocks.push_back(block);
 			}
 
-			// Declare printf
-llvm::FunctionType* printf_type = llvm::FunctionType::get(
-    llvm::Type::getInt32Ty(llvm_ctx),
-    { llvm::PointerType::getUnqual(llvm_ctx) },
-    true  // variadic
-);
-llvm::Function* printf_func = llvm::Function::Create(
-    printf_type,
-    llvm::Function::ExternalLinkage,
-    "printf",
-    module
-);
+			if (!llvm_blocks.empty()) {
+				emitEntryBlock(llvm_blocks[0]);
+			} else {
+				emitEntryBlock(nullptr);
+			}
 
-// Create the format string global
-llvm::Constant* fmt_str = llvm::ConstantDataArray::getString(llvm_ctx, "JIT compiled function entered\n");
-llvm::GlobalVariable* fmt_global = new llvm::GlobalVariable(
-    *module,
-    fmt_str->getType(),
-    true,
-    llvm::GlobalValue::PrivateLinkage,
-    fmt_str,
-    "fmt_str"
-);
-
-// Insert the printf call at the start of the first basic block
-llvm::IRBuilder<> entry_builder(llvm_blocks[0], llvm_blocks[0]->begin());
-llvm::Value* fmt_ptr = entry_builder.CreateInBoundsGEP(
-    fmt_str->getType(),
-    fmt_global,
-    { entry_builder.getInt32(0), entry_builder.getInt32(0) }
-);
-entry_builder.CreateCall(printf_type, printf_func, { fmt_ptr });
-
-			// Helper structure to track called opfuns.
 			std::unordered_set<std::string> used_opfuns;
 
 			for (usize block_idx = 0; block_idx < llvm_blocks.size(); ++block_idx)
 				lowerBlock(
 					func_or_loop_name, bc, cfg.getBlock(block_idx), used_opfuns
-				);  // lowerBlock(function_to_compile, block_idx, used_opfuns);
+				);
 
 			auto used_opfuns_filter = [&](const llvm::GlobalValue* gv) -> bool {
 				return used_opfuns.contains(gv->getName().str());
