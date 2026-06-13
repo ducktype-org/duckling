@@ -68,6 +68,11 @@ namespace query::external {
 		base::Optional<std::vector<InputData>>      previous_inputs_opt,
 		base::Optional<Ref<std::vector<InputData>>> invalidated_inputs_opt
 	) {
+		CORE_ASSERT(
+			!query::Context::areWeInsideQuery(),
+			"invalidateQueries() must not be called from inside a query"
+		);
+
 		auto state = ::query::internal::ContextAccess::getState();
 
 		// Wait until all query execution has stopped: invalidation mutates the graph, caches and
