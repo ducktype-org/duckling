@@ -9,17 +9,16 @@
 #include <sstream>
 #include <string>
 
+#include <iostream>
+
 namespace vm::low::cf {
-
-	OutEdges::OutEdges(): to{ 0, 0 } {}
-
 	usize OutEdges::size() const { return no_edges; }
 
-	OutEdges::Kind OutEdges::kind() const { return op_type; }
+	OutEdges::Kind OutEdges::kind() const { return edge_kind; }
 
 	void OutEdges::setCond(Kind kind, BasicBlockID target1, BasicBlockID target2) {
 		CORE_ASSERT(no_edges == 0, "Outgoing edges already set for this basic block");
-		this->op_type = kind;
+		this->edge_kind = kind;
 		to[0]         = target1;
 		to[1]         = target2;
 		no_edges      = 2;
@@ -27,19 +26,19 @@ namespace vm::low::cf {
 
 	void OutEdges::setDefault(BasicBlockID target) {
 		CORE_ASSERT(no_edges == 0, "Outgoing edges already set for this basic block");
-		this->op_type = Kind::Default;
+		this->edge_kind = Kind::Default;
 		to[0]         = target;
 		no_edges      = 1;
 	}
 
 	BasicBlockID OutEdges::next() const {
-		CORE_ASSERT(op_type == Kind::Default, "This block has no default outgoing edge.");
+		CORE_ASSERT(edge_kind == Kind::Default, "This block has no default outgoing edge.");
 		return to[0];
 	}
 
 	BasicBlockID OutEdges::successTarget() const {
 		CORE_ASSERT(
-			op_type == Kind::JmpIf || op_type == Kind::JmpIfNot,
+			edge_kind == Kind::JmpIf || edge_kind == Kind::JmpIfNot,
 			"This block does not have conditional outgoing edges."
 		);
 		return to[0];
@@ -47,7 +46,7 @@ namespace vm::low::cf {
 
 	BasicBlockID OutEdges::failTarget() const {
 		CORE_ASSERT(
-			op_type == Kind::JmpIf || op_type == Kind::JmpIfNot,
+			edge_kind == Kind::JmpIf || edge_kind == Kind::JmpIfNot,
 			"This block does not have conditional outgoing edges."
 		);
 		return to[1];
@@ -66,10 +65,13 @@ namespace vm::low::cf {
 	}
 
 	BasicBlock::BasicBlock(BasicBlockID id, usize start, usize end):
-		  succ(),
 		  id(id),
 		  start(start),
-		  end(end) {}
+		  end(end),
+		  succ(),
+		  ret_value(0) {}
+
+	void BasicBlock::setRetValue(i64 value) { ret_value = value; }
 
 	OutEdges::Kind BasicBlock::edgeKind() const { return succ.kind(); }
 
@@ -172,42 +174,71 @@ namespace vm::low::cf {
 		}
 	}
 
-	ControlFlowGraph ControlFlowGraph::subgraph(const std::vector<BasicBlockID>& block_ids) const {
+	ControlFlowGraph ControlFlowGraph::loopSubgraph(
+		BasicBlockID entry_block_id, const std::vector<BasicBlockID>& other_block_ids
+	) const {
 		ControlFlowGraph subgraph;
-		subgraph.blocks.reserve(block_ids.size() + 1);
+		subgraph.blocks.emplace_back(
+			0, blocks[entry_block_id].start, blocks[entry_block_id].end
+		);
 
-		auto dummy_block_id = static_cast<BasicBlockID>(block_ids.size());
+		const BasicBlockID UNDEFINED_ID = static_cast<BasicBlockID>(-1);
 
-		std::vector<BasicBlockID> old_to_new(blocks.size() + 1, dummy_block_id);
+		std::vector<BasicBlockID> old_block_ids = { entry_block_id };
+		std::vector<BasicBlockID> old_to_new_id(blocks.size() + 1, UNDEFINED_ID);
+		old_to_new_id[entry_block_id] = 0;
 
-		for (BasicBlockID old_id: block_ids) {
+		std::cerr << "Creating loop subgraph from blocks: " << entry_block_id << "/0 ";
+		for (BasicBlockID old_id: other_block_ids) {
 			CORE_ASSERT(old_id < blocks.size(), "Invalid block ID in subgraph request");
-			CORE_ASSERT(
-				old_to_new[old_id] == dummy_block_id, "Duplicate block ID in subgraph request"
-			);
+			std::cerr << old_id << "/" << old_to_new_id[old_id] << " ";
+			if (old_to_new_id[old_id] != UNDEFINED_ID) {
+				continue;
+			}
 
 			const auto new_id  = static_cast<BasicBlockID>(subgraph.blocks.size());
-			old_to_new[old_id] = new_id;
+			old_to_new_id[old_id] = new_id;
 
-			const BasicBlock& src = blocks[old_id];
-			subgraph.blocks.emplace_back(new_id, src.start, src.end);
+			subgraph.blocks.emplace_back(new_id, blocks[old_id].start, blocks[old_id].end);
+			old_block_ids.push_back(old_id);
 		}
-		// Add dummy block to redirect edges that go outside the selected subset
-		auto last_instr_pos = blocks.back().end - 1;
-		subgraph.blocks.emplace_back(dummy_block_id, last_instr_pos + 1, last_instr_pos + 1);
+		std::cerr << "\n";
 
-		for (BasicBlockID old_id: block_ids) {
-			const BasicBlockID new_id = old_to_new[old_id];
-			const BasicBlock&  src    = blocks[old_id];
-			BasicBlock&        dst    = subgraph.blocks[new_id];
+		const i64 loop_entry_pos = subgraph.blocks[0].start;
 
-			dst.succ = src.succ;
-			for (usize i = 0; i < src.edgeCount(); ++i) {
-				BasicBlockID old_target_id = src.edge(i);
-				BasicBlockID new_target_id = old_to_new[old_target_id];
-				dst.succ[i]                = new_target_id;
+		for (BasicBlockID old_id: old_block_ids) {
+			const BasicBlockID new_id = old_to_new_id[old_id];
+			const BasicBlock*  src    = &blocks[old_id];
+			BasicBlock*        dst    = &subgraph.blocks[new_id];
+
+			dst->succ = src->succ;
+			for (usize i = 0; i < src->edgeCount(); ++i) {
+				BasicBlockID old_target_id = src->edge(i);
+				BasicBlockID new_target_id = old_to_new_id[old_target_id];
+				if (new_target_id == UNDEFINED_ID) {
+					usize jmp_dest_pos = blocks[old_target_id].start;
+
+					// Create empty exit block representing this outgoing edge
+					new_target_id = static_cast<BasicBlockID>(subgraph.blocks.size());
+					subgraph.blocks.emplace_back(new_target_id, jmp_dest_pos, jmp_dest_pos);
+					subgraph.blocks.back().setRetValue(jmp_dest_pos - loop_entry_pos);
+
+					// Update mapping to avoid creating multiple identical dummy blocks
+					old_to_new_id[old_target_id] = new_target_id;
+
+					// We must refresh the pointer, as emplace_back invalidates all references
+					dst = &subgraph.blocks[new_id];
+				}
+				std::cerr << "Mapping outedge from new old block " << old_id << " at index " << i << ": " << dst->succ[i] << "/" << new_target_id << "\n";
+				dst->succ[i] = new_target_id;
 			}
 		}
+
+		std::cerr << "Old-to-new mapping: ";
+		for (usize i = 0; i < blocks.size(); i++) {
+			std::cerr << i << "/" << old_to_new_id[i]<< " ";
+		}
+		std::cerr << "\n";
 
 		return subgraph;
 	}
@@ -216,7 +247,7 @@ namespace vm::low::cf {
 
 	std::string OutEdges::toString() const {
 		std::ostringstream oss;
-		switch (op_type) {
+		switch (edge_kind) {
 		case Kind::End:
 			oss << "End{}";
 			break;
@@ -224,10 +255,10 @@ namespace vm::low::cf {
 			oss << "Default{next -> " << to[0] << "}";
 			break;
 		case Kind::JmpIf:
-			oss << "JmpIf{true -> " << to[0] << ", false -> " << to[1] << "}";
+			oss << "JmpIf{condition: T -> " << to[0] << ", F -> " << to[1] << "}";
 			break;
 		case Kind::JmpIfNot:
-			oss << "JmpIfNot{true -> " << to[1] << ", false -> " << to[0] << "}";
+			oss << "JmpIfNot{condition: T -> " << to[1] << ", F -> " << to[0] << "}";
 			break;
 		}
 		return oss.str();
@@ -235,8 +266,8 @@ namespace vm::low::cf {
 
 	std::string BasicBlock::toString() const {
 		std::ostringstream oss;
-		oss << "Block{bid = " << id << ", range = [" << start << ", " << end << "), edge = "
-		    << succ.toString() << "}";
+		oss << "Block{bid = " << id << ", range = [" << start << ", " << end << "), ret = "
+			<< ret_value << ", edge = " << succ.toString() << "}";
 		return oss.str();
 	}
 

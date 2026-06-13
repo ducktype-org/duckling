@@ -45,22 +45,27 @@ namespace vm::low::cf {
 			usize                     stack_ptr = 0;
 
 			for (BasicBlockID bid = 0; bid < cfg.size(); ++bid) {
-				stack = { bid };
-				stack_ptr = 1;
-				last_visited[bid] = ++timestamp;
+				stack.clear();
+				stack_ptr = 0;
+				last_visited[bid] = ++timestamp; // blocks before bid can't be part of loop
 
-				for (BasicBlockID pred: predecessors[bid]) {
+				for (auto pred: predecessors[bid]) {
 					if (isDominatedBy(pred, bid)) {
 						last_visited[pred] = timestamp;
 						stack.push_back(pred);
+						std::cerr << pred << " is dominated by " << bid << "\n";
 					}
 				}
 
 				while (stack_ptr < stack.size()) {
-					BasicBlockID current = stack[stack_ptr++];
-					if (current == bid) continue;
+					BasicBlockID curr = stack[stack_ptr++];
 
-					for (const auto& next: predecessors[current]) {
+					// If block is it's own predecessor, that means we have found a loop. However,
+					// we don't want to look through it's predecesors, as it doesn't dominate them.
+					if (curr == bid)
+						continue;
+
+					for (auto next: predecessors[curr]) {
 						if (last_visited[next] < timestamp) {
 							stack.push_back(next);
 							last_visited[next] = timestamp;
@@ -68,9 +73,9 @@ namespace vm::low::cf {
 					}
 				}
 
-				if (stack.size() > 1) {
+				if (!stack.empty()) {
 					CORE_ASSERT(bid != function_entrypoint, "Function entrypoint cannot be a loop header");
-					auto loop_cfg = cfg.subgraph(std::move(stack));
+					auto loop_cfg = cfg.loopSubgraph(bid, stack);
 					auto loop_start_offset = cfg.getBlock(bid).start;
 					std::cerr << "CFG of loop starting at block " << bid << ", instruction offset " << loop_start_offset << ":\n" << loop_cfg.toString() << "\n\n";
 					cfgs[loop_start_offset] = std::move(loop_cfg);

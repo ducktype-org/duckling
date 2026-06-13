@@ -37,8 +37,7 @@ namespace vm::low {
 				JmpIfNot,
 			};
 
-			OutEdges();
-
+			OutEdges()                           = default;
 			OutEdges(const OutEdges&)            = default;
 			OutEdges& operator=(const OutEdges&) = default;
 
@@ -99,19 +98,20 @@ namespace vm::low {
 			[[nodiscard]] std::string toString() const;
 
 		private:
-			std::array<BasicBlockID, 2> to;
-			usize                       no_edges{ 0 };
-			Kind                        op_type{ Kind::End };
+			std::array<BasicBlockID, 2> to = { 0, 0 };
+			usize                       no_edges = 0;
+			Kind                        edge_kind = Kind::End;
 		};
 
 		/**
 		 * @brief Basic block metadata used by control-flow analyses.
 		 */
 		struct BasicBlock {
-			OutEdges           succ;
 			const BasicBlockID id;
 			const usize        start;
 			const usize        end;
+			OutEdges           succ;
+			i64                ret_value; // Value only relevant for blocks without outgoing edges.
 
 			/**
 			 * @brief Creates a basic block descriptor.
@@ -122,6 +122,11 @@ namespace vm::low {
 			BasicBlock(BasicBlockID id, usize start, usize end);
 
 			BasicBlock() = delete;
+
+			/**
+			 * @brief Sets return value to block to specified value.
+			 */
+			void setRetValue(i64 value);
 
 			/**
 			 * @brief Returns the shape of outgoing edges.
@@ -215,11 +220,12 @@ namespace vm::low {
 
 			/**
 			 * @brief Builds a CFG containing only selected blocks.
-			 * @param block_ids Block ids to keep in the resulting graph.
+			 * @param other_block_ids Block ids to keep in the resulting graph.
 			 * @return A remapped CFG subgraph with out-of-subset edges redirected.
 			 * @note Current implementation redirects external edges to a synthetic dummy block.
 			 */
-			[[nodiscard]] ControlFlowGraph subgraph(const std::vector<BasicBlockID>& block_ids
+			[[nodiscard]] ControlFlowGraph loopSubgraph(
+				BasicBlockID entry_block_id, const std::vector<BasicBlockID>& other_block_ids
 			) const;
 
 			/**
