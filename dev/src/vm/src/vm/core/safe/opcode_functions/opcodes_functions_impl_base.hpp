@@ -809,17 +809,6 @@ namespace vm {
 		FUNCTION_CONT(2);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(upcast_pptr_pptr)(FUNCTION_ARGS) {
-		{
-			// Same as move_pptr_pptr, treated differently by static analysis.
-			const auto    dst     = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
-			const auto    src     = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
-			const Pointer new_dst = thread.process_memory.updatePointerAssignment(dst, src);
-			WRITE_TO_PLACE_ARG(Pointer, instr->arg0, new_dst);
-		}
-		FUNCTION_CONT(1);
-	}
-
 	RETURN_TYPE OpFuns::OPCODE_NAME(downcast_pptr_pptr)(FUNCTION_ARGS) {
 		{
 			const auto dst = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
@@ -1091,6 +1080,8 @@ namespace vm {
 				WRITE_TO_PLACE_ARG(Pointer, instr->arg0, new_dst);
 			} else {
 				auto tbl_block = tbl_pointer.getBlock();
+				if (Memory::getBlockType(tbl_block)->getKind() != Type::Kind::DynamicTable)
+					throw exceptions::VMDynTableReAllocTypeMismatch();
 				thread.process_memory.dynTableReallocateBlockDataN(tbl_block, new_elem_count);
 			}
 		}
