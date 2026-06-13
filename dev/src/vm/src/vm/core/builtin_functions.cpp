@@ -100,6 +100,20 @@ namespace vm::builtins {
 		return base::safeIntConv<i64>(output.size());
 	}
 
+	i64 FunctionHandlers::builtinOutputI32(SafeVMThread& thread, i32 arg) {
+		const std::string output = std::to_string(arg) + "\n";
+		thread.safe_process.getIO().writeOutput(output);
+
+		return base::safeIntConv<i64>(output.size());
+	}
+
+	i64 FunctionHandlers::builtinOutputChar(SafeVMThread& thread, i8 arg) {
+		std::string output(1, static_cast<char>(arg));
+		thread.safe_process.getIO().writeOutput(output);
+
+		return base::safeIntConv<i64>(output.size());
+	}
+
 	void FunctionHandlers::builtinOutputString(SafeVMThread& thread, Pointer ptr) {
 		auto block      = ptr.getBlock();
 		auto block_id   = thread.process_memory.requestBlockID(block);
@@ -272,6 +286,8 @@ namespace vm::builtins {
 				CASE_FUNC,
 				InputI64,
 				OutputI64,
+				OutputI32,
+				OutputChar,
 				OutputString,
 				Stoi,
 				StartThread,
@@ -306,6 +322,16 @@ namespace vm::builtins {
 					BuiltinFunctionID::OutputI64,
 					{ base::StrID("builtin_output_i64"),
 			          code::FuncSignature({ base::StrID("i64") }, { base::StrID("i64") }) },
+				},
+				{
+					BuiltinFunctionID::OutputI32,
+					{ base::StrID("builtin_output_i32"),
+			          code::FuncSignature({ base::StrID("i64") }, { base::StrID("i32") }) },
+				},
+				{
+					BuiltinFunctionID::OutputChar,
+					{ base::StrID("builtin_output_char"),
+			          code::FuncSignature({ base::StrID("i64") }, { base::StrID("i8") }) },
 				},
 				{
 					BuiltinFunctionID::OutputString,

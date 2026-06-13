@@ -145,6 +145,8 @@ namespace vm {
 		[[nodiscard]]
 		base::Optional<Offset> getFieldOffsetByName(base::StrID field_name) const;
 		[[nodiscard]]
+		base::Optional<TypeCRef> getFieldTypeByName(base::StrID field_name) const;
+		[[nodiscard]]
 		base::Optional<CRef<std::vector<kind::FieldDesc>>> getFields() const;
 
 		// variant

@@ -3,7 +3,7 @@ type primitive: i8 1
 type variant: PersistVariant { i64, i8 }
 type pointer: ptr_PersistVariant PersistVariant
 
-global_data persisted_variant PersistVariant {};
+global_data persisted_variant PersistVariant {}
 
 function set_global_variant_value {} -> {} {
     init_pany_type variant_ptr, ptr_PersistVariant;
