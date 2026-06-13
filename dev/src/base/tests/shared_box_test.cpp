@@ -269,11 +269,14 @@ private:
 						"SharedBox should still own the same object after copying and moving!"
 					);
 
+					// clang-format off
+					// Format in workflows breaks on this, don't know why.
 					assertTrue(
 						threads_boxes[i].ownersCount() >= 3,
 						"At least threads_boxes[i], move and move2 should share ownership of the "
-					    "same object!"
+						"same object!"
 					);
+					// clang-format on
 				}
 				threads_boxes[i].reset();
 			});
