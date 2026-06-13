@@ -1,6 +1,6 @@
 Tests:
-  debug_resume_pause:
+  debug_next:
     Run: "PYTHONPATH=../helpers python3 dap_runner.py @{build_dir}"
     TimeOut: 1
     Cases:
-      resume_pause: { }
+      next: { }

@@ -72,6 +72,10 @@ Disable completions/hints:
 | `/help` | `/?`, `/h` | Show help |
 | `/exit` | `/quit`, `/q` | Exit session |
 | `/history` | `/hist` | Print current session entered statements |
+| `/symbols` | `/syms` | Print declarations visible in the current session |
+| `/variables` | `/vars` | Print top-level variables visible in the current session |
+| `/functions` | `/fns` | Print top-level functions visible in the current session |
+| `/details <name>` | - | Print detailed information for a visible symbol |
 | `/reset [n\|-n] [--silent]` | - | Resets session's state to the either state with absolute index n(when typing just n, this index can be checked in /hist) or when using -n, to the state n states ago. Turning on --silent suppress output during reset 
 | `/cmds` | `/commands` | Show all inputs history(also previous sessions) |
 | `/commands-reset` | `/cmds-reset` | Resets all inputs history |
