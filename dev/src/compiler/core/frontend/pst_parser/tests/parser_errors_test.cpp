@@ -36,6 +36,44 @@ class PSTErrorTests: public tester::TestSuite {
 
 		GenExample(std::string code): code(std::move(code)) { examples.push_back(this); }
 
+		template<typename Element>
+		static u64 countSubElements(CRef<Element> el) {
+			u64 count = 1;
+			for (auto& sub: el->viewChildren()) {
+				count += countSubElements(base::CRef(&*sub.illegalAccess().value()));
+			}
+			return count;
+		}
+
+		template<typename Element>
+		[[nodiscard]]
+		static bool testElementCloning(base::CRef<Element> el) {
+			u64 x1 = 0, x2 = 0, x3 = 0, x4 = 0;
+			{
+				x1 = countSubElements(el);
+				auto clone = el->clone();
+				if (!clone) return false;
+				x2 = countSubElements(el);
+				x3 = countSubElements(clone.ref().toOpt().value());
+			}
+			x4 = countSubElements(el);
+			std::cerr << x1 << " " << x2 << " " << x3 << " " << x4 << "\n";
+			return x1 == x2 && x2 == x3 && x3 == x4;
+		}
+
+		template<typename Element, typename Parser>
+		[[nodiscard]]
+		static bool testCloning(pst::PST<Element, Parser>& pst) {
+			if (not pst.hasErrors()) {
+				auto is_good = testElementCloning(base::CRef(&*pst.getRootElement().illegalAccess().value()));
+				if (!is_good) {
+					std::println(std::cerr, "[Error] Cloning failed");
+				}
+				return is_good;
+			}
+			return true;
+		}
+
 		virtual bool operator()() = 0;
 		[[nodiscard]]
 		virtual std::string message() const
@@ -50,7 +88,7 @@ class PSTErrorTests: public tester::TestSuite {
 
 		bool operator()() override {
 			auto parsed = pst::PST<Element, Parser>::fromContents(code, pst::PSTType::Program);
-			return (not parsed.hasErrors()) == good;
+			return ((not parsed.hasErrors()) == good && testCloning(parsed));
 		}
 
 		[[nodiscard]]
@@ -71,7 +109,7 @@ class PSTErrorTests: public tester::TestSuite {
 			auto parsed = pst::PST<pst::CodeBlock, Parser>::fromContentsWithArgs(
 				code, pst::PSTType::Program, hashing::ComponentHash{}
 			);
-			return (not parsed.hasErrors()) == good;
+			return ((not parsed.hasErrors()) == good && testCloning(parsed));
 		}
 
 		[[nodiscard]]
@@ -92,7 +130,7 @@ class PSTErrorTests: public tester::TestSuite {
 			auto parsed = pst::PST<pst::CodeBlockOrStmt, Parser>::fromContentsWithArgs(
 				code, pst::PSTType::Program, hashing::ComponentHash{}
 			);
-			return (not parsed.hasErrors()) == good;
+			return ((not parsed.hasErrors()) == good && testCloning(parsed));
 		}
 
 		[[nodiscard]]
@@ -121,7 +159,7 @@ class PSTErrorTests: public tester::TestSuite {
 				makeBox<pst::LangParserContext>(class_name, pst::BlockOrderType::Unordered),
 				hashing::ComponentHash{}
 			);
-			return (not parsed.hasErrors()) == good;
+			return ((not parsed.hasErrors()) == good && testCloning(parsed));
 		}
 
 		[[nodiscard]]
