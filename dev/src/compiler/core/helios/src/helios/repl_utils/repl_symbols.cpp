@@ -1,5 +1,6 @@
 #include "repl_symbols.hpp"
 
+#include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/queries/function_queries.hpp>
@@ -8,18 +9,26 @@
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <helios_private/scopes/scopes.hpp>
 
+#include <base/except/exceptions.hpp>
+
 #include <algorithm>
 #include <sstream>
 #include <string_view>
 
 namespace compiler::repl {
 	namespace {
+		/**
+		 * @brief Return whether a symbol kind can be printed with function-style signature details.
+		 */
 		bool isFunctionLike(helios::SymbolKind kind) {
 			return kind == helios::SymbolKind::Function
 			    || kind == helios::SymbolKind::FunctionDeclaration
 			    || kind == helios::SymbolKind::Method;
 		}
 
+		/**
+		 * @brief Convert a compiler symbol kind into the short label used in REPL output.
+		 */
 		std::string symbolKindLabel(helios::SymbolKind kind) {
 			switch (kind) {
 			case helios::SymbolKind::Namespace:
@@ -58,6 +67,9 @@ namespace compiler::repl {
 			return "symbol";
 		}
 
+		/**
+		 * @brief Collect the REPL module chain from oldest statement to the terminal module.
+		 */
 		std::vector<frontend::ModuleID> collectReplModuleChain(
 			query::Context& ctx, frontend::ModuleID terminal_module_id
 		) {
@@ -75,14 +87,18 @@ namespace compiler::repl {
 			return modules;
 		}
 
+		/**
+		 * @brief Format function parameters and return type for a function-like symbol.
+		 */
 		std::string queryFunctionDetails(query::Context& ctx, helios::SymID symbol) {
 			auto declaration = ctx.query<helios::QueryDeclOfFun>(symbol);
 			if (declaration->hasFailed()) return {};
+			const auto& declaration_value = declaration->valueOrPanic();
 
 			std::stringstream out;
 			out << "(";
 			bool first = true;
-			for (const auto& param: declaration->valueOrThrow().parameters) {
+			for (const auto& param: declaration_value.parameters) {
 				if (helios::kind(symbol) == helios::SymbolKind::Method
 				    && param.name == base::StrID("self"))
 					continue;
@@ -90,19 +106,24 @@ namespace compiler::repl {
 				out << param.name.strView() << ": " << param.type.toString();
 				first = false;
 			}
-			out << ") -> " << declaration->valueOrThrow().return_type.toString();
+			out << ") -> " << declaration_value.return_type.toString();
 			return out.str();
 		}
 
+		/**
+		 * @brief Query and format the type of a value-like symbol.
+		 */
 		std::string queryTypeDetails(query::Context& ctx, helios::SymID symbol) {
 			auto type = ctx.query<helios::QueryTypeOfSymbol>(symbol);
 			if (type->hasFailed()) return {};
-			return type->valueOrThrow().toString();
+			return type->valueOrPanic().toString();
 		}
 
-		std::string querySymbolDetails(
-			query::Context& ctx, helios::SymID symbol, helios::SymbolKind kind
-		) {
+		/**
+		 * @brief Return the compact signature/type suffix for symbols that have one.
+		 */
+		std::string querySymbolDetails(query::Context& ctx, helios::SymID symbol) {
+			const auto kind = helios::kind(symbol);
 			if (isFunctionLike(kind)) return queryFunctionDetails(ctx, symbol);
 
 			switch (kind) {
@@ -116,13 +137,16 @@ namespace compiler::repl {
 			}
 		}
 
+		/**
+		 * @brief Format one-line symbol output shared by lists and nested detail sections.
+		 */
 		std::string formatSymbolSummary(query::Context& ctx, helios::SymID symbol) {
 			const auto sym_kind = helios::kind(symbol);
 
 			std::stringstream out;
 			out << symbolKindLabel(sym_kind) << " " << helios::name(symbol).strView();
 
-			const auto details = querySymbolDetails(ctx, symbol, sym_kind);
+			const auto details = querySymbolDetails(ctx, symbol);
 			if (!details.empty()) {
 				if (details.front() == '(')
 					out << details;
@@ -133,6 +157,9 @@ namespace compiler::repl {
 			return out.str();
 		}
 
+		/**
+		 * @brief Print a titled member list, using `none` for empty sections.
+		 */
 		void printMemberSection(
 			query::Context&                   ctx,
 			std::stringstream&                out,
@@ -148,6 +175,9 @@ namespace compiler::repl {
 			for (auto symbol: symbols) out << "  - " << formatSymbolSummary(ctx, symbol) << "\n";
 		}
 
+		/**
+		 * @brief Return symbols declared directly inside a namespace body.
+		 */
 		std::vector<helios::SymID> queryNamespaceMembers(query::Context& ctx, helios::SymID symbol) {
 			auto stmt = helios::stmt(ctx, symbol);
 			if (!stmt.has_value()) return {};
@@ -156,6 +186,9 @@ namespace compiler::repl {
 			return ctx.query<helios::QuerySymbolsInScope>(scope)->valueOrThrow();
 		}
 
+		/**
+		 * @brief Print the field-based constructor available for class values in the REPL.
+		 */
 		void printImplicitFieldConstructor(
 			query::Context& ctx, std::stringstream& out, const helios::ClassSymbolData& class_data
 		) {
@@ -170,13 +203,16 @@ namespace compiler::repl {
 			for (auto member: class_data.members) {
 				if (!first) out << ", ";
 				out << helios::name(member).strView();
-				const auto type = querySymbolDetails(ctx, member, helios::kind(member));
+				const auto type = querySymbolDetails(ctx, member);
 				if (!type.empty()) out << ": " << type;
 				first = false;
 			}
 			out << ")\n";
 		}
 
+		/**
+		 * @brief Print class-specific details such as fields, methods, etc.
+		 */
 		void printClassDetails(query::Context& ctx, std::stringstream& out, helios::SymID symbol) {
 			auto class_data_result = ctx.query<helios::QueryClassSymbolData>(symbol);
 			if (class_data_result->hasFailed()) {
@@ -184,7 +220,7 @@ namespace compiler::repl {
 				return;
 			}
 
-			const auto& class_data = class_data_result->valueOrThrow();
+			const auto& class_data = class_data_result->valueOrPanic();
 			if (class_data.base.has_value()) out << "base: " << class_data.base->toString() << "\n";
 
 			if (!class_data.implements.empty()) {
@@ -205,6 +241,9 @@ namespace compiler::repl {
 				out << "  none\n";
 		}
 
+		/**
+		 * @brief Print namespace-specific details.
+		 */
 		void printNamespaceDetails(
 			query::Context& ctx, std::stringstream& out, helios::SymID symbol
 		) {
@@ -215,6 +254,11 @@ namespace compiler::repl {
 	std::vector<ReplVisibleSymbol> queryVisibleReplSymbols(
 		query::Context& ctx, frontend::ModuleID terminal_module_id
 	) {
+		CORE_ASSERT(
+			frontend::getModuleRef(terminal_module_id)->isReplModule(),
+			"queryVisibleReplSymbols expects a REPL module"
+		);
+
 		std::vector<ReplVisibleSymbol> output;
 
 		for (auto module_id: collectReplModuleChain(ctx, terminal_module_id)) {
@@ -229,7 +273,7 @@ namespace compiler::repl {
 					.kind       = sym_kind,
 					.kind_label = symbolKindLabel(sym_kind),
 					.name       = std::string(helios::name(symbol).strView()),
-					.details    = querySymbolDetails(ctx, symbol, sym_kind),
+					.details    = querySymbolDetails(ctx, symbol),
 				});
 			}
 		}
