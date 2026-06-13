@@ -132,6 +132,13 @@ namespace vm {
 				return mapFileLineToCodeCollectionPosition(request.file, request.line_number);
 			}
 
+			variant_case(api::request::ExecRuntimeExpr, request) {
+				return evalRuntimeExpr(request.thread_id, request.expr);
+			}
+
+			variant_case(api::request::ExecRuntimeExprFromFile, request) {
+				return evalRuntimeExpr(request.thread_id, request.file);
+			}
 			variant_default { return api::Response(api::response::Empty()); }
 		}
 

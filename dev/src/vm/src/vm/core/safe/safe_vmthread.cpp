@@ -693,4 +693,9 @@ namespace vm {
 		runtime_data.global_data_buffer_base      = global_buffer_pointers.data_buffer_base;
 		runtime_data.global_block_ref_buffer_base = global_buffer_pointers.blocks_buffer_base;
 	}
+
+	void SafeVMThread::loadRuntimeExpr(code::valid_function::ValidFunction&& high_expr) {
+		runtime_expr_high.emplace_back(std::move(high_expr));
+		runtime_expr_low.emplace_back(safe_process.compileToLow(runtime_expr_high.back()))
+	}
 }

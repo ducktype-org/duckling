@@ -304,7 +304,7 @@ namespace vm::loader::parser {
 		usize frame = 0;                                                            \
 		if (state[0].is(lang_def::Keyword::BCFrameSpecifier)) {                     \
 			state.parse().one(lang_def::Keyword::BCFrameSpecifier);                 \
-			frame = parseNumericLiteral<usize>(state).first + 1;                    \
+			frame = parseNumericLiteral<usize>(state).first;                        \
 		}                                                                           \
 		auto value       = parseStr(state);                                         \
 		auto arg         = vm::opargs::TYPE{ value };                               \

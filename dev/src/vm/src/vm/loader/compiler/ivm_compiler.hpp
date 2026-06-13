@@ -119,8 +119,8 @@ namespace vm::loader::compiler {
 		 * This function creates an stack context which is used during lowering instructions to
 		 * translate the variable name to numeric offsets.
 		 */
-		detail::FunctionStackContext calculateStackContext(
+		[[nodiscard]] detail::FunctionStackContext calculateStackContext(
 			const code::valid_function::ValidFunction& function
-		);
+		) const;
 	};
 }

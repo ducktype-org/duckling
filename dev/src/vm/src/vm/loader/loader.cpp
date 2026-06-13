@@ -241,3 +241,86 @@ base::Optional<FatBytecodePosition> vm::loader::Loader::mapFileLineToCodeCollect
 
 	return std::nullopt;
 }
+
+std::expected<vm::code::valid_function::ValidFunction, LoaderLogger> Loader::validateExpr(
+	Ref<SafeVMThread> thread, fs::File file
+) const {
+	auto opt_code_collection = parseFiles({ file });
+	if (!opt_code_collection.has_value())
+		return std::unexpected(std::move(opt_code_collection).error());
+
+	auto funcs   = opt_code_collection->functions;
+	auto globals = opt_code_collection->global_data;
+	auto types   = opt_code_collection->types;
+	auto c_funcs = opt_code_collection->external_c_functions;
+
+	LoaderLogger log;
+
+	if (funcs.size() != 1) {
+		if (funcs.size()) {
+			log.logMap(
+				funcs.at(1), [](auto&&) {}, "More than one function in the file"
+			);
+		}
+		else {
+			log.logMap(
+				code::ElementBase{}, [](auto&&) {}, "No function defined in the file"
+			);
+		}
+
+		return std::unexpected(std::move(log));
+	}
+
+	if (!globals.empty()) {
+		log.logMap(
+			globals.at(0), [](auto&&) {}, "There is a global declaration in the file"
+		);
+		return std::unexpected(std::move(log));
+	}
+
+	if (!types.empty()) {
+		log.logMap(
+			code::ElementBase{}, [](auto&&) {}, "There is a type declaration in the file"
+		);
+		return std::unexpected(std::move(log));
+	}
+
+	if (!c_funcs.empty()) {
+		log.logMap(
+			code::ElementBase{}, [](auto&&) {}, "There is a C-function declaration in the file"
+		);
+		return std::unexpected(std::move(log));
+	}
+
+	return validateExpr(thread, funcs.at(0));
+}
+
+std::expected<vm::code::valid_function::ValidFunction, LoaderLogger> Loader::validateExpr(
+	Ref<SafeVMThread> thread, const code::Function& expr
+) const {
+	LoaderLogger log;
+	try {
+		return validated_high_program.validateExpr(thread, expr);
+	} catch (code::StackStructureMismatchError& e) {
+		log.logMap(
+			e.label,
+			[&](Box<dia_int::PlaceholderError>& err) {
+				for (const auto& instruction: e.jumps)
+					instruction.visit([&](auto&& i) {
+						log.addNote(
+							err,
+							static_cast<const code::ElementBase&>(i),
+							code::StackStructureMismatchError::NOTE_MSG
+						);
+					});
+			},
+			e.what()
+		);
+	} catch (code::ValidationError& e) {
+		match_optional(e.maybeElement()) {
+			opt_some(elem) log.log(*elem, e.what());
+			opt_none log.logSimple(e.what());
+		}
+	}
+	return std::unexpected(std::move(log));
+}

@@ -6,6 +6,7 @@
 
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/validator/valid_program.hpp>
+#include <vm/core/safe/safe_vmthread.hpp>
 
 #include <expected>
 
@@ -79,6 +80,14 @@ namespace vm::loader {
 		 */
 		base::Optional<FatBytecodePosition> mapFileLineToCodeCollectionPosition(
 			const fs::File& file, usize line
+		) const;
+
+		std::expected<code::valid_function::ValidFunction, loader::LoaderLogger> validateExpr(
+			Ref<SafeVMThread> thread, fs::File file
+		) const;
+
+		std::expected<code::valid_function::ValidFunction, loader::LoaderLogger> validateExpr(
+			Ref<SafeVMThread> thread, code::Function const& expr
 		) const;
 	};
 }

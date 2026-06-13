@@ -32,6 +32,12 @@ vm::code::ValidProgram vm::code::ValidProgram::tryInsertCode(const code::CodeCol
 	return copy;
 }
 
+vm::code::valid_function::ValidFunction vm::code::ValidProgram::validateExpr(CRef<SafeVMThread> thread, const code::Function& expr) const {
+	return detail::validateAndExtractReachableCode(
+			type_context.getCurrentTypes(), globals_map, function_signatures, ext_c_function_map, expr, thread 
+		);
+}
+
 const vm::code::valid_type::ValidTypeMap& vm::code::ValidProgram::types() const {
 	return type_context.getCurrentTypes();
 }

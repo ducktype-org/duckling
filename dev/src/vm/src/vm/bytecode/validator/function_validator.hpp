@@ -1,5 +1,6 @@
 #pragma once
 
+#include <vm/core/safe/safe_vmthread.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/validator/valid_function.hpp>
 #include <vm/bytecode/validator/valid_type/type_context.hpp>
@@ -14,6 +15,7 @@ namespace vm::code::detail {
 		const ObjIdNameMap<GlobalData>&                  globals_map,
 		const base::HashMap<base::StrID, FuncSignature>& signatures,
 		const ObjIdNameMap<ExternalCFunction>&           ext_c_functions,
-		const Function&                                  function
+		const Function&                                  function,
+		base::Optional<CRef<SafeVMThread>>               thread = std::nullopt
 	);
 }

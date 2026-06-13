@@ -33,6 +33,7 @@ namespace {
 	constexpr std::array VALID_LAST_OPCODES
 		= { OpCode::Op_ret, OpCode::Op_ret_tailcall_func, OpCode::Op_jmp_label };
 
+	constexpr std::array VALID_LAST_OPCODES_FOR_EXPR = { OpCode::Op_ret, OpCode::Op_jmp_label };
 	using DeinitializingInstructions = std::tuple<
 		Op_deinit,
 		Op_call_func,
@@ -261,6 +262,7 @@ class FunctionValidator {
 	const base::HashMap<base::StrID, FuncSignature>& signatures;
 	const ObjIdNameMap<ExternalCFunction>&           ext_c_signatures;
 	const Function&                                  function;
+	base::Optional<CRef<SafeVMThread>>               thread;
 
 	std::vector<base::Optional<StackStateID>>            stack_before_instr;
 	base::HashMap<base::StrID, usize>                    index_of_label;
@@ -1531,11 +1533,19 @@ class FunctionValidator {
 	}
 
 	void validateFunctionEnd() const {
-		if (function.body.empty()
-		    || (stack_before_instr.back().has_value()
-		        && !std::ranges::contains(VALID_LAST_OPCODES, function.body.back().opcode()))) {
+		if (function.body.empty()) throw PathWithoutEndError(function.name);
+
+		bool reached_end = stack_before_instr.back().has_value();
+		if (!reached_end) return;
+
+		auto last_opcode = function.body.back().opcode();
+		bool is_expr     = thread.has_value();
+
+		if (is_expr && !std::ranges::contains(VALID_LAST_OPCODES_FOR_EXPR, last_opcode))
 			throw PathWithoutEndError(function.name);
-		}
+
+		if (!is_expr && !std::ranges::contains(VALID_LAST_OPCODES, last_opcode))
+			throw PathWithoutEndError(function.name);
 	}
 
 	usize getLabelTarget(const opargs::Label& label) const {
@@ -1691,8 +1701,17 @@ class FunctionValidator {
 		return builder.finalize();
 	}
 
+	template<OpCode... ops>
+	void validateForbiddenOpcodes(const std::vector<Instruction>& body) {
+		constexpr std::array FORBIDDEN = { ops... };
+
+		for (auto instr: body)
+			if (std::ranges::contains(FORBIDDEN, instr.opcode()))
+				throw ForbiddenOpcodePresent(instr.opcode());
+	}
+
 	void validateSignature() {
-		if (function.name.str == base::StrID("main")) {
+		if (!thread.has_value() && function.name.str == base::StrID("main")) {
 			if (function.signature.result_types.size() != 1)
 				throw InvalidMainReturnType(function.signature, false);
 			if (function.signature.result_types[0].str != base::StrID("i64"))
@@ -1705,27 +1724,7 @@ class FunctionValidator {
 			if (!types_ctx.contains(reslts)) throw UnknownTypeError(opargs::Type{ reslts });
 	}
 
-public:
-	FunctionValidator(
-		const valid_type::ValidTypeMap&                  types_ctx,
-		const ObjIdNameMap<GlobalData>&                  globals,
-		const base::HashMap<base::StrID, FuncSignature>& signatures,
-		const ObjIdNameMap<ExternalCFunction>&           ext_c_signatures,
-		const Function&                                  function
-	):
-		  types_ctx(types_ctx),
-		  globals(globals),
-		  signatures(signatures),
-		  ext_c_signatures(ext_c_signatures),
-		  function(function) {}
-
-	std::tuple<std::vector<Instruction>, std::vector<StackStateID>, LocalStackDb> validateAndExtractReachableCode(
-	) {
-		validateSignature();
-		preprocessLabels();
-		LocalStackDb db = traverseControlFlowGraph();
-		validateFunctionEnd();
-
+	std::tuple<std::vector<Instruction>, std::vector<StackStateID>> getBody() {
 		std::vector<Instruction>  body;
 		std::vector<StackStateID> stack_states;
 		for (usize idx = 0; idx < function.body.size(); idx++) {
@@ -1734,6 +1733,36 @@ public:
 				stack_states.emplace_back(state);
 			}
 		}
+
+		return { body, stack_states };
+	}
+
+public:
+	FunctionValidator(
+		const valid_type::ValidTypeMap&                  types_ctx,
+		const ObjIdNameMap<GlobalData>&                  globals,
+		const base::HashMap<base::StrID, FuncSignature>& signatures,
+		const ObjIdNameMap<ExternalCFunction>&           ext_c_signatures,
+		const Function&                                  function,
+		base::Optional<CRef<SafeVMThread>>               thread = std::nullopt
+	):
+		  types_ctx(types_ctx),
+		  globals(globals),
+		  signatures(signatures),
+		  ext_c_signatures(ext_c_signatures),
+		  function(function),
+		  thread(thread) {}
+
+	std::tuple<std::vector<Instruction>, std::vector<StackStateID>, LocalStackDb> validateAndExtractReachableCode(
+	) {
+		validateSignature();
+		preprocessLabels();
+		LocalStackDb db = traverseControlFlowGraph();
+		validateFunctionEnd();
+		auto [body, stack_states] = getBody();
+
+		bool is_expr              = thread.has_value();
+		if (is_expr) validateForbiddenOpcodes<OpCode::Op_ret_tailcall_func>(body);
 
 		return { body, stack_states, db };
 	}
@@ -1744,19 +1773,17 @@ vm::code::valid_function::ValidFunction vm::code::detail::validateAndExtractReac
 	const ObjIdNameMap<GlobalData>&                  globals_map,
 	const base::HashMap<base::StrID, FuncSignature>& signatures,
 	const ObjIdNameMap<ExternalCFunction>&           ext_c_signatures,
-	const Function&                                  function
+	const Function&                                  function,
+	base::Optional<CRef<SafeVMThread>>               thread
 ) {
-	FuncSignature signature = signatures.at(function.name);
-
-
-	FunctionValidator validator(types, globals_map, signatures, ext_c_signatures, function);
+	FunctionValidator validator(types, globals_map, signatures, ext_c_signatures, function, thread);
 
 	valid_function::ValidFunction new_function;
 	new_function.name = function.name;
 	std::tie(new_function.body, new_function.stack_states, new_function.local_stack)
 		= validator.validateAndExtractReachableCode();
 	new_function.bytecode_pos = function.bytecode_pos;
-	new_function.signature    = signature;
+	new_function.signature    = signatures.at(function.name);
 
 	return new_function;
 }

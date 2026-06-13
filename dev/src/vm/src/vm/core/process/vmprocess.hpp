@@ -199,6 +199,10 @@ namespace vm {
 			const fs::File& file, usize line_number
 		) = 0;
 
+		virtual std::expected<api::Response, api::ApiError> evalRuntimeExpr(
+			api::ThreadID thread_id, const std::variant<fs::File, code::Function>& expr
+		) = 0;
+
 	public:
 		ProcIO& getIO();
 

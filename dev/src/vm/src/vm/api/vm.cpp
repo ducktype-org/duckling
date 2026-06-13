@@ -80,6 +80,22 @@ namespace vm::api {
 		    .transform(ignoreResponse);
 	}
 
+	std::expected<void, ApiError> executeRuntimeExpr(
+		PID pid, ThreadID thread_id, const code::Function& function
+	) {
+		return Supervisor::get()
+		    .doRequest(SupervisorRequest(pid, request::ExecRuntimeExpr{ thread_id, function }))
+		    .transform(ignoreResponse);
+	}
+
+	std::expected<void, ApiError> executeRuntimeExprFromFile(
+		PID pid, ThreadID thread_id, fs::File file
+	) {
+		return Supervisor::get()
+		    .doRequest(SupervisorRequest(pid, request::ExecRuntimeExprFromFile{ thread_id, file }))
+		    .transform(ignoreResponse);
+	}
+
 	std::expected<void, ApiError> run(PID pid, const std::vector<std::string>& args) {
 		return Supervisor::get()
 		    .doRequest(SupervisorRequest(pid, request::Run{ args }))

@@ -152,6 +152,10 @@ namespace vm {
 			const fs::File& file, usize line_number
 		) override;
 
+		std::expected<api::Response, api::ApiError> evalRuntimeExpr(
+			api::ThreadID thread_id, const std::variant<fs::File, code::Function>& expr
+		) override;
+
 		/**
 		 * @brief Updates the memory for globals of this process after loading a program with new
 		 * globals. Works in incremental way. Only supports adding new globals, not removing or
@@ -192,5 +196,7 @@ namespace vm {
 		 * @brief Get the synchronization primitives of the process.
 		 */
 		SynchronizationPrimitives& getSynchronizationPrimitives();
+
+		low::LowFuncData compileToLow(code::valid_function::ValidFunction const& func) const;
 	};
 }

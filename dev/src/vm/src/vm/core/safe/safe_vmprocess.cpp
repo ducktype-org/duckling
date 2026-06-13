@@ -5,6 +5,7 @@
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/pointers/box.hpp>
 
+#include <vm/bytecode/validator/valid_function.hpp>
 #include <vm/api/data/api_error.hpp>
 #include <vm/api/data/request.hpp>
 #include <vm/api/data/response.hpp>
@@ -496,6 +497,38 @@ namespace vm {
 			.instr_number    = position.instruction_index,
 			.source_position = source_position,
 		};
+	}
+
+	std::expected<api::Response, api::ApiError> SafeVMProcess::evalRuntimeExpr(
+		api::ThreadID thread_id, const std::variant<fs::File, code::Function>& source
+	) {
+		auto opt_thread = getVMThreadByID(thread_id);
+		if (!opt_thread)
+			return std::unexpected(api::ApiError{ api::OtherError{ "Thread not found" } });
+		
+		std::unique_lock                          lock(rw_global);
+		std::expected<code::valid_function::ValidFunction, loader::LoaderLogger> valid_expr = [&] {
+			variant_match(source) {
+				variant_case(fs::File, files) { return loader.validateExpr(*opt_thread, files); }
+				variant_case(code::Function, func) { return loader.validateExpr(*opt_thread, func); }
+			}
+			CORE_UNREACHABLE();
+		}();
+
+		if (valid_expr.has_value()) {
+			(*opt_thread)->loadRuntimeExpr(std::move(valid_expr).value());
+			return api::Response(api::response::Empty());
+		} else {
+			std::stringstream ss;
+			valid_expr.error().dump(ss);
+			return std::unexpected(api::LoadProgramError{ ss.str() });
+		}
+
+		return api::Response(api::response::Empty());
+	}
+
+	low::LowFuncData SafeVMProcess::compileToLow(code::valid_function::ValidFunction const& expr) const {
+		return compiler.lowerExpr(expr);
 	}
 
 	void SafeVMProcess::updateGlobalDataMemory(CRef<low::ILowVMProgram> program) {

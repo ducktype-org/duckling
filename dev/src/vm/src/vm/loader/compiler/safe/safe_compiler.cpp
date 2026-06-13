@@ -339,4 +339,49 @@ namespace vm::loader::compiler::safe {
 		};
 	}
 
+	vm::low::LowFuncData SafeCompiler::lowerExpr(const code::valid_function::ValidFunction& expr
+	) const {
+		vm::loader::compiler::detail::FunctionStackContext ctx = calculateStackContext(expr);
+
+		auto [bytecode, instruction_mapping] = lowerInstructions(ctx);
+
+		// Calculate the functions metadata.
+		code::FuncSignature        signature       = function.signature;
+		code::valid_type::TypeSize parameters_size = {};
+		std::vector<TypeCRef>      parameters;
+		parameters.reserve(signature.parameters.size());
+
+		for (const auto& param: signature.parameters) {
+			CRef<code::valid_type::ValidType> type
+				= high_program.getTypeContext().getCurrentTypes().at(param.str);
+			parameters.emplace_back(low_program.getTypes().at(type->getName()));
+			parameters_size += type->getSize();
+		}
+
+		code::valid_type::TypeSize ret_type_sum = {};
+		std::vector<TypeCRef>      result_types;
+		parameters.reserve(signature.result_types.size());
+
+		for (auto& ret: signature.result_types) {
+			ret_type_sum += high_program.getTypeContext().getCurrentTypes().at(ret)->getSize();
+			result_types.emplace_back(low_program.types->at(ret));
+		}
+
+		return low::LowFuncData{
+			.name = function.name,
+			.id   = 0,  // placeholder, replaced immediately
+#ifdef ENABLE_JIT
+			.cfg = vm::low::cf::ControlFlowGraph(bytecode),
+#endif
+			.bc                  = std::move(bytecode),
+			.local_stack_size    = getIntTypeSize(ctx.local_stack_size),
+			.local_block_count   = ctx.local_block_count,
+			.arg_size            = getIntTypeSize(parameters_size),
+			.ret_size            = getIntTypeSize(ret_type_sum),
+			.parameters          = std::move(parameters),
+			.result_types        = std::move(result_types),
+			.instruction_mapping = std::move(instruction_mapping),
+		};
+	}
+
 }

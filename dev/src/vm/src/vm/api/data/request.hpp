@@ -56,6 +56,16 @@ namespace vm::api {
 			FunctionRunArguments func_args;
 		};
 
+		struct ExecRuntimeExpr {
+			ThreadID thread_id;
+			code::Function expr;
+		};
+
+		struct ExecRuntimeExprFromFile {
+			ThreadID thread_id;
+			fs::File file;
+		};
+
 		struct Step {};
 
 		struct WaitForBreakpoint {};
@@ -145,7 +155,9 @@ namespace vm::api {
 		request::AttachStatusListener,
 		request::AttachOutputListener,
 		request::SetBreakpoint,
-		request::MapFileLineToCodeCollectionPosition>;
+		request::MapFileLineToCodeCollectionPosition,
+		request::ExecRuntimeExpr,
+		request::ExecRuntimeExprFromFile>;
 
 	struct SupervisorRequest {
 		PID            pid;

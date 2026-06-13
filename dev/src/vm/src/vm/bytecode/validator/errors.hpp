@@ -54,6 +54,15 @@ namespace vm::code {
 			  func_name(func_name) {}
 	};
 
+	class ForbiddenOpcodePresent: public ValidationError {
+	public:
+		constexpr static std::string_view ERR_MSG
+			= "Fat-bytecode contains forbidden opcode: ";
+		OpCode op;
+
+		ForbiddenOpcodePresent(OpCode op): ValidationError(base::strConcat(ERR_MSG, op)), op(op) {}
+	};
+
 	/**
 	 * @brief position-less error for function definitions.
 	 * For function name arguments, like in call instructions, use UnknownFunctionError.

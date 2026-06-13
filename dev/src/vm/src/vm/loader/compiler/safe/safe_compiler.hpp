@@ -52,6 +52,8 @@ namespace vm::loader::compiler::safe {
 		 */
 		[[nodiscard]] CRef<vm::low::LowVMProgram> getLowProgram() const;
 
+		[[nodiscard]] vm::low::LowFuncData lowerExpr(code::valid_function::ValidFunction const& expr) const;
+
 		[[nodiscard]] std::expected<FatBytecodePosition, MappingException>
 			mapLowVMProgramPositionToCodeCollectionPosition(low::LowCodePosition position) const;
 

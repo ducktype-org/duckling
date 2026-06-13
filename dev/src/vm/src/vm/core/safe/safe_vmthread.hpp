@@ -3,6 +3,7 @@
 #include <base/collections/optional.hpp>
 #include <base/types/ints.hpp>
 
+#include <vm/bytecode/validator/valid_function.hpp>
 #include <vm/api/data/api_error.hpp>
 #include <vm/api/data/response.hpp>
 #include <vm/api/data/status.hpp>
@@ -87,6 +88,9 @@ namespace vm {
 	 */
 	class SafeVMThread final: public IVMThread {
 	private:
+		std::deque<code::valid_function::ValidFunction> runtime_expr_high;
+		std::deque<low::LowFuncData> runtime_expr_low;
+
 		RuntimeData runtime_data;
 
 		/**
@@ -232,6 +236,8 @@ namespace vm {
 		[[nodiscard]] u64 getNumberOfCurrentStackFrames() const override;
 
 		Frame& getStackFrame(u64 frame_index);
+
+		void loadRuntimeExpr(code::valid_function::ValidFunction&& expr);
 
 		/**
 		 * @brief Update the pointers to the global data buffer and global blocks buffer.

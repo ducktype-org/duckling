@@ -1,5 +1,6 @@
 #pragma once
 
+#include "vm/core/safe/safe_vmthread.hpp"
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/type_of_data.hpp>
 #include <vm/bytecode/validator/valid_function.hpp>
@@ -50,6 +51,8 @@ namespace vm::code {
 		const ObjIdNameMap<valid_function::ValidFunction>& functions() const;
 
 		const ObjIdNameMap<ExternalCFunction>& extCFunctions() const;
+
+		valid_function::ValidFunction validateExpr(CRef<SafeVMThread> thread, const code::Function& expr) const;
 
 	private:
 		ObjIdNameMap<valid_function::ValidFunction> function_map;
