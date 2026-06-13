@@ -1,6 +1,6 @@
 Tests:
   debug_next:
     Run: "PYTHONPATH=../helpers python3 dap_runner.py @{build_dir}"
-    TimeOut: 3
+    TimeOut: 1
     Cases:
       next: { }
