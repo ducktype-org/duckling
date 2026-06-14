@@ -7,17 +7,20 @@
 #include <string_id/string_id.hpp>
 
 namespace compiler::helios {
+
+#define ATTRIBUTES_LIST \
+	attributes::BackendDependent, attributes::DVMOnlyImpl, attributes::NativeOnlyImpl
+
 	namespace attributes {
 		struct BackendDependent {};
 
 		struct DVMOnlyImpl {};
 
 		struct NativeOnlyImpl {};
-
 	}
 
 	using Attribute
-		= std::variant<attributes::DVMOnlyImpl, attributes::NativeOnlyImpl, attributes::BackendDependent>;
+		= std::variant<ATTRIBUTES_LIST>;
 
 	/**
 	 * @brief Check if the given attribute can be applied to given stmt.
@@ -40,5 +43,6 @@ namespace compiler::helios {
 
 	base::Optional<Attribute> attrFromStr(base::StrID str);
 
+	template<typename Attribute>
 	base::StrID attrToStr(Attribute attr);
 }

@@ -79,7 +79,8 @@ namespace compiler::helios {
 	/**
 	 * Check if a symbol has some attribute. 
 	 */
-	bool hasAttribute(SymID, Attribute);
+	template<typename Attribute>
+	bool hasAttribute(SymID);
 
 	/**
 	 * @return PST Stmt element symbol was created from.

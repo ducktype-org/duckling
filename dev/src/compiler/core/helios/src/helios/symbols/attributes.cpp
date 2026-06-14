@@ -13,45 +13,48 @@
 #include <base/collections/maps.hpp>
 
 namespace compiler::helios {
+	using namespace attributes;
 	base::Optional<Attribute> attrFromStr(base::StrID str) {
 		static const auto mapping = [&] {
 			return base::HashMap<std::string_view, Attribute>{
 				{ "dvm_only_impl", Attribute::DVMOnlyImpl },
-				{ "native_only_impl", Attribute::NativeOnlyImpl },
-				{ "backend_dependent", Attribute::BackendDependent },
+				{ "native_only_impl", attributes::NativeOnlyImpl },
+				{ "backend_dependent", attributes::BackendDependent },
 			};
 		}();
 		return mapping.atMaybeCopy(str.strView());
 	}
 
-	base::StrID attrToStr(Attribute attr) {
-		switch (attr) {
-		case Attribute::DVMOnlyImpl:
-			return base::StrID("dvm_only_impl");
-		case Attribute::NativeOnlyImpl:
-			return base::StrID("native_only_impl");
-		case Attribute::BackendDependent:
-			return base::StrID("backend_dependent");
-		default:
-			CORE_PANIC("Attribute serialization not implemented");
-		}
+#define DEFINE_EMPTY_ATTR_TO_STR(Attr, string) \
+	template<>                                  \
+	base::StrID attrToStr(const Attr&) {   \
+		return base::StrID(string);             \
 	}
+	DEFINE_EMPTY_ATTR_TO_STR(DVMOnlyImpl, "dvm_only_impl")
+	DEFINE_EMPTY_ATTR_TO_STR(NativeOnlyImpl,"native_only_impl")
+	DEFINE_EMPTY_ATTR_TO_STR(BackendDependent, "backend_dependent")
+
+#define DEFINE_IS_VALID_FOR_STMT(Attr, valid_kinds)\
+	...
 
 	bool isValidForStmt(Attribute attr, pst::StmtKind kind) {
 		static const auto valid_stmts = [&] {
 			return base::HashMap<Attribute, std::vector<pst::StmtKind>>{
-				{ Attribute::NativeOnlyImpl, { pst::StmtKind::Fun } },
+				{ attributes::NativeOnlyImpl, { pst::StmtKind::Fun } },
 				{ Attribute::DVMOnlyImpl, { pst::StmtKind::Fun } },
-				{ Attribute::BackendDependent, { pst::StmtKind::FunDecl } },
+				{ attributes::BackendDependent, { pst::StmtKind::FunDecl } },
 			};
 		}();
 		return std::ranges::any_of(valid_stmts.at(attr), [&](auto elem) { return elem == kind; });
 	}
 
+#define DEFINE_DISABLES_LOOKUP(Attr, disables) \
+	...
+
 	bool disablesLookup(Attribute attr) {
 		switch (attr) {
 		case Attribute::DVMOnlyImpl:
-		case Attribute::NativeOnlyImpl:
+		case attributes::NativeOnlyImpl:
 			return true;
 		default:
 			return false;
@@ -70,10 +73,10 @@ namespace compiler::helios {
 		const std::vector<Attribute>& attributes
 	) {
 		if (hasAttribute(attributes, Attribute::DVMOnlyImpl)
-		    and hasAttribute(attributes, Attribute::NativeOnlyImpl)) {
+		    and hasAttribute(attributes, attributes::NativeOnlyImpl)) {
 			return std::unexpected(base::strConcat(
 				"Tha attributes `",
-				attrToStr(Attribute::NativeOnlyImpl),
+				attrToStr(attributes::NativeOnlyImpl),
 				"' and '",
 				attrToStr(Attribute::DVMOnlyImpl),
 				"' are exclusive."
