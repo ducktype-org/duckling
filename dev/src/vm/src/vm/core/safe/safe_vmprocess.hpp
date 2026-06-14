@@ -59,6 +59,10 @@ namespace vm {
 		GIL                              gil;
 		SynchronizationPrimitives        synchronization_primitives;
 
+#ifdef ENABLE_JIT
+		jit::JitData jit_data;
+#endif
+
 		/**
 		 * @brief Storage for all VmValues which belong to this process.
 		 * @note Lifetime of these VmValues is controlled by this process. They will be destructed
@@ -162,6 +166,19 @@ namespace vm {
 		 */
 		void updateGlobalDataMemory(CRef<low::ILowVMProgram> program);
 
+		/**
+		 * @brief Updates the JIT data of this process after loading a program with new functions.
+		 * Works in incremental way. Only supports adding new functions, not removing or changing
+		 * existing ones.
+		 * @param program The program with the new functions.
+		 * @param new_functions The list of new functions to update the JIT data with. Each function
+		 * is represented as a tuple of (function data, function id, function name).
+		 */
+		void updateJitData(
+			CRef<low::ILowVMProgram> program,
+			CRef<std::vector<std::tuple<CRef<low::LowFuncData>, u64, base::StrID>>> new_functions
+		);
+
 	public:
 		SafeVMProcess(PID my_pid, bool enable_deadlock_detection = false);
 
@@ -192,5 +209,10 @@ namespace vm {
 		 * @brief Get the synchronization primitives of the process.
 		 */
 		SynchronizationPrimitives& getSynchronizationPrimitives();
+
+#ifdef ENABLE_JIT
+		jit::JitData& getJitData() { return jit_data; }
+		const jit::JitData& getJitData() const { return jit_data; }
+#endif
 	};
 }

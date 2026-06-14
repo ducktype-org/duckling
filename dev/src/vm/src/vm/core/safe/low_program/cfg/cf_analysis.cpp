@@ -60,4 +60,17 @@ namespace vm::low::cf {
 		}
 		return block_beginnings;
 	}
+
+	/**
+	 * @brief Finds the first jitEntrypoint instruction in the bytecode.
+	 * @param bc Micro-bytecode of lowered function to analyze.
+	 * @return Offset of the function's jitEntrypoint instruction.
+	 */
+	usize functionEntrypointOffset(const MicroBytecode& bc) {
+		for (usize i = 0; i < bc.size(); ++i) {
+			if (getInstructionOpcode(bc[i]) == MicroOpcode::jitEntrypoint)
+				return i;
+		}
+		CORE_UNREACHABLE();
+	}
 }  // namespace vm::low::cf

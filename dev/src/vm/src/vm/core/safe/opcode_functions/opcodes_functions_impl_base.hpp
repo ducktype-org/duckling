@@ -104,7 +104,7 @@ namespace vm {
 
 #define DEFINE_MOVE_OPS(BITS_SIZE, TYPE)                                                       \
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_p##BITS_SIZE##_imm)(FUNCTION_ARGS) {                   \
-		{ WRITE_TO_PLACE_ARG(TYPE, instr->arg0, safeReadObjectBytes<TYPE>(instr->arg1)); }     \
+		{ WRITE_TO_PLACE_ARG(u64, instr->arg0, safeReadObjectBytes<u64>(instr->arg1)); }       \
 		FUNCTION_CONT(1);                                                                      \
 	}                                                                                          \
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_p##BITS_SIZE##_p##BITS_SIZE)(FUNCTION_ARGS) {          \
@@ -327,31 +327,51 @@ namespace vm {
 #ifdef ENABLE_JIT
 	RETURN_TYPE OpFuns::OPCODE_NAME(jitEntrypoint)(FUNCTION_ARGS) {
 		{
-			auto& jit_data         = thread.jit_data;
+			auto& jit_data         = thread.safe_process.getJitData();
 			auto& current_func_obj = *frame->current_function;
 			auto  current_func_id  = current_func_obj.id;
-
-			// @TODO: #2858 manage the size when inserting new code
-			if (jit_data.size() <= current_func_id) jit_data.resize(2 * current_func_id + 2);
+			auto  instr_offset     = instr - current_func_obj.bc.data();
 
 			jit::JitFuncData& my_data = jit_data[current_func_id];
+			auto& compiled_code_ptr = my_data.compiled_code_ptrs[instr_offset];
+			auto& until_compilation = my_data.until_compilation[instr_offset];
 
-			if (my_data.func_ptr) {
+			if (compiled_code_ptr) {
 				// is already compiled
-				(*my_data.func_ptr)(&instr, &local_stack, &frame, &thread);
-			} else if (0 < my_data.until_compilation) {
+				const MicroInstruction* saved_instr = instr;
+				const Frame*            saved_frame = frame;
+				i64 offset = (*compiled_code_ptr)(&instr, &local_stack, &frame, &thread);
+				if (saved_frame == frame) instr = saved_instr + offset;
+			} else if (0 < until_compilation) {
 				// should be compiled later
-				--my_data.until_compilation;
+				--until_compilation;
+
+			    save_execution_state(instr, local_stack, frame, thread);
+				thread.executeOneStep();
+
+                // Restore current flow.
+                // They can be changed when doing "step by step" execution.
+                frame       = thread.runtime_data.frame_stack_current;
+                instr       = frame->instr;
+                local_stack = frame->local_stack;
 			} else {
 				// should be compiled now
+				const auto* program_copy
+					= dynamic_cast<const low::LowVMProgramCopy*>(thread.process_program.get());
+				CORE_ASSERT(program_copy, "Jit entrypoints should be only in LowVMProgramCopy.");
+                auto original_function
+					= program_copy->getOriginalProgram()->getFunctions()[current_func_id];
+
 				MRef<jit::JitOpFun> compiled = jit::compileLLVM(
-					current_func_obj.cfg, current_func_obj.bc, current_func_obj.name
+					my_data.cfgs[instr_offset], original_function.bc, current_func_obj.name
 				);
-
 				CORE_ASSERT(compiled, "Compiled function pointer shouldn't be nullptr");
-				my_data.func_ptr = compiled;
+				compiled_code_ptr = compiled;
 
-				(*my_data.func_ptr)(&instr, &local_stack, &frame, &thread);
+				const MicroInstruction* saved_instr = instr;
+				const Frame*            saved_frame = frame;
+				i64 offset = (*compiled_code_ptr)(&instr, &local_stack, &frame, &thread);
+				if (saved_frame == frame) instr = saved_instr + offset;
 			}
 		}
 		FUNCTION_CONT(0);

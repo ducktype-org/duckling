@@ -12,6 +12,11 @@
 #include <vm/loader/compiler/safe/type_builder.hpp>
 #include <vm/utils/interpret.hpp>
 
+#ifdef ENABLE_JIT
+#include <vm/core/safe/low_program/cfg/cf_analysis.hpp>
+#include <vm/core/safe/low_program/instruction.hpp>
+#endif
+
 namespace vm::loader::compiler::safe {
 
 	static usize getIntTypeSize(const code::valid_type::TypeSize& size) {
@@ -201,11 +206,17 @@ namespace vm::loader::compiler::safe {
 				result_types.emplace_back(low_program.types->at(ret));
 			}
 
+#ifdef ENABLE_JIT
+			// Entrypoints have to live in LowVMProgramCopy, but we need a guard so the
+			// function-level entrypoint is never jumped to.
+			usize function_jit_entrypoint = low::cf::functionEntrypointOffset(bytecode);
+			bytecode[function_jit_entrypoint] = makeLowInstruction(low::MicroOpcode::nop, 0, 0);
+#endif
 			usize new_func_id = low_program.functions.insert(
 				low::LowFuncData{ .name = function.name,
 			                      .id   = 0,  // placeholder, replaced immediately
 #ifdef ENABLE_JIT
-			                      .cfg = vm::low::cf::ControlFlowGraph(bytecode),
+								  .jit_entrypoint_offset = function_jit_entrypoint,
 #endif
 			                      .bc                  = std::move(bytecode),
 			                      .local_stack_size    = getIntTypeSize(ctx.local_stack_size),
@@ -217,6 +228,9 @@ namespace vm::loader::compiler::safe {
 			                      .instruction_mapping = std::move(instruction_mapping) },
 				function.name
 			);
+			// This may look awkward, but it allows `LowFuncData` to know its own stable ID in the
+			// map, which makes it possible to avoid hashmap lookups on function calls with JIT.
+			low_program.functions[new_func_id].id = new_func_id;
 			// This may look awkward, but it allows `LowFuncData` to know its own stable ID in the
 			// map, which makes it possible to avoid hashmap lookups on function calls with JIT.
 			low_program.functions[new_func_id].id = new_func_id;

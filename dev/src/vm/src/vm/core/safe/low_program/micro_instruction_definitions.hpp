@@ -399,7 +399,8 @@ DEF_MICRO_INSTR(call_func, vm::low::opargs::FunctionID)
 /**
  * @brief Function prologue, potentially compiles the function in which it is situated and executes
  * the native version.
- * @note Unoptimizable by JIT, listed in dev/scripts/py/jit/jitable_interface.py. */
+ * @note Unoptimizable by JIT, listed in dev/scripts/py/jit/jitable_interface.py.
+ */
 DEF_MICRO_INSTR(jitEntrypoint)
 #endif
 

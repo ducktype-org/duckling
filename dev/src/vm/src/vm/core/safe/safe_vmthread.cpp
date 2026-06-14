@@ -90,10 +90,10 @@ namespace vm {
 		std::byte* local_stack = frame->local_stack;
 
 		low::MicroOpcode opcode = getInstructionOpcode(*instr);
-		if (opcode == low::MicroOpcode::breakpoint) {
+		if (opcode == low::MicroOpcode::breakpoint || opcode == low::MicroOpcode::jitEntrypoint) {
 			const auto* program_copy
 				= dynamic_cast<const low::LowVMProgramCopy*>(process_program.get());
-			CORE_ASSERT(program_copy, "Breakpoints should be only in LowVMProgramCopy.");
+			CORE_ASSERT(program_copy, "Breakpoints and jit entrypoints should be only in LowVMProgramCopy.");
 
 			auto original_instr
 				= program_copy->getOriginalProgram()
@@ -107,9 +107,7 @@ namespace vm {
 		// Execute the instruction by calling the debug opcode function.
 		OpFuns::DEBUG_OPFUNS.at(std::to_underlying(opcode))(instr, local_stack, frame, *this);
 
-		runtime_data.frame_stack_current = frame;
-		frame->local_stack               = local_stack;
-		frame->instr                     = instr;
+		OpFuns::save_execution_state(instr, local_stack, frame, *this);
 	}
 
 	/**
@@ -137,8 +135,8 @@ namespace vm {
 			.name = base::StrID("vm_start_function"),
 			.id   = START_FUNCTION_ID,
 #ifdef ENABLE_JIT
-			.cfg
-			= low::cf::ControlFlowGraph(),  // This is okay because we never JIT the start function.
+			// This is okay because we never JIT the start function.
+			.jit_entrypoint_offset = 0,
 #endif
 			.bc                  = {},
 			.local_stack_size    = 0,
@@ -242,8 +240,8 @@ namespace vm {
 			.name = base::StrID("vm_start_function"),
 			.id   = START_FUNCTION_ID,
 #ifdef ENABLE_JIT
-			.cfg
-			= low::cf::ControlFlowGraph(),  // This is okay because we never JIT the start function.
+			// This is okay because we never JIT the start function.
+			.jit_entrypoint_offset = 0,
 #endif
 			.bc                  = {},
 			.local_stack_size    = 72,

@@ -41,8 +41,11 @@ namespace vm {
 
 		if (code_result.has_value()) {
 			compiler.recompile();
-			loaded_program_copy.selfUpdate();
+			auto new_functions = loaded_program_copy.selfUpdate();
 			updateGlobalDataMemory(&loaded_program_copy);
+#ifdef ENABLE_JIT
+			updateJitData(&loaded_program_copy, &new_functions);
+#endif
 			return api::Response(api::response::Empty());
 		} else {
 			std::stringstream ss;
@@ -527,5 +530,22 @@ namespace vm {
 
 	SynchronizationPrimitives& SafeVMProcess::getSynchronizationPrimitives() {
 		return synchronization_primitives;
+	}
+
+	void SafeVMProcess::updateJitData(
+		CRef<low::ILowVMProgram> program,
+		CRef<std::vector<std::tuple<CRef<low::LowFuncData>, u64, base::StrID>>> new_functions
+	) {
+		for (auto& [func_data, func_id, func_name]: *new_functions) {
+			jit_data.emplace_back(*func_data.get());
+			for (usize i = 0; i < jit_data.back().cfgs.size(); i++) {
+				auto& cfg = jit_data.back().cfgs[i];
+				if (cfg.empty()) continue; // Not an entrypoint
+				auto maybe_old_opcode = loaded_program_copy.replaceOpcode(
+					func_id, i, vm::low::MicroOpcode::jitEntrypoint
+				);
+				CORE_ASSERT(maybe_old_opcode.has_value(), "Failed to replace opcode with jitEntrypoint");
+			}
+		}
 	}
 }

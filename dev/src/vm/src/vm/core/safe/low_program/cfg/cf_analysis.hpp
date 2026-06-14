@@ -30,4 +30,11 @@ namespace vm::low::cf {
 	 * @return Sorted list of basic-block beginnings.
 	 */
 	[[nodiscard]] std::vector<usize> basicBlockBeginnings(const low::MicroBytecode& bc);
+
+	/**
+	 * @brief Finds the first jitEntrypoint instruction in the bytecode.
+	 * @param bc Micro-bytecode of lowered function to analyze.
+	 * @return Offset of the function's jitEntrypoint instruction.
+	 */
+	[[nodiscard]] usize functionEntrypointOffset(const MicroBytecode& bc);
 }  // namespace vm::low::cf
