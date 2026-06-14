@@ -38,6 +38,14 @@ public:
 
 		assertTrue(std::get<char>(v) == 'a', "something went wrong");
 
+		assertTrue(v_get(v, char) == 'a', "something went wrong");
+		assertTrue(v_matches(v, char), "something went wrong");
+		assertTrue(!v_matches(v, int, bool), "something went wrong");
+		v_if_matches(v, bool, _) fail("if_v_matches");
+		bool got_in = false;
+		v_if_matches(v, char, _) { got_in = true; }
+		assertTrue(got_in, "Should get in");
+
 		bool default_ok = false;
 		variant_match(v) {
 			variant_case_novalue(int) { fail("bad variant access"); }
