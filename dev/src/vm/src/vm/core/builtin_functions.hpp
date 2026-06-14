@@ -47,6 +47,8 @@ namespace vm::builtins {
 	enum class BuiltinFunctionID : usize {
 		InputI64,
 		OutputI64,
+		OutputI32,
+		OutputChar,
 		OutputString,
 		Stoi,
 		StartThread,
@@ -74,6 +76,8 @@ namespace vm::builtins {
 	public:
 		static i64  builtinInputI64(SafeVMThread& process);
 		static i64  builtinOutputI64(SafeVMThread& process, i64 arg);
+		static i64  builtinOutputI32(SafeVMThread& process, i32 arg);
+		static i64  builtinOutputChar(SafeVMThread& process, i8 arg);
 		static void builtinOutputString(SafeVMThread& process, Pointer ptr);
 		static i64  builtinStoi(SafeVMThread& process, Pointer ptr);
 		static i64  builtinStartThread(SafeVMThread& process);

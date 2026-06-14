@@ -1,0 +1,212 @@
+# Deterministic deadlock test.
+#
+# Scenario:
+# - threadA locks m1, then waits on a barrier while still holding m1.
+# - threadB locks m2, then waits on the same barrier while still holding m2.
+# - main waits until both workers have reached the barrier, then releases them.
+# - after release, threadA tries to lock m2 and threadB tries to lock m1.
+#
+# This should always produce a deadlock if deadlock detection does not abort first,
+# because both threads are guaranteed to hold their first mutex before attempting the second.
+
+global_data m1 mutex {}
+global_data m2 mutex {}
+global_data gate mutex {}
+global_data cv condition_variable {}
+global_data ready_count i64 {}
+global_data phase i64 {}
+
+function threadA {} -> {} {
+    init_pany_type      lock_m1, mutex;
+    mov_popq_popq       lock_m1, m1;
+    call_builtinfunc    builtin_lock_mutex;
+
+    init_pany_type      gate_lock, mutex;
+    mov_popq_popq       gate_lock, gate;
+    call_builtinfunc    builtin_lock_mutex;
+
+    init_pany_type      rc, i64;
+    mov_p64_p64         rc, ready_count;
+    add_p64_imm         rc, 1;
+    mov_p64_p64         ready_count, rc;
+
+    init_pany_type      cv_ready, condition_variable;
+    mov_popq_popq       cv_ready, cv;
+    call_builtinfunc    builtin_notify_all_cv;
+
+    label WaitReleaseAInit;
+        init_pany_type  p, i64;
+        init_pany_type  wait_cv, condition_variable;
+        init_pany_type  wait_gate, mutex;
+
+    label WaitReleaseA;
+        mov_p64_p64     p, phase;
+        cmpEq_p64_imm   p, 1;
+        jmpIf_label     ReleaseA;
+
+        mov_popq_popq   wait_cv, cv;
+        mov_popq_popq   wait_gate, gate;
+        call_builtinfunc builtin_wait_cv;
+        deinit;
+        jmp_label       WaitReleaseAInit;
+
+    label ReleaseA;
+    deinit;
+    deinit;
+    deinit;
+
+    init_pany_type      unlock_gate_a, mutex;
+    mov_popq_popq       unlock_gate_a, gate;
+    call_builtinfunc    builtin_unlock_mutex;
+
+    init_pany_type      lock_m2, mutex;
+    mov_popq_popq       lock_m2, m2;
+    call_builtinfunc    builtin_lock_mutex;
+
+    init_pany_type      unlock_m2, mutex;
+    mov_popq_popq       unlock_m2, m2;
+    call_builtinfunc    builtin_unlock_mutex;
+
+    init_pany_type      unlock_m1, mutex;
+    mov_popq_popq       unlock_m1, m1;
+    call_builtinfunc    builtin_unlock_mutex;
+
+    ret;
+}
+
+function threadB {} -> {} {
+    init_pany_type      lock_m2, mutex;
+    mov_popq_popq       lock_m2, m2;
+    call_builtinfunc    builtin_lock_mutex;
+
+    init_pany_type      gate_lock, mutex;
+    mov_popq_popq       gate_lock, gate;
+    call_builtinfunc    builtin_lock_mutex;
+
+    init_pany_type      rc, i64;
+    mov_p64_p64         rc, ready_count;
+    add_p64_imm         rc, 1;
+    mov_p64_p64         ready_count, rc;
+
+    init_pany_type      cv_ready, condition_variable;
+    mov_popq_popq       cv_ready, cv;
+    call_builtinfunc    builtin_notify_all_cv;
+
+    label WaitReleaseBInit;
+        init_pany_type  p, i64;
+        init_pany_type  wait_cv, condition_variable;
+        init_pany_type  wait_gate, mutex;
+
+    label WaitReleaseB;
+        mov_p64_p64     p, phase;
+        cmpEq_p64_imm   p, 1;
+        jmpIf_label     ReleaseB;
+
+        mov_popq_popq   wait_cv, cv;
+        mov_popq_popq   wait_gate, gate;
+        call_builtinfunc builtin_wait_cv;
+        deinit;
+        jmp_label       WaitReleaseBInit;
+
+    label ReleaseB;
+    deinit;
+    deinit;
+    deinit;
+
+    init_pany_type      unlock_gate_b, mutex;
+    mov_popq_popq       unlock_gate_b, gate;
+    call_builtinfunc    builtin_unlock_mutex;
+
+    init_pany_type      lock_m1, mutex;
+    mov_popq_popq       lock_m1, m1;
+    call_builtinfunc    builtin_lock_mutex;
+
+    init_pany_type      unlock_m1, mutex;
+    mov_popq_popq       unlock_m1, m1;
+    call_builtinfunc    builtin_unlock_mutex;
+
+    init_pany_type      unlock_m2, mutex;
+    mov_popq_popq       unlock_m2, m2;
+    call_builtinfunc    builtin_unlock_mutex;
+
+    ret;
+}
+
+function main { i64, ptr_argv } -> { i64 } {
+    init_pany_type      init_m1, mutex;
+    call_builtinfunc    builtin_create_mutex;
+    mov_popq_popq       m1, init_m1;
+
+    init_pany_type      init_m2, mutex;
+    call_builtinfunc    builtin_create_mutex;
+    mov_popq_popq       m2, init_m2;
+
+    init_pany_type      init_gate, mutex;
+    call_builtinfunc    builtin_create_mutex;
+    mov_popq_popq       gate, init_gate;
+
+    init_pany_type      init_cv, condition_variable;
+    call_builtinfunc    builtin_create_cv;
+    mov_popq_popq       cv, init_cv;
+
+    mov_p64_imm         ready_count, 0;
+    mov_p64_imm         phase, 0;
+
+    init_pany_type      t1_id, i64;
+    set_threadctx       threadA;
+    call_builtinfunc    builtin_start_thread;
+
+    init_pany_type      t2_id, i64;
+    set_threadctx       threadB;
+    call_builtinfunc    builtin_start_thread;
+
+    init_pany_type      main_gate_lock, mutex;
+    mov_popq_popq       main_gate_lock, gate;
+    call_builtinfunc    builtin_lock_mutex;
+
+    label WaitReadyInit;
+        init_pany_type  r, i64;
+        init_pany_type  wait_ready_cv, condition_variable;
+        init_pany_type  wait_ready_gate, mutex;
+
+    label WaitReady;
+        mov_p64_p64     r, ready_count;
+        cmpEq_p64_imm   r, 2;
+        jmpIf_label     ReleaseWorkers;
+
+        mov_popq_popq   wait_ready_cv, cv;
+        mov_popq_popq   wait_ready_gate, gate;
+        call_builtinfunc builtin_wait_cv;
+        deinit;
+        jmp_label       WaitReadyInit;
+
+    label ReleaseWorkers;
+    deinit;
+    deinit;
+    deinit;
+
+    mov_p64_imm         phase, 1;
+
+    init_pany_type      cv_release, condition_variable;
+    mov_popq_popq       cv_release, cv;
+    call_builtinfunc    builtin_notify_all_cv;
+
+    init_pany_type      unlock_gate_main, mutex;
+    mov_popq_popq       unlock_gate_main, gate;
+    call_builtinfunc    builtin_unlock_mutex;
+
+    init_pany_type      j1, i64;
+    mov_p64_p64         j1, t1_id;
+    call_builtinfunc    builtin_join_thread;
+
+    init_pany_type      j2, i64;
+    mov_p64_p64         j2, t2_id;
+    call_builtinfunc    builtin_join_thread;
+
+    # Deadlock is always detected before the joins complete, so m1 and m2 are still held
+    # by their respective panicked threads. Destroying locked mutexes is undefined behaviour,
+    # so we intentionally skip the destroy calls here. The synchronisation primitives pool
+    # is cleaned up when the process is torn down.
+
+    ret;
+}
