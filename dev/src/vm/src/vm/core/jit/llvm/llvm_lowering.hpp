@@ -287,42 +287,6 @@ namespace vm::jit {
 
 			llvm::IRBuilder<> entry_builder(entry_block);
 
-			// Set up printf declaration
-			llvm::FunctionType* printf_type = llvm::FunctionType::get(
-				llvm::Type::getInt32Ty(llvm_ctx),
-				{ llvm::PointerType::getUnqual(llvm_ctx) },
-				true // variadic
-			);
-
-			llvm::Function* printf_func = module->getFunction("printf");
-			if (!printf_func) {
-				printf_func = llvm::Function::Create(
-					printf_type,
-					llvm::Function::ExternalLinkage,
-					"printf",
-					module
-				);
-			}
-
-			// Create format string
-			llvm::Constant* fmt_str = llvm::ConstantDataArray::getString(llvm_ctx, "JIT compiled function entered\n");
-			llvm::GlobalVariable* fmt_global = new llvm::GlobalVariable(
-				*module,
-				fmt_str->getType(),
-				true,
-				llvm::GlobalValue::PrivateLinkage,
-				fmt_str,
-				"fmt_str"
-			);
-
-			// Call printf
-			llvm::Value* fmt_ptr = entry_builder.CreateInBoundsGEP(
-				fmt_str->getType(),
-				fmt_global,
-				{ entry_builder.getInt32(0), entry_builder.getInt32(0) }
-			);
-			entry_builder.CreateCall(printf_type, printf_func, { fmt_ptr });
-
 			if (first_cfg_block != nullptr) {
 				entry_builder.CreateBr(first_cfg_block);
 			} else {
