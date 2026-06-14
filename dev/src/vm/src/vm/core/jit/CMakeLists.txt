@@ -1,5 +1,5 @@
 add_subdirectory(llvm/)
-# add_subdirectory(copy-and-patch/)
+add_subdirectory(copy-and-patch/)
 
 add_files(
     jit_helper.cpp

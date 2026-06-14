@@ -302,7 +302,7 @@ namespace vm::jit {
 		) {
 			auto& llvm_data = llvmData();
 
-			// Create LLVM basic blocks for each VM block normally
+			// Create LLVM basic blocks for each VM block
 			for (usize block_idx = 0; block_idx < cfg.size(); ++block_idx) {
 				llvm::BasicBlock* block = llvm::BasicBlock::Create(
 					llvm_ctx, "block_" + std::to_string(block_idx), user_func_wrapper
