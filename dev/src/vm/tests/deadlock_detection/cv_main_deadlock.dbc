@@ -11,14 +11,14 @@
 #
 # Expected: VMDeadlockException.
 
-global_data m1          mutex {};
-global_data m2          mutex {};
-global_data gate        mutex {};
-global_data cv_gate     condition_variable {};
-global_data sleep_mutex mutex {};
-global_data cv_main     condition_variable {};
-global_data ready_count i64 {};
-global_data phase       i64 {};
+global_data m1          mutex {}
+global_data m2          mutex {}
+global_data gate        mutex {}
+global_data cv_gate     condition_variable {}
+global_data sleep_mutex mutex {}
+global_data cv_main     condition_variable {}
+global_data ready_count i64 {}
+global_data phase       i64 {}
 
 function workerA {} -> {} {
 	init_pany_type		la, mutex;

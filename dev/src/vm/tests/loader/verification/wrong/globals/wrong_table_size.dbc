@@ -1,0 +1,9 @@
+# The array size is different inside the struct
+type fixed_size_table: My_fst i8 4
+type data: My_data_type {
+    content: My_fst,
+}
+
+global_data my_global My_data_type {
+    initial_value: class { content: fixed_size_table [ 0x01, 0x02, 0x03, 0x04, 0x05 ] }
+}
