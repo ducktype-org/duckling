@@ -2,7 +2,6 @@
 use std::path::Path;
 
 use tracing::debug;
-use url::Url;
 
 use super::types;
 use crate::quackpack::schemas::registry;
@@ -10,6 +9,7 @@ use crate::quackpack::schemas::registry;
 #[cfg(test)]
 mod tests;
 
+use crate::quackpack::util::interned_url::InternedUrl;
 use crate::{QuackResult, QuackResultContext};
 
 const SQL_ERROR_MESSAGE: &str = "failed to execute an SQL query";
@@ -197,7 +197,7 @@ impl ManifestCache {
     #[tracing::instrument(skip(self))]
     pub fn add_or_replace_multiple_manifests(
         &mut self,
-        registry_url: Url,
+        registry_url: InternedUrl,
         multi_manifest: Vec<registry::Manifest>,
     ) -> QuackResult<()> {
         let package_manifest_pairs = multi_manifest
@@ -208,13 +208,13 @@ impl ManifestCache {
                 let package = types::PackageWithUrl {
                     id: manifest.metadata.name.into(),
                     version: manifest.metadata.version,
-                    url: registry_url.clone(),
+                    url: registry_url,
                 };
                 Ok((package, json))
             })
             .collect::<QuackResult<_>>()?;
         self.connection
-            .add_or_replace_mutliple_manifests_jsons(package_manifest_pairs)
+            .add_or_replace_multiple_manifests_jsons(package_manifest_pairs)
             .context(SQL_ERROR_MESSAGE)?;
         Ok(())
     }
@@ -222,7 +222,7 @@ impl ManifestCache {
 
 trait ConnectionExt {
     /// Execute given `sql` query with `params`, ensuring that exactly zero or one rows have been
-    /// returend.
+    /// returned.
     /// If and only if exactly one row has been returned, call `f` on it, returning
     /// `Ok(Some(f(row))`.
     /// If there are no rows, returns `Ok(None)`, and `Err` if there was more
@@ -255,7 +255,7 @@ trait ConnectionExt {
     ) -> rusqlite::Result<()>;
 
     /// Helper for adding or replacing multiple JSON manifests of packages.
-    fn add_or_replace_mutliple_manifests_jsons(
+    fn add_or_replace_multiple_manifests_jsons(
         &mut self,
         multi_manifests: Vec<(types::PackageWithUrl, String)>,
     ) -> rusqlite::Result<()>;
@@ -364,7 +364,7 @@ impl ConnectionExt for rusqlite::Connection {
         Ok(())
     }
 
-    fn add_or_replace_mutliple_manifests_jsons(
+    fn add_or_replace_multiple_manifests_jsons(
         &mut self,
         multi_manifests: Vec<(types::PackageWithUrl, String)>,
     ) -> rusqlite::Result<()> {

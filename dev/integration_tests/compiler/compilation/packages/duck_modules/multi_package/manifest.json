@@ -2,63 +2,70 @@
     "packages": [
         {
             "name": "lib_a",
+            "id": "lib_a",
             "version": "0.1.0",
             "path": "duck_modules/multi_package/lib_a",
             "features": [ "use_mathlib" ]
         },
         {
             "name": "lib_b",
+            "id": "lib_b",
             "version": "0.1.0",
             "path": "duck_modules/multi_package/lib_b",
             "features": [ "use_mathlib", "use_lib_a" ],
             "dependencies": [
-                { "name": "lib_a", "alias": "lib_a" },
-                { "name": "lib_c" }
+                { "id": "lib_a", "alias": "lib_a" },
+                { "id": "lib_c" }
             ]
         },
         {
             "name": "lib_c",
+            "id": "lib_c",
             "version": "0.1.0",
             "path": "duck_modules/multi_package/lib_c",
             "features": [ "use_lib_b" ],
             "dependencies": [
-                { "name": "lib_b" }
+                { "id": "lib_b" }
             ]
         },
         {
             "name": "app1",
+            "id": "app1",
             "version": "0.1.0",
             "path": "duck_modules/multi_package/app1",
             "features": [],
             "dependencies": [
-                { "name": "lib_a", "alias": "lib_a" },
-                { "name": "lib_c", "alias": "lib_b" }
+                { "id": "lib_a", "alias": "lib_a" },
+                { "id": "lib_c", "alias": "lib_b" }
             ]
         },
         {
             "name": "app2",
+            "id": "app2",
             "version": "0.1.0",
             "path": "duck_modules/multi_package/app2",
             "dependencies": [
-                { "name": "lib_a", "alias": "lib_a" }
+                { "id": "lib_a", "alias": "lib_a" }
             ]
         },
         {
             "name": "app3",
+            "id": "app3",
             "version": "0.1.0",
             "path": "duck_modules/multi_package/app3",
             "dependencies": [
-                { "name": "lib_a" },
-                { "name": "lib_b" }
+                { "id": "lib_a" },
+                { "id": "lib_b" }
             ]
         },
         {
             "name": "app3_alias",
+            "id": "app3_alias",
             "version": "0.1.0",
             "path": "duck_modules/multi_package/app3",
             "dependencies": [
-                { "name": "lib_a", "alias": "lib_b" },
-                { "name": "lib_b", "alias": "lib_a" }
+                { "id": "lib_a", "alias": "lib_b" },
+                { "id": "lib_b", "alias": "lib_a" }
             ]
         }
     ],

@@ -90,9 +90,10 @@ private:
 	) {
 		if (expected_prototype_count == -1) expected_prototype_count = expected_function_count;
 		// @TODO: #2694 These numbers are inflated by toString methods for simple types
-		// There are 14 toString methods, and an additional 5 builtin_stringify_<type> prototypes.
-		expected_function_count += 14;
-		expected_prototype_count += 14 + 5;
+		// There are 15 toString methods, and an additional 6 builtin_stringify_<type> prototypes
+		// and 1 slice length method.
+		expected_function_count += 15 + 1;
+		expected_prototype_count += 15 + 1 + 6;
 		auto llvm_module = getLLVMModuleFromPath(std::move(module_path));
 		ASSERT_EQUAL_PRINT(llvm_module.getFunctionCount(false), expected_function_count);
 		ASSERT_EQUAL_PRINT(llvm_module.getFunctionCount(), expected_prototype_count);
@@ -158,7 +159,7 @@ private:
 
 	void classTest() { runTestForModule("modules/classes/records", 13, 15); }
 
-	void stringsTest() { runTestForModule("modules/strings", 2, 2); }
+	void stringsTest() { runTestForModule("modules/strings", 2, 3); }
 
 	void ffiTest() { runTestForModule("modules/ffi", 1, 1); }
 
@@ -227,7 +228,7 @@ private:
 		// arr[3]
 		assertTrue(
 			std::regex_search(
-				ir, std::regex{ R"(getelementptr.*\[10\s+x\s+i32\].*i32\s+0,\s+i64\s+3)" }
+				ir, std::regex{ R"(getelementptr.*\[10\s+x\s+i32\].*i32\s+0,\s+i64\s+%)" }
 			),
 			"Expected GEP instruction for array indexing arr[3]"
 		);
@@ -242,7 +243,7 @@ private:
 			std::regex_search(
 				ir,
 				std::regex{
-					R"(getelementptr.*\[2\s+x\s+\[3\s+x\s+i32\].*i32\s+0,\s+i64\s+1,\s+i64\s+2)" }
+					R"(getelementptr.*\[2\s+x\s+\[3\s+x\s+i32\].*i32\s+0,\s+i64\s+%0,\s+i64\s+%1)" }
 			),
 			"Expected big GEP for nested array access matrix[1][2]"
 		);
@@ -250,7 +251,7 @@ private:
 		// points[1].y
 		// GEP: 0 (ptr), 1 (array index), 1 (field index)
 		assertTrue(
-			std::regex_search(ir, std::regex{ R"(getelementptr.*i32\s+0,\s+i64\s+1,\s+i32\s+1)" }),
+			std::regex_search(ir, std::regex{ R"(getelementptr.*i32\s+0,\s+i64\s+%0,\s+i32\s+1)" }),
 			"Expected GEP for struct field access in array: points[1].y"
 		);
 	}

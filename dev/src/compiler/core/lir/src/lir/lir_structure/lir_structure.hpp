@@ -278,16 +278,6 @@ namespace compiler::lir {
 		 */
 		static LIRGlobal fromMIR(query::Context& ctx, mir::MIRGlobal mir_global);
 
-		/**
-		 * @note Do not use this function outside of LIR lowering / driver.
-		 * This handles both global variables and constants. For constants, it also sets CTV initial
-		 * value of the global.
-		 *
-		 * @TODO: #2246 remove this, it is only used in tests now (and update the tests)
-		 */
-		static LIRGlobal fromHOUT(query::Context& ctx, const helios::HOUTGlobalData& helios_id);
-
-
 		void debugPrint(query::Context& ctx, std::ostream& os) const;
 	};
 
@@ -653,6 +643,28 @@ namespace compiler::lir {
 		LIRGlobal                                         global;
 		std::variant<ctv::CompileTimeValue, CTorDtorPair> data_initialization;
 
+		/**
+		 * @brief Returns the constructor and destructor pair for the global.
+		 * Panics if the global does not have a constructor+destructor initialization.
+		 * Use only when you are sure that the global has constructor+destructor initialization (or
+		 * in tests).
+		 *
+		 * @return CTorDtorPair
+		 */
+		[[nodiscard]]
+		CTorDtorPair getCtorDtorPair() const;
+
+		/**
+		 * @brief Returns the constant value for the global.
+		 * Panics if the global does not have a constant initialization.
+		 * Use only when you are sure that the global has a constant initialization (or
+		 * in tests).
+		 *
+		 * @return ctv::CompileTimeValue
+		 */
+		[[nodiscard]]
+		ctv::CompileTimeValue getConstValue() const;
+
 		void debugPrint(query::Context& ctx, std::ostream& out) const;
 	};
 
@@ -669,5 +681,21 @@ namespace compiler::lir {
 		std::vector<LIRGlobalData>  lir_globals;
 
 		void debugPrint(query::Context& ctx, std::ostream& out) const;
+
+		/**
+		 * @brief Removes duplicate functions and globals from the LIR unit.
+		 * (based on their mangled names).
+		 *
+		 * @note This is needed to handle the case of multiple script modules in the REPL, which
+		 * might contain duplicated functions and globals.
+		 * @TODO: #2694 #2424 Come back to this and maybe remove or adapt this method accordingly.
+		 *
+		 * @note In this context, don't use this method outside of REPL script compilation, as it
+		 * might hide other issues with duplicated functions and globals in LIR units (unless there
+		 * are good reasons to do so). It is only placed here to avoid potential logic duplication
+		 * should we ever need to handle duplicated functions and globals in LIR units in other
+		 * contexts.
+		 */
+		void deduplicateSymbols();
 	};
 }

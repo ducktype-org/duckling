@@ -166,6 +166,28 @@ namespace base {
 	std::vector<std::string> strSplit(const std::string_view str, const std::string& delimiter = " ");
 
 	/**
+	 * @brief Joins a range of strings into a single string with a specified separator.
+	 */
+	std::string strJoin(std::ranges::input_range auto&& range, std::string_view sep) {
+		std::string result;
+
+		auto it  = std::ranges::begin(range);
+		auto end = std::ranges::end(range);
+
+		if (it == end) return result;
+
+		result += *it;
+		++it;
+
+		for (; it != end; ++it) {
+			result += sep;
+			result += *it;
+		}
+
+		return result;
+	}
+
+	/**
 	 * @brief Trims leading whitespace from a string view.
 	 *
 	 * @param text Input string view.

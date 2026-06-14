@@ -67,13 +67,14 @@ impl UrlExt for Url {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::quackpack::util::to_url::ToUrl;
 
     #[test]
     fn basic_endpoints() {
         let base = "https://localhost:9001";
         let package_name = "package";
         let package_version = "1.0.0";
-        let url = Url::parse(base).unwrap();
+        let url = base.to_url().unwrap();
         let package = types::Package {
             id: package_name.into(),
             version: package_version.parse().unwrap(),

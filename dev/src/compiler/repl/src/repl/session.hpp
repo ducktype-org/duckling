@@ -249,6 +249,25 @@ namespace compiler::repl {
 		void printSessionHistory() const;
 
 		/**
+		 * @brief Filter modes for visible REPL symbol printing.
+		 */
+		enum class SymbolListFilter {
+			All,
+			Variables,
+			Functions,
+		};
+
+		/**
+		 * @brief Print symbols visible from the current REPL state, optionally filtered by kind.
+		 */
+		void printVisibleSymbols(SymbolListFilter filter = SymbolListFilter::All);
+
+		/**
+		 * @brief Print detailed information for visible top-level symbols with the given name.
+		 */
+		void printSymbolDetails(std::string_view symbol_name);
+
+		/**
 		 * @brief Keeps data necessary to control resets in one place.
 		 */
 		struct ResetState final {
@@ -273,7 +292,7 @@ namespace compiler::repl {
 		 * globals, and types from previous statements to be referenced in new statements.
 		 * Similar to DVMBuilder but with incremental loading semantics for interactive sessions.
 		 */
-		base::Optional<backend_vm::ReplLoweringContext> m_lowering_context;
+		base::Optional<backend_vm::ReplDVMCodeBuilder> m_lowering_context;
 		/**
 		 * Suppress per-statement REPL feedback. This can be useful either when loading scripts
 		 * or when resetting state of the REPL.

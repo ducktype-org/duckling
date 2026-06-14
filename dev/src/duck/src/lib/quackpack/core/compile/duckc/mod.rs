@@ -21,7 +21,7 @@ use tempfile::TempDir;
 use super::BuildContext;
 use super::compiler_package::CompilerPackage;
 use crate::quackpack::core::compile::early_graph::EarlyGraph;
-use crate::quackpack::core::storage::freeze::FreezeDep;
+use crate::quackpack::core::identity::Identity;
 use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail, qp_bail_internal};
 
 #[derive(Debug)]
@@ -85,7 +85,9 @@ impl Duckc {
             .dependencies_for_package(&graph.graph().root());
         bail_if_has_deps(deps.dependencies())?;
         bail_if_has_explicit_aliases(this)?;
-        let this = this.package();
+        let Some(this) = this.package().try_get_package() else {
+            qp_bail_internal!("tried to compile a frontmatter script as a package");
+        };
         let mut builder = process_builder::DuckcProcessBuilder::new(self);
         builder
             .set_subcommand(process_builder::DuckcSubcommand::CompilePackage)
@@ -95,7 +97,7 @@ impl Duckc {
         if !source_dir.is_dir() {
             qp_bail!(
                 "package `{}` doesn't have a `src/` directory (expected `{}` to be a directory)",
-                this.as_freeze_dep(),
+                bcx.root_identity,
                 source_dir.display()
             )
         }
@@ -104,12 +106,12 @@ impl Duckc {
             .set_package_artifacts_dir(this)
             .update_with_profile(&bcx.profile);
         // We need to lock a file, we can't lock a directory.
-        let _lock = this.artifacts_directory().acquire_global_lock(bcx.pcx.ctx()).with_context(|| format!("failed to acquire an exclusive lock for spawning a duckc in order to compile a package `{}`", this.as_freeze_dep()))?;
+        let _lock = this.artifacts_directory().acquire_global_lock(bcx.pcx.ctx()).with_context(|| format!("failed to acquire an exclusive lock for spawning a duckc in order to compile a package `{}`", bcx.root_identity))?;
         bcx.pcx
             .ctx()
             .console()
             .info_verbose(format!("Running `{}`", builder))?;
-        builder.execute(|| format!("failed to compile package `{}`", this.as_freeze_dep()))?;
+        builder.execute(|| format!("failed to compile package `{}`", bcx.root_identity))?;
         Ok(ArtifactsDir::Default)
     }
 
@@ -143,7 +145,7 @@ impl Duckc {
 }
 
 /// Helper for checking not yet supported features of the compiler.
-fn bail_if_has_deps(dependencies: &[FreezeDep]) -> QuackResult<()> {
+fn bail_if_has_deps(dependencies: &[Identity]) -> QuackResult<()> {
     if !dependencies.is_empty() {
         qp_bail_internal!("external dependencies are not (yet) supported by duckc")
     }
@@ -159,7 +161,7 @@ fn bail_if_has_explicit_aliases(package: &CompilerPackage) -> QuackResult<()> {
         .iter()
         .any(|dep| dep.is_aliased())
     {
-        let desc = package.package().as_freeze_dep();
+        let desc = package.package().as_a_local_identity()?;
         qp_bail_internal!("package `{desc}` has aliased dependencies, which is not yet supported")
     }
     Ok(())

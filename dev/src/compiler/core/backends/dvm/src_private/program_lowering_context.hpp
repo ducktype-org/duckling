@@ -14,7 +14,7 @@
 #include <vm/bytecode/validator/valid_program.hpp>
 
 namespace compiler::backend_vm::internal {
-	class ProgramLoweringContext {
+	class ProgramLoweringContext final {
 		/**
 		 * @brief Context used purely for throwing NotYetImplemented errors.
 		 * @note This context should not be used for anything other than throwing NotYetImplemented

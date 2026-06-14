@@ -26,6 +26,30 @@ impl PartialEq for InternedUrl {
     }
 }
 
+impl PartialEq<Url> for InternedUrl {
+    fn eq(&self, other: &Url) -> bool {
+        self.as_url() == other
+    }
+}
+
+impl PartialEq<&Url> for InternedUrl {
+    fn eq(&self, other: &&Url) -> bool {
+        self.as_url() == *other
+    }
+}
+
+impl PartialEq<InternedUrl> for Url {
+    fn eq(&self, other: &InternedUrl) -> bool {
+        other == self
+    }
+}
+
+impl PartialEq<InternedUrl> for &Url {
+    fn eq(&self, other: &InternedUrl) -> bool {
+        other == self
+    }
+}
+
 impl Eq for InternedUrl {}
 
 impl Hash for InternedUrl {
@@ -44,6 +68,17 @@ impl InternedUrl {
             static_ref
         });
         Self { inner: reference }
+    }
+
+    /// Get the reference to the underlying [`Url`].
+    pub fn as_url(&self) -> &'static Url {
+        self.inner
+    }
+}
+
+impl From<Url> for InternedUrl {
+    fn from(value: Url) -> Self {
+        Self::new(value)
     }
 }
 
@@ -64,12 +99,6 @@ impl AsRef<Url> for InternedUrl {
 impl AsRef<str> for InternedUrl {
     fn as_ref(&self) -> &str {
         self.inner.as_ref()
-    }
-}
-
-impl PartialEq<Url> for InternedUrl {
-    fn eq(&self, other: &Url) -> bool {
-        self.inner == other
     }
 }
 
@@ -118,7 +147,7 @@ impl Display for InternedUrl {
 
 impl Debug for InternedUrl {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        // We intenionally use Display for str here: Url's Debug gives internal data, whereas mostly
+        // We intentionally use Display for str here: Url's Debug gives internal data, whereas mostly
         // we want to see the human-friendly Url.
         Display::fmt(self.inner.as_str(), f)
     }

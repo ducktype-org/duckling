@@ -1,8 +1,9 @@
+#pragma once
 
 #include "dvm_internal_fwd.hpp"
 
 #include <debug_info/debug_info.hpp>
-#include <lir/lir_structure/lir_structure.hpp>
+#include <lir/lir_structure/lir_structure_fd.hpp>
 
 #include <base/pointers/ref.hpp>
 
@@ -12,7 +13,7 @@
 
 namespace compiler::backend_vm {
 	/**
-	 * @brief A statefull collection of code lowered into VM bytecode.
+	 * @brief A stateful collection of code lowered into VM bytecode.
 	 * @note If used improperly, query_ctx might become a dangling reference.
 	 */
 	class DVMCodeBuilder final {
@@ -28,9 +29,16 @@ namespace compiler::backend_vm {
 		DVMCodeBuilder(query::Context& query_ctx, bool build_debug_info, bool is_comp_time_lowering);
 
 		/**
+		 * @brief Inserts a LIR unit into the module.
+		 * This acts as a main entry point and a source of truth for lowering LIR to DVM,
+		 * and should be preferred over using the other insert functions.
+		 */
+		void insertLIRUnit(const lir::LIRUnit& lir_unit);
+
+		/**
 		 * @brief Inserts a LIR function into the module.
 		 */
-		void insertLirFunction(CRef<lir::Function> lir_function);
+		void insertLIRFunction(CRef<lir::Function> lir_function);
 
 		/**
 		 * @brief Inserts an extern C function into the module.
@@ -40,7 +48,7 @@ namespace compiler::backend_vm {
 		/**
 		 * @brief Inserts a LIR global into the module.
 		 */
-		void insertLirGlobal(const lir::LIRGlobalData& lir_global);
+		void insertLIRGlobal(const lir::LIRGlobalData& lir_global);
 
 		/**
 		 * @brief Insert raw bytecode into a module.
@@ -62,7 +70,14 @@ namespace compiler::backend_vm {
 		[[nodiscard]] base::Optional<debug_info::DebugInfo> buildDebugInfo();
 
 	private:
-		// A Boxed pointer to allow forward declaration in order to hide implementation details.
+		/**
+		 * We friend ReplDVMCodeBuilder, so it can access program_context directly.
+		 */
+		friend class ReplDVMCodeBuilder;
+
+		/**
+		 * A Boxed pointer to allow forward declaration in order to hide implementation details.
+		 */
 		Box<internal::ProgramLoweringContext> program_context;
 
 		bool build_debug_info;

@@ -10,6 +10,7 @@
 #include <frontend/pst_parser/utility.hpp>
 #include <helios/queries/function_queries.hpp>
 #include <helios/queries/queries.hpp>
+#include <helios/repl_utils/repl_symbols.hpp>
 
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/defer.hpp>
@@ -165,6 +166,7 @@ namespace compiler::repl {
 
 			return entries;
 		}
+
 	}
 
 	ReplResult ReplSession::failWithMessage(std::string_view message) {
@@ -238,6 +240,170 @@ namespace compiler::repl {
 				first_line = false;
 			}
 		}
+		std::cout << "\n";
+	}
+
+	void ReplSession::printVisibleSymbols(SymbolListFilter filter) {
+		auto empty_message = [filter] {
+			switch (filter) {
+			case SymbolListFilter::All:
+				return "No symbols declared yet.";
+			case SymbolListFilter::Variables:
+				return "No variables declared yet.";
+			case SymbolListFilter::Functions:
+				return "No functions declared yet.";
+			}
+			return "No symbols declared yet.";
+		};
+
+		auto title = [filter] {
+			switch (filter) {
+			case SymbolListFilter::All:
+				return "Visible Symbols";
+			case SymbolListFilter::Variables:
+				return "Visible Variables";
+			case SymbolListFilter::Functions:
+				return "Visible Functions";
+			}
+			return "Visible Symbols";
+		};
+
+		auto should_show = [filter](const ReplVisibleSymbol& symbol) {
+			switch (filter) {
+			case SymbolListFilter::All:
+				return true;
+			case SymbolListFilter::Variables:
+				return symbol.kind == helios::SymbolKind::Variable;
+			case SymbolListFilter::Functions:
+				return symbol.kind == helios::SymbolKind::Function
+				    || symbol.kind == helios::SymbolKind::FunctionDeclaration;
+			}
+			return false;
+		};
+
+		if (m_session_history.empty()) {
+			std::cout << empty_message() << "\n";
+			return;
+		}
+
+		std::string                    error_message;
+		std::vector<ReplVisibleSymbol> symbols;
+		runWithContextErrorHandling(
+			"Unexpected error while listing symbols: ",
+			[&](query::Context& ctx) {
+				symbols = queryVisibleReplSymbols(ctx, getCurrentModuleID());
+			},
+			error_message
+		);
+
+		if (!error_message.empty()) {
+			std::cerr << error_message << "\n";
+			return;
+		}
+
+		std::erase_if(symbols, [&](const auto& symbol) { return !should_show(symbol); });
+
+		if (symbols.empty()) {
+			std::cout << empty_message() << "\n";
+			return;
+		}
+
+		std::cout << "\n=== " << title() << " (" << symbols.size()
+				  << (symbols.size() == 1 ? " symbol" : " symbols") << ") ===\n";
+
+		for (usize i = 0; i < symbols.size(); ++i) {
+			const auto& symbol = symbols[i];
+
+			usize history_index = 0;
+			for (usize j = 0; j < m_session_history.size(); ++j) {
+				if (m_session_history[j].module_id == symbol.module_id) {
+					history_index = j + 1;
+					break;
+				}
+			}
+
+			std::cout << "[" << (i + 1) << "] ";
+			if (history_index != 0) std::cout << "[history #" << history_index << "] ";
+			std::cout << symbol.kind_label << " " << symbol.name;
+
+			if (!symbol.details.empty()) {
+				if (symbol.details.front() == '(')
+					std::cout << symbol.details;
+				else
+					std::cout << " : " << symbol.details;
+			}
+
+			std::cout << "\n";
+		}
+		std::cout << "\n";
+	}
+
+	void ReplSession::printSymbolDetails(std::string_view symbol_name) {
+		const auto trimmed_name = base::strTrim(symbol_name, K_REPL_WHITESPACE);
+		if (trimmed_name.empty()) {
+			std::cout << "Usage: /details <visible-symbol-name>\n";
+			return;
+		}
+
+		if (m_session_history.empty()) {
+			std::cout << "No symbols declared yet.\n";
+			return;
+		}
+
+		struct SymbolDetailsOutput final {
+			ReplVisibleSymbol symbol;
+			std::string       details;
+		};
+
+		std::string                      error_message;
+		std::vector<SymbolDetailsOutput> matches;
+		runWithContextErrorHandling(
+			"Unexpected error while showing symbol details: ",
+			[&](query::Context& ctx) {
+				auto symbols = queryVisibleReplSymbols(ctx, getCurrentModuleID());
+				for (auto& symbol: symbols) {
+					if (symbol.name == trimmed_name) {
+						auto details = formatReplSymbolDetails(ctx, symbol.symbol);
+						matches.emplace_back(SymbolDetailsOutput{
+							.symbol  = std::move(symbol),
+							.details = std::move(details),
+						});
+					}
+				}
+			},
+			error_message
+		);
+
+		if (!error_message.empty()) {
+			std::cerr << error_message << "\n";
+			return;
+		}
+
+		if (matches.empty()) {
+			std::cout << "No visible symbol named `" << trimmed_name << "`.\n";
+			return;
+		}
+
+		std::cout << "\n=== Details for `" << trimmed_name << "`";
+		if (matches.size() > 1) std::cout << " (" << matches.size() << " matches)";
+		std::cout << " ===\n";
+
+		for (usize i = 0; i < matches.size(); ++i) {
+			const auto& match = matches[i];
+
+			usize history_index = 0;
+			for (usize j = 0; j < m_session_history.size(); ++j) {
+				if (m_session_history[j].module_id == match.symbol.module_id) {
+					history_index = j + 1;
+					break;
+				}
+			}
+
+			if (matches.size() > 1) std::cout << "\nmatch #" << (i + 1) << "\n";
+			if (history_index != 0) std::cout << "defined in: history #" << history_index << "\n";
+			std::cout << match.details;
+		}
+
 		std::cout << "\n";
 	}
 
@@ -401,6 +567,26 @@ namespace compiler::repl {
 			return true;
 		}
 
+		if (line == "/symbols" || line == "/syms") {
+			printVisibleSymbols();
+			return true;
+		}
+
+		if (line == "/variables" || line == "/vars") {
+			printVisibleSymbols(SymbolListFilter::Variables);
+			return true;
+		}
+
+		if (line == "/functions" || line == "/fns") {
+			printVisibleSymbols(SymbolListFilter::Functions);
+			return true;
+		}
+
+		if (command == "/details") {
+			printSymbolDetails(args);
+			return true;
+		}
+
 		if (line == "/commands" || line == "/cmds") {
 			m_frontend.printHistory();
 			return true;
@@ -414,6 +600,12 @@ namespace compiler::repl {
 
 		if (line == "/clear" || line == "/c") {
 			m_frontend.clearScreen();
+			return true;
+		}
+
+		if (command == "/complete") {
+			auto prefix = base::strTrim(args);
+			m_frontend.printCompletions(prefix);
 			return true;
 		}
 
