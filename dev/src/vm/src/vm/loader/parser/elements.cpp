@@ -361,11 +361,11 @@ namespace vm::loader::parser {
 #define HANDLE_PLACE_ARG(TYPE)                                                      \
 	template<>                                                                      \
 	auto parseArg(F8ParserState& state) -> vm::opargs::TYPE {                       \
-		auto  pos   = state.getPosition();                                          \
-		usize frame = 0;                                                            \
+		auto                pos   = state.getPosition();                            \
+		base::Optional<u64> frame = std::nullopt;                                   \
 		if (state[0].is(lang_def::Keyword::BCFrameSpecifier)) {                     \
 			state.parse().one(lang_def::Keyword::BCFrameSpecifier);                 \
-			frame = parseNumericLiteral<usize>(state).first;                        \
+			frame = parseNumericLiteral<u64>(state).first;                          \
 		}                                                                           \
 		auto value       = parseStr(state);                                         \
 		auto arg         = vm::opargs::TYPE{ value };                               \

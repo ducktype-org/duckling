@@ -349,8 +349,9 @@ namespace vm::loader::compiler::safe {
 		}
 
 		return low::LowFuncData{
-			.name = function.name,
-			.id   = 0,  // placeholder, replaced immediately
+			.name      = function.name,
+			.id        = 0,  // placeholder, replaced if function is not a volatile expression
+			.high_func = &function,
 #ifdef ENABLE_JIT
 			.cfg = vm::low::cf::ControlFlowGraph(bytecode),
 #endif

@@ -134,8 +134,9 @@ namespace vm {
 		}
 
 		low::LowFuncData start_function{
-			.name = base::StrID("vm_start_function"),
-			.id   = START_FUNCTION_ID,
+			.name      = base::StrID("vm_start_function"),
+			.id        = START_FUNCTION_ID,
+			.high_func = nullptr,
 #ifdef ENABLE_JIT
 			.cfg
 			= low::cf::ControlFlowGraph(),  // This is okay because we never JIT the start function.
@@ -239,8 +240,9 @@ namespace vm {
 		auto        byte_type        = types.at(base::StrID("byte"));
 
 		low::LowFuncData start_function{
-			.name = base::StrID("vm_start_function"),
-			.id   = START_FUNCTION_ID,
+			.name      = base::StrID("vm_start_function"),
+			.id        = START_FUNCTION_ID,
+			.high_func = nullptr,
 #ifdef ENABLE_JIT
 			.cfg
 			= low::cf::ControlFlowGraph(),  // This is okay because we never JIT the start function.
@@ -639,11 +641,23 @@ namespace vm {
 		}
 	}
 
-	std::expected<low::LowCodePosition, api::ApiError> SafeVMThread::getCurrentPosition() {
+	std::expected<low::LowCodePosition, api::ApiError> SafeVMThread::getCurrentPosition(
+		base::Optional<usize> opt_frame_idx
+	) const {
 		variant_match(getStatus()) {
 			variant_case_novalue(api::Paused) {
-				auto  frame = runtime_data.frame_stack_current;
-				auto& func  = *frame->current_function;
+				const Frame* frame = runtime_data.frame_stack_current;
+
+				if_opt_some(opt_frame_idx, frame_index) {
+					u64 frames = getNumberOfCurrentStackFrames();
+					if (frame_index >= frames)
+						return std::unexpected(api::ApiError{
+							api::OtherError{ "Frame index out of bounds" } });
+
+					frame = &getStackFrame(frame_index);
+				}
+
+				auto& func = *frame->current_function;
 
 				return low::LowCodePosition{
 					.function          = &func,
@@ -696,7 +710,7 @@ namespace vm {
 		return u64(runtime_data.frame_stack_current - runtime_data.frame_stack_base) + 1;
 	}
 
-	Frame& SafeVMThread::getStackFrame(u64 frame_index) {
+	const Frame& SafeVMThread::getStackFrame(u64 frame_index) const {
 		return runtime_data.frame_stack_base[frame_index];
 	}
 
@@ -708,5 +722,23 @@ namespace vm {
 	void SafeVMThread::loadRuntimeExpr(code::valid_function::ValidFunction&& high_expr) {
 		runtime_expr_high.emplace_back(std::move(high_expr));
 		runtime_expr_low.emplace_back(safe_process.compileToLow(this, runtime_expr_high.back()));
+	}
+
+	base::Optional<code::StackStateID> SafeVMThread::getStackState(u64 frame_index) const {
+		auto opt_low_pos = getCurrentPosition(frame_index);
+		if_opt_none(opt_low_pos) return std::nullopt;
+
+		auto opt_high_pos
+			= safe_process.getCompiler()->mapLowVMProgramPositionToCodeCollectionPosition(
+				*opt_low_pos
+			);
+		if_opt_none(opt_high_pos) return std::nullopt;
+
+		auto& high_pos = *opt_high_pos;
+		auto  func_ref = *safe_process.getLoader()->getHighProgram()->functions().atMaybe(
+            high_pos.function_name
+        );
+
+		return func_ref->stack_states.at(high_pos.instruction_index);
 	}
 }

@@ -102,6 +102,7 @@ struct LocalStackEntry {
 class LocalStack {
 	// the following are CRefs instead of const& to allow copy/move.
 
+	base::Optional<CRef<SafeVMThread>>                         thread;
 	CRef<valid_type::ValidTypeMap>                             types_ctx;
 	std::variant<CRef<LocalStackDb>, Ref<LocalStackDbBuilder>> source;
 	StackStateID                                               stack_state_id;
@@ -114,11 +115,13 @@ public:
 	LocalStack& operator=(LocalStack&&)      = default;
 
 	LocalStack(
-		const valid_type::ValidTypeMap& types_ctx,
-		Ref<LocalStackDbBuilder>        src,
-		StackStateID                    state,
-		usize                           number_of_rets
+		const valid_type::ValidTypeMap&    types_ctx,
+		Ref<LocalStackDbBuilder>           src,
+		StackStateID                       state,
+		usize                              number_of_rets,
+		base::Optional<CRef<SafeVMThread>> thread = std::nullopt
 	):
+		  thread(thread),
 		  types_ctx(&types_ctx),
 		  source(src),
 		  stack_state_id(state),
@@ -218,16 +221,37 @@ public:
 		stack_state_id  = new_state;
 	}
 
+	template<typename PlaceT>
 	[[nodiscard]]
-	bool contains(base::StrID local_name) const {
-		return VISIT(source, db, return db->contains(stack_state_id, local_name););
+	bool contains(const PlaceT& place) const {
+		if_opt_some(place.frame, from_top) {
+			CORE_ASSERT(
+				thread.has_value(), "we should be checking that there is a thread beforehand"
+			);
+			auto& t = **thread;
+
+			usize stack_size = t.getNumberOfCurrentStackFrames();
+			if (stack_size < from_top) return false;
+			usize frame_idx = stack_size - 1 - from_top;
+
+			auto& frame     = t.getStackFrame(frame_idx);
+			auto  high_func = frame.current_function->high_func;
+			if (!high_func) return false;
+
+			auto opt_state = t.getStackState(frame_idx);
+			if (!opt_state) return false;
+
+			return high_func->local_stack.contains(*opt_state, place.var_name);
+		}
+		return VISIT(source, db, return db->contains(stack_state_id, place.var_name););
 	}
 
+	template<typename PlaceT>
 	[[nodiscard]]
-	CRef<valid_type::ValidType> at(base::StrID local_name) const {
+	CRef<valid_type::ValidType> at(const PlaceT& place) const {
 		base::StrID name_of_type{};
 
-		VISIT(source, db, name_of_type = *db->getTypeName(stack_state_id, local_name););
+		VISIT(source, db, name_of_type = *db->getTypeName(stack_state_id, place.var_name););
 
 		return types_ctx->at(name_of_type);
 	}
@@ -315,7 +339,7 @@ class FunctionValidator {
 		// @TODO: #962 This implementation seeking occurs in a couple of places. Think of a better
 		// way. EDIT: After valid_type::ValidType was added, it's simpler but still could be improved.
 		CRef<valid_type::finalized::Function> method_signature = [&] {
-			const auto&             ptr = local_stack.at(instr.object_ptr.var_name);
+			const auto&             ptr = local_stack.at(instr.object_ptr);
 			valid_type::ValidTypeID inner_id
 				= ptr->getKindAs<valid_type::finalized::Pointer>()->inner;
 			const auto structure
@@ -348,7 +372,7 @@ class FunctionValidator {
 		const auto ptr_on_stack
 			= types_ctx.at(type_name)->getKindAs<valid_type::finalized::Pointer>();
 		const auto& ptr_in_call
-			= local_stack.at(instr.object_ptr.var_name)->getKindAs<valid_type::finalized::Pointer>();
+			= local_stack.at(instr.object_ptr)->getKindAs<valid_type::finalized::Pointer>();
 		if (ptr_in_call->inner != ptr_on_stack->inner)
 			throw InvalidFunctionCallArgumentsError(generic_arg);
 		local_stack.pop(instr);
@@ -396,20 +420,20 @@ class FunctionValidator {
 	CRef<valid_type::ValidType> validateAndGetPlaceType(
 		const PlaceT& place, const LocalStack& current_stack
 	) const {
-		bool is_local  = current_stack.contains(place.var_name);
-		bool is_global = globals.contains(place.var_name);
+		bool from_prev_frame = place.frame.has_value();
+		bool is_local        = current_stack.contains(place);
+		bool is_global       = globals.contains(place.var_name);
+		if (from_prev_frame && !thread) throw FrameSpecifierWithoutRuntimeThread(place);
 		if (is_local && is_global) throw DuplicatedLocalNameError(place);
 		if (!is_local && !is_global) throw UnknownLocalNameError(place);
-		return is_local ? current_stack.at(place.var_name)
-		                : types_ctx.at(globals.at(place.var_name)->type);
+		return is_local ? current_stack.at(place) : types_ctx.at(globals.at(place.var_name)->type);
 	}
 
 	template<typename PlaceT>
 	CRef<valid_type::ValidType> getPlaceType(const PlaceT& place, const LocalStack& current_stack)
 		const {
-		bool is_local = current_stack.contains(place.var_name);
-		return is_local ? current_stack.at(place.var_name)
-		                : types_ctx.at(globals.at(place.var_name)->type);
+		bool is_local = current_stack.contains(place);
+		return is_local ? current_stack.at(place) : types_ctx.at(globals.at(place.var_name)->type);
 	}
 
 	/**
@@ -445,7 +469,7 @@ class FunctionValidator {
 						throw InvalidArgumentTypeError(*place);
 				}
 				variant_case(CRef<opargs::PlaceAny>, place) {
-					bool is_local  = current_stack.contains(place->var_name);
+					bool is_local  = current_stack.contains(*place);
 					bool is_global = globals.contains(place->var_name);
 					if (is_local && is_global) throw DuplicatedLocalNameError(*place);
 					instr_match(instruction) {
@@ -1707,7 +1731,7 @@ class FunctionValidator {
 
 		for (auto instr: body)
 			if (std::ranges::contains(FORBIDDEN, instr.opcode()))
-				throw ForbiddenOpcodePresent(instr.opcode());
+				throw ForbiddenOpcodePresent(instr);
 	}
 
 	void validateSignature() {

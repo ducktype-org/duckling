@@ -10,6 +10,7 @@
 
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/const_value.hpp>
+#include <vm/bytecode/validator/valid_function.hpp>
 #include <vm/core/safe/type_metadata/definitions.hpp>
 #include <vm/core/safe/type_metadata/type_metadata.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
@@ -27,8 +28,9 @@ namespace vm::low {
 	 * @brief Micro bytecode representation of function data.
 	 */
 	struct LowFuncData {
-		base::StrID name;
-		usize       id;
+		base::StrID                                    name;
+		usize                                          id;
+		MCRef<vm::code::valid_function::ValidFunction> high_func;
 #ifdef ENABLE_JIT
 		cf::ControlFlowGraph cfg;
 #endif

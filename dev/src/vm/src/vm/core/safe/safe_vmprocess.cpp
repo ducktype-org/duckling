@@ -367,7 +367,7 @@ namespace vm {
 				if (frame_index >= frames)
 					return std::unexpected(api::ApiError{
 						api::OtherError{ "Frame index out of bounds" } });
-				Frame& frame = opt_thread.value()->getStackFrame(frame_index);
+				const Frame& frame = opt_thread.value()->getStackFrame(frame_index);
 
 				std::vector<api::response::StackFrameData::FrameVar> frame_vars;
 				for (Block* block_ptr:

@@ -22,8 +22,10 @@
 		}                                                             \
 	}
 
-#define DEFINE_PLACE(SUFFIX, OP_SHORT_VALUE) \
-	DEFINE_STR_ARG_TYPE(Place##SUFFIX, var_name, OP_SHORT_VALUE, usize frame = 0;)
+#define DEFINE_PLACE(SUFFIX, OP_SHORT_VALUE)                                               \
+	DEFINE_STR_ARG_TYPE(                                                                   \
+		Place##SUFFIX, var_name, OP_SHORT_VALUE, base::Optional<u64> frame = std::nullopt; \
+	)
 
 /**
  * @brief This namespace encapsulates types of opcode arguments.

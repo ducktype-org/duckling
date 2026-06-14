@@ -84,7 +84,9 @@ namespace vm::api {
 		PID pid, ThreadID thread_id, const code::Function& function
 	) {
 		return Supervisor::get()
-		    .doRequest(SupervisorRequest(pid, request::ExecRuntimeExpr{ thread_id, function }))
+		    .doRequest(SupervisorRequest(
+				pid, request::ExecRuntimeExpr{ .thread_id = thread_id, .expr = function }
+			))
 		    .transform(ignoreResponse);
 	}
 
@@ -92,7 +94,10 @@ namespace vm::api {
 		PID pid, ThreadID thread_id, fs::File file
 	) {
 		return Supervisor::get()
-		    .doRequest(SupervisorRequest(pid, request::ExecRuntimeExprFromFile{ thread_id, file }))
+		    .doRequest(SupervisorRequest(
+				pid,
+				request::ExecRuntimeExprFromFile{ .thread_id = thread_id, .file = std::move(file) }
+			))
 		    .transform(ignoreResponse);
 	}
 

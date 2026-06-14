@@ -248,7 +248,7 @@ base::Optional<FatBytecodePosition> vm::loader::Loader::mapFileLineToCodeCollect
 std::expected<vm::code::valid_function::ValidFunction, LoaderLogger> Loader::validateExpr(
 	Ref<SafeVMThread> thread, fs::File file
 ) const {
-	auto opt_code_collection = parseFiles({ file });
+	auto opt_code_collection = parseFiles({ std::move(file) });
 	if (!opt_code_collection.has_value())
 		return std::unexpected(std::move(opt_code_collection).error());
 

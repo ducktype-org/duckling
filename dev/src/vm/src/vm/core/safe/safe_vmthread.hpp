@@ -190,7 +190,10 @@ namespace vm {
 		 */
 		void run(const std::string& func_name, const RunArguments& run_arguments) override;
 
-		std::expected<low::LowCodePosition, api::ApiError> getCurrentPosition();
+		[[nodiscard]]
+		std::expected<low::LowCodePosition, api::ApiError> getCurrentPosition(
+			base::Optional<usize> frame_idx = std::nullopt
+		) const;
 
 		friend class SafeVMProcess;
 		friend class OpFuns;
@@ -235,7 +238,11 @@ namespace vm {
 
 		[[nodiscard]] u64 getNumberOfCurrentStackFrames() const override;
 
-		Frame& getStackFrame(u64 frame_index);
+		[[nodiscard]]
+		const Frame& getStackFrame(u64 frame_index) const;
+
+		[[nodiscard]]
+		base::Optional<code::StackStateID> getStackState(u64 frame_index) const;
 
 		void loadRuntimeExpr(code::valid_function::ValidFunction&& expr);
 

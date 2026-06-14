@@ -187,6 +187,10 @@ namespace vm {
 
 		CRef<low::ILowVMProgram> getLoadedProgram() const { return loaded_program; }
 
+		CRef<loader::compiler::safe::SafeCompiler> getCompiler() const { return &compiler; }
+
+		CRef<loader::Loader> getLoader() const { return &loader; }
+
 		/**
 		 * @brief Get the GIL of the process.
 		 */

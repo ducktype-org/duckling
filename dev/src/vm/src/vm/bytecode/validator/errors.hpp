@@ -57,10 +57,11 @@ namespace vm::code {
 	class ForbiddenOpcodePresent: public ValidationError {
 	public:
 		constexpr static std::string_view ERR_MSG = "Fat-bytecode contains forbidden opcode: ";
-		OpCode                            op;
+		Instruction                       instr;
 
-		//@todo: figure out how to change OpCode to string
-		ForbiddenOpcodePresent(OpCode op): ValidationError(std::string(ERR_MSG)), op(op) {}
+		ForbiddenOpcodePresent(Instruction i):
+			  ValidationError(base::strConcat(ERR_MSG, i.name())),
+			  instr(i) {}
 	};
 
 	/**
@@ -365,6 +366,7 @@ namespace vm::code {
 	DEFINE_ARGUMENT_ERROR(UnknownFunctionError, "Unknown function: ");
 	DEFINE_ARGUMENT_ERROR(UnknownMethodError, "Unknown method: ");
 	DEFINE_ARGUMENT_ERROR(InvalidBuiltinFunctionError, "Function is not builtin: ");
+	DEFINE_ARGUMENT_ERROR(FrameSpecifierWithoutRuntimeThread, "Argument with frame specifier: ");
 	DEFINE_ARGUMENT_ERROR(
 		InvalidFunctionCallArgumentsError,
 		"Invalid function call arguments. Values on the stack do not have proper types for "
