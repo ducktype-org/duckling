@@ -41,7 +41,7 @@ namespace vm {
 
 		if (code_result.has_value()) {
 			compiler.recompile();
-			auto new_functions = loaded_program_copy.selfUpdate();
+			[[maybe_unused]] auto new_functions = loaded_program_copy.selfUpdate();
 			updateGlobalDataMemory(&loaded_program_copy);
 #ifdef ENABLE_JIT
 			updateJitData(&loaded_program_copy, &new_functions);

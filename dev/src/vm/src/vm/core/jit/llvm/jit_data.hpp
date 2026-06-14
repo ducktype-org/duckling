@@ -7,7 +7,6 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
-#include <unordered_set>
 
 LLVM_INCLUDE_BEGIN()
 
@@ -60,11 +59,6 @@ struct LlvmData {
 	 * @brief pointers to LLVM types used in opcode function definitions.
 	 */
 	LlvmTypes types;
-
-	/**
-	 * @brief Tracking of linked opfunctions to avoid conflicts.
-	 */
-	std::unordered_set<std::string> jit_linked_opfuns;
 
 	/**
 	 * @brief Returns mangled name of opcode if it is in module.
