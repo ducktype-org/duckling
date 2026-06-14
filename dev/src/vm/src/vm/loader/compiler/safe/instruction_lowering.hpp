@@ -93,9 +93,6 @@ namespace vm::loader::compiler::safe::detail {
 		}
 
 		std::pair<low::MicroBytecode, decltype(label_id_to_offset)> build() {
-#ifdef ENABLE_JIT
-    		// addLow<Op_jitLoopRet>();
-#endif
 			return { std::move(result), std::move(label_id_to_offset) };
 		}
 

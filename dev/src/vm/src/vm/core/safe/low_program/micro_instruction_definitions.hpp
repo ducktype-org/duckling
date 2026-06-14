@@ -402,11 +402,6 @@ DEF_MICRO_INSTR(call_func, vm::low::opargs::FunctionID)
  * @note Unoptimizable by JIT, listed in dev/scripts/py/jit/jitable_interface.py.
  */
 DEF_MICRO_INSTR(jitEntrypoint)
-
-/**
- * @brief Functions as ret instruction, but for JIT-compiled loops.
- */
-// DEF_MICRO_INSTR(jitLoopRet)
 #endif
 
 /**

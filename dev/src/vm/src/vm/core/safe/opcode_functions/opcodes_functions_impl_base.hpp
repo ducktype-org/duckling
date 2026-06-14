@@ -376,15 +376,6 @@ namespace vm {
 		}
 		FUNCTION_CONT(0);
 	}
-
-    /*
-	RETURN_TYPE OpFuns::OPCODE_NAME(jitLoopRet)(FUNCTION_ARGS) {
-		{
-			save_execution_state(instr, local_stack, frame, thread);
-        }
-		FUNCTION_CONT(0);
-    }
-    */
 #endif
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(call_builtinfunc)(FUNCTION_ARGS) {
