@@ -24,6 +24,7 @@ use super::duckc::{Duckc, multipackage_schema, process_builder};
 use super::profiles::Profile;
 use super::unit::Unit;
 use super::unit::graph::UnitGraph;
+use crate::quackpack::core::compile::unit::ArtifactsType;
 use crate::util::file_locks::LockedFile;
 use crate::{QuackResult, QuackResultContext, qp_bail};
 
@@ -50,7 +51,16 @@ impl BuildContext<'_, '_> {
     }
 }
 
-/// Collect recursively all packages below `unit`.
+/// Collect this [`Unit`] and all its dependencies (direct and transparent), as a vector of
+/// [`multipackage_schema::Package`].
+///
+/// Dependencies appearing in cycles are also included.
+///
+/// Each dependency is present exactly once.
+///
+/// Right now, order of the vector is indeterministic.
+/// (To be precise, it's a normal DFS order).
+// @TODO: #2907 Make it deterministic? Or maybe sort the output by `id`/`name`?
 pub(crate) fn collect_packages(
     unit: &Unit,
     graph: &UnitGraph,
@@ -78,6 +88,11 @@ pub(crate) fn collect_packages(
 }
 
 /// Get linker options appropriate for the given `unit`.
+///
+/// Right now, this:
+/// 1. returns `None` if there are no dependencies,
+/// 2. creates a [`multipackage_schema::LinkerOptions::RawLinkerArgs`] only for
+///    [`ArtifactsType::IsADependencyArtifact`] dependencies (which _should_ be only `.a` files).
 pub(crate) fn get_linker_options(
     unit: &Unit,
     graph: &UnitGraph,
@@ -89,18 +104,28 @@ pub(crate) fn get_linker_options(
     }
     let string = outputs
         .into_iter()
+        .filter_map(|(unit, output)| {
+            if unit.artifacts_type() == ArtifactsType::IsADependencyArtifact {
+                Some(output)
+            } else {
+                None
+            }
+        })
         .map(|output| output.display().to_string())
         .join(" ");
     debug!("raw linker args are `{string}`");
+    if string.is_empty() {
+        return None;
+    }
     Some(multipackage_schema::LinkerOptions::RawLinkerArgs(string))
 }
 
-/// Collect outputs of _all_ (including `.a`!) dependencies below this `unit`.
+/// Collect _all_ (including `.a`!) outputs of dependencies (direct and transparent) of this `unit`.
 pub(crate) fn get_deps_outputs(
     unit: &Unit,
     graph: &UnitGraph,
     layout: &ProfileLayout,
-) -> Vec<PathBuf> {
+) -> Vec<(Unit, PathBuf)> {
     let mut result = vec![];
     let mut visited = HashSet::new();
     // Note that this DFS is different than the one above: we skip the root.
@@ -108,7 +133,7 @@ pub(crate) fn get_deps_outputs(
         current: &Unit,
         graph: &UnitGraph,
         layout: &ProfileLayout,
-        result: &mut Vec<PathBuf>,
+        result: &mut Vec<(Unit, PathBuf)>,
         visited: &mut HashSet<Unit>,
     ) {
         for dep_id in current.deps_by_unit_id() {
@@ -117,7 +142,7 @@ pub(crate) fn get_deps_outputs(
                 continue;
             }
             visited.insert(dep.clone());
-            result.push(unit_output(dep, graph, layout));
+            result.push((dep.clone(), unit_output(dep, graph, layout)));
             dfs(dep, graph, layout, result, visited);
         }
     }
@@ -162,7 +187,7 @@ pub(crate) fn write_schema(
     Ok(())
 }
 
-/// Create a basic and shared [`process_builder::DuckcProcessBuilder`].
+/// Create a basic and reusable [`process_builder::DuckcProcessBuilder`].
 pub(crate) fn finished_builder_for_layout_and_profile(
     bcx: &BuildContext<'_, '_>,
     layout: &DependencyLayout,
