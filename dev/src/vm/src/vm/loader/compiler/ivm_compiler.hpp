@@ -21,6 +21,8 @@ namespace vm::loader::compiler {
 			/// Total required size for the local stack frame, in bytes.
 			code::valid_type::TypeSize local_stack_size{};
 			usize                      local_block_count = 0;
+
+			base::Optional<CRef<SafeVMThread>> thread_evaluating_expr = std::nullopt;
 		};
 	}
 

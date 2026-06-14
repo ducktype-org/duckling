@@ -65,7 +65,7 @@ namespace vm::loader::compiler::safe::detail {
 	 * from temporary label IDs to label offsets used later by `Compiler::linkLabelArguments`.
 	 */
 	class SafeMicroBytecodeBuilder {
-		safe::SafeCompiler&                                       compiler;
+		const safe::SafeCompiler&                                 compiler;
 		const vm::loader::compiler::detail::FunctionStackContext& ctx;
 
 		base::HashMap<usize, usize>       label_id_to_offset{};
@@ -82,7 +82,7 @@ namespace vm::loader::compiler::safe::detail {
 		code::StackStateID curr_state = code::LocalStackDb::EMPTY;
 
 		SafeMicroBytecodeBuilder(
-			safe::SafeCompiler&                                       compiler,
+			const safe::SafeCompiler&                                 compiler,
 			const vm::loader::compiler::detail::FunctionStackContext& ctx
 		):
 			  compiler{ compiler },

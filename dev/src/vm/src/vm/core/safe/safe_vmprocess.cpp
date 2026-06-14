@@ -527,8 +527,8 @@ namespace vm {
 		return api::Response(api::response::Empty());
 	}
 
-	low::LowFuncData SafeVMProcess::compileToLow(code::valid_function::ValidFunction const& expr) const {
-		return compiler.lowerExpr(expr);
+	low::LowFuncData SafeVMProcess::compileToLow(CRef<SafeVMThread> thread, code::valid_function::ValidFunction const& expr) const {
+		return compiler.lowerExpr(expr, *thread);
 	}
 
 	void SafeVMProcess::updateGlobalDataMemory(CRef<low::ILowVMProgram> program) {

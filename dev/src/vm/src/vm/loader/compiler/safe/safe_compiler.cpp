@@ -136,7 +136,7 @@ namespace vm::loader::compiler::safe {
 		base::HashMap<base::StrID, usize>&                        label_id_map,
 		const FromType&                                           opcode_arg,
 		code::StackStateID                                        stack_state
-	) {
+	) const {
 		return detail::LowerArgumentImpl<ToType>::lower(
 			*this, ctx, label_id_map, opcode_arg, stack_state
 		);
@@ -144,7 +144,7 @@ namespace vm::loader::compiler::safe {
 
 	void SafeCompiler::linkLabelArguments(
 		low::MicroBytecode& instructions, const base::HashMap<usize, usize>& label_map
-	) {
+	) const {
 		for (auto [instr_idx, instr]: std::views::enumerate(instructions)) {
 			auto       opcode_num = std::to_underlying(getInstructionOpcode(instr));
 			std::array args{ Ref(&instr.arg0), Ref(&instr.arg1) };
@@ -156,7 +156,7 @@ namespace vm::loader::compiler::safe {
 	}
 
 	std::pair<low::MicroBytecode, std::vector<vm::low::LowFuncData::InstructionRange>> SafeCompiler::
-		lowerInstructions(const vm::loader::compiler::detail::FunctionStackContext& ctx) {
+		lowerInstructions(const vm::loader::compiler::detail::FunctionStackContext& ctx) const {
 		detail::SafeMicroBytecodeBuilder                    builder{ *this, ctx };
 		std::vector<vm::low::LowFuncData::InstructionRange> instruction_mapping;
 
@@ -179,44 +179,8 @@ namespace vm::loader::compiler::safe {
 			vm::loader::compiler::detail::FunctionStackContext ctx
 				= calculateStackContext(function);
 
-			auto [bytecode, instruction_mapping] = lowerInstructions(ctx);
-
-			// Calculate the functions metadata.
-			code::FuncSignature        signature       = function.signature;
-			code::valid_type::TypeSize parameters_size = {};
-			std::vector<TypeCRef>      parameters;
-			parameters.reserve(signature.parameters.size());
-
-			for (const auto& param: signature.parameters) {
-				CRef<code::valid_type::ValidType> type
-					= high_program.getTypeContext().getCurrentTypes().at(param.str);
-				parameters.emplace_back(low_program.getTypes().at(type->getName()));
-				parameters_size += type->getSize();
-			}
-
-			code::valid_type::TypeSize ret_type_sum = {};
-			std::vector<TypeCRef>      result_types = {};
-			for (auto& ret: signature.result_types) {
-				ret_type_sum += high_program.getTypeContext().getCurrentTypes().at(ret)->getSize();
-				result_types.emplace_back(low_program.types->at(ret));
-			}
-
-			usize new_func_id = low_program.functions.insert(
-				low::LowFuncData{ .name = function.name,
-			                      .id   = 0,  // placeholder, replaced immediately
-#ifdef ENABLE_JIT
-			                      .cfg = vm::low::cf::ControlFlowGraph(bytecode),
-#endif
-			                      .bc                  = std::move(bytecode),
-			                      .local_stack_size    = getIntTypeSize(ctx.local_stack_size),
-			                      .local_block_count   = ctx.local_block_count,
-			                      .arg_size            = getIntTypeSize(parameters_size),
-			                      .ret_size            = getIntTypeSize(ret_type_sum),
-			                      .parameters          = std::move(parameters),
-			                      .result_types        = std::move(result_types),
-			                      .instruction_mapping = std::move(instruction_mapping) },
-				function.name
-			);
+			usize new_func_id
+				= low_program.functions.insert(lowerFunction(function, ctx), function.name);
 			// This may look awkward, but it allows `LowFuncData` to know its own stable ID in the
 			// map, which makes it possible to avoid hashmap lookups on function calls with JIT.
 			low_program.functions[new_func_id].id = new_func_id;
@@ -347,10 +311,19 @@ namespace vm::loader::compiler::safe {
 		};
 	}
 
-	vm::low::LowFuncData SafeCompiler::lowerExpr(const code::valid_function::ValidFunction& expr
+	vm::low::LowFuncData SafeCompiler::lowerExpr(
+		const code::valid_function::ValidFunction& function, CRef<SafeVMThread> thread
 	) const {
-		vm::loader::compiler::detail::FunctionStackContext ctx = calculateStackContext(expr);
+		vm::loader::compiler::detail::FunctionStackContext ctx = calculateStackContext(function);
+		ctx.thread_evaluating_expr = thread;
 
+		return lowerFunction(function, ctx);
+	}
+
+	vm::low::LowFuncData SafeCompiler::lowerFunction(
+		const code::valid_function::ValidFunction&                function,
+		const vm::loader::compiler::detail::FunctionStackContext& ctx
+	) const {
 		auto [bytecode, instruction_mapping] = lowerInstructions(ctx);
 
 		// Calculate the functions metadata.

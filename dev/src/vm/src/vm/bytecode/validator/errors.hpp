@@ -60,7 +60,8 @@ namespace vm::code {
 			= "Fat-bytecode contains forbidden opcode: ";
 		OpCode op;
 
-		ForbiddenOpcodePresent(OpCode op): ValidationError(base::strConcat(ERR_MSG, op)), op(op) {}
+		//@todo: figure out how to change OpCode to string
+		ForbiddenOpcodePresent(OpCode op): ValidationError(std::string(ERR_MSG)), op(op) {}
 	};
 
 	/**

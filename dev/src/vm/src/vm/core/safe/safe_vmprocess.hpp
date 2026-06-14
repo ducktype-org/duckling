@@ -197,6 +197,6 @@ namespace vm {
 		 */
 		SynchronizationPrimitives& getSynchronizationPrimitives();
 
-		low::LowFuncData compileToLow(code::valid_function::ValidFunction const& func) const;
+		low::LowFuncData compileToLow(base::CRef<vm::SafeVMThread> thread, code::valid_function::ValidFunction const& func) const;
 	};
 }

@@ -707,6 +707,6 @@ namespace vm {
 
 	void SafeVMThread::loadRuntimeExpr(code::valid_function::ValidFunction&& high_expr) {
 		runtime_expr_high.emplace_back(std::move(high_expr));
-		runtime_expr_low.emplace_back(safe_process.compileToLow(runtime_expr_high.back()))
+		runtime_expr_low.emplace_back(safe_process.compileToLow(this, runtime_expr_high.back()));
 	}
 }

@@ -52,7 +52,7 @@ namespace vm::loader::compiler::safe {
 		 */
 		[[nodiscard]] CRef<vm::low::LowVMProgram> getLowProgram() const;
 
-		[[nodiscard]] vm::low::LowFuncData lowerExpr(code::valid_function::ValidFunction const& expr) const;
+		[[nodiscard]] vm::low::LowFuncData lowerExpr(code::valid_function::ValidFunction const& expr, CRef<SafeVMThread> thread) const;
 
 		[[nodiscard]] std::expected<FatBytecodePosition, MappingException>
 			mapLowVMProgramPositionToCodeCollectionPosition(low::LowCodePosition position) const;
@@ -85,7 +85,7 @@ namespace vm::loader::compiler::safe {
 		 */
 		void linkLabelArguments(
 			low::MicroBytecode& instructions, const base::HashMap<usize, usize>& label_map
-		);
+		) const;
 
 		/**
 		 * @brief Lowers instructions to micro-bytecode. Iterates through the instructions and
@@ -96,7 +96,12 @@ namespace vm::loader::compiler::safe {
 
 		std::pair<low::MicroBytecode, std::vector<vm::low::LowFuncData::InstructionRange>> lowerInstructions(
 			const vm::loader::compiler::detail::FunctionStackContext& ctx
-		);
+		) const;
+
+		vm::low::LowFuncData lowerFunction(
+			const code::valid_function::ValidFunction&                function,
+			const vm::loader::compiler::detail::FunctionStackContext& ctx
+		) const;
 
 		/**
 		 * @brief Translates a single high-level instruction argument (`opargs::OpCodeArg`)
@@ -115,6 +120,6 @@ namespace vm::loader::compiler::safe {
 			base::HashMap<base::StrID, usize>&                        label_id_map,
 			const FromType&                                           opcode_arg,
 			code::StackStateID                                        stack_state_id
-		);
+		) const;
 	};
 }
