@@ -1,0 +1,6 @@
+function hahahhaha { } -> { i64 } {
+	mov_p64_p64  	res0, frame 0 a;
+    add_p64_p64     ret0, frame 0 b;
+
+	ret;
+}
