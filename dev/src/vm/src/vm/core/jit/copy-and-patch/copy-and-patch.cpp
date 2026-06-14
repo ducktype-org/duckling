@@ -1,4 +1,5 @@
 #include "../jit_compiler.hpp"
+#include "../jit_helper.hpp"
 #include "memory/memory.hpp"
 #include "stencil_holder.hpp"
 
@@ -18,16 +19,6 @@ namespace vm::jit {
 		using namespace std::views;
 
 		auto transform_opcode = [](low::MicroOpcode opcode) {
-			switch (opcode) {
-			case low::MicroOpcode::virtual_call_pptr_method:
-				[[fallthrough]];
-			case low::MicroOpcode::call_func: {
-				return std::to_underlying(SpecialStencils::Trampoline);
-			}
-			default: {
-			}
-			}
-
 			switch (opcode) {
 #define HANDLE_NONJITABLE_INSTR(instr) \
 	case low::MicroOpcode::instr:      \
@@ -105,9 +96,14 @@ namespace vm::jit {
 					case HoleValue::ContinueFn:
 						return std::bit_cast<u64>(next);
 					case HoleValue::CallFn:
-						return std::bit_cast<u64>(
-							vm::OpFuns::DEBUG_OPFUNS[std::to_underlying(opcode)]
-						);
+						if (opcode == low::MicroOpcode::call_func
+						    || opcode == low::MicroOpcode::virtual_call_pptr_method) {
+							return std::bit_cast<u64>(&jit::helpers::trampoline);
+						} else {
+							return std::bit_cast<u64>(
+								vm::OpFuns::DEBUG_OPFUNS[std::to_underlying(opcode)]
+							);
+						}
 					case HoleValue::JmpFn:
 						CORE_PANIC("jumping inside a basic block");
 					case HoleValue::Zero:

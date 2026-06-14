@@ -12,7 +12,6 @@ int main() {
 #undef HANDLE_MICRO_INSTR
 
 	PRINT("special_return");
-	PRINT("special_trampoline");
 	PRINT("special_jump_if");
 	PRINT("special_jump_if_not");
 	PRINT("special_jump");

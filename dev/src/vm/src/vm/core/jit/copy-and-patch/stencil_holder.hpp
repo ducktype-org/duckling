@@ -19,7 +19,6 @@ namespace vm::jit::cnp {
 
 	enum class SpecialStencils : u64 {
 		Return = low::microInstrCount(),
-		Trampoline,
 		JumpIf,
 		JumpIfNot,
 		Jump,

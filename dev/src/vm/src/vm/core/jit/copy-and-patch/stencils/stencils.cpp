@@ -28,12 +28,6 @@ namespace vm::jit::cnp {
 
 	template<OpFun* InstructionImplementation, low::MicroOpcode OpCode>
 	__always_inline void base_stencil(CP_ARGS) {
-		CORE_ASSERT(
-			OpCode == low::MicroOpcode::exit || getInstructionOpcode(*instr) == OpCode,
-			"Expected a different opcode",
-		);
-
-		FORCE_ASSUME(instr->nontc_opcode == std::to_underlying(OpCode));
 		FORCE_ASSUME(instr->arg0 == GET_LINK_VARIABLE(arg0, u64, 64));
 		FORCE_ASSUME(instr->arg1 == GET_LINK_VARIABLE(arg1, u64, 64));
 		InstructionImplementation(instr, local_stack, frame, thread);
@@ -58,12 +52,6 @@ namespace vm::jit::cnp {
 		// Stencils do not take pointers to reduce the cost, since
 		// it would have to be dereferenced or patched in every single stencil.
 		return vm::OpFuns::save_execution_state(instr, local_stack, frame, thread);
-	}
-
-	// NOLINTNEXTLINE(readability-identifier-naming)
-	extern "C" void stencil_special_trampoline(CP_ARGS) {
-		vm::jit::helpers::trampoline(instr, local_stack, frame, thread);
-		CONTINUE_STENCIL;
 	}
 
 	DECLARE_LINK_VARIABLE(jmp_fn);
