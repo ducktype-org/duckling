@@ -208,9 +208,6 @@ namespace vm::jit {
 						opt_none { opfun_name = low::OPCODE_NAMES.at(static_cast<u64>(opcode)); }
 					}
 
-std::cerr << "About to call opfun: " << opfun_name
-          << " isDeclaration=" << getOrCreateOpcodeFunction(opfun_name)->isDeclaration()
-          << "\n";
 					// Here we are calling instruction originating from bc file or debug
 					// instruction. Make instruction* point to switch case version of microinstruction.
 					setInstructionPtr<true>(bc, ir_builder, instr_idx, func_or_loop_name);

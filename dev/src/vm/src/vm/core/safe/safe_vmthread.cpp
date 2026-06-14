@@ -90,9 +90,6 @@ namespace vm {
 		std::byte* local_stack = frame->local_stack;
 
 		low::MicroOpcode opcode = getInstructionOpcode(*instr);
-		std::cerr << "Executing opcode " << vm::low::OPCODE_NAMES[u64(opcode)] << " at offset "
-		          << (instr - &frame->current_function->bc[0]) << " in function "
-		          << frame->current_function->name.strView() << "\n";
 		if (opcode == low::MicroOpcode::breakpoint || opcode == low::MicroOpcode::jitEntrypoint) {
 			const auto* program_copy
 				= dynamic_cast<const low::LowVMProgramCopy*>(process_program.get());

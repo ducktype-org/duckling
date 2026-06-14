@@ -9,8 +9,6 @@
 #include <sstream>
 #include <string>
 
-#include <iostream>
-
 namespace vm::low::cf {
 	usize OutEdges::size() const { return no_edges; }
 
@@ -188,10 +186,8 @@ namespace vm::low::cf {
 		std::vector<BasicBlockID> old_to_new_id(blocks.size() + 1, UNDEFINED_ID);
 		old_to_new_id[entry_block_id] = 0;
 
-		std::cerr << "Creating loop subgraph from blocks: " << entry_block_id << "/0 ";
 		for (BasicBlockID old_id: other_block_ids) {
 			CORE_ASSERT(old_id < blocks.size(), "Invalid block ID in subgraph request");
-			std::cerr << old_id << "/" << old_to_new_id[old_id] << " ";
 			if (old_to_new_id[old_id] != UNDEFINED_ID) {
 				continue;
 			}
@@ -202,7 +198,6 @@ namespace vm::low::cf {
 			subgraph.blocks.emplace_back(new_id, blocks[old_id].start, blocks[old_id].end);
 			old_block_ids.push_back(old_id);
 		}
-		std::cerr << "\n";
 
 		const i64 loop_entry_pos = subgraph.blocks[0].start;
 
@@ -229,16 +224,9 @@ namespace vm::low::cf {
 					// We must refresh the pointer, as emplace_back invalidates all references
 					dst = &subgraph.blocks[new_id];
 				}
-				std::cerr << "Mapping outedge from new old block " << old_id << " at index " << i << ": " << dst->succ[i] << "/" << new_target_id << "\n";
 				dst->succ[i] = new_target_id;
 			}
 		}
-
-		std::cerr << "Old-to-new mapping: ";
-		for (usize i = 0; i < blocks.size(); i++) {
-			std::cerr << i << "/" << old_to_new_id[i]<< " ";
-		}
-		std::cerr << "\n";
 
 		return subgraph;
 	}

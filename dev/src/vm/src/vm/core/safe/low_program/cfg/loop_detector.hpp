@@ -10,8 +10,6 @@
 #include <limits>
 #include <vector>
 
-#include <iostream>
-
 namespace vm::low::cf {
 	class LoopDetector;
 
@@ -34,7 +32,6 @@ namespace vm::low::cf {
 			usize function_entrypoint = func.jit_entrypoint_offset;
 
 			ControlFlowGraph cfg(func.bc);
-			std::cerr << "Full function CFG:\n" << cfg.toString() << "\n\n";
 
 			calcPredecessors(cfg);
 			calcDominators(cfg);
@@ -53,7 +50,6 @@ namespace vm::low::cf {
 					if (isDominatedBy(pred, bid)) {
 						last_visited[pred] = timestamp;
 						stack.push_back(pred);
-						std::cerr << pred << " is dominated by " << bid << "\n";
 					}
 				}
 
@@ -77,14 +73,12 @@ namespace vm::low::cf {
 					CORE_ASSERT(cfg.getBlock(bid).start != function_entrypoint, "Function entrypoint cannot be a loop header");
 					auto loop_cfg = cfg.loopSubgraph(bid, stack);
 					auto loop_start_offset = cfg.getBlock(bid).start;
-					std::cerr << "CFG of loop starting at block " << bid << ", instruction offset " << loop_start_offset << ":\n" << loop_cfg.toString() << "\n\n";
 					cfgs[loop_start_offset] = std::move(loop_cfg);
 				}
 			}
 
 			// Move full function CFG here to avoid copying it before all the subgraphs are created.
 			cfgs[function_entrypoint] = std::move(cfg);
-			std::cerr << "Finished loop detection.\n";
 			return cfgs;
 		}
 

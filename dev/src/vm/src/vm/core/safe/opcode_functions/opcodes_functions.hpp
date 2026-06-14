@@ -178,8 +178,6 @@ namespace vm {
 			// caller.
 			prev_frame->local_block_ref_stack_end -= arg_count;
 			prev_frame->local_stack_head -= called_func.arg_size;
-
-			std::cerr << "    arguments at the end of performFunctionCall: (" << instr << ", " << local_stack << ", " << frame << ", " << &thread << ", " << function_id << ")\n";
 		}
 
 		static

@@ -210,7 +210,6 @@ namespace vm::loader::compiler::safe {
 			// Entrypoints have to live in LowVMProgramCopy, but we need a guard so the
 			// function-level entrypoint is never jumped to.
 			usize function_jit_entrypoint = low::cf::functionEntrypointOffset(bytecode);
-			std::cerr << "Function entrypoint offset: " << function_jit_entrypoint << "\n";
 			bytecode[function_jit_entrypoint] = makeLowInstruction(low::MicroOpcode::nop, 0, 0);
 #endif
 			usize new_func_id = low_program.functions.insert(
