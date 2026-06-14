@@ -172,10 +172,11 @@ namespace vm {
 		return Box<VmValue>::fromPointer(new VmValue(*this, type, src));
 	}
 
-	SafeVMProcess::SafeVMProcess(const PID my_pid):
+	SafeVMProcess::SafeVMProcess(const PID my_pid, bool enable_deadlock_detection):
 		  IVMProcess(my_pid),
 		  loaded_program(&loaded_program_copy),
 		  loaded_program_copy(compiler.getLowProgram()) {
+		if (enable_deadlock_detection) deadlock_detector.emplace();
 		vm_threads.add(*this);
 	}
 

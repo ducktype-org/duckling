@@ -5,6 +5,7 @@
 # duck_build folders, created separately for each test. The tests are run in direct mode by default, but one can switch to VM or exe mode by setting
 # the "mode" variable to "vm" or "exe". Variable "folder" make executing tests in different folders simply more convenient.
 mode: "direct"
+opt_level: "0"
 folder: "."
 
 clean_cmd: "rm -rf @{folder}/duck_build"
@@ -16,7 +17,7 @@ PreCase: "
   if [ '@{mode}' = 'vm' ]; then
     cd @{folder} && @{duckc_path} compile_script @{Name}.ds --dvm-backend;
   elif [ '@{mode}' = 'exe' ]; then
-    cd @{folder} && @{duckc_path} compile_script @{Name}.ds;
+    cd @{folder} && @{duckc_path} compile_script @{Name}.ds -O @{opt_level};
   fi"
 
 Run: "

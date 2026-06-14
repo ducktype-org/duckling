@@ -225,14 +225,22 @@ namespace vm::loader::compiler::safe {
 
 	void SafeCompiler::compileNewGlobals(const std::vector<code::GlobalData>& new_globals) {
 		for (const auto& global: new_globals) {
-			base::Optional<base::StrID> ctor_name, dtor_name;
-			if (global.ctor_name.has_value()) ctor_name = global.ctor_name->str;
-			if (global.dtor_name.has_value()) dtor_name = global.dtor_name->str;
+			auto global_init = [&] -> low::GlobalInit {
+				if_opt_some(global.initial_value, initial_value) {
+					// It's a bummer we have to copy here...
+					// @TODO: #1306 Think if we can avoid copying here
+					return low::GlobalInitialValue{ initial_value };
+				}
+				return low::GlobalCtorDtor{
+					.ctor_name = global.ctor_name.map([](auto ident) { return ident.str; }),
+					.dtor_name = global.dtor_name.map([](auto ident) { return ident.str; })
+				};
+			}();
+
 
 			low::LowGlobalData data{
 				.type                 = low_program.types->at(global.type),
-				.ctor_name            = ctor_name,
-				.dtor_name            = dtor_name,
+				.init                 = global_init,
 				.global_buffer_offset = program_ctx.global_buffer_size.asInt(),
 				.global_block_idx     = program_ctx.global_count,
 			};
