@@ -1,9 +1,9 @@
 #pragma once
 
-#include <vm/core/safe/safe_vmthread.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/validator/valid_function.hpp>
 #include <vm/bytecode/validator/valid_type/type_context.hpp>
+#include <vm/core/safe/safe_vmthread.hpp>
 #include <vm/core/safe/type_metadata/type_metadata.hpp>
 
 namespace vm::code::detail {

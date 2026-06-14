@@ -315,7 +315,7 @@ namespace vm::loader::compiler::safe {
 		const code::valid_function::ValidFunction& function, CRef<SafeVMThread> thread
 	) const {
 		vm::loader::compiler::detail::FunctionStackContext ctx = calculateStackContext(function);
-		ctx.thread_evaluating_expr = thread;
+		ctx.thread_evaluating_expr                             = thread;
 
 		return lowerFunction(function, ctx);
 	}

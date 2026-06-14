@@ -3,10 +3,10 @@
 #include <base/collections/optional.hpp>
 #include <base/types/ints.hpp>
 
-#include <vm/bytecode/validator/valid_function.hpp>
 #include <vm/api/data/api_error.hpp>
 #include <vm/api/data/response.hpp>
 #include <vm/api/data/status.hpp>
+#include <vm/bytecode/validator/valid_function.hpp>
 #include <vm/core/process/interface_types.hpp>
 #include <vm/core/safe/low_program/low_program.hpp>
 #include <vm/core/safe/memory/memory.hpp>
@@ -89,7 +89,7 @@ namespace vm {
 	class SafeVMThread final: public IVMThread {
 	private:
 		std::deque<code::valid_function::ValidFunction> runtime_expr_high;
-		std::deque<low::LowFuncData> runtime_expr_low;
+		std::deque<low::LowFuncData>                    runtime_expr_low;
 
 		RuntimeData runtime_data;
 

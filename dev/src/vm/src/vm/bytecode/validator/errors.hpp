@@ -56,9 +56,8 @@ namespace vm::code {
 
 	class ForbiddenOpcodePresent: public ValidationError {
 	public:
-		constexpr static std::string_view ERR_MSG
-			= "Fat-bytecode contains forbidden opcode: ";
-		OpCode op;
+		constexpr static std::string_view ERR_MSG = "Fat-bytecode contains forbidden opcode: ";
+		OpCode                            op;
 
 		//@todo: figure out how to change OpCode to string
 		ForbiddenOpcodePresent(OpCode op): ValidationError(std::string(ERR_MSG)), op(op) {}

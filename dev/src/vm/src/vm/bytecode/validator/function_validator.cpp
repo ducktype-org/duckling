@@ -34,12 +34,12 @@ namespace {
 		= { OpCode::Op_ret, OpCode::Op_ret_tailcall_func, OpCode::Op_jmp_label };
 
 	constexpr std::array VALID_LAST_OPCODES_FOR_EXPR = { OpCode::Op_ret, OpCode::Op_jmp_label };
-	using DeinitializingInstructions = std::tuple<
-		Op_deinit,
-		Op_call_func,
-		Op_call_builtinfunc,
-		Op_call_cfunc,
-		Op_virtual_call_pptr_method>;
+	using DeinitializingInstructions                 = std::tuple<
+						Op_deinit,
+						Op_call_func,
+						Op_call_builtinfunc,
+						Op_call_cfunc,
+						Op_virtual_call_pptr_method>;
 	using CallingInstructions = std::tuple<Op_call_func, Op_call_builtinfunc, Op_call_cfunc>;
 
 	template<typename T>
@@ -1761,7 +1761,7 @@ public:
 		validateFunctionEnd();
 		auto [body, stack_states] = getBody();
 
-		bool is_expr              = thread.has_value();
+		bool is_expr = thread.has_value();
 		if (is_expr) validateForbiddenOpcodes<OpCode::Op_ret_tailcall_func>(body);
 
 		return { body, stack_states, db };

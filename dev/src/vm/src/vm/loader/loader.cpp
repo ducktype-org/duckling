@@ -260,31 +260,21 @@ std::expected<vm::code::valid_function::ValidFunction, LoaderLogger> Loader::val
 	LoaderLogger log;
 
 	if (funcs.size() != 1) {
-		if (funcs.size()) {
-			log.logMap(
-				funcs.at(1), [](auto&&) {}, "More than one function in the file"
-			);
-		}
-		else {
-			log.logMap(
-				code::ElementBase{}, [](auto&&) {}, "No function defined in the file"
-			);
-		}
+		if (funcs.size())
+			log.logMap(funcs.at(1), [](auto&&) {}, "More than one function in the file");
+		else
+			log.logMap(code::ElementBase{}, [](auto&&) {}, "No function defined in the file");
 
 		return std::unexpected(std::move(log));
 	}
 
 	if (!globals.empty()) {
-		log.logMap(
-			globals.at(0), [](auto&&) {}, "There is a global declaration in the file"
-		);
+		log.logMap(globals.at(0), [](auto&&) {}, "There is a global declaration in the file");
 		return std::unexpected(std::move(log));
 	}
 
 	if (!types.empty()) {
-		log.logMap(
-			code::ElementBase{}, [](auto&&) {}, "There is a type declaration in the file"
-		);
+		log.logMap(code::ElementBase{}, [](auto&&) {}, "There is a type declaration in the file");
 		return std::unexpected(std::move(log));
 	}
 

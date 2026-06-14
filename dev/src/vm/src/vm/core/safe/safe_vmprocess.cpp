@@ -5,11 +5,11 @@
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/pointers/box.hpp>
 
-#include <vm/bytecode/validator/valid_function.hpp>
 #include <vm/api/data/api_error.hpp>
 #include <vm/api/data/request.hpp>
 #include <vm/api/data/response.hpp>
 #include <vm/api/data/status.hpp>
+#include <vm/bytecode/validator/valid_function.hpp>
 #include <vm/core/safe/exceptions.hpp>
 #include <vm/core/safe/low_program/instruction.hpp>
 #include <vm/core/safe/low_program/low_program.hpp>
@@ -505,12 +505,14 @@ namespace vm {
 		auto opt_thread = getVMThreadByID(thread_id);
 		if (!opt_thread)
 			return std::unexpected(api::ApiError{ api::OtherError{ "Thread not found" } });
-		
-		std::unique_lock                          lock(rw_global);
+
+		std::unique_lock                                                         lock(rw_global);
 		std::expected<code::valid_function::ValidFunction, loader::LoaderLogger> valid_expr = [&] {
 			variant_match(source) {
 				variant_case(fs::File, files) { return loader.validateExpr(*opt_thread, files); }
-				variant_case(code::Function, func) { return loader.validateExpr(*opt_thread, func); }
+				variant_case(code::Function, func) {
+					return loader.validateExpr(*opt_thread, func);
+				}
 			}
 			CORE_UNREACHABLE();
 		}();
@@ -527,7 +529,9 @@ namespace vm {
 		return api::Response(api::response::Empty());
 	}
 
-	low::LowFuncData SafeVMProcess::compileToLow(CRef<SafeVMThread> thread, code::valid_function::ValidFunction const& expr) const {
+	low::LowFuncData SafeVMProcess::compileToLow(
+		CRef<SafeVMThread> thread, const code::valid_function::ValidFunction& expr
+	) const {
 		return compiler.lowerExpr(expr, thread);
 	}
 
