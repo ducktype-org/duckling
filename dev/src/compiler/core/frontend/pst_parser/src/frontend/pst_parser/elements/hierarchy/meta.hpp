@@ -1,5 +1,6 @@
 #pragma once
 
+#include "stmt_kind_fd.hpp"
 #include "../../elements/elements_list.hpp"
 #include "../../lang_parser_element.hpp"
 #include "../../pst_state_forward.hpp"
@@ -50,7 +51,7 @@ namespace pst {
 		Transparent,
 	};
 
-	enum class StmtKind {
+	enum class StmtKind : int {
 		Import,
 		Using,
 		Alias,

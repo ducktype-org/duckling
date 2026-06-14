@@ -575,11 +575,32 @@ namespace compiler::lir {
 		base::Optional<base::StrID>             source_code_name;
 	};
 
+	/**
+	 * @brief Function in LIR.
+	 */
 	struct Function final {
 		base::StrID       mangled_name;
 		helios::SymbolABI abi;
+		
+		/**
+		 * If true, this function can have repeated definitions
+		 * across many modules and has weak linkage. 
+		 * Used when having identical function in many modules.
+		 */
 		bool              link_once;
+
+		/**
+		 * If true, this function is not added to the module
+		 * on the DVM backend, even if explicitely requested.
+		 * Used by the DVM/native conditional compilation.
+		 */
 		bool              ignore_on_dvm;
+
+		/**
+		 * If true, this function is not added to the module
+		 * on the LLVM backend, even if explicitely requested.
+		 * Used by the DVM/native conditional compilation.
+		 */
 		bool              ignore_on_llvm;
 
 		std::vector<CRef<tsl::TypeLayout>> parameter_layouts;

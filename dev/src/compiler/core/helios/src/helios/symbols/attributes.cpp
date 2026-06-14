@@ -33,7 +33,7 @@ namespace compiler::helios {
 		case Attribute::BackendDependent:
 			return base::StrID("backend_dependent");
 		default:
-			return base::StrID("name_not_implemented");
+			CORE_PANIC("Attribute serialization not implemented");
 		}
 	}
 

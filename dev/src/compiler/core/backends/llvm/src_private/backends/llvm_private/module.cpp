@@ -88,7 +88,6 @@ namespace compiler::backend_llvm {
 		}
 
 		for (const auto& lir_function: lir_unit.lir_functions) {
-			if (lir_function->ignore_on_llvm) continue;
 			mod.addFunctionToModule(ctx, lir_function);
 		}
 

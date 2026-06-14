@@ -74,6 +74,11 @@ namespace compiler::helios {
 			}
 		}
 
+		/**
+		 * This function verifies if the applied attributes are semantically correct
+		 * on the function. For example we check if the BackendDependent attribute has
+		 * some implementations.
+		 */
 		static void verifyFunctionAttributes(
 			query::Context& ctx, pst::Access<pst::Fun> pst_stmt, SymID sym_id
 		) {

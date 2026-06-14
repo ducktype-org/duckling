@@ -49,13 +49,13 @@ namespace compiler::backend_vm {
 				continue;
 			}
 
-			if (lir_function->ignore_on_dvm) continue;
-
 			insertLIRFunction(lir_function);
 		}
 	}
 
 	void DVMCodeBuilder::insertLIRFunction(CRef<lir::Function> lir_function) {
+		if (lir_function->ignore_on_dvm) return;
+		
 		program_context->lowerAndKeepLirFunction(lir_function);
 	}
 

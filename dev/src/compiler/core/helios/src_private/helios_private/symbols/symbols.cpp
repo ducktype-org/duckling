@@ -234,7 +234,7 @@ namespace compiler::helios {
 		return out;
 	}
 
-	std::vector<Attribute> attributesForSymbol(query::Context& ctx, pst::Access<pst::Stmt> stmt) {
+	std::vector<Attribute> attributesFromPSTStatement(query::Context& ctx, pst::Access<pst::Stmt> stmt) {
 		std::vector<Attribute> result;
 		for (auto attr_locked: stmt->getAttributes()) {
 			auto pst_attr       = attr_locked.unlock(ctx);
@@ -251,7 +251,7 @@ namespace compiler::helios {
 			auto attr_opt = attrFromStr(name);
 			if_opt_none(attr_opt) {
 				ctx.logInt(makeBox<dia_int::PlaceholderError>(
-					base::strConcat("Attribute name '", name, "' is not recognised"),
+					base::strConcat("Attribute name '", name, "' is not recognized"),
 					pst_attr_value->getStablePosition()
 				));
 				query::throwFailed();
@@ -299,7 +299,7 @@ namespace compiler::helios {
 		PstSymbolData pst_data(scope, stmt->getHash());
 
 		// Attribute handling
-		auto attributes           = attributesForSymbol(ctx, stmt);
+		auto attributes           = attributesFromPSTStatement(ctx, stmt);
 		bool is_ignored_by_lookup = std::ranges::any_of(attributes, &disablesLookup);
 
 		switch (stmt->getStmtKind()) {

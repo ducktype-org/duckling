@@ -424,7 +424,7 @@ namespace compiler::helios {
 			for (const auto& stmt: list) {
 				switch (stmt.unlock(ctx)->isDeclaration()) {
 				case pst::DeclKind::Symbol: {
-					// Maybe we should skip the symbol if compiling the symbol failed.
+					// @TODO: #1753 Maybe we should skip the symbol if compiling the symbol failed.
 					auto sym_id = ctx.query<QuerySymbolOfSTMT>(stmt).valueOrThrow();
 					symbols.emplace_back(sym_id);
 					break;
