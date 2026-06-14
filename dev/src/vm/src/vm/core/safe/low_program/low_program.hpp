@@ -9,6 +9,7 @@
 #include <base/pointers/box.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
+#include <vm/bytecode/const_value.hpp>
 #include <vm/core/safe/type_metadata/definitions.hpp>
 #include <vm/core/safe/type_metadata/type_metadata.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
@@ -16,6 +17,8 @@
 #ifdef ENABLE_JIT
 #include <vm/core/safe/low_program/cfg/cf_graph.hpp>
 #endif
+
+#include <variant>
 
 namespace vm::loader::compiler::safe {
 	class SafeCompiler;
@@ -71,17 +74,29 @@ namespace vm::low {
 	};
 
 	/**
+	 * @brief Initialization strategy for a global variable.
+	 * Either initialized via constructor/destructor functions or via a constant initial value.
+	 */
+	struct GlobalCtorDtor {
+		base::Optional<base::StrID> ctor_name;
+		base::Optional<base::StrID> dtor_name;
+	};
+
+	struct GlobalInitialValue {
+		code::ConstantValue value;
+	};
+
+	using GlobalInit = std::variant<GlobalCtorDtor, GlobalInitialValue>;
+
+	/**
 	 * @brief Micro bytecode representation of global data.
 	 */
 	struct LowGlobalData {
 		/// Type
 		TypeCRef type;
 
-		/// Optional constructor name.
-		base::Optional<base::StrID> ctor_name;
-
-		/// Optional destructor name.
-		base::Optional<base::StrID> dtor_name;
+		/// Initialization strategy: either ctor/dtor or constant initial value.
+		GlobalInit init;
 
 		/// The offset of the global variable's data in the global buffer.
 		usize global_buffer_offset;

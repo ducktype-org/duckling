@@ -13,13 +13,13 @@
 # - Main can wait for both completion signals and then verify final state.
 # - Expected final values: counter=20000, ready=2, done=2, ok=1.
 
-global_data counter i64 {};
-global_data ready i64 {};
-global_data done i64 {};
-global_data phase i64 {};
+global_data counter i64 {}
+global_data ready i64 {}
+global_data done i64 {}
+global_data phase i64 {}
 
-global_data lock mutex {};
-global_data cv condition_variable {};
+global_data lock mutex {}
+global_data cv condition_variable {}
 
 function worker {} -> {} {
 	init_pany_type          lock1, mutex;

@@ -9,6 +9,7 @@
 #include <vm/api/data/status.hpp>
 #include <vm/core/process/interface_types.hpp>
 #include <vm/core/process/vmprocess.hpp>
+#include <vm/core/safe/concurrency/deadlock_detection.hpp>
 #include <vm/core/safe/concurrency/gil.hpp>
 #include <vm/core/safe/concurrency/synchronization_primitives.hpp>
 #include <vm/core/safe/low_program/low_program.hpp>
@@ -54,8 +55,9 @@ namespace vm {
 
 		Memory memory;
 
-		GIL                       gil;
-		SynchronizationPrimitives synchronization_primitives;
+		base::Optional<DeadlockDetector> deadlock_detector;
+		GIL                              gil;
+		SynchronizationPrimitives        synchronization_primitives;
 
 #ifdef ENABLE_JIT
 		jit::JitData jit_data;
@@ -178,7 +180,11 @@ namespace vm {
 		);
 
 	public:
-		SafeVMProcess(PID my_pid);
+		SafeVMProcess(PID my_pid, bool enable_deadlock_detection = false);
+
+		DeadlockDetector* getDeadlockDetector() {
+			return deadlock_detector ? &*deadlock_detector : nullptr;
+		}
 
 		Memory& getMemory();
 
