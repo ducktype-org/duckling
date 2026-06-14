@@ -31,14 +31,12 @@ Tests:
 
             hint: In order to use a profile you have to define it in the manifest first
       build_custom_profile:
-        Enabled: "false" # @TODO: #2920 Reenable this
         test_cmd: duck -C foo build --profile my-profile
         profile_name: my-profile
       build_overridden_builtin_profile:
         test_cmd: duck -C foo build --profile bench
         profile_name: bench
       build_custom_profile_inherited:
-        Enabled: "false" # @TODO: #2920 Reenable this
         test_cmd: duck -C foo build --profile my-profile2
         profile_name: my-profile2
       # NOTE: verbose tests are disabled, since compilation order is not deterministic
