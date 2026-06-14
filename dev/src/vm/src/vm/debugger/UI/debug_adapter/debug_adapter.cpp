@@ -135,6 +135,8 @@ namespace vm::debugger::debug_adapter {
 			handlePause(req);
 		else if (cmd == "continue")
 			handleContinue(req);
+		else if (cmd == "next")
+			handleNext(req);
 		else
 			sendResponse(req, false, { { "message", "Unknown command" } });
 	}
@@ -237,6 +239,17 @@ namespace vm::debugger::debug_adapter {
 		auto result = debugger.resume();
 		if (!result.has_value()) {
 			std::string error_msg = "Failed to resume: " + api::errorToString(result.error());
+			sendResponse(req, false, { { "message", error_msg } });
+			return;
+		}
+
+		sendResponse(req, true);
+	}
+
+	void DebugAdapter::handleNext(const nlohmann::json& req) {
+		auto result = debugger.step();
+		if (!result.has_value()) {
+			std::string error_msg = "Failed to step: " + api::errorToString(result.error());
 			sendResponse(req, false, { { "message", error_msg } });
 			return;
 		}
