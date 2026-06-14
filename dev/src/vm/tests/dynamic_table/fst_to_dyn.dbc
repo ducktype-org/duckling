@@ -16,7 +16,7 @@ function main { i64, ptr_argv } -> { i64 } {
     ref_pptr_pany t_fst, g_arr;
     fstToDynTable_pptr_pptr t_dyn, t_fst;
 
-    mov_p64_imm idx, 0;
+    input_p64 idx;
     dynTableLoad_pany_pptr_p64 val, t_dyn, idx;
     output_p64 val;
 

@@ -42,7 +42,13 @@ private:
 
 	void reallocZero() { runTestOnVm("realloc_zero.dbc", "", "42", {}); }
 
-	void fstToDyn() { runTestOnVm("fst_to_dyn.dbc", "", "42", {}); }
+	void fstToDyn() {
+		runTestOnVm("fst_to_dyn.dbc", "0", "42", {});
+		assertExecutionPanickedWith(
+			runTestOnVmGetResult("fst_to_dyn.dbc", "1"),
+			vm::exceptions::VMOutOfBlockBoundsException::ERR_MSG
+		);
+	}
 
 	void reallocOnFst() {
 		assertExecutionPanickedWith(
