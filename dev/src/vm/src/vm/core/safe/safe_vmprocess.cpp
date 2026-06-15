@@ -386,7 +386,8 @@ namespace vm {
 				}
 
 				auto opt_low_pos = opt_thread.value()->getCurrentPosition(frame_index);
-				CORE_ASSERT(opt_low_pos.has_value(), "frame index should be valid");
+				if_opt_none(opt_low_pos) api::Response(api::response::StackFrameData{
+					.function_name = frame.current_function->name, .frame_vars = frame_vars });
 
 				if_opt_some(
 					compiler.mapLowVMProgramPositionToCodeCollectionPosition(*opt_low_pos), high_pos
@@ -399,8 +400,7 @@ namespace vm {
 					auto& ls_db       = func_ref->local_stack;
 
 					using namespace std::views;
-					for (const auto& [block_idx, block_ptr]: zip(iota(0u), block_span)) {
-						auto& frame_var = frame_vars.at(block_idx);
+					for (auto&& [block_idx, frame_var ]: zip(iota(0u), frame_vars)) {
 						frame_var.name  = ls_db.getName(stack_state, block_idx);
 						frame_var.type  = ls_db.getTypeName(stack_state, block_idx);
 						CORE_ASSERT(frame_var.type, "we should have a type of a variable on stack");
