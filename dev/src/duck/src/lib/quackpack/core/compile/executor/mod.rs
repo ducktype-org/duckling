@@ -51,7 +51,7 @@ impl BuildContext<'_, '_> {
     }
 }
 
-/// Collect this [`Unit`] and all its dependencies (direct and transparent), as a vector of
+/// Collect this [`Unit`] and all its dependencies (direct and transitive), as a vector of
 /// [`multipackage_schema::Package`].
 ///
 /// Dependencies appearing in cycles are also included.
@@ -120,7 +120,7 @@ pub(crate) fn get_linker_options(
     Some(multipackage_schema::LinkerOptions::RawLinkerArgs(string))
 }
 
-/// Collect _all_ (including `.a`!) outputs of dependencies (direct and transparent) of this `unit`.
+/// Collect _all_ (including `.a`!) outputs of dependencies (direct and transitive) of this `unit`.
 pub(crate) fn get_deps_outputs(
     unit: &Unit,
     graph: &UnitGraph,
