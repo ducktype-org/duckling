@@ -75,6 +75,7 @@ clah::Clah getVmClah() {
 
 							   return cli(file, args);
 						   }))
+#ifndef ENABLE_JIT
 	    .addSubcommand(clah::Clah("debug", "Start the VM CLI debugger.")
 	                       .addPositional(clah::FileParser::make("file"))
 	                       .setDefaultValueParser(clah::StringParser::make("program_argument"))
@@ -95,6 +96,7 @@ clah::Clah getVmClah() {
 							   vm::debugger::debug_adapter::DebugAdapter::get().run();
 							   return 0;
 						   }))
+#endif
 	    .addSubcommand(clah::Clah("repl", "Start the VM in REPL mode.")
 	                       .setHandler([](const clah::ParsingResult&) -> int {
 							   vm::Supervisor::get();

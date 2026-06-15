@@ -324,59 +324,119 @@ namespace vm {
 		// restoring `instr` from frame.
 		FUNCTION_CONT(0);
 	}
-#ifdef ENABLE_JIT
-	RETURN_TYPE OpFuns::OPCODE_NAME(jitEntrypoint)(FUNCTION_ARGS) {
-		{
-			auto& jit_data         = thread.jit_data;
-			auto& current_func_obj = *frame->current_function;
-			auto  current_func_id  = current_func_obj.id;
 
-			// @TODO: #2858 manage the size when inserting new code
-			if (jit_data.size() <= current_func_id) jit_data.resize(2 * current_func_id + 2);
+#ifdef ENABLE_JIT
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(jitFuncEntrypoint)(FUNCTION_ARGS) {
+		{
+			// This function operates on the assumption that the operation "underneath" it is a nop.
+			auto&       jit_data         = thread.safe_process.getJitData();
+			auto&       current_func_obj = *frame->current_function;
+			auto        current_func_id  = current_func_obj.id;
+			auto        instr_offset     = instr - current_func_obj.bc.data();
+			const auto* program_ptr      = thread.process_program.get();
+			const auto* program_copy     = dynamic_cast<const low::LowVMProgramCopy*>(program_ptr);
+			CORE_ASSERT(program_copy, "JIT entrypoints should be only in LowVMProgramCopy.");
+			auto original_function
+				= program_copy->getOriginalProgram()->getFunctions()[current_func_id];
 
 			jit::JitFuncData& my_data = jit_data[current_func_id];
-
-			if (my_data.func_ptr) {
-	// is already compiled
-	#if COMPILE_WITH_CP
-				(*my_data.func_ptr)(instr + 1, local_stack, frame, thread);
-
-				// Restore values set by copy&patch
-				frame       = thread.runtime_data.frame_stack_current;
-				instr       = frame->instr;
-				local_stack = frame->local_stack;
-	#else
-				(*my_data.func_ptr)(&instr, &local_stack, &frame, &thread);
-	#endif
-			} else if (0 < my_data.until_compilation) {
-				// should be compiled later
-				--my_data.until_compilation;
-			} else {
-	// should be compiled now
-	// @TODO: #2857 Integrate two compilers
-	#if COMPILE_WITH_CP
-				auto compiled    = jit::compileCP(current_func_obj.cfg, current_func_obj.bc);
-				my_data.func_ptr = compiled.intoFunc<jit::CPFunc>();
-				(*my_data.func_ptr)(instr + 1, local_stack, frame, thread);
-
-				// Restore values set by copy&patch
-				frame       = thread.runtime_data.frame_stack_current;
-				instr       = frame->instr;
-				local_stack = frame->local_stack;
-	#else
-				MRef<jit::JitOpFun> compiled = jit::compileLLVM(
-					current_func_obj.cfg, current_func_obj.bc, current_func_obj.name
+			if (my_data.llvm_compiled_code_ptrs[instr_offset]) {
+				// is LLVM-compiled
+				(*my_data.llvm_compiled_code_ptrs[instr_offset])(
+					&instr, &local_stack, &frame, &thread
 				);
+			}
+	#if COMPILE_WITH_CP
+			else if (my_data.cp_compiled_func_ptr) {
+				// is CP-compiled
+				(*my_data.cp_compiled_func_ptr)(instr, local_stack, frame, thread);
+				frame       = thread.runtime_data.frame_stack_current;
+				instr       = frame->instr;
+				local_stack = frame->local_stack;
 
-				CORE_ASSERT(compiled, "Compiled function pointer shouldn't be nullptr");
-				my_data.func_ptr = compiled;
-
-				(*my_data.func_ptr)(&instr, &local_stack, &frame, &thread);
+				if (0 < my_data.until_compilation[instr_offset]) {
+					// should be compiled later with LLVM
+					--my_data.until_compilation[instr_offset];
+				} else {
+					// should be compiled now with LLVM
+					MRef<jit::JitLLVMFunc> compiled = jit::compileLLVM(
+						my_data.cfgs[instr_offset], original_function.bc, current_func_obj.name
+					);
+					CORE_ASSERT(compiled, "Compiled function pointer shouldn't be nullptr.");
+					my_data.llvm_compiled_code_ptrs[instr_offset] = compiled;
+				}
+			}
 	#endif
+			else if (0 < my_data.until_compilation[instr_offset]) {
+				// should be compiled later with the first viable compiler
+				--my_data.until_compilation[instr_offset];
+				++instr;
+			} else {
+	#if COMPILE_WITH_CP
+				auto compiled = jit::compileCP(my_data.cfgs[instr_offset], original_function.bc);
+				my_data.cp_compiled_func_ptr            = compiled.intoFunc<jit::JitCPFunc>();
+				my_data.until_compilation[instr_offset] = LLVM_FUNC_COMPILATION_THRESHOLD;
+	#else
+				MRef<jit::JitLLVMFunc> compiled = jit::compileLLVM(
+					my_data.cfgs[instr_offset], original_function.bc, current_func_obj.name
+				);
+				CORE_ASSERT(compiled, "Compiled function pointer shouldn't be nullptr");
+				my_data.llvm_compiled_code_ptrs[instr_offset] = compiled;
+	#endif
+				++instr;
 			}
 		}
 		FUNCTION_CONT(0);
 	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(jitLoopEntrypoint)(FUNCTION_ARGS) {
+		{
+			auto&             jit_data         = thread.safe_process.getJitData();
+			auto&             current_func_obj = *frame->current_function;
+			auto              current_func_id  = current_func_obj.id;
+			auto              instr_offset     = instr - current_func_obj.bc.data();
+			jit::JitFuncData& my_data          = jit_data[current_func_id];
+
+			auto& llvm_compiled_code_ptr = my_data.llvm_compiled_code_ptrs[instr_offset];
+			auto& until_compilation      = my_data.until_compilation[instr_offset];
+
+			if (llvm_compiled_code_ptr) {
+				// is already LLVM-compiled
+				const MicroInstruction* saved_instr = instr;
+				const Frame*            saved_frame = frame;
+				i64 offset = (*llvm_compiled_code_ptr)(&instr, &local_stack, &frame, &thread);
+				if (saved_frame == frame) instr = saved_instr + offset;
+			} else if (0 < until_compilation) {
+				// should be LLVM-compiled later
+				--until_compilation;
+				save_execution_state(instr, local_stack, frame, thread);
+				thread.executeOneStep();
+				frame       = thread.runtime_data.frame_stack_current;
+				instr       = frame->instr;
+				local_stack = frame->local_stack;
+			} else {
+				// should be LLVM-compiled now
+				const auto* program_copy
+					= dynamic_cast<const low::LowVMProgramCopy*>(thread.process_program.get());
+				CORE_ASSERT(program_copy, "JIT entrypoints should be only in LowVMProgramCopy.");
+				auto original_function
+					= program_copy->getOriginalProgram()->getFunctions()[current_func_id];
+				MRef<jit::JitLLVMFunc> compiled = jit::compileLLVM(
+					my_data.cfgs[instr_offset], original_function.bc, current_func_obj.name
+				);
+				CORE_ASSERT(compiled, "Compiled function pointer shouldn't be nullptr.");
+				llvm_compiled_code_ptr = compiled;
+				save_execution_state(instr, local_stack, frame, thread);
+				thread.executeOneStep();
+				frame       = thread.runtime_data.frame_stack_current;
+				instr       = frame->instr;
+				local_stack = frame->local_stack;
+			}
+		}
+		FUNCTION_CONT(0);
+	}
+
 #endif
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(call_builtinfunc)(FUNCTION_ARGS) {

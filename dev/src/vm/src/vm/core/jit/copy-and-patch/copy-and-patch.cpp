@@ -53,7 +53,8 @@ namespace vm::jit {
 			usize& current_offset = block_offsets.back();
 			for (MicroInstruction instr: block.instructions(bc)) {
 				auto opcode = getInstructionOpcode(instr);
-				if (low::isOpcodeNonExecutable(opcode) || opcode == low::MicroOpcode::jitEntrypoint)
+				if (low::isOpcodeNonExecutable(opcode
+				    ))  // || opcode == low::MicroOpcode::jitFuncEntrypoint)
 					continue;
 				current_offset += get_opfunc_size(transform_opcode((opcode)));
 			}
@@ -82,9 +83,11 @@ namespace vm::jit {
 				" expected: ",
 				block_offsets[idx]
 			);
+
 			for (MicroInstruction instr: block.instructions(bc)) {
 				auto opcode = getInstructionOpcode(instr);
-				if (low::isOpcodeNonExecutable(opcode) || opcode == low::MicroOpcode::jitEntrypoint)
+				if (low::isOpcodeNonExecutable(opcode
+				    ))  // || opcode == low::MicroOpcode::jitEntrypoint)
 					continue;
 
 				patch_stencil(transform_opcode(opcode), [&instr, &next, &opcode](HoleValue value) {

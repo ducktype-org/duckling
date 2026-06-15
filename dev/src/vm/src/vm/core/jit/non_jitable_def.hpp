@@ -2,7 +2,8 @@
 	#define HANDLE_NONJITABLE_INSTR(instr)
 #endif
 
-HANDLE_NONJITABLE_INSTR(jitEntrypoint)
+HANDLE_NONJITABLE_INSTR(jitFuncEntrypoint)
+HANDLE_NONJITABLE_INSTR(jitLoopEntrypoint)
 HANDLE_NONJITABLE_INSTR(call_func)
 HANDLE_NONJITABLE_INSTR(call_builtinfunc)
 HANDLE_NONJITABLE_INSTR(virtual_call_pptr_method)

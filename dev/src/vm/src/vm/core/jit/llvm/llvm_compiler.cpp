@@ -71,7 +71,7 @@ namespace vm::jit {
 		mpm.run(m, mam);
 	}
 
-	MRef<JitOpFun> compileLLVM(
+	MRef<JitLLVMFunc> compileLLVM(
 		const low::cf::ControlFlowGraph& cfg, const low::MicroBytecode& bc, const base::StrID& name
 	) {
 		auto&                         llvm_data = llvmData();
@@ -90,7 +90,19 @@ namespace vm::jit {
 
 		LLVMBuilder(new_module.get(), ctx).lowerCFG(cfg, bc, name);
 
+		if (llvm::verifyModule(*new_module, &llvm::errs())) {
+			llvm::errs() << "Module invalid BEFORE optimization\n";
+			new_module->print(llvm::errs(), nullptr);
+			abort();
+		}
+
 		optimizeModule(*new_module);
+
+		if (llvm::verifyModule(*new_module, &llvm::errs())) {
+			llvm::errs() << "Module invalid AFTER optimization\n";
+			new_module->print(llvm::errs(), nullptr);
+			abort();
+		}
 
 		auto&                       lljit = *llvm_data.lljit_instance;
 		llvm::orc::ThreadSafeModule tsm(std::move(new_module), tsctx);
@@ -106,10 +118,9 @@ namespace vm::jit {
 			});
 			return nullptr;
 		}
-
 		llvm::orc::ExecutorAddr addr = *addr_or_err;
 
-		auto compiled_fn = addr.toPtr<vm::jit::JitOpFun>();
+		auto compiled_fn = addr.toPtr<vm::jit::JitLLVMFunc>();
 
 		return compiled_fn;
 	}

@@ -134,10 +134,13 @@ LlvmData::LlvmTypes findOrCreateTypes(std::unique_ptr<llvm::orc::ThreadSafeConte
 
 	auto frame_ptr_ptr_ty
 		= Ref(llvm::PointerType::getUnqual(Ref(llvm::PointerType::getUnqual(frame_ty.get())).get()));
+
 	auto vm_thread_ptr_ty = Ref(llvm::PointerType::getUnqual(vm_thread_ty.get()));
 
+	auto return_ty = Ref(llvm::Type::getInt64Ty(*g_context->getContext()));
+
 	auto opfun_ty = Ref(llvm::FunctionType::get(
-		Ref(llvm::Type::getVoidTy(*g_context->getContext())).get(),
+		return_ty.get(),
 		{ mi_ptr_ptr_ty.get(), byte_ptr_ptr_ty.get(), frame_ptr_ptr_ty.get(), vm_thread_ptr_ty.get() },
 		false
 	));

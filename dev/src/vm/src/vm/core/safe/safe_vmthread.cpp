@@ -90,10 +90,13 @@ namespace vm {
 		std::byte* local_stack = frame->local_stack;
 
 		low::MicroOpcode opcode = getInstructionOpcode(*instr);
-		if (opcode == low::MicroOpcode::breakpoint) {
+		if (opcode == low::MicroOpcode::breakpoint || opcode == low::MicroOpcode::jitFuncEntrypoint
+		    || opcode == low::MicroOpcode::jitLoopEntrypoint) {
 			const auto* program_copy
 				= dynamic_cast<const low::LowVMProgramCopy*>(process_program.get());
-			CORE_ASSERT(program_copy, "Breakpoints should be only in LowVMProgramCopy.");
+			CORE_ASSERT(
+				program_copy, "Breakpoints and jit entrypoints should be only in LowVMProgramCopy."
+			);
 
 			auto original_instr
 				= program_copy->getOriginalProgram()
@@ -107,9 +110,7 @@ namespace vm {
 		// Execute the instruction by calling the debug opcode function.
 		OpFuns::DEBUG_OPFUNS.at(std::to_underlying(opcode))(instr, local_stack, frame, *this);
 
-		runtime_data.frame_stack_current = frame;
-		frame->local_stack               = local_stack;
-		frame->instr                     = instr;
+		OpFuns::save_execution_state(instr, local_stack, frame, *this);
 	}
 
 	/**
@@ -133,22 +134,21 @@ namespace vm {
 			));
 		}
 
-		low::LowFuncData start_function{
-			.name = base::StrID("vm_start_function"),
-			.id   = START_FUNCTION_ID,
+		low::LowFuncData start_function{ .name = base::StrID("vm_start_function"),
+			                             .id   = START_FUNCTION_ID,
 #ifdef ENABLE_JIT
-			.cfg
-			= low::cf::ControlFlowGraph(),  // This is okay because we never JIT the start function.
+			                             // This is okay because we never JIT the start function.
+			                             .jit_entrypoint_offset = 0,
 #endif
-			.bc                  = {},
-			.local_stack_size    = 0,
-			.local_block_count   = func.result_types.size() + func.parameters.size(),
-			.arg_size            = 0,
-			.ret_size            = func.ret_size,
-			.parameters          = {},
-			.result_types        = func.result_types,
-			.instruction_mapping = {}
-		};
+			                             .bc               = {},
+			                             .local_stack_size = 0,
+			                             .local_block_count
+			                             = func.result_types.size() + func.parameters.size(),
+			                             .arg_size            = 0,
+			                             .ret_size            = func.ret_size,
+			                             .parameters          = {},
+			                             .result_types        = func.result_types,
+			                             .instruction_mapping = {} };
 
 		const u64 called_function_id = process_program->getFunctions().idOf(func.name).value();
 
@@ -238,22 +238,20 @@ namespace vm {
 		auto        str_ptr_type     = types.at(base::StrID("ptr_string"));
 		auto        byte_type        = types.at(base::StrID("byte"));
 
-		low::LowFuncData start_function{
-			.name = base::StrID("vm_start_function"),
-			.id   = START_FUNCTION_ID,
+		low::LowFuncData start_function{ .name = base::StrID("vm_start_function"),
+			                             .id   = START_FUNCTION_ID,
 #ifdef ENABLE_JIT
-			.cfg
-			= low::cf::ControlFlowGraph(),  // This is okay because we never JIT the start function.
+			                             // This is okay because we never JIT the start function.
+			                             .jit_entrypoint_offset = 0,
 #endif
-			.bc                  = {},
-			.local_stack_size    = 72,
-			.local_block_count   = 7,
-			.arg_size            = 0,
-			.ret_size            = func.ret_size,
-			.parameters          = {},
-			.result_types        = func.result_types,
-			.instruction_mapping = {}
-		};
+			                             .bc                  = {},
+			                             .local_stack_size    = 72,
+			                             .local_block_count   = 7,
+			                             .arg_size            = 0,
+			                             .ret_size            = func.ret_size,
+			                             .parameters          = {},
+			                             .result_types        = func.result_types,
+			                             .instruction_mapping = {} };
 
 		// TypeIDs to pass to opcodes.
 		u64 argv_type_arg     = safeReadObjectBytes<u64>(argv_type);

@@ -88,7 +88,7 @@ namespace vm::loader::compiler::safe::detail {
 			  compiler{ compiler },
 			  ctx{ ctx } {
 #ifdef ENABLE_JIT
-			addLow<Op_jitEntrypoint>();
+			addLow<Op_jitFuncEntrypoint>();
 #endif
 		}
 
