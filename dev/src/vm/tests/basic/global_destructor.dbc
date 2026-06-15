@@ -1,7 +1,7 @@
 global_data g i64 {
     constructor: g_ctor,
     destructor: g_dtor
-};
+}
 
 function g_ctor {} -> {} {
     mov_p64_imm            g,       5;

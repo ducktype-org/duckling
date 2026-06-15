@@ -13,14 +13,14 @@
 # - Final invariants: ready=2, consumed_total=20, finished_workers=2,
 #   permits=0, notify_count=20, and ok=1.
 
-global_data ready i64 {};
-global_data consumed_total i64 {};
-global_data finished_workers i64 {};
-global_data permits i64 {};
-global_data notify_count i64 {};
+global_data ready i64 {}
+global_data consumed_total i64 {}
+global_data finished_workers i64 {}
+global_data permits i64 {}
+global_data notify_count i64 {}
 
-global_data lock mutex {};
-global_data cv condition_variable {};
+global_data lock mutex {}
+global_data cv condition_variable {}
 
 function worker {} -> {} {
 	init_pany_type          lock_enter, mutex;
