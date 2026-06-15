@@ -400,9 +400,9 @@ namespace vm {
 					auto& ls_db       = func_ref->local_stack;
 
 					using namespace std::views;
-					for (auto&& [block_idx, frame_var ]: zip(iota(0u), frame_vars)) {
-						frame_var.name  = ls_db.getName(stack_state, block_idx);
-						frame_var.type  = ls_db.getTypeName(stack_state, block_idx);
+					for (auto&& [block_idx, frame_var]: zip(iota(0u), frame_vars)) {
+						frame_var.name = ls_db.getName(stack_state, block_idx);
+						frame_var.type = ls_db.getTypeName(stack_state, block_idx);
 						CORE_ASSERT(frame_var.type, "we should have a type of a variable on stack");
 						CORE_ASSERT(frame_var.name, "we should have a name of a variable on stack");
 					}
