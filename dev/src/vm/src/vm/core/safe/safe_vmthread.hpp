@@ -186,7 +186,9 @@ namespace vm {
 		 */
 		void run(const std::string& func_name, const RunArguments& run_arguments) override;
 
-		std::expected<low::LowCodePosition, api::ApiError> getCurrentPosition();
+		std::expected<low::LowCodePosition, api::ApiError> getCurrentPosition(
+			base::Optional<usize> frame_idx = std::nullopt
+		);
 
 		friend class SafeVMProcess;
 		friend class OpFuns;
