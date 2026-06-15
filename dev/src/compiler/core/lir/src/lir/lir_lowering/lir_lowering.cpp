@@ -838,9 +838,9 @@ namespace compiler::lir {
 						variant_case(mir::FunctionSymID, sym) {
 							bool link_once_val = helios::shouldLinkOnce(sym.id);
 							bool ignore_on_dvm_val
-								= helios::hasAttribute(sym.id, helios::attributes::NativeOnlyImpl{});
+								= helios::hasAttribute<helios::attributes::NativeOnlyImpl>(sym.id);
 							bool ignore_on_llvm_val
-								= helios::hasAttribute(sym.id, helios::attributes::DVMOnlyImpl{});
+								= helios::hasAttribute<helios::attributes::DVMOnlyImpl>(sym.id);
 							return std::make_tuple(
 								link_once_val, ignore_on_dvm_val, ignore_on_llvm_val
 							);

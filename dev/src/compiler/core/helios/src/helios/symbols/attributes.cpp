@@ -46,15 +46,16 @@ namespace compiler::helios {
 	}
 
 	namespace {
-		bool hasAttr(const std::vector<Attribute>& attrs, Attribute target) {
-			return std::ranges::any_of(attrs, [target](const Attribute& a) { return a == target; });
+		template<typename Attr>
+		bool hasAttr(const std::vector<Attribute>& attrs) {
+			return std::ranges::any_of(attrs, [](const Attribute& a) { return base::holds<Attr>(a); });
 		}
 	}
 
 	std::expected<std::monostate, std::string> validateAttributes(
 		const std::vector<Attribute>& attributes
 	) {
-		if (hasAttr(attributes, DVMOnlyImpl{}) and hasAttr(attributes, NativeOnlyImpl{})) {
+		if (hasAttr<DVMOnlyImpl>(attributes) and hasAttr<NativeOnlyImpl>(attributes)) {
 			return std::unexpected(base::strConcat(
 				"The attributes `",
 				attrNameStr(NativeOnlyImpl{}),

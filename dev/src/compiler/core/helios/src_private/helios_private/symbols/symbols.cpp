@@ -1,6 +1,7 @@
 #include "symbols.hpp"
 
 #include "diagnostic_interactive/placeholder.hpp"
+#include "helios_private/attributes/backend_dependent.hpp"
 
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/all_class_elements.hpp>
@@ -199,13 +200,15 @@ namespace compiler::helios {
 		});
 	}
 
-	bool hasAttribute(SymID id, Attribute target) {
-		return std::ranges::any_of(
-			getSymRef(id)->common.attributes,
-			[&target](const Attribute& a) { return a == target; }
-		);
+	template<typename Attribute>
+	bool hasAttribute(SymID id) {
+		return std::ranges::any_of(getSymRef(id)->common.attributes, [](auto a) {
+			return base::holds<Attribute>(a);
+		});
 	}
 
+	#define MAKE_ATTR_INSTANCE(attr) template bool hasAttribute<attr>(SymID id);
+	FOR_EACH(MAKE_ATTR_INSTANCE, ATTRIBUTES_LIST)
 
 	std::string prettyDebugPrint(SymID sym, query::Context& ctx) {
 		// Short summary
@@ -241,7 +244,9 @@ namespace compiler::helios {
 		return out;
 	}
 
-	std::vector<Attribute> attributesFromPSTStatement(query::Context& ctx, pst::Access<pst::Stmt> stmt) {
+	std::vector<Attribute> attributesFromPSTStatement(
+		query::Context& ctx, pst::Access<pst::Stmt> stmt
+	) {
 		std::vector<Attribute> result;
 		for (auto attr_locked: stmt->getAttributes()) {
 			auto pst_attr       = attr_locked.unlock(ctx);
@@ -1055,32 +1060,6 @@ namespace compiler::helios {
 	}
 
 	struct IMPLEMENT_QUERY(QueryDirectFunctionCalls, query::QResult<std::vector<SymID>>) {
-		static std::vector<SymID> getBackendDependentSymbols(query::Context& ctx, SymID fun_decl) {
-			auto symbols = ctx.query<QuerySymbolsInScope>(scope(fun_decl))->valueOrThrow();
-			std::vector<SymID> result;
-			auto               decl_name = name(fun_decl);
-			for (auto s: symbols) {
-				if (name(s) == decl_name and kind(s) == SymbolKind::Function) {
-					if ((not hasAttribute(s, attributes::DVMOnlyImpl{}))
-					    and (not hasAttribute(s, attributes::NativeOnlyImpl{}))) {
-						std::string error_msg = base::strConcat(
-							"The symbols that provide implementation for the declaration should "
-							"have '",
-							attrNameStr(attributes::DVMOnlyImpl{}),
-							"' or '",
-							attrNameStr(attributes::NativeOnlyImpl{}),
-							"' as an attribute."
-						);
-						ctx.logInt(makeBox<dia_int::PlaceholderError>(
-							error_msg, stmt(ctx, s).value()->getStablePosition()
-						));
-					}
-					result.push_back(s);
-				}
-			}
-			return result;
-		}
-
 		struct HoutFunctionCallCollector final:
 			  public code::HoutStmtVisitorEmpty,
 			  public code::HoutExprVisitorEmpty {
@@ -1125,7 +1104,7 @@ namespace compiler::helios {
 			void visitCallExpr(const code::CallExpr& expr) override {
 				if (const auto* callee_ident
 				    = dynamic_cast<const code::IdentifierExpr*>(expr.callee.get())) {
-						called_functions.insert(callee_ident->symbol);
+					called_functions.insert(callee_ident->symbol);
 				}
 
 				expr.callee->acceptVisitor(*this);
@@ -1197,14 +1176,14 @@ namespace compiler::helios {
 
 
 			if (kind(key) == SymbolKind::FunctionDeclaration) {
-				std::vector<SymID> result;
 				// For function declarations we check if a function declaration is a backend
 				// dependent symbol.
-				if (hasAttribute(key, attributes::BackendDependent{})) {
+				if (hasAttribute<attributes::BackendDependent>(key)) {
 					// If yes then we append all the results from all implementations.
-					return getBackendDependentSymbols(ctx, key);
+					return getBackendDependentImplementations(ctx, key);
+				} else {
+					return {};
 				}
-				return result;
 			}
 
 			variant_match(getSymRef(key)->other) {

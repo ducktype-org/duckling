@@ -1,8 +1,4 @@
-#include "diagnostic_interactive/placeholder.hpp"
 #include "function_queries.hpp"
-#include "helios/symbols/attributes.hpp"
-#include "helios/symbols/query_type_of_symbol.hpp"
-#include "helios_private/lookup/interface.hpp"
 
 #include <frontend/pst_parser/elements/hierarchy/actions/all_actions.hpp>
 #include <frontend/pst_parser/elements/hierarchy/actions/return.hpp>
@@ -74,69 +70,6 @@ namespace compiler::helios {
 			}
 		}
 
-		/**
-		 * This function verifies if the applied attributes are semantically correct
-		 * on the function. For example we check if the BackendDependent attribute has
-		 * some implementations.
-		 */
-		static void verifyFunctionAttributes(
-			query::Context& ctx, pst::Access<pst::Fun> pst_stmt, SymID sym_id
-		) {
-			if (pst_stmt->getAttributes().empty()) return;
-
-			if (hasAttribute(sym_id, attributes::DVMOnlyImpl{})
-			    or hasAttribute(sym_id, attributes::NativeOnlyImpl{})) {
-				// Check if in the same scope as the symbol there is a fundecl with the same type.
-
-				auto result
-					= HInterface::ofScope(scope(sym_id)).lookup(ctx, name(sym_id))->valueOrThrow();
-				if (result.leaves.size() != 1) {
-					std::string error_msg = base::strConcat(
-						"When using a '",
-						attrNameStr(attributes::NativeOnlyImpl{}),
-						"' or '",
-						attrNameStr(attributes::DVMOnlyImpl{}),
-						"' attribute expected to find a function "
-						"declaration in the same scope."
-					);
-					ctx.logInt(
-						makeBox<dia_int::PlaceholderError>(error_msg, pst_stmt->getStablePosition())
-					);
-					query::throwFailed();
-				}
-				auto target_sym  = result.leaves.back();
-				auto target_type = ctx.query<QueryTypeOfSymbol>(target_sym)->valueOrThrow();
-				auto our_type    = ctx.query<QueryTypeOfSymbol>(sym_id)->valueOrThrow();
-
-				if (our_type != target_type) {
-					std::string error_msg = base::strConcat(
-						"The function has type `",
-						our_type.toString(),
-						"` but expected the same as declaration type `",
-						target_type.toString(),
-						"`"
-					);
-					ctx.logInt(
-						makeBox<dia_int::PlaceholderError>(error_msg, pst_stmt->getStablePosition())
-					);
-					query::throwFailed();
-				}
-
-				if (not hasAttribute(target_sym, attributes::BackendDependent{})
-				    or kind(target_sym) != SymbolKind::FunctionDeclaration) {
-					std::string error_msg = base::strConcat(
-						"Function should have a `",
-						attrNameStr(attributes::BackendDependent{}),
-						"` attribute and be a `fundecl`."
-					);
-					ctx.logInt(makeBox<dia_int::PlaceholderError>(
-						error_msg, stmt(ctx, target_sym).value()->getStablePosition()
-					));
-					query::throwFailed();
-				}
-			}
-		}
-
 		struct HOUTFunctionMaker final: public pst::PstVisitorPanicky {
 			query::Context& ctx;
 			SymID           original_symbol;
@@ -173,8 +106,6 @@ namespace compiler::helios {
 			void visitFun(pst::Access<pst::Fun> stmt) final {
 				// declaration:
 				auto& decl = ctx.query<QueryDeclOfFun>(original_symbol)->valueOrThrow();
-				verifyFunctionAttributes(ctx, stmt, original_symbol);
-
 				// body:
 				auto fun_body    = stmt->getBody();
 				auto output_body = processBody(decl, fun_body);
