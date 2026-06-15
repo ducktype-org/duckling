@@ -10,6 +10,7 @@ mod package_loader;
 pub mod run;
 pub mod solver;
 pub mod storage;
+pub mod valid_package_name;
 mod venv_config;
 mod version;
 

@@ -5,6 +5,7 @@ use std::path::Path;
 use tracing::debug;
 
 use super::{Scope, dependency};
+use crate::quackpack::core::valid_package_name::ValidPackageName;
 use crate::quackpack::core::{
     Features, Manifest, OptLevel, PackageMetadata, ParseMode, Profile, Profiles, ScopeGuard,
     Version,
@@ -49,9 +50,15 @@ pub(crate) fn parse(
                 qp_bail!(err);
             }
 
+            let name = root.file_stem().unwrap().display().to_string();
+
+            ValidPackageName::new(name.as_str()).with_context(|| {
+                format!("script at `{}` has an invalid script name", root.display())
+            })?;
+
             let name = StrId::from(format!(
-                "{} {}",
-                root.file_name().unwrap().display(),
+                "{}-{}",
+                name,
                 sha256_string(root.as_os_str().as_encoded_bytes())
             ));
             let version = Version::default();
@@ -81,6 +88,14 @@ pub(crate) fn parse(
             };
             debug!("package name is `{name}`, version is `{version}`");
 
+            {
+                let mut guard1 = scope.push("metadata".to_string());
+                let guard2 = guard1.push("name".to_string());
+
+                let _ = ValidPackageName::new(name.as_str())
+                    .context("package has an invalid name")
+                    .with_context(|| guard2.make_context_string())?;
+            }
             let guard = scope.push("features".into());
             let features = parse_features(schema.features.as_ref())
                 .with_context(move || guard.make_context_string())?;
