@@ -9,12 +9,12 @@
 # This should always produce a deadlock if deadlock detection does not abort first,
 # because both threads are guaranteed to hold their first mutex before attempting the second.
 
-global_data m1 mutex {};
-global_data m2 mutex {};
-global_data gate mutex {};
-global_data cv condition_variable {};
-global_data ready_count i64 {};
-global_data phase i64 {};
+global_data m1 mutex {}
+global_data m2 mutex {}
+global_data gate mutex {}
+global_data cv condition_variable {}
+global_data ready_count i64 {}
+global_data phase i64 {}
 
 function threadA {} -> {} {
     init_pany_type      lock_m1, mutex;

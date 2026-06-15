@@ -53,15 +53,6 @@ function(duck_add_vm_tests suffix)
         duck_add_test_custom(vm ${test_set}_LowVMProgramCopy_test debugger/LowVMProgramCopy_tests.cpp
                 USES ${libvm} Tester ${vmtester})
 
-        duck_add_test_custom(vm ${test_set}_building_test loader/assembly/bc_building.cpp
-                USES ${libvm} Tester ${vmtester})
-
-        duck_add_test_custom(vm ${test_set}_parsing_test loader/assembly/bc_parsing.cpp
-                USES ${libvm} Tester ${vmtester})
-
-        duck_add_test_custom(vm ${test_set}_verification_test loader/verification/bc_verification.cpp
-                USES ${libvm} Tester ${vmtester})
-
         duck_add_test_custom(vm ${test_set}_inheritance_loading_test inheritance/inheritance_loading.cpp
                 USES ${libvm} Tester ${vmtester})
         duck_add_test_custom(vm ${test_set}_inheritance_semantics_test inheritance/inheritance_semantics.cpp
@@ -109,3 +100,8 @@ duck_add_test_custom(vm vm_stable_obj_id_name_map_test utils/stable_obj_id_name_
         USES LibVM Tester)
 duck_add_test_custom(vm vm_memory_test memory/memory_test.cpp
         USES LibVM_sc Tester VmTester_sc)
+
+duck_add_test_custom(vm vm_bc_verification loader/verification/bc_verification.cpp USES LibVM_sc Tester VmTester_sc)
+duck_add_test_custom(vm vm_bc_building loader/assembly/bc_building.cpp USES LibVM_sc Tester VmTester_sc)
+duck_add_test_custom(vm vm_bc_parsing loader/assembly/bc_parsing.cpp USES LibVM_sc Tester VmTester_sc)
+duck_add_test_custom(vm vm_bc_serializer loader/serializer/bc_serializer.cpp USES LibVM_sc Tester VmTester_sc)

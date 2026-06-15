@@ -3,7 +3,7 @@
 
 global_data _Q_M22globals_initializationG1g i64 {
     constructor: _Q_M22globals_initializationG1ggc,
-};
+}
 
 function _Q_M22globals_initializationG1ggc {  } -> {} {
     label                   label_0;

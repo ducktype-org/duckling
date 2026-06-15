@@ -1,4 +1,4 @@
-global_data completed_runs i64 {};
+global_data completed_runs i64 {}
 
 function worker {} -> {} {
 	init_pany_type			local_done, i64;
