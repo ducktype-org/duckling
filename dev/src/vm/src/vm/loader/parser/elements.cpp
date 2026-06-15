@@ -306,10 +306,10 @@ namespace vm::loader::parser {
 			return { bytes, Bits(bit_length) };
 		}
 
-		base::StrID parseStr(F8ParserState& state) {
+		tpc::Identifier parseIdentifier(F8ParserState& state) {
 			tpc::Identifier identifier;
 			state.parse().one(&identifier);
-			return identifier.value;
+			return identifier;
 		}
 
 		template<class T>
@@ -326,10 +326,12 @@ namespace vm::loader::parser {
 			auto pos            = state.getPosition();
 			auto parsed_literal = parseNumericLiteral<u64>(state);
 			auto value          = parsed_literal.first;
-			auto arg            = opargs::Immediate{ value };
-			arg.bytecode_pos    = dia::SourcePosition(
-                pos.getLocation(), pos.getStart(), pos.getStart() + parsed_literal.second
-            );
+			// SourcePosition ends are inclusive; a literal of length N ends at start + N - 1.
+			auto length      = std::max<usize>(parsed_literal.second, 1);
+			auto arg         = opargs::Immediate{ value };
+			arg.bytecode_pos = dia::SourcePosition(
+				pos.getLocation(), pos.getStart(), pos.getStart() + length - 1
+			);
 			return arg;
 		}
 
@@ -346,16 +348,13 @@ namespace vm::loader::parser {
 			return field;
 		}
 
-#define HANDLE_STR_ARG(TYPE)                                                        \
-	template<>                                                                      \
-	auto parseArg(F8ParserState& state) -> vm::opargs::TYPE {                       \
-		auto pos         = state.getPosition();                                     \
-		auto value       = parseStr(state);                                         \
-		auto arg         = vm::opargs::TYPE{ value };                               \
-		arg.bytecode_pos = dia::SourcePosition(                                     \
-			pos.getLocation(), pos.getStart(), pos.getStart() + value.view().size() \
-		);                                                                          \
-		return { arg };                                                             \
+#define HANDLE_STR_ARG(TYPE)                                     \
+	template<>                                                   \
+	auto parseArg(F8ParserState& state) -> vm::opargs::TYPE {    \
+		auto identifier  = parseIdentifier(state);               \
+		auto arg         = vm::opargs::TYPE{ identifier.value }; \
+		arg.bytecode_pos = identifier.position;                  \
+		return { arg };                                          \
 	}
 
 #define HANDLE_PLACE_ARG(TYPE)                                                      \
