@@ -25,7 +25,9 @@ using namespace llvm;
  * Embed gives raw bytes, which can't be assigned directly to std::array
  */
 // NOLINTBEGIN
-PUSH_DIAGNOSTIC ALLOW_EXTENSIONS inline constexpr char OPCODES[] = {
+PUSH_DIAGNOSTIC
+ALLOW_EXTENSIONS
+inline constexpr char OPCODES[] = {
 // Linter doesn't actually build common_sc.bc so it would be unavailable.
 #if __has_embed("common_sc.bc")
 	#embed "common_sc.bc"

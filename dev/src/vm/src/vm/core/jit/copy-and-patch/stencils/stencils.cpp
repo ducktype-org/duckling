@@ -37,7 +37,7 @@ namespace vm::jit::cnp {
 // for now only a single(ext-less) instruction
 // jitable_interface.py depends on the exact fully-qualified name
 #define HANDLE_MICRO_INSTR(opcode_name)                                                   \
-	extern "C" void stencil_##opcode_name(CP_ARGS) {                                      \
+	void stencil_##opcode_name(CP_ARGS) {                                                 \
 		return base_stencil<vm::OpFuns::op_##opcode_name, low::MicroOpcode::opcode_name>( \
 			instr, local_stack, frame, thread                                             \
 		);                                                                                \
@@ -47,7 +47,7 @@ namespace vm::jit::cnp {
 #undef HANDLE_MICRO_INSTR
 
 	// NOLINTNEXTLINE(readability-identifier-naming)
-	extern "C" void stencil_special_return(CP_ARGS) {
+	void stencil_special_return(CP_ARGS) {
 		// Since stencils do not take pointers/references it has to store the changed values.
 		// Stencils do not take pointers to reduce the cost, since
 		// it would have to be dereferenced or patched in every single stencil.
@@ -57,7 +57,7 @@ namespace vm::jit::cnp {
 	DECLARE_LINK_VARIABLE(jmp_fn);
 
 	// NOLINTNEXTLINE(readability-identifier-naming)
-	extern "C" void stencil_special_jump_if(CP_ARGS) {
+	void stencil_special_jump_if(CP_ARGS) {
 		if (frame->flags.flag)
 			JUMP_STENCIL(jmp_fn);
 		else
@@ -65,7 +65,7 @@ namespace vm::jit::cnp {
 	}
 
 	// NOLINTNEXTLINE(readability-identifier-naming)
-	extern "C" void stencil_special_jump_if_not(CP_ARGS) {
+	void stencil_special_jump_if_not(CP_ARGS) {
 		if (not frame->flags.flag)
 			JUMP_STENCIL(jmp_fn);
 		else
@@ -73,12 +73,12 @@ namespace vm::jit::cnp {
 	}
 
 	// NOLINTNEXTLINE(readability-identifier-naming)
-	extern "C" void stencil_special_jump(CP_ARGS) { JUMP_STENCIL(jmp_fn); }
+	void stencil_special_jump(CP_ARGS) { JUMP_STENCIL(jmp_fn); }
 
 	DECLARE_LINK_VARIABLE(call_fn);
 
 	// NOLINTNEXTLINE(readability-identifier-naming)
-	extern "C" void stencil_special_call_non_jitable(CP_ARGS) {
+	void stencil_special_call_non_jitable(CP_ARGS) {
 		std::invoke(
 			GET_LINK_VARIABLE(call_fn, vm::DebugOpFun*, 64), instr, local_stack, frame, thread
 		);

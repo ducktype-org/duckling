@@ -86,7 +86,8 @@ class Stencil:
     Analogous to a section or segment in an object file.
     """
 
-    name: str
+    binary_name: str
+    unmangled_name: str
     type: StencilType
     place: int
     size: int
@@ -113,7 +114,7 @@ class Stencil:
     def to_c(self) -> str:
         return "StencilData " + list_quote(
             [
-                f'.name = "{self.name}"',
+                f'.name = "{self.binary_name}"',
                 f".place = {self.place}",
                 f".size = {self.size}",
                 ".to_patch = "

@@ -26,7 +26,7 @@ namespace vm::jit::cnp::internal {
 // Those variables are also implicitly extern:
 // https://en.cppreference.com/cpp/language/language_linkage#Notes
 #define DECLARE_LINK_VARIABLE(name) \
-	extern "C" __attribute__((weak)) internal::OpaqueStruct LINK_VARIABLE_NAME(name)
+	__attribute__((weak)) extern "C" internal::OpaqueStruct LINK_VARIABLE_NAME(name)
 
 #define GET_LINK_VARIABLE(name, type, size) \
 	internal::valueFromPointer<type, u##size>(LINK_VARIABLE_NAME(name))

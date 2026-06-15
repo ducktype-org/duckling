@@ -10,9 +10,14 @@
 
 namespace vm::jit::cnp {
 	[[nodiscard]] auto& getLoadedStencils() {
+		// NOLINTBEGIN
+		PUSH_DIAGNOSTIC
+		ALLOW_EXTENSIONS
 		static constexpr char binary[] = {
 #embed "stencils-so"
 		};
+		POP_DIAGNOSTIC
+		// NOLINTEND
 
 		static auto stencils = Stencils{
 // Linter doesn't actually build stencils-nm so it would be unavailable.

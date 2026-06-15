@@ -22,16 +22,23 @@ def parse_relocation(relocation: ELFRelocation, stencil: Stencil) -> Hole:
         symbol=relocation["Symbol"],
     )
 
+def is_function_section(section: ELFSection):
+    return section["Name"]["Name"].startswith(".ltext.")
 
-def parse_stencil_section(stencil_section: ELFSection) -> Stencil:
+def get_function_name(section: ELFSection):
+    assert is_function_section(section)
+    return section["Name"]["Name"][len(".ltext."):]
+
+def parse_stencil_section(stencil_section: ELFSection, unmangled_name: str) -> Stencil:
     output = Stencil(
-        name=get_stencil_name(stencil_section),
+        unmangled_name=get_stencil_name(unmangled_name),
+        binary_name=get_function_name(stencil_section),
         place=stencil_section["Offset"],
         type=StencilType.INSTRUCTION,
         size=stencil_section["Size"],
         holes=[],
     )
-    if "special" in output.name:
+    if output.unmangled_name.startswith("special"):
         output.type = StencilType.SPECIAL
     output.holes = [
         parse_relocation(rel["Relocation"], output)
@@ -40,17 +47,12 @@ def parse_stencil_section(stencil_section: ELFSection) -> Stencil:
     return output
 
 
-def is_stencil_section(section: ELFSection, accept_all_sections: bool) -> bool:
-    name = section["Name"]["Name"]
-    if not name.startswith(".ltext."):
-        return False
-
-    return True if accept_all_sections else "stencil" in name
+def is_stencil_section(unmangled_name: str) -> bool:
+    return "stencil" in unmangled_name
 
 
-def get_stencil_name(section: ELFSection) -> str:
-    name = section["Name"]["Name"]
-    return name[len(".ltext.") :]
+def get_stencil_name(unmangled_name: str) -> str:
+    return unmangled_name[len("vm::jit::cnp::stencil_"):-len("(vm::MicroInstruction const*, std::byte*, vm::Frame*, vm::SafeVMThread&)")]
 
 
 def split_section_relocations(
@@ -102,11 +104,11 @@ def parse(llvm_readobj: str, binary: str, verbose: bool) -> list[Stencil]:
 
 def order_stencils(stencils: list[Stencil], order) -> list[Stencil]:
     no_stencil = Stencil(
-        name="NO STENCIL", type=StencilType.NO_STENCIL, place=0, size=0, holes=[]
+        unmangled_name="NO STENCIL", binary_name="NO STENCIL", type=StencilType.NO_STENCIL, place=0, size=0, holes=[]
     )
     array = [no_stencil] * len(order)
     for stencil in stencils:
-        idx = order[stencil.name[len("stencil_") :]]
+        idx = order[stencil.unmangled_name]
         array[idx] = stencil
     return array
 
@@ -120,6 +122,7 @@ def validate_stencils(stencils: list[Stencil]):
 
 def generate_stencils(
     llvm_readobj: str,
+    llvm_cxxfilt: str,
     binary,
     accept_all_sections: bool,
     verbose: bool,
@@ -128,11 +131,16 @@ def generate_stencils(
 ) -> list[Stencil]:
     sections = parse(llvm_readobj, binary, verbose)
 
+    function_sections = [section for section in sections if is_function_section(section)]
+    function_names = [get_function_name(section) for section in function_sections]
+    unmangled_names = run_llvm_tool(llvm_cxxfilt, args=[], input="\n".join(function_names), echo=verbose).split('\n')
+
     stencils = [
-        parse_stencil_section(section)
-        for section in sections
-        if is_stencil_section(section, accept_all_sections)
+        parse_stencil_section(section, unmangled_name)
+        for section, unmangled_name in zip(function_sections, unmangled_names)
+        if accept_all_sections or is_stencil_section(unmangled_name)
     ]
+    assert len(stencils) != 0
     if shared:
         stencils = split_shared_relocations(sections, stencils)
     if order:
@@ -158,10 +166,11 @@ def generate_stencils(
 @click.argument("binary", type=click.File("rb"))
 @llvm_tools_version_options
 def main(
-    llvm_readobj, output, binary, verbose, accept_all_sections, shared, order, remove_jumps, **kwargs
+    llvm_readobj, llvm_cxxfilt, output, binary, verbose, accept_all_sections, shared, order, remove_jumps, **kwargs
 ):
     stencils = generate_stencils(
         llvm_readobj=llvm_readobj,
+        llvm_cxxfilt=llvm_cxxfilt,
         binary=binary,
         verbose=verbose,
         accept_all_sections=accept_all_sections,

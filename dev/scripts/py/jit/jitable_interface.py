@@ -11,7 +11,7 @@ def is_opfun(func_name: str) -> bool:
     )
 
 def is_stencil(func_name: str) -> bool:
-    return func_name.startswith("stencil")
+    return func_name.startswith("vm::jit::cnp::stencil")
 
 def nonjitable(func_name: str) -> bool:
     unjitable_opfuncs = [

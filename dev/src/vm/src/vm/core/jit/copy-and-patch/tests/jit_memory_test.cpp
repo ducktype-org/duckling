@@ -16,10 +16,14 @@ using vm::jit::cnp::StencilData;
 using vm::jit::cnp::StencilHole;
 using vm::jit::cnp::Stencils;
 
-
+// NOLINTBEGIN
+PUSH_DIAGNOSTIC
+ALLOW_EXTENSIONS
 static constexpr char binary[] = {
 #embed "mock_stencils-so"
 };
+POP_DIAGNOSTIC
+// NOLINTEND
 
 static auto stencils = Stencils{
 // Linter doesn't actually build mock_stencils-nm so it would be unavailable.
