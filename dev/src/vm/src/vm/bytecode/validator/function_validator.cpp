@@ -1497,6 +1497,20 @@ class FunctionValidator {
 				if (types_ctx.at(table_type->inner)->getName() != "byte")
 					throw DynamicTableTypeMismatchError(instr);
 			}
+			instr_case(Op_fstToDynTable_pptr_pptr, instr) {
+				const auto src_ptr = getPlaceType(instr.src_table_ptr, current_stack)
+				                         ->getKindAs<valid_type::finalized::Pointer>();
+				const auto src_table = expectPointerType<valid_type::finalized::FixedSizeTable>(
+					src_ptr, types_ctx, instr
+				);
+				const auto dst_ptr = getPlaceType(instr.dst_table_ptr, current_stack)
+				                         ->getKindAs<valid_type::finalized::Pointer>();
+				const auto dst_table = expectPointerType<valid_type::finalized::DynamicTable>(
+					dst_ptr, types_ctx, instr
+				);
+				if (src_table->inner != dst_table->inner)
+					throw DynamicTableTypeMismatchError(instr);
+			}
 			instr_case_novalue(Op_nop, Op_exit, Op_initFromVmValue) {}
 		}
 		POP_DIAGNOSTIC

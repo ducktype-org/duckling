@@ -190,10 +190,9 @@ namespace vm {
 		 */
 		void run(const std::string& func_name, const RunArguments& run_arguments) override;
 
-		[[nodiscard]]
 		std::expected<low::LowCodePosition, api::ApiError> getCurrentPosition(
 			base::Optional<usize> frame_idx = std::nullopt
-		) const;
+		);
 
 		friend class SafeVMProcess;
 		friend class OpFuns;
