@@ -2,7 +2,6 @@
 
 #include <frontend/pst_parser/elements/includes/basic.hpp>
 
-#include "base/except/exceptions.hpp"
 #include <base/collections/maps.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
@@ -31,24 +30,20 @@ namespace compiler::helios {
 
 	bool isValidForStmt(Attribute attr, pst::StmtKind kind) {
 		variant_match(attr) {
-			variant_case_novalue(NativeOnlyImpl, DVMOnlyImpl) {
-				return kind == pst::StmtKind::Fun;
-			}
-			variant_case_novalue(BackendDependent) {
-				return kind == pst::StmtKind::FunDecl;
-			}
+			variant_case_novalue(NativeOnlyImpl, DVMOnlyImpl) { return kind == pst::StmtKind::Fun; }
+			variant_case_novalue(BackendDependent) { return kind == pst::StmtKind::FunDecl; }
 		}
 		CORE_UNREACHABLE();
 	}
 
-	bool disablesLookup(Attribute attr) {
-		return v_matches(attr, DVMOnlyImpl, NativeOnlyImpl);
-	}
+	bool disablesLookup(Attribute attr) { return v_matches(attr, DVMOnlyImpl, NativeOnlyImpl); }
 
 	namespace {
 		template<typename Attr>
 		bool hasAttr(const std::vector<Attribute>& attrs) {
-			return std::ranges::any_of(attrs, [](const Attribute& a) { return base::holds<Attr>(a); });
+			return std::ranges::any_of(attrs, [](const Attribute& a) {
+				return base::holds<Attr>(a);
+			});
 		}
 	}
 

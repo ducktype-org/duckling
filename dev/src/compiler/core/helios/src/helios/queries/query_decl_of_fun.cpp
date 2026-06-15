@@ -1,5 +1,4 @@
 #include "function_queries.hpp"
-#include "helios_private/attributes/backend_dependent.hpp"
 
 #include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/elements/hierarchy/actions/all_actions.hpp>
@@ -21,6 +20,7 @@
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/symbol_type.hpp>
 #include <helios/tsh/type_interface.hpp>
+#include <helios_private/attributes/backend_dependent.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/errors/dia_interactive_elements.hpp>
 #include <helios_private/hout_creation/definition_generation/class_constructors.hpp>
@@ -481,6 +481,7 @@ namespace compiler::helios {
 						stmt(ctx, key).value()->acceptVisitor(decl_maker);
 						auto result = std::move(decl_maker.out).value();
 						verifyFunctionAttributes(ctx, stmt(ctx, key).value(), result);
+						return result;
 					}
 					variant_case(defgen::GeneratedSymbolData, generated_data) {
 						variant_match(generated_data.data) {

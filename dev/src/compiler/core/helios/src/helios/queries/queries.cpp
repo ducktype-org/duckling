@@ -200,7 +200,8 @@ namespace compiler::helios {
 					SymID func_sym = func.declaration->original_symbol;
 
 					// Some functions are ignored by the duplicated function check.
-					if (hasAttribute<attributes::DVMOnlyImpl>(func_sym) or hasAttribute<attributes::NativeOnlyImpl>(func_sym)) {
+					if (hasAttribute<attributes::DVMOnlyImpl>(func_sym)
+					    or hasAttribute<attributes::NativeOnlyImpl>(func_sym)) {
 						out.functions.emplace_back(&func);
 						continue;
 					}

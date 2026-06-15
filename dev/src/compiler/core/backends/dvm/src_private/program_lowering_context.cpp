@@ -270,7 +270,7 @@ const vm::code::Function& ProgramLoweringContext::lowerAndKeepLirFunction(
 	CRef<lir::Function> lir_function
 ) {
 	CORE_ASSERT(not lir_function->ignore_on_dvm, "Lowering a function that should not be lowered.");
-	
+
 	if (auto maybe_name = lir_function_to_name.atMaybe(lir_function))
 		return dvm_functions_by_name.at(**maybe_name);
 

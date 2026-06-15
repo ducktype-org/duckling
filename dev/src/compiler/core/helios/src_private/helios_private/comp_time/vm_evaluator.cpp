@@ -273,9 +273,7 @@ namespace {
 	};
 
 	std::expected<void, VmEvaluationError> loadLIRUnit(
-		CompTimeDVM&                                      comptime_dvm,
-		const compiler::lir::LIRUnit& lir_unit,
-		query::Context&                                   query_ctx
+		CompTimeDVM& comptime_dvm, const compiler::lir::LIRUnit& lir_unit, query::Context& query_ctx
 	) {
 		compiler::backend_vm::DVMCodeBuilder m(query_ctx, false, true);
 
@@ -363,7 +361,7 @@ namespace compiler::helios {
 	std::expected<ctv::CompileTimeValue, VmEvaluationError> executeInVm(
 		query::Context&                           ctx,
 		const std::string&                        func_name,
-		const lir::LIRUnit&   lir_unit,
+		const lir::LIRUnit&                       lir_unit,
 		const std::vector<ctv::CompileTimeValue>& args,
 		const tsh::SymbolType<>&                  return_type
 	) {

@@ -836,7 +836,7 @@ namespace compiler::helios {
 
 			return LIRBuildResult{
 				.func_to_call = mangled_name_function_to_call.str(),
-				.lir_unit    = std::move(lir_unit),
+				.lir_unit     = std::move(lir_unit),
 			};
 		}
 

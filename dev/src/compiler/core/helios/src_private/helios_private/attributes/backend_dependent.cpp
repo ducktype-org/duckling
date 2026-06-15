@@ -1,42 +1,41 @@
 #include "backend_dependent.hpp"
 
-#include "helios/queries/function_queries.hpp"
-#include "helios/symbols/attributes.hpp"
-#include "helios/symbols/symbol_id_utils.hpp"
-#include "helios_private/scopes/scopes.hpp"
+#include <diagnostic_interactive/placeholder.hpp>
+#include <helios/queries/function_queries.hpp>
+#include <helios/symbols/attributes.hpp>
+#include <helios/symbols/symbol_id_utils.hpp>
+#include <helios_private/scopes/scopes.hpp>
 
-#include "query_framework/query_errors.hpp"
+#include <query_framework/query_errors.hpp>
 
 namespace compiler::helios {
 
 	template<typename Attr>
 	SymID searchForSymbolWithAttributeAndName(
-		query::Context& ctx,
-		SymID           scope_source_sym,
-		base::StrID     searched_name
+		query::Context& ctx, SymID scope_source_sym, base::StrID searched_name
 	) {
-		auto               symbols = ctx.query<QuerySymbolsInScope>(scope(scope_source_sym))->valueOrThrow();
+		auto symbols = ctx.query<QuerySymbolsInScope>(scope(scope_source_sym))->valueOrThrow();
 		std::vector<SymID> results;
 		for (auto s: symbols)
 			if (name(s) == searched_name && hasAttribute<Attr>(s)) results.push_back(s);
 		if (results.size() > 1) {
-			std::string error_msg = base::strConcat(
+			ctx.logInt(makeBox<dia_int::PlaceholderError>(base::strConcat(
 				"Multiple symbols with name `",
 				searched_name,
 				"` and attribute `",
 				attrNameStr(Attr{}),
 				"` found. Expected at most one."
-			);
+			)));
 			query::throwFailed();
 		}
 		if (results.empty()) {
-			std::string error_msg = base::strConcat(
+			ctx.logInt(makeBox<dia_int::PlaceholderError>(base::strConcat(
 				"No symbol with name `",
 				searched_name,
 				"` and attribute `",
 				attrNameStr(Attr{}),
 				"` found. Expected exactly one."
-			);
+			)));
 			query::throwFailed();
 		}
 		return results[0];
@@ -107,7 +106,7 @@ namespace compiler::helios {
 	) {
 		// We don't check here if the declaration matches with counterparts, as it is done in the
 		// `DVMOnlyImpl` and `NativeOnlyImpl` declarations verification.
-        
+
 		std::string error_reason = "Attributes does not allow initial values for parameters.";
 		if (ensureFunctionDeclarationNoInitialValue(ctx, fun_decl, error_reason).isBad()) {
 			// Error logged by the `ensureFunctionDeclarationNoInitialValue` call.

@@ -1,8 +1,5 @@
 #include "symbols.hpp"
 
-#include "diagnostic_interactive/placeholder.hpp"
-#include "helios_private/attributes/backend_dependent.hpp"
-
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/all_class_elements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
@@ -25,7 +22,6 @@
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 
-#include "base/extend_cpp/vector_utils.hpp"
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
@@ -207,7 +203,7 @@ namespace compiler::helios {
 		});
 	}
 
-	#define MAKE_ATTR_INSTANCE(attr) template bool hasAttribute<attr>(SymID id);
+#define MAKE_ATTR_INSTANCE(attr) template bool hasAttribute<attr>(SymID id);
 	FOR_EACH(MAKE_ATTR_INSTANCE, ATTRIBUTES_LIST)
 
 	std::string prettyDebugPrint(SymID sym, query::Context& ctx) {

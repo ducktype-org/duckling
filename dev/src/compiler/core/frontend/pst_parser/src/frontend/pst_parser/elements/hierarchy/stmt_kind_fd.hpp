@@ -1,5 +1,5 @@
 #pragma once
 
 namespace pst {
-    enum class StmtKind : int;
+	enum class StmtKind : int;
 }
