@@ -598,9 +598,5 @@ namespace state_machine {
 		std::mutex listeners_mutex;
 		std::vector<Listener>
 			listeners;  ///< Functions to be invoked on each state change on the machine.
-
-		/// Cached `listeners.size()`, readable without `listeners_mutex` so `handleEvent` can cheaply
-		/// skip snapshotting the state when there are no listeners. Written under `listeners_mutex`.
-		std::atomic<u64> listener_count{ 0 };
 	};
 }
