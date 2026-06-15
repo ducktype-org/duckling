@@ -1,5 +1,16 @@
 #include "memory.hpp"
 
+#include <fstream>
+#include <utility>
+
+namespace vm::jit::cnp {
+	void JitFuncMemory::dump(const char* filename) {
+		std::ofstream file{ filename, std::ios::binary };
+
+		for (std::byte byte: span()) file << std::to_underlying(byte);
+	}
+}
+
 #if __unix__
 	#include <sys/mman.h>
 	#include <unistd.h>
@@ -8,7 +19,6 @@
 
 	#include <cstddef>
 	#include <functional>
-	#include <iostream>
 
 namespace vm::jit::cnp {
 	inline usize getPageSize() {
@@ -42,7 +52,7 @@ namespace vm::jit::cnp {
 	}
 
 	JitFuncMemory::~JitFuncMemory() noexcept {
-		CORE_ASSERT_SYSCALL_NOEXCEPT(munmap(addr, size) == 0, "unable to unmap memory");
+		// CORE_ASSERT_SYSCALL_NOEXCEPT(munmap(addr, size) == 0, "unable to unmap memory");
 	}
 }
 
@@ -50,7 +60,6 @@ namespace vm::jit::cnp {
 	#include <windows.h>
 
 	#include <cstddef>
-	#include <iostream>
 
 namespace vm::jit::cnp {
 	usize getPageSize() {

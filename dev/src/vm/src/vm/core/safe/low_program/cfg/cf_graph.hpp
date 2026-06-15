@@ -117,6 +117,11 @@ namespace vm::low {
 
 			BasicBlock() = delete;
 
+			[[nodiscard]] std::ranges::range auto instructions(const vm::low::MicroBytecode& bc
+			) const {
+				return std::span(&bc[start], &bc[end]);
+			}
+
 			/**
 			 * @brief Returns the shape of outgoing edges.
 			 */
@@ -190,6 +195,8 @@ namespace vm::low {
 			 * @brief Returns number of blocks in the graph.
 			 */
 			[[nodiscard]] usize size() const;
+
+			[[nodiscard]] std::ranges::range auto getBlocks() const { return std::span(blocks); }
 
 			/**
 			 * @brief Returns block metadata by identifier.

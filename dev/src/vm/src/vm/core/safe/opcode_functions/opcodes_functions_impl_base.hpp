@@ -337,13 +337,33 @@ namespace vm {
 			jit::JitFuncData& my_data = jit_data[current_func_id];
 
 			if (my_data.func_ptr) {
-				// is already compiled
+	// is already compiled
+	#if COMPILE_WITH_CP
+				(*my_data.func_ptr)(instr + 1, local_stack, frame, thread);
+
+				// Restore values set by copy&patch
+				frame       = thread.runtime_data.frame_stack_current;
+				instr       = frame->instr;
+				local_stack = frame->local_stack;
+	#else
 				(*my_data.func_ptr)(&instr, &local_stack, &frame, &thread);
+	#endif
 			} else if (0 < my_data.until_compilation) {
 				// should be compiled later
 				--my_data.until_compilation;
 			} else {
-				// should be compiled now
+	// should be compiled now
+	// @TODO: #2857 Integrate two compilers
+	#if COMPILE_WITH_CP
+				auto compiled    = jit::compileCP(current_func_obj.cfg, current_func_obj.bc);
+				my_data.func_ptr = compiled.intoFunc<jit::CPFunc>();
+				(*my_data.func_ptr)(instr + 1, local_stack, frame, thread);
+
+				// Restore values set by copy&patch
+				frame       = thread.runtime_data.frame_stack_current;
+				instr       = frame->instr;
+				local_stack = frame->local_stack;
+	#else
 				MRef<jit::JitOpFun> compiled = jit::compileLLVM(
 					current_func_obj.cfg, current_func_obj.bc, current_func_obj.name
 				);
@@ -352,6 +372,7 @@ namespace vm {
 				my_data.func_ptr = compiled;
 
 				(*my_data.func_ptr)(&instr, &local_stack, &frame, &thread);
+	#endif
 			}
 		}
 		FUNCTION_CONT(0);

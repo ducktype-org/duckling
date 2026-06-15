@@ -7,26 +7,30 @@
 
 #include <base/pointers/ref.hpp>
 
+#include <vm/core/jit/copy-and-patch/memory/memory.hpp>
 #include <vm/core/safe/low_program/cfg/cf_graph.hpp>
 #include <vm/core/safe/low_program/low_program.hpp>
 
-#ifdef BUILD_TYPE_RELEASE
-constexpr inline uint COMPILATION_THRESHOLD = 10;
-#else
 // During testing compile always to check properly that jit integration works.
 constexpr inline uint COMPILATION_THRESHOLD = 0;
-#endif
 
 namespace vm::jit {
 	using JitOpFun
 		= void(const vm::MicroInstruction**, std::byte**, vm::Frame**, vm::SafeVMThread*);
 
+#define CP_ARGS const MicroInstruction *instr, byte *local_stack, Frame *frame, SafeVMThread &thread
+	using CPFunc = void(CP_ARGS);
+
 	/**
 	 * @brief The data additionally stored per function, by the JIT compiler.
 	 */
 	struct JitFuncData {
-		MRef<JitOpFun> func_ptr          = nullptr;
-		uint           until_compilation = COMPILATION_THRESHOLD;
+#if COMPILE_WITH_CP
+		MRef<CPFunc> func_ptr = nullptr;
+#else
+		MRef<JitOpFun> func_ptr = nullptr;
+#endif
+		uint until_compilation = COMPILATION_THRESHOLD;
 	};
 
 	/**
@@ -44,5 +48,12 @@ namespace vm::jit {
 		const vm::low::cf::ControlFlowGraph& cfg,
 		const vm::low::MicroBytecode&        bc,
 		const base::StrID&                   name
+	);
+
+	/**
+	 * @brief Compile the function on the C1, Copy&Patch-based compiler.
+	 */
+	cnp::JitFuncMemory compileCP(
+		const vm::low::cf::ControlFlowGraph& cfg, const vm::low::MicroBytecode& bc
 	);
 }

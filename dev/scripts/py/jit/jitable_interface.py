@@ -2,16 +2,8 @@
 Removes functions unnecessary for jit. Input file should be output of llvm-nm.
 """
 import click
-import subprocess
-import sys
-from pathlib import Path
 
-from llvm_tools import llvm_tools_version_options
-
-def run_llvm(tool: str, args: list[str], input: str | None = None) -> str:
-    result = subprocess.run([tool] + args, check=True, capture_output=True, text=True, input=input)
-    return result.stdout
-
+from llvm_tools import llvm_tools_version_options, run_llvm_tool
 
 def is_opfun(func_name: str) -> bool:
     return func_name.startswith("vm::OpFuns::op_") and not func_name.startswith(
@@ -19,13 +11,16 @@ def is_opfun(func_name: str) -> bool:
     )
 
 def is_stencil(func_name: str) -> bool:
-    return func_name.startswith("vm::jit::cnp::stencil")
+    return func_name.startswith("stencil")
 
 def nonjitable(func_name: str) -> bool:
     unjitable_opfuncs = [
         "jitEntrypoint",
         "call_builtinfunc",
-        "breakpoint"
+        "virtual_call_pptr_method",
+        "step_gil",
+        "check_strategy",
+        "breakpoint",
     ]
 
     return any(op in func_name for op in unjitable_opfuncs)
@@ -66,7 +61,7 @@ def main(llvm_nm, llvm_cxxfilt, input_path, output_file, **kwargs):
     write = lambda what: output_file.write(what + "\n")
 
     nm_flags = ["--portability", input_path]
-    functions = run_llvm(llvm_nm, nm_flags)
+    functions = run_llvm_tool(llvm_nm, nm_flags)
 
     mangled_names = [
         " ".join(name_split)
@@ -74,7 +69,7 @@ def main(llvm_nm, llvm_cxxfilt, input_path, output_file, **kwargs):
         for *name_split, _type, _place, _size in [line.split(" ")]
     ]
 
-    unmangled_names = run_llvm(llvm_cxxfilt, args=[], input='\n'.join(mangled_names)).splitlines()
+    unmangled_names = run_llvm_tool(llvm_cxxfilt, args=[], input='\n'.join(mangled_names)).splitlines()
 
     for mangled, unmangled in zip(mangled_names, unmangled_names):
         if should_remain(unmangled):

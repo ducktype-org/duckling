@@ -165,7 +165,7 @@ function(add_vm_variant suffix compile_def)
             # O3 is duplicated, because it can possibly improve code after strip-dead-prototypes. It is important to generate
             # as short bitcode as possible, even at the cost of build time.
             COMMAND ${LLVM_OPT}
-                -passes=globalopt,internalize,attributor,simplifycfg,default<O3>,strip-dead-prototypes,default<O3>
+                -passes=globalopt,internalize,simplifycfg,default<O3>,strip-dead-prototypes,default<O3>
                 --internalize-public-api-file=${extracted_func_file}
                 ${common_bc}
                 -o ${common_bc}

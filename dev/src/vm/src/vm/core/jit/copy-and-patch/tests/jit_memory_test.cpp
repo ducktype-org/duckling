@@ -9,35 +9,26 @@
 #include <cstring>
 #include <string>
 
+using vm::jit::cnp::HoleType;
+using vm::jit::cnp::HoleValue;
 using vm::jit::cnp::JitFuncMemory;
 using vm::jit::cnp::StencilData;
+using vm::jit::cnp::StencilHole;
 using vm::jit::cnp::Stencils;
 
-PUSH_DIAGNOSTIC
-ALLOW_EXTENSIONS
-// NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays)
-constexpr static char FULL_ELF[] = {
-// Linter doesn't actually build mock_stencils-so so it would be unavailable.
-#if __has_embed("mock_stencils-so")
-	#embed "mock_stencils-so"
-#else
-	0
-#endif
+
+static constexpr char binary[] = {
+#embed "mock_stencils-so"
 };
-POP_DIAGNOSTIC
 
-static auto stencils
-	= Stencils{ .stencils_binary    = std::bit_cast<std::array<byte, sizeof(FULL_ELF)>>(FULL_ELF),
-	            .stencils_data = std::array {
-
-// Linter doesn't actually build <mock_stencils-nm> so it would be unavailable.
+static auto stencils = Stencils{
+// Linter doesn't actually build mock_stencils-nm so it would be unavailable.
 #if __has_include(<mock_stencils-nm>)
+			.stencils_binary = std::bit_cast<std::array<std::byte, sizeof(binary)>>(binary),
+			.stencils_data =
 	#include <mock_stencils-nm>
-#else
-			StencilData{}
 #endif
-					}
-				 }.load();
+		}.load();
 
 class JitMemoryTest: public tester::TestSuite {
 #undef TESTER_CLASS
@@ -50,6 +41,8 @@ public:
 		TESTER_ADD_TEST(testCallingSimple);
 		TESTER_ADD_TEST(testCallingRecursive);
 		TESTER_ADD_TEST(testCallingLibc);
+		TESTER_ADD_TEST(testPatching);
+		TESTER_ADD_TEST(testCombining);
 	}
 
 private:
@@ -116,6 +109,62 @@ private:
 		auto calling_libc    = memory.intoFunc<int*(int)>();
 		auto from_jit_memory = base::Box<int>::fromPointer(std::invoke(calling_libc, 100));
 		for (int i = 0; i < 100; ++i) ASSERT_EQUAL(from_jit_memory.get()[i], i);
+	}
+
+	void testPatching() {
+		auto foo_code = FIND_FUNC("must_patch");
+		auto memory   = JitFuncMemory::allocate(foo_code.size);
+		stencils.relocate(foo_code, memory.addr);
+		foo_code.patch(memory.addr, [](HoleValue value) {
+			if (value == HoleValue::Arg0)
+				return 9;
+			else
+				CORE_PANIC("Unexpected relocation");
+		});
+		memory.markExecutable();
+
+		auto must_patch = memory.intoFunc<int(int)>();
+		for (int i = 0; i < 100; ++i) ASSERT_EQUAL_PRINT(std::invoke(must_patch, i), i + 9);
+	}
+
+	void testCombining() {
+		auto add_code = FIND_FUNC("mock_add");
+		auto mul_code = FIND_FUNC("mock_mul");
+		auto end_code = FIND_FUNC("mock_end");
+
+		auto memory = JitFuncMemory::allocate(add_code.size + mul_code.size + end_code.size);
+
+		auto add_addr = memory.addr;
+		auto mul_addr = stencils.relocate(add_code, add_addr);
+		auto end_addr = stencils.relocate(mul_code, mul_addr);
+		stencils.relocate(end_code, end_addr);
+
+		add_code.patch(add_addr, [&](HoleValue hole) {
+			switch (hole) {
+			case HoleValue::ContinueFn:
+				return std::bit_cast<intptr_t>(mul_addr);
+			default:
+				CORE_PANIC("unexpected relocation");
+			}
+		});
+
+		mul_code.patch(mul_addr, [&](HoleValue hole) {
+			switch (hole) {
+			case HoleValue::ContinueFn:
+				return std::bit_cast<intptr_t>(end_addr);
+			default:
+				CORE_PANIC("unexpected relocation");
+			}
+		});
+
+		memory.markExecutable();
+		auto build_func = memory.intoFunc<int(int, int)>();  // (a + b) * b
+		for (int a = 0; a < 10; ++a) {
+			for (int b = 0; b < 10; ++b) {
+				auto returned = std::invoke(build_func, a, b);
+				ASSERT_EQUAL_PRINT(returned, (a + b) * b);
+			}
+		}
 	}
 };
 
