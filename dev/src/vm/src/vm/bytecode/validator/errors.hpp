@@ -43,6 +43,15 @@ namespace vm::code {
 		}
 	};
 
+	class EvaluatingExprOnRunningThreadError: public ValidationError {
+	public:
+		constexpr static const std::string_view ERR_MSG
+			= "Trying to evaluate expression while the thread is running : ";
+
+		EvaluatingExprOnRunningThreadError():
+			  ValidationError(std::string(ERR_MSG)){}
+	};
+
 	class PathWithoutEndError: public ValidationError {
 	public:
 		constexpr static std::string_view ERR_MSG

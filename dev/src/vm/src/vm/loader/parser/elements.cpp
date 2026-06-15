@@ -357,22 +357,19 @@ namespace vm::loader::parser {
 		return { arg };                                          \
 	}
 
-#define HANDLE_PLACE_ARG(TYPE)                                                      \
-	template<>                                                                      \
-	auto parseArg(F8ParserState& state) -> vm::opargs::TYPE {                       \
-		auto                pos   = state.getPosition();                            \
-		base::Optional<u64> frame = std::nullopt;                                   \
-		if (state[0].is(lang_def::Keyword::BCFrameSpecifier)) {                     \
-			state.parse().one(lang_def::Keyword::BCFrameSpecifier);                 \
-			frame = parseNumericLiteral<u64>(state).first;                          \
-		}                                                                           \
-		auto value       = parseStr(state);                                         \
-		auto arg         = vm::opargs::TYPE{ value };                               \
-		arg.frame        = frame;                                                   \
-		arg.bytecode_pos = dia::SourcePosition(                                     \
-			pos.getLocation(), pos.getStart(), pos.getStart() + value.view().size() \
-		);                                                                          \
-		return { arg };                                                             \
+#define HANDLE_PLACE_ARG(TYPE)                                      \
+	template<>                                                      \
+	auto parseArg(F8ParserState& state) -> vm::opargs::TYPE {       \
+		base::Optional<u64> frame = std::nullopt;                   \
+		if (state[0].is(lang_def::Keyword::BCFrameSpecifier)) {     \
+			state.parse().one(lang_def::Keyword::BCFrameSpecifier); \
+			frame = parseNumericLiteral<u64>(state).first;          \
+		}                                                           \
+		auto identifier  = parseIdentifier(state);                  \
+		auto arg         = vm::opargs::TYPE{ identifier.value };    \
+		arg.frame        = frame;                                   \
+		arg.bytecode_pos = identifier.position;                     \
+		return { arg };                                             \
 	}
 		FOR_EACH(
 			HANDLE_STR_ARG,

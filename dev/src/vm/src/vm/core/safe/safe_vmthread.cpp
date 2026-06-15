@@ -643,10 +643,10 @@ namespace vm {
 
 	std::expected<low::LowCodePosition, api::ApiError> SafeVMThread::getCurrentPosition(
 		base::Optional<usize> opt_frame_idx
-	) {
+	) const {
 		variant_match(getStatus()) {
 			variant_case_novalue(api::Paused) {
-				auto frame = runtime_data.frame_stack_current;
+				const Frame * frame = runtime_data.frame_stack_current;
 
 				if_opt_some(opt_frame_idx, frame_index) {
 					u64 frames = getNumberOfCurrentStackFrames();

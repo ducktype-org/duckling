@@ -533,19 +533,21 @@ namespace vm {
 		if (!opt_thread)
 			return std::unexpected(api::ApiError{ api::OtherError{ "Thread not found" } });
 
+		auto thread_ref = *opt_thread;
+
 		std::unique_lock                                                         lock(rw_global);
 		std::expected<code::valid_function::ValidFunction, loader::LoaderLogger> valid_expr = [&] {
 			variant_match(source) {
-				variant_case(fs::File, files) { return loader.validateExpr(*opt_thread, files); }
+				variant_case(fs::File, files) { return loader.validateExpr(thread_ref, files); }
 				variant_case(code::Function, func) {
-					return loader.validateExpr(*opt_thread, func);
+					return loader.validateExpr(thread_ref, func);
 				}
 			}
 			CORE_UNREACHABLE();
 		}();
 
 		if (valid_expr.has_value()) {
-			(*opt_thread)->loadRuntimeExpr(std::move(valid_expr).value());
+			thread_ref->loadRuntimeExpr(std::move(valid_expr).value());
 			return api::Response(api::response::Empty());
 		} else {
 			std::stringstream ss;

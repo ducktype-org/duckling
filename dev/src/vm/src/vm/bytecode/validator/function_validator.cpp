@@ -1740,7 +1740,7 @@ class FunctionValidator {
 	}
 
 	template<OpCode... ops>
-	void validateForbiddenOpcodes(const std::vector<Instruction>& body) {
+	void checkIfForbiddenOpcodes(const std::vector<Instruction>& body) {
 		constexpr std::array FORBIDDEN = { ops... };
 
 		for (auto instr: body)
@@ -1775,6 +1775,19 @@ class FunctionValidator {
 		return { body, stack_states };
 	}
 
+	void validateThread() {
+		bool is_expr = thread.has_value();
+
+		if(is_expr && !std::holds_alternative<api::Paused>((*thread)->getStatus()))
+			throw EvaluatingExprOnRunningThreadError();
+	}
+
+	void validateRemainingInstructions(std::vector<Instruction> const& body) {
+		bool is_expr = thread.has_value();
+
+		if (is_expr) checkIfForbiddenOpcodes<OpCode::Op_ret_tailcall_func>(body);
+	}
+
 public:
 	FunctionValidator(
 		const valid_type::ValidTypeMap&                  types_ctx,
@@ -1793,14 +1806,13 @@ public:
 
 	std::tuple<std::vector<Instruction>, std::vector<StackStateID>, LocalStackDb> validateAndExtractReachableCode(
 	) {
+		validateThread();
 		validateSignature();
 		preprocessLabels();
 		LocalStackDb db = traverseControlFlowGraph();
 		validateFunctionEnd();
 		auto [body, stack_states] = getBody();
-
-		bool is_expr = thread.has_value();
-		if (is_expr) validateForbiddenOpcodes<OpCode::Op_ret_tailcall_func>(body);
+		validateRemainingInstructions(body);
 
 		return { body, stack_states, db };
 	}
