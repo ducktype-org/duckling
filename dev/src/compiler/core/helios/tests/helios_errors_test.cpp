@@ -80,7 +80,7 @@ private:
 
 		std::stringstream logged_messages;
 		logger->terminalPrint(logged_messages);
-		std::cerr << "Logged messages:\n" << logged_messages.str() << "\n";
+		// std::cerr << "Logged messages:\n" << logged_messages.str() << "\n";
 		auto msg_count = logger->messageCount();
 		assertEqual(
 			msg_count,

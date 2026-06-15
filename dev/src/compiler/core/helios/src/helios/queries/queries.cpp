@@ -203,15 +203,23 @@ namespace compiler::helios {
 				return f->declaration->original_symbol;
 			});
 
-			duplicatesCheck(ctx, out);
+			if (duplicatesCheck(ctx, out)) is_failed = true;
 
 			if (is_failed) return query::Failed();
 
 			return out;
 		}
 
-		static void duplicatesCheck(query::Context& ctx, const HOUTUnit& unit) {
+		/**
+		 * @brief Reports duplicated function definitions (functions sharing a mangled name).
+		 *
+		 * @return `true` if at least one duplicate was found. The caller is responsible for
+		 * failing the query gracefully; this must not throw, as `QueryModuleHOUT` does not catch
+		 * query-failure exceptions thrown from `provide`.
+		 */
+		static bool duplicatesCheck(query::Context& ctx, const HOUTUnit& unit) {
 			std::unordered_set<base::StrID> mangled_names;
+			bool                            found_duplicate = false;
 			for (const auto& func: unit.functions) {
 				base::StrID mangled_name = ctx.query<compiler::helios::mangler::QueryMangledSymbol>(
 					{ func->declaration->original_symbol }
@@ -227,17 +235,23 @@ namespace compiler::helios {
 				}
 
 				if (mangled_names.contains(mangled_name)) {
-					auto stable_pos  = func->declaration->origin.getStablePosition().value();
-					auto symbol_name = std::string(func->declaration->original_name.strView());
+					found_duplicate = true;
 
-					ctx.logInt(
-						makeBox<dia_int::DuplicatedDefinitionError>(symbol_name, stable_pos, "here")
-					);
-					query::throwFailed();
+					// Compiler-generated functions have no source position; there is nothing
+					// meaningful to point the user at, so we only emit the diagnostic for
+					// functions that originate from source.
+					auto stable_pos = func->declaration->origin.getStablePosition();
+					if (stable_pos.has_value()) {
+						auto symbol_name = std::string(func->declaration->original_name.strView());
+						ctx.logInt(makeBox<dia_int::DuplicatedDefinitionError>(
+							symbol_name, stable_pos.value(), "here"
+						));
+					}
 				} else {
 					mangled_names.insert(mangled_name);
 				}
 			}
+			return found_duplicate;
 		}
 
 		/**
