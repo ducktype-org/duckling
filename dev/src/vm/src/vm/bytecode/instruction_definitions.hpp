@@ -562,6 +562,15 @@ DEF_INSTR(cast_p16_type, (vm::opargs::Place16, value), (vm::opargs::Type, target
 DEF_INSTR(cast_p32_type, (vm::opargs::Place32, value), (vm::opargs::Type, target_type))
 DEF_INSTR(cast_p64_type, (vm::opargs::Place64, value), (vm::opargs::Type, target_type))
 
+// Copies a pointer to a fixed-size table into a pointer to a dynamic table with the same
+// element type. The pointer value is unchanged; this is a type-system-only reinterpretation.
+// @note The resulting pointer must not be passed to dynTableReAlloc.
+DEF_INSTR(
+	fstToDynTable_pptr_pptr,
+	(vm::opargs::PlacePtr, dst_table_ptr),
+	(vm::opargs::PlacePtr, src_table_ptr)
+)
+
 // ========= CONVERSION OPERATIONS ========
 
 // Sign Extension
