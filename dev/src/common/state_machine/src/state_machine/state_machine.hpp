@@ -334,11 +334,11 @@ namespace state_machine {
 	 * Handles access to an underlying `StateMachine` with a `std::mutex`.
 	 *
 	 * @tparam States Variant of state alternatives. Must match the
-	 *                definitions `States`.
+	 *                definition's `States`.
 	 * @tparam Events Variant of event alternatives. Must match the
-	 *                definitions `Events`.
+	 *                definition's `Events`.
 	 * @tparam ErrorT Error type used by actions. Must match
-	 *                the definitions `ErrorT`.
+	 *                the definition's `ErrorT`.
 	 */
 	template<typename States, typename Events, typename ErrorT = std::string>
 	class AtomicStateMachine final {
@@ -397,17 +397,17 @@ namespace state_machine {
 	};
 
 	/**
-	 * @brief Thread-safe wrapper around `StateMachine` with a ability to block on the machine until
-	 * it reaches a specific state and notifications on state changes.
+	 * @brief Thread-safe wrapper around `StateMachine` with an ability to block on the machine
+	 * until it reaches a specific state and notifications on state changes.
 	 *
 	 * Handles access to an underlying `StateMachine` with a `std::mutex`.
 	 *
 	 * @tparam States Variant of state alternatives. Must match the
-	 *                definitions `States`.
+	 *                definition's `States`.
 	 * @tparam Events Variant of event alternatives. Must match the
 	 *                definitions `Events`.
 	 * @tparam ErrorT Error type used by actions. Must match
-	 *                the definitions `ErrorT`.
+	 *                the definition's `ErrorT`.
 	 */
 	template<typename States, typename Events, typename ErrorT = std::string>
 	class WaitableStateMachine final {
@@ -471,6 +471,7 @@ namespace state_machine {
 				std::vector<Listener> listeners_copy;
 				{
 					std::lock_guard lk(listeners_mutex);
+					if (listeners.empty()) return;
 					listeners_copy = listeners;
 				}
 				for (auto& listener: listeners_copy) listener(from_snapshot, to_snapshot, phase);
@@ -597,5 +598,9 @@ namespace state_machine {
 		std::mutex listeners_mutex;
 		std::vector<Listener>
 			listeners;  ///< Functions to be invoked on each state change on the machine.
+
+		/// Cached `listeners.size()`, readable without `listeners_mutex` so `handleEvent` can cheaply
+		/// skip snapshotting the state when there are no listeners. Written under `listeners_mutex`.
+		std::atomic<u64> listener_count{ 0 };
 	};
 }
