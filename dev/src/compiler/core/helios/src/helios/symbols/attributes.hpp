@@ -12,15 +12,20 @@ namespace compiler::helios {
 	attributes::BackendDependent, attributes::DVMOnlyImpl, attributes::NativeOnlyImpl
 
 	namespace attributes {
-		struct BackendDependent {};
+		struct BackendDependent {
+			bool operator==(const BackendDependent&) const = default;
+		};
 
-		struct DVMOnlyImpl {};
+		struct DVMOnlyImpl {
+			bool operator==(const DVMOnlyImpl&) const = default;
+		};
 
-		struct NativeOnlyImpl {};
+		struct NativeOnlyImpl {
+			bool operator==(const NativeOnlyImpl&) const = default;
+		};
 	}
 
-	using Attribute
-		= std::variant<ATTRIBUTES_LIST>;
+	using Attribute = std::variant<ATTRIBUTES_LIST>;
 
 	/**
 	 * @brief Check if the given attribute can be applied to given stmt.
@@ -41,8 +46,16 @@ namespace compiler::helios {
 		const std::vector<Attribute>& attributes
 	);
 
+	/**
+	 * @brief Convert a single identifier into an attribute.
+	 * @return Empty optional when no attributes can be parsed or the parsed attribute.
+	 *
+	 * @warning Does not work on attributes in the form `@something(a,b,c)`
+	 */
 	base::Optional<Attribute> attrFromStr(base::StrID str);
 
-	template<typename Attribute>
-	base::StrID attrToStr(Attribute attr);
+	/**
+	 * @brief Get the attribute name.
+	 */
+	base::StrID attrNameStr(Attribute attr);
 }

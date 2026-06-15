@@ -84,8 +84,8 @@ namespace compiler::helios {
 		) {
 			if (pst_stmt->getAttributes().empty()) return;
 
-			if (hasAttribute(sym_id, Attribute::DVMOnlyImpl)
-			    or hasAttribute(sym_id, attributes::NativeOnlyImpl)) {
+			if (hasAttribute(sym_id, attributes::DVMOnlyImpl{})
+			    or hasAttribute(sym_id, attributes::NativeOnlyImpl{})) {
 				// Check if in the same scope as the symbol there is a fundecl with the same type.
 
 				auto result
@@ -93,9 +93,9 @@ namespace compiler::helios {
 				if (result.leaves.size() != 1) {
 					std::string error_msg = base::strConcat(
 						"When using a '",
-						attrToStr(attributes::NativeOnlyImpl),
+						attrNameStr(attributes::NativeOnlyImpl{}),
 						"' or '",
-						attrToStr(Attribute::DVMOnlyImpl),
+						attrNameStr(attributes::DVMOnlyImpl{}),
 						"' attribute expected to find a function "
 						"declaration in the same scope."
 					);
@@ -122,11 +122,11 @@ namespace compiler::helios {
 					query::throwFailed();
 				}
 
-				if (not hasAttribute(target_sym, attributes::BackendDependent)
+				if (not hasAttribute(target_sym, attributes::BackendDependent{})
 				    or kind(target_sym) != SymbolKind::FunctionDeclaration) {
 					std::string error_msg = base::strConcat(
 						"Function should have a `",
-						attrToStr(attributes::BackendDependent),
+						attrNameStr(attributes::BackendDependent{}),
 						"` attribute and be a `fundecl`."
 					);
 					ctx.logInt(makeBox<dia_int::PlaceholderError>(

@@ -77,10 +77,9 @@ namespace compiler::helios {
 	base::Optional<ScopeID> maybeScope(SymID);
 
 	/**
-	 * Check if a symbol has some attribute. 
+	 * Check if a symbol has some attribute.
 	 */
-	template<typename Attribute>
-	bool hasAttribute(SymID);
+	bool hasAttribute(SymID, Attribute attr);
 
 	/**
 	 * @return PST Stmt element symbol was created from.

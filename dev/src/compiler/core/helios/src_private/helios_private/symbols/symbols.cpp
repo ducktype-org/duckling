@@ -199,16 +199,13 @@ namespace compiler::helios {
 		});
 	}
 
-	template<typename Attribute>
-	bool hasAttribute(SymID id) {
-		return std::ranges::any_of(getSymRef(id)->common.attributes, [](auto a) {
-			return base::holds<Attribute>(a);
-		});
+	bool hasAttribute(SymID id, Attribute target) {
+		return std::ranges::any_of(
+			getSymRef(id)->common.attributes,
+			[&target](const Attribute& a) { return a == target; }
+		);
 	}
 
-	#define MAKE_ATTR_INSTANCE(attr) template bool hasAttribute<attr>(SymID id);
-	FOR_EACH(MAKE_ATTR_INSTANCE, ATTRIBUTES_LIST)
-	
 
 	std::string prettyDebugPrint(SymID sym, query::Context& ctx) {
 		// Short summary
@@ -1064,14 +1061,14 @@ namespace compiler::helios {
 			auto               decl_name = name(fun_decl);
 			for (auto s: symbols) {
 				if (name(s) == decl_name and kind(s) == SymbolKind::Function) {
-					if ((not hasAttribute(s, Attribute::DVMOnlyImpl))
-					    and (not hasAttribute(s, attributes::NativeOnlyImpl))) {
+					if ((not hasAttribute(s, attributes::DVMOnlyImpl{}))
+					    and (not hasAttribute(s, attributes::NativeOnlyImpl{}))) {
 						std::string error_msg = base::strConcat(
 							"The symbols that provide implementation for the declaration should "
 							"have '",
-							attrToStr(Attribute::DVMOnlyImpl),
+							attrNameStr(attributes::DVMOnlyImpl{}),
 							"' or '",
-							attrToStr(attributes::NativeOnlyImpl),
+							attrNameStr(attributes::NativeOnlyImpl{}),
 							"' as an attribute."
 						);
 						ctx.logInt(makeBox<dia_int::PlaceholderError>(
@@ -1203,7 +1200,7 @@ namespace compiler::helios {
 				std::vector<SymID> result;
 				// For function declarations we check if a function declaration is a backend
 				// dependent symbol.
-				if (hasAttribute(key, attributes::BackendDependent)) {
+				if (hasAttribute(key, attributes::BackendDependent{})) {
 					// If yes then we append all the results from all implementations.
 					return getBackendDependentSymbols(ctx, key);
 				}
