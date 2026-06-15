@@ -1483,7 +1483,7 @@ class FunctionValidator {
 					dst_ptr, types_ctx, instr
 				);
 				if (src_table->inner != dst_table->inner)
-					throw FstToDynTableTypeMismatchError(instr);
+					throw DynamicTableTypeMismatchError(instr);
 			}
 			instr_case_novalue(Op_nop, Op_exit, Op_initFromVmValue) {}
 		}

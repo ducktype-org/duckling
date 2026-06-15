@@ -389,10 +389,6 @@ namespace vm::code {
 		DynamicTableTypeMismatchError, "Dynamic table type does not match the expected type."
 	);
 	DEFINE_INSTRUCTION_ERROR(
-		FstToDynTableTypeMismatchError,
-		"Fixed-size and dynamic table element types do not match in fstToDynTable."
-	);
-	DEFINE_INSTRUCTION_ERROR(
 		StructTypeMismatchError, "Struct type does not match the expected type."
 	);
 	DEFINE_INSTRUCTION_ERROR(
