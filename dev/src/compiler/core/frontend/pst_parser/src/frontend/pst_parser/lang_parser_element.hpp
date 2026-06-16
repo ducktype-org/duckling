@@ -75,9 +75,9 @@ namespace pst {
 
 	protected:
 		/**
-		 * @todo Change position handling
-		 * @todo Consider what should happen with context hash
-		 * @todo Consider what should happen with token ownership
+		 * @TODO: #2938 Change position handling
+		 * @TODO: #2938 Consider what should happen with context hash
+		 * @TODO: #2938 Consider what should happen with token ownership
 		 */
 		explicit LangElement(pst::CloneDummy, const LangElement& other):
 			  source_position(other.source_position),
