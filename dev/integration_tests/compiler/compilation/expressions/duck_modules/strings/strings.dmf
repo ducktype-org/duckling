@@ -7,7 +7,7 @@ fun helloWorld() = {
 }
 
 fun prependAppend() = {
-    let b = "b";
+    let b = "b".toString();
     print('a' +: b);
     print("\n");
     print(b :+ 'c' :+ 'd');
@@ -15,8 +15,8 @@ fun prependAppend() = {
 }
 
 fun concat() = {
-    let hello = "Hello, ";
-    let world = "world!\n";
+    let hello = "Hello, ".toString();
+    let world = "world!\n".toString();
     print(hello ++ world);
 }
 

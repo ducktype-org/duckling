@@ -12,6 +12,7 @@
 #include <token_parser_core/common_elements.hpp>
 #include <token_parser_core/parser_state.hpp>
 
+#include <vm/bytecode/const_value.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/type_of_data.hpp>
 
@@ -45,10 +46,12 @@ namespace vm::loader::parser {
 	struct GlobalData final: AsmElement {
 		using AsmElement::AsmElement;
 
-		tpc::Identifier                 name;
-		tpc::Identifier                 type;
-		base::Optional<tpc::Identifier> ctor_name;
-		base::Optional<tpc::Identifier> dtor_name;
+		tpc::Identifier                     name;
+		tpc::Identifier                     type;
+		base::Optional<tpc::Identifier>     ctor_name;
+		base::Optional<tpc::Identifier>     dtor_name;
+		bool                                is_constant{ false };
+		base::Optional<code::ConstantValue> initial_value;
 
 		static Box<GlobalData> parse(F8ParserState& state);
 

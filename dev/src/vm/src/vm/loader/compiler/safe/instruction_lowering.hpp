@@ -86,7 +86,11 @@ namespace vm::loader::compiler::safe::detail {
 			const vm::loader::compiler::detail::FunctionStackContext& ctx
 		):
 			  compiler{ compiler },
-			  ctx{ ctx } {}
+			  ctx{ ctx } {
+#ifdef ENABLE_JIT
+			addLow<Op_jitEntrypoint>();
+#endif
+		}
 
 		std::pair<low::MicroBytecode, decltype(label_id_to_offset)> build() {
 			return { std::move(result), std::move(label_id_to_offset) };
@@ -147,8 +151,14 @@ namespace vm::loader::compiler::safe::detail {
 					makeLowInstruction(T::OPCODE, lowerLowArg<LowArgs>(std::forward<Args>(args))...)
 				);
 #if (BUILD_TYPE_DEV_DEBUG)
-				result.back().opcode_id      = T::OPCODE;
-				result.back().representation = current_high_instruction_representation;
+	#ifdef ENABLE_JIT
+				if constexpr (!std::is_same_v<T, Op_jitEntrypoint>) {
+	#endif
+					result.back().opcode_id      = T::OPCODE;
+					result.back().representation = current_high_instruction_representation;
+	#ifdef ENABLE_JIT
+				}
+	#endif
 #endif
 				next_instruction_index++;
 			}(static_cast<T::ArgTypes*>(nullptr));
@@ -442,13 +452,7 @@ namespace vm::loader::compiler::safe::detail {
 			instr_case(high::Op_jmp_label, i) { addLow<Op_jmp_label>(i.label); }
 			instr_case(high::Op_jmpIf_label, i) { addLow<Op_jmpIf_label>(i.label); }
 			instr_case(high::Op_jmpIfNot_label, i) { addLow<Op_jmpIfNot_label>(i.label); }
-			instr_case(high::Op_call_func, i) {
-#ifdef ENABLE_JIT
-				addLow<Op_jit_call_entrypoint>(i.function);
-#else
-				addLow<Op_call_func>(i.function);
-#endif
-			}
+			instr_case(high::Op_call_func, i) { addLow<Op_call_func>(i.function); }
 			instr_case(high::Op_call_builtinfunc, i) { addLow<Op_call_builtinfunc>(i.function); }
 			instr_case(high::Op_call_cfunc, i) { addLow<Op_call_cfunc>(i.function); }
 			instr_case(high::Op_set_threadctx, i) { addLow<Op_set_threadctx>(i.function); }
@@ -464,7 +468,7 @@ namespace vm::loader::compiler::safe::detail {
 				addLow<Op_setVTable_pptr_type>(i.object_ptr, i.type);
 			}
 			instr_case(high::Op_resetVTable_pptr, i) { addLow<Op_resetVTable_pptr>(i.object_ptr); }
-			instr_case(high::Op_upcast_pptr_pptr, i) { addLow<Op_upcast_pptr_pptr>(i.dst, i.src); }
+			instr_case(high::Op_upcast_pptr_pptr, i) { addLow<Op_mov_pptr_pptr>(i.dst, i.src); }
 			instr_case(high::Op_downcast_pptr_pptr, i) {
 				addLow<Op_downcast_pptr_pptr>(i.dst, i.src);
 				opargs::Type variant_type = getPlaceType(i.dst)->getInnerType().value()->getName();
@@ -567,6 +571,9 @@ namespace vm::loader::compiler::safe::detail {
 			instr_case(high::Op_cast_p16_type, i) {}
 			instr_case(high::Op_cast_p32_type, i) {}
 			instr_case(high::Op_cast_p64_type, i) {}
+			instr_case(high::Op_fstToDynTable_pptr_pptr, i) {
+				addLow<Op_mov_pptr_pptr>(i.dst_table_ptr, i.src_table_ptr);
+			}
 
 			// Sign Extension
 			instr_case(high::Op_sext_p16_p8, i) { addLow<Op_sext_p16_p8>(i.dst, i.src); }

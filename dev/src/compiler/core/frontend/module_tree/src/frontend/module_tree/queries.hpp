@@ -133,4 +133,15 @@ namespace compiler::frontend {
 	base::Optional<ModuleID> getRelativeModule(
 		query::Context&, ModuleID from, const std::vector<base::StrID>& path
 	);
+
+	/**
+	 * @brief Get the module by its absolute path, which includes the package name and the path of
+	 * submodules. It's used to lookup the language primitives.
+	 *
+	 * @warning Since this ignores the dependencies between modules, maybe it should never be used
+	 * in other cases than standard library packages.
+	 */
+	base::Optional<ModuleID> getModuleByAbsolutePath(
+		query::Context& ctx, base::StrID package_name, const std::vector<base::StrID>& path
+	);
 }

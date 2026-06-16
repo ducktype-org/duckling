@@ -22,6 +22,7 @@ namespace vm::debugger {
 		ProgramRunArguments main_args;
 
 		events::Listener<api::ProcStatus> updater;
+		events::Listener<std::string>     vm_output;
 
 		// Event handlers for the debugger:
 
@@ -34,6 +35,11 @@ namespace vm::debugger {
 		 * @brief Emits error message in human readable format on any error
 		 */
 		events::Emitter<std::string> on_error;
+
+		/**
+		 * @brief Emits the output from the VM when VM outputs
+		 */
+		events::Emitter<std::string> on_output;
 
 	public:
 		Debugger();
@@ -54,6 +60,11 @@ namespace vm::debugger {
 		 * @brief Attach Listener to Emitter that emits error message when any error raises
 		 */
 		void attachOnErrorListener(events::Listener<std::string>& listener);
+
+		/**
+		 * @brief Attach Listener to Emitter that emits error message when any error raises
+		 */
+		void attachOnOutputListener(events::Listener<std::string>& listener);
 
 		// Methods to control the debugging session:
 

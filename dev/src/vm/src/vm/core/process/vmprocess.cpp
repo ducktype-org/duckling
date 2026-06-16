@@ -117,6 +117,11 @@ namespace vm {
 				return api::Response(api::response::Empty());
 			}
 
+			variant_case(api::request::AttachOutputListener, request) {
+				io.attachOutputListener(request.listener);
+				return api::Response(api::response::Empty());
+			}
+
 			variant_case(api::request::SetBreakpoint, request) {
 				return setBreakpoint(
 					request.function_name, request.instruction_index, request.enable
@@ -166,6 +171,8 @@ namespace vm {
 			std::unique_lock<std::shared_mutex> lock(rw_status);
 			status = new_status;
 		}
+		// Emit after releasing rw_status: observers may call isExecutionPanicked() which
+		// takes a shared_lock on rw_status; emitting under the unique_lock would self-deadlock.
 		on_status_changed.emitEvent(new_status);
 		status_cv.notify_all();
 
@@ -192,6 +199,7 @@ namespace vm {
 			}
 		}
 		if (updated) {
+			// Emit after releasing rw_status: same invariant as setStatus.
 			on_status_changed.emitEvent(emitted_status);
 			status_cv.notify_all();
 			if (api::isStatusTerminal(emitted_status)) onTerminalStatus(emitted_status);
@@ -202,6 +210,11 @@ namespace vm {
 	api::ProcStatus IVMProcess::getStatus() {
 		std::shared_lock lock(rw_status);
 		return status;
+	}
+
+	bool IVMProcess::isExecutionPanicked() {
+		std::shared_lock lock(rw_status);
+		return std::holds_alternative<api::ExecutionPanicked>(status);
 	}
 
 	std::expected<api::Response, api::ApiError> IVMProcess::input(const api::request::Input& request

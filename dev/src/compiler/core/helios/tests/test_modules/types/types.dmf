@@ -5,7 +5,7 @@ const SimpleFloat: f32 = 4.0;
 
 const SimpleBool: bool = true;
 
-const SimpleString: str = "Hello World!";
+const SimpleString: String = "Hello World!";
 
 # alias TII = (i32, i32); @future
 

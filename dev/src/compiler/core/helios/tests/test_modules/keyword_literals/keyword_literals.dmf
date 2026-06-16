@@ -33,5 +33,5 @@ fun foo() = {
     if (true) { }
     while (false) { }
 
-    var v_str: str = "";
+    var v_str: String = "";
 }

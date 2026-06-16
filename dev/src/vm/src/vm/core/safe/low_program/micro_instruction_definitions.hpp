@@ -394,9 +394,18 @@ DEF_MICRO_INSTR(jmpIfNot_label, vm::low::opargs::Label)
 
 DEF_MICRO_INSTR(call_func, vm::low::opargs::FunctionID)
 #ifdef ENABLE_JIT
-// call a function, with the possibility to compile it later
-DEF_MICRO_INSTR(jit_call_entrypoint, vm::low::opargs::FunctionID)
+// function prologue, potentially compiles the current function and executes the native version
+// mentioned in dev/scripts/jit/jitable_interface.py
+/**
+ * @brief Function prologue, potentially compiles the function in which it is situated and executes
+ * the native version.
+ * @note Unoptimizable by JIT, listed in dev/scripts/py/jit/jitable_interface.py. */
+DEF_MICRO_INSTR(jitEntrypoint)
 #endif
+
+/**
+ * @note Unoptimizable by JIT, listed in dev/scripts/py/jit/jitable_interface.py.
+ */
 DEF_MICRO_INSTR(call_builtinfunc, vm::low::opargs::BuiltinFunctionID)
 DEF_MICRO_INSTR(call_cfunc, vm::low::opargs::ExtCFunction)
 
@@ -429,8 +438,6 @@ DEF_MICRO_INSTR(output_p32, vm::low::opargs::Place32)
 DEF_MICRO_INSTR(setVTable_pptr_type, vm::low::opargs::PlacePtr, vm::low::opargs::Type)
 // deinitialises vtable pointer
 DEF_MICRO_INSTR(resetVTable_pptr, vm::low::opargs::PlacePtr)
-// casts pointed object to its superclass
-DEF_MICRO_INSTR(upcast_pptr_pptr, vm::low::opargs::PlacePtr, vm::low::opargs::PlacePtr)
 // tries to cast pointed object to its subclass, requires that ext_64 is next
 DEF_MICRO_INSTR(downcast_pptr_pptr, vm::low::opargs::PlacePtr, vm::low::opargs::PlacePtr)
 // calls a method of specified name on an a pointer. Performs the dynamic dispatch.
@@ -671,6 +678,9 @@ DEF_MICRO_INSTR(nop)
 // terminates execution
 DEF_MICRO_INSTR(exit)
 
+/**
+ * @note Unoptimizable by JIT, listed in dev/scripts/py/jit/jitable_interface.py.
+ */
 DEF_MICRO_INSTR(breakpoint)
 
 DEF_MICRO_INSTR(stepGil)

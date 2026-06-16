@@ -162,6 +162,11 @@ namespace compiler::helios {
 						// are defined in C++, and will need to be declared with external linkage.
 						return false;
 					}
+					variant_case_novalue(defgen::GeneratedSymbolData::ScriptMainWrapper) {
+						// Script main is the process entry point, so LLVM must not treat it as
+						// discardable generated helper code.
+						return false;
+					}
 					variant_default { return true; }
 				}
 			}

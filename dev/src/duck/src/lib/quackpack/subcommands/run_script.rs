@@ -4,13 +4,12 @@ use std::path::Path;
 use clap::ArgMatches;
 use tracing::debug;
 
-use crate::quackpack::core::compile::duckc::{ArtifactsDir, CompilationType};
+use crate::quackpack::core::compile::duckc::ArtifactsDir;
 use crate::quackpack::core::compile::profiles::{DEFAULT_SCRIPT_PROFILE_NAME, Profile};
-use crate::quackpack::core::compile::{self, BuildContext};
 use crate::quackpack::core::storage::venv_id::{ToVenvId, VenvId};
 use crate::quackpack::core::storage::{StorageSyncOptions, sync};
-use crate::quackpack::core::{AllowGlobalPackage, PackageLoader, run};
-use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail_internal};
+use crate::quackpack::core::{AllowGlobalPackage, PackageContext, PackageLoader, run};
+use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail, qp_bail_internal};
 
 pub struct RunScriptOptions<'duck> {
     /// Current [`DuckContext`].
@@ -88,7 +87,10 @@ impl<'duck> RunScriptOptions<'duck> {
 }
 
 /// Run script given options.
+#[expect(unreachable_code, unused_variables)]
 pub fn run_script<'duck>(rs_options: RunScriptOptions<'duck>) -> QuackResult<()> {
+    // @TODO: #2900 Unmock this.
+    qp_bail_internal!("@TODO: #2900 Pass scripts through `Unit`s");
     let RunScriptOptions {
         ctx,
         path,
@@ -106,19 +108,7 @@ pub fn run_script<'duck>(rs_options: RunScriptOptions<'duck>) -> QuackResult<()>
     let folder_path = path
         .parent()
         .context_internal("we assured that the path points to a file")?;
-    let package = match venv_id {
-        Some(venv_id) => {
-            debug_assert!(!global, "should be guarded by the parser");
-            PackageLoader::find_venv_by_name(ctx, venv_id)?
-        }
-        None => {
-            if global {
-                PackageLoader::global_package(ctx)?
-            } else {
-                PackageLoader::find_from_directory(folder_path, ctx, AllowGlobalPackage::Yes)?
-            }
-        }
-    };
+    let package = get_package(ctx, path, folder_path, global, venv_id)?;
     let root_identity = package.package().as_a_local_identity()?;
     let (lock, venv, storage) = sync(
         &package,
@@ -130,21 +120,54 @@ pub fn run_script<'duck>(rs_options: RunScriptOptions<'duck>) -> QuackResult<()>
     )?;
     let compile_lock = lock.into_compile_lock();
     let profile = Profile::construct_profile(profile, package.package().manifest().profiles())?;
-    let bcx = BuildContext {
-        pcx: &package,
-        root_identity,
-        freeze: venv.into(),
-        storage,
-        used_features: vec![],
-        profile,
-        script_path: Some(folder_path.join(script_name)),
-    };
-    let artifacts_dir = compile::compile(bcx, CompilationType::StandaloneScript)?;
-    drop(compile_lock);
-    execute_script(artifacts_dir, script_name, profile.dvm_bytecode, args)
+    // let bcx = BuildContext {
+    //     pcx: &package,
+    //     root_identity,
+    //     freeze: venv.into(),
+    //     storage,
+    //     used_features: vec![],
+    //     profile,
+    //     script_path: Some(folder_path.join(script_name)),
+    // };
+    // let artifacts_dir = compile::compile(bcx, CompilationType::StandaloneScript)?;
+    // drop(compile_lock);
+    // execute_script(artifacts_dir, script_name, profile.dvm_bytecode, args)
+}
+
+/// Loads the appropriate venv of the script.
+fn get_package<'duck>(
+    ctx: &'duck DuckContext,
+    path: &Path,
+    folder_path: &Path,
+    global: bool,
+    venv_id: Option<VenvId>,
+) -> QuackResult<PackageContext<'duck>> {
+    if let Some(package) = PackageContext::try_new_from_frontmatter(path.to_path_buf(), ctx)? {
+        if venv_id.is_some() {
+            qp_bail!("script with a frontmatter cannot be run with `venv` argument specified")
+        } else {
+            Ok(package)
+        }
+    } else {
+        match venv_id {
+            Some(venv_id) => {
+                debug_assert!(!global, "should be guarded by the parser");
+                PackageLoader::find_venv_by_name(ctx, venv_id)
+            }
+            None => {
+                if global {
+                    PackageLoader::global_package(ctx)
+                } else {
+                    PackageLoader::find_from_directory(folder_path, ctx, AllowGlobalPackage::Yes)
+                }
+            }
+        }
+    }
 }
 
 /// Run the created script binary.
+// @TODO: #2900 Unmock this.
+#[expect(dead_code)]
 fn execute_script(
     artifacts_dir: ArtifactsDir,
     script_name: &OsStr,
