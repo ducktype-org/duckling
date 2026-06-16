@@ -1,5 +1,7 @@
-duckc_path: "@{build_dir}/bin/duckc"
-dvm_path: "@{build_dir}/bin/VM"
+duckc_dir: "@{build_dir}/bin"
+dvm_dir: "@{duckc_dir}"
+duckc_path: "@{duckc_dir}/duckc"
+dvm_path: "@{dvm_dir}/VM"
 
 compile_duckc: "cmake --build @{build_dir} -j -- duckc"
 compile_dvm: "cmake --build @{build_dir} -j -- VM"
