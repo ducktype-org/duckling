@@ -5,6 +5,7 @@
 #include <string_id/string_id.hpp>
 #include <token_parser_core/common_elements.hpp>
 
+#include <vm/bytecode/const_value.hpp>
 #include <vm/bytecode/element_base.hpp>
 #include <vm/bytecode/type_of_data.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
@@ -44,6 +45,12 @@ namespace vm::code {
 
 		base::Optional<Identifier> ctor_name;
 		base::Optional<Identifier> dtor_name;
+
+		// Currently unused.
+		// @TODO: #2916 use this flag
+		bool is_constant{ false };
+
+		base::Optional<ConstantValue> initial_value;
 	};
 
 	struct FuncSignature final {
@@ -78,7 +85,7 @@ namespace vm::code {
 	};
 
 	/**
-	 * @brief Represents a group of types, globals and functions.
+	 * @brief Represents a group of types, globals, and functions.
 	 * @note It's not guaranteed that every code collection is valid.
 	 */
 	struct CodeCollection final {
