@@ -750,7 +750,7 @@ namespace compiler::driver {
 
 		for (const auto& task: tasks) {
 			variant_match(task.build_target) {
-				variant_case_novalue(BuildTargetDVM) {
+				variant_case_novalue(BuildTargetDVMLibrary, BuildTargetDVMExecutable) {
 					collect_modules(task.root_module, BackendType::DVM, task.root_module);
 				}
 				variant_default {
@@ -891,17 +891,32 @@ namespace compiler::driver {
 				variant_case_novalue(BuildTargetLLVM) {
 					// Do nothing for plain object files
 				}
-				variant_case(BuildTargetDVM, target_dvm) {
+				variant_case(BuildTargetDVMLibrary, target_dvm) {
+					auto debug_info_opt
+						= debug_info_artifacts_by_root_module.atMaybe(task.root_module);
+
+					if (linkDVMPackage(
+							*dvm_objects_by_root_module.atMaybe(task.root_module).value(),
+							debug_info_opt.has_value() ? *debug_info_opt.value()
+													   : std::vector<artifacts::FileArtifact>(),
+							std::string(target_dvm.output_file_stem.strView())
+						)
+					        .isBad())
+						result = base::BAD;
+				}
+				variant_case(BuildTargetDVMExecutable, target_dvm) {
+					// If the `target_dvm.link_std_packages` is on, we link the std packages as well.
 					std::vector<artifacts::FileArtifact> dbc_arts
 						= *dvm_objects_by_root_module.atMaybe(task.root_module).value();
 					if (target_dvm.link_std_packages)
 						for (auto& art: getStdLibDVMArtifacts()) dbc_arts.push_back(std::move(art));
 
 					std::vector<artifacts::FileArtifact> debug_info_arts;
+
 					if_opt_some(
 						debug_info_artifacts_by_root_module.atMaybe(task.root_module), debug_arts
 					) {
-						for (auto& art: *debug_arts) debug_info_arts.push_back(art);
+						for (const auto& art: *debug_arts) debug_info_arts.push_back(art);
 						if (target_dvm.link_std_packages)
 							for (auto& art: getStdLibDVMDebugInfoArtifacts())
 								debug_info_arts.push_back(std::move(art));

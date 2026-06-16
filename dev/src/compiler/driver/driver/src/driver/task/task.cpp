@@ -70,13 +70,23 @@ namespace compiler::driver {
 
 		BuildTarget build_target;
 
-		if (strategy && strategy->view() == "dvm") {
-			auto output
-				= js::getString(json, "output_file", "DVM task requires an output file!", report);
+		if (strategy && strategy->view() == "dvm_lib") {
+			auto output = js::getString(
+				json, "output_file", "DVM library task requires an output file!", report
+			);
 			if (!output) had_error = true;
 
-			build_target = BuildTargetDVM{
+			build_target = BuildTargetDVMLibrary{
 				.output_file_stem = output.copyValueOr(base::StrID("package_dvm")),
+			};
+		} else if (strategy && strategy->view() == "dvm_exe") {
+			auto output = js::getString(
+				json, "output_file", "DVM executable task requires an output file!", report
+			);
+			if (!output) had_error = true;
+
+			build_target = BuildTargetDVMExecutable{
+				.output_file_stem = output ? *output : base::StrID(),
 			};
 		} else if (strategy && strategy->view() == "native") {
 			auto output
@@ -220,7 +230,7 @@ namespace compiler::driver {
 		} else if (strategy) {
 			report(
 				base::strConcat("Unknown task strategy: \"", strategy->str(), "\""),
-				R"(Expected "dvm", "native", "obj", or "lib".)",
+				R"(Expected "dvm_exe", "dvm_lib", "native", "obj", or "lib".)",
 				true
 			);
 			had_error = true;

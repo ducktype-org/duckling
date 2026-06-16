@@ -565,7 +565,7 @@ private:
 			base::strConcat("Executable file does not exist: ", exe_path.native())
 		);
 
-		driver::compileEntirePackage(package_info, driver::BuildTargetDVM{});
+		driver::compileEntirePackage(package_info, driver::BuildTargetDVMLibrary{});
 
 		auto dvm_exe_path = artifacts_path / "package_dvm.dbc";
 		assertTrue(
@@ -1036,7 +1036,7 @@ private:
 			{}
 		);
 
-		driver::compileEntirePackage(dvm_package_info, driver::BuildTargetDVM{});
+		driver::compileEntirePackage(dvm_package_info, driver::BuildTargetDVMLibrary{});
 		auto dvm_compile_node
 			= query::internal::makeNodeID<driver::CompileModule>(driver::KeyOf_CompileModule{
 				.module_id        = dvm_package_info.getRootModule().illegalAccess().getID(),

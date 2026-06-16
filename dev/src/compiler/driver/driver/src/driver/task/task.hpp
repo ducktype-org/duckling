@@ -44,16 +44,22 @@ namespace compiler::driver {
 	/**
 	 * @brief Package build target.
 	 */
-	struct BuildTargetDVM final {
+	struct BuildTargetDVMLibrary final {
 		/**
 		 * @brief The output file path stem for the compiled DVM package.
 		 */
 		base::StrID output_file_stem = base::StrID("package_dvm");
+	};
+
+	struct BuildTargetDVMExecutable final {
+		/**
+		 * @brief The output file path stem for the compiled DVM executable.
+		 */
+		base::StrID output_file_stem;
 
 		/**
-		 * @brief Whether to include in the final output the standard library packages that the
-		 * package depends on.
-		 * @TODO: #... this is a temporary way of creating dvm libs, make it the same as with native
+		 * @brief Whether to include in the final output the standard 
+		 * library packages that the executable depends on.
 		 */
 		bool link_std_packages = false;
 	};
@@ -91,7 +97,8 @@ namespace compiler::driver {
 	 * @brief A variant type representing different build targets.
 	 */
 	using BuildTarget = std::variant<
-		BuildTargetDVM,
+		BuildTargetDVMLibrary,
+		BuildTargetDVMExecutable,
 		BuildTargetLLVM,
 		BuildTargetLLVMExecutable,
 		BuildTargetLLVMStaticLibrary>;

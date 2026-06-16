@@ -224,8 +224,9 @@ namespace compiler::driver {
 			                                    .archiving_options = {} },
 			});
 			tasks.push_back(PackageCompilationTask{
-				.root_module  = pkg->getRootModule().illegalAccess().getID(),
-				.build_target = BuildTargetDVM{ .output_file_stem = base::StrID(config.name) },
+				.root_module = pkg->getRootModule().illegalAccess().getID(),
+				.build_target
+				= BuildTargetDVMLibrary{ .output_file_stem = base::StrID(config.name) },
 			});
 		}
 		return tasks;

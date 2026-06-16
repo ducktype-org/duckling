@@ -52,22 +52,22 @@
 
         {
             "package": "lib_a",
-            "strategy": "dvm",
+            "strategy": "dvm_lib",
             "output_file": "lib_a_dvm"
         },
         {
             "package": "lib_b",
-            "strategy": "dvm",
+            "strategy": "dvm_lib",
             "output_file": "lib_b_dvm"
         },
         {
             "package": "app1",
-            "strategy": "dvm",
+            "strategy": "dvm_exe",
             "output_file": "app1_dvm"
         },
         {
             "package": "app2",
-            "strategy": "dvm",
+            "strategy": "dvm_exe",
             "output_file": "app2_dvm"
         },
 
