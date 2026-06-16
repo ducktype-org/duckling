@@ -63,7 +63,6 @@ extern "C" {
 	uint64_t builtin_input_u64();
 	int32_t  builtin_output_f64(double v);
 	double   builtin_input_f64();
-	int64_t  builtin_output_str(str s);
 
 	// String I/O @TODO: #2636 move to Duckling
 	int64_t print(String s);
@@ -163,11 +162,6 @@ String builtin_input_string() {
 }
 
 int64_t print(String s) {
-	// Use fwrite to handle non-null-terminated strings and binary data safely.
-	return int64_t(fwrite(s.data, sizeof(char), s.length, stdout));
-}
-
-int64_t builtin_output_str(str s) {
 	// Use fwrite to handle non-null-terminated strings and binary data safely.
 	return int64_t(fwrite(s.data, sizeof(char), s.length, stdout));
 }
