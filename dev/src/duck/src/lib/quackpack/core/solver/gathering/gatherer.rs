@@ -197,7 +197,11 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
         let FetcherResponse::Some(registry_manifest) = fetcher_response else {
             return Ok(GathererComputation::only_success(fetch_failure()));
         };
-        let manifest: QuackResult<Manifest> = registry_manifest.try_into();
+        let manifest: QuackResult<Manifest> = registry_manifest
+            .try_into()
+            .with_context(|| {
+                format!("registry `{url}` has responded with an invalid JSON for the package `{real_name}` version `{}", request.version)
+            });
         let computation = match manifest {
             Ok(manifest) => GathererComputation::only_success(FetchResponse::Success(
                 FetchSuccess::Pinned(PinnedSuccess {
@@ -247,7 +251,12 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
         };
         let mut errors = vec![];
         for manifest in fetcher_response.packages_metadata {
-            let manifest: QuackResult<Manifest> = manifest.try_into();
+            let version = manifest.metadata.version;
+            let manifest: QuackResult<Manifest> = manifest
+                .try_into()
+                .with_context(|| {
+                    format!("registry `{url}` has responded with an invalid JSON for the package multimetadata of `{real_name}` version `{version}")
+                });
             match manifest {
                 Ok(manifest) => {
                     fetch_response.fetched_manifests.insert(

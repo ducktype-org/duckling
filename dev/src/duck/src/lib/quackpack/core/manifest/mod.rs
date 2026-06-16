@@ -17,10 +17,11 @@ pub use parse::*;
 pub use profiles::*;
 pub use source::*;
 
+use super::valid_package_name::ValidPackageName;
 use crate::duck::util::duck_home::DuckHome;
 use crate::quackpack::core::Version;
 use crate::quackpack::schemas::registry;
-use crate::{QuackError, StrId};
+use crate::{QuackError, QuackResultContext, StrId};
 
 #[derive(Clone, Debug)]
 /// Machine friendly abstraction over a manifest.
@@ -122,6 +123,8 @@ impl TryFrom<registry::Manifest> for Manifest {
         } = metadata;
         let authors = authors.into_iter().collect();
         let metadata = PackageMetadata::new(authors, Some(license), Some(description));
+        ValidPackageName::new(&name)
+            .context("registry responded with a package with an invalid name")?;
         Ok(Manifest::new(
             name.into(),
             version,
