@@ -24,22 +24,26 @@ function main {} -> { i64 } {
     init_pany_type out_i32, i32;
     structLoad_pany_pste_field out_i32, elem, Point.x;
     call_builtinfunc builtin_output_i32;
-
     # Output Point[0].y = 0x87654321 = -10
+
     init_pany_type out_i32_2, i32;
     structLoad_pany_pste_field out_i32_2, elem, Point.y;
     call_builtinfunc builtin_output_i32;
+    deinit;
 
     # Output Point[0].is_ok = 0xFF = -1
+    init_pany_type res_i32, i32;
     init_pany_type out_i8, i8;
     structLoad_pany_pste_field out_i8, elem, Point.is_ok;
     call_builtinfunc builtin_output_char;
+    deinit;
 
     # Load second element
     mov_p64_imm idx, 1;
     fixedSizeTableLoad_pany_pfst_p64 elem, answers, idx;
 
     # Output Point[1].x = 0x00000001 = 1
+    init_pany_type res_i64, i64;
     init_pany_type out_i32_3, i32;
     structLoad_pany_pste_field out_i32_3, elem, Point.x;
     call_builtinfunc builtin_output_i32;
@@ -48,11 +52,14 @@ function main {} -> { i64 } {
     init_pany_type out_i32_4, i32;
     structLoad_pany_pste_field out_i32_4, elem, Point.y;
     call_builtinfunc builtin_output_i32;
+    deinit;
 
     # Output Point[1].is_ok = 0x0A = 10
+    init_pany_type res_i32, i32;
     init_pany_type out_i8_2, i8;
     structLoad_pany_pste_field out_i8_2, elem, Point.is_ok;
     call_builtinfunc builtin_output_char;
+    deinit;
 
     ret;
 }
