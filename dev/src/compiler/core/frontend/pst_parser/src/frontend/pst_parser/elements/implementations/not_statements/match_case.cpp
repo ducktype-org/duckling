@@ -9,6 +9,7 @@ namespace pst {
 			CloningUtils::clone(*this, branches.back().condition, branch.condition);
 			CloningUtils::clone(*this, branches.back().result, branch.result);
 		}
+		ELEMENT_CLONE_SUB_ELEMENT(pattern);
 		ParentClass::cloneSubElements(other);
 	}
 

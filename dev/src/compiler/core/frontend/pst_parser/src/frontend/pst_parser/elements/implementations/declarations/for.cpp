@@ -6,7 +6,7 @@
 #include "preamble.hpp"
 
 namespace pst {
-	CLONE_SUB_ELEMENTS_DEF(For, name, iterator, type, iterable);
+	CLONE_SUB_ELEMENTS_DEF(For, name, iterator, type, iterable, body);
 
 	bool ExprParserHelper::untilForTypeEnd(const TokenStream& state, i64 fwd) {
 		return state[fwd].is(Special::Semicolon) || state[fwd].is(NamedOperator::Assign)

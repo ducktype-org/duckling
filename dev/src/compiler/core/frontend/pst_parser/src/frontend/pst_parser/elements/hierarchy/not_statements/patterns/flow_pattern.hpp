@@ -11,8 +11,8 @@ namespace pst {
 		CLONE_SUBELEMENTS();
 
 	protected:
-		NAMED_CHILD_OPT(as_identifier, IdentifierWrapper);
 		NAMED_CHILD(pattern, AnalysisPattern);
+		NAMED_CHILD_OPT(as_identifier, IdentifierWrapper);
 		NAMED_CHILD_OPT(type_constraint, UniversalExprHolder);
 
 	protected:

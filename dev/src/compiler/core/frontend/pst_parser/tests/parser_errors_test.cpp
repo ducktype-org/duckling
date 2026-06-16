@@ -66,11 +66,19 @@ class PSTErrorTests: public tester::TestSuite {
 				if (!clone) return false;
 				x2 = countSubElements(el);
 				x3 = countSubElements(clone.ref().toOpt().value());
-				if (!(x1 == x3)) {
-					tpc::nullAwareDprint(MRef{el}, std::cerr);
-					std::cerr << "\n";
-					tpc::nullAwareDprint(clone, std::cerr);
-					std::cerr << "\n";
+
+				std::stringstream el_dprint_ss, clone_dprint_ss;
+
+				tpc::nullAwareDprint(MRef{el}, el_dprint_ss);
+				tpc::nullAwareDprint(clone, clone_dprint_ss);
+
+				std::string el_dprint = el_dprint_ss.str(), clone_dprint = clone_dprint_ss.str();
+
+				// This might break if positions are no longer the same
+				if (!(x1 == x3) || el_dprint != clone_dprint) {
+					std::println(std::cerr, "[Error] Cloning has bad output");
+
+					std::cerr << el_dprint << "\n" << clone_dprint << "\n";
 					printSubElementTypes(el);
 					std::cerr << "\n";
 					printSubElementTypes(clone.ref().toOpt().value());
@@ -87,9 +95,6 @@ class PSTErrorTests: public tester::TestSuite {
 		static bool testCloning(pst::PST<Element, Parser>& pst) {
 			if (not pst.hasErrors()) {
 				auto is_good = testElementCloning(base::CRef(&*pst.getRootElement().illegalAccess().value()));
-				if (!is_good) {
-					std::println(std::cerr, "[Error] Cloning failed");
-				}
 				return is_good;
 			}
 			return true;

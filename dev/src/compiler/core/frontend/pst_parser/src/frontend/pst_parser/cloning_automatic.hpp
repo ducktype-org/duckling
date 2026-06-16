@@ -47,12 +47,9 @@ namespace pst {
 			const base::Optional<AccessInternal<T, name>>& source
 		) {
 			if (source) {
-				if (auto src = source->internal()) {
-					MBox<T> copy = std::move(cloneCast(src.toOpt().value()));
-					copy->setParent({ &parent });
-					std::string str_name(name.value);
-					parent.addNamedChild(str_name, copy.refMut());
-					sink.emplace(std::move(copy));
+				if (source) {
+					sink.emplace(nullptr);
+					clone(parent, sink.value(), source.value());
 				}
 			}
 		}
@@ -76,12 +73,8 @@ namespace pst {
 			const base::Optional<AccessInternalAnonymous<T>>& source
 		) {
 			if (source) {
-				if (auto src = source->internal()) {
-					MBox<T> copy = std::move(cloneCast(src.toOpt().value()));
-					copy->setParent({ &parent });
-					parent.addChild(copy);
-					sink.emplace(std::move(copy));
-				}
+				sink.emplace(nullptr);
+				clone(parent, sink.value(), source.value());
 			}
 		}
 
@@ -103,7 +96,10 @@ namespace pst {
 			base::Optional<std::vector<AccessInternalAnonymous<T>>>&       sink,
 			const base::Optional<std::vector<AccessInternalAnonymous<T>>>& source
 		) {
-			if (source) clone(parent, sink.value(), source.value());
+			if (source) {
+				sink.emplace();
+				clone(parent, sink.value(), source.value());
+			}
 		}
 	};
 }
