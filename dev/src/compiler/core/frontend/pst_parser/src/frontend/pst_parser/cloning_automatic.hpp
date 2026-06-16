@@ -5,7 +5,7 @@
  * Utilities for cloning that are supposed to be used in definitions, shouldn't be included outside
  * of element implementations.
  *
- * @todo reduce the repeating code by adding functions to pst_automatic
+ * @TODO: #2937 reduce the repeating code by adding functions to pst_automatic
  */
 #pragma once
 

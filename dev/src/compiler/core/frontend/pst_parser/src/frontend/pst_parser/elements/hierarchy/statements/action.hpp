@@ -9,16 +9,12 @@ namespace pst {
 	class Action: public Stmt {
 		PARENT_CLASS(Stmt);
 		THIS_CLASS(Action);
-
-	protected:
 		CLONE_SUBELEMENTS();
 
+	protected:
 		NAMED_CHILD_OPT(expr, CommaExprHolder);
 
 	public:
-		/**
-		 * @todo handle expression
-		 */
 		ELEMENT_CLONE_DECL(Action);
 
 		STMT_CHILD_CONSTRUCTOR(Action, ElementKind::Action);

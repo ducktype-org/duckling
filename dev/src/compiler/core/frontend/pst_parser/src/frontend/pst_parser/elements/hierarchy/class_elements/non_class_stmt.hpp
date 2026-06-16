@@ -26,9 +26,6 @@ namespace pst {
 		HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const override;
 
 	public:
-		/**
-		 * @todo handle inner_decl_symbol_name
-		 */
 		CLASS_STMT_CHILD_CONSTRUCTOR(NonClassStmt, ElementKind::NonClassStmt);
 		CLASS_STMT_PARSE(NonClassStmt);
 
