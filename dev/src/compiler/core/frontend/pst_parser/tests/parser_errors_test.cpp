@@ -39,17 +39,15 @@ class PSTErrorTests: public tester::TestSuite {
 		template<typename Element>
 		static void printSubElementTypes(CRef<Element> el) {
 			std::cerr << el->elementType() << ", ";
-			for (auto& sub: el->viewChildren()) {
+			for (auto& sub: el->viewChildren())
 				printSubElementTypes(base::CRef(&*sub.illegalAccess().value()));
-			}
 		}
 
 		template<typename Element>
 		static u64 countSubElements(CRef<Element> el) {
 			u64 count = 1;
-			for (auto& sub: el->viewChildren()) {
+			for (auto& sub: el->viewChildren())
 				count += countSubElements(base::CRef(&*sub.illegalAccess().value()));
-			}
 			return count;
 		}
 
@@ -58,18 +56,16 @@ class PSTErrorTests: public tester::TestSuite {
 		static bool testElementCloning(base::CRef<Element> el) {
 			u64 x1 = 0, x2 = 0, x3 = 0, x4 = 0;
 			{
-				x1 = countSubElements(el);
+				x1         = countSubElements(el);
 				auto clone = el->clone();
-				if (!clone) {
-					std::println(std::cerr, "[Error] Cloning failed");
-				}
+				if (!clone) std::println(std::cerr, "[Error] Cloning failed");
 				if (!clone) return false;
 				x2 = countSubElements(el);
 				x3 = countSubElements(clone.ref().toOpt().value());
 
 				std::stringstream el_dprint_ss, clone_dprint_ss;
 
-				tpc::nullAwareDprint(MRef{el}, el_dprint_ss);
+				tpc::nullAwareDprint(MRef{ el }, el_dprint_ss);
 				tpc::nullAwareDprint(clone, clone_dprint_ss);
 
 				std::string el_dprint = el_dprint_ss.str(), clone_dprint = clone_dprint_ss.str();
@@ -94,7 +90,8 @@ class PSTErrorTests: public tester::TestSuite {
 		[[nodiscard]]
 		static bool testCloning(pst::PST<Element, Parser>& pst) {
 			if (not pst.hasErrors()) {
-				auto is_good = testElementCloning(base::CRef(&*pst.getRootElement().illegalAccess().value()));
+				auto is_good
+					= testElementCloning(base::CRef(&*pst.getRootElement().illegalAccess().value()));
 				return is_good;
 			}
 			return true;
