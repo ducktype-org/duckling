@@ -1,0 +1,87 @@
+dir_name: ''
+cause: ''
+dep_name: ''
+test_cmd: duck -C @{dir_name} sync
+root_error: |+
+  echo "error: when trying to parse the user manifest at \`$(pwd)/@{dir_name}/quackconfig.yaml\`
+  
+    Caused by:
+      when parsing the field \`metadata.name\`
+  
+    Caused by:
+      package has an invalid name
+
+    Caused by:
+      @{cause}"
+dep_error: |+
+  echo "error: when trying to parse the user manifest at \`$(pwd)/@{dir_name}/quackconfig.yaml\`
+  
+    Caused by:
+      when parsing the field \`dependencies.@{dep_name}\`
+  
+    Caused by:
+      dependency \`@{dep_name}\` has an invalid name
+
+    Caused by:
+      @{cause}"
+Tests:
+  sync:
+    Description: name-related errors
+    Cases:
+      main_package_name_cannot_be_empty:
+        dir_name: empty_package_name
+        cause: package name is empty
+        ExitCode: 1
+        Err:
+          Run: "@{root_error}"
+      package_name_starts_with_a_dash:
+        dir_name: package_name_starts_with_a_dash
+        cause: package name \`-a\` starts with an illegal character \`-\`
+        ExitCode: 1
+        Err:
+          Run: "@{root_error}"
+      package_name_starts_with_an_illegal_character:
+        dir_name: package_name_starts_with_an_illegal_character
+        cause: package name \`£a\` starts with an illegal character \`£\`
+        ExitCode: 1
+        Err:
+          Run: "@{root_error}"
+      package_name_contains_an_illegal_character:
+        dir_name: package_name_contains_an_illegal_character
+        cause: package name \`ab-£\` contains an illegal character \`£\`
+        ExitCode: 1
+        Err:
+          Run: "@{root_error}"
+      package_name_can_contain_a_dash:
+        dir_name: package_name_can_contain_a_dash
+        ExitCode: 0
+        Output:
+          String: 'info: successfully synchronized venv \`foo-bar\`\n'
+      dependency_name_cannot_be_empty:
+        dir_name: empty_dependency_name
+        dep_name: ''
+        cause: package name is empty
+        ExitCode: 1
+        Err:
+          Run: "@{dep_error}"
+      dependency_name_starts_with_a_dash:
+        dir_name: dependency_name_starts_with_a_dash
+        dep_name: '-a'
+        cause: package name \`-a\` starts with an illegal character \`-\`
+        ExitCode: 1
+        Err:
+          Run: "@{dep_error}"
+      dependency_name_starts_with_an_illegal_character:
+        dir_name: dependency_name_starts_with_an_illegal_character
+        dep_name: '£a'
+        cause: package name \`£a\` starts with an illegal character \`£\`
+        ExitCode: 1
+        Err:
+          Run: "@{dep_error}"
+      dependency_name_contains_an_illegal_character:
+        dir_name: dependency_name_contains_an_illegal_character
+        dep_name: 'ab-£'
+        cause: package name \`ab-£\` contains an illegal character \`£\`
+        ExitCode: 1
+        Err:
+          Run: "@{dep_error}"
