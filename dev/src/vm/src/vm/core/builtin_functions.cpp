@@ -107,11 +107,11 @@ namespace vm::builtins {
 		return base::safeIntConv<i64>(output.size());
 	}
 
-	i64 FunctionHandlers::builtinOutputChar(SafeVMThread& thread, i8 arg) {
+	i32 FunctionHandlers::builtinOutputChar(SafeVMThread& thread, i8 arg) {
 		std::string output(1, static_cast<char>(arg));
 		thread.safe_process.getIO().writeOutput(output);
 
-		return base::safeIntConv<i64>(output.size());
+		return base::safeIntConv<i32>(output.size());
 	}
 
 	void FunctionHandlers::builtinOutputString(SafeVMThread& thread, Pointer ptr) {

@@ -49,6 +49,13 @@ namespace compiler::driver {
 		 * @brief The output file path stem for the compiled DVM package.
 		 */
 		base::StrID output_file_stem = base::StrID("package_dvm");
+
+		/**
+		 * @brief Whether to include in the final output the standard library packages that the
+		 * package depends on.
+		 * @TODO: #... this is a temporary way of creating dvm libs, make it the same as with native
+		 */
+		bool link_std_packages = false;
 	};
 
 	/**

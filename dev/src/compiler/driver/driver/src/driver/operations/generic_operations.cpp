@@ -5,6 +5,8 @@
 
 #include "generic_operations.hpp"
 
+#include "driver_private/standard_library/standard_library.hpp"
+
 #include <debug_info/debug_info_io.hpp>
 #include <driver/debug_info/debug_info.hpp>
 #include <driver/module_flags/module_flags.hpp>
@@ -658,7 +660,12 @@ namespace compiler::driver {
 				auto di_or_error = debug_info::loadFromStream(in);
 				if (!di_or_error.has_value()) {
 					CORE_USER_LOG(
-						"DVM: failed to parse debug info file: ", di_or_error.error(), "\n"
+						"DVM: failed to parse debug info file: ",
+						di_art.file.getFilePath().string(),
+						"\n"
+						"Reason: ",
+						di_or_error.error(),
+						"\n"
 					);
 					return base::BAD;
 				}
@@ -885,15 +892,22 @@ namespace compiler::driver {
 					// Do nothing for plain object files
 				}
 				variant_case(BuildTargetDVM, target_dvm) {
-					auto debug_info_opt
-						= debug_info_artifacts_by_root_module.atMaybe(task.root_module);
+					std::vector<artifacts::FileArtifact> dbc_arts
+						= *dvm_objects_by_root_module.atMaybe(task.root_module).value();
+					if (target_dvm.link_std_packages)
+						for (auto& art: getStdLibDVMArtifacts()) dbc_arts.push_back(std::move(art));
 
-					if (linkDVMPackage(
-							*dvm_objects_by_root_module.atMaybe(task.root_module).value(),
-							debug_info_opt.has_value() ? *debug_info_opt.value()
-													   : std::vector<artifacts::FileArtifact>(),
-							std::string(target_dvm.output_file_stem.strView())
-						)
+					std::vector<artifacts::FileArtifact> debug_info_arts;
+					if_opt_some(
+						debug_info_artifacts_by_root_module.atMaybe(task.root_module), debug_arts
+					) {
+						for (auto& art: *debug_arts) debug_info_arts.push_back(art);
+						if (target_dvm.link_std_packages)
+							for (auto& art: getStdLibDVMDebugInfoArtifacts())
+								debug_info_arts.push_back(std::move(art));
+					}
+
+					if (linkDVMPackage(dbc_arts, debug_info_arts, target_dvm.output_file_stem.str())
 					        .isBad())
 						result = base::BAD;
 				}

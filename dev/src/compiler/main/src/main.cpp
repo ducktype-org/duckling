@@ -611,7 +611,8 @@ clah::Clah getClahForMain() {
 			                                        .copyValueOr("package_dvm");
 
 						build_target = compiler::driver::BuildTargetDVM{
-							.output_file_stem = base::StrID(output_file_name.c_str()),
+							.output_file_stem  = base::StrID(output_file_name.c_str()),
+							.link_std_packages = not options.isFlag("emit-static-lib"),
 						};
 					} else if (options.isFlag("emit-static-lib")) {
 						auto output_file_name = options.getValue<std::string>("output-file-name")
