@@ -58,7 +58,7 @@ namespace compiler::driver {
 		base::StrID output_file_stem;
 
 		/**
-		 * @brief Whether to include in the final output the standard 
+		 * @brief Whether to include in the final output the standard
 		 * library packages that the executable depends on.
 		 */
 		bool link_std_packages = false;

@@ -271,6 +271,14 @@ namespace compiler::driver {
 					= constructLinkerOptions(llvm_exec_target.linking_options, stdlib_options),
 				};
 			}
+			variant_case(BuildTargetDVMExecutable, dvm_exec_target) {
+				return BuildTargetDVMExecutable{
+					.output_file_stem  = dvm_exec_target.output_file_stem,
+					.link_std_packages = not base::holds<options_types::StdLibOptions::NoStd>(
+						stdlib_options.std_lib_type
+					),
+				};
+			}
 			variant_default { return raw_target; }
 		}
 	}

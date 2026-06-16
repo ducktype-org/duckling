@@ -5,8 +5,6 @@
 
 #include "generic_operations.hpp"
 
-#include "driver_private/standard_library/standard_library.hpp"
-
 #include <debug_info/debug_info_io.hpp>
 #include <driver/debug_info/debug_info.hpp>
 #include <driver/module_flags/module_flags.hpp>
@@ -19,6 +17,7 @@
 #include <driver_private/backend_operations/compile_llvm.hpp>
 #include <driver_private/debug_artifacts.hpp>
 #include <driver_private/operations.hpp>
+#include <driver_private/standard_library/standard_library.hpp>
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_id.hpp>
 #include <frontend/module_tree/module_tree.hpp>

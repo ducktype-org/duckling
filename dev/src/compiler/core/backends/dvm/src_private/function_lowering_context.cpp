@@ -339,6 +339,15 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 					"IndexProjection on non-array layout"
 				);
 
+				// We can have in LIR an index projection on a pointer type, which should
+				// insert a deref before the index projection.
+				if (not current_place.isDirect() and current_layout->is<tsl::PointerTypeLayout>()) {
+					const vm::code::TypeOfData& vm_pointer_type
+						= **program_context.lowerAndKeepTslType(current_layout);
+					current_place = loadFromPlace(current_place, vm_pointer_type);
+				}
+
+
 				// Resolve element layout + opcode in one place
 				auto [element_layout, op_kind]
 					= [&]() -> std::pair<CRef<tsl::TypeLayout>, vm::code::builders::OpKind> {

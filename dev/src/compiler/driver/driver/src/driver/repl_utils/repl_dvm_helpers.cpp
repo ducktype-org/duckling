@@ -138,8 +138,6 @@ namespace compiler::repl {
 			  };
 		for (const auto root_module: root_modules) collect_modules(root_module);
 
-		if (modules.size() > 0) CORE_USER_LOG("Loading standard library modules...\n");
-
 		// Lower every module to in-memory DVM code and merge it into a single batch. Loading the
 		// whole standard library at once lets the loader resolve cross-module references that a
 		// per-module load would reject as unknown functions.
