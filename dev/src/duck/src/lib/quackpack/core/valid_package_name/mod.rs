@@ -22,7 +22,7 @@ impl<'a> ValidPackageName<'a> {
 
 #[derive(Debug, Error, Clone, Eq, PartialEq)]
 pub enum PackageNameError {
-    #[error("package name cannot be empty")]
+    #[error("package name is empty")]
     Empty,
     #[error("package name `{name}` starts with an illegal character `{char}`")]
     StartsWithIllegalCharacter { name: String, char: char },
