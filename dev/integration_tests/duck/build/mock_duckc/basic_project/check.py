@@ -66,7 +66,7 @@ else:
     {{
       "package": "{foo_name}",
       "strategy": "dvm",
-      "output_file": "{str(layout / "foo.dvm")}"
+      "output_file": "{str(layout / "foo.dbc")}"
     }}
   ]
 }}"""
