@@ -37,6 +37,14 @@ class PSTErrorTests: public tester::TestSuite {
 		GenExample(std::string code): code(std::move(code)) { examples.push_back(this); }
 
 		template<typename Element>
+		static void printSubElementTypes(CRef<Element> el) {
+			std::cerr << el->elementType() << ", ";
+			for (auto& sub: el->viewChildren()) {
+				printSubElementTypes(base::CRef(&*sub.illegalAccess().value()));
+			}
+		}
+
+		template<typename Element>
 		static u64 countSubElements(CRef<Element> el) {
 			u64 count = 1;
 			for (auto& sub: el->viewChildren()) {
@@ -52,9 +60,22 @@ class PSTErrorTests: public tester::TestSuite {
 			{
 				x1 = countSubElements(el);
 				auto clone = el->clone();
+				if (!clone) {
+					std::println(std::cerr, "[Error] Cloning failed");
+				}
 				if (!clone) return false;
 				x2 = countSubElements(el);
 				x3 = countSubElements(clone.ref().toOpt().value());
+				if (!(x1 == x3)) {
+					tpc::nullAwareDprint(MRef{el}, std::cerr);
+					std::cerr << "\n";
+					tpc::nullAwareDprint(clone, std::cerr);
+					std::cerr << "\n";
+					printSubElementTypes(el);
+					std::cerr << "\n";
+					printSubElementTypes(clone.ref().toOpt().value());
+					std::cerr << "\n";
+				}
 			}
 			x4 = countSubElements(el);
 			std::cerr << x1 << " " << x2 << " " << x3 << " " << x4 << "\n";

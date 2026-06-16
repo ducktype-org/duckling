@@ -4,7 +4,7 @@
 #include "preamble.hpp"
 
 namespace pst::expr {
-	CLONE_SUB_ELEMENTS_DEF(Assignment, type, variables, type, value);
+	CLONE_SUB_ELEMENTS_DEF(Assignment, variables, type, value);
 
 	MBox<ExprElement> Assignment::parse(LangParserState& state) {
 		if (!checkNonEmpty(state)) return nullptr;
