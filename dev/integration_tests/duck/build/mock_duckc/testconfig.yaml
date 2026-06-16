@@ -3,8 +3,11 @@ before_cmd: export PATH="$(pwd)/..:$PATH" && export DUCK_HOME=$(pwd)/duck_home
 
 PostTest: rm -rf $(pwd)/duck_home
 
+# @TODO: #2907 Add more tests with many packages (it'll be easier to write them, once we have determinism)
 SubDirs:
   - basic_project
   - basic_project_with_deps
   - basic_project_with_deps_and_conds
+  - deps_with_dvm
   - features
+  - with_a_local_cycle
