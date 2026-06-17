@@ -51,6 +51,7 @@ namespace vm {
 			  data(data) {}
 	};
 
+	template<>
 	void Memory::initializeBlockFromConstValue(
 		Ref<Block> block, const code::ConstantValue& const_value
 	) {
