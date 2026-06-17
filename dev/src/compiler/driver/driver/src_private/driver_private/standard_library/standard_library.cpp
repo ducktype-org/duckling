@@ -220,13 +220,13 @@ namespace compiler::driver {
 			tasks.push_back(PackageCompilationTask{
 				.root_module = pkg->getRootModule().illegalAccess().getID(),
 				.build_target
-				= BuildTargetLLVMStaticLibrary{ .output_file_stem  = base::StrID(config.name),
+				= BuildTargetLLVMStaticLibrary{ .output_file_name = base::StrID(config.name + ".a"),
 			                                    .archiving_options = {} },
 			});
 			tasks.push_back(PackageCompilationTask{
 				.root_module = pkg->getRootModule().illegalAccess().getID(),
 				.build_target
-				= BuildTargetDVMLibrary{ .output_file_stem = base::StrID(config.name) },
+				= BuildTargetDVMLibrary{ .output_file_name = base::StrID(config.name + ".dbc") },
 			});
 		}
 		return tasks;

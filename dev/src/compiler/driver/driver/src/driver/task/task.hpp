@@ -46,16 +46,16 @@ namespace compiler::driver {
 	 */
 	struct BuildTargetDVMLibrary final {
 		/**
-		 * @brief The output file path stem for the compiled DVM package.
+		 * @brief The output file path name for the compiled DVM package.
 		 */
-		base::StrID output_file_stem = base::StrID("package_dvm");
+		base::StrID output_file_name = base::StrID("package_dvm.dbc");
 	};
 
 	struct BuildTargetDVMExecutable final {
 		/**
-		 * @brief The output file path stem for the compiled DVM executable.
+		 * @brief The output file path name for the compiled DVM executable.
 		 */
-		base::StrID output_file_stem;
+		base::StrID output_file_name;
 
 		/**
 		 * @brief Whether to include in the final output the standard
@@ -73,7 +73,7 @@ namespace compiler::driver {
 		/**
 		 * @brief The output file path for the compiled executable.
 		 */
-		base::StrID output_file_stem;
+		base::StrID output_file_name;
 
 		/**
 		 * @brief Linking options for the executable.
@@ -85,7 +85,7 @@ namespace compiler::driver {
 		/**
 		 * @brief The output file path for the compiled static library.
 		 */
-		base::StrID output_file_stem;
+		base::StrID output_file_name;
 
 		/**
 		 * @brief Archiving options for the static library.

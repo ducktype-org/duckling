@@ -224,7 +224,7 @@ private:
 			driver::compileEntirePackage(
 				package_info,
 				driver::BuildTargetLLVMExecutable{
-					.output_file_stem = base::StrID("package_llvm"),
+					.output_file_name = base::StrID("package_llvm.exe"),
 					.linking_options  = linker::LinkingOptions{ .linker_path             = {},
 			                                                    .additional_link_options = {},
 			                                                    .link_c_standard_library = true,
@@ -551,7 +551,7 @@ private:
 		driver::compileEntirePackage(
 			package_info,
 			driver::BuildTargetLLVMExecutable{
-				.output_file_stem = base::StrID("package_llvm"),
+				.output_file_name = base::StrID("package_llvm.exe"),
 				.linking_options  = linker::LinkingOptions{ .linker_path             = {},
 		                                                    .additional_link_options = {},
 		                                                    .link_c_standard_library = true,
@@ -674,7 +674,7 @@ private:
 		driver::compileEntirePackage(
 			package_info,
 			driver::BuildTargetLLVMExecutable{
-				.output_file_stem = base::StrID("package_llvm"),
+				.output_file_name = base::StrID("package_llvm.exe"),
 				.linking_options  = linker::LinkingOptions{ .linker_path             = {},
 		                                                    .additional_link_options = {},
 		                                                    .link_c_standard_library = true,
@@ -799,7 +799,7 @@ private:
 		driver::compileEntirePackage(
 			package_info,
 			driver::BuildTargetLLVMExecutable{
-				.output_file_stem = base::StrID("package_llvm"),
+				.output_file_name = base::StrID("package_llvm.exe"),
 				.linking_options  = linker::LinkingOptions{ .linker_path             = {},
 		                                                    .additional_link_options = {},
 		                                                    .link_c_standard_library = true,

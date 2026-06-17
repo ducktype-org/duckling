@@ -61,7 +61,7 @@ expected = f"""{{
     {{
       "package": "{foo_name}",
       "strategy": "dvm_exe",
-      "output_file": "{str(layout / "foo.dvm")}"
+      "output_file": "{str(layout / "foo.dbc")}"
     }}
   ]
 }}"""

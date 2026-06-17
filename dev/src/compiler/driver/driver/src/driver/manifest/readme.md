@@ -59,12 +59,12 @@ Remaining fields depend on `strategy`:
 ### `strategy: "dvm_lib"` — DVM bytecode library
 | field         | required | description |
 |---------------|----------|-------------|
-| `output_file` | yes      | Output file stem. |
+| `output_file` | yes      | Output file name. |
 
 ### `strategy: "native"` — native executable (LLVM)
 | field             | required | description |
 |-------------------|----------|-------------|
-| `output_file`     | yes      | Output file stem. |
+| `output_file`     | yes      | Output file name. |
 | `linking_options` | no       | A string (= `additional_link_options`) **or** an object: |
 
 `linking_options` as an object:
@@ -92,7 +92,7 @@ This strategy takes **no extra fields** (`output_file`, `linking_options`,
 ### `strategy: "lib"` — static library (LLVM → `.a`)
 | field             | required | description |
 |-------------------|----------|-------------|
-| `output_file`     | yes      | Output file stem. |
+| `output_file`     | yes      | Output file name. |
 | `archive_options` | no       | A string (= `archiver`) **or** an object with an `archiver` field (path to `ar`). |
 
 ## Example — single package, DVM target
