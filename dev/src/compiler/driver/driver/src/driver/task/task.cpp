@@ -76,7 +76,7 @@ namespace compiler::driver {
 			if (!output) had_error = true;
 
 			build_target = BuildTargetDVM{
-				.output_file_stem = output.copyValueOr(base::StrID("package_dvm")),
+				.output_file_name = output.copyValueOr(base::StrID("package_dvm.dbc")),
 			};
 		} else if (strategy && strategy->view() == "native") {
 			auto output
@@ -160,7 +160,7 @@ namespace compiler::driver {
 			}
 
 			build_target = BuildTargetLLVMExecutable{
-				.output_file_stem = output ? *output : base::StrID(),
+				.output_file_name = output ? *output : base::StrID(),
 				.linking_options  = std::move(linking_options),
 			};
 		} else if (strategy && strategy->view() == "obj") {
@@ -214,7 +214,7 @@ namespace compiler::driver {
 			}
 
 			build_target = BuildTargetLLVMStaticLibrary{
-				.output_file_stem  = output ? *output : base::StrID(),
+				.output_file_name  = output ? *output : base::StrID(),
 				.archiving_options = std::move(archiving_options),
 			};
 		} else if (strategy) {
@@ -256,7 +256,7 @@ namespace compiler::driver {
 		variant_match(raw_target) {
 			variant_case(BuildTargetLLVMExecutable, llvm_exec_target) {
 				return BuildTargetLLVMExecutable{
-					.output_file_stem = llvm_exec_target.output_file_stem,
+					.output_file_name = llvm_exec_target.output_file_name,
 					.linking_options
 					= constructLinkerOptions(llvm_exec_target.linking_options, stdlib_options),
 				};
