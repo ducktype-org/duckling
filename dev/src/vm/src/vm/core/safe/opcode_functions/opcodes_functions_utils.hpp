@@ -10,8 +10,8 @@
 
 namespace vm {
 	template<typename EntryT>
-	class BasicBlock;
-	using Block = BasicBlock<std::byte>;
+	class GenericBlock;
+	using Block = GenericBlock<std::byte>;
 }
 
 /**

@@ -25,7 +25,7 @@ namespace vm {
 	/**
 	 * @brief Helper structure that holds pointers to the global data buffer and global blocks buffer.
 	 */
-	template<typename EntryT, typename BlockT = BasicBlock<EntryT>>
+	template<typename EntryT, typename BlockT = GenericBlock<EntryT>>
 	struct GlobalBufferPointers {
 		EntryT*  data_buffer_base;    /// Base pointer to the global data buffer.
 		BlockT** blocks_buffer_base;  /// Base pointer to the global blocks buffer.
@@ -36,13 +36,13 @@ namespace vm {
 	 * @note Memory is single threaded!
 	 * All of process'es memory - thread stacks (thread local data) and global data is stored here.
 	 */
-	template<typename EntryT, typename BlockT = BasicBlock<EntryT>>
+	template<typename EntryT, typename BlockT = GenericBlock<EntryT>>
 	class IMemory final {
 	private:
 		HeapAllocator<EntryT>  heap_allocator;
 		DummyAllocator<EntryT> dummy_allocator;
 
-		std::deque<BasicThreadStack<EntryT>> threads_frame_stacks;
+		std::deque<GenericThreadStack<EntryT>> threads_frame_stacks;
 
 		/// Buffer for the global data
 		std::vector<EntryT> global_data_buffer{};
@@ -498,7 +498,7 @@ namespace vm {
 
 		// =================== Used by executor ===================
 
-		auto initializeFrameStack() -> Ref<BasicThreadStack<EntryT>> {
+		auto initializeFrameStack() -> Ref<GenericThreadStack<EntryT>> {
 			threads_frame_stacks.emplace_back();
 			return &threads_frame_stacks.back();
 		}

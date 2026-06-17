@@ -20,7 +20,7 @@ namespace vm {
 	 * The blocks are managed by the `vm::Memory` class.
 	 */
 	template<typename EntryT>
-	class BasicBlock {
+	class GenericBlock {
 		/**
 		 * @brief The unique identifier for the block.
 		 */
@@ -54,11 +54,11 @@ namespace vm {
 		friend class IMemory;
 
 		// Think of it as a view on parent's bytes that has it's own type and lifetime.
-		base::Map<usize, Ref<BasicBlock<EntryT>>> children_blocks{};  // offset to block
-		MRef<BasicBlock<EntryT>>                  parent = nullptr;
+		base::Map<usize, Ref<GenericBlock<EntryT>>> children_blocks{};  // offset to block
+		MRef<GenericBlock<EntryT>>                  parent = nullptr;
 
 	public:
-		BasicBlock(BlockID id, BlockData<EntryT> data): id(id), data(data) {}
+		GenericBlock(BlockID id, BlockData<EntryT> data): id(id), data(data) {}
 
 		[[nodiscard]] EntryT* getData() { return data.view.getBegin(); }
 		[[nodiscard]] const EntryT* getData() const { return data.view.getBegin(); }
@@ -66,8 +66,7 @@ namespace vm {
 		[[nodiscard]] BlockID getID() const { return id; }
 	};
 
-	using Block = BasicBlock<std::byte>;
-	using BlockGeneric = Block;
+	using Block = GenericBlock<std::byte>;
 }
 
 ID_STD_HASH(vm::BlockID);
