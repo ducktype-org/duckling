@@ -14,10 +14,10 @@ namespace vm {
 	class DummyAllocator final: public IAllocator<EntryT> {
 	public:
 		BlockData<EntryT> allocate(TypeCRef type, Ref<EntryT> data) {
-			usize   size = type->getSize().asInt();
-			return BlockData<EntryT>{
-				type, base::TypedModRawView<EntryT>{ data.get(), size }, this
-			};
+			usize size = type->getSize().asInt();
+			return BlockData<EntryT>{ type,
+				                      base::TypedModRawView<EntryT>{ data.get(), size },
+				                      this };
 		}
 
 		void deallocate(Ref<BlockData<EntryT>>) final {

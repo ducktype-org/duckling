@@ -8,8 +8,8 @@ namespace vm {
 	template<typename EntryT>
 	class GenericThreadStack final {
 	private:
-		std::vector<Frame>               frame_stack;
-		std::vector<EntryT>              local_stack;
+		std::vector<Frame>                 frame_stack;
+		std::vector<EntryT>                local_stack;
 		std::vector<GenericBlock<EntryT>*> block_ref_stack;
 
 	public:
@@ -41,7 +41,9 @@ namespace vm {
 
 		auto getLocalStack() -> Ref<std::vector<EntryT>> { return &local_stack; }
 
-		auto getBlockRefStack() -> Ref<std::vector<GenericBlock<EntryT>*>> { return &block_ref_stack; }
+		auto getBlockRefStack() -> Ref<std::vector<GenericBlock<EntryT>*>> {
+			return &block_ref_stack;
+		}
 	};
 
 	using ThreadStack = GenericThreadStack<std::byte>;

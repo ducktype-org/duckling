@@ -72,9 +72,8 @@ namespace vm {
 				waitForBreakpoint();
 				api::ProcStatus stat = getStatus();
 				if (!std::holds_alternative<api::Paused>(stat))
-					return std::unexpected(
-						api::ApiError{ api::OtherError{ "unexpected status response" } }
-					);
+					return std::unexpected(api::ApiError{
+						api::OtherError{ "unexpected status response" } });
 
 				return getVMThreadCurrentPosition(getMainThreadID());
 			}
@@ -225,8 +224,7 @@ namespace vm {
 		return std::holds_alternative<api::ExecutionPanicked>(status);
 	}
 
-	std::expected<api::Response, api::ApiError> IVMProcess::input(
-		const api::request::Input& request
+	std::expected<api::Response, api::ApiError> IVMProcess::input(const api::request::Input& request
 	) {
 		// @TODO: #2342 https://github.com/ducktype-org/duckling/pull/381#discussion_r1885688218
 		auto lock = io.lock();
@@ -239,10 +237,8 @@ namespace vm {
 		auto lock = io.lock();
 		// @TODO: #2342 Cannot read output from api when IO is being redirected
 		if (io_redirecter)
-			return std::unexpected(
-				api::ApiError{
-					api::IOError{ "Cannot read output from api when IO is being redirected" } }
-			);
+			return std::unexpected(api::ApiError{
+				api::IOError{ "Cannot read output from api when IO is being redirected" } });
 
 		if (isExecuting(status))
 			io.output_empty_cv.wait(lock, [&] { return !io.outputStream().str().empty(); });

@@ -61,8 +61,11 @@ namespace vm {
 		GenericBlock(BlockID id, BlockData<EntryT> data): id(id), data(data) {}
 
 		[[nodiscard]] EntryT* getData() { return data.view.getBegin(); }
+
 		[[nodiscard]] const EntryT* getData() const { return data.view.getBegin(); }
+
 		[[nodiscard]] bool isDeallocated() const { return deallocated; }
+
 		[[nodiscard]] BlockID getID() const { return id; }
 	};
 

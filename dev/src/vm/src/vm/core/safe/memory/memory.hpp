@@ -65,11 +65,10 @@ namespace vm {
 
 		[[nodiscard]]
 		Ref<BlockT> createBlock(BlockData<EntryT> data) {
-			if constexpr (std::is_trivially_default_constructible_v<EntryT>) {
+			if constexpr (std::is_trivially_default_constructible_v<EntryT>)
 				std::memset(data.view.getBegin(), 0, data.view.size() * sizeof(EntryT));
-			} else {
+			else
 				std::fill(data.view.getBegin(), data.view.getBegin() + data.view.size(), EntryT{});
-			}
 
 			if (free_ids.empty()) {
 				auto id = BlockID(blocks.size());
@@ -127,15 +126,15 @@ namespace vm {
 			// Free all child blocks on suffix.
 			auto& dst_child_blocks = dst->children_blocks;
 			for (auto iter = dst_child_blocks.lower_bound(0); iter != dst_child_blocks.end();
-				 iter      = dst_child_blocks.erase(iter)) {
+			     iter      = dst_child_blocks.erase(iter)) {
 				freeBlockData(iter->second);
 			}
 
 			// Copy the child blocks.
 			auto& src_child_blocks = src->children_blocks;
 			for (auto iter = src_child_blocks.lower_bound(0);
-				 iter != src_child_blocks.end() && iter->first < entry_count;
-				 ++iter) {
+			     iter != src_child_blocks.end() && iter->first < entry_count;
+			     ++iter) {
 				auto offset = iter->first;
 				setNestedViewBlock(dst, offset, iter->second->data.element_type);
 				moveBlocksRecursively(dst->children_blocks[offset], iter->second);
@@ -146,7 +145,9 @@ namespace vm {
 			// because the data being is "moved".
 			if constexpr (std::is_trivially_copyable_v<EntryT>) {
 				std::memcpy(
-					dst->data.view.getBegin(), src->data.view.getBegin(), entry_count * sizeof(EntryT)
+					dst->data.view.getBegin(),
+					src->data.view.getBegin(),
+					entry_count * sizeof(EntryT)
 				);
 			} else {
 				std::copy(
@@ -164,18 +165,18 @@ namespace vm {
 		 * @param block The block to update the data view for.
 		 * @param new_view The new view to set for the block.
 		 */
+
 	public:
 		void updateBlockDataView(Ref<BlockT> block, base::TypedModRawView<EntryT> new_view) {
 			usize expected_size = block->data.element_type->getSize().asInt();
 			CORE_ASSERT(
-				expected_size == new_view.size(),
-				"New view size must match the block's type size"
+				expected_size == new_view.size(), "New view size must match the block's type size"
 			);
 			base::TypedModRawView<EntryT> old_root_view = block->data.view;
 
 			std::function<void(Ref<BlockT>)> update_block_data_recursively
 				= [&](Ref<BlockT> current_block) -> void {
-				base::TypedModRawView<EntryT> current_view      = current_block->data.view;
+				base::TypedModRawView<EntryT> current_view = current_block->data.view;
 				auto offset_from_start = current_view.getBegin() - old_root_view.getBegin();
 				current_block->data.view
 					= { new_view.getBegin() + offset_from_start, current_view.size() };
@@ -186,8 +187,8 @@ namespace vm {
 
 			update_block_data_recursively(block);
 		}
-	private:
 
+	private:
 		/**
 		 * @brief Executes destructors on individual objects that are in the block.
 		 * @param block The block to source the data from.
@@ -273,7 +274,7 @@ namespace vm {
 				for (const auto& fields = **type->getFields(); auto [offset, tp]: fields)
 					(this->*callback)(
 						base::TypedModRawView<EntryT>{ data.getBegin() + offset.asInt(),
-													   tp->getSize().asInt() },
+					                                   tp->getSize().asInt() },
 						tp
 					);
 				break;
@@ -287,10 +288,10 @@ namespace vm {
 				// laying next to each other, then iterate over those as well. Here we start from
 				// the second, since the first one was handled above
 				for (auto next_item = type->getSize().asInt(); next_item < data.size();
-					 next_item += type->getSize().asInt()) {
+				     next_item += type->getSize().asInt()) {
 					iterateOverDataAndExecute(
 						base::TypedModRawView<EntryT>{ data.getBegin() + next_item,
-													   type->getSize().asInt() },
+					                                   type->getSize().asInt() },
 						type,
 						callback
 					);
@@ -509,7 +510,7 @@ namespace vm {
 		 */
 		GlobalBufferPointers<EntryT, BlockT> getGlobalDataMemory() {
 			return { .data_buffer_base   = global_data_buffer.data(),
-					 .blocks_buffer_base = global_data_blocks.data() };
+				     .blocks_buffer_base = global_data_blocks.data() };
 		}
 
 		auto allocateHeap(TypeCRef type) -> Ref<BlockT> {
@@ -538,11 +539,12 @@ namespace vm {
 		   a table of size n with elements of type equal to type's inner type.
 		 */
 		auto dynTableReallocateBlockDataN(Ref<BlockT> block, u64 n) -> void {
-			auto              tbl_type       = block->data.element_type;
-			auto              inner_type     = tbl_type->getInnerType().value();
-			BlockData<EntryT> new_block_data = heap_allocator.dynTableAllocateN(tbl_type, inner_type, n);
-			auto              old_view_size  = block->data.view.size();
-			auto              new_view_size  = new_block_data.view.size();
+			auto              tbl_type   = block->data.element_type;
+			auto              inner_type = tbl_type->getInnerType().value();
+			BlockData<EntryT> new_block_data
+				= heap_allocator.dynTableAllocateN(tbl_type, inner_type, n);
+			auto old_view_size = block->data.view.size();
+			auto new_view_size = new_block_data.view.size();
 
 			BlockT mock_block{ BlockID{ 0 }, new_block_data };
 
@@ -558,7 +560,8 @@ namespace vm {
 		 * For the block to be freed, use deleteBlock.
 		 */
 		void freeBlockData(Ref<BlockT> block) {
-			for (const auto child: block->children_blocks | std::views::values) freeBlockData(child);
+			for (const auto child: block->children_blocks | std::views::values)
+				freeBlockData(child);
 
 			runDataDestructors(block);
 
@@ -599,7 +602,6 @@ namespace vm {
 			initialized_globals.insert(global_block->id);
 		}
 
-
 		void initializeBlockFromConstValue(Ref<Block> block, const code::ConstantValue& const_value);
 
 		/**
@@ -639,7 +641,7 @@ namespace vm {
 
 			auto block_data         = parent_block->data;
 			block_data.element_type = type;
-			u64  entry_count        = type->getSize().asInt();
+			u64 entry_count         = type->getSize().asInt();
 			if (parent_block->deallocated) throw exceptions::VMUseAfterFreeException();
 			if (offset + entry_count > parent_block->data.view.size())
 				throw exceptions::VMOutOfBlockBoundsException();
@@ -671,18 +673,15 @@ namespace vm {
 
 		[[nodiscard]]
 		static auto newBlockReference(Ref<Block> block, u64 offset) -> Pointer
-			requires std::is_same_v<EntryT, std::byte>
-		{
+			requires std::is_same_v<EntryT, std::byte> {
 			increaseBlockRefcount(block);
 			return { block, offset };
 		}
 
 		[[nodiscard]]
-		static constexpr __attribute__((always_inline)) auto getPointerData(
-			Pointer pointer, u64 entry_count
-		) -> base::TypedModRawView<std::byte>
-			requires std::is_same_v<EntryT, std::byte>
-		{
+		static constexpr
+			__attribute__((always_inline)) auto getPointerData(Pointer pointer, u64 entry_count)
+				-> base::TypedModRawView<std::byte> requires std::is_same_v<EntryT, std::byte> {
 			if (pointer.block == nullptr) throw exceptions::VMNullPointerAccessException();
 			if (pointer.block->deallocated) throw exceptions::VMUseAfterFreeException();
 			if (pointer.offset + entry_count > pointer.block->data.view.size())
@@ -696,8 +695,7 @@ namespace vm {
 		 * that it is the type of the blocks pointed-to by `dst` and `src`.
 		 */
 		auto copyPointedData(Pointer dst, Pointer src, TypeCRef type) -> void
-			requires std::is_same_v<EntryT, std::byte>
-		{
+			requires std::is_same_v<EntryT, std::byte> {
 			if (dst.isNull() || src.isNull()) throw exceptions::VMNullPointerCopyException();
 
 			const usize entry_count = type->getSize().asInt();
@@ -705,8 +703,8 @@ namespace vm {
 			// Free child blocks.
 			auto& dst_child_blocks = dst.getBlock()->children_blocks;
 			for (auto iter = dst_child_blocks.lower_bound(dst.offset);
-				 iter != dst_child_blocks.end() && iter->first < dst.offset + entry_count;
-				 iter = dst_child_blocks.erase(iter)) {
+			     iter != dst_child_blocks.end() && iter->first < dst.offset + entry_count;
+			     iter = dst_child_blocks.erase(iter)) {
 				freeBlockData(iter->second);
 			}
 
@@ -717,8 +715,8 @@ namespace vm {
 			// Copy the child blocks
 			auto& src_child_blocks = src.getBlock()->children_blocks;
 			for (auto iter = src_child_blocks.lower_bound(src.offset);
-				 iter != src_child_blocks.end() && iter->first < src.offset + entry_count;
-				 ++iter) {
+			     iter != src_child_blocks.end() && iter->first < src.offset + entry_count;
+			     ++iter) {
 				auto offset = dst.offset + iter->first - src.offset;
 				setNestedViewBlock(dst.getBlock(), offset, iter->second->data.element_type);
 				copyBlocksRecursively(dst.getBlock()->children_blocks[offset], iter->second);
@@ -730,14 +728,12 @@ namespace vm {
 		}
 
 		auto destroyBlockReference(Pointer pointer) -> void
-			requires std::is_same_v<EntryT, std::byte>
-		{
+			requires std::is_same_v<EntryT, std::byte> {
 			if_opt_some(pointer.block.toOpt(), block) { decreaseBlockRefcount(block); }
 		}
 
 		auto updatePointerAssignment(Pointer dst, Pointer src) -> Pointer
-			requires std::is_same_v<EntryT, std::byte>
-		{
+			requires std::is_same_v<EntryT, std::byte> {
 			if (dst.block != src.block) {
 				destroyBlockReference(dst);
 				if_opt_some(src.block.toOpt(), block) { increaseBlockRefcount(block); }
@@ -764,7 +760,7 @@ namespace vm {
 		}
 	};
 
-	using Memory = IMemory<std::byte>;
-	using PointerGeneric = Pointer;
+	using Memory                      = IMemory<std::byte>;
+	using PointerGeneric              = Pointer;
 	using GlobalBufferPointersGeneric = GlobalBufferPointers<std::byte>;
 }

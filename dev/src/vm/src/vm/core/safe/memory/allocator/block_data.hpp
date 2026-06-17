@@ -10,14 +10,15 @@
 namespace vm {
 	template<typename EntryT>
 	struct BlockData final {
-		TypeCRef                element_type;
+		TypeCRef                      element_type;
 		base::TypedModRawView<EntryT> view;
-		Ref<IAllocator<EntryT>> allocator;
+		Ref<IAllocator<EntryT>>       allocator;
 
 		BlockData(
-			TypeCRef element_type, base::TypedModRawView<EntryT> view, Ref<IAllocator<EntryT>> allocator
-		) noexcept
-			  :
+			TypeCRef                      element_type,
+			base::TypedModRawView<EntryT> view,
+			Ref<IAllocator<EntryT>>       allocator
+		) noexcept:
 			  element_type(element_type),
 			  view(view),
 			  allocator(allocator) {}
