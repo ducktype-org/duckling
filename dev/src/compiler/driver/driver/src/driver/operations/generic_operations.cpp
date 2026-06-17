@@ -55,6 +55,7 @@
 #include <algorithm>
 #include <fstream>
 #include <iostream>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -167,7 +168,7 @@ namespace compiler::driver {
 
 			auto output_names = getModuleOutputName(key);
 			auto code_output  = getQueryArtifactsCollection()->fileArtifactAtOrNew(
-                base::StrID(output_names.object_file.c_str())
+                base::StrID(output_names.object_file)
             );
 
 			base::Optional<debug_info::DebugInfo>   debug_info_output;
@@ -522,7 +523,7 @@ namespace compiler::driver {
 
 				auto& script_context  = global_state::getScriptContext();
 				auto  output_artifact = global_state::getRootCollection()->fileArtifactAtOrNew(
-                    base::StrID(base::strConcat(script_context.script_file.stem(), ".dbc").c_str())
+                    base::StrID(base::strConcat(script_context.script_file.stem(), ".dbc"))
                 );
 				std::ofstream output_file(
 					output_artifact.file.getFilePath().getPath(), std::ios::binary
@@ -617,10 +618,9 @@ namespace compiler::driver {
 	base::OkBad linkDVMPackage(
 		const std::vector<artifacts::FileArtifact>& objects,
 		const std::vector<artifacts::FileArtifact>& debug_info_artifacts,
-		const std::string&                          output_file_stem
+		const std::string&                          output_file_name
 	) {
 		vm::loader::Loader dvm_linker;
-		std::string        output_file_name = base::strConcat(output_file_stem, ".dbc");
 
 		using std::ranges::to;
 		using std::ranges::views::transform;
@@ -670,6 +670,10 @@ namespace compiler::driver {
 
 			if (merged_debug_info.has_value()) {
 				merged_debug_info->module_path = output_file.file.getFilePath().string();
+
+				auto output_file_stem = std::string_view(output_file_name);
+				// Try to keep the old behaviour, by manually stripping the most common DVM suffix.
+				if (output_file_stem.ends_with(".dbc")) output_file_stem.remove_suffix(4);
 
 				auto di_output = global_state::getRootCollection()->fileArtifactAtOrNew(
 					base::StrID(base::strConcat(output_file_stem, ".di.json").c_str())
@@ -826,10 +830,9 @@ namespace compiler::driver {
 		for (const auto& task: tasks) {
 			variant_match(task.build_target) {
 				variant_case(BuildTargetLLVMExecutable, target_exe) {
-					auto output_file
-						= global_state::getRootCollection()->fileArtifactAtOrNew(base::StrID(
-							base::strConcat(target_exe.output_file_stem.strView(), ".exe").c_str()
-						));
+					auto output_file = global_state::getRootCollection()->fileArtifactAtOrNew(
+						target_exe.output_file_name
+					);
 
 					llvm_objects_by_root_module.atMaybe(task.root_module)
 						.value()
@@ -857,10 +860,9 @@ namespace compiler::driver {
 				variant_case(BuildTargetLLVMStaticLibrary, target_lib) {
 					// Note, if you change this convention, please also change the one in the
 					// `getStdLibArtifacts`
-					auto output_file
-						= global_state::getRootCollection()->fileArtifactAtOrNew(base::StrID(
-							base::strConcat(target_lib.output_file_stem.strView(), ".a").c_str()
-						));
+					auto output_file = global_state::getRootCollection()->fileArtifactAtOrNew(
+						target_lib.output_file_name
+					);
 
 					auto archive_result = archiver::createArchive(
 						output_file,
@@ -892,7 +894,7 @@ namespace compiler::driver {
 							*dvm_objects_by_root_module.atMaybe(task.root_module).value(),
 							debug_info_opt.has_value() ? *debug_info_opt.value()
 													   : std::vector<artifacts::FileArtifact>(),
-							std::string(target_dvm.output_file_stem.strView())
+							target_dvm.output_file_name.str()
 						)
 					        .isBad())
 						result = base::BAD;

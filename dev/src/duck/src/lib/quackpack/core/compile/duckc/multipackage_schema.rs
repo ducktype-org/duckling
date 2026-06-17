@@ -278,7 +278,7 @@ mod tests {
     {
       "package": "dep-hash",
       "strategy": "dvm",
-      "output_file": "out.dvm"
+      "output_file": "out.dbc"
     },
     {
       "package": "dep2-hash",
@@ -386,7 +386,7 @@ mod tests {
             PackageCompilationTask {
                 package_id: "dep-hash".into(),
                 strategy: PackageCompilationStrategy::Dvm {
-                    output_file: PathBuf::from("out.dvm"),
+                    output_file: PathBuf::from("out.dbc"),
                 },
             },
             PackageCompilationTask {

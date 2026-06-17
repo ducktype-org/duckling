@@ -72,7 +72,11 @@ namespace query::external {
 	 * needs to be erased when a query is invalidated.
 	 *
 	 * @note This is for incremental LS.
+	 * @note This function waits for all workers to become free, i.e. until all query execution
+	 * has stopped, before invalidating.
 	 * @warning Should not be executed concurrently with any query execution.
+	 * @warning Must not be called from a worker thread, as waiting for all workers to be free
+	 * would deadlock.
 	 *
 	 * @param new_inputs Vector of input data (QueryID + hash) used in current compilation.
 	 * @param previous_inputs_opt Optional vector of input data. If provided, the function will only
