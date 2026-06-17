@@ -31,12 +31,13 @@ namespace vm {
 
 	public:
 		BlockData<EntryT> allocate(TypeCRef type) {
-			usize   size = type->getSize().asInt();
-			auto    ptr  = heapAllocOrThrow<EntryT>(size);
+			static_assert(sizeof(EntryT) == 1);
+			usize size = type->getSize().asInt();
+			auto  ptr  = heapAllocOrThrow<EntryT>(size);
 			allocated.emplace_back(ptr, size);
-			return BlockData<EntryT>{
-				type, base::TypedModRawView<EntryT>{ ptr, size }, Ref<IAllocator<EntryT>>{ this }
-			};
+			return BlockData<EntryT>{ type,
+				                      base::TypedModRawView<EntryT>{ ptr, size },
+				                      Ref<IAllocator<EntryT>>{ this } };
 		}
 
 		/**
@@ -46,12 +47,13 @@ namespace vm {
 		 *  to assign the correct type to the new `BlockData` object.
 		 */
 		BlockData<EntryT> dynTableAllocateN(TypeCRef table_type, TypeCRef inner_type, u64 n) {
+			static_assert(sizeof(EntryT) == 1);
 			usize   size = inner_type->getSize().asInt() * n;
 			EntryT* ptr  = heapAllocOrThrow<EntryT>(size);
 			allocated.emplace_back(ptr, size);
-			return BlockData<EntryT>{
-				table_type, base::TypedModRawView<EntryT>{ ptr, size }, Ref<IAllocator<EntryT>>(this)
-			};
+			return BlockData<EntryT>{ table_type,
+				                      base::TypedModRawView<EntryT>{ ptr, size },
+				                      Ref<IAllocator<EntryT>>(this) };
 		}
 
 		void deallocate(Ref<BlockData<EntryT>> data) final {
