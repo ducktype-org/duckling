@@ -259,7 +259,7 @@ private:
 		ASSERT_TRUE(logger().good());
 		ASSERT_TRUE(std::holds_alternative<BuildTargetDVM>(result->build_target));
 		const auto& target = std::get<BuildTargetDVM>(result->build_target);
-		ASSERT_EQUAL(target.output_file_stem.str(), std::string("bin/mylib_dvm"));
+		ASSERT_EQUAL(target.output_file_name.str(), std::string("bin/mylib_dvm"));
 		ASSERT_EQUAL(result->package_id.str(), std::string("mylib"));
 	}
 

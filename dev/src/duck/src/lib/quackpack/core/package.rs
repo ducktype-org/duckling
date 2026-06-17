@@ -1,7 +1,6 @@
 //! A general package abstraction.
 use std::fmt;
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
 
 use crate::QuackResult;
 use crate::quackpack::core::compile::artifacts_layout::ArtifactsLayout;
@@ -9,16 +8,147 @@ use crate::quackpack::core::identity::{Identity, Origin};
 use crate::quackpack::core::{Dependencies, Manifest, Profiles};
 use crate::quackpack::schemas::manifest::Manifest as ManifestSchema;
 
+#[derive(Clone, Debug)]
+/// Entities which can be treated as a package by implementing [`AnyPackage`] trait.
+pub enum AnyPackage {
+    Package(Package),
+    Frontmatter(FrontMatterScript),
+}
+
+impl AnyPackage {
+    /// Get the high-level abstraction over the manifest.
+    pub fn manifest(&self) -> &Manifest {
+        match self {
+            Self::Package(package) => package.manifest(),
+            Self::Frontmatter(frontmatter) => frontmatter.manifest(),
+        }
+    }
+
+    /// Get the root directory of the package / path of the script.
+    pub fn root(&self) -> &Path {
+        match self {
+            Self::Package(package) => package.root_directory(),
+            Self::Frontmatter(frontmatter) => frontmatter.script_file(),
+        }
+    }
+
+    /// Get path to the source directory / path of the script.
+    pub fn src(&self) -> &Path {
+        match self {
+            Self::Package(package) => package.source_directory(),
+            Self::Frontmatter(frontmatter) => frontmatter.script_file(),
+        }
+    }
+
+    /// Check if this is the global package.
+    pub fn is_global(&self) -> bool {
+        match self {
+            Self::Package(package) => package.is_global(),
+            Self::Frontmatter(_) => false,
+        }
+    }
+
+    /// Check if this is the global package.
+    pub fn as_a_local_identity(&self) -> QuackResult<Identity> {
+        match self {
+            Self::Package(package) => package.as_a_local_identity(),
+            Self::Frontmatter(frontmatter) => frontmatter.as_a_local_identity(),
+        }
+    }
+
+    /// Try to cast `&self` into `&Package`.
+    pub fn try_get_package(&self) -> Option<&Package> {
+        match self {
+            Self::Package(package) => Some(package),
+            Self::Frontmatter(_) => None,
+        }
+    }
+
+    /// Try to cast `&self` into `&FrontMatterScript`.
+    pub fn try_get_frontmatter(&self) -> Option<&FrontMatterScript> {
+        match self {
+            Self::Package(_) => None,
+            Self::Frontmatter(frontmatter) => Some(frontmatter),
+        }
+    }
+
+    /// Cast `&self` into `&Package` and panic on mismatch.
+    pub fn get_package(&self) -> &Package {
+        match self {
+            Self::Package(package) => package,
+            Self::Frontmatter(_) => {
+                panic!("tried to cast `AnyPackage` with a frontmatter to a package")
+            }
+        }
+    }
+
+    /// Cast `&self` into `&FrontMatterScript` and panic on mismatch.
+    pub fn get_frontmatter(&self) -> &FrontMatterScript {
+        match self {
+            Self::Package(_) => {
+                panic!("tried to cast `AnyPackage` with a package to a frontmatter")
+            }
+            Self::Frontmatter(frontmatter) => frontmatter,
+        }
+    }
+
+    /// Try to extract [`Package`] from `self`.
+    pub fn try_into_package(self) -> Option<Package> {
+        match self {
+            Self::Package(package) => Some(package),
+            Self::Frontmatter(_) => None,
+        }
+    }
+
+    /// Try to extract [`FrontMatterScript`] from `self`.
+    pub fn try_into_frontmatter(self) -> Option<FrontMatterScript> {
+        match self {
+            Self::Package(_) => None,
+            Self::Frontmatter(frontmatter) => Some(frontmatter),
+        }
+    }
+
+    /// Extract [`Package`] from `self` and panic on mismatch.
+    pub fn unwrap_package(self) -> Package {
+        match self {
+            Self::Package(package) => package,
+            Self::Frontmatter(_) => {
+                panic!("tried to cast `AnyPackage` with a frontmatter to a package")
+            }
+        }
+    }
+
+    /// Extract [`FrontMatterScript`] from `self` and panic on mismatch.
+    pub fn unwrap_frontmatter(self) -> FrontMatterScript {
+        match self {
+            Self::Package(_) => {
+                panic!("tried to cast `AnyPackage` with a package to a frontmatter")
+            }
+            Self::Frontmatter(frontmatter) => frontmatter,
+        }
+    }
+
+    /// Check if this package is a _real_ package.
+    pub fn is_package(&self) -> bool {
+        matches!(self, AnyPackage::Package(..))
+    }
+
+    /// Check if this package is a script's frontmatter.
+    pub fn is_frontmatter(&self) -> bool {
+        matches!(self, AnyPackage::Frontmatter(..))
+    }
+}
+
 #[derive(Clone)]
 /// High-level abstraction over a package we are currently working on.
 pub struct Package {
-    inner: Arc<PackageInner>,
-}
-
-impl fmt::Debug for Package {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        fmt::Debug::fmt(&*self.inner, f)
-    }
+    original_content: String,
+    original_schema: ManifestSchema,
+    manifest: Manifest,
+    root: PathBuf,
+    manifest_path: PathBuf,
+    artifacts_dir: ArtifactsLayout,
+    source_dir: PathBuf,
 }
 
 impl Package {
@@ -33,54 +163,52 @@ impl Package {
         let artifacts_dir = ArtifactsLayout::new(root.join(".duck_build"));
         let source_directory = root.join("src");
         Self {
-            inner: Arc::new(PackageInner {
-                original_content,
-                original_schema,
-                manifest,
-                root,
-                manifest_path,
-                artifacts_dir,
-                source_dir: source_directory,
-            }),
+            original_content,
+            original_schema,
+            manifest,
+            root,
+            manifest_path,
+            artifacts_dir,
+            source_dir: source_directory,
         }
     }
 
     /// Get the original manifest file content.
     pub fn original_content(&self) -> &str {
-        &self.inner.original_content
+        &self.original_content
     }
 
     /// Get the original parsed manifest schema.
     pub fn original_schema(&self) -> &ManifestSchema {
-        &self.inner.original_schema
+        &self.original_schema
     }
 
     /// Get the high-level abstraction over the manifest.
     pub fn manifest(&self) -> &Manifest {
-        &self.inner.manifest
+        &self.manifest
     }
 
     /// Get the root directory of the package.
     pub fn root_directory(&self) -> &Path {
-        &self.inner.root
+        &self.root
     }
 
     /// Get the path to the source directory.
     pub fn source_directory(&self) -> &Path {
-        &self.inner.source_dir
+        &self.source_dir
     }
 
     /// Get the path to the manifest file.
     pub fn manifest_path(&self) -> &Path {
-        &self.inner.manifest_path
+        &self.manifest_path
     }
 
     /// Get the path to the artifacts directory.
     pub fn artifacts_directory(&self) -> &ArtifactsLayout {
-        &self.inner.artifacts_dir
+        &self.artifacts_dir
     }
 
-    /// Convert this package to a [`Identity`].
+    /// Convert this package to an [`Identity`].
     /// This will always (try to) return an [`Identity`] with [`Origin::for_local`] origin.
     pub fn as_a_local_identity(&self) -> QuackResult<Identity> {
         let origin = Origin::for_local(self.root_directory())?;
@@ -93,17 +221,7 @@ impl Package {
     }
 }
 
-struct PackageInner {
-    original_content: String,
-    original_schema: ManifestSchema,
-    manifest: Manifest,
-    root: PathBuf,
-    manifest_path: PathBuf,
-    artifacts_dir: ArtifactsLayout,
-    source_dir: PathBuf,
-}
-
-impl fmt::Debug for PackageInner {
+impl fmt::Debug for Package {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Package")
             .field("manifest", &self.manifest)
@@ -115,7 +233,7 @@ impl fmt::Debug for PackageInner {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone)]
 pub struct FrontMatterScript {
     path: PathBuf,
     original_schema: ManifestSchema,
@@ -160,6 +278,22 @@ impl FrontMatterScript {
     /// Get the profiles specified in the frontmatter.
     pub fn profiles(&self) -> &Profiles {
         self.manifest().profiles()
+    }
+
+    /// Convert this package to an [`Identity`].
+    /// This will always (try to) return an [`Identity`] with [`Origin::for_local`] origin.
+    pub fn as_a_local_identity(&self) -> QuackResult<Identity> {
+        let origin = Origin::for_local(self.script_file())?;
+        Ok(Identity::new(self.manifest().name(), origin))
+    }
+}
+
+impl fmt::Debug for FrontMatterScript {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Script with a frontmatter")
+            .field("manifest", &self.manifest)
+            .field("script path", &self.path)
+            .finish_non_exhaustive()
     }
 }
 

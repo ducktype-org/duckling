@@ -12,6 +12,7 @@
 #include <base/pointers/ref.hpp>
 #include <base/types/ints.hpp>
 
+#include <vm/bytecode/constant_value_fd.hpp>
 #include <vm/core/safe/exceptions.hpp>
 #include <vm/core/safe/type_metadata/definitions.hpp>
 #include <vm/utils/interpret.hpp>
@@ -597,6 +598,9 @@ namespace vm {
 		void setGlobalInitialized(Ref<BlockT> global_block) {
 			initialized_globals.insert(global_block->id);
 		}
+
+
+		void initializeBlockFromConstValue(Ref<Block> block, const code::ConstantValue& const_value);
 
 		/**
 		 * @brief Returns a view of block's data

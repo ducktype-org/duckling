@@ -608,29 +608,29 @@ clah::Clah getClahForMain() {
 					compiler::driver::BuildTarget build_target;
 					if (options.isFlag("dvm-backend")) {
 						auto output_file_name = options.getValue<std::string>("output-file-name")
-			                                        .copyValueOr("package_dvm");
+			                                        .copyValueOr("package_dvm.dbc");
 
 						build_target = compiler::driver::BuildTargetDVM{
-							.output_file_stem = base::StrID(output_file_name.c_str()),
+							.output_file_name = base::StrID(output_file_name.c_str()),
 						};
 					} else if (options.isFlag("emit-static-lib")) {
 						auto output_file_name = options.getValue<std::string>("output-file-name")
-			                                        .copyValueOr("package_llvm");
+			                                        .copyValueOr("package_llvm.exe");
 
 						auto archiving_options = getArchivingOptionsFromClah(options);
 						build_target           = compiler::driver::BuildTargetLLVMStaticLibrary{
-									  .output_file_stem  = base::StrID(output_file_name.c_str()),
+									  .output_file_name  = base::StrID(output_file_name.c_str()),
 									  .archiving_options = archiving_options,
 						};
 					} else {
 						auto output_file_name = options.getValue<std::string>("output-file-name")
-			                                        .copyValueOr("package_llvm");
+			                                        .copyValueOr("package_llvm.exe");
 						auto local_options   = getLinkingOptionsFromClah(options);
 						auto linking_options = compiler::driver::constructLinkerOptions(
 							local_options, stdlib_options
 						);
 						build_target = compiler::driver::BuildTargetLLVMExecutable{
-							.output_file_stem = base::StrID(output_file_name.c_str()),
+							.output_file_name = base::StrID(output_file_name.c_str()),
 							.linking_options  = linking_options,
 						};
 					}

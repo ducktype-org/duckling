@@ -40,6 +40,7 @@ public:
 		TESTER_ADD_TEST(structureOperations);
 		TESTER_ADD_TEST(fixedSizeTableOperations);
 		TESTER_ADD_TEST(nestedAggregateTypesCorrectness);
+		TESTER_ADD_TEST(globalInitialValueTest);
 	}
 
 private:
@@ -151,6 +152,10 @@ private:
 
 	void nestedAggregateTypesCorrectness() {
 		runTestOnVm("nested_aggregate.dbc", "", "133707770999", {});
+	}
+
+	void globalInitialValueTest() {
+		runTestOnVm("global_initial_value.dbc", "", "10\n-10\n/1\n-1\no", {});
 	}
 
 	void testSyncRun() {
