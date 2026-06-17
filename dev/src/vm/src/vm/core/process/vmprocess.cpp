@@ -177,14 +177,12 @@ namespace vm {
 				updated = true;
 			}
 		}
+		// Emit after releasing rw_status: observers may call isExecutionPanicked() which
+		// takes a shared_lock on rw_status; emitting under the unique_lock would self-deadlock.
 		if (updated) {
 			on_status_changed.emitEvent(new_status);
 			status_cv.notify_all();
 		}
-		// Emit after releasing rw_status: observers may call isExecutionPanicked() which
-		// takes a shared_lock on rw_status; emitting under the unique_lock would self-deadlock.
-		on_status_changed.emitEvent(new_status);
-		status_cv.notify_all();
 
 		if (api::isStatusTerminal(new_status)) onTerminalStatus(new_status);
 	}
