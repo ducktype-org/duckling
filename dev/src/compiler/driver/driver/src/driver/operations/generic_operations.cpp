@@ -168,8 +168,8 @@ namespace compiler::driver {
 
 			auto output_names = getModuleOutputName(key);
 			auto code_output  = getQueryArtifactsCollection()->fileArtifactAtOrNew(
-				base::StrID(output_names.object_file)
-			);
+                base::StrID(output_names.object_file)
+            );
 
 			base::Optional<debug_info::DebugInfo>   debug_info_output;
 			base::Optional<artifacts::FileArtifact> debug_info_artifact;
@@ -208,11 +208,9 @@ namespace compiler::driver {
 			}
 			case BackendType::DVM: {
 				if_opt_some(output_names.debug_info_file, di_file) {
-					debug_info_artifact.emplace(
-						getQueryArtifactsCollection()->fileArtifactAtOrNew(
-							base::StrID(di_file.c_str())
-						)
-					);
+					debug_info_artifact.emplace(getQueryArtifactsCollection()->fileArtifactAtOrNew(
+						base::StrID(di_file.c_str())
+					));
 				}
 
 				auto serialize_to_artifact = [&](artifacts::FileArtifact& art,
@@ -525,8 +523,8 @@ namespace compiler::driver {
 
 				auto& script_context  = global_state::getScriptContext();
 				auto  output_artifact = global_state::getRootCollection()->fileArtifactAtOrNew(
-					base::StrID(base::strConcat(script_context.script_file.stem(), ".dbc"))
-				);
+                    base::StrID(base::strConcat(script_context.script_file.stem(), ".dbc"))
+                );
 				std::ofstream output_file(
 					output_artifact.file.getFilePath().getPath(), std::ios::binary
 				);
