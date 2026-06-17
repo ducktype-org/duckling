@@ -16,7 +16,7 @@ pub mod graph;
 const STATIC_LIB_SUFFIX: &str = ".a";
 
 // Duckling specific.
-const DVM_SUFFIX: &str = ".dvm";
+const DVM_SUFFIX: &str = ".dbc";
 
 #[cfg(test)]
 mod tests;
