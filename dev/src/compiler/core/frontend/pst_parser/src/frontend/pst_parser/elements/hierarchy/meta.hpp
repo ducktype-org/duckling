@@ -5,6 +5,7 @@
 #include "../../pst_state_forward.hpp"
 #include "../elements_common.hpp"
 #include "../lang_state_unmethods.hpp"
+#include "stmt_kind_fd.hpp"
 
 #include <diagnostic/source_position.hpp>
 #include <string_id/string_id.hpp>
@@ -50,7 +51,7 @@ namespace pst {
 		Transparent,
 	};
 
-	enum class StmtKind {
+	enum class StmtKind : int {
 		Import,
 		Using,
 		Alias,

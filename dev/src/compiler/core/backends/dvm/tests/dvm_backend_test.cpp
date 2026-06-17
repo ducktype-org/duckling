@@ -34,6 +34,7 @@ public:
 		TESTER_ADD_TEST(unitsTest);
 		TESTER_ADD_TEST(initsDeinitsTest);
 		TESTER_ADD_TEST(pointersTest);
+		TESTER_ADD_TEST(backendDependentTest);
 	}
 
 protected:
@@ -58,6 +59,7 @@ protected:
 			{ fs::FilePath(path("modules/units/")), "units" },
 			{ fs::FilePath(path("modules/inits_deinits/")), "inits_deinits" },
 			{ fs::FilePath(path("modules/pointers/")), "pointers" },
+			{ fs::FilePath(path("modules/backend_dependent/")), "backend_dependent" },
 		};
 		auto init_result
 			= compiler::driver::test_utils::initializeCompilerForTests(packages, artifacts_path);
@@ -164,6 +166,10 @@ private:
 	void pointersTest() { runFailTest("pointers", "Accessing null pointer", {}, {}, {}); }
 
 	void initsDeinitsTest() { runTest("inits_deinits", {}, { "100\n" }, {}, 0); }
+
+	// The DVM backend must select the `@dvm_only_impl` of the `@backend_dependent`
+	// `getValue` (returning 10), not the `@native_only_impl` one (returning 20).
+	void backendDependentTest() { runTest("backend_dependent", {}, {}, {}, 10); }
 };
 
 
