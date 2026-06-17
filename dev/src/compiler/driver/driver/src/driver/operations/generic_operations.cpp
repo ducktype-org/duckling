@@ -832,7 +832,9 @@ namespace compiler::driver {
 		for (const auto& task: tasks) {
 			variant_match(task.build_target) {
 				variant_case(BuildTargetLLVMExecutable, target_exe) {
-					auto output_file = global_state::getRootCollection()->fileArtifactAtOrNew(target_exe.output_file_name));
+					auto output_file = global_state::getRootCollection()->fileArtifactAtOrNew(
+						target_exe.output_file_name
+					);
 
 					llvm_objects_by_root_module.atMaybe(task.root_module)
 						.value()
