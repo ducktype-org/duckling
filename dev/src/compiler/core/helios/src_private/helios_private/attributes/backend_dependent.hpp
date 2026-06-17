@@ -16,13 +16,13 @@ namespace compiler::helios {
 
 	/**
 	 * @brief Verify the `DVMOnlyImpl` and `NativeOnlyImpl` attributes usage on function
-	 * declarations. Throws a query error if the usage is incorrect.
+	 * declarations. Throws a query failed error if the usage is incorrect.
 	 */
 	void verifyBackendImplAttrUsage(query::Context& ctx, const HOUTFunctionDeclaration& fun_decl);
 
 	/**
 	 * @brief Verify the `BackendDependent` attribute usage on function declaration.
-	 * Throws a query error if the usage is incorrect.
+	 * Throws a query failed error if the usage is incorrect.
 	 */
 	void verifyBackendDependentAttrUsage(
 		query::Context& ctx, const HOUTFunctionDeclaration& fun_decl

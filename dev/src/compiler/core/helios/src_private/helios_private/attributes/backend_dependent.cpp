@@ -4,6 +4,7 @@
 #include <helios/queries/function_queries.hpp>
 #include <helios/symbols/attributes.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
+#include <helios_private/hout/hout.hpp>
 #include <helios_private/scopes/scopes.hpp>
 
 #include <query_framework/query_errors.hpp>
@@ -38,7 +39,7 @@ namespace compiler::helios {
 			)));
 			query::throwFailed();
 		}
-		return results[0];
+		return results.at(0);
 	}
 
 	std::vector<SymID> getBackendDependentImplementations(query::Context& ctx, SymID sym_id) {

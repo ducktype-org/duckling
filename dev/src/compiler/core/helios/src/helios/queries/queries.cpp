@@ -28,6 +28,7 @@
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/extend_cpp/vector_utils.hpp>
+#include <base/types/ok_bad.hpp>
 
 #include <query_framework/query_errors.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
@@ -203,7 +204,7 @@ namespace compiler::helios {
 				return f->declaration->original_symbol;
 			});
 
-			if (duplicatesCheck(ctx, out)) is_failed = true;
+			if (duplicatesCheck(ctx, out).isBad()) is_failed = true;
 
 			if (is_failed) return query::Failed();
 
@@ -213,11 +214,11 @@ namespace compiler::helios {
 		/**
 		 * @brief Reports duplicated function definitions (functions sharing a mangled name).
 		 *
-		 * @return `true` if at least one duplicate was found. The caller is responsible for
+		 * @return `base::BAD` if at least one duplicate was found. The caller is responsible for
 		 * failing the query gracefully; this must not throw, as `QueryModuleHOUT` does not catch
 		 * query-failure exceptions thrown from `provide`.
 		 */
-		static bool duplicatesCheck(query::Context& ctx, const HOUTUnit& unit) {
+		static base::OkBad duplicatesCheck(query::Context& ctx, const HOUTUnit& unit) {
 			std::unordered_set<base::StrID> mangled_names;
 			bool                            found_duplicate = false;
 			for (const auto& func: unit.functions) {
@@ -251,7 +252,7 @@ namespace compiler::helios {
 					mangled_names.insert(mangled_name);
 				}
 			}
-			return found_duplicate;
+			return found_duplicate ? base::BAD : base::OK;
 		}
 
 		/**
