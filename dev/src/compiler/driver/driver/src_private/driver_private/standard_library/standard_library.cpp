@@ -222,14 +222,14 @@ namespace compiler::driver {
 					.root_module  = pkg->getRootModule().illegalAccess().getID(),
 					.build_target = BuildTargetLLVMStaticLibrary{ .output_file_name
 			                                                      = base::StrID(config.name + ".a"),
-			                                                      .archiving_options = {} },
+			                                                      .archiving_options = {}, },
 				}
 			);
 			tasks.push_back(
 				PackageCompilationTask{
 					.root_module = pkg->getRootModule().illegalAccess().getID(),
 					.build_target
-					= BuildTargetDVM{ .output_file_name = base::StrID(config.name + ".a") },
+					= BuildTargetDVM{ .output_file_name = base::StrID(config.name + ".a"), },
 				}
 			);
 		}
