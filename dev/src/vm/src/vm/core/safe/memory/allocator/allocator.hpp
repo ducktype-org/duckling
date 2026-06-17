@@ -15,5 +15,4 @@ namespace vm {
 	};
 
 	using AllocatorABC = IAllocator<std::byte>;
-
 }
