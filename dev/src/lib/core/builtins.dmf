@@ -10,7 +10,7 @@ extern("C") {
         and it requires the C-ABI.
     #}
     fundecl builtin_input_char() -> char;
-    fundecl builtin_output_char(c: char) -> i32;
+    fundecl builtin_output_char(c: char) -> i64;
 
     fundecl builtin_input_i64() -> i64;
     fundecl builtin_output_i64(x: i64) -> i64;

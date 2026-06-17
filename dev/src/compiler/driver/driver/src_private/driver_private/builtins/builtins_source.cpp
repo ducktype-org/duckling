@@ -55,7 +55,7 @@ struct list {
 // The definitions will be given below.
 extern "C" {
 	// Basic small I/O @TODO: #2635 move to Duckling, probably
-	int32_t  builtin_output_char(char c);
+	int64_t  builtin_output_char(char c);
 	char     builtin_input_char();
 	int64_t  builtin_output_i64(int64_t v);
 	int64_t  builtin_input_i64();
@@ -91,7 +91,7 @@ extern "C" {
 	String builtin_stringify_str(str s);
 }
 
-int32_t builtin_output_char(char c) { return printf("%c", c); }
+int64_t builtin_output_char(char c) { return printf("%c", c); }
 
 char builtin_input_char() {
 	char c;
