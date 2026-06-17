@@ -229,7 +229,7 @@ namespace compiler::driver {
 				PackageCompilationTask{
 					.root_module = pkg->getRootModule().illegalAccess().getID(),
 					.build_target
-					= BuildTargetDVM{ .output_file_name = base::StrID(config.name + ".a"), },
+					= BuildTargetDVM{ .output_file_name = base::StrID(config.name + ".dbc"), },
 				}
 			);
 		}
