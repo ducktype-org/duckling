@@ -832,9 +832,7 @@ namespace compiler::driver {
 		for (const auto& task: tasks) {
 			variant_match(task.build_target) {
 				variant_case(BuildTargetLLVMExecutable, target_exe) {
-					auto output_file = global_state::getRootCollection()->fileArtifactAtOrNew(
-						base::StrID(target_exe.output_file_name.strView())
-					);
+					auto output_file = global_state::getRootCollection()->fileArtifactAtOrNew(target_exe.output_file_name));
 
 					llvm_objects_by_root_module.atMaybe(task.root_module)
 						.value()
@@ -863,7 +861,7 @@ namespace compiler::driver {
 					// Note, if you change this convention, please also change the one in the
 					// `getStdLibArtifacts`
 					auto output_file = global_state::getRootCollection()->fileArtifactAtOrNew(
-						base::StrID(target_lib.output_file_name.strView())
+						target_lib.output_file_name
 					);
 
 					auto archive_result = archiver::createArchive(
