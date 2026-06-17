@@ -168,7 +168,7 @@ namespace compiler::driver {
 
 			auto output_names = getModuleOutputName(key);
 			auto code_output  = getQueryArtifactsCollection()->fileArtifactAtOrNew(
-				base::StrID(output_names.object_file.c_str())
+				base::StrID(output_names.object_file)
 			);
 
 			base::Optional<debug_info::DebugInfo>   debug_info_output;
@@ -525,7 +525,7 @@ namespace compiler::driver {
 
 				auto& script_context  = global_state::getScriptContext();
 				auto  output_artifact = global_state::getRootCollection()->fileArtifactAtOrNew(
-					base::StrID(base::strConcat(script_context.script_file.stem(), ".dbc").c_str())
+					base::StrID(base::strConcat(script_context.script_file.stem(), ".dbc"))
 				);
 				std::ofstream output_file(
 					output_artifact.file.getFilePath().getPath(), std::ios::binary
@@ -894,7 +894,7 @@ namespace compiler::driver {
 							*dvm_objects_by_root_module.atMaybe(task.root_module).value(),
 							debug_info_opt.has_value() ? *debug_info_opt.value()
 													   : std::vector<artifacts::FileArtifact>(),
-							std::string(target_dvm.output_file_name.strView())
+							target_dvm.output_file_name.str()
 						)
 					        .isBad())
 						result = base::BAD;
