@@ -620,7 +620,7 @@ namespace compiler::driver {
 	base::OkBad linkDVMPackage(
 		const std::vector<artifacts::FileArtifact>& objects,
 		const std::vector<artifacts::FileArtifact>& debug_info_artifacts,
-		const std::string&                          output_file_name,
+		const std::string&                          output_file_name
 	) {
 		vm::loader::Loader dvm_linker;
 
