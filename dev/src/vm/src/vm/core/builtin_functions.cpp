@@ -111,11 +111,11 @@ namespace vm::builtins {
 		return base::safeIntConv<i64>(output.size());
 	}
 
-	i32 FunctionHandlers::builtinOutputChar(SafeVMThread& thread, i8 arg) {
+	i64 FunctionHandlers::builtinOutputChar(SafeVMThread& thread, i8 arg) {
 		std::string output(1, static_cast<char>(arg));
 		thread.safe_process.getIO().writeOutput(output);
 
-		return base::safeIntConv<i32>(output.size());
+		return base::safeIntConv<i64>(output.size());
 	}
 
 	void FunctionHandlers::builtinOutputString(SafeVMThread& thread, Pointer ptr) {
@@ -340,7 +340,7 @@ namespace vm::builtins {
 				{
 					BuiltinFunctionID::OutputChar,
 					{ base::StrID("builtin_output_char"),
-			          code::FuncSignature({ base::StrID("i32") }, { base::StrID("i8") }) },
+			          code::FuncSignature({ base::StrID("i64") }, { base::StrID("i8") }) },
 				},
 				{
 					BuiltinFunctionID::OutputString,

@@ -86,7 +86,7 @@ namespace compiler::driver {
 			if (!output) had_error = true;
 
 			build_target = BuildTargetDVMExecutable{
-				.output_file_stem = output ? *output : base::StrID(),
+				.output_file_stem = output.copyValueOr(base::StrID("package_dvm")),
 			};
 		} else if (strategy && strategy->view() == "native") {
 			auto output

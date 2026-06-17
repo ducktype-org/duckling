@@ -347,7 +347,6 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 					current_place = loadFromPlace(current_place, vm_pointer_type);
 				}
 
-
 				// Resolve element layout + opcode in one place
 				auto [element_layout, op_kind]
 					= [&]() -> std::pair<CRef<tsl::TypeLayout>, vm::code::builders::OpKind> {
