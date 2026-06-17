@@ -98,3 +98,4 @@ SubDirs:
   - diagnostics
   - packages
   - standard_library
+  - incremental

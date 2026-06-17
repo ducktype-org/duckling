@@ -1,0 +1,6 @@
+import core.builtins.*;
+
+# Variant B of the mutated helper module: H.value() == 22.
+fun value() -> i64 = {
+    return 22;
+}

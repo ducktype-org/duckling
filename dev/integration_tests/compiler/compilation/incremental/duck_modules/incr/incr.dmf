@@ -1,0 +1,11 @@
+import core.builtins.*;
+
+import helper as H;
+
+# Root module of the incremental-compilation test package. Its output depends on
+# `helper.dmf`, which the incremental_check.py harness swaps between variants to
+# verify that editing a dependency invalidates the compiled result.
+fun main() -> i64 = {
+    builtin_output_i64(H.value());
+    return 0;
+}

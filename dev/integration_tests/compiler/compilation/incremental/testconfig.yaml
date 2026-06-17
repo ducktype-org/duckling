@@ -1,0 +1,44 @@
+# Incremental compilation tests.
+#
+# Unlike the other compilation tests (which wipe the artifact dir before every
+# compile), these drive a cold -> warm -> edit -> revert cycle against a single
+# persistent artifact dir and assert that incremental rebuilds are correct (never
+# stale) and actually reuse work. All of that logic lives in incremental_check.py;
+# the cases below only select the backend and the expected program output.
+
+incremental_check_script: "@{dev_dir}/integration_tests/compiler/compilation/scripts/incremental_check.py"
+
+# The harness manages the artifact dir itself, so PreCase only needs to make sure
+# no stale build survives a previous run.
+PreCase: "@{clean_cmd}"
+
+incremental_check_cmd: "python3 @{incremental_check_script}
+  --duckc-path @{duckc_path}
+  --vm-path @{dvm_path}
+  --package-dir duck_modules/incr
+  --package-name incr
+  --artifact-dir build
+  --worker-count @{duckc_worker_count}
+  --backend @{backend}
+  --mutate-file duck_modules/incr/helper.dmf
+  --variant-a sources/helper_v1.dmf
+  --variant-b sources/helper_v2.dmf
+  --expected-a \"11\\n\"
+  --expected-b \"22\\n\"
+  --expected-exit 0"
+
+Run: "@{incremental_check_cmd}"
+
+Tests:
+  incremental_rebuild:
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: "OK\n"
+        ExitCode: 0
+      dvm:
+        backend: dvm
+        Output:
+          String: "OK\n"
+        ExitCode: 0
