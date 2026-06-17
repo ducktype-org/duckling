@@ -674,7 +674,8 @@ namespace compiler::driver {
 				merged_debug_info->module_path = output_file.file.getFilePath().string();
 
 				auto output_file_stem = std::string_view(output_file_name);
-				if (output_file_stem.ends_with(".dvm")) output_file_stem.remove_suffix(4);
+				// Try to keep the old behaviour, by manually stripping the most common DVM suffix.
+				if (output_file_stem.ends_with(".dbc")) output_file_stem.remove_suffix(4);
 
 				auto di_output = global_state::getRootCollection()->fileArtifactAtOrNew(
 					base::StrID(base::strConcat(output_file_stem, ".di.json").c_str())
