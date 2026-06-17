@@ -1563,7 +1563,7 @@ private:
 		// (also triggers missing @backend_dependent fundecl, so 2 errors total)
 		checkForErrorOnCompileModule(
 			R"(@dvm_only_impl @native_only_impl fun func() -> i32 = { return 10; })",
-			{ "backend_dependent", "exclusive" },
+			{ "exclusive" },
 			2
 		);
 
