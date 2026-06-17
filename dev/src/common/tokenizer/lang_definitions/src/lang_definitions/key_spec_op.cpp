@@ -9,13 +9,14 @@
 
 namespace lang_def {
 	namespace {
-		// Transient tokenization state: tokenize() sets the mode before consuming tokens and
-		// strAsKeyword() reads it during that same tokenization and the parse that follows. Both
-		// run in one synchronous call stack (SourceFile::getPST -> pst::PST) on a single query
-		// thread pool worker. Workers tokenize in parallel, so a shared global here would be a data
-		// race. It is thread-local because the mode is only ever read on the thread that set it and
-		// never needs to cross threads; thread-local storage follows the thread across any core
-		// migration, so no CPU-affinity guarantee is required.
+		/** 
+		 * Global tokenization state.
+		 * 
+		 * @note This is thread local, because workers tokenize code in parallel, so a shared global here would be a data
+		 * race. It can be thread-local because the mode is always set before tokenization.
+		 *
+		 * @TODO: #2943 remove this global state
+		 */
 		thread_local KeywordMode keyword_mode = DEFAULT_MODE;
 	}
 
