@@ -217,17 +217,15 @@ namespace compiler::driver {
 				"Standard library package not found in global state"
 			);
 
-			tasks.push_back(PackageCompilationTask{
-				.root_module = pkg->getRootModule().illegalAccess().getID(),
-				.build_target
-				= BuildTargetLLVMStaticLibrary{ .output_file_name = base::StrID(config.name + ".a"),
-			                                    .archiving_options = {} },
-			});
-			tasks.push_back(PackageCompilationTask{
-				.root_module = pkg->getRootModule().illegalAccess().getID(),
-				.build_target
-				= BuildTargetDVMLibrary{ .output_file_name = base::StrID(config.name + ".dbc") },
-			});
+			tasks.emplace_back(
+				pkg->getRootModule().illegalAccess().getID(),
+				BuildTargetLLVMStaticLibrary{ .output_file_name  = base::StrID(config.name + ".a"),
+			                                  .archiving_options = {} }
+			);
+			tasks.emplace_back(
+				pkg->getRootModule().illegalAccess().getID(),
+				BuildTargetDVMLibrary{ .output_file_name = base::StrID(config.name + ".dbc") }
+			);
 		}
 		return tasks;
 	}
