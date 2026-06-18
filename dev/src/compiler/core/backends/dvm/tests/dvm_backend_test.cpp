@@ -13,6 +13,7 @@
 #include <vm/bytecode/serializer/serializer.hpp>
 
 #include <utility>
+#include <base/extend_cpp/vector_utils.hpp>
 
 using namespace compiler::driver;
 
@@ -69,51 +70,70 @@ protected:
 	}
 
 private:
-	auto getModuleFromPath(std::string module_path) {
+	auto getModuleFromPath(
+		const std::string&              main_module_path,
+		const std::vector<std::string>& module_paths_to_load = {}
+	) {
 		using namespace compiler;
 
 		vm::code::CodeCollection code;
-		auto                     module = driver::test_utils::getModuleIdFromPath(module_path);
+		auto                     append_module_to_code = [&](const std::string& module_path) {
+            auto module = driver::test_utils::getModuleIdFromPath(module_path);
+            query::utils::withContextDo([&](query::Context& ctx) {
+                auto& top_level = ctx.query<helios::QueryModuleHOUT>(module)->valueOrPanic();
 
-		query::utils::withContextDo([&](query::Context& ctx) {
-			auto& top_level = ctx.query<helios::QueryModuleHOUT>(module)->valueOrPanic();
+                auto mir_unit = mir::lowerToMIRUnit(ctx, &top_level);
+                assertTrue(mir_unit.hasValue(), "MIR lowering failed");
 
-			auto mir_unit = mir::lowerToMIRUnit(ctx, &top_level);
-			assertTrue(mir_unit.hasValue(), "MIR lowering failed");
+                auto lir_unit = lir::lowerToLIRUnit(ctx, mir_unit.valueOrPanic());
 
-			auto lir_unit = lir::lowerToLIRUnit(ctx, mir_unit.valueOrPanic());
+                backend_vm::DVMCodeBuilder m(ctx, base::StrID(module_path), false, false);
+                m.insertLIRUnit(lir_unit);
 
-			backend_vm::DVMCodeBuilder m(ctx, false, false);
-			m.insertLIRUnit(lir_unit);
+                code.mergeFrom(m.build());
+            });
+		};
+		for (auto& module_path: module_paths_to_load) append_module_to_code(module_path);
+		append_module_to_code(main_module_path);
 
-			code = m.build();
-		});
+		base::deduplicateBy(code.functions, [](const vm::code::Function& f) { return f.name.str; });
 		return code;
 	}
 
-	void runTest(
-		std::string                        module_path,
+	void runMultimoduleTest(
+		const std::string&                 module_path,
+		const std::vector<std::string>&    module_paths_to_load,
 		const base::Optional<std::string>& input     = {},
 		const base::Optional<std::string>& output    = {},
 		const std::vector<std::string>&    args      = {},
 		i64                                exit_code = 0
 	) {
 		using namespace compiler;
-		auto code = getModuleFromPath(std::move(module_path));
-		for (auto& type: code.types) vm::code::serializeType(type, std::cerr);
-		for (auto& func: code.functions) vm::code::serializeFunction(func, std::cerr);
+		auto code = getModuleFromPath(module_path, module_paths_to_load);
+		// for (auto& type: code.types) vm::code::serializeType(type, std::cerr);
+		// for (auto& func: code.functions) vm::code::serializeFunction(func, std::cerr);
 		runTestOnVm(code, input, output, args, exit_code);
 	}
 
+	void runTest(
+		const std::string&                 module_path,
+		const base::Optional<std::string>& input     = {},
+		const base::Optional<std::string>& output    = {},
+		const std::vector<std::string>&    args      = {},
+		i64                                exit_code = 0
+	) {
+		runMultimoduleTest(module_path, {}, input, output, args, exit_code);
+	}
+
 	void runFailTest(
-		std::string                        module_path,
+		const std::string&                 module_path,
 		const std::string&                 fail_msg = "",
 		const base::Optional<std::string>& input    = {},
 		const base::Optional<std::string>& output   = {},
 		const std::vector<std::string>&    args     = {}
 	) {
 		using namespace compiler;
-		auto code = getModuleFromPath(std::move(module_path));
+		auto code = getModuleFromPath(module_path);
 		for (auto& type: code.types) vm::code::serializeType(type, std::cerr);
 		for (auto& func: code.functions) vm::code::serializeFunction(func, std::cerr);
 		auto result = runTestOnVmGetResult(code, input, output, args);
@@ -165,7 +185,7 @@ private:
 
 	// A string literal is lowered to a static byte-array global plus a `{ptr, len}` slice struct.
 	// Reading the length and indexing into the slice exercises the generated slice bytecode.
-	void stringSliceTest() { runTest("strings", {}, "5\n", {}, 5); }
+	void stringSliceTest() { runMultimoduleTest("strings", {"core/builtins", "core/panicking"},{}, "14\nhello from vm!", {}, 0); }
 
 	void unitsTest() { runTest("units", {}, {}, {}, 0); }
 
