@@ -32,12 +32,22 @@ namespace compiler::backend_vm::internal {
 		 * @brief Lowers a compile-time value into a DVM value usable inside an instruction stream.
 		 *
 		 * Values representable as a single immediate (numeric, bool, char, meta type) are returned
-		 * directly as a `DVMImmediate`. Everything else is materialized as a global via
-		 * @ref lowerCtvToGlobal and that global's place is returned (an r-value source, copied at
-		 * the use site).
+		 * directly as a `DVMImmediate`. Everything else is materialized as a global constant via
+		 * @ref lowerCtvToGlobal and that global's place is returned.
 		 */
 		static DVMValue lowerValue(FunctionLoweringContext& fctx, const lir::LIRConstant& constant);
 
+		/**
+		 * @brief Construct a new global with a compile-time value and return a place referring to
+		 * it. It may use the constructor or a initial value constant, depending on the value being
+		 * lowered.
+		 *
+		 * @param constant The compile-time value that the global will be initialized with.
+		 * @param type The DVM type of the global.
+		 * @param is_constant Whether the global being created should be marked constant.
+		 * @param lowered_global_name If provided, the global will be created with this name.
+		 * Otherwise, a fresh name will be generated.
+		 */
 		static const DVMPlace& lowerCtvToNewGlobal(
 			ProgramLoweringContext&      pctx,
 			const ctv::CompileTimeValue& constant,
@@ -47,10 +57,18 @@ namespace compiler::backend_vm::internal {
 		);
 
 	private:
+		/**
+		 * @brief Non-trivial value lowerers can return the function to that initializes the global.
+		 */
 		struct CtorLoweringResult {
 			vm::code::Function ctor;
 		};
 
+		/**
+		 * @brief Small helper that lowers a string literal into a static global
+		 * and returns the constructor that assembles the slice pointing to it.
+		 * The constructor should be used as the string literal global `ctor`.
+		 */
 		static CtorLoweringResult lowerStringLiteral(
 			ProgramLoweringContext& pctx,
 			base::StrID             global_name,
@@ -58,6 +76,14 @@ namespace compiler::backend_vm::internal {
 			base::StrID             content
 		);
 
+		/**
+		 * @brief Helper setting the fields of a structure one by one from a list of values.
+		 *
+		 * @param destination The place of the structure to construct.
+		 * @param structure_type The type of the structure to construct.
+		 * @param values The values to set the structure's fields to. The order must match the order
+		 * of the fields in the structure type.
+		 */
 		static void constructStructureFromValues(
 			FunctionLoweringContext&  ctor_ctx,
 			const DVMPlace&           destination,

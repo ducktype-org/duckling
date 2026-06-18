@@ -30,8 +30,8 @@ compiler::backend_vm::internal::ProgramLoweringContext::ProgramLoweringContext(
 	bool            is_comp_time_lowering
 ):
 	  query_ctx_for_errors(&query_ctx),
-	  module_id(module_id),
 	  is_comp_time_lowering(is_comp_time_lowering),
+	  module_id(module_id),
 	  debug_info_builder(
 		  (build_debug_info ? debug_info::DebugInfoBuilder(
 								  debug_info::Target::DBC, debug_info::SourcePositionsType::PstHash
