@@ -12,15 +12,6 @@
 
 using namespace compiler::frontend;
 
-namespace {
-	[[maybe_unused]]
-	base::Ref<SourceFile> getRef(AccessLocked<FileID> access) {
-		return GetFileID_Functor::getFileRefUseOnlyWhenYouKnowWhatYouAreDoingThisCanModifyInput(
-			access.illegalAccess().getID()
-		);
-	}
-}
-
 class SourceFileTest: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS SourceFileTest
