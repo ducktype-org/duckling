@@ -85,11 +85,24 @@ namespace pst {
 			  element_kind(other.element_kind),
 			  id(PstID::next()) {}
 
+		/**
+		 * @brief Virtual function cloneElement that calls all of the parts of cloning that need to
+		 * be done.
+		 *
+		 * The implementation is should only be defined in final elements.
+		 */
 		virtual CLONE_SIGNATURE() = 0;
 
+		/**
+		 * @brief A non-virtual function that is performed on each inheritance level of elements to
+		 * clone the children elements.
+		 */
 		void cloneSubElements(const LangElement&) { return; }
 
 	public:
+		/**
+		 * @brief Returns a clone of the PST subtree starting in the current element.
+		 */
 		[[nodiscard]]
 		MBox<LangElement> clone() const;
 

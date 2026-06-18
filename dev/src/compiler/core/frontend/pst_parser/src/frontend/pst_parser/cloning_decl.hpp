@@ -5,7 +5,7 @@ namespace pst {
 	 * @brief Dummy class used to make constructor used for cloning more explicit and to not
 	 * accidentally use it.
 	 */
-	struct CloneDummy {
+	struct CloneDummy final {
 	private:
 		constexpr CloneDummy() = default;
 		friend constexpr CloneDummy makeCloneDummy();
@@ -57,7 +57,7 @@ private:                           \
  */
 #define CLONE_SIGNATURE_DEFAULT_OVERRIDE()                                 \
 	MBox<LangElement> cloneElement() const override {                      \
-		static_assert(std::is_final_v<ThisClass> == true);                 \
+		static_assert(std::is_final_v<ThisClass>);                         \
 		auto out = base::makeBox<ThisClass>(pst::makeCloneDummy(), *this); \
 		out->cloneSubElements(*this);                                      \
 		return out;                                                        \

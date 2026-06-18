@@ -53,13 +53,13 @@ class PSTErrorTests: public tester::TestSuite {
 
 		template<typename Element>
 		[[nodiscard]]
-		static bool testElementCloning(base::CRef<Element> el) {
+		static base::OkBad testElementCloning(base::CRef<Element> el) {
 			u64 x1 = 0, x2 = 0, x3 = 0, x4 = 0;
 			{
 				x1         = countSubElements(el);
 				auto clone = el->clone();
 				if (!clone) std::println(std::cerr, "[Error] Cloning failed");
-				if (!clone) return false;
+				if (!clone) return base::BAD;
 				x2 = countSubElements(el);
 				x3 = countSubElements(clone.ref().toOpt().value());
 
@@ -82,19 +82,20 @@ class PSTErrorTests: public tester::TestSuite {
 				}
 			}
 			x4 = countSubElements(el);
-			std::cerr << x1 << " " << x2 << " " << x3 << " " << x4 << "\n";
-			return x1 == x2 && x2 == x3 && x3 == x4;
+			if (x1 == x2 && x2 == x3 && x3 == x4)
+				return base::OK;
+			else
+				return base::BAD;
 		}
 
 		template<typename Element, typename Parser>
 		[[nodiscard]]
-		static bool testCloning(pst::PST<Element, Parser>& pst) {
+		static base::OkBad testCloning(pst::PST<Element, Parser>& pst) {
 			if (not pst.hasErrors()) {
-				auto is_good
-					= testElementCloning(base::CRef(&*pst.getRootElement().illegalAccess().value()));
-				return is_good;
+				return testElementCloning(base::CRef(&*pst.getRootElement().illegalAccess().value())
+				);
 			}
-			return true;
+			return base::OK;
 		}
 
 		virtual bool operator()() = 0;
@@ -111,7 +112,7 @@ class PSTErrorTests: public tester::TestSuite {
 
 		bool operator()() override {
 			auto parsed = pst::PST<Element, Parser>::fromContents(code, pst::PSTType::Program);
-			return ((not parsed.hasErrors()) == good && testCloning(parsed));
+			return ((not parsed.hasErrors()) == good && testCloning(parsed).isOk());
 		}
 
 		[[nodiscard]]
@@ -132,7 +133,7 @@ class PSTErrorTests: public tester::TestSuite {
 			auto parsed = pst::PST<pst::CodeBlock, Parser>::fromContentsWithArgs(
 				code, pst::PSTType::Program, hashing::ComponentHash{}
 			);
-			return ((not parsed.hasErrors()) == good && testCloning(parsed));
+			return ((not parsed.hasErrors()) == good && testCloning(parsed).isOk());
 		}
 
 		[[nodiscard]]
@@ -153,7 +154,7 @@ class PSTErrorTests: public tester::TestSuite {
 			auto parsed = pst::PST<pst::CodeBlockOrStmt, Parser>::fromContentsWithArgs(
 				code, pst::PSTType::Program, hashing::ComponentHash{}
 			);
-			return ((not parsed.hasErrors()) == good && testCloning(parsed));
+			return ((not parsed.hasErrors()) == good && testCloning(parsed).isOk());
 		}
 
 		[[nodiscard]]
@@ -182,7 +183,7 @@ class PSTErrorTests: public tester::TestSuite {
 				makeBox<pst::LangParserContext>(class_name, pst::BlockOrderType::Unordered),
 				hashing::ComponentHash{}
 			);
-			return ((not parsed.hasErrors()) == good && testCloning(parsed));
+			return ((not parsed.hasErrors()) == good && testCloning(parsed).isOk());
 		}
 
 		[[nodiscard]]

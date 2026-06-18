@@ -13,7 +13,7 @@
 #include "pst_automatic.hpp"
 
 namespace pst {
-	class CloningUtils {
+	class CloningUtils final {
 	public:
 		template<std::derived_from<LangElement> El>
 		static MBox<El> cloneCast(CRef<El> original) {
@@ -104,9 +104,15 @@ namespace pst {
 	};
 }
 
+/**
+ * @brief Helper macro for CLONE_SUB_ELEMENTS_DEF clones a single sub-element.
+ */
 #define ELEMENT_CLONE_SUB_ELEMENT(sub_element_name) \
 	pst::CloningUtils::clone(*this, sub_element_name, other.sub_element_name);
 
+/**
+ * @brief Default definition of cloneSubElements that takes names of children as arguments.
+ */
 #define CLONE_SUB_ELEMENTS_DEF(element_type, ...)                    \
 	void element_type::cloneSubElements(const element_type& other) { \
 		FOR_EACH(ELEMENT_CLONE_SUB_ELEMENT, __VA_ARGS__)             \
