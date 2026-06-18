@@ -57,6 +57,11 @@ namespace base::internal {
 
 	template<class... Ts>
 	VisitOverloaded(Ts...) -> VisitOverloaded<Ts...>;
+
+	template<typename... Ts, typename Variant>
+	constexpr bool matchesAny(const Variant& v) noexcept {
+		return (std::holds_alternative<Ts>(v) || ...);
+	}
 }
 
 namespace base {
@@ -109,16 +114,31 @@ namespace base {
 	[[fallthrough]];                           \
 	case (::base::variantTypeIndex<decltype(internal_value), type>()):
 
-#define variant_case_novalue(type, ...)                                \
-	break;                                                             \
-	case (::base::variantTypeIndex<decltype(internal_value), type>()): \
-		FOR_EACH(variant_match_novalue_extra_case, __VA_ARGS__)        \
-		if (true)
+#define variant_case_novalue(type, ...)                           \
+	break;                                                        \
+	FOR_EACH(variant_match_novalue_extra_case, type, __VA_ARGS__) \
+	if (true)
 
 #define variant_default \
 	break;              \
 	default:            \
 		if (true)
+
+/**
+ * @brief Does the internal alternative in the variant match any of the provided types.
+ * Use instead of `std::holds_alternative<T>(v)`.
+ */
+#define v_matches(v, ...) ::base::internal::matchesAny<__VA_ARGS__>(v)
+
+/**
+ * @brief Use instead of `std::get<T>(v)`.
+ */
+#define v_get(v, type) std::get<type>(v)
+
+/**
+ * @brief An `if` clause called when `v` holds `type`. The inner type is accessible through `name`.
+ */
+#define v_if_matches(v, type, name) if (const auto* name = std::get_if<type>(&v))
 
 /**
  * @brief Use instead of `std::visit` with multiple choices.

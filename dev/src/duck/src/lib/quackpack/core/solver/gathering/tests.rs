@@ -4,7 +4,6 @@ use std::time::Duration;
 
 use httpmock::prelude::*;
 use tempfile::{TempDir, tempdir};
-use url::Url;
 
 use crate::DuckContext;
 use crate::quackpack::core::fetcher::{Fetcher, types};
@@ -17,22 +16,24 @@ use crate::quackpack::core::solver::types_common::{
 use crate::quackpack::core::{Version, parse_manifest};
 use crate::quackpack::schemas::OneEntryMap;
 use crate::quackpack::schemas::registry::{self, DependencyCondition, DependencyFeature};
+use crate::quackpack::util::interned_url::InternedUrl;
+use crate::quackpack::util::to_url::ToUrl;
 use crate::util::path_ops_ext::PathOpsExt;
 use crate::util::test_utils::setup_test;
 
 struct MockGitAccess();
 impl GitAccess for MockGitAccess {
-    fn git_path(&self, _url: url::Url, _commit: &str) -> PathBuf {
+    fn git_path(&self, _url: InternedUrl, _commit: &str) -> PathBuf {
         unimplemented!()
     }
 
-    fn is_stored(&self, _url: url::Url, _commit: &str) -> bool {
+    fn is_stored(&self, _url: InternedUrl, _commit: &str) -> bool {
         unimplemented!()
     }
 
     fn store(
         &mut self,
-        _url: url::Url,
+        _url: InternedUrl,
         _commit: &str,
         _source_path: &std::path::Path,
     ) -> crate::QuackResult<()> {
@@ -90,8 +91,8 @@ fn create_mock_server() -> MockServer {
     let foo1 = registry::Manifest {
         metadata: registry::Metadata {
             version: Version::new(1, 0, 0),
-            authors: vec!["Patryk Rogalski".into()],
-            license: "GLWTSPL".into(),
+            authors: vec!["Carly Shillingford".into()],
+            license: "MIT".into(),
             name: "foo".into(),
             description: "".into(),
         },
@@ -104,8 +105,8 @@ fn create_mock_server() -> MockServer {
     let foo2 = registry::Manifest {
         metadata: registry::Metadata {
             version: Version::new(2, 0, 0),
-            authors: vec!["Patryk Rogalski".into()],
-            license: "GLWTSPL".into(),
+            authors: vec!["Carly Shillingford".into()],
+            license: "MIT".into(),
             name: "foo".into(),
             description: "".into(),
         },
@@ -118,8 +119,8 @@ fn create_mock_server() -> MockServer {
     let bar3 = registry::Manifest {
         metadata: registry::Metadata {
             version: Version::new(3, 0, 0),
-            authors: vec!["Patryk Rogalski".into()],
-            license: "GLWTSPL".into(),
+            authors: vec!["Carly Shillingford".into()],
+            license: "MIT".into(),
             name: "bar".into(),
             description: "".into(),
         },
@@ -132,8 +133,8 @@ fn create_mock_server() -> MockServer {
     let bar411 = registry::Manifest {
         metadata: registry::Metadata {
             version: Version::new(4, 1, 1),
-            authors: vec!["Patryk Rogalski".into()],
-            license: "GLWTSPL".into(),
+            authors: vec!["Carly Shillingford".into()],
+            license: "MIT".into(),
             name: "bar".into(),
             description: "".into(),
         },
@@ -168,8 +169,8 @@ fn create_mock_server() -> MockServer {
     let xd1 = registry::Manifest {
         metadata: registry::Metadata {
             version: Version::new(1, 0, 0),
-            authors: vec!["Patryk Rogalski".into()],
-            license: "GLWTSPL".into(),
+            authors: vec!["Carly Shillingford".into()],
+            license: "MIT".into(),
             name: "xd".into(),
             description: "".into(),
         },
@@ -182,8 +183,8 @@ fn create_mock_server() -> MockServer {
     let dx2 = registry::Manifest {
         metadata: registry::Metadata {
             version: Version::new(2, 0, 0),
-            authors: vec!["Patryk Rogalski".into()],
-            license: "GLWTSPL".into(),
+            authors: vec!["Carly Shillingford".into()],
+            license: "MIT".into(),
             name: "dx".into(),
             description: "".into(),
         },
@@ -229,8 +230,8 @@ fn create_mock_server() -> MockServer {
     let a1 = registry::Manifest {
         metadata: registry::Metadata {
             version: Version::new(1, 0, 0),
-            authors: vec!["Patryk Rogalski".into()],
-            license: "GLWTSPL".into(),
+            authors: vec!["Carly Shillingford".into()],
+            license: "MIT".into(),
             name: "a".into(),
             description: "".into(),
         },
@@ -243,8 +244,8 @@ fn create_mock_server() -> MockServer {
     let a2 = registry::Manifest {
         metadata: registry::Metadata {
             version: Version::new(2, 0, 0),
-            authors: vec!["Patryk Rogalski".into()],
-            license: "GLWTSPL".into(),
+            authors: vec!["Carly Shillingford".into()],
+            license: "MIT".into(),
             name: "a".into(),
             description: "".into(),
         },
@@ -257,8 +258,8 @@ fn create_mock_server() -> MockServer {
     let b1 = registry::Manifest {
         metadata: registry::Metadata {
             version: Version::new(1, 0, 0),
-            authors: vec!["Patryk Rogalski".into()],
-            license: "GLWTSPL".into(),
+            authors: vec!["Carly Shillingford".into()],
+            license: "MIT".into(),
             name: "b".into(),
             description: "".into(),
         },
@@ -271,8 +272,8 @@ fn create_mock_server() -> MockServer {
     let c1 = registry::Manifest {
         metadata: registry::Metadata {
             version: Version::new(1, 0, 0),
-            authors: vec!["Patryk Rogalski".into()],
-            license: "GLWTSPL".into(),
+            authors: vec!["Carly Shillingford".into()],
+            license: "MIT".into(),
             name: "c".into(),
             description: "".into(),
         },
@@ -282,6 +283,117 @@ fn create_mock_server() -> MockServer {
         profiles: HashMap::new(),
     };
 
+    // Assets for cycle test.
+    let u_v_dep = registry::Dependency {
+        name: "v".into(),
+        version: vec![Version::new(1, 0, 0)],
+        source: registry::DependencySource {
+            inner: registry::SourceInner::Registry {
+                registry_url: server.base_url(),
+            },
+        },
+        features: vec![DependencyFeature::Simple("u".into())],
+        pinned: true,
+        conditions: registry::DependencyCondition {
+            package_features: None,
+        },
+        alias: None,
+    };
+
+    let v_u_dep = registry::Dependency {
+        name: "u".into(),
+        version: vec![Version::new(1, 0, 0)],
+        source: registry::DependencySource {
+            inner: registry::SourceInner::Registry {
+                registry_url: server.base_url(),
+            },
+        },
+        features: vec![DependencyFeature::Simple("v".into())],
+        pinned: true,
+        conditions: registry::DependencyCondition {
+            package_features: None,
+        },
+        alias: None,
+    };
+
+    let u = registry::Manifest {
+        metadata: registry::Metadata {
+            version: Version::new(1, 0, 0),
+            authors: vec!["Carly Shillingford".into()],
+            license: "MIT".into(),
+            name: "a".into(),
+            description: "".into(),
+        },
+        dependencies: vec![u_v_dep],
+        dev_dependencies: registry::Dependencies::new(),
+        features: [("v".into(), vec![])].into(),
+        profiles: HashMap::new(),
+    };
+
+    let v = registry::Manifest {
+        metadata: registry::Metadata {
+            version: Version::new(1, 0, 0),
+            authors: vec!["Carly Shillingford".into()],
+            license: "MIT".into(),
+            name: "a".into(),
+            description: "".into(),
+        },
+        dependencies: vec![v_u_dep],
+        dev_dependencies: registry::Dependencies::new(),
+        features: [("u".into(), vec![])].into(),
+        profiles: HashMap::new(),
+    };
+
+    // Assets for features_expansion test.
+    let n_m_dep = registry::Dependency {
+        name: "m".into(),
+        version: vec![Version::new(1, 0, 0)],
+        source: registry::DependencySource {
+            inner: registry::SourceInner::Registry {
+                registry_url: server.base_url(),
+            },
+        },
+        features: vec![],
+        pinned: true,
+        conditions: registry::DependencyCondition {
+            package_features: Some(vec!["expanded".into()]),
+        },
+        alias: None,
+    };
+
+    let n = registry::Manifest {
+        metadata: registry::Metadata {
+            version: Version::new(1, 0, 0),
+            authors: vec!["Carly Shillingford".into()],
+            license: "MIT".into(),
+            name: "a".into(),
+            description: "".into(),
+        },
+        dependencies: vec![n_m_dep],
+        dev_dependencies: registry::Dependencies::new(),
+        features: [
+            ("expandable".into(), vec!["expanded".into()]),
+            ("expanded".into(), vec![]),
+        ]
+        .into(),
+        profiles: HashMap::new(),
+    };
+
+    let m = registry::Manifest {
+        metadata: registry::Metadata {
+            version: Version::new(1, 0, 0),
+            authors: vec!["Carly Shillingford".into()],
+            license: "MIT".into(),
+            name: "a".into(),
+            description: "".into(),
+        },
+        dependencies: vec![],
+        dev_dependencies: registry::Dependencies::new(),
+        features: [].into(),
+        profiles: HashMap::new(),
+    };
+
+    // Assets for not_pinned_registry test.
     server.mock(|when, then| {
         when.method(GET).path("/packages/foo/1.0.0");
         then.status(200).json_body_obj(&foo1);
@@ -360,6 +472,28 @@ fn create_mock_server() -> MockServer {
         });
     });
 
+    // Assets for cycle test.
+    server.mock(|when, then| {
+        when.method(GET).path("/packages/u/1.0.0");
+        then.status(200).json_body_obj(&u);
+    });
+
+    server.mock(|when, then| {
+        when.method(GET).path("/packages/v/1.0.0");
+        then.status(200).json_body_obj(&v);
+    });
+
+    // Assets for features_expansion test.
+    server.mock(|when, then| {
+        when.method(GET).path("/packages/n/1.0.0");
+        then.status(200).json_body_obj(&n);
+    });
+
+    server.mock(|when, then| {
+        when.method(GET).path("/packages/m/1.0.0");
+        then.status(200).json_body_obj(&m);
+    });
+
     server
 }
 
@@ -371,7 +505,7 @@ fn create_mock_server() -> MockServer {
 fn not_pinned_registry() {
     let (ctx, _root) = setup_duck_ctx();
     let server = create_mock_server();
-    let url: Url = server.base_url().parse().unwrap();
+    let url = server.base_url().to_url().unwrap().into();
     let mut fetcher = Fetcher::new(&ctx).unwrap();
     let (_dir, root_path) = prepare_manifest(&format!(
         r#"
@@ -387,6 +521,7 @@ dependencies:
 "#,
         &url
     ));
+    let root_url = root_path.to_url().unwrap().into();
     let root_manifest = parse_manifest(&root_path, &ctx).unwrap();
     let mut git_access = MockGitAccess();
     let mut gatherer = Gatherer::new(&mut fetcher, &mut git_access);
@@ -399,32 +534,29 @@ dependencies:
         )
         .unwrap();
     let loc_root = ExpandedLocation::Local {
-        absolute_path: root_path.clone(),
-    }
-    .into();
+        absolute_path: root_url,
+    };
     let loc_foo = ExpandedLocation::Registry {
-        url: url.clone(),
+        url,
         real_name: "foo".into(),
-    }
-    .into();
+    };
     let loc_bar = ExpandedLocation::Registry {
-        url: url.clone(),
+        url,
         real_name: "bar".into(),
-    }
-    .into();
-    assert!(
-        gathered_info.versions_for_location
-            == HashMap::from([
-                (loc_root, HashSet::from([None])),
-                (
-                    loc_foo,
-                    HashSet::from([Some(Version::new(1, 0, 0)), Some(Version::new(2, 0, 0))])
-                ),
-                (
-                    loc_bar,
-                    HashSet::from([Some(Version::new(3, 0, 0)), Some(Version::new(4, 1, 1))])
-                ),
-            ])
+    };
+    assert_eq!(
+        gathered_info.versions_for_location,
+        HashMap::from([
+            (loc_root, HashSet::from([None])),
+            (
+                loc_foo,
+                HashSet::from([Some(Version::new(1, 0, 0)), Some(Version::new(2, 0, 0))])
+            ),
+            (
+                loc_bar,
+                HashSet::from([Some(Version::new(3, 0, 0)), Some(Version::new(4, 1, 1))])
+            ),
+        ])
     );
     let packages = HashSet::from([
         ExpandedPackage {
@@ -448,47 +580,47 @@ dependencies:
             version: Some(Version::new(4, 1, 1)),
         },
     ]);
-    assert!(
+    assert_eq!(
+        packages,
         gathered_info
             .gathered_manifests
             .keys()
             .copied()
             .collect::<HashSet<ExpandedPackage>>()
-            == packages
     );
-    assert!(
+    assert_eq!(
+        packages,
         gathered_info
             .possible_features
             .keys()
             .copied()
             .collect::<HashSet<ExpandedPackage>>()
-            == packages
     );
     for (_, features) in gathered_info.possible_features {
         assert!(features.is_empty());
     }
-    assert!(
-        gathered_info.location_resolver
-            == HashMap::from([
-                (
-                    InternedLocation::new(Location::Local { path: root_path }),
-                    loc_root
-                ),
-                (
-                    InternedLocation::new(Location::Registry {
-                        url: url.clone(),
-                        real_name: "foo".into()
-                    }),
-                    loc_foo
-                ),
-                (
-                    InternedLocation::new(Location::Registry {
-                        url: url.clone(),
-                        real_name: "bar".into()
-                    }),
-                    loc_bar
-                ),
-            ])
+    assert_eq!(
+        gathered_info.location_resolver,
+        HashMap::from([
+            (
+                InternedLocation::new(Location::Local { path: root_url }),
+                loc_root
+            ),
+            (
+                InternedLocation::new(Location::Registry {
+                    url,
+                    real_name: "foo".into()
+                }),
+                loc_foo
+            ),
+            (
+                InternedLocation::new(Location::Registry {
+                    url,
+                    real_name: "bar".into()
+                }),
+                loc_bar
+            ),
+        ])
     )
 }
 
@@ -502,7 +634,7 @@ fn pinned_registry() {
     let (ctx, _root) = setup_duck_ctx();
     let server = create_mock_server();
 
-    let url: Url = server.base_url().parse().unwrap();
+    let url = server.base_url().to_url().unwrap().into();
     let mut fetcher = Fetcher::new(&ctx).unwrap();
     let (_dir, root_path) = prepare_manifest(&format!(
         r#"
@@ -524,6 +656,7 @@ dependencies:
 "#,
         &url, &url,
     ));
+    let root_url = root_path.to_url().unwrap().into();
     let root_manifest = parse_manifest(&root_path, &ctx).unwrap();
     let mut git_access = MockGitAccess();
     let mut gatherer = Gatherer::new(&mut fetcher, &mut git_access);
@@ -536,26 +669,23 @@ dependencies:
         )
         .unwrap();
     let loc_root = ExpandedLocation::Local {
-        absolute_path: root_path.clone(),
-    }
-    .into();
+        absolute_path: root_url,
+    };
     let loc_xd = ExpandedLocation::Registry {
-        url: url.clone(),
+        url,
         real_name: "xd".into(),
-    }
-    .into();
+    };
     let loc_dx = ExpandedLocation::Registry {
-        url: url.clone(),
+        url,
         real_name: "dx".into(),
-    }
-    .into();
-    assert!(
-        gathered_info.versions_for_location
-            == HashMap::from([
-                (loc_root, HashSet::from([None])),
-                (loc_xd, HashSet::from([Some(Version::new(1, 0, 0))])),
-                (loc_dx, HashSet::from([Some(Version::new(2, 0, 0))])),
-            ])
+    };
+    assert_eq!(
+        gathered_info.versions_for_location,
+        HashMap::from([
+            (loc_root, HashSet::from([None])),
+            (loc_xd, HashSet::from([Some(Version::new(1, 0, 0))])),
+            (loc_dx, HashSet::from([Some(Version::new(2, 0, 0))])),
+        ])
     );
 }
 
@@ -569,7 +699,7 @@ fn features() {
     let (ctx, _root) = setup_duck_ctx();
     let server = create_mock_server();
 
-    let url: Url = server.base_url().parse().unwrap();
+    let url = server.base_url().to_url().unwrap().into();
     let mut fetcher = Fetcher::new(&ctx).unwrap();
     let (_dir, root_path) = prepare_manifest(&format!(
         r#"
@@ -588,7 +718,7 @@ dependencies:
       registry-url: {}
     features:
     - root:
-        package-features: [my_feature] 
+        package-features: [my_feature]
     version: '2'
     pinned: true
 
@@ -597,6 +727,7 @@ features:
 "#,
         &url, &url,
     ));
+    let root_url = root_path.to_url().unwrap().into();
     let root_manifest = parse_manifest(&root_path, &ctx).unwrap();
     let mut git_access = MockGitAccess();
     let mut gatherer = Gatherer::new(&mut fetcher, &mut git_access);
@@ -609,44 +740,41 @@ features:
         )
         .unwrap();
     let loc_root = ExpandedLocation::Local {
-        absolute_path: root_path.clone(),
-    }
-    .into();
+        absolute_path: root_url,
+    };
     let loc_xd = ExpandedLocation::Registry {
-        url: url.clone(),
+        url,
         real_name: "xd".into(),
-    }
-    .into();
+    };
     let loc_dx = ExpandedLocation::Registry {
-        url: url.clone(),
+        url,
         real_name: "dx".into(),
-    }
-    .into();
-    assert!(
-        gathered_info.possible_features
-            == HashMap::from([
-                (
-                    ExpandedPackage {
-                        location: loc_root,
-                        version: None,
-                    },
-                    ["my_feature".into()].into()
-                ),
-                (
-                    ExpandedPackage {
-                        location: loc_xd,
-                        version: Some(Version::new(1, 0, 0)),
-                    },
-                    ["dx".into()].into()
-                ),
-                (
-                    ExpandedPackage {
-                        location: loc_dx,
-                        version: Some(Version::new(2, 0, 0)),
-                    },
-                    ["root".into()].into()
-                ),
-            ])
+    };
+    assert_eq!(
+        gathered_info.possible_features,
+        HashMap::from([
+            (
+                ExpandedPackage {
+                    location: loc_root,
+                    version: None,
+                },
+                ["my_feature".into()].into()
+            ),
+            (
+                ExpandedPackage {
+                    location: loc_xd,
+                    version: Some(Version::new(1, 0, 0)),
+                },
+                ["dx".into()].into()
+            ),
+            (
+                ExpandedPackage {
+                    location: loc_dx,
+                    version: Some(Version::new(2, 0, 0)),
+                },
+                ["root".into()].into()
+            ),
+        ])
     );
 }
 #[test]
@@ -669,7 +797,7 @@ fn pinned_request_while_pending_not_pinned() {
     let (ctx, _root) = setup_duck_ctx();
     let server = create_mock_server();
 
-    let url: Url = server.base_url().parse().unwrap();
+    let url = server.base_url().to_url().unwrap().into();
     let mut fetcher = Fetcher::new(&ctx).unwrap();
     let (_dir, root_path) = prepare_manifest(&format!(
         r#"
@@ -689,6 +817,7 @@ dependencies:
 "#,
         &url, &url,
     ));
+    let root_url = root_path.to_url().unwrap().into();
     let root_manifest = parse_manifest(&root_path, &ctx).unwrap();
     let mut git_access = MockGitAccess();
     let mut gatherer = Gatherer::new(&mut fetcher, &mut git_access);
@@ -701,74 +830,242 @@ dependencies:
         )
         .unwrap();
     let loc_root = ExpandedLocation::Local {
-        absolute_path: root_path.clone(),
-    }
-    .into();
+        absolute_path: root_url,
+    };
     let loc_a = ExpandedLocation::Registry {
-        url: url.clone(),
+        url,
         real_name: "a".into(),
-    }
-    .into();
+    };
     let loc_b = ExpandedLocation::Registry {
-        url: url.clone(),
+        url,
         real_name: "b".into(),
-    }
-    .into();
+    };
     let loc_c = ExpandedLocation::Registry {
-        url: url.clone(),
+        url,
         real_name: "c".into(),
-    }
-    .into();
-    assert!(
-        gathered_info.versions_for_location
-            == HashMap::from([
-                (loc_root, [None].into()),
-                (
-                    loc_a,
-                    [Some(Version::new(1, 0, 0)), Some(Version::new(2, 0, 0))].into()
-                ),
-                (loc_b, [Some(Version::new(1, 0, 0))].into()),
-                (loc_c, [Some(Version::new(1, 0, 0))].into()),
-            ])
+    };
+    assert_eq!(
+        gathered_info.versions_for_location,
+        HashMap::from([
+            (loc_root, [None].into()),
+            (
+                loc_a,
+                [Some(Version::new(1, 0, 0)), Some(Version::new(2, 0, 0))].into()
+            ),
+            (loc_b, [Some(Version::new(1, 0, 0))].into()),
+            (loc_c, [Some(Version::new(1, 0, 0))].into()),
+        ])
     );
-    assert!(
-        gathered_info.possible_features
-            == HashMap::from([
-                (
-                    ExpandedPackage {
-                        location: loc_root,
-                        version: None,
-                    },
-                    [].into()
-                ),
-                (
-                    ExpandedPackage {
-                        location: loc_a,
-                        version: Some(1.into()),
-                    },
-                    ["f".into()].into()
-                ),
-                (
-                    ExpandedPackage {
-                        location: loc_a,
-                        version: Some(2.into()),
-                    },
-                    [].into()
-                ),
-                (
-                    ExpandedPackage {
-                        location: loc_b,
-                        version: Some(1.into()),
-                    },
-                    [].into()
-                ),
-                (
-                    ExpandedPackage {
-                        location: loc_c,
-                        version: Some(1.into()),
-                    },
-                    [].into()
-                ),
-            ])
+    assert_eq!(
+        gathered_info.possible_features,
+        HashMap::from([
+            (
+                ExpandedPackage {
+                    location: loc_root,
+                    version: None,
+                },
+                [].into()
+            ),
+            (
+                ExpandedPackage {
+                    location: loc_a,
+                    version: Some(1.into()),
+                },
+                ["f".into()].into()
+            ),
+            (
+                ExpandedPackage {
+                    location: loc_a,
+                    version: Some(2.into()),
+                },
+                [].into()
+            ),
+            (
+                ExpandedPackage {
+                    location: loc_b,
+                    version: Some(1.into()),
+                },
+                [].into()
+            ),
+            (
+                ExpandedPackage {
+                    location: loc_c,
+                    version: Some(1.into()),
+                },
+                [].into()
+            ),
+        ])
+    )
+}
+
+/// Cycle of dependencies test.
+/// Synopsis:
+/// * root depends on *u* in version precisely 1
+/// * *u* depends on *v* in version precisely 1, with feature *u*
+/// * *v* depends on *u* in version precisely 1, with feature *v*
+#[test]
+fn cycle() {
+    let (ctx, _root) = setup_duck_ctx();
+    let server = create_mock_server();
+
+    let url = server.base_url().to_url().unwrap().into();
+    let mut fetcher = Fetcher::new(&ctx).unwrap();
+    let (_dir, root_path) = prepare_manifest(&format!(
+        r#"
+metadata:
+  name: root
+  version: '0.1.0'
+
+dependencies:
+  u:
+    source:
+      registry-url: {}
+    version: '1'
+    pinned: true
+"#,
+        &url
+    ));
+    let root_url = root_path.to_url().unwrap().into();
+    let root_manifest = parse_manifest(&root_path, &ctx).unwrap();
+    let mut git_access = MockGitAccess();
+    let mut gatherer = Gatherer::new(&mut fetcher, &mut git_access);
+    let gathered_info = gatherer
+        .explore(
+            root_path.clone(),
+            root_manifest.manifest().clone(),
+            [].into(),
+            SolverMode::default(),
+        )
+        .unwrap();
+    let loc_root = ExpandedLocation::Local {
+        absolute_path: root_url,
+    };
+    let loc_u = ExpandedLocation::Registry {
+        url,
+        real_name: "u".into(),
+    };
+    let loc_v = ExpandedLocation::Registry {
+        url,
+        real_name: "v".into(),
+    };
+    assert_eq!(
+        gathered_info.versions_for_location,
+        HashMap::from([
+            (loc_root, [None].into()),
+            (loc_u, [Some(Version::new(1, 0, 0))].into()),
+            (loc_v, [Some(Version::new(1, 0, 0))].into()),
+        ])
+    );
+    assert_eq!(
+        gathered_info.possible_features,
+        HashMap::from([
+            (
+                ExpandedPackage {
+                    location: loc_root,
+                    version: None,
+                },
+                [].into()
+            ),
+            (
+                ExpandedPackage {
+                    location: loc_u,
+                    version: Some(1.into()),
+                },
+                ["v".into()].into()
+            ),
+            (
+                ExpandedPackage {
+                    location: loc_v,
+                    version: Some(1.into()),
+                },
+                ["u".into()].into()
+            ),
+        ])
+    )
+}
+
+/// Features expansion test.
+/// Synopsis:
+/// * root depends on *n* in version precisely 1, with feature *expandable*, expanding to *expanded*
+/// * *n* depends on *m* in version precisely 1, conditioned on *expanded*
+#[test]
+fn features_expansion() {
+    let (ctx, _root) = setup_duck_ctx();
+    let server = create_mock_server();
+
+    let url = server.base_url().to_url().unwrap().into();
+    let mut fetcher = Fetcher::new(&ctx).unwrap();
+    let (_dir, root_path) = prepare_manifest(&format!(
+        r#"
+metadata:
+  name: root
+  version: '0.1.0'
+
+dependencies:
+  n:
+    source:
+      registry-url: {}
+    version: '1'
+    pinned: true
+    features: [expandable]
+"#,
+        &url
+    ));
+    let root_url = root_path.to_url().unwrap().into();
+    let root_manifest = parse_manifest(&root_path, &ctx).unwrap();
+    let mut git_access = MockGitAccess();
+    let mut gatherer = Gatherer::new(&mut fetcher, &mut git_access);
+    let gathered_info = gatherer
+        .explore(
+            root_path.clone(),
+            root_manifest.manifest().clone(),
+            [].into(),
+            SolverMode::default(),
+        )
+        .unwrap();
+    let loc_root = ExpandedLocation::Local {
+        absolute_path: root_url,
+    };
+    let loc_n = ExpandedLocation::Registry {
+        url,
+        real_name: "n".into(),
+    };
+    let loc_m = ExpandedLocation::Registry {
+        url,
+        real_name: "m".into(),
+    };
+    assert_eq!(
+        gathered_info.versions_for_location,
+        HashMap::from([
+            (loc_root, [None].into()),
+            (loc_n, [Some(Version::new(1, 0, 0))].into()),
+            (loc_m, [Some(Version::new(1, 0, 0))].into()),
+        ])
+    );
+    assert_eq!(
+        gathered_info.possible_features,
+        HashMap::from([
+            (
+                ExpandedPackage {
+                    location: loc_root,
+                    version: None,
+                },
+                [].into()
+            ),
+            (
+                ExpandedPackage {
+                    location: loc_n,
+                    version: Some(1.into()),
+                },
+                ["expandable".into(), "expanded".into()].into()
+            ),
+            (
+                ExpandedPackage {
+                    location: loc_m,
+                    version: Some(1.into()),
+                },
+                [].into()
+            ),
+        ])
     )
 }

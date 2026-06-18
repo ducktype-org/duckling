@@ -1,6 +1,6 @@
-global_data counter i64 {};
+global_data counter i64 {}
 
-global_data global_ptr ptr_i64 {};
+global_data global_ptr ptr_i64 {}
 
 function for_coverage {} -> {} {
 	init_pany_type ptr, ptr_i64;

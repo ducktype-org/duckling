@@ -1,5 +1,4 @@
 //! `build` subcommand execution logic.
-use crate::quackpack::core::compile::duckc::CompilationType;
 use crate::quackpack::core::compile::profiles::Profile;
 use crate::quackpack::core::compile::{self, BuildContext};
 use crate::quackpack::core::storage::{StorageSyncOptions, sync};
@@ -33,6 +32,7 @@ pub fn compile(options: BuildOptions<'_>) -> QuackResult<()> {
         frozen,
         strict_errors,
     } = options;
+    let root_identity = pcx.package().as_a_local_identity()?;
     let (lock, venv, storage) = sync(
         &pcx,
         StorageSyncOptions {
@@ -45,12 +45,12 @@ pub fn compile(options: BuildOptions<'_>) -> QuackResult<()> {
     let profile = Profile::construct_profile(profile, pcx.package().manifest().profiles())?;
     let bcx = BuildContext {
         pcx: &pcx,
+        root_identity,
         freeze: venv.into(),
         storage,
         used_features,
         profile,
-        script_path: None,
     };
-    compile::compile(bcx, CompilationType::OnlyRootPackage)?;
+    compile::compile(bcx)?;
     Ok(())
 }

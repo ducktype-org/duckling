@@ -46,7 +46,7 @@ namespace dia_int {
 	public:
 		PlaceholderError(
 			std::string                             header_message,
-			base::Optional<dia_int::StablePosition> source_position         = {},
+			base::Optional<dia_int::StablePosition> source_position,
 			std::string                             description             = "",
 			base::Optional<std::string>             pointer_message_content = "here"
 		);
@@ -56,7 +56,7 @@ namespace dia_int {
 		 */
 		PlaceholderError(
 			std::string                         header_message,
-			base::Optional<dia::SourcePosition> source_position         = {},
+			base::Optional<dia::SourcePosition> source_position,
 			std::string                         description             = "",
 			base::Optional<std::string>         pointer_message_content = "here"
 		);

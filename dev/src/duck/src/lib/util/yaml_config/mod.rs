@@ -551,6 +551,7 @@ deserializing from YAML containing more than one document is not supported",
 
     #[test]
     fn deserializer_tests() {
+        // cSpell:disable
         use serde::de;
 
         let file = prepare_file(
@@ -702,5 +703,6 @@ missing key `nonexistentkey`",
             .deserialize_optional::<IntOrString>("nonexistentkey")
             .unwrap();
         assert!(none.is_none());
+        // cSpell:enable
     }
 }

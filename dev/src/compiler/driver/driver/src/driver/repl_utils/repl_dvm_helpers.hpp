@@ -20,10 +20,10 @@ namespace compiler::repl {
 	 * the code to a running VM process.
 	 */
 	std::expected<vm::code::CodeCollection, std::string> compileHOUTUnitToDVMCode(
-		query::Context&                  ctx,
-		const helios::HOUTUnit&          hout_unit,
-		std::string_view                 module_name,
-		backend_vm::ReplLoweringContext& lowering_context
+		query::Context&                 ctx,
+		const helios::HOUTUnit&         hout_unit,
+		std::string_view                module_name,
+		backend_vm::ReplDVMCodeBuilder& lowering_context
 	);
 
 	/**
@@ -46,11 +46,30 @@ namespace compiler::repl {
 	 * @return Success or error message on failure.
 	 */
 	std::expected<void, std::string> compileAndLoad(
-		query::Context&                  ctx,
-		const helios::HOUTUnit&          hout_unit,
-		std::string_view                 module_name,
-		vm::PID                          pid,
-		backend_vm::ReplLoweringContext& lowering_context
+		query::Context&                 ctx,
+		const helios::HOUTUnit&         hout_unit,
+		std::string_view                module_name,
+		vm::PID                         pid,
+		backend_vm::ReplDVMCodeBuilder& lowering_context
+	);
+
+	/**
+	 * @brief Compile the standard library to in-memory DVM bytecode and load it into a running
+	 * DVM process.
+	 *
+	 * Does nothing (and succeeds) when no standard library packages are registered.
+	 *
+	 * @param ctx              Active query context for LIR compilation queries.
+	 * @param pid              Process ID of the target DVM instance.
+	 * @param lowering_context Persistent lowering context for REPL statement compilation.
+	 *
+	 * @note Like compileAndLoad(), this does NOT manage the context lifecycle of
+	 * @p lowering_context; the caller must have called setContext() with @p ctx first.
+	 *
+	 * @return Success or error message on failure.
+	 */
+	std::expected<void, std::string> preloadStandardLibrary(
+		query::Context& ctx, vm::PID pid, backend_vm::ReplDVMCodeBuilder& lowering_context
 	);
 
 	/**

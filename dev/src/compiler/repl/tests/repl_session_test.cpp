@@ -1,13 +1,21 @@
+#include <diagnostic_interactive/module_flags/module_flags.hpp>
 #include <driver/repl_utils/repl_split_helpers.hpp>
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <repl/session.hpp>
 
+#include <base/types/ints.hpp>
+
 #include <filesystem/file.hpp>
+#include <logger/logger.hpp>
 #include <query_framework/entry/query_entry_point.hpp>
 #include <tester/tester.hpp>
 
+#include <filesystem>
+#include <fstream>
+#include <iostream>
+#include <sstream>
 #include <string_view>
 
 namespace compiler::repl {
@@ -30,9 +38,20 @@ namespace compiler::repl {
 			TESTER_ADD_TEST(testReplCommandAliasesThroughProcessLine);
 			TESTER_ADD_TEST(testReplExitCommandAliasesThroughProcessLine);
 			TESTER_ADD_TEST(testReplHistoryCommandThroughProcessLine);
+			TESTER_ADD_TEST(testReplSymbolsCommandEmpty);
+			TESTER_ADD_TEST(testReplSymbolsCommandListsDeclarations);
+			TESTER_ADD_TEST(testReplSymbolsCommandListsConstAliasAndClass);
+			TESTER_ADD_TEST(testReplVariablesCommandListsOnlyVariables);
+			TESTER_ADD_TEST(testReplVariablesAndFunctionsCommandsReportEmptyAfterOtherSymbols);
+			TESTER_ADD_TEST(testReplFunctionsCommandListsOnlyFunctions);
+			TESTER_ADD_TEST(testReplDetailsCommandShowsVariableDetails);
+			TESTER_ADD_TEST(testReplDetailsCommandShowsFunctionDetails);
+			TESTER_ADD_TEST(testReplDetailsCommandShowsClassMembers);
+			TESTER_ADD_TEST(testReplDetailsCommandShowsNamespaceMembers);
+			TESTER_ADD_TEST(testReplDetailsCommandDoesNotResolveMemberPaths);
+			TESTER_ADD_TEST(testReplDetailsCommandHandlesMissingName);
 			TESTER_ADD_TEST(testReplUnknownCommandThroughHandleCommand);
 			TESTER_ADD_TEST(testReplClearCommandDoesNotResetSessionState);
-			TESTER_ADD_TEST(testReplClearHistoryResetsSessionState);
 			TESTER_ADD_TEST(testReplProcessLineWithCode);
 			TESTER_ADD_TEST(testReplInstructionExecution);
 			TESTER_ADD_TEST(testReplCommandDetection);
@@ -44,9 +63,48 @@ namespace compiler::repl {
 			TESTER_ADD_TEST(testReplArithmeticExpressions);
 			TESTER_ADD_TEST(testReplVariableLookup);
 			TESTER_ADD_TEST(testReplUnsupportedActionClassification);
+			TESTER_ADD_TEST(testReplResetAbsoluteReplay);
+			TESTER_ADD_TEST(testReplResetRelativeReplay);
+			TESTER_ADD_TEST(testReplResetSyntaxErrors);
+			TESTER_ADD_TEST(testReplFrontendAddHistory);
+			TESTER_ADD_TEST(testReplResetSyntaxErrorsMore);
+			TESTER_ADD_TEST(testReplSaveAndPrintHistory);
+			TESTER_ADD_TEST(testReplCommandsResetCommand);
+			TESTER_ADD_TEST(testReplHistoryCommandAdvanced);
+			TESTER_ADD_TEST(testReplReplayHistoryNotSilent);
+		}
+
+		void beforeAll() override {
+			dia_int::configureImmediatePrint(&std::cerr);
+			// enable if needed
+			// logger::enable_dev_logs = true;
+			// logger::enableDevCategoryByStringName("REPL");
 		}
 
 	private:
+		struct ScopedStreamCapture final {
+			explicit ScopedStreamCapture(std::ostream& stream):
+				  m_stream(stream),
+				  m_old_buf(stream.rdbuf(m_buffer.rdbuf())) {}
+
+			~ScopedStreamCapture() { m_stream.rdbuf(m_old_buf); }
+
+			ScopedStreamCapture(const ScopedStreamCapture&)            = delete;
+			ScopedStreamCapture& operator=(const ScopedStreamCapture&) = delete;
+
+			std::string str() const { return m_buffer.str(); }
+
+		private:
+			std::ostream&     m_stream;
+			std::stringstream m_buffer;
+			std::streambuf*   m_old_buf = nullptr;
+		};
+
+		void removeSessionHistoryFile() {
+			std::error_code err;
+			std::filesystem::remove(".duckling_repl_session_history", err);
+		}
+
 		/**
 		 * @brief Test that a ReplSession can be initialized successfully.
 		 *
@@ -61,7 +119,7 @@ namespace compiler::repl {
 			assertTrue(
 				!session.m_should_exit, "ReplSession should not exit immediately after construction"
 			);
-			assertTrue(session.m_history.empty(), "ReplSession history should start empty");
+			assertTrue(session.m_session_history.empty(), "ReplSession history should start empty");
 			assertTrue(session.m_line_counter == 0, "Line counter should start at 0");
 		}
 
@@ -126,6 +184,459 @@ namespace compiler::repl {
 			assertFalse(session.m_should_exit, "/history should not mark session for exit");
 		}
 
+		void testReplSymbolsCommandEmpty() {
+			ReplSession session;
+
+			ScopedStreamCapture capture(std::cout);
+			auto                result = session.processLine("/symbols");
+
+			assertTrue(
+				result.status == ReplResult::Status::Success,
+				"/symbols should be processed as a successful command"
+			);
+			assertTrue(
+				capture.str().find("No symbols declared yet.") != std::string::npos,
+				"/symbols should report an empty declaration list for a fresh session"
+			);
+		}
+
+		void testReplSymbolsCommandListsDeclarations() {
+			ReplSession session;
+
+			auto var_result = session.processLine("var sym_x: i32 = 10;");
+			auto fun_result
+				= session.processLine("fun sym_add(a: i32, b: i32) -> i32 = { return a + b; }");
+			auto ns_result = session.processLine("namespace SymNs {}");
+
+			assertTrue(
+				var_result.status == ReplResult::Status::Success,
+				"Variable declaration should succeed before /symbols"
+			);
+			assertTrue(
+				fun_result.status == ReplResult::Status::Success,
+				"Function declaration should succeed before /symbols"
+			);
+			assertTrue(
+				ns_result.status == ReplResult::Status::Success,
+				"Namespace declaration should succeed before /symbols"
+			);
+
+			ScopedStreamCapture capture(std::cout);
+			auto                result = session.processLine("/syms");
+			const auto          output = capture.str();
+
+			assertTrue(result.status == ReplResult::Status::Success, "/syms should succeed");
+			assertTrue(
+				output.find("Visible Symbols") != std::string::npos,
+				"/symbols output should include a header"
+			);
+			assertTrue(
+				output.find("[history #1] variable sym_x : i32") != std::string::npos,
+				"/symbols should list the variable with its type"
+			);
+			assertTrue(
+				output.find("[history #2] function sym_add(a: i32, b: i32) -> i32")
+					!= std::string::npos,
+				"/symbols should list the function with its signature"
+			);
+			assertTrue(
+				output.find("[history #3] namespace SymNs") != std::string::npos,
+				"/symbols should list the namespace"
+			);
+		}
+
+		void testReplSymbolsCommandListsConstAliasAndClass() {
+			ReplSession session;
+
+			auto var_result   = session.processLine("var symbol_source: i32 = 3;");
+			auto alias_result = session.processLine("alias symbol_alias = symbol_source;");
+			auto const_result = session.processLine("const symbol_const: i64 = 42;");
+			auto class_result = session.processLine("class SymbolClass{}");
+
+			assertTrue(
+				var_result.status == ReplResult::Status::Success,
+				"Variable declaration should succeed before richer /symbols test"
+			);
+			assertTrue(
+				alias_result.status == ReplResult::Status::Success,
+				"Alias declaration should succeed before /symbols"
+			);
+			assertTrue(
+				const_result.status == ReplResult::Status::Success,
+				"Const declaration should succeed before /symbols"
+			);
+			assertTrue(
+				class_result.status == ReplResult::Status::Success,
+				"Class declaration should succeed before /symbols"
+			);
+
+			ScopedStreamCapture capture(std::cout);
+			auto                result = session.processLine("/symbols");
+			const auto          output = capture.str();
+
+			assertTrue(result.status == ReplResult::Status::Success, "/symbols should succeed");
+			assertTrue(
+				output.find("[history #1] variable symbol_source : i32") != std::string::npos,
+				"/symbols should list regular variables"
+			);
+			assertTrue(
+				output.find("[history #2] alias symbol_alias") != std::string::npos,
+				"/symbols should list aliases"
+			);
+			assertTrue(
+				output.find("[history #3] const symbol_const : const i64") != std::string::npos,
+				"/symbols should list const declarations with their type"
+			);
+			assertTrue(
+				output.find("[history #4] class SymbolClass") != std::string::npos,
+				"/symbols should list classes"
+			);
+		}
+
+		void testReplVariablesCommandListsOnlyVariables() {
+			ReplSession session;
+
+			auto var_result = session.processLine("var only_var_x: i32 = 10;");
+			auto fun_result
+				= session.processLine("fun only_fun_add(a: i32, b: i32) -> i32 = { return a + b; }");
+			auto ns_result = session.processLine("namespace OnlyVarNs {}");
+
+			assertTrue(
+				var_result.status == ReplResult::Status::Success,
+				"Variable declaration should succeed before /vars"
+			);
+			assertTrue(
+				fun_result.status == ReplResult::Status::Success,
+				"Function declaration should succeed before /vars"
+			);
+			assertTrue(
+				ns_result.status == ReplResult::Status::Success,
+				"Namespace declaration should succeed before /vars"
+			);
+
+			ScopedStreamCapture capture(std::cout);
+			auto                result = session.processLine("/vars");
+			const auto          output = capture.str();
+
+			assertTrue(result.status == ReplResult::Status::Success, "/vars should succeed");
+			assertTrue(
+				output.find("Visible Variables") != std::string::npos,
+				"/vars output should include a variables header"
+			);
+			assertTrue(
+				output.find("[history #1] variable only_var_x : i32") != std::string::npos,
+				"/vars should list the variable with its type"
+			);
+			assertTrue(
+				output.find("only_fun_add") == std::string::npos, "/vars should not list functions"
+			);
+			assertTrue(
+				output.find("OnlyVarNs") == std::string::npos, "/vars should not list namespaces"
+			);
+		}
+
+		void testReplVariablesAndFunctionsCommandsReportEmptyAfterOtherSymbols() {
+			ReplSession session;
+
+			auto ns_result    = session.processLine("namespace EmptyFilterNs {}");
+			auto class_result = session.processLine("class EmptyFilterClass{}");
+			auto const_result = session.processLine("const empty_filter_const: i64 = 1;");
+
+			assertTrue(
+				ns_result.status == ReplResult::Status::Success,
+				"Namespace declaration should succeed before empty filter checks"
+			);
+			assertTrue(
+				class_result.status == ReplResult::Status::Success,
+				"Class declaration should succeed before empty filter checks"
+			);
+			assertTrue(
+				const_result.status == ReplResult::Status::Success,
+				"Const declaration should succeed before empty filter checks"
+			);
+
+			{
+				ScopedStreamCapture capture(std::cout);
+				auto                result = session.processLine("/vars");
+				assertTrue(result.status == ReplResult::Status::Success, "/vars should succeed");
+				assertTrue(
+					capture.str().find("No variables declared yet.") != std::string::npos,
+					"/vars should report no top-level variables when only other symbols exist"
+				);
+			}
+
+			{
+				ScopedStreamCapture capture(std::cout);
+				auto                result = session.processLine("/functions");
+				assertTrue(
+					result.status == ReplResult::Status::Success, "/functions should succeed"
+				);
+				assertTrue(
+					capture.str().find("No functions declared yet.") != std::string::npos,
+					"/functions should report no top-level functions when only other symbols exist"
+				);
+			}
+		}
+
+		void testReplFunctionsCommandListsOnlyFunctions() {
+			ReplSession session;
+
+			auto var_result = session.processLine("var only_func_x: i32 = 10;");
+			auto fun_result
+				= session.processLine("fun only_func_add(a: i32, b: i32) -> i32 = { return a + b; }"
+			    );
+			auto ns_result = session.processLine("namespace OnlyFuncNs {}");
+
+			assertTrue(
+				var_result.status == ReplResult::Status::Success,
+				"Variable declaration should succeed before /functions"
+			);
+			assertTrue(
+				fun_result.status == ReplResult::Status::Success,
+				"Function declaration should succeed before /functions"
+			);
+			assertTrue(
+				ns_result.status == ReplResult::Status::Success,
+				"Namespace declaration should succeed before /functions"
+			);
+
+			ScopedStreamCapture capture(std::cout);
+			auto                result = session.processLine("/fns");
+			const auto          output = capture.str();
+
+			assertTrue(result.status == ReplResult::Status::Success, "/fns should succeed");
+			assertTrue(
+				output.find("Visible Functions") != std::string::npos,
+				"/functions output should include a functions header"
+			);
+			assertTrue(
+				output.find("[history #2] function only_func_add(a: i32, b: i32) -> i32")
+					!= std::string::npos,
+				"/functions should list the function with its signature"
+			);
+			assertTrue(
+				output.find("only_func_x") == std::string::npos,
+				"/functions should not list variables"
+			);
+			assertTrue(
+				output.find("OnlyFuncNs") == std::string::npos,
+				"/functions should not list namespaces"
+			);
+		}
+
+		void testReplDetailsCommandShowsVariableDetails() {
+			ReplSession session;
+
+			auto var_result = session.processLine("var detail_value: i64 = 99;");
+			assertTrue(
+				var_result.status == ReplResult::Status::Success,
+				"Variable declaration should succeed before /details"
+			);
+
+			ScopedStreamCapture capture(std::cout);
+			auto                result = session.processLine("/details detail_value");
+			const auto          output = capture.str();
+
+			assertTrue(result.status == ReplResult::Status::Success, "/details should succeed");
+			assertTrue(
+				output.find("Details for `detail_value`") != std::string::npos,
+				"/details should include a variable details header"
+			);
+			assertTrue(
+				output.find("defined in: history #1") != std::string::npos,
+				"/details should include the defining history entry"
+			);
+			assertTrue(
+				output.find("variable detail_value : i64") != std::string::npos,
+				"/details should include the variable type summary"
+			);
+			assertTrue(
+				output.find("kind: variable") != std::string::npos,
+				"/details should include the variable kind"
+			);
+			assertTrue(
+				output.find("qualified name:") != std::string::npos,
+				"/details should include the compiler qualified name"
+			);
+		}
+
+		void testReplDetailsCommandShowsFunctionDetails() {
+			ReplSession session;
+
+			auto fun_result
+				= session.processLine("fun detail_mul(a: i64, b: i64) -> i64 = { return a * b; }");
+			assertTrue(
+				fun_result.status == ReplResult::Status::Success,
+				"Function declaration should succeed before /details"
+			);
+
+			ScopedStreamCapture capture(std::cout);
+			auto                result = session.processLine("/details detail_mul");
+			const auto          output = capture.str();
+
+			assertTrue(result.status == ReplResult::Status::Success, "/details should succeed");
+			assertTrue(
+				output.find("Details for `detail_mul`") != std::string::npos,
+				"/details should include a function details header"
+			);
+			assertTrue(
+				output.find("function detail_mul(a: i64, b: i64) -> i64") != std::string::npos,
+				"/details should include the function signature"
+			);
+			assertTrue(
+				output.find("kind: function") != std::string::npos,
+				"/details should include the function kind"
+			);
+		}
+
+		void testReplDetailsCommandShowsClassMembers() {
+			ReplSession session;
+
+			auto class_result = session.processLine(
+				"class DetailClass{ field_a : i64; field_b : i64; "
+				"fun detail_sum(t : DetailClass) -> i64 = t.field_a + t.field_b;}"
+			);
+			assertTrue(
+				class_result.status == ReplResult::Status::Success,
+				"Class declaration should succeed before /details"
+			);
+
+			ScopedStreamCapture capture(std::cout);
+			auto                result = session.processLine("/details DetailClass");
+			const auto          output = capture.str();
+
+			assertTrue(result.status == ReplResult::Status::Success, "/details should succeed");
+			assertTrue(
+				output.find("Details for `DetailClass`") != std::string::npos,
+				"/details should include a class details header"
+			);
+			assertTrue(
+				output.find("class DetailClass") != std::string::npos,
+				"/details should include the class summary"
+			);
+			assertTrue(
+				output.find("fields:") != std::string::npos, "/details should include class fields"
+			);
+			assertTrue(
+				output.find("field field_a : i64") != std::string::npos,
+				"/details should list the first field"
+			);
+			assertTrue(
+				output.find("field field_b : i64") != std::string::npos,
+				"/details should list the second field"
+			);
+			assertTrue(
+				output.find("declared constructors:") != std::string::npos,
+				"/details should label source constructors as declared"
+			);
+			assertTrue(
+				output.find("implicit constructors:") != std::string::npos,
+				"/details should mention generated implicit constructors"
+			);
+			assertTrue(
+				output.find("DetailClass(field_a: i64, field_b: i64)") != std::string::npos,
+				"/details should show the implicit field constructor"
+			);
+			assertTrue(
+				output.find("methods:") != std::string::npos, "/details should include class methods"
+			);
+			assertTrue(
+				output.find("method detail_sum(t: Class DetailClass) -> i64") != std::string::npos,
+				"/details should list the method signature"
+			);
+		}
+
+		void testReplDetailsCommandShowsNamespaceMembers() {
+			ReplSession session;
+
+			auto namespace_result = session.processLine(
+				"namespace DetailNs { var ns_value: i32 = 1; "
+				"fun ns_fun() -> i32 = { return ns_value; } }"
+			);
+			assertTrue(
+				namespace_result.status == ReplResult::Status::Success,
+				"Namespace declaration should succeed before /details"
+			);
+
+			ScopedStreamCapture capture(std::cout);
+			auto                result = session.processLine("/details DetailNs");
+			const auto          output = capture.str();
+
+			assertTrue(result.status == ReplResult::Status::Success, "/details should succeed");
+			assertTrue(
+				output.find("Details for `DetailNs`") != std::string::npos,
+				"/details should include a namespace details header"
+			);
+			assertTrue(
+				output.find("namespace DetailNs") != std::string::npos,
+				"/details should include the namespace summary"
+			);
+			assertTrue(
+				output.find("members:") != std::string::npos,
+				"/details should include namespace members"
+			);
+			assertTrue(
+				output.find("variable ns_value : i32") != std::string::npos,
+				"/details should list namespace variables"
+			);
+			assertTrue(
+				output.find("function ns_fun() -> i32") != std::string::npos,
+				"/details should list namespace functions"
+			);
+		}
+
+		void testReplDetailsCommandDoesNotResolveMemberPaths() {
+			ReplSession session;
+
+			auto namespace_result
+				= session.processLine("namespace MemberPathNs { var inner: i32 = 1; }");
+			assertTrue(
+				namespace_result.status == ReplResult::Status::Success,
+				"Namespace declaration should succeed before member-path /details check"
+			);
+
+			ScopedStreamCapture capture(std::cout);
+			auto                result = session.processLine("/details MemberPathNs.inner");
+			const auto          output = capture.str();
+
+			assertTrue(result.status == ReplResult::Status::Success, "/details should succeed");
+			assertTrue(
+				output.find("No visible symbol named `MemberPathNs.inner`.") != std::string::npos,
+				"/details should intentionally reject member paths for now"
+			);
+		}
+
+		void testReplDetailsCommandHandlesMissingName() {
+			ReplSession session;
+
+			{
+				ScopedStreamCapture capture(std::cout);
+				auto                result = session.processLine("/details");
+				assertTrue(result.status == ReplResult::Status::Success, "/details should succeed");
+				assertTrue(
+					capture.str().find("Usage: /details <visible-symbol-name>") != std::string::npos,
+					"/details without a name should print usage"
+				);
+			}
+
+			auto var_result = session.processLine("var present_detail_symbol: i32 = 1;");
+			assertTrue(
+				var_result.status == ReplResult::Status::Success,
+				"Variable declaration should succeed before missing /details lookup"
+			);
+
+			{
+				ScopedStreamCapture capture(std::cout);
+				auto                result = session.processLine("/details missing_detail_symbol");
+				assertTrue(result.status == ReplResult::Status::Success, "/details should succeed");
+				assertTrue(
+					capture.str().find("No visible symbol named `missing_detail_symbol`.")
+						!= std::string::npos,
+					"/details should report an unknown symbol"
+				);
+			}
+		}
+
 		void testReplUnknownCommandThroughHandleCommand() {
 			ReplSession session;
 
@@ -140,7 +651,7 @@ namespace compiler::repl {
 
 			session.processLine("var x: i32 = 10;");
 
-			auto history_size_before_clear = session.m_history.size();
+			auto history_size_before_clear = session.m_session_history.size();
 			auto line_counter_before_clear = session.m_line_counter;
 
 			auto clear_result = session.processLine("/clear");
@@ -150,7 +661,7 @@ namespace compiler::repl {
 				"/clear should be processed as a successful command"
 			);
 			assertTrue(
-				session.m_history.size() == history_size_before_clear,
+				session.m_session_history.size() == history_size_before_clear,
 				"/clear should not modify REPL statement history"
 			);
 			assertTrue(
@@ -159,19 +670,292 @@ namespace compiler::repl {
 			);
 		}
 
-		void testReplClearHistoryResetsSessionState() {
+		void testReplResetAbsoluteReplay() {
+			removeSessionHistoryFile();
 			ReplSession session;
 
-			session.processLine("1 + 2");
-			session.processLine("3 + 4");
+			std::vector<std::string_view> statements = {
+				"var a: i32 = 1;",
+				"var b: i32 = a + 1;",
+				"var c: i32 = b + 1;",
+				"var d: i32 = c + 1;",
+			};
 
-			assertTrue(!session.m_history.empty(), "History should contain entries before clear");
-			assertTrue(session.m_line_counter > 0, "Line counter should increase before clear");
+			for (auto stmt: statements) {
+				auto result = session.processLine(stmt);
+				assertTrue(
+					result.status == ReplResult::Status::Success,
+					"Setup statements should execute before reset"
+				);
+			}
 
-			session.clearHistory();
+			auto reset_result = session.processLine("/reset 2");
+			assertTrue(
+				reset_result.status == ReplResult::Status::Reset,
+				"/reset 2 should request a REPL reset"
+			);
+			assertTrue(
+				session.getResetReplayCount().has_value()
+					&& session.getResetReplayCount().value() == 2,
+				"/reset 2 should set replay count to 2"
+			);
 
-			assertTrue(session.m_history.empty(), "clearHistory should remove all history entries");
-			assertTrue(session.m_line_counter == 0, "clearHistory should reset line counter");
+			{
+				ReplSession replay_session;
+				replay_session.replayHistoryEntries(2, true);
+
+				auto first_result  = replay_session.processLine("a;");
+				auto second_result = replay_session.processLine("b;");
+				auto third_result  = replay_session.processLine("c;");
+				auto fourth_result = replay_session.processLine("d;");
+
+				assertTrue(
+					first_result.status == ReplResult::Status::Success,
+					"After reset to entry 2, 'a' should be available"
+				);
+				assertTrue(
+					second_result.status == ReplResult::Status::Success,
+					"After reset to entry 2, 'b' should be available"
+				);
+				assertTrue(
+					third_result.status == ReplResult::Status::Error,
+					"After reset to entry 2, 'c' should be unavailable"
+				);
+				assertTrue(
+					fourth_result.status == ReplResult::Status::Error,
+					"After reset to entry 2, 'd' should be unavailable"
+				);
+			}
+
+			removeSessionHistoryFile();
+		}
+
+		void testReplResetRelativeReplay() {
+			removeSessionHistoryFile();
+			ReplSession session;
+
+			std::vector<std::string_view> statements = {
+				"var a: i32 = 1;",
+				"var b: i32 = a + 1;",
+				"var c: i32 = b + 1;",
+				"var d: i32 = c + 1;",
+			};
+
+			for (auto stmt: statements) {
+				auto result = session.processLine(stmt);
+				assertTrue(
+					result.status == ReplResult::Status::Success,
+					"Setup statements should execute before reset"
+				);
+			}
+
+			auto reset_result = session.processLine("/reset -2");
+			assertTrue(
+				reset_result.status == ReplResult::Status::Reset,
+				"/reset -2 should request a REPL reset"
+			);
+			assertTrue(
+				session.getResetReplayCount().has_value()
+					&& session.getResetReplayCount().value() == 2,
+				"/reset -2 should set replay count to size - 2"
+			);
+
+			{
+				ReplSession replay_session;
+				replay_session.replayHistoryEntries(2, true);
+				auto first_result  = replay_session.processLine("a;");
+				auto second_result = replay_session.processLine("b;");
+				auto third_result  = replay_session.processLine("c;");
+				assertTrue(
+					first_result.status == ReplResult::Status::Success,
+					"After relative reset, 'a' should be available"
+				);
+				assertTrue(
+					second_result.status == ReplResult::Status::Success,
+					"After relative reset, 'b' should be available"
+				);
+				assertTrue(
+					third_result.status == ReplResult::Status::Error,
+					"After relative reset, 'c' should be unavailable"
+				);
+			}
+
+			removeSessionHistoryFile();
+		}
+
+		void testReplFrontendAddHistory() {
+			ReplFrontend frontend_without_completions(false);
+			ReplFrontend frontend_with_completions(true);
+			frontend_without_completions.clearHistory();
+			frontend_with_completions.clearHistory();
+
+			{
+				ScopedStreamCapture capture(std::cout);
+				frontend_without_completions.printHistory();
+				assertTrue(
+					capture.str().find("No history yet.") != std::string::npos,
+					"Should print no history"
+				);
+			}
+
+			frontend_with_completions.addHistoryEntry("test");
+			frontend_with_completions.addHistoryEntry("");
+			frontend_with_completions.clearHistory();
+
+			{
+				ScopedStreamCapture capture(std::cout);
+				frontend_with_completions.printHistory();
+				assertTrue(
+					capture.str().find("No history yet.") != std::string::npos,
+					"Should print no history after clear"
+				);
+			}
+
+			frontend_without_completions.addHistoryEntry("test entry");
+			frontend_without_completions.addHistoryEntry("");
+			frontend_without_completions.addHistoryEntry("line 1\nline 2");
+
+			{
+				ScopedStreamCapture capture(std::cout);
+				frontend_without_completions.printHistory();
+				assertTrue(
+					capture.str().find("test entry") != std::string::npos,
+					"Should contain first entry"
+				);
+				assertTrue(
+					capture.str().find("line 1") != std::string::npos, "Should contain third entry"
+				);
+			}
+
+			frontend_without_completions.clearHistory();
+
+			{
+				ScopedStreamCapture capture(std::cout);
+				frontend_without_completions.printHistory();
+				assertTrue(
+					capture.str().find("No history yet.") != std::string::npos,
+					"Should print no history after clear"
+				);
+			}
+		}
+
+		void testReplSaveAndPrintHistory() {
+			removeSessionHistoryFile();
+			ReplSession session;
+
+			auto result1 = session.processLine("var p: i32 = 123;");
+			assertTrue(result1.status == ReplResult::Status::Success, "Declaration should succeed");
+
+			{
+				ScopedStreamCapture capture(std::cout);
+				auto                result2 = session.processLine("/history");
+				assertTrue(result2.status == ReplResult::Status::Success, "/history should succeed");
+				assertTrue(
+					capture.str().find("var p: i32 = 123;") != std::string::npos,
+					"Should print history containing var p"
+				);
+			}
+
+			auto reset_result = session.processLine("/reset");
+			assertTrue(
+				reset_result.status == ReplResult::Status::Reset, "/reset should request reset"
+			);
+
+			{
+				ScopedStreamCapture capture(std::cerr);
+				session.replayHistoryEntries(0, false);
+				assertTrue(capture.str().empty(), "Should not print anything for 0 count replay");
+			}
+		}
+
+		void testReplResetSyntaxErrorsMore() {
+			removeSessionHistoryFile();
+			ReplSession session;
+
+			{
+				ScopedStreamCapture capture(std::cerr);
+				auto                result = session.processLine("/reset a");
+				assertTrue(
+					result.status == ReplResult::Status::Success,
+					"Invalid /reset syntax should not request a reset"
+				);
+				assertTrue(
+					capture.str().find("Usage: /reset") != std::string::npos,
+					"Invalid /reset syntax should print usage"
+				);
+			}
+
+			{
+				ScopedStreamCapture capture(std::cerr);
+				auto                result = session.processLine("/reset -a");
+				assertTrue(
+					result.status == ReplResult::Status::Success,
+					"Invalid /reset syntax should not request a reset"
+				);
+				assertTrue(
+					capture.str().find("Usage: /reset") != std::string::npos,
+					"Invalid /reset syntax should print usage"
+				);
+			}
+
+			{
+				ScopedStreamCapture capture(std::cerr);
+				auto                result = session.processLine("/reset 99999");
+				assertTrue(
+					result.status == ReplResult::Status::Success,
+					"Invalid /reset syntax should not request a reset"
+				);
+			}
+		}
+
+		void testReplResetSyntaxErrors() {
+			removeSessionHistoryFile();
+			ReplSession session;
+
+			{
+				ScopedStreamCapture capture(std::cerr);
+				auto                result = session.processLine("/reset -");
+				assertTrue(
+					result.status == ReplResult::Status::Success,
+					"Invalid /reset syntax should not request a reset"
+				);
+				assertTrue(
+					capture.str().find("Usage: /reset") != std::string::npos,
+					"Invalid /reset syntax should print usage"
+				);
+			}
+
+			{
+				ScopedStreamCapture capture(std::cerr);
+				auto                result = session.processLine("/reset 1 2");
+				assertTrue(
+					result.status == ReplResult::Status::Success,
+					"Extra tokens in /reset should not request a reset"
+				);
+				assertTrue(
+					capture.str().find("Usage: /reset") != std::string::npos,
+					"Extra tokens in /reset should print usage"
+				);
+			}
+
+			{
+				auto setup_a = session.processLine("var a: i32 = 1;");
+				auto setup_b = session.processLine("var b: i32 = a + 1;");
+				assertTrue(
+					setup_a.status == ReplResult::Status::Success
+						&& setup_b.status == ReplResult::Status::Success,
+					"Setup should succeed before reset validation"
+				);
+				ScopedStreamCapture capture(std::cerr);
+				auto                result = session.processLine("/reset 1");
+				assertTrue(
+					result.status == ReplResult::Status::Reset,
+					"/reset 1 should request a reset when history has entries"
+				);
+				assertTrue(capture.str().empty(), "Valid /reset should not print usage");
+			}
+
+			removeSessionHistoryFile();
 		}
 
 		/**
@@ -204,7 +988,7 @@ namespace compiler::repl {
 				"Instruction statement should execute successfully"
 			);
 			assertTrue(
-				session.m_history.size() == 1,
+				session.m_session_history.size() == 1,
 				"Instruction execution should add one entry to history"
 			);
 		}
@@ -220,7 +1004,9 @@ namespace compiler::repl {
 
 			// Test various inputs to verify command detection
 			std::vector<std::string_view> commands
-				= { "/exit", "/help", "/h", "/history", "/hist", "/clear", "/c" };
+				= { "/exit",    "/help",    "/h",         "/history", "/hist",
+				    "/symbols", "/syms",    "/variables", "/vars",    "/functions",
+				    "/fns",     "/details", "/clear",     "/c" };
 
 			std::vector<std::string_view> code_snippets = { "var x = 4;", "x;", "" };
 
@@ -244,7 +1030,7 @@ namespace compiler::repl {
 			ReplSession session;
 
 			// Initial state
-			auto initial_history_size = session.m_history.size();
+			auto initial_history_size = session.m_session_history.size();
 			auto initial_line_count   = session.m_line_counter;
 
 			assertTrue(initial_history_size == 0, "History should start empty");
@@ -255,7 +1041,7 @@ namespace compiler::repl {
 			session.processLine(code);
 
 			// Verify that history was updated
-			auto updated_history_size = session.m_history.size();
+			auto updated_history_size = session.m_session_history.size();
 			assertTrue(
 				updated_history_size >= initial_history_size,
 				"History size should increase or stay same after processing"
@@ -279,10 +1065,7 @@ namespace compiler::repl {
 				result.message.find("Missing script path") != std::string::npos,
 				"Error should explain that script path is missing"
 			);
-			assertFalse(
-				session.m_suppress_repl_feedback_during_script_load,
-				"Output suppression should be restored"
-			);
+			assertFalse(session.m_suppress_repl, "Output suppression should be restored");
 		}
 
 		void testLoadScriptFileInvalidContents() {
@@ -299,21 +1082,17 @@ namespace compiler::repl {
 			assertTrue(
 				!result.message.empty(), "Invalid script should produce a useful error message"
 			);
-			assertFalse(
-				session.m_suppress_repl_feedback_during_script_load,
-				"Output suppression should be restored"
-			);
+			assertFalse(session.m_suppress_repl, "Output suppression should be restored");
 		}
 
 		void testLoadScriptFileExecutesStatements() {
 			ReplSession session;
 
-			auto script_file = fs::FileManager::createRandomTempFile(
-				"var loaded_x: i32 = 1;\nloaded_x = 10;\nbuiltin_output_i64(loaded_x + 3);"
-			);
+			auto script_file
+				= fs::FileManager::createRandomTempFile("var loaded_x: i32 = 1;\nloaded_x = 10;");
 			auto script_path = std::string("   ") + script_file.getFilePath().string();
 
-			auto initial_history_size = session.m_history.size();
+			auto initial_history_size = session.m_session_history.size();
 
 			auto result = session.loadScriptFile(script_path);
 
@@ -321,12 +1100,9 @@ namespace compiler::repl {
 				result.status == ReplResult::Status::Success, "Loading a valid script should succeed"
 			);
 
-			auto updated_history_size = session.m_history.size();
-			ASSERT_EQUAL(3UL, updated_history_size - initial_history_size);
-			assertFalse(
-				session.m_suppress_repl_feedback_during_script_load,
-				"Output suppression should be restored"
-			);
+			auto updated_history_size = session.m_session_history.size();
+			ASSERT_EQUAL(2UL, updated_history_size - initial_history_size);
+			assertFalse(session.m_suppress_repl, "Output suppression should be restored");
 
 			auto follow_up_result = session.processLine("1 + 1;");
 			assertTrue(
@@ -340,9 +1116,8 @@ namespace compiler::repl {
 		void testLoadCommandExecutesScript() {
 			ReplSession session;
 
-			auto script_file = fs::FileManager::createRandomTempFile(
-				"var cmd_x: i32 = 7;\ncmd_x = cmd_x + 2;\nbuiltin_output_i64(cmd_x);"
-			);
+			auto script_file
+				= fs::FileManager::createRandomTempFile("var cmd_x: i32 = 7;\ncmd_x = cmd_x + 2;");
 			auto command = std::string("/load ") + script_file.getFilePath().string();
 
 			auto result = session.processLine(command);
@@ -443,7 +1218,7 @@ namespace compiler::repl {
 				    { .input = "y;", .description = "Look up y" } };
 
 			// Track initial state
-			size_t initial_history_size = session.m_history.size();
+			usize initial_history_size = session.m_session_history.size();
 
 			for (const auto& test: tests) {
 				auto result = session.processLine(test.input);
@@ -463,9 +1238,9 @@ namespace compiler::repl {
 			}
 
 			// Verify that history was updated with all statements
-			size_t expected_history_size = initial_history_size + tests.size();
+			usize expected_history_size = initial_history_size + tests.size();
 			assertTrue(
-				session.m_history.size() == expected_history_size,
+				session.m_session_history.size() == expected_history_size,
 				"REPL session history should track all variable operations"
 			);
 		}
@@ -498,6 +1273,123 @@ namespace compiler::repl {
 			assert_unsupported_action("break;");
 			assert_unsupported_action("throw 5;");
 			assert_unsupported_action("return;");
+		}
+
+		void testReplCommandsResetCommand() {
+			ReplSession session;
+
+			{
+				ScopedStreamCapture capture(std::cout);
+				auto                result = session.processLine("/commands-reset");
+				assertTrue(
+					result.status == ReplResult::Status::Success, "/commands-reset should succeed"
+				);
+				assertTrue(
+					capture.str().find("Command history cleared.") != std::string::npos,
+					"Should print confirmation, got: " + capture.str()
+				);
+			}
+			{
+				ScopedStreamCapture capture(std::cout);
+				auto                result = session.processLine("/cmds-reset");
+				assertTrue(
+					result.status == ReplResult::Status::Success, "/cmds-reset should succeed"
+				);
+				assertTrue(
+					capture.str().find("Command history cleared.") != std::string::npos,
+					"Should print confirmation"
+				);
+			}
+			{
+				ScopedStreamCapture capture(std::cout);
+				auto                result = session.processLine("/cmds");
+				assertTrue(result.status == ReplResult::Status::Success, "/cmds should succeed");
+				assertTrue(
+					capture.str().find("No history yet.") != std::string::npos,
+					"Should print no history"
+				);
+			}
+			{
+				ScopedStreamCapture capture(std::cout);
+				auto                result = session.processLine("/commands");
+				assertTrue(result.status == ReplResult::Status::Success, "/commands should succeed");
+				assertTrue(
+					capture.str().find("No history yet.") != std::string::npos,
+					"Should print no history"
+				);
+			}
+		}
+
+		void testReplHistoryCommandAdvanced() {
+			removeSessionHistoryFile();
+			ReplSession session;
+
+			auto setup_a = session.processLine("var x_a = 1;");
+			auto setup_b = session.processLine("var y_b = 2;");
+			assertTrue(
+				setup_a.status == ReplResult::Status::Success
+					&& setup_b.status == ReplResult::Status::Success,
+				"Setup should succeed"
+			);
+
+			{
+				ScopedStreamCapture capture(std::cout);
+				auto                result = session.processLine("/hist");
+				assertTrue(result.status == ReplResult::Status::Success, "/hist should succeed");
+				assertTrue(
+					capture.str().find("var x_a = 1;") != std::string::npos, "Should print x_a"
+				);
+				assertTrue(
+					capture.str().find("var y_b = 2;") != std::string::npos, "Should print y_b"
+				);
+			}
+
+			{
+				ScopedStreamCapture capture(std::cout);
+				auto                result = session.processLine("/history");
+				assertTrue(result.status == ReplResult::Status::Success, "/history should succeed");
+				assertTrue(
+					capture.str().find("var x_a = 1;") != std::string::npos, "Should print x_a"
+				);
+			}
+			removeSessionHistoryFile();
+		}
+
+		void testReplReplayHistoryNotSilent() {
+			removeSessionHistoryFile();
+
+			{
+				ReplSession         session;
+				ScopedStreamCapture capture(std::cerr);
+				session.replayHistoryEntries(1, false);
+				assertTrue(
+					capture.str().find("Warning: no REPL session history entries found to replay.")
+						!= std::string::npos,
+					"Should print warning when no history exists"
+				);
+			}
+
+			{
+				std::ofstream out(".duckling_repl_session_history");
+				out << "Duckling REPL session history\n";
+				out << "Entries: 1\n\n";
+				out << "[1]\n";
+				out << "var x = ;\n\n";
+				out.close();
+
+				ReplSession         replay_session;
+				ScopedStreamCapture capture(std::cerr);
+				replay_session.replayHistoryEntries(1, false);
+				std::cout << "DEBUG CAPTURE: '" << capture.str() << "'\n";
+				assertTrue(
+					capture.str().find(
+						"Warning: stopping history replay after entry 1 due to error."
+					) != std::string::npos,
+					"Should print warning when replay errors"
+				);
+			}
+
+			removeSessionHistoryFile();
 		}
 
 	public:

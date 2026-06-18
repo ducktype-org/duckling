@@ -36,6 +36,7 @@ def setup_build_impl(
     llvm_tools_list,
     embed_assets,
     build_static_icu,
+    fixed_std_path,
 ):
 
     check_if_compilers_are_compatible(cxx_compiler, cc_compiler)
@@ -89,6 +90,7 @@ def setup_build_impl(
         ],
         f"-D EMBED_ASSETS={'ON' if embed_assets else 'OFF'}",
         f"-D BUILD_STATIC_ICU={'ON' if build_static_icu else 'OFF'}",
+        f"-D USE_FIXED_STD_PATH={'ON' if fixed_std_path else 'OFF'}",
     ]
     if sanitizer:
         cmd_parts.append(f"-D SANITIZER={sanitizer.upper()}")

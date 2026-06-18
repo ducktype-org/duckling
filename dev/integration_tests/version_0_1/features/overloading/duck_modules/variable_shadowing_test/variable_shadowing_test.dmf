@@ -1,3 +1,5 @@
+import core.builtins.*;
+
 # Variable shadowing and class-based overloading test
 # This test checks variable shadowing and operator overloading for classes
 

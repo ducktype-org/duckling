@@ -18,7 +18,6 @@ coverage.info
 
 # bin:
 bin/
-lib/
 *.a
 *.o
 *.so
@@ -30,3 +29,4 @@ __pycache__/
 
 !.clang-format
 !.clang-tidy
+CLAUDE.local.md

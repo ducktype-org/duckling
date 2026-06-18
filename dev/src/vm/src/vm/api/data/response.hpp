@@ -5,28 +5,9 @@
 
 #include <base/pointers/box.hpp>
 
+#include <diagnostic/source_position.hpp>
+
 #include <vm/core/vmvalue/vmvalueref.hpp>
-
-// NOLINTBEGIN(readability-identifier-naming)
-template<>
-struct nlohmann::adl_serializer<base::RawView> {
-	static void to_json(json& j, const base::RawView& e) { j = e.stringView(); }
-
-	static void from_json(const json&, const base::RawView&) {
-		CORE_PANIC("Parsing data from JSON into base::RawView is not supported (maybe yet).");
-	}
-};
-
-template<typename T>
-struct nlohmann::adl_serializer<base::Box<T>> {
-	static void to_json(json& j, const base::Box<T>& box) { j = *box; }
-
-	static void from_json(const json&, base::Box<T>&) {
-		CORE_PANIC("Parsing data from JSON into Box<T> not supported (yet).");
-	}
-};
-
-// NOLINTEND(readability-identifier-naming)
 
 namespace vm::api {
 	namespace response {
@@ -48,9 +29,10 @@ namespace vm::api {
 		};
 
 		struct CodePosition {
-			u64 function_id;
-			u64 instr_number;
-			NLOHMANN_DEFINE_TYPE_INTRUSIVE(CodePosition, instr_number, function_id);
+			base::StrID                         function_name;
+			u64                                 instr_number;
+			base::Optional<dia::SourcePosition> source_position;
+			NLOHMANN_DEFINE_TYPE_INTRUSIVE(CodePosition, function_name, instr_number);
 		};
 
 		struct NumberOfCurrentStackFrames {
@@ -59,9 +41,10 @@ namespace vm::api {
 
 		struct StackFrameData {
 			struct FrameVar {
-				// @todo: #2264 should express name in CodeCollection instead of offset in LowVMProgram
-				u64        offset = 0;
-				VMValueRef value;
+				u64                         offset = 0;
+				base::Optional<base::StrID> name;
+				base::Optional<base::StrID> type;
+				VMValueRef                  value;
 			};
 
 			base::StrID           function_name;

@@ -5,6 +5,7 @@
 #include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/elements/includes/basic.hpp>
 #include <helios/hout/visitors.hpp>
+#include <helios/mangler/mangler.hpp>
 #include <helios/queries/function_queries.hpp>
 #include <helios/queries/queries.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
@@ -15,8 +16,8 @@
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
-#include <lir/lir_lowering/lir_lowering.hpp>
-#include <mir/mir_lowering/mir_queries.hpp>
+#include <lir/lir_lowering/lir_unit.hpp>
+#include <mir/mir_lowering/mir_unit.hpp>
 
 #include <base/str/str_utils.hpp>
 
@@ -160,7 +161,15 @@ namespace compiler::helios {
 						"Static array type creation with non-integral size. This should be caught "
 						"earlier."
 					);
-					usize size = static_cast<usize>(maybe_size.coerceTo<u64>().value());
+					auto maybe_u64_size = maybe_size.coerceTo<u64>();
+					// @TODO: #2754 With flexible literals it should work
+					if (!maybe_u64_size.has_value()) {
+						ctx.logInt(makeBox<dia_int::PlaceholderError>(
+							"Static array size must be a non-negative integral value.", ""
+						));
+						return query::Failed();
+					}
+					auto size = static_cast<usize>(maybe_u64_size.value());
 					return CompileTimeValue{ sinkStaticArrayDimension(ctx, base_type, size) };
 				}
 			}
@@ -475,6 +484,18 @@ namespace compiler::helios {
 								return ctv::CompileTimeValue{
 									val.withMutability(tsh::Mutability::Immutable)
 								};
+							case Ptr:
+								return ctv::CompileTimeValue{ tsh::SymbolType<>::withDefaults(
+									ctx.query<tsh::QueryPointerType>({ val })
+								) };
+							case ManyPtr:
+								return ctv::CompileTimeValue{ tsh::SymbolType<>::withDefaults(
+									ctx.query<tsh::QueryManyPointerType>({ val })
+								) };
+							case CPtr:
+								return ctv::CompileTimeValue{ tsh::SymbolType<>::withDefaults(
+									ctx.query<tsh::QueryCPointerType>({ val })
+								) };
 							default:
 								ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 									"Evaluation of this unary operator at compile "
@@ -761,10 +782,11 @@ namespace compiler::helios {
 		 * - `functions` 	- a vector of all LIR functions to compile and load to DVM in order to
 		 * 					  evaluate `func_to_call`
 		 */
-		struct LIRBuildResult {
-			std::string func_to_call;  // Mangled name of the function we evaluate.
-			std::vector<CRef<lir::Function>>
-				functions;             // List of LIR functions needed to evaluate `func_to_call`.
+		struct LIRBuildResult final {
+			/// Mangled name of the function we evaluate.
+			std::string func_to_call;
+			/// List of LIR functions and other entites needed to evaluate `func_to_call`.
+			lir::LIRUnit lir_unit;
 		};
 
 		/**
@@ -789,24 +811,33 @@ namespace compiler::helios {
 			Ref dependencies
 				= &ctx.query<QueryTransitiveFunctionCalls>(function_sym_id)->valueOrThrow();
 
-			LIRBuildResult result;
-			result.functions.reserve(dependencies->size());
+			auto mangled_name_function_to_call
+				= ctx.query<mangler::QueryMangledSymbol>({ function_sym_id });
 
+			// temporary hout unit used to lower functions to LIR
+			HOUTUnit hout_unit;
 			for (const SymID& func_id: *dependencies) {
-				// @TODO: #826 Change this code to a single query once it gets implemented.
 				auto& hout_func = ctx.query<QueryCodeOfFun>(func_id)->valueOrThrow();
-				auto& mir_func = ctx.query<mir::LowerToMIRFunction>({ &hout_func })->valueOrThrow();
-
-				auto lir_func_result = ctx.query<lir::LowerToLIRFunction>({ &mir_func });
-
-				// When lowering the top level function, we store it's mangled name to know
-				// which function to call in the VM.
-				if (func_id == function_sym_id)
-					result.func_to_call = lir_func_result->mangled_name.str();
-
-				result.functions.push_back(lir_func_result);
+				hout_unit.functions.emplace_back(&hout_func);
 			}
-			return result;
+			auto lir_unit
+				= lir::lowerToLIRUnit(ctx, mir::lowerToMIRUnit(ctx, &hout_unit).valueOrThrow());
+
+			// Note: the assumptions bellow might change,
+			// for example when we will add consts to comp time.
+			CORE_ASSERT(
+				lir_unit.lir_functions.size() == dependencies->size(),
+				"Number of lir functions should be the same as number of dependencies collected."
+			);
+			CORE_ASSERT(
+				lir_unit.lir_globals.empty(),
+				"LIR global variables are not supported in compile time evaluation."
+			);
+
+			return LIRBuildResult{
+				.func_to_call = mangled_name_function_to_call.str(),
+				.lir_unit     = std::move(lir_unit),
+			};
 		}
 
 		/**
@@ -845,7 +876,7 @@ namespace compiler::helios {
 
 			auto lir_build_result = prepareLIRForDVM(ctx, function_sym_id);
 			if (lir_build_result.hasFailed()) return query::Failed();
-			const auto& [func_to_call_name, all_lir_functions] = lir_build_result.valueOrThrow();
+			const auto& [func_to_call_name, lir_unit] = lir_build_result.valueOrThrow();
 
 
 			// Retrieve the functions return type.
@@ -857,7 +888,7 @@ namespace compiler::helios {
 			tsh::FunctionAbstractType func_type(callee_abs_type);
 
 			auto vm_eval_result = executeInVm(
-				ctx, func_to_call_name, all_lir_functions, ctv_arguments, func_type.getResultType()
+				ctx, func_to_call_name, lir_unit, ctv_arguments, func_type.getResultType()
 			);
 
 			if (!vm_eval_result) {

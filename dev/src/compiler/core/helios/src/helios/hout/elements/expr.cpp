@@ -12,7 +12,12 @@
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
+#include <helios/tsh/abstract_type.hpp>
+#include <helios/tsh/expression_type.hpp>
 #include <helios/tsh/queries.hpp>
+#include <helios/tsh/queries/types.hpp>
+#include <helios/tsh/symbol_type.hpp>
+#include <helios/tsh/types.hpp>
 #include <helios_private/symbols/generated_symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
@@ -150,14 +155,14 @@ namespace compiler::helios::code {
 		  value(value) {}
 
 	LiteralStringExpr::LiteralStringExpr(
-		query::Context&, ElementOrigin origin, const base::StrID value
+		query::Context& ctx, ElementOrigin origin, const base::StrID value
 	):
 		  Expr(
 			  tsh::ExpressionType<>(
 				  tsh::SymbolType{
-					  tsh::getStringType(),
+					  tsh::getCharSliceType(ctx),
 					  tsh::ReferenceKind::Direct,
-					  tsh::Mutability::Mutable,
+					  tsh::Mutability::Immutable,
 				  },
 				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
 			  ),
@@ -278,7 +283,7 @@ namespace compiler::helios::code {
 		return makeBox<ReusableExpr>(inner_cloned, first_use);
 	}
 
-	Box<Expr> ReusableExpr::nextUse() const {
+	Box<ReusableExpr> ReusableExpr::nextUse() const {
 		return makeBox<ReusableExpr>(inner, /*first_use=*/false);
 	}
 
@@ -628,6 +633,9 @@ namespace compiler::helios::code {
 		case BuiltinUnary::BooleanNot:
 		case BuiltinUnary::Ref:
 		case BuiltinUnary::Box:
+		case BuiltinUnary::Ptr:
+		case BuiltinUnary::CPtr:
+		case BuiltinUnary::ManyPtr:
 		case BuiltinUnary::Const:
 			// For most of the unary operators the result is the same as their argument type:
 			// (Int -> Int, Bool -> Bool, Meta -> Meta, etc.)
@@ -691,6 +699,22 @@ namespace compiler::helios::code {
 			break;
 		case BuiltinUnary::Len:
 			out << "len ";
+			expr->debugPrint(out);
+			break;
+		case BuiltinUnary::Ptr:
+			out << "ptr ";
+			expr->debugPrint(out);
+			break;
+		case BuiltinUnary::CPtr:
+			out << "cptr ";
+			expr->debugPrint(out);
+			break;
+		case BuiltinUnary::ManyPtr:
+			out << "manyptr ";
+			expr->debugPrint(out);
+			break;
+		case BuiltinUnary::Slice:
+			out << "slice ";
 			expr->debugPrint(out);
 			break;
 		default:
@@ -814,6 +838,10 @@ namespace compiler::helios::code {
 						  return base_type.as<tsh::DynamicArrayAbstractType>().getElementType();
 					  case tsh::Kind::StaticArray:
 						  return base_type.as<tsh::StaticArrayAbstractType>().getElementType();
+					  case tsh::Kind::ManyPointer:
+						  return base_type.as<tsh::ManyPointerAbstractType>().getPointee();
+					  case tsh::Kind::Slice:
+						  return base_type.as<tsh::SliceAbstractType>().getElementType();
 					  default:
 						  CORE_PANIC("Cannot index a non-array like type");
 					  }
@@ -1013,9 +1041,8 @@ namespace compiler::helios::code {
 	DerefExpr::DerefExpr(query::Context&, ElementOrigin origin, Box<Expr> inner):
 		  Expr(
 			  tsh::ExpressionType<>(
-				  inner->expression_type.getSymbolType().getPointeeSymbolType(
-				  ),  // Remove the ref / box specifier.
-				  tsh::ValueCategory(tsh::PrimaryCategory::Local)
+				  inner->expression_type.getSymbolType().getPointeeSymbolType(),
+				  inner->expression_type.getValueCategory()
 			  ),
 			  origin
 		  ),

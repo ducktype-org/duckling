@@ -63,7 +63,23 @@ namespace compiler::driver {
 			// bool rm_artifacts_before_compilation = false;
 			// bool rm_artifacts_after_compilation = false;
 		};
-	};
+
+		struct StdLibOptions final {
+			struct NoStd final {};
+
+			struct DefaultStd final {};
+
+			struct CustomStd final {
+				fs::FilePath std_path;
+			};
+
+			/**
+			 * The type of standard library to use, or
+			 * no standard library at all.
+			 */
+			std::variant<NoStd, DefaultStd, CustomStd> std_lib_type = NoStd{};
+		};
+	}
 
 	/**
 	 * Structure holding information about mode of operation of the compiler
@@ -95,6 +111,7 @@ namespace compiler::driver {
 			options_types::DebugOptions                               debug_options;
 			options_types::IncrementalOptions                         incremental;
 			options_types::ExecutionOptions                           execution_options;
+			options_types::StdLibOptions                              stdlib_options;
 		};
 
 		/**

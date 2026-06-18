@@ -308,7 +308,14 @@ namespace vm {
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(call_func)(FUNCTION_ARGS) {
-		{ performFunctionCall(instr, local_stack, frame, thread, instr->arg0); }
+		{
+			auto function_id = static_cast<usize>(instr->arg0);
+			CORE_ASSERT(
+				SafeVMThread::isCallableFunctionID(function_id),
+				"Start function should not be called in the runtime!"
+			);
+			performFunctionCall(instr, local_stack, frame, thread, function_id);
+		}
 		// After acquiring the `executing_code` of the new function we have instruction pointer
 		// (`instr`) pointing at the first instruction of the new function, so moving forward by one
 		// would mean that we skipped the first instruction. That's why we move forward zero
@@ -318,37 +325,33 @@ namespace vm {
 		FUNCTION_CONT(0);
 	}
 #ifdef ENABLE_JIT
-	RETURN_TYPE OpFuns::OPCODE_NAME(jit_call_entrypoint)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(jitEntrypoint)(FUNCTION_ARGS) {
 		{
-			auto& jit_data = thread.jit_data;
-			auto  func_id  = instr->arg0;
-			auto& func_obj = thread.process_program->getFunctions()[func_id];
+			auto& jit_data         = thread.jit_data;
+			auto& current_func_obj = *frame->current_function;
+			auto  current_func_id  = current_func_obj.id;
 
-			// @TODO: #2126 manage the size when inserting new code
-			if (jit_data.size() <= func_id) jit_data.resize(2 * func_id + 2);
+			// @TODO: #2858 manage the size when inserting new code
+			if (jit_data.size() <= current_func_id) jit_data.resize(2 * current_func_id + 2);
 
-			jit::JitFuncData& my_data = jit_data[func_id];
-
-			auto run_compiled = [&]() {
-				performFunctionCall(instr, local_stack, frame, thread, func_id);
-				(*my_data.func_ptr)(&instr, &local_stack, &frame, &thread);
-			};
+			jit::JitFuncData& my_data = jit_data[current_func_id];
 
 			if (my_data.func_ptr) {
 				// is already compiled
-				run_compiled();
+				(*my_data.func_ptr)(&instr, &local_stack, &frame, &thread);
 			} else if (0 < my_data.until_compilation) {
 				// should be compiled later
 				--my_data.until_compilation;
-				performFunctionCall(instr, local_stack, frame, thread, func_id);
 			} else {
 				// should be compiled now
-				MRef<jit::JitOpFun> compiled = jit::compileLLVM(func_obj);
+				MRef<jit::JitOpFun> compiled = jit::compileLLVM(
+					current_func_obj.cfg, current_func_obj.bc, current_func_obj.name
+				);
 
 				CORE_ASSERT(compiled, "Compiled function pointer shouldn't be nullptr");
 				my_data.func_ptr = compiled;
 
-				run_compiled();
+				(*my_data.func_ptr)(&instr, &local_stack, &frame, &thread);
 			}
 		}
 		FUNCTION_CONT(0);
@@ -480,6 +483,11 @@ namespace vm {
 			const usize function_id
 				= *thread.process_program->getFunctions().idOf(implementation_name);
 
+			CORE_ASSERT(
+				SafeVMThread::isCallableFunctionID(function_id),
+				"Start function should not be called in the runtime!"
+			);
+
 			performFunctionCall(instr, local_stack, frame, thread, function_id);
 		}
 		FUNCTION_CONT(0);
@@ -487,7 +495,11 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(ret_tailcall_func)(FUNCTION_ARGS) {
 		{
-			auto  function_id       = static_cast<usize>(instr->arg0);
+			auto function_id = static_cast<usize>(instr->arg0);
+			CORE_ASSERT(
+				SafeVMThread::isCallableFunctionID(function_id),
+				"Start function should not be called in the runtime!"
+			);
 			auto& function          = thread.process_program->getFunctions()[function_id];
 			instr                   = function.bc.data();
 			frame->current_function = &function;
@@ -797,17 +809,6 @@ namespace vm {
 		FUNCTION_CONT(2);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(upcast_pptr_pptr)(FUNCTION_ARGS) {
-		{
-			// Same as move_pptr_pptr, treated differently by static analysis.
-			const auto    dst     = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
-			const auto    src     = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
-			const Pointer new_dst = thread.process_memory.updatePointerAssignment(dst, src);
-			WRITE_TO_PLACE_ARG(Pointer, instr->arg0, new_dst);
-		}
-		FUNCTION_CONT(1);
-	}
-
 	RETURN_TYPE OpFuns::OPCODE_NAME(downcast_pptr_pptr)(FUNCTION_ARGS) {
 		{
 			const auto dst = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
@@ -1065,7 +1066,10 @@ namespace vm {
 				// It might be desired to switch to second approach in the future, depending on the
 				// semantics of Duckling arrays.
 				if (!tbl_pointer.isNull()) {
-					thread.process_memory.freeBlockData(tbl_pointer.getBlock());
+					auto tbl_block = tbl_pointer.getBlock();
+					if (Memory::getBlockType(tbl_block)->getKind() != Type::Kind::DynamicTable)
+						throw exceptions::VMDynTableReAllocTypeMismatch();
+					thread.process_memory.freeBlockData(tbl_block);
 					const Pointer new_dst = thread.process_memory.updatePointerAssignment(
 						tbl_pointer, Pointer::null()
 					);
@@ -1079,6 +1083,8 @@ namespace vm {
 				WRITE_TO_PLACE_ARG(Pointer, instr->arg0, new_dst);
 			} else {
 				auto tbl_block = tbl_pointer.getBlock();
+				if (Memory::getBlockType(tbl_block)->getKind() != Type::Kind::DynamicTable)
+					throw exceptions::VMDynTableReAllocTypeMismatch();
 				thread.process_memory.dynTableReallocateBlockDataN(tbl_block, new_elem_count);
 			}
 		}
@@ -1200,10 +1206,10 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(breakpoint)(FUNCTION_ARGS) {
 		{
-			instr += 1;
 			save_execution_state(instr, local_stack, frame, thread);
 
 			thread.handleBreakpoint();
+			thread.executeOneStep();
 
 			// Restore current flow.
 			// They can be changed when doing "step by step" execution.
@@ -1211,6 +1217,7 @@ namespace vm {
 			instr       = frame->instr;
 			local_stack = frame->local_stack;
 		}
+
 		FUNCTION_CONT(0);
 	}
 

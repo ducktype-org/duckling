@@ -15,7 +15,6 @@ namespace vm::debugger {
 	 * It is the middleman between the VM and any user interfaces
 	 * (e.g., command-line interface, graphical debugger, Debug Adapter).
 	 *
-	 * @TODO: #2454 Implement CLI
 	 */
 	class Debugger final {
 	private:
@@ -23,6 +22,7 @@ namespace vm::debugger {
 		std::vector<std::string> main_args;
 
 		events::Listener<api::ProcStatus> updater;
+		events::Listener<std::string>     vm_output;
 
 		// Event handlers for the debugger:
 
@@ -32,14 +32,14 @@ namespace vm::debugger {
 		events::Emitter<api::ProcStatus> on_status_changed;
 
 		/**
-		 * @brief Emits exit value as VMValue when VM completes execution
-		 */
-		events::Emitter<api::ExitValue> on_execution_completed;
-
-		/**
 		 * @brief Emits error message in human readable format on any error
 		 */
 		events::Emitter<std::string> on_error;
+
+		/**
+		 * @brief Emits the output from the VM when VM outputs
+		 */
+		events::Emitter<std::string> on_output;
 
 	public:
 		Debugger(const std::vector<std::string>& main_args = {});
@@ -58,14 +58,14 @@ namespace vm::debugger {
 		void attachOnStatusChangedListener(events::Listener<api::ProcStatus>& listener);
 
 		/**
-		 * @brief Attach Listener to Emitter that emits return value when VM completes execution
+		 * @brief Attach Listener to Emitter that emits error message when any error raises
 		 */
-		void attachOnExecutionCompletedListener(events::Listener<api::ExitValue>& listener);
+		void attachOnErrorListener(events::Listener<std::string>& listener);
 
 		/**
 		 * @brief Attach Listener to Emitter that emits error message when any error raises
 		 */
-		void attachOnErrorListener(events::Listener<std::string>& listener);
+		void attachOnOutputListener(events::Listener<std::string>& listener);
 
 		// Methods to control the debugging session:
 
@@ -106,5 +106,37 @@ namespace vm::debugger {
 		 * @brief Resumes the VM
 		 */
 		std::expected<void, api::ApiError> resume();
+
+		/**
+		 * @brief Returns current position
+		 */
+		std::expected<api::response::CodePosition, api::ApiError> getCurrentPosition();
+
+		/**
+		 * @brief Sets breakpoint
+		 * @param function_name Name of a function to set breakpoint in.
+		 * @param instr_number Index of instruction in function on which to set the beakpint.
+		 * @param enabled Decides whether the brakpoint should be enabled (inserted) or disabled
+		 * (removed).
+		 */
+		std::expected<void, api::ApiError> setBreakpoint(
+			base::StrID function_name, u64 instr_number, bool enabled = true
+		);
+
+		/**
+		 * @brief Sets breakpoint
+		 * @param file File to set breakpoint in.
+		 * @param line Number of line in file on which to set the beakpint.
+		 * @param enabled Decides whether the brakpoint should be enabled (inserted) or disabled
+		 * (removed).
+		 */
+		std::expected<void, api::ApiError> setBreakpoint(
+			fs::File file, usize line, bool enabled = true
+		);
+
+		/**
+		 * @brief Execute one FatByteCode step in the VM
+		 */
+		std::expected<void, api::ApiError> step();
 	};
 }

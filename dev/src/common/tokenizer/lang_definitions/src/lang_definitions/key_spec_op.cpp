@@ -9,7 +9,16 @@
 
 namespace lang_def {
 	namespace {
-		KeywordMode keyword_mode;
+		/**
+		 * Global tokenization state.
+		 *
+		 * @note This is thread local, because workers tokenize code in parallel, so a shared global
+		 * here would be a data race. It can be thread-local because the mode is always set before
+		 * tokenization.
+		 *
+		 * @TODO: #2943 remove this global state
+		 */
+		thread_local KeywordMode keyword_mode = DEFAULT_MODE;
 	}
 
 	void setKeywordMode(KeywordMode mode) { keyword_mode = mode; }
@@ -17,8 +26,7 @@ namespace lang_def {
 	KeywordMode getKeywordMode() { return keyword_mode; }
 
 	base::StrID makeStrID(std::string_view view) {
-		return base::StrID(base::RawView({ reinterpret_cast<const byte*>(view.data()), view.size() }
-		));
+		return base::StrID(base::RawView({ std::as_bytes(std::span{ view }) }));
 	}
 
 	// @TODO: what if there are many instances of one keyword (vec and vector)
@@ -84,6 +92,10 @@ namespace lang_def {
 			{ Keyword::Len, "len", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::Ref, "ref", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::Box, "box", KeywordFlagsOptions::IsGenPrefixOp },
+			{ Keyword::Ptr, "ptr", KeywordFlagsOptions::IsGenPrefixOp },
+			{ Keyword::CPtr, "cptr", KeywordFlagsOptions::IsGenPrefixOp },
+			{ Keyword::ManyPtr, "manyptr", KeywordFlagsOptions::IsGenPrefixOp },
+			{ Keyword::Slice, "slice", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::Copy, "copy", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::Move, "move", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::Refof, "refof", KeywordFlagsOptions::IsGenPrefixOp },
@@ -96,7 +108,6 @@ namespace lang_def {
 			{ Keyword::Or, "or", KeywordFlags() },
 			{ Keyword::Xor, "xor", KeywordFlags() },
 
-			{ Keyword::As, "as", KeywordFlags() },
 			{ Keyword::Hides, "hides", KeywordFlags() },
 			{ Keyword::In, "in", KeywordFlags() },
 			{ Keyword::Lambda, "lambda", KeywordFlags() },
@@ -132,6 +143,7 @@ namespace lang_def {
 			{ Keyword::Char, "char", KeywordFlags() },
 			{ Keyword::Bool, "bool", KeywordFlags() },
 			{ Keyword::Str, "str", KeywordFlags() },
+			{ Keyword::BigStr, "String", KeywordFlags() },
 			{ Keyword::Type, "type", KeywordFlags() },
 
 			{ Keyword::List, "List", KeywordFlags() },
@@ -177,6 +189,8 @@ namespace lang_def {
 			{ Keyword::BCMethodImplementations, "implementations", KeywordFlags() },
 			{ Keyword::BCTrue, "true", KeywordFlags() },
 			{ Keyword::BCFalse, "false", KeywordFlags() },
+			{ Keyword::BCIsConstant, "is_constant", KeywordFlags() },
+			{ Keyword::BCInitialValue, "initial_value", KeywordFlags() },
 		});
 
 	// `- 1` because of `Keyword::NotAKeyword`
@@ -198,6 +212,7 @@ namespace lang_def {
 	constexpr auto OPERATOR_ARRAY = std::to_array<std::pair<NamedOperator, std::string_view>>({
 		{ NamedOperator::NotAnOperator, "NotAnOperator" },
 
+		{ NamedOperator::As, "as" },
 		{ NamedOperator::Period, "." },
 		{ NamedOperator::Range, ".." },
 		{ NamedOperator::PeriodQuestion, ".?" },

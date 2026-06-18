@@ -22,19 +22,18 @@ namespace vm::debugger {
 		  updater([&](const api::ProcStatus& status) {
 			  on_status_changed.emitEvent(status);
 			  variant_match(status) {
-				  variant_case(api::ExecutionCompleted, completed) {
-					  on_execution_completed.emitEvent(completed.exit_value);
-				  }
 				  variant_case(api::ExecutionPanicked, panicked) {
 					  on_error.emitEvent(panicked.error_message);
 				  }
 			  }
-		  }) {
+		  }),
+		  vm_output([&](const std::string& str) { on_output.emitEvent(str); }) {
 		api::spawn()
 			.and_then([&](const api::ProcessInfo& info) {
 				pid = info.pid;
 				return api::attachStatusListener(pid, &updater);
 			})
+			.and_then([&] { return api::attachOutputListener(pid, &vm_output); })
 			.transform_error([&](const api::ApiError& api_error) -> std::monostate {
 				throw std::runtime_error(api::errorToString(api_error));
 			});
@@ -49,17 +48,17 @@ namespace vm::debugger {
 
 	Debugger::~Debugger() {
 		updater.detach();
-		vm::api::getExecutionStatus(pid)
-			.and_then([&](const vm::api::ProcStatus& status) {
-				if (!std::holds_alternative<api::NotStarted>(status))
-					return std::expected<void, vm::api::ApiError>{};
 
-				return std::expected<void, vm::api::ApiError>{ std::unexpected(vm::api::ApiError{
-					vm::api::OtherError{ "VM was not even runned..." } }) };
+		// @TODO: #1222 Remove checking status and always kill after fixing kill
+
+		api::getExecutionStatus(pid)
+			.and_then([&](const api::ProcStatus& status) {
+				if (!std::holds_alternative<api::NotStarted>(status)) return api::kill(pid);
+
+				return std::expected<void, api::ApiError>{};
 			})
-			.and_then([&] { return vm::api::kill(pid); })
-			.transform_error([&](const vm::api::ApiError& api_error) {
-				on_error.emitEvent(vm::api::errorToString(api_error));
+			.transform_error([&](const api::ApiError& api_error) {
+				on_error.emitEvent(api::errorToString(api_error));
 				return api_error;
 			});
 	}
@@ -68,12 +67,12 @@ namespace vm::debugger {
 		on_status_changed.attachListener(listener);
 	}
 
-	void Debugger::attachOnExecutionCompletedListener(events::Listener<api::ExitValue>& listener) {
-		on_execution_completed.attachListener(listener);
-	}
-
 	void Debugger::attachOnErrorListener(events::Listener<std::string>& listener) {
 		on_error.attachListener(listener);
+	}
+
+	void Debugger::attachOnOutputListener(events::Listener<std::string>& listener) {
+		on_output.attachListener(listener);
 	}
 
 	std::expected<void, api::ApiError> Debugger::runMain() {
@@ -141,4 +140,25 @@ namespace vm::debugger {
 			})
 		    .and_then([&] { return api::resume(pid); });
 	}
+
+	std::expected<api::response::CodePosition, api::ApiError> Debugger::getCurrentPosition() {
+		return api::getCurrentPosition(pid);
+	}
+
+	std::expected<void, api::ApiError> Debugger::setBreakpoint(
+		base::StrID function_name, u64 instr_number, bool enabled
+	) {
+		return api::setBreakpoint(pid, function_name, instr_number, enabled);
+	}
+
+	std::expected<void, api::ApiError> Debugger::setBreakpoint(
+		fs::File file, usize line, bool enabled
+	) {
+		return api::mapFileLineToCodeCollectionPosition(pid, std::move(file), line)
+		    .and_then([&](const api::response::CodePosition& pos) {
+				return api::setBreakpoint(pid, pos.function_name, pos.instr_number, enabled);
+			});
+	}
+
+	std::expected<void, api::ApiError> Debugger::step() { return api::step(pid); }
 }

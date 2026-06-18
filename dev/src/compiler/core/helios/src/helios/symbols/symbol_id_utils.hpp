@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include "attributes.hpp"
 #include "symbol_id.hpp"
 #include "symbol_kind.hpp"
 
@@ -48,6 +49,11 @@ namespace compiler::helios {
 	bool isGlobalVar(query::Context&, SymID);
 
 	/**
+	 * Whether a symbol is ignored by lookup.
+	 */
+	bool isIgnoredByLookup(SymID);
+
+	/**
 	 * @return kind of the symbol
 	 */
 	SymbolKind kind(SymID);
@@ -59,11 +65,22 @@ namespace compiler::helios {
 	ScopeID scope(SymID);
 
 	/**
+	 * @return Whether the symbol should use LinkOnce in LLVM.
+	 */
+	bool shouldLinkOnce(SymID);
+
+	/**
 	 * Gets scope that given symbol was defined within.
 	 * Returns empty optional if the symbol doesn't have a scope.
 	 * E.g. builtin functions don't have a scope.
 	 */
 	base::Optional<ScopeID> maybeScope(SymID);
+
+	/**
+	 * Check if a symbol has attribute of the given type.
+	 */
+	template<typename Attribute>
+	bool hasAttribute(SymID);
 
 	/**
 	 * @return PST Stmt element symbol was created from.
@@ -72,11 +89,6 @@ namespace compiler::helios {
 	 * implementation
 	 */
 	base::Optional<pst::Access<pst::Stmt>> stmt(query::Context&, SymID);
-
-	/**
-	 * @return PST element symbol was created from.
-	 */
-	base::Optional<pst::AccessLocked<pst::LangElement>> symbolPst(SymID);
 
 	/**
 	 * @return PST element symbol was created from,

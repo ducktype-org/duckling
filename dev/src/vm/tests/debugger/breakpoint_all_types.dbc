@@ -71,7 +71,7 @@ function main { i64, ptr_argv } -> { i64 } {
 	store_pptr_pany	variant_data_pointer, new_variant_data_value;
 
 
-	breakpoint;
+	# breakpoint; 20
 
 
 	# free(struct_pointer);

@@ -5,17 +5,24 @@
 
 #pragma once
 
+#include "module_flags/module_flags.hpp"
+
 #include <string>
+#include <string_view>
 
 #ifdef USE_REPLXX
 	#include "frontend_implementations/replxx.hpp"
-using FrontendImplementationType = compiler::repl::FrontendReplxxImplementation;
 #else
 	#include "frontend_implementations/minimal.hpp"
-using FrontendImplementationType = compiler::repl::FrontendMinImplementation;
 #endif
 
 namespace compiler::repl {
+
+#ifdef USE_REPLXX
+	using FrontendImplementationType = FrontendReplxxImplementation;
+#else
+	using FrontendImplementationType = FrontendMinImplementation;
+#endif
 
 	/**
 	 * @brief Frontend interface for REPL session.
@@ -38,7 +45,10 @@ namespace compiler::repl {
 	 */
 	class ReplFrontend final {
 	public:
-		explicit ReplFrontend(bool completions_enabled = true);
+		explicit ReplFrontend(
+			bool completions_enabled     = FRONTEND_DEFAULT_COMPLETIONS_ENABLED,
+			bool bracketed_paste_enabled = FRONTEND_DEFAULT_BRACKETED_PASTE_ENABLED
+		);
 		~ReplFrontend() = default;
 
 		/**
@@ -59,6 +69,11 @@ namespace compiler::repl {
 		void printHistory() const;
 
 		/**
+		 * @brief Adds a new entry to the input history.
+		 */
+		void addHistoryEntry(std::string_view entry);
+
+		/**
 		 * @brief Clears the terminal screen.
 		 */
 		void clearScreen();
@@ -72,6 +87,13 @@ namespace compiler::repl {
 		 * @brief Prints the help message with available commands and controls.
 		 */
 		void printHelp() const;
+
+		/**
+		 * @brief Prints all possible completions for a given prefix. Used for autocompletion in
+		 * Jupyter.
+		 */
+		void printCompletions(std::string_view prefix) const;
+
 
 	private:
 		FrontendImplementationType m_impl;

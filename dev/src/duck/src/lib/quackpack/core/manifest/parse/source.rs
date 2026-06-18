@@ -3,17 +3,19 @@
 //! This is the hardest (and most crucial) part of the parsing process.
 use std::path::{Path, PathBuf};
 
+use itertools::Itertools;
 use tracing::debug;
 use url::Url;
 
-use super::Scope;
-use crate::quackpack::core::{BranchOrTag, Git, Local, Registry, ScopeGuard, Source};
+use super::{Scope, ScopeGuard};
+use crate::quackpack::core::{GitReference, Source};
 use crate::quackpack::schemas::manifest::{
     Dependency as DependencySchema, DependencySource as SourceSchema, DetailedSource,
 };
+use crate::quackpack::util::to_url::ToUrl;
 use crate::util::error::MessageError;
 use crate::util::path_ops_ext::PathOpsExt;
-use crate::{DuckContext, QpContext, QuackError, QuackResult, QuackResultContext, qp_bail};
+use crate::{DuckContext, QpContext, QuackError, QuackResult, QuackResultContext, qp_bail, qp_err};
 
 /// Parse given [`DependencySchema`] into [`Source`].
 ///
@@ -29,7 +31,8 @@ pub(crate) fn parse(
     let Some(ref source) = schema.source else {
         debug!("missing the source, falling back to the default registry...?");
         if schema.version.is_some() {
-            return Ok(Source::Registry(Registry::new(ctx.registry_url()?)));
+            let url = ctx.registry_url()?;
+            return Ok(Source::for_registry(url));
         }
         scope.disarm_and_pop();
         return Err(QuackError::hint(
@@ -52,15 +55,12 @@ pub(crate) fn parse(
     }
     let source = match source {
         SourceSchema::Simple(registry_url) => {
-            let url = registry_url
-                .as_str()
-                .try_into()
-                .with_context(|| format!("`{registry_url}` is not a valid URL"))?;
-            return Ok(Registry::new(url).into());
+            let url = registry_url.as_str().to_url()?;
+            return Ok(Source::for_registry(url));
         }
         SourceSchema::Detailed(detailed_source) => detailed_source,
     };
-    let source: Source = match (
+    let source = match (
         source.registry_url.as_ref(),
         source.path.as_ref(),
         source.git_url.as_ref(),
@@ -72,7 +72,8 @@ pub(crate) fn parse(
             check_no_registry(source, &mut scope)?;
             if schema.version.is_some() {
                 debug!("...but has a version, assuming registry source");
-                Registry::new(ctx.registry_url()?).into()
+                let url = ctx.registry_url()?;
+                Source::for_registry(url)
             } else {
                 scope.pop();
                 return Err(QuackError::hint(
@@ -88,32 +89,24 @@ pub(crate) fn parse(
             debug!("found a registry source");
             check_no_git(source, &mut scope)?;
             check_no_local(source, &mut scope)?;
-            let url = registry_url
-                .as_str()
-                .try_into()
-                .with_context(|| format!("`{registry_url}` is not a valid URL"))?;
-            Registry::new(url).into()
+            let url = registry_url.as_str().to_url()?;
+            Source::for_registry(url)
         }
         (None, Some(root), None) => {
             debug!("found a local path source");
             check_no_git(source, &mut scope)?;
             check_no_registry(source, &mut scope)?;
             debug!("manifest path is `{root}`");
-            let (dir_root, was_relative) = resolve_local_dep_root(root, package_root, ctx)?;
-            Local::new(dir_root, root.into(), was_relative).into()
+            let dir_root = resolve_local_dep_root(root, package_root, ctx)?;
+            Source::for_local(&dir_root)?
         }
         (None, None, Some(manifest_git_url)) => {
             debug!("found a git source");
             check_no_local(source, &mut scope)?;
             check_no_registry(source, &mut scope)?;
-            let branch_or_tag = resolve_git_branch_or_tag(source, &scope)?;
+            let reference = resolve_git_reference(source, &scope)?;
             let git_url = parse_git_url(manifest_git_url, package_root, ctx)?;
-            Git::new(
-                git_url,
-                branch_or_tag,
-                source.commit.as_ref().map(<&String>::into),
-            )
-            .into()
+            Source::for_git(git_url, reference)
         }
         (None, Some(_), Some(_)) => {
             scope.pop();
@@ -227,17 +220,32 @@ fn check_no_registry(source: &DetailedSource, scope: &mut ScopeGuard<'_>) -> Qua
 
 /// Resolve [`BranchOrTag`] from the given `source`.
 #[tracing::instrument(skip_all)]
-fn resolve_git_branch_or_tag(source: &DetailedSource, scope: &Scope) -> QuackResult<BranchOrTag> {
-    match (source.branch.as_ref(), source.tag.as_ref()) {
-        (None, None) => Ok(BranchOrTag::Default),
-        (None, Some(tag)) => Ok(BranchOrTag::Tag(tag.into())),
-        (Some(branch), None) => Ok(BranchOrTag::Branch(branch.into())),
-        (Some(_), Some(_)) => {
-            let formatted = scope.format();
-            qp_bail!(
-                "the dependency `{formatted}` is a git dependency, but it contains mutually exclusive fields: `{formatted}.branch`, `{formatted}.tag`"
-            );
-        }
+fn resolve_git_reference(source: &DetailedSource, scope: &Scope) -> QuackResult<GitReference> {
+    let mutually_exclusive_fields_error = |names: &'static [&'static str]| {
+        let formatted = scope.format();
+        let fields = names
+            .iter()
+            .map(|name| format!("`{formatted}.{name}`"))
+            .join(", ");
+        qp_err!(
+            "the dependency `{formatted}` is a git dependency, but it contains mutually exclusive fields: {fields}"
+        )
+    };
+    match (
+        source.branch.as_ref(),
+        source.tag.as_ref(),
+        source.commit.as_ref(),
+    ) {
+        (None, None, None) => Ok(GitReference::Default),
+        (None, Some(tag), None) => Ok(GitReference::Tag(tag.into())),
+        (Some(branch), None, None) => Ok(GitReference::Branch(branch.into())),
+        (None, None, Some(commit)) => Ok(GitReference::Rev(commit.into())),
+        (Some(_), Some(_), None) => Err(mutually_exclusive_fields_error(&["branch", "tag"])),
+        (None, Some(_), Some(_)) => Err(mutually_exclusive_fields_error(&["tag", "commit"])),
+        (Some(_), None, Some(_)) => Err(mutually_exclusive_fields_error(&["branch", "commit"])),
+        (Some(_), Some(_), Some(_)) => Err(mutually_exclusive_fields_error(&[
+            "branch", "tag", "commit",
+        ])),
     }
 }
 
@@ -248,7 +256,7 @@ fn resolve_local_dep_root(
     manifest_root: &str,
     package_root: &Path,
     ctx: &DuckContext,
-) -> QuackResult<(PathBuf, bool)> {
+) -> QuackResult<PathBuf> {
     let home = ctx.user_home();
     let Some(home) = home.to_str() else {
         qp_bail!(
@@ -258,15 +266,12 @@ fn resolve_local_dep_root(
     };
     let expanded = Path::new(manifest_root).expand_user_with(home)?;
     if expanded.is_absolute() {
-        Ok((expanded.to_path_buf(), false))
+        Ok(expanded.to_path_buf())
     } else {
-        Ok((
-            package_root
-                .join(expanded)
-                .expand_user_with(home)?
-                .resolve()?,
-            true,
-        ))
+        Ok(package_root
+            .join(expanded)
+            .expand_user_with(home)?
+            .resolve()?)
     }
 }
 
@@ -276,14 +281,14 @@ fn parse_git_url(
     package_root: &Path,
     ctx: &DuckContext,
 ) -> QuackResult<Url> {
-    let git_url = Url::parse(manifest_git_url);
+    let git_url = manifest_git_url.to_url();
     let mut err: QuackError = match git_url {
         Ok(parsed) => return Ok(parsed),
-        Err(err) => err.into(),
+        Err(err) => err,
     };
     // We are building error messages from the bottom to the top.
     // If an original URL points to a file, mention it to the user. Also, ignore any errors.
-    if let Ok((path, _)) = resolve_local_dep_root(manifest_git_url, package_root, ctx)
+    if let Ok(path) = resolve_local_dep_root(manifest_git_url, package_root, ctx)
         && path.exists()
     {
         err = err.add_hint(format!(

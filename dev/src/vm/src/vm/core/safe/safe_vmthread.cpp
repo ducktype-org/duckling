@@ -16,6 +16,7 @@
 #include <vm/api/data/status.hpp>
 #include <vm/core/safe/concurrency/gil.hpp>
 #include <vm/core/safe/exceptions.hpp>
+#include <vm/core/safe/low_program/cfg/cf_graph.hpp>
 #include <vm/core/safe/low_program/low_program.hpp>
 #include <vm/core/safe/low_program/opcodes.hpp>
 #include <vm/core/safe/memory/pointer.hpp>
@@ -32,21 +33,8 @@
 
 namespace vm {
 
-#if defined(ENABLE_JIT) and not defined(BUILD_TYPE_RELEASE)
-	// When testing JIT, compile all calls from the start function. Specifically main.
-	#define MAKE_BYTECODE_INSTRUCTION(OPCODE_NAME, ARG_0, ARG_1)         \
-		makeLowInstruction(                                              \
-			low::MicroOpcode::OPCODE_NAME == low::MicroOpcode::call_func \
-				? low::MicroOpcode::jit_call_entrypoint                  \
-				: low::MicroOpcode::OPCODE_NAME,                         \
-			ARG_0,                                                       \
-			ARG_1                                                        \
-		)
-
-#else
-	#define MAKE_BYTECODE_INSTRUCTION(OPCODE_NAME, ARG_0, ARG_1) \
-		makeLowInstruction(low::MicroOpcode::OPCODE_NAME, ARG_0, ARG_1)
-#endif
+#define MAKE_BYTECODE_INSTRUCTION(OPCODE_NAME, ARG_0, ARG_1) \
+	makeLowInstruction(low::MicroOpcode::OPCODE_NAME, ARG_0, ARG_1)
 
 	SafeVMThread::SafeVMThread(api::ThreadID thread_id, SafeVMProcess& process):
 		  IVMThread(thread_id, process),
@@ -102,6 +90,19 @@ namespace vm {
 		std::byte* local_stack = frame->local_stack;
 
 		low::MicroOpcode opcode = getInstructionOpcode(*instr);
+		if (opcode == low::MicroOpcode::breakpoint) {
+			const auto* program_copy
+				= dynamic_cast<const low::LowVMProgramCopy*>(process_program.get());
+			CORE_ASSERT(program_copy, "Breakpoints should be only in LowVMProgramCopy.");
+
+			auto original_instr
+				= program_copy->getOriginalProgram()
+			          ->getFunctions()
+			          .at(frame->current_function->name)
+			          ->bc[static_cast<size_t>(frame->instr - &frame->current_function->bc[0])];
+
+			opcode = getInstructionOpcode(original_instr);
+		}
 
 		// Execute the instruction by calling the debug opcode function.
 		OpFuns::DEBUG_OPFUNS.at(std::to_underlying(opcode))(instr, local_stack, frame, *this);
@@ -132,15 +133,22 @@ namespace vm {
 			));
 		}
 
-		low::LowFuncData start_function{ .name             = base::StrID("vm_start_function"),
-			                             .bc               = {},
-			                             .local_stack_size = 0,
-			                             .local_block_count
-			                             = func.result_types.size() + func.parameters.size(),
-			                             .arg_size     = 0,
-			                             .ret_size     = func.ret_size,
-			                             .parameters   = {},
-			                             .result_types = func.result_types };
+		low::LowFuncData start_function{
+			.name = base::StrID("vm_start_function"),
+			.id   = START_FUNCTION_ID,
+#ifdef ENABLE_JIT
+			.cfg
+			= low::cf::ControlFlowGraph(),  // This is okay because we never JIT the start function.
+#endif
+			.bc                  = {},
+			.local_stack_size    = 0,
+			.local_block_count   = func.result_types.size() + func.parameters.size(),
+			.arg_size            = 0,
+			.ret_size            = func.ret_size,
+			.parameters          = {},
+			.result_types        = func.result_types,
+			.instruction_mapping = {}
+		};
 
 		const u64 called_function_id = process_program->getFunctions().idOf(func.name).value();
 
@@ -230,14 +238,22 @@ namespace vm {
 		auto        str_ptr_type     = types.at(base::StrID("ptr_string"));
 		auto        byte_type        = types.at(base::StrID("byte"));
 
-		low::LowFuncData start_function{ .name              = base::StrID("vm_start_function"),
-			                             .bc                = {},
-			                             .local_stack_size  = 72,
-			                             .local_block_count = 7,
-			                             .arg_size          = 0,
-			                             .ret_size          = func.ret_size,
-			                             .parameters        = {},
-			                             .result_types      = func.result_types };
+		low::LowFuncData start_function{
+			.name = base::StrID("vm_start_function"),
+			.id   = START_FUNCTION_ID,
+#ifdef ENABLE_JIT
+			.cfg
+			= low::cf::ControlFlowGraph(),  // This is okay because we never JIT the start function.
+#endif
+			.bc                  = {},
+			.local_stack_size    = 72,
+			.local_block_count   = 7,
+			.arg_size            = 0,
+			.ret_size            = func.ret_size,
+			.parameters          = {},
+			.result_types        = func.result_types,
+			.instruction_mapping = {}
+		};
 
 		// TypeIDs to pass to opcodes.
 		u64 argv_type_arg     = safeReadObjectBytes<u64>(argv_type);
@@ -527,18 +543,39 @@ namespace vm {
 		for (const auto& [global, id, name]: process_program->getGlobals().allData()) {
 			auto block_ref
 				= Ref(runtime_data.global_block_ref_buffer_base[global->global_block_idx]);
-			// Insert the global data if it hasn't been initialized; then run constructor if present
-			if (not process_memory.isGlobalInitialized(block_ref) && global->ctor_name.has_value()) {
-				try {
-					const auto& func
-						= *process_program->getFunctions().atMaybe(global->ctor_name.value()).value();
-					low::LowFuncData start_function = createStartFunctionFor(func, {});
-					executeFunction(start_function, func);
-					process_memory.setGlobalInitialized(block_ref);
-				} catch (const KillProcessException& e) {
-					respondExecutionRequest(api::ExecutionPanicked{ e.what() });
+			if (not process_memory.isGlobalInitialized(block_ref)) {
+				variant_match(global->init) {
+					variant_case(low::GlobalCtorDtor, ctor_dtor) {
+						if (ctor_dtor.ctor_name.has_value()) {
+							try {
+								const auto& func = *process_program->getFunctions()
+								                        .atMaybe(ctor_dtor.ctor_name.value())
+								                        .value();
+								low::LowFuncData start_function = createStartFunctionFor(func, {});
+								executeFunction(start_function, func);
+							} catch (const KillProcessException& e) {
+								auto status = safe_process.getCurrentStatus();
+								if (std::holds_alternative<api::ExecutionPanicked>(status))
+									respondExecutionRequest(status);
+								else
+									respondExecutionRequest(api::ExecutionPanicked{ e.what() });
+								return;
+							}
+						}
+					}
+					variant_case(low::GlobalInitialValue, value_init) {
+						// Copy the constant initial value bytes directly to the global's memory.
+						process_memory.initializeBlockFromConstValue(block_ref, value_init.value);
+					}
 				}
+				process_memory.setGlobalInitialized(block_ref);
 			}
+		}
+
+		const auto terminal_status = safe_process.getCurrentStatus();
+		if (api::isStatusTerminal(terminal_status)) {
+			respondExecutionRequest(terminal_status);
+			return;
 		}
 
 		try {
@@ -563,11 +600,20 @@ namespace vm {
 				CORE_UNREACHABLE();
 			}();
 
-			const auto exit_value = executeFunction(start_function, func);
-			respondExecutionRequest(api::ExecutionCompleted{ exit_value });
-		} catch (const KillProcessException& e) {
+			const auto exit_value     = executeFunction(start_function, func);
+			const auto current_status = safe_process.getCurrentStatus();
+			if (api::isStatusTerminal(current_status))
+				respondExecutionRequest(current_status);
+			else
+				respondExecutionRequest(api::ExecutionCompleted{ exit_value });
+		} catch (const KillProcessException& e) { handleKillProcessException(e); }
+	}
+
+	void SafeVMThread::handleKillProcessException(const KillProcessException& e) {
+		if (safe_process.isExecutionPanicked())
+			respondExecutionRequest(safe_process.getCurrentStatus());
+		else
 			respondExecutionRequest(api::ExecutionPanicked{ e.what() });
-		}
 	}
 
 	void SafeVMThread::execGlobalDestructors() {
@@ -577,37 +623,44 @@ namespace vm {
 		// earlier-created resources is destroyed first, preventing use-after-destruction and
 		// keeping teardown safe and logically consistent.
 		for (const auto& [global, id, name]: std::ranges::reverse_view(globals)) {
-			if (global->dtor_name.has_value()) {
+			auto* ctor_dtor = std::get_if<low::GlobalCtorDtor>(&global->init);
+			if (ctor_dtor && ctor_dtor->dtor_name.has_value()) {
 				try {
 					const auto& func = *executing_program->getFunctions()
-					                        .atMaybe(base::StrID(global->dtor_name.value()))
+					                        .atMaybe(ctor_dtor->dtor_name.value())
 					                        .expect(
 												"Called function does not exist: "
-												+ global->dtor_name.value().str()
+												+ ctor_dtor->dtor_name.value().str()
 											);
 					low::LowFuncData start_function = createStartFunctionFor(func, {});
 					executeFunction(start_function, func);
-				} catch (const KillProcessException& e) {
-					respondExecutionRequest(api::ExecutionPanicked{ e.what() });
-				}
+				} catch (const KillProcessException& e) { handleKillProcessException(e); }
 			}
 		}
 	}
 
-	std::expected<api::Response, api::ApiError> SafeVMThread::getCurrentPosition() {
+	std::expected<low::LowCodePosition, api::ApiError> SafeVMThread::getCurrentPosition(
+		base::Optional<usize> opt_frame_idx
+	) {
 		variant_match(getStatus()) {
 			variant_case_novalue(api::Paused) {
 				auto frame = runtime_data.frame_stack_current;
-				auto instr = frame->instr;
 
-				for (const auto& [idx, func]:
-				     std::views::enumerate(process_program->getFunctions())) {
-					if (func.bc.data() <= instr && instr < func.bc.data() + func.bc.size()) {
-						return api::Response(api::response::CodePosition{
-							.function_id  = static_cast<u64>(idx),  // Assuming function_id is int
-							.instr_number = static_cast<u64>(instr - func.bc.data()) });
-					}
+				if_opt_some(opt_frame_idx, frame_index) {
+					u64 frames = getNumberOfCurrentStackFrames();
+					if (frame_index >= frames)
+						return std::unexpected(api::ApiError{
+							api::OtherError{ "Frame index out of bounds" } });
+
+					frame = &getStackFrame(frame_index);
 				}
+
+				auto& func = *frame->current_function;
+
+				return low::LowCodePosition{
+					.function          = &func,
+					.instruction_index = static_cast<u64>(frame->instr - func.bc.data()),
+				};
 			}
 			variant_default {
 				return std::unexpected(api::ApiError{
@@ -645,6 +698,10 @@ namespace vm {
 	}
 
 	void SafeVMThread::setThreadCtx(std::string str) { thread_ctx = std::move(str); }
+
+	bool SafeVMThread::isCallableFunctionID(usize id) {
+		return id != SafeVMThread::START_FUNCTION_ID;
+	}
 
 	u64 SafeVMThread::getNumberOfCurrentStackFrames() const {
 		// +1 because frame_stack_current points to the current frame, not the next free slot.

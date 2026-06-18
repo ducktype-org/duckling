@@ -249,7 +249,7 @@ fn lock(
     blocking: impl FnOnce() -> io::Result<()>,
 ) -> QuackResult<()> {
     if try_lock(path, non_blocking)? {
-        trace!(path = %path.display(), "locked nonblocking");
+        trace!(path = %path.display(), "locked non-blocking");
         return Ok(());
     }
     trace!(path = %path.display(), "locking blocking");

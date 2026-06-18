@@ -798,6 +798,7 @@ namespace compiler::frontend {
 		std::mutex              wait_mtx;
 		std::condition_variable wait_cv;
 		std::atomic<usize>      next_file_id{ 0 };
+		std::atomic<usize>      parsed_files_count{ 0 };
 		bool                    all_files_parsed = false;
 		auto&                   manager          = concurrent::worker::WorkerManager::get();
 
@@ -813,22 +814,37 @@ namespace compiler::frontend {
 							file_id
 						);
 					file_ref->getPST();
+
+					if (parsed_files_count.fetch_add(1, std::memory_order_relaxed) + 1
+					    == files_to_parse.size()) {
+						std::lock_guard<std::mutex> lock(wait_mtx);
+						all_files_parsed = true;
+						wait_cv.notify_one();
+					}
 				});
-			} else if (idx == files_to_parse.size() + concurrent::worker::getWorkerCount() - 1) {
-				std::lock_guard<std::mutex> lock(wait_mtx);
-				all_files_parsed = true;
-				wait_cv.notify_one();
 			}
 		};
 
 		manager.setNoTasksCallback(schedule_next_file_parsing);
 
-		// Wait until all files are parsed.
-		std::unique_lock lock(wait_mtx);
-		wait_cv.wait(lock, [&] { return all_files_parsed; });
+		for (auto& worker: manager.getAllWorkers()) schedule_next_file_parsing(worker);
 
-		// Clear the call back if all files are parsed.
+		// Wait until all files are parsed.
+		{
+			std::unique_lock lock(wait_mtx);
+			wait_cv.wait(lock, [&] { return all_files_parsed; });
+		}
+
+		// Clear the callback so no worker schedules new parsing tasks.
 		manager.setNoTasksCallback([](concurrent::worker::WRef) {});
+
+		// All the lambdas above capture this function's stack frame by reference. A worker that
+		// finished the last task may still be re-entering its loop and is about to run the
+		// (now-cleared) no-tasks callback, or may have already copied the previous callback before
+		// we cleared it (see Worker::run). Either way it would dereference references into this
+		// frame. Wait until every worker is idle before returning, otherwise that frame gets
+		// destroyed underneath them -> rare segfault.
+		manager.waitForAllWorkersFree();
 	}
 
 	ModuleID createModuleTreeWithRandomPackageID(const fs::File& file) {

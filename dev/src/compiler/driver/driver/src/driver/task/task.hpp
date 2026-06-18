@@ -1,6 +1,7 @@
 #pragma once
 
 #include <archiver/archive.hpp>
+#include <driver/options.hpp>
 #include <frontend/module_tree/module_id.hpp>
 #include <global_state/packages.hpp>
 #include <linker/link.hpp>
@@ -33,33 +34,46 @@ namespace compiler::driver {
 		using DiagnosticReporter = js::DiagnosticLogger;
 
 		/**
-		 * @brief Look up a package root module by its raw package name.
+		 * @brief Look up a package root module by its raw package id.
 		 */
-		base::Optional<compiler::frontend::ModuleID> getRootModuleIDForRawPackageName(
-			base::StrID package_name, const DiagnosticReporter& report
+		base::Optional<compiler::frontend::ModuleID> getRootModuleIDForRawPackageId(
+			base::StrID package_id, const DiagnosticReporter& report
 		);
 	}  // namespace task
 
 	/**
 	 * @brief Package build target.
 	 */
-	struct BuildTargetDVM {
+	struct BuildTargetDVMLibrary final {
 		/**
-		 * @brief The output file path stem for the compiled DVM package.
+		 * @brief The output file path name for the compiled DVM package.
 		 */
-		base::StrID output_file_stem = base::StrID("package_dvm");
+		base::StrID output_file_name = base::StrID("package_dvm.dbc");
+	};
+
+	struct BuildTargetDVMExecutable final {
+		/**
+		 * @brief The output file path name for the compiled DVM executable.
+		 */
+		base::StrID output_file_name;
+
+		/**
+		 * @brief Whether to include in the final output the standard
+		 * library packages that the executable depends on.
+		 */
+		bool link_std_packages = false;
 	};
 
 	/**
 	 * @brief Package build target for LLVM backend (to object files).
 	 */
-	struct BuildTargetLLVM {};
+	struct BuildTargetLLVM final {};
 
-	struct BuildTargetLLVMExecutable {
+	struct BuildTargetLLVMExecutable final {
 		/**
 		 * @brief The output file path for the compiled executable.
 		 */
-		base::StrID output_file_stem;
+		base::StrID output_file_name;
 
 		/**
 		 * @brief Linking options for the executable.
@@ -67,11 +81,11 @@ namespace compiler::driver {
 		linker::LinkingOptions linking_options;
 	};
 
-	struct BuildTargetLLVMStaticLibrary {
+	struct BuildTargetLLVMStaticLibrary final {
 		/**
 		 * @brief The output file path for the compiled static library.
 		 */
-		base::StrID output_file_stem;
+		base::StrID output_file_name;
 
 		/**
 		 * @brief Archiving options for the static library.
@@ -83,7 +97,8 @@ namespace compiler::driver {
 	 * @brief A variant type representing different build targets.
 	 */
 	using BuildTarget = std::variant<
-		BuildTargetDVM,
+		BuildTargetDVMLibrary,
+		BuildTargetDVMExecutable,
 		BuildTargetLLVM,
 		BuildTargetLLVMExecutable,
 		BuildTargetLLVMStaticLibrary>;
@@ -92,7 +107,7 @@ namespace compiler::driver {
 	 * @brief Represents a task for compiling a package
 	 */
 	struct RawPackageCompilationTask final {
-		base::StrID package_name;
+		base::StrID package_id;
 		BuildTarget build_target;
 
 		/**
@@ -113,7 +128,7 @@ namespace compiler::driver {
 	 * A task can be of different types, such as package compilation, and contains the relevant data
 	 * for that task type.
 	 */
-	struct RawTask {
+	struct RawTask final {
 		TaskType                                type;
 		std::variant<RawPackageCompilationTask> task_data;
 
@@ -125,7 +140,7 @@ namespace compiler::driver {
 		);
 	};
 
-	struct Task {
+	struct Task final {
 		TaskType                             type;
 		std::variant<PackageCompilationTask> task_data;
 	};
@@ -135,6 +150,17 @@ namespace compiler::driver {
 	 * @note This function requires presence of the package specified in the task in global_state
 	 */
 	base::Optional<Task> convertRawTaskToTask(
-		const RawTask& raw_task, const task::DiagnosticReporter& report
+		const RawTask&                      raw_task,
+		const options_types::StdLibOptions& stdlib_options,
+		const task::DiagnosticReporter&     report
+	);
+
+	/**
+	 * @brief Construct linker options for a given task, based on the task's build target and the
+	 * standard library options.
+	 */
+	linker::LinkingOptions constructLinkerOptions(
+		const linker::LinkingOptions&       local_options,
+		const options_types::StdLibOptions& stdlib_options
 	);
 }

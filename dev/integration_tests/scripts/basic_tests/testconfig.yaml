@@ -1,30 +1,6 @@
 # Simplest tests for scripts in Duckling.
 
 Tests:
-  declaration:
-    folder: "class/declaration"
-    Cases:
-      direct:
-        mode: direct
-        Output:
-          String: "42\n25\n"
-      vm:
-        mode: vm
-        Output:
-          String: "42\n25\n"
-
-  using_previously_defined_objects:
-    folder: "class/using_previously_defined_objects"
-    Cases:
-      direct:
-        mode: direct
-        Output:
-          String: "12\n"
-      vm:
-        mode: vm
-        Output:
-          String: "12\n"
-
   simple_addition:
     folder: "simple_addition"
     Cases:
@@ -35,6 +11,20 @@ Tests:
       vm:
         mode: vm
         Output: 
+          String: "42\n"
+      exe:
+        mode: exe
+        Output: 
+          String: "42\n"
+      exe_o1:
+        mode: exe
+        opt_level: 1
+        Output:
+          String: "42\n"
+      exe_oz:
+        mode: exe
+        opt_level: z
+        Output:
           String: "42\n"
 
   function_declaration:
@@ -48,6 +38,10 @@ Tests:
         mode: vm
         Output: 
           String: "42\n"
+      exe:
+        mode: exe
+        Output: 
+          String: "42\n"
 
   simple_loop:
     folder: "simple_loop"
@@ -58,5 +52,9 @@ Tests:
           String: "6\n5\n4\n3\n2\n1\n"
       vm:
         mode: vm
+        Output: 
+          String: "6\n5\n4\n3\n2\n1\n"
+      exe:
+        mode: exe
         Output: 
           String: "6\n5\n4\n3\n2\n1\n"

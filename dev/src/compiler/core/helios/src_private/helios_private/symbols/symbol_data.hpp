@@ -1,11 +1,11 @@
 #pragma once
 
-#include "builtin_symbol_data.hpp"
 #include "generated_symbol_data.hpp"
 #include "pst_symbol_data.hpp"
 
 #include <frontend/pst_parser/access.hpp>
 #include <frontend/pst_parser/elements/includes/basic.hpp>
+#include <helios/symbols/attributes.hpp>
 #include <helios/symbols/symbol_id.hpp>
 #include <helios/symbols/symbol_kind.hpp>
 #include <helios/tsh/type_interface.hpp>
@@ -65,6 +65,16 @@ namespace compiler::helios {
 		 * context, e.g. class fields.
 		 */
 		bool dependent = false;
+
+		/**
+		 * When this is true, the symbol is ignored by the lookup.
+		 */
+		bool is_ignored_by_lookup = false;
+
+		/**
+		 * List of attributes on a symbol.
+		 */
+		std::vector<Attribute> attributes = {};
 	};
 
 	/**
@@ -73,8 +83,7 @@ namespace compiler::helios {
 	 * SymbolData is by design a "read-only" structure.
 	 */
 	struct SymbolData final {
-		using OtherData
-			= std::variant<PstSymbolData, builtin::BuiltinFunctionData, defgen::GeneratedSymbolData>;
+		using OtherData = std::variant<PstSymbolData, defgen::GeneratedSymbolData>;
 
 		SymbolData(CommonSymbolData common, OtherData other);
 
@@ -84,10 +93,6 @@ namespace compiler::helios {
 
 		static SymbolData makePSTSymbolData(CommonSymbolData common_data, PstSymbolData pst_data);
 
-		static SymbolData makeBuiltinFunction(
-			base::StrID name, builtin::BuiltinFunctionData builtin_data
-		);
-
 		static SymbolData makeGeneratedSymbol(
 			base::StrID name, defgen::GeneratedSymbolData generated_data
 		);
@@ -96,9 +101,6 @@ namespace compiler::helios {
 		ScopeID getScope() const {
 			variant_match(other) {
 				variant_case(PstSymbolData, pst_data) { return pst_data.scope; }
-				variant_case_novalue(builtin::BuiltinFunctionData) {
-					base::NotYetImplemented("Can't get scope of builtin function.");
-				}
 				variant_case(defgen::GeneratedSymbolData, gen_data) { return gen_data.getScope(); }
 				variant_default { CORE_UNREACHABLE(); }
 			}

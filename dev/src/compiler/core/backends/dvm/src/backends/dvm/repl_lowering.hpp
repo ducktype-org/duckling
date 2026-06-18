@@ -1,9 +1,8 @@
 #pragma once
 
+#include <backends/dvm/dvm_backend.hpp>
 #include <backends/dvm/dvm_internal_fwd.hpp>
-#include <backends/dvm/repl_lowering_snapshot.hpp>
-#include <lir/lir_structure/lir_structure.hpp>
-#include <tsl/type_layout.hpp>
+#include <lir/lir_structure/lir_structure_fd.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/pointers/box.hpp>
@@ -16,29 +15,36 @@
 
 namespace compiler::backend_vm {
 	/**
-	 * @brief REPL wrapper around ProgramLoweringContext with incremental emission support.
+	 * @brief A stateful collection of code lowered into VM bytecode dedicated for REPL/scripts
+	 * compilation use. It exposes an interface for incremental DVM code emission, allowing REPL
+	 * statements to be compiled and loaded one at a time.
 	 *
-	 * Keeps a persistent lowering context across REPL statements and exposes helpers to
-	 * capture a snapshot before lowering and then collect only the newly lowered code
-	 * since that snapshot. This enables incremental bytecode loading while still allowing
-	 * later statements to reference symbols (functions, globals, types) from earlier ones.
+	 * @note Underneath it uses ProgramLoweringContext snapshot API that was added specifically for
+	 * this use case, and DVMCodeBuilder lowering API.
 	 *
-	 * @note This wrapper doesn't add any complicated logic,
-	 * it is a simple wrapper for the ProgramLoweringContext.
+	 * @important: It relies, to an extent, on the private implementation details of DVMCodeBuilder.
 	 *
-	 * @note Feel Free to refactor this class if a better way of managing
-	 * the REPL context is found.
+	 * @note If used improperly, query_ctx might become a dangling reference.
+	 *
+	 * The wrapper maintains a persistent DVMCodeBuilder state across REPL statements.
+	 * It enables incremental bytecode loading without recompiling entire modules from scratch.
+	 *
+	 * @TODO: #2872 Move repl specific logic from ProgramLoweringContext into this wrapper, so that
+	 * ProgramLoweringContext can be used for other purposes without carrying unnecessary
+	 * REPL-specific state, logic and API. Maybe think a little bit more generally about
+	 * implementation of this wrapper and its relation to ProgramLoweringContext and DVMCodeBuilder.
+	 * One idea is to just remove ReplDVMCodeBuilder and add snapshotting api to DVMCodeBuilder.
 	 */
-	class ReplLoweringContext final {
+	class ReplDVMCodeBuilder final {
 	public:
-		explicit ReplLoweringContext(query::Context& query_ctx);
-		~ReplLoweringContext();
+		explicit ReplDVMCodeBuilder(query::Context& query_ctx);
+		~ReplDVMCodeBuilder();
 
 		// Non-copyable, movable
-		ReplLoweringContext(const ReplLoweringContext&)            = delete;
-		ReplLoweringContext& operator=(const ReplLoweringContext&) = delete;
-		ReplLoweringContext(ReplLoweringContext&&) noexcept;
-		ReplLoweringContext& operator=(ReplLoweringContext&&) noexcept;
+		ReplDVMCodeBuilder(const ReplDVMCodeBuilder&)            = delete;
+		ReplDVMCodeBuilder& operator=(const ReplDVMCodeBuilder&) = delete;
+		ReplDVMCodeBuilder(ReplDVMCodeBuilder&&) noexcept;
+		ReplDVMCodeBuilder& operator=(ReplDVMCodeBuilder&&) noexcept;
 
 
 		/**
@@ -64,50 +70,21 @@ namespace compiler::backend_vm {
 		[[nodiscard]] base::Optional<Ref<query::Context>> getActiveContext() const;
 
 		/**
-		 * @brief Lower a LIR function into DVM bytecode function.
-		 * @note If the function was already lowered, this is a no-op.
+		 * Lowers a LIR unit into DVM bytecode and collects the newly lowered code.
+		 *
+		 * @note The newly lowered code might not include all entities from the LIR unit,
+		 * as some of them might have been lowered in previous statements and are already present in
+		 * the context.
 		 */
-		const vm::code::Function& lowerAndKeepLirFunction(base::CRef<lir::Function> lir_function);
-
-		/**
-		 * @brief Lower a LIR global with its constructor and destructor.
-		 */
-		const vm::code::GlobalData& lowerAndKeepLirGlobal(
-			const lir::LIRGlobal&                     lir_global,
-			base::Optional<base::CRef<lir::Function>> global_ctor,
-			base::Optional<base::CRef<lir::Function>> global_dtor
+		vm::code::CodeCollection insertLIRUnitAndCollectNewlyLoweredCode(const lir::LIRUnit& lir_unit
 		);
 
-
-		/**
-		 * @brief Capture current state of lowered entities.
-		 */
-		[[nodiscard]] LoweredEntitiesSnapshot captureLoweredEntitiesSnapshot() const;
-
-
-		/**
-		 * @brief Collect newly lowered types/functions/extra functions since a snapshot.
-		 */
-		[[nodiscard]] vm::code::CodeCollection collectNewCodeSince(
-			const LoweredEntitiesSnapshot& snapshot
-		) const;
-
-
 	private:
-		// Pimpl: store pointer to complete type, with details in CPP
-		base::Box<internal::ProgramLoweringContext> m_context;
+		/**
+		 * The DVMCodeBuilder instance used for lowering LIR units into DVM bytecode.
+		 * @note DVMCodeBuilder friends ReplDVMCodeBuilder, so it can access program_context
+		 * directly, which is necessary for the snapshotting logic.
+		 */
+		DVMCodeBuilder code_builder;
 	};
-
-	/**
-	 * @brief Create a new persistent program lowering context for REPL.
-	 *
-	 * The returned context maintains state across multiple REPL statement compilations,
-	 * allowing later statements to reference symbols (functions, globals, types) defined
-	 * in earlier statements without recompiling everything into a single module.
-	 *
-	 * @param query_ctx The query context used for error reporting.
-	 * @return A box-managed ProgramLoweringContext. The context is owned by the caller
-	 *         and must be kept alive for the duration of the REPL session.
-	 */
-	base::Box<internal::ProgramLoweringContext> createReplLoweringContext(query::Context& query_ctx);
 }

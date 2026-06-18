@@ -3,17 +3,21 @@
  */
 #pragma once
 
+#include "cfg/cf_graph.hpp"
 #include "instruction.hpp"
 
 #include <base/pointers/box.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
+#include <vm/bytecode/const_value.hpp>
 #include <vm/core/safe/type_metadata/definitions.hpp>
 #include <vm/core/safe/type_metadata/type_metadata.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
 
-namespace vm::loader::compiler {
-	class Compiler;
+#include <variant>
+
+namespace vm::loader::compiler::safe {
+	class SafeCompiler;
 }
 
 namespace vm::low {
@@ -23,7 +27,11 @@ namespace vm::low {
 	 * @brief Micro bytecode representation of function data.
 	 */
 	struct LowFuncData {
-		base::StrID   name;
+		base::StrID name;
+		usize       id;
+#ifdef ENABLE_JIT
+		cf::ControlFlowGraph cfg;
+#endif
 		MicroBytecode bc;
 
 		/// The maximum size of the local variables on stack required by the function frame.
@@ -36,7 +44,45 @@ namespace vm::low {
 		usize                 ret_size;
 		std::vector<TypeCRef> parameters;
 		std::vector<TypeCRef> result_types;
+
+		/**
+		 * @brief Range of instructions
+		 * @note Represents inclusive-exclusive range [`begin`, `end`)
+		 */
+		struct InstructionRange {
+			usize begin, end;
+			auto  operator<=>(const InstructionRange&) const = default;
+
+			[[nodiscard]] bool contains(usize index) const { return begin <= index && index < end; }
+		};
+
+		/**
+		 * @brief Mapping of fatbytecode instruction indexes to microbytecode instruction indexes
+		 * ranges.
+		 * @note Vector indexes correspond to FatBytecode instruction indexes
+		 */
+		std::vector<InstructionRange> instruction_mapping;
 	};
+
+	struct LowCodePosition {
+		CRef<LowFuncData> function;
+		usize             instruction_index;
+	};
+
+	/**
+	 * @brief Initialization strategy for a global variable.
+	 * Either initialized via constructor/destructor functions or via a constant initial value.
+	 */
+	struct GlobalCtorDtor {
+		base::Optional<base::StrID> ctor_name;
+		base::Optional<base::StrID> dtor_name;
+	};
+
+	struct GlobalInitialValue {
+		code::ConstantValue value;
+	};
+
+	using GlobalInit = std::variant<GlobalCtorDtor, GlobalInitialValue>;
 
 	/**
 	 * @brief Micro bytecode representation of global data.
@@ -45,11 +91,8 @@ namespace vm::low {
 		/// Type
 		TypeCRef type;
 
-		/// Optional constructor name.
-		base::Optional<base::StrID> ctor_name;
-
-		/// Optional destructor name.
-		base::Optional<base::StrID> dtor_name;
+		/// Initialization strategy: either ctor/dtor or constant initial value.
+		GlobalInit init;
 
 		/// The offset of the global variable's data in the global buffer.
 		usize global_buffer_offset;
@@ -128,7 +171,7 @@ namespace vm::low {
 	 */
 	class LowVMProgram final: public ILowVMProgram {
 	public:
-		friend class vm::loader::compiler::Compiler;
+		friend class vm::loader::compiler::safe::SafeCompiler;
 
 		const TypeMetadata& getTypes() const override { return *types; }
 
@@ -161,6 +204,7 @@ namespace vm::low {
 
 		// Contains all method names in the program. It's used by the executor to determine the
 		// names of called functions.
+		// @TODO: #2685 This is redundant, u64 is as fast as base::StrID.
 		base::HashMap<u64, base::StrID> method_name_pool{};
 	};
 
@@ -224,12 +268,13 @@ namespace vm::low {
 		 * @returns Original opcode from provided location on success and `nullopt` if location does
 		 * not exist.
 		 */
+		template<typename FID>
 		base::Optional<MicroOpcode> replaceOpcode(
-			usize function_id, usize instruction_index, MicroOpcode opcode
+			FID function_id, usize instruction_index, MicroOpcode opcode
 		) {
 			if (!functions.contains(function_id)) return std::nullopt;
 
-			auto& microbytecode = functions[function_id].bc;
+			auto& microbytecode = functions.at(function_id)->bc;
 			if (microbytecode.size() <= instruction_index) return std::nullopt;
 
 			auto&       instruction     = microbytecode[instruction_index];

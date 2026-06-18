@@ -4,7 +4,7 @@ use url::Url;
 
 use crate::DuckContext;
 use crate::quackpack::core::fetcher::git::GitClient;
-use crate::quackpack::core::{BranchOrTag, Git, PackageLoader};
+use crate::quackpack::core::{GitReference, PackageLoader};
 use crate::util::path_ops_ext::PathOpsExt;
 
 fn generate_local_git_repo() -> TempDir {
@@ -20,7 +20,7 @@ fn generate_local_git_repo() -> TempDir {
         .write(
             "\
 metadata:
-  name: fixtured_git_dependency
+  name: foo
   version: '1'",
         )
         .unwrap();
@@ -55,14 +55,11 @@ fn clone_local_repo() {
     let dir = generate_local_git_repo();
 
     let target = dir.path().join("cloned");
-    let source = Git::new(
-        Url::from_directory_path(dir.path()).unwrap(),
-        BranchOrTag::Default,
-        None,
-    );
+    let url = Url::from_directory_path(dir.path()).unwrap();
+    let reference = GitReference::Default;
 
     let ctx = DuckContext::default();
-    let _ = GitClient::clone_blocking(&source, &target, &ctx).unwrap();
+    let _ = GitClient::clone_blocking(&url, reference, &target, &ctx).unwrap();
 
     assert!(target.exists());
     assert!(target.is_dir());
@@ -78,14 +75,12 @@ fn clone_local_repo_with_branch() {
     let dir = generate_local_git_repo();
 
     let target = dir.path().join("cloned");
-    let source = Git::new(
-        Url::from_directory_path(dir.path()).unwrap(),
-        BranchOrTag::Branch("test-branch".into()),
-        None,
-    );
+
+    let url = Url::from_directory_path(dir.path()).unwrap();
+    let reference = GitReference::Branch("test-branch".into());
 
     let ctx = DuckContext::default();
-    let _ = GitClient::clone_blocking(&source, &target, &ctx).unwrap();
+    let _ = GitClient::clone_blocking(&url, reference, &target, &ctx).unwrap();
 
     let repo = Repository::open(&target).unwrap();
     assert_eq!(repo.head().unwrap().shorthand().unwrap(), "test-branch");
@@ -96,14 +91,11 @@ fn clone_local_repo_with_tag() {
     let dir = generate_local_git_repo();
 
     let target = dir.path().join("cloned");
-    let source = Git::new(
-        Url::from_directory_path(dir.path()).unwrap(),
-        BranchOrTag::Tag("v1.0.0".into()),
-        None,
-    );
+    let url = Url::from_directory_path(dir.path()).unwrap();
+    let reference = GitReference::Tag("v1.0.0".into());
 
     let ctx = DuckContext::default();
-    let _ = GitClient::clone_blocking(&source, &target, &ctx).unwrap();
+    let _ = GitClient::clone_blocking(&url, reference, &target, &ctx).unwrap();
 
     let repo = Repository::open(&target).unwrap();
     let mut opts = DescribeOptions::new();
@@ -123,13 +115,11 @@ fn clone_local_repo_with_rev() {
     let original_commit = repo.head().unwrap().peel_to_commit().unwrap();
 
     let target = dir.path().join("cloned");
-    let source = Git::new(
-        Url::from_directory_path(dir.path()).unwrap(),
-        BranchOrTag::Default,
-        Some(original_commit.id().to_string().into()),
-    );
+    let url = Url::from_directory_path(dir.path()).unwrap();
+    let reference = GitReference::Rev(original_commit.id().to_string().into());
+
     let ctx = DuckContext::default();
-    let _ = GitClient::clone_blocking(&source, &target, &ctx).unwrap();
+    let _ = GitClient::clone_blocking(&url, reference, &target, &ctx).unwrap();
 
     let repo = Repository::open(&target).unwrap();
     let new_commit = repo.head().unwrap().peel_to_commit().unwrap();

@@ -5,8 +5,10 @@ use std::collections::{HashMap, HashSet};
 
 use tracing::debug;
 
-use crate::quackpack::core::solver::types_common::ExpandedPackage;
-use crate::quackpack::core::storage::freeze::{FreezeDep, FreezePackage, RootPackage, VenvFreeze};
+use crate::quackpack::core::full_identity::{FullIdentity, FullKind};
+use crate::quackpack::core::identity::Identity;
+use crate::quackpack::core::solver::types_common::{ExpandedLocation, ExpandedPackage};
+use crate::quackpack::core::storage::freeze::{FreezePackage, RootPackage, VenvFreeze};
 use crate::quackpack::core::{FeatureName, Manifest};
 use crate::{QuackResult, QuackResultContext, StrId};
 
@@ -37,6 +39,18 @@ impl Default for SolverPackageFreeze {
     }
 }
 
+fn identity_to_expanded_loc(identity: &FullIdentity) -> ExpandedLocation {
+    let url = identity.origin().url();
+    match identity.origin().kind() {
+        FullKind::Registry => ExpandedLocation::Registry {
+            url,
+            real_name: identity.name(),
+        },
+        FullKind::Git { commit } => ExpandedLocation::Git { url, commit },
+        FullKind::Local => ExpandedLocation::Local { absolute_path: url },
+    }
+}
+
 impl SolverFreeze {
     // @TODO: #2076 Fix issues with storage's freeze.
     #[tracing::instrument(skip_all)]
@@ -45,8 +59,8 @@ impl SolverFreeze {
         let mut expanded_pkgs_by_name = HashMap::new();
         for pkg_freeze in value.dependencies() {
             let pkg = ExpandedPackage {
-                location: pkg_freeze.source(),
-                version: if pkg_freeze.source().is_registry() {
+                location: identity_to_expanded_loc(pkg_freeze.identity()),
+                version: if pkg_freeze.identity().origin().kind().is_registry() {
                     Some(pkg_freeze.version())
                 } else {
                     None
@@ -131,17 +145,16 @@ impl SolverFreeze {
                 let realization_manifest = manifests
                     .get(&realization)
                     .context_internal("No manifest for realization")?;
-                dependencies.push(FreezeDep::new(
-                    realization_manifest.name(),
-                    realization_manifest.version(),
+                dependencies.push(Identity::from_realization_and_manifest(
+                    realization,
+                    realization_manifest,
                 ));
             }
             pkg_freezes.push(FreezePackage::new(
-                package_manifest.name(),
+                FullIdentity::from_realization_and_manifest(pkg, package_manifest),
                 package_manifest.version(),
                 freeze.features.into_iter().collect::<Vec<_>>(),
                 dependencies,
-                pkg.location,
             ));
         }
         let mut root_deps = vec![];
@@ -152,9 +165,9 @@ impl SolverFreeze {
             let realization_manifest = manifests
                 .get(&realization)
                 .context_internal("No manifest for realization")?;
-            root_deps.push(FreezeDep::new(
-                realization_manifest.name(),
-                realization_manifest.version(),
+            root_deps.push(Identity::from_realization_and_manifest(
+                realization,
+                realization_manifest,
             ));
         }
         let root = RootPackage::new(
@@ -172,12 +185,14 @@ mod test {
     use std::path::PathBuf;
 
     use tempfile::{TempDir, tempdir};
-    use url::Url;
 
     use super::*;
     use crate::DuckContext;
+    use crate::quackpack::core::full_identity::FullOrigin;
+    use crate::quackpack::core::identity::{Identity, Origin};
     use crate::quackpack::core::solver::types_common::ExpandedLocation;
     use crate::quackpack::core::{PackageLoader, parse_manifest};
+    use crate::quackpack::util::to_url::ToUrl;
     use crate::util::path_ops_ext::PathOpsExt;
 
     fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {
@@ -192,14 +207,12 @@ mod test {
     #[test]
     fn storage_to_solver_freeze() {
         let loc_a = ExpandedLocation::Registry {
-            url: Url::parse("https://example.net").unwrap(),
+            url: "https://example.net".to_url().unwrap().into(),
             real_name: "a".into(),
-        }
-        .into();
+        };
         let loc_b = ExpandedLocation::Local {
-            absolute_path: PathBuf::new().join("xdd"),
-        }
-        .into();
+            absolute_path: PathBuf::from("/xdd").to_url().unwrap().into(),
+        };
         let pkg_a = ExpandedPackage {
             location: loc_a,
             version: Some(1.into()),
@@ -208,60 +221,76 @@ mod test {
             location: loc_b,
             version: None,
         };
-        let freeze_pkg_a =
-            FreezePackage::new("a".into(), 1.into(), vec!["f_a".into()], vec![], loc_a);
+        let freeze_pkg_a = FreezePackage::new(
+            FullIdentity::new(
+                "a".into(),
+                FullOrigin::for_registry("https://example.net".to_url().unwrap()),
+            ),
+            1.into(),
+            vec!["f_a".into()],
+            vec![],
+        );
         let freeze_pkg_b = FreezePackage::new(
-            "b".into(),
+            FullIdentity::new(
+                "b".into(),
+                FullOrigin::for_local(&PathBuf::from("/xdd")).unwrap(),
+            ),
             2.into(),
             vec!["f_b1".into(), "f_b2".into()],
-            vec![FreezeDep::new("a".into(), 1.into())],
-            loc_b,
+            vec![Identity::new(
+                "a".into(),
+                Origin::for_registry("https://example.net".to_url().unwrap()),
+            )],
         );
         let root = RootPackage::new(
             "root".into(),
             3.into(),
             vec!["f_root".into()],
             vec![
-                FreezeDep::new("a".into(), 1.into()),
-                FreezeDep::new("b".into(), 2.into()),
+                Identity::new(
+                    "a".into(),
+                    Origin::for_registry("https://example.net".to_url().unwrap()),
+                ),
+                Identity::new(
+                    "b".into(),
+                    Origin::for_local(&PathBuf::from("/xdd")).unwrap(),
+                ),
             ],
         );
         let root_pkg = ExpandedPackage {
             location: ExpandedLocation::Local {
-                absolute_path: PathBuf::new(),
-            }
-            .into(),
+                absolute_path: PathBuf::from("/").to_url().unwrap().into(),
+            },
             version: None,
         };
         let storage_freeze = VenvFreeze::new(root, vec![freeze_pkg_a, freeze_pkg_b]);
         let solver_freeze = SolverFreeze::try_from_venv_freeze(root_pkg, &storage_freeze).unwrap();
-        assert!(solver_freeze.main_pkg == root_pkg);
-        assert!(
-            solver_freeze.package_freezes
-                == HashMap::from([
-                    (
-                        root_pkg,
-                        SolverPackageFreeze {
-                            dependencies_realization: [("a".into(), pkg_a), ("b".into(), pkg_b)]
-                                .into(),
-                            features: ["f_root".into()].into(),
-                        }
-                    ),
-                    (
-                        pkg_a,
-                        SolverPackageFreeze {
-                            dependencies_realization: HashMap::new(),
-                            features: ["f_a".into()].into(),
-                        }
-                    ),
-                    (
-                        pkg_b,
-                        SolverPackageFreeze {
-                            dependencies_realization: [("a".into(), pkg_a)].into(),
-                            features: ["f_b1".into(), "f_b2".into()].into(),
-                        }
-                    ),
-                ])
+        assert_eq!(solver_freeze.main_pkg, root_pkg);
+        assert_eq!(
+            solver_freeze.package_freezes,
+            HashMap::from([
+                (
+                    root_pkg,
+                    SolverPackageFreeze {
+                        dependencies_realization: [("a".into(), pkg_a), ("b".into(), pkg_b)].into(),
+                        features: ["f_root".into()].into(),
+                    }
+                ),
+                (
+                    pkg_a,
+                    SolverPackageFreeze {
+                        dependencies_realization: HashMap::new(),
+                        features: ["f_a".into()].into(),
+                    }
+                ),
+                (
+                    pkg_b,
+                    SolverPackageFreeze {
+                        dependencies_realization: [("a".into(), pkg_a)].into(),
+                        features: ["f_b1".into(), "f_b2".into()].into(),
+                    }
+                ),
+            ])
         )
     }
 
@@ -281,6 +310,7 @@ dependencies:
     version: '1'
   alias_b:
     source:
+      # cSpell:disable-next-line
       path: ./sialalala
 
 features:
@@ -318,18 +348,16 @@ features:
         let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
         let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
         let exp_location_root = ExpandedLocation::Local {
-            absolute_path: PathBuf::new().join("./root_path"),
-        }
-        .into();
+            absolute_path: PathBuf::from("/root_path").to_url().unwrap().into(),
+        };
         let exp_location_a = ExpandedLocation::Registry {
-            url: Url::parse("https://example.net").unwrap(),
+            url: "https://example.net".to_url().unwrap().into(),
             real_name: StrId::from("a"),
-        }
-        .into();
+        };
         let exp_location_b = ExpandedLocation::Local {
-            absolute_path: PathBuf::new().join("./sialalala"),
-        }
-        .into();
+            // cSpell:disable-next-line
+            absolute_path: PathBuf::from("/sialalala").to_url().unwrap().into(),
+        };
         let exp_pkg_root = ExpandedPackage {
             location: exp_location_root,
             version: None,
@@ -378,42 +406,56 @@ features:
             ]),
         };
         let storage_freeze = solver_freeze.generate_storage_freeze(&manifests).unwrap();
-        let root_deps: HashSet<FreezeDep> = storage_freeze
+        let root_deps: HashSet<Identity> = storage_freeze
             .root()
             .dependencies()
             .iter()
             .copied()
             .collect();
-        assert!(
-            root_deps
-                == HashSet::from([
-                    FreezeDep::new("a".into(), 1.into()),
-                    FreezeDep::new("b".into(), 2.into())
-                ])
+        assert_eq!(
+            root_deps,
+            HashSet::from([
+                Identity::new(
+                    "a".into(),
+                    Origin::for_registry("https://example.net".to_url().unwrap()),
+                ),
+                Identity::new(
+                    "b".into(),
+                    Origin::for_local(&PathBuf::from("/sialalala")).unwrap(),
+                ),
+            ])
         );
-        assert!(storage_freeze.root().features() == [StrId::new("f_root")]);
-        assert!(storage_freeze.root().name() == StrId::new("root"));
-        assert!(storage_freeze.root().version() == 3.into());
+        assert_eq!(storage_freeze.root().features(), [StrId::new("f_root")]);
+        assert_eq!(storage_freeze.root().name(), StrId::new("root"));
+        assert_eq!(storage_freeze.root().version(), 3.into());
+
         let pkg_freeze_a = FreezePackage::new(
-            "a".into(),
+            FullIdentity::new(
+                "a".into(),
+                FullOrigin::for_registry("https://example.net".to_url().unwrap()),
+            ),
             1.into(),
             vec!["f_a".into()],
             vec![],
-            exp_location_a,
         );
         let pkg_freeze_b = FreezePackage::new(
-            "b".into(),
+            FullIdentity::new(
+                "b".into(),
+                FullOrigin::for_local(&PathBuf::from("/sialalala")).unwrap(),
+            ),
             2.into(),
             vec!["f_b".into()],
-            vec![FreezeDep::new("a".into(), 1.into())],
-            exp_location_b,
+            vec![Identity::new(
+                "a".into(),
+                Origin::for_registry("https://example.net".to_url().unwrap()),
+            )],
         );
-        assert!(storage_freeze.dependencies().len() == 2);
-        assert!(
-            (storage_freeze.dependencies()[0] == pkg_freeze_a
-                && storage_freeze.dependencies()[1] == pkg_freeze_b)
-                || (storage_freeze.dependencies()[1] == pkg_freeze_a
-                    && storage_freeze.dependencies()[0] == pkg_freeze_b)
-        );
+        assert_eq!(storage_freeze.dependencies().len(), 2);
+        if storage_freeze.dependencies()[0] == pkg_freeze_a {
+            assert_eq!(storage_freeze.dependencies()[1], pkg_freeze_b)
+        } else {
+            assert_eq!(storage_freeze.dependencies()[0], pkg_freeze_b);
+            assert_eq!(storage_freeze.dependencies()[1], pkg_freeze_a)
+        }
     }
 }

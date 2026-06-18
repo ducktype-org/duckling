@@ -1,6 +1,10 @@
 #include "debug_adapter.hpp"
 
+#include <vm/api/data/api_error.hpp>
+#include <vm/api/data/status.hpp>
+
 #include <iostream>
+#include <variant>
 
 namespace vm::debugger::debug_adapter {
 	constexpr std::string_view HEADER_PREFIX = "Content-Length: ";
@@ -15,10 +19,55 @@ namespace vm::debugger::debug_adapter {
 				  },
 				  status
 			  );
-
 			  message += "\n";
+
 			  this->sendEvent("output", { { "category", "console" }, { "output", message } });
+
+			  variant_match(status) {
+				  variant_case(api::Paused, status) {
+					  this->sendEvent(
+						  "stopped",
+						  { { "reason", "pause" }, { "threadId", 1 }, { "allThreadsStopped", true } }
+					  );
+				  }
+				  variant_case(api::ExecutionCompleted, status) {
+					  std::string return_str = "[";
+					  bool        is_first   = true;
+
+					  for (auto val: status.exit_value) {
+						  std::string rendered_value     = "";
+						  bool        has_rendered_value = false;
+
+						  if_opt_some(val->readData(), data) {
+							  variant_match(data) {
+								  variant_case(vm::interpreted_data_variant::Primitive, primitive) {
+									  rendered_value     = std::to_string(primitive.value);
+									  has_rendered_value = true;
+								  }
+							  }
+						  }
+
+						  if (has_rendered_value) {
+							  if (!is_first) return_str += ", ";
+							  return_str += rendered_value;
+							  is_first = false;
+						  }
+					  }
+					  return_str += "]";
+
+					  message = "VM returned: " + return_str + "\n";
+
+					  this->sendEvent(
+						  "output", { { "category", "console" }, { "output", message } }
+					  );
+
+					  this->sendEvent("exited", { { "exitCode", 0 } });
+
+					  this->sendEvent("terminated", {});
+				  }
+			  }
 		  }),
+
 		  debugger() {
 		debugger.attachOnStatusChangedListener(status_change_listener);
 	}
@@ -82,6 +131,12 @@ namespace vm::debugger::debug_adapter {
 			handleThreads(req);
 		else if (cmd == "disconnect")
 			handleDisconnect(req);
+		else if (cmd == "pause")
+			handlePause(req);
+		else if (cmd == "continue")
+			handleContinue(req);
+		else if (cmd == "next")
+			handleNext(req);
 		else
 			sendResponse(req, false, { { "message", "Unknown command" } });
 	}
@@ -101,15 +156,22 @@ namespace vm::debugger::debug_adapter {
 	void DebugAdapter::sendResponse(
 		const nlohmann::json& req, bool success, const nlohmann::json& body
 	) {
-		send({ { "type", "response" },
-		       { "request_seq", req["seq"] },
-		       { "success", success },
-		       { "command", req["command"] },
-		       { "body", body } });
+		nlohmann::json message = { { "type", "response" },
+			                       { "request_seq", req["seq"] },
+			                       { "success", success },
+			                       { "command", req["command"] } };
+
+		if (!body.is_null() && !body.empty()) message["body"] = body;
+
+		send(message);
 	}
 
 	void DebugAdapter::sendEvent(const std::string& event, const nlohmann::json& body) {
-		send({ { "type", "event" }, { "event", event }, { "body", body } });
+		nlohmann::json message = { { "type", "event" }, { "event", event } };
+
+		if (!body.is_null() && !body.empty()) message["body"] = body;
+
+		send(message);
 	}
 
 	// ------------------- Handlers -------------------
@@ -123,7 +185,7 @@ namespace vm::debugger::debug_adapter {
 
 		sendResponse(req, true, capabilities);
 
-		sendEvent("initialized", nlohmann::json::object());
+		sendEvent("initialized");
 	}
 
 	void DebugAdapter::handleConfigurationDone(const nlohmann::json& req) {
@@ -131,13 +193,18 @@ namespace vm::debugger::debug_adapter {
 	}
 
 	void DebugAdapter::handleLaunch(const nlohmann::json& req) {
-		std::string program = req["arguments"]["program"];
-		debugger.loadFile(fs::File(program)).transform_error([&](const api::ApiError& api_error) {
-			throw std::runtime_error(api::errorToString(api_error));
-			return api_error;
-		});
+		std::string program     = req["arguments"]["program"];
+		auto        load_result = debugger.loadFile(fs::File(program));
 
-		sendResponse(req, true);
+		if (!load_result.has_value()) {
+			std::string error_msg = "Failed to load file '" + program
+			                      + "': " + api::errorToString(load_result.error());
+
+			sendResponse(req, false, { { "message", error_msg } });
+			return;
+		}
+
+		sendResponse(req, true, {});
 
 		// Immediately run the VM for test purpose for now
 		debugger.runMain();
@@ -154,5 +221,39 @@ namespace vm::debugger::debug_adapter {
 	void DebugAdapter::handleDisconnect(const nlohmann::json& req) {
 		sendResponse(req, true);
 		sendEvent("terminated");
+	}
+
+	void DebugAdapter::handlePause(const nlohmann::json& req) {
+		auto result = debugger.pause();
+
+		if (!result.has_value()) {
+			std::string error_msg = "Failed to pause: " + api::errorToString(result.error());
+			sendResponse(req, false, { { "message", error_msg } });
+			return;
+		}
+
+		sendResponse(req, true);
+	}
+
+	void DebugAdapter::handleContinue(const nlohmann::json& req) {
+		auto result = debugger.resume();
+		if (!result.has_value()) {
+			std::string error_msg = "Failed to resume: " + api::errorToString(result.error());
+			sendResponse(req, false, { { "message", error_msg } });
+			return;
+		}
+
+		sendResponse(req, true);
+	}
+
+	void DebugAdapter::handleNext(const nlohmann::json& req) {
+		auto result = debugger.step();
+		if (!result.has_value()) {
+			std::string error_msg = "Failed to step: " + api::errorToString(result.error());
+			sendResponse(req, false, { { "message", error_msg } });
+			return;
+		}
+
+		sendResponse(req, true);
 	}
 }

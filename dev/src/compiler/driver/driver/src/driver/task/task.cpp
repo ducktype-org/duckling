@@ -1,9 +1,11 @@
 #include "task.hpp"
 
 #include <driver/diagnostics/log_helpers.hpp>
+#include <driver_private/standard_library/standard_library.hpp>
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <global_state/packages.hpp>
+#include <linker/link.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
@@ -18,13 +20,13 @@ namespace compiler::driver {
 	namespace task {
 		namespace {
 			void reportMissingPackageInTask(
-				base::StrID package_name, const DiagnosticReporter& report
+				base::StrID package_id, const DiagnosticReporter& report
 			) {
 				report(
 					base::strConcat(
 						"Package name provided in a compilation task was not found in the provided "
-						"package list. Package name: \"",
-						package_name.strView(),
+						"package list. Package id: \"",
+						package_id.strView(),
 						"\""
 					),
 					std::string{},
@@ -33,14 +35,14 @@ namespace compiler::driver {
 			}
 		}
 
-		base::Optional<compiler::frontend::ModuleID> getRootModuleIDForRawPackageName(
-			base::StrID package_name, const DiagnosticReporter& report
+		base::Optional<compiler::frontend::ModuleID> getRootModuleIDForRawPackageId(
+			base::StrID package_id, const DiagnosticReporter& report
 		) {
 			for (const auto& global_package_info: global_state::getPackages())
-				if (global_package_info.getPackageID() == package_name)
+				if (global_package_info.getPackageID() == package_id)
 					return global_package_info.getRootModule().illegalAccess().getID();
 
-			reportMissingPackageInTask(package_name, report);
+			reportMissingPackageInTask(package_id, report);
 			return {};
 		}
 	}  // namespace task
@@ -60,21 +62,31 @@ namespace compiler::driver {
 
 		bool had_error = false;
 
-		auto package_name = js::getString(json, "package", "Task requires a package name!", report);
-		if (!package_name) had_error = true;
+		auto package_id = js::getString(json, "package", "Task requires a package id!", report);
+		if (!package_id) had_error = true;
 
 		auto strategy = js::getString(json, "strategy", "Task requires a strategy!", report);
 		if (!strategy) had_error = true;
 
 		BuildTarget build_target;
 
-		if (strategy && strategy->view() == "dvm") {
-			auto output
-				= js::getString(json, "output_file", "DVM task requires an output file!", report);
+		if (strategy && strategy->view() == "dvm_lib") {
+			auto output = js::getString(
+				json, "output_file", "DVM library task requires an output file!", report
+			);
 			if (!output) had_error = true;
 
-			build_target = BuildTargetDVM{
-				.output_file_stem = output.copyValueOr(base::StrID("package_dvm")),
+			build_target = BuildTargetDVMLibrary{
+				.output_file_name = output.copyValueOr(base::StrID("package_dvm.dbc")),
+			};
+		} else if (strategy && strategy->view() == "dvm_exe") {
+			auto output = js::getString(
+				json, "output_file", "DVM executable task requires an output file!", report
+			);
+			if (!output) had_error = true;
+
+			build_target = BuildTargetDVMExecutable{
+				.output_file_name = output.copyValueOr(base::StrID("package_dvm.dbc")),
 			};
 		} else if (strategy && strategy->view() == "native") {
 			auto output
@@ -85,6 +97,7 @@ namespace compiler::driver {
 				.linker_path             = {},
 				.additional_link_options = {},
 				.link_c_standard_library = true,
+				.stdlib_link_options     = {},
 			};
 			if (json.contains("linking_options")) {
 				const auto& linking_json = json["linking_options"];
@@ -157,7 +170,7 @@ namespace compiler::driver {
 			}
 
 			build_target = BuildTargetLLVMExecutable{
-				.output_file_stem = output ? *output : base::StrID(),
+				.output_file_name = output ? *output : base::StrID(),
 				.linking_options  = std::move(linking_options),
 			};
 		} else if (strategy && strategy->view() == "obj") {
@@ -211,13 +224,13 @@ namespace compiler::driver {
 			}
 
 			build_target = BuildTargetLLVMStaticLibrary{
-				.output_file_stem  = output ? *output : base::StrID(),
+				.output_file_name  = output ? *output : base::StrID(),
 				.archiving_options = std::move(archiving_options),
 			};
 		} else if (strategy) {
 			report(
 				base::strConcat("Unknown task strategy: \"", strategy->str(), "\""),
-				R"(Expected "dvm", "native", "obj", or "lib".)",
+				R"(Expected "dvm_exe", "dvm_lib", "native", "obj", or "lib".)",
 				true
 			);
 			had_error = true;
@@ -226,7 +239,7 @@ namespace compiler::driver {
 		if (had_error) return {};
 
 		return RawPackageCompilationTask{
-			.package_name = *package_name,
+			.package_id   = *package_id,
 			.build_target = std::move(build_target),
 		};
 	}
@@ -243,21 +256,53 @@ namespace compiler::driver {
 		};
 	}
 
+	/**
+	 * @brief Helper function that merges global linking options with task-specific linking options
+	 * for a given`BuildTarget`.
+	 */
+	BuildTarget convertBuildTargetForTask(
+		const BuildTarget& raw_target, const options_types::StdLibOptions& stdlib_options
+	) {
+		variant_match(raw_target) {
+			variant_case(BuildTargetLLVMExecutable, llvm_exec_target) {
+				return BuildTargetLLVMExecutable{
+					.output_file_name = llvm_exec_target.output_file_name,
+					.linking_options
+					= constructLinkerOptions(llvm_exec_target.linking_options, stdlib_options),
+				};
+			}
+			variant_case(BuildTargetDVMExecutable, dvm_exec_target) {
+				return BuildTargetDVMExecutable{
+					.output_file_name  = dvm_exec_target.output_file_name,
+					.link_std_packages = not base::holds<options_types::StdLibOptions::NoStd>(
+						stdlib_options.std_lib_type
+					),
+				};
+			}
+			variant_default { return raw_target; }
+		}
+	}
+
 	base::Optional<Task> convertRawTaskToTask(
-		const RawTask& raw_task, const task::DiagnosticReporter& report
+		const RawTask&                      raw_task,
+		const options_types::StdLibOptions& stdlib_options,
+		const task::DiagnosticReporter&     report
 	) {
 		variant_match(raw_task.task_data) {
 			variant_case(RawPackageCompilationTask, raw_package_task) {
 				auto root_module_opt
-					= task::getRootModuleIDForRawPackageName(raw_package_task.package_name, report);
+					= task::getRootModuleIDForRawPackageId(raw_package_task.package_id, report);
 
 				if (!root_module_opt.has_value()) return {};
+
+				auto build_target
+					= convertBuildTargetForTask(raw_package_task.build_target, stdlib_options);
 
 				return Task{
 					.type      = TaskType::PackageCompilation,
 					.task_data = PackageCompilationTask{
 						.root_module = *root_module_opt,
-						.build_target = raw_package_task.build_target,
+						.build_target = build_target,
 					},
 				};
 			}
@@ -266,4 +311,12 @@ namespace compiler::driver {
 		CORE_UNREACHABLE();
 	}
 
+	linker::LinkingOptions constructLinkerOptions(
+		const linker::LinkingOptions&       local_options,
+		const options_types::StdLibOptions& stdlib_options
+	) {
+		linker::LinkingOptions options = local_options;
+		options.stdlib_link_options    = getStdLibLinkingArgs(stdlib_options);
+		return options;
+	}
 }  // namespace compiler::driver

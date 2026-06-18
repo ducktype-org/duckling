@@ -29,3 +29,10 @@ Tests:
           File: "multiple_numeric/multiple_numeric.rtf"
         Output:
           String: "@{beginning}\n@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{ans}@{end}"
+  standard_library:
+    Cases:
+      function_works:
+        Input:
+          File: "standard_library/std.rtf"
+        Output:
+          String: "@{beginning}\n42\nFunction executed.\n@{end}"

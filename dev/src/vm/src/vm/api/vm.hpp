@@ -14,10 +14,13 @@
 namespace vm::api {
 	/**
 	 * @brief Create new process in DVM.
+	 * @param enable_deadlock_detection When true (defaults to false), the process will detect
+	 * circular mutex wait chains at runtime and throw VMDeadlockException. When false, deadlock
+	 * detection is skipped and circular waits will block indefinitely until the process is stopped.
 	 * @return The response containing the PID of the newly created process or an API error if the
 	 * process wasn't created.
 	 */
-	std::expected<ProcessInfo, ApiError> spawn();
+	std::expected<ProcessInfo, ApiError> spawn(bool enable_deadlock_detection = false);
 
 	/**
 	 * @brief Get the execution status of the process run on DVM.
@@ -210,5 +213,33 @@ namespace vm::api {
 	 */
 	std::expected<void, ApiError> attachStatusListener(
 		PID pid, Ref<events::Listener<ProcStatus>> listener
+	);
+
+	/**
+	 * @brief Attaches Listener to the output emitter
+	 * @return Nothing if attached succesfully
+	 */
+	std::expected<void, ApiError> attachOutputListener(
+		PID pid, Ref<events::Listener<std::string>> listener
+	);
+
+	/**
+	 * @brief Enables or disables breakpoint on a given instruction in a given function.
+	 * @return Nothing if the breakpoint was set successfully or an API error otherwise.
+	 * @note Enabling a breakpoint on an instruction that already has a breakpoint or disabling a
+	 * breakpoint on an instruction that doesn't have a breakpoint is considered successful and
+	 * doesn't return an error.
+	 */
+	std::expected<void, ApiError> setBreakpoint(
+		PID pid, base::StrID function_name, u64 instruction_index, bool enable
+	);
+
+	/**
+	 * @brief Gets the first code collection instruction that starts in the provided file line.
+	 * @return Either the mapped `CodePosition` on success, or a nullopt if no such instruction
+	 * exists.
+	 */
+	std::expected<response::CodePosition, ApiError> mapFileLineToCodeCollectionPosition(
+		PID pid, fs::File file, usize line_number
 	);
 }

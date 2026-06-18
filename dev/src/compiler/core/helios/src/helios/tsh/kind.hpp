@@ -26,6 +26,9 @@ MAKE_STRINGIFYABLE_ENUM(compiler::tsh, u32, Kind
 	Float,
 	RawPointer,
 	Pointer,
+	ManyPointer,
+	CPointer,
+	Slice,
 	String,
 	Function,
 	DynamicArray,
@@ -43,3 +46,10 @@ MAKE_STRINGIFYABLE_ENUM(compiler::tsh, u32, Kind
 	/** @brief The kind of the type which holds type values. In other words, the "type" type. */
 	Meta
 )
+
+namespace compiler::tsh {
+	inline bool isPointerKind(const Kind kind) {
+		return kind == Kind::RawPointer || kind == Kind::Pointer || kind == Kind::ManyPointer
+		    || kind == Kind::CPointer;
+	}
+}

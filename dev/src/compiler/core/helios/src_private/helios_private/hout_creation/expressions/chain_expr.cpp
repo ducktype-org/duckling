@@ -671,12 +671,18 @@ namespace compiler::helios::code {
 				const auto callees_q_result = getCallableCandidates(lookup_result->leaves);
 				UNPACK_QRESULT_MOVE(const auto& callees =, callees_q_result);
 
-				auto self_expr_ref = makeBox<RefOfExpr>(
-					query_ctx, current_expr->origin.generatedFrom(), std::move(current_expr)
-				);
+				// The self expression may be passed by copy or by reference,
+				// depending on whether the type is simple or composite, respectively.
+				auto self_expr = current_expr->expression_type.getType().isSimple()
+				                   ? std::move(current_expr)
+				                   : Box<Expr>(makeBox<RefOfExpr>(
+										 query_ctx,
+										 current_expr->origin.generatedFrom(),
+										 std::move(current_expr)
+									 ));
 
 				auto res = processMethodCall(
-					query_ctx, callees, expr_access, call_expr, std::move(self_expr_ref)
+					query_ctx, callees, expr_access, call_expr, std::move(self_expr)
 				);
 				UNPACK_QRESULT_MOVE(base::Box<Expr> expr =, res);
 				return ChainState::ofExpr(std::move(expr));

@@ -6,7 +6,6 @@
 #include <base/misc/shared_view.hpp>
 
 #include <diagnostic/location.hpp>
-#include <diagnostic/logger.hpp>
 #include <filesystem/encoding.hpp>
 #include <filesystem/file.hpp>
 #include <lang_definitions/key_spec_op.hpp>
@@ -26,7 +25,6 @@ namespace tokenizer {
 	 */
 	class TokenSource final {
 	private:
-		dia::Logger                            log;
 		dia_int::Logger                        int_log;
 		base::Box<dia::Location>               location;
 		base::Optional<const base::SharedView> content;
@@ -106,7 +104,6 @@ namespace tokenizer {
 		const lexer::TokenData& getTokenData() const;
 		[[nodiscard]]
 		CRef<dia::Location> getLocation() const;
-		Ref<dia::Logger>    getLogger();
 
 		Ref<dia_int::Logger> getIntLogger() { return &int_log; }
 

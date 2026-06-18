@@ -1,0 +1,31 @@
+++++++++++++++++++++++++++++
++   Debugger has started   +
+++++++++++++++++++++++++++++
+Commands:
+  (q)uit      - exit the debugger
+  (h)elp      - write this message
+  (r)un       - run main function
+  (p)ause     - pause running VM
+  (c)ontinue  - resume VM execution
+  (n)ext      - executes one Fat step
+  (s)tatus    - write current VM status
+  (pos)ition  - write current position
+  (b)reakpoint <option> <line>
+              - options: (s)et, remove
+              - line: line nr in file
+
+Commands:
+  (q)uit      - exit the debugger
+  (h)elp      - write this message
+  (r)un       - run main function
+  (p)ause     - pause running VM
+  (c)ontinue  - resume VM execution
+  (n)ext      - executes one Fat step
+  (s)tatus    - write current VM status
+  (pos)ition  - write current position
+  (b)reakpoint <option> <line>
+              - options: (s)et, remove
+              - line: line nr in file
+
+Exiting debugger...
+

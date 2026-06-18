@@ -112,6 +112,7 @@ namespace vm {
 		 */
 		api::ProcStatus getStatus();
 
+
 		/**
 		 * @brief Returns exit code of the process - i.e. return value of `main` bytecode function.
 		 *
@@ -178,8 +179,30 @@ namespace vm {
 
 		virtual api::ThreadID getMainThreadID() = 0;
 
+		/**
+		 * @brief Hook called after process status changes to a terminal one.
+		 * Called without holding `rw_status` lock.
+		 */
+		virtual void onTerminalStatus(const api::ProcStatus&) noexcept {}
+
+		/**
+		 * @brief Enables or disables breakpoint on a given instruction in a given function.
+		 * @note Enabling a breakpoint on an instruction that already has a breakpoint or disabling
+		 * a breakpoint on an instruction that doesn't have a breakpoint is considered successful
+		 * and doesn't return an error.
+		 */
+		virtual std::expected<api::Response, api::ApiError> setBreakpoint(
+			base::StrID function_name, usize instruction_index, bool enable
+		) = 0;
+
+		virtual std::expected<api::Response, api::ApiError> mapFileLineToCodeCollectionPosition(
+			const fs::File& file, usize line_number
+		) = 0;
+
 	public:
 		ProcIO& getIO();
+
+		[[nodiscard]] bool isExecutionPanicked();
 
 		/**
 		 * @brief Entry point to perform requests on the process.
@@ -191,8 +214,15 @@ namespace vm {
 		 */
 		[[nodiscard]] PID getPID() const;
 
-		// @TODO: #2400 Remove this
-		void setStatus(const api::ProcStatus& new_status) noexcept;
+		void setStatus(const api::ProcStatus& new_status, api::ThreadID thread_id) noexcept;
+
+		/**
+		 * @brief Atomically set process status if it is not already terminal.
+		 * @return true if status was updated, false if status was already terminal.
+		 */
+		bool setStatusIfNotTerminal(
+			const api::ProcStatus& new_status, api::ThreadID thread_id
+		) noexcept;
 
 		/**
 		 * @brief Creates a VmValue of a given type and registers it in this VMProcess

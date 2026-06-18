@@ -101,6 +101,21 @@ namespace vm::api {
 		struct AttachStatusListener {
 			Ref<events::Listener<ProcStatus>> listener;
 		};
+
+		struct AttachOutputListener {
+			Ref<events::Listener<std::string>> listener;
+		};
+
+		struct SetBreakpoint {
+			base::StrID function_name;
+			u64         instruction_index;
+			bool        enable;
+		};
+
+		struct MapFileLineToCodeCollectionPosition {
+			fs::File file;
+			u64      line_number;
+		};
 	}
 
 	using RequestVariant = std::variant<
@@ -127,7 +142,10 @@ namespace vm::api {
 		request::Detach,
 		request::ExitCodeRequest,
 		request::DeinitAndValidate,
-		request::AttachStatusListener>;
+		request::AttachStatusListener,
+		request::AttachOutputListener,
+		request::SetBreakpoint,
+		request::MapFileLineToCodeCollectionPosition>;
 
 	struct SupervisorRequest {
 		PID            pid;

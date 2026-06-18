@@ -1,8 +1,19 @@
 load_cargo: . ${CARGO_HOME:-$HOME/.cargo}/env
 cwd_duck_root: cd `git rev-parse --show-toplevel`/dev/src/duck/
-build_duck: cargo --locked build
-duck_exe_path: '`git rev-parse --show-toplevel`/dev/src/duck/target/debug/duck'
-color: never
+# NOTE: Changes made here should also be reflected in `workflows/tests.yml`
+# Changes means changes to compiling duck itself.
+build_duck: |
+  timeout 3m cargo --locked build
+  exit_code=$?
+  # 124 is `timeout`'s standard exit code for command timeout.
+  if [ "$exit_code" -eq 124 ]; then
+    echo "compiling duck would take more than three minutes!" >&2
+    echo "this can be our bug, rust's bug, or someone else's bug (GitHub can also be a culprit, particularly \`cargo build\` downloads SCiP artifacts from GitHub)" >&2
+  fi
+  if [ "$exit_code" -ne 0 ]; then
+    exit "$exit_code"
+  fi
+duck_exe_dir: '`git rev-parse --show-toplevel`/dev/src/duck/target/debug/'
 prepare: ""
 before_cmd: "true"
 
@@ -22,7 +33,7 @@ PreNode: |
 PreTest: |
   @{prepare}
 
-Run: bash -c "@{before_cmd} && @{duck_exe_path} --color=@{color} @{test_cmd}"
+Run: '@{before_cmd} && export PATH="@{duck_exe_dir}:$PATH" && @{test_cmd}'
 
 SubDirs:
   - cli
