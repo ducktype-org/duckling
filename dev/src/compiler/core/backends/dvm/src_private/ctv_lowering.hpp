@@ -52,10 +52,10 @@ namespace compiler::backend_vm::internal {
 		};
 
 		static CtorLoweringResult lowerStringLiteral(
-			ProgramLoweringContext&     pctx,
-			base::StrID                 global_name,
-			const DVMPlace&             inserted_global_place,
-			base::StrID                 content
+			ProgramLoweringContext& pctx,
+			base::StrID             global_name,
+			const DVMPlace&         inserted_global_place,
+			base::StrID             content
 		);
 
 		static void constructStructureFromValues(
