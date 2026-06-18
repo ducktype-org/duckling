@@ -91,9 +91,7 @@ namespace pst {
 
 	public:
 		[[nodiscard]]
-		MBox<LangElement> clone() const {
-			return cloneElement();
-		}
+		MBox<LangElement> clone() const;
 
 		using SubToken = base::CRef<lexer::Token>;
 
