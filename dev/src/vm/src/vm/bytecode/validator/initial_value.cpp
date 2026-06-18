@@ -34,7 +34,7 @@ namespace vm::code::detail {
 					}
 					CORE_UNREACHABLE();
 				}(type_ref);
-				
+
 				if (type_size != value.size)
 					THROW_ERROR(base::strConcat(
 						"Primitive of incorrect size. Expected ",

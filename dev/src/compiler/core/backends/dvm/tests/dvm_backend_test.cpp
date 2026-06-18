@@ -6,6 +6,8 @@
 #include <mir/mir_lowering/mir_unit.hpp>
 #include <vm_tester_utils.hpp>
 
+#include <base/extend_cpp/vector_utils.hpp>
+
 #include <query_framework/context/context.hpp>
 #include <query_framework/entry/with_context_do.hpp>
 
@@ -13,7 +15,6 @@
 #include <vm/bytecode/serializer/serializer.hpp>
 
 #include <utility>
-#include <base/extend_cpp/vector_utils.hpp>
 
 using namespace compiler::driver;
 
@@ -185,7 +186,11 @@ private:
 
 	// A string literal is lowered to a static byte-array global plus a `{ptr, len}` slice struct.
 	// Reading the length and indexing into the slice exercises the generated slice bytecode.
-	void stringSliceTest() { runMultimoduleTest("strings", {"core/builtins", "core/panicking"},{}, "14\nhello from vm!", {}, 0); }
+	void stringSliceTest() {
+		runMultimoduleTest(
+			"strings", { "core/builtins", "core/panicking" }, {}, "14\nhello from vm!", {}, 0
+		);
+	}
 
 	void unitsTest() { runTest("units", {}, {}, {}, 0); }
 

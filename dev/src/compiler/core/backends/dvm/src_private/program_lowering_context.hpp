@@ -37,7 +37,10 @@ namespace compiler::backend_vm::internal {
 		 * The context reference should remain valid for the lifetime of this object.
 		 */
 		explicit ProgramLoweringContext(
-			query::Context& query_ctx, base::StrID module_id, bool build_debug_info, bool is_comp_time_lowering
+			query::Context& query_ctx,
+			base::StrID     module_id,
+			bool            build_debug_info,
+			bool            is_comp_time_lowering
 		);
 
 		/**
@@ -93,7 +96,7 @@ namespace compiler::backend_vm::internal {
 		 * It caches the result, so inserts the type into the program only if needed.
 		 */
 		const vm::code::TypeOfData& getOrInsertPointerType(const vm::code::TypeOfData& pointee_type);
-		
+
 		/**
 		 * @brief Creates and inserts a pointer type based on the type name.
 		 * It caches the result, so inserts the type into the program only if needed.
@@ -112,7 +115,8 @@ namespace compiler::backend_vm::internal {
 		const DVMPlace& getLirGlobal(CRef<lir::LIRGlobal> lir_global);
 
 		/**
-		 * @brief Inserts a synthetic, statically-initialized global into the module and returns its DVM place.
+		 * @brief Inserts a synthetic, statically-initialized global into the module and returns its
+		 * DVM place.
 		 *
 		 * The global is marked constant and carries @p init as its `initial_value`. The given
 		 * @p name_hint is made unique with an internal counter, so callers may reuse the same hint.
@@ -137,8 +141,8 @@ namespace compiler::backend_vm::internal {
 		/**
 		 * @brief Registers the DVM place of a global so it can be referenced.
 		 *
-		 * Inserts a `Direct`-access place for @p name / @p type into the place table and returns it.
-		 * This only declares where the global lives; use @ref defineGlobal to attach its data.
+		 * Inserts a `Direct`-access place for @p name / @p type into the place table and returns
+		 * it. This only declares where the global lives; use @ref defineGlobal to attach its data.
 		 */
 		const DVMPlace& declareGlobal(base::StrID name, const vm::code::TypeOfData& type);
 
