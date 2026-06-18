@@ -1,0 +1,7 @@
+import core.builtins.*;
+
+fun main() -> i64 = {
+    var s: str = "hello";
+    builtin_output_i64(s.length() as i64); # 5
+    return s.length() as i64;
+}

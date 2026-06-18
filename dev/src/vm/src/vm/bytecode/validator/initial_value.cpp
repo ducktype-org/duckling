@@ -24,14 +24,21 @@ namespace vm::code::detail {
 	throw InitialValueTypeMismatchError(global_name, type_ref->getName(), ADDITIONAL_CONTEXT);
 
 			void visitConstantImmediate(const ConstantImmediate& value) override {
-				if (!type_ref->isKind<valid_type::finalized::Primitive>())
-					THROW_ERROR("Got immediate instead.");
-
-				const auto& primitive = type_ref->getKindAs<valid_type::finalized::Primitive>();
-				if (primitive->size != value.size)
+				const auto& type_size = [&](CRef<valid_type::ValidType> type) {
+					variant_match(type->getKind()) {
+						variant_case(valid_type::finalized::Primitive, primitive) {
+							return primitive.size;
+						}
+						variant_case(valid_type::finalized::Opaque, opaque) { return opaque.size; }
+						variant_default { THROW_ERROR("Got immediate instead."); }
+					}
+					CORE_UNREACHABLE();
+				}(type_ref);
+				
+				if (type_size != value.size)
 					THROW_ERROR(base::strConcat(
 						"Primitive of incorrect size. Expected ",
-						primitive->size.asInt(),
+						type_size.asInt(),
 						" bytes, got ",
 						value.size.asInt(),
 						" bytes."

@@ -1,5 +1,6 @@
 #include "program_lowering_context.hpp"
 
+#include "ctv_lowering.hpp"
 #include "debug_info_utils.hpp"
 #include "dvm_value.hpp"
 #include "function_lowering_context.hpp"
@@ -23,9 +24,13 @@
 using namespace compiler::backend_vm::internal;
 
 compiler::backend_vm::internal::ProgramLoweringContext::ProgramLoweringContext(
-	query::Context& query_ctx, bool build_debug_info, bool is_comp_time_lowering
+	query::Context& query_ctx,
+	base::StrID     module_id,
+	bool            build_debug_info,
+	bool            is_comp_time_lowering
 ):
 	  query_ctx_for_errors(&query_ctx),
+	  module_id(module_id),
 	  is_comp_time_lowering(is_comp_time_lowering),
 	  debug_info_builder(
 		  (build_debug_info ? debug_info::DebugInfoBuilder(
@@ -87,12 +92,15 @@ compiler::backend_vm::LoweredEntitiesSnapshot ProgramLoweringContext::captureLow
 const vm::code::TypeOfData& ProgramLoweringContext::getOrInsertPointerType(
 	const vm::code::TypeOfData& pointee_type
 ) {
-	base::StrID pointee_name = vm::code::typeName(pointee_type);
-	auto        pointer_name = base::StrID(base::strConcat("ptr_", pointee_name));
+	return getOrInsertPointerType(vm::code::typeName(pointee_type));
+}
+
+const vm::code::TypeOfData& ProgramLoweringContext::getOrInsertPointerType(base::StrID type_name) {
+	auto pointer_name = base::StrID(base::strConcat("ptr_", type_name));
 
 	if (auto maybe_type = type_storage.dvm_types.atMaybe(pointer_name)) return **maybe_type;
 
-	vm::code::PointerType pointer_type(pointer_name, pointee_name);
+	vm::code::PointerType pointer_type(pointer_name, type_name);
 	type_storage.dvm_types.put(pointer_name, pointer_type);
 	lowered_type_order.push_back(pointer_name);
 	return type_storage.dvm_types.at(pointer_name);
@@ -111,6 +119,42 @@ const DVMPlace& ProgramLoweringContext::getLirGlobal(CRef<lir::LIRGlobal> lir_gl
 
 		return global_name_to_dvm.at(lir_global->mangled_name);
 	}
+}
+
+base::StrID ProgramLoweringContext::getAnonymousGlobalName(base::StrID name_hint) {
+	return base::StrID(
+		base::strConcat(name_hint.strView(), "_", module_id, "_", static_data_global_counter++)
+	);
+}
+
+const DVMPlace& ProgramLoweringContext::declareGlobal(
+	base::StrID name, const vm::code::TypeOfData& type
+) {
+	auto [it, _] = global_name_to_dvm.put(name, DVMPlace(name, type, DVMPlace::AccessKind::Direct));
+	return it->second;
+}
+
+const vm::code::GlobalData& ProgramLoweringContext::defineGlobal(vm::code::GlobalData global_data) {
+	auto name           = global_data.name;
+	auto [it, inserted] = global_name_to_dvm_data.put(name, std::move(global_data));
+	if (inserted) lowered_global_order.push_back(name);
+	return it->second;
+}
+
+const DVMPlace& ProgramLoweringContext::insertStaticDataGlobal(
+	base::StrID name_hint, const vm::code::TypeOfData& type, vm::code::ConstantValue init
+) {
+	auto            global_name = getAnonymousGlobalName(name_hint);
+	const DVMPlace& place       = declareGlobal(global_name, type);
+
+	vm::code::GlobalData global_data{};
+	global_data.name          = global_name;
+	global_data.type          = typeName(type);
+	global_data.is_constant   = true;
+	global_data.initial_value = std::move(init);
+	defineGlobal(std::move(global_data));
+
+	return place;
 }
 
 const vm::code::ExternalCFunction& ProgramLoweringContext::getExternCFunction(
@@ -208,61 +252,41 @@ const vm::code::GlobalData& ProgramLoweringContext::lowerAndKeepLirGlobal(
 		return **maybe_global;
 
 	auto& global_type = **lowerAndKeepTslType(lir_global.global.layout);
-	auto& dvm_global_place
-		= getLirGlobal(&lir_global.global);  // Ensure the global is added to the map.
 
 	using vm::code::Identifier;
 
-	base::Optional<Identifier> ctor_name;
-	base::Optional<Identifier> dtor_name;
+	// @TODO: #1553 add source position to GlobalVariables
 
 	variant_match(lir_global.data_initialization) {
 		variant_case(lir::LIRGlobalData::CTorDtorPair, ctor_dtor_pair) {
+			vm::code::GlobalData global_data{};
+			global_data.name = lir_global.global.mangled_name;
+			global_data.type = typeName(global_type);
+
 			if (ctor_dtor_pair.global_ctor.has_value()) {
 				lowerAndKeepLirFunction(ctor_dtor_pair.global_ctor.value());
-				ctor_name = Identifier(ctor_dtor_pair.global_ctor.value()->mangled_name);
+				global_data.ctor_name
+					= Identifier(ctor_dtor_pair.global_ctor.value()->mangled_name);
 			}
 
 			if (ctor_dtor_pair.global_dtor.has_value()) {
 				lowerAndKeepLirFunction(ctor_dtor_pair.global_dtor.value());
-				dtor_name = Identifier(ctor_dtor_pair.global_dtor.value()->mangled_name);
+				global_data.dtor_name
+					= Identifier(ctor_dtor_pair.global_dtor.value()->mangled_name);
 			}
+
+			defineGlobal(std::move(global_data));
 		}
 		variant_case(ctv::CompileTimeValue, ctv_initial_value) {
-			// @TODO: #1553 we create mini-ctors for global variables with CTV initializers for now.
-			// Ideally, we should add proper support for immediate value initializers in the DVM and
-			// avoid this workaround.
-
-			auto mini_ctor_name
-				= base::StrID(base::strConcat(lir_global.global.mangled_name.strView(), "_ctv_ctor")
-			    );
-
-			auto mini_ctor = createMiniGlobalCtorFromCTV(
-				*this,
-				lir_global.global.layout,
-				global_type,
-				ctv_initial_value,
-				mini_ctor_name,
-				dvm_global_place
+			CtvLowering::lowerCtvToNewGlobal(
+				*this, ctv_initial_value, global_type, false, lir_global.global.mangled_name
 			);
-			extra_bytecode_functions.push_back(std::move(mini_ctor));
-			ctor_name = Identifier(mini_ctor_name);
 		}
 		variant_default {
 			CORE_PANIC("Unhandled LIRGlobalData initial value type in lowerAndKeepLirGlobal");
 		}
 	}
 
-	// @TODO: #1553 add a isConst to DVM and initial values, add source position to
-	// GlobalVariables
-	vm::code::GlobalData global_data{};
-	global_data.name      = lir_global.global.mangled_name;
-	global_data.type      = typeName(global_type);
-	global_data.ctor_name = ctor_name;
-	global_data.dtor_name = dtor_name;
-
-	global_name_to_dvm_data.put(lir_global.global.mangled_name, global_data);
-	lowered_global_order.push_back(lir_global.global.mangled_name);
 	return global_name_to_dvm_data.at(lir_global.global.mangled_name);
 }
 
