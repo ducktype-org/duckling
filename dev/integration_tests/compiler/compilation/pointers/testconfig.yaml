@@ -54,7 +54,7 @@ Tests:
         Output:
           String: ""
         Err:
-          String: 'VMThread has panicked: Data was freed\n{\"data\":{\"error\":\"Execution panicked with error: Data was freed\"},\"type\":\"OtherError\"}block.refcount != 0, BlockID=0\n'
+          String: 'VMThread has panicked: Data was freed\n{\"data\":{\"error\":\"Execution panicked with error: Data was freed\"},\"type\":\"OtherError\"}block.refcount != 0, BlockID=2\n'
         ExitCode: 1
   dvm_use_after_free_box:
     Cases:
@@ -63,7 +63,7 @@ Tests:
         Output:
           String: ""
         Err:
-          String: 'VMThread has panicked: Data was freed\n{\"data\":{\"error\":\"Execution panicked with error: Data was freed\"},\"type\":\"OtherError\"}block.refcount != 0, BlockID=0\n'
+          String: 'VMThread has panicked: Data was freed\n{\"data\":{\"error\":\"Execution panicked with error: Data was freed\"},\"type\":\"OtherError\"}block.refcount != 0, BlockID=2\n'
         ExitCode: 1
   dvm_uninitialized_access:
     Cases:
@@ -72,15 +72,15 @@ Tests:
         Output:
           String: ""
         Err:
-          String: 'VMThread has panicked: Accessing null pointer\n{\"data\":{\"error\":\"Execution panicked with error: Accessing null pointer\"},\"type\":\"OtherError\"}block.refcount != 0, BlockID=1\n'
+          String: 'VMThread has panicked: Accessing null pointer\n{\"data\":{\"error\":\"Execution panicked with error: Accessing null pointer\"},\"type\":\"OtherError\"}block.refcount != 0, BlockID=3\n'
         ExitCode: 1
   slices:
     enable_conc_deterministic_tests: "false"
     Cases:
-      llvm:
-        backend: llvm
+      all:
+        backend: all
         Output:
-          String: "4\nabc\na"
+          String: "Hello from VM!\nl\n15\nHello from Duckling!\n"
         ExitCode: 0
   slices_out_of_bounds:
     enable_conc_deterministic_tests: "false"
@@ -88,4 +88,11 @@ Tests:
       llvm:
         backend: llvm
         ExitCode: 134
+      dvm:
+        backend: dvm
+        Output:
+          String: "Program panicked!\n"
+        Err:
+          String: 'VMThread has panicked: Program panicked\n{\"data\":{\"error\":\"Execution panicked with error: Program panicked\"},\"type\":\"OtherError\"}block.refcount != 0, BlockID=1\n'
+        ExitCode: 1
 
