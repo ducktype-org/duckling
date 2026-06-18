@@ -23,6 +23,11 @@ namespace pst {
 		static MBox<Attribute> parse(LangParserState& state);
 		~Attribute() final = default;
 
+		[[nodiscard]]
+		auto getName() const {
+			return name.give();
+		}
+
 		void     dprint(std::ostream& out) const final;
 		HashAlg& addElementDataToStableHash(HashAlg&) const override;
 
