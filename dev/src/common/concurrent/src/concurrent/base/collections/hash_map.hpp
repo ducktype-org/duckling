@@ -523,9 +523,9 @@ namespace concurrent {
 		 * Retrieves references to all key-value pairs from the map.
 		 * Locks ALL shards (WithAllShardsLock) for the duration of the copy.
 		 *
-		 * @warning The returned references are unguarded once this method returns:
+		 * @warning The returned references are unguarded once this method returns, notably
 		 * a concurrent erase()/extract() of a key leaves its reference dangling.
-		 * Synchronize externally if the map can shrink while the result is in use.
+		 * Synchronize externally if needed.
 		 */
 		[[nodiscard]]
 		std::vector<CRef<KeyValuePair>> getAllKeyValuePairs() const RELEASE_NOEXCEPT {
