@@ -332,11 +332,12 @@ namespace base {
 			return *ptr;
 		}
 
-		template<class U>
-		MBox<U> dynamicCast() {
-			auto ret = MBox<U>(dynamic_cast<U*>(ptr));
+		template<class U,  class UDeleter>
+		requires std::is_constructible_v<UDeleter, Deleter&&>
+		MBox<U, UDeleter> dynamicCast() && {
+			U* ret = dynamic_cast<U*>(ptr);
 			ptr      = nullptr;
-			return std::move(ret);
+			return MBox<U, UDeleter>(ret, std::move(deleter));
 		}
 
 		/**
