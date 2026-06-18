@@ -1,6 +1,7 @@
 #include "function_lowering_context.hpp"
 
 #include "common.hpp"
+#include "ctv_lowering.hpp"
 #include "debug_info_utils.hpp"
 #include "dvm_value.hpp"
 #include "program_lowering_context.hpp"
@@ -50,6 +51,12 @@ FunctionLoweringContext::FunctionLoweringContext(
 	  function_name(name),
 	  fun_di_builder_opt(std::move(fun_di_builder_opt)) {}
 
+FunctionLoweringContext::FunctionLoweringContext(
+	ProgramLoweringContext& program_context, base::StrID name
+):
+	  program_context(program_context),
+	  function_name(name) {}
+
 base::StrID FunctionLoweringContext::getBlockLabel(lir::BlockRef block) {
 	if (!block_to_label.contains(block)) {
 		auto label_name = base::strConcat("label_", block_to_label.size());
@@ -57,80 +64,6 @@ base::StrID FunctionLoweringContext::getBlockLabel(lir::BlockRef block) {
 	}
 
 	return block_to_label.at(block);
-}
-
-namespace {
-	/**
-	 * @brief Translate a compile time value in LIR constant to a DVM immediate.
-	 * @param constant the LIR constant to translate
-	 * @param type the DVM type of the resulting immediate
-	 * @param is_comp_time_lowering if true, pointers to compile time values (e.g. symbol types)
-	 * will be kept as is in the generated code, otherwise they will be replaced with zero value.
-	 * This is useful to have the deterministic codegen (pointers to internal memory is not
-	 * deterministic between runs).
-	 */
-	constexpr DVMImmediate lirConstantToImmediate(
-		const compiler::lir::LIRConstant& constant,
-		const vm::code::TypeOfData&       type,
-		bool                              is_comp_time_lowering = true
-	) {
-		variant_match(constant.value.getStorage()) {
-			variant_case(compiler::numeric_value::NumericValue, numeric) {
-				return std::visit(
-					[&](auto&& val) -> DVMImmediate {
-						return DVMImmediate{ translateToU64(val), type };
-					},
-					numeric.getStorage()
-				);
-			}
-			variant_case(char, value) { return DVMImmediate{ translateToU64(value), type }; }
-			variant_case(bool, value) { return DVMImmediate{ translateToU64(value), type }; }
-			variant_case(compiler::tsh::SymbolType<>, type_val) {
-				// @TODO: #1728 remove this evil bit_cast
-				// Representation of a meta type in DVM is a pointer to the symbol type.
-				// @TODO: #1709 RTTI when the is_comp_time_lowering == false
-				u64 type_val_u64 = is_comp_time_lowering ? std::bit_cast<u64>(&type_val) : 0;
-				return DVMImmediate{ type_val_u64, type };
-			}
-			variant_default {
-				CORE_PANIC("Unsupported CompileTimeValue type for a VM constant operand");
-			}
-		}
-		CORE_UNREACHABLE();
-	}
-}
-
-vm::code::Function compiler::backend_vm::internal::createMiniGlobalCtorFromCTV(
-	ProgramLoweringContext&      program_context,
-	CRef<tsl::TypeLayout>        global_layout,
-	const vm::code::TypeOfData&  lowered_global_type,
-	const ctv::CompileTimeValue& global_ctv_value,
-	base::StrID                  mini_ctor_name,
-	const DVMPlace&              dvm_global
-) {
-	const lir::LIRConstant global_lir_constant{
-		.value  = global_ctv_value,
-		.layout = global_layout,
-	};
-
-	const auto immediate = lirConstantToImmediate(
-		global_lir_constant, lowered_global_type, program_context.isCompTimeLowering()
-	);
-
-	vm::code::Function mini_ctor;
-	mini_ctor.name                   = vm::code::Identifier(mini_ctor_name);
-	mini_ctor.signature.result_types = {};
-	mini_ctor.body.push_back(
-		vm::code::builders::InstructionBuilder(
-			vm::code::builders::OpKind::mov, dvm_global.asArgument(), immediate.asArgument()
-		)
-			.build()
-	);
-	mini_ctor.body.push_back(
-		vm::code::builders::InstructionBuilder(vm::code::builders::OpKind::ret).build()
-	);
-
-	return mini_ctor;
 }
 
 DVMPlace FunctionLoweringContext::forceToPlace(
@@ -388,10 +321,7 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 
 DVMValue FunctionLoweringContext::lowerLirValue(const lir::LIRValue& lir_value) {
 	variant_match(lir_value.getVariant()) {
-		variant_case(lir::LIRConstant, value) {
-			auto dvm_type = **program_context.lowerAndKeepTslType(value.layout);
-			return { lirConstantToImmediate(value, dvm_type, program_context.isCompTimeLowering()) };
-		}
+		variant_case(lir::LIRConstant, value) { return CtvLowering::lowerValue(*this, value); }
 		variant_case(lir::LIRPlace, place) {
 			DVMPlace resolved = resolveLirPlace(place);
 			if (resolved.isDirect()) {
@@ -479,6 +409,7 @@ void compiler::backend_vm::internal::FunctionLoweringContext::pushInstruction(
 }
 
 vm::code::Function compiler::backend_vm::internal::FunctionLoweringContext::finish() && {
+	cleanUpRegisteredTemps();
 	vm::code::Function function;
 	function.name = function_name;
 	for (const auto& param_type: function_parameter_types)

@@ -18,28 +18,17 @@
 namespace compiler::backend_vm::internal {
 	class ProgramLoweringContext;
 
-	/**
-	 * @brief Builds a tiny synthetic global constructor that writes a compile-time value
-	 * into a global variable.
-	 *
-	 * This is a temporary helper used when a LIR global has an initial CTV value but no
-	 * explicit ctor function lowered from LIR.
-	 * @TODO: #1553 Remove this constants should have constants initialization
-
-	 */
-	vm::code::Function createMiniGlobalCtorFromCTV(
-		ProgramLoweringContext&      program_context,
-		CRef<tsl::TypeLayout>        global_layout,
-		const vm::code::TypeOfData&  lowered_global_type,
-		const ctv::CompileTimeValue& global_ctv_value,
-		base::StrID                  mini_ctor_name,
-		const DVMPlace&              dvm_global
-	);
+	class CtvLowering;
 
 	class FunctionLoweringContext {
 	public:
 		friend class InstructionLowerer;
 		friend DVMOperation lirInstrToDVMOperation(FunctionLoweringContext&, const lir::Instruction&);
+
+		// Shared compile-time-value lowering (see ctv_lowering.hpp). Befriending the whole struct
+		// gives its routines access to the instruction-emission internals (temps, instruction
+		// buffer, program context).
+		friend class CtvLowering;
 
 		FunctionLoweringContext(
 			ProgramLoweringContext&                     program_context,
@@ -48,6 +37,10 @@ namespace compiler::backend_vm::internal {
 			const std::vector<CRef<tsl::TypeLayout>>&   parameter_types,
 			base::Optional<debug_info::FunctionBuilder> fun_di_builder_opt
 		);
+
+		/// Constructs a parameterless, void-returning context. Used to synthesize small helper
+		/// functions (e.g. global constructors) that have no LIR signature to lower.
+		FunctionLoweringContext(ProgramLoweringContext& program_context, base::StrID name);
 
 		FunctionLoweringContext(const FunctionLoweringContext&)            = delete;
 		FunctionLoweringContext(FunctionLoweringContext&&)                 = delete;

@@ -31,6 +31,7 @@ public:
 		TESTER_ADD_TEST(referencesTest);
 		TESTER_ADD_TEST(recordsTest);
 		TESTER_ADD_TEST(staticArrayTest);
+		TESTER_ADD_TEST(stringSliceTest);
 		TESTER_ADD_TEST(unitsTest);
 		TESTER_ADD_TEST(initsDeinitsTest);
 		TESTER_ADD_TEST(pointersTest);
@@ -56,6 +57,7 @@ protected:
 			{ fs::FilePath(path("modules/records/")), "records" },
 			{ fs::FilePath(path("modules/references/")), "references" },
 			{ fs::FilePath(path("modules/static_arrays/")), "static_arrays" },
+			{ fs::FilePath(path("modules/strings/")), "strings" },
 			{ fs::FilePath(path("modules/units/")), "units" },
 			{ fs::FilePath(path("modules/inits_deinits/")), "inits_deinits" },
 			{ fs::FilePath(path("modules/pointers/")), "pointers" },
@@ -160,6 +162,10 @@ private:
 	void staticArrayTest() {
 		runTest("static_arrays", {}, "1\n100\n200\n300\n600\n20\n42\n11\n13\n4\n", {}, 0);
 	}
+
+	// A string literal is lowered to a static byte-array global plus a `{ptr, len}` slice struct.
+	// Reading the length and indexing into the slice exercises the generated slice bytecode.
+	void stringSliceTest() { runTest("strings", {}, "5\n", {}, 5); }
 
 	void unitsTest() { runTest("units", {}, {}, {}, 0); }
 
