@@ -18,7 +18,7 @@ namespace pst {
 		template<std::derived_from<LangElement> El>
 		static MBox<El> cloneCast(CRef<El> original) {
 			MBox<LangElement> lang_element = original->clone();
-			return lang_element.dynamicCast<El>();
+			return std::move(lang_element).dynamicCast<El>();
 		}
 
 		template<
