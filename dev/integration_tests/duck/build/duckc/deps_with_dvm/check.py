@@ -60,7 +60,7 @@ expected = f"""{{
   "tasks": [
     {{
       "package": "{foo_name}",
-      "strategy": "dvm",
+      "strategy": "dvm_exe",
       "output_file": "{str(layout / "foo.dbc")}"
     }}
   ]

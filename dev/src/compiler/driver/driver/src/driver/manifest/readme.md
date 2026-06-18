@@ -47,11 +47,16 @@ Currently a single task type: package compilation. Common fields:
 | field      | type   | required | description |
 |------------|--------|----------|-------------|
 | `package`  | string | yes      | ID of a package from `packages[]` to build. |
-| `strategy` | string | yes      | `"dvm"` \| `"native"` \| `"obj"` \| `"lib"`. |
+| `strategy` | string | yes      | `"dvm_exe"` \| `"dvm_lib"` \| `"native"` \| `"obj"` \| `"lib"`. |
 
 Remaining fields depend on `strategy`:
 
-### `strategy: "dvm"` — DVM bytecode
+### `strategy: "dvm_exe"` — DVM bytecode executable
+| field         | required | description |
+|---------------|----------|-------------|
+| `output_file` | yes      | Output file stem. |
+
+### `strategy: "dvm_lib"` — DVM bytecode library
 | field         | required | description |
 |---------------|----------|-------------|
 | `output_file` | yes      | Output file name. |
@@ -98,7 +103,7 @@ This strategy takes **no extra fields** (`output_file`, `linking_options`,
     { "id": "app", "name": "app", "path": "src/app" }
   ],
   "tasks": [
-    { "package": "app", "strategy": "dvm", "output_file": "app" }
+    { "package": "app", "strategy": "dvm_exe", "output_file": "app" }
   ]
 }
 ```
