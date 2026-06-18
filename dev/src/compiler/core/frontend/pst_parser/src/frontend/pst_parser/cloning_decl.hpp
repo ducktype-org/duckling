@@ -2,7 +2,8 @@
 
 namespace pst {
 	/**
-	 * @brief Dummy class used to make constructor used for cloning more explicit and to not accidentally use it.
+	 * @brief Dummy class used to make constructor used for cloning more explicit and to not
+	 * accidentally use it.
 	 */
 	struct CloneDummy {
 	private:
@@ -46,7 +47,8 @@ private:                           \
 		  ParentClass(clone, other) FOR_EACH(CONSTRUCTOR_VALUE_COPY, __VA_ARGS__) {}
 
 /**
- * @brief cloneElement signature macro. The function is used to manage cloning in the lowest level (final) elements.
+ * @brief cloneElement signature macro. The function is used to manage cloning in the lowest level
+ * (final) elements.
  */
 #define CLONE_SIGNATURE() MBox<LangElement> cloneElement() const
 
@@ -63,7 +65,8 @@ private:                           \
 
 
 /**
- * @brief Declaration of cloneSubElements which is responsible for copying the children from the element in the argument.
+ * @brief Declaration of cloneSubElements which is responsible for copying the children from the
+ * element in the argument.
  */
 #define CLONE_SUBELEMENTS() \
                             \
