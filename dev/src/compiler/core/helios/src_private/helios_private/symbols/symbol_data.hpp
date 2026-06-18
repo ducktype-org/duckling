@@ -5,6 +5,7 @@
 
 #include <frontend/pst_parser/access.hpp>
 #include <frontend/pst_parser/elements/includes/basic.hpp>
+#include <helios/symbols/attributes.hpp>
 #include <helios/symbols/symbol_id.hpp>
 #include <helios/symbols/symbol_kind.hpp>
 #include <helios/tsh/type_interface.hpp>
@@ -64,6 +65,16 @@ namespace compiler::helios {
 		 * context, e.g. class fields.
 		 */
 		bool dependent = false;
+
+		/**
+		 * When this is true, the symbol is ignored by the lookup.
+		 */
+		bool is_ignored_by_lookup = false;
+
+		/**
+		 * List of attributes on a symbol.
+		 */
+		std::vector<Attribute> attributes = {};
 	};
 
 	/**

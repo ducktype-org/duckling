@@ -1489,6 +1489,7 @@ namespace compiler::backend_llvm {
 	void addFunctionToModuleImpl(
 		query::Context& ctx, const Ref<ModuleImpl> module, const CRef<lir::Function> lir_function
 	) {
+		if (lir_function->ignore_on_llvm) return;
 		addFunctionToModuleInternal(ctx, module, lir_function);
 	}
 
