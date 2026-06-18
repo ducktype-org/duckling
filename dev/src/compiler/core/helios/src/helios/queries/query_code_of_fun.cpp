@@ -106,7 +106,6 @@ namespace compiler::helios {
 			void visitFun(pst::Access<pst::Fun> stmt) final {
 				// declaration:
 				auto& decl = ctx.query<QueryDeclOfFun>(original_symbol)->valueOrThrow();
-
 				// body:
 				auto fun_body    = stmt->getBody();
 				auto output_body = processBody(decl, fun_body);
