@@ -581,6 +581,18 @@ namespace compiler::helios {
 				pst_data
 			);
 		}
+		case pst::StmtKind::TemplateDecl: {
+			auto template_decl = stmt.dynamicCast<pst::TemplateDecl>().value();
+			return SymbolData::makePSTSymbolData(
+				{
+					.name                 = template_decl->getDeclSymbolIdentifier()->unlock(ctx)->unwrap(), // TODO: inc double check
+					.kind                 = SymbolKind::Template,
+					.is_ignored_by_lookup = is_ignored_by_lookup,
+					.attributes           = std::move(attributes),
+				},
+				pst_data
+			);
+		}
 		default:
 			break;
 		}
