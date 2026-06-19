@@ -70,13 +70,23 @@ namespace compiler::driver {
 
 		BuildTarget build_target;
 
-		if (strategy && strategy->view() == "dvm") {
-			auto output
-				= js::getString(json, "output_file", "DVM task requires an output file!", report);
+		if (strategy && strategy->view() == "dvm_lib") {
+			auto output = js::getString(
+				json, "output_file", "DVM library task requires an output file!", report
+			);
 			if (!output) had_error = true;
 
-			build_target = BuildTargetDVM{
-				.output_file_stem = output.copyValueOr(base::StrID("package_dvm")),
+			build_target = BuildTargetDVMLibrary{
+				.output_file_name = output.copyValueOr(base::StrID("package_dvm.dbc")),
+			};
+		} else if (strategy && strategy->view() == "dvm_exe") {
+			auto output = js::getString(
+				json, "output_file", "DVM executable task requires an output file!", report
+			);
+			if (!output) had_error = true;
+
+			build_target = BuildTargetDVMExecutable{
+				.output_file_name = output.copyValueOr(base::StrID("package_dvm.dbc")),
 			};
 		} else if (strategy && strategy->view() == "native") {
 			auto output
@@ -160,7 +170,7 @@ namespace compiler::driver {
 			}
 
 			build_target = BuildTargetLLVMExecutable{
-				.output_file_stem = output ? *output : base::StrID(),
+				.output_file_name = output ? *output : base::StrID(),
 				.linking_options  = std::move(linking_options),
 			};
 		} else if (strategy && strategy->view() == "obj") {
@@ -214,13 +224,13 @@ namespace compiler::driver {
 			}
 
 			build_target = BuildTargetLLVMStaticLibrary{
-				.output_file_stem  = output ? *output : base::StrID(),
+				.output_file_name  = output ? *output : base::StrID(),
 				.archiving_options = std::move(archiving_options),
 			};
 		} else if (strategy) {
 			report(
 				base::strConcat("Unknown task strategy: \"", strategy->str(), "\""),
-				R"(Expected "dvm", "native", "obj", or "lib".)",
+				R"(Expected "dvm_exe", "dvm_lib", "native", "obj", or "lib".)",
 				true
 			);
 			had_error = true;
@@ -256,9 +266,17 @@ namespace compiler::driver {
 		variant_match(raw_target) {
 			variant_case(BuildTargetLLVMExecutable, llvm_exec_target) {
 				return BuildTargetLLVMExecutable{
-					.output_file_stem = llvm_exec_target.output_file_stem,
+					.output_file_name = llvm_exec_target.output_file_name,
 					.linking_options
 					= constructLinkerOptions(llvm_exec_target.linking_options, stdlib_options),
+				};
+			}
+			variant_case(BuildTargetDVMExecutable, dvm_exec_target) {
+				return BuildTargetDVMExecutable{
+					.output_file_name  = dvm_exec_target.output_file_name,
+					.link_std_packages = not base::holds<options_types::StdLibOptions::NoStd>(
+						stdlib_options.std_lib_type
+					),
 				};
 			}
 			variant_default { return raw_target; }

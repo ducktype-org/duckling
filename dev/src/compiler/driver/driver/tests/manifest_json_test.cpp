@@ -78,7 +78,7 @@ private:
             "tasks": [
                 {
                     "package": "app",
-                    "strategy": "dvm",
+                    "strategy": "dvm_exe",
                     "output_file": "bin/app_dvm"
                 }
             ]
@@ -145,7 +145,7 @@ private:
 		auto manifest_json = nlohmann::json::parse(R"({
             "packages": [],
             "tasks": [
-                { "strategy": "dvm" }
+                { "strategy": "dvm_exe" }
             ]
         })");
 
@@ -176,7 +176,7 @@ private:
             "tasks": [
                 {
                     "package": "app",
-                    "strategy": "dvm",
+                    "strategy": "dvm_exe",
                     "output_file": "bin/app_dvm",
                     "name": "build_app"
                 }
@@ -249,7 +249,7 @@ private:
 		clearLogger();
 
 		auto task_json = nlohmann::json::parse(
-			R"({ "package": "mylib", "strategy": "dvm", "output_file": "bin/mylib_dvm" })"
+			R"({ "package": "mylib", "strategy": "dvm_lib", "output_file": "bin/mylib_dvm" })"
 		);
 		auto result = RawPackageCompilationTask::fromJson(
 			task_json, diagnostics::makeGlobalLoggerReporter()
@@ -257,9 +257,9 @@ private:
 
 		ASSERT_TRUE(result.has_value());
 		ASSERT_TRUE(logger().good());
-		ASSERT_TRUE(std::holds_alternative<BuildTargetDVM>(result->build_target));
-		const auto& target = std::get<BuildTargetDVM>(result->build_target);
-		ASSERT_EQUAL(target.output_file_stem.str(), std::string("bin/mylib_dvm"));
+		ASSERT_TRUE(std::holds_alternative<BuildTargetDVMLibrary>(result->build_target));
+		const auto& target = std::get<BuildTargetDVMLibrary>(result->build_target);
+		ASSERT_EQUAL(target.output_file_name.str(), std::string("bin/mylib_dvm"));
 		ASSERT_EQUAL(result->package_id.str(), std::string("mylib"));
 	}
 
@@ -345,7 +345,7 @@ private:
 
 		auto task_json = nlohmann::json::parse(R"({
             "package": "app",
-            "strategy": "dvm"
+            "strategy": "dvm_exe"
         })");
 		auto result    = RawPackageCompilationTask::fromJson(
             task_json, diagnostics::makeGlobalLoggerReporter()

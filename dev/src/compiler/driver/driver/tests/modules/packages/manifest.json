@@ -42,45 +42,45 @@
         {
             "package": "lib_a",
             "strategy": "lib",
-            "output_file": "lib_a"
+            "output_file": "lib_a.a"
         },
         {
             "package": "lib_b",
             "strategy": "lib",
-            "output_file": "lib_b"
+            "output_file": "lib_b.a"
         },
 
         {
             "package": "lib_a",
-            "strategy": "dvm",
-            "output_file": "lib_a_dvm"
+            "strategy": "dvm_lib",
+            "output_file": "lib_a_dvm.dbc"
         },
         {
             "package": "lib_b",
-            "strategy": "dvm",
-            "output_file": "lib_b_dvm"
+            "strategy": "dvm_lib",
+            "output_file": "lib_b_dvm.dbc"
         },
         {
             "package": "app1",
-            "strategy": "dvm",
-            "output_file": "app1_dvm"
+            "strategy": "dvm_exe",
+            "output_file": "app1_dvm.dbc"
         },
         {
             "package": "app2",
-            "strategy": "dvm",
-            "output_file": "app2_dvm"
+            "strategy": "dvm_exe",
+            "output_file": "app2_dvm.dbc"
         },
 
         {
             "package": "app1",
             "strategy": "native",
-            "output_file": "app1",
+            "output_file": "app1.exe",
             "linking_options": "build/lib_a.a build/lib_b.a"
         },
         {
             "package": "app2",
             "strategy": "native",
-            "output_file": "app2",
+            "output_file": "app2.exe",
             "linking_options": {
                 "additional_link_options": "build/lib_a.a",
                 "link_c_standard_library": true

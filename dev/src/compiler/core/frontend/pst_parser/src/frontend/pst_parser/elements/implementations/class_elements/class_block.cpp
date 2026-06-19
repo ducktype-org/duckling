@@ -3,6 +3,12 @@
 #include "preamble.hpp"
 
 namespace pst {
+	void ClassBlock::cloneSubElements(const ClassBlock& other) {
+		ELEMENT_CLONE_SUB_ELEMENT(statements);
+		fillSymbols();
+		ParentClass::cloneSubElements(other);
+	}
+
 	MBox<ClassBlock> ClassBlock::parse(LangParserState& state) {
 		CORE_ASSERT(
 			state.getContext()->block_order == BlockOrderType::Unordered,

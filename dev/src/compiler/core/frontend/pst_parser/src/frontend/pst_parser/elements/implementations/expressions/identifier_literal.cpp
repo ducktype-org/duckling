@@ -4,6 +4,8 @@
 #include "preamble.hpp"
 
 namespace pst::expr {
+	CLONE_SUB_ELEMENTS_DEF(IdentifierLiteral, name, template_specifier);
+
 	MBox<ExprElement> IdentifierLiteral::parse(LangParserState& state) {
 		if (!checkNonEmpty(state)) return nullptr;
 

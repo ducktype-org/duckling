@@ -175,7 +175,7 @@ private:
 		ASSERT_TRUE(driver::compilePackages(tasks).isOk());
 
 		// Verify expected artifacts
-		for (const auto& art: driver::getStdLibArtifacts()) {
+		for (const auto& art: driver::getStdLibNativeArtifacts()) {
 			assertTrue(
 				std::filesystem::exists(art.file.getFilePath().getPath()),
 				base::strConcat(

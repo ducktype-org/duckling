@@ -10,6 +10,12 @@ namespace compiler::repl {
 			   "providing any number, it will reset to the clean starting state.\n";
 		out << "  /history, /hist                 - Show session history (all statements executed "
 			   "in this repl session)\n";
+		out << "  /symbols, /syms                 - Show declarations visible in this session\n";
+		out << "  /variables, /vars               - Show top-level variables visible in this "
+			   "session\n";
+		out << "  /functions, /fns                - Show top-level functions visible in this "
+			   "session\n";
+		out << "  /details <name>                 - Show details for a visible symbol\n";
 		out << "  /commands, /cmds                - Show all input history (editor history)\n";
 		out << "  /commands-reset, /cmds-reset    - Clear input history (editor history)\n";
 		out << "  /clear, /c                      - Clear terminal\n";

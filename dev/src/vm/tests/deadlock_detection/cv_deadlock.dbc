@@ -1,0 +1,235 @@
+# CV sleep + mutex deadlock test.
+#
+# Scenario:
+# - threadWaiter locks sleep_mutex then blocks on cv_sleep, which nobody signals.
+# - threadA and threadB use a CV barrier to guarantee both hold their first mutex
+#   before attempting the cross-lock, making the deadlock deterministic.
+# - The deadlock detector fires VMDeadlockException in one of the threads.
+# - Once the process becomes ExecutionPanicked, threadWaiter's next 500 ms CV
+#   polling wakeup sees isTerminateRequested() == true and exits cleanly.
+#
+# This shows that a thread sleeping on a CV is woken (within one polling interval)
+# when the process panics, without any dedicated CV deadlock detector.
+#
+# Expected: VMDeadlockException.
+
+global_data m1           mutex {}
+global_data m2           mutex {}
+global_data gate         mutex {}
+global_data cv_gate      condition_variable {}
+global_data sleep_mutex  mutex {}
+global_data cv_sleep     condition_variable {}
+global_data ready_count  i64 {}
+global_data phase        i64 {}
+
+function threadWaiter {} -> {} {
+	init_pany_type		sm, mutex;
+	mov_popq_popq		sm, sleep_mutex;
+	call_builtinfunc	builtin_lock_mutex;
+
+	# Sleep on cv_sleep. Nobody will signal it; the thread wakes only when
+	# isTerminateRequested() returns true (after the mutex deadlock panics
+	# the process) on the next 500 ms polling tick.
+	label SleepLoop;
+		init_pany_type		wcv, condition_variable;
+		mov_popq_popq		wcv, cv_sleep;
+		init_pany_type		wm, mutex;
+		mov_popq_popq		wm, sleep_mutex;
+		call_builtinfunc	builtin_wait_cv;
+		jmp_label			SleepLoop;
+
+	ret;
+}
+
+function threadA {} -> {} {
+	init_pany_type		la, mutex;
+	mov_popq_popq		la, m1;
+	call_builtinfunc	builtin_lock_mutex;
+
+	init_pany_type		gl, mutex;
+	mov_popq_popq		gl, gate;
+	call_builtinfunc	builtin_lock_mutex;
+
+	init_pany_type		rc, i64;
+	mov_p64_p64			rc, ready_count;
+	add_p64_imm			rc, 1;
+	mov_p64_p64			ready_count, rc;
+
+	init_pany_type		notify_cv, condition_variable;
+	mov_popq_popq		notify_cv, cv_gate;
+	call_builtinfunc	builtin_notify_all_cv;
+
+	label WaitPhaseAInit;
+		init_pany_type	p, i64;
+		init_pany_type	wait_cv, condition_variable;
+		init_pany_type	wait_gate, mutex;
+
+	label WaitPhaseA;
+		mov_p64_p64		p, phase;
+		cmpEq_p64_imm	p, 1;
+		jmpIf_label		ReleasedA;
+
+		mov_popq_popq	wait_cv, cv_gate;
+		mov_popq_popq	wait_gate, gate;
+		call_builtinfunc builtin_wait_cv;
+		deinit;
+		jmp_label		WaitPhaseAInit;
+
+	label ReleasedA;
+	deinit;
+	deinit;
+	deinit;
+
+	init_pany_type		ug, mutex;
+	mov_popq_popq		ug, gate;
+	call_builtinfunc	builtin_unlock_mutex;
+
+	# Cross-lock: deadlock detector fires here.
+	init_pany_type		lb, mutex;
+	mov_popq_popq		lb, m2;
+	call_builtinfunc	builtin_lock_mutex;
+
+	ret;
+}
+
+function threadB {} -> {} {
+	init_pany_type		lb, mutex;
+	mov_popq_popq		lb, m2;
+	call_builtinfunc	builtin_lock_mutex;
+
+	init_pany_type		gl, mutex;
+	mov_popq_popq		gl, gate;
+	call_builtinfunc	builtin_lock_mutex;
+
+	init_pany_type		rc, i64;
+	mov_p64_p64			rc, ready_count;
+	add_p64_imm			rc, 1;
+	mov_p64_p64			ready_count, rc;
+
+	init_pany_type		notify_cv, condition_variable;
+	mov_popq_popq		notify_cv, cv_gate;
+	call_builtinfunc	builtin_notify_all_cv;
+
+	label WaitPhaseBInit;
+		init_pany_type	p, i64;
+		init_pany_type	wait_cv, condition_variable;
+		init_pany_type	wait_gate, mutex;
+
+	label WaitPhaseB;
+		mov_p64_p64		p, phase;
+		cmpEq_p64_imm	p, 1;
+		jmpIf_label		ReleasedB;
+
+		mov_popq_popq	wait_cv, cv_gate;
+		mov_popq_popq	wait_gate, gate;
+		call_builtinfunc builtin_wait_cv;
+		deinit;
+		jmp_label		WaitPhaseBInit;
+
+	label ReleasedB;
+	deinit;
+	deinit;
+	deinit;
+
+	init_pany_type		ug, mutex;
+	mov_popq_popq		ug, gate;
+	call_builtinfunc	builtin_unlock_mutex;
+
+	# Cross-lock: deadlock detector fires here.
+	init_pany_type		la, mutex;
+	mov_popq_popq		la, m1;
+	call_builtinfunc	builtin_lock_mutex;
+
+	ret;
+}
+
+function main { i64, ptr_argv } -> { i64 } {
+	init_pany_type		im1, mutex;
+	call_builtinfunc	builtin_create_mutex;
+	mov_popq_popq		m1, im1;
+
+	init_pany_type		im2, mutex;
+	call_builtinfunc	builtin_create_mutex;
+	mov_popq_popq		m2, im2;
+
+	init_pany_type		ig, mutex;
+	call_builtinfunc	builtin_create_mutex;
+	mov_popq_popq		gate, ig;
+
+	init_pany_type		icvg, condition_variable;
+	call_builtinfunc	builtin_create_cv;
+	mov_popq_popq		cv_gate, icvg;
+
+	init_pany_type		ism, mutex;
+	call_builtinfunc	builtin_create_mutex;
+	mov_popq_popq		sleep_mutex, ism;
+
+	init_pany_type		icvs, condition_variable;
+	call_builtinfunc	builtin_create_cv;
+	mov_popq_popq		cv_sleep, icvs;
+
+	mov_p64_imm			ready_count, 0;
+	mov_p64_imm			phase, 0;
+
+	init_pany_type		tw, i64;
+	set_threadctx		threadWaiter;
+	call_builtinfunc	builtin_start_thread;
+
+	init_pany_type		ta, i64;
+	set_threadctx		threadA;
+	call_builtinfunc	builtin_start_thread;
+
+	init_pany_type		tb, i64;
+	set_threadctx		threadB;
+	call_builtinfunc	builtin_start_thread;
+
+	# Lock gate and wait until both threads have their first mutex.
+	init_pany_type		mg, mutex;
+	mov_popq_popq		mg, gate;
+	call_builtinfunc	builtin_lock_mutex;
+
+	label WaitReadyInit;
+		init_pany_type	r, i64;
+		init_pany_type	wcv, condition_variable;
+		init_pany_type	wg, mutex;
+
+	label WaitReady;
+		mov_p64_p64		r, ready_count;
+		cmpEq_p64_imm	r, 2;
+		jmpIf_label		Release;
+
+		mov_popq_popq	wcv, cv_gate;
+		mov_popq_popq	wg, gate;
+		call_builtinfunc builtin_wait_cv;
+		deinit;
+		jmp_label		WaitReadyInit;
+
+	label Release;
+	deinit;
+	deinit;
+	deinit;
+
+	mov_p64_imm			phase, 1;
+
+	init_pany_type		rcv, condition_variable;
+	mov_popq_popq		rcv, cv_gate;
+	call_builtinfunc	builtin_notify_all_cv;
+
+	init_pany_type		ug, mutex;
+	mov_popq_popq		ug, gate;
+	call_builtinfunc	builtin_unlock_mutex;
+
+	init_pany_type		jw, i64;
+	mov_p64_p64			jw, tw;
+	call_builtinfunc	builtin_join_thread;
+
+	init_pany_type		ja, i64;
+	mov_p64_p64			ja, ta;
+	call_builtinfunc	builtin_join_thread;
+
+	init_pany_type		jb, i64;
+	mov_p64_p64			jb, tb;
+	call_builtinfunc	builtin_join_thread;
+
+	ret;
+}

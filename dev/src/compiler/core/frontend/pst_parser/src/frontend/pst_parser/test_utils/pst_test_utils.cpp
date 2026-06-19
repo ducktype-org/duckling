@@ -52,4 +52,58 @@ namespace pst {
 		}
 		return base::OK;
 	}
+
+	void printSubElementTypes(CRef<LangElement> el) {
+		std::cerr << el->elementType() << ", ";
+		for (auto& sub: el->viewChildren())
+			printSubElementTypes(base::CRef(&*sub.illegalAccess().value()));
+	}
+
+	u64 countSubElements(CRef<LangElement> el) {
+		u64 count = 1;
+		for (auto& sub: el->viewChildren())
+			count += countSubElements(base::CRef(&*sub.illegalAccess().value()));
+		return count;
+	}
+
+	base::OkBad testElementCloning(base::CRef<LangElement> el) {
+		u64 x1 = 0, x2 = 0, x3 = 0, x4 = 0;
+		{
+			x1         = countSubElements(el);
+			auto clone = el->clone();
+
+			if (!clone) {
+				std::println(std::cerr, "[Error] Cloning failed");
+				return base::BAD;
+			}
+
+			x2 = countSubElements(el);
+			x3 = countSubElements(clone.ref().toOpt().value());
+
+			std::stringstream el_dprint_ss, clone_dprint_ss;
+
+			tpc::nullAwareDprint(MRef{ el }, el_dprint_ss);
+			tpc::nullAwareDprint(clone, clone_dprint_ss);
+
+			std::string el_dprint = el_dprint_ss.str(), clone_dprint = clone_dprint_ss.str();
+
+			// This might break if positions are no longer the same
+			if (!(x1 == x3) || el_dprint != clone_dprint) {
+				std::println(std::cerr, "[Error] Cloning has bad output");
+
+				std::cerr << el_dprint << "\n" << clone_dprint << "\n";
+				printSubElementTypes(el);
+				std::cerr << "\n";
+				printSubElementTypes(clone.ref().toOpt().value());
+				std::cerr << "\n";
+
+				return base::BAD;
+			}
+		}
+		x4 = countSubElements(el);
+		if (x1 == x2 && x2 == x3 && x3 == x4)
+			return base::OK;
+		else
+			return base::BAD;
+	}
 }

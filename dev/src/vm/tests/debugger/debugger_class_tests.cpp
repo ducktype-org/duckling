@@ -24,6 +24,7 @@ public:
 		TESTER_ADD_TEST(getStatusBreakpoint);
 		TESTER_ADD_TEST(rerunTest);
 		TESTER_ADD_TEST(errorTest);
+		TESTER_ADD_TEST(outputTest);
 		TESTER_ADD_TEST(memoryTest);
 	}
 
@@ -294,6 +295,31 @@ private:
 		ASSERT_TRUE(debugger.resume().has_value());
 
 		ASSERT_TRUE(std::holds_alternative<vm::api::Running>(debugger.getStatus()));
+	}
+
+	/**
+	 * @brief test if the output emitter works
+	 */
+	void outputTest() {
+		std::atomic_bool        output = false;
+		std::condition_variable cv;
+		std::mutex              m;
+
+		vm::debugger::Debugger debugger{ fs::File(path("vm_api_tests.dbc")) };
+
+		events::Listener<std::string> output_listener([&](const std::string& str) {
+			ASSERT_EQUAL_PRINT("7", str);
+			output.store(true);
+			cv.notify_all();
+		});
+
+		debugger.attachOnOutputListener(output_listener);
+
+		ASSERT_TRUE(debugger.runMain().has_value());
+
+		std::unique_lock lk(m);
+		// Test timeout
+		ASSERT_TRUE(cv.wait_for(lk, std::chrono::milliseconds(100), [&] { return output.load(); }));
 	}
 
 	void memoryTest() {

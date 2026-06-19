@@ -45,6 +45,7 @@ public:
 		TESTER_ADD_TEST(ffiTest);
 		TESTER_ADD_TEST(tuplesTest);
 		TESTER_ADD_TEST(pointersTest);
+		TESTER_ADD_TEST(backendDependentTest);
 	}
 
 protected:
@@ -457,6 +458,22 @@ private:
 	void pointersTest() {
 		auto        llvm_module = getLLVMModuleFromPath("modules/pointers");
 		std::string ir          = llvm_module.dumpLLVMToString();
+	}
+
+	void backendDependentTest() {
+		auto        llvm_module = getLLVMModuleFromPath("modules/backend_dependent");
+		std::string ir          = llvm_module.dumpLLVMToString();
+
+		// The LLVM backend must compile the `@native_only_impl` of `getValue` (returning 20)
+		// and never the `@dvm_only_impl` one (returning 10).
+		assertTrue(
+			std::regex_search(ir, std::regex{ R"(ret i32 20)" }),
+			"Expected native_only_impl 'ret i32 20' in the LLVM module"
+		);
+		assertTrue(
+			not std::regex_search(ir, std::regex{ R"(ret i32 10)" }),
+			"dvm_only_impl 'ret i32 10' must not be compiled into the LLVM module"
+		);
 	}
 };
 
