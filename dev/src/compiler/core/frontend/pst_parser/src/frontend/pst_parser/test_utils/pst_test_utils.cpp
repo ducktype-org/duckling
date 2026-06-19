@@ -71,8 +71,12 @@ namespace pst {
 		{
 			x1         = countSubElements(el);
 			auto clone = el->clone();
-			if (!clone) std::println(std::cerr, "[Error] Cloning failed");
-			if (!clone) return base::BAD;
+
+			if (!clone) {
+				std::println(std::cerr, "[Error] Cloning failed");
+				return base::BAD;
+			}
+
 			x2 = countSubElements(el);
 			x3 = countSubElements(clone.ref().toOpt().value());
 
@@ -92,6 +96,8 @@ namespace pst {
 				std::cerr << "\n";
 				printSubElementTypes(clone.ref().toOpt().value());
 				std::cerr << "\n";
+
+				return base::BAD;
 			}
 		}
 		x4 = countSubElements(el);
