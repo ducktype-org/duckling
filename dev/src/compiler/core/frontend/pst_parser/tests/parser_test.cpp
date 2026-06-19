@@ -152,7 +152,11 @@ private:
 
 		assertTrue(testing_utils::compareJson(ss.str(), correct_string), "outputs are not equal");
 		if (no_errors) {
-			assertTrue(pst::testElementCloning(CRef{&*pst.getRootElement().illegalAccess().value()}).isOk(), "Error during cloning");
+			assertTrue(
+				pst::testElementCloning(CRef{ &*pst.getRootElement().illegalAccess().value() })
+					.isOk(),
+				"Error during cloning"
+			);
 		}
 	}
 

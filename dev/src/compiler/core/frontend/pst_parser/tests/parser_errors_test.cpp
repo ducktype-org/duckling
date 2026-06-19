@@ -16,8 +16,8 @@
 #include <frontend/pst_parser/elements/implementations/preamble.hpp>
 #include <frontend/pst_parser/elements/implementations/statements/statements_errors.hpp>
 #include <frontend/pst_parser/elements/parser_common_errors.hpp>
-#include <frontend/pst_parser/test_utils/pst_test_utils.hpp>
 #include <frontend/pst_parser/pst.hpp>
+#include <frontend/pst_parser/test_utils/pst_test_utils.hpp>
 
 #include <diagnostic/source_position.hpp>
 #include <tester/tester.hpp>
@@ -41,7 +41,8 @@ class PSTErrorTests: public tester::TestSuite {
 		[[nodiscard]]
 		static base::OkBad testCloning(const pst::PST<Element, Parser>& pst) {
 			if (not pst.hasErrors()) {
-				return pst::testElementCloning(base::CRef(&*pst.getRootElement().illegalAccess().value())
+				return pst::testElementCloning(
+					base::CRef(&*pst.getRootElement().illegalAccess().value())
 				);
 			}
 			return base::OK;

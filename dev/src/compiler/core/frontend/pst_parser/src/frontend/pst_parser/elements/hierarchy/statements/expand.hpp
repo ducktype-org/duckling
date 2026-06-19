@@ -20,7 +20,8 @@ namespace pst {
 
 	public:
 		/**
-		 * @note This constructor is used instead of ELEMENT_CLONE_DECL, because LangParserContext require custom handling as it doesn't have a simple copy constructor.
+		 * @note This constructor is used instead of ELEMENT_CLONE_DECL, because LangParserContext
+		 * require custom handling as it doesn't have a simple copy constructor.
 		 */
 		explicit Expand(pst::CloneDummy dummy, const Expand& other):
 			  ParentClass(dummy, other),
