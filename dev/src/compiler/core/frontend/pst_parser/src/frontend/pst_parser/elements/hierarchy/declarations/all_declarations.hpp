@@ -12,3 +12,4 @@
 #include "top_level.hpp"      // IWYU pragma: export
 #include "variable.hpp"       // IWYU pragma: export
 #include "while.hpp"          // IWYU pragma: export
+#include "template_decl.hpp"  // IWYU pragma: export

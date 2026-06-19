@@ -198,6 +198,9 @@ namespace pst {
 			case Keyword::FunDecl:
 				return internal::parseStmt<FunDecl>(state);
 
+			case Keyword::Template:
+				return internal::parseStmt<TemplateDecl>(state);
+
 			case Keyword::Pattern:
 				return internal::parseStmt<Pattern>(state);
 

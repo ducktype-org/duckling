@@ -62,6 +62,7 @@ namespace pst {
 		// Expression wrappers:
 		RoundGroupExpr,
 		CallList,
+		TemplateList,
 
 		// for all expression elements:
 		ExprElement,
