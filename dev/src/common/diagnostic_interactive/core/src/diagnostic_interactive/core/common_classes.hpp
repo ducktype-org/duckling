@@ -8,7 +8,7 @@
 #include <string>
 
 namespace dia_int {
-	struct CodeLocation {
+	struct CodeLocation final {
 		std::string         file{};
 		u64                 line{};
 		u64                 column{};
@@ -17,7 +17,7 @@ namespace dia_int {
 			end_column;  // Optional hash of the PST node corresponding to this code location.
 	};
 
-	struct HashCodeLocation {
+	struct HashCodeLocation final {
 		base::Bit256                 begin_node;
 		base::Optional<base::Bit256> end_node;
 	};
