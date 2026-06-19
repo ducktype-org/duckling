@@ -16,7 +16,7 @@
         },
         {
             "package": "uses_std",
-            "strategy": "dvm",
+            "strategy": "dvm_exe",
             "output_file": "package_dvm.dbc"
         }
     ]
