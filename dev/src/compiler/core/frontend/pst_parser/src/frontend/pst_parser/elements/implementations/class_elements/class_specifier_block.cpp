@@ -4,6 +4,8 @@
 #include "preamble.hpp"
 
 namespace pst {
+	CLONE_SUB_ELEMENTS_DEF(ClassSpecifierBlock, block);
+
 	HashAlg& ClassSpecifierBlock::addElementDataToStableHash(HashAlg& partial_hash) const {
 		return partial_hash;
 	}

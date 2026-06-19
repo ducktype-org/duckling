@@ -60,6 +60,14 @@ class LexerErrorTests: public tester::TestSuite {
 		std::make_unique<Example<false>>("'\n"),
 	};
 
+	// Literals ending in a backslash right before EOF must produce an
+	// unclosed-literal diagnostic instead of crashing the lexer.
+	std::array<std::unique_ptr<GenExample>, 3> trailing_backslash_eof = {
+		std::make_unique<Example<false>>(R"("abc\)"),
+		std::make_unique<Example<false>>(R"('a\)"),
+		std::make_unique<Example<false>>(R"(f"abc\)"),
+	};
+
 	std::array<std::unique_ptr<GenExample>, 2> bad_char_count = {
 		std::make_unique<Example<false>>("''"),
 		std::make_unique<Example<false>>("'aaaa'"),

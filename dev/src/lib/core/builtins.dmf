@@ -10,7 +10,7 @@ extern("C") {
         and it requires the C-ABI.
     #}
     fundecl builtin_input_char() -> char;
-    fundecl builtin_output_char(c: char) -> i32;
+    fundecl builtin_output_char(c: char) -> i64;
 
     fundecl builtin_input_i64() -> i64;
     fundecl builtin_output_i64(x: i64) -> i64;
@@ -23,8 +23,15 @@ extern("C") {
 
     fundecl builtin_input_string() -> String;
     fundecl print(x: String) -> i32;
-    
-    fundecl builtin_output_str(x: str) -> i32;
+}
+
+fun builtin_output_str(s: str) -> i32 = {
+    var i = 0u32;
+    while (i < s.length()) {
+        builtin_output_char(s[i]);
+        i = i + 1u32;
+    }
+    return i as i32;
 }
 
 fun print(x: str) -> i32 = builtin_output_str(x);

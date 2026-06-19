@@ -4,6 +4,8 @@
 
 namespace pst {
 	class Restart final: public Action {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(Restart, Action);
+
 	public:
 		explicit Restart(const LangParserState& state): Action(state) {}
 

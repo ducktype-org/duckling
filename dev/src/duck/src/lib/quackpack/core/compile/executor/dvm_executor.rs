@@ -70,7 +70,9 @@ fn create_task(
         "`DvmExecutor` should create task only for the root `Unit`"
     );
     let strategy = match unit.artifacts_type() {
-        ArtifactsType::Dvm => multipackage_schema::PackageCompilationStrategy::Dvm {
+        // QuackPack only emits DVM executables; `DvmLib` is produced solely by the
+        // C++ std library path, so it is intentionally unreachable here.
+        ArtifactsType::Dvm => multipackage_schema::PackageCompilationStrategy::DvmExe {
             output_file: unit_output(unit, graph, layout),
         },
         task => unreachable!(

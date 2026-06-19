@@ -6,6 +6,8 @@
 #include "preamble.hpp"
 
 namespace pst {
+	CLONE_SUB_ELEMENTS_DEF(ExprHolder, expr);
+
 	void ExprHolder::dprint(std::ostream& out) const {
 		out << "{";
 

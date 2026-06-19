@@ -4,6 +4,7 @@
 #include "preamble.hpp"
 
 namespace pst {
+	CLONE_SUB_ELEMENTS_DEF(Pattern, name, param, ret, body);
 
 	MBox<Pattern> Pattern::parse(LangParserState& state) {
 		auto out = makeBox<Pattern>(state);

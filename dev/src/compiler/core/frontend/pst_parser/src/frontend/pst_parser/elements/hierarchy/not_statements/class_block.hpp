@@ -7,6 +7,10 @@ namespace pst {
 	 * @brief Class Block that contains Class statements.
 	 */
 	class ClassBlock final: public NotStmt {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(ClassBlock, NotStmt);
+		CLONE_SUBELEMENTS();
+
+	protected:
 		std::vector<AccessInternalAnonymous<ClassStmt>> statements;
 
 		/**
