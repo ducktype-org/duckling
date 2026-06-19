@@ -5,22 +5,22 @@ Tests:
     Cases:
       status_exit:
         Input:
-          String: "status\ns\nexit" 
+          String: "status\nexit" 
         Output:
           File: "start.out"
       help_quit:
         Input:
-          String: "help\nh\nquit" 
+          String: "--help\nexit" 
         Output:
           File: "help.out"
       run_pause_continue:
         Input:
-          String: "run\npause\ncontinue\np\nc\nq" 
+          String: "run\npause\ncontinue\nexit" 
         Output:
           File: "run.out"
       errors:
         Input:
-          String: "r\nr\nresume\np\np\nq"
+          String: "run\nrun\ncontinue\ncontinue\npause\npause\nexit"
         Output:
           File: "error.out"
 
