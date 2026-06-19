@@ -141,40 +141,41 @@ namespace vm::debugger::cli {
 										 debugger.step();
 										 return 0;
 									 }))
-		          .addSubcommand(clah::Clah("break", "sets or unsets the breakpoint")
-		                             .addPositional(clah::CategoryParser::make(
-										 "option", std::vector<std::string>{ "set", "del" }
-									 ))
-		                             .addPositional(clah::IntParser::make("line"))
-		                             .setHandler([&](const clah::ParsingResult& options) -> int {
-										 auto option = options.getPositional<std::string>(0);
-										 auto line   = (usize) options.getPositional<i64>(1);
+		          .addSubcommand(
+					  clah::Clah("break", "sets or unsets the breakpoint")
+						  .addPositional(clah::CategoryParser::make(
+							  "option", std::vector<std::string>{ "set", "del" }
+						  ))
+						  .addPositional(clah::IntParser::make("line"))
+						  .setHandler([&](const clah::ParsingResult& options) -> int {
+							  auto option = options.getPositional<std::string>(0);
+							  auto line   = base::safeIntConv<usize>(options.getPositional<i64>(1));
 
-										 if (!selected_file) {
-											 printNL("No selected file");
-											 return 0;
-										 }
+							  if (!selected_file) {
+								  printNL("No selected file");
+								  return 0;
+							  }
 
-										 bool enable = option == "set";
-										 auto result = debugger.setBreakpoint(
-											 selected_file.value(), line, enable
-										 );
+							  bool enable = option == "set";
+							  auto result
+								  = debugger.setBreakpoint(selected_file.value(), line, enable);
 
-										 if (result) {
-											 printNL(
-												 "Breakpoint in ",
-												 selected_file->name(),
-												 " line ",
-												 line,
-												 " ",
-												 (enable ? "set." : "unset.")
-											 );
-										 } else {
-											 printNL("Modyfing breakpoint failed!");
-										 }
+							  if (result) {
+								  printNL(
+									  "Breakpoint in ",
+									  selected_file->name(),
+									  " line ",
+									  line,
+									  " ",
+									  (enable ? "set." : "unset.")
+								  );
+							  } else {
+								  printNL("Modyfing breakpoint failed!");
+							  }
 
-										 return 0;
-									 }));
+							  return 0;
+						  })
+				  );
 
 		printNL(
 			"++++++++++++++++++++++++++++\n"
