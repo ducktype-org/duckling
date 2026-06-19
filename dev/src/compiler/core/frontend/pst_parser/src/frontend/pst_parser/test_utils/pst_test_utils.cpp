@@ -106,5 +106,4 @@ namespace pst {
 		else
 			return base::BAD;
 	}
-
 }
