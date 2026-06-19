@@ -1,5 +1,4 @@
 add_subdirectory(frontend)
-add_subdirectory(formatter)
 add_subdirectory(helios)
 add_subdirectory(mir)
 add_subdirectory(lir)
