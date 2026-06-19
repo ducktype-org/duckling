@@ -1,6 +1,6 @@
 Tests:
   debugger_cli_basic:
-    Run: "@{build_dir}/bin/VM debug inf_loop.dbc"
+    Run: "@{build_dir}/bin/VM debug -f inf_loop.dbc"
     TimeOut: 5 
     Cases:
       status_exit:
