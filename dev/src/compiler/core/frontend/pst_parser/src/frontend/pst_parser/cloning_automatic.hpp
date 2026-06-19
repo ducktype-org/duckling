@@ -29,7 +29,7 @@ namespace pst {
 			El& parent, AccessInternal<T, name>& sink, const AccessInternal<T, name>& source
 		) {
 			if (auto src = source.internal()) {
-				MBox<T> copy = std::move(cloneCast(src.toOpt().value()));
+				MBox<T> copy = cloneCast(src.toOpt().value());
 				copy->setParent({ &parent });
 				std::string str_name(name.value);
 				parent.addNamedChild(str_name, copy.refMut());
@@ -59,7 +59,7 @@ namespace pst {
 			El& parent, AccessInternalAnonymous<T>& sink, const AccessInternalAnonymous<T>& source
 		) {
 			if (auto src = source.internal()) {
-				MBox<T> copy = std::move(cloneCast(src.toOpt().value()));
+				MBox<T> copy = cloneCast(src.toOpt().value());
 				copy->setParent({ &parent });
 				parent.addChild(copy);
 				sink = std::move(copy);
