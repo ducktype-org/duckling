@@ -13,7 +13,11 @@ namespace pst {
 	 * `ClassName.type(...)` syntax
 	 */
 	class ClassSpecial: public ClassStmt {
+		PARENT_CLASS(ClassStmt);
+		THIS_CLASS(ClassSpecial);
+
 	protected:
+		ELEMENT_CLONE_DECL(ClassSpecial);
 		HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const override;
 
 	public:

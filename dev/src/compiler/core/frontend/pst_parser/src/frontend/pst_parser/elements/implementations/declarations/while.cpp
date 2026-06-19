@@ -5,6 +5,8 @@
 #include "preamble.hpp"
 
 namespace pst {
+	CLONE_SUB_ELEMENTS_DEF(While, name, condition, body);
+
 	MBox<While> While::parse(LangParserState& state) {
 		auto out = makeBox<While>(state);
 

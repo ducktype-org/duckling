@@ -3,6 +3,8 @@
 #include "preamble.hpp"
 
 namespace pst {
+	CLONE_SUB_ELEMENTS_DEF(RoundGroupExpr, expr);
+
 	MBox<RoundGroupExpr> RoundGroupExpr::parse(LangParserState& state) {
 		auto out = makeBox<RoundGroupExpr>(state);
 

@@ -7,6 +7,9 @@ namespace pst {
 	 * @brief Used for elements which can have different keywords like class specials.
 	 */
 	class KeywordWrapper final: public NotStmt {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(KeywordWrapper, NotStmt, key);
+
+	protected:
 		lang_def::Keyword key;
 
 	public:

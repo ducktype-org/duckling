@@ -5,6 +5,8 @@
 #include "preamble.hpp"
 
 namespace pst {
+	CLONE_SUB_ELEMENTS_DEF(Constructor, ident, params, inits, body);
+
 	MBox<Constructor> Constructor::parse(LangParserState& state) {
 		auto out = makeBox<Constructor>(state);
 
