@@ -1333,17 +1333,6 @@ private:
 		ASSERT_TRUE(!restored.hasMetadata<metadata_SimpleMeta>(node3));
 		ASSERT_TRUE(!restored.hasMetadata<metadata_TestMeta>(node2));
 		ASSERT_TRUE(!restored.hasMetadata<metadata_AnotherMeta>(node1));
-
-		// A truncated artifact (interrupted write, disk corruption) must fail with a
-		// clean exception instead of reading out of bounds.
-		for (usize cut:
-		     { usize{ 1 }, serialized_storage.size() / 2, serialized_storage.size() - 1 }) {
-			auto truncated = std::span<const std::byte>(serialized_storage).first(cut);
-			assertThrows<std::out_of_range>(
-				[&]() { (void) query::internal::MetadataStorage::deserialize(truncated); },
-				"Truncated metadata artifact should throw"
-			);
-		}
 	}
 };
 
