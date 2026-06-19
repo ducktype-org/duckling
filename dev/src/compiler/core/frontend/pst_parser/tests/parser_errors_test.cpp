@@ -16,6 +16,7 @@
 #include <frontend/pst_parser/elements/implementations/preamble.hpp>
 #include <frontend/pst_parser/elements/implementations/statements/statements_errors.hpp>
 #include <frontend/pst_parser/elements/parser_common_errors.hpp>
+#include <frontend/pst_parser/test_utils/pst_test_utils.hpp>
 #include <frontend/pst_parser/pst.hpp>
 
 #include <diagnostic/source_position.hpp>
@@ -36,63 +37,11 @@ class PSTErrorTests: public tester::TestSuite {
 
 		GenExample(std::string code): code(std::move(code)) { examples.push_back(this); }
 
-		template<typename Element>
-		static void printSubElementTypes(CRef<Element> el) {
-			std::cerr << el->elementType() << ", ";
-			for (auto& sub: el->viewChildren())
-				printSubElementTypes(base::CRef(&*sub.illegalAccess().value()));
-		}
-
-		template<typename Element>
-		static u64 countSubElements(CRef<Element> el) {
-			u64 count = 1;
-			for (auto& sub: el->viewChildren())
-				count += countSubElements(base::CRef(&*sub.illegalAccess().value()));
-			return count;
-		}
-
-		template<typename Element>
-		[[nodiscard]]
-		static base::OkBad testElementCloning(base::CRef<Element> el) {
-			u64 x1 = 0, x2 = 0, x3 = 0, x4 = 0;
-			{
-				x1         = countSubElements(el);
-				auto clone = el->clone();
-				if (!clone) std::println(std::cerr, "[Error] Cloning failed");
-				if (!clone) return base::BAD;
-				x2 = countSubElements(el);
-				x3 = countSubElements(clone.ref().toOpt().value());
-
-				std::stringstream el_dprint_ss, clone_dprint_ss;
-
-				tpc::nullAwareDprint(MRef{ el }, el_dprint_ss);
-				tpc::nullAwareDprint(clone, clone_dprint_ss);
-
-				std::string el_dprint = el_dprint_ss.str(), clone_dprint = clone_dprint_ss.str();
-
-				// This might break if positions are no longer the same
-				if (!(x1 == x3) || el_dprint != clone_dprint) {
-					std::println(std::cerr, "[Error] Cloning has bad output");
-
-					std::cerr << el_dprint << "\n" << clone_dprint << "\n";
-					printSubElementTypes(el);
-					std::cerr << "\n";
-					printSubElementTypes(clone.ref().toOpt().value());
-					std::cerr << "\n";
-				}
-			}
-			x4 = countSubElements(el);
-			if (x1 == x2 && x2 == x3 && x3 == x4)
-				return base::OK;
-			else
-				return base::BAD;
-		}
-
 		template<typename Element, typename Parser>
 		[[nodiscard]]
-		static base::OkBad testCloning(pst::PST<Element, Parser>& pst) {
+		static base::OkBad testCloning(const pst::PST<Element, Parser>& pst) {
 			if (not pst.hasErrors()) {
-				return testElementCloning(base::CRef(&*pst.getRootElement().illegalAccess().value())
+				return pst::testElementCloning(base::CRef(&*pst.getRootElement().illegalAccess().value())
 				);
 			}
 			return base::OK;

@@ -259,5 +259,4 @@ namespace pst {
 		                  CORE_ASSERT(my_count == clone_count, "Not all children cloned."););
 		return cloneElement();
 	}
-
 }
