@@ -97,6 +97,21 @@ namespace pst {
 		template<class T>
 		concept FunctionLike = std::same_as<T, Fun> || std::same_as<T, Pattern>;
 
+		template<>
+		struct StmtFinder<TemplateDecl> {
+			/**
+			 * @brief Calculates the heuristic for where a given statement ends. Can be overriden
+			 * when needed.
+			 */
+			static u64 findStatementLength(LangParserState& state) {
+				// skip template and parameters:
+				if (!state[0].is(Keyword::Template)) return 0;
+				if (!state[1].is(lexer::Token::Type::BracketGroup)) return 1;
+
+				return 3 + state.ctokens().countUntil<StmtClassifiers<TemplateDecl>::isStmtEnd>(3);
+			}
+		};
+
 		template<class T>
 		requires FunctionLike<T> struct StmtFinder<T> {
 		private:
@@ -182,6 +197,11 @@ namespace pst {
 			}
 
 			if (state[0].is(Special::Semicolon) || isSentinel(state, 0)) {
+				std::cerr << "ERROR: Empty statement\n";
+				std::cerr <<  state[0].is(Special::Semicolon) << " " << isSentinel(state, 0) << "\n";
+				std::cerr <<  state[-1].getValue().strView() << "\n";
+				std::cerr <<  state[-2].getValue().strView() << "\n";
+				std::cerr <<  state[0].getValue().strView() << "\n";
 				state.logInt(base::makeBox<EmptyStatementError>(state.getPosition()));
 				return nullptr;
 			}
@@ -199,6 +219,7 @@ namespace pst {
 				return internal::parseStmt<FunDecl>(state);
 
 			case Keyword::Template:
+				std::cerr << "Parsing template declaration\n";
 				return internal::parseStmt<TemplateDecl>(state);
 
 			case Keyword::Pattern:
@@ -217,6 +238,7 @@ namespace pst {
 				return internal::parseStmt<Using>(state);
 
 			case Keyword::Namespace:
+				std::cerr << "Parsing namespace\n";
 				return internal::parseStmt<Namespace>(state);
 
 			case Keyword::Class:
