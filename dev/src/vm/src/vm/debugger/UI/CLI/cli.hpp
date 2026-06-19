@@ -14,15 +14,17 @@ namespace vm::debugger::cli {
 	 */
 	class CLIDebugger {
 	public:
-		CLIDebugger(const std::vector<std::string>& main_args = {});
-		CLIDebugger(const fs::File& filepath, const std::vector<std::string>& main_args = {});
+		CLIDebugger();
 		CLIDebugger(const CLIDebugger&)            = delete;
 		CLIDebugger& operator=(const CLIDebugger&) = delete;
 		CLIDebugger(CLIDebugger&&)                 = delete;
 		CLIDebugger& operator=(CLIDebugger&&)      = delete;
 		~CLIDebugger()                             = default;
 
-		int run();
+		std::expected<void, api::ApiError> load(const fs::File& file);
+		std::expected<void, api::ApiError> loadDefault();
+		void                               setDefaultArgs(const ProgramRunArguments& args);
+		int                                run();
 
 	private:
 		events::Listener<api::ProcStatus> status_change_listener;
