@@ -35,6 +35,7 @@ namespace pst {
 		Pattern,
 		Block,
 		SpecifierBlock,
+		Template,
 
 		Using,
 		Alias,

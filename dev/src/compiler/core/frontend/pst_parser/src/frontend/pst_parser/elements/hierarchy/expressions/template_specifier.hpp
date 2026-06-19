@@ -16,7 +16,9 @@ namespace pst::expr {
 		NAMED_CHILD(inner, TemplateList);
 
 	public:
-		TemplateSpecifier(const LangParserState& state): ExprElement(state, 300) {}
+		TemplateSpecifier(const LangParserState& state): ExprElement(state, 300) {
+			this->element_kind = ElementKind::ExprElement;
+		}
 
 		static MBox<ExprElement> parse(LangParserState& state);
 

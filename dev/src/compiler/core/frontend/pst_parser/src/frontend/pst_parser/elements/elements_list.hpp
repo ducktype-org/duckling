@@ -68,6 +68,7 @@ namespace pst {
 	class If;
 	class While;
 	class For;
+	class TemplateDecl;
 	// Actions
 	class Return;
 	class Continue;
