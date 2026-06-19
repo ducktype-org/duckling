@@ -9,6 +9,10 @@ namespace pst::expr {
 	 * A block that has value equal to the value returned from it.
 	 */
 	class BlockExpr final: public ExprElement {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(BlockExpr, ExprElement);
+		CLONE_SUBELEMENTS();
+
+	protected:
 		NAMED_CHILD(block, CodeBlock);
 
 	public:

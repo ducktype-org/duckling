@@ -7,6 +7,10 @@ namespace pst {
 	 * @brief Represents an Tuple pattern, which contains a list of flow patterns.
 	 */
 	class TuplePattern final: public AnalysisPattern {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(TuplePattern, AnalysisPattern);
+		CLONE_SUBELEMENTS();
+
+	protected:
 		NAMED_CHILD(elements, FlowPatternList);
 
 	protected:

@@ -4,6 +4,8 @@
 #include "../preamble.hpp"
 
 namespace pst {
+	CLONE_SUB_ELEMENTS_DEF(ImportNested, names, nested_import);
+
 	MBox<ImportNested> ImportNested::parse(LangParserState& state) {
 		auto out = makeBox<ImportNested>(state);
 

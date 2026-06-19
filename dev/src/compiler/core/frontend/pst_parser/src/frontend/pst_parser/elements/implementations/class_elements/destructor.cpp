@@ -4,6 +4,8 @@
 #include "preamble.hpp"
 
 namespace pst {
+	CLONE_SUB_ELEMENTS_DEF(Destructor, body);
+
 	MBox<Destructor> Destructor::parse(LangParserState& state) {
 		auto out = makeBox<Destructor>(state);
 
