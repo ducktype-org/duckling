@@ -379,7 +379,17 @@ namespace compiler::helios {
 					out->scopes.emplace_back(ctx.query<QueryPrimaryCodeScopeFor>(element));
 			};
 
-			auto for_all_ok = pstForAll(ctx, root_unlocked.value(), grab_scopes_function);
+			// TODO: cutoff changes semantics of this query, consider making it internal somehow
+			auto cutoff_function = [](pst::Access<pst::LangElement> element) {
+				if (element->getElementKind() == pst::ElementKind::Template) {
+					// we want to skip template bodies, since
+					// they don't compile directly
+					return true;
+				}
+				return false;
+			};
+
+			auto for_all_ok = pstForAll(ctx, root_unlocked.value(), grab_scopes_function, cutoff_function);
 			if (for_all_ok.status().isBad()) {
 				// if the pstForAll failed, we mark the whole query as failed, but we still return
 				// the scopes that we managed to obtain.
