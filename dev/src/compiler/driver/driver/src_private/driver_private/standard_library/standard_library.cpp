@@ -219,12 +219,16 @@ namespace compiler::driver {
 
 			tasks.emplace_back(
 				pkg->getRootModule().illegalAccess().getID(),
-				BuildTargetLLVMStaticLibrary{ .output_file_name  = base::StrID(config.name + ".a"),
-			                                  .archiving_options = {} }
+				BuildTargetLLVMStaticLibrary{
+					.output_file_name  = base::StrID(config.name + ".a"),
+					.archiving_options = {},
+				}
 			);
 			tasks.emplace_back(
 				pkg->getRootModule().illegalAccess().getID(),
-				BuildTargetDVMLibrary{ .output_file_name = base::StrID(config.name + ".dbc") }
+				BuildTargetDVMLibrary{
+					.output_file_name = base::StrID(config.name + ".dbc"),
+				}
 			);
 		}
 		return tasks;
