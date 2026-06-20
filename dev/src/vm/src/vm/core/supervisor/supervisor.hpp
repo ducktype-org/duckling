@@ -7,7 +7,6 @@
 
 #include <expected>
 #include <shared_mutex>
-#include <unordered_map>
 
 namespace vm {
 	class IVMProcess;
@@ -19,7 +18,7 @@ namespace vm {
 
 		std::shared_mutex                        rw_process_table;
 		PID                                      next = 0;
-		std::unordered_map<PID, Box<IVMProcess>> process_table;
+		base::HashMap<PID, Box<IVMProcess>> process_table;
 
 		std::expected<Ref<IVMProcess>, api::ApiError> getProcess(PID pid);
 

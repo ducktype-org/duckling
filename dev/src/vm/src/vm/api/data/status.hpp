@@ -39,20 +39,17 @@ namespace vm::api {
 		ExecutionPanicked>;
 
 	constexpr bool isStatusTerminal(const ProcStatus& status) {
-		return std::holds_alternative<ExecutionCompleted>(status)
-		    || std::holds_alternative<ExecutionStopped>(status)
-		    || std::holds_alternative<ExecutionPanicked>(status);
+		return v_matches(status, ExecutionCompleted, ExecutionStopped, ExecutionPanicked);
 	}
 
 	constexpr bool hasExecutionStarted(const ProcStatus& status) {
-		return !(std::holds_alternative<NotStarted>(status));
+		return !v_matches(status, NotStarted);
 	}
 
 	constexpr bool isExecuting(const ProcStatus& status) {
 		// @note This function is equivalent to the following:
 		// return !isStatusTerminal(status) && hasExecutionStarted(status);
-		return std::holds_alternative<Running>(status) || std::holds_alternative<Paused>(status)
-		    || std::holds_alternative<Sleeping>(status);
+		return !(std::holds_alternative<NotStarted>(status));
 	}
 
 	constexpr bool canRespond(const ProcStatus& status) {
