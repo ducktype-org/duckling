@@ -3,6 +3,8 @@
 #include "impl_template.hpp"
 
 namespace pst {
+	CLONE_SUB_ELEMENTS_DEF(NestedImportList, elements);
+
 	MBox<NestedImportList> NestedImportList::parse(LangParserState& state) {
 		return ListParsingTemplate::parseList<
 			ImportChain,

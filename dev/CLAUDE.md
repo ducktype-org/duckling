@@ -19,7 +19,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Conventions
 
 - Commit messages: `[Component] Action: description` — components like Compiler, DVM, REPL, DevOps, QuackPack; actions Add/Fix/Refactor/Change/Remove.
-- C++23. clang-tidy enforces naming (warnings are errors): functions/methods `camelBack`, variables/members `lower_case`, constants `UPPER_CASE`, enums `CamelCase`.
+- C++23. clang-tidy enforces naming (warnings are errors): functions/methods `camelCase`, variables/members `snake_case`, constants `UPPER_CASE`, enums `PascalCase`.
 - Column limit 100; indentation is tabs aligned with spaces (TabWidth 4) per `.clang-format`.
 - Tracked-task comments must use the todo-validate format with an open issue number (the todo-validate check gates PRs — run `./toolbox.py todo-validate` for the exact format); you may add an issue via `gh` and link it in the code.
 

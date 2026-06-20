@@ -63,6 +63,7 @@ RUN apt-get update -y && \
     rsync \
     nlohmann-json3-dev \
     nano \
+    gdb \
     && \
     # Make g++-14 default
     update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-14 100 && \

@@ -4,6 +4,7 @@
 #include "preamble.hpp"
 
 namespace pst::expr {
+	CLONE_SUB_ELEMENTS_DEF(BlockExpr, block);
 
 	MBox<ExprElement> BlockExpr::parse(LangParserState& state) {
 		if (!checkNonEmpty(state)) return nullptr;

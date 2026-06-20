@@ -5,6 +5,7 @@
 #include "preamble.hpp"
 
 namespace pst::expr {
+	CLONE_SUB_ELEMENTS_DEF(MatchExpr, value_to_match, cases);
 
 	MBox<ExprElement> MatchExpr::parse(LangParserState& state) {
 		if (!checkNonEmpty(state)) return nullptr;

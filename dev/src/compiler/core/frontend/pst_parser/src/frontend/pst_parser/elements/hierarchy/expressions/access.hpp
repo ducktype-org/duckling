@@ -9,6 +9,10 @@ namespace pst::expr {
 	 * .?][name][optionally template specifier]`
 	 */
 	class Access final: public ExprElement {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(Access, ExprElement);
+		CLONE_SUBELEMENTS();
+
+	protected:
 		NAMED_CHILD(type, OperatorWrapper);  ///< either `.` or `.?` or `::`
 		NAMED_CHILD(name, IdentifierWrapper);
 		NAMED_CHILD_OPT(template_specifier, ExprElement);

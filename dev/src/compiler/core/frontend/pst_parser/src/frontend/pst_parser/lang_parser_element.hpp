@@ -1,6 +1,7 @@
 #pragma once
 
 #include "access.hpp"
+#include "cloning_decl.hpp"
 #include "element_kind.hpp"
 #include "elements/elements_list.hpp"
 #include "elements/lang_state_unmethods.hpp"
@@ -70,7 +71,41 @@ namespace pst {
 	 * @brief Base Element for all of the PST elements.
 	 */
 	class LangElement: public tpc::Element {
+		THIS_CLASS(LangElement);
+
+	protected:
+		/**
+		 * @TODO: #2938 Change position handling
+		 * @TODO: #2938 Consider what should happen with context hash
+		 * @TODO: #2938 Consider what should happen with token ownership
+		 */
+		explicit LangElement(pst::CloneDummy, const LangElement& other):
+			  source_position(other.source_position),
+			  context_hash(other.context_hash),
+			  element_kind(other.element_kind),
+			  id(PstID::next()) {}
+
+		/**
+		 * @brief Virtual function cloneElement that calls all of the parts of cloning that need to
+		 * be done.
+		 *
+		 * The implementation is should only be defined in final elements.
+		 */
+		virtual CLONE_SIGNATURE() = 0;
+
+		/**
+		 * @brief A non-virtual function that is performed on each inheritance level of elements to
+		 * clone the children elements.
+		 */
+		void cloneSubElements(const LangElement&) { return; }
+
 	public:
+		/**
+		 * @brief Returns a clone of the PST subtree starting in the current element.
+		 */
+		[[nodiscard]]
+		MBox<LangElement> clone() const;
+
 		using SubToken = base::CRef<lexer::Token>;
 
 		/**
@@ -88,6 +123,10 @@ namespace pst {
 		 * @brief Needed for access to hash methods.
 		 */
 		friend class ClassStmt;
+
+		template<typename X>
+		friend class PSTAutomatic;
+		friend class CloningUtils;
 
 		using Child = AccessLocked<LangElement>;
 
@@ -265,9 +304,6 @@ namespace pst {
 		}
 
 		virtual void acceptVisitor(PstVisitor& visitor) const;
-
-		template<typename X>
-		friend class PSTAutomatic;
 
 		[[nodiscard]]
 		const AdditionalRootData& getAdditionalRootData() const {

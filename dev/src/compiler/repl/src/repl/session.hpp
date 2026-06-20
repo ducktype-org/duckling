@@ -225,6 +225,16 @@ namespace compiler::repl {
 		void initDVM();
 
 		/**
+		 * @brief Compile the standard library and load it into the DVM process.
+		 *
+		 * Called once during initialization, after initDVM(), so that imported standard library
+		 * functions (e.g. from `core`) are callable from interactive statements. Failures are
+		 * reported as a warning and leave the session usable for code that does not rely on the
+		 * standard library.
+		 */
+		void preloadStandardLibrary();
+
+		/**
 		 * @brief Return a simple error result.
 		 */
 		ReplResult failWithMessage(std::string_view message);
@@ -247,6 +257,25 @@ namespace compiler::repl {
 		 * @brief Print session history (executed statements).
 		 */
 		void printSessionHistory() const;
+
+		/**
+		 * @brief Filter modes for visible REPL symbol printing.
+		 */
+		enum class SymbolListFilter {
+			All,
+			Variables,
+			Functions,
+		};
+
+		/**
+		 * @brief Print symbols visible from the current REPL state, optionally filtered by kind.
+		 */
+		void printVisibleSymbols(SymbolListFilter filter = SymbolListFilter::All);
+
+		/**
+		 * @brief Print detailed information for visible top-level symbols with the given name.
+		 */
+		void printSymbolDetails(std::string_view symbol_name);
 
 		/**
 		 * @brief Keeps data necessary to control resets in one place.

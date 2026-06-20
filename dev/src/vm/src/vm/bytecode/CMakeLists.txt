@@ -1,9 +1,11 @@
 add_files(
     bytecode.cpp
     builtin_types.cpp
+    const_value.cpp
     builders/instruction_builder.cpp
     serializer/serializer.cpp
     validator/function_validator.cpp
+    validator/initial_value.cpp
     validator/local_stack_database.cpp
     validator/local_stack_database_builder.cpp
     validator/type_validator.cpp
