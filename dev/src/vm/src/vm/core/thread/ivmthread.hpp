@@ -19,7 +19,7 @@ namespace vm {
 
 	/**
 	 * @brief An execution request posted by the VMProcess.
-	 * This is serves as a channel to communicate VMProcess and VMThread
+	 * This is serves as a channel to communicate VMProcess with VMThread.
 	 */
 	enum class ExecutionRequest : std::uint8_t { Resume, Pause, ExecuteOneStep, Stop, NoRequest };
 
