@@ -129,12 +129,16 @@ cmake --build build --target duckfmt -j"$(nproc)"
 
 # run the formatter unit tests (pack: formatter)
 python3 toolbox.py test -b build -R formatter_test -j"$(nproc)" --output-on-failure
+
+# run the duckfmt CLI integration tests
+python3 toolbox.py itest -b build -t "integration_tests/formatter"
 ```
 
 The unit tests are golden tests: each feeds an input string (or a
 `tests/snippets/*.duck` file) through `formatTokens` and compares against the
 expected output, also asserting idempotence (formatting the output again is a
-no-op).
+no-op). The integration tests live in `integration_tests/formatter/` and drive
+the `duckfmt` binary end to end (stdout output, `--check`, bad config).
 
 ## Limitations
 

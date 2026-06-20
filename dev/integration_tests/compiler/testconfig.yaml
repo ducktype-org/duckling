@@ -3,4 +3,3 @@ PreNode: "@{compile_duckc} && @{compile_dvm}"
 SubDirs:
   - cli
   - compilation
-  - format
