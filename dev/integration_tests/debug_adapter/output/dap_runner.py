@@ -9,12 +9,10 @@ try:
     launch_seq = client.send_request("launch", {"program": client.program_name})
     client.wait_for(responses=[launch_seq], outputs=["Running"])
 
-    # Request Pause and wait for all interleaved facts
+    # Wait for output
     client.wait_for(
         outputs=["42"]
     )
-    sys.stderr.write("--> SUCCESS: VM successfully outputed!\n")
-    sys.stderr.flush()
 
 finally:
     client.close()
