@@ -2,3 +2,4 @@ SubDirs:
   - basic
   - continue_pause
   - next
+  - output
