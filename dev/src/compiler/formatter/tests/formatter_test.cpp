@@ -86,6 +86,7 @@ public:
 		TESTER_ADD_TEST(testIncrementDecrement);
 		TESTER_ADD_TEST(testMatchArms);
 		TESTER_ADD_TEST(testFunctionBlock);
+		TESTER_ADD_TEST(testBraceBlockWithoutSemicolon);
 		TESTER_ADD_TEST(testIfElseChain);
 		TESTER_ADD_TEST(testWhileLoop);
 		TESTER_ADD_TEST(testNestedBlocks);
@@ -248,6 +249,21 @@ fun f() = {
 	y = 2;
 }
 )"));
+	}
+
+	void testBraceBlockWithoutSemicolon() {
+		// A single-statement block with no trailing `;` is still a code block: it must explode
+		// onto its own lines, and the statement after it must not glue to the closing brace.
+		check("fun fib() = {if (n < 2) {return n} return f(n)}", golden(R"(
+fun fib() = {
+	if (n < 2) {
+		return n
+	}
+	return f(n)
+}
+)"));
+		// A curly with comma-separated expressions and no statement keyword stays an inline literal.
+		check("let s = {1, 2, 3};", "let s = {1, 2, 3};\n");
 	}
 
 	void testIfElseChain() {

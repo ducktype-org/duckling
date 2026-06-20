@@ -2,6 +2,7 @@
 
 #include <base/types/ints.hpp>
 
+#include <lang_definitions/key_spec_op.hpp>
 #include <lexer/token.hpp>
 
 #include <algorithm>
@@ -96,6 +97,17 @@ namespace formatter {
 		bool isCaseKeyword(const Token& t) { return isKeyword(t) && isStr(t, "case"); }
 
 		/**
+		 * A keyword that opens a statement (`return`, `var`, `while`, `fun`, ...). Its presence in
+		 * a curly group marks the group as a code block rather than a collection literal, even when
+		 * the block holds a single statement with no trailing `;` (`{return n}`).
+		 */
+		bool isStatementKeyword(const Token& t) {
+			return isKeyword(t)
+			    && lang_def::keywordFlags(t.asKeyword())
+			           .contains(lang_def::KeywordFlagsOptions::IsStmtStart);
+		}
+
+		/**
 		 * Whether `prev` leaves us at a position where an expression may start
 		 * (so that a sign operator is unary rather than binary).
 		 */
@@ -183,6 +195,9 @@ namespace formatter {
 					if (isComment(child)) return true;
 					// Match arms need no `;`, yet a match body is still a code block.
 					if (isCaseKeyword(child)) return true;
+					// A statement keyword (`return`, `while`, ...) marks a single-statement block
+					// with no trailing `;`, e.g. `if (c) {return n}`.
+					if (isStatementKeyword(child)) return true;
 				}
 				return false;
 			}
