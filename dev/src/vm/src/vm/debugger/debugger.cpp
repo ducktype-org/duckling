@@ -17,8 +17,7 @@ namespace {
 }
 
 namespace vm::debugger {
-	Debugger::Debugger(const std::vector<std::string>& main_args):
-		  main_args(main_args),
+	Debugger::Debugger():
 		  updater([&](const api::ProcStatus& status) {
 			  on_status_changed.emitEvent(status);
 			  variant_match(status) {
@@ -37,13 +36,6 @@ namespace vm::debugger {
 			.transform_error([&](const api::ApiError& api_error) -> std::monostate {
 				throw std::runtime_error(api::errorToString(api_error));
 			});
-	}
-
-	Debugger::Debugger(const fs::File& filepath, const std::vector<std::string>& main_args):
-		  Debugger(main_args) {
-		loadFile(filepath).transform_error([&](const api::ApiError& api_error) -> std::monostate {
-			throw std::runtime_error(api::errorToString(api_error));
-		});
 	}
 
 	Debugger::~Debugger() {
@@ -104,6 +96,8 @@ namespace vm::debugger {
 		return api::loadFiles(pid, { filepath });
 	}
 
+	void Debugger::setDefaultArgs(const ProgramRunArguments& args) { main_args = args; }
+
 	std::expected<u64, api::ApiError> Debugger::getNumberOfStackFrames(api::ThreadID thread_id) {
 		return api::debuggerGetNumberOfStackFrames(pid, thread_id)
 		    .transform([](api::response::NumberOfCurrentStackFrames nosf) {
@@ -161,4 +155,8 @@ namespace vm::debugger {
 	}
 
 	std::expected<void, api::ApiError> Debugger::step() { return api::step(pid); }
+
+	std::expected<void, api::ApiError> Debugger::sendInput(const std::string& msg) {
+		return api::input(pid, msg);
+	}
 }

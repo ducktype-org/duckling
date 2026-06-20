@@ -7,6 +7,9 @@ namespace pst::expr {
 	 * @brief Element representing a string value in an expression
 	 */
 	class ExprStrValue final: public ExprElement {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(ExprStrValue, ExprElement, string);
+
+	protected:
 		tpc::StringValue string;
 
 	public:

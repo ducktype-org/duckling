@@ -3,6 +3,8 @@
 #include "../preamble.hpp"
 
 namespace pst {
+	CLONE_SUB_ELEMENTS_DEF(TuplePattern, elements);
+
 	MBox<TuplePattern> TuplePattern::parse(LangParserState& state) {
 		if (!state[0].isBracketGroup(lexer::Token::BracketType::Round)) return nullptr;
 		auto out = makeBox<TuplePattern>(state);

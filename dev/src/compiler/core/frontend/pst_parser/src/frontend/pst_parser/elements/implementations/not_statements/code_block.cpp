@@ -5,7 +5,11 @@
 #include <algorithm>
 
 namespace pst {
-
+	void CodeBlock::cloneSubElements(const CodeBlock& other) {
+		ELEMENT_CLONE_SUB_ELEMENT(statements);
+		fillSymbols();
+		ParentClass::cloneSubElements(other);
+	}
 
 	MBox<CodeBlock> CodeBlock::parse(LangParserState& state) {
 		auto order_type = state.getContext()->block_order;

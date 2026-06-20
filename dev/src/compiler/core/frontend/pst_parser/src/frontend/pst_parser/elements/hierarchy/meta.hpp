@@ -23,6 +23,11 @@ namespace pst {
 	 * @brief A general element that is a common ancestor for elements that aren't statements
 	 */
 	class NotStmt: public LangElement {
+		PARENT_CLASS(LangElement);
+
+	protected:
+		ELEMENT_CLONE_DECL(NotStmt);
+
 	public:
 		explicit NotStmt(const LangParserState& state): LangElement(state) {}
 
@@ -86,6 +91,14 @@ namespace pst {
 	 * @brief A general element that is a common ancestor of all statements.
 	 */
 	class Stmt: public LangElement {
+		PARENT_CLASS(LangElement);
+		THIS_CLASS(Stmt);
+		CLONE_SUBELEMENTS();
+
+	public:
+		ELEMENT_CLONE_DECL(Stmt, kind, implicit_return);
+
+	protected:
 		StmtKind kind;
 
 		friend void internal::makeImplicitReturn(MRef<Stmt>);
@@ -228,10 +241,14 @@ namespace pst {
 	 * @brief Statements specific to the inside of a class
 	 */
 	class ClassStmt: public Stmt {
-	protected:
-		ClassStmt(StmtKind kind, const LangParserState& state): Stmt(kind, state) {}
+		PARENT_CLASS(Stmt);
+		THIS_CLASS(ClassStmt);
 
 	protected:
+		ELEMENT_CLONE_DECL(ClassStmt);
+
+		ClassStmt(StmtKind kind, const LangParserState& state): Stmt(kind, state) {}
+
 		HashAlg& addGenericDataToHash(HashAlg&) const override;
 
 	public:

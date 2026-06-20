@@ -217,19 +217,17 @@ namespace compiler::driver {
 				"Standard library package not found in global state"
 			);
 
-			tasks.push_back(
-				PackageCompilationTask{
-					.root_module  = pkg->getRootModule().illegalAccess().getID(),
-					.build_target = BuildTargetLLVMStaticLibrary{ .output_file_name
-			                                                      = base::StrID(config.name + ".a"),
-			                                                      .archiving_options = {}, },
+			tasks.emplace_back(
+				pkg->getRootModule().illegalAccess().getID(),
+				BuildTargetLLVMStaticLibrary{
+					.output_file_name  = base::StrID(config.name + ".a"),
+					.archiving_options = {},
 				}
 			);
-			tasks.push_back(
-				PackageCompilationTask{
-					.root_module = pkg->getRootModule().illegalAccess().getID(),
-					.build_target
-					= BuildTargetDVM{ .output_file_name = base::StrID(config.name + ".dbc"), },
+			tasks.emplace_back(
+				pkg->getRootModule().illegalAccess().getID(),
+				BuildTargetDVMLibrary{
+					.output_file_name = base::StrID(config.name + ".dbc"),
 				}
 			);
 		}
@@ -241,21 +239,56 @@ namespace compiler::driver {
 	) {
 		if_opt_some(resolveStdPath(linking_options), _) {
 			std::string result;
-			for (const auto& art: getStdLibArtifacts())
+			for (const auto& art: getStdLibNativeArtifacts())
 				result += " " + art.file.getFilePath().string();
 			return result;
 		}
 		return {};
 	}
 
-	std::vector<artifacts::FileArtifact> getStdLibArtifacts() {
-		std::vector<artifacts::FileArtifact> artifacts;
+	std::vector<frontend::ModuleID> getStandardLibraryRootModules() {
+		std::vector<frontend::ModuleID> root_modules;
 		for (const auto& config: STD_PACKAGES_CONFIG) {
-			auto artifact = global_state::getRootCollection()->fileArtifactAtOrNew(
-				base::StrID(base::strConcat(config.name, ".a"))
+			auto pkg = std::find_if(
+				global_state::getPackages().begin(),
+				global_state::getPackages().end(),
+				[&](const auto& pkg_info) {
+					return pkg_info.getPackageID() == base::StrID(config.name);
+				}
 			);
-			artifacts.push_back(std::move(artifact));
+			// Unlike getStandardLibraryCompilationTasks(), missing packages are skipped.
+			if (pkg == global_state::getPackages().end()) continue;
+			root_modules.push_back(pkg->getRootModule().illegalAccess().getID());
 		}
-		return artifacts;
+		return root_modules;
+	}
+
+	namespace {
+		/**
+		 * @brief Small helper that gets the standard library artifacts from the
+		 * root collection based on the provided extension.
+		 */
+		std::vector<artifacts::FileArtifact> getStdLibArtifacts(std::string_view extension) {
+			std::vector<artifacts::FileArtifact> artifacts;
+			for (const auto& config: STD_PACKAGES_CONFIG) {
+				auto artifact = global_state::getRootCollection()->fileArtifactAtOrNew(
+					base::StrID(base::strConcat(config.name, extension))
+				);
+				artifacts.push_back(std::move(artifact));
+			}
+			return artifacts;
+		}
+	}
+
+	std::vector<artifacts::FileArtifact> getStdLibNativeArtifacts() {
+		return getStdLibArtifacts(".a");
+	}
+
+	std::vector<artifacts::FileArtifact> getStdLibDVMArtifacts() {
+		return getStdLibArtifacts(".dbc");
+	}
+
+	std::vector<artifacts::FileArtifact> getStdLibDVMDebugInfoArtifacts() {
+		return getStdLibArtifacts(".di.json");
 	}
 }

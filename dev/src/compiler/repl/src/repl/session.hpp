@@ -225,6 +225,16 @@ namespace compiler::repl {
 		void initDVM();
 
 		/**
+		 * @brief Compile the standard library and load it into the DVM process.
+		 *
+		 * Called once during initialization, after initDVM(), so that imported standard library
+		 * functions (e.g. from `core`) are callable from interactive statements. Failures are
+		 * reported as a warning and leave the session usable for code that does not rely on the
+		 * standard library.
+		 */
+		void preloadStandardLibrary();
+
+		/**
 		 * @brief Return a simple error result.
 		 */
 		ReplResult failWithMessage(std::string_view message);

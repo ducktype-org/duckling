@@ -87,39 +87,38 @@
         },
         {
             "package": "lib_a",
-            "strategy": "dvm",
+            "strategy": "dvm_lib",
             "output_file": "lib_a_dvm.dbc"
         },
         {
             "package": "lib_b",
-            "strategy": "dvm",
+            "strategy": "dvm_lib",
             "output_file": "lib_b_dvm.dbc"
         },
         {
             "package": "lib_c",
-            "strategy": "dvm",
+            "strategy": "dvm_lib",
             "output_file": "lib_c_dvm.dbc"
         },
         {
             "package": "app1",
-            "strategy": "dvm",
+            "strategy": "dvm_exe",
             "output_file": "app1_dvm.dbc"
         },
         {
             "package": "app2",
-            "strategy": "dvm",
+            "strategy": "dvm_exe",
             "output_file": "app2_dvm.dbc"
         },
         {
             "package": "app3",
-            "strategy": "dvm",
+            "strategy": "dvm_exe",
             "output_file": "app3_dvm.dbc"
         },
         {
             "package": "app3_alias",
-            "strategy": "dvm",
+            "strategy": "dvm_exe",
             "output_file": "app3_alias_dvm.dbc"
-
         },
         {
             "package": "app1",
