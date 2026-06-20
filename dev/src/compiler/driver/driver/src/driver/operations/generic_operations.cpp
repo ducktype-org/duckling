@@ -53,6 +53,7 @@
 #include <vm/loader/loader.hpp>
 
 #include <algorithm>
+#include <deque>
 #include <fstream>
 #include <iostream>
 #include <utility>
@@ -337,9 +338,10 @@ namespace compiler::driver {
 				.lir_unit  = lir::LIRUnit{},
 			};
 
-			// Track wrapper symbols to build the synthetic main that runs them in order.
-			// We preserve the original statement order to match script semantics.
-			std::vector<helios::SymID>         wrapper_symbols;
+			// Ordered actions (wrapper calls and global-variable inits) run by the synthetic main.
+			std::vector<repl::ScriptMainAction> main_actions;
+			// Backing storage for default-init global data; must outlive the synthetic main below.
+			std::deque<helios::HOUTGlobalData> deferred_global_storage;
 			base::Optional<frontend::ModuleID> parent_module_id;
 			u64                                statement_counter = 0;
 
@@ -379,8 +381,12 @@ namespace compiler::driver {
 					)) {
 					CORE_DEV_LOG(REPL, "compile_script: classified as definition\n");
 					const auto& hout_unit = repl::getDefinitionHOUTUnit(ctx, module_id);
-					auto        lir_result
-						= compileHOUTUnitToLIRModuleData(ctx, hout_unit, module_name_id);
+					// Defer mutable global initializers so they run from main in source order.
+					auto neutralized_unit = repl::neutralizeScriptGlobalInits(
+						ctx, hout_unit, deferred_global_storage, main_actions
+					);
+					auto lir_result
+						= compileHOUTUnitToLIRModuleData(ctx, neutralized_unit, module_name_id);
 					if (lir_result.hasFailed())
 						return std::unexpected("Failed to compile definition statement to LIR");
 					repl::appendScriptLIRModuleData(merged, lir_result.valueOrPanic());
@@ -393,9 +399,10 @@ namespace compiler::driver {
 					);
 					if (!wrapper_result.has_value()) return std::unexpected(wrapper_result.error());
 
-					wrapper_symbols.push_back(
-						wrapper_result->wrapper_function.declaration->original_symbol
-					);
+					main_actions.emplace_back(repl::ScriptMainWrapperCall{
+						.wrapper_symbol
+						= wrapper_result->wrapper_function.declaration->original_symbol,
+					});
 
 					auto hout_unit = repl::makeExecutableHOUTUnit(wrapper_result->wrapper_function);
 					auto lir_result
@@ -416,7 +423,7 @@ namespace compiler::driver {
 			// main-file root scope that represents the full script context.
 			auto main_scope = repl::queryScriptMainRootScope(ctx, parent_module_id.value());
 			auto main_fun
-				= repl::buildScriptMainWrapper(ctx, merged.module_id, main_scope, wrapper_symbols);
+				= repl::buildScriptMainWrapper(ctx, merged.module_id, main_scope, main_actions);
 			helios::HOUTUnit main_unit;
 			main_unit.functions.emplace_back(&main_fun);
 			auto main_lir = compileHOUTUnitToLIRModuleData(ctx, main_unit, merged.module_id);

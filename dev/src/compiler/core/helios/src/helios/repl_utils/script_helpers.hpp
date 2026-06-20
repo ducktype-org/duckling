@@ -6,9 +6,52 @@
 
 #include <string_id/string_id.hpp>
 
+#include <deque>
+#include <variant>
 #include <vector>
 
 namespace compiler::repl {
+	/**
+	 * @brief Synthetic-main action that calls an executable-statement wrapper function.
+	 */
+	struct ScriptMainWrapperCall final {
+		helios::SymID wrapper_symbol;
+	};
+
+	/**
+	 * @brief Synthetic-main action that assigns a global variable its initializer in source order.
+	 *
+	 * @note `value` references the lowered HOUT initializer expression owned by the module HOUT
+	 * (kept alive by the query cache for the whole compilation).
+	 */
+	struct ScriptMainGlobalInit final {
+		helios::SymID            global_symbol;
+		CRef<helios::code::Expr> value;
+	};
+
+	/**
+	 * @brief One sequenced action in the synthetic script `main`, preserving source order.
+	 */
+	using ScriptMainAction = std::variant<ScriptMainWrapperCall, ScriptMainGlobalInit>;
+
+	/**
+	 * @brief Defer mutable global variable initialization in a definition module's HOUT.
+	 *
+	 * Replaces each mutable global variable's eager initializer with the type's default initializer
+	 * and appends a ScriptMainGlobalInit carrying the real initializer to @p out_actions, so that
+	 * it runs from the synthetic `main` in source order instead of eagerly before it. Compile-time
+	 * constants and immutable globals are left untouched.
+	 *
+	 * @param default_init_storage Backing storage for the generated default-init global data; must
+	 * outlive the returned HOUT unit, which references entries by CRef.
+	 */
+	helios::HOUTUnit neutralizeScriptGlobalInits(
+		query::Context&                     ctx,
+		const helios::HOUTUnit&             module_hout,
+		std::deque<helios::HOUTGlobalData>& default_init_storage,
+		std::vector<ScriptMainAction>&      out_actions
+	);
+
 	/**
 	 * @brief Resolve the canonical root scope used for generated script `main`.
 	 *
@@ -57,13 +100,14 @@ namespace compiler::repl {
 	 *        It contributes one component of generated-symbol key/hash identity,
 	 *        not for choosing the emitted entrypoint name.
 	 * @param main_scope Root scope where generated `main` should be placed.
-	 * @param wrapper_symbols Ordered wrapper call list to execute from generated `main`.
+	 * @param actions Ordered actions (wrapper calls and global-variable inits) to run from `main`,
+	 *        in source order.
 	 */
 	helios::HOUTFunction buildScriptMainWrapper(
-		query::Context&                   ctx,
-		base::StrID                       script_id,
-		helios::ScopeID                   main_scope,
-		const std::vector<helios::SymID>& wrapper_symbols
+		query::Context&                      ctx,
+		base::StrID                          script_id,
+		helios::ScopeID                      main_scope,
+		const std::vector<ScriptMainAction>& actions
 	);
 
 }  // namespace compiler::repl

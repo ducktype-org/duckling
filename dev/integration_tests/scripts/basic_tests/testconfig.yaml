@@ -48,13 +48,31 @@ Tests:
     Cases:
       direct:
         mode: direct
-        Output: 
+        Output:
           String: "6\n5\n4\n3\n2\n1\n"
       vm:
         mode: vm
-        Output: 
+        Output:
           String: "6\n5\n4\n3\n2\n1\n"
       exe:
         mode: exe
-        Output: 
+        Output:
           String: "6\n5\n4\n3\n2\n1\n"
+
+  # Issue #2924: top-level `var` initializers run in source order, not eagerly before
+  # the surrounding statements. `second()` (prints 2) precedes `var b = first()` (prints 1).
+  init_exec_order:
+    folder: "init_exec_order"
+    Cases:
+      direct:
+        mode: direct
+        Output:
+          String: "2\n1\n"
+      vm:
+        mode: vm
+        Output:
+          String: "2\n1\n"
+      exe:
+        mode: exe
+        Output:
+          String: "2\n1\n"
