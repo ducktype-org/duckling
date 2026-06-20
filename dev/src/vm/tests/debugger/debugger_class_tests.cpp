@@ -389,8 +389,9 @@ private:
 	}
 
 	void inputTest() {
-		vm::debugger::Debugger debugger{ fs::File(path("input.dbc")) };
-		std::mutex             m;
+		vm::debugger::Debugger debugger;
+		debugger.loadFile(fs::File(path("input.dbc")));
+		std::mutex m;
 
 		std::condition_variable cv;
 
