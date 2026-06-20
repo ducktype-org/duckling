@@ -1,5 +1,7 @@
 #pragma once
 
+#include "base/extend_cpp/variant_match.hpp"
+
 #include <vm/core/vmvalue/vmvalue.hpp>
 
 #include <json/json.hpp>
@@ -53,8 +55,7 @@ namespace vm::api {
 	}
 
 	constexpr bool canRespond(const ProcStatus& status) {
-		return std::holds_alternative<NotStarted>(status) || std::holds_alternative<Paused>(status)
-		    || isStatusTerminal(status);
+		return v_matches(status, NotStarted, Paused) || isStatusTerminal(status);
 	}
 }
 
