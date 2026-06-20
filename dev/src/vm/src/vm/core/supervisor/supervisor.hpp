@@ -16,8 +16,8 @@ namespace vm {
 		Supervisor() = default;
 		~Supervisor();
 
-		std::shared_mutex                        rw_process_table;
-		PID                                      next = 0;
+		std::shared_mutex                   rw_process_table;
+		u64                                 next_pid = 0;
 		base::HashMap<PID, Box<IVMProcess>> process_table;
 
 		std::expected<Ref<IVMProcess>, api::ApiError> getProcess(PID pid);

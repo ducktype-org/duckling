@@ -64,7 +64,7 @@ namespace vm {
 		 * "Assumes execution status is `running`"
 		 * @return true if and only if program was in the running state and was successfully paused
 		 */
-		 bool pause();
+		bool pause();
 
 		/**
 		 * @brief Resumes the execution of a program.
@@ -72,7 +72,7 @@ namespace vm {
 		 * "Assumes execution status is `paused`"
 		 * @return true if and only if program was in the paused state and was successfully resumed
 		 */
-		 bool resume();
+		bool resume();
 
 		/**
 		 * @brief Execute one step of the program.
@@ -80,7 +80,7 @@ namespace vm {
 		 * Waits for the program to perform one step and pause.
 		 * @return true if the program successfully performed one step and paused
 		 */
-		 bool step();
+		bool step();
 
 		/**
 		 * @brief End the execution of a program.

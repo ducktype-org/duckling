@@ -21,11 +21,9 @@ namespace vm {
 				return api::Response(api::response::Empty());
 			}
 			variant_case(api::ExecutionPanicked, panicked) {
-				return std::unexpected(
-					api::ApiError(
-						api::OtherError("Execution panicked with error: " + panicked.error_message)
-					)
-				);
+				return std::unexpected(api::ApiError(
+					api::OtherError("Execution panicked with error: " + panicked.error_message)
+				));
 			}
 			variant_default {
 				return std::unexpected(api::ApiError(api::OtherError("Unexpected run status!")));

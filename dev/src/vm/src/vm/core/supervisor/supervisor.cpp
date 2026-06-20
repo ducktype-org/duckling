@@ -19,7 +19,7 @@ namespace vm {
 
 	std::expected<PID, api::ApiError> Supervisor::newProcess(bool enable_deadlock_detection) {
 		std::unique_lock lock(rw_process_table);
-		PID              pid = next++;
+		PID              pid = PID::fromU64(next_pid++);
 		process_table.emplace(
 			pid, Box<IVMProcess>::fromPointer(new SafeVMProcess(pid, enable_deadlock_detection))
 		);

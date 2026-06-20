@@ -7,8 +7,8 @@
 #include <vm/api/vm.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/core/builtin_functions.hpp>
-#include <vm/core/process/proc_io.hpp>
 #include <vm/core/process/ivmprocess.hpp>
+#include <vm/core/process/proc_io.hpp>
 #include <vm/core/safe/concurrency/synchronization_primitives.hpp>
 #include <vm/core/safe/safe_vmprocess.hpp>
 #include <vm/core/safe/safe_vmthread.hpp>

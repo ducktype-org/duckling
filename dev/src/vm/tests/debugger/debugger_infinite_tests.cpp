@@ -1,5 +1,3 @@
-#include <base/misc/int_conv.hpp>
-
 #include <tester/tester.hpp>
 
 #include <vm/api/vm.hpp>
@@ -85,10 +83,10 @@ private:
 		vm::api::stop(pid).value();    // "Stop failed (1)"
 	}
 
-	u64 stepAndGetLine(u64 pid) {
-		vm::api::step(base::safeIntConv<vm::PID>(pid)).value();  // "Step failed"
-		auto execution_position = vm::api::getCurrentPosition(base::safeIntConv<vm::PID>(pid))
-		                              .value();                  // "Get current position failed"
+	u64 stepAndGetLine(vm::PID pid) {
+		vm::api::step(pid).value();                      // "Step failed"
+		auto execution_position
+			= vm::api::getCurrentPosition(pid).value();  // "Get current position failed"
 		return execution_position.instr_number;
 	}
 };

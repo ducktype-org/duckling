@@ -58,7 +58,8 @@ private:
 		vm::debugger::Debugger debugger;
 		ASSERT_TRUE(debugger.loadFile(fs::File(path(std::string(path_name)))).has_value());
 
-		events::Listener<vm::api::ProcStatus> status_listener([&](const vm::api::ProcStatus& status) {
+		events::Listener<vm::api::ProcStatus> status_listener([&](const vm::api::ProcStatus& status
+		                                                      ) {
 			bool notify = false;
 			{
 				std::lock_guard lk(m);
@@ -157,7 +158,8 @@ private:
 			altIndex(vm::api::Paused),  // pause 2
 		};
 
-		events::Listener<vm::api::ProcStatus> status_listener([&](const vm::api::ProcStatus& status) {
+		events::Listener<vm::api::ProcStatus> status_listener([&](const vm::api::ProcStatus& status
+		                                                      ) {
 			{
 				std::lock_guard lk(m);
 				ASSERT_TRUE(status_counter < expected_statuses.size());
@@ -233,7 +235,8 @@ private:
 
 		const std::vector<int> expected_values = { 0, 0, 0 };
 
-		events::Listener<vm::api::ProcStatus> status_listener([&](const vm::api::ProcStatus& status) {
+		events::Listener<vm::api::ProcStatus> status_listener([&](const vm::api::ProcStatus& status
+		                                                      ) {
 			{
 				std::lock_guard lk(m);
 				ASSERT_TRUE(status_counter < expected_statuses.size());
@@ -334,7 +337,8 @@ private:
 
 		std::condition_variable cv;
 
-		events::Listener<vm::api::ProcStatus> status_listener([&](const vm::api::ProcStatus& status) {
+		events::Listener<vm::api::ProcStatus> status_listener([&](const vm::api::ProcStatus& status
+		                                                      ) {
 			if (status.index() == altIndex(vm::api::Paused)) cv.notify_one();
 		});
 		debugger.attachOnStatusChangedListener(status_listener);
@@ -391,7 +395,8 @@ private:
 
 		std::condition_variable cv;
 
-		events::Listener<vm::api::ProcStatus> status_listener([&](const vm::api::ProcStatus& status) {
+		events::Listener<vm::api::ProcStatus> status_listener([&](const vm::api::ProcStatus& status
+		                                                      ) {
 			if (status.index() == altIndex(vm::api::ExecutionCompleted)) cv.notify_one();
 		});
 		debugger.attachOnStatusChangedListener(status_listener);
