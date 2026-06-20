@@ -264,7 +264,7 @@ namespace vm::debugger::debug_adapter {
 
 		std::string user_input = args["expression"].get<std::string>();
 
-		auto result = debugger.input(user_input);
+		auto result = debugger.sendInput(user_input);
 
 		if (!result.has_value()) {
 			std::string error_msg

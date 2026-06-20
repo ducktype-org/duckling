@@ -403,7 +403,7 @@ private:
 
 		debugger.runMain();
 
-		debugger.input("2");
+		debugger.sendInput("2");
 
 		std::unique_lock lk(m);
 		ASSERT_TRUE(cv.wait_for(lk, std::chrono::milliseconds(100), [&] {
