@@ -59,8 +59,6 @@ Tests:
         Output:
           String: "6\n5\n4\n3\n2\n1\n"
 
-  # Issue #2924: top-level `var` initializers run in source order, not eagerly before
-  # the surrounding statements. `second()` (prints 2) precedes `var b = first()` (prints 1).
   init_exec_order:
     folder: "init_exec_order"
     Cases:
