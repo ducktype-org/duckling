@@ -88,7 +88,7 @@ private:
 			manifest_json, diagnostics::makeGlobalLoggerReporter()
 		);
 
-		ASSERT_TRUE(result.has_value());
+		ASSERT_HAS_VALUE(result);
 		ASSERT_TRUE(logger().good());
 		(void) result->verify(diagnostics::makeGlobalLoggerReporter());
 		ASSERT_EQUAL(result->packages.size(), 2u);
@@ -112,7 +112,7 @@ private:
 			manifest_json, diagnostics::makeGlobalLoggerReporter()
 		);
 
-		ASSERT_TRUE(!result.has_value());
+		ASSERT_HAS_VALUE(!result);
 		ASSERT_TRUE(logger().hasErrors());
 	}
 
@@ -135,7 +135,7 @@ private:
 			manifest_json, diagnostics::makeGlobalLoggerReporter()
 		);
 
-		ASSERT_TRUE(!result.has_value());
+		ASSERT_HAS_VALUE(!result);
 		ASSERT_TRUE(logger().hasErrors());
 	}
 
@@ -153,7 +153,7 @@ private:
 			manifest_json, diagnostics::makeGlobalLoggerReporter()
 		);
 
-		ASSERT_TRUE(!result.has_value());
+		ASSERT_HAS_VALUE(!result);
 		ASSERT_TRUE(logger().hasErrors());
 	}
 
@@ -187,7 +187,7 @@ private:
 			manifest_json, diagnostics::makeGlobalLoggerReporter()
 		);
 
-		ASSERT_TRUE(result.has_value());
+		ASSERT_HAS_VALUE(result);
 		ASSERT_TRUE(!logger().hasErrors());
 		(void) result->verify(diagnostics::makeGlobalLoggerReporter());
 		ASSERT_TRUE(hasWarning());
@@ -255,7 +255,7 @@ private:
 			task_json, diagnostics::makeGlobalLoggerReporter()
 		);
 
-		ASSERT_TRUE(result.has_value());
+		ASSERT_HAS_VALUE(result);
 		ASSERT_TRUE(logger().good());
 		ASSERT_TRUE(std::holds_alternative<BuildTargetDVMLibrary>(result->build_target));
 		const auto& target = std::get<BuildTargetDVMLibrary>(result->build_target);
@@ -273,7 +273,7 @@ private:
 			task_json, diagnostics::makeGlobalLoggerReporter()
 		);
 
-		ASSERT_TRUE(result.has_value());
+		ASSERT_HAS_VALUE(result);
 		ASSERT_TRUE(logger().good());
 		ASSERT_TRUE(std::holds_alternative<BuildTargetLLVMExecutable>(result->build_target));
 		const auto& target = std::get<BuildTargetLLVMExecutable>(result->build_target);
@@ -293,7 +293,7 @@ private:
             task_json, diagnostics::makeGlobalLoggerReporter()
         );
 
-		ASSERT_TRUE(!result.has_value());
+		ASSERT_HAS_VALUE(!result);
 		ASSERT_TRUE(logger().hasErrors());
 	}
 
@@ -314,7 +314,7 @@ private:
             task_json, diagnostics::makeGlobalLoggerReporter()
         );
 
-		ASSERT_TRUE(result.has_value());
+		ASSERT_HAS_VALUE(result);
 		ASSERT_TRUE(logger().good());
 		ASSERT_TRUE(std::holds_alternative<BuildTargetLLVMExecutable>(result->build_target));
 		const auto& target = std::get<BuildTargetLLVMExecutable>(result->build_target);
@@ -336,7 +336,7 @@ private:
             task_json, diagnostics::makeGlobalLoggerReporter()
         );
 
-		ASSERT_TRUE(!result.has_value());
+		ASSERT_HAS_VALUE(!result);
 		ASSERT_TRUE(logger().hasErrors());
 	}
 
@@ -351,7 +351,7 @@ private:
             task_json, diagnostics::makeGlobalLoggerReporter()
         );
 
-		ASSERT_TRUE(!result.has_value());
+		ASSERT_HAS_VALUE(!result);
 		ASSERT_TRUE(logger().hasErrors());
 	}
 
@@ -363,7 +363,7 @@ private:
             task_json, diagnostics::makeGlobalLoggerReporter()
         );
 
-		ASSERT_TRUE(!result.has_value());
+		ASSERT_HAS_VALUE(!result);
 		ASSERT_TRUE(logger().hasErrors());
 	}
 

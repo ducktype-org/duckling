@@ -1048,7 +1048,7 @@ private:
 
 		int                      temp_val = hr1.valueOrPanic();
 		base::Optional<Ref<int>> opt1     = Ref<int>(&temp_val);
-		ASSERT_TRUE(opt1.has_value());
+		ASSERT_HAS_VALUE(opt1);
 		ASSERT_EQUAL(1, **opt1);
 
 		query::QResult<std::string> hr2 = "Value";

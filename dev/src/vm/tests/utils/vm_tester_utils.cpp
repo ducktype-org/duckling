@@ -11,7 +11,7 @@
 
 vm::PID VmTestSuite::initProcess(bool enable_deadlock_detection) {
 	auto process_pid_response = vm::api::spawn(enable_deadlock_detection);
-	ASSERT_TRUE(process_pid_response.has_value());
+	ASSERT_HAS_VALUE(process_pid_response);
 	return process_pid_response->pid;
 }
 
@@ -52,14 +52,14 @@ void VmTestSuite::assertExecutionPanickedWith(
 ) {
 	std::string local_error        = "";
 	auto        exec_status_result = vm::api::getExecutionStatus(test_result.pid);
-	ASSERT_TRUE(exec_status_result.has_value());
+	ASSERT_HAS_VALUE(exec_status_result);
 
 	variant_match(exec_status_result.value()) {
 		variant_case(vm::api::ExecutionPanicked, panicked) {
 			ASSERT_TRUE(panicked.error_message.contains(err_piece));
 		}
 		variant_default {
-			ASSERT_TRUE(!test_result.run_result.has_value());
+			ASSERT_HAS_VALUE(!test_result.run_result);
 			fail(base::strConcat(
 				"Expected ",
 				TypeParseTraits<vm::api::ExecutionPanicked>::NAME.data(),
@@ -74,7 +74,7 @@ void VmTestSuite::loadInvalidDbc(
 ) {
 	fs::File file(path(dbc_filename));
 	auto     loaded_file_response = vm::api::loadFiles(initProcess(), { file });
-	ASSERT_TRUE(!loaded_file_response.has_value());
+	ASSERT_HAS_VALUE(!loaded_file_response);
 	auto err = loaded_file_response.error();
 	ASSERT_TRUE(std::holds_alternative<vm::api::LoadProgramError>(err));
 	auto err_str = std::get<vm::api::LoadProgramError>(err).why;
@@ -89,7 +89,7 @@ void VmTestSuite::loadInvalidDbc(
 void VmTestSuite::loadValidDbc(const std::string& dbc_filename) {
 	auto res = vm::api::loadFiles(initProcess(), { fs::File(path(dbc_filename)) });
 	if (!res.has_value()) std::cerr << nlohmann::json(res.error()) << '\n';
-	ASSERT_TRUE(res.has_value());
+	ASSERT_HAS_VALUE(res);
 }
 
 #define EXPECT_VOID(action)                          \
@@ -155,7 +155,7 @@ void VmTestSuite::handleTestResult(const TestResult& test_result, i64 exit_code)
 	}
 	ASSERT_EQUAL_PRINT(test_result.run_result.value(), exit_code);
 	const auto validation_result = vm::api::deinitAndValidate(test_result.pid);
-	ASSERT_TRUE(validation_result.has_value());
+	ASSERT_HAS_VALUE(validation_result);
 	ASSERT_TRUE(validation_result.value());
 }
 
@@ -168,14 +168,14 @@ void VmTestSuite::runFunctionSynchronouslyAsTest(
 	const base::Optional<i64>          expected_exit_code
 ) {
 	const auto run_result = vm::api::runFunctionAwait(pid, func_name, args);
-	ASSERT_TRUE(run_result.has_value());
-	ASSERT_TRUE(!vm::api::join(pid).has_value());
+	ASSERT_HAS_VALUE(run_result);
+	ASSERT_HAS_VALUE(!vm::api::join(pid));
 
-	if_opt_some(optional_input, input) { ASSERT_TRUE(vm::api::input(pid, input).has_value()); }
+	if_opt_some(optional_input, input) { ASSERT_HAS_VALUE(vm::api::input(pid, input)); }
 
 	if_opt_some(optional_output, output) {
 		auto output_response = vm::api::output(pid);
-		ASSERT_TRUE(output_response.has_value());
+		ASSERT_HAS_VALUE(output_response);
 		ASSERT_EQUAL(output, output_response->output);
 	}
 

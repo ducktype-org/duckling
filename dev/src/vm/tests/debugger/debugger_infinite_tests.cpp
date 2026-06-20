@@ -40,8 +40,8 @@ private:
 	void pausesExecution() {
 		auto pid = loadProgram("while_true.dbc");
 
-		ASSERT_TRUE(vm::api::setBreakpoint(pid, base::StrID("main"), 0, true).has_value());
-		ASSERT_TRUE(vm::api::run(pid).has_value());  // "Run failed (1)"
+		ASSERT_HAS_VALUE(vm::api::setBreakpoint(pid, base::StrID("main"), 0, true));
+		ASSERT_HAS_VALUE(vm::api::run(pid));  // "Run failed (1)"
 
 		// We want to assure that the start function already managed to call main for the test to
 		// work correctly.
@@ -49,8 +49,8 @@ private:
 			= vm::api::waitForBreakpoint(pid).value();  // "Wait for breakpoint failed (1)"
 		ASSERT_EQUAL_PRINT(0, execution_position.instr_number);
 
-		ASSERT_TRUE(vm::api::resume(pid).has_value());  // "Resume failed (1)"
-		auto position = vm::api::pause(pid).value();    // "Pause failed (1)"
+		ASSERT_HAS_VALUE(vm::api::resume(pid));       // "Resume failed (1)"
+		auto position = vm::api::pause(pid).value();  // "Pause failed (1)"
 		ASSERT_EQUAL_PRINT(position.instr_number, 4);
 
 		auto expected_next_line = [this](u64 x) -> u64 {

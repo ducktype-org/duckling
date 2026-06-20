@@ -514,7 +514,7 @@ private:
 		);
 		auto promoted
 			= getSubmodule(root->getSubmodules().illegalAccess(), base::StrID("removal_grand"));
-		ASSERT_TRUE(getRef(promoted)->getParentModule().has_value());
+		ASSERT_HAS_VALUE(getRef(promoted)->getParentModule());
 		ASSERT_EQUAL(
 			root->getModuleID(), getRef(getRef(promoted)->getParentModule().value())->getModuleID()
 		);
@@ -646,7 +646,7 @@ private:
 		ASSERT_TRUE(getRef(getSubmodule(mt->getSubmodules().illegalAccess(), base::StrID("subdir")))
 		                ->hasMainSourceFile());
 		// Check parent
-		ASSERT_TRUE(mt->getParentModule().has_value());
+		ASSERT_HAS_VALUE(mt->getParentModule());
 		ASSERT_EQUAL("parent_mod", getRef(mt->getParentModule().value())->getName().strView());
 	}
 

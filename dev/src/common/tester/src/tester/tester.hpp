@@ -49,6 +49,8 @@
 
 #define ASSERT_TRUE(actual) ASSERT_EQUAL(true, actual)
 
+#define ASSERT_HAS_VALUE(actual) ASSERT_EQUAL(true, actual.has_value())
+
 
 class SimpleTesterTest;
 
