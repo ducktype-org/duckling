@@ -49,7 +49,7 @@ namespace vm::api {
 	constexpr bool isExecuting(const ProcStatus& status) {
 		// @note This function is equivalent to the following:
 		// return !isStatusTerminal(status) && hasExecutionStarted(status);
-		return !(std::holds_alternative<NotStarted>(status));
+		return v_matches(status, Running, Paused, Sleeping);
 	}
 
 	constexpr bool canRespond(const ProcStatus& status) {
