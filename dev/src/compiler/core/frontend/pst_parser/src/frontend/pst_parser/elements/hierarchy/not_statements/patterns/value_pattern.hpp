@@ -8,6 +8,10 @@ namespace pst {
 	 * block expression or an identifier.
 	 */
 	class ValuePattern final: public AnalysisPattern {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(ValuePattern, AnalysisPattern);
+		CLONE_SUBELEMENTS();
+
+	protected:
 		NAMED_CHILD(expression, ValuePatternExprHolder);
 
 	protected:

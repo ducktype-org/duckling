@@ -4,6 +4,8 @@
 #include "var_parse.hpp"
 
 namespace pst {
+	CLONE_SUB_ELEMENTS_DEF(Const, name, type, value);
+
 	MBox<Const> Const::parse(LangParserState& state) {
 		return parseVariableTemplate<Const, Keyword::Const>(state);
 	}

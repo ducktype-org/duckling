@@ -102,6 +102,7 @@ public:
 		TESTER_ADD_TEST(testTypeLifting);
 		TESTER_ADD_TEST(testHoutElementsOrigin);
 		TESTER_ADD_TEST(testAliases);
+		TESTER_ADD_TEST(testBackendDependentCompTime);
 
 		// this is at the end
 		// so we test all the scopes created in helios tests:
@@ -3259,6 +3260,16 @@ private:
 		auto nonwild_using        = getChain("c", root_scope);
 		auto nonwild_using_target = getChain("M.c", root_scope);
 		ASSERT_EQUAL(nonwild_using, nonwild_using_target);
+	}
+
+	void testBackendDependentCompTime() {
+		auto [module, root_scope] = getModule(fs::File(path("test_modules/backend_dependent")));
+
+		// `const VALUE = getValue.func();` calls a `@backend_dependent` function. Comp time
+		// evaluation runs on the DVM, so it must select the `@dvm_only_impl` implementation
+		// (returning 10) rather than the `@native_only_impl` one (returning 20). Evaluating
+		// the const therefore checks that comp time picks the right implementation.
+		ASSERT_EQUAL(10, getConstValueAs<i32>("VALUE", root_scope));
 	}
 
 	void testScopeParentsAndDepth() {

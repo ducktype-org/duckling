@@ -282,6 +282,21 @@ namespace lang_def {
 		RUN_BEFORE_MAIN(init::registerForInit(key_spec_op::init));
 	}
 
+	/**
+	 * @brief Set/get the keyword mode used by strAsKeyword().
+	 *
+	 * @warning The mode is stored thread-locally. It is only ever observed by the thread that set
+	 * it, so it must be set on the same thread that performs the subsequent tokenization and
+	 * parsing reads (this holds today: a PST tokenizes and parses within one synchronous call, and
+	 * the DuckBC loader tokenizes and parses each file sequentially on one thread).
+	 *
+	 * In particular, do NOT set it in the main thread expecting worker threads to observe the value,
+	 * a worker reading it would see its own default instead. It is thread-local precisely
+	 * because workers tokenize in parallel on the query thread pool and a shared global would be a
+	 * data race.
+	 *
+	 * @TODO: #2943 remove this global state
+	 */
 	void        setKeywordMode(KeywordMode mode);
 	KeywordMode getKeywordMode();
 

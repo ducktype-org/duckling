@@ -10,6 +10,10 @@ namespace pst {
 	 * @brief Class constructor element.
 	 */
 	class CopyConstructor final: public ClassSpecial {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(CopyConstructor, ClassSpecial);
+		CLONE_SUBELEMENTS();
+
+	protected:
 		NAMED_CHILD(params, ParamList);
 		NAMED_CHILD(inits, InitList);
 		NAMED_CHILD(body, CodeBlockOrStmt);
