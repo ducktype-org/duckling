@@ -137,6 +137,8 @@ namespace vm::debugger::debug_adapter {
 			handleContinue(req);
 		else if (cmd == "next")
 			handleNext(req);
+		else if (cmd == "evaluate")
+			handleEvaluate(req);
 		else
 			sendResponse(req, false, { { "message", "Unknown command" } });
 	}
@@ -255,5 +257,24 @@ namespace vm::debugger::debug_adapter {
 		}
 
 		sendResponse(req, true);
+	}
+
+	void DebugAdapter::handleEvaluate(const nlohmann::json& req) {
+		auto args = req["arguments"];
+
+		std::string userInput = args["expression"].get<std::string>();
+
+		auto result = debugger.input(userInput);
+
+		if (!result.has_value()) {
+			std::string error_msg
+				= "Failed to process input: " + api::errorToString(result.error());
+			sendResponse(req, false, { { "message", error_msg } });
+			return;
+		}
+		nlohmann::json response_body
+			= { { "result", "Input accepted: " + userInput }, { "variablesReference", 0 } };
+
+		sendResponse(req, true, response_body);
 	}
 }

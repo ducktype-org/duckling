@@ -155,4 +155,8 @@ namespace vm::debugger {
 	}
 
 	std::expected<void, api::ApiError> Debugger::step() { return api::step(pid); }
+
+	std::expected<void, api::ApiError> Debugger::input(std::string msg) {
+		return api::input(pid, msg);
+	}
 }
