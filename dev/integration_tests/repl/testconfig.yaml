@@ -1,4 +1,5 @@
 disable-bracketed-paste: "--disable-bracketed-paste"
+PreNode: "@{compile_duckc}"
 
 Run: "@{duckc_path} repl @{disable-bracketed-paste}"
 

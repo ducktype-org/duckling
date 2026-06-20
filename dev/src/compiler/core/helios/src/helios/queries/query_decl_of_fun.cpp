@@ -20,6 +20,7 @@
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/symbol_type.hpp>
 #include <helios/tsh/type_interface.hpp>
+#include <helios_private/attributes/backend_dependent.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/errors/dia_interactive_elements.hpp>
 #include <helios_private/hout_creation/definition_generation/class_constructors.hpp>
@@ -179,6 +180,29 @@ namespace compiler::helios {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryReturnTypeDeduction);
+
+	/**
+	 * This function verifies if the applied attributes are semantically correct
+	 * on the function. For example we check if the BackendDependent attribute has
+	 * some implementations.
+	 * This is needed, because some attributes can have additional requirements on the function
+	 * declaration and the surrounding code.
+	 */
+	static void verifyFunctionAttributes(
+		query::Context& ctx, pst::Access<pst::Stmt> pst_stmt, const HOUTFunctionDeclaration& fun_decl
+	) {
+		if (pst_stmt->getAttributes().empty()) return;
+
+		if (hasAttribute<attributes::DVMOnlyImpl>(fun_decl.original_symbol)
+		    or hasAttribute<attributes::NativeOnlyImpl>(fun_decl.original_symbol)) {
+			verifyBackendImplAttrUsage(ctx, fun_decl);
+			return;
+		}
+		if (hasAttribute<attributes::BackendDependent>(fun_decl.original_symbol)) {
+			verifyBackendDependentAttrUsage(ctx, fun_decl);
+			return;
+		}
+	}
 
 	struct IMPLEMENT_QUERY(QueryDeclOfFun, query::QResult<HOUTFunctionDeclaration>) {
 		struct DeclarationVisitor final: public pst::PstVisitorPanicky {
@@ -455,7 +479,9 @@ namespace compiler::helios {
 					variant_case_novalue(PstSymbolData) {
 						DeclarationVisitor decl_maker(ctx, key);
 						stmt(ctx, key).value()->acceptVisitor(decl_maker);
-						return std::move(decl_maker.out).value();
+						auto result = std::move(decl_maker.out).value();
+						verifyFunctionAttributes(ctx, stmt(ctx, key).value(), result);
+						return result;
 					}
 					variant_case(defgen::GeneratedSymbolData, generated_data) {
 						variant_match(generated_data.data) {

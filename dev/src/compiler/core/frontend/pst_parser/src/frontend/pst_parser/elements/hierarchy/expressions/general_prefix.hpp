@@ -10,6 +10,7 @@ namespace pst::expr {
 	 * Excludes `not`
 	 */
 	class GeneralPrefix final: public PrefixOperator {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(GeneralPrefix, PrefixOperator);
 		using Lower = ChainExpr;
 		using Self  = GeneralPrefix;
 

@@ -3,6 +3,8 @@
 #include "../preamble.hpp"
 
 namespace pst {
+	CLONE_SUB_ELEMENTS_DEF(ValuePattern, expression);
+
 	MBox<ValuePattern> ValuePattern::parse(LangParserState& state) {
 		if (!state[0].isNumLiteralGroup() && !state[0].isString() && !state[0].is(Keyword::True)
 		    && !state[0].is(Keyword::False)

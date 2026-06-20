@@ -5,6 +5,8 @@
 #include "preamble.hpp"
 
 namespace pst {
+	CLONE_SUB_ELEMENTS_DEF(Class, name, base, implements, body);
+
 	bool ExprParserHelper::untilExtendsEnd(const TokenStream& state, i64 fwd = 0) {
 		return state[fwd].is(Special::Semicolon) || state[fwd].is(NamedOperator::Assign)
 		    || internal::Conditions::isImplementsOrBlockGroup(state, fwd);

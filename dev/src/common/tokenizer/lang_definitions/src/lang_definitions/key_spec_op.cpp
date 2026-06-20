@@ -9,7 +9,16 @@
 
 namespace lang_def {
 	namespace {
-		KeywordMode keyword_mode;
+		/**
+		 * Global tokenization state.
+		 *
+		 * @note This is thread local, because workers tokenize code in parallel, so a shared global
+		 * here would be a data race. It can be thread-local because the mode is always set before
+		 * tokenization.
+		 *
+		 * @TODO: #2943 remove this global state
+		 */
+		thread_local KeywordMode keyword_mode = DEFAULT_MODE;
 	}
 
 	void setKeywordMode(KeywordMode mode) { keyword_mode = mode; }

@@ -86,6 +86,10 @@ namespace vm::builtins {
 
 	// ============================== BUILTIN IMPLEMENTATIONS ==============================
 
+	void FunctionHandlers::builtinAbort(SafeVMThread& /*thread*/) {
+		throw vm::exceptions::VMPanicException{};
+	}
+
 	i64 FunctionHandlers::builtinInputI64(SafeVMThread& thread) {
 		thread.setProcessStatus(api::Sleeping{});
 		auto return_value = thread.safe_process.getIO().getInput<i64>(thread);
@@ -284,6 +288,7 @@ namespace vm::builtins {
 
 			FOR_EACH(
 				CASE_FUNC,
+				Abort,
 				InputI64,
 				OutputI64,
 				OutputI32,
@@ -313,6 +318,10 @@ namespace vm::builtins {
 		-> CRef<std::unordered_map<BuiltinFunctionID, std::pair<base::StrID, code::FuncSignature>>> {
 		static const std::unordered_map<BuiltinFunctionID, std::pair<base::StrID, code::FuncSignature>>
 			map{
+				{
+					BuiltinFunctionID::Abort,
+					{ base::StrID("abort"), code::FuncSignature({}, {}) },
+				},
 				{
 					BuiltinFunctionID::InputI64,
 					{ base::StrID("builtin_input_i64"),

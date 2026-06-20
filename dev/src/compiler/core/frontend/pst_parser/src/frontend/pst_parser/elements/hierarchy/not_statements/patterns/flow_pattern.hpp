@@ -7,8 +7,12 @@ namespace pst {
 	 * @brief Represents a flow pattern.
 	 */
 	class FlowPattern final: public NotStmt {
-		NAMED_CHILD_OPT(as_identifier, IdentifierWrapper);
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(FlowPattern, NotStmt);
+		CLONE_SUBELEMENTS();
+
+	protected:
 		NAMED_CHILD(pattern, AnalysisPattern);
+		NAMED_CHILD_OPT(as_identifier, IdentifierWrapper);
 		NAMED_CHILD_OPT(type_constraint, UniversalExprHolder);
 
 	protected:

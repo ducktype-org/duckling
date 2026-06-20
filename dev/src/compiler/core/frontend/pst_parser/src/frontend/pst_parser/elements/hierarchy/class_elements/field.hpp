@@ -8,6 +8,10 @@ namespace pst {
 	 * @brief Class field element.
 	 */
 	class Field final: public ClassStmt {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(Field, ClassStmt, is_mutable);
+		CLONE_SUBELEMENTS();
+
+	protected:
 		bool is_mutable = true;
 		NAMED_CHILD(name, IdentifierWrapper);
 		NAMED_CHILD(type, CommaExprHolder);

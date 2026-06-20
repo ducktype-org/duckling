@@ -4,6 +4,8 @@
 
 namespace pst {
 	class Redo final: public Action {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(Redo, Action);
+
 	public:
 		explicit Redo(const LangParserState& state): Action(state) {}
 
