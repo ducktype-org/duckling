@@ -13,6 +13,4 @@
 		this->element_kind = ElementKind::ClassSpecial;                                   \
 	}
 
-#define CLASS_STMT_PARSE(class_name) static MBox<class_name> parse(LangParserState& state)
-
 #define PARSE_DECL() static MBox<ThisClass> parse(LangParserState& state)

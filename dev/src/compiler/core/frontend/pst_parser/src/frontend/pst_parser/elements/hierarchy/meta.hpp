@@ -235,28 +235,4 @@ namespace pst {
 	class_name(const LangParserState& state): Stmt(StmtKind::class_name, state) { \
 		this->element_kind = element_kind_;                                       \
 	}
-
-	// /**
-	 // * @brief Statements specific to the inside of a class
-	 // */
-	// class ClassStmt: public Stmt {
-		// PARENT_CLASS(Stmt);
-		// THIS_CLASS(ClassStmt);
-
-	// protected:
-		// ELEMENT_CLONE_DECL(ClassStmt);
-
-		// ClassStmt(StmtKind kind, const LangParserState& state): Stmt(kind, state) {}
-
-		// HashAlg& addGenericDataToHash(HashAlg&) const override;
-
-	// public:
-		// static MBox<ClassStmt> parse(LangParserState& state);
-
-		// [[nodiscard]]
-		// std::string elementType() const override {
-			// return "Class Element";
-		// }
-	// };
-
 }

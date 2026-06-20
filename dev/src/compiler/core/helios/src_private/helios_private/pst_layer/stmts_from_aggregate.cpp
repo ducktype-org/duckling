@@ -1,6 +1,5 @@
 #include "stmts_from_aggregate.hpp"
 
-#include <frontend/pst_parser/elements/hierarchy/class_elements/class_specifier_block.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/top_level.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/class_block.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
