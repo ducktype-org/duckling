@@ -1,7 +1,7 @@
 import core.builtins.*;
 
-# Regression test for issue #2924: a top-level `var` initializer must run in source
-# order, interleaved with the surrounding top-level statements, not eagerly before them.
+# A top-level `var` initializer must run in source order, interleaved with the
+# surrounding top-level statements, not eagerly before them.
 
 fun first() -> i64 = {
 	builtin_output_i64(1);
