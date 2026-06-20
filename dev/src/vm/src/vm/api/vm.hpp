@@ -209,7 +209,7 @@ namespace vm::api {
 
 	/**
 	 * @brief Attaches Listener to the on_status_changed Emitter
-	 * @return Nothing if attached succesfully
+	 * @return Nothing if attached successfully
 	 */
 	std::expected<void, ApiError> attachStatusListener(
 		PID pid, Ref<events::Listener<ProcStatus>> listener
@@ -217,7 +217,7 @@ namespace vm::api {
 
 	/**
 	 * @brief Attaches Listener to the output emitter
-	 * @return Nothing if attached succesfully
+	 * @return Nothing if attached successfully
 	 */
 	std::expected<void, ApiError> attachOutputListener(
 		PID pid, Ref<events::Listener<std::string>> listener

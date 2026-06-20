@@ -115,7 +115,7 @@ private:
 		for (auto& type: code.types) vm::code::serializeType(type, std::cerr);
 		for (auto& func: code.functions) vm::code::serializeFunction(func, std::cerr);
 		auto result = runTestOnVmGetResult(code, input, output, args);
-		ASSERT_TRUE(not result.run_result.has_value());
+		ASSERT_NO_VALUE(result.run_result);
 		auto err_str = to_string(nlohmann::json(result.run_result.error()));
 		if (not err_str.contains(fail_msg)) {
 			fail(base::strConcat(
@@ -123,7 +123,7 @@ private:
 			));
 		}
 		const auto validation_result = vm::api::deinitAndValidate(result.pid);
-		ASSERT_TRUE(validation_result.has_value());
+		ASSERT_HAS_VALUE(validation_result);
 	}
 
 	void simpleTest() { runTest("simple", {}, {}, {}, 42); }
