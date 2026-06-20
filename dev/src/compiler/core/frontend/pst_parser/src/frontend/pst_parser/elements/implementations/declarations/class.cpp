@@ -1,7 +1,7 @@
 #include "../../hierarchy/declarations/class.hpp"
 
 #include "../../hierarchy/expressions/ternary.hpp"
-#include "../../hierarchy/not_statements/class_block.hpp"
+#include "../../hierarchy/not_statements/code_block.hpp"
 #include "preamble.hpp"
 
 namespace pst {
@@ -25,6 +25,7 @@ namespace pst {
 		PST_NEW_CONTEXT({
 			state.setContextClassName(out->name.internal()->unwrap());
 			state.setContextBlockOrdering(BlockOrderType::Unordered);
+			state.setContextStmt(StmtContext::Class);
 			PARSE().one(&out->body);
 		})
 

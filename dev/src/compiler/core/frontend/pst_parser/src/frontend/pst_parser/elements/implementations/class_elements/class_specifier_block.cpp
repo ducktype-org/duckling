@@ -1,33 +1,33 @@
-#include "../../hierarchy/class_elements/class_specifier_block.hpp"
+// #include "../../hierarchy/class_elements/class_specifier_block.hpp"
 
-#include "../../hierarchy/not_statements/class_block.hpp"
-#include "preamble.hpp"
+// #include "../../hierarchy/not_statements/class_block.hpp"
+// #include "preamble.hpp"
 
-namespace pst {
-	CLONE_SUB_ELEMENTS_DEF(ClassSpecifierBlock, block);
+// namespace pst {
+	// CLONE_SUB_ELEMENTS_DEF(ClassSpecifierBlock, block);
 
-	HashAlg& ClassSpecifierBlock::addElementDataToStableHash(HashAlg& partial_hash) const {
-		return partial_hash;
-	}
+	// HashAlg& ClassSpecifierBlock::addElementDataToStableHash(HashAlg& partial_hash) const {
+		// return partial_hash;
+	// }
 
-	MBox<ClassSpecifierBlock> ClassSpecifierBlock::parse(LangParserState& state) {
-		auto out = makeBox<ClassSpecifierBlock>(state);
+	// MBox<ClassSpecifierBlock> ClassSpecifierBlock::parse(LangParserState& state) {
+		// auto out = makeBox<ClassSpecifierBlock>(state);
 
-		PARSE().one(&out->block);
+		// PARSE().one(&out->block);
 
-		PST_RETURN out;
-	}
+		// PST_RETURN out;
+	// }
 
-	void ClassSpecifierBlock::dprint(std::ostream& out) const {
-		out << "{";
+	// void ClassSpecifierBlock::dprint(std::ostream& out) const {
+		// out << "{";
 
-		out << R"("code block": )";
-		nullAwareDprint(block, out);
+		// out << R"("code block": )";
+		// nullAwareDprint(block, out);
 
-		out << "}";
-	}
+		// out << "}";
+	// }
 
-	void ClassSpecifierBlock::acceptVisitor(PstVisitor& visitor) const {
-		visitor.visitClassSpecifierBlock(*this);
-	}
-}
+	// void ClassSpecifierBlock::acceptVisitor(PstVisitor& visitor) const {
+		// visitor.visitClassSpecifierBlock(*this);
+	// }
+// }

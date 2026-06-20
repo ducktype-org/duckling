@@ -80,7 +80,6 @@ namespace pst {
 		CopyConstructor,
 		Destructor,
 		ClassSpecifierBlock,
-		NonClassStmt
 	};
 
 	namespace internal {
@@ -237,27 +236,27 @@ namespace pst {
 		this->element_kind = element_kind_;                                       \
 	}
 
-	/**
-	 * @brief Statements specific to the inside of a class
-	 */
-	class ClassStmt: public Stmt {
-		PARENT_CLASS(Stmt);
-		THIS_CLASS(ClassStmt);
+	// /**
+	 // * @brief Statements specific to the inside of a class
+	 // */
+	// class ClassStmt: public Stmt {
+		// PARENT_CLASS(Stmt);
+		// THIS_CLASS(ClassStmt);
 
-	protected:
-		ELEMENT_CLONE_DECL(ClassStmt);
+	// protected:
+		// ELEMENT_CLONE_DECL(ClassStmt);
 
-		ClassStmt(StmtKind kind, const LangParserState& state): Stmt(kind, state) {}
+		// ClassStmt(StmtKind kind, const LangParserState& state): Stmt(kind, state) {}
 
-		HashAlg& addGenericDataToHash(HashAlg&) const override;
+		// HashAlg& addGenericDataToHash(HashAlg&) const override;
 
-	public:
-		static MBox<ClassStmt> parse(LangParserState& state);
+	// public:
+		// static MBox<ClassStmt> parse(LangParserState& state);
 
-		[[nodiscard]]
-		std::string elementType() const override {
-			return "Class Element";
-		}
-	};
+		// [[nodiscard]]
+		// std::string elementType() const override {
+			// return "Class Element";
+		// }
+	// };
 
 }

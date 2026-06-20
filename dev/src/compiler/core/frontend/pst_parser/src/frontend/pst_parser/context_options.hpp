@@ -17,4 +17,14 @@ namespace pst {
 		Ordered,
 		Undefined,
 	};
+
+	/**
+	 * @brief Current statement context, used to choose Statement choice
+	 * 
+	 */
+	enum class StmtContext {
+		Normal,
+		Class,
+		Undefined,
+	};
 }
