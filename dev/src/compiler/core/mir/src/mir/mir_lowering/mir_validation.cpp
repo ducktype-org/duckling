@@ -32,24 +32,129 @@ namespace compiler::mir {
 			present.at(id.asInt()) = false;
 			return id;
 		}
+
+		bool empty() { return stack.empty(); }
 	};
 
 	struct Transfer {
-		std::vector<LocalID> moved_inside;
-		std::vector<LocalID> created_inside;
+		std::vector<MIRLocalRef> moved_inside;
+		std::vector<MIRLocalRef> created_inside;
 	};
 
-	base::OkBad validateMoves(query::Context&, const Function& fun) {
-		enum class Status { Alive, Moved, MaybeMoved };
-		using LocalStatusMap = base::HashMap<LocalID, Status>;
+	Transfer computeTransfer(const Block& block) {
+		Transfer transfer;
+		for (const auto& stmt: block.instructions) {
+			for (auto& flag: stmt.flags) {
+				switch (flag.flag) {
+				case OperationFlag::Flag::Move:
+					transfer.moved_inside.push_back(flag.local);
+					break;
+				case OperationFlag::Flag::Construct:
+					transfer.created_inside.push_back(flag.local);
+					break;
+				default:
+					break;
+				}
+			}
+		}
+		for (auto& flag: block.terminator.flags) {
+			switch (flag.flag) {
+			case OperationFlag::Flag::Move:
+				transfer.moved_inside.push_back(flag.local);
+				break;
+			case OperationFlag::Flag::Construct:
+				transfer.created_inside.push_back(flag.local);
+				break;
+			default:
+				break;
+			}
+		}
+		return transfer;
+	}
 
+	enum class Status { Alive, Moved, MaybeMoved };
+	using LocalStatusMap = base::HashMap<MIRLocalRef, Status>;
+
+	void applyTransfer(const Transfer& transfer, LocalStatusMap& in_map, LocalStatusMap& out_map) {
+		out_map = in_map;
+		for (auto& local: transfer.created_inside) out_map.insertOrAssign(local, Status::Alive);
+		for (auto& local: transfer.moved_inside) {
+			if (out_map.contains(local)) {
+				if (out_map.at(local) == Status::Alive)
+					out_map.insertOrAssign(local, Status::Moved);
+				else if (out_map.at(local) == Status::Moved)
+					out_map.insertOrAssign(local, Status::MaybeMoved);
+			} else {
+				out_map.insertOrAssign(local, Status::MaybeMoved);
+			}
+		}
+	}
+
+	void calculateInputMapFromPredecessors(
+		const std::vector<LocalStatusMap>& predecessors_out_maps, LocalStatusMap& result
+	) {
+		if (predecessors_out_maps.empty()) return;
+
+		result = predecessors_out_maps.front();
+		for (usize i = 1; i < predecessors_out_maps.size(); i++) {
+			for (const auto& [local, status]: predecessors_out_maps.at(i)) {
+				if (auto result_status_opt = result.atMaybe(local)) {
+					auto result_status = *result_status_opt.value();
+					switch (result_status) {
+					case Status::Alive:
+						switch (status) {
+						case Status::Moved:
+							result.insertOrAssign(local, Status::MaybeMoved);
+							break;
+						case Status::MaybeMoved:
+							result.insertOrAssign(local, Status::MaybeMoved);
+							break;
+						case Status::Alive:
+							// We do nothing
+							break;
+						}
+						break;
+					case Status::Moved:
+						switch (status) {
+						case Status::Alive:
+							result.insertOrAssign(local, Status::MaybeMoved);
+							break;
+						case Status::MaybeMoved:
+							result.insertOrAssign(local, Status::MaybeMoved);
+							break;
+						case Status::Moved:
+							break;
+						}
+						break;
+					case Status::MaybeMoved:
+						// We do nothing as we won't change this
+						break;
+					}
+				} else {
+					result.erase(local);
+				}
+			}
+		}
+	}
+
+	base::OkBad validateMoves(query::Context&, const Function& fun) {
 		base::HashMap<BlockID, LocalStatusMap> in_local_status;
 		base::HashMap<BlockID, LocalStatusMap> out_local_status;
 		BlockWorklist                          worklist(fun.blocks.size());
 		base::HashMap<BlockID, Transfer>       block_transfer_functions;
 
 		for (const auto& block: fun.blocks)  // Fill with blocks.
-		                                     // variables_status.emplace(block.key, LocalSet());
+			block_transfer_functions.put(block.key, computeTransfer(block.value));
+
+		worklist.pushBack(fun.block_order.front());
+		in_local_status.put(fun.block_order.front()) = {};
+
+		while (not worklist.empty()) {
+			auto        block_id  = worklist.pop();
+			CRef<Block> block     = fun.blocks.at(block_id);
+			auto&       in_status = in_local_status.at(block_id);
+			auto&       transfer  = block_transfer_functions.at(block_id);
+		}
 	}
 
 	base::OkBad validateShadowing(query::Context& ctx, const Function& fun) {
