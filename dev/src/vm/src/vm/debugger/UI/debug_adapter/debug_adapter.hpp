@@ -52,5 +52,6 @@ namespace vm::debugger::debug_adapter {
 		void handlePause(const nlohmann::json& req);
 		void handleContinue(const nlohmann::json& req);
 		void handleNext(const nlohmann::json& req);
+		void handleEvaluate(const nlohmann::json& req);
 	};
 }
