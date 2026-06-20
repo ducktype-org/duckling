@@ -1,7 +1,6 @@
 #include "stmts_from_aggregate.hpp"
 
 #include <frontend/pst_parser/elements/hierarchy/declarations/top_level.hpp>
-#include <frontend/pst_parser/elements/hierarchy/not_statements/class_block.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/expand.hpp>
 #include <helios_private/pst_layer/macros.hpp>
@@ -15,45 +14,6 @@
 namespace compiler::helios {
 
 	// @TODO: in the future: make some base for all elements that can be used here
-
-	namespace internal {
-		void visitClassStmts(
-			query::Context&                   ctx,
-			StmtList<pst::ClassStmt>&         out,
-			pst::AccessLocked<pst::ClassStmt> stmt
-		) {
-			if (auto access_block_opt = stmt.unlock(ctx).dynamicCast<pst::ClassSpecifierBlock>()) {
-				auto access_block = access_block_opt.value();
-				for (auto e: *access_block->getBlock().unlock(ctx)) visitClassStmts(ctx, out, e);
-			} else
-				out.push_back(stmt);
-		}
-
-		/**
-		 * @brief Returns all children statements of given ClassBlock
-		 * Flattens access specifier blocks as their information is included in statements.
-		 *
-		 * @return StmtList
-		 */
-		StmtList<pst::ClassStmt> getChildStmtsOfClassBlock(
-			query::Context& ctx, pst::AccessLocked<pst::LangElement> elem
-		) {
-			if (auto class_block = elem.unlock(ctx).dynamicCast<pst::ClassBlock>()) {
-				StmtList<pst::ClassStmt> out;
-				for (auto&& e: *class_block.value()) internal::visitClassStmts(ctx, out, e);
-				return out;
-			} else {
-				IF_BUILD_TYPE_DEV({
-					const auto& element = *elem.unlock(ctx);
-					CORE_PANIC(base::strConcat(
-						"Bad Duckling Element in `getChildStmtsOfClassBlock`: ",
-						typeid(element).name()
-					));
-				});
-			}
-			CORE_UNREACHABLE();
-		}
-	}
 
 	StmtList<> getStmtsFromStmtAggregate(
 		query::Context& ctx, pst::AccessLocked<pst::LangElement> locked
@@ -80,9 +40,6 @@ namespace compiler::helios {
 				output.emplace_back(code_block_or_stmt_val->getStmt());
 		} else if (auto top_level = elem.dynamicCast<pst::TopLevel>()) {
 			for (auto e: top_level.value()->getStatements()) output.emplace_back(e);
-		} else if (elem.dynamicCast<pst::ClassBlock>()) {
-			auto elements = internal::getChildStmtsOfClassBlock(ctx, elem);
-			for (auto e: elements) output.emplace_back(e);
 		} else {
 			IF_BUILD_TYPE_DEV({
 				const auto& element = *elem;

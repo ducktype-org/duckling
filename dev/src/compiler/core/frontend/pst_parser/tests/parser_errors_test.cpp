@@ -130,7 +130,9 @@ class PSTErrorTests: public tester::TestSuite {
 		bool operator()() override {
 			auto parsed = pst::PST<Element, Parser>::fromContentsWithArgs(
 				this->code,
-				makeBox<pst::LangParserContext>(class_name, pst::BlockOrderType::Unordered, pst::StmtContext::Class),
+				makeBox<pst::LangParserContext>(
+					class_name, pst::BlockOrderType::Unordered, pst::StmtContext::Class
+				),
 				hashing::ComponentHash{}
 			);
 			return ((not parsed.hasErrors()) == good && testCloning(parsed).isOk());

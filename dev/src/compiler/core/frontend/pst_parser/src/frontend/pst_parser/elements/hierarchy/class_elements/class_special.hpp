@@ -22,6 +22,7 @@ namespace pst {
 
 	public:
 		ClassSpecial(StmtKind kind, const LangParserState& state): Stmt(kind, state) {}
+
 		PARSE_DECL();
 
 		[[nodiscard]]

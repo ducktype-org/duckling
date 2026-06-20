@@ -16,7 +16,9 @@ namespace pst {
 		BlockOrderType block_order;
 		StmtContext    stmt_context;
 
-		LangParserContext(base::StrID class_name, BlockOrderType block_order, StmtContext stmt_context):
+		LangParserContext(
+			base::StrID class_name, BlockOrderType block_order, StmtContext stmt_context
+		):
 			  class_name(class_name),
 			  block_order(block_order),
 			  stmt_context(stmt_context) {}
@@ -27,11 +29,15 @@ namespace pst {
 			  stmt_context(other->stmt_context) {}
 
 		static Box<LangParserContext> programBaseContext() {
-			return base::makeBox<LangParserContext>(base::StrID(""), BlockOrderType::Unordered, StmtContext::Normal);
+			return base::makeBox<LangParserContext>(
+				base::StrID(""), BlockOrderType::Unordered, StmtContext::Normal
+			);
 		}
 
 		static Box<LangParserContext> scriptBaseContext() {
-			return base::makeBox<LangParserContext>(base::StrID(""), BlockOrderType::Ordered, StmtContext::Normal);
+			return base::makeBox<LangParserContext>(
+				base::StrID(""), BlockOrderType::Ordered, StmtContext::Normal
+			);
 		}
 
 		[[nodiscard]]

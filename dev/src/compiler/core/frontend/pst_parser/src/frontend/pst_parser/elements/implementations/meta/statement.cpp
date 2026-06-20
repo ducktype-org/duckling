@@ -1,8 +1,8 @@
+#include "../../hierarchy/class_elements/all_class_elements.hpp"
 #include "../../hierarchy/declarations/all_declarations.hpp"
 #include "../../hierarchy/lists/all_lists.hpp"                    // IWYU pragma: keep
 #include "../../hierarchy/not_statements/all_not_statements.hpp"  // IWYU pragma: keep
 #include "../../hierarchy/statements/all_statements.hpp"
-#include "../../hierarchy/class_elements/all_class_elements.hpp"
 #include "meta_errors.hpp"
 #include "preamble.hpp"
 
@@ -248,7 +248,7 @@ namespace pst {
 
 		MBox<Stmt> chooseClassStmt(LangParserState& state) {
 			if (state[0].is(Special::Semicolon)
-				&& (state[-1].is(Special::Semicolon) || isSentinel(state, -1))) {
+			    && (state[-1].is(Special::Semicolon) || isSentinel(state, -1))) {
 				state.tokens().skip();
 				return nullptr;
 			}
@@ -266,7 +266,8 @@ namespace pst {
 			case Keyword::Let:
 			case Keyword::Var:
 				return parseStmt<Field>(state);
-			// These are statements that are not class-specific when adding new ones be careful about the fact that ContextStmt is set to Class here.
+			// These are statements that are not class-specific when adding new ones be careful
+			// about the fact that ContextStmt is set to Class here.
 			case Keyword::Alias:
 				return parseStmt<Alias>(state);
 			case Keyword::Using:

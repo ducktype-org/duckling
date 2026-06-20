@@ -243,7 +243,7 @@ namespace pst {
 		 * * CodeBlock
 		 * * CodeBlockOrStmt
 		 * * TopLevel
-		 * * 
+		 * *
 		 */
 		[[nodiscard]]
 		virtual bool isStatementAggregate() const {

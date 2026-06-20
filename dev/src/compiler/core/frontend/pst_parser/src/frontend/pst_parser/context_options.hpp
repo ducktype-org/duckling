@@ -20,7 +20,7 @@ namespace pst {
 
 	/**
 	 * @brief Current statement context, used to choose Statement choice
-	 * 
+	 *
 	 */
 	enum class StmtContext {
 		Normal,
