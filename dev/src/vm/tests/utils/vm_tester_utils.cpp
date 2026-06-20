@@ -59,7 +59,7 @@ void VmTestSuite::assertExecutionPanickedWith(
 			ASSERT_TRUE(panicked.error_message.contains(err_piece));
 		}
 		variant_default {
-			ASSERT_HAS_VALUE(!test_result.run_result);
+			ASSERT_NO_VALUE(test_result.run_result);
 			fail(base::strConcat(
 				"Expected ",
 				TypeParseTraits<vm::api::ExecutionPanicked>::NAME.data(),
@@ -74,7 +74,7 @@ void VmTestSuite::loadInvalidDbc(
 ) {
 	fs::File file(path(dbc_filename));
 	auto     loaded_file_response = vm::api::loadFiles(initProcess(), { file });
-	ASSERT_HAS_VALUE(!loaded_file_response);
+	ASSERT_NO_VALUE(loaded_file_response);
 	auto err = loaded_file_response.error();
 	ASSERT_TRUE(std::holds_alternative<vm::api::LoadProgramError>(err));
 	auto err_str = std::get<vm::api::LoadProgramError>(err).why;
@@ -169,7 +169,7 @@ void VmTestSuite::runFunctionSynchronouslyAsTest(
 ) {
 	const auto run_result = vm::api::runFunctionAwait(pid, func_name, args);
 	ASSERT_HAS_VALUE(run_result);
-	ASSERT_HAS_VALUE(!vm::api::join(pid));
+	ASSERT_NO_VALUE(vm::api::join(pid));
 
 	if_opt_some(optional_input, input) { ASSERT_HAS_VALUE(vm::api::input(pid, input)); }
 

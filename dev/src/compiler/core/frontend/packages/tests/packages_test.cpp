@@ -66,7 +66,7 @@ private:
 		TestReporter reporter;
 		auto         json = nlohmann::json::parse(R"({ "alias": "alias" })");
 		auto         dep  = RawDependencyInfo::fromJson(json, reporter.callback());
-		ASSERT_HAS_VALUE(!dep);
+		ASSERT_NO_VALUE(dep);
 		ASSERT_TRUE(reporter.errors > 0);
 	}
 
@@ -74,7 +74,7 @@ private:
 		TestReporter reporter;
 		auto         json = nlohmann::json::parse(R"({ "id": "dep", "alias": 123 })");
 		auto         dep  = RawDependencyInfo::fromJson(json, reporter.callback());
-		ASSERT_HAS_VALUE(!dep);
+		ASSERT_NO_VALUE(dep);
 		ASSERT_TRUE(reporter.errors > 0);
 	}
 
@@ -126,7 +126,7 @@ private:
             "dependencies": []
         })");
 		auto         pkg  = RawPackageInfo::fromJson(json, reporter.callback());
-		ASSERT_HAS_VALUE(!pkg);
+		ASSERT_NO_VALUE(pkg);
 		ASSERT_TRUE(reporter.errors > 0);
 	}
 
@@ -140,7 +140,7 @@ private:
             "dependencies": []
         })");
 		auto         pkg  = RawPackageInfo::fromJson(json, reporter.callback());
-		ASSERT_HAS_VALUE(!pkg);
+		ASSERT_NO_VALUE(pkg);
 		ASSERT_TRUE(reporter.errors > 0);
 	}
 
@@ -153,7 +153,7 @@ private:
             "dependencies": { "id": "dep" }
         })");
 		auto         pkg  = RawPackageInfo::fromJson(json, reporter.callback());
-		ASSERT_HAS_VALUE(!pkg);
+		ASSERT_NO_VALUE(pkg);
 		ASSERT_TRUE(reporter.errors > 0);
 	}
 
@@ -244,7 +244,7 @@ private:
 
 			auto missing
 				= pkg_info->getPackageDependencyByAlias(base::StrID("missing")).unlock(ctx);
-			ASSERT_HAS_VALUE(!missing);
+			ASSERT_NO_VALUE(missing);
 		});
 
 		fs::FileManager::deleteFile(main_file);
@@ -323,7 +323,7 @@ private:
 		};
 
 		auto pkg_info = createPackageInfo(raw, { raw }, reporter.callback());
-		ASSERT_HAS_VALUE(!pkg_info);
+		ASSERT_NO_VALUE(pkg_info);
 		ASSERT_TRUE(reporter.errors > 0);
 
 		fs::FileManager::deleteFolder(empty_dir, true);

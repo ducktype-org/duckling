@@ -49,12 +49,43 @@
 
 #define ASSERT_TRUE(actual) ASSERT_EQUAL(true, actual)
 
-#define ASSERT_HAS_VALUE(actual) ASSERT_EQUAL(true, actual.has_value())
+#define ASSERT_HAS_VALUE(actual) ASSERT_EQUAL(true, tester::detail::hasValue(actual))
+
+#define ASSERT_NO_VALUE(actual) ASSERT_EQUAL(false, tester::detail::hasValue(actual))
 
 
 class SimpleTesterTest;
 
 namespace tester {
+
+	namespace detail {
+		template<typename>
+		inline constexpr bool ALWAYS_FALSE = false;
+
+		/**
+		 * @brief Resolves hasValue() for multiple cases. Works both on direct types and pointers as
+		 * well as `has_value()` and `hasValue()`
+		 */
+		template<typename T>
+		bool hasValue(const T& value) {
+			if constexpr (requires { value.has_value(); }) {
+				return value.has_value();
+			} else if constexpr (requires { value.hasValue(); }) {
+				return value.hasValue();
+			} else if constexpr (requires { value->has_value(); }) {
+				return value->has_value();
+			} else if constexpr (requires { value->hasValue(); }) {
+				return value->hasValue();
+			} else {
+				static_assert(
+					ALWAYS_FALSE<T>,
+					"ASSERT_HAS_VALUE requires an operand with .has_value(), .hasValue(), "
+					"->has_value() or ->hasValue()"
+				);
+				return false;
+			}
+		}
+	}
 
 	/**
 	 * @brief Add spaces before capital letters in a string,

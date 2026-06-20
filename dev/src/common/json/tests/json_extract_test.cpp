@@ -57,21 +57,21 @@ private:
 	void extractStringMissingKey() {
 		auto j      = nlohmann::json::parse(R"({"other": "x"})");
 		auto result = js::extractString(j, "name");
-		ASSERT_HAS_VALUE(!result);
+		ASSERT_NO_VALUE(result);
 		ASSERT_TRUE(result.error() == js::JsonExtractError::MissingKey);
 	}
 
 	void extractStringWrongType() {
 		auto j      = nlohmann::json::parse(R"({"name": 42})");
 		auto result = js::extractString(j, "name");
-		ASSERT_HAS_VALUE(!result);
+		ASSERT_NO_VALUE(result);
 		ASSERT_TRUE(result.error() == js::JsonExtractError::WrongType);
 	}
 
 	void extractStringNotAnObject() {
 		auto j      = nlohmann::json::parse(R"([1, 2, 3])");
 		auto result = js::extractString(j, "name");
-		ASSERT_HAS_VALUE(!result);
+		ASSERT_NO_VALUE(result);
 		ASSERT_TRUE(result.error() == js::JsonExtractError::NotAnObject);
 	}
 
@@ -85,7 +85,7 @@ private:
 	void extractBoolWrongType() {
 		auto j      = nlohmann::json::parse(R"({"flag": "yes"})");
 		auto result = js::extractBool(j, "flag");
-		ASSERT_HAS_VALUE(!result);
+		ASSERT_NO_VALUE(result);
 		ASSERT_TRUE(result.error() == js::JsonExtractError::WrongType);
 	}
 
@@ -99,7 +99,7 @@ private:
 	void extractArrayWrongType() {
 		auto j      = nlohmann::json::parse(R"({"xs": "not an array"})");
 		auto result = js::extractArray(j, "xs");
-		ASSERT_HAS_VALUE(!result);
+		ASSERT_NO_VALUE(result);
 		ASSERT_TRUE(result.error() == js::JsonExtractError::WrongType);
 	}
 
@@ -120,7 +120,7 @@ private:
 	void extractStringValueWrongType() {
 		auto j      = nlohmann::json::parse(R"(42)");
 		auto result = js::extractStringValue(j);
-		ASSERT_HAS_VALUE(!result);
+		ASSERT_NO_VALUE(result);
 		ASSERT_TRUE(result.error() == js::JsonExtractError::WrongType);
 	}
 
@@ -167,13 +167,13 @@ private:
 
 		ASSERT_TRUE(!js::checkIsObject(nlohmann::json::parse(R"([1])"), "root", reporter.callback())
 		);
-		ASSERT_HAS_VALUE(!js::getString(json, "name", "bad", reporter.callback()));
-		ASSERT_HAS_VALUE(!js::getStringIfPresent(json, "name", "bad", reporter.callback()));
-		ASSERT_HAS_VALUE(!js::getBool(json, "flag", "bad", reporter.callback()));
-		ASSERT_HAS_VALUE(!js::getBoolIfPresent(json, "flag", "bad", reporter.callback()));
-		ASSERT_HAS_VALUE(!js::getArray(json, "array", "bad", reporter.callback()));
-		ASSERT_HAS_VALUE(!js::getObject(json, "obj", "bad", reporter.callback()));
-		ASSERT_HAS_VALUE(!js::getObjectIfPresent(json, "obj", "bad", reporter.callback()));
+		ASSERT_NO_VALUE(js::getString(json, "name", "bad", reporter.callback()));
+		ASSERT_NO_VALUE(js::getStringIfPresent(json, "name", "bad", reporter.callback()));
+		ASSERT_NO_VALUE(js::getBool(json, "flag", "bad", reporter.callback()));
+		ASSERT_NO_VALUE(js::getBoolIfPresent(json, "flag", "bad", reporter.callback()));
+		ASSERT_NO_VALUE(js::getArray(json, "array", "bad", reporter.callback()));
+		ASSERT_NO_VALUE(js::getObject(json, "obj", "bad", reporter.callback()));
+		ASSERT_NO_VALUE(js::getObjectIfPresent(json, "obj", "bad", reporter.callback()));
 		ASSERT_TRUE(
 			!js::getStringValue(nlohmann::json::parse("123"), "value", "bad", reporter.callback())
 				 .has_value()
@@ -182,7 +182,7 @@ private:
 		auto warn_json = nlohmann::json::parse(R"({"missing": 1, "items": ["ok", 2]})");
 		ASSERT_TRUE(!js::getStringWarning(warn_json, "nope", "warn", reporter.callback()).has_value()
 		);
-		ASSERT_HAS_VALUE(!js::getBoolWarning(warn_json, "nope", "warn", reporter.callback()));
+		ASSERT_NO_VALUE(js::getBoolWarning(warn_json, "nope", "warn", reporter.callback()));
 		ASSERT_TRUE(!js::getArrayWarning(warn_json, "nope", "warn", reporter.callback()).has_value()
 		);
 		ASSERT_TRUE(!js::getObjectWarning(warn_json, "nope", "warn", reporter.callback()).has_value()
@@ -190,9 +190,9 @@ private:
 
 		auto elem_warn
 			= js::getStringFromArrayWarning(warn_json["items"][1], "items", reporter.callback());
-		ASSERT_HAS_VALUE(!elem_warn);
+		ASSERT_NO_VALUE(elem_warn);
 		auto elem_err = js::getStringFromArray(warn_json["items"][1], "items", reporter.callback());
-		ASSERT_HAS_VALUE(!elem_err);
+		ASSERT_NO_VALUE(elem_err);
 
 		js::checkForUnknownFields(
 			warn_json, { "missing" }, { "items" }, "root", reporter.callback()

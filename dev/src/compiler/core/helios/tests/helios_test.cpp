@@ -444,7 +444,7 @@ private:
 		ASSERT_EQUAL(2, first_class_info.methods.size());
 		ASSERT_EQUAL(1, first_class_info.constructors.size());
 		ASSERT_HAS_VALUE(first_class_info.destructor);
-		ASSERT_HAS_VALUE(not first_class_info.base);
+		ASSERT_NO_VALUE(first_class_info.base);
 		ASSERT_EQUAL(0, first_class_info.implements.size());
 		ASSERT_EQUAL("FirstClassEver", first_class_info.name);
 
@@ -462,7 +462,7 @@ private:
 		ASSERT_EQUAL(0, second_class_info.members.size());
 		ASSERT_EQUAL(0, second_class_info.methods.size());
 		ASSERT_EQUAL(0, second_class_info.constructors.size());
-		ASSERT_HAS_VALUE(not second_class_info.destructor);
+		ASSERT_NO_VALUE(second_class_info.destructor);
 		ASSERT_HAS_VALUE(second_class_info.base);
 		ASSERT_EQUAL(first_class_abstract_type, second_class_info.base);
 		ASSERT_EQUAL("SecondClass", second_class_info.name);

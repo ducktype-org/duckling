@@ -340,7 +340,7 @@ private:
 		vm::PID  pid = initProcess();
 		fs::File file(path("inject_code_1.dbc"));
 		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file }));
-		ASSERT_HAS_VALUE(!vm::api::loadFiles(pid, { file }));
+		ASSERT_NO_VALUE(vm::api::loadFiles(pid, { file }));
 		vm::api::deinitAndValidate(pid);
 	}
 

@@ -210,7 +210,7 @@ private:
 			driver::options_types::StdLibOptions{},
 			compiler::driver::diagnostics::makeGlobalLoggerReporter()
 		);
-		ASSERT_HAS_VALUE(!result);
+		ASSERT_NO_VALUE(result);
 		ASSERT_TRUE(global_state::getGlobalLogger()->hasErrors());
 	}
 
@@ -224,7 +224,7 @@ private:
 		ASSERT_EQUAL(found.value()->getPackageID(), existing_id);
 
 		auto missing = global_state::getPackageRefOpt(base::StrID("definitely_missing"));
-		ASSERT_HAS_VALUE(!missing);
+		ASSERT_NO_VALUE(missing);
 
 		assertThrows<base::Panic>(
 			[&]() { (void) global_state::getPackageRef(base::StrID("definitely_missing")); },
@@ -235,7 +235,7 @@ private:
 		auto root_module = packages.back().getRootModule().illegalAccess().getID();
 		global_state::setters::removePackage(root_module);
 		auto removed = global_state::getPackageRefOpt(removed_id);
-		ASSERT_HAS_VALUE(!removed);
+		ASSERT_NO_VALUE(removed);
 	}
 
 	void archiverFailurePaths() {

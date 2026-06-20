@@ -238,7 +238,7 @@ private:
 
 		{
 			auto response = vm::api::debuggerGetStackFrameData(pid, tid, 2);
-			ASSERT_HAS_VALUE(!response);
+			ASSERT_NO_VALUE(response);
 		}
 
 		{

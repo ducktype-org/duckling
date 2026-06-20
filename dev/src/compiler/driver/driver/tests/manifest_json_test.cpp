@@ -112,7 +112,7 @@ private:
 			manifest_json, diagnostics::makeGlobalLoggerReporter()
 		);
 
-		ASSERT_HAS_VALUE(!result);
+		ASSERT_NO_VALUE(result);
 		ASSERT_TRUE(logger().hasErrors());
 	}
 
@@ -135,7 +135,7 @@ private:
 			manifest_json, diagnostics::makeGlobalLoggerReporter()
 		);
 
-		ASSERT_HAS_VALUE(!result);
+		ASSERT_NO_VALUE(result);
 		ASSERT_TRUE(logger().hasErrors());
 	}
 
@@ -153,7 +153,7 @@ private:
 			manifest_json, diagnostics::makeGlobalLoggerReporter()
 		);
 
-		ASSERT_HAS_VALUE(!result);
+		ASSERT_NO_VALUE(result);
 		ASSERT_TRUE(logger().hasErrors());
 	}
 
@@ -293,7 +293,7 @@ private:
             task_json, diagnostics::makeGlobalLoggerReporter()
         );
 
-		ASSERT_HAS_VALUE(!result);
+		ASSERT_NO_VALUE(result);
 		ASSERT_TRUE(logger().hasErrors());
 	}
 
@@ -336,7 +336,7 @@ private:
             task_json, diagnostics::makeGlobalLoggerReporter()
         );
 
-		ASSERT_HAS_VALUE(!result);
+		ASSERT_NO_VALUE(result);
 		ASSERT_TRUE(logger().hasErrors());
 	}
 
@@ -351,7 +351,7 @@ private:
             task_json, diagnostics::makeGlobalLoggerReporter()
         );
 
-		ASSERT_HAS_VALUE(!result);
+		ASSERT_NO_VALUE(result);
 		ASSERT_TRUE(logger().hasErrors());
 	}
 
@@ -363,7 +363,7 @@ private:
             task_json, diagnostics::makeGlobalLoggerReporter()
         );
 
-		ASSERT_HAS_VALUE(!result);
+		ASSERT_NO_VALUE(result);
 		ASSERT_TRUE(logger().hasErrors());
 	}
 
