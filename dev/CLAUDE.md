@@ -25,6 +25,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Structure notes
 
-- `src/base/` utilities, `src/common/` cross-cutting (tokenizer, query framework, tester, diagnostics), `src/compiler/` (frontend, MIR/LIR, LLVM + DVM backends, formatter, REPL, LSP), `src/vm/` the DVM, `src/duck/` Rust CLI + QuackPack.
+- `src/base/` utilities, `src/common/` cross-cutting (tokenizer, query framework, tester, diagnostics), `src/formatter/` the token-based source formatter (`duckfmt`), `src/compiler/` (frontend, MIR/LIR, LLVM + DVM backends, REPL, LSP), `src/vm/` the DVM, `src/duck/` Rust CLI + QuackPack.
 - `src/compiler/driver/driver/` nesting is intentional (driver + time_stats modules).
 - Compilation is query-based and stateful (incremental), not traditional passes — be careful with query cache invalidation order.

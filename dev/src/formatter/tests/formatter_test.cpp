@@ -830,4 +830,4 @@ public:
 	~FormatterTest() override = default;
 };
 
-TESTER_COMMON_MAIN("/src/compiler/formatter/tests/");
+TESTER_COMMON_MAIN("/src/formatter/tests/");
