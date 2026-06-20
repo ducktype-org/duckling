@@ -143,6 +143,6 @@ namespace vm::debugger {
 		/**
 		 * @brief Send input to the VM
 		 */
-		std::expected<void, api::ApiError> input(std::string msg);
+		std::expected<void, api::ApiError> input(const std::string& msg);
 	};
 }

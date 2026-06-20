@@ -262,9 +262,9 @@ namespace vm::debugger::debug_adapter {
 	void DebugAdapter::handleEvaluate(const nlohmann::json& req) {
 		auto args = req["arguments"];
 
-		std::string userInput = args["expression"].get<std::string>();
+		std::string user_input = args["expression"].get<std::string>();
 
-		auto result = debugger.input(userInput);
+		auto result = debugger.input(user_input);
 
 		if (!result.has_value()) {
 			std::string error_msg
@@ -273,7 +273,7 @@ namespace vm::debugger::debug_adapter {
 			return;
 		}
 		nlohmann::json response_body
-			= { { "result", "Input accepted: " + userInput }, { "variablesReference", 0 } };
+			= { { "result", "Input accepted: " + user_input }, { "variablesReference", 0 } };
 
 		sendResponse(req, true, response_body);
 	}
