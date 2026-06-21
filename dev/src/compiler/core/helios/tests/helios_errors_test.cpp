@@ -590,6 +590,19 @@ private:
 				{ "Type `List` cannot be default initialized" },
 				1
 			);
+
+			checkForErrorOnCompileModule(
+				R"(
+				class Inner { non_defaultable: ref i64; }
+
+				fun main() -> i64 = {
+					var tup: (Inner, i64);
+					return 0;
+				}
+			)",
+				{ "Type `Tuple(Class Inner, i64)` cannot be default initialized" },
+				1
+			);
 		}
 
 
