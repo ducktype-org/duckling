@@ -816,6 +816,15 @@ namespace compiler::helios::code {
 				UNPACK_QRESULT_MOVE(base::Box<Expr> field_expr =, expr);
 				return ChainState::ofExpr(std::move(field_expr));
 			}
+			case SymbolKind::Template: {
+				// HERE we need to: get the template, assume that it has a bake expression (for now),
+				// process it into namespace expr.
+				// it is very temporary, but this logic will be a subject to refactor soon anyway.
+				//
+				// PRPR: think about it
+				// PRPR: we handle template baking nowehere!
+				return ChainState::ofNamespaceLike(symbol, pst_element_origin);
+			}
 			default:
 				query_ctx.logInt(makeBox<dia_int::PlaceholderError>(
 					base::strConcat(
