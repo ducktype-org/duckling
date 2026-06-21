@@ -53,11 +53,30 @@ class PSTBuilderTest: public tester::TestSuite {
 	Example<pst::While, false>   bad_choice{ "block {}" };
 	Example<pst::Block, false>   no_brackets{ "const x:i32=3;" };
 
+	// A leading `if` must be parsed as a ternary expression (not an if-statement) whenever a
+	// top-level `then` follows the condition.
+	Example<pst::TopLevel, true> ternary_single_stmt_fun{
+		"fun max(x: i64, y: i64) = if x > 0 then x else y;"
+	};
+	Example<pst::TopLevel, true> ternary_expr_stmt{
+		"fun main() -> i64 = { if true then 0 else 1; return 0; }"
+	};
+	Example<pst::TopLevel, true> ternary_paren_condition{ "fun g() = if (x) then 1 else 2;" };
+	// The if-statement (parenthesised condition, no top-level `then`) must still parse as such,
+	// even when its body returns a ternary.
+	Example<pst::TopLevel, true> if_statement_with_ternary_body{
+		"fun h() = { if (c) return if a then b else c; }"
+	};
+
 	void exampleTests() {
 		testExample(empty_top_level);
 		testExample(empty_block);
 		testExample(bad_choice);
 		testExample(no_brackets);
+		testExample(ternary_single_stmt_fun);
+		testExample(ternary_expr_stmt);
+		testExample(ternary_paren_condition);
+		testExample(if_statement_with_ternary_body);
 	}
 
 public:
