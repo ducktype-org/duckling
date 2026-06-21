@@ -1,0 +1,28 @@
+# Main thread is Sleeping on a bytecode condition variable.
+
+global_data sleep_mutex mutex {}
+global_data cv_main     condition_variable {}
+
+function main { } -> { i64 } {
+	init_pany_type		ism, mutex;
+	call_builtinfunc	builtin_create_mutex;
+	mov_popq_popq		sleep_mutex, ism;
+
+	init_pany_type		icvm, condition_variable;
+	call_builtinfunc	builtin_create_cv;
+	mov_popq_popq		cv_main, icvm;
+
+	init_pany_type		sm, mutex;
+	mov_popq_popq		sm, sleep_mutex;
+	call_builtinfunc	builtin_lock_mutex;
+
+	label SleepLoop;
+		init_pany_type		scv, condition_variable;
+		mov_popq_popq		scv, cv_main;
+		init_pany_type		swm, mutex;
+		mov_popq_popq		swm, sleep_mutex;
+		call_builtinfunc	builtin_wait_cv;
+		jmp_label			SleepLoop;
+
+	ret;
+}

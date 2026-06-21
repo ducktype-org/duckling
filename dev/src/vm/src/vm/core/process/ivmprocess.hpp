@@ -9,10 +9,14 @@
 #include <vm/api/data/api_error.hpp>
 #include <vm/api/data/request.hpp>
 #include <vm/api/data/status.hpp>
+#include <vm/api/data/thread_id.hpp>
 #include <vm/core/process/proc_io.hpp>
+#include <vm/core/process/process_state.hpp>
+#include <vm/core/thread/thread_state.hpp>
 
+#include <condition_variable>
 #include <expected>
-#include <shared_mutex>
+#include <mutex>
 #include <variant>
 
 namespace vm {
@@ -32,9 +36,12 @@ namespace vm {
 	 * creating and resetting the Execution Thread,
 	 * setting the status of the execution (pause, stop, run),
 	 * managing the input and output of the executing thread and some more.
-	 *
 	 */
 	class IVMProcess {
+	public:
+		using ProcessState = process_sm::process_state::ProcessState;
+		using ProcessEvent = process_sm::process_event::ProcessEvent;
+
 	protected:
 		PID                              my_pid;
 		ProcIO                           io;
@@ -42,9 +49,36 @@ namespace vm {
 		// See: https://en.cppreference.com/w/cpp/io/ios_base/Init
 		std::ios_base::Init cin_cout_init;
 
-		api::ProcStatus             status;
-		std::shared_mutex           rw_status;
-		std::condition_variable_any status_cv;
+		/**
+		 * @brief Per-VMThread states and stop flag. Used to calculate the aggregate state of
+		 * VMProcess via `aggregate`.
+		 * Protected by `threads_states_mutex`.
+		 */
+		process_sm::ProcessAggregationState threads_states{};
+		mutable std::mutex                  threads_states_mutex;
+
+		/**
+		 * @brief CV for waiting for a change of the subthread states. Used by `waitForProcessState`.
+		 */
+		mutable std::condition_variable threads_states_changed;
+
+		/**
+		 * @brief The most recent aggregate of VMProcesses VMThread states.
+		 * Protected by `threads_states_mutex`.
+		 */
+		process_sm::process_state::ProcessState last_process_state{
+			process_sm::process_state::NotStarted{}
+		};
+
+		/**
+		 * @brief Counter incremented on every thread -> process state update.
+		 * Used for waiting for a fresh state. For example when a process is Paused, we run it and
+		 * pause it again. The quick Pause-Running-Pause change might not have been observed and
+		 * theres no way to distinguish between the two Paused states.
+		 * @see `waitForFreshProcessState`
+		 * Guarded by `threads_states_mutex`.
+		 */
+		u64 process_state_change_counter{ 0 };
 
 		/**
 		 * @brief Emits after the process status has changed.
@@ -53,7 +87,61 @@ namespace vm {
 
 		IVMProcess(PID my_pid);
 
+
+		/**
+		 * @brief Returns a copy of the current aggregated process state.
+		 */
+		[[nodiscard]] ProcessState getProcessState() const;
+
+		/**
+		 * @brief Get a copy of the VMProcess state change counter.
+		 * Used with `waitForFreshProcessState`.
+		 */
+		[[nodiscard]] u64 getProcessStateChangeCount() const {
+			std::lock_guard<std::mutex> lock(threads_states_mutex);
+			return process_state_change_counter;
+		}
+
+		/**
+		 * @brief Blocks until aggregate(threads_states) satisfies pred, then returns that state.
+		 * Releases threads_states_mutex while waiting; safe to call from any thread.
+		 */
+		template<typename Pred>
+		[[nodiscard]] ProcessState waitForProcessState(Pred&& pred) const {
+			std::unique_lock<std::mutex> lock(threads_states_mutex);
+			threads_states_changed.wait(lock, [&] {
+				return std::forward<Pred>(pred)(process_sm::aggregate(threads_states));
+			});
+			return process_sm::aggregate(threads_states);
+		}
+
+		/**
+		 * @brief Blocks until the state has advanced past `since` and satisfies pred.
+		 * Usefull, when a process state may change fast and we won't observe it. For example on
+		 * Paused->Running->Paused. We can't distinguish between the two Paused states if not for
+		 * the `since`.
+		 */
+		template<typename Pred>
+		[[nodiscard]] ProcessState waitForFreshProcessState(u64 since, Pred&& pred) const {
+			std::unique_lock<std::mutex> lock(threads_states_mutex);
+			threads_states_changed.wait(lock, [&] {
+				return process_state_change_counter > since
+				    && std::forward<Pred>(pred)(process_sm::aggregate(threads_states));
+			});
+			return process_sm::aggregate(threads_states);
+		}
+
+
 	private:
+		/**
+		 * @brief Called by the thread state machine listener linked in `adoptThread`.
+		 * Updates `threads_states`, recomputes the aggregate, emits `on_status_changed` if the
+		 * process-level state changed. Cascades a Kill to all threads on panic.
+		 */
+		void onThreadStateChanged(
+			api::ThreadID tid, const thread_sm::thread_state::ThreadState& new_state
+		);
+
 		/**
 		 * @brief Loads the program from a given source into the current loader program state,
 		 * recompiles the program as a whole and moves an updated program into VMProcesses memory.
@@ -186,6 +274,26 @@ namespace vm {
 		virtual void onTerminalStatus(const api::ProcStatus&) noexcept {}
 
 		/**
+		 * @brief Posts Stop to all threads. Non blocking.
+		 */
+		virtual void requestStopAllThreads() noexcept = 0;
+
+
+		/**
+		 * @brief Links a VMThread into the VMProcesses state aggregation.
+		 *
+		 * Saves the VMThreads initial state and subscribes a listener on the thread's state machine
+		 * that calls `onThreadStateChanged` on every thread state transition.
+		 * @note: Must be called once per thread, before it is spawned.
+		 */
+		void adoptThread(IVMThread& thread);
+
+		/**
+		 * @brief Performs a specific VMProcess state change command. Like run, stop, kill, etc.
+		 */
+		base::Optional<api::ApiError> applyCommand(const ProcessEvent& event);
+
+		/**
 		 * @brief Enables or disables breakpoint on a given instruction in a given function.
 		 * @note Enabling a breakpoint on an instruction that already has a breakpoint or disabling
 		 * a breakpoint on an instruction that doesn't have a breakpoint is considered successful
@@ -202,8 +310,6 @@ namespace vm {
 	public:
 		ProcIO& getIO();
 
-		[[nodiscard]] bool isExecutionPanicked();
-
 		/**
 		 * @brief Entry point to perform requests on the process.
 		 */
@@ -213,16 +319,6 @@ namespace vm {
 		 * @brief Get the PID of the process.
 		 */
 		[[nodiscard]] PID getPID() const;
-
-		void setStatus(const api::ProcStatus& new_status, api::ThreadID thread_id) noexcept;
-
-		/**
-		 * @brief Atomically set process status if it is not already terminal.
-		 * @return true if status was updated, false if status was already terminal.
-		 */
-		bool setStatusIfNotTerminal(
-			const api::ProcStatus& new_status, api::ThreadID thread_id
-		) noexcept;
 
 		/**
 		 * @brief Creates a VmValue of a given type and registers it in this VMProcess

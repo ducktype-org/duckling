@@ -99,8 +99,8 @@ namespace vm::api {
 	/**
 	 * @brief Deinitialize and validate processes memory state.
 	 * Also, remove the process from the internal structures.
-	 * @TODO: #1354 After 1354 it should be required that the process is stopped/finished
-	 * when this endpoint is called.
+	 * @note The process must be stopped or finished (no thread executing) when this endpoint
+	 * is called.
 	 */
 	std::expected<response::Boolean, ApiError> deinitAndValidate(PID pid);
 

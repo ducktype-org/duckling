@@ -1,8 +1,10 @@
 #include "supervisor.hpp"
 
+#include <vm/api/data/status.hpp>
 #include <vm/core/process/ivmprocess.hpp>
 #include <vm/core/safe/safe_vmprocess.hpp>
 
+#include <iostream>
 #include <mutex>
 
 namespace vm {
@@ -34,8 +36,23 @@ namespace vm {
 				auto res = getProcess(request.pid).and_then([](Ref<IVMProcess> process) {
 					return process->doRequest(api::request::DeinitAndValidate{});
 				});
-				std::unique_lock lock(rw_process_table);
-				process_table.erase(request.pid);
+				// Remove the process once it has been successfully deinitialized.
+				if (res) {
+					// We have to destroy the process after releasing `rw_process_table`, since
+					// destroying a process destroys its status Emitter (which takes the Emitter
+					// lock), and the event-emission takes the locks in the opposite order (Emitter
+					// lock -> rw_process_table), so destroying while holding `rw_process_table` can
+					// deadlock.
+					base::MBox<IVMProcess> dying_process;
+					{
+						std::unique_lock lock(rw_process_table);
+						auto             it = process_table.find(request.pid);
+						if (it != process_table.end()) {
+							dying_process = std::move(it->second);
+							process_table.erase(it);
+						}
+					}
+				}
 				return res;
 			}
 			variant_default {
@@ -50,16 +67,34 @@ namespace vm {
 	}
 
 	std::expected<void, api::ApiError> Supervisor::killProcess(PID pid) {
-		std::unique_lock lock(rw_process_table);
-		if (!process_table.contains(pid)) return std::unexpected(api::ProcessNotFound{});
+		// We have to destroy the process after releasing `rw_process_table`, since
+		// destroying a process destroys its status Emitter (which takes the Emitter
+		// lock), and the event-emission takes the locks in the opposite order (Emitter
+		// lock -> rw_process_table), so destroying while holding `rw_process_table` can
+		// deadlock.
+		base::MBox<IVMProcess> dying_process;
+		{
+			std::unique_lock lock(rw_process_table);
+			auto             it = process_table.find(pid);
+			if (it == process_table.end()) return std::unexpected(api::ProcessNotFound{});
 
-		process_table.erase(pid);
+			dying_process = std::move(it->second);
+			process_table.erase(it);
+		}
 		return {};
 	}
 
 	Supervisor::~Supervisor() {
-		// @TODO: #1354 add asserts here, that the processes are stopped and if not then cerr the
-		// warnings about it.
-		for (auto& [pid, proc]: process_table) proc->doRequest(api::request::DeinitAndValidate{});
+		for (auto& [pid, proc]: process_table) {
+			// Every process must be stopped or finished before the Supervisor is destroyed.
+			auto status = proc->doRequest(api::request::StatusRequest{});
+			if (status && isExecuting(v_get(*status, api::ProcStatus))) {
+				std::cerr << "Supervisor destroyed while process " << pid
+						  << " is still executing; stopping it now. Processes must be stopped or "
+							 "finished before the Supervisor is destroyed.\n";
+				(void) proc->doRequest(api::request::Stop{});
+			}
+			(void) proc->doRequest(api::request::DeinitAndValidate{});
+		}
 	}
 }

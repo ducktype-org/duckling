@@ -24,6 +24,8 @@ namespace vm::api {
 		NLOHMANN_DEFINE_TYPE_INTRUSIVE(ExecutionCompleted, exit_value);
 	};
 
+	struct ExecutionStopping {};
+
 	struct ExecutionStopped {};
 
 	struct ExecutionPanicked {
@@ -36,6 +38,7 @@ namespace vm::api {
 		Running,
 		Paused,
 		Sleeping,
+		ExecutionStopping,
 		ExecutionCompleted,
 		ExecutionStopped,
 		ExecutionPanicked>;
@@ -51,7 +54,7 @@ namespace vm::api {
 	constexpr bool isExecuting(const ProcStatus& status) {
 		// @note This function is equivalent to the following:
 		// return !isStatusTerminal(status) && hasExecutionStarted(status);
-		return v_matches(status, Running, Paused, Sleeping);
+		return v_matches(status, Running, Paused, Sleeping, ExecutionStopping);
 	}
 
 	constexpr bool canRespond(const ProcStatus& status) {
@@ -65,6 +68,7 @@ JSON_REGISTER_TYPE_WITH_NAME(vm::api::NotStarted, "NotStarted")
 
 JSON_REGISTER_TYPE_WITH_NAME(vm::api::Paused, "Paused")
 JSON_REGISTER_TYPE_WITH_NAME(vm::api::Running, "Running")
+JSON_REGISTER_TYPE_WITH_NAME(vm::api::ExecutionStopping, "ExecutionStopping")
 JSON_REGISTER_TYPE_WITH_NAME(vm::api::ExecutionPanicked, "ExecutionPanicked")
 JSON_REGISTER_TYPE_WITH_NAME(vm::api::ExecutionCompleted, "ExecutionCompleted")
 JSON_REGISTER_TYPE_WITH_NAME(vm::api::ExecutionStopped, "ExecutionStopped")

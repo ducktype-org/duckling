@@ -1,6 +1,7 @@
 #pragma once
 
 #include <base/collections/optional.hpp>
+#include <base/extend_cpp/scoped_unlock.hpp>
 #include <base/types/ints.hpp>
 
 #include <vm/api/data/api_error.hpp>
@@ -8,7 +9,7 @@
 #include <vm/api/data/response.hpp>
 #include <vm/api/data/status.hpp>
 #include <vm/core/process/interface_types.hpp>
-#include <vm/utils/blocking_queue.hpp>
+#include <vm/core/thread/thread_state.hpp>
 
 #include <expected>
 #include <string>
@@ -31,11 +32,33 @@ namespace vm {
 	 */
 	class IVMThread {
 	public:
-		constexpr explicit IVMThread(api::ThreadID thread_id, IVMProcess& my_process):
+		using ThreadState   = thread_sm::thread_state::ThreadState;
+		using ThreadEvent   = thread_sm::thread_event::ThreadEvent;
+		using ThreadMachine = thread_sm::ThreadStateMachine;
+
+		explicit IVMThread(api::ThreadID thread_id, IVMProcess& my_process):
 			  my_process(my_process),
-			  thread_id(thread_id) {}
+			  thread_id(thread_id),
+			  state_machine(
+				  thread_sm::thread_state::NotStarted{}, thread_sm::getThreadStateMachineDefinition()
+			  ) {}
 
 		virtual ~IVMThread() = default;
+
+		/**
+		 * @brief Returns a copy of the VMThread's current state.
+		 */
+		[[nodiscard]] thread_sm::thread_state::ThreadState getThreadState() const {
+			return state_machine.getStateCopy();
+		}
+
+		[[nodiscard]] api::ThreadID getThreadID() const { return thread_id; }
+
+		/**
+		 * @brief Direct access to this thread's state machine. Used by `IVMProcess::adoptThread` to
+		 * subscribe the thread->process listener.
+		 */
+		ThreadMachine& getStateMachine() { return state_machine; }
 
 		/**
 		 * @brief Creates a new thread that runs the code.
@@ -55,32 +78,39 @@ namespace vm {
 		/**
 		 * @brief Runs a program and waits for it to finish.
 		 * Does not create a new thread, runs the program in the current execution thread.
+		 *
+		 * @return true if the program was run, false if this thread is already executing.
 		 */
-		void runNoSpawn(const std::string& func_name, const RunArguments& run_arguments);
+		[[nodiscard]] bool runNoSpawn(
+			const std::string& func_name, const RunArguments& run_arguments
+		);
 
 		/**
 		 * @brief Pauses the execution of a program.
 		 * Sets the status to paused and waits for the execution thread to respond.
 		 * "Assumes execution status is `running`"
-		 * @return true if and only if program was in the running state and was successfully paused
+		 * @return `void` if and only if program was in the running state and was successfully
+		 * paused. Otherwise an error.
 		 */
-		bool pause();
+		std::expected<void, std::string> pause();
 
 		/**
 		 * @brief Resumes the execution of a program.
 		 * Sets the status to running and waits for the execution thread to respond.
 		 * "Assumes execution status is `paused`"
-		 * @return true if and only if program was in the paused state and was successfully resumed
+		 * @return `void` if and only if program was in the paused state and was successfully
+		 * resumed. Otherwise an error.
 		 */
-		bool resume();
+		std::expected<void, std::string> resume();
 
 		/**
 		 * @brief Execute one step of the program.
 		 * Valid only when the VM is paused.
 		 * Waits for the program to perform one step and pause.
-		 * @return true if the program successfully performed one step and paused
+		 * @return `void` if the program successfully performed one step and paused. Otherwise an
+		 * error.
 		 */
-		bool step();
+		std::expected<void, std::string> step();
 
 		/**
 		 * @brief End the execution of a program.
@@ -88,26 +118,58 @@ namespace vm {
 		 * @return true if the program is in the end stopped.
 		 */
 		bool stop();
+
 		/**
-		 * @brief Check if thread has an active execution thread handle.
-		 * @return true if exec_thread is active and joinable.
+		 * @brief Non-blocking way of telling the thread to stop.
+		 * Used when performing cascade stops on panics etc.
 		 */
-		[[nodiscard]] virtual bool hasActiveThread() const;
+		void requestStop() noexcept;
+
 		/**
 		 * @brief Waits for the execution thread to finish and returns final response.
 		 */
 		std::expected<api::Response, api::ApiError> join();
 
-		virtual bool isPauseRequested();
+		/**
+		 * @brief Check if thread has an active execution thread handle.
+		 * @return true if exec_thread is active and joinable.
+		 */
+		[[nodiscard]] bool hasActiveThread() const;
 
-		virtual bool isTerminateRequested();
 
-		// Given lock cannot be a lock on external_api_mutex
-		// If you have access to external_api_mutex, implement this yourself.
+		/**
+		 * @brief Returns true if a Pause control request is pending.
+		 */
+		[[nodiscard]] bool isPauseRequested();
+
+		/**
+		 * @brief Returns true if a Stop control request is pending.
+		 */
+		[[nodiscard]] bool isTerminateRequested();
+
+		/**
+		 * @brief Blocks until pred() returns true.
+		 *
+		 * @warning: Given lock cannot be a lock on external_api_mutex
+		 * If you have access to external_api_mutex, implement this yourself.
+		 */
 		template<class Condition>
 		void waitUntilNotPausedAndCondition(std::unique_lock<std::mutex>& lock, Condition condition) {
 			pause_cv.wait(lock, [this, &condition] { return !isPauseRequested() && condition(); });
 		}
+
+	protected:
+		/**
+		 * @brief Reports that the thread enters a sleeping state. Sends the `EnterSleep` event and
+		 * causes a state change.
+		 */
+		void reportAsSleeping();
+
+		/**
+		 * @brief Reports that the thread left the sleeping state. Sends the `WakeUp{}` event and
+		 * causes a state change.
+		 */
+		void reportAsRunning();
 
 		/**
 		 * @brief Handles execution request when `execution_request_break` bool is set.
@@ -121,9 +183,6 @@ namespace vm {
 		 */
 		void notifyPaused();
 
-		[[nodiscard]] const api::ProcStatus& getStatus() const { return status; }
-
-		[[nodiscard]] api::ThreadID getThreadID() const { return thread_id; }
 
 		[[nodiscard]] virtual u64 getNumberOfCurrentStackFrames() const = 0;
 
@@ -143,51 +202,66 @@ namespace vm {
 		/**
 		 * @brief Execution thread handle shared by IVMThread implementations.
 		 */
+		mutable std::mutex          exec_thread_mutex;
 		base::Optional<std::thread> exec_thread;
-
-		/**
-		 * @brief Message queue to send responses to the VMProcess.
-		 */
-		BlockingQueue<api::ProcStatus> execution_response_queue;
 
 		/**
 		 * @brief The process this VMThread belongs to.
 		 */
 		IVMProcess& my_process;
-
 		/**
 		 * @brief Run a single function with given parameters.
 		 */
 		virtual void run(const std::string& func_name, const RunArguments& run_arguments) = 0;
 
 		/**
+		 * @brief Function to be called when the VMProcess is deinitialized. Calls GlobalData's
+		 * destructor functions.
+		 */
+		virtual void execGlobalDestructors() = 0;
+
+		/**
+		 * @brief Main debug function that executes one step of the program.
+		 */
+		virtual void executeOneStep() = 0;
+
+		/**
 		 * @brief Calls `run` within safe try-catch block, to catch any exceptions thrown by the
 		 * running code and respond to the process with the panicked status.
 		 */
-		virtual void safeRun(const std::string& func_name, const RunArguments& run_arguments);
-
-		virtual bool waitForPausedResponse();
-
-		virtual bool waitForStoppedResponse();
-
-		virtual bool waitForRunningResponse();
+		void safeRun(const std::string& func_name, const RunArguments& run_arguments);
 
 		/**
-		 * @brief Responds to an execution request by sending a response to the VMProcess.
-		 *
-		 * @param response The response to send.
+		 * @brief Fires an event from the `exec_thread` context, causes a VMThread state change.
 		 */
-		virtual void respondExecutionRequest(const api::ProcStatus& response);
+		void fireEvent(const thread_sm::thread_event::ThreadEvent& event);
 
-		virtual void executeOneStep() = 0;
+		/**
+		 * @brief Fires an event while the `lock` is temporarily released and re-acquires it before
+		 * returning.
+		 *
+		 * @detail `fireEvent` runs the thread->process state listeners synchronously, which may
+		 * re-enter VMThread methods that take `execution_request_mutex` (e.g. `pause`, `resume`,
+		 * `step` via `postRequest`). Holding the lock across the call would deadlock this thread.
+		 */
+		void fireEventUnlocked(
+			std::unique_lock<std::mutex>& lock, const thread_sm::thread_event::ThreadEvent& event
+		);
 
-		void setProcessStatus(const vm::api::ProcStatus& new_status);
+		/**
+		 * @brief Posts a control request to the VMThread. Called from the `VMProcess` context,
+		 * i.e. in `stop`, `pause`, `join`, etc.
+		 */
+		void postRequest(ExecutionRequest req, bool raise_pending_flag);
+
 
 		/**
 		 * @brief Main function of the VMThread "debug" mode, where the step by step execution can
 		 * take place. After each step the execution status is set to `paused` and the VMThread
 		 * waits for the next command. Mutex "execution_request_mutex" is held when the VM is
 		 * executing the code.
+		 * State transitions go through `fireEventUnlocked`, and `executeOneStep` runs with the lock
+		 * released, since both may re-enter code that takes `execution_request_mutex`.
 		 *
 		 * @param lock
 		 */
@@ -199,21 +273,20 @@ namespace vm {
 		void handleBreakpoint();
 
 		/**
-		 * @brief Joins the execution thread if it is joinable.
+		 * @brief Joins the OS execution thread if there is one, then clears the handle.
 		 */
-		bool joinExecutionThread();
+		void joinExecutionThread();
 
-		void setThreadStatus(const api::ProcStatus& new_status) { status = new_status; }
-
-		/**
-		 * @brief Function to be called when the VMProcess is deinitialized. Calls GlobalData's
-		 * destructor functions.
-		 */
-		virtual void execGlobalDestructors() = 0;
 
 	private:
-		api::ProcStatus status = api::NotStarted{};
-		api::ThreadID   thread_id;
+		api::ThreadID thread_id;
+
+		/**
+		 * @brief State machine handling the inner state of this thread. The only source of truth
+		 * about the process state.
+		 */
+		ThreadMachine state_machine;
+
 
 		/**
 		 * @brief Mutex responsible for setting the execution_request and execution_request_break
@@ -226,10 +299,9 @@ namespace vm {
 		 * execution (by requesting pause or stop), it sets the execution_request_break flag to
 		 * true, so the running VMThread can only check this flag first and not acquire the mutex.
 		 */
-		std::mutex        execution_request_mutex;
-		ExecutionRequest  execution_request              = ExecutionRequest::NoRequest;
-		std::atomic<bool> execution_request_pending_flag = false;
-
+		std::mutex              execution_request_mutex;
+		ExecutionRequest        execution_request              = ExecutionRequest::NoRequest;
+		std::atomic<bool>       execution_request_pending_flag = false;
 		std::condition_variable pause_cv;
 	};
 }

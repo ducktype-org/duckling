@@ -24,6 +24,7 @@
 #include <vm/core/safe/type_metadata/definitions.hpp>
 #include <vm/core/safe/type_metadata/type.hpp>
 #include <vm/core/thread/kill_process_exception.hpp>
+#include <vm/core/thread/thread_state.hpp>
 #include <vm/module_flags/module_flags.hpp>
 #include <vm/utils/interpret.hpp>
 
@@ -32,6 +33,8 @@
 #include <vector>
 
 namespace vm {
+	namespace ts = thread_sm::thread_state;
+	namespace te = thread_sm::thread_event;
 
 #define MAKE_BYTECODE_INSTRUCTION(OPCODE_NAME, ARG_0, ARG_1) \
 	makeLowInstruction(low::MicroOpcode::OPCODE_NAME, ARG_0, ARG_1)
@@ -538,8 +541,6 @@ namespace vm {
 	 * @brief Starts the execution of a function with a given name and arguments.
 	 */
 	void SafeVMThread::run(const std::string& func_name, const RunArguments& run_arguments) {
-		respondExecutionRequest(api::Running{});
-
 		for (const auto& [global, id, name]: process_program->getGlobals().allData()) {
 			auto block_ref
 				= Ref(runtime_data.global_block_ref_buffer_base[global->global_block_idx]);
@@ -547,20 +548,11 @@ namespace vm {
 				variant_match(global->init) {
 					variant_case(low::GlobalCtorDtor, ctor_dtor) {
 						if (ctor_dtor.ctor_name.has_value()) {
-							try {
-								const auto& func = *process_program->getFunctions()
-								                        .atMaybe(ctor_dtor.ctor_name.value())
-								                        .value();
-								low::LowFuncData start_function = createStartFunctionFor(func, {});
-								executeFunction(start_function, func);
-							} catch (const KillProcessException& e) {
-								auto status = safe_process.getCurrentStatus();
-								if (std::holds_alternative<api::ExecutionPanicked>(status))
-									respondExecutionRequest(status);
-								else
-									respondExecutionRequest(api::ExecutionPanicked{ e.what() });
-								return;
-							}
+							const auto& func = *process_program->getFunctions()
+							                        .atMaybe(ctor_dtor.ctor_name.value())
+							                        .value();
+							low::LowFuncData start_function = createStartFunctionFor(func, {});
+							executeFunction(start_function, func);
 						}
 					}
 					variant_case(low::GlobalInitialValue, value_init) {
@@ -572,48 +564,29 @@ namespace vm {
 			}
 		}
 
-		const auto terminal_status = safe_process.getCurrentStatus();
-		if (api::isStatusTerminal(terminal_status)) {
-			respondExecutionRequest(terminal_status);
-			return;
+		const auto& maybe_func
+			= process_program->getFunctions().atMaybe(base::StrID(func_name.data()));
+		if (!maybe_func.has_value()) {
+			throw exceptions::VMRuntimeException(
+				base::strConcat("Called function '", func_name, "' does not exist.")
+			);
 		}
+		const auto& func = *maybe_func.value();
 
-		try {
-			const auto& maybe_func
-				= process_program->getFunctions().atMaybe(base::StrID(func_name.data()));
-			if (!maybe_func.has_value()) {
-				respondExecutionRequest(api::ExecutionPanicked{
-					base::strConcat("Called function '", func_name, "' does not exist.") });
-				return;
-			}
-			const auto& func = *maybe_func.value();
-
-			low::LowFuncData start_function = [&]() {
-				variant_match(run_arguments) {
-					variant_case(ProgramRunArguments, program_run_arguments) {
-						return createProgramStartFunction(func, program_run_arguments);
-					}
-					variant_case(FunctionRunArguments, function_run_data) {
-						return createStartFunctionFor(func, function_run_data);
-					}
+		low::LowFuncData start_function = [&]() {
+			variant_match(run_arguments) {
+				variant_case(ProgramRunArguments, program_run_arguments) {
+					return createProgramStartFunction(func, program_run_arguments);
 				}
-				CORE_UNREACHABLE();
-			}();
+				variant_case(FunctionRunArguments, function_run_data) {
+					return createStartFunctionFor(func, function_run_data);
+				}
+			}
+			CORE_UNREACHABLE();
+		}();
 
-			const auto exit_value     = executeFunction(start_function, func);
-			const auto current_status = safe_process.getCurrentStatus();
-			if (api::isStatusTerminal(current_status))
-				respondExecutionRequest(current_status);
-			else
-				respondExecutionRequest(api::ExecutionCompleted{ exit_value });
-		} catch (const KillProcessException& e) { handleKillProcessException(e); }
-	}
-
-	void SafeVMThread::handleKillProcessException(const KillProcessException& e) {
-		if (safe_process.isExecutionPanicked())
-			respondExecutionRequest(safe_process.getCurrentStatus());
-		else
-			respondExecutionRequest(api::ExecutionPanicked{ e.what() });
+		const auto exit_value = executeFunction(start_function, func);
+		fireEvent(thread_sm::thread_event::Finish{ exit_value });
 	}
 
 	void SafeVMThread::execGlobalDestructors() {
@@ -634,7 +607,9 @@ namespace vm {
 											);
 					low::LowFuncData start_function = createStartFunctionFor(func, {});
 					executeFunction(start_function, func);
-				} catch (const KillProcessException& e) { handleKillProcessException(e); }
+				} catch (const KillProcessException& e) {
+					std::cerr << "Global destructor interrupted: " << e.what() << "\n";
+				}
 			}
 		}
 	}
@@ -642,8 +617,8 @@ namespace vm {
 	std::expected<low::LowCodePosition, api::ApiError> SafeVMThread::getCurrentPosition(
 		base::Optional<usize> opt_frame_idx
 	) {
-		variant_match(getStatus()) {
-			variant_case_novalue(api::Paused) {
+		variant_match(getThreadState()) {
+			variant_case_novalue(ts::Paused) {
 				auto frame = runtime_data.frame_stack_current;
 
 				if_opt_some(opt_frame_idx, frame_index) {
