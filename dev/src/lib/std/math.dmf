@@ -1,9 +1,0 @@
-
-namespace libm {
-    extern("C")  {
-        fundecl floor(x: f64) -> f64;
-    }
-}
-
-fun floor(f64) = libm.floor(30);
-
