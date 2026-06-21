@@ -3,6 +3,7 @@
 #include "dvm_value.hpp"
 
 #include <ctv/ctv.hpp>
+#include <lir/lir_structure/lir_structure.hpp>
 #include <tsl/type_layout.hpp>
 
 #include <base/collections/optional.hpp>
@@ -11,10 +12,6 @@
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/const_value.hpp>
 #include <vm/bytecode/type_of_data.hpp>
-
-namespace compiler::lir {
-	struct LIRConstant;
-}
 
 namespace compiler::backend_vm::internal {
 	class FunctionLoweringContext;

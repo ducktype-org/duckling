@@ -140,10 +140,12 @@ namespace compiler::backend_vm::internal {
 
 		auto string_table = makeBox<vm::code::ConstantFixedSizeTable>();
 		string_table->elements.reserve(length);
-		for (unsigned char byte: bytes)
-			string_table->elements.emplace_back(makeBox<vm::code::ConstantImmediate>(
-				vm::code::ConstantImmediate::fromU64AndSize(translateToU64(byte), Bytes{ 1 })
-			));
+		for (char byte: bytes)
+			string_table->elements.emplace_back(
+				makeBox<vm::code::ConstantImmediate>(vm::code::ConstantImmediate::fromU64AndSize(
+					translateToU64((unsigned char) byte), Bytes{ 1 }
+				))
+			);
 
 		const DVMPlace& array_global = pctx.insertStaticDataGlobal(
 			base::StrID("str_data"),
