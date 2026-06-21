@@ -203,7 +203,7 @@ namespace compiler::helios::defgen {
 						makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), result_symbol),
 						field.getSymbol()
 					),
-					std::move(init_expr)
+					init_expr
 				));
 			}
 
