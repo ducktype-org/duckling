@@ -163,7 +163,8 @@ namespace compiler::repl {
 		if (return_type.getRefKind() != tsh::ReferenceKind::Direct)
 			return std::unexpected("Unsupported return type for REPL: " + return_type.toString());
 
-		const auto       raw_type_str = return_type.getType().toString();
+		const auto&      abstract_type = return_type.getType();
+		const auto&      raw_type_str  = abstract_type.toString();
 		std::string_view type_view(raw_type_str);
 
 		return vm::api::runFunction(pid, std::string(func_name), {})

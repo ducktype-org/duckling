@@ -8,11 +8,25 @@ namespace pst {
 	 * @brief Simple expand macro.
 	 */
 	class Expand final: public Stmt {
+		THIS_CLASS(Expand);
+		PARENT_CLASS(Stmt);
+		CLONE_SIGNATURE_DEFAULT_OVERRIDE();
+		CLONE_SUBELEMENTS();
+
+	protected:
 		// This is context that is saved during parsing so that it can be restored on expansion.
 		Box<LangParserContext> context;
 		NAMED_CHILD(value, CommaExprHolder);
 
 	public:
+		/**
+		 * @note This constructor is used instead of ELEMENT_CLONE_DECL, because LangParserContext
+		 * require custom handling as it doesn't have a simple copy constructor.
+		 */
+		explicit Expand(pst::CloneDummy dummy, const Expand& other):
+			  ParentClass(dummy, other),
+			  context(makeBox<LangParserContext>(other.context.ref())) {}
+
 		Expand(const LangParserState& state, CRef<LangParserContext> context):
 			  Stmt(StmtKind::Expand, state),
 			  context(makeBox<LangParserContext>(context)) {

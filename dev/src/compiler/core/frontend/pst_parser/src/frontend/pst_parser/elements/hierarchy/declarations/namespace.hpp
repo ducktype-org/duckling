@@ -4,6 +4,10 @@
 
 namespace pst {
 	class Namespace final: public Decl {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(Namespace, Decl);
+		CLONE_SUBELEMENTS();
+
+	protected:
 		NAMED_CHILD(name, IdentifierWrapper);
 		NAMED_CHILD(body, CodeBlock);
 

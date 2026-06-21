@@ -410,7 +410,9 @@ namespace lexer {
 
 		next();
 		while (!peek().is('"')) {
-			if (peek().is('\\')) {
+			// A backslash as the very last character must not be skipped over,
+			// otherwise skip(2) would advance past EOF; let the EOF branch report it.
+			if (peek().is('\\') && !peek(1).is(Class::END_OF_FILE_VALUE)) {
 				skip(2);
 			} else if (isEOL()) {
 				dia::SourcePosition err_pos(source_start, where - 1);
@@ -444,7 +446,8 @@ namespace lexer {
 		auto  source_start = currentPosition();
 
 		while (!peek().is('"') && !peek().is('{') && !isEOL() && !isEOF())
-			if (peek().is('\\'))
+			// Do not skip past EOF on a trailing backslash; the loop condition handles EOF.
+			if (peek().is('\\') && !peek(1).is(Class::END_OF_FILE_VALUE))
 				skip(2);
 			else
 				next();
@@ -520,7 +523,9 @@ namespace lexer {
 
 		next();
 		while (!peek().is('\'')) {
-			if (peek().is('\\')) {
+			// A backslash as the very last character must not be skipped over,
+			// otherwise skip(2) would advance past EOF; let the EOF branch report it.
+			if (peek().is('\\') && !peek(1).is(Class::END_OF_FILE_VALUE)) {
 				skip(2);
 			} else if (isEOL()) {
 				dia::SourcePosition err_pos(source_start, where - 1);

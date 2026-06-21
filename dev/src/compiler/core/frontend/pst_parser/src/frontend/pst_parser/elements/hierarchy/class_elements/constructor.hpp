@@ -10,6 +10,10 @@ namespace pst {
 	 * @brief Class constructor element.
 	 */
 	class Constructor final: public ClassSpecial {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(Constructor, ClassSpecial);
+		CLONE_SUBELEMENTS();
+
+	protected:
 		NAMED_CHILD_OPT(ident, IdentifierWrapper);  ///< If no value it's "create" is implied
 		NAMED_CHILD(params, ParamList);
 		NAMED_CHILD(inits, InitList);

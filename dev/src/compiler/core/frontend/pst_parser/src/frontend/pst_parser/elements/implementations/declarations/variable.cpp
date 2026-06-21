@@ -5,6 +5,8 @@
 #include "var_parse.hpp"
 
 namespace pst {
+	CLONE_SUB_ELEMENTS_DEF(Variable, name, type, value);
+
 	MBox<Variable> Variable::parse(LangParserState& state) {
 		MBox<Variable> out;
 

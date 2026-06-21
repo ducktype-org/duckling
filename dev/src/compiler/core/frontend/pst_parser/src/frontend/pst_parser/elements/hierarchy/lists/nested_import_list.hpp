@@ -9,6 +9,9 @@ namespace pst {
 	 */
 	class NestedImportList final:
 		  public List<ImportChain, internal::NameGetters::nestedImportList> {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(NestedImportList, List);
+		CLONE_SUBELEMENTS();
+
 	public:
 		explicit NestedImportList(const LangParserState& state): List(state) {
 			this->element_kind = ElementKind::NestedImportList;
