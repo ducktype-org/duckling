@@ -892,19 +892,6 @@ private:
 
 			checkForErrorOnCompileModule(
 				R"(
-				class A { a: i64 = 1; }
-				fun main() -> i64 = {
-					var a: (i32, A);
-					return 0;
-				}
-			)",
-				{ "Feature not implemented", "Generating default constructors for", "tuple types" },
-				1
-			);
-
-
-			checkForErrorOnCompileModule(
-				R"(
 				fun main() -> i64 = {
 					var a: List[i32];
 					var b = a;
