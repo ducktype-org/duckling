@@ -539,15 +539,14 @@ namespace vm {
 		std::expected<code::valid_function::ValidFunction, loader::LoaderLogger> valid_expr = [&] {
 			variant_match(source) {
 				variant_case(fs::File, files) { return loader.validateExpr(thread_ref, files); }
-				variant_case(code::Function, func) {
-					return loader.validateExpr(thread_ref, func);
-				}
+				variant_case(code::Function, func) { return loader.validateExpr(thread_ref, func); }
 			}
 			CORE_UNREACHABLE();
 		}();
 
 		if (valid_expr.has_value()) {
-			thread_ref->loadRuntimeExpr(std::move(valid_expr).value());
+			auto success = thread_ref->loadAndExecRuntimeExpr(std::move(valid_expr).value());
+			if (!success) return std::unexpected(api::ApiError{ api::OtherError{ "Couldn't execute the expression" } });
 			return api::Response(api::response::Empty());
 		} else {
 			std::stringstream ss;

@@ -20,6 +20,7 @@
 #include <vm/core/safe/low_program/low_program.hpp>
 #include <vm/core/safe/low_program/opcodes.hpp>
 #include <vm/core/safe/memory/pointer.hpp>
+#include <vm/core/safe/opcode_functions/opcodes_functions.hpp>
 #include <vm/core/safe/safe_vmprocess.hpp>
 #include <vm/core/safe/type_metadata/definitions.hpp>
 #include <vm/core/safe/type_metadata/type.hpp>
@@ -646,7 +647,7 @@ namespace vm {
 	) const {
 		variant_match(getStatus()) {
 			variant_case_novalue(api::Paused) {
-				const Frame * frame = runtime_data.frame_stack_current;
+				const Frame* frame = runtime_data.frame_stack_current;
 
 				if_opt_some(opt_frame_idx, frame_index) {
 					u64 frames = getNumberOfCurrentStackFrames();
@@ -719,9 +720,24 @@ namespace vm {
 		runtime_data.global_block_ref_buffer_base = global_buffer_pointers.blocks_buffer_base;
 	}
 
-	void SafeVMThread::loadRuntimeExpr(code::valid_function::ValidFunction&& high_expr) {
+	bool SafeVMThread::loadAndExecRuntimeExpr(code::valid_function::ValidFunction&& high_expr) {
+		CORE_ASSERT(
+			v_matches(getStatus(), api::Paused),
+			"To load and evaluate expr we need the thread to be paused"
+		);
 		runtime_expr_high.emplace_back(std::move(high_expr));
 		runtime_expr_low.emplace_back(safe_process.compileToLow(this, runtime_expr_high.back()));
+
+		auto& frame       = runtime_data.frame_stack_current;
+		auto& instr       = frame->instr;
+		auto& local_stack = frame->local_stack;
+		auto& called_expr = runtime_expr_low.back();
+		for (auto type: called_expr.result_types)
+			OpFuns::performInit(instr, local_stack, frame, *this, type);
+		OpFuns::performFunctionCall(instr, local_stack, frame, *this, called_expr);
+
+		auto response = resume();
+		return response;
 	}
 
 	base::Optional<code::StackStateID> SafeVMThread::getStackState(u64 frame_index) const {
@@ -740,5 +756,19 @@ namespace vm {
         );
 
 		return func_ref->stack_states.at(high_pos.instruction_index);
+	}
+
+	base::Optional<std::tuple<CRef<code::valid_function::ValidFunction>, code::StackStateID>>
+		SafeVMThread::getFuncAndStackStateOfThread(usize frame_idx) const {
+		if (frame_idx >= getNumberOfCurrentStackFrames()) return std::nullopt;
+
+		auto& frame     = getStackFrame(frame_idx);
+		auto  high_func = frame.current_function->high_func;
+		if (!high_func) return std::nullopt;
+
+		auto opt_state = getStackState(frame_idx);
+		if (!opt_state) return std::nullopt;
+
+		return std::make_tuple(*high_func.toOpt(), *opt_state);
 	}
 }

@@ -48,8 +48,7 @@ namespace vm::code {
 		constexpr static const std::string_view ERR_MSG
 			= "Trying to evaluate expression while the thread is running : ";
 
-		EvaluatingExprOnRunningThreadError():
-			  ValidationError(std::string(ERR_MSG)){}
+		EvaluatingExprOnRunningThreadError(): ValidationError(std::string(ERR_MSG)) {}
 	};
 
 	class PathWithoutEndError: public ValidationError {
@@ -188,6 +187,21 @@ namespace vm::code {
 		[[nodiscard]] base::Optional<CRef<ElementBase>> maybeElement() const override {
 			return type_mismatch ? static_cast<CRef<ElementBase>>(&main_signature.result_types[0])
 			                     : base::Optional<CRef<ElementBase>>{};
+		}
+	};
+
+	class InvalidRuntimeExprSignature: public ValidationError {
+	public:
+		constexpr static std::string_view ERR_MSG
+			= "It's required for the runtime expressions don't take any parameters";
+		const code::FuncSignature signature;
+
+		InvalidRuntimeExprSignature(code::FuncSignature expr_signature):
+			  ValidationError(ERR_MSG.data()),
+			  signature(std::move(expr_signature)) {}
+
+		[[nodiscard]] base::Optional<CRef<ElementBase>> maybeElement() const override {
+			return static_cast<CRef<ElementBase>>(&signature.parameters.at(0));
 		}
 	};
 

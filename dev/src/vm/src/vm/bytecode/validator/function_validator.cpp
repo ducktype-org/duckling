@@ -224,24 +224,16 @@ public:
 	template<typename PlaceT>
 	[[nodiscard]]
 	bool contains(const PlaceT& place) const {
-		if_opt_some(place.frame, from_top) {
+		if_opt_some(place.frame, frame_idx) {
 			CORE_ASSERT(
 				thread.has_value(), "we should be checking that there is a thread beforehand"
 			);
-			auto& t = **thread;
+			auto tpl = (*thread)->getFuncAndStackStateOfThread(frame_idx);
 
-			usize stack_size = t.getNumberOfCurrentStackFrames();
-			if (stack_size < from_top) return false;
-			usize frame_idx = stack_size - 1 - from_top;
+			if_opt_none(tpl) { return false; }
+			auto [high_func, stack_state] = *tpl;
 
-			auto& frame     = t.getStackFrame(frame_idx);
-			auto  high_func = frame.current_function->high_func;
-			if (!high_func) return false;
-
-			auto opt_state = t.getStackState(frame_idx);
-			if (!opt_state) return false;
-
-			return high_func->local_stack.contains(*opt_state, place.var_name);
+			return high_func->local_stack.contains(stack_state, place.var_name);
 		}
 		return VISIT(source, db, return db->contains(stack_state_id, place.var_name););
 	}
@@ -251,7 +243,23 @@ public:
 	CRef<valid_type::ValidType> at(const PlaceT& place) const {
 		base::StrID name_of_type{};
 
-		VISIT(source, db, name_of_type = *db->getTypeName(stack_state_id, place.var_name););
+		match_optional(place.frame) {
+			opt_some(frame_idx) {
+				CORE_ASSERT(
+					thread.has_value(), "we should be checking that there is a thread beforehand"
+				);
+				auto tpl = (*thread)->getFuncAndStackStateOfThread(frame_idx);
+
+				CORE_ASSERT(tpl.has_value(), "all the checks should be done before");
+				auto [high_func, stack_state] = *tpl;
+
+				name_of_type = *high_func->local_stack.getTypeName(stack_state, place.var_name);
+			}
+
+			opt_none {
+				VISIT(source, db, name_of_type = *db->getTypeName(stack_state_id, place.var_name););
+			}
+		}
 
 		return types_ctx->at(name_of_type);
 	}
@@ -1740,7 +1748,7 @@ class FunctionValidator {
 	}
 
 	template<OpCode... ops>
-	void checkIfForbiddenOpcodes(const std::vector<Instruction>& body) {
+	void throwOnForbiddenOpcodes(const std::vector<Instruction>& body) {
 		constexpr std::array FORBIDDEN = { ops... };
 
 		for (auto instr: body)
@@ -1749,7 +1757,12 @@ class FunctionValidator {
 	}
 
 	void validateSignature() {
-		if (!thread.has_value() && function.name.str == base::StrID("main")) {
+		bool is_expr = thread.has_value();
+
+		if (is_expr && function.signature.parameters.size())
+			throw InvalidRuntimeExprSignature(function.signature);
+
+		if (!is_expr && function.name.str == base::StrID("main")) {
 			if (function.signature.result_types.size() != 1)
 				throw InvalidMainReturnType(function.signature, false);
 			if (function.signature.result_types[0].str != base::StrID("i64"))
@@ -1775,17 +1788,17 @@ class FunctionValidator {
 		return { body, stack_states };
 	}
 
-	void validateThread() {
+	void validateThreadStatus() {
 		bool is_expr = thread.has_value();
 
-		if(is_expr && !std::holds_alternative<api::Paused>((*thread)->getStatus()))
+		if (is_expr && !std::holds_alternative<api::Paused>((*thread)->getStatus()))
 			throw EvaluatingExprOnRunningThreadError();
 	}
 
-	void validateRemainingInstructions(std::vector<Instruction> const& body) {
+	void validateIllegalInstructions(const std::vector<Instruction>& body) {
 		bool is_expr = thread.has_value();
 
-		if (is_expr) checkIfForbiddenOpcodes<OpCode::Op_ret_tailcall_func>(body);
+		if (is_expr) throwOnForbiddenOpcodes<OpCode::Op_ret_tailcall_func>(body);
 	}
 
 public:
@@ -1806,13 +1819,13 @@ public:
 
 	std::tuple<std::vector<Instruction>, std::vector<StackStateID>, LocalStackDb> validateAndExtractReachableCode(
 	) {
-		validateThread();
+		validateThreadStatus();
 		validateSignature();
 		preprocessLabels();
 		LocalStackDb db = traverseControlFlowGraph();
 		validateFunctionEnd();
 		auto [body, stack_states] = getBody();
-		validateRemainingInstructions(body);
+		validateIllegalInstructions(body);
 
 		return { body, stack_states, db };
 	}

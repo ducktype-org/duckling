@@ -314,7 +314,11 @@ namespace vm {
 				SafeVMThread::isCallableFunctionID(function_id),
 				"Start function should not be called in the runtime!"
 			);
-			performFunctionCall(instr, local_stack, frame, thread, function_id);
+
+			auto& called_func = thread.process_program->getFunctions()[function_id];
+			instr += 1;
+
+			performFunctionCall(instr, local_stack, frame, thread, called_func);
 		}
 		// After acquiring the `executing_code` of the new function we have instruction pointer
 		// (`instr`) pointing at the first instruction of the new function, so moving forward by one
@@ -488,7 +492,10 @@ namespace vm {
 				"Start function should not be called in the runtime!"
 			);
 
-			performFunctionCall(instr, local_stack, frame, thread, function_id);
+			auto& called_func = thread.process_program->getFunctions()[function_id];
+			instr += 1;
+
+			performFunctionCall(instr, local_stack, frame, thread, called_func);
 		}
 		FUNCTION_CONT(0);
 	}

@@ -4,15 +4,12 @@
 
 #include <vm/api/vm.hpp>
 
-
 class VmRuntimeExprTest: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS VmRuntimeExprTest
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		TESTER_ADD_TEST(pausesOnBreakpointAndResumes);
-	}
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(pausesOnBreakpointAndResumes); }
 
 
 private:

@@ -244,7 +244,12 @@ namespace vm {
 		[[nodiscard]]
 		base::Optional<code::StackStateID> getStackState(u64 frame_index) const;
 
-		void loadRuntimeExpr(code::valid_function::ValidFunction&& expr);
+		[[nodiscard]]
+		base::Optional<std::tuple<
+			CRef<code::valid_function::ValidFunction>,
+			code::StackStateID>> getFuncAndStackStateOfThread(usize frame_idx) const;
+
+		bool loadAndExecRuntimeExpr(code::valid_function::ValidFunction&& expr);
 
 		/**
 		 * @brief Update the pointers to the global data buffer and global blocks buffer.

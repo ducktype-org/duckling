@@ -117,10 +117,9 @@ namespace vm {
 				std::byte*&              local_stack,
 				Frame*&                  frame,
 				SafeVMThread&            thread,
-				usize                    function_id
+				const low::LowFuncData&  called_func
 			) {
 			auto& runtime_data = thread.runtime_data;
-			auto& called_func  = thread.process_program->getFunctions()[function_id];
 
 			if constexpr (ENABLE_VM_DETAIL_LOGGING)
 				CORE_DEV_LOG(
@@ -142,7 +141,7 @@ namespace vm {
 				= u64(frame->local_block_ref_stack_end - frame->local_block_ref_stack_base);
 
 			// Save current registers and flow.
-			frame->instr       = instr + 1;
+			frame->instr       = instr;
 			frame->local_stack = local_stack;
 
 			// Save the last frame

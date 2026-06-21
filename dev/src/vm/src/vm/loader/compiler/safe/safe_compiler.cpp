@@ -52,6 +52,24 @@ namespace vm::loader::compiler::safe {
 
 		DEFINE_LOWER_ARGUMENT_IMPL_FOR_FAMILY(
 			low::opargs::PlaceDataArgumentType,
+
+			if_opt_some(opcode_arg.frame, frame_idx) {
+				CORE_ASSERT(stack_ctx.thread_evaluating_expr.has_value(), "there should be a thread evaluating this expr");
+				auto& thread = **stack_ctx.thread_evaluating_expr;
+
+				auto [prev_func, stack_state] = *thread.getFuncAndStackStateOfThread(frame_idx);
+				auto relative_offset = getIntTypeSize(*prev_func->local_stack.getByteOffset(stack_state, opcode_arg.var_name));
+				
+				usize stack_size = thread.getNumberOfCurrentStackFrames();
+
+				auto prev_frame_base = thread.getStackFrame(frame_idx).local_stack;
+				auto current_end = thread.getStackFrame(stack_size - 1).local_stack_head;
+				
+				usize frame_offset = usize(prev_frame_base - current_end);
+
+				return (frame_offset + relative_offset) & (~(1ULL << 63));
+			}
+
 			if (auto&& maybe_offset = stack_ctx.function.local_stack.getByteOffset(stack_state_id, opcode_arg.var_name); maybe_offset.has_value()) {
 				return getIntTypeSize(*maybe_offset);
 			}
@@ -60,6 +78,24 @@ namespace vm::loader::compiler::safe {
 
 		DEFINE_LOWER_ARGUMENT_IMPL_FOR_FAMILY(
 			low::opargs::PlaceBlockArgumentType,
+
+			if_opt_some(opcode_arg.frame, frame_idx) {
+				CORE_ASSERT(stack_ctx.thread_evaluating_expr.has_value(), "there is a thread evaluating this expr");
+				auto& thread = **stack_ctx.thread_evaluating_expr;
+
+				auto [prev_func, stack_state] = *thread.getFuncAndStackStateOfThread(frame_idx);
+				auto relative_offset = *prev_func->local_stack.getIdx(stack_state, opcode_arg.var_name);
+				
+				usize stack_size = thread.getNumberOfCurrentStackFrames();
+
+				auto prev_frame_base = thread.getStackFrame(frame_idx).local_block_ref_stack_base;
+				auto current_end = thread.getStackFrame(stack_size - 1).local_block_ref_stack_end;
+				
+				usize frame_offset = usize(prev_frame_base - current_end);
+
+				return (frame_offset + relative_offset) & (~(1ULL << 63));
+			}
+
 			if(auto maybe_val = stack_ctx.function.local_stack.getIdx(stack_state_id, opcode_arg.var_name)) {
 				return *maybe_val;
 			}
