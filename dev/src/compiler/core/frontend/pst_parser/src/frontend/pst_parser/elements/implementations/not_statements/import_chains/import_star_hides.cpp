@@ -3,6 +3,8 @@
 #include "../preamble.hpp"
 
 namespace pst {
+	CLONE_SUB_ELEMENTS_DEF(ImportStarHides, names, hides);
+
 	MBox<ImportStarHides> ImportStarHides::parse(LangParserState& state) {
 		auto out = makeBox<ImportStarHides>(state);
 

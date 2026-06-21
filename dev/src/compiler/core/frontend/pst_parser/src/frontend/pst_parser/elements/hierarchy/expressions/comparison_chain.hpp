@@ -11,6 +11,10 @@ namespace pst::expr {
 	 * The chain is stored as a list of sub-expressions and a list of operators between them.
 	 */
 	class ComparisonChain final: public ExprElement {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(ComparisonChain, ExprElement);
+		CLONE_SUBELEMENTS();
+
+	protected:
 		using Lower = GeneralBinary;
 
 		std::vector<AccessInternalAnonymous<ExprElement>>     sub_expr;

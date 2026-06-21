@@ -3,6 +3,8 @@
 #include "impl_template.hpp"
 
 namespace pst {
+	CLONE_SUB_ELEMENTS_DEF(AtrArgList, elements);
+
 	MBox<AtrArgList> AtrArgList::parse(LangParserState& state) {
 		return ListParsingTemplate::parseList<
 			UniversalExprHolder,

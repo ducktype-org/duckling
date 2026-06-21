@@ -332,6 +332,13 @@ namespace base {
 			return *ptr;
 		}
 
+		template<class U, class UDeleter = base::DefaultBoxPtrDeleter<U>>
+		requires std::is_constructible_v<UDeleter, Deleter&&> MBox<U, UDeleter> dynamicCast() && {
+			U* ret = dynamic_cast<U*>(ptr);
+			ptr    = nullptr;
+			return MBox<U, UDeleter>(ret, std::move(deleter));
+		}
+
 		/**
 		 * @brief Method that converts MBox to Optional<Box>.
 		 * It leaves MBox in null state.

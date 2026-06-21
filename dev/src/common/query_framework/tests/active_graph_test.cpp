@@ -163,7 +163,7 @@ private:
 		active_graph.putNode(node_ids_fixtures.at(0), context_fixture);
 		active_graph.setEdge(node_ids_fixtures.at(0), node_ids_fixtures.at(0));
 		auto was_cycle_loop = active_graph.cycleCheck(node_ids_fixtures.at(0));
-		ASSERT_TRUE(was_cycle_loop.has_value());
+		ASSERT_HAS_VALUE(was_cycle_loop);
 		ASSERT_TRUE(was_cycle_loop.value().cycle_nodes.size() == 1);
 		ASSERT_TRUE(was_cycle_loop.value().cycle_nodes.at(0).node_id == node_ids_fixtures.at(0));
 

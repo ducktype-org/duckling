@@ -28,6 +28,7 @@ public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(basicMapTest);
 		TESTER_ADD_TEST(strIDTest);
+		TESTER_ADD_TEST(bigStringBufferTest);
 	}
 
 	~SimpleIDMapsTest() override = default;
@@ -76,6 +77,24 @@ private:
 		assertTrue(id2 != id3, "!= error");
 		assertTrue(id3 == id3, "== error");
 		assertTrue(id3 == "ab", "data error");
+	}
+
+	void bigStringBufferTest() {
+		// A regular buffer with free space, then a string too big for any regular
+		// buffer (which gets its own dedicated buffer at the end of the buffer
+		// list), then a small string. The small string must open a new regular
+		// buffer instead of being appended into the dedicated buffer, where it
+		// would overwrite the interned bytes of the big string.
+		base::StrID warmup(makeView("warmup"));
+
+		const std::string big(40'000, 'B');
+		base::StrID       big_id(makeView(big));
+
+		base::StrID small_id(makeView("small-after-big"));
+
+		assertTrue(big_id.view().stringView() == big, "big string corrupted by following intern");
+		assertTrue(base::StrID(makeView(big)) == big_id, "big string lookup mismatch");
+		assertTrue(small_id == "small-after-big", "small string data error");
 	}
 };
 

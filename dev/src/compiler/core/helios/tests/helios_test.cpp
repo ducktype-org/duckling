@@ -102,6 +102,7 @@ public:
 		TESTER_ADD_TEST(testTypeLifting);
 		TESTER_ADD_TEST(testHoutElementsOrigin);
 		TESTER_ADD_TEST(testAliases);
+		TESTER_ADD_TEST(testBackendDependentCompTime);
 
 		// this is at the end
 		// so we test all the scopes created in helios tests:
@@ -442,8 +443,8 @@ private:
 		ASSERT_EQUAL(2, first_class_info.members.size());
 		ASSERT_EQUAL(2, first_class_info.methods.size());
 		ASSERT_EQUAL(1, first_class_info.constructors.size());
-		ASSERT_TRUE(first_class_info.destructor.has_value());
-		ASSERT_TRUE(not first_class_info.base.has_value());
+		ASSERT_HAS_VALUE(first_class_info.destructor);
+		ASSERT_NO_VALUE(first_class_info.base);
 		ASSERT_EQUAL(0, first_class_info.implements.size());
 		ASSERT_EQUAL("FirstClassEver", first_class_info.name);
 
@@ -461,8 +462,8 @@ private:
 		ASSERT_EQUAL(0, second_class_info.members.size());
 		ASSERT_EQUAL(0, second_class_info.methods.size());
 		ASSERT_EQUAL(0, second_class_info.constructors.size());
-		ASSERT_TRUE(not second_class_info.destructor.has_value());
-		ASSERT_TRUE(second_class_info.base.has_value());
+		ASSERT_NO_VALUE(second_class_info.destructor);
+		ASSERT_HAS_VALUE(second_class_info.base);
 		ASSERT_EQUAL(first_class_abstract_type, second_class_info.base);
 		ASSERT_EQUAL("SecondClass", second_class_info.name);
 
@@ -2562,7 +2563,7 @@ private:
 			ASSERT_TRUE(std::holds_alternative<compiler::helios::CAbi>(abi_value));
 			auto c_abi = std::get<compiler::helios::CAbi>(abi_value);
 			if (!expected_library.empty()) {
-				ASSERT_TRUE(c_abi.library.has_value());
+				ASSERT_HAS_VALUE(c_abi.library);
 				ASSERT_EQUAL(expected_library, c_abi.library.value().strView());
 			}
 		};
@@ -3259,6 +3260,16 @@ private:
 		auto nonwild_using        = getChain("c", root_scope);
 		auto nonwild_using_target = getChain("M.c", root_scope);
 		ASSERT_EQUAL(nonwild_using, nonwild_using_target);
+	}
+
+	void testBackendDependentCompTime() {
+		auto [module, root_scope] = getModule(fs::File(path("test_modules/backend_dependent")));
+
+		// `const VALUE = getValue.func();` calls a `@backend_dependent` function. Comp time
+		// evaluation runs on the DVM, so it must select the `@dvm_only_impl` implementation
+		// (returning 10) rather than the `@native_only_impl` one (returning 20). Evaluating
+		// the const therefore checks that comp time picks the right implementation.
+		ASSERT_EQUAL(10, getConstValueAs<i32>("VALUE", root_scope));
 	}
 
 	void testScopeParentsAndDepth() {

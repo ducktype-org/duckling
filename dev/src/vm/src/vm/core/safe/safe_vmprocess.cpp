@@ -172,10 +172,11 @@ namespace vm {
 		return Box<VmValue>::fromPointer(new VmValue(*this, type, src));
 	}
 
-	SafeVMProcess::SafeVMProcess(const PID my_pid):
+	SafeVMProcess::SafeVMProcess(const PID my_pid, bool enable_deadlock_detection):
 		  IVMProcess(my_pid),
 		  loaded_program(&loaded_program_copy),
 		  loaded_program_copy(compiler.getLowProgram()) {
+		if (enable_deadlock_detection) deadlock_detector.emplace();
 		vm_threads.add(*this);
 	}
 
@@ -367,17 +368,44 @@ namespace vm {
 						api::OtherError{ "Frame index out of bounds" } });
 				Frame& frame = opt_thread.value()->getStackFrame(frame_index);
 
+				auto block_span
+					= std::span(frame.local_block_ref_stack_base, frame.local_block_ref_stack_end);
+
 				std::vector<api::response::StackFrameData::FrameVar> frame_vars;
-				for (Block* block_ptr:
-				     std::span(frame.local_block_ref_stack_base, frame.local_block_ref_stack_end)) {
+				for (Block* const& block_ptr: block_span) {
 					Ref<Block> block  = Ref(block_ptr);
 					u64        offset = base::safeIntConv<u64>(
                         memory.getBlockViewUnsafe(block).getBegin() - frame.local_stack
                     );
 					frame_vars.push_back(api::response::StackFrameData::FrameVar{
 						.offset = offset,
+						.name   = std::nullopt,
+						.type   = std::nullopt,
 						.value  = VMValueRef(*this, memory.getBlockType(block), Pointer(block, 0)),
 					});
+				}
+
+				auto opt_low_pos = opt_thread.value()->getCurrentPosition(frame_index);
+				if_opt_none(opt_low_pos) api::Response(api::response::StackFrameData{
+					.function_name = frame.current_function->name, .frame_vars = frame_vars });
+
+				if_opt_some(
+					compiler.mapLowVMProgramPositionToCodeCollectionPosition(*opt_low_pos), high_pos
+				) {
+					auto func_opt
+						= loader.getHighProgram()->functions().atMaybe(high_pos.function_name);
+					CORE_ASSERT(func_opt, "We mapped low position to high, high-func should exist");
+					auto  func_ref    = *func_opt;
+					auto  stack_state = func_ref->stack_states.at(high_pos.instruction_index);
+					auto& ls_db       = func_ref->local_stack;
+
+					using namespace std::views;
+					for (auto&& [block_idx, frame_var]: zip(iota(0u), frame_vars)) {
+						frame_var.name = ls_db.getName(stack_state, block_idx);
+						frame_var.type = ls_db.getTypeName(stack_state, block_idx);
+						CORE_ASSERT(frame_var.type, "we should have a type of a variable on stack");
+						CORE_ASSERT(frame_var.name, "we should have a name of a variable on stack");
+					}
 				}
 
 				return api::Response(api::response::StackFrameData{

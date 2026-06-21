@@ -7,6 +7,8 @@
 
 namespace pst {
 
+	CLONE_SUB_ELEMENTS_DEF(Stmt, prefixes.attributes, prefixes.specifiers);
+
 	bool Stmt::trailingSemicolon() { return true; }
 
 	namespace internal {

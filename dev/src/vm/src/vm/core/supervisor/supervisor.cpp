@@ -1,6 +1,6 @@
 #include "supervisor.hpp"
 
-#include <vm/core/process/vmprocess.hpp>
+#include <vm/core/process/ivmprocess.hpp>
 #include <vm/core/safe/safe_vmprocess.hpp>
 
 #include <mutex>
@@ -17,10 +17,12 @@ namespace vm {
 		return process_table.at(pid).refMut();
 	}
 
-	std::expected<PID, api::ApiError> Supervisor::newProcess() {
+	std::expected<PID, api::ApiError> Supervisor::newProcess(bool enable_deadlock_detection) {
 		std::unique_lock lock(rw_process_table);
-		PID              pid = next++;
-		process_table.emplace(pid, Box<IVMProcess>::fromPointer(new SafeVMProcess(pid)));
+		PID              pid = PID::fromU64(next_pid++);
+		process_table.emplace(
+			pid, Box<IVMProcess>::fromPointer(new SafeVMProcess(pid, enable_deadlock_detection))
+		);
 		return pid;
 	}
 

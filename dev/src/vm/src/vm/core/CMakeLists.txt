@@ -6,12 +6,14 @@ endif ()
 add_files(
 	supervisor/supervisor.cpp
 	safe/safe_vmprocess.cpp
-	process/vmprocess.cpp
+	process/ivmprocess.cpp
 	process/proc_io.cpp
 	builtin_functions.cpp
 	safe/type_metadata/type_metadata.cpp
 	safe/type_metadata/type.cpp
+	safe/memory/initialization_from_const.cpp
 	safe/memory/memory.cpp
+	safe/concurrency/deadlock_detection.cpp
 	safe/concurrency/gil.cpp
 	safe/concurrency/condition_variable.cpp
 	safe/concurrency/synchronization_primitives.cpp

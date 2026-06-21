@@ -4,6 +4,8 @@
 #include "preamble.hpp"
 
 namespace pst {
+	CLONE_SUB_ELEMENTS_DEF(Method, name, params, ret, body);
+
 	MBox<Method> Method::parse(LangParserState& state) {
 		auto out = makeBox<Method>(state);
 

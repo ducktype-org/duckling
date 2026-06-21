@@ -12,7 +12,6 @@
 #include "preamble.hpp"
 
 namespace pst::expr {
-
 	MBox<ExprElement> Atom::parse(LangParserState& state) {
 		if (!checkNonEmpty(state)) return nullptr;
 

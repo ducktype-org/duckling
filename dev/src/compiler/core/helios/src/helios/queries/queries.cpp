@@ -7,6 +7,7 @@
 #include <helios/mangler/mangler.hpp>
 #include <helios/queries/function_queries.hpp>
 #include <helios/queries/global_data_queries.hpp>
+#include <helios/symbols/attributes.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
@@ -27,6 +28,7 @@
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/extend_cpp/vector_utils.hpp>
+#include <base/types/ok_bad.hpp>
 
 #include <query_framework/query_errors.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
@@ -75,9 +77,6 @@ namespace compiler::helios {
 			std::set<SymID>                default_ctors;
 			std::set<SymID>                additional_ctors;
 			std::set<SymID>                additional_methods;
-			// Keeps track of mangled names processed within the current module
-			// to detect duplicated function declarations at the HOUT level.
-			std::set<base::StrID> processed_mangled_names;
 
 			auto register_ctor_and_tostring_if_needed = [&](SymID sym) {
 				const auto& symbol_type = ctx.query<QueryTypeOfSymbol>(sym)->valueOrThrow();
@@ -201,29 +200,7 @@ namespace compiler::helios {
 					is_failed = true;
 					continue;
 				} else {
-					auto& func     = hout_function->valueOrPanic();
-					SymID func_sym = func.declaration->original_symbol;
-					// NOTE: Utilizing the mangler here is a bit hacky, but should work without issues.
-					base::StrID mangled_name
-						= ctx.query<compiler::helios::mangler::QueryMangledSymbol>({ func_sym });
-
-					if (mangled_name.isBad()) {
-						out.functions.emplace_back(&func);
-						continue;
-					}
-
-					if (processed_mangled_names.contains(mangled_name)) {
-						auto stable_pos  = func.declaration->origin.getStablePosition().value();
-						auto symbol_name = std::string(func.declaration->original_name.strView());
-
-						ctx.logInt(makeBox<dia_int::DuplicatedDefinitionError>(
-							symbol_name, stable_pos, "here"
-						));
-						is_failed = true;
-						continue;
-					}
-
-					processed_mangled_names.insert(mangled_name);
+					auto& func = hout_function->valueOrPanic();
 					out.functions.emplace_back(&func);
 				}
 			}
@@ -232,9 +209,55 @@ namespace compiler::helios {
 				return f->declaration->original_symbol;
 			});
 
+			if (duplicatesCheck(ctx, out).isBad()) is_failed = true;
+
 			if (is_failed) return query::Failed();
 
 			return out;
+		}
+
+		/**
+		 * @brief Reports duplicated function definitions (functions sharing a mangled name).
+		 *
+		 * @return `base::BAD` if at least one duplicate was found. The caller is responsible for
+		 * failing the query gracefully; this must not throw, as `QueryModuleHOUT` does not catch
+		 * query-failure exceptions thrown from `provide`.
+		 */
+		static base::OkBad duplicatesCheck(query::Context& ctx, const HOUTUnit& unit) {
+			std::unordered_set<base::StrID> mangled_names;
+			bool                            found_duplicate = false;
+			for (const auto& func: unit.functions) {
+				base::StrID mangled_name = ctx.query<compiler::helios::mangler::QueryMangledSymbol>(
+					{ func->declaration->original_symbol }
+				);
+				if (mangled_name.isBad()) continue;
+				auto sym_id = func->declaration->original_symbol;
+
+				if (hasAttribute<attributes::DVMOnlyImpl>(sym_id)
+				    or hasAttribute<attributes::NativeOnlyImpl>(sym_id)) {
+					// We allow duplicate mangled names for functions with backend-dependent
+					// implementations, as they will be compiled separately and won't cause a conflict.
+					continue;
+				}
+
+				if (mangled_names.contains(mangled_name)) {
+					found_duplicate = true;
+
+					// Compiler-generated functions have no source position; there is nothing
+					// meaningful to point the user at, so we only emit the diagnostic for
+					// functions that originate from source.
+					auto stable_pos = func->declaration->origin.getStablePosition();
+					if (stable_pos.has_value()) {
+						auto symbol_name = std::string(func->declaration->original_name.strView());
+						ctx.logInt(makeBox<dia_int::DuplicatedDefinitionError>(
+							symbol_name, stable_pos.value(), "here"
+						));
+					}
+				} else {
+					mangled_names.insert(mangled_name);
+				}
+			}
+			return found_duplicate ? base::BAD : base::OK;
 		}
 
 		/**

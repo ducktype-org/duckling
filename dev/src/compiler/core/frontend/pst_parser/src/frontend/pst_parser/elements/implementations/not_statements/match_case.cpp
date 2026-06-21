@@ -3,6 +3,15 @@
 #include "preamble.hpp"
 
 namespace pst {
+	void MatchCase::cloneSubElements(const MatchCase& other) {
+		for (auto& branch: other.branches) {
+			branches.push_back({});
+			CloningUtils::clone(*this, branches.back().condition, branch.condition);
+			CloningUtils::clone(*this, branches.back().result, branch.result);
+		}
+		ELEMENT_CLONE_SUB_ELEMENT(pattern);
+		ParentClass::cloneSubElements(other);
+	}
 
 	MBox<MatchCase> MatchCase::parse(LangParserState& state) {
 		auto out = makeBox<MatchCase>(state);
