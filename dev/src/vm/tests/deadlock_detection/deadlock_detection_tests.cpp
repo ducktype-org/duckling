@@ -21,7 +21,7 @@ public:
 private:
 	TestResult runWithDetection(const std::string& filename) {
 		auto pid = initProcess(true);
-		ASSERT_TRUE(vm::api::loadFiles(pid, { fs::File(path(filename)) }).has_value());
+		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { fs::File(path(filename)) }));
 		return runTestOnVmGetResult(pid);
 	}
 
@@ -54,7 +54,7 @@ private:
 		// usage still works.
 		auto pid  = initProcess(false);
 		auto file = fs::File(path("safe_mutex.dbc"));
-		ASSERT_TRUE(vm::api::loadFiles(pid, { file }).has_value());
+		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file }));
 		handleTestResult(runTestOnVmGetResult(pid), 0);
 	}
 };
