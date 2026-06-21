@@ -14,12 +14,10 @@
 #include <vm/bytecode/validator/valid_program.hpp>
 
 namespace compiler::backend_vm::internal {
-	struct CtvLowering;
+	class CTVLowering;
 
 	class ProgramLoweringContext final {
-		// CTV lowering (see ctv_lowering.hpp) materializes globals/types/functions directly into
-		// the context, so it needs access to the internal storage.
-		friend struct CtvLowering;
+		friend class CTVLowering;
 
 		/**
 		 * @brief Context used purely for throwing NotYetImplemented errors.
@@ -101,7 +99,7 @@ namespace compiler::backend_vm::internal {
 		 * @brief Creates and inserts a pointer type based on the type name.
 		 * It caches the result, so inserts the type into the program only if needed.
 		 */
-		const vm::code::TypeOfData& getOrInsertPointerType(base::StrID type_name);
+		const vm::code::TypeOfData& getOrInsertPointerType(base::StrID pointee_type_name);
 
 		/**
 		 * @brief Retrieves or lazily creates the DVM place for the given LIR global.

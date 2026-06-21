@@ -30,7 +30,7 @@ namespace compiler::backend_vm::internal {
 
 	}  // namespace
 
-	DVMValue CtvLowering::lowerValue(
+	DVMValue CTVLowering::lowerValue(
 		FunctionLoweringContext& fctx, const lir::LIRConstant& constant
 	) {
 		ProgramLoweringContext& pctx = fctx.program_context;
@@ -55,31 +55,26 @@ namespace compiler::backend_vm::internal {
 				return DVMValue{ DVMImmediate{ type_val_u64, type } };
 			}
 			variant_default {
-				return DVMValue{ lowerCtvToNewGlobal(pctx, constant.value, type, true) };
+				return DVMValue{ lowerCTVToNewGlobal(pctx, constant.value, type, true) };
 			}
 		}
 	}
 
-	const DVMPlace& CtvLowering::lowerCtvToNewGlobal(
+	const DVMPlace& CTVLowering::lowerCTVToNewGlobal(
 		ProgramLoweringContext&      pctx,
 		const ctv::CompileTimeValue& constant,
 		const vm::code::TypeOfData&  type,
 		bool                         is_constant,
 		base::Optional<base::StrID>  lowered_global_name
 	) {
-		// Resolve the global to initialize: either the caller's, or a fresh one we create.
-		base::StrID global_name;
-		if_opt_some(lowered_global_name, name) { global_name = name; }
-		if_opt_none(lowered_global_name) {
-			global_name = pctx.getAnonymousGlobalName(base::StrID("ctv_value"));
-		}
+		base::StrID global_name
+			= lowered_global_name.copyValueOr(pctx.getAnonymousGlobalName(base::StrID("ctv_value")));
 
 		vm::code::GlobalData global_data{};
 		global_data.name        = global_name;
 		global_data.type        = typeName(type);
 		global_data.is_constant = is_constant;
 
-		// Copy: the string case inserts further globals which may rehash the place table.
 		const DVMPlace& inserted_global_place = pctx.declareGlobal(global_name, type);
 
 		variant_match(constant.getStorage()) {
@@ -117,7 +112,7 @@ namespace compiler::backend_vm::internal {
 		return inserted_global_place;
 	}
 
-	CtvLowering::CtorLoweringResult CtvLowering::lowerStringLiteral(
+	CTVLowering::CtorLoweringResult CTVLowering::lowerStringLiteral(
 		ProgramLoweringContext& pctx,
 		base::StrID             global_name,
 		const DVMPlace&         inserted_global_place,
@@ -145,7 +140,7 @@ namespace compiler::backend_vm::internal {
 
 		auto string_table = makeBox<vm::code::ConstantFixedSizeTable>();
 		string_table->elements.reserve(length);
-		for (char byte: bytes)
+		for (unsigned char byte: bytes)
 			string_table->elements.emplace_back(makeBox<vm::code::ConstantImmediate>(
 				vm::code::ConstantImmediate::fromU64AndSize(translateToU64(byte), Bytes{ 1 })
 			));
@@ -184,11 +179,11 @@ namespace compiler::backend_vm::internal {
 		return CtorLoweringResult{ .ctor = std::move(ctor_ctx).finish() };
 	}
 
-	void CtvLowering::constructStructureFromValues(
-		FunctionLoweringContext&  ctor_ctx,
-		const DVMPlace&           destination,
-		const vm::code::DataType& structure_type,
-		std::vector<DVMValue>     values
+	void CTVLowering::constructStructureFromValues(
+		FunctionLoweringContext&     ctor_ctx,
+		const DVMPlace&              destination,
+		const vm::code::DataType&    structure_type,
+		const std::vector<DVMValue>& values
 	) {
 		CORE_ASSERT(
 			structure_type.fields.size() == values.size(),

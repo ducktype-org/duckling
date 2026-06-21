@@ -95,12 +95,14 @@ const vm::code::TypeOfData& ProgramLoweringContext::getOrInsertPointerType(
 	return getOrInsertPointerType(vm::code::typeName(pointee_type));
 }
 
-const vm::code::TypeOfData& ProgramLoweringContext::getOrInsertPointerType(base::StrID type_name) {
-	auto pointer_name = base::StrID(base::strConcat("ptr_", type_name));
+const vm::code::TypeOfData& ProgramLoweringContext::getOrInsertPointerType(
+	base::StrID pointee_type_name
+) {
+	auto pointer_name = base::StrID(base::strConcat("ptr_", pointee_type_name));
 
 	if (auto maybe_type = type_storage.dvm_types.atMaybe(pointer_name)) return **maybe_type;
 
-	vm::code::PointerType pointer_type(pointer_name, type_name);
+	vm::code::PointerType pointer_type(pointer_name, pointee_type_name);
 	type_storage.dvm_types.put(pointer_name, pointer_type);
 	lowered_type_order.push_back(pointer_name);
 	return type_storage.dvm_types.at(pointer_name);
@@ -260,8 +262,9 @@ const vm::code::GlobalData& ProgramLoweringContext::lowerAndKeepLirGlobal(
 	variant_match(lir_global.data_initialization) {
 		variant_case(lir::LIRGlobalData::CTorDtorPair, ctor_dtor_pair) {
 			vm::code::GlobalData global_data{};
-			global_data.name = lir_global.global.mangled_name;
-			global_data.type = typeName(global_type);
+			global_data.name        = lir_global.global.mangled_name;
+			global_data.type        = typeName(global_type);
+			global_data.is_constant = false;
 
 			if (ctor_dtor_pair.global_ctor.has_value()) {
 				lowerAndKeepLirFunction(ctor_dtor_pair.global_ctor.value());
@@ -278,7 +281,7 @@ const vm::code::GlobalData& ProgramLoweringContext::lowerAndKeepLirGlobal(
 			defineGlobal(std::move(global_data));
 		}
 		variant_case(ctv::CompileTimeValue, ctv_initial_value) {
-			CtvLowering::lowerCtvToNewGlobal(
+			CTVLowering::lowerCTVToNewGlobal(
 				*this, ctv_initial_value, global_type, false, lir_global.global.mangled_name
 			);
 		}

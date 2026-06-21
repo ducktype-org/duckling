@@ -18,17 +18,13 @@
 namespace compiler::backend_vm::internal {
 	class ProgramLoweringContext;
 
-	class CtvLowering;
+	class CTVLowering;
 
 	class FunctionLoweringContext {
 	public:
 		friend class InstructionLowerer;
 		friend DVMOperation lirInstrToDVMOperation(FunctionLoweringContext&, const lir::Instruction&);
-
-		// Shared compile-time-value lowering (see ctv_lowering.hpp). Befriending the whole struct
-		// gives its routines access to the instruction-emission internals (temps, instruction
-		// buffer, program context).
-		friend class CtvLowering;
+		friend class CTVLowering;
 
 		FunctionLoweringContext(
 			ProgramLoweringContext&                     program_context,

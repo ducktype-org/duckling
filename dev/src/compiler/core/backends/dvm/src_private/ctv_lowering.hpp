@@ -26,7 +26,7 @@ namespace compiler::backend_vm::internal {
 	 * Grouped as a struct so both context classes need to befriend only this one type to give the
 	 * lowering routines access to their internals.
 	 */
-	class CtvLowering {
+	class CTVLowering {
 	public:
 		/**
 		 * @brief Lowers a compile-time value into a DVM value usable inside an instruction stream.
@@ -39,7 +39,7 @@ namespace compiler::backend_vm::internal {
 
 		/**
 		 * @brief Construct a new global with a compile-time value and return a place referring to
-		 * it. It may use the constructor or a initial value constant, depending on the value being
+		 * it. It may use the constructor or an initial value constant, depending on the value being
 		 * lowered.
 		 *
 		 * @param constant The compile-time value that the global will be initialized with.
@@ -48,7 +48,7 @@ namespace compiler::backend_vm::internal {
 		 * @param lowered_global_name If provided, the global will be created with this name.
 		 * Otherwise, a fresh name will be generated.
 		 */
-		static const DVMPlace& lowerCtvToNewGlobal(
+		static const DVMPlace& lowerCTVToNewGlobal(
 			ProgramLoweringContext&      pctx,
 			const ctv::CompileTimeValue& constant,
 			const vm::code::TypeOfData&  type,
@@ -85,10 +85,10 @@ namespace compiler::backend_vm::internal {
 		 * of the fields in the structure type.
 		 */
 		static void constructStructureFromValues(
-			FunctionLoweringContext&  ctor_ctx,
-			const DVMPlace&           destination,
-			const vm::code::DataType& structure_type,
-			std::vector<DVMValue>     values
+			FunctionLoweringContext&     ctor_ctx,
+			const DVMPlace&              destination,
+			const vm::code::DataType&    structure_type,
+			const std::vector<DVMValue>& values
 		);
 	};
 }

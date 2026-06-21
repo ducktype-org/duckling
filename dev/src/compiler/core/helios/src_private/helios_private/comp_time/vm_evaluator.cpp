@@ -232,8 +232,6 @@ namespace {
 			return {};
 		}
 
-		u64 getLoadedCount() const { return loaded_symbols.size(); }
-
 	private:
 		bool initializeCompTimeOps() {
 			auto code = comptime_ops::getComptimeTypeOperations(*pid);
@@ -277,13 +275,15 @@ namespace {
 	std::expected<void, VmEvaluationError> loadLIRUnit(
 		CompTimeDVM& comptime_dvm, const compiler::lir::LIRUnit& lir_unit, query::Context& query_ctx
 	) {
-		// So comp-time and repl are both loading the code incrementally into VM, but they are using
-		// different methods... Maybe use the repl incremental context here?
+		static std::atomic<int> module_counter{};
+
+		// @TODO: #2971 So comp-time and repl are both loading the code incrementally into VM, but
+		// they are using different methods... Maybe use the repl incremental context here?
 		auto backend_module_name
-			= base::StrID(base::strConcat("module_", comptime_dvm.getLoadedCount()));
+			= base::StrID(base::strConcat("module_", module_counter.fetch_add(1)));
 		compiler::backend_vm::DVMCodeBuilder m(query_ctx, backend_module_name, false, true);
 
-		// Insert comptime context intto the module, for the module to pass the validation. This code
+		// Insert comptime context into the module, for the module to pass the validation. This code
 		// although loaded here multiple times will be deduplicated by `CompTimeDVM::loadCode()`
 		auto comptime_code = comptime_ops::getComptimeTypeOperations(*comptime_dvm.getPID());
 		m.insertRawBytecodeDefinitions(comptime_code);

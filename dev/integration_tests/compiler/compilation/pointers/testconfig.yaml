@@ -47,6 +47,7 @@ Tests:
           String: "10\n99\n"
         ExitCode: 0
 
+  # @TODO: #2228 Replace all panicked tests output here with regex shortened versions
   dvm_use_after_free_local:
     Cases:
       dvm:

@@ -321,7 +321,7 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 
 DVMValue FunctionLoweringContext::lowerLirValue(const lir::LIRValue& lir_value) {
 	variant_match(lir_value.getVariant()) {
-		variant_case(lir::LIRConstant, value) { return CtvLowering::lowerValue(*this, value); }
+		variant_case(lir::LIRConstant, value) { return CTVLowering::lowerValue(*this, value); }
 		variant_case(lir::LIRPlace, place) {
 			DVMPlace resolved = resolveLirPlace(place);
 			if (resolved.isDirect()) {
@@ -409,7 +409,6 @@ void compiler::backend_vm::internal::FunctionLoweringContext::pushInstruction(
 }
 
 vm::code::Function compiler::backend_vm::internal::FunctionLoweringContext::finish() && {
-	cleanUpRegisteredTemps();
 	vm::code::Function function;
 	function.name = function_name;
 	for (const auto& param_type: function_parameter_types)
