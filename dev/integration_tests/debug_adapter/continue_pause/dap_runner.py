@@ -6,6 +6,7 @@ client = DAPTestClient(program_name="../examples/while_true.dbc")
 try:
     # Initialization and startup phase
     client.send_request("initialize")
+    client.send_request("configurationDone")
     launch_seq = client.send_request("launch", {"program": client.program_name})
     client.wait_for(responses=[launch_seq], outputs=["Running"])
 

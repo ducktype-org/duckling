@@ -34,6 +34,18 @@ namespace vm::debugger::debug_adapter {
 		int                    next_seq = 1;
 		std::mutex             output_mutex;
 
+		// Maps source file paths to a set of active line numbers where breakpoints are requested.
+		std::map<std::string, std::set<size_t>> active_breakpoints;
+
+		// Flag indicating whether the editor has finished sending the initial configuration.
+		bool is_configuration_done = false;
+		// Stores the 'launch' request to handle the asynchronous initialization handshake.
+		// According to the DAP specification, 'launch' and 'configurationDone' can arrive in
+		// an arbitrary order. Deferring the launch execution ensures we only spin up the VM
+		// when fully configured, and fulfills VS Code's requirement that the 'launch' success
+		// response must be sent last, after 'configurationDone' is processed.
+		nlohmann::json deferred_launch_req = nullptr;
+
 		// DAP I/O
 		void send(const nlohmann::json& msg);
 		void sendResponse(
@@ -44,6 +56,7 @@ namespace vm::debugger::debug_adapter {
 		// Handlers
 		void handleRequest(const nlohmann::json& req);
 		void handleInitialize(const nlohmann::json& req);
+		void handleSetBreakpoints(const nlohmann::json& req);
 		void handleConfigurationDone(const nlohmann::json& req);
 		void handleLaunch(const nlohmann::json& req);
 		void handleThreads(const nlohmann::json& req);
