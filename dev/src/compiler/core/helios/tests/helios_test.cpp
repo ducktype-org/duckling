@@ -2752,11 +2752,11 @@ private:
 		auto trivial_sym      = getChain("Trivial", root_scope).back();
 		auto with_init_sym    = getChain("WithInit", root_scope).back();
 		auto nested_sym       = getChain("Nested", root_scope).back();
-		auto arr_holder_sym       = getChain("ArrayHolder", root_scope).back();
-		auto tup_holder_sym = getChain("TupleHolder", root_scope). back();
+		auto arr_holder_sym   = getChain("ArrayHolder", root_scope).back();
+		auto tup_holder_sym   = getChain("TupleHolder", root_scope).back();
 		auto deep_sym         = getChain("DeepStack", root_scope).back();
 		auto deep_trivial_sym = getChain("DeepStackTrivial", root_scope).back();
-		auto tup_trivial_sym = getChain("TupleTrivial", root_scope).back();
+		auto tup_trivial_sym  = getChain("TupleTrivial", root_scope).back();
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto get_class_type = [&](SymID sym_id) {
@@ -2876,9 +2876,8 @@ private:
 				bool found_tup_ctor = false;
 				for (auto d: deps) {
 					auto gsd = std::get<GeneratedSymbolData>(getSymRef(d)->other);
-					if (std::holds_alternative<GeneratedSymbolData::DefaultTupleConstructor>(
-							gsd.data
-						))
+					if (std::holds_alternative<GeneratedSymbolData::DefaultTupleConstructor>(gsd.data
+					    ))
 						found_tup_ctor = true;
 				}
 				ASSERT_TRUE(found_tup_ctor);
