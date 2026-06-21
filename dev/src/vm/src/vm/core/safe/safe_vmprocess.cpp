@@ -141,7 +141,7 @@ namespace vm {
 	}
 
 	base::Optional<api::ApiError> SafeVMProcess::assertProcessCanRespond() {
-		// TODOP: This should work on ProcessState level I think.
+		// @TODO: #2966 Don't use `api::ProcStatus` here. Use `ProcessState` instead.
 		api::ProcStatus status = getStatus();
 
 		if (!api::canRespond(status))
@@ -200,7 +200,7 @@ namespace vm {
 	}
 
 	std::expected<api::Response, api::StateError> SafeVMProcess::getExitCode() {
-		// TODOP: This should work on ProcessState I think.
+		// @TODO: #2966 Don't use `api::ProcStatus` here. Use `ProcessState` instead.
 		const api::ProcStatus status = getStatus();
 		variant_match(status) {
 			variant_case(api::ExecutionCompleted, completed) { return completed.exit_value; }

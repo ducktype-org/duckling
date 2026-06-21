@@ -261,7 +261,7 @@ namespace vm {
 			variant_case_novalue(api::request::ExitCodeRequest) { return getExitCode(); }
 
 			variant_case_novalue(api::request::DeinitAndValidate) {
-				// TODOP: Completely disjoin apu status and process status.
+				// @TODO: #2966 Don't use `api::ProcStatus` here. Use `ProcessState` instead.
 				if (isExecuting(getStatus()))
 					return std::unexpected(api::ApiError{
 						api::StateError{ "Cannot deinitialize and validate a "
