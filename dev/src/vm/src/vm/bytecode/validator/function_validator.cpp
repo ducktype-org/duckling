@@ -1259,7 +1259,7 @@ class FunctionValidator {
 				if (!inh_meta.available_methods.contains(instr.method.method_name))
 					throw InvalidVirtualCallError(instr);
 			}
-			instr_case_novalue(Op_ret_tailcall_func, Op_ret, Op_deinit) {}
+			instr_case_novalue(Op_ret_tailcall_func, Op_ret, Op_ret_from_expr, Op_deinit) {}
 			instr_case_novalue(Op_input_p64, Op_output_p64, Op_input_p32, Op_output_p32) {}
 			instr_case(Op_setVTable_pptr_type, instr) {
 				const auto pointer_type = getPlaceType(instr.object_ptr, current_stack)
@@ -1846,7 +1846,7 @@ vm::code::valid_function::ValidFunction vm::code::detail::validateAndExtractReac
 	std::tie(new_function.body, new_function.stack_states, new_function.local_stack)
 		= validator.validateAndExtractReachableCode();
 	new_function.bytecode_pos = function.bytecode_pos;
-	new_function.signature    = signatures.at(function.name);
+	new_function.signature    = function.signature;
 
 	return new_function;
 }
