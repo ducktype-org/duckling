@@ -84,7 +84,14 @@ namespace query::internal {
 			type_map.put(type_id, std::move(metadata_vec));
 		extracted.type_map.clear();
 
-		storage.put(std::move(extracted).node_id, std::move(type_map));
+		// \parallel This runs on query worker threads while the previous graph is merged into the
+		// current one (QueryState::mergePreviousGraphIntoCurrentGraph). The same node can already
+		// have metadata in the current storage produced by a concurrent re-execution of that node
+		// (MetadataStorage::addMetadata), so a plain asserting put() would trip
+		// "Key already exists in StableHashMap". Freshly executed metadata is authoritative, so we
+		// keep the existing entry and skip restoring the (identical for a green node / stale for a
+		// recomputed one) previous metadata. maybePut() does this atomically under the shard lock.
+		storage.maybePut(std::move(extracted).node_id, std::move(type_map));
 	}
 
 	void MetadataStorage::clearNodeMetadata(NodeID node_id) { storage.erase(node_id); }
