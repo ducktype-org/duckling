@@ -32,7 +32,7 @@ public:
 private:
 	void noRunTest() {
 		vm::debugger::Debugger debugger;
-		debugger.loadFile(fs::File(path("debugger_test.dbc")));
+		ASSERT_HAS_VALUE(debugger.loadFile(fs::File(path("debugger_test.dbc"))));
 		ASSERT_TRUE(std::holds_alternative<vm::api::NotStarted>(debugger.getStatus()));
 	}
 
@@ -56,7 +56,7 @@ private:
 		std::condition_variable cv;
 
 		vm::debugger::Debugger debugger;
-		debugger.loadFile(fs::File(path(std::string(path_name))));
+		ASSERT_HAS_VALUE(debugger.loadFile(fs::File(path(std::string(path_name)))));
 
 		events::Listener<vm::api::ProcStatus> status_listener([&](const vm::api::ProcStatus& status
 		                                                      ) {
@@ -78,9 +78,9 @@ private:
 					}
 					variant_case(vm::api::Paused, paused) {
 						auto code_pos = debugger.getCurrentPosition();
-						ASSERT_TRUE(code_pos.has_value());
+						ASSERT_HAS_VALUE(code_pos);
 						ASSERT_TRUE(position_counter < breakpoints.size());
-						ASSERT_TRUE(code_pos.value().source_position.has_value());
+						ASSERT_HAS_VALUE(code_pos.value().source_position);
 						auto line
 							= code_pos.value().source_position.value().getStartLineColumn().first;
 						ASSERT_EQUAL_PRINT(breakpoints[position_counter], line);
@@ -99,7 +99,7 @@ private:
 		for (u64 breakpoint: breakpoints)
 			ASSERT_TRUE(debugger.setBreakpoint(fs::File(path(std::string(path_name))), breakpoint)
 			                .has_value());
-		ASSERT_TRUE(debugger.runMain().has_value());
+		ASSERT_HAS_VALUE(debugger.runMain());
 		std::unique_lock lk(m);
 		// timeout for the test
 		ASSERT_TRUE(cv.wait_for(lk, std::chrono::milliseconds(100), [&] {
@@ -172,13 +172,13 @@ private:
 		events::Listener<std::string> error_listener([&](const std::string& err) { fail(err); });
 
 		vm::debugger::Debugger debugger;
-		debugger.loadFile(fs::File(path("while_true.dbc")));
-		ASSERT_TRUE(debugger.setBreakpoint(base::StrID("main"), 0).has_value());
+		ASSERT_HAS_VALUE(debugger.loadFile(fs::File(path("while_true.dbc"))));
+		ASSERT_HAS_VALUE(debugger.setBreakpoint(base::StrID("main"), 0));
 
 		debugger.attachOnStatusChangedListener(status_listener);
 		debugger.attachOnErrorListener(error_listener);
 
-		ASSERT_TRUE(debugger.runMain().has_value());
+		ASSERT_HAS_VALUE(debugger.runMain());
 
 		{
 			std::unique_lock lk(m);
@@ -187,7 +187,7 @@ private:
 			}));
 		}
 
-		debugger.resume();
+		ASSERT_HAS_VALUE(debugger.resume());
 		{
 			std::unique_lock lk(m);
 			ASSERT_TRUE(cv.wait_for(lk, std::chrono::milliseconds(100), [&] {
@@ -195,7 +195,7 @@ private:
 			}));
 		}
 
-		debugger.pause();
+		ASSERT_HAS_VALUE(debugger.pause());
 		{
 			std::unique_lock lk(m);
 			ASSERT_TRUE(cv.wait_for(lk, std::chrono::milliseconds(100), [&] {
@@ -203,7 +203,7 @@ private:
 			}));
 		}
 
-		debugger.resume();
+		ASSERT_HAS_VALUE(debugger.resume());
 		{
 			std::unique_lock lk(m);
 			ASSERT_TRUE(cv.wait_for(lk, std::chrono::milliseconds(100), [&] {
@@ -211,7 +211,7 @@ private:
 			}));
 		}
 
-		debugger.pause();
+		ASSERT_HAS_VALUE(debugger.pause());
 		std::unique_lock lk(m);
 		ASSERT_TRUE(cv.wait_for(lk, std::chrono::milliseconds(100), [&] {
 			return status_counter == expected_statuses.size();
@@ -261,7 +261,7 @@ private:
 		events::Listener<std::string> error_listener([&](const std::string& err) { fail(err); });
 
 		vm::debugger::Debugger debugger;
-		debugger.loadFile(fs::File(path("debugger_test.dbc")));
+		ASSERT_HAS_VALUE(debugger.loadFile(fs::File(path("debugger_test.dbc"))));
 
 		debugger.attachOnStatusChangedListener(status_listener);
 		debugger.attachOnErrorListener(error_listener);
@@ -270,7 +270,7 @@ private:
 
 		while (loop-- > 0) {
 			status_counter = 0;
-			debugger.runMain();
+			ASSERT_HAS_VALUE(debugger.runMain());
 			std::unique_lock lk(m);
 			// Test timeout
 			ASSERT_TRUE(cv.wait_for(lk, std::chrono::milliseconds(100), [&] {
@@ -285,20 +285,20 @@ private:
 
 	void errorTest() {
 		vm::debugger::Debugger debugger;
-		debugger.loadFile(fs::File(path("while_true_no_breakpoint.dbc")));
+		ASSERT_HAS_VALUE(debugger.loadFile(fs::File(path("while_true_no_breakpoint.dbc"))));
 
-		debugger.runMain();
+		ASSERT_HAS_VALUE(debugger.runMain());
 		ASSERT_TRUE(!debugger.runMain());  // 1st error
 
 		ASSERT_TRUE(!debugger.resume());   // 2nd error
 
 		ASSERT_TRUE(!debugger.step());     // 3rd error
 
-		ASSERT_TRUE(debugger.pause().has_value());
+		ASSERT_HAS_VALUE(debugger.pause());
 
 		ASSERT_TRUE(!debugger.pause());  // 4rd error
 
-		ASSERT_TRUE(debugger.resume().has_value());
+		ASSERT_HAS_VALUE(debugger.resume());
 
 		ASSERT_TRUE(std::holds_alternative<vm::api::Running>(debugger.getStatus()));
 	}
@@ -312,7 +312,7 @@ private:
 		std::mutex              m;
 
 		vm::debugger::Debugger debugger;
-		debugger.loadFile(fs::File(path("vm_api_tests.dbc")));
+		ASSERT_HAS_VALUE(debugger.loadFile(fs::File(path("vm_api_tests.dbc"))));
 
 		events::Listener<std::string> output_listener([&](const std::string& str) {
 			ASSERT_EQUAL_PRINT("7", str);
@@ -322,7 +322,7 @@ private:
 
 		debugger.attachOnOutputListener(output_listener);
 
-		ASSERT_TRUE(debugger.runMain().has_value());
+		ASSERT_HAS_VALUE(debugger.runMain());
 
 		std::unique_lock lk(m);
 		// Test timeout
@@ -331,8 +331,8 @@ private:
 
 	void memoryTest() {
 		vm::debugger::Debugger debugger;
-		debugger.loadFile(fs::File(path("breakpoint_all_types.dbc")));
-		ASSERT_TRUE(debugger.setBreakpoint(base::StrID("main"), 20).has_value());
+		ASSERT_HAS_VALUE(debugger.loadFile(fs::File(path("breakpoint_all_types.dbc"))));
+		ASSERT_HAS_VALUE(debugger.setBreakpoint(base::StrID("main"), 20));
 		std::mutex m;
 
 		std::condition_variable cv;
@@ -342,7 +342,7 @@ private:
 			if (status.index() == altIndex(vm::api::Paused)) cv.notify_one();
 		});
 		debugger.attachOnStatusChangedListener(status_listener);
-		debugger.runMain();
+		ASSERT_HAS_VALUE(debugger.runMain());
 		std::unique_lock lk(m);
 		ASSERT_TRUE(cv.wait_for(lk, std::chrono::milliseconds(100), [&] {
 			return std::holds_alternative<vm::api::Paused>(debugger.getStatus());
@@ -351,11 +351,11 @@ private:
 		{
 			// Code position Test
 			auto pos_response = debugger.getCurrentPosition();
-			ASSERT_TRUE(pos_response.has_value());
+			ASSERT_HAS_VALUE(pos_response);
 			auto code_position = pos_response.value();
 			ASSERT_EQUAL_PRINT("main", code_position.function_name);
 			ASSERT_EQUAL_PRINT(20, code_position.instr_number);
-			ASSERT_TRUE(code_position.source_position.has_value());
+			ASSERT_HAS_VALUE(code_position.source_position);
 		}
 
 
@@ -377,20 +377,20 @@ private:
 		ASSERT_EQUAL_PRINT("42", info.frame_vars[8].value.str());         // new_variant_data_value
 
 		// Step test
-		ASSERT_TRUE(debugger.step().has_value());
+		ASSERT_HAS_VALUE(debugger.step());
 		{
 			auto pos_response = debugger.getCurrentPosition();
-			ASSERT_TRUE(pos_response.has_value());
+			ASSERT_HAS_VALUE(pos_response);
 			auto code_position = pos_response.value();
 			ASSERT_EQUAL_PRINT("main", code_position.function_name);
 			ASSERT_EQUAL_PRINT(21, code_position.instr_number);
-			ASSERT_TRUE(code_position.source_position.has_value());
+			ASSERT_HAS_VALUE(code_position.source_position);
 		}
 	}
 
 	void inputTest() {
 		vm::debugger::Debugger debugger;
-		debugger.loadFile(fs::File(path("input.dbc")));
+		ASSERT_HAS_VALUE(debugger.loadFile(fs::File(path("input.dbc"))));
 		std::mutex m;
 
 		std::condition_variable cv;
@@ -401,9 +401,9 @@ private:
 		});
 		debugger.attachOnStatusChangedListener(status_listener);
 
-		debugger.runMain();
+		ASSERT_HAS_VALUE(debugger.runMain());
 
-		debugger.sendInput("2");
+		ASSERT_HAS_VALUE(debugger.sendInput("2"));
 
 		std::unique_lock lk(m);
 		ASSERT_TRUE(cv.wait_for(lk, std::chrono::milliseconds(100), [&] {
@@ -414,7 +414,7 @@ private:
 		auto completed_info = std::get<vm::api::ExecutionCompleted>(status);
 		auto optional_data  = completed_info.exit_value[0]->readData();
 
-		ASSERT_TRUE(optional_data.has_value());
+		ASSERT_HAS_VALUE(optional_data);
 
 		auto data_variant   = optional_data.value();
 		auto primitive_data = std::get<vm::interpreted_data_variant::Primitive>(data_variant);

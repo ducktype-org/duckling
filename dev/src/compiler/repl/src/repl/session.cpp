@@ -198,7 +198,7 @@ namespace compiler::repl {
 			attach_result.has_value(), "ReplSession::initDVM: Failed to attach I/O to DVM process"
 		);
 
-		CORE_DEV_LOG(REPL, "DVM initialized with PID ", m_dvm_pid, "\n");
+		CORE_DEV_LOG(REPL, "DVM initialized with PID ", m_dvm_pid.asInt(), "\n");
 	}
 
 	void ReplSession::preloadStandardLibrary() {

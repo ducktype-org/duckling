@@ -160,7 +160,7 @@ private:
 
 	void testSyncRun() {
 		vm::PID pid = initProcess();
-		ASSERT_TRUE(vm::api::loadFiles(pid, { fs::File(path("simple_function.dbc")) }).has_value());
+		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { fs::File(path("simple_function.dbc")) }));
 		runFunctionSynchronouslyAsTest(pid, "foo", {}, "", "120", 123);
 		vm::api::deinitAndValidate(pid);
 	}
