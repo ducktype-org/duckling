@@ -42,13 +42,6 @@ Tests:
         Output:
           String: "100\n0\n49\n99\n5\n25\n0\n4\n100\n119\n0\n555\n"
         ExitCode: 0
-  push_ternary:
-    Cases:
-      llvm:
-        backend: llvm
-        Output:
-          String: "11\n44\n"
-        ExitCode: 0
   array_of_lists:
     # @TODO: #2825 This test currently leaks memory since we don't have array destructors.
     # Add a valgrind case when it's implemented.

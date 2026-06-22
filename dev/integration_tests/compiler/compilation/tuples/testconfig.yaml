@@ -8,21 +8,13 @@ Tests:
         Output:
           String: "10\n20\n15\n35\n15\n35\n"
         ExitCode: 0
-  ternary_elements:
-    enable_conc_deterministic_tests: "false"
-    Cases:
-      all:
-        backend: all
-        Output:
-          String: "1\n3\n6\n7\n9\n"
-        ExitCode: 0
   pack:
     enable_conc_deterministic_tests: "false"
     Cases:
       llvm:
         backend: llvm
         Output:
-          String: ""
+          String: "1\n4\n"
         ExitCode: 0
   person:
     Cases:

@@ -254,9 +254,6 @@ namespace compiler::mir {
 			auto ctor_symid = expr.tuple_ctor_symbol;
 			args.emplace_back(MIRFunctionLiteral{ ctor_symid });
 
-			// Lower in reverse, chaining each element through the previous one's begin,
-			// so element sub-graphs (e.g. ternaries) are reachable and evaluated in
-			// source order (the last lowered element executes first).
 			for (const auto& element: expr.elements | std::views::reverse) {
 				auto lowered_element = lowerSubExpr(*element, current);
 				args.push_back(lowered_element.getResult(function));
@@ -621,8 +618,6 @@ namespace compiler::mir {
 			auto hole         = continuation->addHole();
 			auto lowered_elem = lowerSubExpr(*expr.element, continuation);
 			auto elem_val     = lowered_elem.getResult(function);
-			// Chain the list through the element's begin so the element's sub-graph
-			// (e.g. a ternary) stays reachable.
 			auto lowered_list = lowerSubExpr(*expr.list, lowered_elem.begin);
 			auto list_val     = lowered_list.getResult(function);
 
@@ -638,10 +633,8 @@ namespace compiler::mir {
 			auto hole          = continuation->addHole();
 			auto lowered_count = lowerSubExpr(*expr.count, continuation);
 			auto count_val     = lowered_count.getResult(function);
-			// Chain the list through the count's begin so the count's sub-graph
-			// (e.g. a ternary) stays reachable.
-			auto lowered_list = lowerSubExpr(*expr.list, lowered_count.begin);
-			auto list_val     = lowered_list.getResult(function);
+			auto lowered_list  = lowerSubExpr(*expr.list, lowered_count.begin);
+			auto list_val      = lowered_list.getResult(function);
 
 			noValueOutput(
 				lowered_list.begin,

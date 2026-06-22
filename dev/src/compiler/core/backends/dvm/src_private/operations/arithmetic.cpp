@@ -20,10 +20,9 @@ namespace compiler::backend_vm::internal {
 			ctx->maybeStoreResult(op.dest, op.src);
 			ctx->pushInstruction({ op.op, *op.dest });
 		} else {
-			// Otherwise it's a global or indirect. We perform the operations on a
-			// temporary and then store it in the indirect place. The temporary must be
-			// a fresh copy: the opcode mutates it in place, and reusing op.src directly
-			// would clobber a live local.
+			// Otherwise it's indirect. We perform the operations on a temporary and then store it
+			// in the indirect place. The temporary must be a fresh copy: the opcode mutates it in
+			// place, and reusing op.src directly would clobber a live local.
 			auto tmp = ctx->copyToTempPlace(op.src, "un_tmp");
 			ctx->pushInstruction({ op.op, tmp });
 			ctx->maybeStoreResult(op.dest, { tmp });
