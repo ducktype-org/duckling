@@ -1,11 +1,23 @@
-#pragma once
-
 #include "templates.hpp"
 
 
 #include <query_framework/standard_query/query_impl.hpp>
+#include <hashing/hashing_algorithms.hpp>
+#include <hashing/add_to_hash.hpp>
 
 namespace compiler::helios::templates {
+
+    base::Bit256 TemplateBakeKey::queryUnstablePerfectHash() const {
+        hashing::SHA256 hasher;
+        hashing::addToHash(hasher, template_sym_id.queryUnstablePerfectHash());
+        hashing::addToHash(hasher, template_arguments.size());
+
+        for (const auto& arg: template_arguments) {
+            hashing::addToHash(hasher, arg.queryUnstablePerfectHash());
+        }
+
+        return hasher.finalize();
+    }
 
 
     struct IMPLEMENT_QUERY(QueryBakeTemplateSymID, query::QResult<SymID>) {
@@ -28,7 +40,7 @@ namespace compiler::helios::templates {
             // and put just SymID in PST root data
             
 
-            CORE_UNREACHABLE();
+            CORE_PANIC("QueryBakeTemplateSymID is not implemented yet");
         }
 
         QUERY_AUTO_CACHE_COPY
