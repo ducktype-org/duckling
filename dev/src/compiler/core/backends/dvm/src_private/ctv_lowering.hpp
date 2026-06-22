@@ -30,7 +30,7 @@ namespace compiler::backend_vm::internal {
 		 *
 		 * Values representable as a single immediate (numeric, bool, char, meta type) are returned
 		 * directly as a `DVMImmediate`. Everything else is materialized as a global constant via
-		 * @ref lowerCtvToGlobal and that global's place is returned.
+		 * @ref lowerCTVToNewGlobal and that global's place is returned.
 		 */
 		static DVMValue lowerValue(FunctionLoweringContext& fctx, const lir::LIRConstant& constant);
 

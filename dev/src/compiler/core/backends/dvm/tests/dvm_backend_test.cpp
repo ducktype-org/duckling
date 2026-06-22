@@ -98,6 +98,7 @@ private:
 		append_module_to_code(main_module_path);
 
 		base::deduplicateBy(code.functions, [](const vm::code::Function& f) { return f.name.str; });
+		base::deduplicateBy(code.types, [](const vm::code::TypeOfData& f) { return typeName(f); });
 		return code;
 	}
 
@@ -135,8 +136,8 @@ private:
 	) {
 		using namespace compiler;
 		auto code = getModuleFromPath(module_path);
-		for (auto& type: code.types) vm::code::serializeType(type, std::cerr);
-		for (auto& func: code.functions) vm::code::serializeFunction(func, std::cerr);
+		// for (auto& type: code.types) vm::code::serializeType(type, std::cerr);
+		// for (auto& func: code.functions) vm::code::serializeFunction(func, std::cerr);
 		auto result = runTestOnVmGetResult(code, input, output, args);
 		ASSERT_NO_VALUE(result.run_result);
 		auto err_str = to_string(nlohmann::json(result.run_result.error()));

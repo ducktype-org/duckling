@@ -499,3 +499,10 @@ void compiler::backend_vm::internal::FunctionLoweringContext::pushDeinitsForInst
 	}
 	deinits_pushed = true;
 }
+
+compiler::backend_vm::internal::FunctionLoweringContext compiler::backend_vm::internal::
+	FunctionLoweringContext::getVoidParameterLessFunctionContext(
+		ProgramLoweringContext& program_context, base::StrID name
+	) {
+	return { program_context, name };
+}

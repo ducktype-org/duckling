@@ -155,7 +155,8 @@ namespace compiler::backend_vm::internal {
 
 		// ================ Part 2: build constructor to assemble the slice ================
 		auto ctor_name = base::StrID(base::strConcat(global_name.strView(), "_ctor"));
-		FunctionLoweringContext ctor_ctx{ pctx, ctor_name };
+		FunctionLoweringContext ctor_ctx
+			= FunctionLoweringContext::getVoidParameterLessFunctionContext(pctx, ctor_name);
 
 		// ref -> pointer to the static fixed-size table, then reinterpret as a
 		// dynamic-table pointer (the slice's `_0`).

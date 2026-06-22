@@ -34,9 +34,6 @@ namespace compiler::backend_vm::internal {
 			base::Optional<debug_info::FunctionBuilder> fun_di_builder_opt
 		);
 
-		/// Constructs a parameterless, void-returning context. Used to synthesize small helper
-		/// functions (e.g. global constructors) that have no LIR signature to lower.
-		FunctionLoweringContext(ProgramLoweringContext& program_context, base::StrID name);
 
 		FunctionLoweringContext(const FunctionLoweringContext&)            = delete;
 		FunctionLoweringContext(FunctionLoweringContext&&)                 = delete;
@@ -80,8 +77,20 @@ namespace compiler::backend_vm::internal {
 
 		vm::code::Function finish() &&;
 
+		/**
+		 * @brief Constructs a parameterless, void-returning context. Used to synthesize small
+		 * helper functions (e.g. global constructors) that have no LIR signature to lower.
+		 */
+		static FunctionLoweringContext getVoidParameterLessFunctionContext(
+			ProgramLoweringContext& program_context, base::StrID name
+		);
 
 	private:
+		/**
+		 * @brief Constructs a parameterless, void-returning context. Used to synthesize small
+		 * helper functions (e.g. global constructors) that have no LIR signature to lower.
+		 */
+		FunctionLoweringContext(ProgramLoweringContext& program_context, base::StrID name);
 		/**
 		 * @brief Creates a mapping between a LIR local and DVM local.
 		 */

@@ -30,7 +30,7 @@ namespace vm::code::detail {
 							return primitive.size;
 						}
 						variant_case(valid_type::finalized::Opaque, opaque) { return opaque.size; }
-						variant_default { THROW_ERROR("Got immediate instead."); }
+						variant_default { THROW_ERROR("Got immediate initial value instead."); }
 					}
 					CORE_UNREACHABLE();
 				}(type_ref);
