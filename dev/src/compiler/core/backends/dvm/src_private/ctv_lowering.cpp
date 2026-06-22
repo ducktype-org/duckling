@@ -47,13 +47,6 @@ namespace compiler::backend_vm::internal {
 			variant_case(bool, value) {
 				return DVMValue{ DVMImmediate{ translateToU64(value), type } };
 			}
-			variant_case(compiler::tsh::SymbolType<>, type_val) {
-				// @TODO: #1728 remove this evil bit_cast
-				// Representation of a meta type in DVM is a pointer to the symbol type.
-				// @TODO: #1709 RTTI when the is_comp_time_lowering == false
-				u64 type_val_u64 = pctx.isCompTimeLowering() ? std::bit_cast<u64>(&type_val) : 0;
-				return DVMValue{ DVMImmediate{ type_val_u64, type } };
-			}
 			variant_default {
 				return DVMValue{ lowerCTVToNewGlobal(pctx, constant.value, type, true) };
 			}
@@ -96,6 +89,8 @@ namespace compiler::backend_vm::internal {
 				);
 			}
 			variant_case(compiler::tsh::SymbolType<>, type_val) {
+				// @TODO: #1709 RTTI when the is_comp_time_lowering == false
+				// Representation of a meta type in DVM is a pointer to the symbol type.
 				u64 type_val_u64 = pctx.isCompTimeLowering() ? std::bit_cast<u64>(&type_val) : 0;
 				global_data.initial_value = vm::code::ConstantValue::fromU64AndSize(
 					type_val_u64, std::get<vm::code::OpaqueType>(type).size
