@@ -220,6 +220,10 @@ namespace compiler::helios {
 
 		std::string                                         out = "";
 		base::Optional<pst::AccessLocked<pst::LangElement>> pst = maybeSymbolPst(sym);
+		if (not pst) {
+			return name(sym).str();
+		}
+		
 		do {
 			if (!pst.value().unlock(ctx)->getParent()) break;
 			auto stmt = pst->unlock(ctx).dynamicCast<pst::Stmt>();

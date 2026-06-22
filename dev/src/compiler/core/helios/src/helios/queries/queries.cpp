@@ -137,18 +137,20 @@ namespace compiler::helios {
 		}
 
 		static base::OkBad collectCalledFunctions(query::Context& ctx, HOUTUnit& out_unit) {
-			std::unordered_set<SymID> functions_in_module;
+			std::unordered_set<SymID> added_to_queue;
 			std::vector<SymID>        functions_stack;
 			base::OkBad               result = base::OK;
 
 			for (auto f: out_unit.functions) {
-				functions_in_module.insert(f->declaration->original_symbol);
+				added_to_queue.insert(f->declaration->original_symbol);
 				functions_stack.push_back(f->declaration->original_symbol);
 			}
+			out_unit.functions.clear();
 
 			while (not functions_stack.empty()) {
-				auto current_fun = functions_stack.front();
-				if (functions_in_module.contains(current_fun)) continue;
+				auto current_fun = functions_stack.back();
+				std::cerr << "visiting " << name(current_fun).str() << std::endl;
+				functions_stack.pop_back();
 
 				auto qresult = ctx.query<QueryDirectFunctionCalls>(current_fun);
 				if (qresult->hasFailed()) {
@@ -158,9 +160,18 @@ namespace compiler::helios {
 				auto& called_funs = qresult->valueOrThrow();
 
 				for (auto called_fun: called_funs) {
-					if (functions_in_module.contains(called_fun)) continue;
+					if (added_to_queue.contains(called_fun)) continue;
+					if (v_matches(getSymRef(called_fun)->other, defgen::GeneratedSymbolData)) {
+						std::cerr << "called " << name(called_fun).str() << std::endl;
+						// For now we just if this, but we will deal with this later.
+						if (base::holds<defgen::GeneratedSymbolData::BuiltinOperator>(
+								v_get(getSymRef(called_fun)->other, defgen::GeneratedSymbolData).data
+							))
+							continue;
 
-					functions_stack.push_back(called_fun);
+						functions_stack.push_back(called_fun);
+						added_to_queue.insert(called_fun);
+					}
 				}
 
 				// The query call should always succeed as the QueryDirectFunctionCalls
@@ -168,7 +179,7 @@ namespace compiler::helios {
 				out_unit.functions.emplace_back(
 					&ctx.query<QueryCodeOfFun>(current_fun)->valueOrThrow()
 				);
-				functions_in_module.insert(current_fun);
+				added_to_queue.insert(current_fun);
 			}
 			return result;
 		}
