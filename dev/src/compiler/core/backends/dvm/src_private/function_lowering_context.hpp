@@ -18,28 +18,13 @@
 namespace compiler::backend_vm::internal {
 	class ProgramLoweringContext;
 
-	/**
-	 * @brief Builds a tiny synthetic global constructor that writes a compile-time value
-	 * into a global variable.
-	 *
-	 * This is a temporary helper used when a LIR global has an initial CTV value but no
-	 * explicit ctor function lowered from LIR.
-	 * @TODO: #1553 Remove this constants should have constants initialization
-
-	 */
-	vm::code::Function createMiniGlobalCtorFromCTV(
-		ProgramLoweringContext&      program_context,
-		CRef<tsl::TypeLayout>        global_layout,
-		const vm::code::TypeOfData&  lowered_global_type,
-		const ctv::CompileTimeValue& global_ctv_value,
-		base::StrID                  mini_ctor_name,
-		const DVMPlace&              dvm_global
-	);
+	class CTVLowering;
 
 	class FunctionLoweringContext {
 	public:
 		friend class InstructionLowerer;
 		friend DVMOperation lirInstrToDVMOperation(FunctionLoweringContext&, const lir::Instruction&);
+		friend class CTVLowering;
 
 		FunctionLoweringContext(
 			ProgramLoweringContext&                     program_context,
@@ -48,6 +33,7 @@ namespace compiler::backend_vm::internal {
 			const std::vector<CRef<tsl::TypeLayout>>&   parameter_types,
 			base::Optional<debug_info::FunctionBuilder> fun_di_builder_opt
 		);
+
 
 		FunctionLoweringContext(const FunctionLoweringContext&)            = delete;
 		FunctionLoweringContext(FunctionLoweringContext&&)                 = delete;
@@ -91,8 +77,20 @@ namespace compiler::backend_vm::internal {
 
 		vm::code::Function finish() &&;
 
+		/**
+		 * @brief Constructs a parameterless, void-returning context. Used to synthesize small
+		 * helper functions (e.g. global constructors) that have no LIR signature to lower.
+		 */
+		static FunctionLoweringContext getVoidParameterLessFunctionContext(
+			ProgramLoweringContext& program_context, base::StrID name
+		);
 
 	private:
+		/**
+		 * @brief Constructs a parameterless, void-returning context. Used to synthesize small
+		 * helper functions (e.g. global constructors) that have no LIR signature to lower.
+		 */
+		FunctionLoweringContext(ProgramLoweringContext& program_context, base::StrID name);
 		/**
 		 * @brief Creates a mapping between a LIR local and DVM local.
 		 */
