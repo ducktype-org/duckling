@@ -156,5 +156,5 @@ namespace base {
 #define VISIT(variant_value, name, ...) \
 	std::visit([&](auto&& name) { __VA_ARGS__; }, (variant_value))
 
-#define VISIT_T(variant_value, name, type, ...) \
-	std::visit([&](auto&& name) -> type { __VA_ARGS__; }, (variant_value))
+#define VISIT_RET(variant_value, name, returned_type, ...) \
+	std::visit([&](auto&& name) -> returned_type { __VA_ARGS__; }, (variant_value))

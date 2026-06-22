@@ -10,7 +10,7 @@ struct result_t {
 int main() {
 	std::variant<int, bool, char> variant;
 
-	auto res = VISIT_T(variant,
+	auto res = VISIT_RET(variant,
 	                   var,
 	                   result_t,
 	                   return {

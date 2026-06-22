@@ -190,21 +190,13 @@ public:
 
 	[[nodiscard]]
 	LocalStackEntry front(usize idx = 0) const {
-		variant_match(source) {
-			variant_case(Ref<LocalStackDbBuilder>, bld_ref) {
-				return LocalStackEntry{
-					.local_name = *bld_ref->getName(stack_state_id, idx),
-					.type       = types_ctx->at(*bld_ref->getTypeName(stack_state_id, idx)),
-				};
-			}
-			variant_case(CRef<LocalStackDb>, db_ref) {
-				return LocalStackEntry{
-					.local_name = *db_ref->getName(stack_state_id, idx),
-					.type       = types_ctx->at(*db_ref->getTypeName(stack_state_id, idx)),
-				};
-			}
-		}
-		CORE_UNREACHABLE();
+		return VISIT_RET(source,
+		                 db,
+		                 LocalStackEntry,
+		                 return LocalStackEntry{
+							 .local_name = *db->getName(stack_state_id, idx),
+							 .type       = types_ctx->at(*db->getTypeName(stack_state_id, idx)),
+						 };);
 	}
 
 	void castPrimitive(const opargs::OpCodePrimitiveArg& local, const opargs::Type& type) {
