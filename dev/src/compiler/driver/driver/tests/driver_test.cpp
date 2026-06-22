@@ -224,7 +224,7 @@ private:
 			driver::compileEntirePackage(
 				package_info,
 				driver::BuildTargetLLVMExecutable{
-					.output_file_stem = base::StrID("package_llvm"),
+					.output_file_name = base::StrID("package_llvm.exe"),
 					.linking_options  = linker::LinkingOptions{ .linker_path             = {},
 			                                                    .additional_link_options = {},
 			                                                    .link_c_standard_library = true,
@@ -375,7 +375,7 @@ private:
 
 			// Nodes should not be added - if in the future we allow that, this test needs to be
 			// updated
-			ASSERT_TRUE(preserved_deps_before_opt.has_value());
+			ASSERT_HAS_VALUE(preserved_deps_before_opt);
 
 			// All preserved dependencies from before must still exist after optimization.
 			// This includes input nodes.
@@ -457,7 +457,7 @@ private:
 			          ->valueOrPanic();
 
 			ASSERT_TRUE(artifacts.object_art.file.exists());
-			ASSERT_TRUE(artifacts.debug_info.has_value());
+			ASSERT_HAS_VALUE(artifacts.debug_info);
 
 			fs::FileManager::deleteFile(artifacts.object_art.file);
 			fs::FileManager::deleteFile(
@@ -528,7 +528,7 @@ private:
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto run_result = driver::runModuleOnDVM(ctx, module);
 
-			ASSERT_TRUE(run_result.has_value());
+			ASSERT_HAS_VALUE(run_result);
 			ASSERT_EQUAL_PRINT(0, run_result.value().exit_code);
 		});
 	}
@@ -551,7 +551,7 @@ private:
 		driver::compileEntirePackage(
 			package_info,
 			driver::BuildTargetLLVMExecutable{
-				.output_file_stem = base::StrID("package_llvm"),
+				.output_file_name = base::StrID("package_llvm.exe"),
 				.linking_options  = linker::LinkingOptions{ .linker_path             = {},
 		                                                    .additional_link_options = {},
 		                                                    .link_c_standard_library = true,
@@ -565,7 +565,7 @@ private:
 			base::strConcat("Executable file does not exist: ", exe_path.native())
 		);
 
-		driver::compileEntirePackage(package_info, driver::BuildTargetDVM{});
+		driver::compileEntirePackage(package_info, driver::BuildTargetDVMLibrary{});
 
 		auto dvm_exe_path = artifacts_path / "package_dvm.dbc";
 		assertTrue(
@@ -602,7 +602,7 @@ private:
 			std::filesystem::remove(artifacts.object_art.file.getFilePath().getPath());
 
 			auto run_result = driver::runModuleOnDVM(ctx, module);
-			ASSERT_TRUE(run_result.has_value());
+			ASSERT_HAS_VALUE(run_result);
 			ASSERT_EQUAL_PRINT(0, run_result.value().exit_code);
 		});
 	}
@@ -616,7 +616,7 @@ private:
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto run_result = driver::runModuleOnDVM(ctx, module);
-			ASSERT_TRUE(run_result.has_value());
+			ASSERT_HAS_VALUE(run_result);
 			ASSERT_EQUAL_PRINT(5, run_result.value().exit_code);
 		});
 	}
@@ -674,7 +674,7 @@ private:
 		driver::compileEntirePackage(
 			package_info,
 			driver::BuildTargetLLVMExecutable{
-				.output_file_stem = base::StrID("package_llvm"),
+				.output_file_name = base::StrID("package_llvm.exe"),
 				.linking_options  = linker::LinkingOptions{ .linker_path             = {},
 		                                                    .additional_link_options = {},
 		                                                    .link_c_standard_library = true,
@@ -799,7 +799,7 @@ private:
 		driver::compileEntirePackage(
 			package_info,
 			driver::BuildTargetLLVMExecutable{
-				.output_file_stem = base::StrID("package_llvm"),
+				.output_file_name = base::StrID("package_llvm.exe"),
 				.linking_options  = linker::LinkingOptions{ .linker_path             = {},
 		                                                    .additional_link_options = {},
 		                                                    .link_c_standard_library = true,
@@ -1036,7 +1036,7 @@ private:
 			{}
 		);
 
-		driver::compileEntirePackage(dvm_package_info, driver::BuildTargetDVM{});
+		driver::compileEntirePackage(dvm_package_info, driver::BuildTargetDVMLibrary{});
 		auto dvm_compile_node
 			= query::internal::makeNodeID<driver::CompileModule>(driver::KeyOf_CompileModule{
 				.module_id        = dvm_package_info.getRootModule().illegalAccess().getID(),

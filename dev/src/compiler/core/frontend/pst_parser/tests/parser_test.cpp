@@ -151,8 +151,13 @@ private:
 		}
 
 		assertTrue(testing_utils::compareJson(ss.str(), correct_string), "outputs are not equal");
-		// @TODO: Do we want to print some information about the differences or the bad output to a
-		// file?
+		if (no_errors) {
+			assertTrue(
+				pst::testElementCloning(CRef{ &*pst.getRootElement().illegalAccess().value() })
+					.isOk(),
+				"Error during cloning"
+			);
+		}
 	}
 
 	void testJsonRelativePath(
@@ -228,7 +233,7 @@ private:
 		                   .illegalAccess()
 		                   .value()
 		                   .dynamicCast<pst::Fun>();
-		ASSERT_TRUE(fun_opt.has_value());
+		ASSERT_HAS_VALUE(fun_opt);
 		auto fun = fun_opt.value();
 
 		auto params = fun->getParams().illegalAccess().value();

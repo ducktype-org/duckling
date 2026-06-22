@@ -13,7 +13,11 @@ namespace pst {
 	 *
 	 * Currently allows: using, alias, class.
 	 */
-	class NonClassStmt: public ClassStmt {
+	class NonClassStmt final: public ClassStmt {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(NonClassStmt, ClassStmt, inner_decl_kind);
+		CLONE_SUBELEMENTS();
+
+	protected:
 		NAMED_CHILD(inner_stmt, Stmt);
 
 		DeclKind                                        inner_decl_kind = DeclKind::None;

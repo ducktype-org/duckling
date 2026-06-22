@@ -7,6 +7,10 @@ namespace pst {
 	 * @brief Import chain of the form `A.B.C` or `A.B.C as X`
 	 */
 	class ImportIdentifierAs final: public ImportChain {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(ImportIdentifierAs, ImportChain);
+		CLONE_SUBELEMENTS();
+
+	protected:
 		std::vector<AccessInternalAnonymous<IdentifierWrapper>> names;
 		NAMED_CHILD_OPT(as, IdentifierWrapper);
 

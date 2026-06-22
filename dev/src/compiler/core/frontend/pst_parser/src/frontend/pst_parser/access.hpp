@@ -174,6 +174,7 @@ namespace pst {
 
 		template<typename State>
 		friend class PSTAutomatic;
+		friend class CloningUtils;
 
 		template<std::derived_from<LangElement>, std::derived_from<LangElement>>
 		friend class PST;
@@ -233,6 +234,7 @@ namespace pst {
 
 		template<typename State>
 		friend class PSTAutomatic;
+		friend class CloningUtils;
 
 		template<typename E>
 		AccessInternal& operator=(AccessInternal<E, name>&& oth) noexcept {

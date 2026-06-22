@@ -69,18 +69,18 @@ public:
 		Optional<int> opt2;
 		ASSERT_TRUE(opt2.empty());
 		opt2 = base::Optional(2);
-		ASSERT_TRUE(opt2.has_value());
+		ASSERT_HAS_VALUE(opt2);
 		ASSERT_EQUAL(opt2.value(), 2);
 
 		opt2 = opt;
-		ASSERT_TRUE(opt.has_value());
-		ASSERT_TRUE(opt2.has_value());
+		ASSERT_HAS_VALUE(opt);
+		ASSERT_HAS_VALUE(opt2);
 		ASSERT_EQUAL(opt.value(), 4);
 		ASSERT_EQUAL(opt2.value(), 4);
 
 		opt2.value() = 3;
-		ASSERT_TRUE(opt.has_value());
-		ASSERT_TRUE(opt2.has_value());
+		ASSERT_HAS_VALUE(opt);
+		ASSERT_HAS_VALUE(opt2);
 		ASSERT_EQUAL(opt.value(), 4);
 		ASSERT_EQUAL(opt2.value(), 3);
 	}
