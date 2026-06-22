@@ -1,5 +1,6 @@
 #pragma once
 
+#include <base/collections/maps.hpp>
 #include <base/pointers/box.hpp>
 #include <base/pointers/ref.hpp>
 
@@ -7,7 +8,6 @@
 
 #include <expected>
 #include <shared_mutex>
-#include <unordered_map>
 
 namespace vm {
 	class IVMProcess;
@@ -17,9 +17,9 @@ namespace vm {
 		Supervisor() = default;
 		~Supervisor();
 
-		std::shared_mutex                        rw_process_table;
-		PID                                      next = 0;
-		std::unordered_map<PID, Box<IVMProcess>> process_table;
+		std::shared_mutex                   rw_process_table;
+		u64                                 next_pid = 0;
+		base::HashMap<PID, Box<IVMProcess>> process_table;
 
 		std::expected<Ref<IVMProcess>, api::ApiError> getProcess(PID pid);
 

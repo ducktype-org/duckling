@@ -1043,12 +1043,12 @@ private:
 		using namespace query;
 
 		query::QResult<int> hr1 = 1;
-		ASSERT_TRUE(hr1.hasValue());
+		ASSERT_HAS_VALUE(hr1);
 		ASSERT_EQUAL(1, hr1.valueOrPanic());
 
 		int                      temp_val = hr1.valueOrPanic();
 		base::Optional<Ref<int>> opt1     = Ref<int>(&temp_val);
-		ASSERT_TRUE(opt1.has_value());
+		ASSERT_HAS_VALUE(opt1);
 		ASSERT_EQUAL(1, **opt1);
 
 		query::QResult<std::string> hr2 = "Value";
@@ -1057,7 +1057,7 @@ private:
 
 		std::string                      info  = "Hello";
 		query::QResult<std::string_view> whoa2 = std::string_view(info);
-		ASSERT_TRUE(whoa2.hasValue());
+		ASSERT_HAS_VALUE(whoa2);
 	}
 
 	void testKeyCopy() {

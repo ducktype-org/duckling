@@ -233,7 +233,7 @@ private:
 		                   .illegalAccess()
 		                   .value()
 		                   .dynamicCast<pst::Fun>();
-		ASSERT_TRUE(fun_opt.has_value());
+		ASSERT_HAS_VALUE(fun_opt);
 		auto fun = fun_opt.value();
 
 		auto params = fun->getParams().illegalAccess().value();
