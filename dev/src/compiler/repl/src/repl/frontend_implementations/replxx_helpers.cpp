@@ -83,10 +83,10 @@ namespace compiler::repl::replxx_helpers {
 				continue;
 			}
 
-			if (ch == '#' && next_ch == '}') {
+			if (ch == '}' && next_ch == '#') {
 				if (multiline_comment_depth > 0) {
 					multiline_comment_depth--;
-					++i;  // Skip the '}'
+					++i;  // Skip the '#'
 					continue;
 				}
 			}

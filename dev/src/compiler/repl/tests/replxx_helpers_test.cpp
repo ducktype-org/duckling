@@ -55,7 +55,7 @@ private:
 			ASSERT_EQUAL(0, computeBraceIndentDepth(input, input.size()));
 		}
 		{
-			std::string input = "{ #{ { } #} }";
+			std::string input = "{ #{ { } }# }";
 			ASSERT_EQUAL(0, computeBraceIndentDepth(input, input.size()));
 		}
 	}
