@@ -67,9 +67,13 @@ namespace vm::debugger::debug_adapter {
 				  }
 			  }
 		  }),
+		  output_listener([this](const std::string& str) {
+			  this->sendEvent("output", { { "category", "console" }, { "output", str } });
+		  }),
 
 		  debugger() {
 		debugger.attachOnStatusChangedListener(status_change_listener);
+		debugger.attachOnOutputListener(output_listener);
 	}
 
 	DebugAdapter DebugAdapter::get() { return {}; }
