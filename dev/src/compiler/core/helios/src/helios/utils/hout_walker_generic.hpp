@@ -41,10 +41,11 @@ namespace compiler::helios::code {
 		explicit HoutTreeWalker(Handler& handler): handler(handler) {}
 
 		void walk(const Expr& expr) { expr.acceptVisitor(*this); }
+
 		void walk(const Stmt& stmt) { stmt.acceptVisitor(*this); }
 
 		void walkBlock(const CodeBlock& block) {
-			for (const auto& stmt : block.statements) walk(*stmt);
+			for (const auto& stmt: block.statements) walk(*stmt);
 		}
 
 	private:
@@ -96,12 +97,19 @@ namespace compiler::helios::code {
 		// --- Leaf expressions: hand to the handler, nothing to descend into. ---
 
 		void visitLiteralUnitExpr(const LiteralUnitExpr& e) override { handler(e); }
+
 		void visitLiteralNumericExpr(const LiteralNumericExpr& e) override { handler(e); }
+
 		void visitLiteralBoolExpr(const LiteralBoolExpr& e) override { handler(e); }
+
 		void visitLiteralCharExpr(const LiteralCharExpr& e) override { handler(e); }
+
 		void visitLiteralStringExpr(const LiteralStringExpr& e) override { handler(e); }
+
 		void visitLiteralTypeExpr(const LiteralTypeExpr& e) override { handler(e); }
+
 		void visitIdentifierExpr(const IdentifierExpr& e) override { handler(e); }
+
 		void visitDefaultValueExpr(const DefaultValueExpr& e) override { handler(e); }
 
 		// --- Composite expressions: hand to the handler (pre-order), then descend. ---
@@ -131,7 +139,7 @@ namespace compiler::helios::code {
 
 		void visitChainComparisonExpr(const ChainComparisonExpr& e) override {
 			handler(e);
-			for (const auto& comparison : e.comparisons) walk(*comparison);
+			for (const auto& comparison: e.comparisons) walk(*comparison);
 		}
 
 		void visitParenthesisExpr(const ParenthesisExpr& e) override {
@@ -141,18 +149,18 @@ namespace compiler::helios::code {
 
 		void visitTupleExpr(const TupleExpr& e) override {
 			handler(e);
-			for (const auto& element : e.elements) walk(*element);
+			for (const auto& element: e.elements) walk(*element);
 		}
 
 		void visitVariantTypeConstructorExpr(const VariantTypeConstructorExpr& e) override {
 			handler(e);
-			for (const auto& subtype : e.subtypes) walk(*subtype);
+			for (const auto& subtype: e.subtypes) walk(*subtype);
 		}
 
 		void visitCallExpr(const CallExpr& e) override {
 			handler(e);
 			walk(*e.callee);
-			for (const auto& argument : e.arguments) walk(*argument);
+			for (const auto& argument: e.arguments) walk(*argument);
 		}
 
 		void visitAccessExpr(const AccessExpr& e) override {
@@ -168,7 +176,7 @@ namespace compiler::helios::code {
 
 		void visitSequenceExpr(const SequenceExpr& e) override {
 			handler(e);
-			for (const auto& expression : e.expressions) walk(*expression);
+			for (const auto& expression: e.expressions) walk(*expression);
 		}
 
 		void visitBoxOfExpr(const BoxOfExpr& e) override {

@@ -16,9 +16,9 @@ namespace compiler::helios::code {
 	std::vector<SymID> collectCalledSymbols(const HOUTFunction& fun);
 
 
-    /**
-     * @brief Same as above, but for the expressions. 
-     */
+	/**
+	 * @brief Same as above, but for the expressions.
+	 */
 	[[nodiscard]]
 	std::vector<SymID> collectCalledSymbols(const Expr& expr);
 }

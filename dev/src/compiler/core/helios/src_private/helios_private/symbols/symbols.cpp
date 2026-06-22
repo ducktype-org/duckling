@@ -1080,7 +1080,7 @@ namespace compiler::helios {
 			}
 
 			if (not functionHasImplementation(key)) return {};
-			
+
 			const auto& fun_hout_result = ctx.query<QueryCodeOfFun>(key)->valueOrThrow();
 			return code::collectCalledSymbols(fun_hout_result);
 		}

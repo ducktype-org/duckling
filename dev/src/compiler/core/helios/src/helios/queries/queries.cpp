@@ -153,8 +153,7 @@ namespace compiler::helios {
 				if (auto global_variable = std::get_if<HOUTGlobalVariable>(&g->value)) {
 					for (auto called_fun: collectCalledSymbols(*global_variable->initial_value)) {
 						if (added_to_queue.contains(called_fun)) continue;
-						if (not functionHasImplementation(called_fun))
-							continue;
+						if (not functionHasImplementation(called_fun)) continue;
 						functions_stack.push_back(called_fun);
 						added_to_queue.insert(called_fun);
 					}
@@ -177,14 +176,10 @@ namespace compiler::helios {
 
 				for (auto called_fun: called_funs) {
 					if (added_to_queue.contains(called_fun)) continue;
-					if (v_matches(getSymRef(called_fun)->other, defgen::GeneratedSymbolData)) {
-						// For now we just if this, but we will deal with this later.
-						if (not functionHasImplementation(called_fun))
-							continue;
+					if (not functionHasImplementation(called_fun)) continue;
 
-						functions_stack.push_back(called_fun);
-						added_to_queue.insert(called_fun);
-					}
+					functions_stack.push_back(called_fun);
+					added_to_queue.insert(called_fun);
 				}
 
 				// The query call should always succeed as the QueryDirectFunctionCalls
