@@ -32,6 +32,7 @@
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/templates/templates.hpp>
+#include <helios_private/comp_time/comp_time.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
@@ -827,7 +828,7 @@ namespace compiler::helios::code {
 
 
 				// Ideally, we want to split pst bake as a separate element,
-				// for not this is ok:
+				// for not this is a mock:
 				if (auto access_pst = pst_elem.dynamicCast<pst::expr::Access>()) {
 					if (access_pst.value()->getTemplateSpecifier().has_value()) {
 						auto template_specifier = access_pst.value()->getTemplateSpecifier().value().unlock(query_ctx);
@@ -840,14 +841,18 @@ namespace compiler::helios::code {
 
 						for (const auto& arg: *template_specifier_dc->getArgumentList().unlock(query_ctx)) {
 							auto arg_expr_result = subExprFromPST(query_ctx, arg.unlock(query_ctx)->getExpr());
-							UNPACK_QRESULT_MOVE(auto arg_expr =, arg_expr_result);
-							// ctv
-							
-							key.template_arguments.emplace_back(std::move(arg_expr));
+							UNPACK_QRESULT_MOVE(auto arg_expr =, arg_expr_result); // TODO: no panic
+		
+							auto ctv = query_ctx.query<QueryEvaluateHOUTExpression>({ arg_expr.ref() });
+							UNPACK_QRESULT_MOVE(auto ctv_value =, ctv); // TODO: no panic
+
+							key.template_arguments.emplace_back(std::move(ctv_value));
 						}
 						
 						auto resulting_symbol = 
-							query_ctx.query<helios::templates::::QueryBakeTemplateSymID
+							query_ctx.query<helios::templates::QueryBakeTemplateSymID>({ key }).valueOrPanic(); // PR: no panic!
+
+						return processNamespaceOrValue(resulting_symbol, pst_element_origin, pst_elem);
 					}
 				}
 

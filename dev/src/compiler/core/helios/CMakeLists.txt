@@ -35,6 +35,7 @@ add_library(HELIOS STATIC
 	src_private/helios_private/errors/duplicated_definition.cpp
 	src_private/helios_private/tsh/abstract_type_impl.cpp
 	src_private/helios_private/tsh/queries.cpp
+	src_private/helios_private/templates/templates.cpp
 
 	src/helios/queries/queries.cpp
 	src/helios/queries/query_code_of_fun.cpp
