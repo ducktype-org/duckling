@@ -7,7 +7,6 @@
 #include <vm/core/thread/kill_process_exception.hpp>
 #include <vm/core/thread/thread_state.hpp>
 
-#include <atomic>
 #include <exception>
 #include <expected>
 #include <mutex>
@@ -70,15 +69,6 @@ namespace vm {
 				"Fire event reported error! for: ", te::threadEventName(event), " err: ", res->error()
 			)
 		);
-	}
-
-	void IVMThread::fireEventUnlocked(
-		std::unique_lock<std::mutex>& lock, const te::ThreadEvent& event
-	) {
-		// Listeners run synchronously inside `fireEvent` and may re-acquire
-		// `execution_request_mutex`, thus we have to release it first to not deadlock.
-		base::ScopedUnlock unlocked(lock);
-		fireEvent(event);
 	}
 
 	void IVMThread::joinExecutionThread() {
@@ -225,7 +215,7 @@ namespace vm {
 		std::unique_lock lock(execution_request_mutex);
 		switch (execution_request) {
 		case ExecutionRequest::Pause:
-			fireEventUnlocked(lock, te::Pause{});
+			fireEvent(te::Pause{});
 
 			runDebuggerLoop(lock);
 
@@ -263,27 +253,22 @@ namespace vm {
 			switch (execution_request) {
 			case ExecutionRequest::Resume: {
 				execution_request = ExecutionRequest::NoRequest;
-				fireEventUnlocked(lock, te::Resume{});
+				fireEvent(lock, te::Resume{});
 				return;
 			}
 			case ExecutionRequest::Stop: {
 				throw KillProcessException{};
 			}
 			case ExecutionRequest::ExecuteOneStep: {
-				fireEventUnlocked(lock, te::Resume{});
+				fireEvent(lock, te::Resume{});
 
-				// `executeOneStep` must run without `execution_request_mutex` held since the
-				// stepped instruction might re-acquire it.
-				{
-					base::ScopedUnlock unlocked(lock);
-					executeOneStep();
-				}
+				executeOneStep();
 				// A Stop posted while the step ran must win. Overwriting it with Pause would lose
 				// the only Stop notification and get in the the debugger loop waiting for
 				// `execution_request != Pause` forever causing a deadlock.
 				if (execution_request == ExecutionRequest::Stop) throw KillProcessException{};
 				execution_request = ExecutionRequest::Pause;
-				fireEventUnlocked(lock, te::Pause{});
+				fireEvent(lock, te::Pause{});
 				break;
 			}
 			default:

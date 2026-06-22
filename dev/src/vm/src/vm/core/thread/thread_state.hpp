@@ -126,47 +126,54 @@ namespace vm::thread_sm {
 		= state_machine::WaitableStateMachine<thread_state::ThreadState, thread_event::ThreadEvent>;
 
 	inline ThreadStateMachineDefinition buildThreadStateMachineDefinition() {
-		namespace st = thread_state;
-		namespace ev = thread_event;
-		using R      = ThreadStateMachineDefinition::ActionResultT;
-		using A      = ThreadStateMachineDefinition::ActionResultT;
+		namespace st  = thread_state;
+		namespace ev  = thread_event;
+		using ResultT = ThreadStateMachineDefinition::ActionResultT;
 
 		ThreadStateMachineDefinition def;
 
 		def.addTransitions<ev::Spawn, st::NotStarted, st::Completed, st::Stopped, st::Panicked>(
-			[](const st::ThreadState&, const ev::Spawn&) -> A { return R{ st::Running{} }; }
+			[](const st::ThreadState&, const ev::Spawn&) -> ResultT {
+				return ResultT{ st::Running{} };
+			}
 		);
 
-		def.addTransition<st::Running, ev::Pause>([](const st::Running&, const ev::Pause&) -> A {
-			return R{ st::Paused{} };
-		});
+		def.addTransition<st::Running, ev::Pause>(
+			[](const st::Running&, const ev::Pause&) -> ResultT { return ResultT{ st::Paused{} }; }
+		);
 
-		def.addTransition<st::Paused, ev::Resume>([](const st::Paused&, const ev::Resume&) -> A {
-			return R{ st::Running{} };
-		});
+		def.addTransition<st::Paused, ev::Resume>(
+			[](const st::Paused&, const ev::Resume&) -> ResultT { return ResultT{ st::Running{} }; }
+		);
 
 		def.addTransition<st::Running, ev::EnterSleep>(
-			[](const st::Running&, const ev::EnterSleep&) -> A { return R{ st::Sleeping{} }; }
+			[](const st::Running&, const ev::EnterSleep&) -> ResultT {
+				return ResultT{ st::Sleeping{} };
+			}
 		);
 
 		def.addTransition<st::Sleeping, ev::WakeUp>(
-			[](const st::Sleeping&, const ev::WakeUp&) -> A { return R{ st::Running{} }; }
+			[](const st::Sleeping&, const ev::WakeUp&) -> ResultT {
+				return ResultT{ st::Running{} };
+			}
 		);
 
 		def.addTransitions<ev::Finish, st::Running, st::Paused>(
-			[](const st::ThreadState&, const ev::Finish& e) -> A {
-				return R{ st::Completed{ e.exit_value } };
+			[](const st::ThreadState&, const ev::Finish& e) -> ResultT {
+				return ResultT{ st::Completed{ e.exit_value } };
 			}
 		);
 
 		def.addTransitions<ev::Panic, st::Running, st::Sleeping, st::Paused>(
-			[](const st::ThreadState&, const ev::Panic& e) -> A {
-				return R{ st::Panicked{ e.msg } };
+			[](const st::ThreadState&, const ev::Panic& e) -> ResultT {
+				return ResultT{ st::Panicked{ e.msg } };
 			}
 		);
 
 		def.addTransitions<ev::Kill, st::NotStarted, st::Running, st::Sleeping, st::Paused>(
-			[](const st::ThreadState&, const ev::Kill&) -> A { return R{ st::Stopped{} }; }
+			[](const st::ThreadState&, const ev::Kill&) -> ResultT {
+				return ResultT{ st::Stopped{} };
+			}
 		);
 
 		return def;

@@ -116,7 +116,7 @@ namespace vm {
 				return api::ApiError{ api::StateError{ base::strConcat(
 					"Invalid request '",
 					pe::processEventName(event),
-					"in current state '",
+					"' in current state '",
 					ps::processStateName(last_process_state),
 					"'"
 				) } };
@@ -292,7 +292,7 @@ namespace vm {
 
 			variant_default { return api::Response(api::response::Empty()); }
 		}
-#undef APPLY
+#undef APPLY_COMMAND
 		CORE_UNREACHABLE();
 	}
 

@@ -132,14 +132,19 @@ private:
 	 * @brief Legal directed edges of the emitted process-status sequence.
 	 */
 	static bool legalStatusEdge(usize from, usize to) {
-		constexpr usize NOT_STARTED = 0;
-		constexpr usize RUNNING     = 1;
-		constexpr usize PAUSED      = 2;
-		constexpr usize SLEEPING    = 3;
-		constexpr usize STOPPING    = 4;
-		constexpr usize COMPLETED   = 5;
-		constexpr usize STOPPED     = 6;
-		constexpr usize PANICKED    = 7;
+		constexpr usize NOT_STARTED
+			= base::variantTypeIndex<vm::api::ProcStatus, vm::api::NotStarted>();
+		constexpr usize RUNNING  = base::variantTypeIndex<vm::api::ProcStatus, vm::api::Running>();
+		constexpr usize PAUSED   = base::variantTypeIndex<vm::api::ProcStatus, vm::api::Paused>();
+		constexpr usize SLEEPING = base::variantTypeIndex<vm::api::ProcStatus, vm::api::Sleeping>();
+		constexpr usize STOPPING
+			= base::variantTypeIndex<vm::api::ProcStatus, vm::api::ExecutionStopping>();
+		constexpr usize COMPLETED
+			= base::variantTypeIndex<vm::api::ProcStatus, vm::api::ExecutionCompleted>();
+		constexpr usize STOPPED
+			= base::variantTypeIndex<vm::api::ProcStatus, vm::api::ExecutionStopped>();
+		constexpr usize PANICKED
+			= base::variantTypeIndex<vm::api::ProcStatus, vm::api::ExecutionPanicked>();
 
 		static const auto matrix = [] {
 			std::array<std::array<bool, STATUS_COUNT>, STATUS_COUNT> m{};
@@ -175,9 +180,17 @@ private:
 		}
 	}
 
-	u64 masterSeed() { return std::random_device{}(); }
+	u64 masterSeed() {
+		if (const char* env_seed = std::getenv("DUCK_TORTURE_SEED"))  // NOLINT
+			return std::strtoull(env_seed, nullptr, 10);
+		return std::random_device{}();
+	}
 
-	usize iterations(usize default_count) { return default_count; }
+	usize iterations(usize default_count) {
+		if (const char* env_iters = std::getenv("DUCK_TORTURE_ITERATIONS"))  // NOLINT
+			return std::strtoull(env_iters, nullptr, 10);
+		return default_count;
+	}
 
 	vm::PID spawnAndLoad(std::string_view program) {
 		auto spawned = vm::api::spawn();
@@ -373,11 +386,8 @@ private:
 			// Report it without failing the suite so the no-deadlock / transition
 			// contract this test guards stays enforceable.
 			auto valid = vm::api::deinitAndValidate(pid);
-			if (!(valid.has_value() && valid.value()))
-				message(
-					"KNOWN ISSUE: guest memory leak after debugger session (seed="
-					+ std::to_string(seed) + ")"
-				);
+			ASSERT_HAS_VALUE(valid);
+			ASSERT_TRUE(valid.value());
 		}
 	}
 

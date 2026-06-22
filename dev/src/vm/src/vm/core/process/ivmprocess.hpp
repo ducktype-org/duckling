@@ -117,7 +117,7 @@ namespace vm {
 
 		/**
 		 * @brief Blocks until the state has advanced past `since` and satisfies pred.
-		 * Usefull, when a process state may change fast and we won't observe it. For example on
+		 * Useful, when a process state may change fast and we won't observe it. For example on
 		 * Paused->Running->Paused. We can't distinguish between the two Paused states if not for
 		 * the `since`.
 		 */

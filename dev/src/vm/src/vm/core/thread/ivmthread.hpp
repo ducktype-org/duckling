@@ -237,18 +237,6 @@ namespace vm {
 		void fireEvent(const thread_sm::thread_event::ThreadEvent& event);
 
 		/**
-		 * @brief Fires an event while the `lock` is temporarily released and re-acquires it before
-		 * returning.
-		 *
-		 * @detail `fireEvent` runs the thread->process state listeners synchronously, which may
-		 * re-enter VMThread methods that take `execution_request_mutex` (e.g. `pause`, `resume`,
-		 * `step` via `postRequest`). Holding the lock across the call would deadlock this thread.
-		 */
-		void fireEventUnlocked(
-			std::unique_lock<std::mutex>& lock, const thread_sm::thread_event::ThreadEvent& event
-		);
-
-		/**
 		 * @brief Posts a control request to the VMThread. Called from the `VMProcess` context,
 		 * i.e. in `stop`, `pause`, `join`, etc.
 		 */
@@ -260,8 +248,6 @@ namespace vm {
 		 * take place. After each step the execution status is set to `paused` and the VMThread
 		 * waits for the next command. Mutex "execution_request_mutex" is held when the VM is
 		 * executing the code.
-		 * State transitions go through `fireEventUnlocked`, and `executeOneStep` runs with the lock
-		 * released, since both may re-enter code that takes `execution_request_mutex`.
 		 *
 		 * @param lock
 		 */
@@ -299,9 +285,9 @@ namespace vm {
 		 * execution (by requesting pause or stop), it sets the execution_request_break flag to
 		 * true, so the running VMThread can only check this flag first and not acquire the mutex.
 		 */
-		std::mutex              execution_request_mutex;
-		ExecutionRequest        execution_request              = ExecutionRequest::NoRequest;
-		std::atomic<bool>       execution_request_pending_flag = false;
-		std::condition_variable pause_cv;
+		std::recursive_mutex        execution_request_mutex;
+		ExecutionRequest            execution_request              = ExecutionRequest::NoRequest;
+		std::atomic<bool>           execution_request_pending_flag = false;
+		std::condition_variable_any pause_cv;
 	};
 }

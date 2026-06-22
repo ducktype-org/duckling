@@ -1,8 +1,8 @@
 /**
  * @brief States and events for the VMProcess.
  *
- * The process state is an aggregate of it's threads state. On each thread state change `aggregate`
- * is called via the `ThreadState` machine listener, which updates the aggregate state if the process.
+ * The process state is an aggregate of its threads state. On each thread state change `aggregate`
+ * is called via the `ThreadState` machine listener, which updates the aggregate state of the process.
  */
 #pragma once
 
@@ -135,13 +135,13 @@ namespace vm::process_sm {
 		// Nothing started.
 		if (!any_started) return NotStarted{};
 
-		// If any is thread is running than the process is running as well.
+		// If any thread is running then the process is running as well.
 		for (const auto& [tid, state]: agg.threads)
 			if (v_matches(state, ts::Running)) return Running{};
-		// If any is thread is sleeping than the process is sleeping as well.
+		// If any thread is sleeping then the process is sleeping as well.
 		for (const auto& [tid, state]: agg.threads)
 			if (v_matches(state, ts::Sleeping)) return Sleeping{};
-		// If any thread is paused, than the process is paused as well.
+		// If any thread is paused, then the process is paused as well.
 		for (const auto& [tid, state]: agg.threads)
 			if (v_matches(state, ts::Paused)) return Paused{};
 
