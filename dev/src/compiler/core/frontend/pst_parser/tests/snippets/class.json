@@ -107,7 +107,7 @@
 						"sourceStart": 45,
 						"sourceEnd": 375
 					},
-					"Class Block": [
+					"Code Block": [
 						{
 							"position": {
 								"sourceStart": 48,
@@ -680,41 +680,33 @@
 								"sourceStart": 182,
 								"sourceEnd": 196
 							},
-							"Non Class Statement": {
-								"internal stmt": {
-									"position": {
-										"sourceStart": 182,
-										"sourceEnd": 196
-									},
-									"Using": {
-										"position": {
-											"sourceStart": 188,
-											"sourceEnd": 195
+							"Using": {
+								"position": {
+									"sourceStart": 188,
+									"sourceEnd": 195
+								},
+								"Dotted Name": {
+									"star": "false",
+									"names": [
+										{
+											"position": {
+												"sourceStart": 188,
+												"sourceEnd": 190
+											},
+											"Identifier Wrapper": {
+												"value": "std"
+											}
 										},
-										"Dotted Name": {
-											"star": "false",
-											"names": [
-												{
-													"position": {
-														"sourceStart": 188,
-														"sourceEnd": 190
-													},
-													"Identifier Wrapper": {
-														"value": "std"
-													}
-												},
-												{
-													"position": {
-														"sourceStart": 192,
-														"sourceEnd": 195
-													},
-													"Identifier Wrapper": {
-														"value": "math"
-													}
-												},
-											]
-										}
-									}
+										{
+											"position": {
+												"sourceStart": 192,
+												"sourceEnd": 195
+											},
+											"Identifier Wrapper": {
+												"value": "math"
+											}
+										},
+									]
 								}
 							}
 						},
@@ -742,72 +734,64 @@
 									}
 								},
 							],
-							"Class specifier block": {
-								"code block": {
+							"Specifier block": {
+								"block": {
 									"position": {
 										"sourceStart": 207,
 										"sourceEnd": 373
 									},
-									"Class Block": [
+									"Code Block": [
 										{
 											"position": {
 												"sourceStart": 211,
 												"sourceEnd": 235
 											},
-											"Non Class Statement": {
-												"internal stmt": {
+											"Alias": {
+												"name": {
 													"position": {
-														"sourceStart": 211,
-														"sourceEnd": 235
+														"sourceStart": 217,
+														"sourceEnd": 220
 													},
-													"Alias": {
-														"name": {
-															"position": {
-																"sourceStart": 217,
-																"sourceEnd": 220
+													"Identifier Wrapper": {
+														"value": "sqrt"
+													}
+												},
+												"points_to": {
+													"position": {
+														"sourceStart": 222,
+														"sourceEnd": 234
+													},
+													"Dotted Name": {
+														"star": "false",
+														"names": [
+															{
+																"position": {
+																	"sourceStart": 222,
+																	"sourceEnd": 224
+																},
+																"Identifier Wrapper": {
+																	"value": "std"
+																}
 															},
-															"Identifier Wrapper": {
-																"value": "sqrt"
-															}
-														},
-														"points_to": {
-															"position": {
-																"sourceStart": 222,
-																"sourceEnd": 234
+															{
+																"position": {
+																	"sourceStart": 226,
+																	"sourceEnd": 229
+																},
+																"Identifier Wrapper": {
+																	"value": "math"
+																}
 															},
-															"Dotted Name": {
-																"star": "false",
-																"names": [
-																	{
-																		"position": {
-																			"sourceStart": 222,
-																			"sourceEnd": 224
-																		},
-																		"Identifier Wrapper": {
-																			"value": "std"
-																		}
-																	},
-																	{
-																		"position": {
-																			"sourceStart": 226,
-																			"sourceEnd": 229
-																		},
-																		"Identifier Wrapper": {
-																			"value": "math"
-																		}
-																	},
-																	{
-																		"position": {
-																			"sourceStart": 231,
-																			"sourceEnd": 234
-																		},
-																		"Identifier Wrapper": {
-																			"value": "sqrt"
-																		}
-																	},
-																]
-															}
-														}
+															{
+																"position": {
+																	"sourceStart": 231,
+																	"sourceEnd": 234
+																},
+																"Identifier Wrapper": {
+																	"value": "sqrt"
+																}
+															},
+														]
 													}
 												}
 											}

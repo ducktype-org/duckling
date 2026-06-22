@@ -20,7 +20,7 @@ namespace pst {
 
 	public:
 		CLASS_STMT_SPEC_CONSTRUCTOR(CopyConstructor);
-		CLASS_STMT_PARSE(CopyConstructor);
+		PARSE_DECL();
 
 		~CopyConstructor() override = default;
 		void dprint(std::ostream& out) const final;
