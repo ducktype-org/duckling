@@ -167,6 +167,9 @@ public:
 
 		auto size = bld_ref->size(stack_state_id);
 		if (size == number_of_ret_vals) throw RetValDeinitError(cause);
+		// note: we dont't allow to pop the ret-vals from stack, because that would be weird (e.g.
+		// caller's variable has not changed the name, but has changed the block...)
+
 		auto new_state = bld_ref->pop(stack_state_id);
 		auto new_size  = bld_ref->size(new_state);
 		CORE_ASSERT(new_size + 1 == size, "we expect that the size must be valid");
@@ -354,6 +357,24 @@ class FunctionValidator {
 		for (auto [idx, reslt]: zip(iota(0u), reslts | reverse))
 			if (local_stack.back(idx).type->getID() != reslt)
 				throw InvalidFunctionCallArgumentsError(generic_arg);
+	}
+
+	void validateRet(
+		const LocalStack& local_stack, const Op_ret& instr, const FuncSignature& current_signature
+	) {
+		auto& returns    = current_signature.result_types;
+		usize ret_amount = returns.size();
+		CORE_ASSERT(
+			local_stack.size() >= ret_amount,
+			"Since we cannot pop the ret-vals, all the original return values must be on the stack"
+		);
+
+		// note: As of 22-06-2026, the only way for the function to return invalid types is via
+		// incorrect casting
+
+		for (usize i = 0; i < ret_amount; i++)
+			if (local_stack.front(i).type->getName() != returns.at(i).str)
+				throw InvalidRetError(instr);
 	}
 
 	void validateTailcall(
@@ -656,7 +677,7 @@ class FunctionValidator {
 				if (src_type != dst_type) throw PointerTypeMismatchError(instr);
 			}
 
-			instr_case_novalue(Op_mov_popq_popq, Op_mov_popq_imm) {}
+			instr_case_novalue(Op_mov_popq_popq) {}
 
 			instr_case(Op_mov_pste_pste, instr) {
 				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
@@ -1656,7 +1677,8 @@ class FunctionValidator {
 					dfs_stack.emplace_back(getLabelTarget(instr.label), local_stack);
 				}
 				instr_case(Op_ret, instr) {
-					stack_before_instr[index]    = local_stack.getStateID();
+					stack_before_instr[index] = local_stack.getStateID();
+					validateRet(local_stack, instr, function.signature);
 					std::tie(index, local_stack) = dfs_stack.back();
 					dfs_stack.pop_back();
 				}

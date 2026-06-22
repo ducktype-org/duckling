@@ -142,6 +142,14 @@ namespace pst {
 			= type;
 	}
 
+	void LangParserState::setContextStmt(StmtContext type) {
+		if (type == getContext()->stmt_context) return;
+		copyOwnContext();
+		dynamic_cast<LangParserContext*>(&*std::get<Box<tpc::ParserContext>>(current_context))
+			->stmt_context
+			= type;
+	}
+
 	class NotAllParsedError final: public dia_int::MessageWithCodeFragmentAndCause {
 		dia_int::Metadata getMetadata() const final {
 			return { .template_type = "message",
