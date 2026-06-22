@@ -92,3 +92,6 @@ add_example(variant_match_example examples/variant_match_example.cpp
 
 add_example(variant_visit_example examples/variant_visit_example.cpp
         USES Base)
+
+add_example(variant_typed_visit_example examples/variant_typed_visit_example.cpp
+        USES Base)

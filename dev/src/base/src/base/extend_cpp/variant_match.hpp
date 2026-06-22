@@ -18,6 +18,7 @@
  * ### Usage
  *
  * @include variant_visit_example.cpp
+ * @include variant_typed_visit_example.cpp
  *
  * Variant match
  * -------------
@@ -152,4 +153,8 @@ namespace base {
 /**
  * @brief Use instead of simple `std::visit`.
  */
-#define VISIT(variant_value, name, code) std::visit([&](auto&& name) { code; }, (variant_value))
+#define VISIT(variant_value, name, ...) \
+	std::visit([&](auto&& name) { __VA_ARGS__; }, (variant_value))
+
+#define VISIT_T(variant_value, name, type, ...) \
+	std::visit([&](auto&& name) -> type { __VA_ARGS__; }, (variant_value))
