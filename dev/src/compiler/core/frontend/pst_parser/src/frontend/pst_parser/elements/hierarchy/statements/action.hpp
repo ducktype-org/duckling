@@ -7,10 +7,16 @@ namespace pst {
 	 * @note Action assumes optional expression before the semicolon.
 	 */
 	class Action: public Stmt {
+		PARENT_CLASS(Stmt);
+		THIS_CLASS(Action);
+		CLONE_SUBELEMENTS();
+
 	protected:
 		NAMED_CHILD_OPT(expr, CommaExprHolder);
 
 	public:
+		ELEMENT_CLONE_DECL(Action);
+
 		STMT_CHILD_CONSTRUCTOR(Action, ElementKind::Action);
 		static MBox<Action> parse(LangParserState& state);
 		~Action() override = default;

@@ -60,27 +60,27 @@ private:
 			opt_some(func_name) {
 				ASSERT_TRUE(std::holds_alternative<vm::FunctionRunArguments>(args));
 				const auto& function_args = std::get<vm::FunctionRunArguments>(args);
-				ASSERT_TRUE(vm::api::runFunction(pid, func_name, function_args).has_value());
+				ASSERT_HAS_VALUE(vm::api::runFunction(pid, func_name, function_args));
 			}
 			opt_none {
 				ASSERT_TRUE(std::holds_alternative<std::vector<std::string>>(args));
 				auto program_args = std::get<std::vector<std::string>>(args);
-				ASSERT_TRUE(vm::api::run(pid, program_args).has_value());
+				ASSERT_HAS_VALUE(vm::api::run(pid, program_args));
 			}
 		}
 
-		if_opt_some(optional_input, input) { ASSERT_TRUE(vm::api::input(pid, input).has_value()); }
+		if_opt_some(optional_input, input) { ASSERT_HAS_VALUE(vm::api::input(pid, input)); }
 
-		ASSERT_TRUE(vm::api::join(pid).has_value());
+		ASSERT_HAS_VALUE(vm::api::join(pid));
 
 		if_opt_some(optional_output, output) {
 			auto output_response = vm::api::output(pid);
-			ASSERT_TRUE(output_response.has_value());
+			ASSERT_HAS_VALUE(output_response);
 			ASSERT_EQUAL(output, output_response->output);
 		}
 
 		auto exit_code_response = vm::api::getExitValue(pid);
-		ASSERT_TRUE(exit_code_response.has_value());
+		ASSERT_HAS_VALUE(exit_code_response);
 		const auto& exit_value = exit_code_response.value();
 
 		match_optional(expected_return_values) {
@@ -125,7 +125,7 @@ private:
 	 */
 	Box<vm::VmValue> getIntVmValue(vm::PID pid, i64 value) {
 		auto response = vm::api::getVmValue(pid, "i64");
-		ASSERT_TRUE(response.has_value());
+		ASSERT_HAS_VALUE(response);
 		auto vm_value = std::move(response->vm_value);
 		vm_value->writeBytes<i64>(value);
 		return vm_value;
@@ -156,7 +156,7 @@ private:
 		vm::PID  pid = initProcess();
 		fs::File file1(path("multiple_files_1.dbc"));
 		fs::File file2(path("multiple_files_2.dbc"));
-		ASSERT_TRUE(vm::api::loadFiles(pid, { file1, file2 }).has_value());
+		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file1, file2 }));
 
 		runAndCheckReturnValue(pid, {}, vm::ProgramRunArguments{}, "123", "123", 0);
 		vm::api::deinitAndValidate(pid);
@@ -166,8 +166,8 @@ private:
 		vm::PID  pid = initProcess();
 		fs::File file1(path("inject_code_1.dbc"));
 		fs::File file2(path("inject_code_2.dbc"));
-		ASSERT_TRUE(vm::api::loadFiles(pid, { file1 }).has_value());
-		ASSERT_TRUE(vm::api::loadFiles(pid, { file2 }).has_value());
+		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file1 }));
+		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file2 }));
 
 		runAndCheckReturnValue(pid, {}, vm::ProgramRunArguments{}, "123", "123", 0);
 		vm::api::deinitAndValidate(pid);
@@ -176,7 +176,7 @@ private:
 	void runNoArgFunction() {
 		vm::PID  pid = initProcess();
 		fs::File file(path("call_no_arg_function.dbc"));
-		ASSERT_TRUE(vm::api::loadFiles(pid, { file }).has_value());
+		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file }));
 
 		runAndCheckReturnValue(pid, "summer", vm::FunctionRunArguments{}, {}, "735", {});
 		vm::api::deinitAndValidate(pid);
@@ -185,7 +185,7 @@ private:
 	void runVoidFunction() {
 		vm::PID  pid = initProcess();
 		fs::File file(path("call_void_function.dbc"));
-		ASSERT_TRUE(vm::api::loadFiles(pid, { file }).has_value());
+		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file }));
 
 		OwnedArgumentList owned_arguments = getOwnedArgumentList(pid, { 1, 2 });
 		runAndCheckReturnValue(pid, "summer", createArgumentList(owned_arguments), {}, "3", {});
@@ -196,7 +196,7 @@ private:
 	void runNonVoidFunction() {
 		vm::PID  pid = initProcess();
 		fs::File file(path("call_non_void_function.dbc"));
-		ASSERT_TRUE(vm::api::loadFiles(pid, { file }).has_value());
+		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file }));
 
 		OwnedArgumentList owned_arguments = getOwnedArgumentList(pid, { 695, 40 });
 		runAndCheckReturnValue(pid, "summer", createArgumentList(owned_arguments), {}, {}, 735);
@@ -207,7 +207,7 @@ private:
 	void runMultipleReturnValuesFunction() {
 		vm::PID  pid = initProcess();
 		fs::File file(path("multiple_retvals.dbc"));
-		ASSERT_TRUE(vm::api::loadFiles(pid, { file }).has_value());
+		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file }));
 
 		OwnedArgumentList owned_arguments = getOwnedArgumentList(pid, { 40, 695 });
 		runAndCheckReturnValues(
@@ -235,7 +235,7 @@ private:
 	void doubleRunFunction() {
 		vm::PID  pid = initProcess();
 		fs::File file1(path("repl_1.dbc"));
-		ASSERT_TRUE(vm::api::loadFiles(pid, { file1 }).has_value());
+		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file1 }));
 
 		OwnedArgumentList owned_arguments = getOwnedArgumentList(pid, { 4, 8 });
 		runAndCheckReturnValue(pid, "spring", createArgumentList(owned_arguments), {}, {}, 32);
@@ -249,7 +249,7 @@ private:
 	void manyRunFunctions() {
 		vm::PID  pid = initProcess();
 		fs::File file(path("repl_1.dbc"));
-		ASSERT_TRUE(vm::api::loadFiles(pid, { file }).has_value());
+		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file }));
 
 		for (i32 i = 0; i < 100; i++) {
 			OwnedArgumentList owned_arguments = getOwnedArgumentList(pid, { i, i });
@@ -265,13 +265,13 @@ private:
 		vm::PID pid = initProcess();
 
 		fs::File file1(path("repl_1.dbc"));
-		ASSERT_TRUE(vm::api::loadFiles(pid, { file1 }).has_value());
+		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file1 }));
 		OwnedArgumentList owned_arguments = getOwnedArgumentList(pid, { 4, 8 });
 		runAndCheckReturnValue(pid, "spring", createArgumentList(owned_arguments), {}, {}, 32);
 		freeArguments(owned_arguments);
 
 		fs::File file2(path("repl_2.dbc"));
-		ASSERT_TRUE(vm::api::loadFiles(pid, { file2 }).has_value());
+		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file2 }));
 		OwnedArgumentList owned_arguments2 = getOwnedArgumentList(pid, { 1, 2 });
 		runAndCheckReturnValue(pid, "summer", createArgumentList(owned_arguments2), {}, {}, 3);
 		freeArguments(owned_arguments2);
@@ -281,11 +281,11 @@ private:
 	void replWithGlobals() {
 		vm::PID  pid = initProcess();
 		fs::File file1(path("repl_with_globals_1.dbc"));
-		ASSERT_TRUE(vm::api::loadFiles(pid, { file1 }).has_value());
+		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file1 }));
 		runAndCheckReturnValue(pid, "globaler_setter", vm::FunctionRunArguments{}, "1 2", {}, {});
 
 		fs::File file2(path("repl_with_globals_2.dbc"));
-		ASSERT_TRUE(vm::api::loadFiles(pid, { file2 }).has_value());
+		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file2 }));
 		runAndCheckReturnValue(pid, "globaler_reader", vm::FunctionRunArguments{}, {}, "12", {});
 		vm::api::deinitAndValidate(pid);
 	}
@@ -293,14 +293,14 @@ private:
 	void incrementalGlobalVariantPersistsValue() {
 		vm::PID  pid = initProcess();
 		fs::File file1(path("incremental_global_variant_1.dbc"));
-		ASSERT_TRUE(vm::api::loadFiles(pid, { file1 }).has_value());
+		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file1 }));
 
 		runAndCheckReturnValue(
 			pid, "set_global_variant_value", vm::FunctionRunArguments{}, {}, {}, {}
 		);
 
 		fs::File file2(path("incremental_global_variant_2.dbc"));
-		ASSERT_TRUE(vm::api::loadFiles(pid, { file2 }).has_value());
+		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file2 }));
 
 		runAndCheckReturnValue(
 			pid, "read_global_variant_value", vm::FunctionRunArguments{}, {}, "735", {}
@@ -312,13 +312,13 @@ private:
 		vm::PID pid = initProcess();
 
 		fs::File file1(path("loaded_func_call_1.dbc"));
-		ASSERT_TRUE(vm::api::loadFiles(pid, { file1 }).has_value());
+		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file1 }));
 		OwnedArgumentList owned_arguments = getOwnedArgumentList(pid, { 4, 8 });
 		runAndCheckReturnValue(pid, "summer", createArgumentList(owned_arguments), {}, {}, 12);
 		freeArguments(owned_arguments);
 
 		fs::File file2(path("loaded_func_call_2.dbc"));
-		ASSERT_TRUE(vm::api::loadFiles(pid, { file2 }).has_value());
+		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file2 }));
 		OwnedArgumentList owned_arguments2 = getOwnedArgumentList(pid, { 2, 3 });
 		runAndCheckReturnValue(pid, "spring", createArgumentList(owned_arguments2), {}, {}, 10);
 		freeArguments(owned_arguments2);
@@ -328,10 +328,10 @@ private:
 	void separateGlobals() {
 		vm::PID  pid = initProcess();
 		fs::File file1(path("separate_globals_1.dbc"));
-		ASSERT_TRUE(vm::api::loadFiles(pid, { file1 }).has_value());
+		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file1 }));
 
 		fs::File file2(path("separate_globals_2.dbc"));
-		ASSERT_TRUE(vm::api::loadFiles(pid, { file2 }).has_value());
+		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file2 }));
 		runAndCheckReturnValue(pid, "globaler_setter", vm::FunctionRunArguments{}, "12", "12", {});
 		vm::api::deinitAndValidate(pid);
 	}
@@ -339,15 +339,15 @@ private:
 	void injectExistingFunction() {
 		vm::PID  pid = initProcess();
 		fs::File file(path("inject_code_1.dbc"));
-		ASSERT_TRUE(vm::api::loadFiles(pid, { file }).has_value());
-		ASSERT_TRUE(!vm::api::loadFiles(pid, { file }).has_value());
+		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file }));
+		ASSERT_NO_VALUE(vm::api::loadFiles(pid, { file }));
 		vm::api::deinitAndValidate(pid);
 	}
 
 	void runFunctionArgumentValidation() {
 		vm::PID  pid = initProcess();
 		fs::File file(path("call_non_void_function.dbc"));
-		ASSERT_TRUE(vm::api::loadFiles(pid, { file }).has_value());
+		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file }));
 		{
 			// Not enough arguments.
 			OwnedArgumentList arguments;
@@ -383,7 +383,7 @@ private:
 			arguments.push_back(getIntVmValue(pid, 10));
 
 			auto i32_value = vm::api::getVmValue(pid, "i32");
-			ASSERT_TRUE(i32_value.has_value());
+			ASSERT_HAS_VALUE(i32_value);
 			arguments.push_back(std::move(i32_value->vm_value));
 
 			auto func_args = createArgumentList(arguments);
