@@ -298,6 +298,12 @@ namespace pst {
 			return out;
 		}
 
+		static PST fromClone(
+			AccessLocked<Element> element, PSTContext&& pst_ctx, hashing::ComponentHash hash_ctx = {}
+		) {
+			return fromCloneWithArgs(element, std::move(pst_ctx), std::move(hash_ctx));
+		}
+
 		[[nodiscard]]
 		const std::vector<ImportType>& getImports() const {
 			return imports;

@@ -5,6 +5,8 @@
 #include <helios/tsh/symbol_type.hpp>
 #include <helios/tsh/types.hpp>
 
+#include <ctv/ctv.hpp>
+
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/types/bit256.hpp>
 #include <base/types/ints.hpp>
@@ -86,6 +88,21 @@ namespace compiler::helios::defgen {
 		struct BuiltinOperator final {
 			// The type of the builtin operator this symbol represents.
 			tsh::FunctionAbstractType operator_type;
+
+			[[nodiscard]]
+			base::Bit256 queryUnstablePerfectHash() const;
+		};
+
+		struct TemplateBakeConstant final {
+			// PR: just constant?
+
+			tsh::SymbolType<>	 type;
+			ctv::CompileTimeValue value;
+
+			TemplateBakeConstant(tsh::SymbolType<> type, ctv::CompileTimeValue value);
+
+			// will we need scope here?
+			// for mangling maybe?
 
 			[[nodiscard]]
 			base::Bit256 queryUnstablePerfectHash() const;
@@ -231,6 +248,7 @@ namespace compiler::helios::defgen {
 			[[nodiscard]]
 			base::Bit256 queryUnstablePerfectHash() const;
 		};
+
 
 		using GeneratedSymbolDataVariant = std::variant<
 			ImplicitConstructor,

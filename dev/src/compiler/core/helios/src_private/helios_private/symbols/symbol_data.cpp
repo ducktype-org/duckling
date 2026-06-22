@@ -42,6 +42,17 @@ namespace compiler::helios {
 			return { operator_type.queryUnstablePerfectHash() };
 		}
 
+		GeneratedSymbolData::TemplateBakeConstant::TemplateBakeConstant(
+			tsh::SymbolType<> type, ctv::CompileTimeValue value
+		): type(type), value(std::move(value)) {}
+
+		base::Bit256 GeneratedSymbolData::TemplateBakeConstant::queryUnstablePerfectHash() const {
+			hashing::SHA256 hasher;
+			hashing::addToHash(hasher, type.queryUnstablePerfectHash());
+			hashing::addToHash(hasher, value.queryUnstablePerfectHash());
+			return hasher.finalize();
+		}
+
 		base::Bit256 GeneratedSymbolData::Parameter::queryUnstablePerfectHash() const {
 			return { function_symbol.queryUnstablePerfectHash(), parameter_index };
 		}

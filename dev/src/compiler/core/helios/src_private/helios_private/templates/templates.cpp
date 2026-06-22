@@ -1,5 +1,8 @@
 #include "templates.hpp"
 
+#include <frontend/pst_parser/elements/hierarchy/declarations/template_decl.hpp>
+
+#include <helios/symbols/symbol_id_utils.hpp>
 
 #include <query_framework/standard_query/query_impl.hpp>
 #include <hashing/hashing_algorithms.hpp>
@@ -38,7 +41,19 @@ namespace compiler::helios::templates {
             //
             // NOTE: it might be good to put TemplateInstantiationData in symbol data,
             // and put just SymID in PST root data
-            
+
+            CORE_ASSERT(kind(key.template_sym_id) == SymbolKind::Template, "SymID is not a Template");
+
+            auto pst_statement = stmt(ctx, key.template_sym_id).value();
+            auto template_statement = pst_statement.dynamicCast<pst::TemplateDecl>().value();
+
+            auto template_params = template_statement->getParams().unlock(ctx);
+
+            // This should be an error:!!
+            CORE_ASSERT(
+                template_params->size() == key.template_arguments.size(),
+                "Template arguments count does not match template parameters count"
+            );
 
             CORE_PANIC("QueryBakeTemplateSymID is not implemented yet");
         }
