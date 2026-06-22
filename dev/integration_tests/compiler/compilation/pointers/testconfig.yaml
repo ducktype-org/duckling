@@ -96,4 +96,13 @@ Tests:
         Err:
           String: 'VMThread has panicked: Program panicked\n{\"data\":{\"error\":\"Execution panicked with error: Program panicked\"},\"type\":\"OtherError\"}block.refcount != 0, BlockID=1\n'
         ExitCode: 1
+  slices_negative_index:
+    enable_conc_deterministic_tests: "false"
+    Cases:
+      llvm:
+        backend: llvm
+        ExitCode: 134
+      dvm:
+        backend: dvm
+        ExitCode: 1
 

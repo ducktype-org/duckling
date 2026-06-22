@@ -84,6 +84,18 @@ DVMPlace FunctionLoweringContext::forceToPlace(
 	CORE_UNREACHABLE();
 }
 
+DVMPlace FunctionLoweringContext::copyToTempPlace(
+	const DVMValue& value, base::Optional<std::string_view> name_hint
+) {
+	DVMPlace temp = pushTempLocal(value.getType(), name_hint);
+	pushInstruction({
+		vm::code::builders::OpKind::mov,
+		temp.asArgument(),
+		value.asArgument(),
+	});
+	return temp;
+}
+
 void FunctionLoweringContext::maybeStoreResult(
 	const base::Optional<DVMPlace>& maybe_dest_place, const DVMValue& src_value
 ) {
