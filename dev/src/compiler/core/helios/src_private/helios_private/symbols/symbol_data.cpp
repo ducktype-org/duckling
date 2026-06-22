@@ -1,12 +1,11 @@
 #include "symbol_data.hpp"
 
-#include "helios/symbols/symbol_kind.hpp"
-
 #include <helios/scope_id.hpp>
 #include <helios/symbols/query_class_of_member.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
+#include <helios/symbols/symbol_kind.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/types.hpp>
 
@@ -424,9 +423,19 @@ namespace compiler::helios {
 				or kind(id) == SymbolKind::Method,
 			"Incorrect functionHasImplementation call"
 		);
+		if (kind(id) == SymbolKind::FunctionDeclaration) return false;
 
 		// PST (user-written) functions always have a body.
 		if (not v_matches(getSymRef(id)->other, defgen::GeneratedSymbolData)) return true;
+
+		// Among generated symbols, builtin operators are the only ones without a body.
+		return not base::holds<defgen::GeneratedSymbolData::BuiltinOperator>(
+			v_get(getSymRef(id)->other, defgen::GeneratedSymbolData).data
+		);
+	}
+
+	bool functionHasGeneratedImplementation(SymID id) {
+		if (not v_matches(getSymRef(id)->other, defgen::GeneratedSymbolData)) return false;
 
 		// Among generated symbols, builtin operators are the only ones without a body.
 		return not base::holds<defgen::GeneratedSymbolData::BuiltinOperator>(

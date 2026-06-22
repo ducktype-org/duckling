@@ -866,10 +866,7 @@ private:
 			glob_data += hout->glob_data.size();
 		}
 
-		// @TODO: #2694 This should be 3, not 19, when toString methods
-		// for simple types are moved out of every HOUT unit.
-		// @TODO: #2424 When refactoring, add robust tests that the expected toString methods are added.
-		ASSERT_EQUAL_PRINT(functions, 19);
+		ASSERT_EQUAL_PRINT(functions, 3);
 		ASSERT_EQUAL(glob_data, 5);
 	}
 
@@ -887,10 +884,7 @@ private:
 			glob_data += hout->glob_data.size();
 		}
 
-		// @TODO: #2694 This should be 1, not 29 (1 + 2 * 14 + 1 (length)), when toString methods
-		// for simple types are moved out of every HOUT unit (there are two units in this test).
-		// @TODO: #2424 When refactoring, add robust tests that the expected toString methods are added.
-		ASSERT_EQUAL_PRINT(functions, 33);
+		ASSERT_EQUAL_PRINT(functions, 1);
 		ASSERT_EQUAL(glob_data, 5);
 	}
 

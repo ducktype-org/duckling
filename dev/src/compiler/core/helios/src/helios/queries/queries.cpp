@@ -1,7 +1,5 @@
 #include "queries.hpp"
 
-#include "helios/utils/hout_walkers.hpp"
-
 #include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/hout/elements.hpp>
@@ -16,6 +14,7 @@
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/symbol_type.hpp>
 #include <helios/tsh/type_interface.hpp>
+#include <helios/utils/hout_walkers.hpp>
 #include <helios_private/errors/dia_interactive_elements.hpp>
 #include <helios_private/errors/duplicated_definition.hpp>
 #include <helios_private/hout_creation/definition_generation/class_constructors.hpp>
@@ -153,7 +152,7 @@ namespace compiler::helios {
 				if (auto global_variable = std::get_if<HOUTGlobalVariable>(&g->value)) {
 					for (auto called_fun: collectCalledSymbols(*global_variable->initial_value)) {
 						if (added_to_queue.contains(called_fun)) continue;
-						if (not functionHasImplementation(called_fun)) continue;
+						if (not functionHasGeneratedImplementation(called_fun)) continue;
 						functions_stack.push_back(called_fun);
 						added_to_queue.insert(called_fun);
 					}
@@ -176,7 +175,7 @@ namespace compiler::helios {
 
 				for (auto called_fun: called_funs) {
 					if (added_to_queue.contains(called_fun)) continue;
-					if (not functionHasImplementation(called_fun)) continue;
+					if (not functionHasGeneratedImplementation(called_fun)) continue;
 
 					functions_stack.push_back(called_fun);
 					added_to_queue.insert(called_fun);

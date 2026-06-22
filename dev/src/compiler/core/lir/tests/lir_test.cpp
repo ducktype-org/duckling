@@ -115,14 +115,6 @@ private:
 		withContextDo([&](query::Context& ctx) {
 			helios::HOUTUnit unit = ctx.query<helios::QueryModuleHOUT>(module)->valueOrPanic();
 
-			// We filter out toString methods here for test purposes
-			// @TODO: #2694 remove this filtering
-			// #2483 -- deal with this if needed
-			base::filterVectorInPlace(unit.functions, [](const CRef<helios::HOUTFunction>& func) {
-				return func->declaration->original_name != base::StrID("toString")
-				   and func->declaration->original_name != base::StrID("length");
-			});
-
 			auto mir_unit = mir::lowerToMIRUnit(ctx, &unit);
 			assertTrue(mir_unit.hasValue(), "MIR lowering failed!");
 
