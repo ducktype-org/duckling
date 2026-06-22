@@ -356,6 +356,18 @@ class FunctionValidator {
 				throw InvalidFunctionCallArgumentsError(generic_arg);
 	}
 
+	void validateRet(
+		const LocalStack& local_stack, const Op_ret& instr, const FuncSignature& current_signature
+	) {
+		auto& returns    = current_signature.result_types;
+		usize ret_amount = returns.size();
+		CORE_ASSERT(local_stack.size() >= ret_amount, "We shouldn't pop any retvals");
+
+		for (usize i = 0; i < ret_amount; i++)
+			if (local_stack.front(i).type->getName() != returns.at(i).str)
+				throw InvalidRetError(instr);
+	}
+
 	void validateTailcall(
 		const LocalStack&           local_stack,
 		const Op_ret_tailcall_func& instr,
@@ -1656,7 +1668,8 @@ class FunctionValidator {
 					dfs_stack.emplace_back(getLabelTarget(instr.label), local_stack);
 				}
 				instr_case(Op_ret, instr) {
-					stack_before_instr[index]    = local_stack.getStateID();
+					stack_before_instr[index] = local_stack.getStateID();
+					validateRet(local_stack, instr, function.signature);
 					std::tie(index, local_stack) = dfs_stack.back();
 					dfs_stack.pop_back();
 				}
