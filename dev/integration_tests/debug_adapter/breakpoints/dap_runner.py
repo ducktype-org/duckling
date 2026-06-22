@@ -25,9 +25,7 @@ try:
         client.wait_for(responses=[bp_seq])
 
         config_seq = client.send_request("configurationDone")
-        client.wait_for(responses=[launch_seq, config_seq])
-
-        client.wait_for(events=["stopped"])
+        client.wait_for(responses=[launch_seq, config_seq], events=["stopped"])
 
     # =========================================================================
     # Scenario 2: SetBreakpoints -> Launch -> ConfigurationDone
