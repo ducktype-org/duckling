@@ -22,6 +22,11 @@ namespace pst::expr {
 
 		static MBox<ExprElement> parse(LangParserState& state);
 
+		[[nodiscard]]
+		auto getArgumentList() const -> AccessLocked<TemplateList> {
+			return inner.give();
+		}
+
 		~TemplateSpecifier() override = default;
 		void     dprint(std::ostream& out) const final;
 		void     acceptExprVisitor(PstExprVisitor& visitor) const final;

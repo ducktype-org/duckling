@@ -31,6 +31,7 @@
 #include <helios_private/lookup/lookup_result.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
+#include <helios_private/templates/templates.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
@@ -823,6 +824,33 @@ namespace compiler::helios::code {
 				//
 				// PRPR: think about it
 				// PRPR: we handle template baking nowehere!
+
+
+				// Ideally, we want to split pst bake as a separate element,
+				// for not this is ok:
+				if (auto access_pst = pst_elem.dynamicCast<pst::expr::Access>()) {
+					if (access_pst.value()->getTemplateSpecifier().has_value()) {
+						auto template_specifier = access_pst.value()->getTemplateSpecifier().value().unlock(query_ctx);
+						auto template_specifier_dc = template_specifier.dynamicCast<pst::expr::TemplateSpecifier>().value();
+
+						templates::TemplateBakeKey key {
+							.template_sym_id = symbol,
+							.template_arguments = {},
+						};
+
+						for (const auto& arg: *template_specifier_dc->getArgumentList().unlock(query_ctx)) {
+							auto arg_expr_result = subExprFromPST(query_ctx, arg.unlock(query_ctx)->getExpr());
+							UNPACK_QRESULT_MOVE(auto arg_expr =, arg_expr_result);
+							// ctv
+							
+							key.template_arguments.emplace_back(std::move(arg_expr));
+						}
+						
+						auto resulting_symbol = 
+							query_ctx.query<helios::templates::::QueryBakeTemplateSymID
+					}
+				}
+
 				return ChainState::ofNamespaceLike(symbol, pst_element_origin);
 			}
 			default:
