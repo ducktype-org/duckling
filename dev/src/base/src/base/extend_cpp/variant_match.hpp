@@ -18,7 +18,6 @@
  * ### Usage
  *
  * @include variant_visit_example.cpp
- * @include variant_typed_visit_example.cpp
  *
  * Variant match
  * -------------
@@ -155,6 +154,3 @@ namespace base {
  */
 #define VISIT(variant_value, name, ...) \
 	std::visit([&](auto&& name) { __VA_ARGS__; }, (variant_value))
-
-#define VISIT_RET(variant_value, name, returned_type, ...) \
-	std::visit([&](auto&& name) -> returned_type { __VA_ARGS__; }, (variant_value))
