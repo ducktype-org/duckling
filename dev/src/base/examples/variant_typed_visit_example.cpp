@@ -5,7 +5,6 @@
 struct result_t {
 	std::string name;
 	int         integer_v;
-
 };
 
 int main() {
