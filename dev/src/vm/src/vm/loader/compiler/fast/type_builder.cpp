@@ -42,7 +42,7 @@ namespace {
 
 		for (valid_type::ValidTypeID type_id: new_types) {
 			const valid_type::ValidType& type = *types_ctx.at(type_id);
-			variant_match(types_ctx.at(type_id)->getKind()) {
+			variant_match(type.getKind()) {
 				variant_case(valid_type::finalized::Primitive, primitive) {
 					type_collection->at(type.getName())->definePrimitive(primitive.size);
 				}

@@ -21,11 +21,11 @@ public:
 	}
 
 private:
-	vm::PID spawnFastAndLoad(const std::string& dbc_filename) {
+	vm::PID spawnFastAndLoad(const std::string& dbc_file_path) {
 		auto pid         = initProcess({
 					.mode = vm::api::ProcessMode::Fast,
         });
-		auto file        = fs::File(path(dbc_filename));
+		auto file        = fs::File(path(dbc_file_path));
 		auto load_result = vm::api::loadFiles(pid, { file });
 		if (!load_result.has_value()) {
 			std::cerr << std::format("Error loading file: {}\n", errorToString(load_result.error()));
@@ -36,12 +36,12 @@ private:
 
 	template<class... Args>
 	void runTestOnFast(
-		const std::string&                 name,
+		const std::string&                 dbc_file_path,
 		const base::Optional<std::string>& optional_input  = {},
 		const base::Optional<std::string>& optional_output = {},
 		i64                                exit_code       = 0
 	) {
-		runTestOnVm(spawnFastAndLoad(name), optional_input, optional_output, {}, exit_code);
+		runTestOnVm(spawnFastAndLoad(dbc_file_path), optional_input, optional_output, {}, exit_code);
 	}
 
 	void testSimple() { runTestOnFast("simple.dbc", "", "", 42); }

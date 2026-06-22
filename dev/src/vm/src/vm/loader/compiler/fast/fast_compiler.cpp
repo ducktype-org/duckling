@@ -52,35 +52,26 @@ void fast::FastCompiler::compileNewFunctions(
 ) {
 	for (const code::valid_function::ValidFunction& function: new_functions) {
 		detail::FunctionStackContext ctx = calculateStackContext(function);
+		// Reusable transforms: map a type name to its byte size / its fast-mode TypeID.
+		auto get_sizes    = std::views::transform([this](const auto& type_name) {
+            return program.types.at(type_name)->getSize();
+        });
+		auto get_type_ids = std::views::transform([this](const auto& type_name) {
+			return program.types.at(type_name)->getID();
+		});
 		program.functions.insert(
 			vm::fast::FunctionInfo{
 				.name        = function.name,
 				.id          = vm::fast::FunctionID(program.functions.size()),
 				.return_size = std::ranges::fold_left(
-					function.signature.result_types
-						| std::views::transform([this](const auto& result_type) {
-							  return program.types.at(result_type)->getSize();
-						  }),
-					Bytes(0),
-					std::plus()
+					function.signature.result_types | get_sizes, Bytes(0), std::plus()
 				),
 				.args_size = std::ranges::fold_left(
-					function.signature.parameters
-						| std::views::transform([this](const auto& param_type) {
-							  return program.types.at(param_type)->getSize();
-						  }),
-					Bytes(0),
-					std::plus()
+					function.signature.parameters | get_sizes, Bytes(0), std::plus()
 				),
-				.arg_types = function.signature.parameters
-		                   | std::views::transform([this](const auto& param_type) {
-								 return program.types.at(param_type)->getID();
-							 })
+				.arg_types = function.signature.parameters | get_type_ids
 		                   | std::ranges::to<std::vector<vm::fast::TypeID>>(),
-				.return_types = function.signature.result_types
-		                      | std::views::transform([this](const auto& result_type) {
-									return program.types.at(result_type)->getID();
-								})
+				.return_types = function.signature.result_types | get_type_ids
 		                      | std::ranges::to<std::vector<vm::fast::TypeID>>() },
 			function.name
 		);
@@ -106,7 +97,7 @@ void fast::FastCompiler::compileNewExtCFunctions(
 				.function_pointer   = func.function_pointer,
 				.parameter_size_sum = std::ranges::fold_left(
 					func.signature.parameters | std::views::transform([this](const auto& param_name) {
-						return Bytes(program.types.at(param_name)->getSize().asInt());
+						return program.types.at(param_name)->getSize();
 					}),
 					Bytes(0),
 					std::plus()

@@ -48,6 +48,8 @@ struct Instruction {
 #endif
 
 #if defined(MAKE_MAKERS_JUST_DEF) || defined(MAKE_MAKERS_FULL) || defined(MAKE_MAKERS_JUST_IMPL)
+// Maker functions: `maker::<INSTR_NAME>(args...)` builds a fully-formed `Instruction` of that kind
+// from its arguments. See relocatable.hpp and executable.hpp for example instantiations.
 namespace maker {
 	#define HANDLE_ARG(type, name)       ARG_NAMESPACE type name,
 	#define HANDLE_ARG_LAST(type, name)  ARG_NAMESPACE type name

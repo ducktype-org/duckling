@@ -1,9 +1,10 @@
 #include "cli.hpp"
-#include <limits>
 
 #include <base/except/exceptions.hpp>
 
 #include <token_source/source.hpp>
+
+#include <limits>
 
 namespace {
 	std::string strip(std::string& string) {
@@ -109,7 +110,7 @@ namespace vm::debugger::cli {
 			}
 
 			if (stripped_line == "run" || stripped_line == "r") {
-				debugger.runMain().transform_error([&](const api::ApiError& api_error) {
+				(void) debugger.runMain().transform_error([&](const api::ApiError& api_error) {
 					std::lock_guard lk(output_mutex);
 					std::cout << "Run failed...\n";
 					return api_error;
@@ -123,7 +124,7 @@ namespace vm::debugger::cli {
 					  });
 			} else if (stripped_line == "continue" || stripped_line == "c"
 			           || stripped_line == "resume") {
-				debugger.resume().transform_error([&](const api::ApiError& api_error) {
+				(void) debugger.resume().transform_error([&](const api::ApiError& api_error) {
 					std::lock_guard lk(output_mutex);
 					std::cout << "Resume failed...\n";
 					return api_error;
@@ -136,7 +137,7 @@ namespace vm::debugger::cli {
 				auto response = debugger.getCurrentPosition();
 				position();
 			} else if (stripped_line == "step" || stripped_line == "next" || stripped_line == "n") {
-				debugger.step();
+				(void) debugger.step();
 			} else if (stripped_line.starts_with("breakpoint ") || stripped_line.starts_with("b ")) {
 				std::stringstream stream(stripped_line.substr(stripped_line.find_first_of(' ')));
 				std::string       option;

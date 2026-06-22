@@ -593,7 +593,10 @@ namespace compiler::driver {
 			          .and_then([&] { return vm::api::getExitValue(pid); })
 			          .transform_error(vm::api::errorToString)
 			          .transform([](vm::api::ExitValue exit_values) {
-						CORE_ASSERT(std::holds_alternative<std::vector<Ref<vm::VmValue>>>(exit_values), "Bad variant");
+						  CORE_ASSERT(
+							  std::holds_alternative<std::vector<Ref<vm::VmValue>>>(exit_values),
+							  "Bad variant"
+						  );
 						  const auto& exit_values_vec
 							  = std::get<std::vector<Ref<vm::VmValue>>>(exit_values);
 						  CORE_ASSERT(exit_values_vec.size() == 1, "Expected single exit value");
@@ -927,8 +930,9 @@ namespace compiler::driver {
 		    .and_then([&] { return vm::api::getExitValue(pid); })
 		    .transform_error(vm::api::errorToString)
 		    .transform([](vm::api::ExitValue exit_values) {
-
-					CORE_ASSERT(std::holds_alternative<std::vector<Ref<vm::VmValue>>>(exit_values), "Bad variant");
+				CORE_ASSERT(
+					std::holds_alternative<std::vector<Ref<vm::VmValue>>>(exit_values), "Bad variant"
+				);
 				const auto& exit_values_vec = std::get<std::vector<Ref<vm::VmValue>>>(exit_values);
 				CORE_ASSERT(
 					exit_values_vec.size() == 1,

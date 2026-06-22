@@ -76,9 +76,14 @@ namespace vm::fast {
 		/****************/
 		/* Constructors */
 		/****************/
+		// Declares a type with its name, id and size; its kind is left undefined.
 		static Type declareType(base::StrID name, TypeID id, TypeSize size);
 
-		// Type definition:
+		/*************/
+		/* Modifiers */
+		/*************/
+		// Define the kind of an already-declared type, in place. Each type must be defined exactly
+		// once (after declareType) before it is used.
 		void definePrimitive(Bytes size);
 		void definePointer(TypeCRef inner);
 		void defineFixedSizeTable(TypeCRef inner, u64 table_size);

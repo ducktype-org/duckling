@@ -128,7 +128,7 @@ namespace vm::fast {
 	}
 
 	std::expected<api::Response, api::ApiError> FastVMProcess::mapFileLineToCodeCollectionPosition(
-		const fs::File& file, usize line_number
+		[[maybe_unused]] const fs::File& file, [[maybe_unused]] usize line_number
 	) {
 		// @TODO: #2102 Implement this pure virtual method.
 		throw vm::VMNotImplemented(
@@ -137,7 +137,9 @@ namespace vm::fast {
 	}
 
 	std::expected<api::Response, api::ApiError> FastVMProcess::setBreakpoint(
-		base::StrID function_name, usize instruction_index, bool enable
+		[[maybe_unused]] base::StrID function_name,
+		[[maybe_unused]] usize       instruction_index,
+		[[maybe_unused]] bool        enable
 	) {
 		// @TODO: #2102 Implement this pure virtual method.
 		throw vm::VMNotImplemented("Method `setBreakpoint` is not implemented.");

@@ -10,13 +10,12 @@
 #include <vm/core/fast/program/instructions/relocatable.hpp>
 
 #include <optional>
-#include <stack>
 
 using namespace vm::loader::compiler;
 using namespace vm::fast::reloc;
 
 namespace {
-	static usize getIntTypeSize(const vm::code::valid_type::TypeSize& size) {
+	static usize getByteSize(const vm::code::valid_type::TypeSize& size) {
 		return static_cast<usize>(size.assumePointerSize(Bytes(8)));
 	}
 
@@ -33,6 +32,8 @@ namespace {
 		auto getStack() const { return stack_ctx.function.local_stack; }
 	};
 
+	// Two makeImmediate overloads: one for immediates read from the bytecode and one for raw
+	// integers computed during lowering (stack offsets/sizes passed directly to PUSH).
 	arg::Immediate makeImmediate(Context&, const vm::opargs::Immediate& value) {
 		return value.value;
 	}
@@ -40,7 +41,7 @@ namespace {
 	arg::Immediate makeImmediate(Context&, const u64 value) { return value; }
 
 	arg::Place64 makePlace64(Context& ctx, const vm::opargs::Place64& place) {
-		return getIntTypeSize(ctx.getStack().getByteOffset(ctx.stack_sid, place.var_name).value());
+		return getByteSize(ctx.getStack().getByteOffset(ctx.stack_sid, place.var_name).value());
 	}
 
 	arg::Function makeFunction(Context& ctx, const vm::opargs::FunctionName& func) {
@@ -48,7 +49,7 @@ namespace {
 	}
 
 	arg::PlaceAny makePlaceAny(Context& ctx, const vm::opargs::PlaceAny& place) {
-		return getIntTypeSize(ctx.getStack().getByteOffset(ctx.stack_sid, place.var_name).value());
+		return getByteSize(ctx.getStack().getByteOffset(ctx.stack_sid, place.var_name).value());
 	}
 
 	[[maybe_unused]] arg::PlaceAny makePlaceAny(Context&, u64 place_any) { return place_any; }
@@ -66,7 +67,9 @@ namespace {
 #define MAKE_ARG(tp, name)             CAT(make, tp)(ctx, name),
 #define MAKE_ARG_LAST(tp, name)        CAT(make, tp)(ctx, name)
 
-	// Creates a helper to auto-translate parameters to the appropriate types for the instruction
+	// Defines a helper `MakerHelper_<NAME>(Context& ctx, auto&& a0, auto&& a1, ...)` whose
+	// parameters mirror the instruction's arguments. It runs each raw argument through the matching
+	// make<ArgType>(ctx, arg) translator and forwards the results to `reloc::maker::<NAME>(...)`.
 #define HANDLE_INSTR_ARGS(NAME, ...)                                                               \
 	[[maybe_unused]] vm::fast::reloc::Instruction CAT(MakerHelper_, NAME)(                         \
 		[[maybe_unused]] Context                                                                   \
@@ -125,6 +128,9 @@ namespace {
 
 		for (vm::fast::reloc::Instruction& instr: new_instructions) {
 			switch (instr.id) {
+// IF(c)(x) emits x when c is true and nothing otherwise (there is no else branch). COND is true
+// only for instructions carrying a JumpDestination argument, so every other instruction is left
+// untouched and falls through to the `default` case below.
 #define HANDLE_INSTR_ARGS(NAME, ...) IF(COND(__VA_ARGS__))(BODY(NAME, __VA_ARGS__))
 #include <vm/core/fast/program/instructions/instruction_definitions.hpp>
 #undef HANDLE_INSTR_ARGS
@@ -166,7 +172,7 @@ std::vector<vm::fast::reloc::Instruction> vm::loader::compiler::fast::lowerInstr
 		instr_match(instruction) {
 			instr_case(high::Op_init_pany_type, init) {
 				auto type      = high_program.types().at(init.type.type_name);
-				auto type_size = getIntTypeSize(type->getSize());
+				auto type_size = getByteSize(type->getSize());
 				PUSH(init_pany_imm, init.var, type_size);
 			}
 			instr_case(high::Op_deinit, deinit) {
@@ -185,7 +191,7 @@ std::vector<vm::fast::reloc::Instruction> vm::loader::compiler::fast::lowerInstr
 					= *program.functions.at(call.function.function_name);
 				const usize func_ret_args_size
 					= (called_func_info.args_size + called_func_info.return_size).asInt();
-				const usize stack_top = getIntTypeSize(ctx.getStack().byteSize(ctx.stack_sid));
+				const usize stack_top = getByteSize(ctx.getStack().byteSize(ctx.stack_sid));
 				PUSH(call_func_imm, call.function, stack_top - func_ret_args_size);
 			}
 			instr_case(high::Op_input_p64, input) PUSH(input_p64, input.dst);

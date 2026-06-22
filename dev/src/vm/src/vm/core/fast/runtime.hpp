@@ -38,7 +38,8 @@ namespace vm::fast {
 
 		base::Box<AlignedStackMemory> local_stack_memory = makeBox<AlignedStackMemory>();
 
-		// Size matches LOCAL_STACK_SIZE
+		// The frame count here is a heuristic approximation with no exact semantic meaning;
+		// LOCAL_STACK_SIZE / sizeof(Frame) is simply used as an arbitrary, "large enough" size.
 		std::vector<Frame> frame_stack = std::vector<Frame>(LOCAL_STACK_SIZE / sizeof(Frame));
 
 		Frame* top_frame = frame_stack.data();

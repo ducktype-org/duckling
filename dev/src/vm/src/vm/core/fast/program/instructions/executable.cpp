@@ -26,6 +26,7 @@ using namespace vm::fast;
 	#include <vm/core/fast/program/instructions/instruction_definitions.hpp>
 	#undef HANDLE_INSTR
 
+// NOLINTNEXTLINE(modernize-concat-nested-namespaces) inner `maker` namespace comes from the include
 namespace vm::fast::exec {
 	#define ARG_NAMESPACE           vm::fast::exec::arg::
 	#define ID_TYPE()               vm::fast::DispatcherFunction

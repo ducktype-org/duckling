@@ -1,3 +1,12 @@
+/**
+ * @file instr_macro_helper.hpp
+ * @brief Helper to build a mangled instruction name from its argument types.
+ *
+ * `INSTR_NAME(base, ArgType...)` expands to `base_<info0>_<info1>...`, where each suffix comes from
+ * the `INFO_<ArgType>()` macro (e.g. `INFO_Place8()` -> `(p8)`). It therefore only works for
+ * argument types that have a matching `INFO_<ArgType>` macro defined (see argument_definitions.hpp).
+ */
+
 #include <base/preproc/cat.hpp>
 #include <base/preproc/for_each.hpp>
 

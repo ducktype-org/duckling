@@ -1,5 +1,19 @@
 #pragma once
 
+/**
+ * @file relocatable.hpp
+ * @brief The relocatable instruction representation used while building fast-mode programs.
+ *
+ * Fast mode has two instruction structs with the same layout but different argument types: the
+ * relocatable form here (`reloc::Instruction`) and the executable form in `executable.hpp`
+ * (`exec::Instruction`). The relocatable form stores arguments as compilation-stable IDs (a
+ * `Function` is a `FunctionID`, a `Type` is a `TypeID`), while the executable form stores the same
+ * arguments as raw runtime pointers. The lowering pipeline emits relocatable instructions, and
+ * `relocator.hpp` links them into executable instructions just before execution; keeping the two
+ * separate lets us build position-independent code first and resolve it to pointers only once the
+ * final function/type storage is known.
+ */
+
 #include "../ids.hpp"
 
 #include <base/comptime/is_complete.hpp>
