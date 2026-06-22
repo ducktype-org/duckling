@@ -260,8 +260,7 @@ namespace vm::debugger::debug_adapter {
 						{ { "verified", true },
 					      { "line", line },
 					      { "message",
-					        { "message",
-					          "Failed to set breakpoint: " + api::errorToString(res.error()) } } }
+					          "Failed to set breakpoint: " + api::errorToString(res.error()) } }
 					);
 				}
 			}
@@ -286,12 +285,12 @@ namespace vm::debugger::debug_adapter {
 		if (!deferred_launch_req.is_null()) {
 			auto res = debugger.runMain();
 			if (!res.has_value()) {
-				std::string error_msg = "Failed to run main: '" + api::errorToString(res.error());
+				std::string error_msg = "Failed to run main: '" + api::errorToString(res.error()) + '\'';
 
 				sendResponse(req, false, { { "message", error_msg } });
 				return;
 			}
-			sendResponse(deferred_launch_req, res.has_value(), {});
+			sendResponse(deferred_launch_req, true, {});
 		}
 	}
 
