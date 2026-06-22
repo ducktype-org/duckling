@@ -43,6 +43,21 @@ namespace vm::code {
 		}
 	};
 
+	class InvalidRetError: public ValidationError {
+	public:
+		constexpr static const std::string_view ERR_MSG
+			= "Trying to return with invalid stack state";
+		instructions::Op_ret return_instr;
+
+		InvalidRetError(instructions::Op_ret return_instr):
+			  ValidationError(std::string{ ERR_MSG }),
+			  return_instr(return_instr) {}
+
+		[[nodiscard]] base::Optional<CRef<ElementBase>> maybeElement() const override {
+			return &return_instr;
+		}
+	};
+
 	class EvaluatingExprOnRunningThreadError: public ValidationError {
 	public:
 		constexpr static const std::string_view ERR_MSG

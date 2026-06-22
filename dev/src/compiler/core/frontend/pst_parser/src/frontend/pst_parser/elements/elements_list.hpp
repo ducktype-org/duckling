@@ -4,7 +4,6 @@ namespace pst {
 	// Meta
 	class Stmt;
 	class NotStmt;
-	class ClassStmt;
 	// Lists
 	class ParamList;
 	class ImplementsList;
@@ -21,7 +20,6 @@ namespace pst {
 	class CallArgument;
 	class CodeBlock;
 	class CodeBlockOrStmt;
-	class ClassBlock;
 	class StmtSpecifier;
 	class RoundGroupExpr;
 	class ExprElement;

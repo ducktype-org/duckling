@@ -21,6 +21,7 @@ namespace pst::expr {
 
 		PST_NEW_CONTEXT({
 			state.setContextBlockOrdering(BlockOrderType::Ordered);
+			state.setContextStmt(StmtContext::Normal);
 			PARSE().one(&out->block);
 		})
 
