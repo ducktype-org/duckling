@@ -1,6 +1,7 @@
 #include "supervisor.hpp"
 
 #include <vm/core/fast/fast_vmprocess.hpp>
+#include <vm/core/process/ivmprocess.hpp>
 #include <vm/core/safe/safe_vmprocess.hpp>
 
 #include <mutex>
@@ -19,10 +20,15 @@ namespace vm {
 
 	std::expected<PID, api::ApiError> Supervisor::newProcess(const api::ProcessConfig& options) {
 		std::unique_lock lock(rw_process_table);
-		PID              pid = next++;
+		PID              pid = PID::fromU64(next_pid++);
 		switch (options.mode) {
 		case api::ProcessMode::Safe:
-			process_table.emplace(pid, Box<IVMProcess>::fromPointer(new SafeVMProcess(pid)));
+			process_table.emplace(
+				pid,
+				Box<IVMProcess>::fromPointer(
+					new SafeVMProcess(pid, options.enable_deadlock_detection)
+				)
+			);
 			break;
 		case api::ProcessMode::Fast:
 			process_table.emplace(pid, Box<IVMProcess>::fromPointer(new fast::FastVMProcess(pid)));

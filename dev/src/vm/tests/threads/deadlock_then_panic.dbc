@@ -11,8 +11,8 @@
 # - The auto-stop logic from terminal status kills both deadlocked threads.
 # - No hang or resource leak.
 
-global_data mutex_a mutex {};
-global_data mutex_b mutex {};
+global_data mutex_a mutex {}
+global_data mutex_b mutex {}
 
 function thread1 {} -> {} {
 	init_pany_type		lock_a, mutex;

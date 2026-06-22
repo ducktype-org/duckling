@@ -1,0 +1,12 @@
+metadata:
+  name: foo
+  version: '1.0.0'
+
+dependencies:
+  bar:
+    source:
+      path: ../bar
+
+profiles:
+  dvm:
+    dvm-bytecode: true

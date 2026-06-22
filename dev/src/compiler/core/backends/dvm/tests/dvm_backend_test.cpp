@@ -34,6 +34,7 @@ public:
 		TESTER_ADD_TEST(unitsTest);
 		TESTER_ADD_TEST(initsDeinitsTest);
 		TESTER_ADD_TEST(pointersTest);
+		TESTER_ADD_TEST(backendDependentTest);
 	}
 
 protected:
@@ -58,6 +59,7 @@ protected:
 			{ fs::FilePath(path("modules/units/")), "units" },
 			{ fs::FilePath(path("modules/inits_deinits/")), "inits_deinits" },
 			{ fs::FilePath(path("modules/pointers/")), "pointers" },
+			{ fs::FilePath(path("modules/backend_dependent/")), "backend_dependent" },
 		};
 		auto init_result
 			= compiler::driver::test_utils::initializeCompilerForTests(packages, artifacts_path);
@@ -113,7 +115,7 @@ private:
 		for (auto& type: code.types) vm::code::serializeType(type, std::cerr);
 		for (auto& func: code.functions) vm::code::serializeFunction(func, std::cerr);
 		auto result = runTestOnVmGetResult(code, input, output, args);
-		ASSERT_TRUE(not result.run_result.has_value());
+		ASSERT_NO_VALUE(result.run_result);
 		auto err_str = to_string(nlohmann::json(result.run_result.error()));
 		if (not err_str.contains(fail_msg)) {
 			fail(base::strConcat(
@@ -121,7 +123,7 @@ private:
 			));
 		}
 		const auto validation_result = vm::api::deinitAndValidate(result.pid);
-		ASSERT_TRUE(validation_result.has_value());
+		ASSERT_HAS_VALUE(validation_result);
 	}
 
 	void simpleTest() { runTest("simple", {}, {}, {}, 42); }
@@ -164,6 +166,10 @@ private:
 	void pointersTest() { runFailTest("pointers", "Accessing null pointer", {}, {}, {}); }
 
 	void initsDeinitsTest() { runTest("inits_deinits", {}, { "100\n" }, {}, 0); }
+
+	// The DVM backend must select the `@dvm_only_impl` of the `@backend_dependent`
+	// `getValue` (returning 10), not the `@native_only_impl` one (returning 20).
+	void backendDependentTest() { runTest("backend_dependent", {}, {}, {}, 10); }
 };
 
 

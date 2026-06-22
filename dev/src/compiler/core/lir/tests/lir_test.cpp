@@ -491,9 +491,9 @@ private:
 		ASSERT_EQUAL(lir::LIRGlobalType::Variable, g.global.type);
 
 		// Adjust those checks if we will have CTV initializers for globals in the future.
-		ASSERT_TRUE(g.getCtorDtorPair().global_ctor.has_value());
-		ASSERT_TRUE(some_global.getCtorDtorPair().global_ctor.has_value());
-		ASSERT_TRUE(global_tuple.getCtorDtorPair().global_ctor.has_value());
+		ASSERT_HAS_VALUE(g.getCtorDtorPair().global_ctor);
+		ASSERT_HAS_VALUE(some_global.getCtorDtorPair().global_ctor);
+		ASSERT_HAS_VALUE(global_tuple.getCtorDtorPair().global_ctor);
 	}
 
 	void testLifetimeFlags() {

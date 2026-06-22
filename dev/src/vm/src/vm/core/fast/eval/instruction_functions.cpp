@@ -3,7 +3,7 @@
 #include <vm/api/data/status.hpp>
 #include <vm/core/fast/fast_vmthread.hpp>
 #include <vm/core/fast/utils.hpp>
-#include <vm/core/process/vmprocess.hpp>
+#include <vm/core/process/ivmprocess.hpp>
 
 #include <cstring>
 

@@ -13,6 +13,7 @@ public:
 		TESTER_ADD_TEST(invalidOpcode);
 		TESTER_ADD_TEST(noSemicolon);
 		TESTER_ADD_TEST(invalidLocalName);
+		TESTER_ADD_TEST(opcodeSourcePositions);
 	}
 
 private:
@@ -60,6 +61,37 @@ private:
 
 	void invalidLocalName() {
 		parseInvalidDbc("invalid_local_name.dbc", { "Expected an identifier here" });
+	}
+
+	/**
+	 * @brief Asserts that opcode source positions span exactly the instruction text, i.e. that
+	 * the (inclusive) `.end` covers the last argument and nothing past it.
+	 */
+	void opcodeSourcePositions() {
+		fs::File file(path("source_positions.dbc"));
+		auto     parsing_result = parser::parse({ file });
+		assertTrue(parsing_result.has_value(), "Expected successful parse.");
+
+		const auto& opcodes = parsing_result->front().functions.front()->code->opcodes;
+
+		const std::vector<std::string> expected = {
+			"init_pany_type x, i32",
+			"mov_p32_imm x, 5",
+			"mov_p32_imm x, -17",
+			"jmp_label end",
+			"label end",
+			"output_p32 x",
+			"deinit",
+			"ret",
+		};
+
+		assertEqual(opcodes.size(), expected.size(), "Unexpected opcode count.");
+		for (usize i = 0; i < expected.size(); i++)
+			assertEqual(
+				expected[i],
+				opcodes[i]->position.content(),
+				base::strConcat("Wrong position content for opcode #", std::to_string(i))
+			);
 	}
 };
 

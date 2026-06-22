@@ -3,6 +3,8 @@
 #include "../preamble.hpp"
 
 namespace pst {
+	CLONE_SUB_ELEMENTS_DEF(DeconstructorPattern, deconstructor_name, arguments);
+
 	MBox<DeconstructorPattern> DeconstructorPattern::parse(LangParserState& state) {
 		auto out = makeBox<DeconstructorPattern>(state);
 

@@ -1,7 +1,7 @@
 # The global pointer vector is initialized by a separate function call 
 # to initialize_vector to mimic the behavior happening during comp time.
 
-global_data vector opaque_ptr {}; # cpp vector pointer.
+global_data vector opaque_ptr {} # cpp vector pointer.
 
 function initialize_vector { opaque_ptr } -> {} {
     mov_popq_popq vector, arg0;

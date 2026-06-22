@@ -17,6 +17,7 @@
 #include <driver_private/backend_operations/compile_llvm.hpp>
 #include <driver_private/debug_artifacts.hpp>
 #include <driver_private/operations.hpp>
+#include <driver_private/standard_library/standard_library.hpp>
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_id.hpp>
 #include <frontend/module_tree/module_tree.hpp>
@@ -56,6 +57,7 @@
 #include <algorithm>
 #include <fstream>
 #include <iostream>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -168,7 +170,7 @@ namespace compiler::driver {
 
 			auto output_names = getModuleOutputName(key);
 			auto code_output  = getQueryArtifactsCollection()->fileArtifactAtOrNew(
-                base::StrID(output_names.object_file.c_str())
+                base::StrID(output_names.object_file)
             );
 
 			base::Optional<debug_info::DebugInfo>   debug_info_output;
@@ -523,7 +525,7 @@ namespace compiler::driver {
 
 				auto& script_context  = global_state::getScriptContext();
 				auto  output_artifact = global_state::getRootCollection()->fileArtifactAtOrNew(
-                    base::StrID(base::strConcat(script_context.script_file.stem(), ".dbc").c_str())
+                    base::StrID(base::strConcat(script_context.script_file.stem(), ".dbc"))
                 );
 				std::ofstream output_file(
 					output_artifact.file.getFilePath().getPath(), std::ios::binary
@@ -624,10 +626,9 @@ namespace compiler::driver {
 	base::OkBad linkDVMPackage(
 		const std::vector<artifacts::FileArtifact>& objects,
 		const std::vector<artifacts::FileArtifact>& debug_info_artifacts,
-		const std::string&                          output_file_stem
+		const std::string&                          output_file_name
 	) {
 		vm::loader::Loader dvm_linker;
-		std::string        output_file_name = base::strConcat(output_file_stem, ".dbc");
 
 		using std::ranges::to;
 		using std::ranges::views::transform;
@@ -665,7 +666,12 @@ namespace compiler::driver {
 				auto di_or_error = debug_info::loadFromStream(in);
 				if (!di_or_error.has_value()) {
 					CORE_USER_LOG(
-						"DVM: failed to parse debug info file: ", di_or_error.error(), "\n"
+						"DVM: failed to parse debug info file: ",
+						di_art.file.getFilePath().string(),
+						"\n"
+						"Reason: ",
+						di_or_error.error(),
+						"\n"
 					);
 					return base::BAD;
 				}
@@ -677,6 +683,10 @@ namespace compiler::driver {
 
 			if (merged_debug_info.has_value()) {
 				merged_debug_info->module_path = output_file.file.getFilePath().string();
+
+				auto output_file_stem = std::string_view(output_file_name);
+				// Try to keep the old behaviour, by manually stripping the most common DVM suffix.
+				if (output_file_stem.ends_with(".dbc")) output_file_stem.remove_suffix(4);
 
 				auto di_output = global_state::getRootCollection()->fileArtifactAtOrNew(
 					base::StrID(base::strConcat(output_file_stem, ".di.json").c_str())
@@ -750,7 +760,7 @@ namespace compiler::driver {
 
 		for (const auto& task: tasks) {
 			variant_match(task.build_target) {
-				variant_case_novalue(BuildTargetDVM) {
+				variant_case_novalue(BuildTargetDVMLibrary, BuildTargetDVMExecutable) {
 					collect_modules(task.root_module, BackendType::DVM, task.root_module);
 				}
 				variant_default {
@@ -833,10 +843,9 @@ namespace compiler::driver {
 		for (const auto& task: tasks) {
 			variant_match(task.build_target) {
 				variant_case(BuildTargetLLVMExecutable, target_exe) {
-					auto output_file
-						= global_state::getRootCollection()->fileArtifactAtOrNew(base::StrID(
-							base::strConcat(target_exe.output_file_stem.strView(), ".exe").c_str()
-						));
+					auto output_file = global_state::getRootCollection()->fileArtifactAtOrNew(
+						target_exe.output_file_name
+					);
 
 					llvm_objects_by_root_module.atMaybe(task.root_module)
 						.value()
@@ -864,10 +873,9 @@ namespace compiler::driver {
 				variant_case(BuildTargetLLVMStaticLibrary, target_lib) {
 					// Note, if you change this convention, please also change the one in the
 					// `getStdLibArtifacts`
-					auto output_file
-						= global_state::getRootCollection()->fileArtifactAtOrNew(base::StrID(
-							base::strConcat(target_lib.output_file_stem.strView(), ".a").c_str()
-						));
+					auto output_file = global_state::getRootCollection()->fileArtifactAtOrNew(
+						target_lib.output_file_name
+					);
 
 					auto archive_result = archiver::createArchive(
 						output_file,
@@ -891,7 +899,7 @@ namespace compiler::driver {
 				variant_case_novalue(BuildTargetLLVM) {
 					// Do nothing for plain object files
 				}
-				variant_case(BuildTargetDVM, target_dvm) {
+				variant_case(BuildTargetDVMLibrary, target_dvm) {
 					auto debug_info_opt
 						= debug_info_artifacts_by_root_module.atMaybe(task.root_module);
 
@@ -899,8 +907,30 @@ namespace compiler::driver {
 							*dvm_objects_by_root_module.atMaybe(task.root_module).value(),
 							debug_info_opt.has_value() ? *debug_info_opt.value()
 													   : std::vector<artifacts::FileArtifact>(),
-							std::string(target_dvm.output_file_stem.strView())
+							target_dvm.output_file_name.str()
 						)
+					        .isBad())
+						result = base::BAD;
+				}
+				variant_case(BuildTargetDVMExecutable, target_dvm) {
+					// If the `target_dvm.link_std_packages` is on, we link the std packages as well.
+					std::vector<artifacts::FileArtifact> dbc_arts
+						= *dvm_objects_by_root_module.atMaybe(task.root_module).value();
+					if (target_dvm.link_std_packages)
+						for (auto& art: getStdLibDVMArtifacts()) dbc_arts.push_back(std::move(art));
+
+					std::vector<artifacts::FileArtifact> debug_info_arts;
+
+					if_opt_some(
+						debug_info_artifacts_by_root_module.atMaybe(task.root_module), debug_arts
+					) {
+						for (const auto& art: *debug_arts) debug_info_arts.push_back(art);
+						if (target_dvm.link_std_packages)
+							for (auto& art: getStdLibDVMDebugInfoArtifacts())
+								debug_info_arts.push_back(std::move(art));
+					}
+
+					if (linkDVMPackage(dbc_arts, debug_info_arts, target_dvm.output_file_name.str())
 					        .isBad())
 						result = base::BAD;
 				}

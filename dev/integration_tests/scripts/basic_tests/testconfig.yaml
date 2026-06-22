@@ -16,6 +16,16 @@ Tests:
         mode: exe
         Output: 
           String: "42\n"
+      exe_o1:
+        mode: exe
+        opt_level: 1
+        Output:
+          String: "42\n"
+      exe_oz:
+        mode: exe
+        opt_level: z
+        Output:
+          String: "42\n"
 
   function_declaration:
     folder: "function_declaration"

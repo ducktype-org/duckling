@@ -468,7 +468,7 @@ namespace vm::loader::compiler::safe::detail {
 				addLow<Op_setVTable_pptr_type>(i.object_ptr, i.type);
 			}
 			instr_case(high::Op_resetVTable_pptr, i) { addLow<Op_resetVTable_pptr>(i.object_ptr); }
-			instr_case(high::Op_upcast_pptr_pptr, i) { addLow<Op_upcast_pptr_pptr>(i.dst, i.src); }
+			instr_case(high::Op_upcast_pptr_pptr, i) { addLow<Op_mov_pptr_pptr>(i.dst, i.src); }
 			instr_case(high::Op_downcast_pptr_pptr, i) {
 				addLow<Op_downcast_pptr_pptr>(i.dst, i.src);
 				opargs::Type variant_type = getPlaceType(i.dst)->getInnerType().value()->getName();
@@ -571,6 +571,9 @@ namespace vm::loader::compiler::safe::detail {
 			instr_case(high::Op_cast_p16_type, i) {}
 			instr_case(high::Op_cast_p32_type, i) {}
 			instr_case(high::Op_cast_p64_type, i) {}
+			instr_case(high::Op_fstToDynTable_pptr_pptr, i) {
+				addLow<Op_mov_pptr_pptr>(i.dst_table_ptr, i.src_table_ptr);
+			}
 
 			// Sign Extension
 			instr_case(high::Op_sext_p16_p8, i) { addLow<Op_sext_p16_p8>(i.dst, i.src); }

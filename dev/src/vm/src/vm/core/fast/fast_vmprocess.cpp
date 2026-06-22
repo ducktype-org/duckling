@@ -1,7 +1,7 @@
 #include "fast_vmprocess.hpp"
 
 #include <vm/core/fast/program/relocator.hpp>
-#include <vm/core/process/vmprocess.hpp>
+#include <vm/core/process/ivmprocess.hpp>
 #include <vm/loader/logger.hpp>
 #include <vm/utils/vm_not_implemented.hpp>
 

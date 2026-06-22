@@ -4,6 +4,8 @@
 #include "../preamble.hpp"
 
 namespace pst {
+	CLONE_SUB_ELEMENTS_DEF(FormatSubExpression, expr);
+
 	MBox<FormatSubExpression> FormatSubExpression::parse(LangParserState& state) {
 		auto out = makeBox<FormatSubExpression>(state);
 

@@ -8,10 +8,9 @@ using namespace dia_int::term_ui_view;
 
 // NOLINTBEGIN(missing-field-initializers)
 
-#define SAMPLE_LOCATION                                                                \
-	{                                                                                  \
-		.file = "main.dmf", .line = 15, .column = 16, .end_line = {}, .end_column = {} \
-	}
+constexpr dia_int::CodeLocation SAMPLE_LOCATION{
+	.file = "main.dmf", .line = 15, .column = 16, .end_line = {}, .end_column = {}
+};
 
 Message sample1() {
 	auto ptrs = base::HashMap<u64, PointerMessage>();

@@ -8,11 +8,19 @@ namespace pst::expr {
 	 * @brief Common ancestor for prefix operator elements.
 	 */
 	class PrefixOperator: public ExprElement {
+		THIS_CLASS(PrefixOperator);
+		PARENT_CLASS(ExprElement);
+
+	protected:
+		CLONE_SUBELEMENTS();
+
 	protected:
 		NAMED_CHILD(op, OperatorWrapper);
 		NAMED_CHILD(expr, ExprElement);
 
 	public:
+		ELEMENT_CLONE_DECL(PrefixOperator);
+
 		explicit PrefixOperator(const LangParserState& state, i64 precedence):
 			  ExprElement(state, precedence) {}
 

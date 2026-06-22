@@ -6,7 +6,7 @@
 
 #include <vm/api/data/thread_id.hpp>
 #include <vm/core/fast/program/program.hpp>
-#include <vm/core/process/vmprocess.hpp>
+#include <vm/core/process/ivmprocess.hpp>
 #include <vm/loader/compiler/fast/fast_compiler.hpp>
 #include <vm/loader/loader.hpp>
 #include <vm/utils/vm_not_implemented.hpp>

@@ -31,6 +31,12 @@ namespace vm::code {
 	void serializeCode(const CodeCollection& code_collection, std::ostream& out);
 
 	/**
+	 * @brief Serializes constant value into a parse-able by the DVM
+	 * text representation.
+	 */
+	void serializeConstValue(const ConstantValue& const_value, std::ostream& out);
+
+	/**
 	 * @brief Stringifies instruction arguments.
 	 */
 	std::string argumentToString(const opargs::OpCodeArg& arg);

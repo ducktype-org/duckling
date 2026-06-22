@@ -78,7 +78,7 @@ private:
 		 */
 		const auto get_int_vm_value = [&](vm::PID pid, u64 value) -> Box<vm::VmValue> {
 			auto response = vm::api::getVmValue(pid, "i64");
-			ASSERT_TRUE(response.has_value());
+			ASSERT_HAS_VALUE(response);
 			auto vm_value = std::move(response->vm_value);
 			vm_value->writeBytes<u64>(value);
 			return vm_value;
@@ -100,7 +100,7 @@ private:
 			ASSERT_TRUE(
 				vm::api::runFunction(pid, function_name, { vm_value_max64.refMut() }).has_value()
 			);
-			ASSERT_TRUE(vm::api::join(pid).has_value());
+			ASSERT_HAS_VALUE(vm::api::join(pid));
 			auto value = vm::api::getExitValue(pid);
 			if (!value.has_value()) {
 				fail(
