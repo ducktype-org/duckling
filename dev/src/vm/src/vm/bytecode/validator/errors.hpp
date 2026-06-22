@@ -50,7 +50,7 @@ namespace vm::code {
 		instructions::Op_ret return_instr;
 
 		InvalidRetError(instructions::Op_ret return_instr):
-			  ValidationError(base::strConcat(ERR_MSG)),
+			  ValidationError(std::string{ ERR_MSG }),
 			  return_instr(return_instr) {}
 
 		[[nodiscard]] base::Optional<CRef<ElementBase>> maybeElement() const override {
