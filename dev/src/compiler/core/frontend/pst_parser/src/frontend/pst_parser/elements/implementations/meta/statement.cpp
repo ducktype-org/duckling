@@ -177,16 +177,6 @@ namespace pst {
 		/**
 		 * @brief Disambiguates a leading `if` token between an if-statement and a ternary
 		 * expression statement.
-		 *
-		 * An if-statement always has the shape `if [name] (condition) body`, i.e. its condition is
-		 * a parenthesised round group placed right after an optional name. A ternary instead has
-		 * the shape `if condition then a else b` with an arbitrary (possibly unparenthesised)
-		 * condition.
-		 *
-		 * When the prefix can form a valid if-statement we look at the token where the body would
-		 * begin: a `then` keyword there means it is actually a ternary. When the prefix can't be an
-		 * if-statement at all (the condition is not parenthesised) we fall back to scanning the
-		 * statement for a top-level `then`, which only a ternary can contain.
 		 */
 		bool isTernaryIf(LangParserState& state) {
 			if (state[1].isIdentifier() && state[2].isBracketGroup(Token::BracketType::Round))
