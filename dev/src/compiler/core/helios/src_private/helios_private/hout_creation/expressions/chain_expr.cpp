@@ -46,6 +46,36 @@
 
 namespace compiler::helios::code {
 
+
+	SymID transformTemplateBake(query::Context& query_ctx, SymID template_sym_id, pst::Access<pst::expr::TemplateSpecifier> template_specifier) {
+		CORE_ASSERT(kind(template_sym_id) == SymbolKind::Template, "SymID is not a Template");
+
+		// std::cerr << "Chain expr template access with template specifier!\n";
+
+		// auto template_specifier = access_pst.value()->getTemplateSpecifier().value().unlock(query_ctx);
+		// auto template_specifier_dc = template_specifier.dynamicCast<pst::expr::TemplateSpecifier>().value();
+
+		templates::TemplateBakeKey key {
+			.template_sym_id = template_sym_id,
+			.template_arguments = {},
+		};
+
+		for (const auto& arg: *template_specifier->getArgumentList().unlock(query_ctx)) {
+			auto arg_expr_result = subExprFromPST(query_ctx, arg.unlock(query_ctx)->getExpr());
+			auto arg_expr = std::move(arg_expr_result).valueOrPanic(); // TODO: no panic
+
+			auto ctv = query_ctx.query<QueryEvaluateHOUTExpression>({ arg_expr.ref() });
+			auto ctv_value = std::move(ctv).valueOrPanic(); // TODO: no panic
+
+			key.template_arguments.emplace_back(std::move(ctv_value));
+		}
+		
+		auto resulting_symbol = 
+			query_ctx.query<helios::templates::QueryBakeTemplateSymID>({ key }).valueOrPanic(); // PR: no panic!
+
+		return resulting_symbol;
+	}
+
 	/**
 	 * @brief This error message is used when there are both function symbols and non-function valid
 	 * symbols found during the lookup (like function and class constructor with the same name).
@@ -466,6 +496,17 @@ namespace compiler::helios::code {
 			);
 			// @TODO: #1412 handle dealias expressions:
 			UNPACK_QRESULT_MOVE(const auto& sym_list =, lookup_result);
+			auto mock_symbol = sym_list.back();
+
+			if (ident->getTemplateSpecifier().has_value() and kind(mock_symbol) == SymbolKind::Template) {
+				auto template_bake = transformTemplateBake(
+					query_ctx, 
+					mock_symbol, 
+					ident->getTemplateSpecifier().value().unlock(query_ctx).dynamicCast<pst::expr::TemplateSpecifier>().value()
+				);
+				return processNamespaceOrValue(template_bake, pstOrigin(ident), ident);
+			}
+
 			return processNamespaceOrValue(sym_list.back(), pstOrigin(ident), ident);
 		}
 
@@ -826,35 +867,45 @@ namespace compiler::helios::code {
 				// PRPR: think about it
 				// PRPR: we handle template baking nowehere!
 
+				std::cerr << "Chain expr template!\n";
+				pst_elem->debugPrint(std::cerr);
+				std::cerr << "\n";
+
 
 				// Ideally, we want to split pst bake as a separate element,
 				// for not this is a mock:
-				if (auto access_pst = pst_elem.dynamicCast<pst::expr::Access>()) {
-					if (access_pst.value()->getTemplateSpecifier().has_value()) {
-						auto template_specifier = access_pst.value()->getTemplateSpecifier().value().unlock(query_ctx);
-						auto template_specifier_dc = template_specifier.dynamicCast<pst::expr::TemplateSpecifier>().value();
+				// if (auto access_pst = pst_elem.dynamicCast<pst::expr::Access>()) {
+				// 	CORE_PANIC("never mind, this does not see the access");
 
-						templates::TemplateBakeKey key {
-							.template_sym_id = symbol,
-							.template_arguments = {},
-						};
+				// 	std::cerr << "Chain expr template access!\n";
 
-						for (const auto& arg: *template_specifier_dc->getArgumentList().unlock(query_ctx)) {
-							auto arg_expr_result = subExprFromPST(query_ctx, arg.unlock(query_ctx)->getExpr());
-							UNPACK_QRESULT_MOVE(auto arg_expr =, arg_expr_result); // TODO: no panic
+				// 	if (access_pst.value()->getTemplateSpecifier().has_value()) {
+				// 		std::cerr << "Chain expr template access with template specifier!\n";
+
+				// 		auto template_specifier = access_pst.value()->getTemplateSpecifier().value().unlock(query_ctx);
+				// 		auto template_specifier_dc = template_specifier.dynamicCast<pst::expr::TemplateSpecifier>().value();
+
+				// 		templates::TemplateBakeKey key {
+				// 			.template_sym_id = symbol,
+				// 			.template_arguments = {},
+				// 		};
+
+				// 		for (const auto& arg: *template_specifier_dc->getArgumentList().unlock(query_ctx)) {
+				// 			auto arg_expr_result = subExprFromPST(query_ctx, arg.unlock(query_ctx)->getExpr());
+				// 			UNPACK_QRESULT_MOVE(auto arg_expr =, arg_expr_result); // TODO: no panic
 		
-							auto ctv = query_ctx.query<QueryEvaluateHOUTExpression>({ arg_expr.ref() });
-							UNPACK_QRESULT_MOVE(auto ctv_value =, ctv); // TODO: no panic
+				// 			auto ctv = query_ctx.query<QueryEvaluateHOUTExpression>({ arg_expr.ref() });
+				// 			UNPACK_QRESULT_MOVE(auto ctv_value =, ctv); // TODO: no panic
 
-							key.template_arguments.emplace_back(std::move(ctv_value));
-						}
+				// 			key.template_arguments.emplace_back(std::move(ctv_value));
+				// 		}
 						
-						auto resulting_symbol = 
-							query_ctx.query<helios::templates::QueryBakeTemplateSymID>({ key }).valueOrPanic(); // PR: no panic!
+				// 		auto resulting_symbol = 
+				// 			query_ctx.query<helios::templates::QueryBakeTemplateSymID>({ key }).valueOrPanic(); // PR: no panic!
 
-						return processNamespaceOrValue(resulting_symbol, pst_element_origin, pst_elem);
-					}
-				}
+				// 		return processNamespaceOrValue(resulting_symbol, pst_element_origin, pst_elem);
+				// 	}
+				// }
 
 				return ChainState::ofNamespaceLike(symbol, pst_element_origin);
 			}

@@ -739,7 +739,7 @@ namespace compiler::helios {
 
 			// @note: here case for variables will be calling TS
 			default:
-				throw base::NotYetImplemented("Lookup in symbol...");
+				throw base::NotYetImplemented(base::strConcat("Lookup in symbol: ", key.symbol.ref->common.name));
 			}
 		}
 
