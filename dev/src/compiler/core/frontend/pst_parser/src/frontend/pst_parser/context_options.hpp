@@ -21,6 +21,9 @@ namespace pst {
 	/**
 	 * @brief Current statement context, used to choose Statement choice
 	 *
+	 * Normal - Statements in normal context (expressions, namespaces, ...).
+	 * Class - Statements in class context (methods, fields, ...).
+	 * Undefined - Illegal default state.
 	 */
 	enum class StmtContext {
 		Normal,

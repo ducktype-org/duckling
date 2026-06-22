@@ -977,7 +977,7 @@ namespace compiler::helios {
 			//
 			// The Class situation is a bit more complicated
 			// @TODO: #1535 Fix/figure out class handling
-			// Might be deprecated by merging the two cases (?)
+			// Might be deprecated by merging the two cases (?) #2961
 			while (true) {
 				if (auto as_stmt = pst_element.dynamicCast<pst::Stmt>()) {
 					// Can swap to append range when g++ 15 is more commonly available

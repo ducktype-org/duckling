@@ -12,9 +12,10 @@ namespace pst {
 	public:
 		friend class LangParserState;
 
-		base::StrID    class_name;
-		BlockOrderType block_order;
-		StmtContext    stmt_context;
+		base::StrID    class_name;    ///< Class name in context, used for parsing class statements
+		BlockOrderType block_order;   ///< Block order type, used to decide paths in code blocks
+		StmtContext    stmt_context;  ///< Statement type context, used to decide between normal and
+		                              ///< class statement parsing
 
 		LangParserContext(
 			base::StrID class_name, BlockOrderType block_order, StmtContext stmt_context

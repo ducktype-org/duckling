@@ -236,3 +236,5 @@ namespace pst {
 		this->element_kind = element_kind_;                                       \
 	}
 }
+
+#define PARSE_DECL() static MBox<ThisClass> parse(LangParserState& state)
