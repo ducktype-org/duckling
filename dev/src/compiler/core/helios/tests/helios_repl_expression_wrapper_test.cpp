@@ -57,7 +57,7 @@ private:
 				.expr_stmt = expr_stmt,
 				.counter   = 7,
 			});
-			ASSERT_TRUE(wrapper_result.hasValue());
+			ASSERT_HAS_VALUE(wrapper_result);
 			auto& wrapper = wrapper_result.valueOrPanic();
 
 			ASSERT_EQUAL(wrapper.declaration->parameters.size(), 0u);
@@ -79,7 +79,7 @@ private:
 				.expr_stmt = expr_stmt,
 				.counter   = 13,
 			});
-			ASSERT_TRUE(wrapper_result.hasValue());
+			ASSERT_HAS_VALUE(wrapper_result);
 			auto& wrapper = wrapper_result.valueOrPanic();
 
 			auto sym_ref  = helios::getSymRef(wrapper.declaration->original_symbol);
@@ -111,8 +111,8 @@ private:
 				.expr_stmt = expr_stmt,
 				.counter   = 102,
 			});
-			ASSERT_TRUE(wrapper_result_a.hasValue());
-			ASSERT_TRUE(wrapper_result_b.hasValue());
+			ASSERT_HAS_VALUE(wrapper_result_a);
+			ASSERT_HAS_VALUE(wrapper_result_b);
 			auto& wrapper_a = wrapper_result_a.valueOrPanic();
 			auto& wrapper_b = wrapper_result_b.valueOrPanic();
 
@@ -148,8 +148,8 @@ private:
 				.expr_stmt = expr_f64,
 				.counter   = 999,
 			});
-			ASSERT_TRUE(wrapper_result_i32.hasValue());
-			ASSERT_TRUE(wrapper_result_f64.hasValue());
+			ASSERT_HAS_VALUE(wrapper_result_i32);
+			ASSERT_HAS_VALUE(wrapper_result_f64);
 			auto& wrapper_i32 = wrapper_result_i32.valueOrPanic();
 			auto& wrapper_f64 = wrapper_result_f64.valueOrPanic();
 

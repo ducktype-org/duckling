@@ -6,7 +6,7 @@ endif ()
 add_files(
 	supervisor/supervisor.cpp
 	safe/safe_vmprocess.cpp
-	process/vmprocess.cpp
+	process/ivmprocess.cpp
 	process/proc_io.cpp
 	builtin_functions.cpp
 	safe/type_metadata/type_metadata.cpp
