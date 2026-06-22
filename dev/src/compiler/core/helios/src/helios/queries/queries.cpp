@@ -1,5 +1,7 @@
 #include "queries.hpp"
 
+#include "helios/utils/hout_walkers.hpp"
+
 #include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/hout/elements.hpp>
@@ -30,7 +32,6 @@
 #include <base/extend_cpp/vector_utils.hpp>
 #include <base/types/ok_bad.hpp>
 
-#include "query_framework/context/context.hpp"
 #include <query_framework/query_errors.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 #include <query_framework/utils/query_failed_try.hpp>
@@ -147,11 +148,26 @@ namespace compiler::helios {
 			}
 			out_unit.functions.clear();
 
+			// Append calls from the global value initial value expression.
+			for (auto g: out_unit.glob_data) {
+				if (auto global_variable = std::get_if<HOUTGlobalVariable>(&g->value)) {
+					for (auto called_fun: collectCalledSymbols(*global_variable->initial_value)) {
+						if (added_to_queue.contains(called_fun)) continue;
+						if (not functionHasImplementation(called_fun))
+							continue;
+						functions_stack.push_back(called_fun);
+						added_to_queue.insert(called_fun);
+					}
+				}
+			}
+
 			while (not functions_stack.empty()) {
 				auto current_fun = functions_stack.back();
-				std::cerr << "visiting " << name(current_fun).str() << std::endl;
 				functions_stack.pop_back();
 
+				// Note, to make the templated global variables work (or templated class static
+				// variables) we have to not only look for calls, but also for usages of the global
+				// variables and add them to worklist.
 				auto qresult = ctx.query<QueryDirectFunctionCalls>(current_fun);
 				if (qresult->hasFailed()) {
 					result = base::BAD;
@@ -162,11 +178,8 @@ namespace compiler::helios {
 				for (auto called_fun: called_funs) {
 					if (added_to_queue.contains(called_fun)) continue;
 					if (v_matches(getSymRef(called_fun)->other, defgen::GeneratedSymbolData)) {
-						std::cerr << "called " << name(called_fun).str() << std::endl;
 						// For now we just if this, but we will deal with this later.
-						if (base::holds<defgen::GeneratedSymbolData::BuiltinOperator>(
-								v_get(getSymRef(called_fun)->other, defgen::GeneratedSymbolData).data
-							))
+						if (not functionHasImplementation(called_fun))
 							continue;
 
 						functions_stack.push_back(called_fun);

@@ -11,9 +11,9 @@
 #include <helios/queries/function_queries.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
-#include <helios/utils/hout_walker_generic.hpp>
 #include <helios/tsh/abstract_type.hpp>
 #include <helios/tsh/queries/types.hpp>
+#include <helios/utils/hout_walkers.hpp>
 #include <helios_private/attributes/backend_dependent.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/hout_creation/expressions/coercions.hpp>
@@ -220,10 +220,8 @@ namespace compiler::helios {
 
 		std::string                                         out = "";
 		base::Optional<pst::AccessLocked<pst::LangElement>> pst = maybeSymbolPst(sym);
-		if (not pst) {
-			return name(sym).str();
-		}
-		
+		if (not pst) return name(sym).str();
+
 		do {
 			if (!pst.value().unlock(ctx)->getParent()) break;
 			auto stmt = pst->unlock(ctx).dynamicCast<pst::Stmt>();
@@ -1070,27 +1068,6 @@ namespace compiler::helios {
 				"Query function dependencies called on non-function symbol"
 			);
 
-			auto collect_deps = [&](SymID sym) {
-				const auto& fun_hout_result = ctx.query<QueryCodeOfFun>(sym)->valueOrThrow();
-				const auto& function_body   = fun_hout_result.body;
-
-				std::unordered_set<SymID> called_functions;
-				code::walkCodeBlock(*function_body, [&](const auto& node) {
-					using Node = std::remove_cvref_t<decltype(node)>;
-					if constexpr (std::same_as<Node, code::CallExpr>) {
-						if (const auto* callee_ident
-						    = dynamic_cast<const code::IdentifierExpr*>(node.callee.get())) {
-							called_functions.insert(callee_ident->symbol);
-						}
-					} else if constexpr (std::same_as<Node, code::TupleExpr>) {
-						// A tuple expression lowers to a call to the tuple constructor in MIR.
-						called_functions.insert(node.tuple_ctor_symbol);
-					}
-				});
-				return std::ranges::to<std::vector<SymID>>(called_functions);
-			};
-
-
 			if (kind(key) == SymbolKind::FunctionDeclaration) {
 				// For function declarations we check if a function declaration is a backend
 				// dependent symbol.
@@ -1102,28 +1079,10 @@ namespace compiler::helios {
 				}
 			}
 
-			variant_match(getSymRef(key)->other) {
-				variant_case_novalue(PstSymbolData) {
-					// Just a PST function.
-					return collect_deps(key);
-				}
-				variant_case(defgen::GeneratedSymbolData, gsd_data) {
-					variant_match(gsd_data.data) {
-						variant_case_novalue(defgen::GeneratedSymbolData::BuiltinOperator) {
-							// Builtin operators have no dependencies
-							return {};
-						}
-					}
-					CORE_ASSERT(
-						gsd_data.getType(ctx).getType().getKind() == tsh::Kind::Function,
-						"QueryDirectFunction calls called on a non-function symbol"
-					);
-					return collect_deps(key);
-				}
-				variant_default { CORE_UNREACHABLE(); }
-			}
-
-			CORE_UNREACHABLE();
+			if (not functionHasImplementation(key)) return {};
+			
+			const auto& fun_hout_result = ctx.query<QueryCodeOfFun>(key)->valueOrThrow();
+			return code::collectCalledSymbols(fun_hout_result);
 		}
 
 		QUERY_AUTO_CACHE_CREF
