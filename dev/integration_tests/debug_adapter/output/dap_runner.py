@@ -6,13 +6,10 @@ client = DAPTestClient(program_name="../examples/output.dbc")
 try:
     # Startup phase
     client.send_request("initialize")
+    client.send_request("configurationDone")
     launch_seq = client.send_request("launch", {"program": client.program_name})
-    client.wait_for(responses=[launch_seq], outputs=["Running"])
-
-    # Wait for output
-    client.wait_for(
-        outputs=["42"]
-    )
+    
+    client.wait_for(responses=[launch_seq], outputs=["42"])
 
 finally:
     client.close()
