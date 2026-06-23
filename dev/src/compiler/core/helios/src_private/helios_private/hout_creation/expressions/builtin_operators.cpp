@@ -11,6 +11,8 @@
 #include <lang_definitions/key_spec_op.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 
+#include "crow/json.h"
+
 #include <tuple>
 #include <utility>
 
@@ -67,6 +69,156 @@ namespace {
 }
 
 namespace compiler::helios::code {
+	base::Optional<std::tuple<BuiltinUnary, Coercion>> findNumericUnaryBuiltin(
+		query::Context& ctx, lexer::Operator op, CRef<Expr> expr
+	) {
+		auto operation_kind = expr->expression_type.getType().getKind();
+
+		const static base::Map<std::pair<lexer::Operator, tsh::Kind>, BuiltinUnary> numeric_operators
+			= {
+				  /// Negations ///
+				  { { base::StrID("-"), tsh::Kind::Integral }, BuiltinUnary::IntegerNegation },
+				  { { base::StrID("-"), tsh::Kind::Float }, BuiltinUnary::FloatNegation },
+			  };
+
+		if (numeric_operators.contains({ op, operation_kind }))
+			return std::make_tuple(
+				numeric_operators.at({ op, operation_kind }),
+				Coercion::emptyCoercion(expr->expression_type.getSymbolType())
+			);
+
+		return {};
+	}
+
+	struct IMPLEMENT_QUERY(QueryRegularUnaryBuiltinSymbols, RegularUnaryBuiltinSymbolMap) {
+		static auto provide(Context& ctx, QKey) -> PResult {
+			// Preamble
+			const auto bool_t = tsh::SymbolType<>{
+				tsh::getBoolType(),
+				tsh::ReferenceKind::Direct,
+				tsh::Mutability::Immutable,
+			};
+			using enum BuiltinUnary;
+
+			// The result map and a helper functions to populate it.
+			auto result_ops = RegularUnaryBuiltinSymbolMap{};
+			// - Helper function to register a builtin operation that results in a BuiltinUnary.
+			const auto builtin_op = [&ctx, &result_ops](
+										const base::StrID              name,
+										const tsh::SymbolType<> param_type,
+										const tsh::SymbolType<>        return_type,
+										const BuiltinUnary             op
+									) -> void {
+				auto builtin = RegularUnaryBuiltin{
+					.symbol = ctx.query<defgen::QueryGeneratedSymbol>({
+						.name = name,
+						.generated_symbol_data
+						= defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::BuiltinOperator{
+							ctx.query<tsh::QueryFunctionType>({
+								.parameter_types = { param_type },
+								.result_type     = return_type,
+							}),
+						} },
+					}),
+					.op     = op,
+				};
+				result_ops.put(builtin.symbol, builtin);
+			};
+			// - Helper function to register a builtin operation that results in a function call.
+			const auto builtin_call = [&ctx, &result_ops](
+										  const base::StrID       name,
+										  const tsh::SymbolType<> param_type,
+										  const tsh::SymbolType<> return_type,
+										  const base::StrID       builtin_name
+									  ) -> void {
+				const auto gen_data
+					= defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::BuiltinOperator{
+						ctx.query<tsh::QueryFunctionType>({
+							.parameter_types = { param_type },
+							.result_type     = return_type,
+						}),
+					} };
+				auto builtin = RegularUnaryBuiltin{
+					.symbol = ctx.query<defgen::QueryGeneratedSymbol>({
+						.name                  = name,
+						.generated_symbol_data = gen_data,
+					}),
+					.op = RegularUnaryBuiltin::FunctionCall{ ctx.query<defgen::QueryGeneratedSymbol>(
+						{ .name = builtin_name, .generated_symbol_data = gen_data }
+					) },
+				};
+				result_ops.put(builtin.symbol, builtin);
+			};
+
+			/// Meta operations ///
+			const auto meta_t = tsh::SymbolType<>{
+				tsh::getMetaType(),
+				tsh::ReferenceKind::Direct,
+				tsh::Mutability::Immutable,
+			};
+			builtin_op(keywordToStr(lang_def::Keyword::Ref), meta_t, meta_t, Ref);
+			builtin_op(keywordToStr(lang_def::Keyword::Box), meta_t, meta_t, Box);
+			builtin_op(keywordToStr(lang_def::Keyword::Ptr), meta_t, meta_t, Ptr);
+			builtin_op(keywordToStr(lang_def::Keyword::ManyPtr), meta_t, meta_t, ManyPtr);
+			builtin_op(keywordToStr(lang_def::Keyword::CPtr), meta_t, meta_t, CPtr);
+			builtin_op(keywordToStr(lang_def::Keyword::Slice), meta_t, meta_t, Slice);
+			builtin_op(keywordToStr(lang_def::Keyword::Const), meta_t, meta_t, Const);
+
+			/// Boolean operations ///
+			builtin_op(keywordToStr(lang_def::Keyword::Not), bool_t, bool_t, BooleanNot);
+
+			/// Dynamic array operations (@TODO: #1970 convert to method) ///
+			builtin_op(keywordToStr(lang_def::Keyword::Len), meta_t, meta_t, True);
+
+			/// Character arithmetic ///
+			const auto u8_t = tsh::SymbolType<>{
+				tsh::getIntegralType(ctx, 8, tsh::IntegralAbstractType::Signedness::Unsigned),
+				tsh::ReferenceKind::Direct,
+				tsh::Mutability::Immutable,
+			};
+			const auto char_t = tsh::SymbolType<>{
+				tsh::getCharType(),
+				tsh::ReferenceKind::Direct,
+				tsh::Mutability::Immutable,
+			};
+			builtin_op(base::StrID("<"), { char_t, char_t }, bool_t, IntegerLt);
+			builtin_op(base::StrID("<="), { char_t, char_t }, bool_t, IntegerLteq);
+			builtin_op(base::StrID(">"), { char_t, char_t }, bool_t, IntegerGt);
+			builtin_op(base::StrID(">="), { char_t, char_t }, bool_t, IntegerGteq);
+			builtin_op(base::StrID("=="), { char_t, char_t }, bool_t, IntegerEq);
+			builtin_op(base::StrID("!="), { char_t, char_t }, bool_t, IntegerNeq);
+			builtin_op(base::StrID("-"), { char_t, char_t }, u8_t, IntegerSub);
+			builtin_op(base::StrID("+"), { u8_t, char_t }, char_t, IntegerAdd);
+			builtin_op(base::StrID("+"), { char_t, u8_t }, char_t, IntegerAdd);
+
+			/// String operators ///
+			const auto str_t = tsh::SymbolType<>{
+				tsh::getStringType(),
+				tsh::ReferenceKind::Direct,
+				tsh::Mutability::Immutable,
+			};
+			builtin_call(
+				base::StrID("+:"), { char_t, str_t }, str_t, base::StrID("builtin_string_prepended")
+			);
+			builtin_call(
+				base::StrID(":+"), { str_t, char_t }, str_t, base::StrID("builtin_string_appended")
+			);
+			builtin_call(
+				base::StrID("++"),
+				{ str_t, str_t },
+				str_t,
+				base::StrID("builtin_string_concatenated")
+			);
+
+			// Return
+			return result_ops;
+		}
+
+		QUERY_AUTO_CACHE_CREF
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryRegularBinaryBuiltinSymbols)
+
 	base::Optional<std::tuple<BuiltinBinary, Coercion, Coercion>> findNumericBinaryBuiltin(
 		query::Context& ctx, lexer::Operator op, CRef<Expr> lhs, CRef<Expr> rhs
 	) {
@@ -136,10 +288,10 @@ namespace compiler::helios::code {
 			auto result_ops = RegularBinaryBuiltinSymbolMap{};
 			// - Helper function to register a builtin operation that results in a BuiltinBinary.
 			const auto builtin_op = [&ctx, &result_ops](
-										const base::StrID                              name,
-										std::vector<tsh::SymbolType<>>                 param_types,
-										const tsh::SymbolType<>                        return_type,
-										const RegularBinaryBuiltin::HOUTRepresentation op
+										const base::StrID              name,
+										std::vector<tsh::SymbolType<>> param_types,
+										const tsh::SymbolType<>        return_type,
+										const BuiltinBinary            op
 									) -> void {
 				auto builtin = RegularBinaryBuiltin{
 					.symbol = ctx.query<defgen::QueryGeneratedSymbol>({
@@ -147,8 +299,8 @@ namespace compiler::helios::code {
 						.generated_symbol_data
 						= defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::BuiltinOperator{
 							ctx.query<tsh::QueryFunctionType>({
-								std::move(param_types),
-								return_type,
+								.parameter_types = std::move(param_types),
+								.result_type     = return_type,
 							}),
 						} },
 					}),
@@ -163,11 +315,11 @@ namespace compiler::helios::code {
 										  const tsh::SymbolType<>               return_type,
 										  const base::StrID                     builtin_name
 									  ) -> void {
-				auto gen_data
+				const auto gen_data
 					= defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::BuiltinOperator{
 						ctx.query<tsh::QueryFunctionType>({
-							param_types,
-							return_type,
+							.parameter_types = param_types,
+							.result_type     = return_type,
 						}),
 					} };
 				auto builtin = RegularBinaryBuiltin{

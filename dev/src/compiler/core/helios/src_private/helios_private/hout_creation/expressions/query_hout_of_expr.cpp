@@ -337,8 +337,7 @@ namespace compiler::helios::code {
 			void visitSuffixOperator(pst::Access<pst::expr::SuffixOperator> stmt) override {
 				// note: here we will have to compile things like `a++`, `a--`, `T?`.
 				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-					"Suffix operators are not implemented yet in HOUT, since they don't exist "
-					"yet.",
+					"Suffix operators are not implemented yet in HOUT, since they don't exist yet.",
 					stmt->getStablePosition()
 				));
 				return;  // failed
@@ -414,6 +413,8 @@ namespace compiler::helios::code {
 			/**
 			 * @brief Finds the appropriate binary operator to call and constructs the corresponding
 			 * HOUT expression. Consumes the provided expressions of the arguments.
+			 * Currently used for all operators other than `As` (type cast) and `Pipe` (variant type
+			 * construction). Perhaps they will be moved here later.
 			 * @param op The operator
 			 * @param lhs The precomputed left-hand side argument
 			 * @param rhs The precomputed right-hand side argument

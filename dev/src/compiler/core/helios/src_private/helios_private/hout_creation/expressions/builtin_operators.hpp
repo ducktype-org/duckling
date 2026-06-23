@@ -16,6 +16,57 @@
 
 namespace compiler::helios::code {
 	/**
+	 * @brief Finds a numeric builtin unary operator for an expression and a given name.
+	 * If types don't match directly, checks whether one can implicitly coerce to another.
+	 * @return Returns the operation along with coercions to apply to operands in format
+	 * (builtin_operation, coercion)
+	 */
+	base::Optional<std::tuple<BuiltinUnary, Coercion>> findNumericUnaryBuiltin(
+		query::Context& ctx, lexer::Operator op, CRef<Expr> expr
+	);
+
+	/**
+	 * @brief Represents a builtin unary operator which is not a numeric operator, and how it
+	 * should appear in HOUT (as a BuiltinUnary, or a function call).
+	 */
+	struct RegularUnaryBuiltin final {
+		/// The symbol of the builtin operator.
+		SymID symbol;
+
+		struct FunctionCall final {
+			SymID function_symbol;
+		};
+
+		using HOUTRepresentation = std::variant<BuiltinUnary, FunctionCall>;
+
+		/** The HOUT operation to perform — either a BuiltinUnary or a function call.
+		 *  Note: the called function may be different from the symbol. For example, the `++`
+		 *  operator on strings actually calls a built-in concat function under a different name.
+		 */
+		HOUTRepresentation op;
+	};
+
+	/** Type for storing a mapping between regular unary builtin symbols and related helpful data.
+	 *  The `symbol` in the data is the same as the key. We predict that the value type will
+	 *  grow in complexity as we introduce more features, so we keep the symbol for convenience.
+	 */
+	using RegularUnaryBuiltinSymbolMap = base::StableHashMap<SymID, RegularUnaryBuiltin>;
+
+	/**
+	 * @brief Get all builtin unary operators which are *not* numeric operators
+	 * for the purpose of lookup and overload resolution. This is a query for idiomatic parallelism.
+	 * @note: The symbols' implementation in
+	 * compiler::helios::defgen::generateBuiltinOperatorExpression must be kept up-to-date with
+	 * this list.
+	 */
+	DECLARE_QUERY(
+		QueryRegularUnaryBuiltinSymbols,
+		query::EmptyKey,
+		CRef<RegularUnaryBuiltinSymbolMap>,
+		({ .uses_qresult = false })
+	);
+
+	/**
 	 * @brief Finds a numeric builtin binary operator between two expressions and for a given name.
 	 * If types don't match directly, checks whether one can implicitly coerce to another.
 	 * @return Returns the operation along with coercions to apply to operands in format
