@@ -152,4 +152,5 @@ namespace base {
 /**
  * @brief Use instead of simple `std::visit`.
  */
-#define VISIT(variant_value, name, code) std::visit([&](auto&& name) { code; }, (variant_value))
+#define VISIT(variant_value, name, ...) \
+	std::visit([&](auto&& name) { __VA_ARGS__; }, (variant_value))
