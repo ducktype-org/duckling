@@ -23,6 +23,9 @@
 #include <helios_private/pst_layer/stmts_from_aggregate.hpp>
 #include <helios_private/scopes/scope_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
+#include <helios_private/templates/templates.hpp>
+
+
 
 #include <base/collections/maps.hpp>
 #include <base/collections/stable_container.hpp>
@@ -555,6 +558,31 @@ namespace compiler::helios {
 				// @TODO: check if "While" defines any variables in its condition
 				// and add them here.
 				output(std::vector<SymID>{});
+			}
+			
+			// THIS IS A GIGA HACK!
+			// change it to todo or better solution
+			void visitTemplateDecl(pst::Access<pst::TemplateDecl> template_decl) override {
+				
+				// Scope of "template →(...)← {}"
+				// ONLY for BAKED templates, since they are the only ones that have a scope.
+
+				std::vector<SymID> out;
+				const auto& additional_data = template_decl->getAdditionalRootData();
+
+				variant_match(additional_data.pst_parent) {
+					variant_case(pst::AdditionalRootData::TemplateParent, template_parent) {
+						auto proper_data = base::anyCast<templates::TemplateBakePSTLinkedData>(template_parent.template_bake_data);
+						for (const auto& param: proper_data.template_arguments_symbols) {
+							out.emplace_back(param);
+						}
+					}
+					variant_default {
+						CORE_PANIC("Template declaration without TemplateParent, this should not happen here.");
+					}
+				}
+
+				output(std::move(out));
 			}
 
 			void visitFor(pst::Access<pst::For> for_stmt) override {
