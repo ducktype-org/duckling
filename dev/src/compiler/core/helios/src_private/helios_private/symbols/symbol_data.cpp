@@ -416,6 +416,9 @@ namespace compiler::helios {
 			) {
 				kind = SymbolKind::Variable;
 			}
+			variant_case_novalue(defgen::GeneratedSymbolData::TemplateBakeConstant) {
+				kind = SymbolKind::Const;
+			}
 			variant_default { CORE_UNREACHABLE(); }
 		}
 		return {
