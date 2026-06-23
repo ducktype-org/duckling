@@ -11,6 +11,7 @@
 #include <time_stats/time_stats.hpp>
 
 #include <token_source/source.hpp>
+#include <base/pointers/box_or_ref.hpp>
 
 namespace pst {
 	// Used to not include full state definition
@@ -79,7 +80,8 @@ namespace pst {
 		/**
 		 * Token source backing this PST (tokenized file or virtual input).
 		 */
-		SharedBox<tokenizer::TokenSource> file;
+		 // TODO: this is a hack, fix it in some better way
+		Box<tokenizer::TokenSource> file;
 
 		/**
 		 * Root element access wrapper for the parsed element tree.
@@ -187,10 +189,13 @@ namespace pst {
 		// TODO: add clone dummy here:
 		explicit PST(
 			Box<Element> element_to_clone,
-			Box<LangParserContext>  parsing_ctx,
+			Box<LangParserContext>  parsing_ctx,// should we use it?
 			hashing::ComponentHash hash_ctx = {}
 		):
-			file(element_to_clone->getStablePosition().getActiveSourcePositionIllegalAccess().getSource()),
+			// this is a total hack:
+			file(
+				tokenizer::makeTokenSource(element_to_clone->getStablePosition().getActiveSourcePositionIllegalAccess().getSource()->getFile())
+			),
 			hash_ctx_info(std::move(hash_ctx)),
 			element(AccessInternalAnonymous<Element>(std::move(element_to_clone)))
 		{

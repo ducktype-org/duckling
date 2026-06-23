@@ -28,7 +28,15 @@ namespace compiler::helios::templates {
     }
 
 
-    struct IMPLEMENT_QUERY(QueryBakeTemplateSymID, query::QResult<SymID>) {
+    struct TemplateBakeStorage final {
+        SymID baked_template_sym_id;
+
+        // TODO: add custom pst element todo issue (link root pst data one) 
+        pst::PST<pst::TemplateDecl> baked_template_pst;
+    }
+
+
+    struct IMPLEMENT_QUERY(QueryBakeTemplateSymID, query::QResult<TemplateBakeStorage>) {
         static auto provide(Context& ctx, QKey key) -> PResult {
             // most heavy lifting will happen here, and in usage of pst root data
 
@@ -61,12 +69,15 @@ namespace compiler::helios::templates {
             );
 
             // pass this to clone:?
-            auto dummy_token_source = template_statement->getStablePosition().getActiveSourcePosition(ctx).getSource();
+            // auto dummy_token_source = template_statement->getStablePosition().getActiveSourcePosition(ctx).getSource();
 
-            pst::PST<pst::TemplateDecl> pst(
-                template_statement->clone(),
+            // TODO: get hash from context???
+            hashing::ComponentHash hash_ctx = hashing::ComponentHash(base::StrID(key.queryUnstablePerfectHash().toStringHex()));
+
+            auto pst = pst::PST<pst::TemplateDecl>::fromClone(
+                template_statement->clone().dynamicCast<pst::TemplateDecl>().toOptBox().value(),
                 pst::LangParserContext::programBaseContext(), // ???,
-                key.queryUnstablePerfectHash() // ???
+                hash_ctx // ???
 
                 // context...?
                 // hash...? from key hash + from template hash 
@@ -75,7 +86,12 @@ namespace compiler::helios::templates {
             CORE_PANIC("QueryBakeTemplateSymID is not implemented yet");
         }
 
-        QUERY_AUTO_CACHE_COPY
+        QUERY_AUTO_CACHE_CONSTRUCT_BY_LAMBDA(
+            [](CRef<PResult> result) -> QResult {
+                if (result->hasFailed()) return query::Failed();
+                return result->valueOrPanic().baked_template_sym_id;
+            }
+        )
 
     };
 
