@@ -1,4 +1,4 @@
-before_cmd: export DUCK_HOME="$(pwd)"
+duck_home: '.'
 
 Tests:
   test-basic-flow:

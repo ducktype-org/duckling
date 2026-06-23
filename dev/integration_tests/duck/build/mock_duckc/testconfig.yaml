@@ -1,7 +1,5 @@
-# !TODO: $(pwd) is relative to the current test, but we want it to point to the directory of this file.
-before_cmd: export PATH="$(pwd)/..:$PATH" && export DUCK_HOME=$(pwd)/duck_home
-
-PostTest: rm -rf $(pwd)/duck_home
+# NOTE: Each subdir has its own symlink of duckc
+before_cmd: export PATH="@{dev_dir}/integration_tests/duck/build/mock_duckc/:$PATH"
 
 # @TODO: #2907 Add more tests with many packages (it'll be easier to write them, once we have determinism)
 SubDirs:

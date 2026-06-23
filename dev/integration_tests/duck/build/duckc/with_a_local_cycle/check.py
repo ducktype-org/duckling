@@ -1,9 +1,5 @@
 import sys
-import shutil
 from pathlib import Path
-
-# Make ../../../utilities.py import work
-sys.path.append(str(Path(__file__).resolve().parents[3]))
 
 from utilities import *
 
@@ -200,4 +196,3 @@ expected = f"""{{
 }}"""
 
 assert_eq(text, expected)
-shutil.rmtree(artifacts_dir_for_root(foo_path))

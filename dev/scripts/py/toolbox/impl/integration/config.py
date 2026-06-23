@@ -41,6 +41,7 @@ GLOBAL_CONFIG_KEYS = {
     SUBDIRS,
     PARENT,
     CONFIG_FILE,
+    CONFIG_DIR,
     *GENERAL_VARIABLES,
 }
 
@@ -57,6 +58,7 @@ def _read_config_file(dir_with_config: Path) -> dict:
         config = yaml.safe_load(f.read())
 
     config[CONFIG_FILE] = config_file
+    config[CONFIG_DIR] = config_file.parent.absolute()
     return config
 
 

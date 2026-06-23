@@ -18,7 +18,7 @@ Tests:
           String: 'error: No such command: \`not-a-subcmd\`\n'
 
       invalid-config:
-        before_cmd: export DUCK_HOME=.
+        duck_home: '.'
         test_cmd: duck not-a-command
         ExitCode: 1
         Err:

@@ -1,5 +1,5 @@
 features: ""
-PostCase: python3 check.py @{features}
+PostCase: '@{set_python_path} && python3 check.py @{features}'
 
 Tests:
   build:

@@ -1,4 +1,4 @@
-PostCase: python3 check.py && rm -f foo/quackfreeze.json
+PostCase: '@{set_python_path} && python3 check.py'
 
 Tests:
   sync:

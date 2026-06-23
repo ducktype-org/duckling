@@ -6,9 +6,8 @@ prepare: |
   EOF
   chmod +x duck-echo
 
-before_cmd: export PATH="$(pwd):$PATH" && export DUCK_HOME="$(pwd)"
-
-PostTest: rm duck-echo
+before_cmd: export PATH="$(pwd):$PATH"
+duck_home: '.'
 
 Tests:
   test-run-external-subcmd:

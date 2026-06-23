@@ -1,4 +1,6 @@
 import json
+import shutil
+import tempfile
 from pathlib import Path
 
 from .test_loader import Case, Test, TestNode, load_tests
@@ -24,6 +26,51 @@ from ..helpers import (
 )
 
 DEFAULT_LOG_FILE_PATH = Path("/tmp/dit.log")
+
+TMP_ROOT_DIR = Path(tempfile.gettempdir()) / "dit"
+
+
+class WorkDir:
+    """
+    A context manager which:
+    * creates a temporary directory with the given `prefix`, under `root`,
+    * copies `src` to the created directory,
+    * on exit, if `not keep`, deletes it.
+    """
+
+    def __init__(self, src: Path, root: Path, prefix: str):
+        self.src = src
+        self.prefix = prefix
+        self.keep = False
+        self.root = root
+        self.path: Path
+
+    def __enter__(self) -> "WorkDir":
+        TMP_ROOT_DIR.mkdir(parents=True, exist_ok=True)
+        self.path = Path(tempfile.mkdtemp(prefix=self.prefix, dir=self.root))
+        shutil.copytree(self.src, self.path, dirs_exist_ok=True, symlinks=True)
+        return self
+
+    def __exit__(self, *_exc) -> bool:
+        if not self.keep:
+            shutil.rmtree(self.path, ignore_errors=True)
+        return False
+
+
+class NoOpContextManager:
+    """
+    A no-op counterpart to WorkDir.
+    """
+
+    def __init__(self, src: Path):
+        self.path = src
+        self.keep = False
+
+    def __enter__(self) -> "NoOpContextManager":
+        return self
+
+    def __exit__(self, *_exc) -> bool:
+        return False
 
 
 def tester_impl(
@@ -86,6 +133,71 @@ def tester_impl(
         print_success(f"All tests have run successfully!")
 
 
+def _tmp_prefix(name: str) -> str:
+    """Builds a recognizable, filesystem-safe temporary directory prefix."""
+    slug = "".join(c if c.isalnum() else "-" for c in name)
+    return f"dit-{slug}-"
+
+
+def _run_test_command(
+        command: str, message: str, cwd: Path, dry: bool, verbose: bool
+):
+    """Runs a `pre_test`/`post_test` command (if any) with `cwd`."""
+    if command:
+        log_info_if_needed(message, dry, verbose)
+        dit_exec_command(
+            command,
+            cwd=cwd,
+            capture_output=not verbose,
+            dry=dry,
+            verbose=verbose,
+        )
+
+
+def _run_one_case(
+        test: Test,
+        case: Case,
+        effective_cwd: Path,
+        case_path: str,
+        stats: TestStatistics,
+        dry: bool,
+        verbose: bool,
+        log_file: Path,
+) -> bool:
+    """
+    Runs a single case in `effective_cwd`, records the outcome in `stats`,
+    and returns `True` if the case failed.
+    """
+    try:
+        match run_case(test, case, effective_cwd, dry, verbose, log_file):
+            case Failure(error):
+                print_failure(f"Case `{case.name}` has failed because: {error}")
+                stats.failed.append(case_path)
+                return True
+            case Success():
+                if not dry:
+                    stats.succeeded.append(case_path)
+                    print_success(f"Case `{case.name}` passed")
+            case Disabled():
+                if not dry:
+                    stats.disabled.append(case_path)
+                    print_neutral(f"Case `{case.name}` disabled")
+    except BashCommandError as e:
+        if e.exit_code == 124:
+            print_failure(
+                f"Case `{test.name}/{case.name}` has failed with exit code 124 - likely timed out after {case.timeout} second(s)."
+            )
+        else:
+            print_failure(f"Case `{test.name}/{case.name}` has failed.")
+        write_log(
+            f"{test.name}/{case.name} has failed:\n{''.join(e.args)}\n",
+            log_file=log_file,
+        )
+        stats.failed.append(case_path)
+        return True
+    return False
+
+
 def run_test(
         test: Test,
         path: str,
@@ -97,60 +209,46 @@ def run_test(
 ) -> TestStatistics:
     """
     Runs a test from `Test` object.
+
+    Outside of dry mode, every command runs against temporary copies of the
+    test's directory: `pre_test`/`post_test` share a single base copy, and each
+    case runs in its own fresh copy of that base (so it inherits any artifacts
+    built by `pre_test` while staying isolated from the other cases). Temporary
+    directories of failed cases are kept around for inspection.
     """
-    if test.pre_test:
-        log_info_if_needed("Executing pre-test...", dry, verbose)
-        dit_exec_command(
-            test.pre_test,
-            cwd=test.cwd,
-            capture_output=not verbose,
-            dry=dry,
-            verbose=verbose,
-        )
     stats = TestStatistics([], [], [])
     simplified_filter = filter[len(path) + 1:]
     log_info(f"===== {path} =====")
-    for i, case in enumerate(test.cases):
-        if not case.name.startswith(simplified_filter):
-            continue
-        log_info_if_needed(f"Run [{i + 1}/{len(test)}] - {case.name}", dry, verbose)
-        case_path = path + "/" + case.name
-        try:
-            match run_case(test, case, dry, verbose, log_file):
-                case Failure(error):
-                    print_failure(f"Case `{case.name}` has failed because: {error}")
-                    stats.failed.append(case_path)
-                case Success():
-                    if not dry:
-                        stats.succeeded.append(case_path)
-                        print_success(f"Case `{case.name}` passed")
-                case Disabled():
-                    if not dry:
-                        stats.disabled.append(case_path)
-                        print_neutral(f"Case `{case.name}` disabled")
-        except BashCommandError as e:
-            if e.exit_code == 124:
-                print_failure(
-                    f"Case `{test.name}/{case.name}` has failed with exit code 124 - likely timed out after {case.timeout} second(s)."
-                )
-            else:
-                print_failure(f"Case `{test.name}/{case.name}` has failed.")
-            write_log(
-                f"{test.name}/{case.name} has failed:\n{''.join(e.args)}\n",
-                log_file=log_file,
+
+    base_dir = (
+        NoOpContextManager(test.cwd)
+        if dry
+        else WorkDir(test.cwd, TMP_ROOT_DIR, _tmp_prefix(test.name))
+    )
+    with base_dir as base:
+        _run_test_command(test.pre_test, "Executing pre-test...", base.path, dry, verbose)
+        for i, case in enumerate(test.cases):
+            if not case.name.startswith(simplified_filter):
+                continue
+            log_info_if_needed(f"Run [{i + 1}/{len(test)}] - {case.name}", dry, verbose)
+            case_path = path + "/" + case.name
+            case_dir = (
+                NoOpContextManager(base.path)
+                if dry
+                else WorkDir(base.path, TMP_ROOT_DIR, _tmp_prefix(f"{test.name}-{case.name}"))
             )
-            stats.failed.append(case_path)
-            if fail_fast:
-                break
-    if test.post_test:
-        log_info_if_needed("Executing post-test...", dry, verbose)
-        dit_exec_command(
-            test.post_test,
-            cwd=test.cwd,
-            capture_output=not verbose,
-            dry=dry,
-            verbose=verbose,
-        )
+            with case_dir as work:
+                if _run_one_case(
+                    test, case, work.path, case_path, stats, dry, verbose, log_file
+                ):
+                    work.keep = True
+                    log_warning(f"Kept working directory of failed case at: {work.path}")
+                    if fail_fast:
+                        break
+        _run_test_command(test.post_test, "Executing post-test...", base.path, dry, verbose)
+        if stats.failed:
+            base.keep = True
+
     return stats
 
 
@@ -171,10 +269,12 @@ def log_test_out_differs(test, case, message, got, expected, log_file, verbose):
 
 
 def run_case(
-        test: Test, case: Case, dry: bool, verbose: bool, log_file: Path
+        test: Test, case: Case, effective_cwd: Path, dry: bool, verbose: bool, log_file: Path
 ) -> Success | Failure | Disabled:
     """
     Runs a test case from `Case` object.
+    All of the case's commands are run with `effective_cwd` as their working
+    directory (a per-case temporary copy of the test's directory).
     Returns an empty string on success, and an error message on error.
     """
     # Check if `Enabled` evaluates to `true` to see if test-case is enabled or not
@@ -183,7 +283,7 @@ def run_case(
         try:
             dit_exec_command(
                 case.enabled,
-                cwd=test.cwd,
+                cwd=effective_cwd,
                 capture_output=not verbose,
                 dry=dry,
                 verbose=verbose,
@@ -197,7 +297,7 @@ def run_case(
         log_info_if_needed("Executing pre-case command...", dry, verbose)
         dit_exec_command(
             case.pre_case,
-            cwd=test.cwd,
+            cwd=effective_cwd,
             capture_output=not verbose,
             dry=dry,
             verbose=verbose,
@@ -208,14 +308,14 @@ def run_case(
     if case.input:
         log_info_if_needed("Getting input", dry, verbose)
         test_input, _ = dit_exec_command(
-            case.input.get_command(), cwd=test.cwd, dry=dry, verbose=verbose
+            case.input.get_command(), cwd=effective_cwd, dry=dry, verbose=verbose
         )
 
     # Run test.
     log_info_if_needed("Running the test case...", dry, verbose)
     test_output, test_err = dit_exec_command(
         f"timeout {case.timeout}s bash -c \'{case.run}\'",
-        cwd=test.cwd,
+        cwd=effective_cwd,
         input=test_input,
         exitcode=case.expected_exitcode,
         dry=dry,
@@ -226,7 +326,7 @@ def run_case(
     if case.expected_output:
         log_info_if_needed("Getting the expected output...", dry, verbose)
         test_expected_output, _ = dit_exec_command(
-            case.expected_output.get_command(), cwd=test.cwd, verbose=verbose, dry=dry
+            case.expected_output.get_command(), cwd=effective_cwd, verbose=verbose, dry=dry
         )
         if not dry and test_output != test_expected_output:
             log_test_out_differs(
@@ -244,7 +344,7 @@ def run_case(
     if case.expected_err:
         log_info_if_needed("Getting the expected err...", dry, verbose)
         test_expected_err, _ = dit_exec_command(
-            case.expected_err.get_command(), cwd=test.cwd, verbose=verbose, dry=dry
+            case.expected_err.get_command(), cwd=effective_cwd, verbose=verbose, dry=dry
         )
         if not dry and test_err != test_expected_err:
             log_test_out_differs(
@@ -263,7 +363,7 @@ def run_case(
         log_info_if_needed("Executing post-case command...", dry, verbose)
         dit_exec_command(
             case.post_case,
-            test.cwd,
+            effective_cwd,
             capture_output=not verbose,
             input=test_output,
             verbose=verbose,

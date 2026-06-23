@@ -1,6 +1,6 @@
 Tests:
   debug_input:
-    Run: "PYTHONPATH=../helpers python3 dap_runner.py @{build_dir}"
+    Run: "PYTHONPATH=@{ConfigDir}/../helpers python3 dap_runner.py @{build_dir}"
     TimeOut: 1
     Cases:
       input: { }

@@ -2,6 +2,12 @@
 
 This README is a guide to Duckling Integration Test (DIT) framework.
 
+> [!IMPORTANT]
+> Tests are run in temporary directories, with theirs content copied to an appropriate directory.
+>
+> Each case is run in `<SHARED TMP DIR>/dit/<case specific directory>/`.
+
+
 ## Test folder structure
 
 DIT tests are composed in a tree-like structure.
@@ -101,6 +107,11 @@ Variables can be shadowed.
 All **builtin variables are `UpperCase`** and all user defined variables should
 be `kebab-case` or `lower_case`.
 
+> [!IMPORTANT]
+> The only exceptions are:
+> * `@{dev_dir}`, which is an absolute path to the `dev/` directory,
+> * `@{build_dir}`, which is a value of the `-b` CLI option.
+
 Here is a list of builtin variables and their meaning **depending on the context**:
 
 Config file variables (linked to a node in the test tree, not inherited):
@@ -121,6 +132,14 @@ General variables (not tied to any context):
 - `TimeOut` - Maximum time given for the execution in seconds - defaults to 1 - On timeout the process exits with exit code 124.
 - `ExitCode` - Expected test case's exit code - defaults to 0.
 - `Enabled` - Bash command specifying whether the test case is enabled. If it evaluates to true (0), then the test case is enabled, otherwise it's disabled.
+- `ConfigDir` - Absolute path to a directory containing the current `testconfig.yaml` file.
+> [!IMPORTANT]
+> Remember that variables are expanded lazily, so `SubDirs` can overwrite your `ConfigDir`.
+
+> [!NOTE]
+> `@{ConfigDir}` points to a file __inside__ git.
+>
+> It's not affected by temporary directories.
 
 Subtree-specific variables (applied to a subtree rooted at this node) are __INHERITED__ from the parent node unless explicitly redefined in the child node:
 - `PreNode` - A command executed once before processing the node and its subdirectories.  

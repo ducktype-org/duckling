@@ -2,7 +2,7 @@ profile_name: ""
 run_post_case: "true"
 PostCase: |+
   if [ @{run_post_case} == "true" ]; then
-    python3 check.py @{profile_name}
+    @{set_python_path} && python3 check.py @{profile_name}
   fi
 
 Tests:

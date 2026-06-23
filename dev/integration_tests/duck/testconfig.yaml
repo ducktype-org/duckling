@@ -1,5 +1,5 @@
 load_cargo: . ${CARGO_HOME:-$HOME/.cargo}/env
-cwd_duck_root: cd `git rev-parse --show-toplevel`/dev/src/duck/
+cwd_duck_root: cd @{dev_dir}/src/duck/
 # NOTE: Changes made here should also be reflected in `workflows/tests.yml`
 # Changes means changes to compiling duck itself.
 build_duck: |
@@ -13,7 +13,7 @@ build_duck: |
   if [ "$exit_code" -ne 0 ]; then
     exit "$exit_code"
   fi
-duck_exe_dir: '`git rev-parse --show-toplevel`/dev/src/duck/target/debug/'
+duck_exe_dir: '@{dev_dir}/src/duck/target/debug/'
 prepare: ""
 before_cmd: "true"
 
@@ -24,6 +24,10 @@ before_cmd: "true"
 # 5 seconds seems to be enough.
 timeout_default: 5
 
+python_helpers_path: '@{dev_dir}/integration_tests/duck/'
+set_python_path: export PYTHONPATH=@{python_helpers_path}
+duck_home: '$(pwd)/duck_home'
+
 PreNode: |
   @{load_cargo}
   @{cwd_duck_root}
@@ -33,7 +37,7 @@ PreNode: |
 PreTest: |
   @{prepare}
 
-Run: '@{before_cmd} && export PATH="@{duck_exe_dir}:$PATH" && @{test_cmd}'
+Run: '@{before_cmd} && export PATH="@{duck_exe_dir}:$PATH" && export DUCK_HOME=@{duck_home} && @{test_cmd}'
 
 SubDirs:
   - cli

@@ -2,7 +2,7 @@ features: ""
 run_post_case: "true"
 PostCase: |+
   if [ @{run_post_case} == "true" ]; then
-    python3 check.py @{features}
+    @{set_python_path} && python3 check.py @{features}
   fi
 Tests:
   build:
