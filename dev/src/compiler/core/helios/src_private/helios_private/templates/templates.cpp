@@ -44,12 +44,21 @@ namespace compiler::helios::templates {
 
     struct IMPLEMENT_QUERY(QueryBakeTemplateSymID, query::QResult<TemplateBakeStorage>) {
 
-        static std::vector<SymID> bakeTemplateArgumentsSymbols(Context& ctx, pst::Access<pst::ParamList> template_params, ScopeID scope) {
+        // TODO: this will act as a function, and we might want to allow template overloading.
+        // It would be cool to unify this logic.
+        static std::vector<SymID> bakeTemplateArgumentsSymbols(
+            Context& ctx,
+            pst::Access<pst::ParamList> template_params,
+            ScopeID scope,
+            const QKey& q_key
+        ) {
     
 
             std::vector<SymID> symbols;
             
+            u64 i = 0;
             for (const auto& param: *template_params) {
+                
                 auto param_unlocked = param.unlock(ctx);
 
                 auto type_expression = param_unlocked->getType();
@@ -62,19 +71,22 @@ namespace compiler::helios::templates {
                         type_ctv.get<tsh::SymbolType<>>().value(),
                         tsh::Mutability::Immutable
                     );
+                
+                // NOTE: this computes the default value, not the one passed here!
+                // const auto hout_qresult = getHoutOfExprWithExpectedType(
+    			// 	ctx, value_expression, 
+                //    type
+	    		// );
 
-                const auto hout_qresult = getHoutOfExprWithExpectedType(
-    				ctx, value_expression, 
-                   type
-	    		);
-
-                auto value_ctv
-	    			= ctx.query<QueryEvaluateHOUTExpression>({ hout_qresult.valueOrThrow().ref() }).valueOrThrow();
+                // auto value_ctv
+	    		// 	= ctx.query<QueryEvaluateHOUTExpression>({ hout_qresult.valueOrThrow().ref() }).valueOrThrow();
 
                 auto const_symbol = ctx.query<defgen::QueryGeneratedSymbol>(defgen::KeyFor_QueryGeneratedSymbol{
                     .name = name,
                     .generated_symbol_data = defgen::GeneratedSymbolData{defgen::GeneratedSymbolData::TemplateBakeConstant{
-                        type, std::move(value_ctv), scope
+                        type, 
+                        q_key.template_arguments.at(i++), //std::move(value_ctv), 
+                        scope
                     }},
                 });
 
@@ -162,7 +174,8 @@ namespace compiler::helios::templates {
 
             auto args = bakeTemplateArgumentsSymbols(ctx, template_params, 
                         
-                            ctx.query<QueryPrimaryCodeScopeFor>({ baked_root })
+                            ctx.query<QueryPrimaryCodeScopeFor>({ baked_root }),
+                            key
                         );
             
             // this can totally race, if left without sync:
