@@ -51,7 +51,6 @@ void fast::FastCompiler::compileNewFunctions(
 	const std::vector<code::valid_function::ValidFunction>& new_functions
 ) {
 	for (const code::valid_function::ValidFunction& function: new_functions) {
-		detail::FunctionStackContext ctx = calculateStackContext(function);
 		// Reusable transforms: map a type name to its byte size / its fast-mode TypeID.
 		auto get_sizes    = std::views::transform([this](const auto& type_name) {
             return program.types.at(type_name)->getSize();
@@ -76,7 +75,7 @@ void fast::FastCompiler::compileNewFunctions(
 			function.name
 		);
 		reloc_functions.emplace_back(
-			lowerInstructions(high_program, program, ctx, *program.functions.at(function.name))
+			lowerInstructions(high_program, program, calculateStackContext(function), *program.functions.at(function.name))
 		);
 	}
 }

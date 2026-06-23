@@ -107,7 +107,7 @@ namespace vm::fast {
 
 		template<class T>
 		base::Optional<CRef<T>> get() const {
-			if (std::holds_alternative<T>(kind)) return &std::get<T>(kind);
+			if (v_matches(kind, T)) return &std::get<T>(kind);
 			return {};
 		}
 
