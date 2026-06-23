@@ -1,6 +1,9 @@
 #include "templates.hpp"
 
 #include <frontend/pst_parser/elements/hierarchy/declarations/template_decl.hpp>
+#include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp> // PR relax it?
+#include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp> //PR relax it?
+#include <frontend/pst_parser/elements/hierarchy/lists/all_lists.hpp> // PR relax it?
 
 #include <helios/symbols/symbol_id_utils.hpp>
 
