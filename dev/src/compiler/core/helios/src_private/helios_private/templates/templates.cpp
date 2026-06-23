@@ -143,6 +143,7 @@ namespace compiler::helios::templates {
                 .pst_parent = pst::AdditionalRootData::TemplateParent{
                     .template_bake_data = TemplateBakePSTLinkedData{
                         // .instantiated_sym_id = SymID{}, // TODO: generate new sym_id for baked template
+                        .pst_parent_element = template_statement->getParent().value(), // TODO: change to pst layer call.. templtaes in macros :o
                         .template_arguments_symbols = bakeTemplateArgumentsSymbols(ctx, template_params)
                     }
                 }

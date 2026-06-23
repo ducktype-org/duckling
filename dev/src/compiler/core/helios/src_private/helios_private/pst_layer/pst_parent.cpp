@@ -1,4 +1,5 @@
 #include "pst_parent.hpp"
+#include <helios_private/templates/templates.hpp>
 
 namespace compiler::helios {
 
@@ -22,9 +23,14 @@ namespace compiler::helios {
 					auto module_id     = base::anyCast<frontend::ModuleID>(module_id_any);
 					return PSTParentResult{ module_id };
 				}
+				variant_case(pst::AdditionalRootData::TemplateParent, template_parent) {
+					auto template_bake_data_any = template_parent.template_bake_data;
+					auto template_bake_data     = base::anyCast<templates::TemplateBakePSTLinkedData>(template_bake_data_any);
+					return PSTParentResult{ template_bake_data.pst_parent_element };
+				}
 				variant_default {
 					CORE_PANIC(
-						"Element has no PST parent and no PST additional root data, cannot "
+						"Element has no PST parent and unknown PST additional root data, cannot "
 						"determine PST parent."
 					);
 				}
