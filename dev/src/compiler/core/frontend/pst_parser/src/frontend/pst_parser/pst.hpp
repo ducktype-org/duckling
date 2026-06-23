@@ -184,6 +184,15 @@ namespace pst {
 			parse(std::move(parsing_ctx), std::forward<Args>(args)...);
 		}
 
+		// TODO: add clone dummy here:
+		explicit PST(
+			AccessLocked<Element> element_to_clone,
+			Box<LangParserContext>  parsing_ctx,
+			hashing::ComponentHash hash_ctx = {}
+		) {
+			
+		}
+
 		/**
 		 * @brief Performs the element path calculation for all of the elements of the tree.
 		 */
@@ -299,9 +308,11 @@ namespace pst {
 		}
 
 		static PST fromClone(
-			AccessLocked<Element> element, PSTContext&& pst_ctx, hashing::ComponentHash hash_ctx = {}
+			AccessLocked<Element> element_to_clone,
+			Box<LangParserContext>  parsing_ctx,
+			hashing::ComponentHash hash_ctx = {}
 		) {
-			return fromCloneWithArgs(element, std::move(pst_ctx), std::move(hash_ctx));
+
 		}
 
 		[[nodiscard]]
