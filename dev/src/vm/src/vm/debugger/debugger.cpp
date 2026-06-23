@@ -27,7 +27,7 @@ namespace vm::debugger {
 			  }
 		  }),
 		  vm_output([&](const std::string& str) { on_output.emitEvent(str); }) {
-		api::spawn()
+		(void) api::spawn()
 			.and_then([&](const api::ProcessInfo& info) {
 				pid = info.pid;
 				return api::attachStatusListener(pid, &updater);
@@ -43,7 +43,7 @@ namespace vm::debugger {
 
 		// @TODO: #1222 Remove checking status and always kill after fixing kill
 
-		api::getExecutionStatus(pid)
+		(void) api::getExecutionStatus(pid)
 			.and_then([&](const api::ProcStatus& status) {
 				if (!std::holds_alternative<api::NotStarted>(status)) return api::kill(pid);
 
@@ -155,4 +155,8 @@ namespace vm::debugger {
 	}
 
 	std::expected<void, api::ApiError> Debugger::step() { return api::step(pid); }
+
+	std::expected<void, api::ApiError> Debugger::sendInput(const std::string& msg) {
+		return api::input(pid, msg);
+	}
 }

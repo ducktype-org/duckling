@@ -126,6 +126,7 @@ namespace pst {
 
 		void setContextClassName(base::StrID);
 		void setContextBlockOrdering(BlockOrderType);
+		void setContextStmt(StmtContext);
 
 		/**
 		 * @brief Adds to the balance of skipped_entries

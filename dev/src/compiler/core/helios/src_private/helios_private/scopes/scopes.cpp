@@ -122,16 +122,6 @@ namespace compiler::helios {
 		case pst::ElementKind::CodeBlockOrStmt:
 			return ElementScopeKind::Standard;
 
-		case pst::ElementKind::ClassBlock: {
-			// This is because AccessBlocks store a ClassBlock inside.
-			// Only the "top-class" ClassBlock has a scope.
-			auto parent_kind = element->getParent().value().unlock(ctx)->getElementKind();
-			if (parent_kind == pst::ElementKind::Class)
-				return ElementScopeKind::Standard;
-			else
-				return ElementScopeKind::Transparent;
-		}
-
 		// I don't know if this is correct
 		case pst::ElementKind::SpecifierBlock:
 			return ElementScopeKind::Transparent;
@@ -155,10 +145,6 @@ namespace compiler::helios {
 		// this has to be transparent, since ClassBlock scopes
 		// contain all symbols in AccessBlock's
 		case pst::ElementKind::ClassSpecifierBlock:
-			return ElementScopeKind::Transparent;
-
-		// @TODO: #2087 this is a mock, figure out proper handling of non-class statements
-		case pst::ElementKind::NonClassStmt:
 			return ElementScopeKind::Transparent;
 
 		case pst::ElementKind::If:

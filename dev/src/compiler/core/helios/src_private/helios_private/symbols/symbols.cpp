@@ -106,7 +106,6 @@ namespace compiler::helios {
 				// Variables inside classes, functions and some statements are not global:
 				case pst::ElementKind::Class:
 				case pst::ElementKind::Fun:
-				case pst::ElementKind::ClassBlock:
 				case pst::ElementKind::ClassMethod:
 				case pst::ElementKind::ClassSpecial:
 				case pst::ElementKind::ClassSpecifierBlock:
@@ -671,16 +670,7 @@ namespace compiler::helios {
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			auto scope = getPSTElementParentScope(ctx, key.element);
-			if (key.element.unlock(ctx)->getElementKind() == pst::ElementKind::NonClassStmt) {
-				// @TODO: #2087 remove this branch, when non-class statements will be properly supported.
-				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-					"Non-class statements inside classes are not supported yet.",
-					key.element.unlock(ctx)->getStablePosition(),
-					"",
-					"here"
-				));
-				return query::Failed();
-			} else if (auto stmt = key.element.unlock(ctx).dynamicCast<pst::Stmt>())
+			if (auto stmt = key.element.unlock(ctx).dynamicCast<pst::Stmt>())
 				return PResult{ makeSymbolFromStatement(ctx, scope, stmt.value()) };
 			else
 				return PResult{ makeSymbolFromPSTElement(scope, key.element.unlock(ctx), ctx) };
@@ -1020,6 +1010,7 @@ namespace compiler::helios {
 			//
 			// The Class situation is a bit more complicated
 			// @TODO: #1535 Fix/figure out class handling
+			// Might be deprecated by merging the two cases (?) #2961
 			while (true) {
 				if (auto as_stmt = pst_element.dynamicCast<pst::Stmt>()) {
 					// Can swap to append range when g++ 15 is more commonly available
@@ -1034,13 +1025,6 @@ namespace compiler::helios {
 						ctx, pst_element, pst::ElementKind::CodeBlock, pst::ElementKind::SpecifierBlock
 					)) {
 					pst_element = *std::move(result_stmt);
-				} else if (auto result_block = getAncestor(
-							   ctx,
-							   pst_element,
-							   pst::ElementKind::ClassBlock,
-							   pst::ElementKind::ClassSpecifierBlock
-						   )) {
-					pst_element = *std::move(result_block);
 				} else {
 					break;
 				}

@@ -86,7 +86,7 @@ private:
 							}
 			)
 			                .has_value());
-			ASSERT_TRUE(vm::api::loadFiles(pid, { fs::File(path("extern_test.dbc")) }).has_value());
+			ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { fs::File(path("extern_test.dbc")) }));
 			return pid;
 		};
 
@@ -144,7 +144,7 @@ private:
 
 		// Prepare the initializing argument.
 		auto vm_value_response = vm::api::getVmValue(pid, "opaque_ptr");
-		ASSERT_TRUE(vm_value_response.has_value());
+		ASSERT_HAS_VALUE(vm_value_response);
 		auto  vm_value   = std::move(vm_value_response->vm_value);
 		auto* vector_ptr = &global_opaque::vec;
 		vm_value->writeBytes(vector_ptr);
@@ -152,7 +152,7 @@ private:
 		// Initialize the global vector pointer
 		ASSERT_TRUE(vm::api::runFunction(pid, "initialize_vector", { vm_value.refMut() }).has_value()
 		);
-		ASSERT_TRUE(vm::api::join(pid).has_value());
+		ASSERT_HAS_VALUE(vm::api::join(pid));
 
 		vm_value->freeData();
 
@@ -199,7 +199,7 @@ private:
 					  }, }
 				).has_value()
 			);
-			ASSERT_TRUE(vm::api::loadFiles(pid, { fs::File(path("void_no_args.dbc")) }).has_value());
+			ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { fs::File(path("void_no_args.dbc")) }));
 			return pid;
 		};
 		runTestOnVm(get_ext_func_program(), {}, {});
