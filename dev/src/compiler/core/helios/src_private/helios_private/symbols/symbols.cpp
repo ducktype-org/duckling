@@ -923,25 +923,46 @@ namespace compiler::helios {
 			CORE_ASSERT(kind(key) == SymbolKind::Const, "SymID is not a Const");
 
 			// Get the const's data
-			const auto pst = getSymRef(key)
-			                     ->getPSTData()
-			                     ->getElement()
-			                     .unlock(ctx)
-			                     .dynamicCast<pst::Const>()
-			                     .value();
-			const auto type = ctx.query<QueryTypeOfSymbol>(key)->valueOrThrow();
 
-			// Get the coerced HOUT expression
-			const auto hout_qresult = getHoutOfExprWithExpectedType(
-				ctx, pst->getValue().value().unlock(ctx)->getExpr(), type
-			);
-			if (hout_qresult.hasFailed()) return query::Failed();
+			variant_match(getSymRef(key)->other) {
+				variant_case(defgen::GeneratedSymbolData, gen_data) {
+					variant_match(gen_data.data) {
+						variant_case(defgen::GeneratedSymbolData::TemplateBakeConstant, const_data) {
+							return const_data.value;
+						}
+						variant_default {
+							CORE_PANIC("Unexpected GeneratedSymbolData type in QueryConstValueOf");
+						}
+					}
+				}
 
-			// Evaluate the HOUT expression at compile-time
-			auto ctv
-				= ctx.query<QueryEvaluateHOUTExpression>({ hout_qresult.valueOrThrow().ref() });
-			if (ctv.hasFailed()) return query::Failed();
-			return ctv.valueOrThrow();
+				variant_case(PstSymbolData, pst_data) {
+					const auto pst = pst_data
+										.getElement()
+										.unlock(ctx)
+										.dynamicCast<pst::Const>()
+										.value();
+					const auto type = ctx.query<QueryTypeOfSymbol>(key)->valueOrThrow();
+
+					// Get the coerced HOUT expression
+					const auto hout_qresult = getHoutOfExprWithExpectedType(
+						ctx, pst->getValue().value().unlock(ctx)->getExpr(), type
+					);
+					if (hout_qresult.hasFailed()) return query::Failed();
+
+					// Evaluate the HOUT expression at compile-time
+					auto ctv
+						= ctx.query<QueryEvaluateHOUTExpression>({ hout_qresult.valueOrThrow().ref() });
+					if (ctv.hasFailed()) return query::Failed();
+					return ctv.valueOrThrow();
+				}
+
+				variant_default {
+					CORE_PANIC("Unexpected SymbolData::other type in QueryConstValueOf");
+				}
+			}
+
+			CORE_UNREACHABLE();
 		}
 
 		QUERY_AUTO_CACHE_COPY

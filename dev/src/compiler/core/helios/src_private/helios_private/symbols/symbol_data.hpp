@@ -110,6 +110,7 @@ namespace compiler::helios {
 		template<class T>
 		[[nodiscard]]
 		CRef<T> getData() const {
+			CORE_ASSERT(std::holds_alternative<T>(other), "SymbolData does not hold the requested type");
 			return &std::get<T>(other);
 		}
 
