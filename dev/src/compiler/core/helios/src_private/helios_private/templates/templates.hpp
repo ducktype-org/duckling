@@ -9,12 +9,12 @@
 
 namespace compiler::helios::templates {
 
-    enum class TemplateKind {
-        Function,
-        Class,
-        Namespace,
-        Const,
-    };
+    // enum class TemplateKind {
+    //     Function,
+    //     Class,
+    //     Namespace,
+    //     Const,
+    // };
 
 
     struct TemplateBakeKey final {
@@ -33,9 +33,12 @@ namespace compiler::helios::templates {
      * TODO: this will be passed to PST root in type-opaque way, so other helios code can retrieve it when needed. 
      */
     struct TemplateBakePSTLinkedData final {
-        TemplateKind kind;
-        SymID instantiated_sym_id;
-        std::vector<ctv::CompileTimeValue> template_arguments;
+        // TemplateKind kind;
+        // SymID instantiated_sym_id;
+
+        std::vector<SymID> template_arguments_symbols;
+
+        // std::vector<ctv::CompileTimeValue> template_arguments;
     };
 
     /**

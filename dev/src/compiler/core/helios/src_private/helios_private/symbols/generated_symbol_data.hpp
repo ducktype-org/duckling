@@ -258,6 +258,7 @@ namespace compiler::helios::defgen {
 			DefaultDestructor,
 			LengthMethod,
 			BuiltinOperator,
+			TemplateBakeConstant,
 			Parameter,
 			SelfParameter,
 			Field,

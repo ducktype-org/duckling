@@ -9,6 +9,10 @@
 
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <helios_private/symbols/symbols.hpp>
+#include <helios_private/comp_time/comp_time.hpp>
+#include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
+// #include <helios_private/hout_creation/definition_generation/
+#include <helios/tsh/deductions.hpp>
 
 #include <query_framework/standard_query/query_impl.hpp>
 #include <hashing/hashing_algorithms.hpp>
@@ -38,6 +42,48 @@ namespace compiler::helios::templates {
 
 
     struct IMPLEMENT_QUERY(QueryBakeTemplateSymID, query::QResult<TemplateBakeStorage>) {
+
+        static std::vector<SymID> bakeTemplateArgumentsSymbols(Context& ctx, pst::Access<pst::ParamList> template_params) {
+        
+
+            std::vector<SymID> symbols;
+            
+            for (const auto& param: *template_params) {
+                auto param_unlocked = param.unlock(ctx);
+
+                auto type_expression = param_unlocked->getType();
+                auto value_expression = param_unlocked->getValue()->unlock(ctx)->getExpr();
+                auto name = param_unlocked->getName().unlock(ctx)->unwrap();
+
+                auto type_ctv = getTypeCTVFromPST(ctx, type_expression).valueOrThrow();
+
+                auto type = tsh::deductions::declarationTypeFromProvidedType(
+                        type_ctv.get<tsh::SymbolType<>>().value(),
+                        tsh::Mutability::Immutable
+                    );
+
+                const auto hout_qresult = getHoutOfExprWithExpectedType(
+    				ctx, value_expression, 
+                   type
+	    		);
+
+                auto value_ctv
+	    			= ctx.query<QueryEvaluateHOUTExpression>({ hout_qresult.valueOrThrow().ref() }).valueOrThrow();
+
+                auto const_symbol = ctx.query<defgen::QueryGeneratedSymbol>(defgen::KeyFor_QueryGeneratedSymbol{
+                    .name = name,
+                    .generated_symbol_data = defgen::GeneratedSymbolData{defgen::GeneratedSymbolData::TemplateBakeConstant{
+                        type, std::move(value_ctv)
+                    }},
+                });
+
+                symbols.push_back(const_symbol);
+            }
+
+            return symbols;
+        }
+
+
         static auto provide(Context& ctx, QKey key) -> PResult {
             // most heavy lifting will happen here, and in usage of pst root data
 
@@ -93,6 +139,14 @@ namespace compiler::helios::templates {
                 // context...?
                 // hash...? from key hash + from template hash 
             );
+            baked_pst.setAdditionalRootData(pst::AdditionalRootData{
+                .pst_parent = pst::AdditionalRootData::TemplateParent{
+                    .template_bake_data = TemplateBakePSTLinkedData{
+                        // .instantiated_sym_id = SymID{}, // TODO: generate new sym_id for baked template
+                        .template_arguments_symbols = bakeTemplateArgumentsSymbols(ctx, template_params)
+                    }
+                }
+            });
 
             std::cerr << "Baked template pst!  \n";
 
