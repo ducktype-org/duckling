@@ -310,6 +310,7 @@ namespace compiler::helios {
 						tsh::Mutability::Immutable,
 					};
 				}
+				variant_case(TemplateBakeConstant, constant) { return constant.type; }
 			}
 			CORE_UNREACHABLE();
 		}
