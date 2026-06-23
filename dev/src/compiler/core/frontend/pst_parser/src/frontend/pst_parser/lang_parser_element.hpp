@@ -242,7 +242,7 @@ namespace pst {
 
 		[[nodiscard]]
 		HashType getHash() const {
-			CORE_ASSERT(hash.has_value(), "Hash not calculated for this" + elementType());
+			CORE_ASSERT(hash.has_value(), "Hash not calculated for this: " + elementType());
 			return hash.value();
 		}
 

@@ -75,8 +75,18 @@ namespace compiler::helios::templates {
             // TODO: get hash from context???
             hashing::ComponentHash hash_ctx = hashing::ComponentHash(base::StrID(key.queryUnstablePerfectHash().toStringHex()));
 
+            
+            std::cerr << "Running clone now!  \n";
+            
+            auto cloned = template_statement->clone().dynamicCast<pst::TemplateDecl>().toOptBox().value();
+            
+            std::cerr << "Baking pst now!  \n";
+
+            auto token_source_hack = tokenizer::makeTokenSource(template_statement->getStablePosition().getActiveSourcePositionIllegalAccess().getSource()->getFile());
+
             auto baked_pst = pst::PST<pst::TemplateDecl>::fromClone(
-                template_statement->clone().dynamicCast<pst::TemplateDecl>().toOptBox().value(),
+                std::move(cloned),
+                std::move(token_source_hack),
                 pst::LangParserContext::programBaseContext(), // ???,
                 hash_ctx // ???
 
@@ -84,12 +94,21 @@ namespace compiler::helios::templates {
                 // hash...? from key hash + from template hash 
             );
 
+            std::cerr << "Baked template pst!  \n";
 
             auto baked_statement = baked_pst.getRootElement().unlock(ctx)->getInnerStatement();
+            
+            std::cerr << "Baked statement!  \n";
 
-            auto baked_sym_id = ctx.query<QuerySymbolOfSTMT>(baked_statement);
 
-            CORE_PANIC("QueryBakeTemplateSymID is not implemented yet");
+            auto baked_sym_id = ctx.query<QuerySymbolOfSTMT>(baked_statement).valueOrThrow();
+
+            std::cerr << "Baked template sym_id: " << name(baked_sym_id).strView() << "\n";
+
+            return TemplateBakeStorage{
+                .baked_template_sym_id = baked_sym_id,
+                .baked_template_pst = std::move(baked_pst)
+            };
         }
 
         QUERY_AUTO_CACHE_CONSTRUCT_BY_LAMBDA(
