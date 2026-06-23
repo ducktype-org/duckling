@@ -79,7 +79,7 @@ namespace pst {
 		/**
 		 * Token source backing this PST (tokenized file or virtual input).
 		 */
-		Box<tokenizer::TokenSource> file;
+		SharedBox<tokenizer::TokenSource> file;
 
 		/**
 		 * Root element access wrapper for the parsed element tree.
@@ -186,11 +186,18 @@ namespace pst {
 
 		// TODO: add clone dummy here:
 		explicit PST(
-			AccessLocked<Element> element_to_clone,
+			Box<Element> element_to_clone,
 			Box<LangParserContext>  parsing_ctx,
 			hashing::ComponentHash hash_ctx = {}
-		) {
-			
+		):
+			file(element_to_clone->getStablePosition().getActiveSourcePositionIllegalAccess().getSource()),
+			hash_ctx_info(std::move(hash_ctx)),
+			element(AccessInternalAnonymous<Element>(std::move(element_to_clone)))
+		{
+			// TODO: imports???
+			calcElementPathHash();
+			calcHashes();
+			putInPSTHashHashMap();
 		}
 
 		/**
@@ -308,11 +315,11 @@ namespace pst {
 		}
 
 		static PST fromClone(
-			AccessLocked<Element> element_to_clone,
+			Box<Element> element_to_clone,
 			Box<LangParserContext>  parsing_ctx,
 			hashing::ComponentHash hash_ctx = {}
 		) {
-
+			return PST(std::move(element_to_clone), std::move(parsing_ctx), std::move(hash_ctx));
 		}
 
 		[[nodiscard]]

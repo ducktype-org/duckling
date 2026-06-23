@@ -4,6 +4,8 @@
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp> // PR relax it?
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp> //PR relax it?
 #include <frontend/pst_parser/elements/hierarchy/lists/all_lists.hpp> // PR relax it?
+#include <frontend/pst_parser/pst.hpp>
+#include <frontend/pst_parser/lang_parser_context.hpp>
 
 #include <helios/symbols/symbol_id_utils.hpp>
 
@@ -56,6 +58,18 @@ namespace compiler::helios::templates {
             CORE_ASSERT(
                 template_params->size() == key.template_arguments.size(),
                 "Template arguments count does not match template parameters count"
+            );
+
+            // pass this to clone:?
+            auto dummy_token_source = template_statement->getStablePosition().getActiveSourcePosition(ctx).getSource();
+
+            pst::PST<pst::TemplateDecl> pst(
+                template_statement->clone(),
+                pst::LangParserContext::programBaseContext(), // ???,
+                key.queryUnstablePerfectHash() // ???
+
+                // context...?
+                // hash...? from key hash + from template hash 
             );
 
             CORE_PANIC("QueryBakeTemplateSymID is not implemented yet");
