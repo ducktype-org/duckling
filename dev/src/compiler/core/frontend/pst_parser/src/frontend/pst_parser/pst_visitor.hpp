@@ -49,6 +49,6 @@ namespace pst {
 		BindingPattern,
 		ValuePattern,
 		Expand,
-		TemplateDecl
+		TemplateStmt
 	);
 }

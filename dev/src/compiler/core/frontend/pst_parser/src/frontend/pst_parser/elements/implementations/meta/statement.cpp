@@ -98,21 +98,6 @@ namespace pst {
 		template<class T>
 		concept FunctionLike = std::same_as<T, Fun> || std::same_as<T, Pattern>;
 
-		template<>
-		struct StmtFinder<TemplateDecl> {
-			/**
-			 * @brief Calculates the heuristic for where a given statement ends. Can be overriden
-			 * when needed.
-			 */
-			static u64 findStatementLength(LangParserState& state) {
-				// skip template and parameters:
-				if (!state[0].is(Keyword::Template)) return 0;
-				if (!state[1].is(lexer::Token::Type::BracketGroup)) return 1;
-
-				return 3 + state.ctokens().countUntil<StmtClassifiers<TemplateDecl>::isStmtEnd>(3);
-			}
-		};
-
 		template<class T>
 		requires FunctionLike<T> struct StmtFinder<T> {
 		private:
@@ -218,10 +203,6 @@ namespace pst {
 
 			case Keyword::FunDecl:
 				return internal::parseStmt<FunDecl>(state);
-
-			case Keyword::Template:
-				std::cerr << "Parsing template declaration\n";
-				return internal::parseStmt<TemplateDecl>(state);
 
 			case Keyword::Pattern:
 				return internal::parseStmt<Pattern>(state);
@@ -342,8 +323,11 @@ namespace pst {
 
 		MBox<Stmt> out;
 
-		// Specifier block handling
-		if (!prefixes.specifiers.empty() && state[0].isBracketGroup(Token::Curly)) {
+		if (state[0].is(Keyword::Template)) {
+			// Template statement handling
+			out = TemplateStmt::parse(state);
+		} else if (!prefixes.specifiers.empty() && state[0].isBracketGroup(Token::Curly)) {
+			// Specifier block handling
 			out = internal::parseStmt<SpecifierBlock>(state);
 		} else {
 			// Parse Statement based on context

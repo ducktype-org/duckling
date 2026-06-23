@@ -1,6 +1,6 @@
 #include "templates.hpp"
 
-#include <frontend/pst_parser/elements/hierarchy/declarations/template_decl.hpp>
+#include <frontend/pst_parser/elements/hierarchy/declarations/template_stmt.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp> // PR relax it?
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp> //PR relax it?
 #include <frontend/pst_parser/elements/hierarchy/lists/all_lists.hpp> // PR relax it?
@@ -38,7 +38,7 @@ namespace compiler::helios::templates {
         SymID baked_template_sym_id;
 
         // TODO: add custom pst element todo issue (link root pst data one) 
-        pst::PST<pst::TemplateDecl> baked_template_pst;
+        pst::PST<pst::TemplateStmt> baked_template_pst;
     };
 
 
@@ -118,9 +118,9 @@ namespace compiler::helios::templates {
             CORE_ASSERT(kind(key.template_sym_id) == SymbolKind::Template, "SymID is not a Template");
 
             auto pst_statement = stmt(ctx, key.template_sym_id).value();
-            auto template_statement = pst_statement.dynamicCast<pst::TemplateDecl>().value();
+            auto template_statement = pst_statement.dynamicCast<pst::TemplateStmt>().value();
 
-            auto template_params = template_statement->getParams().unlock(ctx);
+            auto template_params = template_statement->getTemplateDecl().unlock(ctx)->getParams().unlock(ctx);
 
             // This should be an error:!!
             CORE_ASSERT(
@@ -137,13 +137,13 @@ namespace compiler::helios::templates {
             
             std::cerr << "Running clone now!  \n";
             
-            auto cloned = template_statement->clone().dynamicCast<pst::TemplateDecl>().toOptBox().value();
+            auto cloned = template_statement->clone().dynamicCast<pst::TemplateStmt>().toOptBox().value();
             
             std::cerr << "Baking pst now!  \n";
 
             auto token_source_hack = tokenizer::makeTokenSource(template_statement->getStablePosition().getActiveSourcePositionIllegalAccess().getSource()->getFile());
 
-            auto baked_pst = pst::PST<pst::TemplateDecl>::fromClone(
+            auto baked_pst = pst::PST<pst::TemplateStmt>::fromClone(
                 std::move(cloned),
                 std::move(token_source_hack),
                 pst::LangParserContext::programBaseContext(), // ???,

@@ -33,7 +33,7 @@ namespace pst {
 		Pattern,
 		Block,
 		SpecifierBlock,
-		Template,
+		TemplateStmt,
 
 		Using,
 		Alias,
@@ -85,6 +85,8 @@ namespace pst {
 		DottedName,
 		CallArgument,
 		NestedImportList,
+
+		TemplateDecl,
 
 		// wrappers
 		OperatorWrapper,

@@ -580,8 +580,8 @@ namespace compiler::helios {
 				pst_data
 			);
 		}
-		case pst::StmtKind::TemplateDecl: {
-			auto template_decl = stmt.dynamicCast<pst::TemplateDecl>().value();
+		case pst::StmtKind::TemplateStmt: {
+			auto template_decl = stmt.dynamicCast<pst::TemplateStmt>().value();
 			return SymbolData::makePSTSymbolData(
 				{
 					.name                 = template_decl->getDeclSymbolIdentifier()->unlock(ctx)->unwrap(), // TODO: inc double check

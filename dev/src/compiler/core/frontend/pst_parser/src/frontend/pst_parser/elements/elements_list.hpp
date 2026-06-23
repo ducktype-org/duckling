@@ -26,6 +26,7 @@ namespace pst {
 	class FormatSubElement;
 	class FormatSubExpression;
 	class FormatSubString;
+	class TemplateDecl;
 	// Wrappers
 	class OperatorWrapper;
 	class IdentifierWrapper;
@@ -66,7 +67,7 @@ namespace pst {
 	class If;
 	class While;
 	class For;
-	class TemplateDecl;
+	class TemplateStmt;
 	// Actions
 	class Return;
 	class Continue;

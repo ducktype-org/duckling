@@ -1,29 +1,31 @@
 #pragma once
 
-#include "../lists/parameter_list.hpp"
+#include "../not_statements/template_decl.hpp"
 #include "preamble.hpp"
 
 namespace pst {
 	/**
 	 * @brief Template declaration
 	 */
-	class TemplateDecl final: public Decl {
-		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(TemplateDecl, Decl);
+	class TemplateStmt final: public Decl {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(TemplateStmt, Decl);
 		CLONE_SUBELEMENTS();
 
 	protected:
-		NAMED_CHILD(params, ParamList);  // {} vs (), mock for now
+		NAMED_CHILD(template_decl, TemplateDecl);
 		NAMED_CHILD(inner_statement, Stmt);
+
+		base::Optional<AccessLocked<IdentifierWrapper>> inner_decl_symbol;
 
 	protected:
 		HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const override;
 
 	public:
-		DECL_CHILD_CONSTRUCTOR(TemplateDecl, ElementKind::Template);
+		DECL_CHILD_CONSTRUCTOR(TemplateStmt, ElementKind::TemplateStmt);
 
 		[[nodiscard]]
-		AccessLocked<ParamList> getParams() const {
-            return params.give();
+		AccessLocked<TemplateDecl> getTemplateDecl() const {
+            return template_decl.give();
 		}
         
         [[nodiscard]]
@@ -33,19 +35,17 @@ namespace pst {
 
 		bool trailingSemicolon() override { return false; } 
 
-
-		static MBox<TemplateDecl> parse(LangParserState& state);
+		static MBox<TemplateStmt> parse(LangParserState& state);
 		void                 dprint(std::ostream& out) const final;
-		~TemplateDecl() final = default;
+		~TemplateStmt() final = default;
 
 		[[nodiscard]]
 		std::string elementType() const override {
-			return "Template Declaration";
+			return "Template Statement";
 		}
 
 		[[nodiscard]]
 		base::Optional<AccessLocked<IdentifierWrapper>> getDeclSymbolIdentifier() const final {
-            // TODO PR: this breaks incremental maybe?
 			return inner_statement.internal()->getDeclSymbolIdentifier();
 		}
 

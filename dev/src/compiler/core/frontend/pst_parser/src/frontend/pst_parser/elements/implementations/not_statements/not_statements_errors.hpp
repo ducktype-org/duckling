@@ -118,4 +118,17 @@ namespace pst {
 		NoExternArgumentError(dia::SourcePosition pos):
 			  dia_int::MessageWithCodeFragmentAndCause(pos) {}
 	};
+
+	class TemplateNoListError final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "template_no_list_error" };
+		}
+
+	public:
+		TemplateNoListError(dia::SourcePosition pos):
+			  dia_int::MessageWithCodeFragmentAndCause(pos) {}
+	};
 }
