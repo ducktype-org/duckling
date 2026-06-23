@@ -20,8 +20,6 @@ Tests:
   # In custom std instead of the default one we have a different implementation
   # of builtin_output that output 20 for the same `no_std` user code.
   custom_std:
-
-    enable_conc_deterministic_tests: "false"
     module_to_compile: "uses_std"
     compile_dvm_options: "--custom-std-path custom_std"
     compile_llvm_options: "--custom-std-path custom_std"

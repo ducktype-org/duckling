@@ -75,7 +75,6 @@ Tests:
           String: 'VMThread has panicked: Accessing null pointer\n{\"data\":{\"error\":\"Execution panicked with error: Accessing null pointer\"},\"type\":\"OtherError\"}block.refcount != 0, BlockID=1\n'
         ExitCode: 1
   slices:
-    enable_conc_deterministic_tests: "false"
     Cases:
       llvm:
         backend: llvm
@@ -83,7 +82,6 @@ Tests:
           String: "4\nabc\na"
         ExitCode: 0
   slices_out_of_bounds:
-    enable_conc_deterministic_tests: "false"
     Cases:
       llvm:
         backend: llvm

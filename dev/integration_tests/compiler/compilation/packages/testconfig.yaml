@@ -6,10 +6,6 @@
 # DVM artifacts are produced but not executed (DVM execution not yet hooked up
 # for multi-package output).
 
-# DVM fails in determinizm check
-enable_conc_deterministic_tests: "false"
-
-
 compile_deterministically_cmd: "if [ '@{enable_conc_deterministic_tests}' = 'true' ]; then python3 @{compile_determinism_script} --duckc-path @{duckc_path} --manifest duck_modules/@{Name}/manifest.json --duckc-worker-count @{duckc_worker_count}; else true; fi"
 compile_only_cmd:  "@{duckc_path} compile_packages duck_modules/@{Name}/manifest.json -w @{duckc_worker_count} -a build"
 

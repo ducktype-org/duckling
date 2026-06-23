@@ -1,4 +1,6 @@
-# @TODO: #2448 Investigate why deterministic compilation check fails for these tests
+# These are negative compilation tests: the package intentionally has no main
+# source file, so compilation is expected to fail. The determinism pre-check
+# only applies to packages that compile successfully, so it is disabled here.
 enable_conc_deterministic_tests: "false"
 
 Tests:

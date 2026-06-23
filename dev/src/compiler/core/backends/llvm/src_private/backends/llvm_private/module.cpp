@@ -12,7 +12,9 @@
 
 #include <logger/logger.hpp>
 
+#include <algorithm>
 #include <iostream>
+#include <vector>
 
 namespace compiler::backend_llvm {
 	Module::Module(const base::StrID module_id): impl(initModuleImpl(module_id)) {}
@@ -87,8 +89,25 @@ namespace compiler::backend_llvm {
 			mod.addFunctionToModuleDtors(ctx, CRef<lir::Function>(&module_dtor));
 		}
 
-		for (const auto& lir_function: lir_unit.lir_functions)
-			mod.addFunctionToModule(ctx, lir_function);
+		// Emit functions in a deterministic order (by mangled name) instead of in
+		// discovery order. The order in which functions are lowered into the LIR unit
+		// depends on query worker-thread scheduling, and emitting them in that order
+		// makes the produced object file layout (and LLVM constant-pool numbering)
+		// non-deterministic. Sorting here keeps concurrent compilation byte-identical
+		// to single-threaded compilation. Mangled names are unique per module by
+		// construction (upstream MIR lowering, and REPL symbol dedup), so the order is
+		// fully determined. Function order has no semantic effect (unlike
+		// globals/ctors/dtors, which are intentionally left in their original order).
+		// Compare via strView() (lexicographic content order), NOT StrID::operator<,
+		// whose ordering is by interning id and therefore itself non-deterministic.
+		std::vector<CRef<lir::Function>> sorted_functions(
+			lir_unit.lir_functions.begin(), lir_unit.lir_functions.end()
+		);
+		std::ranges::sort(sorted_functions, [](const auto& lhs, const auto& rhs) {
+			return lhs->mangled_name.strView() < rhs->mangled_name.strView();
+		});
+
+		for (const auto& lir_function: sorted_functions) mod.addFunctionToModule(ctx, lir_function);
 
 		CORE_ASSERT(
 			mod.verify().isOk(),
