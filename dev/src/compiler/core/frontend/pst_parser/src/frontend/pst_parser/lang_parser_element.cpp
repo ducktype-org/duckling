@@ -190,6 +190,14 @@ namespace pst {
 		additional_root_data.emplace(std::move(data));
 	}
 
+	// XD:
+	void LangElement::resetAdditionalRootData(AdditionalRootData data) {
+		CORE_ASSERT(additional_root_data.has_value(), "Additional root data not set");
+		CORE_ASSERT(!parent.has_value(), "Only root elements can have additional root data");
+		additional_root_data.reset();
+		additional_root_data.emplace(std::move(data));
+	}
+
 	void LangElement::acceptVisitor(PstVisitor&) const {
 		CORE_PANIC("PstVisitor not supported for " + elementType());
 	}

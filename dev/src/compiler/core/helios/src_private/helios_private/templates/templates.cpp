@@ -146,6 +146,35 @@ namespace compiler::helios::templates {
 
             auto baked_root = baked_pst.getRootElement().unlock(ctx);
             auto baked_statement = baked_root->getInnerStatement();
+
+            // we are looping here with the scope i think:
+            baked_pst.setAdditionalRootData(pst::AdditionalRootData{
+                .pst_parent = pst::AdditionalRootData::TemplateParent{
+                    .template_bake_data = TemplateBakePSTLinkedData{
+                        // .instantiated_sym_id = SymID{}, // TODO: generate new sym_id for baked template
+                        .pst_parent_element = template_statement->getParent().value(), // TODO: change to pst layer call.. templtaes in macros :o
+                        .template_arguments_symbols = {}
+                    }
+                }
+            });
+
+            // we only set args, after we can run bakeTemplateArgumentsSymbols
+
+            auto args = bakeTemplateArgumentsSymbols(ctx, template_params, 
+                        
+                            ctx.query<QueryPrimaryCodeScopeFor>({ baked_root })
+                        );
+            
+            // this can totally race, if left without sync:
+            baked_pst.resetAdditionalRootData(pst::AdditionalRootData{
+                .pst_parent = pst::AdditionalRootData::TemplateParent{
+                    .template_bake_data = TemplateBakePSTLinkedData{
+                        // .instantiated_sym_id = SymID{}, // TODO: generate new sym_id for baked template
+                        .pst_parent_element = template_statement->getParent().value(), // TODO: change to pst layer call.. templtaes in macros :o
+                        .template_arguments_symbols = args
+                    }
+                }
+            });
             
             std::cerr << "Baked statement!  \n";
 
@@ -154,18 +183,7 @@ namespace compiler::helios::templates {
 
             std::cerr << "Baked template sym_id: " << name(baked_sym_id).strView() << "\n";
 
-            baked_pst.setAdditionalRootData(pst::AdditionalRootData{
-                .pst_parent = pst::AdditionalRootData::TemplateParent{
-                    .template_bake_data = TemplateBakePSTLinkedData{
-                        // .instantiated_sym_id = SymID{}, // TODO: generate new sym_id for baked template
-                        .pst_parent_element = template_statement->getParent().value(), // TODO: change to pst layer call.. templtaes in macros :o
-                        .template_arguments_symbols = bakeTemplateArgumentsSymbols(ctx, template_params, 
-                        
-                            ctx.query<QueryPrimaryCodeScopeFor>({ baked_root })
-                        )
-                    }
-                }
-            });
+            
 
             return TemplateBakeStorage{
                 .baked_template_sym_id = baked_sym_id,

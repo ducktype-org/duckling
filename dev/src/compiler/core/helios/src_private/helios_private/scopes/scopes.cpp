@@ -627,7 +627,7 @@ namespace compiler::helios {
 				variant_match(additional_data.pst_parent) {
 					variant_case(pst::AdditionalRootData::TemplateParent, template_parent) {
 						auto proper_data = base::anyCast<templates::TemplateBakePSTLinkedData>(template_parent.template_bake_data);
-						for (const auto& param: proper_data.template_arguments_symbols) {
+						for (const auto& param: proper_data.template_arguments_symbols.value()) {
 							out.emplace_back(param);
 						}
 					}

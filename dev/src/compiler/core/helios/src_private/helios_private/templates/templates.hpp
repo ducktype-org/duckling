@@ -40,7 +40,8 @@ namespace compiler::helios::templates {
 
         pst::AccessLocked<pst::LangElement> pst_parent_element;
 
-        std::vector<SymID> template_arguments_symbols;
+        // hack 2:
+        base::Optional<std::vector<SymID>> template_arguments_symbols;
 
         // std::vector<ctv::CompileTimeValue> template_arguments;
     };

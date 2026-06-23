@@ -538,6 +538,8 @@ namespace pst {
 		 * @note This should only be used for root elements of the PST.
 		 */
 		void setAdditionalRootData(AdditionalRootData data);
+		
+		void resetAdditionalRootData(AdditionalRootData data);
 
 	private:
 		PstID id = PstID::next();
