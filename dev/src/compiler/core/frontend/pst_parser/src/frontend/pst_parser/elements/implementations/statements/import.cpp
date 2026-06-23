@@ -4,6 +4,8 @@
 #include "preamble.hpp"
 
 namespace pst {
+	CLONE_SUB_ELEMENTS_DEF(Import, import_chain);
+
 	MBox<Import> Import::parse(LangParserState& state) {
 		auto out = makeBox<Import>(state);
 

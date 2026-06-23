@@ -1,0 +1,8 @@
+function main {} -> { i64 } {
+
+	init_pany_type     x, i64;
+	mov_p64_imm        x, 42;
+    call_builtinfunc  builtin_output_i64;
+
+	ret;
+}

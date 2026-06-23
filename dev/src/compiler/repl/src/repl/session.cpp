@@ -198,7 +198,32 @@ namespace compiler::repl {
 			attach_result.has_value(), "ReplSession::initDVM: Failed to attach I/O to DVM process"
 		);
 
-		CORE_DEV_LOG(REPL, "DVM initialized with PID ", m_dvm_pid, "\n");
+		CORE_DEV_LOG(REPL, "DVM initialized with PID ", m_dvm_pid.asInt(), "\n");
+	}
+
+	void ReplSession::preloadStandardLibrary() {
+		std::string error_message;
+		runWithContextErrorHandling(
+			"Unexpected error while preloading the standard library: ",
+			[&](query::Context& ctx) {
+				// Reuse the persistent statement-lowering context so functions loaded here are
+			    // recorded as already-lowered and are not re-emitted for later statements.
+				if (!m_lowering_context.has_value()) m_lowering_context.emplace(ctx);
+				m_lowering_context->setContext(ctx);
+				defer(m_lowering_context->invalidateContext());
+
+				auto load_result = compiler::repl::preloadStandardLibrary(
+					ctx, m_dvm_pid, m_lowering_context.value()
+				);
+				if (!load_result.has_value())
+					error_message = "Failed to load standard library: " + load_result.error();
+			},
+			error_message
+		);
+
+		// A missing or broken standard library should not abort the REPL: report it and keep
+		// going so code that does not rely on the standard library still works.
+		if (!error_message.empty()) std::cerr << error_message << "\n";
 	}
 
 	void ReplSession::saveSessionHistoryToFile() const {
@@ -414,6 +439,7 @@ namespace compiler::repl {
 		  m_frontend(completions_enabled, bracketed_paste_enabled),
 		  m_lowering_context() {
 		initDVM();
+		preloadStandardLibrary();
 	}
 
 	ReplResult ReplSession::loadScriptFile(std::string_view file_path) {

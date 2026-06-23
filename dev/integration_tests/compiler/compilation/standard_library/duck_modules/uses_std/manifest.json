@@ -12,12 +12,12 @@
         {
             "package": "uses_std",
             "strategy": "native",
-            "output_file": "package_llvm"
+            "output_file": "package_llvm.exe"
         },
         {
             "package": "uses_std",
-            "strategy": "dvm",
-            "output_file": "package_dvm"
+            "strategy": "dvm_exe",
+            "output_file": "package_dvm.dbc"
         }
     ]
 }

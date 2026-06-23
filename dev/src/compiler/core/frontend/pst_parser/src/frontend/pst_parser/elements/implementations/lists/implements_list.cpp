@@ -4,6 +4,8 @@
 #include "impl_template.hpp"
 
 namespace pst {
+	CLONE_SUB_ELEMENTS_DEF(ImplementsList, elements);
+
 	MBox<ImplementsList> ImplementsList::parse(LangParserState& state) {
 		return ListParsingTemplate::parseList<
 			ImplementsElementExprHolder,

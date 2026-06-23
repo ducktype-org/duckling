@@ -21,7 +21,7 @@ Tests:
       all:
         backend: all
         Output:
-          String: "1\n1\n30\n200\n3\n2\n"
+          String: "1\n1\n30\n200\n3\n2\n10\n7\n10\n-10\n"
         ExitCode: 0
 
   comparison_chain:

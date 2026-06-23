@@ -12,7 +12,7 @@ Tests:
       llvm:
         backend: llvm
         Output:
-          String: ""
+          String: "1\n4\n"
         ExitCode: 0
   person:
     Cases:

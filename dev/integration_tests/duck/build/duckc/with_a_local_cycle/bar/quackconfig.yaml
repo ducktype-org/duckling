@@ -1,0 +1,8 @@
+metadata:
+  name: bar
+  version: '1.0.0'
+
+dependencies:
+ baz:
+  source:
+    path: ../baz/

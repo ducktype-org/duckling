@@ -272,19 +272,23 @@ namespace {
 		}
 	};
 
-	std::expected<void, VmEvaluationError> loadLirFunctions(
-		CompTimeDVM&                                      comptime_dvm,
-		const std::vector<CRef<compiler::lir::Function>>& all_lir_functions,
-		query::Context&                                   query_ctx
+	std::expected<void, VmEvaluationError> loadLIRUnit(
+		CompTimeDVM& comptime_dvm, const compiler::lir::LIRUnit& lir_unit, query::Context& query_ctx
 	) {
-		compiler::backend_vm::DVMCodeBuilder m(query_ctx, false, true);
+		static std::atomic<int> module_counter{};
 
-		// Insert comptime context intto the module, for the module to pass the validation. This code
+		// @TODO: #2971 So comp-time and repl are both loading the code incrementally into VM, but
+		// they are using different methods... Maybe use the repl incremental context here?
+		auto backend_module_name
+			= base::StrID(base::strConcat("module_", module_counter.fetch_add(1)));
+		compiler::backend_vm::DVMCodeBuilder m(query_ctx, backend_module_name, false, true);
+
+		// Insert comptime context into the module, for the module to pass the validation. This code
 		// although loaded here multiple times will be deduplicated by `CompTimeDVM::loadCode()`
 		auto comptime_code = comptime_ops::getComptimeTypeOperations(*comptime_dvm.getPID());
 		m.insertRawBytecodeDefinitions(comptime_code);
+		m.insertLIRUnit(lir_unit);
 
-		for (const auto& lir_function: all_lir_functions) m.insertLIRFunction(lir_function);
 		auto bytecode = m.build();
 
 		return comptime_dvm.loadCode(bytecode);
@@ -363,7 +367,7 @@ namespace compiler::helios {
 	std::expected<ctv::CompileTimeValue, VmEvaluationError> executeInVm(
 		query::Context&                           ctx,
 		const std::string&                        func_name,
-		const std::vector<CRef<lir::Function>>&   lir_functions,
+		const lir::LIRUnit&                       lir_unit,
 		const std::vector<ctv::CompileTimeValue>& args,
 		const tsh::SymbolType<>&                  return_type
 	) {
@@ -380,7 +384,7 @@ namespace compiler::helios {
 				"Failed to initialize the comptime DVM process."
 			));
 
-		if (auto res = loadLirFunctions(comptime_dvm, lir_functions, ctx); !res)
+		if (auto res = loadLIRUnit(comptime_dvm, lir_unit, ctx); !res)
 			return std::unexpected(res.error());
 
 		if (auto res = setQueryContext(comptime_dvm, ctx); !res)
