@@ -43,8 +43,8 @@ namespace compiler::helios {
 		}
 
 		GeneratedSymbolData::TemplateBakeConstant::TemplateBakeConstant(
-			tsh::SymbolType<> type, ctv::CompileTimeValue value
-		): type(type), value(std::move(value)) {}
+			tsh::SymbolType<> type, ctv::CompileTimeValue value, ScopeID scope
+		): type(type), value(std::move(value)), scope(scope) {}
 
 		base::Bit256 GeneratedSymbolData::TemplateBakeConstant::queryUnstablePerfectHash() const {
 			hashing::SHA256 hasher;
@@ -344,6 +344,9 @@ namespace compiler::helios {
 				}
 				variant_case(ReplInstructionWrapper, repl) {
 					CORE_PANIC("Can't get scope of repl instruction wrapper yet.");
+				}
+				variant_case(TemplateBakeConstant, constant) {
+					return constant.scope;
 				}
 				variant_case(ScriptMainWrapper, script) { return script.scope; }
 			}

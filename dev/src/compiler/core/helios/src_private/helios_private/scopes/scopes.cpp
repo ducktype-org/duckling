@@ -208,7 +208,8 @@ namespace compiler::helios {
 
 		case pst::ElementKind::Template:
 			// make sure this is ok!
-			return ElementScopeKind::Transparent;
+			// link the issue, this is a total hack
+			return ElementScopeKind::Standard; // this sort of works only for baked ones now,
 
 		case pst::ElementKind::FormatSubExpression:
 		case pst::ElementKind::FormatSubString:

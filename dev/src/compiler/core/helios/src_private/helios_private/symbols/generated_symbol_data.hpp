@@ -98,8 +98,9 @@ namespace compiler::helios::defgen {
 
 			tsh::SymbolType<>	 type;
 			ctv::CompileTimeValue value;
+			ScopeID scope;
 
-			TemplateBakeConstant(tsh::SymbolType<> type, ctv::CompileTimeValue value);
+			TemplateBakeConstant(tsh::SymbolType<> type, ctv::CompileTimeValue value, ScopeID scope);
 
 			// will we need scope here?
 			// for mangling maybe?

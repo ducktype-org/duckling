@@ -11,6 +11,7 @@
 #include <helios_private/symbols/symbols.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
+#include <helios_private/scopes/scopes.hpp>
 // #include <helios_private/hout_creation/definition_generation/
 #include <helios/tsh/deductions.hpp>
 
@@ -43,8 +44,8 @@ namespace compiler::helios::templates {
 
     struct IMPLEMENT_QUERY(QueryBakeTemplateSymID, query::QResult<TemplateBakeStorage>) {
 
-        static std::vector<SymID> bakeTemplateArgumentsSymbols(Context& ctx, pst::Access<pst::ParamList> template_params) {
-        
+        static std::vector<SymID> bakeTemplateArgumentsSymbols(Context& ctx, pst::Access<pst::ParamList> template_params, ScopeID scope) {
+    
 
             std::vector<SymID> symbols;
             
@@ -73,7 +74,7 @@ namespace compiler::helios::templates {
                 auto const_symbol = ctx.query<defgen::QueryGeneratedSymbol>(defgen::KeyFor_QueryGeneratedSymbol{
                     .name = name,
                     .generated_symbol_data = defgen::GeneratedSymbolData{defgen::GeneratedSymbolData::TemplateBakeConstant{
-                        type, std::move(value_ctv)
+                        type, std::move(value_ctv), scope
                     }},
                 });
 
@@ -139,19 +140,12 @@ namespace compiler::helios::templates {
                 // context...?
                 // hash...? from key hash + from template hash 
             );
-            baked_pst.setAdditionalRootData(pst::AdditionalRootData{
-                .pst_parent = pst::AdditionalRootData::TemplateParent{
-                    .template_bake_data = TemplateBakePSTLinkedData{
-                        // .instantiated_sym_id = SymID{}, // TODO: generate new sym_id for baked template
-                        .pst_parent_element = template_statement->getParent().value(), // TODO: change to pst layer call.. templtaes in macros :o
-                        .template_arguments_symbols = bakeTemplateArgumentsSymbols(ctx, template_params)
-                    }
-                }
-            });
+            
 
             std::cerr << "Baked template pst!  \n";
 
-            auto baked_statement = baked_pst.getRootElement().unlock(ctx)->getInnerStatement();
+            auto baked_root = baked_pst.getRootElement().unlock(ctx);
+            auto baked_statement = baked_root->getInnerStatement();
             
             std::cerr << "Baked statement!  \n";
 
@@ -159,6 +153,19 @@ namespace compiler::helios::templates {
             auto baked_sym_id = ctx.query<QuerySymbolOfSTMT>(baked_statement).valueOrThrow();
 
             std::cerr << "Baked template sym_id: " << name(baked_sym_id).strView() << "\n";
+
+            baked_pst.setAdditionalRootData(pst::AdditionalRootData{
+                .pst_parent = pst::AdditionalRootData::TemplateParent{
+                    .template_bake_data = TemplateBakePSTLinkedData{
+                        // .instantiated_sym_id = SymID{}, // TODO: generate new sym_id for baked template
+                        .pst_parent_element = template_statement->getParent().value(), // TODO: change to pst layer call.. templtaes in macros :o
+                        .template_arguments_symbols = bakeTemplateArgumentsSymbols(ctx, template_params, 
+                        
+                            ctx.query<QueryPrimaryCodeScopeFor>({ baked_root })
+                        )
+                    }
+                }
+            });
 
             return TemplateBakeStorage{
                 .baked_template_sym_id = baked_sym_id,
