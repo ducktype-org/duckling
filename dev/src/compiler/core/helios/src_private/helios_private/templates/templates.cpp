@@ -55,7 +55,7 @@ namespace compiler::helios::templates {
                 auto value_expression = param_unlocked->getValue()->unlock(ctx)->getExpr();
                 auto name = param_unlocked->getName().unlock(ctx)->unwrap();
 
-                auto type_ctv = getTypeCTVFromPST(ctx, type_expression).valueOrThrow();
+                auto type_ctv = getTypeCTVFromPST(ctx, type_expression.unlock(ctx)->getExpr()).valueOrThrow();
 
                 auto type = tsh::deductions::declarationTypeFromProvidedType(
                         type_ctv.get<tsh::SymbolType<>>().value(),
