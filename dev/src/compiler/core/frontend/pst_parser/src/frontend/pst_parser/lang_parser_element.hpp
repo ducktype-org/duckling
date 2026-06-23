@@ -60,11 +60,15 @@ namespace pst {
 			std::any module_id;
 		};
 
+		struct TemplateParent final {
+			std::any template_bake_data;
+		};
+
 		/**
 		 * @brief Source of PST.
 		 * @note This is used mostly for determining the parent helios-scope of PST root elements.
 		 */
-		std::variant<MacroExpansionParent, ModuleParent> pst_parent;
+		std::variant<MacroExpansionParent, ModuleParent, TemplateParent> pst_parent;
 	};
 
 	/**

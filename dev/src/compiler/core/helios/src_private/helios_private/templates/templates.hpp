@@ -32,7 +32,7 @@ namespace compiler::helios::templates {
      * @brief Data produced by baking a template symbol ID.
      * TODO: this will be passed to PST root in type-opaque way, so other helios code can retrieve it when needed. 
      */
-    struct TemplateInstantiationData final {
+    struct TemplateBakePSTLinkedData final {
         TemplateKind kind;
         SymID instantiated_sym_id;
         std::vector<ctv::CompileTimeValue> template_arguments;

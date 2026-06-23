@@ -8,6 +8,7 @@
 #include <frontend/pst_parser/lang_parser_context.hpp>
 
 #include <helios/symbols/symbol_id_utils.hpp>
+#include <helios_private/symbols/symbols.hpp>
 
 #include <query_framework/standard_query/query_impl.hpp>
 #include <hashing/hashing_algorithms.hpp>
@@ -33,7 +34,7 @@ namespace compiler::helios::templates {
 
         // TODO: add custom pst element todo issue (link root pst data one) 
         pst::PST<pst::TemplateDecl> baked_template_pst;
-    }
+    };
 
 
     struct IMPLEMENT_QUERY(QueryBakeTemplateSymID, query::QResult<TemplateBakeStorage>) {
@@ -74,7 +75,7 @@ namespace compiler::helios::templates {
             // TODO: get hash from context???
             hashing::ComponentHash hash_ctx = hashing::ComponentHash(base::StrID(key.queryUnstablePerfectHash().toStringHex()));
 
-            auto pst = pst::PST<pst::TemplateDecl>::fromClone(
+            auto baked_pst = pst::PST<pst::TemplateDecl>::fromClone(
                 template_statement->clone().dynamicCast<pst::TemplateDecl>().toOptBox().value(),
                 pst::LangParserContext::programBaseContext(), // ???,
                 hash_ctx // ???
@@ -82,6 +83,11 @@ namespace compiler::helios::templates {
                 // context...?
                 // hash...? from key hash + from template hash 
             );
+
+
+            auto baked_statement = baked_pst.getRootElement().unlock(ctx)->getInnerStatement();
+
+            auto baked_sym_id = ctx.query<QuerySymbolOfSTMT>(baked_statement);
 
             CORE_PANIC("QueryBakeTemplateSymID is not implemented yet");
         }

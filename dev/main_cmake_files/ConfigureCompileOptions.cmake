@@ -27,6 +27,7 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 		"-Werror=free-nonheap-object "
 		"-Werror=conversion "
 		"-Werror=implicit-fallthrough "
+		"-Werror=reorder "
 		"-Wall -Wextra "
 		"-pedantic "
 		"-Wno-sign-compare "

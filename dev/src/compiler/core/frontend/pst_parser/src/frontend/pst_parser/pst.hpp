@@ -196,8 +196,8 @@ namespace pst {
 			file(
 				tokenizer::makeTokenSource(element_to_clone->getStablePosition().getActiveSourcePositionIllegalAccess().getSource()->getFile())
 			),
-			hash_ctx_info(std::move(hash_ctx)),
-			element(AccessInternalAnonymous<Element>(std::move(element_to_clone)))
+			element(AccessInternalAnonymous<Element>(std::move(element_to_clone))),
+			hash_ctx_info(std::move(hash_ctx))
 		{
 			// TODO: imports???
 			calcElementPathHash();
