@@ -1,5 +1,6 @@
 #pragma once
 
+#include <base/extend_cpp/variant_match.hpp>
 #include <base/pointers/ref.hpp>
 #include <base/types/bits_and_bytes.hpp>
 
