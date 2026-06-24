@@ -23,9 +23,11 @@ namespace vm::jit::cnp {
 		DynamicLibrary& operator=(DynamicLibrary&&) noexcept;
 		~DynamicLibrary() noexcept;
 
-		std::byte*                 findSymbol(const char* name) const;
-		base::Optional<std::byte*> maybeFindSymbol(const char* name) const;
-		static DynamicLibrary      fromMemory(std::span<const byte> library_bytes);
+		std::byte*                                        findSymbol(const char* name) const;
+		base::Optional<std::byte*>                        maybeFindSymbol(const char* name) const;
+		static std::expected<DynamicLibrary, std::string> fromMemory(
+			std::span<const byte> library_bytes
+		);
 
 	private:
 		DynamicLibrary(int in_lib_fd, void* in_lib_handle):

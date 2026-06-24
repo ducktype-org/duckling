@@ -8,34 +8,37 @@
 	#include <sys/mman.h>
 	#include <unistd.h>
 
-	#include <cstring>
-	#include <format>
-
 namespace vm::jit::cnp {
-	DynamicLibrary DynamicLibrary::fromMemory(std::span<const byte> library_bytes) {
+	std::expected<DynamicLibrary, std::string> DynamicLibrary::fromMemory(
+		std::span<const byte> library_bytes
+	) {
 		int fd = memfd_create("lib", 0);
-		CORE_ASSERT_SYSCALL(fd != -1, "memfd_create failed:");
+		if (fd == -1) return std::unexpected<std::string>("memfd_create failed");
 
-		auto write_n = [&]() {
+		auto write_n = [&]() -> std::expected<void, std::string> {
 			usize to_write = library_bytes.size();
 			auto  ptr      = library_bytes.data();
 			while (to_write) {
 				ssize_t ret = write(fd, ptr, to_write);
-				CORE_ASSERT_SYSCALL(ret != -1, "write failed: ");
+				if (ret == -1) return std::unexpected<std::string>("write failed");
 				auto written = static_cast<usize>(ret);
 				to_write -= written;
 				ptr += written;
 			}
+			return {};
 		};
-		write_n();
-		lseek(fd, 0, SEEK_SET);
 
+		return write_n().and_then([&]() -> std::expected<DynamicLibrary, std::string> {
+			lseek(fd, 0, SEEK_SET);
 
-		auto  path   = std::format("/proc/self/fd/{}", fd);
-		void* handle = dlopen(path.data(), RTLD_NOW);
-		CORE_ASSERT_STRONG(handle, "dlopen failed: ", dlerror());  // NOLINT(concurrency-mt-unsafe)
+			auto  path   = base::strConcat("/proc/self/fd/", fd);
+			void* handle = dlopen(path.data(), RTLD_NOW);
+			// NOLINTBEGIN(concurrency-mt-unsafe)
+			if (!handle) return std::unexpected(base::strConcat("dlopen failed: ", dlerror()));
+			// NOLINTEND(concurrency-mt-unsafe)
 
-		return DynamicLibrary{ fd, handle };
+			return DynamicLibrary{ fd, handle };
+		});
 	}
 
 	DynamicLibrary::DynamicLibrary(DynamicLibrary&& dynlib) noexcept:
@@ -61,7 +64,7 @@ namespace vm::jit::cnp {
 
 	std::byte* DynamicLibrary::findSymbol(const char* name) const {
 		void* sym_loc = dlsym(lib_handle, name);
-		CORE_ASSERT_STRONG(sym_loc, "dlsym failed: ", dlerror());  // NOLINT(concurrency-mt-unsafe)
+		CORE_ASSERT(sym_loc, "dlsym failed: ", dlerror());  // NOLINT(concurrency-mt-unsafe)
 		return reinterpret_cast<std::byte*>(sym_loc);
 	}
 
