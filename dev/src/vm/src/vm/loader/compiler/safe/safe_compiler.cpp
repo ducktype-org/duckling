@@ -53,7 +53,8 @@ namespace vm::loader::compiler::safe {
 		DEFINE_LOWER_ARGUMENT_IMPL_FOR_FAMILY(
 			low::opargs::PlaceDataArgumentType,
 
-			if_opt_some(opcode_arg.frame, frame_idx) {
+			if (opcode_arg.frame.has_value()) {
+				auto& frame_idx = *opcode_arg.frame;
 				CORE_ASSERT(stack_ctx.thread_evaluating_expr.has_value(), "there should be a thread evaluating this expr");
 				auto& thread = **stack_ctx.thread_evaluating_expr;
 
@@ -80,7 +81,8 @@ namespace vm::loader::compiler::safe {
 		DEFINE_LOWER_ARGUMENT_IMPL_FOR_FAMILY(
 			low::opargs::PlaceBlockArgumentType,
 
-			if_opt_some(opcode_arg.frame, frame_idx) {
+			if (opcode_arg.frame.has_value()) {
+				auto& frame_idx = *opcode_arg.frame;
 				CORE_ASSERT(stack_ctx.thread_evaluating_expr.has_value(), "there is a thread evaluating this expr");
 				auto& thread = **stack_ctx.thread_evaluating_expr;
 
