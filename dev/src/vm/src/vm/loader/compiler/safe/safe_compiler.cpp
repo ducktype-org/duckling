@@ -59,7 +59,7 @@ namespace vm::loader::compiler::safe {
 
 				auto prev_func = thread.getFatBytecodeFunction(frame_idx);
 				auto line = thread.getCurrentHighPosition(frame_idx)->instruction_index;
-				auto relative_offset = getIntTypeSize(prev_func->getByteOffset(line, opcode_arg.var_name));
+				auto relative_offset = getIntTypeSize(*prev_func->getByteOffset(line, opcode_arg.var_name));
 				
 				usize stack_size = thread.getNumberOfCurrentStackFrames();
 
@@ -86,7 +86,7 @@ namespace vm::loader::compiler::safe {
 
 				auto prev_func = thread.getFatBytecodeFunction(frame_idx);
 				auto line = thread.getCurrentHighPosition(frame_idx)->instruction_index;
-				auto relative_offset = getIntTypeSize(prev_func->getIdx(line, opcode_arg.var_name));
+				auto relative_offset = *prev_func->getIdx(line, opcode_arg.var_name);
 				
 				usize stack_size = thread.getNumberOfCurrentStackFrames();
 
