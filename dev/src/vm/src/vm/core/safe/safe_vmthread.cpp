@@ -740,35 +740,25 @@ namespace vm {
 		return response;
 	}
 
-	base::Optional<code::StackStateID> SafeVMThread::getStackState(u64 frame_index) const {
+	base::Optional<vm::loader::FatBytecodePosition> SafeVMThread::getCurrentHighPosition(
+		u64 frame_index
+	) const {
 		auto opt_low_pos = getCurrentPosition(frame_index);
 		if_opt_none(opt_low_pos) return std::nullopt;
 
-		auto opt_high_pos
-			= safe_process.getCompiler()->mapLowVMProgramPositionToCodeCollectionPosition(
-				*opt_low_pos
-			);
-		if_opt_none(opt_high_pos) return std::nullopt;
+		auto ans = safe_process.getCompiler()->mapLowVMProgramPositionToCodeCollectionPosition(
+			*opt_low_pos
+		);
+		if_opt_none(ans) return std::nullopt;
 
-		auto& high_pos = *opt_high_pos;
-		auto  func_ref = *safe_process.getLoader()->getHighProgram()->functions().atMaybe(
-            high_pos.function_name
-        );
-
-		return func_ref->stack_states.at(high_pos.instruction_index);
+		return *ans;
 	}
 
-	base::Optional<std::tuple<CRef<code::valid_function::ValidFunction>, code::StackStateID>>
-		SafeVMThread::getFuncAndStackStateOfThread(usize frame_idx) const {
-		if (frame_idx >= getNumberOfCurrentStackFrames()) return std::nullopt;
+	MCRef<code::valid_function::ValidFunction> SafeVMThread::getFatBytecodeFunction(u64 frame_idx
+	) const {
+		if (frame_idx >= getNumberOfCurrentStackFrames()) return nullptr;
 
-		auto& frame     = getStackFrame(frame_idx);
-		auto  high_func = frame.current_function->high_func;
-		if (!high_func) return std::nullopt;
-
-		auto opt_state = getStackState(frame_idx);
-		if (!opt_state) return std::nullopt;
-
-		return std::make_tuple(*high_func.toOpt(), *opt_state);
+		auto& frame = getStackFrame(frame_idx);
+		return frame.current_function->high_func;
 	}
 }

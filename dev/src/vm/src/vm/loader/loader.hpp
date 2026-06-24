@@ -7,20 +7,11 @@
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/validator/valid_program.hpp>
 #include <vm/core/safe/safe_vmthread.hpp>
+#include <vm/loader/bytecode_pos.hpp>
 
 #include <expected>
 
 namespace vm::loader {
-	struct FatBytecodePosition {
-		base::StrID function_name;
-		usize       instruction_index;
-	};
-
-	enum class MappingException {
-		MissingMapping,
-		NoFunction,
-	};
-
 	/**
 	 * @class Loader
 	 * @brief Class, that allows for loading programs in multiple forms.

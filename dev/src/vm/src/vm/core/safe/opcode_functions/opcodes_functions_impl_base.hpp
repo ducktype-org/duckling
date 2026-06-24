@@ -558,6 +558,58 @@ namespace vm {
 		FUNCTION_CONT(0);
 	}
 
+	RETURN_TYPE OpFuns::OPCODE_NAME(ret_from_expr)(FUNCTION_ARGS) {
+		{
+			CORE_ASSERT(
+				thread.runtime_expr_low.size(),
+				"Some expression must be evaluated when executing `ret_from_expr`"
+			);
+
+			auto& expr = thread.runtime_expr_low.back();
+
+			CORE_ASSERT(
+				instr >= expr.bc.data() && instr < expr.bc.data() + expr.bc.size(),
+				"We must be evaluating the latest expression when executing `ret_from_expr`"
+			);
+
+			auto* callee_frame = frame;
+			u64   ret_count    = frame->current_function->result_types.size();
+			frame--;
+
+			std::vector<Ref<VmValue>> exit_value = {};
+
+			while (callee_frame->local_block_ref_stack_end
+			       > callee_frame->local_block_ref_stack_base) {
+				auto block         = Ref(callee_frame->local_block_ref_stack_end[-1]);
+				u64  block_ref_idx = u64(
+                    callee_frame->local_block_ref_stack_end - 1
+                    - callee_frame->local_block_ref_stack_base
+                );
+
+				if (block_ref_idx < ret_count) {
+					exit_value.emplace_back(thread.safe_process.createVmValue(
+						expr.result_types[block_ref_idx], Pointer(block, 0)
+					));
+				}
+
+				thread.process_memory.freeBlockData(block);
+				thread.process_memory.decreaseBlockRefcount(block);
+
+				callee_frame->local_block_ref_stack_end--;
+			}
+			callee_frame->resetFrameData();
+
+			instr       = frame->instr;
+			local_stack = frame->local_stack;
+
+			thread.respondExecutionRequest(api::ExprExecutionCompleted{ exit_value });
+
+			thread.runtime_expr_low.pop_back();
+			thread.runtime_expr_high.pop_back();
+		}
+		FUNCTION_CONT(0);
+	}
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(init_bany_type)(FUNCTION_ARGS) {
 		{
 			performInit(

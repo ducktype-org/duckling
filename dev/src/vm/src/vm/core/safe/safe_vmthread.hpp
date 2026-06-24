@@ -14,6 +14,7 @@
 #include <vm/core/thread/ivmthread.hpp>
 #include <vm/core/thread/kill_process_exception.hpp>
 #include <vm/core/vmvalue/vmvalue.hpp>
+#include <vm/loader/bytecode_pos.hpp>
 
 #include <limits>
 
@@ -242,12 +243,11 @@ namespace vm {
 		const Frame& getStackFrame(u64 frame_index) const;
 
 		[[nodiscard]]
-		base::Optional<code::StackStateID> getStackState(u64 frame_index) const;
+		base::Optional<vm::loader::FatBytecodePosition> getCurrentHighPosition(u64 frame_index
+		) const;
 
 		[[nodiscard]]
-		base::Optional<std::tuple<
-			CRef<code::valid_function::ValidFunction>,
-			code::StackStateID>> getFuncAndStackStateOfThread(usize frame_idx) const;
+		MCRef<code::valid_function::ValidFunction> getFatBytecodeFunction(u64 frame_idx) const;
 
 		bool loadAndExecRuntimeExpr(code::valid_function::ValidFunction&& expr);
 

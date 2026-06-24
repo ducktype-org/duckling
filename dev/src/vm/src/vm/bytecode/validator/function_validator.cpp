@@ -231,12 +231,16 @@ public:
 			CORE_ASSERT(
 				thread.has_value(), "we should be checking that there is a thread beforehand"
 			);
-			auto tpl = (*thread)->getFuncAndStackStateOfThread(frame_idx);
+			auto pos = (*thread)->getCurrentHighPosition(frame_idx);
+			if_opt_none(pos) return false;
 
-			if_opt_none(tpl) { return false; }
-			auto [high_func, stack_state] = *tpl;
+			auto high_func = (*thread)->getFatBytecodeFunction(frame_idx);
+			if (!high_func) return false;
 
-			return high_func->local_stack.contains(stack_state, place.var_name);
+			auto ans = high_func->contains(pos->instruction_index, place.var_name);
+			if (!ans) return false;
+
+			return *ans;
 		}
 		return VISIT(source, db, return db->contains(stack_state_id, place.var_name););
 	}
@@ -251,12 +255,16 @@ public:
 				CORE_ASSERT(
 					thread.has_value(), "we should be checking that there is a thread beforehand"
 				);
-				auto tpl = (*thread)->getFuncAndStackStateOfThread(frame_idx);
+				auto pos       = (*thread)->getCurrentHighPosition(frame_idx);
+				auto high_func = (*thread)->getFatBytecodeFunction(frame_idx);
 
-				CORE_ASSERT(tpl.has_value(), "all the checks should be done before");
-				auto [high_func, stack_state] = *tpl;
+				CORE_ASSERT(
+					pos.has_value() && high_func,
+					"before using method `at()` we need to check that the value is contained, so "
+					"that arguments are valid"
+				);
 
-				name_of_type = *high_func->local_stack.getTypeName(stack_state, place.var_name);
+				name_of_type = *high_func->getTypeName(pos->instruction_index, place.var_name);
 			}
 
 			opt_none {
@@ -393,8 +401,9 @@ class FunctionValidator {
 				throw InvalidFunctionCallArgumentsError(generic_arg);
 	}
 
+	template<typename RetInstr>
 	void validateRet(
-		const LocalStack& local_stack, const Op_ret& instr, const FuncSignature& current_signature
+		const LocalStack& local_stack, const RetInstr& instr, const FuncSignature& current_signature
 	) {
 		auto& returns    = current_signature.result_types;
 		usize ret_amount = returns.size();
@@ -1724,6 +1733,12 @@ class FunctionValidator {
 					std::tie(index, local_stack) = dfs_stack.back();
 					dfs_stack.pop_back();
 				}
+				instr_case(Op_ret_from_expr, instr) {
+					stack_before_instr[index] = local_stack.getStateID();
+					validateRet(local_stack, instr, function.signature);
+					std::tie(index, local_stack) = dfs_stack.back();
+					dfs_stack.pop_back();
+				}
 				instr_case(Op_call_func, instr) {
 					stack_before_instr[index] = local_stack.getStateID();
 					validateCallAndPop(local_stack, instr);
@@ -1820,7 +1835,10 @@ class FunctionValidator {
 	void validateIllegalInstructions(const std::vector<Instruction>& body) {
 		bool is_expr = thread.has_value();
 
-		if (is_expr) throwOnForbiddenOpcodes<OpCode::Op_ret_tailcall_func>(body);
+		if (is_expr)
+			throwOnForbiddenOpcodes<OpCode::Op_ret_tailcall_func, OpCode::Op_ret>(body);
+		else
+			throwOnForbiddenOpcodes<OpCode::Op_ret_from_expr>(body);
 	}
 
 public:

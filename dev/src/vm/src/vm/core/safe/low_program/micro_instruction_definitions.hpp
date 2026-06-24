@@ -415,6 +415,7 @@ DEF_MICRO_INSTR(set_threadctx, vm::low::opargs::FunctionID)
 DEF_MICRO_INSTR(ret_tailcall_func, vm::low::opargs::FunctionID)
 // return
 DEF_MICRO_INSTR(ret)
+DEF_MICRO_INSTR(ret_from_expr)
 
 // ========= STACK OPERATIONS ========
 

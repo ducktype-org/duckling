@@ -47,14 +47,16 @@ namespace vm::code {
 	public:
 		constexpr static const std::string_view ERR_MSG
 			= "Trying to return with invalid stack state";
-		instructions::Op_ret return_instr;
+		std::variant<instructions::Op_ret, instructions::Op_ret_from_expr> return_instr;
 
-		InvalidRetError(instructions::Op_ret return_instr):
+		InvalidRetError(
+			std::variant<instructions::Op_ret, instructions::Op_ret_from_expr> return_instr
+		):
 			  ValidationError(std::string{ ERR_MSG }),
 			  return_instr(return_instr) {}
 
 		[[nodiscard]] base::Optional<CRef<ElementBase>> maybeElement() const override {
-			return &return_instr;
+			return VISIT(return_instr, instr, return CRef<ElementBase>{ &instr });
 		}
 	};
 
