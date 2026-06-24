@@ -18,7 +18,7 @@ namespace compiler::driver {
 	) {
 		time_stats::TrackCategoryTime _(time_stats::TimeCategories::BackendCompilation);
 
-		backend_vm::DVMCodeBuilder module(query_ctx, build_debug_info, false);
+		backend_vm::DVMCodeBuilder module(query_ctx, data->module_id, build_debug_info, false);
 
 		module.insertLIRUnit(data->lir_unit);
 

@@ -75,9 +75,6 @@ DEF_INSTR(setNull_pptr, (vm::opargs::PlacePtr, dst))
 // Copies an opaque value
 DEF_INSTR(mov_popq_popq, (vm::opargs::PlaceOpq, dst), (vm::opargs::PlaceOpq, src))
 
-// Copies an opaque value between globals and locals
-DEF_INSTR(mov_popq_imm, (vm::opargs::PlaceOpq, dst), (vm::opargs::Immediate, src))
-
 
 // ========= SIGNED INTEGER ARITHMETIC OPERATIONS ========
 

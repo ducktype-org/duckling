@@ -5,7 +5,6 @@
 #include "symbol_kind.hpp"
 
 #include <frontend/pst_parser/elements/hierarchy/declarations/class.hpp>
-#include <frontend/pst_parser/elements/hierarchy/not_statements/class_block.hpp>
 #include <frontend/pst_parser/elements/includes/basic.hpp>
 #include <frontend/pst_parser/pst_visitor.hpp>
 #include <helios_private/comp_time/comp_time.hpp>

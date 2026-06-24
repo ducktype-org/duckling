@@ -117,7 +117,7 @@ class PSTErrorTests: public tester::TestSuite {
 		}
 	};
 
-	template<std::derived_from<pst::ClassStmt> Element, bool good = true, typename Parser = Element>
+	template<std::derived_from<pst::Stmt> Element, bool good = true, typename Parser = Element>
 	struct ClassStmtExample: public GenExample {
 		base::StrID class_name;
 
@@ -130,7 +130,9 @@ class PSTErrorTests: public tester::TestSuite {
 		bool operator()() override {
 			auto parsed = pst::PST<Element, Parser>::fromContentsWithArgs(
 				this->code,
-				makeBox<pst::LangParserContext>(class_name, pst::BlockOrderType::Unordered),
+				makeBox<pst::LangParserContext>(
+					class_name, pst::BlockOrderType::Unordered, pst::StmtContext::Class
+				),
 				hashing::ComponentHash{}
 			);
 			return ((not parsed.hasErrors()) == good && testCloning(parsed).isOk());
@@ -302,14 +304,14 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::Expand, false> empty_expand{ "expand ;" };
 	Example<pst::Expand, false> unclosed_expand{ "expand \"return 0;;" };
 
-	ClassStmtExample<pst::NonClassStmt, true> class_using{ "using std.math;" };
-	ClassStmtExample<pst::NonClassStmt, true> class_alias{ "alias sqrt=std.math.sqrt;" };
+	ClassStmtExample<pst::Stmt, true> class_using{ "using std.math;" };
+	ClassStmtExample<pst::Stmt, true> class_alias{ "alias sqrt=std.math.sqrt;" };
 
-	ClassStmtExample<pst::ClassStmt, true> public_access_block{ "public {}" };
-	ClassStmtExample<pst::ClassStmt, true> private_access_block{ "private {}" };
-	ClassStmtExample<pst::ClassStmt, true> protected_access_block{ "protected {}" };
-	ClassStmtExample<pst::ClassStmt, true> multi_specifier_block{ "public private {}" };
-	ClassStmtExample<pst::ClassStmt, true> simple_specified_field{ "public static x: i32 = 5;" };
+	ClassStmtExample<pst::Stmt, true> public_access_block{ "public {}" };
+	ClassStmtExample<pst::Stmt, true> private_access_block{ "private {}" };
+	ClassStmtExample<pst::Stmt, true> protected_access_block{ "protected {}" };
+	ClassStmtExample<pst::Stmt, true> multi_specifier_block{ "public private {}" };
+	ClassStmtExample<pst::Stmt, true> simple_specified_field{ "public static x: i32 = 5;" };
 
 	ClassStmtExample<pst::Field, true>  simple_field{ "x: i32 = 5" };
 	ClassStmtExample<pst::Field, true>  simple_var_field{ "var x: i32 = 5" };

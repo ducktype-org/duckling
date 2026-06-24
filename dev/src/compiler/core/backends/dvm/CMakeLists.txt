@@ -2,6 +2,7 @@
 add_library(DVMBackend STATIC
     src_private/program_lowering_context.cpp
     src_private/function_lowering_context.cpp
+    src_private/ctv_lowering.cpp
     src_private/instruction_lowering.cpp
     src_private/dvm_value.cpp
     src_private/operations/dvm_operation.cpp

@@ -113,6 +113,12 @@ private:
 				vm::code::UnknownTypeError::ERR_MSG,
 			}
 		);
+		loadInvalidDbc(
+			"casting_invalid_ret.dbc",
+			{
+				vm::code::InvalidRetError::ERR_MSG,
+			}
+		);
 	}
 };
 
