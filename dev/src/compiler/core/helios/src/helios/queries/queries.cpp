@@ -91,6 +91,15 @@ namespace compiler::helios {
 					const auto& tuple_tostring
 						= ctx.query<defgen::QueryToStringMethod>(tuple_type)->valueOrThrow();
 					additional_methods.insert(tuple_tostring.declaration->original_symbol);
+
+					if (!symbol_type.isTriviallyZeroInitializable(ctx)
+					    && symbol_type.isDefaultConstructible(ctx)) {
+						const auto& default_tuple_ctor
+							= ctx.query<defgen::QueryDefaultTupleConstructor>(tuple_type)
+						          ->valueOrThrow();
+						default_ctors.insert(default_tuple_ctor.declaration->original_symbol);
+					}
+
 					return;
 				}
 				if (type.getKind() == tsh::Kind::Slice) {
@@ -119,11 +128,6 @@ namespace compiler::helios {
 					const auto& class_ctor
 						= ctx.query<defgen::QueryDefaultClassConstructor>(class_type)->valueOrThrow();
 					default_ctors.insert(class_ctor.declaration->original_symbol);
-				} else if (type.getKind() == tsh::Kind::Tuple) {
-					auto        tuple_type = type.as<tsh::TupleAbstractType>();
-					const auto& tuple_ctor
-						= ctx.query<defgen::QueryDefaultTupleConstructor>(tuple_type)->valueOrThrow();
-					default_ctors.insert(tuple_ctor.declaration->original_symbol);
 				}
 			};
 			auto register_ctor_and_tostring_if_needed_no_interrupt
