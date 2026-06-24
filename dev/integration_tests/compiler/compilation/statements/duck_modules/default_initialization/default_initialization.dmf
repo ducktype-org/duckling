@@ -125,6 +125,20 @@ fun testMultiDimArrays() -> () = {
     builtin_output_i64(m.matrix[1][2][0].y); # 0
 }
 
+# ==================================== TUPLES ====================================
+fun testTuples() -> () = {
+    var primitiveTuple = (
+        i32,         # 0
+        f64,         # 0.0
+        bool,        # false
+        char,        # '\0'
+        String,      # ""
+        # List[i32],   # empty list
+        # type;
+    )
+    print(primitiveTuple.toString());
+}
+
 # ==================================== NESTED CLASSES ====================================
 class Deep { val: i64 = 999; val2: i64; }
 class Middle { d: Deep[2]; }
@@ -165,6 +179,9 @@ fun main() -> i64 = {
     
     printSeparator();
     testMultiDimArrays();
+
+    printSeparator();
+    testTuples();
     
     printSeparator();
     testDeepNesting();
