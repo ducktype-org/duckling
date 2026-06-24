@@ -2859,7 +2859,7 @@ private:
 				ASSERT_TRUE(found_array_ctor);
 			}
 
-			// TupleHolder ctor should call a ctor of static array field, which calls a ctor of the
+			// TupleHolder ctor should call a ctor of the tuple field, which calls a ctor of the
 			// inner element.
 			{
 				auto        tup_holder_st = get_class_type(tup_holder_sym);

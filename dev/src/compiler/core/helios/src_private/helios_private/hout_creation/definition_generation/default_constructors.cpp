@@ -147,12 +147,9 @@ namespace compiler::helios::defgen {
 
 			using DefaultTupleConstructor = GeneratedSymbolData::DefaultTupleConstructor;
 			using Variable                = GeneratedSymbolData::GeneratedFunctionVariable;
-			using std::ranges::to;
-			using std::views::transform;
 
-			// Construct the constructor's type.
 			const std::vector<tsh::InterfaceElement> fields
-				= tuple_interface->getFieldsView() | to<std::vector>();
+				= tuple_interface->getFieldsView() | std::ranges::to<std::vector>();
 
 			// Prepare the ctor symbol and declaration.
 			const SymID ctor_symbol
@@ -179,7 +176,7 @@ namespace compiler::helios::defgen {
                 } },
             });
 
-			// All fields  are zeroed.
+			// All fields are zeroed.
 			body.emplace_back(makeBox<code::VariableStmt>(
 				code::generatedOrigin(),
 				makeBox<code::DefaultValueExpr>(
