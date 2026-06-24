@@ -95,7 +95,6 @@ DEF_MICRO_INSTR(setNull_pptr, vm::low::opargs::PlacePtr)
 // It requires a `ext_imm` after this instruction as third argument, defining the size of the opaque
 // type in bytes.
 DEF_MICRO_INSTR(mov_popq_popq, vm::low::opargs::PlaceOpq, vm::low::opargs::PlaceOpq)
-DEF_MICRO_INSTR(mov_popq_imm, vm::low::opargs::PlaceOpq, vm::low::opargs::Immediate)
 
 // ========= SIGNED INTEGER ARITHMETIC OPERATIONS ========
 DEF_MICRO_INSTR(add_p64_p64, vm::low::opargs::Place64, vm::low::opargs::Place64)

@@ -26,7 +26,12 @@ namespace compiler::backend_vm {
 		 * @param is_comp_time_lowering Whether we are lowering the code to be loaded by the VM for
 		 * compile time evaluation, or for the final output module.
 		 */
-		DVMCodeBuilder(query::Context& query_ctx, bool build_debug_info, bool is_comp_time_lowering);
+		DVMCodeBuilder(
+			query::Context& query_ctx,
+			base::StrID     module_id,
+			bool            build_debug_info,
+			bool            is_comp_time_lowering
+		);
 
 		/**
 		 * @brief Inserts a LIR unit into the module.

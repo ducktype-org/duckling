@@ -182,7 +182,7 @@ public:
 
 	[[nodiscard]]
 	usize size() const {
-		return VISIT(source, db, return db->size(stack_state_id););
+		return VISIT(source, db, return db->size(stack_state_id));
 	}
 
 	[[nodiscard]]
@@ -194,21 +194,14 @@ public:
 
 	[[nodiscard]]
 	LocalStackEntry front(usize idx = 0) const {
-		variant_match(source) {
-			variant_case(Ref<LocalStackDbBuilder>, bld_ref) {
-				return LocalStackEntry{
-					.local_name = *bld_ref->getName(stack_state_id, idx),
-					.type       = types_ctx->at(*bld_ref->getTypeName(stack_state_id, idx)),
-				};
+		return VISIT(
+			source,
+			db,
+			return LocalStackEntry{
+				.local_name = *db->getName(stack_state_id, idx),
+				.type       = types_ctx->at(*db->getTypeName(stack_state_id, idx)),
 			}
-			variant_case(CRef<LocalStackDb>, db_ref) {
-				return LocalStackEntry{
-					.local_name = *db_ref->getName(stack_state_id, idx),
-					.type       = types_ctx->at(*db_ref->getTypeName(stack_state_id, idx)),
-				};
-			}
-		}
-		CORE_UNREACHABLE();
+		);
 	}
 
 	void castPrimitive(const opargs::OpCodePrimitiveArg& local, const opargs::Type& type) {
@@ -282,15 +275,12 @@ public:
 	 */
 	[[nodiscard]]
 	bool eqStack(StackStateID stack_state_1, StackStateID stack_state_2) const {
-		bool ans = false;
-		VISIT(
+		return VISIT(
 			source,
 			db,
-			ans
-			= db->eqTypes(stack_state_1, stack_state_2) && db->eqNames(stack_state_1, stack_state_2)
+			return db->eqTypes(stack_state_1, stack_state_2)
+		        && db->eqNames(stack_state_1, stack_state_2)
 		);
-
-		return ans;
 	}
 };
 
@@ -720,7 +710,7 @@ class FunctionValidator {
 				if (src_type != dst_type) throw PointerTypeMismatchError(instr);
 			}
 
-			instr_case_novalue(Op_mov_popq_popq, Op_mov_popq_imm) {}
+			instr_case_novalue(Op_mov_popq_popq) {}
 
 			instr_case(Op_mov_pste_pste, instr) {
 				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);

@@ -99,6 +99,13 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::parseFiles(
 				new_code.external_c_functions,
 				[](const code::ExternalCFunction& func) { return func.name.str.strView(); }
 			);
+			base::deduplicateBy(new_code.global_data, [](const vm::code::GlobalData& g) {
+				return g.name.str.strView();
+			});
+			base::deduplicateBy(new_code.types, [](const vm::code::TypeOfData& f) {
+				return typeName(f);
+			});
+
 			return new_code;
 		}
 	}
