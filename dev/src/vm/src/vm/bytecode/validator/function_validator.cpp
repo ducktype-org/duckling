@@ -33,7 +33,7 @@ namespace {
 	constexpr std::array VALID_LAST_OPCODES
 		= { OpCode::Op_ret, OpCode::Op_ret_tailcall_func, OpCode::Op_jmp_label };
 
-	constexpr std::array VALID_LAST_OPCODES_FOR_EXPR = { OpCode::Op_ret, OpCode::Op_jmp_label };
+	constexpr std::array VALID_LAST_OPCODES_FOR_EXPR = { OpCode::Op_ret_from_expr, OpCode::Op_jmp_label };
 	using DeinitializingInstructions                 = std::tuple<
 						Op_deinit,
 						Op_call_func,
@@ -472,7 +472,20 @@ class FunctionValidator {
 	 * @param instruction Instruction that is validated.
 	 */
 	void validateArgTypes(const Instruction& instruction, const LocalStack& current_stack) const {
+		bool is_expr = thread.has_value();
 		for (auto arg: instruction.args()) {
+			variant_match(arg) {
+#define PLACE_CASE(PLACE_T)                                   \
+	variant_case(CRef<opargs::PLACE_T>, place) {              \
+		if (!is_expr && place->frame.has_value()) {           \
+			throw FrameSpecifierWithoutRuntimeThread(*place); \
+		}                                                     \
+	}
+				FOR_EACH(PLACE_CASE, VM_OPARG_PLACE_TYPES)
+#undef PLACE_CASE
+				variant_default {}
+			}
+
 			variant_match(arg) {
 #define PLACE_CASE(BIT_COUNT)                                                              \
 	variant_case(CRef<opargs::Place##BIT_COUNT>, place) {                                  \
@@ -489,7 +502,7 @@ class FunctionValidator {
 				PLACE_CASE(16);
 				PLACE_CASE(32);
 				PLACE_CASE(64);
-
+#undef PLACE_CASE
 				variant_case(CRef<opargs::PlacePtr>, place) {
 					CRef<valid_type::ValidType> type
 						= validateAndGetPlaceType(*place, current_stack);
@@ -497,8 +510,10 @@ class FunctionValidator {
 						throw InvalidArgumentTypeError(*place);
 				}
 				variant_case(CRef<opargs::PlaceAny>, place) {
+					bool from_prev_frame = place->frame.has_value();
 					bool is_local  = current_stack.contains(*place);
 					bool is_global = globals.contains(place->var_name);
+					if (from_prev_frame && !thread) throw FrameSpecifierWithoutRuntimeThread(*place);
 					if (is_local && is_global) throw DuplicatedLocalNameError(*place);
 					instr_match(instruction) {
 						instr_case_novalue(Op_init_pany_type) {
@@ -1658,7 +1673,8 @@ class FunctionValidator {
 			types_ctx,
 			Ref<LocalStackDbBuilder>{ &builder },
 			start_state,
-			function.signature.result_types.size()
+			function.signature.result_types.size(),
+			thread
 		);
 
 		stack_before_instr.resize(function.body.size(), std::nullopt);

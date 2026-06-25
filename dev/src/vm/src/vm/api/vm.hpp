@@ -242,4 +242,12 @@ namespace vm::api {
 	std::expected<response::CodePosition, ApiError> mapFileLineToCodeCollectionPosition(
 		PID pid, fs::File file, usize line_number
 	);
+
+	std::expected<void, ApiError> executeRuntimeExpr(
+		PID pid, ThreadID thread_id, const code::Function& function
+	);
+
+	std::expected<void, ApiError> executeRuntimeExprFromFile(
+		PID pid, ThreadID thread_id, fs::File file
+	);
 }

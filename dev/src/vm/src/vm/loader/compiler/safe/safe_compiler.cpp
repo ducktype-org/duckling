@@ -65,7 +65,8 @@ namespace vm::loader::compiler::safe {
 				usize stack_size = thread.getNumberOfCurrentStackFrames();
 
 				auto prev_frame_base = thread.getStackFrame(frame_idx).local_stack;
-				auto current_end = thread.getStackFrame(stack_size - 1).local_stack_head;
+				auto top_frame = thread.getStackFrame(stack_size - 1);
+				auto current_end = top_frame.local_stack + top_frame.local_stack_head;
 				
 				usize frame_offset = usize(prev_frame_base - current_end);
 
@@ -213,9 +214,10 @@ namespace vm::loader::compiler::safe {
 	}
 
 	void SafeCompiler::compileNewFunctions(
-		const std::vector<code::valid_function::ValidFunction>& new_functions
+		const std::vector<CRef<code::valid_function::ValidFunction>>& new_functions
 	) {
-		for (const auto& function: new_functions) {
+		for (const auto& func_ref: new_functions) {
+			const auto& function = *func_ref;
 			vm::loader::compiler::detail::FunctionStackContext ctx
 				= calculateStackContext(function);
 

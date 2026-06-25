@@ -154,6 +154,14 @@ namespace vm::debugger::cli {
 										 debugger.step();
 										 return 0;
 									 }))
+		          .addSubcommand(clah::Clah("eval", "evaluates runtime expression")
+		                             .addPositional(clah::FileParser::make("file"))
+		                             .setHandler([&](const clah::ParsingResult& options) {
+										 auto file = options.getPositional<fs::File>(0);
+										 auto response = debugger.evaluate(file);
+										 if (!response) printNL("evaluation of the expression failed");
+										 return 0;
+									 }))
 		          .addSubcommand(
 					  clah::Clah("break", "sets or unsets the breakpoint")
 						  .addPositional(clah::CategoryParser::make(

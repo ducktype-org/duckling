@@ -109,6 +109,13 @@ namespace vm::debugger {
 		std::expected<void, api::ApiError> resume();
 
 		/**
+		 * @brief Resumes the VM
+		 */
+		std::expected<void, api::ApiError> evaluate(
+			const fs::File&, api::ThreadID thread_id = vm::api::ThreadID(0)
+		);
+
+		/**
 		 * @brief Returns current position
 		 */
 		std::expected<api::response::CodePosition, api::ApiError> getCurrentPosition();

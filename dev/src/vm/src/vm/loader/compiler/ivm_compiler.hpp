@@ -96,7 +96,7 @@ namespace vm::loader::compiler {
 		 * functions.
 		 */
 		virtual void compileNewFunctions(
-			const std::vector<code::valid_function::ValidFunction>& new_functions
+			const std::vector<CRef<code::valid_function::ValidFunction>>& new_functions
 		) = 0;
 
 		/**

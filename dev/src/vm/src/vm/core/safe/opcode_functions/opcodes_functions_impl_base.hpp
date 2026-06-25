@@ -590,14 +590,16 @@ namespace vm {
 					exit_value.emplace_back(thread.safe_process.createVmValue(
 						expr.result_types[block_ref_idx], Pointer(block, 0)
 					));
-				}
-
-				thread.process_memory.freeBlockData(block);
-				thread.process_memory.decreaseBlockRefcount(block);
-
-				callee_frame->local_block_ref_stack_end--;
+				} 
+			
+				performDeinit(callee_frame, thread);
 			}
 			callee_frame->resetFrameData();
+
+			// updating the caller's frame, because result variables
+			// are no longer on the stack
+			frame->local_block_ref_stack_end -= ret_count;
+			frame->local_stack_head -= frame->current_function->ret_size;
 
 			instr       = frame->instr;
 			local_stack = frame->local_stack;
