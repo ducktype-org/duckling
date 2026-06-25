@@ -24,9 +24,9 @@ namespace {
 
 	void printProcStatus(printer::PrinterOStream& os, const vm::api::ProcStatus& status) {
 		os.add(printer::PrinterContent(typeToString(status)));
-		if (std::holds_alternative<vm::api::ExecutionCompleted>(status)) {
+		if (v_matches(status, vm::api::ExecutionCompleted)) {
 			const auto& exit_value = std::get<vm::api::ExecutionCompleted>(status).exit_value;
-			if (std::holds_alternative<std::vector<Ref<vm::VmValue>>>(exit_value)) {
+			if (v_matches(exit_value, std::vector<Ref<vm::VmValue>>)) {
 				for (auto val: std::get<std::vector<Ref<vm::VmValue>>>(exit_value)) {
 					if_opt_some(val->readData(), data) {
 						variant_match(data) {
@@ -154,7 +154,7 @@ namespace vm::debugger::cli {
 									 }))
 		          .addSubcommand(clah::Clah("step", "executes one step")
 		                             .setHandler([&](const clah::ParsingResult&) -> int {
-										 (void) debugger.step();
+										 debugger.step();
 										 return 0;
 									 }))
 		          .addSubcommand(
