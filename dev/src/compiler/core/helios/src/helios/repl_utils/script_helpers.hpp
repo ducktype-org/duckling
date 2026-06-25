@@ -35,21 +35,33 @@ namespace compiler::repl {
 	using ScriptMainAction = std::variant<ScriptMainWrapperCall, ScriptMainGlobalInit>;
 
 	/**
+	 * @brief Result of deferring a definition module's mutable global initializers.
+	 */
+	struct NeutralizedScriptModule final {
+		/// HOUT unit with mutable global initializers replaced by harmless default initializers.
+		helios::HOUTUnit unit;
+		/// Real initializers to run from the synthetic `main`, in source order.
+		std::vector<ScriptMainAction> deferred_inits;
+		/// Backing storage for the default-init globals that `unit` references by CRef; must stay
+		/// alive as long as `unit` is used (e.g. while lowering it).
+		std::deque<helios::HOUTGlobalData> default_init_storage;
+	};
+
+	/**
 	 * @brief Defer mutable global variable initialization in a definition module's HOUT.
 	 *
 	 * Replaces each mutable global variable's eager initializer with the type's default initializer
-	 * and appends a ScriptMainGlobalInit carrying the real initializer to @p out_actions, so that
-	 * it runs from the synthetic `main` in source order instead of eagerly before it. Compile-time
-	 * constants and immutable globals are left untouched.
+	 * and records a ScriptMainGlobalInit carrying the real initializer, so it runs from the
+	 * synthetic `main` in source order instead of eagerly before it. Compile-time constants and
+	 * immutable globals are left untouched: they cannot be reassigned, so the
+	 * default-init-then-assign trick does not apply to them.
 	 *
-	 * @param default_init_storage Backing storage for the generated default-init global data; must
-	 * outlive the returned HOUT unit, which references entries by CRef.
+	 * @param ctx Active query context, used to build default initializer expressions.
+	 * @param module_hout Definition module HOUT to neutralize; not mutated.
+	 * @return Neutralized unit, the deferred initializers, and their backing storage.
 	 */
-	helios::HOUTUnit neutralizeScriptGlobalInits(
-		query::Context&                     ctx,
-		const helios::HOUTUnit&             module_hout,
-		std::deque<helios::HOUTGlobalData>& default_init_storage,
-		std::vector<ScriptMainAction>&      out_actions
+	NeutralizedScriptModule neutralizeScriptGlobalInits(
+		query::Context& ctx, const helios::HOUTUnit& module_hout
 	);
 
 	/**

@@ -58,6 +58,9 @@ namespace compiler::repl {
 						));
 					}
 					variant_case(ScriptMainGlobalInit, global_init) {
+						// Initialize the global by assigning its initial value, mirroring the
+						// normal global constructor lowering (LowerGlobalDataToMIRCtor in
+						// mir_queries.cpp). Keep in sync if global init/ctor emission changes.
 						auto location = base::makeBox<helios::code::IdentifierExpr>(
 							ctx, helios::code::generatedOrigin(), global_init.global_symbol
 						);
@@ -112,20 +115,20 @@ namespace compiler::repl {
 		return ScriptMainWrapperBuilder::build(ctx, script_id, main_scope, actions);
 	}
 
-	helios::HOUTUnit neutralizeScriptGlobalInits(
-		query::Context&                     ctx,
-		const helios::HOUTUnit&             module_hout,
-		std::deque<helios::HOUTGlobalData>& default_init_storage,
-		std::vector<ScriptMainAction>&      out_actions
+	NeutralizedScriptModule neutralizeScriptGlobalInits(
+		query::Context& ctx, const helios::HOUTUnit& module_hout
 	) {
+		NeutralizedScriptModule result;
 		// Copying the unit only duplicates the CRef vectors, not the underlying cached data.
-		helios::HOUTUnit result = module_hout;
+		result.unit = module_hout;
 
-		for (auto& global_ref: result.glob_data) {
+		for (auto& global_ref: result.unit.glob_data) {
 			const auto& global = *global_ref;
 
 			if (global.data_type != helios::HOUTGlobalDataType::Variable) continue;
 			if (!std::holds_alternative<helios::HOUTGlobalVariable>(global.value)) continue;
+			// Only mutable globals can be deferred: deferral default-initializes the global
+			// eagerly and reassigns the real value from `main`, which immutable globals reject.
 			if (global.type.getMutability() != tsh::Mutability::Mutable) continue;
 
 			const auto& real_initializer = std::get<helios::HOUTGlobalVariable>(global.value);
@@ -135,12 +138,13 @@ namespace compiler::repl {
 			)
 			                        .valueOrThrow();
 
-			out_actions.emplace_back(ScriptMainGlobalInit{
+			result.deferred_inits.emplace_back(ScriptMainGlobalInit{
 				.global_symbol = global.helios_symbol,
 				.value         = real_initializer.initial_value.ref(),
 			});
 
-			default_init_storage.push_back(helios::HOUTGlobalData{
+			// HOUTGlobalVariable is move-only, so rebuild the entry rather than copying *global_ref.
+			result.default_init_storage.push_back(helios::HOUTGlobalData{
 				.helios_symbol = global.helios_symbol,
 				.origin        = global.origin,
 				.original_name = global.original_name,
@@ -148,7 +152,7 @@ namespace compiler::repl {
 				.value         = helios::HOUTGlobalVariable{ default_init },
 				.type          = global.type,
 			});
-			global_ref = CRef(&default_init_storage.back());
+			global_ref = CRef(&result.default_init_storage.back());
 		}
 
 		return result;

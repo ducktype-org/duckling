@@ -54,7 +54,6 @@
 #include <vm/loader/loader.hpp>
 
 #include <algorithm>
-#include <deque>
 #include <fstream>
 #include <iostream>
 #include <string_view>
@@ -342,10 +341,8 @@ namespace compiler::driver {
 
 			// Ordered actions (wrapper calls and global-variable inits) run by the synthetic main.
 			std::vector<repl::ScriptMainAction> main_actions;
-			// Backing storage for default-init global data; must outlive the synthetic main below.
-			std::deque<helios::HOUTGlobalData> deferred_global_storage;
-			base::Optional<frontend::ModuleID> parent_module_id;
-			u64                                statement_counter = 0;
+			base::Optional<frontend::ModuleID>  parent_module_id;
+			u64                                 statement_counter = 0;
 
 			if (split_result->empty()) {
 				// Empty input should still produce a valid synthetic script main wrapper with no
@@ -384,11 +381,14 @@ namespace compiler::driver {
 					CORE_DEV_LOG(REPL, "compile_script: classified as definition\n");
 					const auto& hout_unit = repl::getDefinitionHOUTUnit(ctx, module_id);
 					// Defer mutable global initializers so they run from main in source order.
-					auto neutralized_unit = repl::neutralizeScriptGlobalInits(
-						ctx, hout_unit, deferred_global_storage, main_actions
+					auto neutralized = repl::neutralizeScriptGlobalInits(ctx, hout_unit);
+					main_actions.insert(
+						main_actions.end(),
+						neutralized.deferred_inits.begin(),
+						neutralized.deferred_inits.end()
 					);
 					auto lir_result
-						= compileHOUTUnitToLIRModuleData(ctx, neutralized_unit, module_name_id);
+						= compileHOUTUnitToLIRModuleData(ctx, neutralized.unit, module_name_id);
 					if (lir_result.hasFailed())
 						return std::unexpected("Failed to compile definition statement to LIR");
 					repl::appendScriptLIRModuleData(merged, lir_result.valueOrPanic());
