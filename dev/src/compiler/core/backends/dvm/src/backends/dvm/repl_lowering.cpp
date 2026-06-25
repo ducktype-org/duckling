@@ -8,7 +8,7 @@
 namespace compiler::backend_vm {
 
 	ReplDVMCodeBuilder::ReplDVMCodeBuilder(query::Context& query_ctx):
-		  code_builder(query_ctx, false, false) {}
+		  code_builder(query_ctx, base::StrID("repl"), false, false) {}
 
 	ReplDVMCodeBuilder::~ReplDVMCodeBuilder()                                        = default;
 	ReplDVMCodeBuilder::ReplDVMCodeBuilder(ReplDVMCodeBuilder&&) noexcept            = default;
