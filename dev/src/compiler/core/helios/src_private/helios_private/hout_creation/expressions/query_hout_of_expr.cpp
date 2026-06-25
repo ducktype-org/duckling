@@ -344,8 +344,9 @@ namespace compiler::helios::code {
 			}
 
 			void visitPrefixOperator(pst::Access<pst::expr::PrefixOperator> stmt) override {
-				// @NOTE: This is a mockup
-				auto inner = subExprFromPST(ctx, stmt->getExpr()).valueOrThrow();
+				const auto op         = stmt->getOperator().unlock(ctx);
+				auto       inner      = subExprFromPST(ctx, stmt->getExpr()).valueOrThrow();
+				auto       inner_type = inner->expression_type.getSymbolType();
 
 				// @todo here we should:
 				// * lookup for user defined operators
@@ -353,11 +354,8 @@ namespace compiler::helios::code {
 				// * make function call
 				// For now we support just builtins
 
-				// if no function call is found, we try to use builtin operators:
-				auto inner_type = inner->expression_type.getSymbolType();
-
-				if (stmt->getOperator().unlock(ctx)->unwrap()
-				    == lang_def::NamedOperator::Ampersand) {
+				// Handle taking references
+				if (op->unwrap() == lang_def::NamedOperator::Ampersand) {
 					// @TODO: #1956 remove the check bellow.
 					// This is a temporary check to prevent us from taking reference of types that
 					// do not carry information.
@@ -382,7 +380,10 @@ namespace compiler::helios::code {
 					}
 					node = makeBox<RefOfExpr>(ctx, pstOrigin(stmt), std::move(inner));
 					return;
-				} else if (stmt->getOperator().unlock(ctx)->unwrap()
+				}
+
+				// Handle dereferencing
+				if (op->unwrap()
 				           == lang_def::NamedOperator::Multiply) {
 					if (not tsh::isPointerKind(inner_type.getType().getKind())) {
 						ctx.logInt(makeBox<dia_int::PlaceholderError>(
@@ -392,6 +393,11 @@ namespace compiler::helios::code {
 					}
 					node = makeBox<DerefExpr>(ctx, pstOrigin(stmt), std::move(inner));
 					return;
+				}
+
+				// Handle array length
+				if (op->unwrap() == lang_def::Keyword::Len) {
+
 				}
 
 				auto builtin = unaryBuiltin(
