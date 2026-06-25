@@ -511,6 +511,42 @@ namespace compiler::driver {
 			return base::OK;
 		}
 
+		/**
+		 * @brief Lowers the whole standard library to a single in-memory DVM CodeCollection.
+		 *
+		 * Scripts resolve standard library symbols like `print` during the frontend, but the
+		 * bytecode definitions still have to be present when the script is loaded into the DVM.
+		 * This compiles every module reachable from the standard library package roots and merges
+		 * them into one collection, the in-memory analogue of what `linkDVMPackage` does for
+		 * packages via on-disk .dbc artifacts.
+		 */
+		std::expected<vm::code::CodeCollection, std::string> compileStdLibToDVMCode(
+			query::Context& ctx
+		) {
+			vm::code::CodeCollection std_code;
+
+			std::function<base::OkBad(frontend::ModuleID)> collect_module
+				= [&](frontend::ModuleID module_id) -> base::OkBad {
+				auto lir_data_qr = compileModuleToLIRModuleData(ctx, module_id);
+				if (lir_data_qr.hasFailed()) return base::BAD;
+				auto lir_data = lir_data_qr.valueOrPanic();
+				std_code.mergeFrom(compileLIRModuleToDVM(&lir_data, ctx, false).code);
+
+				auto submodules = ctx.query<frontend::QuerySubmodules>(module_id);
+				for (const auto& [id, submodule]: *submodules)
+					if (collect_module(submodule).isBad()) return base::BAD;
+				return base::OK;
+			};
+
+			for (const auto root_module: getStandardLibraryRootModules())
+				if (collect_module(root_module).isBad())
+					return std::unexpected(
+						"Failed to compile standard library module to DVM bytecode."
+					);
+
+			return std_code;
+		}
+
 		base::OkBad compileScriptToDVMBytecode() {
 			base::Optional<std::string> error_message;
 			query::utils::withContextDo([&](query::Context& ctx) {
@@ -521,6 +557,14 @@ namespace compiler::driver {
 				}
 
 				auto dvm_module = compileLIRModuleToDVM(&script_lir.value(), ctx, false);
+
+				auto std_code = compileStdLibToDVMCode(ctx);
+				if (!std_code.has_value()) {
+					error_message = std_code.error();
+					return;
+				}
+				std_code->mergeFrom(std::move(dvm_module.code));
+				std_code->deduplicate();
 
 				auto& script_context  = global_state::getScriptContext();
 				auto  output_artifact = global_state::getRootCollection()->fileArtifactAtOrNew(
@@ -537,7 +581,7 @@ namespace compiler::driver {
 					return;
 				}
 
-				vm::code::serializeCode(dvm_module.code, output_file);
+				vm::code::serializeCode(std_code.value(), output_file);
 				output_file.close();
 
 				CORE_USER_LOG(
@@ -580,6 +624,14 @@ namespace compiler::driver {
 
 			auto dvm_module = compileLIRModuleToDVM(&script_lir.value(), ctx, false);
 
+			auto merged_code = compileStdLibToDVMCode(ctx);
+			if (!merged_code.has_value()) {
+				error_message = merged_code.error();
+				return;
+			}
+			merged_code->mergeFrom(std::move(dvm_module.code));
+			merged_code->deduplicate();
+
 			vm::PID pid{};
 			auto    run_result
 				= vm::api::spawn()
@@ -587,7 +639,7 @@ namespace compiler::driver {
 						  pid = process.pid;
 						  return std::expected<void, vm::api::ApiError>{};
 					  })
-			          .and_then([&] { return vm::api::loadCode(pid, { dvm_module.code }); })
+			          .and_then([&] { return vm::api::loadCode(pid, merged_code.value()); })
 			          .and_then([&] { return vm::api::attach(pid, std::cin, std::cout); })
 			          .and_then([&] { return vm::api::run(pid); })
 			          .and_then([&] { return vm::api::join(pid); })

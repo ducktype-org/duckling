@@ -1,6 +1,17 @@
 #include "bytecode.hpp"
 
+#include <base/extend_cpp/vector_utils.hpp>
+
 namespace vm::code {
+
+	void CodeCollection::deduplicate() {
+		base::deduplicateBy(functions, [](const Function& func) { return func.name.str.strView(); });
+		base::deduplicateBy(external_c_functions, [](const ExternalCFunction& func) {
+			return func.name.str.strView();
+		});
+		base::deduplicateBy(global_data, [](const GlobalData& g) { return g.name.str.strView(); });
+		base::deduplicateBy(types, [](const TypeOfData& t) { return typeName(t); });
+	}
 
 	void CodeCollection::mergeFrom(CodeCollection&& other) {
 		functions.insert(

@@ -92,19 +92,7 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::parseFiles(
 					new_code.functions.emplace_back(function);
 				}
 			}
-			base::deduplicateBy(new_code.functions, [](const code::Function& func) {
-				return func.name.str.strView();
-			});
-			base::deduplicateBy(
-				new_code.external_c_functions,
-				[](const code::ExternalCFunction& func) { return func.name.str.strView(); }
-			);
-			base::deduplicateBy(new_code.global_data, [](const vm::code::GlobalData& g) {
-				return g.name.str.strView();
-			});
-			base::deduplicateBy(new_code.types, [](const vm::code::TypeOfData& f) {
-				return typeName(f);
-			});
+			new_code.deduplicate();
 
 			return new_code;
 		}

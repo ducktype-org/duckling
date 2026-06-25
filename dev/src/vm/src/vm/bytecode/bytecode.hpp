@@ -99,5 +99,12 @@ namespace vm::code {
 		 * Does not perform any assertions.
 		 */
 		void mergeFrom(CodeCollection&& other);
+
+		/**
+		 * @brief Removes duplicate functions, types, globals and external C functions, keeping
+		 * the first occurrence of each (by name). Useful after merging collections that share
+		 * cross-module definitions (e.g. script code merged with the standard library).
+		 */
+		void deduplicate();
 	};
 }
