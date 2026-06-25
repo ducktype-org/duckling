@@ -11,7 +11,7 @@ namespace pst {
 		if (!assertStmtChoice<TemplateDecl>(state, state[0].is(Keyword::Template))) return nullptr;
 
 		PARSE().one(Keyword::Template);
-		if (state[0].isBracketGroup(lexer::Token::Round)) {
+		if (not state[0].isBracketGroup(lexer::Token::Round)) {
 			state.logSafeError(
 				makeBox<TemplateNoListError>(state.getPosition())
 			);
