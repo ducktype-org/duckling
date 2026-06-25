@@ -124,7 +124,7 @@ namespace compiler::helios {
 			}
 
 			if (duplicatesCheck(ctx, out).isBad()) is_failed = true;
-			if (collectCalledFunctions(ctx, out).isBad()) is_failed = true;
+			if (collectUnitReplicatedSymbols(ctx, out).isBad()) is_failed = true;
 
 
 			// This is the place where we would check for all the functions and if they return some
@@ -136,7 +136,12 @@ namespace compiler::helios {
 			return out;
 		}
 
-		static base::OkBad collectCalledFunctions(query::Context& ctx, HOUTUnit& out_unit) {
+		/**
+		 * @brief This function collects all used symbols from the hout unit module
+		 * that should be appended to the module, for example some compiler generated symbols
+		 * or template instantiations in the future.
+		 */
+		static base::OkBad collectUnitReplicatedSymbols(query::Context& ctx, HOUTUnit& out_unit) {
 			std::unordered_set<SymID> added_to_queue;
 			std::vector<SymID>        functions_stack;
 			base::OkBad               result = base::OK;
@@ -152,7 +157,7 @@ namespace compiler::helios {
 				if (auto global_variable = std::get_if<HOUTGlobalVariable>(&g->value)) {
 					for (auto called_fun: collectCalledSymbols(*global_variable->initial_value)) {
 						if (added_to_queue.contains(called_fun)) continue;
-						if (not functionHasGeneratedImplementation(called_fun)) continue;
+						if (emissionPolicy(called_fun) != EmissionPolicy::Replicated) continue;
 						functions_stack.push_back(called_fun);
 						added_to_queue.insert(called_fun);
 					}
@@ -175,7 +180,7 @@ namespace compiler::helios {
 
 				for (auto called_fun: called_funs) {
 					if (added_to_queue.contains(called_fun)) continue;
-					if (not functionHasGeneratedImplementation(called_fun)) continue;
+					if (emissionPolicy(called_fun) != EmissionPolicy::Replicated) continue;
 
 					functions_stack.push_back(called_fun);
 					added_to_queue.insert(called_fun);

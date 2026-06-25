@@ -37,16 +37,42 @@
 #include <vector>
 
 namespace compiler::helios {
-	/**
-	 * @TODO: move to some docs
-	 *  * imports are just symbols that we will "lookup in" just like usings.
-	 *    They will link to different modules.
-	 *  * Scopes trees of different modules are independent to relax dependency
-	 *
-	 *  @TODO: what about lookup cycles -- we will need to probably refactor queries a bit
-	 *  in the future
-	 */
+	bool implementsQueryCodeOfFun(SymID id) {
+		variant_match(getSymRef(id)->other) {
+			variant_case_novalue(PstSymbolData) {
+				return kind(id) != SymbolKind::FunctionDeclaration;
+			}
+			variant_case(defgen::GeneratedSymbolData, generated_data) {
+				variant_match(generated_data.data) {
+					variant_case_novalue(defgen::GeneratedSymbolData::BuiltinOperator) {
+						return false;
+					}
+					variant_default { return true; }
+				}
+			}
+			variant_default { CORE_PANIC("Case not covered"); }
+		}
+		CORE_UNREACHABLE();
+	}
 
+	EmissionPolicy emissionPolicy(SymID id) {
+		variant_match(getSymRef(id)->other) {
+			variant_case_novalue(PstSymbolData) { return EmissionPolicy::OwnerOnly; }
+			variant_case(defgen::GeneratedSymbolData, generated_data) {
+				variant_match(generated_data.data) {
+					variant_case_novalue(
+						defgen::GeneratedSymbolData::BuiltinOperator,
+						defgen::GeneratedSymbolData::ScriptMainWrapper
+					) {
+						return EmissionPolicy::OwnerOnly;
+					}
+					variant_default { return EmissionPolicy::Replicated; }
+				}
+			}
+			variant_default { CORE_PANIC("Case not covered"); }
+		}
+		CORE_UNREACHABLE();
+	}
 
 	/**
 	 * @brief Query "linked-scope", that is scope
@@ -155,29 +181,6 @@ namespace compiler::helios {
 	SymbolKind kind(SymID id) { return getSymRef(id)->common.kind; }
 
 	ScopeID scope(SymID id) { return getSymRef(id)->getScope(); }
-
-	bool shouldLinkOnce(SymID id) {
-		variant_match(getSymRef(id)->other) {
-			variant_case_novalue(PstSymbolData) { return false; }
-			variant_case(defgen::GeneratedSymbolData, gen_data) {
-				variant_match(gen_data.data) {
-					variant_case_novalue(defgen::GeneratedSymbolData::BuiltinOperator) {
-						// BuiltinOperators (better name pending) are those functions which
-						// are defined in C++, and will need to be declared with external linkage.
-						return false;
-					}
-					variant_case_novalue(defgen::GeneratedSymbolData::ScriptMainWrapper) {
-						// Script main is the process entry point, so LLVM must not treat it as
-						// discardable generated helper code.
-						return false;
-					}
-					variant_default { return true; }
-				}
-			}
-			variant_default { CORE_PANIC("Unhandled symbol kind"); }
-		}
-		CORE_UNREACHABLE();
-	}
 
 	base::Optional<ScopeID> maybeScope(SymID id) {
 		variant_match(getSymRef(id)->other) {
@@ -1063,7 +1066,7 @@ namespace compiler::helios {
 				}
 			}
 
-			if (not functionHasImplementation(key)) return {};
+			if (not implementsQueryCodeOfFun(key)) return {};
 
 			const auto& fun_hout_result = ctx.query<QueryCodeOfFun>(key)->valueOrThrow();
 			return code::collectCalledSymbols(fun_hout_result);

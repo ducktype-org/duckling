@@ -416,30 +416,4 @@ namespace compiler::helios {
 			generated_data,
 		};
 	}
-
-	bool functionHasImplementation(SymID id) {
-		CORE_ASSERT(
-			kind(id) == SymbolKind::Function or kind(id) == SymbolKind::FunctionDeclaration
-				or kind(id) == SymbolKind::Method,
-			"Incorrect functionHasImplementation call"
-		);
-		if (kind(id) == SymbolKind::FunctionDeclaration) return false;
-
-		// PST (user-written) functions always have a body.
-		if (not v_matches(getSymRef(id)->other, defgen::GeneratedSymbolData)) return true;
-
-		// Among generated symbols, builtin operators are the only ones without a body.
-		return not base::holds<defgen::GeneratedSymbolData::BuiltinOperator>(
-			v_get(getSymRef(id)->other, defgen::GeneratedSymbolData).data
-		);
-	}
-
-	bool functionHasGeneratedImplementation(SymID id) {
-		if (not v_matches(getSymRef(id)->other, defgen::GeneratedSymbolData)) return false;
-
-		// Among generated symbols, builtin operators are the only ones without a body.
-		return not base::holds<defgen::GeneratedSymbolData::BuiltinOperator>(
-			v_get(getSymRef(id)->other, defgen::GeneratedSymbolData).data
-		);
-	}
 }

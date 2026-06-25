@@ -153,8 +153,4 @@ namespace compiler::helios {
 	};
 
 	inline auto getSymRef(const SymID id) { return GetSymRef_Functor::get(id); }
-
-	bool functionHasImplementation(SymID id);
-
-	bool functionHasGeneratedImplementation(SymID id);
 }

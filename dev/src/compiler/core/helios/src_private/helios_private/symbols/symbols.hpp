@@ -18,6 +18,12 @@
 #include <string_id/string_id.hpp>
 
 namespace compiler::helios {
+	/**
+	 * @brief Whether the symbol can be called
+	 * with QueryCodeOfFun.
+	 */
+	bool implementsQueryCodeOfFun(SymID id);
+
 
 	/**
 	 * @brief Return all symbols currently stored by HELIOS.

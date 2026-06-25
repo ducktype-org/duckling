@@ -65,9 +65,16 @@ namespace compiler::helios {
 	ScopeID scope(SymID);
 
 	/**
-	 * @return Whether the symbol should use LinkOnce in LLVM.
+	 * @brief Symbol emission policy, whether it should
+	 * be inserted into every module, or we should keep the definition to
+	 * the module where the definition is located.
+	 * This also translates to LLVM weak/strong linkage.
 	 */
-	bool shouldLinkOnce(SymID);
+	enum class EmissionPolicy {
+		OwnerOnly,
+		Replicated,
+	};
+	EmissionPolicy emissionPolicy(SymID id);
 
 	/**
 	 * Gets scope that given symbol was defined within.

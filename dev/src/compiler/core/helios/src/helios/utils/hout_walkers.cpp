@@ -12,31 +12,36 @@ namespace compiler::helios::code {
 		 * function called by the visited nodes. Non-matching node types (statements, other
 		 * expressions) are ignored.
 		 */
-		auto calledSymbolCollector(std::unordered_set<SymID>& result) {
-			return [&result](const auto& node) {
+		auto calledSymbolCollector(std::vector<SymID>& result, std::unordered_set<SymID>& visited) {
+			return [&result, &visited](const auto& node) {
+				auto add_to_result = [&](SymID element) {
+					if (visited.insert(element).second) result.push_back(element);
+				};
 				using Node = std::remove_cvref_t<decltype(node)>;
 				if constexpr (std::same_as<Node, CallExpr>) {
 					if (const auto* callee_ident
 					    = dynamic_cast<const IdentifierExpr*>(node.callee.get())) {
-						result.insert(callee_ident->symbol);
+						add_to_result(callee_ident->symbol);
 					}
 				} else if constexpr (std::same_as<Node, TupleExpr>) {
 					// A tuple expression lowers to a call to the tuple constructor in MIR.
-					result.insert(node.tuple_ctor_symbol);
+					add_to_result(node.tuple_ctor_symbol);
 				}
 			};
 		}
 	}
 
 	std::vector<SymID> collectCalledSymbols(const HOUTFunction& fun) {
-		std::unordered_set<SymID> result;
-		walkFunctionTree(fun, calledSymbolCollector(result));
-		return result | std::ranges::to<std::vector>();
+		std::vector<SymID>        result;
+		std::unordered_set<SymID> visited;
+		walkFunctionTree(fun, calledSymbolCollector(result, visited));
+		return result;
 	}
 
 	std::vector<SymID> collectCalledSymbols(const Expr& expr) {
-		std::unordered_set<SymID> result;
-		walkExprTree(expr, calledSymbolCollector(result));
-		return result | std::ranges::to<std::vector>();
+		std::vector<SymID>        result;
+		std::unordered_set<SymID> visited;
+		walkExprTree(expr, calledSymbolCollector(result, visited));
+		return result;
 	}
 }
