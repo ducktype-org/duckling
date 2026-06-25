@@ -11,6 +11,7 @@ namespace vm::loader::compiler {
 	namespace detail {
 		/**
 		 * @brief A structure holding the intermediate state for the compilation of a single function.
+		 * @TODO: #2898 This structure's name is outdated
 		 */
 		struct FunctionStackContext {
 			FunctionStackContext(const code::valid_function::ValidFunction& func): function(func) {}
