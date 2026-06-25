@@ -21,7 +21,7 @@ namespace pst {
 
 	public:
 		CLASS_STMT_SPEC_CONSTRUCTOR(Constructor);
-		CLASS_STMT_PARSE(Constructor);
+		PARSE_DECL();
 
 		~Constructor() override = default;
 		void dprint(std::ostream& out) const final;
