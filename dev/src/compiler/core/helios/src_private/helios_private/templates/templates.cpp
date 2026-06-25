@@ -62,7 +62,10 @@ namespace compiler::helios::templates {
                 auto param_unlocked = param.unlock(ctx);
 
                 auto type_expression = param_unlocked->getType();
-                auto value_expression = param_unlocked->getValue()->unlock(ctx)->getExpr();
+
+                // This gets the optional default value:
+                // auto value_expression = param_unlocked->getValue()->unlock(ctx)->getExpr();
+
                 auto name = param_unlocked->getName().unlock(ctx)->unwrap();
 
                 auto type_ctv = getTypeCTVFromPST(ctx, type_expression.unlock(ctx)->getExpr()).valueOrThrow();
