@@ -728,9 +728,9 @@ namespace vm {
 		runtime_expr_high.emplace_back(std::move(high_expr));
 		runtime_expr_low.emplace_back(safe_process.compileToLow(this, runtime_expr_high.back()));
 
-		auto frame       = runtime_data.frame_stack_current;
-		auto instr       = frame->instr;
-		auto local_stack = frame->local_stack;
+		auto  frame       = runtime_data.frame_stack_current;
+		auto  instr       = frame->instr;
+		auto  local_stack = frame->local_stack;
 		auto& called_expr = runtime_expr_low.back();
 		for (auto type: called_expr.result_types)
 			OpFuns::performInit(instr, local_stack, frame, *this, type);

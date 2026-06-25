@@ -590,8 +590,8 @@ namespace vm {
 					exit_value.emplace_back(thread.safe_process.createVmValue(
 						expr.result_types[block_ref_idx], Pointer(block, 0)
 					));
-				} 
-			
+				}
+
 				performDeinit(callee_frame, thread);
 			}
 			callee_frame->resetFrameData();

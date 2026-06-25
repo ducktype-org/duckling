@@ -157,9 +157,10 @@ namespace vm::debugger::cli {
 		          .addSubcommand(clah::Clah("eval", "evaluates runtime expression")
 		                             .addPositional(clah::FileParser::make("file"))
 		                             .setHandler([&](const clah::ParsingResult& options) {
-										 auto file = options.getPositional<fs::File>(0);
+										 auto file     = options.getPositional<fs::File>(0);
 										 auto response = debugger.evaluate(file);
-										 if (!response) printNL("evaluation of the expression failed");
+										 if (!response)
+											 printNL("evaluation of the expression failed");
 										 return 0;
 									 }))
 		          .addSubcommand(

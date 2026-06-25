@@ -160,15 +160,17 @@ namespace vm::debugger {
 		return api::input(pid, msg);
 	}
 
-	std::expected<void, api::ApiError> Debugger::evaluate(const fs::File& file, api::ThreadID thread_id) {
+	std::expected<void, api::ApiError> Debugger::evaluate(
+		const fs::File& file, api::ThreadID thread_id
+	) {
 		return api::getExecutionStatus(pid)
 		    .and_then([&](const api::ProcStatus& status) -> std::expected<void, api::ApiError> {
 				variant_match(status) {
 					variant_case_novalue(api::Paused) { return {}; }
 					variant_default {
-						return std::unexpected(api::ApiError{ api::OtherError{
-							"Wrong VM state to run: got " + statusToString(status)
-							+ ", required state is Paused." } });
+						return std::unexpected(api::ApiError{
+							api::OtherError{ "Wrong VM state to run: got " + statusToString(status)
+					                         + ", required state is Paused." } });
 					}
 				}
 			})
