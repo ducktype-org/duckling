@@ -122,16 +122,6 @@ namespace compiler::helios {
 		case pst::ElementKind::CodeBlockOrStmt:
 			return ElementScopeKind::Standard;
 
-		case pst::ElementKind::ClassBlock: {
-			// This is because AccessBlocks store a ClassBlock inside.
-			// Only the "top-class" ClassBlock has a scope.
-			auto parent_kind = element->getParent().value().unlock(ctx)->getElementKind();
-			if (parent_kind == pst::ElementKind::Class)
-				return ElementScopeKind::Standard;
-			else
-				return ElementScopeKind::Transparent;
-		}
-
 		// I don't know if this is correct
 		case pst::ElementKind::SpecifierBlock:
 			return ElementScopeKind::Transparent;
@@ -155,10 +145,6 @@ namespace compiler::helios {
 		// this has to be transparent, since ClassBlock scopes
 		// contain all symbols in AccessBlock's
 		case pst::ElementKind::ClassSpecifierBlock:
-			return ElementScopeKind::Transparent;
-
-		// @TODO: #2087 this is a mock, figure out proper handling of non-class statements
-		case pst::ElementKind::NonClassStmt:
 			return ElementScopeKind::Transparent;
 
 		case pst::ElementKind::If:
@@ -206,7 +192,7 @@ namespace compiler::helios {
 			// basically just a wrapper around the expanded element.
 			return ElementScopeKind::Transparent;
 
-		case pst::ElementKind::Template:
+		case pst::ElementKind::TemplateStmt:
 			// make sure this is ok!
 			// link the issue, this is a total hack
 			return ElementScopeKind::Standard; // this sort of works only for baked ones now,
@@ -385,7 +371,7 @@ namespace compiler::helios {
 
 			// TODO: cutoff changes semantics of this query, consider making it internal somehow
 			auto cutoff_function = [](pst::Access<pst::LangElement> element) {
-				if (element->getElementKind() == pst::ElementKind::Template) {
+				if (element->getElementKind() == pst::ElementKind::TemplateStmt) {
 					// we want to skip template bodies, since
 					// they don't compile directly
 					return true;
@@ -563,7 +549,7 @@ namespace compiler::helios {
 			
 			// THIS IS A GIGA HACK!
 			// change it to todo or better solution
-			// void visitTemplateDecl(pst::Access<pst::TemplateDecl> template_decl) override {
+			// void visitTemplateStmt(pst::Access<pst::TemplateStmt> template_decl) override {
 				
 			// 	// Scope of "template →(...)← {}"
 			// 	// ONLY for BAKED templates, since they are the only ones that have a scope.
@@ -616,10 +602,10 @@ namespace compiler::helios {
 			if (base_element->isStatementAggregate()) {
 				return filterSymbolsFromStmtList(ctx, getStmtsFromStmtAggregate(ctx, base_element));
 			} 
-			else if (base_element->getElementKind() == pst::ElementKind::Template) {
+			else if (base_element->getElementKind() == pst::ElementKind::TemplateStmt) {
 				std::cerr << "QuerySymbolsInScope for template element!\n";
 
-				auto template_decl = base_element.dynamicCast<pst::TemplateDecl>().value();
+				auto template_decl = base_element.dynamicCast<pst::TemplateStmt>().value();
 
 				std::vector<SymID> out;
 				const auto& additional_data = template_decl->getAdditionalRootData();

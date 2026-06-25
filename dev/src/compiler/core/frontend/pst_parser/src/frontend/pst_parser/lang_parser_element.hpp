@@ -123,11 +123,6 @@ namespace pst {
 		 */
 		friend class Stmt;
 
-		/**
-		 * @brief Needed for access to hash methods.
-		 */
-		friend class ClassStmt;
-
 		template<typename X>
 		friend class PSTAutomatic;
 		friend class CloningUtils;
@@ -252,7 +247,7 @@ namespace pst {
 		 * * CodeBlock
 		 * * CodeBlockOrStmt
 		 * * TopLevel
-		 * * ClassBlock
+		 * *
 		 */
 		[[nodiscard]]
 		virtual bool isStatementAggregate() const {

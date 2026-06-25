@@ -168,7 +168,7 @@ private:
 		));
 
 		auto maybe_art = query_col->fileArtifactAtMaybe(base::StrID(fname.c_str()));
-		ASSERT_TRUE(maybe_art.has_value());
+		ASSERT_HAS_VALUE(maybe_art);
 
 		const auto& art  = *maybe_art.value();
 		auto        path = art.file.getFilePath().getPath();

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ordering.hpp"
+#include "context_options.hpp"
 
 #include <hashing/add_to_hash.hpp>
 #include <token_parser_core/parser_state.hpp>
@@ -12,28 +12,38 @@ namespace pst {
 	public:
 		friend class LangParserState;
 
-		base::StrID    class_name;
-		BlockOrderType block_order;
+		base::StrID    class_name;    ///< Class name in context, used for parsing class statements
+		BlockOrderType block_order;   ///< Block order type, used to decide paths in code blocks
+		StmtContext    stmt_context;  ///< Statement type context, used to decide between normal and
+		                              ///< class statement parsing
 
-		LangParserContext(base::StrID class_name, BlockOrderType block_order):
+		LangParserContext(
+			base::StrID class_name, BlockOrderType block_order, StmtContext stmt_context
+		):
 			  class_name(class_name),
-			  block_order(block_order) {}
+			  block_order(block_order),
+			  stmt_context(stmt_context) {}
 
 		LangParserContext(CRef<LangParserContext> other):
 			  class_name(other->class_name),
-			  block_order(other->block_order) {}
+			  block_order(other->block_order),
+			  stmt_context(other->stmt_context) {}
 
 		static Box<LangParserContext> programBaseContext() {
-			return base::makeBox<LangParserContext>(base::StrID(""), BlockOrderType::Unordered);
+			return base::makeBox<LangParserContext>(
+				base::StrID(""), BlockOrderType::Unordered, StmtContext::Normal
+			);
 		}
 
 		static Box<LangParserContext> scriptBaseContext() {
-			return base::makeBox<LangParserContext>(base::StrID(""), BlockOrderType::Ordered);
+			return base::makeBox<LangParserContext>(
+				base::StrID(""), BlockOrderType::Ordered, StmtContext::Normal
+			);
 		}
 
 		[[nodiscard]]
 		Box<tpc::ParserContext> copy() const override {
-			return base::makeBox<LangParserContext>(class_name, block_order);
+			return base::makeBox<LangParserContext>(class_name, block_order, stmt_context);
 		}
 
 		friend constexpr void addToHash(

@@ -353,7 +353,7 @@ namespace compiler::backend_vm::internal {
 		case BoxFree: {
 			CORE_ASSERT(
 				instr.arguments.size() == 1,
-				"BoxAlloc operation expects 1 argument, got: ",
+				"BoxFree operation expects 1 argument, got: ",
 				instr.arguments.size()
 			);
 			return BoxFreeOperation{

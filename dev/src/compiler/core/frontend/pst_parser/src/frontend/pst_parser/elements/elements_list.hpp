@@ -4,7 +4,6 @@ namespace pst {
 	// Meta
 	class Stmt;
 	class NotStmt;
-	class ClassStmt;
 	// Lists
 	class ParamList;
 	class ImplementsList;
@@ -21,13 +20,13 @@ namespace pst {
 	class CallArgument;
 	class CodeBlock;
 	class CodeBlockOrStmt;
-	class ClassBlock;
 	class StmtSpecifier;
 	class RoundGroupExpr;
 	class ExprElement;
 	class FormatSubElement;
 	class FormatSubExpression;
 	class FormatSubString;
+	class TemplateDecl;
 	// Wrappers
 	class OperatorWrapper;
 	class IdentifierWrapper;
@@ -68,7 +67,7 @@ namespace pst {
 	class If;
 	class While;
 	class For;
-	class TemplateDecl;
+	class TemplateStmt;
 	// Actions
 	class Return;
 	class Continue;

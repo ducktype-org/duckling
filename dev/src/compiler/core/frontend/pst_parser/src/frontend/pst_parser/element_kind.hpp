@@ -24,8 +24,6 @@ namespace pst {
 		CodeBlock,
 		CodeBlockOrStmt,
 
-		ClassBlock,
-
 		// Duckling declarations:
 		Namespace,
 		Class,
@@ -35,7 +33,7 @@ namespace pst {
 		Pattern,
 		Block,
 		SpecifierBlock,
-		Template,
+		TemplateStmt,
 
 		Using,
 		Alias,
@@ -74,7 +72,6 @@ namespace pst {
 		ClassField,
 		ClassMethod,
 		ClassSpecifierBlock,
-		NonClassStmt,
 		ClassSpecial,
 
 		// use it, once its docs are more stable:
@@ -88,6 +85,8 @@ namespace pst {
 		DottedName,
 		CallArgument,
 		NestedImportList,
+
+		TemplateDecl,
 
 		// wrappers
 		OperatorWrapper,
