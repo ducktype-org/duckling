@@ -24,8 +24,20 @@ namespace {
 
 	void printProcStatus(printer::PrinterOStream& os, const vm::api::ProcStatus& status) {
 		os.add(printer::PrinterContent(typeToString(status)));
-		if (std::holds_alternative<vm::api::ExecutionCompleted>(status)) {
-			for (auto val: std::get<vm::api::ExecutionCompleted>(status).exit_value) {
+
+		base::Optional<vm::api::ExitValue> maybe_result = std::nullopt;
+
+		variant_match(status) {
+			variant_case(vm::api::ExecutionCompleted, completed) {
+				maybe_result = completed.exit_value;
+			}
+			variant_case(vm::api::ExprExecutionCompleted, expr_completed) {
+				maybe_result = expr_completed.exit_value;
+			}
+		}
+
+		if_opt_some(maybe_result, exit_value) {
+			for (auto val: exit_value) {
 				if_opt_some(val->readData(), data) {
 					variant_match(data) {
 						variant_case(vm::interpreted_data_variant::Primitive, primitive) {
