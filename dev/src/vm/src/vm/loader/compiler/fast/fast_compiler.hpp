@@ -18,8 +18,10 @@ namespace vm::loader::compiler::fast {
 
 		void compileNewGlobals(const std::vector<code::GlobalData>& new_globals) override;
 
-		void compileNewFunctions(const std::vector<code::valid_function::ValidFunction>& new_functions
+		void compileNewFunctions(
+			const std::vector<CRef<code::valid_function::ValidFunction>>& new_functions
 		) override;
+
 
 		void compileNewExtCFunctions(const std::vector<code::ExternalCFunction>& new_functions
 		) override;

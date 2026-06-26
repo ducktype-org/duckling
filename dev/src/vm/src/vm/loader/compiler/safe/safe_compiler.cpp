@@ -173,9 +173,10 @@ namespace vm::loader::compiler::safe {
 	}
 
 	void SafeCompiler::compileNewFunctions(
-		const std::vector<code::valid_function::ValidFunction>& new_functions
+		const std::vector<CRef<code::valid_function::ValidFunction>>& new_functions
 	) {
-		for (const auto& function: new_functions) {
+		for (const auto& func_ref: new_functions) {
+			auto&                                              function = *func_ref;
 			vm::loader::compiler::detail::FunctionStackContext ctx
 				= calculateStackContext(function);
 
