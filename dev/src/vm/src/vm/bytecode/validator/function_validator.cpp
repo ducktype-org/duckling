@@ -228,13 +228,7 @@ public:
 			auto pos = (*thread)->getCurrentHighPosition(frame_idx);
 			if_opt_none(pos) return false;
 
-			auto high_func = (*thread)->getFatBytecodeFunction(frame_idx);
-			if (!high_func) return false;
-
-			auto ans = high_func->contains(pos->instruction_index, place.var_name);
-			if (!ans) return false;
-
-			return *ans;
+			return pos->contains(place.var_name);
 		}
 		return VISIT(source, db, return db->contains(stack_state_id, place.var_name););
 	}
@@ -242,6 +236,7 @@ public:
 	template<typename PlaceT>
 	[[nodiscard]]
 	CRef<valid_type::ValidType> at(const PlaceT& place) const {
+		base::StrID name = place.var_name;
 		base::StrID name_of_type{};
 
 		match_optional(place.frame) {
@@ -249,21 +244,10 @@ public:
 				CORE_ASSERT(
 					thread.has_value(), "we should be checking that there is a thread beforehand"
 				);
-				auto pos       = (*thread)->getCurrentHighPosition(frame_idx);
-				auto high_func = (*thread)->getFatBytecodeFunction(frame_idx);
-
-				CORE_ASSERT(
-					pos.has_value() && high_func,
-					"before using method `at()` we need to check that the value is contained, so "
-					"that arguments are valid"
-				);
-
-				name_of_type = *high_func->getTypeName(pos->instruction_index, place.var_name);
+				name_of_type = *(*thread)->getCurrentHighPosition(frame_idx)->getTypeName(name);
 			}
 
-			opt_none {
-				VISIT(source, db, name_of_type = *db->getTypeName(stack_state_id, place.var_name););
-			}
+			opt_none { VISIT(source, db, name_of_type = *db->getTypeName(stack_state_id, name)); }
 		}
 
 		return types_ctx->at(name_of_type);

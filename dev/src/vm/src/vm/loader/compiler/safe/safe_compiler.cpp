@@ -58,9 +58,7 @@ namespace vm::loader::compiler::safe {
 				CORE_ASSERT(stack_ctx.thread_evaluating_expr.has_value(), "there should be a thread evaluating this expr");
 				auto& thread = **stack_ctx.thread_evaluating_expr;
 
-				auto prev_func = thread.getFatBytecodeFunction(frame_idx);
-				auto line = thread.getCurrentHighPosition(frame_idx)->instruction_index;
-				auto relative_offset = getIntTypeSize(*prev_func->getByteOffset(line, opcode_arg.var_name));
+				auto relative_offset = getIntTypeSize(*thread.getCurrentHighPosition(frame_idx)->getByteOffset(opcode_arg.var_name));
 				
 				usize stack_size = thread.getNumberOfCurrentStackFrames();
 
@@ -87,9 +85,7 @@ namespace vm::loader::compiler::safe {
 				CORE_ASSERT(stack_ctx.thread_evaluating_expr.has_value(), "there is a thread evaluating this expr");
 				auto& thread = **stack_ctx.thread_evaluating_expr;
 
-				auto prev_func = thread.getFatBytecodeFunction(frame_idx);
-				auto line = thread.getCurrentHighPosition(frame_idx)->instruction_index;
-				auto relative_offset = *prev_func->getIdx(line, opcode_arg.var_name);
+				auto relative_offset = *thread.getCurrentHighPosition(frame_idx)->getIdx(opcode_arg.var_name);
 				
 				usize stack_size = thread.getNumberOfCurrentStackFrames();
 

@@ -26,7 +26,7 @@ namespace vm::api {
 	};
 
 	struct ExprExecutionCompleted {
-		ExitValue exit_value;
+		std::vector<Ref<VmValue>> exit_value;
 		NLOHMANN_DEFINE_TYPE_INTRUSIVE(ExprExecutionCompleted, exit_value);
 	};
 

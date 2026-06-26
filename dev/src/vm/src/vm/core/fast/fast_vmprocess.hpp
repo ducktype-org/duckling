@@ -90,6 +90,10 @@ namespace vm::fast {
 		std::expected<api::Response, api::ApiError> getVMValueForType(const std::string& type_name
 		) override;
 
+		std::expected<api::Response, api::ApiError> evalRuntimeExpr(
+			api::ThreadID thread_id, const std::variant<fs::File, code::Function>& expr
+		) override;
+
 		std::vector<api::ThreadID> getAllThreadIDs() override;
 
 		FastVMThread& getMainVMThread();

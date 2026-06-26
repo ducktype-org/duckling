@@ -29,19 +29,26 @@ namespace {
 
 		variant_match(status) {
 			variant_case(vm::api::ExecutionCompleted, completed) {
-				maybe_result = completed.exit_value;
+				const auto& exit_value = completed.exit_value;
+				if (v_matches(exit_value, std::vector<Ref<vm::VmValue>>)) {
+					for (auto val: std::get<std::vector<Ref<vm::VmValue>>>(exit_value)) {
+						if_opt_some(val->readData(), data) {
+							variant_match(data) {
+								variant_case(vm::interpreted_data_variant::Primitive, primitive) {
+									os << " (return value = " << std::to_string(primitive.value) << ")";
+								}
+							}
+						}
+					}
+				}
 			}
 			variant_case(vm::api::ExprExecutionCompleted, expr_completed) {
-				maybe_result = expr_completed.exit_value;
-			}
-		}
-
-		if_opt_some(maybe_result, exit_value) {
-			for (auto val: exit_value) {
-				if_opt_some(val->readData(), data) {
-					variant_match(data) {
-						variant_case(vm::interpreted_data_variant::Primitive, primitive) {
-							os << " (return value = " << std::to_string(primitive.value) << ")";
+				for (auto val: expr_completed.exit_value) {
+					if_opt_some(val->readData(), data) {
+						variant_match(data) {
+							variant_case(vm::interpreted_data_variant::Primitive, primitive) {
+								os << " (return value = " << std::to_string(primitive.value) << ")";
+							}
 						}
 					}
 				}

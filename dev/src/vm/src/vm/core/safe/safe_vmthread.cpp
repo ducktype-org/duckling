@@ -741,25 +741,27 @@ namespace vm {
 		return response;
 	}
 
-	base::Optional<vm::loader::FatBytecodePosition> SafeVMThread::getCurrentHighPosition(
-		u64 frame_index
+	base::Optional<vm::loader::ValidFuncPosition> SafeVMThread::getCurrentHighPosition(u64 frame_index
 	) const {
 		auto opt_low_pos = getCurrentPosition(frame_index);
 		if_opt_none(opt_low_pos) return std::nullopt;
 
-		auto ans = safe_process.getCompiler()->mapLowVMProgramPositionToCodeCollectionPosition(
+		auto fat_pos = safe_process.getCompiler()->mapLowVMProgramPositionToCodeCollectionPosition(
 			*opt_low_pos
 		);
-		if_opt_none(ans) return std::nullopt;
+		if_opt_none(fat_pos) return std::nullopt;
 
-		return *ans;
+		return loader::ValidFuncPosition(
+			fat_pos->instruction_index, *getFatBytecodeFunction(frame_index)
+		);
 	}
 
-	MCRef<code::valid_function::ValidFunction> SafeVMThread::getFatBytecodeFunction(u64 frame_idx
+	base::Optional<CRef<code::valid_function::ValidFunction>> SafeVMThread::getFatBytecodeFunction(
+		u64 frame_idx
 	) const {
-		if (frame_idx >= getNumberOfCurrentStackFrames()) return nullptr;
+		if (frame_idx >= getNumberOfCurrentStackFrames()) return std::nullopt;
 
 		auto& frame = getStackFrame(frame_idx);
-		return frame.current_function->high_func;
+		return frame.current_function->high_func.toOpt();
 	}
 }
