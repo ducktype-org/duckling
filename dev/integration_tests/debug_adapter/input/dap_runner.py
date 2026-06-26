@@ -5,14 +5,12 @@ client = DAPTestClient(program_name="../examples/input.dbc")
 
 try:
     # Startup phase
-    client.send_request("initialize")
-    client.send_request("configurationDone")
-    launch_seq = client.send_request("launch", {"program": client.program_name})
-    client.wait_for(responses=[launch_seq])
+    client.start_session()
+    client.wait_for(outputs=["Running"])
 
     # Sending input in evaluate request
     number = 42
-    input_seq = client.send_request("evaluate", {"expression": f"{number}", "context": "repl"})
+    input_seq = client.send_evaluate(number)
     client.wait_for(
         outputs=[f"VM returned: [{number}]"]
     )
