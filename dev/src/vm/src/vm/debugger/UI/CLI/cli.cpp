@@ -35,7 +35,8 @@ namespace {
 						if_opt_some(val->readData(), data) {
 							variant_match(data) {
 								variant_case(vm::interpreted_data_variant::Primitive, primitive) {
-									os << " (return value = " << std::to_string(primitive.value) << ")";
+									os << " (return value = " << std::to_string(primitive.value)
+									   << ")";
 								}
 							}
 						}
@@ -179,7 +180,10 @@ namespace vm::debugger::cli {
 										 auto file     = options.getPositional<fs::File>(0);
 										 auto response = debugger.evaluate(file);
 										 if (!response)
-											 printNL("evaluation of the expression failed");
+											 printNL(
+												 "evaluation of the expression failed:\n"
+												 + errorToString(response.error())
+											 );
 										 return 0;
 									 }))
 		          .addSubcommand(

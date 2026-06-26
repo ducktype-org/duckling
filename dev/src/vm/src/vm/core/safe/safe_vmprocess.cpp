@@ -548,7 +548,7 @@ namespace vm {
 			auto success = thread_ref->loadAndExecRuntimeExpr(std::move(valid_expr).value());
 			if (!success)
 				return std::unexpected(api::ApiError{
-					api::OtherError{ "Couldn't execute the expression" } });
+					api::OtherError{ "Couldn't execute the expression - likely resume() has somehow failed" } });
 			return api::Response(api::response::Empty());
 		} else {
 			std::stringstream ss;
