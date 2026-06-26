@@ -392,7 +392,7 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(jitLoopEntrypoint)(FUNCTION_ARGS) {
 		{
-			auto&             jit_data         = thread.safe_process.getJitData();
+			/*auto&             jit_data         = thread.safe_process.getJitData();
 			auto&             current_func_obj = *frame->current_function;
 			auto              current_func_id  = current_func_obj.id;
 			auto              instr_offset     = instr - current_func_obj.bc.data();
@@ -432,9 +432,9 @@ namespace vm {
 				frame       = thread.runtime_data.frame_stack_current;
 				instr       = frame->instr;
 				local_stack = frame->local_stack;
-			}
+			}*/
 		}
-		FUNCTION_CONT(0);
+		FUNCTION_CONT(1);
 	}
 
 #endif
