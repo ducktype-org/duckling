@@ -6,6 +6,7 @@
 
 #include <condition_variable>
 #include <mutex>
+#include <variant>
 
 #define altIndex(t) base::variantTypeIndex<vm::api::ProcStatus, t>()
 
@@ -67,7 +68,13 @@ private:
 				ASSERT_EQUAL_PRINT(expected_statuses[status_counter], status.index());
 				variant_match(status) {
 					variant_case(vm::api::ExecutionCompleted, completed) {
-						auto exit_value = completed.exit_value;
+						auto exit_value_variant = completed.exit_value;
+						ASSERT_TRUE(std::holds_alternative<std::vector<Ref<vm::VmValue>>>(
+							exit_value_variant
+						));
+						auto exit_value
+							= std::get<std::vector<Ref<vm::VmValue>>>(exit_value_variant);
+
 						ASSERT_TRUE(ret_val_counter < expected_values.size());
 						ASSERT_EQUAL_PRINT(1, exit_value.size());
 						ASSERT_EQUAL_PRINT("i64", exit_value[0]->type->getName());
@@ -243,7 +250,13 @@ private:
 				ASSERT_EQUAL_PRINT(expected_statuses[status_counter], status.index());
 				variant_match(status) {
 					variant_case(vm::api::ExecutionCompleted, completed) {
-						auto exit_value = completed.exit_value;
+						auto exit_value_variant = completed.exit_value;
+						ASSERT_TRUE(std::holds_alternative<std::vector<Ref<vm::VmValue>>>(
+							exit_value_variant
+						));
+						auto exit_value
+							= std::get<std::vector<Ref<vm::VmValue>>>(exit_value_variant);
+
 						ASSERT_TRUE(ret_val_counter < expected_values.size());
 						ASSERT_EQUAL_PRINT(1, exit_value.size());
 						ASSERT_EQUAL_PRINT("i64", exit_value[0]->type->getName());
@@ -410,9 +423,10 @@ private:
 			return std::holds_alternative<vm::api::ExecutionCompleted>(debugger.getStatus());
 		}));
 
-		auto status         = debugger.getStatus();
-		auto completed_info = std::get<vm::api::ExecutionCompleted>(status);
-		auto optional_data  = completed_info.exit_value[0]->readData();
+		auto  status         = debugger.getStatus();
+		auto  completed_info = std::get<vm::api::ExecutionCompleted>(status);
+		auto& exit_value     = std::get<std::vector<Ref<vm::VmValue>>>(completed_info.exit_value);
+		auto  optional_data  = exit_value[0]->readData();
 
 		ASSERT_HAS_VALUE(optional_data);
 
