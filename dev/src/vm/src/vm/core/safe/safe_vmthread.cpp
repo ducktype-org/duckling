@@ -729,6 +729,7 @@ namespace vm {
 		runtime_expr_low.emplace_back(safe_process.compileToLow(this, runtime_expr_high.back()));
 
 		auto  frame       = runtime_data.frame_stack_current;
+		auto  prev_frame  = frame;
 		auto  instr       = frame->instr;
 		auto  local_stack = frame->local_stack;
 		auto& called_expr = runtime_expr_low.back();
@@ -736,6 +737,11 @@ namespace vm {
 			OpFuns::performInit(instr, local_stack, frame, *this, type);
 		OpFuns::performFunctionCall(instr, local_stack, frame, *this, called_expr);
 		OpFuns::save_execution_state(instr, local_stack, frame, *this);
+
+		// updating the previous frame, because result variables
+		// will not be returned to the caller
+		prev_frame->local_block_ref_stack_end -= called_expr.result_types.size();
+		prev_frame->local_stack_head -= called_expr.ret_size;
 
 		auto response = resume();
 		return response;

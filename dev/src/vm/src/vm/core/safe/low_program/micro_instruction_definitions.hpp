@@ -691,7 +691,7 @@ DEF_MICRO_INSTR(stepGil)
  * @arg0 - pointer to a VmValue.
  * @arg1 - n/a.
  */
-DEF_MICRO_INSTR(initFromVmValue)
+DEF_MICRO_INSTR(initFromVmValue, vm::low::opargs::Immediate)
 
 #ifdef DEFAULT_HANDLE_MICRO_INSTR
 #undef DEFAULT_HANDLE_MICRO_INSTR

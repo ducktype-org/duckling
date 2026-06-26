@@ -1830,7 +1830,7 @@ class FunctionValidator {
 		if (is_expr)
 			throwOnForbiddenOpcodes<OpCode::Op_ret_tailcall_func, OpCode::Op_ret>(body);
 		else
-			throwOnForbiddenOpcodes<OpCode::Op_ret_from_expr>(body);
+			throwOnForbiddenOpcodes<OpCode::Op_ret_from_expr, OpCode::Op_initFromVmValue>(body);
 	}
 
 public:

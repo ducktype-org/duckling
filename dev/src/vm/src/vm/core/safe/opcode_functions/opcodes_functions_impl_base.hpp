@@ -596,11 +596,6 @@ namespace vm {
 			}
 			callee_frame->resetFrameData();
 
-			// updating the caller's frame, because result variables
-			// are no longer on the stack
-			frame->local_block_ref_stack_end -= ret_count;
-			frame->local_stack_head -= frame->current_function->ret_size;
-
 			instr       = frame->instr;
 			local_stack = frame->local_stack;
 
