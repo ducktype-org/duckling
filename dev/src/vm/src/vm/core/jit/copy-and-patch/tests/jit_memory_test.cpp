@@ -9,7 +9,6 @@
 #include <cstring>
 #include <string>
 
-using vm::jit::cnp::HoleType;
 using vm::jit::cnp::HoleValue;
 using vm::jit::cnp::JitFuncMemory;
 using vm::jit::cnp::StencilData;

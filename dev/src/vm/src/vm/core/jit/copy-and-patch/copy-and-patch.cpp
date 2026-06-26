@@ -11,9 +11,12 @@
 
 #include <functional>
 
+static CP_RETURN exceptionRethrow(CP_ARGS) { throw; }
+
 namespace vm::jit {
 	cnp::JitFuncMemory compileCP(
-		const vm::low::cf::ControlFlowGraph& cfg, const vm::low::MicroBytecode& bc
+		const vm::low::cf::ControlFlowGraph& cfg,
+		const vm::low::MicroBytecode&        bc
 	) {
 		using namespace cnp;
 		using namespace std::views;
@@ -30,14 +33,17 @@ namespace vm::jit {
 			}
 		};
 
-		auto choose_edge = [](auto block) -> SpecialStencils {
+		auto choose_edge = [](auto block) -> base::Optional<SpecialStencils> {
+			if (block.isFallthrough()) {
+				return std::nullopt;
+			}
 			switch (block.edgeKind()) {
 			case vm::low::cf::OutEdges::Kind::JmpIf:
 				return SpecialStencils::JumpIf;
 			case vm::low::cf::OutEdges::Kind::JmpIfNot:
 				return SpecialStencils::JumpIfNot;
 			case vm::low::cf::OutEdges::Kind::End:
-				return SpecialStencils::Return;
+				return std::nullopt;
 			case vm::low::cf::OutEdges::Kind::Default:
 				return SpecialStencils::Jump;
 			}
@@ -58,8 +64,9 @@ namespace vm::jit {
 					continue;
 				current_offset += get_opfunc_size(transform_opcode((opcode)));
 			}
-			auto stencil = std::to_underlying(choose_edge(block));
-			current_offset += get_opfunc_size(stencil);
+
+			if (auto stencil = choose_edge(block))
+				current_offset += get_opfunc_size(std::to_underlying(stencil.value()));
 		}
 
 
@@ -84,14 +91,16 @@ namespace vm::jit {
 				block_offsets[idx]
 			);
 
-			for (MicroInstruction instr: block.instructions(bc)) {
+			for (const MicroInstruction& instr: block.instructions(bc)) {
 				auto opcode = getInstructionOpcode(instr);
 				if (low::isOpcodeNonExecutable(opcode
 				    ))  // || opcode == low::MicroOpcode::jitEntrypoint)
 					continue;
 
-				patch_stencil(transform_opcode(opcode), [&instr, &next, &opcode](HoleValue value) {
+				patch_stencil(transform_opcode(opcode), [&](HoleValue value) {
 					switch (value) {
+					case HoleValue::InstrPtr:
+						return std::bit_cast<u64>(&instr);
 					case HoleValue::Arg0:
 						return instr.arg0;
 					case HoleValue::Arg1:
@@ -107,33 +116,48 @@ namespace vm::jit {
 								vm::OpFuns::DEBUG_OPFUNS[std::to_underlying(opcode)]
 							);
 						}
+					case HoleValue::CallOpcode:
+						return *reinterpret_cast<const u64*>(&instr);
+					case HoleValue::ExceptionThrower:
+						return std::bit_cast<u64>(&exceptionRethrow);
+					case HoleValue::None:
+						[[fallthrough]];
 					case HoleValue::JmpFn:
-						CORE_PANIC("jumping inside a basic block");
-					case HoleValue::Zero:
-						CORE_PANIC("zero left as a hole");
+						[[fallthrough]];
+					case HoleValue::COUNT:
+						CORE_PANIC(base::enumToStr(value), " was left as a hole in a basic block");
 					}
 				});
 			}
-			auto stencil = std::to_underlying(choose_edge(block));
-			patch_stencil(stencil, [&](HoleValue value) {
-				switch (value) {
-				case HoleValue::Arg0:
-					CORE_PANIC("arg0 passed to stencil jump");
-				case HoleValue::Arg1:
-					CORE_PANIC("arg1 passed to stencil jump");
-				case HoleValue::ContinueFn:
-					return std::bit_cast<u64>(memory.addr + block_offsets.at(block.edge(1)));
-				case HoleValue::CallFn:
-					CORE_PANIC("call function passed to stencil jump");
-				case HoleValue::JmpFn:
-					return std::bit_cast<u64>(memory.addr + block_offsets.at(block.edge(0)));
-				case HoleValue::Zero:
-					CORE_PANIC("zero left as a hole");
-				}
-			});
+			if (auto stencil = choose_edge(block)) {
+				patch_stencil(std::to_underlying(stencil.value()), [&](HoleValue value) {
+					switch (value) {
+					case HoleValue::ContinueFn:
+						return std::bit_cast<u64>(memory.addr + block_offsets.at(block.edge(1)));
+					case HoleValue::JmpFn:
+						return std::bit_cast<u64>(memory.addr + block_offsets.at(block.edge(0)));
+					case HoleValue::InstrPtr:
+						[[fallthrough]];
+					case HoleValue::Arg0:
+						[[fallthrough]];
+					case HoleValue::Arg1:
+						[[fallthrough]];
+					case HoleValue::CallOpcode:
+						[[fallthrough]];
+					case HoleValue::CallFn:
+						[[fallthrough]];
+					case HoleValue::ExceptionThrower:
+						[[fallthrough]];
+					case HoleValue::None:
+						[[fallthrough]];
+					case HoleValue::COUNT:
+						CORE_PANIC(base::enumToStr(value), " was passed to jump stencil");
+					}
+				});
+			}
 		}
 
-		IF_BUILD_TYPE_DEV(memory.dump("compiled function"));
+		IF_BUILD_TYPE_DEV(memory.dump("compiled_function"));
 		memory.markExecutable();
 		return memory;
 	}

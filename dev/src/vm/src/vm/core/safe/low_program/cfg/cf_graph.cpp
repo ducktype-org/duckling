@@ -249,6 +249,8 @@ namespace vm::low::cf {
 		return oss.str();
 	}
 
+	bool BasicBlock::isFallthrough() const { return edgeKind() == OutEdges::Kind::Default && next() == id + 1; }
+
 	std::string BasicBlock::toString() const {
 		std::ostringstream oss;
 		oss << "Block{bid = " << id << ", range = [" << start << ", " << end

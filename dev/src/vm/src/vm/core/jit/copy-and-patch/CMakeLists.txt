@@ -26,7 +26,7 @@ function(process_to_binary binary_file destination_file binary_artifact_prefix a
 # @TODO: #2296 This takes way too long, ccache/make targets to simplify.
     add_custom_command(
         OUTPUT ${linked_out}
-        COMMAND ${CMAKE_C_COMPILER}
+        COMMAND ${CMAKE_CXX_COMPILER}
         -O3
         -fno-plt
         -fPIC
@@ -36,7 +36,7 @@ function(process_to_binary binary_file destination_file binary_artifact_prefix a
         -c
         ${binary_file}
         -o ${linked_out}-1
-        COMMAND ${CMAKE_C_COMPILER}
+        COMMAND ${CMAKE_CXX_COMPILER}
         -fPIC
         -shared
         -mcmodel=large
@@ -54,6 +54,7 @@ function(process_to_binary binary_file destination_file binary_artifact_prefix a
         "${linked_out}"
         "--output=${nm_out}"
         ${analyze_arg}
+        # "--statistics"
         "--shared"
         ${LLVM_TOOLS_ARGS}
         DEPENDS ${linked_out} ${analyze_deps}
@@ -101,7 +102,7 @@ function(process_to_binary binary_file destination_file binary_artifact_prefix a
 endfunction()
 
 process_to_binary(
-    ${CMAKE_CURRENT_SOURCE_DIR}/tests/mock_stencils.c 
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/mock_stencils.cpp
     tests/jit_memory_test.cpp 
     "mock_stencils"
     "--accept-all-sections"

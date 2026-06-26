@@ -12,25 +12,24 @@ import _schema
 def list_quote(elements):
     return "{" + ", ".join(elements) + "}"
 
-def _signed(value: int) -> int:
-    value %= 1 << 64
-    if value & (1 << 63):
-        value -= 1 << 64
-    return value
-
-
 @enum.unique
 class HoleValue(enum.Enum):
     """
     Different "base" values that can be patched into holes.
     """
 
+    INSTR_PTR = enum.auto()
+    ARG0 = enum.auto()
+    ARG1 = enum.auto()
+    
     CONTINUE_FN = enum.auto()
     JMP_FN = enum.auto()
     CALL_FN = enum.auto()
-    ARG0 = enum.auto()
-    ARG1 = enum.auto()
-    ZERO = enum.auto()
+
+    CALL_OPCODE = enum.auto()
+    EXCEPTION_THROWER = enum.auto()
+
+    NONE = enum.auto()
 
 
 def symbol_to_value(symbol: str) -> HoleValue:
@@ -38,7 +37,7 @@ def symbol_to_value(symbol: str) -> HoleValue:
     Convert a symbol name to a HoleValue and a symbol name.
     """
     if not symbol.startswith("_value_to_patch_"):
-        return HoleValue.ZERO
+        return HoleValue.NONE
     
     type_name = symbol[len("_value_to_patch_"):]
     return HoleValue[type_name.upper()]
@@ -48,26 +47,13 @@ def to_pascal_case(text):
 
 @dataclasses.dataclass
 class Hole:
-    """
-    A "hole" in the stencil to be patched with a computed runtime value.
-    Analogous to relocation records in an object file.
-    """
-
     offset: int
-    kind: _schema.HoleKind
-    # Patch with this base value:
     value: HoleValue
-    # ...plus the address of this symbol:
-    symbol: str | None
-    # ...plus this addend:
-    addend: int
 
     def to_c(self) -> str:
         return "StencilHole" + list_quote(
             [
                 f".offset = {self.offset}",
-                f".size = 4",
-                f".type = HoleType::Movable",
                 f".value = HoleValue::{to_pascal_case(self.value.name)}",
             ]
         )
@@ -81,11 +67,6 @@ class StencilType(enum.Enum):
 
 @dataclasses.dataclass
 class Stencil:
-    """
-    A contiguous block of machine code or data to be copied-and-patched.
-    Analogous to a section or segment in an object file.
-    """
-
     binary_name: str
     unmangled_name: str
     type: StencilType
@@ -97,10 +78,12 @@ class Stencil:
         return binary[self.place: self.place + self.size]
 
     def remove_jump(self, binary):
-        # This only checks `jmp rax`, but that is enough as most stencils end in exaclty this way.
+        # This only checks `jmp rax`, but that is enough as most stencils end in exactly this way.
         # This is very dependant on the compilation method used, and I have my doubts that it is the best way, so I leave it be for now.
         if  self.type == StencilType.INSTRUCTION and self.stencil_binary(binary).endswith((b"\xFF", b"\xE0")):
             self.size = self.size - 2
+            return True
+        return False
 
     def validate(self) -> bool:
         match self.type:
@@ -109,7 +92,7 @@ class Stencil:
             case StencilType.SPECIAL:
                 return self.size != 0
             case StencilType.INSTRUCTION:
-                return self.size != 0 and len(self.holes)
+                return self.size != 0 and len(self.holes) != 0
 
     def to_c(self) -> str:
         return "StencilData " + list_quote(
@@ -119,7 +102,7 @@ class Stencil:
                 f".size = {self.size}",
                 ".to_patch = "
                 + list_quote(
-                    hole.to_c() for hole in self.holes if hole.value != HoleValue.ZERO
+                    hole.to_c() for hole in self.holes if hole.value != HoleValue.NONE
                 ),
                 ".relocation = {}",
             ]

@@ -96,4 +96,8 @@ namespace vm::low {
 	constexpr bool isOpcodeNonExecutable(const vm::low::MicroOpcode& opcode) {
 		return std::ranges::find(NON_EXEC_OPCODES, opcode) != NON_EXEC_OPCODES.end();
 	}
+
+	template<vm::low::MicroOpcode opcode>
+	constexpr bool isOpcodeReturning
+		= opcode == MicroOpcode::ret || opcode == MicroOpcode::ret_tailcall_func;
 }

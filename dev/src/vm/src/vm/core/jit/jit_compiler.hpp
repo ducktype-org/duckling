@@ -27,8 +27,10 @@ namespace vm::jit {
 		= int(const vm::MicroInstruction**, std::byte**, vm::Frame**, vm::SafeVMThread*);
 
 
-#define CP_ARGS const MicroInstruction *instr, byte *local_stack, Frame *frame, SafeVMThread &thread
-	using JitCPFunc = void(CP_ARGS);
+#define CP_RETURN    __attribute__((preserve_none)) void
+#define CP_ARGS      [[maybe_unused]] ::byte *local_stack, [[maybe_unused]] ::vm::Frame *frame, [[maybe_unused]] ::vm::SafeVMThread &thread
+#define CP_PASS_ARGS local_stack, frame, thread
+	using JitCPFunc = CP_RETURN(CP_ARGS);
 
 	/**
 	 * @brief The data additionally stored per function, by the JIT compiler.

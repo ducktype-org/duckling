@@ -153,6 +153,8 @@ namespace vm::low {
 			 */
 			[[nodiscard]] BasicBlockID failTarget() const;
 
+			[[nodiscard]] bool isFallthrough() const;
+
 			/**
 			 * @brief Sets conditional successors.
 			 * @param kind Conditional edge kind.

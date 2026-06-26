@@ -337,7 +337,7 @@ namespace vm {
 			const auto* program_ptr      = thread.process_program.get();
 			const auto* program_copy     = dynamic_cast<const low::LowVMProgramCopy*>(program_ptr);
 			CORE_ASSERT(program_copy, "JIT entrypoints should be only in LowVMProgramCopy.");
-			auto original_function
+			const auto& original_function
 				= program_copy->getOriginalProgram()->getFunctions()[current_func_id];
 
 			jit::JitFuncData& my_data = jit_data[current_func_id];
@@ -350,7 +350,7 @@ namespace vm {
 	#if COMPILE_WITH_CP
 			else if (my_data.cp_compiled_func_ptr) {
 				// is CP-compiled
-				(*my_data.cp_compiled_func_ptr)(instr, local_stack, frame, thread);
+				(*my_data.cp_compiled_func_ptr)(CP_PASS_ARGS);
 				frame       = thread.runtime_data.frame_stack_current;
 				instr       = frame->instr;
 				local_stack = frame->local_stack;

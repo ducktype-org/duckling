@@ -87,9 +87,6 @@ namespace vm::jit::cnp {
 		byte* relocate(const StencilData& stencil_data, byte* new_address) {
 			auto binary = stencilsBinary(stencil_data);
 			std::ranges::copy(binary, new_address);
-
-			for (const StencilHole& hole: stencil_data.relocation)
-				hole.relocate(binary.data(), new_address);
 			return new_address + binary.size_bytes();
 		}
 

@@ -8,7 +8,7 @@ import click
 import json
 import bisect
 
-from _stencils import Stencil, Hole, symbol_to_value, stencils_to_c, StencilType
+from _stencils import HoleValue, Stencil, Hole, symbol_to_value, stencils_to_c, StencilType
 from _schema import ELFRelocation, ELFSection
 
 from llvm_tools import llvm_tools_version_options, run_llvm_tool
@@ -16,10 +16,7 @@ from llvm_tools import llvm_tools_version_options, run_llvm_tool
 def parse_relocation(relocation: ELFRelocation, stencil: Stencil) -> Hole:
     return Hole(
         offset=relocation["Offset"] - stencil.place,
-        addend=relocation["Addend"],
         value=symbol_to_value(relocation["Symbol"]["Name"]),
-        kind=relocation["Type"]["Name"],
-        symbol=relocation["Symbol"],
     )
 
 def is_function_section(section: ELFSection):
@@ -30,8 +27,9 @@ def get_function_name(section: ELFSection):
     return section["Name"]["Name"][len(".ltext."):]
 
 def parse_stencil_section(stencil_section: ELFSection, unmangled_name: str) -> Stencil:
+    assert unmangled_name != ""
     output = Stencil(
-        unmangled_name=get_stencil_name(unmangled_name),
+        unmangled_name=unmangled_name,
         binary_name=get_function_name(stencil_section),
         place=stencil_section["Offset"],
         type=StencilType.INSTRUCTION,
@@ -46,13 +44,17 @@ def parse_stencil_section(stencil_section: ELFSection, unmangled_name: str) -> S
     ]
     return output
 
-
+stencil_args="std::byte*, vm::Frame*, vm::SafeVMThread&"
 def is_stencil_section(unmangled_name: str) -> bool:
-    return "stencil" in unmangled_name
+    return unmangled_name.startswith("vm::jit::cnp::stencil_") and \
+            unmangled_name.endswith(f"({stencil_args})")
 
 
-def get_stencil_name(unmangled_name: str) -> str:
-    return unmangled_name[len("vm::jit::cnp::stencil_"):-len("(vm::MicroInstruction const*, std::byte*, vm::Frame*, vm::SafeVMThread&)")]
+def get_stencil_name(unmangled_name: str, truncate: bool) -> str:
+    if truncate:
+        return unmangled_name
+    assert is_stencil_section(unmangled_name)
+    return unmangled_name[len("vm::jit::cnp::stencil_"):-len(f"({stencil_args})")]
 
 
 def split_section_relocations(
@@ -127,7 +129,6 @@ def generate_stencils(
     accept_all_sections: bool,
     verbose: bool,
     shared: bool,
-    order,
 ) -> list[Stencil]:
     sections = parse(llvm_readobj, binary, verbose)
 
@@ -136,37 +137,53 @@ def generate_stencils(
     unmangled_names = run_llvm_tool(llvm_cxxfilt, args=[], input="\n".join(function_names), echo=verbose).split('\n')
 
     stencils = [
-        parse_stencil_section(section, unmangled_name)
+        parse_stencil_section(section, get_stencil_name(unmangled_name, accept_all_sections))
         for section, unmangled_name in zip(function_sections, unmangled_names)
         if accept_all_sections or is_stencil_section(unmangled_name)
     ]
     assert len(stencils) != 0
     if shared:
         stencils = split_shared_relocations(sections, stencils)
-    if order:
-        stencils = order_stencils(stencils, json.loads(order.read()))
     if not accept_all_sections:
         validate_stencils(stencils)
 
     return stencils
 
+def gather_statistics(stencils, failed_removal = None):
+    removed_jumps = failed_removal is not None
+    def count_jumps(stencil: Stencil):
+        is_removed = 1 if removed_jumps and stencil.unmangled_name not in failed_removal else 0
+        continue_holes = len([hole for hole in stencil.holes if hole.value == HoleValue.CONTINUE_FN])
+        return continue_holes - is_removed
+    
+    stencil_jumps = [(stencil.unmangled_name, count_jumps(stencil)) for stencil in stencils]
+    failed_jumps = {name: remained for name, remained in stencil_jumps if remained != 0}
+
+    output_statistics = {
+        "stencil_size": {stencil.unmangled_name: stencil.size for stencil in stencils},
+        "count_of_continue_jumps": failed_jumps
+    }
+    if removed_jumps:
+        output_statistics.update({"failed_to_remove_jump": failed_removal})
+
+    return output_statistics
 
 @click.command()
 @click.option("--accept-all-sections", is_flag=True)
 @click.option(
     "--output",
-    required=True,
     type=click.File("w"),
     help="File where stencils will be written.",
 )
 @click.option("-v", "--verbose", is_flag=True)
 @click.option("-s", "--shared", is_flag=True)
 @click.option("-r", "--remove-jumps", is_flag=True)
-@click.option("--order", type=click.File("r"))
+@click.option("--statistics", is_flag=True)
+@click.option("--order", type=click.File("r")) 
 @click.argument("binary", type=click.File("rb"))
 @llvm_tools_version_options
 def main(
-    llvm_readobj, llvm_cxxfilt, output, binary, verbose, accept_all_sections, shared, order, remove_jumps, **kwargs
+    statistics, llvm_readobj, llvm_cxxfilt, output, binary, verbose, accept_all_sections, shared, order, remove_jumps, **kwargs
 ):
     stencils = generate_stencils(
         llvm_readobj=llvm_readobj,
@@ -175,16 +192,21 @@ def main(
         verbose=verbose,
         accept_all_sections=accept_all_sections,
         shared=shared,
-        order=order,
     )
-
+    
     if remove_jumps:
         binary_contents = binary.read()
-        print(type(binary_contents))
-        for stencil in stencils:
-            stencil.remove_jump(binary_contents)
+        failed_stencils = [stencil.unmangled_name for stencil in stencils if not stencil.remove_jump(binary_contents)]
+    else:
+        failed_stencils = None
+            
+    if statistics:
+        print(json.dumps(gather_statistics(stencils, failed_stencils), indent=4))
 
-    output.write(stencils_to_c(stencils))
+    if order:
+        stencils = order_stencils(stencils, json.loads(order.read()))
+    if output:
+        output.write(stencils_to_c(stencils))
 
 
 if __name__ == "__main__":
