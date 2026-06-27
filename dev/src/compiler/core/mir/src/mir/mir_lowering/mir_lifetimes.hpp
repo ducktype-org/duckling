@@ -1,5 +1,8 @@
 #pragma once
 
+#include "mir/mir_structure/mir_local_ref.hpp"
+#include "mir_liveness.hpp"
+
 #include <mir/mir_structure/mir_lifetime_scope.hpp>
 
 #include <query_framework/context/context_fd.hpp>
@@ -13,7 +16,14 @@ namespace compiler::mir {
 
 
 	struct Function;
-	struct LifetimePassArgs;
+
+	using LocalsByScopeMap = base::HashMap<ScopeRef, std::vector<MIRLocalRef>, ScopeRefHash>;
+
+	struct LifetimePassArgs {
+		LocalsByScopeMap                             locals_by_scope;
+		LivenessData                                 liveness;
+		base::HashMap<BlockID, std::vector<BlockID>> block_predecessors;
+	};
 
 	/**
 	 * @brief Abstract class representing a pass that adds lifetime related instructions and flags
@@ -24,6 +34,13 @@ namespace compiler::mir {
 		virtual ~LifetimePass() = default;
 
 		virtual void run(query::Context&, Function&, const LifetimePassArgs&) = 0;
+	};
+
+	/**
+	 * @brief Use after move and use uninitialized.
+	 */
+	class InvalidUseCheck final : public LifetimePass {
+		void run(query::Context&, Function&, const LifetimePassArgs&) final;
 	};
 
 	/**

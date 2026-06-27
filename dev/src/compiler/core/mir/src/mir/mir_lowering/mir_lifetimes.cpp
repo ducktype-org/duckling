@@ -3,11 +3,6 @@
 #include "../mir_structure/mir_structure.hpp"
 
 namespace compiler::mir {
-	using LocalsByScopeMap = base::HashMap<ScopeRef, std::vector<MIRLocalRef>, ScopeRefHash>;
-
-	struct LifetimePassArgs {
-		LocalsByScopeMap locals_by_scope;
-	};
 
 	ScopeRef lca(ScopeRef a, ScopeRef b) {
 		auto depth_a = a->depth;
@@ -392,6 +387,14 @@ namespace compiler::mir {
 		for (const auto& local: function.local_list)
 			if (local.scope.value() != function.no_lifetime_scope)
 				args.locals_by_scope.put(local.scope.value()).first->second.emplace_back(&local);
+
+
+		// Predecessor lists.
+		for (auto block_id: function.block_order)
+			for (auto succ: getTerminatorSuccessors(function.blocks.at(block_id)->terminator))
+				args.block_predecessors.put(succ).first->second.push_back(block_id);
+
+		args.liveness = calculateGlobalInLivenessStatus(function, args.block_predecessors);
 
 		return args;
 	}
