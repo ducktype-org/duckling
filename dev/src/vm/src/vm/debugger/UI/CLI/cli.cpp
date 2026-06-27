@@ -61,12 +61,14 @@ namespace vm::debugger::cli {
 		return {};
 	}
 
-	std::expected<void, api::ApiError> CLIDebugger::loadDefault() {
-		fs::FilePath fp = "duck_build/package_dvm.dbc";
-		if (!fp.exists())
-			return std::unexpected(api::OtherError{
-				"No compiled program in the current directory." });
-		return load(fp);
+	std::expected<void, std::variant<api::ApiError, std::string>> CLIDebugger::loadDefault() {
+		auto response = debugger.loadDefault();
+		if (!response) return std::unexpected(response.error());
+
+		if_opt_some(debugger.getMapper().mainFile(), main_filepath) selected_file
+			= fs::File(main_filepath);
+
+		return {};
 	}
 
 	void CLIDebugger::setDefaultArgs(const ProgramRunArguments& args) {
@@ -140,6 +142,11 @@ namespace vm::debugger::cli {
 												 pos.instr_number
 											 );
 											 if_opt_some(pos.source_position, sp) {
+												 printer::PrinterOStream out;
+												 dia::printHighlightedPositions(out, { sp }, 1);
+												 print(out.getContents());
+											 }
+											 if_opt_some(pos.mapped_position, sp) {
 												 printer::PrinterOStream out;
 												 dia::printHighlightedPositions(out, { sp }, 1);
 												 print(out.getContents());

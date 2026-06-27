@@ -75,42 +75,49 @@ clah::Clah getVmClah() {
 
 							   return cli(file, args);
 						   }))
-	    .addSubcommand(
-			clah::Clah("debug", "Start the VM CLI debugger.")
-				.add(clah::ParamBuilder::ofValue(clah::FileParser::make())
-	                     .addShortName('f')
-	                     .addLongName("file")
-	                     .addShortDesc(".dbc file to load")
-	                     .optional()
-	                     .build())
-				.setDefaultValueParser(clah::StringParser::make("program_argument"))
-				.setHandler([](const clah::ParsingResult& options) {
-					vm::Supervisor::get();
+	    .addSubcommand(clah::Clah("debug", "Start the VM CLI debugger.")
+	                       .add(clah::ParamBuilder::ofValue(clah::FileParser::make())
+	                                .addShortName('f')
+	                                .addLongName("file")
+	                                .addShortDesc(".dbc file to load")
+	                                .optional()
+	                                .build())
+	                       .setDefaultValueParser(clah::StringParser::make("program_argument"))
+	                       .setHandler([](const clah::ParsingResult& options) {
+							   vm::Supervisor::get();
 
-					auto cli = vm::debugger::cli::CLIDebugger();
+							   auto cli = vm::debugger::cli::CLIDebugger();
 
-					auto file   = options.getValue<fs::File>("file");
-					auto result = file ? cli.load(*file) : cli.loadDefault();
-					if (!result) {
-						printer::StreamPrinter::print({
-							{ "[ERROR] ", printer::Color::Red },
-							{ "Loading file failed with message:\n", printer::Color::Default },
-							{ vm::api::errorToString(result.error()), printer::Color::Default },
-							{ "\nAborting\n", printer::Color::Default },
-						});
+							   auto file   = options.getValue<fs::File>("file");
+							   auto result = file ? cli.load(*file) : cli.loadDefault();
+							   if (!result) {
+								   std::string error_string = "";
+								   variant_match(result.error()) {
+									   variant_case(vm::api::ApiError, error) {
+										   error_string = vm::api::errorToString(error);
+									   }
+									   variant_case(std::string, error) { error_string = error; }
+								   }
 
-						return 1;
-					}
+								   printer::StreamPrinter::print({
+									   { "[ERROR] ", printer::Color::Red },
+									   { "Loading file failed with message:\n",
+			                             printer::Color::Default },
+									   { error_string, printer::Color::Default },
+									   { "\nAborting\n", printer::Color::Default },
+								   });
 
-					std::vector<std::string> args;
-					args.reserve(options.getExtraParameterCount());
-					for (usize argc = 0; argc < options.getExtraParameterCount(); argc++)
-						args.push_back(*options.getExtra<std::string>(argc));
-					cli.setDefaultArgs(args);
+								   return 1;
+							   }
 
-					return cli.run();
-				})
-		)
+							   std::vector<std::string> args;
+							   args.reserve(options.getExtraParameterCount());
+							   for (usize argc = 0; argc < options.getExtraParameterCount(); argc++)
+								   args.push_back(*options.getExtra<std::string>(argc));
+							   cli.setDefaultArgs(args);
+
+							   return cli.run();
+						   }))
 	    .addSubcommand(clah::Clah("debug_adapter", "Start the VM debug adapter.")
 	                       .setHandler([](const clah::ParsingResult&) -> int {
 							   vm::Supervisor::get();

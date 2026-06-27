@@ -21,10 +21,10 @@ namespace vm::debugger::cli {
 		CLIDebugger& operator=(CLIDebugger&&)      = delete;
 		~CLIDebugger()                             = default;
 
-		std::expected<void, api::ApiError> load(const fs::File& file);
-		std::expected<void, api::ApiError> loadDefault();
-		void                               setDefaultArgs(const ProgramRunArguments& args);
-		int                                run();
+		std::expected<void, api::ApiError>                            load(const fs::File& file);
+		std::expected<void, std::variant<api::ApiError, std::string>> loadDefault();
+		void setDefaultArgs(const ProgramRunArguments& args);
+		int  run();
 
 	private:
 		events::Listener<api::ProcStatus> status_change_listener;
