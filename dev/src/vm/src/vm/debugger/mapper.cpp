@@ -4,7 +4,6 @@
 
 #include <diagnostic/location.hpp>
 #include <string_id/string_id.hpp>
-#include <token_source/source.hpp>
 
 #include <algorithm>
 #include <fstream>
@@ -131,5 +130,13 @@ namespace vm::debugger {
 		if (!fp) return std::nullopt;
 
 		return fp->file_path;
+	}
+
+	bool Mapper::containsFile(fs::FilePath filepath) const {
+		return std::ranges::any_of(functions, [&](const auto& p) {
+			const auto& [_, function] = p;
+			auto function_position    = getfp(function.metadata->position);
+			return function_position && function_position->file_path == filepath;
+		});
 	}
 }

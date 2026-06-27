@@ -4,6 +4,7 @@
 
 #include <diagnostic/source_position.hpp>
 #include <filesystem/file.hpp>
+#include <token_source/source.hpp>
 
 namespace vm::debugger {
 	namespace mapper {
@@ -55,5 +56,7 @@ namespace vm::debugger {
 		 * @brief returns filepath of file containing function named `main`
 		 */
 		base::Optional<fs::FilePath> mainFile() const;
+
+		bool containsFile(fs::FilePath filepath) const;
 	};
 }

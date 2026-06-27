@@ -4,6 +4,8 @@
 
 #include <vm/api/vm.hpp>
 
+#define lambdify(inner) ([this](auto&& arg) { return inner(arg); })
+
 namespace {
 	inline std::string statusToString(const vm::api::ProcStatus& status) {
 		return std::visit(
@@ -67,6 +69,16 @@ namespace vm::debugger {
 		on_output.attachListener(listener);
 	}
 
+	CodePosition Debugger::mapCodePosition(const api::response::CodePosition& pos) {
+		CodePosition cp;
+		cp.function_name   = pos.function_name;
+		cp.instr_number    = pos.instr_number;
+		cp.source_position = pos.source_position;
+		cp.mapped_position
+			= mapper.mapCodePositionToSourcePosition(pos.function_name, pos.instr_number);
+		return cp;
+	}
+
 	std::expected<void, api::ApiError> Debugger::runMain() {
 		return api::getExecutionStatus(pid)
 		    .and_then([&](const api::ProcStatus& status) -> std::expected<void, api::ApiError> {
@@ -96,6 +108,23 @@ namespace vm::debugger {
 		return api::loadFiles(pid, { filepath });
 	}
 
+	std::expected<void, std::variant<api::ApiError, std::string>> Debugger::loadDefault() {
+		fs::FilePath fp = "duck_build/package_dvm.dbc";
+		if (!fp.exists())
+			return std::unexpected(api::OtherError{
+				"No compiled program in the current directory." });
+
+		fs::FilePath fp_map = "duck_build/package_dvm.di.json";
+		if (!fp_map.exists())
+			return std::unexpected(api::OtherError{
+				"No compiled program mapping in the current directory." });
+
+		auto resp = mapper.loadMapping(fp_map);
+		if (!resp) return resp;
+
+		return loadFile(fp);
+	}
+
 	void Debugger::setDefaultArgs(const ProgramRunArguments& args) { main_args = args; }
 
 	std::expected<u64, api::ApiError> Debugger::getNumberOfStackFrames(api::ThreadID thread_id) {
@@ -111,16 +140,19 @@ namespace vm::debugger {
 		return api::debuggerGetStackFrameData(pid, thread_id, frame_index);
 	}
 
-	std::expected<api::response::CodePosition, api::ApiError> Debugger::pause() {
-		return api::getExecutionStatus(pid).and_then(
-			[&](const api::ProcStatus& status
-		    ) -> std::expected<api::response::CodePosition, api::ApiError> {
-				if (std::holds_alternative<api::Running>(status)) return api::pause(pid);
-				return std::unexpected(api::ApiError{
-					api::OtherError{ "Wrong VM state to pause: got " + statusToString(status)
-			                         + ", allowed state is Running." } });
-			}
-		);
+	std::expected<CodePosition, api::ApiError> Debugger::pause() {
+		return api::getExecutionStatus(pid)
+		    .and_then(
+				[&](const api::ProcStatus& status
+		        ) -> std::expected<api::response::CodePosition, api::ApiError> {
+					if (std::holds_alternative<api::Running>(status)) return api::pause(pid);
+					return std::unexpected(api::ApiError{
+						api::OtherError{ "Wrong VM state to pause: got " + statusToString(status)
+			                             + ", allowed state is Running." } });
+				}
+			)
+		    .transform(lambdify(mapCodePosition));
+		;
 	}
 
 	std::expected<void, api::ApiError> Debugger::resume() {
@@ -135,8 +167,8 @@ namespace vm::debugger {
 		    .and_then([&] { return api::resume(pid); });
 	}
 
-	std::expected<api::response::CodePosition, api::ApiError> Debugger::getCurrentPosition() {
-		return api::getCurrentPosition(pid);
+	std::expected<CodePosition, api::ApiError> Debugger::getCurrentPosition() {
+		return api::getCurrentPosition(pid).transform(lambdify(mapCodePosition));
 	}
 
 	std::expected<void, api::ApiError> Debugger::setBreakpoint(
@@ -148,9 +180,13 @@ namespace vm::debugger {
 	std::expected<void, api::ApiError> Debugger::setBreakpoint(
 		fs::File file, usize line, bool enabled
 	) {
+		if_opt_some(mapper.mapSourcePositionToCodePosition(file.getFilePath(), line), pos) {
+			return setBreakpoint(pos.first, pos.second, enabled);
+		}
+
 		return api::mapFileLineToCodeCollectionPosition(pid, std::move(file), line)
 		    .and_then([&](const api::response::CodePosition& pos) {
-				return api::setBreakpoint(pid, pos.function_name, pos.instr_number, enabled);
+				return setBreakpoint(pos.function_name, pos.instr_number, enabled);
 			});
 	}
 
@@ -159,4 +195,6 @@ namespace vm::debugger {
 	std::expected<void, api::ApiError> Debugger::sendInput(const std::string& msg) {
 		return api::input(pid, msg);
 	}
+
+	Mapper& Debugger::getMapper() { return mapper; }
 }
