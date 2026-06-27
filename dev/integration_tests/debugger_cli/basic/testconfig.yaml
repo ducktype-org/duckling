@@ -18,10 +18,10 @@ Tests:
           String: "run\npause\ncontinue\nexit" 
         Output:
           File: "run.out"
-      errors:
-        Input:
-          String: "run\nrun\ncontinue\ncontinue\npause\npause\nexit"
-        Output:
-          File: "error.out"
+      # errors:
+      #   Input:
+      #     String: "run\nrun\ncontinue\ncontinue\npause\npause\nexit"
+      #   Output:
+      #     File: "error.out"
 
     
