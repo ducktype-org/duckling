@@ -196,7 +196,7 @@ namespace vm::low {
 	private:
 		LowVMProgram()                                  = default;
 		Box<TypeMetadata>                         types = makeBox<TypeMetadata>();
-		ObjIdNameMap<LowFuncData, usize>          functions{};
+		StableObjIdNameMap<LowFuncData, usize>    functions{};
 		StableObjIdNameMap<LowExternCFunction>    extern_c_functions{};
 		ObjIdNameMap<LowGlobalData, GlobalDataID> global_data{};
 		Bytes                                     global_buffer_size = Bytes(0);

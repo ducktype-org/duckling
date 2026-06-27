@@ -52,10 +52,10 @@ namespace vm::code {
 		const ObjIdNameMap<ExternalCFunction>& extCFunctions() const;
 
 	private:
-		ObjIdNameMap<valid_function::ValidFunction> function_map;
-		ObjIdNameMap<ExternalCFunction>             ext_c_function_map;
-		ObjIdNameMap<GlobalData>                    globals_map;
-		TypeContext                                 type_context;
+		StableObjIdNameMap<valid_function::ValidFunction> function_map;
+		ObjIdNameMap<ExternalCFunction>                   ext_c_function_map;
+		ObjIdNameMap<GlobalData>                          globals_map;
+		TypeContext                                       type_context;
 
 		/**
 		 * @brief Contains a mapping from function name to function signature for all functions
