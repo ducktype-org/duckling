@@ -49,7 +49,15 @@ namespace vm::debugger::cli {
 			std::cout << "\n";
 		}
 
+		template<typename... Args>
+		void printError(const Args&... content) {
+			std::stringstream sstr;
+			((sstr << content), ...);
+			printError({ sstr.str() });
+		}
+
 		void print(const printer::PrinterContentsSeq& content);
 		void printNL(const printer::PrinterContentsSeq& content);
+		void printError(const printer::PrinterContentsSeq& content);
 	};
 }
