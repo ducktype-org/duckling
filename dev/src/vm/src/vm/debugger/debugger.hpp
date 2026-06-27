@@ -148,7 +148,12 @@ namespace vm::debugger {
 		/**
 		 * @brief Execute one FatByteCode step in the VM
 		 */
-		std::expected<void, api::ApiError> step();
+		std::expected<CodePosition, api::ApiError> step();
+
+		/**
+		 * @brief Execute one FatByteCode step in the VM
+		 */
+		std::expected<CodePosition, api::ApiError> mappedStep();
 
 		/**
 		 * @brief Send input to the VM

@@ -133,32 +133,26 @@ namespace vm::debugger::cli {
 		          .addSubcommand(clah::Clah("position", "writes current position")
 		                             .setHandler([&](const clah::ParsingResult&) -> int {
 										 auto response = debugger.getCurrentPosition();
-										 if (response) {
-											 auto pos = response.value();
-											 printNL(
-												 "Function `",
-												 pos.function_name.strView(),
-												 "` instruction ",
-												 pos.instr_number
-											 );
-											 if_opt_some(pos.source_position, sp) {
-												 printer::PrinterOStream out;
-												 dia::printHighlightedPositions(out, { sp }, 1);
-												 print(out.getContents());
-											 }
-											 if_opt_some(pos.mapped_position, sp) {
-												 printer::PrinterOStream out;
-												 dia::printHighlightedPositions(out, { sp }, 1);
-												 print(out.getContents());
-											 }
-										 } else {
+										 if (response)
+											 printCodePosition(*response);
+										 else
 											 printNL("Faild to obtain position!");
-										 }
 										 return 0;
 									 }))
 		          .addSubcommand(clah::Clah("step", "executes one step")
 		                             .setHandler([&](const clah::ParsingResult&) -> int {
-										 debugger.step();
+										 auto response = (selected_file
+			                                              && debugger.getMapper().containsFile(
+															  selected_file->getFilePath()
+														  ))
+			                                               ? debugger.mappedStep()
+			                                               : debugger.step();
+
+										 if (response)
+											 printCodePosition(*response);
+										 else
+											 printNL("Faild to obtain position!");
+
 										 return 0;
 									 }))
 		          .addSubcommand(
@@ -207,6 +201,22 @@ namespace vm::debugger::cli {
 
 		printNL("Exiting debugger.");
 		return 0;
+	}
+
+	void CLIDebugger::printCodePosition(CodePosition position) {
+		printNL(
+			"Function `", position.function_name.strView(), "` instruction ", position.instr_number
+		);
+		if_opt_some(position.source_position, sp) {
+			printer::PrinterOStream out;
+			dia::printHighlightedPositions(out, { sp }, 1);
+			print(out.getContents());
+		}
+		if_opt_some(position.mapped_position, sp) {
+			printer::PrinterOStream out;
+			dia::printHighlightedPositions(out, { sp }, 1);
+			print(out.getContents());
+		}
 	}
 
 	void CLIDebugger::print(const printer::PrinterContentsSeq& content) {

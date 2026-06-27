@@ -190,7 +190,35 @@ namespace vm::debugger {
 			});
 	}
 
-	std::expected<void, api::ApiError> Debugger::step() { return api::step(pid); }
+	std::expected<CodePosition, api::ApiError> Debugger::step() {
+		auto step_response = api::step(pid);
+		if (!step_response) return std::unexpected(step_response.error());
+
+		auto pos = getCurrentPosition();
+		if (pos && pos->function_name == "vm_start_function") {
+			auto resume_response = resume();
+			if (!resume_response) return std::unexpected(resume_response.error());
+		}
+
+		return pos;
+	}
+
+	std::expected<CodePosition, api::ApiError> Debugger::mappedStep() {
+		while (true) {
+			auto response = step();
+			if (!response) return response;
+			if (!response->mapped_position) continue;
+			auto mapped   = *response->mapped_position;
+			auto unmapped = mapper.mapSourcePositionToCodePosition(
+				mapped.getLocation()->getSourceFile().getFilePath(),
+				mapped.getStartLineColumn().first
+			);
+			if (!unmapped) continue;
+			if (unmapped->first == response->function_name
+			    && unmapped->second == response->instr_number)
+				return response;
+		}
+	}
 
 	std::expected<void, api::ApiError> Debugger::sendInput(const std::string& msg) {
 		return api::input(pid, msg);
