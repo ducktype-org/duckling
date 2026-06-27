@@ -310,6 +310,7 @@ dependencies:
     version: '1'
   alias_b:
     source:
+      # cSpell:disable-next-line
       path: ./sialalala
 
 features:
@@ -354,6 +355,7 @@ features:
             real_name: StrId::from("a"),
         };
         let exp_location_b = ExpandedLocation::Local {
+            // cSpell:disable-next-line
             absolute_path: PathBuf::from("/sialalala").to_url().unwrap().into(),
         };
         let exp_pkg_root = ExpandedPackage {

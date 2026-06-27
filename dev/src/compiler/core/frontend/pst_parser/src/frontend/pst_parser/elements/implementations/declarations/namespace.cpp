@@ -4,6 +4,8 @@
 #include "preamble.hpp"
 
 namespace pst {
+	CLONE_SUB_ELEMENTS_DEF(Namespace, name, body);
+
 	MBox<Namespace> Namespace::parse(LangParserState& state) {
 		auto out = makeBox<Namespace>(state);
 

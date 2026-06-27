@@ -29,7 +29,7 @@ namespace compiler::backend_vm {
 
 	private:
 		friend class internal::ProgramLoweringContext;
-		friend class ReplLoweringContext;
+		friend class ReplDVMCodeBuilder;
 
 		LoweredEntitiesSnapshot(
 			usize type_count, usize global_count, usize function_count, usize extra_function_count

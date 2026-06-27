@@ -4,10 +4,12 @@
 
 #include <tester/tester.hpp>
 
+#include <atomic>
 #include <expected>
 #include <memory>
 #include <string>
 #include <thread>
+#include <tuple>
 #include <variant>
 #include <vector>
 
@@ -34,6 +36,17 @@ public:
 		TESTER_ADD_TEST(atomicGetStateCopy);
 		TESTER_ADD_TEST(atomicMoveOnlyStateTest);
 		TESTER_ADD_TEST(atomicConcurrentHandleEventTest);
+
+		// WaitableStateMachine
+		TESTER_ADD_TEST(waitableBasicTest);
+		TESTER_ADD_TEST(waitableVersionBumpTest);
+		TESTER_ADD_TEST(waitableFailedActionTest);
+		TESTER_ADD_TEST(waitableSubscribeTest);
+		TESTER_ADD_TEST(waitableSubscribeOnlyOnSuccessTest);
+		TESTER_ADD_TEST(waitableWaitForStateTest);
+		TESTER_ADD_TEST(waitableWaitForStateImmediateTest);
+		TESTER_ADD_TEST(waitableWaitForFreshStateTest);
+		TESTER_ADD_TEST(waitableConcurrentHandleEventTest);
 	}
 
 	~StateMachineTest() override = default;
@@ -347,6 +360,213 @@ private:
 		i32 final_value
 			= m.withState([](const CounterState& s) { return std::get<Counter>(s).value; });
 		assertTrue(final_value == N_THREADS * N_PER_THREAD, "All increments should be performed");
+	}
+
+	using WaitableLightMachine   = state_machine::WaitableStateMachine<LightState, LightEvent>;
+	using WaitableCounterMachine = state_machine::WaitableStateMachine<CounterState, CounterEvent>;
+
+	void waitableBasicTest() {
+		LightDefinition def;
+		def.addTransition<Red, Tick>([](const Red&, const Tick&) -> LightState { return Green{}; });
+
+		WaitableLightMachine m(Red{}, &def);
+		auto                 res = m.handleEvent(Tick{});
+		assertTrue(res.has_value() && res.value().has_value(), "Transition should succeed");
+		assertTrue(
+			std::holds_alternative<Green>(m.getStateCopy()), "Machine should hold the new state"
+		);
+
+		auto rejected = m.handleEvent(Tick{});
+		assertTrue(!rejected.has_value(), "Unregistered transition should return nullopt");
+		assertTrue(std::holds_alternative<Green>(m.getStateCopy()), "State should be unchanged");
+	}
+
+	void waitableVersionBumpTest() {
+		LightDefinition def;
+		def.addTransition<Red, Tick>([](const Red&, const Tick&) -> LightState { return Green{}; });
+
+		WaitableLightMachine m(Red{}, &def);
+		assertTrue(m.getStateChangeCount() == 0, "Fresh machine should be at version 0");
+
+		m.handleEvent(Tick{});
+		assertTrue(m.getStateChangeCount() == 1, "Successful transition should bump the version");
+
+		m.handleEvent(Tick{});  // Not registered for Green.
+		assertTrue(m.getStateChangeCount() == 1, "Rejected event must not bump the version");
+	}
+
+	void waitableFailedActionTest() {
+		LightDefinition def;
+		def.addTransition<Red, Tick>(LightActionFn{
+			[](const Red&, const Tick&) -> std::expected<LightState, std::string> {
+				return std::unexpected("action failed");
+			} });
+
+		WaitableLightMachine m(Red{}, &def);
+		i32                  notified = 0;
+		m.subscribe([&notified](const LightState&, const LightState&, u64) { ++notified; });
+
+		auto res = m.handleEvent(Tick{});
+		assertTrue(res.has_value(), "Transition is configured");
+		assertTrue(!res.value().has_value(), "Action should fail");
+		assertTrue(res.value().error() == "action failed", "Error message should be propagated");
+		assertTrue(std::holds_alternative<Red>(m.getStateCopy()), "State should be unchanged");
+		assertTrue(m.getStateChangeCount() == 0, "Failed action must not bump the version");
+		assertTrue(notified == 0, "Failed action must not invoke listeners");
+	}
+
+	void waitableSubscribeTest() {
+		CounterDefinition def;
+		def.addTransition<Empty, Init>([](const Empty&, const Init& init) -> CounterState {
+			return Counter{ init.start };
+		});
+		def.addTransition<Counter, Increment>(
+			[](const Counter& c, const Increment& inc) -> CounterState {
+				return Counter{ c.value + inc.by };
+			}
+		);
+
+		WaitableCounterMachine m(Empty{}, &def);
+
+		std::vector<std::tuple<CounterState, CounterState, u64>> observed;
+		m.subscribe([&observed](const CounterState& from, const CounterState& to, u64 generation) {
+			observed.emplace_back(from, to, generation);
+		});
+
+		m.handleEvent(Init{ 10 });
+		m.handleEvent(Increment{ 5 });
+
+		assertTrue(observed.size() == 2, "Listener should fire once per successful transition");
+
+		// First transition: Empty -> Counter{10}, generation 0.
+		assertTrue(std::holds_alternative<Empty>(std::get<0>(observed[0])), "First from is Empty");
+		assertTrue(
+			std::get<Counter>(std::get<1>(observed[0])).value == 10, "First to is Counter{10}"
+		);
+		assertTrue(std::get<2>(observed[0]) == 0, "First generation is 0");
+
+		// Second transition: Counter{10} -> Counter{15}, generation 1.
+		assertTrue(
+			std::get<Counter>(std::get<0>(observed[1])).value == 10, "Second from is Counter{10}"
+		);
+		assertTrue(
+			std::get<Counter>(std::get<1>(observed[1])).value == 15, "Second to is Counter{15}"
+		);
+		assertTrue(std::get<2>(observed[1]) == 1, "Second generation is 1");
+	}
+
+	void waitableSubscribeOnlyOnSuccessTest() {
+		LightDefinition def;
+		def.addTransition<Red, Tick>([](const Red&, const Tick&) -> LightState { return Green{}; });
+
+		WaitableLightMachine m(Red{}, &def);
+		i32                  notified = 0;
+		m.subscribe([&notified](const LightState&, const LightState&, u64) { ++notified; });
+
+		m.handleEvent(Tick{});  // Red -> Green, fires.
+		m.handleEvent(Tick{});  // (Green, Tick) not registered, does not fire.
+
+		assertTrue(notified == 1, "Listener fires only on a committed transition");
+	}
+
+	void waitableWaitForStateTest() {
+		LightDefinition def;
+		def.addTransition<Red, Tick>([](const Red&, const Tick&) -> LightState { return Green{}; });
+
+		WaitableLightMachine m(Red{}, &def);
+
+		std::thread waker([&m] { m.handleEvent(Tick{}); });
+		auto        state
+			= m.waitForState([](const LightState& s) { return std::holds_alternative<Green>(s); });
+		waker.join();
+
+		assertTrue(std::holds_alternative<Green>(state), "Waiter should observe Green");
+		assertTrue(m.getStateChangeCount() == 1, "Waiter should observe the bumped version");
+	}
+
+	void waitableWaitForStateImmediateTest() {
+		LightDefinition def;
+		def.addTransition<Red, Tick>([](const Red&, const Tick&) -> LightState { return Green{}; });
+
+		WaitableLightMachine m(Red{}, &def);
+		auto                 state
+			= m.waitForState([](const LightState& s) { return std::holds_alternative<Red>(s); });
+		assertTrue(std::holds_alternative<Red>(state), "Should return the already-matching state");
+	}
+
+	void waitableWaitForFreshStateTest() {
+		// A waiter keyed on the version observes that a transition happened even
+		// if it cannot name the exact state it raced against.
+		CounterDefinition def;
+		def.addTransition<Empty, Init>([](const Empty&, const Init& init) -> CounterState {
+			return Counter{ init.start };
+		});
+		def.addTransition<Counter, Increment>(
+			[](const Counter& c, const Increment& inc) -> CounterState {
+				return Counter{ c.value + inc.by };
+			}
+		);
+
+		WaitableCounterMachine m(Empty{}, &def);
+		const u64              start_version = m.getStateChangeCount();
+
+		std::thread waker([&m] {
+			m.handleEvent(Init{ 1 });
+			m.handleEvent(Increment{ 1 });
+		});
+		auto        state = m.waitForFreshState(start_version, [](const CounterState& s) {
+            return std::holds_alternative<Counter>(s);
+        });
+		waker.join();
+
+		assertTrue(m.getStateChangeCount() > start_version, "Version should have advanced");
+		assertTrue(std::holds_alternative<Counter>(state), "Waiter should observe a Counter state");
+	}
+
+	void waitableConcurrentHandleEventTest() {
+		// Many threads incrementing the same counter, plus a listener counting commits.
+		CounterDefinition def;
+		def.addTransition<Empty, Init>([](const Empty&, const Init& init) -> CounterState {
+			return Counter{ init.start };
+		});
+		def.addTransition<Counter, Increment>(
+			[](const Counter& c, const Increment& inc) -> CounterState {
+				return Counter{ c.value + inc.by };
+			}
+		);
+
+		WaitableCounterMachine m(Empty{}, &def);
+		m.handleEvent(Init{ 0 });
+
+		std::atomic<i32> listener_calls{ 0 };
+		m.subscribe([&listener_calls](const CounterState&, const CounterState&, u64) {
+			listener_calls.fetch_add(1, std::memory_order_relaxed);
+		});
+
+		constexpr int N_THREADS    = 8;
+		constexpr int N_PER_THREAD = 1'000;
+
+		std::vector<std::thread> threads;
+		threads.reserve(N_THREADS);
+		for (int i = 0; i < N_THREADS; ++i) {
+			threads.emplace_back([&m] {
+				for (int j = 0; j < N_PER_THREAD; ++j) m.handleEvent(Increment{ 1 });
+			});
+		}
+		for (auto& t: threads) t.join();
+
+		i32 final_value
+			= m.withState([](const CounterState& s) { return std::get<Counter>(s).value; });
+		assertTrue(final_value == N_THREADS * N_PER_THREAD, "All increments should be performed");
+		// Init plus every Increment committed, so one listener call per state change.
+		assertTrue(
+			m.getStateChangeCount() == static_cast<u64>(N_THREADS * N_PER_THREAD + 1),
+			"Version count should match the number of committed transitions"
+		);
+		assertTrue(
+			listener_calls.load(std::memory_order_relaxed) == N_THREADS * N_PER_THREAD,
+			"Listener should fire once per committed Increment"
+		);
 	}
 };
 

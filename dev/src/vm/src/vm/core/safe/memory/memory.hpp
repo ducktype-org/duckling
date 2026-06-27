@@ -12,6 +12,7 @@
 #include <base/pointers/ref.hpp>
 #include <base/types/ints.hpp>
 
+#include <vm/bytecode/constant_value_fd.hpp>
 #include <vm/core/safe/exceptions.hpp>
 #include <vm/core/safe/type_metadata/definitions.hpp>
 
@@ -266,6 +267,9 @@ namespace vm {
 		 * @param global_block The block of the global variable to set as initialized.
 		 */
 		void setGlobalInitialized(Ref<Block> global_block);
+
+
+		void initializeBlockFromConstValue(Ref<Block> block, const code::ConstantValue& const_value);
 
 		/**
 		 * @brief Returns a view of block's data

@@ -1,0 +1,22 @@
+import core.builtins.*;
+
+fun longer_str(a: str, b: str) = {
+    if (a.length() > b.length())
+        return a;
+    else
+        return b;
+}
+
+fun main() -> i64 = {
+    let a = "Hello from VM!\n";
+    print(a);
+    builtin_output_char(a[2]);
+    builtin_output_char('\n');
+    builtin_output_i64(a.length() as i64);
+
+    let b = "Hello from Duckling!\n";
+
+    print(longer_str(a, b));
+    
+    return 0;
+}

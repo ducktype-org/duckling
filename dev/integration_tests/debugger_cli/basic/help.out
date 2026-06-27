@@ -1,25 +1,20 @@
 ++++++++++++++++++++++++++++
 +   Debugger has started   +
 ++++++++++++++++++++++++++++
-Commands:
-  (q)uit      - exit the debugger
-  (h)elp      - write this message
-  (r)un       - run main function
-  (p)ause     - pause running VM
-  (c)ontinue  - resume VM execution
-  (n)ext      - executes one Fat step
-  (s)tatus    - write current VM status
-  (pos)ition  - write current position
+Usage:  [GLOBAL OPTIONS] <COMMAND> [OPTIONS]
 
-Commands:
-  (q)uit      - exit the debugger
-  (h)elp      - write this message
-  (r)un       - run main function
-  (p)ause     - pause running VM
-  (c)ontinue  - resume VM execution
-  (n)ext      - executes one Fat step
-  (s)tatus    - write current VM status
-  (pos)ition  - write current position
+Available Commands:
+ exit                      exits the debugger
+ run                       runs main function
+ pause                     pauses running VM
+ continue                  resumes VM execution
+ status                    writes current VM status
+ position                  writes current position
+ step                      executes one step
+ break                     sets or unsets the breakpoint
 
-Exiting debugger...
+Global options:
+  -h, --help               Display this information.
 
+Run ' <COMMAND> --help for more information on a command.
+Exiting debugger.

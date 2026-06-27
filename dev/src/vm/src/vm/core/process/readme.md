@@ -1,5 +1,5 @@
 # DVM — VMProcess module
-## [`VMProcess`](./vmprocess.hpp)
+## [`VMProcess`](./ivmprocess.hpp)
 The `VMProcess` is the core component that represents a single, isolated execution environment for a program
 running within the virtual machine. While the `Supervisor` manages multiple processes, the `VMProcess` is
 concerned with everything needed to run *one* specific program from start to finish. It does not execute

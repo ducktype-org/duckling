@@ -3,51 +3,51 @@
 
 #include <base/pointers/box.hpp>
 
+#include <logger/logger.hpp>
+
 namespace compiler::backend_vm {
-	/**
-	 * @brief Factory function: Create a new persistent lowering context for REPL.
-	 *
-	 */
-	Box<internal::ProgramLoweringContext> createReplLoweringContext(query::Context& query_ctx) {
-		return makeBox<internal::ProgramLoweringContext>(query_ctx, false, false);
+
+	ReplDVMCodeBuilder::ReplDVMCodeBuilder(query::Context& query_ctx):
+		  code_builder(query_ctx, base::StrID("repl"), false, false) {}
+
+	ReplDVMCodeBuilder::~ReplDVMCodeBuilder()                                        = default;
+	ReplDVMCodeBuilder::ReplDVMCodeBuilder(ReplDVMCodeBuilder&&) noexcept            = default;
+	ReplDVMCodeBuilder& ReplDVMCodeBuilder::operator=(ReplDVMCodeBuilder&&) noexcept = default;
+
+	void ReplDVMCodeBuilder::setContext(query::Context& query_ctx) {
+		code_builder.program_context->setContext(query_ctx);
 	}
 
-	ReplLoweringContext::ReplLoweringContext(query::Context& query_ctx):
-		  m_context(createReplLoweringContext(query_ctx)) {}
-
-	ReplLoweringContext::~ReplLoweringContext()                                         = default;
-	ReplLoweringContext::ReplLoweringContext(ReplLoweringContext&&) noexcept            = default;
-	ReplLoweringContext& ReplLoweringContext::operator=(ReplLoweringContext&&) noexcept = default;
-
-	void ReplLoweringContext::setContext(query::Context& query_ctx) {
-		m_context->setContext(query_ctx);
+	void ReplDVMCodeBuilder::invalidateContext() {
+		code_builder.program_context->invalidateContext();
 	}
 
-	void ReplLoweringContext::invalidateContext() { m_context->invalidateContext(); }
-
-	base::Optional<base::Ref<query::Context>> ReplLoweringContext::getActiveContext() const {
-		return m_context->getActiveContext();
+	base::Optional<base::Ref<query::Context>> ReplDVMCodeBuilder::getActiveContext() const {
+		return code_builder.program_context->getActiveContext();
 	}
 
-	const vm::code::Function& ReplLoweringContext::lowerAndKeepLirFunction(
-		CRef<lir::Function> lir_function
+	vm::code::CodeCollection ReplDVMCodeBuilder::insertLIRUnitAndCollectNewlyLoweredCode(
+		const lir::LIRUnit& lir_unit
 	) {
-		return m_context->lowerAndKeepLirFunction(lir_function);
-	}
+		auto snapshot = code_builder.program_context->captureLoweredEntitiesSnapshot();
 
-	const vm::code::GlobalData& ReplLoweringContext::lowerAndKeepLirGlobal(
-		const lir::LIRGlobalData& lir_global
-	) {
-		return m_context->lowerAndKeepLirGlobal(lir_global);
-	}
+		CORE_DEV_LOG(
+			REPL,
+			"Lowering context snapshot: types=",
+			snapshot.loweredTypeCount(),
+			", globals=",
+			snapshot.loweredGlobalCount(),
+			", functions=",
+			snapshot.loweredFunctionCount(),
+			", helper_functions=",
+			snapshot.extraBytecodeFunctionCount(),
+			"\n"
+		);
 
-	LoweredEntitiesSnapshot ReplLoweringContext::captureLoweredEntitiesSnapshot() const {
-		return m_context->captureLoweredEntitiesSnapshot();
-	}
+		code_builder.insertLIRUnit(lir_unit);
 
-	vm::code::CodeCollection ReplLoweringContext::collectNewCodeSince(
-		const LoweredEntitiesSnapshot& snapshot
-	) const {
-		return m_context->collectNewCodeSince(snapshot);
+		vm::code::CodeCollection new_code
+			= code_builder.program_context->collectNewCodeSince(snapshot);
+		return new_code;
 	}
 }

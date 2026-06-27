@@ -20,6 +20,7 @@
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/symbol_type.hpp>
 #include <helios/tsh/type_interface.hpp>
+#include <helios_private/attributes/backend_dependent.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/errors/dia_interactive_elements.hpp>
 #include <helios_private/hout_creation/definition_generation/class_constructors.hpp>
@@ -27,6 +28,7 @@
 #include <helios_private/hout_creation/hout_stmt_compilation.hpp>
 #include <helios_private/pst_layer/stmts_from_aggregate.hpp>
 #include <helios_private/scopes/scopes.hpp>
+#include <helios_private/symbols/generated_symbol_data.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
@@ -178,6 +180,29 @@ namespace compiler::helios {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryReturnTypeDeduction);
+
+	/**
+	 * This function verifies if the applied attributes are semantically correct
+	 * on the function. For example we check if the BackendDependent attribute has
+	 * some implementations.
+	 * This is needed, because some attributes can have additional requirements on the function
+	 * declaration and the surrounding code.
+	 */
+	static void verifyFunctionAttributes(
+		query::Context& ctx, pst::Access<pst::Stmt> pst_stmt, const HOUTFunctionDeclaration& fun_decl
+	) {
+		if (pst_stmt->getAttributes().empty()) return;
+
+		if (hasAttribute<attributes::DVMOnlyImpl>(fun_decl.original_symbol)
+		    or hasAttribute<attributes::NativeOnlyImpl>(fun_decl.original_symbol)) {
+			verifyBackendImplAttrUsage(ctx, fun_decl);
+			return;
+		}
+		if (hasAttribute<attributes::BackendDependent>(fun_decl.original_symbol)) {
+			verifyBackendDependentAttrUsage(ctx, fun_decl);
+			return;
+		}
+	}
 
 	struct IMPLEMENT_QUERY(QueryDeclOfFun, query::QResult<HOUTFunctionDeclaration>) {
 		struct DeclarationVisitor final: public pst::PstVisitorPanicky {
@@ -409,10 +434,9 @@ namespace compiler::helios {
 		}
 
 		/**
-		 * @brief Get the declaration of a builtin function, or one which does not have its
-		 * parameters specified anywhere. The parameter symbols are set as compiler-generated.
+		 * @brief Get the declaration of a function-like symbol based on its type.
 		 */
-		static PResult getBuiltinDecl(Context& ctx, QKey fun) {
+		static PResult funDeclFromType(Context& ctx, QKey fun) {
 			const auto builtin_type = ctx.query<QueryTypeOfSymbol>({ fun })
 			                              ->valueOrThrow()
 			                              .getType()
@@ -436,6 +460,7 @@ namespace compiler::helios {
 					param_symbol,
 					code::generatedOrigin()
 				);
+				i++;
 			}
 			return HOUTFunctionDeclaration{
 				fun,
@@ -454,7 +479,9 @@ namespace compiler::helios {
 					variant_case_novalue(PstSymbolData) {
 						DeclarationVisitor decl_maker(ctx, key);
 						stmt(ctx, key).value()->acceptVisitor(decl_maker);
-						return std::move(decl_maker.out).value();
+						auto result = std::move(decl_maker.out).value();
+						verifyFunctionAttributes(ctx, stmt(ctx, key).value(), result);
+						return result;
 					}
 					variant_case(defgen::GeneratedSymbolData, generated_data) {
 						variant_match(generated_data.data) {
@@ -495,97 +522,28 @@ namespace compiler::helios {
 							variant_case(
 								defgen::GeneratedSymbolData::ToStringMethod, to_string_data
 							) {
-								const auto self_param = ctx.query<defgen::QueryGeneratedSymbol>(
-									{ .name = base::StrID("self"),
-								      .generated_symbol_data
-								      = defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::Parameter{
-										  .function_symbol = key,
-										  .parameter_index = 0,
-									  } } }
-								);
-
-								const auto method_type = ctx.query<QueryTypeOfSymbol>(key)
-								                             ->valueOrThrow()
-								                             .getType()
-								                             .as<tsh::FunctionAbstractType>();
-								const auto self_type   = method_type.getParameterTypes().at(0);
-								const auto return_type = method_type.getResultType();
-
-								std::vector<code::Parameter> parameters;
-								parameters.emplace_back(
-									base::StrID("self"),
-									self_type,
-									std::nullopt,
-									self_param,
-									code::generatedOrigin()
-								);
-
-								return HOUTFunctionDeclaration{
-									key, return_type, std::move(parameters), code::generatedOrigin()
-								};
+								return funDeclFromType(ctx, key);
 							}
 							variant_case(defgen::GeneratedSymbolData::DefaultDestructor, dtor_data) {
-								const auto self_param = ctx.query<defgen::QueryGeneratedSymbol>(
-									{ .name = base::StrID("self"),
-								      .generated_symbol_data
-								      = defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::Parameter{
-										  .function_symbol = key,
-										  .parameter_index = 0,
-									  } } }
-								);
-
-								const auto method_type = ctx.query<QueryTypeOfSymbol>(key)
-								                             ->valueOrThrow()
-								                             .getType()
-								                             .as<tsh::FunctionAbstractType>();
-								const auto self_type   = method_type.getParameterTypes().at(0);
-								const auto return_type = method_type.getResultType();
-
-								std::vector<code::Parameter> parameters;
-								parameters.emplace_back(
-									base::StrID("self"),
-									self_type,
-									std::nullopt,
-									self_param,
-									code::generatedOrigin()
-								);
-
-								return HOUTFunctionDeclaration{
-									key, return_type, std::move(parameters), code::generatedOrigin()
-								};
+								return funDeclFromType(ctx, key);
+							}
+							variant_case(defgen::GeneratedSymbolData::LengthMethod, length_method) {
+								return funDeclFromType(ctx, key);
 							}
 							variant_case_novalue(defgen::GeneratedSymbolData::BuiltinOperator) {
-								return getBuiltinDecl(ctx, key);
+								return funDeclFromType(ctx, key);
 							}
 							variant_case_novalue(
 								defgen::GeneratedSymbolData::ReplExpressionWrapper,
 								defgen::GeneratedSymbolData::ReplInstructionWrapper
 							) {
-								auto function_type = ctx.query<QueryTypeOfSymbol>({ key })
-								                         ->valueOrThrow()
-								                         .getType()
-								                         .as<tsh::FunctionAbstractType>();
-								return HOUTFunctionDeclaration{
-									key,
-									function_type.getResultType(),
-									{},
-									code::generatedOrigin(),
-								};
+								return funDeclFromType(ctx, key);
 							}
 							variant_case_novalue(defgen::GeneratedSymbolData::ScriptMainWrapper) {
 								// Script main is a generated symbol with a regular function
 								// signature, so it needs a normal HOUT declaration for the backend
 								// pipeline.
-								auto function_type = ctx.query<QueryTypeOfSymbol>({ key })
-								                         ->valueOrThrow()
-								                         .getType()
-								                         .as<tsh::FunctionAbstractType>();
-								return HOUTFunctionDeclaration{
-									key,
-									function_type.getResultType(),
-									{},
-									code::generatedOrigin(),
-								};
+								return funDeclFromType(ctx, key);
 							}
 							variant_default {
 								// Other generated symbols are not functions.

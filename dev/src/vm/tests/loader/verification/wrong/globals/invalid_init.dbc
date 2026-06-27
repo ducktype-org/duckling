@@ -1,0 +1,10 @@
+global_data my_global i64 {
+    constructor: my_constructor,
+    initial_value: 0x00001111
+}
+
+function my_constructor {  } -> {} {
+    mov_p64_imm            my_global,       5;
+    # Terminator: ReturnVoid
+    ret;
+}

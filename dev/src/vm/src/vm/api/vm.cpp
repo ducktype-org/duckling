@@ -62,8 +62,8 @@ namespace vm::api {
 		    .and_then(mapOrWrongResponse<response::CodePosition>);
 	}
 
-	std::expected<ProcessInfo, ApiError> spawn() {
-		return Supervisor::get().newProcess().transform([](const auto& x) {
+	std::expected<ProcessInfo, ApiError> spawn(const ProcessConfig& options) {
+		return Supervisor::get().newProcess(options).transform([](const auto& x) {
 			return ProcessInfo{ x };
 		});
 	}
@@ -215,6 +215,14 @@ namespace vm::api {
 	) {
 		return Supervisor::get()
 		    .doRequest(SupervisorRequest(pid, request::AttachStatusListener{ .listener = listener }))
+		    .transform(ignoreResponse);
+	}
+
+	std::expected<void, ApiError> attachOutputListener(
+		PID pid, Ref<events::Listener<std::string>> listener
+	) {
+		return Supervisor::get()
+		    .doRequest(SupervisorRequest(pid, request::AttachOutputListener{ .listener = listener }))
 		    .transform(ignoreResponse);
 	}
 

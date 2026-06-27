@@ -1,5 +1,6 @@
-x = int(input())
-m = int(input())
+x, m = input().rstrip().split(' ')
+x = int(x)
+m = int(m)
 
 a = 0
 b = 1

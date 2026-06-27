@@ -39,4 +39,10 @@ namespace pst {
 	 * @brief Check if none of the Element paths repeat for different elements
 	 */
 	base::OkBad checkUniqueHashes(AccessLocked<pst::LangElement> root);
+
+	void printSubElementTypes(CRef<LangElement> el);
+
+	u64 countSubElements(CRef<LangElement> el);
+
+	base::OkBad testElementCloning(base::CRef<LangElement> el);
 }

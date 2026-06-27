@@ -29,6 +29,8 @@ namespace compiler::tsl {
 				return PointerTypeLayout(tsh::ManyPointerAbstractType(key), ctx);
 			case CPointer:
 				return PointerTypeLayout(tsh::CPointerAbstractType(key), ctx);
+			case Slice:
+				return ClassTypeLayout(tsh::SliceAbstractType(key), ctx);
 			case String:
 				return StringTypeLayout(key, ctx);
 			case Function:

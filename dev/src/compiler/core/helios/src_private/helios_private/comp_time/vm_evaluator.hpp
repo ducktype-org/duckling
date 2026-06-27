@@ -34,8 +34,8 @@ namespace compiler::helios {
 	 *
 	 * @param ctx query context needed to perform compile time type operations.
 	 * @param func_name The name of the function to call.
-	 * @param lir_functions List of LIR functions to be passed to the VM. Includes the actual
-	 * function to call as well as all others called by it.
+	 * @param lir_unit List of LIR functions and other entities to be passed to the VM. Includes the
+	 * actual function to call as well as all others called by it.
 	 * @param args A vector of CTVs to be passed as arguments.
 	 * @param return_type The expected return type of the function, needed to cast the VMs return
 	 * value back to the expected "compiler type"
@@ -44,7 +44,7 @@ namespace compiler::helios {
 	std::expected<ctv::CompileTimeValue, VmEvaluationError> executeInVm(
 		query::Context&                           ctx,
 		const std::string&                        func_name,
-		const std::vector<CRef<lir::Function>>&   lir_functions,
+		const lir::LIRUnit&                       lir_unit,
 		const std::vector<ctv::CompileTimeValue>& args,
 		const tsh::SymbolType<>&                  return_type
 	);

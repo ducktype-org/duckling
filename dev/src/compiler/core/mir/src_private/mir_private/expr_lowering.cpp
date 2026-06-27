@@ -2,10 +2,12 @@
 
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/visitors.hpp>
+#include <helios/symbols/query_type_symbol_data.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/utils/get_expr_symid.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
+#include <mir_private/utils/slices.hpp>
 
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
@@ -252,14 +254,15 @@ namespace compiler::mir {
 			auto ctor_symid = expr.tuple_ctor_symbol;
 			args.emplace_back(MIRFunctionLiteral{ ctor_symid });
 
-			for (const auto& element: expr.elements) {
-				auto lowered_element = lowerSubExpr(*element, continuation);
+			for (const auto& element: expr.elements | std::views::reverse) {
+				auto lowered_element = lowerSubExpr(*element, current);
 				args.push_back(lowered_element.getResult(function));
 				current = lowered_element.begin;
 			}
+			std::reverse(args.begin() + 1, args.end());
 
 			return noValueOutput(
-				continuation,
+				current,
 				call,
 				Instruction{ Operation::Call, {}, args, {}, expr_scope, {}, { expr.getPosition() } },
 				expr.expression_type.getSymbolType()
@@ -323,13 +326,51 @@ namespace compiler::mir {
 			if (expr.base->expression_type.getSymbolType().getType().getKind() == tsh::Kind::Meta) {
 				// @TODO: #1918 Implement that.
 				throw base::NotYetImplemented("Lowering of IndexExpr operating on Meta");
+			} else if (expr.base->expression_type.getSymbolType().getType().getKind()
+			           == tsh::Kind::Slice) {
+				auto bounds_check_fail_block = function.newBlock();
+				auto bounds_check_cond_block = function.newBlock();
+				auto entry_block             = function.newBlock();
+				entry_block->setTerminator(Instruction{
+					Operation::Jump, {}, { bounds_check_cond_block->getID() }, {}, expr_scope });
+
+				auto lowered_index = lowerSubExpr(*expr.index, entry_block);
+				auto index_val     = lowered_index.getResult(function);
+
+				auto lowered_base = lowerSubExpr(*expr.base, lowered_index.begin);
+				auto base_val     = lowered_base.getResult(function);
+
+				// We perform bound checking
+				auto slice_data = function.getContext().query<helios::QuerySliceTypeData>(
+					expr.base->expression_type.getSymbolType().getType()
+				);
+				sliceBoundsCheck(
+					{ .condition_block = bounds_check_cond_block,
+				      .fail_block      = bounds_check_fail_block,
+				      .ok_block        = continuation,
+				      .function        = function,
+				      .scope           = expr_scope },
+					*slice_data,
+					index_val,
+					base_val,
+					expr.getPosition()
+				);
+
+				variant_match(std::move(base_val.getVariant())) {
+					variant_case(MIRPlace, place) {
+						auto result = place.withField(function.getContext(), slice_data->ptr)
+						                  .withIndex(index_val);
+						valueOutput(lowered_base.begin, result);
+					}
+					variant_default { CORE_PANIC("Index base must be a MIRPlace"); }
+				}
+
 			} else {
 				auto lowered_index = lowerSubExpr(*expr.index, continuation);
 				auto index_val     = lowered_index.getResult(function);
 
 				auto lowered_base = lowerSubExpr(*expr.base, lowered_index.begin);
 				auto base_val     = lowered_base.getResult(function);
-
 				variant_match(std::move(base_val.getVariant())) {
 					variant_case(MIRPlace, place) {
 						valueOutput(lowered_base.begin, place.withIndex(index_val));
@@ -577,7 +618,7 @@ namespace compiler::mir {
 			auto hole         = continuation->addHole();
 			auto lowered_elem = lowerSubExpr(*expr.element, continuation);
 			auto elem_val     = lowered_elem.getResult(function);
-			auto lowered_list = lowerSubExpr(*expr.list, continuation);
+			auto lowered_list = lowerSubExpr(*expr.list, lowered_elem.begin);
 			auto list_val     = lowered_list.getResult(function);
 
 			noValueOutput(
@@ -592,7 +633,7 @@ namespace compiler::mir {
 			auto hole          = continuation->addHole();
 			auto lowered_count = lowerSubExpr(*expr.count, continuation);
 			auto count_val     = lowered_count.getResult(function);
-			auto lowered_list  = lowerSubExpr(*expr.list, continuation);
+			auto lowered_list  = lowerSubExpr(*expr.list, lowered_count.begin);
 			auto list_val      = lowered_list.getResult(function);
 
 			noValueOutput(

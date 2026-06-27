@@ -1,0 +1,12 @@
+Tests:
+  build:
+    Description: can build a project with dependencies
+    Cases:
+      build:
+        test_cmd: duck -C foo build
+        # @TODO: #2907 Make this deterministic
+        # Output:
+        #   String: |+
+        #     info: successfully synchronized venv \`foo\`
+        #     info: compiling \`bar\`...
+        #     info: compiling \`foo\`...

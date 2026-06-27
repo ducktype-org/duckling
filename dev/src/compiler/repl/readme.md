@@ -72,6 +72,10 @@ Disable completions/hints:
 | `/help` | `/?`, `/h` | Show help |
 | `/exit` | `/quit`, `/q` | Exit session |
 | `/history` | `/hist` | Print current session entered statements |
+| `/symbols` | `/syms` | Print declarations visible in the current session |
+| `/variables` | `/vars` | Print top-level variables visible in the current session |
+| `/functions` | `/fns` | Print top-level functions visible in the current session |
+| `/details <name>` | - | Print detailed information for a visible symbol |
 | `/reset [n\|-n] [--silent]` | - | Resets session's state to the either state with absolute index n(when typing just n, this index can be checked in /hist) or when using -n, to the state n states ago. Turning on --silent suppress output during reset 
 | `/cmds` | `/commands` | Show all inputs history(also previous sessions) |
 | `/commands-reset` | `/cmds-reset` | Resets all inputs history |
@@ -157,7 +161,7 @@ For each statement:
 3. The statement is classified as expression, instruction, or definition.
 4. Expression/instruction paths generate wrapper functions; definition path loads module HOUT.
 5. HOUT is lowered to LIR and compiled to DVM bytecode.
-6. Lowering uses `ReplLoweringContext` to emit only newly-lowered entities
+6. Lowering uses `ReplDVMCodeBuilder` to emit only newly-lowered entities
   (see `core/backends/dvm/README.md`).
 7. New code is loaded into current DVM process.
 8. Wrapper executes (for executable statements) and result is printed when supported.

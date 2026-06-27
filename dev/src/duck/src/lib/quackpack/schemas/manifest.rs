@@ -1,6 +1,7 @@
 //! Local manifest schemas.
 use std::collections::HashMap;
 use std::fmt;
+use std::path::PathBuf;
 
 use serde::{Deserialize, de};
 use serde_untagged::UntaggedEnumVisitor;
@@ -10,23 +11,53 @@ use crate::quackpack::schemas::OneEntryMap;
 
 pub type Dependencies = HashMap<String, Dependency>;
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 /// Schema of the [`quackconfig.yaml`](crate::quackpack::core::PackageLoader::MANIFEST_NAME) file.
+/// Also used by script frontmatters.
 pub struct Manifest {
     /// `metadata:` root field.
     pub metadata: Option<Metadata>,
-    /// `dependencies:` root field
+    /// `dependencies:` root field.
     pub dependencies: Option<Dependencies>,
-    /// `dev_dependencies:` root field
+    /// `dev_dependencies:` root field.
     pub dev_dependencies: Option<Dependencies>,
-    /// `features:` root field
+    /// `features:` root field.
     pub features: Option<HashMap<String, Vec<String>>>,
-    /// `profiles:` root field
+    /// `profiles:` root field.
     pub profiles: Option<HashMap<String, Profile>>,
+    /// `import:` root field.
+    /// Only used by frontmatters.
+    pub import: Option<PathBuf>,
 }
 
-#[derive(Debug, Deserialize)]
+impl Manifest {
+    /// Checks whether at most the [`Manifest::import`] field is not [`None`].
+    pub fn is_just_import_or_empty(&self) -> bool {
+        self.metadata.is_none()
+            && self.features.is_none()
+            && self.dependencies.is_none()
+            && self.dev_dependencies.is_none()
+            && self.profiles.is_none()
+    }
+
+    /// Checks whether fields only allowed in frontmatters are present and that `import` field is absent.
+    pub fn fields_disallowed_in_expanded_frontmatter(&self) -> Vec<&'static str> {
+        let mut result = vec![];
+        if self.metadata.is_some() {
+            result.push("metadata");
+        }
+        if self.features.is_some() {
+            result.push("features");
+        }
+        if self.import.is_some() {
+            result.push("import");
+        }
+        result
+    }
+}
+
+#[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 /// Schema of the `metadata:` table.
 pub struct Metadata {
@@ -42,7 +73,7 @@ pub struct Metadata {
     pub description: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 /// Single dependency of the package.
 pub struct Dependency {
@@ -58,7 +89,7 @@ pub struct Dependency {
     pub conditions: Option<DependencyCondition>,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 /// A dependency versions which can be present in one of the two ways:
 /// 1. as a list of strings, where each string is a valid version,
 /// 2. as a string of versions which are separated by an `" or "` keyword (extra spaces are ignored).
@@ -104,7 +135,7 @@ impl<'de> Deserialize<'de> for OredSemver {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 /// A dependency's source.
 pub enum DependencySource {
     /// `Simple` variant overwrites `registry_url` for a given dependency.
@@ -159,7 +190,7 @@ impl<'de> de::Deserialize<'de> for DependencySource {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 /// A detailed source of a dependency.
 pub struct DetailedSource {
@@ -196,7 +227,7 @@ impl DetailedSource {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 /// Conditions, from which any has to be true, in order to enable this dependency.
 pub struct DependencyCondition {
@@ -205,12 +236,12 @@ pub struct DependencyCondition {
     pub package_features: Option<Vec<String>>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "kebab-case", transparent)]
 /// A feature + its conditions.
 pub struct DetailedFeature(pub OneEntryMap<String, DependencyCondition>);
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 /// A general dependency feature.
 pub enum DependencyFeature {
     /// Just a feature.
@@ -232,7 +263,7 @@ impl<'de> de::Deserialize<'de> for DependencyFeature {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 /// A single compilation profile.
 pub struct Profile {
@@ -248,7 +279,7 @@ pub struct Profile {
     pub inherits: Option<String>,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub enum OptLevel {
     Number(u32),
     String(String),

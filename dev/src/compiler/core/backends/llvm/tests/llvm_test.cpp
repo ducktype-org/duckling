@@ -45,6 +45,7 @@ public:
 		TESTER_ADD_TEST(ffiTest);
 		TESTER_ADD_TEST(tuplesTest);
 		TESTER_ADD_TEST(pointersTest);
+		TESTER_ADD_TEST(backendDependentTest);
 	}
 
 protected:
@@ -90,9 +91,10 @@ private:
 	) {
 		if (expected_prototype_count == -1) expected_prototype_count = expected_function_count;
 		// @TODO: #2694 These numbers are inflated by toString methods for simple types
-		// There are 14 toString methods, and an additional 5 builtin_stringify_<type> prototypes.
-		expected_function_count += 14;
-		expected_prototype_count += 14 + 5;
+		// There are 15 toString methods, and an additional 6 builtin_stringify_<type> prototypes
+		// and 1 slice length method.
+		expected_function_count += 15 + 1;
+		expected_prototype_count += 15 + 1 + 6;
 		auto llvm_module = getLLVMModuleFromPath(std::move(module_path));
 		ASSERT_EQUAL_PRINT(llvm_module.getFunctionCount(false), expected_function_count);
 		ASSERT_EQUAL_PRINT(llvm_module.getFunctionCount(), expected_prototype_count);
@@ -158,7 +160,7 @@ private:
 
 	void classTest() { runTestForModule("modules/classes/records", 13, 15); }
 
-	void stringsTest() { runTestForModule("modules/strings", 2, 2); }
+	void stringsTest() { runTestForModule("modules/strings", 2, 3); }
 
 	void ffiTest() { runTestForModule("modules/ffi", 1, 1); }
 
@@ -456,6 +458,22 @@ private:
 	void pointersTest() {
 		auto        llvm_module = getLLVMModuleFromPath("modules/pointers");
 		std::string ir          = llvm_module.dumpLLVMToString();
+	}
+
+	void backendDependentTest() {
+		auto        llvm_module = getLLVMModuleFromPath("modules/backend_dependent");
+		std::string ir          = llvm_module.dumpLLVMToString();
+
+		// The LLVM backend must compile the `@native_only_impl` of `getValue` (returning 20)
+		// and never the `@dvm_only_impl` one (returning 10).
+		assertTrue(
+			std::regex_search(ir, std::regex{ R"(ret i32 20)" }),
+			"Expected native_only_impl 'ret i32 20' in the LLVM module"
+		);
+		assertTrue(
+			not std::regex_search(ir, std::regex{ R"(ret i32 10)" }),
+			"dvm_only_impl 'ret i32 10' must not be compiled into the LLVM module"
+		);
 	}
 };
 

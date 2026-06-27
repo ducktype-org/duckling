@@ -57,33 +57,6 @@ namespace compiler::lir {
 		};
 	}
 
-	LIRGlobal LIRGlobal::fromHOUT(query::Context& ctx, const helios::HOUTGlobalData& hout_global) {
-		auto type_layout = ctx.query<tsl::QuerySymbolTypeLayout>(hout_global.type);
-
-		auto mangled_name = helios::mangler::getSimpleMangledName(ctx, hout_global.helios_symbol);
-
-		variant_match(hout_global.value) {
-			variant_case(helios::HOUTGlobalConst, name) {
-				return LIRGlobal{
-					type_layout,
-					mangled_name,
-					LIRGlobalType::Constant,
-				};
-			}
-			variant_case(helios::HOUTGlobalVariable, name) {
-				return LIRGlobal{ type_layout, mangled_name, LIRGlobalType::Variable };
-			}
-			variant_default {
-				CORE_PANIC(
-					"Unhandled HOUTGlobalData type in LIRGlobal::fromHOUT: ",
-					hout_global.original_name.strView()
-				);
-			}
-		}
-
-		CORE_UNREACHABLE();
-	}
-
 	LIRPlace::LIRPlace(BaseVariant base, std::vector<Projection> projection_chain):
 		  base(base),
 		  layout([&]() -> CRef<tsl::TypeLayout> {
@@ -189,7 +162,7 @@ namespace compiler::lir {
 	 *
 	 * @note It should be used only used in lir::Function::debugPrint method
 	 */
-	struct LIRPrinter {
+	struct LIRPrinter final {
 		query::Context& ctx;
 		std::ostream&   output;
 
@@ -324,7 +297,9 @@ namespace compiler::lir {
 			block_id = function.getBlockIDs();
 
 			output << "[LIR] Function \"" << function.mangled_name.strView() << "\""
-				   << (function.link_once ? " (link once)" : "") << ":\n";
+				   << (function.link_once ? " (link once)" : "")
+				   << (function.ignore_on_dvm ? " (ignore on dvm)" : "")
+				   << (function.ignore_on_llvm ? " (ignore on llvm)" : "") << "\n";
 
 			for (const auto& local: function.local_list) {
 				printLocalDesc(&local);
@@ -388,6 +363,24 @@ namespace compiler::lir {
 		}
 	}
 
+	LIRGlobalData::CTorDtorPair LIRGlobalData::getCtorDtorPair() const {
+		CORE_ASSERT(
+			std::holds_alternative<LIRGlobalData::CTorDtorPair>(data_initialization),
+			"Global does not have constructor/destructor initialization: ",
+			global.mangled_name.strView()
+		);
+		return std::get<LIRGlobalData::CTorDtorPair>(data_initialization);
+	}
+
+	ctv::CompileTimeValue LIRGlobalData::getConstValue() const {
+		CORE_ASSERT(
+			std::holds_alternative<ctv::CompileTimeValue>(data_initialization),
+			"Global does not have constant initialization: ",
+			global.mangled_name.strView()
+		);
+		return std::get<ctv::CompileTimeValue>(data_initialization);
+	}
+
 	void LIRUnit::debugPrint(query::Context& ctx, std::ostream& os) const {
 		os << "LIRUnit: \n";
 		os << "Globals:\n";
@@ -403,19 +396,22 @@ namespace compiler::lir {
 	}
 
 	void LIRUnit::deduplicateSymbols() {
-		std::unordered_set<base::StrID> seen_globals;
-		base::filterVectorInPlace(lir_globals, [&seen_globals](const LIRGlobalData& global_data) {
-			if (seen_globals.contains(global_data.global.mangled_name)) return false;
-			seen_globals.insert(global_data.global.mangled_name);
-			return true;
+		base::deduplicateBy(lir_globals, [](const LIRGlobalData& global_data) {
+			return global_data.global.mangled_name;
 		});
 
-		std::unordered_set<base::StrID> seen_functions;
-		base::filterVectorInPlace(lir_functions, [&seen_functions](const CRef<Function>& func) {
-			if (seen_functions.contains(func->mangled_name)) return false;
-			seen_functions.insert(func->mangled_name);
-			return true;
-		});
+		std::unordered_set<base::StrID> seen;
+		std::vector<CRef<Function>>     result_functions;
+		for (auto lir_func: lir_functions) {
+			if (seen.insert(lir_func->mangled_name).second)
+				result_functions.push_back(lir_func);
+			else if (lir_func->ignore_on_dvm or lir_func->ignore_on_llvm) {
+				// If we ignore it on some backend then we don't want to deduplicate
+				// it based on mangled name.
+				result_functions.push_back(lir_func);
+			}
+		}
+		lir_functions = std::move(result_functions);
 	}
 
 	LIRLocalSpecialKind specialKindFromMIR(const mir::MIRLocal& mir_local) {

@@ -29,18 +29,16 @@ Two execution versions
 
 ## RiftVM:
 Two versions:
-1. RiftVM + debug:  
+1. RiftVM + debug:
 In src/services/executor_f8/op_case_config.hpp:
 ```
-constexpr bool IGNORE_EXECUTION_STRATEGY = false;
 // #define USE_COMPUTED_GOTO
 // #define USE_FLAT_FRAME
 ```
 `time ./RiftVM -f {file}.rbc < input{n}.in > dump.out`
-2. RiftVM:  
+2. RiftVM:
 In src/services/executor_f8/op_case_config.hpp:
 ```
-constexpr bool IGNORE_EXECUTION_STRATEGY = true;
 #define USE_COMPUTED_GOTO
 // #define USE_FLAT_FRAME
 ```

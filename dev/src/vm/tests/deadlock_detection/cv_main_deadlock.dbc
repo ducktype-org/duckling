@@ -1,0 +1,213 @@
+# Main-sleeps-on-CV + worker mutex deadlock test.
+#
+# Scenario:
+# - workerA and workerB use a barrier to guarantee both hold their first mutex
+#   before the cross-lock attempt, making the deadlock deterministic.
+# - After releasing the workers, main locks sleep_mutex and blocks on cv_main,
+#   which nobody will ever signal.
+# - The deadlock detector fires VMDeadlockException in one of the workers.
+# - Once the process becomes ExecutionPanicked, main's next 500 ms CV polling
+#   tick sees isTerminateRequested() == true and main exits cleanly.
+#
+# Expected: VMDeadlockException.
+
+global_data m1          mutex {}
+global_data m2          mutex {}
+global_data gate        mutex {}
+global_data cv_gate     condition_variable {}
+global_data sleep_mutex mutex {}
+global_data cv_main     condition_variable {}
+global_data ready_count i64 {}
+global_data phase       i64 {}
+
+function workerA {} -> {} {
+	init_pany_type		la, mutex;
+	mov_popq_popq		la, m1;
+	call_builtinfunc	builtin_lock_mutex;
+
+	init_pany_type		gl, mutex;
+	mov_popq_popq		gl, gate;
+	call_builtinfunc	builtin_lock_mutex;
+
+	init_pany_type		rc, i64;
+	mov_p64_p64			rc, ready_count;
+	add_p64_imm			rc, 1;
+	mov_p64_p64			ready_count, rc;
+
+	init_pany_type		n, condition_variable;
+	mov_popq_popq		n, cv_gate;
+	call_builtinfunc	builtin_notify_all_cv;
+
+	label WaitPhaseAInit;
+		init_pany_type	p, i64;
+		init_pany_type	wcv, condition_variable;
+		init_pany_type	wg, mutex;
+
+	label WaitPhaseA;
+		mov_p64_p64		p, phase;
+		cmpEq_p64_imm	p, 1;
+		jmpIf_label		ReleasedA;
+
+		mov_popq_popq	wcv, cv_gate;
+		mov_popq_popq	wg, gate;
+		call_builtinfunc builtin_wait_cv;
+		deinit;
+		jmp_label		WaitPhaseAInit;
+
+	label ReleasedA;
+	deinit;
+	deinit;
+	deinit;
+
+	init_pany_type		ug, mutex;
+	mov_popq_popq		ug, gate;
+	call_builtinfunc	builtin_unlock_mutex;
+
+	# Cross-lock: deadlock detector fires here.
+	init_pany_type		lb, mutex;
+	mov_popq_popq		lb, m2;
+	call_builtinfunc	builtin_lock_mutex;
+
+	ret;
+}
+
+function workerB {} -> {} {
+	init_pany_type		lb, mutex;
+	mov_popq_popq		lb, m2;
+	call_builtinfunc	builtin_lock_mutex;
+
+	init_pany_type		gl, mutex;
+	mov_popq_popq		gl, gate;
+	call_builtinfunc	builtin_lock_mutex;
+
+	init_pany_type		rc, i64;
+	mov_p64_p64			rc, ready_count;
+	add_p64_imm			rc, 1;
+	mov_p64_p64			ready_count, rc;
+
+	init_pany_type		n, condition_variable;
+	mov_popq_popq		n, cv_gate;
+	call_builtinfunc	builtin_notify_all_cv;
+
+	label WaitPhaseBInit;
+		init_pany_type	p, i64;
+		init_pany_type	wcv, condition_variable;
+		init_pany_type	wg, mutex;
+
+	label WaitPhaseB;
+		mov_p64_p64		p, phase;
+		cmpEq_p64_imm	p, 1;
+		jmpIf_label		ReleasedB;
+
+		mov_popq_popq	wcv, cv_gate;
+		mov_popq_popq	wg, gate;
+		call_builtinfunc builtin_wait_cv;
+		deinit;
+		jmp_label		WaitPhaseBInit;
+
+	label ReleasedB;
+	deinit;
+	deinit;
+	deinit;
+
+	init_pany_type		ug, mutex;
+	mov_popq_popq		ug, gate;
+	call_builtinfunc	builtin_unlock_mutex;
+
+	# Cross-lock: deadlock detector fires here.
+	init_pany_type		la, mutex;
+	mov_popq_popq		la, m1;
+	call_builtinfunc	builtin_lock_mutex;
+
+	ret;
+}
+
+function main { i64, ptr_argv } -> { i64 } {
+	init_pany_type		im1, mutex;
+	call_builtinfunc	builtin_create_mutex;
+	mov_popq_popq		m1, im1;
+
+	init_pany_type		im2, mutex;
+	call_builtinfunc	builtin_create_mutex;
+	mov_popq_popq		m2, im2;
+
+	init_pany_type		ig, mutex;
+	call_builtinfunc	builtin_create_mutex;
+	mov_popq_popq		gate, ig;
+
+	init_pany_type		icvg, condition_variable;
+	call_builtinfunc	builtin_create_cv;
+	mov_popq_popq		cv_gate, icvg;
+
+	init_pany_type		ism, mutex;
+	call_builtinfunc	builtin_create_mutex;
+	mov_popq_popq		sleep_mutex, ism;
+
+	init_pany_type		icvm, condition_variable;
+	call_builtinfunc	builtin_create_cv;
+	mov_popq_popq		cv_main, icvm;
+
+	mov_p64_imm			ready_count, 0;
+	mov_p64_imm			phase, 0;
+
+	init_pany_type		ta, i64;
+	set_threadctx		workerA;
+	call_builtinfunc	builtin_start_thread;
+
+	init_pany_type		tb, i64;
+	set_threadctx		workerB;
+	call_builtinfunc	builtin_start_thread;
+
+	# Wait until both workers hold their first mutex, then release them.
+	init_pany_type		mg, mutex;
+	mov_popq_popq		mg, gate;
+	call_builtinfunc	builtin_lock_mutex;
+
+	label WaitReadyInit;
+		init_pany_type	r, i64;
+		init_pany_type	wcv, condition_variable;
+		init_pany_type	wg, mutex;
+
+	label WaitReady;
+		mov_p64_p64		r, ready_count;
+		cmpEq_p64_imm	r, 2;
+		jmpIf_label		Release;
+
+		mov_popq_popq	wcv, cv_gate;
+		mov_popq_popq	wg, gate;
+		call_builtinfunc builtin_wait_cv;
+		deinit;
+		jmp_label		WaitReadyInit;
+
+	label Release;
+	deinit;
+	deinit;
+	deinit;
+
+	mov_p64_imm			phase, 1;
+
+	init_pany_type		rcv, condition_variable;
+	mov_popq_popq		rcv, cv_gate;
+	call_builtinfunc	builtin_notify_all_cv;
+
+	init_pany_type		ug, mutex;
+	mov_popq_popq		ug, gate;
+	call_builtinfunc	builtin_unlock_mutex;
+
+	# Main now sleeps on cv_main. Nobody will signal it.
+	# When the workers deadlock, the process becomes ExecutionPanicked and
+	# main's next 500 ms polling tick exits this wait via KillProcessException.
+	init_pany_type		sm, mutex;
+	mov_popq_popq		sm, sleep_mutex;
+	call_builtinfunc	builtin_lock_mutex;
+
+	label SleepLoop;
+		init_pany_type		scv, condition_variable;
+		mov_popq_popq		scv, cv_main;
+		init_pany_type		swm, mutex;
+		mov_popq_popq		swm, sleep_mutex;
+		call_builtinfunc	builtin_wait_cv;
+		jmp_label			SleepLoop;
+
+	ret;
+}

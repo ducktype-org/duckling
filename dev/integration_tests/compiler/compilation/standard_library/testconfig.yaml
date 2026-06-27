@@ -6,7 +6,7 @@ Tests:
       uses_std:
         backend: all
         Output:
-          String: "10\n"
+          String: "10\n42\n"
 
   # We test if not using std when disabling it in the compiler works.
   no_std:
@@ -27,9 +27,9 @@ Tests:
     compile_llvm_options: "--custom-std-path custom_std"
     Cases:
       all:
-        backend: llvm
+        backend: all
         Output:
-          String: "20\n"
+          String: "20\n84\n"
 
   # We test if disabling the std and using it in the user code causes the expected compile error.
   no_std_fails:
@@ -62,4 +62,4 @@ Tests:
       all:
         backend: all
         Output:
-          String: "10\n"
+          String: "10\n42\n"

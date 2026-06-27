@@ -3,6 +3,7 @@
 #include "preamble.hpp"
 
 namespace pst::expr {
+	CLONE_SUB_ELEMENTS_DEF(Call, args);
 
 	MBox<ExprElement> Call::parse(LangParserState& state) {
 		if (!checkNonEmpty(state)) return nullptr;

@@ -93,7 +93,7 @@ impl Dependency {
     }
 
     /// Get the required root packages mentioned in the manifest.
-    pub fn enableing_features(&self) -> &[FeatureName] {
+    pub fn enabling_features(&self) -> &[FeatureName] {
         let Some(conditions) = &self.conditions else {
             return &[];
         };

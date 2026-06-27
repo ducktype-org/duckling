@@ -57,7 +57,7 @@ private:
 		ASSERT_TRUE(init_result.status().isOk());
 
 		auto prev_graph_opt = query::internal::ContextAccess::getState()->getPreviousGraph();
-		ASSERT_TRUE(prev_graph_opt.has_value());
+		ASSERT_HAS_VALUE(prev_graph_opt);
 		auto prev = prev_graph_opt.value();
 
 		auto prev_colors = query::internal::ContextAccess::getState()->getPreviousNodeColors();

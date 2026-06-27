@@ -4,6 +4,8 @@
 #include "preamble.hpp"
 
 namespace pst::expr {
+	CLONE_SUB_ELEMENTS_DEF(KeywordLiteral, keyword, template_specifier);
+
 	MBox<ExprElement> KeywordLiteral::parse(LangParserState& state) {
 		if (!checkNonEmpty(state)) return nullptr;
 
