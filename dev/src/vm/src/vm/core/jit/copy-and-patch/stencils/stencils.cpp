@@ -26,14 +26,14 @@ namespace vm::jit::cnp {
 
 	template<OpFun* InstructionImplementation, low::MicroOpcode OpCode>
 	__always_inline CP_RETURN base_stencil(CP_ARGS) {
-		const MicroInstruction* instr = GET_LINK_VARIABLE(instr_ptr, const MicroInstruction*, 64);
+		auto instr = GET_LINK_VARIABLE(instr_ptr, const MicroInstruction*, 64);
 		FORCE_ASSUME(instr->arg0 == GET_LINK_VARIABLE(arg0, u64, 64));
 		FORCE_ASSUME(instr->arg1 == GET_LINK_VARIABLE(arg1, u64, 64));
 		try {
 			InstructionImplementation(instr, local_stack, frame, thread);
 		} catch (...) { CALL_STENCIL(exception_thrower); }
 
-		if constexpr (low::isOpcodeReturning<OpCode>) {
+		if constexpr (low::IS_OPCODE_RETURNING<OpCode>) {
 			// Since stencils do not take pointers/references it has to store the changed values.
 			// Stencils do not take pointers to reduce the cost, since
 			// it would have to be dereferenced or patched in every single stencil.
@@ -79,7 +79,7 @@ namespace vm::jit::cnp {
 
 	// NOLINTNEXTLINE(readability-identifier-naming)
 	CP_RETURN stencil_special_call_non_jitable(CP_ARGS) {
-		const MicroInstruction* instr = GET_LINK_VARIABLE(instr_ptr, const MicroInstruction*, 64);
+		auto instr = GET_LINK_VARIABLE(instr_ptr, const MicroInstruction*, 64);
 		FORCE_ASSUME(instr->nontc_opcode == GET_LINK_VARIABLE(call_opcode, u64, 64));
 		FORCE_ASSUME(instr->arg0 == GET_LINK_VARIABLE(arg0, u64, 64));
 		FORCE_ASSUME(instr->arg1 == GET_LINK_VARIABLE(arg1, u64, 64));

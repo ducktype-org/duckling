@@ -34,7 +34,7 @@ namespace vm::low {
 		base::StrID name;
 		usize       id;
 #ifdef ENABLE_JIT
-		usize jit_entrypoint_offset;
+		usize jit_func_entrypoint_offset;
 #endif
 		MicroBytecode bc;
 

@@ -98,6 +98,6 @@ namespace vm::low {
 	}
 
 	template<vm::low::MicroOpcode opcode>
-	constexpr bool isOpcodeReturning
+	constexpr bool IS_OPCODE_RETURNING
 		= opcode == MicroOpcode::ret || opcode == MicroOpcode::ret_tailcall_func;
 }

@@ -86,10 +86,13 @@ namespace vm::loader::compiler::safe::detail {
 			const vm::loader::compiler::detail::FunctionStackContext& ctx
 		):
 			  compiler{ compiler },
-			  ctx{ ctx } {
+			  ctx{ ctx }
 #ifdef ENABLE_JIT
-			addLow<Op_jitFuncEntrypoint>();
+			  ,
+			  next_instruction_index{ 1 },
+			  result{ makeLowInstruction(vm::low::MicroOpcode::jitFuncEntrypoint, 0, 0) }
 #endif
+		{
 		}
 
 		std::pair<low::MicroBytecode, decltype(label_id_to_offset)> build() {
@@ -138,12 +141,12 @@ namespace vm::loader::compiler::safe::detail {
 		requires AreTranslatableInstructionTagArgs<T, Args...> void addLow(Args&&... args) {
 			if (push_step_gil_on_next_add_low) {
 				push_step_gil_on_next_add_low = false;
-				// addLow<Op_stepGil>();
+				addLow<Op_stepGil>();
 			}
 
 			if (is_control_flow) {
 				is_control_flow = false;
-				// addLow<Op_check_strategy>();
+				addLow<Op_check_strategy>();
 			}
 
 			[&]<typename... LowArgs>(std::tuple<LowArgs...>*) {
@@ -151,14 +154,8 @@ namespace vm::loader::compiler::safe::detail {
 					makeLowInstruction(T::OPCODE, lowerLowArg<LowArgs>(std::forward<Args>(args))...)
 				);
 #if (BUILD_TYPE_DEV_DEBUG)
-	#ifdef ENABLE_JIT
-				if constexpr (!std::is_same_v<T, Op_jitEntrypoint>) {
-	#endif
-					result.back().opcode_id      = T::OPCODE;
-					result.back().representation = current_high_instruction_representation;
-	#ifdef ENABLE_JIT
-				}
-	#endif
+				result.back().opcode_id      = T::OPCODE;
+				result.back().representation = current_high_instruction_representation;
 #endif
 				next_instruction_index++;
 			}(static_cast<T::ArgTypes*>(nullptr));

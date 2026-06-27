@@ -14,7 +14,9 @@ namespace vm::jit::cnp {
 		PUSH_DIAGNOSTIC
 		ALLOW_EXTENSIONS
 		static constexpr char binary[] = {
-#embed "stencils-so"
+#if UNDER_LINTER
+	#embed "stencils-so"
+#endif
 		};
 		POP_DIAGNOSTIC
 		// NOLINTEND

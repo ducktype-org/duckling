@@ -44,7 +44,7 @@ namespace vm {
 			[[maybe_unused]] auto new_functions = loaded_program_copy.selfUpdate();
 			updateGlobalDataMemory(&loaded_program_copy);
 #ifdef ENABLE_JIT
-			updateJitData(&loaded_program_copy, &new_functions);
+			updateJitData(&new_functions);
 #endif
 			return api::Response(api::response::Empty());
 		} else {
@@ -559,27 +559,21 @@ namespace vm {
 		return synchronization_primitives;
 	}
 
+#ifdef ENABLE_JIT
 	void SafeVMProcess::updateJitData(
-		CRef<low::ILowVMProgram>                                                program,
 		CRef<std::vector<std::tuple<CRef<low::LowFuncData>, u64, base::StrID>>> new_functions
 	) {
 		for (auto& [func_data, func_id, func_name]: *new_functions) {
 			jit_data.emplace_back(*func_data.get());
-			usize jit_nop_idx = 0;
-			for (usize i = 0; i < func_data->bc.size(); ++i) {
-				if (getInstructionOpcode(func_data->bc[i]) == vm::low::MicroOpcode::nop) {
-					jit_nop_idx = i;
-					break;
-				}
-			}
 			for (usize i = 0; i < jit_data.back().cfgs.size(); i++) {
 				auto& cfg = jit_data.back().cfgs[i];
 				if (cfg.empty()) continue;  // Not an entrypoint
 				auto maybe_old_opcode = loaded_program_copy.replaceOpcode(
 					func_id,
 					i,
-					(i == jit_nop_idx ? vm::low::MicroOpcode::jitFuncEntrypoint
-				                      : vm::low::MicroOpcode::jitLoopEntrypoint)
+					(i == func_data->jit_func_entrypoint_offset
+				         ? vm::low::MicroOpcode::jitFuncEntrypoint
+				         : vm::low::MicroOpcode::jitLoopEntrypoint)
 				);
 				CORE_ASSERT(
 					maybe_old_opcode.has_value(), "Failed to replace opcode with jit entrypoint"
@@ -587,4 +581,5 @@ namespace vm {
 			}
 		}
 	}
+#endif
 }

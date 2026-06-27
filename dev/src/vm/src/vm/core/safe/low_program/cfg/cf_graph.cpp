@@ -179,15 +179,15 @@ namespace vm::low::cf {
 		ControlFlowGraph subgraph;
 		subgraph.blocks.emplace_back(0, blocks[entry_block_id].start, blocks[entry_block_id].end);
 
-		const BasicBlockID UNDEFINED_ID = static_cast<BasicBlockID>(-1);
+		const auto undefined_id = static_cast<BasicBlockID>(-1);
 
 		std::vector<BasicBlockID> old_block_ids = { entry_block_id };
-		std::vector<BasicBlockID> old_to_new_id(blocks.size() + 1, UNDEFINED_ID);
+		std::vector<BasicBlockID> old_to_new_id(blocks.size() + 1, undefined_id);
 		old_to_new_id[entry_block_id] = 0;
 
 		for (BasicBlockID old_id: other_block_ids) {
 			CORE_ASSERT(old_id < blocks.size(), "Invalid block ID in subgraph request");
-			if (old_to_new_id[old_id] != UNDEFINED_ID) continue;
+			if (old_to_new_id[old_id] != undefined_id) continue;
 
 			const auto new_id     = static_cast<BasicBlockID>(subgraph.blocks.size());
 			old_to_new_id[old_id] = new_id;
@@ -196,7 +196,7 @@ namespace vm::low::cf {
 			old_block_ids.push_back(old_id);
 		}
 
-		const i64 loop_entry_pos = subgraph.blocks[0].start;
+		const auto loop_entry_pos = static_cast<i64>(subgraph.blocks[0].start);
 
 		for (BasicBlockID old_id: old_block_ids) {
 			const BasicBlockID new_id = old_to_new_id[old_id];
@@ -207,8 +207,8 @@ namespace vm::low::cf {
 			for (usize i = 0; i < src->edgeCount(); ++i) {
 				BasicBlockID old_target_id = src->edge(i);
 				BasicBlockID new_target_id = old_to_new_id[old_target_id];
-				if (new_target_id == UNDEFINED_ID) {
-					usize jmp_dest_pos = blocks[old_target_id].start;
+				if (new_target_id == undefined_id) {
+					auto jmp_dest_pos = static_cast<i64>(blocks[old_target_id].start);
 
 					// Create empty exit block representing this outgoing edge
 					new_target_id = static_cast<BasicBlockID>(subgraph.blocks.size());
@@ -249,7 +249,9 @@ namespace vm::low::cf {
 		return oss.str();
 	}
 
-	bool BasicBlock::isFallthrough() const { return edgeKind() == OutEdges::Kind::Default && next() == id + 1; }
+	bool BasicBlock::isFallthrough() const {
+		return edgeKind() == OutEdges::Kind::Default && next() == id + 1;
+	}
 
 	std::string BasicBlock::toString() const {
 		std::ostringstream oss;

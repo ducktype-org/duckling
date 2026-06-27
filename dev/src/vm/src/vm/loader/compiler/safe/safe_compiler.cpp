@@ -216,7 +216,7 @@ namespace vm::loader::compiler::safe {
 				low::LowFuncData{ .name = function.name,
 			                      .id   = 0,  // placeholder, replaced immediately
 #ifdef ENABLE_JIT
-			                      .jit_entrypoint_offset = function_jit_entrypoint,
+			                      .jit_func_entrypoint_offset = function_jit_entrypoint,
 #endif
 			                      .bc                  = std::move(bytecode),
 			                      .local_stack_size    = getIntTypeSize(ctx.local_stack_size),

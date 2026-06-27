@@ -15,20 +15,22 @@
 #ifdef BUILD_TYPE_RELEASE_
 // During testing compile always to check properly that jit integration works.
 constexpr inline uint CP_FUNC_COMPILATION_THRESHOLD   = 0;
-constexpr inline uint LLVM_FUNC_COMPILATION_THRESHOLD = 0;
-constexpr inline uint LOOP_COMPILATION_THRESHOLD      = 1;
+constexpr inline uint LLVM_FUNC_COMPILATION_THRESHOLD = -1;
+constexpr inline uint LOOP_COMPILATION_THRESHOLD      = -1;
 #else
 constexpr inline uint CP_FUNC_COMPILATION_THRESHOLD   = 0;
-constexpr inline uint LLVM_FUNC_COMPILATION_THRESHOLD = 0;
-constexpr inline uint LOOP_COMPILATION_THRESHOLD      = 1;
+constexpr inline uint LLVM_FUNC_COMPILATION_THRESHOLD = -1;
+constexpr inline uint LOOP_COMPILATION_THRESHOLD      = -1;
 #endif
 namespace vm::jit {
 	using JitLLVMFunc
 		= int(const vm::MicroInstruction**, std::byte**, vm::Frame**, vm::SafeVMThread*);
 
 
-#define CP_RETURN    __attribute__((preserve_none)) void
-#define CP_ARGS      [[maybe_unused]] ::byte *local_stack, [[maybe_unused]] ::vm::Frame *frame, [[maybe_unused]] ::vm::SafeVMThread &thread
+#define CP_RETURN __attribute__((preserve_none)) void
+#define CP_ARGS                                                                \
+	[[maybe_unused]] ::byte *local_stack, [[maybe_unused]] ::vm::Frame *frame, \
+		[[maybe_unused]] ::vm::SafeVMThread &thread
 #define CP_PASS_ARGS local_stack, frame, thread
 	using JitCPFunc = CP_RETURN(CP_ARGS);
 
@@ -50,9 +52,9 @@ namespace vm::jit {
 			  until_compilation(cfgs.size(), LOOP_COMPILATION_THRESHOLD),
 			  llvm_compiled_code_ptrs(cfgs.size(), nullptr) {
 #if COMPILE_WITH_CP
-			until_compilation[func.jit_entrypoint_offset] = CP_FUNC_COMPILATION_THRESHOLD;
+			until_compilation[func.jit_func_entrypoint_offset] = CP_FUNC_COMPILATION_THRESHOLD;
 #else
-			until_compilation[func.jit_entrypoint_offset] = LLVM_FUNC_COMPILATION_THRESHOLD;
+			until_compilation[func.jit_func_entrypoint_offset] = LLVM_FUNC_COMPILATION_THRESHOLD;
 #endif
 		}
 	};

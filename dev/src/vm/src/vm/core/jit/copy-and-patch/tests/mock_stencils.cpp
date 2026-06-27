@@ -2,6 +2,8 @@
 #include <cstdio>
 #include <cstdlib>
 
+// NOLINTBEGIN
+
 __attribute__((weak)) extern int _value_to_patch_arg0;
 
 extern "C" __attribute__((noinline)) int simple_function_plus_1(int x) {
@@ -64,3 +66,5 @@ extern "C" int mock_mul(int a, int b) {
 extern "C" int mock_end(int a, int _) { return a; }
 
 extern "C" void throwing(int x) { throw x; }
+
+// NOLINTEND

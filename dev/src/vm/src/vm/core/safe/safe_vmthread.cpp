@@ -138,7 +138,7 @@ namespace vm {
 			                             .id   = START_FUNCTION_ID,
 #ifdef ENABLE_JIT
 			                             // This is okay because we never JIT the start function.
-			                             .jit_entrypoint_offset = 0,
+			                             .jit_func_entrypoint_offset = 0,
 #endif
 			                             .bc               = {},
 			                             .local_stack_size = 0,
@@ -242,7 +242,7 @@ namespace vm {
 			                             .id   = START_FUNCTION_ID,
 #ifdef ENABLE_JIT
 			                             // This is okay because we never JIT the start function.
-			                             .jit_entrypoint_offset = 0,
+			                             .jit_func_entrypoint_offset = 0,
 #endif
 			                             .bc                  = {},
 			                             .local_stack_size    = 72,

@@ -15,8 +15,7 @@ static CP_RETURN exceptionRethrow(CP_ARGS) { throw; }
 
 namespace vm::jit {
 	cnp::JitFuncMemory compileCP(
-		const vm::low::cf::ControlFlowGraph& cfg,
-		const vm::low::MicroBytecode&        bc
+		const vm::low::cf::ControlFlowGraph& cfg, const vm::low::MicroBytecode& bc
 	) {
 		using namespace cnp;
 		using namespace std::views;
@@ -34,9 +33,7 @@ namespace vm::jit {
 		};
 
 		auto choose_edge = [](auto block) -> base::Optional<SpecialStencils> {
-			if (block.isFallthrough()) {
-				return std::nullopt;
-			}
+			if (block.isFallthrough()) return std::nullopt;
 			switch (block.edgeKind()) {
 			case vm::low::cf::OutEdges::Kind::JmpIf:
 				return SpecialStencils::JumpIf;
@@ -57,7 +54,7 @@ namespace vm::jit {
 		for (const low::cf::BasicBlock& block: cfg.getBlocks()) {
 			block_offsets.push_back(block_offsets.back());
 			usize& current_offset = block_offsets.back();
-			for (MicroInstruction instr: block.instructions(bc)) {
+			for (const MicroInstruction& instr: block.instructions(bc)) {
 				auto opcode = getInstructionOpcode(instr);
 				if (low::isOpcodeNonExecutable(opcode
 				    ))  // || opcode == low::MicroOpcode::jitFuncEntrypoint)
@@ -113,6 +110,7 @@ namespace vm::jit {
 							return std::bit_cast<u64>(&jit::helpers::trampoline);
 						} else {
 							return std::bit_cast<u64>(
+								// NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
 								vm::OpFuns::DEBUG_OPFUNS[std::to_underlying(opcode)]
 							);
 						}

@@ -29,7 +29,7 @@ namespace vm::low::cf {
 		 */
 		std::vector<ControlFlowGraph> findLoops(const LowFuncData& func) {
 			std::vector<ControlFlowGraph> cfgs(func.bc.size());
-			usize                         function_entrypoint = func.jit_entrypoint_offset;
+			usize                         function_entrypoint = func.jit_func_entrypoint_offset;
 
 			ControlFlowGraph cfg(func.bc);
 

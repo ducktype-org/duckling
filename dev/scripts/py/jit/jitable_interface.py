@@ -19,7 +19,7 @@ def nonjitable(func_name: str) -> bool:
         "jitLoopEntrypoint",
         "call_builtinfunc",
         "virtual_call_pptr_method",
-        "step_gil",
+        "stepGil",
         "check_strategy",
         "breakpoint",
     ]

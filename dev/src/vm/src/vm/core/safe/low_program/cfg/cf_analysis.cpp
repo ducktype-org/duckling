@@ -61,6 +61,7 @@ namespace vm::low::cf {
 		return block_beginnings;
 	}
 
+#ifdef ENABLE_JIT
 	/**
 	 * @brief Finds the first jitFunctionEntrypoint instruction in the bytecode.
 	 * @param bc Micro-bytecode of lowered function to analyze.
@@ -71,4 +72,5 @@ namespace vm::low::cf {
 			if (getInstructionOpcode(bc[i]) == MicroOpcode::jitFuncEntrypoint) return i;
 		CORE_UNREACHABLE();
 	}
+#endif
 }  // namespace vm::low::cf
