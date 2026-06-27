@@ -8,8 +8,8 @@ namespace pst {
 	/**
 	 * @brief Class method element.
 	 */
-	class Method final: public ClassStmt {
-		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(Method, ClassStmt);
+	class Method final: public Stmt {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(Method, Stmt);
 		CLONE_SUBELEMENTS();
 
 	protected:
@@ -21,8 +21,8 @@ namespace pst {
 		HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const override;
 
 	public:
-		CLASS_STMT_CHILD_CONSTRUCTOR(Method, ElementKind::ClassMethod);
-		CLASS_STMT_PARSE(Method);
+		STMT_CHILD_CONSTRUCTOR(Method, ElementKind::ClassMethod);
+		PARSE_DECL();
 
 		~Method() override = default;
 		void dprint(std::ostream& out) const final;

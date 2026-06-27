@@ -14,7 +14,7 @@ namespace vm {
 	public:
 		VMNotImplemented(): message("VM Operation not implemented") {}
 
-		VMNotImplemented(std::string_view msg): message(msg.data()) {}
+		VMNotImplemented(std::string_view msg): message(msg) {}
 
 		[[nodiscard]]
 		constexpr const char* what() const noexcept override {
