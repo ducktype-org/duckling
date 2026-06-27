@@ -1,17 +1,42 @@
 #include "mapper.hpp"
 
-#include <debug_info/debug_info_io.hpp>
-
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <diagnostic/location.hpp>
-#include <diagnostic/source_position.hpp>
-#include <filesystem/file.hpp>
 #include <string_id/string_id.hpp>
 #include <token_source/source.hpp>
 
 #include <algorithm>
 #include <fstream>
+
+namespace {
+	base::Optional<debug_info::SourcePosition> getsp(
+		const vm::debugger::mapper::InstrOrVarMetadata& meta
+	) {
+		variant_match(meta) {
+			variant_case(base::CRef<debug_info::InstructionMetadata>, m) { return m->position; }
+			variant_case(base::CRef<debug_info::VariableMetadata>, m) { return m->position; }
+		}
+
+		return std::nullopt;
+	}
+
+	debug_info::FilePosition getfp(const debug_info::SourcePosition& sp) {
+		return std::get<debug_info::FilePosition>(sp.line_col_position);
+	}
+
+	base::Optional<debug_info::FilePosition> getfp(
+		const base::Optional<debug_info::SourcePosition>& sp
+	) {
+		return sp.map([&](const debug_info::SourcePosition& spv) { return getfp(spv); });
+	}
+
+	base::Optional<debug_info::FilePosition> getfp(
+		const vm::debugger::mapper::InstrOrVarMetadata& meta
+	) {
+		return getfp(getsp(meta));
+	}
+}
 
 namespace vm::debugger {
 	std::expected<void, std::string> Mapper::loadMapping(fs::File mapping_file) {
@@ -22,57 +47,31 @@ namespace vm::debugger {
 
 		infos.push_back(di);
 		for (const auto& [name, metadata]: infos.back().functions) {
-			auto fsid = base::StrID(name);
-			functions.put(fsid, &metadata);
-			function_instr_offsets.put(fsid, {});
+			auto fsid     = base::StrID(name);
+			auto [it, _]  = functions.put(fsid, &metadata);
+			auto& offsets = it->second.instr_offsets;
+
 			for (const auto& [offset, meta]: metadata.instr_offsets_to_metadata)
-				function_instr_offsets[fsid].put(offset, &meta);
+				offsets.put(offset, &meta);
 			for (const auto& [offset, meta]: metadata.instr_offsets_to_variable_init)
-				function_instr_offsets[fsid].put(offset, &meta);
+				offsets.put(offset, &meta);
 		}
 
 		return {};
 	}
 
-	base::Optional<Mapper::InstrOrVarMetadata> Mapper::mapCodePositionToMetadata(
+	base::Optional<mapper::InstrOrVarMetadata> Mapper::mapCodePositionToMetadata(
 		base::StrID function_name, usize instruction_index
-	) {
-		auto maybe_fio = function_instr_offsets.atMaybe(function_name);
-		if (!maybe_fio) return std::nullopt;
-		auto fio = maybe_fio.value();
+	) const {
+		auto maybe_func = functions.atMaybe(function_name);
+		if (!maybe_func) return std::nullopt;
+		const auto& fio = (**maybe_func).instr_offsets;
 
-		auto it = fio->upper_bound(instruction_index);
-		if (it == fio->begin()) return std::nullopt;
+		auto it = fio.upper_bound(instruction_index);
+		if (it == fio.begin()) return std::nullopt;
 		--it;
 
 		return it->second;
-	}
-
-	base::Optional<debug_info::SourcePosition> Mapper::getsp(
-		const vm::debugger::Mapper::InstrOrVarMetadata& meta
-	) {
-		variant_match(meta) {
-			variant_case(base::CRef<debug_info::InstructionMetadata>, m) { return m->position; }
-			variant_case(base::CRef<debug_info::VariableMetadata>, m) { return m->position; }
-		}
-
-		return std::nullopt;
-	}
-
-	debug_info::FilePosition Mapper::getfp(const debug_info::SourcePosition& sp) {
-		return std::get<debug_info::FilePosition>(sp.line_col_position);
-	}
-
-	base::Optional<debug_info::FilePosition> Mapper::getfp(
-		const base::Optional<debug_info::SourcePosition>& sp
-	) {
-		return sp.map([&](const debug_info::SourcePosition& spv) { return getfp(spv); });
-	}
-
-	base::Optional<debug_info::FilePosition> Mapper::getfp(
-		const vm::debugger::Mapper::InstrOrVarMetadata& meta
-	) {
-		return getfp(getsp(meta));
 	}
 
 	base::Optional<dia::SourcePosition> Mapper::mapCodePositionToSourcePosition(
@@ -103,16 +102,15 @@ namespace vm::debugger {
 
 	base::Optional<std::pair<base::StrID, usize>> Mapper::mapSourcePositionToCodePosition(
 		fs::FilePath filepath, usize line
-	) {
-		for (const auto& [function_name, offsets_map]: function_instr_offsets) {
-			auto function_position = getfp(functions[function_name]->position);
-			if (!function_position) continue;
-			if (function_position->file_path != filepath || line < function_position->start_line
-			    || function_position->end_line < line)
+	) const {
+		for (const auto& [function_name, function]: functions) {
+			auto function_position = getfp(function.metadata->position);
+			if (!function_position || function_position->file_path != filepath
+			    || line < function_position->start_line || function_position->end_line < line)
 				continue;
 
 			usize ret = 0;
-			for (const auto& [offset, meta]: offsets_map) {
+			for (const auto& [offset, meta]: function.instr_offsets) {
 				auto pos = getfp(meta);
 				if (!pos) continue;
 
@@ -125,11 +123,11 @@ namespace vm::debugger {
 		return std::nullopt;
 	}
 
-	std::optional<fs::FilePath> Mapper::mainFile() {
+	base::Optional<fs::FilePath> Mapper::mainFile() const {
 		auto main = functions.atMaybe(base::StrID("main"));
 		if (!main) return std::nullopt;
 
-		auto fp = getfp((***main).position);
+		auto fp = getfp((**main).metadata->position);
 		if (!fp) return std::nullopt;
 
 		return fp->file_path;
