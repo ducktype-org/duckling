@@ -52,7 +52,9 @@ namespace vm::debugger::cli {
 			  printNL(out.getContents());
 		  }),
 		  error_listener([&](const std::string& err) { printNL("Error: ", err); }),
-		  output_listener([&](const std::string& str) { printNL({{str, printer::Color::BrightCyan}} ); }){
+		  output_listener([&](const std::string& str) {
+			  printNL({ { str, printer::Color::BrightCyan } });
+		  }) {
 		debugger.attachOnStatusChangedListener(status_change_listener);
 		debugger.attachOnErrorListener(error_listener);
 		debugger.attachOnOutputListener(output_listener);

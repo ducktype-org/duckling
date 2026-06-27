@@ -29,7 +29,7 @@ namespace vm::debugger::cli {
 	private:
 		events::Listener<api::ProcStatus> status_change_listener;
 		events::Listener<std::string>     error_listener;
-		events::Listener<std::string>	  output_listener;
+		events::Listener<std::string>     output_listener;
 		Debugger                          debugger;
 		std::mutex                        output_mutex;
 
