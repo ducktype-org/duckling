@@ -19,7 +19,7 @@ constexpr inline uint LLVM_FUNC_COMPILATION_THRESHOLD = 0;
 constexpr inline uint LOOP_COMPILATION_THRESHOLD      = 1;
 #else
 constexpr inline uint CP_FUNC_COMPILATION_THRESHOLD   = 0;
-constexpr inline uint LLVM_FUNC_COMPILATION_THRESHOLD = -1;
+constexpr inline uint LLVM_FUNC_COMPILATION_THRESHOLD = 0;
 constexpr inline uint LOOP_COMPILATION_THRESHOLD      = 1;
 #endif
 namespace vm::jit {
