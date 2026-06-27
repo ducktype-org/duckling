@@ -54,7 +54,6 @@ namespace vm::loader::compiler {
 
 	void IVMCompiler::recompile() {
 		using namespace std::views;
-		using namespace code;
 		using std::vector, std::ranges::to;
 
 		ProgramSize sizes = getCurrentProgramSize();
