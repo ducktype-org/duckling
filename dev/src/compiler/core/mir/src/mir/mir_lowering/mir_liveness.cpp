@@ -11,6 +11,10 @@
 #include <ostream>
 
 namespace compiler::mir {
+	/**
+	 * @brief Helper structure to efficiently add and remove
+	 * elements from the stack.
+	 */
 	class Worklist final {
 		std::vector<BlockID> stack;
 		std::vector<bool>    on_stack;
@@ -56,6 +60,15 @@ namespace compiler::mir {
 		});
 	}
 
+	/**
+	 * @brief Joins the status from two predecessor blocks, decided what is the local status
+	 * at the begining of the successor block. If the value is not present in the map,
+	 * it should be represented by an empty optional, it means that value is uninitialized.
+	 *
+	 * @warning Merging one uninitialized and one initialized gives unitinitialized by default.
+	 * This is valid as it means that the destructor will be inserted on blocks with the initialized
+	 * values, but at this point we don't have destructors inserted.
+	 */
 	base::Optional<LivenessState> joinStatus(
 		base::Optional<LivenessState> a, base::Optional<LivenessState> b
 	) {
@@ -107,7 +120,9 @@ namespace compiler::mir {
 			switch (flag.flag) {
 			case OperationFlag::Flag::Construct:
 				// Construction kills any previously reaching moves.
-				map.insertOrAssign(flag.local->id, LivenessState{ LivenessStatus::Alive, {} });
+				map.insertOrAssign(
+					flag.local->id, LivenessState{ .kind = LivenessStatus::Alive, .move_sites = {} }
+				);
 				break;
 			case OperationFlag::Flag::Move: {
 				// This instruction becomes the sole move reaching the value from here on.
@@ -115,7 +130,8 @@ namespace compiler::mir {
 				if (instr.metadata.position.has_value())
 					sites.push_back(instr.metadata.position.value());
 				map.insertOrAssign(
-					flag.local->id, LivenessState{ LivenessStatus::Moved, std::move(sites) }
+					flag.local->id,
+					LivenessState{ .kind = LivenessStatus::Moved, .move_sites = std::move(sites) }
 				);
 				break;
 			}
@@ -125,6 +141,10 @@ namespace compiler::mir {
 		}
 	}
 
+	/**
+	 * @brief Given LocalLivenessMap valid at the start of the block,
+	 * return the LocalLivenessMap valid at the end of the block.
+	 */
 	LocalLivenessMap transferBlock(const Block& block, LocalLivenessMap map) {
 		for (const auto& instr: block.instructions) updateLivenessMapByInstr(map, instr);
 		updateLivenessMapByInstr(map, block.terminator);
@@ -171,6 +191,8 @@ namespace compiler::mir {
 		};
 
 		// Worklist fixpoint, seeded from the entry so only reachable blocks are processed.
+		// If the calculated out liveness map differs, we add the successors to the worklist
+		// so they are recalculated.
 		Worklist worklist{ std::ranges::max_element(fun.block_order)->asInt() + 1 };
 		worklist.push(entry);
 		while (not worklist.empty()) {
