@@ -19,13 +19,6 @@
 
 namespace compiler::helios {
 	/**
-	 * @brief Whether the symbol can be called
-	 * with QueryCodeOfFun.
-	 */
-	bool implementsQueryCodeOfFun(SymID id);
-
-
-	/**
 	 * @brief Return all symbols currently stored by HELIOS.
 	 * @note: This should be used for tests and debug only,
 	 * and never in an actual query.

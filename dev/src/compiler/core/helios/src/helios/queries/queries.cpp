@@ -10,7 +10,7 @@
 #include <helios/symbols/attributes.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
+#include <helios/symbols/symbol_id.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/symbol_type.hpp>
 #include <helios/tsh/type_interface.hpp>
@@ -82,7 +82,7 @@ namespace compiler::helios {
 						break;
 					case SymbolKind::Const:
 					case SymbolKind::Variable:
-						if (sym_kind == SymbolKind::Variable && not isGlobalVar(ctx, sym)) continue;
+						if (sym_kind == SymbolKind::Variable && not isGlobalVar(ctx, sym)) break;
 						scheduled_global_data_tasks.emplace_back(
 							ctx.schedule<QueryHOUTGlobalData>(sym)
 						);
@@ -124,7 +124,7 @@ namespace compiler::helios {
 			}
 
 			if (duplicatesCheck(ctx, out).isBad()) is_failed = true;
-			if (collectUnitReplicatedSymbols(ctx, out).isBad()) is_failed = true;
+			if (collectReplicatedSymbols(ctx, out).isBad()) is_failed = true;
 
 
 			// This is the place where we would check for all the functions and if they return some
@@ -141,25 +141,30 @@ namespace compiler::helios {
 		 * that should be appended to the module, for example some compiler generated symbols
 		 * or template instantiations in the future.
 		 */
-		static base::OkBad collectUnitReplicatedSymbols(query::Context& ctx, HOUTUnit& out_unit) {
-			std::unordered_set<SymID> added_to_queue;
+		static base::OkBad collectReplicatedSymbols(query::Context& ctx, HOUTUnit& out_unit) {
+			// In this visiting method, we don't add to the stack the symbols that were already
+			// added there.
+			std::unordered_set<SymID> visited_function_symbols;
 			std::vector<SymID>        functions_stack;
 			base::OkBad               result = base::OK;
 
 			for (auto f: out_unit.functions) {
-				added_to_queue.insert(f->declaration->original_symbol);
+				visited_function_symbols.insert(f->declaration->original_symbol);
 				functions_stack.push_back(f->declaration->original_symbol);
 			}
+			// But we also always add all the elements popped from the stack to the module unit.
+			// So the functions are added to the stack, meaning they will be added to the hout unit,
+			// when popped from the stack. To avoid the duplicated we clear the hout unit.
 			out_unit.functions.clear();
 
-			// Append calls from the global value initial value expression.
+			// Append calls from the global variable initial value expression.
 			for (auto g: out_unit.glob_data) {
 				if (auto global_variable = std::get_if<HOUTGlobalVariable>(&g->value)) {
 					for (auto called_fun: collectCalledSymbols(*global_variable->initial_value)) {
-						if (added_to_queue.contains(called_fun)) continue;
+						if (visited_function_symbols.contains(called_fun)) continue;
 						if (emissionPolicy(called_fun) != EmissionPolicy::Replicated) continue;
 						functions_stack.push_back(called_fun);
-						added_to_queue.insert(called_fun);
+						visited_function_symbols.insert(called_fun);
 					}
 				}
 			}
@@ -179,19 +184,18 @@ namespace compiler::helios {
 				auto& called_funs = qresult->valueOrThrow();
 
 				for (auto called_fun: called_funs) {
-					if (added_to_queue.contains(called_fun)) continue;
+					if (visited_function_symbols.contains(called_fun)) continue;
 					if (emissionPolicy(called_fun) != EmissionPolicy::Replicated) continue;
 
 					functions_stack.push_back(called_fun);
-					added_to_queue.insert(called_fun);
+					visited_function_symbols.insert(called_fun);
 				}
 
-				// The query call should always succeed as the QueryDirectFunctionCalls
-				// has to konw the function body.
-				out_unit.functions.emplace_back(
-					&ctx.query<QueryCodeOfFun>(current_fun)->valueOrThrow()
-				);
-				added_to_queue.insert(current_fun);
+				if (implementsQueryCodeOfFun(current_fun))
+					out_unit.functions.emplace_back(
+						&ctx.query<QueryCodeOfFun>(current_fun)->valueOrThrow()
+					);
+				visited_function_symbols.insert(current_fun);
 			}
 			return result;
 		}

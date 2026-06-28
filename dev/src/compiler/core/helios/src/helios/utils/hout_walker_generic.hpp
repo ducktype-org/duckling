@@ -8,8 +8,8 @@
 #include <vector>
 
 /**
- * @file hout_walker.hpp
- * @brief Generic pre-order traversal of the HOUT statement/expression tree.
+ * @file hout_walker_generic.hpp
+ * @brief Generic DFS traversal of the HOUT statement/expression tree.
  *
  * The walkers descend through every statement and into every sub-expression,
  * invoking a user-provided `Handler` for each expression they encounter.
@@ -27,7 +27,7 @@
 
 namespace compiler::helios::code {
 	/**
-	 * @brief Pre-order walker over the HOUT tree. Hands every statement and every
+	 * @brief DFS walker over the HOUT tree. Hands every statement and every
 	 * expression (in that order) to `handler`, then descends into the children.
 	 *
 	 * Derives from the panicky visitor bases so a newly added node type fails loudly
@@ -115,8 +115,10 @@ namespace compiler::helios::code {
 		// --- Composite expressions: hand to the handler (pre-order), then descend. ---
 
 		void visitReusableExpr(const ReusableExpr& e) override {
-			handler(e);
-			walk(*e.inner);
+			if (e.first_use) {
+				handler(e);
+				walk(*e.inner);
+			}
 		}
 
 		void visitBinaryOperatorExpr(const BinaryOperatorExpr& e) override {

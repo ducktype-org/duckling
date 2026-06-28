@@ -1,5 +1,3 @@
-
-
 #include <helios/hout/hout.hpp>
 #include <helios/symbols/symbol_id.hpp>
 
@@ -9,15 +7,14 @@ namespace compiler::helios::code {
 	 *
 	 * Walks the whole body and, for each `code::CallExpr` whose callee resolves to a
 	 * plain identifier, records its `SymID`. Calls with a non-identifier callee
-	 * (e.g. an expression-valued callee) are skipped. The result is deduplicated
-	 * and in unspecified order.
+	 * (e.g. pointers to functions, lambdas) are skipped. The result is deduplicated.
 	 */
 	[[nodiscard]]
 	std::vector<SymID> collectCalledSymbols(const HOUTFunction& fun);
 
 
 	/**
-	 * @brief Same as above, but for the expressions.
+	 * @brief Collect the symbols of every function called from the expression tree.
 	 */
 	[[nodiscard]]
 	std::vector<SymID> collectCalledSymbols(const Expr& expr);
