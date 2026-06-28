@@ -93,31 +93,44 @@ namespace compiler::mir {
 		};
 
 		// lambdas used just to not duplicate code:
-		auto add_destructor_to_instr_vec
-			= [&](ScopeRef instr_scope, MIRLocalRef local, std::vector<Instruction>& instructions) {
-				  if (local->lifetime_flags.contains(LifetimeFlag::NoDestructor)) return;
+		auto add_destructor_to_instr_vec = [&](ScopeRef                  instr_scope,
+		                                       MIRLocalRef               local,
+		                                       std::vector<Instruction>& out_instructions,
+		                                       const LocalLivenessMap&   liveness) {
+			if (local->lifetime_flags.contains(LifetimeFlag::NoDestructor)) return;
 
-				  instructions.push_back(Instruction{
-					  Operation::DestructIf,
-					  {},
-					  { local },
-					  {
-						  OperationFlag{ .flag = OperationFlag::Flag::Destruct, .local = local },
-					  },
-					  instr_scope,
-				  });
-			  };
+			// Liveness analysis
+			auto local_liveness = liveness.atMaybe(local->id);
+			if (local_liveness.empty()) return;  // Empty means that the local is uninitialized
+			if (local_liveness.value()->kind == LivenessStatus::Moved)
+				return;                          // When moved we also do not create destructor
 
-		auto add_destructors_to_instr_vec
-			= [&](const auto& ending_scopes, std::vector<Instruction>& instructions) {
-				  for (const auto& scope: ending_scopes) {
-					  if (not locals_by_scope.contains(scope)) continue;
-					  auto& locals = locals_by_scope.at(scope);
-					  // Add destructors in reverse order.
-					  for (auto& local: locals | std::views::reverse)
-						  add_destructor_to_instr_vec(scope, local, instructions);
-				  }
-			  };
+			Operation op = local_liveness.value()->kind == LivenessStatus::Alive
+			                 ? Operation::Destruct
+			                 : Operation::DestructIf;
+
+			out_instructions.push_back(Instruction{
+				op,
+				{},
+				{ local },
+				{
+					OperationFlag{ .flag = OperationFlag::Flag::Destruct, .local = local },
+				},
+				instr_scope,
+			});
+		};
+
+		auto add_destructors_to_instr_vec = [&](const auto&               ending_scopes,
+		                                        std::vector<Instruction>& out_instructions,
+		                                        const LocalLivenessMap&   liveness) {
+			for (const auto& scope: ending_scopes) {
+				if (not locals_by_scope.contains(scope)) continue;
+				auto& locals = locals_by_scope.at(scope);
+				// Add destructors in reverse order.
+				for (auto& local: locals | std::views::reverse)
+					add_destructor_to_instr_vec(scope, local, out_instructions, liveness);
+			}
+		};
 
 
 		for (auto& block_id: function.block_order) {
@@ -126,6 +139,13 @@ namespace compiler::mir {
 
 			// each block is considered independently
 			auto& block = function.blocks[block_id];
+
+			// Liveness is only computed for blocks reachable from the entry. Unreachable blocks are
+			// still present here (they get pruned later by eliminateUnreachable), so default to an
+			// empty map for them instead of crashing.
+			LocalLivenessMap liveness_info;
+			if (auto found = args.liveness.block_in_liveness.atMaybe(block_id))
+				liveness_info = *found.value();
 
 			std::vector<Instruction> new_instructions;
 			new_instructions.reserve(block.instructions.size());
@@ -138,21 +158,23 @@ namespace compiler::mir {
 				                           : block.terminator;
 
 				new_instructions.push_back(instr);
+				updateLivenessMapByInstr(liveness_info, instr);
 
 				auto ending_scopes = getEndingScopes(instr.scope, next_instr.scope);
 
-				add_destructors_to_instr_vec(ending_scopes, new_instructions);
+				add_destructors_to_instr_vec(ending_scopes, new_instructions, liveness_info);
 			}
 
 			// We handle terminator in special way, because its successors are a set, not a single
 			// object.
+			// We also assume that the block terminator never creates or moves any local variable.
 			auto& terminator = block.terminator;
 			auto  successors = getTerminatorSuccessors(terminator);
 			if (successors.empty()) {
 				// the function ends
 				auto ending_scopes
 					= getEndingScopes(terminator.scope, function.lifetime_scope_tree.root);
-				add_destructors_to_instr_vec(ending_scopes, new_instructions);
+				add_destructors_to_instr_vec(ending_scopes, new_instructions, liveness_info);
 			} else {
 				// Here we handle situations where a branch may cause two different sets of
 				// destructors being performed. For example breaking from a loop etc.
@@ -197,7 +219,7 @@ namespace compiler::mir {
 					// and insert them directly to the current block.
 					if (boundary_crossed)
 						add_destructors_to_instr_vec(
-							first_path_ending_scopes.value(), new_instructions
+							first_path_ending_scopes.value(), new_instructions, liveness_info
 						);
 				} else {
 					// Paths are not identical or there would be a scope regression. Create a new
@@ -220,7 +242,9 @@ namespace compiler::mir {
 							Operation::Nop, {}, {}, {}, terminator.scope });
 
 						// Add all needed destructors.
-						add_destructors_to_instr_vec(succ_ending_scopes, new_block_instructions);
+						add_destructors_to_instr_vec(
+							succ_ending_scopes, new_block_instructions, liveness_info
+						);
 
 						Instruction new_block_terminator{
 							Operation::Jump, {}, { MIRValue(succ) }, {}, succ_begin_scope
@@ -394,7 +418,7 @@ namespace compiler::mir {
 			for (auto succ: getTerminatorSuccessors(function.blocks.at(block_id)->terminator))
 				args.block_predecessors.put(succ).first->second.push_back(block_id);
 
-		args.liveness = calculateGlobalInLivenessStatus(function, args.block_predecessors);
+		args.liveness = calculateGlobalInLivenessMap(function, args.block_predecessors);
 
 		return args;
 	}
@@ -405,6 +429,7 @@ namespace compiler::mir {
 		// The order here does matter. AddDestructorsPass{} performs a transformation on the CFG
 		// which adds an important invariant that all successors of a block have the same ending
 		// scopes. This assumption is then used when adding ScopeFlags.
+		InvalidUseCheck{}.run(ctx, function, args);
 		AddDestructorsPass{}.run(ctx, function, args);
 		AddScopeFlagsPass{}.run(ctx, function, args);
 

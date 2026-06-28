@@ -674,6 +674,8 @@ namespace compiler::helios {
 				result = CompileTimeValue{ maybe_new_numeric.value() };
 			}
 
+			void visitMoveExpr(const code::MoveExpr&) final { result = CouldNotShortPath{}; }
+
 			void visitRefOfExpr(const code::RefOfExpr&) final { result = CouldNotShortPath{}; }
 
 			void visitBoxOfExpr(const code::BoxOfExpr&) final { result = CouldNotShortPath{}; }

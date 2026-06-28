@@ -1,7 +1,11 @@
+# Valid and invalid `move` usages, exercised by mir_lifetime_test::moveValidationTest.
+# `good*` functions must lower successfully, `bad*` functions must fail with a
+# use-after-move / use-of-possibly-moved error.
+
 fun good1(c: i64) = {
     var a: i64 = 10;
     var b: i64 = 15;
-    a = b; # this is move (in test)
+    a = move b;
     a = 3;
 }
 
@@ -9,7 +13,7 @@ fun good2(c: i64) = {
     var a: i64 = 10;
     var b: i64 = 15;
     if (b < 16){
-        a = b; # this is move (in test)
+        a = move b;
     }
     a = 3;
 }
@@ -20,7 +24,7 @@ fun good3(c: i64) = {
         var b: i64 = 15;
         if (b < 16){
             b = 4;
-            a = b; # this is move (in test)
+            a = move b;
         }
     }
     a = 3;
@@ -30,33 +34,35 @@ fun good4(c: i64) = {
     var a: i64 = 15;
     while (a < 16){
         var b: i64 = 10;
-        a = b; # this is move (in test)
+        a = move b;
     }
     a = 3;
 }
 
+# `b` is moved, then read again on the same straight-line path.
 fun bad1(c: i64) = {
     var a: i64 = 10;
     var b: i64 = 15;
-    a = b; # this is move (in test)
-    b = a;
+    a = move b;
+    a = b;
 }
 
-
+# `b` is moved inside the loop body, so the loop condition reads a moved value on the
+# next iteration.
 fun bad2(c: i64) = {
     var a: i64 = 10;
     var b: i64 = 15;
     while (b < 16){
-        a = b; # this is move (in test)
+        a = move b;
     }
 }
 
-
+# `b` is moved on only one branch, so it is possibly-moved at the read below.
 fun bad3(c: i64) = {
     var a: i64 = 10;
     var b: i64 = 15;
     if (b < 16){
-        a = b; # this is move (in test)
+        a = move b;
     }
-    b = 3;
+    a = b;
 }

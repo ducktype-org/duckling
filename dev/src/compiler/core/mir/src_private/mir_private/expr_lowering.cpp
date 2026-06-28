@@ -1,5 +1,6 @@
 #include "expr_lowering.hpp"
 
+#include <diagnostic_interactive/placeholder.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
@@ -488,6 +489,43 @@ namespace compiler::mir {
 			                                 = expr.source_expr->expression_type.getSymbolType(),
 			                                 .target_type = expr.target_type },
 			                 { expr.getPosition() } },
+				expr.expression_type.getSymbolType()
+			);
+		}
+
+		void visitMoveExpr(const hc::MoveExpr& expr) override {
+			// `move x` yields the value of `x` and marks the source local as moved-out, so any
+			// later use is flagged by the liveness/use-after-move analysis. The `Move` flag has to
+			// sit on an instruction that reads the local, so we copy it into a fresh temporary and
+			// attach the flag there.
+			auto hole          = continuation->addHole();
+			auto lowered_inner = lowerSubExpr(*expr.inner, continuation);
+			auto inner_val     = lowered_inner.getResult(function);
+
+			// Moving anything that is not a plain local place (e.g. a temporary) has no source to
+			// mark, so just forward the value unchanged.
+			if (not inner_val.isLocal() or inner_val.get<mir::MIRPlace>().hasProjections()) {
+				function.getContext().logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					"Moving from a non-local place is not supported yet.", expr.inner->getPosition()
+				));
+				query::throwFailed();
+				return;
+			}
+
+			const auto moved_local = inner_val.get<MIRPlace>().getBase<MIRLocalRef>();
+
+			noValueOutput(
+				lowered_inner.begin,
+				hole,
+				Instruction(
+					Operation::Assign,
+					{},
+					{ inner_val },
+					{ OperationFlag{ .flag = OperationFlag::Flag::Move, .local = moved_local } },
+					expr_scope,
+					{},
+					{ expr.getPosition() }
+				),
 				expr.expression_type.getSymbolType()
 			);
 		}

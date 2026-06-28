@@ -99,5 +99,13 @@ namespace dia_int {
 		}
 
 		static StablePosition fakePosition();
+
+		/**
+		 * @brief Two positions are equal when they span the same source nodes.
+		 * The conversion-function pointers are not part of the identity.
+		 */
+		bool operator==(const StablePosition& other) const {
+			return begin_node == other.begin_node && end_node == other.end_node;
+		}
 	};
 }

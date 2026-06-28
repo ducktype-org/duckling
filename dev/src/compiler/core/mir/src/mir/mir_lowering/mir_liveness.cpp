@@ -1,5 +1,14 @@
 #include "mir_liveness.hpp"
+
 #include "mir_lifetimes.hpp"
+
+#include <diagnostic_interactive/placeholder.hpp>
+
+#include <logger/logger.hpp>
+#include <query_framework/query_errors.hpp>
+
+#include <algorithm>
+#include <ostream>
 
 namespace compiler::mir {
 	class Worklist final {
@@ -17,7 +26,8 @@ namespace compiler::mir {
 		}
 
 		BlockID pop() {
-			auto top                 = stack.back();
+			auto top = stack.back();
+			stack.pop_back();
 			on_stack.at(top.asInt()) = false;
 			return top;
 		}
@@ -27,22 +37,48 @@ namespace compiler::mir {
 		BlockID top() { return stack.back(); }
 	};
 
-	base::Optional<Status> joinStatus(base::Optional<Status> a, base::Optional<Status> b) {
-		if (a.has_value() && b.has_value())
-			if (a == b)
-				return a;
-			else
-				return Status::MaybeMoved;
-		else
-			return {};
+	/**
+	 * @brief Append @p src move sites to @p dst, skipping positions already present.
+	 */
+	void mergeMoveSites(
+		std::vector<dia_int::StablePosition>& dst, const std::vector<dia_int::StablePosition>& src
+	) {
+		for (const auto& pos: src)
+			if (not std::ranges::contains(dst, pos)) dst.push_back(pos);
+	}
+
+	bool sameState(const LivenessState& a, const LivenessState& b) {
+		if (a.kind != b.kind) return false;
+		if (a.move_sites.size() != b.move_sites.size()) return false;
+		// Order-independent comparison: sizes are equal, so containment one way is enough.
+		return std::ranges::all_of(a.move_sites, [&](const auto& pos) {
+			return std::ranges::contains(b.move_sites, pos);
+		});
+	}
+
+	base::Optional<LivenessState> joinStatus(
+		base::Optional<LivenessState> a, base::Optional<LivenessState> b
+	) {
+		// Missing on one of the incoming paths -> treated as uninitialized in the merge.
+		if (not a.has_value() || not b.has_value()) return {};
+
+		LivenessStatus kind = (a->kind == b->kind) ? a->kind : LivenessStatus::MaybeMoved;
+
+		LivenessState result{ .kind = kind, .move_sites = {} };
+		// Collect the reaching move sites from every path that considers the value moved.
+		if (kind != LivenessStatus::Alive) {
+			if (a->kind != LivenessStatus::Alive) mergeMoveSites(result.move_sites, a->move_sites);
+			if (b->kind != LivenessStatus::Alive) mergeMoveSites(result.move_sites, b->move_sites);
+		}
+		return result;
 	}
 
 	/**
 	 * @brief If the value is not present in one of the maps, then we assume that is it
 	 * uninitialized in the merge, as we don't have the destructors inserted there yet.
 	 */
-	LocalStatusMap joinMaps(const LocalStatusMap& a, const LocalStatusMap& b) {
-		LocalStatusMap result;
+	LocalLivenessMap joinMaps(const LocalLivenessMap& a, const LocalLivenessMap& b) {
+		LocalLivenessMap result;
 		for (const auto& [local, status]: a)
 			if (auto joined = joinStatus(status, b.atMaybeCopy(local)))
 				result.insertOrAssign(local, *joined);
@@ -55,42 +91,51 @@ namespace compiler::mir {
 		return result;
 	}
 
-	bool sameMap(base::Optional<CRef<LocalStatusMap>> a_opt, const LocalStatusMap& b) {
+	bool sameMap(base::Optional<CRef<LocalLivenessMap>> a_opt, const LocalLivenessMap& b) {
 		if (a_opt.empty()) return false;
 		auto a = a_opt.value();
 		if (a->size() != b.size()) return false;
 		for (const auto& [local, status]: *a) {
 			auto other = b.atMaybe(local);
-			if (not other || *other.value() != status) return false;
+			if (not other || not sameState(*other.value(), status)) return false;
 		}
 		return true;
 	}
 
-	void updateLivenessMapByInstr(LocalStatusMap& map, const Instruction& instr) {
+	void updateLivenessMapByInstr(LocalLivenessMap& map, const Instruction& instr) {
 		for (const auto& flag: instr.flags) {
 			switch (flag.flag) {
 			case OperationFlag::Flag::Construct:
-				map.insertOrAssign(flag.local->id, Status::Alive);
+				// Construction kills any previously reaching moves.
+				map.insertOrAssign(flag.local->id, LivenessState{ LivenessStatus::Alive, {} });
 				break;
-			case OperationFlag::Flag::Move:
-				map.insertOrAssign(flag.local->id, Status::Moved);
+			case OperationFlag::Flag::Move: {
+				// This instruction becomes the sole move reaching the value from here on.
+				std::vector<dia_int::StablePosition> sites;
+				if (instr.metadata.position.has_value())
+					sites.push_back(instr.metadata.position.value());
+				map.insertOrAssign(
+					flag.local->id, LivenessState{ LivenessStatus::Moved, std::move(sites) }
+				);
 				break;
+			}
 			default:
 				break;
 			}
 		}
 	}
 
-	LocalStatusMap transferBlock(const Block& block, LocalStatusMap map) {
+	LocalLivenessMap transferBlock(const Block& block, LocalLivenessMap map) {
 		for (const auto& instr: block.instructions) updateLivenessMapByInstr(map, instr);
 		updateLivenessMapByInstr(map, block.terminator);
 		return map;
 	}
 
-	LivenessData calculateGlobalInLivenessStatus(
+	LivenessData calculateGlobalInLivenessMap(
 		const Function& fun, const base::HashMap<BlockID, std::vector<BlockID>>& block_predecessors
 	) {
 		if (fun.block_order.empty()) return {};
+		CORE_DEV_LOG(Compiler, "Calculating global liveness map for function `", fun.name, "`.\n");
 
 		auto is_tracked = [&](MIRLocalRef local) {
 			return local->scope.has_value() && local->scope.value() != fun.no_lifetime_scope
@@ -98,21 +143,23 @@ namespace compiler::mir {
 		};
 
 		// Parameters are alive on function entry.
-		LocalStatusMap in_map_from_params;
+		LocalLivenessMap in_map_from_params;
 		for (const auto& local: fun.local_list) {
 			MIRLocalRef ref = base::Ref(&local);
 			if (ref->parameter_index.has_value() && is_tracked(ref))
-				in_map_from_params.insertOrAssign(ref->id, Status::Alive);
+				in_map_from_params.insertOrAssign(
+					ref->id, LivenessState{ .kind = LivenessStatus::Alive, .move_sites = {} }
+				);
 		}
 
 
-		base::HashMap<BlockID, LocalStatusMap> out_status;
-		base::HashMap<BlockID, LocalStatusMap> in_status;
+		base::HashMap<BlockID, LocalLivenessMap> out_status;
+		base::HashMap<BlockID, LocalLivenessMap> in_status;
 
 		auto entry = fun.block_order.front();
 
 		auto compute_in = [&](BlockID block_id) {
-			base::Optional<LocalStatusMap> acc;
+			base::Optional<LocalLivenessMap> acc;
 			if (block_id == entry) acc = in_map_from_params;
 			if (auto preds = block_predecessors.atMaybe(block_id))
 				for (auto pred: *preds.value()) {
@@ -120,11 +167,11 @@ namespace compiler::mir {
 					if (not pred_out) continue;  // not yet reachable/processed
 					acc = acc ? joinMaps(*acc, *pred_out.value()) : *pred_out.value();
 				}
-			return acc ? std::move(*acc) : LocalStatusMap{};
+			return acc ? std::move(*acc) : LocalLivenessMap{};
 		};
 
 		// Worklist fixpoint, seeded from the entry so only reachable blocks are processed.
-		Worklist worklist(fun.block_order.size());
+		Worklist worklist{ std::ranges::max_element(fun.block_order)->asInt() + 1 };
 		worklist.push(entry);
 		while (not worklist.empty()) {
 			auto block_id = worklist.pop();
@@ -138,7 +185,17 @@ namespace compiler::mir {
 			for (auto succ: getTerminatorSuccessors(fun.blocks.at(block_id)->terminator))
 				worklist.push(succ);
 		}
-		return { .block_in_liveness = in_status };
+
+		LivenessData result{ .block_in_liveness = std::move(in_status) };
+
+		CORE_DEV_LOG(Compiler, "Liveness info calculated.\n");
+		IF_BUILD_TYPE_DEV({
+			std::stringstream sstr;
+			result.debugPrint(sstr);
+			CORE_DEV_LOG(Compiler, sstr.str());
+		})
+
+		return result;
 	}
 
 	void collectValueReads(const MIRValue& value, std::vector<MIRLocalRef>& out);
@@ -185,31 +242,46 @@ namespace compiler::mir {
 
 		const auto& block_in = args.liveness.block_in_liveness;
 
-		auto check_instr = [&](const Instruction& instr, LocalStatusMap& map) {
+		auto check_instr = [&](const Instruction& instr, LocalLivenessMap& map) {
 			// Reads are validated against the state *before* the instruction executes, so a local
 			// that is moved by this very instruction is still considered alive when read here.
 			for (auto local: instructionReads(instr)) {
 				if (not is_tracked(local)) continue;
 
-				auto status = map.atMaybeCopy(local->id);
-				if (not status.has_value() || *status != Status::Alive) {
-					const char* title = !status.has_value()      ? "Use of an uninitialized value."
-					                  : *status == Status::Moved ? "Use of a moved value."
-					                                             : "Use of a possibly-moved value.";
+				auto state = map.atMaybeCopy(local->id);
+				if (state.has_value() && state->kind == LivenessStatus::Alive) continue;
 
-					ctx.logInt(makeBox<dia_int::PlaceholderError>(
-						title,
-						base::strConcat(
-							"The variable `",
-							local->getName(),
-							!status.has_value()        ? "` is used before it is initialized."
-							: *status == Status::Moved ? "` is used after it has been moved out of."
-													   : "` may have been moved out of on some "
-					                                     "control-flow paths reaching "
-														 "this use."
-						)
-					));
-				}
+				const bool  uninitialized = not state.has_value();
+				const char* title         = uninitialized ? "Use of an uninitialized value."
+				                          : state->kind == LivenessStatus::Moved
+				                              ? "Use of a moved value."
+				                              : "Use of a possibly-moved value.";
+
+				auto description = base::strConcat(
+					"The variable `",
+					local->getName(),
+					uninitialized ? "` is used before it is initialized."
+					: state->kind == LivenessStatus::Moved
+						? "` is used after it has been moved out of."
+						: "` may have been moved out of on some "
+						  "control-flow paths reaching this use."
+				);
+
+				// Anchor the error at the use site (placeholder until a real template exists).
+				auto msg = makeBox<dia_int::PlaceholderError>(
+					std::string(title), instr.metadata.position, std::move(description)
+				);
+
+				// Point a note at every move instruction that reaches this use. If both branches of
+				// an if/else move the value, both move sites are reported here.
+				if (state.has_value())
+					for (const auto& site: state->move_sites)
+						msg->addAttachedMessage(
+							makeBox<dia_int::PlaceholderNote>(std::string("value moved here"), site)
+						);
+
+				ctx.logInt(std::move(msg));
+				query::throwFailed();
 			}
 
 			updateLivenessMapByInstr(map, instr);
@@ -219,9 +291,34 @@ namespace compiler::mir {
 			auto in = block_in.atMaybe(block_id);
 			if (not in) continue;  // unreachable block, not part of the fixpoint result.
 
-			LocalStatusMap map = *in.value();
+			LocalLivenessMap map = *in.value();
 			for (const auto& instr: fun.blocks.at(block_id)->instructions) check_instr(instr, map);
 			check_instr(fun.blocks.at(block_id)->terminator, map);
+		}
+	}
+
+	void LivenessData::debugPrint(std::ostream& out) {
+		auto status_name = [](LivenessStatus status) -> const char* {
+			switch (status) {
+			case LivenessStatus::Alive:
+				return "Alive";
+			case LivenessStatus::Moved:
+				return "Moved";
+			case LivenessStatus::MaybeMoved:
+				return "MaybeMoved";
+			}
+			return "?";
+		};
+
+		out << "LivenessData (in-status per block):\n";
+		for (const auto& [block_id, map]: block_in_liveness) {
+			out << "  block " << block_id.asInt() << ":\n";
+			for (const auto& [local, state]: map) {
+				out << "    local " << local.asInt() << " -> " << status_name(state.kind);
+				if (not state.move_sites.empty())
+					out << " (moved at " << state.move_sites.size() << " site(s))";
+				out << "\n";
+			}
 		}
 	}
 }

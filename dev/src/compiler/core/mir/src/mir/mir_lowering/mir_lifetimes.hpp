@@ -1,9 +1,9 @@
 #pragma once
 
-#include "mir/mir_structure/mir_local_ref.hpp"
 #include "mir_liveness.hpp"
 
 #include <mir/mir_structure/mir_lifetime_scope.hpp>
+#include <mir/mir_structure/mir_local_ref.hpp>
 
 #include <query_framework/context/context_fd.hpp>
 
@@ -39,7 +39,8 @@ namespace compiler::mir {
 	/**
 	 * @brief Use after move and use uninitialized.
 	 */
-	class InvalidUseCheck final : public LifetimePass {
+	class InvalidUseCheck final: public LifetimePass {
+	public:
 		void run(query::Context&, Function&, const LifetimePassArgs&) final;
 	};
 
