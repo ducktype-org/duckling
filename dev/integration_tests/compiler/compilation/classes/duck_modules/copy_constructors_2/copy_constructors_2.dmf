@@ -1,0 +1,31 @@
+import core.builtins.*;
+
+# class T {
+#     list: List[i64];
+# }
+
+# fun foo(a: T) -> T = {
+#     return a;
+# }
+
+# fun foo(lst: ref List[i32]) = {
+#     var i = 0;
+#     while (u32(i) < lst.length()) {
+#         print(lst[i].toString());
+#         i = i + 1;
+#     }
+# }
+
+fun main() -> i64 = {
+    var t: List[i32];
+
+    #builtin_output_i64(888);
+    #builtin_output_i64((t.length()) as i64);
+    # t.push(1);
+    # t.push(2);
+    # t.push(3);
+    #foo(&t);
+    #var tt: List[i32] = t;
+    
+    return 0;
+}

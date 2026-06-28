@@ -83,6 +83,13 @@ namespace compiler::helios::defgen {
 			base::Bit256 queryUnstablePerfectHash() const;
 		};
 
+		struct DefaultCopyConstructor final {
+			tsh::AbstractType owner_type;  // TODOP: Symbol Type
+
+			[[nodiscard]]
+			base::Bit256 queryUnstablePerfectHash() const;
+		};
+
 		struct BuiltinOperator final {
 			// The type of the builtin operator this symbol represents.
 			tsh::FunctionAbstractType operator_type;
@@ -238,6 +245,7 @@ namespace compiler::helios::defgen {
 			DefaultStaticArrayConstructor,
 			ToStringMethod,
 			DefaultDestructor,
+			DefaultCopyConstructor,
 			LengthMethod,
 			BuiltinOperator,
 			Parameter,
@@ -259,12 +267,15 @@ namespace compiler::helios::defgen {
 		[[nodiscard]] base::Optional<ScopeID> maybeScope() const;
 
 		/**
-		 * @brief Whether GeneratedSymbolData stores a generated default constructor.
+		 * @brief Whether GeneratedSymbolData stores a generated default constructor. This includes
+		 * copy constructors.
 		 * @return True if the inner variant stores a default constructor, false otherwise.
 		 */
 		[[nodiscard]] bool isDefaultConstructor() const {
 			variant_match(data) {
-				variant_case_novalue(DefaultClassConstructor, DefaultStaticArrayConstructor) {
+				variant_case_novalue(
+					DefaultClassConstructor, DefaultStaticArrayConstructor, DefaultCopyConstructor
+				) {
 					return true;
 				}
 				variant_default { return false; }

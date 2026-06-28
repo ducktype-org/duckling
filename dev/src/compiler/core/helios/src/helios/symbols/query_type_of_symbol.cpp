@@ -224,7 +224,8 @@ namespace compiler::helios {
 			for (auto& param: declaration.parameters) param_types.emplace_back(param.type);
 
 			return tsh::SymbolType{
-				ctx.query<tsh::QueryFunctionType>({ param_types, declaration.return_type }),
+				ctx.query<tsh::QueryFunctionType>({ .parameter_types = param_types,
+				                                    .result_type     = declaration.return_type }),
 				tsh::ReferenceKind::Direct,
 				tsh::Mutability::Mutable,
 			};
@@ -236,10 +237,7 @@ namespace compiler::helios {
 			variant_match(symbol_ref->other) {
 				variant_case(PstSymbolData, pst_data) {
 					// @note: function are handled in a special way, using QueryDeclOfFun.
-					if (kind(key) == SymbolKind::Function
-					    or kind(key) == SymbolKind::FunctionDeclaration
-					    or kind(key) == SymbolKind::Method)
-						return handleFunction(ctx, key);
+					if (isFunctionLike(kind(key))) return handleFunction(ctx, key);
 
 					PstVisitor_GetTypeOf visitor(ctx);
 					pst_data.getElement().unlock(ctx)->acceptVisitor(visitor);

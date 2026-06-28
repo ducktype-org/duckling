@@ -29,6 +29,7 @@
 #include <helios_private/errors/dia_interactive_elements.hpp>
 #include <helios_private/hout_creation/definition_generation/class_constructors.hpp>
 #include <helios_private/hout_creation/definition_generation/default_constructors.hpp>
+#include <helios_private/hout_creation/definition_generation/default_copy_constructors.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
@@ -97,6 +98,7 @@ public:
 		TESTER_ADD_TEST(testStmtSpecifiers);
 		TESTER_ADD_TEST(testOverloadResolution);
 		TESTER_ADD_TEST(testDefaultInitializers);
+		TESTER_ADD_TEST(testDefaultCopyConstructors);
 		TESTER_ADD_TEST(testCastsHout);
 		TESTER_ADD_TEST(testPointers);
 		TESTER_ADD_TEST(testTypeLifting);
@@ -2879,6 +2881,113 @@ private:
 				const auto& expr
 					= ctx.query<QueryDefaultInitializerExpr>(deep_trivial_st)->valueOrThrow();
 				ASSERT_TRUE(dynamic_cast<const DefaultValueExpr*>(expr.get()) != nullptr);
+			}
+		});
+	}
+
+	void testDefaultCopyConstructors() {
+		using namespace compiler::helios;
+		using namespace compiler::helios::code;
+		using namespace compiler::helios::defgen;
+
+		auto [module, root_scope] = getModule(fs::File(path("test_modules/copy_constructors")));
+
+		auto trivial_sym = getChain("Trivial", root_scope).back();
+		auto has_box_sym = getChain("HasBox", root_scope).back();
+		auto holds_sym   = getChain("HoldsNonTrivial", root_scope).back();
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			auto get_class_type = [&](SymID sym_id) {
+				return ctx.query<QueryTypeFromDefinition>(sym_id)->valueOrThrow().getType();
+			};
+
+			// For a trivially-copyable class, the copy constructor copies each field with byte
+			// copy, so each assignment's right-hand side is a field access, not a copy-ctor call.
+			{
+				auto        trivial_type = get_class_type(trivial_sym);
+				const auto& cctor
+					= ctx.query<QueryDefaultCopyConstructor>(trivial_type)->valueOrThrow();
+
+				// `(const ref Trivial) -> Trivial`.
+				ASSERT_EQUAL_PRINT(1, cctor.declaration->parameters.size());
+				const auto param_type = cctor.declaration->parameters.at(0).type;
+				ASSERT_EQUAL(compiler::tsh::ReferenceKind::Ref, param_type.getRefKind());
+				ASSERT_EQUAL(compiler::tsh::Mutability::Immutable, param_type.getMutability());
+				ASSERT_EQUAL(trivial_type, param_type.getType());
+				ASSERT_EQUAL(trivial_type, cctor.declaration->return_type.getType());
+
+				// var __result;
+				// __result.a = (*source).a;
+				// __result.b = (*source).b;
+				// return.
+				const auto& stmts = cctor.body->statements;
+				ASSERT_EQUAL_PRINT(4, stmts.size());
+				ASSERT_TRUE(dynamic_cast<const VariableStmt*>(stmts.front().get()) != nullptr);
+				ASSERT_TRUE(dynamic_cast<const ReturnStmt*>(stmts.back().get()) != nullptr);
+
+				auto assign = dynamic_cast<const AssignmentStmt*>(stmts.at(1).get());
+				ASSERT_TRUE(assign != nullptr);
+				ASSERT_TRUE(
+					dynamic_cast<const AccessExpr*>(assign->new_value_expr.get()) != nullptr
+				);
+			}
+
+			// For a class holding a non-trivially-copyable field, the copy constructor copies the
+			// field by calling that field type's copy constructor.
+			{
+				auto        holds_type = get_class_type(holds_sym);
+				const auto& cctor
+					= ctx.query<QueryDefaultCopyConstructor>(holds_type)->valueOrThrow();
+
+				const auto& stmts = cctor.body->statements;
+				ASSERT_EQUAL_PRINT(3, stmts.size());
+
+				auto assign = dynamic_cast<const AssignmentStmt*>(stmts.at(1).get());
+				ASSERT_TRUE(assign != nullptr);
+
+				auto call = dynamic_cast<const CallExpr*>(assign->new_value_expr.get());
+				ASSERT_TRUE(call != nullptr);
+
+				auto callee_sym = getIdentifierExprSymID(call->callee.ref()).value();
+				auto callee_gsd = std::get<GeneratedSymbolData>(getSymRef(callee_sym)->other);
+				ASSERT_TRUE(std::holds_alternative<GeneratedSymbolData::DefaultCopyConstructor>(
+					callee_gsd.data
+				));
+			}
+
+			// A tuple is copied element-by-element just like a class. Trivial elements are
+			// byte-copied, non-trivially-copyable elements are copied with their own copy constructor.
+			{
+				auto i32_type = compiler::tsh::getIntegralType(
+					ctx, 32, compiler::tsh::IntegralAbstractType::Signedness::Signed
+				);
+				auto has_box_st = st(get_class_type(has_box_sym));
+				auto tuple_type
+					= ctx.query<compiler::tsh::QueryTupleType>({ { st(i32_type), has_box_st } });
+
+				const auto& cctor
+					= ctx.query<QueryDefaultCopyConstructor>(tuple_type)->valueOrThrow();
+
+				const auto& stmts = cctor.body->statements;
+				ASSERT_EQUAL_PRINT(4, stmts.size());
+
+				// First element is trivially copyable.
+				auto assign0 = dynamic_cast<const AssignmentStmt*>(stmts.at(1).get());
+				ASSERT_TRUE(assign0 != nullptr);
+				ASSERT_TRUE(
+					dynamic_cast<const AccessExpr*>(assign0->new_value_expr.get()) != nullptr
+				);
+
+				// Second element requires a copy ctor.
+				auto assign1 = dynamic_cast<const AssignmentStmt*>(stmts.at(2).get());
+				ASSERT_TRUE(assign1 != nullptr);
+				auto call = dynamic_cast<const CallExpr*>(assign1->new_value_expr.get());
+				ASSERT_TRUE(call != nullptr);
+				auto callee_sym = getIdentifierExprSymID(call->callee.ref()).value();
+				auto callee_gsd = std::get<GeneratedSymbolData>(getSymRef(callee_sym)->other);
+				ASSERT_TRUE(std::holds_alternative<GeneratedSymbolData::DefaultCopyConstructor>(
+					callee_gsd.data
+				));
 			}
 		});
 	}

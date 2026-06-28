@@ -1,0 +1,46 @@
+import core.builtins.*;
+
+class T {
+    counter: i64 = 1;
+    
+    T.copy(other: const ref T) = {
+        builtin_output_i64(666);
+        return T(other.counter);
+    }
+
+#    T.move(other: const ref T) = {
+#        # builtin_output_i64(777);
+#        return T(other.counter);
+#    }
+#
+#    T.destroy() = {
+#        # builtin_output_i64(888);
+#    }
+#
+#    fun increment() -> () = {
+#        counter = counter + 1;
+#    }
+
+    
+    # TODOP: Duplicate ctor definition
+    # TODOP: Wrong number of params
+    # TODOP: Wrong param types
+}
+
+# TODOP: Error is bugged.
+# fun foo() -> () = {}
+# fun foo() -> () = {}
+
+fun foo(a: T) -> T = {
+    return a;
+}
+
+fun main() -> i64 = {
+    var t: T = T(2);
+    t.counter = 2;
+    var tt: T = t;
+
+    tt = foo(tt);
+    
+    return 0;
+}

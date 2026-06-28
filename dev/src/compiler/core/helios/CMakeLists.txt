@@ -26,6 +26,7 @@ add_library(HELIOS STATIC
 	src_private/helios_private/hout_creation/definition_generation/class_constructors.cpp
 	src_private/helios_private/hout_creation/definition_generation/tuple_constructor.cpp
 	src_private/helios_private/hout_creation/definition_generation/default_constructors.cpp
+	src_private/helios_private/hout_creation/definition_generation/default_copy_constructors.cpp
 	src_private/helios_private/hout_creation/definition_generation/default_destructors.cpp
 	src_private/helios_private/hout_creation/definition_generation/length_methods.cpp
 	src_private/helios_private/hout_creation/definition_generation/to_string_methods.cpp

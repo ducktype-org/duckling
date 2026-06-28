@@ -3,6 +3,7 @@
 #include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/elements/hierarchy/actions/all_actions.hpp>
 #include <frontend/pst_parser/elements/hierarchy/actions/return.hpp>
+#include <frontend/pst_parser/elements/hierarchy/class_elements/copy_constructor.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/field.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/method.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
@@ -13,6 +14,7 @@
 #include <helios/hout/elements.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/mangler/mangler.hpp>
+#include <helios/symbols/query_class_of_member.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
@@ -313,6 +315,18 @@ namespace compiler::helios {
 				                     .origin        = code::generatedOrigin() }
 				);
 			}
+
+			void visitCopyConstructor(pst::Access<pst::CopyConstructor> stmt) final {
+				emplaceDeclaration(stmt->getParams(), {});
+
+				const auto class_type
+					= ctx.query<QueryClassOfMember>(original_symbol)->valueOrThrow();
+				this->out->return_type = tsh::SymbolType<>{
+					class_type,
+					tsh::ReferenceKind::Direct,
+					tsh::Mutability::Mutable,
+				};
+			}
 		};
 
 		/**
@@ -445,8 +459,8 @@ namespace compiler::helios {
 			auto       parameters  = std::vector<code::Parameter>{};
 			for (u32 i = 0; const auto& param_type: builtin_type.getParameterTypes()) {
 				const auto param_symbol = ctx.query<defgen::QueryGeneratedSymbol>({
-					base::StrID(base::strConcat("_", i).c_str()),
-					defgen::GeneratedSymbolData{
+					.name=base::StrID(base::strConcat("_", i).c_str()),
+					.generated_symbol_data=defgen::GeneratedSymbolData{
 						defgen::GeneratedSymbolData::Parameter{
 							.function_symbol = fun,
 							.parameter_index = i,
@@ -474,7 +488,8 @@ namespace compiler::helios {
 			switch (kind(key)) {
 			case SymbolKind::Function:
 			case SymbolKind::FunctionDeclaration:
-			case SymbolKind::Method: {
+			case SymbolKind::Method:
+			case SymbolKind::Constructor: {
 				variant_match(getSymRef(key)->other) {
 					variant_case_novalue(PstSymbolData) {
 						DeclarationVisitor decl_maker(ctx, key);
@@ -525,6 +540,11 @@ namespace compiler::helios {
 								return funDeclFromType(ctx, key);
 							}
 							variant_case(defgen::GeneratedSymbolData::DefaultDestructor, dtor_data) {
+								return funDeclFromType(ctx, key);
+							}
+							variant_case(
+								defgen::GeneratedSymbolData::DefaultCopyConstructor, cctor_data
+							) {
 								return funDeclFromType(ctx, key);
 							}
 							variant_case(defgen::GeneratedSymbolData::LengthMethod, length_method) {

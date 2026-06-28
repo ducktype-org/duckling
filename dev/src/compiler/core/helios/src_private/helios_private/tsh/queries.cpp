@@ -4,6 +4,7 @@
 
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/query_type_symbol_data.hpp>
+#include <helios_private/symbols/symbols.hpp>
 
 #include <query_framework/standard_query/query_impl.hpp>
 
@@ -33,6 +34,18 @@ namespace compiler::tsh {
 			for (const compiler::helios::SymID method_sym: class_data.methods) {
 				elements.push_back(InterfaceElement(
 					method_sym,
+					key.value->toAbstractType(),
+					declaration_order,
+					InterfaceElement::InterfaceElementKind::Method,
+					{}
+				));
+				declaration_order++;
+			}
+
+			for (const compiler::helios::SymID ctor_sym: class_data.constructors) {
+				if (!compiler::helios::isUserDefinedCopyConstructor(ctx, ctor_sym)) continue;
+				elements.push_back(InterfaceElement(
+					ctor_sym,
 					key.value->toAbstractType(),
 					declaration_order,
 					InterfaceElement::InterfaceElementKind::Method,

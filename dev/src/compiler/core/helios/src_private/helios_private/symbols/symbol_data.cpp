@@ -6,6 +6,7 @@
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/tsh/queries/types.hpp>
+#include <helios/tsh/symbol_type.hpp>
 #include <helios/tsh/types.hpp>
 
 #include <base/except/exceptions.hpp>
@@ -35,6 +36,10 @@ namespace compiler::helios {
 		}
 
 		base::Bit256 GeneratedSymbolData::DefaultDestructor::queryUnstablePerfectHash() const {
+			return owner_type.queryUnstablePerfectHash();
+		}
+
+		base::Bit256 GeneratedSymbolData::DefaultCopyConstructor::queryUnstablePerfectHash() const {
 			return owner_type.queryUnstablePerfectHash();
 		}
 
@@ -207,6 +212,22 @@ namespace compiler::helios {
 						tsh::Mutability::Immutable,
 					};
 				}
+				variant_case(DefaultCopyConstructor, cctor) {
+					// `(const ref T source) -> T`.
+					const tsh::SymbolType<> source_type{
+						cctor.owner_type,
+						tsh::ReferenceKind::Ref,
+						tsh::Mutability::Immutable,
+					};
+
+					const auto return_type = tsh::SymbolType<>::withDefaults(cctor.owner_type);
+
+					const auto cctor_abstract_type
+						= ctx.query<tsh::QueryFunctionType>({ .parameter_types = { source_type },
+					                                          .result_type     = return_type });
+
+					return tsh::SymbolType<>::withDefaultsConst(cctor_abstract_type);
+				}
 				variant_case(BuiltinOperator, op) {
 					return tsh::SymbolType<>{
 						op.operator_type,
@@ -346,6 +367,7 @@ namespace compiler::helios {
 				variant_case(DefaultClassConstructor, ctor) { return {}; }
 				variant_case(DefaultStaticArrayConstructor, ctor) { return {}; }
 				variant_case(DefaultDestructor, dtor) { return {}; }
+				variant_case(DefaultCopyConstructor, cctor) { return {}; }
 				variant_case(ToStringMethod, to_string) { return {}; }
 				variant_case(LengthMethod, m) { return {}; }
 				variant_case(BuiltinOperator, op) { return {}; }
@@ -389,7 +411,8 @@ namespace compiler::helios {
 				defgen::GeneratedSymbolData::ScriptMainWrapper,
 				defgen::GeneratedSymbolData::ToStringMethod,
 				defgen::GeneratedSymbolData::LengthMethod,
-				defgen::GeneratedSymbolData::DefaultDestructor
+				defgen::GeneratedSymbolData::DefaultDestructor,
+				defgen::GeneratedSymbolData::DefaultCopyConstructor
 			) {
 				kind = SymbolKind::Function;
 			}

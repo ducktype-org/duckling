@@ -4,6 +4,7 @@
 
 #include <frontend/pst_parser/elements/includes/basic.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
+#include <helios/symbols/symbol_kind.hpp>
 
 #include <query_framework/context/context.hpp>
 
@@ -35,9 +36,8 @@ namespace compiler::helios {
 		  parameters(std::move(parameters)),
 		  origin(origin) {
 		CORE_ASSERT(
-			kind(symbol) == SymbolKind::Function or kind(symbol) == SymbolKind::FunctionDeclaration
-				or kind(symbol) == SymbolKind::Method,
-			"Symbol is not a function, function declaration nor method"
+			isFunctionLike(kind(symbol)),
+			"Symbol is not a function, function declaration, method, constructor nor destructor"
 		);
 	}
 

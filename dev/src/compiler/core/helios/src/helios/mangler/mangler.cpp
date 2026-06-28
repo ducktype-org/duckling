@@ -14,6 +14,7 @@
 #include <helios/symbols/symbol_abi.hpp>
 #include <helios/symbols/symbol_id.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
+#include <helios/symbols/symbol_kind.hpp>
 #include <helios/tsh/types.hpp>
 #include <helios_private/pst_layer/pst_parent.hpp>
 #include <helios_private/scopes/scopes.hpp>
@@ -247,9 +248,7 @@ namespace compiler::helios::mangler {
 		 */
 		std::string func(query::Context& ctx, SymID symbol_id) {
 			std::stringstream ret;
-			if (kind(symbol_id) == SymbolKind::Function
-			    or kind(symbol_id) == SymbolKind::FunctionDeclaration
-			    or kind(symbol_id) == SymbolKind::Method) {
+			if (isFunctionLike(kind(symbol_id))) {
 				// @TODO: #2255 Function qualifiers?
 
 				auto function_type = ctx.query<QueryTypeOfSymbol>(symbol_id)->valueOrThrow();
@@ -283,6 +282,7 @@ namespace compiler::helios::mangler {
 
 			case SymbolKind::Function:
 			case SymbolKind::Method:
+			case SymbolKind::Constructor:
 			case SymbolKind::FunctionDeclaration: {
 				variant_match(getSymRef(symbol_id)->other) {
 					variant_case_novalue(PstSymbolData) {
@@ -321,6 +321,13 @@ namespace compiler::helios::mangler {
 								// We do not have a reliable "path to type" in this case, so we omit
 								// it. Any ambiguities are solved by the function type anyway.
 								return "Hdd" + func(ctx, symbol_id) + "E";
+							}
+							variant_case(
+								defgen::GeneratedSymbolData::DefaultCopyConstructor, cctor
+							) {
+								// We do not have a reliable "path to type" in this case, so we omit
+								// it. Any ambiguities are solved by the function type anyway.
+								return "Hcc" + func(ctx, symbol_id) + "E";
 							}
 							variant_case(defgen::GeneratedSymbolData::ToStringMethod, to_string) {
 								// We do not have a reliable "path to type" in this case

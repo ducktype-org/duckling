@@ -18,6 +18,7 @@
 #include <helios_private/errors/duplicated_definition.hpp>
 #include <helios_private/hout_creation/definition_generation/class_constructors.hpp>
 #include <helios_private/hout_creation/definition_generation/default_constructors.hpp>
+#include <helios_private/hout_creation/definition_generation/default_copy_constructors.hpp>
 #include <helios_private/hout_creation/definition_generation/length_methods.hpp>
 #include <helios_private/hout_creation/definition_generation/to_string_methods.hpp>
 #include <helios_private/hout_creation/definition_generation/tuple_constructor.hpp>
@@ -81,6 +82,14 @@ namespace compiler::helios {
 			auto register_ctor_and_tostring_if_needed = [&](SymID sym) {
 				const auto& symbol_type = ctx.query<QueryTypeOfSymbol>(sym)->valueOrThrow();
 				const auto& type        = symbol_type.getType();
+
+				// Don't insert copy ctors if the type is trivially copyable or not copyable at all.
+				if (not symbol_type.isTriviallyCopyable(ctx) and symbol_type.isCopyable(ctx)) {
+					const auto& class_copy_ctor
+						= ctx.query<defgen::QueryDefaultCopyConstructor>(symbol_type.getType())
+					          ->valueOrThrow();
+					default_ctors.insert(class_copy_ctor.declaration->original_symbol);
+				}
 
 				// @TODO: #2509 Handle nested tuples
 				if (type.getKind() == tsh::Kind::Tuple) {

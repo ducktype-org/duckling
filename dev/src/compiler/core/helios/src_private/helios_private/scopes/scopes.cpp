@@ -505,8 +505,7 @@ namespace compiler::helios {
 			}
 
 			void visitCopyConstructor(pst::Access<pst::CopyConstructor> cctor) override {
-				// Scope of "fun →()← {}"
-
+				// Scope of "T.copy →(other)← = {}".
 				std::vector<SymID> out;
 				for (auto params: *cctor->getParams().unlock(ctx))
 					out.emplace_back(ctx.query<QuerySymbolOfSTMT>(params).valueOrThrow());

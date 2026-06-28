@@ -2,6 +2,7 @@
 
 #include <frontend/pst_parser/elements/hierarchy/actions/all_actions.hpp>
 #include <frontend/pst_parser/elements/hierarchy/actions/return.hpp>
+#include <frontend/pst_parser/elements/hierarchy/class_elements/copy_constructor.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/method.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
@@ -19,6 +20,7 @@
 #include <helios_private/errors/errors.hpp>
 #include <helios_private/hout_creation/definition_generation/class_constructors.hpp>
 #include <helios_private/hout_creation/definition_generation/default_constructors.hpp>
+#include <helios_private/hout_creation/definition_generation/default_copy_constructors.hpp>
 #include <helios_private/hout_creation/definition_generation/default_destructors.hpp>
 #include <helios_private/hout_creation/definition_generation/length_methods.hpp>
 #include <helios_private/hout_creation/definition_generation/to_string_methods.hpp>
@@ -123,6 +125,59 @@ namespace compiler::helios {
 
 				this->out.emplace(HOUTFunction(code::pstOrigin(stmt), &decl, output_body));
 			}
+
+			void visitCopyConstructor(pst::Access<pst::CopyConstructor> stmt) final {
+				// declaration:
+				auto& decl = ctx.query<QueryDeclOfFun>(original_symbol)->valueOrThrow();
+				validateConstructorSource(stmt, decl);
+				// @TODO: #2000 Initializer lists are currently ignored.
+				// TODOP: Resolve.
+
+				// body:
+				auto output_body = processBody(decl, stmt->getBody());
+				this->out.emplace(HOUTFunction(code::pstOrigin(stmt), &decl, output_body));
+			}
+
+			// Validates a user-defined copy/move constructor's source parameter. The copy
+			// constructor must declare exactly one parameter, which must be a reference
+			// (`ref`/`const ref`) to its own class.
+			template<class ConstructorElement>
+			void validateConstructorSource(
+				pst::Access<ConstructorElement> stmt, const HOUTFunctionDeclaration& decl
+			) {
+				const auto class_type
+					= ctx.query<QueryClassOfMember>(original_symbol)->valueOrThrow();
+
+				const auto params_source = stmt->getParams().unlock(ctx)->getStablePosition();
+
+				if (decl.parameters.size() != 1) {
+					ctx.logInt(makeBox<dia_int::PlaceholderError>(
+						"A copy/move constructor must declare exactly one parameter: a "
+						"reference to the object being copied or moved from.",
+						params_source
+					));
+					query::throwFailed();
+				}
+
+				const auto other_type   = decl.parameters.at(0).type;
+				const bool is_reference = other_type.getRefKind() == tsh::ReferenceKind::Ref;
+				const bool is_matching_class
+					= other_type.getType().getKind() == tsh::Kind::Class
+				   && other_type.getType().as<tsh::ClassAbstractType>().getSymbol()
+				          == class_type.getSymbol();
+				if (!is_reference || !is_matching_class) {
+					ctx.logInt(makeBox<dia_int::PlaceholderError>(
+						base::strConcat(
+							"A copy/move constructor's parameter must be a reference "
+							"(`ref`/`const ref`) to its own class `",
+							name(class_type.getSymbol()),
+							"`."
+						),
+						params_source
+					));
+					query::throwFailed();
+				}
+			}
 		};
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
@@ -130,8 +185,9 @@ namespace compiler::helios {
 			// Non-generated symbol data.
 			if (sym_ref->getPSTDataOpt().has_value()) {
 				CORE_ASSERT(
-					kind(key) == SymbolKind::Function or kind(key) == SymbolKind::Method,
-					"Function creation called on non-function and non-method symbol"
+					isFunctionLike(kind(key)),
+					"Function creation called on non-function, non-method and non-constructor "
+					"symbol"
 				);
 				HOUTFunctionMaker func_maker(ctx, key);
 				stmt(ctx, key).value()->acceptVisitor(func_maker);
@@ -168,6 +224,10 @@ namespace compiler::helios {
 						}
 						variant_case(defgen::GeneratedSymbolData::DefaultDestructor, dtor) {
 							return ctx.query<defgen::QueryDefaultDestructor>(dtor.owner_type)
+							    ->valueOrThrow();
+						}
+						variant_case(defgen::GeneratedSymbolData::DefaultCopyConstructor, cctor) {
+							return ctx.query<defgen::QueryDefaultCopyConstructor>(cctor.owner_type)
 							    ->valueOrThrow();
 						}
 						variant_case(

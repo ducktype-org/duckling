@@ -1,0 +1,12 @@
+class Trivial {
+    a: i32;
+    b: i32;
+}
+
+class HasBox {
+    boxed: box i32;
+}
+
+class HoldsNonTrivial {
+    inner: HasBox;
+}

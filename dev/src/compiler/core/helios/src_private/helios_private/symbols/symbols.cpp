@@ -1,5 +1,7 @@
 #include "symbols.hpp"
 
+#include "frontend/pst_parser/elements/hierarchy/class_elements/destructor.hpp"
+
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/all_class_elements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
@@ -9,7 +11,9 @@
 #include <helios/hout/hout.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/queries/function_queries.hpp>
+#include <helios/symbols/query_class_of_member.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
+#include <helios/symbols/query_type_symbol_data.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/tsh/abstract_type.hpp>
 #include <helios/tsh/queries/types.hpp>
@@ -195,6 +199,22 @@ namespace compiler::helios {
 		return getSymRef(id)->getPSTDataOpt().map([](CRef<PstSymbolData> data) {
 			return data->getElement();
 		});
+	}
+
+	// Move those somewhere more appropriate
+	bool isUserDefinedCopyConstructor(query::Context& ctx, const SymID sym) {
+		if (kind(sym) != SymbolKind::Constructor) return false;
+		const auto pst = maybeSymbolPst(sym);
+		if (!pst.has_value()) return false;
+		return pst->unlock(ctx).dynamicCast<pst::CopyConstructor>().has_value();
+	}
+
+	base::Optional<SymID> userCopyConstructorOf(query::Context& ctx, const SymID class_sym) {
+		if (kind(class_sym) != SymbolKind::Class) return {};
+		const auto& class_data = ctx.query<QueryClassSymbolData>(class_sym)->valueOrThrow();
+		for (const SymID ctor: class_data.constructors)
+			if (isUserDefinedCopyConstructor(ctx, ctor)) return ctor;
+		return {};
 	}
 
 	template<typename Attribute>
@@ -541,10 +561,6 @@ namespace compiler::helios {
 			);
 		}
 		case pst::StmtKind::CopyConstructor: {
-			// left for code consistency
-			[[maybe_unused]]
-			auto constructor
-				= stmt.dynamicCast<pst::CopyConstructor>().value();
 			return SymbolData::makePSTSymbolData(
 				{
 					.name                 = lang_def::keywordToStr(lang_def::Keyword::Copy),

@@ -28,6 +28,18 @@ namespace compiler::helios {
 	std::vector<SymID> getAllHeliosSymbols();
 
 	/**
+	 * @brief Whether the given symbol is a user-defined copy constructor.
+	 */
+	bool isUserDefinedCopyConstructor(query::Context& ctx, SymID sym);
+
+	/**
+	 * @brief Finds the user-defined copy constructor of a class, if it declares one.
+	 * @param class_sym The symbol of the class.
+	 * @return The copy constructor symbol, or an empty optional if the class doesn't declare one.
+	 */
+	base::Optional<SymID> userCopyConstructorOf(query::Context& ctx, SymID class_sym);
+
+	/**
 	 * @brief Query symbol associated with given element in PST
 	 *
 	 * \query_thread_safe_if_cache_and_struct

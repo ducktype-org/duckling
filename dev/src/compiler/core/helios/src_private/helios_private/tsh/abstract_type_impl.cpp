@@ -493,6 +493,9 @@ namespace compiler::tsh {
 	}
 
 	bool ClassAbstractTypeImpl::isCopyable(query::Context& ctx) const {
+		// A user-defined copy constructor makes the class copyable regardless of its fields.
+		if (compiler::helios::userCopyConstructorOf(ctx, symbol).has_value()) return true;
+
 		auto fields = getDeclaredInterface(ctx)->getFieldsView();
 		// All component types have to be copyable.
 		return std::ranges::all_of(fields, [&](const auto& field) {
@@ -501,6 +504,10 @@ namespace compiler::tsh {
 	}
 
 	bool ClassAbstractTypeImpl::isTriviallyCopyable(query::Context& ctx) const {
+		// A user-defined copy constructor means copies must run user code, so the class is never
+		// trivially copyable.
+		if (compiler::helios::userCopyConstructorOf(ctx, symbol).has_value()) return false;
+
 		auto fields = getDeclaredInterface(ctx)->getFieldsView();
 		// All component types have to be trivially copyable.
 		return std::ranges::all_of(fields, [&](const auto& field) {
