@@ -297,7 +297,9 @@ namespace compiler::lir {
 			block_id = function.getBlockIDs();
 
 			output << "[LIR] Function \"" << function.mangled_name.strView() << "\""
-				   << (function.link_once ? " (link once)" : "") << ":\n";
+				   << (function.link_once ? " (link once)" : "")
+				   << (function.ignore_on_dvm ? " (ignore on dvm)" : "")
+				   << (function.ignore_on_llvm ? " (ignore on llvm)" : "") << "\n";
 
 			for (const auto& local: function.local_list) {
 				printLocalDesc(&local);
@@ -394,19 +396,22 @@ namespace compiler::lir {
 	}
 
 	void LIRUnit::deduplicateSymbols() {
-		std::unordered_set<base::StrID> seen_globals;
-		base::filterVectorInPlace(lir_globals, [&seen_globals](const LIRGlobalData& global_data) {
-			if (seen_globals.contains(global_data.global.mangled_name)) return false;
-			seen_globals.insert(global_data.global.mangled_name);
-			return true;
+		base::deduplicateBy(lir_globals, [](const LIRGlobalData& global_data) {
+			return global_data.global.mangled_name;
 		});
 
-		std::unordered_set<base::StrID> seen_functions;
-		base::filterVectorInPlace(lir_functions, [&seen_functions](const CRef<Function>& func) {
-			if (seen_functions.contains(func->mangled_name)) return false;
-			seen_functions.insert(func->mangled_name);
-			return true;
-		});
+		std::unordered_set<base::StrID> seen;
+		std::vector<CRef<Function>>     result_functions;
+		for (auto lir_func: lir_functions) {
+			if (seen.insert(lir_func->mangled_name).second)
+				result_functions.push_back(lir_func);
+			else if (lir_func->ignore_on_dvm or lir_func->ignore_on_llvm) {
+				// If we ignore it on some backend then we don't want to deduplicate
+				// it based on mangled name.
+				result_functions.push_back(lir_func);
+			}
+		}
+		lir_functions = std::move(result_functions);
 	}
 
 	LIRLocalSpecialKind specialKindFromMIR(const mir::MIRLocal& mir_local) {

@@ -16,6 +16,8 @@ mod frontmatter;
 mod manifest;
 mod source;
 
+pub use frontmatter::try_parse_frontmatter;
+
 #[cfg(test)]
 mod tests;
 
@@ -92,7 +94,7 @@ impl<'scope> ScopeGuard<'scope> {
     }
 
     /// Disarm this guard.
-    /// Droping it will have no effect.
+    /// Dropping it will have no effect.
     pub fn disarm(&mut self) {
         self.armed = false;
     }

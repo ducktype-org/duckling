@@ -5,6 +5,7 @@
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
+#include <base/extend_cpp/vector_utils.hpp>
 #include <base/str/str_utils.hpp>
 
 #include <diagnostic/source_position.hpp>
@@ -50,11 +51,14 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::parseFiles(
 					code_global.name         = global->name;
 					code_global.type         = global->type;
 					code_global.bytecode_pos = global->position;
+					code_global.is_constant  = global->is_constant;
 					if (global->ctor_name.has_value())
 						code_global.ctor_name = code::Identifier(global->ctor_name.value().value);
 
 					if (global->dtor_name.has_value())
 						code_global.dtor_name = code::Identifier(global->dtor_name.value().value);
+					if (global->initial_value.has_value())
+						code_global.initial_value = global->initial_value.value();
 					new_code.global_data.emplace_back(code_global);
 				}
 				for (const auto& tp: parsed_file.types) new_code.types.push_back(tp->datatype);
@@ -88,6 +92,19 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::parseFiles(
 					new_code.functions.emplace_back(function);
 				}
 			}
+			base::deduplicateBy(new_code.functions, [](const code::Function& func) {
+				return func.name.str.strView();
+			});
+			base::deduplicateBy(
+				new_code.external_c_functions,
+				[](const code::ExternalCFunction& func) { return func.name.str.strView(); }
+			);
+			base::deduplicateBy(new_code.global_data, [](const vm::code::GlobalData& g) {
+				return g.name.str.strView();
+			});
+			base::deduplicateBy(new_code.types, [](const vm::code::TypeOfData& f) {
+				return typeName(f);
+			});
 
 			return new_code;
 		}

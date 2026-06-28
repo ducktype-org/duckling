@@ -6,6 +6,8 @@
 #include "preamble.hpp"
 
 namespace pst::expr {
+	CLONE_SUB_ELEMENTS_DEF(ChainExpr, atom, chain);
+
 	i64 ChainExpr::toNextLink(const LangParserState& state) {
 		CORE_ASSERT(state.ctokens().size() > 0, "Illegal max length to next link");
 

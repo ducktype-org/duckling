@@ -47,6 +47,7 @@ Tests:
           String: "10\n99\n"
         ExitCode: 0
 
+  # @TODO: #2228 Replace all panicked tests output here with regex shortened versions
   dvm_use_after_free_local:
     Cases:
       dvm:
@@ -54,7 +55,7 @@ Tests:
         Output:
           String: ""
         Err:
-          String: 'VMThread has panicked: Data was freed\n{\"data\":{\"error\":\"Execution panicked with error: Data was freed\"},\"type\":\"OtherError\"}block.refcount != 0, BlockID=0\n'
+          String: 'VMThread has panicked: Data was freed\n{\"data\":{\"error\":\"Execution panicked with error: Data was freed\"},\"type\":\"OtherError\"}block.refcount != 0, BlockID=2\n'
         ExitCode: 1
   dvm_use_after_free_box:
     Cases:
@@ -63,7 +64,7 @@ Tests:
         Output:
           String: ""
         Err:
-          String: 'VMThread has panicked: Data was freed\n{\"data\":{\"error\":\"Execution panicked with error: Data was freed\"},\"type\":\"OtherError\"}block.refcount != 0, BlockID=0\n'
+          String: 'VMThread has panicked: Data was freed\n{\"data\":{\"error\":\"Execution panicked with error: Data was freed\"},\"type\":\"OtherError\"}block.refcount != 0, BlockID=2\n'
         ExitCode: 1
   dvm_uninitialized_access:
     Cases:
@@ -72,5 +73,36 @@ Tests:
         Output:
           String: ""
         Err:
-          String: 'VMThread has panicked: Accessing null pointer\n{\"data\":{\"error\":\"Execution panicked with error: Accessing null pointer\"},\"type\":\"OtherError\"}block.refcount != 0, BlockID=1\n'
+          String: 'VMThread has panicked: Accessing null pointer\n{\"data\":{\"error\":\"Execution panicked with error: Accessing null pointer\"},\"type\":\"OtherError\"}block.refcount != 0, BlockID=3\n'
         ExitCode: 1
+  slices:
+    enable_conc_deterministic_tests: "false"
+    Cases:
+      all:
+        backend: all
+        Output:
+          String: "Hello from VM!\nl\n15\nHello from Duckling!\n"
+        ExitCode: 0
+  slices_out_of_bounds:
+    enable_conc_deterministic_tests: "false"
+    Cases:
+      llvm:
+        backend: llvm
+        ExitCode: 134
+      dvm:
+        backend: dvm
+        Output:
+          String: "Program panicked!\n"
+        Err:
+          String: 'VMThread has panicked: Program panicked\n{\"data\":{\"error\":\"Execution panicked with error: Program panicked\"},\"type\":\"OtherError\"}block.refcount != 0, BlockID=1\n'
+        ExitCode: 1
+  slices_negative_index:
+    enable_conc_deterministic_tests: "false"
+    Cases:
+      llvm:
+        backend: llvm
+        ExitCode: 134
+      dvm:
+        backend: dvm
+        ExitCode: 1
+

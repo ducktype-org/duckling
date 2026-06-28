@@ -3,6 +3,8 @@
 #include "preamble.hpp"
 
 namespace pst {
+	CLONE_SUB_ELEMENTS_DEF(CodeBlockOrStmt, code_block, stmt);
+
 	MBox<CodeBlockOrStmt> CodeBlockOrStmt::parse(LangParserState& state) {
 		auto out = makeBox<CodeBlockOrStmt>(state);
 		if (state[0].isBracketGroup(Token::BracketType::Curly)) {

@@ -63,7 +63,7 @@ pub type Task = PackageCompilationTask;
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 pub struct PackageCompilationTask {
     #[serde(rename = "package")]
-    /// ID of a package refered by this task.
+    /// ID of a package referred by this task.
     pub package_id: StrId,
     #[serde(flatten)]
     /// Compilation strategy of this task.
@@ -75,9 +75,16 @@ pub struct PackageCompilationTask {
 #[serde(rename_all = "snake_case", tag = "strategy")]
 /// Supported duckc compilation strategies.
 pub enum PackageCompilationStrategy {
-    /// Compile this task into a DVM file.
-    // Name has to be `Dvm`, as `DVM` (with "snake_case") would be rendered as "d_v_m".
-    Dvm {
+    /// Compile this task into a DVM executable.
+    // Name uses `Dvm` (not `DVM`), as `DVM` (with "snake_case") would be rendered as "d_v_m";
+    // this serializes to "dvm_exe".
+    DvmExe {
+        /// Path to the output file.
+        output_file: PathBuf,
+    },
+    /// Compile this task into a DVM library.
+    // Serializes to "dvm_lib" (see the note on `DvmExe`).
+    DvmLib {
         /// Path to the output file.
         output_file: PathBuf,
     },
@@ -200,13 +207,14 @@ mod tests {
     use super::*;
 
     #[test]
-    fn basic_json_convertion() {
+    fn basic_json_conversion() {
         let packages = create_mock_packages();
         let tasks = create_mock_tasks();
         let multi_package = MultiPackage { packages, tasks };
         let serialized = serde_json::to_string_pretty(&multi_package).unwrap();
         assert_eq!(
             serialized,
+            // cSpell:disable
             r#"{
   "packages": [
     {
@@ -276,8 +284,8 @@ mod tests {
     },
     {
       "package": "dep-hash",
-      "strategy": "dvm",
-      "output_file": "out.dvm"
+      "strategy": "dvm_lib",
+      "output_file": "out.dbc"
     },
     {
       "package": "dep2-hash",
@@ -305,7 +313,7 @@ mod tests {
       "output_file": "out.so"
     }
   ]
-}"#
+}"# // cSpell:enable
         );
 
         let deserialized = serde_json::from_str::<MultiPackage>(&serialized).unwrap();
@@ -361,6 +369,7 @@ mod tests {
                     output_file: PathBuf::from("out.exe"),
                     linking_options: Some(LinkerOptions::Complex(ComplexLinkerOptions {
                         linker: None,
+                        // cSpell:disable-next-line
                         additional_linking_options: Some("-lfoo".into()),
                         link_cstd: Some(true),
                     })),
@@ -370,6 +379,7 @@ mod tests {
                 package_id: "a".into(),
                 strategy: PackageCompilationStrategy::Binary {
                     output_file: PathBuf::from("out.exe"),
+                    // cSpell:disable-next-line
                     linking_options: Some(LinkerOptions::RawLinkerArgs("-lfoo".into())),
                 },
             },
@@ -382,8 +392,8 @@ mod tests {
             },
             PackageCompilationTask {
                 package_id: "dep-hash".into(),
-                strategy: PackageCompilationStrategy::Dvm {
-                    output_file: PathBuf::from("out.dvm"),
+                strategy: PackageCompilationStrategy::DvmLib {
+                    output_file: PathBuf::from("out.dbc"),
                 },
             },
             PackageCompilationTask {
@@ -429,6 +439,7 @@ mod tests {
         let serialized = serde_json::to_string_pretty(&multi_package).unwrap();
         assert_eq!(
             serialized,
+            // cSpell:disable
             r#"{
   "packages": [
     {
@@ -555,37 +566,37 @@ mod tests {
     },
     {
       "package": "lib_a",
-      "strategy": "dvm",
+      "strategy": "dvm_lib",
       "output_file": "lib_a_dvm"
     },
     {
       "package": "lib_b",
-      "strategy": "dvm",
+      "strategy": "dvm_lib",
       "output_file": "lib_b_dvm"
     },
     {
       "package": "lib_c",
-      "strategy": "dvm",
+      "strategy": "dvm_lib",
       "output_file": "lib_c_dvm"
     },
     {
       "package": "app1",
-      "strategy": "dvm",
+      "strategy": "dvm_exe",
       "output_file": "app1_dvm"
     },
     {
       "package": "app2",
-      "strategy": "dvm",
+      "strategy": "dvm_exe",
       "output_file": "app2_dvm"
     },
     {
       "package": "app3",
-      "strategy": "dvm",
+      "strategy": "dvm_exe",
       "output_file": "app3_dvm"
     },
     {
       "package": "app3_alias",
-      "strategy": "dvm",
+      "strategy": "dvm_exe",
       "output_file": "app3_alias_dvm"
     },
     {
@@ -622,7 +633,7 @@ mod tests {
       }
     }
   ]
-}"#
+}"# // cSpell:enable
         );
     }
 
@@ -632,6 +643,7 @@ mod tests {
                 id: "lib_a".into(),
                 import_name: "lib_a".into(),
                 version: Version::new(0, 1, 0),
+                // cSpell:disable-next-line
                 features: vec!["use_mathlib".into()],
                 path_to_the_src_directory: PathBuf::from("duck_modules/multi_package/lib_a"),
                 dependencies: vec![],
@@ -640,6 +652,7 @@ mod tests {
                 id: "lib_b".into(),
                 import_name: "lib_b".into(),
                 version: Version::new(0, 1, 0),
+                // cSpell:disable-next-line
                 features: vec!["use_mathlib".into(), "use_lib_a".into()],
                 path_to_the_src_directory: PathBuf::from("duck_modules/multi_package/lib_b"),
                 dependencies: vec![
@@ -754,43 +767,43 @@ mod tests {
             },
             PackageCompilationTask {
                 package_id: "lib_a".into(),
-                strategy: PackageCompilationStrategy::Dvm {
+                strategy: PackageCompilationStrategy::DvmLib {
                     output_file: PathBuf::from("lib_a_dvm"),
                 },
             },
             PackageCompilationTask {
                 package_id: "lib_b".into(),
-                strategy: PackageCompilationStrategy::Dvm {
+                strategy: PackageCompilationStrategy::DvmLib {
                     output_file: PathBuf::from("lib_b_dvm"),
                 },
             },
             PackageCompilationTask {
                 package_id: "lib_c".into(),
-                strategy: PackageCompilationStrategy::Dvm {
+                strategy: PackageCompilationStrategy::DvmLib {
                     output_file: PathBuf::from("lib_c_dvm"),
                 },
             },
             PackageCompilationTask {
                 package_id: "app1".into(),
-                strategy: PackageCompilationStrategy::Dvm {
+                strategy: PackageCompilationStrategy::DvmExe {
                     output_file: PathBuf::from("app1_dvm"),
                 },
             },
             PackageCompilationTask {
                 package_id: "app2".into(),
-                strategy: PackageCompilationStrategy::Dvm {
+                strategy: PackageCompilationStrategy::DvmExe {
                     output_file: PathBuf::from("app2_dvm"),
                 },
             },
             PackageCompilationTask {
                 package_id: "app3".into(),
-                strategy: PackageCompilationStrategy::Dvm {
+                strategy: PackageCompilationStrategy::DvmExe {
                     output_file: PathBuf::from("app3_dvm"),
                 },
             },
             PackageCompilationTask {
                 package_id: "app3_alias".into(),
-                strategy: PackageCompilationStrategy::Dvm {
+                strategy: PackageCompilationStrategy::DvmExe {
                     output_file: PathBuf::from("app3_alias_dvm"),
                 },
             },

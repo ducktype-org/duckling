@@ -30,11 +30,9 @@ use tracing::debug;
 
 use crate::quackpack::core::manifest::parse::manifest::parse;
 use crate::quackpack::core::{FrontMatterScript, ParseMode};
-use crate::{
-    DuckContext, QuackResult, qp_bail, quackpack::schemas::manifest::Manifest as ManifestSchema,
-    util::path_ops_ext::PathOpsExt,
-};
-use crate::{QuackResultContext, qp_err};
+use crate::quackpack::schemas::manifest::Manifest as ManifestSchema;
+use crate::util::path_ops_ext::PathOpsExt;
+use crate::{DuckContext, QuackResult, QuackResultContext, qp_bail, qp_err};
 
 pub static FRONTMATTER_REGEX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^\s*<frontmatter>([\s\S]*)</frontmatter>").unwrap());
@@ -43,7 +41,6 @@ pub static UNCLOSED_FRONTMATTER_REGEX: LazyLock<Regex> =
 
 /// Parse a frontmatter of a script at a given `path`.
 /// If the script does not contain a frontmatter, returns `Ok(None)`.
-#[cfg_attr(not(test), expect(dead_code))]
 pub fn try_parse_frontmatter(
     path: PathBuf,
     ctx: &DuckContext,

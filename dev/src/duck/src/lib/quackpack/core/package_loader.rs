@@ -193,7 +193,12 @@ metadata:
         let package =
             PackageLoader::find_from_directory(tmp_file.path(), &ctx, false.into()).unwrap();
         assert_eq!(
-            package.package().root_directory().resolve().unwrap(),
+            package
+                .into_package()
+                .unwrap_package()
+                .root_directory()
+                .resolve()
+                .unwrap(),
             tmp_file.path().resolve().unwrap()
         );
     }
@@ -210,7 +215,12 @@ metadata:
         let ctx = DuckContext::default();
         let package = PackageLoader::find_from_directory(&child, &ctx, false.into()).unwrap();
         assert_eq!(
-            package.package().root_directory().resolve().unwrap(),
+            package
+                .into_package()
+                .unwrap_package()
+                .root_directory()
+                .resolve()
+                .unwrap(),
             tmp_file.path().resolve().unwrap()
         );
     }
@@ -224,12 +234,17 @@ metadata:
         let ctx = DuckContext::default();
         let package = PackageLoader::find_at_exact_directory(tmp_file.path(), &ctx).unwrap();
         assert_eq!(
-            package.package().root_directory().resolve().unwrap(),
+            package
+                .into_package()
+                .unwrap_package()
+                .root_directory()
+                .resolve()
+                .unwrap(),
             tmp_file.path().resolve().unwrap()
         );
     }
 
-    #[test]
+    #[test] // cSpell:disable-next-line
     fn finds_at_exact_directory_notadir() {
         let tmp_file = tempdir().unwrap();
         let file = tmp_file.path().join("xd");

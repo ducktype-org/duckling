@@ -43,52 +43,53 @@ void server(i32 port) {
 	crow::SimpleApp app;
 
 	CROW_ROUTE(app, "/status/<uint>")
-	([](vm::PID pid) { return toResponse(vm::api::getExecutionStatus(pid)); });
+	([](u64 raw_pid) { return toResponse(vm::api::getExecutionStatus(vm::PID::fromU64(raw_pid))); });
 
 	CROW_ROUTE(app, "/process/spawn").methods(crow::HTTPMethod::PUT)([]() {
 		return toResponse(vm::api::spawn());
 	});
-	CROW_ROUTE(app, "/process/kill/<uint>").methods(crow::HTTPMethod::DELETE)([](vm::PID pid) {
-		return toResponse(vm::api::kill(pid));
+	CROW_ROUTE(app, "/process/kill/<uint>").methods(crow::HTTPMethod::DELETE)([](u64 raw_pid) {
+		return toResponse(vm::api::kill(vm::PID::fromU64(raw_pid)));
 	});
 
 	CROW_ROUTE(app, "/process/load/<uint>")
-		.methods(crow::HTTPMethod::POST)([](const crow::request& req, vm::PID pid) {
+		.methods(crow::HTTPMethod::POST)([](const crow::request& req, u64 raw_pid) {
 			std::string filepath = req.body;
 
-			return toResponse(vm::api::loadFiles(pid, { fs::File(filepath) }));
+			return toResponse(vm::api::loadFiles(vm::PID::fromU64(raw_pid), { fs::File(filepath) }));
 		});
-	CROW_ROUTE(app, "/process/run/<uint>").methods(crow::HTTPMethod::POST)([](vm::PID pid) {
-		return toResponse(vm::api::run(pid));
+	CROW_ROUTE(app, "/process/run/<uint>").methods(crow::HTTPMethod::POST)([](u64 raw_pid) {
+		return toResponse(vm::api::run(vm::PID::fromU64(raw_pid)));
 	});
-	CROW_ROUTE(app, "/process/join/<uint>").methods(crow::HTTPMethod::POST)([](vm::PID pid) {
-		return toResponse(vm::api::join(pid));
+	CROW_ROUTE(app, "/process/join/<uint>").methods(crow::HTTPMethod::POST)([](u64 raw_pid) {
+		return toResponse(vm::api::join(vm::PID::fromU64(raw_pid)));
 	});
-	CROW_ROUTE(app, "/process/stop/<uint>").methods(crow::HTTPMethod::POST)([](vm::PID pid) {
-		return toResponse(vm::api::stop(pid));
+	CROW_ROUTE(app, "/process/stop/<uint>").methods(crow::HTTPMethod::POST)([](u64 raw_pid) {
+		return toResponse(vm::api::stop(vm::PID::fromU64(raw_pid)));
 	});
 
 	CROW_ROUTE(app, "/process/input/<uint>")
-		.methods(crow::HTTPMethod::POST)([](const crow::request& req, vm::PID pid) {
+		.methods(crow::HTTPMethod::POST)([](const crow::request& req, u64 raw_pid) {
 			std::string input = req.body;
 
-			return toResponse(vm::api::input(pid, input));
+			return toResponse(vm::api::input(vm::PID::fromU64(raw_pid), input));
 		});
 	CROW_ROUTE(app, "/process/output/<uint>")
-	([](vm::PID pid) { return toResponse(vm::api::output(pid)); });
+	([](u64 raw_pid) { return toResponse(vm::api::output(vm::PID::fromU64(raw_pid))); });
 
-	CROW_ROUTE(app, "/debug/pause/<uint>").methods(crow::HTTPMethod::POST)([](vm::PID pid) {
-		return toResponse(vm::api::pause(pid));
+	CROW_ROUTE(app, "/debug/pause/<uint>").methods(crow::HTTPMethod::POST)([](u64 raw_pid) {
+		return toResponse(vm::api::pause(vm::PID::fromU64(raw_pid)));
 	});
-	CROW_ROUTE(app, "/debug/resume/<uint>").methods(crow::HTTPMethod::POST)([](vm::PID pid) {
-		return toResponse(vm::api::resume(pid));
+	CROW_ROUTE(app, "/debug/resume/<uint>").methods(crow::HTTPMethod::POST)([](u64 raw_pid) {
+		return toResponse(vm::api::resume(vm::PID::fromU64(raw_pid)));
 	});
-	CROW_ROUTE(app, "/debug/step/<uint>").methods(crow::HTTPMethod::POST)([](vm::PID pid) {
-		return toResponse(vm::api::step(pid));
+	CROW_ROUTE(app, "/debug/step/<uint>").methods(crow::HTTPMethod::POST)([](u64 raw_pid) {
+		return toResponse(vm::api::step(vm::PID::fromU64(raw_pid)));
 	});
 
 	CROW_ROUTE(app, "/data/type/<uint>/<string>")
-	([](vm::PID pid, const std::string& type_name) {
+	([](u64 raw_pid, const std::string& type_name) {
+		vm::PID pid = vm::PID::fromU64(raw_pid);
 		return toResponse(vm::api::getType(pid, type_name)
 		                      .transform([](const vm::api::response::Type& type_response) {
 								  return type_response.type;

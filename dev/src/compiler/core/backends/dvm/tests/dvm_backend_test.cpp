@@ -1,22 +1,12 @@
 #include <backends/dvm/dvm_backend.hpp>
-#include <driver/initialize.hpp>
-#include <driver/manifest/manifest.hpp>
-#include <frontend/module_tree/functors.hpp>
-#include <frontend/module_tree/module_id.hpp>
-#include <frontend/module_tree/module_tree.hpp>
-#include <frontend/module_tree/queries.hpp>
-#include <frontend/packages/packages.hpp>
-#include <global_state/global_logger.hpp>
-#include <global_state/packages.hpp>
+#include <driver/test_utils.hpp>
 #include <helios/queries/queries.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <lir/lir_lowering/lir_unit.hpp>
-#include <lir/lir_structure/lir_structure.hpp>
-#include <mir/mir_lowering/mir_queries.hpp>
 #include <mir/mir_lowering/mir_unit.hpp>
 #include <vm_tester_utils.hpp>
 
-#include <base/str/str_utils.hpp>
+#include <base/extend_cpp/vector_utils.hpp>
 
 #include <query_framework/context/context.hpp>
 #include <query_framework/entry/with_context_do.hpp>
@@ -43,9 +33,11 @@ public:
 		TESTER_ADD_TEST(referencesTest);
 		TESTER_ADD_TEST(recordsTest);
 		TESTER_ADD_TEST(staticArrayTest);
+		TESTER_ADD_TEST(stringSliceTest);
 		TESTER_ADD_TEST(unitsTest);
 		TESTER_ADD_TEST(initsDeinitsTest);
 		TESTER_ADD_TEST(pointersTest);
+		TESTER_ADD_TEST(backendDependentTest);
 	}
 
 protected:
@@ -57,127 +49,97 @@ protected:
 	 * Treats the `modules` directory as a single package with each test module as a submodule.
 	 */
 	void beforeAll() override {
-		// To see diagnostics
-		compiler::driver::initializeGlobalLogger();
-
-		auto subpath_package = [&](const std::string& subpath) {
-			return compiler::frontend::packages::RawPackageInfo{
-				.package_id   = base::StrID(subpath),
-				.package_name = base::StrID(subpath),
-				.version      = base::StrID("0.1.0"),
-				.package_path = fs::FilePath(path("modules/" + subpath + "/")),
-				.features     = {},
-				.dependencies = {},
-			};
+		std::vector<compiler::driver::test_utils::PackagePathAndName> packages{
+			{ fs::FilePath(path("modules/simple/")), "simple" },
+			{ fs::FilePath(path("modules/boolean_operations/")), "boolean_operations" },
+			{ fs::FilePath(path("modules/builtin_funcs/")), "builtin_funcs" },
+			{ fs::FilePath(path("modules/comparisons/")), "comparisons" },
+			{ fs::FilePath(path("modules/function_calls/")), "function_calls" },
+			{ fs::FilePath(path("modules/globals/")), "globals" },
+			{ fs::FilePath(path("modules/records/")), "records" },
+			{ fs::FilePath(path("modules/references/")), "references" },
+			{ fs::FilePath(path("modules/static_arrays/")), "static_arrays" },
+			{ fs::FilePath(path("modules/strings/")), "strings" },
+			{ fs::FilePath(path("modules/units/")), "units" },
+			{ fs::FilePath(path("modules/inits_deinits/")), "inits_deinits" },
+			{ fs::FilePath(path("modules/pointers/")), "pointers" },
+			{ fs::FilePath(path("modules/backend_dependent/")), "backend_dependent" },
 		};
-		std::vector<compiler::frontend::packages::RawPackageInfo> packages{
-			subpath_package("simple"),         subpath_package("boolean_operations"),
-			subpath_package("builtin_funcs"),  subpath_package("comparisons"),
-			subpath_package("function_calls"), subpath_package("globals"),
-			subpath_package("records"),        subpath_package("references"),
-			subpath_package("static_arrays"),  subpath_package("units"),
-			subpath_package("inits_deinits"),  subpath_package("pointers")
-		};
-
-		auto init_result = compiler::driver::initializeTheCompiler(
-			compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
-				.packages_info = std::move(packages),
-				.compilation_artifacts = {
-					.artifacts_path = artifacts_path,
-				},
-				.backend_options = {
-					.llvm_backend = {},
-				},
-				.debug_options         = {},
-				.incremental           = {},
-				.execution_options     = { .worker_count = 1 },
-				.stdlib_options = { .std_lib_type = compiler::driver::options_types::StdLibOptions::DefaultStd{} },
-			}
-		);
+		auto init_result
+			= compiler::driver::test_utils::initializeCompilerForTests(packages, artifacts_path);
 		assertTrue(init_result.status().isOk(), "Compiler initialization failed");
 	}
 
 private:
-	/**
-	 * Given module path from root module finds the submodule and returns its ID.
-	 * It works like that because the whole `modules` directory is a single package root
-	 * and each test module is a submodule of that package.
-	 */
-	compiler::frontend::ModuleID findSubmodule(
-		compiler::frontend::ModuleID start_module, const std::vector<std::string>& path
+	auto getModuleFromPath(
+		const std::string&              main_module_path,
+		const std::vector<std::string>& module_paths_to_load = {}
 	) {
-		compiler::frontend::ModuleID current_module = start_module;
-		for (const auto& part: path) {
-			std::cerr << "Finding submodule: " << part << "\n";
-			current_module = compiler::frontend::getModuleRef(current_module)
-			                     ->getSubmoduleByName(base::StrID(part))
-			                     .illegalAccess()
-			                     ->illegalAccess()
-			                     .getID();
-		}
-		return current_module;
-	}
-
-	auto getModuleFromPath(std::string module_path) {
 		using namespace compiler;
 
 		vm::code::CodeCollection code;
-		std::vector<std::string> path_parts = module_path | std::views::split('/')
-		                                    | std::views::transform([](auto&& part) {
-												  return std::string(part.begin(), part.end());
-											  })
-		                                    | std::ranges::to<std::vector>();
-		auto                     package_name = base::StrID(path_parts.front());
-		std::vector<std::string> submodule_path_parts(path_parts.begin() + 1, path_parts.end());
-		base::Optional<compiler::frontend::ModuleID> root_module_id;
-		for (const auto& pkg_info: global_state::getPackages())
-			if (pkg_info.getPackageID() == package_name)
-				root_module_id = pkg_info.getRootModule().illegalAccess().getID();
-		auto module = findSubmodule(*root_module_id, submodule_path_parts);
+		auto                     append_module_to_code = [&](const std::string& module_path) {
+            auto module = driver::test_utils::getModuleIdFromPath(module_path);
+            query::utils::withContextDo([&](query::Context& ctx) {
+                auto& top_level = ctx.query<helios::QueryModuleHOUT>(module)->valueOrPanic();
 
-		query::utils::withContextDo([&](query::Context& ctx) {
-			auto& top_level = ctx.query<helios::QueryModuleHOUT>(module)->valueOrPanic();
+                auto mir_unit = mir::lowerToMIRUnit(ctx, &top_level);
+                assertTrue(mir_unit.hasValue(), "MIR lowering failed");
 
-			auto mir_unit = mir::lowerToMIRUnit(ctx, &top_level);
-			assertTrue(mir_unit.hasValue(), "MIR lowering failed");
+                auto lir_unit = lir::lowerToLIRUnit(ctx, mir_unit.valueOrPanic());
 
-			auto lir_unit = lir::lowerToLIRUnit(ctx, mir_unit.valueOrPanic());
+                backend_vm::DVMCodeBuilder m(ctx, base::StrID(module_path), false, false);
+                m.insertLIRUnit(lir_unit);
 
-			backend_vm::DVMCodeBuilder m(ctx, false, false);
-			m.insertLIRUnit(lir_unit);
+                code.mergeFrom(m.build());
+            });
+		};
+		for (auto& module_path: module_paths_to_load) append_module_to_code(module_path);
+		append_module_to_code(main_module_path);
 
-			code = m.build();
-		});
+		base::deduplicateBy(code.functions, [](const vm::code::Function& f) { return f.name.str; });
+		base::deduplicateBy(code.types, [](const vm::code::TypeOfData& f) { return typeName(f); });
 		return code;
 	}
 
-	void runTest(
-		std::string                        module_path,
+	void runMultimoduleTest(
+		const std::string&                 module_path,
+		const std::vector<std::string>&    module_paths_to_load,
 		const base::Optional<std::string>& input     = {},
 		const base::Optional<std::string>& output    = {},
 		const std::vector<std::string>&    args      = {},
 		i64                                exit_code = 0
 	) {
 		using namespace compiler;
-		auto code = getModuleFromPath(std::move(module_path));
-		for (auto& type: code.types) vm::code::serializeType(type, std::cerr);
-		for (auto& func: code.functions) vm::code::serializeFunction(func, std::cerr);
+		auto code = getModuleFromPath(module_path, module_paths_to_load);
+		// for (auto& type: code.types) vm::code::serializeType(type, std::cerr);
+		// for (auto& func: code.functions) vm::code::serializeFunction(func, std::cerr);
 		runTestOnVm(code, input, output, args, exit_code);
 	}
 
+	void runTest(
+		const std::string&                 module_path,
+		const base::Optional<std::string>& input     = {},
+		const base::Optional<std::string>& output    = {},
+		const std::vector<std::string>&    args      = {},
+		i64                                exit_code = 0
+	) {
+		runMultimoduleTest(module_path, {}, input, output, args, exit_code);
+	}
+
 	void runFailTest(
-		std::string                        module_path,
+		const std::string&                 module_path,
 		const std::string&                 fail_msg = "",
 		const base::Optional<std::string>& input    = {},
 		const base::Optional<std::string>& output   = {},
 		const std::vector<std::string>&    args     = {}
 	) {
 		using namespace compiler;
-		auto code = getModuleFromPath(std::move(module_path));
-		for (auto& type: code.types) vm::code::serializeType(type, std::cerr);
-		for (auto& func: code.functions) vm::code::serializeFunction(func, std::cerr);
+		auto code = getModuleFromPath(module_path);
+		// for (auto& type: code.types) vm::code::serializeType(type, std::cerr);
+		// for (auto& func: code.functions) vm::code::serializeFunction(func, std::cerr);
 		auto result = runTestOnVmGetResult(code, input, output, args);
-		ASSERT_TRUE(not result.run_result.has_value());
+		ASSERT_NO_VALUE(result.run_result);
 		auto err_str = to_string(nlohmann::json(result.run_result.error()));
 		if (not err_str.contains(fail_msg)) {
 			fail(base::strConcat(
@@ -185,7 +147,7 @@ private:
 			));
 		}
 		const auto validation_result = vm::api::deinitAndValidate(result.pid);
-		ASSERT_TRUE(validation_result.has_value());
+		ASSERT_HAS_VALUE(validation_result);
 	}
 
 	void simpleTest() { runTest("simple", {}, {}, {}, 42); }
@@ -223,11 +185,23 @@ private:
 		runTest("static_arrays", {}, "1\n100\n200\n300\n600\n20\n42\n11\n13\n4\n", {}, 0);
 	}
 
+	// A string literal is lowered to a static byte-array global plus a `{ptr, len}` slice struct.
+	// Reading the length and indexing into the slice exercises the generated slice bytecode.
+	void stringSliceTest() {
+		runMultimoduleTest(
+			"strings", { "core/builtins", "core/panicking" }, {}, "14\nhello from vm!", {}, 0
+		);
+	}
+
 	void unitsTest() { runTest("units", {}, {}, {}, 0); }
 
 	void pointersTest() { runFailTest("pointers", "Accessing null pointer", {}, {}, {}); }
 
 	void initsDeinitsTest() { runTest("inits_deinits", {}, { "100\n" }, {}, 0); }
+
+	// The DVM backend must select the `@dvm_only_impl` of the `@backend_dependent`
+	// `getValue` (returning 10), not the `@native_only_impl` one (returning 20).
+	void backendDependentTest() { runTest("backend_dependent", {}, {}, {}, 10); }
 };
 
 

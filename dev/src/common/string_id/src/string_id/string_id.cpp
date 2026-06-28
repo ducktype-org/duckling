@@ -43,7 +43,7 @@ namespace base {
 		// next free position in last buffer
 		constinit usize next_pos = 0;
 
-		constinit bool any_buffer_exits = false;
+		constinit bool any_buffer_exists = false;
 
 		constinit std::mutex mutex;
 	}
@@ -97,17 +97,23 @@ namespace base {
 
 		base::RawView actual_data;
 
-		// @TODO: add test to this:
 		if (data.size() > DEFAULT_BUFFER_SIZE) {
 			// Data is too big to fit into any buffer
 			buffer_list.emplace_back(base::OwningView::copy(data));
-			actual_data      = RawView(lastBuffer().getBegin(), data.size());
-			any_buffer_exits = true;
+			actual_data       = RawView(lastBuffer().getBegin(), data.size());
+			any_buffer_exists = true;
+
+			// The dedicated buffer is now the last one. The bump-allocator state
+			// (next_pos/size_left) described the previous regular buffer; writing at
+			// next_pos into lastBuffer() would overwrite the just-interned big string.
+			// Mark the last buffer as full so the next small string opens a new one.
+			next_pos  = DEFAULT_BUFFER_SIZE;
+			size_left = 0;
 		} else {
-			if (size_left < data.size() || !any_buffer_exits) {
+			if (size_left < data.size() || !any_buffer_exists) {
 				// Data can't fit into last buffer
 				newBuffer();
-				any_buffer_exits = true;
+				any_buffer_exists = true;
 			}
 
 			actual_data = RawView(lastBuffer().getBegin() + next_pos, data.size());

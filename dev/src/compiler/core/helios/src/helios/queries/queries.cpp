@@ -7,6 +7,7 @@
 #include <helios/mangler/mangler.hpp>
 #include <helios/queries/function_queries.hpp>
 #include <helios/queries/global_data_queries.hpp>
+#include <helios/symbols/attributes.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
@@ -17,6 +18,7 @@
 #include <helios_private/errors/duplicated_definition.hpp>
 #include <helios_private/hout_creation/definition_generation/class_constructors.hpp>
 #include <helios_private/hout_creation/definition_generation/default_constructors.hpp>
+#include <helios_private/hout_creation/definition_generation/length_methods.hpp>
 #include <helios_private/hout_creation/definition_generation/to_string_methods.hpp>
 #include <helios_private/hout_creation/definition_generation/tuple_constructor.hpp>
 #include <helios_private/scopes/scopes.hpp>
@@ -25,6 +27,8 @@
 
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
+#include <base/extend_cpp/vector_utils.hpp>
+#include <base/types/ok_bad.hpp>
 
 #include <query_framework/query_errors.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
@@ -72,10 +76,7 @@ namespace compiler::helios {
 			std::vector<SymID>             class_symbols;
 			std::set<SymID>                default_ctors;
 			std::set<SymID>                additional_ctors;
-			std::set<SymID>                additional_tostrings;
-			// Keeps track of mangled names processed within the current module
-			// to detect duplicated function declarations at the HOUT level.
-			std::set<base::StrID> processed_mangled_names;
+			std::set<SymID>                additional_methods;
 
 			auto register_ctor_and_tostring_if_needed = [&](SymID sym) {
 				const auto& symbol_type = ctx.query<QueryTypeOfSymbol>(sym)->valueOrThrow();
@@ -89,7 +90,16 @@ namespace compiler::helios {
 					additional_ctors.insert(tuple_ctor.declaration->original_symbol);
 					const auto& tuple_tostring
 						= ctx.query<defgen::QueryToStringMethod>(tuple_type)->valueOrThrow();
-					additional_tostrings.insert(tuple_tostring.declaration->original_symbol);
+					additional_methods.insert(tuple_tostring.declaration->original_symbol);
+					return;
+				}
+				if (type.getKind() == tsh::Kind::Slice) {
+					const auto& length_method
+						= ctx.query<defgen::QueryLengthMethod>(type)->valueOrThrow();
+					additional_methods.insert(length_method.declaration->original_symbol);
+					const auto& tostring_method
+						= ctx.query<defgen::QueryToStringMethod>(type)->valueOrThrow();
+					additional_methods.insert(tostring_method.declaration->original_symbol);
 					return;
 				}
 
@@ -150,7 +160,7 @@ namespace compiler::helios {
 				}
 			}
 
-			appendToStringForSimpleTypes(out.functions, ctx);
+			appendMethodForSimpleTypes(out.functions, ctx);
 
 			for (auto class_sym: class_symbols) {
 				// we postpone this past function scheduling, as
@@ -172,7 +182,7 @@ namespace compiler::helios {
 			});
 
 			run_no_interrupt([&] {
-				for (SymID tostring_sym: additional_tostrings) {
+				for (SymID tostring_sym: additional_methods) {
 					const auto& hout_res = ctx.query<QueryCodeOfFun>(tostring_sym)->valueOrThrow();
 					out.functions.emplace_back(&hout_res);
 				}
@@ -185,39 +195,16 @@ namespace compiler::helios {
 					is_failed = true;
 					continue;
 				} else {
-					auto& func     = hout_function->valueOrPanic();
-					SymID func_sym = func.declaration->original_symbol;
-					// NOTE: Utilizing the mangler here is a bit hacky, but should work without issues.
-					base::StrID mangled_name
-						= ctx.query<compiler::helios::mangler::QueryMangledSymbol>({ func_sym });
-
-					if (mangled_name.isBad()) {
-						out.functions.emplace_back(&func);
-						continue;
-					}
-
-					if (processed_mangled_names.contains(mangled_name)) {
-						auto stable_pos  = func.declaration->origin.getStablePosition().value();
-						auto symbol_name = std::string(func.declaration->original_name.strView());
-
-						ctx.logInt(makeBox<dia_int::DuplicatedDefinitionError>(
-							symbol_name, stable_pos, "here"
-						));
-						is_failed = true;
-						continue;
-					}
-
-					processed_mangled_names.insert(mangled_name);
+					auto& func = hout_function->valueOrPanic();
 					out.functions.emplace_back(&func);
 				}
 			}
 
-			std::set<SymID>                 unique_funcs;
-			std::vector<CRef<HOUTFunction>> deduplicated_functions;
-			for (auto f: out.functions)
-				if (unique_funcs.insert(f->declaration->original_symbol).second)
-					deduplicated_functions.push_back(f);
-			out.functions = std::move(deduplicated_functions);
+			base::deduplicateBy(out.functions, [](CRef<HOUTFunction> f) {
+				return f->declaration->original_symbol;
+			});
+
+			if (duplicatesCheck(ctx, out).isBad()) is_failed = true;
 
 			if (is_failed) return query::Failed();
 
@@ -225,11 +212,55 @@ namespace compiler::helios {
 		}
 
 		/**
+		 * @brief Reports duplicated function definitions (functions sharing a mangled name).
+		 *
+		 * @return `base::BAD` if at least one duplicate was found. The caller is responsible for
+		 * failing the query gracefully; this must not throw, as `QueryModuleHOUT` does not catch
+		 * query-failure exceptions thrown from `provide`.
+		 */
+		static base::OkBad duplicatesCheck(query::Context& ctx, const HOUTUnit& unit) {
+			std::unordered_set<base::StrID> mangled_names;
+			bool                            found_duplicate = false;
+			for (const auto& func: unit.functions) {
+				base::StrID mangled_name = ctx.query<compiler::helios::mangler::QueryMangledSymbol>(
+					{ func->declaration->original_symbol }
+				);
+				if (mangled_name.isBad()) continue;
+				auto sym_id = func->declaration->original_symbol;
+
+				if (hasAttribute<attributes::DVMOnlyImpl>(sym_id)
+				    or hasAttribute<attributes::NativeOnlyImpl>(sym_id)) {
+					// We allow duplicate mangled names for functions with backend-dependent
+					// implementations, as they will be compiled separately and won't cause a conflict.
+					continue;
+				}
+
+				if (mangled_names.contains(mangled_name)) {
+					found_duplicate = true;
+
+					// Compiler-generated functions have no source position; there is nothing
+					// meaningful to point the user at, so we only emit the diagnostic for
+					// functions that originate from source.
+					auto stable_pos = func->declaration->origin.getStablePosition();
+					if (stable_pos.has_value()) {
+						auto symbol_name = std::string(func->declaration->original_name.strView());
+						ctx.logInt(makeBox<dia_int::DuplicatedDefinitionError>(
+							symbol_name, stable_pos.value(), "here"
+						));
+					}
+				} else {
+					mangled_names.insert(mangled_name);
+				}
+			}
+			return found_duplicate ? base::BAD : base::OK;
+		}
+
+		/**
 		 * @brief Appends the compiler-generated methods for simple types.
 		 * @param out_functions The vector of functions to be modified.
 		 * @param ctx The query context.
 		 */
-		static void appendToStringForSimpleTypes(
+		static void appendMethodForSimpleTypes(
 			std::vector<CRef<HOUTFunction>>& out_functions, Context& ctx
 		) {
 			auto append_to_string_for_simple_type = [&](tsh::AbstractType type) {
@@ -254,6 +285,11 @@ namespace compiler::helios {
 			append_to_string_for_simple_type(tsh::getBoolType());
 			append_to_string_for_simple_type(tsh::getStringType());
 			append_to_string_for_simple_type(tsh::getUnitType());
+			append_to_string_for_simple_type(tsh::getCharSliceType(ctx));
+			out_functions.emplace_back(&ctx.query<QueryCodeOfFun>(defgen::lengthMethodForType(
+																	  ctx, tsh::getCharSliceType(ctx)
+																  ))
+			                                ->valueOrThrow());
 		}
 
 		/**

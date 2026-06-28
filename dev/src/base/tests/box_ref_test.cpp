@@ -316,9 +316,9 @@ private:
 		{
 			MBox<LiveCounter> a = makeBox<LiveCounter>();
 
-			ASSERT_TRUE(a.toOpt().has_value());
-			ASSERT_TRUE(a.ref().toOpt().has_value());
-			ASSERT_TRUE(a.refMut().toOpt().has_value());
+			ASSERT_HAS_VALUE(a.toOpt());
+			ASSERT_HAS_VALUE(a.ref().toOpt());
+			ASSERT_HAS_VALUE(a.refMut().toOpt());
 
 			ASSERT_EQUAL(LiveCounter::count, 1);
 		}

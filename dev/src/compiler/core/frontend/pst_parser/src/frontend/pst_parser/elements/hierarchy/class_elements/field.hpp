@@ -7,7 +7,11 @@ namespace pst {
 	/**
 	 * @brief Class field element.
 	 */
-	class Field final: public ClassStmt {
+	class Field final: public Stmt {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(Field, Stmt, is_mutable);
+		CLONE_SUBELEMENTS();
+
+	protected:
 		bool is_mutable = true;
 		NAMED_CHILD(name, IdentifierWrapper);
 		NAMED_CHILD(type, CommaExprHolder);
@@ -16,8 +20,8 @@ namespace pst {
 		HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const override;
 
 	public:
-		CLASS_STMT_CHILD_CONSTRUCTOR(Field, ElementKind::ClassField);
-		CLASS_STMT_PARSE(Field);
+		STMT_CHILD_CONSTRUCTOR(Field, ElementKind::ClassField);
+		PARSE_DECL();
 
 		~Field() override = default;
 		void dprint(std::ostream& out) const final;

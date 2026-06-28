@@ -24,7 +24,7 @@ namespace compiler::helios {
 			auto expand_hout = getHoutOfExprWithExpectedType(
 								   ctx,
 								   expand->getValue().unlock(ctx)->getExpr(),
-								   tsh::SymbolType<>::withDefaults(tsh::getStringType())
+								   tsh::SymbolType<>::withDefaultsConst(tsh::getCharSliceType(ctx))
 			)
 			                       .valueOrThrow();
 			auto expand_ctv

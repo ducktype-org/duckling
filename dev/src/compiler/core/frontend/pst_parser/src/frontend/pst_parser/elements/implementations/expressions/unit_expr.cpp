@@ -3,7 +3,6 @@
 #include "preamble.hpp"
 
 namespace pst::expr {
-
 	MBox<ExprElement> UnitExpr::parse(LangParserState& state) {
 		if (!checkNonEmpty(state)) return nullptr;
 

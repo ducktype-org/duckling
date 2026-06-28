@@ -14,7 +14,7 @@
 #include <cstring>
 
 // Definition of the Duckling string representation.
-struct str {
+struct String {
 	// Pointer to the data of the string proper.
 	char* data;
 	// The length of the string proper.
@@ -26,6 +26,14 @@ struct str {
 	// memory and the pointer to the data (always non-negative). The total size
 	// of the allocated buffer is thus memory_begin_offset + memory_end_offset.
 	uint64_t memory_end_offset;
+};
+
+// Definition of the Duckling character slice representation, used for string literals.
+struct str {
+	// Pointer to the data of the character slice.
+	char* data;
+	// The length of the character slice.
+	uint64_t length;
 };
 
 // Definition of the Duckling dynamic list representation.
@@ -47,7 +55,7 @@ struct list {
 // The definitions will be given below.
 extern "C" {
 	// Basic small I/O @TODO: #2635 move to Duckling, probably
-	int32_t  builtin_output_char(char c);
+	int64_t  builtin_output_char(char c);
 	char     builtin_input_char();
 	int64_t  builtin_output_i64(int64_t v);
 	int64_t  builtin_input_i64();
@@ -57,12 +65,12 @@ extern "C" {
 	double   builtin_input_f64();
 
 	// String I/O @TODO: #2636 move to Duckling
-	int64_t print(str s);
-	str     builtin_input_string();
-	void    builtin_free_string(str s);
-	str     builtin_string_prepended(char c, str s);
-	str     builtin_string_appended(str s, char c);
-	str     builtin_string_concatenated(str s, str t);
+	int64_t print(String s);
+	String  builtin_input_string();
+	void    builtin_free_string(String s);
+	String  builtin_string_prepended(char c, String s);
+	String  builtin_string_appended(String s, char c);
+	String  builtin_string_concatenated(String s, String t);
 
 	// Runtime Allocators
 	void* builtin_alloc(uint64_t size);
@@ -75,14 +83,15 @@ extern "C" {
 	void     builtin_list_free(list* list);
 
 	// Stringification @TODO: #2634 move to Duckling, probably
-	str builtin_stringify_i64(int64_t v);
-	str builtin_stringify_u64(uint64_t v);
-	str builtin_stringify_f64(double v);
-	str builtin_stringify_char(char c);
-	str builtin_stringify_bool(bool b);
+	String builtin_stringify_i64(int64_t v);
+	String builtin_stringify_u64(uint64_t v);
+	String builtin_stringify_f64(double v);
+	String builtin_stringify_char(char c);
+	String builtin_stringify_bool(bool b);
+	String builtin_stringify_str(str s);
 }
 
-int32_t builtin_output_char(char c) { return printf("%c", c); }
+int64_t builtin_output_char(char c) { return printf("%c", c); }
 
 char builtin_input_char() {
 	char c;
@@ -115,7 +124,7 @@ double builtin_input_f64() {
 	return v;
 }
 
-str builtin_input_string() {
+String builtin_input_string() {
 	char*   line = nullptr;
 	size_t  len  = 0;
 	ssize_t read = getline(&line, &len, stdin);
@@ -124,7 +133,9 @@ str builtin_input_string() {
 		// In case of error or EOF, return an empty string.
 		// getline might have allocated memory, so free it.
 		free(line);
-		return str{ .data = nullptr, .length = 0, .memory_begin_offset = 0, .memory_end_offset = 0 };
+		return String{
+			.data = nullptr, .length = 0, .memory_begin_offset = 0, .memory_end_offset = 0
+		};
 	}
 
 	// Strip trailing newline if present
@@ -142,7 +153,7 @@ str builtin_input_string() {
 	memcpy(new_buffer, line, size_t(read));
 	free(line);
 
-	return str{
+	return String{
 		.data                = new_buffer,
 		.length              = uint64_t(read),
 		.memory_begin_offset = 0,
@@ -150,12 +161,12 @@ str builtin_input_string() {
 	};
 }
 
-int64_t print(str s) {
+int64_t print(String s) {
 	// Use fwrite to handle non-null-terminated strings and binary data safely.
 	return int64_t(fwrite(s.data, sizeof(char), s.length, stdout));
 }
 
-void builtin_free_string(str s) {
+void builtin_free_string(String s) {
 	if (s.data != NULL) {
 		// The data pointer might not be the start of the allocation.
 		// Adjust back by the offset to get the real start.
@@ -167,13 +178,13 @@ void builtin_free_string(str s) {
 	}
 }
 
-str builtin_string_appended(str s, char c) {
+String builtin_string_appended(String s, char c) {
 	char* new_data = (char*) malloc(s.length + 1);
 	if (!new_data) exit(1);
 	memcpy(new_data, s.data, s.length);
 	new_data[s.length] = c;
 
-	return str{
+	return String{
 		.data                = new_data,
 		.length              = s.length + 1,
 		.memory_begin_offset = 0,
@@ -181,13 +192,13 @@ str builtin_string_appended(str s, char c) {
 	};
 }
 
-str builtin_string_prepended(char c, str s) {
+String builtin_string_prepended(char c, String s) {
 	char* new_data = (char*) malloc(s.length + 1);
 	if (!new_data) exit(1);
 	new_data[0] = c;
 	memcpy(new_data + 1, s.data, s.length);
 
-	return str{
+	return String{
 		.data                = new_data,
 		.length              = s.length + 1,
 		.memory_begin_offset = 0,
@@ -195,7 +206,7 @@ str builtin_string_prepended(char c, str s) {
 	};
 }
 
-str builtin_string_concatenated(str s, str t) {
+String builtin_string_concatenated(String s, String t) {
 	uint64_t new_length = s.length + t.length;
 	char*    new_data   = (char*) malloc(new_length);
 	if (!new_data) exit(1);
@@ -203,11 +214,24 @@ str builtin_string_concatenated(str s, str t) {
 	memcpy(new_data, s.data, s.length);
 	memcpy(new_data + s.length, t.data, t.length);
 
-	return str{
+	return String{
 		.data                = new_data,
 		.length              = new_length,
 		.memory_begin_offset = 0,
 		.memory_end_offset   = new_length,
+	};
+}
+
+String builtin_stringify_str(str slice) {
+	char* new_data = (char*) malloc(slice.length);
+	if (!new_data) exit(1);
+	memcpy(new_data, slice.data, slice.length);
+
+	return String{
+		.data                = new_data,
+		.length              = slice.length,
+		.memory_begin_offset = 0,
+		.memory_end_offset   = slice.length,
 	};
 }
 
@@ -277,12 +301,12 @@ void builtin_list_free(list* list) {
 	}
 }
 
-str builtin_stringify_i64(int64_t v) {
+String builtin_stringify_i64(int64_t v) {
 	char stringified[21];
 	snprintf(stringified, sizeof(stringified), "%ld", v);
 	uint64_t length = strlen(stringified);
 
-	auto result = str{
+	auto result = String{
 		.data                = (char*) malloc(length),
 		.length              = uint64_t(length),
 		.memory_begin_offset = 0,
@@ -293,12 +317,12 @@ str builtin_stringify_i64(int64_t v) {
 	return result;
 }
 
-str builtin_stringify_u64(uint64_t v) {
+String builtin_stringify_u64(uint64_t v) {
 	char stringified[21];
 	snprintf(stringified, sizeof(stringified), "%lu", v);
 	uint64_t length = strlen(stringified);
 
-	auto result = str{
+	auto result = String{
 		.data                = (char*) malloc(length),
 		.length              = uint64_t(length),
 		.memory_begin_offset = 0,
@@ -309,12 +333,12 @@ str builtin_stringify_u64(uint64_t v) {
 	return result;
 }
 
-str builtin_stringify_f64(double v) {
+String builtin_stringify_f64(double v) {
 	char stringified[32];
 	snprintf(stringified, sizeof(stringified), "%g", v);
 	uint64_t length = strlen(stringified);
 
-	auto result = str{
+	auto result = String{
 		.data                = (char*) malloc(length),
 		.length              = uint64_t(length),
 		.memory_begin_offset = 0,
@@ -325,8 +349,8 @@ str builtin_stringify_f64(double v) {
 	return result;
 }
 
-str builtin_stringify_char(char c) {
-	auto result = str{
+String builtin_stringify_char(char c) {
+	auto result = String{
 		.data                = (char*) malloc(1),
 		.length              = 1,
 		.memory_begin_offset = 0,
@@ -336,11 +360,11 @@ str builtin_stringify_char(char c) {
 	return result;
 }
 
-str builtin_stringify_bool(bool b) {
+String builtin_stringify_bool(bool b) {
 	const char*    stringified = b ? "true" : "false";
 	const uint64_t length      = b ? 4 : 5;
 
-	auto result = str{
+	auto result = String{
 		.data                = (char*) malloc(length),
 		.length              = length,
 		.memory_begin_offset = 0,

@@ -28,6 +28,8 @@ namespace vm::code {
 			{ base::StrID("i16"), TypeOfData(PrimitiveType(base::StrID("i16"), Bytes{ 2 })) },
 			{ base::StrID("i32"), TypeOfData(PrimitiveType(base::StrID("i32"), Bytes{ 4 })) },
 			{ base::StrID("i64"), TypeOfData(PrimitiveType(base::StrID("i64"), Bytes{ 8 })) },
+			{ base::StrID("ptr_i8"),
+			  TypeOfData(PointerType(base::StrID("ptr_i8"), base::StrID("i8"))) },
 			{ base::StrID("ptr_i16"),
 			  TypeOfData(PointerType(base::StrID("ptr_i16"), base::StrID("i16"))) },
 			{ base::StrID("ptr_i32"),
