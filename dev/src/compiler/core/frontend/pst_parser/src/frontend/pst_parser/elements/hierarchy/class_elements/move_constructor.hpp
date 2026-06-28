@@ -7,10 +7,10 @@
 
 namespace pst {
 	/**
-	 * @brief Class copy constructor element.
+	 * @brief Class move constructor element.
 	 */
-	class CopyConstructor final: public ClassSpecial {
-		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(CopyConstructor, ClassSpecial);
+	class MoveConstructor final: public ClassSpecial {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(MoveConstructor, ClassSpecial);
 		CLONE_SUBELEMENTS();
 
 	protected:
@@ -19,10 +19,10 @@ namespace pst {
 		NAMED_CHILD(body, CodeBlockOrStmt);
 
 	public:
-		CLASS_STMT_SPEC_CONSTRUCTOR(CopyConstructor);
+		CLASS_STMT_SPEC_CONSTRUCTOR(MoveConstructor);
 		PARSE_DECL();
 
-		~CopyConstructor() override = default;
+		~MoveConstructor() override = default;
 		void dprint(std::ostream& out) const final;
 
 		[[nodiscard]]
@@ -37,12 +37,12 @@ namespace pst {
 
 		[[nodiscard]]
 		std::string elementType() const override {
-			return "Copy Constructor";
+			return "Move Constructor";
 		}
 
 		[[nodiscard]]
 		base::Optional<base::StrID> getInternalSymbolName() const final {
-			return base::StrID("copy");
+			return base::StrID("move");
 		}
 
 		void acceptVisitor(PstVisitor& visitor) const override;
