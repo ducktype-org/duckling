@@ -34,6 +34,7 @@
 #include <concepts>
 #include <cstddef>
 #include <cstring>
+#include <ostream>
 #include <span>
 #include <type_traits>
 #include <vector>
@@ -70,6 +71,42 @@ namespace query {
 	concept TriviallySerializable = std::is_trivially_copyable_v<
 		T>;  // && std::is_implicit_lifetime_v<T>: This is not supported by gcc14, although
 	         // std::is_trivially_copyable_v<T> implies std::is_implicit_lifetime_v<T>
+
+	/**
+	 * @brief Concept checking if a type has a 'void prettyPrint(std::ostream&) const' method.
+	 *
+	 * When the wrapped type satisfies this concept, the generated metadata struct overrides
+	 * BaseMetadata::prettyPrint to forward to the wrapped value's prettyPrint.
+	 */
+	template<typename T>
+	concept HasPrettyPrint = requires(const T& t, std::ostream& os) {
+		{ t.prettyPrint(os) } -> std::same_as<void>;
+	};
+
+	/**
+	 * @brief Pretty print a wrapped metadata value, forwarding to its own prettyPrint if available.
+	 *
+	 * If the value type defines 'void prettyPrint(std::ostream&) const' the call is forwarded to it.
+	 * Otherwise the default BaseMetadata::prettyPrint implementation is used.
+	 *
+	 * This is a function template so that the unused branch is discarded by 'if constexpr'; the same
+	 * dispatch written inline in a non-templated override would require both branches to be
+	 * well-formed for the concrete value type.
+	 *
+	 * @param os The output stream to print to.
+	 * @param value The wrapped value to print.
+	 * @param base The owning metadata instance, used for the default fallback.
+	 */
+	template<typename T>
+	void prettyPrintMetadataValue(
+		std::ostream& os, const T& value, const internal::BaseMetadata& base
+	) {
+		if constexpr (HasPrettyPrint<T>) {
+			value.prettyPrint(os);
+		} else {
+			base.internal::BaseMetadata::prettyPrint(os);
+		}
+	}
 
 }  // namespace query
 
@@ -124,6 +161,10 @@ namespace query {
 		[[nodiscard]]                                                                              \
 		base::StrID getTypeID() const override {                                                   \
 			return TYPE_ID;                                                                        \
+		}                                                                                          \
+                                                                                                   \
+		void prettyPrint(std::ostream& os) const override {                                        \
+			::query::prettyPrintMetadataValue(os, value, *this);                                   \
 		}                                                                                          \
                                                                                                    \
 		[[nodiscard]]                                                                              \
@@ -191,6 +232,10 @@ namespace query {
 		[[nodiscard]]                                                                              \
 		base::StrID getTypeID() const override {                                                   \
 			return TYPE_ID;                                                                        \
+		}                                                                                          \
+                                                                                                   \
+		void prettyPrint(std::ostream& os) const override {                                        \
+			::query::prettyPrintMetadataValue(os, value, *this);                                   \
 		}                                                                                          \
                                                                                                    \
 		[[nodiscard]]                                                                              \
@@ -261,6 +306,10 @@ namespace query {
 		[[nodiscard]]                                                                  \
 		base::StrID getStrIDValue() const override {                                   \
 			return value;                                                              \
+		}                                                                              \
+                                                                                       \
+		void prettyPrint(std::ostream& os) const override {                            \
+			::query::prettyPrintMetadataValue(os, value, *this);                       \
 		}                                                                              \
                                                                                        \
 	private:                                                                           \
