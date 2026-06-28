@@ -9,6 +9,7 @@ include(Replxx.cmake)
 include(StdCxxExp.cmake)
 include(TreeSitter.cmake)
 include(YamlCpp.cmake)
+include(Libffi.cmake)
 
 add_subdirectory(allocators)
 

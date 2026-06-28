@@ -639,11 +639,23 @@ namespace vm {
 		}
 	}
 
-	std::expected<low::LowCodePosition, api::ApiError> SafeVMThread::getCurrentPosition() {
+	std::expected<low::LowCodePosition, api::ApiError> SafeVMThread::getCurrentPosition(
+		base::Optional<usize> opt_frame_idx
+	) {
 		variant_match(getStatus()) {
 			variant_case_novalue(api::Paused) {
-				auto  frame = runtime_data.frame_stack_current;
-				auto& func  = *frame->current_function;
+				auto frame = runtime_data.frame_stack_current;
+
+				if_opt_some(opt_frame_idx, frame_index) {
+					u64 frames = getNumberOfCurrentStackFrames();
+					if (frame_index >= frames)
+						return std::unexpected(api::ApiError{
+							api::OtherError{ "Frame index out of bounds" } });
+
+					frame = &getStackFrame(frame_index);
+				}
+
+				auto& func = *frame->current_function;
 
 				return low::LowCodePosition{
 					.function          = &func,

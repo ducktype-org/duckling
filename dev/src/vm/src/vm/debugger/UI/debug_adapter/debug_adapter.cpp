@@ -2,6 +2,7 @@
 
 #include <vm/api/data/api_error.hpp>
 #include <vm/api/data/status.hpp>
+#include <vm/core/vmvalue/vmvalue.hpp>
 
 #include <iostream>
 #include <variant>
@@ -34,7 +35,14 @@ namespace vm::debugger::debug_adapter {
 					  std::string return_str = "[";
 					  bool        is_first   = true;
 
-					  for (auto val: status.exit_value) {
+					  // status.exit_value
+					  CORE_ASSERT(
+						  std::holds_alternative<std::vector<Ref<vm::VmValue>>>(status.exit_value),
+						  "Wrong variant member"
+					  );
+					  const auto& exit_value
+						  = std::get<std::vector<Ref<vm::VmValue>>>(status.exit_value);
+					  for (CRef<VmValue> val: exit_value) {
 						  std::string rendered_value     = "";
 						  bool        has_rendered_value = false;
 
@@ -67,9 +75,13 @@ namespace vm::debugger::debug_adapter {
 				  }
 			  }
 		  }),
+		  output_listener([this](const std::string& str) {
+			  this->sendEvent("output", { { "category", "console" }, { "output", str } });
+		  }),
 
 		  debugger() {
 		debugger.attachOnStatusChangedListener(status_change_listener);
+		debugger.attachOnOutputListener(output_listener);
 	}
 
 	DebugAdapter DebugAdapter::get() { return {}; }
@@ -137,6 +149,8 @@ namespace vm::debugger::debug_adapter {
 			handleContinue(req);
 		else if (cmd == "next")
 			handleNext(req);
+		else if (cmd == "evaluate")
+			handleEvaluate(req);
 		else
 			sendResponse(req, false, { { "message", "Unknown command" } });
 	}
@@ -255,5 +269,24 @@ namespace vm::debugger::debug_adapter {
 		}
 
 		sendResponse(req, true);
+	}
+
+	void DebugAdapter::handleEvaluate(const nlohmann::json& req) {
+		auto args = req["arguments"];
+
+		std::string user_input = args["expression"].get<std::string>();
+
+		auto result = debugger.sendInput(user_input);
+
+		if (!result.has_value()) {
+			std::string error_msg
+				= "Failed to process input: " + api::errorToString(result.error());
+			sendResponse(req, false, { { "message", error_msg } });
+			return;
+		}
+		nlohmann::json response_body
+			= { { "result", "Input accepted: " + user_input }, { "variablesReference", 0 } };
+
+		sendResponse(req, true, response_body);
 	}
 }

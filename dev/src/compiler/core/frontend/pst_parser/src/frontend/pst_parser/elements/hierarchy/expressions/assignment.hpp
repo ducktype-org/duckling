@@ -10,6 +10,10 @@ namespace pst::expr {
 	 * @note An assignment expression is supposed to appear only once in a stmt expression.
 	 */
 	class Assignment final: public ExprElement {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(Assignment, ExprElement);
+		CLONE_SUBELEMENTS();
+
+	protected:
 		using Lower = Comma;
 
 		NAMED_CHILD(variables, ExprElement);

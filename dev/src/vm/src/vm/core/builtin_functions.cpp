@@ -7,8 +7,8 @@
 #include <vm/api/vm.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/core/builtin_functions.hpp>
+#include <vm/core/process/ivmprocess.hpp>
 #include <vm/core/process/proc_io.hpp>
-#include <vm/core/process/vmprocess.hpp>
 #include <vm/core/safe/concurrency/synchronization_primitives.hpp>
 #include <vm/core/safe/safe_vmprocess.hpp>
 #include <vm/core/safe/safe_vmthread.hpp>
@@ -85,6 +85,10 @@ namespace vm::builtins {
 	}
 
 	// ============================== BUILTIN IMPLEMENTATIONS ==============================
+
+	void FunctionHandlers::builtinAbort(SafeVMThread& /*thread*/) {
+		throw vm::exceptions::VMPanicException{};
+	}
 
 	i64 FunctionHandlers::builtinInputI64(SafeVMThread& thread) {
 		thread.setProcessStatus(api::Sleeping{});
@@ -284,6 +288,7 @@ namespace vm::builtins {
 
 			FOR_EACH(
 				CASE_FUNC,
+				Abort,
 				InputI64,
 				OutputI64,
 				OutputI32,
@@ -313,6 +318,10 @@ namespace vm::builtins {
 		-> CRef<std::unordered_map<BuiltinFunctionID, std::pair<base::StrID, code::FuncSignature>>> {
 		static const std::unordered_map<BuiltinFunctionID, std::pair<base::StrID, code::FuncSignature>>
 			map{
+				{
+					BuiltinFunctionID::Abort,
+					{ base::StrID("abort"), code::FuncSignature({}, {}) },
+				},
 				{
 					BuiltinFunctionID::InputI64,
 					{ base::StrID("builtin_input_i64"),

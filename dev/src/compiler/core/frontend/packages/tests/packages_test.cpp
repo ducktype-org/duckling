@@ -55,9 +55,9 @@ private:
 		TestReporter reporter;
 		auto         json = nlohmann::json::parse(R"({ "id": "dep", "alias": "alias" })");
 		auto         dep  = RawDependencyInfo::fromJson(json, reporter.callback());
-		ASSERT_TRUE(dep.has_value());
+		ASSERT_HAS_VALUE(dep);
 		ASSERT_EQUAL(dep->package_id.str(), std::string("dep"));
-		ASSERT_TRUE(dep->alias.has_value());
+		ASSERT_HAS_VALUE(dep->alias);
 		ASSERT_EQUAL(dep->alias.value().str(), std::string("alias"));
 		ASSERT_EQUAL(reporter.errors, 0);
 	}
@@ -66,7 +66,7 @@ private:
 		TestReporter reporter;
 		auto         json = nlohmann::json::parse(R"({ "alias": "alias" })");
 		auto         dep  = RawDependencyInfo::fromJson(json, reporter.callback());
-		ASSERT_TRUE(!dep.has_value());
+		ASSERT_NO_VALUE(dep);
 		ASSERT_TRUE(reporter.errors > 0);
 	}
 
@@ -74,7 +74,7 @@ private:
 		TestReporter reporter;
 		auto         json = nlohmann::json::parse(R"({ "id": "dep", "alias": 123 })");
 		auto         dep  = RawDependencyInfo::fromJson(json, reporter.callback());
-		ASSERT_TRUE(!dep.has_value());
+		ASSERT_NO_VALUE(dep);
 		ASSERT_TRUE(reporter.errors > 0);
 	}
 
@@ -91,7 +91,7 @@ private:
             ]
         })");
 		auto         pkg  = RawPackageInfo::fromJson(json, reporter.callback());
-		ASSERT_TRUE(pkg.has_value());
+		ASSERT_HAS_VALUE(pkg);
 		ASSERT_EQUAL(pkg->package_id.str(), std::string("pkg_id"));
 		ASSERT_EQUAL(pkg->package_name.str(), std::string("pkg"));
 		ASSERT_EQUAL(pkg->version.str(), std::string("1.2.3"));
@@ -111,7 +111,7 @@ private:
             "dependencies": []
         })");
 		auto         pkg  = RawPackageInfo::fromJson(json, reporter.callback());
-		ASSERT_TRUE(pkg.has_value());
+		ASSERT_HAS_VALUE(pkg);
 		ASSERT_EQUAL(reporter.errors, 0);
 		ASSERT_TRUE(reporter.warnings > 0);
 	}
@@ -126,7 +126,7 @@ private:
             "dependencies": []
         })");
 		auto         pkg  = RawPackageInfo::fromJson(json, reporter.callback());
-		ASSERT_TRUE(!pkg.has_value());
+		ASSERT_NO_VALUE(pkg);
 		ASSERT_TRUE(reporter.errors > 0);
 	}
 
@@ -140,7 +140,7 @@ private:
             "dependencies": []
         })");
 		auto         pkg  = RawPackageInfo::fromJson(json, reporter.callback());
-		ASSERT_TRUE(!pkg.has_value());
+		ASSERT_NO_VALUE(pkg);
 		ASSERT_TRUE(reporter.errors > 0);
 	}
 
@@ -153,7 +153,7 @@ private:
             "dependencies": { "id": "dep" }
         })");
 		auto         pkg  = RawPackageInfo::fromJson(json, reporter.callback());
-		ASSERT_TRUE(!pkg.has_value());
+		ASSERT_NO_VALUE(pkg);
 		ASSERT_TRUE(reporter.errors > 0);
 	}
 
@@ -228,7 +228,7 @@ private:
 
 
 		auto pkg_info = createPackageInfo(raw, { raw, dep, lib }, reporter.callback());
-		ASSERT_TRUE(pkg_info.has_value());
+		ASSERT_HAS_VALUE(pkg_info);
 		ASSERT_EQUAL(reporter.errors, 0);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
@@ -239,12 +239,12 @@ private:
 			ASSERT_EQUAL(dep_pkg.getID().str(), std::string("dep"));
 
 			auto alias_dep = pkg_info->getPackageDependencyByAlias(base::StrID("l")).unlock(ctx);
-			ASSERT_TRUE(alias_dep.has_value());
+			ASSERT_HAS_VALUE(alias_dep);
 			ASSERT_EQUAL(alias_dep.value().unlock(ctx).getID().str(), std::string("lib"));
 
 			auto missing
 				= pkg_info->getPackageDependencyByAlias(base::StrID("missing")).unlock(ctx);
-			ASSERT_TRUE(!missing.has_value());
+			ASSERT_NO_VALUE(missing);
 		});
 
 		fs::FileManager::deleteFile(main_file);
@@ -299,7 +299,7 @@ private:
 			.dependencies = {},
 		};
 		auto pkg_info = createPackageInfo(raw, { raw, dep }, reporter.callback());
-		ASSERT_TRUE(pkg_info.has_value());
+		ASSERT_HAS_VALUE(pkg_info);
 		ASSERT_EQUAL(pkg_info->getVersion().str(), std::string("1.0.0"));
 		ASSERT_EQUAL(pkg_info->getFeatures()->size(), 1);
 		auto deps = pkg_info->getDependencies().illegalAccess();
@@ -323,7 +323,7 @@ private:
 		};
 
 		auto pkg_info = createPackageInfo(raw, { raw }, reporter.callback());
-		ASSERT_TRUE(!pkg_info.has_value());
+		ASSERT_NO_VALUE(pkg_info);
 		ASSERT_TRUE(reporter.errors > 0);
 
 		fs::FileManager::deleteFolder(empty_dir, true);

@@ -16,6 +16,8 @@ public:
 		TESTER_ADD_TEST(tooLarge);
 		TESTER_ADD_TEST(stringOutput);
 		TESTER_ADD_TEST(reallocZero);
+		TESTER_ADD_TEST(fstToDyn);
+		TESTER_ADD_TEST(reallocOnFst);
 	}
 
 private:
@@ -39,6 +41,21 @@ private:
 	void stringOutput() { runTestOnVm("string_output.dbc", {}, "test\ntest", { "test" }, 0); }
 
 	void reallocZero() { runTestOnVm("realloc_zero.dbc", "", "42", {}); }
+
+	void fstToDyn() {
+		runTestOnVm("fst_to_dyn.dbc", "0", "42", {});
+		assertExecutionPanickedWith(
+			runTestOnVmGetResult("fst_to_dyn.dbc", "1"),
+			vm::exceptions::VMOutOfBlockBoundsException::ERR_MSG
+		);
+	}
+
+	void reallocOnFst() {
+		assertExecutionPanickedWith(
+			runTestOnVmGetResult("realloc_on_fst.dbc", ""),
+			vm::exceptions::VMDynTableReAllocTypeMismatch::ERR_MSG
+		);
+	}
 };
 
 TESTER_COMMON_MAIN("/src/vm/tests/dynamic_table/");
