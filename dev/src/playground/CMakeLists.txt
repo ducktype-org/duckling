@@ -20,3 +20,5 @@ llvm_map_components_to_libnames(llvm_libs
     nativecodegen)
 target_include_directories(llvm_example_playground PRIVATE ${LLVM_INCLUDE_DIRS})
 target_link_libraries(llvm_example_playground ${llvm_libs} llvm_helpers)
+
+duck_add_playground(ffi ffi_playground.cpp USES Base PkgConfig::LIBFFI)
