@@ -3,7 +3,6 @@
 #include <frontend/pst_parser/lang_parser_element.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/mangler/mangler.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 #include <tsl/queries.hpp>

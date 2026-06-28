@@ -20,7 +20,6 @@
 #include <helios/hout/hout.hpp>
 #include <helios/mangler/mangler.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/tsh/queries.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 #include <tsl/queries.hpp>

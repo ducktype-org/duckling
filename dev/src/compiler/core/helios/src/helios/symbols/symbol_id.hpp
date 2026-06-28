@@ -141,7 +141,6 @@ namespace compiler::helios {
 	/**
 	 * @return PST Stmt element symbol was created from.
 	 * Panics if the element was not a statement.
-	 * @todo should this be an external API? It might depend on incremental compilation
 	 * implementation
 	 */
 	base::Optional<pst::Access<pst::Stmt>> stmt(query::Context&, SymID);

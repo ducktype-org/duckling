@@ -7,7 +7,6 @@
 
 #include <helios/mangler/mangler.hpp>
 #include <helios/queries/queries.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
