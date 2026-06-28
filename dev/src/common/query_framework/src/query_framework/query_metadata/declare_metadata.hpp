@@ -86,11 +86,11 @@ namespace query {
 	/**
 	 * @brief Pretty print a wrapped metadata value, forwarding to its own prettyPrint if available.
 	 *
-	 * If the value type defines 'void prettyPrint(std::ostream&) const' the call is forwarded to it.
-	 * Otherwise the default BaseMetadata::prettyPrint implementation is used.
+	 * If the value type defines 'void prettyPrint(std::ostream&) const' the call is forwarded to
+	 * it. Otherwise the default BaseMetadata::prettyPrint implementation is used.
 	 *
-	 * This is a function template so that the unused branch is discarded by 'if constexpr'; the same
-	 * dispatch written inline in a non-templated override would require both branches to be
+	 * This is a function template so that the unused branch is discarded by 'if constexpr'; the
+	 * same dispatch written inline in a non-templated override would require both branches to be
 	 * well-formed for the concrete value type.
 	 *
 	 * @param os The output stream to print to.
@@ -101,11 +101,10 @@ namespace query {
 	void prettyPrintMetadataValue(
 		std::ostream& os, const T& value, const internal::BaseMetadata& base
 	) {
-		if constexpr (HasPrettyPrint<T>) {
+		if constexpr (HasPrettyPrint<T>)
 			value.prettyPrint(os);
-		} else {
+		else
 			base.internal::BaseMetadata::prettyPrint(os);
-		}
 	}
 
 }  // namespace query

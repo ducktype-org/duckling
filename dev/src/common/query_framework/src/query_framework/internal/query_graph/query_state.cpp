@@ -420,28 +420,31 @@ namespace query::internal {
 			prev_graph.node_deps->erase(node);
 
 			auto key_value_pair = query_graph.node_deps->maybePut(node, std::move(prev_deps));
-			// If the node is an input query, it may already exist in the current graph (added via addSideInputNode)
-			// This is beacause addSideInputNode do not try to merge the input node from previous graph, but just add it to the current graph if it does not exist yet.
-			// This is the only exception to the rule, that green node saved in the prev graph will never be recomputed
+			// If the node is an input query, it may already exist in the current graph (added via
+			// addSideInputNode) This is beacause addSideInputNode do not try to merge the input
+			// node from previous graph, but just add it to the current graph if it does not exist
+			// yet. This is the only exception to the rule, that green node saved in the prev graph
+			// will never be recomputed
 			CORE_ASSERT(
-				key_value_pair != nullptr || node.q_id.getData().isInputQuery(), "Node should not exist in current graph during merge"
+				key_value_pair != nullptr || node.q_id.getData().isInputQuery(),
+				"Node should not exist in current graph during merge"
 			);
 
 			// Merge metadata for nodes with preserve_in_graph = true
 			if (node.q_id.getData().tags.preserve_in_graph && previous->metadata.has_value()) {
 				auto extracted_opt = previous->metadata->extract(node);
-				if (extracted_opt.has_value()){
-					// The input metadata might already exist in the current graph, so we use maybeEmplace to avoid overwriting it.
-					// Queries has waranty that the query with the same (stable) key will have the same effect
-					// This also include the metadata, so we do not need to merge anything here8
+				if (extracted_opt.has_value()) {
+					// The input metadata might already exist in the current graph, so we use
+					// maybeEmplace to avoid overwriting it. Queries has waranty that the query with
+					// the same (stable) key will have the same effect This also include the
+					// metadata, so we do not need to merge anything here8
 					metadata_storage.maybeEmplace(std::move(extracted_opt).value());
 				}
 			}
 
 			// Key value pair may be null for the input query
 			// If the input query was added to the graph concurrently on another worker
-			if (node.q_id.getData().isInputQuery())
-				continue;
+			if (node.q_id.getData().isInputQuery()) continue;
 
 			auto current_deps_holder = key_value_pair->value.getHolder();
 
