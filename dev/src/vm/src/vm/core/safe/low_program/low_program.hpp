@@ -119,7 +119,7 @@ namespace vm::low {
 			= 0;
 
 		[[nodiscard]]
-		virtual const ObjIdNameMap<LowFuncData, usize>& getFunctions() const
+		virtual const StableObjIdNameMap<LowFuncData, usize>& getFunctions() const
 			= 0;
 
 		[[nodiscard]]
@@ -175,7 +175,7 @@ namespace vm::low {
 
 		const TypeMetadata& getTypes() const override { return *types; }
 
-		const ObjIdNameMap<LowFuncData, usize>& getFunctions() const override { return functions; }
+		const StableObjIdNameMap<LowFuncData, usize>& getFunctions() const override { return functions; }
 
 		const StableObjIdNameMap<LowExternCFunction>& getExternCFunctions() const override {
 			return extern_c_functions;
@@ -222,12 +222,12 @@ namespace vm::low {
 	 */
 	class LowVMProgramCopy final: public ILowVMProgram {
 		CRef<LowVMProgram>               original_program;
-		ObjIdNameMap<LowFuncData, usize> functions{};
+		StableObjIdNameMap<LowFuncData, usize> functions{};
 
 	public:
 		const TypeMetadata& getTypes() const override { return original_program->getTypes(); }
 
-		const ObjIdNameMap<LowFuncData, usize>& getFunctions() const override { return functions; }
+		const StableObjIdNameMap<LowFuncData, usize>& getFunctions() const override { return functions; }
 
 		const StableObjIdNameMap<LowExternCFunction>& getExternCFunctions() const override {
 			return original_program->getExternCFunctions();
