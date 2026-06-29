@@ -1,0 +1,45 @@
+metadata:
+  type: "error"
+  family: "type_check"
+  name: "field_not_c_compatible"
+  code: "0"
+  active_from: "0.0.1"
+  active_until: "now"
+  template_type: "message"
+
+
+params:
+  field_name:
+    description: "Name of the rejected field."
+  field_type:
+    description: "Type of the rejected field."
+  reason:
+    description: "Why the type is not C-compatible."
+  code:
+    description: "The code snippet where the error occurred."
+  code_location:
+    description: "The location of the code snippet."
+
+
+header_message:
+  - "Field `"
+  - param: "field_name"
+  - "` of type `"
+  - param: "field_type"
+  - "` is not legal in an `extern(\"C\")` class: "
+  - param: "reason"
+  - "."
+
+description:
+  - codeblock:
+      param: "code"
+    location:
+      param: "code_location"
+
+
+pointer_messages:
+  cause:
+    priority: 1
+    type: "error"
+    content:
+      - "here"

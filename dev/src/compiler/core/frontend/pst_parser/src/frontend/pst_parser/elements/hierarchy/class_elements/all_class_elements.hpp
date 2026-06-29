@@ -5,3 +5,4 @@
 #include "destructor.hpp"        // IWYU pragma: export
 #include "field.hpp"             // IWYU pragma: export
 #include "method.hpp"            // IWYU pragma: export
+#include "move_constructor.hpp"  // IWYU pragma: export
