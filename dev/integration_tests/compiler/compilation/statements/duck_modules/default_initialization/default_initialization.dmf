@@ -127,7 +127,7 @@ fun testMultiDimArrays() -> () = {
 
 # ==================================== TUPLES ====================================
 fun testTuples() -> () = {
-    var primitiveTuple = (
+    var primitiveTuple: (
         i32,         # 0
         f64,         # 0.0
         bool,        # false
@@ -135,9 +135,14 @@ fun testTuples() -> () = {
         String,      # ""
         # @TODO: #2988 uncomment when fixed
         # List[i32],   # empty list
-        # type;
-    )
-    print(primitiveTuple.toString());
+        # type
+    );
+    
+    builtin_output_i64(primitiveTuple._1);                    # 0
+    builtin_output_f64(primitiveTuple._2);                    # 0.0
+    builtin_output_i64(if primitiveTuple._3 then 1 else 0);   # 0
+    builtin_output_char(primitiveTuple._4 - '\0' + 'A');      # 'A'
+    print(primitiveTuple._5);                                 # ""
 }
 
 # ==================================== NESTED CLASSES ====================================
