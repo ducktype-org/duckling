@@ -173,12 +173,11 @@ namespace compiler::tsl {
 			case Kind::Import:
 			case Kind::TypeTemplate:
 				return fail("non-runtime type cannot appear as a field type");
-			case Kind::COUNT:
-				CORE_UNREACHABLE();
 			case tsh::Kind::Slice:
 				return fail("`slice` is not C-compatible");
+			default:
+				CORE_UNREACHABLE();
 			}
-			CORE_UNREACHABLE();
 		}
 
 		QUERY_AUTO_CACHE_CREF

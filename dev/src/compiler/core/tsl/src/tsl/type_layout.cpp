@@ -362,9 +362,9 @@ namespace compiler::tsl {
 			  tsh::SymbolType<>::withDefaults(dynamic_array_type),
 			  ctx
 		  ),
-		  element_layout(CRef<TypeLayout>(
+		  element_layout(
 			  &ctx.query<QuerySymbolTypeLayout>(dynamic_array_type.getElementType())->valueOrThrow()
-		  )) {}
+		  ) {}
 
 	std::string DynamicArrayTypeLayout::toStringDefinition(
 		query::Context& ctx, bool recursive, const u32 indent
@@ -387,19 +387,19 @@ namespace compiler::tsl {
 		const tsh::StaticArrayAbstractType static_array_type, query::Context& ctx
 	):
 		  TypeLayoutABC(
-			  CRef<TypeLayout>(&ctx.query<QuerySymbolTypeLayout>(static_array_type.getElementType())
-	                                ->valueOrThrow())
-					  ->getSize()
+			  ctx.query<QuerySymbolTypeLayout>(static_array_type.getElementType())
+					  ->valueOrThrow()
+					  .getSize()
 				  * static_array_type.getSize(),
-			  CRef<TypeLayout>(&ctx.query<QuerySymbolTypeLayout>(static_array_type.getElementType())
-	                                ->valueOrThrow())
-				  ->getAlignment(),
+			  ctx.query<QuerySymbolTypeLayout>(static_array_type.getElementType())
+				  ->valueOrThrow()
+				  .getAlignment(),
 			  tsh::SymbolType<>::withDefaults(static_array_type),
 			  ctx
 		  ),
-		  element_layout(CRef<TypeLayout>(
+		  element_layout(
 			  &ctx.query<QuerySymbolTypeLayout>(static_array_type.getElementType())->valueOrThrow()
-		  )),
+		  ),
 		  element_count(static_array_type.getSize()) {}
 
 	std::string StaticArrayTypeLayout::toStringDefinition(
@@ -657,34 +657,32 @@ namespace compiler::tsl {
 		const tsh::PointerAbstractType pointer_type, query::Context& ctx
 	):
 		  TypeLayoutABC(POINTER_SIZE, tsh::SymbolType<>::withDefaults(pointer_type), ctx),
-		  pointee(CRef<TypeLayout>(
+		  pointee(
 			  &ctx.query<QueryAbstractTypeLayout>(pointer_type.getUnderlyingType())->valueOrThrow()
-		  )),
+		  ),
 		  pointer_kind(PointerKind::SinglePointer) {}
 
 	PointerTypeLayout::PointerTypeLayout(
 		const tsh::ManyPointerAbstractType pointer_type, query::Context& ctx
 	):
 		  TypeLayoutABC(POINTER_SIZE, tsh::SymbolType<>::withDefaults(pointer_type), ctx),
-		  pointee(CRef<TypeLayout>(
+		  pointee(
 			  &ctx.query<QueryAbstractTypeLayout>(pointer_type.getUnderlyingType())->valueOrThrow()
-		  )),
+		  ),
 		  pointer_kind(PointerKind::ManyPointer) {}
 
 	PointerTypeLayout::PointerTypeLayout(
 		const tsh::CPointerAbstractType pointer_type, query::Context& ctx
 	):
 		  TypeLayoutABC(POINTER_SIZE, tsh::SymbolType<>::withDefaults(pointer_type), ctx),
-		  pointee(CRef<TypeLayout>(
+		  pointee(
 			  &ctx.query<QueryAbstractTypeLayout>(pointer_type.getUnderlyingType())->valueOrThrow()
-		  )),
+		  ),
 		  pointer_kind(PointerKind::CPointer) {}
 
 	PointerTypeLayout::PointerTypeLayout(const tsh::SymbolType<> symbol_type, query::Context& ctx):
 		  TypeLayoutABC(POINTER_SIZE, symbol_type, ctx),
-		  pointee(CRef<TypeLayout>(
-			  &ctx.query<QueryAbstractTypeLayout>(symbol_type.getType())->valueOrThrow()
-		  )),
+		  pointee(&ctx.query<QueryAbstractTypeLayout>(symbol_type.getType())->valueOrThrow()),
 		  pointer_kind(PointerKind::SinglePointer) {
 		CORE_ASSERT(
 			symbol_type.getRefKind() != tsh::ReferenceKind::Direct,

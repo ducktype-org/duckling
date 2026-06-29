@@ -5,6 +5,8 @@
 #include <tsl/c_abi_converter.hpp>
 #include <tsl/c_abi_target.hpp>
 
+#include <base/extend_cpp/variant_match.hpp>
+
 #include <query_framework/context/context.hpp>
 #include <query_framework/entry/with_context_do.hpp>
 #include <tester/tester.hpp>
@@ -61,7 +63,7 @@ public:
 private:
 	void expectInt(const CAbiConversionResult& r, usize width, bool is_signed) {
 		ASSERT_TRUE(r.has_value());
-		ASSERT_TRUE(std::holds_alternative<ats::IntType>(r->value));
+		ASSERT_TRUE(base::holds<ats::IntType>(r->value));
 		const auto& i = std::get<ats::IntType>(r->value);
 		assertTrue(usize(i.width_bits) == width, "width mismatch");
 		assertTrue(i.is_signed == is_signed, "signedness mismatch");
@@ -69,7 +71,7 @@ private:
 
 	void expectFloat(const CAbiConversionResult& r, usize width) {
 		ASSERT_TRUE(r.has_value());
-		ASSERT_TRUE(std::holds_alternative<ats::FloatType>(r->value));
+		ASSERT_TRUE(base::holds<ats::FloatType>(r->value));
 		assertTrue(usize(std::get<ats::FloatType>(r->value).width_bits) == width, "width mismatch");
 	}
 
@@ -102,10 +104,11 @@ private:
 				expectFloat(queryConv(ctx, directOf(t)), width);
 			}
 
-			// f80 (x87 long double) is accepted only on targets with an x87 unit.
+			// f80 (x87 long double) is accepted only on x86_64 (x87 unit);
+			// aarch64 has no such format and must reject it.
 			const auto  f80_type = getFloatType(ctx, 80);
 			const auto& r        = queryConv(ctx, directOf(f80_type));
-			if (compilerTargetABI().data_layout.float_layouts.atMaybe(u8(80)).has_value())
+			if (&compilerTargetABI() == &abi::layout::x86_64Linux())
 				expectFloat(r, 80);
 			else
 				assertFalse(r.has_value(), "f80 should be rejected without an x87 unit");
@@ -116,18 +119,18 @@ private:
 		withContextDo([&](query::Context& ctx) -> void {
 			const auto& bool_conv = queryConv(ctx, directOf(getBoolType()));
 			ASSERT_TRUE(bool_conv.has_value());
-			assertTrue(std::holds_alternative<ats::BoolType>(bool_conv->value), "expected BoolType");
+			assertTrue(base::holds<ats::BoolType>(bool_conv->value), "expected BoolType");
 
 			const auto& char_conv = queryConv(ctx, directOf(getCharType()));
 			ASSERT_TRUE(char_conv.has_value());
-			assertTrue(std::holds_alternative<ats::CharType>(char_conv->value), "expected CharType");
+			assertTrue(base::holds<ats::CharType>(char_conv->value), "expected CharType");
 
 			const CPointerAbstractType c_pointer
 				= ctx.query<QueryCPointerType>({ directOf(i32Of(ctx)) });
 			const auto& ptr_conv = queryConv(ctx, directOf(c_pointer));
 			ASSERT_TRUE(ptr_conv.has_value());
 			assertTrue(
-				std::holds_alternative<ats::PointerType>(ptr_conv->value), "expected PointerType"
+				base::holds<ats::PointerType>(ptr_conv->value), "expected PointerType"
 			);
 		});
 	}
@@ -140,7 +143,7 @@ private:
 				= ctx.query<QueryStaticArrayType>({ directOf(i32Of(ctx)), 4 });
 			const auto& r = queryConv(ctx, directOf(arr_type));
 			ASSERT_TRUE(r.has_value());
-			ASSERT_TRUE(std::holds_alternative<ats::OpaqueType>(r->value));
+			ASSERT_TRUE(base::holds<ats::OpaqueType>(r->value));
 			const auto& o = std::get<ats::OpaqueType>(r->value);
 			assertTrue(usize(o.size) == 16, "array of 4 i32 should be 16 bytes");
 			assertTrue(usize(o.alignment) == 4, "array of i32 should have align 4");

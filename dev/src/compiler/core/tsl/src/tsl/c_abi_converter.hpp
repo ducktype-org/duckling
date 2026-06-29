@@ -10,9 +10,6 @@
  * holding either the converted type or a human-readable rejection reason.
  * The caller (typically the class-layout helper) is responsible for
  * reporting diagnostics with the proper field name and source position.
- *
- * Being a query, the result is cached and cycle detection is enabled
- * (`uses_qresult=true, allow_cycles=true`).
  */
 #pragma once
 
