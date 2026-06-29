@@ -6,7 +6,7 @@ add_library(TypeSystemLower STATIC
         src/tsl/c_abi_target.cpp
 )
 
-make_module(TypeSystemLower USES Base QueryFramework HELIOS AbiLayout AbiTypeSystem)
+make_module(TypeSystemLower USES Base QueryFramework HELIOS ForeignAbiUtils)
 
 duck_add_test(compiler tsl_simple tests/tsl_simple_test.cpp USES HELIOS)
 
