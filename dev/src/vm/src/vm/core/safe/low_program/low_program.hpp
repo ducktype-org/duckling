@@ -10,6 +10,7 @@
 
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/const_value.hpp>
+#include <vm/bytecode/validator/valid_function.hpp>
 #include <vm/core/safe/type_metadata/definitions.hpp>
 #include <vm/core/safe/type_metadata/type_metadata.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
@@ -33,6 +34,8 @@ namespace vm::low {
 		cf::ControlFlowGraph cfg;
 #endif
 		MicroBytecode bc;
+
+		MCRef<vm::code::valid_function::ValidFunction> high_func;
 
 		/// The maximum size of the local variables on stack required by the function frame.
 		usize local_stack_size;

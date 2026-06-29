@@ -392,10 +392,7 @@ namespace vm {
 				if_opt_some(
 					compiler.mapLowVMProgramPositionToCodeCollectionPosition(*opt_low_pos), high_pos
 				) {
-					auto func_opt
-						= loader.getHighProgram()->functions().atMaybe(high_pos.function_name);
-					CORE_ASSERT(func_opt, "We mapped low position to high, high-func should exist");
-					auto  func_ref    = *func_opt;
+					auto  func_ref    = frame.current_function->high_func;
 					auto  stack_state = func_ref->stack_states.at(high_pos.instruction_index);
 					auto& ls_db       = func_ref->local_stack;
 

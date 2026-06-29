@@ -141,6 +141,7 @@ namespace vm {
 			= low::cf::ControlFlowGraph(),  // This is okay because we never JIT the start function.
 #endif
 			.bc                  = {},
+			.high_func           = nullptr,
 			.local_stack_size    = 0,
 			.local_block_count   = func.result_types.size() + func.parameters.size(),
 			.arg_size            = 0,
@@ -246,6 +247,7 @@ namespace vm {
 			= low::cf::ControlFlowGraph(),  // This is okay because we never JIT the start function.
 #endif
 			.bc                  = {},
+			.high_func           = nullptr,
 			.local_stack_size    = 72,
 			.local_block_count   = 7,
 			.arg_size            = 0,
