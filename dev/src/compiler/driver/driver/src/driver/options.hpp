@@ -3,6 +3,8 @@
 #include <frontend/packages/packages.hpp>
 #include <global_state/backend_options.hpp>
 
+#include <base/extend_cpp/variant_match.hpp>
+
 #include <filesystem/file.hpp>
 #include <filesystem/file_path.hpp>
 
@@ -78,6 +80,32 @@ namespace compiler::driver {
 			 * no standard library at all.
 			 */
 			std::variant<NoStd, DefaultStd, CustomStd> std_lib_type = NoStd{};
+
+			[[nodiscard]] bool stdActive() const { return not base::holds<NoStd>(std_lib_type); }
+		};
+
+		struct LinkingOptions final {
+			/**
+			 * Options only supported on Native backend.
+			 */
+
+			/**
+			 * @brief Name of the linker to use.
+			 */
+			base::Optional<std::string> native_linker_path;
+			/**
+			 * @brief The options that will be passed "as-is" to linker.
+			 */
+			base::Optional<std::string> native_additional_link_options;
+			/**
+			 * @brief Whether to link the c standard library.
+			 */
+			bool native_link_c_standard_lib;
+
+			/**
+			 * Options only supported on DVM backend.
+			 */
+			// Empty for now...
 		};
 	}
 
@@ -121,6 +149,7 @@ namespace compiler::driver {
 		struct ReplMode final {
 			options_types::DebugOptions     debug_options;
 			options_types::ExecutionOptions execution_options;
+			options_types::StdLibOptions    stdlib_options;
 		};
 
 		/**
@@ -139,6 +168,7 @@ namespace compiler::driver {
 			options_types::ArtifactsOptions compilation_artifacts;
 			options_types::DebugOptions     debug_options;
 			options_types::ExecutionOptions execution_options;
+			options_types::StdLibOptions    stdlib_options;
 		};
 
 		/**

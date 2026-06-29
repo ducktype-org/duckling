@@ -6,6 +6,8 @@
 
 #pragma once
 
+#include "driver/options.hpp"
+
 #include <archiver/archive.hpp>
 #include <debug_info/debug_info.hpp>
 #include <driver/backend_type.hpp>
@@ -62,13 +64,6 @@ namespace compiler::driver {
 	};
 
 	/**
-	 * Temporary interface for compiling and running code on DVM in-memory.
-	 */
-	std::expected<RunOutput, std::string> runModuleOnDVM(
-		query::Context& ctx, frontend::ModuleID module_id
-	);
-
-	/**
 	 * @brief Compile a Duckling script (.ds file) into a single artifact.
 	 *
 	 * Reads the script source from global_state::ScriptContext, splits it into individual
@@ -84,14 +79,16 @@ namespace compiler::driver {
 	 * @param linking_options  Linker configuration (ignored for DVM backend).
 	 */
 	base::OkBad compileScript(
-		BackendType backend_type, const linker::LinkingOptions& linking_options
+		BackendType                          backend_type,
+		const options_types::StdLibOptions&  std_lib_opts,
+		const options_types::LinkingOptions& linking_opts
 	);
 
 	/**
 	 * Compile a Duckling script to DVM bytecode in-memory and execute it.
 	 * The script file must be set in global_state via init before calling this function.
 	 */
-	std::expected<RunOutput, std::string> runScriptOnDVM();
+	std::expected<RunOutput, std::string> runScriptOnDVM(bool load_stdlib);
 
 	struct KeyOf_CompileModule final {
 		frontend::ModuleID module_id;
