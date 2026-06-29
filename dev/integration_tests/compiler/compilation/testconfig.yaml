@@ -85,6 +85,7 @@ SubDirs:
   - functions
   - constants
   - classes
+  - extern_c
   - static_arrays
   - dynamic_arrays
   - optimisations
