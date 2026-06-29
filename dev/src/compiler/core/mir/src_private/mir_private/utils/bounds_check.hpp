@@ -1,9 +1,10 @@
 #pragma once
 
-#include <helios/hout/elements/expr.hpp>
-#include <helios/symbols/query_type_symbol_data.hpp>
+#include <diagnostic_interactive/stable_position.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 #include <mir_private/mir_builders.hpp>
+
+#include <base/collections/optional.hpp>
 
 namespace compiler::mir {
 	struct BoundsCheckBuilderContext final {
@@ -14,11 +15,18 @@ namespace compiler::mir {
 		ScopeRef         scope;
 	};
 
-	void sliceBoundsCheck(
+	/**
+	 * @brief Emits a bounds check `0 <= index < length`. Shared by slices, dynamic arrays
+	 * and static arrays.
+	 *
+	 * @param index  The (signed) index value being checked.
+	 * @param length The length of the indexed array.
+	 * @param pos    Source position of the indexing expression.
+	 */
+	void boundsCheck(
 		BoundsCheckBuilderContext                      context,
-		const helios::SliceTypeData&                   slice_data,
 		const MIRValue&                                index,
-		const MIRValue&                                slice,  // struct { ptr, length }
+		const MIRValue&                                length,
 		const base::Optional<dia_int::StablePosition>& pos
 	);
 }

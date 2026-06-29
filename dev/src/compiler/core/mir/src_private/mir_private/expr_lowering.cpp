@@ -3,11 +3,10 @@
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/symbols/query_type_symbol_data.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/utils/get_expr_symid.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
-#include <mir_private/utils/slices.hpp>
+#include <mir_private/utils/bounds_check.hpp>
 
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
@@ -323,60 +322,105 @@ namespace compiler::mir {
 		}
 
 		void visitIndexExpr(const hc::IndexExpr& expr) override {
-			if (expr.base->expression_type.getSymbolType().getType().getKind() == tsh::Kind::Meta) {
+			const auto base_type = expr.base->expression_type.getSymbolType().getType();
+			const auto base_kind = base_type.getKind();
+
+			if (base_kind == tsh::Kind::Meta) {
 				// @TODO: #1918 Implement that.
 				throw base::NotYetImplemented("Lowering of IndexExpr operating on Meta");
-			} else if (expr.base->expression_type.getSymbolType().getType().getKind()
-			           == tsh::Kind::Slice) {
-				auto bounds_check_fail_block = function.newBlock();
-				auto bounds_check_cond_block = function.newBlock();
-				auto entry_block             = function.newBlock();
-				entry_block->setTerminator(Instruction{
-					Operation::Jump, {}, { bounds_check_cond_block->getID() }, {}, expr_scope });
+			}
 
-				auto lowered_index = lowerSubExpr(*expr.index, entry_block);
-				auto index_val     = lowered_index.getResult(function);
-
-				auto lowered_base = lowerSubExpr(*expr.base, lowered_index.begin);
-				auto base_val     = lowered_base.getResult(function);
-
-				// We perform bound checking
-				auto slice_data = function.getContext().query<helios::QuerySliceTypeData>(
-					expr.base->expression_type.getSymbolType().getType()
-				);
-				sliceBoundsCheck(
-					{ .condition_block = bounds_check_cond_block,
-				      .fail_block      = bounds_check_fail_block,
-				      .ok_block        = continuation,
-				      .function        = function,
-				      .scope           = expr_scope },
-					*slice_data,
-					index_val,
-					base_val,
-					expr.getPosition()
-				);
-
-				variant_match(std::move(base_val.getVariant())) {
-					variant_case(MIRPlace, place) {
-						auto result = place.withField(function.getContext(), slice_data->ptr)
-						                  .withIndex(index_val);
-						valueOutput(lowered_base.begin, result);
-					}
-					variant_default { CORE_PANIC("Index base must be a MIRPlace"); }
+			// Slices and dynamic arrays store their data behind a `ptr` field, so indexing them is
+			// `Field(ptr) -> Index`. Static arrays and many-pointers index directly.
+			auto element_place = [&](const MIRPlace& place, const MIRValue& index_val) -> MIRPlace {
+				auto& ctx = function.getContext();
+				switch (base_kind) {
+				case tsh::Kind::Slice: {
+					auto slice_data = ctx.query<helios::QuerySliceTypeData>(base_type);
+					return place.withField(ctx, slice_data->ptr).withIndex(index_val);
 				}
+				case tsh::Kind::DynamicArray: {
+					auto dyn_data = ctx.query<helios::QueryDynamicArrayTypeData>(base_type);
+					return place.withField(ctx, dyn_data->ptr).withIndex(index_val);
+				}
+				case tsh::Kind::StaticArray:
+				case tsh::Kind::ManyPointer:
+					return place.withIndex(index_val);
+				default:
+					CORE_PANIC("IndexExpr base must be an indexable type");
+				}
+			};
 
-			} else {
+			// Many-pointers have no length, so they cannot be bounds-checked and are lowered
+			// directly.
+			if (base_kind == tsh::Kind::ManyPointer) {
 				auto lowered_index = lowerSubExpr(*expr.index, continuation);
 				auto index_val     = lowered_index.getResult(function);
 
 				auto lowered_base = lowerSubExpr(*expr.base, lowered_index.begin);
 				auto base_val     = lowered_base.getResult(function);
+
 				variant_match(std::move(base_val.getVariant())) {
 					variant_case(MIRPlace, place) {
-						valueOutput(lowered_base.begin, place.withIndex(index_val));
+						valueOutput(lowered_base.begin, element_place(place, index_val));
 					}
 					variant_default { CORE_PANIC("Index base must be a MIRPlace"); }
 				}
+				return;
+			}
+
+			// The length of the indexed array - slices and dynamic arrays read their `len` field,
+			// static arrays use their compile-time size.
+			auto array_length = [&](const MIRPlace& place) -> MIRValue {
+				auto& ctx = function.getContext();
+				switch (base_kind) {
+				case tsh::Kind::Slice: {
+					auto slice_data = ctx.query<helios::QuerySliceTypeData>(base_type);
+					return place.withField(ctx, slice_data->len);
+				}
+				case tsh::Kind::DynamicArray: {
+					auto dyn_data = ctx.query<helios::QueryDynamicArrayTypeData>(base_type);
+					return place.withField(ctx, dyn_data->len);
+				}
+				case tsh::Kind::StaticArray: {
+					const auto size = base_type.as<tsh::StaticArrayAbstractType>().getSize();
+					return MIRValue{ MIRConstant{
+						ctv::CompileTimeValue{ ctv::NumericValue{ static_cast<i64>(size) } } } };
+				}
+				default:
+					CORE_PANIC("Bounds check requires a sized array type");
+				}
+			};
+
+			// Now, before the index projection, perform the bounds check.
+			auto bounds_check_fail_block = function.newBlock();
+			auto bounds_check_cond_block = function.newBlock();
+			auto entry_block             = function.newBlock();
+			entry_block->setTerminator(Instruction{
+				Operation::Jump, {}, { bounds_check_cond_block->getID() }, {}, expr_scope });
+
+			auto lowered_index = lowerSubExpr(*expr.index, entry_block);
+			auto index_val     = lowered_index.getResult(function);
+
+			auto lowered_base = lowerSubExpr(*expr.base, lowered_index.begin);
+			auto base_val     = lowered_base.getResult(function);
+
+			variant_match(std::move(base_val.getVariant())) {
+				variant_case(MIRPlace, place) {
+					boundsCheck(
+						{ .condition_block = bounds_check_cond_block,
+					      .fail_block      = bounds_check_fail_block,
+					      .ok_block        = continuation,
+					      .function        = function,
+					      .scope           = expr_scope },
+						index_val,
+						array_length(place),
+						expr.getPosition()
+					);
+
+					valueOutput(lowered_base.begin, element_place(place, index_val));
+				}
+				variant_default { CORE_PANIC("Index base must be a MIRPlace"); }
 			}
 		}
 
@@ -787,8 +831,6 @@ namespace compiler::mir {
 				return Operation::MetaCreateRef;
 			case Const:
 				return Operation::MetaCreateConst;
-			case Len:
-				return Operation::ListLen;
 			default:
 				CORE_UNREACHABLE();
 			}
