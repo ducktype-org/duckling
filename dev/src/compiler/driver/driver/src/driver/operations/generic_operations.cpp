@@ -321,6 +321,93 @@ namespace compiler::driver {
 	QUERY_IMPLEMENTATION_BOILERPLATE(CompileModule);
 
 	namespace {
+		/**
+		 * @brief Links all per-module DVM .dbc files into a single merged package .dbc,
+		 * and merges per-module debug info files if provided.
+		 *
+		 * This is the DVM analogue of linking .o object files for LLVM.
+		 */
+		base::OkBad linkDVMPackage(
+			const std::vector<artifacts::FileArtifact>& objects,
+			const std::vector<artifacts::FileArtifact>& debug_info_artifacts,
+			const std::string&                          output_file_name
+		) {
+			vm::loader::Loader dvm_linker;
+
+			using std::ranges::to;
+			using std::ranges::views::transform;
+			auto parse_result = dvm_linker.parseCodeCollectionFromFiles(
+				objects | transform(&artifacts::FileArtifact::file) | to<std::vector>()
+			);
+
+			if (!parse_result.has_value()) {
+				CORE_USER_LOG(
+					"DVM linking failed: could not parse compiler-generated module bytecode file.\n"
+					"Reason: ",
+					parse_result.error(),
+					"\n"
+				);
+				return base::BAD;
+			}
+			vm::code::CodeCollection merged_code = std::move(parse_result.value());
+			// @TODO: #2895 deal with this once weak/strong symbols are added
+			merged_code.deduplicate();
+
+			auto output_file = global_state::getRootCollection()->fileArtifactAtOrNew(
+				base::StrID(output_file_name)
+			);
+			std::ofstream out(output_file.file.getFilePath().getPath(), std::ios::binary);
+			if (!out.is_open()) CORE_PANIC("Failed to open DVM package output file for writing");
+			vm::code::serializeCode(merged_code, out);
+
+			// Merge per-module debug info files into a single package debug info file.
+			if (!debug_info_artifacts.empty()) {
+				base::Optional<debug_info::DebugInfo> merged_debug_info;
+
+				for (const auto& di_art: debug_info_artifacts) {
+					std::ifstream in(di_art.file.getFilePath().getPath(), std::ios::binary);
+					if (!in.is_open()) {
+						CORE_USER_LOG("DVM: failed to open debug info artifact for merging\n");
+						return base::BAD;
+					}
+					auto di_or_error = debug_info::loadFromStream(in);
+					if (!di_or_error.has_value()) {
+						CORE_USER_LOG(
+							"DVM: failed to parse debug info file: ",
+							di_art.file.getFilePath().string(),
+							"\n"
+							"Reason: ",
+							di_or_error.error(),
+							"\n"
+						);
+						return base::BAD;
+					}
+					if (!merged_debug_info.has_value())
+						merged_debug_info.emplace(std::move(di_or_error.value()));
+					else
+						merged_debug_info->mergeFrom(std::move(di_or_error.value()));
+				}
+
+				if (merged_debug_info.has_value()) {
+					merged_debug_info->module_path = output_file.file.getFilePath().string();
+
+					auto output_file_stem = std::string_view(output_file_name);
+					// Try to keep the old behaviour, by manually stripping the most common DVM suffix.
+					if (output_file_stem.ends_with(".dbc")) output_file_stem.remove_suffix(4);
+
+					auto di_output = global_state::getRootCollection()->fileArtifactAtOrNew(
+						base::StrID(base::strConcat(output_file_stem, ".di.json").c_str())
+					);
+					std::ofstream di_out(di_output.file.getFilePath().getPath(), std::ios::binary);
+					if (!di_out.is_open())
+						CORE_PANIC("Failed to open DVM package debug info output file for writing");
+					debug_info::saveToStream(*merged_debug_info, di_out);
+				}
+			}
+
+			return base::OK;
+		}
+
 		std::expected<LIRUnitWithBackendName, std::string> compileScriptToLIRModuleData(
 			query::Context& ctx
 		) {
@@ -524,17 +611,16 @@ namespace compiler::driver {
 
 				auto dvm_module = compileLIRModuleToDVM(&script_lir.value(), ctx, false);
 
-				auto& script_context  = global_state::getScriptContext();
-				auto  output_artifact = global_state::getRootCollection()->fileArtifactAtOrNew(
-                    base::StrID(base::strConcat(script_context.script_file.stem(), ".dbc"))
-                );
+				auto script_obj_artifact = global_state::getRootCollection()->fileArtifactAtOrNew(
+					base::StrID(base::strConcat(script_lir->module_id, ".dbc"))
+				);
 				std::ofstream output_file(
-					output_artifact.file.getFilePath().getPath(), std::ios::binary
+					script_obj_artifact.file.getFilePath().getPath(), std::ios::binary
 				);
 				if (!output_file.is_open()) {
 					error_message = base::strConcat(
 						"Failed to open output file for script bytecode: ",
-						output_artifact.file.getFilePath().string()
+						script_obj_artifact.file.getFilePath().string()
 					);
 					return;
 				}
@@ -542,9 +628,21 @@ namespace compiler::driver {
 				vm::code::serializeCode(dvm_module.code, output_file);
 				output_file.close();
 
-				CORE_USER_LOG(
-					"Script bytecode written to: ", output_artifact.file.getFilePath().string(), "\n"
-				);
+				auto& script_context   = global_state::getScriptContext();
+				auto  output_file_name = base::strConcat(script_context.script_file.stem(), ".dbc");
+
+				std::vector<artifacts::FileArtifact> dvm_objs = { std::move(script_obj_artifact) };
+				if (link_std_lib)
+					for (auto dvm_std_obj: getStdLibDVMArtifacts())
+						dvm_objs.emplace_back(std::move(dvm_std_obj));
+
+
+				if (linkDVMPackage(dvm_objs, {}, output_file_name).isBad()) {
+					error_message = "Linking of the DVM objects failed.";
+					return;
+				}
+
+				CORE_USER_LOG("Script bytecode written to: ", output_file_name, "\n");
 			});
 
 			if (error_message.has_value()) {
@@ -567,9 +665,7 @@ namespace compiler::driver {
 				constructNativeLinkerOptions(linking_opts, std_lib_opts)
 			);
 		case BackendType::DVM:
-			return compileScriptToDVMBytecode(
-				std_lib_opts.stdActive()
-			);
+			return compileScriptToDVMBytecode(std_lib_opts.stdActive());
 		default:
 			CORE_PANIC("bad backend type");
 		}
@@ -587,7 +683,7 @@ namespace compiler::driver {
 			}
 
 			auto dvm_module = compileLIRModuleToDVM(&script_lir.value(), ctx, false);
-			
+
 			if (load_stdlib) {
 				using std::ranges::to;
 				using std::ranges::views::transform;
@@ -628,92 +724,6 @@ namespace compiler::driver {
 
 		if (error_message.has_value()) return std::unexpected(error_message.value());
 		return output.value();
-	}
-
-	/**
-	 * @brief Links all per-module DVM .dbc files into a single merged package .dbc,
-	 * and merges per-module debug info files if provided.
-	 *
-	 * This is the DVM analogue of linking .o object files for LLVM.
-	 */
-	base::OkBad linkDVMPackage(
-		const std::vector<artifacts::FileArtifact>& objects,
-		const std::vector<artifacts::FileArtifact>& debug_info_artifacts,
-		const std::string&                          output_file_name
-	) {
-		vm::loader::Loader dvm_linker;
-
-		using std::ranges::to;
-		using std::ranges::views::transform;
-		auto parse_result = dvm_linker.parseCodeCollectionFromFiles(
-			objects | transform(&artifacts::FileArtifact::file) | to<std::vector>()
-		);
-
-		if (!parse_result.has_value()) {
-			CORE_USER_LOG(
-				"DVM linking failed: could not parse compiler-generated module bytecode file.\n"
-				"Reason: ",
-				parse_result.error(),
-				"\n"
-			);
-			return base::BAD;
-		}
-		vm::code::CodeCollection merged_code = std::move(parse_result.value());
-		// @TODO: #2895 deal with this once weak/strong symbols are added
-		merged_code.deduplicate();
-
-		auto output_file
-			= global_state::getRootCollection()->fileArtifactAtOrNew(base::StrID(output_file_name));
-		std::ofstream out(output_file.file.getFilePath().getPath(), std::ios::binary);
-		if (!out.is_open()) CORE_PANIC("Failed to open DVM package output file for writing");
-		vm::code::serializeCode(merged_code, out);
-
-		// Merge per-module debug info files into a single package debug info file.
-		if (!debug_info_artifacts.empty()) {
-			base::Optional<debug_info::DebugInfo> merged_debug_info;
-
-			for (const auto& di_art: debug_info_artifacts) {
-				std::ifstream in(di_art.file.getFilePath().getPath(), std::ios::binary);
-				if (!in.is_open()) {
-					CORE_USER_LOG("DVM: failed to open debug info artifact for merging\n");
-					return base::BAD;
-				}
-				auto di_or_error = debug_info::loadFromStream(in);
-				if (!di_or_error.has_value()) {
-					CORE_USER_LOG(
-						"DVM: failed to parse debug info file: ",
-						di_art.file.getFilePath().string(),
-						"\n"
-						"Reason: ",
-						di_or_error.error(),
-						"\n"
-					);
-					return base::BAD;
-				}
-				if (!merged_debug_info.has_value())
-					merged_debug_info.emplace(std::move(di_or_error.value()));
-				else
-					merged_debug_info->mergeFrom(std::move(di_or_error.value()));
-			}
-
-			if (merged_debug_info.has_value()) {
-				merged_debug_info->module_path = output_file.file.getFilePath().string();
-
-				auto output_file_stem = std::string_view(output_file_name);
-				// Try to keep the old behaviour, by manually stripping the most common DVM suffix.
-				if (output_file_stem.ends_with(".dbc")) output_file_stem.remove_suffix(4);
-
-				auto di_output = global_state::getRootCollection()->fileArtifactAtOrNew(
-					base::StrID(base::strConcat(output_file_stem, ".di.json").c_str())
-				);
-				std::ofstream di_out(di_output.file.getFilePath().getPath(), std::ios::binary);
-				if (!di_out.is_open())
-					CORE_PANIC("Failed to open DVM package debug info output file for writing");
-				debug_info::saveToStream(*merged_debug_info, di_out);
-			}
-		}
-
-		return base::OK;
 	}
 
 	namespace {

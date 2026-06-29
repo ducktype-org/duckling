@@ -962,6 +962,7 @@ clah::Clah getClahForMain() {
 						   }))
 	    .addSubcommand(
 			clah::Clah("repl", "Start an interactive REPL session")
+				.add(getClahStdLibOptions())
 				.add(clah::ParamBuilder::ofFlag()
 	                     .addLongName("no-completions")
 	                     .addShortDesc("Disable REPL autocompletions and hints.")
@@ -983,12 +984,14 @@ clah::Clah getClahForMain() {
 	                     .addShortDesc("Replay history without output (internal).")
 	                     .build())
 				.setHandler([](const clah::ParsingResult& options) -> int {
+					auto stdlib_opts = getStdLibOptionsFromClah(options);
 					auto init_result = compiler::driver::initializeTheCompiler(
 								   compiler::driver::CompilerModeOfOperationAndOptions::ReplMode{
 									   .debug_options = debug_options::getDebugOptionsFromClah(options),
 									   .execution_options = {
 										   .worker_count = 1,
 									   },
+									   .stdlib_options = stdlib_opts
 								   }
 							   );
 					if (init_result.status().isBad()) {
@@ -1006,6 +1009,8 @@ clah::Clah getClahForMain() {
 					compiler::repl::ReplResult repl_result = compiler::repl::ReplResult::success();
 					{
 						compiler::repl::ReplSession session(completions, bracketed);
+						if (stdlib_opts.stdActive()) session.preloadStandardLibrary();
+						
 						auto replay_count_opt = options.getValue<i64>("history-entries");
 						i64  replay_count     = replay_count_opt.copyValueOr(0);
 						bool replay_silent    = options.isFlag("silent");
