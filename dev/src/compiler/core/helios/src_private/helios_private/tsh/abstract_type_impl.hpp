@@ -1008,6 +1008,9 @@ namespace compiler::tsh {
 		}
 
 		[[nodiscard]]
+		compiler::helios::SymbolABI getABI(query::Context& ctx) const;
+
+		[[nodiscard]]
 		base::Optional<ClassAbstractType> getBaseClassType(query::Context& ctx) const;
 
 		[[nodiscard]]

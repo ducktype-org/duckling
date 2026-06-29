@@ -7,7 +7,7 @@
 
 namespace pst {
 	/**
-	 * @brief Class constructor element.
+	 * @brief Class copy constructor element.
 	 */
 	class CopyConstructor final: public ClassSpecial {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(CopyConstructor, ClassSpecial);
