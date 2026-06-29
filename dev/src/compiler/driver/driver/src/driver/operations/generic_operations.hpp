@@ -6,8 +6,6 @@
 
 #pragma once
 
-#include "driver/options.hpp"
-
 #include <archiver/archive.hpp>
 #include <debug_info/debug_info.hpp>
 #include <driver/backend_type.hpp>

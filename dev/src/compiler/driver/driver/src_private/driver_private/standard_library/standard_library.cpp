@@ -215,13 +215,14 @@ namespace compiler::driver {
 			// If pkg is not loaded then we skip it.
 			if (pkg == global_state::getPackages().end()) continue;
 
-			tasks.emplace_back(
-				pkg->getRootModule().illegalAccess().getID(),
-				BuildTargetLLVMStaticLibrary{
-					.output_file_name  = base::StrID(config.name + ".a"),
-					.archiving_options = {},
-				}
-			);
+			if (global_state::getBackendOptions()->llvm_backend.has_value())
+				tasks.emplace_back(
+					pkg->getRootModule().illegalAccess().getID(),
+					BuildTargetLLVMStaticLibrary{
+						.output_file_name  = base::StrID(config.name + ".a"),
+						.archiving_options = {},
+					}
+				);
 			tasks.emplace_back(
 				pkg->getRootModule().illegalAccess().getID(),
 				BuildTargetDVMLibrary{

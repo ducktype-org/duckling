@@ -36,3 +36,4 @@ SubDirs:
   - basic_tests
   - declarations
   - lists_and_arrays
+  - standard_library

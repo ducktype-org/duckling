@@ -1,7 +1,5 @@
 #include "task.hpp"
 
-#include "driver/options.hpp"
-
 #include <driver/diagnostics/log_helpers.hpp>
 #include <driver_private/standard_library/standard_library.hpp>
 #include <frontend/module_tree/functors.hpp>

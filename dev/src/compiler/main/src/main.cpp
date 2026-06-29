@@ -6,10 +6,9 @@
  * @note: The ideas from here might be one day separated into a framework.
  */
 
-#include "driver/options.hpp"
-
 #include <archiver/archive.hpp>
 #include <diagnostic_interactive/logger.hpp>
+#include <diagnostic_interactive/module_flags/module_flags.hpp>
 #include <driver/diagnostics/log_helpers.hpp>
 #include <driver/exit.hpp>
 #include <driver/initialize.hpp>
@@ -943,9 +942,14 @@ clah::Clah getClahForMain() {
 								   return 1;
 							   }
 
+							   // `run` shares its stdout with the script being executed, so build
+		                       // progress (standard library compilation, archiving, ...) must not
+		                       // be printed there.
+							   logger::enable_user_logs    = false;
 							   auto std_compilation_result = compiler::driver::compilePackages(
 								   compiler::driver::getLoadedStdLibCompilationTasks()
 							   );
+							   logger::enable_user_logs = true;
 							   if (std_compilation_result.isBad()) {
 								   compiler::driver::exit();
 								   return 1;
@@ -963,6 +967,7 @@ clah::Clah getClahForMain() {
 	    .addSubcommand(
 			clah::Clah("repl", "Start an interactive REPL session")
 				.add(getClahStdLibOptions())
+				.addCustomVerification(verifyStdLibOptions)
 				.add(clah::ParamBuilder::ofFlag()
 	                     .addLongName("no-completions")
 	                     .addShortDesc("Disable REPL autocompletions and hints.")
@@ -1010,7 +1015,7 @@ clah::Clah getClahForMain() {
 					{
 						compiler::repl::ReplSession session(completions, bracketed);
 						if (stdlib_opts.stdActive()) session.preloadStandardLibrary();
-						
+
 						auto replay_count_opt = options.getValue<i64>("history-entries");
 						i64  replay_count     = replay_count_opt.copyValueOr(0);
 						bool replay_silent    = options.isFlag("silent");
