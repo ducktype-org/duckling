@@ -1,5 +1,7 @@
 # This has to be static due to cyclic dependencies in helios->mir->lir->dvm for comp time, and helios<->TS cyclic dependency.
 add_library(HELIOS STATIC
+	src_private/helios_private/attributes/backend_dependent.cpp
+	src_private/helios_private/hout/hout.cpp
 	src_private/helios_private/symbols/symbol_data.cpp
 	src_private/helios_private/symbols/symbols.cpp
 	src_private/helios_private/scopes/scopes.cpp
@@ -52,12 +54,14 @@ add_library(HELIOS STATIC
 	src/helios/symbols/query_type_symbol_data.cpp
 	src/helios/symbols/query_type_from_definition.cpp
 	src/helios/symbols/query_class_of_member.cpp
+	src/helios/symbols/attributes.cpp
 	src/helios/symbols/symbol_abi.cpp
 	src/helios/symbols/symbol_id.cpp
 	src/helios/utils/get_expr_symid.cpp
 	src/helios/utils/symbol_list.cpp
 	src/helios/repl_utils/repl_queries.cpp
 	src/helios/repl_utils/script_helpers.cpp
+	src/helios/repl_utils/repl_symbols.cpp
 	src/helios/ls_utils/ls_utils.cpp
 	src/helios/utils/go_to_definition.cpp
 	src/helios/tsh/queries/implicit_coercibility.cpp

@@ -1,0 +1,7 @@
+type primitive: MyInt64 8
+
+function main {} -> { i64 } {
+    mov_p64_imm ret0, 0;
+    cast_p64_type ret0, MyInt64;
+	ret;
+}

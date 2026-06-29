@@ -3,6 +3,8 @@
 #include "preamble.hpp"
 
 namespace pst {
+	CLONE_SUB_ELEMENTS_DEF(CallArgument, arg_name, arg);
+
 	MBox<CallArgument> CallArgument::parse(LangParserState& state) {
 		auto out = makeBox<CallArgument>(state);
 		if (state[1].is(lang_def::NamedOperator::Assign)) {

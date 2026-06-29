@@ -127,7 +127,7 @@ pub struct Profile {
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[cfg_attr(test, derive(Eq, PartialEq))]
-#[serde(rename_all = "kebab-case", untagged)]
+#[serde(rename_all = "kebab-case")]
 /// Duckc optimization level.
 pub enum OptLevel {
     Zero,

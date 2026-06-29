@@ -7,6 +7,10 @@ namespace pst {
 	 * @brief Element representing an expression group inside of a format string
 	 */
 	class FormatSubExpression final: public FormatSubElement {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(FormatSubExpression, FormatSubElement);
+		CLONE_SUBELEMENTS();
+
+	protected:
 		NAMED_CHILD(expr, UniversalAllowBlockExprHolder);
 
 	public:

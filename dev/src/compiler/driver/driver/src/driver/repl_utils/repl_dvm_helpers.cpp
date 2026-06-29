@@ -4,7 +4,9 @@
 #include <driver_private/backend_operations/compile_dvm.hpp>
 #include <driver_private/lir_unit_with_name.hpp>
 #include <driver_private/operations.hpp>
+#include <driver_private/standard_library/standard_library.hpp>
 #include <frontend/module_tree/module_tree.hpp>
+#include <frontend/module_tree/queries.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 #include <mir/mir_lowering/mir_queries.hpp>
@@ -17,6 +19,10 @@
 
 #include <vm/api/vm.hpp>
 #include <vm/bytecode/bytecode.hpp>
+
+#include <functional>
+#include <variant>
+#include <vector>
 
 namespace compiler::repl {
 	// Platform portability check: DVM assumes bool is 1 byte (stored as i8).
@@ -117,6 +123,38 @@ namespace compiler::repl {
 			});
 	}
 
+	std::expected<void, std::string> preloadStandardLibrary(
+		query::Context& ctx, vm::PID pid, backend_vm::ReplDVMCodeBuilder& lowering_context
+	) {
+		const auto root_modules = driver::getStandardLibraryRootModules();
+		if (root_modules.empty()) return {};  // No standard library registered: nothing to load.
+
+		// Collect every module reachable from the standard library package roots.
+		std::vector<frontend::ModuleID>         modules;
+		std::function<void(frontend::ModuleID)> collect_modules
+			= [&](frontend::ModuleID module_id) {
+				  modules.push_back(module_id);
+				  auto submodules = ctx.query<frontend::QuerySubmodules>(module_id);
+				  for (const auto& submodule: *submodules) collect_modules(submodule.second);
+			  };
+		for (const auto root_module: root_modules) collect_modules(root_module);
+
+		// Lower every module to in-memory DVM code and merge it into a single batch. Loading the
+		// whole standard library at once lets the loader resolve cross-module references that a
+		// per-module load would reject as unknown functions.
+		vm::code::CodeCollection preload_code;
+		for (const auto module_id: modules) {
+			auto lir_data_qr = driver::compileModuleToLIRModuleData(ctx, module_id);
+			if (lir_data_qr.hasFailed())
+				return std::unexpected("Failed to compile standard library module to LIR");
+			preload_code.mergeFrom(lowering_context.insertLIRUnitAndCollectNewlyLoweredCode(
+				lir_data_qr.valueOrPanic().lir_unit
+			));
+		}
+
+		return vm::api::loadCode(pid, preload_code).transform_error(vm::api::errorToString);
+	}
+
 	// @TODO: #1817 This approach is hacky.
 	// Instead of extracting the exit value manually based on type,
 	// print would be called inside the DVM execution.
@@ -126,7 +164,8 @@ namespace compiler::repl {
 		if (return_type.getRefKind() != tsh::ReferenceKind::Direct)
 			return std::unexpected("Unsupported return type for REPL: " + return_type.toString());
 
-		const auto       raw_type_str = return_type.getType().toString();
+		const auto&      abstract_type = return_type.getType();
+		const auto&      raw_type_str  = abstract_type.toString();
 		std::string_view type_view(raw_type_str);
 
 		return vm::api::runFunction(pid, std::string(func_name), {})
@@ -136,17 +175,24 @@ namespace compiler::repl {
 		    .and_then(
 				[type_view](vm::api::ExitValue exit_values
 		        ) -> std::expected<std::string, std::string> {
+					CORE_ASSERT(
+						std::holds_alternative<std::vector<Ref<vm::VmValue>>>(exit_values),
+						"Expecting exit values to be a vector of VmValue references"
+					);
+					const auto& exit_values_vec
+						= std::get<std::vector<Ref<vm::VmValue>>>(exit_values);
 					if (type_view == "()") {
 						CORE_ASSERT(
-							exit_values.empty(), "Expecting no return values for unit return type"
+							exit_values_vec.empty(),
+							"Expecting no return values for unit return type"
 						);
 						return { "" };
 					}
 
 					CORE_ASSERT(
-						exit_values.size() == 1, "Expecting only one return value from the DVM"
+						exit_values_vec.size() == 1, "Expecting only one return value from the DVM"
 					);
-					auto& exit_value = exit_values.at(0);
+					auto& exit_value = exit_values_vec.at(0);
 					if (type_view == "i32")
 						return std::to_string(exit_value->readBytes<i32>());
 					else if (type_view == "i64")

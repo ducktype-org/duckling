@@ -1,3 +1,6 @@
 SubDirs:
   - basic
   - continue_pause
+  - next
+  - input
+  - output

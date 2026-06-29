@@ -32,6 +32,14 @@ impl AnyPackage {
         }
     }
 
+    /// Get path to the source directory / path of the script.
+    pub fn src(&self) -> &Path {
+        match self {
+            Self::Package(package) => package.source_directory(),
+            Self::Frontmatter(frontmatter) => frontmatter.script_file(),
+        }
+    }
+
     /// Check if this is the global package.
     pub fn is_global(&self) -> bool {
         match self {
@@ -118,6 +126,16 @@ impl AnyPackage {
             }
             Self::Frontmatter(frontmatter) => frontmatter,
         }
+    }
+
+    /// Check if this package is a _real_ package.
+    pub fn is_package(&self) -> bool {
+        matches!(self, AnyPackage::Package(..))
+    }
+
+    /// Check if this package is a script's frontmatter.
+    pub fn is_frontmatter(&self) -> bool {
+        matches!(self, AnyPackage::Frontmatter(..))
     }
 }
 

@@ -303,7 +303,9 @@ namespace compiler::lir {
 			block_id = function.getBlockIDs();
 
 			output << "[LIR] Function \"" << function.mangled_name.strView() << "\""
-				   << (function.link_once ? " (link once)" : "") << ":\n";
+				   << (function.link_once ? " (link once)" : "")
+				   << (function.ignore_on_dvm ? " (ignore on dvm)" : "")
+				   << (function.ignore_on_llvm ? " (ignore on llvm)" : "") << "\n";
 
 			for (const auto& local: function.local_list) {
 				printLocalDesc(&local);
@@ -403,7 +405,19 @@ namespace compiler::lir {
 		base::deduplicateBy(lir_globals, [](const LIRGlobalData& global_data) {
 			return global_data.global.mangled_name;
 		});
-		base::deduplicateBy(lir_functions, [](CRef<Function> func) { return func->mangled_name; });
+
+		std::unordered_set<base::StrID> seen;
+		std::vector<CRef<Function>>     result_functions;
+		for (auto lir_func: lir_functions) {
+			if (seen.insert(lir_func->mangled_name).second)
+				result_functions.push_back(lir_func);
+			else if (lir_func->ignore_on_dvm or lir_func->ignore_on_llvm) {
+				// If we ignore it on some backend then we don't want to deduplicate
+				// it based on mangled name.
+				result_functions.push_back(lir_func);
+			}
+		}
+		lir_functions = std::move(result_functions);
 	}
 
 	LIRLocalSpecialKind specialKindFromMIR(const mir::MIRLocal& mir_local) {

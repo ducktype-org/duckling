@@ -9,10 +9,13 @@
 namespace compiler::backend_vm {
 
 	DVMCodeBuilder::DVMCodeBuilder(
-		query::Context& query_ctx, bool build_debug_info, bool is_comp_time_lowering
+		query::Context& query_ctx,
+		base::StrID     module_id,
+		bool            build_debug_info,
+		bool            is_comp_time_lowering
 	):
 		  program_context(makeBox<internal::ProgramLoweringContext>(
-			  query_ctx, build_debug_info, is_comp_time_lowering
+			  query_ctx, module_id, build_debug_info, is_comp_time_lowering
 		  )),
 		  build_debug_info(build_debug_info) {}
 
@@ -54,6 +57,8 @@ namespace compiler::backend_vm {
 	}
 
 	void DVMCodeBuilder::insertLIRFunction(CRef<lir::Function> lir_function) {
+		if (lir_function->ignore_on_dvm) return;
+
 		program_context->lowerAndKeepLirFunction(lir_function);
 	}
 

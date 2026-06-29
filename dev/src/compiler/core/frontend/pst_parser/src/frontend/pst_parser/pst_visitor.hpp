@@ -37,6 +37,7 @@ namespace pst {
 		Field,
 		Constructor,
 		CopyConstructor,
+		MoveConstructor,
 		Destructor,
 		ClassSpecifierBlock,
 		Param,
