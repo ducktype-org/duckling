@@ -219,8 +219,7 @@ private:
 
 	void dynamicArrayTest() {
 		withContextDo([&](query::Context& ctx) -> void {
-			const UnitAbstractType unit_type   = getUnitType();
-			const auto             unit_layout = queryLayout(ctx, unit_type);
+			const UnitAbstractType unit_type = getUnitType();
 
 			const DynamicArrayAbstractType dynamic_array_type
 				= ctx.query<QueryDynamicArrayType>(st(unit_type));
@@ -232,16 +231,17 @@ private:
 				"Layout should have source type as constructed."
 			);
 			variant_match(dynamic_array_layout->getVariant()) {
-				variant_case(DynamicArrayTypeLayout, l) {
-					// Comparison uses dereference because the (cached) layout of the abstract type
-					// will have a different address than the (cached) layout of the symbol type.
+				variant_case(ClassTypeLayout, l) {
 					assertEqual(
-						*l.getElementLayout(),
-						*unit_layout,
-						"Element layout should be the layout of the element type."
+						l.getNumSubLayouts(),
+						usize(4),
+						"Dynamic array layout should have 4 fields (ptr, len, off_start_reserved, "
+						"off_end_reserved)."
 					);
 				}
-				variant_default { fail("Layout of dynamic array type should be array-like."); }
+				variant_default {
+					fail("Layout of dynamic array type should be a class-like struct.");
+				}
 			}
 
 			testPrinting(dynamic_array_layout, ctx, true);

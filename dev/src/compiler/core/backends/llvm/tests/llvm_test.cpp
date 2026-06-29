@@ -1,5 +1,6 @@
 #include <backends/llvm/llvm_backend.hpp>
 #include <diagnostic_interactive/module_flags/module_flags.hpp>
+#include <driver/test_utils.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <global_state/backend_options.hpp>
@@ -10,6 +11,7 @@
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
+#include <filesystem/file.hpp>
 #include <query_framework/context/context.hpp>
 #include <query_framework/entry/with_context_do.hpp>
 #include <tester/tester.hpp>
@@ -50,9 +52,13 @@ public:
 
 protected:
 	void beforeAll() override {
-		global_state::setters::setBackendOptions({
-			.llvm_backend = { global_state::BackendOptions::LLVMBackend{} },
-		});
+		// Initialize the compiler so the standard library is loaded.
+		fs::FilePath artifacts_path = fs::FileManager::createRandomTempDirectory().getFilePath();
+		auto         init_result    = compiler::driver::test_utils::initializeCompilerForTests(
+            {}, artifacts_path, { compiler::driver::options_types::StdLibOptions::DefaultStd{} }
+        );
+		assertTrue(init_result.status().isOk(), "Compiler initialization failed");
+
 		dia_int::configureImmediatePrint(&std::cerr);
 	}
 
@@ -244,15 +250,17 @@ private:
 			std::regex_search(
 				ir,
 				std::regex{
-					R"(getelementptr.*\[2\s+x\s+\[3\s+x\s+i32\].*i32\s+0,\s+i64\s+%0,\s+i64\s+%1)" }
+					R"(getelementptr.*\[2\s+x\s+\[3\s+x\s+i32\].*i32\s+0,\s+i64\s+%\w+,\s+i64\s+%\w+)" }
 			),
 			"Expected big GEP for nested array access matrix[1][2]"
 		);
 
 		// points[1].y
-		// GEP: 0 (ptr), 1 (array index), 1 (field index)
+		// GEP: 0 (ptr), array index, 1 (field index)
 		assertTrue(
-			std::regex_search(ir, std::regex{ R"(getelementptr.*i32\s+0,\s+i64\s+%0,\s+i32\s+1)" }),
+			std::regex_search(
+				ir, std::regex{ R"(getelementptr.*i32\s+0,\s+i64\s+%\w+,\s+i32\s+1)" }
+			),
 			"Expected GEP for struct field access in array: points[1].y"
 		);
 	}
@@ -272,10 +280,14 @@ private:
 			std::regex_search(ir, std::regex{ R"(call\s+void\s+@builtin_list_push)" }),
 			"Expected a call to builtin_list_push"
 		);
+
 		assertTrue(
-			std::regex_search(ir, std::regex{ R"(call\s+i64\s+@builtin_list_len)" }),
-			"Expected a call to builtin_list_len"
+			std::regex_search(
+				ir, std::regex{ R"(getelementptr\s+%Di64E,\s+ptr\s+%\w+,\s+i32\s+0,\s+i32\s+1)" }
+			),
+			"Expected a GEP to the length field (index 1) of the list struct"
 		);
+
 		assertTrue(
 			std::regex_search(ir, std::regex{ R"(call\s+void\s+@builtin_list_pop)" }),
 			"Expected a call to builtin_list_pop"

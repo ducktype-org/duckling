@@ -256,7 +256,6 @@ namespace compiler::tsl {
 
 	/**
 	 * @brief Layout of the string type.
-	 * It is similar to DynamicArrayTypeLayout, but intentionally implemented separately.
 	 */
 	class StringTypeLayout final: public TypeLayoutABC {
 		/**
@@ -319,66 +318,6 @@ namespace compiler::tsl {
 		Bytes getEndOfMemoryOffsetPosition() const {
 			(void) this;
 			return POINTER_SIZE_BYTES + METADATA_SIZE * 2;
-		}
-	};
-
-	/**
-	 * @brief Layout of a dynamic array type.
-	 */
-	class DynamicArrayTypeLayout final: public TypeLayoutABC {
-		/**
-		 * The dynamic array type consists of four parts of information:
-		 * -# Pointer to the start of data
-		 * -# Offset of the end of data
-		 * -# Offset of the start of reserved memory
-		 * -# Offset of the end of reserved memory
-		 * The pointer and offsets are arranged in this exact order in memory.
-		 */
-		static constexpr auto METADATA_SIZE = Bytes(8);
-
-		CRef<TypeLayout> element_layout;
-
-		DynamicArrayTypeLayout(tsh::DynamicArrayAbstractType dynamic_array_type, query::Context& ctx);
-
-		friend struct ImplementationOf_QueryAbstractTypeLayout;
-
-	public:
-		[[nodiscard]]
-		std::string toStringDefinition(query::Context&, bool recursive, u32 indent) const override;
-
-		/**
-		 * @return The offset of the end of data offset
-		 */
-		[[nodiscard]]
-		Bytes getEndOfDataOffsetPosition() const {
-			(void) this;
-			return POINTER_SIZE_BYTES;
-		}
-
-		/**
-		 * @return The offset of the start of reserved memory offset
-		 */
-		[[nodiscard]]
-		Bytes getStartOfMemoryOffsetPosition() const {
-			(void) this;
-			return POINTER_SIZE_BYTES + METADATA_SIZE;
-		}
-
-		/**
-		 * @return The offset of the end of reserved memory offset
-		 */
-		[[nodiscard]]
-		Bytes getEndOfMemoryOffsetPosition() const {
-			(void) this;
-			return POINTER_SIZE_BYTES + METADATA_SIZE * 2;
-		}
-
-		/**
-		 * @return The layout of each element of the dynamic array.
-		 */
-		[[nodiscard]]
-		CRef<TypeLayout> getElementLayout() const {
-			return element_layout;
 		}
 	};
 
@@ -523,6 +462,8 @@ namespace compiler::tsl {
 		ClassTypeLayout(tsh::TupleAbstractType tuple_type, query::Context& ctx);
 
 		ClassTypeLayout(tsh::SliceAbstractType slice_type, query::Context& ctx);
+
+		ClassTypeLayout(tsh::DynamicArrayAbstractType dynamic_array_type, query::Context& ctx);
 
 		friend struct ImplementationOf_QueryAbstractTypeLayout;
 
@@ -701,7 +642,6 @@ namespace compiler::tsl {
 		FloatTypeLayout,
 		VariantTypeLayout,
 		StringTypeLayout,
-		DynamicArrayTypeLayout,
 		StaticArrayTypeLayout,
 		ClassTypeLayout,
 		FunctionalTypeLayout,

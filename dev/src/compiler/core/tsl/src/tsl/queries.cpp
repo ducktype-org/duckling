@@ -38,7 +38,7 @@ namespace compiler::tsl {
 			case Function:
 				return FunctionalTypeLayout(key, ctx);
 			case DynamicArray:
-				return DynamicArrayTypeLayout(tsh::DynamicArrayAbstractType(key), ctx);
+				return ClassTypeLayout(tsh::DynamicArrayAbstractType(key), ctx);
 			case StaticArray:
 				return StaticArrayTypeLayout(tsh::StaticArrayAbstractType(key), ctx);
 			case Variant:

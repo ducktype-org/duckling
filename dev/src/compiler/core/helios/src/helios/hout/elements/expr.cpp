@@ -624,7 +624,7 @@ namespace compiler::helios::code {
 	}
 
 	tsh::AbstractType builtinUnaryOperationToReturnType(
-		query::Context& ctx, BuiltinUnary operation, tsh::AbstractType argument_type
+		[[maybe_unused]] query::Context& ctx, BuiltinUnary operation, tsh::AbstractType argument_type
 	) {
 		using enum BuiltinUnary;
 		switch (operation) {
@@ -640,9 +640,6 @@ namespace compiler::helios::code {
 			// For most of the unary operators the result is the same as their argument type:
 			// (Int -> Int, Bool -> Bool, Meta -> Meta, etc.)
 			return argument_type;
-		case BuiltinUnary::Len: {
-			return tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned);
-		}
 		default:
 			CORE_UNREACHABLE();
 		}
@@ -695,10 +692,6 @@ namespace compiler::helios::code {
 			break;
 		case BuiltinUnary::Const:
 			out << "const ";
-			expr->debugPrint(out);
-			break;
-		case BuiltinUnary::Len:
-			out << "len ";
 			expr->debugPrint(out);
 			break;
 		case BuiltinUnary::Ptr:
