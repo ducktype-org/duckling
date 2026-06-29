@@ -62,19 +62,31 @@ clah::Clah getVmClah() {
 							   server(i32(port));
 							   return 0;
 						   }))
-	    .addSubcommand(clah::Clah("run", "Run a .dbc file.")
-	                       .addPositional(clah::FileParser::make("file"))
-	                       .setDefaultValueParser(clah::StringParser::make("program_argument"))
-	                       .setHandler([](const clah::ParsingResult& options) {
-							   vm::Supervisor::get();
-							   auto                     file = options.getPositional<fs::File>(0);
-							   std::vector<std::string> args;
-							   args.reserve(options.getExtraParameterCount());
-							   for (usize argc = 0; argc < options.getExtraParameterCount(); argc++)
-								   args.push_back(*options.getExtra<std::string>(argc));
+	    .addSubcommand(
+			clah::Clah("run", "Run a .dbc file.")
+				.addPositional(clah::FileParser::make("file"))
+				.add(clah::ParamBuilder::ofFlag()
+	                     .addLongName("fast-mode")
+	                     .addShortDesc(
+							 "Fast mode for the VM, which does not perform certain runtime checks."
+						 )
+	                     .build())
+				.setDefaultValueParser(clah::StringParser::make("program_argument"))
+				.setHandler([](const clah::ParsingResult& options) {
+					vm::Supervisor::get();
+					auto                     file = options.getPositional<fs::File>(0);
+					std::vector<std::string> args;
+					args.reserve(options.getExtraParameterCount());
+					for (usize argc = 0; argc < options.getExtraParameterCount(); argc++)
+						args.push_back(*options.getExtra<std::string>(argc));
 
-							   return cli(file, args);
-						   }))
+					vm::api::ProcessConfig process_options{};
+					if (options.isFlag("fast-mode"))
+						process_options.mode = vm::api::ProcessMode::Fast;
+
+					return cli(file, args, process_options);
+				})
+		)
 	    .addSubcommand(
 			clah::Clah("debug", "Start the VM CLI debugger.")
 				.add(clah::ParamBuilder::ofValue(clah::FileParser::make())

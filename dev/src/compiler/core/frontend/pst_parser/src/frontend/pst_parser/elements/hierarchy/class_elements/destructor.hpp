@@ -22,6 +22,11 @@ namespace pst {
 		void dprint(std::ostream& out) const final;
 
 		[[nodiscard]]
+		AccessLocked<CodeBlock> getBody() const {
+			return body.give();
+		}
+
+		[[nodiscard]]
 		std::string elementType() const override {
 			return "Class Destructor";
 		}

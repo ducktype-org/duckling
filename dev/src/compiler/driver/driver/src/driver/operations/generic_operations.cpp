@@ -51,6 +51,7 @@
 #include <vm/bytecode/serializer/serializer.hpp>
 #include <vm/bytecode/validator/errors.hpp>
 #include <vm/bytecode/validator/valid_program.hpp>
+#include <vm/core/vmvalue/vmvalue.hpp>
 #include <vm/loader/loader.hpp>
 
 #include <algorithm>
@@ -433,8 +434,8 @@ namespace compiler::driver {
 			u64                                statement_counter = 0;
 
 			if (split_result->empty()) {
-				// Empty input should still produce a valid synthetic script main wrapper with no
-				// statement calls.
+				// Empty input should still produce a valid synthetic script main wrapper with
+				// no statement calls.
 				auto empty_script_module
 					= repl::createEphemeralChainedStatementModule("", {}, 0, "script_");
 				parent_module_id = empty_script_module->getModuleID();
@@ -708,9 +709,15 @@ namespace compiler::driver {
 			          .and_then([&] { return vm::api::getExitValue(pid); })
 			          .transform_error(vm::api::errorToString)
 			          .transform([](vm::api::ExitValue exit_values) {
-						  CORE_ASSERT(exit_values.size() == 1, "Expected single exit value");
+						  CORE_ASSERT(
+							  v_matches(exit_values, std::vector<Ref<vm::VmValue>>),
+							  "Expected exit value to be vector"
+						  );
+						  const auto& exit_values_vec
+							  = std::get<std::vector<Ref<vm::VmValue>>>(exit_values);
+						  CORE_ASSERT(exit_values_vec.size() == 1, "Expected single exit value");
 						  return RunOutput{ .exit_code = base::safeIntConv<int>(
-												exit_values.at(0)->readBytes<i64>()
+												exit_values_vec.at(0)->readBytes<i64>()
 											) };
 					  });
 
@@ -793,10 +800,11 @@ namespace compiler::driver {
 		}
 
 		// Sort + dedup: a single (module_id, backend, build_debug_info, root_module) should be
-		// compiled at most once even if multiple tasks reference it. The sort key is the module's
-		// content hash, which is effectively random across modules — that gives us deterministic
-		// output *and* spreads sibling modules across the worker queue (better load balancing
-		// than feeding workers a depth-first traversal), so no separate shuffle is needed.
+		// compiled at most once even if multiple tasks reference it. The sort key is the
+		// module's content hash, which is effectively random across modules — that gives us
+		// deterministic output *and* spreads sibling modules across the worker queue (better
+		// load balancing than feeding workers a depth-first traversal), so no separate shuffle
+		// is needed.
 		std::ranges::sort(modules_to_compile, lessModuleToCompile);
 		modules_to_compile.erase(
 			std::ranges::unique(modules_to_compile).begin(), modules_to_compile.end()

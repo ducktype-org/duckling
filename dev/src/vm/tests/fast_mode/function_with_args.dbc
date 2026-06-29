@@ -1,0 +1,16 @@
+function add { i64, i64 } -> { i64 } {
+    add_p64_p64 ret0, arg0;
+    add_p64_p64 ret0, arg1;
+    ret;
+}
+
+function main {} -> { i64 } {
+    init_pany_type result, i64;
+    init_pany_type a, i64;
+    input_p64 a;
+    init_pany_type b, i64;
+    input_p64 b;
+    call_func add;
+    output_p64 result;
+    ret;
+}
