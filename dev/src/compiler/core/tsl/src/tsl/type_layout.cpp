@@ -291,9 +291,7 @@ namespace compiler::tsl {
 					));
 					continue;
 				}
-				abi_fields.push_back(
-					abi::type_system::makeAbiType(abi::type_system::cloneAbiType(*conversion))
-				);
+				abi_fields.emplace_back(base::CRef<abi::type_system::AbiType>(&conversion.value()));
 			}
 
 			if (any_failed) query::throwFailed();

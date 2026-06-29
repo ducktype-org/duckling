@@ -1,6 +1,6 @@
 #pragma once
 
-#include <base/pointers/box.hpp>
+#include <base/pointers/box_or_ref.hpp>
 #include <base/types/bits_and_bytes.hpp>
 #include <base/types/ints.hpp>
 
@@ -45,7 +45,13 @@ namespace abi::type_system {
 	struct PointerType final {};
 
 	struct AbiType;
-	using AbiTypePtr = base::Box<AbiType>;
+
+	/**
+	 * @brief A child AbiType node that either owns its target (a `Box`) or
+	 * borrows it (a `CRef`). Borrowing lets a converted type reference a
+	 * cached `QueryCAbiTypeOf` result for a sub-type without cloning it.
+	 */
+	using AbiTypePtr = base::BoxOrCRef<AbiType>;
 
 	/**
 	 * @brief A fixed-size C array. `count` must be strictly positive;
@@ -66,25 +72,16 @@ namespace abi::type_system {
 	};
 
 	/**
-	 * @brief A pre-computed blob with known size and alignment. Represents a
-	 * nested type whose internal layout has already been determined.
-	 */
-	struct OpaqueType final {
-		Bytes size;
-		Bytes alignment;
-	};
-
-	/**
 	 * @brief Tagged union of every C-representable type the library
 	 * understands.
 	 */
 	struct AbiType final {
-		std::variant<IntType, FloatType, BoolType, CharType, PointerType, ArrayType, StructType, OpaqueType>
+		std::variant<IntType, FloatType, BoolType, CharType, PointerType, ArrayType, StructType>
 			value;
 	};
 
 	/** @brief Wraps an AbiType value in an owning box. */
-	AbiTypePtr makeAbiType(AbiType type);
+	AbiTypePtr makeBoxAbiType(AbiType type);
 
 	/** @brief Builds an AbiType from an IntType. */
 	AbiType intType(u8 width_bits, bool is_signed);
@@ -101,14 +98,15 @@ namespace abi::type_system {
 	/** @brief Builds an opaque pointer AbiType. */
 	AbiType pointerType();
 
-	/** @brief Builds a fixed-size array AbiType. */
-	AbiType arrayType(AbiType element, usize count);
+	/**
+	 * @brief Builds a fixed-size array AbiType from an element node. The element
+	 * may own its target (a `Box`) or borrow it (a `CRef` into, e.g., a cached
+	 * conversion) — the latter avoids cloning.
+	 */
+	AbiType arrayType(AbiTypePtr element, usize count);
 
 	/** @brief Builds a struct AbiType from a list of field types. */
 	AbiType structType(std::vector<AbiTypePtr> fields);
-
-	/** @brief Builds an opaque blob AbiType with known size and alignment. */
-	AbiType opaqueType(Bytes size, Bytes alignment);
 
 	/** @brief Deep-clones an AbiType tree into newly allocated owning nodes. */
 	AbiType cloneAbiType(const AbiType& type);

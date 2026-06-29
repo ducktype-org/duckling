@@ -129,24 +129,34 @@ private:
 				= ctx.query<QueryCPointerType>({ directOf(i32Of(ctx)) });
 			const auto& ptr_conv = queryConv(ctx, directOf(c_pointer));
 			ASSERT_TRUE(ptr_conv.has_value());
-			assertTrue(
-				base::holds<ats::PointerType>(ptr_conv->value), "expected PointerType"
-			);
+			assertTrue(base::holds<ats::PointerType>(ptr_conv->value), "expected PointerType");
 		});
 	}
 
 	void arraysTest() {
 		withContextDo([&](query::Context& ctx) -> void {
-			// Accepted: a static array converts to an opaque blob carrying the
-			// C layout computed from the element's C-ABI type.
+			// Accepted: a static array converts to an ArrayType whose element
+			// borrows the element type's cached conversion (no clone).
 			const StaticArrayAbstractType arr_type
 				= ctx.query<QueryStaticArrayType>({ directOf(i32Of(ctx)), 4 });
 			const auto& r = queryConv(ctx, directOf(arr_type));
 			ASSERT_TRUE(r.has_value());
-			ASSERT_TRUE(base::holds<ats::OpaqueType>(r->value));
-			const auto& o = std::get<ats::OpaqueType>(r->value);
-			assertTrue(usize(o.size) == 16, "array of 4 i32 should be 16 bytes");
-			assertTrue(usize(o.alignment) == 4, "array of i32 should have align 4");
+			ASSERT_TRUE(base::holds<ats::ArrayType>(r->value));
+			const auto& a = std::get<ats::ArrayType>(r->value);
+			assertTrue(a.count == 4, "array should have 4 elements");
+			ASSERT_TRUE(base::holds<ats::IntType>(a.element->value));
+			assertTrue(
+				usize(std::get<ats::IntType>(a.element->value).width_bits) == 32,
+				"element should be i32"
+			);
+
+			// The element node points straight at the cached element conversion
+			// rather than at a fresh clone.
+			const auto& elem_conv = queryConv(ctx, directOf(i32Of(ctx)));
+			assertTrue(
+				a.element.get() == &*elem_conv,
+				"array element should reference the cached element conversion"
+			);
 
 			// Rejected: zero-length arrays and arrays of non-C-compatible elements.
 			const StaticArrayAbstractType zero_len

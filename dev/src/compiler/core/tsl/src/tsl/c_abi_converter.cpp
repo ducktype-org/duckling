@@ -1,4 +1,3 @@
-#include <abi/layout/compute_c_layout.hpp>
 #include <abi/type_system/type.hpp>
 #include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/tsh/kind.hpp>
@@ -65,15 +64,10 @@ namespace compiler::tsl {
 			if (!element_conv.has_value())
 				return fail(base::strConcat("array element rejected: ", element_conv.error()));
 
-
-			auto array_abi_type = ats::arrayType(ats::cloneAbiType(*element_conv), array.getSize());
-
-			auto size_align = sizeAlignOf(compilerTargetABI(), array_abi_type);
-
-			return ok(ats::AbiType{ ats::OpaqueType{
-				.size      = size_align.size,
-				.alignment = size_align.alignment,
-			} });
+			// Borrow the element's cached conversion instead of cloning it.
+			return ok(
+				ats::arrayType(base::CRef<ats::AbiType>(&element_conv.value()), array.getSize())
+			);
 		}
 
 		CAbiConversionResult convertClass(tsh::ClassAbstractType class_type, query::Context& ctx) {
@@ -83,8 +77,8 @@ namespace compiler::tsl {
 					return fail("nested non-extern(\"C\") class");
 				}
 				variant_case_novalue(helios::CAbi) {
-					// Convert the fields to their C-ABI types, compute the class's
-					// C layout from them and return it as an opaque blob.
+					// Convert the fields to their C-ABI types and return them as a
+					// struct, borrowing each field's cached conversion (no clone).
 					std::vector<ats::AbiTypePtr> fields;
 					for (const auto& element: class_type.getInterface(ctx)->getElements()) {
 						if (!element.isField()) continue;
@@ -97,17 +91,11 @@ namespace compiler::tsl {
 								"` rejected: ",
 								conversion.error()
 							));
-						fields.push_back(ats::makeAbiType(ats::cloneAbiType(*conversion)));
+						fields.emplace_back(base::CRef<ats::AbiType>(&conversion.value()));
 					}
 					if (fields.empty()) return fail("class with no fields has zero size in C ABI");
 
-					auto size_align
-						= sizeAlignOf(compilerTargetABI(), ats::structType(std::move(fields)));
-
-					return ok(ats::AbiType{ ats::OpaqueType{
-						.size      = size_align.size,
-						.alignment = size_align.alignment,
-					} });
+					return ok(ats::structType(std::move(fields)));
 				}
 			}
 			CORE_PANIC("unknown symbol ABI kind");
