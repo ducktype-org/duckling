@@ -3,6 +3,7 @@
 #include "coercions.hpp"
 #include "errors.hpp"
 #include "function_calls/call_processing.hpp"
+#include "helios/queries/function_queries.hpp"
 #include "hout_of_subexpr.hpp"
 #include "numeric_literals.hpp"
 
@@ -119,6 +120,19 @@ namespace compiler::helios::code {
 			getVariantSubExprsInPlace(ctx, expr.unlock(ctx)->getLeftOperand(), sub_exprs);
 			getVariantSubExprsInPlace(ctx, expr.unlock(ctx)->getRightOperand(), sub_exprs);
 			return sub_exprs;
+		}
+
+		std::vector<SymID> filterFunctionsByOperatoriness(
+			query::Context&                              ctx,
+			const std::vector<SymID>&                    function_syms,
+			const HOUTFunctionDeclaration::Operatoriness operatoriness
+		) {
+			std::vector<SymID> result;
+			for (const auto& sym: function_syms)
+				if (const auto sym_decl = ctx.query<QueryDeclOfFun>(sym);
+				    sym_decl->valueOrThrow().operatoriness == operatoriness)
+					result.push_back(sym);
+			return result;
 		}
 
 		/**
@@ -321,6 +335,49 @@ namespace compiler::helios::code {
 				CORE_UNREACHABLE();
 			}
 
+			/**
+			 * @brief Finds the appropriate unary operator to call and constructs the corresponding
+			 * HOUT expression. Consumes the provided argument expression.
+			 * Some cases, such as the ampersand and asterisk for references are not handled here.
+			 * Perhaps they will be moved here later.
+			 * @param op The operator
+			 * @param inner The precomputed argument
+			 * @param scope The scope in which the operator call happens
+			 * @param operatoriness Whether the operator is prefix or suffix
+			 */
+			[[nodiscard]]
+			Box<Expr> resolveUnaryOperator(
+				const pst::Access<pst::OperatorWrapper>      op,
+				Box<Expr>                                    inner,
+				const ScopeID                                scope,
+				const HOUTFunctionDeclaration::Operatoriness operatoriness
+			) const {
+				CORE_ASSERT(
+					operatoriness == HOUTFunctionDeclaration::Operatoriness::Prefix
+						|| operatoriness == HOUTFunctionDeclaration::Operatoriness::Suffix,
+					"resolveUnaryOperator should only filter for prefix or suffix operators"
+				);
+
+				// Unlike in the case of binary operators, we do not consider a special case
+				// for numeric operations in the case of unary operators.
+				// We simply perform "regular" lookup. This includes lookups in two places:
+				//    a. The calling scope (a user can define a standalone function named `+`).
+				//    b. The type of the argument (for an operator method).
+				// Next, we perform typical overload resolution.
+				const auto lookup_result
+					= HInterface::ofScopeWithParents(scope).lookup(ctx, op->unwrap().value);
+				// @TODO: #1412 fix dealias
+				auto all_candidates = lookup_result->valueOrThrow().leaves;
+				for (const auto [builtin_operator_sym, _]:
+				     *ctx.query<QueryRegularUnaryBuiltinSymbols>({})) {
+					if (name(builtin_operator_sym) == op->unwrap().value)
+						all_candidates.push_back(builtin_operator_sym);
+				}
+				all_candidates = filterFunctionsByOperatoriness(ctx, all_candidates, operatoriness);
+				return processUnaryOperatorCall(ctx, all_candidates, std::move(inner), pstOrigin(op))
+				    .valueOrThrow();
+			}
+
 			void visitSuffixOperator(pst::Access<pst::expr::SuffixOperator> stmt) override {
 				// note: here we will have to compile things like `a++`, `a--`, `T?`.
 				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
@@ -370,8 +427,7 @@ namespace compiler::helios::code {
 				}
 
 				// Handle dereferencing
-				if (op->unwrap()
-				           == lang_def::NamedOperator::Multiply) {
+				if (op->unwrap() == lang_def::NamedOperator::Multiply) {
 					if (not tsh::isPointerKind(inner_type.getType().getKind())) {
 						ctx.logInt(makeBox<dia_int::PlaceholderError>(
 							"Tried to dereference a non-pointer type", stmt->getStablePosition()
@@ -383,8 +439,27 @@ namespace compiler::helios::code {
 				}
 
 				// Handle array length
-				if (op->unwrap() == lang_def::Keyword::Len) {
+				if (op->unwrap() == lang_def::keywordToStr(lang_def::Keyword::Len)) {
+					// @TODO: #1970 If the operator is `len` we have to bypass the trivial
+					// copyability check for now. This is because the temporarily added `len`
+					// operator operates on direct values thus any usage of it on reference types
+					// would need to perform a deref (which means a copy, but copying lists is not
+					// yet implemented) thus `canCoerce` returns an error. Since `len` operator
+					// existence is temporary we mock it out and insert a deref either way. This
+					// will copy the list struct, but not copy the heap data, but this is acceptable
+					// in case of `len`. A more solid approach would be for the `len` operator to
+					// take a reference to the list, but this would require more architectural
+					// changes. `len` operator will be replaced by the `.length()` method/field in
+					// the future, thus for release purposes is mocked up.
+					auto direct_type = inner_type.withReferenceKind(tsh::ReferenceKind::Direct);
+					auto coercion_qresult = canCoerce(ctx, inner_type, direct_type, true);
 
+					node = makeBox<UnaryOperatorExpr>(
+						ctx,
+						pstOrigin(stmt),
+						BuiltinUnary::Len,
+						coercion_qresult.valueOrThrow().getCoercion().coerce(ctx, std::move(inner))
+					);
 				}
 
 				auto builtin = unaryBuiltin(
@@ -456,6 +531,9 @@ namespace compiler::helios::code {
 					if (name(builtin_operator_sym) == op->unwrap().value)
 						all_candidates.push_back(builtin_operator_sym);
 				}
+				all_candidates = filterFunctionsByOperatoriness(
+					ctx, all_candidates, HOUTFunctionDeclaration::Operatoriness::Infix
+				);
 				return processBinaryOperatorCall(
 						   ctx, all_candidates, std::move(lhs), std::move(rhs), pstOrigin(op)
 				)

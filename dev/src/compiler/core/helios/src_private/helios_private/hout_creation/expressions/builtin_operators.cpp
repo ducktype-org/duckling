@@ -124,31 +124,6 @@ namespace compiler::helios::code {
 				};
 				result_ops.put(builtin.symbol, builtin);
 			};
-			// - Helper function to register a builtin operation that results in a function call.
-			const auto builtin_call = [&ctx, &result_ops](
-										  const base::StrID       name,
-										  const tsh::SymbolType<> param_type,
-										  const tsh::SymbolType<> return_type,
-										  const base::StrID       builtin_name
-									  ) -> void {
-				const auto gen_data
-					= defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::BuiltinOperator{
-						ctx.query<tsh::QueryFunctionType>({
-							.parameter_types = { param_type },
-							.result_type     = return_type,
-						}),
-					} };
-				auto builtin = RegularUnaryBuiltin{
-					.symbol = ctx.query<defgen::QueryGeneratedSymbol>({
-						.name                  = name,
-						.generated_symbol_data = gen_data,
-					}),
-					.op = RegularUnaryBuiltin::FunctionCall{ ctx.query<defgen::QueryGeneratedSymbol>(
-						{ .name = builtin_name, .generated_symbol_data = gen_data }
-					) },
-				};
-				result_ops.put(builtin.symbol, builtin);
-			};
 
 			/// Meta operations ///
 			const auto meta_t = tsh::SymbolType<>{
@@ -166,49 +141,6 @@ namespace compiler::helios::code {
 
 			/// Boolean operations ///
 			builtin_op(keywordToStr(lang_def::Keyword::Not), bool_t, bool_t, BooleanNot);
-
-			/// Dynamic array operations (@TODO: #1970 convert to method) ///
-			builtin_op(keywordToStr(lang_def::Keyword::Len), meta_t, meta_t, True);
-
-			/// Character arithmetic ///
-			const auto u8_t = tsh::SymbolType<>{
-				tsh::getIntegralType(ctx, 8, tsh::IntegralAbstractType::Signedness::Unsigned),
-				tsh::ReferenceKind::Direct,
-				tsh::Mutability::Immutable,
-			};
-			const auto char_t = tsh::SymbolType<>{
-				tsh::getCharType(),
-				tsh::ReferenceKind::Direct,
-				tsh::Mutability::Immutable,
-			};
-			builtin_op(base::StrID("<"), { char_t, char_t }, bool_t, IntegerLt);
-			builtin_op(base::StrID("<="), { char_t, char_t }, bool_t, IntegerLteq);
-			builtin_op(base::StrID(">"), { char_t, char_t }, bool_t, IntegerGt);
-			builtin_op(base::StrID(">="), { char_t, char_t }, bool_t, IntegerGteq);
-			builtin_op(base::StrID("=="), { char_t, char_t }, bool_t, IntegerEq);
-			builtin_op(base::StrID("!="), { char_t, char_t }, bool_t, IntegerNeq);
-			builtin_op(base::StrID("-"), { char_t, char_t }, u8_t, IntegerSub);
-			builtin_op(base::StrID("+"), { u8_t, char_t }, char_t, IntegerAdd);
-			builtin_op(base::StrID("+"), { char_t, u8_t }, char_t, IntegerAdd);
-
-			/// String operators ///
-			const auto str_t = tsh::SymbolType<>{
-				tsh::getStringType(),
-				tsh::ReferenceKind::Direct,
-				tsh::Mutability::Immutable,
-			};
-			builtin_call(
-				base::StrID("+:"), { char_t, str_t }, str_t, base::StrID("builtin_string_prepended")
-			);
-			builtin_call(
-				base::StrID(":+"), { str_t, char_t }, str_t, base::StrID("builtin_string_appended")
-			);
-			builtin_call(
-				base::StrID("++"),
-				{ str_t, str_t },
-				str_t,
-				base::StrID("builtin_string_concatenated")
-			);
 
 			// Return
 			return result_ops;
@@ -411,25 +343,12 @@ namespace compiler::helios::code {
 		auto source_type = expr->expression_type.getSymbolType();
 
 		Coercion unary_coercion = [&]() -> Coercion {
-			bool is_len = (op == lang_def::keywordToStr(lang_def::Keyword::Len));
 			// If the operation operates on Direct values we need to perform a
 			// coercion from a ref / box type the direct type. This is needed to handle cases
 			// like: var x: i32 = -someReference.
 			if (source_type.getRefKind() != tsh::ReferenceKind::Direct) {
 				auto direct_type = source_type.withReferenceKind(tsh::ReferenceKind::Direct);
-
-				// @TODO: #1970 If the operator is `len` we have to bypass the trivial copyability
-				// check for now. This is because the temporarily added `len` operator operates on
-				// direct values thus any usage of it on reference types would need to perform a
-				// deref (which means a copy, but copying lists is not yet implemented) thus
-				// `canCoerce` returns an error.
-				// Since `len` operator existence is temporary we mock it out and insert a deref
-				// either way. This will copy the list struct, but not copy the heap data, but this
-				// is acceptable in case of `len`. A more solid approach would be for the `len`
-				// operator to take a reference to the list, but this would require more
-				// architectural changes. `len` operator will be replaced by the `.length()`
-				// method/field in the future, thus for release purposes is mocked up.
-				auto res = canCoerce(ctx, source_type, direct_type, is_len);
+				auto res = canCoerce(ctx, source_type, direct_type);
 				if (res.valueOrThrow().isValid())
 					return std::move(res.valueOrThrow()).getCoercion();
 			}
