@@ -90,11 +90,6 @@ private:
 		std::string module_path, i32 expected_function_count = 1, i32 expected_prototype_count = -1
 	) {
 		if (expected_prototype_count == -1) expected_prototype_count = expected_function_count;
-		// @TODO: #2694 These numbers are inflated by toString methods for simple types
-		// There are 15 toString methods, and an additional 6 builtin_stringify_<type> prototypes
-		// and 1 slice length method.
-		expected_function_count += 15 + 1;
-		expected_prototype_count += 15 + 1 + 6;
 		auto llvm_module = getLLVMModuleFromPath(std::move(module_path));
 		ASSERT_EQUAL_PRINT(llvm_module.getFunctionCount(false), expected_function_count);
 		ASSERT_EQUAL_PRINT(llvm_module.getFunctionCount(), expected_prototype_count);
@@ -158,9 +153,9 @@ private:
 		runTestForModule("modules/units/unit_simple_multiple_modules", 1, 2);
 	}
 
-	void classTest() { runTestForModule("modules/classes/records", 13, 15); }
+	void classTest() { runTestForModule("modules/classes/records", 16, 21); }
 
-	void stringsTest() { runTestForModule("modules/strings", 2, 3); }
+	void stringsTest() { runTestForModule("modules/strings", 3, 5); }
 
 	void ffiTest() { runTestForModule("modules/ffi", 1, 1); }
 
@@ -177,7 +172,7 @@ private:
 			ptr_loads++;
 			search_range = matches.suffix();
 		}
-		assertTrue(ptr_loads == 18, "Too few pointer loads");
+		ASSERT_EQUAL_PRINT(ptr_loads, 17);
 	}
 
 	void boxesTest() {

@@ -1,5 +1,4 @@
 #include <abi/type_system/type.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/tsh/kind.hpp>
 #include <helios/tsh/type_interface.hpp>
 #include <helios/tsh/types.hpp>
