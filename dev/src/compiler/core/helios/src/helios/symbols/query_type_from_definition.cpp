@@ -5,6 +5,7 @@
 #include <helios/tsh/queries/types.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
+#include <helios/symbols/symbol_id_utils.hpp>
 
 #include <query_framework/standard_query/query_impl.hpp>
 
@@ -33,18 +34,14 @@ namespace compiler::helios {
 					tsh::Mutability::Mutable,
 				};
 			}
-
-			void visitConst(pst::Access<pst::Const>) final {
-				CORE_PANIC("TODO: remove this case! (QueryTypeFromDefinition)\n");
-				// auto ctv_result = ctx.query<QueryConstValueOf>(key);
-				// if (ctv_result.hasFailed()) return;
-				// const auto& ctv           = ctv_result.valueOrThrow();
-				// const auto& type_of_const = ctv.get<tsh::SymbolType<>>();
-				// definition_symbol_type    = type_of_const;
-			}
 		};
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
+			CORE_ASSERT(
+				kind(key) == SymbolKind::Class,
+				"QueryTypeFromDefinition query is only valid for class definitions (for now)"
+			);
+
 			auto symbol_ref = getSymRef(key);
 
 			PstVisitor_GetTypeFromDefinition visitor(ctx, key);

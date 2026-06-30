@@ -207,13 +207,13 @@ namespace compiler::helios {
 			}
 
 			void visitIdentifierExpr(const code::IdentifierExpr& expr) final {
-				// Type Evaluation.
 				if (kind(expr.symbol) == SymbolKind::Const) {
 					// Constant Evaluation.
 					auto const_val_result = ctx.query<QueryConstValueOf>({ expr.symbol });
 					result                = const_val_result.valueOrThrow();
 				}
-				else if (expr.expression_type.getType().getKind() == tsh::Kind::Meta and kind(expr.symbol) == SymbolKind::Class) {
+				else if (kind(expr.symbol) == SymbolKind::Class) {
+					// Special case for type definitions. 
 					auto type = ctx.query<QueryTypeFromDefinition>({ expr.symbol });
 					result    = type->valueOrThrow();
 				} 
