@@ -211,13 +211,11 @@ namespace compiler::helios {
 					// Constant Evaluation.
 					auto const_val_result = ctx.query<QueryConstValueOf>({ expr.symbol });
 					result                = const_val_result.valueOrThrow();
-				}
-				else if (kind(expr.symbol) == SymbolKind::Class) {
-					// Special case for type definitions. 
+				} else if (kind(expr.symbol) == SymbolKind::Class) {
+					// Special case for type definitions.
 					auto type = ctx.query<QueryTypeFromDefinition>({ expr.symbol });
 					result    = type->valueOrThrow();
-				} 
-				else {
+				} else {
 					match_optional(expr.origin.getStablePosition()) {
 						opt_some(pos) {
 							ctx.logInt(makeBox<dia_int::PlaceholderError>(
