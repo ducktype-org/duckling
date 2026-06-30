@@ -462,20 +462,12 @@ namespace compiler::helios::code {
 					);
 				}
 
-				auto builtin = unaryBuiltin(
-					stmt->getOperator().unlock(ctx)->unwrap(), std::move(inner), pstOrigin(stmt)
+				node = resolveUnaryOperator(
+					op,
+					std::move(inner),
+					ctx.query<QueryPrimaryCodeScopeFor>({ stmt }),
+					HOUTFunctionDeclaration::Operatoriness::Prefix
 				);
-				if (builtin.has_value()) {
-					node = std::move(builtin).value();
-					return;
-				} else {
-					ctx.logInt(makeBox<UndefinedUnaryOperatorError>(
-						stmt->getStablePosition(),
-						stmt->getOperator().unlock(ctx)->unwrap().str(),
-						makeBox<InteractiveType>(ctx, inner_type)
-					));
-					// failed
-				}
 			}
 
 			/**

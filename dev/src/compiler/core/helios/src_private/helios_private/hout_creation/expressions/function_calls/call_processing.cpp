@@ -797,4 +797,11 @@ namespace compiler::helios::code {
 			ctx, callee_sym, pst_origin, std::move(call_arguments), argument_origin, coercions
 		);
 	}
+
+	query::QResult<Box<Expr>> processBinaryOperatorCall(
+		query::Context&           ctx,
+		const std::vector<SymID>& candidates,
+		Box<Expr>                 inner,
+		ElementOrigin             op_origin
+	) {}
 }
