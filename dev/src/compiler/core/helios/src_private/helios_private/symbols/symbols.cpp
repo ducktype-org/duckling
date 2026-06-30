@@ -37,10 +37,9 @@
 
 namespace compiler::helios {
 	bool implementsQueryCodeOfFun(SymID id) {
+		if (kind(id) != SymbolKind::Function && kind(id) != SymbolKind::Method) return false;
 		variant_match(getSymRef(id)->other) {
-			variant_case_novalue(PstSymbolData) {
-				return kind(id) != SymbolKind::FunctionDeclaration;
-			}
+			variant_case_novalue(PstSymbolData) { return true; }
 			variant_case(defgen::GeneratedSymbolData, generated_data) {
 				variant_match(generated_data.data) {
 					variant_case_novalue(defgen::GeneratedSymbolData::BuiltinOperator) {

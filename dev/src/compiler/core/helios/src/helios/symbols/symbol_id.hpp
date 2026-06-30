@@ -123,6 +123,9 @@ namespace compiler::helios {
 	/**
 	 * @brief Whether the symbol can be called
 	 * with QueryCodeOfFun.
+	 * For example `fundecl abc(...)` returns false,
+	 * but a builtin can return true.
+	 * Non functional symbols return false.
 	 */
 	bool implementsQueryCodeOfFun(SymID id);
 

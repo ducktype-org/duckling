@@ -142,8 +142,7 @@ namespace compiler::helios {
 		 * or template instantiations in the future.
 		 */
 		static base::OkBad collectReplicatedSymbols(query::Context& ctx, HOUTUnit& out_unit) {
-			// In this visiting method, we don't add to the stack the symbols that were already
-			// added there.
+			// We perform a DFS traversal of the HOUT Unit. We keep track of the visited functions.
 			std::unordered_set<SymID> visited_function_symbols;
 			std::vector<SymID>        functions_stack;
 			base::OkBad               result = base::OK;
@@ -152,9 +151,9 @@ namespace compiler::helios {
 				visited_function_symbols.insert(f->declaration->original_symbol);
 				functions_stack.push_back(f->declaration->original_symbol);
 			}
-			// But we also always add all the elements popped from the stack to the module unit.
-			// So the functions are added to the stack, meaning they will be added to the hout unit,
-			// when popped from the stack. To avoid the duplicated we clear the hout unit.
+			// We will add all the function symbols we visit. This includes the initally collected
+			// function symbols, which were added to the stack. To avoid duplication, we clear the
+			// unit first.
 			out_unit.functions.clear();
 
 			// Append calls from the global variable initial value expression.

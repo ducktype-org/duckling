@@ -115,10 +115,8 @@ namespace compiler::helios::code {
 		// --- Composite expressions: hand to the handler (pre-order), then descend. ---
 
 		void visitReusableExpr(const ReusableExpr& e) override {
-			if (e.first_use) {
-				handler(e);
-				walk(*e.inner);
-			}
+			handler(e);
+			if (e.first_use) walk(*e.inner);
 		}
 
 		void visitBinaryOperatorExpr(const BinaryOperatorExpr& e) override {
