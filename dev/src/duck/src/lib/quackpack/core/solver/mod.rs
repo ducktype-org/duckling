@@ -90,7 +90,7 @@ impl<'duck, 'ctx> SolverGathererData<'duck, 'ctx> {
             root_pcx: pcx,
             root_pkg: ExpandedPackage {
                 location: ExpandedLocation::Local {
-                    absolute_path: pcx.package().root_directory().to_url()?.into(),
+                    absolute_path: pcx.package().root().to_url()?.into(),
                 },
                 version: None,
             },
@@ -146,7 +146,7 @@ impl<'duck, 'ctx> SolverGathererData<'duck, 'ctx> {
             )
         }
 
-        let root_path = self.root_pcx.package().root_directory().into();
+        let root_path = self.root_pcx.package().root().into();
         let gathered_info = Self::run_solver_gatherer(
             &mut gatherer,
             root_manifest,

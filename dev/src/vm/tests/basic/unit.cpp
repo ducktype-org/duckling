@@ -40,6 +40,7 @@ public:
 		TESTER_ADD_TEST(structureOperations);
 		TESTER_ADD_TEST(fixedSizeTableOperations);
 		TESTER_ADD_TEST(nestedAggregateTypesCorrectness);
+		TESTER_ADD_TEST(globalInitialValueTest);
 	}
 
 private:
@@ -153,9 +154,13 @@ private:
 		runTestOnVm("nested_aggregate.dbc", "", "133707770999", {});
 	}
 
+	void globalInitialValueTest() {
+		runTestOnVm("global_initial_value.dbc", "", "10\n-10\n/1\n-1\no", {});
+	}
+
 	void testSyncRun() {
 		vm::PID pid = initProcess();
-		ASSERT_TRUE(vm::api::loadFiles(pid, { fs::File(path("simple_function.dbc")) }).has_value());
+		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { fs::File(path("simple_function.dbc")) }));
 		runFunctionSynchronouslyAsTest(pid, "foo", {}, "", "120", 123);
 		vm::api::deinitAndValidate(pid);
 	}

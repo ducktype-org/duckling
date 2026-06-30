@@ -2,6 +2,8 @@
 
 #include <tester/tester.hpp>
 
+#include <thread>
+
 // SharedBox asserts:
 static_assert(std::is_copy_constructible_v<SharedBox<int>>, "SharedBox should be copy constructible");
 
@@ -17,7 +19,7 @@ static_assert(
 );
 
 struct InstancesCounter {
-	static inline usize count = 0;
+	constinit static inline usize count = 0;
 
 	int state = 0;
 
@@ -41,6 +43,10 @@ public:
 		TESTER_ADD_TEST(testSharedBox);
 		TESTER_ADD_TEST(testSharedBoxFromPtr);
 		TESTER_ADD_TEST(testCustomDeleter);
+		TESTER_ADD_TEST(testEquality);
+		TESTER_ADD_TEST(concurrentUsage<1>);
+		TESTER_ADD_TEST(concurrentUsage<2>);
+		TESTER_ADD_TEST(concurrentUsage<4>);
 	}
 
 private:
@@ -199,8 +205,88 @@ private:
 		auto b = a;
 		// NOLINTEND
 		auto c = makeSharedBox<int>(42);
-		ASSERT_EQUAL(a == b, true);
-		ASSERT_EQUAL(a == c, false);
+		ASSERT_TRUE(a == b);
+		ASSERT_TRUE(a != c);
+	}
+
+	struct DeleteCounter {
+		constinit static inline usize count = 0;
+
+		bool do_count = false;
+
+		DeleteCounter() = default;
+
+		~DeleteCounter() {
+			if (do_count) count++;
+		}
+	};
+
+	template<u64 THREAD_COUNT, u64 ITERATIONS_PER_THREAD = 10>
+	void concurrentUsage() {
+		DeleteCounter::count = 0;
+
+		SharedBox<DeleteCounter> a = makeSharedBox<DeleteCounter>();
+		a->do_count                = true;
+
+		std::vector<SharedBox<DeleteCounter>> threads_boxes;
+		threads_boxes.reserve(THREAD_COUNT);
+		for (u64 i = 0; i < THREAD_COUNT; i++) threads_boxes.emplace_back(a);
+
+		assertTrue(
+			threads_boxes[0].ownersCount() == THREAD_COUNT + 1,
+			"All SharedBoxes should share ownership of the same object!"
+		);
+		a.reset();
+		assertTrue(
+			threads_boxes[0].ownersCount() == THREAD_COUNT,
+			"All threads should share ownership of the same object!"
+		);
+
+		std::vector<std::jthread> threads;
+		threads.reserve(THREAD_COUNT);
+		for (u64 i = 0; i < THREAD_COUNT; i++) {
+			threads.emplace_back([&, i] {
+				// We perform a lot of copying and moving to increase the chances of catching
+				// concurrency issues with reference counting. And after that we reset the
+				// SharedBox, which should cause the DeleteCounter to be deleted exactly once.
+
+				for (u64 j = 0; j < ITERATIONS_PER_THREAD; j++) {
+					SharedBox<DeleteCounter> copy = threads_boxes[i];
+					SharedBox<DeleteCounter> move = std::move(copy);
+
+					SharedBox<DeleteCounter> copy2 = makeSharedBox<DeleteCounter>();
+					copy2                          = move;
+
+					SharedBox<DeleteCounter> move2 = makeSharedBox<DeleteCounter>();
+					move2                          = std::move(copy2);
+
+					assertTrue(
+						move2 == threads_boxes[i],
+						"SharedBox should still own the same object after copying and moving!"
+					);
+					assertTrue(
+						move2.ref() == threads_boxes[i].ref(),
+						"SharedBox should still own the same object after copying and moving!"
+					);
+
+					// clang-format off
+					// Format in workflows breaks on this, don't know why.
+					assertTrue(
+						threads_boxes[i].ownersCount() >= 3,
+						"At least threads_boxes[i], move and move2 should share ownership of the "
+						"same object!"
+					);
+					// clang-format on
+				}
+				threads_boxes[i].reset();
+			});
+		}
+
+		for (auto& thread: threads) thread.join();
+
+		for (auto& box: threads_boxes) assertTrue(!box, "All SharedBoxes should be reset!");
+
+		ASSERT_EQUAL_PRINT(DeleteCounter::count, 1);
 	}
 };
 

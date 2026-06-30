@@ -278,16 +278,6 @@ namespace compiler::lir {
 		 */
 		static LIRGlobal fromMIR(query::Context& ctx, mir::MIRGlobal mir_global);
 
-		/**
-		 * @note Do not use this function outside of LIR lowering / driver.
-		 * This handles both global variables and constants. For constants, it also sets CTV initial
-		 * value of the global.
-		 *
-		 * @TODO: #2246 remove this, it is only used in tests now (and update the tests)
-		 */
-		static LIRGlobal fromHOUT(query::Context& ctx, const helios::HOUTGlobalData& helios_id);
-
-
 		void debugPrint(query::Context& ctx, std::ostream& os) const;
 	};
 
@@ -591,7 +581,27 @@ namespace compiler::lir {
 	struct Function final {
 		base::StrID       mangled_name;
 		helios::SymbolABI abi;
-		bool              link_once;
+
+		/**
+		 * If true, this function can have repeated definitions
+		 * across many modules and has weak linkage.
+		 * Used when having identical function in many modules.
+		 */
+		bool link_once;
+
+		/**
+		 * If true, this function is not added to the module
+		 * on the DVM backend, even if explicitely requested.
+		 * Used by the DVM/native conditional compilation.
+		 */
+		bool ignore_on_dvm;
+
+		/**
+		 * If true, this function is not added to the module
+		 * on the LLVM backend, even if explicitely requested.
+		 * Used by the DVM/native conditional compilation.
+		 */
+		bool ignore_on_llvm;
 
 		std::vector<CRef<tsl::TypeLayout>> parameter_layouts;
 		CRef<tsl::TypeLayout>              return_type_layout;
@@ -652,6 +662,28 @@ namespace compiler::lir {
 
 		LIRGlobal                                         global;
 		std::variant<ctv::CompileTimeValue, CTorDtorPair> data_initialization;
+
+		/**
+		 * @brief Returns the constructor and destructor pair for the global.
+		 * Panics if the global does not have a constructor+destructor initialization.
+		 * Use only when you are sure that the global has constructor+destructor initialization (or
+		 * in tests).
+		 *
+		 * @return CTorDtorPair
+		 */
+		[[nodiscard]]
+		CTorDtorPair getCtorDtorPair() const;
+
+		/**
+		 * @brief Returns the constant value for the global.
+		 * Panics if the global does not have a constant initialization.
+		 * Use only when you are sure that the global has a constant initialization (or
+		 * in tests).
+		 *
+		 * @return ctv::CompileTimeValue
+		 */
+		[[nodiscard]]
+		ctv::CompileTimeValue getConstValue() const;
 
 		void debugPrint(query::Context& ctx, std::ostream& out) const;
 	};

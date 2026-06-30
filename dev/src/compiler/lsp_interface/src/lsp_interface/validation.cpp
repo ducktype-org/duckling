@@ -10,9 +10,11 @@
 #include <frontend/module_tree/source_file.hpp>
 #include <frontend/pst_parser/lang_parser_element.hpp>
 #include <helios/queries/queries.hpp>
+#include <mir/mir_lowering/mir_unit.hpp>
 
-#include <query_framework/context/context.hpp>
+#include <query_framework/context/context_fd.hpp>
 #include <query_framework/entry/query_entry_point.hpp>
+#include <query_framework/entry/with_context_do.hpp>
 
 namespace lsp {
 	using namespace compiler;
@@ -159,12 +161,16 @@ namespace lsp {
 
 		// We run the semantic analysis if there is no parsing errors.
 
-		// @TODO: #2246 see if anything should be changed here.
-		//          We could add mir-lowering phase here, as some compilation errors happen during
-		//          mir lowering.
+		if (isModuleTreeParsedSuccessfully(root_module)) {
+			query::utils::withContextDo([&](query::Context& ctx) -> void {
+				auto hout
+					= ctx.query<helios::QueryModuleHOUTRecursively>(root_module->getModuleID());
 
-		if (isModuleTreeParsedSuccessfully(root_module))
-			query::entryPoint<helios::QueryModuleHOUTRecursively>(root_module->getModuleID());
+				// Since MIR lowering can produce errors, we have to run MIR lowering as well.
+				if (hout.hasValue())
+					for (const auto& item: hout.valueOrPanic()) mir::lowerToMIRUnit(ctx, item);
+			});
+		}
 
 		query::Context::collectAndUpdateAllDiagnostic(
 			diagnostics, updatePositionWithHashCodeLocation

@@ -9,7 +9,6 @@
 #include <helios/queries/function_queries.hpp>
 #include <helios/queries/queries.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios_private/comp_time/vm_evaluator.hpp>
 #include <helios_private/hout_creation/expressions/coercions.hpp>
@@ -207,14 +206,14 @@ namespace compiler::helios {
 			}
 
 			void visitIdentifierExpr(const code::IdentifierExpr& expr) final {
-				// Type Evaluation.
-				if (expr.expression_type.getType().getKind() == tsh::Kind::Meta) {
-					auto type = ctx.query<QueryTypeFromDefinition>({ expr.symbol });
-					result    = type->valueOrThrow();
-				} else if (kind(expr.symbol) == SymbolKind::Const) {
+				if (kind(expr.symbol) == SymbolKind::Const) {
 					// Constant Evaluation.
 					auto const_val_result = ctx.query<QueryConstValueOf>({ expr.symbol });
 					result                = const_val_result.valueOrThrow();
+				} else if (kind(expr.symbol) == SymbolKind::Class) {
+					// Special case for type definitions.
+					auto type = ctx.query<QueryTypeFromDefinition>({ expr.symbol });
+					result    = type->valueOrThrow();
 				} else {
 					match_optional(expr.origin.getStablePosition()) {
 						opt_some(pos) {
@@ -783,9 +782,10 @@ namespace compiler::helios {
 		 * 					  evaluate `func_to_call`
 		 */
 		struct LIRBuildResult final {
-			std::string func_to_call;  // Mangled name of the function we evaluate.
-			std::vector<CRef<lir::Function>>
-				functions;             // List of LIR functions needed to evaluate `func_to_call`.
+			/// Mangled name of the function we evaluate.
+			std::string func_to_call;
+			/// List of LIR functions and other entites needed to evaluate `func_to_call`.
+			lir::LIRUnit lir_unit;
 		};
 
 		/**
@@ -835,7 +835,7 @@ namespace compiler::helios {
 
 			return LIRBuildResult{
 				.func_to_call = mangled_name_function_to_call.str(),
-				.functions    = std::move(lir_unit.lir_functions),
+				.lir_unit     = std::move(lir_unit),
 			};
 		}
 
@@ -875,7 +875,7 @@ namespace compiler::helios {
 
 			auto lir_build_result = prepareLIRForDVM(ctx, function_sym_id);
 			if (lir_build_result.hasFailed()) return query::Failed();
-			const auto& [func_to_call_name, all_lir_functions] = lir_build_result.valueOrThrow();
+			const auto& [func_to_call_name, lir_unit] = lir_build_result.valueOrThrow();
 
 
 			// Retrieve the functions return type.
@@ -887,7 +887,7 @@ namespace compiler::helios {
 			tsh::FunctionAbstractType func_type(callee_abs_type);
 
 			auto vm_eval_result = executeInVm(
-				ctx, func_to_call_name, all_lir_functions, ctv_arguments, func_type.getResultType()
+				ctx, func_to_call_name, lir_unit, ctv_arguments, func_type.getResultType()
 			);
 
 			if (!vm_eval_result) {

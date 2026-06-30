@@ -3,15 +3,17 @@
  */
 
 #include <ctv/ctv.hpp>
+#include <diagnostic_interactive/module_flags/module_flags.hpp>
 #include <helios/queries/function_queries.hpp>
 #include <helios/queries/queries.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <helios/tsh/queries.hpp>
 #include <mir/mir_lowering/mir_queries.hpp>
+#include <mir/mir_lowering/mir_unit.hpp>
 #include <mir/mir_lowering/mir_validation.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 
+#include <filesystem/file.hpp>
 #include <query_framework/context/context.hpp>
 #include <query_framework/entry/with_context_do.hpp>
 #include <tester/tester.hpp>
@@ -41,7 +43,11 @@ public:
 		TESTER_ADD_TEST(staticArraysTest);
 		TESTER_ADD_TEST(dynamicArraysTest);
 		TESTER_ADD_TEST(tupleTest);
+		TESTER_ADD_TEST(sliceTest);
 	}
+
+protected:
+	void beforeAll() override { dia_int::configureImmediatePrint(&std::cerr); }
 
 private:
 	using enum compiler::tsh::IntegralAbstractType::Signedness;
@@ -424,15 +430,17 @@ private:
 		withContextDo([&](query::Context& ctx) {
 			auto& unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
 			auto& functions = unit.functions;
-			ASSERT_EQUAL(4, functions.size());
-			ASSERT_EQUAL(functions.at(0)->declaration->original_name, base::StrID("missing_return"));
-			ASSERT_EQUAL(
+			ASSERT_EQUAL_PRINT(4, functions.size());
+			ASSERT_EQUAL_PRINT(
+				functions.at(0)->declaration->original_name, base::StrID("missing_return")
+			);
+			ASSERT_EQUAL_PRINT(
 				functions.at(1)->declaration->original_name, base::StrID("should_add_retvoid")
 			);
-			ASSERT_EQUAL(
+			ASSERT_EQUAL_PRINT(
 				functions.at(2)->declaration->original_name, base::StrID("unreachable_end")
 			);
-			ASSERT_EQUAL(functions.at(3)->declaration->original_name, base::StrID("empty"));
+			ASSERT_EQUAL_PRINT(functions.at(3)->declaration->original_name, base::StrID("empty"));
 
 			ASSERT_TRUE(
 				ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(0) })->hasFailed()
@@ -446,14 +454,16 @@ private:
 
 			auto& last_block
 				= should_add_retvoid_fun.blocks[should_add_retvoid_fun.block_order.back()];
-			ASSERT_EQUAL(last_block.terminator.operation, compiler::mir::Operation::ReturnVoid);
+			ASSERT_EQUAL_PRINT(
+				last_block.terminator.operation, compiler::mir::Operation::ReturnVoid
+			);
 
 
 			auto& unreachable_end_fun
 				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(2) })->valueOrThrow();
 			ASSERT_TRUE(unreachable_end_fun.validateBlockIDs().isOk());
 			unreachable_end_fun.debugPrint(foo_str);
-			ASSERT_EQUAL(unreachable_end_fun.block_order.size(), 7);
+			ASSERT_EQUAL_PRINT(unreachable_end_fun.block_order.size(), 7);
 
 			auto& empty
 				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(3) })->valueOrThrow();
@@ -910,6 +920,17 @@ private:
 			}
 
 			ASSERT_TRUE(found_tuple_ctor_call);
+		});
+	}
+
+	void sliceTest() {
+		// Test that without STD library, slice type access will not work.
+		auto [module, scope] = getModule(fs::File(path("modules/slices")));
+
+		withContextDo([&](query::Context& ctx) {
+			auto hout_unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
+			auto mir_unit  = compiler::mir::lowerToMIRUnit(ctx, &hout_unit->valueOrPanic());
+			ASSERT_TRUE(mir_unit.hasFailed());
 		});
 	}
 };

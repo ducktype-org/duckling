@@ -39,6 +39,9 @@ public:
 		TESTER_ADD_TEST(testErrorLoggingExpandStatements);
 		TESTER_ADD_TEST(testErrorLoggingCyclicErrors);
 		TESTER_ADD_TEST(testPointerCastErrors);
+		TESTER_ADD_TEST(testBackendDependentAttributeErrors);
+
+
 		TESTER_ADD_TEST(testErrorBadExpr);
 		TESTER_ADD_TEST(testDiagnosticErrorsCorrectness);
 	}
@@ -64,15 +67,10 @@ private:
 		const std::vector<std::string_view>& present_phrases,
 		u64                                  logged_msg_count
 	) {
-		// @TODO: #2246 make sure this is ok
-		frontend::ModuleID module_id
-			= frontend::createModuleTreeFromContents(module_content, "test_package");
+		frontend::ModuleID module_id = frontend::createModuleTreeFromContents(module_content);
 
-		auto result = base::anyCast<CRef<query::QResult<helios::HOUTUnit>>>(
-			query::utils::withContextCompute([&](query::Context& ctx) {
-				return ctx.query<helios::QueryModuleHOUT>(module_id);
-			})
-		);
+		auto result = query::entryPoint<helios::QueryModuleHOUT>(module_id);
+
 		assertTrue(result->hasFailed(), "Expected HOUT query to fail for module content.");
 		auto logger = query::Context::dumpToOneLoggerAndClear();
 
@@ -82,7 +80,7 @@ private:
 
 		std::stringstream logged_messages;
 		logger->terminalPrint(logged_messages);
-		std::cerr << "Logged messages:\n" << logged_messages.str() << "\n";
+		// std::cerr << "Logged messages:\n" << logged_messages.str() << "\n";
 		auto msg_count = logger->messageCount();
 		assertEqual(
 			msg_count,
@@ -405,7 +403,7 @@ private:
 					arr["index"] = 1;
 				}
 			)",
-				{ "Type `string` cannot be converted to type `const i64`." },
+				{ "Type `const slice char` cannot be converted to type `const i64`." },
 				1
 			);
 
@@ -698,7 +696,7 @@ private:
 					arr["index"] = 1;
 				}
 			)",
-				{ "Type `string` cannot be converted to type `const i64`." },
+				{ "Type `const slice char` cannot be converted to type `const i64`." },
 				1
 			);
 
@@ -732,7 +730,7 @@ private:
 					l -= "sth";
 				}
 			)",
-				{ "Type `string` cannot be converted to type `u64`" },
+				{ "Type `const slice char` cannot be converted to type `u64`" },
 				1
 			);
 
@@ -1205,7 +1203,7 @@ private:
 			R"(
 				expand 1;
 			)",
-			{ "i32", "string" },
+			{ "i32", "const slice char" },
 			1
 		);
 
@@ -1539,6 +1537,126 @@ private:
                 fun a() -> i64 = { return 2; }
             )",
 			{ "Symbol 'a' is already defined." },
+			1
+		);
+	}
+
+	void testBackendDependentAttributeErrors() {
+		// ==================== Attribute format errors ====================
+
+		checkForErrorOnCompileModule(
+			R"(@unknown_attr fun a() -> i32 = 0;)", { "is not recognized" }, 1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(@foo.bar fun a() -> i32 = 0;)", { "Attribute is not supported" }, 1
+		);
+
+		// @backend_dependent on `fun` instead of `fundecl`
+		checkForErrorOnCompileModule(
+			R"(@backend_dependent fun a() -> i32 = 0;)",
+			{ "Attribute is not supported on this type of statement" },
+			1
+		);
+
+		// Mutually exclusive @dvm_only_impl and @native_only_impl on same function
+		// (also triggers missing @backend_dependent fundecl, so 2 errors total)
+		checkForErrorOnCompileModule(
+			R"(@dvm_only_impl @native_only_impl fun func() -> i32 = { return 10; })",
+			{ "exclusive" },
+			2
+		);
+
+		// ==================== Missing counterpart errors ====================
+
+		// @backend_dependent fundecl with no @dvm_only_impl implementation
+		checkForErrorOnCompileModule(
+			R"(
+                @backend_dependent
+                fundecl func() -> i32;
+
+                @native_only_impl
+                fun func() -> i32 = { return 20; }
+            )",
+			{ "dvm_only_impl" },
+			1
+		);
+
+		// @dvm_only_impl with no corresponding @backend_dependent fundecl
+		checkForErrorOnCompileModule(
+			R"(
+                @dvm_only_impl
+                fun func() -> i32 = { return 10; }
+            )",
+			{ "backend_dependent" },
+			1
+		);
+
+		// ==================== Signature mismatch errors ====================
+
+		// Return type mismatch between fundecl and dvm impl
+		checkForErrorOnCompileModule(
+			R"(
+                @backend_dependent
+                fundecl func() -> i32;
+
+                @dvm_only_impl
+                fun func() -> i64 = { return 10; }
+
+                @native_only_impl
+                fun func() -> i32 = { return 20; }
+            )",
+			{ "does not match" },
+			1
+		);
+
+		// Parameter type mismatch between fundecl and dvm impl
+		checkForErrorOnCompileModule(
+			R"(
+                @backend_dependent
+                fundecl func(x: i32) -> i32;
+
+                @dvm_only_impl
+                fun func(x: i64) -> i32 = { return 0; }
+
+                @native_only_impl
+                fun func(x: i32) -> i32 = { return x; }
+            )",
+			{ "does not match" },
+			1
+		);
+
+		// Parameter name mismatch between fundecl and dvm impl
+		checkForErrorOnCompileModule(
+			R"(
+                @backend_dependent
+                fundecl func(x: i32) -> i32;
+
+                @dvm_only_impl
+                fun func(y: i32) -> i32 = { return y; }
+
+                @native_only_impl
+                fun func(x: i32) -> i32 = { return x; }
+            )",
+			{ "does not match" },
+			1
+		);
+
+		// ==================== Initial value errors ====================
+
+		// @dvm_only_impl with a parameter that has a default value
+		checkForErrorOnCompileModule(
+			R"(
+                @backend_dependent
+                fundecl func(x: i32) -> i32;
+
+                @dvm_only_impl
+                fun func(x: i32 = 5) -> i32 = { return x; }
+
+                @native_only_impl
+                fun func(x: i32) -> i32 = { return x; }
+            )",
+			{ "Initial value is not allowed here" },
 			1
 		);
 	}

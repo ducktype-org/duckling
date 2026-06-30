@@ -3,6 +3,8 @@
 #include "../preamble.hpp"
 
 namespace pst {
+	CLONE_SUB_ELEMENTS_DEF(FlowPattern, pattern, as_identifier, type_constraint);
+
 	MBox<FlowPattern> FlowPattern::parse(LangParserState& state) {
 		auto out = makeBox<FlowPattern>(state);
 

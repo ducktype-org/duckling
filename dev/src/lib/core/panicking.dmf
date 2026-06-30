@@ -1,0 +1,8 @@
+import core.builtins.*;
+
+extern("C") fundecl abort() -> ();
+
+fun panic() -> () = {
+    builtin_output_str("Program panicked!\n");
+    abort();
+}

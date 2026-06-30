@@ -52,7 +52,7 @@ pub fn init(opts: InitOptions<'_, '_>) -> QuackResult<()> {
         None => opts
             .at
             .file_name()
-            .expect("file without a filename")
+            .with_context(|| format!("path `{}` doesn't have a filename", opts.at.display()))?
             .to_string_lossy()
             .into_owned(),
     };
@@ -151,7 +151,7 @@ fn bail_on_overriding_project(ctx: &DuckContext, root: &Path) -> QuackError {
     qp_err!(
         "cannot reinitialize project `{}` at `{}`",
         package.package().manifest().name(),
-        package.package().root_directory().display()
+        package.package().root().display()
     )
 }
 
@@ -228,7 +228,7 @@ fn add_package_structure(ctx: &DuckContext, root_path: &Path) -> QuackResult<()>
         Err(err) => {
             if matches!(err.kind(), ErrorKind::AlreadyExists) {
                 ctx.console().note_verbose(format!(
-                    "the source file {} already exists, not overwiting it",
+                    "the source file {} already exists, not overwriting it",
                     source_file_path.display()
                 ))?;
                 return Ok(());
@@ -255,7 +255,7 @@ fn init_git(ctx: &DuckContext, root_path: &Path) -> QuackResult<()> {
         Err(err) => {
             if matches!(err.kind(), ErrorKind::AlreadyExists) {
                 ctx.console().note_verbose(format!(
-                    "the file {} already exists, not overwiting it",
+                    "the file {} already exists, not overwriting it",
                     gitignore_path.display()
                 ))?;
                 return Ok(());

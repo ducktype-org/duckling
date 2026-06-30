@@ -250,4 +250,13 @@ namespace pst {
 			return first_pos;
 		}
 	}
+
+	MBox<LangElement> LangElement::clone() const {
+		auto clone    = cloneElement();
+		u64  my_count = 0, clone_count = 0;
+		IF_BUILD_TYPE_DEV(for ([[maybe_unused]] auto& ref : viewChildren()) my_count++;
+		                  for ([[maybe_unused]] auto& ref : clone->viewChildren()) clone_count++;
+		                  CORE_ASSERT(my_count == clone_count, "Not all children cloned."););
+		return cloneElement();
+	}
 }

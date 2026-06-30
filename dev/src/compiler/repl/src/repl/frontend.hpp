@@ -88,6 +88,13 @@ namespace compiler::repl {
 		 */
 		void printHelp() const;
 
+		/**
+		 * @brief Prints all possible completions for a given prefix. Used for autocompletion in
+		 * Jupyter.
+		 */
+		void printCompletions(std::string_view prefix) const;
+
+
 	private:
 		FrontendImplementationType m_impl;
 	};  // class ReplFrontend

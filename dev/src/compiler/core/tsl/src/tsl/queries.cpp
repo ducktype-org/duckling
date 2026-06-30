@@ -2,8 +2,10 @@
 
 #include <query_framework/standard_query/query_impl.hpp>
 
+#include <utility>
+
 namespace compiler::tsl {
-	struct IMPLEMENT_QUERY(QueryAbstractTypeLayout, TypeLayout) {
+	struct IMPLEMENT_QUERY(QueryAbstractTypeLayout, query::QResult<TypeLayout>) {
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
 			using enum tsh::Kind;
 			switch (key.getKind()) {
@@ -29,6 +31,8 @@ namespace compiler::tsl {
 				return PointerTypeLayout(tsh::ManyPointerAbstractType(key), ctx);
 			case CPointer:
 				return PointerTypeLayout(tsh::CPointerAbstractType(key), ctx);
+			case Slice:
+				return ClassTypeLayout(tsh::SliceAbstractType(key), ctx);
 			case String:
 				return StringTypeLayout(key, ctx);
 			case Function:
@@ -53,10 +57,12 @@ namespace compiler::tsl {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryAbstractTypeLayout)
 
-	struct IMPLEMENT_QUERY(QuerySymbolTypeLayout, TypeLayout) {
+	struct IMPLEMENT_QUERY(QuerySymbolTypeLayout, query::QResult<TypeLayout>) {
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
-			if (key.getRefKind() == tsh::ReferenceKind::Direct)
-				return *ctx.query<QueryAbstractTypeLayout>(key.getType());
+			if (key.getRefKind() == tsh::ReferenceKind::Direct) {
+				auto copy = ctx.query<QueryAbstractTypeLayout>(key.getType())->valueOrThrow();
+				return std::move(copy);
+			}
 			return PointerTypeLayout(key, ctx);
 		}
 

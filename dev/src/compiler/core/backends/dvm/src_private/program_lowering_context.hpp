@@ -14,7 +14,11 @@
 #include <vm/bytecode/validator/valid_program.hpp>
 
 namespace compiler::backend_vm::internal {
-	class ProgramLoweringContext {
+	class CTVLowering;
+
+	class ProgramLoweringContext final {
+		friend class CTVLowering;
+
 		/**
 		 * @brief Context used purely for throwing NotYetImplemented errors.
 		 * @note This context should not be used for anything other than throwing NotYetImplemented
@@ -31,7 +35,10 @@ namespace compiler::backend_vm::internal {
 		 * The context reference should remain valid for the lifetime of this object.
 		 */
 		explicit ProgramLoweringContext(
-			query::Context& query_ctx, bool build_debug_info, bool is_comp_time_lowering
+			query::Context& query_ctx,
+			base::StrID     module_id,
+			bool            build_debug_info,
+			bool            is_comp_time_lowering
 		);
 
 		/**
@@ -89,6 +96,12 @@ namespace compiler::backend_vm::internal {
 		const vm::code::TypeOfData& getOrInsertPointerType(const vm::code::TypeOfData& pointee_type);
 
 		/**
+		 * @brief Creates and inserts a pointer type based on the type name.
+		 * It caches the result, so inserts the type into the program only if needed.
+		 */
+		const vm::code::TypeOfData& getOrInsertPointerType(base::StrID pointee_type_name);
+
+		/**
 		 * @brief Retrieves or lazily creates the DVM place for the given LIR global.
 		 *
 		 * This lookup is not purely observational: it may insert and cache a placeholder entry
@@ -98,6 +111,46 @@ namespace compiler::backend_vm::internal {
 		 * vm::code::GlobalData has already been lowered for that global name.
 		 */
 		const DVMPlace& getLirGlobal(CRef<lir::LIRGlobal> lir_global);
+
+		/**
+		 * @brief Inserts a synthetic, statically-initialized global into the module and returns its
+		 * DVM place.
+		 *
+		 * The global is marked constant and carries @p init as its `initial_value`. The given
+		 * @p name_hint is made unique with an internal counter, so callers may reuse the same hint.
+		 *
+		 * @param name_hint Base name for the global (uniquified internally).
+		 * @param type The DVM type of the global.
+		 * @param init The static initial value bytes.
+		 * @return The DVM place referring to the inserted global.
+		 */
+		const DVMPlace& insertStaticDataGlobal(
+			base::StrID name_hint, const vm::code::TypeOfData& type, vm::code::ConstantValue init
+		);
+
+		/**
+		 * @brief Produces a fresh, unique global name from @p name_hint.
+		 *
+		 * The hint is suffixed with the module id and an internal counter so the same hint can be
+		 * reused for many anonymous globals (string literals, CTV values, ...).
+		 */
+		[[nodiscard]] base::StrID getAnonymousGlobalName(base::StrID name_hint);
+
+		/**
+		 * @brief Registers the DVM place of a global so it can be referenced.
+		 *
+		 * Inserts a `Direct`-access place for @p name / @p type into the place table and returns
+		 * it. This only declares where the global lives; use @ref defineGlobal to attach its data.
+		 */
+		const DVMPlace& declareGlobal(base::StrID name, const vm::code::TypeOfData& type);
+
+		/**
+		 * @brief Stores the data of a global and records it in emission order.
+		 *
+		 * Keyed by @p global_data.name. Order is recorded only on first insertion so REPL can emit
+		 * only new globals.
+		 */
+		const vm::code::GlobalData& defineGlobal(vm::code::GlobalData global_data);
 
 		/**
 		 * @brief Retrieves the extern C function with the given name.
@@ -160,6 +213,8 @@ namespace compiler::backend_vm::internal {
 		/// symbol types) are lowered.
 		bool is_comp_time_lowering;
 
+		base::StrID module_id;
+
 		// Using ValidProgram here would be inefficient due to the need for frequent code verifications.
 
 		struct TypeStorage {
@@ -177,6 +232,9 @@ namespace compiler::backend_vm::internal {
 		std::vector<base::StrID> lowered_function_order;
 		// Maintains insertion order for globals so REPL can emit only new globals.
 		std::vector<base::StrID> lowered_global_order;
+
+		// Counter used to make synthetic static-data global names (string literals) unique.
+		usize static_data_global_counter{ 0 };
 
 		base::Map<CRef<lir::Function>, base::StrID> lir_function_to_name;
 		base::Map<base::StrID, vm::code::Function>  dvm_functions_by_name;

@@ -148,12 +148,4 @@ private:
 	}
 };
 
-int main(int argc, const char**) {
-	init::InitObject _;
-	if (argc != 1) CORE_PANIC("Test expects no arguments");
-
-	auto config = tester::getTestConfig("/common/tester/tests/");
-
-	SimpleTesterTest test(config);
-	if (!test.run()) return 1;
-}
+TESTER_COMMON_MAIN("/src/common/tester/tests/");

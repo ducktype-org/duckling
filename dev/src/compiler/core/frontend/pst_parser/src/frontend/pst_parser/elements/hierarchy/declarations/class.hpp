@@ -9,11 +9,14 @@ namespace pst {
 	 * @brief Class declaration
 	 */
 	class Class final: public Decl {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(Class, Decl);
+		CLONE_SUBELEMENTS();
+
 	private:
 		NAMED_CHILD(name, IdentifierWrapper);
 		NAMED_CHILD(base, ExtendsExprHolder);
 		NAMED_CHILD(implements, ImplementsList);
-		NAMED_CHILD(body, ClassBlock);
+		NAMED_CHILD(body, CodeBlock);
 
 	protected:
 		HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const override;
@@ -27,7 +30,7 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		AccessLocked<ClassBlock> getBody() const {
+		AccessLocked<CodeBlock> getBody() const {
 			return body.give();
 		}
 

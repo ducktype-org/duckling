@@ -4,6 +4,7 @@
 #include "preamble.hpp"
 
 namespace pst::expr {
+	CLONE_SUB_ELEMENTS_DEF(BlockExpr, block);
 
 	MBox<ExprElement> BlockExpr::parse(LangParserState& state) {
 		if (!checkNonEmpty(state)) return nullptr;
@@ -20,6 +21,7 @@ namespace pst::expr {
 
 		PST_NEW_CONTEXT({
 			state.setContextBlockOrdering(BlockOrderType::Ordered);
+			state.setContextStmt(StmtContext::Normal);
 			PARSE().one(&out->block);
 		})
 

@@ -11,10 +11,11 @@
 #include <helios/mangler/mangler.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/tsh/abstract_type.hpp>
 #include <helios/tsh/expression_type.hpp>
 #include <helios/tsh/queries.hpp>
+#include <helios/tsh/queries/types.hpp>
+#include <helios/tsh/symbol_type.hpp>
 #include <helios/tsh/types.hpp>
 #include <helios_private/symbols/generated_symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
@@ -153,14 +154,14 @@ namespace compiler::helios::code {
 		  value(value) {}
 
 	LiteralStringExpr::LiteralStringExpr(
-		query::Context&, ElementOrigin origin, const base::StrID value
+		query::Context& ctx, ElementOrigin origin, const base::StrID value
 	):
 		  Expr(
 			  tsh::ExpressionType<>(
 				  tsh::SymbolType{
-					  tsh::getStringType(),
+					  tsh::getCharSliceType(ctx),
 					  tsh::ReferenceKind::Direct,
-					  tsh::Mutability::Mutable,
+					  tsh::Mutability::Immutable,
 				  },
 				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
 			  ),
@@ -838,6 +839,8 @@ namespace compiler::helios::code {
 						  return base_type.as<tsh::StaticArrayAbstractType>().getElementType();
 					  case tsh::Kind::ManyPointer:
 						  return base_type.as<tsh::ManyPointerAbstractType>().getPointee();
+					  case tsh::Kind::Slice:
+						  return base_type.as<tsh::SliceAbstractType>().getElementType();
 					  default:
 						  CORE_PANIC("Cannot index a non-array like type");
 					  }
