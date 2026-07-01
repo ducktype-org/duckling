@@ -35,10 +35,15 @@ namespace vm::code {
 		auto builtin_func_opt = builtins::getBuiltinFunctionID(name);
 		if (!builtin_func_opt) CORE_PANIC("Function name ", name, " is not a builtin function");
 		switch (builtin_func_opt.value()) {
+		case builtins::BuiltinFunctionID::Abort:
+			// terminates the current execution
+			return { ControlFlowModifying };
 		case builtins::BuiltinFunctionID::InputI64:
 			// reads from stdin, blocks waiting for the user
 			return FunctionFlag(IORead) | MayBlock | ReleaseGIL;
 		case builtins::BuiltinFunctionID::OutputI64:
+		case builtins::BuiltinFunctionID::OutputI32:
+		case builtins::BuiltinFunctionID::OutputChar:
 		case builtins::BuiltinFunctionID::OutputString:
 			return FunctionFlag(IOWrite) | RequiresGIL;
 		case builtins::BuiltinFunctionID::Stoi:
@@ -145,7 +150,6 @@ namespace vm::code {
 			FLAGS_W(mov_p16_imm)
 			FLAGS_W(mov_p32_imm)
 			FLAGS_W(mov_p64_imm)
-			FLAGS_W(mov_popq_imm)
 			FLAGS_W(setNull_pptr)
 
 			FLAGS_W_R(mov_p8_p8)
@@ -617,6 +621,11 @@ namespace vm::code {
 				deref_write();
 				flags |= MayBlock;
 			}
+			// fst->dyn is a type-only pointer reinterpretation: the value is copied, no deref
+			instr_case(ins::Op_fstToDynTable_pptr_pptr, i) {
+				wr(i.dst_table_ptr);
+				rd(i.src_table_ptr);
+			}
 
 			// ===== Casts (in-place primitive casts) =====
 			instr_case(ins::Op_cast_p8_type, i) { rdwr(i.value); }
@@ -690,7 +699,7 @@ namespace vm::code {
 			}
 			instr_case(ins::Op_initFromVmValue, i) { (void) i; }
 			instr_case(ins::Comment, i) { (void) i; }
-			instr_default { CORE_PANIC("Unhandled instruction"); }
+			instr_default { CORE_PANIC("Unhandled instruction: ", internal_value.name()); }
 		}
 		POP_DIAGNOSTIC
 

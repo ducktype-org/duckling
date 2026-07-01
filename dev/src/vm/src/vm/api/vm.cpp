@@ -113,8 +113,8 @@ namespace vm::api {
 			))
 		    .and_then(mapOrWrongResponse<ExitValue>);
 	}
-	std::expected<void, ApiError> setExecutionConfig(PID pid, ExecutionConfig config) {
 
+	std::expected<void, ApiError> setExecutionConfig(PID pid, ExecutionConfig config) {
 		return Supervisor::get()
 		    .doRequest(SupervisorRequest(pid, request::SetExecutionConfig{ config }))
 		    .transform(ignoreResponse);

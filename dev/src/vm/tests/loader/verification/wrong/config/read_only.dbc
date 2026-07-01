@@ -1,4 +1,4 @@
-global_data _Q_M9read_onlyG1a i32 {};
+global_data _Q_M9read_onlyG1a i32 {}
 
 function main {  } -> { i64 } {
     mov_p32_imm            _Q_M9read_onlyG1a,        1;
