@@ -131,7 +131,7 @@ fn create_single_unit(
     bcx: &BuildContext<'_, '_>,
 ) -> Unit {
     let artifacts_type = infer_artifacts_type(unit_identity, root_identity, bcx);
-    let dependencies = node
+    let mut dependencies = node
         .dependencies()
         .iter()
         .map(|dep| {
@@ -139,7 +139,8 @@ fn create_single_unit(
                 .get(dep)
                 .unwrap_or_else(|| panic!("{}", missing_depenendcy_in_graph_message(*dep)))
         })
-        .collect();
+        .collect::<Vec<_>>();
+    dependencies.sort();
     let unit_id = *ids_map
         .get(&unit_identity)
         .unwrap_or_else(|| panic!("{}", missing_depenendcy_in_graph_message(unit_identity)));

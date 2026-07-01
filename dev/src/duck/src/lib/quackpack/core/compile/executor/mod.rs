@@ -78,7 +78,7 @@ pub(crate) fn collect_packages(
         }
         visited.insert(current.clone());
         result.push(current.multipackage_schema_package(graph));
-        for dep_id in current.deps_by_unit_id() {
+        for dep_id in current.deps_by_sorted_unit_id() {
             let dep = graph.unit_for(*dep_id);
             dfs(dep, graph, result, visited);
         }
@@ -136,7 +136,7 @@ pub(crate) fn get_deps_outputs(
         result: &mut Vec<(Unit, PathBuf)>,
         visited: &mut HashSet<Unit>,
     ) {
-        for dep_id in current.deps_by_unit_id() {
+        for dep_id in current.deps_by_sorted_unit_id() {
             let dep = graph.unit_for(*dep_id);
             if visited.contains(dep) {
                 continue;
