@@ -1,5 +1,7 @@
 #include "symbol_data.hpp"
 
+#include "helios_private/symbols/pst_symbol_data.hpp"
+
 #include <helios/scope_id.hpp>
 #include <helios/symbols/query_class_of_member.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
@@ -90,11 +92,13 @@ namespace compiler::helios {
 	) {
 		SymbolKind kind{};
 		variant_match(generated_data) {
+			variant_case_novalue(defgen::BuiltinOperator) {
+				kind = SymbolKind::FunctionDeclaration;
+			}
 			variant_case_novalue(
 				defgen::ImplicitConstructor,
 				defgen::DefaultConstructor,
 				defgen::Method,
-				defgen::BuiltinOperator,
 				defgen::ReplExpressionWrapper,
 				defgen::ReplInstructionWrapper,
 				defgen::ScriptMainWrapper
@@ -126,11 +130,20 @@ namespace compiler::helios {
 	base::Optional<ScopeID> SymbolData::getScope() const {
 		variant_match(other) {
 			variant_case(PstImplementedSemantics, pst_data) { return pst_data.scope; }
+			variant_case(BuiltinSemantics, data) { return data.scope; }
 			variant_case(defgen::SelfParameter, param) { return param.scope; }
 			variant_case(defgen::ControlFlowLocal, local) { return local.owning_scope; }
 			variant_case(defgen::ScriptMainWrapper, script) { return script.scope; }
 			variant_default { return {}; }
 		}
 		CORE_UNREACHABLE();
+	}
+
+	base::Optional<pst::AccessLocked<pst::LangElement>> SymbolData::maybePstElement() const {
+		variant_match(other) {
+			variant_case(PstImplementedSemantics, data) { return data.getElement(); }
+			variant_case(BuiltinSemantics, data) { return data.getElement(); }
+			variant_default { return {}; }
+		}
 	}
 }

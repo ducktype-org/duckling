@@ -115,26 +115,14 @@ namespace compiler::helios {
 			if (auto ptr = std::get_if<T>(&other)) return CRef<T>{ ptr };
 			return std::nullopt;
 		}
-
-		[[nodiscard]]
-		CRef<PstImplementedSemantics> getPSTData() const {
-			return getData<PstImplementedSemantics>();
-		}
-
-		[[nodiscard]]
-		base::Optional<CRef<PstImplementedSemantics>> getPSTDataOpt() const {
-			if (auto ptr = std::get_if<PstImplementedSemantics>(&other); ptr != nullptr)
-				return CRef<PstImplementedSemantics>(ptr);
-			return std::nullopt;
-		}
-
+		base::Optional<pst::AccessLocked<pst::LangElement>> maybePstElement() const;
 		/**
 		 * Return associated pst_element cast to Stmt.
 		 * Panics if element is not a statement or if symbol is not associated with PST element.
 		 */
 		[[nodiscard]]
 		base::Optional<pst::Access<pst::Stmt>> stmtCast(query::Context& ctx) const {
-			return getPSTData()->getElement().unlock(ctx).dynamicCast<pst::Stmt>();
+			return maybePstElement().value().unlock(ctx).dynamicCast<pst::Stmt>();
 		}
 	};
 

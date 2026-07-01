@@ -1,5 +1,8 @@
 #include "query_type_of_symbol.hpp"
 
+#include "helios/symbols/query_class_of_member.hpp"
+#include "helios/symbols/query_type_from_definition.hpp"
+
 #include <frontend/pst_parser/elements/hierarchy/class_elements/field.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
@@ -18,8 +21,6 @@
 #include <query_framework/standard_query/query_impl.hpp>
 
 #include <utility>
-#include "helios/symbols/query_class_of_member.hpp"
-#include "helios/symbols/query_type_from_definition.hpp"
 
 namespace compiler::helios {
 
@@ -285,41 +286,40 @@ namespace compiler::helios {
 					};
 				}
 				variant_case(defgen::Method, method) {
-					// Builds the `self` parameter for `method.owner_type`.
-					const auto self = [&](tsh::ReferenceKind ref, tsh::Mutability mut) {
-						return tsh::SymbolType<>{ method.owner_type, ref, mut };
-					};
+					// Mutable self type.
+					const auto mut_self = tsh::SymbolType<>{ method.owner_type,
+						                                     method.owner_type.isSimple()
+						                                         ? tsh::ReferenceKind::Direct
+						                                         : tsh::ReferenceKind::Ref,
+						                                     tsh::Mutability::Mutable };
+					// Immutable self type
+					const auto immmut_self = mut_self.withMutability(tsh::Mutability::Immutable);
 
-					// `toString` and `length` take an immutable `self` (by value for simple types,
-					// by ref otherwise); only their return type differs.
-					const auto immutable_self_ref = method.owner_type.isSimple()
-					                                   ? tsh::ReferenceKind::Direct
-					                                   : tsh::ReferenceKind::Ref;
 
 					// The self parameter and return type depend on the concrete method kind.
-					const auto [self_type, return_type]
-						= [&]() -> std::pair<tsh::SymbolType<>, tsh::SymbolType<>> {
+					auto [arg_types, return_type]
+						= [&]() -> std::pair<std::vector<tsh::SymbolType<>>, tsh::SymbolType<>> {
 						switch (method.kind) {
 						case defgen::GeneratedMethod::ToString:
-							return { self(immutable_self_ref, tsh::Mutability::Immutable),
-							         tsh::SymbolType<>::withDefaults(tsh::getStringType()) };
+							return { { immmut_self },
+								     tsh::SymbolType<>::withDefaults(tsh::getStringType()) };
 						case defgen::GeneratedMethod::LengthMethod:
-							return { self(immutable_self_ref, tsh::Mutability::Immutable),
-							         tsh::SymbolType<>::withDefaults(tsh::getIntegralType(
+							return { { immmut_self },
+								     tsh::SymbolType<>::withDefaults(tsh::getIntegralType(
 										 ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned
 									 )) };
 						case defgen::GeneratedMethod::DefaultDestructor:
-							return { self(tsh::ReferenceKind::Ref, tsh::Mutability::Mutable),
-							         tsh::SymbolType<>{ tsh::getUnitType(),
-							                            tsh::ReferenceKind::Direct,
-							                            tsh::Mutability::Immutable } };
+							return { { mut_self },
+								     tsh::SymbolType<>{ tsh::getUnitType(),
+								                        tsh::ReferenceKind::Direct,
+								                        tsh::Mutability::Immutable } };
 						}
 						CORE_UNREACHABLE();
 					}();
 
-					const auto method_abstract_type
-						= ctx.query<tsh::QueryFunctionType>({ .parameter_types = { self_type },
-					                                          .result_type     = return_type });
+					const auto method_abstract_type = ctx.query<tsh::QueryFunctionType>(
+						{ .parameter_types = std::move(arg_types), .result_type = return_type }
+					);
 
 					return tsh::SymbolType<>{
 						method_abstract_type,

@@ -1,5 +1,9 @@
 #include "symbols.hpp"
 
+#include "frontend/pst_parser/access.hpp"
+#include "frontend/pst_parser/lang_parser_element.hpp"
+#include "helios_private/symbols/generated_symbol_data.hpp"
+
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/all_class_elements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
@@ -37,12 +41,14 @@
 
 namespace compiler::helios {
 	bool implementsQueryCodeOfFun(SymID id) {
-		if (kind(id) != SymbolKind::Function && kind(id) != SymbolKind::Method) return false;
+		if (kind(id) != SymbolKind::Function && kind(id) != SymbolKind::Method
+		    && kind(id) != SymbolKind::FunctionDeclaration)
+			return false;
+
 		variant_match(getSymRef(id)->other) {
 			variant_case_novalue(PstImplementedSemantics) { return true; }
-			variant_case_novalue(BuiltinSemantics) { CORE_PANIC("Case not covered"); }
-			variant_case_novalue(defgen::BuiltinOperator) { return false; }
-			variant_default { return true; }
+			variant_case_novalue(BuiltinSemantics) { return true; }
+			variant_default { return kind(id) != SymbolKind::FunctionDeclaration; }
 		}
 		CORE_UNREACHABLE();
 	}
@@ -50,11 +56,25 @@ namespace compiler::helios {
 	EmissionPolicy emissionPolicy(SymID id) {
 		variant_match(getSymRef(id)->other) {
 			variant_case_novalue(PstImplementedSemantics) { return EmissionPolicy::OwnerOnly; }
-			variant_case_novalue(BuiltinSemantics) { CORE_PANIC("Case not covered"); }
+			variant_case_novalue(BuiltinSemantics) { return EmissionPolicy::Replicated; }
 			variant_case_novalue(defgen::BuiltinOperator, defgen::ScriptMainWrapper) {
 				return EmissionPolicy::OwnerOnly;
 			}
-			variant_default { return EmissionPolicy::Replicated; }
+			variant_case_novalue(
+				defgen::ImplicitConstructor,
+				defgen::DefaultConstructor,
+				defgen::Method,
+				defgen::Parameter,
+				defgen::SelfParameter,
+				defgen::Field,
+				defgen::GeneratedFunctionVariable,
+				defgen::ControlFlowLocal,
+				defgen::ReplExpressionWrapper,
+				defgen::ReplInstructionWrapper
+			) {
+				return EmissionPolicy::Replicated;
+			}
+			variant_default { CORE_PANIC("Unhandled symbol semantics"); }
 		}
 		CORE_UNREACHABLE();
 	}
@@ -91,17 +111,6 @@ namespace compiler::helios {
 
 	bool isGlobalVar(query::Context& ctx, SymID id) {
 		CORE_ASSERT(getSymRef(id)->common.kind == SymbolKind::Variable, "Not a variable.");
-
-		// Generated symbol might have appeared here when adding new generated locals into the
-		// function when desugaring for loops. We filter them out here since rest of the function
-		// assumes we have a PST symbol.
-		CRef<SymbolData> symbol_data = getSymRef(id);
-		variant_match(symbol_data->other) {
-			variant_case_novalue(defgen::ControlFlowLocal) { return false; }
-			variant_case_novalue(PstImplementedSemantics, BuiltinSemantics) {}  // handled below
-			variant_default { CORE_PANIC("Unhandled generated symbol in `isGlobalVar()`"); }
-		}
-
 
 		// We go up the PST until we find a statement that determines whether the variable is global
 		// or not.
@@ -157,13 +166,13 @@ namespace compiler::helios {
 					CORE_UNREACHABLE();
 				}
 			},
-			getSymRef(id)->getPSTData()->getElement().unlock(ctx)
+			getSymRef(id)->maybePstElement().value().unlock(ctx)
 		);
 	}
 
 	SymbolKind kind(SymID id) { return getSymRef(id)->common.kind; }
 
-	ScopeID scope(SymID id) { return getSymRef(id)->getScope(); }
+	ScopeID scope(SymID id) { return getSymRef(id)->getScope().value(); }
 
 	base::Optional<ScopeID> maybeScope(SymID id) { return getSymRef(id)->getScope(); }
 
@@ -172,9 +181,7 @@ namespace compiler::helios {
 	}
 
 	base::Optional<pst::AccessLocked<pst::LangElement>> maybeSymbolPst(SymID id) {
-		return getSymRef(id)->getPSTDataOpt().map([](CRef<PstImplementedSemantics> data) {
-			return data->getElement();
-		});
+		return getSymRef(id)->maybePstElement();
 	}
 
 	template<typename Attribute>
@@ -804,7 +811,7 @@ namespace compiler::helios {
 			case SymbolKind::Using:
 			case SymbolKind::Import: {
 				QueryLinkedScopeVisitor visitor(ctx, key);
-				key.ref->getPSTData()->getElement().unlock(ctx)->acceptVisitor(visitor);
+				key.ref->maybePstElement().value().unlock(ctx)->acceptVisitor(visitor);
 				return visitor.result_scope.value();
 			}
 			default: {
@@ -837,8 +844,7 @@ namespace compiler::helios {
 			std::vector<tpc::Identifier> pointed_chain;
 			if (kind(key) == SymbolKind::Using) {
 				auto dotted = getSymRef(key)
-				                  ->getPSTData()
-				                  ->getElement()
+				                  ->maybePstElement().value()
 				                  .unlock(ctx)
 				                  .dynamicCast<pst::Using>()
 				                  .value()
@@ -849,8 +855,7 @@ namespace compiler::helios {
 					pointed_chain[i] = { .value = dotted->getNameByIndex(i).unlock(ctx)->unwrap() };
 			} else if (kind(key) == SymbolKind::Alias) {
 				auto dotted = getSymRef(key)
-				                  ->getPSTData()
-				                  ->getElement()
+				                  ->maybePstElement().value()
 				                  .unlock(ctx)
 				                  .dynamicCast<pst::Alias>()
 				                  .value()
@@ -884,8 +889,7 @@ namespace compiler::helios {
 
 			// Get the const's data
 			const auto pst = getSymRef(key)
-			                     ->getPSTData()
-			                     ->getElement()
+			                     ->maybePstElement().value()
 			                     .unlock(ctx)
 			                     .dynamicCast<pst::Const>()
 			                     .value();
@@ -953,7 +957,7 @@ namespace compiler::helios {
 				return {};
 			}
 
-			auto pst_element = getSymRef(key)->getPSTData()->getElement().unlock(ctx);
+			auto pst_element = getSymRef(key)->maybePstElement().value().unlock(ctx);
 
 			// SpecifierBlock only has a "CodeBlock" child, which can has "Stmt" children.
 			//

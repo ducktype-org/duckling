@@ -81,8 +81,8 @@ namespace compiler::helios {
 				  auto nested = current.children[0];
 				  if (kind(nested.node) == SymbolKind::Alias) {
 					  auto alias_stmt = getSymRef(nested.node)
-				                            ->getPSTData()
-				                            ->getElement()
+				                            ->maybePstElement()
+				                            .value()
 				                            .unlock(ctx)
 				                            .dynamicCast<pst::Alias>()
 				                            .value();
