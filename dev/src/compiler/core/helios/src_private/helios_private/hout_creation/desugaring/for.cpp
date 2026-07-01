@@ -116,7 +116,6 @@ namespace compiler::helios::desugaring {
 			if (not ctx.collection_is_l_value)
 				length_arg = makeBox<code::RefOfExpr>(ctx.ctx, gen, std::move(length_arg));
 
-			// TODOP: How to make this vector inline?
 			std::vector<Box<code::Expr>> length_args;
 			length_args.emplace_back(std::move(length_arg));
 
