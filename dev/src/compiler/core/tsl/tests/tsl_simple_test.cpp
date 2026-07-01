@@ -194,7 +194,7 @@ private:
 						"Pointee should be a layout of the pointed-to type."
 					);
 				}
-				variant_default { fail("Layout of raw pointer type should be pointer-like."); }
+				variant_default { fail("Layout of pointer type should be pointer-like."); }
 			}
 			testPrinting(unit_pointer_layout, ctx);
 		});

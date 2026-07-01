@@ -1,7 +1,5 @@
 #include "expr_lowering.hpp"
 
-#include "helios/tsh/kind.hpp"
-
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/symbols/query_type_symbol_data.hpp>
@@ -10,7 +8,6 @@
 #include <mir/mir_structure/mir_structure.hpp>
 #include <mir_private/utils/slices.hpp>
 
-#include "base/extend_cpp/stringifyable_enum.hpp"
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
