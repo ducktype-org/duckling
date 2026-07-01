@@ -13,15 +13,31 @@ Tests:
       build:
         test_cmd: duck -C foo build
         profile_name: dev
+        Output:
+          String: |+
+            info: successfully synchronized venv \`foo\`
+            info: compiling \`foo\`...
       build_release:
         test_cmd: duck -C foo build --release
+        Output:
+          String: |+
+            info: successfully synchronized venv \`foo\`
+            info: compiling \`foo\`...
         profile_name: release
       build_release_profile:
         profile_name: release
         test_cmd: duck -C foo build --profile=release
+        Output:
+          String: |+
+            info: successfully synchronized venv \`foo\`
+            info: compiling \`foo\`...
       build_release_profile2:
         profile_name: release
         test_cmd: duck --color=never -C foo build --profile release
+        Output:
+          String: |+
+            info: successfully synchronized venv \`foo\`
+            info: compiling \`foo\`...
       build_nonexistent_profile:
         test_cmd: duck -C foo build --profile=nonexistent
         run_post_case: "false"
@@ -34,12 +50,24 @@ Tests:
       build_custom_profile:
         test_cmd: duck -C foo build --profile my-profile
         profile_name: my-profile
+        Output:
+          String: |+
+            info: successfully synchronized venv \`foo\`
+            info: compiling \`foo\`...
       build_overridden_builtin_profile:
         test_cmd: duck -C foo build --profile bench
         profile_name: bench
+        Output:
+          String: |+
+            info: successfully synchronized venv \`foo\`
+            info: compiling \`foo\`...
       build_custom_profile_inherited:
         test_cmd: duck -C foo build --profile my-profile2
         profile_name: my-profile2
+        Output:
+          String: |+
+            info: successfully synchronized venv \`foo\`
+            info: compiling \`foo\`...
       # @TODO: #3023 Reenable verbose itests
       build_verbose:
         test_cmd: duck -C foo build --verbose

@@ -11,9 +11,17 @@ Tests:
       build_with_feature:
         test_cmd: duck -C foo build --features foo
         features: "foo"
+        Output:
+          String: |+
+            info: successfully synchronized venv \`foo\`
+            info: compiling \`foo\`...
       build_with_pulling_feature:
         test_cmd: duck -C foo build --features bar
         features: bar foo
+        Output:
+          String: |+
+            info: successfully synchronized venv \`foo\`
+            info: compiling \`foo\`...
       build_with_nonexisting_feature:
         test_cmd: duck -C foo build --features aaa
         run_post_case: "false"

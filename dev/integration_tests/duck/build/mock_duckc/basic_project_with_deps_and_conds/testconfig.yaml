@@ -7,6 +7,14 @@ Tests:
     Cases:
       build_without_bar:
         test_cmd: duck -C foo build
+        Output:
+          String: |+
+            info: successfully synchronized venv \`foo\`
+            info: compiling \`foo\`...
       build_with_bar:
         test_cmd: duck -C foo build --features use-bar
         features: use-bar
+        Output:
+          String: |+
+            info: successfully synchronized venv \`foo\`
+            info: compiling \`foo\`...

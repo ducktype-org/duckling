@@ -5,3 +5,7 @@ Tests:
     Cases:
       build:
         test_cmd: duck -C foo build
+        Output:
+          String: |+
+            info: successfully synchronized venv \`foo\`
+            info: compiling \`foo\`...
