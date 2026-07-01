@@ -1,4 +1,5 @@
 profile_name: ""
+foo: "foo-1.0.0-[HASH]"
 run_post_case: "true"
 PostCase: |+
   if [ @{run_post_case} == "true" ]; then

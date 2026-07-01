@@ -9,5 +9,6 @@ SubDirs:
   - basic_project_with_deps
   - basic_project_with_deps_and_conds
   - deps_with_dvm
+  - diamond
   - features
   - with_a_local_cycle

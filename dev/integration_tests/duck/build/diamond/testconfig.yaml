@@ -1,0 +1,18 @@
+#    root
+#   /   \
+#  foo bar
+#   \ /
+#   baz
+Tests:
+  build:
+    Description: can build a project with dependencies
+    Cases:
+      build:
+        test_cmd: duck -C root build
+        Output:
+          String: |+
+            info: successfully synchronized venv \`root\`
+            info: compiling \`baz\`...
+            info: compiling \`foo\`...
+            info: compiling \`bar\`...
+            info: compiling \`root\`...

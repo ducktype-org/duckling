@@ -3,7 +3,7 @@ import shutil
 from pathlib import Path
 
 # Make ../../../utilities.py import work
-sys.path.append(str(Path(__file__).resolve().parents[3]))
+sys.path.append(str(Path(__file__).resolve().parents[2]))
 
 from utilities import *
 

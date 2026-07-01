@@ -10,6 +10,7 @@ from utilities import *
 foo_path = Path.cwd() / "foo"
 bar_path = Path.cwd() / "bar"
 baz_path = Path.cwd() / "baz"
+root_path = Path.cwd() / "root"
 
 version = "1.0.0"
 
@@ -20,12 +21,14 @@ layout = artifacts_dir_for_root(foo_path)
 layout = artifacts_for_profile(layout, profile)
 
 foo_name = unit_dir_name_for("foo", version, foo_path)
+root_name = unit_dir_name_for("root", version, foo_path)
 bar_name = unit_dir_name_for("bar", version, bar_path)
 baz_name = unit_dir_name_for("baz", version, bar_path)
 
 foo_artifacts = layout / foo_name
 bar_artifacts = layout / bar_name
 baz_artifacts = layout / baz_name
+root_artifacts = layout / root_name
 
 assert locks_path(bar_artifacts).exists()
 check_file_is_empty(locks_path(bar_artifacts))
@@ -55,23 +58,7 @@ expected = f"""{{
       "version": "1.0.0",
       "features": [],
       "path": "{str(baz_path)}/src",
-      "dependencies": [
-        {{
-          "id": "{foo_name}"
-        }}
-      ]
-    }},
-    {{
-      "id": "{foo_name}",
-      "name": "foo",
-      "version": "1.0.0",
-      "features": [],
-      "path": "{str(foo_path)}/src",
-      "dependencies": [
-        {{
-          "id": "{bar_name}"
-        }}
-      ]
+      "dependencies": []
     }}
   ],
   "tasks": [
@@ -101,35 +88,7 @@ expected = f"""{{
       "version": "1.0.0",
       "features": [],
       "path": "{str(baz_path)}/src",
-      "dependencies": [
-        {{
-          "id": "{foo_name}"
-        }}
-      ]
-    }},
-    {{
-      "id": "{foo_name}",
-      "name": "foo",
-      "version": "1.0.0",
-      "features": [],
-      "path": "{str(foo_path)}/src",
-      "dependencies": [
-        {{
-          "id": "{bar_name}"
-        }}
-      ]
-    }},
-    {{
-      "id": "{bar_name}",
-      "name": "bar",
-      "version": "1.0.0",
-      "features": [],
-      "path": "{str(bar_path)}/src",
-      "dependencies": [
-        {{
-          "id": "{baz_name}"
-        }}
-      ]
+      "dependencies": []
     }}
   ],
   "tasks": [
@@ -161,6 +120,49 @@ expected = f"""{{
       "path": "{str(foo_path)}/src",
       "dependencies": [
         {{
+          "id": "{baz_name}"
+        }}
+      ]
+    }},
+    {{
+      "id": "{baz_name}",
+      "name": "baz",
+      "version": "1.0.0",
+      "features": [],
+      "path": "{str(baz_path)}/src",
+      "dependencies": []
+    }}
+  ],
+  "tasks": [
+    {{
+      "package": "{foo_name}",
+      "strategy": "lib",
+      "output_file": "{str(layout / foo_name / f"{foo_name}.a")}"
+    }}
+  ]
+}}"""
+
+assert_eq(text, expected)
+
+root_deps = deps_json_path_for_dep(root_artifacts)
+assert root_deps.exists()
+
+assert locks_path(foo_artifacts).exists()
+check_file_is_empty(locks_path(foo_artifacts))
+
+text = root_deps.read_text()
+
+expected = f"""{{
+  "packages": [
+    {{
+      "id": "{root_name}",
+      "name": "root",
+      "version": "1.0.0",
+      "features": [],
+      "path": "{str(root_path)}/src",
+      "dependencies": [
+        {{
+          "id": "{foo_name}",
           "id": "{bar_name}"
         }}
       ]
@@ -178,23 +180,31 @@ expected = f"""{{
       ]
     }},
     {{
+      "id": "{foo_name}",
+      "name": "foo",
+      "version": "1.0.0",
+      "features": [],
+      "path": "{str(foo_path)}/src",
+      "dependencies": [
+        {{
+          "id": "{baz_name}"
+        }}
+      ]
+    }},
+    {{
       "id": "{baz_name}",
       "name": "baz",
       "version": "1.0.0",
       "features": [],
       "path": "{str(baz_path)}/src",
-      "dependencies": [
-        {{
-          "id": "{foo_name}"
-        }}
-      ]
+      "dependencies": []
     }}
   ],
   "tasks": [
     {{
-      "package": "{foo_name}",
+      "package": "{root_name}",
       "strategy": "native",
-      "output_file": "{str(layout / "foo")}"
+      "output_file": "{str(layout / "root")}"
     }}
   ]
 }}"""
