@@ -44,9 +44,9 @@ impl UnitGraph {
         self.unit_for(self.root_id)
     }
 
-    /// Get an iterator over [`Unit`]s, in any order.
-    pub fn any_units_order(&self) -> impl Iterator<Item = &Unit> {
-        self.units.iter()
+    /// Get [`Unit`]s sorted by their IDs.
+    pub fn units_sorted_by_id(&self) -> &[Unit] {
+        &self.units[..]
     }
 
     /// Check if the given [`Unit`] is the root [`Unit`].

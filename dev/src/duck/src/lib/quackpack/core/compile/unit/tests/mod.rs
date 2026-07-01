@@ -51,6 +51,7 @@ fn lowers_early_graph() {
     let foo_id = 2;
     let bar_id = 1;
     let baz_id = 3;
+    assert_eq!(unit_graph.units_sorted_by_id().len(), 4);
 
     let root = unit_graph.unit_for(root_id);
     assert_eq!(root, unit_graph.root_unit());
@@ -115,6 +116,7 @@ fn lowers_early_graph_with_cycle() {
     let foo_id = 3;
     let bar_id = 1;
     let cycle_id = 2;
+    assert_eq!(unit_graph.units_sorted_by_id().len(), 4);
 
     let root = unit_graph.unit_for(root_id);
     assert_eq!(root, unit_graph.root_unit());
