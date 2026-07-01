@@ -1,5 +1,7 @@
 #include "lir_structure.hpp"
 
+#include "helios/symbols/symbol_id.hpp"
+
 #include <frontend/pst_parser/lang_parser_element.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/mangler/mangler.hpp>

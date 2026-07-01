@@ -836,7 +836,7 @@ private:
 			bool found_zero_init        = false;
 			bool found_push             = false;
 			bool found_pop              = false;
-			bool found_len              = false;
+			bool found_length_call      = false;
 			bool found_index_projection = false;
 
 			using namespace compiler::mir;
@@ -850,25 +850,31 @@ private:
 							found_zero_init = true;
 						break;
 					}
-					case Operation::ListPush:
-						found_push = true;
+					case Operation::Call: {
+						auto callee = instr.arguments.at(0).get<MIRFunctionLiteral>();
+						auto name   = compiler::helios::name(callee.helios_id);
+
+						if (name == base::StrID("push"))
+							found_push = true;
+						else if (name == base::StrID("pop"))
+							found_pop = true;
+						else if (name == base::StrID("length"))
+							found_length_call = true;
+
 						break;
-					case Operation::ListPop:
-						found_pop = true;
-						break;
-					case Operation::ListLen:
-						found_len = true;
-						break;
+					}
 					case Operation::Assign:
 					case Operation::Cast: {
 						if (instr.output.has_value()) {
 							auto& out_place = instr.output.value();
-							if (out_place.getBase<MIRLocalRef>()->getName() == "l"
-							    && out_place.projection_chain.size() == 1) {
-								bool is_index = std::holds_alternative<MIRPlace::IndexProjection>(
-									out_place.projection_chain[0].storage
-								);
-								if (is_index) found_index_projection = true;
+							// `l[0] = 42` lowers to a `Field(ptr)` projection followed by an
+							// `Index` projection.
+							if (out_place.getBase<MIRLocalRef>()->getName() == "l") {
+								for (const auto& proj: out_place.projection_chain)
+									if (std::holds_alternative<MIRPlace::IndexProjection>(
+											proj.storage
+										))
+										found_index_projection = true;
 							}
 						}
 						break;
@@ -882,7 +888,7 @@ private:
 			ASSERT_TRUE(found_zero_init);
 			ASSERT_TRUE(found_push);
 			ASSERT_TRUE(found_pop);
-			ASSERT_TRUE(found_len);
+			ASSERT_TRUE(found_length_call);
 			ASSERT_TRUE(found_index_projection);
 		});
 	}
