@@ -1,4 +1,3 @@
-PostCase: python3 check.py
 Tests:
   build:
     Description: can build a project with dependencies

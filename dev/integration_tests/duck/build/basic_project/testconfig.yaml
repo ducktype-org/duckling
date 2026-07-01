@@ -39,20 +39,40 @@ Tests:
       build_custom_profile_inherited:
         test_cmd: duck -C foo build --profile my-profile2
         profile_name: my-profile2
-      # NOTE: verbose tests are disabled, since compilation order is not deterministic
+      # @TODO: #3023 Reenable verbose itests
       build_verbose:
         test_cmd: duck -C foo build --verbose
         profile_name: dev
         Enabled: "false"
+        Output:
+          Run: |+
+            echo "info: successfully synchronized venv \`foo\`
+            info: compiling \`foo\`...
+            info: Running \`duckc compile_packages $(pwd)/foo/.duck_build/@{profile_name}/@{foo}/deps.json -a $(pwd)/foo/.duck_build/@{profile_name}/@{foo}/artifacts -O 1\`"
       build_release_verbose:
-        test_cmd: duck -C foo build --release --verbose
+        test_cmd: duck -C foo build --@{profile_name} --verbose
         profile_name: release
         Enabled: "false"
+        Output:
+          Run: |+
+            echo "info: successfully synchronized venv \`foo\`
+            info: compiling \`foo\`...
+            info: Running \`duckc compile_packages $(pwd)/foo/.duck_build/@{profile_name}/@{foo}/deps.json -a $(pwd)/foo/.duck_build/@{profile_name}/@{foo}/artifacts -O 3 --no-incremental\`"
       build_release_profile_verbose:
-        test_cmd: duck -C foo build --profile=release --verbose
+        test_cmd: duck -C foo build --profile=@{profile_name} --verbose
         profile_name: release
         Enabled: "false"
+        Output:
+          Run: |+
+            echo "info: successfully synchronized venv \`foo\`
+            info: compiling \`foo\`...
+            info: Running \`duckc compile_packages $(pwd)/foo/.duck_build/@{profile_name}/@{foo}/deps.json -a $(pwd)/foo/.duck_build/@{profile_name}/@{foo}/artifacts -O 3 --no-incremental\`"
       build_release_profile2_verbose:
-        test_cmd: duck -C foo build --profile release --verbose
+        test_cmd: duck -C foo build --profile @{profile_name} --verbose
         profile_name: release
         Enabled: "false"
+        Output:
+          Run: |+
+            echo "info: successfully synchronized venv \`foo\`
+            info: compiling \`foo\`...
+            info: Running \`duckc compile_packages $(pwd)/foo/.duck_build/@{profile_name}/@{foo}/deps.json -a $(pwd)/foo/.duck_build/@{profile_name}/@{foo}/artifacts -O 3 --no-incremental\`"
