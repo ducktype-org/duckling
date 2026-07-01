@@ -33,7 +33,7 @@ public:
 private:
 	void noRunTest() {
 		vm::debugger::Debugger debugger;
-		ASSERT_HAS_VALUE(debugger.loadFile(fs::File(path("debugger_test.dbc"))));
+		ASSERT_HAS_VALUE(debugger.loadFiles({ fs::File(path("debugger_test.dbc")) }));
 		ASSERT_TRUE(std::holds_alternative<vm::api::NotStarted>(debugger.getStatus()));
 	}
 
@@ -57,7 +57,7 @@ private:
 		std::condition_variable cv;
 
 		vm::debugger::Debugger debugger;
-		ASSERT_HAS_VALUE(debugger.loadFile(fs::File(path(std::string(path_name)))));
+		ASSERT_HAS_VALUE(debugger.loadFiles({ fs::File(path(std::string(path_name))) }));
 
 		events::Listener<vm::api::ProcStatus> status_listener([&](const vm::api::ProcStatus& status
 		                                                      ) {
@@ -179,7 +179,7 @@ private:
 		events::Listener<std::string> error_listener([&](const std::string& err) { fail(err); });
 
 		vm::debugger::Debugger debugger;
-		ASSERT_HAS_VALUE(debugger.loadFile(fs::File(path("while_true.dbc"))));
+		ASSERT_HAS_VALUE(debugger.loadFiles({ fs::File(path("while_true.dbc")) }));
 		ASSERT_HAS_VALUE(debugger.setBreakpoint(base::StrID("main"), 0));
 
 		debugger.attachOnStatusChangedListener(status_listener);
@@ -274,7 +274,7 @@ private:
 		events::Listener<std::string> error_listener([&](const std::string& err) { fail(err); });
 
 		vm::debugger::Debugger debugger;
-		ASSERT_HAS_VALUE(debugger.loadFile(fs::File(path("debugger_test.dbc"))));
+		ASSERT_HAS_VALUE(debugger.loadFiles({ fs::File(path("debugger_test.dbc")) }));
 
 		debugger.attachOnStatusChangedListener(status_listener);
 		debugger.attachOnErrorListener(error_listener);
@@ -298,7 +298,7 @@ private:
 
 	void errorTest() {
 		vm::debugger::Debugger debugger;
-		ASSERT_HAS_VALUE(debugger.loadFile(fs::File(path("while_true_no_breakpoint.dbc"))));
+		ASSERT_HAS_VALUE(debugger.loadFiles({ fs::File(path("while_true_no_breakpoint.dbc")) }));
 
 		ASSERT_HAS_VALUE(debugger.runMain());
 		ASSERT_TRUE(!debugger.runMain());  // 1st error
@@ -325,7 +325,7 @@ private:
 		std::mutex              m;
 
 		vm::debugger::Debugger debugger;
-		ASSERT_HAS_VALUE(debugger.loadFile(fs::File(path("vm_api_tests.dbc"))));
+		ASSERT_HAS_VALUE(debugger.loadFiles({ fs::File(path("vm_api_tests.dbc")) }));
 
 		events::Listener<std::string> output_listener([&](const std::string& str) {
 			ASSERT_EQUAL_PRINT("7", str);
@@ -344,7 +344,7 @@ private:
 
 	void memoryTest() {
 		vm::debugger::Debugger debugger;
-		ASSERT_HAS_VALUE(debugger.loadFile(fs::File(path("breakpoint_all_types.dbc"))));
+		ASSERT_HAS_VALUE(debugger.loadFiles({ fs::File(path("breakpoint_all_types.dbc")) }));
 		ASSERT_HAS_VALUE(debugger.setBreakpoint(base::StrID("main"), 20));
 		std::mutex m;
 
@@ -403,7 +403,7 @@ private:
 
 	void inputTest() {
 		vm::debugger::Debugger debugger;
-		ASSERT_HAS_VALUE(debugger.loadFile(fs::File(path("input.dbc"))));
+		ASSERT_HAS_VALUE(debugger.loadFiles({ fs::File(path("input.dbc")) }));
 		std::mutex m;
 
 		std::condition_variable cv;

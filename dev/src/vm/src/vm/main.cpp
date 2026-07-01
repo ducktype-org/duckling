@@ -68,7 +68,7 @@ clah::Clah getVmClah() {
 						   }))
 	    .addSubcommand(
 			clah::Clah("run", "Starts VM in CLI mode")
-				.setDefaultValueParser(clah::FileParser::make("dbc file", std::regex("*\\.dbc")))
+				.setDefaultValueParser(clah::FileParser::make("dbc file", std::regex(".*\\.dbc")))
 				.addCustomVerification(
 					[](const clah::ParsingResult& parsed) -> clah::VerificationResult {
 						if (parsed.getExtraParameterCount() == 0) {
@@ -99,7 +99,7 @@ clah::Clah getVmClah() {
 	                     .addLongName("debug")
 	                     .addShortDesc("Start the VM CLI debugger")
 	                     .build())
-				.add(clah::ParamBuilder::ofValue(clah::StringParser::make("args"))
+				.add(clah::ParamBuilder::ofValue(clah::StringListParser::make("args"))
 	                     .addShortDesc("Program arguments, e.g. \"hello -n 5\"")
 	                     .addShortName('c')
 	                     .addLongName("args")
