@@ -1,7 +1,6 @@
 
 #include "query_type_symbol_data.hpp"
 
-#include "symbol_id_utils.hpp"
 #include "symbol_kind.hpp"
 
 #include <frontend/pst_parser/elements/hierarchy/declarations/class.hpp>

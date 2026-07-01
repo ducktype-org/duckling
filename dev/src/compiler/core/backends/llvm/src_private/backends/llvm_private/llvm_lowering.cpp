@@ -25,7 +25,6 @@ LLVM_INCLUDE_END()
 #include "module_impl.hpp"
 
 #include <ctv/numeric_value.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 #include <tsl/type_layout.hpp>
 

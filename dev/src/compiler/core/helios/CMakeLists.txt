@@ -59,6 +59,7 @@ add_library(HELIOS STATIC
 	src/helios/symbols/symbol_abi.cpp
 	src/helios/symbols/symbol_id.cpp
 	src/helios/utils/get_expr_symid.cpp
+	src/helios/utils/hout_walkers.cpp
 	src/helios/utils/symbol_list.cpp
 	src/helios/repl_utils/repl_queries.cpp
 	src/helios/repl_utils/script_helpers.cpp

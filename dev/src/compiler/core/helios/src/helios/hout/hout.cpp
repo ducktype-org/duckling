@@ -3,7 +3,6 @@
 #include "elements.hpp"
 
 #include <frontend/pst_parser/elements/includes/basic.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 
 #include <query_framework/context/context.hpp>
 

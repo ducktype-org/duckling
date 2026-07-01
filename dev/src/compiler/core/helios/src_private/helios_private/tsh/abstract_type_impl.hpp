@@ -1,7 +1,6 @@
 #pragma once
 
 #include <helios/symbols/symbol_id.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/tsh/abstract_type.hpp>
 #include <helios/tsh/kind.hpp>
 #include <helios/tsh/mutability.hpp>
