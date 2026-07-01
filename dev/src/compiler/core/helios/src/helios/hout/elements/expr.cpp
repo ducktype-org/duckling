@@ -547,8 +547,8 @@ namespace compiler::helios::code {
 			  { .name = ctx.query<mangler::QueryMangledType>(expression_type.getSymbolType())
 	                        ->valueOrThrow(),
 	            .generated_symbol_data
-	            = defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::ImplicitConstructor{
-					expression_type.getType() } } }
+	            = defgen::ImplicitConstructor{
+					expression_type.getType() } }
 		  )) {}
 
 	TupleExpr::TupleExpr(

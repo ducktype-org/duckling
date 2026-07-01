@@ -19,24 +19,14 @@ namespace compiler::helios {
 			return { target_type.queryUnstablePerfectHash() };
 		}
 
-		base::Bit256 DefaultClassConstructor::queryUnstablePerfectHash() const {
-			return { class_symbol.queryUnstablePerfectHash() };
+		base::Bit256 DefaultConstructor::queryUnstablePerfectHash() const {
+			return { type.queryUnstablePerfectHash() };
 		}
 
-		base::Bit256 DefaultStaticArrayConstructor::queryUnstablePerfectHash() const {
-			return { array_type.queryUnstablePerfectHash() };
-		}
-
-		base::Bit256 ToStringMethod::queryUnstablePerfectHash() const {
-			return owner_type.queryUnstablePerfectHash();
-		}
-
-		base::Bit256 LengthMethod::queryUnstablePerfectHash() const {
-			return { owner_type.queryUnstablePerfectHash() };
-		}
-
-		base::Bit256 DefaultDestructor::queryUnstablePerfectHash() const {
-			return owner_type.queryUnstablePerfectHash();
+		base::Bit256 Method::queryUnstablePerfectHash() const {
+			return hashing::justHash<hashing::SHA256>(
+				owner_type.queryUnstablePerfectHash(), static_cast<u64>(kind)
+			);
 		}
 
 		base::Bit256 BuiltinOperator::queryUnstablePerfectHash() const {
@@ -102,15 +92,12 @@ namespace compiler::helios {
 		variant_match(generated_data) {
 			variant_case_novalue(
 				defgen::ImplicitConstructor,
-				defgen::DefaultClassConstructor,
-				defgen::DefaultStaticArrayConstructor,
+				defgen::DefaultConstructor,
+				defgen::Method,
 				defgen::BuiltinOperator,
 				defgen::ReplExpressionWrapper,
 				defgen::ReplInstructionWrapper,
-				defgen::ScriptMainWrapper,
-				defgen::ToStringMethod,
-				defgen::LengthMethod,
-				defgen::DefaultDestructor
+				defgen::ScriptMainWrapper
 			) {
 				kind = SymbolKind::Function;
 			}

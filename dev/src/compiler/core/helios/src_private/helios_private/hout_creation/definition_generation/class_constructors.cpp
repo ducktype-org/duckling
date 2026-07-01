@@ -17,8 +17,8 @@ namespace compiler::helios::defgen {
 			// Preamble, get some basic data.
 			auto class_interface = class_type.getInterface(ctx);
 
-			using ImplicitConstructor = GeneratedSymbolData::ImplicitConstructor;
-			using Variable            = GeneratedSymbolData::GeneratedFunctionVariable;
+			using defgen::ImplicitConstructor;
+			using Variable = GeneratedFunctionVariable;
 			using std::ranges::to;
 			using std::views::transform;
 
@@ -31,7 +31,7 @@ namespace compiler::helios::defgen {
 			// Prepare the ctor symbol and declaration.
 			const SymID ctor_symbol = ctx.query<QueryGeneratedSymbol>({
 				.name                  = name(class_type.getSymbol()),
-				.generated_symbol_data = GeneratedSymbolData{ ImplicitConstructor{ class_type } },
+				.generated_symbol_data = ImplicitConstructor{ class_type },
 			});
 
 			const auto& ctor_decl = ctx.query<QueryDeclOfFun>(ctor_symbol)->valueOrThrow();
@@ -48,7 +48,7 @@ namespace compiler::helios::defgen {
 			const SymID result_symbol = ctx.query<QueryGeneratedSymbol>({
 				.name = base::StrID("__result"),
 				.generated_symbol_data
-				= GeneratedSymbolData{ Variable{ ctor_symbol, 0, result_symbol_type } },
+				= Variable{ ctor_symbol, 0, result_symbol_type },
 			});
 			body.emplace_back(makeBox<code::VariableStmt>(code::VariableStmt(
 				code::generatedOrigin(),

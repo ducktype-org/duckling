@@ -82,8 +82,8 @@ namespace compiler::helios {
 					ctx.query<defgen::QueryGeneratedSymbol>(
 						{ .name = base::StrID{ base::strConcat("_", i + 1) },
 				          .generated_symbol_data
-				          = defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::Field{
-							  .parent_type = source_type, .index = i } } }
+				          = defgen::Field{
+							  .parent_type = source_type, .index = i } }
 					)
 				);
 

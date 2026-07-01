@@ -260,11 +260,11 @@ namespace compiler::helios::desugaring {
 			return ctx.query<defgen::QueryGeneratedSymbol>({
 				.name = name,
 				.generated_symbol_data
-				= defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::ControlFlowLocal{
+				= defgen::ControlFlowLocal{
 					.owning_scope = for_scope,
 					.role         = role,
 					.type         = type,
-				} },
+				},
 			});
 		};
 
