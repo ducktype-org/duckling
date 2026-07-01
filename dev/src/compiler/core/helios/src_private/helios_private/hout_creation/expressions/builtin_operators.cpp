@@ -145,12 +145,12 @@ namespace compiler::helios::code {
 					.symbol = ctx.query<defgen::QueryGeneratedSymbol>({
 						.name = name,
 						.generated_symbol_data
-						= defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::BuiltinOperator{
+						= defgen::BuiltinOperator{
 							ctx.query<tsh::QueryFunctionType>({
 								std::move(param_types),
 								return_type,
 							}),
-						} },
+						},
 					}),
 					.op     = op,
 				};
@@ -164,12 +164,12 @@ namespace compiler::helios::code {
 										  const base::StrID                     builtin_name
 									  ) -> void {
 				auto gen_data
-					= defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::BuiltinOperator{
+					= defgen::BuiltinOperator{
 						ctx.query<tsh::QueryFunctionType>({
 							param_types,
 							return_type,
 						}),
-					} };
+					};
 				auto builtin = RegularBinaryBuiltin{
 					.symbol = ctx.query<defgen::QueryGeneratedSymbol>({
 						.name                  = name,

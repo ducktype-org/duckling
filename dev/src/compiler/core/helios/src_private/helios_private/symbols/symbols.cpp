@@ -40,15 +40,9 @@ namespace compiler::helios {
 		if (kind(id) != SymbolKind::Function && kind(id) != SymbolKind::Method) return false;
 		variant_match(getSymRef(id)->other) {
 			variant_case_novalue(PstImplementedSemantics) { return true; }
-			variant_case(defgen::GeneratedSymbolData, generated_data) {
-				variant_match(generated_data.data) {
-					variant_case_novalue(defgen::GeneratedSymbolData::BuiltinOperator) {
-						return false;
-					}
-					variant_default { return true; }
-				}
-			}
-			variant_default { CORE_PANIC("Case not covered"); }
+			variant_case_novalue(BuiltinSemantics) { CORE_PANIC("Case not covered"); }
+			variant_case_novalue(defgen::BuiltinOperator) { return false; }
+			variant_default { return true; }
 		}
 		CORE_UNREACHABLE();
 	}
@@ -56,18 +50,11 @@ namespace compiler::helios {
 	EmissionPolicy emissionPolicy(SymID id) {
 		variant_match(getSymRef(id)->other) {
 			variant_case_novalue(PstImplementedSemantics) { return EmissionPolicy::OwnerOnly; }
-			variant_case(defgen::GeneratedSymbolData, generated_data) {
-				variant_match(generated_data.data) {
-					variant_case_novalue(
-						defgen::GeneratedSymbolData::BuiltinOperator,
-						defgen::GeneratedSymbolData::ScriptMainWrapper
-					) {
-						return EmissionPolicy::OwnerOnly;
-					}
-					variant_default { return EmissionPolicy::Replicated; }
-				}
+			variant_case_novalue(BuiltinSemantics) { CORE_PANIC("Case not covered"); }
+			variant_case_novalue(defgen::BuiltinOperator, defgen::ScriptMainWrapper) {
+				return EmissionPolicy::OwnerOnly;
 			}
-			variant_default { CORE_PANIC("Case not covered"); }
+			variant_default { return EmissionPolicy::Replicated; }
 		}
 		CORE_UNREACHABLE();
 	}
@@ -109,12 +96,10 @@ namespace compiler::helios {
 		// function when desugaring for loops. We filter them out here since rest of the function
 		// assumes we have a PST symbol.
 		CRef<SymbolData> symbol_data = getSymRef(id);
-		if (std::holds_alternative<defgen::GeneratedSymbolData>(symbol_data->other)) {
-			auto gsd = std::get<defgen::GeneratedSymbolData>(symbol_data->other);
-			variant_match(gsd.data) {
-				variant_case_novalue(defgen::GeneratedSymbolData::ControlFlowLocal) return false;
-				variant_default CORE_PANIC("Unhandled generated symbol in `isGlobalVar()`");
-			}
+		variant_match(symbol_data->other) {
+			variant_case_novalue(defgen::ControlFlowLocal) { return false; }
+			variant_case_novalue(PstImplementedSemantics, BuiltinSemantics) {}  // handled below
+			variant_default { CORE_PANIC("Unhandled generated symbol in `isGlobalVar()`"); }
 		}
 
 
@@ -180,14 +165,7 @@ namespace compiler::helios {
 
 	ScopeID scope(SymID id) { return getSymRef(id)->getScope(); }
 
-	base::Optional<ScopeID> maybeScope(SymID id) {
-		variant_match(getSymRef(id)->other) {
-			variant_case(PstImplementedSemantics, pst_data) { return pst_data.scope; }
-			variant_case(defgen::GeneratedSymbolData, gen_data) { return gen_data.maybeScope(); }
-			variant_default { CORE_PANIC("Unhandled symbol kind"); }
-		}
-		CORE_UNREACHABLE();
-	}
+	base::Optional<ScopeID> maybeScope(SymID id) { return getSymRef(id)->getScope(); }
 
 	base::Optional<pst::Access<pst::Stmt>> stmt(query::Context& ctx, SymID id) {
 		return getSymRef(id)->stmtCast(ctx);
@@ -970,7 +948,7 @@ namespace compiler::helios {
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			std::vector<pst::AccessLocked<pst::StmtSpecifier>> specifiers;
-			if (std::holds_alternative<defgen::GeneratedSymbolData>(getSymRef(key)->other)) {
+			if (!std::holds_alternative<PstImplementedSemantics>(getSymRef(key)->other)) {
 				// Generated symbols have no specifiers (for now)
 				return {};
 			}
@@ -1012,7 +990,8 @@ namespace compiler::helios {
 	namespace defgen {
 		base::Bit256 KeyFor_QueryGeneratedSymbol::queryUnstablePerfectHash() const {
 			return hashing::justHash<hashing::SHA256>(
-				std::hash<base::StrID>()(name), generated_symbol_data.queryUnstablePerfectHash()
+				std::hash<base::StrID>()(name),
+				generatedSymbolUnstablePerfectHash(generated_symbol_data)
 			);
 		}
 

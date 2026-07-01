@@ -98,8 +98,8 @@ namespace compiler::helios {
 
 	namespace defgen {
 		struct KeyFor_QueryGeneratedSymbol {
-			base::StrID         name;
-			GeneratedSymbolData generated_symbol_data;
+			base::StrID                name;
+			GeneratedSymbolDataVariant generated_symbol_data;
 
 			[[nodiscard]]
 			base::Bit256 queryUnstablePerfectHash() const;

@@ -16,6 +16,8 @@
 #include <helios_private/symbols/symbol_data.hpp>
 
 #include <query_framework/standard_query/query_impl.hpp>
+
+#include <utility>
 #include "helios/symbols/query_class_of_member.hpp"
 #include "helios/symbols/query_type_from_definition.hpp"
 
@@ -268,15 +270,9 @@ namespace compiler::helios {
 						tsh::Mutability::Immutable,
 					};
 				}
-				variant_case(defgen::DefaultClassConstructor, ctor) {
-					const auto class_type
-						= ctx.query<QueryTypeFromDefinition>({ ctor.class_symbol })
-					          ->valueOrThrow()
-					          .getType()
-					          .as<tsh::ClassAbstractType>();
-
+				variant_case(defgen::DefaultConstructor, ctor) {
 					// @TODO: #1328 Properly handle value categories in class constructors.
-					const auto return_type = tsh::SymbolType<>::withDefaults(class_type);
+					const auto return_type = tsh::SymbolType<>::withDefaults(ctor.type);
 
 					const auto ctor_abstract_type
 						= ctx.query<tsh::QueryFunctionType>({ .parameter_types = {},
@@ -288,80 +284,45 @@ namespace compiler::helios {
 						tsh::Mutability::Immutable,
 					};
 				}
-				variant_case(defgen::DefaultStaticArrayConstructor, ctor) {
-					const auto return_type = tsh::SymbolType<>::withDefaults(ctor.array_type);
-
-					const auto ctor_abstract_type
-						= ctx.query<tsh::QueryFunctionType>({ .parameter_types = {},
-					                                          .result_type     = return_type });
-
-					return tsh::SymbolType<>{
-						ctor_abstract_type,
-						tsh::ReferenceKind::Direct,
-						tsh::Mutability::Immutable,
-					};
-				}
-				variant_case(defgen::ToStringMethod, to_string) {
-					const tsh::SymbolType<> self_type{
-						to_string.owner_type,
-						to_string.owner_type.isSimple() ? tsh::ReferenceKind::Direct
-														: tsh::ReferenceKind::Ref,
-						tsh::Mutability::Immutable,
+				variant_case(defgen::Method, method) {
+					// Builds the `self` parameter for `method.owner_type`.
+					const auto self = [&](tsh::ReferenceKind ref, tsh::Mutability mut) {
+						return tsh::SymbolType<>{ method.owner_type, ref, mut };
 					};
 
-					const auto return_type = tsh::SymbolType<>::withDefaults(tsh::getStringType());
+					// `toString` and `length` take an immutable `self` (by value for simple types,
+					// by ref otherwise); only their return type differs.
+					const auto immutable_self_ref = method.owner_type.isSimple()
+					                                   ? tsh::ReferenceKind::Direct
+					                                   : tsh::ReferenceKind::Ref;
 
-					const auto to_string_abstract_type
+					// The self parameter and return type depend on the concrete method kind.
+					const auto [self_type, return_type]
+						= [&]() -> std::pair<tsh::SymbolType<>, tsh::SymbolType<>> {
+						switch (method.kind) {
+						case defgen::GeneratedMethod::ToString:
+							return { self(immutable_self_ref, tsh::Mutability::Immutable),
+							         tsh::SymbolType<>::withDefaults(tsh::getStringType()) };
+						case defgen::GeneratedMethod::LengthMethod:
+							return { self(immutable_self_ref, tsh::Mutability::Immutable),
+							         tsh::SymbolType<>::withDefaults(tsh::getIntegralType(
+										 ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned
+									 )) };
+						case defgen::GeneratedMethod::DefaultDestructor:
+							return { self(tsh::ReferenceKind::Ref, tsh::Mutability::Mutable),
+							         tsh::SymbolType<>{ tsh::getUnitType(),
+							                            tsh::ReferenceKind::Direct,
+							                            tsh::Mutability::Immutable } };
+						}
+						CORE_UNREACHABLE();
+					}();
+
+					const auto method_abstract_type
 						= ctx.query<tsh::QueryFunctionType>({ .parameter_types = { self_type },
 					                                          .result_type     = return_type });
 
 					return tsh::SymbolType<>{
-						to_string_abstract_type,
-						tsh::ReferenceKind::Direct,
-						tsh::Mutability::Immutable,
-					};
-				}
-				variant_case(defgen::LengthMethod, length_method) {
-					const tsh::SymbolType<> self_type{
-						length_method.owner_type,
-						length_method.owner_type.isSimple() ? tsh::ReferenceKind::Direct
-															: tsh::ReferenceKind::Ref,
-						tsh::Mutability::Immutable,
-					};
-
-					const auto return_type = tsh::SymbolType<>::withDefaults(tsh::getIntegralType(
-						ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned
-					));
-
-					const auto length_method_abstract_type
-						= ctx.query<tsh::QueryFunctionType>({ .parameter_types = { self_type },
-					                                          .result_type     = return_type });
-
-					return tsh::SymbolType<>{
-						length_method_abstract_type,
-						tsh::ReferenceKind::Direct,
-						tsh::Mutability::Immutable,
-					};
-				}
-				variant_case(defgen::DefaultDestructor, dtor) {
-					const tsh::SymbolType<> self_type{
-						dtor.owner_type,
-						tsh::ReferenceKind::Ref,
-						tsh::Mutability::Mutable,
-					};
-
-					const tsh::SymbolType<> return_type{
-						tsh::getUnitType(),
-						tsh::ReferenceKind::Direct,
-						tsh::Mutability::Immutable,
-					};
-
-					const auto dtor_abstract_type
-						= ctx.query<tsh::QueryFunctionType>({ .parameter_types = { self_type },
-					                                          .result_type     = return_type });
-
-					return tsh::SymbolType<>{
-						dtor_abstract_type,
+						method_abstract_type,
 						tsh::ReferenceKind::Direct,
 						tsh::Mutability::Immutable,
 					};

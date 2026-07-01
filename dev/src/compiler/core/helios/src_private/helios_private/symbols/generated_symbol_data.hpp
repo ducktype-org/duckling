@@ -31,43 +31,37 @@ namespace compiler::helios::defgen {
 	};
 
 	/**
-	 * Represents a compiler-generated default constructor for a class/array/tuple, in general more complex type.
+	 * Represents a compiler-generated default constructor for a class/array/tuple, in general more
+	 * complex type.
 	 *
-	 * The default constructor for a class is a function that takes no parameters and initializes all class
-	 * fields with their initial values or default values if initial values where not provided.
-	 * Returns the initialized class.
+	 * The default constructor for a class is a function that takes no parameters and initializes
+	 * all class fields with their initial values or default values if initial values where not
+	 * provided. Returns the initialized class.
 	 *
-	 * For the array, the default constructor is a function that doesn't take any parameters and loops through
-	 * the static array initializing its fields with a default value (which may mean a call to
-	 * another constructor). Returns the initialized static array value.
+	 * For the array, the default constructor is a function that doesn't take any parameters and
+	 * loops through the static array initializing its fields with a default value (which may mean a
+	 * call to another constructor). Returns the initialized static array value.
 	 */
 	struct DefaultConstructor final {
 		tsh::AbstractType type;  // The symbol of the class this constructor belongs to.
 
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const;
-	};	
+	};
 
 	enum class GeneratedMethod {
-		
-	}
+		DefaultDestructor,
+		LengthMethod,
+		ToString,
+	};
 
+	/**
+	 * Represents a compiler-generated method shared by all types (the destructor, `length` and
+	 * `toString`). The concrete method is distinguished by `kind`.
+	 */
 	struct Method final {
 		tsh::AbstractType owner_type;
-
-		[[nodiscard]]
-		base::Bit256 queryUnstablePerfectHash() const;
-	};
-
-	struct LengthMethod final {
-		tsh::AbstractType owner_type;
-
-		[[nodiscard]]
-		base::Bit256 queryUnstablePerfectHash() const;
-	};
-
-	struct DefaultDestructor final {
-		tsh::AbstractType owner_type;
+		GeneratedMethod   kind;
 
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const;
@@ -223,16 +217,13 @@ namespace compiler::helios::defgen {
 	};
 
 #define GENERATED_SYMBOL_SEMANTICS_LIST                                                           \
-	defgen::ImplicitConstructor, defgen::DefaultClassConstructor,                                 \
-		defgen::DefaultStaticArrayConstructor, defgen::ToStringMethod, defgen::DefaultDestructor, \
-		defgen::LengthMethod, defgen::BuiltinOperator, defgen::Parameter, defgen::SelfParameter,  \
-		defgen::Field, defgen::GeneratedFunctionVariable, defgen::ControlFlowLocal,               \
-		defgen::ReplExpressionWrapper, defgen::ReplInstructionWrapper, defgen::ScriptMainWrapper
+	defgen::ImplicitConstructor, defgen::DefaultConstructor, defgen::Method,                      \
+		defgen::BuiltinOperator, defgen::Parameter, defgen::SelfParameter, defgen::Field,         \
+		defgen::GeneratedFunctionVariable, defgen::ControlFlowLocal, defgen::ReplExpressionWrapper, \
+		defgen::ReplInstructionWrapper, defgen::ScriptMainWrapper
 
 	using GeneratedSymbolDataVariant = std::variant<GENERATED_SYMBOL_SEMANTICS_LIST>;
 
 	[[nodiscard]]
-	base::Bit256      generatedSymbolUnstablePerfectHash(const GeneratedSymbolDataVariant&);
-	tsh::SymbolType<> getType(query::Context& ctx);
-	[[nodiscard]] base::Optional<ScopeID> maybeScope();
+	base::Bit256 generatedSymbolUnstablePerfectHash(const GeneratedSymbolDataVariant&);
 }

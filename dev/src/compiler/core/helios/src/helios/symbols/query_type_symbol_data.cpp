@@ -108,8 +108,8 @@ namespace compiler::helios {
 				      // Starting from 1, not 0!
 				      .name = base::StrID{ base::strConcat("_", order + 1) },
 				      .generated_symbol_data
-				      = defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::Field{
-						  .parent_type = key, .index = order } } }
+				      = defgen::Field{
+						  .parent_type = key, .index = order } }
 				));
 			}
 
@@ -127,14 +127,14 @@ namespace compiler::helios {
 			SymID ptr = ctx.query<defgen::QueryGeneratedSymbol>(
 				{ .name = base::StrID{ "ptr" },
 			      .generated_symbol_data
-			      = defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::Field{
-					  .parent_type = key, .index = 0 } } }
+			      = defgen::Field{
+					  .parent_type = key, .index = 0 } }
 			);
 			SymID len = ctx.query<defgen::QueryGeneratedSymbol>(
 				{ .name = base::StrID{ "len" },
 			      .generated_symbol_data
-			      = defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::Field{
-					  .parent_type = key, .index = 1 } } }
+			      = defgen::Field{
+					  .parent_type = key, .index = 1 } }
 			);
 
 			return SliceTypeData{ .ptr = ptr, .len = len };
