@@ -1,0 +1,11 @@
+#    root
+#   /   \
+#  foo bar
+#   \ /
+#   baz
+Tests:
+  build:
+    Description: can build a project with dependencies
+    Cases:
+      build:
+        test_cmd: duck -C root build
