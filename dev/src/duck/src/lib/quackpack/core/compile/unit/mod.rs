@@ -1,10 +1,25 @@
 //! [`Unit`] is supposed to be all information required to invoke a single instance of duckc.
 
+use std::env::consts::{DLL_PREFIX, DLL_SUFFIX, EXE_SUFFIX};
+use std::hash::Hash;
 use std::sync::Arc;
 
+use self::graph::UnitGraph;
+use super::duckc::multipackage_schema;
 use crate::quackpack::core::compile::compiler_package::CompilerPackage;
-use crate::quackpack::core::storage::package_id::PackageId;
+use crate::quackpack::core::identity::Identity;
 use crate::util::hash::sha256_string;
+
+pub mod graph;
+
+// Missing constants from [`std::env::consts`].
+const STATIC_LIB_SUFFIX: &str = ".a";
+
+// Duckling specific.
+const DVM_SUFFIX: &str = ".dbc";
+
+#[cfg(test)]
+mod tests;
 
 #[derive(Debug, Clone)]
 /// Information required to invoke duckc once.
@@ -38,7 +53,7 @@ struct UnitInner {
     /// Which package we're compiling.
     package: CompilerPackage,
     /// How have we got this package.
-    package_id: PackageId,
+    identity: Identity,
     /// ID's of all __direct__ dependencies of this [`Unit`].
     dependencies_by_id: Vec<u64>,
     /// What artifacts should this unit produce.
@@ -50,7 +65,7 @@ impl Unit {
     pub fn new(
         unit_id: u64,
         package: CompilerPackage,
-        package_id: PackageId,
+        identity: Identity,
         dependencies: Vec<u64>,
         package_type: ArtifactsType,
     ) -> Self {
@@ -58,7 +73,7 @@ impl Unit {
             inner: Arc::new(UnitInner {
                 unit_id,
                 package,
-                package_id,
+                identity,
                 dependencies_by_id: dependencies,
                 package_type,
             }),
@@ -85,15 +100,82 @@ impl Unit {
         self.inner.package_type
     }
 
+    /// Get the [`Identity`] of this [`Unit`].
+    pub fn identity(&self) -> Identity {
+        self.inner.identity
+    }
+
     /// Get a unique (in terms of the current compilation graph) name, which can be used as a directory
     /// name for storing artifacts.
     pub fn unique_name(&self) -> String {
-        let id = self.inner.package_id.storage_name();
         // Can we trim this hash?
-        let id = sha256_string(id);
+        let id = sha256_string(self.identity().origin().to_string());
         let name = self.root_package().package().manifest().name();
         let version = self.root_package().package().manifest().version();
         format!("{}-{}-{}", name, version, id)
+    }
+
+    /// Get the filename of the output of this [`Unit`].
+    pub fn output_file_name(&self) -> String {
+        let name = self.root_package().package().manifest().name();
+        match self.artifacts_type() {
+            ArtifactsType::Binary => format!("{}{}", name, EXE_SUFFIX),
+            ArtifactsType::Library => format!("{}{}{}", DLL_PREFIX, name, DLL_SUFFIX),
+            ArtifactsType::Dvm => format!("{}{}", name, DVM_SUFFIX),
+            ArtifactsType::IsADependencyArtifact => {
+                format!("{}{}", self.unique_name(), STATIC_LIB_SUFFIX)
+            }
+        }
+    }
+
+    /// Get a single [`multipackage_schema::Package`] for this [`Unit`].
+    pub fn multipackage_schema_package(&self, graph: &UnitGraph) -> multipackage_schema::Package {
+        let package = self.root_package().package();
+        let name = package.manifest().name();
+        let version = package.manifest().version();
+        let features = {
+            let mut features = self
+                .root_package()
+                .enabled_features()
+                .iter()
+                .copied()
+                .collect::<Vec<_>>();
+            features.sort();
+            features
+        };
+        let dependencies = {
+            let mut result = vec![];
+            for dep_id in self.deps_by_unit_id() {
+                let unit_dep = graph.unit_for(*dep_id);
+                let dep_name = unit_dep.root_package().package().manifest().name();
+                let dep = package
+                    .manifest()
+                    .dependencies()
+                    .get_by_name(dep_name)
+                    .unwrap_or_else(|| {
+                        panic!(
+                            "unit=({},{}) has dep=({},{}), but it's not in the manifest?!",
+                            self.unit_id(),
+                            name,
+                            dep_id,
+                            dep_name
+                        )
+                    });
+                result.push(multipackage_schema::Dependency {
+                    id: unit_dep.unique_name().into(),
+                    alias: dep.alias(),
+                });
+            }
+            result
+        };
+        multipackage_schema::Package {
+            id: self.unique_name().into(),
+            import_name: name,
+            version,
+            features,
+            path_to_the_src_directory: package.src().to_path_buf(),
+            dependencies,
+        }
     }
 }
 
@@ -104,3 +186,10 @@ impl PartialEq for Unit {
 }
 
 impl Eq for Unit {}
+
+impl Hash for Unit {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        let ptr = Arc::as_ptr(&self.inner);
+        std::ptr::hash(ptr, state)
+    }
+}

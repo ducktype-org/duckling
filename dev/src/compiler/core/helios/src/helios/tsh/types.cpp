@@ -72,6 +72,10 @@ namespace compiler::tsh {
 		return toCPimpl(pimpl)->getUnderlyingType();
 	}
 
+	SymbolType<> SliceAbstractType::getElementType() const {
+		return toCPimpl(pimpl)->getElementType();
+	}
+
 	struct ReferenceConstructionRecord {
 		AbstractType  underlying_type;
 		ReferenceKind ref_kind;
@@ -152,6 +156,10 @@ namespace compiler::tsh {
 		return toCPimpl(pimpl)->getSymbol();
 	}
 
+	compiler::helios::SymbolABI ClassAbstractType::getABI(query::Context& ctx) const {
+		return toCPimpl(pimpl)->getABI(ctx);
+	}
+
 	base::Optional<ClassAbstractType> ClassAbstractType::getBaseClassType(query::Context& ctx
 	) const {
 		return toCPimpl(pimpl)->getBaseClassType(ctx);
@@ -206,6 +214,7 @@ namespace compiler::tsh {
 	INSTANTIATE_CHECKED_CAST(PointerAbstractType)
 	INSTANTIATE_CHECKED_CAST(ManyPointerAbstractType)
 	INSTANTIATE_CHECKED_CAST(CPointerAbstractType)
+	INSTANTIATE_CHECKED_CAST(SliceAbstractType)
 	INSTANTIATE_CHECKED_CAST(StringAbstractType)
 	INSTANTIATE_CHECKED_CAST(TupleAbstractType)
 	INSTANTIATE_CHECKED_CAST(FunctionAbstractType)

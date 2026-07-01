@@ -34,21 +34,34 @@ namespace compiler::driver {
 		using DiagnosticReporter = js::DiagnosticLogger;
 
 		/**
-		 * @brief Look up a package root module by its raw package name.
+		 * @brief Look up a package root module by its raw package id.
 		 */
-		base::Optional<compiler::frontend::ModuleID> getRootModuleIDForRawPackageName(
-			base::StrID package_name, const DiagnosticReporter& report
+		base::Optional<compiler::frontend::ModuleID> getRootModuleIDForRawPackageId(
+			base::StrID package_id, const DiagnosticReporter& report
 		);
 	}  // namespace task
 
 	/**
 	 * @brief Package build target.
 	 */
-	struct BuildTargetDVM final {
+	struct BuildTargetDVMLibrary final {
 		/**
-		 * @brief The output file path stem for the compiled DVM package.
+		 * @brief The output file path name for the compiled DVM package.
 		 */
-		base::StrID output_file_stem = base::StrID("package_dvm");
+		base::StrID output_file_name = base::StrID("package_dvm.dbc");
+	};
+
+	struct BuildTargetDVMExecutable final {
+		/**
+		 * @brief The output file path name for the compiled DVM executable.
+		 */
+		base::StrID output_file_name;
+
+		/**
+		 * @brief Whether to include in the final output the standard
+		 * library packages that the executable depends on.
+		 */
+		bool link_std_packages = false;
 	};
 
 	/**
@@ -60,7 +73,7 @@ namespace compiler::driver {
 		/**
 		 * @brief The output file path for the compiled executable.
 		 */
-		base::StrID output_file_stem;
+		base::StrID output_file_name;
 
 		/**
 		 * @brief Linking options for the executable.
@@ -72,7 +85,7 @@ namespace compiler::driver {
 		/**
 		 * @brief The output file path for the compiled static library.
 		 */
-		base::StrID output_file_stem;
+		base::StrID output_file_name;
 
 		/**
 		 * @brief Archiving options for the static library.
@@ -84,7 +97,8 @@ namespace compiler::driver {
 	 * @brief A variant type representing different build targets.
 	 */
 	using BuildTarget = std::variant<
-		BuildTargetDVM,
+		BuildTargetDVMLibrary,
+		BuildTargetDVMExecutable,
 		BuildTargetLLVM,
 		BuildTargetLLVMExecutable,
 		BuildTargetLLVMStaticLibrary>;
@@ -93,7 +107,7 @@ namespace compiler::driver {
 	 * @brief Represents a task for compiling a package
 	 */
 	struct RawPackageCompilationTask final {
-		base::StrID package_name;
+		base::StrID package_id;
 		BuildTarget build_target;
 
 		/**

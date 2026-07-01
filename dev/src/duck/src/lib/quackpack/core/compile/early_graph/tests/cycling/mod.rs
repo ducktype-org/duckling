@@ -1,4 +1,4 @@
-mod setup;
+pub mod setup;
 use std::collections::{HashMap, HashSet};
 
 use setup::*;
@@ -37,7 +37,6 @@ fn creates_valid_initial_graph() {
         storage: Storage::new(ctx.default_storage_root().into_not_locked_path()),
         used_features: vec![],
         profile,
-        script_path: None,
     };
     let graph = EarlyGraph::new_early(&bcx).unwrap();
     assert_eq!(graph.graph.root, identity_for("root"));
@@ -93,7 +92,6 @@ fn expands_valid_features1() {
         storage: Storage::new(ctx.default_storage_root().into_not_locked_path()),
         used_features: vec!["use_foo_with_baz".into()],
         profile,
-        script_path: None,
     };
     let mut graph = EarlyGraph::new_early(&bcx).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
@@ -146,7 +144,6 @@ fn expands_valid_features2() {
         storage: Storage::new(ctx.default_storage_root().into_not_locked_path()),
         used_features: vec!["use_bar_with_baz".into()],
         profile,
-        script_path: None,
     };
     let mut graph = EarlyGraph::new_early(&bcx).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
@@ -199,7 +196,6 @@ fn expands_valid_features3() {
         storage: Storage::new(ctx.default_storage_root().into_not_locked_path()),
         used_features: vec!["full".into()],
         profile,
-        script_path: None,
     };
     let mut graph = EarlyGraph::new_early(&bcx).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
@@ -250,7 +246,6 @@ fn errors_with_nonexistent_features() {
         storage: Storage::new(ctx.default_storage_root().into_not_locked_path()),
         used_features: vec!["nonexistent".into()],
         profile,
-        script_path: None,
     };
     let mut graph = EarlyGraph::new_early(&bcx).unwrap();
     let err = graph.populate_features(&bcx.used_features).unwrap_err();
@@ -285,7 +280,6 @@ fn removes_inactive_deps1() {
         storage: Storage::new(ctx.default_storage_root().into_not_locked_path()),
         used_features: vec![],
         profile,
-        script_path: None,
     };
     let mut graph = EarlyGraph::new_early(&bcx).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
@@ -304,6 +298,22 @@ fn removes_inactive_deps1() {
             (fetcher_identity_for("foo"), DependencyNode::new(vec![])),
             (fetcher_identity_for("bar"), DependencyNode::new(vec![])),
         ])
+    );
+
+    // Check that graph is in sync with `PackagesSet`.
+    assert_eq!(graph.packages.inner.len(), 3);
+    assert!(graph.packages.inner.contains_key(&identity_for("root")));
+    assert!(
+        graph
+            .packages
+            .inner
+            .contains_key(&fetcher_identity_for("foo"))
+    );
+    assert!(
+        graph
+            .packages
+            .inner
+            .contains_key(&fetcher_identity_for("bar"))
     );
 }
 
@@ -331,7 +341,6 @@ fn removes_inactive_deps2() {
         storage: Storage::new(ctx.default_storage_root().into_not_locked_path()),
         used_features: vec!["use_foo_with_baz".into()],
         profile,
-        script_path: None,
     };
     let mut graph = EarlyGraph::new_early(&bcx).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
@@ -354,6 +363,28 @@ fn removes_inactive_deps2() {
             (fetcher_identity_for("bar"), DependencyNode::new(vec![])),
             (fetcher_identity_for("baz"), DependencyNode::new(vec![])),
         ])
+    );
+
+    // Check that graph is in sync with `PackagesSet`.
+    assert_eq!(graph.packages.inner.len(), 4);
+    assert!(graph.packages.inner.contains_key(&identity_for("root")));
+    assert!(
+        graph
+            .packages
+            .inner
+            .contains_key(&fetcher_identity_for("foo"))
+    );
+    assert!(
+        graph
+            .packages
+            .inner
+            .contains_key(&fetcher_identity_for("bar"))
+    );
+    assert!(
+        graph
+            .packages
+            .inner
+            .contains_key(&fetcher_identity_for("baz"))
     );
 }
 
@@ -381,7 +412,6 @@ fn removes_inactive_deps3() {
         storage: Storage::new(ctx.default_storage_root().into_not_locked_path()),
         used_features: vec!["use_bar_with_baz".into()],
         profile,
-        script_path: None,
     };
     let mut graph = EarlyGraph::new_early(&bcx).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
@@ -404,6 +434,28 @@ fn removes_inactive_deps3() {
             ),
             (fetcher_identity_for("baz"), DependencyNode::new(vec![])),
         ])
+    );
+
+    // Check that graph is in sync with `PackagesSet`.
+    assert_eq!(graph.packages.inner.len(), 4);
+    assert!(graph.packages.inner.contains_key(&identity_for("root")));
+    assert!(
+        graph
+            .packages
+            .inner
+            .contains_key(&fetcher_identity_for("foo"))
+    );
+    assert!(
+        graph
+            .packages
+            .inner
+            .contains_key(&fetcher_identity_for("bar"))
+    );
+    assert!(
+        graph
+            .packages
+            .inner
+            .contains_key(&fetcher_identity_for("baz"))
     );
 }
 
@@ -431,7 +483,6 @@ fn removes_inactive_deps4() {
         storage: Storage::new(ctx.default_storage_root().into_not_locked_path()),
         used_features: vec!["full".into()],
         profile,
-        script_path: None,
     };
     let mut graph = EarlyGraph::new_early(&bcx).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
@@ -457,6 +508,28 @@ fn removes_inactive_deps4() {
             ),
             (fetcher_identity_for("baz"), DependencyNode::new(vec![])),
         ])
+    );
+
+    // Check that graph is in sync with `PackagesSet`.
+    assert_eq!(graph.packages.inner.len(), 4);
+    assert!(graph.packages.inner.contains_key(&identity_for("root")));
+    assert!(
+        graph
+            .packages
+            .inner
+            .contains_key(&fetcher_identity_for("foo"))
+    );
+    assert!(
+        graph
+            .packages
+            .inner
+            .contains_key(&fetcher_identity_for("bar"))
+    );
+    assert!(
+        graph
+            .packages
+            .inner
+            .contains_key(&fetcher_identity_for("baz"))
     );
 }
 
@@ -484,7 +557,6 @@ fn cycle() {
         storage: Storage::new(ctx.default_storage_root().into_not_locked_path()),
         used_features: vec!["cycle".into()],
         profile,
-        script_path: None,
     };
     let mut graph = EarlyGraph::new_early(&bcx).unwrap();
     graph.populate_features(&bcx.used_features).unwrap();
@@ -508,7 +580,24 @@ fn cycle() {
                 DependencyNode::new(vec![identity_for("root")])
             )
         ])
-    )
+    );
+
+    // Check that graph is in sync with `PackagesSet`.
+    assert_eq!(graph.packages.inner.len(), 4);
+    assert!(graph.packages.inner.contains_key(&identity_for("root")));
+    assert!(graph.packages.inner.contains_key(&identity_for("cycle")));
+    assert!(
+        graph
+            .packages
+            .inner
+            .contains_key(&fetcher_identity_for("foo"))
+    );
+    assert!(
+        graph
+            .packages
+            .inner
+            .contains_key(&fetcher_identity_for("bar"))
+    );
 }
 
 #[test]
@@ -530,7 +619,6 @@ fn missing_direct_dep_in_freeze() {
         storage: Storage::new(ctx.default_storage_root().into_not_locked_path()),
         used_features: vec![],
         profile,
-        script_path: None,
     };
     let err = EarlyGraph::new_early(&bcx).unwrap_err();
     assert_eq!(
@@ -561,7 +649,6 @@ fn missing_transitive_dep_in_freeze() {
         storage: Storage::new(ctx.default_storage_root().into_not_locked_path()),
         used_features: vec![],
         profile,
-        script_path: None,
     };
     let err = EarlyGraph::new_early(&bcx).unwrap_err();
     assert_eq!(

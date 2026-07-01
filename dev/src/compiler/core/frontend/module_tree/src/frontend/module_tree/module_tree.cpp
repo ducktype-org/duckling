@@ -830,11 +830,21 @@ namespace compiler::frontend {
 		for (auto& worker: manager.getAllWorkers()) schedule_next_file_parsing(worker);
 
 		// Wait until all files are parsed.
-		std::unique_lock lock(wait_mtx);
-		wait_cv.wait(lock, [&] { return all_files_parsed; });
+		{
+			std::unique_lock lock(wait_mtx);
+			wait_cv.wait(lock, [&] { return all_files_parsed; });
+		}
 
-		// Clear the call back if all files are parsed.
+		// Clear the callback so no worker schedules new parsing tasks.
 		manager.setNoTasksCallback([](concurrent::worker::WRef) {});
+
+		// All the lambdas above capture this function's stack frame by reference. A worker that
+		// finished the last task may still be re-entering its loop and is about to run the
+		// (now-cleared) no-tasks callback, or may have already copied the previous callback before
+		// we cleared it (see Worker::run). Either way it would dereference references into this
+		// frame. Wait until every worker is idle before returning, otherwise that frame gets
+		// destroyed underneath them -> rare segfault.
+		manager.waitForAllWorkersFree();
 	}
 
 	ModuleID createModuleTreeWithRandomPackageID(const fs::File& file) {

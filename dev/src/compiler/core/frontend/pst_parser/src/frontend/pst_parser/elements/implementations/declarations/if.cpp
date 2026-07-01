@@ -5,6 +5,8 @@
 #include "preamble.hpp"
 
 namespace pst {
+	CLONE_SUB_ELEMENTS_DEF(If, name, condition, then_body, else_body);
+
 	MBox<If> If::parse(LangParserState& state) {
 		auto out = makeBox<If>(state);
 

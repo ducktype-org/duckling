@@ -182,7 +182,8 @@ namespace concurrent {
 		}
 
 		/**
-		 * Inserts key->value into the container if key does not exist.
+		 * Inserts key->value into the container if key does not exist,
+		 * otherwise assigns the new value to the existing key.
 		 */
 		template<typename K = KEY_T, typename D = DATA_T>
 		void putOrAssign(const K& key, D&& value) RELEASE_NOEXCEPT {
@@ -519,10 +520,12 @@ namespace concurrent {
 		}
 
 		/**
-		 * Retrieves all key-value pairs from the map.
-		 * Locks WithAllShardsLock underneath to ensure thread safety,
-		 * but locks each shard only for the time needed to copy its elements,
-		 * so it can see elements added during the call, but not necessarily all of them.
+		 * Retrieves references to all key-value pairs from the map.
+		 * Locks ALL shards (WithAllShardsLock) for the duration of the copy.
+		 *
+		 * @warning The returned references are unguarded once this method returns, notably
+		 * a concurrent erase()/extract() of a key leaves its reference dangling.
+		 * Synchronize externally if needed.
 		 */
 		[[nodiscard]]
 		std::vector<CRef<KeyValuePair>> getAllKeyValuePairs() const RELEASE_NOEXCEPT {

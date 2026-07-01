@@ -1,10 +1,12 @@
 #include "../../hierarchy/declarations/class.hpp"
 
 #include "../../hierarchy/expressions/ternary.hpp"
-#include "../../hierarchy/not_statements/class_block.hpp"
+#include "../../hierarchy/not_statements/code_block.hpp"
 #include "preamble.hpp"
 
 namespace pst {
+	CLONE_SUB_ELEMENTS_DEF(Class, name, base, implements, body);
+
 	bool ExprParserHelper::untilExtendsEnd(const TokenStream& state, i64 fwd = 0) {
 		return state[fwd].is(Special::Semicolon) || state[fwd].is(NamedOperator::Assign)
 		    || internal::Conditions::isImplementsOrBlockGroup(state, fwd);
@@ -23,6 +25,7 @@ namespace pst {
 		PST_NEW_CONTEXT({
 			state.setContextClassName(out->name.internal()->unwrap());
 			state.setContextBlockOrdering(BlockOrderType::Unordered);
+			state.setContextStmt(StmtContext::Class);
 			PARSE().one(&out->body);
 		})
 

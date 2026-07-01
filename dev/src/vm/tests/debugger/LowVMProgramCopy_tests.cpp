@@ -29,7 +29,7 @@ private:
 
 		ASSERT_EQUAL(program_copy.getOriginalProgram(), program);
 
-		ASSERT_TRUE(loader.loadAndValidate({ { path("breakpoint.dbc") } }, config).has_value());
+		ASSERT_HAS_VALUE(loader.loadAndValidate({ { path("breakpoint.dbc") } }, config));
 		compiler.recompile();
 		ASSERT_TRUE(program->getFunctions().size());
 		ASSERT_EQUAL_PRINT(program_copy.getFunctions().size(), 0);
@@ -38,12 +38,18 @@ private:
 		ASSERT_EQUAL_PRINT(program_copy.getFunctions().size(), program->getFunctions().size());
 
 		auto main_function_id = program_copy.getFunctions().idOf(base::StrID("main"));
-		ASSERT_TRUE(main_function_id.has_value());
+		ASSERT_HAS_VALUE(main_function_id);
 
 		vm::low::MicroOpcode opcode = vm::low::MicroOpcode::breakpoint;
-		auto maybe_opcode = program_copy.replaceOpcode(main_function_id.value(), 0, opcode);
+#ifdef ENABLE_JIT
+		usize first_opcode_index = 1;
+#else
+		usize first_opcode_index = 0;
+#endif
+		auto maybe_opcode
+			= program_copy.replaceOpcode(main_function_id.value(), first_opcode_index, opcode);
 
-		ASSERT_TRUE(maybe_opcode.has_value());
+		ASSERT_HAS_VALUE(maybe_opcode);
 
 		vm::low::MicroOpcode expected_opcode = vm::low::MicroOpcode::stepGil;
 		assertEqual(

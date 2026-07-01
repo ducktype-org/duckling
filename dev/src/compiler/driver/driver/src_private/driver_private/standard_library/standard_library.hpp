@@ -9,11 +9,13 @@
 #pragma once
 
 #include <driver/options.hpp>
+#include <frontend/module_tree/module_id.hpp>
 
 #include <artifacts/artifacts.hpp>
 #include <filesystem/file_path.hpp>
 
 #include <array>
+#include <vector>
 
 namespace compiler::driver {
 	/**
@@ -38,23 +40,17 @@ namespace compiler::driver {
 	);
 
 	/**
-	 * @brief To the `packages_info` vector, to each `RawPackageInfo` in it
-	 * adds the dependency on all standard library packages. This way this dependency
-	 * doesn't have to be provided by the user in the manifest and is added by the compiler.
-	 */
-	base::OkBad addStandardLibraryDependencies(
-		std::vector<compiler::frontend::packages::RawPackageInfo>& packages_info,
-		frontend::packages::DiagnosticReporter&                    report
-	);
-
-	/**
-	 * @brief Creates packages for the standard library and adds them to the global state.
+	 * @brief Adds the standard library packages to the vector and adds std dependencies for
+	 * all the packages in a vector.
+	 * @param packages_info[out] The input vector is modified.
 	 * @param std_path Path to the standard library.
 	 * @param report Diagnostic reporter to report any issues with the standard library packages
 	 * (like a missing package).
 	 */
 	base::OkBad addStandardLibraryPackages(
-		const fs::FilePath& std_path, frontend::packages::DiagnosticReporter& report
+		std::vector<compiler::frontend::packages::RawPackageInfo>& packages_info,
+		const fs::FilePath&                                        std_path,
+		frontend::packages::DiagnosticReporter&                    report
 	);
 
 	/**
@@ -66,7 +62,23 @@ namespace compiler::driver {
 	);
 
 	/**
-	 * @brief The place where the compiled standard library binaries are placed.
+	 * @brief The place where the compiled standard library binaries for native targets are placed.
 	 */
-	std::vector<artifacts::FileArtifact> getStdLibArtifacts();
+	std::vector<artifacts::FileArtifact> getStdLibNativeArtifacts();
+
+	/**
+	 * @brief The place where the compiled standard library DVM artifacts are placed.
+	 */
+	std::vector<artifacts::FileArtifact> getStdLibDVMArtifacts();
+
+	/**
+	 * @brief The place where the compiled standard library DVM debug info artifacts are placed.
+	 */
+	std::vector<artifacts::FileArtifact> getStdLibDVMDebugInfoArtifacts();
+
+	/**
+	 * @brief Returns the root module IDs of the registered standard library packages.
+	 * @note This is only for REPL usage.
+	 */
+	std::vector<frontend::ModuleID> getStandardLibraryRootModules();
 }

@@ -25,7 +25,6 @@ LLVM_INCLUDE_END()
 #include "module_impl.hpp"
 
 #include <ctv/numeric_value.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 #include <tsl/type_layout.hpp>
 
@@ -135,15 +134,11 @@ namespace {
 					string_constant
 				);
 
-				// Prepare the global struct
+				// Prepare the char slice struct
 				const u64                          length = str.strView().size();
 				const std::vector<llvm::Constant*> fields{
 					string_global,
 					// length is length
-					llvm::ConstantInt::get(llvm_module->getContext(), llvm::APInt(64, length)),
-					// memory_begin_offset (wrt. data pointer) is 0
-					llvm::ConstantInt::get(llvm_module->getContext(), llvm::APInt(64, 0)),
-					// memory_end_offset (wrt. data pointer) is equal to length
 					llvm::ConstantInt::get(llvm_module->getContext(), llvm::APInt(64, length))
 				};
 				const auto struct_type     = llvm::cast<llvm::StructType>(llvm_type.get());
@@ -527,8 +522,8 @@ namespace compiler::backend_llvm {
 
 	/**
 	 * Adds a global variable to the module based on the LIRGlobal description.
-	 * For globals is sets the initial value to null (this function does not handle constructors),
-	 * for constants it sets the initial value to the provided constant value.
+	 * Sets the initial value to null (this function does not handle constructors and proper
+	 * initialization),
 	 */
 	Ref<llvm::GlobalVariable> addGlobalVariable(
 		const Ref<llvm::Module> module, const lir::LIRGlobalData& lir_global
@@ -543,27 +538,9 @@ namespace compiler::backend_llvm {
 		global->setLinkage(llvm::GlobalValue::ExternalLinkage);
 		global->setConstant(lir_global.global.type == lir::LIRGlobalType::Constant);
 
-		if (lir_global.global.type == lir::LIRGlobalType::Constant) {
-			CORE_ASSERT(
-				std::holds_alternative<ctv::CompileTimeValue>(lir_global.data_initialization),
-				"Constant global must have CompileTimeValue as initial value"
-			);
-			global->setInitializer(ctvToLLVMConstant(
-				std::get<ctv::CompileTimeValue>(lir_global.data_initialization),
-				global->getValueType(),
-				module
-			));
-		} else {
-			// Initialise the global variable to null, since it will be initialised in the constructor:
-			CORE_ASSERT(
-				std::holds_alternative<lir::LIRGlobalData::CTorDtorPair>(
-					lir_global.data_initialization
-				),
-				"For now we assume, that each non-constant is non-CTV initialized, but this might "
-				"change in the future"
-			);
-			global->setInitializer(llvm::Constant::getNullValue(global->getValueType()));
-		}
+		// We set null initialization for all globals by default to keep potential uninitialized
+		// memory issues easier to track.
+		global->setInitializer(llvm::Constant::getNullValue(global->getValueType()));
 
 		return global;
 	}
@@ -1511,6 +1488,7 @@ namespace compiler::backend_llvm {
 	void addFunctionToModuleImpl(
 		query::Context& ctx, const Ref<ModuleImpl> module, const CRef<lir::Function> lir_function
 	) {
+		if (lir_function->ignore_on_llvm) return;
 		addFunctionToModuleInternal(ctx, module, lir_function);
 	}
 
@@ -1521,8 +1499,8 @@ namespace compiler::backend_llvm {
 		// 65535 is the default priority for global constructors in LLVM.
 		// There is also a 4-parameter Constant* Data = nullptr, which is the pointer to the
 		// global variable associated with the constructor. However, the problem is that the
-		// order of functions with the same priority is not defined. Therefore, we probably want
-		// to create one global constructor that calls the constructor of each variable in the
+		// order of functions with the same priority is not defined. Therefore, we generally
+		// create one global constructor that calls the constructor of each variable in the
 		// module.
 		llvm::appendToGlobalCtors(*module->module.refMut(), fun, 65'535);
 	}
@@ -1534,7 +1512,20 @@ namespace compiler::backend_llvm {
 		llvm::appendToGlobalDtors(*module->module.refMut(), fun, 65'535);
 	}
 
-	void addGlobalToModuleImpl(const Ref<ModuleImpl> module, const lir::LIRGlobalData& lir_global) {
+	void addGlobalDeclarationToModuleImpl(
+		const Ref<ModuleImpl> module, const lir::LIRGlobalData& lir_global
+	) {
 		addGlobalVariable(module->module.refMut(), lir_global);
+	}
+
+	void setGlobalConstantInitializerImpl(
+		Ref<ModuleImpl> module, base::StrID mangled_name, const ctv::CompileTimeValue& constant_value
+	) {
+		const Ref<llvm::GlobalVariable> global
+			= module->module->getNamedGlobal(mangled_name.strView());
+
+		global->setInitializer(
+			ctvToLLVMConstant(constant_value, global->getValueType(), module->module.refMut())
+		);
 	}
 }

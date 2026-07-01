@@ -7,6 +7,10 @@ namespace pst {
 	 * @brief Const compile time variable declaration.
 	 */
 	class Const final: public Decl {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(Const, Decl);
+		CLONE_SUBELEMENTS();
+
+	protected:
 		NAMED_CHILD(name, IdentifierWrapper);
 		NAMED_CHILD_OPT(type, CommaExprHolder);
 		NAMED_CHILD_OPT(value, CommaExprHolder);

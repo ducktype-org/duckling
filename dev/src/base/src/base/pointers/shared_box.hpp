@@ -7,6 +7,8 @@
 #include <base/pointers/ref.hpp>
 #include <base/types/ints.hpp>
 
+#include <atomic>
+
 namespace base {
 	/**
 	 * @brief: A control block of SharedBox type.
@@ -14,15 +16,20 @@ namespace base {
 	 */
 	template<class Deleter>
 	struct ControlBlock final {
-		usize                         n_owners = 1;
+		std::atomic<u64>              n_owners = 1;
 		[[no_unique_address]] Deleter deleter;
 
-		ControlBlock(Deleter deleter): deleter(deleter) {}
+		ControlBlock(Deleter deleter): deleter(std::move(deleter)) {}
 	};
 
 	/**
 	 * @brief A pointer wrapper type, that shares the ownership of the pointer and deletes it
 	 * when all of the owners go out of scope.
+	 *
+	 * \parallel Concurrent usage of different SharedBox instances owning the same object is safe,
+	 * but concurrent usage of the same SharedBox instance is not. This mimics the behavior of
+	 * std::shared_ptr.
+	 *
 	 * @note: An invariant is kept, that either both `data_ptr` and `ctrl_ptr` are either `nullptr`
 	 * (which initially happens by move and can propagate through copying) or neither is `nullptr`.
 	 *
@@ -69,12 +76,15 @@ namespace base {
 		/**
 		 * @brief: Decrements the number of the owners of the object pointed to.
 		 * If the counter reaches 0, deletes the object and the control block.
+		 * Sets the SharedBox to null state.
 		 */
 		void renounceOwnership() noexcept {
 			if (isFullyNull()) return;
 			assertNotNull();
-			ctrl_ptr->n_owners--;
-			if (ctrl_ptr->n_owners == 0) {
+
+			u64 n_owners_before = ctrl_ptr->n_owners.fetch_sub(1, std::memory_order_acq_rel);
+
+			if (n_owners_before == 1) {
 				ctrl_ptr->deleter.del(data_ptr);
 				delete ctrl_ptr;
 			}
@@ -101,7 +111,7 @@ namespace base {
 		 * It is not a constructor in order to make this call more explicit.
 		 */
 		static SharedBox fromPointerWithCustomDeleter(T* ptr, Deleter deleter) noexcept {
-			return SharedBox(ptr, new ControlBlock(deleter));
+			return SharedBox(ptr, new ControlBlock(std::move(deleter)));
 		}
 
 		/**
@@ -116,7 +126,7 @@ namespace base {
 			  ctrl_ptr{ other.ctrl_ptr } {
 			if (isFullyNull()) return;
 			assertNotNull();
-			ctrl_ptr->n_owners++;
+			ctrl_ptr->n_owners.fetch_add(1, std::memory_order_acq_rel);
 		}
 
 		SharedBox(SharedBox&& other) noexcept:
@@ -127,7 +137,7 @@ namespace base {
 			other.nullify();
 		}
 
-		explicit SharedBox(Box<T>&& other) noexcept:
+		explicit SharedBox(Box<T, Deleter>&& other) noexcept:
 			  data_ptr{ std::move(other).ptr },
 			  ctrl_ptr{ new ControlBlock(std::move(other).deleter) } {
 			other.ptr = nullptr;
@@ -149,7 +159,7 @@ namespace base {
 			ctrl_ptr = other.ctrl_ptr;
 			if (!isFullyNull()) {
 				assertNotNull();
-				ctrl_ptr->n_owners++;
+				ctrl_ptr->n_owners.fetch_add(1, std::memory_order_acq_rel);
 			}
 			return *this;
 		}
@@ -223,6 +233,25 @@ namespace base {
 				"object!"
 			);
 			return data_ptr == other.data_ptr;
+		}
+
+		/**
+		 * @brief Resets the SharedBox to null state, renouncing the ownership of the object.
+		 */
+		void reset() noexcept { renounceOwnership(); }
+
+		/**
+		 * @brief Returns the number of SharedBox instances sharing ownership of the same object.
+		 * If the SharedBox is in null state, returns 0.
+		 */
+		[[nodiscard]]
+		u64 ownersCount() const noexcept {
+			if (isFullyNull()) return 0;
+			assertNotNull();
+
+			// Relaxed ordering here is ok here, since it is only used to get an approximate number
+			// of owners.
+			return ctrl_ptr->n_owners.load(std::memory_order_relaxed);
 		}
 
 		~SharedBox() { renounceOwnership(); }

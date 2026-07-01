@@ -7,6 +7,10 @@ namespace pst {
 	 * @brief Top-level element that is the root of the pst of a single file.
 	 */
 	class TopLevel final: public Decl {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(TopLevel, Decl, type);
+		CLONE_SUBELEMENTS();
+
+	protected:
 		std::vector<AccessInternalAnonymous<Stmt>> statements;
 		/**
 		 * @brief The ordering in the top-level is based on context and usually changed by passing

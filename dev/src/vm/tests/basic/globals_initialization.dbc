@@ -8,11 +8,11 @@
 
 global_data f i64 {
     constructor: f_ctor
-};
+}
 
 global_data g i64 {
     constructor: g_ctor
-};
+}
 
 function f_ctor {} -> {} {
     mov_p64_imm f, 7;

@@ -18,10 +18,11 @@ namespace vm::debugger {
 	 */
 	class Debugger final {
 	private:
-		PID                      pid;
-		std::vector<std::string> main_args;
+		PID                 pid;
+		ProgramRunArguments main_args;
 
 		events::Listener<api::ProcStatus> updater;
+		events::Listener<std::string>     vm_output;
 
 		// Event handlers for the debugger:
 
@@ -35,9 +36,13 @@ namespace vm::debugger {
 		 */
 		events::Emitter<std::string> on_error;
 
+		/**
+		 * @brief Emits the output from the VM when VM outputs
+		 */
+		events::Emitter<std::string> on_output;
+
 	public:
-		Debugger(const std::vector<std::string>& main_args = {});
-		Debugger(const fs::File& filepath, const std::vector<std::string>& main_args = {});
+		Debugger();
 		~Debugger();
 		Debugger(const Debugger&)            = delete;
 		Debugger& operator=(const Debugger&) = delete;
@@ -56,6 +61,11 @@ namespace vm::debugger {
 		 */
 		void attachOnErrorListener(events::Listener<std::string>& listener);
 
+		/**
+		 * @brief Attach Listener to Emitter that emits error message when any error raises
+		 */
+		void attachOnOutputListener(events::Listener<std::string>& listener);
+
 		// Methods to control the debugging session:
 
 		/**
@@ -73,6 +83,8 @@ namespace vm::debugger {
 		 * @brief Loads the file
 		 */
 		std::expected<void, api::ApiError> loadFile(const fs::File& filepath);
+
+		void setDefaultArgs(const ProgramRunArguments& args);
 
 		/**
 		 * @brief Returns number of stack frames
@@ -103,14 +115,34 @@ namespace vm::debugger {
 
 		/**
 		 * @brief Sets breakpoint
+		 * @param function_name Name of a function to set breakpoint in.
+		 * @param instr_number Index of instruction in function on which to set the beakpint.
+		 * @param enabled Decides whether the brakpoint should be enabled (inserted) or disabled
+		 * (removed).
 		 */
 		std::expected<void, api::ApiError> setBreakpoint(
 			base::StrID function_name, u64 instr_number, bool enabled = true
 		);
 
 		/**
+		 * @brief Sets breakpoint
+		 * @param file File to set breakpoint in.
+		 * @param line Number of line in file on which to set the beakpint.
+		 * @param enabled Decides whether the brakpoint should be enabled (inserted) or disabled
+		 * (removed).
+		 */
+		std::expected<void, api::ApiError> setBreakpoint(
+			fs::File file, usize line, bool enabled = true
+		);
+
+		/**
 		 * @brief Execute one FatByteCode step in the VM
 		 */
 		std::expected<void, api::ApiError> step();
+
+		/**
+		 * @brief Send input to the VM
+		 */
+		std::expected<void, api::ApiError> sendInput(const std::string& msg);
 	};
 }

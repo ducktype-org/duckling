@@ -23,9 +23,7 @@ protected:
 		std::expected<i64, vm::api::ApiError> run_result;  // exit code or error
 	};
 
-protected:
-	vm::PID initProcess(vm::api::ExecutionConfig config = {});
-
+	vm::PID initProcess(const vm::api::ProcessConfig& config = {}, vm::api::ExecutionConfig execution_config = {});
 	void handleTestResult(const TestResult& test_result, i64 exit_code);
 
 	/**

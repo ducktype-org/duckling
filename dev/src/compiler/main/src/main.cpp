@@ -443,6 +443,7 @@ clah::Clah getClahForMain() {
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
 							.packages_info = {
 								compiler::frontend::packages::RawPackageInfo{
+									.package_id   = base::StrID(package_name),
 									.package_name = base::StrID(package_name),
 									.version      = base::StrID("not_supported"),
 									.package_path = fs::FilePath(path_to_compile.getFilePath()),
@@ -476,7 +477,8 @@ clah::Clah getClahForMain() {
 
 					CORE_ASSERT(!global_state::getPackages().empty(), "No packages registered");
 					auto root
-						= global_state::getPackages().back().getRootModule().illegalAccess().getID();
+						= global_state::getPackages().front().getRootModule().illegalAccess().getID(
+						);
 
 					(void) query::entryPoint<driver::CompileModule>({ root, backend_type, false });
 
@@ -576,6 +578,7 @@ clah::Clah getClahForMain() {
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
 							.packages_info = {
 								compiler::frontend::packages::RawPackageInfo{
+									.package_id   = base::StrID(package_name),
 									.package_name = base::StrID(package_name),
 									.version      = base::StrID("not_supported"),
 									.package_path = path_to_compile.getFilePath(),
@@ -605,31 +608,41 @@ clah::Clah getClahForMain() {
 					compiler::driver::BuildTarget build_target;
 					if (options.isFlag("dvm-backend")) {
 						auto output_file_name = options.getValue<std::string>("output-file-name")
-			                                        .copyValueOr("package_dvm");
+			                                        .copyValueOr("package_dvm.dbc");
 
-						build_target = compiler::driver::BuildTargetDVM{
-							.output_file_stem = base::StrID(output_file_name.c_str()),
-						};
-					} else if (options.isFlag("emit-static-lib")) {
-						auto output_file_name = options.getValue<std::string>("output-file-name")
-			                                        .copyValueOr("package_llvm");
+						if (options.isFlag("emit-static-lib")) {
+							build_target = compiler::driver::BuildTargetDVMLibrary{
+								.output_file_name = base::StrID(output_file_name),
+							};
+						} else {
+							build_target = compiler::driver::BuildTargetDVMExecutable{
+								.output_file_name  = base::StrID(output_file_name),
+								.link_std_packages = not base::holds<
+									compiler::driver::options_types::StdLibOptions::NoStd>(
+									stdlib_options.std_lib_type
+								)
+							};
+						}
 
-						auto archiving_options = getArchivingOptionsFromClah(options);
-						build_target           = compiler::driver::BuildTargetLLVMStaticLibrary{
-									  .output_file_stem  = base::StrID(output_file_name.c_str()),
-									  .archiving_options = archiving_options,
-						};
 					} else {
 						auto output_file_name = options.getValue<std::string>("output-file-name")
-			                                        .copyValueOr("package_llvm");
-						auto local_options   = getLinkingOptionsFromClah(options);
-						auto linking_options = compiler::driver::constructLinkerOptions(
-							local_options, stdlib_options
-						);
-						build_target = compiler::driver::BuildTargetLLVMExecutable{
-							.output_file_stem = base::StrID(output_file_name.c_str()),
-							.linking_options  = linking_options,
-						};
+			                                        .copyValueOr("package_llvm.exe");
+						if (options.isFlag("emit-static-lib")) {
+							auto archiving_options = getArchivingOptionsFromClah(options);
+							build_target           = compiler::driver::BuildTargetLLVMStaticLibrary{
+										  .output_file_name  = base::StrID(output_file_name),
+										  .archiving_options = archiving_options,
+							};
+						} else {
+							auto local_options   = getLinkingOptionsFromClah(options);
+							auto linking_options = compiler::driver::constructLinkerOptions(
+								local_options, stdlib_options
+							);
+							build_target = compiler::driver::BuildTargetLLVMExecutable{
+								.output_file_name = base::StrID(output_file_name),
+								.linking_options  = linking_options,
+							};
+						}
 					}
 
 					time_stats::TrackCategoryTime total_compilation_time(
@@ -648,7 +661,7 @@ clah::Clah getClahForMain() {
 					base::OkBad result = compiler::driver::compilePackages({
 						compiler::driver::PackageCompilationTask{
 							.root_module
-							= global_state::getPackages().back().getRootModule().illegalAccess().getID(
+							= global_state::getPackages().front().getRootModule().illegalAccess().getID(
 							),
 							.build_target = build_target,
 						},
@@ -842,6 +855,7 @@ clah::Clah getClahForMain() {
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
 									.packages_info = {
 										compiler::frontend::packages::RawPackageInfo{
+											.package_id   = base::StrID(package_name),
 											.package_name = base::StrID(package_name),
 											.version      = base::StrID("not_supported"),
 											.package_path = path_to_compile.getFilePath(),

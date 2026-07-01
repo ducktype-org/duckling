@@ -4,6 +4,8 @@
 #include "preamble.hpp"
 
 namespace pst {
+	CLONE_SUB_ELEMENTS_DEF(CopyConstructor, params, inits, body)
+
 	MBox<CopyConstructor> CopyConstructor::parse(LangParserState& state) {
 		auto out = makeBox<CopyConstructor>(state);
 
@@ -20,6 +22,7 @@ namespace pst {
 
 		PST_NEW_CONTEXT({
 			state.setContextBlockOrdering(BlockOrderType::Ordered);
+			state.setContextStmt(StmtContext::Normal);
 			PARSE().all(NamedOperator::Assign, &out->body);
 		})
 

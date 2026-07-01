@@ -14,15 +14,17 @@ namespace vm::debugger::cli {
 	 */
 	class CLIDebugger {
 	public:
-		CLIDebugger(const std::vector<std::string>& main_args = {});
-		CLIDebugger(const fs::File& filepath, const std::vector<std::string>& main_args = {});
+		CLIDebugger();
 		CLIDebugger(const CLIDebugger&)            = delete;
 		CLIDebugger& operator=(const CLIDebugger&) = delete;
 		CLIDebugger(CLIDebugger&&)                 = delete;
 		CLIDebugger& operator=(CLIDebugger&&)      = delete;
 		~CLIDebugger()                             = default;
 
-		int run();
+		std::expected<void, api::ApiError> load(const fs::File& file);
+		std::expected<void, api::ApiError> loadDefault();
+		void                               setDefaultArgs(const ProgramRunArguments& args);
+		int                                run();
 
 	private:
 		events::Listener<api::ProcStatus> status_change_listener;
@@ -30,10 +32,23 @@ namespace vm::debugger::cli {
 		Debugger                          debugger;
 		std::mutex                        output_mutex;
 
+		base::Optional<fs::File>           selected_file;
 		std::expected<void, api::ApiError> load_result = {};
 
-		void help();
-		void status();
-		void position();
+		template<typename... Args>
+		void print(const Args&... content) {
+			std::lock_guard lk(output_mutex);
+			((std::cout << content), ...);
+		}
+
+		template<typename... Args>
+		void printNL(const Args&... content) {
+			std::lock_guard lk(output_mutex);
+			((std::cout << content), ...);
+			std::cout << "\n";
+		}
+
+		void print(const printer::PrinterContentsSeq& content);
+		void printNL(const printer::PrinterContentsSeq& content);
 	};
 }

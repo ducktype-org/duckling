@@ -3,6 +3,8 @@
 #include "../preamble.hpp"
 
 namespace pst {
+	CLONE_SUB_ELEMENTS_DEF(BindingPattern, name);
+
 	MBox<BindingPattern> BindingPattern::parse(LangParserState& state) {
 		auto out = makeBox<BindingPattern>(state);
 		PARSE().one(&out->name);

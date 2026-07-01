@@ -107,6 +107,10 @@ namespace vm::api {
 			api::ExecutionConfig config;
 		};
 
+		struct AttachOutputListener {
+			Ref<events::Listener<std::string>> listener;
+		};
+
 		struct SetBreakpoint {
 			base::StrID function_name;
 			u64         instruction_index;
@@ -145,6 +149,7 @@ namespace vm::api {
 		request::DeinitAndValidate,
 		request::AttachStatusListener,
 		request::SetExecutionConfig,
+		request::AttachOutputListener,
 		request::SetBreakpoint,
 		request::MapFileLineToCodeCollectionPosition>;
 

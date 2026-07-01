@@ -13,7 +13,6 @@
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_abi.hpp>
 #include <helios/symbols/symbol_id.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/tsh/types.hpp>
 #include <helios_private/pst_layer/pst_parent.hpp>
 #include <helios_private/scopes/scopes.hpp>
@@ -326,7 +325,10 @@ namespace compiler::helios::mangler {
 								// We do not have a reliable "path to type" in this case
 								// (esp. for simple types such as i32), so we omit it.
 								// Any ambiguities are solved by the function type anyway.
-								return "Hts" + func(ctx, symbol_id) + "E";
+								return "HtoString" + func(ctx, symbol_id) + "E";
+							}
+							variant_case(defgen::GeneratedSymbolData::LengthMethod, length_method) {
+								return "Hlength" + func(ctx, symbol_id) + "E";
 							}
 							variant_case(
 								defgen::GeneratedSymbolData::ReplExpressionWrapper, repl_wrapper
@@ -524,6 +526,14 @@ namespace compiler::helios::mangler {
 			);
 		}
 
+		static std::string mangle(query::Context& ctx, tsh::SliceAbstractType type) {
+			return base::strConcat(
+				"S",
+				ctx.query<QueryMangledType>({ type.getElementType() })->valueOrThrow().str(),
+				"E"
+			);
+		}
+
 		static std::string mangle(query::Context&, tsh::StringAbstractType) { return "s"; }
 
 		static std::string mangle(query::Context& ctx, tsh::FunctionAbstractType type) {
@@ -606,6 +616,8 @@ namespace compiler::helios::mangler {
 				return mangle(ctx, type.as<tsh::ManyPointerAbstractType>());
 			case CPointer:
 				return mangle(ctx, type.as<tsh::CPointerAbstractType>());
+			case Slice:
+				return mangle(ctx, type.as<tsh::SliceAbstractType>());
 			case String:
 				return mangle(ctx, type.as<tsh::StringAbstractType>());
 			case Function:

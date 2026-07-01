@@ -5,6 +5,8 @@
 #include "preamble.hpp"
 
 namespace pst::expr {
+	CLONE_SUB_ELEMENTS_DEF(ExprFormatStrValue, sub_elements);
+
 	MBox<ExprElement> ExprFormatStrValue::parse(LangParserState& state) {
 		if (!checkNonEmpty(state)) return nullptr;
 

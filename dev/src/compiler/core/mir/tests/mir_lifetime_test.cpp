@@ -8,7 +8,6 @@
 
 #include <ctv/ctv.hpp>
 #include <helios/queries/queries.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <helios/tsh/queries.hpp>
 #include <mir/mir_lowering/mir_queries.hpp>
@@ -54,7 +53,7 @@ private:
 		ASSERT_EQUAL(foo_mir->local_list.size(), 5);
 
 		// Verify lifetime scopes are assigned
-		for (const auto& local: foo_mir->local_list) ASSERT_TRUE(local.scope.has_value());
+		for (const auto& local: foo_mir->local_list) ASSERT_HAS_VALUE(local.scope);
 	}
 
 	void simpleLifetimeSequenceTest() {

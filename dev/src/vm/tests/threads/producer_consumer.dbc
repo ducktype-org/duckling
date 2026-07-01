@@ -11,14 +11,14 @@
 # produced_total=20000, consumed_total=20000, buffer_count=0,
 # finished_producers=2, finished_consumers=2, ok=1.
 
-global_data lock mutex {};
-global_data cv condition_variable {};
+global_data lock mutex {}
+global_data cv condition_variable {}
 
-global_data buffer_count i64 {};
-global_data produced_total i64 {};
-global_data consumed_total i64 {};
-global_data finished_producers i64 {};
-global_data finished_consumers i64 {};
+global_data buffer_count i64 {}
+global_data produced_total i64 {}
+global_data consumed_total i64 {}
+global_data finished_producers i64 {}
+global_data finished_consumers i64 {}
 
 function producer {} -> {} {
 	init_pany_type              to_produce, i64;

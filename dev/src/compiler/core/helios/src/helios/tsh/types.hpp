@@ -10,6 +10,7 @@
 #include "abstract_type.hpp"
 #include "symbol_type.hpp"
 
+#include <helios/symbols/symbol_abi.hpp>
 #include <helios/symbols/symbol_id.hpp>
 
 #include <base/collections/optional.hpp>
@@ -27,6 +28,7 @@ namespace compiler::tsh {
 	class PointerAbstractTypeImpl;
 	class ManyPointerAbstractTypeImpl;
 	class CPointerAbstractTypeImpl;
+	class SliceAbstractTypeImpl;
 	class StringAbstractTypeImpl;
 	class TupleAbstractTypeImpl;
 	class FunctionAbstractTypeImpl;
@@ -287,6 +289,20 @@ namespace compiler::tsh {
 		CONSTRUCT_FROM_IMPLEMENTATION(CPointerAbstractType)
 	};
 
+	/**
+	 * @brief The Slice type.
+	 */
+	class SliceAbstractType final: public AbstractType {
+	public:
+		SETUP_TYPE_WITH_BASE(SliceAbstractType, AbstractType)
+
+		[[nodiscard]] SymbolType<> getElementType() const;
+
+		CONSTRUCT_WITH_CHECKED_CAST(SliceAbstractType)
+
+		CONSTRUCT_FROM_IMPLEMENTATION(SliceAbstractType)
+	};
+
 	/*******************\
 	|  COMPOSITE TYPES  |
 	\*******************/
@@ -479,6 +495,15 @@ namespace compiler::tsh {
 		 */
 		[[nodiscard]]
 		compiler::helios::SymID getSymbol() const;
+
+		/**
+		 * @brief Returns the ABI of this class, derived from its `extern` specifiers.
+		 *
+		 * Returns `DefaultAbi` for plain classes and `CAbi` for classes annotated
+		 * with `extern("C")`.
+		 */
+		[[nodiscard]]
+		compiler::helios::SymbolABI getABI(query::Context& ctx) const;
 
 		/**
 		 * Gets the type of the base class.

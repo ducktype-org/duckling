@@ -5,6 +5,8 @@
 #include "preamble.hpp"
 
 namespace pst {
+	CLONE_SUB_ELEMENTS_DEF(SpecifierBlock, block);
+
 	MBox<SpecifierBlock> SpecifierBlock::parse(LangParserState& state) {
 		auto out = makeBox<SpecifierBlock>(state);
 

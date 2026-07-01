@@ -1,7 +1,6 @@
 #pragma once
 
 #include <helios/symbols/symbol_id.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/tsh/abstract_type.hpp>
 #include <helios/tsh/kind.hpp>
 #include <helios/tsh/mutability.hpp>
@@ -633,6 +632,48 @@ namespace compiler::tsh {
 		CRef<TypeInterface> getDeclaredInterface(query::Context& ctx) const override;
 	};
 
+	class SliceAbstractTypeImpl final: public AbstractTypeImpl {
+		SymbolType<> element;
+
+	public:
+		[[nodiscard]]
+		Kind getKind() const override {
+			return STATIC_KIND;
+		}
+
+		[[nodiscard]]
+		SymbolType<> getElementType() const {
+			return element;
+		}
+
+		/**
+		 * @brief The Kind of types described by objects of this class.
+		 */
+		static constexpr Kind STATIC_KIND = Kind::Slice;
+
+		explicit SliceAbstractTypeImpl(const SymbolType<> element): element(element) {
+			representation = base::strConcat("slice ", element.toString());
+		}
+
+		[[nodiscard]]
+		bool isImplicitlyCoercible(AbstractType target, query::Context& ctx) const override;
+
+		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
+
+		[[nodiscard]] bool isDefaultConstructible(query::Context&) const override { return false; }
+
+		[[nodiscard]] bool isTriviallyZeroInitializable(query::Context&) const override {
+			return false;
+		}
+
+		[[nodiscard]] bool isCopyable(query::Context&) const override { return true; }
+
+		[[nodiscard]] bool isTriviallyCopyable(query::Context&) const override { return true; }
+
+		[[nodiscard]]
+		CRef<TypeInterface> getDeclaredInterface(query::Context&) const override;
+	};
+
 	class StringAbstractTypeImpl final: public AbstractTypeImpl {
 	public:
 		[[nodiscard]]
@@ -964,6 +1005,9 @@ namespace compiler::tsh {
 		compiler::helios::SymID getSymbol() const {
 			return symbol;
 		}
+
+		[[nodiscard]]
+		compiler::helios::SymbolABI getABI(query::Context& ctx) const;
 
 		[[nodiscard]]
 		base::Optional<ClassAbstractType> getBaseClassType(query::Context& ctx) const;

@@ -20,9 +20,10 @@ namespace compiler::backend_vm::internal {
 			ctx->maybeStoreResult(op.dest, op.src);
 			ctx->pushInstruction({ op.op, *op.dest });
 		} else {
-			// Otherwise it's a global or indirect. We perform the operations on the
-			// temporary and then store it in the indirect place.
-			auto tmp = ctx->forceToPlace(op.src);
+			// Otherwise it's indirect. We perform the operations on a temporary and then store it
+			// in the indirect place. The temporary must be a fresh copy: the opcode mutates it in
+			// place, and reusing op.src directly would clobber a live local.
+			auto tmp = ctx->copyToTempPlace(op.src, "un_tmp");
 			ctx->pushInstruction({ op.op, tmp });
 			ctx->maybeStoreResult(op.dest, { tmp });
 		}
@@ -47,10 +48,11 @@ namespace compiler::backend_vm::internal {
 			ctx->maybeStoreResult(op.dest, op.lhs);
 			ctx->pushInstruction({ op.op, *op.dest, op.rhs });
 		} else {
-			// If the output is accessed through a pointer, or doesn't exist, we perform operations
-			// If the output is accessed through a pointer or the output and the argument operate
-			// are the same place, or doesn't exist, we perform operations on the temporary.
-			auto tmp = ctx->forceToPlace(op.lhs, "bin_tmp");
+			// If the output is accessed through a pointer, or aliases one of the arguments,
+			// or doesn't exist, we perform the operation on a temporary. The temporary must
+			// be a fresh copy: the opcode mutates it in place, and reusing op.lhs directly
+			// would clobber a live local.
+			auto tmp = ctx->copyToTempPlace(op.lhs, "bin_tmp");
 			ctx->pushInstruction({ op.op, tmp, op.rhs });
 			ctx->maybeStoreResult(op.dest, { tmp });
 		}

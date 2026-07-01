@@ -20,6 +20,7 @@ namespace vm::exceptions {
 		name(): VMRuntimeException(std::string(ERR_MSG)) {} \
 	}
 
+	VM_RUNTIME_EXCEPTION(VMPanicException, "Program panicked");
 	VM_RUNTIME_EXCEPTION(VMNullPointerCopyException, "Copying to/from null pointer");
 	VM_RUNTIME_EXCEPTION(VMNullPointerAccessException, "Accessing null pointer");
 	VM_RUNTIME_EXCEPTION(VMVtableUnset, "Calling a virtual method with an unset vtable");
@@ -32,6 +33,10 @@ namespace vm::exceptions {
 	VM_RUNTIME_EXCEPTION(VMMemoryAllocationError, "Failed to allocate memory");
 	// @TODO: #1431 remove this
 	VM_RUNTIME_EXCEPTION(VMGlobalNotFoundException, "Global variable not found");
+	VM_RUNTIME_EXCEPTION(VMDeadlockException, "Deadlock detected");
+	VM_RUNTIME_EXCEPTION(
+		VMDynTableReAllocTypeMismatch, "dynTableReAlloc called on a non-dynamic-table block"
+	);
 
 #define VM_RUNTIME_EXCEPTION_WITH_PARAM(name, msg, type)                 \
 	struct name: public VMRuntimeException {                             \

@@ -53,11 +53,11 @@ public:
 private:
 	void parseDependencySuccess() {
 		TestReporter reporter;
-		auto         json = nlohmann::json::parse(R"({ "name": "dep", "alias": "alias" })");
+		auto         json = nlohmann::json::parse(R"({ "id": "dep", "alias": "alias" })");
 		auto         dep  = RawDependencyInfo::fromJson(json, reporter.callback());
-		ASSERT_TRUE(dep.has_value());
-		ASSERT_EQUAL(dep->package_name.str(), std::string("dep"));
-		ASSERT_TRUE(dep->alias.has_value());
+		ASSERT_HAS_VALUE(dep);
+		ASSERT_EQUAL(dep->package_id.str(), std::string("dep"));
+		ASSERT_HAS_VALUE(dep->alias);
 		ASSERT_EQUAL(dep->alias.value().str(), std::string("alias"));
 		ASSERT_EQUAL(reporter.errors, 0);
 	}
@@ -66,49 +66,52 @@ private:
 		TestReporter reporter;
 		auto         json = nlohmann::json::parse(R"({ "alias": "alias" })");
 		auto         dep  = RawDependencyInfo::fromJson(json, reporter.callback());
-		ASSERT_TRUE(!dep.has_value());
+		ASSERT_NO_VALUE(dep);
 		ASSERT_TRUE(reporter.errors > 0);
 	}
 
 	void parseDependencyAliasWrongTypeFails() {
 		TestReporter reporter;
-		auto         json = nlohmann::json::parse(R"({ "name": "dep", "alias": 123 })");
+		auto         json = nlohmann::json::parse(R"({ "id": "dep", "alias": 123 })");
 		auto         dep  = RawDependencyInfo::fromJson(json, reporter.callback());
-		ASSERT_TRUE(!dep.has_value());
+		ASSERT_NO_VALUE(dep);
 		ASSERT_TRUE(reporter.errors > 0);
 	}
 
 	void parsePackageSuccess() {
 		TestReporter reporter;
 		auto         json = nlohmann::json::parse(R"({
+            "id": "pkg_id",
             "name": "pkg",
             "path": "VFS:/packages/pkg.dmf",
             "version": "1.2.3",
             "features": ["f1", "f2"],
             "dependencies": [
-                { "name": "dep" }
+                { "id": "dep" }
             ]
         })");
 		auto         pkg  = RawPackageInfo::fromJson(json, reporter.callback());
-		ASSERT_TRUE(pkg.has_value());
+		ASSERT_HAS_VALUE(pkg);
+		ASSERT_EQUAL(pkg->package_id.str(), std::string("pkg_id"));
 		ASSERT_EQUAL(pkg->package_name.str(), std::string("pkg"));
 		ASSERT_EQUAL(pkg->version.str(), std::string("1.2.3"));
 		ASSERT_EQUAL(pkg->features.size(), 2u);
 		ASSERT_EQUAL(pkg->dependencies.size(), 1u);
-		ASSERT_EQUAL(pkg->dependencies[0].package_name.str(), std::string("dep"));
+		ASSERT_EQUAL(pkg->dependencies[0].package_id.str(), std::string("dep"));
 		ASSERT_EQUAL(reporter.errors, 0);
 	}
 
 	void parsePackageUnknownFieldsWarn() {
 		TestReporter reporter;
 		auto         json = nlohmann::json::parse(R"({
+            "id": "pkg",
             "name": "pkg",
             "path": "VFS:/packages/pkg.dmf",
             "weird": 123,
             "dependencies": []
         })");
 		auto         pkg  = RawPackageInfo::fromJson(json, reporter.callback());
-		ASSERT_TRUE(pkg.has_value());
+		ASSERT_HAS_VALUE(pkg);
 		ASSERT_EQUAL(reporter.errors, 0);
 		ASSERT_TRUE(reporter.warnings > 0);
 	}
@@ -116,38 +119,41 @@ private:
 	void parsePackageBadFeaturesFails() {
 		TestReporter reporter;
 		auto         json = nlohmann::json::parse(R"({
+            "id": "pkg",
             "name": "pkg",
             "path": "VFS:/packages/pkg.dmf",
             "features": ["ok", 123],
             "dependencies": []
         })");
 		auto         pkg  = RawPackageInfo::fromJson(json, reporter.callback());
-		ASSERT_TRUE(!pkg.has_value());
+		ASSERT_NO_VALUE(pkg);
 		ASSERT_TRUE(reporter.errors > 0);
 	}
 
 	void parsePackageVersionWrongTypeFails() {
 		TestReporter reporter;
 		auto         json = nlohmann::json::parse(R"({
+            "id": "pkg",
             "name": "pkg",
             "path": "VFS:/packages/pkg.dmf",
             "version": 123,
             "dependencies": []
         })");
 		auto         pkg  = RawPackageInfo::fromJson(json, reporter.callback());
-		ASSERT_TRUE(!pkg.has_value());
+		ASSERT_NO_VALUE(pkg);
 		ASSERT_TRUE(reporter.errors > 0);
 	}
 
 	void parsePackageDependenciesNotArrayFails() {
 		TestReporter reporter;
 		auto         json = nlohmann::json::parse(R"({
+            "id": "pkg",
             "name": "pkg",
             "path": "VFS:/packages/pkg.dmf",
-            "dependencies": { "name": "dep" }
+            "dependencies": { "id": "dep" }
         })");
 		auto         pkg  = RawPackageInfo::fromJson(json, reporter.callback());
-		ASSERT_TRUE(!pkg.has_value());
+		ASSERT_NO_VALUE(pkg);
 		ASSERT_TRUE(reporter.errors > 0);
 	}
 
@@ -193,18 +199,36 @@ private:
 		TestReporter reporter;
 		auto         main_file = fs::FileManager::createRandomVirtualFile("fn main() {}", ".dmf");
 		RawPackageInfo raw{
+			.package_id   = base::StrID("pkg"),
 			.package_name = base::StrID("pkg"),
 			.version      = base::StrID("1.0.0"),
 			.package_path = main_file.getFilePath(),
 			.features     = {},
 			.dependencies = {
-				RawDependencyInfo{ .package_name = base::StrID("dep"), .alias = {} },
-				RawDependencyInfo{ .package_name = base::StrID("lib"), .alias = base::StrID("l") },
+				RawDependencyInfo{ .package_id = base::StrID("dep"), .alias = {} },
+				RawDependencyInfo{ .package_id = base::StrID("lib"), .alias = base::StrID("l") },
 			},
 		};
+		RawPackageInfo dep{
+			.package_id   = base::StrID("dep"),
+			.package_name = base::StrID("dep"),
+			.version      = base::StrID("1.0.0"),
+			.package_path = main_file.getFilePath(),
+			.features     = {},
+			.dependencies = {},
+		};
+		RawPackageInfo lib{
+			.package_id   = base::StrID("lib"),
+			.package_name = base::StrID("lib"),
+			.version      = base::StrID("1.0.0"),
+			.package_path = main_file.getFilePath(),
+			.features     = {},
+			.dependencies = {},
+		};
 
-		auto pkg_info = createPackageInfo(raw, reporter.callback());
-		ASSERT_TRUE(pkg_info.has_value());
+
+		auto pkg_info = createPackageInfo(raw, { raw, dep, lib }, reporter.callback());
+		ASSERT_HAS_VALUE(pkg_info);
 		ASSERT_EQUAL(reporter.errors, 0);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
@@ -215,12 +239,12 @@ private:
 			ASSERT_EQUAL(dep_pkg.getID().str(), std::string("dep"));
 
 			auto alias_dep = pkg_info->getPackageDependencyByAlias(base::StrID("l")).unlock(ctx);
-			ASSERT_TRUE(alias_dep.has_value());
+			ASSERT_HAS_VALUE(alias_dep);
 			ASSERT_EQUAL(alias_dep.value().unlock(ctx).getID().str(), std::string("lib"));
 
 			auto missing
 				= pkg_info->getPackageDependencyByAlias(base::StrID("missing")).unlock(ctx);
-			ASSERT_TRUE(!missing.has_value());
+			ASSERT_NO_VALUE(missing);
 		});
 
 		fs::FileManager::deleteFile(main_file);
@@ -230,16 +254,18 @@ private:
 		TestReporter                reporter;
 		std::vector<RawPackageInfo> packages;
 		packages.push_back(RawPackageInfo{
+			.package_id   = base::StrID("a"),
 			.package_name = base::StrID("a"),
 			.version      = base::StrID("1"),
 			.package_path = fs::FilePath("VFS:/packages/a"),
 			.features     = {},
 			.dependencies = {
-				RawDependencyInfo{ .package_name = base::StrID("b"), .alias = {} },
-				RawDependencyInfo{ .package_name = base::StrID("missing"), .alias = {} },
+				RawDependencyInfo{ .package_id = base::StrID("b"), .alias = {} },
+				RawDependencyInfo{ .package_id = base::StrID("missing"), .alias = {} },
 			},
 		});
 		packages.push_back(RawPackageInfo{
+			.package_id   = base::StrID("b"),
 			.package_name = base::StrID("b"),
 			.version      = base::StrID("1"),
 			.package_path = fs::FilePath("VFS:/packages/b"),
@@ -249,7 +275,7 @@ private:
 
 		filterUndeclaredDependencies(packages, reporter.callback());
 		ASSERT_EQUAL(packages[0].dependencies.size(), 1);
-		ASSERT_EQUAL(packages[0].dependencies[0].package_name.str(), std::string("b"));
+		ASSERT_EQUAL(packages[0].dependencies[0].package_id.str(), std::string("b"));
 		ASSERT_TRUE(reporter.errors > 0);
 	}
 
@@ -257,15 +283,23 @@ private:
 		TestReporter   reporter;
 		auto           main_file = fs::FileManager::createRandomVirtualFile("fn main() {}", ".dmf");
 		RawPackageInfo raw{
+			.package_id   = base::StrID("pkg"),
 			.package_name = base::StrID("pkg"),
 			.version      = base::StrID("1.0.0"),
 			.package_path = main_file.getFilePath(),
 			.features     = { base::StrID("f1") },
-			.dependencies = { RawDependencyInfo{ .package_name = base::StrID("dep"), .alias = {} } },
+			.dependencies = { RawDependencyInfo{ .package_id = base::StrID("dep"), .alias = {} } },
 		};
-
-		auto pkg_info = createPackageInfo(raw, reporter.callback());
-		ASSERT_TRUE(pkg_info.has_value());
+		RawPackageInfo dep{
+			.package_id   = base::StrID("dep"),
+			.package_name = base::StrID("dep"),
+			.version      = base::StrID("1.0.0"),
+			.package_path = main_file.getFilePath(),
+			.features     = {},
+			.dependencies = {},
+		};
+		auto pkg_info = createPackageInfo(raw, { raw, dep }, reporter.callback());
+		ASSERT_HAS_VALUE(pkg_info);
 		ASSERT_EQUAL(pkg_info->getVersion().str(), std::string("1.0.0"));
 		ASSERT_EQUAL(pkg_info->getFeatures()->size(), 1);
 		auto deps = pkg_info->getDependencies().illegalAccess();
@@ -280,6 +314,7 @@ private:
 		TestReporter   reporter;
 		auto           empty_dir = fs::FileManager::createRandomVirtualDirectory();
 		RawPackageInfo raw{
+			.package_id   = base::StrID("pkg"),
 			.package_name = base::StrID("pkg"),
 			.version      = base::StrID("1.0.0"),
 			.package_path = empty_dir.getFilePath(),
@@ -287,8 +322,8 @@ private:
 			.dependencies = {},
 		};
 
-		auto pkg_info = createPackageInfo(raw, reporter.callback());
-		ASSERT_TRUE(!pkg_info.has_value());
+		auto pkg_info = createPackageInfo(raw, { raw }, reporter.callback());
+		ASSERT_NO_VALUE(pkg_info);
 		ASSERT_TRUE(reporter.errors > 0);
 
 		fs::FileManager::deleteFolder(empty_dir, true);

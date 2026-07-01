@@ -11,7 +11,6 @@
 #include <helios/hout/elements.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/tsh/symbol_type.hpp>
 #include <helios/tsh/type_interface.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
@@ -20,6 +19,7 @@
 #include <helios_private/hout_creation/definition_generation/class_constructors.hpp>
 #include <helios_private/hout_creation/definition_generation/default_constructors.hpp>
 #include <helios_private/hout_creation/definition_generation/default_destructors.hpp>
+#include <helios_private/hout_creation/definition_generation/length_methods.hpp>
 #include <helios_private/hout_creation/definition_generation/to_string_methods.hpp>
 #include <helios_private/hout_creation/definition_generation/tuple_constructor.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
@@ -105,7 +105,6 @@ namespace compiler::helios {
 			void visitFun(pst::Access<pst::Fun> stmt) final {
 				// declaration:
 				auto& decl = ctx.query<QueryDeclOfFun>(original_symbol)->valueOrThrow();
-
 				// body:
 				auto fun_body    = stmt->getBody();
 				auto output_body = processBody(decl, fun_body);
@@ -179,6 +178,10 @@ namespace compiler::helios {
 						}
 						variant_case(defgen::GeneratedSymbolData::ToStringMethod, to_string) {
 							return ctx.query<defgen::QueryToStringMethod>(to_string.owner_type)
+							    ->valueOrThrow();
+						}
+						variant_case(defgen::GeneratedSymbolData::LengthMethod, length_method) {
+							return ctx.query<defgen::QueryLengthMethod>(length_method.owner_type)
 							    ->valueOrThrow();
 						}
 						variant_default {
