@@ -22,6 +22,8 @@ impl UnitGraph {
     pub fn new(root_id: u64, units: Vec<Unit>) -> Self {
         let ids = units.iter().map(Unit::unit_id);
         assert!(ids.is_sorted(), "Units should be sorted by IDs");
+        // Leaving this as a variable, since it might change in the future.
+        assert_eq!(root_id, 0, "root Unit should have an ID == 0");
         for (index, unit) in units.iter().enumerate() {
             assert_eq!(
                 index as u64,
@@ -46,7 +48,7 @@ impl UnitGraph {
 
     /// Get [`Unit`]s sorted by their IDs.
     pub fn units_sorted_by_id(&self) -> &[Unit] {
-        &self.units[..]
+        &self.units
     }
 
     /// Check if the given [`Unit`] is the root [`Unit`].
