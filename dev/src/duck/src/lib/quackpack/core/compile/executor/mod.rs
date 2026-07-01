@@ -60,7 +60,6 @@ impl BuildContext<'_, '_> {
 ///
 /// Right now, order of the vector is indeterministic.
 /// (To be precise, it's a normal DFS order).
-// @TODO: #2907 Make it deterministic? Or maybe sort the output by `id`/`name`?
 pub(crate) fn collect_packages(
     unit: &Unit,
     graph: &UnitGraph,
