@@ -191,7 +191,7 @@ namespace compiler::helios {
 	):
 		  function_symbol(function_symbol),
 		  pst_expr(std::move(pst_expr)) {
-		if_opt_some(getSymRef(function_symbol)->getDataOpt<PstSymbolData>(), pst_data) {
+		if_opt_some(getSymRef(function_symbol)->getDataOpt<PstImplementedSemantics>(), pst_data) {
 			auto position = getFunctionLikeSourcePosition(ctx, pst_data->getElement().unlock(ctx));
 			auto id       = MessageBase::getUniqueID();
 			this->linked_messages.put(std::move(id), makeBox<FunctionDeclaredHereNote>(position));

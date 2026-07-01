@@ -284,7 +284,7 @@ namespace compiler::helios::mangler {
 			case SymbolKind::Method:
 			case SymbolKind::FunctionDeclaration: {
 				variant_match(getSymRef(symbol_id)->other) {
-					variant_case_novalue(PstSymbolData) {
+					variant_case_novalue(PstImplementedSemantics) {
 						// If the symbol originates from the PST, use its path.
 						return path(ctx, symbol_id) + func(ctx, symbol_id);
 					}

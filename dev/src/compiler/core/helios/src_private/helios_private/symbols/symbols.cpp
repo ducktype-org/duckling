@@ -39,7 +39,7 @@ namespace compiler::helios {
 	bool implementsQueryCodeOfFun(SymID id) {
 		if (kind(id) != SymbolKind::Function && kind(id) != SymbolKind::Method) return false;
 		variant_match(getSymRef(id)->other) {
-			variant_case_novalue(PstSymbolData) { return true; }
+			variant_case_novalue(PstImplementedSemantics) { return true; }
 			variant_case(defgen::GeneratedSymbolData, generated_data) {
 				variant_match(generated_data.data) {
 					variant_case_novalue(defgen::GeneratedSymbolData::BuiltinOperator) {
@@ -55,7 +55,7 @@ namespace compiler::helios {
 
 	EmissionPolicy emissionPolicy(SymID id) {
 		variant_match(getSymRef(id)->other) {
-			variant_case_novalue(PstSymbolData) { return EmissionPolicy::OwnerOnly; }
+			variant_case_novalue(PstImplementedSemantics) { return EmissionPolicy::OwnerOnly; }
 			variant_case(defgen::GeneratedSymbolData, generated_data) {
 				variant_match(generated_data.data) {
 					variant_case_novalue(
@@ -182,7 +182,7 @@ namespace compiler::helios {
 
 	base::Optional<ScopeID> maybeScope(SymID id) {
 		variant_match(getSymRef(id)->other) {
-			variant_case(PstSymbolData, pst_data) { return pst_data.scope; }
+			variant_case(PstImplementedSemantics, pst_data) { return pst_data.scope; }
 			variant_case(defgen::GeneratedSymbolData, gen_data) { return gen_data.maybeScope(); }
 			variant_default { CORE_PANIC("Unhandled symbol kind"); }
 		}
@@ -194,7 +194,7 @@ namespace compiler::helios {
 	}
 
 	base::Optional<pst::AccessLocked<pst::LangElement>> maybeSymbolPst(SymID id) {
-		return getSymRef(id)->getPSTDataOpt().map([](CRef<PstSymbolData> data) {
+		return getSymRef(id)->getPSTDataOpt().map([](CRef<PstImplementedSemantics> data) {
 			return data->getElement();
 		});
 	}
@@ -309,7 +309,7 @@ namespace compiler::helios {
 	) {
 		// @TODO: change this function to visitor to avoid dynamic_casts
 
-		PstSymbolData pst_data(scope, stmt->getHash());
+		PstImplementedSemantics pst_data(scope, stmt->getHash());
 
 		// Attribute handling
 		auto attributes           = attributesFromPSTStatement(ctx, stmt);
@@ -609,7 +609,7 @@ namespace compiler::helios {
 					.name = parameter->getName().unlock(ctx)->unwrap(),
 					.kind = SymbolKind::Parameter,
 				},
-				PstSymbolData(scope, element->getHash())
+				PstImplementedSemantics(scope, element->getHash())
 			);
 		}
 
@@ -625,7 +625,7 @@ namespace compiler::helios {
 						.name = ident_wrapper->unwrap(),
 						.kind = SymbolKind::Variable,
 					},
-					PstSymbolData(scope, element->getHash())
+					PstImplementedSemantics(scope, element->getHash())
 				);
 			} else {
 				CORE_PANIC("IdentifierWrapper in QuerySymbolOfStmt with unsupported parent");

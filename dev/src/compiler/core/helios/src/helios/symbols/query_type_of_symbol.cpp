@@ -16,6 +16,8 @@
 #include <helios_private/symbols/symbol_data.hpp>
 
 #include <query_framework/standard_query/query_impl.hpp>
+#include "helios/symbols/query_class_of_member.hpp"
+#include "helios/symbols/query_type_from_definition.hpp"
 
 namespace compiler::helios {
 
@@ -233,7 +235,7 @@ namespace compiler::helios {
 			auto symbol_ref = getSymRef(key);
 
 			variant_match(symbol_ref->other) {
-				variant_case(PstSymbolData, pst_data) {
+				variant_case(PstImplementedSemantics, pst_data) {
 					// @note: function are handled in a special way, using QueryDeclOfFun.
 					if (kind(key) == SymbolKind::Function
 					    or kind(key) == SymbolKind::FunctionDeclaration
@@ -245,8 +247,216 @@ namespace compiler::helios {
 
 					return visitor.symbol_type_qresult;
 				}
-				variant_case(defgen::GeneratedSymbolData, generated_data) {
-					return generated_data.getType(ctx);
+				variant_case(defgen::ImplicitConstructor, ctor) {
+					const auto target_type = ctor.target_type;
+
+					// @TODO: #1328 Properly handle value categories in class constructors.
+					auto fields = target_type.getInterface(ctx)->getFieldsView();
+					std::vector<tsh::SymbolType<>> param_types;
+					for (const auto& field: fields) param_types.push_back(field.getType(ctx));
+
+					const auto return_type = tsh::SymbolType<>::withDefaults(target_type);
+
+					const auto ctor_abstract_type = ctx.query<tsh::QueryFunctionType>({
+						.parameter_types = std::move(param_types),
+						.result_type     = return_type,
+					});
+
+					return tsh::SymbolType<>{
+						ctor_abstract_type,
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Immutable,
+					};
+				}
+				variant_case(defgen::DefaultClassConstructor, ctor) {
+					const auto class_type
+						= ctx.query<QueryTypeFromDefinition>({ ctor.class_symbol })
+					          ->valueOrThrow()
+					          .getType()
+					          .as<tsh::ClassAbstractType>();
+
+					// @TODO: #1328 Properly handle value categories in class constructors.
+					const auto return_type = tsh::SymbolType<>::withDefaults(class_type);
+
+					const auto ctor_abstract_type
+						= ctx.query<tsh::QueryFunctionType>({ .parameter_types = {},
+					                                          .result_type     = return_type });
+
+					return tsh::SymbolType<>{
+						ctor_abstract_type,
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Immutable,
+					};
+				}
+				variant_case(defgen::DefaultStaticArrayConstructor, ctor) {
+					const auto return_type = tsh::SymbolType<>::withDefaults(ctor.array_type);
+
+					const auto ctor_abstract_type
+						= ctx.query<tsh::QueryFunctionType>({ .parameter_types = {},
+					                                          .result_type     = return_type });
+
+					return tsh::SymbolType<>{
+						ctor_abstract_type,
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Immutable,
+					};
+				}
+				variant_case(defgen::ToStringMethod, to_string) {
+					const tsh::SymbolType<> self_type{
+						to_string.owner_type,
+						to_string.owner_type.isSimple() ? tsh::ReferenceKind::Direct
+														: tsh::ReferenceKind::Ref,
+						tsh::Mutability::Immutable,
+					};
+
+					const auto return_type = tsh::SymbolType<>::withDefaults(tsh::getStringType());
+
+					const auto to_string_abstract_type
+						= ctx.query<tsh::QueryFunctionType>({ .parameter_types = { self_type },
+					                                          .result_type     = return_type });
+
+					return tsh::SymbolType<>{
+						to_string_abstract_type,
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Immutable,
+					};
+				}
+				variant_case(defgen::LengthMethod, length_method) {
+					const tsh::SymbolType<> self_type{
+						length_method.owner_type,
+						length_method.owner_type.isSimple() ? tsh::ReferenceKind::Direct
+															: tsh::ReferenceKind::Ref,
+						tsh::Mutability::Immutable,
+					};
+
+					const auto return_type = tsh::SymbolType<>::withDefaults(tsh::getIntegralType(
+						ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned
+					));
+
+					const auto length_method_abstract_type
+						= ctx.query<tsh::QueryFunctionType>({ .parameter_types = { self_type },
+					                                          .result_type     = return_type });
+
+					return tsh::SymbolType<>{
+						length_method_abstract_type,
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Immutable,
+					};
+				}
+				variant_case(defgen::DefaultDestructor, dtor) {
+					const tsh::SymbolType<> self_type{
+						dtor.owner_type,
+						tsh::ReferenceKind::Ref,
+						tsh::Mutability::Mutable,
+					};
+
+					const tsh::SymbolType<> return_type{
+						tsh::getUnitType(),
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Immutable,
+					};
+
+					const auto dtor_abstract_type
+						= ctx.query<tsh::QueryFunctionType>({ .parameter_types = { self_type },
+					                                          .result_type     = return_type });
+
+					return tsh::SymbolType<>{
+						dtor_abstract_type,
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Immutable,
+					};
+				}
+				variant_case(defgen::BuiltinOperator, op) {
+					return tsh::SymbolType<>{
+						op.operator_type,
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Immutable,
+					};
+				}
+				variant_case(defgen::Parameter, param) {
+					const auto function_type
+						= ctx.query<QueryTypeOfSymbol>({ param.function_symbol })
+					          ->valueOrThrow()
+					          .getType()
+					          .as<tsh::FunctionAbstractType>();
+					auto param_symbol_type
+						= function_type.getParameterTypes().at(param.parameter_index);
+					return param_symbol_type;
+				}
+				variant_case(defgen::SelfParameter, param) {
+					const auto class_type
+						= ctx.query<QueryClassOfMember>(param.method_symbol)->valueOrThrow();
+					auto param_symbol_type = tsh::SymbolType{
+						class_type,
+						tsh::ReferenceKind::Ref,
+						tsh::Mutability::Mutable,
+					};
+					return param_symbol_type;
+				}
+				variant_case(defgen::Field, field) {
+					// @TODO: #2515 Implement other cases
+					switch (field.parent_type.getKind()) {
+					case tsh::Kind::Tuple:
+						return field.parent_type.as<tsh::TupleAbstractType>().getComponents().at(
+							field.index
+						);
+					case tsh::Kind::Slice: {
+						if (field.index == 0) {
+							auto element_type
+								= field.parent_type.as<tsh::SliceAbstractType>().getElementType();
+							auto many_pointer_type
+								= ctx.query<tsh::QueryManyPointerType>({ element_type });
+							return tsh::SymbolType<>::withDefaults(many_pointer_type);
+						}
+						if (field.index == 1) {
+							return tsh::SymbolType<>::withDefaults(tsh::getIntegralType(
+								ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned
+							));
+						}
+						CORE_PANIC("Slice only has fields 0 (element) and 1 (length)");
+					}
+					default:
+						CORE_UNREACHABLE();
+					}
+				}
+				variant_case(defgen::GeneratedFunctionVariable, var) { return var.type; }
+				variant_case(defgen::ControlFlowLocal, local) { return local.type; }
+				variant_case(defgen::ReplExpressionWrapper, repl) {
+					const auto function_abstract_type = ctx.query<tsh::QueryFunctionType>({
+						.parameter_types = {},
+						.result_type     = repl.return_type,
+					});
+					return tsh::SymbolType<>{
+						function_abstract_type,
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Immutable,
+					};
+				}
+				variant_case_novalue(defgen::ReplInstructionWrapper) {
+					// Unit (not Void) is the correct return type for procedures.
+					// Per the language spec: "void ... cannot be returned from a function".
+					const auto void_type = tsh::SymbolType<>::withDefaults(tsh::getUnitType());
+					const auto function_abstract_type
+						= ctx.query<tsh::QueryFunctionType>({ .parameter_types = {},
+					                                          .result_type     = void_type });
+					return tsh::SymbolType<>{
+						function_abstract_type,
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Immutable,
+					};
+				}
+				variant_case_novalue(defgen::ScriptMainWrapper) {
+					const auto return_type = tsh::SymbolType<>::withDefaults(
+						tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed)
+					);
+					const auto function_abstract_type
+						= ctx.query<tsh::QueryFunctionType>({ .parameter_types = {},
+					                                          .result_type     = return_type });
+					return tsh::SymbolType<>{
+						function_abstract_type,
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Immutable,
+					};
 				}
 				variant_default { CORE_PANIC("Unknown symbol data type"); }
 			}

@@ -83,29 +83,25 @@ namespace compiler::helios {
 	 * SymbolData is by design a "read-only" structure.
 	 */
 	struct SymbolData final {
-		using OtherData = std::variant<PstSymbolData, defgen::GeneratedSymbolData>;
+		using SymbolSemantics
+			= std::variant<PstImplementedSemantics, BuiltinSemantics, GENERATED_SYMBOL_SEMANTICS_LIST>;
 
-		SymbolData(CommonSymbolData common, OtherData other);
+		SymbolData(CommonSymbolData common, SymbolSemantics other);
 
 		CommonSymbolData common;
-		OtherData        other;
+		SymbolSemantics  other;
 		SymbolDataID     id;
 
-		static SymbolData makePSTSymbolData(CommonSymbolData common_data, PstSymbolData pst_data);
+		static SymbolData makePSTSymbolData(
+			CommonSymbolData common_data, PstImplementedSemantics pst_data
+		);
 
 		static SymbolData makeGeneratedSymbol(
-			base::StrID name, defgen::GeneratedSymbolData generated_data
+			base::StrID name, defgen::GeneratedSymbolDataVariant generated_data
 		);
 
 		[[nodiscard]]
-		ScopeID getScope() const {
-			variant_match(other) {
-				variant_case(PstSymbolData, pst_data) { return pst_data.scope; }
-				variant_case(defgen::GeneratedSymbolData, gen_data) { return gen_data.getScope(); }
-				variant_default { CORE_UNREACHABLE(); }
-			}
-			CORE_UNREACHABLE();
-		}
+		base::Optional<ScopeID> getScope() const;
 
 		template<class T>
 		[[nodiscard]]
@@ -121,14 +117,14 @@ namespace compiler::helios {
 		}
 
 		[[nodiscard]]
-		CRef<PstSymbolData> getPSTData() const {
-			return getData<PstSymbolData>();
+		CRef<PstImplementedSemantics> getPSTData() const {
+			return getData<PstImplementedSemantics>();
 		}
 
 		[[nodiscard]]
-		base::Optional<CRef<PstSymbolData>> getPSTDataOpt() const {
-			if (auto ptr = std::get_if<PstSymbolData>(&other); ptr != nullptr)
-				return CRef<PstSymbolData>(ptr);
+		base::Optional<CRef<PstImplementedSemantics>> getPSTDataOpt() const {
+			if (auto ptr = std::get_if<PstImplementedSemantics>(&other); ptr != nullptr)
+				return CRef<PstImplementedSemantics>(ptr);
 			return std::nullopt;
 		}
 
