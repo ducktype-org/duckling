@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use super::graph::lower_early_graph;
 use crate::quackpack::core::PackageLoader;
 use crate::quackpack::core::compile::BuildContext;
@@ -16,7 +14,6 @@ use crate::quackpack::util::to_url::ToUrl;
 // Some notes on the tests' structure:
 // * we use [0u64; 0] to create an empty slice of u64; otherwise, there's also a serde_json's Value,
 //   which can be compared against u64, and rustc complains about not-infering the type.
-// * since ID's are random, firstly we collect them by name.
 
 // **NOTE**
 // To de-duplicate some code, we reuse setup from early_graph/ tests.
@@ -50,20 +47,10 @@ fn lowers_early_graph() {
     let graph = create_early_graph_from_bcx(&bcx).unwrap();
     let unit_graph = lower_early_graph(graph, &bcx);
 
-    let name_to_id = {
-        let mut map = HashMap::new();
-        for (id, unit) in unit_graph.units.iter() {
-            let name = unit.root_package().package().manifest().name().as_str();
-            map.insert(name, *id);
-        }
-        map
-    };
-    let root_id = *name_to_id.get("root").unwrap();
-    let foo_id = *name_to_id.get("foo").unwrap();
-    let bar_id = *name_to_id.get("bar").unwrap();
-    let baz_id = *name_to_id.get("baz").unwrap();
-    assert!(!name_to_id.contains_key("cycle"));
-    assert_eq!(name_to_id.len(), 4);
+    let root_id = 0;
+    let foo_id = 2;
+    let bar_id = 1;
+    let baz_id = 3;
 
     let root = unit_graph.unit_for(root_id);
     assert_eq!(root, unit_graph.root_unit());
@@ -124,20 +111,10 @@ fn lowers_early_graph_with_cycle() {
     let graph = create_early_graph_from_bcx(&bcx).unwrap();
     let unit_graph = lower_early_graph(graph, &bcx);
 
-    let name_to_id = {
-        let mut map = HashMap::new();
-        for (id, unit) in unit_graph.units.iter() {
-            let name = unit.root_package().package().manifest().name().as_str();
-            map.insert(name, *id);
-        }
-        map
-    };
-    let root_id = *name_to_id.get("root").unwrap();
-    let foo_id = *name_to_id.get("foo").unwrap();
-    let bar_id = *name_to_id.get("bar").unwrap();
-    let cycle_id = *name_to_id.get("cycle").unwrap();
-    assert!(!name_to_id.contains_key("baz"));
-    assert_eq!(name_to_id.len(), 4);
+    let root_id = 0;
+    let foo_id = 3;
+    let bar_id = 1;
+    let cycle_id = 2;
 
     let root = unit_graph.unit_for(root_id);
     assert_eq!(root, unit_graph.root_unit());
