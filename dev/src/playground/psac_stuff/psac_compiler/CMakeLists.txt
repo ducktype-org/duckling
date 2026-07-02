@@ -14,6 +14,8 @@ add_library(libpsackling
     psackling/context.hpp
     psackling/module_loader.hpp
     psackling/module_loader.cpp
+    psackling/pipeline.hpp
+    psackling/pipeline.cpp
     psackling/llvm_lowering_context.hpp
     psackling/llvm_lowering_context.cpp
     psackling/expr_lowering.hpp

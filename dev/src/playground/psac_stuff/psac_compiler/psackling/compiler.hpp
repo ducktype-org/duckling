@@ -7,6 +7,8 @@
 #include <string_view>
 
 namespace pg {
+	struct AnalyzedProgram;
+
 	struct CompileOptions {
 		std::string output_path = "psacklinged.out";
 
@@ -56,7 +58,6 @@ namespace pg {
 
 	private:
 		struct State;
-		struct AnalyzedProgram;
 
 		CompileStats    compileAnalyzed(AnalyzedProgram program);
 		AnalyzedProgram analyze(const fs::File& file);
