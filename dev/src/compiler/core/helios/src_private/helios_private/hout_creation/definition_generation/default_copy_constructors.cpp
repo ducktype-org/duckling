@@ -1,20 +1,14 @@
 #include "default_copy_constructors.hpp"
 
-#include "helios/tsh/kind.hpp"
-#include "helios/tsh/types.hpp"
-
 #include <diagnostic_interactive/placeholder.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/queries/function_queries.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios_private/hout_creation/definition_generation/length_methods.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
-
-#include "base/pointers/box.hpp"
 
 #include <query_framework/standard_query/query_impl.hpp>
 
