@@ -39,9 +39,6 @@ PreNode: ""
 
 # Clean: "@{clean_cmd}"
 PreCase: "@{clean_cmd} && mkdir build;
-  # echo $(pwd);
-  # ls $(pwd);
-  # realpath build;
   case '@{backend}' in
     dvm)       @{compile_dvm_backend_cmd}                                                                                ;;
     llvm)      @{compile_llvm_backend_cmd}                                                                               ;;
@@ -52,6 +49,7 @@ PreCase: "@{clean_cmd} && mkdir build;
   esac;"
 
 Run: "
+  ls build || echo 'foo';
   case '@{backend}' in
     dvm) @{dvm_path} run @{compiled_to_dvm}       ;;
     llvm)
