@@ -208,7 +208,7 @@ namespace vm::debugger::debug_adapter {
 
 	void DebugAdapter::handleLaunch(const nlohmann::json& req) {
 		std::string program     = req["arguments"]["program"];
-		auto        load_result = debugger.loadFile(fs::File(program));
+		auto        load_result = debugger.loadFiles({ fs::File(program) });
 
 		if (!load_result.has_value()) {
 			std::string error_msg = "Failed to load file '" + program
