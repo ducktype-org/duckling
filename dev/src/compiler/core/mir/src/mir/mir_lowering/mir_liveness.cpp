@@ -37,8 +37,6 @@ namespace compiler::mir {
 		}
 
 		bool empty() { return stack.empty(); }
-
-		BlockID top() { return stack.back(); }
 	};
 
 	/**
@@ -61,8 +59,8 @@ namespace compiler::mir {
 	}
 
 	/**
-	 * @brief Joins the status from two predecessor blocks, decided what is the local status
-	 * at the begining of the successor block. If the value is not present in the map,
+	 * @brief Joins the status from two predecessor blocks, deciding what is the local status
+	 * at the beginning of the successor block. If the value is not present in the map,
 	 * it should be represented by an empty optional, it means that value is uninitialized.
 	 *
 	 * @warning Merging one uninitialized and one initialized gives unitinitialized by default.
@@ -274,7 +272,7 @@ namespace compiler::mir {
 				if (state.has_value() && state->kind == LivenessStatus::Alive) continue;
 
 				const bool  uninitialized = not state.has_value();
-				const char* title         = uninitialized ? "Use of an uninitialized value."
+				std::string_view title         = uninitialized ? "Use of an uninitialized value."
 				                          : state->kind == LivenessStatus::Moved
 				                              ? "Use of a moved value."
 				                              : "Use of a possibly-moved value.";
@@ -320,7 +318,7 @@ namespace compiler::mir {
 	}
 
 	void LivenessData::debugPrint(std::ostream& out) {
-		auto status_name = [](LivenessStatus status) -> const char* {
+		auto status_name = [](LivenessStatus status) -> std::string_view {
 			switch (status) {
 			case LivenessStatus::Alive:
 				return "Alive";
@@ -328,6 +326,8 @@ namespace compiler::mir {
 				return "Moved";
 			case LivenessStatus::MaybeMoved:
 				return "MaybeMoved";
+			default:
+				CORE_UNREACHABLE();
 			}
 			return "?";
 		};

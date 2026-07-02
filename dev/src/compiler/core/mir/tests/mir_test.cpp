@@ -73,7 +73,7 @@ private:
 			base::Optional<CRef<compiler::helios::HOUTFunction>> target;
 			for (const auto& fn: unit.functions)
 				if (fn->declaration->original_name.strView() == "moveParamThenBlock") target = fn;
-			ASSERT_TRUE(target.has_value());
+			ASSERT_HAS_VALUE(target);
 
 			auto pre_mir = compiler::mir::lowerToPreMIRFunction(ctx, target.value());
 

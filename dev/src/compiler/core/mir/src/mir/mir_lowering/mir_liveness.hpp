@@ -14,7 +14,7 @@ namespace compiler::mir {
 	 * - @ref Moved      — definitely moved out of on every path reaching this point; using it is a
 	 *                     use-after-move.
 	 * - @ref MaybeMoved — moved out of on some (but not all) incoming paths; using it is reported
-	 * as a use of a possibly-moved value.
+	 *                     as a use of a possibly-moved value.
 	 *
 	 * A local absent from the map is treated as uninitialized (not yet constructed on this path).
 	 */
@@ -29,7 +29,7 @@ namespace compiler::mir {
 		 */
 		LivenessStatus kind;
 		/**
-		 * @brief The set of move instructions that "reach" this point
+		 * @brief The list of move instructions that "reach" this point
 		 * (reaching-definitions style). This lets diagnostics point at every place a value was
 		 * moved, e.g. when both branches of an if/else move the same local.
 		 *

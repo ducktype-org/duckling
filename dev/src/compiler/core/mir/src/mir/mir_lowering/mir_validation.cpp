@@ -8,10 +8,8 @@
 #include <base/collections/maps.hpp>
 #include <base/collections/optional.hpp>
 
-#include <algorithm>
 
 namespace compiler::mir {
-
 
 	base::OkBad validateShadowing(query::Context& ctx, const Function& fun) {
 		base::HashMap<base::StrID, std::vector<CRef<MIRLocal>>> named_locals;
