@@ -223,7 +223,7 @@ def run_test(
     base_dir = (
         NoOpContextManager(test.cwd)
         if dry
-        else WorkDir(test.cwd, TMP_ROOT_DIR, _tmp_prefix(test.name))
+        else WorkDir(test.cwd, TMP_ROOT_DIR, _tmp_prefix(f"{test.name}-pre-post-test"))
     )
     with base_dir as base:
         _run_test_command(test.pre_test, "Executing pre-test...", base.path, dry, verbose)

@@ -1,11 +1,3 @@
-# NOTE: 'EOF' needs to be quoted, so $@ is not expanded by the shell.
-prepare: |
-  cat <<'EOF' > duck-echo
-  #!/bin/sh
-  echo "$@"
-  EOF
-  chmod +x duck-echo
-
 before_cmd: export PATH="$(pwd):$PATH"
 duck_home: '.'
 

@@ -37,8 +37,11 @@ compiled_to_dvm: "./build/package_dvm.dbc"
 # Deliberately empty, so as not to recompile duckc and dvm for each test.
 PreNode: ""
 
-Clean: "@{clean_cmd}"
+# Clean: "@{clean_cmd}"
 PreCase: "@{clean_cmd} && mkdir build;
+  # echo $(pwd);
+  # ls $(pwd);
+  # realpath build;
   case '@{backend}' in
     dvm)       @{compile_dvm_backend_cmd}                                                                                ;;
     llvm)      @{compile_llvm_backend_cmd}                                                                               ;;

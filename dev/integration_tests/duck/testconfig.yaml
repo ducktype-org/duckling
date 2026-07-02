@@ -14,7 +14,6 @@ build_duck: |
     exit "$exit_code"
   fi
 duck_exe_dir: '@{dev_dir}/src/duck/target/debug/'
-prepare: ""
 before_cmd: "true"
 
 # Sometimes we hit a test timeout in itests, but only in CI.
@@ -33,9 +32,6 @@ PreNode: |
   @{cwd_duck_root}
   @{build_duck}
   cd -
-
-PreTest: |
-  @{prepare}
 
 Run: '@{before_cmd} && export PATH="@{duck_exe_dir}:$PATH" && export DUCK_HOME=@{duck_home} && @{test_cmd}'
 
