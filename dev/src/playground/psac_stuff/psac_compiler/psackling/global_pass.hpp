@@ -3,6 +3,7 @@
 #include "const_eval.hpp"
 #include "context.hpp"
 #include "llvm.hpp"
+#include "module_loader.hpp"
 #include "type_name_extractor.hpp"
 
 #include <frontend/pst_parser/access.hpp>
@@ -35,6 +36,29 @@ namespace pg {
 			for (pst::AccessLocked<pst::LangElement> child: *stmt->getBody().illegalAccess().value())
 				child.illegalAccess().value()->acceptVisitor(nested_pass);
 			ctx.popNamespace();
+		}
+
+		void visitImport(pst::Access<pst::Import> stmt) override {
+			const ImportSpec spec = parseImportSpec(*stmt);
+			// Modules are processed dependency-first, so the imported module's
+			// namespace chain already exists.
+			const ns::NamespaceID target = ctx.resolveModulePath(spec.path);
+			if (spec.star) {
+				ctx.importNamespaceSymbols(target);
+				return;
+			}
+			// `import math;` from the root file: the module's namespace symbol is
+			// already visible under that exact name — nothing to alias.
+			const base::StrID alias = spec.alias.value();
+			if (ctx.currNs().symbols.contains(alias)) {
+				sym::Symbol& existing = ctx.getSymbol(ctx.currNs().symbols[alias]);
+				if (std::holds_alternative<sym::NamespaceSymbol>(existing.kind)
+				    && std::get<sym::NamespaceSymbol>(existing.kind).namespace_id == target)
+					return;
+			}
+			ctx.insertSymbol(
+				alias, sym::NamespaceSymbol{ .namespace_id = target }, ctx.namespace_type_id
+			);
 		}
 
 		/// Resolves a type expression (bare identifier or type keyword) to a TypeID,

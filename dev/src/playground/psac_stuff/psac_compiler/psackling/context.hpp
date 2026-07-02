@@ -180,6 +180,59 @@ namespace pg {
 			return id;
 		}
 
+		/// Enters (creating on first use) the nested namespace chain of a module path,
+		/// e.g. {a, b} for the file imported as `a.b`. Returns how many namespaces were
+		/// entered; undo with that many popNamespace() calls.
+		usize enterModulePath(const std::vector<base::StrID>& module_path) {
+			for (base::StrID component: module_path) {
+				if (currNs().symbols.contains(component)) {
+					sym::Symbol& symbol = symbols[currNs().symbols[component]];
+					if (!std::holds_alternative<sym::NamespaceSymbol>(symbol.kind)) {
+						throw std::runtime_error(
+							"Module path component '" + component.str() + "' is not a namespace"
+						);
+					}
+					enterNamespace(std::get<sym::NamespaceSymbol>(symbol.kind).namespace_id);
+				} else {
+					pushNamespace(component);
+				}
+			}
+			return module_path.size();
+		}
+
+		/// Resolves a dotted module path from the root namespace to the namespace of the
+		/// file imported as that path. The imported file must already be registered
+		/// (modules are processed dependency-first).
+		ns::NamespaceID resolveModulePath(const std::vector<base::StrID>& module_path) {
+			ns::NamespaceID current = root_ns_id;
+			for (base::StrID component: module_path) {
+				sym::SymbolID sym_id = lookupInNamespace(current, component);
+				if (!std::holds_alternative<sym::NamespaceSymbol>(symbols[sym_id].kind)) {
+					throw std::runtime_error(
+						"Import path component '" + component.str() + "' is not a namespace"
+					);
+				}
+				current = std::get<sym::NamespaceSymbol>(symbols[sym_id].kind).namespace_id;
+			}
+			return current;
+		}
+
+		/// `import path.*`: makes every symbol of `from_id` visible in the current
+		/// namespace under its own name. Internal `$`-prefixed bookkeeping symbols are
+		/// skipped; the shared SymbolIDs keep link names pointing at the home module.
+		void importNamespaceSymbols(ns::NamespaceID from_id) {
+			for (const auto& [name, sym_id]: namespaces[from_id].symbols) {
+				if (name.str().starts_with('$')) continue;
+				if (currNs().symbols.contains(name)) {
+					throw std::runtime_error(
+						"Imported symbol " + name.str() + " already declared in namespace "
+						+ currNs().name.str()
+					);
+				}
+				currNs().symbols.insertOrAssign(name, sym_id);
+			}
+		}
+
 		/// Enter an already-existing namespace (e.g. one created by an earlier pass).
 		void enterNamespace(ns::NamespaceID id) { namespace_stack.push_back(id); }
 

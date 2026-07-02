@@ -12,6 +12,8 @@ add_library(libpsackling
     psackling/ids.hpp
     psackling/namespace.hpp
     psackling/context.hpp
+    psackling/module_loader.hpp
+    psackling/module_loader.cpp
     psackling/llvm_lowering_context.hpp
     psackling/llvm_lowering_context.cpp
     psackling/expr_lowering.hpp

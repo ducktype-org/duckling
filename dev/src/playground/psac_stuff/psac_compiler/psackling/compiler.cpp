@@ -6,6 +6,7 @@
 #include "global_pass.hpp"
 #include "llvm.hpp"
 #include "llvm_lowering_context.hpp"
+#include "module_loader.hpp"
 
 LLVM_INCLUDE_BEGIN()
 #include <llvm/Transforms/Utils/ModuleUtils.h>
@@ -132,6 +133,9 @@ namespace {
 			ctx.popNamespace();
 		}
 
+		// Handled by GlobalPass; nothing to lower per-function.
+		void visitImport(pst::Access<pst::Import>) override {}
+
 		// Handled entirely by GlobalPass; nothing to lower per-function.
 		void visitClass(pst::Access<pst::Class>) override {}
 
@@ -188,6 +192,11 @@ namespace {
 			);
 			for (pst::AccessLocked<pst::LangElement> child: *stmt->getBody().illegalAccess().value())
 				child.illegalAccess().value()->acceptVisitor(*this);
+		}
+
+		// Rewiring an import can change what every use-site resolves to.
+		void visitImport(pst::Access<pst::Import> stmt) override {
+			hash = combineHash(hash, contentHash(*stmt));
 		}
 	};
 
@@ -351,7 +360,8 @@ namespace {
 
 namespace pg {
 	struct Compiler::AnalyzedProgram {
-		std::unique_ptr<pst::PST<>>   pst;
+		// Dependency post-order: imported files first, the root file last.
+		std::vector<LoadedModule>     modules;
 		Context                       ctx;
 		std::vector<FunctionWorkItem> items;
 		std::vector<u64>              fn_hashes;
@@ -363,8 +373,8 @@ namespace pg {
 	struct Compiler::State {
 		CompileOptions options;
 
-		// The PST must outlive the work items (they hold Access references into it).
-		std::unique_ptr<pst::PST<>>   pst;
+		// The PSTs must outlive the work items (they hold Access references into them).
+		std::vector<LoadedModule>     modules;
 		Context                       ctx;
 		std::vector<FunctionWorkItem> items;
 		std::vector<u64>              fn_hashes;
@@ -396,17 +406,23 @@ namespace pg {
 		AnalyzedProgram program;
 		{
 			PhaseTimer timer("parse");
-			// Skip the PST's SHA-256 stable hashes — incremental diffing here uses its
-			// own dprint-based content hashes instead.
-			program.pst = std::make_unique<pst::PST<>>(
-				file, pst::PSTType::Program, hashing::ComponentHash{}, pst::PSTHashing::Skip
-			);
+			program.modules = loadModules(file);
 		}
 
-		auto for_each_top_level = [&](auto& visitor) {
+		auto for_each_top_level = [](const LoadedModule& module, auto& visitor) {
 			for (pst::AccessLocked<pst::Stmt> inner_stmt:
-			     program.pst->getRootElement().illegalAccess().value()->getStatements()) {
+			     module.pst->getRootElement().illegalAccess().value()->getStatements()) {
 				inner_stmt.illegalAccess().value()->acceptVisitor(visitor);
+			}
+		};
+
+		// Runs the visitor over every module's top level inside the module's namespace
+		// chain. Modules come dependency-first, so imports always resolve.
+		auto for_each_module = [&](auto& visitor) {
+			for (const LoadedModule& module: program.modules) {
+				const usize entered = program.ctx.enterModulePath(module.module_path);
+				for_each_top_level(module, visitor);
+				for (usize i = 0; i < entered; ++i) program.ctx.popNamespace();
 			}
 		};
 
@@ -414,21 +430,29 @@ namespace pg {
 		{
 			PhaseTimer timer("global_pass");
 			GlobalPass global_pass(program.ctx);
-			for_each_top_level(global_pass);
+			for_each_module(global_pass);
 		}
 
 		// Pass 2: collect function work items, content hashes and the globals hash.
 		{
 			PhaseTimer        timer("collect+hash");
 			FunctionCollector collector(program.ctx);
-			for_each_top_level(collector);
+			for_each_module(collector);
 			program.items        = std::move(collector.items);
 			program.fn_hashes    = std::move(collector.fn_hashes);
 			program.link_names   = std::move(collector.link_names);
 			program.global_inits = std::move(collector.global_inits);
 
 			GlobalsHasher globals_hasher;
-			for_each_top_level(globals_hasher);
+			for (const LoadedModule& module: program.modules) {
+				// Module identity participates: moving a definition between files
+				// changes link names even when content hashes stay equal.
+				for (base::StrID component: module.module_path)
+					globals_hasher.hash = combineHash(
+						globals_hasher.hash, std::hash<std::string>{}(component.str())
+					);
+				for_each_top_level(module, globals_hasher);
+			}
 			program.globals_hash = globals_hasher.hash;
 		}
 
@@ -469,7 +493,7 @@ namespace pg {
 
 		const usize n = program.items.size();
 
-		s.pst          = std::move(program.pst);
+		s.modules      = std::move(program.modules);
 		s.ctx          = program.ctx;
 		s.items        = std::move(program.items);
 		s.fn_hashes    = std::move(program.fn_hashes);
@@ -538,17 +562,17 @@ namespace pg {
 
 		// No previous compilation, or the set of functions changed (added/removed/
 		// renamed): the computation shape no longer matches, do a full build.
-		const bool same_function_set = (s.pst != nullptr) && (program.link_names == s.link_names);
+		const bool same_function_set = !s.modules.empty() && (program.link_names == s.link_names);
 		if (!same_function_set) return compileAnalyzed(std::move(program));
 
 		const usize n = s.items.size();
 
 		// Refresh shared state in place — the PSAC read closures point at these. The
-		// old PST is destroyed only after the items referencing it were replaced.
+		// old PSTs are destroyed only after the items referencing them were replaced.
 		s.ctx          = program.ctx;
 		s.items        = std::move(program.items);
 		s.global_inits = std::move(program.global_inits);
-		s.pst          = std::move(program.pst);
+		s.modules      = std::move(program.modules);
 
 		// Diff hashes and rewrite exactly the Mods that changed; propagation then
 		// re-runs exactly the reads of those Mods.

@@ -55,6 +55,233 @@ class PsacklingerTest: public tester::TestSuite {
 		return u64(cmd.execute(system_command::SystemCommand::ExitCodeHandling::Ignore));
 	}
 
+	/// Creates a fresh virtual directory with the given {relative path, source} files.
+	/// Relative paths may contain '/' — intermediate folders are created. Returns the
+	/// first file (the program root).
+	static fs::File makeProgramDir(
+		std::initializer_list<std::pair<std::string_view, std::string_view>> files
+	) {
+		static std::atomic<usize> counter{ 0 };
+		// Joins happen below the FilePath level: FilePath::join classifies bare
+		// relative segments by CWD, which misfires when the tests run under /tmp.
+		const std::filesystem::path dir = fs::FilePath::getDefaultVirtualDirectoryPath().getPath()
+		                                / ("psack_multifile_" + std::to_string(counter++));
+		fs::FileManager::createVirtualFolder(fs::FilePath{ dir });
+
+		base::Optional<fs::File> root;
+		for (const auto& [relative, code]: files) {
+			// Create intermediate folders for nested module paths.
+			std::string           prefix;
+			std::filesystem::path parent = dir;
+			for (char c: relative) {
+				if (c != '/') {
+					prefix += c;
+					continue;
+				}
+				parent /= prefix;
+				const fs::FilePath parent_path{ parent };
+				if (!parent_path.exists()) fs::FileManager::createVirtualFolder(parent_path);
+				prefix.clear();
+			}
+			fs::File file = fs::FileManager::createVirtualFile(
+				fs::FilePath{ dir / std::filesystem::path(relative) }, code
+			);
+			if (!root.has_value()) root = file;
+		}
+		return root.value();
+	}
+
+	static u64 compileAndRun(const fs::File& root) {
+		fs::File out_dir    = fs::FileManager::createRandomTempDirectory();
+		fs::File executable = out_dir.createSubFile("", "multifile.out");
+		pg::compile(root, executable.getFilePath().string());
+		return runExecutable(executable);
+	}
+
+	// --- Multifile / imports ---
+
+	void importAliasCall() {
+		fs::File root = makeProgramDir({
+			{ "root.dmf",
+		      "import math as M;\n"
+		      "fun main() -> i64 = { return M.add(2, 3); }\n" },
+			{ "math.dmf", "fun add(a: i64, b: i64) -> i64 = { return a + b; }\n" },
+		});
+		ASSERT_EQUAL_PRINT(u64(5), compileAndRun(root));
+	}
+
+	void importDefaultAlias() {
+		fs::File root = makeProgramDir({
+			{ "root.dmf",
+		      "import math;\n"
+		      "fun main() -> i64 = { return math.add(4, 3); }\n" },
+			{ "math.dmf", "fun add(a: i64, b: i64) -> i64 = { return a + b; }\n" },
+		});
+		ASSERT_EQUAL_PRINT(u64(7), compileAndRun(root));
+	}
+
+	void importStar() {
+		fs::File root = makeProgramDir({
+			{ "root.dmf",
+		      "import math.*;\n"
+		      "fun main() -> i64 = { return add(K, 3); }\n" },
+			{ "math.dmf",
+		      "const K: i64 = 10;\n"
+		      "fun add(a: i64, b: i64) -> i64 = { return a + b; }\n" },
+		});
+		ASSERT_EQUAL_PRINT(u64(13), compileAndRun(root));
+	}
+
+	void importNestedPath() {
+		fs::File root = makeProgramDir({
+			{ "root.dmf",
+		      "import a.b as AB;\n"
+		      "fun main() -> i64 = { return AB.f(); }\n" },
+			{ "a/b.dmf", "fun f() -> i64 = { return 6; }\n" },
+		});
+		ASSERT_EQUAL_PRINT(u64(6), compileAndRun(root));
+	}
+
+	void importTransitive() {
+		fs::File root = makeProgramDir({
+			{ "root.dmf",
+		      "import util as U;\n"
+		      "fun main() -> i64 = { return U.twicePlusOne(5); }\n" },
+			{ "util.dmf",
+		      "import math as M;\n"
+		      "fun twicePlusOne(x: i64) -> i64 = { return M.twice(x) + 1; }\n" },
+			{ "math.dmf", "fun twice(x: i64) -> i64 = { return x * 2; }\n" },
+		});
+		ASSERT_EQUAL_PRINT(u64(11), compileAndRun(root));
+	}
+
+	/// Two importers of the same module share one load and one set of symbols.
+	void importDiamond() {
+		fs::File root = makeProgramDir({
+			{ "root.dmf",
+		      "import a as A;\n"
+		      "import b as B;\n"
+		      "fun main() -> i64 = { return A.f() + B.g(); }\n" },
+			{ "a.dmf",
+		      "import shared as S;\n"
+		      "fun f() -> i64 = { return S.base() + 1; }\n" },
+			{ "b.dmf",
+		      "import shared as S;\n"
+		      "fun g() -> i64 = { return S.base() + 2; }\n" },
+			{ "shared.dmf", "fun base() -> i64 = { return 10; }\n" },
+		});
+		ASSERT_EQUAL_PRINT(u64(23), compileAndRun(root));
+	}
+
+	void importedGlobals() {
+		fs::File root = makeProgramDir({
+			{ "root.dmf",
+		      "import counter as C;\n"
+		      "fun main() -> i64 = {\n"
+		      "    C.bump();\n"
+		      "    C.bump();\n"
+		      "    return C.value;\n"
+		      "}\n" },
+			{ "counter.dmf",
+		      "var value: i64 = 5;\n"
+		      "fun bump() = { value += 1; }\n" },
+		});
+		ASSERT_EQUAL_PRINT(u64(7), compileAndRun(root));
+	}
+
+	void importCycleFails() {
+		fs::File root = makeProgramDir({
+			{ "root.dmf",
+		      "import a as A;\n"
+		      "fun main() -> i64 = { return 0; }\n" },
+			{ "a.dmf", "import b as B;\nfun f() -> i64 = { return 1; }\n" },
+			{ "b.dmf", "import a as A;\nfun g() -> i64 = { return 2; }\n" },
+		});
+		try {
+			compileAndRun(root);
+			ASSERT_TRUE(false);
+		} catch (const std::runtime_error& e) {
+			ASSERT_TRUE(std::string(e.what()).contains("cycle"));
+		}
+	}
+
+	void importStarCollisionFails() {
+		fs::File root = makeProgramDir({
+			{ "root.dmf",
+		      "import a.*;\n"
+		      "import b.*;\n"
+		      "fun main() -> i64 = { return f(); }\n" },
+			{ "a.dmf", "fun f() -> i64 = { return 1; }\n" },
+			{ "b.dmf", "fun f() -> i64 = { return 2; }\n" },
+		});
+		try {
+			compileAndRun(root);
+			ASSERT_TRUE(false);
+		} catch (const std::runtime_error& e) {
+			ASSERT_TRUE(std::string(e.what()).contains("already declared"));
+		}
+	}
+
+	/// Changing one function body in an imported file recompiles exactly that function.
+	void incrementalImportedBodyChange() {
+		const std::string root_code
+			= "import math as M;\n"
+			  "fun main() -> i64 = { return M.helper() + 1; }\n";
+
+		fs::File           root = makeProgramDir({
+            { "root.dmf", root_code },
+            { "math.dmf", "fun helper() -> i64 = { return 10; }\n" },
+        });
+		const fs::FilePath math_path{ root.getFilePath().parentPath().getPath() / "math.dmf" };
+
+		fs::File out_dir    = fs::FileManager::createRandomTempDirectory();
+		fs::File executable = out_dir.createSubFile("", "incr_import.out");
+
+		pg::Compiler compiler(pg::CompileOptions{ .output_path = executable.getFilePath().string() }
+		);
+
+		pg::CompileStats initial = compiler.compile(root);
+		ASSERT_EQUAL_PRINT(usize(2), initial.total_functions);
+		ASSERT_EQUAL_PRINT(u64(11), runExecutable(executable));
+
+		pg::CompileStats unchanged = compiler.update(root);
+		ASSERT_EQUAL_PRINT(usize(0), unchanged.recompiled_functions);
+
+		fs::FileManager::createVirtualFile(
+			math_path, "fun helper() -> i64 = { return 20; }\n", /*allow_overwrite=*/true
+		);
+		pg::CompileStats incremental = compiler.update(root);
+		ASSERT_EQUAL_PRINT(usize(1), incremental.recompiled_functions);
+		ASSERT_EQUAL_PRINT(u64(21), runExecutable(executable));
+	}
+
+	/// Changing a const in an imported file recompiles everything (coarse globals hash).
+	void incrementalImportedConstChange() {
+		fs::File           root = makeProgramDir({
+            { "root.dmf",
+		                "import conf.*;\n"
+		                          "fun main() -> i64 = { return X + 1; }\n" },
+            { "conf.dmf", "const X: i64 = 5;\n" },
+        });
+		const fs::FilePath conf_path{ root.getFilePath().parentPath().getPath() / "conf.dmf" };
+
+		fs::File out_dir    = fs::FileManager::createRandomTempDirectory();
+		fs::File executable = out_dir.createSubFile("", "incr_import_const.out");
+
+		pg::Compiler compiler(pg::CompileOptions{ .output_path = executable.getFilePath().string() }
+		);
+
+		compiler.compile(root);
+		ASSERT_EQUAL_PRINT(u64(6), runExecutable(executable));
+
+		fs::FileManager::createVirtualFile(
+			conf_path, "const X: i64 = 8;\n", /*allow_overwrite=*/true
+		);
+		pg::CompileStats incremental = compiler.update(root);
+		ASSERT_EQUAL_PRINT(usize(1), incremental.recompiled_functions);
+		ASSERT_EQUAL_PRINT(u64(9), runExecutable(executable));
+	}
+
 	/// Changing one function body recompiles exactly that function; identical source
 	/// recompiles nothing.
 	void incrementalBodyChange() {
@@ -1251,6 +1478,37 @@ public:
 		addTest(
 			static_cast<TestType>(&PsacklingerTest::incrementalSequentialMode),
 			"IncrementalSequentialMode",
+			false
+		);
+		addTest(static_cast<TestType>(&PsacklingerTest::importAliasCall), "ImportAliasCall", false);
+		addTest(
+			static_cast<TestType>(&PsacklingerTest::importDefaultAlias), "ImportDefaultAlias", false
+		);
+		addTest(static_cast<TestType>(&PsacklingerTest::importStar), "ImportStar", false);
+		addTest(
+			static_cast<TestType>(&PsacklingerTest::importNestedPath), "ImportNestedPath", false
+		);
+		addTest(
+			static_cast<TestType>(&PsacklingerTest::importTransitive), "ImportTransitive", false
+		);
+		addTest(static_cast<TestType>(&PsacklingerTest::importDiamond), "ImportDiamond", false);
+		addTest(static_cast<TestType>(&PsacklingerTest::importedGlobals), "ImportedGlobals", false);
+		addTest(
+			static_cast<TestType>(&PsacklingerTest::importCycleFails), "ImportCycleFails", false
+		);
+		addTest(
+			static_cast<TestType>(&PsacklingerTest::importStarCollisionFails),
+			"ImportStarCollisionFails",
+			false
+		);
+		addTest(
+			static_cast<TestType>(&PsacklingerTest::incrementalImportedBodyChange),
+			"IncrementalImportedBodyChange",
+			false
+		);
+		addTest(
+			static_cast<TestType>(&PsacklingerTest::incrementalImportedConstChange),
+			"IncrementalImportedConstChange",
 			false
 		);
 	}

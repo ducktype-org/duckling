@@ -45,11 +45,13 @@ namespace pg {
 		Compiler(Compiler&&)                 = delete;
 		Compiler& operator=(Compiler&&)      = delete;
 
-		/// Full compilation. Also used as the fallback when the set of functions changed.
+		/// Full compilation of the program rooted at `file` (imported files are loaded
+		/// transitively). Also used as the fallback when the set of functions changed.
 		CompileStats compile(const fs::File& file);
 
-		/// Incremental recompilation with new source for the same program: diffs the
-		/// per-function hashes, rewrites the changed Mods and propagates.
+		/// Incremental recompilation with new source for the same program: re-reads the
+		/// root file and its imports, diffs the per-function hashes, rewrites the
+		/// changed Mods and propagates.
 		CompileStats update(const fs::File& file);
 
 	private:
