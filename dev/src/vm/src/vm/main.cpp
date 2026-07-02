@@ -72,15 +72,15 @@ clah::Clah getVmClah() {
 				.addCustomVerification(
 					[](const clah::ParsingResult& parsed) -> clah::VerificationResult {
 						if (parsed.getExtraParameterCount() == 0) {
-							if (!parsed.isFlag('d'))
+							if (!parsed.isFlag("debug"))
 								return std::unexpected<std::string>("Need at least one file");
-						} else if (parsed.getExtraParameterCount() != 1 && parsed.isFlag('d'))
+						} else if (parsed.getExtraParameterCount() != 1 && parsed.isFlag("debug"))
 							// @TODO: #3020 Add support for multi-file debugging
 							return std::unexpected<std::string>(
 								"Debugger currently supports only one file"
 							);
 
-						if (parsed.isFlag('d') && parsed.isFlag("fast-mode"))
+						if (parsed.isFlag("debug") && parsed.isFlag("fast-mode"))
 							return std::unexpected<std::string>(
 								"Debugger does not support fast-mode"
 							);
@@ -100,7 +100,9 @@ clah::Clah getVmClah() {
 	                     .addShortDesc("Start the VM CLI debugger")
 	                     .build())
 				.add(clah::ParamBuilder::ofValue(clah::StringListParser::make("args"))
-	                     .addShortDesc("Program arguments, e.g. \"hello -n 5\"")
+	                     .addShortDesc(
+							 R"(Program arguments. To pass arguments such as "hello -n 5", enter them as a comma-separated list: "hello,-n,5".)"
+						 )
 	                     .addShortName('c')
 	                     .addLongName("args")
 	                     .build())
