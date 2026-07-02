@@ -429,7 +429,8 @@ namespace query::internal {
 			CORE_ASSERT(
 				key_value_pair != nullptr || node.q_id.getData().isInputQuery()
 					|| (node.q_id.getData().tags.preserve_in_graph
-			            and !node.q_id.getData().tags.can_be_loaded_from_disk),
+			            and !node.q_id.getData().tags.can_be_loaded_from_disk)
+						   and node.q_id.getData().tags.used_hashes == UsedHashes::StableHash,
 				"Node should not exist in current graph during merge"
 			);
 
