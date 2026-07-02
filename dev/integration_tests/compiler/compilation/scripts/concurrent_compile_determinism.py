@@ -382,6 +382,7 @@ def run_manifest_mode(args: argparse.Namespace) -> int:
         return 0
     finally:
         remove_files(created_files)
+        shutil.rmtree(args.build_dir, ignore_errors=True)
 
 
 # Executes duckc compile_package and captures process output.
@@ -535,6 +536,7 @@ def main() -> int:
         return 0
     finally:
         remove_files(created_files)
+        shutil.rmtree(args.build_dir, ignore_errors=True)
 
 
 # Script entry point.
