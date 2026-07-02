@@ -1,4 +1,4 @@
-#include "vmvalue.hpp"
+#include "safe_vmvalue.hpp"
 
 #include <logger/logger.hpp>
 
@@ -29,48 +29,49 @@ namespace {
 	}
 }
 
-vm::VmValue::VmValue(SafeVMProcess& process, TypeCRef type):
+vm::SafeVmValue::SafeVmValue(SafeVMProcess& process, TypeCRef type):
+	  IVmValue(type),
 	  data(type->getSize()),
 	  my_process(&process),
 	  memory(&process.getMemory()),
-	  type(type),
 	  pointer(memory->allocateDummy(type, data.data()), 0) {
 	memory->increaseBlockRefcount(pointer.getBlock());
 }
 
-vm::VmValue::VmValue(SafeVMProcess& process, TypeCRef type, Pointer src): VmValue(process, type) {
+vm::SafeVmValue::SafeVmValue(SafeVMProcess& process, TypeCRef type, Pointer src):
+	  SafeVmValue(process, type) {
 	importData(src);
 }
 
-vm::VmValue::~VmValue() {
+vm::SafeVmValue::~SafeVmValue() {
 	if (!pointer.isNull()) CORE_DEV_LOG(DVM, "VmValue not freed!\n");
 }
 
-void vm::VmValue::exportData(Pointer dst) const { memory->copyPointedData(dst, pointer, type); }
+void vm::SafeVmValue::exportData(Pointer dst) const { memory->copyPointedData(dst, pointer, type); }
 
-void vm::VmValue::importData(Pointer src) { memory->copyPointedData(pointer, src, type); }
+void vm::SafeVmValue::importData(Pointer src) { memory->copyPointedData(pointer, src, type); }
 
-vm::VMValueRef vm::VmValue::asRef() const { return { *my_process.get(), type, pointer }; }
+vm::SafeVmValueRef vm::SafeVmValue::asRef() const { return { *my_process.get(), type, pointer }; }
 
-void vm::VmValue::freeData() {
+void vm::SafeVmValue::freeData() {
 	memory->freeBlockData(pointer.getBlock());
 	memory->decreaseBlockRefcount(pointer.getBlock());
 	pointer = Pointer::null();
 }
 
-vm::PID vm::VmValue::getPID() const { return my_process->getPID(); }
+vm::PID vm::SafeVmValue::getPID() const { return my_process->getPID(); }
 
-base::CRef<vm::code::valid_type::ValidType> vm::VmValue::getType() const {
+base::CRef<vm::code::valid_type::ValidType> vm::SafeVmValue::getType() const {
 	auto type_id = static_cast<code::valid_type::ValidTypeID>(type->getID().asInt());
 	auto types   = my_process->loader.getHighProgram()->types();
 	return types.at(type_id);
 }
 
-byte* vm::VmValue::getBytes() { return data.data(); }
+byte* vm::SafeVmValue::getBytes() { return data.data(); }
 
-const byte* vm::VmValue::getBytes() const { return data.data(); }
+const byte* vm::SafeVmValue::getBytes() const { return data.data(); }
 
-void vm::VmValue::dprint(std::ostream& out, const std::string& indent) const {
+void vm::SafeVmValue::dprint(std::ostream& out, const std::string& indent) const {
 	out << indent << "---- VmValue ----\n";
 	out << indent << "Type: " << type->getName().str() << " (Size: " << type->getSize().asInt()
 		<< " bytes)\n";
@@ -94,6 +95,6 @@ void vm::VmValue::dprint(std::ostream& out, const std::string& indent) const {
 	out << indent << "-----------------\n";
 }
 
-base::Optional<vm::InterpretedDataVariant> vm::VmValue::readData() const {
+base::Optional<vm::InterpretedDataVariant> vm::SafeVmValue::readData() const {
 	return asRef().readData();
 }
