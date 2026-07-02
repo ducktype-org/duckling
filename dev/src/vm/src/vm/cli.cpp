@@ -19,16 +19,8 @@ std::string convertError(const vm::api::ApiError& api_error) {
 	return vm::api::errorToString(api_error);
 }
 
-int cli() {
-	std::string filepath;
-	std::cout << "Path to file: ";
-	std::cin >> filepath;
-
-	return cli(fs::File(filepath));
-}
-
 int cli(
-	const fs::File&                 filepath,
+	const std::vector<fs::File>&    files,
 	const std::vector<std::string>& args,
 	const vm::api::ProcessConfig&   options
 ) {
@@ -43,7 +35,7 @@ int cli(
 
 				  return std::expected<void, vm::api::ApiError>{};
 			  })
-	          .and_then([&] { return vm::api::loadFiles(pid, { filepath }); })
+	          .and_then([&] { return vm::api::loadFiles(pid, files); })
 	          .and_then([&] { return vm::api::attach(pid, std::cin, std::cout); })
 	          .and_then([&] { return vm::api::run(pid, args); })
 	          .and_then([&] { return vm::api::join(pid); })
