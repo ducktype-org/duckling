@@ -423,10 +423,13 @@ namespace query::internal {
 			// If the node is an input query, it may already exist in the current graph (added via
 			// addSideInputNode) This is beacause addSideInputNode do not try to merge the input
 			// node from previous graph, but just add it to the current graph if it does not exist
-			// yet. This is the only exception to the rule, that green node saved in the prev graph
-			// will never be recomputed
+			// yet. The same with queries with preserve_in_graph = true but with
+			// can_be_loaded_from_disk == false They need to be recoputed, but might contain a
+			// metadata that need to be loaded from disk
 			CORE_ASSERT(
-				key_value_pair != nullptr || node.q_id.getData().isInputQuery(),
+				key_value_pair != nullptr || node.q_id.getData().isInputQuery()
+					|| (node.q_id.getData().tags.preserve_in_graph
+			            and !node.q_id.getData().tags.can_be_loaded_from_disk),
 				"Node should not exist in current graph during merge"
 			);
 
@@ -442,9 +445,10 @@ namespace query::internal {
 				}
 			}
 
-			// Key value pair may be null for the input query
-			// If the input query was added to the graph concurrently on another worker
-			if (node.q_id.getData().isInputQuery()) continue;
+			// Key value pair may be null for the input query and preserve_in_graph queries that are
+			// already in the current graph. If the input query was added to the graph concurrently
+			// on another worker
+			if (key_value_pair == nullptr) continue;
 
 			auto current_deps_holder = key_value_pair->value.getHolder();
 
