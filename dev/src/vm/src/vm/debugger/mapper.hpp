@@ -28,7 +28,7 @@ namespace vm::debugger {
 		 */
 		base::Map<fs::FilePath, base::Box<tokenizer::TokenSource>> token_sources;
 
-		base::Optional<mapper::InstrOrVarMetadata> mapCodePositionToMetadata(
+		[[nodiscard]] base::Optional<mapper::InstrOrVarMetadata> mapCodePositionToMetadata(
 			base::StrID function_name, usize instruction_index
 		) const;
 
@@ -36,7 +36,7 @@ namespace vm::debugger {
 		/**
 		 * @brief loads mapping from provided file to the `Mapper`
 		 */
-		std::expected<void, std::string> loadMapping(fs::File mapping_file);
+		std::expected<void, std::string> loadMapping(const fs::File& mapping_file);
 
 		/**
 		 * @brief maps function name and instruction index to source position
@@ -48,14 +48,14 @@ namespace vm::debugger {
 		/**
 		 * @brief maps filepath and line to function name and instruction index
 		 */
-		base::Optional<std::pair<base::StrID, usize>> mapSourcePositionToCodePosition(
-			fs::FilePath filepath, usize line
+		[[nodiscard]] base::Optional<std::pair<base::StrID, usize>> mapSourcePositionToCodePosition(
+			const fs::FilePath& filepath, usize line
 		) const;
 
 		/**
 		 * @brief returns filepath of file containing function named `main`
 		 */
-		base::Optional<fs::FilePath> mainFile() const;
+		[[nodiscard]] base::Optional<fs::FilePath> mainFile() const;
 
 		[[nodiscard]] bool containsFile(fs::FilePath filepath) const;
 	};

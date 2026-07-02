@@ -38,7 +38,7 @@ namespace {
 }
 
 namespace vm::debugger {
-	std::expected<void, std::string> Mapper::loadMapping(fs::File mapping_file) {
+	std::expected<void, std::string> Mapper::loadMapping(const fs::File& mapping_file) {
 		std::fstream stream(mapping_file.getFilePath().getPath());
 		auto         maybe_debug_info = debug_info::loadFromStream(stream);
 		if (!maybe_debug_info) return std::unexpected(maybe_debug_info.error());
@@ -100,7 +100,7 @@ namespace vm::debugger {
 	}
 
 	base::Optional<std::pair<base::StrID, usize>> Mapper::mapSourcePositionToCodePosition(
-		fs::FilePath filepath, usize line
+		const fs::FilePath& filepath, usize line
 	) const {
 		for (const auto& [function_name, function]: functions) {
 			auto function_position = getfp(function.metadata->position);
