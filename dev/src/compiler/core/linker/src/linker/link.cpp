@@ -34,7 +34,10 @@ namespace compiler::linker {
 
 		if_opt_some(options.stdlib_link_options, stdlib_link_options)
 			command.addArg(stdlib_link_options);  // Link the Duckling standard library.
-		if (options.link_c_standard_library) command.addArg("-lc");  // Link the C standard library.
+		if (options.link_c_standard_library) {
+			command.addArg("-lc");  // Link the C standard library.
+			command.addArg("-lm");  // Link the C math library.
+		}
 
 		command.addArg("-o");
 		command.addArg(output.file.getFilePath().native());
