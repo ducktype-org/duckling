@@ -87,6 +87,16 @@ namespace query::internal {
 		storage.put(std::move(extracted).node_id, std::move(type_map));
 	}
 
+	void MetadataStorage::maybeEmplace(ExtractedNodeMetadata&& extracted) {
+		// convert StableHashMap back to ConHashMap for storage
+		TypeMap type_map;
+		for (auto& [type_id, metadata_vec]: extracted.type_map)
+			type_map.put(type_id, std::move(metadata_vec));
+		extracted.type_map.clear();
+
+		storage.maybePut(std::move(extracted).node_id, std::move(type_map));
+	}
+
 	void MetadataStorage::clearNodeMetadata(NodeID node_id) { storage.erase(node_id); }
 
 	bool MetadataStorage::empty() const { return storage.size() == 0; }
