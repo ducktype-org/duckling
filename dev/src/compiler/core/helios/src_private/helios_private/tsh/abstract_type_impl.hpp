@@ -1,7 +1,6 @@
 #pragma once
 
 #include <helios/symbols/symbol_id.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/tsh/abstract_type.hpp>
 #include <helios/tsh/kind.hpp>
 #include <helios/tsh/mutability.hpp>
@@ -1006,6 +1005,9 @@ namespace compiler::tsh {
 		compiler::helios::SymID getSymbol() const {
 			return symbol;
 		}
+
+		[[nodiscard]]
+		compiler::helios::SymbolABI getABI(query::Context& ctx) const;
 
 		[[nodiscard]]
 		base::Optional<ClassAbstractType> getBaseClassType(query::Context& ctx) const;
