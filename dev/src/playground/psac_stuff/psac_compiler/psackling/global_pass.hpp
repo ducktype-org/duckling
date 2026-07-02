@@ -152,10 +152,10 @@ namespace pg {
 			std::vector<sym::SymbolID> field_symbols;
 			u32                        index = 0;
 
-			pst::Access<pst::ClassBlock> body = stmt->getBody().illegalAccess().value();
+			pst::Access<pst::CodeBlock> body = stmt->getBody().illegalAccess().value();
 
-			for (pst::AccessLocked<pst::ClassStmt> member_locked: *body) {
-				pst::Access<pst::ClassStmt> member = member_locked.illegalAccess().value();
+			for (pst::AccessLocked<pst::Stmt> member_locked: *body) {
+				pst::Access<pst::Stmt> member = member_locked.illegalAccess().value();
 
 				auto var_opt = member.dynamicCast<pst::Field>();
 				if (!var_opt.has_value()) {
