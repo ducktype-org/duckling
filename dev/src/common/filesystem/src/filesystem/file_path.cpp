@@ -14,10 +14,9 @@ namespace {
 	 */
 	bool hasTemporaryPrefix(const std::filesystem::path& path) {
 		auto temp_dir = std::filesystem::canonical(std::filesystem::temp_directory_path());
-		auto abs_path = std::filesystem::absolute(path);
 
 		auto temp_str = temp_dir.generic_string();
-		auto path_str = abs_path.generic_string();
+		auto path_str = path.generic_string();
 
 		if (path_str == temp_str) return true;  // Exact match
 
