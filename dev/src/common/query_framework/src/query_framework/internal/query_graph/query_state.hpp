@@ -380,8 +380,9 @@ namespace query::internal {
 		bool addMetadataIfNotExistsInternal(NodeID node_id, Args&&... args) {
 			// Check that the query has preserve_in_graph = true
 			// If someone want to add metadata to unstable query, that would be transferred to dummy
-			// during merge The node_id.q_id.getData().tags.used_hashes == UsedHashes::StableHash check
-			// could be removed And everything would work, but that will require a good reason.
+			// during merge The node_id.q_id.getData().tags.used_hashes == UsedHashes::StableHash
+			// check could be removed And everything would work, but that will require a good
+			// reason.
 			CORE_ASSERT(
 				node_id.q_id.getData().tags.preserve_in_graph
 					and node_id.q_id.getData().tags.used_hashes == UsedHashes::StableHash,
