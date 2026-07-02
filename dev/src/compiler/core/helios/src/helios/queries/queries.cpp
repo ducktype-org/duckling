@@ -10,10 +10,11 @@
 #include <helios/symbols/attributes.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
+#include <helios/symbols/symbol_id.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/symbol_type.hpp>
 #include <helios/tsh/type_interface.hpp>
+#include <helios/utils/hout_walkers.hpp>
 #include <helios_private/errors/dia_interactive_elements.hpp>
 #include <helios_private/errors/duplicated_definition.hpp>
 #include <helios_private/hout_creation/definition_generation/class_constructors.hpp>
@@ -34,8 +35,6 @@
 #include <query_framework/standard_query/query_impl.hpp>
 #include <query_framework/utils/query_failed_try.hpp>
 
-#include <set>
-
 namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QueryModuleHOUT, query::QResult<HOUTUnit>) {
@@ -45,15 +44,6 @@ namespace compiler::helios {
 			// so we store in this variable whether any failure occurred,
 			// and return failure at the end if so.
 			bool is_failed = false;
-
-			// @TODO: #2496 maybe remove the following machinery.
-			// This query schedules other queries, so we can't interrupt it in the middle of
-			// execution, as then we might not await some of the scheduled queries, which is
-			// currently a bug.
-			auto run_no_interrupt = [&is_failed]<typename Func>(Func&& func) {
-				auto ok = query::runFuncWithQueryFailedHandling(std::forward<Func>(func));
-				if (ok.status().isBad()) is_failed = true;
-			};
 
 			MCRef<std::vector<ScopeID>> scopes_to_process;
 
@@ -72,77 +62,8 @@ namespace compiler::helios {
 
 			HOUTUnit out;
 
-			std::vector<query::TaskHandle> scheduled_tasks;
-			std::vector<SymID>             class_symbols;
-			std::set<SymID>                default_ctors;
-			std::set<SymID>                additional_ctors;
-			std::set<SymID>                additional_methods;
-
-			auto register_ctor_and_tostring_if_needed = [&](SymID sym) {
-				const auto& symbol_type = ctx.query<QueryTypeOfSymbol>(sym)->valueOrThrow();
-				const auto& type        = symbol_type.getType();
-
-				// @TODO: #2509 Handle nested tuples
-				if (type.getKind() == tsh::Kind::Tuple) {
-					auto        tuple_type = type.as<tsh::TupleAbstractType>();
-					const auto& tuple_ctor
-						= ctx.query<defgen::QueryTuplePackConstructor>(tuple_type)->valueOrThrow();
-					additional_ctors.insert(tuple_ctor.declaration->original_symbol);
-					const auto& tuple_tostring
-						= ctx.query<defgen::QueryToStringMethod>(tuple_type)->valueOrThrow();
-					additional_methods.insert(tuple_tostring.declaration->original_symbol);
-
-					if (!symbol_type.isTriviallyZeroInitializable(ctx)
-					    && symbol_type.isDefaultConstructible(ctx)) {
-						const auto& default_tuple_ctor
-							= ctx.query<defgen::QueryDefaultTupleConstructor>(tuple_type)
-						          ->valueOrThrow();
-						default_ctors.insert(default_tuple_ctor.declaration->original_symbol);
-					}
-
-					return;
-				}
-				if (type.getKind() == tsh::Kind::Slice) {
-					const auto& length_method
-						= ctx.query<defgen::QueryLengthMethod>(type)->valueOrThrow();
-					additional_methods.insert(length_method.declaration->original_symbol);
-					const auto& tostring_method
-						= ctx.query<defgen::QueryToStringMethod>(type)->valueOrThrow();
-					additional_methods.insert(tostring_method.declaration->original_symbol);
-					return;
-				}
-
-				// Don't insert any constructors if a type is trivially zero-initializable or not
-				// default constructible.
-				if (symbol_type.isTriviallyZeroInitializable(ctx)) return;
-				if (!symbol_type.isDefaultConstructible(ctx)) return;
-
-				if (type.getKind() == tsh::Kind::StaticArray) {
-					auto        arr_type = type.as<tsh::StaticArrayAbstractType>();
-					const auto& arr_ctor
-						= ctx.query<defgen::QueryDefaultStaticArrayConstructor>(arr_type)
-					          ->valueOrThrow();
-					default_ctors.insert(arr_ctor.declaration->original_symbol);
-				} else if (type.getKind() == tsh::Kind::Class) {
-					auto        class_type = type.as<tsh::ClassAbstractType>();
-					const auto& class_ctor
-						= ctx.query<defgen::QueryDefaultClassConstructor>(class_type)->valueOrThrow();
-					default_ctors.insert(class_ctor.declaration->original_symbol);
-				}
-			};
-			auto register_ctor_and_tostring_if_needed_no_interrupt
-				= [&run_no_interrupt, &register_ctor_and_tostring_if_needed](SymID sym) {
-					  run_no_interrupt([&] { register_ctor_and_tostring_if_needed(sym); });
-				  };
-
-			auto try_append_global_data = [&](SymID sym) {
-				auto hout_global = ctx.query<QueryHOUTGlobalData>(sym);
-				if (hout_global->hasFailed()) {
-					is_failed = true;
-					return;
-				}
-				out.glob_data.emplace_back(&hout_global->valueOrPanic());
-			};
+			std::vector<query::TaskHandle> scheduled_function_code_tasks;
+			std::vector<query::TaskHandle> scheduled_global_data_tasks;
 
 			for (auto scope: *scopes_to_process) {
 				Ref symbols_in_scope = ctx.query<QuerySymbolsInScope>(scope);
@@ -154,50 +75,33 @@ namespace compiler::helios {
 				for (auto sym: symbols_in_scope->valueOrPanic()) {
 					// Register default constructors for all symbols that need them.
 					const auto sym_kind = kind(sym);
-					if (sym_kind == SymbolKind::Variable || sym_kind == SymbolKind::Const)
-						register_ctor_and_tostring_if_needed_no_interrupt(sym);
-
-					// grab constants:
-					if (kind(sym) == SymbolKind::Const) try_append_global_data(sym);
-					if (kind(sym) == SymbolKind::Variable and isGlobalVar(ctx, sym))
-						try_append_global_data(sym);
-
-					// grab functions:
-					if (kind(sym) == SymbolKind::Function)
-						scheduled_tasks.emplace_back(ctx.schedule<QueryCodeOfFun>(sym));
-					if (kind(sym) == SymbolKind::Class) class_symbols.emplace_back(sym);
+					switch (sym_kind) {
+					case SymbolKind::Function:
+						scheduled_function_code_tasks.emplace_back(ctx.schedule<QueryCodeOfFun>(sym)
+						);
+						break;
+					case SymbolKind::Const:
+					case SymbolKind::Variable:
+						if (sym_kind == SymbolKind::Variable && not isGlobalVar(ctx, sym)) break;
+						scheduled_global_data_tasks.emplace_back(
+							ctx.schedule<QueryHOUTGlobalData>(sym)
+						);
+						break;
+					case SymbolKind::Class: {
+						auto result = appendClassTasks(
+							scheduled_function_code_tasks, scheduled_global_data_tasks, sym, ctx
+						);
+						if (result.isBad()) is_failed = true;
+						break;
+					}
+					default:
+						break;
+					}
 				}
 			}
 
-			appendMethodForSimpleTypes(out.functions, ctx);
 
-			for (auto class_sym: class_symbols) {
-				// we postpone this past function scheduling, as
-				// appendClassConstructors may be time consuming.
-				run_no_interrupt([&] {
-					appendImplicitClassConstructors(out.functions, class_sym, ctx);
-					auto append_methods_result
-						= appendClassMethodsWithFail(out.functions, class_sym, ctx);
-					if (append_methods_result) is_failed = true;
-				});
-			}
-
-			run_no_interrupt([&] {
-				appendDefaultConstructors(out.functions, default_ctors, ctx);
-				for (SymID ctor_sym: additional_ctors) {
-					const auto& hout_res = ctx.query<QueryCodeOfFun>(ctor_sym)->valueOrThrow();
-					out.functions.emplace_back(&hout_res);
-				}
-			});
-
-			run_no_interrupt([&] {
-				for (SymID tostring_sym: additional_methods) {
-					const auto& hout_res = ctx.query<QueryCodeOfFun>(tostring_sym)->valueOrThrow();
-					out.functions.emplace_back(&hout_res);
-				}
-			});
-
-			for (auto handler: scheduled_tasks) {
+			for (auto handler: scheduled_function_code_tasks) {
 				// we "catch" failure here to continue gathering other functions:
 				auto hout_function = ctx.await<QueryCodeOfFun>(handler);
 				if (hout_function->hasFailed()) {
@@ -208,16 +112,91 @@ namespace compiler::helios {
 					out.functions.emplace_back(&func);
 				}
 			}
-
-			base::deduplicateBy(out.functions, [](CRef<HOUTFunction> f) {
-				return f->declaration->original_symbol;
-			});
+			for (auto handler: scheduled_global_data_tasks) {
+				auto global_data = ctx.await<QueryHOUTGlobalData>(handler);
+				if (global_data->hasFailed()) {
+					is_failed = true;
+					continue;
+				} else {
+					auto& func = global_data->valueOrPanic();
+					out.glob_data.emplace_back(&func);
+				}
+			}
 
 			if (duplicatesCheck(ctx, out).isBad()) is_failed = true;
+			if (collectReplicatedSymbols(ctx, out).isBad()) is_failed = true;
+
+
+			// This is the place where we would check for all the functions and if they return some
+			// type, like class or tuple then we can append the destructor.
+
 
 			if (is_failed) return query::Failed();
 
 			return out;
+		}
+
+		/**
+		 * @brief This function collects all used symbols from the hout unit module
+		 * that should be appended to the module, for example some compiler generated symbols
+		 * or template instantiations in the future.
+		 */
+		static base::OkBad collectReplicatedSymbols(query::Context& ctx, HOUTUnit& out_unit) {
+			// We perform a DFS traversal of the HOUT Unit. We keep track of the visited functions.
+			std::unordered_set<SymID> visited_function_symbols;
+			std::vector<SymID>        functions_stack;
+			base::OkBad               result = base::OK;
+
+			for (auto f: out_unit.functions) {
+				visited_function_symbols.insert(f->declaration->original_symbol);
+				functions_stack.push_back(f->declaration->original_symbol);
+			}
+			// We will add all the function symbols we visit. This includes the initally collected
+			// function symbols, which were added to the stack. To avoid duplication, we clear the
+			// unit first.
+			out_unit.functions.clear();
+
+			// Append calls from the global variable initial value expression.
+			for (auto g: out_unit.glob_data) {
+				if (auto global_variable = std::get_if<HOUTGlobalVariable>(&g->value)) {
+					for (auto called_fun: collectCalledSymbols(*global_variable->initial_value)) {
+						if (visited_function_symbols.contains(called_fun)) continue;
+						if (emissionPolicy(called_fun) != EmissionPolicy::Replicated) continue;
+						functions_stack.push_back(called_fun);
+						visited_function_symbols.insert(called_fun);
+					}
+				}
+			}
+
+			while (not functions_stack.empty()) {
+				auto current_fun = functions_stack.back();
+				functions_stack.pop_back();
+
+				// Note, to make the templated global variables work (or templated class static
+				// variables) we have to not only look for calls, but also for usages of the global
+				// variables and add them to worklist.
+				auto qresult = ctx.query<QueryDirectFunctionCalls>(current_fun);
+				if (qresult->hasFailed()) {
+					result = base::BAD;
+					continue;
+				}
+				auto& called_funs = qresult->valueOrThrow();
+
+				for (auto called_fun: called_funs) {
+					if (visited_function_symbols.contains(called_fun)) continue;
+					if (emissionPolicy(called_fun) != EmissionPolicy::Replicated) continue;
+
+					functions_stack.push_back(called_fun);
+					visited_function_symbols.insert(called_fun);
+				}
+
+				if (implementsQueryCodeOfFun(current_fun))
+					out_unit.functions.emplace_back(
+						&ctx.query<QueryCodeOfFun>(current_fun)->valueOrThrow()
+					);
+				visited_function_symbols.insert(current_fun);
+			}
+			return result;
 		}
 
 		/**
@@ -265,125 +244,13 @@ namespace compiler::helios {
 		}
 
 		/**
-		 * @brief Appends the compiler-generated methods for simple types.
-		 * @param out_functions The vector of functions to be modified.
-		 * @param ctx The query context.
+		 * Append the methods and static variables of a class.
 		 */
-		static void appendMethodForSimpleTypes(
-			std::vector<CRef<HOUTFunction>>& out_functions, Context& ctx
-		) {
-			auto append_to_string_for_simple_type = [&](tsh::AbstractType type) {
-				const auto to_string_method
-					= ctx.query<QueryCodeOfFun>(defgen::toStringSymForType(ctx, type));
-				out_functions.emplace_back(&to_string_method->valueOrThrow());
-			};
-
-			for (auto size: { 8, 16, 32, 64 }) {
-				append_to_string_for_simple_type(tsh::getIntegralType(
-					ctx, u64(size), tsh::IntegralAbstractType::Signedness::Signed
-				));
-				append_to_string_for_simple_type(tsh::getIntegralType(
-					ctx, u64(size), tsh::IntegralAbstractType::Signedness::Unsigned
-				));
-			}
-
-			for (auto size: { 32, 64 })
-				append_to_string_for_simple_type(tsh::getFloatType(ctx, u64(size)));
-
-			append_to_string_for_simple_type(tsh::getCharType());
-			append_to_string_for_simple_type(tsh::getBoolType());
-			append_to_string_for_simple_type(tsh::getStringType());
-			append_to_string_for_simple_type(tsh::getUnitType());
-			append_to_string_for_simple_type(tsh::getCharSliceType(ctx));
-			out_functions.emplace_back(&ctx.query<QueryCodeOfFun>(defgen::lengthMethodForType(
-																	  ctx, tsh::getCharSliceType(ctx)
-																  ))
-			                                ->valueOrThrow());
-		}
-
-		/**
-		 * @brief Appends the default constructors and all the default constructors they call to
-		 * the HOUT unit.
-		 *
-		 * @param out_functions The vector of functions to be modified.
-		 * @param ctors Symbol IDs of the top level default constructors generated for the
-		 * symbols in scope.
-		 * @param ctx The query context.
-		 */
-		static void appendDefaultConstructors(
-			std::vector<CRef<HOUTFunction>>& out_functions,
-			const std::set<SymID>&           ctors,
-			Context&                         ctx
-		) {
-			std::set<SymID> all_required_functions;
-
-			// Collect all dependencies - default ctors called by the default ctor, and eliminate
-			// duplicates. This is needed to handle default constructors of types like `T[5][3]`,
-			// for which the top level default constructor recursively calls the default constructor
-			// of `T[3]`. The inner `T[3]` constructor isn't included in the `ctors` set since there
-			// are no symbols in scope of type `T[3]`, thus we retrieve it by checking transitive
-			// functions calls of the top-level default constructor.
-			for (SymID ctor_sym: ctors) {
-				auto transitive = ctx.query<QueryTransitiveFunctionCalls>(ctor_sym)->valueOrThrow();
-				for (SymID dependency: transitive) {
-					auto sym_ref = getSymRef(dependency);
-
-					// Skip all not generated symbols, to prevent double insertion of HOUTFunctions.
-					// For example in cases like: `class T { a: i32 = foo(); }`, the SymID of
-					// `foo()` will get returned as a result of `QueryTransitiveFunctionCalls` since
-					// it's called by the default constructor of `T`. This function was already
-					// added when looping through the symbols in scope thus we skip it here.
-					if (!std::holds_alternative<defgen::GeneratedSymbolData>(sym_ref->other))
-						continue;
-					const auto gsd_data = std::get<defgen::GeneratedSymbolData>(sym_ref->other);
-					// Insert only other default constructors to not insert implicit constructors twice.
-					if (gsd_data.isDefaultConstructor()) all_required_functions.insert(dependency);
-				}
-			}
-
-			// Now insert them into the module.
-			for (SymID func_sym: all_required_functions) {
-				const auto& hout_res = ctx.query<QueryCodeOfFun>(func_sym)->valueOrThrow();
-				out_functions.emplace_back(&hout_res);
-			}
-		}
-
-		/**
-		 * Append the constructors of a class to the provided vector of functions.
-		 * @param out_functions The vector of functions to be modified.
-		 * @param class_sym The symbol of the class, whose constructors are to be appended.
-		 * @param ctx The query context.
-		 */
-		static void appendImplicitClassConstructors(
-			std::vector<CRef<HOUTFunction>>& out_functions, const SymID class_sym, Context& ctx
-		) {
-			CORE_ASSERT(
-				kind(class_sym) == SymbolKind::Class,
-				"Invalid argument exception: expected class symbol"
-			);
-
-			// For now, we handle only the class's primary constructor.
-			// @TODO: #1290 Handle auxiliary constructors.
-
-			const auto class_type = ctx.query<QueryTypeFromDefinition>(class_sym)
-			                            ->valueOrThrow()
-			                            .getType()
-			                            .as<tsh::ClassAbstractType>();
-			const auto& implicit_ctor
-				= ctx.query<defgen::QueryImplicitClassConstructor>(class_type)->valueOrThrow();
-			out_functions.emplace_back(&implicit_ctor);
-		}
-
-		/**
-		 * Append the methods of a class to the provided vector of functions.
-		 * @param out_functions The vector of functions to be modified.
-		 * @param class_sym The symbol of the class, whose methods are to be appended.
-		 * @param ctx The query context.
-		 *
-		 * @return Whether any method queries failed.
-		 */
-		static bool appendClassMethodsWithFail(
-			std::vector<CRef<HOUTFunction>>& out_functions, const SymID class_sym, Context& ctx
+		static base::OkBad appendClassTasks(
+			std::vector<query::TaskHandle>&                  out_function_code_tasks,
+			[[maybe_unused]] std::vector<query::TaskHandle>& out_global_data_tasks,
+			const SymID                                      class_sym,
+			Context&                                         ctx
 		) {
 			CORE_ASSERT(
 				kind(class_sym) == SymbolKind::Class,
@@ -398,24 +265,6 @@ namespace compiler::helios {
 
 			auto methods = class_type.getInterface(ctx)->getMethodsView();
 
-
-			bool is_failed = false;
-
-			auto run_if_to_string = [](const SymID sym, auto&& action) {
-				auto sym_ref = getSymRef(sym);
-				variant_match(sym_ref->other) {
-					variant_case(defgen::GeneratedSymbolData, gsd) {
-						variant_match(gsd.data) {
-							variant_case_novalue(defgen::GeneratedSymbolData::ToStringMethod) {
-								action();
-							}
-							variant_default {}
-						}
-					}
-					variant_default {}
-				}
-			};
-
 			for (const auto& method: methods) {
 				// @TODO: #1956 remove this if when ZST refs are supported
 				// we fail here, because otherwise we try to lower a self pointer to a ZST type and
@@ -429,35 +278,13 @@ namespace compiler::helios {
 							return pst.unlock(ctx)->getStablePosition();
 						})
 					));
-					return true;  // failed
+					return base::BAD;
 				}
 
-				auto method_sym  = method.getSymbol();
-				auto hout_method = ctx.query<QueryCodeOfFun>(method_sym);
-				if (hout_method->hasFailed()) {
-					is_failed = true;
-					continue;
-				} else {
-					out_functions.emplace_back(&hout_method->valueOrPanic());
-
-					// If the method is a `toString`, collect its `toString` dependencies too.
-					run_if_to_string(method_sym, [&] {
-						auto transitive = ctx.query<QueryTransitiveFunctionCalls>(method_sym);
-						if (!transitive->hasFailed()) {
-							for (SymID dep: transitive->valueOrPanic()) {
-								run_if_to_string(dep, [&] {
-									auto dep_hout = ctx.query<QueryCodeOfFun>(dep);
-									if (dep_hout->hasFailed())
-										is_failed = true;
-									else
-										out_functions.emplace_back(&dep_hout->valueOrPanic());
-								});
-							}
-						}
-					});
-				}
+				auto method_sym = method.getSymbol();
+				out_function_code_tasks.push_back(ctx.schedule<QueryCodeOfFun>(method_sym));
 			}
-			return is_failed;
+			return base::OK;
 		}
 
 		QUERY_AUTO_CACHE_CREF
