@@ -315,27 +315,6 @@ namespace compiler::helios::code {
 			}
 
 			/**
-			 * If a valid builtin exists (special characters only), returns it.
-			 * Otherwise, returns None.
-			 */
-			base::Optional<Box<Expr>> unaryBuiltin(
-				lexer::Operator op, Box<Expr> expr, ElementOrigin origin
-			) {
-				auto result = findUnaryBuiltin(ctx, op, expr.ref());
-				match_optional(result) {
-					opt_some_move(value) {
-						auto [operation, coercion] = value;
-						auto coerced               = coercion.coerce(ctx, std::move(expr));
-						return makeBox<UnaryOperatorExpr>(
-							ctx, origin, operation, std::move(coerced)
-						);
-					}
-					opt_none { return {}; }
-				}
-				CORE_UNREACHABLE();
-			}
-
-			/**
 			 * @brief Finds the appropriate unary operator to call and constructs the corresponding
 			 * HOUT expression. Consumes the provided argument expression.
 			 * Some cases, such as the ampersand and asterisk for references are not handled here.
@@ -358,23 +337,45 @@ namespace compiler::helios::code {
 					"resolveUnaryOperator should only filter for prefix or suffix operators"
 				);
 
-				// Unlike in the case of binary operators, we do not consider a special case
-				// for numeric operations in the case of unary operators.
-				// We simply perform "regular" lookup. This includes lookups in two places:
+				// Binary operator resolution now happens in two steps:
+				// 1. If the arguments are both numeric (integral or float) and the operator is a
+				// built-in arithmetic operator, we look for promotions from left to right and from
+				// right to left, and then use the built-in operator on the promoted-to type.
+				// 2. Otherwise, we perform "regular" lookup. This includes lookups in two places:
 				//    a. The calling scope (a user can define a standalone function named `+`).
-				//    b. The type of the argument (for an operator method).
+				//    b. The type of the left-hand side argument (for an operator method).
 				// Next, we perform typical overload resolution.
+
+				// Step 1. — special path for numeric promotions
+				if (isNumericType(inner->expression_type.getType())
+				    && isNumericOperator(op->unwrap())) {
+					auto numeric_builtin_opt
+						= findNumericUnaryBuiltin(ctx, op->unwrap(), inner.ref());
+					auto new_origin = inner->origin;
+
+					if_opt_some(numeric_builtin_opt, numeric_builtin) {
+						auto [operation, coercion] = numeric_builtin;
+						auto coerced_inner         = coercion.coerce(ctx, std::move(inner));
+						return makeBox<UnaryOperatorExpr>(
+							ctx, new_origin, operation, std::move(coerced_inner)
+						);
+					}
+				}
+
+				// Step 2. — Regular lookup and overload resolution
 				const auto lookup_result
 					= HInterface::ofScopeWithParents(scope).lookup(ctx, op->unwrap().value);
 				// @TODO: #1412 fix dealias
 				auto all_candidates = lookup_result->valueOrThrow().leaves;
 				for (const auto [builtin_operator_sym, _]:
-				     *ctx.query<QueryRegularUnaryBuiltinSymbols>({})) {
+				     *ctx.query<QueryRegularBuiltinOperatorSymbols>({})) {
 					if (name(builtin_operator_sym) == op->unwrap().value)
 						all_candidates.push_back(builtin_operator_sym);
 				}
 				all_candidates = filterFunctionsByOperatoriness(ctx, all_candidates, operatoriness);
-				return processUnaryOperatorCall(ctx, all_candidates, std::move(inner), pstOrigin(op))
+				return processUnaryOperatorCall(
+						   ctx, all_candidates, std::move(inner), pstOrigin(op), operatoriness
+				)
 				    .valueOrThrow();
 			}
 
@@ -391,12 +392,6 @@ namespace compiler::helios::code {
 				const auto op         = stmt->getOperator().unlock(ctx);
 				auto       inner      = subExprFromPST(ctx, stmt->getExpr()).valueOrThrow();
 				auto       inner_type = inner->expression_type.getSymbolType();
-
-				// @todo here we should:
-				// * lookup for user defined operators
-				// * type check
-				// * make function call
-				// For now we support just builtins
 
 				// Handle taking references
 				if (op->unwrap() == lang_def::NamedOperator::Ampersand) {
@@ -519,7 +514,7 @@ namespace compiler::helios::code {
 				// @TODO: #1412 fix dealias
 				auto all_candidates = lookup_result->valueOrThrow().leaves;
 				for (const auto [builtin_operator_sym, _]:
-				     *ctx.query<QueryRegularBinaryBuiltinSymbols>({})) {
+				     *ctx.query<QueryRegularBuiltinOperatorSymbols>({})) {
 					if (name(builtin_operator_sym) == op->unwrap().value)
 						all_candidates.push_back(builtin_operator_sym);
 				}

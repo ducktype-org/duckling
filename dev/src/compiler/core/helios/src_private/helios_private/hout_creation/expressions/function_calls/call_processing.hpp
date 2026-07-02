@@ -2,6 +2,7 @@
 
 #include <frontend/pst_parser/elements/elements_list.hpp>
 #include <helios/hout/elements/expr.hpp>
+#include <helios/hout/hout.hpp>
 
 #include <base/pointers/box.hpp>
 
@@ -80,12 +81,14 @@ namespace compiler::helios::code {
 	 * @param candidates Contains all candidate functions that could be called.
 	 * @param inner The preprocessed argument of the operator call.
 	 * @param op_origin Operator origin used for callee origin.
+	 * @param operatoriness Whether we're dealing with a prefix or suffix operator.
 	 */
-	query::QResult<Box<Expr>> processBinaryOperatorCall(
-		query::Context&           ctx,
-		const std::vector<SymID>& candidates,
-		Box<Expr>                 inner,
-		ElementOrigin             op_origin
+	query::QResult<Box<Expr>> processUnaryOperatorCall(
+		query::Context&                        ctx,
+		const std::vector<SymID>&              candidates,
+		Box<Expr>                              inner,
+		ElementOrigin                          op_origin,
+		HOUTFunctionDeclaration::Operatoriness operatoriness
 	);
 
 	/**

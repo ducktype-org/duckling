@@ -346,28 +346,35 @@ namespace compiler::helios::code {
 		const base::Optional<std::vector<Coercion>>& coercions
 	) {
 		const auto call_origin = pst_origin.whole_call_origin;
-		auto  hout_op   = ctx.query<QueryRegularBinaryBuiltinSymbols>({})->atMaybe(fun).value()->op;
+		auto  hout_op = ctx.query<QueryRegularBuiltinOperatorSymbols>({})->atMaybe(fun).value()->op;
 		auto& arguments = call_arguments.positional_arguments;
-		auto  lhs       = coercions ? coercions->at(0).coerce(ctx, std::move(arguments.at(0)))
-		                            : std::move(arguments.at(0));
-		auto  rhs       = coercions ? coercions->at(1).coerce(ctx, std::move(arguments.at(1)))
-		                            : std::move(arguments.at(1));
+
+		std::vector<Box<Expr>> coerced_args;
+		if (coercions) {
+			coerced_args.reserve(coercions->size());
+			for (usize i{ 0 }; i < coercions->size(); i++)
+				coerced_args.emplace_back(coercions->at(i).coerce(ctx, std::move(arguments.at(i))));
+		} else {
+			coerced_args = std::move(arguments);
+		}
 
 		variant_match(hout_op) {
-			variant_case(BuiltinBinary, op) {
-				return makeBox<BinaryOperatorExpr>(
-					ctx, call_origin, op, std::move(lhs), std::move(rhs)
+			variant_case(BuiltinUnary, unary_op) {
+				return makeBox<UnaryOperatorExpr>(
+					ctx, call_origin, unary_op, std::move(coerced_args.at(0))
 				);
 			}
-			variant_case(RegularBinaryBuiltin::FunctionCall, call) {
-				std::vector<Box<Expr>> final_call_arguments;
-				final_call_arguments.emplace_back(std::move(lhs));
-				final_call_arguments.emplace_back(std::move(rhs));
+			variant_case(BuiltinBinary, op) {
+				return makeBox<BinaryOperatorExpr>(
+					ctx, call_origin, op, std::move(coerced_args.at(0)), std::move(coerced_args.at(1))
+				);
+			}
+			variant_case(RegularBuiltinOperator::FunctionCall, call) {
 				return makeBox<CallExpr>(
 					ctx,
 					call_origin,
 					makeBox<IdentifierExpr>(ctx, pst_origin.callee_origin, call.function_symbol),
-					std::move(final_call_arguments)
+					std::move(coerced_args)
 				);
 			}
 		}
@@ -798,10 +805,56 @@ namespace compiler::helios::code {
 		);
 	}
 
-	query::QResult<Box<Expr>> processBinaryOperatorCall(
-		query::Context&           ctx,
-		const std::vector<SymID>& candidates,
-		Box<Expr>                 inner,
-		ElementOrigin             op_origin
-	) {}
+	query::QResult<Box<Expr>> processUnaryOperatorCall(
+		query::Context&                        ctx,
+		const std::vector<SymID>&              candidates,
+		Box<Expr>                              inner,
+		ElementOrigin                          op_origin,
+		HOUTFunctionDeclaration::Operatoriness operatoriness
+	) {
+		CORE_ASSERT(
+			operatoriness == HOUTFunctionDeclaration::Operatoriness::Prefix
+				|| operatoriness == HOUTFunctionDeclaration::Operatoriness::Suffix,
+			"Given operatoriness must be either prefix or suffix."
+		);
+		// Obtain the call source positions
+		const auto inner_origin = inner->origin;
+		const auto whole_call_origin
+			= operatoriness == HOUTFunctionDeclaration::Operatoriness::Prefix
+		        ? elementOriginOrdered(op_origin, inner_origin)
+		        : elementOriginOrdered(inner_origin, op_origin);
+		const CallPstOrigin pst_origin{
+			.whole_call_origin = whole_call_origin,
+			.callee_origin     = op_origin,
+			.arguments_origin  = { inner_origin },
+		};
+		CallArguments call_arguments{};
+		call_arguments.positional_arguments.emplace_back(std::move(inner));
+
+		// Resolve overloads and construct call expression
+		auto overload_resolution_qresult
+			= doOverloadResolution(ctx, candidates, call_arguments, pst_origin);
+		UNPACK_QRESULT(auto overload_resolution_result =, overload_resolution_qresult);
+		const auto [callee_sym, argument_origin, coercions] = std::move(overload_resolution_result);
+
+		// Now construct the expression.
+		// If the function is a builtin operator, we use special
+		// handling which may not be simply a single function call.
+		variant_match(getSymRef(callee_sym)->other) {
+			variant_case(defgen::GeneratedSymbolData, generated) {
+				variant_match(generated.data) {
+					variant_case_novalue(defgen::GeneratedSymbolData::BuiltinOperator) {
+						return constructOperatorExpr(
+							ctx, pst_origin, callee_sym, std::move(call_arguments), coercions
+						);
+					}
+				}
+			}
+		}
+
+		// Otherwise, we construct a normal function call expression.
+		return constructCallExpr(
+			ctx, callee_sym, pst_origin, std::move(call_arguments), argument_origin, coercions
+		);
+	}
 }

@@ -445,7 +445,7 @@ namespace compiler::helios {
 		 * @brief Get the declaration of a function-like symbol based on its type.
 		 */
 		static PResult funDeclFromType(
-			Context& ctx, QKey fun, HOUTFunctionDeclaration::Operatoriness operatoriness
+			Context& ctx, QKey fun, const HOUTFunctionDeclaration::Operatoriness operatoriness
 		) {
 			const auto builtin_type = ctx.query<QueryTypeOfSymbol>({ fun })
 			                              ->valueOrThrow()
@@ -549,10 +549,10 @@ namespace compiler::helios {
 							variant_case(defgen::GeneratedSymbolData::LengthMethod, length_method) {
 								return funDeclFromType(ctx, key, HOUTFunctionDeclaration::Operatoriness::None);
 							}
-							variant_case_novalue(defgen::GeneratedSymbolData::BuiltinOperator) {
+							variant_case(defgen::GeneratedSymbolData::BuiltinOperator, builtin_op) {
 								// Currently, all builtins *participating in lookup* are binary operators.
 								// TODO (this PR?) differentiate between builtin operators and their C++-defined impls.
-								return funDeclFromType(ctx, key, HOUTFunctionDeclaration::Operatoriness::Infix);
+								return funDeclFromType(ctx, key, builtin_op.operatoriness);
 							}
 							variant_case_novalue(
 								defgen::GeneratedSymbolData::ReplExpressionWrapper,
