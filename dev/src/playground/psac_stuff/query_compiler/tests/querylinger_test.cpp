@@ -122,8 +122,9 @@ class QuerylingerTest: public tester::TestSuite {
 		ASSERT_EQUAL_PRINT(u64(14), runExecutable(executable));
 	}
 
-	/// Changing a global variable initializer re-emits the globals object and (via
-	/// the coarse globals input) recompiles every function.
+	/// Changing a global variable initializer re-emits the globals object and
+	/// relinks, but recompiles no functions: readers depend only on the variable's
+	/// identity and type (psacklinger recompiles everything here).
 	void incrementalGlobalVarChange() {
 		const std::string v1 = R"(
 			var g: i64 = 5;
@@ -145,8 +146,114 @@ class QuerylingerTest: public tester::TestSuite {
 
 		ql::CompileStats incremental
 			= compiler.update(fs::FileManager::createRandomVirtualFile(v2));
-		ASSERT_EQUAL_PRINT(usize(1), incremental.recompiled_functions);
+		ASSERT_EQUAL_PRINT(usize(0), incremental.recompiled_functions);
 		ASSERT_EQUAL_PRINT(u64(9), runExecutable(executable));
+	}
+
+	/// Renaming a parameter changes only that function's body hash: its signature
+	/// input (types only) is untouched, so callers stay cached — psacklinger
+	/// recompiles all three functions here.
+	void incrementalParamRenameOnlySelf() {
+		const std::string v1 = R"(
+			fun f(a: i64) -> i64 = { return a; }
+			fun g() -> i64 = { return f(4); }
+			fun main() -> i64 = { return g(); }
+		)";
+		const std::string v2 = R"(
+			fun f(b: i64) -> i64 = { return b; }
+			fun g() -> i64 = { return f(4); }
+			fun main() -> i64 = { return g(); }
+		)";
+
+		fs::File out_dir    = fs::FileManager::createRandomTempDirectory();
+		fs::File executable = out_dir.createSubFile("", "incr_param_rename.out");
+
+		ql::Compiler compiler(ql::CompileOptions{ .output_path = executable.getFilePath().string() }
+		);
+
+		compiler.compile(fs::FileManager::createRandomVirtualFile(v1));
+		ASSERT_EQUAL_PRINT(u64(4), runExecutable(executable));
+
+		ql::CompileStats incremental
+			= compiler.update(fs::FileManager::createRandomVirtualFile(v2));
+		ASSERT_EQUAL_PRINT(usize(3), incremental.total_functions);
+		ASSERT_EQUAL_PRINT(usize(1), incremental.recompiled_functions);
+		ASSERT_EQUAL_PRINT(u64(4), runExecutable(executable));
+	}
+
+	/// Changing a function's return type invalidates its callers through the
+	/// signature input: the unchanged caller must recompile and hit the type error.
+	void incrementalReturnTypeChangeBreaksCaller() {
+		const std::string v1 = R"(
+			fun f() -> i64 = { return 1; }
+			fun main() -> i64 = { return f() + 1; }
+		)";
+		const std::string v2 = R"(
+			fun f() -> bool = { return true; }
+			fun main() -> i64 = { return f() + 1; }
+		)";
+
+		fs::File out_dir    = fs::FileManager::createRandomTempDirectory();
+		fs::File executable = out_dir.createSubFile("", "incr_ret_type.out");
+
+		ql::Compiler compiler(ql::CompileOptions{ .output_path = executable.getFilePath().string() }
+		);
+
+		compiler.compile(fs::FileManager::createRandomVirtualFile(v1));
+		ASSERT_EQUAL_PRINT(u64(2), runExecutable(executable));
+
+		try {
+			compiler.update(fs::FileManager::createRandomVirtualFile(v2));
+			ASSERT_TRUE(false);
+		} catch (const std::runtime_error& e) {
+			ASSERT_TRUE(std::string(e.what()).contains("operand"));
+		}
+	}
+
+	/// Adding a class field recompiles only the functions that use the class —
+	/// including surviving the source-position shift of everything below the new
+	/// line (content hashes are position-stripped).
+	void incrementalClassFieldOnlyUsersRecompile() {
+		const std::string v1 = R"(
+			class Point {
+				var x: i64;
+			}
+			fun reader() -> i64 = {
+				var p: Point;
+				p.x = 3;
+				return p.x;
+			}
+			fun other() -> i64 = { return 7; }
+			fun main() -> i64 = { return reader() + other(); }
+		)";
+		const std::string v2 = R"(
+			class Point {
+				var x: i64;
+				var y: i64;
+			}
+			fun reader() -> i64 = {
+				var p: Point;
+				p.x = 3;
+				return p.x;
+			}
+			fun other() -> i64 = { return 7; }
+			fun main() -> i64 = { return reader() + other(); }
+		)";
+
+		fs::File out_dir    = fs::FileManager::createRandomTempDirectory();
+		fs::File executable = out_dir.createSubFile("", "incr_class_field.out");
+
+		ql::Compiler compiler(ql::CompileOptions{ .output_path = executable.getFilePath().string() }
+		);
+
+		compiler.compile(fs::FileManager::createRandomVirtualFile(v1));
+		ASSERT_EQUAL_PRINT(u64(10), runExecutable(executable));
+
+		ql::CompileStats incremental
+			= compiler.update(fs::FileManager::createRandomVirtualFile(v2));
+		ASSERT_EQUAL_PRINT(usize(3), incremental.total_functions);
+		ASSERT_EQUAL_PRINT(usize(1), incremental.recompiled_functions);
+		ASSERT_EQUAL_PRINT(u64(10), runExecutable(executable));
 	}
 
 	/// Adding a function creates a new query node without psacklinger's full-rebuild
@@ -175,10 +282,9 @@ class QuerylingerTest: public tester::TestSuite {
 		ASSERT_EQUAL_PRINT(u64(42), runExecutable(executable));
 	}
 
-	/// Removing a function drops its object from the link without psacklinger's
-	/// full-rebuild fallback. The survivors still recompile because the removed
-	/// signature is part of the coarse globals input (fine-grained signature inputs
-	/// land in a later milestone).
+	/// Removing a function drops its object from the link without recompiling the
+	/// unchanged survivors: nothing depended on the removed signature, so only the
+	/// relink happens (psacklinger falls back to a full rebuild here).
 	void incrementalFunctionRemoved() {
 		const std::string v1 = R"(
 			fun extra() -> i64 = { return 41; }
@@ -201,7 +307,7 @@ class QuerylingerTest: public tester::TestSuite {
 
 		ql::CompileStats shrunk = compiler.update(fs::FileManager::createRandomVirtualFile(v2));
 		ASSERT_EQUAL_PRINT(usize(2), shrunk.total_functions);
-		ASSERT_EQUAL_PRINT(usize(2), shrunk.recompiled_functions);
+		ASSERT_EQUAL_PRINT(usize(0), shrunk.recompiled_functions);
 		ASSERT_EQUAL_PRINT(u64(10), runExecutable(executable));
 	}
 
@@ -352,6 +458,21 @@ public:
 		addTest(
 			static_cast<TestType>(&QuerylingerTest::incrementalConstOnlyReadersRecompile),
 			"IncrementalConstOnlyReadersRecompile",
+			false
+		);
+		addTest(
+			static_cast<TestType>(&QuerylingerTest::incrementalParamRenameOnlySelf),
+			"IncrementalParamRenameOnlySelf",
+			false
+		);
+		addTest(
+			static_cast<TestType>(&QuerylingerTest::incrementalReturnTypeChangeBreaksCaller),
+			"IncrementalReturnTypeChangeBreaksCaller",
+			false
+		);
+		addTest(
+			static_cast<TestType>(&QuerylingerTest::incrementalClassFieldOnlyUsersRecompile),
+			"IncrementalClassFieldOnlyUsersRecompile",
 			false
 		);
 		addTest(

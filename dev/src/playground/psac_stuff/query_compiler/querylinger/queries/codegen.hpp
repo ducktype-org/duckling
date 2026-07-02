@@ -44,8 +44,10 @@ namespace ql {
 
 	DECLARE_QUERY(QueryGlobalsObject, GlobalsObjectKey, ObjectResult, ({ .uses_qresult = false }));
 
-	/// How many function-object providers actually ran since the last reset; the
-	/// session uses it to report recompile counts like psacklinger's CompileStats.
+	/// How many function-object (resp. globals-object) providers actually ran since
+	/// the last reset; the session uses them to report recompile counts like
+	/// psacklinger's CompileStats and to decide whether a relink is needed.
 	usize functionRecompileCount();
-	void  resetFunctionRecompileCount();
+	usize globalsObjectRecompileCount();
+	void  resetRecompileCounts();
 }

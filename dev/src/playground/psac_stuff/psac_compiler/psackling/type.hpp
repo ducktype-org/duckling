@@ -21,6 +21,9 @@ namespace pg::tp {
 		// Fields are stored as symbols in the namespace of the structure
 		sym::SymbolID              structure_symbol_id;
 		std::vector<sym::SymbolID> field_symbols;
+		/// Namespace-qualified name — a stable identity for per-class dependency
+		/// tracking in the query-based backend.
+		base::StrID qualified_name;
 	};
 
 	struct Integral {

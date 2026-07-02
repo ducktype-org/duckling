@@ -76,13 +76,42 @@ namespace ql {
 				inputs.emplace_back(FnBodyInput::getID(), node_id.hash.val);
 			}
 
-			for (const pg::ConstInputInfo& const_input: session.program.const_inputs) {
+			for (const pg::SymbolInputInfo& const_input: session.program.const_inputs) {
 				const auto node_id = query::internal::makeNodeID<ConstInput>(ConstInputKey{
 					.session_epoch = session.epoch,
 					.name_hash     = const_input.name_hash,
 					.value_hash    = const_input.value_hash });
 				inputs.emplace_back(ConstInput::getID(), node_id.hash.val);
 			}
+
+			for (const pg::SymbolInputInfo& sig_input: session.program.sig_inputs) {
+				const auto node_id = query::internal::makeNodeID<SigInput>(SigInputKey{
+					.session_epoch = session.epoch,
+					.name_hash     = sig_input.name_hash,
+					.value_hash    = sig_input.value_hash });
+				inputs.emplace_back(SigInput::getID(), node_id.hash.val);
+			}
+
+			for (const pg::SymbolInputInfo& class_input: session.program.class_inputs) {
+				const auto node_id = query::internal::makeNodeID<ClassInput>(ClassInputKey{
+					.session_epoch = session.epoch,
+					.name_hash     = class_input.name_hash,
+					.value_hash    = class_input.value_hash });
+				inputs.emplace_back(ClassInput::getID(), node_id.hash.val);
+			}
+
+			for (const pg::SymbolInputInfo& var_input: session.program.global_var_inputs) {
+				const auto node_id = query::internal::makeNodeID<GlobalVarInput>(GlobalVarInputKey{
+					.session_epoch = session.epoch,
+					.name_hash     = var_input.name_hash,
+					.value_hash    = var_input.value_hash });
+				inputs.emplace_back(GlobalVarInput::getID(), node_id.hash.val);
+			}
+
+			const auto defs_node_id
+				= query::internal::makeNodeID<GlobalDefsInput>(GlobalDefsInputKey{
+					.session_epoch = session.epoch, .defs_hash = session.program.global_defs_hash });
+			inputs.emplace_back(GlobalDefsInput::getID(), defs_node_id.hash.val);
 
 			const auto globals_node_id = query::internal::makeNodeID<GlobalsInput>(GlobalsInputKey{
 				.session_epoch = session.epoch,
@@ -113,7 +142,7 @@ namespace ql {
 		SessionState& session = state->session;
 		const usize   n       = session.program.items.size();
 
-		resetFunctionRecompileCount();
+		resetRecompileCounts();
 
 		auto globals_handle = query::scheduleEntryPoint<QueryGlobalsObject>(GlobalsObjectKey{
 			.session_epoch = session.epoch });
@@ -144,9 +173,11 @@ namespace ql {
 		const CompileStats stats{ .total_functions      = n,
 			                      .recompiled_functions = functionRecompileCount() };
 
-		// Nothing recompiled and the function set is unchanged: the executable on disk
-		// is already current (psacklinger's no-op update path skips the link too).
+		// Nothing recompiled (functions or globals object) and the function set is
+		// unchanged: the executable on disk is already current (psacklinger's no-op
+		// update path skips the link too).
 		const bool nothing_changed = stats.recompiled_functions == 0
+		                          && globalsObjectRecompileCount() == 0
 		                          && session.program.link_names == state->previous_link_names;
 		if (!(allow_skip_link && nothing_changed)) {
 			pg::PhaseTimer timer("link");

@@ -200,16 +200,17 @@ namespace pg {
 				// Initializers on class fields are ignored. Zero-initialized by default.
 			}
 
+			ctx.popNamespace();
+
 			// Build the class type class_ns_id, but don't let newType insert the
 			// TypeSymbol that would land it in the class's own namespace instead of outside.
 			tp::TypeID type_id = ctx.newTypeInScope(
 				name,
 				tp::Structure{ .structure_symbol_id = sym::SymbolID{},
-			                   .field_symbols       = std::move(field_symbols) },
+			                   .field_symbols       = std::move(field_symbols),
+			                   .qualified_name      = ctx.qualifyName(name) },
 				class_ns_id
 			);
-
-			ctx.popNamespace();
 
 			// Now expose the class name in the outer scope so `var p: Point;` resolves.
 			sym::SymbolID class_sym_id

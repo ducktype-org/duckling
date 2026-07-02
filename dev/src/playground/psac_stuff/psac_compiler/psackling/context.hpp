@@ -12,8 +12,9 @@
 #include <variant>
 
 namespace pg {
-	/// Hook for the query-based backend: notified when lowering reads a compile-time
-	/// constant, so per-constant dependencies can be recorded at the use site.
+	/// Hook for the query-based backend: notified when lowering uses a global symbol
+	/// (constant, function, global variable or class type), so per-symbol
+	/// dependencies can be recorded at the use site.
 	class SymbolUseObserver {
 	public:
 		SymbolUseObserver()          = default;
@@ -24,7 +25,10 @@ namespace pg {
 		SymbolUseObserver(SymbolUseObserver&&)                 = delete;
 		SymbolUseObserver& operator=(SymbolUseObserver&&)      = delete;
 
-		virtual void onConstantUse(const sym::Symbol& symbol) = 0;
+		virtual void onConstantUse(const sym::Symbol& symbol)       = 0;
+		virtual void onFunctionUse(const sym::Symbol& symbol)       = 0;
+		virtual void onGlobalVariableUse(const sym::Symbol& symbol) = 0;
+		virtual void onClassTypeUse(const tp::TypeInfo& type_info)  = 0;
 	};
 
 	/**
@@ -275,6 +279,18 @@ namespace pg {
 
 		void notifyConstantUse(const sym::Symbol& symbol) {
 			if (symbol_use_observer != nullptr) symbol_use_observer->onConstantUse(symbol);
+		}
+
+		void notifyFunctionUse(const sym::Symbol& symbol) {
+			if (symbol_use_observer != nullptr) symbol_use_observer->onFunctionUse(symbol);
+		}
+
+		void notifyGlobalVariableUse(const sym::Symbol& symbol) {
+			if (symbol_use_observer != nullptr) symbol_use_observer->onGlobalVariableUse(symbol);
+		}
+
+		void notifyClassTypeUse(const tp::TypeInfo& type_info) {
+			if (symbol_use_observer != nullptr) symbol_use_observer->onClassTypeUse(type_info);
 		}
 
 		/// Observer for constant reads during lowering; null in the PSAC backend. The

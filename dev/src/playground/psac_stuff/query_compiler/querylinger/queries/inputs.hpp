@@ -41,10 +41,73 @@ namespace ql {
 
 	DECLARE_QUERY_SIDE_INPUT(ConstInput, ConstInputKey);
 
-	/// Coarse "everything global except constants" side input — psacklinger's
-	/// globals Mod as a query node: classes, global variables, imports and function
-	/// signatures fold into one hash. Constants are tracked per symbol via
-	/// ConstInput; the rest splits into per-symbol inputs in later milestones.
+	/// One function's signature (link name + parameter/return types) as an input.
+	/// Callers depend on it through getOrCreateFunction, so a signature change
+	/// invalidates exactly the function and its callers.
+	struct SigInputKey {
+		u64 session_epoch;
+		u64 name_hash;
+		u64 value_hash;
+
+		bool operator==(const SigInputKey&) const = default;
+
+		[[nodiscard]] query::QueryStableHash queryStablePerfectHash() const {
+			return { session_epoch, name_hash, value_hash, 4 };
+		}
+	};
+
+	DECLARE_QUERY_SIDE_INPUT(SigInput, SigInputKey);
+
+	/// One class's layout (field names + types) as an input; users depend on it
+	/// through struct type lowering.
+	struct ClassInputKey {
+		u64 session_epoch;
+		u64 name_hash;
+		u64 value_hash;
+
+		bool operator==(const ClassInputKey&) const = default;
+
+		[[nodiscard]] query::QueryStableHash queryStablePerfectHash() const {
+			return { session_epoch, name_hash, value_hash, 5 };
+		}
+	};
+
+	DECLARE_QUERY_SIDE_INPUT(ClassInput, ClassInputKey);
+
+	/// One global variable's identity + type as an input; readers depend on it
+	/// through getOrCreateGlobal. Initializers are covered by GlobalDefsInput —
+	/// only the globals object cares about those.
+	struct GlobalVarInputKey {
+		u64 session_epoch;
+		u64 name_hash;
+		u64 value_hash;
+
+		bool operator==(const GlobalVarInputKey&) const = default;
+
+		[[nodiscard]] query::QueryStableHash queryStablePerfectHash() const {
+			return { session_epoch, name_hash, value_hash, 6 };
+		}
+	};
+
+	DECLARE_QUERY_SIDE_INPUT(GlobalVarInput, GlobalVarInputKey);
+
+	/// Content hash of all global variable declarations, initializers included;
+	/// the globals-object emission depends on it.
+	struct GlobalDefsInputKey {
+		u64 session_epoch;
+		u64 defs_hash;
+
+		bool operator==(const GlobalDefsInputKey&) const = default;
+
+		[[nodiscard]] query::QueryStableHash queryStablePerfectHash() const {
+			return { session_epoch, defs_hash, 0, 7 };
+		}
+	};
+
+	DECLARE_QUERY_SIDE_INPUT(GlobalDefsInput, GlobalDefsInputKey);
+
+	/// Coarse structural side input: imports, namespace names and module identity.
+	/// Everything else is tracked through the per-symbol inputs above.
 	struct GlobalsInputKey {
 		u64 session_epoch;
 		u64 globals_hash;

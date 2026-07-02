@@ -12,12 +12,13 @@
 namespace ql {
 	namespace {
 		std::atomic<usize> recompiled_functions{ 0 };
+		std::atomic<usize> reemitted_globals_objects{ 0 };
 
-		/// Registers a ConstInput dependency for every compile-time constant the
-		/// lowering reads, giving each emission query per-constant granularity.
-		class ConstUseRecorder final: public pg::SymbolUseObserver {
+		/// Registers a side-input dependency for every global symbol the lowering
+		/// uses, giving each emission query per-symbol granularity.
+		class SymbolUseRecorder final: public pg::SymbolUseObserver {
 		public:
-			ConstUseRecorder(query::Context& query_ctx, u64 session_epoch):
+			SymbolUseRecorder(query::Context& query_ctx, u64 session_epoch):
 				  query_ctx(query_ctx),
 				  session_epoch(session_epoch) {}
 
@@ -26,6 +27,30 @@ namespace ql {
 					{ .session_epoch = session_epoch,
 				      .name_hash     = pg::constNameHash(symbol),
 				      .value_hash    = pg::constValueHash(activeSession().program.ctx, symbol) }
+				);
+			}
+
+			void onFunctionUse(const pg::sym::Symbol& symbol) override {
+				query_ctx.query<SigInput>(
+					{ .session_epoch = session_epoch,
+				      .name_hash     = pg::functionNameHash(symbol),
+				      .value_hash    = pg::functionSigHash(activeSession().program.ctx, symbol) }
+				);
+			}
+
+			void onGlobalVariableUse(const pg::sym::Symbol& symbol) override {
+				query_ctx.query<GlobalVarInput>(
+					{ .session_epoch = session_epoch,
+				      .name_hash     = pg::globalVarNameHash(symbol),
+				      .value_hash    = pg::globalVarTypeHash(activeSession().program.ctx, symbol) }
+				);
+			}
+
+			void onClassTypeUse(const pg::tp::TypeInfo& type_info) override {
+				query_ctx.query<ClassInput>(
+					{ .session_epoch = session_epoch,
+				      .name_hash     = pg::classNameHash(type_info),
+				      .value_hash    = pg::classLayoutHash(activeSession().program.ctx, type_info) }
 				);
 			}
 
@@ -49,7 +74,7 @@ namespace ql {
 			                          .globals_hash  = session.program.globals_hash_no_consts });
 
 			recompiled_functions.fetch_add(1, std::memory_order_relaxed);
-			ConstUseRecorder recorder(ctx, key.session_epoch);
+			SymbolUseRecorder recorder(ctx, key.session_epoch);
 			try {
 				pg::compileOneFunction(
 					session.program.ctx,
@@ -72,8 +97,11 @@ namespace ql {
 
 			ctx.query<GlobalsInput>({ .session_epoch = key.session_epoch,
 			                          .globals_hash  = session.program.globals_hash_no_consts });
+			ctx.query<GlobalDefsInput>({ .session_epoch = key.session_epoch,
+			                             .defs_hash     = session.program.global_defs_hash });
 
-			ConstUseRecorder recorder(ctx, key.session_epoch);
+			reemitted_globals_objects.fetch_add(1, std::memory_order_relaxed);
+			SymbolUseRecorder recorder(ctx, key.session_epoch);
 			try {
 				pg::emitGlobalsObject(
 					session.program.ctx,
@@ -92,5 +120,12 @@ namespace ql {
 
 	usize functionRecompileCount() { return recompiled_functions.load(std::memory_order_relaxed); }
 
-	void resetFunctionRecompileCount() { recompiled_functions.store(0, std::memory_order_relaxed); }
+	usize globalsObjectRecompileCount() {
+		return reemitted_globals_objects.load(std::memory_order_relaxed);
+	}
+
+	void resetRecompileCounts() {
+		recompiled_functions.store(0, std::memory_order_relaxed);
+		reemitted_globals_objects.store(0, std::memory_order_relaxed);
+	}
 }

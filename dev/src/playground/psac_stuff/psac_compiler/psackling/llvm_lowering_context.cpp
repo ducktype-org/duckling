@@ -63,6 +63,7 @@ llvm::Type* pg::LlvmLoweringContext::lowerType(tp::TypeID type_id, Context& ctx)
 			return types[type_id];
 		}
 		variant_case(tp::Structure, structure) {
+			ctx.notifyClassTypeUse(type_info);
 			llvm::StructType* struct_type = nullptr;
 			llvm_module.inCtxDo([&](llvm::LLVMContext& llvm_ctx, llvm::Module&) {
 				struct_type = llvm::StructType::create(llvm_ctx, type_info.name.strView());
@@ -109,6 +110,7 @@ llvm::Function* pg::LlvmLoweringContext::getOrCreateFunction(sym::SymbolID fun_s
 	);
 	const auto& fn_kind = std::get<sym::FunctionSymbol>(fun_sym.kind);
 
+	ctx.notifyFunctionUse(fun_sym);
 	auto* fn_ty = llvm::cast<llvm::FunctionType>(lowerType(fun_sym.type_id, ctx));
 	llvm_module.inCtxDo([&](llvm::LLVMContext&, llvm::Module& mod) {
 		functions.insertOrAssign(
@@ -133,6 +135,7 @@ llvm::GlobalVariable* pg::LlvmLoweringContext::getOrCreateGlobal(
 	);
 	const auto& global_kind = std::get<sym::GlobalVariableSymbol>(global_sym.kind);
 
+	ctx.notifyGlobalVariableUse(global_sym);
 	llvm::Type* llvm_ty = lowerType(global_sym.type_id, ctx);
 	llvm_module.inCtxDo([&](llvm::LLVMContext&, llvm::Module& mod) {
 		// No initializer — this is an external declaration; the definition lives in

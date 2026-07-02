@@ -31,9 +31,10 @@ namespace pg {
 		ns::NamespaceID            enclosing_ns;
 	};
 
-	/// Identity and value of one top-level compile-time constant, for per-constant
-	/// dependency tracking in the query-based backend.
-	struct ConstInputInfo {
+	/// Identity and value of one top-level symbol (constant, function signature,
+	/// class layout or global variable), for per-symbol dependency tracking in the
+	/// query-based backend.
+	struct SymbolInputInfo {
 		u64 name_hash;
 		u64 value_hash;
 	};
@@ -44,6 +45,30 @@ namespace pg {
 	/// Value hash of a constant: raw bits mixed with the type name, so both value
 	/// and type changes are detected.
 	u64 constValueHash(Context& ctx, const sym::Symbol& symbol);
+
+	/// Stable identity hash of a function: hash of its link name.
+	u64 functionNameHash(const sym::Symbol& symbol);
+
+	/// Signature hash of a function: link name plus parameter and return type names.
+	/// Deliberately excludes parameter names and the body, so only changes callers
+	/// can observe invalidate them.
+	u64 functionSigHash(Context& ctx, const sym::Symbol& symbol);
+
+	/// Stable identity hash of a global variable: hash of its link name.
+	u64 globalVarNameHash(const sym::Symbol& symbol);
+
+	/// Type hash of a global variable — what readers depend on. The initializer is
+	/// covered by the globals-definitions hash instead (only the globals object
+	/// cares about it).
+	u64 globalVarTypeHash(Context& ctx, const sym::Symbol& symbol);
+
+	/// Stable identity hash of a class: hash of its namespace-qualified name.
+	u64 classNameHash(const tp::TypeInfo& type_info);
+
+	/// Layout hash of a class: field names and field type names in declaration
+	/// order. Nested layout changes are caught through the nested classes' own
+	/// inputs (lowering a struct recursively visits its field types).
+	u64 classLayoutHash(Context& ctx, const tp::TypeInfo& type_info);
 
 	/// Everything the front end produces for one program: parsed modules in
 	/// dependency post-order, populated symbol tables, and the per-function work
@@ -63,12 +88,20 @@ namespace pg {
 		/// signatures. The PSAC backend's whole-world dependency.
 		u64 globals_hash = 0;
 
-		/// Same as globals_hash but without the constants, which the query backend
-		/// tracks per constant through const_inputs instead.
+		/// Only the structural part (imports, namespace names, module identity) —
+		/// the query backend's coarse remainder; everything else it tracks through
+		/// the per-symbol inputs below.
 		u64 globals_hash_no_consts = 0;
 
-		/// All top-level constants of the program (identity + value hashes).
-		std::vector<ConstInputInfo> const_inputs;
+		/// Full content hash of all global variable declarations (initializers
+		/// included) in declaration order; the globals-object emission depends on it.
+		u64 global_defs_hash = 0;
+
+		/// Per-symbol inputs of the program (identity + value hashes).
+		std::vector<SymbolInputInfo> const_inputs;
+		std::vector<SymbolInputInfo> sig_inputs;
+		std::vector<SymbolInputInfo> class_inputs;
+		std::vector<SymbolInputInfo> global_var_inputs;
 	};
 
 	/// Parses the program rooted at `file` (imports loaded transitively) and runs
