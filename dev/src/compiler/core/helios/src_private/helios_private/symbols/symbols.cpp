@@ -1,13 +1,5 @@
 #include "symbols.hpp"
 
-#include "frontend/pst_parser/access.hpp"
-#include "frontend/pst_parser/lang_parser_element.hpp"
-#include "helios/attributes/builtins.hpp"
-#include "helios/symbols/attributes.hpp"
-#include "helios/symbols/symbol_id.hpp"
-#include "helios_private/symbols/generated_symbol_data.hpp"
-#include "helios_private/symbols/pst_symbol_data.hpp"
-
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/all_class_elements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
@@ -123,6 +115,10 @@ namespace compiler::helios {
 
 	bool isGlobalVar(query::Context& ctx, SymID id) {
 		CORE_ASSERT(getSymRef(id)->common.kind == SymbolKind::Variable, "Not a variable.");
+
+		// For now if the symbol doesn't have a PST element it is not global,
+		// Maybe be not true if we have generated globals in the future.
+		if_opt_none(getSymRef(id)->maybePstElement()) return false;
 
 		// We go up the PST until we find a statement that determines whether the variable is global
 		// or not.

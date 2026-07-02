@@ -160,7 +160,7 @@ private:
 
 			// They have different hashes (good)
 			assertTrue(
-				gen_i32->queryUnstablePerfectHash() != gen_f64->queryUnstablePerfectHash(),
+				repl_i32->queryUnstablePerfectHash() != repl_f64->queryUnstablePerfectHash(),
 				"Different return types should produce different hashes"
 			);
 			// BUT: Their mangled names collide

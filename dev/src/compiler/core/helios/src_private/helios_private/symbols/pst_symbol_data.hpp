@@ -32,6 +32,11 @@ namespace compiler::helios {
 		}
 	};
 
+	/**
+	 * @brief Symbol data for compiler builtins, i.e. PST `fundecl`s carrying a `@builtin("...")`
+	 * attribute. The declaration comes from the PST, but the implementation is provided by the
+	 * compiler (see `getBuiltinImpl`) rather than from a body in the source.
+	 */
 	struct BuiltinSemantics final {
 		/**
 		 * Scope in which the symbol was defined.
@@ -43,6 +48,9 @@ namespace compiler::helios {
 		 */
 		pst::HashType pst_element_hash;
 
+		/**
+		 * Which builtin this symbol implements.
+		 */
 		BuiltinType builtin;
 
 		BuiltinSemantics(ScopeID scope, pst::HashType pst_element_hash, BuiltinType builtin):
