@@ -169,6 +169,9 @@ jobs:
       - name: Install Valgrind
         run: sudo apt -y install valgrind
 
+      - name: Install pkg-config + libffi
+        run: sudo apt -y install pkg-config libffi-dev
+
       - name: Setup duck dependencies
         uses: ./.github/actions/setup-duck-dependencies/
 

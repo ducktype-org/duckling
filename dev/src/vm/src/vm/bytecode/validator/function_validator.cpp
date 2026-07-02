@@ -178,7 +178,7 @@ public:
 
 	[[nodiscard]]
 	usize size() const {
-		return VISIT(source, db, return db->size(stack_state_id););
+		return VISIT(source, db, return db->size(stack_state_id));
 	}
 
 	[[nodiscard]]
@@ -190,21 +190,14 @@ public:
 
 	[[nodiscard]]
 	LocalStackEntry front(usize idx = 0) const {
-		variant_match(source) {
-			variant_case(Ref<LocalStackDbBuilder>, bld_ref) {
-				return LocalStackEntry{
-					.local_name = *bld_ref->getName(stack_state_id, idx),
-					.type       = types_ctx->at(*bld_ref->getTypeName(stack_state_id, idx)),
-				};
+		return VISIT(
+			source,
+			db,
+			return LocalStackEntry{
+				.local_name = *db->getName(stack_state_id, idx),
+				.type       = types_ctx->at(*db->getTypeName(stack_state_id, idx)),
 			}
-			variant_case(CRef<LocalStackDb>, db_ref) {
-				return LocalStackEntry{
-					.local_name = *db_ref->getName(stack_state_id, idx),
-					.type       = types_ctx->at(*db_ref->getTypeName(stack_state_id, idx)),
-				};
-			}
-		}
-		CORE_UNREACHABLE();
+		);
 	}
 
 	void castPrimitive(const opargs::OpCodePrimitiveArg& local, const opargs::Type& type) {
@@ -227,11 +220,7 @@ public:
 
 	[[nodiscard]]
 	CRef<valid_type::ValidType> at(base::StrID local_name) const {
-		base::StrID name_of_type{};
-
-		VISIT(source, db, name_of_type = *db->getTypeName(stack_state_id, local_name););
-
-		return types_ctx->at(name_of_type);
+		return VISIT(source, db, return types_ctx->at(*db->getTypeName(stack_state_id, local_name)));
 	}
 
 	/**
@@ -241,15 +230,12 @@ public:
 	 */
 	[[nodiscard]]
 	bool eqStack(StackStateID stack_state_1, StackStateID stack_state_2) const {
-		bool ans = false;
-		VISIT(
+		return VISIT(
 			source,
 			db,
-			ans
-			= db->eqTypes(stack_state_1, stack_state_2) && db->eqNames(stack_state_1, stack_state_2)
+			return db->eqTypes(stack_state_1, stack_state_2)
+		        && db->eqNames(stack_state_1, stack_state_2)
 		);
-
-		return ans;
 	}
 };
 

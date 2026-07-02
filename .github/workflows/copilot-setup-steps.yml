@@ -37,6 +37,7 @@ jobs:
             clang-19 clang++-19 \
             clang-tidy-19 clang-format-19 \
             libzstd-dev zlib1g-dev \
+            pkg-config libffi-dev \
             mold
 
       - name: Initialize repository (submodules and Python venv)

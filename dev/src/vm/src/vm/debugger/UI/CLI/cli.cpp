@@ -24,12 +24,15 @@ namespace {
 
 	void printProcStatus(printer::PrinterOStream& os, const vm::api::ProcStatus& status) {
 		os.add(printer::PrinterContent(typeToString(status)));
-		if (std::holds_alternative<vm::api::ExecutionCompleted>(status)) {
-			for (auto val: std::get<vm::api::ExecutionCompleted>(status).exit_value) {
-				if_opt_some(val->readData(), data) {
-					variant_match(data) {
-						variant_case(vm::interpreted_data_variant::Primitive, primitive) {
-							os << " (return value = " << std::to_string(primitive.value) << ")";
+		if (v_matches(status, vm::api::ExecutionCompleted)) {
+			const auto& exit_value = std::get<vm::api::ExecutionCompleted>(status).exit_value;
+			if (v_matches(exit_value, std::vector<Ref<vm::VmValue>>)) {
+				for (auto val: std::get<std::vector<Ref<vm::VmValue>>>(exit_value)) {
+					if_opt_some(val->readData(), data) {
+						variant_match(data) {
+							variant_case(vm::interpreted_data_variant::Primitive, primitive) {
+								os << " (return value = " << std::to_string(primitive.value) << ")";
+							}
 						}
 					}
 				}
@@ -54,7 +57,7 @@ namespace vm::debugger::cli {
 	}
 
 	std::expected<void, api::ApiError> CLIDebugger::load(const fs::File& file) {
-		auto response = debugger.loadFile(file);
+		auto response = debugger.loadFiles({ file });
 		if (!response) return std::unexpected(response.error());
 
 		selected_file = file;
@@ -69,8 +72,8 @@ namespace vm::debugger::cli {
 		return load(fp);
 	}
 
-	void CLIDebugger::setDefaultArgs(const ProgramRunArguments& args) {
-		debugger.setDefaultArgs(args);
+	void CLIDebugger::setProgramArguments(const ProgramRunArguments& args) {
+		debugger.setProgramArguments(args);
 	}
 
 	int CLIDebugger::run() {

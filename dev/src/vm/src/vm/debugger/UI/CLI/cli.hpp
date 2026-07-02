@@ -21,9 +21,10 @@ namespace vm::debugger::cli {
 		CLIDebugger& operator=(CLIDebugger&&)      = delete;
 		~CLIDebugger()                             = default;
 
+		// @TODO: #3020 Add support for multi-file debugging
 		std::expected<void, api::ApiError> load(const fs::File& file);
 		std::expected<void, api::ApiError> loadDefault();
-		void                               setDefaultArgs(const ProgramRunArguments& args);
+		void                               setProgramArguments(const ProgramRunArguments& args);
 		int                                run();
 
 	private:
