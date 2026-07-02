@@ -23,8 +23,7 @@ protected:
 		std::expected<i64, vm::api::ApiError> run_result;  // exit code or error
 	};
 
-protected:
-	vm::PID initProcess(bool enable_deadlock_detection = false);
+	vm::PID initProcess(const vm::api::ProcessConfig& config = {});
 
 	void handleTestResult(const TestResult& test_result, i64 exit_code);
 

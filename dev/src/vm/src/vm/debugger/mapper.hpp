@@ -57,6 +57,6 @@ namespace vm::debugger {
 		 */
 		base::Optional<fs::FilePath> mainFile() const;
 
-		bool containsFile(fs::FilePath filepath) const;
+		[[nodiscard]] bool containsFile(fs::FilePath filepath) const;
 	};
 }

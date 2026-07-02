@@ -6,6 +6,7 @@
 
 #include <condition_variable>
 #include <mutex>
+#include <variant>
 
 #define altIndex(t) base::variantTypeIndex<vm::api::ProcStatus, t>()
 
@@ -32,7 +33,7 @@ public:
 private:
 	void noRunTest() {
 		vm::debugger::Debugger debugger;
-		ASSERT_HAS_VALUE(debugger.loadFile(fs::File(path("debugger_test.dbc"))));
+		ASSERT_HAS_VALUE(debugger.loadFiles({ fs::File(path("debugger_test.dbc")) }));
 		ASSERT_TRUE(std::holds_alternative<vm::api::NotStarted>(debugger.getStatus()));
 	}
 
@@ -56,7 +57,7 @@ private:
 		std::condition_variable cv;
 
 		vm::debugger::Debugger debugger;
-		ASSERT_HAS_VALUE(debugger.loadFile(fs::File(path(std::string(path_name)))));
+		ASSERT_HAS_VALUE(debugger.loadFiles({ fs::File(path(std::string(path_name))) }));
 
 		events::Listener<vm::api::ProcStatus> status_listener([&](const vm::api::ProcStatus& status
 		                                                      ) {
@@ -67,7 +68,13 @@ private:
 				ASSERT_EQUAL_PRINT(expected_statuses[status_counter], status.index());
 				variant_match(status) {
 					variant_case(vm::api::ExecutionCompleted, completed) {
-						auto exit_value = completed.exit_value;
+						auto exit_value_variant = completed.exit_value;
+						ASSERT_TRUE(std::holds_alternative<std::vector<Ref<vm::VmValue>>>(
+							exit_value_variant
+						));
+						auto exit_value
+							= std::get<std::vector<Ref<vm::VmValue>>>(exit_value_variant);
+
 						ASSERT_TRUE(ret_val_counter < expected_values.size());
 						ASSERT_EQUAL_PRINT(1, exit_value.size());
 						ASSERT_EQUAL_PRINT("i64", exit_value[0]->type->getName());
@@ -172,7 +179,7 @@ private:
 		events::Listener<std::string> error_listener([&](const std::string& err) { fail(err); });
 
 		vm::debugger::Debugger debugger;
-		ASSERT_HAS_VALUE(debugger.loadFile(fs::File(path("while_true.dbc"))));
+		ASSERT_HAS_VALUE(debugger.loadFiles({ fs::File(path("while_true.dbc")) }));
 		ASSERT_HAS_VALUE(debugger.setBreakpoint(base::StrID("main"), 0));
 
 		debugger.attachOnStatusChangedListener(status_listener);
@@ -243,7 +250,13 @@ private:
 				ASSERT_EQUAL_PRINT(expected_statuses[status_counter], status.index());
 				variant_match(status) {
 					variant_case(vm::api::ExecutionCompleted, completed) {
-						auto exit_value = completed.exit_value;
+						auto exit_value_variant = completed.exit_value;
+						ASSERT_TRUE(std::holds_alternative<std::vector<Ref<vm::VmValue>>>(
+							exit_value_variant
+						));
+						auto exit_value
+							= std::get<std::vector<Ref<vm::VmValue>>>(exit_value_variant);
+
 						ASSERT_TRUE(ret_val_counter < expected_values.size());
 						ASSERT_EQUAL_PRINT(1, exit_value.size());
 						ASSERT_EQUAL_PRINT("i64", exit_value[0]->type->getName());
@@ -261,7 +274,7 @@ private:
 		events::Listener<std::string> error_listener([&](const std::string& err) { fail(err); });
 
 		vm::debugger::Debugger debugger;
-		ASSERT_HAS_VALUE(debugger.loadFile(fs::File(path("debugger_test.dbc"))));
+		ASSERT_HAS_VALUE(debugger.loadFiles({ fs::File(path("debugger_test.dbc")) }));
 
 		debugger.attachOnStatusChangedListener(status_listener);
 		debugger.attachOnErrorListener(error_listener);
@@ -285,7 +298,7 @@ private:
 
 	void errorTest() {
 		vm::debugger::Debugger debugger;
-		ASSERT_HAS_VALUE(debugger.loadFile(fs::File(path("while_true_no_breakpoint.dbc"))));
+		ASSERT_HAS_VALUE(debugger.loadFiles({ fs::File(path("while_true_no_breakpoint.dbc")) }));
 
 		ASSERT_HAS_VALUE(debugger.runMain());
 		ASSERT_TRUE(!debugger.runMain());  // 1st error
@@ -312,7 +325,7 @@ private:
 		std::mutex              m;
 
 		vm::debugger::Debugger debugger;
-		ASSERT_HAS_VALUE(debugger.loadFile(fs::File(path("vm_api_tests.dbc"))));
+		ASSERT_HAS_VALUE(debugger.loadFiles({ fs::File(path("vm_api_tests.dbc")) }));
 
 		events::Listener<std::string> output_listener([&](const std::string& str) {
 			ASSERT_EQUAL_PRINT("7", str);
@@ -331,7 +344,7 @@ private:
 
 	void memoryTest() {
 		vm::debugger::Debugger debugger;
-		ASSERT_HAS_VALUE(debugger.loadFile(fs::File(path("breakpoint_all_types.dbc"))));
+		ASSERT_HAS_VALUE(debugger.loadFiles({ fs::File(path("breakpoint_all_types.dbc")) }));
 		ASSERT_HAS_VALUE(debugger.setBreakpoint(base::StrID("main"), 20));
 		std::mutex m;
 
@@ -390,7 +403,7 @@ private:
 
 	void inputTest() {
 		vm::debugger::Debugger debugger;
-		ASSERT_HAS_VALUE(debugger.loadFile(fs::File(path("input.dbc"))));
+		ASSERT_HAS_VALUE(debugger.loadFiles({ fs::File(path("input.dbc")) }));
 		std::mutex m;
 
 		std::condition_variable cv;
@@ -410,9 +423,10 @@ private:
 			return std::holds_alternative<vm::api::ExecutionCompleted>(debugger.getStatus());
 		}));
 
-		auto status         = debugger.getStatus();
-		auto completed_info = std::get<vm::api::ExecutionCompleted>(status);
-		auto optional_data  = completed_info.exit_value[0]->readData();
+		auto  status         = debugger.getStatus();
+		auto  completed_info = std::get<vm::api::ExecutionCompleted>(status);
+		auto& exit_value     = std::get<std::vector<Ref<vm::VmValue>>>(completed_info.exit_value);
+		auto  optional_data  = exit_value[0]->readData();
 
 		ASSERT_HAS_VALUE(optional_data);
 
