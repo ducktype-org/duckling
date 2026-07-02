@@ -82,6 +82,9 @@ duck_add_test(compiler helios tests/helios_test.cpp
 	USES Base PstParser HELIOS
 	INCLUDE "${CMAKE_CURRENT_LIST_DIR}/src_private")
 
+duck_add_test(compiler helios_with_std tests/helios_with_std_test.cpp
+	USES Base PstParser HELIOS Driver)
+
 
 duck_add_test(compiler helios_errors tests/helios_errors_test.cpp
 	USES Base PstParser HELIOS
