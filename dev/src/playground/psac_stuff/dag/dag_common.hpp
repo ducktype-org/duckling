@@ -85,7 +85,7 @@ void printUsage(const char* bin_name) {
 			  << "Example: " << bin_name << " 10 100 5000 8 1000 10 update\n";
 }
 
-bool parseArgs(int argc, const char* argv[]) {
+bool parseArgs(int argc, const char** argv) {
 	if (argc != 8) return false;
 
 	try {

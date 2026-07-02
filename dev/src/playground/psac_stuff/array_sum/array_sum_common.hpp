@@ -40,7 +40,7 @@ void printUsage(const char* bin_name) {
 			  << "Note: <mod> 0 means use standard u64 wrap-around.\n";
 }
 
-bool parseArgs(int argc, const char* argv[]) {
+bool parseArgs(int argc, const char** argv) {
 	if (argc != 6) return false;
 	try {
 		g_config.array_size     = std::stoull(argv[1]);

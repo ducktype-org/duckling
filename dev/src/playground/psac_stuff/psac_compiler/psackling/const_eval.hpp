@@ -5,6 +5,7 @@
 
 #include <frontend/pst_parser/elements/elements_list.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/expr_element.hpp>
+#include <frontend/pst_parser/elements/includes/basic.hpp>  // IWYU pragma: keep
 #include <frontend/pst_parser/pst_expr_visitor.hpp>
 
 namespace pg {
