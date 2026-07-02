@@ -46,3 +46,4 @@ add_example(psacklinger main.cpp USES libpsackling Base Init Clah Logger SystemC
 
 
 add_example(psacklinger_test tests/psacklinger_test.cpp USES libpsackling Tester Base Init Clah Logger SystemCommand llvm_helpers)
+target_include_directories(psacklinger_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/..)
