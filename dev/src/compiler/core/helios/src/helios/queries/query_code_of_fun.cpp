@@ -144,51 +144,54 @@ namespace compiler::helios {
 					// ...
 					CORE_PANIC("implement this");
 				}
-				variant_case(defgen::ImplicitConstructor, ctor) {
-					switch (ctor.target_type.getKind()) {
-					case tsh::Kind::Class:
-						return ctx
-						    .query<defgen::QueryImplicitClassConstructor>(
-								ctor.target_type.as<tsh::ClassAbstractType>()
-							)
-						    ->valueOrThrow();
-					case tsh::Kind::Tuple:
-						return ctx
-						    .query<defgen::QueryTuplePackConstructor>(
-								ctor.target_type.as<tsh::TupleAbstractType>()
-							)
-						    ->valueOrThrow();
-					default:
-						CORE_PANIC("Unhandled implicit constructor type.");
+				variant_case(defgen::Constructor, ctor) {
+					switch (ctor.kind) {
+					case defgen::GeneratedConstructorType::Implicit:
+						switch (ctor.type.getKind()) {
+						case tsh::Kind::Class:
+							return ctx
+							    .query<defgen::QueryImplicitClassConstructor>(
+									ctor.type.as<tsh::ClassAbstractType>()
+								)
+							    ->valueOrThrow();
+						case tsh::Kind::Tuple:
+							return ctx
+							    .query<defgen::QueryTuplePackConstructor>(
+									ctor.type.as<tsh::TupleAbstractType>()
+								)
+							    ->valueOrThrow();
+						default:
+							CORE_PANIC("Unhandled implicit constructor type.");
+						}
+					case defgen::GeneratedConstructorType::Default:
+						switch (ctor.type.getKind()) {
+						case tsh::Kind::Class:
+							return ctx
+							    .query<defgen::QueryDefaultClassConstructor>(
+									ctor.type.as<tsh::ClassAbstractType>()
+								)
+							    ->valueOrThrow();
+						case tsh::Kind::StaticArray:
+							return ctx
+							    .query<defgen::QueryDefaultStaticArrayConstructor>(
+									ctor.type.as<tsh::StaticArrayAbstractType>()
+								)
+							    ->valueOrThrow();
+						default:
+							CORE_PANIC("Unhandled default constructor type.");
+						}
 					}
-				}
-				variant_case(defgen::DefaultConstructor, ctor) {
-					switch (ctor.type.getKind()) {
-					case tsh::Kind::Class:
-						return ctx
-						    .query<defgen::QueryDefaultClassConstructor>(
-								ctor.type.as<tsh::ClassAbstractType>()
-							)
-						    ->valueOrThrow();
-					case tsh::Kind::StaticArray:
-						return ctx
-						    .query<defgen::QueryDefaultStaticArrayConstructor>(
-								ctor.type.as<tsh::StaticArrayAbstractType>()
-							)
-						    ->valueOrThrow();
-					default:
-						CORE_PANIC("Unhandled default constructor type.");
-					}
+					CORE_UNREACHABLE();
 				}
 				variant_case(defgen::Method, method) {
 					switch (method.kind) {
-					case defgen::GeneratedMethod::DefaultDestructor:
+					case defgen::GeneratedMethodType::DefaultDestructor:
 						return ctx.query<defgen::QueryDefaultDestructor>(method.owner_type)
 						    ->valueOrThrow();
-					case defgen::GeneratedMethod::ToString:
+					case defgen::GeneratedMethodType::ToString:
 						return ctx.query<defgen::QueryToStringMethod>(method.owner_type)
 						    ->valueOrThrow();
-					case defgen::GeneratedMethod::LengthMethod:
+					case defgen::GeneratedMethodType::LengthMethod:
 						return ctx.query<defgen::QueryLengthMethod>(method.owner_type)
 						    ->valueOrThrow();
 					}

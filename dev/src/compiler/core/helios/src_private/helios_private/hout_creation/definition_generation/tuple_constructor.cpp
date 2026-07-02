@@ -14,7 +14,8 @@ namespace compiler::helios::defgen {
 		static auto provide(Context& ctx, const QKey tuple_type) -> PResult {
 			auto tuple_interface = tuple_type.getInterface(ctx);
 			// Preamble, get some basic data.
-			using defgen::ImplicitConstructor;
+			using defgen::Constructor;
+			using defgen::GeneratedConstructorType;
 			using Variable = GeneratedFunctionVariable;
 			using std::ranges::to;
 			using std::views::transform;
@@ -30,7 +31,7 @@ namespace compiler::helios::defgen {
 				.name
 				= ctx.query<mangler::QueryMangledType>(tsh::SymbolType<>::withDefaults(tuple_type))
 			          ->valueOrThrow(),
-				.generated_symbol_data = ImplicitConstructor{ tuple_type },
+				.generated_symbol_data = Constructor{ tuple_type, GeneratedConstructorType::Implicit },
 			});
 
 			const auto& ctor_decl = ctx.query<QueryDeclOfFun>(ctor_symbol)->valueOrThrow();

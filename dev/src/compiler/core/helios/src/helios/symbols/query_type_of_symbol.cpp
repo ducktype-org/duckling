@@ -228,7 +228,7 @@ namespace compiler::helios {
 			for (auto& param: declaration.parameters) param_types.emplace_back(param.type);
 
 			return tsh::SymbolType{
-				ctx.query<tsh::QueryFunctionType>({ param_types, declaration.return_type }),
+				ctx.query<tsh::QueryFunctionType>({ .parameter_types=param_types, .result_type=declaration.return_type }),
 				tsh::ReferenceKind::Direct,
 				tsh::Mutability::Mutable,
 			};
@@ -250,13 +250,17 @@ namespace compiler::helios {
 
 					return visitor.symbol_type_qresult;
 				}
-				variant_case(defgen::ImplicitConstructor, ctor) {
-					const auto target_type = ctor.target_type;
+				variant_case(defgen::Constructor, ctor) {
+					const auto target_type = ctor.type;
 
 					// @TODO: #1328 Properly handle value categories in class constructors.
-					auto fields = target_type.getInterface(ctx)->getFieldsView();
+					// The implicit constructor takes a parameter per field, the default constructor
+					// takes none.
 					std::vector<tsh::SymbolType<>> param_types;
-					for (const auto& field: fields) param_types.push_back(field.getType(ctx));
+					if (ctor.kind == defgen::GeneratedConstructorType::Implicit) {
+						auto fields = target_type.getInterface(ctx)->getFieldsView();
+						for (const auto& field: fields) param_types.push_back(field.getType(ctx));
+					}
 
 					const auto return_type = tsh::SymbolType<>::withDefaults(target_type);
 
@@ -264,20 +268,6 @@ namespace compiler::helios {
 						.parameter_types = std::move(param_types),
 						.result_type     = return_type,
 					});
-
-					return tsh::SymbolType<>{
-						ctor_abstract_type,
-						tsh::ReferenceKind::Direct,
-						tsh::Mutability::Immutable,
-					};
-				}
-				variant_case(defgen::DefaultConstructor, ctor) {
-					// @TODO: #1328 Properly handle value categories in class constructors.
-					const auto return_type = tsh::SymbolType<>::withDefaults(ctor.type);
-
-					const auto ctor_abstract_type
-						= ctx.query<tsh::QueryFunctionType>({ .parameter_types = {},
-					                                          .result_type     = return_type });
 
 					return tsh::SymbolType<>{
 						ctor_abstract_type,
@@ -300,15 +290,15 @@ namespace compiler::helios {
 					auto [arg_types, return_type]
 						= [&]() -> std::pair<std::vector<tsh::SymbolType<>>, tsh::SymbolType<>> {
 						switch (method.kind) {
-						case defgen::GeneratedMethod::ToString:
+						case defgen::GeneratedMethodType::ToString:
 							return { { immmut_self },
 								     tsh::SymbolType<>::withDefaults(tsh::getStringType()) };
-						case defgen::GeneratedMethod::LengthMethod:
+						case defgen::GeneratedMethodType::LengthMethod:
 							return { { immmut_self },
 								     tsh::SymbolType<>::withDefaults(tsh::getIntegralType(
 										 ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned
 									 )) };
-						case defgen::GeneratedMethod::DefaultDestructor:
+						case defgen::GeneratedMethodType::DefaultDestructor:
 							return { { mut_self },
 								     tsh::SymbolType<>{ tsh::getUnitType(),
 								                        tsh::ReferenceKind::Direct,

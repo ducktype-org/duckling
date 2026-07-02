@@ -17,12 +17,10 @@
 
 namespace compiler::helios {
 	namespace defgen {
-		base::Bit256 ImplicitConstructor::queryUnstablePerfectHash() const {
-			return { target_type.queryUnstablePerfectHash() };
-		}
-
-		base::Bit256 DefaultConstructor::queryUnstablePerfectHash() const {
-			return { type.queryUnstablePerfectHash() };
+		base::Bit256 Constructor::queryUnstablePerfectHash() const {
+			return hashing::justHash<hashing::SHA256>(
+				type.queryUnstablePerfectHash(), static_cast<u64>(kind)
+			);
 		}
 
 		base::Bit256 Method::queryUnstablePerfectHash() const {
@@ -96,8 +94,7 @@ namespace compiler::helios {
 				kind = SymbolKind::FunctionDeclaration;
 			}
 			variant_case_novalue(
-				defgen::ImplicitConstructor,
-				defgen::DefaultConstructor,
+				defgen::Constructor,
 				defgen::Method,
 				defgen::ReplExpressionWrapper,
 				defgen::ReplInstructionWrapper,

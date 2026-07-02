@@ -14,7 +14,7 @@ namespace compiler::helios::defgen {
 	SymID destructSymForType(query::Context& ctx, const tsh::AbstractType type) {
 		return ctx.query<QueryGeneratedSymbol>({
 			.name                  = base::StrID("__destruct"),
-			.generated_symbol_data = Method{ type, GeneratedMethod::DefaultDestructor },
+			.generated_symbol_data = Method{ type, GeneratedMethodType::DefaultDestructor },
 		});
 	}
 

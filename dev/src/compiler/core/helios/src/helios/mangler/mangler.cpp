@@ -289,41 +289,30 @@ namespace compiler::helios::mangler {
 						return path(ctx, symbol_id) + func(ctx, symbol_id);
 					}
 					// If the symbol is generated, it has no path.
-					variant_case(defgen::ImplicitConstructor, ctor) {
-						const auto mangled_class = ctx.query<QueryMangledType>(
-							tsh::SymbolType<>::withDefaults(ctor.target_type)
-						);
-						const auto ctor_suffix = "Hic" + func(ctx, symbol_id) + "E";
-						return mangled_class->valueOrThrow().str() + ctor_suffix;
-					}
-					variant_case(defgen::DefaultConstructor, ctor) {
-						if (ctor.type.getKind() == tsh::Kind::Class) {
-							const auto path_to_class
-								= path(ctx, ctor.type.as<tsh::ClassAbstractType>().getSymbol());
-							const auto ctor_suffix = "Hdc" + func(ctx, symbol_id) + "E";
-							return path_to_class + ctor_suffix;
-						}
+					variant_case(defgen::Constructor, ctor) {
+						// The mangled type identifies which type the constructor belongs to (works
+						// for any kind: class, tuple, static array, ...). The infix tag distinguishes
+						// the implicit constructor from the default one.
+						const auto mangled_type = ctx.query<QueryMangledType>(
+							tsh::SymbolType<>::withDefaults(ctor.type)
+						)->valueOrThrow().str();
 
-						// Static array (and other non-class) constructors have no reliable path, so
-						// we mangle the type directly.
-						return "Hds"
-						     + ctx.query<QueryMangledType>(
-									  tsh::SymbolType<>::withDefaults(ctor.type)
-							 )
-						           ->valueOrThrow()
-						           .str()
-						     + "E";
+						const std::string_view ctor_tag
+							= ctor.kind == defgen::GeneratedConstructorType::Implicit ? "Hic"
+							                                                          : "Hdc";
+
+						return mangled_type + ctor_tag + func(ctx, symbol_id) + "E";
 					}
 					variant_case(defgen::Method, method) {
 						// We do not have a reliable "path to type" in these cases (esp. for simple
 						// types such as i32), so we omit it. Any ambiguities are solved by the
 						// function type anyway.
 						switch (method.kind) {
-						case defgen::GeneratedMethod::DefaultDestructor:
+						case defgen::GeneratedMethodType::DefaultDestructor:
 							return "Hdd" + func(ctx, symbol_id) + "E";
-						case defgen::GeneratedMethod::ToString:
+						case defgen::GeneratedMethodType::ToString:
 							return "HtoString" + func(ctx, symbol_id) + "E";
-						case defgen::GeneratedMethod::LengthMethod:
+						case defgen::GeneratedMethodType::LengthMethod:
 							return "Hlength" + func(ctx, symbol_id) + "E";
 						}
 						CORE_UNREACHABLE();

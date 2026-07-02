@@ -14,42 +14,35 @@
 #include <variant>
 
 namespace compiler::helios::defgen {
+	enum class GeneratedConstructorType {
+		Implicit,
+		Default,
+	};
+
 	/**
-	 * Represents a compiler-generated implicit constructor for a class (or other type such as a
-	 * tuple).
+	 * Represents a compiler-generated constructor for a type. The concrete constructor is
+	 * distinguished by `kind`:
 	 *
-	 * The implicit constructor is a function that takes parameters for each field of the type
-	 * and returns an instance of the type with those fields initialised accordingly.
+	 * - `Implicit`: takes parameters for each field of the type and returns an instance of the type
+	 *   with those fields initialised accordingly. Different types, such as tuples, might have an
+	 *   implicit ctor as well.
 	 *
-	 * @note Different types, such as tuples, might have an implicit ctor as well.
+	 * - `Default`: for a class/array/tuple (in general more complex type). The default constructor
+	 *   for a class takes no parameters and initializes all class fields with their initial values
+	 *   or default values if initial values where not provided; returns the initialized class. For
+	 *   the array, it takes no parameters and loops through the static array initializing its fields
+	 *   with a default value (which may mean a call to another constructor); returns the initialized
+	 *   static array value.
 	 */
-	struct ImplicitConstructor final {
-		tsh::AbstractType target_type;  // The type of the object this constructor belongs to.
+	struct Constructor final {
+		tsh::AbstractType        type;  // The type this constructor belongs to.
+		GeneratedConstructorType kind;
 
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const;
 	};
 
-	/**
-	 * Represents a compiler-generated default constructor for a class/array/tuple, in general more
-	 * complex type.
-	 *
-	 * The default constructor for a class is a function that takes no parameters and initializes
-	 * all class fields with their initial values or default values if initial values where not
-	 * provided. Returns the initialized class.
-	 *
-	 * For the array, the default constructor is a function that doesn't take any parameters and
-	 * loops through the static array initializing its fields with a default value (which may mean a
-	 * call to another constructor). Returns the initialized static array value.
-	 */
-	struct DefaultConstructor final {
-		tsh::AbstractType type;  // The symbol of the class this constructor belongs to.
-
-		[[nodiscard]]
-		base::Bit256 queryUnstablePerfectHash() const;
-	};
-
-	enum class GeneratedMethod {
+	enum class GeneratedMethodType {
 		DefaultDestructor,
 		LengthMethod,
 		ToString,
@@ -61,7 +54,7 @@ namespace compiler::helios::defgen {
 	 */
 	struct Method final {
 		tsh::AbstractType owner_type;
-		GeneratedMethod   kind;
+		GeneratedMethodType   kind;
 
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const;
@@ -77,7 +70,7 @@ namespace compiler::helios::defgen {
 
 	/**
 	 * Represents a compiler-generated parameter of a function. This function may itself be
-	 * compiler-generated, such as the `ImplicitConstructor`.
+	 * compiler-generated, such as the implicit `Constructor`.
 	 */
 	struct Parameter final {
 		SymID function_symbol;  // The symbol of the function this parameter belongs to.
@@ -113,7 +106,7 @@ namespace compiler::helios::defgen {
 
 	/**
 	 * Represents a compiler-generated variable (not parameter) in a function inside a compiler
-	 * generated function, such as the `ImplicitConstructor`. This variable is uniquely
+	 * generated function, such as the implicit `Constructor`. This variable is uniquely
 	 * identified by it's index and belongs to a generated function.
 	 * @note When inserting variables into regular (not generated functions), where getting a
 	 * `variable_index` is unachievable use `ControlFlowLocal`.
@@ -217,7 +210,7 @@ namespace compiler::helios::defgen {
 	};
 
 #define GENERATED_SYMBOL_SEMANTICS_LIST                                                           \
-	defgen::ImplicitConstructor, defgen::DefaultConstructor, defgen::Method,                      \
+	defgen::Constructor, defgen::Method,                                                          \
 		defgen::BuiltinOperator, defgen::Parameter, defgen::SelfParameter, defgen::Field,         \
 		defgen::GeneratedFunctionVariable, defgen::ControlFlowLocal, defgen::ReplExpressionWrapper, \
 		defgen::ReplInstructionWrapper, defgen::ScriptMainWrapper

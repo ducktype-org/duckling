@@ -12,7 +12,7 @@ namespace compiler::helios::defgen {
 	SymID lengthMethodForType(query::Context& ctx, tsh::AbstractType type) {
 		return ctx.query<QueryGeneratedSymbol>(
 			{ .name                  = base::StrID("length"),
-		      .generated_symbol_data = Method{ type, GeneratedMethod::LengthMethod } }
+		      .generated_symbol_data = Method{ type, GeneratedMethodType::LengthMethod } }
 		);
 	}
 

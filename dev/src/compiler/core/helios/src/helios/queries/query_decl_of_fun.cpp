@@ -319,16 +319,17 @@ namespace compiler::helios {
 		 * @brief Get the declaration of an implicit class constructor.
 		 */
 		static PResult getImplicitCtorDecl(
-			Context& ctx, const defgen::ImplicitConstructor& ctor_data
+			Context& ctx, const defgen::Constructor& ctor_data
 		) {
 			// Preamble
-			using defgen::ImplicitConstructor;
+			using defgen::Constructor;
+			using defgen::GeneratedConstructorType;
 			using defgen::Parameter;
 			using std::ranges::to;
 			using std::views::transform;
 
 			// Get type data
-			const auto target_type = ctor_data.target_type;
+			const auto target_type = ctor_data.type;
 			auto       interface   = target_type.getInterface(ctx);
 
 			const std::vector<tsh::InterfaceElement> fields
@@ -354,7 +355,7 @@ namespace compiler::helios {
 			// Prepare the necessary symbols (of the constructor and its parameters).
 			const SymID ctor_symbol        = ctx.query<defgen::QueryGeneratedSymbol>({
 					   .name                  = ctor_name,
-					   .generated_symbol_data = ImplicitConstructor{ target_type },
+					   .generated_symbol_data = Constructor{ target_type, GeneratedConstructorType::Implicit },
             });
 			const auto  result_symbol_type = tsh::SymbolType<>{
                 target_type,
@@ -479,17 +480,21 @@ namespace compiler::helios {
 						verifyFunctionAttributes(ctx, stmt(ctx, key).value(), result);
 						return result;
 					}
-					variant_case(defgen::ImplicitConstructor, ctor_data) {
-						return getImplicitCtorDecl(ctx, ctor_data);
-					}
-					variant_case(defgen::DefaultConstructor, ctor_data) {
-						const auto return_type = tsh::SymbolType<>{ ctor_data.type,
-							                                        tsh::ReferenceKind::Direct,
-							                                        tsh::Mutability::Mutable };
+					variant_case(defgen::Constructor, ctor_data) {
+						switch (ctor_data.kind) {
+						case defgen::GeneratedConstructorType::Implicit:
+							return getImplicitCtorDecl(ctx, ctor_data);
+						case defgen::GeneratedConstructorType::Default: {
+							const auto return_type = tsh::SymbolType<>{ ctor_data.type,
+								                                        tsh::ReferenceKind::Direct,
+								                                        tsh::Mutability::Mutable };
 
-						return HOUTFunctionDeclaration{
-							key, return_type, {}, code::generatedOrigin()
-						};
+							return HOUTFunctionDeclaration{
+								key, return_type, {}, code::generatedOrigin()
+							};
+						}
+						}
+						CORE_UNREACHABLE();
 					}
 					variant_case_novalue(
 						defgen::Method,

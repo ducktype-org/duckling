@@ -61,8 +61,7 @@ namespace compiler::helios {
 				return EmissionPolicy::OwnerOnly;
 			}
 			variant_case_novalue(
-				defgen::ImplicitConstructor,
-				defgen::DefaultConstructor,
+				defgen::Constructor,
 				defgen::Method,
 				defgen::Parameter,
 				defgen::SelfParameter,
