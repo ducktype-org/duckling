@@ -17,7 +17,7 @@
 
 namespace vm {
 
-	class VmValue;
+	class IVmValue;
 
 	/**
 	 * @brief The API for using the virtual process of the VM.
@@ -241,8 +241,8 @@ namespace vm {
 		 * specified, created VmValue will be empty.
 		 * @return A non-owning, modifiable reference to the new VmValue.
 		 */
-		virtual Ref<VmValue> createVmValue(TypeCRef type)              = 0;
-		virtual Ref<VmValue> createVmValue(TypeCRef type, Pointer src) = 0;
+		virtual Ref<IVmValue> createVmValue(TypeCRef type)              = 0;
+		virtual Ref<IVmValue> createVmValue(TypeCRef type, Pointer src) = 0;
 
 		/**
 		 * @brief Creates a VmValue of a given type and transfers ownership to the caller.
@@ -253,8 +253,8 @@ namespace vm {
 		 * specified, created VmValue will be empty.
 		 * @return A Box referencing the newly created VmValue.
 		 */
-		virtual Box<VmValue> createOwnedVmValue(TypeCRef type)              = 0;
-		virtual Box<VmValue> createOwnedVmValue(TypeCRef type, Pointer src) = 0;
+		virtual Box<IVmValue> createOwnedVmValue(TypeCRef type)              = 0;
+		virtual Box<IVmValue> createOwnedVmValue(TypeCRef type, Pointer src) = 0;
 
 		virtual ~IVMProcess() = default;
 	};

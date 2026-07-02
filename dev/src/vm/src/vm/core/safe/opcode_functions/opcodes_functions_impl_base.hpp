@@ -47,7 +47,7 @@
 #include <vm/core/safe/opcode_functions/opcodes_functions.hpp>
 #include <vm/core/safe/safe_vmprocess.hpp>
 #include <vm/core/safe/safe_vmthread.hpp>
-#include <vm/core/vmvalue/vmvalue.hpp>
+#include <vm/core/vmvalue/ivmvalue.hpp>
 #include <vm/utils/interpret.hpp>
 
 #include <cmath>
@@ -364,8 +364,8 @@ namespace vm {
 			auto function_signature = builtins::getBuiltinFunctionSignature(builtin_id);
 			auto arg_count          = function_signature->parameters.size();
 
-			std::vector<Box<VmValue>> args;
-			auto                      block_ref_stack_count
+			std::vector<Box<IVmValue>> args;
+			auto                       block_ref_stack_count
 				= usize(frame->local_block_ref_stack_end - frame->local_block_ref_stack_base);
 			u64 first_arg_idx = block_ref_stack_count - arg_count;
 
@@ -386,7 +386,7 @@ namespace vm {
 				);
 			}
 
-			base::Optional<Box<VmValue>> return_value = builtins::callBuiltinFunction(
+			base::Optional<Box<IVmValue>> return_value = builtins::callBuiltinFunction(
 				builtin_id, result_types, thread.safe_process, thread, args
 			);
 
@@ -1219,7 +1219,7 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(initFromVmValue)(FUNCTION_ARGS) {
 		{
-			const VmValue& vm_value = *std::bit_cast<const VmValue*>(instr->arg0);
+			const IVmValue& vm_value = *std::bit_cast<const IVmValue*>(instr->arg0);
 			performInit(instr, local_stack, frame, thread, vm_value.type);
 			vm_value.exportData({ Ref(frame->local_block_ref_stack_end[-1]), 0 });
 		}

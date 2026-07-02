@@ -13,7 +13,8 @@
 #include <vm/core/safe/low_program/instruction.hpp>
 #include <vm/core/safe/low_program/low_program.hpp>
 #include <vm/core/safe/safe_vmthread.hpp>
-#include <vm/core/vmvalue/vmvalue.hpp>
+#include <vm/core/safe/vmvalue/safe_vmvalue.hpp>
+#include <vm/core/safe/vmvalue/safe_vmvalueref.hpp>
 #include <vm/loader/loader.hpp>
 #include <vm/loader/logger.hpp>
 
@@ -152,24 +153,24 @@ namespace vm {
 		return {};
 	}
 
-	Ref<VmValue> SafeVMProcess::createVmValue(TypeCRef type) {
-		auto value = Box<VmValue>::fromPointer(new VmValue(*this, type));
+	Ref<IVmValue> SafeVMProcess::createVmValue(TypeCRef type) {
+		auto value = Box<SafeVmValue>::fromPointer(new SafeVmValue(*this, type));
 		owned_vm_values.push_back(std::move(value));
 		return owned_vm_values.back().refMut();
 	}
 
-	Ref<VmValue> SafeVMProcess::createVmValue(TypeCRef type, Pointer src) {
-		auto value = Box<VmValue>::fromPointer(new VmValue(*this, type, src));
+	Ref<IVmValue> SafeVMProcess::createVmValue(TypeCRef type, Pointer src) {
+		auto value = Box<SafeVmValue>::fromPointer(new SafeVmValue(*this, type, src));
 		owned_vm_values.push_back(std::move(value));
 		return owned_vm_values.back().refMut();
 	}
 
-	Box<VmValue> SafeVMProcess::createOwnedVmValue(TypeCRef type) {
-		return Box<VmValue>::fromPointer(new VmValue(*this, type));
+	Box<IVmValue> SafeVMProcess::createOwnedVmValue(TypeCRef type) {
+		return Box<SafeVmValue>::fromPointer(new SafeVmValue(*this, type));
 	}
 
-	Box<VmValue> SafeVMProcess::createOwnedVmValue(TypeCRef type, Pointer src) {
-		return Box<VmValue>::fromPointer(new VmValue(*this, type, src));
+	Box<IVmValue> SafeVMProcess::createOwnedVmValue(TypeCRef type, Pointer src) {
+		return Box<SafeVmValue>::fromPointer(new SafeVmValue(*this, type, src));
 	}
 
 	SafeVMProcess::SafeVMProcess(const PID my_pid, bool enable_deadlock_detection):
@@ -381,7 +382,9 @@ namespace vm {
 						.offset = offset,
 						.name   = std::nullopt,
 						.type   = std::nullopt,
-						.value  = VMValueRef(*this, memory.getBlockType(block), Pointer(block, 0)),
+						.value  = SharedBox<IVmValueRef>::fromPointer(
+                            new SafeVmValueRef(*this, memory.getBlockType(block), Pointer(block, 0))
+                        ),
 					});
 				}
 

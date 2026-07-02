@@ -31,8 +31,8 @@ namespace vm {
 	 * loading and parsing of the program is done in the caller's thread.
 	 */
 	class SafeVMProcess final: public IVMProcess {
-		friend class VmValue;
-		friend class VMValueRef;
+		friend class SafeVmValue;
+		friend class SafeVmValueRef;
 
 	private:
 		std::shared_mutex rw_global;
@@ -64,7 +64,7 @@ namespace vm {
 		 * @note Lifetime of these VmValues is controlled by this process. They will be destructed
 		 * when process is deinitialized.
 		 */
-		std::vector<Box<VmValue>> owned_vm_values;
+		std::vector<Box<IVmValue>> owned_vm_values;
 
 		/**
 		 * @brief Pool of threads in this process.
@@ -173,13 +173,13 @@ namespace vm {
 
 		[[nodiscard]] api::ProcStatus getCurrentStatus() { return getStatus(); }
 
-		Ref<VmValue> createVmValue(TypeCRef type) override;
+		Ref<IVmValue> createVmValue(TypeCRef type) override;
 
-		Ref<VmValue> createVmValue(TypeCRef type, Pointer src) override;
+		Ref<IVmValue> createVmValue(TypeCRef type, Pointer src) override;
 
-		Box<VmValue> createOwnedVmValue(TypeCRef type) override;
+		Box<IVmValue> createOwnedVmValue(TypeCRef type) override;
 
-		Box<VmValue> createOwnedVmValue(TypeCRef type, Pointer src) override;
+		Box<IVmValue> createOwnedVmValue(TypeCRef type, Pointer src) override;
 
 		CRef<low::ILowVMProgram> getLoadedProgram() const { return loaded_program; }
 

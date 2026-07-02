@@ -12,7 +12,7 @@
 #include <vm/core/safe/memory/thread_stack.hpp>
 #include <vm/core/thread/ivmthread.hpp>
 #include <vm/core/thread/kill_process_exception.hpp>
-#include <vm/core/vmvalue/vmvalue.hpp>
+#include <vm/core/vmvalue/ivmvalue.hpp>
 
 #include <limits>
 
@@ -120,7 +120,7 @@ namespace vm {
 		 * @brief Stores exit value of the last ran function. ExecutionCompleted exec status can
 		 * store a reference to this object.
 		 */
-		base::Optional<std::vector<Ref<VmValue>>> exit_value_storage{};
+		base::Optional<std::vector<Ref<IVmValue>>> exit_value_storage{};
 
 		/**
 		 * @brief Thread context - currently just the name of the function that will be used in
@@ -167,7 +167,7 @@ namespace vm {
 		 * @param func - the function to execute.
 		 * @return Mutable reference to a value returned by the program
 		 */
-		std::vector<Ref<VmValue>> executeFunction(
+		std::vector<Ref<IVmValue>> executeFunction(
 			const low::LowFuncData& start_function, const low::LowFuncData& func
 		);
 

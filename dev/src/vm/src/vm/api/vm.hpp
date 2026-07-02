@@ -10,7 +10,7 @@
 #include <vm/api/data/response.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/core/process/interface_types.hpp>
-#include <vm/core/vmvalue/vmvalue.hpp>
+#include <vm/core/vmvalue/ivmvalue.hpp>
 
 namespace vm::api {
 	/**
@@ -188,7 +188,7 @@ namespace vm::api {
 	 * @brief Get an empty VmValue (initialized by zero bytes) of the given type.
 	 * @note This endpoint returns a VmValue which is owned by the caller. It's the callers
 	 * responsibility to call `VmValue::freeData()` on the VmValue. For more information
-	 * on why this is necessary, see documentation of `vm::VmValue::freeData()`.
+	 * on why this is necessary, see documentation of `vm::IVmValue::freeData()`.
 	 * @return Response containing a Box containing the newly allocated VmValue of the specified type.
 	 */
 	std::expected<response::VmValue, ApiError> getVmValue(PID pid, const std::string& type_name);

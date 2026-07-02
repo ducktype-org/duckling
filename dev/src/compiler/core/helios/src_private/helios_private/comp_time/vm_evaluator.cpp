@@ -9,7 +9,7 @@
 #include <vm/api/vm.hpp>
 #include <vm/bytecode/validator/errors.hpp>
 #include <vm/bytecode/validator/valid_program.hpp>
-#include <vm/core/vmvalue/vmvalue.hpp>
+#include <vm/core/vmvalue/ivmvalue.hpp>
 
 #include <expected>
 #include <mutex>
@@ -22,11 +22,11 @@ namespace {
 	 * @brief Converts a given `ctv` to VmValue.
 	 * @return The converted VmValue or a VmEvaluationError if the conversion failed.
 	 */
-	std::expected<Box<vm::VmValue>, VmEvaluationError> ctvToVmValue(
+	std::expected<Box<vm::IVmValue>, VmEvaluationError> ctvToVmValue(
 		vm::PID pid, const CompileTimeValue& ctv
 	) {
 		auto get_vm_value
-			= [&](base::StrID type_name) -> std::expected<Box<vm::VmValue>, VmEvaluationError> {
+			= [&](base::StrID type_name) -> std::expected<Box<vm::IVmValue>, VmEvaluationError> {
 			auto vm_value_response = vm::api::getVmValue(pid, type_name.str());
 			if (!vm_value_response.has_value())
 				return std::unexpected(VmEvaluationError(
@@ -39,7 +39,7 @@ namespace {
 		variant_match(ctv.getStorage()) {
 			variant_case(NumericValue, val) {
 				return std::visit(
-					[&](auto&& num_val) -> std::expected<Box<vm::VmValue>, VmEvaluationError> {
+					[&](auto&& num_val) -> std::expected<Box<vm::IVmValue>, VmEvaluationError> {
 						using NumT = std::decay_t<decltype(num_val)>;
 
 						// @TODO: #899 Once CTV will be VmValue based (contain the VMValue and
@@ -97,7 +97,7 @@ namespace {
 	 * @return The converted value or a VmEvaluationError if the conversion failed.
 	 */
 	std::expected<CompileTimeValue, VmEvaluationError> vmValueToCtv(
-		const compiler::tsh::SymbolType<>& type, Ref<vm::VmValue> vm_value
+		const compiler::tsh::SymbolType<>& type, Ref<vm::IVmValue> vm_value
 	) {
 		const auto kind = type.getType().getKind();
 		switch (kind) {
@@ -296,10 +296,10 @@ namespace {
 		return comptime_dvm.loadCode(bytecode);
 	}
 
-	std::expected<std::vector<Box<vm::VmValue>>, VmEvaluationError> prepareArguments(
+	std::expected<std::vector<Box<vm::IVmValue>>, VmEvaluationError> prepareArguments(
 		CompTimeDVM& comptime_dvm, const std::vector<compiler::ctv::CompileTimeValue>& args
 	) {
-		std::vector<Box<vm::VmValue>> owned_arguments;
+		std::vector<Box<vm::IVmValue>> owned_arguments;
 		owned_arguments.reserve(args.size());
 		for (const auto& ctv_arg: args) {
 			auto res = ctvToVmValue(*comptime_dvm.getPID(), ctv_arg);
@@ -334,10 +334,10 @@ namespace {
 	}
 
 	std::expected<compiler::ctv::CompileTimeValue, VmEvaluationError> runAndGetResult(
-		CompTimeDVM&                         comptime_dvm,
-		const std::string&                   func_name,
-		const std::vector<Box<vm::VmValue>>& owned_args,
-		const compiler::tsh::SymbolType<>    return_type
+		CompTimeDVM&                          comptime_dvm,
+		const std::string&                    func_name,
+		const std::vector<Box<vm::IVmValue>>& owned_args,
+		const compiler::tsh::SymbolType<>     return_type
 	) {
 		vm::PID pid = *comptime_dvm.getPID();
 
@@ -357,7 +357,7 @@ namespace {
 		for (const auto& arg: owned_args) arg->freeData();
 
 		variant_match(maybe_exit_value.value()) {
-			variant_case(std::vector<Ref<vm::VmValue>>, values) {
+			variant_case(std::vector<Ref<vm::IVmValue>>, values) {
 				CORE_ASSERT(
 					values.size() == 1, "Compiler support for multiple values not implemented"
 				);

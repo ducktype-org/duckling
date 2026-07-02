@@ -116,7 +116,7 @@ auto VmTestSuite::runTestOnVmGetResult(
 	const auto exit_value = vm::api::getExitValue(pid).transform([&](vm::api::ExitValue values) {
 		variant_match(values) {
 			variant_case(i64, exit_code) return exit_code;
-			variant_case(std::vector<Ref<vm::VmValue>>, values) {
+			variant_case(std::vector<Ref<vm::IVmValue>>, values) {
 				ASSERT_TRUE(values.size() == 1);
 				auto& value = values.at(0);
 				ASSERT_TRUE(value->type->getName().str() == "i64");
@@ -193,7 +193,7 @@ void VmTestSuite::runFunctionSynchronouslyAsTest(
 			else
 				ASSERT_TRUE(exit_code == 0);
 		}
-		variant_case(std::vector<Ref<vm::VmValue>>, values) {
+		variant_case(std::vector<Ref<vm::IVmValue>>, values) {
 			if (expected_exit_code.has_value()) {
 				ASSERT_TRUE(values.size() == 1);
 				ASSERT_EQUAL_PRINT(expected_exit_code.value(), values.at(0)->readBytes<i64>());

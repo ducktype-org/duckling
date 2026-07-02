@@ -7,7 +7,7 @@
 #include <string>
 
 namespace {
-	Box<vm::VmValue> getIntVmValue(vm::PID pid, i64 value) {
+	Box<vm::IVmValue> getIntVmValue(vm::PID pid, i64 value) {
 		auto response = vm::api::getVmValue(pid, "i64");
 		if (!response.has_value()) throw ReplFailedToCreateAVmValue();
 		auto vm_value = std::move(response->vm_value);
@@ -167,7 +167,7 @@ i64 DuckVMRepl::runOnVm(const std::string& func_name, OwnedArgumentList& func_ar
 	if (!exit_code_response.has_value()) throw ReplEmptyExitCodeException();
 	variant_match(exit_code_response.value()) {
 		variant_case(i64, exit_value) { return exit_value; }
-		variant_case(std::vector<Ref<vm::VmValue>>, values) {
+		variant_case(std::vector<Ref<vm::IVmValue>>, values) {
 			CORE_ASSERT(values.size() == 1, "REPL expects only one response value");
 			if (values.at(0)->type->getName() != base::StrID("i64"))
 				throw ReplWrongReturnTypeException();

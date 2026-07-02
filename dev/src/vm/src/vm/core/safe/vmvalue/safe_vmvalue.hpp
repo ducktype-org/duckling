@@ -13,8 +13,8 @@ namespace vm {
 	class SafeVMProcess;
 
 	/**
-	 * @brief Storage for a value in the safe VM. It is meant to import a value into / export a value
-	 * out of the VM. It is NOT meant to be used by the internal memory module.
+	 * @brief Storage for a value in the safe VM. It is meant to import a value into / export a
+	 * value out of the VM. It is NOT meant to be used by the internal memory module.
 	 * @note Passed data is copied.
 	 * @note SafeVmValues can be used only in the processes which were used when initializing them.
 	 * They can't be transferred in between different processes.

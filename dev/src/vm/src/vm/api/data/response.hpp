@@ -7,7 +7,8 @@
 
 #include <diagnostic/source_position.hpp>
 
-#include <vm/core/vmvalue/vmvalueref.hpp>
+#include <vm/core/vmvalue/ivmvalue.hpp>
+#include <vm/core/vmvalue/ivmvalueref.hpp>
 
 namespace vm::api {
 	namespace response {
@@ -24,7 +25,7 @@ namespace vm::api {
 		};
 
 		struct VmValue {
-			Box<::vm::VmValue> vm_value;
+			Box<::vm::IVmValue> vm_value;
 			NLOHMANN_DEFINE_TYPE_INTRUSIVE(VmValue, vm_value);
 		};
 
@@ -41,10 +42,10 @@ namespace vm::api {
 
 		struct StackFrameData {
 			struct FrameVar {
-				u64                         offset = 0;
-				base::Optional<base::StrID> name;
-				base::Optional<base::StrID> type;
-				VMValueRef                  value;
+				u64                          offset = 0;
+				base::Optional<base::StrID>  name;
+				base::Optional<base::StrID>  type;
+				SharedBox<::vm::IVmValueRef> value;
 			};
 
 			base::StrID           function_name;

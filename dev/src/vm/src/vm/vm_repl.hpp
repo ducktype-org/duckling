@@ -39,7 +39,7 @@
  */
 class DuckVMRepl {
 public:
-	using OwnedArgumentList = std::vector<Box<vm::VmValue>>;
+	using OwnedArgumentList = std::vector<Box<vm::IVmValue>>;
 
 	static DuckVMRepl get();
 	DuckVMRepl(DuckVMRepl&&)                 = delete;

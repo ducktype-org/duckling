@@ -30,7 +30,7 @@ public:
 	}
 
 private:
-	using OwnedArgumentList = std::vector<Box<vm::VmValue>>;
+	using OwnedArgumentList = std::vector<Box<vm::IVmValue>>;
 
 	/**
 	 * @brief Executes a function or a program within a VM process and verifies the results.
@@ -82,8 +82,8 @@ private:
 		auto exit_code_response = vm::api::getExitValue(pid);
 		ASSERT_HAS_VALUE(exit_code_response);
 		const auto& exit_value = exit_code_response.value();
-		ASSERT_TRUE(std::holds_alternative<std::vector<Ref<vm::VmValue>>>(exit_value));
-		auto& exit_value_vec = std::get<std::vector<Ref<vm::VmValue>>>(exit_value);
+		ASSERT_TRUE(std::holds_alternative<std::vector<Ref<vm::IVmValue>>>(exit_value));
+		auto& exit_value_vec = std::get<std::vector<Ref<vm::IVmValue>>>(exit_value);
 
 		match_optional(expected_return_values) {
 			opt_some(exp) {
@@ -125,7 +125,7 @@ private:
 	/**
 	 * @brief Create an owned VmValue containing a specified value.
 	 */
-	Box<vm::VmValue> getIntVmValue(vm::PID pid, i64 value) {
+	Box<vm::IVmValue> getIntVmValue(vm::PID pid, i64 value) {
 		auto response = vm::api::getVmValue(pid, "i64");
 		ASSERT_HAS_VALUE(response);
 		auto vm_value = std::move(response->vm_value);

@@ -10,24 +10,24 @@ namespace vm::fast {
 		vm_threads.add(*this, compiler.getProgramBase(), &functions);
 	}
 
-	Ref<VmValue> FastVMProcess::createVmValue([[maybe_unused]] vm::TypeCRef type) {
+	Ref<IVmValue> FastVMProcess::createVmValue([[maybe_unused]] vm::TypeCRef type) {
 		// @TODO: #2102 Implement this pure virtual method.
 		throw vm::VMNotImplemented("Method `createVmValue` is not implemented.");
 	}
 
-	Ref<VmValue> FastVMProcess::createVmValue(
+	Ref<IVmValue> FastVMProcess::createVmValue(
 		[[maybe_unused]] vm::TypeCRef type, [[maybe_unused]] Pointer src
 	) {
 		// @TODO: #2102 Implement this pure virtual method.
 		throw vm::VMNotImplemented("Method `createVmValue` is not implemented.");
 	}
 
-	Box<VmValue> FastVMProcess::createOwnedVmValue([[maybe_unused]] vm::TypeCRef type) {
+	Box<IVmValue> FastVMProcess::createOwnedVmValue([[maybe_unused]] vm::TypeCRef type) {
 		// @TODO: #2102 Implement this pure virtual method.
 		throw vm::VMNotImplemented("Method `createOwnedVmValue` is not implemented.");
 	}
 
-	Box<VmValue> FastVMProcess::createOwnedVmValue(
+	Box<IVmValue> FastVMProcess::createOwnedVmValue(
 		[[maybe_unused]] vm::TypeCRef type, [[maybe_unused]] Pointer src
 	) {
 		// @TODO: #2102 Implement this pure virtual method.

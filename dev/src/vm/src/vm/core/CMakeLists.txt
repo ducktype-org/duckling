@@ -32,8 +32,8 @@ add_files(
 	safe/low_program/cfg/cf_graph.cpp
 	safe/low_program/cfg/cf_analysis.cpp
 	safe/safe_vmthread.cpp
-	vmvalue/vmvalue.cpp
-	vmvalue/vmvalueref.cpp
+	safe/vmvalue/safe_vmvalue.cpp
+	safe/vmvalue/safe_vmvalueref.cpp
 	fast/eval/instruction_functions.cpp
 	fast/program/relocator.cpp
 	fast/fast_vmthread.cpp

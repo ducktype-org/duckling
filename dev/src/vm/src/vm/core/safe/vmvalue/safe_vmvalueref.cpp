@@ -123,10 +123,10 @@ base::Optional<vm::InterpretedDataVariant> vm::SafeVmValueRef::readData() const 
 			match_optional(view_block_ref.toOpt()) {
 				opt_some(view_block) {
 					return vm::interpreted_data_variant::Variant{
-						.type_tag = alternative_index,
-						.referenced = SharedBox<IVmValueRef>::fromPointer(
-							new SafeVmValueRef(*my_process.get(), inner_type, Pointer(view_block, 0))
-						),
+						.type_tag   = alternative_index,
+						.referenced = SharedBox<IVmValueRef>::fromPointer(new SafeVmValueRef(
+							*my_process.get(), inner_type, Pointer(view_block, 0)
+						)),
 					};
 				}
 				opt_none { return std::nullopt; }

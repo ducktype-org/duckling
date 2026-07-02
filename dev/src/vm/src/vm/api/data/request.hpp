@@ -10,7 +10,7 @@
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/core/process/interface_types.hpp>
 #include <vm/core/safe/memory/pointer.hpp>
-#include <vm/core/vmvalue/vmvalue.hpp>
+#include <vm/core/vmvalue/ivmvalue.hpp>
 
 #include <json/json.hpp>
 

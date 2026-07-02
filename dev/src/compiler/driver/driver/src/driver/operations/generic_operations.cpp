@@ -51,7 +51,7 @@
 #include <vm/bytecode/serializer/serializer.hpp>
 #include <vm/bytecode/validator/errors.hpp>
 #include <vm/bytecode/validator/valid_program.hpp>
-#include <vm/core/vmvalue/vmvalue.hpp>
+#include <vm/core/vmvalue/ivmvalue.hpp>
 #include <vm/loader/loader.hpp>
 
 #include <algorithm>
@@ -596,11 +596,11 @@ namespace compiler::driver {
 			          .transform_error(vm::api::errorToString)
 			          .transform([](vm::api::ExitValue exit_values) {
 						  CORE_ASSERT(
-							  v_matches(exit_values, std::vector<Ref<vm::VmValue>>),
+							  v_matches(exit_values, std::vector<Ref<vm::IVmValue>>),
 							  "Expected exit value to be vector"
 						  );
 						  const auto& exit_values_vec
-							  = std::get<std::vector<Ref<vm::VmValue>>>(exit_values);
+							  = std::get<std::vector<Ref<vm::IVmValue>>>(exit_values);
 						  CORE_ASSERT(exit_values_vec.size() == 1, "Expected single exit value");
 						  return RunOutput{ .exit_code = base::safeIntConv<int>(
 												exit_values_vec.at(0)->readBytes<i64>()
@@ -962,10 +962,10 @@ namespace compiler::driver {
 		    .transform_error(vm::api::errorToString)
 		    .transform([](vm::api::ExitValue exit_values) {
 				CORE_ASSERT(
-					v_matches(exit_values, std::vector<Ref<vm::VmValue>>),
+					v_matches(exit_values, std::vector<Ref<vm::IVmValue>>),
 					"Expected exit value to be vector"
 				);
-				const auto& exit_values_vec = std::get<std::vector<Ref<vm::VmValue>>>(exit_values);
+				const auto& exit_values_vec = std::get<std::vector<Ref<vm::IVmValue>>>(exit_values);
 				CORE_ASSERT(
 					exit_values_vec.size() == 1,
 					"Support for multiple return values in compiler not implemented"

@@ -478,7 +478,7 @@ namespace vm {
 	#pragma GCC pop_options
 #endif
 
-	std::vector<Ref<VmValue>> SafeVMThread::executeFunction(
+	std::vector<Ref<IVmValue>> SafeVMThread::executeFunction(
 		const low::LowFuncData& start_function, const low::LowFuncData& func
 	) {
 		ScopedGilGuard gil_guard(*this);
@@ -512,7 +512,7 @@ namespace vm {
 			"result."
 		);
 
-		exit_value_storage = { std::vector<Ref<VmValue>>{} };
+		exit_value_storage = { std::vector<Ref<IVmValue>>{} };
 		for (u64 idx = 0; idx < func.result_types.size(); idx++) {
 			exit_value_storage.value().emplace_back(safe_process.createVmValue(
 				func.result_types[idx],

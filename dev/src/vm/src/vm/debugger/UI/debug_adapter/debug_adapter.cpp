@@ -2,7 +2,7 @@
 
 #include <vm/api/data/api_error.hpp>
 #include <vm/api/data/status.hpp>
-#include <vm/core/vmvalue/vmvalue.hpp>
+#include <vm/core/vmvalue/ivmvalue.hpp>
 
 #include <iostream>
 #include <variant>
@@ -37,12 +37,12 @@ namespace vm::debugger::debug_adapter {
 
 					  // status.exit_value
 					  CORE_ASSERT(
-						  std::holds_alternative<std::vector<Ref<vm::VmValue>>>(status.exit_value),
+						  std::holds_alternative<std::vector<Ref<vm::IVmValue>>>(status.exit_value),
 						  "Wrong variant member"
 					  );
 					  const auto& exit_value
-						  = std::get<std::vector<Ref<vm::VmValue>>>(status.exit_value);
-					  for (CRef<VmValue> val: exit_value) {
+						  = std::get<std::vector<Ref<vm::IVmValue>>>(status.exit_value);
+					  for (CRef<IVmValue> val: exit_value) {
 						  std::string rendered_value     = "";
 						  bool        has_rendered_value = false;
 

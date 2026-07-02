@@ -64,7 +64,9 @@ namespace vm {
 		 */
 		template<class T>
 		T readBytes() const {
-			CORE_ASSERT(sizeof(T) <= static_cast<usize>(type->getSize()), "VmValue: Out of bounds read");
+			CORE_ASSERT(
+				sizeof(T) <= static_cast<usize>(type->getSize()), "VmValue: Out of bounds read"
+			);
 			return vm::safeReadPointerBytes<T>(getBytes());
 		}
 
@@ -74,7 +76,8 @@ namespace vm {
 		template<class T>
 		void writeBytes(const T& value, const usize offset = 0) {
 			CORE_ASSERT(
-				offset + sizeof(T) <= static_cast<usize>(type->getSize()), "VmValue: Out of bounds write"
+				offset + sizeof(T) <= static_cast<usize>(type->getSize()),
+				"VmValue: Out of bounds write"
 			);
 			return vm::safeWriteBytes<T>(getBytes(), value);
 		}
