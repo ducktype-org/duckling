@@ -130,11 +130,13 @@ namespace compiler::helios {
 					output(expr->expression_type.getSymbolType());
 				} else {
 					// "void" return should actually deduce to unit type:
-					output(tsh::SymbolType<>{
-						tsh::getUnitType(),
-						tsh::ReferenceKind::Direct,
-						tsh::Mutability::Mutable,
-					});
+					output(
+						tsh::SymbolType<>{
+							tsh::getUnitType(),
+							tsh::ReferenceKind::Direct,
+							tsh::Mutability::Mutable,
+						}
+					);
 				}
 			}
 
@@ -167,11 +169,13 @@ namespace compiler::helios {
 				return *return_collector.out.begin();
 			default:
 				// there are multiple candidates and return type deduction is inconclusive
-				ctx.logInt(makeBox<dia_int::PlaceholderError>(
-					"Function declared with no explicit return type and inconsistent return "
-					"statements.",
-					fun->getStablePosition()
-				));
+				ctx.logInt(
+					makeBox<dia_int::PlaceholderError>(
+						"Function declared with no explicit return type and inconsistent return "
+						"statements.",
+						fun->getStablePosition()
+					)
+				);
 				return query::Failed();
 			}
 		}
@@ -232,8 +236,9 @@ namespace compiler::helios {
 					const auto ret_type_ctv
 						= getTypeCTVFromPST(ctx, ret.value().unlock(ctx)->getExpr()).valueOrThrow();
 					ret_type = ret_type_ctv.get<tsh::SymbolType<>>().value();
-					origin   = code::multiplePstOriginOrdered({ param_list.unlock(ctx),
-					                                            ret.value().unlock(ctx) });
+					origin   = code::multiplePstOriginOrdered(
+						{ param_list.unlock(ctx), ret.value().unlock(ctx) }
+					);
 				}
 				// Deduce return type if not provided.
 				else {
@@ -318,9 +323,7 @@ namespace compiler::helios {
 		/**
 		 * @brief Get the declaration of an implicit class constructor.
 		 */
-		static PResult getImplicitCtorDecl(
-			Context& ctx, const defgen::Constructor& ctor_data
-		) {
+		static PResult getImplicitCtorDecl(Context& ctx, const defgen::Constructor& ctor_data) {
 			// Preamble
 			using defgen::Constructor;
 			using defgen::GeneratedConstructorType;
@@ -354,13 +357,14 @@ namespace compiler::helios {
 
 			// Prepare the necessary symbols (of the constructor and its parameters).
 			const SymID ctor_symbol        = ctx.query<defgen::QueryGeneratedSymbol>({
-					   .name                  = ctor_name,
-					   .generated_symbol_data = Constructor{ target_type, GeneratedConstructorType::Implicit },
-            });
+				.name = ctor_name,
+				.generated_symbol_data
+				= Constructor{ target_type, GeneratedConstructorType::Implicit },
+			});
 			const auto  result_symbol_type = tsh::SymbolType<>{
-                target_type,
-                tsh::ReferenceKind::Direct,
-                tsh::Mutability::Mutable,
+				target_type,
+				tsh::ReferenceKind::Direct,
+				tsh::Mutability::Mutable,
 			};
 
 			std::vector<code::Parameter> parameters;
@@ -383,11 +387,10 @@ namespace compiler::helios {
 					                                .unlock(ctx)
 					                                .dynamicCast<pst::Field>()
 					                                .value();
-					field_origin          = code::pstOrigin(field_pst_data).generatedFrom();
-					auto init_expr_opt    = field_pst_data->getInit();
-					init_expr_coerced_opt = init_expr_opt.map(
-						[&](pst::AccessLocked<pst::ExprHolder> expr_holder
-					    ) -> BoxOrCRef<code::Expr> {
+					field_origin              = code::pstOrigin(field_pst_data).generatedFrom();
+					auto init_expr_opt        = field_pst_data->getInit();
+					init_expr_coerced_opt     = init_expr_opt.map(
+						[&](pst::AccessLocked<pst::ExprHolder> expr_holder) -> BoxOrCRef<code::Expr> {
 							const auto field_type = field.getType(ctx);
 							auto       expr
 								= getHoutOfExprWithExpectedType(
@@ -440,12 +443,12 @@ namespace compiler::helios {
 			                              ->valueOrThrow()
 			                              .getType()
 			                              .as<tsh::FunctionAbstractType>();
-			const auto return_type = builtin_type.getResultType();
-			auto       parameters  = std::vector<code::Parameter>{};
+			const auto return_type  = builtin_type.getResultType();
+			auto       parameters   = std::vector<code::Parameter>{};
 			for (u32 i = 0; const auto& param_type: builtin_type.getParameterTypes()) {
 				const auto param_symbol = ctx.query<defgen::QueryGeneratedSymbol>({
-					base::StrID(base::strConcat("_", i).c_str()),
-					defgen::Parameter{
+					.name=base::StrID(base::strConcat("_", i).c_str()),
+					.generated_symbol_data=defgen::Parameter{
 						.function_symbol = fun,
 						.parameter_index = i,
 					},
@@ -473,7 +476,7 @@ namespace compiler::helios {
 			case SymbolKind::FunctionDeclaration:
 			case SymbolKind::Method: {
 				variant_match(getSymRef(key)->other) {
-					variant_case_novalue(PstImplementedSemantics) {
+					variant_case_novalue(PstImplementedSemantics, BuiltinSemantics) {
 						DeclarationVisitor decl_maker(ctx, key);
 						stmt(ctx, key).value()->acceptVisitor(decl_maker);
 						auto result = std::move(decl_maker.out).value();

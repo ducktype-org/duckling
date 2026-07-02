@@ -37,6 +37,9 @@ namespace compiler::helios {
 
 	using Attribute = std::variant<ATTRIBUTES_LIST>;
 
+	template<typename Attr>
+	base::Optional<CRef<Attr>> getAttrInVector(const std::vector<Attribute>& attrs);
+
 	/**
 	 * @brief Check if the given attribute can be applied to given stmt.
 	 */

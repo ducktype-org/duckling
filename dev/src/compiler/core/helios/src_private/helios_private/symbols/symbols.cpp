@@ -2,7 +2,11 @@
 
 #include "frontend/pst_parser/access.hpp"
 #include "frontend/pst_parser/lang_parser_element.hpp"
+#include "helios/attributes/builtins.hpp"
+#include "helios/symbols/attributes.hpp"
+#include "helios/symbols/symbol_id.hpp"
 #include "helios_private/symbols/generated_symbol_data.hpp"
+#include "helios_private/symbols/pst_symbol_data.hpp"
 
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/all_class_elements.hpp>
@@ -41,13 +45,17 @@
 
 namespace compiler::helios {
 	bool implementsQueryCodeOfFun(SymID id) {
+		// Builtins have FunctionDeclaration kind, but can implement code of fun.
 		if (kind(id) != SymbolKind::Function && kind(id) != SymbolKind::Method
 		    && kind(id) != SymbolKind::FunctionDeclaration)
 			return false;
 
 		variant_match(getSymRef(id)->other) {
 			variant_case_novalue(PstImplementedSemantics) { return true; }
-			variant_case_novalue(BuiltinSemantics) { return true; }
+			variant_case(BuiltinSemantics, data) {
+				// Only if implemented in HOUT, then it can be called with code of fun.
+				return builtinOriginForType(data.builtin).contains(BuiltinOrigin::HOUT);
+			}
 			variant_default { return kind(id) != SymbolKind::FunctionDeclaration; }
 		}
 		CORE_UNREACHABLE();
@@ -56,7 +64,12 @@ namespace compiler::helios {
 	EmissionPolicy emissionPolicy(SymID id) {
 		variant_match(getSymRef(id)->other) {
 			variant_case_novalue(PstImplementedSemantics) { return EmissionPolicy::OwnerOnly; }
-			variant_case_novalue(BuiltinSemantics) { return EmissionPolicy::Replicated; }
+			variant_case(BuiltinSemantics, data) {
+				// Only if HOUT implements the builtin we want to replicate it.
+				return builtinOriginForType(data.builtin).contains(BuiltinOrigin::HOUT)
+				         ? EmissionPolicy::Replicated
+				         : EmissionPolicy::OwnerOnly;
+			}
 			variant_case_novalue(defgen::BuiltinOperator, defgen::ScriptMainWrapper) {
 				return EmissionPolicy::OwnerOnly;
 			}
@@ -153,14 +166,16 @@ namespace compiler::helios {
 					return self(pst_parent.getAsLangElement().unlock(ctx));
 				}
 				default:
-					ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-						base::strConcat(
-							"Global variable detection is not implemented for variables inside "
-							"elements of kind: ",
-							el->elementType()
-						),
-						el->getStablePosition()
-					));
+					ctx.logInt(
+						makeBox<dia_int::NotYetImplementedCodeError>(
+							base::strConcat(
+								"Global variable detection is not implemented for variables inside "
+								"elements of kind: ",
+								el->elementType()
+							),
+							el->getStablePosition()
+						)
+					);
 					query::throwFailed();
 					CORE_UNREACHABLE();
 				}
@@ -238,9 +253,11 @@ namespace compiler::helios {
 			auto pst_attr_value = pst_attr->getName().unlock(ctx);
 
 			if (pst_attr_value->numberOfNames() != 1) {
-				ctx.logInt(makeBox<dia_int::PlaceholderError>(
-					"Attribute is not supported", pst_attr_value->getStablePosition()
-				));
+				ctx.logInt(
+					makeBox<dia_int::PlaceholderError>(
+						"Attribute is not supported", pst_attr_value->getStablePosition()
+					)
+				);
 				query::throwFailed();
 			}
 			auto ident = pst_attr_value->getNameByIndex(0);
@@ -254,20 +271,24 @@ namespace compiler::helios {
 
 			auto attr_opt = attrFromStr(ctx, name, args);
 			if_opt_none(attr_opt) {
-				ctx.logInt(makeBox<dia_int::PlaceholderError>(
-					base::strConcat("Attribute name '", name, "' is not recognized"),
-					pst_attr_value->getStablePosition()
-				));
+				ctx.logInt(
+					makeBox<dia_int::PlaceholderError>(
+						base::strConcat("Attribute name '", name, "' is not recognized"),
+						pst_attr_value->getStablePosition()
+					)
+				);
 				query::throwFailed();
 			}
 
 			auto attr = attr_opt.value();
 
 			if (not isValidForStmt(attr, stmt->getStmtKind())) {
-				ctx.logInt(makeBox<dia_int::PlaceholderError>(
-					"Attribute is not supported on this type of statement.",
-					pst_attr_value->getStablePosition()
-				));
+				ctx.logInt(
+					makeBox<dia_int::PlaceholderError>(
+						"Attribute is not supported on this type of statement.",
+						pst_attr_value->getStablePosition()
+					)
+				);
 				query::throwFailed();
 			}
 
@@ -276,9 +297,11 @@ namespace compiler::helios {
 
 		auto validation_result = validateAttributes(result);
 		if (not validation_result.has_value()) {
-			ctx.logInt(makeBox<dia_int::PlaceholderError>(
-				validation_result.error(), stmt->getStablePosition()
-			));
+			ctx.logInt(
+				makeBox<dia_int::PlaceholderError>(
+					validation_result.error(), stmt->getStablePosition()
+				)
+			);
 		}
 
 		return result;
@@ -300,11 +323,31 @@ namespace compiler::helios {
 	) {
 		// @TODO: change this function to visitor to avoid dynamic_casts
 
-		PstImplementedSemantics pst_data(scope, stmt->getHash());
 
 		// Attribute handling
 		auto attributes           = attributesFromPSTStatement(ctx, stmt);
 		bool is_ignored_by_lookup = std::ranges::any_of(attributes, &disablesLookup);
+
+		// Check if it is a builtin.
+		if_opt_some(getAttrInVector<attributes::Builtin>(attributes), builtin_data) {
+			auto function = stmt.dynamicCast<pst::FunDecl>().value();
+			return SymbolData::makeBuiltinSymbolData(
+				{
+					.name                 = function->getName().unlock(ctx)->unwrap(),
+					.kind                 = SymbolKind::FunctionDeclaration,
+					.is_ignored_by_lookup = is_ignored_by_lookup,
+					.attributes           = std::move(attributes),
+
+				},
+				BuiltinSemantics{
+					scope,
+					stmt->getHash(),
+					builtin_data->builtin,
+				}
+			);
+		}
+
+		PstImplementedSemantics pst_data(scope, stmt->getHash());
 
 		switch (stmt->getStmtKind()) {
 		case pst::StmtKind::Fun: {
@@ -453,11 +496,13 @@ namespace compiler::helios {
 				usize count = import_star.value()->numberOfNames();
 				auto  name  = import_star.value()->getNameByIndex(count - 1).unlock(ctx)->unwrap();
 				if (import_star.value()->isImportHides()) {
-					ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-						"Import chains of type `ImportStarHides` are not yet supported in "
-						"makeSymbolFromStatement",
-						import_star.value()->getStablePosition()
-					));
+					ctx.logInt(
+						makeBox<dia_int::NotYetImplementedCodeError>(
+							"Import chains of type `ImportStarHides` are not yet supported in "
+							"makeSymbolFromStatement",
+							import_star.value()->getStablePosition()
+						)
+					);
 				}
 				return SymbolData::makePSTSymbolData(
 					{
@@ -472,11 +517,13 @@ namespace compiler::helios {
 				);
 			} else if (auto import_nested = import_chain.dynamicCast<pst::ImportNested>()) {
 				// import a.b.c(...);
-				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-					"Import chains of type `ImportNested` are not yet supported in "
-					"makeSymbolFromStatement",
-					import_nested.value()->getStablePosition()
-				));
+				ctx.logInt(
+					makeBox<dia_int::NotYetImplementedCodeError>(
+						"Import chains of type `ImportNested` are not yet supported in "
+						"makeSymbolFromStatement",
+						import_nested.value()->getStablePosition()
+					)
+				);
 				usize count = import_nested.value()->numberOfNames();
 				auto  name = import_nested.value()->getNameByIndex(count - 1).unlock(ctx)->unwrap();
 				return SymbolData::makePSTSymbolData(
@@ -538,8 +585,7 @@ namespace compiler::helios {
 		case pst::StmtKind::CopyConstructor: {
 			// left for code consistency
 			[[maybe_unused]]
-			auto constructor
-				= stmt.dynamicCast<pst::CopyConstructor>().value();
+			auto constructor = stmt.dynamicCast<pst::CopyConstructor>().value();
 			return SymbolData::makePSTSymbolData(
 				{
 					.name                 = lang_def::keywordToStr(lang_def::Keyword::Copy),
@@ -579,9 +625,11 @@ namespace compiler::helios {
 			break;
 		}
 		[[maybe_unused]] auto stmt_ptr = &*stmt;
-		CORE_PANIC(base::strConcat(
-			"makeSymbolFromStatement bad symbol kind, stmt: ", typeid(*stmt_ptr).name()
-		));
+		CORE_PANIC(
+			base::strConcat(
+				"makeSymbolFromStatement bad symbol kind, stmt: ", typeid(*stmt_ptr).name()
+			)
+		);
 	}
 
 	/**
@@ -781,9 +829,11 @@ namespace compiler::helios {
 					auto names  = unlock_all_names(import_star.value());
 					module_path = std::vector<base::StrID>{ names.begin(), names.end() };
 				} else {
-					ctx.logInt(makeBox<dia_int::PlaceholderError>(
-						"Unknown import chain type.", import_stmt->getStablePosition()
-					));
+					ctx.logInt(
+						makeBox<dia_int::PlaceholderError>(
+							"Unknown import chain type.", import_stmt->getStablePosition()
+						)
+					);
 					output(query::Failed());
 					return;
 				}
@@ -792,9 +842,11 @@ namespace compiler::helios {
 					= frontend::getRelativeModule(ctx, module(scope(key)), module_path);
 
 				if (!maybe_imported_module.has_value()) {
-					ctx.logInt(makeBox<dia_int::PlaceholderError>(
-						"Module not found.", import_stmt->getStablePosition()
-					));
+					ctx.logInt(
+						makeBox<dia_int::PlaceholderError>(
+							"Module not found.", import_stmt->getStablePosition()
+						)
+					);
 					output(query::Failed());
 					return;
 				}
@@ -821,13 +873,15 @@ namespace compiler::helios {
 				return visitor.result_scope.value();
 			}
 			default: {
-				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-					base::strConcat(
-						"Linked scope for this symbol kind is not implemented yet: ",
-						key.ref->common.kind
-					),
-					stmt(ctx, key.ref).value()->getStablePosition()
-				));
+				ctx.logInt(
+					makeBox<dia_int::NotYetImplementedCodeError>(
+						base::strConcat(
+							"Linked scope for this symbol kind is not implemented yet: ",
+							key.ref->common.kind
+						),
+						stmt(ctx, key.ref).value()->getStablePosition()
+					)
+				);
 				return query::Failed();
 			}
 			}
@@ -850,7 +904,8 @@ namespace compiler::helios {
 			std::vector<tpc::Identifier> pointed_chain;
 			if (kind(key) == SymbolKind::Using) {
 				auto dotted = getSymRef(key)
-				                  ->maybePstElement().value()
+				                  ->maybePstElement()
+				                  .value()
 				                  .unlock(ctx)
 				                  .dynamicCast<pst::Using>()
 				                  .value()
@@ -861,7 +916,8 @@ namespace compiler::helios {
 					pointed_chain[i] = { .value = dotted->getNameByIndex(i).unlock(ctx)->unwrap() };
 			} else if (kind(key) == SymbolKind::Alias) {
 				auto dotted = getSymRef(key)
-				                  ->maybePstElement().value()
+				                  ->maybePstElement()
+				                  .value()
 				                  .unlock(ctx)
 				                  .dynamicCast<pst::Alias>()
 				                  .value()
@@ -894,11 +950,12 @@ namespace compiler::helios {
 			CORE_ASSERT(kind(key) == SymbolKind::Const, "SymID is not a Const");
 
 			// Get the const's data
-			const auto pst = getSymRef(key)
-			                     ->maybePstElement().value()
-			                     .unlock(ctx)
-			                     .dynamicCast<pst::Const>()
-			                     .value();
+			const auto pst  = getSymRef(key)
+			                      ->maybePstElement()
+			                      .value()
+			                      .unlock(ctx)
+			                      .dynamicCast<pst::Const>()
+			                      .value();
 			const auto type = ctx.query<QueryTypeOfSymbol>(key)->valueOrThrow();
 
 			// Get the coerced HOUT expression

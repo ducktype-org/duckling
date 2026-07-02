@@ -83,6 +83,7 @@ namespace pst {
 		DottedName,
 		CallArgument,
 		NestedImportList,
+		AtrArgList,
 
 		// wrappers
 		OperatorWrapper,

@@ -284,8 +284,8 @@ namespace compiler::helios::mangler {
 			case SymbolKind::Method:
 			case SymbolKind::FunctionDeclaration: {
 				variant_match(getSymRef(symbol_id)->other) {
-					variant_case_novalue(PstImplementedSemantics) {
-						// If the symbol originates from the PST, use its path.
+					variant_case_novalue(PstImplementedSemantics, BuiltinSemantics) {
+						// If the symbol originates from the PST (including builtins), use its path.
 						return path(ctx, symbol_id) + func(ctx, symbol_id);
 					}
 					// If the symbol is generated, it has no path.
@@ -297,7 +297,7 @@ namespace compiler::helios::mangler {
 							tsh::SymbolType<>::withDefaults(ctor.type)
 						)->valueOrThrow().str();
 
-						const std::string_view ctor_tag
+						const char* ctor_tag
 							= ctor.kind == defgen::GeneratedConstructorType::Implicit ? "Hic"
 							                                                          : "Hdc";
 

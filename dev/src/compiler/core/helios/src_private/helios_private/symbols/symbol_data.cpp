@@ -79,6 +79,12 @@ namespace compiler::helios {
 		  other(other),
 		  id(SymbolDataID::next()) {}
 
+	SymbolData SymbolData::makeBuiltinSymbolData(
+		CommonSymbolData common_data, BuiltinSemantics builtin_data
+	) {
+		return { std::move(common_data), builtin_data };
+	}
+
 	SymbolData SymbolData::makePSTSymbolData(
 		CommonSymbolData common_data, PstImplementedSemantics pst_data
 	) {

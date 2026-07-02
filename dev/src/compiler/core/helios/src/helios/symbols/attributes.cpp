@@ -1,9 +1,8 @@
 #include "attributes.hpp"
 
+#include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/elements/hierarchy/lists/attribute_arg_list.hpp>
 #include <frontend/pst_parser/elements/includes/basic.hpp>
-
-#include <diagnostic_interactive/placeholder.hpp>
 
 #include <base/collections/maps.hpp>
 #include <base/extend_cpp/variant_match.hpp>
@@ -31,21 +30,21 @@ namespace compiler::helios {
 		 */
 		Attribute expectNoArgs(query::Context& ctx, Attribute attr, AttrArgs args) {
 			if (args.has_value() && args.value().unlock(ctx)->size() > 0) {
-				ctx.logInt(makeBox<dia_int::PlaceholderError>(
-					base::strConcat(
-						"Attribute '", attrNameStr(attr).str(), "' does not take arguments."
-					),
-					args.value().unlock(ctx)->getStablePosition()
-				));
+				ctx.logInt(
+					makeBox<dia_int::PlaceholderError>(
+						base::strConcat(
+							"Attribute '", attrNameStr(attr).str(), "' does not take arguments."
+						),
+						args.value().unlock(ctx)->getStablePosition()
+					)
+				);
 				query::throwFailed();
 			}
 			return attr;
 		}
 	}
 
-	base::Optional<Attribute> attrFromStr(
-		query::Context& ctx, base::StrID name, AttrArgs args
-	) {
+	base::Optional<Attribute> attrFromStr(query::Context& ctx, base::StrID name, AttrArgs args) {
 		static const base::HashMap<std::string_view, AttrParser> mapping = {
 			{ "dvm_only_impl",
 			  [](query::Context& c, AttrArgs a) { return expectNoArgs(c, DVMOnlyImpl{}, a); } },
@@ -85,26 +84,35 @@ namespace compiler::helios {
 
 	bool disablesLookup(Attribute attr) { return v_matches(attr, DVMOnlyImpl, NativeOnlyImpl); }
 
-	namespace {
-		template<typename Attr>
-		bool hasAttr(const std::vector<Attribute>& attrs) {
-			return std::ranges::any_of(attrs, [](const Attribute& a) {
-				return base::holds<Attr>(a);
-			});
-		}
+	template<typename Attr>
+	base::Optional<CRef<Attr>> getAttrInVector(const std::vector<Attribute>& attrs) {
+		for (auto& attr: attrs) if_opt_some(base::maybeChoose<Attr>(attr), value) return value;
+		return {};
+	}
+
+#define MAKE_ATTR_INSTANCE(attr) \
+	template base::Optional<CRef<attr>> getAttrInVector<attr>(const std::vector<Attribute>& attrs);
+	FOR_EACH(MAKE_ATTR_INSTANCE, ATTRIBUTES_LIST)
+
+	template<typename Attr>
+	bool hasAttrInVector(const std::vector<Attribute>& attrs) {
+		return getAttrInVector<Attr>(attrs).has_value();
 	}
 
 	std::expected<std::monostate, std::string> validateAttributes(
 		const std::vector<Attribute>& attributes
 	) {
-		if (hasAttr<DVMOnlyImpl>(attributes) and hasAttr<NativeOnlyImpl>(attributes)) {
-			return std::unexpected(base::strConcat(
-				"The attributes `",
-				attrNameStr(NativeOnlyImpl{}),
-				"' and '",
-				attrNameStr(DVMOnlyImpl{}),
-				"' are exclusive."
-			));
+		if (hasAttrInVector<DVMOnlyImpl>(attributes)
+		    and hasAttrInVector<NativeOnlyImpl>(attributes)) {
+			return std::unexpected(
+				base::strConcat(
+					"The attributes `",
+					attrNameStr(NativeOnlyImpl{}),
+					"' and '",
+					attrNameStr(DVMOnlyImpl{}),
+					"' are exclusive."
+				)
+			);
 		}
 		return {};
 	}

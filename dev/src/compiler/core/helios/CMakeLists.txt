@@ -1,7 +1,7 @@
 # This has to be static due to cyclic dependencies in helios->mir->lir->dvm for comp time, and helios<->TS cyclic dependency.
 add_library(HELIOS STATIC
 	src_private/helios_private/attributes/backend_dependent.cpp
-	src_private/helios_private/attributes/builtins.cpp
+	src/helios/attributes/builtins.cpp
 	src_private/helios_private/hout/hout.cpp
 	src_private/helios_private/symbols/symbol_data.cpp
 	src_private/helios_private/symbols/symbols.cpp

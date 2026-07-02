@@ -635,6 +635,7 @@ namespace compiler::helios::code {
 		case BuiltinUnary::Ptr:
 		case BuiltinUnary::CPtr:
 		case BuiltinUnary::ManyPtr:
+		case BuiltinUnary::Slice:
 		case BuiltinUnary::Const:
 			// For most of the unary operators the result is the same as their argument type:
 			// (Int -> Int, Bool -> Bool, Meta -> Meta, etc.)

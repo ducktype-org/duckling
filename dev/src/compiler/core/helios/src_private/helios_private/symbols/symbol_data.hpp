@@ -92,6 +92,10 @@ namespace compiler::helios {
 		SymbolSemantics  other;
 		SymbolDataID     id;
 
+		static SymbolData makeBuiltinSymbolData(
+			CommonSymbolData common_data, BuiltinSemantics builtin_data
+		);
+
 		static SymbolData makePSTSymbolData(
 			CommonSymbolData common_data, PstImplementedSemantics pst_data
 		);

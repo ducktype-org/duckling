@@ -141,8 +141,7 @@ namespace compiler::helios {
 					return func_maker.out.value();
 				}
 				variant_case(BuiltinSemantics, data) {
-					// ...
-					CORE_PANIC("implement this");
+					return getBuiltinImpl(ctx, key, data.builtin);
 				}
 				variant_case(defgen::Constructor, ctor) {
 					switch (ctor.kind) {

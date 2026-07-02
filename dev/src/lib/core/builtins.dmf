@@ -37,4 +37,4 @@ fun builtin_output_str(s: str) -> i32 = {
 fun print(x: str) -> i32 = builtin_output_str(x);
 
 @builtin("ptr_from_slice")
-fundecl ptr_from_slice(slice char s) -> manyptr char;
+fundecl ptr_from_slice(s: slice char) -> manyptr char;

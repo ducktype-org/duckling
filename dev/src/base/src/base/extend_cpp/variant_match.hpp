@@ -41,6 +41,7 @@
  */
 #pragma once
 
+#include "base/collections/optional.hpp"
 #include <base/comptime/type_traits.hpp>
 #include <base/preproc/diagnostics.hpp>
 #include <base/preproc/for_each.hpp>
@@ -79,6 +80,12 @@ namespace base {
 	template<typename T, typename U>
 	static T choose(const U& el) {
 		return std::get<T>(el);
+	}
+
+	template<typename T, typename U>
+	inline base::Optional<CRef<T>> maybeChoose(const U& el) {
+		auto el_ptr = std::get_if<T>(&el);
+		return el_ptr == nullptr ? base::Optional<CRef<T>>{} : el_ptr;
 	}
 }
 

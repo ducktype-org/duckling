@@ -238,7 +238,7 @@ namespace compiler::helios {
 			auto symbol_ref = getSymRef(key);
 
 			variant_match(symbol_ref->other) {
-				variant_case(PstImplementedSemantics, pst_data) {
+				variant_case_novalue(PstImplementedSemantics, BuiltinSemantics) {
 					// @note: function are handled in a special way, using QueryDeclOfFun.
 					if (kind(key) == SymbolKind::Function
 					    or kind(key) == SymbolKind::FunctionDeclaration
@@ -246,7 +246,7 @@ namespace compiler::helios {
 						return handleFunction(ctx, key);
 
 					PstVisitor_GetTypeOf visitor(ctx);
-					pst_data.getElement().unlock(ctx)->acceptVisitor(visitor);
+					maybeSymbolPst(key)->unlock(ctx)->acceptVisitor(visitor);
 
 					return visitor.symbol_type_qresult;
 				}
