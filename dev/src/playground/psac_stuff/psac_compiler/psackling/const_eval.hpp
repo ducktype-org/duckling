@@ -10,7 +10,7 @@
 
 namespace pg {
 	/// Result of compile-time evaluation: raw 64-bit data plus the type telling
-	/// how to interpret it (i64 or bool for now).
+	/// how to interpret it (i64, bool or char for now).
 	struct ConstValue {
 		u64        bits{ 0 };
 		tp::TypeID type_id{};
@@ -19,7 +19,7 @@ namespace pg {
 	/**
 	 * @brief Evaluates a PST expression at compile time.
 	 *
-	 * Supports numeric/boolean literals, parentheses, arithmetic and logical binary
+	 * Supports numeric/boolean/char literals, parentheses, arithmetic and logical binary
 	 * operators, comparisons, references to other constants and namespace-qualified
 	 * constants (`ns::CONST`).
 	 */
@@ -30,6 +30,7 @@ namespace pg {
 		ConstValue eval(const pst::ExprElement& expr);
 
 		void visitExprNumericValue(pst::Access<pst::expr::ExprNumericValue> lit) override;
+		void visitExprCharValue(pst::Access<pst::expr::ExprCharValue> lit) override;
 		void visitKeywordLiteral(pst::Access<pst::expr::KeywordLiteral> kw) override;
 		void visitRoundExpr(pst::Access<pst::expr::RoundExpr> round) override;
 		void visitBinaryOperator(pst::Access<pst::expr::BinaryOperator> op) override;

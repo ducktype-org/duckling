@@ -20,6 +20,7 @@ add_library(libpsackling
     psackling/expr_lowering.cpp
     psackling/const_eval.hpp
     psackling/const_eval.cpp
+    psackling/char_literal.hpp
     psackling/type_name_extractor.hpp
     psackling/type_name_extractor.cpp
 )

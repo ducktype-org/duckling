@@ -1,5 +1,7 @@
 #include "expr_lowering.hpp"
 
+#include "char_literal.hpp"
+
 #include <frontend/pst_parser/elements/elements_list.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
@@ -31,6 +33,15 @@ namespace pg {
 		result              = LoweredExpr{
 						 .value   = llvm::ConstantInt::get(llvm_ty, value),
 						 .type_id = ctx.i64_type_id,
+		};
+	}
+
+	void ExprLowering::visitExprCharValue(pst::Access<pst::expr::ExprCharValue> lit) {
+		const char  value   = charLiteralValue(lit);
+		llvm::Type* llvm_ty = lowering.lowerType(ctx.char_type_id, ctx);
+		result              = LoweredExpr{
+						 .value   = llvm::ConstantInt::get(llvm_ty, static_cast<unsigned char>(value)),
+						 .type_id = ctx.char_type_id,
 		};
 	}
 
@@ -136,29 +147,45 @@ namespace pg {
 			return;
 		}
 
-		if (lhs.type_id != ctx.i64_type_id || rhs.type_id != ctx.i64_type_id) {
+		// Comparisons accept i64 (signed order) and char (unsigned byte order) operand
+		// pairs; arithmetic stays i64-only — chars don't participate, like in the real
+		// compiler where char is not an integral type.
+		const bool both_i64  = lhs.type_id == ctx.i64_type_id && rhs.type_id == ctx.i64_type_id;
+		const bool both_char = lhs.type_id == ctx.char_type_id && rhs.type_id == ctx.char_type_id;
+		if (!both_i64 && !both_char) {
 			throw std::runtime_error(
-				"Binary arithmetic operator currently only supports i64 operands"
+				"Binary operator currently only supports i64 or char operand pairs"
 			);
 		}
+		auto require_i64 = [&] {
+			if (!both_i64)
+				throw std::runtime_error(
+					"Binary arithmetic operator currently only supports i64 operands"
+				);
+		};
 
 		llvm::Value* out_value   = nullptr;
 		tp::TypeID   result_type = ctx.i64_type_id;
 		switch (op->getOperator().illegalAccess().value()->unwrap().asNamed()) {
 		case lang_def::NamedOperator::Plus:
+			require_i64();
 			out_value = builder.CreateAdd(lhs.value, rhs.value, "addtmp");
 			break;
 		case lang_def::NamedOperator::Minus:
+			require_i64();
 			out_value = builder.CreateSub(lhs.value, rhs.value, "subtmp");
 			break;
 		case lang_def::NamedOperator::Multiply:
+			require_i64();
 			out_value = builder.CreateMul(lhs.value, rhs.value, "multmp");
 			break;
 		case lang_def::NamedOperator::Divide:
 			// Signed division — i64 is signed in our type system.
+			require_i64();
 			out_value = builder.CreateSDiv(lhs.value, rhs.value, "divtmp");
 			break;
 		case lang_def::NamedOperator::Remainder:
+			require_i64();
 			out_value = builder.CreateSRem(lhs.value, rhs.value, "remtmp");
 			break;
 		case lang_def::NamedOperator::Equal:
@@ -170,19 +197,23 @@ namespace pg {
 			result_type = ctx.bool_type_id;
 			break;
 		case lang_def::NamedOperator::Lesser:
-			out_value   = builder.CreateICmpSLT(lhs.value, rhs.value, "lttmp");
+			out_value   = both_char ? builder.CreateICmpULT(lhs.value, rhs.value, "lttmp")
+			                        : builder.CreateICmpSLT(lhs.value, rhs.value, "lttmp");
 			result_type = ctx.bool_type_id;
 			break;
 		case lang_def::NamedOperator::LEqual:
-			out_value   = builder.CreateICmpSLE(lhs.value, rhs.value, "letmp");
+			out_value   = both_char ? builder.CreateICmpULE(lhs.value, rhs.value, "letmp")
+			                        : builder.CreateICmpSLE(lhs.value, rhs.value, "letmp");
 			result_type = ctx.bool_type_id;
 			break;
 		case lang_def::NamedOperator::Greater:
-			out_value   = builder.CreateICmpSGT(lhs.value, rhs.value, "gttmp");
+			out_value   = both_char ? builder.CreateICmpUGT(lhs.value, rhs.value, "gttmp")
+			                        : builder.CreateICmpSGT(lhs.value, rhs.value, "gttmp");
 			result_type = ctx.bool_type_id;
 			break;
 		case lang_def::NamedOperator::GEqual:
-			out_value   = builder.CreateICmpSGE(lhs.value, rhs.value, "getmp");
+			out_value   = both_char ? builder.CreateICmpUGE(lhs.value, rhs.value, "getmp")
+			                        : builder.CreateICmpSGE(lhs.value, rhs.value, "getmp");
 			result_type = ctx.bool_type_id;
 			break;
 		default:
@@ -206,20 +237,25 @@ namespace pg {
 			throw std::runtime_error("Empty comparison chain (PST invariant violation)");
 
 		auto cmp_for
-			= [&](lang_def::NamedOperator op_kind, llvm::Value* l, llvm::Value* r) -> llvm::Value* {
+			= [&](lang_def::NamedOperator op_kind, llvm::Value* l, llvm::Value* r, bool is_char
+		      ) -> llvm::Value* {
 			switch (op_kind) {
 			case lang_def::NamedOperator::Equal:
 				return builder.CreateICmpEQ(l, r, "eqtmp");
 			case lang_def::NamedOperator::NotEqual:
 				return builder.CreateICmpNE(l, r, "netmp");
 			case lang_def::NamedOperator::Lesser:
-				return builder.CreateICmpSLT(l, r, "lttmp");
+				return is_char ? builder.CreateICmpULT(l, r, "lttmp")
+				               : builder.CreateICmpSLT(l, r, "lttmp");
 			case lang_def::NamedOperator::LEqual:
-				return builder.CreateICmpSLE(l, r, "letmp");
+				return is_char ? builder.CreateICmpULE(l, r, "letmp")
+				               : builder.CreateICmpSLE(l, r, "letmp");
 			case lang_def::NamedOperator::Greater:
-				return builder.CreateICmpSGT(l, r, "gttmp");
+				return is_char ? builder.CreateICmpUGT(l, r, "gttmp")
+				               : builder.CreateICmpSGT(l, r, "gttmp");
 			case lang_def::NamedOperator::GEqual:
-				return builder.CreateICmpSGE(l, r, "getmp");
+				return is_char ? builder.CreateICmpUGE(l, r, "getmp")
+				               : builder.CreateICmpSGE(l, r, "getmp");
 			default:
 				throw std::runtime_error(
 					"Unsupported comparison operator in chain (== != < <= > >=)"
@@ -233,11 +269,17 @@ namespace pg {
 		for (u64 i = 0; i < ops.size(); ++i) {
 			LoweredExpr right = lower(*chain->getSubExpr(i + 1).illegalAccess().value());
 
-			if (left.type_id != ctx.i64_type_id || right.type_id != ctx.i64_type_id)
-				throw std::runtime_error("Comparison currently only supports i64 operands");
+			const bool both_i64
+				= left.type_id == ctx.i64_type_id && right.type_id == ctx.i64_type_id;
+			const bool both_char
+				= left.type_id == ctx.char_type_id && right.type_id == ctx.char_type_id;
+			if (!both_i64 && !both_char)
+				throw std::runtime_error(
+					"Comparison currently only supports i64 or char operand pairs"
+				);
 
 			llvm::Value* link = cmp_for(
-				ops[i].illegalAccess().value()->unwrap().asNamed(), left.value, right.value
+				ops[i].illegalAccess().value()->unwrap().asNamed(), left.value, right.value, both_char
 			);
 			combined = combined ? builder.CreateAnd(combined, link, "chaintmp") : link;
 			left     = right;

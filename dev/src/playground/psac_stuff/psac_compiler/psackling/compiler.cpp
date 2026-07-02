@@ -227,30 +227,51 @@ namespace {
 
 	/**
 	 * @brief Defines the builtin runtime functions in the globals module. Matches the
-	 * real compiler's builtin: int64_t builtin_output_i64(int64_t v) — prints the value
-	 * and a newline via libc printf and returns printf's result.
+	 * real compiler's builtins:
+	 *   int64_t builtin_output_i64(int64_t v)  — printf("%ld\n", v)
+	 *   int64_t builtin_output_char(char c)    — printf("%c", c)
+	 * Both return printf's result.
 	 */
 	void defineBuiltins(pg::LlvmProgramModule& module) {
 		module.inCtxDo([&](llvm::LLVMContext& llvm_ctx, llvm::Module& mod) {
 			auto* i64_ty = llvm::Type::getInt64Ty(llvm_ctx);
 			auto* i32_ty = llvm::Type::getInt32Ty(llvm_ctx);
+			auto* i8_ty  = llvm::Type::getInt8Ty(llvm_ctx);
 			auto* ptr_ty = llvm::PointerType::getUnqual(llvm_ctx);
 
 			auto* printf_ty = llvm::FunctionType::get(i32_ty, { ptr_ty }, /*isVarArg=*/true);
 			auto* printf_fn
 				= llvm::Function::Create(printf_ty, llvm::Function::ExternalLinkage, "printf", &mod);
 
-			auto* output_ty = llvm::FunctionType::get(i64_ty, { i64_ty }, false);
-			auto* output_fn = llvm::Function::Create(
-				output_ty, llvm::Function::ExternalLinkage, "builtin_output_i64", &mod
-			);
+			{
+				auto* output_ty = llvm::FunctionType::get(i64_ty, { i64_ty }, false);
+				auto* output_fn = llvm::Function::Create(
+					output_ty, llvm::Function::ExternalLinkage, "builtin_output_i64", &mod
+				);
 
-			auto*             entry = llvm::BasicBlock::Create(llvm_ctx, "entry", output_fn);
-			llvm::IRBuilder<> builder(entry);
-			llvm::Value*      format = builder.CreateGlobalStringPtr("%ld\n", "output_i64_fmt");
-			llvm::Value*      printed
-				= builder.CreateCall(printf_ty, printf_fn, { format, output_fn->getArg(0) });
-			builder.CreateRet(builder.CreateSExt(printed, i64_ty));
+				auto*             entry = llvm::BasicBlock::Create(llvm_ctx, "entry", output_fn);
+				llvm::IRBuilder<> builder(entry);
+				llvm::Value*      format = builder.CreateGlobalStringPtr("%ld\n", "output_i64_fmt");
+				llvm::Value*      printed
+					= builder.CreateCall(printf_ty, printf_fn, { format, output_fn->getArg(0) });
+				builder.CreateRet(builder.CreateSExt(printed, i64_ty));
+			}
+
+			{
+				auto* output_ty = llvm::FunctionType::get(i64_ty, { i8_ty }, false);
+				auto* output_fn = llvm::Function::Create(
+					output_ty, llvm::Function::ExternalLinkage, "builtin_output_char", &mod
+				);
+
+				auto*             entry = llvm::BasicBlock::Create(llvm_ctx, "entry", output_fn);
+				llvm::IRBuilder<> builder(entry);
+				llvm::Value*      format = builder.CreateGlobalStringPtr("%c", "output_char_fmt");
+				// C default argument promotion: char widens to int before the vararg call.
+				llvm::Value* widened = builder.CreateSExt(output_fn->getArg(0), i32_ty);
+				llvm::Value* printed
+					= builder.CreateCall(printf_ty, printf_fn, { format, widened });
+				builder.CreateRet(builder.CreateSExt(printed, i64_ty));
+			}
 		});
 	}
 

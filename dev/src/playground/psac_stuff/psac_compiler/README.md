@@ -8,11 +8,12 @@ pipeline. It compiles each function **in parallel** and, when fed new source,
 recompiles **only the functions that changed**.
 
 Supported language subset: functions (calls, recursion, forward references, void),
-`i64`/`bool`, classes with fields and default constructors (`Point()`), `if`/`while`,
-compile-time `const`s, global variables with runtime initializers, namespaces
-(accessed with `.`), arithmetic/comparison/logical operators, compound assignments
-and the `builtin_output_i64` runtime builtin. Enough to compile the ~8000-line
-generated benchmark samples.
+`i64`/`bool`/`char` (char literals with C-style escapes), classes with fields and
+default constructors (`Point()`), `if`/`while`, compile-time `const`s, global
+variables with runtime initializers, namespaces (accessed with `.`),
+arithmetic/comparison/logical operators, compound assignments and the
+`builtin_output_i64`/`builtin_output_char` runtime builtins. Enough to compile the
+~8000-line generated benchmark samples.
 
 ## Pipeline
 
@@ -217,7 +218,7 @@ compile.
 
 ## Tests
 
-`psacklinger_test` (target `psacklinger_test`) runs 84 end-to-end tests: each
+`psacklinger_test` (target `psacklinger_test`) runs 107 end-to-end tests: each
 compiles a program through the full parallel pipeline, executes it and checks the
 exit code. The `Incremental*` tests assert the recompile *counts* — e.g. that a
 one-body edit recompiles exactly one function and an unchanged source recompiles
@@ -227,6 +228,8 @@ zero.
 
 - No short-circuit `and`/`or`, named/default arguments, subscripts or methods;
   constructors take no arguments (zero-initialization only).
+- `char` compares (unsigned byte order) but has no arithmetic and no `char`↔`i64`
+  casts, mirroring the real compiler's distinct char type.
 - Globals dependency is coarse (one hash for everything non-body).
 - Integer division is unguarded (`sdiv`), matching the real compiler's LLVM
   backend: division by zero is a SIGFPE, where the DVM backend panics gracefully.

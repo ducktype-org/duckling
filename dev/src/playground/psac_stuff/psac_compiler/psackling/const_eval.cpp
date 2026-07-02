@@ -1,5 +1,6 @@
 #include "const_eval.hpp"
 
+#include "char_literal.hpp"
 #include "type_name_extractor.hpp"
 
 #include <frontend/pst_parser/elements/hierarchy/declarations/const.hpp>
@@ -19,6 +20,13 @@ namespace pg {
 		result = ConstValue{
 			.bits    = std::stoull(lit->getValue().str()),
 			.type_id = ctx.i64_type_id,
+		};
+	}
+
+	void ConstEval::visitExprCharValue(pst::Access<pst::expr::ExprCharValue> lit) {
+		result = ConstValue{
+			.bits    = static_cast<unsigned char>(charLiteralValue(lit)),
+			.type_id = ctx.char_type_id,
 		};
 	}
 

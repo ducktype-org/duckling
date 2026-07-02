@@ -222,6 +222,39 @@ class PsacklingerTest: public tester::TestSuite {
 		}
 	}
 
+	/// Chars compare but don't participate in arithmetic, and never mix with i64.
+	void charTypeErrorsFail() {
+		fs::File arithmetic = makeProgramDir({
+			{ "root.dmf",
+		      "fun main() -> i64 = {\n"
+		      "    var c: char = 'a' + 'b';\n"
+		      "    return 0;\n"
+		      "}\n" },
+		});
+		try {
+			compileAndRun(arithmetic);
+			ASSERT_TRUE(false);
+		} catch (const std::runtime_error& e) {
+			ASSERT_TRUE(std::string(e.what()).contains("i64 operands"));
+		}
+
+		fs::File mixed_compare = makeProgramDir({
+			{ "root.dmf",
+		      "fun main() -> i64 = {\n"
+		      "    if ('a' == 1) {\n"
+		      "        return 1;\n"
+		      "    }\n"
+		      "    return 0;\n"
+		      "}\n" },
+		});
+		try {
+			compileAndRun(mixed_compare);
+			ASSERT_TRUE(false);
+		} catch (const std::runtime_error& e) {
+			ASSERT_TRUE(std::string(e.what()).contains("operand pairs"));
+		}
+	}
+
 	/// Changing one function body in an imported file recompiles exactly that function.
 	void incrementalImportedBodyChange() {
 		const std::string root_code
@@ -1455,6 +1488,180 @@ public:
 			15
 		);  // 1+2+3+4+5
 
+		// --- Chars ---
+
+		PS_TEST(
+			CharVarCompare,
+			R"(
+				fun main() -> i64 = {
+					var c: char = 'a';
+					if (c == 'a') {
+						return 1;
+					}
+					return 0;
+				}
+			)",
+			1
+		);
+
+		PS_TEST(
+			CharOrdering,
+			R"(
+				fun main() -> i64 = {
+					if ('a' < 'b') {
+						if ('z' > 'y') {
+							return 2;
+						}
+					}
+					return 0;
+				}
+			)",
+			2
+		);
+
+		PS_TEST(
+			CharComparisonChain,
+			R"(
+				fun main() -> i64 = {
+					if ('a' < 'b' < 'c') {
+						return 3;
+					}
+					return 0;
+				}
+			)",
+			3
+		);
+
+		PS_TEST(
+			CharEscapes,
+			R"(
+				fun main() -> i64 = {
+					if ('\n' == '\n') {
+						if ('\n' != 'n') {
+							if ('\0' < '\t') {
+								return 4;
+							}
+						}
+					}
+					return 0;
+				}
+			)",
+			4
+		);
+
+		PS_TEST(
+			CharParamReturn,
+			R"(
+				fun pick(flag: bool, a: char, b: char) -> char = {
+					if (flag) {
+						return a;
+					}
+					return b;
+				}
+				fun main() -> i64 = {
+					if (pick(true, 'x', 'y') == 'x') {
+						if (pick(false, 'x', 'y') == 'y') {
+							return 5;
+						}
+					}
+					return 0;
+				}
+			)",
+			5
+		);
+
+		PS_TEST(
+			CharConst,
+			R"(
+				const NL: char = '\n';
+				fun main() -> i64 = {
+					if (NL == '\n') {
+						return 6;
+					}
+					return 0;
+				}
+			)",
+			6
+		);
+
+		PS_TEST(
+			CharAssign,
+			R"(
+				fun main() -> i64 = {
+					var c: char = 'a';
+					c = 'b';
+					if (c == 'b') {
+						return 7;
+					}
+					return 0;
+				}
+			)",
+			7
+		);
+
+		PS_TEST(
+			GlobalCharVar,
+			R"(
+				var g: char = 'q';
+				fun main() -> i64 = {
+					if (g == 'q') {
+						g = 'r';
+						if (g == 'r') {
+							return 8;
+						}
+					}
+					return 0;
+				}
+			)",
+			8
+		);
+
+		PS_TEST(
+			GlobalCharZeroInit,
+			R"(
+				var g: char;
+				fun main() -> i64 = {
+					if (g == '\0') {
+						return 9;
+					}
+					return 0;
+				}
+			)",
+			9
+		);
+
+		PS_TEST(
+			CharField,
+			R"(
+				class Cell {
+					c: char;
+				}
+				fun main() -> i64 = {
+					var cell: Cell;
+					if (cell.c == '\0') {
+						cell.c = 'k';
+						if (cell.c == 'k') {
+							return 10;
+						}
+					}
+					return 0;
+				}
+			)",
+			10
+		);
+
+		PS_TEST(
+			BuiltinOutputChar,
+			R"(
+				fun main() -> i64 = {
+					builtin_output_char('H');
+					builtin_output_char('i');
+					return builtin_output_char('\n');
+				}
+			)",
+			1
+		);  // printf("%c", ...) returns 1
+
 		addTest(
 			static_cast<TestType>(&PsacklingerTest::incrementalBodyChange),
 			"IncrementalBodyChange",
@@ -1500,6 +1707,9 @@ public:
 			static_cast<TestType>(&PsacklingerTest::importStarCollisionFails),
 			"ImportStarCollisionFails",
 			false
+		);
+		addTest(
+			static_cast<TestType>(&PsacklingerTest::charTypeErrorsFail), "CharTypeErrorsFail", false
 		);
 		addTest(
 			static_cast<TestType>(&PsacklingerTest::incrementalImportedBodyChange),

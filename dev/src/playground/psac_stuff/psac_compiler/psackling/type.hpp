@@ -29,6 +29,10 @@ namespace pg::tp {
 
 	struct Boolean {};
 
+	// Distinct from Integral like in the real compiler (tsh::CharAbstractType):
+	// chars compare but don't participate in arithmetic. Lowered as i8.
+	struct Character {};
+
 	struct Void {};
 
 	struct Pointer {
@@ -41,7 +45,7 @@ namespace pg::tp {
 	};
 
 	using TypeKind
-		= std::variant<Integral, Boolean, Incomplete, Structure, Pointer, Function, Void, Namespace>;
+		= std::variant<Integral, Boolean, Character, Incomplete, Structure, Pointer, Function, Void, Namespace>;
 
 	struct TypeInfo {
 		base::StrID     name;

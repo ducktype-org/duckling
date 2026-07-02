@@ -37,6 +37,13 @@ llvm::Type* pg::LlvmLoweringContext::lowerType(tp::TypeID type_id, Context& ctx)
 			});
 			return types[type_id];
 		}
+		variant_case(tp::Character, character) {
+			llvm_module.inCtxDo([&](llvm::LLVMContext& llvm_ctx, llvm::Module&) {
+				auto new_type = llvm::Type::getInt8Ty(llvm_ctx);
+				types.insertOrAssign(type_id, new_type);
+			});
+			return types[type_id];
+		}
 		variant_case(tp::Void, void_type) {
 			llvm_module.inCtxDo([&](llvm::LLVMContext& llvm_ctx, llvm::Module&) {
 				auto new_type = llvm::Type::getVoidTy(llvm_ctx);

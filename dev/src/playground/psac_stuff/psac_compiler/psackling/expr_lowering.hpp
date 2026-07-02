@@ -45,6 +45,7 @@ namespace pg {
 		LoweredExpr lower(const pst::ExprElement& expr);
 
 		void visitExprNumericValue(pst::Access<pst::expr::ExprNumericValue> lit) override;
+		void visitExprCharValue(pst::Access<pst::expr::ExprCharValue> lit) override;
 		void visitKeywordLiteral(pst::Access<pst::expr::KeywordLiteral> kw) override;
 		void visitIdentifierLiteral(pst::Access<pst::expr::IdentifierLiteral> ident) override;
 		void visitBinaryOperator(pst::Access<pst::expr::BinaryOperator> op) override;
