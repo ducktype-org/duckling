@@ -1,6 +1,7 @@
 #!/bin/bash
-# Benchmarks psacklinger (PSAC-parallel compiler) against duckc (the real compiler)
-# on full compiles, and measures psacklinger's thread scaling.
+# Benchmarks psacklinger (PSAC-parallel compiler) and querylinger (query-framework
+# compiler) against duckc (the real compiler) on full compiles, and measures the
+# playground compilers' thread scaling.
 #
 # Usage:
 #   ./bench_compiler.sh [input.dmf ...]
@@ -34,6 +35,7 @@ BENCH_DATA="/home/mateusz/code/benchmark/data/input"
 
 DUCKC="$BUILD_DIR/bin/duckc"
 PSACKLINGER="$BUILD_DIR/bin/psacklinger"
+QUERYLINGER="$BUILD_DIR/bin/querylinger"
 
 THREADS="${THREADS:-1 2 4 8 16}"
 RUNS="${RUNS:-5}"
@@ -49,7 +51,7 @@ else
 fi
 
 echo "=== Building compilers ==="
-cmake --build "$BUILD_DIR" --target duckc psacklinger -j"$(nproc)"
+cmake --build "$BUILD_DIR" --target duckc psacklinger querylinger -j"$(nproc)"
 
 command -v hyperfine >/dev/null || { echo "Error: hyperfine not installed"; exit 1; }
 
@@ -112,6 +114,8 @@ EOF
             "$DUCKC compile_packages $WORK/${NAME}_manifest.json -w $T -a $ART_DIR --no-incremental"
             -n "psacklinger-j$T"
             "$PSACKLINGER $INPUT -j $T -o $WORK/$NAME.out"
+            -n "querylinger-j$T"
+            "$QUERYLINGER $INPUT -j $T -o $WORK/${NAME}_ql.out"
         )
     done
 

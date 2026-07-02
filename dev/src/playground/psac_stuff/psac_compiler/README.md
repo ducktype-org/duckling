@@ -165,16 +165,20 @@ recompiled 1/2 functions
 recompiled 0/2 functions
 ```
 
-## Benchmarks vs duckc
+## Benchmarks vs duckc and querylinger
 
-`./bench_compiler.sh [input.dmf ...]` builds both compilers (release builds from
-`build-release` by default; `BUILD_DIR` overridable) and runs hyperfine over:
+`./bench_compiler.sh [input.dmf ...]` builds the three compilers (release builds
+from `build-release` by default; `BUILD_DIR` overridable) and runs hyperfine
+over:
 
 - `duckc` — `compile_module`, single-threaded, object files only;
 - `duckc-wN` — `compile_packages -w N` (query-framework workers); also compiles
   the std/core packages and links a real executable, the closest equivalent of
   what psacklinger does;
-- `psacklinger --sequential` and `psacklinger -j N`.
+- `psacklinger --sequential` and `psacklinger -j N`;
+- `querylinger -j N` — the query-framework sibling (`../query_compiler`),
+  sharing this compiler's whole front end and LLVM lowering, with the query
+  graph replacing PSAC as the incremental engine.
 
 Everything is cold: duckc's incremental cache and artifacts are wiped before
 every timed run. `THREADS`, `RUNS`, `WARMUP` are env-tunable; results land next
@@ -182,22 +186,41 @@ to the script as `results_compiler_<name>.{json,md}`.
 
 Release builds, ~8000-line generated samples (`benchmark/data/input`), 5 runs:
 
-| threads | duck1: duckc -w | duck1: psacklinger -j | duck2: duckc -w | duck2: psacklinger -j |
-|---:|---:|---:|---:|---:|
-| 1 | 702 ms | 564 ms | 1304 ms | 439 ms |
-| 2 | 649 ms | 382 ms | 1265 ms | 361 ms |
-| 4 | 583 ms | 304 ms | 1234 ms | 326 ms |
-| 8 | 562 ms | **261 ms** | 1221 ms | **305 ms** |
-| 16 | 575 ms | 264 ms | 1231 ms | 318 ms |
+| threads | duck1: duckc -w | duck1: psack -j | duck1: query -j | duck2: duckc -w | duck2: psack -j | duck2: query -j |
+|---:|---:|---:|---:|---:|---:|---:|
+| 1 | 704 ms | 597 ms | 568 ms | 1395 ms | 481 ms | 459 ms |
+| 2 | 685 ms | 413 ms | 387 ms | 1375 ms | 398 ms | 366 ms |
+| 4 | 629 ms | 320 ms | 292 ms | 1358 ms | 356 ms | 313 ms |
+| 8 | 597 ms | 292 ms | 253 ms | 1322 ms | 346 ms | 308 ms |
+| 16 | 631 ms | 276 ms | **236 ms** | 1385 ms | 355 ms | **281 ms** |
 
 Readings:
 
-- psacklinger wins at every width: ~2.2× on duck1 and ~4.0× on duck2 at -j8.
-- duckc's `-w` workers barely help a single big module (~1.25× on duck1, flat on
-  duck2) — its parallelism is per-query/per-package and one module is dominated
-  by a serial task chain. psacklinger's per-function fan-out scales ~2.2×.
-- Build type matters enormously: the same benchmark on Debug builds reads ~2.8 s
-  vs ~5.5–7.6 s — only relative trends survive, absolute Debug numbers don't.
+- Both playground compilers beat duckc at every width (~2.5× on duck1, ~4.4× on
+  duck2 at -j8) — per-function fan-out vs duckc's serial task chain on a single
+  big module.
+- querylinger edges out psacklinger at every width (~10–20%): the query
+  framework's task pool costs no more than PSAC's Mod reads at this granularity,
+  and nothing from parlay links into the querylinger binary, so its busy-spin
+  scheduler can't touch the serial front end at all.
+- Build type matters enormously: the same benchmark on Debug builds reads
+  several times slower — only relative trends survive, absolute Debug numbers
+  don't.
+
+Warm incremental updates (`bench_incremental.py`, interactive mode, -j8,
+single-line edits; see `results_incremental_<name>.md`):
+
+| scenario | psacklinger | querylinger |
+|:---|:---|:---|
+| no-op | ~100 ms, 0/352 | ~100 ms, 0/352 |
+| one body edit | ~150 ms, 1/352 | ~150 ms, 1/352 |
+| global var initializer | ~220 ms, **352/352** | ~150 ms, **0/352** |
+
+The ~100 ms floor is the shared non-incremental front end (full re-parse +
+re-analyze). At equal dependency granularity the engines are indistinguishable;
+querylinger's per-symbol side inputs win exactly where psacklinger's coarse
+globals Mod forces a full recompile (constants, signatures, class layouts,
+global variables — see `../query_compiler/docs/architecture.md`).
 
 Phase breakdown (`PSACKLINGER_TIMING=1`, duck1 at `-j8`, release): parse 67 ms,
 GlobalPass 1 ms, collect+hash 22 ms, globals object 2 ms, function lowering
@@ -218,11 +241,12 @@ compile.
 
 ## Tests
 
-`psacklinger_test` (target `psacklinger_test`) runs 107 end-to-end tests: each
+`psacklinger_test` (target `psacklinger_test`) runs ~108 end-to-end tests: each
 compiles a program through the full parallel pipeline, executes it and checks the
-exit code. The `Incremental*` tests assert the recompile *counts* — e.g. that a
-one-body edit recompiles exactly one function and an unchanged source recompiles
-zero.
+exit code. The program corpus lives in `../compiler_test_corpus/` and is shared
+with `querylinger_test`, so both compilers prove identical language behavior.
+The `Incremental*` tests assert the recompile *counts* — e.g. that a one-body
+edit recompiles exactly one function and an unchanged source recompiles zero.
 
 ## Known limitations
 
