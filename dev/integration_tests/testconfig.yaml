@@ -17,3 +17,9 @@ TimeOut: "$([ \"$(@{is_jit_enabled})\" = \"ON\" ] && echo @{timeout_jit} || echo
 
 SubDirs:
     - compiler
+    - duck
+    - repl
+    - debug_adapter
+    - debugger_cli
+    - scripts
+    - version_0_1

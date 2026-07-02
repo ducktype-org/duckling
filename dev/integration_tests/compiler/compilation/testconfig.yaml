@@ -37,7 +37,6 @@ compiled_to_dvm: "./build/package_dvm.dbc"
 # Deliberately empty, so as not to recompile duckc and dvm for each test.
 PreNode: ""
 
-# Clean: "@{clean_cmd}"
 PreCase: "@{clean_cmd} && mkdir build;
   case '@{backend}' in
     dvm)       @{compile_dvm_backend_cmd}                                                                                ;;
@@ -76,5 +75,27 @@ Tests:
           String: "4\n1\n23\n4\n1\n4\n4\n8\n4\n8\n76\n"
         ExitCode: 76
 
-# SubDirs:
-#   - conditional_compilation
+SubDirs:
+  - expressions
+  - comp_time
+  - builtins
+  - samples
+  - statements
+  - functions
+  - constants
+  - classes
+  - extern_c
+  - static_arrays
+  - dynamic_arrays
+  - optimisations
+  - references
+  - boxes
+  - pointers
+  - globals
+  - tuples
+  - imports
+  - macros
+  - diagnostics
+  - packages
+  - standard_library
+  - conditional_compilation
