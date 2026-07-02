@@ -1,4 +1,4 @@
-#include <vm/bytecode/flags.hpp>
+#include "flags.hpp"
 
 #include <base/preproc/for_each.hpp>
 
