@@ -4,6 +4,7 @@
 #include <diagnostic_interactive/stable_position.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 
+#include <algorithm>
 #include <vector>
 
 namespace compiler::mir {
@@ -37,6 +38,19 @@ namespace compiler::mir {
 		 * Positions may be missing for compiler-generated instructions.
 		 */
 		std::vector<dia_int::StablePosition> move_sites;
+
+		/**
+		 * @brief Two states are equal when they have the same status and the same set of move
+		 * sites. The comparison of move sites is order-independent.
+		 */
+		bool operator==(const LivenessState& other) const {
+			if (kind != other.kind) return false;
+			if (move_sites.size() != other.move_sites.size()) return false;
+			// Sizes are equal, so containment one way is enough.
+			return std::ranges::all_of(move_sites, [&](const auto& pos) {
+				return std::ranges::contains(other.move_sites, pos);
+			});
+		}
 	};
 
 	using LocalLivenessMap = base::HashMap<LocalID, LivenessState>;

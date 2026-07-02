@@ -49,15 +49,6 @@ namespace compiler::mir {
 			if (not std::ranges::contains(dst, pos)) dst.push_back(pos);
 	}
 
-	bool sameState(const LivenessState& a, const LivenessState& b) {
-		if (a.kind != b.kind) return false;
-		if (a.move_sites.size() != b.move_sites.size()) return false;
-		// Order-independent comparison: sizes are equal, so containment one way is enough.
-		return std::ranges::all_of(a.move_sites, [&](const auto& pos) {
-			return std::ranges::contains(b.move_sites, pos);
-		});
-	}
-
 	/**
 	 * @brief Joins the status from two predecessor blocks, deciding what is the local status
 	 * at the beginning of the successor block. If the value is not present in the map,
@@ -102,13 +93,11 @@ namespace compiler::mir {
 		return result;
 	}
 
-	bool sameMap(base::Optional<CRef<LocalLivenessMap>> a_opt, const LocalLivenessMap& b) {
-		if (a_opt.empty()) return false;
-		auto a = a_opt.value();
-		if (a->size() != b.size()) return false;
-		for (const auto& [local, status]: *a) {
+	bool sameMap(const LocalLivenessMap& a, const LocalLivenessMap& b) {
+		if (a.size() != b.size()) return false;
+		for (const auto& [local, status]: a) {
 			auto other = b.atMaybe(local);
-			if (not other || not sameState(*other.value(), status)) return false;
+			if (not other || *other.value() != status) return false;
 		}
 		return true;
 	}
@@ -198,7 +187,8 @@ namespace compiler::mir {
 			auto new_in   = compute_in(block_id);
 			auto new_out  = transferBlock(*fun.blocks.at(block_id), new_in);
 
-			if (sameMap(std::as_const(out_status).atMaybe(block_id), new_out)) continue;
+			auto prev_out = out_status.atMaybe(block_id);
+			if (prev_out && sameMap(*prev_out.value(), new_out)) continue;
 			out_status.insertOrAssign(block_id, std::move(new_out));
 			in_status.insertOrAssign(block_id, std::move(new_in));
 
@@ -261,6 +251,7 @@ namespace compiler::mir {
 		};
 
 		const auto& block_in = args.liveness.block_in_liveness;
+		bool        failed   = false;
 
 		auto check_instr = [&](const Instruction& instr, LocalLivenessMap& map) {
 			// Reads are validated against the state *before* the instruction executes, so a local
@@ -271,11 +262,11 @@ namespace compiler::mir {
 				auto state = map.atMaybeCopy(local->id);
 				if (state.has_value() && state->kind == LivenessStatus::Alive) continue;
 
-				const bool  uninitialized = not state.has_value();
+				const bool       uninitialized = not state.has_value();
 				std::string_view title         = uninitialized ? "Use of an uninitialized value."
-				                          : state->kind == LivenessStatus::Moved
-				                              ? "Use of a moved value."
-				                              : "Use of a possibly-moved value.";
+				                               : state->kind == LivenessStatus::Moved
+				                                   ? "Use of a moved value."
+				                                   : "Use of a possibly-moved value.";
 
 				auto description = base::strConcat(
 					"The variable `",
@@ -301,7 +292,7 @@ namespace compiler::mir {
 						);
 
 				ctx.logInt(std::move(msg));
-				query::throwFailed();
+				failed = true;
 			}
 
 			updateLivenessMapByInstr(map, instr);
@@ -315,6 +306,8 @@ namespace compiler::mir {
 			for (const auto& instr: fun.blocks.at(block_id)->instructions) check_instr(instr, map);
 			check_instr(fun.blocks.at(block_id)->terminator, map);
 		}
+
+		if (failed) query::throwFailed();
 	}
 
 	void LivenessData::debugPrint(std::ostream& out) {

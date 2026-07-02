@@ -8,7 +8,6 @@
 #include <base/collections/maps.hpp>
 #include <base/collections/optional.hpp>
 
-
 namespace compiler::mir {
 
 	base::OkBad validateShadowing(query::Context& ctx, const Function& fun) {

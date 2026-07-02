@@ -46,7 +46,7 @@ namespace compiler::mir {
 
 	/**
 	 * @brief Perform a pass of MIR, that adds destructor calls
-	 * based on instruction lifetime-scopes.
+	 * based on instruction lifetime-scopes and liveness information.
 	 *
 	 * @important
 	 * It is a mock implementation, and does not perform
