@@ -23,9 +23,28 @@ namespace ql {
 
 	DECLARE_QUERY_SIDE_INPUT(FnBodyInput, FnBodyInputKey);
 
-	/// Coarse "everything global" side input — psacklinger's globals Mod as a query
-	/// node: classes, consts, global variables, imports and function signatures all
-	/// fold into one hash. Split into per-symbol inputs in later milestones.
+	/// One top-level constant as its own input: the key carries the constant's
+	/// identity (qualified-name hash) and value (+type) hash. Functions record a
+	/// dependency at the use site, so a const edit invalidates only its readers —
+	/// where psacklinger's coarse globals Mod recompiles everything.
+	struct ConstInputKey {
+		u64 session_epoch;
+		u64 name_hash;
+		u64 value_hash;
+
+		bool operator==(const ConstInputKey&) const = default;
+
+		[[nodiscard]] query::QueryStableHash queryStablePerfectHash() const {
+			return { session_epoch, name_hash, value_hash, 3 };
+		}
+	};
+
+	DECLARE_QUERY_SIDE_INPUT(ConstInput, ConstInputKey);
+
+	/// Coarse "everything global except constants" side input — psacklinger's
+	/// globals Mod as a query node: classes, global variables, imports and function
+	/// signatures fold into one hash. Constants are tracked per symbol via
+	/// ConstInput; the rest splits into per-symbol inputs in later milestones.
 	struct GlobalsInputKey {
 		u64 session_epoch;
 		u64 globals_hash;

@@ -66,7 +66,7 @@ namespace ql {
 
 		std::vector<query::external::InputData> collectInputs(const SessionState& session) {
 			std::vector<query::external::InputData> inputs;
-			inputs.reserve(session.program.items.size() + 1);
+			inputs.reserve(session.program.items.size() + session.program.const_inputs.size() + 1);
 
 			for (usize i = 0; i < session.program.items.size(); ++i) {
 				const auto node_id = query::internal::makeNodeID<FnBodyInput>(FnBodyInputKey{
@@ -76,8 +76,17 @@ namespace ql {
 				inputs.emplace_back(FnBodyInput::getID(), node_id.hash.val);
 			}
 
+			for (const pg::ConstInputInfo& const_input: session.program.const_inputs) {
+				const auto node_id = query::internal::makeNodeID<ConstInput>(ConstInputKey{
+					.session_epoch = session.epoch,
+					.name_hash     = const_input.name_hash,
+					.value_hash    = const_input.value_hash });
+				inputs.emplace_back(ConstInput::getID(), node_id.hash.val);
+			}
+
 			const auto globals_node_id = query::internal::makeNodeID<GlobalsInput>(GlobalsInputKey{
-				.session_epoch = session.epoch, .globals_hash = session.program.globals_hash });
+				.session_epoch = session.epoch,
+				.globals_hash  = session.program.globals_hash_no_consts });
 			inputs.emplace_back(GlobalsInput::getID(), globals_node_id.hash.val);
 			return inputs;
 		}

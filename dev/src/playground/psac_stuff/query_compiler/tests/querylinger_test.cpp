@@ -93,9 +93,8 @@ class QuerylingerTest: public tester::TestSuite {
 		ASSERT_EQUAL_PRINT(u64(21), runExecutable(executable));
 	}
 
-	/// Changing a global constant recompiles every function — parity with
-	/// psacklinger's coarse globals dependency (made fine-grained in later
-	/// milestones).
+	/// Changing a global constant recompiles both functions — both of them read it,
+	/// so the per-constant dependency reaches each one.
 	void incrementalGlobalsChange() {
 		const std::string v1 = R"(
 			const X: i64 = 5;
@@ -206,6 +205,38 @@ class QuerylingerTest: public tester::TestSuite {
 		ASSERT_EQUAL_PRINT(u64(10), runExecutable(executable));
 	}
 
+	/// Changing a constant recompiles exactly its readers — the headline advantage
+	/// over psacklinger, whose coarse globals Mod recompiles every function here.
+	void incrementalConstOnlyReadersRecompile() {
+		const std::string v1 = R"(
+			const X: i64 = 5;
+			fun reader() -> i64 = { return X; }
+			fun other() -> i64 = { return 7; }
+			fun main() -> i64 = { return reader() + other(); }
+		)";
+		const std::string v2 = R"(
+			const X: i64 = 8;
+			fun reader() -> i64 = { return X; }
+			fun other() -> i64 = { return 7; }
+			fun main() -> i64 = { return reader() + other(); }
+		)";
+
+		fs::File out_dir    = fs::FileManager::createRandomTempDirectory();
+		fs::File executable = out_dir.createSubFile("", "incr_const_readers.out");
+
+		ql::Compiler compiler(ql::CompileOptions{ .output_path = executable.getFilePath().string() }
+		);
+
+		compiler.compile(fs::FileManager::createRandomVirtualFile(v1));
+		ASSERT_EQUAL_PRINT(u64(12), runExecutable(executable));
+
+		ql::CompileStats incremental
+			= compiler.update(fs::FileManager::createRandomVirtualFile(v2));
+		ASSERT_EQUAL_PRINT(usize(3), incremental.total_functions);
+		ASSERT_EQUAL_PRINT(usize(1), incremental.recompiled_functions);
+		ASSERT_EQUAL_PRINT(u64(15), runExecutable(executable));
+	}
+
 	/// Changing one function body in an imported file recompiles exactly that
 	/// function.
 	void incrementalImportedBodyChange() {
@@ -238,8 +269,8 @@ class QuerylingerTest: public tester::TestSuite {
 		ASSERT_EQUAL_PRINT(u64(21), runExecutable(executable));
 	}
 
-	/// Changing a const in an imported file recompiles every function (coarse
-	/// globals input — one function total here, so 1/1).
+	/// Changing a const in an imported file recompiles its reader (the only
+	/// function here, so 1/1).
 	void incrementalImportedConstChange() {
 		fs::File           root = psack_corpus::makeProgramDir({
             { "root.dmf",
@@ -316,6 +347,11 @@ public:
 		addTest(
 			static_cast<TestType>(&QuerylingerTest::incrementalFunctionRemoved),
 			"IncrementalFunctionRemoved",
+			false
+		);
+		addTest(
+			static_cast<TestType>(&QuerylingerTest::incrementalConstOnlyReadersRecompile),
+			"IncrementalConstOnlyReadersRecompile",
 			false
 		);
 		addTest(

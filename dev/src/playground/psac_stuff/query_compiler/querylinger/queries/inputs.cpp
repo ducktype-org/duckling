@@ -4,5 +4,6 @@
 
 namespace ql {
 	IMPLEMENT_QUERY_SIDE_INPUT(FnBodyInput);
+	IMPLEMENT_QUERY_SIDE_INPUT(ConstInput);
 	IMPLEMENT_QUERY_SIDE_INPUT(GlobalsInput);
 }

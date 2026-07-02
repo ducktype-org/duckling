@@ -180,6 +180,7 @@ namespace pg {
 				"constant expressions"
 			);
 		}
+		ctx.notifyConstantUse(symbol);
 		return ConstValue{ .bits    = std::get<sym::ConstantSymbol>(symbol.kind).bits,
 			               .type_id = symbol.type_id };
 	}
@@ -256,6 +257,10 @@ namespace pg {
 			}
 		}
 
-		ctx.insertSymbol(name, sym::ConstantSymbol{ .bits = value.bits }, value.type_id);
+		ctx.insertSymbol(
+			name,
+			sym::ConstantSymbol{ .bits = value.bits, .qualified_name = ctx.qualifyName(name) },
+			value.type_id
+		);
 	}
 }

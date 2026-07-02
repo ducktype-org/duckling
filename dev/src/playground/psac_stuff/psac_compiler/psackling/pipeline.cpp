@@ -51,6 +51,7 @@ namespace {
 		std::vector<u64>                  fn_hashes;
 		std::vector<std::string>          link_names;
 		std::vector<pg::GlobalInitItem>   global_inits;
+		std::vector<pg::ConstInputInfo>   const_inputs;
 
 		void visitFun(pst::Access<pst::Fun> stmt) override {
 			const base::StrID      name = stmt->getName().illegalAccess().value()->unwrap();
@@ -81,7 +82,14 @@ namespace {
 		// Handled entirely by GlobalPass; nothing to lower per-function.
 		void visitClass(pst::Access<pst::Class>) override {}
 
-		void visitConst(pst::Access<pst::Const>) override {}
+		void visitConst(pst::Access<pst::Const> stmt) override {
+			const base::StrID      name = stmt->getName().illegalAccess().value()->unwrap();
+			const pg::sym::Symbol& symbol
+				= ctx.getSymbol(ctx.lookupInScopeAndParents(ctx.currNs().id, name));
+			const_inputs.push_back(pg::ConstInputInfo{ .name_hash = pg::constNameHash(symbol),
+			                                           .value_hash
+			                                           = pg::constValueHash(ctx, symbol) });
+		}
 
 		void visitVariable(pst::Access<pst::Variable> stmt) override {
 			if (stmt->getValue().has_value())
@@ -103,12 +111,16 @@ namespace {
 	public:
 		u64 hash = 14'695'981'039'346'656'037ULL;
 
+		/// Constants are accumulated separately: the PSAC backend folds them into the
+		/// coarse globals hash, while the query backend tracks them per constant.
+		u64 consts_hash = 14'695'981'039'346'656'037ULL;
+
 		void visitClass(pst::Access<pst::Class> stmt) override {
 			hash = combineHash(hash, contentHash(*stmt));
 		}
 
 		void visitConst(pst::Access<pst::Const> stmt) override {
-			hash = combineHash(hash, contentHash(*stmt));
+			consts_hash = combineHash(consts_hash, contentHash(*stmt));
 		}
 
 		void visitVariable(pst::Access<pst::Variable> stmt) override {
@@ -234,6 +246,7 @@ namespace pg {
 			program.fn_hashes    = std::move(collector.fn_hashes);
 			program.link_names   = std::move(collector.link_names);
 			program.global_inits = std::move(collector.global_inits);
+			program.const_inputs = std::move(collector.const_inputs);
 
 			GlobalsHasher globals_hasher;
 			for (const LoadedModule& module: program.modules) {
@@ -245,18 +258,32 @@ namespace pg {
 					);
 				for_each_top_level(module, globals_hasher);
 			}
-			program.globals_hash = globals_hasher.hash;
+			program.globals_hash_no_consts = globals_hasher.hash;
+			program.globals_hash = combineHash(globals_hasher.hash, globals_hasher.consts_hash);
 		}
 
 		return program;
 	}
 
+	u64 constNameHash(const sym::Symbol& symbol) {
+		return std::hash<std::string>{}(
+			std::get<sym::ConstantSymbol>(symbol.kind).qualified_name.str()
+		);
+	}
+
+	u64 constValueHash(Context& ctx, const sym::Symbol& symbol) {
+		const u64 type_hash = std::hash<std::string>{}(ctx.getTypeInfo(symbol.type_id).name.str());
+		return combineHash(std::get<sym::ConstantSymbol>(symbol.kind).bits, type_hash);
+	}
+
 	void compileOneFunction(
 		const Context&               base_ctx,
 		const FunctionWorkItem&      item,
-		const std::filesystem::path& object_path
+		const std::filesystem::path& object_path,
+		SymbolUseObserver*           observer
 	) {
-		Context             ctx = base_ctx;
+		Context ctx             = base_ctx;
+		ctx.symbol_use_observer = observer;
 		LlvmProgramModule   module;
 		LlvmLoweringContext lowering(module);
 		FunctionPass        pass(ctx, module, lowering);
@@ -271,9 +298,11 @@ namespace pg {
 	void emitGlobalsObject(
 		const Context&                     base_ctx,
 		const std::vector<GlobalInitItem>& global_inits,
-		const std::filesystem::path&       object_path
+		const std::filesystem::path&       object_path,
+		SymbolUseObserver*                 observer
 	) {
-		Context             ctx = base_ctx;
+		Context ctx             = base_ctx;
+		ctx.symbol_use_observer = observer;
 		LlvmProgramModule   module;
 		LlvmLoweringContext lowering(module);
 

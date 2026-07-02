@@ -31,6 +31,20 @@ namespace pg {
 		ns::NamespaceID            enclosing_ns;
 	};
 
+	/// Identity and value of one top-level compile-time constant, for per-constant
+	/// dependency tracking in the query-based backend.
+	struct ConstInputInfo {
+		u64 name_hash;
+		u64 value_hash;
+	};
+
+	/// Stable identity hash of a constant: hash of its namespace-qualified name.
+	u64 constNameHash(const sym::Symbol& symbol);
+
+	/// Value hash of a constant: raw bits mixed with the type name, so both value
+	/// and type changes are detected.
+	u64 constValueHash(Context& ctx, const sym::Symbol& symbol);
+
 	/// Everything the front end produces for one program: parsed modules in
 	/// dependency post-order, populated symbol tables, and the per-function work
 	/// items with their content hashes. Shared by the PSAC (psacklinger) and the
@@ -43,7 +57,18 @@ namespace pg {
 		std::vector<u64>              fn_hashes;
 		std::vector<std::string>      link_names;
 		std::vector<GlobalInitItem>   global_inits;
-		u64                           globals_hash = 0;
+
+		/// Coarse hash over everything a function may depend on besides its body:
+		/// classes, constants, globals, imports, namespace structure and function
+		/// signatures. The PSAC backend's whole-world dependency.
+		u64 globals_hash = 0;
+
+		/// Same as globals_hash but without the constants, which the query backend
+		/// tracks per constant through const_inputs instead.
+		u64 globals_hash_no_consts = 0;
+
+		/// All top-level constants of the program (identity + value hashes).
+		std::vector<ConstInputInfo> const_inputs;
 	};
 
 	/// Parses the program rooted at `file` (imports loaded transitively) and runs
@@ -57,11 +82,15 @@ namespace pg {
 	 * declarations mutate them) and a private LLVMContext (LLVM contexts are not
 	 * thread-safe). Cross-function calls become declarations resolved by the linker
 	 * through the functions' link names.
+	 *
+	 * The observer (if any) is installed on the private Context copy and notified
+	 * about symbol uses during lowering.
 	 */
 	void compileOneFunction(
 		const Context&               base_ctx,
 		const FunctionWorkItem&      item,
-		const std::filesystem::path& object_path
+		const std::filesystem::path& object_path,
+		SymbolUseObserver*           observer = nullptr
 	);
 
 	/**
@@ -72,7 +101,8 @@ namespace pg {
 	void emitGlobalsObject(
 		const Context&                     base_ctx,
 		const std::vector<GlobalInitItem>& global_inits,
-		const std::filesystem::path&       object_path
+		const std::filesystem::path&       object_path,
+		SymbolUseObserver*                 observer = nullptr
 	);
 
 	/// Links the object files into an executable with the system clang.

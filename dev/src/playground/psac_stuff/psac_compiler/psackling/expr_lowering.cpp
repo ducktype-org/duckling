@@ -101,6 +101,7 @@ namespace pg {
 		}
 
 		if (std::holds_alternative<sym::ConstantSymbol>(symbol.kind)) {
+			ctx.notifyConstantUse(symbol);
 			llvm::Type* llvm_ty = lowering.lowerType(symbol.type_id, ctx);
 			return LoweredExpr{
 				.value

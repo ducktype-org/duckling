@@ -12,6 +12,21 @@
 #include <variant>
 
 namespace pg {
+	/// Hook for the query-based backend: notified when lowering reads a compile-time
+	/// constant, so per-constant dependencies can be recorded at the use site.
+	class SymbolUseObserver {
+	public:
+		SymbolUseObserver()          = default;
+		virtual ~SymbolUseObserver() = default;
+
+		SymbolUseObserver(const SymbolUseObserver&)            = delete;
+		SymbolUseObserver& operator=(const SymbolUseObserver&) = delete;
+		SymbolUseObserver(SymbolUseObserver&&)                 = delete;
+		SymbolUseObserver& operator=(SymbolUseObserver&&)      = delete;
+
+		virtual void onConstantUse(const sym::Symbol& symbol) = 0;
+	};
+
 	/**
 	 * @brief Symbol, type and namespace tables. Pure data — no LLVM state — so it is
 	 * cheaply copyable; parallel per-function compilation hands each task its own copy.
@@ -257,6 +272,14 @@ namespace pg {
 		ns::Namespace& getNamespace(ns::NamespaceID id) { return namespaces[id]; }
 
 		sym::Symbol& getSymbol(sym::SymbolID id) { return symbols[id]; }
+
+		void notifyConstantUse(const sym::Symbol& symbol) {
+			if (symbol_use_observer != nullptr) symbol_use_observer->onConstantUse(symbol);
+		}
+
+		/// Observer for constant reads during lowering; null in the PSAC backend. The
+		/// pointer travels with per-task Context copies (the observer must outlive them).
+		SymbolUseObserver* symbol_use_observer = nullptr;
 
 		/// All GlobalVariableSymbols in declaration order; the globals object file
 		/// defines exactly these.

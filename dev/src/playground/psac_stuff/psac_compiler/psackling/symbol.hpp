@@ -27,6 +27,9 @@ namespace pg::sym {
 	/// type_id says how to interpret it (i64 or bool for now).
 	struct ConstantSymbol {
 		u64 bits;
+		/// Namespace-qualified name — a stable identity for per-constant dependency
+		/// tracking in the query-based backend.
+		base::StrID qualified_name;
 	};
 
 	struct TypeSymbol {
