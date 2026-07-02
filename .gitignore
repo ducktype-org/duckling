@@ -12,3 +12,11 @@ package-lock.json
 *.tsbuildinfo
 
 !.devcontainer/
+
+# Itest artifacts
+
+# memory dump files
+core.*
+
+# copy of the source code for concurrent itests
+concurrent_copy*
