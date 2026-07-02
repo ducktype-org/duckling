@@ -21,7 +21,6 @@
 #include <helios/hout/visitors.hpp>
 #include <helios/ls_utils/ls_utils.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 
 #include <base/extend_cpp/stringifyable_enum.hpp>
 #include <base/extend_cpp/variant_match.hpp>

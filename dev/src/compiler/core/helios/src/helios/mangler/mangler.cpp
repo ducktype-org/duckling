@@ -13,8 +13,6 @@
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_abi.hpp>
 #include <helios/symbols/symbol_id.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
-#include <helios/symbols/symbol_kind.hpp>
 #include <helios/tsh/types.hpp>
 #include <helios_private/pst_layer/pst_parent.hpp>
 #include <helios_private/scopes/scopes.hpp>

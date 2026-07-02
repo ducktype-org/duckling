@@ -1,7 +1,5 @@
 #include "symbols.hpp"
 
-#include "frontend/pst_parser/elements/hierarchy/class_elements/destructor.hpp"
-
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/all_class_elements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
@@ -13,10 +11,9 @@
 #include <helios/queries/function_queries.hpp>
 #include <helios/symbols/query_class_of_member.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
-#include <helios/symbols/query_type_symbol_data.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/tsh/abstract_type.hpp>
 #include <helios/tsh/queries/types.hpp>
+#include <helios/utils/hout_walkers.hpp>
 #include <helios_private/attributes/backend_dependent.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/hout_creation/expressions/coercions.hpp>
@@ -40,16 +37,41 @@
 #include <vector>
 
 namespace compiler::helios {
-	/**
-	 * @TODO: move to some docs
-	 *  * imports are just symbols that we will "lookup in" just like usings.
-	 *    They will link to different modules.
-	 *  * Scopes trees of different modules are independent to relax dependency
-	 *
-	 *  @TODO: what about lookup cycles -- we will need to probably refactor queries a bit
-	 *  in the future
-	 */
+	bool implementsQueryCodeOfFun(SymID id) {
+		if (kind(id) != SymbolKind::Function && kind(id) != SymbolKind::Method) return false;
+		variant_match(getSymRef(id)->other) {
+			variant_case_novalue(PstSymbolData) { return true; }
+			variant_case(defgen::GeneratedSymbolData, generated_data) {
+				variant_match(generated_data.data) {
+					variant_case_novalue(defgen::GeneratedSymbolData::BuiltinOperator) {
+						return false;
+					}
+					variant_default { return true; }
+				}
+			}
+			variant_default { CORE_PANIC("Case not covered"); }
+		}
+		CORE_UNREACHABLE();
+	}
 
+	EmissionPolicy emissionPolicy(SymID id) {
+		variant_match(getSymRef(id)->other) {
+			variant_case_novalue(PstSymbolData) { return EmissionPolicy::OwnerOnly; }
+			variant_case(defgen::GeneratedSymbolData, generated_data) {
+				variant_match(generated_data.data) {
+					variant_case_novalue(
+						defgen::GeneratedSymbolData::BuiltinOperator,
+						defgen::GeneratedSymbolData::ScriptMainWrapper
+					) {
+						return EmissionPolicy::OwnerOnly;
+					}
+					variant_default { return EmissionPolicy::Replicated; }
+				}
+			}
+			variant_default { CORE_PANIC("Case not covered"); }
+		}
+		CORE_UNREACHABLE();
+	}
 
 	/**
 	 * @brief Query "linked-scope", that is scope
@@ -159,29 +181,6 @@ namespace compiler::helios {
 
 	ScopeID scope(SymID id) { return getSymRef(id)->getScope(); }
 
-	bool shouldLinkOnce(SymID id) {
-		variant_match(getSymRef(id)->other) {
-			variant_case_novalue(PstSymbolData) { return false; }
-			variant_case(defgen::GeneratedSymbolData, gen_data) {
-				variant_match(gen_data.data) {
-					variant_case_novalue(defgen::GeneratedSymbolData::BuiltinOperator) {
-						// BuiltinOperators (better name pending) are those functions which
-						// are defined in C++, and will need to be declared with external linkage.
-						return false;
-					}
-					variant_case_novalue(defgen::GeneratedSymbolData::ScriptMainWrapper) {
-						// Script main is the process entry point, so LLVM must not treat it as
-						// discardable generated helper code.
-						return false;
-					}
-					variant_default { return true; }
-				}
-			}
-			variant_default { CORE_PANIC("Unhandled symbol kind"); }
-		}
-		CORE_UNREACHABLE();
-	}
-
 	base::Optional<ScopeID> maybeScope(SymID id) {
 		variant_match(getSymRef(id)->other) {
 			variant_case(PstSymbolData, pst_data) { return pst_data.scope; }
@@ -238,6 +237,8 @@ namespace compiler::helios {
 
 		std::string                                         out = "";
 		base::Optional<pst::AccessLocked<pst::LangElement>> pst = maybeSymbolPst(sym);
+		if (not pst) return name(sym).str();
+
 		do {
 			if (!pst.value().unlock(ctx)->getParent()) break;
 			auto stmt = pst->unlock(ctx).dynamicCast<pst::Stmt>();
@@ -1058,120 +1059,12 @@ namespace compiler::helios {
 	}
 
 	struct IMPLEMENT_QUERY(QueryDirectFunctionCalls, query::QResult<std::vector<SymID>>) {
-		struct HoutFunctionCallCollector final:
-			  public code::HoutStmtVisitorEmpty,
-			  public code::HoutExprVisitorEmpty {
-		public:
-			std::unordered_set<SymID> called_functions;
-
-			void visitReturnStmt(const code::ReturnStmt& stmt) override {
-				stmt.value->acceptVisitor(*this);
-			}
-
-			void visitExprStmt(const code::ExprStmt& stmt) override {
-				stmt.expr->acceptVisitor(*this);
-			}
-
-			void visitIfStmt(const code::IfStmt& stmt) override {
-				stmt.condition->acceptVisitor(*this);
-
-				for (const auto& sub_stmt: stmt.then_body.statements)
-					sub_stmt->acceptVisitor(*this);
-				for (const auto& sub_stmt: stmt.else_body.statements)
-					sub_stmt->acceptVisitor(*this);
-			}
-
-			void visitWhileStmt(const code::WhileStmt& stmt) override {
-				stmt.condition->acceptVisitor(*this);
-				for (const auto& sub_stmt: stmt.body.statements) sub_stmt->acceptVisitor(*this);
-			}
-
-			void visitBlockStmt(const code::BlockStmt& stmt) override {
-				for (const auto& sub_stmt: stmt.body.statements) sub_stmt->acceptVisitor(*this);
-			}
-
-			void visitVariableStmt(const code::VariableStmt& stmt) override {
-				stmt.initial_value->acceptVisitor(*this);
-			}
-
-			void visitAssignmentStmt(const code::AssignmentStmt& stmt) override {
-				stmt.location_expr->acceptVisitor(*this);
-				stmt.new_value_expr->acceptVisitor(*this);
-			}
-
-			void visitCallExpr(const code::CallExpr& expr) override {
-				if (const auto* callee_ident
-				    = dynamic_cast<const code::IdentifierExpr*>(expr.callee.get())) {
-					called_functions.insert(callee_ident->symbol);
-				}
-
-				expr.callee->acceptVisitor(*this);
-				for (const auto& arg: expr.arguments) arg->acceptVisitor(*this);
-			}
-
-			void visitBinaryOperatorExpr(const code::BinaryOperatorExpr& expr) override {
-				expr.lhs->acceptVisitor(*this);
-				expr.rhs->acceptVisitor(*this);
-			}
-
-			void visitUnaryOperatorExpr(const code::UnaryOperatorExpr& expr) override {
-				expr.expr->acceptVisitor(*this);
-			}
-
-			void visitTernaryOperatorExpr(const code::TernaryOperatorExpr& expr) override {
-				expr.condition->acceptVisitor(*this);
-				expr.if_true->acceptVisitor(*this);
-				expr.if_false->acceptVisitor(*this);
-			}
-
-			void visitParenthesisExpr(const code::ParenthesisExpr& expr) override {
-				expr.inner->acceptVisitor(*this);
-			}
-
-			void visitSequenceExpr(const code::SequenceExpr& expr) override {
-				for (const auto& sub_expr: expr.expressions) sub_expr->acceptVisitor(*this);
-			}
-
-			void visitAccessExpr(const code::AccessExpr& expr) override {
-				expr.base->acceptVisitor(*this);
-			}
-
-			void visitChainComparisonExpr(const code::ChainComparisonExpr& expr) override {
-				for (const auto& sub_expr: expr.comparisons) sub_expr->acceptVisitor(*this);
-			}
-
-			void visitTupleExpr(const code::TupleExpr& expr) override {
-				// Tuple expression is equivalent to a function call to the tuple constructor in MIR
-				called_functions.insert(expr.tuple_ctor_symbol);
-				for (const auto& sub_expr: expr.elements) sub_expr->acceptVisitor(*this);
-			}
-
-			void visitVariantTypeConstructorExpr(const code::VariantTypeConstructorExpr& expr
-			) override {
-				for (const auto& sub_expr: expr.subtypes) sub_expr->acceptVisitor(*this);
-			}
-
-			void visitLiftToTypeExpr(const code::LiftToTypeExpr& expr) override {
-				expr.value_expr->acceptVisitor(*this);
-			}
-		};
-
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			CORE_ASSERT(
 				kind(key) == SymbolKind::Function || kind(key) == SymbolKind::Method
 					|| kind(key) == SymbolKind::FunctionDeclaration,
 				"Query function dependencies called on non-function symbol"
 			);
-
-			auto collect_deps = [&](SymID sym) {
-				const auto& fun_hout_result = ctx.query<QueryCodeOfFun>(sym)->valueOrThrow();
-				const auto& function_body   = fun_hout_result.body;
-
-				HoutFunctionCallCollector visitor;
-				for (const auto& stmt: function_body->statements) stmt->acceptVisitor(visitor);
-				return std::ranges::to<std::vector<SymID>>(visitor.called_functions);
-			};
-
 
 			if (kind(key) == SymbolKind::FunctionDeclaration) {
 				// For function declarations we check if a function declaration is a backend
@@ -1184,28 +1077,10 @@ namespace compiler::helios {
 				}
 			}
 
-			variant_match(getSymRef(key)->other) {
-				variant_case_novalue(PstSymbolData) {
-					// Just a PST function.
-					return collect_deps(key);
-				}
-				variant_case(defgen::GeneratedSymbolData, gsd_data) {
-					variant_match(gsd_data.data) {
-						variant_case_novalue(defgen::GeneratedSymbolData::BuiltinOperator) {
-							// Builtin operators have no dependencies
-							return {};
-						}
-					}
-					CORE_ASSERT(
-						gsd_data.getType(ctx).getType().getKind() == tsh::Kind::Function,
-						"QueryDirectFunction calls called on a non-function symbol"
-					);
-					return collect_deps(key);
-				}
-				variant_default { CORE_UNREACHABLE(); }
-			}
+			if (not implementsQueryCodeOfFun(key)) return {};
 
-			CORE_UNREACHABLE();
+			const auto& fun_hout_result = ctx.query<QueryCodeOfFun>(key)->valueOrThrow();
+			return code::collectCalledSymbols(fun_hout_result);
 		}
 
 		QUERY_AUTO_CACHE_CREF

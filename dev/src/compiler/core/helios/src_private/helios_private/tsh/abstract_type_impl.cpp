@@ -11,6 +11,7 @@
 #include <frontend/pst_parser/elements/hierarchy/lists/nested_import_list.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <helios/symbols/query_type_symbol_data.hpp>
+#include <helios/symbols/symbol_abi.hpp>
 #include <helios/tsh/queries/implicit_coercibility.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios_private/hout_creation/definition_generation/default_destructors.hpp>
@@ -434,6 +435,10 @@ namespace compiler::tsh {
 		auto& base = ctx.query<compiler::helios::QueryClassSymbolData>(symbol)->valueOrThrow().base;
 		if (base.has_value()) return { ClassAbstractType(base.value()) };
 		return {};
+	}
+
+	compiler::helios::SymbolABI ClassAbstractTypeImpl::getABI(query::Context& ctx) const {
+		return ctx.query<compiler::helios::QuerySymbolABI>(symbol)->valueOrThrow();
 	}
 
 	std::vector<ClassAbstractType> ClassAbstractTypeImpl::getImplementedInterfaceTypes(
