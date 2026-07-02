@@ -44,12 +44,10 @@ namespace compiler::helios {
 		query::Context& ctx, base::Optional<pst::AccessLocked<pst::AtrArgList>> args
 	) {
 		if_opt_none(args) {
-			ctx.logInt(
-				makeBox<dia_int::PlaceholderError>(
-					"Attribute 'builtin' expects exactly one argument, got 0.",
-					base::Optional<dia_int::StablePosition>{}
-				)
-			);
+			ctx.logInt(makeBox<dia_int::PlaceholderError>(
+				"Attribute 'builtin' expects exactly one argument, got 0.",
+				base::Optional<dia_int::StablePosition>{}
+			));
 			query::throwFailed();
 		}
 
@@ -58,39 +56,31 @@ namespace compiler::helios {
 			                                                              arg_list->end() };
 
 		if (holders.size() != 1) {
-			ctx.logInt(
-				makeBox<dia_int::PlaceholderError>(
-					base::strConcat(
-						"Attribute 'builtin' expects exactly one argument, got ", holders.size(), "."
-					),
-					arg_list->getStablePosition()
-				)
-			);
+			ctx.logInt(makeBox<dia_int::PlaceholderError>(
+				base::strConcat(
+					"Attribute 'builtin' expects exactly one argument, got ", holders.size(), "."
+				),
+				arg_list->getStablePosition()
+			));
 			query::throwFailed();
 		}
 
 		auto holder  = holders.front().unlock(ctx);
 		auto str_lit = holder->getExpr().unlock(ctx).dynamicCast<pst::expr::ExprStrValue>();
 		if_opt_none(str_lit) {
-			ctx.logInt(
-				makeBox<dia_int::PlaceholderError>(
-					"Attribute 'builtin' expects a string literal naming the builtin.",
-					holder->getStablePosition()
-				)
-			);
+			ctx.logInt(makeBox<dia_int::PlaceholderError>(
+				"Attribute 'builtin' expects a string literal naming the builtin.",
+				holder->getStablePosition()
+			));
 			query::throwFailed();
 		}
 
 		auto builtin = builtinTypeFromStr(str_lit.value()->getValue().value);
 		if_opt_none(builtin) {
-			ctx.logInt(
-				makeBox<dia_int::PlaceholderError>(
-					base::strConcat(
-						"Unknown builtin '", str_lit.value()->getValue().value.str(), "'."
-					),
-					holder->getStablePosition()
-				)
-			);
+			ctx.logInt(makeBox<dia_int::PlaceholderError>(
+				base::strConcat("Unknown builtin '", str_lit.value()->getValue().value.str(), "'."),
+				holder->getStablePosition()
+			));
 			query::throwFailed();
 		}
 
@@ -103,32 +93,28 @@ namespace compiler::helios {
 			// `ptr_from_slice(slice T s) -> manyptr T` simply returns the slice's data pointer
 			// field. This mirrors the `length` method, only reading a different field (`ptr` vs
 			// `len`).
-			auto& decl        = ctx.query<QueryDeclOfFun>(symbol)->valueOrThrow();
-			auto  slice_type  = decl.parameters.at(0).type.getType().as<tsh::SliceAbstractType>();
+			auto& decl         = ctx.query<QueryDeclOfFun>(symbol)->valueOrThrow();
+			auto  slice_type   = decl.parameters.at(0).type.getType().as<tsh::SliceAbstractType>();
 			auto  slice_fields = ctx.query<QuerySliceTypeData>(slice_type);
 
 			std::vector<Box<code::Stmt>> body{};
-			body.emplace_back(
-				makeBox<code::ReturnStmt>(
+			body.emplace_back(makeBox<code::ReturnStmt>(
+				code::generatedOrigin(),
+				makeBox<code::AccessExpr>(
+					ctx,
 					code::generatedOrigin(),
-					makeBox<code::AccessExpr>(
-						ctx,
-						code::generatedOrigin(),
-						makeBox<code::IdentifierExpr>(
-							ctx, code::generatedOrigin(), decl.parameters.at(0).helios_symbol
-						),
-						slice_fields->ptr
-					)
+					makeBox<code::IdentifierExpr>(
+						ctx, code::generatedOrigin(), decl.parameters.at(0).helios_symbol
+					),
+					slice_fields->ptr
 				)
-			);
+			));
 			return HOUTFunction(
 				code::generatedOrigin(),
 				&decl,
-				std::make_shared<const code::CodeBlock>(
-					code::CodeBlock{
-						.statements = std::move(body),
-					}
-				)
+				std::make_shared<const code::CodeBlock>(code::CodeBlock{
+					.statements = std::move(body),
+				})
 			);
 		}
 		default: {

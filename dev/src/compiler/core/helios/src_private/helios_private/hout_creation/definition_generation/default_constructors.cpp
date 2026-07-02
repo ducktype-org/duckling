@@ -34,8 +34,9 @@ namespace compiler::helios::defgen {
 
 			// Prepare the ctor symbol and declaration.
 			const SymID ctor_symbol = ctx.query<QueryGeneratedSymbol>(
-				{ .name                  = name(class_symbol),
-			      .generated_symbol_data = Constructor{ class_type, GeneratedConstructorType::Default } }
+				{ .name = name(class_symbol),
+			      .generated_symbol_data
+			      = Constructor{ class_type, GeneratedConstructorType::Default } }
 			);
 
 
@@ -48,7 +49,7 @@ namespace compiler::helios::defgen {
 
 			// @TODO: #2307 Classes with a field named `__result`.
 			// - Declare result variable.
-			const auto  result_symbol_type = ctor_decl.return_type;
+			const auto result_symbol_type = ctor_decl.return_type;
 			const SymID result_symbol      = ctx.query<QueryGeneratedSymbol>({
 					 .name                  = base::StrID("__result"),
 					 .generated_symbol_data = GeneratedFunctionVariable{
@@ -148,8 +149,9 @@ namespace compiler::helios::defgen {
 
 			// Prepare the ctor symbol and declaration.
 			const SymID ctor_symbol = ctx.query<QueryGeneratedSymbol>({
-				.name                  = base::StrID("__init_array"),
-				.generated_symbol_data = Constructor{ array_type, GeneratedConstructorType::Default },
+				.name = base::StrID("__init_array"),
+				.generated_symbol_data
+				= Constructor{ array_type, GeneratedConstructorType::Default },
 			});
 
 			const auto& ctor_decl = ctx.query<QueryDeclOfFun>(ctor_symbol)->valueOrThrow();
@@ -180,7 +182,7 @@ namespace compiler::helios::defgen {
 					                               tsh::Mutability::Mutable };
 				// var i: i64 = 0;
 				const SymID i_sym
-					= ctx.query<QueryGeneratedSymbol>({ .name = base::StrID("__i"),
+					= ctx.query<QueryGeneratedSymbol>({ .name                  = base::StrID("__i"),
 				                                        .generated_symbol_data = Variable{
 															.function_symbol = ctor_symbol,
 															.variable_index  = 1,

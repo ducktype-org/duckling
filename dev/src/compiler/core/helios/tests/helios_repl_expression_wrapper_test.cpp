@@ -83,8 +83,7 @@ private:
 
 			auto sym_ref = helios::getSymRef(wrapper.declaration->original_symbol);
 
-			auto repl_data
-				= std::get_if<helios::defgen::ReplExpressionWrapper>(&sym_ref->other);
+			auto repl_data = std::get_if<helios::defgen::ReplExpressionWrapper>(&sym_ref->other);
 			assertTrue(repl_data != nullptr, "Expected ReplExpressionWrapper generated symbol");
 			ASSERT_EQUAL(repl_data->counter, 13u);
 			ASSERT_EQUAL(repl_data->return_type, wrapper.declaration->return_type);
@@ -151,10 +150,8 @@ private:
 			auto sym_i32 = helios::getSymRef(wrapper_i32.declaration->original_symbol);
 			auto sym_f64 = helios::getSymRef(wrapper_f64.declaration->original_symbol);
 
-			auto repl_i32
-				= std::get_if<helios::defgen::ReplExpressionWrapper>(&sym_i32->other);
-			auto repl_f64
-				= std::get_if<helios::defgen::ReplExpressionWrapper>(&sym_f64->other);
+			auto repl_i32 = std::get_if<helios::defgen::ReplExpressionWrapper>(&sym_i32->other);
+			auto repl_f64 = std::get_if<helios::defgen::ReplExpressionWrapper>(&sym_f64->other);
 
 			assertTrue(repl_i32 != nullptr && repl_f64 != nullptr, "Expected ReplExpressionWrapper");
 

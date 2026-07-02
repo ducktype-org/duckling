@@ -291,15 +291,16 @@ namespace compiler::helios::mangler {
 					// If the symbol is generated, it has no path.
 					variant_case(defgen::Constructor, ctor) {
 						// The mangled type identifies which type the constructor belongs to (works
-						// for any kind: class, tuple, static array, ...). The infix tag distinguishes
-						// the implicit constructor from the default one.
-						const auto mangled_type = ctx.query<QueryMangledType>(
-							tsh::SymbolType<>::withDefaults(ctor.type)
-						)->valueOrThrow().str();
+						// for any kind: class, tuple, static array, ...). The infix tag
+						// distinguishes the implicit constructor from the default one.
+						const auto mangled_type
+							= ctx.query<QueryMangledType>(tsh::SymbolType<>::withDefaults(ctor.type))
+						          ->valueOrThrow()
+						          .str();
 
 						const char* ctor_tag
 							= ctor.kind == defgen::GeneratedConstructorType::Implicit ? "Hic"
-							                                                          : "Hdc";
+						                                                              : "Hdc";
 
 						return mangled_type + ctor_tag + func(ctx, symbol_id) + "E";
 					}

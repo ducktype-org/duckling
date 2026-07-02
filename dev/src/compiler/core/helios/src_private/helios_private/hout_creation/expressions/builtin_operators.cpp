@@ -163,13 +163,12 @@ namespace compiler::helios::code {
 										  const tsh::SymbolType<>               return_type,
 										  const base::StrID                     builtin_name
 									  ) -> void {
-				auto gen_data
-					= defgen::BuiltinOperator{
-						ctx.query<tsh::QueryFunctionType>({
-							param_types,
-							return_type,
-						}),
-					};
+				auto gen_data = defgen::BuiltinOperator{
+					ctx.query<tsh::QueryFunctionType>({
+						param_types,
+						return_type,
+					}),
+				};
 				auto builtin = RegularBinaryBuiltin{
 					.symbol = ctx.query<defgen::QueryGeneratedSymbol>({
 						.name                  = name,

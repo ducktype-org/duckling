@@ -13,8 +13,9 @@
 
 namespace compiler::helios {
 
-#define ATTRIBUTES_LIST \
-	attributes::BackendDependent, attributes::DVMOnlyImpl, attributes::NativeOnlyImpl, attributes::Builtin
+#define ATTRIBUTES_LIST                                                                \
+	attributes::BackendDependent, attributes::DVMOnlyImpl, attributes::NativeOnlyImpl, \
+		attributes::Builtin
 
 	namespace attributes {
 		struct BackendDependent {
@@ -31,7 +32,7 @@ namespace compiler::helios {
 
 		struct Builtin {
 			BuiltinType builtin;
-			bool operator==(const Builtin&) const = default;
+			bool        operator==(const Builtin&) const = default;
 		};
 	}
 
@@ -71,7 +72,8 @@ namespace compiler::helios {
 	 * @param args The attribute argument list, empty when the attribute is written without `(...)`.
 	 */
 	base::Optional<Attribute> attrFromStr(
-		query::Context& ctx, base::StrID name,
+		query::Context&                                    ctx,
+		base::StrID                                        name,
 		base::Optional<pst::AccessLocked<pst::AtrArgList>> args
 	);
 

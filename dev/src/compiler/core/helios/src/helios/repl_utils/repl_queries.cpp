@@ -68,8 +68,8 @@ namespace compiler::repl {
 			auto synthetic_symbol = ctx.query<helios::defgen::QueryGeneratedSymbol>(
 				{ .name = base::StrID("__repl_expr_wrapper__"),
 			      .generated_symbol_data
-			      = helios::defgen::ReplExpressionWrapper{
-					  .counter = key.counter, .return_type = return_type } }
+			      = helios::defgen::ReplExpressionWrapper{ .counter     = key.counter,
+			                                               .return_type = return_type } }
 			);
 
 			CORE_DEV_LOG(REPL, "Creating function declaration\n");
@@ -119,8 +119,7 @@ namespace compiler::repl {
 			auto synthetic_symbol = ctx.query<helios::defgen::QueryGeneratedSymbol>(
 				{ .name = base::StrID("__repl_instr_wrapper__"),
 			      .generated_symbol_data
-			      = helios::defgen::ReplInstructionWrapper{
-					  .counter = key.counter } }
+			      = helios::defgen::ReplInstructionWrapper{ .counter = key.counter } }
 			);
 
 			CORE_DEV_LOG(REPL, "Creating function declaration\n");

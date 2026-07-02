@@ -11,7 +11,6 @@
 
 #include <filesystem/file.hpp>
 #include <filesystem/file_path.hpp>
-
 #include <query_framework/entry/query_entry_point.hpp>
 #include <string_id/string_id.hpp>
 #include <tester/tester.hpp>
@@ -36,8 +35,8 @@ protected:
 
 private:
 	// A `@builtin(...)` fundecl (here `ptr_from_slice` from core.builtins) has no body in source;
-	// the compiler synthesizes its implementation (getBuiltinImpl). This checks that the synthesized
-	// definition is actually emitted into the module HOUT when the builtin is used.
+	// the compiler synthesizes its implementation (getBuiltinImpl). This checks that the
+	// synthesized definition is actually emitted into the module HOUT when the builtin is used.
 	void testBuiltinDefinitionInModuleHOUT() {
 		auto module_id = compiler::driver::test_utils::getModuleIdFromPath("builtins");
 

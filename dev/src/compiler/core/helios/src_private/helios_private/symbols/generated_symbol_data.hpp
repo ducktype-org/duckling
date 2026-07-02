@@ -30,9 +30,9 @@ namespace compiler::helios::defgen {
 	 * - `Default`: for a class/array/tuple (in general more complex type). The default constructor
 	 *   for a class takes no parameters and initializes all class fields with their initial values
 	 *   or default values if initial values where not provided; returns the initialized class. For
-	 *   the array, it takes no parameters and loops through the static array initializing its fields
-	 *   with a default value (which may mean a call to another constructor); returns the initialized
-	 *   static array value.
+	 *   the array, it takes no parameters and loops through the static array initializing its
+	 * fields with a default value (which may mean a call to another constructor); returns the
+	 * initialized static array value.
 	 */
 	struct Constructor final {
 		tsh::AbstractType        type;  // The type this constructor belongs to.
@@ -53,8 +53,8 @@ namespace compiler::helios::defgen {
 	 * `toString`). The concrete method is distinguished by `kind`.
 	 */
 	struct Method final {
-		tsh::AbstractType owner_type;
-		GeneratedMethodType   kind;
+		tsh::AbstractType   owner_type;
+		GeneratedMethodType kind;
 
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const;
@@ -209,11 +209,11 @@ namespace compiler::helios::defgen {
 		base::Bit256 queryUnstablePerfectHash() const;
 	};
 
-#define GENERATED_SYMBOL_SEMANTICS_LIST                                                           \
-	defgen::Constructor, defgen::Method,                                                          \
-		defgen::BuiltinOperator, defgen::Parameter, defgen::SelfParameter, defgen::Field,         \
-		defgen::GeneratedFunctionVariable, defgen::ControlFlowLocal, defgen::ReplExpressionWrapper, \
-		defgen::ReplInstructionWrapper, defgen::ScriptMainWrapper
+#define GENERATED_SYMBOL_SEMANTICS_LIST                                                          \
+	defgen::Constructor, defgen::Method, defgen::BuiltinOperator, defgen::Parameter,             \
+		defgen::SelfParameter, defgen::Field, defgen::GeneratedFunctionVariable,                 \
+		defgen::ControlFlowLocal, defgen::ReplExpressionWrapper, defgen::ReplInstructionWrapper, \
+		defgen::ScriptMainWrapper
 
 	using GeneratedSymbolDataVariant = std::variant<GENERATED_SYMBOL_SEMANTICS_LIST>;
 

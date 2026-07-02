@@ -3,8 +3,8 @@
 #include <frontend/pst_parser/access.hpp>
 #include <helios/hout/hout_fd.hpp>
 
-#include <base/extend_cpp/flag.hpp>
 #include <base/collections/optional.hpp>
+#include <base/extend_cpp/flag.hpp>
 
 #include <string_id/string_id.hpp>
 
@@ -28,6 +28,7 @@ namespace compiler::helios {
 
 	/**
 	 * @brief Identifies which compiler builtin a `@builtin("...")` attribute selects.
+	 * Can't use the STRINGIFIYABLE enum because camel case vs snake case.
 	 */
 	enum class BuiltinType {
 		RawPtrFromSlice,

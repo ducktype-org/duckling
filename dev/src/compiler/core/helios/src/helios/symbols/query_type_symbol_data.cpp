@@ -106,10 +106,8 @@ namespace compiler::helios {
 				tuple_info.members.push_back(ctx.query<defgen::QueryGeneratedSymbol>(
 					{ // Tuple field names are _1, _2, ...
 				      // Starting from 1, not 0!
-				      .name = base::StrID{ base::strConcat("_", order + 1) },
-				      .generated_symbol_data
-				      = defgen::Field{
-						  .parent_type = key, .index = order } }
+				      .name                  = base::StrID{ base::strConcat("_", order + 1) },
+				      .generated_symbol_data = defgen::Field{ .parent_type = key, .index = order } }
 				));
 			}
 
@@ -125,16 +123,12 @@ namespace compiler::helios {
 		static auto provide(Context& ctx, const QKey key) -> PResult {
 			// The fields of a slice type are always `ptr` and `len`, in that order.
 			SymID ptr = ctx.query<defgen::QueryGeneratedSymbol>(
-				{ .name = base::StrID{ "ptr" },
-			      .generated_symbol_data
-			      = defgen::Field{
-					  .parent_type = key, .index = 0 } }
+				{ .name                  = base::StrID{ "ptr" },
+			      .generated_symbol_data = defgen::Field{ .parent_type = key, .index = 0 } }
 			);
 			SymID len = ctx.query<defgen::QueryGeneratedSymbol>(
-				{ .name = base::StrID{ "len" },
-			      .generated_symbol_data
-			      = defgen::Field{
-					  .parent_type = key, .index = 1 } }
+				{ .name                  = base::StrID{ "len" },
+			      .generated_symbol_data = defgen::Field{ .parent_type = key, .index = 1 } }
 			);
 
 			return SliceTypeData{ .ptr = ptr, .len = len };

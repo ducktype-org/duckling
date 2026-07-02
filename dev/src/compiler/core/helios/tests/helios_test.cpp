@@ -2819,8 +2819,7 @@ private:
 				// `WithInit`.
 				ASSERT_EQUAL_PRINT(2, deps.size());
 
-				const auto* dep_ctor
-					= std::get_if<Constructor>(&getSymRef(deps[0])->other);
+				const auto* dep_ctor = std::get_if<Constructor>(&getSymRef(deps[0])->other);
 				ASSERT_TRUE(dep_ctor != nullptr);
 				ASSERT_EQUAL(dep_ctor->kind, GeneratedConstructorType::Default);
 				ASSERT_EQUAL(dep_ctor->type.getKind(), compiler::tsh::Kind::Class);

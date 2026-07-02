@@ -1,5 +1,4 @@
 #include "function_queries.hpp"
-#include "helios_private/symbols/pst_symbol_data.hpp"
 
 #include <frontend/pst_parser/elements/hierarchy/actions/all_actions.hpp>
 #include <frontend/pst_parser/elements/hierarchy/actions/return.hpp>
@@ -27,6 +26,7 @@
 #include <helios_private/hout_creation/hout_stmt_compilation.hpp>
 #include <helios_private/pst_layer/stmts_from_aggregate.hpp>
 #include <helios_private/scopes/scopes.hpp>
+#include <helios_private/symbols/pst_symbol_data.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 

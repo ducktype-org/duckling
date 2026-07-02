@@ -31,7 +31,8 @@ namespace compiler::helios::defgen {
 				.name
 				= ctx.query<mangler::QueryMangledType>(tsh::SymbolType<>::withDefaults(tuple_type))
 			          ->valueOrThrow(),
-				.generated_symbol_data = Constructor{ tuple_type, GeneratedConstructorType::Implicit },
+				.generated_symbol_data
+				= Constructor{ tuple_type, GeneratedConstructorType::Implicit },
 			});
 
 			const auto& ctor_decl = ctx.query<QueryDeclOfFun>(ctor_symbol)->valueOrThrow();
@@ -45,9 +46,8 @@ namespace compiler::helios::defgen {
 			// - Declare result variable.
 			const auto  result_symbol_type = ctor_decl.return_type;
 			const SymID result_symbol      = ctx.query<QueryGeneratedSymbol>({
-					 .name = base::StrID("__result"),
-					 .generated_symbol_data
-                = Variable{ ctor_symbol, 0, result_symbol_type },
+					 .name                  = base::StrID("__result"),
+					 .generated_symbol_data = Variable{ ctor_symbol, 0, result_symbol_type },
             });
 			body.emplace_back(makeBox<code::VariableStmt>(code::VariableStmt(
 				code::generatedOrigin(),

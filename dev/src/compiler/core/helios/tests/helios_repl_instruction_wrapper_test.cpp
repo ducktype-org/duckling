@@ -151,8 +151,7 @@ private:
 
 			auto sym_ref = helios::getSymRef(sym);
 
-			auto repl_data
-				= std::get_if<helios::defgen::ReplInstructionWrapper>(&sym_ref->other);
+			auto repl_data = std::get_if<helios::defgen::ReplInstructionWrapper>(&sym_ref->other);
 			assertTrue(repl_data != nullptr, "Expected ReplInstructionWrapper generated symbol");
 			ASSERT_EQUAL(repl_data->counter, 31u);
 		});

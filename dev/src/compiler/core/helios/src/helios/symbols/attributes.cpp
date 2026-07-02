@@ -30,14 +30,12 @@ namespace compiler::helios {
 		 */
 		Attribute expectNoArgs(query::Context& ctx, Attribute attr, AttrArgs args) {
 			if (args.has_value() && args.value().unlock(ctx)->size() > 0) {
-				ctx.logInt(
-					makeBox<dia_int::PlaceholderError>(
-						base::strConcat(
-							"Attribute '", attrNameStr(attr).str(), "' does not take arguments."
-						),
-						args.value().unlock(ctx)->getStablePosition()
-					)
-				);
+				ctx.logInt(makeBox<dia_int::PlaceholderError>(
+					base::strConcat(
+						"Attribute '", attrNameStr(attr).str(), "' does not take arguments."
+					),
+					args.value().unlock(ctx)->getStablePosition()
+				));
 				query::throwFailed();
 			}
 			return attr;
@@ -104,15 +102,13 @@ namespace compiler::helios {
 	) {
 		if (hasAttrInVector<DVMOnlyImpl>(attributes)
 		    and hasAttrInVector<NativeOnlyImpl>(attributes)) {
-			return std::unexpected(
-				base::strConcat(
-					"The attributes `",
-					attrNameStr(NativeOnlyImpl{}),
-					"' and '",
-					attrNameStr(DVMOnlyImpl{}),
-					"' are exclusive."
-				)
-			);
+			return std::unexpected(base::strConcat(
+				"The attributes `",
+				attrNameStr(NativeOnlyImpl{}),
+				"' and '",
+				attrNameStr(DVMOnlyImpl{}),
+				"' are exclusive."
+			));
 		}
 		return {};
 	}

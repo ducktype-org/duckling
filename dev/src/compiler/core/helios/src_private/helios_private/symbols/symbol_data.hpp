@@ -119,7 +119,9 @@ namespace compiler::helios {
 			if (auto ptr = std::get_if<T>(&other)) return CRef<T>{ ptr };
 			return std::nullopt;
 		}
+
 		base::Optional<pst::AccessLocked<pst::LangElement>> maybePstElement() const;
+
 		/**
 		 * Return associated pst_element cast to Stmt.
 		 * Panics if element is not a statement or if symbol is not associated with PST element.

@@ -279,10 +279,9 @@ namespace compiler::helios::defgen {
 			const auto result_sym = ctx.query<QueryGeneratedSymbol>(
 				{ .name = base::StrID("__result"),
 			      .generated_symbol_data
-			      = GeneratedFunctionVariable{
-					  .function_symbol = to_string_decl.original_symbol,
-					  .variable_index  = 0,
-					  .type            = STRING_TYPE } }
+			      = GeneratedFunctionVariable{ .function_symbol = to_string_decl.original_symbol,
+			                                   .variable_index  = 0,
+			                                   .type            = STRING_TYPE } }
 			);
 			body.emplace_back(makeBox<code::VariableStmt>(
 				code::generatedOrigin(),

@@ -1,8 +1,5 @@
 #include "query_type_of_symbol.hpp"
 
-#include "helios/symbols/query_class_of_member.hpp"
-#include "helios/symbols/query_type_from_definition.hpp"
-
 #include <frontend/pst_parser/elements/hierarchy/class_elements/field.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
@@ -10,6 +7,8 @@
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/queries/function_queries.hpp>
+#include <helios/symbols/query_class_of_member.hpp>
+#include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/symbol_kind.hpp>
 #include <helios/tsh/deductions.hpp>
 #include <helios/tsh/queries/types.hpp>
@@ -228,7 +227,8 @@ namespace compiler::helios {
 			for (auto& param: declaration.parameters) param_types.emplace_back(param.type);
 
 			return tsh::SymbolType{
-				ctx.query<tsh::QueryFunctionType>({ .parameter_types=param_types, .result_type=declaration.return_type }),
+				ctx.query<tsh::QueryFunctionType>({ .parameter_types = param_types,
+				                                    .result_type     = declaration.return_type }),
 				tsh::ReferenceKind::Direct,
 				tsh::Mutability::Mutable,
 			};

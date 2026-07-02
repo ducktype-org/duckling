@@ -41,7 +41,7 @@
  */
 #pragma once
 
-#include "base/collections/optional.hpp"
+#include <base/collections/optional.hpp>
 #include <base/comptime/type_traits.hpp>
 #include <base/preproc/diagnostics.hpp>
 #include <base/preproc/for_each.hpp>

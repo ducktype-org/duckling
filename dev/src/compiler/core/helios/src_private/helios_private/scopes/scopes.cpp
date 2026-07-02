@@ -492,9 +492,9 @@ namespace compiler::helios {
 				out.emplace_back(ctx.query<defgen::QueryGeneratedSymbol>({
 					.name = base::StrID("self"),
 					.generated_symbol_data
-					= defgen::SelfParameter{
-						.method_symbol = ctx.query<QuerySymbolOfSTMT>(meth).valueOrThrow(),
-						.scope         = key },
+					= defgen::SelfParameter{ .method_symbol
+				                             = ctx.query<QuerySymbolOfSTMT>(meth).valueOrThrow(),
+				                             .scope = key },
 				}));
 
 				output(std::move(out));
