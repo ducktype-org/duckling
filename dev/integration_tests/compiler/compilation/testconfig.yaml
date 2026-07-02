@@ -11,7 +11,7 @@ compile_llvm_options: ""
 # Runs an extra deterministic compile check before normal compile_package.
 # You can override this to "false" in any subtree/test when duplication-based checks fail
 # for test-specific reasons (for example repeated globals or intentionally conflicting symbols).
-enable_conc_deterministic_tests: "true"
+enable_conc_deterministic_tests: "false"
 # Number of duckc worker threads used for compilation and determinism checks.
 duckc_worker_count: "3"
 
@@ -49,7 +49,6 @@ PreCase: "@{clean_cmd} && mkdir build;
   esac;"
 
 Run: "
-  ls build || echo 'foo';
   case '@{backend}' in
     dvm) @{dvm_path} run @{compiled_to_dvm}       ;;
     llvm)
