@@ -118,6 +118,19 @@ protected:
 	);
 
 	/**
+	 * @brief Loads @p first_dbc under an unrestricted config, then loads @p second_dbc under
+	 * @p config on the same process, asserting the second load fails verification with the
+	 * given error keywords. Exercises flag propagation from already-loaded ("old") functions
+	 * to newly loaded ones.
+	 */
+	void loadThenLoadInvalidDbc(
+		const std::string&                   first_dbc,
+		const std::string&                   second_dbc,
+		const std::vector<std::string_view>& error_keywords,
+		vm::api::ExecutionConfig             config = {}
+	);
+
+	/**
 	 * @brief Loads a file containing a valid bytecode program and asserts it was loaded correctly.
 	 */
 	void loadValidDbc(const std::string& dbc_filename, vm::api::ExecutionConfig config = {});

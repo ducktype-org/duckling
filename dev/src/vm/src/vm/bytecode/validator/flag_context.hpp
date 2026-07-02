@@ -1,5 +1,6 @@
 #pragma once
 
+#include <vm/api/data/execution_config.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/flags.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>

@@ -25,6 +25,16 @@ namespace vm::code {
 					instr_case(instructions::Op_call_func, call_func) {
 						called_funcs.push_back(call_func.function.function_name);
 					}
+					// A tail-call is a direct call to a named function, so its callee's flags must
+					// propagate to the caller just like a regular call.
+					instr_case(instructions::Op_ret_tailcall_func, tailcall) {
+						called_funcs.push_back(tailcall.function.function_name);
+					}
+					// set_threadctx names the function a spawned thread will run; its effects are
+					// caused by the spawner, so it is an edge for flag propagation too.
+					instr_case(instructions::Op_set_threadctx, threadctx) {
+						called_funcs.push_back(threadctx.function.function_name);
+					}
 					instr_default {
 						// Flags of builtins are known on the instruction level.
 						// Similarly, flags of extern C functions are assumed at the instruction level.

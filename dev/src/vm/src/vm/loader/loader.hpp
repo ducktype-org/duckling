@@ -4,6 +4,7 @@
 
 #include <filesystem/file.hpp>
 
+#include <vm/api/data/execution_config.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/validator/valid_program.hpp>
 

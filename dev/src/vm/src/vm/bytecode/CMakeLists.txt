@@ -1,5 +1,6 @@
 add_files(
     bytecode.cpp
+    flags.cpp
     builtin_types.cpp
     const_value.cpp
     builders/instruction_builder.cpp

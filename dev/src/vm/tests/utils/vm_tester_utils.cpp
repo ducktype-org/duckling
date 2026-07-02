@@ -95,6 +95,33 @@ void VmTestSuite::loadInvalidDbc(
 	}
 }
 
+void VmTestSuite::loadThenLoadInvalidDbc(
+	const std::string&                   first_dbc,
+	const std::string&                   second_dbc,
+	const std::vector<std::string_view>& error_keywords,
+	const vm::api::ExecutionConfig       config
+) {
+	// Load the first batch under an unrestricted config so its functions become already
+	// validated "old" functions, then tighten the config before loading the second batch.
+	auto pid = initProcess();
+	ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { fs::File(path(first_dbc)) }));
+
+	ASSERT_HAS_VALUE(vm::api::setExecutionConfig(pid, config));
+
+	auto second_response = vm::api::loadFiles(pid, { fs::File(path(second_dbc)) });
+	ASSERT_NO_VALUE(second_response);
+
+	auto err = second_response.error();
+	ASSERT_TRUE(std::holds_alternative<vm::api::LoadProgramError>(err));
+	auto err_str = std::get<vm::api::LoadProgramError>(err).why;
+	std::cerr << err_str << '\n';
+	for (auto err_key: error_keywords) {
+		assertTrue(
+			err_str.find(err_key) != std::string::npos, base::strConcat("Not found: ", err_key)
+		);
+	}
+}
+
 void VmTestSuite::loadValidDbc(
 	const std::string& dbc_filename, const vm::api::ExecutionConfig config
 ) {
