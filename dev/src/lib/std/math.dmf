@@ -17,159 +17,262 @@ namespace libm_forward {
         # Basic operations
         {
             # Absolute value
-            funcdecl fabsf(x: f32) -> f32;
-            funcdecl fabs(x: f64) -> f64;
+            fundecl fabsf(x: f32) -> f32;
+            fundecl fabs(x: f64) -> f64;
 
             # Division floating-point reminder
-            funcdecl fmodf(x: f32, y: f32) -> f32;
-            funcdecl fmod(x: f64, y: f64) -> f64;
+            fundecl fmodf(x: f32, y: f32) -> f32;
+            fundecl fmod(x: f64, y: f64) -> f64;
 
 
             # Division IEEE floating-point reminder
-            funcdecl reminderf(x: f32, y: f32) -> f32;
-            funcdecl reminder(x: f64, y: f64) -> f64;
+            fundecl reminderf(x: f32, y: f32) -> f32;
+            fundecl reminder(x: f64, y: f64) -> f64;
 
             # Division floating-point reminder
-            # funcdecl remquof(x: f32, y: f32, quo: *i32) -> f32;
-            # funcdecl remquo(x: f64, y: f64, quo: *i32) -> f64;
+            # fundecl remquof(x: f32, y: f32, quo: *i32) -> f32;
+            # fundecl remquo(x: f64, y: f64, quo: *i32) -> f64;
 
             # Multiply-add
             # (x * y) + z
-            funcdecl fmaf(x: f32, y: f32, z: f32) -> f32;
-            funcdecl fma(x: f64, y: f64, z: f64) -> f64;
+            fundecl fmaf(x: f32, y: f32, z: f32) -> f32;
+            fundecl fma(x: f64, y: f64, z: f64) -> f64;
 
             # Maximum
-            funcdecl fmaxf(x: f32, y: f32) -> f32;
-            funcdecl fmax(x: f64, y: f64) -> f64;
+            fundecl fmaxf(x: f32, y: f32) -> f32;
+            fundecl fmax(x: f64, y: f64) -> f64;
 
             # Minimum
-            funcdecl fminf(x: f32, y: f32) -> f32;
-            funcdecl fmin(x: f64, y: f64) -> f64;
+            fundecl fminf(x: f32, y: f32) -> f32;
+            fundecl fmin(x: f64, y: f64) -> f64;
 
             # Positive difference
             # x-y if x > y, else 0
-            funcdecl fdimf(x: f32, y: f32) -> f32;
-            funcdecl fdim(x: f64, y: f64) -> f64;
+            fundecl fdimf(x: f32, y: f32) -> f32;
+            fundecl fdim(x: f64, y: f64) -> f64;
 
             # NaN
-            # funcdecl nanf(arg: *c_char) -> f32;
-            # funcdecl nan(arg: *c_char) -> f64;
+            # fundecl nanf(arg: *c_char) -> f32;
+            # fundecl nan(arg: *c_char) -> f64;
         }
 
         # Exponential functions 
         {
             # Exp
             # e**x
-            funcdecl expf(x: f32) -> f32;
-            funcdecl exp(x: f64) -> f64;
+            fundecl expf(x: f32) -> f32;
+            fundecl exp(x: f64) -> f64;
 
             # Exp 2
             # 2**x
-            funcdecl exp2f(x: f32) -> f32;
-            funcdecl exp2(x: f64) -> f64;
+            fundecl exp2f(x: f32) -> f32;
+            fundecl exp2(x: f64) -> f64;
 
             # Exp minus 1
             # e**x - 1
-            funcdecl expm1f(x: f32) -> f32;
-            funcdecl expm1(x: f64) -> f64;
+            fundecl expm1f(x: f32) -> f32;
+            fundecl expm1(x: f64) -> f64;
 
             # Log base e
-            funcdecl logf(x: f32) -> f32;
-            funcdecl log(x: f64) -> f64;
+            fundecl logf(x: f32) -> f32;
+            fundecl log(x: f64) -> f64;
 
             # Log base 10
-            funcdecl log10f(x: f32) -> f32;
-            funcdecl log10(x: f64) -> f64;
+            fundecl log10f(x: f32) -> f32;
+            fundecl log10(x: f64) -> f64;
 
             # Log base 2
-            funcdecl log2f(x: f32) -> f32;
-            funcdecl log2(x: f64) -> f64;
+            fundecl log2f(x: f32) -> f32;
+            fundecl log2(x: f64) -> f64;
 
             # Log 1 plus x
             # ln(1+x)
-            funcdecl log1pf(x: f32) -> f32;
-            funcdecl log1p(x: f64) -> f64;
+            fundecl log1pf(x: f32) -> f32;
+            fundecl log1p(x: f64) -> f64;
         }
 
         # Power functions
         {
             # Power
             # x**y
-            funcdecl powf(x: f32, y: f32) -> f32;
-            funcdecl pow(x: f64, y: f64) -> f64;
+            fundecl powf(x: f32, y: f32) -> f32;
+            fundecl pow(x: f64, y: f64) -> f64;
 
             # Square root
             # x**1/2
-            funcdecl sqrtf(x: f32) -> f32;
-            funcdecl sqrt(x: f64) -> f64;
+            fundecl sqrtf(x: f32) -> f32;
+            fundecl sqrt(x: f64) -> f64;
 
             # Cube root
             # x**1/3
-            funcdecl cbrtf(x: f32) -> f32;
-            funcdecl cbrt(x: f64) -> f64;
+            fundecl cbrtf(x: f32) -> f32;
+            fundecl cbrt(x: f64) -> f64;
 
             # Hypotenuse
             # sqrt(x**2 + y**2)
-            funcdecl hypotf(x: f32, y: f32) -> f32;
-            funcdecl hypot(x: f64, y: f64) -> f64;
+            fundecl hypotf(x: f32, y: f32) -> f32;
+            fundecl hypot(x: f64, y: f64) -> f64;
         }
 
         # Trigonometric functions
         {
             # Sine
-            funcdecl sinf(x: f32) -> f32;
-            funcdecl sin(x: f64) -> f64;
+            fundecl sinf(x: f32) -> f32;
+            fundecl sin(x: f64) -> f64;
 
             # Cosine
-            funcdecl cosf(x: f32) -> f32;
-            funcdecl cos(x: f64) -> f64;
+            fundecl cosf(x: f32) -> f32;
+            fundecl cos(x: f64) -> f64;
 
             # Tangent
-            funcdecl tanf(x: f32) -> f32;
-            funcdecl tan(x: f64) -> f64;
+            fundecl tanf(x: f32) -> f32;
+            fundecl tan(x: f64) -> f64;
 
             # Arcsine
-            funcdecl asinf(x: f32) -> f32;
-            funcdecl asin(x: f64) -> f64;
+            fundecl asinf(x: f32) -> f32;
+            fundecl asin(x: f64) -> f64;
 
             # Arccosine
-            funcdecl acosf(x: f32) -> f32;
-            funcdecl acos(x: f64) -> f64;
+            fundecl acosf(x: f32) -> f32;
+            fundecl acos(x: f64) -> f64;
 
             # Arctangent
-            funcdecl atanf(x: f32) -> f32;
-            funcdecl atan(x: f64) -> f64;
+            fundecl atanf(x: f32) -> f32;
+            fundecl atan(x: f64) -> f64;
 
             # Arctangent using signs to determine quadrants
-            funcdecl atan2f(y: f32, x: f32) -> f32;
-            funcdecl atan2(y: f64, x: f64) -> f64;
+            fundecl atan2f(y: f32, x: f32) -> f32;
+            fundecl atan2(y: f64, x: f64) -> f64;
         }
 
         # Hyperbolic functions
         {
             # Hyperbolic sine
-            funcdecl sinhf(x: f32) -> f32;
-            funcdecl sinh(x: f64) -> f64;
+            fundecl sinhf(x: f32) -> f32;
+            fundecl sinh(x: f64) -> f64;
 
             # Hyperbolic cosine
-            funcdecl coshf(x: f32) -> f32;
-            funcdecl cosh(x: f64) -> f64;
+            fundecl coshf(x: f32) -> f32;
+            fundecl cosh(x: f64) -> f64;
 
             # Hyperbolic tangent
-            funcdecl tanhf(x: f32) -> f32;
-            funcdecl tanh(x: f64) -> f64;
+            fundecl tanhf(x: f32) -> f32;
+            fundecl tanh(x: f64) -> f64;
 
             # Inverse hyperbolic sine
-            funcdecl asinhf(x: f32) -> f32;
-            funcdecl asinh(x: f64) -> f64;
+            fundecl asinhf(x: f32) -> f32;
+            fundecl asinh(x: f64) -> f64;
 
             # Inverse hyperbolic cosine
-            funcdecl acoshf(x: f32) -> f32;
-            funcdecl acosh(x: f64) -> f64;
+            fundecl acoshf(x: f32) -> f32;
+            fundecl acosh(x: f64) -> f64;
 
             # Inverse hyperbolic tangent
-            funcdecl atanhf(x: f32) -> f32;
-            funcdecl atanh(x: f64) -> f64;}
+            fundecl atanhf(x: f32) -> f32;
+            fundecl atanh(x: f64) -> f64;
+        }
+
+        # Error and gamma functions
+        {
+            # Error function
+            fundecl erff(x: f32) -> f32;
+            fundecl erf(x: f64) -> f64;
+
+            # Complementary error function
+            fundecl erfcf(x: f32) -> f32;
+            fundecl erfc(x: f64) -> f64;
+
+            # Gamma function
+            fundecl tgammaf(x: f32) -> f32;
+            fundecl tgamma(x: f64) -> f64;
+
+            # Logarithm of the absolute value of the gamma function
+            fundecl lgammaf(x: f32) -> f32;
+            fundecl lgamma(x: f64) -> f64;
+        }
+
+        # Nearest integer floating-point operations
+        {
+            # Ceil
+            fundecl ceilf(x: f32) -> f32;
+            fundecl ceil(x: f64) -> f64;
+
+            # Floor
+            fundecl floorf(x: f32) -> f32;
+            fundecl floor(x: f64) -> f64;
+
+            # Truncate
+            fundecl truncf(x: f32) -> f32;
+            fundecl trunc(x: f64) -> f64;
+
+            # Round
+            fundecl roundf(x: f32) -> f32;
+            fundecl round(x: f64) -> f64;
+
+            # Round to integer
+            fundecl lroundf(x: f32) -> i64;
+            fundecl lround(x: f64) -> i64;
+
+            # Round using current mode
+            fundecl nearbyintf(x: f32) -> f32;
+            fundecl nearbyint(x: f64) -> f64;
+
+            # Round using current mode with exception if result differs
+            fundecl rintf(x: f32) -> f32;
+            fundecl rint(x: f64) -> f64;
+
+            # Round to integer using current mode with exception if result differs
+            fundecl lrintf(x: f32) -> i64;
+            fundecl lrint(x: f64) -> i64;
+        }
+
+        # Floating-point manipulation functions
+        {
+            # Breaks a number into significand and a power of 2
+            # fundecl frexpf(x: f32, exp: *i32) -> f32;
+            # fundecl frexpx: f64, exp: *i32) -> f64;
+
+            # Multiplies a number by a power of 2
+            fundecl ldexpf(x: f32, exp: i32) -> f32;
+            fundecl ldexp(x: f64, exp: i32) -> f64
+
+            # Breaks a number into integer and fractional parts
+            # fundecl modff(x: f32, y: f32) -> f32;
+            # fundecl modf(x: f64, y: f64) -> f64
+
+            # Computes efficiently a number times FLT_RADIX raised to a power
+            fundecl scalbnf(x: f32, n: i32) -> f32;
+            fundecl scalbn(x: f64, n: i32) -> f64;
+            fundecl scalblnf(x: f32, n: i64) -> f32;
+            fundecl scalbln(x: f64, n: i64) -> f64;
+
+            # Extracts exponent of the given number
+            fundecl ilogbf(x: f32) -> i32;
+            fundecl ilogb(x: f64) -> i32;
+            fundecl logbf(x: f32) -> f32;
+            fundecl logb(x: f64) -> f64;
+
+            # Determines next representable floating-point value towards the given value
+            fundecl nextafterf(x: f32, y: f32) -> f32;
+            fundecl nextafter(x: f64, y: f64) -> f64;
+            fundecl nexttowardf(x: f32, y: f64) -> f32;
+            fundecl nexttoward(x: f64, y: f64) -> f64;
+
+            # Determines next representable floating-point value greater or less than the given value
+            fundecl nextupf(x: f32) -> f32;
+            fundecl nextup(x: f64) -> f64;
+            fundecl nextdownf(x: f32) -> f32;
+            fundecl nextdown(x: f64) -> f64;
+
+            # Produces a value with the magnitude of a given value and the sign of another given value
+            fundecl copysignf(x: f32, y: f32) -> f32;
+            fundecl copysign(x: f64, y: f64) -> f64;
+        }
+
+        # Classification and comparison
+        {
+            # Probably not needed, but we can add it if we want to expose the C interface for these functions.
+        }
     }
 }
 
