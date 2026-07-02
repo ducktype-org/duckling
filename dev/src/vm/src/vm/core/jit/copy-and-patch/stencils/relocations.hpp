@@ -14,7 +14,6 @@ MAKE_STRINGIFYABLE_ENUM(vm::jit::cnp, u32, HoleValue,
 	JmpFn,
 	CallFn,
 	CallOpcode,
-	ExceptionThrower,
 	None
 );
 

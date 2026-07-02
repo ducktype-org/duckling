@@ -27,7 +27,6 @@ class HoleValue(enum.Enum):
     CALL_FN = enum.auto()
 
     CALL_OPCODE = enum.auto()
-    EXCEPTION_THROWER = enum.auto()
 
     NONE = enum.auto()
 

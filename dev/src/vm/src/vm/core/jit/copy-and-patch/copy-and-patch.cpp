@@ -11,8 +11,6 @@
 
 #include <functional>
 
-static CP_RETURN exceptionRethrow(CP_ARGS) { throw; }
-
 namespace vm::jit {
 	cnp::JitFuncMemory compileCP(
 		const vm::low::cf::ControlFlowGraph& cfg, const vm::low::MicroBytecode& bc
@@ -116,8 +114,6 @@ namespace vm::jit {
 						}
 					case HoleValue::CallOpcode:
 						return *reinterpret_cast<const u64*>(&instr);
-					case HoleValue::ExceptionThrower:
-						return std::bit_cast<u64>(&exceptionRethrow);
 					case HoleValue::None:
 						[[fallthrough]];
 					case HoleValue::JmpFn:
@@ -143,8 +139,6 @@ namespace vm::jit {
 					case HoleValue::CallOpcode:
 						[[fallthrough]];
 					case HoleValue::CallFn:
-						[[fallthrough]];
-					case HoleValue::ExceptionThrower:
 						[[fallthrough]];
 					case HoleValue::None:
 						[[fallthrough]];

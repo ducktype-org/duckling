@@ -22,16 +22,13 @@ namespace vm::jit::cnp {
 	DECLARE_LINK_VARIABLE(arg0);
 	DECLARE_LINK_VARIABLE(arg1);
 	DECLARE_LINK_VARIABLE(continue_fn);
-	DECLARE_LINK_VARIABLE(exception_thrower);
 
 	template<OpFun* InstructionImplementation, low::MicroOpcode OpCode>
 	__always_inline CP_RETURN base_stencil(CP_ARGS) {
 		auto instr = GET_LINK_VARIABLE(instr_ptr, const MicroInstruction*, 64);
 		FORCE_ASSUME(instr->arg0 == GET_LINK_VARIABLE(arg0, u64, 64));
 		FORCE_ASSUME(instr->arg1 == GET_LINK_VARIABLE(arg1, u64, 64));
-		try {
-			InstructionImplementation(instr, local_stack, frame, thread);
-		} catch (...) { CALL_STENCIL(exception_thrower); }
+		InstructionImplementation(instr, local_stack, frame, thread);
 
 		if constexpr (low::IS_OPCODE_RETURNING<OpCode>) {
 			// Since stencils do not take pointers/references it has to store the changed values.
