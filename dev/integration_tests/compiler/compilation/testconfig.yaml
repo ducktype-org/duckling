@@ -42,8 +42,8 @@ PreCase: "@{clean_cmd} && mkdir build;
   case '@{backend}' in
     dvm)       @{compile_dvm_backend_cmd}                                                                                ;;
     llvm)      @{compile_llvm_backend_cmd}                                                                               ;;
-    all)       @{compile_dvm_backend_deterministically_cmd} ;;#&& @{compile_llvm_backend_deterministically_cmd} &&
-               # @{compile_dvm_only_cmd} && @{compile_llvm_only_cmd}                                                      ;;
+    all)       @{compile_dvm_backend_deterministically_cmd} && @{compile_llvm_backend_deterministically_cmd} &&
+               @{compile_dvm_only_cmd} && @{compile_llvm_only_cmd}                                                      ;;
     nobackend) echo 'Backend undefined'; exit 1                                                                          ;;
     *)         echo 'Unknown backend';   exit 1                                                                          ;;
   esac;"
