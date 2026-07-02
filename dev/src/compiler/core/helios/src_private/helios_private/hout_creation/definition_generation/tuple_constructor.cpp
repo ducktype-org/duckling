@@ -32,7 +32,7 @@ namespace compiler::helios::defgen {
 				= ctx.query<mangler::QueryMangledType>(tsh::SymbolType<>::withDefaults(tuple_type))
 			          ->valueOrThrow(),
 				.generated_symbol_data
-				= Constructor{ tuple_type, GeneratedConstructorType::Implicit },
+				= Constructor{ .type = tuple_type, .kind = GeneratedConstructorType::Implicit },
 			});
 
 			const auto& ctor_decl = ctx.query<QueryDeclOfFun>(ctor_symbol)->valueOrThrow();

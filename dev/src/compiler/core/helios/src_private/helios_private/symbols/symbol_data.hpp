@@ -120,6 +120,7 @@ namespace compiler::helios {
 			return std::nullopt;
 		}
 
+		[[nodiscard]]
 		base::Optional<pst::AccessLocked<pst::LangElement>> maybePstElement() const;
 
 		/**

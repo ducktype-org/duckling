@@ -10,9 +10,11 @@
 
 namespace compiler::helios::defgen {
 	SymID lengthMethodForType(query::Context& ctx, tsh::AbstractType type) {
-		return ctx.query<QueryGeneratedSymbol>({ .name                  = base::StrID("length"),
-		                                         .generated_symbol_data = Method{
-													 type, GeneratedMethodType::LengthMethod } });
+		return ctx.query<QueryGeneratedSymbol>(
+			{ .name = base::StrID("length"),
+		      .generated_symbol_data
+		      = Method{ .owner_type = type, .kind = GeneratedMethodType::LengthMethod } }
+		);
 	}
 
 	struct IMPLEMENT_QUERY(QueryLengthMethod, query::QResult<HOUTFunction>) {

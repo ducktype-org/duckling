@@ -354,7 +354,7 @@ namespace compiler::helios {
 			const SymID ctor_symbol        = ctx.query<defgen::QueryGeneratedSymbol>({
 					   .name = ctor_name,
 					   .generated_symbol_data
-                = Constructor{ target_type, GeneratedConstructorType::Implicit },
+                = Constructor{ .type = target_type, .kind = GeneratedConstructorType::Implicit },
             });
 			const auto  result_symbol_type = tsh::SymbolType<>{
                 target_type,
@@ -370,7 +370,8 @@ namespace compiler::helios {
 				// Get the symbol of the constructor parameter corresponding to this field.
 				const SymID argument_symbol = ctx.query<defgen::QueryGeneratedSymbol>({
 					.name                  = base::StrID(name(field.getSymbol())),
-					.generated_symbol_data = Parameter{ ctor_symbol, argument_index },
+					.generated_symbol_data = Parameter{ .function_symbol = ctor_symbol,
+				                                        .parameter_index = argument_index },
 				});
 
 				base::Optional<BoxOrCRef<code::Expr>> init_expr_coerced_opt = std::nullopt;

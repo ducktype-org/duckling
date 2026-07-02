@@ -33,7 +33,7 @@ namespace compiler::helios::defgen {
 			const SymID ctor_symbol = ctx.query<QueryGeneratedSymbol>({
 				.name = name(class_type.getSymbol()),
 				.generated_symbol_data
-				= Constructor{ class_type, GeneratedConstructorType::Implicit },
+				= Constructor{ .type = class_type, .kind = GeneratedConstructorType::Implicit },
 			});
 
 			const auto& ctor_decl = ctx.query<QueryDeclOfFun>(ctor_symbol)->valueOrThrow();
