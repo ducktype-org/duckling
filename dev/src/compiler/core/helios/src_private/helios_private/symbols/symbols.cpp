@@ -244,9 +244,16 @@ namespace compiler::helios {
 				));
 				query::throwFailed();
 			}
-			auto ident    = pst_attr_value->getNameByIndex(0);
-			auto name     = ident.unlock(ctx)->unwrap();
-			auto attr_opt = attrFromStr(name);
+			auto ident = pst_attr_value->getNameByIndex(0);
+			auto name  = ident.unlock(ctx)->unwrap();
+
+			// Pass the attribute argument list (e.g. the "ptr_from_slice" in
+			// @builtin("ptr_from_slice")) to the per-attribute parser, empty when there is no
+			// `(...)`. Each parser validates and consumes the PST arguments itself.
+			base::Optional<pst::AccessLocked<pst::AtrArgList>> args;
+			if (pst_attr->hasArgs()) args = pst_attr->getArgs();
+
+			auto attr_opt = attrFromStr(ctx, name, args);
 			if_opt_none(attr_opt) {
 				ctx.logInt(makeBox<dia_int::PlaceholderError>(
 					base::strConcat("Attribute name '", name, "' is not recognized"),

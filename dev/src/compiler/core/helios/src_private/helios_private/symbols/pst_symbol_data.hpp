@@ -2,6 +2,7 @@
 
 #include <frontend/pst_parser/access.hpp>
 #include <frontend/pst_parser/lang_parser_element.hpp>
+#include <helios/attributes/builtins.hpp>
 #include <helios/scope_id.hpp>
 
 namespace compiler::helios {
@@ -31,10 +32,6 @@ namespace compiler::helios {
 		}
 	};
 
-	enum class Builtin {
-		// ...
-	};
-
 	struct BuiltinSemantics final {
 		/**
 		 * Scope in which the symbol was defined.
@@ -46,9 +43,9 @@ namespace compiler::helios {
 		 */
 		pst::HashType pst_element_hash;
 
-		Builtin builtin;
+		BuiltinType builtin;
 
-		BuiltinSemantics(ScopeID scope, pst::HashType pst_element_hash, Builtin builtin):
+		BuiltinSemantics(ScopeID scope, pst::HashType pst_element_hash, BuiltinType builtin):
 			  scope(scope),
 			  pst_element_hash(pst_element_hash),
 			  builtin(builtin) {}
