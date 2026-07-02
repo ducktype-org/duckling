@@ -1,0 +1,5 @@
+# The PSAC/parlay custom allocators (vendored psac-src, prebuilt LLVM headers)
+# confuse the clang static analyzer's NewDelete checker; the findings land in
+# vendored headers where NOLINT is not an option.
+InheritParentConfig: true
+Checks: '-clang-analyzer-cplusplus.NewDelete'

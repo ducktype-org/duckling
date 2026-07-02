@@ -237,8 +237,11 @@ def clang_tidy_on(
     # clang-tidy command succeeds if no errors were found.
     # Prints warnings on stdout.
     try:
+        # No --config-file: clang-tidy walks up from the linted file, so scoped
+        # .clang-tidy overrides (e.g. src/playground/psac_stuff) apply on top of
+        # the root config via InheritParentConfig.
         tidy_out, _ = bash_command_get_output(
-            f"{clang_tidy_path} -p {build_folder} --format-style file --config-file .clang-tidy"
+            f"{clang_tidy_path} -p {build_folder} --format-style file"
             f' --line-filter="[{{"name": "{file}", "lines": {file_diffs}}}]"'
             f" --extra-arg=-std=c++23 {gcc_clang_tidy_extra_args(build_folder)} {file}",
             log_file=log_file,
