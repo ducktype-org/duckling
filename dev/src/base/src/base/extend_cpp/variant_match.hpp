@@ -102,10 +102,13 @@ namespace base {
  * Braces are IMPORTANT for the code to work properly
  */
 #define variant_match(value)                                                        \
-	PUSH_DIAGNOSTIC NO_SHADOW CORE_ASSERT(                                          \
+	PUSH_DIAGNOSTIC NO_SHADOW \                                                                              \
+	switch (auto&& internal_value = (value); [&]{\
+	CORE_ASSERT(                                          \
 		not value.valueless_by_exception(), "Variant in variant_match is valueless" \
-	);                                                                              \
-	switch (auto&& internal_value = (value); internal_value.index())                \
+	); \
+	    return internal_value.index();\
+	}())                \
 	POP_DIAGNOSTIC
 
 #define variant_case(type, name)                                       \
