@@ -29,6 +29,10 @@ VALID_TODO_PATTERNS = [
     re.compile(r"@FIXME:\s+#(\d+)\s+\S+", re.IGNORECASE),
 ]
 
+# Excluded from validation everywhere (CLI defaults and pr-validate): the validator
+# sources and CLAUDE.md document the required format, so they always trip the patterns.
+DEFAULT_EXCLUDE_FILES = ["todo_validate.py", "todo_counter.py", "CLAUDE.md"]
+
 # Patterns to detect any TODO/FIXME comment (for reporting violations)
 ANY_TODO_PATTERNS = [
     re.compile(r"[^!]@TODO", re.IGNORECASE),
@@ -158,7 +162,7 @@ def todo_validate_impl(
     """
 
     if exclude_files is None:
-        exclude_files = ["todo_validate.py", "todo_counter.py", "CLAUDE.md"]
+        exclude_files = DEFAULT_EXCLUDE_FILES
 
     files_and_lines: dict[str, list[tuple[int, int]]] = list_files_impl(
         only_modified=not all, lines=True, branch=branch, no_merge_base=no_merge_base
