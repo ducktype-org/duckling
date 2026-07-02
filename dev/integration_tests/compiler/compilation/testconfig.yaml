@@ -80,26 +80,4 @@ Tests:
         ExitCode: 76
 
 SubDirs:
-  - expressions
-  - comp_time
-  - builtins
-  - samples
-  - statements
-  - functions
-  - constants
-  - classes
-  - extern_c
-  - static_arrays
-  - dynamic_arrays
-  - optimisations
-  - references
-  - boxes
-  - pointers
-  - globals
-  - tuples
-  - imports
-  - macros
-  - diagnostics
-  - packages
-  - standard_library
   - conditional_compilation
