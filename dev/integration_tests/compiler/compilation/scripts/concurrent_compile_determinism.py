@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 from hashlib import sha256
+import os
 from pathlib import Path
 import re
 import shlex
@@ -53,6 +54,20 @@ import sys
 GENERATED_COPY_STEM_RE = re.compile(r"^concurrent_copy\d+_.+")
 IMPORT_RE = re.compile(r"^(\s*import\s+)([A-Za-z_]\w*)(?=[\s\.;]|$)")
 MAIN_FUN_RE = re.compile(r"(\bfun\s+)main(\s*\()")
+
+# Sync a directory pointed by `path`.
+# It's used to persist a new directories in `/tmp`.
+def sync_file(path: Path):
+    def inner(path: Path):
+        fd = os.open(path, os.O_RDONLY)
+        try:
+            os.fsync(fd)
+        finally:
+            os.close(fd)
+    try:
+        inner(path)
+    except Exception:
+        pass
 
 
 # Returns True when file is a generated temporary copy.
@@ -253,6 +268,8 @@ def parse_args() -> argparse.Namespace:
 def clean_build_dir(build_dir: Path) -> None:
     shutil.rmtree(build_dir, ignore_errors=True)
     build_dir.mkdir(parents=True, exist_ok=True)
+    sync_file(build_dir)
+    sync_file(build_dir.parent)
 
 
 # Executes duckc compile_packages on a manifest and captures process output.
@@ -383,6 +400,7 @@ def run_manifest_mode(args: argparse.Namespace) -> int:
     finally:
         remove_files(created_files)
         shutil.rmtree(build_dir, ignore_errors=True)
+        sync_file(build_dir.parent)
 
 
 # Executes duckc compile_package and captures process output.
@@ -537,6 +555,7 @@ def main() -> int:
     finally:
         remove_files(created_files)
         shutil.rmtree(build_dir, ignore_errors=True)
+        sync_file(build_dir.parent)
 
 
 # Script entry point.
