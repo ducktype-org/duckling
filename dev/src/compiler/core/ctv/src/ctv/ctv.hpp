@@ -48,7 +48,7 @@ namespace compiler::ctv {
 		Storage value;
 
 	public:
-		CompileTimeValue();
+		CompileTimeValue() = default;
 
 		/**
 		 * @brief Template constructor of CTV for all types which exist in the Storage variant.
@@ -61,7 +61,9 @@ namespace compiler::ctv {
 		 * @return A constant reference to the CTV value storage.
 		 */
 		[[nodiscard]]
-		const Storage& getStorage() const;
+		const Storage& getStorage() const {
+			return value;
+		}
 
 		/**
 		 * @brief Transforms the value stored in the CTV to a string representation. Used for debug

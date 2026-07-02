@@ -10,10 +10,6 @@
 #include <string>
 
 namespace compiler::ctv {
-	CompileTimeValue::CompileTimeValue() = default;
-
-	const CompileTimeValue::Storage& CompileTimeValue::getStorage() const { return value; }
-
 	std::string CompileTimeValue::toString() const {
 		variant_match(value) {
 			variant_case(bool, val) { return val ? "true" : "false"; }

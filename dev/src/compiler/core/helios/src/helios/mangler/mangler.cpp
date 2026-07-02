@@ -497,14 +497,55 @@ namespace compiler::helios::mangler {
 		static std::string mangle(query::Context&, tsh::CharAbstractType) { return "c"; }
 
 		static std::string mangle(query::Context&, tsh::IntegralAbstractType type) {
-			if (type.getSignedness() == tsh::IntegralAbstractType::Signedness::Signed)
-				return base::strConcat("i", type.getSize().asInt());
-			else
-				return base::strConcat("j", type.getSize().asInt());
+			bool is_signed  = type.getSignedness() == tsh::IntegralAbstractType::Signedness::Signed;
+			u32  size       = type.getSize().asInt();
+			std::string ret = (is_signed ? "i" : "j");
+			switch (size) {
+			case 8:
+				ret += "b";
+				break;
+			case 16:
+				ret += "w";
+				break;
+			case 32:
+				ret += "d";
+				break;
+			case 64:
+				ret += "q";
+				break;
+			case 128:
+				ret += "x";
+				break;
+			case 256:
+				ret += "y";
+				break;
+			case 512:
+				ret += "z";
+				break;
+			default:
+				ret = (is_signed ? "k" : "l") + std::to_string(size) + "_";
+			}
 		}
 
 		static std::string mangle(query::Context&, tsh::FloatAbstractType type) {
-			return base::strConcat("f", type.getSize().asInt());
+			const auto size = type.getSize().asInt();
+			switch (size) {
+			case 16:
+				return "h";
+			case 32:
+				return "f";
+			case 64:
+				return "d";
+			case 80:
+				return "e";
+			case 128:
+				return "q";
+			case 256:
+				return "o";
+			default:
+				// @future: "b" for brain float
+				CORE_UNREACHABLE();
+			}
 		}
 
 		static std::string mangle(query::Context&, tsh::RawPointerAbstractType) { return "p"; }
@@ -592,6 +633,89 @@ namespace compiler::helios::mangler {
 
 		static std::string mangle(query::Context&, tsh::MetaAbstractType) { return "t"; }
 
+		static std::string mangle(query::Context& ctx, compiler::numeric_value::NumericValue num) {
+			if (num.isIntegral()) {
+				return mangle(
+					ctx, num.getTypeOfStoredValue(ctx).getType().as<tsh::IntegralAbstractType>()
+				);
+			} else {
+				return mangle(
+					ctx, num.getTypeOfStoredValue(ctx).getType().as<tsh::FloatAbstractType>()
+				);
+			}
+		}
+
+		static std::string mangleValue(
+			query::Context& ctx, compiler::numeric_value::NumericValue num
+		) {
+			auto value = num.getStorage();
+			// int8_t, i16, i32, i64, uint8_t, u16, u32, u64, f32, f64
+			if (value.index() <= 3) {
+				i64 int_value
+					= std::visit([&](auto&& arg) -> i64 { return static_cast<i64>(arg); }, value);
+				return base::strConcat((int_value < 0 ? "n" : ""), std::abs(int_value));
+			} else if (value.index() <= 7) {
+				u64 uint_value
+					= std::visit([&](auto&& arg) -> u64 { return static_cast<u64>(arg); }, value);
+				return std::to_string(uint_value);
+			} else if (value.index() == 8) {
+				f32                                    float_value = std::get<f32>(value);
+				std::array<unsigned char, sizeof(f32)> bytes;
+				std::memcpy(bytes.data(), &float_value, sizeof(f32));
+				std::string hex_str;
+				hex_str.reserve(bytes.size() * 2);
+				for (unsigned char byte: bytes) {
+					hex_str += "0123456789abcdef"[byte >> 4];
+					hex_str += "0123456789abcdef"[byte & 0x0F];
+				}
+				return hex_str;
+			} else if (value.index() == 9) {
+				f64                                    double_value = std::get<f64>(value);
+				std::array<unsigned char, sizeof(f64)> bytes;
+				std::memcpy(bytes.data(), &double_value, sizeof(f64));
+				std::string hex_str;
+				hex_str.reserve(bytes.size() * 2);
+				for (unsigned char byte: bytes) {
+					hex_str += "0123456789abcdef"[byte >> 4];
+					hex_str += "0123456789abcdef"[byte & 0x0F];
+				}
+				return hex_str;
+			} else {
+				CORE_UNREACHABLE();
+			}
+		}
+
+		static std::string mangle(query::Context& ctx, compiler::ctv::CompileTimeValue value) {
+			std::string ret;
+
+			variant_match(value.getStorage()) {
+				variant_case(bool, b) { return base::strConcat("b", (b ? "1" : "0")); }
+				variant_case(compiler::numeric_value::NumericValue, num) {
+					return mangle(ctx, num) + mangleValue(ctx, num) + "_";
+				}
+				variant_case(char, c) {
+					ret = base::strConcat("c", std::to_string(static_cast<u32>(c)), "_");
+				}
+				variant_case(base::StrID, str) {
+					auto view = str.strView();
+					ret       = base::strConcat("s", view.size(), view);
+				}
+				variant_case(compiler::ctv::CompileTimeValue::UnitCTV, unit) { ret = "u"; }
+				variant_case(compiler::ctv::CompileTimeValue::TupleCTV, tuple) {
+					ret = "T";
+					for (auto&& elem: tuple.getElements()) ret += mangle(ctx, elem);
+					ret += "E";
+				}
+				variant_case(tsh::SymbolType<>, sym) {
+					// @taw3e8 @todo: is it all we want to mangle here?
+					ret = "t" + ctx.query<QueryMangledType>({ sym })->valueOrThrow().str();
+				}
+				variant_default { CORE_UNREACHABLE(); }
+			}
+
+			return ret;
+		}
+
 		static query::QResult<std::string> mangle(query::Context& ctx, tsh::AbstractType type) {
 			using enum tsh::Kind;
 			switch (type.getKind()) {
@@ -656,7 +780,7 @@ namespace compiler::helios::mangler {
 		}
 
 		QUERY_AUTO_CACHE_CREF
-	};
+	}
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryMangledType);
 
