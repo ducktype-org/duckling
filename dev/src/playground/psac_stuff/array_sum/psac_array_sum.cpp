@@ -68,7 +68,7 @@ int main(int argc, const char* argv[]) {
 	value_tree.resize(4 * g_config.array_size);
 
 	std::vector<psac::Mod<ValueTp>> arr(g_config.array_size);
-	ValueTp                         simple_sum = 0;  // TODO: Remove this from here
+	ValueTp                         simple_sum = 0;  // !TODO: Remove this from here
 	for (usize i = 0; i < g_config.array_size; ++i) {
 		auto val = g_source_array[i];
 		psac_write(&arr[i], val);

@@ -78,7 +78,7 @@ int main(int argc, const char* argv[]) {
 	std::cin.tie(nullptr);
 
 	generateArray();
-	// TODO: Remove this from here.
+	// !TODO: Remove this from here.
 	ValueTp simple_sum = 0;
 	for (ValueTp x: g_source_array) simple_sum += x;
 
