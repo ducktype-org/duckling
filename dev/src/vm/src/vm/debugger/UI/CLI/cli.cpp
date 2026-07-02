@@ -57,7 +57,7 @@ namespace vm::debugger::cli {
 	}
 
 	std::expected<void, api::ApiError> CLIDebugger::load(const fs::File& file) {
-		auto response = debugger.loadFile(file);
+		auto response = debugger.loadFiles({ file });
 		if (!response) return std::unexpected(response.error());
 
 		selected_file = file;
@@ -72,8 +72,8 @@ namespace vm::debugger::cli {
 		return load(fp);
 	}
 
-	void CLIDebugger::setDefaultArgs(const ProgramRunArguments& args) {
-		debugger.setDefaultArgs(args);
+	void CLIDebugger::setProgramArguments(const ProgramRunArguments& args) {
+		debugger.setProgramArguments(args);
 	}
 
 	int CLIDebugger::run() {
