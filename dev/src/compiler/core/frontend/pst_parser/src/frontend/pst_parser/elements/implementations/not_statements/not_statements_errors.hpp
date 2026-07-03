@@ -119,6 +119,9 @@ namespace pst {
 			  dia_int::MessageWithCodeFragmentAndCause(pos) {}
 	};
 
+	/**
+	 * @brief Error for when a template statement is missing a parameter list.
+	 */
 	class TemplateNoListError final: public dia_int::MessageWithCodeFragmentAndCause {
 		dia_int::Metadata getMetadata() const final {
 			return { .template_type = "message",

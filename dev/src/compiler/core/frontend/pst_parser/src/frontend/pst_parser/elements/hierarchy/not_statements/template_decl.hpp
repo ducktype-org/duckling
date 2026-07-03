@@ -12,7 +12,8 @@ namespace pst {
 		CLONE_SUBELEMENTS();
 
 	protected:
-		NAMED_CHILD(params, ParamList);  // {} vs (), mock for now
+		// @TODO: #3042 Probably change this from `()` syntax to `{}` or `[]` syntax
+		NAMED_CHILD(params, ParamList);
 
 	protected:
 		HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const override;
