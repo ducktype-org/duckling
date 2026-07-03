@@ -81,7 +81,7 @@ def exec_bash_command(
     the toolbox's environment.
 
     When `timeout` (seconds) expires, the command's process group is
-    killed and a `BashCommandTimeout` is raised.
+    killed and a `BashCommandError` is raised.
     """
     if isinstance(cwd, str):
         cwd = pathlib.Path(cwd)
@@ -106,7 +106,10 @@ def exec_bash_command(
         stdout, stderr = proc.communicate(input=input, timeout=timeout)
         status = proc.wait()
     except sp.TimeoutExpired:
-        os.killpg(proc.pid, signal.SIGKILL)
+        try:
+            os.killpg(proc.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
         stdout, stderr = proc.communicate()
         status = Timeout(timeout)
 

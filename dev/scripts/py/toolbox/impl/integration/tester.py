@@ -1,6 +1,7 @@
 import json
 import os
 import threading
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -44,7 +45,9 @@ def resolve_timeout(timeout, cwd: Path) -> float:
     try:
         return float(value.decode("UTF-8").strip())
     except ValueError:
-        exit_with_error(f"TimeOut `{timeout}` does not evaluate to a number.")
+        # Raise instead of exiting: this runs on a worker thread, where
+        # an exit would kill only the thread and go unnoticed.
+        raise RuntimeError(f"TimeOut `{timeout}` does not evaluate to a number.")
 
 
 @dataclass
@@ -60,7 +63,10 @@ class RunContext:
     verbose: bool
     log_file: Path
     jobs: int
-    case_slots: threading.BoundedSemaphore
+    # Executes the test cases and bounds their concurrency; the
+    # coordinating threads (one per node/test, mostly blocked waiting
+    # for their children) do not go through it. None in sequential runs.
+    case_pool: ThreadPoolExecutor | None
     log_lock: threading.Lock
     abort: threading.Event
     output: OrderedOutput
@@ -121,7 +127,7 @@ def tester_impl(
         verbose=verbose,
         log_file=log_file,
         jobs=jobs,
-        case_slots=threading.BoundedSemaphore(jobs),
+        case_pool=None,
         log_lock=threading.Lock(),
         abort=threading.Event(),
         output=OrderedOutput(),
@@ -129,9 +135,16 @@ def tester_impl(
 
     if ctx.parallel:
         register_test_sections(test_set, [], ctx)
+        ctx.case_pool = ThreadPoolExecutor(
+            max_workers=jobs, thread_name_prefix="dit-case"
+        )
 
-    succeeded, failed, disabled = run_tests(test_set, [], ctx)
-    ctx.output.drain()
+    try:
+        succeeded, failed, disabled = run_tests(test_set, [], ctx)
+    finally:
+        if ctx.case_pool is not None:
+            ctx.case_pool.shutdown()
+        ctx.output.drain()
 
     if dry:
         return
@@ -212,22 +225,17 @@ def run_test(test: Test, path: str, ctx: RunContext) -> TestStatistics:
         ):
             if ctx.abort.is_set():
                 return
-            with ctx.case_slots:
-                if ctx.abort.is_set():
-                    return
-                if run_single_case(test, case, index, path, ctx, case_stats, clog):
-                    ctx.abort.set()
+            if run_single_case(test, case, index, path, ctx, case_stats, clog):
+                ctx.abort.set()
 
-        threads = [
-            threading.Thread(
-                target=case_worker, args=(i, case, results[slot], case_logs[slot])
+        futures = [
+            ctx.case_pool.submit(
+                case_worker, i, case, results[slot], case_logs[slot]
             )
             for slot, (i, case) in enumerate(selected)
         ]
-        for thread in threads:
-            thread.start()
-        for thread in threads:
-            thread.join()
+        for future in futures:
+            future.result()
         for result in results:
             stats.iadd(result)
 
@@ -533,17 +541,20 @@ def run_tests(node: TestNode, tree: list[str], ctx: RunContext) -> TestStatistic
         results: list[TestStatistics | None] = [None] * len(tasks)
 
         def node_worker(index: int, path: str, task):
+            # Catches everything: an exception escaping the thread would
+            # silently drop the subtree's results and report a green run.
+            # BashCommandError is the expected kind (e.g. PreNode/PostNode).
             try:
                 results[index] = task()
-            except BashCommandError as e:
-                # This except is for errors in e.g. PreNode/PostNode
+            except Exception as e:
                 failure = (print_failure, f"`{path}` has failed.")
                 if ctx.output.has(path):
                     ctx.output.submit(path, [failure])
                 else:
                     with ctx.log_lock:
                         failure[0](failure[1])
-                write_log(f"{path} has failed:\n{''.join(e.args)}\n", ctx.log_file)
+                message = "".join(str(arg) for arg in e.args) or repr(e)
+                write_log(f"{path} has failed:\n{message}\n", ctx.log_file)
                 results[index] = TestStatistics([], [path], [])
                 if ctx.fail_fast:
                     ctx.abort.set()
