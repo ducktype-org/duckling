@@ -25,18 +25,18 @@ namespace pst {
 
 		[[nodiscard]]
 		AccessLocked<TemplateDecl> getTemplateDecl() const {
-            return template_decl.give();
+			return template_decl.give();
 		}
-        
-        [[nodiscard]]
-        AccessLocked<Stmt> getInnerStatement() const {
-            return inner_statement.give();
-        }
 
-		bool trailingSemicolon() override { return false; } 
+		[[nodiscard]]
+		AccessLocked<Stmt> getInnerStatement() const {
+			return inner_statement.give();
+		}
+
+		bool trailingSemicolon() override { return false; }
 
 		static MBox<TemplateStmt> parse(LangParserState& state);
-		void                 dprint(std::ostream& out) const final;
+		void                      dprint(std::ostream& out) const final;
 		~TemplateStmt() final = default;
 
 		[[nodiscard]]
