@@ -3,7 +3,7 @@
 # We do not run actual Duckling programs in this test.
 # Instead, we verify that the compiler produces the expected diagnostics for invalid code.
 
-PreCase: "@{clean_cmd} && mkdir build"
+PreCase: "mkdir -p @{case_build}"
 
 Run: "
   case @{backend} in
