@@ -7,6 +7,7 @@ from pathlib import Path
 from .test_loader import Case, Test, TestNode, load_tests
 from .utils import (
     CaseLog,
+    OrderedOutput,
     dit_exec_command,
     log_info_if_needed,
     print_failure,
@@ -46,6 +47,7 @@ class RunContext:
     case_slots: threading.BoundedSemaphore
     log_lock: threading.Lock
     abort: threading.Event
+    output: OrderedOutput
 
     @property
     def parallel(self) -> bool:
@@ -106,9 +108,14 @@ def tester_impl(
         case_slots=threading.BoundedSemaphore(jobs),
         log_lock=threading.Lock(),
         abort=threading.Event(),
+        output=OrderedOutput(),
     )
 
+    if ctx.parallel:
+        register_test_sections(test_set, [], ctx)
+
     (succeeded, failed, disabled) = run_tests(test_set, [], ctx)
+    ctx.output.drain()
 
     if dry:
         return
@@ -129,6 +136,25 @@ def tester_impl(
         print_success(f"All tests have run successfully!")
 
 
+def register_test_sections(node: TestNode, tree: list[str], ctx: RunContext):
+    """
+    Registers every test that will run in tree order, so that the output
+    of concurrently running tests is printed in that order. Mirrors the
+    traversal and filtering of `run_tests`.
+    """
+    tree.append(node.name)
+    current_path = "/".join(tree)
+    if not current_path.startswith(ctx.filter) and not ctx.filter.startswith(current_path):
+        return
+    for test in node.tests:
+        path = "/".join(tree + [test.name])
+        if not path.startswith(ctx.filter) and not ctx.filter.startswith(path):
+            continue
+        ctx.output.register(path)
+    for subtest in node.subtests:
+        register_test_sections(subtest, tree.copy(), ctx)
+
+
 def run_test(test: Test, path: str, ctx: RunContext) -> TestStatistics:
     """
     Runs a test from `Test` object.
@@ -146,7 +172,6 @@ def run_test(test: Test, path: str, ctx: RunContext) -> TestStatistics:
         )
     stats = TestStatistics([], [], [])
     simplified_filter = ctx.filter[len(path) + 1:]
-    log_info(f"===== {path} =====")
 
     selected = [
         (i, case)
@@ -155,26 +180,28 @@ def run_test(test: Test, path: str, ctx: RunContext) -> TestStatistics:
     ]
 
     if not ctx.parallel:
+        log_info(f"===== {path} =====")
         for i, case in selected:
             clog = CaseLog(ctx.log_file)
             if run_single_case(test, case, i, path, ctx, stats, clog):
                 break
     else:
         results = [TestStatistics([], [], []) for _ in selected]
+        case_logs = [CaseLog(ctx.log_file, immediate=False) for _ in selected]
 
-        def case_worker(index: int, case: Case, case_stats: TestStatistics):
+        def case_worker(index: int, case: Case, case_stats: TestStatistics, clog: CaseLog):
             if ctx.abort.is_set():
                 return
             with ctx.case_slots:
                 if ctx.abort.is_set():
                     return
-                clog = CaseLog(ctx.log_file, immediate=False, lock=ctx.log_lock)
-                clog.emit(log_info, f"===== {path}/{case.name} =====")
                 if run_single_case(test, case, index, path, ctx, case_stats, clog):
                     ctx.abort.set()
 
         threads = [
-            threading.Thread(target=case_worker, args=(i, case, results[slot]))
+            threading.Thread(
+                target=case_worker, args=(i, case, results[slot], case_logs[slot])
+            )
             for slot, (i, case) in enumerate(selected)
         ]
         for thread in threads:
@@ -183,6 +210,12 @@ def run_test(test: Test, path: str, ctx: RunContext) -> TestStatistics:
             thread.join()
         for result in results:
             stats.iadd(result)
+
+        # Emit the whole test as one section, cases in definition order.
+        section = [(log_info, f"===== {path} =====")]
+        for clog in case_logs:
+            section.extend(clog.console)
+        ctx.output.submit(path, section)
 
     if test.post_test:
         log_info_if_needed("Executing post-test...", ctx.dry, ctx.verbose)
@@ -475,8 +508,12 @@ def run_tests(node: TestNode, tree: list[str], ctx: RunContext) -> TestStatistic
             try:
                 results[index] = task()
             except BashCommandError as e:
-                with ctx.log_lock:
-                    print_failure(f"`{path}` has failed.")
+                failure = (print_failure, f"`{path}` has failed.")
+                if ctx.output.has(path):
+                    ctx.output.submit(path, [failure])
+                else:
+                    with ctx.log_lock:
+                        failure[0](failure[1])
                 write_log(f"{path} has failed:\n{''.join(e.args)}\n", ctx.log_file)
                 results[index] = TestStatistics([], [path], [])
                 if ctx.fail_fast:

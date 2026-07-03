@@ -12,6 +12,7 @@ Subcommands:
                         left over from past runs
     exec -- CMD...   -- run CMD inside the temporary directory
     clean            -- remove the temporary directory
+    sweep            -- only sweep stale directories of past runs
 """
 import os
 import shutil
@@ -99,6 +100,8 @@ def main():
             cmd_exec(args)
         case "clean":
             cmd_clean()
+        case "sweep":
+            sweep_stale()
         case unknown:
             fail(f"unknown subcommand: {unknown}")
 
