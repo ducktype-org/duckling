@@ -30,6 +30,29 @@ from ..helpers import (
 
 DEFAULT_LOG_FILE_PATH = Path("/tmp/dit.log")
 
+TIMEOUT_CACHE: dict[str, str] = {}
+TIMEOUT_CACHE_LOCK = threading.Lock()
+
+
+def eval_timeout(timeout, cwd: Path, dry: bool) -> str:
+    """
+    Resolves a TimeOut expression to its value. The expression may invoke
+    commands (e.g. inspecting the build configuration), so it is evaluated
+    once per unique expression and cached; this also keeps the logged Run
+    commands readable.
+    """
+    timeout = str(timeout)
+    if dry:
+        return timeout
+    with TIMEOUT_CACHE_LOCK:
+        if timeout in TIMEOUT_CACHE:
+            return TIMEOUT_CACHE[timeout]
+    value, _ = dit_exec_command(f"echo -n {timeout}", cwd=cwd)
+    value = value.decode("UTF-8").strip() or timeout
+    with TIMEOUT_CACHE_LOCK:
+        TIMEOUT_CACHE[timeout] = value
+    return value
+
 
 @dataclass
 class RunContext:
@@ -264,9 +287,10 @@ def run_single_case(
                     clog.emit(print_neutral, f"Case `{case.name}` disabled")
     except BashCommandError as e:
         if e.exit_code == 124:
+            timeout = TIMEOUT_CACHE.get(str(case.timeout), case.timeout)
             clog.emit(
                 print_failure,
-                f"Case `{test.name}/{case.name}` has failed with exit code 124 - likely timed out after {case.timeout} second(s).",
+                f"Case `{test.name}/{case.name}` has failed with exit code 124 - likely timed out after {timeout} second(s).",
             )
         else:
             clog.emit(print_failure, f"Case `{test.name}/{case.name}` has failed.")
@@ -352,8 +376,9 @@ def run_case(
 
     # Run test.
     clog.info_if_needed("Running the test case...", dry, verbose)
+    timeout = eval_timeout(case.timeout, test.cwd, dry)
     test_output, test_err = dit_exec_command(
-        f"timeout {case.timeout}s bash -c \'{case.run}\'",
+        f"timeout {timeout}s bash -c \'{case.run}\'",
         cwd=test.cwd,
         input=test_input,
         exitcode=case.expected_exitcode,
