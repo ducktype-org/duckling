@@ -30,20 +30,6 @@ using base::bytes2bits;
 namespace compiler::tsl {
 	namespace {
 		/**
-		 * @brief Compute the layout of a pointer's pointee, while preserving its reference-kind.
-		 *
-		 * A pointer whose pointee is a reference (e.g. `manyptr ref T`) stores `ref T` values
-		 * (pointers), so its pointee layout must be a pointer layout, not the layout of `T`. For a
-		 * non-reference pointee this resolves to the plain abstract-type layout, identical to
-		 * querying it directly.
-		 */
-		CRef<TypeLayout> pointeeLayout(const tsh::SymbolType<> pointee, query::Context& ctx) {
-			if (pointee.getRefKind() == tsh::ReferenceKind::Direct)
-				return { &ctx.query<QueryAbstractTypeLayout>(pointee.getType())->valueOrThrow() };
-			return { &ctx.query<QuerySymbolTypeLayout>(pointee)->valueOrThrow() };
-		}
-
-		/**
 		 * @brief Get a vector of TypeLayouts for a vector of SymbolType.
 		 * @param types The input SymbolType vector.
 		 * @param ctx The query context.
@@ -656,21 +642,21 @@ namespace compiler::tsl {
 		const tsh::PointerAbstractType pointer_type, query::Context& ctx
 	):
 		  TypeLayoutABC(POINTER_SIZE, tsh::SymbolType<>::withDefaults(pointer_type), ctx),
-		  pointee(pointeeLayout(pointer_type.getPointee(), ctx)),
+		  pointee(&ctx.query<QuerySymbolTypeLayout>(pointer_type.getPointee())->valueOrThrow()),
 		  pointer_kind(PointerKind::SinglePointer) {}
 
 	PointerTypeLayout::PointerTypeLayout(
 		const tsh::ManyPointerAbstractType pointer_type, query::Context& ctx
 	):
 		  TypeLayoutABC(POINTER_SIZE, tsh::SymbolType<>::withDefaults(pointer_type), ctx),
-		  pointee(pointeeLayout(pointer_type.getPointee(), ctx)),
+		  pointee(&ctx.query<QuerySymbolTypeLayout>(pointer_type.getPointee())->valueOrThrow()),
 		  pointer_kind(PointerKind::ManyPointer) {}
 
 	PointerTypeLayout::PointerTypeLayout(
 		const tsh::CPointerAbstractType pointer_type, query::Context& ctx
 	):
 		  TypeLayoutABC(POINTER_SIZE, tsh::SymbolType<>::withDefaults(pointer_type), ctx),
-		  pointee(pointeeLayout(pointer_type.getPointee(), ctx)),
+		  pointee(&ctx.query<QuerySymbolTypeLayout>(pointer_type.getPointee())->valueOrThrow()),
 		  pointer_kind(PointerKind::CPointer) {}
 
 	PointerTypeLayout::PointerTypeLayout(const tsh::SymbolType<> symbol_type, query::Context& ctx):

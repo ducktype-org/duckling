@@ -189,8 +189,9 @@ private:
 			variant_match(unit_pointer_layout->getVariant()) {
 				variant_case(PointerTypeLayout, l) {
 					assertTrue(l.hasPointee(), "Typed pointer layout should have pointee.");
-					assertTrue(
-						l.getPointee() == unit_layout,
+					assertEqual(
+						*l.getPointee(),
+						*unit_layout,
 						"Pointee should be a layout of the pointed-to type."
 					);
 				}
