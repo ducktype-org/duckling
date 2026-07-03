@@ -379,9 +379,7 @@ jobs:
       - name: Integration Tests
         id: integration-tests
         working-directory: ${{ env.WORKSPACE }}
-        # CI runners are slow and cases run concurrently, so give the
-        # cases a larger timeout than the local default.
-        run: ./toolbox.py itest -b ${{ env.BUILD_DIR }} --custom-values '{"timeout_default": "10"}'
+        run: ./toolbox.py itest -b ${{ env.BUILD_DIR }}
 
       # NOTE: This has to be done **after** integration tests: ONLY when testing duck, we actually build duck in CI,
       # so we have to save sccache after that, otherwise we'd have nothing to save.
