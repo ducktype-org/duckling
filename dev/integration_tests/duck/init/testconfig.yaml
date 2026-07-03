@@ -3,6 +3,7 @@ PreNode: ""
 SubDirs:
   - basic_project
   - basic_project_renamed
+  - invalid_arguments
   - missing_argument
   - reinitialization
   - reinitialization_renamed

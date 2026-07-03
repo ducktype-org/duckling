@@ -81,6 +81,7 @@ namespace pst {
 	class ClassSpecial;
 	class Constructor;
 	class CopyConstructor;
+	class MoveConstructor;
 	class Destructor;
 	class Method;
 	class Field;

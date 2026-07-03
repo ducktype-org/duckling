@@ -94,7 +94,7 @@ Tests:
         Output:
           String: "Program panicked!\n"
         Err:
-          String: 'VMThread has panicked: Program panicked\n{\"data\":{\"error\":\"Execution panicked with error: Program panicked\"},\"type\":\"OtherError\"}block.refcount != 0, BlockID=1\n'
+          String: 'VMThread has panicked: Program panicked\n{\"data\":{\"error\":\"Execution panicked with error: Program panicked\"},\"type\":\"OtherError\"}block.refcount != 0, BlockID=0\n'
         ExitCode: 1
   slices_negative_index:
     enable_conc_deterministic_tests: "false"
