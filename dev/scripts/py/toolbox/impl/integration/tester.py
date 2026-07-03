@@ -31,16 +31,20 @@ from ..helpers import (
 DEFAULT_LOG_FILE_PATH = Path("/tmp/dit.log")
 
 
-def eval_timeout(timeout, cwd: Path) -> str:
+def resolve_timeout(timeout, cwd: Path) -> float:
     """
-    Resolves a TimeOut expression to its value for error reporting; the
-    expression may invoke commands (e.g. inspecting the build config).
+    Resolves a TimeOut value to seconds. It may be a number or a bash
+    expression producing one (e.g. inspecting the build configuration).
     """
     try:
-        value, _ = dit_exec_command(f"echo -n {timeout}", cwd=cwd)
-        return value.decode("UTF-8").strip() or str(timeout)
-    except BashCommandError:
-        return str(timeout)
+        return float(timeout)
+    except ValueError:
+        pass
+    value, _ = dit_exec_command(f"echo -n {timeout}", cwd=cwd)
+    try:
+        return float(value.decode("UTF-8").strip())
+    except ValueError:
+        exit_with_error(f"TimeOut `{timeout}` does not evaluate to a number.")
 
 
 @dataclass
@@ -276,9 +280,10 @@ def run_single_case(
                     clog.emit(print_neutral, f"Case `{case.name}` disabled")
     except BashCommandError as e:
         if e.exit_code == 124:
+            timeout = f"{e.timeout:g}" if e.timeout is not None else case.timeout
             clog.emit(
                 print_failure,
-                f"Case `{test.name}/{case.name}` has failed with exit code 124 - likely timed out after {e.timeout} second(s).",
+                f"Case `{test.name}/{case.name}` has failed with exit code 124 - likely timed out after {timeout} second(s).",
             )
         else:
             clog.emit(print_failure, f"Case `{test.name}/{case.name}` has failed.")
@@ -364,20 +369,16 @@ def run_case(
 
     # Run test.
     clog.info_if_needed("Running the test case...", dry, verbose)
-    try:
-        test_output, test_err = dit_exec_command(
-            f"timeout {case.timeout}s bash -c \'{case.run}\'",
-            cwd=test.cwd,
-            input=test_input,
-            exitcode=case.expected_exitcode,
-            dry=dry,
-            verbose=verbose,
-            env=case_env,
-        )
-    except BashCommandError as e:
-        if e.exit_code == 124:
-            e.timeout = eval_timeout(case.timeout, test.cwd)
-        raise
+    test_output, test_err = dit_exec_command(
+        case.run,
+        cwd=test.cwd,
+        input=test_input,
+        exitcode=case.expected_exitcode,
+        dry=dry,
+        verbose=verbose,
+        env=case_env,
+        timeout=None if dry else resolve_timeout(case.timeout, test.cwd),
+    )
 
     # Compare test and expected output.
     if case.expected_output:

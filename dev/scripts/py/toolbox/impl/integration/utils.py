@@ -70,6 +70,7 @@ def dit_exec_command(
     dry: bool = False,
     verbose: bool = False,
     env: dict[str, str] | None = None,
+    timeout: float | None = None,
 ) -> tuple[bytes, bytes]:
     return exec_bash_command(
         command=command,
@@ -81,6 +82,7 @@ def dit_exec_command(
         verbose=verbose,
         decode=False,
         env=env,
+        timeout=timeout,
     )
 
 

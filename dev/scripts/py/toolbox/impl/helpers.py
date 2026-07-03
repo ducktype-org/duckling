@@ -1,8 +1,10 @@
 from typing import NoReturn
 import click
+import os
 import pathlib
 import re
 import shutil
+import signal
 import subprocess as sp
 import sys
 
@@ -28,7 +30,13 @@ def exit_with_error(msg: str) -> NoReturn:
 
 class BashCommandError(Exception):
     def __init__(
-        self, command: str, exit_code, stdout, stderr, at: pathlib.Path = None
+        self,
+        command: str,
+        exit_code,
+        stdout,
+        stderr,
+        at: pathlib.Path = None,
+        timeout: float | None = None,
     ):
         super().__init__(
             f"\n\tBash command `{command}` {f'\n\texecuted at `{at.absolute()}` ' if at else ''}\n\thas failed with an exit code: {exit_code}, because:\n"
@@ -40,8 +48,7 @@ class BashCommandError(Exception):
         self.stdout = stdout
         self.stderr = stderr
         self.at = at
-        # The resolved timeout of the wrapped command, attached by the caller.
-        self.timeout: str | None = None
+        self.timeout = timeout
 
 
 def exec_bash_command(
@@ -55,12 +62,16 @@ def exec_bash_command(
     decode: bool = True,
     log_to_file=sys.stdout,
     env: dict[str, str] | None = None,
+    timeout: float | None = None,
 ) -> tuple[bytes | str, bytes | str]:
     """
     This is the lowest level access to calling a bash command in toolbox.
 
     `env` replaces the environment of the spawned process; `None` inherits
     the toolbox's environment.
+
+    When `timeout` (seconds) expires, the command's process group is
+    killed and a `BashCommandError` with exit code 124 is raised.
     """
     if isinstance(cwd, str):
         cwd = pathlib.Path(cwd)
@@ -78,8 +89,19 @@ def exec_bash_command(
         stdin=sp.PIPE if input else None,
         stdout=sp.PIPE if capture_output else None,
         stderr=sp.PIPE if capture_output else None,
+        # A separate process group, so a timeout can kill the whole tree.
+        start_new_session=timeout is not None,
     )
-    stdout, stderr = proc.communicate(input=input)
+    try:
+        stdout, stderr = proc.communicate(input=input, timeout=timeout)
+    except sp.TimeoutExpired:
+        os.killpg(proc.pid, signal.SIGKILL)
+        stdout, stderr = proc.communicate()
+        if stdout is not None:
+            stdout = stdout.decode("UTF-8", errors="replace")
+        if stderr is not None:
+            stderr = stderr.decode("UTF-8", errors="replace")
+        raise BashCommandError(command, 124, stdout, stderr, at=cwd, timeout=timeout)
 
     status = proc.wait()
 
