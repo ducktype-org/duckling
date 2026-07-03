@@ -30,13 +30,7 @@ def exit_with_error(msg: str) -> NoReturn:
 
 class BashCommandError(Exception):
     def __init__(
-        self,
-        command: str,
-        exit_code,
-        stdout,
-        stderr,
-        at: pathlib.Path = None,
-        timeout: float | None = None,
+        self, command: str, exit_code, stdout, stderr, at: pathlib.Path = None
     ):
         super().__init__(
             f"\n\tBash command `{command}` {f'\n\texecuted at `{at.absolute()}` ' if at else ''}\n\thas failed with an exit code: {exit_code}, because:\n"
@@ -48,6 +42,23 @@ class BashCommandError(Exception):
         self.stdout = stdout
         self.stderr = stderr
         self.at = at
+
+
+class BashCommandTimeout(BashCommandError):
+    """
+    Raised when a command exceeds its timeout. Keeps exit code 124
+    (the `timeout` utility's convention) for messages and logs.
+    """
+
+    def __init__(
+        self,
+        command: str,
+        stdout,
+        stderr,
+        at: pathlib.Path = None,
+        timeout: float | None = None,
+    ):
+        super().__init__(command, 124, stdout, stderr, at=at)
         self.timeout = timeout
 
 
@@ -71,7 +82,7 @@ def exec_bash_command(
     the toolbox's environment.
 
     When `timeout` (seconds) expires, the command's process group is
-    killed and a `BashCommandError` with exit code 124 is raised.
+    killed and a `BashCommandTimeout` is raised.
     """
     if isinstance(cwd, str):
         cwd = pathlib.Path(cwd)
@@ -101,7 +112,7 @@ def exec_bash_command(
             stdout = stdout.decode("UTF-8", errors="replace")
         if stderr is not None:
             stderr = stderr.decode("UTF-8", errors="replace")
-        raise BashCommandError(command, 124, stdout, stderr, at=cwd, timeout=timeout)
+        raise BashCommandTimeout(command, stdout, stderr, at=cwd, timeout=timeout)
 
     status = proc.wait()
 

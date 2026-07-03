@@ -17,10 +17,12 @@ from .utils import (
     TestStatistics,
     Success,
     Failure,
+    Timeout,
     Disabled,
 )
 from ..helpers import (
     BashCommandError,
+    BashCommandTimeout,
     exit_with_error,
     get_input,
     log_info,
@@ -270,6 +272,13 @@ def run_single_case(
                     print_failure, f"Case `{case.name}` has failed because: {error}"
                 )
                 stats.failed.append(case_path)
+            case Timeout(timeout):
+                clog.emit(
+                    print_failure,
+                    f"Case `{test.name}/{case.name}` has failed - timed out after {timeout:g} second(s).",
+                )
+                stats.failed.append(case_path)
+                stop = ctx.fail_fast
             case Success():
                 if not ctx.dry:
                     stats.succeeded.append(case_path)
@@ -279,14 +288,7 @@ def run_single_case(
                     stats.disabled.append(case_path)
                     clog.emit(print_neutral, f"Case `{case.name}` disabled")
     except BashCommandError as e:
-        if e.exit_code == 124:
-            timeout = f"{e.timeout:g}" if e.timeout is not None else case.timeout
-            clog.emit(
-                print_failure,
-                f"Case `{test.name}/{case.name}` has failed with exit code 124 - likely timed out after {timeout} second(s).",
-            )
-        else:
-            clog.emit(print_failure, f"Case `{test.name}/{case.name}` has failed.")
+        clog.emit(print_failure, f"Case `{test.name}/{case.name}` has failed.")
         clog.log(f"{test.name}/{case.name} has failed:\n{''.join(e.args)}\n")
         stats.failed.append(case_path)
         stop = ctx.fail_fast
@@ -310,7 +312,7 @@ def log_test_out_differs(test, case, message, got, expected, clog: CaseLog, verb
 
 def run_case(
         test: Test, case: Case, ctx: RunContext, clog: CaseLog
-) -> Success | Failure | Disabled:
+) -> Success | Failure | Timeout | Disabled:
     """
     Runs a test case from `Case` object.
     Returns an empty string on success, and an error message on error.
@@ -369,16 +371,20 @@ def run_case(
 
     # Run test.
     clog.info_if_needed("Running the test case...", dry, verbose)
-    test_output, test_err = dit_exec_command(
-        case.run,
-        cwd=test.cwd,
-        input=test_input,
-        exitcode=case.expected_exitcode,
-        dry=dry,
-        verbose=verbose,
-        env=case_env,
-        timeout=None if dry else resolve_timeout(case.timeout, test.cwd),
-    )
+    try:
+        test_output, test_err = dit_exec_command(
+            case.run,
+            cwd=test.cwd,
+            input=test_input,
+            exitcode=case.expected_exitcode,
+            dry=dry,
+            verbose=verbose,
+            env=case_env,
+            timeout=None if dry else resolve_timeout(case.timeout, test.cwd),
+        )
+    except BashCommandTimeout as e:
+        clog.log(f"{test.name}/{case.name} has failed:\n{''.join(e.args)}\n")
+        return Timeout(e.timeout)
 
     # Compare test and expected output.
     if case.expected_output:

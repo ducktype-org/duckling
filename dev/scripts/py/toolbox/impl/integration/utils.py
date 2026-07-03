@@ -189,6 +189,11 @@ class Failure:
 
 
 @dataclass
+class Timeout:
+    timeout: float
+
+
+@dataclass
 class Disabled:
     pass
 
