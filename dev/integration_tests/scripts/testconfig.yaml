@@ -1,3 +1,6 @@
+# The toolchain is built by the root PreNode; do not inherit it here.
+PreNode: ""
+
 # Integration tests for scripts in Duckling.
 
 # As described in PR #2352, scripts can be run in three ways: directly with duckc, compiled to DVM bytecode and executed on the DVM (vm mode) or compiled
