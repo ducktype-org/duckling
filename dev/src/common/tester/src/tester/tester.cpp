@@ -114,7 +114,7 @@ namespace tester {
 			TestResult res;
 			curr_global_res = &res;
 
-			runTest(t.test);
+			runTest(t);
 			if (t.should_fail) res.success = !res.success;
 			resultHandler(t, res);
 
@@ -140,9 +140,10 @@ namespace tester {
 			.test = test, .name = std::string(test_name), .should_fail = should_fail });
 	}
 
-	void TestSuite::runTest(TestType test) {
+	void TestSuite::runTest(TestData test) {
+		printer::StreamPrinter::print({ { "Running ", test.name, "\n" } });
 		try {
-			(this->*test)();
+			(this->*test.test)();
 		} catch (const CritTestError& e) {
 		} catch (const base::Panic& panic) {
 			curr_global_res->success = false;
