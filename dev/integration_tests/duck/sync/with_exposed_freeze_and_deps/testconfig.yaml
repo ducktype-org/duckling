@@ -1,4 +1,4 @@
-PostCase: python3 check.py && rm -f foo/quackfreeze.json
+PostCase: python3 check.py && rm -f foo/quackfreeze.json && @{cleanup_tmp_env}
 
 Tests:
   sync:

@@ -7,8 +7,8 @@ sys.path.append(str(Path(__file__).resolve().parents[3]))
 
 from utilities import *
 
-foo_path = Path.cwd() / "foo"
-bar_path = Path.cwd() / "bar"
+foo_path = project_root("foo")
+bar_path = project_root("bar")
 
 version = "1.0.0"
 
