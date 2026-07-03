@@ -1,5 +1,6 @@
 import pathlib
 import sys
+import threading
 from dataclasses import dataclass, astuple
 
 from ..helpers import (
@@ -83,17 +84,67 @@ def dit_exec_command(
     )
 
 
+_WRITE_LOG_LOCK = threading.Lock()
+
+
 def write_log(msg, log_file):
     """
     Dumps a `msg` message into a log file `log_file`.
     """
-    with open(log_file, "a") as f:
-        print(">>>" + msg + f"{'-' * 50}", file=f)
+    with _WRITE_LOG_LOCK:
+        with open(log_file, "a") as f:
+            print(">>>" + msg + f"{'-' * 50}", file=f)
 
 
 def log_info_if_needed(msg: str, dry: bool, verbose: bool):
     if dry or verbose:
         log_info(msg)
+
+
+class CaseLog:
+    """
+    Collects the console lines and log-file chunks of a single test case.
+    In immediate mode (sequential runs) everything is emitted right away;
+    otherwise the output is buffered and `flush` emits it in one piece
+    under `lock`, so concurrently running cases stay readable.
+    """
+
+    def __init__(
+        self,
+        log_file: pathlib.Path,
+        immediate: bool = True,
+        lock: threading.Lock | None = None,
+    ):
+        self.log_file = log_file
+        self.immediate = immediate
+        self.lock = lock
+        self.console = []
+        self.chunks = []
+
+    def emit(self, print_fn, msg: str):
+        if self.immediate:
+            print_fn(msg)
+        else:
+            self.console.append((print_fn, msg))
+
+    def info_if_needed(self, msg: str, dry: bool, verbose: bool):
+        if dry or verbose:
+            self.emit(log_info, msg)
+
+    def log(self, msg: str):
+        if self.immediate:
+            write_log(msg, self.log_file)
+        else:
+            self.chunks.append(msg)
+
+    def flush(self):
+        if self.immediate:
+            return
+        with self.lock:
+            for print_fn, msg in self.console:
+                print_fn(msg)
+        for chunk in self.chunks:
+            write_log(chunk, self.log_file)
 
 
 @dataclass

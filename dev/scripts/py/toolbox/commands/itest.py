@@ -48,6 +48,13 @@ from click import command, option
     help="Enable or disable concurrent deterministic compilation checks for all tests.",
 )
 @option(
+    "-j",
+    "--jobs",
+    type=int,
+    default=1,
+    help="Maximal number of concurrently running test cases. 1 means sequential execution.",
+)
+@option(
     "-t",
     "--filter",
     type=str,
