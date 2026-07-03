@@ -140,7 +140,7 @@ namespace tester {
 			.test = test, .name = std::string(test_name), .should_fail = should_fail });
 	}
 
-	void TestSuite::runTest(TestData test) {
+	void TestSuite::runTest(const TestData& test) {
 		printer::StreamPrinter::print({ { "Running ", test.name, "\n" } });
 		try {
 			(this->*test.test)();

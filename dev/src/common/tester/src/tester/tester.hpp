@@ -139,7 +139,7 @@ namespace tester {
 		void epilog(usize passed, usize failed, double time);
 
 		TestResult* curr_global_res;
-		void        runTest(TestData test);
+		void        runTest(const TestData& test);
 
 		std::string              name;
 		std::vector<TestData>    tests;
