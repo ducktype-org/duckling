@@ -68,6 +68,7 @@ public:
 		TESTER_ADD_TEST(testClass);
 		TESTER_ADD_TEST(testListParsing);
 		TESTER_ADD_TEST(testListParsingErrors);
+		TESTER_ADD_TEST(testTemplateStmtParsing);
 		TESTER_ADD_TEST(testUsingErrors);
 		TESTER_ADD_TEST(testParamListErrors);
 		TESTER_ADD_TEST(testMissingSemiErr);
@@ -191,6 +192,8 @@ private:
 	void testClass() { testJsonRelativePath("class.duck", "class.json"); }
 
 	void testListParsing() { testJsonRelativePath("lists_ok.duck", "lists_ok.json"); }
+
+	void testTemplateStmtParsing() { testJsonRelativePath("template_statements.duck", "template_statements.json"); }
 
 	void testFormatStrParsing() {
 		testJsonRelativePath("format_strings.duck", "format_strings.json");
