@@ -379,7 +379,7 @@ jobs:
       - name: Integration Tests
         id: integration-tests
         working-directory: ${{ env.WORKSPACE }}
-        run: ./toolbox.py itest -b ${{ env.BUILD_DIR }} --custom-values '{"timeout_default": "5"}'
+        run: ./toolbox.py itest -b ${{ env.BUILD_DIR }} -j ${{ steps.set-jobs.outputs.jobs }}
 
       # NOTE: This has to be done **after** integration tests: ONLY when testing duck, we actually build duck in CI,
       # so we have to save sccache after that, otherwise we'd have nothing to save.
