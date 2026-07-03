@@ -126,7 +126,7 @@ General variables (not tied to any context):
 - `TimeOut` - Maximum time given for the execution in seconds - defaults to 1 - On timeout the process exits with exit code 124.
 - `ExitCode` - Expected test case's exit code - defaults to 0.
 - `Enabled` - Bash command specifying whether the test case is enabled. If it evaluates to true (0), then the test case is enabled, otherwise it's disabled.
-- `Env` - A mapping of **environment variable names to bash commands**. The commands are evaluated once per case, in definition order (later entries see the earlier ones); each command's stdout becomes the variable's value. The resulting environment is passed to every command of the case, which is the way to pass information between `PreCase`, `Run` and `PostCase` (each of them is a separate process). Entries are inherited down the tree and can be shadowed per key.
+- `Env` - A mapping of **environment variable names to bash commands**. The commands are evaluated once per case, in definition order (later entries see the earlier ones); each command's stdout becomes the variable's value. The resulting environment is passed to every command of the case. Entries are inherited down the tree and can be shadowed per key.
 
 ```yaml
 Env:
