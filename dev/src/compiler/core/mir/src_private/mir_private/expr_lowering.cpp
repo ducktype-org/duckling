@@ -373,7 +373,6 @@ namespace compiler::mir {
 				auto lowered_base = lowerSubExpr(*expr.base, lowered_index.begin);
 				auto base_val     = lowered_base.getResult(function);
 
-				// We perform bound checking
 				auto dyn_array_data
 					= function.getContext().query<helios::QueryDynamicArrayTypeData>(
 						expr.base->expression_type.getSymbolType().getType()
