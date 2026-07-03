@@ -475,9 +475,6 @@ namespace compiler::mir {
 				sub_continuation = arg_lowered.begin;
 			}
 
-			// @TODO: #505 here in the future we (probably) will have to handle
-			// move operations related to the passing of the arguments to the function
-
 			return noValueOutput(
 				sub_continuation,
 				call,
