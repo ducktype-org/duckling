@@ -126,6 +126,13 @@ General variables (not tied to any context):
 - `TimeOut` - Maximum time given for the execution in seconds - defaults to 1 - On timeout the process exits with exit code 124.
 - `ExitCode` - Expected test case's exit code - defaults to 0.
 - `Enabled` - Bash command specifying whether the test case is enabled. If it evaluates to true (0), then the test case is enabled, otherwise it's disabled.
+- `Env` - A mapping of **environment variable names to bash commands**. The commands are evaluated once per case, in definition order (later entries see the earlier ones); each command's stdout becomes the variable's value. The resulting environment is passed to every command of the case, which is the way to pass information between `PreCase`, `Run` and `PostCase` (each of them is a separate process). Entries are inherited down the tree and can be shadowed per key.
+
+```yaml
+Env:
+    DIT_TMP_DIR: "@{new_tmp_dir}"           # a fresh mktemp dir for every case
+    DUCK_HOME: "echo $DIT_TMP_DIR/duck_home"  # may derive from earlier entries
+```
 
 Subtree-specific variables (applied to a subtree rooted at this node) are __INHERITED__ from the parent node unless explicitly redefined in the child node:
 - `PreNode` - A command executed once before processing the node and its subdirectories.  
@@ -159,6 +166,48 @@ Case specific:
 - `Run` - data is taken from stdout of a command specified here.
 - `Compile` - [Optional] - can be specified to first compile a program to run.
 
+## Concurrency
+
+Tests run concurrently by default (`-j` defaults to the CPU count; `-j 1` runs
+sequentially, which is useful for debugging). **Tests must be written so that
+they can run concurrently.** The scheduler guarantees only the following order:
+
+- `PreNode` of a node runs **before** all tests and subnodes of that node,
+  and `PostNode` runs **after** all of them.
+- `PreTest` runs **before** all cases of its test, `PostTest` **after** them.
+- Anything in between — cases of a test, tests of a node, sibling subtrees —
+  may run in **any order and in parallel**.
+
+Practically this means a case must not write to files shared with other cases:
+no artifacts in the test's source directory, no shared scratch paths. Use the
+per-case temporary environment below for anything a case writes.
+
+## Temporary environments
+
+A subtree that needs a scratch directory opts in with:
+
+```yaml
+Env:
+    DIT_TMP_DIR: "@{new_tmp_dir}"
+```
+
+Every case then gets a fresh directory under `/tmp/dit/`, visible to all of
+its commands as `$DIT_TMP_DIR`. The root config defines helpers around
+`integration_tests/helpers/tmp_env.py`:
+
+- `@{make_tmp_env}` - copies the files listed in the `tmp_env_files` variable
+  (paths relative to the test's directory, mirrored inside the tmp dir) and
+  sweeps stale directories of past runs. Not needed if nothing is copied.
+- `@{at_tmp_env} CMD` - runs `CMD` inside the tmp dir.
+- `@{cleanup_tmp_env}` - removes the tmp dir; put it in `PostCase`, which only
+  runs for successful cases - directories of failed cases are kept in
+  `/tmp/dit/` for debugging and are swept once they age out.
+
+Often no files need copying at all: point the compiler's artifact option at
+`$DIT_TMP_DIR/build` (see `compiler/compilation/testconfig.yaml`) and keep
+reading sources from the test's directory, which is safe because it is
+read-only sharing.
+
 ## Note on cleaning
 
 Cleaning is **NOT** performed automatically after a test run nor before. It is meant to be ran explicitly by the tester.
@@ -169,9 +218,8 @@ This system is very flexible, however it's not a build system!
 
 Some advice I can give related to working with build artifacts includes:
 
-- Use a build system!
-- If using a build system is an overkill then when producing a single binary file, make its suffix `.bin`, or something that is ignored by git
-- Otherwise, when producing multiple artifacts for a single binary, make a build command that writes everything to a */build/* directory.
+- Write artifacts to `$DIT_TMP_DIR` (see the temporary environments section) — never to the source tree.
+- Use a build system when the setup outgrows the framework.
 
 ## Troubleshooting and debugging
 

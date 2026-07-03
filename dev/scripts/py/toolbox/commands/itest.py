@@ -4,6 +4,7 @@ from ..impl.integration.tester import (
 )
 from .helpers import (
     build_dir,
+    get_cpu_count,
     verbose,
 )
 from click import command, option
@@ -51,7 +52,7 @@ from click import command, option
     "-j",
     "--jobs",
     type=int,
-    default=1,
+    default=get_cpu_count(),
     help="Maximal number of concurrently running test cases. 1 means sequential execution.",
 )
 @option(
