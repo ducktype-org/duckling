@@ -135,8 +135,6 @@ namespace lang_def {
 		Xor,
 
 		// General text prefix operators (Not doesn't count)
-		Len,  // @TODO: #1970 This being an operator may be temporary. This should probably be
-		      // removed one we can use builtin methods/fields.
 		Ref,
 		Box,
 		Ptr,

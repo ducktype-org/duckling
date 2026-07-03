@@ -382,8 +382,7 @@ namespace compiler::helios::code {
 		CPtr,
 		Slice,
 		Box,
-		Const,
-		Len,  // @TODO: #1970 Probably remove that in the future.
+		Const
 	};
 
 	/**
