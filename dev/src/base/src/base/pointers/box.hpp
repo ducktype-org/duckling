@@ -335,6 +335,16 @@ namespace base {
 		template<class U, class UDeleter = base::DefaultBoxPtrDeleter<U>>
 		requires std::is_constructible_v<UDeleter, Deleter&&> MBox<U, UDeleter> dynamicCast() && {
 			U* ret = dynamic_cast<U*>(ptr);
+
+			if (ret == nullptr and ptr != nullptr) {
+				// hmm?
+				CORE_PANIC(
+					"Failed to dynamic cast MBox for: ",
+					typeid(T).name(),
+					typeid(U).name()
+				);
+			}
+
 			ptr    = nullptr;
 			return MBox<U, UDeleter>(ret, std::move(deleter));
 		}

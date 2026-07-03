@@ -183,6 +183,11 @@ namespace pst {
 			}
 
 			if (state[0].is(Special::Semicolon) || isSentinel(state, 0)) {
+				std::cerr << "ERROR: Empty statement\n";
+				std::cerr <<  state[0].is(Special::Semicolon) << " " << isSentinel(state, 0) << "\n";
+				std::cerr <<  state[-1].getValue().strView() << "\n";
+				std::cerr <<  state[-2].getValue().strView() << "\n";
+				std::cerr <<  state[0].getValue().strView() << "\n";
 				state.logInt(base::makeBox<EmptyStatementError>(state.getPosition()));
 				return nullptr;
 			}
@@ -215,6 +220,7 @@ namespace pst {
 				return internal::parseStmt<Using>(state);
 
 			case Keyword::Namespace:
+				std::cerr << "Parsing namespace\n";
 				return internal::parseStmt<Namespace>(state);
 
 			case Keyword::Class:
@@ -317,8 +323,11 @@ namespace pst {
 
 		MBox<Stmt> out;
 
-		// Specifier block handling
-		if (!prefixes.specifiers.empty() && state[0].isBracketGroup(Token::Curly)) {
+		if (state[0].is(Keyword::Template)) {
+			// Template statement handling
+			out = TemplateStmt::parse(state);
+		} else if (!prefixes.specifiers.empty() && state[0].isBracketGroup(Token::Curly)) {
+			// Specifier block handling
 			out = internal::parseStmt<SpecifierBlock>(state);
 		} else {
 			// Parse Statement based on context
