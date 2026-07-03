@@ -287,10 +287,9 @@ def run_single_case(
                     clog.emit(print_neutral, f"Case `{case.name}` disabled")
     except BashCommandError as e:
         if e.exit_code == 124:
-            timeout = TIMEOUT_CACHE.get(str(case.timeout), case.timeout)
             clog.emit(
                 print_failure,
-                f"Case `{test.name}/{case.name}` has failed with exit code 124 - likely timed out after {timeout} second(s).",
+                f"Case `{test.name}/{case.name}` has failed with exit code 124 - likely timed out after {e.timeout} second(s).",
             )
         else:
             clog.emit(print_failure, f"Case `{test.name}/{case.name}` has failed.")
@@ -377,15 +376,19 @@ def run_case(
     # Run test.
     clog.info_if_needed("Running the test case...", dry, verbose)
     timeout = eval_timeout(case.timeout, test.cwd, dry)
-    test_output, test_err = dit_exec_command(
-        f"timeout {timeout}s bash -c \'{case.run}\'",
-        cwd=test.cwd,
-        input=test_input,
-        exitcode=case.expected_exitcode,
-        dry=dry,
-        verbose=verbose,
-        env=case_env,
-    )
+    try:
+        test_output, test_err = dit_exec_command(
+            f"timeout {timeout}s bash -c \'{case.run}\'",
+            cwd=test.cwd,
+            input=test_input,
+            exitcode=case.expected_exitcode,
+            dry=dry,
+            verbose=verbose,
+            env=case_env,
+        )
+    except BashCommandError as e:
+        e.timeout = timeout
+        raise
 
     # Compare test and expected output.
     if case.expected_output:
