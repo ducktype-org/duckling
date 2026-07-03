@@ -41,7 +41,7 @@ class BashCommandError(Exception):
         self.stderr = stderr
         self.at = at
         # The resolved timeout of the wrapped command, attached by the caller.
-        self.timeout = None
+        self.timeout: str | None = None
 
 
 def exec_bash_command(

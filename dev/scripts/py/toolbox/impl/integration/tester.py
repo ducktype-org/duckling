@@ -30,28 +30,17 @@ from ..helpers import (
 
 DEFAULT_LOG_FILE_PATH = Path("/tmp/dit.log")
 
-TIMEOUT_CACHE: dict[str, str] = {}
-TIMEOUT_CACHE_LOCK = threading.Lock()
 
-
-def eval_timeout(timeout, cwd: Path, dry: bool) -> str:
+def eval_timeout(timeout, cwd: Path) -> str:
     """
-    Resolves a TimeOut expression to its value. The expression may invoke
-    commands (e.g. inspecting the build configuration), so it is evaluated
-    once per unique expression and cached; this also keeps the logged Run
-    commands readable.
+    Resolves a TimeOut expression to its value for error reporting; the
+    expression may invoke commands (e.g. inspecting the build config).
     """
-    timeout = str(timeout)
-    if dry:
-        return timeout
-    with TIMEOUT_CACHE_LOCK:
-        if timeout in TIMEOUT_CACHE:
-            return TIMEOUT_CACHE[timeout]
-    value, _ = dit_exec_command(f"echo -n {timeout}", cwd=cwd)
-    value = value.decode("UTF-8").strip() or timeout
-    with TIMEOUT_CACHE_LOCK:
-        TIMEOUT_CACHE[timeout] = value
-    return value
+    try:
+        value, _ = dit_exec_command(f"echo -n {timeout}", cwd=cwd)
+        return value.decode("UTF-8").strip() or str(timeout)
+    except BashCommandError:
+        return str(timeout)
 
 
 @dataclass
@@ -375,10 +364,9 @@ def run_case(
 
     # Run test.
     clog.info_if_needed("Running the test case...", dry, verbose)
-    timeout = eval_timeout(case.timeout, test.cwd, dry)
     try:
         test_output, test_err = dit_exec_command(
-            f"timeout {timeout}s bash -c \'{case.run}\'",
+            f"timeout {case.timeout}s bash -c \'{case.run}\'",
             cwd=test.cwd,
             input=test_input,
             exitcode=case.expected_exitcode,
@@ -387,7 +375,8 @@ def run_case(
             env=case_env,
         )
     except BashCommandError as e:
-        e.timeout = timeout
+        if e.exit_code == 124:
+            e.timeout = eval_timeout(case.timeout, test.cwd)
         raise
 
     # Compare test and expected output.
