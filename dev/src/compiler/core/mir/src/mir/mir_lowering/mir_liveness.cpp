@@ -84,12 +84,6 @@ namespace compiler::mir {
 		for (const auto& [local, status]: a)
 			if (auto joined = joinStatus(status, b.atMaybeCopy(local)))
 				result.insertOrAssign(local, *joined);
-
-		for (const auto& [local, status]: b) {
-			if (a.contains(local)) continue;  // already handled above
-
-			if (auto joined = joinStatus({}, status)) result.insertOrAssign(local, *joined);
-		}
 		return result;
 	}
 
@@ -322,7 +316,6 @@ namespace compiler::mir {
 			default:
 				CORE_UNREACHABLE();
 			}
-			return "?";
 		};
 
 		out << "LivenessData (in-status per block):\n";
