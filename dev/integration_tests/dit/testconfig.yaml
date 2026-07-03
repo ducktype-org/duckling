@@ -37,3 +37,27 @@ Tests:
                 PostCase: "@{cleanup_tmp_env}"
                 Output:
                     String: "ok\n"
+            # Names are deliberately reverse-alphabetical: any ordering other
+            # than the definition order breaks the dependency chain.
+            ordered_evaluation:
+                Env:
+                    Z_FIRST: "echo 1"
+                    M_SECOND: "echo \"$Z_FIRST\"2"
+                    A_THIRD: "echo \"$M_SECOND\"3"
+                Run: "echo \"$A_THIRD\""
+                PostCase: "@{cleanup_tmp_env}"
+                Output:
+                    String: "123\n"
+    env_shadowing:
+        Description: "Checks that shadowing an Env key keeps its original evaluation position."
+        Env:
+            SHADOWED: "echo parent"
+            DERIVED_FROM_SHADOWED: "echo \"$SHADOWED\"-suffix"
+        Cases:
+            override_keeps_position:
+                Env:
+                    SHADOWED: "echo child"
+                Run: "echo \"$DERIVED_FROM_SHADOWED\""
+                PostCase: "@{cleanup_tmp_env}"
+                Output:
+                    String: "child-suffix\n"
