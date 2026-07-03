@@ -3,7 +3,6 @@
 #include "mir_lifetimes.hpp"
 
 #include <frontend/pst_parser/elements/includes/basic.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 
 #include <base/collections/maps.hpp>
 #include <base/collections/optional.hpp>

@@ -9,7 +9,6 @@
 #include <helios/queries/function_queries.hpp>
 #include <helios/queries/queries.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios_private/comp_time/vm_evaluator.hpp>
 #include <helios_private/hout_creation/expressions/coercions.hpp>
@@ -207,14 +206,14 @@ namespace compiler::helios {
 			}
 
 			void visitIdentifierExpr(const code::IdentifierExpr& expr) final {
-				// Type Evaluation.
-				if (expr.expression_type.getType().getKind() == tsh::Kind::Meta) {
-					auto type = ctx.query<QueryTypeFromDefinition>({ expr.symbol });
-					result    = type->valueOrThrow();
-				} else if (kind(expr.symbol) == SymbolKind::Const) {
+				if (kind(expr.symbol) == SymbolKind::Const) {
 					// Constant Evaluation.
 					auto const_val_result = ctx.query<QueryConstValueOf>({ expr.symbol });
 					result                = const_val_result.valueOrThrow();
+				} else if (kind(expr.symbol) == SymbolKind::Class) {
+					// Special case for type definitions.
+					auto type = ctx.query<QueryTypeFromDefinition>({ expr.symbol });
+					result    = type->valueOrThrow();
 				} else {
 					match_optional(expr.origin.getStablePosition()) {
 						opt_some(pos) {
