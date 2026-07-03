@@ -62,6 +62,10 @@ namespace compiler::mir::test_utils {
 			return expectFlag(OperationFlag::Flag::Construct, var_name);
 		}
 
+		LifetimeChecker& expectReinit(std::string_view var_name) {
+			return expectFlag(OperationFlag::Flag::Reinit, var_name);
+		}
+
 		LifetimeChecker& expectDestruct(std::string_view var_name) {
 			return expectFlag(OperationFlag::Flag::Destruct, var_name);
 		}

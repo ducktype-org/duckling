@@ -801,6 +801,10 @@ namespace compiler::helios::code {
 					}
 					node = makeBox<DerefExpr>(ctx, pstOrigin(stmt), std::move(inner));
 					return;
+				} else if (stmt->getOperator().unlock(ctx)->unwrap().asKeyword()
+				           == lang_def::Keyword::Move) {
+					node = makeBox<MoveExpr>(ctx, pstOrigin(stmt), std::move(inner));
+					return;
 				}
 
 				auto builtin = unaryBuiltin(
