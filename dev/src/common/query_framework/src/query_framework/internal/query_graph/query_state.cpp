@@ -454,6 +454,9 @@ namespace query::internal {
 			// another worker). In that case there is nothing more to merge for this node.
 			if (key_value_pair == nullptr) continue;
 
+			// Inputs have no dependencies, so we skip them:
+			if (node.q_id.getData().isInputQuery()) continue;
+
 			auto current_deps_holder = key_value_pair->value.getHolder();
 
 			for (const auto& child: *current_deps_holder) stack.push_back(Frame{ .node = child });
