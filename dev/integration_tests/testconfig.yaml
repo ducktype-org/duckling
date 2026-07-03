@@ -6,6 +6,11 @@ dvm_path: "@{dvm_dir}/VM"
 compile_duckc: "cmake --build @{build_dir} -j -- duckc"
 compile_dvm: "cmake --build @{build_dir} -j -- VM"
 
+# The toolchain is built once, before any subtree runs. Subtree PreNodes
+# must not invoke cmake themselves: with -j > 1 subtrees run concurrently
+# and concurrent builds of the same build dir race.
+PreNode: "@{compile_duckc} && @{compile_dvm}"
+
 is_jit_enabled: "cmake -L -N @{build_dir} | grep JIT_ENABLED | cut -d \"=\" -f 2"
 
 # Per-case temporary environment (opt-in). A subtree that needs a scratch

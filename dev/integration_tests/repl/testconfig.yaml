@@ -1,5 +1,6 @@
 disable-bracketed-paste: "--disable-bracketed-paste"
-PreNode: "@{compile_duckc}"
+# Toolchain is built by the root PreNode.
+PreNode: ""
 
 Run: "@{duckc_path} repl @{disable-bracketed-paste}"
 
