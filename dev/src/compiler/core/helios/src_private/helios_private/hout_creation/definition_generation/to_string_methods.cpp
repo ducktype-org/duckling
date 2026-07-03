@@ -41,6 +41,7 @@ namespace compiler::helios::defgen {
 						{ type },
 						STRING_TYPE,
 					}),
+					.operatoriness = HOUTFunctionDeclaration::Operatoriness::None,
 				} },
 			});
 		}
@@ -54,6 +55,7 @@ namespace compiler::helios::defgen {
 					{ STRING_TYPE, STRING_TYPE },
 					STRING_TYPE,
 				}),
+				.operatoriness = HOUTFunctionDeclaration::Operatoriness::None,
 			} },
 		});
 	}

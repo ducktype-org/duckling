@@ -70,7 +70,7 @@ namespace {
 
 namespace compiler::helios::code {
 	base::Optional<std::tuple<BuiltinUnary, Coercion>> findNumericUnaryBuiltin(
-		query::Context& ctx, lexer::Operator op, CRef<Expr> expr
+		query::Context&, lexer::Operator op, const CRef<Expr> expr
 	) {
 		auto operation_kind = expr->expression_type.getType().getKind();
 
