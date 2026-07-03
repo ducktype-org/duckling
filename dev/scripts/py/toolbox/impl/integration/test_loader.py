@@ -5,6 +5,7 @@ from .utils import ExpressionFillError, VariableNotFound, check_resembles_builti
 from .io_data import IOData, make_data_from_dict
 from .config import (
     GENERAL_VARIABLES,
+    config_collect_env,
     config_eval_variables,
     config_find_and_eval,
     config_find_value,
@@ -28,6 +29,7 @@ CASE_ALLOWED_KEYS = {
     RUN,
     PRE_CASE,
     POST_CASE,
+    ENV,
     INPUT,
     OUTPUT,
     ERR,
@@ -73,6 +75,10 @@ def _make_case(test_dict: dict, case_name: str) -> Case:
             enabled=config_find_and_eval(case_dict, ENABLED, default=""),
             pre_case=config_find_and_eval(case_dict, PRE_CASE, default=""),
             post_case=config_find_and_eval(case_dict, POST_CASE, default=""),
+            env={
+                name: config_eval_variables(case_dict, command)
+                for name, command in config_collect_env(case_dict).items()
+            },
             input=io_data[0],
             expected_output=io_data[1],
             expected_err=io_data[2],
