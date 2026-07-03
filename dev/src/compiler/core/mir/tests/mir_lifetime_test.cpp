@@ -249,8 +249,8 @@ private:
 		LifetimeChecker{}
 			.expectConstruct("a")
 			.expectConstruct("b")
-			.expectMove("b")     // a = move b
-			.expectReinit("b")   // b = 99
+			.expectMove("b")                                    // a = move b
+			.expectReinit("b")                                  // b = 99
 			.validate(reinit1);
 		LifetimeChecker{}.expectReinit("a").validate(reinit1);  // a = move b
 
