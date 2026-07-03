@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from typing import NoReturn
 import click
 import os
@@ -28,46 +29,44 @@ def exit_with_error(msg: str) -> NoReturn:
     exit(1)
 
 
+@dataclass
+class WrongExitcode:
+    expected: int
+    got: int
+
+@dataclass
+class Timeout:
+    timeout: float
+
 class BashCommandError(Exception):
     def __init__(
-        self, command: str, exit_code, stdout, stderr, at: pathlib.Path = None
+        self, command: str, exit_status: WrongExitcode | Timeout, stdout: str, stderr: str, at: pathlib.Path = None
     ):
+        self.reason_string = ""
+        match exit_status:
+            case WrongExitcode(expected, got):
+                self.reason_string = f"failed, because exited with `{got}`, expected `{expected}`"
+            case Timeout(v):
+                self.reason_string = f"timed out after {v} second(s)"
+
         super().__init__(
-            f"\n\tBash command `{command}` {f'\n\texecuted at `{at.absolute()}` ' if at else ''}\n\thas failed with an exit code: {exit_code}, because:\n"
+            f"\n\tBash command `{command}` {f'\n\texecuted at `{at.absolute()}` ' if at else ''}\n\thas {self.reason_string}\n"
             + f"[STDOUT]:{"\n" + stdout if stdout else ""}\n"
             + f"[STDERR]:{"\n" + stderr if stderr else ""}"
         )
         self.command = command
-        self.exit_code = exit_code
+        self.exit_status = exit_status
         self.stdout = stdout
         self.stderr = stderr
         self.at = at
 
 
-class BashCommandTimeout(BashCommandError):
-    """
-    Raised when a command exceeds its timeout. Keeps exit code 124
-    (the `timeout` utility's convention) for messages and logs.
-    """
-
-    def __init__(
-        self,
-        command: str,
-        stdout,
-        stderr,
-        at: pathlib.Path = None,
-        timeout: float | None = None,
-    ):
-        super().__init__(command, 124, stdout, stderr, at=at)
-        self.timeout = timeout
-
-
 def exec_bash_command(
     command: str,
     cwd: str | pathlib.Path,
-    capture_output=False,
+    capture_output: bool =False,
     input: bytes | None = None,
-    exitcode=0,
+    exitcode: int =0,
     dry: bool = False,
     verbose: bool = False,
     decode: bool = True,
@@ -105,16 +104,11 @@ def exec_bash_command(
     )
     try:
         stdout, stderr = proc.communicate(input=input, timeout=timeout)
+        status = proc.wait()
     except sp.TimeoutExpired:
         os.killpg(proc.pid, signal.SIGKILL)
         stdout, stderr = proc.communicate()
-        if stdout is not None:
-            stdout = stdout.decode("UTF-8", errors="replace")
-        if stderr is not None:
-            stderr = stderr.decode("UTF-8", errors="replace")
-        raise BashCommandTimeout(command, stdout, stderr, at=cwd, timeout=timeout)
-
-    status = proc.wait()
+        status = Timeout(timeout)
 
     # Check if there's a need for decoding
     if status != exitcode or decode:
@@ -124,6 +118,8 @@ def exec_bash_command(
             stderr = stderr.decode("UTF-8")
 
     if status != exitcode:
+        if type(status) is int:
+            status = WrongExitcode(exitcode, status)
         raise BashCommandError(command, status, stdout, stderr, at=cwd)
 
     return stdout, stderr

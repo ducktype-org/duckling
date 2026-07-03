@@ -16,13 +16,11 @@ from .utils import (
     print_neutral,
     TestStatistics,
     Success,
-    Failure,
-    Timeout,
+    OutputMismatch,
     Disabled,
 )
 from ..helpers import (
     BashCommandError,
-    BashCommandTimeout,
     exit_with_error,
     get_input,
     log_info,
@@ -73,16 +71,16 @@ class RunContext:
 
 
 def tester_impl(
-        clean: bool,
-        dry: bool,
-        filter: str,
-        fail_fast: bool,
-        verbose: bool,
-        log_file: str | Path,
-        build_dir: str,
-        determinism_check: bool | None = None,
-        custom_values: str = "{}",
-        jobs: int = 1,
+    clean: bool,
+    dry: bool,
+    filter: str,
+    fail_fast: bool,
+    verbose: bool,
+    log_file: str | Path,
+    build_dir: str,
+    determinism_check: bool | None = None,
+    custom_values: str = "{}",
+    jobs: int = 1,
 ):
     """
     The driver function of Duckling Integration Tests framework.
@@ -132,7 +130,7 @@ def tester_impl(
     if ctx.parallel:
         register_test_sections(test_set, [], ctx)
 
-    (succeeded, failed, disabled) = run_tests(test_set, [], ctx)
+    succeeded, failed, disabled = run_tests(test_set, [], ctx)
     ctx.output.drain()
 
     if dry:
@@ -162,7 +160,9 @@ def register_test_sections(node: TestNode, tree: list[str], ctx: RunContext):
     """
     tree.append(node.name)
     current_path = "/".join(tree)
-    if not current_path.startswith(ctx.filter) and not ctx.filter.startswith(current_path):
+    if not current_path.startswith(ctx.filter) and not ctx.filter.startswith(
+        current_path
+    ):
         return
     for test in node.tests:
         path = "/".join(tree + [test.name])
@@ -189,7 +189,7 @@ def run_test(test: Test, path: str, ctx: RunContext) -> TestStatistics:
             verbose=ctx.verbose,
         )
     stats = TestStatistics([], [], [])
-    simplified_filter = ctx.filter[len(path) + 1:]
+    simplified_filter = ctx.filter[len(path) + 1 :]
 
     selected = [
         (i, case)
@@ -207,7 +207,9 @@ def run_test(test: Test, path: str, ctx: RunContext) -> TestStatistics:
         results = [TestStatistics([], [], []) for _ in selected]
         case_logs = [CaseLog(ctx.log_file, immediate=False) for _ in selected]
 
-        def case_worker(index: int, case: Case, case_stats: TestStatistics, clog: CaseLog):
+        def case_worker(
+            index: int, case: Case, case_stats: TestStatistics, clog: CaseLog
+        ):
             if ctx.abort.is_set():
                 return
             with ctx.case_slots:
@@ -248,13 +250,13 @@ def run_test(test: Test, path: str, ctx: RunContext) -> TestStatistics:
 
 
 def run_single_case(
-        test: Test,
-        case: Case,
-        index: int,
-        path: str,
-        ctx: RunContext,
-        stats: TestStatistics,
-        clog: CaseLog,
+    test: Test,
+    case: Case,
+    index: int,
+    path: str,
+    ctx: RunContext,
+    stats: TestStatistics,
+    clog: CaseLog,
 ) -> bool:
     """
     Runs one case, classifies the result into `stats` and flushes the
@@ -267,15 +269,9 @@ def run_single_case(
     stop = False
     try:
         match run_case(test, case, ctx, clog):
-            case Failure(error):
+            case OutputMismatch(error):
                 clog.emit(
-                    print_failure, f"Case `{case.name}` has failed because: {error}"
-                )
-                stats.failed.append(case_path)
-            case Timeout(timeout):
-                clog.emit(
-                    print_failure,
-                    f"Case `{test.name}/{case.name}` has failed - timed out after {timeout:g} second(s).",
+                    print_failure, f"Case `{case.name}` has failed because {error}"
                 )
                 stats.failed.append(case_path)
                 stop = ctx.fail_fast
@@ -288,7 +284,7 @@ def run_single_case(
                     stats.disabled.append(case_path)
                     clog.emit(print_neutral, f"Case `{case.name}` disabled")
     except BashCommandError as e:
-        clog.emit(print_failure, f"Case `{test.name}/{case.name}` has failed.")
+        clog.emit(print_failure, f"Case `{test.name}/{case.name}` has {e.reason_string}.")
         clog.log(f"{test.name}/{case.name} has failed:\n{''.join(e.args)}\n")
         stats.failed.append(case_path)
         stop = ctx.fail_fast
@@ -311,11 +307,12 @@ def log_test_out_differs(test, case, message, got, expected, clog: CaseLog, verb
 
 
 def run_case(
-        test: Test, case: Case, ctx: RunContext, clog: CaseLog
-) -> Success | Failure | Timeout | Disabled:
+    test: Test, case: Case, ctx: RunContext, clog: CaseLog
+) -> Success | OutputMismatch | Disabled:
     """
     Runs a test case from `Case` object.
     Returns an empty string on success, and an error message on error.
+    It may emit `BashCommandError`s.
     """
     dry = ctx.dry
     verbose = ctx.verbose
@@ -365,32 +362,34 @@ def run_case(
     if case.input:
         clog.info_if_needed("Getting input", dry, verbose)
         test_input, _ = dit_exec_command(
-            case.input.get_command(), cwd=test.cwd, dry=dry, verbose=verbose,
+            case.input.get_command(),
+            cwd=test.cwd,
+            dry=dry,
+            verbose=verbose,
             env=case_env,
         )
 
     # Run test.
     clog.info_if_needed("Running the test case...", dry, verbose)
-    try:
-        test_output, test_err = dit_exec_command(
-            case.run,
-            cwd=test.cwd,
-            input=test_input,
-            exitcode=case.expected_exitcode,
-            dry=dry,
-            verbose=verbose,
-            env=case_env,
-            timeout=None if dry else resolve_timeout(case.timeout, test.cwd),
-        )
-    except BashCommandTimeout as e:
-        clog.log(f"{test.name}/{case.name} has failed:\n{''.join(e.args)}\n")
-        return Timeout(e.timeout)
+    test_output, test_err = dit_exec_command(
+        case.run,
+        cwd=test.cwd,
+        input=test_input,
+        exitcode=case.expected_exitcode,
+        dry=dry,
+        verbose=verbose,
+        env=case_env,
+        timeout=None if dry else resolve_timeout(case.timeout, test.cwd),
+    )
 
     # Compare test and expected output.
     if case.expected_output:
         clog.info_if_needed("Getting the expected output...", dry, verbose)
         test_expected_output, _ = dit_exec_command(
-            case.expected_output.get_command(), cwd=test.cwd, verbose=verbose, dry=dry,
+            case.expected_output.get_command(),
+            cwd=test.cwd,
+            verbose=verbose,
+            dry=dry,
             env=case_env,
         )
         if not dry and test_output != test_expected_output:
@@ -403,13 +402,16 @@ def run_case(
                 clog,
                 verbose,
             )
-            return Failure(f"Stdouts do not match.")
+            return OutputMismatch(f"Stdouts do not match.")
 
     # Compare test and expected err.
     if case.expected_err:
         clog.info_if_needed("Getting the expected err...", dry, verbose)
         test_expected_err, _ = dit_exec_command(
-            case.expected_err.get_command(), cwd=test.cwd, verbose=verbose, dry=dry,
+            case.expected_err.get_command(),
+            cwd=test.cwd,
+            verbose=verbose,
+            dry=dry,
             env=case_env,
         )
         if not dry and test_err != test_expected_err:
@@ -422,7 +424,7 @@ def run_case(
                 clog,
                 verbose,
             )
-            return Failure(f"Stderrs do not match.")
+            return OutputMismatch(f"Stderrs do not match.")
 
     # Post-case command
     if case.post_case:
@@ -476,7 +478,9 @@ def run_tests(node: TestNode, tree: list[str], ctx: RunContext) -> TestStatistic
 
     # Check if the current node is relevant to the filter
     current_path = "/".join(tree)
-    if not current_path.startswith(ctx.filter) and not ctx.filter.startswith(current_path):
+    if not current_path.startswith(ctx.filter) and not ctx.filter.startswith(
+        current_path
+    ):
         return all_stats
 
     if ctx.abort.is_set():
@@ -532,6 +536,7 @@ def run_tests(node: TestNode, tree: list[str], ctx: RunContext) -> TestStatistic
             try:
                 results[index] = task()
             except BashCommandError as e:
+                # This except is for errors in e.g. PreNode/PostNode
                 failure = (print_failure, f"`{path}` has failed.")
                 if ctx.output.has(path):
                     ctx.output.submit(path, [failure])

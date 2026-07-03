@@ -64,9 +64,9 @@ def print_neutral(msg, file=sys.stdout):
 def dit_exec_command(
     command: str,
     cwd: pathlib.Path,
-    capture_output=True,
+    capture_output: bool = True,
     input: bytes | None = None,
-    exitcode=0,
+    exitcode: int = 0,
     dry: bool = False,
     verbose: bool = False,
     env: dict[str, str] | None = None,
@@ -184,13 +184,8 @@ class Success:
 
 
 @dataclass
-class Failure:
+class OutputMismatch:
     error: str
-
-
-@dataclass
-class Timeout:
-    timeout: float
 
 
 @dataclass
