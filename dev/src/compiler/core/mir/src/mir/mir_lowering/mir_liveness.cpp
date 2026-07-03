@@ -106,7 +106,7 @@ namespace compiler::mir {
 		for (const auto& flag: instr.flags) {
 			switch (flag.flag) {
 			case OperationFlag::Flag::Construct:
-				// Construction kills any previously reaching moves.
+			case OperationFlag::Flag::Reinit:
 				map.insertOrAssign(
 					flag.local->id, LivenessState{ .kind = LivenessStatus::Alive, .move_sites = {} }
 				);

@@ -66,3 +66,40 @@ fun bad3(c: i64) = {
     }
     a = b;
 }
+
+fun eat(x: i64) = x;
+
+# `reinit*` functions exercise reinitialization by assignment: a local is moved out and then
+# reassigned (a bare-local store, which carries a `Reinit` flag), so a later read is valid.
+
+# Straight-line: `b` moved out, then reinitialized, then read.
+fun reinit1() = {
+    var a: i64 = 10;
+    var b: i64 = 15;
+    a = move b;
+    b = 99;
+    eat(b);
+}
+
+# `a` is moved and reinitialized on both branches, so it is alive at the merge read.
+fun reinit2() = {
+    var a: i64 = 10;
+    var c: i64 = 15;
+    if (c == 0) { eat(move a); a = 5; }
+    else { eat(move a); a = 6; }
+    eat(a);
+}
+
+# `a` is moved then reinitialized inside the loop body, so both the in-body read and the
+# next-iteration / post-loop reads see an alive value.
+fun reinit3() = {
+    var a: i64 = 10;
+    var c: i64 = 15;
+    while (c > 0) {
+        eat(move a);
+        a = 2;
+        eat(a);
+        c = c - 1;
+    }
+    eat(a);
+}

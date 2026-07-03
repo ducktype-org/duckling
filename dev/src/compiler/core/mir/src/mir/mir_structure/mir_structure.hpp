@@ -587,7 +587,7 @@ namespace compiler::mir {
 	 * * does operation move some variable
 	 */
 	struct OperationFlag final {
-		enum class Flag { ScopeStart, ScopeEnd, Construct, Destruct, Move };
+		enum class Flag { ScopeStart, ScopeEnd, Construct, Reinit, Destruct, Move };
 		Flag        flag;
 		MIRLocalRef local;
 
@@ -599,6 +599,17 @@ namespace compiler::mir {
 	 */
 	constexpr OperationFlag flagConstruct(MIRLocalRef local) {
 		return { .flag = OperationFlag::Flag::Construct, .local = local };
+	}
+
+	/**
+	 * @brief Creates reinit flag for given local.
+	 *
+	 * Emitted when an assignment stores a value into a whole local (no projections), as opposed to
+	 * a declaration. Like @ref flagConstruct it marks the local as alive from this point on for
+	 * liveness analysis.
+	 */
+	constexpr OperationFlag flagReinit(MIRLocalRef local) {
+		return { .flag = OperationFlag::Flag::Reinit, .local = local };
 	}
 
 	/**

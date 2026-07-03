@@ -295,6 +295,9 @@ namespace compiler::mir {
 		case Flag::Construct:
 			os << "Construct";
 			break;
+		case Flag::Reinit:
+			os << "Reinit";
+			break;
 		case Flag::Destruct:
 			os << "Destruct";
 			break;

@@ -33,6 +33,7 @@ public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(lifetimeAnalysisTest);
 		TESTER_ADD_TEST(moveValidationTest);
+		TESTER_ADD_TEST(reinitAfterMoveTest);
 		TESTER_ADD_TEST(moveDestructorTest);
 		TESTER_ADD_TEST(simpleLifetimeSequenceTest);
 		TESTER_ADD_TEST(lifetimeFlagsRepeatedBlocks);
@@ -232,6 +233,34 @@ private:
 			check_fails("bad2");
 			check_fails("bad3");
 		});
+	}
+
+	void reinitAfterMoveTest() {
+		// Reinitialization by assignment. A bare-local store (e.g. `b = 99`) carries a `Reinit`
+		// flag that revives the local for liveness, so reading it after a prior move-out is valid.
+		// Each `getMIRFunctionByName` below panics if lowering fails, so the mere fact these
+		// `reinit*` functions lower is the regression guard against the false use-after-move.
+		using compiler::mir::Operation;
+		auto [module, scope] = getModule(fs::File(path("modules/move_validation")));
+
+		// reinit1: `b` moved out (`a = move b`), reinitialized (`b = 99`), then read (`eat(b)`).
+		// The `a = move b` store also reinitializes `a`.
+		auto reinit1 = getMIRFunctionByName(module, "reinit1");
+		LifetimeChecker{}
+			.expectConstruct("a")
+			.expectConstruct("b")
+			.expectMove("b")     // a = move b
+			.expectReinit("b")   // b = 99
+			.validate(reinit1);
+		LifetimeChecker{}.expectReinit("a").validate(reinit1);  // a = move b
+
+		// reinit2: `a` is moved and reinitialized on both branches, alive at the merge read.
+		auto reinit2 = getMIRFunctionByName(module, "reinit2");
+		LifetimeChecker{}.expectMove("a").expectReinit("a").validate(reinit2);
+
+		// reinit3: `a` is moved then reinitialized inside the loop body.
+		auto reinit3 = getMIRFunctionByName(module, "reinit3");
+		LifetimeChecker{}.expectMove("a").expectReinit("a").validate(reinit3);
 	}
 
 	void moveDestructorTest() {
