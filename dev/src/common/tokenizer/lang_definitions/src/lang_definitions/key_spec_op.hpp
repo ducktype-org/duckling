@@ -65,6 +65,9 @@ namespace lang_def {
 		Switch,
 		Case,
 
+		// Templates:
+		Template,
+
 		// Macro
 		Expand,
 
