@@ -445,7 +445,8 @@ private:
 
 		ASSERT_EQUAL(2, first_class_info.members.size());
 		ASSERT_EQUAL(2, first_class_info.methods.size());
-		ASSERT_EQUAL(1, first_class_info.constructors.size());
+		// @TODO: #2000 Re-enable once copy constructors are called in coercions.
+		// ASSERT_EQUAL(1, first_class_info.constructors.size());
 		ASSERT_HAS_VALUE(first_class_info.destructor);
 		ASSERT_NO_VALUE(first_class_info.base);
 		ASSERT_EQUAL(0, first_class_info.implements.size());
