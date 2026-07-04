@@ -168,6 +168,9 @@ either in the scheme or it's implementation, they should be reflected here.
                         | "dt" <function-type>              // default tuple constructor
                         | "dd" <function-type>              // default destructor
                         | "ts" <function-type>              // toString method
+                        | "length" <function-type>          // length method
+                        | "push" <function-type>            // push method
+                        | "pop" <function-type>             // pop method
 //                      | ...                               // @future: virtual tables, generic structures, named parameter tables, guard variables, ...
 
 <back-reference> ::= "B" <compact-number>                   // reference to a previously defined node

@@ -19,7 +19,7 @@ namespace logger {
 		}
 
 		Ref<std::ostream>& getCurrentLoggingStream() {
-			static Ref<std::ostream> current_stream = &std::cout;
+			static Ref<std::ostream> current_stream = &std::cerr;
 			return current_stream;
 		}
 

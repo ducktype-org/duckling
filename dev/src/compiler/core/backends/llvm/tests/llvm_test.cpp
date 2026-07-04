@@ -239,7 +239,7 @@ private:
 			std::regex_search(
 				ir,
 				std::regex{
-					R"(getelementptr.*\[2\s+x\s+\[3\s+x\s+i32\].*i32\s+0,\s+i64\s+%0,\s+i64\s+%1)" }
+					R"(getelementptr.*\[2\s+x\s+\[3\s+x\s+i32\].*i32\s+0,\s+i64\s+%\w+,\s+i64\s+%\w+)" }
 			),
 			"Expected big GEP for nested array access matrix[1][2]"
 		);
@@ -267,10 +267,14 @@ private:
 			std::regex_search(ir, std::regex{ R"(call\s+void\s+@builtin_list_push)" }),
 			"Expected a call to builtin_list_push"
 		);
+
 		assertTrue(
-			std::regex_search(ir, std::regex{ R"(call\s+i64\s+@builtin_list_len)" }),
-			"Expected a call to builtin_list_len"
+			std::regex_search(
+				ir, std::regex{ R"(getelementptr\s+%Di64E,\s+ptr\s+%\w+,\s+i32\s+0,\s+i32\s+1)" }
+			),
+			"Expected a GEP to the length field (index 1) of the list struct"
 		);
+
 		assertTrue(
 			std::regex_search(ir, std::regex{ R"(call\s+void\s+@builtin_list_pop)" }),
 			"Expected a call to builtin_list_pop"

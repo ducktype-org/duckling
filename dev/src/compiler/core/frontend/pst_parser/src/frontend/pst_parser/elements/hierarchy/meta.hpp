@@ -73,6 +73,7 @@ namespace pst {
 		Const,
 		Variable,
 		Expand,
+		TemplateStmt,
 		// Class Statements
 		Method,
 		Field,

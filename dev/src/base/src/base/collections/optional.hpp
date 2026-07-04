@@ -34,6 +34,7 @@
 #include <base/except/exceptions.hpp>
 #include <base/preproc/diagnostics.hpp>
 
+#include <compare>
 #include <functional>
 #include <optional>
 #include <utility>
@@ -391,6 +392,16 @@ namespace base {
 	constexpr bool operator>=(const Optional<U>& one, const Optional<T>& other) {
 		return (one.has_value() && other.has_value() && one.value() >= other.value())
 		    || one.has_value();
+	}
+
+	// An empty Optional orders before any engaged one, matching the relational operators above.
+	template<class U, class T>
+	constexpr auto operator<=>(const Optional<U>& one, const Optional<T>& other)
+		-> decltype(one.value() <=> other.value()) {
+		if (one.has_value() && other.has_value()) return one.value() <=> other.value();
+		return static_cast<decltype(one.value() <=> other.value())>(
+			one.has_value() <=> other.has_value()
+		);
 	}
 
 	template<class T>
