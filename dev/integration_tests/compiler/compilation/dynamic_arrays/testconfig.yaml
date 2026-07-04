@@ -53,15 +53,12 @@ Tests:
         ExitCode: 0
 
   list_out_of_bounds:
-    # enable_conc_deterministic_tests: "false"
     Cases:
       llvm:
         backend: llvm
         ExitCode: 134
 
   list_negative_index:
-    # TODOP:
-    # enable_conc_deterministic_tests: "false"
     Cases:
       llvm:
         backend: llvm

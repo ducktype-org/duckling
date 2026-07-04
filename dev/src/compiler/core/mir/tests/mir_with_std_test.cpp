@@ -15,6 +15,8 @@
 #include <mir/mir_lowering/mir_validation.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 
+#include "base/extend_cpp/variant_match.hpp"
+
 #include <filesystem/file.hpp>
 #include <query_framework/context/context.hpp>
 #include <query_framework/entry/with_context_do.hpp>
@@ -113,9 +115,7 @@ private:
 							// `Index` projection.
 							if (out_place.getBase<MIRLocalRef>()->getName() == "l") {
 								for (const auto& proj: out_place.projection_chain)
-									if (std::holds_alternative<MIRPlace::IndexProjection>(
-											proj.storage
-										))
+									if (v_matches(proj.storage, MIRPlace::IndexProjection))
 										found_index_projection = true;
 							}
 						}
@@ -171,7 +171,7 @@ private:
 						// `arr[2] = ...` is a single `Index` projection.
 						if (local->getName() == "arr") {
 							for (const auto& proj: out_place.projection_chain)
-								if (std::holds_alternative<MIRPlace::IndexProjection>(proj.storage))
+								if (v_matches(proj.storage, MIRPlace::IndexProjection))
 									found_index_projection = true;
 						}
 
@@ -179,12 +179,8 @@ private:
 						if (out_place.projection_chain.size() == 2) {
 							const auto& chain = out_place.projection_chain;
 
-							bool is_idx
-								= std::holds_alternative<MIRPlace::IndexProjection>(chain[0].storage
-							    );
-							bool is_fld
-								= std::holds_alternative<MIRPlace::FieldProjection>(chain[1].storage
-							    );
+							bool is_idx = v_matches(chain[0].storage, MIRPlace::IndexProjection);
+							bool is_fld = v_matches(chain[1].storage, MIRPlace::FieldProjection);
 
 							if (is_idx && is_fld) {
 								auto field = std::get<MIRPlace::FieldProjection>(chain[1].storage);
