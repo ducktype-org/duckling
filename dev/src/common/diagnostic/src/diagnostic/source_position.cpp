@@ -143,7 +143,8 @@ namespace dia {
 	}
 
 	printer::PrinterContentsSeq SourcePosition::genPrinterContents(
-		[[maybe_unused]] const printer::PrinterContentsSeq& reason
+		[[maybe_unused]] /* @TODO: #2657 this parameter is unused */ const printer::PrinterContentsSeq&
+			reason
 	) const {
 		printer::PrinterOStream str;
 		return str.getContents();
