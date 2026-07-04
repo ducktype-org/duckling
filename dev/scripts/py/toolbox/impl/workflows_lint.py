@@ -1,3 +1,11 @@
+"""
+GitHub creates no runs for a workflow whose file does not parse as YAML —
+no failure, no annotation on the PR, other workflows keep running. The
+breakage is invisible until someone notices runs are missing, so validity
+has to be checked outside GitHub: locally (pr-validate) and by a job in a
+different workflow file (linting.yml).
+"""
+
 from pathlib import Path
 
 import yaml
