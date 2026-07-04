@@ -51,3 +51,18 @@ Tests:
         Output:
           String: "2\n3\n3\n4\n9\n10\n100\n0\n100\n2\n3\n4\n1\n5\n6\n7\n8\n9\n10\n"
         ExitCode: 0
+
+  list_out_of_bounds:
+    # enable_conc_deterministic_tests: "false"
+    Cases:
+      llvm:
+        backend: llvm
+        ExitCode: 134
+
+  list_negative_index:
+    # TODOP:
+    # enable_conc_deterministic_tests: "false"
+    Cases:
+      llvm:
+        backend: llvm
+        ExitCode: 134

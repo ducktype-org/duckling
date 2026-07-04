@@ -73,3 +73,31 @@ Tests:
         Output:
           String: "100\n500\n10\n20\n"
         ExitCode: 0
+  array_out_of_bounds:
+    # TODOP: Try to turn that on
+    enable_conc_deterministic_tests: "false"
+    Cases:
+      llvm:
+        backend: llvm
+        ExitCode: 134
+      dvm:
+        backend: dvm
+        Output:
+          String: "Program panicked!\n"
+        Err:
+          String: 'VMThread has panicked: Program panicked\n{\"data\":{\"error\":\"Execution panicked with error: Program panicked\"},\"type\":\"OtherError\"}block.refcount != 0, BlockID=2\n'
+        ExitCode: 1
+  # TODOP: Try to turn that on
+  array_negative_index:
+    enable_conc_deterministic_tests: "false"
+    Cases:
+      llvm:
+        backend: llvm
+        ExitCode: 134
+      dvm:
+        backend: dvm
+        Output:
+          String: "Program panicked!\n"
+        Err:
+          String: 'VMThread has panicked: Program panicked\n{\"data\":{\"error\":\"Execution panicked with error: Program panicked\"},\"type\":\"OtherError\"}block.refcount != 0, BlockID=2\n'
+        ExitCode: 1
