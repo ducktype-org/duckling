@@ -5,12 +5,14 @@ from __future__ import annotations
 import argparse
 import json
 from hashlib import sha256
+import os
 from pathlib import Path
 import re
 import shlex
 import shutil
 import subprocess
 import sys
+import tempfile
 
 
 # Deterministic compile pre-check used by integration tests.
@@ -261,6 +263,7 @@ def compile_packages_manifest(
     manifest_path: str,
     workers: int,
     compile_options: str,
+    build_dir: Path,
 ) -> tuple[int, str, str]:
     command = [
         duckc_path,
@@ -269,7 +272,7 @@ def compile_packages_manifest(
         "-w",
         str(workers),
         "-a",
-        "build",
+        str(build_dir),
     ]
 
     if compile_options.strip():
@@ -293,6 +296,7 @@ def run_once_manifest(
         manifest_path=manifest_path,
         workers=workers,
         compile_options=compile_options,
+        build_dir=build_dir,
     )
     if code != 0:
         details = (
@@ -320,7 +324,11 @@ def run_manifest_mode(args: argparse.Namespace) -> int:
         return 1
 
     concurrent_workers = args.duckc_worker_count if args.duckc_worker_count > 1 else 3
-    build_dir = Path("build")
+    # Manifest packages are still duplicated in place (their paths come from
+    # the manifest), so manifest mode is not safe under concurrent cases that
+    # share packages; only the build directory is private.
+    work_dir = make_work_dir()
+    build_dir = work_dir / "build"
     created_files: list[Path] = []
 
     try:
@@ -382,25 +390,33 @@ def run_manifest_mode(args: argparse.Namespace) -> int:
         return 0
     finally:
         remove_files(created_files)
-        shutil.rmtree(build_dir, ignore_errors=True)
+        shutil.rmtree(work_dir, ignore_errors=True)
+
+
+# Creates a private work directory, preferably under the case's tmp env.
+def make_work_dir() -> Path:
+    parent = os.environ.get("DIT_TMP_DIR") or None
+    return Path(tempfile.mkdtemp(prefix="determinism-", dir=parent))
 
 
 # Executes duckc compile_package and captures process output.
 def compile_package(
     duckc_path: str,
+    package_dir: Path,
     module_name: str,
     workers: int,
     compile_options: str,
     backend: str,
+    build_dir: Path,
 ) -> tuple[int, str, str]:
     command = [
         duckc_path,
         "compile_package",
-        f"duck_modules/{module_name}",
+        str(package_dir),
         "-w",
         str(workers),
         "-a",
-        "build",
+        str(build_dir),
         "-n",
         f"package_{module_name}",
     ]
@@ -418,6 +434,7 @@ def compile_package(
 # Runs one compile pass and returns success flag, snapshot and error details.
 def run_once(
     duckc_path: str,
+    package_dir: Path,
     module_name: str,
     workers: int,
     compile_options: str,
@@ -427,10 +444,12 @@ def run_once(
     clean_build_dir(build_dir)
     code, out, err = compile_package(
         duckc_path=duckc_path,
+        package_dir=package_dir,
         module_name=module_name,
         workers=workers,
         compile_options=compile_options,
         backend=backend,
+        build_dir=build_dir,
     )
     if code != 0:
         details = (
@@ -465,23 +484,29 @@ def main() -> int:
         )
         return 1
 
-    package_dir = Path("duck_modules") / args.module_name
-    if not package_dir.exists():
+    source_package_dir = Path("duck_modules") / args.module_name
+    if not source_package_dir.exists():
         print(
-            f"[determinism-check] Module package not found: {package_dir}",
+            f"[determinism-check] Module package not found: {source_package_dir}",
             file=sys.stderr,
         )
         return 1
 
     concurrent_workers = args.duckc_worker_count if args.duckc_worker_count > 1 else 3
-    build_dir = Path("build")
-    created_files: list[Path] = []
+
+    # Work on a private copy of the package, so that the source tree is
+    # never mutated and concurrently running test cases cannot collide.
+    work_dir = make_work_dir()
+    package_dir = work_dir / "duck_modules" / args.module_name
+    build_dir = work_dir / "build"
 
     try:
-        created_files = duplicate_package_modules(package_dir, args.copy_count)
+        shutil.copytree(source_package_dir, package_dir)
+        duplicate_package_modules(package_dir, args.copy_count)
 
         ok_single, single_snapshot, single_error = run_once(
             duckc_path=args.duckc_path,
+            package_dir=package_dir,
             module_name=args.module_name,
             workers=1,
             compile_options=args.compile_options,
@@ -498,6 +523,7 @@ def main() -> int:
 
         ok_concurrent, concurrent_snapshot, concurrent_error = run_once(
             duckc_path=args.duckc_path,
+            package_dir=package_dir,
             module_name=args.module_name,
             workers=concurrent_workers,
             compile_options=args.compile_options,
@@ -535,8 +561,7 @@ def main() -> int:
         )
         return 0
     finally:
-        remove_files(created_files)
-        shutil.rmtree(build_dir, ignore_errors=True)
+        shutil.rmtree(work_dir, ignore_errors=True)
 
 
 # Script entry point.

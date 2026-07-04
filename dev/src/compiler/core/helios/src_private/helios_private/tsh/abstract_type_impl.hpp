@@ -1,7 +1,6 @@
 #pragma once
 
 #include <helios/symbols/symbol_id.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/tsh/abstract_type.hpp>
 #include <helios/tsh/kind.hpp>
 #include <helios/tsh/mutability.hpp>
@@ -197,13 +196,6 @@ namespace compiler::tsh {
 		 */
 		std::string representation = "UNNAMED";
 	};
-
-	std::vector<Box<const AbstractTypeImpl>>& getTypes();
-
-	template<std::derived_from<AbstractTypeImpl> T>
-	void pushType(Box<T>&& type) {
-		getTypes().emplace_back(std::move(type));
-	}
 
 	class UnitAbstractTypeImpl final: public AbstractTypeImpl {
 	public:

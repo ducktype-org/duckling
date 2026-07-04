@@ -17,6 +17,7 @@ class Case:
     run: str
     pre_case: str
     post_case: str
+    env: dict[str, str]
     input: Optional[IOData]
     expected_exitcode: int
     expected_output: Optional[IOData]

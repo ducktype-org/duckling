@@ -378,6 +378,14 @@ namespace query::internal {
 		void emplace(ExtractedNodeMetadata&& extracted);
 
 		/**
+		 * @brief Maybe emplace extracted metadata into storage if node does not already exist.
+		 * This is useful when merging input nodes form prev compilation, where the node may already
+		 * exist in the current graph.
+		 * @param extracted The extracted metadata to emplace (must be rvalue).
+		 */
+		void maybeEmplace(ExtractedNodeMetadata&& extracted);
+
+		/**
 		 * @brief Clear all metadata for a specific node.
 		 *
 		 * @param node_id The NodeID to clear metadata for

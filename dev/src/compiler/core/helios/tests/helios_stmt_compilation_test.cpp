@@ -12,7 +12,6 @@
 #include <helios/hout/elements.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/queries/queries.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios_private/pst_layer/stmts_from_aggregate.hpp>
 #include <helios_private/scopes/scopes.hpp>
@@ -328,13 +327,12 @@ private:
 				ASSERT_EQUAL(c.expr_stmt_count, 1u);
 			});
 		}
-
 		{
 			auto module_id = frontend::createModuleTreeFromContents(
 				R"(
 				fun foo() = {
 					var a: List[i32];
-					a += 5;
+					a.push(5);
 				}
 			)",
 				"test_pkg"
@@ -353,7 +351,7 @@ private:
 				R"(
 				fun foo() = {
 					var a: List[i32];
-					a -= 5u64;
+					a.pop(5u64);
 				}
 			)",
 				"test_pkg"
