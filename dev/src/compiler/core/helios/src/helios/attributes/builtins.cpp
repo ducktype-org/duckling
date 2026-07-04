@@ -28,11 +28,11 @@ namespace compiler::helios {
 		}
 	}
 
-	base::Optional<BuiltinKind> builtinTypeFromStr(base::StrID name) {
+	base::Optional<BuiltinKind> builtinKindFromStr(base::StrID name) {
 		return builtinNameMapping().atMaybeCopy(name.strView());
 	}
 
-	base::StrID builtinTypeToStr(BuiltinKind type) {
+	base::StrID builtinKindToStr(BuiltinKind type) {
 		switch (type) {
 		case BuiltinKind::RawPtrFromSlice:
 			return base::StrID("ptr_from_slice");
@@ -75,7 +75,7 @@ namespace compiler::helios {
 			query::throwFailed();
 		}
 
-		auto builtin = builtinTypeFromStr(str_lit.value()->getValue().value);
+		auto builtin = builtinKindFromStr(str_lit.value()->getValue().value);
 		if_opt_none(builtin) {
 			ctx.logInt(makeBox<dia_int::PlaceholderError>(
 				base::strConcat("Unknown builtin '", str_lit.value()->getValue().value.str(), "'."),
@@ -119,14 +119,14 @@ namespace compiler::helios {
 		}
 		default: {
 			CORE_PANIC(
-				base::strConcat("Builtin `", builtinTypeToStr(type), "` is not implemented in HOUT")
+				base::strConcat("Builtin `", builtinKindToStr(type), "` is not implemented in HOUT")
 			);
 		}
 		}
 		CORE_UNREACHABLE();
 	}
 
-	BuiltinOrigins builtinOriginForType(BuiltinKind type) {
+	BuiltinOrigins builtinOrigin(BuiltinKind type) {
 		switch (type) {
 		case BuiltinKind::RawPtrFromSlice:
 			return BuiltinOrigin::HOUT;

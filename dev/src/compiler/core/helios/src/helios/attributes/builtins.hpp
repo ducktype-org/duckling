@@ -37,17 +37,17 @@ namespace compiler::helios {
 	/**
 	 * @brief Map a builtin name to its BuiltinKind, empty when the name is unknown.
 	 */
-	base::Optional<BuiltinKind> builtinTypeFromStr(base::StrID name);
+	base::Optional<BuiltinKind> builtinKindFromStr(base::StrID name);
 
 	/**
-	 * @brief Reverse of builtinTypeFromStr.
+	 * @brief Reverse of builtinKindFromStr.
 	 */
-	base::StrID builtinTypeToStr(BuiltinKind type);
+	base::StrID builtinKindToStr(BuiltinKind type);
 
 	/**
 	 * @brief Origin for the given builtin.
 	 */
-	BuiltinOrigins builtinOriginForType(BuiltinKind type);
+	BuiltinOrigins builtinOrigin(BuiltinKind type);
 
 	/**
 	 * @brief Validate the arguments of a `@builtin(...)` attribute and resolve the builtin.
