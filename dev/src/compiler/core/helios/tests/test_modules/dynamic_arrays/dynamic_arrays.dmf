@@ -1,8 +1,8 @@
 fun testDynamic() -> () = {
     var l: List[i64];
-    l += 1;
-    l -= 1u64;
-    let l_len = len l;
+    l.push(1);
+    l.pop(1u64);
+    let l_len = l.length();
     l[0] = 42;
     let x = l[0];
 }

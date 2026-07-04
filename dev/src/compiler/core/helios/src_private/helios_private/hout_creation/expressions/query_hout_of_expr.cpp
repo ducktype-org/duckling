@@ -801,6 +801,10 @@ namespace compiler::helios::code {
 					}
 					node = makeBox<DerefExpr>(ctx, pstOrigin(stmt), std::move(inner));
 					return;
+				} else if (stmt->getOperator().unlock(ctx)->unwrap().asKeyword()
+				           == lang_def::Keyword::Move) {
+					node = makeBox<MoveExpr>(ctx, pstOrigin(stmt), std::move(inner));
+					return;
 				}
 
 				auto builtin = unaryBuiltin(
@@ -891,7 +895,6 @@ namespace compiler::helios::code {
 				auto op = stmt->getAssignmentType().unlock(ctx)->unwrap();
 
 				auto var = stmt->getVariables();
-				auto val = stmt->getValue();
 
 				auto location_expr_qresult = subExprFromPST(ctx, var);
 				if (location_expr_qresult.hasFailed()) return;
@@ -910,49 +913,6 @@ namespace compiler::helios::code {
 						"Left side of assignment can't be immutable.", stmt->getStablePosition()
 					));
 					return;
-				}
-
-				if (op == base::StrID("+=")) {
-					// @TODO: #1970 This implementation is temporary and should be handled by the
-					// `+=` operator in the future.
-					if (location_type.getType().getKind() == tsh::Kind::DynamicArray) {
-						auto dyn_array
-							= location_type.getType().as<tsh::DynamicArrayAbstractType>();
-						auto element_type = dyn_array.getElementType();
-						auto value_expr_coerced_qresult
-							= subExprFromPSTWithType(ctx, val, element_type);
-						if (value_expr_coerced_qresult.hasFailed()) return;
-
-						node = makeBox<ListPushExpr>(
-							pstOrigin(stmt),
-							std::move(location_expr),
-							std::move(value_expr_coerced_qresult).valueOrThrow()
-						);
-						return;
-					}
-				} else if (op == base::StrID("-=")) {
-					// @TODO: #1970 This implementation is temporary and should be handled by the
-					// `-=` operator in the future.
-					if (location_type.getType().getKind() == tsh::Kind::DynamicArray) {
-						auto u64_type = tsh::SymbolType<>{
-							tsh::getIntegralType(
-								ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned
-							),
-							tsh::ReferenceKind::Direct,
-							tsh::Mutability::Mutable
-						};
-
-						auto value_expr_coerced_qresult
-							= subExprFromPSTWithType(ctx, val, u64_type);
-						if (value_expr_coerced_qresult.hasFailed()) return;
-
-						node = makeBox<ListPopExpr>(
-							pstOrigin(stmt),
-							std::move(location_expr),
-							std::move(value_expr_coerced_qresult).valueOrThrow()
-						);
-						return;
-					}
 				}
 
 				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(

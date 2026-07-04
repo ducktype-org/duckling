@@ -89,7 +89,6 @@ namespace lang_def {
 
 			// This is the list of keywords that are general prefix operators
 			{ Keyword::Const, "const", KeywordFlagsOptions::IsGenPrefixOp },
-			{ Keyword::Len, "len", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::Ref, "ref", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::Box, "box", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::Ptr, "ptr", KeywordFlagsOptions::IsGenPrefixOp },

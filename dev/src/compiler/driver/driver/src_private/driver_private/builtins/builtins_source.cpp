@@ -77,10 +77,9 @@ extern "C" {
 	void  builtin_dealloc(void* ptr);
 
 	// List
-	void     builtin_list_push(list* list, void* element_ptr, uint64_t element_size);
-	void     builtin_list_pop(list* list, uint64_t count, uint64_t element_size);
-	uint64_t builtin_list_len(list* list);
-	void     builtin_list_free(list* list);
+	void builtin_list_push(list* list, void* element_ptr, uint64_t element_size);
+	void builtin_list_pop(list* list, uint64_t count, uint64_t element_size);
+	void builtin_list_free(list* list);
 
 	// Stringification @TODO: #2634 move to Duckling, probably
 	String builtin_stringify_i64(int64_t v);
@@ -285,9 +284,6 @@ void builtin_list_pop(list* list, uint64_t count, uint64_t element_size) {
 	uint64_t to_remove = count < list->length ? count : list->length;
 	list->length -= to_remove;
 }
-
-// len(vec: List[T]) -> u64
-uint64_t builtin_list_len(list* list) { return list->length; }
 
 void builtin_list_free(list* list) {
 	if (list->data != NULL) {

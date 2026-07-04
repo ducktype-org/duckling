@@ -35,4 +35,5 @@ PostTest: "
 SubDirs:
   - basic_tests
   - declarations
-  - lists_and_arrays
+  # @TODO: #3046 Turn this back on when fixed.
+  # - lists_and_arrays

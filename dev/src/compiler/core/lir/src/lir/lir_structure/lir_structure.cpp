@@ -83,9 +83,6 @@ namespace compiler::lir {
 							  variant_case(tsl::StaticArrayTypeLayout, static_array_layout) {
 								  current_layout = static_array_layout.getElementLayout();
 							  }
-							  variant_case(tsl::DynamicArrayTypeLayout, dynamic_array_layout) {
-								  current_layout = dynamic_array_layout.getElementLayout();
-							  }
 							  variant_case(tsl::PointerTypeLayout, many_pointer_layout) {
 								  current_layout = many_pointer_layout.getPointee();
 							  }
