@@ -31,8 +31,18 @@ set(REPLXX_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(replxx)
 
 # Suppress warnings in replxx sources that conflict with our strict -Werror flags.
-target_compile_options(replxx PRIVATE
-	-Wno-conversion -Wno-shadow -Wno-shadow=local
-	-Wno-implicit-fallthrough
-	-Wno-error=conversion -Wno-error=shadow=local -Wno-error=implicit-fallthrough
-)
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+	target_compile_options(replxx PRIVATE
+		-Wno-conversion -Wno-shadow -Wno-shadow=local
+		-Wno-implicit-fallthrough
+		-Wno-error=conversion -Wno-error=shadow=local -Wno-error=implicit-fallthrough
+	)
+elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
+	target_compile_options(replxx PRIVATE
+		-Wno-conversion -Wno-shadow
+		-Wno-implicit-fallthrough
+		-Wno-error=conversion -Wno-error=implicit-fallthrough
+	)
+else()
+	message(FATAL_ERROR "Error: UNKNOWN COMPILER")
+endif()
