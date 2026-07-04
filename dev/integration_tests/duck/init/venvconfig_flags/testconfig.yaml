@@ -6,17 +6,17 @@ Tests:
         test_cmd: duck init --expose-freezefile foo
         Output:
           Run: |+
-            echo "info: successfully created a new project \`foo\` at \`$(pwd)/foo\`"
-        PostCase: python3 check.py expose_freezefile
+            echo "info: successfully created a new project \`foo\` at \`$DIT_TMP_DIR/foo\`"
+        PostCase: python3 check.py expose_freezefile && @{cleanup_tmp_env}
       ephemeral:
         test_cmd: duck init --ephemeral foo
         Output:
           Run: |+
-            echo "info: successfully created a new project \`foo\` at \`$(pwd)/foo\`"
-        PostCase: python3 check.py ephemeral
+            echo "info: successfully created a new project \`foo\` at \`$DIT_TMP_DIR/foo\`"
+        PostCase: python3 check.py ephemeral && @{cleanup_tmp_env}
       local_storage:
         test_cmd: duck init --local-storage foo
         Output:
           Run: |+
-            echo "info: successfully created a new project \`foo\` at \`$(pwd)/foo\`"
-        PostCase: python3 check.py local_storage
+            echo "info: successfully created a new project \`foo\` at \`$DIT_TMP_DIR/foo\`"
+        PostCase: python3 check.py local_storage && @{cleanup_tmp_env}

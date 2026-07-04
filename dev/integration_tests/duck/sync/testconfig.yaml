@@ -1,7 +1,3 @@
-before_cmd: export DUCK_HOME="$(pwd)/duck_home"
-
-PostTest: rm -rf $(pwd)/duck_home
-
 PreNode: ""
 
 SubDirs:

@@ -1,3 +1,4 @@
+tmp_env_files: "foo"
 Tests:
   init:
     Description: cannot reinitialise a project
@@ -7,4 +8,4 @@ Tests:
         ExitCode: 1
         Err:
           Run: |+
-            echo "error: cannot reinitialize project \`foo\` at \`$(pwd)/foo\`"
+            echo "error: cannot reinitialize project \`foo\` at \`$DIT_TMP_DIR/foo\`"

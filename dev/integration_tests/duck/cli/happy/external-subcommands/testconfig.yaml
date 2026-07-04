@@ -1,14 +1,16 @@
 # NOTE: 'EOF' needs to be quoted, so $@ is not expanded by the shell.
-prepare: |
+# duck-echo is created once for all tests of this node; tests only read it.
+PreNode: |
   cat <<'EOF' > duck-echo
   #!/bin/sh
   echo "$@"
   EOF
   chmod +x duck-echo
 
+# DUCK_HOME points at this directory, so duck reads the config.yaml here.
 before_cmd: export PATH="$(pwd):$PATH" && export DUCK_HOME="$(pwd)"
 
-PostTest: rm duck-echo
+PostNode: rm duck-echo
 
 Tests:
   test-run-external-subcmd:
