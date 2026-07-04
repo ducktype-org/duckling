@@ -11,11 +11,8 @@ namespace pst {
 		if (!assertStmtChoice<TemplateDecl>(state, state[0].is(Keyword::Template))) return nullptr;
 
 		PARSE().one(Keyword::Template);
-		if (not state[0].isBracketGroup(lexer::Token::Round)) {
-			state.logSafeError(
-				makeBox<TemplateNoListError>(state.getPosition())
-			);
-		}
+		if (not state[0].isBracketGroup(lexer::Token::Round))
+			state.logSafeError(makeBox<TemplateNoListError>(state.getPosition()));
 		PARSE().one(&out->params);
 
 		PST_RETURN out;
@@ -24,12 +21,11 @@ namespace pst {
 	void TemplateDecl::dprint(std::ostream& out) const {
 		out << "{";
 
-		out << ",\"Parameters\":";
+		out << "\"Parameters\":";
 		nullAwareDprint(params, out);
 
 		out << "}";
 	}
-
 
 	HashAlg& TemplateDecl::addElementDataToStableHash(HashAlg& partial_hash) const {
 		return partial_hash;

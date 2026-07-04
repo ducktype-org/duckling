@@ -1,5 +1,6 @@
+tmp_env_files: "foo bar"
 features: ""
-PostCase: python3 check.py @{features}
+PostCase: python3 check.py @{features} && @{cleanup_tmp_env}
 
 Tests:
   build:

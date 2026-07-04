@@ -12,7 +12,8 @@ namespace pst {
 		CLONE_SUBELEMENTS();
 
 	protected:
-		NAMED_CHILD(params, ParamList);  // {} vs (), mock for now
+		// @TODO: #3042 Probably change this from `()` syntax to `{}` or `[]` syntax
+		NAMED_CHILD(params, ParamList);
 
 	protected:
 		HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const override;
@@ -24,14 +25,13 @@ namespace pst {
 
 		[[nodiscard]]
 		AccessLocked<ParamList> getParams() const {
-            return params.give();
+			return params.give();
 		}
 
-		bool trailingSemicolon() override { return false; } 
-
+		bool trailingSemicolon() override { return false; }
 
 		static MBox<TemplateDecl> parse(LangParserState& state);
-		void                 dprint(std::ostream& out) const final;
+		void                      dprint(std::ostream& out) const final;
 		~TemplateDecl() final = default;
 
 		[[nodiscard]]

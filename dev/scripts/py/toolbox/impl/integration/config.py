@@ -20,6 +20,7 @@ GENERAL_VARIABLES = {
     COMPILE,
     RUN,
     CLEAN,
+    ENV,
     PRE_NODE,
     POST_NODE,
     PRE_TEST,
@@ -122,6 +123,33 @@ def config_find_value(config: dict, key: str, default=None) -> Optional[Any]:
     if config[PARENT]:
         return config_find_value(config[PARENT], key, default=default)
     return default
+
+
+def config_collect_env(config: dict) -> dict[str, str]:
+    """
+    Collects `Env` entries from `config` and all its ancestors.
+
+    Entries are merged root-first, so a redefinition lower in the tree
+    overrides the value but keeps the position (and thus the evaluation
+    order) of the original definition.
+    """
+    chain = []
+    node = config
+    while node is not None:
+        env = node.get(ENV)
+        if env is not None:
+            if not isinstance(env, dict):
+                exit_with_error(
+                    f"`{ENV}` must be a mapping of variable names to bash commands"
+                    f" (in {config_get_name_path(node)})"
+                )
+            chain.append(env)
+        node = node[PARENT]
+
+    merged: dict[str, str] = {}
+    for env in reversed(chain):
+        merged |= {str(name): str(command) for name, command in env.items()}
+    return merged
 
 
 VARIABLE_EXPRESSION = re.compile(r"@{(.*?)}")

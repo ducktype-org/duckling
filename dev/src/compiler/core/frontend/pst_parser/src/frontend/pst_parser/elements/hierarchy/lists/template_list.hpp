@@ -14,7 +14,6 @@ namespace pst {
 	public:
 		explicit TemplateList(const LangParserState& state): List(state) {
 			this->element_kind = ElementKind::TemplateList;
-			
 		}
 
 		static MBox<TemplateList> parse(LangParserState& state);

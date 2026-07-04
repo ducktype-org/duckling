@@ -1,4 +1,4 @@
-PostCase: python3 check.py
+PostCase: python3 check.py && @{cleanup_tmp_env}
 Tests:
   sync:
     Description: can sync a project with features cycle

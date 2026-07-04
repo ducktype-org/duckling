@@ -9,6 +9,7 @@
 #include "if.hpp"             // IWYU pragma: export
 #include "namespace.hpp"      // IWYU pragma: export
 #include "pattern.hpp"        // IWYU pragma: export
+#include "template_stmt.hpp"  // IWYU pragma: export
 #include "top_level.hpp"      // IWYU pragma: export
 #include "variable.hpp"       // IWYU pragma: export
 #include "while.hpp"          // IWYU pragma: export
