@@ -74,7 +74,6 @@ protected:                  \
 	void cloneSubElements(const ThisClass&)
 
 
-	// PR: add element kinds?
 /**
  * @brief Macro that combines all of the macros that are used in lowest level (final) elements.
  */
