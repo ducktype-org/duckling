@@ -37,20 +37,37 @@ namespace compiler::helios::defgen {
 		 *
 		 * - Trivially-copyable sources are returned as they where (which means they are byte
 		 * copied).
-		 * - Non-trivially-copyable class, static-array and tuple members are copied by calling
-		 * their own default copy constructor with a reference to `source`.
+		 * - A `box T` source is deep-copied into a freshly allocated box holding a copy of the
+		 * pointee.
+		 * - Non-trivially-copyable class, static-array, tuple and list members are copied by
+		 * calling their own default copy constructor with a reference to `source`.
 		 */
 		Box<code::Expr> makeCopyExpr(
 			query::Context& ctx, Box<code::Expr> source, const tsh::SymbolType<>& type
 		) {
-			std::cout << "Make copy expr\n";
 			if (type.isTriviallyCopyable(ctx)) return source;
+
+			// A `box T` is deep-copied. Allocate a new box holding a copy of the pointee
+			// `box(<copy of *source>)`. For a trivially-copyable pointee this collapses to
+			// `box(*source)`.
+			if (type.getRefKind() == tsh::ReferenceKind::Box) {
+				const auto pointee_type = type.withReferenceKind(tsh::ReferenceKind::Direct);
+				auto       pointee_copy = makeCopyExpr(
+                    ctx,
+                    makeBox<code::DerefExpr>(ctx, code::generatedOrigin(), std::move(source)),
+                    pointee_type
+                );
+				return makeBox<code::BoxOfExpr>(
+					ctx, code::generatedOrigin(), std::move(pointee_copy)
+				);
+			}
 
 			const auto abstract_type = type.getType();
 			if (type.getRefKind() == tsh::ReferenceKind::Direct
 			    && (abstract_type.getKind() == tsh::Kind::Class
 			        || abstract_type.getKind() == tsh::Kind::StaticArray
-			        || abstract_type.getKind() == tsh::Kind::Tuple)) {
+			        || abstract_type.getKind() == tsh::Kind::Tuple
+			        || abstract_type.getKind() == tsh::Kind::DynamicArray)) {
 				const SymID copy_sym = copySymForType(ctx, abstract_type);
 
 				std::vector<Box<code::Expr>> args;
@@ -404,8 +421,6 @@ namespace compiler::helios::defgen {
 			const auto& cctor_decl         = ctx.query<QueryDeclOfFun>(copy_sym)->valueOrThrow();
 			const SymID source_symbol      = cctor_decl.parameters.at(0).helios_symbol;
 			const auto  result_symbol_type = cctor_decl.return_type;
-
-			std::cout << "default copy ctor\n";
 
 			std::vector<Box<code::Stmt>> body;
 			switch (owner_type.getKind()) {

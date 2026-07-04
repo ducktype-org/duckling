@@ -1062,8 +1062,7 @@ namespace compiler::helios {
 	struct IMPLEMENT_QUERY(QueryDirectFunctionCalls, query::QResult<std::vector<SymID>>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			CORE_ASSERT(
-				kind(key) == SymbolKind::Function || kind(key) == SymbolKind::Method
-					|| kind(key) == SymbolKind::FunctionDeclaration,
+				isFunctionLike(kind(key)),
 				"Query function dependencies called on non-function symbol"
 			);
 

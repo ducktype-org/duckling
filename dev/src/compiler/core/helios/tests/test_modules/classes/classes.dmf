@@ -24,6 +24,10 @@ class FirstClassEver {
 class SecondClass extends FirstClassEver {}
 
 let first_class_ever: FirstClassEver = FirstClassEver(1, f32(2.0));
+
+# @TODO: #2000 Re-enable once copy constructors are called in coercions. This is an lvalue copy
+# of a non-trivially-copyable class (FirstClassEver has a user copy constructor), which requires
+# emitting a copy-constructor call rather than a trivial byte copy.
 let first_class_ever_copy = first_class_ever;
 
 class ClassWithMember {
