@@ -315,6 +315,10 @@ namespace compiler::helios::mangler {
 							return "HtoString" + func(ctx, symbol_id) + "E";
 						case defgen::GeneratedMethodType::LengthMethod:
 							return "Hlength" + func(ctx, symbol_id) + "E";
+						case defgen::GeneratedMethodType::Push:
+							return "Hpush" + func(ctx, symbol_id) + "E";
+						case defgen::GeneratedMethodType::Pop:
+							return "Hpop" + func(ctx, symbol_id) + "E";
 						}
 						CORE_UNREACHABLE();
 					}

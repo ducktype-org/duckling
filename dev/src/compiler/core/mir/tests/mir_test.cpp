@@ -8,6 +8,7 @@
 #include <helios/queries/queries.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <helios/tsh/queries.hpp>
+#include <mir/mir_lowering/mir_liveness.hpp>
 #include <mir/mir_lowering/mir_queries.hpp>
 #include <mir/mir_lowering/mir_unit.hpp>
 #include <mir/mir_lowering/mir_validation.hpp>
@@ -43,6 +44,7 @@ public:
 		TESTER_ADD_TEST(staticArraysTest);
 		TESTER_ADD_TEST(dynamicArraysTest);
 		TESTER_ADD_TEST(tupleTest);
+		TESTER_ADD_TEST(livenessMapTest);
 		TESTER_ADD_TEST(sliceTest);
 	}
 
@@ -51,6 +53,65 @@ protected:
 
 private:
 	using enum compiler::tsh::IntegralAbstractType::Signedness;
+
+	/**
+	 * @brief Unit test for the global in-liveness map produced by `calculateGlobalInLivenessMap`.
+	 *
+	 * Uses `moveParamThenBlock(a, c)`, which moves the parameter `a` in the entry block and then
+	 * branches. The map is computed on the pre-lifetime MIR (so the move flag is present but no
+	 * use-after-move validation runs), and we assert:
+	 *  - `a` is alive on entry (it is a parameter),
+	 *  - some successor block sees `a` as `Moved` with exactly one reaching move site.
+	 */
+	void livenessMapTest() {
+		auto [module, scope] = getModule(fs::File(path("modules/move_lifetime")));
+
+		withContextDo([&](query::Context& ctx) {
+			auto& unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+
+			base::Optional<CRef<compiler::helios::HOUTFunction>> target;
+			for (const auto& fn: unit.functions)
+				if (fn->declaration->original_name.strView() == "moveParamThenBlock") target = fn;
+			ASSERT_HAS_VALUE(target);
+
+			auto pre_mir = compiler::mir::lowerToPreMIRFunction(ctx, target.value());
+
+			// Find the first parameter local (`a`).
+			base::Optional<compiler::mir::LocalID> a_id;
+			for (const auto& local: pre_mir.local_list)
+				if (local.parameter_index.has_value() && local.parameter_index.value() == 0)
+					a_id = local.id;
+			ASSERT_TRUE(a_id.has_value());
+
+			// Build predecessor lists, same as constructLifetimePassArgs does.
+			base::HashMap<compiler::mir::BlockID, std::vector<compiler::mir::BlockID>> preds;
+			for (auto block_id: pre_mir.block_order)
+				for (auto succ:
+				     compiler::mir::getTerminatorSuccessors(pre_mir.blocks.at(block_id)->terminator))
+					preds.put(succ).first->second.push_back(block_id);
+
+			auto liveness = compiler::mir::calculateGlobalInLivenessMap(pre_mir, preds);
+
+			// `a` is a parameter, so it is alive at the entry block.
+			auto entry     = pre_mir.block_order.front();
+			auto entry_map = liveness.block_in_liveness.atMaybe(entry);
+			ASSERT_TRUE(entry_map.has_value());
+			auto a_at_entry = entry_map.value()->atMaybe(a_id.value());
+			ASSERT_TRUE(a_at_entry.has_value());
+			ASSERT_TRUE(a_at_entry.value()->kind == compiler::mir::LivenessStatus::Alive);
+
+			// After the unconditional move in the entry block, at least one successor block must
+			// observe `a` as `Moved` with exactly one reaching move site.
+			bool found_moved = false;
+			for (const auto& [block_id, map]: liveness.block_in_liveness) {
+				auto state = map.atMaybe(a_id.value());
+				if (state.has_value() && state.value()->kind == compiler::mir::LivenessStatus::Moved
+				    && state.value()->move_sites.size() == 1)
+					found_moved = true;
+			}
+			ASSERT_TRUE(found_moved);
+		});
+	}
 
 	void simpleTest() {
 		auto [module, scope] = getModule(fs::File(path("modules/mir_simple_test")));
@@ -416,7 +477,11 @@ private:
 				};
 
 				for (const auto& instr: block.instructions) {
-					if (instr.operation == compiler::mir::Operation::DestructIf) continue;
+					// Destructors (conditional or unconditional) legitimately reference any local,
+					// including parameters other than the one used in the body.
+					if (instr.operation == compiler::mir::Operation::DestructIf
+					    || instr.operation == compiler::mir::Operation::Destruct)
+						continue;
 					for (const auto& arg: instr.arguments) validate_value(arg);
 				}
 				for (const auto& arg: block.terminator.arguments) validate_value(arg);
@@ -836,7 +901,7 @@ private:
 			bool found_zero_init        = false;
 			bool found_push             = false;
 			bool found_pop              = false;
-			bool found_len              = false;
+			bool found_length_call      = false;
 			bool found_index_projection = false;
 
 			using namespace compiler::mir;
@@ -850,25 +915,31 @@ private:
 							found_zero_init = true;
 						break;
 					}
-					case Operation::ListPush:
-						found_push = true;
+					case Operation::Call: {
+						auto callee = instr.arguments.at(0).get<MIRFunctionLiteral>();
+						auto name   = compiler::helios::name(callee.helios_id);
+
+						if (name == base::StrID("push"))
+							found_push = true;
+						else if (name == base::StrID("pop"))
+							found_pop = true;
+						else if (name == base::StrID("length"))
+							found_length_call = true;
+
 						break;
-					case Operation::ListPop:
-						found_pop = true;
-						break;
-					case Operation::ListLen:
-						found_len = true;
-						break;
+					}
 					case Operation::Assign:
 					case Operation::Cast: {
 						if (instr.output.has_value()) {
 							auto& out_place = instr.output.value();
-							if (out_place.getBase<MIRLocalRef>()->getName() == "l"
-							    && out_place.projection_chain.size() == 1) {
-								bool is_index = std::holds_alternative<MIRPlace::IndexProjection>(
-									out_place.projection_chain[0].storage
-								);
-								if (is_index) found_index_projection = true;
+							// `l[0] = 42` lowers to a `Field(ptr)` projection followed by an
+							// `Index` projection.
+							if (out_place.getBase<MIRLocalRef>()->getName() == "l") {
+								for (const auto& proj: out_place.projection_chain)
+									if (std::holds_alternative<MIRPlace::IndexProjection>(
+											proj.storage
+										))
+										found_index_projection = true;
 							}
 						}
 						break;
@@ -882,7 +953,7 @@ private:
 			ASSERT_TRUE(found_zero_init);
 			ASSERT_TRUE(found_push);
 			ASSERT_TRUE(found_pop);
-			ASSERT_TRUE(found_len);
+			ASSERT_TRUE(found_length_call);
 			ASSERT_TRUE(found_index_projection);
 		});
 	}

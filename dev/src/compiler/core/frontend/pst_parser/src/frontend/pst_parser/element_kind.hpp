@@ -33,6 +33,7 @@ namespace pst {
 		Pattern,
 		Block,
 		SpecifierBlock,
+		TemplateStmt,
 
 		Using,
 		Alias,
@@ -59,6 +60,7 @@ namespace pst {
 		// Expression wrappers:
 		RoundGroupExpr,
 		CallList,
+		TemplateList,
 
 		// for all expression elements:
 		ExprElement,
@@ -84,6 +86,8 @@ namespace pst {
 		CallArgument,
 		NestedImportList,
 		AtrArgList,
+
+		TemplateDecl,
 
 		// wrappers
 		OperatorWrapper,

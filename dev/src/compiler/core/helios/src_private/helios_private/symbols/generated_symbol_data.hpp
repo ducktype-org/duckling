@@ -46,11 +46,13 @@ namespace compiler::helios::defgen {
 		DefaultDestructor,
 		LengthMethod,
 		ToString,
+		Push,  // Dynamic array `push` method.
+		Pop,   // Dynamic array `pop` method.
 	};
 
 	/**
-	 * Represents a compiler-generated method shared by all types (the destructor, `length` and
-	 * `toString`). The concrete method is distinguished by `kind`.
+	 * Represents a compiler-generated method shared by all types (the destructor, `length`,
+	 * `toString`, and dynamic-array `push`/`pop`). The concrete method is distinguished by `kind`.
 	 */
 	struct Method final {
 		tsh::AbstractType   owner_type;

@@ -303,6 +303,27 @@ namespace compiler::helios {
 								     tsh::SymbolType<>{ tsh::getUnitType(),
 								                        tsh::ReferenceKind::Direct,
 								                        tsh::Mutability::Immutable } };
+						case defgen::GeneratedMethodType::Push: {
+							// `(ref mut T self, Element element) -> ()`.
+							const auto element_type
+								= method.owner_type.as<tsh::DynamicArrayAbstractType>()
+							          .getElementType();
+							return { { mut_self, element_type },
+								     tsh::SymbolType<>{ tsh::getUnitType(),
+								                        tsh::ReferenceKind::Direct,
+								                        tsh::Mutability::Immutable } };
+						}
+						case defgen::GeneratedMethodType::Pop: {
+							// `(ref mut T self, u64 count) -> ()`.
+							const auto count_type
+								= tsh::SymbolType<>::withDefaults(tsh::getIntegralType(
+									ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned
+								));
+							return { { mut_self, count_type },
+								     tsh::SymbolType<>{ tsh::getUnitType(),
+								                        tsh::ReferenceKind::Direct,
+								                        tsh::Mutability::Immutable } };
+						}
 						}
 						CORE_UNREACHABLE();
 					}();
@@ -365,6 +386,29 @@ namespace compiler::helios {
 							));
 						}
 						CORE_PANIC("Slice only has fields 0 (element) and 1 (length)");
+					}
+					case tsh::Kind::DynamicArray: {
+						switch (field.index) {
+						case 0: {
+							auto element_type
+								= field.parent_type.as<tsh::DynamicArrayAbstractType>()
+							          .getElementType();
+							auto many_pointer_type
+								= ctx.query<tsh::QueryManyPointerType>({ element_type });
+							return tsh::SymbolType<>::withDefaults(many_pointer_type);
+						}
+						case 1:
+						case 2:
+						case 3:
+							return tsh::SymbolType<>::withDefaults(tsh::getIntegralType(
+								ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned
+							));
+						default:
+							CORE_PANIC(
+								"Dynamic Array only has fields 0 (ptr), 1 (length), 2 "
+								"(off_start_reserved), 3 (off_end_reserved)"
+							);
+						}
 					}
 					default:
 						CORE_UNREACHABLE();

@@ -258,25 +258,12 @@ namespace compiler::helios::code {
 		auto source_type = expr->expression_type.getSymbolType();
 
 		Coercion unary_coercion = [&]() -> Coercion {
-			bool is_len = (op == lang_def::keywordToStr(lang_def::Keyword::Len));
 			// If the operation operates on Direct values we need to perform a
 			// coercion from a ref / box type the direct type. This is needed to handle cases
 			// like: var x: i32 = -someReference.
 			if (source_type.getRefKind() != tsh::ReferenceKind::Direct) {
 				auto direct_type = source_type.withReferenceKind(tsh::ReferenceKind::Direct);
-
-				// @TODO: #1970 If the operator is `len` we have to bypass the trivial copyability
-				// check for now. This is because the temporarily added `len` operator operates on
-				// direct values thus any usage of it on reference types would need to perform a
-				// deref (which means a copy, but copying lists is not yet implemented) thus
-				// `canCoerce` returns an error.
-				// Since `len` operator existence is temporary we mock it out and insert a deref
-				// either way. This will copy the list struct, but not copy the heap data, but this
-				// is acceptable in case of `len`. A more solid approach would be for the `len`
-				// operator to take a reference to the list, but this would require more
-				// architectural changes. `len` operator will be replaced by the `.length()`
-				// method/field in the future, thus for release purposes is mocked up.
-				auto res = canCoerce(ctx, source_type, direct_type, is_len);
+				auto res         = canCoerce(ctx, source_type, direct_type);
 				if (res.valueOrThrow().isValid())
 					return std::move(res.valueOrThrow()).getCoercion();
 			}
@@ -303,8 +290,6 @@ namespace compiler::helios::code {
 			{ { keywordToStr(lang_def::Keyword::CPtr), tsh::Kind::Meta }, BuiltinUnary::CPtr },
 			{ { keywordToStr(lang_def::Keyword::Slice), tsh::Kind::Meta }, BuiltinUnary::Slice },
 			{ { keywordToStr(lang_def::Keyword::Const), tsh::Kind::Meta }, BuiltinUnary::Const },
-			// List.
-			{ { keywordToStr(lang_def::Keyword::Len), tsh::Kind::DynamicArray }, BuiltinUnary::Len },
 		};
 
 		// Single lookup
