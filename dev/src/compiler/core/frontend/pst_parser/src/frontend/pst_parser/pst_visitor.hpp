@@ -50,5 +50,6 @@ namespace pst {
 		BindingPattern,
 		ValuePattern,
 		Expand,
+		TemplateStmt
 	);
 }
