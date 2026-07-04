@@ -11,13 +11,13 @@ namespace compiler::helios::defgen {
 	SymID pushMethodForType(query::Context& ctx, tsh::AbstractType type) {
 		return ctx.query<QueryGeneratedSymbol>({ .name = base::StrID("push"),
 		                                         .generated_symbol_data
-		                                         = Method{ type, GeneratedMethodType::Push } });
+		                                         = Method{ type, GeneratedMethodKind::Push } });
 	}
 
 	SymID popMethodForType(query::Context& ctx, tsh::AbstractType type) {
 		return ctx.query<QueryGeneratedSymbol>({ .name = base::StrID("pop"),
 		                                         .generated_symbol_data
-		                                         = Method{ type, GeneratedMethodType::Pop } });
+		                                         = Method{ type, GeneratedMethodKind::Pop } });
 	}
 
 	namespace {

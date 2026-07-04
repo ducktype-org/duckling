@@ -31,7 +31,7 @@ namespace compiler::helios {
 		};
 
 		struct Builtin {
-			BuiltinType builtin;
+			BuiltinKind builtin;
 			bool        operator==(const Builtin&) const = default;
 		};
 	}

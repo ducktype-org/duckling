@@ -257,7 +257,7 @@ namespace compiler::helios {
 					// The implicit constructor takes a parameter per field, the default constructor
 					// takes none.
 					std::vector<tsh::SymbolType<>> param_types;
-					if (ctor.kind == defgen::GeneratedConstructorType::Implicit) {
+					if (ctor.kind == defgen::GeneratedConstructorKind::Implicit) {
 						auto fields = target_type.getInterface(ctx)->getFieldsView();
 						for (const auto& field: fields) param_types.push_back(field.getType(ctx));
 					}
@@ -290,20 +290,20 @@ namespace compiler::helios {
 					auto [arg_types, return_type]
 						= [&]() -> std::pair<std::vector<tsh::SymbolType<>>, tsh::SymbolType<>> {
 						switch (method.kind) {
-						case defgen::GeneratedMethodType::ToString:
+						case defgen::GeneratedMethodKind::ToString:
 							return { { immmut_self },
 								     tsh::SymbolType<>::withDefaults(tsh::getStringType()) };
-						case defgen::GeneratedMethodType::LengthMethod:
+						case defgen::GeneratedMethodKind::LengthMethod:
 							return { { immmut_self },
 								     tsh::SymbolType<>::withDefaults(tsh::getIntegralType(
 										 ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned
 									 )) };
-						case defgen::GeneratedMethodType::DefaultDestructor:
+						case defgen::GeneratedMethodKind::DefaultDestructor:
 							return { { mut_self },
 								     tsh::SymbolType<>{ tsh::getUnitType(),
 								                        tsh::ReferenceKind::Direct,
 								                        tsh::Mutability::Immutable } };
-						case defgen::GeneratedMethodType::Push: {
+						case defgen::GeneratedMethodKind::Push: {
 							// `(ref mut T self, Element element) -> ()`.
 							const auto element_type
 								= method.owner_type.as<tsh::DynamicArrayAbstractType>()
@@ -313,7 +313,7 @@ namespace compiler::helios {
 								                        tsh::ReferenceKind::Direct,
 								                        tsh::Mutability::Immutable } };
 						}
-						case defgen::GeneratedMethodType::Pop: {
+						case defgen::GeneratedMethodKind::Pop: {
 							// `(ref mut T self, u64 count) -> ()`.
 							const auto count_type
 								= tsh::SymbolType<>::withDefaults(tsh::getIntegralType(

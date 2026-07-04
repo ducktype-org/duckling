@@ -14,7 +14,7 @@
 #include <variant>
 
 namespace compiler::helios::defgen {
-	enum class GeneratedConstructorType {
+	enum class GeneratedConstructorKind {
 		Implicit,
 		Default,
 	};
@@ -36,13 +36,13 @@ namespace compiler::helios::defgen {
 	 */
 	struct Constructor final {
 		tsh::AbstractType        type;  // The type this constructor belongs to.
-		GeneratedConstructorType kind;
+		GeneratedConstructorKind kind;
 
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const;
 	};
 
-	enum class GeneratedMethodType {
+	enum class GeneratedMethodKind {
 		DefaultDestructor,
 		LengthMethod,
 		ToString,
@@ -56,7 +56,7 @@ namespace compiler::helios::defgen {
 	 */
 	struct Method final {
 		tsh::AbstractType   owner_type;
-		GeneratedMethodType kind;
+		GeneratedMethodKind kind;
 
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const;

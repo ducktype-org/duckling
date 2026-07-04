@@ -30,24 +30,24 @@ namespace compiler::helios {
 	 * @brief Identifies which compiler builtin a `@builtin("...")` attribute selects.
 	 * Can't use the STRINGIFIYABLE enum because camel case vs snake case.
 	 */
-	enum class BuiltinType {
+	enum class BuiltinKind {
 		RawPtrFromSlice,
 	};
 
 	/**
-	 * @brief Map a builtin name to its BuiltinType, empty when the name is unknown.
+	 * @brief Map a builtin name to its BuiltinKind, empty when the name is unknown.
 	 */
-	base::Optional<BuiltinType> builtinTypeFromStr(base::StrID name);
+	base::Optional<BuiltinKind> builtinTypeFromStr(base::StrID name);
 
 	/**
 	 * @brief Reverse of builtinTypeFromStr.
 	 */
-	base::StrID builtinTypeToStr(BuiltinType type);
+	base::StrID builtinTypeToStr(BuiltinKind type);
 
 	/**
 	 * @brief Origin for the given builtin.
 	 */
-	BuiltinOrigins builtinOriginForType(BuiltinType type);
+	BuiltinOrigins builtinOriginForType(BuiltinKind type);
 
 	/**
 	 * @brief Validate the arguments of a `@builtin(...)` attribute and resolve the builtin.
@@ -57,7 +57,7 @@ namespace compiler::helios {
 	 *
 	 * @param args The attribute argument list, empty when the attribute is written without `(...)`.
 	 */
-	BuiltinType parseBuiltinAttr(
+	BuiltinKind parseBuiltinAttr(
 		query::Context& ctx, base::Optional<pst::AccessLocked<pst::AtrArgList>> args
 	);
 
@@ -66,5 +66,5 @@ namespace compiler::helios {
 	 * @param symbol The builtin's function symbol (used to fetch its declaration/parameters).
 	 * @param type   Which builtin to implement.
 	 */
-	HOUTFunction getBuiltinImpl(query::Context& ctx, SymID symbol, BuiltinType type);
+	HOUTFunction getBuiltinImpl(query::Context& ctx, SymID symbol, BuiltinKind type);
 }

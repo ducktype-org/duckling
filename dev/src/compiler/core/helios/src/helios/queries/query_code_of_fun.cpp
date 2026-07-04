@@ -146,7 +146,7 @@ namespace compiler::helios {
 				}
 				variant_case(defgen::Constructor, ctor) {
 					switch (ctor.kind) {
-					case defgen::GeneratedConstructorType::Implicit:
+					case defgen::GeneratedConstructorKind::Implicit:
 						switch (ctor.type.getKind()) {
 						case tsh::Kind::Class:
 							return ctx
@@ -163,7 +163,7 @@ namespace compiler::helios {
 						default:
 							CORE_PANIC("Unhandled implicit constructor type.");
 						}
-					case defgen::GeneratedConstructorType::Default:
+					case defgen::GeneratedConstructorKind::Default:
 						switch (ctor.type.getKind()) {
 						case tsh::Kind::Class:
 							return ctx
@@ -185,18 +185,18 @@ namespace compiler::helios {
 				}
 				variant_case(defgen::Method, method) {
 					switch (method.kind) {
-					case defgen::GeneratedMethodType::DefaultDestructor:
+					case defgen::GeneratedMethodKind::DefaultDestructor:
 						return ctx.query<defgen::QueryDefaultDestructor>(method.owner_type)
 						    ->valueOrThrow();
-					case defgen::GeneratedMethodType::ToString:
+					case defgen::GeneratedMethodKind::ToString:
 						return ctx.query<defgen::QueryToStringMethod>(method.owner_type)
 						    ->valueOrThrow();
-					case defgen::GeneratedMethodType::LengthMethod:
+					case defgen::GeneratedMethodKind::LengthMethod:
 						return ctx.query<defgen::QueryLengthMethod>(method.owner_type)
 						    ->valueOrThrow();
-					case defgen::GeneratedMethodType::Push:
+					case defgen::GeneratedMethodKind::Push:
 						return ctx.query<defgen::QueryPushMethod>(method.owner_type)->valueOrThrow();
-					case defgen::GeneratedMethodType::Pop:
+					case defgen::GeneratedMethodKind::Pop:
 						return ctx.query<defgen::QueryPopMethod>(method.owner_type)->valueOrThrow();
 					}
 					CORE_UNREACHABLE();

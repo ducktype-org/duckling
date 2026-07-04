@@ -549,7 +549,7 @@ namespace compiler::helios::code {
 	                        ->valueOrThrow(),
 	            .generated_symbol_data
 	            = defgen::Constructor{ .type = expression_type.getType(),
-	                                   .kind = defgen::GeneratedConstructorType::Implicit } }
+	                                   .kind = defgen::GeneratedConstructorKind::Implicit } }
 		  )) {}
 
 	TupleExpr::TupleExpr(

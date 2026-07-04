@@ -51,9 +51,9 @@ namespace compiler::helios {
 		/**
 		 * Which builtin this symbol implements.
 		 */
-		BuiltinType builtin;
+		BuiltinKind builtin;
 
-		BuiltinSemantics(ScopeID scope, pst::HashType pst_element_hash, BuiltinType builtin):
+		BuiltinSemantics(ScopeID scope, pst::HashType pst_element_hash, BuiltinKind builtin):
 			  scope(scope),
 			  pst_element_hash(pst_element_hash),
 			  builtin(builtin) {}

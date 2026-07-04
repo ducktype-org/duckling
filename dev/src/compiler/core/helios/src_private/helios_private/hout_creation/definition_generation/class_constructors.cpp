@@ -18,7 +18,7 @@ namespace compiler::helios::defgen {
 			auto class_interface = class_type.getInterface(ctx);
 
 			using defgen::Constructor;
-			using defgen::GeneratedConstructorType;
+			using defgen::GeneratedConstructorKind;
 			using Variable = GeneratedFunctionVariable;
 			using std::ranges::to;
 			using std::views::transform;
@@ -33,7 +33,7 @@ namespace compiler::helios::defgen {
 			const SymID ctor_symbol = ctx.query<QueryGeneratedSymbol>({
 				.name = name(class_type.getSymbol()),
 				.generated_symbol_data
-				= Constructor{ .type = class_type, .kind = GeneratedConstructorType::Implicit },
+				= Constructor{ .type = class_type, .kind = GeneratedConstructorKind::Implicit },
 			});
 
 			const auto& ctor_decl = ctx.query<QueryDeclOfFun>(ctor_symbol)->valueOrThrow();

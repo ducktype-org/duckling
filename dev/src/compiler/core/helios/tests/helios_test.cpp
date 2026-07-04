@@ -2820,7 +2820,7 @@ private:
 
 				const auto* dep_ctor = std::get_if<Constructor>(&getSymRef(deps[0])->other);
 				ASSERT_TRUE(dep_ctor != nullptr);
-				ASSERT_EQUAL(dep_ctor->kind, GeneratedConstructorType::Default);
+				ASSERT_EQUAL(dep_ctor->kind, GeneratedConstructorKind::Default);
 				ASSERT_EQUAL(dep_ctor->type.getKind(), compiler::tsh::Kind::Class);
 			}
 
@@ -2841,7 +2841,7 @@ private:
 				bool found_array_ctor = false;
 				for (auto d: deps) {
 					const auto* ctor = std::get_if<Constructor>(&getSymRef(d)->other);
-					if (ctor != nullptr && ctor->kind == GeneratedConstructorType::Default
+					if (ctor != nullptr && ctor->kind == GeneratedConstructorKind::Default
 					    && ctor->type.getKind() == compiler::tsh::Kind::StaticArray)
 						found_array_ctor = true;
 				}

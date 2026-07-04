@@ -18,29 +18,29 @@
 namespace compiler::helios {
 	namespace {
 		/**
-		 * @brief Single source of truth mapping builtin names to BuiltinType.
+		 * @brief Single source of truth mapping builtin names to BuiltinKind.
 		 */
-		const base::HashMap<std::string_view, BuiltinType>& builtinNameMapping() {
-			static const base::HashMap<std::string_view, BuiltinType> mapping = {
-				{ "ptr_from_slice", BuiltinType::RawPtrFromSlice },
+		const base::HashMap<std::string_view, BuiltinKind>& builtinNameMapping() {
+			static const base::HashMap<std::string_view, BuiltinKind> mapping = {
+				{ "ptr_from_slice", BuiltinKind::RawPtrFromSlice },
 			};
 			return mapping;
 		}
 	}
 
-	base::Optional<BuiltinType> builtinTypeFromStr(base::StrID name) {
+	base::Optional<BuiltinKind> builtinTypeFromStr(base::StrID name) {
 		return builtinNameMapping().atMaybeCopy(name.strView());
 	}
 
-	base::StrID builtinTypeToStr(BuiltinType type) {
+	base::StrID builtinTypeToStr(BuiltinKind type) {
 		switch (type) {
-		case BuiltinType::RawPtrFromSlice:
+		case BuiltinKind::RawPtrFromSlice:
 			return base::StrID("ptr_from_slice");
 		}
 		CORE_UNREACHABLE();
 	}
 
-	BuiltinType parseBuiltinAttr(
+	BuiltinKind parseBuiltinAttr(
 		query::Context& ctx, base::Optional<pst::AccessLocked<pst::AtrArgList>> args
 	) {
 		if_opt_none(args) {
@@ -87,9 +87,9 @@ namespace compiler::helios {
 		return builtin.value();
 	}
 
-	HOUTFunction getBuiltinImpl(query::Context& ctx, SymID symbol, BuiltinType type) {
+	HOUTFunction getBuiltinImpl(query::Context& ctx, SymID symbol, BuiltinKind type) {
 		switch (type) {
-		case BuiltinType::RawPtrFromSlice: {
+		case BuiltinKind::RawPtrFromSlice: {
 			// `ptr_from_slice(slice T s) -> manyptr T` simply returns the slice's data pointer
 			// field. This mirrors the `length` method, only reading a different field (`ptr` vs
 			// `len`).
@@ -126,9 +126,9 @@ namespace compiler::helios {
 		CORE_UNREACHABLE();
 	}
 
-	BuiltinOrigins builtinOriginForType(BuiltinType type) {
+	BuiltinOrigins builtinOriginForType(BuiltinKind type) {
 		switch (type) {
-		case BuiltinType::RawPtrFromSlice:
+		case BuiltinKind::RawPtrFromSlice:
 			return BuiltinOrigin::HOUT;
 		}
 		CORE_UNREACHABLE();

@@ -321,7 +321,7 @@ namespace compiler::helios {
 		static PResult getImplicitCtorDecl(Context& ctx, const defgen::Constructor& ctor_data) {
 			// Preamble
 			using defgen::Constructor;
-			using defgen::GeneratedConstructorType;
+			using defgen::GeneratedConstructorKind;
 			using defgen::Parameter;
 			using std::ranges::to;
 			using std::views::transform;
@@ -354,7 +354,7 @@ namespace compiler::helios {
 			const SymID ctor_symbol        = ctx.query<defgen::QueryGeneratedSymbol>({
 					   .name = ctor_name,
 					   .generated_symbol_data
-                = Constructor{ .type = target_type, .kind = GeneratedConstructorType::Implicit },
+                = Constructor{ .type = target_type, .kind = GeneratedConstructorKind::Implicit },
             });
 			const auto  result_symbol_type = tsh::SymbolType<>{
                 target_type,
@@ -482,9 +482,9 @@ namespace compiler::helios {
 					}
 					variant_case(defgen::Constructor, ctor_data) {
 						switch (ctor_data.kind) {
-						case defgen::GeneratedConstructorType::Implicit:
+						case defgen::GeneratedConstructorKind::Implicit:
 							return getImplicitCtorDecl(ctx, ctor_data);
-						case defgen::GeneratedConstructorType::Default: {
+						case defgen::GeneratedConstructorKind::Default: {
 							const auto return_type = tsh::SymbolType<>{ ctor_data.type,
 								                                        tsh::ReferenceKind::Direct,
 								                                        tsh::Mutability::Mutable };
