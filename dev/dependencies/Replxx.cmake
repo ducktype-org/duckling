@@ -31,7 +31,6 @@ set(REPLXX_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(replxx)
 
 # Suppress warnings in replxx sources that conflict with our strict -Werror flags.
-
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 	target_compile_options(replxx PRIVATE
 		-Wno-conversion -Wno-shadow -Wno-shadow=local
