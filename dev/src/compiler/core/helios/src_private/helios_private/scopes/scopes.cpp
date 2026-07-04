@@ -545,31 +545,6 @@ namespace compiler::helios {
 				// and add them here.
 				output(std::vector<SymID>{});
 			}
-			
-			// THIS IS A GIGA HACK!
-			// change it to todo or better solution
-			// void visitTemplateStmt(pst::Access<pst::TemplateStmt> template_decl) override {
-				
-			// 	// Scope of "template →(...)← {}"
-			// 	// ONLY for BAKED templates, since they are the only ones that have a scope.
-
-			// 	std::vector<SymID> out;
-			// 	const auto& additional_data = template_decl->getAdditionalRootData();
-
-			// 	variant_match(additional_data.pst_parent) {
-			// 		variant_case(pst::AdditionalRootData::TemplateParent, template_parent) {
-			// 			auto proper_data = base::anyCast<templates::TemplateBakePSTLinkedData>(template_parent.template_bake_data);
-			// 			for (const auto& param: proper_data.template_arguments_symbols) {
-			// 				out.emplace_back(param);
-			// 			}
-			// 		}
-			// 		variant_default {
-			// 			CORE_PANIC("Template declaration without TemplateParent, this should not happen here.");
-			// 		}
-			// 	}
-
-			// 	output(std::move(out));
-			// }
 
 			void visitFor(pst::Access<pst::For> for_stmt) override {
 				using namespace desugaring;
@@ -602,8 +577,13 @@ namespace compiler::helios {
 				return filterSymbolsFromStmtList(ctx, getStmtsFromStmtAggregate(ctx, base_element));
 			} 
 			else if (base_element->getElementKind() == pst::ElementKind::TemplateStmt) {
-				std::cerr << "QuerySymbolsInScope for template element!\n";
+				// THIS IS A GIGA HACK!
+				// @TODO: better solution
 
+				// Scope of "template →(...)← {}"
+				// ONLY for BAKED templates, since they are the only ones that have a scope.
+
+				// @TODO: move in to the visitor?
 				auto template_decl = base_element.dynamicCast<pst::TemplateStmt>().value();
 
 				std::vector<SymID> out;
