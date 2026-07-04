@@ -21,7 +21,7 @@ namespace pst {
 	void TemplateDecl::dprint(std::ostream& out) const {
 		out << "{";
 
-		out << ",\"Parameters\":";
+		out << "\"Parameters\":";
 		nullAwareDprint(params, out);
 
 		out << "}";

@@ -49,6 +49,8 @@ namespace lang_def {
 			{ Keyword::Loop, "loop", KeywordFlagsOptions::IsStmtStart },
 			{ Keyword::Block, "block", KeywordFlagsOptions::IsStmtStart },
 			{ Keyword::Expand, "expand", KeywordFlagsOptions::IsStmtStart },
+
+			// @note: Template is a bit special, it acts more as a specifier so it being a stmt start might not always be what we want.
 			{ Keyword::Template, "template", KeywordFlagsOptions::IsStmtStart },
 
 			// These Keywords also indicate start of a statement.
