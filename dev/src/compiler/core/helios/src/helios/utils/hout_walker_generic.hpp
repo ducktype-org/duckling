@@ -215,6 +215,11 @@ namespace compiler::helios::code {
 			walk(*e.list);
 			walk(*e.count);
 		}
+
+		void visitMoveExpr(const MoveExpr& e) override {
+			handler(e);
+			walk(*e.inner);
+		}
 	};
 
 	/// Walk `expr` and all of its sub-expressions.

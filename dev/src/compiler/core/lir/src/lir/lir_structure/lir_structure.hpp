@@ -39,7 +39,6 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 
 	ListPush,
 	ListPop,
-	ListLen,
 
 	/**
 		@brief Placeholder.
