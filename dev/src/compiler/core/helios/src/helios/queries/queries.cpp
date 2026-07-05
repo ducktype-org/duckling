@@ -227,17 +227,14 @@ namespace compiler::helios {
 			base::StrID mangled_name = compiler::helios::mangler::getSimpleMangledName(ctx, sym_id);
 			if (mangled_name.isBad()) return false;
 
+			// Allow duplicate mangled names for symbols with backend-dependent implementations.
 			if (hasAttribute<attributes::DVMOnlyImpl>(sym_id)
 			    or hasAttribute<attributes::NativeOnlyImpl>(sym_id)) {
-				// Allow duplicate mangled names for symbols with backend-dependent implementations.
 				return false;
 			}
 
 			auto [entry, inserted] = seen_declarations.try_emplace(mangled_name, stable_pos);
-			if (inserted) {
-				// First time we see this mangled name, so it is not a duplicate.
-				return false;
-			}
+			if (inserted) return false;
 
 			auto error = makeBox<dia_int::DuplicatedDefinitionError>(
 				std::string(original_name.strView()), stable_pos
@@ -300,7 +297,6 @@ namespace compiler::helios {
 					))
 					found_duplicate = true;
 			}
-
 			return found_duplicate ? base::BAD : base::OK;
 		}
 
