@@ -52,10 +52,13 @@ public:
 
 protected:
 	void beforeAll() override {
-		// Initialize the compiler so the standard library is loaded.
+		// Initialize the compiler so the standard library is loaded and select the LLVM backend.
 		fs::FilePath artifacts_path = fs::FileManager::createRandomTempDirectory().getFilePath();
 		auto         init_result    = compiler::driver::test_utils::initializeCompilerForTests(
-            {}, artifacts_path, { compiler::driver::options_types::StdLibOptions::DefaultStd{} }
+            {},
+            artifacts_path,
+            { compiler::driver::options_types::StdLibOptions::DefaultStd{} },
+            { .llvm_backend = global_state::BackendOptions::LLVMBackend{} }
         );
 		assertTrue(init_result.status().isOk(), "Compiler initialization failed");
 
@@ -253,7 +256,9 @@ private:
 		// points[1].y
 		// GEP: 0 (ptr), 1 (array index), 1 (field index)
 		assertTrue(
-			std::regex_search(ir, std::regex{ R"(getelementptr.*i32\s+0,\s+i64\s+%0,\s+i32\s+1)" }),
+			std::regex_search(
+				ir, std::regex{ R"(getelementptr.*i32\s+0,\s+i64\s+%\w+,\s+i32\s+1)" }
+			),
 			"Expected GEP for struct field access in array: points[1].y"
 		);
 	}
