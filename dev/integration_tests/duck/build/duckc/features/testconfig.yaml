@@ -1,4 +1,3 @@
-tmp_env_files: "foo"
 features: ""
 run_post_case: "true"
 PostCase: |+
@@ -6,6 +5,12 @@ PostCase: |+
     python3 check.py @{features}
   fi
   @{cleanup_tmp_env}
+PreCase: |+
+  cd $DIT_TMP_DIR
+  @{duck_exe} init foo
+  echo "features:
+    foo: []
+    bar: [foo]" >> foo/quackconfig.yaml
 Tests:
   build:
     Description: can build a project with features

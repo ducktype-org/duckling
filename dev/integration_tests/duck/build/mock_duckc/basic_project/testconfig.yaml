@@ -1,4 +1,3 @@
-tmp_env_files: "foo"
 profile_name: ""
 run_post_case: "true"
 PostCase: |+
@@ -6,6 +5,19 @@ PostCase: |+
     python3 check.py @{profile_name}
   fi
   @{cleanup_tmp_env}
+
+PreCase: |+
+  cd $DIT_TMP_DIR
+  @{duck_exe} init foo
+  echo "profiles:
+    my-profile:
+      opt-level: z
+      dvm-bytecode: true
+    bench:
+      opt-level: 2
+    my-profile2:
+      inherits: my-profile
+      opt-level: s" >> foo/quackconfig.yaml
 
 Tests:
   build:

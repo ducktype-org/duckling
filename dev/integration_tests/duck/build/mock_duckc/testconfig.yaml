@@ -1,5 +1,5 @@
 # !TODO: $(pwd) is relative to the current test, but we want it to point to the directory of this file.
-before_cmd: export PATH="$(pwd)/..:$PATH" && @{make_tmp_env} && cd "$DIT_TMP_DIR"
+before_cmd: export PATH="$(pwd)/..:$PATH"
 
 # @TODO: #2907 Add more tests with many packages (it'll be easier to write them, once we have determinism)
 SubDirs:

@@ -1,6 +1,19 @@
-tmp_env_files: "foo bar"
 features: ""
 PostCase: python3 check.py @{features} && @{cleanup_tmp_env}
+
+PreCase: |+
+  cd $DIT_TMP_DIR
+  @{duck_exe} init foo
+  @{duck_exe} init bar
+  echo "dependencies:
+    bar:
+      source:
+        path: ../bar
+      conditions:
+        package-features: [use-bar]
+
+  features:
+    use-bar: []" >> foo/quackconfig.yaml
 
 Tests:
   build:

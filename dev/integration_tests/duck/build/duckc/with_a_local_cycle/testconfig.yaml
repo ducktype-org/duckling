@@ -1,4 +1,21 @@
-tmp_env_files: "foo bar baz"
+PreCase: |+
+  cd $DIT_TMP_DIR
+  @{duck_exe} init foo
+  @{duck_exe} init bar
+  @{duck_exe} init baz
+  echo "dependencies:
+    bar:
+      source:
+        path: ../bar" >> foo/quackconfig.yaml
+  echo "dependencies:
+    baz:
+      source:
+        path: ../baz" >> bar/quackconfig.yaml
+
+  echo "dependencies:
+    foo:
+      source:
+        path: ../foo" >> baz/quackconfig.yaml
 Tests:
   build:
     Description: can build a project with dependencies

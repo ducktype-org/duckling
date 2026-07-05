@@ -1,5 +1,13 @@
-tmp_env_files: "foo bar"
 PostCase: python3 check.py && @{cleanup_tmp_env}
+
+PreCase: |+
+  cd $DIT_TMP_DIR
+  @{duck_exe} init foo
+  @{duck_exe} init bar
+  echo "dependencies:
+    bar:
+      source:
+        path: ../bar" >> foo/quackconfig.yaml
 Tests:
   build:
     Description: can build a project with dependencies
