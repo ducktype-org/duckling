@@ -37,7 +37,7 @@ PreCase: |+
   if [ '@{add_dep}' == 'true' ]; then
     echo "dependencies:
       '@{dep_name}':
-        version: 1" >> @{dir_name}/quackconfig.yaml
+        version: 1.0.0" >> @{dir_name}/quackconfig.yaml
   fi
 Tests:
   sync:
@@ -72,9 +72,10 @@ Tests:
           Run: "@{root_error}"
       package_name_can_contain_a_dash:
         dir_name: package_name_can_contain_a_dash
+        package_name: foo-bar
         ExitCode: 0
         Output:
-          String: 'info: successfully synchronized venv \`foo-bar\`\n'
+          String: 'info: successfully synchronized venv \`@{package_name}\`\n'
       dependency_name_cannot_be_empty:
         dir_name: empty_dependency_name
         dep_name: ''
