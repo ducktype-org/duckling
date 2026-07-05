@@ -31,10 +31,13 @@ namespace compiler::backend_vm::internal {
 		void lower(const BoxFreeOperation& op);
 		void lower(const CastOperation& op);
 		void lower(const MetaOperation& op);
+		void lower(const VariantConstructOperation& op);
+		void lower(const VariantTryProjectOperation& op);
 
 		// Terminators
 		void lower(const JumpOperation& op);
 		void lower(const BranchOperation& op);
+		void lower(const BranchIfNullOperation& op);
 		void lower(const ReturnOperation& op);
 
 		/**

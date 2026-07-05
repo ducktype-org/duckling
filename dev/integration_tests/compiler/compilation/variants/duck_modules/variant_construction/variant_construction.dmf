@@ -1,0 +1,23 @@
+import core.builtins.*;
+
+fun main() -> i64 = {
+	# Construction via implicit coercion.
+	var a: i32 = i32(7);
+	var v: i32 | f32 = a;
+	builtin_output_i64(i64(1));
+
+	# Reassignment with a different alternative.
+	v = f32(2.5);
+	builtin_output_i64(i64(2));
+
+	# Reassignment back to the first alternative.
+	v = i32(42);
+	builtin_output_i64(i64(3));
+
+	# Variant-to-variant assignment (same type, no coercion).
+	var w: i32 | f32 = v;
+	w = v;
+	builtin_output_i64(i64(4));
+
+	return i64(0);
+}

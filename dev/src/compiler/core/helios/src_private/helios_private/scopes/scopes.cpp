@@ -151,6 +151,16 @@ namespace compiler::helios {
 		case pst::ElementKind::ClassSpecial:
 			return ElementScopeKind::Standard;
 
+		// Each case owns the symbols bound by its pattern.
+		case pst::ElementKind::MatchCase:
+			return ElementScopeKind::Standard;
+
+		case pst::ElementKind::Match:
+		case pst::ElementKind::FlowPattern:
+		case pst::ElementKind::BindingPattern:
+		case pst::ElementKind::WildcardPattern:
+			return ElementScopeKind::Transparent;
+
 		case pst::ElementKind::ClassConstructor:
 		case pst::ElementKind::ClassDestructor:
 			return ElementScopeKind::Standard;
@@ -556,6 +566,19 @@ namespace compiler::helios {
 
 			if (base_element->isStatementAggregate()) {
 				return filterSymbolsFromStmtList(ctx, getStmtsFromStmtAggregate(ctx, base_element));
+			} else if (base_element->getElementKind() == pst::ElementKind::MatchCase) {
+				// The only symbol a match case may introduce is its pattern binding.
+				auto match_case = base_element.dynamicCast<pst::MatchCase>().value();
+				auto flow       = match_case->getPattern().unlock(ctx);
+
+				std::vector<SymID> out;
+				if (auto binding
+				    = flow->getPattern().unlock(ctx).dynamicCast<pst::BindingPattern>()) {
+					out.emplace_back(
+						ctx.query<QuerySymbolOfSTMT>({ binding.value()->getName() }).valueOrThrow()
+					);
+				}
+				return out;
 			} else if (base_element->isStatement()) {
 				// note: if this check fail, it might be that we are missing some cases
 				CORE_ASSERT(

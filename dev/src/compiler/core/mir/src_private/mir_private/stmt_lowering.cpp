@@ -4,6 +4,7 @@
 
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/hout/visitors.hpp>
+#include <helios/tsh/queries/types.hpp>
 #include <mir/mir_structure/mir_local_ref.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 
@@ -317,6 +318,81 @@ namespace compiler::mir {
 			auto block_body = lowerCodeBlock(stmt.body, continuation, function, block_scope);
 
 			output({ block_body.begin });
+		}
+
+		void visitMatchStmt(const hc::MatchStmt& stmt) override {
+			auto match_scope = function.newScope(parent_scope);
+
+			const auto subject_type = stmt.subject->expression_type.getSymbolType();
+			const auto variant_type = subject_type.getType().as<tsh::VariantAbstractType>();
+
+			// Cases are tried in order; the chain is built backwards. `next_entry` is
+			// where a failed alternative test jumps to: the next case, or (for the very
+			// last case, when the match has no wildcard) the continuation.
+			BlockID                         next_entry = continuation->getID();
+			base::Optional<BlockBuilderRef> first_entry;
+
+			for (const auto& match_case: stmt.cases | std::views::reverse) {
+				// Body block: run the case body, then jump to the continuation.
+				auto case_scope = function.newScope(parent_scope);
+				auto body_end   = function.newBlock();
+				body_end->setTerminator(
+					{ Operation::Jump, {}, { continuation->getID() }, {}, case_scope }
+				);
+				auto body_begin
+					= lowerCodeBlock(match_case.body, body_end, function, case_scope).begin;
+
+				if (!match_case.alternative_index.has_value()) {
+					// Wildcard: unconditional entry, no test needed.
+					next_entry  = body_begin->getID();
+					first_entry = body_begin;
+					continue;
+				}
+
+				// Test block: try to project the alternative, branch on the null-ness of
+				// the resulting payload pointer.
+				auto test_block      = function.newBlock();
+				auto project_hole    = test_block->addHole();
+				auto lowered_subject = lowerExpr(*stmt.subject, test_block, function, match_scope);
+				auto subject_val     = lowered_subject.getResult(function);
+
+				const usize alternative_index = match_case.alternative_index.value();
+				const auto  alternative_type  = variant_type.getMember(alternative_index);
+				const auto  pointer_type      = tsh::SymbolType<>::withDefaults(
+                    function.getContext().query<tsh::QueryPointerType>({ alternative_type })
+                );
+
+				auto        payload_ptr = function.addTmp(pointer_type, match_scope);
+				Instruction project_instr{ Operation::VariantTryProject,
+					                       {},
+					                       { subject_val },
+					                       { flagConstruct(payload_ptr) },
+					                       match_scope,
+					                       VariantParameters{
+											   .alternative_index = alternative_index,
+											   .alternative_type  = alternative_type },
+					                       { stmt.getPosition() } };
+				project_instr.output.emplace(payload_ptr);
+				project_hole.fill(project_instr);
+
+				test_block->setTerminator(Instruction(
+					Operation::BranchIfNull,
+					{},
+					std::vector<MIRValue>{ MIRValue{ payload_ptr },
+				                           MIRValue{ next_entry },
+				                           MIRValue{ body_begin->getID() } },
+					{},
+					match_scope,
+					{},
+					{ stmt.getPosition() }
+				));
+
+				next_entry  = lowered_subject.begin->getID();
+				first_entry = lowered_subject.begin;
+			}
+
+			CORE_ASSERT(first_entry.has_value(), "MatchStmt with no cases");
+			output({ first_entry.value() });
 		}
 	};
 

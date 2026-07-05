@@ -13,7 +13,8 @@ namespace compiler::helios::code {
 		WhileStmt,
 		VariableStmt,
 		AssignmentStmt,
-		BlockStmt
+		BlockStmt,
+		MatchStmt
 	);
 	MAKE_VISITOR(HoutExpr,
 		LiteralUnitExpr,
@@ -32,6 +33,7 @@ namespace compiler::helios::code {
 		TupleExpr,
 		VariantTypeConstructorExpr,
 		VariantConstructExpr,
+		VariantProjectExpr,
 		CallExpr,
 		AccessExpr,
 		IndexExpr,

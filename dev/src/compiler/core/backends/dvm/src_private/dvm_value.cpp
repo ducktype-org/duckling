@@ -19,6 +19,7 @@ using namespace compiler::backend_vm::internal;
 		variant_case(vm::code::PointerType, pointer) { return vm::opargs::PlacePtr(name); }
 		variant_case(vm::code::FixedSizeTableType, array) { return vm::opargs::PlaceFSTable(name); }
 		variant_case(vm::code::DataType, data) { return vm::opargs::PlaceStructure(name); }
+		variant_case(vm::code::VariantType, variant) { return vm::opargs::PlaceVnt(name); }
 		variant_case(vm::code::OpaqueType, opaque) { return vm::opargs::PlaceOpq(name); }
 		variant_default {
 			CORE_PANIC("DVMLocal type not supported for argument: ", typeName(type));

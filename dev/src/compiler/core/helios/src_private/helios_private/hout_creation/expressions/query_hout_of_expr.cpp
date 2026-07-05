@@ -378,6 +378,16 @@ namespace compiler::helios::code {
 				    .valueOrThrow();
 			}
 
+			void visitMatchExpr(pst::Access<pst::expr::MatchExpr> stmt) override {
+				// Match is desugared at the statement surface (variable initializers,
+				// assignments and returns); as a nested sub-expression it is not supported.
+				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					"`match` used as a nested sub-expression. It is only supported as a "
+					"variable initializer, assignment right-hand side or return value.",
+					stmt->getStablePosition()
+				));
+			}
+
 			void visitBinaryOperator(pst::Access<pst::expr::BinaryOperator> stmt) override {
 				// handle variants:
 				const auto op = stmt->getOperator().unlock(ctx);

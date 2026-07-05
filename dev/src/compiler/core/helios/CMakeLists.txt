@@ -31,6 +31,7 @@ add_library(HELIOS STATIC
 	src_private/helios_private/hout_creation/definition_generation/list_methods.cpp
 	src_private/helios_private/hout_creation/definition_generation/to_string_methods.cpp
 	src_private/helios_private/hout_creation/desugaring/for.cpp
+	src_private/helios_private/hout_creation/desugaring/match.cpp
 	src_private/helios_private/hout_creation/hout_stmt_compilation.cpp
 	src_private/helios_private/errors/dia_interactive_elements.cpp
 	src_private/helios_private/errors/duplicated_definition.cpp

@@ -96,6 +96,7 @@ SubDirs:
   - optimisations
   - references
   - boxes
+  - variants
   - pointers
   - globals
   - tuples

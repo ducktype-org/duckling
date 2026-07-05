@@ -14,6 +14,7 @@ namespace compiler::helios::code {
 	STMT_VISITOR(VariableStmt)
 	STMT_VISITOR(AssignmentStmt)
 	STMT_VISITOR(BlockStmt)
+	STMT_VISITOR(MatchStmt)
 
 	namespace {
 		constexpr usize INDENT_SIZE = 4;
@@ -92,6 +93,25 @@ namespace compiler::helios::code {
 		addIndent(out, indent);
 		out << "{\n";
 		for (const auto& stmt: body.statements) stmt->debugPrint(out, indent + 1);
+		addIndent(out, indent);
+		out << "}\n";
+	}
+
+	void MatchStmt::debugPrint(std::ostream& out, usize indent) const {
+		addIndent(out, indent);
+		out << "match (";
+		subject->debugPrint(out);
+		out << ") {\n";
+		for (const auto& match_case: cases) {
+			addIndent(out, indent + 1);
+			if (match_case.alternative_index.has_value())
+				out << "case [alt=" << match_case.alternative_index.value() << "] {\n";
+			else
+				out << "case [wildcard] {\n";
+			for (const auto& stmt: match_case.body.statements) stmt->debugPrint(out, indent + 2);
+			addIndent(out, indent + 1);
+			out << "}\n";
+		}
 		addIndent(out, indent);
 		out << "}\n";
 	}

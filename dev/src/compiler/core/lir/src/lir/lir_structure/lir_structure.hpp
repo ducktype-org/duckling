@@ -102,13 +102,20 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 	Cast,
 	ZeroInitialize,
 
+	/** Creates a variant value from a payload value (see mir::Operation::VariantConstruct). */
+	VariantConstruct,
+	/** Pointer to the variant's payload, null on alternative mismatch. */
+	VariantTryProject,
+
 	Call,
 
 	ReturnVoid,
 	ReturnValue,
 	Jump,
 	Branch,
-	
+	/** Terminator: [pointer, null_target, not_null_target]. */
+	BranchIfNull,
+
 	// Nop can be useful when lowering the instruction flags and MIR instr translates
 	// to zero instructions in LIR, but we want to have the flags in correct place.
 	Nop
@@ -493,10 +500,21 @@ namespace compiler::lir {
 	};
 
 	/**
+	 * @brief Parameters of VariantConstruct/VariantTryProject: the variant alternative
+	 * (index in the canonical order of the interned variant type) and its layout.
+	 */
+	struct VariantParameters final {
+		usize                 alternative_index;
+		tsh::SymbolType<>     alternative_type;
+		CRef<tsl::TypeLayout> alternative_layout;
+		CRef<tsl::TypeLayout> variant_layout;
+	};
+
+	/**
 	 * @brief Additional parameters for LIR instructions that depend on the operation type.
 	 */
 	using InstrParameters
-		= std::variant<NoInstrParameters, CastParameters, ListOperationParameters>;
+		= std::variant<NoInstrParameters, CastParameters, ListOperationParameters, VariantParameters>;
 
 	struct InstructionMetadata {
 		base::Optional<dia_int::StablePosition> position;

@@ -1,0 +1,16 @@
+# Tests for variant types
+Tests:
+  variant_construction:
+    Cases:
+      all:
+        backend: all
+        Output:
+          String: "1\n2\n3\n4\n"
+        ExitCode: 0
+  variant_match:
+    Cases:
+      all:
+        backend: all
+        Output:
+          String: "41\n-1\n10\n2\n"
+        ExitCode: 0

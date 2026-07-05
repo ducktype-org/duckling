@@ -138,6 +138,35 @@ namespace compiler::backend_vm::internal {
 	};
 
 	/**
+	 * @brief Constructs a variant value: sets the active alternative and stores the payload.
+	 */
+	struct VariantConstructOperation {
+		lir::VariantParameters variant_params;
+		DVMValue               payload;
+		DVMPlace               dest;  ///< The variant place; always present.
+	};
+
+	/**
+	 * @brief Produces a pointer to the variant's payload, null on alternative mismatch.
+	 */
+	struct VariantTryProjectOperation {
+		lir::VariantParameters variant_params;
+		DVMPlace               variant;
+		DVMPlace               dest;  ///< The pointer place; always present.
+	};
+
+	/**
+	 * @brief Terminator branching on pointer nullness.
+	 */
+	struct BranchIfNullOperation {
+		DVMValue pointer;
+		DVMLabel null_target;
+		DVMLabel not_null_target;
+
+		std::vector<lir::ScopeFlag> scope_flags;
+	};
+
+	/**
 	 * @brief Represents a jump terminator.
 	 */
 	struct JumpOperation {
@@ -184,8 +213,11 @@ namespace compiler::backend_vm::internal {
 		BoxFreeOperation,
 		CastOperation,
 		MetaOperation,
+		VariantConstructOperation,
+		VariantTryProjectOperation,
 		JumpOperation,
 		BranchOperation,
+		BranchIfNullOperation,
 		ReturnOperation>;
 
 

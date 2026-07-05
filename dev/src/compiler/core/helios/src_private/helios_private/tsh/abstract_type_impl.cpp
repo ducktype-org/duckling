@@ -247,6 +247,13 @@ namespace compiler::tsh {
 
 	VariantAbstractTypeImpl::VariantAbstractTypeImpl(const std::vector<SymbolType<>>& variant_types):
 		  underlying_types(variant_types) {
+		// Variants are unordered; canonicalize the alternative order so that the runtime tag
+		// (= index into getUnderlyingTypes()) does not depend on construction order.
+		// Sorting must not use queryUnstablePerfectHash: it differs between compiler
+		// processes, which would make the emitted code non-deterministic.
+		std::ranges::stable_sort(underlying_types, [](const SymbolType<>& a, const SymbolType<>& b) {
+			return a.toString() < b.toString();
+		});
 		representation = "Variant " + stringifyTypeVector(underlying_types);
 	}
 

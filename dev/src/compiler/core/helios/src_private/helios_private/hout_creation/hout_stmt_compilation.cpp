@@ -21,6 +21,7 @@
 #include <helios_private/errors/errors.hpp>
 #include <helios_private/hout_creation/definition_generation/default_constructors.hpp>
 #include <helios_private/hout_creation/desugaring/for.hpp>
+#include <helios_private/hout_creation/desugaring/match.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/pst_layer/stmts_from_aggregate.hpp>
 #include <helios_private/symbols/symbols.hpp>
@@ -60,6 +61,12 @@ namespace compiler::helios {
 		 */
 		base::Optional<Box<code::Stmt>> out;
 
+		/**
+		 * Statements to emit before `out`, used by desugarings that need more than one
+		 * statement (e.g. a `match` initializer declares the target variable first).
+		 */
+		std::vector<Box<code::Stmt>> prefix_stmts;
+
 		HoutStmtMaker(query::Context& ctx, tsh::SymbolType<> return_type):
 			  ctx(ctx),
 			  return_type(return_type) {}
@@ -78,6 +85,27 @@ namespace compiler::helios {
 
 		void visitReturn(pst::Access<pst::Return> stmt) override {
 			if (auto val = stmt->getValue()) {
+				auto inner = val.value().unlock(ctx)->getExpr().unlock(ctx);
+				if (auto match_opt = inner.dynamicCast<pst::expr::MatchExpr>()) {
+					// `return match (...) {...};` — each case returns its result directly.
+					auto desugared = desugaring::desugarMatch(
+						ctx,
+						match_opt.value(),
+						return_type,
+						[&](BoxOrCRef<code::Expr> result) -> Box<code::Stmt> {
+							return makeBox<code::ReturnStmt>(
+								code::pstOrigin(stmt), std::move(result)
+							);
+						}
+					);
+					if (!desugared.has_value()) {
+						is_failed = true;
+						return;
+					}
+					output(std::move(desugared.value()));
+					return;
+				}
+
 				auto expr_coerced = getHoutOfExprWithExpectedType(
 										ctx, val.value().unlock(ctx)->getExpr(), return_type
 				)
@@ -140,6 +168,29 @@ namespace compiler::helios {
 			}
 
 			if (op == base::StrID("=")) {
+				if (auto match_opt = val.unlock(ctx).dynamicCast<pst::expr::MatchExpr>()) {
+					// `lhs = match (...) {...};` — every case assigns its result to the lhs.
+					auto location_type_direct = location_expr->expression_type.getSymbolType();
+					auto desugared            = desugaring::desugarMatch(
+                        ctx,
+                        match_opt.value(),
+                        location_type_direct,
+                        [&](BoxOrCRef<code::Expr> result) -> Box<code::Stmt> {
+                            return makeBox<code::AssignmentStmt>(
+                                code::pstOrigin(assignment),
+                                location_expr->clone(),
+                                std::move(result)
+                            );
+                        }
+                    );
+					if (!desugared.has_value()) {
+						is_failed = true;
+						return;
+					}
+					output(std::move(desugared.value()));
+					return;
+				}
+
 				// The new `SymbolType` of `location_expr` is the location symbol without the
 				// ref/box specifier (as it was removed in the DerefExpr constructor). We now
 				// coerce the value expr to the type without the ref/box specifier.
@@ -281,6 +332,38 @@ namespace compiler::helios {
 				output(code::VariableStmt(code::pstOrigin(stmt), initial_value, symbol_type, symbol)
 				);
 			} else {
+				auto inner = stmt->getValue().value().unlock(ctx)->getExpr().unlock(ctx);
+				if (auto match_opt = inner.dynamicCast<pst::expr::MatchExpr>()) {
+					// `var r: R = match (...) {...};` — declare the variable first, then let
+					// every case assign its result to it.
+					auto desugared = desugaring::desugarMatch(
+						ctx,
+						match_opt.value(),
+						symbol_type,
+						[&](BoxOrCRef<code::Expr> result) -> Box<code::Stmt> {
+							return makeBox<code::AssignmentStmt>(
+								code::generatedOrigin(),
+								makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), symbol),
+								std::move(result)
+							);
+						}
+					);
+					if (!desugared.has_value()) {
+						is_failed = true;
+						return;
+					}
+					prefix_stmts.emplace_back(makeBox<code::VariableStmt>(
+						code::pstOrigin(stmt),
+						makeBox<code::DefaultValueExpr>(
+							ctx, code::generatedOrigin(), symbol_type.getType()
+						),
+						symbol_type,
+						symbol
+					));
+					output(std::move(desugared.value()));
+					return;
+				}
+
 				auto initial_value_coerced
 					= getHoutOfExprWithExpectedType(
 						  ctx, stmt->getValue().value().unlock(ctx)->getExpr(), symbol_type
@@ -397,6 +480,9 @@ namespace compiler::helios {
 				query::throwFailed();
 			}
 
+			for (auto& prefix_stmt: stmt_maker.prefix_stmts)
+				block.statements.emplace_back(std::move(prefix_stmt));
+
 			if (stmt_maker.out.has_value())
 				block.statements.emplace_back(std::move(stmt_maker.out.value()));
 		}
@@ -423,6 +509,9 @@ namespace compiler::helios {
 		unlocked.value()->acceptVisitor(stmt_maker);
 
 		if (stmt_maker.is_failed) query::throwFailed();
+
+		for (auto& prefix_stmt: stmt_maker.prefix_stmts)
+			block.statements.emplace_back(std::move(prefix_stmt));
 
 		if (stmt_maker.out.has_value())
 			block.statements.emplace_back(std::move(stmt_maker.out.value()));

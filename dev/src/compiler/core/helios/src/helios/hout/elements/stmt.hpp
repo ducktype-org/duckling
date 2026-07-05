@@ -188,4 +188,31 @@ namespace compiler::helios::code {
 		void debugPrint(std::ostream& out, usize indent = 0) const final;
 		void acceptVisitor(HoutStmtVisitor&) const override;
 	};
+
+	/**
+	 * @brief Lowered `match` over a variant value.
+	 *
+	 * Cases are tried in order. A case either tests one concrete alternative of the
+	 * subject's variant type or is a wildcard (empty alternative index) that always
+	 * matches. Pattern bindings are represented as a VariableStmt at the start of the
+	 * case body, initialized with a VariantProjectExpr.
+	 */
+	struct MatchStmt final: public Stmt {
+		struct Case final {
+			/** Alternative index in the subject's variant type; empty for wildcards. */
+			base::Optional<usize> alternative_index;
+			CodeBlock             body;
+		};
+
+		Box<Expr>         subject;  ///< Variant-typed subject; must be a readable place.
+		std::vector<Case> cases;
+
+		MatchStmt(ElementOrigin origin, Box<Expr> subject, std::vector<Case> cases):
+			  Stmt(origin),
+			  subject(std::move(subject)),
+			  cases(std::move(cases)) {}
+
+		void debugPrint(std::ostream& out, usize indent = 0) const final;
+		void acceptVisitor(HoutStmtVisitor&) const override;
+	};
 }

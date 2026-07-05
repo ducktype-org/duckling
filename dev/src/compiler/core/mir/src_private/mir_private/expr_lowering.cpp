@@ -306,9 +306,67 @@ namespace compiler::mir {
 			return;
 		}
 
-		void visitVariantConstructExpr(const hc::VariantConstructExpr&) override {
-			// @TODO: #803 lower variant value construction to MIR
-			throw base::NotYetImplemented("Lowering of variant value construction");
+		void visitVariantConstructExpr(const hc::VariantConstructExpr& expr) override {
+			auto result_type = expr.expression_type.getSymbolType();
+			CORE_ASSERT(
+				result_type.getType().getKind() == tsh::Kind::Variant,
+				"VariantConstructExpr must produce a variant"
+			);
+			const auto alternative_type
+				= result_type.getType().as<tsh::VariantAbstractType>().getMember(
+					expr.alternative_index
+				);
+
+			auto hole    = continuation->addHole();
+			auto lowered = lowerSubExpr(*expr.inner, continuation);
+
+			const auto payload = lowered.getResult(function);
+			return noValueOutput(
+				lowered.begin,
+				hole,
+				Instruction{ Operation::VariantConstruct,
+			                 {},
+			                 { payload },
+			                 {},
+			                 expr_scope,
+			                 VariantParameters{ .alternative_index = expr.alternative_index,
+			                                    .alternative_type  = alternative_type },
+			                 { expr.getPosition() } },
+				result_type
+			);
+		}
+
+		void visitVariantProjectExpr(const hc::VariantProjectExpr& expr) override {
+			// Emit a VariantTryProject producing a pointer to the payload, then read
+			// through it. Only valid when the active alternative is known to match.
+			auto hole    = continuation->addHole();
+			auto lowered = lowerSubExpr(*expr.subject, continuation);
+
+			const auto subject_val = lowered.getResult(function);
+			CORE_ASSERT(
+				std::holds_alternative<MIRPlace>(subject_val.getVariant()),
+				"VariantProjectExpr subject must be a place"
+			);
+
+			const auto payload_type = expr.expression_type.getSymbolType();
+			const auto pointer_type = tsh::SymbolType<>::withDefaults(
+				function.getContext().query<tsh::QueryPointerType>({ payload_type })
+			);
+
+			auto        payload_ptr = function.addTmp(pointer_type, expr_scope);
+			Instruction project_instr{ Operation::VariantTryProject,
+				                       {},
+				                       { subject_val },
+				                       { flagConstruct(payload_ptr) },
+				                       expr_scope,
+				                       VariantParameters{ .alternative_index
+				                                          = expr.alternative_index,
+				                                          .alternative_type = payload_type },
+				                       { expr.getPosition() } };
+			project_instr.output.emplace(payload_ptr);
+			hole.fill(project_instr);
+
+			valueOutput(lowered.begin, MIRValue{ MIRPlace(payload_ptr).withDeref() });
 		}
 
 		void visitAccessExpr(const hc::AccessExpr& expr) override {
