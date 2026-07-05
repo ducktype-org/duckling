@@ -1,9 +1,11 @@
 dir_name: ''
 cause: ''
 dep_name: ''
-test_cmd: duck -C @{dir_name} sync
+package_name: 'foo'
+add_dep: 'false'
+test_cmd: "@{at_tmp_env} duck -C @{dir_name} sync"
 root_error: |+
-  echo "error: when trying to parse the user manifest at \`$(pwd)/@{dir_name}/quackconfig.yaml\`
+  echo "error: when trying to parse the user manifest at \`${DIT_TMP_DIR}/@{dir_name}/quackconfig.yaml\`
   
     Caused by:
       when parsing the field \`metadata.name\`
@@ -14,7 +16,7 @@ root_error: |+
     Caused by:
       @{cause}"
 dep_error: |+
-  echo "error: when trying to parse the user manifest at \`$(pwd)/@{dir_name}/quackconfig.yaml\`
+  echo "error: when trying to parse the user manifest at \`${DIT_TMP_DIR}/@{dir_name}/quackconfig.yaml\`
   
     Caused by:
       when parsing the field \`dependencies.@{dep_name}\`
@@ -24,12 +26,26 @@ dep_error: |+
 
     Caused by:
       @{cause}"
+
+PreCase: |+
+  cd $DIT_TMP_DIR
+  mkdir -p @{dir_name}
+  echo "metadata:
+    name: '@{package_name}'
+    version: 1.0.0" > @{dir_name}/quackconfig.yaml
+
+  if [ '@{add_dep}' == 'true' ]; then
+    echo "dependencies:
+      '@{dep_name}':
+        version: 1" >> @{dir_name}/quackconfig.yaml
+  fi
 Tests:
   sync:
     Description: name-related errors
     Cases:
       main_package_name_cannot_be_empty:
         dir_name: empty_package_name
+        package_name: ''
         cause: package name is empty
         ExitCode: 1
         Err:
@@ -37,12 +53,14 @@ Tests:
       package_name_starts_with_a_dash:
         dir_name: package_name_starts_with_a_dash
         cause: package name \`-a\` starts with an illegal character \`-\`
+        package_name: '-a'
         ExitCode: 1
         Err:
           Run: "@{root_error}"
       package_name_starts_with_an_illegal_character:
         dir_name: package_name_starts_with_an_illegal_character
         cause: package name \`£a\` starts with an illegal character \`£\`
+        package_name: '£a'
         ExitCode: 1
         Err:
           Run: "@{root_error}"
@@ -60,6 +78,7 @@ Tests:
       dependency_name_cannot_be_empty:
         dir_name: empty_dependency_name
         dep_name: ''
+        add_dep: 'true'
         cause: package name is empty
         ExitCode: 1
         Err:
@@ -67,6 +86,7 @@ Tests:
       dependency_name_starts_with_a_dash:
         dir_name: dependency_name_starts_with_a_dash
         dep_name: '-a'
+        add_dep: 'true'
         cause: package name \`-a\` starts with an illegal character \`-\`
         ExitCode: 1
         Err:
@@ -74,6 +94,7 @@ Tests:
       dependency_name_starts_with_an_illegal_character:
         dir_name: dependency_name_starts_with_an_illegal_character
         dep_name: '£a'
+        add_dep: 'true'
         cause: package name \`£a\` starts with an illegal character \`£\`
         ExitCode: 1
         Err:
@@ -81,6 +102,7 @@ Tests:
       dependency_name_contains_an_illegal_character:
         dir_name: dependency_name_contains_an_illegal_character
         dep_name: 'ab-£'
+        add_dep: 'true'
         cause: package name \`ab-£\` contains an illegal character \`£\`
         ExitCode: 1
         Err:
