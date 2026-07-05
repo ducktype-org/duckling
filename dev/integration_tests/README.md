@@ -131,7 +131,7 @@ General variables (not tied to any context):
 > Remember that variables are expanded lazily, so `SubDirs` can overwrite your `ConfigDir`.
 
 > [!NOTE]
-> `@{ConfigDir}` points to a file __inside__ git.
+> `@{ConfigDir}` points to the parent directory of the `testconfig.yaml` file (__inside__ git).
 >
 > It's not affected by temporary directories.
 
