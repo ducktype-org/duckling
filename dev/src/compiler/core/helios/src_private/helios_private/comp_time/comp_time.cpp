@@ -277,8 +277,7 @@ namespace compiler::helios {
 									auto maybe_rhs_val = rhs.template get<LhsNumT>();
 									if (!maybe_rhs_val.has_value()) {
 										CORE_PANIC(base::strConcat(
-											"Operands on binary expression evaluated at "
-											"compile "
+											"Operands on binary expression evaluated at compile "
 											"time are of different type. This should be "
 											"prevented by casts.\nLeft side is:",
 											lhs.getTypeOfStoredValue(ctx).getType().toString(),
