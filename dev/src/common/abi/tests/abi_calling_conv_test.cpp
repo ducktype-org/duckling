@@ -12,7 +12,7 @@
 #include <vector>
 
 namespace cc = abi::calling_conv;
-namespace at = abi::type_system;
+namespace at = abi::types;
 
 namespace {
 
@@ -67,6 +67,7 @@ public:
 		// x86_64 arguments.
 		TESTER_ADD_TEST(x86ScalarSmallIntTest);
 		TESTER_ADD_TEST(x86SmallStructTest);
+		TESTER_ADD_TEST(x86SmallFloatSseTest);
 		TESTER_ADD_TEST(x86ScalarPointerTest);
 		TESTER_ADD_TEST(x86ScalarDoubleTest);
 		TESTER_ADD_TEST(x86TwoIntsOneWordTest);
@@ -138,15 +139,23 @@ private:
 	// --- x86_64 arguments ----------------------------------------------------
 
 	void x86ScalarSmallIntTest() {
-		// i8 fits in <8 bytes → coerced to a raw integer of its bit width.
+		// i8 → single INTEGER eightbyte, coerced type is struct{i8}.
 		TypeArena arena;
-		expectByValue(x86Arg(arena, i(8)), i(8), "x86 i8");
+		expectByValue(x86Arg(arena, i(8)), s(i(8)), "x86 i8");
 	}
 
 	void x86SmallStructTest() {
-		// struct{i8,i8} is 2 bytes → one integer of 16 bits.
+		// struct{i8,i8} is 2 bytes → one INTEGER eightbyte → struct{i16}.
 		TypeArena arena;
-		expectByValue(x86Arg(arena, s(i(8), i(8))), i(16), "x86 {i8,i8}");
+		expectByValue(x86Arg(arena, s(i(8), i(8))), s(i(16)), "x86 {i8,i8}");
+	}
+
+	void x86SmallFloatSseTest() {
+		// A sub-8-byte float must land in an SSE reg, not an integer one.
+		// clang: `sf(float)` for struct{float}. See abi_clang_check.sh.
+		TypeArena arena;
+		expectByValue(x86Arg(arena, f(32)), s(f(32)), "x86 f32");
+		expectByValue(x86Arg(arena, s(f(32))), s(f(32)), "x86 {f32}");
 	}
 
 	void x86ScalarPointerTest() {
@@ -297,7 +306,7 @@ private:
 			                                                 arena.add(f(64)) } };
 		auto                            info = abi->computeInfo(ft);
 		assertTrue(info.param_info.size() == 3, "three params");
-		expectByValue(info.param_info.at(0).info, i(8), "param0 i8");
+		expectByValue(info.param_info.at(0).info, s(i(8)), "param0 i8");
 		expectByPointer(info.param_info.at(1).info, /*by_val=*/true, "param1 {i64,i64,i8}");
 		expectByValue(info.param_info.at(2).info, s(f(64)), "param2 f64");
 	}

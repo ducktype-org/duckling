@@ -22,7 +22,7 @@ namespace abi::calling_conv {
 		};
 
 		struct ByValue {
-			type_system::AbiType coerce_to_type;
+			types::AbiType coerce_to_type;
 			bool                 sign_ext;
 			bool                 zero_ext;
 		};
@@ -32,7 +32,7 @@ namespace abi::calling_conv {
 
 		static ArgInfo byPointer(bool by_val);
 		static ArgInfo byValue(
-			type_system::AbiType type, bool sign_ext = false, bool zero_ext = false
+			types::AbiType type, bool sign_ext = false, bool zero_ext = false
 		);
 	};
 
@@ -51,8 +51,8 @@ namespace abi::calling_conv {
 	};
 
 	struct FunctionType {
-		type_system::AbiTypeRef              return_type;
-		std::vector<type_system::AbiTypeRef> param_types;
+		types::AbiTypeRef              return_type;
+		std::vector<types::AbiTypeRef> param_types;
 	};
 
 	class TargetInfo {

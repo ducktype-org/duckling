@@ -17,54 +17,54 @@ namespace abi::calling_conv {
 		return ArgInfo{ .kind = ByPointer{ .by_val = by_val } };
 	}
 
-	ArgInfo ArgInfo::byValue(type_system::AbiType type, bool sign_ext, bool zero_ext) {
+	ArgInfo ArgInfo::byValue(types::AbiType type, bool sign_ext, bool zero_ext) {
 		return ArgInfo{ .kind = ByValue{ .coerce_to_type = std::move(type),
 			                             .sign_ext       = sign_ext,
 			                             .zero_ext       = zero_ext } };
 	}
 
-	std::vector<type_system::AbiType> flattenType(
+	std::vector<types::AbiType> flattenType(
 		const TargetABI&            target,
-		const type_system::AbiType& type,
+		const types::AbiType& type,
 		layout::ComputedLayout&     expanded_layout
 	) {
-		std::vector<type_system::AbiType> result;
+		std::vector<types::AbiType> result;
 		auto                              size_align = layout::sizeAlignOf(target, type);
 		expanded_layout.alignment                    = size_align.alignment;
 		expanded_layout.size                         = size_align.size;
 
 		auto flatten_rec
-			= [&](auto&& self, const type_system::AbiType& node, Bytes offset) -> void {
+			= [&](auto&& self, const types::AbiType& node, Bytes offset) -> void {
 			variant_match(node.value) {
-				variant_case(type_system::IntType, v) {
+				variant_case(types::IntType, v) {
 					result.push_back({ v });
 					expanded_layout.field_offsets.push_back(offset);
 				}
-				variant_case(type_system::FloatType, v) {
+				variant_case(types::FloatType, v) {
 					result.push_back({ v });
 					expanded_layout.field_offsets.push_back(offset);
 				}
-				variant_case(type_system::BoolType, v) {
-					result.push_back(type_system::intType(8, false));
+				variant_case(types::BoolType, v) {
+					result.push_back(types::intType(8, false));
 					expanded_layout.field_offsets.push_back(offset);
 				}
-				variant_case(type_system::CharType, v) {
-					result.push_back(type_system::intType(8, false));
+				variant_case(types::CharType, v) {
+					result.push_back(types::intType(8, false));
 					expanded_layout.field_offsets.push_back(offset);
 				}
-				variant_case(type_system::PointerType, v) {
+				variant_case(types::PointerType, v) {
 					result.push_back(
-						type_system::intType(target.data_layout.pointer_size.asInt() * 8, false)
+						types::intType(target.data_layout.pointer_size.asInt() * 8, false)
 					);
 					expanded_layout.field_offsets.push_back(offset);
 				}
-				variant_case(type_system::StructType, v) {
+				variant_case(types::StructType, v) {
 					auto struct_layout = layout::computeCLayout(target, v.fields);
 					for (auto&& [field, field_offset]:
 					     std::views::zip(v.fields, struct_layout.field_offsets))
 						self(self, *field, field_offset);
 				}
-				variant_case(type_system::ArrayType, v) {
+				variant_case(types::ArrayType, v) {
 					auto elem_size_align = layout::sizeAlignOf(target, *v.element);
 					for (int i{ 0 }; i < v.count; i++) {
 						self(self, *v.element, offset);
@@ -86,9 +86,9 @@ namespace abi::calling_conv {
 		}
 	}
 
-	type_system::AbiType combineToLowHighStruct(
+	types::AbiType combineToLowHighStruct(
 		const TargetABI&                         target,
-		const std::vector<type_system::AbiType>& flattened,
+		const std::vector<types::AbiType>& flattened,
 		const layout::ComputedLayout&            expanded_layout
 	) {
 		enum class Eightbyte { NoClass, Integer, Sse };
@@ -103,8 +103,8 @@ namespace abi::calling_conv {
 			u64  elem_bytes = 0;
 			bool is_float   = false;
 			variant_match(leaf.value) {
-				variant_case(type_system::IntType, v) { elem_bytes = v.width_bits / 8; }
-				variant_case(type_system::FloatType, v) {
+				variant_case(types::IntType, v) { elem_bytes = v.width_bits / 8; }
+				variant_case(types::FloatType, v) {
 					elem_bytes = v.width_bits / 8;
 					is_float   = true;
 				}
@@ -131,7 +131,7 @@ namespace abi::calling_conv {
 		}
 
 
-		std::vector<type_system::AbiTypePtr> fields;
+		std::vector<types::AbiTypePtr> fields;
 		Bytes                                current_offset{ 0 };
 		Bytes                                total_size = expanded_layout.field_offsets.back()
 		                 + layout::sizeAlignOf(target, flattened.back()).size;
@@ -139,7 +139,7 @@ namespace abi::calling_conv {
 			switch (classes.at(i)) {
 			case Eightbyte::Sse: {
 				u64 float_width_bits = fp_used.at(i) <= 4 ? 32 : 64;
-				fields.push_back(type_system::makeBoxAbiType(type_system::floatType(float_width_bits
+				fields.push_back(types::makeBoxAbiType(types::floatType(float_width_bits
 				)));
 				break;
 			}
@@ -151,7 +151,7 @@ namespace abi::calling_conv {
 					)
 				          .asInt();
 				fields.push_back(
-					type_system::makeBoxAbiType(type_system::intType(int_with_bits, false))
+					types::makeBoxAbiType(types::intType(int_with_bits, false))
 				);
 				break;
 			}
@@ -160,21 +160,18 @@ namespace abi::calling_conv {
 			}
 			current_offset += Bytes(8);
 		}
-		return type_system::structType(std::move(fields));
+		return types::structType(std::move(fields));
 	}
 
 	FunctionInfo X86_64ABIInfo::computeInfo(const FunctionType& ft) const {
-		auto compute_arg_entry = [&](const type_system::AbiTypeRef& original_type) {
+		auto compute_arg_entry = [&](const types::AbiTypeRef& original_type) {
 			auto size_align = layout::sizeAlignOf(myTargetABI(), *original_type);
 
-			// Main logic. Note: exactly-8-byte aggregates go through the flatten
-			// path so a double / {f32,f32} lands in SSE, not an integer register —
-			// hence the lower bound is strict `<` while the upper is `<=`.
-			if (size_align.size < Bytes(8)) {
-				return ArgEntry{ .info = ArgInfo::byValue(type_system::intType(
-									 base::bytes2bits(size_align.size).asInt(), false
-								 )) };
-			} else if (size_align.size <= Bytes(16)) {
+			// Everything up to two eightbytes is classified per-eightbyte by
+			// flatten + combine, so a sub-8-byte float / {f32,f32} lands in SSE
+			// rather than an integer register. Only > 16 bytes is passed in memory.
+            // @TODO: verify this
+			if (size_align.size <= Bytes(16)) {
 				layout::ComputedLayout expanded_layout;
 				auto flattened_types = flattenType(myTargetABI(), *original_type, expanded_layout);
 				auto type = combineToLowHighStruct(myTargetABI(), flattened_types, expanded_layout);
@@ -183,7 +180,7 @@ namespace abi::calling_conv {
 				return ArgEntry{ .info = ArgInfo::byPointer(true) };
 			}
 		};
-		auto compute_return_entry = [&](const type_system::AbiTypeRef& original_type) {
+		auto compute_return_entry = [&](const types::AbiTypeRef& original_type) {
 			auto arg_info        = compute_arg_entry(original_type);
 			bool passed_as_param = false;
 			if (auto by_pointer = std::get_if<ArgInfo::ByPointer>(&arg_info.info.kind)) {
@@ -198,7 +195,7 @@ namespace abi::calling_conv {
 			                             | std::ranges::to<std::vector>() };
 	}
 
-	bool isHomogeneous(const std::vector<type_system::AbiType>& types) {
+	bool isHomogeneous(const std::vector<types::AbiType>& types) {
 		if (types.size() > 4 or types.size() == 0) return false;
 		auto& first = types.at(0);
 		for (u64 i{ 1 }; i < types.size(); i++)
@@ -207,35 +204,35 @@ namespace abi::calling_conv {
 	}
 
 	FunctionInfo AArch64ABIInfo::computeInfo(const FunctionType& ft) const {
-		auto homogeneous_arg_info = [&](std::vector<type_system::AbiType> types) {
-			std::vector<type_system::AbiTypePtr> fields;
+		auto homogeneous_arg_info = [&](std::vector<types::AbiType> types) {
+			std::vector<types::AbiTypePtr> fields;
 			fields.reserve(types.size());
 			for (auto&& type: types)
-				fields.emplace_back(type_system::makeBoxAbiType(std::move(type)));
-			return ArgInfo::byValue(type_system::structType(std::move(fields)));
+				fields.emplace_back(types::makeBoxAbiType(std::move(type)));
+			return ArgInfo::byValue(types::structType(std::move(fields)));
 		};
 		auto two_words_arg_info = [&]() {
-			std::vector<type_system::AbiTypePtr> fields;
-			fields.push_back(type_system::makeBoxAbiType(type_system::intType(64, false)));
-			fields.push_back(type_system::makeBoxAbiType(type_system::intType(64, false)));
-			return ArgInfo::byValue(type_system::structType(std::move(fields)));
+			std::vector<types::AbiTypePtr> fields;
+			fields.push_back(types::makeBoxAbiType(types::intType(64, false)));
+			fields.push_back(types::makeBoxAbiType(types::intType(64, false)));
+			return ArgInfo::byValue(types::structType(std::move(fields)));
 		};
 
-		auto compute_arg_entry = [&](const type_system::AbiTypeRef& original_type) {
+		auto compute_arg_entry = [&](const types::AbiTypeRef& original_type) {
 			[[maybe_unused]] layout::ComputedLayout computed_layout;
 			auto flattened_types = flattenType(myTargetABI(), *original_type, computed_layout);
 			if (isHomogeneous(flattened_types))
 				return ArgEntry{ homogeneous_arg_info(std::move(flattened_types)) };
 
 			if (computed_layout.size <= Bytes(8))
-				return ArgEntry{ .info = ArgInfo::byValue(type_system::intType(64, false)) };
+				return ArgEntry{ .info = ArgInfo::byValue(types::intType(64, false)) };
 			else if (computed_layout.size <= Bytes(16))
 				return ArgEntry{ two_words_arg_info() };
 			else
 				return ArgEntry{ .info = ArgInfo::byPointer(false) };
 		};
 
-		auto compute_return_entry = [&](const type_system::AbiTypeRef& original_type) {
+		auto compute_return_entry = [&](const types::AbiTypeRef& original_type) {
 			[[maybe_unused]] layout::ComputedLayout computed_layout;
 			auto flattened_types = flattenType(myTargetABI(), *original_type, computed_layout);
 			if (isHomogeneous(flattened_types))
@@ -243,7 +240,7 @@ namespace abi::calling_conv {
 					                .passed_as_param = false };
 
 			if (computed_layout.size <= Bytes(8)) {
-				return ReturnEntry{ .info            = ArgInfo::byValue(type_system::intType(
+				return ReturnEntry{ .info            = ArgInfo::byValue(types::intType(
                                         base::bytes2bits(computed_layout.size).asInt(), false
                                     )),
 					                .passed_as_param = false };

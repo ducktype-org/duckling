@@ -7,7 +7,7 @@
 #include <variant>
 #include <vector>
 
-namespace abi::type_system {
+namespace abi::types {
 
 	/**
 	 * @brief A C-compatible integer type, parameterised by its bit width and

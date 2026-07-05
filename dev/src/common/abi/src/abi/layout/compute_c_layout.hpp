@@ -23,7 +23,7 @@ namespace abi::layout {
 	 * @brief Computes the size and alignment of a single type. Panics on
 	 * zero-sized constructs (arrays with count 0, empty structs).
 	 */
-	SizeAlign sizeAlignOf(const TargetABI& target, const type_system::AbiType& t);
+	SizeAlign sizeAlignOf(const TargetABI& target, const types::AbiType& t);
 
 	/**
 	 * @brief Computes the C layout of a sequence of fields. Each field is
@@ -34,7 +34,7 @@ namespace abi::layout {
 	 * zero-sized inputs beforehand.
 	 */
 	ComputedLayout computeCLayout(
-		const TargetABI& target, const std::vector<type_system::AbiTypePtr>& fields
+		const TargetABI& target, const std::vector<types::AbiTypePtr>& fields
 	);
 
 }

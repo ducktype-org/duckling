@@ -7,7 +7,7 @@
 #include <utility>
 #include <vector>
 
-namespace abi::type_system {
+namespace abi::types {
 
 	// The static analyzer cannot model `base::Box` ownership when a Box is nested
 	// inside a returned value tree, so it reports false-positive leaks for the
