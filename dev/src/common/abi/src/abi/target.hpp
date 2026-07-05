@@ -6,7 +6,7 @@
 
 #include <cstdint>
 
-namespace abi::layout {
+namespace abi {
 
 	// NOLINTNEXTLINE(readability-identifier-naming) — "X86_64" is the canonical arch name.
 	enum class Arch : uint8_t { X86_64, AArch64 };
@@ -56,7 +56,7 @@ namespace abi::layout {
 		 * alignment equals the size.
 		 */
 		[[nodiscard]]
-		static Bytes naturalAlignmentForIntWidth(u8 width_bits);
+		static Bytes naturalAlignmentForIntWidth(u64 width_bits);
 	};
 
 	/**

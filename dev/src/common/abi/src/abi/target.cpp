@@ -1,12 +1,12 @@
-#include <abi/layout/target.hpp>
+#include <abi/target.hpp>
 
 #include <base/except/exceptions.hpp>
 
 #include <utility>
 
-namespace abi::layout {
+namespace abi {
 
-	Bytes DataLayout::naturalAlignmentForIntWidth(u8 width_bits) {
+	Bytes DataLayout::naturalAlignmentForIntWidth(u64 width_bits) {
 		switch (usize(width_bits)) {
 		case 8:
 			return Bytes(1);

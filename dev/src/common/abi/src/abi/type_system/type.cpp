@@ -15,11 +15,11 @@ namespace abi::type_system {
 
 	AbiTypePtr makeBoxAbiType(AbiType type) { return base::makeBox<AbiType>(std::move(type)); }
 
-	AbiType intType(u8 width_bits, bool is_signed) {
+	AbiType intType(u64 width_bits, bool is_signed) {
 		return AbiType{ IntType{ .width_bits = width_bits, .is_signed = is_signed } };
 	}
 
-	AbiType floatType(u8 width_bits) { return AbiType{ FloatType{ .width_bits = width_bits } }; }
+	AbiType floatType(u64 width_bits) { return AbiType{ FloatType{ .width_bits = width_bits } }; }
 
 	AbiType boolType() { return AbiType{ BoolType{} }; }
 

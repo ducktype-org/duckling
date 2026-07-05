@@ -14,7 +14,7 @@ namespace abi::type_system {
 	 * signedness. Width must be one of 8, 16, 32 or 64.
 	 */
 	struct IntType final {
-		u8   width_bits;
+		u64  width_bits;
 		bool is_signed;
 	};
 
@@ -22,7 +22,7 @@ namespace abi::type_system {
 	 * @brief A C-compatible floating-point type, parameterised by its bit width.
 	 */
 	struct FloatType final {
-		u8 width_bits;
+		u64 width_bits;
 	};
 
 	/**
@@ -84,10 +84,10 @@ namespace abi::type_system {
 	AbiTypePtr makeBoxAbiType(AbiType type);
 
 	/** @brief Builds an AbiType from an IntType. */
-	AbiType intType(u8 width_bits, bool is_signed);
+	AbiType intType(u64 width_bits, bool is_signed);
 
 	/** @brief Builds an AbiType from a FloatType. */
-	AbiType floatType(u8 width_bits);
+	AbiType floatType(u64 width_bits);
 
 	/** @brief Builds a C `_Bool` AbiType. */
 	AbiType boolType();

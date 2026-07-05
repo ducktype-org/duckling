@@ -1,6 +1,6 @@
 #pragma once
 
-#include <abi/layout/target.hpp>
+#include <abi/target.hpp>
 #include <abi/type_system/type.hpp>
 
 #include <base/types/bits_and_bytes.hpp>
