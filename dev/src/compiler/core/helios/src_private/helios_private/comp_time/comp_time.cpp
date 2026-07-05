@@ -3,6 +3,7 @@
 #include <ctv/ctv.hpp>
 #include <ctv/numeric_value.hpp>
 #include <diagnostic_interactive/placeholder.hpp>
+#include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/includes/basic.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/mangler/mangler.hpp>
@@ -818,15 +819,6 @@ namespace compiler::helios {
 			auto mangled_name_function_to_call
 				= ctx.query<mangler::QueryMangledSymbol>({ .symbol_key = function_sym_id });
 
-			// Some dependencies are injected by MIR lowering rather than being present in the HOUT,
-			// so they are invisible to the HOUT-level transitive call collection. In particular
-			// array/slice bounds checks emit a call to `panic`, thus we must load it into the VM as
-			// well.
-			auto panic_sym = ctx.query<QueryLanguagePrimitiveSymID>({ LanguagePrimitive::Panic })
-			                     ->valueOrThrow();
-			Ref panic_dependencies
-				= &ctx.query<QueryTransitiveFunctionCalls>(panic_sym)->valueOrThrow();
-
 			std::vector<SymID>        all_dependencies;
 			std::unordered_set<SymID> seen_dependencies;
 			auto                      add_dependencies = [&](const std::vector<SymID>& deps) {
@@ -835,7 +827,21 @@ namespace compiler::helios {
                         all_dependencies.push_back(func_id);
 			};
 			add_dependencies(*dependencies);
-			add_dependencies(*panic_dependencies);
+
+			// Some dependencies are injected by MIR lowering rather than being present in the HOUT,
+			// so they are invisible to the HOUT-level transitive call collection. In particular
+			// array/slice bounds checks emit a call to `panic`, thus we must load it into the VM as
+			// well.
+			if (frontend::getModuleByAbsolutePath(
+					ctx, base::StrID("core"), { base::StrID("panicking") }
+				)) {
+				auto panic_sym
+					= ctx.query<QueryLanguagePrimitiveSymID>({ LanguagePrimitive::Panic })
+				          ->valueOrThrow();
+				Ref panic_dependencies
+					= &ctx.query<QueryTransitiveFunctionCalls>(panic_sym)->valueOrThrow();
+				add_dependencies(*panic_dependencies);
+			}
 
 			// temporary hout unit used to lower functions to LIR
 			HOUTUnit hout_unit;
