@@ -1,5 +1,7 @@
 #include "queries.hpp"
 
+#include <helios/tsh/queries/types.hpp>
+
 #include <query_framework/standard_query/query_impl.hpp>
 
 #include <utility>
@@ -43,6 +45,11 @@ namespace compiler::tsl {
 				return StaticArrayTypeLayout(tsh::StaticArrayAbstractType(key), ctx);
 			case Variant:
 				return VariantTypeLayout(key, ctx);
+			case Optional:
+				// Optionals share their layout with the `{inner, ()}` variant.
+				return VariantTypeLayout(
+					tsh::getOptionalEquivalentVariant(ctx, tsh::OptionalAbstractType(key)), ctx
+				);
 			case Tuple:
 				return ClassTypeLayout(tsh::TupleAbstractType(key), ctx);
 			case Class:

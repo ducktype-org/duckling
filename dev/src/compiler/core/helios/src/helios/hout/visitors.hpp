@@ -34,6 +34,8 @@ namespace compiler::helios::code {
 		VariantTypeConstructorExpr,
 		VariantConstructExpr,
 		VariantProjectExpr,
+		OptionalTypeConstructorExpr,
+		LiteralNoneExpr,
 		CallExpr,
 		AccessExpr,
 		IndexExpr,

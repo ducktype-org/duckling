@@ -1,5 +1,6 @@
 #include "query_type_of_symbol.hpp"
 
+#include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/field.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
@@ -100,6 +101,15 @@ namespace compiler::helios {
 					                   ->valueOrThrow();
 
 					const auto& expr_type = parsed->expression_type;
+					if (expr_type.getType().getKind() == tsh::Kind::None) {
+						ctx.logInt(makeBox<dia_int::PlaceholderError>(
+							"Cannot deduce a type from `none`; annotate the variable with an "
+							"optional type (`?T`).",
+							stmt->getStablePosition()
+						));
+						setFailed();
+						return;
+					}
 					setTypeOfSymbol(
 						tsh::deductions::declarationTypeFromInitializer(expr_type, decl_mutability)
 					);

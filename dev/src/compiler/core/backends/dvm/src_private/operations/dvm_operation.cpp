@@ -21,8 +21,8 @@ namespace {
 	bool isMetaTypeOperation(lir::Operation op) {
 		return op == lir::Operation::MetaCreateBox || op == lir::Operation::MetaCreateRef
 		    || op == lir::Operation::MetaCreateConst || op == lir::Operation::MetaCreateTuple
-		    || op == lir::Operation::MetaCreateVariant || op == lir::Operation::MetaEq
-		    || op == lir::Operation::MetaNeq;
+		    || op == lir::Operation::MetaCreateVariant || op == lir::Operation::MetaCreateOptional
+		    || op == lir::Operation::MetaEq || op == lir::Operation::MetaNeq;
 	}
 
 	vm::code::builders::OpKind lirOperationToDVMOpKind(const lir::Operation& op) {
@@ -302,16 +302,20 @@ namespace compiler::backend_vm::internal {
 
 		/// Variant operations ///
 		case VariantConstruct: {
+			// The payload argument is absent when it carries no information (the `()` of
+			// an optional's `none` state).
 			CORE_ASSERT(
-				instr.arguments.size() == 1,
-				"VariantConstruct expects 1 argument, got: ",
+				instr.arguments.size() <= 1,
+				"VariantConstruct expects at most 1 argument, got: ",
 				instr.arguments.size()
 			);
 			const auto variant_params = std::get_if<lir::VariantParameters>(&instr.extra_params);
 			CORE_ASSERT(variant_params != nullptr, "VariantConstruct without parameters");
 			return VariantConstructOperation{
 				.variant_params = *variant_params,
-				.payload        = lower_arg(instr.arguments[0]),
+				.payload        = instr.arguments.size() == 1
+				                    ? base::Optional<DVMValue>(lower_arg(instr.arguments[0]))
+				                    : base::Optional<DVMValue>(),
 				.dest           = lower_dest(),
 			};
 		}

@@ -152,6 +152,10 @@ namespace compiler::tsh {
 		return toCPimpl(pimpl)->getMember(index);
 	}
 
+	SymbolType<> OptionalAbstractType::getInnerType() const {
+		return toCPimpl(pimpl)->getInnerType();
+	}
+
 	compiler::helios::SymID ClassAbstractType::getSymbol() const {
 		return toCPimpl(pimpl)->getSymbol();
 	}
@@ -221,6 +225,8 @@ namespace compiler::tsh {
 	INSTANTIATE_CHECKED_CAST(DynamicArrayAbstractType)
 	INSTANTIATE_CHECKED_CAST(StaticArrayAbstractType)
 	INSTANTIATE_CHECKED_CAST(VariantAbstractType)
+	INSTANTIATE_CHECKED_CAST(OptionalAbstractType)
+	INSTANTIATE_CHECKED_CAST(NoneAbstractType)
 	INSTANTIATE_CHECKED_CAST(ClassAbstractType)
 	INSTANTIATE_CHECKED_CAST(NamespaceAbstractType)
 	INSTANTIATE_CHECKED_CAST(ModuleAbstractType)

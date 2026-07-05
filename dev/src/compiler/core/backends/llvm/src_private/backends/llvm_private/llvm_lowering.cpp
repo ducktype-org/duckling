@@ -1139,14 +1139,18 @@ namespace compiler::backend_llvm {
 					builder.getInt8(static_cast<std::uint8_t>(params.alternative_index)), variant_ptr
 				);
 
-				llvm::Value* payload  = loadLIRValue(lir_instruction.arguments.at(0), builder);
-				llvm::Value* data_ptr = builder.CreateConstInBoundsGEP1_64(
-					builder.getInt8Ty(),
-					variant_ptr,
-					static_cast<u64>(variant_layout.getDataOffset()),
-					"variant_data"
-				);
-				builder.CreateStore(payload, data_ptr);
+				// An absent payload argument means the alternative carries no information
+				// (an optional's `none` state) — only the tag is written.
+				if (!lir_instruction.arguments.empty()) {
+					llvm::Value* payload  = loadLIRValue(lir_instruction.arguments.at(0), builder);
+					llvm::Value* data_ptr = builder.CreateConstInBoundsGEP1_64(
+						builder.getInt8Ty(),
+						variant_ptr,
+						static_cast<u64>(variant_layout.getDataOffset()),
+						"variant_data"
+					);
+					builder.CreateStore(payload, data_ptr);
+				}
 				break;
 			}
 			case VariantTryProject: {

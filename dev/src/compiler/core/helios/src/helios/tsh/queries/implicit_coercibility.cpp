@@ -67,6 +67,17 @@ namespace compiler::tsh {
 						return true;
 			}
 
+			// `none` and exact inner-type values coerce into an optional.
+			if (key.target.getType().getKind() == Kind::Optional) {
+				if (key.source.getType().getKind() == Kind::None) return true;
+
+				const OptionalAbstractType target_optional = key.target.getType();
+				const auto                 inner           = target_optional.getInnerType();
+				if (inner.getRefKind() == ReferenceKind::Direct
+				    && inner.getType() == key.source.getType())
+					return true;
+			}
+
 			// @TODO: #584
 			return context.query<QueryImplicitCoercibilityOnAbstractType>({
 				key.source.getType(),

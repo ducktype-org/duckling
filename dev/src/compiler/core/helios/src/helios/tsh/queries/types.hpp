@@ -45,6 +45,11 @@ namespace compiler::tsh {
 	CharAbstractType getCharType();
 
 	/**
+	 * @brief Simple getter to create and get the type of the `none` literal.
+	 */
+	NoneAbstractType getNoneType();
+
+	/**
 	 * @brief Simple getter to create and get integral types.
 	 */
 	IntegralAbstractType getIntegralType(
@@ -231,6 +236,22 @@ namespace compiler::tsh {
 	DECLARE_QUERY(
 		QueryVariantType, KeyFor_QueryVariantType, VariantAbstractType, ({ .uses_qresult = false })
 	)
+
+	/**
+	 * @brief Query to get an interned Optional type from its inner type.
+	 *
+	 * \query_thread_safe_if_cache
+	 */
+	DECLARE_QUERY(QueryOptionalType, SymbolType<>, OptionalAbstractType, ({ .uses_qresult = false }))
+
+	/**
+	 * @brief The two-alternative variant type an optional shares its layout and runtime
+	 * representation with: `{inner, ()}`. Used by lowering; `?T` and `T | ()` remain
+	 * distinct types.
+	 */
+	VariantAbstractType getOptionalEquivalentVariant(
+		query::Context& ctx, OptionalAbstractType optional_type
+	);
 
 	/**
 	 * @brief Key for QueryFunctionType.

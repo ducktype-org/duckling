@@ -306,16 +306,54 @@ namespace compiler::mir {
 			return;
 		}
 
-		void visitVariantConstructExpr(const hc::VariantConstructExpr& expr) override {
+		void visitOptionalTypeConstructorExpr(const hc::OptionalTypeConstructorExpr& expr) override {
 			auto result_type = expr.expression_type.getSymbolType();
 			CORE_ASSERT(
-				result_type.getType().getKind() == tsh::Kind::Variant,
-				"VariantConstructExpr must produce a variant"
+				result_type.getType().getKind() == tsh::Kind::Meta,
+				"Expression type in Optional Type Constructor should be meta"
 			);
-			const auto alternative_type
-				= result_type.getType().as<tsh::VariantAbstractType>().getMember(
-					expr.alternative_index
-				);
+
+			auto hole = continuation->addHole();
+
+			auto       lowered     = lowerSubExpr(*expr.subtype, continuation);
+			const auto subtype_val = lowered.getResult(function);
+
+			noValueOutput(
+				lowered.begin,
+				hole,
+				Instruction(
+					Operation::MetaCreateOptional,
+					{},
+					{ subtype_val },
+					{},
+					expr_scope,
+					{},
+					{ expr.getPosition() }
+				),
+				result_type
+			);
+		}
+
+		void visitLiteralNoneExpr(const hc::LiteralNoneExpr&) override {
+			// `none` is always replaced during coercion into an optional type.
+			throw base::NotYetImplemented("Lowering of a bare `none` literal");
+		}
+
+		void visitVariantConstructExpr(const hc::VariantConstructExpr& expr) override {
+			auto       result_type = expr.expression_type.getSymbolType();
+			const auto result_kind = result_type.getType().getKind();
+			CORE_ASSERT(
+				result_kind == tsh::Kind::Variant || result_kind == tsh::Kind::Optional,
+				"VariantConstructExpr must produce a variant or an optional"
+			);
+			const auto backing_variant
+				= result_kind == tsh::Kind::Variant
+			        ? result_type.getType().as<tsh::VariantAbstractType>()
+			        : tsh::getOptionalEquivalentVariant(
+						  function.getContext(),
+						  result_type.getType().as<tsh::OptionalAbstractType>()
+					  );
+			const auto alternative_type = backing_variant.getMember(expr.alternative_index);
 
 			auto hole    = continuation->addHole();
 			auto lowered = lowerSubExpr(*expr.inner, continuation);

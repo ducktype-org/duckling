@@ -498,6 +498,44 @@ namespace compiler::helios::code {
 	};
 
 	/**
+	 * @brief Optional type constructor inside an expression (`?T`).
+	 */
+	struct OptionalTypeConstructorExpr final: public Expr {
+		Box<Expr> subtype;
+
+		OptionalTypeConstructorExpr(query::Context& ctx, ElementOrigin origin, Box<Expr> subtype);
+
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
+
+	private:
+		FRIEND_MAKEBOX
+
+		OptionalTypeConstructorExpr(
+			tsh::ExpressionType<> expression_type, ElementOrigin origin, Box<Expr> subtype
+		);
+	};
+
+	/**
+	 * @brief The `none` literal. Always coerces into an optional type.
+	 */
+	struct LiteralNoneExpr final: public Expr {
+		LiteralNoneExpr(query::Context& ctx, ElementOrigin origin);
+
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
+
+	private:
+		FRIEND_MAKEBOX
+
+		LiteralNoneExpr(tsh::ExpressionType<> expression_type, ElementOrigin origin);
+	};
+
+	/**
 	 * @brief Constructs a variant value from a value of one of its alternatives.
 	 *
 	 * Created on implicit coercion to a variant type. The inner expression's type must be

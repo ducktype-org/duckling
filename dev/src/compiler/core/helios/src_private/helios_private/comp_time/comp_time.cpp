@@ -660,6 +660,35 @@ namespace compiler::helios {
 				));
 			}
 
+			void visitOptionalTypeConstructorExpr(const code::OptionalTypeConstructorExpr& expr
+			) final {
+				CORE_ASSERT(
+					expr.subtype->expression_type.getType().getKind() == tsh::Kind::Meta,
+					"It's impossible to create an optional of a non-type sub-type in HOUT"
+				);
+
+				const auto sub_type_ctv = evalHoutExpr(ctx, expr.subtype.ref());
+				if (sub_type_ctv.hasFailed()) {
+					result = query::Failed();
+					return;
+				}
+
+				result = CompileTimeValue{ tsh::SymbolType<>{
+					ctx.query<tsh::QueryOptionalType>(
+						sub_type_ctv.valueOrThrow().get<tsh::SymbolType<>>().value()
+					),
+					tsh::ReferenceKind::Direct,
+					tsh::Mutability::Mutable,
+				} };
+			}
+
+			void visitLiteralNoneExpr(const code::LiteralNoneExpr& expr) final {
+				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					"Evaluating a bare `none` literal at compile time.",
+					expr.origin.getStablePosition()
+				));
+			}
+
 			void visitSequenceExpr(const code::SequenceExpr& seq) final {
 				auto sub_result = evalHoutExpr(ctx, seq.expressions.back().ref());
 				if (sub_result.hasFailed()) {

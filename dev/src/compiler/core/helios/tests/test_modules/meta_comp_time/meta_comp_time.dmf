@@ -95,3 +95,27 @@ fun buildAndMatch(use_int: bool) -> i64 = {
 }
 const MATCHED_INT = buildAndMatch(true);
 const MATCHED_OTHER = buildAndMatch(false);
+
+### Optional comp-time logic.
+fun makeOptional(t: type) -> type = ?t;
+const OPT_I32 = ?i32;
+const OPT_IS_DISTINCT = ?i32 != (i32 | ());
+const OPT_NESTS = ?(?i32) != ?i32;
+const OPT_FROM_FUN = makeOptional(i32) == ?i32;
+
+fun optionalValue(o: ?i32) -> i64 = {
+    var r: i64 = match (o) {
+        case x : i32 = i64(x);
+        case _ = i64(0) - i64(1);
+    };
+    return r;
+}
+fun buildOptional(use_value: bool) -> i64 = {
+    var o: ?i32 = none;
+    if (use_value) {
+        o = i32(5);
+    }
+    return optionalValue(o);
+}
+const OPT_MATCHED = buildOptional(true);
+const OPT_MATCHED_NONE = buildOptional(false);

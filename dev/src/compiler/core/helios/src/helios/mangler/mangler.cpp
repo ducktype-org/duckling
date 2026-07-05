@@ -591,6 +591,12 @@ namespace compiler::helios::mangler {
 			return res.str();
 		}
 
+		static std::string mangle(query::Context& ctx, tsh::OptionalAbstractType type) {
+			return base::strConcat(
+				"O", ctx.query<QueryMangledType>({ type.getInnerType() })->valueOrThrow().str(), "E"
+			);
+		}
+
 		static std::string mangle(query::Context& ctx, tsh::ClassAbstractType type) {
 			return getSimpleMangledName(ctx, type.getSymbol()).str();
 		}
@@ -636,6 +642,8 @@ namespace compiler::helios::mangler {
 				return mangle(ctx, type.as<tsh::TupleAbstractType>());
 			case Variant:
 				return mangle(ctx, type.as<tsh::VariantAbstractType>());
+			case Optional:
+				return mangle(ctx, type.as<tsh::OptionalAbstractType>());
 			case Class:
 				return mangle(ctx, type.as<tsh::ClassAbstractType>());
 			case Meta:

@@ -263,6 +263,30 @@ namespace compiler::tsh {
 		return true;
 	}
 
+	OptionalAbstractTypeImpl::OptionalAbstractTypeImpl(const SymbolType<>& inner_type):
+		  inner_type(inner_type) {
+		representation = "?" + inner_type.toString();
+	}
+
+	bool OptionalAbstractTypeImpl::isCopyable(query::Context& ctx) const {
+		return inner_type.getType().isCopyable(ctx);
+	}
+
+	bool OptionalAbstractTypeImpl::isTriviallyCopyable(query::Context& ctx) const {
+		return inner_type.getType().isTriviallyCopyable(ctx);
+	}
+
+	CRef<TypeInterface> OptionalAbstractTypeImpl::getDeclaredInterface(query::Context&) const {
+		// note: we can extend interface later if needed
+		static TypeInterface empty{};
+		return &empty;
+	}
+
+	CRef<TypeInterface> NoneAbstractTypeImpl::getDeclaredInterface(query::Context&) const {
+		static TypeInterface empty{};
+		return &empty;
+	}
+
 	ClassAbstractTypeImpl::ClassAbstractTypeImpl(compiler::helios::SymID symbol): symbol(symbol) {
 		representation = "Class " + name(symbol).str();
 	}

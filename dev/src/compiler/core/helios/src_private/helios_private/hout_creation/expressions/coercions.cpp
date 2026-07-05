@@ -144,6 +144,30 @@ namespace compiler::helios {
 				}
 			}
 			CORE_PANIC("Coercion should always be valid at this point.");
+		} else if (to.getType().getKind() == tsh::Kind::Optional) {
+			// Optionals share their representation with the `{inner, ()}` variant.
+			// `none` becomes the unit alternative, inner-typed values the inner one.
+			const auto equivalent = tsh::getOptionalEquivalentVariant(
+				ctx, to.getType().as<tsh::OptionalAbstractType>()
+			);
+			const auto& alternatives = equivalent.getUnderlyingTypes();
+
+			const auto      payload_type = source_type.getKind() == tsh::Kind::None
+			                                 ? tsh::AbstractType(tsh::getUnitType())
+			                                 : source_type;
+			Box<code::Expr> payload      = std::move(current_expr);
+			if (source_type.getKind() == tsh::Kind::None)
+				payload = makeBox<code::LiteralUnitExpr>(ctx, payload->origin.generatedFrom());
+
+			for (usize i = 0; i < alternatives.size(); i++) {
+				if (alternatives[i].getRefKind() == tsh::ReferenceKind::Direct
+				    && alternatives[i].getType() == payload_type) {
+					return makeBox<code::VariantConstructExpr>(
+						ctx, payload->origin.generatedFrom(), std::move(payload), to, i
+					);
+				}
+			}
+			CORE_PANIC("Coercion should always be valid at this point.");
 		} else if ((is_source_numeric and is_target_numeric)
 		           or (is_source_bool and is_target_numeric)) {
 			// Numeric type promotion

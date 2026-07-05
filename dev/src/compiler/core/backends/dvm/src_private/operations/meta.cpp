@@ -26,6 +26,7 @@ namespace comptime_func_names {
 	constexpr auto VARIANT_BUILDER_NEW      = "comptime_variant_builder_new";
 	constexpr auto VARIANT_BUILDER_PUSH     = "comptime_variant_builder_push";
 	constexpr auto VARIANT_BUILDER_FINALIZE = "comptime_variant_builder_finalize";
+	constexpr auto CREATE_OPTIONAL          = "comptime_create_optional";
 }
 
 namespace {
@@ -117,6 +118,16 @@ namespace compiler::backend_vm::internal {
 				.finalize_func = base::StrID(comptime_func_names::VARIANT_BUILDER_FINALIZE)
 			};
 			lower_builder_pattern(builder);
+			break;
+		}
+		case lir::Operation::MetaCreateOptional: {
+			CORE_ASSERT(op.args.size() == 1, "MetaCreateOptional expects 1 argument");
+			auto query_ctx_val = getQueryContext();
+			lower_single_call(
+				base::StrID(comptime_func_names::CREATE_OPTIONAL),
+				{ query_ctx_val, op.args.front() },
+				op.dest
+			);
 			break;
 		}
 		case lir::Operation::MetaEq:

@@ -975,6 +975,75 @@ namespace compiler::tsh {
 		CRef<TypeInterface> getDeclaredInterface(query::Context& ctx) const override;
 	};
 
+	class OptionalAbstractTypeImpl final: public AbstractTypeImpl {
+		SymbolType<> inner_type;
+
+	public:
+		[[nodiscard]]
+		Kind getKind() const override {
+			return STATIC_KIND;
+		}
+
+		/**
+		 * @brief The Kind of types described by objects of this class.
+		 */
+		static constexpr Kind STATIC_KIND = Kind::Optional;
+
+		explicit OptionalAbstractTypeImpl(const SymbolType<>& inner_type);
+
+		[[nodiscard]]
+		SymbolType<> getInnerType() const {
+			return inner_type;
+		}
+
+		[[nodiscard]] bool hasNoOpDestructor() const override {
+			return inner_type.hasNoOpDestructor();
+		}
+
+		[[nodiscard]] bool isDefaultConstructible(query::Context&) const override { return true; }
+
+		[[nodiscard]] bool isTriviallyZeroInitializable(query::Context&) const override {
+			// A zeroed optional is a valid `none` value.
+			return true;
+		}
+
+		[[nodiscard]] bool isCopyable(query::Context& ctx) const override;
+		[[nodiscard]] bool isTriviallyCopyable(query::Context& ctx) const override;
+
+		[[nodiscard]]
+		CRef<TypeInterface> getDeclaredInterface(query::Context& ctx) const override;
+	};
+
+	class NoneAbstractTypeImpl final: public AbstractTypeImpl {
+	public:
+		[[nodiscard]]
+		Kind getKind() const override {
+			return STATIC_KIND;
+		}
+
+		/**
+		 * @brief The Kind of types described by objects of this class.
+		 */
+		static constexpr Kind STATIC_KIND = Kind::None;
+
+		NoneAbstractTypeImpl() { representation = "none"; }
+
+		[[nodiscard]] bool hasNoOpDestructor() const override { return true; }
+
+		[[nodiscard]] bool isDefaultConstructible(query::Context&) const override { return false; }
+
+		[[nodiscard]] bool isTriviallyZeroInitializable(query::Context&) const override {
+			return false;
+		}
+
+		[[nodiscard]] bool isCopyable(query::Context&) const override { return true; }
+
+		[[nodiscard]] bool isTriviallyCopyable(query::Context&) const override { return true; }
+
+		[[nodiscard]]
+		CRef<TypeInterface> getDeclaredInterface(query::Context& ctx) const override;
+	};
+
 	class ClassAbstractTypeImpl final: public AbstractTypeImpl {
 		compiler::helios::SymID symbol;
 

@@ -173,6 +173,13 @@ namespace compiler::helios::code {
 			walk(*e.subject);
 		}
 
+		void visitOptionalTypeConstructorExpr(const OptionalTypeConstructorExpr& e) override {
+			handler(e);
+			walk(*e.subtype);
+		}
+
+		void visitLiteralNoneExpr(const LiteralNoneExpr& e) override { handler(e); }
+
 		void visitCallExpr(const CallExpr& e) override {
 			handler(e);
 			walk(*e.callee);

@@ -35,6 +35,8 @@ namespace compiler::tsh {
 	class DynamicArrayAbstractTypeImpl;
 	class StaticArrayAbstractTypeImpl;
 	class VariantAbstractTypeImpl;
+	class OptionalAbstractTypeImpl;
+	class NoneAbstractTypeImpl;
 	class ClassAbstractTypeImpl;
 	class NamespaceAbstractTypeImpl;
 	class ModuleAbstractTypeImpl;
@@ -470,6 +472,40 @@ namespace compiler::tsh {
 		CONSTRUCT_WITH_CHECKED_CAST(VariantAbstractType)
 
 		CONSTRUCT_FROM_IMPLEMENTATION(VariantAbstractType)
+	};
+
+	/**
+	 * @brief The Optional types (`?T`).
+	 *
+	 * A value of an optional type either holds a value of the inner type or is `none`.
+	 * Optionals are distinct from two-alternative variants, so `?T != T | ()` and
+	 * `??T` nests.
+	 */
+	class OptionalAbstractType: public AbstractType {
+	public:
+		SETUP_TYPE_WITH_BASE(OptionalAbstractType, AbstractType)
+
+		[[nodiscard]]
+		SymbolType<> getInnerType() const;
+
+		CONSTRUCT_WITH_CHECKED_CAST(OptionalAbstractType)
+
+		CONSTRUCT_FROM_IMPLEMENTATION(OptionalAbstractType)
+	};
+
+	/**
+	 * @brief The type of the `none` literal.
+	 *
+	 * Values of this type only exist transiently: they always implicitly coerce into an
+	 * optional type and can never be materialized.
+	 */
+	class NoneAbstractType final: public AbstractType {
+	public:
+		SETUP_TYPE_WITH_BASE(NoneAbstractType, AbstractType)
+
+		CONSTRUCT_WITH_CHECKED_CAST(NoneAbstractType)
+
+		CONSTRUCT_FROM_IMPLEMENTATION(NoneAbstractType)
 	};
 
 	/**

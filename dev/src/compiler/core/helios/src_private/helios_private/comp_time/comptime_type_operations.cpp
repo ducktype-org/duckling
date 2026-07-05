@@ -96,6 +96,21 @@ namespace compiler::helios::comptime_ops {
 		return MetaTypeMemoryManager::instance().allocateType(new_type);
 	}
 
+	DEF_VM_EXT_C_FUNC(
+		tsh::SymbolType<>*,
+		"opaque_ptr",
+		comptime_create_optional,
+		(query::Context*, "opaque_ptr", ctx_ptr),
+		(tsh::SymbolType<>*, "opaque_ptr", type_ptr)
+	) {
+		auto new_type = tsh::SymbolType<>{
+			ctx_ptr->query<tsh::QueryOptionalType>(*type_ptr),
+			tsh::ReferenceKind::Direct,
+			tsh::Mutability::Mutable,
+		};
+		return MetaTypeMemoryManager::instance().allocateType(new_type);
+	}
+
 	DEF_VM_EXT_C_FUNC(TupleTypeBuilder*, "opaque_ptr", comptime_tuple_builder_new) {
 		auto* builder = new TupleTypeBuilder();
 		return builder;
@@ -187,6 +202,7 @@ namespace compiler::helios::comptime_ops {
 			VM_INSTANCE_EXT_C_FUNC(
 				comptime_variant_builder_finalize, comptime_variant_builder_finalize, pid
 			),
+			VM_INSTANCE_EXT_C_FUNC(comptime_create_optional, comptime_create_optional, pid),
 			VM_INSTANCE_EXT_C_FUNC(comptime_types_equal, comptime_types_equal, pid),
 			VM_INSTANCE_EXT_C_FUNC(comptime_types_not_equal, comptime_types_not_equal, pid),
 		};

@@ -142,8 +142,9 @@ namespace compiler::backend_vm::internal {
 	 */
 	struct VariantConstructOperation {
 		lir::VariantParameters variant_params;
-		DVMValue               payload;
-		DVMPlace               dest;  ///< The variant place; always present.
+		/// Absent when the payload carries no information (an optional's `none` state).
+		base::Optional<DVMValue> payload;
+		DVMPlace                 dest;  ///< The variant place; always present.
 	};
 
 	/**

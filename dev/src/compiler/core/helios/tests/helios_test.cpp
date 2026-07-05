@@ -370,6 +370,21 @@ private:
 			ASSERT_EQUAL(17, getConstValueAs<i64>("MATCHED_INT", root_scope));
 			ASSERT_EQUAL(-1, getConstValueAs<i64>("MATCHED_OTHER", root_scope));
 		}
+
+		// Optional comp-time logic.
+		{
+			auto opt_i32   = st(query::entryPoint<compiler::tsh::QueryOptionalType>(st(i32_type)));
+			auto opt_value = getConstValueAs<compiler::tsh::SymbolType<>>("OPT_I32", root_scope);
+			ASSERT_EQUAL(opt_i32, opt_value);
+
+			ASSERT_EQUAL(true, getConstValueAs<bool>("OPT_IS_DISTINCT", root_scope));
+			ASSERT_EQUAL(true, getConstValueAs<bool>("OPT_NESTS", root_scope));
+			ASSERT_EQUAL(true, getConstValueAs<bool>("OPT_FROM_FUN", root_scope));
+
+			// Comp-time pattern matching over optional values (evaluated via the VM path).
+			ASSERT_EQUAL(5, getConstValueAs<i64>("OPT_MATCHED", root_scope));
+			ASSERT_EQUAL(-1, getConstValueAs<i64>("OPT_MATCHED_NONE", root_scope));
+		}
 	}
 
 	void testNumericLiterals() {

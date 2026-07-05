@@ -14,3 +14,10 @@ Tests:
         Output:
           String: "41\n-1\n10\n2\n42\n-5\n"
         ExitCode: 0
+  optionals:
+    Cases:
+      all:
+        backend: all
+        Output:
+          String: "7\n-1\n21\n-9\n21\n"
+        ExitCode: 0

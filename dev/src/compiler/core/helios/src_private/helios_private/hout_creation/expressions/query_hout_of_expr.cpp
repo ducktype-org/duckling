@@ -613,6 +613,10 @@ namespace compiler::helios::code {
 					node = makeBox<LiteralBoolExpr>(ctx, pstOrigin(stmt), false);
 					break;
 
+				case pst::Keyword::None:
+					node = makeBox<LiteralNoneExpr>(ctx, pstOrigin(stmt));
+					break;
+
 
 				// types:
 				case pst::Keyword::Bool:
@@ -774,6 +778,16 @@ namespace compiler::helios::code {
 
 				// if no function call is found, we try to use builtin operators:
 				auto inner_type = inner->expression_type.getSymbolType();
+
+				if (stmt->getOperator().unlock(ctx)->unwrap()
+				        == lang_def::NamedOperator::QuestionMark
+				    && inner_type.getType().getKind() == tsh::Kind::Meta) {
+					// `?T` — the optional type constructor.
+					node = makeBox<OptionalTypeConstructorExpr>(
+						ctx, pstOrigin(stmt), std::move(inner)
+					);
+					return;
+				}
 
 				if (stmt->getOperator().unlock(ctx)->unwrap()
 				    == lang_def::NamedOperator::Ampersand) {

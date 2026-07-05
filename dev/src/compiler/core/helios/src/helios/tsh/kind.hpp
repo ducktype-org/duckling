@@ -35,6 +35,16 @@ MAKE_STRINGIFYABLE_ENUM(compiler::tsh, u32, Kind
 	StaticArray,
 	Tuple,
 	Variant,
+
+	/** @brief The kind of optional types (`?T`). */
+	Optional,
+
+	/**
+		@brief The kind of the `none` literal. Values of this type only exist
+		transiently and always coerce into an optional type.
+	*/
+	None,
+
 	Class,
 	TypeTemplate,
 	Namespace,

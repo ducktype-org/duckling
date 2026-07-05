@@ -31,6 +31,11 @@ namespace compiler::tsh {
 		return CharAbstractType{ &char_impl };
 	}
 
+	NoneAbstractType getNoneType() {
+		static auto none_impl = NoneAbstractTypeImpl{};
+		return NoneAbstractType{ &none_impl };
+	}
+
 	IntegralAbstractType getIntegralType(
 		query::Context& ctx, u64 size, IntegralAbstractType::Signedness signedness
 	) {
@@ -191,6 +196,25 @@ namespace compiler::tsh {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryVariantType)
+
+	struct IMPLEMENT_QUERY(QueryOptionalType, OptionalAbstractType::Impl) {
+		static auto provide(Context&, const QKey& key) -> PResult {
+			return OptionalAbstractTypeImpl(key);
+		}
+
+		QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryOptionalType)
+
+	VariantAbstractType getOptionalEquivalentVariant(
+		query::Context& ctx, const OptionalAbstractType optional_type
+	) {
+		return ctx.query<QueryVariantType>({ {
+			optional_type.getInnerType(),
+			SymbolType<>::withDefaults(getUnitType()),
+		} });
+	}
 
 	struct IMPLEMENT_QUERY(QueryFunctionType, FunctionAbstractType::Impl) {
 		static auto provide(Context&, const QKey& key) -> PResult {

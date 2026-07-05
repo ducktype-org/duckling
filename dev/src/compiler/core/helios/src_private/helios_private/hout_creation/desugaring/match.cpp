@@ -8,6 +8,7 @@
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/origin.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
+#include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/types.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
@@ -99,7 +100,8 @@ namespace compiler::helios::desugaring {
 		Box<code::Expr> subject_hout = std::move(subject_hout_opt.value());
 
 		const auto subject_type = subject_hout->expression_type.getSymbolType();
-		if (subject_type.getType().getKind() != tsh::Kind::Variant) {
+		const auto subject_kind = subject_type.getType().getKind();
+		if (subject_kind != tsh::Kind::Variant && subject_kind != tsh::Kind::Optional) {
 			logMatchNYI(
 				ctx,
 				base::strConcat("`match` over non-variant type: ", subject_type.toString(), "."),
@@ -107,8 +109,15 @@ namespace compiler::helios::desugaring {
 			);
 			return {};
 		}
-		const tsh::VariantAbstractType variant_type     = subject_type.getType();
-		const usize                    num_alternatives = variant_type.getUnderlyingTypes().size();
+		// Optionals match through their backing `{inner, ()}` variant: `case x : T` covers
+		// the value, the wildcard covers `none`.
+		const tsh::VariantAbstractType variant_type
+			= subject_kind == tsh::Kind::Optional
+		        ? tsh::getOptionalEquivalentVariant(
+					  ctx, subject_type.getType().as<tsh::OptionalAbstractType>()
+				  )
+		        : tsh::VariantAbstractType(subject_type.getType());
+		const usize num_alternatives = variant_type.getUnderlyingTypes().size();
 
 		// Generated local holding the subject for the duration of the match.
 		const auto subject_local_type = subject_type.withMutability(tsh::Mutability::Immutable);
@@ -172,6 +181,15 @@ namespace compiler::helios::desugaring {
 					= constraint_ctv.valueOrThrow().get<tsh::SymbolType<>>().value();
 
 				alternative_index = findAlternativeIndex(variant_type, constraint_type);
+				if (subject_kind == tsh::Kind::Optional
+				    && constraint_type.getType().getKind() == tsh::Kind::Unit) {
+					ctx.logInt(makeBox<dia_int::PlaceholderError>(
+						"The `none` state of an optional is matched with a wildcard "
+						"(`case _`), not with a `()` constraint.",
+						case_position
+					));
+					return {};
+				}
 				if (!alternative_index.has_value()) {
 					ctx.logInt(makeBox<dia_int::PlaceholderError>(
 						base::strConcat(

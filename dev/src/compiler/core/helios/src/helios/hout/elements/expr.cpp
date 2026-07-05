@@ -45,6 +45,8 @@ namespace compiler::helios::code {
 	EXPR_VISITOR(VariantTypeConstructorExpr)
 	EXPR_VISITOR(VariantConstructExpr)
 	EXPR_VISITOR(VariantProjectExpr)
+	EXPR_VISITOR(OptionalTypeConstructorExpr)
+	EXPR_VISITOR(LiteralNoneExpr)
 	EXPR_VISITOR(ParenthesisExpr)
 	EXPR_VISITOR(CallExpr)
 	EXPR_VISITOR(AccessExpr)
@@ -664,14 +666,75 @@ namespace compiler::helios::code {
 		);
 	}
 
+	OptionalTypeConstructorExpr::OptionalTypeConstructorExpr(
+		query::Context&, ElementOrigin origin, Box<Expr> subtype
+	):
+		  Expr(
+			  tsh::ExpressionType{
+				  tsh::SymbolType{
+					  tsh::getMetaType(),
+					  tsh::ReferenceKind::Direct,
+					  tsh::Mutability::Mutable,
+				  },
+				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary),
+			  },
+			  origin
+		  ),
+		  subtype(std::move(subtype)) {}
+
+	OptionalTypeConstructorExpr::OptionalTypeConstructorExpr(
+		tsh::ExpressionType<> expression_type, ElementOrigin origin, Box<Expr> subtype
+	):
+		  Expr(expression_type, origin),
+		  subtype(std::move(subtype)) {}
+
+	void OptionalTypeConstructorExpr::debugPrint(std::ostream& out) const {
+		out << "?(";
+		subtype->debugPrint(out);
+		out << ")";
+	}
+
+	Box<Expr> OptionalTypeConstructorExpr::clone() const {
+		return makeBox<OptionalTypeConstructorExpr>(expression_type, origin, subtype->clone());
+	}
+
+	LiteralNoneExpr::LiteralNoneExpr(query::Context&, ElementOrigin origin):
+		  Expr(
+			  tsh::ExpressionType<>(
+				  tsh::SymbolType{
+					  tsh::getNoneType(),
+					  tsh::ReferenceKind::Direct,
+					  tsh::Mutability::Mutable,
+				  },
+				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
+			  ),
+			  origin
+		  ) {}
+
+	LiteralNoneExpr::LiteralNoneExpr(tsh::ExpressionType<> expression_type, ElementOrigin origin):
+		  Expr(expression_type, origin) {}
+
+	void LiteralNoneExpr::debugPrint(std::ostream& out) const { out << "none"; }
+
+	Box<Expr> LiteralNoneExpr::clone() const {
+		return makeBox<LiteralNoneExpr>(expression_type, origin);
+	}
+
+	namespace {
+		tsh::VariantAbstractType backingVariantOf(query::Context& ctx, const tsh::AbstractType type) {
+			if (type.getKind() == tsh::Kind::Optional)
+				return tsh::getOptionalEquivalentVariant(ctx, type.as<tsh::OptionalAbstractType>());
+			return type.as<tsh::VariantAbstractType>();
+		}
+	}
+
 	VariantProjectExpr::VariantProjectExpr(
-		query::Context&, ElementOrigin origin, Box<Expr> subject, usize alternative_index
+		query::Context& ctx, ElementOrigin origin, Box<Expr> subject, usize alternative_index
 	):
 		  Expr(
 			  tsh::ExpressionType<>(
-				  subject->expression_type.getType().as<tsh::VariantAbstractType>().getMember(
-					  alternative_index
-				  ),
+				  backingVariantOf(ctx, subject->expression_type.getType())
+					  .getMember(alternative_index),
 				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
 			  ),
 			  origin

@@ -324,7 +324,12 @@ namespace compiler::mir {
 			auto match_scope = function.newScope(parent_scope);
 
 			const auto subject_type = stmt.subject->expression_type.getSymbolType();
-			const auto variant_type = subject_type.getType().as<tsh::VariantAbstractType>();
+			const auto variant_type = subject_type.getType().getKind() == tsh::Kind::Optional
+			                            ? tsh::getOptionalEquivalentVariant(
+											  function.getContext(),
+											  subject_type.getType().as<tsh::OptionalAbstractType>()
+										  )
+			                            : subject_type.getType().as<tsh::VariantAbstractType>();
 
 			// Cases are tried in order; the chain is built backwards. `next_entry` is
 			// where a failed alternative test jumps to: the next case, or (for the very

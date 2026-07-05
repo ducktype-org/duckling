@@ -438,9 +438,17 @@ base::Optional<vm::code::TypeOfData> ProgramLoweringContext::lowerTslTypeInterna
 			alternatives.reserve(num_alternatives);
 			std::string variant_type_name = "vnt";
 			for (usize i{ 0 }; i < num_alternatives; i++) {
-				const auto                  alternative_layout = variant_layout.getLayoutOfIndex(i);
-				const vm::code::TypeOfData& vm_alternative_type
-					= **lowerAndKeepTslType(alternative_layout);
+				const auto alternative_layout  = variant_layout.getLayoutOfIndex(i);
+				auto       lowered_alternative = lowerAndKeepTslType(alternative_layout);
+				// Information-less alternatives (the `()` of an optional) have no VM type;
+				// they are represented by a one-byte marker primitive.
+				const vm::code::TypeOfData vm_alternative_type
+					= lowered_alternative.has_value()
+				        ? **lowered_alternative
+				        : vm::code::TypeOfData(
+							  vm::code::PrimitiveType(base::StrID("unit_marker"), Bytes{ 1 })
+						  );
+				if (!lowered_alternative.has_value()) keepVMType(vm_alternative_type);
 				alternatives.emplace_back(typeName(vm_alternative_type));
 				variant_type_name
 					= base::strConcat(variant_type_name, "_", typeName(vm_alternative_type));

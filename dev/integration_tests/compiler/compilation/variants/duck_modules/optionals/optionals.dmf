@@ -1,0 +1,28 @@
+import core.builtins.*;
+
+fun valueOr(o: ?i32, fallback: i64) -> i64 = {
+	return match (o) {
+		case x : i32 = i64(x);
+		case _ = fallback;
+	};
+}
+
+fun main() -> i64 = {
+	var a: ?i32 = i32(7);
+	builtin_output_i64(valueOr(a, i64(-1)));
+
+	a = none;
+	builtin_output_i64(valueOr(a, i64(-1)));
+
+	a = i32(21);
+	builtin_output_i64(valueOr(a, i64(-1)));
+
+	var b: ?i32 = none;
+	builtin_output_i64(valueOr(b, i64(-9)));
+
+	# Optional-to-optional assignment.
+	b = a;
+	builtin_output_i64(valueOr(b, i64(-9)));
+
+	return i64(0);
+}
