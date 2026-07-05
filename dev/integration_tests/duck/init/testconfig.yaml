@@ -1,8 +1,5 @@
 PreNode: ""
 
-# init cases create their projects inside the case tmp dir.
-before_cmd: "@{make_tmp_env} && cd \"$DIT_TMP_DIR\""
-
 SubDirs:
   - basic_project
   - basic_project_renamed

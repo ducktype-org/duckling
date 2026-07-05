@@ -1,4 +1,4 @@
-PostCase: python3 check.py && @{cleanup_tmp_env}
+PostCase: python3 check.py
 
 Tests:
   init:

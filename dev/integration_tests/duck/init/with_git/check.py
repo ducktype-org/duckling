@@ -1,6 +1,4 @@
-import subprocess
 import sys
-import shutil
 from pathlib import Path
 
 # Make ../../utilities.py import work
@@ -16,11 +14,8 @@ quackconfig = """metadata:
 """
 
 real_qp = (root / "quackconfig.yaml").read_text()
-try:
-  assert_eq(quackconfig, real_qp)
+assert_eq(quackconfig, real_qp)
 
-  check_src_from_root(root)
-  check_gitignore_from_root(root)
-  check_is_git_root(root)
-finally:
-  shutil.rmtree(root)
+check_src_from_root(root)
+check_gitignore_from_root(root)
+check_is_git_root(root)

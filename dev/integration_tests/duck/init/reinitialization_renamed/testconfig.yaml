@@ -1,10 +1,12 @@
-tmp_env_files: "foo"
 Tests:
   init:
     Description: cannot reinitialise a project
     Cases:
       init:
         test_cmd: duck init foo --name bar
+        PreCase: |+
+          cd $DIT_TMP_DIR
+          @{duck_exe} init foo
         ExitCode: 1
         Err:
           Run: |+
