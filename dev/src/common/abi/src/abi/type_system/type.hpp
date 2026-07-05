@@ -16,6 +16,8 @@ namespace abi::type_system {
 	struct IntType final {
 		u64  width_bits;
 		bool is_signed;
+
+		bool operator==(const IntType&) const = default;
 	};
 
 	/**
@@ -23,26 +25,34 @@ namespace abi::type_system {
 	 */
 	struct FloatType final {
 		u64 width_bits;
+
+		bool operator==(const FloatType&) const = default;
 	};
 
 	/**
 	 * @brief The C `_Bool` type: a well-defined 1-byte ABI type. Carries no
 	 * payload because its size and alignment are fixed.
 	 */
-	struct BoolType final {};
+	struct BoolType final {
+		bool operator==(const BoolType&) const = default;
+	};
 
 	/**
 	 * @brief The C `char` type: a 1-byte integer. Carries no payload; its
 	 * signedness is implementation-defined in C but does not affect layout.
 	 */
-	struct CharType final {};
+	struct CharType final {
+		bool operator==(const CharType&) const = default;
+	};
 
 	/**
 	 * @brief A C-compatible pointer. Size and alignment of a pointer is fully
 	 * determined by the target, so this variant intentionally carries no
 	 * payload: `int*`, `void*` and `MyStruct*` all share the same layout.
 	 */
-	struct PointerType final {};
+	struct PointerType final {
+		bool operator==(const PointerType&) const = default;
+	};
 
 	struct AbiType;
 
@@ -52,6 +62,7 @@ namespace abi::type_system {
 	 * cached `QueryCAbiTypeOf` result for a sub-type without cloning it.
 	 */
 	using AbiTypePtr = base::BoxOrCRef<AbiType>;
+	using AbiTypeRef = base::CRef<AbiType>;
 
 	/**
 	 * @brief A fixed-size C array. `count` must be strictly positive;
@@ -60,6 +71,8 @@ namespace abi::type_system {
 	struct ArrayType final {
 		AbiTypePtr element;
 		usize      count;
+
+		bool operator==(const ArrayType& other) const;
 	};
 
 	/**
@@ -69,6 +82,8 @@ namespace abi::type_system {
 	 */
 	struct StructType final {
 		std::vector<AbiTypePtr> fields;
+
+		bool operator==(const StructType& other) const;
 	};
 
 	/**
@@ -78,6 +93,8 @@ namespace abi::type_system {
 	struct AbiType final {
 		std::variant<IntType, FloatType, BoolType, CharType, PointerType, ArrayType, StructType>
 			value;
+
+		bool operator==(const AbiType&) const = default;
 	};
 
 	/** @brief Wraps an AbiType value in an owning box. */

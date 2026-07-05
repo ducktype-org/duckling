@@ -37,24 +37,22 @@ namespace abi::calling_conv {
 	};
 
 	struct ArgEntry {
-		ArgInfo                 info;
-		type_system::AbiTypePtr original_type;
+		ArgInfo info;
 	};
 
 	struct ReturnEntry {
-		ArgInfo                 info;
-		type_system::AbiTypePtr original_type;
-		bool                    passed_as_param;
+		ArgInfo info;
+		bool    passed_as_param;
 	};
 
-	class FunctionInfo {
+	struct FunctionInfo {
 		ReturnEntry           return_info;
 		std::vector<ArgEntry> param_info;
 	};
 
-	class FunctionType {
-		type_system::AbiTypePtr              return_type;
-		std::vector<type_system::AbiTypePtr> param_types;
+	struct FunctionType {
+		type_system::AbiTypeRef              return_type;
+		std::vector<type_system::AbiTypeRef> param_types;
 	};
 
 	class TargetInfo {

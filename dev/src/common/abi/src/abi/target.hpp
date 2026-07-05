@@ -48,7 +48,7 @@ namespace abi {
 		 * where its stored size (16) differs from `width / 8` — which is exactly
 		 * why the value is tabulated per target instead of derived from width.
 		 */
-		base::Map<u8, SizeAlign> float_layouts;
+		base::Map<u64, SizeAlign> float_layouts;
 
 		/**
 		 * @brief Returns the natural alignment in bytes for an integer of the

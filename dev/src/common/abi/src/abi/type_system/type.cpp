@@ -3,6 +3,7 @@
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
+#include <algorithm>
 #include <utility>
 #include <vector>
 
@@ -12,6 +13,16 @@ namespace abi::type_system {
 	// inside a returned value tree, so it reports false-positive leaks for the
 	// allocating helpers below.
 	// NOLINTBEGIN(clang-analyzer-cplusplus.NewDeleteLeaks)
+
+	bool ArrayType::operator==(const ArrayType& other) const {
+		return count == other.count && *element == *other.element;
+	}
+
+	bool StructType::operator==(const StructType& other) const {
+		return std::ranges::equal(
+			fields, other.fields, [](const AbiTypePtr& a, const AbiTypePtr& b) { return *a == *b; }
+		);
+	}
 
 	AbiTypePtr makeBoxAbiType(AbiType type) { return base::makeBox<AbiType>(std::move(type)); }
 
