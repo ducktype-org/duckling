@@ -65,6 +65,10 @@ namespace compiler::helios {
 			std::vector<query::TaskHandle> scheduled_function_code_tasks;
 			std::vector<query::TaskHandle> scheduled_global_data_tasks;
 
+			// Classes are not stored in the HOUTUnit, so we collect their symbols here to be able
+			// to check them for duplicates later.
+			std::vector<SymID> class_symbols;
+
 			for (auto scope: *scopes_to_process) {
 				Ref symbols_in_scope = ctx.query<QuerySymbolsInScope>(scope);
 				if (symbols_in_scope->hasFailed()) {
@@ -88,6 +92,7 @@ namespace compiler::helios {
 						);
 						break;
 					case SymbolKind::Class: {
+						class_symbols.push_back(sym);
 						auto result = appendClassTasks(
 							scheduled_function_code_tasks, scheduled_global_data_tasks, sym, ctx
 						);
@@ -123,7 +128,7 @@ namespace compiler::helios {
 				}
 			}
 
-			if (duplicatesCheck(ctx, out).isBad()) is_failed = true;
+			if (duplicatesCheck(ctx, out, class_symbols).isBad()) is_failed = true;
 			if (collectReplicatedSymbols(ctx, out).isBad()) is_failed = true;
 
 
@@ -200,46 +205,100 @@ namespace compiler::helios {
 		}
 
 		/**
-		 * @brief Reports duplicated function definitions (functions sharing a mangled name).
+		 * @brief Reports a duplicated definition diagnostic if a `SymID`s mangled name collides
+		 * with a previously seen definition.
 		 *
+		 * @param seen_declarations Mangled names seen so far, mapped to the source position of the
+		 * first definition that used them (if it originates from source).
+		 * @param sym_id The new SymID being inserted.
+		 * @param stable_pos Source position of the definition.
+		 * @return `true` if `sym_id` duplicates an earlier definition.
+		 */
+		static bool reportIfDuplicate(
+			query::Context& ctx,
+			std::unordered_map<base::StrID, base::Optional<dia_int::StablePosition>>&
+													seen_declarations,
+			SymID                                   sym_id,
+			base::StrID                             original_name,
+			base::Optional<dia_int::StablePosition> stable_pos
+		) {
+			base::StrID mangled_name = compiler::helios::mangler::getSimpleMangledName(ctx, sym_id);
+			if (mangled_name.isBad()) return false;
+
+			if (hasAttribute<attributes::DVMOnlyImpl>(sym_id)
+			    or hasAttribute<attributes::NativeOnlyImpl>(sym_id)) {
+				// Allow duplicate mangled names for symbols with backend-dependent implementations.
+				return false;
+			}
+
+			auto [entry, inserted] = seen_declarations.try_emplace(mangled_name, stable_pos);
+			if (inserted) {
+				// First time we see this mangled name, so it is not a duplicate.
+				return false;
+			}
+
+			auto error = makeBox<dia_int::DuplicatedDefinitionError>(
+				std::string(original_name.strView()), stable_pos
+			);
+
+			// Attach the previous declaration if it exists (was not compiler generated).
+			const auto& previous_pos = entry->second;
+			if (previous_pos.has_value())
+				error->addAttachedMessage(makeBox<dia_int::PlaceholderNote>(
+					"Previous declaration here.", previous_pos.value()
+				));
+
+			ctx.logInt(std::move(error));
+
+			return true;
+		}
+
+		/**
+		 * @brief Reports duplicated definitions of functions, globals and classes sharing a
+		 * mangled name.
+		 *
+		 * @param class_symbols Class symbols of the unit.
 		 * @return `base::BAD` if at least one duplicate was found. The caller is responsible for
 		 * failing the query gracefully; this must not throw, as `QueryModuleHOUT` does not catch
 		 * query-failure exceptions thrown from `provide`.
 		 */
-		static base::OkBad duplicatesCheck(query::Context& ctx, const HOUTUnit& unit) {
-			std::unordered_set<base::StrID> mangled_names;
-			bool                            found_duplicate = false;
-			for (const auto& func: unit.functions) {
-				base::StrID mangled_name = ctx.query<compiler::helios::mangler::QueryMangledSymbol>(
-					{ func->declaration->original_symbol }
-				);
-				if (mangled_name.isBad()) continue;
-				auto sym_id = func->declaration->original_symbol;
+		static base::OkBad duplicatesCheck(
+			query::Context& ctx, const HOUTUnit& unit, const std::vector<SymID>& class_symbols
+		) {
+			std::unordered_map<base::StrID, base::Optional<dia_int::StablePosition>>
+				 seen_declarations;
+			bool found_duplicate = false;
 
-				if (hasAttribute<attributes::DVMOnlyImpl>(sym_id)
-				    or hasAttribute<attributes::NativeOnlyImpl>(sym_id)) {
-					// We allow duplicate mangled names for functions with backend-dependent
-					// implementations, as they will be compiled separately and won't cause a conflict.
-					continue;
-				}
-
-				if (mangled_names.contains(mangled_name)) {
+			for (const auto& func: unit.functions)
+				if (reportIfDuplicate(
+						ctx,
+						seen_declarations,
+						func->declaration->original_symbol,
+						func->declaration->original_name,
+						func->declaration->origin.getStablePosition()
+					))
 					found_duplicate = true;
 
-					// Compiler-generated functions have no source position; there is nothing
-					// meaningful to point the user at, so we only emit the diagnostic for
-					// functions that originate from source.
-					auto stable_pos = func->declaration->origin.getStablePosition();
-					if (stable_pos.has_value()) {
-						auto symbol_name = std::string(func->declaration->original_name.strView());
-						ctx.logInt(makeBox<dia_int::DuplicatedDefinitionError>(
-							symbol_name, stable_pos.value(), "here"
-						));
-					}
-				} else {
-					mangled_names.insert(mangled_name);
-				}
+			for (const auto& global: unit.glob_data)
+				if (reportIfDuplicate(
+						ctx,
+						seen_declarations,
+						global->helios_symbol,
+						global->original_name,
+						global->origin.getStablePosition()
+					))
+					found_duplicate = true;
+
+			for (SymID class_sym: class_symbols) {
+				auto stable_pos = maybeSymbolPst(class_sym).map([&](auto pst) {
+					return pst.unlock(ctx)->getStablePosition();
+				});
+				if (reportIfDuplicate(
+						ctx, seen_declarations, class_sym, name(class_sym), stable_pos
+					))
+					found_duplicate = true;
 			}
+
 			return found_duplicate ? base::BAD : base::OK;
 		}
 
