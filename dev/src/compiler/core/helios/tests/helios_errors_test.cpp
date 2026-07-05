@@ -745,40 +745,6 @@ private:
 			checkForErrorOnCompileModule(
 				R"(
 				fun main() = {
-					var l: List[i64];
-					l += 1.5;
-				}
-			)",
-				{ "Type `f32` cannot be converted to type `i64`" },
-				1
-			);
-
-			checkForErrorOnCompileModule(
-				R"(
-				fun main() = {
-					var l: List[i64];
-					l -= "sth";
-				}
-			)",
-				{ "Type `const slice char` cannot be converted to type `u64`" },
-				1
-			);
-
-			checkForErrorOnCompileModule(
-				R"(
-				fun main() = {
-					var x = 10;
-					var length = len x;
-				}
-			)",
-				{ "No builtin unary operator `len` for type `i32`" },
-				1
-			);
-
-
-			checkForErrorOnCompileModule(
-				R"(
-				fun main() = {
 					var l1: List[i64];
 					var l2: List[f64] = l1;
 				}
@@ -1040,7 +1006,7 @@ private:
 				fun main() -> i64 = {
     				var nested: List[List[i32]];
     				var inner: List[i32];
-    				nested += inner;    
+    				nested.push(inner);    
     				return 0;
 				}
 			)",

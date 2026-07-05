@@ -549,6 +549,12 @@ namespace compiler::helios {
 							variant_case(defgen::GeneratedSymbolData::LengthMethod, length_method) {
 								return funDeclFromType(ctx, key);
 							}
+							variant_case(defgen::GeneratedSymbolData::PushMethod, push_method) {
+								return funDeclFromType(ctx, key);
+							}
+							variant_case(defgen::GeneratedSymbolData::PopMethod, pop_method) {
+								return funDeclFromType(ctx, key);
+							}
 							variant_case_novalue(defgen::GeneratedSymbolData::BuiltinOperator) {
 								return funDeclFromType(ctx, key);
 							}

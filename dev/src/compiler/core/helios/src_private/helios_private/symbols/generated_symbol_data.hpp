@@ -76,6 +76,28 @@ namespace compiler::helios::defgen {
 			base::Bit256 queryUnstablePerfectHash() const;
 		};
 
+		/**
+		 * Represents a compiler-generated `push` method for a dynamic array, appending an element
+		 * to the end of the array.
+		 */
+		struct PushMethod final {
+			tsh::AbstractType owner_type;
+
+			[[nodiscard]]
+			base::Bit256 queryUnstablePerfectHash() const;
+		};
+
+		/**
+		 * Represents a compiler-generated `pop` method for a dynamic array, removing a number of
+		 * elements from the end of the array.
+		 */
+		struct PopMethod final {
+			tsh::AbstractType owner_type;
+
+			[[nodiscard]]
+			base::Bit256 queryUnstablePerfectHash() const;
+		};
+
 		struct DefaultDestructor final {
 			tsh::AbstractType owner_type;
 
@@ -247,6 +269,8 @@ namespace compiler::helios::defgen {
 			DefaultDestructor,
 			DefaultCopyConstructor,
 			LengthMethod,
+			PushMethod,
+			PopMethod,
 			BuiltinOperator,
 			Parameter,
 			SelfParameter,

@@ -23,6 +23,7 @@
 #include <helios_private/hout_creation/definition_generation/default_copy_constructors.hpp>
 #include <helios_private/hout_creation/definition_generation/default_destructors.hpp>
 #include <helios_private/hout_creation/definition_generation/length_methods.hpp>
+#include <helios_private/hout_creation/definition_generation/list_methods.hpp>
 #include <helios_private/hout_creation/definition_generation/to_string_methods.hpp>
 #include <helios_private/hout_creation/definition_generation/tuple_constructor.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
@@ -167,7 +168,7 @@ namespace compiler::helios {
 					ctx.logInt(makeBox<dia_int::PlaceholderError>(
 						base::strConcat(
 							"A copy constructor's parameter must be a constant reference to its "
-					        "own "
+							"own "
 							"class `",
 							name(class_type.getSymbol()),
 							"`."
@@ -242,6 +243,14 @@ namespace compiler::helios {
 						}
 						variant_case(defgen::GeneratedSymbolData::LengthMethod, length_method) {
 							return ctx.query<defgen::QueryLengthMethod>(length_method.owner_type)
+							    ->valueOrThrow();
+						}
+						variant_case(defgen::GeneratedSymbolData::PushMethod, push_method) {
+							return ctx.query<defgen::QueryPushMethod>(push_method.owner_type)
+							    ->valueOrThrow();
+						}
+						variant_case(defgen::GeneratedSymbolData::PopMethod, pop_method) {
+							return ctx.query<defgen::QueryPopMethod>(pop_method.owner_type)
 							    ->valueOrThrow();
 						}
 						variant_default {
