@@ -1,6 +1,5 @@
 #pragma once
 
-#include <diagnostic_interactive/stable_position.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 #include <mir_private/mir_builders.hpp>
 
