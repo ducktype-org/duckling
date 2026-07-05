@@ -1,7 +1,5 @@
 # !TODO: $(pwd) is relative to the current test, but we want it to point to the directory of this file.
-before_cmd: export PATH="$(pwd)/..:$PATH" && export DUCK_HOME=$(pwd)/duck_home
-
-PostTest: rm -rf $(pwd)/duck_home
+before_cmd: export PATH="$(pwd)/..:$PATH" && @{make_tmp_env} && cd "$DIT_TMP_DIR"
 
 SubDirs:
   - basic_project

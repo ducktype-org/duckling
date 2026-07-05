@@ -1,6 +1,4 @@
-before_cmd: export PATH="@{duckc_dir}:$PATH" && export DUCK_HOME=$(pwd)/duck_home
-
-PostTest: rm -rf $(pwd)/duck_home
+before_cmd: export PATH="@{duckc_dir}:$PATH" && @{make_tmp_env} && cd "$DIT_TMP_DIR"
 
 # @TODO: #2920 Some tests have explicit `fun main() -> i64` instead of `fun main()`; it is a temporary workaround, but it should be reverted.
 # @TODO: #3023 Enable output in all tests; we don't check it, because it contains not-portable hashes

@@ -327,13 +327,12 @@ private:
 				ASSERT_EQUAL(c.expr_stmt_count, 1u);
 			});
 		}
-
 		{
 			auto module_id = frontend::createModuleTreeFromContents(
 				R"(
 				fun foo() = {
 					var a: List[i32];
-					a += 5;
+					a.push(5);
 				}
 			)",
 				"test_pkg"
@@ -352,7 +351,7 @@ private:
 				R"(
 				fun foo() = {
 					var a: List[i32];
-					a -= 5u64;
+					a.pop(5u64);
 				}
 			)",
 				"test_pkg"
