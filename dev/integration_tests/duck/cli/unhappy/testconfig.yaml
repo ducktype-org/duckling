@@ -1,8 +1,8 @@
 Tests:
-  test-basic-errors:
+  basic-cli-or-config-errors:
     Description: Checks a lot of basic errors
     Cases:
-      autofix-fail:
+      invalid-subcommand-with-suggestions:
         test_cmd: duck x
         ExitCode: 1
         Err:
@@ -11,14 +11,18 @@ Tests:
                    - \`b\`
                    - \`r\`?
 
-      invalid-subcmd:
+      invalid-subcommand:
         test_cmd: duck not-a-subcmd
         ExitCode: 1
         Err:
           String: 'error: No such command: \`not-a-subcmd\`\n'
 
       invalid-config:
-        before_cmd: export DUCK_HOME=.
+        PreCase: |+
+          mkdir -p $DUCK_HOME
+          echo "security:
+            typos:
+              max_distance: ala" > $DUCK_HOME/config.yaml
         test_cmd: duck not-a-command
         ExitCode: 1
         Err:
@@ -29,4 +33,4 @@ Tests:
                 the key \`security.typos.max_distance\` expects a positive integer, not a string
             
               Caused by:
-                when parsing the configuration at \`$(pwd)/config.yaml\`"
+                when parsing the configuration at \`$DUCK_HOME/config.yaml\`"

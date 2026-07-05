@@ -1,37 +1,40 @@
-before_cmd: export DUCK_HOME="$(pwd)"
+PreCase: |+
+  mkdir -p $DUCK_HOME
+  echo "security:
+    typos:
+      enabled: true
+
+  aliases:
+    my-custom-build-alias: build -j4
+    my-custom-build-alias-array: [build, -j4]" > $DUCK_HOME/config.yaml
 
 Tests:
-  test-basic-flow:
+  basic-cli-with-config:
     Description: Checks a lot of basic flows, such as happy, builtin alias, auto fix...
     Cases:
-      runs-builtin-command:
+      builtin-command:
         test_cmd: duck build
         ExitCode: 1
         Err:
-          Run: 'echo "error: no manifest has been found from the \`$(pwd)\` to the \`/\`"'
-      runs-builtin-alias:
+          Run: 'echo "error: no manifest has been found from the \`${DIT_TMP_DIR}\` to the \`/\`"'
+      builtin-alias:
         test_cmd: duck b
         ExitCode: 1
         Err:
-          Run: 'echo "error: no manifest has been found from the \`$(pwd)\` to the \`/\`"'
-      runs-user-alias:
+          Run: 'echo "error: no manifest has been found from the \`${DIT_TMP_DIR}\` to the \`/\`"'
+      user-alias:
         test_cmd: duck my-custom-build-alias
         ExitCode: 1
         Err:
-          Run: 'echo "error: no manifest has been found from the \`$(pwd)\` to the \`/\`"'
-      runs-user-alias-as-an-array:
+          Run: 'echo "error: no manifest has been found from the \`${DIT_TMP_DIR}\` to the \`/\`"'
+      user-alias-as-an-array:
         test_cmd: duck my-custom-build-alias-array
         ExitCode: 1
         Err:
-          Run: 'echo "error: no manifest has been found from the \`$(pwd)\` to the \`/\`"'
-      runs-user-alias-as-an-array:
-        test_cmd: duck my-custom-build-alias-array
-        ExitCode: 1
-        Err:
-          Run: 'echo "error: no manifest has been found from the \`$(pwd)\` to the \`/\`"'
+          Run: 'echo "error: no manifest has been found from the \`${DIT_TMP_DIR}\` to the \`/\`"'
       autofix-success:
         test_cmd: duck buil
         ExitCode: 1
         Err:
-          Run: 'echo "error: no manifest has been found from the \`$(pwd)\` to the \`/\`"'
+          Run: 'echo "error: no manifest has been found from the \`${DIT_TMP_DIR}\` to the \`/\`"'
 

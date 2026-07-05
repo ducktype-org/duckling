@@ -1,19 +1,25 @@
-# NOTE: 'EOF' needs to be quoted, so $@ is not expanded by the shell.
-# duck-echo is created once for all tests of this node; tests only read it.
-PreNode: |
-  cat <<'EOF' > duck-echo
+before_cmd: export PATH="${DIT_TMP_DIR}/bin:$PATH"
+
+PreCase: |+
+  cd $DIT_TMP_DIR
+  mkdir -p $DUCK_HOME
+  mkdir -p bin
+  echo "security:
+    typos:
+      max_distance: 1
+      enabled: true
+
+  aliases:
+    abababa: echo" > $DUCK_HOME/config.yaml
+
+  cat <<'EOF' > bin/duck-echo
   #!/bin/sh
   echo "$@"
   EOF
-  chmod +x duck-echo
-
-# DUCK_HOME points at this directory, so duck reads the config.yaml here.
-before_cmd: export PATH="$(pwd):$PATH" && export DUCK_HOME="$(pwd)"
-
-PostNode: rm duck-echo
+  chmod +x bin/duck-echo
 
 Tests:
-  test-run-external-subcmd:
+  run-external-subcmd:
     Description: Finds external subcommands
     test_cmd: duck echo External subcmd
 
@@ -22,7 +28,7 @@ Tests:
         Output:
           String: External subcmd\n
 
-  test-fixes-to-external:
+  can-autofix-external:
     Description: Can fix typo in external subcommand
     test_cmd: duck ecjo External subcmd
 
@@ -30,7 +36,7 @@ Tests:
       echo:
         Output:
           String: External subcmd\n
-  test-fixes-to-alias_to_external:
+  can-autofix-alias-to-external:
     Description: Aliases can expand to external subcommands
     test_cmd: duck abababq External subcmd
 
