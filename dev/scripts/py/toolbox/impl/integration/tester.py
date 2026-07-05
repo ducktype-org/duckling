@@ -67,6 +67,12 @@ class RunContext:
     # coordinating threads (one per node/test, mostly blocked waiting
     # for their children) do not go through it. None in sequential runs.
     case_pool: ThreadPoolExecutor | None
+    # One permit per concurrently running case; a `NoParallel` test takes
+    # all of them to run its cases on an otherwise idle machine. None in
+    # sequential runs.
+    slots: threading.BoundedSemaphore | None
+    # Serializes `NoParallel` tests, so only one at a time drains `slots`.
+    exclusive: threading.Lock
     log_lock: threading.Lock
     abort: threading.Event
     output: OrderedOutput
@@ -128,6 +134,8 @@ def tester_impl(
         log_file=log_file,
         jobs=jobs,
         case_pool=None,
+        slots=None,
+        exclusive=threading.Lock(),
         log_lock=threading.Lock(),
         abort=threading.Event(),
         output=OrderedOutput(),
@@ -135,6 +143,7 @@ def tester_impl(
 
     if ctx.parallel:
         register_test_sections(test_set, [], ctx)
+        ctx.slots = threading.BoundedSemaphore(jobs)
         ctx.case_pool = ThreadPoolExecutor(
             max_workers=jobs, thread_name_prefix="dit-case"
         )
@@ -228,14 +237,34 @@ def run_test(test: Test, path: str, ctx: RunContext) -> TestStatistics:
             if run_single_case(test, case, index, path, ctx, case_stats, clog):
                 ctx.abort.set()
 
-        futures = [
-            ctx.case_pool.submit(
-                case_worker, i, case, results[slot], case_logs[slot]
-            )
-            for slot, (i, case) in enumerate(selected)
-        ]
-        for future in futures:
-            future.result()
+        if test.no_parallel:
+            # Take every slot, so the cases below run with nothing else
+            # executing; in-flight cases finish first, queued ones wait.
+            with ctx.exclusive:
+                for _ in range(ctx.jobs):
+                    ctx.slots.acquire()
+                try:
+                    for slot, (i, case) in enumerate(selected):
+                        case_worker(i, case, results[slot], case_logs[slot])
+                finally:
+                    for _ in range(ctx.jobs):
+                        ctx.slots.release()
+        else:
+
+            def pooled_worker(
+                index: int, case: Case, case_stats: TestStatistics, clog: CaseLog
+            ):
+                with ctx.slots:
+                    case_worker(index, case, case_stats, clog)
+
+            futures = [
+                ctx.case_pool.submit(
+                    pooled_worker, i, case, results[slot], case_logs[slot]
+                )
+                for slot, (i, case) in enumerate(selected)
+            ]
+            for future in futures:
+                future.result()
         for result in results:
             stats.iadd(result)
 

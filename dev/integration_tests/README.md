@@ -182,6 +182,13 @@ Practically this means a case must not write to files shared with other cases:
 no artifacts in the test's source directory, no shared scratch paths. Use the
 per-case temporary environment below for anything a case writes.
 
+A test can opt out with `NoParallel: true` (settable on the test or inherited
+from any ancestor node): its cases then run with **no other cases executing
+anywhere in the tree** — in-flight cases finish first, queued ones wait. Use it
+sparingly, for tests sensitive to machine load: tight timeouts, or cases that
+abort (SIGABRT) and thus wait for the system core-dump handler, which can take
+seconds on a busy machine.
+
 ## Temporary environments
 
 A subtree that needs a scratch directory opts in with:
