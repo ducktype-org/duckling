@@ -8,6 +8,7 @@
 #include <helios/mangler/mangler.hpp>
 #include <helios/queries/function_queries.hpp>
 #include <helios/queries/queries.hpp>
+#include <helios/symbols/lang_primitives.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios_private/comp_time/vm_evaluator.hpp>
@@ -26,6 +27,7 @@
 #include <cmath>
 #include <ranges>
 #include <type_traits>
+#include <unordered_set>
 
 namespace compiler::helios {
 	using namespace ctv;
@@ -274,7 +276,8 @@ namespace compiler::helios {
 									auto maybe_rhs_val = rhs.template get<LhsNumT>();
 									if (!maybe_rhs_val.has_value()) {
 										CORE_PANIC(base::strConcat(
-											"Operands on binary expression evaluated at compile "
+											"Operands on binary expression evaluated at "
+											"compile "
 											"time are of different type. This should be "
 											"prevented by casts.\nLeft side is:",
 											lhs.getTypeOfStoredValue(ctx).getType().toString(),
@@ -813,11 +816,30 @@ namespace compiler::helios {
 				= &ctx.query<QueryTransitiveFunctionCalls>(function_sym_id)->valueOrThrow();
 
 			auto mangled_name_function_to_call
-				= ctx.query<mangler::QueryMangledSymbol>({ function_sym_id });
+				= ctx.query<mangler::QueryMangledSymbol>({ .symbol_key = function_sym_id });
+
+			// Some dependencies are injected by MIR lowering rather than being present in the HOUT,
+			// so they are invisible to the HOUT-level transitive call collection. In particular
+			// array/slice bounds checks emit a call to `panic`, thus we must load it into the VM as
+			// well.
+			auto panic_sym = ctx.query<QueryLanguagePrimitiveSymID>({ LanguagePrimitive::Panic })
+			                     ->valueOrThrow();
+			Ref panic_dependencies
+				= &ctx.query<QueryTransitiveFunctionCalls>(panic_sym)->valueOrThrow();
+
+			std::vector<SymID>        all_dependencies;
+			std::unordered_set<SymID> seen_dependencies;
+			auto                      add_dependencies = [&](const std::vector<SymID>& deps) {
+                for (const SymID& func_id: deps)
+                    if (seen_dependencies.insert(func_id).second)
+                        all_dependencies.push_back(func_id);
+			};
+			add_dependencies(*dependencies);
+			add_dependencies(*panic_dependencies);
 
 			// temporary hout unit used to lower functions to LIR
 			HOUTUnit hout_unit;
-			for (const SymID& func_id: *dependencies) {
+			for (const SymID& func_id: all_dependencies) {
 				auto& hout_func = ctx.query<QueryCodeOfFun>(func_id)->valueOrThrow();
 				hout_unit.functions.emplace_back(&hout_func);
 			}
@@ -827,7 +849,7 @@ namespace compiler::helios {
 			// Note: the assumptions bellow might change,
 			// for example when we will add consts to comp time.
 			CORE_ASSERT(
-				lir_unit.lir_functions.size() == dependencies->size(),
+				lir_unit.lir_functions.size() == all_dependencies.size(),
 				"Number of lir functions should be the same as number of dependencies collected."
 			);
 			CORE_ASSERT(
