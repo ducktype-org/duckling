@@ -1,5 +1,7 @@
 #include "implicit_coercibility.hpp"
 
+#include <helios/tsh/types.hpp>
+
 #include <query_framework/standard_query/query_impl.hpp>
 
 #include <set>
@@ -53,6 +55,17 @@ namespace compiler::tsh {
 
 			if (from_ref_kind == ReferenceKind::Box && to_ref_kind == ReferenceKind::Ref)
 				return false;
+
+			// A value coerces into a variant only when its type is exactly equal to one of the
+			// variant's direct alternatives (no chained coercions).
+			if (key.target.getType().getKind() == Kind::Variant
+			    && key.source.getType().getKind() != Kind::Variant) {
+				const VariantAbstractType target_variant = key.target.getType();
+				for (const auto& alternative: target_variant.getUnderlyingTypes())
+					if (alternative.getRefKind() == ReferenceKind::Direct
+					    && alternative.getType() == key.source.getType())
+						return true;
+			}
 
 			// @TODO: #584
 			return context.query<QueryImplicitCoercibilityOnAbstractType>({

@@ -131,6 +131,19 @@ namespace compiler::helios {
 		if (source_type == to.getType()) {
 			// No coercion
 			return current_expr;
+		} else if (to.getType().getKind() == tsh::Kind::Variant) {
+			// Wrap the value into the (exactly matching) variant alternative.
+			const auto& alternatives
+				= to.getType().as<tsh::VariantAbstractType>().getUnderlyingTypes();
+			for (usize i = 0; i < alternatives.size(); i++) {
+				if (alternatives[i].getRefKind() == tsh::ReferenceKind::Direct
+				    && alternatives[i].getType() == source_type) {
+					return makeBox<code::VariantConstructExpr>(
+						ctx, current_expr->origin.generatedFrom(), std::move(current_expr), to, i
+					);
+				}
+			}
+			CORE_PANIC("Coercion should always be valid at this point.");
 		} else if ((is_source_numeric and is_target_numeric)
 		           or (is_source_bool and is_target_numeric)) {
 			// Numeric type promotion

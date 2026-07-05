@@ -216,6 +216,7 @@ private:
 		auto i128_type = getIntegralTypeNoContext(128, Signed);
 
 		auto f16_type  = getFloatTypeNoContext(16);
+		auto f32_type  = getFloatTypeNoContext(32);
 		auto f64_type  = getFloatTypeNoContext(64);
 		auto f128_type = getFloatTypeNoContext(128);
 
@@ -345,6 +346,27 @@ private:
 				auto not_mega_type = getConstValueAs<bool>("NOT_IS_MEGA", root_scope);
 				ASSERT_EQUAL(not_mega_type, false);
 			}
+		}
+
+		// Variant comp-time logic.
+		// @TODO: #803 assert comp-time pattern matching over variant values once `match` is
+		// lowered through helios.
+		{
+			auto i32_or_f32
+				= st(query::entryPoint<compiler::tsh::QueryVariantType>({ { st(i32_type),
+			                                                                st(f32_type) } }));
+
+			auto picked_variant
+				= getConstValueAs<compiler::tsh::SymbolType<>>("PICKED_VARIANT", root_scope);
+			ASSERT_EQUAL(i32_or_f32, picked_variant);
+
+			auto picked_plain
+				= getConstValueAs<compiler::tsh::SymbolType<>>("PICKED_PLAIN", root_scope);
+			ASSERT_EQUAL(st(i32_type), picked_plain);
+
+			ASSERT_EQUAL(true, getConstValueAs<bool>("PICKED_IS_VARIANT", root_scope));
+			ASSERT_EQUAL(true, getConstValueAs<bool>("PICKED_ORDER_INSENSITIVE", root_scope));
+			ASSERT_EQUAL(true, getConstValueAs<bool>("VARIANTS_DO_NOT_FLATTEN", root_scope));
 		}
 	}
 
@@ -1182,7 +1204,7 @@ private:
 		ASSERT_EQUAL(function->declaration->original_name, "foo");
 
 		// note that alias should not be included here:
-		ASSERT_EQUAL(function->body->statements.size(), 8);
+		ASSERT_EQUAL(function->body->statements.size(), 9);
 
 		auto& statements = function->body->statements;
 
@@ -1215,30 +1237,27 @@ private:
 		}
 
 		{
-			// @TODO: #803 support variant types
-			// auto& var = get_var_ref(2);
-			// ASSERT_EQUAL(compiler::helios::name(var.helios_symbol), "c");
-			// ASSERT_EQUAL(var.type, st(i32_or_f32));
-			(void) i32_or_f32;  // < remove
+			auto& var = get_var_ref(2);
+			ASSERT_EQUAL(compiler::helios::name(var.helios_symbol), "c");
+			ASSERT_EQUAL(var.type, st(i32_or_f32));
 		}
 
 		{
-			auto& var = get_var_ref(2);
+			auto& var = get_var_ref(3);
 			ASSERT_EQUAL(compiler::helios::name(var.helios_symbol), "d");
 			ASSERT_EQUAL(var.type.getType().getKind(), compiler::tsh::Kind::Class);
 		}
 
 		{
-			auto& if_stmt = dynamic_cast<const compiler::helios::code::IfStmt&>(*statements.at(3));
+			auto& if_stmt = dynamic_cast<const compiler::helios::code::IfStmt&>(*statements.at(4));
 			{
 				auto& var1 = get_var_block(0, if_stmt.then_body);
 				ASSERT_EQUAL(compiler::helios::name(var1.helios_symbol), "x");
 				ASSERT_EQUAL(var1.type, st(i32_type));
 
-				// @TODO: #803 support variant types
-				// auto& var2 = get_var_block(1, if_stmt.then_body);
-				// ASSERT_EQUAL(compiler::helios::name(var2.helios_symbol), "y");
-				// ASSERT_EQUAL(var2.type, st(i32_or_f32));
+				auto& var2 = get_var_block(1, if_stmt.then_body);
+				ASSERT_EQUAL(compiler::helios::name(var2.helios_symbol), "y");
+				ASSERT_EQUAL(var2.type, st(i32_or_f32));
 			}
 			{
 				auto& var = get_var_block(0, if_stmt.else_body);
@@ -1249,10 +1268,14 @@ private:
 
 		{
 			auto& while_stmt
-				= dynamic_cast<const compiler::helios::code::WhileStmt&>(*statements.at(4));
+				= dynamic_cast<const compiler::helios::code::WhileStmt&>(*statements.at(5));
 			auto& var = get_var_block(0, while_stmt.body);
 			ASSERT_EQUAL(compiler::helios::name(var.helios_symbol), "a");
 			ASSERT_EQUAL(var.type, st(i32_type));
+
+			auto& var_y = get_var_block(2, while_stmt.body);
+			ASSERT_EQUAL(compiler::helios::name(var_y.helios_symbol), "y");
+			ASSERT_EQUAL(var_y.type, st(i32_or_f32));
 		}
 
 		{

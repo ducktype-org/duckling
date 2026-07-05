@@ -11,6 +11,7 @@
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios_private/comp_time/vm_evaluator.hpp>
+#include <helios_private/errors/errors.hpp>
 #include <helios_private/hout_creation/expressions/coercions.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
@@ -621,11 +622,36 @@ namespace compiler::helios {
 					);
 				}
 
+				for (usize i = 0; i < subtypes.size(); i++) {
+					for (usize j = 0; j < i; j++) {
+						if (subtypes[i].getType() == subtypes[j].getType()
+						    && subtypes[i].getRefKind() == subtypes[j].getRefKind()) {
+							const auto position = expr.origin.getStablePosition();
+							CORE_ASSERT(
+								position.has_value(),
+								"Variant type constructor without a source position"
+							);
+							ctx.logInt(makeBox<DuplicateVariantAlternativeError>(
+								position.value(), makeBox<InteractiveType>(ctx, subtypes[i])
+							));
+							result = query::Failed();
+							return;
+						}
+					}
+				}
+
 				result = CompileTimeValue{ tsh::SymbolType<>{
 					ctx.query<tsh::QueryVariantType>({ subtypes }),
 					tsh::ReferenceKind::Direct,
 					tsh::Mutability::Mutable,
 				} };
+			}
+
+			void visitVariantConstructExpr(const code::VariantConstructExpr& expr) final {
+				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					"Evaluating variant construction at compile time.",
+					expr.origin.getStablePosition()
+				));
 			}
 
 			void visitSequenceExpr(const code::SequenceExpr& seq) final {

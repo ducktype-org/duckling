@@ -5,15 +5,13 @@ var uninit_global: i32;
 fun foo() -> i32 = {
 	var a: i32 = i32(in_n);
 	var b: i32 = i32(0);
-	# @TODO: #803 support variant types
-	# var c: i32 | f32 = a;
+	var c: i32 | f32 = a;
 	var d: T = T();
 	alias hmm = T;
 	using N.*;
 	if (0) {
 		var x: i32 = b;
-		# @TODO: #803 support variant types
-		# var y: i32 | f32 = c;
+		var y: i32 | f32 = c;
 		b;
 	} else {
 		var z: i32 = b;
@@ -21,8 +19,7 @@ fun foo() -> i32 = {
 	while (0) {
 		var a: i32 = i32(1);
 		var x: i32 = b;
-		# @TODO: #803 support variant types
-		# var y: i32 | f32 = c;
+		var y: i32 | f32 = c;
 		b;
 	}
 	# @TODO: #1412 fix dealias

@@ -498,6 +498,40 @@ namespace compiler::helios::code {
 	};
 
 	/**
+	 * @brief Constructs a variant value from a value of one of its alternatives.
+	 *
+	 * Created on implicit coercion to a variant type. The inner expression's type must be
+	 * exactly equal to the alternative at `alternative_index`.
+	 */
+	struct VariantConstructExpr final: public Expr {
+		Box<Expr> inner;
+		usize     alternative_index;
+
+		VariantConstructExpr(
+			query::Context&   ctx,
+			ElementOrigin     origin,
+			Box<Expr>         inner,
+			tsh::SymbolType<> variant_type,
+			usize             alternative_index
+		);
+
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
+
+	private:
+		FRIEND_MAKEBOX
+
+		VariantConstructExpr(
+			tsh::ExpressionType<> expression_type,
+			ElementOrigin         origin,
+			Box<Expr>             inner,
+			usize                 alternative_index
+		);
+	};
+
+	/**
 	 * @brief Represents a field access to an expression, like "some_struct.field".
 	 * @note This does not represent namespace-like access, like "some_namespace.some_symbol". It
 	 * is reserved for field access, with the field name dealiased, etc., in its most direct form.

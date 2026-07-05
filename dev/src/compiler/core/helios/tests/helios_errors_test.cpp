@@ -1436,6 +1436,11 @@ private:
 		} catch (query::internal::QueryFailedException& err) {
 			// Since this branch was chosen, everything worked well.
 		}
+
+		ASSERT_TRUE(query::entryPoint<QueryConstValueOf>(
+						test_utils::getChain("DUP_VARIANT", root_scope).back()
+		)
+		                .hasFailed());
 	}
 
 	void testDiagnosticErrorsCorrectness() {

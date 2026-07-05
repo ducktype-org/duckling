@@ -43,6 +43,7 @@ namespace compiler::helios::code {
 	EXPR_VISITOR(ChainComparisonExpr)
 	EXPR_VISITOR(TupleExpr)
 	EXPR_VISITOR(VariantTypeConstructorExpr)
+	EXPR_VISITOR(VariantConstructExpr)
 	EXPR_VISITOR(ParenthesisExpr)
 	EXPR_VISITOR(CallExpr)
 	EXPR_VISITOR(AccessExpr)
@@ -620,6 +621,45 @@ namespace compiler::helios::code {
 		for (const auto& subtype: subtypes) cloned_subtypes.push_back(subtype->clone());
 		return makeBox<VariantTypeConstructorExpr>(
 			expression_type, origin, std::move(cloned_subtypes)
+		);
+	}
+
+	VariantConstructExpr::VariantConstructExpr(
+		query::Context&,
+		ElementOrigin     origin,
+		Box<Expr>         inner,
+		tsh::SymbolType<> variant_type,
+		usize             alternative_index
+	):
+		  Expr(
+			  tsh::ExpressionType<>(
+				  variant_type, tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
+			  ),
+			  origin
+		  ),
+		  inner(std::move(inner)),
+		  alternative_index(alternative_index) {}
+
+	VariantConstructExpr::VariantConstructExpr(
+		tsh::ExpressionType<> expression_type,
+		ElementOrigin         origin,
+		Box<Expr>             inner,
+		usize                 alternative_index
+	):
+		  Expr(expression_type, origin),
+		  inner(std::move(inner)),
+		  alternative_index(alternative_index) {}
+
+	void VariantConstructExpr::debugPrint(std::ostream& out) const {
+		out << "variant_construct[alt=" << alternative_index
+			<< ", to=" << expression_type.getSymbolType().toString() << "](";
+		inner->debugPrint(out);
+		out << ")";
+	}
+
+	Box<Expr> VariantConstructExpr::clone() const {
+		return makeBox<VariantConstructExpr>(
+			expression_type, origin, inner->clone(), alternative_index
 		);
 	}
 

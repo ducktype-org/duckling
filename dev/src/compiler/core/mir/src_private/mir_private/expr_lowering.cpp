@@ -306,6 +306,11 @@ namespace compiler::mir {
 			return;
 		}
 
+		void visitVariantConstructExpr(const hc::VariantConstructExpr&) override {
+			// @TODO: #803 lower variant value construction to MIR
+			throw base::NotYetImplemented("Lowering of variant value construction");
+		}
+
 		void visitAccessExpr(const hc::AccessExpr& expr) override {
 			auto       sub_result = lowerSubExpr(*expr.base, continuation);
 			const auto sub_begin  = sub_result.begin;
