@@ -43,13 +43,44 @@ namespace compiler::mir {
 		});
 		// Maybe we should end the Function here.
 		fail_block->setTerminator({ Operation::Jump, {}, { ok_block->getID() }, {}, scope });
-		auto condition_tmp = function.addConditionTmp(scope);
+
+		// The index is coerced to a signed integer, so both bounds must be verified:
+		// index < len alone lets negative indices through (signed comparison).
+		//
+		// Note: instructions in a block are assembled in reverse execution order,
+		// so the BooleanAnd is added first and executes last.
+		auto below_len_tmp    = function.addConditionTmp(scope);
+		auto non_negative_tmp = function.addConditionTmp(scope);
+		auto condition_tmp    = function.addConditionTmp(scope);
+
+		condition_block->addInstruction(Instruction(
+			Operation::BooleanAnd,
+			MIRPlace(condition_tmp),
+			{ MIRValue(below_len_tmp), MIRValue(non_negative_tmp) },
+			{ flagConstruct(condition_tmp) },
+			scope,
+			{},
+			{}
+		));
+
+		auto zero = MIRValue{ MIRConstant{
+			ctv::CompileTimeValue{ ctv::NumericValue{ static_cast<i64>(0) } } } };
+
+		condition_block->addInstruction(Instruction(
+			Operation::IntegerGteq,
+			MIRPlace(non_negative_tmp),
+			{ index, zero },
+			{ flagConstruct(non_negative_tmp) },
+			scope,
+			{},
+			{}
+		));
 
 		condition_block->addInstruction(Instruction(
 			Operation::IntegerLt,
-			MIRPlace(condition_tmp),
+			MIRPlace(below_len_tmp),
 			{ index, slice_len.value() },
-			{ flagConstruct(condition_tmp) },
+			{ flagConstruct(below_len_tmp) },
 			scope,
 			{},
 			{}

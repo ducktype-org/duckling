@@ -1,9 +1,9 @@
+tmp_env_files: "foo bar baz"
 Tests:
   build:
     Description: can build a project with dependencies
     Cases:
       build:
-        Enabled: "false" # @TODO: #2919 Reenable this
         test_cmd: duck -C foo build
         # @TODO: #2907 Make this deterministic
         # Output:

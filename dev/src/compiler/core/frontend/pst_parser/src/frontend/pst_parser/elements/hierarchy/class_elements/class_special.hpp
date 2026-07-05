@@ -12,13 +12,18 @@ namespace pst {
 	 * @brief Special class methods like constructors, and destructors using the
 	 * `ClassName.type(...)` syntax
 	 */
-	class ClassSpecial: public ClassStmt {
+	class ClassSpecial: public Stmt {
+		PARENT_CLASS(Stmt);
+		THIS_CLASS(ClassSpecial);
+
 	protected:
+		ELEMENT_CLONE_DECL(ClassSpecial);
 		HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const override;
 
 	public:
-		CLASS_STMT_PASS_CONSTRUCTOR(ClassSpecial);
-		CLASS_STMT_PARSE(ClassSpecial);
+		ClassSpecial(StmtKind kind, const LangParserState& state): Stmt(kind, state) {}
+
+		PARSE_DECL();
 
 		[[nodiscard]]
 		std::string elementType() const override {

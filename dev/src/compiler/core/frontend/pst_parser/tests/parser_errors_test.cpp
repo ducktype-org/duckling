@@ -17,6 +17,7 @@
 #include <frontend/pst_parser/elements/implementations/statements/statements_errors.hpp>
 #include <frontend/pst_parser/elements/parser_common_errors.hpp>
 #include <frontend/pst_parser/pst.hpp>
+#include <frontend/pst_parser/test_utils/pst_test_utils.hpp>
 
 #include <diagnostic/source_position.hpp>
 #include <tester/tester.hpp>
@@ -36,6 +37,17 @@ class PSTErrorTests: public tester::TestSuite {
 
 		GenExample(std::string code): code(std::move(code)) { examples.push_back(this); }
 
+		template<typename Element, typename Parser>
+		[[nodiscard]]
+		static base::OkBad testCloning(const pst::PST<Element, Parser>& pst) {
+			if (not pst.hasErrors()) {
+				return pst::testElementCloning(
+					base::CRef(&*pst.getRootElement().illegalAccess().value())
+				);
+			}
+			return base::OK;
+		}
+
 		virtual bool operator()() = 0;
 		[[nodiscard]]
 		virtual std::string message() const
@@ -50,7 +62,7 @@ class PSTErrorTests: public tester::TestSuite {
 
 		bool operator()() override {
 			auto parsed = pst::PST<Element, Parser>::fromContents(code, pst::PSTType::Program);
-			return (not parsed.hasErrors()) == good;
+			return ((not parsed.hasErrors()) == good && testCloning(parsed).isOk());
 		}
 
 		[[nodiscard]]
@@ -71,7 +83,7 @@ class PSTErrorTests: public tester::TestSuite {
 			auto parsed = pst::PST<pst::CodeBlock, Parser>::fromContentsWithArgs(
 				code, pst::PSTType::Program, hashing::ComponentHash{}
 			);
-			return (not parsed.hasErrors()) == good;
+			return ((not parsed.hasErrors()) == good && testCloning(parsed).isOk());
 		}
 
 		[[nodiscard]]
@@ -92,7 +104,7 @@ class PSTErrorTests: public tester::TestSuite {
 			auto parsed = pst::PST<pst::CodeBlockOrStmt, Parser>::fromContentsWithArgs(
 				code, pst::PSTType::Program, hashing::ComponentHash{}
 			);
-			return (not parsed.hasErrors()) == good;
+			return ((not parsed.hasErrors()) == good && testCloning(parsed).isOk());
 		}
 
 		[[nodiscard]]
@@ -105,7 +117,7 @@ class PSTErrorTests: public tester::TestSuite {
 		}
 	};
 
-	template<std::derived_from<pst::ClassStmt> Element, bool good = true, typename Parser = Element>
+	template<std::derived_from<pst::Stmt> Element, bool good = true, typename Parser = Element>
 	struct ClassStmtExample: public GenExample {
 		base::StrID class_name;
 
@@ -118,10 +130,12 @@ class PSTErrorTests: public tester::TestSuite {
 		bool operator()() override {
 			auto parsed = pst::PST<Element, Parser>::fromContentsWithArgs(
 				this->code,
-				makeBox<pst::LangParserContext>(class_name, pst::BlockOrderType::Unordered),
+				makeBox<pst::LangParserContext>(
+					class_name, pst::BlockOrderType::Unordered, pst::StmtContext::Class
+				),
 				hashing::ComponentHash{}
 			);
-			return (not parsed.hasErrors()) == good;
+			return ((not parsed.hasErrors()) == good && testCloning(parsed).isOk());
 		}
 
 		[[nodiscard]]
@@ -290,14 +304,18 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::Expand, false> empty_expand{ "expand ;" };
 	Example<pst::Expand, false> unclosed_expand{ "expand \"return 0;;" };
 
-	ClassStmtExample<pst::NonClassStmt, true> class_using{ "using std.math;" };
-	ClassStmtExample<pst::NonClassStmt, true> class_alias{ "alias sqrt=std.math.sqrt;" };
+	Example<pst::TemplateStmt, true>  simple_template{ "template () class C {}" };
+	Example<pst::TemplateStmt, false> no_template_list{ "template class C {}" };
+	Example<pst::TemplateStmt, false> no_statement{ "template ()" };
 
-	ClassStmtExample<pst::ClassStmt, true> public_access_block{ "public {}" };
-	ClassStmtExample<pst::ClassStmt, true> private_access_block{ "private {}" };
-	ClassStmtExample<pst::ClassStmt, true> protected_access_block{ "protected {}" };
-	ClassStmtExample<pst::ClassStmt, true> multi_specifier_block{ "public private {}" };
-	ClassStmtExample<pst::ClassStmt, true> simple_specified_field{ "public static x: i32 = 5;" };
+	ClassStmtExample<pst::Stmt, true> class_using{ "using std.math;" };
+	ClassStmtExample<pst::Stmt, true> class_alias{ "alias sqrt=std.math.sqrt;" };
+
+	ClassStmtExample<pst::Stmt, true> public_access_block{ "public {}" };
+	ClassStmtExample<pst::Stmt, true> private_access_block{ "private {}" };
+	ClassStmtExample<pst::Stmt, true> protected_access_block{ "protected {}" };
+	ClassStmtExample<pst::Stmt, true> multi_specifier_block{ "public private {}" };
+	ClassStmtExample<pst::Stmt, true> simple_specified_field{ "public static x: i32 = 5;" };
 
 	ClassStmtExample<pst::Field, true>  simple_field{ "x: i32 = 5" };
 	ClassStmtExample<pst::Field, true>  simple_var_field{ "var x: i32 = 5" };

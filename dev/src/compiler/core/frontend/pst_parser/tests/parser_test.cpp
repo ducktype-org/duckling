@@ -68,6 +68,7 @@ public:
 		TESTER_ADD_TEST(testClass);
 		TESTER_ADD_TEST(testListParsing);
 		TESTER_ADD_TEST(testListParsingErrors);
+		TESTER_ADD_TEST(testTemplateStmtParsing);
 		TESTER_ADD_TEST(testUsingErrors);
 		TESTER_ADD_TEST(testParamListErrors);
 		TESTER_ADD_TEST(testMissingSemiErr);
@@ -151,8 +152,13 @@ private:
 		}
 
 		assertTrue(testing_utils::compareJson(ss.str(), correct_string), "outputs are not equal");
-		// @TODO: Do we want to print some information about the differences or the bad output to a
-		// file?
+		if (no_errors) {
+			assertTrue(
+				pst::testElementCloning(CRef{ &*pst.getRootElement().illegalAccess().value() })
+					.isOk(),
+				"Error during cloning"
+			);
+		}
 	}
 
 	void testJsonRelativePath(
@@ -186,6 +192,10 @@ private:
 	void testClass() { testJsonRelativePath("class.duck", "class.json"); }
 
 	void testListParsing() { testJsonRelativePath("lists_ok.duck", "lists_ok.json"); }
+
+	void testTemplateStmtParsing() {
+		testJsonRelativePath("template_statements.duck", "template_statements.json");
+	}
 
 	void testFormatStrParsing() {
 		testJsonRelativePath("format_strings.duck", "format_strings.json");
@@ -228,7 +238,7 @@ private:
 		                   .illegalAccess()
 		                   .value()
 		                   .dynamicCast<pst::Fun>();
-		ASSERT_TRUE(fun_opt.has_value());
+		ASSERT_HAS_VALUE(fun_opt);
 		auto fun = fun_opt.value();
 
 		auto params = fun->getParams().illegalAccess().value();

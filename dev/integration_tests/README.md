@@ -101,6 +101,11 @@ Variables can be shadowed.
 All **builtin variables are `UpperCase`** and all user defined variables should
 be `kebab-case` or `lower_case`.
 
+> [!IMPORTANT]
+> The only exceptions are:
+> * `@{dev_dir}`, which is an absolute path to the `dev/` directory,
+> * `@{build_dir}`, which is a value of the `-b` CLI option.
+
 Here is a list of builtin variables and their meaning **depending on the context**:
 
 Config file variables (linked to a node in the test tree, not inherited):

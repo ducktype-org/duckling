@@ -20,6 +20,7 @@ namespace vm::exceptions {
 		name(): VMRuntimeException(std::string(ERR_MSG)) {} \
 	}
 
+	VM_RUNTIME_EXCEPTION(VMPanicException, "Program panicked");
 	VM_RUNTIME_EXCEPTION(VMNullPointerCopyException, "Copying to/from null pointer");
 	VM_RUNTIME_EXCEPTION(VMNullPointerAccessException, "Accessing null pointer");
 	VM_RUNTIME_EXCEPTION(VMVtableUnset, "Calling a virtual method with an unset vtable");

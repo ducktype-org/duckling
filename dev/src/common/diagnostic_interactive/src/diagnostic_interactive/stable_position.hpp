@@ -4,6 +4,9 @@
 
 #include <diagnostic/source_position.hpp>
 
+#include <compare>
+#include <tuple>
+
 namespace query {
 	struct Context;
 }
@@ -99,5 +102,17 @@ namespace dia_int {
 		}
 
 		static StablePosition fakePosition();
+
+		/**
+		 * @brief Positions are ordered by the source nodes they span.
+		 * The conversion-function pointers are not part of the identity.
+		 */
+		std::strong_ordering operator<=>(const StablePosition& other) const {
+			return std::tie(begin_node, end_node) <=> std::tie(other.begin_node, other.end_node);
+		}
+
+		bool operator==(const StablePosition& other) const {
+			return std::tie(begin_node, end_node) == std::tie(other.begin_node, other.end_node);
+		}
 	};
 }

@@ -18,7 +18,6 @@
 #include <string_id/string_id.hpp>
 
 namespace compiler::helios {
-
 	/**
 	 * @brief Return all symbols currently stored by HELIOS.
 	 * @note: This should be used for tests and debug only,
@@ -120,7 +119,7 @@ namespace compiler::helios {
 	}
 
 	/**
-	 * @brief Query all function dependencies of a function (e.g. for a given function SymID, return
+	 * @brief Query all function called from a function (e.g. for a given function SymID, return
 	 * all SymID-s of functions called directly by this one.
 	 * @note Works only for SymID-s that represent functions (both PST and generated).
 	 *

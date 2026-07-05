@@ -3,6 +3,7 @@
 #include "preamble.hpp"
 
 namespace pst {
+	CLONE_SUB_ELEMENTS_DEF(Attribute, name, args);
 
 	MBox<Attribute> Attribute::parse(LangParserState& state) {
 		Box<Attribute> out = makeBox<Attribute>(state);

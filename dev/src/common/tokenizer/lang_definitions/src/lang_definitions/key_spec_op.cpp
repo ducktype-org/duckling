@@ -9,7 +9,16 @@
 
 namespace lang_def {
 	namespace {
-		KeywordMode keyword_mode;
+		/**
+		 * Global tokenization state.
+		 *
+		 * @note This is thread local, because workers tokenize code in parallel, so a shared global
+		 * here would be a data race. It can be thread-local because the mode is always set before
+		 * tokenization.
+		 *
+		 * @TODO: #2943 remove this global state
+		 */
+		thread_local KeywordMode keyword_mode = DEFAULT_MODE;
 	}
 
 	void setKeywordMode(KeywordMode mode) { keyword_mode = mode; }
@@ -40,6 +49,10 @@ namespace lang_def {
 			{ Keyword::Loop, "loop", KeywordFlagsOptions::IsStmtStart },
 			{ Keyword::Block, "block", KeywordFlagsOptions::IsStmtStart },
 			{ Keyword::Expand, "expand", KeywordFlagsOptions::IsStmtStart },
+
+			// @note: Template is a bit special, it acts more as a specifier so it being a stmt
+			// start might not always be what we want.
+			{ Keyword::Template, "template", KeywordFlagsOptions::IsStmtStart },
 
 			// These Keywords also indicate start of a statement.
 			{ Keyword::Return,
@@ -80,7 +93,6 @@ namespace lang_def {
 
 			// This is the list of keywords that are general prefix operators
 			{ Keyword::Const, "const", KeywordFlagsOptions::IsGenPrefixOp },
-			{ Keyword::Len, "len", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::Ref, "ref", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::Box, "box", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::Ptr, "ptr", KeywordFlagsOptions::IsGenPrefixOp },

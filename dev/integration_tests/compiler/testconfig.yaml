@@ -1,6 +1,3 @@
-compile_duckc: "cmake --build @{build_dir} -j -- duckc"
-compile_dvm: "cmake --build @{build_dir} -j -- VM"
-
 PreNode: "@{compile_duckc} && @{compile_dvm}"
 
 SubDirs:

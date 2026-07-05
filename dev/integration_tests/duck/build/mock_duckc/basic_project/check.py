@@ -7,7 +7,7 @@ sys.path.append(str(Path(__file__).resolve().parents[3]))
 
 from utilities import *
 
-foo_path = Path.cwd() / "foo"
+foo_path = project_root("foo")
 
 version = "1.0.0"
 
@@ -65,8 +65,8 @@ else:
   "tasks": [
     {{
       "package": "{foo_name}",
-      "strategy": "dvm",
-      "output_file": "{str(layout / "foo.dvm")}"
+      "strategy": "dvm_exe",
+      "output_file": "{str(layout / "foo.dbc")}"
     }}
   ]
 }}"""

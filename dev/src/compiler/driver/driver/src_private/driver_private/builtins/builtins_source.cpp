@@ -55,7 +55,7 @@ struct list {
 // The definitions will be given below.
 extern "C" {
 	// Basic small I/O @TODO: #2635 move to Duckling, probably
-	int32_t  builtin_output_char(char c);
+	int64_t  builtin_output_char(char c);
 	char     builtin_input_char();
 	int64_t  builtin_output_i64(int64_t v);
 	int64_t  builtin_input_i64();
@@ -63,7 +63,6 @@ extern "C" {
 	uint64_t builtin_input_u64();
 	int32_t  builtin_output_f64(double v);
 	double   builtin_input_f64();
-	int64_t  builtin_output_str(str s);
 
 	// String I/O @TODO: #2636 move to Duckling
 	int64_t print(String s);
@@ -78,10 +77,9 @@ extern "C" {
 	void  builtin_dealloc(void* ptr);
 
 	// List
-	void     builtin_list_push(list* list, void* element_ptr, uint64_t element_size);
-	void     builtin_list_pop(list* list, uint64_t count, uint64_t element_size);
-	uint64_t builtin_list_len(list* list);
-	void     builtin_list_free(list* list);
+	void builtin_list_push(list* list, void* element_ptr, uint64_t element_size);
+	void builtin_list_pop(list* list, uint64_t count, uint64_t element_size);
+	void builtin_list_free(list* list);
 
 	// Stringification @TODO: #2634 move to Duckling, probably
 	String builtin_stringify_i64(int64_t v);
@@ -92,7 +90,7 @@ extern "C" {
 	String builtin_stringify_str(str s);
 }
 
-int32_t builtin_output_char(char c) { return printf("%c", c); }
+int64_t builtin_output_char(char c) { return printf("%c", c); }
 
 char builtin_input_char() {
 	char c;
@@ -163,11 +161,6 @@ String builtin_input_string() {
 }
 
 int64_t print(String s) {
-	// Use fwrite to handle non-null-terminated strings and binary data safely.
-	return int64_t(fwrite(s.data, sizeof(char), s.length, stdout));
-}
-
-int64_t builtin_output_str(str s) {
 	// Use fwrite to handle non-null-terminated strings and binary data safely.
 	return int64_t(fwrite(s.data, sizeof(char), s.length, stdout));
 }
@@ -291,9 +284,6 @@ void builtin_list_pop(list* list, uint64_t count, uint64_t element_size) {
 	uint64_t to_remove = count < list->length ? count : list->length;
 	list->length -= to_remove;
 }
-
-// len(vec: List[T]) -> u64
-uint64_t builtin_list_len(list* list) { return list->length; }
 
 void builtin_list_free(list* list) {
 	if (list->data != NULL) {

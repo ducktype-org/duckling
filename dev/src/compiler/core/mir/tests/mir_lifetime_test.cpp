@@ -8,7 +8,6 @@
 
 #include <ctv/ctv.hpp>
 #include <helios/queries/queries.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <helios/tsh/queries.hpp>
 #include <mir/mir_lowering/mir_queries.hpp>
@@ -33,6 +32,8 @@ public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(lifetimeAnalysisTest);
 		TESTER_ADD_TEST(moveValidationTest);
+		TESTER_ADD_TEST(reinitAfterMoveTest);
+		TESTER_ADD_TEST(moveDestructorTest);
 		TESTER_ADD_TEST(simpleLifetimeSequenceTest);
 		TESTER_ADD_TEST(lifetimeFlagsRepeatedBlocks);
 		TESTER_ADD_TEST(lifetimeFlagsSingleBlock);
@@ -54,7 +55,7 @@ private:
 		ASSERT_EQUAL(foo_mir->local_list.size(), 5);
 
 		// Verify lifetime scopes are assigned
-		for (const auto& local: foo_mir->local_list) ASSERT_TRUE(local.scope.has_value());
+		for (const auto& local: foo_mir->local_list) ASSERT_HAS_VALUE(local.scope);
 	}
 
 	void simpleLifetimeSequenceTest() {
@@ -93,8 +94,8 @@ private:
 			.expectDestruct("a")
 			.expectInstruction(compiler::mir::Operation::ReturnValue)
 			.expectScopeEnd("a")
-			// Second return
-			.expectDestruct("a")
+			// Second return: `return a` moves `a` out, so it is moved (not destructed) here.
+			.expectMove("a")
 			.expectInstruction(compiler::mir::Operation::ReturnValue)
 			.expectScopeEnd("a")
 			.validate(foo_mir);
@@ -159,125 +160,131 @@ private:
 	}
 
 	void moveValidationTest() {
-		// @note This test is very fragile and may require hotfixes even after unrelated changes.
-		// Proper tests can be written once 'move' is implemented. It should contain usage of 'if',
-		// 'else', 'break', 'continue', 'switch' etc..
+		// Use-after-move validation, driven by real `move` expressions. `good*` functions lower
+		// successfully (and we check the move/destructor shape they produce), while `bad*`
+		// functions fail to lower because a moved (or possibly-moved) value is read.
+		using compiler::mir::Operation;
 		auto [module, scope] = getModule(fs::File(path("modules/move_validation")));
 
+		// In all `good*` functions: Local(0) = param `c`, Local(1) = `a`, Local(2) = `b`.
+
+		// good1: straight-line move. `b` is moved (so it has no destructor), while `a` stays alive
+		// to its scope end and gets an unconditional `Destruct`.
+		LifetimeChecker{}
+			.expectConstruct("a")
+			.expectConstruct("b")
+			.expectMove("b")
+			.expectInstruction(Operation::Destruct)
+			.expectDestruct("a")
+			.validate(getMIRFunctionByName(module, "good1"));
+
+		// good2: `b` is moved only on the `if` branch, so at the merge it is `MaybeMoved` and gets
+		// a conditional `DestructIf`; `a` still gets an unconditional `Destruct`.
+		LifetimeChecker{}
+			.expectConstruct("a")
+			.expectConstruct("b")
+			.expectMove("b")
+			.expectInstruction(Operation::DestructIf)
+			.expectDestruct("b")
+			.expectInstruction(Operation::Destruct)
+			.expectDestruct("a")
+			.validate(getMIRFunctionByName(module, "good2"));
+
+		// good3: `b` is loop-local and moved on a conditional path inside the loop body, so it is
+		// `MaybeMoved` at the end of the body -> `DestructIf`.
+		LifetimeChecker{}
+			.expectConstruct("a")
+			.expectConstruct("b")
+			.expectMove("b")
+			.expectInstruction(Operation::DestructIf)
+			.expectDestruct("b")
+			.expectInstruction(Operation::Destruct)
+			.expectDestruct("a")
+			.validate(getMIRFunctionByName(module, "good3"));
+
+		// good4: `b` is loop-local and moved unconditionally in the body, so it is `Moved` at the
+		// end of the body and gets no destructor at all; only `a` is destructed.
+		LifetimeChecker{}
+			.expectConstruct("a")
+			.expectConstruct("b")
+			.expectMove("b")
+			.expectInstruction(Operation::Destruct)
+			.expectDestruct("a")
+			.validate(getMIRFunctionByName(module, "good4"));
+
+		// `bad*` functions read a moved / possibly-moved value, so lowering must fail.
 		withContextDo([&](query::Context& ctx) {
 			auto& unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
-			auto& functions = unit.functions;
 
-			for (CRef<compiler::helios::HOUTFunction> fun: functions) {
-				if (fun->declaration->original_name.str() == "good1") {
-					auto& mir_rep_good1 = (compiler::mir::Function&) ctx
-					                          .query<compiler::mir::LowerToMIRFunction>({ fun })
-					                          ->valueOrThrow();
-
-
-					CRef<compiler::mir::MIRLocal> tmp(mir_rep_good1.local_list[2]);
-
-					mir_rep_good1.blocks[mir_rep_good1.block_order[0]]
-						.instructions[4]
-						.flags.emplace_back(compiler::mir::OperationFlag::Flag::Move, tmp);
-
-					ASSERT_TRUE(validateFunction(ctx, mir_rep_good1).isOk());
-				}
-
-				if (fun->declaration->original_name.str() == "good2") {
-					auto& mir_rep_good2 = (compiler::mir::Function&) ctx
-					                          .query<compiler::mir::LowerToMIRFunction>({ fun })
-					                          ->valueOrThrow();
-
-					CRef<compiler::mir::MIRLocal> var_b(mir_rep_good2.local_list[2]);
-					compiler::mir::Instruction&   assignment
-						= mir_rep_good2.blocks[mir_rep_good2.block_order[1]].instructions[0];
-
-					// If this test fails use the following to find the correct Instruction.
-					// mir_rep_good2.debugPrint(std::cerr);
-					// assignment.debugPrint(std::cerr);
-					assertEqual(
-						compiler::mir::Operation::Assign,
-						assignment.operation,
-						"Fragile test, please fix (good2, assignment)"
-					);
+			auto check_fails = [&](std::string_view name) {
+				for (CRef<compiler::helios::HOUTFunction> fun: unit.functions) {
+					if (fun->declaration->original_name.strView() != name) continue;
 					assertTrue(
-						assignment.arguments[0].isLocal(), "Fragile test, please fix (good2, local)"
+						ctx.query<compiler::mir::LowerToMIRFunction>({ fun })->hasFailed(),
+						base::strConcat(name, " should fail to lower")
 					);
-					assignment.flags.emplace_back(compiler::mir::OperationFlag::Flag::Move, var_b);
-
-					ASSERT_TRUE(validateFunction(ctx, mir_rep_good2).isOk());
+					return;
 				}
+				CORE_PANIC(base::strConcat("Function '", name, "' not found in module"));
+			};
 
-				if (fun->declaration->original_name.str() == "good3") {
-					auto& mir_rep_good3 = (compiler::mir::Function&) ctx
-					                          .query<compiler::mir::LowerToMIRFunction>({ fun })
-					                          ->valueOrThrow();
-
-					CRef<compiler::mir::MIRLocal> tmp(mir_rep_good3.local_list[2]);
-
-					mir_rep_good3.blocks[mir_rep_good3.block_order[2]]
-						.instructions[2]
-						.flags.emplace_back(compiler::mir::OperationFlag::Flag::Move, tmp);
-
-					ASSERT_TRUE(validateFunction(ctx, mir_rep_good3).isOk());
-				}
-
-				if (fun->declaration->original_name.str() == "good4") {
-					auto& mir_rep_good4 = (compiler::mir::Function&) ctx
-					                          .query<compiler::mir::LowerToMIRFunction>({ fun })
-					                          ->valueOrThrow();
-
-					CRef<compiler::mir::MIRLocal> tmp(mir_rep_good4.local_list[2]);
-
-					mir_rep_good4.blocks[mir_rep_good4.block_order[1]]
-						.instructions[2]
-						.flags.emplace_back(compiler::mir::OperationFlag::Flag::Move, tmp);
-
-					ASSERT_TRUE(validateFunction(ctx, mir_rep_good4).isOk());
-				}
-
-				if (fun->declaration->original_name.str() == "bad1") {
-					auto& mir_rep_bad1 = (compiler::mir::Function&) ctx
-					                         .query<compiler::mir::LowerToMIRFunction>({ fun })
-					                         ->valueOrThrow();
-
-					CRef<compiler::mir::MIRLocal> tmp(mir_rep_bad1.local_list[2]);
-
-					mir_rep_bad1.blocks[mir_rep_bad1.block_order[0]]
-						.instructions[2]
-						.flags.emplace_back(compiler::mir::OperationFlag::Flag::Move, tmp);
-
-					ASSERT_TRUE(validateFunction(ctx, mir_rep_bad1).isBad());
-				}
-
-				if (fun->declaration->original_name.str() == "bad2") {
-					auto& mir_rep_bad2 = (compiler::mir::Function&) ctx
-					                         .query<compiler::mir::LowerToMIRFunction>({ fun })
-					                         ->valueOrThrow();
-
-					CRef<compiler::mir::MIRLocal> tmp(mir_rep_bad2.local_list[2]);
-					mir_rep_bad2.blocks[mir_rep_bad2.block_order[1]]
-						.instructions[0]
-						.flags.emplace_back(compiler::mir::OperationFlag::Flag::Move, tmp);
-
-					ASSERT_TRUE(validateFunction(ctx, mir_rep_bad2).isBad());
-				}
-
-				if (fun->declaration->original_name.str() == "bad3") {
-					auto& mir_rep_bad3 = (compiler::mir::Function&) ctx
-					                         .query<compiler::mir::LowerToMIRFunction>({ fun })
-					                         ->valueOrThrow();
-
-					CRef<compiler::mir::MIRLocal> tmp(mir_rep_bad3.local_list[2]);
-					mir_rep_bad3.blocks[mir_rep_bad3.block_order[1]]
-						.instructions[0]
-						.flags.emplace_back(compiler::mir::OperationFlag::Flag::Move, tmp);
-
-					ASSERT_TRUE(validateFunction(ctx, mir_rep_bad3).isBad());
-				}
-			}
+			check_fails("bad1");
+			check_fails("bad2");
+			check_fails("bad3");
 		});
+	}
+
+	void reinitAfterMoveTest() {
+		// Reinitialization by assignment. A bare-local store (e.g. `b = 99`) carries a `Reinit`
+		// flag that revives the local for liveness, so reading it after a prior move-out is valid.
+		// Each `getMIRFunctionByName` below panics if lowering fails, so the mere fact these
+		// `reinit*` functions lower is the regression guard against the false use-after-move.
+		using compiler::mir::Operation;
+		auto [module, scope] = getModule(fs::File(path("modules/move_validation")));
+
+		// reinit1: `b` moved out (`a = move b`), reinitialized (`b = 99`), then read (`eat(b)`).
+		// The `a = move b` store also reinitializes `a`.
+		auto reinit1 = getMIRFunctionByName(module, "reinit1");
+		LifetimeChecker{}
+			.expectConstruct("a")
+			.expectConstruct("b")
+			.expectMove("b")                                    // a = move b
+			.expectReinit("b")                                  // b = 99
+			.validate(reinit1);
+		LifetimeChecker{}.expectReinit("a").validate(reinit1);  // a = move b
+
+		// reinit2: `a` is moved and reinitialized on both branches, alive at the merge read.
+		auto reinit2 = getMIRFunctionByName(module, "reinit2");
+		LifetimeChecker{}.expectMove("a").expectReinit("a").validate(reinit2);
+
+		// reinit3: `a` is moved then reinitialized inside the loop body.
+		auto reinit3 = getMIRFunctionByName(module, "reinit3");
+		LifetimeChecker{}.expectMove("a").expectReinit("a").validate(reinit3);
+	}
+
+	void moveDestructorTest() {
+		// Move-aware destructor insertion. With the liveness analysis in place, a local that is
+		// definitely alive at its scope end gets an unconditional `Destruct`, while a local that
+		// is moved on only some control-flow paths is `MaybeMoved` and gets a conditional
+		// `DestructIf`. A definitely-moved local gets no destructor at all.
+		auto [module, scope] = getModule(fs::File(path("modules/move_lifetime")));
+
+		// `a` is never moved -> alive at scope end -> unconditional `Destruct`.
+		auto no_move = getMIRFunctionByName(module, "noMove");
+		LifetimeChecker{}
+			.expectConstruct("a")
+			.expectInstruction(compiler::mir::Operation::Destruct)
+			.expectDestruct("a")
+			.validate(no_move);
+
+		// `a` is moved on the `if` branch only -> `MaybeMoved` at the merge -> `DestructIf`.
+		auto maybe_move = getMIRFunctionByName(module, "maybeMove");
+		LifetimeChecker{}
+			.expectConstruct("a")
+			.expectMove("a")
+			.expectInstruction(compiler::mir::Operation::DestructIf)
+			.expectDestruct("a")
+			.validate(maybe_move);
 	}
 
 	i32 countIntermediateDestructorBlocks(CRef<compiler::mir::Function> func) {

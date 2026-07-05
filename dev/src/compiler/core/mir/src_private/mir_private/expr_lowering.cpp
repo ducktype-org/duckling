@@ -1,9 +1,9 @@
 #include "expr_lowering.hpp"
 
+#include <diagnostic_interactive/placeholder.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/symbols/query_type_symbol_data.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/utils/get_expr_symid.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
@@ -254,14 +254,15 @@ namespace compiler::mir {
 			auto ctor_symid = expr.tuple_ctor_symbol;
 			args.emplace_back(MIRFunctionLiteral{ ctor_symid });
 
-			for (const auto& element: expr.elements) {
-				auto lowered_element = lowerSubExpr(*element, continuation);
+			for (const auto& element: expr.elements | std::views::reverse) {
+				auto lowered_element = lowerSubExpr(*element, current);
 				args.push_back(lowered_element.getResult(function));
 				current = lowered_element.begin;
 			}
+			std::reverse(args.begin() + 1, args.end());
 
 			return noValueOutput(
-				continuation,
+				current,
 				call,
 				Instruction{ Operation::Call, {}, args, {}, expr_scope, {}, { expr.getPosition() } },
 				expr.expression_type.getSymbolType()
@@ -322,11 +323,12 @@ namespace compiler::mir {
 		}
 
 		void visitIndexExpr(const hc::IndexExpr& expr) override {
-			if (expr.base->expression_type.getSymbolType().getType().getKind() == tsh::Kind::Meta) {
+			auto base_kind = expr.base->expression_type.getSymbolType().getType().getKind();
+			switch (base_kind) {
+			case tsh::Kind::Meta:
 				// @TODO: #1918 Implement that.
 				throw base::NotYetImplemented("Lowering of IndexExpr operating on Meta");
-			} else if (expr.base->expression_type.getSymbolType().getType().getKind()
-			           == tsh::Kind::Slice) {
+			case tsh::Kind::Slice: {
 				auto bounds_check_fail_block = function.newBlock();
 				auto bounds_check_cond_block = function.newBlock();
 				auto entry_block             = function.newBlock();
@@ -363,8 +365,32 @@ namespace compiler::mir {
 					}
 					variant_default { CORE_PANIC("Index base must be a MIRPlace"); }
 				}
+				break;
+			}
+			case tsh::Kind::DynamicArray: {
+				auto lowered_index = lowerSubExpr(*expr.index, continuation);
+				auto index_val     = lowered_index.getResult(function);
 
-			} else {
+				auto lowered_base = lowerSubExpr(*expr.base, lowered_index.begin);
+				auto base_val     = lowered_base.getResult(function);
+
+				auto dyn_array_data
+					= function.getContext().query<helios::QueryDynamicArrayTypeData>(
+						expr.base->expression_type.getSymbolType().getType()
+					);
+
+				variant_match(std::move(base_val.getVariant())) {
+					variant_case(MIRPlace, place) {
+						auto result = place.withField(function.getContext(), dyn_array_data->ptr)
+						                  .withIndex(index_val);
+						valueOutput(lowered_base.begin, result);
+					}
+					variant_default { CORE_PANIC("Index base must be a MIRPlace"); }
+				}
+				break;
+			}
+			case tsh::Kind::ManyPointer:
+			case tsh::Kind::StaticArray: {
 				auto lowered_index = lowerSubExpr(*expr.index, continuation);
 				auto index_val     = lowered_index.getResult(function);
 
@@ -376,6 +402,10 @@ namespace compiler::mir {
 					}
 					variant_default { CORE_PANIC("Index base must be a MIRPlace"); }
 				}
+				break;
+			}
+			default:
+				CORE_UNREACHABLE();
 			}
 		}
 
@@ -474,9 +504,6 @@ namespace compiler::mir {
 				sub_continuation = arg_lowered.begin;
 			}
 
-			// @TODO: #505 here in the future we (probably) will have to handle
-			// move operations related to the passing of the arguments to the function
-
 			return noValueOutput(
 				sub_continuation,
 				call,
@@ -528,6 +555,43 @@ namespace compiler::mir {
 			                                 = expr.source_expr->expression_type.getSymbolType(),
 			                                 .target_type = expr.target_type },
 			                 { expr.getPosition() } },
+				expr.expression_type.getSymbolType()
+			);
+		}
+
+		void visitMoveExpr(const hc::MoveExpr& expr) override {
+			// `move x` yields the value of `x` and marks the source local as moved-out, so any
+			// later use is flagged by the liveness/use-after-move analysis. The `Move` flag has to
+			// sit on an instruction that reads the local, so we copy it into a fresh temporary and
+			// attach the flag there.
+			auto hole          = continuation->addHole();
+			auto lowered_inner = lowerSubExpr(*expr.inner, continuation);
+			auto inner_val     = lowered_inner.getResult(function);
+
+			// Moving anything that is not a plain local place (e.g. a temporary) has no source to
+			// mark, so just forward the value unchanged.
+			if (not inner_val.isLocal() or inner_val.get<mir::MIRPlace>().hasProjections()) {
+				function.getContext().logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					"Moving from a non-local place is not supported yet.", expr.inner->getPosition()
+				));
+				query::throwFailed();
+				return;
+			}
+
+			const auto moved_local = inner_val.get<MIRPlace>().getBase<MIRLocalRef>();
+
+			noValueOutput(
+				lowered_inner.begin,
+				hole,
+				Instruction(
+					Operation::Assign,
+					{},
+					{ inner_val },
+					{ OperationFlag{ .flag = OperationFlag::Flag::Move, .local = moved_local } },
+					expr_scope,
+					{},
+					{ expr.getPosition() }
+				),
 				expr.expression_type.getSymbolType()
 			);
 		}
@@ -617,7 +681,7 @@ namespace compiler::mir {
 			auto hole         = continuation->addHole();
 			auto lowered_elem = lowerSubExpr(*expr.element, continuation);
 			auto elem_val     = lowered_elem.getResult(function);
-			auto lowered_list = lowerSubExpr(*expr.list, continuation);
+			auto lowered_list = lowerSubExpr(*expr.list, lowered_elem.begin);
 			auto list_val     = lowered_list.getResult(function);
 
 			noValueOutput(
@@ -632,7 +696,7 @@ namespace compiler::mir {
 			auto hole          = continuation->addHole();
 			auto lowered_count = lowerSubExpr(*expr.count, continuation);
 			auto count_val     = lowered_count.getResult(function);
-			auto lowered_list  = lowerSubExpr(*expr.list, continuation);
+			auto lowered_list  = lowerSubExpr(*expr.list, lowered_count.begin);
 			auto list_val      = lowered_list.getResult(function);
 
 			noValueOutput(
@@ -786,8 +850,6 @@ namespace compiler::mir {
 				return Operation::MetaCreateRef;
 			case Const:
 				return Operation::MetaCreateConst;
-			case Len:
-				return Operation::ListLen;
 			default:
 				CORE_UNREACHABLE();
 			}

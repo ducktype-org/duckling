@@ -1,4 +1,4 @@
-PostCase: python3 check.py
+PostCase: python3 check.py && @{cleanup_tmp_env}
 
 Tests:
   init:
@@ -8,4 +8,4 @@ Tests:
         test_cmd: duck init foo --name bar
         Output:
           Run: |+
-            echo "info: successfully created a new project \`bar\` at \`$(pwd)/foo\`"
+            echo "info: successfully created a new project \`bar\` at \`$DIT_TMP_DIR/foo\`"

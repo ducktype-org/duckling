@@ -7,7 +7,6 @@
 
 #include <helios/mangler/mangler.hpp>
 #include <helios/queries/queries.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
@@ -114,14 +113,6 @@ private:
 
 		withContextDo([&](query::Context& ctx) {
 			helios::HOUTUnit unit = ctx.query<helios::QueryModuleHOUT>(module)->valueOrPanic();
-
-			// We filter out toString methods here for test purposes
-			// @TODO: #2694 remove this filtering
-			// #2483 -- deal with this if needed
-			base::filterVectorInPlace(unit.functions, [](const CRef<helios::HOUTFunction>& func) {
-				return func->declaration->original_name != base::StrID("toString")
-				   and func->declaration->original_name != base::StrID("length");
-			});
 
 			auto mir_unit = mir::lowerToMIRUnit(ctx, &unit);
 			assertTrue(mir_unit.hasValue(), "MIR lowering failed!");
@@ -491,9 +482,9 @@ private:
 		ASSERT_EQUAL(lir::LIRGlobalType::Variable, g.global.type);
 
 		// Adjust those checks if we will have CTV initializers for globals in the future.
-		ASSERT_TRUE(g.getCtorDtorPair().global_ctor.has_value());
-		ASSERT_TRUE(some_global.getCtorDtorPair().global_ctor.has_value());
-		ASSERT_TRUE(global_tuple.getCtorDtorPair().global_ctor.has_value());
+		ASSERT_HAS_VALUE(g.getCtorDtorPair().global_ctor);
+		ASSERT_HAS_VALUE(some_global.getCtorDtorPair().global_ctor);
+		ASSERT_HAS_VALUE(global_tuple.getCtorDtorPair().global_ctor);
 	}
 
 	void testLifetimeFlags() {
@@ -703,23 +694,16 @@ private:
 				case Operation::ZeroInitialize:
 					found_zero_init = true;
 					break;
-				case Operation::ListPush: {
-					ASSERT_TRUE(std::holds_alternative<ListOperationParameters>(instr.extra_params));
-					auto& params = std::get<ListOperationParameters>(instr.extra_params);
-					ASSERT_EQUAL(params.element_layout->getSize(), Bits(64));
-					found_push_with_params = true;
+				case Operation::Call: {
+					auto name = instr.arguments.at(0).get<FunctionLiteral>().mangled_name.strView();
+					if (name.contains("push"))
+						found_push_with_params = true;
+					else if (name.contains("pop"))
+						found_pop_with_params = true;
+					else if (name.contains("length"))
+						found_len = true;
 					break;
 				}
-				case Operation::ListPop: {
-					ASSERT_TRUE(std::holds_alternative<ListOperationParameters>(instr.extra_params));
-					auto& params = std::get<ListOperationParameters>(instr.extra_params);
-					ASSERT_EQUAL(params.element_layout->getSize(), Bits(64));
-					found_pop_with_params = true;
-					break;
-				}
-				case Operation::ListLen:
-					found_len = true;
-					break;
 				case Operation::ListFree:
 					found_free = true;
 					break;
@@ -740,9 +724,10 @@ private:
 		auto module = getLIROfModule(path("modules/meta_functions"));
 
 		withContextDo([&](query::Context& ctx) {
-			auto                  meta_type_entity = tsh::getMetaType();
-			CRef<tsl::TypeLayout> meta_layout
-				= ctx.query<tsl::QueryAbstractTypeLayout>(meta_type_entity);
+			auto meta_type_entity = tsh::getMetaType();
+			auto meta_layout      = CRef<tsl::TypeLayout>(
+                &ctx.query<tsl::QueryAbstractTypeLayout>(meta_type_entity)->valueOrThrow()
+            );
 
 			auto assert_is_meta_local
 				= [&](const lir::LIRLocal& local) { ASSERT_EQUAL(*local.layout, *meta_layout); };
@@ -819,11 +804,19 @@ private:
 			bool found_result_f32 = false;
 			bool found_some_i16   = false;
 
-			auto bool_layout = ctx.query<tsl::QueryAbstractTypeLayout>(tsh::getBoolType());
-			auto f32_layout  = ctx.query<tsl::QueryAbstractTypeLayout>(getFloatType(ctx, 32));
-			auto i16_layout  = ctx.query<tsl::QueryAbstractTypeLayout>(
-                getIntegralType(ctx, 16, compiler::tsh::IntegralAbstractType::Signedness::Signed)
-            );
+			auto bool_layout = CRef<tsl::TypeLayout>(
+				&ctx.query<tsl::QueryAbstractTypeLayout>(tsh::getBoolType())->valueOrThrow()
+			);
+			auto f32_layout = CRef<tsl::TypeLayout>(
+				&ctx.query<tsl::QueryAbstractTypeLayout>(getFloatType(ctx, 32))->valueOrThrow()
+			);
+			auto i16_layout = CRef<tsl::TypeLayout>(
+				&ctx
+					 .query<tsl::QueryAbstractTypeLayout>(getIntegralType(
+						 ctx, 16, compiler::tsh::IntegralAbstractType::Signedness::Signed
+					 ))
+					 ->valueOrThrow()
+			);
 
 			for (const auto& local: proc_data_lir->local_list) {
 				if (!local.helios_id.has_value()) continue;

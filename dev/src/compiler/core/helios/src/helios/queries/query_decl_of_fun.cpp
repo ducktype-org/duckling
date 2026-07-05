@@ -15,11 +15,11 @@
 #include <helios/mangler/mangler.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/tsh/expression_type.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/symbol_type.hpp>
 #include <helios/tsh/type_interface.hpp>
+#include <helios_private/attributes/backend_dependent.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/errors/dia_interactive_elements.hpp>
 #include <helios_private/hout_creation/definition_generation/class_constructors.hpp>
@@ -179,6 +179,29 @@ namespace compiler::helios {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryReturnTypeDeduction);
+
+	/**
+	 * This function verifies if the applied attributes are semantically correct
+	 * on the function. For example we check if the BackendDependent attribute has
+	 * some implementations.
+	 * This is needed, because some attributes can have additional requirements on the function
+	 * declaration and the surrounding code.
+	 */
+	static void verifyFunctionAttributes(
+		query::Context& ctx, pst::Access<pst::Stmt> pst_stmt, const HOUTFunctionDeclaration& fun_decl
+	) {
+		if (pst_stmt->getAttributes().empty()) return;
+
+		if (hasAttribute<attributes::DVMOnlyImpl>(fun_decl.original_symbol)
+		    or hasAttribute<attributes::NativeOnlyImpl>(fun_decl.original_symbol)) {
+			verifyBackendImplAttrUsage(ctx, fun_decl);
+			return;
+		}
+		if (hasAttribute<attributes::BackendDependent>(fun_decl.original_symbol)) {
+			verifyBackendDependentAttrUsage(ctx, fun_decl);
+			return;
+		}
+	}
 
 	struct IMPLEMENT_QUERY(QueryDeclOfFun, query::QResult<HOUTFunctionDeclaration>) {
 		struct DeclarationVisitor final: public pst::PstVisitorPanicky {
@@ -421,8 +444,8 @@ namespace compiler::helios {
 			auto       parameters  = std::vector<code::Parameter>{};
 			for (u32 i = 0; const auto& param_type: builtin_type.getParameterTypes()) {
 				const auto param_symbol = ctx.query<defgen::QueryGeneratedSymbol>({
-					base::StrID(base::strConcat("_", i).c_str()),
-					defgen::GeneratedSymbolData{
+					.name=base::StrID(base::strConcat("_", i).c_str()),
+					.generated_symbol_data=defgen::GeneratedSymbolData{
 						defgen::GeneratedSymbolData::Parameter{
 							.function_symbol = fun,
 							.parameter_index = i,
@@ -455,7 +478,9 @@ namespace compiler::helios {
 					variant_case_novalue(PstSymbolData) {
 						DeclarationVisitor decl_maker(ctx, key);
 						stmt(ctx, key).value()->acceptVisitor(decl_maker);
-						return std::move(decl_maker.out).value();
+						auto result = std::move(decl_maker.out).value();
+						verifyFunctionAttributes(ctx, stmt(ctx, key).value(), result);
+						return result;
 					}
 					variant_case(defgen::GeneratedSymbolData, generated_data) {
 						variant_match(generated_data.data) {
@@ -502,6 +527,12 @@ namespace compiler::helios {
 								return funDeclFromType(ctx, key);
 							}
 							variant_case(defgen::GeneratedSymbolData::LengthMethod, length_method) {
+								return funDeclFromType(ctx, key);
+							}
+							variant_case(defgen::GeneratedSymbolData::PushMethod, push_method) {
+								return funDeclFromType(ctx, key);
+							}
+							variant_case(defgen::GeneratedSymbolData::PopMethod, pop_method) {
 								return funDeclFromType(ctx, key);
 							}
 							variant_case_novalue(defgen::GeneratedSymbolData::BuiltinOperator) {

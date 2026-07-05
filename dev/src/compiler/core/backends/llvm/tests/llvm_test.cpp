@@ -45,6 +45,7 @@ public:
 		TESTER_ADD_TEST(ffiTest);
 		TESTER_ADD_TEST(tuplesTest);
 		TESTER_ADD_TEST(pointersTest);
+		TESTER_ADD_TEST(backendDependentTest);
 	}
 
 protected:
@@ -89,11 +90,6 @@ private:
 		std::string module_path, i32 expected_function_count = 1, i32 expected_prototype_count = -1
 	) {
 		if (expected_prototype_count == -1) expected_prototype_count = expected_function_count;
-		// @TODO: #2694 These numbers are inflated by toString methods for simple types
-		// There are 15 toString methods, and an additional 6 builtin_stringify_<type> prototypes
-		// and 1 slice length method.
-		expected_function_count += 15 + 1;
-		expected_prototype_count += 15 + 1 + 6;
 		auto llvm_module = getLLVMModuleFromPath(std::move(module_path));
 		ASSERT_EQUAL_PRINT(llvm_module.getFunctionCount(false), expected_function_count);
 		ASSERT_EQUAL_PRINT(llvm_module.getFunctionCount(), expected_prototype_count);
@@ -157,9 +153,9 @@ private:
 		runTestForModule("modules/units/unit_simple_multiple_modules", 1, 2);
 	}
 
-	void classTest() { runTestForModule("modules/classes/records", 13, 15); }
+	void classTest() { runTestForModule("modules/classes/records", 16, 21); }
 
-	void stringsTest() { runTestForModule("modules/strings", 2, 3); }
+	void stringsTest() { runTestForModule("modules/strings", 3, 5); }
 
 	void ffiTest() { runTestForModule("modules/ffi", 1, 1); }
 
@@ -176,7 +172,7 @@ private:
 			ptr_loads++;
 			search_range = matches.suffix();
 		}
-		assertTrue(ptr_loads == 18, "Too few pointer loads");
+		ASSERT_EQUAL_PRINT(ptr_loads, 17);
 	}
 
 	void boxesTest() {
@@ -243,7 +239,7 @@ private:
 			std::regex_search(
 				ir,
 				std::regex{
-					R"(getelementptr.*\[2\s+x\s+\[3\s+x\s+i32\].*i32\s+0,\s+i64\s+%0,\s+i64\s+%1)" }
+					R"(getelementptr.*\[2\s+x\s+\[3\s+x\s+i32\].*i32\s+0,\s+i64\s+%\w+,\s+i64\s+%\w+)" }
 			),
 			"Expected big GEP for nested array access matrix[1][2]"
 		);
@@ -271,10 +267,14 @@ private:
 			std::regex_search(ir, std::regex{ R"(call\s+void\s+@builtin_list_push)" }),
 			"Expected a call to builtin_list_push"
 		);
+
 		assertTrue(
-			std::regex_search(ir, std::regex{ R"(call\s+i64\s+@builtin_list_len)" }),
-			"Expected a call to builtin_list_len"
+			std::regex_search(
+				ir, std::regex{ R"(getelementptr\s+%Di64E,\s+ptr\s+%\w+,\s+i32\s+0,\s+i32\s+1)" }
+			),
+			"Expected a GEP to the length field (index 1) of the list struct"
 		);
+
 		assertTrue(
 			std::regex_search(ir, std::regex{ R"(call\s+void\s+@builtin_list_pop)" }),
 			"Expected a call to builtin_list_pop"
@@ -457,6 +457,22 @@ private:
 	void pointersTest() {
 		auto        llvm_module = getLLVMModuleFromPath("modules/pointers");
 		std::string ir          = llvm_module.dumpLLVMToString();
+	}
+
+	void backendDependentTest() {
+		auto        llvm_module = getLLVMModuleFromPath("modules/backend_dependent");
+		std::string ir          = llvm_module.dumpLLVMToString();
+
+		// The LLVM backend must compile the `@native_only_impl` of `getValue` (returning 20)
+		// and never the `@dvm_only_impl` one (returning 10).
+		assertTrue(
+			std::regex_search(ir, std::regex{ R"(ret i32 20)" }),
+			"Expected native_only_impl 'ret i32 20' in the LLVM module"
+		);
+		assertTrue(
+			not std::regex_search(ir, std::regex{ R"(ret i32 10)" }),
+			"dvm_only_impl 'ret i32 10' must not be compiled into the LLVM module"
+		);
 	}
 };
 

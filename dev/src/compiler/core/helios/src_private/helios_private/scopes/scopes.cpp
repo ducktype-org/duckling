@@ -13,7 +13,6 @@
 #include <frontend/pst_parser/elements/hierarchy/statements/using.hpp>
 #include <frontend/pst_parser/lang_parser_element.hpp>
 #include <frontend/pst_parser/pst_visitor.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios_private/hout_creation/desugaring/for.hpp>
 #include <helios_private/lookup/interface.hpp>
@@ -119,16 +118,6 @@ namespace compiler::helios {
 		case pst::ElementKind::CodeBlockOrStmt:
 			return ElementScopeKind::Standard;
 
-		case pst::ElementKind::ClassBlock: {
-			// This is because AccessBlocks store a ClassBlock inside.
-			// Only the "top-class" ClassBlock has a scope.
-			auto parent_kind = element->getParent().value().unlock(ctx)->getElementKind();
-			if (parent_kind == pst::ElementKind::Class)
-				return ElementScopeKind::Standard;
-			else
-				return ElementScopeKind::Transparent;
-		}
-
 		// I don't know if this is correct
 		case pst::ElementKind::SpecifierBlock:
 			return ElementScopeKind::Transparent;
@@ -145,16 +134,13 @@ namespace compiler::helios {
 		case pst::ElementKind::ClassField:
 		case pst::ElementKind::CallArgument:
 		case pst::ElementKind::FunDecl:
+		case pst::ElementKind::Attribute:
 			// this is transparent, since we don't need this scope:
 			return ElementScopeKind::Transparent;
 
 		// this has to be transparent, since ClassBlock scopes
 		// contain all symbols in AccessBlock's
 		case pst::ElementKind::ClassSpecifierBlock:
-			return ElementScopeKind::Transparent;
-
-		// @TODO: #2087 this is a mock, figure out proper handling of non-class statements
-		case pst::ElementKind::NonClassStmt:
 			return ElementScopeKind::Transparent;
 
 		case pst::ElementKind::If:
@@ -423,7 +409,8 @@ namespace compiler::helios {
 			for (const auto& stmt: list) {
 				switch (stmt.unlock(ctx)->isDeclaration()) {
 				case pst::DeclKind::Symbol: {
-					auto sym_id = ctx.query<QuerySymbolOfSTMT>(stmt).valueOrPanic();
+					// @TODO: #1753 Maybe we should skip the symbol if compiling the symbol failed.
+					auto sym_id = ctx.query<QuerySymbolOfSTMT>(stmt).valueOrThrow();
 					symbols.emplace_back(sym_id);
 					break;
 				}
@@ -439,13 +426,13 @@ namespace compiler::helios {
 					           = stmt.unlock(ctx).template dynamicCast<pst::Using>()) {
 						// Using has DeclType::Transparent if it ends in .*
 						// This is currently handled the same way as DeclType::Symbol.
-						auto sym_id = ctx.query<QuerySymbolOfSTMT>(stmt).valueOrPanic();
+						auto sym_id = ctx.query<QuerySymbolOfSTMT>(stmt).valueOrThrow();
 						symbols.emplace_back(sym_id);
 					} else if (auto import_opt
 					           = stmt.unlock(ctx).template dynamicCast<pst::Import>()) {
 						// Import has DeclType::Transparent as it can intrude many different
 						// symbols. This is currently handled the same way as DeclType::Symbol.
-						auto sym_id = ctx.query<QuerySymbolOfSTMT>(stmt).valueOrPanic();
+						auto sym_id = ctx.query<QuerySymbolOfSTMT>(stmt).valueOrThrow();
 						symbols.emplace_back(sym_id);
 					} else {
 						CORE_PANIC(
@@ -489,7 +476,7 @@ namespace compiler::helios {
 
 				std::vector<SymID> out;
 				for (auto params: *fun->getParams().unlock(ctx))
-					out.emplace_back(ctx.query<QuerySymbolOfSTMT>(params).valueOrPanic());
+					out.emplace_back(ctx.query<QuerySymbolOfSTMT>(params).valueOrThrow());
 
 				output(std::move(out));
 			}
@@ -499,7 +486,7 @@ namespace compiler::helios {
 
 				std::vector<SymID> out;
 				for (auto params: *meth->getParams().unlock(ctx))
-					out.emplace_back(ctx.query<QuerySymbolOfSTMT>(params).valueOrPanic());
+					out.emplace_back(ctx.query<QuerySymbolOfSTMT>(params).valueOrThrow());
 
 				out.emplace_back(ctx.query<defgen::QueryGeneratedSymbol>({
 					.name = base::StrID("self"),
@@ -521,7 +508,7 @@ namespace compiler::helios {
 
 				std::vector<SymID> out;
 				for (auto params: *cctor->getParams().unlock(ctx))
-					out.emplace_back(ctx.query<QuerySymbolOfSTMT>(params).valueOrPanic());
+					out.emplace_back(ctx.query<QuerySymbolOfSTMT>(params).valueOrThrow());
 
 				output(std::move(out));
 			}
@@ -636,6 +623,8 @@ namespace compiler::helios {
 			LookupResult result{ .leaves = {}, .children = {} };
 
 			for (const auto& sym: *symbol_list) {
+				if (isIgnoredByLookup(sym)) continue;
+
 				if (isWildcard(sym)) {
 					if (key.with_wildcards) {
 						auto wild_result_qresult

@@ -378,11 +378,13 @@ namespace query::internal {
 		template<typename MetadataT, typename... Args>
 		requires std::derived_from<MetadataT, BaseMetadata>
 		bool addMetadataIfNotExistsInternal(NodeID node_id, Args&&... args) {
-			// Check that the query has preserve_in_graph = true
+			// Metadata may only be attached to nodes that are preserved across compilations,
+			// because that is what lets it survive into the next graph. We do not require stable
+			// hashing here: a preserved node with an unstable hash still keeps its metadata locally,
+			// and it is the merge step that decides whether the metadata can be carried over safely.
 			CORE_ASSERT(
 				node_id.q_id.getData().tags.preserve_in_graph,
-				"Cannot add metadata to query without preserve_in_graph = true. "
-				"Query: "
+				"Cannot add metadata to query without preserve_in_graph = true. Query: "
 					+ std::string(node_id.q_id.getData().name)
 			);
 			return metadata_storage.addMetadataIfNotExists<MetadataT>(

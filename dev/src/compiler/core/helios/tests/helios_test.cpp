@@ -19,7 +19,6 @@
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/query_type_symbol_data.hpp>
 #include <helios/symbols/symbol_abi.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <helios/tsh/mutability.hpp>
 #include <helios/tsh/queries/types.hpp>
@@ -102,6 +101,7 @@ public:
 		TESTER_ADD_TEST(testTypeLifting);
 		TESTER_ADD_TEST(testHoutElementsOrigin);
 		TESTER_ADD_TEST(testAliases);
+		TESTER_ADD_TEST(testBackendDependentCompTime);
 
 		// this is at the end
 		// so we test all the scopes created in helios tests:
@@ -442,8 +442,8 @@ private:
 		ASSERT_EQUAL(2, first_class_info.members.size());
 		ASSERT_EQUAL(2, first_class_info.methods.size());
 		ASSERT_EQUAL(1, first_class_info.constructors.size());
-		ASSERT_TRUE(first_class_info.destructor.has_value());
-		ASSERT_TRUE(not first_class_info.base.has_value());
+		ASSERT_HAS_VALUE(first_class_info.destructor);
+		ASSERT_NO_VALUE(first_class_info.base);
 		ASSERT_EQUAL(0, first_class_info.implements.size());
 		ASSERT_EQUAL("FirstClassEver", first_class_info.name);
 
@@ -461,8 +461,8 @@ private:
 		ASSERT_EQUAL(0, second_class_info.members.size());
 		ASSERT_EQUAL(0, second_class_info.methods.size());
 		ASSERT_EQUAL(0, second_class_info.constructors.size());
-		ASSERT_TRUE(not second_class_info.destructor.has_value());
-		ASSERT_TRUE(second_class_info.base.has_value());
+		ASSERT_NO_VALUE(second_class_info.destructor);
+		ASSERT_HAS_VALUE(second_class_info.base);
 		ASSERT_EQUAL(first_class_abstract_type, second_class_info.base);
 		ASSERT_EQUAL("SecondClass", second_class_info.name);
 
@@ -865,10 +865,7 @@ private:
 			glob_data += hout->glob_data.size();
 		}
 
-		// @TODO: #2694 This should be 3, not 19, when toString methods
-		// for simple types are moved out of every HOUT unit.
-		// @TODO: #2424 When refactoring, add robust tests that the expected toString methods are added.
-		ASSERT_EQUAL_PRINT(functions, 19);
+		ASSERT_EQUAL_PRINT(functions, 3);
 		ASSERT_EQUAL(glob_data, 5);
 	}
 
@@ -886,10 +883,7 @@ private:
 			glob_data += hout->glob_data.size();
 		}
 
-		// @TODO: #2694 This should be 1, not 29 (1 + 2 * 14 + 1 (length)), when toString methods
-		// for simple types are moved out of every HOUT unit (there are two units in this test).
-		// @TODO: #2424 When refactoring, add robust tests that the expected toString methods are added.
-		ASSERT_EQUAL_PRINT(functions, 33);
+		ASSERT_EQUAL_PRINT(functions, 1);
 		ASSERT_EQUAL(glob_data, 5);
 	}
 
@@ -2007,23 +2001,22 @@ private:
 			ASSERT_TRUE(default_val != nullptr);
 		}
 		{
-			// l += 1;
+			// l.push(1);
 			auto& expr_stmt = dynamic_cast<const ExprStmt&>(*statements.at(1));
-			auto* push_expr = dynamic_cast<const ListPushExpr*>(expr_stmt.expr.get());
-			ASSERT_TRUE(push_expr != nullptr);
+			auto* call_expr = dynamic_cast<const CallExpr*>(expr_stmt.expr.get());
+			ASSERT_TRUE(call_expr != nullptr);
 		}
 		{
-			// l -= 1;
+			// l.pop(1);
 			auto& expr_stmt = dynamic_cast<const ExprStmt&>(*statements.at(2));
-			auto* pop_expr  = dynamic_cast<const ListPopExpr*>(expr_stmt.expr.get());
-			ASSERT_TRUE(pop_expr != nullptr);
+			auto* call_expr = dynamic_cast<const CallExpr*>(expr_stmt.expr.get());
+			ASSERT_TRUE(call_expr != nullptr);
 		}
 		{
-			// let l_len = len l;
-			auto& var_decl = dynamic_cast<const VariableStmt&>(*statements.at(3));
-			auto* len_expr = dynamic_cast<const UnaryOperatorExpr*>(var_decl.initial_value.get());
-			ASSERT_TRUE(len_expr != nullptr);
-			ASSERT_EQUAL(len_expr->operation, BuiltinUnary::Len);
+			// let l_len = l.length();
+			auto& var_decl  = dynamic_cast<const VariableStmt&>(*statements.at(3));
+			auto* call_expr = dynamic_cast<const CallExpr*>(var_decl.initial_value.get());
+			ASSERT_TRUE(call_expr != nullptr);
 		}
 		{
 			// l[0] = 42;
@@ -2562,7 +2555,7 @@ private:
 			ASSERT_TRUE(std::holds_alternative<compiler::helios::CAbi>(abi_value));
 			auto c_abi = std::get<compiler::helios::CAbi>(abi_value);
 			if (!expected_library.empty()) {
-				ASSERT_TRUE(c_abi.library.has_value());
+				ASSERT_HAS_VALUE(c_abi.library);
 				ASSERT_EQUAL(expected_library, c_abi.library.value().strView());
 			}
 		};
@@ -3259,6 +3252,16 @@ private:
 		auto nonwild_using        = getChain("c", root_scope);
 		auto nonwild_using_target = getChain("M.c", root_scope);
 		ASSERT_EQUAL(nonwild_using, nonwild_using_target);
+	}
+
+	void testBackendDependentCompTime() {
+		auto [module, root_scope] = getModule(fs::File(path("test_modules/backend_dependent")));
+
+		// `const VALUE = getValue.func();` calls a `@backend_dependent` function. Comp time
+		// evaluation runs on the DVM, so it must select the `@dvm_only_impl` implementation
+		// (returning 10) rather than the `@native_only_impl` one (returning 20). Evaluating
+		// the const therefore checks that comp time picks the right implementation.
+		ASSERT_EQUAL(10, getConstValueAs<i32>("VALUE", root_scope));
 	}
 
 	void testScopeParentsAndDepth() {
