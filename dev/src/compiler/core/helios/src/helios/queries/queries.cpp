@@ -222,6 +222,8 @@ namespace compiler::helios {
 			base::StrID                             original_name,
 			base::Optional<dia_int::StablePosition> stable_pos
 		) {
+			if (not maybeSymbolPst(sym_id).has_value()) return false;
+
 			base::StrID mangled_name = compiler::helios::mangler::getSimpleMangledName(ctx, sym_id);
 			if (mangled_name.isBad()) return false;
 
@@ -275,7 +277,7 @@ namespace compiler::helios {
 						seen_declarations,
 						func->declaration->original_symbol,
 						func->declaration->original_name,
-						func->declaration->origin.getStablePosition()
+						func->origin.getStablePosition()
 					))
 					found_duplicate = true;
 
