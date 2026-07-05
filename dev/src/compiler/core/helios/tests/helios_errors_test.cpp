@@ -80,7 +80,7 @@ private:
 
 		std::stringstream logged_messages;
 		logger->terminalPrint(logged_messages);
-		// std::cerr << "Logged messages:\n" << logged_messages.str() << "\n";
+		std::cerr << "Logged messages:\n" << logged_messages.str() << "\n";
 		auto msg_count = logger->messageCount();
 		assertEqual(
 			msg_count,
@@ -360,6 +360,36 @@ private:
 				}
 			)",
 				{ "Type `f32` cannot be converted to type `i64`." },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				R"(
+				class MyClass {
+					x:i64 = 0;
+
+					MyClass.copy(other: const MyClass) = {
+						return MyClass(1);
+					}
+				}
+			)",
+				{ "A copy constructor's parameter must be a constant reference to its own class "
+			      "`MyClass`." },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				R"(
+				class MyClass {
+					x:i64 = 0;
+
+					MyClass.copy(other: const ref MyClass, a: i64) = {
+						return MyClass(1);
+					}
+				}
+			)",
+				{ "A copy constructor must declare exactly one parameter: a reference to the "
+			      "object being copied." },
 				1
 			);
 		}

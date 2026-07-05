@@ -130,7 +130,6 @@ namespace compiler::helios {
 				// declaration:
 				auto& decl = ctx.query<QueryDeclOfFun>(original_symbol)->valueOrThrow();
 				validateConstructorSource(stmt, decl);
-				// @TODO: #3050 Initializer lists are currently ignored.
 
 				// body:
 				auto output_body = processBody(decl, stmt->getBody());
@@ -167,7 +166,8 @@ namespace compiler::helios {
 				if (!is_reference || !is_matching_class) {
 					ctx.logInt(makeBox<dia_int::PlaceholderError>(
 						base::strConcat(
-							"A copy constructor's parameter must be a reference to its own "
+							"A copy constructor's parameter must be a constant reference to its "
+					        "own "
 							"class `",
 							name(class_type.getSymbol()),
 							"`."
