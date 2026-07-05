@@ -39,6 +39,52 @@ namespace compiler::helios::desugaring {
 		}
 	}
 
+	namespace {
+		/**
+		 * @brief Compiles the match subject and normalizes it to a direct value.
+		 * @return An empty optional when the subject fails to compile.
+		 */
+		base::Optional<Box<code::Expr>> getSubjectHout(
+			query::Context& ctx, pst::Access<pst::expr::MatchExpr> match_expr
+		) {
+			auto subject_res = ctx.query<QueryHoutOfExpr>(
+				{ match_expr->getValueToMatch().unlock(ctx)->getExpr() }
+			);
+			if (subject_res->hasFailed()) return {};
+			Box<code::Expr> subject_hout = subject_res->valueOrThrow()->clone();
+
+			if (subject_hout->expression_type.getSymbolType().getRefKind()
+			    != tsh::ReferenceKind::Direct)
+				subject_hout = makeBox<code::DerefExpr>(
+					ctx, code::generatedOrigin(), std::move(subject_hout)
+				);
+			return subject_hout;
+		}
+	}
+
+	base::Optional<SymID> getMatchSubjectSymbol(
+		query::Context& ctx, pst::Access<pst::expr::MatchExpr> match_expr
+	) {
+		auto subject_hout = getSubjectHout(ctx, match_expr);
+		if (!subject_hout.has_value()) return {};
+
+		const auto subject_local_type
+			= subject_hout.value()->expression_type.getSymbolType().withMutability(
+				tsh::Mutability::Immutable
+			);
+		const ScopeID match_scope = ctx.query<QueryPrimaryCodeScopeFor>({ match_expr });
+
+		return ctx.query<defgen::QueryGeneratedSymbol>({
+			.name = base::StrID(base::strConcat("__match_subject_", match_expr->getID().asInt())),
+			.generated_symbol_data
+			= defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::ControlFlowLocal{
+				.owning_scope = match_scope,
+				.role         = base::StrID("__match_subject"),
+				.type         = subject_local_type,
+			} },
+		});
+	}
+
 	base::Optional<code::BlockStmt> desugarMatch(
 		query::Context&                   ctx,
 		pst::Access<pst::expr::MatchExpr> match_expr,
@@ -48,14 +94,9 @@ namespace compiler::helios::desugaring {
 		const auto gen            = code::generatedOrigin();
 		const auto match_position = match_expr->getStablePosition();
 
-		// The subject must be a direct variant value.
-		auto subject_res
-			= ctx.query<QueryHoutOfExpr>({ match_expr->getValueToMatch().unlock(ctx)->getExpr() });
-		if (subject_res->hasFailed()) return {};
-		Box<code::Expr> subject_hout = subject_res->valueOrThrow()->clone();
-
-		if (subject_hout->expression_type.getSymbolType().getRefKind() != tsh::ReferenceKind::Direct)
-			subject_hout = makeBox<code::DerefExpr>(ctx, gen, std::move(subject_hout));
+		auto subject_hout_opt = getSubjectHout(ctx, match_expr);
+		if (!subject_hout_opt.has_value()) return {};
+		Box<code::Expr> subject_hout = std::move(subject_hout_opt.value());
 
 		const auto subject_type = subject_hout->expression_type.getSymbolType();
 		if (subject_type.getType().getKind() != tsh::Kind::Variant) {
@@ -70,17 +111,10 @@ namespace compiler::helios::desugaring {
 		const usize                    num_alternatives = variant_type.getUnderlyingTypes().size();
 
 		// Generated local holding the subject for the duration of the match.
-		const ScopeID match_scope        = ctx.query<QueryPrimaryCodeScopeFor>({ match_expr });
-		const auto    subject_local_type = subject_type.withMutability(tsh::Mutability::Immutable);
-		const SymID   subject_sym        = ctx.query<defgen::QueryGeneratedSymbol>({
-					 .name = base::StrID(base::strConcat("__match_subject_", match_expr->getID().asInt())),
-					 .generated_symbol_data
-            = defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::ControlFlowLocal{
-						 .owning_scope = match_scope,
-						 .role         = base::StrID("__match_subject"),
-						 .type         = subject_local_type,
-            } },
-        });
+		const auto subject_local_type = subject_type.withMutability(tsh::Mutability::Immutable);
+		const auto subject_sym_opt    = getMatchSubjectSymbol(ctx, match_expr);
+		if (!subject_sym_opt.has_value()) return {};
+		const SymID subject_sym = subject_sym_opt.value();
 		auto subject_ident = [&] { return makeBox<code::IdentifierExpr>(ctx, gen, subject_sym); };
 
 		// Lower all cases.

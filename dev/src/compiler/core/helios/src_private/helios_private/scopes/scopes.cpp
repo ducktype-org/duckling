@@ -15,6 +15,7 @@
 #include <frontend/pst_parser/pst_visitor.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios_private/hout_creation/desugaring/for.hpp>
+#include <helios_private/hout_creation/desugaring/match.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/lookup/lookup_result.hpp>
 #include <helios_private/pst_layer/for_all.hpp>
@@ -151,11 +152,12 @@ namespace compiler::helios {
 		case pst::ElementKind::ClassSpecial:
 			return ElementScopeKind::Standard;
 
-		// Each case owns the symbols bound by its pattern.
+		// The match owns the generated subject local; each case owns the symbols bound
+		// by its pattern.
+		case pst::ElementKind::Match:
 		case pst::ElementKind::MatchCase:
 			return ElementScopeKind::Standard;
 
-		case pst::ElementKind::Match:
 		case pst::ElementKind::FlowPattern:
 		case pst::ElementKind::BindingPattern:
 		case pst::ElementKind::WildcardPattern:
@@ -183,6 +185,13 @@ namespace compiler::helios {
 			    && expr_parent.value()->getElementKind() == pst::ElementKind::Expand) {
 				// This is a special case.
 				// Elements in macro expansions should have their scope parent be the grandparent.
+				return ElementScopeKind::ParentTransparent;
+			}
+			if (expr_parent.has_value()
+			    && expr_parent.value()->getElementKind() == pst::ElementKind::Match) {
+				// The match subject resolves in the scope surrounding the match. Resolving it
+				// inside the match's own scope would create a query cycle: enumerating the
+				// match scope's symbols requires compiling the subject.
 				return ElementScopeKind::ParentTransparent;
 			}
 			return ElementScopeKind::Transparent;
@@ -566,6 +575,15 @@ namespace compiler::helios {
 
 			if (base_element->isStatementAggregate()) {
 				return filterSymbolsFromStmtList(ctx, getStmtsFromStmtAggregate(ctx, base_element));
+			} else if (base_element->getElementKind() == pst::ElementKind::Match) {
+				// The match's scope owns the generated local holding the subject.
+				auto match_expr = base_element.dynamicCast<pst::expr::MatchExpr>().value();
+
+				std::vector<SymID> out;
+				if (auto subject_sym = desugaring::getMatchSubjectSymbol(ctx, match_expr);
+				    subject_sym.has_value())
+					out.emplace_back(subject_sym.value());
+				return out;
 			} else if (base_element->getElementKind() == pst::ElementKind::MatchCase) {
 				// The only symbol a match case may introduce is its pattern binding.
 				auto match_case = base_element.dynamicCast<pst::MatchCase>().value();

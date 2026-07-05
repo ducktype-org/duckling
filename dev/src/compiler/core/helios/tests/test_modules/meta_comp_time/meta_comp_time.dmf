@@ -64,8 +64,6 @@ const FAKE = isI32(i64);
 
 
 ### Variant comp-time logic.
-# @TODO: #803 test comp-time pattern matching over variant values once `match` is lowered
-# through helios (today a Match Expr has no scope kind and no HOUT representation).
 fun pickNumeric(use_variant: bool) -> type = {
     if (use_variant) {
         return i32 | f32;
@@ -80,3 +78,20 @@ const PICKED_ORDER_INSENSITIVE = PICKED_VARIANT == (f32 | i32);
 
 fun variantOf(a: type, b: type) -> type = a | b;
 const VARIANTS_DO_NOT_FLATTEN = variantOf(i32 | f32, i64) == ((i32 | f32) | i64);
+
+fun matchValue(v: i32 | f32) -> i64 = {
+    var r: i64 = match (v) {
+        case x : i32 = i64(x);
+        case _ = i64(0) - i64(1);
+    };
+    return r;
+}
+fun buildAndMatch(use_int: bool) -> i64 = {
+    var v: i32 | f32 = f32(0.5);
+    if (use_int) {
+        v = i32(17);
+    }
+    return matchValue(v);
+}
+const MATCHED_INT = buildAndMatch(true);
+const MATCHED_OTHER = buildAndMatch(false);

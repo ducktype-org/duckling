@@ -39,6 +39,17 @@ namespace pst {
 			 *  - A keyword that is always at the start of a statement.
 			 *  - A keyword that is a specifier.
 			 */
+			/**
+			 * @brief Whether the token at @p fwd is the case block of a `match` expression
+			 * (the `match ( ... ) { ... }` token triple). Such a block belongs to the
+			 * statement instead of ending it.
+			 */
+			static bool isMatchBodyBlock(const TokenStream& state, i64 fwd) {
+				return fwd >= 2 && state[fwd].isBracketGroup(lexer::Token::BracketType::Curly)
+				    && state[fwd - 1].isBracketGroup(lexer::Token::BracketType::Round)
+				    && state[fwd - 2].is(Keyword::Match);
+			}
+
 			static bool isStmtEnd(const TokenStream& state, i64 fwd) {
 				return state[fwd].is(Token::Type::Sentinel) || state[fwd].is(Special::AtSign)
 				    || state[fwd - 1].is(Special::Semicolon)
@@ -46,7 +57,8 @@ namespace pst {
 				           .contains(lang_def::KeywordFlagsOptions::IsStmtStart)
 				    || keywordFlags(state[fwd].asKeyword())
 				           .contains(lang_def::KeywordFlagsOptions::IsSpecifier)
-				    || Conditions::isBlockGroup(state, fwd - 1);
+				    || (Conditions::isBlockGroup(state, fwd - 1)
+				        && !isMatchBodyBlock(state, fwd - 1));
 			}
 		};
 

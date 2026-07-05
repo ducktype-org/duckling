@@ -12,5 +12,5 @@ Tests:
       all:
         backend: all
         Output:
-          String: "41\n-1\n10\n2\n"
+          String: "41\n-1\n10\n2\n42\n-5\n"
         ExitCode: 0

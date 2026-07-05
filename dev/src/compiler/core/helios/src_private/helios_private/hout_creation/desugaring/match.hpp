@@ -16,6 +16,15 @@ namespace compiler::helios::desugaring {
 	using MatchResultSink = std::function<Box<code::Stmt>(BoxOrCRef<code::Expr> case_result)>;
 
 	/**
+	 * @brief The generated local holding the match subject for the duration of the match.
+	 * @note Must stay consistent with QuerySymbolsInScope for the Match element's scope.
+	 * @return The symbol, or an empty optional when the subject expression fails to compile.
+	 */
+	base::Optional<SymID> getMatchSubjectSymbol(
+		query::Context& ctx, pst::Access<pst::expr::MatchExpr> match_expr
+	);
+
+	/**
 	 * @brief Desugars a `match` expression used at the statement surface.
 	 *
 	 * Produces a BlockStmt containing a generated subject local followed by a

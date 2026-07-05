@@ -349,8 +349,6 @@ private:
 		}
 
 		// Variant comp-time logic.
-		// @TODO: #803 assert comp-time pattern matching over variant values once `match` is
-		// lowered through helios.
 		{
 			auto i32_or_f32
 				= st(query::entryPoint<compiler::tsh::QueryVariantType>({ { st(i32_type),
@@ -367,6 +365,10 @@ private:
 			ASSERT_EQUAL(true, getConstValueAs<bool>("PICKED_IS_VARIANT", root_scope));
 			ASSERT_EQUAL(true, getConstValueAs<bool>("PICKED_ORDER_INSENSITIVE", root_scope));
 			ASSERT_EQUAL(true, getConstValueAs<bool>("VARIANTS_DO_NOT_FLATTEN", root_scope));
+
+			// Comp-time pattern matching over variant values (evaluated via the VM path).
+			ASSERT_EQUAL(17, getConstValueAs<i64>("MATCHED_INT", root_scope));
+			ASSERT_EQUAL(-1, getConstValueAs<i64>("MATCHED_OTHER", root_scope));
 		}
 	}
 

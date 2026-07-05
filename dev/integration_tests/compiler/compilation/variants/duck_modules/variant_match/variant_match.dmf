@@ -10,12 +10,18 @@ fun describe(v: i32 | f32) -> i64 = {
 }
 
 fun pickExhaustive(v: i32 | f32) -> i64 = {
-	var r: i64 = i64(0);
-	r = match (v) {
+	var r: i64 = match (v) {
 		case x : i32 = i64(x) + i64(1);
 		case y : f32 = i64(2);
 	};
 	return r;
+}
+
+fun viaReturn(v: i32 | f32) -> i64 = {
+	return match (v) {
+		case x : i32 = i64(x) * i64(2);
+		case _ = i64(-5);
+	};
 }
 
 fun main() -> i64 = {
@@ -29,6 +35,11 @@ fun main() -> i64 = {
 	builtin_output_i64(pickExhaustive(a));
 	a = f32(0.5);
 	builtin_output_i64(pickExhaustive(a));
+
+	a = i32(21);
+	builtin_output_i64(viaReturn(a));
+	a = f32(1.5);
+	builtin_output_i64(viaReturn(a));
 
 	return i64(0);
 }
