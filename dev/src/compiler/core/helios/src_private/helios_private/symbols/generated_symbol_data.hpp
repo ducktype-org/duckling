@@ -84,7 +84,7 @@ namespace compiler::helios::defgen {
 		};
 
 		struct DefaultCopyConstructor final {
-			tsh::AbstractType owner_type;  // TODOP: Symbol Type
+			tsh::AbstractType owner_type;
 
 			[[nodiscard]]
 			base::Bit256 queryUnstablePerfectHash() const;

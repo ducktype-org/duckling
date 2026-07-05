@@ -130,8 +130,7 @@ namespace compiler::helios {
 				// declaration:
 				auto& decl = ctx.query<QueryDeclOfFun>(original_symbol)->valueOrThrow();
 				validateConstructorSource(stmt, decl);
-				// @TODO: #2000 Initializer lists are currently ignored.
-				// TODOP: Resolve.
+				// @TODO: #3050 Initializer lists are currently ignored.
 
 				// body:
 				auto output_body = processBody(decl, stmt->getBody());
@@ -152,8 +151,8 @@ namespace compiler::helios {
 
 				if (decl.parameters.size() != 1) {
 					ctx.logInt(makeBox<dia_int::PlaceholderError>(
-						"A copy/move constructor must declare exactly one parameter: a "
-						"reference to the object being copied or moved from.",
+						"A copy constructor must declare exactly one parameter: a reference to "
+						"the object being copied.",
 						params_source
 					));
 					query::throwFailed();
@@ -168,8 +167,8 @@ namespace compiler::helios {
 				if (!is_reference || !is_matching_class) {
 					ctx.logInt(makeBox<dia_int::PlaceholderError>(
 						base::strConcat(
-							"A copy/move constructor's parameter must be a reference "
-							"(`ref`/`const ref`) to its own class `",
+							"A copy constructor's parameter must be a reference to its own "
+							"class `",
 							name(class_type.getSymbol()),
 							"`."
 						),

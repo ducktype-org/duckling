@@ -1,5 +1,3 @@
-#include "helios_private/symbols/generated_symbol_data.hpp"
-
 #include <diagnostic_interactive/logger.hpp>
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
