@@ -28,7 +28,7 @@ check_files_equal(metadata, old_metadata)
 
 check_venv_metadata(metadata)
 
-expected_last_location = Path.cwd() / "foo"
+expected_last_location = project_root("foo")
 
 check_venv_last_location(file=metadata, expected=expected_last_location)
 

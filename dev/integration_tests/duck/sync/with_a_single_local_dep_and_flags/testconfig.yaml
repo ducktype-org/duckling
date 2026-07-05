@@ -1,5 +1,20 @@
 PostCase: python3 check.py && @{cleanup_tmp_env}
 
+PreCase: |+
+  cd $DIT_TMP_DIR
+  @{duck_exe} init foo
+  @{duck_exe} init bar
+  echo "dependencies:
+    bar:
+      source:
+        path: ../bar
+
+  features:
+    f: []" >> foo/quackconfig.yaml
+
+  echo "features:
+    b: []" >> bar/quackconfig.yaml
+
 Tests:
   sync:
     Description: can sync a project with dependency, conditions and flags

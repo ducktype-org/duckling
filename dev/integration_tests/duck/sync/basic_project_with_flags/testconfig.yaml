@@ -1,5 +1,14 @@
 PostCase: python3 check.py && @{cleanup_tmp_env}
 
+PreCase: |+
+  cd $DIT_TMP_DIR
+  @{duck_exe} init foo
+  echo "features:
+    empty: []
+    pulls: [pulls1, pulls2]
+    pulls1: [pulls2]
+    pulls2: []" >> foo/quackconfig.yaml
+
 Tests:
   sync:
     Description: can sync a project with flags

@@ -1,3 +1,8 @@
+PreCase: |+
+  cd $DIT_TMP_DIR
+  @{duck_exe} init foo
+  echo "features:
+    flag: [absent]" >> foo/quackconfig.yaml
 Tests:
   sync:
     Description: cannot sync a project with malformed manifest (missing feature flags)
@@ -7,7 +12,7 @@ Tests:
         ExitCode: 1
         Err:
           Run: |+
-            echo "error: when trying to parse the user manifest at \`$(pwd)/foo/quackconfig.yaml\`
+            echo "error: when trying to parse the user manifest at \`$DIT_TMP_DIR/foo/quackconfig.yaml\`
             
               Caused by:
                 when parsing the field \`features\`

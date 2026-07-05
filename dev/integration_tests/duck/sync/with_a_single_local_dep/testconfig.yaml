@@ -1,4 +1,13 @@
-PostCase: python3 check.py && @{cleanup_tmp_env}
+PostCase: python3 check.py
+
+PreCase: |+
+  cd $DIT_TMP_DIR
+  @{duck_exe} init foo
+  @{duck_exe} init bar
+  echo "dependencies:
+    bar:
+      source:
+        path: ../bar" >> foo/quackconfig.yaml
 
 Tests:
   sync:

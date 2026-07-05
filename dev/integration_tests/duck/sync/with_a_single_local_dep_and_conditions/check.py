@@ -28,7 +28,7 @@ check_files_equal(metadata, old_metadata)
 
 check_venv_metadata(metadata)
 
-expected_last_location = Path.cwd() / "foo"
+expected_last_location = project_root("foo")
 
 check_venv_last_location(file=metadata, expected=expected_last_location)
 
@@ -39,10 +39,10 @@ bar = {
     "version": "1.0.0",
     "features": [],
     "dependencies": [],
-    "source": f"local+file://{str(Path.cwd() / "bar")}"
+    "source": f"local+file://{str(project_root("bar"))}"
 }
 
-bar_loc = f"bar local+file://{str(Path.cwd() / "bar")}"
+bar_loc = f"bar local+file://{str(project_root("bar"))}"
 
 assert_eq(freeze["root"]["name"], "foo")
 assert_eq(freeze["root"]["version"], "1.0.0")

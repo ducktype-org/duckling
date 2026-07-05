@@ -1,4 +1,7 @@
 PostCase: python3 check.py && @{cleanup_tmp_env}
+PreCase: |+
+  cd $DIT_TMP_DIR
+  @{duck_exe} init foo
 
 Tests:
   sync:

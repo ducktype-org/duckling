@@ -1,3 +1,10 @@
+PreCase: |+
+  cd $DIT_TMP_DIR
+  @{duck_exe} init foo
+  echo "dependencies:
+    bar:
+      source:
+        path: ../bar" >> foo/quackconfig.yaml
 Tests:
   sync:
     Description: cannot sync a project with a nonexistent dependency
@@ -7,4 +14,4 @@ Tests:
         ExitCode: 1
         Err:
           Run: |+
-            echo "error: the path \`$(pwd)/bar\` is not a directory"
+            echo "error: the path \`$DIT_TMP_DIR/bar\` is not a directory"
