@@ -1,5 +1,5 @@
 load_cargo: . ${CARGO_HOME:-$HOME/.cargo}/env
-cwd_duck_root: cd `git rev-parse --show-toplevel`/dev/src/duck/
+cwd_duck_root: cd @{dev_dir}/src/duck/
 # NOTE: Changes made here should also be reflected in `workflows/tests.yml`
 # Changes means changes to compiling duck itself.
 build_duck: |
@@ -13,7 +13,8 @@ build_duck: |
   if [ "$exit_code" -ne 0 ]; then
     exit "$exit_code"
   fi
-duck_exe_dir: '`git rev-parse --show-toplevel`/dev/src/duck/target/debug/'
+duck_exe_dir: '@{dev_dir}/src/duck/target/debug/'
+duck_exe: '@{duck_exe_dir}/duck'
 prepare: ""
 before_cmd: "true"
 
