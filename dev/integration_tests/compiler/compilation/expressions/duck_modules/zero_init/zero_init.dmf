@@ -27,10 +27,10 @@ fun main() -> i64 = {
     builtin_output_i64(tup._1); # 0
     builtin_output_i64(if tup._2 then 1 else 0); # 0
 
-    # @TODO: #3015 Fix test determinism
-    # var tup2: (T, T);
-    # builtin_output_i64(tup2._1.a + tup2._2.a); # 0
-    # builtin_output_i64(if tup2._1.b or tup2._2.b then 1 else 0); # 0
+    # @TODO: #2448 Investigate why deterministic compilation check fails for this test
+    var tup2: (T, T);
+    builtin_output_i64(tup2._1.a + tup2._2.a); # 0
+    builtin_output_i64(if tup2._1.b or tup2._2.b then 1 else 0); # 0
 
 
     # @TODO: #2483 When strings are handled in DVM, remove this test and enable `statements/default_initialization` for DVM.
