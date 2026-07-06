@@ -34,6 +34,14 @@ namespace compiler::helios {
 			return { owner_type.queryUnstablePerfectHash() };
 		}
 
+		base::Bit256 GeneratedSymbolData::PushMethod::queryUnstablePerfectHash() const {
+			return { owner_type.queryUnstablePerfectHash() };
+		}
+
+		base::Bit256 GeneratedSymbolData::PopMethod::queryUnstablePerfectHash() const {
+			return { owner_type.queryUnstablePerfectHash() };
+		}
+
 		base::Bit256 GeneratedSymbolData::DefaultDestructor::queryUnstablePerfectHash() const {
 			return owner_type.queryUnstablePerfectHash();
 		}
@@ -184,6 +192,57 @@ namespace compiler::helios {
 						tsh::Mutability::Immutable,
 					};
 				}
+				variant_case(PushMethod, push_method) {
+					// `(ref mut T self, Element element) -> ()`.
+					const tsh::SymbolType<> self_type{
+						push_method.owner_type,
+						tsh::ReferenceKind::Ref,
+						tsh::Mutability::Mutable,
+					};
+
+					const auto element_type
+						= push_method.owner_type.as<tsh::DynamicArrayAbstractType>().getElementType(
+						);
+
+					const auto return_type
+						= tsh::SymbolType<>::withDefaultsConst(tsh::getUnitType());
+
+					const auto push_abstract_type
+						= ctx.query<tsh::QueryFunctionType>({ .parameter_types
+					                                          = { self_type, element_type },
+					                                          .result_type = return_type });
+
+					return tsh::SymbolType<>{
+						push_abstract_type,
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Immutable,
+					};
+				}
+				variant_case(PopMethod, pop_method) {
+					// `(ref mut T self, u64 count) -> ()`.
+					const tsh::SymbolType<> self_type{
+						pop_method.owner_type,
+						tsh::ReferenceKind::Ref,
+						tsh::Mutability::Mutable,
+					};
+
+					const auto count_type = tsh::SymbolType<>::withDefaults(tsh::getIntegralType(
+						ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned
+					));
+
+					const auto return_type
+						= tsh::SymbolType<>::withDefaultsConst(tsh::getUnitType());
+
+					const auto pop_abstract_type = ctx.query<tsh::QueryFunctionType>(
+						{ .parameter_types = { self_type, count_type }, .result_type = return_type }
+					);
+
+					return tsh::SymbolType<>{
+						pop_abstract_type,
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Immutable,
+					};
+				}
 				variant_case(DefaultDestructor, dtor) {
 					const tsh::SymbolType<> self_type{
 						dtor.owner_type,
@@ -255,6 +314,38 @@ namespace compiler::helios {
 							));
 						}
 						CORE_PANIC("Slice only has fields 0 (element) and 1 (length)");
+					}
+					case tsh::Kind::DynamicArray: {
+						switch (field.index) {
+						case 0: {
+							auto element_type
+								= field.parent_type.as<tsh::DynamicArrayAbstractType>()
+							          .getElementType();
+							auto many_pointer_type
+								= ctx.query<tsh::QueryManyPointerType>({ element_type });
+							return tsh::SymbolType<>::withDefaults(many_pointer_type);
+						}
+						case 1: {
+							return tsh::SymbolType<>::withDefaults(tsh::getIntegralType(
+								ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned
+							));
+						}
+						case 2: {
+							return tsh::SymbolType<>::withDefaults(tsh::getIntegralType(
+								ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned
+							));
+						}
+						case 3: {
+							return tsh::SymbolType<>::withDefaults(tsh::getIntegralType(
+								ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned
+							));
+						}
+						default:
+							CORE_PANIC(
+								"Dynamic Array only has fields 0 (ptr), 1 (length), 2 "
+								"(off_start_reserved), 3 (off_end_reserved)"
+							);
+						}
 					}
 					default:
 						CORE_UNREACHABLE();
@@ -348,6 +439,8 @@ namespace compiler::helios {
 				variant_case(DefaultDestructor, dtor) { return {}; }
 				variant_case(ToStringMethod, to_string) { return {}; }
 				variant_case(LengthMethod, m) { return {}; }
+				variant_case(PushMethod, m) { return {}; }
+				variant_case(PopMethod, m) { return {}; }
 				variant_case(BuiltinOperator, op) { return {}; }
 				variant_case(Parameter, param) { return {}; }
 				variant_case(SelfParameter, param) { return param.scope; }
@@ -389,7 +482,9 @@ namespace compiler::helios {
 				defgen::GeneratedSymbolData::ScriptMainWrapper,
 				defgen::GeneratedSymbolData::ToStringMethod,
 				defgen::GeneratedSymbolData::LengthMethod,
-				defgen::GeneratedSymbolData::DefaultDestructor
+				defgen::GeneratedSymbolData::PushMethod,
+				defgen::GeneratedSymbolData::PopMethod,
+				defgen::GeneratedSymbolData::DefaultDestructor,
 			) {
 				kind = SymbolKind::Function;
 			}

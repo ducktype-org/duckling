@@ -1,4 +1,5 @@
 import json
+import os
 from pathlib import Path
 
 from .test_loader import Case, Test, TestNode, load_tests
@@ -192,6 +193,19 @@ def run_case(
         except BashCommandError:
             return Disabled()
 
+    # Evaluate `Env` variables. Each entry is a bash command whose stdout
+    # becomes the variable's value; later entries see the earlier ones.
+    # The resulting environment is passed to every command of this case.
+    case_env = None
+    if case.env:
+        log_info_if_needed("Evaluating Env variables...", dry, verbose)
+        case_env = os.environ.copy()
+        for name, command in case.env.items():
+            value, _ = dit_exec_command(
+                command, cwd=test.cwd, dry=dry, verbose=verbose, env=case_env
+            )
+            case_env[name] = value.decode("UTF-8").strip()
+
     # Pre-case command
     if case.pre_case:
         log_info_if_needed("Executing pre-case command...", dry, verbose)
@@ -201,6 +215,7 @@ def run_case(
             capture_output=not verbose,
             dry=dry,
             verbose=verbose,
+            env=case_env,
         )
 
     # Get input.
@@ -208,7 +223,8 @@ def run_case(
     if case.input:
         log_info_if_needed("Getting input", dry, verbose)
         test_input, _ = dit_exec_command(
-            case.input.get_command(), cwd=test.cwd, dry=dry, verbose=verbose
+            case.input.get_command(), cwd=test.cwd, dry=dry, verbose=verbose,
+            env=case_env,
         )
 
     # Run test.
@@ -220,13 +236,15 @@ def run_case(
         exitcode=case.expected_exitcode,
         dry=dry,
         verbose=verbose,
+        env=case_env,
     )
 
     # Compare test and expected output.
     if case.expected_output:
         log_info_if_needed("Getting the expected output...", dry, verbose)
         test_expected_output, _ = dit_exec_command(
-            case.expected_output.get_command(), cwd=test.cwd, verbose=verbose, dry=dry
+            case.expected_output.get_command(), cwd=test.cwd, verbose=verbose, dry=dry,
+            env=case_env,
         )
         if not dry and test_output != test_expected_output:
             log_test_out_differs(
@@ -244,7 +262,8 @@ def run_case(
     if case.expected_err:
         log_info_if_needed("Getting the expected err...", dry, verbose)
         test_expected_err, _ = dit_exec_command(
-            case.expected_err.get_command(), cwd=test.cwd, verbose=verbose, dry=dry
+            case.expected_err.get_command(), cwd=test.cwd, verbose=verbose, dry=dry,
+            env=case_env,
         )
         if not dry and test_err != test_expected_err:
             log_test_out_differs(
@@ -268,6 +287,7 @@ def run_case(
             input=test_output,
             verbose=verbose,
             dry=dry,
+            env=case_env,
         )
 
     return Success()

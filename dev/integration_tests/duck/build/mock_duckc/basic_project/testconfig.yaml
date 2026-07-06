@@ -1,9 +1,12 @@
+tmp_env_files: "foo"
 profile_name: ""
+foo: "foo-1.0.0-[HASH]"
 run_post_case: "true"
 PostCase: |+
   if [ @{run_post_case} == "true" ]; then
     python3 check.py @{profile_name}
   fi
+  @{cleanup_tmp_env}
 
 Tests:
   build:
@@ -18,11 +21,11 @@ Tests:
             info: compiling \`foo\`...
       build_release:
         test_cmd: duck -C foo build --release
-        profile_name: release
         Output:
           String: |+
             info: successfully synchronized venv \`foo\`
             info: compiling \`foo\`...
+        profile_name: release
       build_release_profile:
         profile_name: release
         test_cmd: duck -C foo build --profile=release
@@ -67,7 +70,7 @@ Tests:
           String: |+
             info: successfully synchronized venv \`foo\`
             info: compiling \`foo\`...
-      # NOTE: verbose tests are disabled, since compilation order is not deterministic
+      # @TODO: #3023 Reenable verbose itests
       build_verbose:
         test_cmd: duck -C foo build --verbose
         profile_name: dev
@@ -75,28 +78,32 @@ Tests:
         Output:
           Run: |+
             echo "info: successfully synchronized venv \`foo\`
-            info: Running \`duckc compile_package -n foo $(pwd)/foo/src -a $(pwd)/foo/.duck_build -O 1\`"
+            info: compiling \`foo\`...
+            info: Running \`duckc compile_packages $(pwd)/foo/.duck_build/@{profile_name}/@{foo}/deps.json -a $(pwd)/foo/.duck_build/@{profile_name}/@{foo}/artifacts -O 1\`"
       build_release_verbose:
-        test_cmd: duck -C foo build --release --verbose
+        test_cmd: duck -C foo build --@{profile_name} --verbose
         profile_name: release
         Enabled: "false"
         Output:
           Run: |+
             echo "info: successfully synchronized venv \`foo\`
-            info: Running \`duckc compile_package -n foo $(pwd)/foo/src -a $(pwd)/foo/.duck_build -O 3 --no-incremental\`"
+            info: compiling \`foo\`...
+            info: Running \`duckc compile_packages $(pwd)/foo/.duck_build/@{profile_name}/@{foo}/deps.json -a $(pwd)/foo/.duck_build/@{profile_name}/@{foo}/artifacts -O 3 --no-incremental\`"
       build_release_profile_verbose:
-        test_cmd: duck -C foo build --profile=release --verbose
+        test_cmd: duck -C foo build --profile=@{profile_name} --verbose
         profile_name: release
         Enabled: "false"
         Output:
           Run: |+
             echo "info: successfully synchronized venv \`foo\`
-            info: Running \`duckc compile_package -n foo $(pwd)/foo/src -a $(pwd)/foo/.duck_build -O 3 --no-incremental\`"
+            info: compiling \`foo\`...
+            info: Running \`duckc compile_packages $(pwd)/foo/.duck_build/@{profile_name}/@{foo}/deps.json -a $(pwd)/foo/.duck_build/@{profile_name}/@{foo}/artifacts -O 3 --no-incremental\`"
       build_release_profile2_verbose:
-        test_cmd: duck -C foo build --profile release --verbose
+        test_cmd: duck -C foo build --profile @{profile_name} --verbose
         profile_name: release
         Enabled: "false"
         Output:
           Run: |+
             echo "info: successfully synchronized venv \`foo\`
-            info: Running \`duckc compile_package -n foo $(pwd)/foo/src -a $(pwd)/foo/.duck_build -O 3 --no-incremental\`"
+            info: compiling \`foo\`...
+            info: Running \`duckc compile_packages $(pwd)/foo/.duck_build/@{profile_name}/@{foo}/deps.json -a $(pwd)/foo/.duck_build/@{profile_name}/@{foo}/artifacts -O 3 --no-incremental\`"

@@ -17,6 +17,14 @@ duck_exe_dir: '`git rev-parse --show-toplevel`/dev/src/duck/target/debug/'
 prepare: ""
 before_cmd: "true"
 
+# Every case gets a private DUCK_HOME under its tmp dir, so cases can
+# run concurrently and never write caches into the source tree.
+Env:
+    DIT_TMP_DIR: "@{new_tmp_dir}"
+    DUCK_HOME: "echo $DIT_TMP_DIR/duck_home"
+
+PostCase: "@{cleanup_tmp_env}"
+
 # Sometimes we hit a test timeout in itests, but only in CI.
 # It's because when we create a fetcher cache (an SQLite database), we execute a statement to create a basic table.
 # This causes SQLite to create a file and some other stuff. It also calls fsync on a parent directory.
@@ -33,10 +41,12 @@ PreNode: |
 PreTest: |
   @{prepare}
 
-Run: '@{before_cmd} && export PATH="@{duck_exe_dir}:$PATH" && @{test_cmd}'
+Run: 'export PATH="@{duck_exe_dir}:$PATH" && @{before_cmd} && @{test_cmd}'
 
 SubDirs:
   - cli
   - sync
   - init
   - build
+
+default_src: "import core.builtins.*;\nfun main() -> i64 = {\n    return 0;\n}"
