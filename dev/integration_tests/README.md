@@ -126,6 +126,14 @@ General variables (not tied to any context):
 - `TimeOut` - Maximum time given for the execution in seconds - defaults to 1 - On timeout the process exits with exit code 124.
 - `ExitCode` - Expected test case's exit code - defaults to 0.
 - `Enabled` - Bash command specifying whether the test case is enabled. If it evaluates to true (0), then the test case is enabled, otherwise it's disabled.
+- `ConfigDir` - Absolute path to a directory containing the current `testconfig.yaml` file.
+> [!IMPORTANT]
+> Remember that variables are expanded lazily, so `SubDirs` can overwrite your `ConfigDir`.
+
+> [!NOTE]
+> `@{ConfigDir}` points to the parent directory of the `testconfig.yaml` file (__inside__ git).
+>
+> It's not affected by temporary directories.
 
 Subtree-specific variables (applied to a subtree rooted at this node) are __INHERITED__ from the parent node unless explicitly redefined in the child node:
 - `PreNode` - A command executed once before processing the node and its subdirectories.  

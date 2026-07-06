@@ -61,3 +61,14 @@ Tests:
                 PostCase: "@{cleanup_tmp_env}"
                 Output:
                     String: "child-suffix\n"
+    config_dir_works:
+      Description: Checks that @{ConfigDir} points to the right directory
+      Cases:
+        run-to-output:
+          Run: echo @{ConfigDir}
+          Output:
+            Run: echo $(pwd)
+        output-to-run:
+          Run: echo -n $(pwd)
+          Output:
+            String: "@{ConfigDir}"
