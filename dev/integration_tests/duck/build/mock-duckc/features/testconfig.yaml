@@ -1,5 +1,8 @@
 features: ""
-PostCase: python3 check.py @{features} && @{cleanup_tmp_env}
+PostCase: |+
+  python3 check.py @{features}
+  @{cleanup_tmp_env}
+
 PreCase: |+
   @{cd-tmp-dir}
   @{duck-exe} init foo
@@ -7,12 +10,20 @@ PreCase: |+
     foo: []
     bar: [foo]" >> foo/quackconfig.yaml
 Tests:
-  duck/build/duckc/features:
+  duck/build/mock-duckc/features:
     Description: can build a project with features
     Cases:
       basic:
         test-cmd: duck -C foo build --features foo
         features: "foo"
+        Output:
+          String: |+
+            info: successfully synchronized venv \`foo\`
+            info: compiling \`foo\`...
       pulling-feature:
         test-cmd: duck -C foo build --features bar
         features: bar foo
+        Output:
+          String: |+
+            info: successfully synchronized venv \`foo\`
+            info: compiling \`foo\`...

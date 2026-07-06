@@ -1,0 +1,13 @@
+PreCase: |+
+  @{cd-tmp-dir}
+  @{duck-exe} init foo
+Tests:
+  duck/init/errors/reinitialization:
+    Description: cannot reinitialise a project
+    Cases:
+      init:
+        test-cmd: duck init foo
+        ExitCode: 1
+        Err:
+          Run: |+
+            echo "error: cannot reinitialize project \`foo\` at \`$DIT_TMP_DIR/foo\`"

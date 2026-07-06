@@ -1,0 +1,27 @@
+PostCase: python3 check.py && @{cleanup_tmp_env}
+
+PreCase: |+
+  @{cd-tmp-dir}
+  @{duck-exe} init foo
+  @{duck-exe} init bar
+  echo "dependencies:
+    bar:
+      source:
+        path: ../bar
+      features: [b]
+
+  features:
+    f: []" >> foo/quackconfig.yaml
+
+  echo "features:
+    b: []" >> bar/quackconfig.yaml
+
+Tests:
+  duck/sync/dep-and-flags2:
+    Description: can sync a project with dependency, conditions and flags
+    Cases:
+      sync:
+        test-cmd: duck -C foo sync
+        Output:
+          String: 'info: successfully synchronized venv \`foo\`\n'
+        

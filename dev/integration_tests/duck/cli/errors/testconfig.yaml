@@ -1,0 +1,36 @@
+Tests:
+  duck/cli/errors:
+    Description: Checks a lot of basic errors
+    Cases:
+      invalid-subcommand-with-suggestions:
+        test-cmd: duck x
+        ExitCode: 1
+        Err:
+          String: |
+            error: No such command as \`x\`. Did you mean:
+                   - \`b\`
+                   - \`r\`?
+
+      invalid-subcommand:
+        test-cmd: duck not-a-subcmd
+        ExitCode: 1
+        Err:
+          String: 'error: No such command: \`not-a-subcmd\`\n'
+
+      invalid-config:
+        PreCase: |+
+          mkdir -p $DUCK_HOME
+          echo "security:
+            typos:
+              max_distance: ala" > $DUCK_HOME/config.yaml
+        test-cmd: duck not-a-command
+        ExitCode: 1
+        Err:
+          Run: |+
+            echo "error: when trying to check the maximum typos fixing distance
+            
+              Caused by:
+                the key \`security.typos.max_distance\` expects a positive integer, not a string
+            
+              Caused by:
+                when parsing the configuration at \`$DUCK_HOME/config.yaml\`"
