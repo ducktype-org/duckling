@@ -1,5 +1,6 @@
 #include <backends/llvm/llvm_backend.hpp>
 #include <diagnostic_interactive/module_flags/module_flags.hpp>
+#include <driver/test_utils.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <global_state/backend_options.hpp>
@@ -10,6 +11,7 @@
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
+#include <filesystem/file.hpp>
 #include <query_framework/context/context.hpp>
 #include <query_framework/entry/with_context_do.hpp>
 #include <tester/tester.hpp>
@@ -50,9 +52,16 @@ public:
 
 protected:
 	void beforeAll() override {
-		global_state::setters::setBackendOptions({
-			.llvm_backend = { global_state::BackendOptions::LLVMBackend{} },
-		});
+		// Initialize the compiler so the standard library is loaded and select the LLVM backend.
+		fs::FilePath artifacts_path = fs::FileManager::createRandomTempDirectory().getFilePath();
+		auto         init_result    = compiler::driver::test_utils::initializeCompilerForTests(
+            {},
+            artifacts_path,
+            { compiler::driver::options_types::StdLibOptions::DefaultStd{} },
+            { .llvm_backend = global_state::BackendOptions::LLVMBackend{} }
+        );
+		assertTrue(init_result.status().isOk(), "Compiler initialization failed");
+
 		dia_int::configureImmediatePrint(&std::cerr);
 	}
 
@@ -247,7 +256,9 @@ private:
 		// points[1].y
 		// GEP: 0 (ptr), 1 (array index), 1 (field index)
 		assertTrue(
-			std::regex_search(ir, std::regex{ R"(getelementptr.*i32\s+0,\s+i64\s+%0,\s+i32\s+1)" }),
+			std::regex_search(
+				ir, std::regex{ R"(getelementptr.*i32\s+0,\s+i64\s+%\w+,\s+i32\s+1)" }
+			),
 			"Expected GEP for struct field access in array: points[1].y"
 		);
 	}

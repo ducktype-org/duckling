@@ -10,4 +10,4 @@ make_module(TypeSystemLower USES Base QueryFramework HELIOS ForeignAbiUtils)
 
 duck_add_test(compiler tsl_simple tests/tsl_simple_test.cpp USES HELIOS)
 
-duck_add_test(compiler c_abi_converter tests/c_abi_converter_test.cpp USES HELIOS TypeSystemLower)
+duck_add_test(compiler c_abi_converter tests/c_abi_converter_test.cpp USES TypeSystemLower HELIOS)

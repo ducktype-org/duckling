@@ -548,8 +548,8 @@ namespace compiler::helios::code {
 			  { .name = ctx.query<mangler::QueryMangledType>(expression_type.getSymbolType())
 	                        ->valueOrThrow(),
 	            .generated_symbol_data
-	            = defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::ImplicitConstructor{
-					expression_type.getType() } } }
+	            = defgen::Constructor{ .type = expression_type.getType(),
+	                                   .kind = defgen::Constructor::Kind::Implicit } }
 		  )) {}
 
 	TupleExpr::TupleExpr(
@@ -636,6 +636,7 @@ namespace compiler::helios::code {
 		case BuiltinUnary::Ptr:
 		case BuiltinUnary::CPtr:
 		case BuiltinUnary::ManyPtr:
+		case BuiltinUnary::Slice:
 		case BuiltinUnary::Const:
 			// For most of the unary operators the result is the same as their argument type:
 			// (Int -> Int, Bool -> Bool, Meta -> Meta, etc.)
