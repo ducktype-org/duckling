@@ -1,9 +1,9 @@
 #include "abstract_type_impl.hpp"
 
-#include "helios_private/hout_creation/definition_generation/copy_constructors.hpp"
 #include "queries.hpp"
 
 #include <helios/symbols/query_type_of_symbol.hpp>
+#include <helios_private/hout_creation/definition_generation/copy_constructors.hpp>
 
 // @TODO: #2331 Remove these includes
 #include <frontend/pst_parser/elements/hierarchy/class_elements/field.hpp>

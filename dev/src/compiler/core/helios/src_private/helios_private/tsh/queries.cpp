@@ -1,10 +1,10 @@
 #include "queries.hpp"
 
 #include "abstract_type_impl.hpp"
-#include "helios_private/hout_creation/definition_generation/copy_constructors.hpp"
 
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/query_type_symbol_data.hpp>
+#include <helios_private/hout_creation/definition_generation/copy_constructors.hpp>
 #include <helios_private/hout_creation/definition_generation/length_methods.hpp>
 #include <helios_private/hout_creation/definition_generation/list_methods.hpp>
 #include <helios_private/symbols/symbols.hpp>
