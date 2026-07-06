@@ -22,9 +22,8 @@
 namespace compiler::helios::defgen {
 	SymID toStringSymForType(query::Context& ctx, const tsh::AbstractType type) {
 		return ctx.query<QueryGeneratedSymbol>({
-			.name = base::StrID("toString"),
-			.generated_symbol_data
-			= Method{ .owner_type = type, .kind = Method::Kind::ToString },
+			.name                  = base::StrID("toString"),
+			.generated_symbol_data = Method{ .owner_type = type, .kind = Method::Kind::ToString },
 		});
 	}
 

@@ -299,8 +299,7 @@ namespace compiler::helios::mangler {
 						          .str();
 
 						const char* ctor_tag
-							= ctor.kind == defgen::Constructor::Kind::Implicit ? "Hic"
-						                                                              : "Hdc";
+							= ctor.kind == defgen::Constructor::Kind::Implicit ? "Hic" : "Hdc";
 
 						return mangled_type + ctor_tag + func(ctx, symbol_id) + "E";
 					}
