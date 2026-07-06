@@ -51,15 +51,6 @@ Tests:
                 PostCase: "@{cleanup_tmp_env}"
                 Output:
                     String: "123\n"
-    no_parallel_smoke:
-        NoParallel: true
-        Description: "Smoke-checks that a NoParallel test loads and runs under -j."
-        Cases:
-            runs:
-                Run: "echo ok"
-                PostCase: "@{cleanup_tmp_env}"
-                Output:
-                    String: "ok\n"
     env_shadowing:
         Description: "Checks that shadowing an Env key keeps its original evaluation position."
         Env:

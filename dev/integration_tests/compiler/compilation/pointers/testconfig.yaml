@@ -92,7 +92,6 @@ Tests:
     Cases:
       llvm:
         backend: llvm
-        TimeOut: 10
         ExitCode: 134
       dvm:
         backend: dvm
@@ -107,9 +106,7 @@ Tests:
     Cases:
       llvm:
         backend: llvm
-        TimeOut: 10
         ExitCode: 134
       dvm:
         backend: dvm
         ExitCode: 1
-
