@@ -185,7 +185,7 @@ namespace compiler::helios::templates {
             // we can't call QueryPrimaryCodeScopeFor(baked_root) without pst_parent_element set.
             // At the same time this scope is needed to generate the template argument symbols, so we have to do it in two steps.
             CRef<TemplateBakePSTLinkedData> baked_root_data_pointer = std::any_cast<TemplateBakePSTLinkedData>(&baked_root->getAdditionalRootData().getAs<pst::AdditionalRootData::BakedTemplateParent>().template_bake_data);
-            baked_root_data_pointer->template_arguments_symbols->store(new std::vector<SymID>(std::move(args)));
+            baked_root_data_pointer->template_arguments_symbols->store(new std::vector<SymID>(std::move(args)), std::memory_order_acq_rel);
             
             
             std::cerr << "Baked statement!  \n";

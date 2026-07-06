@@ -603,7 +603,7 @@ namespace compiler::helios {
 				variant_match(additional_data.pst_parent) {
 					variant_case(pst::AdditionalRootData::BakedTemplateParent, template_parent) {
 						auto proper_data = base::anyCast<templates::TemplateBakePSTLinkedData>(template_parent.template_bake_data);
-						for (const auto& param: proper_data.template_arguments_symbols.value()) {
+						for (const auto& param: *proper_data.template_arguments_symbols->load(std::memory_order_acq_rel)) {
 							out.emplace_back(param);
 						}
 					}
