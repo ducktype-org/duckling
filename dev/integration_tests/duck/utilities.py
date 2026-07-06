@@ -62,7 +62,7 @@ def project_root(name: str) -> Path:
     inside a tmp env (build/, init/) copy or create their projects under
     $DIT_TMP_DIR; the fallback is the test's own directory."""
     if tmp_dir := os.environ.get("DIT_TMP_DIR"):
-        return Path(tmp_dir) / name
+        return Path(tmp_dir).resolve() / name
     return Path.cwd() / name
 
 
