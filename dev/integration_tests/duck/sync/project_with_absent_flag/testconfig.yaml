@@ -1,6 +1,6 @@
 PreCase: |+
   cd $DIT_TMP_DIR
-  @{duck_exe} init foo
+  @{duck-exe} init foo
   echo "features:
     flag: [absent]" >> foo/quackconfig.yaml
 Tests:
@@ -8,7 +8,7 @@ Tests:
     Description: cannot sync a project with malformed manifest (missing feature flags)
     Cases:
       sync:
-        test_cmd: duck -C foo sync
+        test-cmd: duck -C foo sync
         ExitCode: 1
         Err:
           Run: |+

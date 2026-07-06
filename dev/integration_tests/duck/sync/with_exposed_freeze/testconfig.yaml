@@ -2,14 +2,14 @@ PostCase: python3 check.py && @{cleanup_tmp_env}
 
 PreCase: |+
   cd $DIT_TMP_DIR
-  @{duck_exe} init foo --expose-freezefile
+  @{duck-exe} init foo --expose-freezefile
 
 Tests:
   duck/sync/with-exposed-freezefile:
     Description: can sync a new project which exposes a freezefile
     Cases:
       sync:
-        test_cmd: duck -C foo sync
+        test-cmd: duck -C foo sync
         Output:
           String: 'info: successfully synchronized venv \`foo\`\n'
         

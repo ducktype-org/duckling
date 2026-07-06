@@ -8,7 +8,7 @@ PostCase: |+
 
 PreCase: |+
   cd $DIT_TMP_DIR
-  @{duck_exe} init foo
+  @{duck-exe} init foo
   echo "features:
     foo: []
     bar: [foo]" >> foo/quackconfig.yaml
@@ -17,21 +17,21 @@ Tests:
     Description: can build a project with features
     Cases:
       basic:
-        test_cmd: duck -C foo build --features foo
+        test-cmd: duck -C foo build --features foo
         features: "foo"
         Output:
           String: |+
             info: successfully synchronized venv \`foo\`
             info: compiling \`foo\`...
       pulling-feature:
-        test_cmd: duck -C foo build --features bar
+        test-cmd: duck -C foo build --features bar
         features: bar foo
         Output:
           String: |+
             info: successfully synchronized venv \`foo\`
             info: compiling \`foo\`...
       nonexisting-feature:
-        test_cmd: duck -C foo build --features aaa
+        test-cmd: duck -C foo build --features aaa
         run_post_case: "false"
         ExitCode: 1
         Output:

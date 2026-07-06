@@ -1,8 +1,8 @@
 PreCase: |+
   cd $DIT_TMP_DIR
-  @{duck_exe} init foo
-  @{duck_exe} init bar
-  @{duck_exe} init baz
+  @{duck-exe} init foo
+  @{duck-exe} init bar
+  @{duck-exe} init baz
   echo "dependencies:
     bar:
       source:
@@ -21,7 +21,7 @@ Tests:
     Description: can build a project with dependencies
     Cases:
       build:
-        test_cmd: duck -C foo build
+        test-cmd: duck -C foo build
         # @TODO: #2907 Make this deterministic
         # Output:
         #   String: |+

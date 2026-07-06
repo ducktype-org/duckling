@@ -1,14 +1,14 @@
 PreCase: |+
   cd $DIT_TMP_DIR
-  @{duck_exe} init foo
-  @{duck_exe} init foo_but_different_dir --name foo
-  @{duck_exe} -C foo sync
+  @{duck-exe} init foo
+  @{duck-exe} init foo_but_different_dir --name foo
+  @{duck-exe} -C foo sync
 Tests:
   duck/sync/would-overwrite-error:
     Description: 
     Cases:
       sync:
-        test_cmd: duck -C foo_but_different_dir sync
+        test-cmd: duck -C foo_but_different_dir sync
         Err:
           Run: |+
             echo "error: tried to overwrite an existing virtual environment from another location

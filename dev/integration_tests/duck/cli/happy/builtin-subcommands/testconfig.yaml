@@ -13,27 +13,27 @@ Tests:
     Description: Checks a lot of basic flows, such as happy, builtin alias, auto fix...
     Cases:
       builtin-command:
-        test_cmd: duck build
+        test-cmd: duck build
         ExitCode: 1
         Err:
           Run: 'echo "error: no manifest has been found from the \`${DIT_TMP_DIR}\` to the \`/\`"'
       builtin-alias:
-        test_cmd: duck b
+        test-cmd: duck b
         ExitCode: 1
         Err:
           Run: 'echo "error: no manifest has been found from the \`${DIT_TMP_DIR}\` to the \`/\`"'
       user-alias:
-        test_cmd: duck my-custom-build-alias
+        test-cmd: duck my-custom-build-alias
         ExitCode: 1
         Err:
           Run: 'echo "error: no manifest has been found from the \`${DIT_TMP_DIR}\` to the \`/\`"'
       user-alias-as-an-array:
-        test_cmd: duck my-custom-build-alias-array
+        test-cmd: duck my-custom-build-alias-array
         ExitCode: 1
         Err:
           Run: 'echo "error: no manifest has been found from the \`${DIT_TMP_DIR}\` to the \`/\`"'
       autofix-success:
-        test_cmd: duck buil
+        test-cmd: duck buil
         ExitCode: 1
         Err:
           Run: 'echo "error: no manifest has been found from the \`${DIT_TMP_DIR}\` to the \`/\`"'

@@ -1,4 +1,4 @@
-before_cmd: export PATH="${DIT_TMP_DIR}/bin:$PATH"
+before-cmd: export PATH="${DIT_TMP_DIR}/bin:$PATH"
 
 PreCase: |+
   cd $DIT_TMP_DIR
@@ -21,7 +21,7 @@ PreCase: |+
 Tests:
   run-external-subcmd:
     Description: Finds external subcommands
-    test_cmd: duck echo External subcmd
+    test-cmd: duck echo External subcmd
 
     Cases:
       echo:
@@ -30,7 +30,7 @@ Tests:
 
   can-autofix-external:
     Description: Can fix typo in external subcommand
-    test_cmd: duck ecjo External subcmd
+    test-cmd: duck ecjo External subcmd
 
     Cases:
       echo:
@@ -38,7 +38,7 @@ Tests:
           String: External subcmd\n
   can-autofix-alias-to-external:
     Description: Aliases can expand to external subcommands
-    test_cmd: duck abababq External subcmd
+    test-cmd: duck abababq External subcmd
 
     Cases:
       echo:

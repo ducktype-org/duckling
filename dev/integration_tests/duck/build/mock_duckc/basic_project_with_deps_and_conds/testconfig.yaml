@@ -3,8 +3,8 @@ PostCase: python3 check.py @{features} && @{cleanup_tmp_env}
 
 PreCase: |+
   cd $DIT_TMP_DIR
-  @{duck_exe} init foo
-  @{duck_exe} init bar
+  @{duck-exe} init foo
+  @{duck-exe} init bar
   echo "dependencies:
     bar:
       source:
@@ -20,13 +20,13 @@ Tests:
     Description: can build a project with conditional dependencies
     Cases:
       without-bar:
-        test_cmd: duck -C foo build
+        test-cmd: duck -C foo build
         Output:
           String: |+
             info: successfully synchronized venv \`foo\`
             info: compiling \`foo\`...
       with-bar:
-        test_cmd: duck -C foo build --features use-bar
+        test-cmd: duck -C foo build --features use-bar
         features: use-bar
         Output:
           String: |+

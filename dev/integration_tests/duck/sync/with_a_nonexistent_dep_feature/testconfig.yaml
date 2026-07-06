@@ -1,7 +1,7 @@
 PreCase: |+
   cd $DIT_TMP_DIR
-  @{duck_exe} init foo
-  @{duck_exe} init bar
+  @{duck-exe} init foo
+  @{duck-exe} init bar
   echo "dependencies:
     bar:
       source:
@@ -12,7 +12,7 @@ Tests:
     Description: cannot sync a project with a nonexistent dependency feature
     Cases:
       sync:
-        test_cmd: duck -C foo sync
+        test-cmd: duck -C foo sync
         ExitCode: 1
         Err:
           Run: |+

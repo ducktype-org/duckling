@@ -1,13 +1,13 @@
 PreCase: |+
   cd $DIT_TMP_DIR
-  @{duck_exe} init foo
+  @{duck-exe} init foo
 
 Tests:
   duck/init/reinitialization:
     Description: cannot reinitialise a project
     Cases:
       init:
-        test_cmd: duck init foo
+        test-cmd: duck init foo
         ExitCode: 1
         Err:
           Run: |+

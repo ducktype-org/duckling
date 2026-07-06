@@ -3,7 +3,7 @@ Tests:
     Description: checks for invalid arguments
     Cases:
       doesnt-panic-when-passed-root:
-        test_cmd: duck init /
+        test-cmd: duck init /
         ExitCode: 1
         Err:
           String: |+

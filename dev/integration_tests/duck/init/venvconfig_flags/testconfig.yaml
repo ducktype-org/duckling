@@ -6,19 +6,19 @@ Tests:
     Description: can initialise a new project with different venvconfig flags
     Cases:
       expose-freezefile:
-        test_cmd: duck init --expose-freezefile foo
+        test-cmd: duck init --expose-freezefile foo
         Output:
           Run: |+
             echo "info: successfully created a new project \`foo\` at \`$DIT_TMP_DIR/foo\`"
         post-check-action: expose_freezefile
       ephemeral:
-        test_cmd: duck init --ephemeral foo
+        test-cmd: duck init --ephemeral foo
         Output:
           Run: |+
             echo "info: successfully created a new project \`foo\` at \`$DIT_TMP_DIR/foo\`"
         post-check-action: ephemeral
       local-storage:
-        test_cmd: duck init --local-storage foo
+        test-cmd: duck init --local-storage foo
         Output:
           Run: |+
             echo "info: successfully created a new project \`foo\` at \`$DIT_TMP_DIR/foo\`"

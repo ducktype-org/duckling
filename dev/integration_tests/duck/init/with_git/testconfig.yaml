@@ -5,7 +5,7 @@ Tests:
     Description: can initialise a new project with --no-git flag
     Cases:
       init:
-        test_cmd: duck init --git foo
+        test-cmd: duck init --git foo
         Output:
           Run: |+
             echo "info: successfully created a new project \`foo\` at \`$DIT_TMP_DIR/foo\`"
