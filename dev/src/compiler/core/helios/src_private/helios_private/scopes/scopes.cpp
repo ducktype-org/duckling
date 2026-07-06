@@ -592,6 +592,12 @@ namespace compiler::helios {
 				auto template_decl = base_element.dynamicCast<pst::TemplateStmt>().value();
 
 				std::vector<SymID> out;
+
+				if (not template_decl->hasAdditionalRootData()) {
+					// This is not a baked template, so it does define any symbols in its scope.
+					return out;
+				}
+
 				const auto& additional_data = template_decl->getAdditionalRootData();
 
 				variant_match(additional_data.pst_parent) {

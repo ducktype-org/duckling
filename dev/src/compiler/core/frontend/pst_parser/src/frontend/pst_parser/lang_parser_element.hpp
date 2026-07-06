@@ -310,6 +310,17 @@ namespace pst {
 			return additional_root_data.value();
 		}
 
+		/**
+		 * @brief Returns whether the element has additional root data.
+		 * @TODO: #2996 Remove this in favor of some kind of having more proper
+		 * knowledge of PST origin (bake/expand/user/etc).
+		 * This is currently used to hack-in the check for whether a template is baked or not, which is not a good solution.
+		 */
+		[[nodiscard]]
+		bool hasAdditionalRootData() const {
+			return additional_root_data.has_value();
+		}
+
 	protected:
 		/**
 		 * @brief Map from stable hash to lang element for all created elements.

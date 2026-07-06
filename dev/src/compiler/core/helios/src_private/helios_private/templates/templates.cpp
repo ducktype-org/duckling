@@ -52,7 +52,6 @@ namespace compiler::helios::templates {
             ScopeID scope,
             const QKey& q_key
         ) {
-    
 
             std::vector<SymID> symbols;
             
@@ -80,7 +79,6 @@ namespace compiler::helios::templates {
     			// 	ctx, value_expression, 
                 //    type
 	    		// );
-
                 // auto value_ctv
 	    		// 	= ctx.query<QueryEvaluateHOUTExpression>({ hout_qresult.valueOrThrow().ref() }).valueOrThrow();
 
@@ -88,7 +86,7 @@ namespace compiler::helios::templates {
                     .name = name,
                     .generated_symbol_data = defgen::GeneratedSymbolData{defgen::GeneratedSymbolData::TemplateBakeConstant{
                         type, 
-                        q_key.template_arguments.at(i++), //std::move(value_ctv), 
+                        q_key.template_arguments.at(i++),
                         scope
                     }},
                 });
@@ -100,7 +98,7 @@ namespace compiler::helios::templates {
         }
 
 
-        static auto provide(Context& ctx, QKey key) -> PResult {
+        static auto provide(Context& ctx, const QKey& key) -> PResult {
             // most heavy lifting will happen here, and in usage of pst root data
 
             // outline
@@ -125,11 +123,14 @@ namespace compiler::helios::templates {
 
             auto template_params = template_statement->getTemplateDecl().unlock(ctx)->getParams().unlock(ctx);
 
-            // This should be an error:!!
+            // This is not an error (but could be for UX sake), as this should be catch at the same level as
+            // function overloads:!!
+            // @TODO: also assert CTV types
             CORE_ASSERT(
                 template_params->size() == key.template_arguments.size(),
                 "Template arguments count does not match template parameters count"
             );
+            
 
             // pass this to clone:?
             // auto dummy_token_source = template_statement->getStablePosition().getActiveSourcePosition(ctx).getSource();
@@ -176,7 +177,6 @@ namespace compiler::helios::templates {
             // we only set args, after we can run bakeTemplateArgumentsSymbols
 
             auto args = bakeTemplateArgumentsSymbols(ctx, template_params, 
-                        
                             ctx.query<QueryPrimaryCodeScopeFor>({ baked_root }),
                             key
                         );
