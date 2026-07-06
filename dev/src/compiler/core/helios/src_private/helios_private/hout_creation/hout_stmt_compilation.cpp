@@ -94,19 +94,12 @@ namespace compiler::helios {
 
 		void handleAssignmentExpr(pst::Access<pst::expr::Assignment> assignment) {
 			auto op = assignment->getAssignmentType().unlock(ctx)->unwrap();
-			if (op != base::StrID("=") && op != base::StrID("+=") && op != base::StrID("-=")) {
+			if (op != base::StrID("=")) {
 				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 					base::strConcat("This assignment type: '", op.str(), "'."),
 					assignment->getStablePosition()
 				));
 				query::throwFailed();
-			}
-
-			if (op != base::StrID("=")) {
-				auto assignment_expr
-					= ctx.query<QueryHoutOfExpr>({ assignment })->valueOrThrow().ref();
-				output(code::ExprStmt(code::pstOrigin(assignment), assignment_expr));
-				return;
 			}
 
 			auto var = assignment->getVariables();

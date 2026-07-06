@@ -1,4 +1,9 @@
-PostCase: python3 check.py && rm -f foo/quackfreeze.json
+# The exposed freezefile is written into the project, so sync a copy
+# staged inside the tmp env instead of the committed one.
+tmp_env_files: "foo bar"
+before_cmd: "@{make_tmp_env} && cd \"$DIT_TMP_DIR\""
+
+PostCase: python3 check.py && @{cleanup_tmp_env}
 
 Tests:
   sync:

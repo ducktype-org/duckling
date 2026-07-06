@@ -694,23 +694,16 @@ private:
 				case Operation::ZeroInitialize:
 					found_zero_init = true;
 					break;
-				case Operation::ListPush: {
-					ASSERT_TRUE(std::holds_alternative<ListOperationParameters>(instr.extra_params));
-					auto& params = std::get<ListOperationParameters>(instr.extra_params);
-					ASSERT_EQUAL(params.element_layout->getSize(), Bits(64));
-					found_push_with_params = true;
+				case Operation::Call: {
+					auto name = instr.arguments.at(0).get<FunctionLiteral>().mangled_name.strView();
+					if (name.contains("push"))
+						found_push_with_params = true;
+					else if (name.contains("pop"))
+						found_pop_with_params = true;
+					else if (name.contains("length"))
+						found_len = true;
 					break;
 				}
-				case Operation::ListPop: {
-					ASSERT_TRUE(std::holds_alternative<ListOperationParameters>(instr.extra_params));
-					auto& params = std::get<ListOperationParameters>(instr.extra_params);
-					ASSERT_EQUAL(params.element_layout->getSize(), Bits(64));
-					found_pop_with_params = true;
-					break;
-				}
-				case Operation::ListLen:
-					found_len = true;
-					break;
 				case Operation::ListFree:
 					found_free = true;
 					break;

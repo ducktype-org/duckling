@@ -1,9 +1,11 @@
+tmp_env_files: "foo"
 profile_name: ""
 run_post_case: "true"
 PostCase: |+
   if [ @{run_post_case} == "true" ]; then
     python3 check.py @{profile_name}
   fi
+  @{cleanup_tmp_env}
 
 Tests:
   build:
