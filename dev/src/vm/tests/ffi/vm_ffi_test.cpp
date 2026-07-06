@@ -27,6 +27,11 @@ public:
 		TESTER_ADD_TEST(smallIntReturnWidening);
 		TESTER_ADD_TEST(cptrRoundTripThroughC);
 		TESTER_ADD_TEST(cptrCopyBuiltins);
+		TESTER_ADD_TEST(floatArgsAndReturn);
+		TESTER_ADD_TEST(doubleArgsAndReturn);
+		TESTER_ADD_TEST(mixedIntFloatArgs);
+		TESTER_ADD_TEST(floatStructByValue);
+		TESTER_ADD_TEST(floatNameWithWrongSizeFails);
 		TESTER_ADD_TEST(missingSymbolFails);
 		TESTER_ADD_TEST(missingObjectFileFails);
 		TESTER_ADD_TEST(unsupportedTypeFails);
@@ -191,6 +196,119 @@ private:
 				  "    ret;\n"
 				  "}\n",
 			"555"
+		);
+	}
+
+	void floatArgsAndReturn() {
+		runProgram(
+			"float_add",
+			ffiObjectHeader()
+				+ "type primitive: f32 4\n"
+				  "ffi function ffi_addf { f32, f32 } -> { f32 };\n"
+				  "function main { i64, ptr_argv } -> { i64 } {\n"
+				  "    init_pany_type res, f32;\n"
+				  "    init_pany_type a, f32;\n"
+				  "    init_pany_type b, f32;\n"
+				  "    mov_p32_imm a, 20.25f32;\n"
+				  "    mov_p32_imm b, 21.75f32;\n"
+				  "    call_ffifunc ffi_addf;\n"
+				  "    init_pany_type r, i64;\n"
+				  "    init_pany_type ires, i32;\n"
+				  "    fptosi_p32_p32 ires, res;\n"
+				  "    call_builtinfunc builtin_output_i32;\n"
+				  "    ret;\n"
+				  "}\n",
+			"42\n"
+		);
+	}
+
+	void doubleArgsAndReturn() {
+		runProgram(
+			"double_add",
+			ffiObjectHeader()
+				+ "type primitive: f64 8\n"
+				  "ffi function ffi_addd { f64, f64 } -> { f64 };\n"
+				  "function main { i64, ptr_argv } -> { i64 } {\n"
+				  "    init_pany_type res, f64;\n"
+				  "    init_pany_type a, f64;\n"
+				  "    init_pany_type b, f64;\n"
+				  "    mov_p64_imm a, 20.25;\n"
+				  "    mov_p64_imm b, 21.75;\n"
+				  "    call_ffifunc ffi_addd;\n"
+				  "    init_pany_type r, i64;\n"
+				  "    init_pany_type ires, i32;\n"
+				  "    fptosi_p32_p64 ires, res;\n"
+				  "    call_builtinfunc builtin_output_i32;\n"
+				  "    ret;\n"
+				  "}\n",
+			"42\n"
+		);
+	}
+
+	void mixedIntFloatArgs() {
+		runProgram(
+			"mixed_args",
+			ffiObjectHeader()
+				+ "type primitive: f64 8\n"
+				  "ffi function ffi_mix { i64, f64, i64, f64 } -> { f64 };\n"
+				  "function main { i64, ptr_argv } -> { i64 } {\n"
+				  "    init_pany_type res, f64;\n"
+				  "    init_pany_type a, i64;\n"
+				  "    init_pany_type b, f64;\n"
+				  "    init_pany_type c, i64;\n"
+				  "    init_pany_type d, f64;\n"
+				  "    mov_p64_imm a, 40;\n"
+				  "    mov_p64_imm b, 0.25;\n"
+				  "    mov_p64_imm c, 1;\n"
+				  "    mov_p64_imm d, 0.75;\n"
+				  "    call_ffifunc ffi_mix;\n"
+				  "    init_pany_type r, i64;\n"
+				  "    init_pany_type ires, i32;\n"
+				  "    fptosi_p32_p64 ires, res;\n"
+				  "    call_builtinfunc builtin_output_i32;\n"
+				  "    ret;\n"
+				  "}\n",
+			"42\n"
+		);
+	}
+
+	void floatStructByValue() {
+		runProgram(
+			"float_struct",
+			ffiObjectHeader()
+				+ "type primitive: f32 4\n"
+				  "type data: FPair { a: f32, b: f32 } assert_size 8\n"
+				  "ffi function ffi_fpair_swap { FPair } -> { FPair };\n"
+				  "function main { i64, ptr_argv } -> { i64 } {\n"
+				  "    init_pany_type x, f32;\n"
+				  "    init_pany_type res, FPair;\n"
+				  "    init_pany_type p, FPair;\n"
+				  "    mov_p32_imm x, 1.75f32;\n"
+				  "    structStore_pste_pany_field p, x, FPair.a;\n"
+				  "    mov_p32_imm x, 40.25f32;\n"
+				  "    structStore_pste_pany_field p, x, FPair.b;\n"
+				  "    call_ffifunc ffi_fpair_swap;\n"
+				  "    init_pany_type sum, f32;\n"
+				  "    structLoad_pany_pste_field sum, res, FPair.a;\n"
+				  "    structLoad_pany_pste_field x, res, FPair.b;\n"
+				  "    fadd_p32_p32 sum, x;\n"
+				  "    init_pany_type r, i64;\n"
+				  "    init_pany_type ires, i32;\n"
+				  "    fptosi_p32_p32 ires, sum;\n"
+				  "    call_builtinfunc builtin_output_i32;\n"
+				  "    ret;\n"
+				  "}\n",
+			"42\n"
+		);
+	}
+
+	void floatNameWithWrongSizeFails() {
+		expectLoadError(
+			"bad_float_size",
+			ffiObjectHeader()
+				+ "type primitive: f32 8\n"
+				  "ffi function ffi_addf { f32, f32 } -> { f32 };\n",
+			{ "FFI function signature" }
 		);
 	}
 

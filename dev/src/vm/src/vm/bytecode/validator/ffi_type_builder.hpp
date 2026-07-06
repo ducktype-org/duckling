@@ -20,6 +20,10 @@ namespace vm::code::ffi_detail {
 	 * @brief Returns the libffi type describing the given VM type.
 	 * Supports primitives of size 1, 2, 4 or 8 (mapped to signed integers), opaque types
 	 * (mapped to a pointer, used for the builtin `cptr`) and data structures of the above.
+	 * Primitives named `f32` (size 4) and `f64` (size 8) map to `float`/`double` — the names
+	 * the DVM backend emits for floating-point types; without this they would be classified
+	 * as integers, which breaks the C calling convention (e.g. SysV passes floats in XMM
+	 * registers).
 	 * @note The caller must ensure the type was validated as FFI-compatible.
 	 */
 	ffi_type* buildFFIType(

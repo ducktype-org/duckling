@@ -162,6 +162,10 @@ void vm::code::ValidProgram::insertFFIFunctions(const std::vector<FFIFunction>& 
 	auto is_ffi_primitive = [](const valid_type::ValidType& tp) {
 		if (auto primitive = tp.maybeGetKindAs<valid_type::finalized::Primitive>()) {
 			auto size = usize(primitive.value()->size);
+			// `f32`/`f64` map to C `float`/`double` in `buildFFIType`; any other size under
+			// these names would be silently misclassified, so reject it here.
+			if (tp.getName() == base::StrID("f32")) return size == 4;
+			if (tp.getName() == base::StrID("f64")) return size == 8;
 			return size == 1 || size == 2 || size == 4 || size == 8;
 		}
 		return false;

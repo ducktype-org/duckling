@@ -2,6 +2,8 @@
 
 #include <base/except/exceptions.hpp>
 
+#include <string_id/string_id.hpp>
+
 #include <vm/bytecode/validator/valid_type/finalized_kinds.hpp>
 
 namespace vm::code::ffi_detail {
@@ -11,7 +13,10 @@ namespace vm::code::ffi_detail {
 		FFITypeStorage&                 storage
 	) {
 		if (auto primitive = type.maybeGetKindAs<valid_type::finalized::Primitive>()) {
-			switch (usize(primitive.value()->size)) {
+			auto size = usize(primitive.value()->size);
+			if (type.getName() == base::StrID("f32") && size == 4) return &ffi_type_float;
+			if (type.getName() == base::StrID("f64") && size == 8) return &ffi_type_double;
+			switch (size) {
 			case 1:
 				return &ffi_type_sint8;
 			case 2:

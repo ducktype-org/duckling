@@ -27,6 +27,25 @@ extern "C" {
 	int64_t ffi_read8(void* p) { return *static_cast<int64_t*>(p); }
 
 	void ffi_free8(void* p) { std::free(p); }
+
+	// Floating-point args and returns - misclassified as integers unless the `f32`/`f64`
+	// name-based mapping puts them in the SSE argument class.
+	float ffi_addf(float a, float b) { return a + b; }
+
+	double ffi_addd(double a, double b) { return a + b; }
+
+	// Mixed INTEGER/SSE argument classification.
+	double ffi_mix(int64_t a, double b, int64_t c, double d) {
+		return static_cast<double>(a + c) + b + d;
+	}
+
+	// Struct with float fields - an all-SSE aggregate, passed and returned by value.
+	struct FPair {
+		float a;
+		float b;
+	};
+
+	FPair ffi_fpair_swap(FPair p) { return { .a = p.b, .b = p.a }; }
 }
 
 // NOLINTEND(readability-identifier-naming,cppcoreguidelines-no-malloc,cppcoreguidelines-owning-memory)
