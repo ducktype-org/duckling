@@ -7,26 +7,23 @@ sys.path.append(str(Path(__file__).resolve().parents[3]))
 from utilities import *
 
 foo_path = project_root("foo")
+bar_path = project_root("bar")
 
 version = "1.0.0"
 
-features = sys.argv[1:]
-features = [f'"{feature}"' for feature in features]
-feature_str = ""
-for i, feature in enumerate(features):
-    feature_str += f'        {feature}'
-    if i != len(features) - 1:
-        feature_str += ",\n"
-
-profile = "dev"
+profile = "dvm"
 
 layout = artifacts_dir_for_root(foo_path)
 
 layout = artifacts_for_profile(layout, profile)
 
 foo_name = unit_dir_name_for("foo", version, foo_path)
+bar_name = unit_dir_name_for("bar", version, bar_path)
 
 foo_artifacts = layout / foo_name
+bar_artifacts = layout / bar_name
+
+assert not bar_artifacts.exists()
 
 assert locks_path(foo_artifacts).exists()
 check_file_is_empty(locks_path(foo_artifacts))
@@ -42,18 +39,28 @@ expected = f"""{{
       "id": "{foo_name}",
       "name": "foo",
       "version": "1.0.0",
-      "features": [
-{feature_str}
-      ],
+      "features": [],
       "path": "{str(foo_path)}/src",
+      "dependencies": [
+        {{
+          "id": "{bar_name}"
+        }}
+      ]
+    }},
+    {{
+      "id": "{bar_name}",
+      "name": "bar",
+      "version": "1.0.0",
+      "features": [],
+      "path": "{str(bar_path)}/src",
       "dependencies": []
     }}
   ],
   "tasks": [
     {{
       "package": "{foo_name}",
-      "strategy": "native",
-      "output_file": "{str(layout / "foo")}"
+      "strategy": "dvm_exe",
+      "output_file": "{str(layout / "foo.dbc")}"
     }}
   ]
 }}"""
