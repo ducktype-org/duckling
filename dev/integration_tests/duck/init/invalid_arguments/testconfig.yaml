@@ -1,5 +1,5 @@
 Tests:
-  init:
+  duck/init/invalid-arguments:
     Description: checks for invalid arguments
     Cases:
       doesnt-panic-when-passed-root:

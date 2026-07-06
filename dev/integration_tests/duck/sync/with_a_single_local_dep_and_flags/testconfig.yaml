@@ -16,7 +16,7 @@ PreCase: |+
     b: []" >> bar/quackconfig.yaml
 
 Tests:
-  sync:
+  duck/sync/with-a-single-local-dep-and-flags:
     Description: can sync a project with dependency, conditions and flags
     Cases:
       sync:

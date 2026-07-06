@@ -1,5 +1,4 @@
 import sys
-import shutil
 from pathlib import Path
 
 # Make ../../../utilities.py import work
@@ -72,4 +71,3 @@ else:
 }}"""
 
 assert_eq(text, expected)
-shutil.rmtree(artifacts_dir_for_root(foo_path))

@@ -16,11 +16,11 @@ PreCase: |+
     use-bar: []" >> foo/quackconfig.yaml
 
 Tests:
-  build:
+  duck/build/duckc/basic-project:
     Description: can build a project with conditional dependencies
     Cases:
-      build_without_bar:
+      without-bar:
         test_cmd: duck -C foo build
-      build_with_bar:
+      with-bar:
         test_cmd: duck -C foo build --features use-bar
         features: use-bar

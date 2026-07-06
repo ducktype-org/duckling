@@ -4,7 +4,7 @@ PreCase: |+
   @{duck_exe} init foo
 
 Tests:
-  sync:
+  duck/sync/basic-project:
     Description: can sync a new project
     Cases:
       sync:

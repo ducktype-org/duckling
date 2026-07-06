@@ -1,7 +1,7 @@
-PostCase: python3 check.py
+PostCase: python3 check.py && @{cleanup_tmp_env}
 
 Tests:
-  init:
+  duck/init/with-git:
     Description: can initialise a new project with --no-git flag
     Cases:
       init:

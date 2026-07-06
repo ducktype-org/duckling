@@ -6,7 +6,7 @@ PreCase: |+
       source:
         path: ../bar" >> foo/quackconfig.yaml
 Tests:
-  sync:
+  duck/sync-with-a-nonexistent-local-dep:
     Description: cannot sync a project with a nonexistent dependency
     Cases:
       sync:

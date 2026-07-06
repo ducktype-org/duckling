@@ -20,22 +20,22 @@ PreCase: |+
       opt-level: s" >> foo/quackconfig.yaml
 
 Tests:
-  build:
+  duck/build/duckc/basic-project:
     Description: can build a new project, and expands profiles
     Cases:
-      build:
+      dev:
         test_cmd: duck -C foo build
         profile_name: dev
-      build_release:
+      release:
         test_cmd: duck -C foo build --release
         profile_name: release
-      build_release_profile:
+      release2:
         profile_name: release
         test_cmd: duck -C foo build --profile=release
-      build_release_profile2:
+      relase3:
         profile_name: release
         test_cmd: duck --color=never -C foo build --profile release
-      build_nonexistent_profile:
+      nonexistent-profile:
         test_cmd: duck -C foo build --profile=nonexistent
         run_post_case: "false"
         ExitCode: 1
@@ -44,29 +44,29 @@ Tests:
             error: Unknown profile \`nonexistent\`
 
             hint: In order to use a profile you have to define it in the manifest first
-      build_custom_profile:
+      custom-profile:
         test_cmd: duck -C foo build --profile my-profile
         profile_name: my-profile
-      build_overridden_builtin_profile:
+      overridden-builtin-profile:
         test_cmd: duck -C foo build --profile bench
         profile_name: bench
-      build_custom_profile_inherited:
+      custom-profile-inherited:
         test_cmd: duck -C foo build --profile my-profile2
         profile_name: my-profile2
       # NOTE: verbose tests are disabled, since compilation order is not deterministic
-      build_verbose:
+      verbose:
         test_cmd: duck -C foo build --verbose
         profile_name: dev
         Enabled: "false"
-      build_release_verbose:
+      verbose-release:
         test_cmd: duck -C foo build --release --verbose
         profile_name: release
         Enabled: "false"
-      build_release_profile_verbose:
+      verbose-release2:
         test_cmd: duck -C foo build --profile=release --verbose
         profile_name: release
         Enabled: "false"
-      build_release_profile2_verbose:
+      verbose-release3:
         test_cmd: duck -C foo build --profile release --verbose
         profile_name: release
         Enabled: "false"

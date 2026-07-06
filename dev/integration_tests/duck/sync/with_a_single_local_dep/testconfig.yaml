@@ -1,4 +1,4 @@
-PostCase: python3 check.py
+PostCase: python3 check.py && @{cleanup_tmp_env}
 
 PreCase: |+
   cd $DIT_TMP_DIR
@@ -10,7 +10,7 @@ PreCase: |+
         path: ../bar" >> foo/quackconfig.yaml
 
 Tests:
-  sync:
+  duck/sync/with-a-single-local-dep:
     Description: can sync a project with a single local dep
     Cases:
       sync:

@@ -4,7 +4,7 @@ PreCase: |+
   echo "features:
     flag: [absent]" >> foo/quackconfig.yaml
 Tests:
-  sync:
+  duck/sync/project-with-absent-flag:
     Description: cannot sync a project with malformed manifest (missing feature flags)
     Cases:
       sync:

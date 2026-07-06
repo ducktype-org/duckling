@@ -13,7 +13,7 @@ PreCase: |+
     dvm:
       dvm-bytecode: true" >> foo/quackconfig.yaml
 Tests:
-  build:
+  duck/build/duckc/deps-with-dvm:
     Description: can build a project with dependencies
     Cases:
       build:

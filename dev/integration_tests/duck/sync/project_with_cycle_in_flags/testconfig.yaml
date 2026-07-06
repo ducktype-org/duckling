@@ -1,11 +1,11 @@
-PostCase: python3 check.py
+PostCase: python3 check.py && @{cleanup_tmp_env}
 PreCase: |+
   cd $DIT_TMP_DIR
   @{duck_exe} init foo
   echo "features:
     cycle: [cycle]" >> foo/quackconfig.yaml
 Tests:
-  sync:
+  duck/sync/project-with-a-cycle-in-flags:
     Description: can sync a project with features cycle
     Cases:
       sync:

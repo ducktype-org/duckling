@@ -10,7 +10,7 @@ PreCase: |+
     pulls2: []" >> foo/quackconfig.yaml
 
 Tests:
-  sync:
+  duck/sync/basic-project-with-flags:
     Description: can sync a project with flags
     Cases:
       sync:

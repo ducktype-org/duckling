@@ -13,24 +13,24 @@ PreCase: |+
     foo: []
     bar: [foo]" >> foo/quackconfig.yaml
 Tests:
-  build:
+  duck/build/mock-duckc/features:
     Description: can build a project with features
     Cases:
-      build_with_feature:
+      basic:
         test_cmd: duck -C foo build --features foo
         features: "foo"
         Output:
           String: |+
             info: successfully synchronized venv \`foo\`
             info: compiling \`foo\`...
-      build_with_pulling_feature:
+      pulling-feature:
         test_cmd: duck -C foo build --features bar
         features: bar foo
         Output:
           String: |+
             info: successfully synchronized venv \`foo\`
             info: compiling \`foo\`...
-      build_with_nonexisting_feature:
+      nonexisting-feature:
         test_cmd: duck -C foo build --features aaa
         run_post_case: "false"
         ExitCode: 1

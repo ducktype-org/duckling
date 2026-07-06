@@ -4,7 +4,7 @@ PreCase: |+
   @{duck_exe} init foo_but_different_dir --name foo
   @{duck_exe} -C foo sync
 Tests:
-  sync:
+  duck/sync/would-overwrite-error:
     Description: 
     Cases:
       sync:
