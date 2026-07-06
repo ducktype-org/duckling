@@ -69,9 +69,9 @@ namespace vm::builtins {
 	};
 
 	/**
-	 * @brief Placeholder parameter type used for a builtin argument whose type is checked by a
-	 * custom verifier (see `getBuiltinArgVerifier`) rather than by exact name match. It only
-	 * contributes to the parameter count; it is never resolved as a real type.
+	 * @brief Placeholder parameter type used for a builtin argument whose type is checked by the
+	 * builtin's own `arg_verifier` rather than by exact name match. It only contributes to the
+	 * parameter count; it is never resolved as a real type.
 	 */
 	inline constexpr std::string_view VERIFIER_CHECKED_PARAM = "$checked";
 
@@ -84,6 +84,27 @@ namespace vm::builtins {
 	using BuiltinArgVerifier = base::Optional<std::string> (*)(
 		const std::vector<base::CRef<code::valid_type::ValidType>>& arg_types
 	);
+
+	/**
+	 * @brief Full description of a builtin function: its bytecode-visible name, its signature,
+	 * and an optional custom argument verifier.
+	 */
+	struct BuiltinFunction {
+		base::StrID         name;
+		code::FuncSignature signature;
+		/// When set, validates the whole argument list instead of exact per-parameter type-name
+		/// matching. Parameters it covers use `VERIFIER_CHECKED_PARAM` as a placeholder.
+		BuiltinArgVerifier arg_verifier = nullptr;
+
+		BuiltinFunction(
+			base::StrID         name,
+			code::FuncSignature signature,
+			BuiltinArgVerifier  arg_verifier = nullptr
+		):
+			  name(name),
+			  signature(std::move(signature)),
+			  arg_verifier(arg_verifier) {}
+	};
 
 	/**
 	 * @brief Returns the argument verifier for a builtin, or nullptr if its arguments are checked
@@ -147,16 +168,15 @@ namespace vm::builtins {
 	);
 
 	/**
-	 * @brief Returns the map of builtin functions types with lazy initialization.
+	 * @brief Returns the map of builtin functions with lazy initialization.
 	 * @note Function types here should match HELIOS types.
 	 * The types used for the parameters and the return value are defined in the @file
 	 * bytecode/builtin_types.hpp file (like "i64", "i32").
 	 */
-	auto getBuiltinFunctions()
-		-> CRef<std::unordered_map<BuiltinFunctionID, std::pair<base::StrID, code::FuncSignature>>>;
+	auto getBuiltinFunctions() -> CRef<std::unordered_map<BuiltinFunctionID, BuiltinFunction>>;
 
 	inline CRef<code::FuncSignature> getBuiltinFunctionSignature(BuiltinFunctionID id) {
-		return &getBuiltinFunctions()->at(id).second;
+		return &getBuiltinFunctions()->at(id).signature;
 	}
 
 	base::Optional<CRef<code::FuncSignature>> getBuiltinFunctionSignature(base::StrID name);

@@ -334,106 +334,6 @@ namespace vm::builtins {
 		}
 	}
 
-	auto getBuiltinFunctions()
-		-> CRef<std::unordered_map<BuiltinFunctionID, std::pair<base::StrID, code::FuncSignature>>> {
-		static const std::unordered_map<BuiltinFunctionID, std::pair<base::StrID, code::FuncSignature>>
-			map{
-				{
-					BuiltinFunctionID::Abort,
-					{ base::StrID("abort"), code::FuncSignature({}, {}) },
-				},
-				{
-					BuiltinFunctionID::InputI64,
-					{ base::StrID("builtin_input_i64"),
-			          code::FuncSignature({ base::StrID("i64") }, {}) },
-				},
-				{
-					BuiltinFunctionID::OutputI64,
-					{ base::StrID("builtin_output_i64"),
-			          code::FuncSignature({ base::StrID("i64") }, { base::StrID("i64") }) },
-				},
-				{
-					BuiltinFunctionID::OutputI32,
-					{ base::StrID("builtin_output_i32"),
-			          code::FuncSignature({ base::StrID("i64") }, { base::StrID("i32") }) },
-				},
-				{
-					BuiltinFunctionID::OutputChar,
-					{ base::StrID("builtin_output_char"),
-			          code::FuncSignature({ base::StrID("i64") }, { base::StrID("i8") }) },
-				},
-				{
-					BuiltinFunctionID::OutputString,
-					{ base::StrID("builtin_strOutput_pptr"),
-			          code::FuncSignature({}, { base::StrID("ptr_string") }) },
-				},
-				{
-					BuiltinFunctionID::Stoi,
-					{
-						base::StrID("builtin_stoi_pptr"),
-						code::FuncSignature({ base::StrID("i64") }, { base::StrID("ptr_string") }),
-					},
-				},
-				{
-					BuiltinFunctionID::StartThread,
-					{ base::StrID("builtin_start_thread"),
-			          code::FuncSignature({ base::StrID("i64") }, {}) },
-				},
-				{
-					BuiltinFunctionID::JoinThread,
-					{ base::StrID("builtin_join_thread"),
-			          code::FuncSignature({ base::StrID("i64") }, { base::StrID("i64") }) },
-				},
-				{ BuiltinFunctionID::CreateMutex,
-			      { base::StrID("builtin_create_mutex"),
-			        code::FuncSignature({ base::StrID("mutex") }, {}) } },
-				{ BuiltinFunctionID::LockMutex,
-			      { base::StrID("builtin_lock_mutex"),
-			        code::FuncSignature({}, { base::StrID("mutex") }) } },
-				{ BuiltinFunctionID::UnlockMutex,
-			      { base::StrID("builtin_unlock_mutex"),
-			        code::FuncSignature({}, { base::StrID("mutex") }) } },
-				{ BuiltinFunctionID::DestroyMutex,
-			      { base::StrID("builtin_destroy_mutex"),
-			        code::FuncSignature({}, { base::StrID("mutex") }) } },
-				{ BuiltinFunctionID::CreateCV,
-			      { base::StrID("builtin_create_cv"),
-			        code::FuncSignature({ base::StrID("condition_variable") }, {}) } },
-				{ BuiltinFunctionID::WaitCV,
-			      { base::StrID("builtin_wait_cv"),
-			        code::FuncSignature(
-						{}, { base::StrID("condition_variable"), base::StrID("mutex") }
-					) } },
-				{ BuiltinFunctionID::NotifyCV,
-			      { base::StrID("builtin_notify_cv"),
-			        code::FuncSignature({}, { base::StrID("condition_variable") }) } },
-				{ BuiltinFunctionID::NotifyAllCV,
-			      { base::StrID("builtin_notify_all_cv"),
-			        code::FuncSignature({}, { base::StrID("condition_variable") }) } },
-				{
-					BuiltinFunctionID::DestroyCV,
-					{ base::StrID("builtin_destroy_cv"),
-			          code::FuncSignature({}, { base::StrID("condition_variable") }) },
-				},
-				{
-					BuiltinFunctionID::CptrRead,
-					{ base::StrID("builtin_cptr_read_pptr"),
-			          code::FuncSignature(
-						  {}, { base::StrID("cptr"), base::StrID(VERIFIER_CHECKED_PARAM) }
-					  ) },
-				},
-				{
-					BuiltinFunctionID::CptrWrite,
-					{ base::StrID("builtin_cptr_write_pptr"),
-			          code::FuncSignature(
-						  {}, { base::StrID("cptr"), base::StrID(VERIFIER_CHECKED_PARAM) }
-					  ) },
-				},
-			};
-
-		return &map;
-	}
-
 	namespace {
 		// Shared verifier for the `cptr` copy builtins: (cptr, pointer-to-any-type).
 		base::Optional<std::string> verifyCptrCopyArgs(
@@ -449,14 +349,108 @@ namespace vm::builtins {
 		}
 	}
 
+	auto getBuiltinFunctions() -> CRef<std::unordered_map<BuiltinFunctionID, BuiltinFunction>> {
+		static const std::unordered_map<BuiltinFunctionID, BuiltinFunction> map{
+			{
+				BuiltinFunctionID::Abort,
+				{ base::StrID("abort"), code::FuncSignature({}, {}) },
+			},
+			{
+				BuiltinFunctionID::InputI64,
+				{ base::StrID("builtin_input_i64"),
+			      code::FuncSignature({ base::StrID("i64") }, {}) },
+			},
+			{
+				BuiltinFunctionID::OutputI64,
+				{ base::StrID("builtin_output_i64"),
+			      code::FuncSignature({ base::StrID("i64") }, { base::StrID("i64") }) },
+			},
+			{
+				BuiltinFunctionID::OutputI32,
+				{ base::StrID("builtin_output_i32"),
+			      code::FuncSignature({ base::StrID("i64") }, { base::StrID("i32") }) },
+			},
+			{
+				BuiltinFunctionID::OutputChar,
+				{ base::StrID("builtin_output_char"),
+			      code::FuncSignature({ base::StrID("i64") }, { base::StrID("i8") }) },
+			},
+			{
+				BuiltinFunctionID::OutputString,
+				{ base::StrID("builtin_strOutput_pptr"),
+			      code::FuncSignature({}, { base::StrID("ptr_string") }) },
+			},
+			{
+				BuiltinFunctionID::Stoi,
+				{
+					base::StrID("builtin_stoi_pptr"),
+					code::FuncSignature({ base::StrID("i64") }, { base::StrID("ptr_string") }),
+				},
+			},
+			{
+				BuiltinFunctionID::StartThread,
+				{ base::StrID("builtin_start_thread"),
+			      code::FuncSignature({ base::StrID("i64") }, {}) },
+			},
+			{
+				BuiltinFunctionID::JoinThread,
+				{ base::StrID("builtin_join_thread"),
+			      code::FuncSignature({ base::StrID("i64") }, { base::StrID("i64") }) },
+			},
+			{ BuiltinFunctionID::CreateMutex,
+			  { base::StrID("builtin_create_mutex"),
+			    code::FuncSignature({ base::StrID("mutex") }, {}) } },
+			{ BuiltinFunctionID::LockMutex,
+			  { base::StrID("builtin_lock_mutex"),
+			    code::FuncSignature({}, { base::StrID("mutex") }) } },
+			{ BuiltinFunctionID::UnlockMutex,
+			  { base::StrID("builtin_unlock_mutex"),
+			    code::FuncSignature({}, { base::StrID("mutex") }) } },
+			{ BuiltinFunctionID::DestroyMutex,
+			  { base::StrID("builtin_destroy_mutex"),
+			    code::FuncSignature({}, { base::StrID("mutex") }) } },
+			{ BuiltinFunctionID::CreateCV,
+			  { base::StrID("builtin_create_cv"),
+			    code::FuncSignature({ base::StrID("condition_variable") }, {}) } },
+			{ BuiltinFunctionID::WaitCV,
+			  { base::StrID("builtin_wait_cv"),
+			    code::FuncSignature(
+					{}, { base::StrID("condition_variable"), base::StrID("mutex") }
+				) } },
+			{ BuiltinFunctionID::NotifyCV,
+			  { base::StrID("builtin_notify_cv"),
+			    code::FuncSignature({}, { base::StrID("condition_variable") }) } },
+			{ BuiltinFunctionID::NotifyAllCV,
+			  { base::StrID("builtin_notify_all_cv"),
+			    code::FuncSignature({}, { base::StrID("condition_variable") }) } },
+			{
+				BuiltinFunctionID::DestroyCV,
+				{ base::StrID("builtin_destroy_cv"),
+			      code::FuncSignature({}, { base::StrID("condition_variable") }) },
+			},
+			{
+				BuiltinFunctionID::CptrRead,
+				{ base::StrID("builtin_cptr_read_pptr"),
+			      code::FuncSignature(
+					  {}, { base::StrID("cptr"), base::StrID(VERIFIER_CHECKED_PARAM) }
+				  ),
+			      &verifyCptrCopyArgs },
+			},
+			{
+				BuiltinFunctionID::CptrWrite,
+				{ base::StrID("builtin_cptr_write_pptr"),
+			      code::FuncSignature(
+					  {}, { base::StrID("cptr"), base::StrID(VERIFIER_CHECKED_PARAM) }
+				  ),
+			      &verifyCptrCopyArgs },
+			},
+		};
+
+		return &map;
+	}
+
 	BuiltinArgVerifier getBuiltinArgVerifier(BuiltinFunctionID id) {
-		switch (id) {
-		case BuiltinFunctionID::CptrRead:
-		case BuiltinFunctionID::CptrWrite:
-			return &verifyCptrCopyArgs;
-		default:
-			return nullptr;
-		}
+		return getBuiltinFunctions()->at(id).arg_verifier;
 	}
 
 	base::Optional<CRef<code::FuncSignature>> getBuiltinFunctionSignature(base::StrID name) {
@@ -471,8 +465,8 @@ namespace vm::builtins {
 			= [] {
 				  std::unordered_map<base::StrID, BuiltinFunctionID> indices;
 
-				  for (const auto& [id, func_pair]: *getBuiltinFunctions())
-					  indices.emplace(func_pair.first, id);
+				  for (const auto& [id, func]: *getBuiltinFunctions())
+					  indices.emplace(func.name, id);
 				  return indices;
 			  }();
 
