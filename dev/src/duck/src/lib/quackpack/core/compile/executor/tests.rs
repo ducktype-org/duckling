@@ -27,7 +27,7 @@ fn collects_packages() {
     };
     let graph = create_early_graph_from_bcx(&bcx).unwrap();
     let unit_graph = lower_early_graph(graph, &bcx);
-    for unit in unit_graph.any_units_order() {
+    for unit in unit_graph.units_sorted_by_id() {
         let expected: &[&str] = match unit.root_package().package().manifest().name().as_str() {
             "root" => &["bar", "baz", "foo", "root"],
             "foo" => &["baz", "foo"],
@@ -57,7 +57,7 @@ fn collects_packages_cycle() {
     };
     let graph = create_early_graph_from_bcx(&bcx).unwrap();
     let unit_graph = lower_early_graph(graph, &bcx);
-    for unit in unit_graph.any_units_order() {
+    for unit in unit_graph.units_sorted_by_id() {
         let expected: &[&str] = match unit.root_package().package().manifest().name().as_str() {
             "root" | "cycle" => &["bar", "cycle", "foo", "root"],
             "foo" => &["foo"],

@@ -60,7 +60,6 @@ impl BuildContext<'_, '_> {
 ///
 /// Right now, order of the vector is indeterministic.
 /// (To be precise, it's a normal DFS order).
-// @TODO: #2907 Make it deterministic? Or maybe sort the output by `id`/`name`?
 pub(crate) fn collect_packages(
     unit: &Unit,
     graph: &UnitGraph,
@@ -78,7 +77,7 @@ pub(crate) fn collect_packages(
         }
         visited.insert(current.clone());
         result.push(current.multipackage_schema_package(graph));
-        for dep_id in current.deps_by_unit_id() {
+        for dep_id in current.deps_sorted_by_unit_id() {
             let dep = graph.unit_for(*dep_id);
             dfs(dep, graph, result, visited);
         }
@@ -136,7 +135,7 @@ pub(crate) fn get_deps_outputs(
         result: &mut Vec<(Unit, PathBuf)>,
         visited: &mut HashSet<Unit>,
     ) {
-        for dep_id in current.deps_by_unit_id() {
+        for dep_id in current.deps_sorted_by_unit_id() {
             let dep = graph.unit_for(*dep_id);
             if visited.contains(dep) {
                 continue;

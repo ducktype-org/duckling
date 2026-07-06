@@ -15,7 +15,7 @@ namespace compiler::helios::defgen {
 		return ctx.query<QueryGeneratedSymbol>({
 			.name = base::StrID("__destruct"),
 			.generated_symbol_data
-			= GeneratedSymbolData{ GeneratedSymbolData::DefaultDestructor{ type } },
+			= Method{ .owner_type = type, .kind = Method::Kind::DefaultDestructor },
 		});
 	}
 

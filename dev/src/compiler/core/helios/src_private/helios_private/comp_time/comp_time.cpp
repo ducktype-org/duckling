@@ -3,11 +3,13 @@
 #include <ctv/ctv.hpp>
 #include <ctv/numeric_value.hpp>
 #include <diagnostic_interactive/placeholder.hpp>
+#include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/includes/basic.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/mangler/mangler.hpp>
 #include <helios/queries/function_queries.hpp>
 #include <helios/queries/queries.hpp>
+#include <helios/symbols/lang_primitives.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios_private/comp_time/vm_evaluator.hpp>
@@ -26,6 +28,7 @@
 #include <cmath>
 #include <ranges>
 #include <type_traits>
+#include <unordered_set>
 
 namespace compiler::helios {
 	using namespace ctv;
@@ -495,6 +498,10 @@ namespace compiler::helios {
 								return ctv::CompileTimeValue{ tsh::SymbolType<>::withDefaults(
 									ctx.query<tsh::QueryCPointerType>({ val })
 								) };
+							case Slice:
+								return ctv::CompileTimeValue{ tsh::SymbolType<>::withDefaults(
+									ctx.query<tsh::QuerySliceType>({ val })
+								) };
 							default:
 								ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 									"Evaluation of this unary operator at compile "
@@ -813,11 +820,35 @@ namespace compiler::helios {
 				= &ctx.query<QueryTransitiveFunctionCalls>(function_sym_id)->valueOrThrow();
 
 			auto mangled_name_function_to_call
-				= ctx.query<mangler::QueryMangledSymbol>({ function_sym_id });
+				= ctx.query<mangler::QueryMangledSymbol>({ .symbol_key = function_sym_id });
+
+			std::vector<SymID>        all_dependencies;
+			std::unordered_set<SymID> seen_dependencies;
+			auto                      add_dependencies = [&](const std::vector<SymID>& deps) {
+                for (const SymID& func_id: deps)
+                    if (seen_dependencies.insert(func_id).second)
+                        all_dependencies.push_back(func_id);
+			};
+			add_dependencies(*dependencies);
+
+			// Some dependencies are injected by MIR lowering rather than being present in the HOUT,
+			// so they are invisible to the HOUT-level transitive call collection. In particular
+			// array/slice bounds checks emit a call to `panic`, thus we must load it into the VM as
+			// well.
+			if (frontend::getModuleByAbsolutePath(
+					ctx, base::StrID("core"), { base::StrID("panicking") }
+				)) {
+				auto panic_sym
+					= ctx.query<QueryLanguagePrimitiveSymID>({ LanguagePrimitive::Panic })
+				          ->valueOrThrow();
+				Ref panic_dependencies
+					= &ctx.query<QueryTransitiveFunctionCalls>(panic_sym)->valueOrThrow();
+				add_dependencies(*panic_dependencies);
+			}
 
 			// temporary hout unit used to lower functions to LIR
 			HOUTUnit hout_unit;
-			for (const SymID& func_id: *dependencies) {
+			for (const SymID& func_id: all_dependencies) {
 				auto& hout_func = ctx.query<QueryCodeOfFun>(func_id)->valueOrThrow();
 				hout_unit.functions.emplace_back(&hout_func);
 			}
@@ -827,7 +858,7 @@ namespace compiler::helios {
 			// Note: the assumptions bellow might change,
 			// for example when we will add consts to comp time.
 			CORE_ASSERT(
-				lir_unit.lir_functions.size() == dependencies->size(),
+				lir_unit.lir_functions.size() == all_dependencies.size(),
 				"Number of lir functions should be the same as number of dependencies collected."
 			);
 			CORE_ASSERT(
