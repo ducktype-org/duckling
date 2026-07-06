@@ -161,15 +161,15 @@ private:
 		return execution_position.instr_number;
 	}
 
-	template<typename FiedDataType>
-	FiedDataType getVMValueRefData(const SharedBox<vm::IVmValueRef>& vmvalue_ref) {
+	template<typename FieldDataType>
+	FieldDataType getVMValueRefData(const SharedBox<vm::IVmValueRef>& vmvalue_ref) {
 		auto data_opt = vmvalue_ref->readData();
 		assertTrue(data_opt.has_value(), "VMValueRef: Referenced memory is dead");
-		return std::get<FiedDataType>(data_opt.value());
+		return std::get<FieldDataType>(data_opt.value());
 	}
 
-	template<typename FiedDataType>
-	FiedDataType getStructField(
+	template<typename FieldDataType>
+	FieldDataType getStructField(
 		vm::interpreted_data_variant::Data data_data, base::StrID type_id, base::StrID field_name
 	) {
 		auto field_index = data_data.field_name_map[field_name];
@@ -179,7 +179,7 @@ private:
 			type_id,
 			"Variable type is not correct for field " + field_name.str()
 		);
-		return getVMValueRefData<FiedDataType>(field.value);
+		return getVMValueRefData<FieldDataType>(field.value);
 	}
 
 	/**

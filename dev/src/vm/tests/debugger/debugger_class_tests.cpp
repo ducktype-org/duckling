@@ -383,10 +383,9 @@ private:
 		ASSERT_EQUAL_PRINT("null", info.frame_vars[2].value->str());       // arg1
 		ASSERT_EQUAL_PRINT("<pointer>", info.frame_vars[3].value->str());  // struct_pointer
 		ASSERT_EQUAL_PRINT("<pointer>", info.frame_vars[4].value->str());  // dyntable_pointer
-		ASSERT_EQUAL_PRINT(
-			"<pointer>", info.frame_vars[5].value->str()
-		);  // fixtable_pointer		ASSERT_EQUAL_PRINT("<pointer>", info.frame_vars[6].value->str());
-		ASSERT_EQUAL_PRINT("<pointer>", info.frame_vars[7].value->str());  // variant_pointer
+		ASSERT_EQUAL_PRINT("<pointer>", info.frame_vars[5].value->str());  // fixtable_pointer
+		ASSERT_EQUAL_PRINT("<pointer>", info.frame_vars[6].value->str());  // variant_pointer
+		ASSERT_EQUAL_PRINT("<pointer>", info.frame_vars[7].value->str());  // variant_data_pointer
 		ASSERT_EQUAL_PRINT("42", info.frame_vars[8].value->str());         // new_variant_data_value
 
 		// Step test

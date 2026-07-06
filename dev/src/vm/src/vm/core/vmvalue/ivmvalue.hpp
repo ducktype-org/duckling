@@ -8,7 +8,11 @@
 #include <vm/core/vmvalue/ivmvalueref.hpp>
 #include <vm/utils/interpret.hpp>
 
+#include <json/json.hpp>
+
+#include <iomanip>
 #include <ostream>
+#include <sstream>
 
 namespace vm {
 	/**
@@ -81,7 +85,7 @@ namespace vm {
 				offset + sizeof(T) <= static_cast<usize>(getDataSize()),
 				"VmValue: Out of bounds write"
 			);
-			return vm::safeWriteBytes<T>(getBytes(), value);
+			return vm::safeWriteBytes<T>(getBytes(), value, offset);
 		}
 	};
 }
