@@ -1,3 +1,5 @@
+#include "backends/llvm_private/abi_converter.hpp"
+
 #include <llvm_helpers/llvm_helpers.hpp>
 
 #include <mutex>
@@ -377,10 +379,6 @@ namespace compiler::backend_llvm {
 		}
 		CORE_UNREACHABLE();
 	}
-
-	// Function-call and prototype lowering (getFunType, getCallingConvFromABI,
-	// getOrInsertFunctionPrototypeFromLiteral, ...) lives in call_lowering.{hpp,cpp}. That is
-	// where the C ABI argument/return lowering will grow.
 
 	/**
 	 * @brief This only inserts a global variable declaration if it doesn't exist.
@@ -898,20 +896,134 @@ namespace compiler::backend_llvm {
 			return module->getOrInsertFunction(name, llvm::FunctionType::get(ret_type, args, false));
 		}
 
-		llvm::CallInst* lowerCallCAbiInstruction(
-			const lir::Instruction& lir_instruction, llvm::IRBuilder<>& builder, const lir::LIRAbi::CAbi& c_abi
+		llvm::Value* lowerCallCAbiInstruction(
+			const lir::Instruction&  lir_instruction,
+			llvm::IRBuilder<>&       builder,
+			const lir::LIRAbi::CAbi& c_abi
 		) {
+			namespace cc = abi::calling_conv;
+
 			const auto function_literal
 				= lir_instruction.arguments.at(0).get<lir::FunctionLiteral>();
-			
-			for (int i{0}; i < function_literal.parameter_layouts.size(); i++) {
-				auto& lir_arg = lir_instruction.arguments.at(i + 1);
+
+			auto&                   ctx         = builder.getContext();
+			const llvm::DataLayout& data_layout = module->getDataLayout();
+
+			// Call-site parameter attributes, keyed by the LLVM argument index (which is not the
+			// same as the source parameter index because an sret pointer may be prepended).
+			std::vector<std::pair<u32, llvm::Attribute>> attributes;
+			std::vector<llvm::Value*>                    args;
+
+			// memcpy `type`-sized bytes from `src` to `dst`, using the ABI alignment of `type`.
+			auto memcpy_typed = [&](llvm::Value* dst, llvm::Value* src, llvm::Type* type) {
+				const auto size  = data_layout.getTypeAllocSize(type);
+				const auto align = data_layout.getABITypeAlign(type);
+				builder.CreateMemCpy(dst, align, src, align, size);
+			};
+
+			// Reinterpret the bytes behind `src_value` as `desired_type`:
+			// Accept the `src_value` and `src_type` and get the value of a `desired_type`
+			// that is mem-copied under the hood.
+			auto copy_value_to_type
+				= [&](llvm::Value* src_val, llvm::Type* src_type, llvm::Type* desired_type
+			      ) -> llvm::Value* {
+				auto* alloca_src = builder.CreateAlloca(src_type, nullptr, "tmp_coerce_src");
+				builder.CreateStore(src_val, alloca_src);
+				auto* dst = builder.CreateAlloca(desired_type, nullptr, "tmp_reinterpret");
+				memcpy_typed(dst, alloca_src, desired_type);
+				return builder.CreateLoad(desired_type, dst);
+			};
+
+			auto& return_cc = c_abi.function_info.return_info;
+
+			// The LLVM type of the original (un-coerced) return value.
+			llvm::Type* return_original_type = abiTypeToLLVMType(ctx, *return_cc.original_type);
+
+			// Storage for the returned value when it is returned indirectly (sret). Filled in below.
+			llvm::Value* sret_slot = nullptr;
+
+			if (return_cc.passed_as_param) {
+				CORE_ASSERT(
+					v_matches(return_cc.info.kind, cc::ArgInfo::ByPointer),
+					"When passing as param expected calling conv info is ByPointer"
+				);
+				// The callee writes the result through a hidden pointer parameter. Allocate a slot
+				// of the original type and pass its address as the first argument.
+				sret_slot = builder.CreateAlloca(return_original_type, nullptr, "sret_slot");
+				attributes.emplace_back(
+					u32(args.size()),
+					llvm::Attribute::getWithStructRetType(ctx, return_original_type)
+				);
+				args.push_back(sret_slot);
+			}
+
+			for (usize i{ 0 }; i < function_literal.parameter_layouts->size(); i++) {
+				auto& lir_arg  = lir_instruction.arguments.at(i + 1);
 				auto& abi_info = c_abi.function_info.param_info.at(i);
 
+				llvm::Type* original_type = abiTypeToLLVMType(ctx, *abi_info.original_type);
+
 				variant_match(abi_info.info.kind) {
-					variant_case(abi::AbiInfo::)
+					variant_case(cc::ArgInfo::ByValue, data) {
+						llvm::Type* coerce_type = abiTypeToLLVMType(ctx, data.coerce_to_type);
+
+						if (coerce_type == original_type) {
+							// No coercion needed – pass the value directly.
+							args.push_back(loadLIRValue(lir_arg, builder));
+						} else {
+							// Coerce by reinterpreting the bytes: store the original value into a
+							// temporary, then load it back with the coerced type.
+							auto value = loadLIRValue(lir_arg, builder);
+							args.push_back(copy_value_to_type(value, original_type, coerce_type));
+						}
+					}
+					variant_case(cc::ArgInfo::ByPointer, data) {
+						// Pass a pointer to the argument's storage.
+						auto* ptr = loadLIRValueToPointer(lir_arg, builder);
+						if (data.by_val) {
+							attributes.emplace_back(
+								u32(args.size()),
+								llvm::Attribute::getWithByValType(ctx, original_type)
+							);
+						}
+						args.push_back(ptr);
+					}
 				}
 			}
+
+			auto callee = getOrInsertFunctionPrototypeFromLiteral(module, function_literal);
+
+			llvm::CallInst* call_instruction = builder.CreateCall(callee, args);
+
+			// Apply the collected call-site parameter attributes.
+			for (const auto& [idx, attr]: attributes) call_instruction->addParamAttr(idx, attr);
+
+			// Nothing more to do if the call produces no result.
+			if (not lir_instruction.output.has_value()) return call_instruction;
+
+			// Reconstruct and return the original-typed return value (the caller stores it).
+			llvm::Value* result_value = nullptr;
+
+			if (return_cc.passed_as_param) {
+				// Result was written through the sret pointer – just load it back.
+				result_value = builder.CreateLoad(return_original_type, sret_slot);
+			} else {
+				variant_match(return_cc.info.kind) {
+					variant_case(cc::ArgInfo::ByValue, data) {
+						llvm::Type* coerce_type = abiTypeToLLVMType(ctx, data.coerce_to_type);
+						if (coerce_type == return_original_type) {
+							result_value = call_instruction;
+						} else {
+							result_value = copy_value_to_type(call_instruction, coerce_type, return_original_type);
+						}
+					}
+					variant_case(cc::ArgInfo::ByPointer, data) {
+						result_value = builder.CreateLoad(return_original_type, call_instruction);
+					}
+				}
+			}
+
+			return result_value;
 		}
 
 		/**
@@ -926,40 +1038,27 @@ namespace compiler::backend_llvm {
 		 * @param builder The IRBuilder positioned at the call site.
 		 * @return The emitted call instruction.
 		 */
-		llvm::CallInst* lowerCallInstruction(
+		llvm::Value* lowerCallInstruction(
 			const lir::Instruction& lir_instruction, llvm::IRBuilder<>& builder
 		) {
-
 			const auto function_literal
 				= lir_instruction.arguments.at(0).get<lir::FunctionLiteral>();
 
-			if(auto c_abi = std::get_if<lir::LIRAbi::CAbi>(&function_literal.abi.value)) {
+			if (auto c_abi = std::get_if<lir::LIRAbi::CAbi>(&function_literal.abi.value))
 				return lowerCallCAbiInstruction(lir_instruction, builder, *c_abi);
-			}
-			CORE_ASSERT(v_matches(function_literal.abi.value, lir::LIRAbi::DefaultAbi), "Non default abi lowering.");
 
-			// Load the argument values (everything after the callee).
+			// Here and below is the Default abi handling
+			CORE_ASSERT(
+				v_matches(function_literal.abi.value, lir::LIRAbi::DefaultAbi),
+				"Non default abi lowering."
+			);
+
 			std::vector<llvm::Value*> args;
 			args.reserve(lir_instruction.arguments.size() - 1);
 			for (usize i = 1; i < lir_instruction.arguments.size(); i++)
 				args.push_back(loadLIRValue(lir_instruction.arguments.at(i), builder));
 
 			auto callee = getOrInsertFunctionPrototypeFromLiteral(module, function_literal);
-
-			// If the function uses C ABI, we need to pass structs by pointer.
-			std::vector<usize> byval_indices{};
-			if (std::holds_alternative<lir::LIRAbi::CAbi>(function_literal.abi.value)) {
-				for (usize i = 0; i < function_literal.parameter_layouts->size(); i++) {
-					if (const auto param_layout = function_literal.parameter_layouts->at(i);
-					    param_layout->is<tsl::StringTypeLayout>()) {
-						byval_indices.push_back(i);
-						const auto str_type = typeFromLayout(module, param_layout);
-						const auto arg_ptr  = builder.CreateAlloca(str_type);
-						builder.CreateStore(args.at(i), arg_ptr);
-						args.at(i) = arg_ptr;
-					}
-				}
-			}
 
 			llvm::CallInst* call_instruction = builder.CreateCall(callee, args);
 
@@ -969,14 +1068,6 @@ namespace compiler::backend_llvm {
 					"call to non void function without output "
 					"– this may be valid, feel free "
 					"to remove assertion if the compiler internals change."
-				);
-			}
-
-			for (const auto byval_idx: byval_indices) {
-				const auto arg_type
-					= typeFromLayout(module, function_literal.parameter_layouts->at(byval_idx));
-				call_instruction->addParamAttr(
-					u32(byval_idx), llvm::Attribute::getWithByValType(context, arg_type)
 				);
 			}
 
@@ -1245,10 +1336,10 @@ namespace compiler::backend_llvm {
 			case Call: {
 				CORE_ASSERT(lir_instruction.arguments.size() > 0, "call instruction without callee");
 
-				llvm::CallInst* call_instruction = lowerCallInstruction(lir_instruction, builder);
+				llvm::Value* call_value = lowerCallInstruction(lir_instruction, builder);
 
 				if (lir_instruction.output.has_value())
-					storeOutput(lir_instruction.output.value(), call_instruction, builder);
+					storeOutput(lir_instruction.output.value(), call_value, builder);
 
 				break;
 			}
