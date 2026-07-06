@@ -162,8 +162,15 @@ namespace abi::calling_conv {
 		return types::structType(std::move(fields));
 	}
 
+#define ARG_ENTRY(arg_info) \
+	ArgEntry { .info = arg_info, .original_type = original_type }
+#define RETURN_ENTRY(ret_info, passed_as_param_val)                                              \
+	ReturnEntry {                                                                                \
+		.info = ret_info, .passed_as_param = passed_as_param_val, .original_type = original_type \
+	}
+
 	FunctionInfo X86_64ABIInfo::computeInfo(const FunctionType& ft) const {
-		auto compute_arg_entry = [&](const types::AbiTypeRef& original_type) {
+		auto compute_arg_entry = [&](const types::AbiTypeCRef& original_type) {
 			auto size_align = layout::sizeAlignOf(myTargetABI(), *original_type);
 
 			// Fast path for simple types
@@ -175,26 +182,25 @@ namespace abi::calling_conv {
 					types::BoolType,
 					types::PointerType
 				))
-				return ArgEntry{ .info = ArgInfo::byValue(types::cloneAbiType(*original_type)) };
+				return ARG_ENTRY(ArgInfo::byValue(types::cloneAbiType(*original_type)));
 
 			if (size_align.size <= Bytes(16)) {
 				layout::ComputedLayout expanded_layout;
 				auto flattened_types = flattenType(myTargetABI(), *original_type, expanded_layout);
 				auto type = combineToLowHighStruct(myTargetABI(), flattened_types, expanded_layout);
-				return ArgEntry{ .info = ArgInfo::byValue(std::move(type)) };
+				return ARG_ENTRY(ArgInfo::byValue(std::move(type)));
 			} else {
-				return ArgEntry{ .info = ArgInfo::byPointer(true) };
+				return ARG_ENTRY(ArgInfo::byPointer(true));
 			}
 		};
-		auto compute_return_entry = [&](const types::AbiTypeRef& original_type) {
+		auto compute_return_entry = [&](const types::AbiTypeCRef& original_type) {
 			auto arg_info        = compute_arg_entry(original_type);
 			bool passed_as_param = false;
 			if (auto by_pointer = std::get_if<ArgInfo::ByPointer>(&arg_info.info.kind)) {
 				passed_as_param    = true;
 				by_pointer->by_val = false;
 			}
-			return ReturnEntry{ .info            = std::move(arg_info.info),
-				                .passed_as_param = passed_as_param };
+			return RETURN_ENTRY(std::move(arg_info.info), passed_as_param);
 		};
 		return FunctionInfo{ .return_info = compute_return_entry(ft.return_type),
 			                 .param_info = ft.param_types | std::views::transform(compute_arg_entry)
@@ -228,7 +234,7 @@ namespace abi::calling_conv {
 			return ArgInfo::byValue(types::structType(std::move(fields)));
 		};
 
-		auto compute_arg_entry = [&](const types::AbiTypeRef& original_type) -> ArgEntry {
+		auto compute_arg_entry = [&](const types::AbiTypeCRef& original_type) -> ArgEntry {
 			// Fast path for simple types
 			if (v_matches(
 					original_type->value,
@@ -238,22 +244,22 @@ namespace abi::calling_conv {
 					types::BoolType,
 					types::PointerType
 				))
-				return ArgEntry{ .info = ArgInfo::byValue(types::cloneAbiType(*original_type)) };
+				return ARG_ENTRY(ArgInfo::byValue(types::cloneAbiType(*original_type)));
 
 			[[maybe_unused]] layout::ComputedLayout computed_layout;
 			auto flattened_types = flattenType(myTargetABI(), *original_type, computed_layout);
 			if (isHomogeneous(flattened_types))
-				return ArgEntry{ homogeneous_arg_info(std::move(flattened_types)) };
+				return ARG_ENTRY(homogeneous_arg_info(std::move(flattened_types)));
 
 			if (computed_layout.size <= Bytes(8))
-				return ArgEntry{ .info = ArgInfo::byValue(types::intType(64, false)) };
+				return ARG_ENTRY(ArgInfo::byValue(types::intType(64, false)));
 			else if (computed_layout.size <= Bytes(16))
-				return ArgEntry{ two_words_arg_info() };
+				return ARG_ENTRY(two_words_arg_info());
 			else
-				return ArgEntry{ .info = ArgInfo::byPointer(false) };
+				return ARG_ENTRY(ArgInfo::byPointer(false));
 		};
 
-		auto compute_return_entry = [&](const types::AbiTypeRef& original_type) -> ReturnEntry {
+		auto compute_return_entry = [&](const types::AbiTypeCRef& original_type) -> ReturnEntry {
 			// Fast path for simple types
 			if (v_matches(
 					original_type->value,
@@ -263,26 +269,25 @@ namespace abi::calling_conv {
 					types::BoolType,
 					types::PointerType
 				))
-				return ReturnEntry{ .info = ArgInfo::byValue(types::cloneAbiType(*original_type)),
-					                .passed_as_param = false };
-            
+				return RETURN_ENTRY(ArgInfo::byValue(types::cloneAbiType(*original_type)), false);
+
 
 			[[maybe_unused]] layout::ComputedLayout computed_layout;
 			auto flattened_types = flattenType(myTargetABI(), *original_type, computed_layout);
 			if (isHomogeneous(flattened_types))
-				return ReturnEntry{ .info = homogeneous_arg_info(std::move(flattened_types)),
-					                .passed_as_param = false };
+				return RETURN_ENTRY(homogeneous_arg_info(std::move(flattened_types)), false);
 
 			if (computed_layout.size <= Bytes(8)) {
-				return ReturnEntry{ .info            = ArgInfo::byValue(types::intType(
-                                        base::bytes2bits(computed_layout.size).asInt(), false
-                                    )),
-					                .passed_as_param = false };
+				return RETURN_ENTRY(
+					ArgInfo::byValue(
+						types::intType(base::bytes2bits(computed_layout.size).asInt(), false)
+					),
+					false
+				);
 			} else if (computed_layout.size <= Bytes(16)) {
-				return ReturnEntry{ .info = two_words_arg_info(), .passed_as_param = false };
+				return RETURN_ENTRY(two_words_arg_info(), false);
 			} else {
-				// Double check this.
-				return ReturnEntry{ .info = ArgInfo::byPointer(false), .passed_as_param = true };
+				return RETURN_ENTRY(ArgInfo::byPointer(false), true);
 			}
 		};
 
@@ -298,8 +303,8 @@ namespace abi::calling_conv {
 			return X86_64ABIInfo{}.computeInfo(ft);
 		case Arch::AArch64:
 			return AArch64ABIInfo{}.computeInfo(ft);
-        default:
-            CORE_UNREACHABLE();
+		default:
+			CORE_UNREACHABLE();
 		}
 	}
 }

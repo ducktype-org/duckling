@@ -62,7 +62,7 @@ namespace abi::types {
 	 * cached `QueryCAbiTypeOf` result for a sub-type without cloning it.
 	 */
 	using AbiTypePtr = base::BoxOrCRef<AbiType>;
-	using AbiTypeRef = base::CRef<AbiType>;
+	using AbiTypeCRef = base::CRef<AbiType>;
 
 	/**
 	 * @brief A fixed-size C array. `count` must be strictly positive;

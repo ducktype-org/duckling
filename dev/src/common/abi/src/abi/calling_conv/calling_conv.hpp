@@ -39,11 +39,13 @@ namespace abi::calling_conv {
 
 	struct ArgEntry {
 		ArgInfo info;
+        types::AbiTypeCRef original_type;
 	};
 
 	struct ReturnEntry {
 		ArgInfo info;
 		bool    passed_as_param;
+        types::AbiTypeCRef original_type;
 	};
 
 	struct FunctionInfo {
@@ -52,8 +54,8 @@ namespace abi::calling_conv {
 	};
 
 	struct FunctionType {
-		types::AbiTypeRef              return_type;
-		std::vector<types::AbiTypeRef> param_types;
+		types::AbiTypeCRef              return_type;
+		std::vector<types::AbiTypeCRef> param_types;
 	};
 
 	class TargetInfo {

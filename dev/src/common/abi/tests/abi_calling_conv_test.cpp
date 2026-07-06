@@ -40,14 +40,14 @@ namespace {
 	}
 
 	/**
-	 * FunctionType stores AbiTypeRef (non-owning CRef). The arena keeps the
+	 * FunctionType stores AbiTypeCRef (non-owning CRef). The arena keeps the
 	 * pointed-to AbiTypes alive with stable addresses (deque never relocates).
 	 */
 	class TypeArena {
 		std::deque<at::AbiType> store;
 
 	public:
-		at::AbiTypeRef add(at::AbiType type) {
+		at::AbiTypeCRef add(at::AbiType type) {
 			store.push_back(std::move(type));
 			return { &store.back() };
 		}
