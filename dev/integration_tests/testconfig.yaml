@@ -18,7 +18,7 @@ is_jit_enabled: "cmake -L -N @{build_dir} | grep JIT_ENABLED | cut -d \"=\" -f 2
 # Per-case temporary environment (opt-in). A subtree that needs a scratch
 # directory defines `Env: { DIT_TMP_DIR: "@{new_tmp_dir}" }` and then uses
 # the helpers below; tests set `tmp_env_files` to the files they need copied.
-new_tmp_dir: "mkdir -p /tmp/dit && mktemp -d -p /tmp/dit case-XXXXXXXX"
+new_tmp_dir: "mkdir -p /tmp/dit && realpath $(mktemp -d -p /tmp/dit case-XXXXXXXX)"
 tmp_env_tool: "python3 @{dev_dir}/integration_tests/helpers/tmp_env.py"
 tmp_env_files: ""
 make_tmp_env: "@{tmp_env_tool} make @{tmp_env_files}"
