@@ -1,18 +1,21 @@
+/**
+ * @file calling_conv.hpp
+ * @author Wojciech Rzeplinski
+ */
 #include <abi/target.hpp>
 #include <abi/type_system/type.hpp>
 
 #include <variant>
 
 /**
- * @brief Calling convention library.
+ * @brief Calling convention library for the C/C++ calling convention for the LLVM.
  * Meant as our replacement of the
  * https://github.com/llvm/llvm-project/tree/main/llvm/include/llvm/ABI library. Once the LLVM
  * version supports for AARCH64 and Windows we could replace it. We don't support: C++ conventions,
- * unions, vector registers, win32, packed structs.
+ * unions, vector registers, win32, packed structs (but the logic is written in a way the
+ * packed struct are supported very easily).
  */
 namespace abi::calling_conv {
-	enum class CallingConv { C };
-
 	class ArgInfo {
 	public:
 		struct ByPointer {
@@ -23,17 +26,15 @@ namespace abi::calling_conv {
 
 		struct ByValue {
 			types::AbiType coerce_to_type;
-			bool                 sign_ext;
-			bool                 zero_ext;
+			bool           sign_ext;
+			bool           zero_ext;
 		};
 
 		using Kind = std::variant<ByPointer, ByValue>;
 		Kind kind;
 
 		static ArgInfo byPointer(bool by_val);
-		static ArgInfo byValue(
-			types::AbiType type, bool sign_ext = false, bool zero_ext = false
-		);
+		static ArgInfo byValue(types::AbiType type, bool sign_ext = false, bool zero_ext = false);
 	};
 
 	struct ArgEntry {
@@ -63,14 +64,22 @@ namespace abi::calling_conv {
 	};
 
 	class X86_64ABIInfo final: public TargetInfo {
+	public:
 		[[nodiscard]] const TargetABI& myTargetABI() const final { return x86_64Linux(); }
 
 		[[nodiscard]] FunctionInfo computeInfo(const FunctionType& ft) const final;
 	};
 
 	class AArch64ABIInfo final: public TargetInfo {
+	public:
 		[[nodiscard]] const TargetABI& myTargetABI() const final { return aarch64Linux(); }
 
 		[[nodiscard]] FunctionInfo computeInfo(const FunctionType& ft) const final;
 	};
+
+    /**
+     * @brief Main entry point. Calculate the calling convention info about 
+     * a function based on the target and ABI types of a function.
+     */
+	FunctionInfo computeCallingConv(TargetABI& target, const FunctionType& ft);
 }

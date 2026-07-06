@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 
-namespace at = abi::type_system;
+namespace at = abi::types;
 namespace al = abi::layout;
 
 // Target presets and TargetABI/Arch moved from `abi::layout` to `abi`.

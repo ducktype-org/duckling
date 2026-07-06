@@ -4,6 +4,7 @@
 
 #include <abi/layout/compute_c_layout.hpp>
 
+#include "base/except/exceptions.hpp"
 #include "base/extend_cpp/variant_match.hpp"
 #include "base/types/bits_and_bytes.hpp"
 
@@ -24,17 +25,14 @@ namespace abi::calling_conv {
 	}
 
 	std::vector<types::AbiType> flattenType(
-		const TargetABI&            target,
-		const types::AbiType& type,
-		layout::ComputedLayout&     expanded_layout
+		const TargetABI& target, const types::AbiType& type, layout::ComputedLayout& expanded_layout
 	) {
 		std::vector<types::AbiType> result;
-		auto                              size_align = layout::sizeAlignOf(target, type);
-		expanded_layout.alignment                    = size_align.alignment;
-		expanded_layout.size                         = size_align.size;
+		auto                        size_align = layout::sizeAlignOf(target, type);
+		expanded_layout.alignment              = size_align.alignment;
+		expanded_layout.size                   = size_align.size;
 
-		auto flatten_rec
-			= [&](auto&& self, const types::AbiType& node, Bytes offset) -> void {
+		auto flatten_rec = [&](auto&& self, const types::AbiType& node, Bytes offset) -> void {
 			variant_match(node.value) {
 				variant_case(types::IntType, v) {
 					result.push_back({ v });
@@ -86,10 +84,14 @@ namespace abi::calling_conv {
 		}
 	}
 
+	/**
+	 * @brief Combine into struct with two fields
+	 * with the algorithm from x86-64 ABI.
+	 */
 	types::AbiType combineToLowHighStruct(
-		const TargetABI&                         target,
+		const TargetABI&                   target,
 		const std::vector<types::AbiType>& flattened,
-		const layout::ComputedLayout&            expanded_layout
+		const layout::ComputedLayout&      expanded_layout
 	) {
 		enum class Eightbyte { NoClass, Integer, Sse };
 
@@ -132,15 +134,14 @@ namespace abi::calling_conv {
 
 
 		std::vector<types::AbiTypePtr> fields;
-		Bytes                                current_offset{ 0 };
-		Bytes                                total_size = expanded_layout.field_offsets.back()
+		Bytes                          current_offset{ 0 };
+		Bytes                          total_size = expanded_layout.field_offsets.back()
 		                 + layout::sizeAlignOf(target, flattened.back()).size;
 		for (u64 i{ 0 }; i < 2; i++) {
 			switch (classes.at(i)) {
 			case Eightbyte::Sse: {
 				u64 float_width_bits = fp_used.at(i) <= 4 ? 32 : 64;
-				fields.push_back(types::makeBoxAbiType(types::floatType(float_width_bits
-				)));
+				fields.push_back(types::makeBoxAbiType(types::floatType(float_width_bits)));
 				break;
 			}
 			case Eightbyte::Integer: {
@@ -150,9 +151,7 @@ namespace abi::calling_conv {
 						  roundUpIntBytes(std::min(total_size - current_offset, Bytes(8)))
 					)
 				          .asInt();
-				fields.push_back(
-					types::makeBoxAbiType(types::intType(int_with_bits, false))
-				);
+				fields.push_back(types::makeBoxAbiType(types::intType(int_with_bits, false)));
 				break;
 			}
 			default:
@@ -167,10 +166,17 @@ namespace abi::calling_conv {
 		auto compute_arg_entry = [&](const types::AbiTypeRef& original_type) {
 			auto size_align = layout::sizeAlignOf(myTargetABI(), *original_type);
 
-			// Everything up to two eightbytes is classified per-eightbyte by
-			// flatten + combine, so a sub-8-byte float / {f32,f32} lands in SSE
-			// rather than an integer register. Only > 16 bytes is passed in memory.
-            // @TODO: verify this
+			// Fast path for simple types
+			if (v_matches(
+					original_type->value,
+					types::IntType,
+					types::FloatType,
+					types::CharType,
+					types::BoolType,
+					types::PointerType
+				))
+				return ArgEntry{ .info = ArgInfo::byValue(types::cloneAbiType(*original_type)) };
+
 			if (size_align.size <= Bytes(16)) {
 				layout::ComputedLayout expanded_layout;
 				auto flattened_types = flattenType(myTargetABI(), *original_type, expanded_layout);
@@ -195,9 +201,14 @@ namespace abi::calling_conv {
 			                             | std::ranges::to<std::vector>() };
 	}
 
+	/**
+	 * @brief Is homogeneous floating-point aggregate" (HFA) for Aarch64.
+	 */
 	bool isHomogeneous(const std::vector<types::AbiType>& types) {
 		if (types.size() > 4 or types.size() == 0) return false;
+
 		auto& first = types.at(0);
+		if (not base::holds<types::FloatType>(first.value)) return false;
 		for (u64 i{ 1 }; i < types.size(); i++)
 			if (first != types.at(i)) return false;
 		return true;
@@ -207,8 +218,7 @@ namespace abi::calling_conv {
 		auto homogeneous_arg_info = [&](std::vector<types::AbiType> types) {
 			std::vector<types::AbiTypePtr> fields;
 			fields.reserve(types.size());
-			for (auto&& type: types)
-				fields.emplace_back(types::makeBoxAbiType(std::move(type)));
+			for (auto&& type: types) fields.emplace_back(types::makeBoxAbiType(std::move(type)));
 			return ArgInfo::byValue(types::structType(std::move(fields)));
 		};
 		auto two_words_arg_info = [&]() {
@@ -218,7 +228,18 @@ namespace abi::calling_conv {
 			return ArgInfo::byValue(types::structType(std::move(fields)));
 		};
 
-		auto compute_arg_entry = [&](const types::AbiTypeRef& original_type) {
+		auto compute_arg_entry = [&](const types::AbiTypeRef& original_type) -> ArgEntry {
+			// Fast path for simple types
+			if (v_matches(
+					original_type->value,
+					types::IntType,
+					types::FloatType,
+					types::CharType,
+					types::BoolType,
+					types::PointerType
+				))
+				return ArgEntry{ .info = ArgInfo::byValue(types::cloneAbiType(*original_type)) };
+
 			[[maybe_unused]] layout::ComputedLayout computed_layout;
 			auto flattened_types = flattenType(myTargetABI(), *original_type, computed_layout);
 			if (isHomogeneous(flattened_types))
@@ -232,7 +253,20 @@ namespace abi::calling_conv {
 				return ArgEntry{ .info = ArgInfo::byPointer(false) };
 		};
 
-		auto compute_return_entry = [&](const types::AbiTypeRef& original_type) {
+		auto compute_return_entry = [&](const types::AbiTypeRef& original_type) -> ReturnEntry {
+			// Fast path for simple types
+			if (v_matches(
+					original_type->value,
+					types::IntType,
+					types::FloatType,
+					types::CharType,
+					types::BoolType,
+					types::PointerType
+				))
+				return ReturnEntry{ .info = ArgInfo::byValue(types::cloneAbiType(*original_type)),
+					                .passed_as_param = false };
+            
+
 			[[maybe_unused]] layout::ComputedLayout computed_layout;
 			auto flattened_types = flattenType(myTargetABI(), *original_type, computed_layout);
 			if (isHomogeneous(flattened_types))
@@ -256,5 +290,16 @@ namespace abi::calling_conv {
 		return FunctionInfo{ .return_info = compute_return_entry(ft.return_type),
 			                 .param_info = ft.param_types | std::views::transform(compute_arg_entry)
 			                             | std::ranges::to<std::vector>() };
+	}
+
+	FunctionInfo computeCallingConv(TargetABI& target, const FunctionType& ft) {
+		switch (target.triple.arch) {
+		case Arch::X86_64:
+			return X86_64ABIInfo{}.computeInfo(ft);
+		case Arch::AArch64:
+			return AArch64ABIInfo{}.computeInfo(ft);
+        default:
+            CORE_UNREACHABLE();
+		}
 	}
 }
