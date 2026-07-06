@@ -1,5 +1,5 @@
 import core.builtins.*;
 
-fun main() = {
+fun main() -> i64 = {
     return 0;
 }

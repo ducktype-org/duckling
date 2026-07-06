@@ -12,8 +12,6 @@
 #include <string>
 
 namespace compiler::ctv {
-	CompileTimeValue::CompileTimeValue() = default;
-
 	const CompileTimeValue::Storage& CompileTimeValue::getStorage() const { return value; }
 
 	base::Bit256 CompileTimeValue::queryUnstablePerfectHash() const {
