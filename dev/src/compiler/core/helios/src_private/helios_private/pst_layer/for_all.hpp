@@ -23,6 +23,10 @@ namespace compiler::helios {
 			query::Context& ctx, pst::Access<ElementT> element, const FunctionT& function,
 			const CutoffFunctionT& cutoff_function
 		) {
+			// Check if we should stop recursion before running the function, to allow cutoff function to skip
+			// some branches entirely. 
+			if (cutoff_function(element)) return base::OK;
+			
 			if (element->getElementKind() == pst::ElementKind::Expand) {
 				auto expansion_result = ctx.query<QueryMacroExpansion>({
 					element.template dynamicCast<pst::Expand>().value(),
@@ -38,10 +42,6 @@ namespace compiler::helios {
 			}
 
 			base::OkBad result = base::OK;
-
-			// Check if we should stop recursion before running the function, to allow cutoff function to skip
-			// some branches entirely. 
-			if (cutoff_function(element)) return result;
 
 			// Run the function
 			function(element);
@@ -67,6 +67,7 @@ namespace compiler::helios {
 	/**
 	 * Runs given function for a PST element and all its subelements.
 	 * Performs recursive calls into macro expansions.
+	 * Skips subtrees for which the cutoff function returns true.
 	 *
 	 * @return If any query failed during the traversal, returns base::BAD. Otherwise, returns
 	 * base::OK.
