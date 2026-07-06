@@ -117,8 +117,6 @@ namespace compiler::lir {
 			return Operation::ListPush;
 		case mir::Operation::ListPop:
 			return Operation::ListPop;
-		case mir::Operation::ListLen:
-			return Operation::ListLen;
 		case mir::Operation::ZeroInitialize:
 			return Operation::ZeroInitialize;
 
@@ -591,7 +589,6 @@ namespace compiler::lir {
 					break;
 				}
 				case mir::Operation::AddressOf:
-				case mir::Operation::ListLen:
 				case mir::Operation::BoxAlloc:
 				case mir::Operation::IntegerAdd:
 				case mir::Operation::IntegerNeg:
@@ -649,7 +646,8 @@ namespace compiler::lir {
 					);
 					break;
 				}
-				case mir::Operation::DestructIf: {
+				case mir::Operation::DestructIf:
+				case mir::Operation::Destruct: {
 					const auto& to_destruct = mir_instruction.arguments.at(0).get<mir::MIRPlace>();
 					const auto& type        = to_destruct.type;
 

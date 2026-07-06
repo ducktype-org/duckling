@@ -18,7 +18,7 @@ fun printPrimitives(a: ref Primitives) -> () = {
     builtin_output_i64(if a.c then 1 else 0);   # 0
     builtin_output_char(a.d - '\0' + 'A');      # 'A'
     print(a.e);                 # ""
-    builtin_output_u64(len a.f);                # empty list -> 0
+    builtin_output_u64(a.f.length());                # empty list -> 0
 }
 
 fun printPrimitives(a: ref Primitives2) -> () = {
@@ -27,7 +27,7 @@ fun printPrimitives(a: ref Primitives2) -> () = {
     builtin_output_i64(if a.c then 1 else 0);   # 0
     builtin_output_char(a.d - '\0' + 'A');      # 'A'
     print(a.e);                 # ""
-    builtin_output_u64(len a.f);                # empty list -> 0
+    builtin_output_u64(a.f.length());                # empty list -> 0
 }
 
 fun printPrimitives(a: ref InitializedPrimitives) -> () = {
@@ -77,18 +77,18 @@ fun testPrimitives() -> () = {
     var a: Primitives; 
     printPrimitives(&a);
     # Check that the list is usable after default init.
-    a.f += 1;
-    a.f += 2;
-    a.f += 3;
-    builtin_output_u64(len a.f);
+    a.f.push(1);
+    a.f.push(2);
+    a.f.push(3);
+    builtin_output_u64(a.f.length());
     printSmallSeparator(); 
    
     printPrimitives(&g_a);
     # Check that the list is usable after default init.
-    g_a.f += 1;
-    g_a.f += 2;
-    g_a.f += 3;
-    builtin_output_u64(len g_a.f);
+    g_a.f.push(1);
+    g_a.f.push(2);
+    g_a.f.push(3);
+    builtin_output_u64(g_a.f.length());
     printSmallSeparator(); 
 
     var b: InitializedPrimitives;

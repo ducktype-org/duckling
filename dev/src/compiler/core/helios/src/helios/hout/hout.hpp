@@ -44,6 +44,8 @@ namespace compiler::helios {
 		struct ImplementationOf_QueryToStringMethod;
 		struct ImplementationOf_QueryDefaultDestructor;
 		struct ImplementationOf_QueryLengthMethod;
+		struct ImplementationOf_QueryPushMethod;
+		struct ImplementationOf_QueryPopMethod;
 	}
 
 	namespace code {
@@ -117,6 +119,8 @@ namespace compiler::helios {
 		friend defgen::ImplementationOf_QueryToStringMethod;
 		friend defgen::ImplementationOf_QueryDefaultDestructor;
 		friend defgen::ImplementationOf_QueryLengthMethod;
+		friend defgen::ImplementationOf_QueryPushMethod;
+		friend defgen::ImplementationOf_QueryPopMethod;
 		friend compiler::repl::ImplementationOf_QueryReplExpressionWrapper;
 		friend compiler::repl::ImplementationOf_QueryReplInstructionWrapper;
 		friend compiler::repl::ScriptMainWrapperBuilder;

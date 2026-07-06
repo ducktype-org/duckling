@@ -341,6 +341,12 @@ namespace compiler::helios::mangler {
 							variant_case(defgen::GeneratedSymbolData::LengthMethod, length_method) {
 								return "Hlength" + func(ctx, symbol_id) + "E";
 							}
+							variant_case(defgen::GeneratedSymbolData::PushMethod, push_method) {
+								return "Hpush" + func(ctx, symbol_id) + "E";
+							}
+							variant_case(defgen::GeneratedSymbolData::PopMethod, pop_method) {
+								return "Hpop" + func(ctx, symbol_id) + "E";
+							}
 							variant_case(
 								defgen::GeneratedSymbolData::ReplExpressionWrapper, repl_wrapper
 							) {
