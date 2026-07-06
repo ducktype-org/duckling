@@ -1,6 +1,5 @@
 #include "value_category.hpp"
 
-#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/symbols/symbol_kind.hpp>
 
 namespace compiler::tsh {

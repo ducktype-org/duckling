@@ -18,7 +18,6 @@
 #include <string_id/string_id.hpp>
 
 namespace compiler::helios {
-
 	/**
 	 * @brief Return all symbols currently stored by HELIOS.
 	 * @note: This should be used for tests and debug only,

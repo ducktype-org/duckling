@@ -15,7 +15,6 @@
 #include <helios/mangler/mangler.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/tsh/expression_type.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/symbol_type.hpp>
@@ -445,8 +444,8 @@ namespace compiler::helios {
 			auto       parameters  = std::vector<code::Parameter>{};
 			for (u32 i = 0; const auto& param_type: builtin_type.getParameterTypes()) {
 				const auto param_symbol = ctx.query<defgen::QueryGeneratedSymbol>({
-					base::StrID(base::strConcat("_", i).c_str()),
-					defgen::GeneratedSymbolData{
+					.name=base::StrID(base::strConcat("_", i).c_str()),
+					.generated_symbol_data=defgen::GeneratedSymbolData{
 						defgen::GeneratedSymbolData::Parameter{
 							.function_symbol = fun,
 							.parameter_index = i,
@@ -528,6 +527,12 @@ namespace compiler::helios {
 								return funDeclFromType(ctx, key);
 							}
 							variant_case(defgen::GeneratedSymbolData::LengthMethod, length_method) {
+								return funDeclFromType(ctx, key);
+							}
+							variant_case(defgen::GeneratedSymbolData::PushMethod, push_method) {
+								return funDeclFromType(ctx, key);
+							}
+							variant_case(defgen::GeneratedSymbolData::PopMethod, pop_method) {
 								return funDeclFromType(ctx, key);
 							}
 							variant_case_novalue(defgen::GeneratedSymbolData::BuiltinOperator) {

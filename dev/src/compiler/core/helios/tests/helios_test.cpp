@@ -19,7 +19,6 @@
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/query_type_symbol_data.hpp>
 #include <helios/symbols/symbol_abi.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <helios/tsh/mutability.hpp>
 #include <helios/tsh/queries/types.hpp>
@@ -866,10 +865,7 @@ private:
 			glob_data += hout->glob_data.size();
 		}
 
-		// @TODO: #2694 This should be 3, not 19, when toString methods
-		// for simple types are moved out of every HOUT unit.
-		// @TODO: #2424 When refactoring, add robust tests that the expected toString methods are added.
-		ASSERT_EQUAL_PRINT(functions, 19);
+		ASSERT_EQUAL_PRINT(functions, 3);
 		ASSERT_EQUAL(glob_data, 5);
 	}
 
@@ -887,10 +883,7 @@ private:
 			glob_data += hout->glob_data.size();
 		}
 
-		// @TODO: #2694 This should be 1, not 29 (1 + 2 * 14 + 1 (length)), when toString methods
-		// for simple types are moved out of every HOUT unit (there are two units in this test).
-		// @TODO: #2424 When refactoring, add robust tests that the expected toString methods are added.
-		ASSERT_EQUAL_PRINT(functions, 33);
+		ASSERT_EQUAL_PRINT(functions, 1);
 		ASSERT_EQUAL(glob_data, 5);
 	}
 
@@ -2008,23 +2001,22 @@ private:
 			ASSERT_TRUE(default_val != nullptr);
 		}
 		{
-			// l += 1;
+			// l.push(1);
 			auto& expr_stmt = dynamic_cast<const ExprStmt&>(*statements.at(1));
-			auto* push_expr = dynamic_cast<const ListPushExpr*>(expr_stmt.expr.get());
-			ASSERT_TRUE(push_expr != nullptr);
+			auto* call_expr = dynamic_cast<const CallExpr*>(expr_stmt.expr.get());
+			ASSERT_TRUE(call_expr != nullptr);
 		}
 		{
-			// l -= 1;
+			// l.pop(1);
 			auto& expr_stmt = dynamic_cast<const ExprStmt&>(*statements.at(2));
-			auto* pop_expr  = dynamic_cast<const ListPopExpr*>(expr_stmt.expr.get());
-			ASSERT_TRUE(pop_expr != nullptr);
+			auto* call_expr = dynamic_cast<const CallExpr*>(expr_stmt.expr.get());
+			ASSERT_TRUE(call_expr != nullptr);
 		}
 		{
-			// let l_len = len l;
-			auto& var_decl = dynamic_cast<const VariableStmt&>(*statements.at(3));
-			auto* len_expr = dynamic_cast<const UnaryOperatorExpr*>(var_decl.initial_value.get());
-			ASSERT_TRUE(len_expr != nullptr);
-			ASSERT_EQUAL(len_expr->operation, BuiltinUnary::Len);
+			// let l_len = l.length();
+			auto& var_decl  = dynamic_cast<const VariableStmt&>(*statements.at(3));
+			auto* call_expr = dynamic_cast<const CallExpr*>(var_decl.initial_value.get());
+			ASSERT_TRUE(call_expr != nullptr);
 		}
 		{
 			// l[0] = 42;

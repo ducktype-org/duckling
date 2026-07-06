@@ -8,7 +8,7 @@ sys.path.append(str(Path(__file__).resolve().parents[2]))
 
 from utilities import *
 
-root = Path.cwd() / "foo"
+root = project_root("foo")
 
 quackconfig = """metadata:
   name: foo

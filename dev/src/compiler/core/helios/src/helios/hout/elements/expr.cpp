@@ -11,7 +11,6 @@
 #include <helios/mangler/mangler.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/tsh/abstract_type.hpp>
 #include <helios/tsh/expression_type.hpp>
 #include <helios/tsh/queries.hpp>
@@ -49,6 +48,7 @@ namespace compiler::helios::code {
 	EXPR_VISITOR(AccessExpr)
 	EXPR_VISITOR(IndexExpr)
 	EXPR_VISITOR(SequenceExpr)
+	EXPR_VISITOR(MoveExpr)
 	EXPR_VISITOR(BoxOfExpr)
 	EXPR_VISITOR(RefOfExpr)
 	EXPR_VISITOR(DerefExpr)
@@ -624,7 +624,7 @@ namespace compiler::helios::code {
 	}
 
 	tsh::AbstractType builtinUnaryOperationToReturnType(
-		query::Context& ctx, BuiltinUnary operation, tsh::AbstractType argument_type
+		[[maybe_unused]] query::Context& ctx, BuiltinUnary operation, tsh::AbstractType argument_type
 	) {
 		using enum BuiltinUnary;
 		switch (operation) {
@@ -640,9 +640,6 @@ namespace compiler::helios::code {
 			// For most of the unary operators the result is the same as their argument type:
 			// (Int -> Int, Bool -> Bool, Meta -> Meta, etc.)
 			return argument_type;
-		case BuiltinUnary::Len: {
-			return tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned);
-		}
 		default:
 			CORE_UNREACHABLE();
 		}
@@ -695,10 +692,6 @@ namespace compiler::helios::code {
 			break;
 		case BuiltinUnary::Const:
 			out << "const ";
-			expr->debugPrint(out);
-			break;
-		case BuiltinUnary::Len:
-			out << "len ";
 			expr->debugPrint(out);
 			break;
 		case BuiltinUnary::Ptr:
@@ -1010,6 +1003,30 @@ namespace compiler::helios::code {
 
 	Box<Expr> RefOfExpr::clone() const {
 		return makeBox<RefOfExpr>(expression_type, origin, inner->clone());
+	}
+
+	MoveExpr::MoveExpr(query::Context&, ElementOrigin origin, Box<Expr> inner):
+		  Expr(
+			  tsh::ExpressionType<>(
+				  inner->expression_type.getSymbolType(),
+				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
+			  ),
+			  origin
+		  ),
+		  inner(std::move(inner)) {}
+
+	MoveExpr::MoveExpr(tsh::ExpressionType<> expression_type, ElementOrigin origin, Box<Expr> inner):
+		  Expr(expression_type, origin),
+		  inner(std::move(inner)) {}
+
+	void MoveExpr::debugPrint(std::ostream& out) const {
+		out << "move(";
+		inner->debugPrint(out);
+		out << ")";
+	}
+
+	Box<Expr> MoveExpr::clone() const {
+		return makeBox<MoveExpr>(expression_type, origin, inner->clone());
 	}
 
 	BoxOfExpr::BoxOfExpr(query::Context&, ElementOrigin origin, Box<Expr> inner):
