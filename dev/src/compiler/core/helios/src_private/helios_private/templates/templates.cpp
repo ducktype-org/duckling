@@ -12,6 +12,7 @@
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/scopes/scopes.hpp>
+#include <helios_private/pst_layer/pst_parent.hpp>
 // #include <helios_private/hout_creation/definition_generation/
 #include <helios/tsh/deductions.hpp>
 
@@ -167,8 +168,7 @@ namespace compiler::helios::templates {
             baked_pst.setAdditionalRootData(pst::AdditionalRootData{
                 .pst_parent = pst::AdditionalRootData::BakedTemplateParent{
                     .template_bake_data = TemplateBakePSTLinkedData{
-                        // .instantiated_sym_id = SymID{}, // TODO: generate new sym_id for baked template
-                        .pst_parent_element = template_statement->getParent().value(), // TODO: change to pst layer call.. templtaes in macros :o
+                        .pst_parent_element = getPSTElementParent(ctx, template_statement).getAsLangElement(),
                         .template_arguments_symbols = {}
                     }
                 }
@@ -186,7 +186,7 @@ namespace compiler::helios::templates {
             baked_pst.resetAdditionalRootData(pst::AdditionalRootData{
                 .pst_parent = pst::AdditionalRootData::BakedTemplateParent{
                     .template_bake_data = TemplateBakePSTLinkedData{
-                        .pst_parent_element = template_statement->getParent().value(), // TODO: change to pst layer call.. templtaes in macros :o
+                        .pst_parent_element = getPSTElementParent(ctx, template_statement).getAsLangElement(),
                         .template_arguments_symbols = args
                     }
                 }

@@ -52,6 +52,7 @@ namespace compiler::helios::templates {
         pst::AccessLocked<pst::LangElement> pst_parent_element;
 
         // hack 2:
+        // PR: change to mutable atomic, and set it inside the bake query.
         base::Optional<std::vector<SymID>> template_arguments_symbols;
     };
 
@@ -62,5 +63,7 @@ namespace compiler::helios::templates {
      * @param key The template bake key.
      * @return The baked symbol ID.
      */
-    DECLARE_QUERY(QueryBakeTemplateSymID, TemplateBakeKey, query::QResult<SymID>, ({}));    
+    DECLARE_QUERY(QueryBakeTemplateSymID, TemplateBakeKey, query::QResult<SymID>, ({}));
+
+    // @NOTE: if we will have bale to hout unit, it should first bake everything to the sym id, and then gather the content of the HOUTUnit
 }
