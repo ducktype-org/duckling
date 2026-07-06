@@ -42,6 +42,15 @@ namespace compiler::helios::templates {
         pst::PST<pst::TemplateStmt> baked_template_pst;
     };
 
+    void TemplateBakePSTLinkedData::TemplateArgumentsSymbolsDeleter::del(std::atomic<std::vector<SymID>*>* ptr) {
+        // Here we delete both raw pointer allocated with new and the atomic wrapper around it.
+        auto vec_ptr = ptr->load(std::memory_order_acq_rel);
+        if (vec_ptr) {
+            delete vec_ptr;
+        }
+        delete ptr;
+    }
+
 
     struct IMPLEMENT_QUERY(QueryBakeTemplateSymID, query::QResult<TemplateBakeStorage>) {
 
@@ -169,7 +178,7 @@ namespace compiler::helios::templates {
                 .pst_parent = pst::AdditionalRootData::BakedTemplateParent{
                     .template_bake_data = TemplateBakePSTLinkedData{
                         .pst_parent_element = getPSTElementParent(ctx, template_statement).getAsLangElement(),
-                        .template_arguments_symbols = makeSharedBox<std::atomic<std::vector<SymID>*>>(nullptr)
+                        .template_arguments_symbols = makeSharedBox<std::atomic<std::vector<SymID>*>, TemplateBakePSTLinkedData::TemplateArgumentsSymbolsDeleter>(nullptr)
                     }
                 }
             });

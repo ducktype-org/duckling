@@ -54,12 +54,19 @@ namespace compiler::helios::templates {
         // hack 2:
         // PR: change to mutable atomic, and set it inside the bake query.
 
+
+        struct TemplateArgumentsSymbolsDeleter final {
+              void del(std::atomic<std::vector<SymID>*>* ptr);
+        };
+
         /**
          * @brief The symbols for the template arguments.
          *
          * @TODO: Implementation of this is a bit hacky, try to improve this.
+         *
+         * @note: We use custom deleter to delete the vector, because we can't use unique_ptr inside atomic.
          */
-        mutable SharedBox<std::atomic<std::vector<SymID>*>> template_arguments_symbols;
+        mutable SharedBox<std::atomic<std::vector<SymID>*>, TemplateArgumentsSymbolsDeleter> template_arguments_symbols;
     };
 
     /**
