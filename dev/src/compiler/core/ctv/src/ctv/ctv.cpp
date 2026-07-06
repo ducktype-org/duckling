@@ -3,10 +3,10 @@
 #include <ctv/numeric_value.hpp>
 #include <helios/tsh/queries/types.hpp>
 
+#include <hashing/add_to_hash.hpp>
+#include <hashing/hashing_algorithms.hpp>
 #include <query_framework/context/context.hpp>
 #include <string_id/string_id.hpp>
-#include <hashing/hashing_algorithms.hpp>
-#include <hashing/add_to_hash.hpp>
 
 #include <sstream>
 #include <string>
@@ -26,27 +26,27 @@ namespace compiler::ctv {
 				// TODO PR: this is questionable
 				hashing::addToHash(hasher, val.coerceTo<i64>().value());
 			}
-			variant_case(char, c) { 
-				hashing::addToHash(hasher, c);
-			}
-			variant_case(base::StrID, val) { 
+			variant_case(char, c) { hashing::addToHash(hasher, c); }
+			variant_case(base::StrID, val) {
 				// TODO PR:
-				// std hash is ok here, but maybe just add .unstablePerfectHash() to StrID and use it instead?
+				// std hash is ok here, but maybe just add .unstablePerfectHash() to StrID and use
+				// it instead?
 				hashing::addToHash(hasher, std::hash<base::StrID>()(val));
 			}
-			variant_case_novalue(UnitCTV) { 
+			variant_case_novalue(UnitCTV) {
 				// nothing to add to hash
 			}
 			variant_case(TupleCTV, tuple) {
-
 				CORE_PANIC("Querying hash of tuple CTV is not implemented yet");
 			}
-			variant_case(tsh::SymbolType<>, val) { hashing::addToHash(hasher, val.queryUnstablePerfectHash()); }
+			variant_case(tsh::SymbolType<>, val) {
+				hashing::addToHash(hasher, val.queryUnstablePerfectHash());
+			}
 			variant_default {
 				throw base::NotYetImplemented("Converting other CTV types to string");
 			}
 		}
-		
+
 		return hasher.finalize();
 	}
 

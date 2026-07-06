@@ -1,11 +1,10 @@
 #pragma once
 
+#include <ctv/ctv.hpp>
 #include <helios/scope_id.hpp>
 #include <helios/symbols/symbol_id.hpp>
 #include <helios/tsh/symbol_type.hpp>
 #include <helios/tsh/types.hpp>
-
-#include <ctv/ctv.hpp>
 
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/types/bit256.hpp>
@@ -118,9 +117,9 @@ namespace compiler::helios::defgen {
 		struct TemplateBakeConstant final {
 			// PR: just constant?
 
-			tsh::SymbolType<>	 type;
+			tsh::SymbolType<>     type;
 			ctv::CompileTimeValue value;
-			ScopeID scope;
+			ScopeID               scope;
 
 			TemplateBakeConstant(tsh::SymbolType<> type, ctv::CompileTimeValue value, ScopeID scope);
 
@@ -271,7 +270,6 @@ namespace compiler::helios::defgen {
 			[[nodiscard]]
 			base::Bit256 queryUnstablePerfectHash() const;
 		};
-
 
 		using GeneratedSymbolDataVariant = std::variant<
 			ImplicitConstructor,

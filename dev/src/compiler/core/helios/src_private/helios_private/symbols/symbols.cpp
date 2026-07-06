@@ -588,7 +588,8 @@ namespace compiler::helios {
 			auto template_decl = stmt.dynamicCast<pst::TemplateStmt>().value();
 			return SymbolData::makePSTSymbolData(
 				{
-					.name                 = template_decl->getDeclSymbolIdentifier()->unlock(ctx)->unwrap(), // TODO: inc double check
+					.name = template_decl->getDeclSymbolIdentifier()->unlock(ctx)->unwrap(
+					),  // TODO: inc double check
 					.kind                 = SymbolKind::Template,
 					.is_ignored_by_lookup = is_ignored_by_lookup,
 					.attributes           = std::move(attributes),
@@ -733,7 +734,9 @@ namespace compiler::helios {
 
 			// @note: here case for variables will be calling TS
 			default:
-				throw base::NotYetImplemented(base::strConcat("Lookup in symbol: ", key.symbol.ref->common.name));
+				throw base::NotYetImplemented(
+					base::strConcat("Lookup in symbol: ", key.symbol.ref->common.name)
+				);
 			}
 		}
 
@@ -931,11 +934,8 @@ namespace compiler::helios {
 				}
 
 				variant_case(PstSymbolData, pst_data) {
-					const auto pst = pst_data
-										.getElement()
-										.unlock(ctx)
-										.dynamicCast<pst::Const>()
-										.value();
+					const auto pst
+						= pst_data.getElement().unlock(ctx).dynamicCast<pst::Const>().value();
 					const auto type = ctx.query<QueryTypeOfSymbol>(key)->valueOrThrow();
 
 					// Get the coerced HOUT expression
@@ -945,8 +945,9 @@ namespace compiler::helios {
 					if (hout_qresult.hasFailed()) return query::Failed();
 
 					// Evaluate the HOUT expression at compile-time
-					auto ctv
-						= ctx.query<QueryEvaluateHOUTExpression>({ hout_qresult.valueOrThrow().ref() });
+					auto ctv = ctx.query<QueryEvaluateHOUTExpression>(
+						{ hout_qresult.valueOrThrow().ref() }
+					);
 					if (ctv.hasFailed()) return query::Failed();
 					return ctv.valueOrThrow();
 				}

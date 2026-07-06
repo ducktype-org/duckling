@@ -10,8 +10,9 @@
 #include <diagnostic_interactive/stable_position.hpp>
 #include <time_stats/time_stats.hpp>
 
-#include <token_source/source.hpp>
 #include <base/pointers/box_or_ref.hpp>
+
+#include <token_source/source.hpp>
 
 namespace pst {
 	// Used to not include full state definition
@@ -80,7 +81,7 @@ namespace pst {
 		/**
 		 * Token source backing this PST (tokenized file or virtual input).
 		 */
-		 // TODO: this is a hack, fix it in some better way
+		// TODO: this is a hack, fix it in some better way
 		Box<tokenizer::TokenSource> file;
 
 		/**
@@ -188,18 +189,15 @@ namespace pst {
 
 		// TODO: add clone dummy here:
 		explicit PST(
-			Box<Element> cloned_element,
+			Box<Element>                cloned_element,
 			Box<tokenizer::TokenSource> token_source,
-			Box<LangParserContext>  parsing_ctx,// should we use it?
-			hashing::ComponentHash hash_ctx = {}
+			Box<LangParserContext>      parsing_ctx,  // should we use it?
+			hashing::ComponentHash      hash_ctx = {}
 		):
-			// this is a total hack:
-			file(
-				std::move(token_source)
-			),
-			element(AccessInternalAnonymous<Element>(std::move(cloned_element))),
-			hash_ctx_info(std::move(hash_ctx))
-		{
+			  // this is a total hack:
+			  file(std::move(token_source)),
+			  element(AccessInternalAnonymous<Element>(std::move(cloned_element))),
+			  hash_ctx_info(std::move(hash_ctx)) {
 			// TODO: imports???
 
 			std::cerr << "a\n";
@@ -326,12 +324,17 @@ namespace pst {
 		}
 
 		static PST fromClone(
-			Box<Element> cloned_element,
+			Box<Element>                cloned_element,
 			Box<tokenizer::TokenSource> token_source,
-			Box<LangParserContext>  parsing_ctx,
-			hashing::ComponentHash hash_ctx
+			Box<LangParserContext>      parsing_ctx,
+			hashing::ComponentHash      hash_ctx
 		) {
-			return PST(std::move(cloned_element), std::move(token_source), std::move(parsing_ctx), std::move(hash_ctx));
+			return PST(
+				std::move(cloned_element),
+				std::move(token_source),
+				std::move(parsing_ctx),
+				std::move(hash_ctx)
+			);
 		}
 
 		[[nodiscard]]

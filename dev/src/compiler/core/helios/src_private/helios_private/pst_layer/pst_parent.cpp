@@ -1,4 +1,5 @@
 #include "pst_parent.hpp"
+
 #include <helios_private/templates/templates.hpp>
 
 namespace compiler::helios {
@@ -25,7 +26,9 @@ namespace compiler::helios {
 				}
 				variant_case(pst::AdditionalRootData::BakedTemplateParent, template_parent) {
 					auto template_bake_data_any = template_parent.template_bake_data;
-					auto template_bake_data     = base::anyCast<templates::TemplateBakePSTLinkedData>(template_bake_data_any);
+					auto template_bake_data
+						= base::anyCast<templates::TemplateBakePSTLinkedData>(template_bake_data_any
+					    );
 					return PSTParentResult{ template_bake_data.pst_parent_element };
 				}
 				variant_default {

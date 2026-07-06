@@ -24,8 +24,6 @@
 #include <helios_private/symbols/symbols.hpp>
 #include <helios_private/templates/templates.hpp>
 
-
-
 #include <base/collections/maps.hpp>
 #include <base/collections/stable_container.hpp>
 #include <base/except/exceptions.hpp>
@@ -194,11 +192,11 @@ namespace compiler::helios {
 		case pst::ElementKind::TemplateStmt:
 			// make sure this is ok!
 			// link the issue, this is a total hack
-			return ElementScopeKind::Standard; // this sort of works only for baked ones now,
+			return ElementScopeKind::Standard;  // this sort of works only for baked ones now,
 
 		case pst::ElementKind::TemplateDecl:
-			// This is a weird case, this is used to lookup on expressions inside template declaration
-			// before baking.
+			// This is a weird case, this is used to lookup on expressions inside template
+			// declaration before baking.
 			return ElementScopeKind::Transparent;
 
 		case pst::ElementKind::FormatSubExpression:
@@ -383,7 +381,8 @@ namespace compiler::helios {
 				return false;
 			};
 
-			auto for_all_ok = pstForAll(ctx, root_unlocked.value(), grab_scopes_function, cutoff_function);
+			auto for_all_ok
+				= pstForAll(ctx, root_unlocked.value(), grab_scopes_function, cutoff_function);
 			if (for_all_ok.status().isBad()) {
 				// if the pstForAll failed, we mark the whole query as failed, but we still return
 				// the scopes that we managed to obtain.
@@ -580,8 +579,7 @@ namespace compiler::helios {
 
 			if (base_element->isStatementAggregate()) {
 				return filterSymbolsFromStmtList(ctx, getStmtsFromStmtAggregate(ctx, base_element));
-			} 
-			else if (base_element->getElementKind() == pst::ElementKind::TemplateStmt) {
+			} else if (base_element->getElementKind() == pst::ElementKind::TemplateStmt) {
 				// THIS IS A GIGA HACK!
 				// @TODO: better solution
 
@@ -602,19 +600,25 @@ namespace compiler::helios {
 
 				variant_match(additional_data.pst_parent) {
 					variant_case(pst::AdditionalRootData::BakedTemplateParent, template_parent) {
-						auto proper_data = base::anyCast<templates::TemplateBakePSTLinkedData>(template_parent.template_bake_data);
-						for (const auto& param: *proper_data.template_arguments_symbols->load(std::memory_order_acq_rel)) {
+						auto proper_data = base::anyCast<templates::TemplateBakePSTLinkedData>(
+							template_parent.template_bake_data
+						);
+						for (const auto& param:
+						     *proper_data.template_arguments_symbols->load(std::memory_order_acq_rel
+						     )) {
 							out.emplace_back(param);
 						}
 					}
 					variant_default {
-						CORE_PANIC("Template declaration without BakedTemplateParent, this should not happen here.");
+						CORE_PANIC(
+							"Template declaration without BakedTemplateParent, this should not "
+						    "happen here."
+						);
 					}
 				}
 
 				return out;
-			}
-			else if (base_element->isStatement()) {
+			} else if (base_element->isStatement()) {
 				// note: if this check fail, it might be that we are missing some cases
 				CORE_ASSERT(
 					getScopeKind(ctx, base_element) == ElementScopeKind::Standard,

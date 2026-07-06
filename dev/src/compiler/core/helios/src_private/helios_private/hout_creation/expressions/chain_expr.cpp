@@ -20,6 +20,7 @@
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/types.hpp>
 #include <helios/utils/get_expr_symid.hpp>
+#include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/hout_creation/definition_generation/class_constructors.hpp>
 #include <helios_private/hout_creation/expressions/coercions.hpp>
 #include <helios_private/hout_creation/expressions/function_calls/call_processing.hpp>
@@ -31,7 +32,6 @@
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/templates/templates.hpp>
-#include <helios_private/comp_time/comp_time.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
@@ -48,31 +48,38 @@ namespace compiler::helios::code {
 	/**
 	 * This helper will likely evolve once :{} is a separate access expression
 	 */
-	SymID transformTemplateBake(query::Context& query_ctx, SymID template_sym_id, pst::Access<pst::expr::TemplateSpecifier> template_specifier) {
+	SymID transformTemplateBake(
+		query::Context&                           query_ctx,
+		SymID                                     template_sym_id,
+		pst::Access<pst::expr::TemplateSpecifier> template_specifier
+	) {
 		CORE_ASSERT(kind(template_sym_id) == SymbolKind::Template, "SymID is not a Template");
 
 		// std::cerr << "Chain expr template access with template specifier!\n";
 
-		// auto template_specifier = access_pst.value()->getTemplateSpecifier().value().unlock(query_ctx);
-		// auto template_specifier_dc = template_specifier.dynamicCast<pst::expr::TemplateSpecifier>().value();
+		// auto template_specifier =
+		// access_pst.value()->getTemplateSpecifier().value().unlock(query_ctx); auto
+		// template_specifier_dc =
+		// template_specifier.dynamicCast<pst::expr::TemplateSpecifier>().value();
 
-		templates::TemplateBakeKey key {
-			.template_sym_id = template_sym_id,
+		templates::TemplateBakeKey key{
+			.template_sym_id    = template_sym_id,
 			.template_arguments = {},
 		};
 
 		for (const auto& arg: *template_specifier->getArgumentList().unlock(query_ctx)) {
 			auto arg_expr_result = subExprFromPST(query_ctx, arg.unlock(query_ctx)->getExpr());
-			auto arg_expr = std::move(arg_expr_result).valueOrPanic(); // TODO: no panic
+			auto arg_expr        = std::move(arg_expr_result).valueOrPanic();  // TODO: no panic
 
-			auto ctv = query_ctx.query<QueryEvaluateHOUTExpression>({ arg_expr.ref() });
-			auto ctv_value = std::move(ctv).valueOrPanic(); // TODO: no panic
+			auto ctv       = query_ctx.query<QueryEvaluateHOUTExpression>({ arg_expr.ref() });
+			auto ctv_value = std::move(ctv).valueOrPanic();  // TODO: no panic
 
 			key.template_arguments.emplace_back(std::move(ctv_value));
 		}
-		
-		auto resulting_symbol = 
-			query_ctx.query<helios::templates::QueryBakeTemplateSymID>({ key }).valueOrPanic(); // PR: no panic!
+
+		auto resulting_symbol
+			= query_ctx.query<helios::templates::QueryBakeTemplateSymID>({ key }).valueOrPanic(
+			);  // PR: no panic!
 
 		return resulting_symbol;
 	}
@@ -499,14 +506,19 @@ namespace compiler::helios::code {
 			UNPACK_QRESULT_MOVE(const auto& sym_list =, lookup_result);
 			auto mock_symbol = sym_list.back();
 
-			if (ident->getTemplateSpecifier().has_value() and kind(mock_symbol) == SymbolKind::Template) {
+			if (ident->getTemplateSpecifier().has_value()
+			    and kind(mock_symbol) == SymbolKind::Template) {
 				// This handles :{} part of the chain.
 				// It will change in #TODO
-				
+
 				auto template_bake = transformTemplateBake(
-					query_ctx, 
-					mock_symbol, 
-					ident->getTemplateSpecifier().value().unlock(query_ctx).dynamicCast<pst::expr::TemplateSpecifier>().value()
+					query_ctx,
+					mock_symbol,
+					ident->getTemplateSpecifier()
+						.value()
+						.unlock(query_ctx)
+						.dynamicCast<pst::expr::TemplateSpecifier>()
+						.value()
 				);
 				return processNamespaceOrValue(template_bake, pstOrigin(ident), ident);
 			}

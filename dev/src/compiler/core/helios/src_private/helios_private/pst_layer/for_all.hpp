@@ -20,13 +20,15 @@ namespace compiler::helios {
 		template<typename ElementT, typename FunctionT, typename CutoffFunctionT>
 		[[nodiscard]]
 		base::OkBad pstForAllAux(
-			query::Context& ctx, pst::Access<ElementT> element, const FunctionT& function,
+			query::Context&        ctx,
+			pst::Access<ElementT>  element,
+			const FunctionT&       function,
 			const CutoffFunctionT& cutoff_function
 		) {
-			// Check if we should stop recursion before running the function, to allow cutoff function to skip
-			// some branches entirely. 
+			// Check if we should stop recursion before running the function, to allow cutoff
+			// function to skip some branches entirely.
 			if (cutoff_function(element)) return base::OK;
-			
+
 			if (element->getElementKind() == pst::ElementKind::Expand) {
 				auto expansion_result = ctx.query<QueryMacroExpansion>({
 					element.template dynamicCast<pst::Expand>().value(),
@@ -55,7 +57,8 @@ namespace compiler::helios {
 					"View children should only contain valid element (no null ptrs)"
 				);
 
-				auto inner_result = internal::pstForAllAux(ctx, child_unlocked.value(), function, cutoff_function);
+				auto inner_result
+					= internal::pstForAllAux(ctx, child_unlocked.value(), function, cutoff_function);
 				if (inner_result.isBad()) result = base::BAD;
 			}
 
@@ -75,7 +78,9 @@ namespace compiler::helios {
 	template<typename ElementT, typename FunctionT, typename CutoffFunctionT>
 	[[nodiscard]]
 	base::CheckedOkBad pstForAll(
-		query::Context& ctx, pst::Access<ElementT> element, const FunctionT& function,
+		query::Context&        ctx,
+		pst::Access<ElementT>  element,
+		const FunctionT&       function,
 		const CutoffFunctionT& cutoff_function = [](const auto&) { return false; }
 	) {
 		base::OkBad result = base::OK;
