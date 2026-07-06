@@ -1,5 +1,5 @@
-profile_name: ""
-PostCase: python3 check.py @{profile_name} && @{cleanup_tmp_env}
+profile-name: ""
+PostCase: python3 check.py @{profile-name} && @{cleanup_tmp_env}
 
 PreCase: |+
   @{cd-tmp-dir}
@@ -19,39 +19,39 @@ Tests:
     Cases:
       dev:
         test-cmd: duck -C foo build
-        profile_name: dev
+        profile-name: dev
       release:
         test-cmd: duck -C foo build --release
-        profile_name: release
+        profile-name: release
       release2:
-        profile_name: release
+        profile-name: release
         test-cmd: duck -C foo build --profile=release
       relase3:
-        profile_name: release
+        profile-name: release
         test-cmd: duck --color=never -C foo build --profile release
       custom-profile:
         test-cmd: duck -C foo build --profile my-profile
-        profile_name: my-profile
+        profile-name: my-profile
       overridden-builtin-profile:
         test-cmd: duck -C foo build --profile bench
-        profile_name: bench
+        profile-name: bench
       custom-profile-inherited:
         test-cmd: duck -C foo build --profile my-profile2
-        profile_name: my-profile2
+        profile-name: my-profile2
       # NOTE: verbose tests are disabled, since compilation order is not deterministic
       verbose:
         test-cmd: duck -C foo build --verbose
-        profile_name: dev
+        profile-name: dev
         Enabled: "false"
       verbose-release:
         test-cmd: duck -C foo build --release --verbose
-        profile_name: release
+        profile-name: release
         Enabled: "false"
       verbose-release2:
         test-cmd: duck -C foo build --profile=release --verbose
-        profile_name: release
+        profile-name: release
         Enabled: "false"
       verbose-release3:
         test-cmd: duck -C foo build --profile release --verbose
-        profile_name: release
+        profile-name: release
         Enabled: "false"
