@@ -1,12 +1,12 @@
 before-cmd: export PATH="@{duckc_dir}:$PATH"
 
-# @TODO: #2907 Add more tests with many packages (it'll be easier to write them, once we have determinism)
-# @TODO: #2907 Add Output to the tests; this requires duckc output, too...
 # @TODO: #2920 Some tests have explicit `fun main() -> i64` instead of `fun main()`; it is a temporary workaround, but it should be reverted.
+# @TODO: #3023 Enable output in all tests; we don't check it, because it contains not-portable hashes
 SubDirs:
   - basic
   - basic-deps
   - basic-deps-and-conds
+  - diamond
   - dvm-deps
   - errors
   - features

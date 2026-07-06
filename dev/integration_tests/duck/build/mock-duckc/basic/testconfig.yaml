@@ -1,4 +1,5 @@
 profile-name: ""
+foo: "foo-1.0.0-[HASH]"
 PostCase: |+
   python3 check.py @{profile-name}
   @{cleanup_tmp_env}
@@ -101,4 +102,5 @@ Tests:
         Output:
           Run: |+
             echo "info: successfully synchronized venv \`foo\`
-            info: Running \`duckc compile_package -n foo $(pwd)/foo/src -a $(pwd)/foo/.duck_build -O 3 --no-incremental\`"
+            info: compiling \`foo\`...
+            info: Running \`duckc compile_packages $(pwd)/foo/.duck_build/@{profile-name}/@{foo}/deps.json -a $(pwd)/foo/.duck_build/@{profile-name}/@{foo}/artifacts -O 3 --no-incremental\`"

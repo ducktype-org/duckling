@@ -49,4 +49,4 @@ SubDirs:
   - build
 
 # @TODO: #2920 This shouldn't need ` -> i64`.
-default-src: "import core.builtins.*;\nfun main() -> i64 = {\n    return 0;\n}"
+default-src: '"import core.builtins.*;\nfun main() -> i64 = {\n    return 0;\n}"'

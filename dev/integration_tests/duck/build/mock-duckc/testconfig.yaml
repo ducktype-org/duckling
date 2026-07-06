@@ -6,6 +6,7 @@ SubDirs:
   - basic
   - basic-deps
   - basic-deps-and-conds
+  - diamond
   - dvm-deps
   - errors
   - features
