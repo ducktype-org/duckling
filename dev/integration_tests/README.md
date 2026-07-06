@@ -128,18 +128,27 @@ General variables (not tied to any context):
 - `Enabled` - Bash command specifying whether the test case is enabled. If it evaluates to true (0), then the test case is enabled, otherwise it's disabled.
 - `Env` - A mapping of **environment variable names to bash commands**. The commands are evaluated once per case, in definition order (later entries see the earlier ones); each command's stdout becomes the variable's value. The resulting environment is passed to every command of the case. Entries are inherited down the tree and can be shadowed per key.
 
-```yaml
-Env:
-    DIT_TMP_DIR: "@{new_tmp_dir}"           # a fresh mktemp dir for every case
-    DUCK_HOME: "echo $DIT_TMP_DIR/duck_home"  # may derive from earlier entries
-```
+  ```yaml
+  Env:
+      DIT_TMP_DIR: "@{new_tmp_dir}"           # a fresh mktemp dir for every case
+      DUCK_HOME: "echo $DIT_TMP_DIR/duck_home"  # may derive from earlier entries
+  ```
+
+- `ConfigDir` - Absolute path to a directory containing the current `testconfig.yaml` file.
+  > [!IMPORTANT]
+  > Remember that variables are expanded lazily, so `SubDirs` can overwrite your `ConfigDir`.
+
+  > [!NOTE]
+  > `@{ConfigDir}` points to the parent directory of the `testconfig.yaml` file (__inside__ git).
+  >
+  > It's not affected by temporary directories.
 
 Subtree-specific variables (applied to a subtree rooted at this node) are __INHERITED__ from the parent node unless explicitly redefined in the child node:
-- `PreNode` - A command executed once before processing the node and its subdirectories.  
-  Example: If a `PreNode` command is `echo '1'` and the node has 3 subdirectories, the command will run 4 times in total: once for the parent node and once for each subdirectory.  
+- `PreNode` - A command executed once before processing the node and its subdirectories.
+  Example: If a `PreNode` command is `echo '1'` and the node has 3 subdirectories, the command will run 4 times in total: once for the parent node and once for each subdirectory.
   Order of execution: `parent node` -> `first child` -> `second child` -> `third child` -> `parent's siblings`.
 
-- `PostNode` - Same as `PreNode`, but the command is executed after processing the node and its subdirectories.  
+- `PostNode` - Same as `PreNode`, but the command is executed after processing the node and its subdirectories.
   Order of execution: `first child` -> `second child` -> `third child` -> `parent node` -> `parent's siblings`.
 
 Both `PreNode` and `PostNode` commands are executed only if the node or its descendants match the `-t` filter argument. This ensures that irrelevant nodes and their commands are skipped.
