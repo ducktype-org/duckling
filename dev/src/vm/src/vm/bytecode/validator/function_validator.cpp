@@ -15,6 +15,7 @@
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
 #include <vm/bytecode/validator/local_stack_database_builder.hpp>
+#include <vm/bytecode/validator/valid_type/finalized_kinds.hpp>
 #include <vm/bytecode/validator/valid_type/type_context.hpp>
 #include <vm/bytecode/validator/valid_type/valid_type.hpp>
 #include <vm/core/builtin_functions.hpp>
@@ -38,8 +39,10 @@ namespace {
 		Op_call_func,
 		Op_call_builtinfunc,
 		Op_call_cfunc,
+		Op_call_ffifunc,
 		Op_virtual_call_pptr_method>;
-	using CallingInstructions = std::tuple<Op_call_func, Op_call_builtinfunc, Op_call_cfunc>;
+	using CallingInstructions
+		= std::tuple<Op_call_func, Op_call_builtinfunc, Op_call_cfunc, Op_call_ffifunc>;
 
 	template<typename T>
 	concept DeinitializingInstruction = base::IsTupleMember<T, DeinitializingInstructions>;
@@ -249,6 +252,7 @@ class FunctionValidator {
 	const ObjIdNameMap<GlobalData>&                  globals;
 	const base::HashMap<base::StrID, FuncSignature>& signatures;
 	const ObjIdNameMap<ExternalCFunction>&           ext_c_signatures;
+	const ObjIdNameMap<FFIFunction>&                 ffi_signatures;
 	const Function&                                  function;
 
 	std::vector<base::Optional<StackStateID>>            stack_before_instr;
@@ -264,6 +268,8 @@ class FunctionValidator {
                 return *builtins::getBuiltinFunctionSignature(instr.function.function_name);
             if constexpr (std::is_same_v<opargs::ExtCFunctionName, decltype(instr.function)>)
                 return &ext_c_signatures.at(instr.function.function_name)->signature;
+            if constexpr (std::is_same_v<opargs::FFIFunctionName, decltype(instr.function)>)
+                return &ffi_signatures.at(instr.function.function_name)->signature;
             return &signatures.at(instr.function.function_name);
 		}();
 
@@ -273,11 +279,27 @@ class FunctionValidator {
 		if (params.size() + results.size() > local_stack.size())
 			throw InvalidFunctionCallArgumentsError(generic_arg);
 
+		// Some builtins verify their argument types with a custom callback instead of exact
+		// name matching (e.g. a pointer to any type). When present, per-parameter names are
+		// placeholders and the callback validates the whole argument list.
+		builtins::BuiltinArgVerifier verifier = nullptr;
+		if constexpr (std::is_same_v<opargs::BuiltinFunctionName, decltype(instr.function)>)
+			if (auto id = builtins::getBuiltinFunctionID(instr.function.function_name))
+				verifier = builtins::getBuiltinArgVerifier(*id);
+
 		using namespace std::views;
+		std::vector<CRef<valid_type::ValidType>> arg_types;
 		for (auto param: params | reverse) {
-			if (local_stack.back().type->getName() != param.str)
+			arg_types.push_back(local_stack.back().type);
+			if (!verifier && local_stack.back().type->getName() != param.str)
 				throw InvalidFunctionCallArgumentsError(generic_arg);
 			local_stack.pop(instr);
+		}
+
+		if (verifier) {
+			std::ranges::reverse(arg_types);  // restore call order
+			if (verifier(arg_types).has_value())
+				throw InvalidFunctionCallArgumentsError(generic_arg);
 		}
 
 		for (auto [idx, reslt]: enumerate(results | reverse))
@@ -485,6 +507,11 @@ class FunctionValidator {
 				variant_case(CRef<opargs::ExtCFunctionName>, function_value) {
 					auto fun_name = function_value->function_name;
 					if (!ext_c_signatures.contains(fun_name))
+						throw UnknownFunctionError(*function_value);
+				}
+				variant_case(CRef<opargs::FFIFunctionName>, function_value) {
+					auto fun_name = function_value->function_name;
+					if (!ffi_signatures.contains(fun_name))
 						throw UnknownFunctionError(*function_value);
 				}
 				variant_case(CRef<opargs::MethodName>, method_value) {
@@ -1216,7 +1243,7 @@ class FunctionValidator {
 					throw VariantTypeMismatchError(instr);
 			}
 			instr_case_novalue(Op_label, Op_jmp_label, Op_jmpIf_label, Op_jmpIfNot_label) {}
-			instr_case_novalue(Op_call_func, Op_call_builtinfunc, Op_call_cfunc) {}
+			instr_case_novalue(Op_call_func, Op_call_builtinfunc, Op_call_cfunc, Op_call_ffifunc) {}
 			instr_case_novalue(Op_set_threadctx) {}
 			instr_case(Op_virtual_call_pptr_method, instr) {
 				// For a method call to be valid it has to be present in the interface.
@@ -1683,6 +1710,11 @@ class FunctionValidator {
 					validateCallAndPop(local_stack, instr);
 					index++;
 				}
+				instr_case(Op_call_ffifunc, instr) {
+					stack_before_instr[index] = local_stack.getStateID();
+					validateCallAndPop(local_stack, instr);
+					index++;
+				}
 				instr_case(Op_virtual_call_pptr_method, instr) {
 					stack_before_instr[index] = local_stack.getStateID();
 					validateMethodCallAndPop(local_stack, instr);
@@ -1733,12 +1765,14 @@ public:
 		const ObjIdNameMap<GlobalData>&                  globals,
 		const base::HashMap<base::StrID, FuncSignature>& signatures,
 		const ObjIdNameMap<ExternalCFunction>&           ext_c_signatures,
+		const ObjIdNameMap<FFIFunction>&                 ffi_signatures,
 		const Function&                                  function
 	):
 		  types_ctx(types_ctx),
 		  globals(globals),
 		  signatures(signatures),
 		  ext_c_signatures(ext_c_signatures),
+		  ffi_signatures(ffi_signatures),
 		  function(function) {}
 
 	std::tuple<std::vector<Instruction>, std::vector<StackStateID>, LocalStackDb> validateAndExtractReachableCode(
@@ -1766,12 +1800,15 @@ vm::code::valid_function::ValidFunction vm::code::detail::validateAndExtractReac
 	const ObjIdNameMap<GlobalData>&                  globals_map,
 	const base::HashMap<base::StrID, FuncSignature>& signatures,
 	const ObjIdNameMap<ExternalCFunction>&           ext_c_signatures,
+	const ObjIdNameMap<FFIFunction>&                 ffi_signatures,
 	const Function&                                  function
 ) {
 	FuncSignature signature = signatures.at(function.name);
 
 
-	FunctionValidator validator(types, globals_map, signatures, ext_c_signatures, function);
+	FunctionValidator validator(
+		types, globals_map, signatures, ext_c_signatures, ffi_signatures, function
+	);
 
 	valid_function::ValidFunction new_function;
 	new_function.name = function.name;

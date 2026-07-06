@@ -6,6 +6,7 @@
 
 #include <vm/api/vm.hpp>
 #include <vm/bytecode/bytecode.hpp>
+#include <vm/bytecode/validator/valid_type/finalized_kinds.hpp>
 #include <vm/core/builtin_functions.hpp>
 #include <vm/core/process/ivmprocess.hpp>
 #include <vm/core/process/proc_io.hpp>
@@ -17,6 +18,7 @@
 #include <vm/core/vmvalue/vmvalue.hpp>
 
 #include <chrono>
+#include <cstring>
 
 namespace vm::builtins {
 
@@ -271,6 +273,22 @@ namespace vm::builtins {
 		thread.safe_process.getSynchronizationPrimitives().removeCV(cv_id);
 	}
 
+	void FunctionHandlers::builtinCptrRead(SafeVMThread& thread, u64 src, Pointer dst) {
+		auto  view      = thread.process_memory.getBlockViewUnsafe(dst.getBlock());
+		byte* dst_begin = view.getBegin() + dst.getOffset();
+		usize copy_size = view.size() - dst.getOffset();
+		// NOLINTNEXTLINE(performance-no-int-to-ptr): a cptr is a raw native address by definition.
+		std::memcpy(dst_begin, reinterpret_cast<const void*>(src), copy_size);
+	}
+
+	void FunctionHandlers::builtinCptrWrite(SafeVMThread& thread, u64 dst, Pointer src) {
+		auto  view      = thread.process_memory.getBlockViewUnsafe(src.getBlock());
+		byte* src_begin = view.getBegin() + src.getOffset();
+		usize copy_size = view.size() - src.getOffset();
+		// NOLINTNEXTLINE(performance-no-int-to-ptr): a cptr is a raw native address by definition.
+		std::memcpy(reinterpret_cast<void*>(dst), src_begin, copy_size);
+	}
+
 	base::Optional<Box<VmValue>> callBuiltinFunction(
 		BuiltinFunctionID                id,
 		const std::vector<TypeCRef>&     result_types,
@@ -305,7 +323,9 @@ namespace vm::builtins {
 				WaitCV,
 				NotifyCV,
 				NotifyAllCV,
-				DestroyCV
+				DestroyCV,
+				CptrRead,
+				CptrWrite
 			)
 
 
@@ -395,9 +415,48 @@ namespace vm::builtins {
 					{ base::StrID("builtin_destroy_cv"),
 			          code::FuncSignature({}, { base::StrID("condition_variable") }) },
 				},
+				{
+					BuiltinFunctionID::CptrRead,
+					{ base::StrID("builtin_cptr_read_pptr"),
+			          code::FuncSignature(
+						  {}, { base::StrID("cptr"), base::StrID(VERIFIER_CHECKED_PARAM) }
+					  ) },
+				},
+				{
+					BuiltinFunctionID::CptrWrite,
+					{ base::StrID("builtin_cptr_write_pptr"),
+			          code::FuncSignature(
+						  {}, { base::StrID("cptr"), base::StrID(VERIFIER_CHECKED_PARAM) }
+					  ) },
+				},
 			};
 
 		return &map;
+	}
+
+	namespace {
+		// Shared verifier for the `cptr` copy builtins: (cptr, pointer-to-any-type).
+		base::Optional<std::string> verifyCptrCopyArgs(
+			const std::vector<CRef<code::valid_type::ValidType>>& arg_types
+		) {
+			if (arg_types.size() != 2) return "expected exactly two arguments";
+			if (!(arg_types[0]->isKind<code::valid_type::finalized::Opaque>()
+			      && arg_types[0]->getName() == base::StrID("cptr")))
+				return "first argument must be a `cptr`";
+			if (!arg_types[1]->isKind<code::valid_type::finalized::Pointer>())
+				return "second argument must be a pointer";
+			return {};
+		}
+	}
+
+	BuiltinArgVerifier getBuiltinArgVerifier(BuiltinFunctionID id) {
+		switch (id) {
+		case BuiltinFunctionID::CptrRead:
+		case BuiltinFunctionID::CptrWrite:
+			return &verifyCptrCopyArgs;
+		default:
+			return nullptr;
+		}
 	}
 
 	base::Optional<CRef<code::FuncSignature>> getBuiltinFunctionSignature(base::StrID name) {

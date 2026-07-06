@@ -155,6 +155,69 @@ namespace vm::code {
 	DEFINE_DUPLICATED_ELEMENT_ERROR(
 		DuplicatedExtCFunctionError, code::ExternalCFunction, "Duplicated external C function: "
 	);
+	DEFINE_DUPLICATED_ELEMENT_ERROR(
+		DuplicatedFFIFunctionError, code::FFIFunction, "Duplicated FFI function: "
+	);
+
+	class FFIUnsupportedTypeError: public ValidationError {
+	public:
+		constexpr static std::string_view ERR_MSG
+			= "Type cannot be used in an FFI function signature (expected a primitive of size 1, "
+			  "2, 4 or 8, `cptr`, or a data structure with only such fields): ";
+
+		FFIUnsupportedTypeError(const valid_type::ValidType& type):
+			  ValidationError(base::strConcat(ERR_MSG, type.getName())) {}
+	};
+
+	class FFIUnknownSymbolError: public ValidationError {
+	public:
+		constexpr static std::string_view ERR_MSG
+			= "Symbol not found in any of the loaded `ffi object` files: ";
+		const code::FFIFunction function;
+
+		FFIUnknownSymbolError(const code::FFIFunction& function):
+			  ValidationError(base::strConcat(ERR_MSG, function.name.str)),
+			  function(function) {}
+
+		[[nodiscard]] base::Optional<CRef<ElementBase>> maybeElement() const override {
+			return &function.name;
+		}
+	};
+
+	class FFIObjectFileError: public ValidationError {
+	public:
+		constexpr static std::string_view ERR_MSG = "Failed to load `ffi object` file: ";
+
+		FFIObjectFileError(const fs::File& file, const std::string& reason):
+			  ValidationError(base::strConcat(ERR_MSG, file.getFilePath().string(), ": ", reason)) {
+		}
+	};
+
+	class FFIStructLayoutMismatchError: public ValidationError {
+	public:
+		constexpr static std::string_view ERR_MSG
+			= "The VM layout of this structure does not match the C ABI layout, so it cannot be "
+			  "used in an FFI function signature (C inserts alignment padding): ";
+
+		FFIStructLayoutMismatchError(const valid_type::ValidType& type):
+			  ValidationError(base::strConcat(ERR_MSG, type.getName())) {}
+	};
+
+	class TypeSizeAssertError: public ValidationError {
+	public:
+		constexpr static std::string_view ERR_MSG = "`assert_size` mismatch for type ";
+
+		TypeSizeAssertError(base::StrID type_name, usize expected, usize actual):
+			  ValidationError(base::strConcat(
+				  ERR_MSG,
+				  type_name,
+				  ": expected ",
+				  base::toString(expected),
+				  " bytes, computed ",
+				  base::toString(actual),
+				  " bytes."
+			  )) {}
+	};
 
 	/**
 	 * @note A type may be trivially copyable if its bits can be just copied and its

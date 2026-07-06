@@ -91,6 +91,46 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::parseFiles(
 
 					new_code.functions.emplace_back(function);
 				}
+
+				for (const auto& ffi_func: parsed_file.ffi_functions) {
+					code::FFIFunction function;
+					function.bytecode_pos = ffi_func->position;
+
+					code::Identifier func_name;
+					func_name.str          = ffi_func->name.value;
+					func_name.bytecode_pos = ffi_func->name.position;
+					function.name          = func_name;
+
+					for (const auto& param: ffi_func->parameters) {
+						code::Identifier param_id;
+						param_id.str          = param.value;
+						param_id.bytecode_pos = param.position;
+						function.signature.parameters.emplace_back(param_id);
+					}
+
+					for (const auto& reslt: ffi_func->result_types) {
+						code::Identifier result_type_id;
+						result_type_id.str          = reslt.value;
+						result_type_id.bytecode_pos = reslt.position;
+						function.signature.result_types.emplace_back(result_type_id);
+					}
+
+					new_code.ffi_functions.emplace_back(function);
+				}
+
+				for (const auto& ffi_object: parsed_file.ffi_objects) {
+					fs::FilePath path{ ffi_object->path.strView() };
+					if (!path.getPath().is_absolute())
+						path = parsed_file.source_file.getFilePath().parentPath() / path;
+					if (!path.exists()) {
+						LoaderLogger log;
+						log.logSimple(base::strConcat(
+							"Failed to load `ffi object` file: ", path.string(), ": file not found."
+						));
+						return std::unexpected(std::move(log));
+					}
+					new_code.object_files.emplace_back(path);
+				}
 			}
 			base::deduplicateBy(new_code.functions, [](const code::Function& func) {
 				return func.name.str.strView();
@@ -99,6 +139,12 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::parseFiles(
 				new_code.external_c_functions,
 				[](const code::ExternalCFunction& func) { return func.name.str.strView(); }
 			);
+			base::deduplicateBy(new_code.ffi_functions, [](const code::FFIFunction& func) {
+				return func.name.str.strView();
+			});
+			base::deduplicateBy(new_code.object_files, [](const fs::File& file) {
+				return file.getFilePath().string();
+			});
 			base::deduplicateBy(new_code.global_data, [](const vm::code::GlobalData& g) {
 				return g.name.str.strView();
 			});
@@ -117,7 +163,8 @@ std::expected<void, LoaderLogger> Loader::loadAndValidate(const code::CodeCollec
 ) {
 	// Skip if no new code was added.
 	if (code_collection.functions.empty() && code_collection.types.empty()
-	    && code_collection.global_data.empty() && code_collection.external_c_functions.empty()) {
+	    && code_collection.global_data.empty() && code_collection.external_c_functions.empty()
+	    && code_collection.ffi_functions.empty() && code_collection.object_files.empty()) {
 		return {};
 	}
 
@@ -151,6 +198,14 @@ std::expected<void, LoaderLogger> Loader::loadAndValidate(const code::CodeCollec
 				log.addNote(err, e.previous_element, "Previous function declaration here.");
 			},
 			"Function with this name already exists."
+		);
+	} catch (code::DuplicatedFFIFunctionError& e) {
+		log.logMap(
+			e.new_element,
+			[&](auto& err) {
+				log.addNote(err, e.previous_element, "Previous FFI function declaration here.");
+			},
+			"FFI function with this name already exists."
 		);
 	} catch (code::DuplicatedGlobalDataError& e) {
 		log.logMap(

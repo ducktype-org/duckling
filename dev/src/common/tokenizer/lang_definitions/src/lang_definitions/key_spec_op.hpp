@@ -167,6 +167,9 @@ namespace lang_def {
 
 		// BC:
 		BCFunction,
+		BCFfi,
+		BCObject,
+		BCAssertSize,
 		BCType,
 		BCPrimitive,
 		BCPointer,

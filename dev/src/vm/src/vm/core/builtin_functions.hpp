@@ -27,6 +27,7 @@
 #include <string_id/string_id.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
+#include <vm/bytecode/validator/valid_type/valid_type.hpp>
 #include <vm/core/safe/safe_vmthread.hpp>
 #include <vm/core/vmvalue/vmvalue.hpp>
 
@@ -62,8 +63,33 @@ namespace vm::builtins {
 		WaitCV,
 		NotifyCV,
 		NotifyAllCV,
-		DestroyCV
+		DestroyCV,
+		CptrRead,
+		CptrWrite
 	};
+
+	/**
+	 * @brief Placeholder parameter type used for a builtin argument whose type is checked by a
+	 * custom verifier (see `getBuiltinArgVerifier`) rather than by exact name match. It only
+	 * contributes to the parameter count; it is never resolved as a real type.
+	 */
+	inline constexpr std::string_view VERIFIER_CHECKED_PARAM = "$checked";
+
+	/**
+	 * @brief Verifies the argument types of a builtin call that cannot be expressed as a fixed
+	 * list of type names (e.g. a pointer to any type). Returns an error message if the types are
+	 * invalid, or an empty optional if they are acceptable.
+	 * @param arg_types The concrete types of the arguments on the stack, in call order.
+	 */
+	using BuiltinArgVerifier = base::Optional<std::string> (*)(
+		const std::vector<base::CRef<code::valid_type::ValidType>>& arg_types
+	);
+
+	/**
+	 * @brief Returns the argument verifier for a builtin, or nullptr if its arguments are checked
+	 * by ordinary exact type-name matching.
+	 */
+	BuiltinArgVerifier getBuiltinArgVerifier(BuiltinFunctionID id);
 
 	/**
 	 * @brief Class for FunctionHandlers.
@@ -93,6 +119,20 @@ namespace vm::builtins {
 		static void builtinNotifyCV(SafeVMThread& process, u64 cv_id);
 		static void builtinNotifyAllCV(SafeVMThread& process, u64 cv_id);
 		static void builtinDestroyCV(SafeVMThread& process, u64 cv_id);
+
+		/**
+		 * @brief Copies the whole block pointed to by the VM pointer `dst` out of the raw C memory
+		 * addressed by `src` (a `cptr`). Used to read FFI results back into the VM.
+		 * @warning `src` must address at least the block's size of valid, readable memory.
+		 */
+		static void builtinCptrRead(SafeVMThread& process, u64 src, Pointer dst);
+
+		/**
+		 * @brief Copies the whole block pointed to by the VM pointer `src` into the raw C memory
+		 * addressed by `dst` (a `cptr`). Used to hand VM data to FFI functions.
+		 * @warning `dst` must address at least the block's size of valid, writable memory.
+		 */
+		static void builtinCptrWrite(SafeVMThread& process, u64 dst, Pointer src);
 	};
 
 	/**

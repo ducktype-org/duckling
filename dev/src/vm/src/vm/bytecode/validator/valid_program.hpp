@@ -4,7 +4,10 @@
 #include <vm/bytecode/type_of_data.hpp>
 #include <vm/bytecode/validator/valid_function.hpp>
 #include <vm/bytecode/validator/valid_type/type_context.hpp>
+#include <vm/core/native/dynamic_library.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
+
+#include <memory>
 
 namespace vm::code {
 	/**
@@ -51,11 +54,23 @@ namespace vm::code {
 
 		const ObjIdNameMap<ExternalCFunction>& extCFunctions() const;
 
+		const ObjIdNameMap<FFIFunction>& ffiFunctions() const;
+
+		const std::unordered_map<fs::File, std::shared_ptr<native::DynamicLibrary>>& objectFiles(
+		) const;
+
 	private:
 		ObjIdNameMap<valid_function::ValidFunction> function_map;
 		ObjIdNameMap<ExternalCFunction>             ext_c_function_map;
+		ObjIdNameMap<FFIFunction>                   ffi_function_map;
 		ObjIdNameMap<GlobalData>                    globals_map;
 		TypeContext                                 type_context;
+
+		/**
+		 * @brief Shared objects declared with `ffi object`, loaded into the process. The library
+		 * handles are shared between program copies and live for the lifetime of the program.
+		 */
+		std::unordered_map<fs::File, std::shared_ptr<native::DynamicLibrary>> object_files;
 
 		/**
 		 * @brief Contains a mapping from function name to function signature for all functions
@@ -99,5 +114,20 @@ namespace vm::code {
 		 * Cannot insert multiple ExternalCFunctions with the same name.
 		 */
 		void insertExternalCFunctions(const std::vector<ExternalCFunction>& new_functions);
+
+		/**
+		 * @brief Inserts an FFIFunction. May invalidate state.
+		 * Cannot insert multiple FFIFunctions with the same name. Signature types must be
+		 * primitives of size 1, 2, 4 or 8, the builtin `cptr` type, or data structures whose
+		 * every field is such a primitive or `cptr`. Resolves each function's native symbol from
+		 * the loaded object files.
+		 */
+		void insertFFIFunctions(const std::vector<FFIFunction>& new_functions);
+
+		/**
+		 * @brief Loads new shared objects into the process. May invalidate state.
+		 * Object files already loaded (by path) are skipped.
+		 */
+		void insertObjectFiles(const std::vector<fs::File>& new_files);
 	};
 }

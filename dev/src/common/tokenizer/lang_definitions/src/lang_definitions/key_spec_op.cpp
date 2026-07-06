@@ -167,6 +167,9 @@ namespace lang_def {
 	constexpr auto BC_KEYWORDS_ARRAY
 		= std::to_array<std::tuple<Keyword, std::string_view, KeywordFlags>>({
 			{ Keyword::BCFunction, "function", KeywordFlags() },
+			{ Keyword::BCFfi, "ffi", KeywordFlags() },
+			{ Keyword::BCObject, "object", KeywordFlags() },
+			{ Keyword::BCAssertSize, "assert_size", KeywordFlags() },
 			{ Keyword::BCType, "type", KeywordFlags() },
 			{ Keyword::BCPrimitive, "primitive", KeywordFlags() },
 			{ Keyword::BCPointer, "pointer", KeywordFlags() },

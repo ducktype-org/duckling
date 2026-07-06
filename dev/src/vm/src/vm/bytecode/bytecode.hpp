@@ -2,6 +2,7 @@
 
 #include "instructions.hpp"
 
+#include <filesystem/file.hpp>
 #include <string_id/string_id.hpp>
 #include <token_parser_core/common_elements.hpp>
 
@@ -72,6 +73,18 @@ namespace vm::code {
 	};
 
 	/**
+	 * @brief Represents a native function declared in bytecode and resolved by its name from one
+	 * of the shared objects declared with `ffi object`. Called via `call_ffifunc` using libffi.
+	 */
+	struct FFIFunction final: ElementBase {
+		Identifier    name;
+		FuncSignature signature;
+
+		/// Native symbol address, resolved during validation. Never null in a `ValidProgram`.
+		void (*symbol)() = nullptr;
+	};
+
+	/**
 	 * @brief Represents C/C++ function, that can be called from bytecode by its name.
 	 * It's required that function accepts two parameters:
 	 * - std::byte* destination - a place to store the call result
@@ -93,6 +106,8 @@ namespace vm::code {
 		std::vector<TypeOfData>        types;
 		std::vector<GlobalData>        global_data;
 		std::vector<ExternalCFunction> external_c_functions;
+		std::vector<FFIFunction>       ffi_functions;
+		std::vector<fs::File>          object_files;
 
 		/**
 		 * @brief Merges another CodeCollection into this one by appending all its elements.
