@@ -21,11 +21,11 @@ impl UnitGraph {
     /// Create a new [`UnitGraph`].
     pub fn new(root_id: u64, units: Vec<Unit>) -> Self {
         let ids = units.iter().map(Unit::unit_id);
-        assert!(ids.is_sorted(), "Units should be sorted by IDs");
-        // Leaving this as a variable, since it might change in the future.
-        assert_eq!(root_id, 0, "root Unit should have an ID == 0");
+        debug_assert!(ids.is_sorted(), "Units should be sorted by IDs");
+        // Leaving `root_id` as a variable/member, since it might change in the future.
+        debug_assert_eq!(root_id, 0, "root Unit should have an ID == 0");
         for (index, unit) in units.iter().enumerate() {
-            assert_eq!(
+            debug_assert_eq!(
                 index as u64,
                 unit.unit_id(),
                 "{index}-th Unit({}) should have ID == {index}, but has {}",

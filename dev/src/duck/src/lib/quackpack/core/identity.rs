@@ -65,7 +65,7 @@ impl Identity {
     /// * current duck execution,
     /// * etc.
     ///
-    /// Firstly we compare names, then [`Origin`]s.
+    /// Firstly we compare names lexicographically, then [`Origin`]s.
     pub fn stable_compare(lhs: Self, rhs: Self) -> Ordering {
         let name_cmp = lhs.name.cmp(&rhs.name);
         if name_cmp.is_ne() {
@@ -178,7 +178,7 @@ impl Origin {
     /// * current duck execution,
     /// * etc.
     ///
-    /// Firstly, we compare kinds, then URLs.
+    /// Firstly, we compare kinds, then URLs lexicographically.
     pub fn stable_compare(lhs: Self, rhs: Self) -> Ordering {
         let kind_ordering = Kind::stable_compare(lhs.kind, rhs.kind);
         if kind_ordering.is_ne() {
@@ -297,6 +297,8 @@ impl Kind {
     /// * used rust version,
     /// * current duck execution,
     /// * etc.
+    ///
+    /// Order is: [`Local`](Kind::Local) < [`Git`](Kind::Git) < [`Registry`](Kind::Registry).
     pub fn stable_compare(lhs: Self, rhs: Self) -> Ordering {
         match (lhs, rhs) {
             // Lhs == Rhs.

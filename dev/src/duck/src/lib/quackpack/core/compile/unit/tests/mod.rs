@@ -57,25 +57,25 @@ fn lowers_early_graph() {
     assert_eq!(root, unit_graph.root_unit());
     assert_eq!(root.artifacts_type(), ArtifactsType::Binary);
     assert_eq!(root.unit_id(), root_id);
-    assert_eq!(root.deps_by_sorted_unit_id(), [bar_id, foo_id]);
+    assert_eq!(root.deps_sorted_by_unit_id(), [bar_id, foo_id]);
     assert_eq!(root.identity(), identity_for("root"));
 
     let foo = unit_graph.unit_for(foo_id);
     assert_eq!(foo.artifacts_type(), ArtifactsType::IsADependencyArtifact);
     assert_eq!(foo.unit_id(), foo_id);
-    assert_eq!(foo.deps_by_sorted_unit_id(), [baz_id]);
+    assert_eq!(foo.deps_sorted_by_unit_id(), [baz_id]);
     assert_eq!(foo.identity(), fetcher_identity_for("foo"));
 
     let bar = unit_graph.unit_for(bar_id);
     assert_eq!(bar.artifacts_type(), ArtifactsType::IsADependencyArtifact);
     assert_eq!(bar.unit_id(), bar_id);
-    assert_eq!(bar.deps_by_sorted_unit_id(), [baz_id]);
+    assert_eq!(bar.deps_sorted_by_unit_id(), [baz_id]);
     assert_eq!(bar.identity(), fetcher_identity_for("bar"));
 
     let baz = unit_graph.unit_for(baz_id);
     assert_eq!(baz.artifacts_type(), ArtifactsType::IsADependencyArtifact);
     assert_eq!(baz.unit_id(), baz_id);
-    assert_eq!(baz.deps_by_sorted_unit_id(), [0u64; 0]);
+    assert_eq!(baz.deps_sorted_by_unit_id(), [0u64; 0]);
     assert_eq!(baz.identity(), fetcher_identity_for("baz"));
 }
 
@@ -119,23 +119,23 @@ fn lowers_early_graph_with_cycle() {
     assert_eq!(root.artifacts_type(), ArtifactsType::Binary);
     assert_eq!(root.unit_id(), root_id);
     assert_eq!(root.identity(), identity_for("root"));
-    assert_eq!(root.deps_by_sorted_unit_id(), [bar_id, cycle_id, foo_id]);
+    assert_eq!(root.deps_sorted_by_unit_id(), [bar_id, cycle_id, foo_id]);
 
     let foo = unit_graph.unit_for(foo_id);
     assert_eq!(foo.artifacts_type(), ArtifactsType::IsADependencyArtifact);
     assert_eq!(foo.unit_id(), foo_id);
-    assert_eq!(foo.deps_by_sorted_unit_id(), [0u64; 0]);
+    assert_eq!(foo.deps_sorted_by_unit_id(), [0u64; 0]);
     assert_eq!(foo.identity(), fetcher_identity_for("foo"));
 
     let bar = unit_graph.unit_for(bar_id);
     assert_eq!(bar.artifacts_type(), ArtifactsType::IsADependencyArtifact);
     assert_eq!(bar.unit_id(), bar_id);
-    assert_eq!(bar.deps_by_sorted_unit_id(), [0u64; 0]);
+    assert_eq!(bar.deps_sorted_by_unit_id(), [0u64; 0]);
     assert_eq!(bar.identity(), fetcher_identity_for("bar"));
 
     let cycle = unit_graph.unit_for(cycle_id);
     assert_eq!(cycle.artifacts_type(), ArtifactsType::IsADependencyArtifact);
     assert_eq!(cycle.unit_id(), cycle_id);
-    assert_eq!(cycle.deps_by_sorted_unit_id(), [root_id]);
+    assert_eq!(cycle.deps_sorted_by_unit_id(), [root_id]);
     assert_eq!(cycle.identity(), identity_for("cycle"));
 }

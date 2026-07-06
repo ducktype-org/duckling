@@ -42,9 +42,7 @@ fn compile(graph: UnitGraph, bcx: &BuildContext<'_, '_>) -> QuackResult<Executor
         .get_package()
         .artifacts_directory();
     let profile_layout = artifacts_layout.for_profile(&bcx.profile.name);
-    // [OLD COMMENT] We explicitly compile `root` at the end.
-    // [UPDATED/VALID COMMENT] Units are sorted by ID, and the root has an ID 0, so in reverse we'll
-    // compile the root last.
+    // Units are sorted by ID, and the root has an ID 0, so in reverse we'll compile the root last.
     for unit in graph.units_sorted_by_id().iter().rev() {
         compile_unit(unit, &graph, &profile_layout, bcx)?;
     }
