@@ -196,6 +196,11 @@ namespace compiler::helios {
 			// link the issue, this is a total hack
 			return ElementScopeKind::Standard; // this sort of works only for baked ones now,
 
+		case pst::ElementKind::TemplateDecl:
+			// This is a weird case, this is used to lookup on expressions inside template declaration
+			// before baking.
+			return ElementScopeKind::Transparent;
+
 		case pst::ElementKind::FormatSubExpression:
 		case pst::ElementKind::FormatSubString:
 			return ElementScopeKind::Transparent;

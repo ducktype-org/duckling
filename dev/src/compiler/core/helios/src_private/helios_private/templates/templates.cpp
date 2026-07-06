@@ -7,7 +7,7 @@
 #include <frontend/pst_parser/pst.hpp>
 #include <frontend/pst_parser/lang_parser_context.hpp>
 
-#include <helios/symbols/symbol_id_utils.hpp>
+#include <helios/symbols/symbol_id.hpp>
 #include <helios_private/symbols/symbols.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
