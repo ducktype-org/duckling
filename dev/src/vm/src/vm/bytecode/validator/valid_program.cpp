@@ -244,11 +244,11 @@ void vm::code::ValidProgram::insertFFIFunctions(const std::vector<FFIFunction>& 
 	}
 }
 
-void vm::code::ValidProgram::insertObjectFiles(const std::vector<fs::File>& new_files) {
+void vm::code::ValidProgram::insertObjectFiles(const std::vector<std::string>& new_files) {
 	for (const auto& file: new_files) {
 		if (object_files.contains(file)) continue;
 
-		auto library = native::DynamicLibrary::tryFromFile(file.getFilePath().string().c_str());
+		auto library = native::DynamicLibrary::tryFromFile(file.c_str());
 		if (!library.has_value()) throw FFIObjectFileError(file, library.error());
 
 		object_files.emplace(
@@ -265,7 +265,7 @@ const vm::ObjIdNameMap<vm::code::FFIFunction>& vm::code::ValidProgram::ffiFuncti
 	return ffi_function_map;
 }
 
-const std::unordered_map<fs::File, std::shared_ptr<vm::native::DynamicLibrary>>& vm::code::
+const std::unordered_map<std::string, std::shared_ptr<vm::native::DynamicLibrary>>& vm::code::
 	ValidProgram::objectFiles() const {
 	return object_files;
 }

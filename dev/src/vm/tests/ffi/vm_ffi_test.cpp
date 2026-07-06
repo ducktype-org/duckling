@@ -32,6 +32,9 @@ public:
 		TESTER_ADD_TEST(mixedIntFloatArgs);
 		TESTER_ADD_TEST(floatStructByValue);
 		TESTER_ADD_TEST(floatNameWithWrongSizeFails);
+		TESTER_ADD_TEST(systemLibraryViaApi);
+		TESTER_ADD_TEST(bareSonameInBytecode);
+		TESTER_ADD_TEST(missingSystemLibraryFails);
 		TESTER_ADD_TEST(missingSymbolFails);
 		TESTER_ADD_TEST(missingObjectFileFails);
 		TESTER_ADD_TEST(unsupportedTypeFails);
@@ -309,6 +312,68 @@ private:
 				+ "type primitive: f32 8\n"
 				  "ffi function ffi_addf { f32, f32 } -> { f32 };\n",
 			{ "FFI function signature" }
+		);
+	}
+
+	// A system library injected through `loadCode` (the path the `--ffi-lib` CLI option uses)
+	// must be visible to `ffi function` declarations from a later `loadFiles` call.
+	void systemLibraryViaApi() {
+		auto pid = initProcess();
+
+		vm::code::CodeCollection libs;
+		libs.object_files.emplace_back("libm.so.6");
+		ASSERT_HAS_VALUE(vm::api::loadCode(pid, libs));
+
+		auto file = writeTempDbc(
+			"system_lib_api",
+			"type primitive: f64 8\n"
+			"ffi function cos { f64 } -> { f64 };\n"
+			"function main { i64, ptr_argv } -> { i64 } {\n"
+			"    init_pany_type res, f64;\n"
+			"    init_pany_type a, f64;\n"
+			"    mov_p64_imm a, 0.0;\n"
+			"    call_ffifunc cos;\n"
+			"    init_pany_type r, i64;\n"
+			"    init_pany_type ires, i32;\n"
+			"    fptosi_p32_p64 ires, res;\n"
+			"    call_builtinfunc builtin_output_i32;\n"
+			"    ret;\n"
+			"}\n"
+		);
+		auto load = vm::api::loadFiles(pid, { file });
+		if (!load.has_value()) fail(nlohmann::json(load.error()).dump());
+		runTestOnVm(pid, {}, "1\n");
+	}
+
+	// A bare soname in `ffi object` skips the file-existence check and is resolved by dlopen's
+	// system library search.
+	void bareSonameInBytecode() {
+		runProgram(
+			"system_lib_bytecode",
+			"ffi object \"libm.so.6\";\n"
+			"type primitive: f64 8\n"
+			"ffi function cos { f64 } -> { f64 };\n"
+			"function main { i64, ptr_argv } -> { i64 } {\n"
+			"    init_pany_type res, f64;\n"
+			"    init_pany_type a, f64;\n"
+			"    mov_p64_imm a, 0.0;\n"
+			"    call_ffifunc cos;\n"
+			"    init_pany_type r, i64;\n"
+			"    init_pany_type ires, i32;\n"
+			"    fptosi_p32_p64 ires, res;\n"
+			"    call_builtinfunc builtin_output_i32;\n"
+			"    ret;\n"
+			"}\n",
+			"1\n"
+		);
+	}
+
+	void missingSystemLibraryFails() {
+		expectLoadError(
+			"missing_system_lib",
+			"ffi object \"libduckling_no_such_lib.so\";\n"
+			"ffi function ffi_add { i64, i64 } -> { i64 };\n",
+			{ "Failed to load" }
 		);
 	}
 

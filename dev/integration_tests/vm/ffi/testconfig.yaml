@@ -1,0 +1,26 @@
+# Tests for loading system shared libraries for FFI symbol resolution:
+# the `--ffi-lib` CLI option and bare sonames in `ffi object` declarations.
+
+# Deliberately empty, the parent node already compiles the VM.
+PreNode: ""
+
+Tests:
+  ffi-system-lib:
+    Cases:
+      cli-option:
+        Run: "@{dvm_path} run cos.dbc --ffi-lib libm.so.6"
+        Output:
+          String: "1\n"
+      cli-option-short:
+        Run: "@{dvm_path} run cos.dbc -l libm.so.6"
+        Output:
+          String: "1\n"
+      bare-soname-in-bytecode:
+        Run: "@{dvm_path} run cos_ffi_object.dbc"
+        Output:
+          String: "1\n"
+      # The quoted grep pattern must be a single word, DIT splits the command naively.
+      missing-library-fails:
+        Run: "@{dvm_path} run cos.dbc --ffi-lib libduckling_no_such_lib.so 2>&1 | grep -c Failed"
+        Output:
+          String: "1\n"

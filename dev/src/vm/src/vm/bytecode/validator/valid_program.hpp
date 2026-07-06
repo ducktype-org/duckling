@@ -56,7 +56,7 @@ namespace vm::code {
 
 		const ObjIdNameMap<FFIFunction>& ffiFunctions() const;
 
-		const std::unordered_map<fs::File, std::shared_ptr<native::DynamicLibrary>>& objectFiles(
+		const std::unordered_map<std::string, std::shared_ptr<native::DynamicLibrary>>& objectFiles(
 		) const;
 
 	private:
@@ -67,10 +67,11 @@ namespace vm::code {
 		TypeContext                                 type_context;
 
 		/**
-		 * @brief Shared objects declared with `ffi object`, loaded into the process. The library
-		 * handles are shared between program copies and live for the lifetime of the program.
+		 * @brief Shared objects declared with `ffi object`, loaded into the process and keyed by
+		 * the exact string passed to `dlopen`. The library handles are shared between program
+		 * copies and live for the lifetime of the program.
 		 */
-		std::unordered_map<fs::File, std::shared_ptr<native::DynamicLibrary>> object_files;
+		std::unordered_map<std::string, std::shared_ptr<native::DynamicLibrary>> object_files;
 
 		/**
 		 * @brief Contains a mapping from function name to function signature for all functions
@@ -126,8 +127,8 @@ namespace vm::code {
 
 		/**
 		 * @brief Loads new shared objects into the process. May invalidate state.
-		 * Object files already loaded (by path) are skipped.
+		 * Object files already loaded (by the same dlopen string) are skipped.
 		 */
-		void insertObjectFiles(const std::vector<fs::File>& new_files);
+		void insertObjectFiles(const std::vector<std::string>& new_files);
 	};
 }

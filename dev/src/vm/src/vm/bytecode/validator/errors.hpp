@@ -188,9 +188,8 @@ namespace vm::code {
 	public:
 		constexpr static std::string_view ERR_MSG = "Failed to load `ffi object` file: ";
 
-		FFIObjectFileError(const fs::File& file, const std::string& reason):
-			  ValidationError(base::strConcat(ERR_MSG, file.getFilePath().string(), ": ", reason)) {
-		}
+		FFIObjectFileError(const std::string& file, const std::string& reason):
+			  ValidationError(base::strConcat(ERR_MSG, file, ": ", reason)) {}
 	};
 
 	class FFIStructLayoutMismatchError: public ValidationError {

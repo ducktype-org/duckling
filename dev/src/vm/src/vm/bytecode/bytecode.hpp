@@ -107,7 +107,9 @@ namespace vm::code {
 		std::vector<GlobalData>        global_data;
 		std::vector<ExternalCFunction> external_c_functions;
 		std::vector<FFIFunction>       ffi_functions;
-		std::vector<fs::File>          object_files;
+		/// Shared objects for FFI symbol resolution, each stored as the exact string passed to
+		/// `dlopen` (an absolute path, or a bare name searched in the system library paths).
+		std::vector<std::string> object_files;
 
 		/**
 		 * @brief Merges another CodeCollection into this one by appending all its elements.

@@ -120,6 +120,12 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::parseFiles(
 
 				for (const auto& ffi_object: parsed_file.ffi_objects) {
 					fs::FilePath path{ ffi_object->path.strView() };
+					// A name without a directory component (e.g. "libm.so.6") is passed through
+					// to dlopen, which searches the system library paths.
+					if (!path.getPath().has_parent_path()) {
+						new_code.object_files.emplace_back(path.string());
+						continue;
+					}
 					if (!path.getPath().is_absolute())
 						path = parsed_file.source_file.getFilePath().parentPath() / path;
 					if (!path.exists()) {
@@ -129,7 +135,7 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::parseFiles(
 						));
 						return std::unexpected(std::move(log));
 					}
-					new_code.object_files.emplace_back(path);
+					new_code.object_files.emplace_back(path.string());
 				}
 			}
 			base::deduplicateBy(new_code.functions, [](const code::Function& func) {
@@ -142,9 +148,7 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::parseFiles(
 			base::deduplicateBy(new_code.ffi_functions, [](const code::FFIFunction& func) {
 				return func.name.str.strView();
 			});
-			base::deduplicateBy(new_code.object_files, [](const fs::File& file) {
-				return file.getFilePath().string();
-			});
+			base::deduplicateBy(new_code.object_files, [](const std::string& file) { return file; });
 			base::deduplicateBy(new_code.global_data, [](const vm::code::GlobalData& g) {
 				return g.name.str.strView();
 			});
