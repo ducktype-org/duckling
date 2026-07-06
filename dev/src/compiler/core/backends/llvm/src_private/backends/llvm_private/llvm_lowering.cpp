@@ -934,17 +934,21 @@ namespace compiler::backend_llvm {
 				return builder.CreateLoad(desired_type, dst);
 			};
 
-			auto& return_cc = c_abi.function_info.return_info;
+			auto& return_info_opt = c_abi.function_info.return_info;
 
 			// The LLVM type of the original (un-coerced) return value.
-			llvm::Type* return_original_type = abiTypeToLLVMType(ctx, *return_cc.original_type);
+			llvm::Type* return_original_type = nullptr;
+			if (return_info_opt)
+				return_original_type = abiTypeToLLVMType(ctx, *return_info_opt->original_type);
+			else
+				return_original_type = llvm::Type::getVoidTy(ctx);
 
 			// Storage for the returned value when it is returned indirectly (sret). Filled in below.
 			llvm::Value* sret_slot = nullptr;
 
-			if (return_cc.passed_as_param) {
+			if (return_info_opt && return_info_opt->passed_as_param) {
 				CORE_ASSERT(
-					v_matches(return_cc.info.kind, cc::ArgInfo::ByPointer),
+					v_matches(return_info_opt->info.kind, cc::ArgInfo::ByPointer),
 					"When passing as param expected calling conv info is ByPointer"
 				);
 				// The callee writes the result through a hidden pointer parameter. Allocate a slot
@@ -1004,17 +1008,19 @@ namespace compiler::backend_llvm {
 			// Reconstruct and return the original-typed return value (the caller stores it).
 			llvm::Value* result_value = nullptr;
 
-			if (return_cc.passed_as_param) {
+			if (return_info_opt && return_info_opt->passed_as_param) {
 				// Result was written through the sret pointer – just load it back.
 				result_value = builder.CreateLoad(return_original_type, sret_slot);
-			} else {
-				variant_match(return_cc.info.kind) {
+			} else if (return_info_opt) {
+				variant_match(return_info_opt->info.kind) {
 					variant_case(cc::ArgInfo::ByValue, data) {
 						llvm::Type* coerce_type = abiTypeToLLVMType(ctx, data.coerce_to_type);
 						if (coerce_type == return_original_type) {
 							result_value = call_instruction;
 						} else {
-							result_value = copy_value_to_type(call_instruction, coerce_type, return_original_type);
+							result_value = copy_value_to_type(
+								call_instruction, coerce_type, return_original_type
+							);
 						}
 					}
 					variant_case(cc::ArgInfo::ByPointer, data) {

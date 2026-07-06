@@ -55,13 +55,13 @@ namespace abi::calling_conv {
 	};
 
 	struct FunctionInfo {
-		ReturnEntry           return_info;
-		std::vector<ArgEntry> param_info;
+		base::Optional<ReturnEntry> return_info;
+		std::vector<ArgEntry>       param_info;
 	};
 
 	struct FunctionType {
-		types::AbiTypeCRef              return_type;
-		std::vector<types::AbiTypeCRef> param_types;
+		base::Optional<types::AbiTypeCRef> return_type;
+		std::vector<types::AbiTypeCRef>    param_types;
 	};
 
 	class TargetInfo {

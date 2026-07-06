@@ -60,6 +60,11 @@ namespace compiler::helios {
 					ctx, LanguagePrimitive::Panic, "core", { "panicking" }, "panic"
 				);
 			}
+			case LanguagePrimitive::BuiltinOutputStr: {
+				return lookupPrimitive(
+					ctx, LanguagePrimitive::Panic, "core", { "builtins" }, "builtin_output_str"
+				);
+			}
 			default:
 				CORE_PANIC("Unknown language primitive: ", key.primitive);
 			}

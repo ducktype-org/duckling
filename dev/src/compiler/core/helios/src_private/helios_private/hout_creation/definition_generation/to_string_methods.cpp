@@ -16,6 +16,7 @@
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_result.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
+#include "helios/symbols/lang_primitives.hpp"
 
 #include <ranges>
 
@@ -62,9 +63,7 @@ namespace compiler::helios::defgen {
 		std::vector<Box<code::Expr>> call_args;
 		call_args.emplace_back(makeBox<code::LiteralStringExpr>(ctx, code::generatedOrigin(), value)
 		);
-		SymID callee_sym = stringifySym(
-			ctx, tsh::SymbolType<>::withDefaults(tsh::getCharSliceType(ctx)), "builtin_stringify_str"
-		);
+		SymID callee_sym = ctx.query<QueryLanguagePrimitiveSymID>({LanguagePrimitive::BuiltinOutputStr})->valueOrThrow();
 		auto callee = makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), callee_sym);
 		return makeBox<code::CallExpr>(
 			ctx, code::generatedOrigin(), std::move(callee), std::move(call_args)

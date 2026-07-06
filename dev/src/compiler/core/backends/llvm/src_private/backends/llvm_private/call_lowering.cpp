@@ -38,22 +38,22 @@ namespace compiler::backend_llvm {
 			auto&       return_cc   = function_info.return_info;
 			llvm::Type* return_type = nullptr;
 
-			if (return_cc.passed_as_param) {
+			if (return_cc && return_cc->passed_as_param) {
 				CORE_ASSERT(
-					std::holds_alternative<cc::ArgInfo::ByPointer>(return_cc.info.kind),
+					std::holds_alternative<cc::ArgInfo::ByPointer>(return_cc->info.kind),
 					"When passing as param expected calling conv info is ByPointer"
 				);
 				// The result is returned indirectly: prepend a hidden `sret` pointer parameter and
 				// make the function return void.
-				llvm::Type* original_type = abiTypeToLLVMType(ctx, *return_cc.original_type);
+				llvm::Type* original_type = abiTypeToLLVMType(ctx, *return_cc->original_type);
 				attributes.emplace_back(
 					u32(llvm_parameters.size()),
 					llvm::Attribute::getWithStructRetType(ctx, original_type)
 				);
 				llvm_parameters.push_back(llvm::PointerType::getUnqual(ctx));
 				return_type = llvm::Type::getVoidTy(ctx);
-			} else {
-				variant_match(return_cc.info.kind) {
+			} else if (return_cc) {
+				variant_match(return_cc->info.kind) {
 					variant_case(cc::ArgInfo::ByValue, data) {
 						return_type = abiTypeToLLVMType(ctx, data.coerce_to_type);
 					}
@@ -61,6 +61,8 @@ namespace compiler::backend_llvm {
 						return_type = llvm::PointerType::getUnqual(ctx);
 					}
 				}
+			} else {
+				return_type = llvm::Type::getVoidTy(ctx);
 			}
 
 			for (const auto& param: function_info.param_info) {

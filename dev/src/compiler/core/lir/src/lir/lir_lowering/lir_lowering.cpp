@@ -81,13 +81,24 @@ namespace compiler::lir {
 			auto& result = ctx.query<tsl::QueryCAbiTypeOf>(type->getSourceType())
 			                   ->valueOrPanicMsg("Query failure.");
 			if (not result.has_value())
-				CORE_PANIC(
-					base::strConcat("Function type is not compatible with CABI", result.error())
-				);
+				CORE_PANIC(base::strConcat(
+					"Function type is not compatible with CABI: `",
+					result.error(),
+					"` in symbol `",
+					helios::name(sym),
+					"`."
+				));
 			return &result.value();
 		};
+
+		auto return_abi_or_empty
+			= [&](CRef<tsl::TypeLayout> type) -> base::Optional<abi::types::AbiTypeCRef> {
+			if (v_matches(type->getVariant(), tsl::EmptyTypeLayout)) return {};  // void return
+			return abi_type_or_panic(type);
+		};
+
 		abi::calling_conv::FunctionType abi_fun_type{
-			.return_type = abi_type_or_panic(return_type),
+			.return_type = return_abi_or_empty(return_type),
 			.param_types = parameter_types | std::views::transform(abi_type_or_panic)
 			             | std::ranges::to<std::vector>(),
 		};
@@ -1007,7 +1018,7 @@ namespace compiler::lir {
 		BlockRef entry_block_ref = blocks.last();
 
 		return Function{ .mangled_name       = mangled_name,
-			             .abi                = {LIRAbi::DefaultAbi{}},
+			             .abi                = { LIRAbi::DefaultAbi{} },
 			             .link_once          = false,
 			             .ignore_on_dvm      = false,
 			             .ignore_on_llvm     = false,

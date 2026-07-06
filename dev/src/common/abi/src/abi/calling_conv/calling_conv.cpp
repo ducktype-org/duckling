@@ -203,7 +203,7 @@ namespace abi::calling_conv {
 			}
 			return RETURN_ENTRY(std::move(arg_info.info), passed_as_param);
 		};
-		return FunctionInfo{ .return_info = compute_return_entry(ft.return_type),
+		return FunctionInfo{ .return_info = ft.return_type.map(compute_return_entry),
 			                 .param_info = ft.param_types | std::views::transform(compute_arg_entry)
 			                             | std::ranges::to<std::vector>() };
 	}
@@ -295,7 +295,7 @@ namespace abi::calling_conv {
 		};
 
 
-		return FunctionInfo{ .return_info = compute_return_entry(ft.return_type),
+		return FunctionInfo{ .return_info = ft.return_type.map(compute_return_entry),
 			                 .param_info = ft.param_types | std::views::transform(compute_arg_entry)
 			                             | std::ranges::to<std::vector>() };
 	}
