@@ -10,7 +10,8 @@
 #include <frontend/pst_parser/lang_parser_element.hpp>
 
 namespace compiler::helios::templates {
-
+    
+    // This might be useful in the future.
     // enum class TemplateKind {
     //     Function,
     //     Class,
@@ -19,10 +20,21 @@ namespace compiler::helios::templates {
     // };
 
 
+    /**
+     * @brief Key for baking a template symbol ID.
+     * @note Everything related to handling named parameters, template overloading, default template arguments, implicit coercions of arguments, etc. should be handled by the caller using this key.
+     * Queries using this key assumes perfect match of template arguments to template parameters.
+     */
     struct TemplateBakeKey final {
+        /**
+         * @brief The symbol ID of the template to bake.
+         */
         SymID template_sym_id;
 
-        // TODO: we will have to assert argument types!
+        /** 
+         * Arguments that should 1-1 match the template parameters of the template symbol ID.
+         * This is used to generate constant symbols for the template arguments, and link them to the given baked template.
+         */
         std::vector<ctv::CompileTimeValue> template_arguments;
 
         [[nodiscard]]
@@ -31,30 +43,24 @@ namespace compiler::helios::templates {
 
 
     /**
-     * @brief Data produced by baking a template symbol ID.
-     * TODO: this will be passed to PST root in type-opaque way, so other helios code can retrieve it when needed. 
+     * @brief Data linked to the baked template, produced by baking a template symbol ID.
+     * This will be passed to PST root as additional root data in type-opaque way, so other helios code can retrieve it when needed.
+     * 
+     * @TODO: #3071 link this to the proper custom root element, liked pst::BakedTemplateRoot or something like that.
      */
     struct TemplateBakePSTLinkedData final {
-        // TemplateKind kind;
-        // SymID instantiated_sym_id;
-
         pst::AccessLocked<pst::LangElement> pst_parent_element;
 
         // hack 2:
         base::Optional<std::vector<SymID>> template_arguments_symbols;
-
-        // std::vector<ctv::CompileTimeValue> template_arguments;
     };
 
     /**
      * @brief Query to bake a template symbol ID.
+     * @important: Implementation of this query is very fragile for now.
+     *
      * @param key The template bake key.
      * @return The baked symbol ID.
      */
-    DECLARE_QUERY(QueryBakeTemplateSymID, TemplateBakeKey, query::QResult<SymID>, ({}));
-
-
-    // TODO: bake to hout units?
-
-    
+    DECLARE_QUERY(QueryBakeTemplateSymID, TemplateBakeKey, query::QResult<SymID>, ({}));    
 }
