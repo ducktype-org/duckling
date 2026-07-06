@@ -1,7 +1,7 @@
 before-cmd: export PATH="${DIT_TMP_DIR}/bin:$PATH"
 
 PreCase: |+
-  cd $DIT_TMP_DIR
+  @{cd-tmp-dir}
   mkdir -p $DUCK_HOME
   mkdir -p bin
   echo "security:

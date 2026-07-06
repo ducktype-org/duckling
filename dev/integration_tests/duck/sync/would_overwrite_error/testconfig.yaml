@@ -1,5 +1,5 @@
 PreCase: |+
-  cd $DIT_TMP_DIR
+  @{cd-tmp-dir}
   @{duck-exe} init foo
   @{duck-exe} init foo_but_different_dir --name foo
   @{duck-exe} -C foo sync

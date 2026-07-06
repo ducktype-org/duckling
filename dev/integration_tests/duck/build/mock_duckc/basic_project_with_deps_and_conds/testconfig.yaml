@@ -2,7 +2,7 @@ features: ""
 PostCase: python3 check.py @{features} && @{cleanup_tmp_env}
 
 PreCase: |+
-  cd $DIT_TMP_DIR
+  @{cd-tmp-dir}
   @{duck-exe} init foo
   @{duck-exe} init bar
   echo "dependencies:

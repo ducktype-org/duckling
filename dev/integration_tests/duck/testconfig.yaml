@@ -40,7 +40,7 @@ PreNode: |
   @{build-duck}
   cd -
 
-Run: 'export PATH="@{duck-exe-dir}:$PATH" && cd ${DIT_TMP_DIR} && @{before-cmd} && @{test-cmd}'
+Run: 'export PATH="@{duck-exe-dir}:$PATH" && @{cd-tmp-dir} && @{before-cmd} && @{test-cmd}'
 
 SubDirs:
   - cli

@@ -1,7 +1,7 @@
 PostCase: python3 check.py && @{cleanup_tmp_env}
 
 PreCase: |+
-  cd $DIT_TMP_DIR
+  @{cd-tmp-dir}
   @{duck-exe} init foo
   echo "features:
     empty: []

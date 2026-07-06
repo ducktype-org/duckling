@@ -1,7 +1,6 @@
 PreCase: |+
-  cd $DIT_TMP_DIR
+  @{cd-tmp-dir}
   @{duck-exe} init foo
-
 Tests:
   duck/init/reinitialization:
     Description: cannot reinitialise a project
