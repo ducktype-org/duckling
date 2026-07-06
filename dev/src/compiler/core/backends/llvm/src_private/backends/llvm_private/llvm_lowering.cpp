@@ -898,6 +898,22 @@ namespace compiler::backend_llvm {
 			return module->getOrInsertFunction(name, llvm::FunctionType::get(ret_type, args, false));
 		}
 
+		llvm::CallInst* lowerCallCAbiInstruction(
+			const lir::Instruction& lir_instruction, llvm::IRBuilder<>& builder, const lir::LIRAbi::CAbi& c_abi
+		) {
+			const auto function_literal
+				= lir_instruction.arguments.at(0).get<lir::FunctionLiteral>();
+			
+			for (int i{0}; i < function_literal.parameter_layouts.size(); i++) {
+				auto& lir_arg = lir_instruction.arguments.at(i + 1);
+				auto& abi_info = c_abi.function_info.param_info.at(i);
+
+				variant_match(abi_info.info.kind) {
+					variant_case(abi::AbiInfo::)
+				}
+			}
+		}
+
 		/**
 		 * @brief Lowers a `Call` instruction to an `llvm::CallInst`.
 		 *
@@ -913,8 +929,14 @@ namespace compiler::backend_llvm {
 		llvm::CallInst* lowerCallInstruction(
 			const lir::Instruction& lir_instruction, llvm::IRBuilder<>& builder
 		) {
+
 			const auto function_literal
 				= lir_instruction.arguments.at(0).get<lir::FunctionLiteral>();
+
+			if(auto c_abi = std::get_if<lir::LIRAbi::CAbi>(&function_literal.abi.value)) {
+				return lowerCallCAbiInstruction(lir_instruction, builder, *c_abi);
+			}
+			CORE_ASSERT(v_matches(function_literal.abi.value, lir::LIRAbi::DefaultAbi), "Non default abi lowering.");
 
 			// Load the argument values (everything after the callee).
 			std::vector<llvm::Value*> args;
