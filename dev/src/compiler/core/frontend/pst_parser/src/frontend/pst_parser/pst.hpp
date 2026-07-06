@@ -378,14 +378,6 @@ namespace pst {
 			this->element.internalMut()->setAdditionalRootData(std::move(data));
 		}
 
-		void resetAdditionalRootData(AdditionalRootData data) {
-			CORE_ASSERT(
-				element.internalMut().toOpt().has_value(),
-				"Attempted to reset additional root data on PST with null root element"
-			);
-			this->element.internalMut()->resetAdditionalRootData(std::move(data));
-		}
-
 		void dprint(std::ostream& out) const { nullAwareDprint(element, out); }
 	};
 }

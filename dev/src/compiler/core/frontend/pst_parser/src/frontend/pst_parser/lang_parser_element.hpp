@@ -69,6 +69,12 @@ namespace pst {
 		 * @note This is used mostly for determining the parent helios-scope of PST root elements.
 		 */
 		std::variant<MacroExpansionParent, ModuleParent, BakedTemplateParent> pst_parent;
+
+		template<class T>
+		[[nodiscard]]
+		const T& getAs() const {
+			return std::get<T>(pst_parent);
+		}
 	};
 
 	/**
@@ -544,11 +550,6 @@ namespace pst {
 		 * @note This should only be used for root elements of the PST.
 		 */
 		void setAdditionalRootData(AdditionalRootData data);
-		
-		/**
-		 * @TODO:#3072 remove this
-		 */
-		void resetAdditionalRootData(AdditionalRootData data);
 
 	private:
 		PstID id = PstID::next();

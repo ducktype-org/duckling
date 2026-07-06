@@ -53,7 +53,13 @@ namespace compiler::helios::templates {
 
         // hack 2:
         // PR: change to mutable atomic, and set it inside the bake query.
-        base::Optional<std::vector<SymID>> template_arguments_symbols;
+
+        /**
+         * @brief The symbols for the template arguments.
+         *
+         * @TODO: Implementation of this is a bit hacky, try to improve this.
+         */
+        mutable SharedBox<std::atomic<std::vector<SymID>*>> template_arguments_symbols;
     };
 
     /**

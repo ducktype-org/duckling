@@ -169,28 +169,24 @@ namespace compiler::helios::templates {
                 .pst_parent = pst::AdditionalRootData::BakedTemplateParent{
                     .template_bake_data = TemplateBakePSTLinkedData{
                         .pst_parent_element = getPSTElementParent(ctx, template_statement).getAsLangElement(),
-                        .template_arguments_symbols = {}
+                        .template_arguments_symbols = makeSharedBox<std::atomic<std::vector<SymID>*>>(nullptr)
                     }
                 }
             });
-
-            // we only set args, after we can run bakeTemplateArgumentsSymbols
 
             auto args = bakeTemplateArgumentsSymbols(ctx, template_params, 
                             ctx.query<QueryPrimaryCodeScopeFor>({ baked_root }),
                             key
                         );
             
-            // @TODO: #3072 remove this
-            // Also: this can totally race
-            baked_pst.resetAdditionalRootData(pst::AdditionalRootData{
-                .pst_parent = pst::AdditionalRootData::BakedTemplateParent{
-                    .template_bake_data = TemplateBakePSTLinkedData{
-                        .pst_parent_element = getPSTElementParent(ctx, template_statement).getAsLangElement(),
-                        .template_arguments_symbols = args
-                    }
-                }
-            });
+            // @TODO: #3072 try to improve this.
+            // We atomically set template_arguments_symbols here, 
+            // The reason we can't do it in the initial setAdditionalRootData call is because
+            // we can't call QueryPrimaryCodeScopeFor(baked_root) without pst_parent_element set.
+            // At the same time this scope is needed to generate the template argument symbols, so we have to do it in two steps.
+            CRef<TemplateBakePSTLinkedData> baked_root_data_pointer = std::any_cast<TemplateBakePSTLinkedData>(&baked_root->getAdditionalRootData().getAs<pst::AdditionalRootData::BakedTemplateParent>().template_bake_data);
+            baked_root_data_pointer->template_arguments_symbols->store(new std::vector<SymID>(std::move(args)));
+            
             
             std::cerr << "Baked statement!  \n";
 
