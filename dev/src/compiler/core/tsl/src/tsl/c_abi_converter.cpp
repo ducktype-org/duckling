@@ -44,7 +44,7 @@ namespace compiler::tsl {
 			const usize width = usize(flt.getSize());
 			// A float is C-compatible iff the target lists its width: the IEEE
 			// formats everywhere, the x87 80-bit extended only on x87 targets.
-			if (!compilerTargetABI().data_layout.float_layouts.atMaybe(u8(width)).has_value())
+			if (!compilerTargetABI().data_layout.float_layouts.contains(width))
 				return fail(base::strConcat(
 					"floating-point width ",
 					std::to_string(width),

@@ -72,6 +72,16 @@ namespace abi::types {
 		AbiTypePtr element;
 		usize      count;
 
+		ArrayType(AbiTypePtr element, usize count);
+
+		// `element` is an owning Box, so a copy must deep-clone it (a shallow
+		// copy is deleted by BoxOrCRef). Moves stay cheap.
+		ArrayType(const ArrayType& other);
+		ArrayType(ArrayType&&) noexcept            = default;
+		ArrayType& operator=(const ArrayType& other);
+		ArrayType& operator=(ArrayType&&) noexcept = default;
+		~ArrayType()                               = default;
+
 		bool operator==(const ArrayType& other) const;
 	};
 
@@ -82,6 +92,16 @@ namespace abi::types {
 	 */
 	struct StructType final {
 		std::vector<AbiTypePtr> fields;
+
+		explicit StructType(std::vector<AbiTypePtr> fields);
+
+		// Fields are owning Boxes, so a copy must deep-clone each one (a shallow
+		// copy is deleted by BoxOrCRef). Moves stay cheap.
+		StructType(const StructType& other);
+		StructType(StructType&&) noexcept            = default;
+		StructType& operator=(const StructType& other);
+		StructType& operator=(StructType&&) noexcept = default;
+		~StructType()                                = default;
 
 		bool operator==(const StructType& other) const;
 	};

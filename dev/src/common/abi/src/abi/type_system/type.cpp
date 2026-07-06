@@ -14,8 +14,44 @@ namespace abi::types {
 	// allocating helpers below.
 	// NOLINTBEGIN(clang-analyzer-cplusplus.NewDeleteLeaks)
 
+	AbiTypePtr makeBoxAbiType(AbiType type) { return base::makeBox<AbiType>(std::move(type)); }
+
+	ArrayType::ArrayType(AbiTypePtr element, usize count):
+		  element(std::move(element)),
+		  count(count) {}
+
+	ArrayType::ArrayType(const ArrayType& other):
+		  element(makeBoxAbiType(cloneAbiType(*other.element))),
+		  count(other.count) {}
+
+	ArrayType& ArrayType::operator=(const ArrayType& other) {
+		if (this != &other) {
+			element = makeBoxAbiType(cloneAbiType(*other.element));
+			count   = other.count;
+		}
+		return *this;
+	}
+
 	bool ArrayType::operator==(const ArrayType& other) const {
 		return count == other.count && *element == *other.element;
+	}
+
+	namespace {
+		std::vector<AbiTypePtr> cloneFields(const std::vector<AbiTypePtr>& fields) {
+			std::vector<AbiTypePtr> cloned;
+			cloned.reserve(fields.size());
+			for (const auto& field: fields) cloned.push_back(makeBoxAbiType(cloneAbiType(*field)));
+			return cloned;
+		}
+	}
+
+	StructType::StructType(std::vector<AbiTypePtr> fields): fields(std::move(fields)) {}
+
+	StructType::StructType(const StructType& other): fields(cloneFields(other.fields)) {}
+
+	StructType& StructType::operator=(const StructType& other) {
+		if (this != &other) fields = cloneFields(other.fields);
+		return *this;
 	}
 
 	bool StructType::operator==(const StructType& other) const {
@@ -23,8 +59,6 @@ namespace abi::types {
 			fields, other.fields, [](const AbiTypePtr& a, const AbiTypePtr& b) { return *a == *b; }
 		);
 	}
-
-	AbiTypePtr makeBoxAbiType(AbiType type) { return base::makeBox<AbiType>(std::move(type)); }
 
 	AbiType intType(u64 width_bits, bool is_signed) {
 		return AbiType{ IntType{ .width_bits = width_bits, .is_signed = is_signed } };
@@ -39,11 +73,11 @@ namespace abi::types {
 	AbiType pointerType() { return AbiType{ PointerType{} }; }
 
 	AbiType arrayType(AbiTypePtr element, usize count) {
-		return AbiType{ ArrayType{ .element = std::move(element), .count = count } };
+		return AbiType{ ArrayType{ std::move(element), count } };
 	}
 
 	AbiType structType(std::vector<AbiTypePtr> fields) {
-		return AbiType{ StructType{ .fields = std::move(fields) } };
+		return AbiType{ StructType{ std::move(fields) } };
 	}
 
 	AbiType cloneAbiType(const AbiType& type) {
