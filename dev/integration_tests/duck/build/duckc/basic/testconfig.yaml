@@ -4,6 +4,8 @@ PostCase: python3 check.py @{profile-name} && @{cleanup_tmp_env}
 PreCase: |+
   @{cd-tmp-dir}
   @{duck-exe} init foo
+  # @TODO: #2920 This shouldn't be needed (manually fixup return type).
+  echo @{default-src} > foo/src/src.dmf
   echo "profiles:
     my-profile:
       opt-level: z

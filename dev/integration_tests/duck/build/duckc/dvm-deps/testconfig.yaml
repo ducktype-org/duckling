@@ -4,6 +4,8 @@ PreCase: |+
   @{cd-tmp-dir}
   @{duck-exe} init foo
   @{duck-exe} init bar
+  # @TODO: #2920 This shouldn't be needed (manually fixup return type).
+  echo @{default-src} > foo/src/src.dmf
   echo "dependencies:
     bar:
       source:
