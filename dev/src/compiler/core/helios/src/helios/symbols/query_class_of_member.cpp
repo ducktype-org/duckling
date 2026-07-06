@@ -2,7 +2,6 @@
 
 #include <helios/scope_id.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/symbols/symbol_kind.hpp>
 #include <helios/tsh/types.hpp>
 #include <helios_private/scopes/scope_data.hpp>

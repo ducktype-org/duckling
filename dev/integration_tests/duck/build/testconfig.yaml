@@ -2,4 +2,4 @@ PreNode: ""
 
 SubDirs:
   - duckc
-  - mock_duckc
+  - mock-duckc

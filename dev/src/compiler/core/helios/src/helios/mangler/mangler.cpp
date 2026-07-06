@@ -13,7 +13,6 @@
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_abi.hpp>
 #include <helios/symbols/symbol_id.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/tsh/types.hpp>
 #include <helios_private/pst_layer/pst_parent.hpp>
 #include <helios_private/scopes/scopes.hpp>
@@ -330,6 +329,12 @@ namespace compiler::helios::mangler {
 							}
 							variant_case(defgen::GeneratedSymbolData::LengthMethod, length_method) {
 								return "Hlength" + func(ctx, symbol_id) + "E";
+							}
+							variant_case(defgen::GeneratedSymbolData::PushMethod, push_method) {
+								return "Hpush" + func(ctx, symbol_id) + "E";
+							}
+							variant_case(defgen::GeneratedSymbolData::PopMethod, pop_method) {
+								return "Hpop" + func(ctx, symbol_id) + "E";
 							}
 							variant_case(
 								defgen::GeneratedSymbolData::ReplExpressionWrapper, repl_wrapper

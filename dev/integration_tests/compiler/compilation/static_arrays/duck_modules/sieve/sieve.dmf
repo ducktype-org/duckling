@@ -1,13 +1,13 @@
 import core.builtins.*;
 
-fun init_array(size: i64, arr: ref i64[100]) -> () = {
+fun init_array(arr: ref i64[100]) -> () = {
     var i = 0;
-    while (i < size) {
+    while (i < i64(arr.length())) {
         arr[i] = 1;
         i = i + 1;
     }
-    if (size > 0) { arr[0] = 0; }
-    if (size > 1) { arr[1] = 0; }
+    if (i64(arr.length()) > 0) { arr[0] = 0; }
+    if (i64(arr.length()) > 1) { arr[1] = 0; }
 }
 
 fun sieve(n: i64, is_prime: ref i64[100]) -> () = {
@@ -34,7 +34,7 @@ fun main() -> i64 = {
 
     var is_prime: i64[100];
     
-    init_array(100, &is_prime);
+    init_array(&is_prime);
 
     sieve(limit, &is_prime);
 

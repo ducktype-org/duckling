@@ -3,7 +3,6 @@
 #include <frontend/pst_parser/lang_parser_element.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/mangler/mangler.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 #include <tsl/queries.hpp>
@@ -21,7 +20,9 @@ namespace compiler::lir {
 		const mir::MIRLocalRef    mir_local,
 		const base::Optional<u64> new_parameter_index
 	) {
-		auto             type_layout = ctx.query<tsl::QuerySymbolTypeLayout>(mir_local->type);
+		auto type_layout
+			= CRef<tsl::TypeLayout>(&ctx.query<tsl::QuerySymbolTypeLayout>(mir_local->type)
+		                                 ->valueOrPanicMsg("layout query failed at LIR stage"));
 		LIRLocalMetadata metadata;
 		if_opt_some(mir_local->helios_id, helios_id) {
 			metadata.source_code_name = helios::name(helios_id);
@@ -36,14 +37,18 @@ namespace compiler::lir {
 	}
 
 	LIRLocal LIRLocal::boolLocal(query::Context& ctx) {
-		auto bool_type   = tsh::getBoolType();
-		auto bool_layout = ctx.query<tsl::QueryAbstractTypeLayout>(bool_type);
+		auto  bool_type   = tsh::getBoolType();
+		auto& bool_layout = ctx.query<tsl::QueryAbstractTypeLayout>(bool_type)->valueOrPanicMsg(
+			"layout query failed at LIR stage"
+		);
 
-		return LIRLocal{ bool_layout };
+		return LIRLocal{ CRef<tsl::TypeLayout>(&bool_layout) };
 	}
 
 	LIRGlobal LIRGlobal::fromMIR(query::Context& ctx, mir::MIRGlobal mir_global) {
-		auto type_layout = ctx.query<tsl::QuerySymbolTypeLayout>(mir_global.type);
+		auto type_layout
+			= CRef<tsl::TypeLayout>(&ctx.query<tsl::QuerySymbolTypeLayout>(mir_global.type)
+		                                 ->valueOrPanicMsg("layout query failed at LIR stage"));
 
 		auto mangled_name  = helios::mangler::getSimpleMangledName(ctx, mir_global.helios_id);
 		LIRGlobalType type = mir_global.kind == mir::MIRGlobal::Kind::Constant
@@ -77,9 +82,6 @@ namespace compiler::lir {
 						  variant_match(current_layout->getVariant()) {
 							  variant_case(tsl::StaticArrayTypeLayout, static_array_layout) {
 								  current_layout = static_array_layout.getElementLayout();
-							  }
-							  variant_case(tsl::DynamicArrayTypeLayout, dynamic_array_layout) {
-								  current_layout = dynamic_array_layout.getElementLayout();
 							  }
 							  variant_case(tsl::PointerTypeLayout, many_pointer_layout) {
 								  current_layout = many_pointer_layout.getPointee();
