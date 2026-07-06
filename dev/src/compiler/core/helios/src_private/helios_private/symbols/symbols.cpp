@@ -201,22 +201,6 @@ namespace compiler::helios {
 		});
 	}
 
-	// Move those somewhere more appropriate
-	bool isUserDefinedCopyConstructor(query::Context& ctx, const SymID sym) {
-		if (kind(sym) != SymbolKind::Constructor) return false;
-		const auto pst = maybeSymbolPst(sym);
-		if (!pst.has_value()) return false;
-		return pst->unlock(ctx).dynamicCast<pst::CopyConstructor>().has_value();
-	}
-
-	base::Optional<SymID> userCopyConstructorOf(query::Context& ctx, const SymID class_sym) {
-		if (kind(class_sym) != SymbolKind::Class) return {};
-		const auto& class_data = ctx.query<QueryClassSymbolData>(class_sym)->valueOrThrow();
-		for (const SymID ctor: class_data.constructors)
-			if (isUserDefinedCopyConstructor(ctx, ctor)) return ctor;
-		return {};
-	}
-
 	template<typename Attribute>
 	bool hasAttribute(SymID id) {
 		return std::ranges::any_of(getSymRef(id)->common.attributes, [](auto a) {

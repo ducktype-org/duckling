@@ -1,5 +1,6 @@
 #include "abstract_type_impl.hpp"
 
+#include "helios_private/hout_creation/definition_generation/copy_constructors.hpp"
 #include "queries.hpp"
 
 #include <helios/symbols/query_type_of_symbol.hpp>
@@ -503,7 +504,7 @@ namespace compiler::tsh {
 
 	bool ClassAbstractTypeImpl::isCopyable(query::Context& ctx) const {
 		// A user-defined copy constructor makes the class copyable regardless of its fields.
-		if (compiler::helios::userCopyConstructorOf(ctx, symbol).has_value()) return true;
+		if (compiler::helios::defgen::userCopyConstructorOf(ctx, symbol).has_value()) return true;
 
 		auto fields = getDeclaredInterface(ctx)->getFieldsView();
 		// All component types have to be copyable.
@@ -515,7 +516,7 @@ namespace compiler::tsh {
 	bool ClassAbstractTypeImpl::isTriviallyCopyable(query::Context& ctx) const {
 		// A user-defined copy constructor means copies must run user code, so the class is never
 		// trivially copyable.
-		if (compiler::helios::userCopyConstructorOf(ctx, symbol).has_value()) return false;
+		if (compiler::helios::defgen::userCopyConstructorOf(ctx, symbol).has_value()) return false;
 
 		auto fields = getDeclaredInterface(ctx)->getFieldsView();
 		// All component types have to be trivially copyable.

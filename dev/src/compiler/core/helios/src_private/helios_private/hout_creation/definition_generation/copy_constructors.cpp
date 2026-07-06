@@ -1,20 +1,42 @@
-#include "default_copy_constructors.hpp"
+#include "copy_constructors.hpp"
 
 #include <diagnostic_interactive/placeholder.hpp>
+#include <frontend/pst_parser/elements/hierarchy/class_elements/copy_constructor.hpp>
+#include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/queries/function_queries.hpp>
+#include <helios/symbols/query_type_symbol_data.hpp>
 #include <helios/tsh/queries/types.hpp>
+#include <helios_private/hout_creation/definition_generation/copy_constructors.hpp>
 #include <helios_private/hout_creation/definition_generation/length_methods.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
+
+#include "base/except/exceptions.hpp"
 
 #include <query_framework/standard_query/query_impl.hpp>
 
 #include <ranges>
 
 namespace compiler::helios::defgen {
+	bool isUserDefinedCopyConstructor(query::Context& ctx, const SymID sym) {
+		if (kind(sym) != SymbolKind::Constructor) return false;
+		const auto maybe_pst = maybeSymbolPst(sym);
+		CORE_ASSERT(maybe_pst.has_value(), "User defined copy constructor without a PST element");
+		const auto pst = maybe_pst.value();
+		return pst.unlock(ctx).dynamicCast<pst::CopyConstructor>().has_value();
+	}
+
+	base::Optional<SymID> userCopyConstructorOf(query::Context& ctx, const SymID class_sym) {
+		if (kind(class_sym) != SymbolKind::Class) return {};
+		const auto& class_data = ctx.query<QueryClassSymbolData>(class_sym)->valueOrThrow();
+		for (const SymID ctor: class_data.constructors)
+			if (isUserDefinedCopyConstructor(ctx, ctor)) return ctor;
+		return {};
+	}
+
 	SymID copySymForType(query::Context& ctx, const tsh::AbstractType type) {
 		// First, try to get the user-defined constructor.
 		if (type.getKind() == tsh::Kind::Class) {
@@ -36,11 +58,11 @@ namespace compiler::helios::defgen {
 		 * @brief Build a HOUT expression that produces a copy of `source`.
 		 *
 		 * - Trivially-copyable sources are returned as they where (which means they are byte
-		 * copied).
+		 *   copied).
 		 * - A `box T` source is deep-copied into a freshly allocated box holding a copy of the
-		 * pointee.
+		 * 	 pointee.
 		 * - Non-trivially-copyable class, static-array, tuple and list members are copied by
-		 * calling their own default copy constructor with a reference to `source`.
+		 *   calling their own copy constructor with a reference to `source`.
 		 */
 		Box<code::Expr> makeCopyExpr(
 			query::Context& ctx, Box<code::Expr> source, const tsh::SymbolType<>& type
@@ -52,52 +74,48 @@ namespace compiler::helios::defgen {
 			// `box(*source)`.
 			if (type.getRefKind() == tsh::ReferenceKind::Box) {
 				const auto pointee_type = type.withReferenceKind(tsh::ReferenceKind::Direct);
-				auto       pointee_copy = makeCopyExpr(
-                    ctx,
-                    makeBox<code::DerefExpr>(ctx, code::generatedOrigin(), std::move(source)),
-                    pointee_type
-                );
+
+				// Produce a copy of the underlying type.
+				auto pointee_copy = makeCopyExpr(
+					ctx,
+					makeBox<code::DerefExpr>(ctx, code::generatedOrigin(), std::move(source)),
+					pointee_type
+				);
+
+				// Now wrap it in a heap allocation.
 				return makeBox<code::BoxOfExpr>(
 					ctx, code::generatedOrigin(), std::move(pointee_copy)
 				);
 			}
 
+			// Now we have a direct value which should be copied.
 			const auto abstract_type = type.getType();
-			if (type.getRefKind() == tsh::ReferenceKind::Direct
-			    && (abstract_type.getKind() == tsh::Kind::Class
-			        || abstract_type.getKind() == tsh::Kind::StaticArray
-			        || abstract_type.getKind() == tsh::Kind::Tuple
-			        || abstract_type.getKind() == tsh::Kind::DynamicArray)) {
-				const SymID copy_sym = copySymForType(ctx, abstract_type);
+			CORE_ASSERT(
+				abstract_type.getKind() == tsh::Kind::Class
+					or abstract_type.getKind() == tsh::Kind::StaticArray
+					or abstract_type.getKind() == tsh::Kind::Tuple
+					or abstract_type.getKind() == tsh::Kind::DynamicArray,
+				"Tried to generate a copy constructor for a type which shouldn't need it"
+			);
 
-				std::vector<Box<code::Expr>> args;
-				args.emplace_back(
-					makeBox<code::RefOfExpr>(ctx, code::generatedOrigin(), std::move(source))
-				);
+			const SymID                  copy_sym = copySymForType(ctx, abstract_type);
+			std::vector<Box<code::Expr>> args;
+			args.emplace_back(
+				makeBox<code::RefOfExpr>(ctx, code::generatedOrigin(), std::move(source))
+			);
 
-				return makeBox<code::CallExpr>(
-					ctx,
-					code::generatedOrigin(),
-					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), copy_sym),
-					std::move(args)
-				);
-			}
-
-			ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-				base::strConcat(
-					"Default copy constructor for non-trivially-copyable type `",
-					type.toString(),
-					"`."
-				),
-				""
-			));
-			query::throwFailed();
-			CORE_UNREACHABLE();
+			return makeBox<code::CallExpr>(
+				ctx,
+				code::generatedOrigin(),
+				makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), copy_sym),
+				std::move(args)
+			);
 		}
 
 		/**
 		 * @brief Build `(*source).<member>` - a dereference of the `source` parameter followed by a
 		 * field access.
+		 * @TODO: 2776 Move this somewhere
 		 */
 		Box<code::Expr> derefSourceField(query::Context& ctx, SymID source_symbol, SymID field) {
 			return makeBox<code::AccessExpr>(
@@ -135,36 +153,44 @@ namespace compiler::helios::defgen {
 				.generated_symbol_data = GeneratedSymbolData{ Variable{
 					.function_symbol = copy_sym, .variable_index = 0, .type = result_symbol_type } },
 			});
-			body.emplace_back(makeBox<code::VariableStmt>(
-				code::generatedOrigin(),
-				makeBox<code::DefaultValueExpr>(
-					ctx, code::generatedOrigin(), result_symbol_type.getType()
-				),
-				result_symbol_type,
-				result_symbol
-			));
+			body.emplace_back(
+				makeBox<code::VariableStmt>(
+					code::generatedOrigin(),
+					makeBox<code::DefaultValueExpr>(
+						ctx, code::generatedOrigin(), result_symbol_type.getType()
+					),
+					result_symbol_type,
+					result_symbol
+				)
+			);
 
 			// __result.field = <copy of (*source).field>;
 			for (const auto& field: fields) {
 				auto field_copy = makeCopyExpr(
 					ctx, derefSourceField(ctx, source_symbol, field.getSymbol()), field.getType(ctx)
 				);
-				body.emplace_back(makeBox<code::AssignmentStmt>(
-					code::generatedOrigin(),
-					makeBox<code::AccessExpr>(
-						ctx,
+				body.emplace_back(
+					makeBox<code::AssignmentStmt>(
 						code::generatedOrigin(),
-						makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), result_symbol),
-						field.getSymbol()
-					),
-					std::move(field_copy)
-				));
+						makeBox<code::AccessExpr>(
+							ctx,
+							code::generatedOrigin(),
+							makeBox<code::IdentifierExpr>(
+								ctx, code::generatedOrigin(), result_symbol
+							),
+							field.getSymbol()
+						),
+						std::move(field_copy)
+					)
+				);
 			}
 
-			body.emplace_back(makeBox<code::ReturnStmt>(
-				code::generatedOrigin(),
-				makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), result_symbol)
-			));
+			body.emplace_back(
+				makeBox<code::ReturnStmt>(
+					code::generatedOrigin(),
+					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), result_symbol)
+				)
+			);
 
 			return body;
 		}
@@ -189,14 +215,16 @@ namespace compiler::helios::defgen {
 				.generated_symbol_data = GeneratedSymbolData{ Variable{
 					.function_symbol = copy_sym, .variable_index = 0, .type = result_symbol_type } },
 			});
-			body.emplace_back(makeBox<code::VariableStmt>(
-				code::generatedOrigin(),
-				makeBox<code::DefaultValueExpr>(
-					ctx, code::generatedOrigin(), result_symbol_type.getType()
-				),
-				result_symbol_type,
-				res_sym
-			));
+			body.emplace_back(
+				makeBox<code::VariableStmt>(
+					code::generatedOrigin(),
+					makeBox<code::DefaultValueExpr>(
+						ctx, code::generatedOrigin(), result_symbol_type.getType()
+					),
+					result_symbol_type,
+					res_sym
+				)
+			);
 
 			// Generate the copy loop only if the static array is not empty.
 			if (size > 0) {
@@ -208,25 +236,27 @@ namespace compiler::helios::defgen {
 
 				// var __i: u64 = 0;
 				const SymID i_sym    = ctx.query<QueryGeneratedSymbol>({
-					   .name                  = base::StrID("__i"),
-					   .generated_symbol_data = GeneratedSymbolData{ Variable{
-						   .function_symbol = copy_sym, .variable_index = 1, .type = u64_type } },
-                });
+					.name                  = base::StrID("__i"),
+					.generated_symbol_data = GeneratedSymbolData{ Variable{
+						.function_symbol = copy_sym, .variable_index = 1, .type = u64_type } },
+				});
 				auto        zero_val = numeric_value::NumericValue::createOfType(u64_abs_type)
-				                    .expect("u64 creation failed");
-				body.emplace_back(makeBox<code::VariableStmt>(
-					code::generatedOrigin(),
-					makeBox<code::LiteralNumericExpr>(ctx, code::generatedOrigin(), zero_val),
-					u64_type,
-					i_sym
-				));
+				                           .expect("u64 creation failed");
+				body.emplace_back(
+					makeBox<code::VariableStmt>(
+						code::generatedOrigin(),
+						makeBox<code::LiteralNumericExpr>(ctx, code::generatedOrigin(), zero_val),
+						u64_type,
+						i_sym
+					)
+				);
 
 				// while (__i < size) {
 				// 		__result[__i] = <copy of (*source)[__i]>;
 				// 		__i = __i + 1;
 				// }
-				auto size_val = numeric_value::NumericValue::createOfType(u64_abs_type, size)
-				                    .expect("u64 creation failed");
+				auto size_val  = numeric_value::NumericValue::createOfType(u64_abs_type, size)
+				                     .expect("u64 creation failed");
 				auto condition = makeBox<code::BinaryOperatorExpr>(
 					ctx,
 					code::generatedOrigin(),
@@ -248,42 +278,50 @@ namespace compiler::helios::defgen {
 					),
 					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), i_sym)
 				);
-				loop_body.statements.emplace_back(makeBox<code::AssignmentStmt>(
-					code::generatedOrigin(),
-					makeBox<code::IndexExpr>(
-						ctx,
+				loop_body.statements.emplace_back(
+					makeBox<code::AssignmentStmt>(
 						code::generatedOrigin(),
-						makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), res_sym),
-						makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), i_sym)
-					),
-					makeCopyExpr(ctx, std::move(source_element), element_type)
-				));
+						makeBox<code::IndexExpr>(
+							ctx,
+							code::generatedOrigin(),
+							makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), res_sym),
+							makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), i_sym)
+						),
+						makeCopyExpr(ctx, std::move(source_element), element_type)
+					)
+				);
 
 				// __i = __i + 1;
 				auto one_val = numeric_value::NumericValue::createOfType(u64_abs_type, 1)
 				                   .expect("u64 creation failed");
-				loop_body.statements.emplace_back(makeBox<code::AssignmentStmt>(
-					code::generatedOrigin(),
-					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), i_sym),
-					makeBox<code::BinaryOperatorExpr>(
-						ctx,
+				loop_body.statements.emplace_back(
+					makeBox<code::AssignmentStmt>(
 						code::generatedOrigin(),
-						code::BuiltinBinary::IntegerAdd,
 						makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), i_sym),
-						makeBox<code::LiteralNumericExpr>(ctx, code::generatedOrigin(), one_val)
+						makeBox<code::BinaryOperatorExpr>(
+							ctx,
+							code::generatedOrigin(),
+							code::BuiltinBinary::IntegerAdd,
+							makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), i_sym),
+							makeBox<code::LiteralNumericExpr>(ctx, code::generatedOrigin(), one_val)
+						)
 					)
-				));
+				);
 
-				body.emplace_back(makeBox<code::WhileStmt>(
-					code::generatedOrigin(), std::move(condition), std::move(loop_body)
-				));
+				body.emplace_back(
+					makeBox<code::WhileStmt>(
+						code::generatedOrigin(), std::move(condition), std::move(loop_body)
+					)
+				);
 			}
 
 			// return __result;
-			body.emplace_back(makeBox<code::ReturnStmt>(
-				code::generatedOrigin(),
-				makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), res_sym)
-			));
+			body.emplace_back(
+				makeBox<code::ReturnStmt>(
+					code::generatedOrigin(),
+					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), res_sym)
+				)
+			);
 
 			return body;
 		}
@@ -307,14 +345,16 @@ namespace compiler::helios::defgen {
 				.generated_symbol_data = GeneratedSymbolData{ Variable{
 					.function_symbol = copy_sym, .variable_index = 0, .type = result_symbol_type } },
 			});
-			body.emplace_back(makeBox<code::VariableStmt>(
-				code::generatedOrigin(),
-				makeBox<code::DefaultValueExpr>(
-					ctx, code::generatedOrigin(), result_symbol_type.getType()
-				),
-				result_symbol_type,
-				res_sym
-			));
+			body.emplace_back(
+				makeBox<code::VariableStmt>(
+					code::generatedOrigin(),
+					makeBox<code::DefaultValueExpr>(
+						ctx, code::generatedOrigin(), result_symbol_type.getType()
+					),
+					result_symbol_type,
+					res_sym
+				)
+			);
 
 			const auto u64_abs_type
 				= tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned);
@@ -324,22 +364,24 @@ namespace compiler::helios::defgen {
 
 			// var __i: u64 = 0;
 			const SymID i_sym    = ctx.query<QueryGeneratedSymbol>({
-				   .name                  = base::StrID("__i"),
-				   .generated_symbol_data = GeneratedSymbolData{ Variable{
-					   .function_symbol = copy_sym, .variable_index = 1, .type = u64_type } },
-            });
+				.name                  = base::StrID("__i"),
+				.generated_symbol_data = GeneratedSymbolData{ Variable{
+					.function_symbol = copy_sym, .variable_index = 1, .type = u64_type } },
+			});
 			auto        zero_val = numeric_value::NumericValue::createOfType(u64_abs_type)
-			                    .expect("u64 creation failed");
-			body.emplace_back(makeBox<code::VariableStmt>(
-				code::generatedOrigin(),
-				makeBox<code::LiteralNumericExpr>(ctx, code::generatedOrigin(), zero_val),
-				u64_type,
-				i_sym
-			));
+			                           .expect("u64 creation failed");
+			body.emplace_back(
+				makeBox<code::VariableStmt>(
+					code::generatedOrigin(),
+					makeBox<code::LiteralNumericExpr>(ctx, code::generatedOrigin(), zero_val),
+					u64_type,
+					i_sym
+				)
+			);
 
 
 			// while (__i < source.length()) {
-			// 		__result[__i] = <copy of (*source)[__i]>;
+			// 		__result += <copy of (*source)[__i]>;
 			// 		__i = __i + 1;
 			// }
 			SymID length_method_sym = defgen::lengthMethodForType(ctx, array_type);
@@ -366,7 +408,7 @@ namespace compiler::helios::defgen {
 
 			code::CodeBlock loop_body{};
 
-			// __result[__i] = <copy of (*source)[__i]>;
+			// __result += <copy of (*source)[__i]>;
 			auto source_element = makeBox<code::IndexExpr>(
 				ctx,
 				code::generatedOrigin(),
@@ -377,39 +419,47 @@ namespace compiler::helios::defgen {
 				),
 				makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), i_sym)
 			);
-			loop_body.statements.emplace_back(makeBox<code::ExprStmt>(
-				code::generatedOrigin(),
-				makeBox<code::ListPushExpr>(
+			loop_body.statements.emplace_back(
+				makeBox<code::ExprStmt>(
 					code::generatedOrigin(),
-					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), res_sym),
-					makeCopyExpr(ctx, std::move(source_element), element_type)
+					makeBox<code::ListPushExpr>(
+						code::generatedOrigin(),
+						makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), res_sym),
+						makeCopyExpr(ctx, std::move(source_element), element_type)
+					)
 				)
-			));
+			);
 
 			// __i = __i + 1;
 			auto one_val = numeric_value::NumericValue::createOfType(u64_abs_type, 1)
 			                   .expect("u64 creation failed");
-			loop_body.statements.emplace_back(makeBox<code::AssignmentStmt>(
-				code::generatedOrigin(),
-				makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), i_sym),
-				makeBox<code::BinaryOperatorExpr>(
-					ctx,
+			loop_body.statements.emplace_back(
+				makeBox<code::AssignmentStmt>(
 					code::generatedOrigin(),
-					code::BuiltinBinary::IntegerAdd,
 					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), i_sym),
-					makeBox<code::LiteralNumericExpr>(ctx, code::generatedOrigin(), one_val)
+					makeBox<code::BinaryOperatorExpr>(
+						ctx,
+						code::generatedOrigin(),
+						code::BuiltinBinary::IntegerAdd,
+						makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), i_sym),
+						makeBox<code::LiteralNumericExpr>(ctx, code::generatedOrigin(), one_val)
+					)
 				)
-			));
+			);
 
-			body.emplace_back(makeBox<code::WhileStmt>(
-				code::generatedOrigin(), std::move(condition), std::move(loop_body)
-			));
+			body.emplace_back(
+				makeBox<code::WhileStmt>(
+					code::generatedOrigin(), std::move(condition), std::move(loop_body)
+				)
+			);
 
 			// return __result;
-			body.emplace_back(makeBox<code::ReturnStmt>(
-				code::generatedOrigin(),
-				makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), res_sym)
-			));
+			body.emplace_back(
+				makeBox<code::ReturnStmt>(
+					code::generatedOrigin(),
+					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), res_sym)
+				)
+			);
 
 			return body;
 		}
@@ -448,14 +498,15 @@ namespace compiler::helios::defgen {
 					result_symbol_type
 				);
 				break;
-			// @TODO: #2000 Boxes (deep copy) and other non-aggregate non-trivially-copyable types.
 			default:
-				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-					base::strConcat(
-						"Default copy constructor for type `", owner_type.toString(), "`."
-					),
-					""
-				));
+				ctx.logInt(
+					makeBox<dia_int::NotYetImplementedCodeError>(
+						base::strConcat(
+							"Default copy constructor for type `", owner_type.toString(), "`."
+						),
+						""
+					)
+				);
 				return query::Failed();
 			}
 

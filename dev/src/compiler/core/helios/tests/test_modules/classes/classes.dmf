@@ -26,7 +26,6 @@ class FirstClassEver {
 class SecondClass extends FirstClassEver {}
 
 let first_class_ever: FirstClassEver = FirstClassEver(1, f32(2.0));
-
 let first_class_ever_copy = first_class_ever;
 
 class ClassWithMember {

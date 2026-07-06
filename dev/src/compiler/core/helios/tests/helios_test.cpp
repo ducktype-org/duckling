@@ -27,8 +27,8 @@
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/errors/dia_interactive_elements.hpp>
 #include <helios_private/hout_creation/definition_generation/class_constructors.hpp>
+#include <helios_private/hout_creation/definition_generation/copy_constructors.hpp>
 #include <helios_private/hout_creation/definition_generation/default_constructors.hpp>
-#include <helios_private/hout_creation/definition_generation/default_copy_constructors.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
@@ -97,7 +97,7 @@ public:
 		TESTER_ADD_TEST(testStmtSpecifiers);
 		TESTER_ADD_TEST(testOverloadResolution);
 		TESTER_ADD_TEST(testDefaultInitializers);
-		TESTER_ADD_TEST(testDefaultCopyConstructors);
+		TESTER_ADD_TEST(testCopyConstructors);
 		TESTER_ADD_TEST(testCastsHout);
 		TESTER_ADD_TEST(testPointers);
 		TESTER_ADD_TEST(testTypeLifting);
@@ -2878,7 +2878,7 @@ private:
 		});
 	}
 
-	void testDefaultCopyConstructors() {
+	void testCopyConstructors() {
 		using namespace compiler::helios;
 		using namespace compiler::helios::code;
 		using namespace compiler::helios::defgen;
@@ -2979,9 +2979,7 @@ private:
 				ASSERT_TRUE(call != nullptr);
 				auto callee_sym = getIdentifierExprSymID(call->callee.ref()).value();
 				auto callee_gsd = std::get<GeneratedSymbolData>(getSymRef(callee_sym)->other);
-				ASSERT_TRUE(std::holds_alternative<GeneratedSymbolData::DefaultCopyConstructor>(
-					callee_gsd.data
-				));
+				ASSERT_TRUE(v_matches(callee_gsd.data, GeneratedSymbolData::DefaultCopyConstructor));
 			}
 
 			auto dump_cctor = [&](std::string_view            label,
@@ -3069,8 +3067,6 @@ private:
 				    .getType();
 			};
 
-			// ---- Recursive bodies of the non-trivial field types. ----
-
 			// HasBox -> box(*source.boxed).
 			{
 				const auto& cctor = dump_cctor("HasBox", get_class_type(has_box_sym));
@@ -3093,7 +3089,7 @@ private:
 				assert_generated_copy(assign->new_value_expr.get());
 			}
 
-			// Static array - an element-wise copy loop.
+			// Static array - a copy loop element by element.
 			{
 				const auto& cctor = dump_cctor("HasBox[3]", field_abstract_type("nontrivial_arr"));
 				const auto& stmts = cctor.body->statements;
@@ -3126,7 +3122,7 @@ private:
 				ASSERT_TRUE(dynamic_cast<const WhileStmt*>(stmts.at(2).get()) != nullptr);
 			}
 
-			// List of a non-trivial element - each pushed element is a deep copy-ctor call.
+			// List of a non-trivial element - each pushed element is a copy-ctor call.
 			{
 				const auto& cctor = dump_cctor("List[HasBox]", field_abstract_type("class_list"));
 				const auto& stmts = cctor.body->statements;

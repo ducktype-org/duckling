@@ -1,6 +1,7 @@
 #include "queries.hpp"
 
 #include "abstract_type_impl.hpp"
+#include "helios_private/hout_creation/definition_generation/copy_constructors.hpp"
 
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/query_type_symbol_data.hpp>
@@ -45,7 +46,9 @@ namespace compiler::tsh {
 			}
 
 			for (const compiler::helios::SymID ctor_sym: class_data.constructors) {
-				if (!compiler::helios::isUserDefinedCopyConstructor(ctx, ctor_sym)) continue;
+				// For now we just handle copy constructors.
+				if (!compiler::helios::defgen::isUserDefinedCopyConstructor(ctx, ctor_sym))
+					continue;
 				elements.push_back(InterfaceElement(
 					ctor_sym,
 					key.value->toAbstractType(),

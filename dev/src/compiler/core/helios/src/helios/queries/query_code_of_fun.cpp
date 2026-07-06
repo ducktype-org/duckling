@@ -1,4 +1,5 @@
 #include "function_queries.hpp"
+#include "helios_private/hout_creation/definition_generation/copy_constructors.hpp"
 
 #include <frontend/pst_parser/elements/hierarchy/actions/all_actions.hpp>
 #include <frontend/pst_parser/elements/hierarchy/actions/return.hpp>
@@ -20,7 +21,6 @@
 #include <helios_private/errors/errors.hpp>
 #include <helios_private/hout_creation/definition_generation/class_constructors.hpp>
 #include <helios_private/hout_creation/definition_generation/default_constructors.hpp>
-#include <helios_private/hout_creation/definition_generation/default_copy_constructors.hpp>
 #include <helios_private/hout_creation/definition_generation/default_destructors.hpp>
 #include <helios_private/hout_creation/definition_generation/length_methods.hpp>
 #include <helios_private/hout_creation/definition_generation/list_methods.hpp>
@@ -137,9 +137,9 @@ namespace compiler::helios {
 				this->out.emplace(HOUTFunction(code::pstOrigin(stmt), &decl, output_body));
 			}
 
-			// Validates a user-defined copy/move constructor's source parameter. The copy
-			// constructor must declare exactly one parameter, which must be a reference
-			// (`ref`/`const ref`) to its own class.
+			// Validates a user-defined copy constructor's source parameter. The copy
+			// constructor must declare exactly one parameter, which must be a constant reference
+			// to its own class.
 			template<class ConstructorElement>
 			void validateConstructorSource(
 				pst::Access<ConstructorElement> stmt, const HOUTFunctionDeclaration& decl
@@ -167,7 +167,8 @@ namespace compiler::helios {
 				if (!is_reference || !is_matching_class) {
 					ctx.logInt(makeBox<dia_int::PlaceholderError>(
 						base::strConcat(
-							"A copy constructor's parameter must be a constant reference to its "
+							"A copy constructor's parameter must be a constant reference to "
+							"its "
 							"own "
 							"class `",
 							name(class_type.getSymbol()),
