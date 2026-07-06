@@ -358,16 +358,15 @@ namespace vm::loader::compiler::safe {
 
 			// The cif captures pointers into `ffi_arg_types` and `struct_types` - moving the
 			// whole object afterwards is fine, as those live on the heap.
-			CORE_ASSERT(
-				ffi_prep_cif(
-					&low_func.cif,
-					FFI_DEFAULT_ABI,
-					base::safeIntConv<unsigned>(low_func.ffi_arg_types.size()),
-					result_type,
-					low_func.ffi_arg_types.data()
-				) == FFI_OK,
-				"ffi_prep_cif failed for FFI function"
+			// Kept out of CORE_ASSERT: its condition is not evaluated in release builds.
+			[[maybe_unused]] ffi_status status = ffi_prep_cif(
+				&low_func.cif,
+				FFI_DEFAULT_ABI,
+				base::safeIntConv<unsigned>(low_func.ffi_arg_types.size()),
+				result_type,
+				low_func.ffi_arg_types.data()
 			);
+			CORE_ASSERT(status == FFI_OK, "ffi_prep_cif failed for FFI function");
 
 			low_program.ffi_functions.insert(std::move(low_func), new_func.name);
 		}

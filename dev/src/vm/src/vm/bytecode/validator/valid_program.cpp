@@ -195,10 +195,10 @@ void vm::code::ValidProgram::insertFFIFunctions(const std::vector<FFIFunction>& 
 			ffi_type* struct_type = ffi_detail::buildFFIType(*tp.value(), types, storage);
 
 			std::vector<size_t> c_offsets(structure.value()->fields.size());
-			CORE_ASSERT(
-				ffi_get_struct_offsets(FFI_DEFAULT_ABI, struct_type, c_offsets.data()) == FFI_OK,
-				"ffi_get_struct_offsets failed"
-			);
+			// Kept out of CORE_ASSERT: its condition is not evaluated in release builds.
+			[[maybe_unused]] ffi_status offsets_status
+				= ffi_get_struct_offsets(FFI_DEFAULT_ABI, struct_type, c_offsets.data());
+			CORE_ASSERT(offsets_status == FFI_OK, "ffi_get_struct_offsets failed");
 
 			auto to_bytes = [](const valid_type::TypeSize& size) {
 				return usize(size.assumePointerSize(Bytes(16)));
