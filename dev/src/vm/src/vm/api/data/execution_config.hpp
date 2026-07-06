@@ -13,7 +13,7 @@ namespace vm::api {
 		/// Code execution cannot modify a global state, e.g. when performing compile-time evaluation.
 		bool read_only = false;
 
-		/// The user cannot spawn threads, e.g. in a REPL environment.
+		/// Process can only have a single thread — user cannot spawn more
 		bool single_thread = false;
 	};
 }

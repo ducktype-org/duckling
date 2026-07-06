@@ -79,6 +79,7 @@ namespace vm::code {
 		return result;
 	}
 
+	// @TODO: #3068 Extend ExecutionConfig and check more flags.
 	static void verifyFlagsAgainstConfig(
 		const InstructionFlag flags, api::ExecutionConfig config, const base::StrID func_name
 	) {
@@ -152,14 +153,19 @@ namespace vm::code {
 
 			// Propagate via BFS
 			std::queue<base::StrID> to_visit;
-			for (const auto& func: marked_functions) to_visit.push(func);
+			for (const auto& func: marked_functions) {
+				to_visit.push(func);
+				marked_functions.insert(func);
+			}
 			while (!to_visit.empty()) {
 				auto current = to_visit.front();
 				to_visit.pop();
-				marked_functions.insert(current);
 
 				for (const auto& next: transpose_call_graph.at(current))
-					if (!marked_functions.contains(next)) to_visit.push(next);
+					if (!marked_functions.contains(next)) {
+						to_visit.push(next);
+						marked_functions.insert(current);
+					}
 			}
 
 			// Append the flag to all marked new-functions

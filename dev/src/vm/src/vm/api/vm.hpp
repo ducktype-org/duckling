@@ -33,6 +33,9 @@ namespace vm::api {
 
 	/**
 	 * @brief Set the execution config of a VMProcess.
+	 * @note This affects static checks performed when *loading new code*. While data computed for
+	 * already loaded code does not need to be recomputed, compliance of old code wrt. the config
+	 * is *not* checked.
 	 * @return Nothing if the config was set successfully or an API error otherwise.
 	 */
 	std::expected<void, ApiError> setExecutionConfig(PID pid, ExecutionConfig config);
