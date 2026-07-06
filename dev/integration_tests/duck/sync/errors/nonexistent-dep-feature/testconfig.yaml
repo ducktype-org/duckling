@@ -8,7 +8,7 @@ PreCase: |+
         path: ../bar/
       features: [b]" >> foo/quackconfig.yaml
 Tests:
-  duck/sync/errors/nonexistent-dep-feature:
+  nonexistent-dep-feature:
     Description: cannot sync a project with a nonexistent dependency feature
     Cases:
       sync:

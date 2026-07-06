@@ -18,7 +18,7 @@ PreCase: |+
     b: []" >> bar/quackconfig.yaml
 
 Tests:
-  duck/sync/dep-and-conditions:
+  dep-and-conditions:
     Description: can sync a project with dependency and conditions
     Cases:
       sync:

@@ -9,7 +9,7 @@ PreCase: |+
     my-custom-build-alias-array: [build, -j4]" > $DUCK_HOME/config.yaml
 
 Tests:
-  duck/cli/builtin-subcommands:
+  builtin-subcommands:
     Description: Checks a lot of basic flows, such as happy, builtin alias, auto fix...
     Cases:
       builtin-command:

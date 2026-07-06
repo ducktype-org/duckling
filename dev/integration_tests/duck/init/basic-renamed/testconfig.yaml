@@ -1,7 +1,7 @@
 PostCase: python3 check.py && @{cleanup_tmp_env}
 
 Tests:
-  duck/init/basic-renamed:
+  basic-renamed:
     Description: can initialise a new project
     Cases:
       init:

@@ -17,7 +17,7 @@ PreCase: |+
     b: []" >> bar/quackconfig.yaml
 
 Tests:
-  duck/sync/exposed-freezefile-and-deps:
+  exposed-freezefile-and-deps:
     Description: can sync a project with deps which exposes a freezefile
     Cases:
       sync:

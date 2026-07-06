@@ -17,7 +17,7 @@ PreCase: |+
       source:
         path: ../foo" >> baz/quackconfig.yaml
 Tests:
-  duck/build/duckc/local-cycle:
+  local-cycle:
     Description: can build a project with dependencies
     Cases:
       build:

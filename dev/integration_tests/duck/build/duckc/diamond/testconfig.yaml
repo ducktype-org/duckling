@@ -43,7 +43,7 @@ PreCase: |+
     version: 1.0.0" > baz/quackconfig.yaml
 PostCase: python3 check.py && @{cleanup_tmp_env}
 Tests:
-  duck/build/duckc/diamond:
+  diamond:
     Description: can build a project with dependencies
     Cases:
       build:

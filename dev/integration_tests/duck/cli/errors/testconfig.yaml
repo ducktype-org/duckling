@@ -1,5 +1,5 @@
 Tests:
-  duck/cli/errors:
+  cli-and-config-errors:
     Description: Checks a lot of basic errors
     Cases:
       invalid-subcommand-with-suggestions:

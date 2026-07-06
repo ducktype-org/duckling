@@ -7,7 +7,7 @@ PreCase: |+
     foo: []
     bar: [foo]" >> foo/quackconfig.yaml
 Tests:
-  duck/build/duckc/features:
+  features:
     Description: can build a project with features
     Cases:
       basic:

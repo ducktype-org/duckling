@@ -10,7 +10,7 @@ PreCase: |+
         path: ../bar" >> foo/quackconfig.yaml
 
 Tests:
-  duck/sync/dep:
+  dep:
     Description: can sync a project with a single local dep
     Cases:
       sync:

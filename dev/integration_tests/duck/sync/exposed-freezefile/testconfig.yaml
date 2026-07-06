@@ -5,7 +5,7 @@ PreCase: |+
   @{duck-exe} init foo --expose-freezefile
 
 Tests:
-  duck/sync/exposed-freezefile:
+  exposed-freezefile:
     Description: can sync a new project which exposes a freezefile
     Cases:
       sync:

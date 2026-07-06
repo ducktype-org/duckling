@@ -5,7 +5,7 @@ PreCase: |+
   echo "features:
     cycle: [cycle]" >> foo/quackconfig.yaml
 Tests:
-  duck/sync/cycle-in-flags:
+  cycle-in-flags:
     Description: can sync a project with features cycle
     Cases:
       sync:

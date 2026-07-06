@@ -2,7 +2,7 @@ PreCase: |+
   @{cd-tmp-dir}
   @{duck-exe} init foo
 Tests:
-  duck/build/duckc/errors/nonexistent-feature:
+  nonexistent-feature:
     Description: errors with a nonexistent feature
     Cases:
       nonexisting-feature:

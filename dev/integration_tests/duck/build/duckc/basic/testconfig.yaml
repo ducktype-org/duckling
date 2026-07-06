@@ -16,7 +16,7 @@ PreCase: |+
       inherits: my-profile
       opt-level: s" >> foo/quackconfig.yaml
 Tests:
-  duck/build/duckc/basic:
+  basic:
     Description: can build a new project, and expands profiles
     Cases:
       dev:

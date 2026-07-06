@@ -9,7 +9,7 @@ PreCase: |+
       source:
         path: ../bar" >> foo/quackconfig.yaml
 Tests:
-  duck/build/duckc/basic-deps:
+  basic-deps:
     Description: can build a project with dependencies
     Cases:
       build:

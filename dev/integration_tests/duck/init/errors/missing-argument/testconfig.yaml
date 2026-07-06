@@ -1,5 +1,5 @@
 Tests:
-  duck/init/errors/missing-argument:
+  missing-argument:
     Description: name/path is required
     Cases:
       init:

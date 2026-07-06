@@ -16,7 +16,7 @@ PreCase: |+
     use-bar: []" >> foo/quackconfig.yaml
 
 Tests:
-  duck/build/mock-duckc/basic-deps-and-conds:
+  basic-deps-and-conds:
     Description: can build a project with conditional dependencies
     Cases:
       without-bar:

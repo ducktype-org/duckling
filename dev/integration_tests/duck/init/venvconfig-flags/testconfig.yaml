@@ -2,7 +2,7 @@ post-check-action: ''
 PostCase: python3 check.py @{post-check-action} && @{cleanup_tmp_env}
 
 Tests:
-  duck/init/venvconfig-flags:
+  venvconfig-flags:
     Description: can initialise a new project with different venvconfig flags
     Cases:
       expose-freezefile:
