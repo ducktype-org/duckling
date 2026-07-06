@@ -257,7 +257,7 @@ namespace compiler::helios {
 					// The implicit constructor takes a parameter per field, the default constructor
 					// takes none.
 					std::vector<tsh::SymbolType<>> param_types;
-					if (ctor.kind == defgen::GeneratedConstructorKind::Implicit) {
+					if (ctor.kind == defgen::Constructor::Kind::Implicit) {
 						auto fields = target_type.getInterface(ctx)->getFieldsView();
 						for (const auto& field: fields) param_types.push_back(field.getType(ctx));
 					}
@@ -290,20 +290,20 @@ namespace compiler::helios {
 					auto [arg_types, return_type]
 						= [&]() -> std::pair<std::vector<tsh::SymbolType<>>, tsh::SymbolType<>> {
 						switch (method.kind) {
-						case defgen::GeneratedMethodKind::ToString:
+						case defgen::Method::Kind::ToString:
 							return { { immmut_self },
 								     tsh::SymbolType<>::withDefaults(tsh::getStringType()) };
-						case defgen::GeneratedMethodKind::LengthMethod:
+						case defgen::Method::Kind::LengthMethod:
 							return { { immmut_self },
 								     tsh::SymbolType<>::withDefaults(tsh::getIntegralType(
 										 ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned
 									 )) };
-						case defgen::GeneratedMethodKind::DefaultDestructor:
+						case defgen::Method::Kind::DefaultDestructor:
 							return { { mut_self },
 								     tsh::SymbolType<>{ tsh::getUnitType(),
 								                        tsh::ReferenceKind::Direct,
 								                        tsh::Mutability::Immutable } };
-						case defgen::GeneratedMethodKind::Push: {
+						case defgen::Method::Kind::Push: {
 							// `(ref mut T self, Element element) -> ()`.
 							const auto element_type
 								= method.owner_type.as<tsh::DynamicArrayAbstractType>()
@@ -313,7 +313,7 @@ namespace compiler::helios {
 								                        tsh::ReferenceKind::Direct,
 								                        tsh::Mutability::Immutable } };
 						}
-						case defgen::GeneratedMethodKind::Pop: {
+						case defgen::Method::Kind::Pop: {
 							// `(ref mut T self, u64 count) -> ()`.
 							const auto count_type
 								= tsh::SymbolType<>::withDefaults(tsh::getIntegralType(

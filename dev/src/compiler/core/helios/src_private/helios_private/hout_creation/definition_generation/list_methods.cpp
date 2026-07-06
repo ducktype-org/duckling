@@ -9,15 +9,17 @@
 
 namespace compiler::helios::defgen {
 	SymID pushMethodForType(query::Context& ctx, tsh::AbstractType type) {
-		return ctx.query<QueryGeneratedSymbol>({ .name = base::StrID("push"),
-		                                         .generated_symbol_data
-		                                         = Method{ type, GeneratedMethodKind::Push } });
+		return ctx.query<QueryGeneratedSymbol>(
+			{ .name                  = base::StrID("push"),
+		      .generated_symbol_data = Method{ .owner_type = type, .kind = Method::Kind::Push } }
+		);
 	}
 
 	SymID popMethodForType(query::Context& ctx, tsh::AbstractType type) {
-		return ctx.query<QueryGeneratedSymbol>({ .name = base::StrID("pop"),
-		                                         .generated_symbol_data
-		                                         = Method{ type, GeneratedMethodKind::Pop } });
+		return ctx.query<QueryGeneratedSymbol>(
+			{ .name                  = base::StrID("pop"),
+		      .generated_symbol_data = Method{ .owner_type = type, .kind = Method::Kind::Pop } }
+		);
 	}
 
 	namespace {

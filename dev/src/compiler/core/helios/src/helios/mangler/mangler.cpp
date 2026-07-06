@@ -299,7 +299,7 @@ namespace compiler::helios::mangler {
 						          .str();
 
 						const char* ctor_tag
-							= ctor.kind == defgen::GeneratedConstructorKind::Implicit ? "Hic"
+							= ctor.kind == defgen::Constructor::Kind::Implicit ? "Hic"
 						                                                              : "Hdc";
 
 						return mangled_type + ctor_tag + func(ctx, symbol_id) + "E";
@@ -309,15 +309,15 @@ namespace compiler::helios::mangler {
 						// types such as i32), so we omit it. Any ambiguities are solved by the
 						// function type anyway.
 						switch (method.kind) {
-						case defgen::GeneratedMethodKind::DefaultDestructor:
+						case defgen::Method::Kind::DefaultDestructor:
 							return "Hdd" + func(ctx, symbol_id) + "E";
-						case defgen::GeneratedMethodKind::ToString:
+						case defgen::Method::Kind::ToString:
 							return "HtoString" + func(ctx, symbol_id) + "E";
-						case defgen::GeneratedMethodKind::LengthMethod:
+						case defgen::Method::Kind::LengthMethod:
 							return "Hlength" + func(ctx, symbol_id) + "E";
-						case defgen::GeneratedMethodKind::Push:
+						case defgen::Method::Kind::Push:
 							return "Hpush" + func(ctx, symbol_id) + "E";
-						case defgen::GeneratedMethodKind::Pop:
+						case defgen::Method::Kind::Pop:
 							return "Hpop" + func(ctx, symbol_id) + "E";
 						}
 						CORE_UNREACHABLE();

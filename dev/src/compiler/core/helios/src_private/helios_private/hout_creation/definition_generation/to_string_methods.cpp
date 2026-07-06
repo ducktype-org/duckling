@@ -24,7 +24,7 @@ namespace compiler::helios::defgen {
 		return ctx.query<QueryGeneratedSymbol>({
 			.name = base::StrID("toString"),
 			.generated_symbol_data
-			= Method{ .owner_type = type, .kind = GeneratedMethodKind::ToString },
+			= Method{ .owner_type = type, .kind = Method::Kind::ToString },
 		});
 	}
 

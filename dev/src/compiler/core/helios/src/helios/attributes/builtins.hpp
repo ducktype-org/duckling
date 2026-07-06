@@ -17,7 +17,7 @@ namespace pst {
 }
 
 /**
- * This decided what layer implements the builtin. For example `ptr_from_slice`
+ * This decides what layer implements the builtin. For example `ptr_from_slice`
  * is implemented in HOUT, but in the future some builtins will be implemented only
  * in DVM Backend or LLVM backend.
  */
@@ -35,11 +35,6 @@ namespace compiler::helios {
 	};
 
 	/**
-	 * @brief Map a builtin name to its BuiltinKind, empty when the name is unknown.
-	 */
-	base::Optional<BuiltinKind> builtinKindFromStr(base::StrID name);
-
-	/**
 	 * @brief Reverse of builtinKindFromStr.
 	 */
 	base::StrID builtinKindToStr(BuiltinKind type);
@@ -47,7 +42,7 @@ namespace compiler::helios {
 	/**
 	 * @brief Origin for the given builtin.
 	 */
-	BuiltinOrigins builtinOrigin(BuiltinKind type);
+	BuiltinOrigins getBuiltinOrigins(BuiltinKind type);
 
 	/**
 	 * @brief Validate the arguments of a `@builtin(...)` attribute and resolve the builtin.

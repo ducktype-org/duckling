@@ -61,7 +61,7 @@ namespace compiler::helios::defgen {
 		return ctx.query<QueryGeneratedSymbol>(
 			{ .name = base::StrID("length"),
 		      .generated_symbol_data
-		      = Method{ .owner_type = type, .kind = GeneratedMethodKind::LengthMethod } }
+		      = Method{ .owner_type = type, .kind = Method::Kind::LengthMethod } }
 		);
 	}
 

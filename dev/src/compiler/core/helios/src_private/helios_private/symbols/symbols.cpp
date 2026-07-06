@@ -47,7 +47,7 @@ namespace compiler::helios {
 			variant_case_novalue(PstImplementedSemantics) { return true; }
 			variant_case(BuiltinSemantics, data) {
 				// Only if implemented in HOUT, then it can be called with code of fun.
-				return builtinOrigin(data.builtin).contains(BuiltinOrigin::HOUT);
+				return getBuiltinOrigins(data.builtin).contains(BuiltinOrigin::HOUT);
 			}
 			variant_case_novalue(GENERATED_SYMBOL_SEMANTICS_LIST) {
 				return kind(id) != SymbolKind::FunctionDeclaration;
@@ -62,7 +62,7 @@ namespace compiler::helios {
 			variant_case_novalue(PstImplementedSemantics) { return EmissionPolicy::OwnerOnly; }
 			variant_case(BuiltinSemantics, data) {
 				// Only if HOUT implements the builtin we want to replicate it.
-				return builtinOrigin(data.builtin).contains(BuiltinOrigin::HOUT)
+				return getBuiltinOrigins(data.builtin).contains(BuiltinOrigin::HOUT)
 				         ? EmissionPolicy::Replicated
 				         : EmissionPolicy::OwnerOnly;
 			}
@@ -1043,7 +1043,7 @@ namespace compiler::helios {
 
 		struct IMPLEMENT_QUERY(QueryGeneratedSymbol, SymbolData) {
 			static auto provide(Context&, QKey key) -> PResult {
-				return SymbolData::makeGeneratedSymbol(key.name, key.generated_symbol_data);
+				return SymbolData::makeGeneratedSymbolData(key.name, key.generated_symbol_data);
 			}
 
 			QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF_IGNORE_CONSTRUCTIBILITY_CHECK

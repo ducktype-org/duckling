@@ -28,16 +28,19 @@ namespace compiler::helios {
 		}
 	}
 
-	base::Optional<BuiltinKind> builtinKindFromStr(base::StrID name) {
-		return builtinNameMapping().atMaybeCopy(name.strView());
-	}
-
 	base::StrID builtinKindToStr(BuiltinKind type) {
 		switch (type) {
 		case BuiltinKind::RawPtrFromSlice:
 			return base::StrID("ptr_from_slice");
 		}
 		CORE_UNREACHABLE();
+	}
+
+	/**
+	 * @brief Map a builtin name to its BuiltinKind, empty when the name is unknown.
+	 */
+	base::Optional<BuiltinKind> builtinKindFromStr(base::StrID name) {
+		return builtinNameMapping().atMaybeCopy(name.strView());
 	}
 
 	BuiltinKind parseBuiltinAttr(
@@ -126,7 +129,7 @@ namespace compiler::helios {
 		CORE_UNREACHABLE();
 	}
 
-	BuiltinOrigins builtinOrigin(BuiltinKind type) {
+	BuiltinOrigins getBuiltinOrigins(BuiltinKind type) {
 		switch (type) {
 		case BuiltinKind::RawPtrFromSlice:
 			return BuiltinOrigin::HOUT;

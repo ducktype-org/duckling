@@ -1,6 +1,6 @@
 import core.builtins.*;
 
-fun main() -> i64 = {
+fun main() = {
     let x: i64 = builtin_input_i64();
     builtin_output_i64(x + 1);
 

@@ -90,7 +90,7 @@ namespace compiler::helios {
 		return { std::move(common_data), pst_data };
 	}
 
-	SymbolData SymbolData::makeGeneratedSymbol(
+	SymbolData SymbolData::makeGeneratedSymbolData(
 		const base::StrID name, defgen::GeneratedSymbolDataVariant generated_data
 	) {
 		SymbolKind kind{};

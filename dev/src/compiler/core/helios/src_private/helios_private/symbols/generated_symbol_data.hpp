@@ -14,10 +14,6 @@
 #include <variant>
 
 namespace compiler::helios::defgen {
-	enum class GeneratedConstructorKind {
-		Implicit,
-		Default,
-	};
 
 	/**
 	 * Represents a compiler-generated constructor for a type. The concrete constructor is
@@ -35,19 +31,16 @@ namespace compiler::helios::defgen {
 	 * initialized static array value.
 	 */
 	struct Constructor final {
-		tsh::AbstractType        type;  // The type this constructor belongs to.
-		GeneratedConstructorKind kind;
+		enum class Kind {
+			Implicit,
+			Default,
+		};
+
+		tsh::AbstractType type;  // The type this constructor belongs to.
+		Constructor::Kind kind;
 
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const;
-	};
-
-	enum class GeneratedMethodKind {
-		DefaultDestructor,
-		LengthMethod,
-		ToString,
-		Push,  // Dynamic array `push` method.
-		Pop,   // Dynamic array `pop` method.
 	};
 
 	/**
@@ -55,8 +48,16 @@ namespace compiler::helios::defgen {
 	 * `toString`, and dynamic-array `push`/`pop`). The concrete method is distinguished by `kind`.
 	 */
 	struct Method final {
-		tsh::AbstractType   owner_type;
-		GeneratedMethodKind kind;
+		enum class Kind {
+			DefaultDestructor,
+			LengthMethod,
+			ToString,
+			Push,  // Dynamic array `push` method.
+			Pop,   // Dynamic array `pop` method.
+		};
+
+		tsh::AbstractType owner_type;
+		Method::Kind      kind;
 
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const;

@@ -36,7 +36,7 @@ namespace compiler::helios::defgen {
 			const SymID ctor_symbol = ctx.query<QueryGeneratedSymbol>(
 				{ .name = name(class_symbol),
 			      .generated_symbol_data
-			      = Constructor{ .type = class_type, .kind = GeneratedConstructorKind::Default } }
+			      = Constructor{ .type = class_type, .kind = Constructor::Kind::Default } }
 			);
 
 
@@ -151,7 +151,7 @@ namespace compiler::helios::defgen {
 			const SymID ctor_symbol = ctx.query<QueryGeneratedSymbol>({
 				.name = base::StrID("__init_array"),
 				.generated_symbol_data
-				= Constructor{ .type = array_type, .kind = GeneratedConstructorKind::Default },
+				= Constructor{ .type = array_type, .kind = Constructor::Kind::Default },
 			});
 
 			const auto& ctor_decl = ctx.query<QueryDeclOfFun>(ctor_symbol)->valueOrThrow();

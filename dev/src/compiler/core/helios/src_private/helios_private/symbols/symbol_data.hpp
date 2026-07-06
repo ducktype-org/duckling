@@ -100,7 +100,7 @@ namespace compiler::helios {
 			CommonSymbolData common_data, PstImplementedSemantics pst_data
 		);
 
-		static SymbolData makeGeneratedSymbol(
+		static SymbolData makeGeneratedSymbolData(
 			base::StrID name, defgen::GeneratedSymbolDataVariant generated_data
 		);
 

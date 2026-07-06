@@ -76,6 +76,7 @@ namespace base {
 
 	/**
 	 * @brief Helper function for extracting from variants
+	 * @TODO: #3073 change to ref
 	 */
 	template<typename T, typename U>
 	static T choose(const U& el) {
