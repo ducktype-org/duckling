@@ -66,29 +66,4 @@ namespace compiler::backend_llvm {
 	llvm::FunctionCallee getOrInsertFunctionPrototypeFromLIRFunction(
 		Ref<llvm::Module> module, const lir::Function& lir_function
 	);
-
-	/**
-	 * @brief Lowers a `Call` to the callee, emitting the `llvm::CallInst` and its call-site
-	 * attributes.
-	 *
-	 * The caller is responsible for loading the argument values (@p args, in call order,
-	 * excluding the callee) and for storing the result. This function owns everything that
-	 * happens at the call boundary: resolving the prototype, the C ABI argument marshalling
-	 * (currently: strings passed by pointer with `byval`) and attaching the matching call-site
-	 * attributes. This is the place to add further ABI call-site attributes.
-	 *
-	 * @param module The LLVM module the call is emitted into.
-	 * @param builder The IRBuilder positioned at the call site.
-	 * @param function_literal The callee.
-	 * @param args The already-loaded argument values (may be rewritten for `byval` passing).
-	 * @param has_output Whether the call's result is used (drives the void-return assertion).
-	 * @return The emitted call instruction.
-	 */
-	llvm::CallInst* lowerCallInstruction(
-		Ref<llvm::Module>           module,
-		llvm::IRBuilder<>&          builder,
-		const lir::FunctionLiteral& function_literal,
-		std::vector<llvm::Value*>   args,
-		bool                        has_output
-	);
 }

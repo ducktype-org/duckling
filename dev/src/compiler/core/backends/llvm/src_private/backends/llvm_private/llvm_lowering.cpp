@@ -728,25 +728,6 @@ namespace compiler::backend_llvm {
 			CORE_UNREACHABLE();
 		}
 
-		/**
-		 * @brief Maps a collection of LIRValues to a LLVM Values.
-		 *
-		 * This function may generate new LLVM instructions if necessary, see `loadLIRValue`.
-		 *
-		 * @param lir_locations The LIRValues to convert into LLVM Values.
-		 * @param builder The LLVM IRBuilder to use for loading the values, if necessary.
-		 * @return The vector of loaded LLVM Values.
-		 */
-		auto loadLIRValueList(
-			const std::vector<lir::LIRValue>& lir_locations, llvm::IRBuilder<>& builder
-		) -> std::vector<llvm::Value*> {
-			std::vector<llvm::Value*> llvm_locations;
-			llvm_locations.reserve(lir_locations.size());
-			for (const auto& lir_location: lir_locations)
-				llvm_locations.push_back(loadLIRValue(lir_location, builder));
-			return llvm_locations;
-		}
-
 		void storeOutput(
 			const lir::LIRPlace& output, const Ref<llvm::Value> value, llvm::IRBuilder<>& builder
 		) {
@@ -915,6 +896,69 @@ namespace compiler::backend_llvm {
 			std::initializer_list<llvm::Type*> args
 		) -> llvm::FunctionCallee {
 			return module->getOrInsertFunction(name, llvm::FunctionType::get(ret_type, args, false));
+		}
+
+		/**
+		 * @brief Lowers a `Call` instruction to an `llvm::CallInst`.
+		 *
+		 * Loads the argument values, resolves the callee prototype, performs the C ABI argument
+		 * marshalling (currently: strings passed by pointer with `byval`) and emits the call with
+		 * its matching call-site attributes. This is the place to add further ABI call-site
+		 * attributes. Storing the result (if any) is left to the caller.
+		 *
+		 * @param lir_instruction The `Call` instruction (first argument is the callee).
+		 * @param builder The IRBuilder positioned at the call site.
+		 * @return The emitted call instruction.
+		 */
+		llvm::CallInst* lowerCallInstruction(
+			const lir::Instruction& lir_instruction, llvm::IRBuilder<>& builder
+		) {
+			const auto function_literal
+				= lir_instruction.arguments.at(0).get<lir::FunctionLiteral>();
+
+			// Load the argument values (everything after the callee).
+			std::vector<llvm::Value*> args;
+			args.reserve(lir_instruction.arguments.size() - 1);
+			for (usize i = 1; i < lir_instruction.arguments.size(); i++)
+				args.push_back(loadLIRValue(lir_instruction.arguments.at(i), builder));
+
+			auto callee = getOrInsertFunctionPrototypeFromLiteral(module, function_literal);
+
+			// If the function uses C ABI, we need to pass structs by pointer.
+			std::vector<usize> byval_indices{};
+			if (std::holds_alternative<lir::LIRAbi::CAbi>(function_literal.abi.value)) {
+				for (usize i = 0; i < function_literal.parameter_layouts->size(); i++) {
+					if (const auto param_layout = function_literal.parameter_layouts->at(i);
+					    param_layout->is<tsl::StringTypeLayout>()) {
+						byval_indices.push_back(i);
+						const auto str_type = typeFromLayout(module, param_layout);
+						const auto arg_ptr  = builder.CreateAlloca(str_type);
+						builder.CreateStore(args.at(i), arg_ptr);
+						args.at(i) = arg_ptr;
+					}
+				}
+			}
+
+			llvm::CallInst* call_instruction = builder.CreateCall(callee, args);
+
+			if (not lir_instruction.output.has_value()) {
+				CORE_ASSERT(
+					callee.getFunctionType()->getReturnType()->isVoidTy(),
+					"call to non void function without output "
+					"– this may be valid, feel free "
+					"to remove assertion if the compiler internals change."
+				);
+			}
+
+			for (const auto byval_idx: byval_indices) {
+				const auto arg_type
+					= typeFromLayout(module, function_literal.parameter_layouts->at(byval_idx));
+				call_instruction->addParamAttr(
+					u32(byval_idx), llvm::Attribute::getWithByValType(context, arg_type)
+				);
+			}
+
+			return call_instruction;
 		}
 
 #define LIR_2_LLVM_BINARY_OPERATION_CASE(op)                                       \
@@ -1179,23 +1223,7 @@ namespace compiler::backend_llvm {
 			case Call: {
 				CORE_ASSERT(lir_instruction.arguments.size() > 0, "call instruction without callee");
 
-				const auto function_literal
-					= lir_instruction.arguments.at(0).get<lir::FunctionLiteral>();
-
-				// Load the argument values (everything after the callee). Loading needs the
-				// per-function local/block state, so it stays here; the call boundary itself
-				// (prototype, byval marshalling, call-site attributes) lives in call_lowering.
-				auto args = loadLIRValueList(
-					std::vector(
-						lir_instruction.arguments.begin() + 1, lir_instruction.arguments.end()
-					),
-					builder
-				);
-
-				llvm::CallInst* call_instruction = lowerCallInstruction(
-					module, builder, function_literal, std::move(args),
-					lir_instruction.output.has_value()
-				);
+				llvm::CallInst* call_instruction = lowerCallInstruction(lir_instruction, builder);
 
 				if (lir_instruction.output.has_value())
 					storeOutput(lir_instruction.output.value(), call_instruction, builder);
