@@ -1,0 +1,59 @@
+profile-name: ""
+PostCase: python3 check.py @{profile-name} && @{cleanup_tmp_env}
+
+PreCase: |+
+  @{cd-tmp-dir}
+  @{duck-exe} init foo
+  # @TODO: #2920 This shouldn't be needed (manually fixup return type).
+  echo @{default-src} > foo/src/src.dmf
+  echo "profiles:
+    my-profile:
+      opt-level: z
+      dvm-bytecode: true
+    bench:
+      opt-level: 2
+    my-profile2:
+      inherits: my-profile
+      opt-level: s" >> foo/quackconfig.yaml
+Tests:
+  basic:
+    Description: can build a new project, and expands profiles
+    Cases:
+      dev:
+        test-cmd: duck -C foo build
+        profile-name: dev
+      release:
+        test-cmd: duck -C foo build --release
+        profile-name: release
+      release2:
+        profile-name: release
+        test-cmd: duck -C foo build --profile=release
+      relase3:
+        profile-name: release
+        test-cmd: duck --color=never -C foo build --profile release
+      custom-profile:
+        test-cmd: duck -C foo build --profile my-profile
+        profile-name: my-profile
+      overridden-builtin-profile:
+        test-cmd: duck -C foo build --profile bench
+        profile-name: bench
+      custom-profile-inherited:
+        test-cmd: duck -C foo build --profile my-profile2
+        profile-name: my-profile2
+      # @TODO: #3023 Reenable verbose itests
+      verbose:
+        test-cmd: duck -C foo build --verbose
+        profile-name: dev
+        Enabled: "false"
+      verbose-release:
+        test-cmd: duck -C foo build --release --verbose
+        profile-name: release
+        Enabled: "false"
+      verbose-release2:
+        test-cmd: duck -C foo build --profile=release --verbose
+        profile-name: release
+        Enabled: "false"
+      verbose-release3:
+        test-cmd: duck -C foo build --profile release --verbose
+        profile-name: release
+        Enabled: "false"
