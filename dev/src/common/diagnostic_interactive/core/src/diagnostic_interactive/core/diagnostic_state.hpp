@@ -154,6 +154,8 @@ namespace dia_int::state {
 		enum class Status : bool { Primary, Alternative };
 
 	private:
+		// @TODO: #3047 investigate the need for ComponentID here
+		[[maybe_unused]]
 		ComponentID id;
 		Status      status = Status::Primary;
 

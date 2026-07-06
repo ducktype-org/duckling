@@ -20,12 +20,15 @@ namespace compiler::driver::test_utils {
 	 * @param packages Pairs of (package_path, package_name) for test packages.
 	 * @param artifacts_path Path where compilation artifacts should be stored.
 	 * @param stdlib_options Options describing which stdlib to use.
+	 * @param backend_options Options describing which backend to enable. Defaults to no backend
+	 * enabled.
 	 */
 	base::CheckedOkBad initializeCompilerForTests(
 		const std::vector<PackagePathAndName>& packages,
 		const fs::FilePath&                    artifacts_path,
 		const options_types::StdLibOptions&    stdlib_options
-		= { options_types::StdLibOptions::DefaultStd{} }
+		= { options_types::StdLibOptions::DefaultStd{} },
+		const global_state::BackendOptions& backend_options = {}
 	);
 
 	/**

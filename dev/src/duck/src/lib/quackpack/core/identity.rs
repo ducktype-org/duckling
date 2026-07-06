@@ -7,6 +7,7 @@
 //!
 //! For differences between [`FullIdentity`] and [`Identity`], see the `readme.md` under the `core/` directory.
 
+use std::cmp::Ordering;
 use std::fmt::Display;
 use std::path::Path;
 use std::str::FromStr;
@@ -56,6 +57,21 @@ impl Identity {
             ExpandedLocation::Local { absolute_path } => Origin::new(absolute_path, Kind::Local),
         };
         Self::new(name, origin)
+    }
+
+    /// Compare `lhs` and `rhs` in a stable way!
+    /// By “stable” we mean that the return type does not depend on:
+    /// * used rust version,
+    /// * current duck execution,
+    /// * etc.
+    ///
+    /// Firstly we compare names lexicographically, then [`Origin`]s.
+    pub fn stable_compare(lhs: Self, rhs: Self) -> Ordering {
+        let name_cmp = lhs.name.cmp(&rhs.name);
+        if name_cmp.is_ne() {
+            return name_cmp;
+        }
+        Origin::stable_compare(lhs.origin, rhs.origin)
     }
 }
 
@@ -154,6 +170,21 @@ impl Origin {
     /// Get a [`Kind`] of this [`Origin`].
     pub fn kind(&self) -> Kind {
         self.kind
+    }
+
+    /// Compare `lhs` and `rhs` in a stable way!
+    /// By “stable” we mean that the return type does not depend on:
+    /// * used rust version,
+    /// * current duck execution,
+    /// * etc.
+    ///
+    /// Firstly, we compare kinds, then URLs lexicographically.
+    pub fn stable_compare(lhs: Self, rhs: Self) -> Ordering {
+        let kind_ordering = Kind::stable_compare(lhs.kind, rhs.kind);
+        if kind_ordering.is_ne() {
+            return kind_ordering;
+        }
+        lhs.url.cmp(&rhs.url)
     }
 }
 
@@ -259,6 +290,30 @@ impl Kind {
     /// Check, whether this [`Kind`] is a local kind.
     pub fn is_local(&self) -> bool {
         matches!(self, Kind::Local)
+    }
+
+    /// Compare `lhs` and `rhs` in a stable way!
+    /// By “stable” we mean that the return type does not depend on:
+    /// * used rust version,
+    /// * current duck execution,
+    /// * etc.
+    ///
+    /// Order is: [`Local`](Kind::Local) < [`Git`](Kind::Git) < [`Registry`](Kind::Registry).
+    pub fn stable_compare(lhs: Self, rhs: Self) -> Ordering {
+        match (lhs, rhs) {
+            // Lhs == Rhs.
+            (Self::Registry, Self::Registry)
+            | (Self::Git, Self::Git)
+            | (Self::Local, Self::Local) => Ordering::Equal,
+            // Lhs > Rhs.
+            (Self::Registry, Self::Git)
+            | (Self::Registry, Self::Local)
+            | (Self::Git, Self::Local) => Ordering::Greater,
+            // Lhs < Rhs.
+            (Self::Git, Self::Registry)
+            | (Self::Local, Self::Registry)
+            | (Self::Local, Self::Git) => Ordering::Less,
+        }
     }
 }
 
@@ -383,6 +438,98 @@ mod tests {
             let formatted = identity.to_string();
             assert_eq!(formatted, "foo local+file:///tmp");
         }
+    }
+
+    #[test]
+    fn identity_stable_sort() {
+        let url = "https://localhost:9001".to_url().unwrap();
+        let origin = Origin::for_registry(url);
+        let foo = Identity::new("foo".into(), origin);
+        let url = "https://localhost:9001".to_url().unwrap();
+        let origin = Origin::for_git(url);
+        let foo_git = Identity::new("foo".into(), origin);
+        let root = PathBuf::from("/tmp");
+        let origin = Origin::for_local(&root).unwrap();
+        let foo_local = Identity::new("foo".into(), origin);
+
+        let url = "https://localhost:9001".to_url().unwrap();
+        let origin = Origin::for_registry(url);
+        let bar = Identity::new("bar".into(), origin);
+        let url = "https://localhost:9001".to_url().unwrap();
+        let origin = Origin::for_git(url);
+        let bar_git = Identity::new("bar".into(), origin);
+        let root = PathBuf::from("/tmp");
+        let origin = Origin::for_local(&root).unwrap();
+        let bar_local = Identity::new("bar".into(), origin);
+
+        assert_eq!(Identity::stable_compare(foo, foo), Ordering::Equal);
+        assert_eq!(Identity::stable_compare(foo, foo_git), Ordering::Greater);
+        assert_eq!(Identity::stable_compare(foo, foo_local), Ordering::Greater);
+        assert_eq!(Identity::stable_compare(foo, bar), Ordering::Greater);
+        assert_eq!(Identity::stable_compare(foo, bar_git), Ordering::Greater);
+        assert_eq!(Identity::stable_compare(foo, bar_local), Ordering::Greater);
+
+        assert_eq!(Identity::stable_compare(foo_git, foo), Ordering::Less);
+        assert_eq!(Identity::stable_compare(foo_git, foo_git), Ordering::Equal);
+        assert_eq!(
+            Identity::stable_compare(foo_git, foo_local),
+            Ordering::Greater
+        );
+        assert_eq!(Identity::stable_compare(foo_git, bar), Ordering::Greater);
+        assert_eq!(
+            Identity::stable_compare(foo_git, bar_git),
+            Ordering::Greater
+        );
+        assert_eq!(
+            Identity::stable_compare(foo_git, bar_local),
+            Ordering::Greater
+        );
+
+        assert_eq!(Identity::stable_compare(foo_local, foo), Ordering::Less);
+        assert_eq!(Identity::stable_compare(foo_local, foo_git), Ordering::Less);
+        assert_eq!(
+            Identity::stable_compare(foo_local, foo_local),
+            Ordering::Equal
+        );
+        assert_eq!(Identity::stable_compare(foo_local, bar), Ordering::Greater);
+        assert_eq!(
+            Identity::stable_compare(foo_local, bar_git),
+            Ordering::Greater
+        );
+        assert_eq!(
+            Identity::stable_compare(foo_local, bar_local),
+            Ordering::Greater
+        );
+
+        assert_eq!(Identity::stable_compare(bar, foo), Ordering::Less);
+        assert_eq!(Identity::stable_compare(bar, foo_git), Ordering::Less);
+        assert_eq!(Identity::stable_compare(bar, foo_local), Ordering::Less);
+        assert_eq!(Identity::stable_compare(bar, bar), Ordering::Equal);
+        assert_eq!(Identity::stable_compare(bar, bar_git), Ordering::Greater);
+        assert_eq!(Identity::stable_compare(bar, bar_local), Ordering::Greater);
+
+        assert_eq!(Identity::stable_compare(bar_git, foo), Ordering::Less);
+        assert_eq!(Identity::stable_compare(bar_git, foo_git), Ordering::Less);
+        assert_eq!(Identity::stable_compare(bar_git, foo_local), Ordering::Less);
+        assert_eq!(Identity::stable_compare(bar_git, bar), Ordering::Less);
+        assert_eq!(Identity::stable_compare(bar_git, bar_git), Ordering::Equal);
+        assert_eq!(
+            Identity::stable_compare(bar_git, bar_local),
+            Ordering::Greater
+        );
+
+        assert_eq!(Identity::stable_compare(bar_local, foo), Ordering::Less);
+        assert_eq!(Identity::stable_compare(bar_local, foo_git), Ordering::Less);
+        assert_eq!(
+            Identity::stable_compare(bar_local, foo_local),
+            Ordering::Less
+        );
+        assert_eq!(Identity::stable_compare(bar_local, bar), Ordering::Less);
+        assert_eq!(Identity::stable_compare(bar_local, bar_git), Ordering::Less);
+        assert_eq!(
+            Identity::stable_compare(bar_local, bar_local),
+            Ordering::Equal
+        );
     }
 
     #[test]

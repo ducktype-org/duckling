@@ -304,6 +304,10 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::Expand, false> empty_expand{ "expand ;" };
 	Example<pst::Expand, false> unclosed_expand{ "expand \"return 0;;" };
 
+	Example<pst::TemplateStmt, true>  simple_template{ "template () class C {}" };
+	Example<pst::TemplateStmt, false> no_template_list{ "template class C {}" };
+	Example<pst::TemplateStmt, false> no_statement{ "template ()" };
+
 	ClassStmtExample<pst::Stmt, true> class_using{ "using std.math;" };
 	ClassStmtExample<pst::Stmt, true> class_alias{ "alias sqrt=std.math.sqrt;" };
 

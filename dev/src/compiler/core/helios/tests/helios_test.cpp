@@ -2001,23 +2001,22 @@ private:
 			ASSERT_TRUE(default_val != nullptr);
 		}
 		{
-			// l += 1;
+			// l.push(1);
 			auto& expr_stmt = dynamic_cast<const ExprStmt&>(*statements.at(1));
-			auto* push_expr = dynamic_cast<const ListPushExpr*>(expr_stmt.expr.get());
-			ASSERT_TRUE(push_expr != nullptr);
+			auto* call_expr = dynamic_cast<const CallExpr*>(expr_stmt.expr.get());
+			ASSERT_TRUE(call_expr != nullptr);
 		}
 		{
-			// l -= 1;
+			// l.pop(1);
 			auto& expr_stmt = dynamic_cast<const ExprStmt&>(*statements.at(2));
-			auto* pop_expr  = dynamic_cast<const ListPopExpr*>(expr_stmt.expr.get());
-			ASSERT_TRUE(pop_expr != nullptr);
+			auto* call_expr = dynamic_cast<const CallExpr*>(expr_stmt.expr.get());
+			ASSERT_TRUE(call_expr != nullptr);
 		}
 		{
-			// let l_len = len l;
-			auto& var_decl = dynamic_cast<const VariableStmt&>(*statements.at(3));
-			auto* len_expr = dynamic_cast<const UnaryOperatorExpr*>(var_decl.initial_value.get());
-			ASSERT_TRUE(len_expr != nullptr);
-			ASSERT_EQUAL(len_expr->operation, BuiltinUnary::Len);
+			// let l_len = l.length();
+			auto& var_decl  = dynamic_cast<const VariableStmt&>(*statements.at(3));
+			auto* call_expr = dynamic_cast<const CallExpr*>(var_decl.initial_value.get());
+			ASSERT_TRUE(call_expr != nullptr);
 		}
 		{
 			// l[0] = 42;
@@ -2819,10 +2818,10 @@ private:
 				// `WithInit`.
 				ASSERT_EQUAL_PRINT(2, deps.size());
 
-				auto dep_gsd = std::get<GeneratedSymbolData>(getSymRef(deps[0])->other);
-				ASSERT_TRUE(std::holds_alternative<GeneratedSymbolData::DefaultClassConstructor>(
-					dep_gsd.data
-				));
+				const auto* dep_ctor = std::get_if<Constructor>(&getSymRef(deps[0])->other);
+				ASSERT_TRUE(dep_ctor != nullptr);
+				ASSERT_EQUAL(dep_ctor->kind, Constructor::Kind::Default);
+				ASSERT_EQUAL(dep_ctor->type.getKind(), compiler::tsh::Kind::Class);
 			}
 
 			// ArrayHolder ctor should call a ctor of static array field, which calls a ctor of the
@@ -2841,10 +2840,9 @@ private:
 
 				bool found_array_ctor = false;
 				for (auto d: deps) {
-					auto gsd = std::get<GeneratedSymbolData>(getSymRef(d)->other);
-					if (std::holds_alternative<GeneratedSymbolData::DefaultStaticArrayConstructor>(
-							gsd.data
-						))
+					const auto* ctor = std::get_if<Constructor>(&getSymRef(d)->other);
+					if (ctor != nullptr && ctor->kind == Constructor::Kind::Default
+					    && ctor->type.getKind() == compiler::tsh::Kind::StaticArray)
 						found_array_ctor = true;
 				}
 				ASSERT_TRUE(found_array_ctor);

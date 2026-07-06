@@ -1,0 +1,24 @@
+PreCase: |+
+  @{cd-tmp-dir}
+  @{duck-exe} init foo
+  @{duck-exe} init foo-but-different-dir --name foo
+  @{duck-exe} -C foo sync
+Tests:
+  overwrite:
+    Description: 
+    Cases:
+      sync:
+        test-cmd: duck -C foo-but-different-dir sync
+        Err:
+          Run: |+
+            echo "error: tried to overwrite an existing virtual environment from another location
+            
+              Caused by:
+                synchronizing the package at \`${DIT_TMP_DIR}/foo-but-different-dir\` would overwrite the venv of the package at \`${DIT_TMP_DIR}/foo\`
+
+              Caused by:
+                the packages share the same name \`foo\`
+            
+            hint: use \`--overwrite\` to force an overwrite"
+        ExitCode: 1
+        
