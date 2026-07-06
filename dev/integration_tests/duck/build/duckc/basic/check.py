@@ -10,15 +10,8 @@ foo_path = project_root("foo")
 
 version = "1.0.0"
 
-features = sys.argv[1:]
-features = [f'"{feature}"' for feature in features]
-feature_str = ""
-for i, feature in enumerate(features):
-    feature_str += f'        {feature}'
-    if i != len(features) - 1:
-        feature_str += ",\n"
-
-profile = "dev"
+profile = sys.argv[1]
+is_dvm = (profile == "my-profile") or (profile == "my-profile2")
 
 layout = artifacts_dir_for_root(foo_path)
 
@@ -36,15 +29,14 @@ assert foo_deps.exists()
 
 text = foo_deps.read_text()
 
-expected = f"""{{
+if not is_dvm:
+    expected = f"""{{
   "packages": [
     {{
       "id": "{foo_name}",
       "name": "foo",
       "version": "1.0.0",
-      "features": [
-{feature_str}
-      ],
+      "features": [],
       "path": "{str(foo_path)}/src",
       "dependencies": []
     }}
@@ -54,6 +46,26 @@ expected = f"""{{
       "package": "{foo_name}",
       "strategy": "native",
       "output_file": "{str(layout / "foo")}"
+    }}
+  ]
+}}"""
+else:
+    expected = f"""{{
+  "packages": [
+    {{
+      "id": "{foo_name}",
+      "name": "foo",
+      "version": "1.0.0",
+      "features": [],
+      "path": "{str(foo_path)}/src",
+      "dependencies": []
+    }}
+  ],
+  "tasks": [
+    {{
+      "package": "{foo_name}",
+      "strategy": "dvm_exe",
+      "output_file": "{str(layout / "foo.dbc")}"
     }}
   ]
 }}"""

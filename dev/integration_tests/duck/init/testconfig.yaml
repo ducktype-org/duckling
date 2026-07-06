@@ -1,14 +1,8 @@
 PreNode: ""
 
-# init cases create their projects inside the case tmp dir.
-before_cmd: "@{make_tmp_env} && cd \"$DIT_TMP_DIR\""
-
 SubDirs:
-  - basic_project
-  - basic_project_renamed
-  - invalid_arguments
-  - missing_argument
-  - reinitialization
-  - reinitialization_renamed
-  - venvconfig_flags
-  - with_git
+  - basic
+  - basic-renamed
+  - errors
+  - venvconfig-flags
+  - with-git

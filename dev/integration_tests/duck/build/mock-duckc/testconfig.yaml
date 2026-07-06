@@ -1,0 +1,12 @@
+# NOTE: `ConfigDir` will be overwritten by `SubDirs`.
+before-cmd: export PATH="@{ConfigDir}/..:$PATH"
+
+SubDirs:
+  - basic
+  - basic-deps
+  - basic-deps-and-conds
+  - diamond
+  - dvm-deps
+  - errors
+  - features
+  - local-cycle
