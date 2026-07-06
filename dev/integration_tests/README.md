@@ -151,7 +151,7 @@ Subtree-specific variables (applied to a subtree rooted at this node) are __INHE
 - `PostNode` - Same as `PreNode`, but the command is executed after processing the node and its subdirectories.
   Order of execution: `first child` -> `second child` -> `third child` -> `parent node` -> `parent's siblings`.
 
-Both `PreNode` and `PostNode` commands are executed only if the node or its descendants match the `-t` filter argument. This ensures that irrelevant nodes and their commands are skipped.
+Both `PreNode` and `PostNode` commands are executed only if at least one test case beneath the node matches the `-t` filter argument. This ensures that irrelevant nodes and their commands are skipped.
 
 Test specific:
 
@@ -192,11 +192,22 @@ no artifacts in the test's source directory, no shared scratch paths. Use the
 per-case temporary environment below for anything a case writes.
 
 A test can opt out with `NoParallel: true` (settable on the test or inherited
-from any ancestor node): its cases then run with **no other cases executing
-anywhere in the tree** — in-flight cases finish first, queued ones wait. Use it
-sparingly, for tests sensitive to machine load: tight timeouts, or cases that
-abort (SIGABRT) and thus wait for the system core-dump handler, which can take
-seconds on a busy machine.
+from any ancestor node): all such tests are deferred to a second phase after
+every other test has finished, where their cases run **strictly one at a time
+on an otherwise idle machine**. Use it sparingly, for tests sensitive to
+machine load: tight timeouts, or cases that abort (SIGABRT) and thus wait for
+the system core-dump handler, which can take seconds on a busy machine. A
+`PostNode` above a `NoParallel` test correctly waits for that second phase.
+
+Each finished test prints its output as one atomic section, by default in
+completion order; pass `--deterministic-output` to print in the definition
+(tree) order instead — normal tests first, `NoParallel` tests last.
+
+The `-t` filter is a regex, matched with `re.search` against the full
+`node/.../test/case` path of every case. Plain strings therefore work as
+fuzzy filters: `-t integration_tests/compiler` (a prefix), `-t pointers`
+(an inner directory), or `-t 'slices.*oob'`. Anchor with `^`/`$` or
+surrounding `/` for exact segments.
 
 ## Temporary environments
 

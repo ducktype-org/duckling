@@ -60,7 +60,16 @@ from click import command, option
     "--filter",
     type=str,
     default="",
-    help="Run tests under the specified path prefix (e.g., 'tests/C++' or 'tests/C++/Case1').",
+    help="Run only the test cases whose 'node/.../test/case' path matches the given "
+    "regex (searched anywhere in the path). Plain strings work as fuzzy filters: "
+    "a path prefix, an inner directory name or a test name.",
+)
+@option(
+    "--deterministic-output",
+    is_flag=True,
+    default=False,
+    help="With -j > 1, print test outputs in the definition (tree) order instead of "
+    "the completion order.",
 )
 @option(
     "--custom-values",
