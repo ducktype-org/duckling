@@ -601,14 +601,14 @@ namespace compiler::helios {
 				const auto& additional_data = template_decl->getAdditionalRootData();
 
 				variant_match(additional_data.pst_parent) {
-					variant_case(pst::AdditionalRootData::TemplateParent, template_parent) {
+					variant_case(pst::AdditionalRootData::BakedTemplateParent, template_parent) {
 						auto proper_data = base::anyCast<templates::TemplateBakePSTLinkedData>(template_parent.template_bake_data);
 						for (const auto& param: proper_data.template_arguments_symbols.value()) {
 							out.emplace_back(param);
 						}
 					}
 					variant_default {
-						CORE_PANIC("Template declaration without TemplateParent, this should not happen here.");
+						CORE_PANIC("Template declaration without BakedTemplateParent, this should not happen here.");
 					}
 				}
 

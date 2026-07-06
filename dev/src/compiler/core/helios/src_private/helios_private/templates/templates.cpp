@@ -165,7 +165,7 @@ namespace compiler::helios::templates {
 
             // we are looping here with the scope i think:
             baked_pst.setAdditionalRootData(pst::AdditionalRootData{
-                .pst_parent = pst::AdditionalRootData::TemplateParent{
+                .pst_parent = pst::AdditionalRootData::BakedTemplateParent{
                     .template_bake_data = TemplateBakePSTLinkedData{
                         // .instantiated_sym_id = SymID{}, // TODO: generate new sym_id for baked template
                         .pst_parent_element = template_statement->getParent().value(), // TODO: change to pst layer call.. templtaes in macros :o
@@ -181,11 +181,11 @@ namespace compiler::helios::templates {
                             key
                         );
             
-            // this can totally race, if left without sync:
+            // @TODO: #3072 remove this
+            // Also: this can totally race
             baked_pst.resetAdditionalRootData(pst::AdditionalRootData{
-                .pst_parent = pst::AdditionalRootData::TemplateParent{
+                .pst_parent = pst::AdditionalRootData::BakedTemplateParent{
                     .template_bake_data = TemplateBakePSTLinkedData{
-                        // .instantiated_sym_id = SymID{}, // TODO: generate new sym_id for baked template
                         .pst_parent_element = template_statement->getParent().value(), // TODO: change to pst layer call.. templtaes in macros :o
                         .template_arguments_symbols = args
                     }

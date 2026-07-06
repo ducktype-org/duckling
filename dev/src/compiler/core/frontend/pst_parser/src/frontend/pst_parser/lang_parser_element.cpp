@@ -190,8 +190,8 @@ namespace pst {
 		additional_root_data.emplace(std::move(data));
 	}
 
-	// @TODO: this is a hack, deal with it!
 	void LangElement::resetAdditionalRootData(AdditionalRootData data) {
+		// @TODO: #3072 remove this
 		CORE_ASSERT(additional_root_data.has_value(), "Additional root data not set");
 		CORE_ASSERT(!parent.has_value(), "Only root elements can have additional root data");
 		additional_root_data.reset();
