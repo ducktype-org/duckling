@@ -35,17 +35,23 @@ namespace abi::calling_conv {
 
 		static ArgInfo byPointer(bool by_val);
 		static ArgInfo byValue(types::AbiType type, bool sign_ext = false, bool zero_ext = false);
+
+		template<typename Alternative>
+		base::Optional<CRef<Alternative>> getKind() {
+			if (auto value = std::get_if<Alternative>(&kind)) return { CRef<Alternative>(value) };
+			return {};
+		}
 	};
 
 	struct ArgEntry {
-		ArgInfo info;
-        types::AbiTypeCRef original_type;
+		ArgInfo            info;
+		types::AbiTypeCRef original_type;
 	};
 
 	struct ReturnEntry {
-		ArgInfo info;
-		bool    passed_as_param;
-        types::AbiTypeCRef original_type;
+		ArgInfo            info;
+		bool               passed_as_param;
+		types::AbiTypeCRef original_type;
 	};
 
 	struct FunctionInfo {
@@ -79,9 +85,9 @@ namespace abi::calling_conv {
 		[[nodiscard]] FunctionInfo computeInfo(const FunctionType& ft) const final;
 	};
 
-    /**
-     * @brief Main entry point. Calculate the calling convention info about 
-     * a function based on the target and ABI types of a function.
-     */
+	/**
+	 * @brief Main entry point. Calculate the calling convention info about
+	 * a function based on the target and ABI types of a function.
+	 */
 	FunctionInfo computeCallingConv(const TargetABI& target, const FunctionType& ft);
 }

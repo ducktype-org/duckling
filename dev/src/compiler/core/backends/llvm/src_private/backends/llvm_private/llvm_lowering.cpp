@@ -22,7 +22,9 @@ LLVM_INCLUDE_BEGIN()
 
 LLVM_INCLUDE_END()
 
+#include "call_lowering.hpp"
 #include "module_impl.hpp"
+#include "type_from_layout.hpp"
 
 #include <ctv/numeric_value.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
@@ -376,104 +378,9 @@ namespace compiler::backend_llvm {
 		CORE_UNREACHABLE();
 	}
 
-	/**
-	 * Get the LLVM function type based on the layouts of its parameters and return type.
-	 * @note If the function type has to conform to C/C++ ABI, then struct-like parameters
-	 * should be passed by pointer and with the `byval` LLVM attribute. See:
-	 * https://yorickpeterse.com/articles/the-mess-that-is-handling-structure-arguments-and-returns-in-llvm/.
-	 * @param module The LLVM module in which the function type will be used.
-	 * @param parameters The layouts of the parameters of the function.
-	 * @param return_type The layout of the return type of the function.
-	 * @param abi The ABI to conform to.
-	 * @return The LLVM function type.
-	 */
-	auto getFunType(
-		const Ref<llvm::Module>                   module,
-		const std::vector<CRef<tsl::TypeLayout>>& parameters,
-		const CRef<tsl::TypeLayout>               return_type,
-		const helios::SymbolABI                   abi = helios::DefaultAbi{}
-	) {
-		std::vector<llvm::Type*> llvm_parameters;
-		llvm_parameters.reserve(parameters.size());
-
-		// Prepare parameter types.
-		for (const auto& param: parameters)
-			if (std::holds_alternative<helios::CAbi>(abi) and param->is<tsl::StringTypeLayout>())
-				llvm_parameters.push_back(llvm::PointerType::getUnqual(module->getContext()));
-			else
-				llvm_parameters.push_back(typeFromLayout(module, param));
-
-		// Prepare function type, including return type.
-		return llvm::FunctionType::get(typeFromLayout(module, return_type), llvm_parameters, false);
-	}
-
-	llvm::CallingConv::ID getCallingConvFromABI(const helios::SymbolABI& abi) {
-		variant_match(abi) {
-			variant_case(helios::DefaultAbi, name) { return llvm::CallingConv::C; }
-			variant_case(helios::CAbi, name) { return llvm::CallingConv::C; }
-		}
-		CORE_UNREACHABLE();
-	}
-
-	/**
-	 * Gets a function from a module by the function literal (using a mangle_name field).
-	 *
-	 * If the function doesn't exits it adds a function prototype with
-	 * external linkage to the module based on provided lir_functions.
-	 *
-	 * @note We use it to add all functions to the module currently.
-	 * This will have to change in the future, but it will require some restructuring
-	 * of how we are creating llvm modules, as we need to know what function in local to which
-	 * module.
-	 */
-	llvm::FunctionCallee getOrInsertFunctionPrototypeFromLiteral(
-		const Ref<llvm::Module> module, const lir::FunctionLiteral& function_literal
-	) {
-		const auto mangled_name = function_literal.mangled_name;
-		// We check if function exist first, to avoid unnecessary construction of types:
-		if (const auto func = module->getFunction(mangled_name.strView())) return func;
-
-		llvm::FunctionCallee callee = module->getOrInsertFunction(
-			mangled_name.strView(),
-			getFunType(
-				module,
-				*function_literal.parameter_layouts,
-				function_literal.return_type_layout,
-				function_literal.abi
-			)
-		);
-
-		if (auto* function = llvm::dyn_cast<llvm::Function>(callee.getCallee())) {
-			function->setCallingConv(getCallingConvFromABI(function_literal.abi));
-			if (function_literal.link_once)
-				function->setLinkage(llvm::GlobalValue::LinkOnceODRLinkage);
-
-			// If the function uses C ABI, we need to pass structs by pointer with `byval` attribute.
-			if (std::holds_alternative<helios::CAbi>(function_literal.abi)) {
-				for (usize i = 0; i < function_literal.parameter_layouts->size(); i++) {
-					if (const auto param_layout = function_literal.parameter_layouts->at(i);
-					    param_layout->is<tsl::StringTypeLayout>()) {
-						function->addParamAttr(
-							u32(i),
-							llvm::Attribute::getWithByValType(
-								module->getContext(), typeFromLayout(module, param_layout)
-							)
-						);
-					}
-				}
-			}
-		}
-
-		return callee;
-	}
-
-	llvm::FunctionCallee getOrInsertFunctionPrototypeFromLIRFunction(
-		const Ref<llvm::Module> module, const lir::Function& lir_function
-	) {
-		return getOrInsertFunctionPrototypeFromLiteral(
-			module, lir::FunctionLiteral::fromFunction(lir_function)
-		);
-	}
+	// Function-call and prototype lowering (getFunType, getCallingConvFromABI,
+	// getOrInsertFunctionPrototypeFromLiteral, ...) lives in call_lowering.{hpp,cpp}. That is
+	// where the C ABI argument/return lowering will grow.
 
 	/**
 	 * @brief This only inserts a global variable declaration if it doesn't exist.
@@ -1274,50 +1181,24 @@ namespace compiler::backend_llvm {
 
 				const auto function_literal
 					= lir_instruction.arguments.at(0).get<lir::FunctionLiteral>();
-				auto callee = getOrInsertFunctionPrototypeFromLiteral(module, function_literal);
 
+				// Load the argument values (everything after the callee). Loading needs the
+				// per-function local/block state, so it stays here; the call boundary itself
+				// (prototype, byval marshalling, call-site attributes) lives in call_lowering.
 				auto args = loadLIRValueList(
 					std::vector(
 						lir_instruction.arguments.begin() + 1, lir_instruction.arguments.end()
 					),
 					builder
 				);
-				// If the function uses C ABI, we need to pass structs by pointer.
-				std::vector<usize> byval_indices{};
-				if (std::holds_alternative<helios::CAbi>(function_literal.abi)) {
-					for (usize i = 0; i < function_literal.parameter_layouts->size(); i++) {
-						if (const auto param_layout = function_literal.parameter_layouts->at(i);
-						    param_layout->is<tsl::StringTypeLayout>()) {
-							byval_indices.push_back(i);
-							const auto str_type = typeFromLayout(module, param_layout);
-							const auto arg_ptr  = builder.CreateAlloca(str_type);
-							builder.CreateStore(args.at(i), arg_ptr);
-							args.at(i) = arg_ptr;
-						}
-					}
-				}
 
-				llvm::CallInst* call_instruction = nullptr;
-				if (lir_instruction.output.has_value()) {
-					const auto output = lir_instruction.output.value();
-					call_instruction  = builder.CreateCall(callee, args);
-					storeOutput(output, call_instruction, builder);
-				} else {
-					CORE_ASSERT(
-						callee.getFunctionType()->getReturnType()->isVoidTy(),
-						"call to non void function without output "
-						"– this may be valid, feel free "
-						"to remove assertion if the compiler internals change."
-					);
-					call_instruction = builder.CreateCall(callee, args);
-				}
-				for (const auto byval_idx: byval_indices) {
-					const auto arg_type
-						= typeFromLayout(module, function_literal.parameter_layouts->at(byval_idx));
-					call_instruction->addParamAttr(
-						u32(byval_idx), llvm::Attribute::getWithByValType(context, arg_type)
-					);
-				}
+				llvm::CallInst* call_instruction = lowerCallInstruction(
+					module, builder, function_literal, std::move(args),
+					lir_instruction.output.has_value()
+				);
+
+				if (lir_instruction.output.has_value())
+					storeOutput(lir_instruction.output.value(), call_instruction, builder);
 
 				break;
 			}

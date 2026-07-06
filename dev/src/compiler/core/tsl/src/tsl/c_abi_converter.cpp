@@ -69,6 +69,21 @@ namespace compiler::tsl {
 			);
 		}
 
+		// @TODO: #2636 Remove this. `string` is not actually C-compatible. We lower it here to
+		// its underlying `{ ptr, i64, i64, i64 }` representation (matching the string layout the
+		// LLVM backend emits) purely as a temporary measure, so that string arguments get correct
+		// ABI lowering until proper string FFI support exists.
+		CAbiConversionResult convertString() {
+			std::vector<ats::AbiTypePtr> fields;
+			fields.reserve(4);
+			// Written directly on abi::types: owning boxes, no cached conversion to borrow.
+			fields.emplace_back(ats::makeBoxAbiType(ats::pointerType()));
+			fields.emplace_back(ats::makeBoxAbiType(ats::intType(64, false)));
+			fields.emplace_back(ats::makeBoxAbiType(ats::intType(64, false)));
+			fields.emplace_back(ats::makeBoxAbiType(ats::intType(64, false)));
+			return ok(ats::structType(std::move(fields)));
+		}
+
 		CAbiConversionResult convertClass(tsh::ClassAbstractType class_type, query::Context& ctx) {
 			const helios::SymbolABI abi = class_type.getABI(ctx);
 			variant_match(abi) {
@@ -144,7 +159,7 @@ namespace compiler::tsl {
 			case Kind::Char:
 				return ok(ats::charType());
 			case Kind::String:
-				return fail("`string` is not C-compatible");
+				return convertString();
 			case Kind::DynamicArray:
 				return fail("dynamic arrays are not C-compatible");
 			case Kind::Function:
