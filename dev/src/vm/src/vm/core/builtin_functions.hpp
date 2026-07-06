@@ -28,7 +28,11 @@
 
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/core/safe/safe_vmthread.hpp>
-#include <vm/core/vmvalue/ivmvalue.hpp>
+
+namespace vm {
+	class SafeVmValue;
+	class SafeVMProcess;
+}
 
 namespace vm::builtins {
 
@@ -98,12 +102,12 @@ namespace vm::builtins {
 	/**
 	 * @brief Calls a builtin function with the given ID and arguments.
 	 */
-	base::Optional<Box<IVmValue>> callBuiltinFunction(
-		BuiltinFunctionID                 id,
-		const std::vector<TypeCRef>&      result_types,
-		IVMProcess&                       process,
-		SafeVMThread&                     thread,
-		const std::vector<Box<IVmValue>>& arguments
+	base::Optional<Box<SafeVmValue>> callBuiltinFunction(
+		BuiltinFunctionID                    id,
+		const std::vector<TypeCRef>&         result_types,
+		SafeVMProcess&                       process,
+		SafeVMThread&                        thread,
+		const std::vector<Box<SafeVmValue>>& arguments
 	);
 
 	/**

@@ -104,7 +104,7 @@ namespace {
 		case compiler::tsh::Kind::Integral: {
 			compiler::tsh::IntegralAbstractType int_type(type.getType());
 			auto                                bit_size     = int_type.getSize();
-			base::StrID                         vm_type_name = vm_value->type->getName();
+			base::StrID                         vm_type_name = vm_value->getType()->getName();
 
 			if (int_type.getSignedness()
 			    == compiler::tsh::IntegralAbstractType::Signedness::Signed) {
@@ -131,7 +131,7 @@ namespace {
 		case compiler::tsh::Kind::Float: {
 			compiler::tsh::FloatAbstractType float_type(type.getType());
 			auto                             bit_size     = float_type.getSize();
-			base::StrID                      vm_type_name = vm_value->type->getName();
+			base::StrID                      vm_type_name = vm_value->getType()->getName();
 
 			if (bit_size <= Bits{ 32 } && vm_type_name == "i32")
 				return CompileTimeValue{ NumericValue{ vm_value->readBytes<f32>() } };
@@ -146,21 +146,21 @@ namespace {
 		}
 
 		case compiler::tsh::Kind::Bool: {
-			if (vm_value->type->getName() != base::StrID("byte")
-			    && vm_value->type->getName() != base::StrID("i8"))
+			if (vm_value->getType()->getName() != base::StrID("byte")
+			    && vm_value->getType()->getName() != base::StrID("i8"))
 				return std::unexpected(VmEvaluationError(
 					VmEvaluationError::Kind::ReturnConversionFailed,
 					"Expected byte (bool) VM value but received type: "
-						+ vm_value->type->getName().str()
+						+ vm_value->getType()->getName().str()
 				));
 			return CompileTimeValue{ vm_value->readBytes<bool>() };
 		}
 		case compiler::tsh::Kind::Meta: {
-			if (vm_value->type->getName() != base::StrID("opaque_ptr"))
+			if (vm_value->getType()->getName() != base::StrID("opaque_ptr"))
 				return std::unexpected(VmEvaluationError(
 					VmEvaluationError::Kind::ReturnConversionFailed,
 					"Expected opaque pointer VM value but received type: "
-						+ vm_value->type->getName().str()
+						+ vm_value->getType()->getName().str()
 				));
 			auto* meta_ptr = vm_value->readBytes<compiler::tsh::SymbolType<>*>();
 			return CompileTimeValue{ *meta_ptr };

@@ -153,23 +153,32 @@ namespace vm {
 		return {};
 	}
 
-	Ref<IVmValue> SafeVMProcess::createVmValue(TypeCRef type) {
+	Ref<IVmValue> SafeVMProcess::createVmValue(code::valid_type::ValidTypeID type_id) {
+		// Safe TypeIDs are asserted (in the type builder) to be numerically equal to ValidTypeIDs.
+		return createVmValue(loaded_program->getTypes().at(TypeID(type_id.asInt())));
+	}
+
+	Box<IVmValue> SafeVMProcess::createOwnedVmValue(code::valid_type::ValidTypeID type_id) {
+		return createOwnedVmValue(loaded_program->getTypes().at(TypeID(type_id.asInt())));
+	}
+
+	Ref<SafeVmValue> SafeVMProcess::createVmValue(TypeCRef type) {
 		auto value = Box<SafeVmValue>::fromPointer(new SafeVmValue(*this, type));
 		owned_vm_values.emplace_back(std::move(value));
 		return owned_vm_values.back().refMut();
 	}
 
-	Ref<IVmValue> SafeVMProcess::createVmValue(TypeCRef type, Pointer src) {
+	Ref<SafeVmValue> SafeVMProcess::createVmValue(TypeCRef type, Pointer src) {
 		auto value = Box<SafeVmValue>::fromPointer(new SafeVmValue(*this, type, src));
 		owned_vm_values.emplace_back(std::move(value));
 		return owned_vm_values.back().refMut();
 	}
 
-	Box<IVmValue> SafeVMProcess::createOwnedVmValue(TypeCRef type) {
+	Box<SafeVmValue> SafeVMProcess::createOwnedVmValue(TypeCRef type) {
 		return Box<SafeVmValue>::fromPointer(new SafeVmValue(*this, type));
 	}
 
-	Box<IVmValue> SafeVMProcess::createOwnedVmValue(TypeCRef type, Pointer src) {
+	Box<SafeVmValue> SafeVMProcess::createOwnedVmValue(TypeCRef type, Pointer src) {
 		return Box<SafeVmValue>::fromPointer(new SafeVmValue(*this, type, src));
 	}
 
@@ -382,8 +391,8 @@ namespace vm {
 						.offset = offset,
 						.name   = std::nullopt,
 						.type   = std::nullopt,
-						.value  = SharedBox<IVmValueRef>::fromPointer(
-                            new SafeVmValueRef(*this, memory.getBlockType(block), Pointer(block, 0))
+						.value  = SafeVmValueRef::makeShared(
+                            *this, memory.getBlockType(block), Pointer(block, 0)
                         ),
 					});
 				}

@@ -1,17 +1,23 @@
 #pragma once
 
+#include <base/collections/maps.hpp>
 #include <base/collections/optional.hpp>
 #include <base/pointers/shared_box.hpp>
+#include <base/types/bits_and_bytes.hpp>
+#include <base/types/ints.hpp>
+
+#include <string_id/string_id.hpp>
 
 #include <vm/api/data/process_info.hpp>
 #include <vm/bytecode/validator/valid_type/valid_type.hpp>
-#include <vm/core/safe/memory/memory.hpp>
-#include <vm/core/safe/type_metadata/definitions.hpp>
 #include <vm/utils/interpret.hpp>
 
+#include <stdexcept>
+#include <string>
+#include <variant>
+#include <vector>
+
 namespace vm {
-	class SafeVMProcess;
-	class SafeVmValueRef;
 	class IVmValueRef;
 
 	namespace interpreted_data_variant {
@@ -53,6 +59,18 @@ namespace vm {
 		[[nodiscard]] virtual std::string str() const = 0;
 	};
 
+	/**
+	 * @brief Interface providing element access to a table value observed from outside a VM.
+	 * Implementations resolve elements lazily using their VM's own memory representation.
+	 */
+	class ITableElementAccess {
+	public:
+		virtual ~ITableElementAccess() = default;
+
+		/** @brief Creates a reference to the table element at `index`. */
+		[[nodiscard]] virtual SharedBox<IVmValueRef> get(usize index) const = 0;
+	};
+
 	namespace interpreted_data_variant {
 		struct Primitive final {
 			const u64 value;
@@ -63,24 +81,23 @@ namespace vm {
 		};
 
 		struct Table final {
-			friend class vm::SafeVmValueRef;
+			SharedBox<ITableElementAccess> elements;
 
-		private:
-			base::Ref<SafeVMProcess> process;
-			vm::Pointer              begin;
-			TypeCRef                 type;
+			const usize size;
 
-		public:
-			const usize            size;
-			SharedBox<IVmValueRef> get(usize index);
-
-		private:
-			Table(base::Ref<SafeVMProcess> process, vm::Pointer begin, TypeCRef type, usize size);
+			/**
+			 * @brief Returns a reference to the table element at `index`.
+			 * @throws std::out_of_range when `index` is outside the table.
+			 */
+			[[nodiscard]] SharedBox<IVmValueRef> get(usize index) const {
+				if (index >= size) throw std::out_of_range("Table index out of range");
+				return elements->get(index);
+			}
 		};
 
 		struct Data final {
 			struct FieldDesc {
-				Offset                 offset = Offset(0);
+				Bytes                  offset = Bytes(0);
 				SharedBox<IVmValueRef> value;
 			};
 

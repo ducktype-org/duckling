@@ -2,6 +2,7 @@
 
 #include <base/collections/optional.hpp>
 
+#include <array>
 #include <ranges>
 #include <string>
 #include <vector>
@@ -31,6 +32,46 @@ public:
 
 private:
 	using OwnedArgumentList = std::vector<Box<vm::IVmValue>>;
+
+	/**
+	 * @brief An IVmValue implementation which does not come from the safe VM. Used to check that
+	 * the safe VM rejects values it did not create, even when their PID matches.
+	 */
+	class ForeignVmValue final: public vm::IVmValue {
+	public:
+		explicit ForeignVmValue(vm::PID pid): pid(pid) {}
+
+		void freeData() override {}
+
+		[[nodiscard]] base::CRef<vm::code::valid_type::ValidType> getType() const override {
+			CORE_PANIC("ForeignVmValue has no type");
+		}
+
+		[[nodiscard]] vm::code::valid_type::ValidTypeID getTypeID() const override {
+			CORE_PANIC("ForeignVmValue has no type");
+		}
+
+		[[nodiscard]] Bytes getDataSize() const override { return Bytes(sizeof(data)); }
+
+		[[nodiscard]] base::Optional<vm::InterpretedDataVariant> readData() const override {
+			return {};
+		}
+
+		[[nodiscard]] vm::PID getPID() const override { return pid; }
+
+		[[nodiscard]] byte* getBytes() override { return data.data(); }
+
+		[[nodiscard]] const byte* getBytes() const override { return data.data(); }
+
+		void dprint(std::ostream& out, const std::string& indent) const override {
+			out << indent << "ForeignVmValue\n";
+		}
+
+	private:
+		vm::PID pid;
+
+		std::array<byte, sizeof(i64)> data{};
+	};
 
 	/**
 	 * @brief Executes a function or a program within a VM process and verifies the results.
@@ -393,6 +434,22 @@ private:
 			assertExecutionPanickedWith(
 				runFunctionExpectPanic(pid, "summer", func_args),
 				"Type mismatch for argument 1 of function 'summer': expected i64, got i32"
+			);
+
+			freeArguments(arguments);
+		}
+
+		{
+			// VMValue with a matching PID, but not created by the safe VM implementation.
+			OwnedArgumentList arguments;
+			arguments.push_back(getIntVmValue(pid, 5));
+			arguments.push_back(Box<vm::IVmValue>::fromPointer(new ForeignVmValue(pid)));
+			auto func_args = createArgumentList(arguments);
+
+			assertExecutionPanickedWith(
+				runFunctionExpectPanic(pid, "summer", func_args),
+				"VMValue for argument 1 is invalid: it does not belong to the safe VM "
+				"implementation"
 			);
 
 			freeArguments(arguments);

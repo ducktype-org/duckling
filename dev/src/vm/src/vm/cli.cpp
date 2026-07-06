@@ -49,7 +49,7 @@ int cli(
 						  );
 						  auto& vm_value = values.at(0);
 						  CORE_ASSERT(
-							  vm_value->type->getName() == base::StrID("i64"),
+							  vm_value->getType()->getName() == base::StrID("i64"),
 							  "DVM program returned and exit value different than i64"
 						  );
 						  return vm_value->readBytes<i64>();

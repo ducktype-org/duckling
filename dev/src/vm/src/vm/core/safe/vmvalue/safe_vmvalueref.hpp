@@ -28,6 +28,14 @@ namespace vm {
 	public:
 		SafeVmValueRef(SafeVMProcess& process, TypeCRef type, Pointer pointed_data);
 
+		/**
+		 * @brief Creates a shared, interface-typed reference to safe VM data.
+		 * Single place funneling the allocation of `SafeVmValueRef`s into a `SharedBox`.
+		 */
+		[[nodiscard]] static SharedBox<IVmValueRef> makeShared(
+			SafeVMProcess& process, TypeCRef type, Pointer pointed_data
+		);
+
 		[[nodiscard]] base::CRef<code::valid_type::ValidType> getType() const override;
 		[[nodiscard]] base::Optional<InterpretedDataVariant>  readData() const override;
 		[[nodiscard]] std::string                             str() const override;
@@ -42,5 +50,21 @@ namespace vm {
 			auto view = memory->getPointerData(pointed_data, sizeof(T));
 			return vm::safeReadPointerBytes<T>(view.getBegin());
 		}
+	};
+
+	/**
+	 * @brief Element access to a table stored in the safe VM's memory.
+	 * Elements are resolved lazily - a `SafeVmValueRef` is created per requested index.
+	 */
+	class SafeTableElementAccess final: public ITableElementAccess {
+	private:
+		const Ref<SafeVMProcess> my_process;
+		const TypeCRef           element_type;
+		const Pointer            begin;
+
+	public:
+		SafeTableElementAccess(SafeVMProcess& process, TypeCRef element_type, Pointer begin);
+
+		[[nodiscard]] SharedBox<IVmValueRef> get(usize index) const override;
 	};
 }

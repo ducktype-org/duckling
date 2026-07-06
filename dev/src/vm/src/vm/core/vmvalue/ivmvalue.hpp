@@ -1,11 +1,10 @@
 #pragma once
 
 #include <base/collections/optional.hpp>
+#include <base/types/bits_and_bytes.hpp>
 
 #include <vm/api/data/process_info.hpp>
 #include <vm/bytecode/validator/valid_type/valid_type.hpp>
-#include <vm/core/safe/memory/pointer.hpp>
-#include <vm/core/safe/type_metadata/definitions.hpp>
 #include <vm/core/vmvalue/ivmvalueref.hpp>
 #include <vm/utils/interpret.hpp>
 
@@ -22,8 +21,6 @@ namespace vm {
 	public:
 		virtual ~IVmValue() = default;
 
-		TypeCRef type;
-
 		/**
 		 * @brief Frees the data of the value (deinitializes the blocks in the memory module).
 		 * This function has to be called when using values created with the
@@ -31,14 +28,19 @@ namespace vm {
 		 */
 		virtual void freeData() = 0;
 
-		/** @brief Copies the value's data into the memory pointed to by `dst`. */
-		virtual void exportData(Pointer dst) const = 0;
-
-		/** @brief Fills the value's data with the bytes pointed to by `src`. */
-		virtual void importData(Pointer src) = 0;
-
 		/** @brief Returns the high-level (compiler) type of the value. */
 		[[nodiscard]] virtual base::CRef<code::valid_type::ValidType> getType() const = 0;
+
+		/** @brief Returns the ID of the high-level (compiler) type of the value. */
+		[[nodiscard]] virtual code::valid_type::ValidTypeID getTypeID() const = 0;
+
+		/**
+		 * @brief Returns the concrete size (in bytes) of the value's data in the VM implementation
+		 * this value belongs to.
+		 * @note This differs from `getType()->getSize()`, which is symbolic (pointer sizes vary
+		 * between VM implementations).
+		 */
+		[[nodiscard]] virtual Bytes getDataSize() const = 0;
 
 		/** @brief Interprets the value's data as a structured, human-inspectable variant. */
 		[[nodiscard]] virtual base::Optional<InterpretedDataVariant> readData() const = 0;
@@ -65,7 +67,7 @@ namespace vm {
 		template<class T>
 		T readBytes() const {
 			CORE_ASSERT(
-				sizeof(T) <= static_cast<usize>(type->getSize()), "VmValue: Out of bounds read"
+				sizeof(T) <= static_cast<usize>(getDataSize()), "VmValue: Out of bounds read"
 			);
 			return vm::safeReadPointerBytes<T>(getBytes());
 		}
@@ -76,14 +78,11 @@ namespace vm {
 		template<class T>
 		void writeBytes(const T& value, const usize offset = 0) {
 			CORE_ASSERT(
-				offset + sizeof(T) <= static_cast<usize>(type->getSize()),
+				offset + sizeof(T) <= static_cast<usize>(getDataSize()),
 				"VmValue: Out of bounds write"
 			);
 			return vm::safeWriteBytes<T>(getBytes(), value);
 		}
-
-	protected:
-		explicit IVmValue(TypeCRef type): type(type) {}
 	};
 }
 
@@ -95,12 +94,12 @@ template<>
 struct nlohmann::adl_serializer<vm::IVmValue> {
 	static void to_json(json& j, const vm::IVmValue& v) {
 		j["type"]        = std::string(TypeParseTraits<vm::IVmValue>::NAME.data());
-		j["data_type"]   = v.type->getName().str();
-		j["data_length"] = v.type->getSize();
+		j["data_type"]   = v.getType()->getName().str();
+		j["data_length"] = v.getDataSize();
 		// Convert value's bytes to HEX string
 		std::stringstream ss;
 		ss << std::hex;
-		for (size_t i = 0; i < v.type->getSize().asInt(); ++i)
+		for (size_t i = 0; i < v.getDataSize().asInt(); ++i)
 			ss << std::setw(2) << std::setfill('0') << static_cast<int>(v.getBytes()[i]);
 		j["data"] = ss.str();
 	}

@@ -119,7 +119,7 @@ auto VmTestSuite::runTestOnVmGetResult(
 			variant_case(std::vector<Ref<vm::IVmValue>>, values) {
 				ASSERT_TRUE(values.size() == 1);
 				auto& value = values.at(0);
-				ASSERT_TRUE(value->type->getName().str() == "i64");
+				ASSERT_TRUE(value->getType()->getName().str() == "i64");
 				auto exit_code = value->readBytes<i64>();
 				return exit_code;
 			}

@@ -169,7 +169,7 @@ i64 DuckVMRepl::runOnVm(const std::string& func_name, OwnedArgumentList& func_ar
 		variant_case(i64, exit_value) { return exit_value; }
 		variant_case(std::vector<Ref<vm::IVmValue>>, values) {
 			CORE_ASSERT(values.size() == 1, "REPL expects only one response value");
-			if (values.at(0)->type->getName() != base::StrID("i64"))
+			if (values.at(0)->getType()->getName() != base::StrID("i64"))
 				throw ReplWrongReturnTypeException();
 			return values.at(0)->readBytes<i64>();
 		}

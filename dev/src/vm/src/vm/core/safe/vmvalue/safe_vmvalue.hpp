@@ -46,6 +46,12 @@ namespace vm {
 		Ref<Memory>        memory;
 
 	public:
+		/**
+		 * @brief Attempts to downcast an interface-level VmValue to a SafeVmValue.
+		 * Returns none when the value does not belong to the safe VM implementation.
+		 */
+		[[nodiscard]] static base::Optional<base::CRef<SafeVmValue>> tryCast(const IVmValue& value);
+
 		SafeVmValue(const SafeVmValue&)            = delete;
 		SafeVmValue(SafeVmValue&&)                 = default;
 		SafeVmValue& operator=(const SafeVmValue&) = delete;
@@ -64,17 +70,26 @@ namespace vm {
 		 */
 		void freeData() override;
 
-		void exportData(Pointer dst) const override;
+		/** @brief Copies the value's data into the safe VM memory pointed to by `dst`. */
+		void exportData(Pointer dst) const;
 
-		void importData(Pointer src) override;
+		/** @brief Fills the value's data with the bytes pointed to by `src`. */
+		void importData(Pointer src);
 
 		[[nodiscard]] SafeVmValueRef asRef() const;
 
 		[[nodiscard]] base::CRef<code::valid_type::ValidType> getType() const override;
 
+		[[nodiscard]] code::valid_type::ValidTypeID getTypeID() const override;
+
+		[[nodiscard]] Bytes getDataSize() const override;
+
 		[[nodiscard]] base::Optional<InterpretedDataVariant> readData() const override;
 
 		[[nodiscard]] PID getPID() const override;
+
+		/// Safe VM runtime type metadata of the stored value.
+		TypeCRef type;
 
 		Pointer pointer;
 

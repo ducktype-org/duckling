@@ -17,13 +17,9 @@ namespace vm::fast {
 		explicit FastVMProcess(PID pid);
 		~FastVMProcess() override = default;
 
-		Ref<IVmValue> createVmValue(vm::TypeCRef type) override;
+		Ref<IVmValue> createVmValue(code::valid_type::ValidTypeID type_id) override;
 
-		Ref<IVmValue> createVmValue(vm::TypeCRef type, Pointer src) override;
-
-		Box<IVmValue> createOwnedVmValue(vm::TypeCRef type) override;
-
-		Box<IVmValue> createOwnedVmValue(vm::TypeCRef type, Pointer src) override;
+		Box<IVmValue> createOwnedVmValue(code::valid_type::ValidTypeID type_id) override;
 
 		std::expected<api::Response, api::ApiError> doRequest(const api::RequestVariant& request
 		) override;

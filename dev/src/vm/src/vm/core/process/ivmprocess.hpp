@@ -9,6 +9,7 @@
 #include <vm/api/data/api_error.hpp>
 #include <vm/api/data/request.hpp>
 #include <vm/api/data/status.hpp>
+#include <vm/bytecode/validator/valid_type/valid_type_id.hpp>
 #include <vm/core/process/proc_io.hpp>
 
 #include <expected>
@@ -232,29 +233,23 @@ namespace vm {
 		) noexcept;
 
 		/**
-		 * @brief Creates a VmValue of a given type and registers it in this VMProcess
+		 * @brief Creates an empty VmValue of a given type and registers it in this VMProcess.
 		 * The VmValue is owned by the VMProcess. VmValues created with this function are freed when
 		 * the process is deinitialized.
 		 *
-		 * @param type The type of the data stored in the newly created VmValue.
-		 * @param src The pointer to the data used to fill the newly created VmValue. If not
-		 * specified, created VmValue will be empty.
+		 * @param type_id ID of the (validated bytecode) type of the data stored in the new VmValue.
 		 * @return A non-owning, modifiable reference to the new VmValue.
 		 */
-		virtual Ref<IVmValue> createVmValue(TypeCRef type)              = 0;
-		virtual Ref<IVmValue> createVmValue(TypeCRef type, Pointer src) = 0;
+		virtual Ref<IVmValue> createVmValue(code::valid_type::ValidTypeID type_id) = 0;
 
 		/**
-		 * @brief Creates a VmValue of a given type and transfers ownership to the caller.
+		 * @brief Creates an empty VmValue of a given type and transfers ownership to the caller.
 		 * The caller is expected to free the VmValue.
 		 *
-		 * @param type The type of the data stored in the newly created VmValue.
-		 * @param src The pointer to the data used to fill the newly created VmValue. If not
-		 * specified, created VmValue will be empty.
+		 * @param type_id ID of the (validated bytecode) type of the data stored in the new VmValue.
 		 * @return A Box referencing the newly created VmValue.
 		 */
-		virtual Box<IVmValue> createOwnedVmValue(TypeCRef type)              = 0;
-		virtual Box<IVmValue> createOwnedVmValue(TypeCRef type, Pointer src) = 0;
+		virtual Box<IVmValue> createOwnedVmValue(code::valid_type::ValidTypeID type_id) = 0;
 
 		virtual ~IVMProcess() = default;
 	};

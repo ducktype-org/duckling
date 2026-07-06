@@ -7,6 +7,7 @@
 
 #include <diagnostic/source_position.hpp>
 
+#include <vm/core/safe/type_metadata/type.hpp>
 #include <vm/core/vmvalue/ivmvalue.hpp>
 #include <vm/core/vmvalue/ivmvalueref.hpp>
 

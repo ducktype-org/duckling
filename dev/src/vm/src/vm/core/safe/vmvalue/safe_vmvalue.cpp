@@ -29,11 +29,17 @@ namespace {
 	}
 }
 
+base::Optional<base::CRef<vm::SafeVmValue>> vm::SafeVmValue::tryCast(const IVmValue& value) {
+	const auto* safe_value = dynamic_cast<const SafeVmValue*>(&value);
+	if (safe_value == nullptr) return {};
+	return base::CRef<SafeVmValue>(safe_value);
+}
+
 vm::SafeVmValue::SafeVmValue(SafeVMProcess& process, TypeCRef type):
-	  IVmValue(type),
 	  data(type->getSize()),
 	  my_process(&process),
 	  memory(&process.getMemory()),
+	  type(type),
 	  pointer(memory->allocateDummy(type, data.data()), 0) {
 	memory->increaseBlockRefcount(pointer.getBlock());
 }
@@ -62,10 +68,16 @@ void vm::SafeVmValue::freeData() {
 vm::PID vm::SafeVmValue::getPID() const { return my_process->getPID(); }
 
 base::CRef<vm::code::valid_type::ValidType> vm::SafeVmValue::getType() const {
-	auto type_id = static_cast<code::valid_type::ValidTypeID>(type->getID().asInt());
-	auto types   = my_process->loader.getHighProgram()->types();
-	return types.at(type_id);
+	const auto& types = my_process->loader.getHighProgram()->types();
+	return types.at(getTypeID());
 }
+
+vm::code::valid_type::ValidTypeID vm::SafeVmValue::getTypeID() const {
+	// Safe TypeIDs are asserted (in the type builder) to be numerically equal to ValidTypeIDs.
+	return code::valid_type::ValidTypeID(type->getID().asInt());
+}
+
+Bytes vm::SafeVmValue::getDataSize() const { return type->getSize(); }
 
 byte* vm::SafeVmValue::getBytes() { return data.data(); }
 

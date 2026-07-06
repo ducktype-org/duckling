@@ -14,7 +14,6 @@
 #include <vm/core/safe/safe_vmthread.hpp>
 #include <vm/core/safe/type_metadata/definitions.hpp>
 #include <vm/core/thread/kill_process_exception.hpp>
-#include <vm/core/vmvalue/ivmvalue.hpp>
 
 #include <chrono>
 
@@ -22,8 +21,8 @@ namespace vm::builtins {
 
 	namespace {
 		template<class Ret, class... FunArgs, std::size_t... Is>
-		base::Optional<Box<IVmValue>>
-			callUnpackArgsImpl(Ret (*function)(SafeVMThread&, FunArgs...), const std::vector<TypeCRef>& vm_return_types, IVMProcess& process, SafeVMThread& thread, const std::vector<Box<IVmValue>>& args, std::index_sequence<Is...>) {
+		base::Optional<Box<SafeVmValue>>
+			callUnpackArgsImpl(Ret (*function)(SafeVMThread&, FunArgs...), const std::vector<TypeCRef>& vm_return_types, SafeVMProcess& process, SafeVMThread& thread, const std::vector<Box<SafeVmValue>>& args, std::index_sequence<Is...>) {
 			if constexpr (std::is_void_v<Ret>) {
 				function(thread, args[Is]->template readBytes<FunArgs>()...);
 				return {};
@@ -62,12 +61,12 @@ namespace vm::builtins {
 		 * be expensive we could go back to that approach.
 		 */
 		template<class Ret, class... FunArgs>
-		base::Optional<Box<IVmValue>> callUnpackArgs(
+		base::Optional<Box<SafeVmValue>> callUnpackArgs(
 			Ret (*function)(SafeVMThread&, FunArgs...),
-			const std::vector<TypeCRef>&      vm_return_types,
-			IVMProcess&                       process,
-			SafeVMThread&                     thread,
-			const std::vector<Box<IVmValue>>& args
+			const std::vector<TypeCRef>&         vm_return_types,
+			SafeVMProcess&                       process,
+			SafeVMThread&                        thread,
+			const std::vector<Box<SafeVmValue>>& args
 		) {
 			CORE_ASSERT(
 				sizeof...(FunArgs) == args.size(),
@@ -271,12 +270,12 @@ namespace vm::builtins {
 		thread.safe_process.getSynchronizationPrimitives().removeCV(cv_id);
 	}
 
-	base::Optional<Box<IVmValue>> callBuiltinFunction(
-		BuiltinFunctionID                 id,
-		const std::vector<TypeCRef>&      result_types,
-		IVMProcess&                       process,
-		SafeVMThread&                     thread,
-		const std::vector<Box<IVmValue>>& arguments
+	base::Optional<Box<SafeVmValue>> callBuiltinFunction(
+		BuiltinFunctionID                    id,
+		const std::vector<TypeCRef>&         result_types,
+		SafeVMProcess&                       process,
+		SafeVMThread&                        thread,
+		const std::vector<Box<SafeVmValue>>& arguments
 	) {
 		switch (id) {
 #define CASE_FUNC(ID_NAME)                                                               \

@@ -30,6 +30,7 @@ namespace vm {
 	}
 
 	class SafeVMProcess;
+	class SafeVmValue;
 
 	/**
 	 * @brief Frames are on stack, this is the maximum number of frame pointers available.
@@ -120,7 +121,7 @@ namespace vm {
 		 * @brief Stores exit value of the last ran function. ExecutionCompleted exec status can
 		 * store a reference to this object.
 		 */
-		base::Optional<std::vector<Ref<IVmValue>>> exit_value_storage{};
+		base::Optional<std::vector<Ref<SafeVmValue>>> exit_value_storage{};
 
 		/**
 		 * @brief Thread context - currently just the name of the function that will be used in
@@ -165,9 +166,9 @@ namespace vm {
 		 * in the start_function bytecode vector.
 		 * @param start_function - the code of the start function.
 		 * @param func - the function to execute.
-		 * @return Mutable reference to a value returned by the program
+		 * @return Mutable references to the SafeVmValues returned by the program
 		 */
-		std::vector<Ref<IVmValue>> executeFunction(
+		std::vector<Ref<SafeVmValue>> executeFunction(
 			const low::LowFuncData& start_function, const low::LowFuncData& func
 		);
 

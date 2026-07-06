@@ -14,6 +14,7 @@
 #include <vm/core/safe/concurrency/synchronization_primitives.hpp>
 #include <vm/core/safe/low_program/low_program.hpp>
 #include <vm/core/safe/safe_vmthread.hpp>
+#include <vm/core/safe/vmvalue/safe_vmvalue.hpp>
 #include <vm/loader/compiler/safe/safe_compiler.hpp>
 #include <vm/loader/loader.hpp>
 
@@ -64,7 +65,7 @@ namespace vm {
 		 * @note Lifetime of these VmValues is controlled by this process. They will be destructed
 		 * when process is deinitialized.
 		 */
-		std::vector<Box<IVmValue>> owned_vm_values;
+		std::vector<Box<SafeVmValue>> owned_vm_values;
 
 		/**
 		 * @brief Pool of threads in this process.
@@ -173,13 +174,33 @@ namespace vm {
 
 		[[nodiscard]] api::ProcStatus getCurrentStatus() { return getStatus(); }
 
-		Ref<IVmValue> createVmValue(TypeCRef type) override;
+		Ref<IVmValue> createVmValue(code::valid_type::ValidTypeID type_id) override;
 
-		Ref<IVmValue> createVmValue(TypeCRef type, Pointer src) override;
+		Box<IVmValue> createOwnedVmValue(code::valid_type::ValidTypeID type_id) override;
 
-		Box<IVmValue> createOwnedVmValue(TypeCRef type) override;
+		/**
+		 * @brief Creates an empty, process-owned SafeVmValue from safe type metadata.
+		 * Safe-VM-internal counterpart of the interface factory.
+		 */
+		Ref<SafeVmValue> createVmValue(TypeCRef type);
 
-		Box<IVmValue> createOwnedVmValue(TypeCRef type, Pointer src) override;
+		/**
+		 * @brief Creates a process-owned SafeVmValue from safe type metadata, filled with the
+		 * bytes pointed to by `src`. Safe-VM-internal only.
+		 */
+		Ref<SafeVmValue> createVmValue(TypeCRef type, Pointer src);
+
+		/**
+		 * @brief Creates an empty, caller-owned SafeVmValue from safe type metadata.
+		 * Safe-VM-internal counterpart of the interface factory.
+		 */
+		Box<SafeVmValue> createOwnedVmValue(TypeCRef type);
+
+		/**
+		 * @brief Creates a caller-owned SafeVmValue from safe type metadata, filled with the
+		 * bytes pointed to by `src`. Safe-VM-internal only.
+		 */
+		Box<SafeVmValue> createOwnedVmValue(TypeCRef type, Pointer src);
 
 		CRef<low::ILowVMProgram> getLoadedProgram() const { return loaded_program; }
 
