@@ -1,6 +1,6 @@
 SubDirs:
   - absent-flag
-  - illegal_packages_names
+  - illegal-packages-names
   - nonexistent-dep-feature
   - nonexistent-local-dep
   - overwrite
