@@ -29,10 +29,10 @@ namespace compiler::repl {
 			auto synthetic_symbol = ctx.query<helios::defgen::QueryGeneratedSymbol>({
 				.name = base::StrID("main"),
 				.generated_symbol_data
-				= helios::defgen::GeneratedSymbolData{ helios::defgen::GeneratedSymbolData::ScriptMainWrapper{
+				= helios::defgen::ScriptMainWrapper{
 					.script_id = script_id,
 					.scope     = main_scope,
-				} },
+				},
 			});
 
 			CORE_DEV_LOG(REPL, "Creating function declaration for script main\n");
