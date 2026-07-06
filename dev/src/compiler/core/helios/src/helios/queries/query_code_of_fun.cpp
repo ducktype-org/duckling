@@ -167,8 +167,8 @@ namespace compiler::helios {
 				if (!is_reference || !is_matching_class) {
 					ctx.logInt(makeBox<dia_int::PlaceholderError>(
 						base::strConcat(
-							"A copy constructor's parameter must be a constant reference to its "
-					        "own class `",
+							"A copy constructor's parameter must be a constant reference to "
+							"its own class `",
 							name(class_type.getSymbol()),
 							"`."
 						),
