@@ -48,3 +48,5 @@ SubDirs:
   - sync
   - init
   - build
+
+default_src: "import core.builtins.*;\nfun main() -> i64 = {\n    return 0;\n}"
