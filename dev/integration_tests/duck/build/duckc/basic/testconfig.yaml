@@ -40,7 +40,7 @@ Tests:
       custom-profile-inherited:
         test-cmd: duck -C foo build --profile my-profile2
         profile-name: my-profile2
-      # NOTE: verbose tests are disabled, since compilation order is not deterministic
+      # @TODO: #3023 Reenable verbose itests
       verbose:
         test-cmd: duck -C foo build --verbose
         profile-name: dev

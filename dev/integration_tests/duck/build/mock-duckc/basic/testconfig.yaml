@@ -70,7 +70,7 @@ Tests:
           String: |+
             info: successfully synchronized venv \`foo\`
             info: compiling \`foo\`...
-      # NOTE: verbose tests are disabled, since compilation order is not deterministic
+      # @TODO: #3023 Reenable verbose itests
       verbose:
         test-cmd: duck -C foo build --verbose
         profile-name: dev

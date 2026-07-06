@@ -1,7 +1,6 @@
 # NOTE: `ConfigDir` will be overwritten by `SubDirs`.
 before-cmd: export PATH="@{ConfigDir}/..:$PATH"
 
-# @TODO: #2907 Add more tests with many packages (it'll be easier to write them, once we have determinism)
 SubDirs:
   - basic
   - basic-deps
