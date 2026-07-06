@@ -59,8 +59,8 @@ class TestGroup:
     cases: list[tuple[int, Case]]
     node: NodeState
     stats: TestStatistics = field(default_factory=lambda: TestStatistics([], [], []))
-    results: list[TestStatistics] = field(default_factory=list)
-    case_logs: list[CaseLog] = field(default_factory=list)
+    results: list[TestStatistics] = field(default_factory=list[TestStatistics])
+    case_logs: list[CaseLog] = field(default_factory=list[CaseLog])
     remaining: int = 0
     lock: threading.Lock = field(default_factory=threading.Lock)
 

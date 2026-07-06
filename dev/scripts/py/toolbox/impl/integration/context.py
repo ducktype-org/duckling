@@ -28,7 +28,7 @@ class RunContext:
     abort: threading.Event = field(default_factory=threading.Event)
     # Paths of PostNode commands that failed; folded into the final
     # statistics (the tests beneath keep their own results).
-    node_failures: list[str] = field(default_factory=list)
+    node_failures: list[str] = field(default_factory=list[str])
     node_failures_lock: threading.Lock = field(default_factory=threading.Lock)
 
     @property

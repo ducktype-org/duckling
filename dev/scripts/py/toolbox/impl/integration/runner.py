@@ -54,7 +54,7 @@ def run_single_case(
     case_path = path + "/" + case.name
     stop = False
     try:
-        match run_case(test, case, ctx, clog):
+        match run_case(test, case, case_path, ctx, clog):
             case OutputMismatch(error):
                 clog.emit(
                     print_failure, f"Case `{case.name}` has failed because {error}"
@@ -71,19 +71,19 @@ def run_single_case(
                     clog.emit(print_neutral, f"Case `{case.name}` disabled")
     except BashCommandError as e:
         clog.emit(print_failure, f"Case `{test.name}/{case.name}` has {e.reason_string}.")
-        clog.log(f"{test.name}/{case.name} has failed:\n{''.join(e.args)}\n")
+        clog.log(f"{case_path} has failed:\n{''.join(e.args)}\n")
         stats.failed.append(case_path)
         stop = ctx.fail_fast
     clog.flush()
     return stop
 
 
-def log_test_out_differs(test, case, message, got, expected, clog: CaseLog, verbose):
+def log_test_out_differs(case_path, message, got, expected, clog: CaseLog, verbose):
     """
     Used to dump program's incorrect output.
     """
     to_dump = (
-        f"{test.name}/{case.name}: {message}\n"
+        f"{case_path}: {message}\n"
         f"[GOT]:\n{got.decode('UTF-8')}\n"
         f"[EXPECTED]:\n{expected.decode('UTF-8')}\n"
     )
@@ -93,7 +93,7 @@ def log_test_out_differs(test, case, message, got, expected, clog: CaseLog, verb
 
 
 def run_case(
-    test: Test, case: Case, ctx: RunContext, clog: CaseLog
+    test: Test, case: Case, case_path: str, ctx: RunContext, clog: CaseLog
 ) -> Success | OutputMismatch | Disabled:
     """
     Runs a test case from `Case` object.
@@ -179,8 +179,7 @@ def run_case(
         )
         if not dry and test_output != test_expected_output:
             log_test_out_differs(
-                test,
-                case,
+                case_path,
                 "Stdouts do not match.",
                 test_output,
                 test_expected_output,
@@ -201,8 +200,7 @@ def run_case(
         )
         if not dry and test_err != test_expected_err:
             log_test_out_differs(
-                test,
-                case,
+                case_path,
                 "Stderrs do not match.",
                 test_err,
                 test_expected_err,
