@@ -6,7 +6,7 @@
  */
 #pragma once
 
-#include <abi/layout/target.hpp>
+#include <abi/target.hpp>
 
 namespace compiler::tsl {
 
@@ -16,6 +16,6 @@ namespace compiler::tsl {
 	 * The compiler currently produces code only for the host's target, so this
 	 * resolves to `abi::layout::hostTargetABI()`.
 	 */
-	const abi::layout::TargetABI& compilerTargetABI();
+	const abi::TargetABI& compilerTargetABI();
 
 }

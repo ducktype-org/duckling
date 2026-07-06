@@ -83,5 +83,5 @@ namespace abi::calling_conv {
      * @brief Main entry point. Calculate the calling convention info about 
      * a function based on the target and ABI types of a function.
      */
-	FunctionInfo computeCallingConv(TargetABI& target, const FunctionType& ft);
+	FunctionInfo computeCallingConv(const TargetABI& target, const FunctionType& ft);
 }

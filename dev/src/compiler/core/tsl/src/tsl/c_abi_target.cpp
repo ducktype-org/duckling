@@ -1,8 +1,8 @@
-#include <abi/layout/target.hpp>
+#include <abi/target.hpp>
 #include <tsl/c_abi_target.hpp>
 
 namespace compiler::tsl {
 
-	const abi::layout::TargetABI& compilerTargetABI() { return abi::layout::hostTargetABI(); }
+	const abi::TargetABI& compilerTargetABI() { return abi::hostTargetABI(); }
 
 }

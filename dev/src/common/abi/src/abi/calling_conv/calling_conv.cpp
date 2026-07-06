@@ -170,6 +170,7 @@ namespace abi::calling_conv {
 	}
 
 	FunctionInfo X86_64ABIInfo::computeInfo(const FunctionType& ft) const {
+		// ========================== Main logic ==========================
 		auto compute_arg_entry = [&](const types::AbiTypeCRef& original_type) {
 			auto size_align = layout::sizeAlignOf(myTargetABI(), *original_type);
 
@@ -234,6 +235,7 @@ namespace abi::calling_conv {
 			return ArgInfo::byValue(types::structType(std::move(fields)));
 		};
 
+		// ========================== Main logic ==========================
 		auto compute_arg_entry = [&](const types::AbiTypeCRef& original_type) -> ArgEntry {
 			// Fast path for simple types
 			if (v_matches(
@@ -259,6 +261,7 @@ namespace abi::calling_conv {
 				return ARG_ENTRY(ArgInfo::byPointer(false));
 		};
 
+		// Return calculation differs a bit, on the passing a struct which is smaller than 8 bytes.
 		auto compute_return_entry = [&](const types::AbiTypeCRef& original_type) -> ReturnEntry {
 			// Fast path for simple types
 			if (v_matches(
@@ -297,7 +300,7 @@ namespace abi::calling_conv {
 			                             | std::ranges::to<std::vector>() };
 	}
 
-	FunctionInfo computeCallingConv(TargetABI& target, const FunctionType& ft) {
+	FunctionInfo computeCallingConv(const TargetABI& target, const FunctionType& ft) {
 		switch (target.triple.arch) {
 		case Arch::X86_64:
 			return X86_64ABIInfo{}.computeInfo(ft);
