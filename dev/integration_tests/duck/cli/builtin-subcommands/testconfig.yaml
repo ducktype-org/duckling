@@ -1,0 +1,40 @@
+PreCase: |+
+  mkdir -p $DUCK_HOME
+  echo "security:
+    typos:
+      enabled: true
+
+  aliases:
+    my-custom-build-alias: build -j4
+    my-custom-build-alias-array: [build, -j4]" > $DUCK_HOME/config.yaml
+
+Tests:
+  builtin-subcommands:
+    Description: Checks a lot of basic flows, such as happy, builtin alias, auto fix...
+    Cases:
+      builtin-command:
+        test-cmd: duck build
+        ExitCode: 1
+        Err:
+          Run: 'echo "error: no manifest has been found from the \`${DIT_TMP_DIR}\` to the \`/\`"'
+      builtin-alias:
+        test-cmd: duck b
+        ExitCode: 1
+        Err:
+          Run: 'echo "error: no manifest has been found from the \`${DIT_TMP_DIR}\` to the \`/\`"'
+      user-alias:
+        test-cmd: duck my-custom-build-alias
+        ExitCode: 1
+        Err:
+          Run: 'echo "error: no manifest has been found from the \`${DIT_TMP_DIR}\` to the \`/\`"'
+      user-alias-as-an-array:
+        test-cmd: duck my-custom-build-alias-array
+        ExitCode: 1
+        Err:
+          Run: 'echo "error: no manifest has been found from the \`${DIT_TMP_DIR}\` to the \`/\`"'
+      autofix-success:
+        test-cmd: duck buil
+        ExitCode: 1
+        Err:
+          Run: 'echo "error: no manifest has been found from the \`${DIT_TMP_DIR}\` to the \`/\`"'
+

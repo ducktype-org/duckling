@@ -20,6 +20,10 @@ import time
 from pathlib import Path
 
 TMP_ROOT = Path("/tmp/dit")
+# MacOS has a lot of weird symlinks.
+# F.e. `/tmp` is a symlink to `/private/tmp`, and duck resolves paths, so I get a lot of mismatches on my local machine.
+MACOS_WEIRD_TMP_ROOT = Path("/private/tmp/dit")
+ALLOWED_TMP_ROOTS = [TMP_ROOT, MACOS_WEIRD_TMP_ROOT]
 STALE_AGE_SECONDS = 24 * 60 * 60
 
 
@@ -33,8 +37,10 @@ def tmp_dir() -> Path:
     if not value:
         fail("DIT_TMP_DIR is not set; define it with the `Env` config key")
     path = Path(value)
-    if TMP_ROOT not in path.parents:
-        fail(f"DIT_TMP_DIR ({value}) must live under {TMP_ROOT}")
+    is_under_valid_dir = any(root in path.parents for root in ALLOWED_TMP_ROOTS)
+    if not is_under_valid_dir:
+        valid_roots_string = " or ".join(str(x) for x in ALLOWED_TMP_ROOTS)
+        fail(f"DIT_TMP_DIR ({value}) must live under {valid_roots_string}")
     return path
 
 
