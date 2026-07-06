@@ -1220,8 +1220,6 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(initFromVmValue)(FUNCTION_ARGS) {
 		{
-			// The embedded pointer is already a verified SafeVmValue: the downcast happens once
-			// at the API boundary, when the start function is built.
 			const auto& safe_vm_value = *std::bit_cast<const SafeVmValue*>(instr->arg0);
 			performInit(instr, local_stack, frame, thread, safe_vm_value.type);
 			safe_vm_value.exportData({ Ref(frame->local_block_ref_stack_end[-1]), 0 });
