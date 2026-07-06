@@ -155,13 +155,13 @@ namespace vm {
 
 	Ref<IVmValue> SafeVMProcess::createVmValue(TypeCRef type) {
 		auto value = Box<SafeVmValue>::fromPointer(new SafeVmValue(*this, type));
-		owned_vm_values.push_back(std::move(value));
+		owned_vm_values.emplace_back(std::move(value));
 		return owned_vm_values.back().refMut();
 	}
 
 	Ref<IVmValue> SafeVMProcess::createVmValue(TypeCRef type, Pointer src) {
 		auto value = Box<SafeVmValue>::fromPointer(new SafeVmValue(*this, type, src));
-		owned_vm_values.push_back(std::move(value));
+		owned_vm_values.emplace_back(std::move(value));
 		return owned_vm_values.back().refMut();
 	}
 

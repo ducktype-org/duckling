@@ -7,12 +7,12 @@
 SharedBox<vm::IVmValueRef> vm::interpreted_data_variant::Table::get(usize index) {
 	if (index >= size) throw std::out_of_range("Table index out of range");
 
-	vm::Pointer pointer
-		= begin.movedPointer(static_cast<i64>(index * static_cast<usize>(type->getSize())));
+	vm::Pointer pointer = begin.movedPointer(index * static_cast<usize>(type->getSize()));
 
 	return SharedBox<IVmValueRef>::fromPointer(new SafeVmValueRef(*process.get(), type, pointer));
 }
 
+// NOLINTBEGIN(clang-analyzer-cplusplus.NewDeleteLeaks)
 base::Optional<vm::InterpretedDataVariant> vm::SafeVmValueRef::readData() const {
 	variant_match(my_type->getKindVariant()) {
 		variant_case_novalue(vm::kind::Primitive) {
@@ -78,7 +78,7 @@ base::Optional<vm::InterpretedDataVariant> vm::SafeVmValueRef::readData() const 
 					.value  = SharedBox<IVmValueRef>::fromPointer(new SafeVmValueRef(
                         *my_process.get(),
                         field_desc.type,
-                        pointed_data.movedPointer(static_cast<i64>(field_desc.offset.asInt()))
+                        pointed_data.movedPointer(static_cast<u64>(field_desc.offset.asInt()))
                     )) });
 			}
 
@@ -117,7 +117,7 @@ base::Optional<vm::InterpretedDataVariant> vm::SafeVmValueRef::readData() const 
 			TypeCRef inner_type = variant_kind.alternatives.at(alternative_index);
 
 			auto view_block_ref = memory->getNestedViewBlock(
-				pointed_data.movedPointer(static_cast<i64>(variant_kind.type_tag_size)), inner_type
+				pointed_data.movedPointer(static_cast<u64>(variant_kind.type_tag_size)), inner_type
 			);
 
 			match_optional(view_block_ref.toOpt()) {
@@ -144,6 +144,8 @@ base::Optional<vm::InterpretedDataVariant> vm::SafeVmValueRef::readData() const 
 
 	CORE_UNREACHABLE();
 }
+
+// NOLINTEND(clang-analyzer-cplusplus.NewDeleteLeaks)
 
 vm::interpreted_data_variant::Table::Table(
 	base::Ref<SafeVMProcess> process, vm::Pointer begin, TypeCRef type, usize size

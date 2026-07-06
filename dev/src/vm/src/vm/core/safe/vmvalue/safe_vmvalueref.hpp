@@ -28,8 +28,6 @@ namespace vm {
 	public:
 		SafeVmValueRef(SafeVMProcess& process, TypeCRef type, Pointer pointed_data);
 
-		bool operator==(const SafeVmValueRef&) const = default;
-
 		[[nodiscard]] base::CRef<code::valid_type::ValidType> getType() const override;
 		[[nodiscard]] base::Optional<InterpretedDataVariant>  readData() const override;
 		[[nodiscard]] std::string                             str() const override;

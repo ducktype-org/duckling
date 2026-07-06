@@ -67,11 +67,14 @@ namespace base {
 			return (data_ptr == nullptr && ctrl_ptr == nullptr);
 		}
 
+		// NOLINTBEGIN(clang-analyzer-cplusplus.NewDeleteLeaks)
 		explicit SharedBox(T* ptr, ControlBlock<Deleter>* ctrl) noexcept:
 			  data_ptr{ ptr },
 			  ctrl_ptr{ ctrl } {
 			assertNotNull();
 		}
+
+		// NOLINTEND(clang-analyzer-cplusplus.NewDeleteLeaks)
 
 		/**
 		 * @brief: Decrements the number of the owners of the object pointed to.
