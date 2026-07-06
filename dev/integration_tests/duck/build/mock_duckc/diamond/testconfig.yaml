@@ -41,9 +41,9 @@ PreCase: |+
   echo "metadata:
     name: baz
     version: 1.0.0" > baz/quackconfig.yaml
-PostCase: python3 check.py
+PostCase: python3 check.py && @{cleanup_tmp_env}
 Tests:
-  diamond:
+  duck/build/mock_duckc/diamond:
     Description: can build a project with dependencies
     Cases:
       build:
