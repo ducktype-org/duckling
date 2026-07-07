@@ -161,11 +161,12 @@ namespace compiler::helios {
 
 				const auto other_type   = decl.parameters.at(0).type;
 				const bool is_reference = other_type.getRefKind() == tsh::ReferenceKind::Ref;
+				const bool is_const     = other_type.getMutability() == tsh::Mutability::Immutable;
 				const bool is_matching_class
 					= other_type.getType().getKind() == tsh::Kind::Class
 				   && other_type.getType().as<tsh::ClassAbstractType>().getSymbol()
 				          == class_type.getSymbol();
-				if (!is_reference || !is_matching_class) {
+				if (!is_reference || !is_matching_class || !is_const) {
 					ctx.logInt(makeBox<dia_int::PlaceholderError>(
 						base::strConcat(
 							"A copy constructor's parameter must be a constant reference to "

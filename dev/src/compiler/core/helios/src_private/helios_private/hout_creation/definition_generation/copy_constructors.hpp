@@ -10,7 +10,7 @@ namespace compiler::helios::defgen {
 	/**
 	 * @brief Get the symbol of the default copy constructor for a given type.
 	 */
-	SymID copySymForType(query::Context& ctx, tsh::AbstractType type);
+	SymID copyConstructorSymForType(query::Context& ctx, tsh::AbstractType type);
 
 	/**
 	 * @brief Whether the given symbol is a user-defined copy constructor.

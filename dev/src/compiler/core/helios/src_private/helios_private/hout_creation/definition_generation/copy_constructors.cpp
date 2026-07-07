@@ -35,7 +35,7 @@ namespace compiler::helios::defgen {
 		return {};
 	}
 
-	SymID copySymForType(query::Context& ctx, const tsh::AbstractType type) {
+	SymID copyConstructorSymForType(query::Context& ctx, const tsh::AbstractType type) {
 		// First, try to get the user-defined constructor.
 		if (type.getKind() == tsh::Kind::Class) {
 			if (const auto user
@@ -61,22 +61,18 @@ namespace compiler::helios::defgen {
 		 * - Non-trivially-copyable class, static-array, tuple and list members are copied by
 		 *   calling their own copy constructor with a reference to `source`.
 		 */
-		Box<code::Expr> makeCopyExpr(
-			query::Context& ctx, Box<code::Expr> source, const tsh::SymbolType<>& type
-		) {
+		Box<code::Expr> makeCopyExpr(query::Context& ctx, Box<code::Expr> source) {
+			const tsh::SymbolType<> type = source->expression_type.getSymbolType();
+
 			if (type.isTriviallyCopyable(ctx)) return source;
 
 			// A `box T` is deep-copied. Allocate a new box holding a copy of the pointee
 			// `box(<copy of *source>)`. For a trivially-copyable pointee this collapses to
 			// `box(*source)`.
 			if (type.getRefKind() == tsh::ReferenceKind::Box) {
-				const auto pointee_type = type.withReferenceKind(tsh::ReferenceKind::Direct);
-
 				// Produce a copy of the underlying type.
 				auto pointee_copy = makeCopyExpr(
-					ctx,
-					makeBox<code::DerefExpr>(ctx, code::generatedOrigin(), std::move(source)),
-					pointee_type
+					ctx, makeBox<code::DerefExpr>(ctx, code::generatedOrigin(), std::move(source))
 				);
 
 				// Now wrap it in a heap allocation.
@@ -95,7 +91,7 @@ namespace compiler::helios::defgen {
 				"Tried to generate a copy constructor for a type which shouldn't need it"
 			);
 
-			const SymID                  copy_sym = copySymForType(ctx, abstract_type);
+			const SymID                  copy_sym = copyConstructorSymForType(ctx, abstract_type);
 			std::vector<Box<code::Expr>> args;
 			args.emplace_back(
 				makeBox<code::RefOfExpr>(ctx, code::generatedOrigin(), std::move(source))
@@ -162,9 +158,8 @@ namespace compiler::helios::defgen {
 
 			// __result.field = <copy of (*source).field>;
 			for (const auto& field: fields) {
-				auto field_copy = makeCopyExpr(
-					ctx, derefSourceField(ctx, source_symbol, field.getSymbol()), field.getType(ctx)
-				);
+				auto field_copy
+					= makeCopyExpr(ctx, derefSourceField(ctx, source_symbol, field.getSymbol()));
 				body.emplace_back(makeBox<code::AssignmentStmt>(
 					code::generatedOrigin(),
 					makeBox<code::AccessExpr>(
@@ -194,8 +189,7 @@ namespace compiler::helios::defgen {
 		) {
 			using Variable = GeneratedFunctionVariable;
 
-			const auto  element_type = array_type.getElementType();
-			const usize size         = array_type.getSize();
+			const usize size = array_type.getSize();
 
 			std::vector<Box<code::Stmt>> body;
 
@@ -273,7 +267,7 @@ namespace compiler::helios::defgen {
 						makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), res_sym),
 						makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), i_sym)
 					),
-					makeCopyExpr(ctx, std::move(source_element), element_type)
+					makeCopyExpr(ctx, std::move(source_element))
 				));
 
 				// __i = __i + 1;
@@ -313,8 +307,6 @@ namespace compiler::helios::defgen {
 			const tsh::SymbolType<>&             result_symbol_type
 		) {
 			using Variable = GeneratedFunctionVariable;
-
-			const auto element_type = array_type.getElementType();
 
 			std::vector<Box<code::Stmt>> body;
 
@@ -400,7 +392,7 @@ namespace compiler::helios::defgen {
 				makeBox<code::ListPushExpr>(
 					code::generatedOrigin(),
 					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), res_sym),
-					makeCopyExpr(ctx, std::move(source_element), element_type)
+					makeCopyExpr(ctx, std::move(source_element))
 				)
 			));
 
@@ -435,7 +427,7 @@ namespace compiler::helios::defgen {
 
 	struct IMPLEMENT_QUERY(QueryDefaultCopyConstructor, query::QResult<HOUTFunction>) {
 		static PResult provide(Context& ctx, const QKey owner_type) {
-			const SymID copy_sym           = copySymForType(ctx, owner_type);
+			const SymID copy_sym           = copyConstructorSymForType(ctx, owner_type);
 			const auto& cctor_decl         = ctx.query<QueryDeclOfFun>(copy_sym)->valueOrThrow();
 			const SymID source_symbol      = cctor_decl.parameters.at(0).helios_symbol;
 			const auto  result_symbol_type = cctor_decl.return_type;
