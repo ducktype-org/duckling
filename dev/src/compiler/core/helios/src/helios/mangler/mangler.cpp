@@ -246,9 +246,7 @@ namespace compiler::helios::mangler {
 		 */
 		std::string func(query::Context& ctx, SymID symbol_id) {
 			std::stringstream ret;
-			if (kind(symbol_id) == SymbolKind::Function
-			    or kind(symbol_id) == SymbolKind::FunctionDeclaration
-			    or kind(symbol_id) == SymbolKind::Method) {
+			if (isFunctionLike(kind(symbol_id))) {
 				// @TODO: #2255 Function qualifiers?
 
 				auto function_type = ctx.query<QueryTypeOfSymbol>(symbol_id)->valueOrThrow();
@@ -282,6 +280,7 @@ namespace compiler::helios::mangler {
 
 			case SymbolKind::Function:
 			case SymbolKind::Method:
+			case SymbolKind::Constructor:
 			case SymbolKind::FunctionDeclaration: {
 				variant_match(getSymRef(symbol_id)->other) {
 					variant_case_novalue(PstImplementedSemantics, BuiltinSemantics) {
@@ -292,14 +291,23 @@ namespace compiler::helios::mangler {
 					variant_case(defgen::Constructor, ctor) {
 						// The mangled type identifies which type the constructor belongs to (works
 						// for any kind: class, tuple, static array, ...). The infix tag
-						// distinguishes the implicit constructor from the default one.
+						// distinguishes the implicit, default and copy constructors.
 						const auto mangled_type
 							= ctx.query<QueryMangledType>(tsh::SymbolType<>::withDefaults(ctor.type))
 						          ->valueOrThrow()
 						          .str();
 
-						const char* ctor_tag
-							= ctor.kind == defgen::Constructor::Kind::Implicit ? "Hic" : "Hdc";
+						const char* ctor_tag = [&]() -> const char* {
+							switch (ctor.kind) {
+							case defgen::Constructor::Kind::Implicit:
+								return "Hic";
+							case defgen::Constructor::Kind::Default:
+								return "Hdc";
+							case defgen::Constructor::Kind::Copy:
+								return "Hcc";
+							}
+							CORE_UNREACHABLE();
+						}();
 
 						return mangled_type + ctor_tag + func(ctx, symbol_id) + "E";
 					}
