@@ -45,9 +45,8 @@ namespace compiler::helios::defgen {
 
 		// Otherwise, we use the default one.
 		return ctx.query<QueryGeneratedSymbol>({
-			.name = base::StrID("__copy"),
-			.generated_symbol_data
-			= Constructor{ .type = type, .kind = Constructor::Kind::Copy },
+			.name                  = base::StrID("__copy"),
+			.generated_symbol_data = Constructor{ .type = type, .kind = Constructor::Kind::Copy },
 		});
 	}
 
@@ -148,8 +147,9 @@ namespace compiler::helios::defgen {
 			// var __result: T = <zero>;
 			const SymID result_symbol = ctx.query<QueryGeneratedSymbol>({
 				.name                  = base::StrID("__result"),
-				.generated_symbol_data = Variable{
-					.function_symbol = copy_sym, .variable_index = 0, .type = result_symbol_type },
+				.generated_symbol_data = Variable{ .function_symbol = copy_sym,
+			                                       .variable_index  = 0,
+			                                       .type            = result_symbol_type },
 			});
 			body.emplace_back(makeBox<code::VariableStmt>(
 				code::generatedOrigin(),
@@ -202,8 +202,9 @@ namespace compiler::helios::defgen {
 			// var __result: T[N] = <zero>;
 			const SymID res_sym = ctx.query<QueryGeneratedSymbol>({
 				.name                  = base::StrID("__result"),
-				.generated_symbol_data = Variable{
-					.function_symbol = copy_sym, .variable_index = 0, .type = result_symbol_type },
+				.generated_symbol_data = Variable{ .function_symbol = copy_sym,
+			                                       .variable_index  = 0,
+			                                       .type            = result_symbol_type },
 			});
 			body.emplace_back(makeBox<code::VariableStmt>(
 				code::generatedOrigin(),
@@ -224,9 +225,9 @@ namespace compiler::helios::defgen {
 
 				// var __i: u64 = 0;
 				const SymID i_sym    = ctx.query<QueryGeneratedSymbol>({
-					   .name                  = base::StrID("__i"),
-					   .generated_symbol_data = Variable{
-						   .function_symbol = copy_sym, .variable_index = 1, .type = u64_type },
+					   .name = base::StrID("__i"),
+					   .generated_symbol_data
+                    = Variable{ .function_symbol = copy_sym, .variable_index = 1, .type = u64_type },
                 });
 				auto        zero_val = numeric_value::NumericValue::createOfType(u64_abs_type)
 				                    .expect("u64 creation failed");
@@ -320,8 +321,9 @@ namespace compiler::helios::defgen {
 			// var __result: List[T] = <zero>;
 			const SymID res_sym = ctx.query<QueryGeneratedSymbol>({
 				.name                  = base::StrID("__result"),
-				.generated_symbol_data = Variable{
-					.function_symbol = copy_sym, .variable_index = 0, .type = result_symbol_type },
+				.generated_symbol_data = Variable{ .function_symbol = copy_sym,
+			                                       .variable_index  = 0,
+			                                       .type            = result_symbol_type },
 			});
 			body.emplace_back(makeBox<code::VariableStmt>(
 				code::generatedOrigin(),
@@ -340,9 +342,9 @@ namespace compiler::helios::defgen {
 
 			// var __i: u64 = 0;
 			const SymID i_sym    = ctx.query<QueryGeneratedSymbol>({
-				   .name                  = base::StrID("__i"),
-				   .generated_symbol_data = Variable{
-					   .function_symbol = copy_sym, .variable_index = 1, .type = u64_type },
+				   .name = base::StrID("__i"),
+				   .generated_symbol_data
+                = Variable{ .function_symbol = copy_sym, .variable_index = 1, .type = u64_type },
             });
 			auto        zero_val = numeric_value::NumericValue::createOfType(u64_abs_type)
 			                    .expect("u64 creation failed");

@@ -2941,7 +2941,7 @@ private:
 				auto call = dynamic_cast<const CallExpr*>(assign->new_value_expr.get());
 				ASSERT_TRUE(call != nullptr);
 
-				auto        callee_sym = getIdentifierExprSymID(call->callee.ref()).value();
+				auto        callee_sym  = getIdentifierExprSymID(call->callee.ref()).value();
 				const auto* callee_ctor = std::get_if<Constructor>(&getSymRef(callee_sym)->other);
 				ASSERT_TRUE(callee_ctor != nullptr);
 				ASSERT_EQUAL(callee_ctor->kind, Constructor::Kind::Copy);
@@ -2975,7 +2975,7 @@ private:
 				ASSERT_TRUE(assign1 != nullptr);
 				auto call = dynamic_cast<const CallExpr*>(assign1->new_value_expr.get());
 				ASSERT_TRUE(call != nullptr);
-				auto        callee_sym = getIdentifierExprSymID(call->callee.ref()).value();
+				auto        callee_sym  = getIdentifierExprSymID(call->callee.ref()).value();
 				const auto* callee_ctor = std::get_if<Constructor>(&getSymRef(callee_sym)->other);
 				ASSERT_TRUE(callee_ctor != nullptr);
 				ASSERT_EQUAL(callee_ctor->kind, Constructor::Kind::Copy);
@@ -3047,16 +3047,17 @@ private:
 
 			// A field whose class defines a user copy constructor calls the user code, not a
 			// generated one.
-			ASSERT_TRUE(v_matches(getSymRef(callee_of(rhs_of("nested_user")))->other, PstImplementedSemantics)
-			);
+			ASSERT_TRUE(v_matches(
+				getSymRef(callee_of(rhs_of("nested_user")))->other, PstImplementedSemantics
+			));
 
 			// `box UserCopied` - deep copy whose inner pointee copy runs the user constructor.
 			{
 				auto box_of = dynamic_cast<const BoxOfExpr*>(rhs_of("deep"));
 				ASSERT_TRUE(box_of != nullptr);
-				ASSERT_TRUE(
-					v_matches(getSymRef(callee_of(box_of->inner.get()))->other, PstImplementedSemantics)
-				);
+				ASSERT_TRUE(v_matches(
+					getSymRef(callee_of(box_of->inner.get()))->other, PstImplementedSemantics
+				));
 			}
 
 			auto field_abstract_type = [&](std::string_view field_name) {
