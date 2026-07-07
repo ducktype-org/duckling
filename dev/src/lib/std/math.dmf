@@ -16,8 +16,8 @@ namespace libm_forward {
 
     namespace int_funcs { extern("C") {
         # Computes absolute value of an integral value
-        fundecl abs(x: i32) -> i32;
-        fundecl labs(x: i64) -> i64;
+        fundecl labs(x: i32) -> i32;
+        fundecl llabs(x: i64) -> i64;
 
         # Possibly add `div`
     }}
@@ -216,8 +216,8 @@ namespace libm_forward {
         # Rounds to nearest integer, rounding away from zero in halfway cases
         fundecl roundf(x: f32) -> f32;
         fundecl round(x: f64) -> f64;
-        fundecl lroundf(x: f32) -> i64;
-        fundecl lround(x: f64) -> i64;
+        fundecl lroundf(x: f32) -> i32;
+        fundecl lround(x: f64) -> i32;
 
         # Rounds to an integer using current rounding mode
         fundecl nearbyintf(x: f32) -> f32;
@@ -226,8 +226,8 @@ namespace libm_forward {
         # Rounds to an integer using current rounding mode with exception if the result differs
         fundecl rintf(x: f32) -> f32;
         fundecl rint(x: f64) -> f64;
-        fundecl lrintf(x: f32) -> i64;
-        fundecl lrint(x: f64) -> i64;
+        fundecl lrintf(x: f32) -> i32;
+        fundecl lrint(x: f64) -> i32;
     }}
 
     # Floating-point manipulation functions
@@ -245,14 +245,12 @@ namespace libm_forward {
         fundecl modf(arg: f64, iptr: cptr f64) -> f64;
 
         # Computes efficiently a number times FLT_RADIX raised to a power
-        fundecl scalbnf(x: f32, exp: i32) -> f32;
-        fundecl scalbn(x: f64, exp: i32) -> f64;
-        fundecl scalblnf(x: f32, exp: i64) -> f32;
-        fundecl scalbln(x: f64, exp: i64) -> f64;
+        fundecl scalblnf(x: f32, exp: i32) -> f32;
+        fundecl scalbln(x: f64, exp: i32) -> f64;
 
         # Extracts exponent of the given number
-        fundecl ilogbf(x: f32) -> i32;
-        fundecl ilogb(x: f64) -> i32;
+        fundecl ilogbf(x: f32) -> i16;
+        fundecl ilogb(x: f64) -> i16;
         fundecl logbf(x: f32) -> f32;
         fundecl logb(x: f64) -> f64;
 
