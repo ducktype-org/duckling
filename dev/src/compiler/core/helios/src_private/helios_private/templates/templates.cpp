@@ -90,7 +90,7 @@ namespace compiler::helios::templates {
 					defgen::QueryGeneratedSymbol>(defgen::KeyFor_QueryGeneratedSymbol{
 					.name = name,
 					.generated_symbol_data
-					= defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::TemplateBakeConstant{
+					= defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::GeneratedConstant{
 						type, q_key.template_arguments.at(i++), scope } },
 				});
 

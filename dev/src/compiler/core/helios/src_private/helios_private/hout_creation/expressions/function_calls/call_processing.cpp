@@ -781,15 +781,12 @@ namespace compiler::helios::code {
 		// Note: this does not include numeric operators on numeric arguments,
 		// as that case is handled earlier, before considering overload resolution.
 		variant_match(getSymRef(callee_sym)->other) {
-			variant_case(defgen::GeneratedSymbolData, generated) {
-				variant_match(generated.data) {
-					variant_case_novalue(defgen::GeneratedSymbolData::BuiltinOperator) {
-						return constructOperatorExpr(
-							ctx, pst_origin, callee_sym, std::move(call_arguments), coercions
-						);
-					}
-				}
+			variant_case_novalue(defgen::BuiltinOperator) {
+				return constructOperatorExpr(
+					ctx, pst_origin, callee_sym, std::move(call_arguments), coercions
+				);
 			}
+			variant_default {}
 		}
 
 		// Otherwise, we construct a normal function call expression.
