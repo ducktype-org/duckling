@@ -79,7 +79,7 @@ namespace compiler::backend_vm::internal {
 	/**
 	 * @brief Represents a call DVM operation.
 	 */
-	struct BuiltinCallOperation {
+	struct BuiltinCallOperation final {
 		lir::BuiltinFunctionKind kind;
 		std::deque<DVMValue>     args;
 		base::Optional<DVMPlace> dest;

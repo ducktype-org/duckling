@@ -153,13 +153,17 @@ namespace compiler::lir {
 	/**
 	 * @brief Reference to a function in LIR.
 	 */
-	struct FunctionLiteral {
+	struct FunctionLiteral final {
 		base::StrID                                         mangled_name;
 		helios::SymbolABI                                   abi;
 		bool                                                link_once;
 		std::shared_ptr<std::vector<CRef<tsl::TypeLayout>>> parameter_layouts;
 		CRef<tsl::TypeLayout>                               return_type_layout;
-		// Empty value indicates that a function is not an optional.
+
+		/**
+		 * Optional indicates if a function literal is a builtin function.
+		 * Empty value indicates that a function is not a builtin.
+		 */
 		base::Optional<BuiltinFunctionKind> builtin_kind_opt;
 
 		static FunctionLiteral fromFunction(const Function&);
