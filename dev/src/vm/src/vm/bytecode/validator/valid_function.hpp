@@ -10,6 +10,7 @@ namespace vm::code::valid_function {
 		std::vector<StackStateID> stack_states;  // One state for each instruction
 		FuncSignature             signature;
 		LocalStackDb              local_stack;
+		InstructionFlag           flags;
 
 		/**
 		 * @brief constructs a normal (not validated) function, which from a valid function

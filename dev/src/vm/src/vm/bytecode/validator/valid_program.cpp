@@ -90,18 +90,16 @@ void vm::code::ValidProgram::insertFunctions(
 	const std::vector<Function>& new_functions, api::ExecutionConfig config
 ) {
 	if (new_functions.empty()) return;
-
+	flag_context.insertAndValidate(new_functions, globals_map, ext_c_function_map, config);
 	for (const auto& func: new_functions) {
 		if (function_map.contains(func.name))
 			throw DuplicatedFunctionError(func, function_map.at(func.name)->toNormal());
 
 		auto validated_function = detail::validateAndExtractReachableCode(
-			type_context.getCurrentTypes(), globals_map, function_signatures, ext_c_function_map, func
+			type_context.getCurrentTypes(), globals_map, function_signatures, ext_c_function_map, flag_context, func
 		);
 		function_map.insert(validated_function, validated_function.name);
 	}
-
-	flag_context.insertAndValidate(new_functions, globals_map, ext_c_function_map, config);
 }
 
 void vm::code::ValidProgram::insertExternalCFunctions(

@@ -25,6 +25,8 @@ namespace vm::code {
 			api::ExecutionConfig                   config
 		);
 
+		InstructionFlag getFlagsForFunction(const base::StrID function) const;
+
 	private:
 		// The sum of all InstructionFlags for the instructions which may be executed
 		// (directly or indirectly) by a given function.

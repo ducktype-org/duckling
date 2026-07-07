@@ -68,7 +68,7 @@ namespace vm::code {
 		return result;
 	}
 
-	InstructionFlag getFlagsForFunction(
+	InstructionFlag collectFlagsForFunction(
 		const Function&                        func,
 		const ObjIdNameMap<GlobalData>&        globals,
 		const ObjIdNameMap<ExternalCFunction>& ext_c_functions
@@ -130,7 +130,7 @@ namespace vm::code {
 		base::HashMap<base::StrID, InstructionFlag> direct_flags;
 		for (const auto& new_func: new_functions) {
 			direct_flags.put(
-				new_func.name.str, getFlagsForFunction(new_func, globals, ext_c_functions)
+				new_func.name.str, collectFlagsForFunction(new_func, globals, ext_c_functions)
 			);
 		}
 		for (const auto& [func_name, _]: transpose_call_graph)
@@ -179,5 +179,9 @@ namespace vm::code {
 
 			verifyFlagsAgainstConfig(flags, config, new_func);
 		}
+	}
+
+	InstructionFlag FlagContext::getFlagsForFunction(const base::StrID function) const {
+		return flags_in_functions.at(function);
 	}
 }
