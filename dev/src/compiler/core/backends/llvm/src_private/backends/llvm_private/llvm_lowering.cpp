@@ -1074,6 +1074,8 @@ namespace compiler::backend_llvm {
 						}
 					}
 					variant_case(cc::ArgInfo::ByPointer, data) {
+						// This ABI is probably not used anywhere, as it means the callee allocates a pointer
+						// and return the pointer.
 						result_value = builder.CreateLoad(return_original_type, call_instruction);
 					}
 				}

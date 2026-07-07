@@ -17,7 +17,11 @@ namespace abi::types {
 		u64  width_bits;
 		bool is_signed;
 
-		bool operator==(const IntType&) const = default;
+		// Signedness does not affect the ABI representation (an i64 and a u64 occupy the same
+		// register/memory bits), so two integer types of equal width compare equal regardless of
+		// `is_signed`. This lets a no-op coercion (e.g. a struct field's signed i64 coerced to an
+		// unsigned i64 register eightbyte) be recognised as leaving the representation unchanged.
+		bool operator==(const IntType& other) const { return width_bits == other.width_bits; }
 	};
 
 	/**

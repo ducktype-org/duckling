@@ -1,0 +1,47 @@
+import core.builtins.*;
+
+# Exercises the C ABI (SysV / AArch64) struct-passing lowering for `extern("C")` calls.
+# Three struct size classes are covered, in both argument and return position:
+#   - Small (8 bytes)  -> single-register by-value  (coerced to `{ i64 }`)
+#   - Mid   (16 bytes) -> two-register by-value     (coerced to `{ i64, i64 }`)
+#   - Big   (24 bytes) -> memory: `byval` pointer argument / `sret` return
+# The C side (c_lib.c) mirrors these struct definitions.
+
+extern("C") {
+    class Small { x: i32 = 0;    y: i32 = 0;    }
+    class Mid   { a: i64 = 0i64; b: i64 = 0i64; }
+    class Big   { a: i64 = 0i64; b: i64 = 0i64; c: i64 = 0i64; }
+
+    # Pass a struct by value, return a scalar.
+    fundecl take_small(s: Small) -> i64;
+    fundecl take_mid(s: Mid) -> i64;
+    fundecl take_big(s: Big) -> i64;
+
+    # Take a scalar, return a struct by value.
+    fundecl make_small(seed: i64) -> Small;
+    fundecl make_mid(seed: i64) -> Mid;
+    fundecl make_big(seed: i64) -> Big;
+}
+
+fun main() -> i64 = {
+    # Argument passing: struct in, scalar out.
+    builtin_output_i64(take_small(Small(3, 4)));            # 7
+    builtin_output_i64(take_mid(Mid(10i64, 20i64)));        # 30
+    builtin_output_i64(take_big(Big(100i64, 200i64, 300i64))); # 600
+
+    # Return values: scalar in, struct out. Read every field back.
+    let s = make_small(1i64);
+    builtin_output_i64(s.x);                                # 1
+    builtin_output_i64(s.y);                                # 2
+
+    let m = make_mid(5i64);
+    builtin_output_i64(m.a);                                # 5
+    builtin_output_i64(m.b);                                # 10
+
+    let b = make_big(7i64);
+    builtin_output_i64(b.a);                                # 7
+    builtin_output_i64(b.b);                                # 14
+    builtin_output_i64(b.c);                                # 21
+
+    return 0i64;
+}

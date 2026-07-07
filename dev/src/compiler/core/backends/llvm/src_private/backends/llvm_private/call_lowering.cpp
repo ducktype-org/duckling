@@ -27,13 +27,26 @@ namespace compiler::backend_llvm {
 		};
 
 		LoweredCAbiSignature lowerCAbiSignature(
-			const Ref<llvm::Module> module, const abi::calling_conv::FunctionInfo& function_info
+			const Ref<llvm::Module>                   module,
+			const abi::calling_conv::FunctionInfo&    function_info,
+			const std::vector<CRef<tsl::TypeLayout>>& parameter_layouts,
+			const CRef<tsl::TypeLayout>               return_layout
 		) {
 			namespace cc = abi::calling_conv;
 			auto& ctx    = module->getContext();
 
 			std::vector<llvm::Type*>                     llvm_parameters;
 			std::vector<std::pair<u32, llvm::Attribute>> attributes;
+
+			// The LLVM type of a `ByValue` argument/return. When the calling convention passes the
+			// value without changing its representation (`coerce_to_type == original_type`) we keep
+			// its natural type computed by `typeFromLayout`.
+			auto by_value_type = [&](const cc::ArgInfo::ByValue& data,
+			                         const CRef<tsl::TypeLayout> layout,
+			                         abi::types::AbiTypeCRef     original_type) -> llvm::Type* {
+				if (data.coerce_to_type == *original_type) return typeFromLayout(module, layout);
+				return abiTypeToLLVMType(ctx, data.coerce_to_type);
+			};
 
 			auto&       return_cc   = function_info.return_info;
 			llvm::Type* return_type = nullptr;
@@ -55,7 +68,7 @@ namespace compiler::backend_llvm {
 			} else if (return_cc) {
 				variant_match(return_cc->info.kind) {
 					variant_case(cc::ArgInfo::ByValue, data) {
-						return_type = abiTypeToLLVMType(ctx, data.coerce_to_type);
+						return_type = by_value_type(data, return_layout, return_cc->original_type);
 					}
 					variant_case(cc::ArgInfo::ByPointer, data) {
 						return_type = llvm::PointerType::getUnqual(ctx);
@@ -65,10 +78,13 @@ namespace compiler::backend_llvm {
 				return_type = llvm::Type::getVoidTy(ctx);
 			}
 
-			for (const auto& param: function_info.param_info) {
+			for (usize i = 0; i < function_info.param_info.size(); i++) {
+				const auto& param = function_info.param_info.at(i);
 				variant_match(param.info.kind) {
 					variant_case(cc::ArgInfo::ByValue, data) {
-						llvm_parameters.push_back(abiTypeToLLVMType(ctx, data.coerce_to_type));
+						llvm_parameters.push_back(
+							by_value_type(data, parameter_layouts.at(i), param.original_type)
+						);
 					}
 					variant_case(cc::ArgInfo::ByPointer, data) {
 						if (data.by_val) {
@@ -99,7 +115,7 @@ namespace compiler::backend_llvm {
 	) {
 		// The C ABI signature is fully driven by the calling-convention library.
 		if (const auto c_abi = std::get_if<lir::LIRAbi::CAbi>(&abi.value))
-			return lowerCAbiSignature(module, c_abi->function_info).type;
+			return lowerCAbiSignature(module, c_abi->function_info, parameters, return_type).type;
 
 		std::vector<llvm::Type*> llvm_parameters;
 		llvm_parameters.reserve(parameters.size());
@@ -131,9 +147,14 @@ namespace compiler::backend_llvm {
 
 		llvm::FunctionType* fun_type = nullptr;
 		if (auto c_abi = std::get_if<lir::LIRAbi::CAbi>(&function_literal.abi.value)) {
-			auto lowered = lowerCAbiSignature(module, c_abi->function_info);
-			fun_type     = lowered.type;
-			attributes   = std::move(lowered.attributes);
+			auto lowered = lowerCAbiSignature(
+				module,
+				c_abi->function_info,
+				*function_literal.parameter_layouts,
+				function_literal.return_type_layout
+			);
+			fun_type   = lowered.type;
+			attributes = std::move(lowered.attributes);
 		} else {
 			fun_type = getFunType(
 				module,
