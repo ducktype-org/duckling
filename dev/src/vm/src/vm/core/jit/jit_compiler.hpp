@@ -22,9 +22,8 @@ constexpr inline uint LOOP_COMPILATION_THRESHOLD      = 0;
 #endif
 
 #if COMPILE_WITH_CNP
-constexpr inline uint CP_FUNC_COMPILATION_THRESHOLD   = 0;
+constexpr inline uint CP_FUNC_COMPILATION_THRESHOLD = 0;
 #endif
-
 
 
 namespace vm::jit {
@@ -47,7 +46,7 @@ namespace vm::jit {
 		std::vector<uint>                      until_compilation;
 		std::vector<MRef<JitLLVMFunc>>         llvm_compiled_code_ptrs;
 #if COMPILE_WITH_CNP
-		MRef<JitCPFunc> cp_compiled_func_ptr = nullptr;
+		std::optional<cnp::JitFuncMemory> cp_memory = std::nullopt;
 #endif
 
 		JitFuncData() = default;

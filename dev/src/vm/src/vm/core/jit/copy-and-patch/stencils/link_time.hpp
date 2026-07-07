@@ -9,10 +9,11 @@ namespace vm::jit::cnp::internal {
 
 	template<class Type, class IntegerEquivalent>
 	Type valueFromPointer(OpaqueStruct& link_time_variable) {
-		auto value = std::bit_cast<uintptr_t>(&link_time_variable);
+		auto value = std::bit_cast<std::uintptr_t>(&link_time_variable);
 
 		static_assert(
-			sizeof(IntegerEquivalent) <= sizeof(intptr_t), "Type too big for a link-time constant"
+			sizeof(IntegerEquivalent) <= sizeof(std::uintptr_t),
+			"Type too big for a link-time constant"
 		);
 		auto truncated_value = static_cast<IntegerEquivalent>(value);
 

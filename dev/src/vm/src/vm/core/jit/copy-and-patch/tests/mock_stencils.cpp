@@ -43,7 +43,9 @@ extern "C" int* calling_libc(int x) {
 	return output;
 }
 
-extern "C" int must_patch(int x) { return x + (intptr_t) (&_value_to_patch_arg0); }
+extern "C" int must_patch(int x) {
+	return x + static_cast<int>(reinterpret_cast<std::intptr_t>(&_value_to_patch_arg0));
+}
 
 typedef int (*stencil_type)(int, int);
 

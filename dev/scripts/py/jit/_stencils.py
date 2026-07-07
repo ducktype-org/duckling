@@ -6,7 +6,6 @@ Authors: Wojciech Rzepliński, Paweł Mieszkowski
 
 import enum
 import dataclasses
-import _schema
 
 
 def list_quote(elements):
@@ -14,10 +13,6 @@ def list_quote(elements):
 
 @enum.unique
 class HoleValue(enum.Enum):
-    """
-    Different "base" values that can be patched into holes.
-    """
-
     INSTR_PTR = enum.auto()
     ARG0 = enum.auto()
     ARG1 = enum.auto()
@@ -32,9 +27,6 @@ class HoleValue(enum.Enum):
 
 
 def symbol_to_value(symbol: str) -> HoleValue:
-    """
-    Convert a symbol name to a HoleValue and a symbol name.
-    """
     if not symbol.startswith("_value_to_patch_"):
         return HoleValue.NONE
     
@@ -69,12 +61,12 @@ class Stencil:
     binary_name: str
     unmangled_name: str
     type: StencilType
-    place: int
+    offset: int
     size: int
     holes: list[Hole]
 
     def stencil_binary(self, binary):
-        return binary[self.place: self.place + self.size]
+        return binary[self.offset: self.offset + self.size]
 
     def remove_jump(self, binary):
         # This only checks `jmp rax`, but that is enough as most stencils end in exactly this way.
@@ -97,7 +89,7 @@ class Stencil:
         return "StencilData " + list_quote(
             [
                 f'.name = "{self.binary_name}"',
-                f".place = {self.place}",
+                f".place = {self.offset}",
                 f".size = {self.size}",
                 ".to_patch = "
                 + list_quote(

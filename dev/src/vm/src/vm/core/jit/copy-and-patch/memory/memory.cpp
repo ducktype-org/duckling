@@ -52,7 +52,8 @@ namespace vm::jit::cnp {
 	}
 
 	JitFuncMemory::~JitFuncMemory() noexcept {
-		// CORE_ASSERT_SYSCALL_NOEXCEPT(munmap(addr, size) == 0, "unable to unmap memory");
+		if (!addr || !size) return;
+		CORE_ASSERT_SYSCALL_NOEXCEPT(munmap(addr, size) == 0, "unable to unmap memory");
 	}
 }
 

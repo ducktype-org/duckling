@@ -1,7 +1,7 @@
 #!/bin/python3
 
 """
-Gathers data from the binary stencils used for embeding and patching.
+Gathers data from the binary stencils used for embedding and patching.
 """
 
 import click
@@ -15,7 +15,7 @@ from llvm_tools import llvm_tools_version_options, run_llvm_tool
 
 def parse_relocation(relocation: ELFRelocation, stencil: Stencil) -> Hole:
     return Hole(
-        offset=relocation["Offset"] - stencil.place,
+        offset=relocation["Offset"] - stencil.offset,
         value=symbol_to_value(relocation["Symbol"]["Name"]),
     )
 
@@ -31,7 +31,7 @@ def parse_stencil_section(stencil_section: ELFSection, unmangled_name: str) -> S
     output = Stencil(
         unmangled_name=unmangled_name,
         binary_name=get_function_name(stencil_section),
-        place=stencil_section["Offset"],
+        offset=stencil_section["Offset"],
         type=StencilType.INSTRUCTION,
         size=stencil_section["Size"],
         holes=[],
@@ -60,7 +60,8 @@ def get_stencil_name(unmangled_name: str, truncate: bool) -> str:
 def split_section_relocations(
     section: ELFSection, stencils: list[Stencil]
 ) -> list[Stencil]:
-    stencil_offset = lambda stencil: stencil.place
+    def stencil_offset(stencil: Stencil) -> int:
+        return stencil.offset
     beginnings = sorted([stencil for stencil in stencils], key=stencil_offset)
     for wrapped_relocation in section["Relocations"]:
         relocation = wrapped_relocation["Relocation"]
@@ -70,7 +71,7 @@ def split_section_relocations(
         if idx == 0:
             continue
         stencil = stencils[idx - 1]
-        if rel_offset < stencil.place + stencil.size:
+        if rel_offset < stencil.offset + stencil.size:
             stencil.holes.append(parse_relocation(relocation, stencil))
     return stencils
 
@@ -106,7 +107,7 @@ def parse(llvm_readobj: str, binary: str, verbose: bool) -> list[Stencil]:
 
 def order_stencils(stencils: list[Stencil], order) -> list[Stencil]:
     no_stencil = Stencil(
-        unmangled_name="NO STENCIL", binary_name="NO STENCIL", type=StencilType.NO_STENCIL, place=0, size=0, holes=[]
+        unmangled_name="NO STENCIL", binary_name="NO STENCIL", type=StencilType.NO_STENCIL, offset=0, size=0, holes=[]
     )
     array = [no_stencil] * len(order)
     for stencil in stencils:

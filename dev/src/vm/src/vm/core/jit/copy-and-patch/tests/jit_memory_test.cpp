@@ -19,7 +19,9 @@ using vm::jit::cnp::Stencils;
 PUSH_DIAGNOSTIC
 ALLOW_EXTENSIONS
 static constexpr char binary[] = {
-#embed "mock_stencils-so"
+#if __has_embed("mock_stencils-so")
+	#embed "mock_stencils-so"
+#endif
 };
 POP_DIAGNOSTIC
 // NOLINTEND
@@ -145,7 +147,7 @@ private:
 		add_code.patch(add_addr, [&](HoleValue hole) {
 			switch (hole) {
 			case HoleValue::ContinueFn:
-				return std::bit_cast<intptr_t>(mul_addr);
+				return std::bit_cast<std::intptr_t>(mul_addr);
 			default:
 				CORE_PANIC("unexpected relocation");
 			}
@@ -154,7 +156,7 @@ private:
 		mul_code.patch(mul_addr, [&](HoleValue hole) {
 			switch (hole) {
 			case HoleValue::ContinueFn:
-				return std::bit_cast<intptr_t>(end_addr);
+				return std::bit_cast<std::intptr_t>(end_addr);
 			default:
 				CORE_PANIC("unexpected relocation");
 			}
