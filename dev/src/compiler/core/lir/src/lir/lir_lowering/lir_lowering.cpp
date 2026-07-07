@@ -73,6 +73,8 @@ namespace compiler::lir {
 		);
 		auto link_once    = helios::emissionPolicy(helios_id) == helios::EmissionPolicy::Replicated;
 		auto mangled_name = helios::mangler::getSimpleMangledName(ctx, helios_id);
+		base::Optional<BuiltinFunctionKind> builtin_kind_opt
+			= helios::isBuiltin(helios_id).flatMap(builtinKindFromHOUT);
 
 		auto return_type = mirReturnType2LirLayout(ctx, type.getResultType());
 		std::vector<CRef<tsl::TypeLayout>> parameter_types;
@@ -93,6 +95,7 @@ namespace compiler::lir {
 			.parameter_layouts
 			= std::make_shared<std::vector<CRef<tsl::TypeLayout>>>(std::move(parameter_types)),
 			.return_type_layout = return_type,
+			.builtin_kind_opt   = builtin_kind_opt
 		};
 	}
 
@@ -209,9 +212,11 @@ namespace compiler::lir {
 			return Operation::BooleanNot;
 		// @TODO: add more cases
 		default:
-			CORE_PANIC(base::strConcat(
-				"Operation without direct counterpart", base::enumToStr(mir_operation)
-			));
+			CORE_PANIC(
+				base::strConcat(
+					"Operation without direct counterpart", base::enumToStr(mir_operation)
+				)
+			);
 		}
 	}
 
@@ -432,7 +437,8 @@ namespace compiler::lir {
 			 * @param locs The MIR location.
 			 * @return The LIR locations, possibly with some discarded.
 			 */
-			[[nodiscard]] std::vector<LIRValue> getLocations(const std::vector<mir::MIRValue>& locs
+			[[nodiscard]] std::vector<LIRValue> getLocations(
+				const std::vector<mir::MIRValue>& locs
 			) const {
 				std::vector<LIRValue> result;
 				result.reserve(locs.size());
@@ -462,8 +468,7 @@ namespace compiler::lir {
 
 					[[maybe_unused]]
 					//< temporary for linter
-					auto lir_local
-						= getLocal(local);
+					auto lir_local = getLocal(local);
 
 					switch (flag) {
 						using enum mir::OperationFlag::Flag;
@@ -732,11 +737,13 @@ namespace compiler::lir {
 					break;
 				}
 				default:
-					throw base::NotYetImplemented(base::strConcat(
-						"instruction ",
-						base::enumToStr(mir_instruction.operation),
-						" in LowerToLIRFunction"
-					));
+					throw base::NotYetImplemented(
+						base::strConcat(
+							"instruction ",
+							base::enumToStr(mir_instruction.operation),
+							" in LowerToLIRFunction"
+						)
+					);
 				}
 				usize after_instruction_count = curr_block->instructions.size();
 				auto  flags                   = lowerFlags(mir_instruction);
@@ -965,8 +972,12 @@ namespace compiler::lir {
 		entry_block.terminator = Instruction{ Operation::ReturnVoid, {}, {}, {} };
 
 		for (const auto& function: functions) {
-			entry_block.instructions.push_back(Instruction{
-				Operation::Call, {}, { LIRValue{ FunctionLiteral::fromFunction(*function) } }, {} });
+			entry_block.instructions.push_back(
+				Instruction{ Operation::Call,
+			                 {},
+			                 { LIRValue{ FunctionLiteral::fromFunction(*function) } },
+			                 {} }
+			);
 		}
 
 		base::StableVector<Block> blocks;

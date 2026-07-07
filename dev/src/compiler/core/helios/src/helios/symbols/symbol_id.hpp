@@ -15,6 +15,7 @@
 
 #include <hashing/add_to_hash.hpp>
 #include <string_id/string_id.hpp>
+#include "helios/attributes/builtins.hpp"
 
 namespace compiler::helios {
 	// Forwards:
@@ -91,6 +92,13 @@ namespace compiler::helios {
 	 * variables will appear (for example analog to C++ static variables).
 	 */
 	bool isGlobalVar(query::Context&, SymID);
+
+
+	/**
+	 * Check if a symbol is a builtin. If so, return the BuiltinKind.
+	 * Return empty optional is a symbol is not a builtin.
+	 */
+	base::Optional<BuiltinKind> isBuiltin(SymID);
 
 	/**
 	 * Whether a symbol is ignored by lookup.

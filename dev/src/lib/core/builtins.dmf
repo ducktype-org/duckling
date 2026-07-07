@@ -36,5 +36,17 @@ fun builtin_output_str(s: str) -> i32 = {
 
 fun print(x: str) -> i32 = builtin_output_str(x);
 
-@builtin("ptr_from_slice")
-fundecl ptr_from_slice(s: slice char) -> manyptr char;
+@builtin("char_ptr_from_slice")
+fundecl char_ptr_from_slice(s: slice char) -> manyptr char;
+
+@builtin("char_slice_from_ptr_len")
+fundecl char_slice_from_ptr_len(p: manyptr char, l: u64) -> slice char;
+
+@builtin("dvm_char_alloc")
+fundecl dvm_char_alloc(u64 size) -> manyptr char;
+
+@builtin("dvm_char_realloc")
+fundecl dvm_char_realloc(manyptr char, u64 size) -> manyptr char;
+
+@builtin("dvm_char_free")
+fundecl dvm_char_free(manyptr char);

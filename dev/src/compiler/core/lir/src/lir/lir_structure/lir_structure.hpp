@@ -1,5 +1,6 @@
 #pragma once
 
+#include "helios/attributes/builtins.hpp"
 #include "lir_structure_fd.hpp"  // IWYU pragma: keep
 
 #include <ctv/ctv.hpp>
@@ -142,6 +143,25 @@ namespace compiler::lir {
 	using BlockRef = CRef<Block>;
 
 	/**
+	 * @brief Function which call will be replaced
+	 * manually in the backend.
+	 */
+	enum class BuiltinFunctionKind { DvmCharAlloc, DvmCharRealloc, DvmCharFree };
+
+	base::Optional<BuiltinFunctionKind> builtinKindFromHOUT(helios::BuiltinKind kind) {
+		switch(kind) {
+			case helios::BuiltinKind::DvmCharAlloc:
+				return BuiltinFunctionKind::DvmCharFree;
+			case helios::BuiltinKind::DvmCharRealloc:
+				return BuiltinFunctionKind::DvmCharRealloc;
+			case helios::BuiltinKind::DvmCharFree:
+				return BuiltinFunctionKind::DvmCharFree;
+			default:
+				return {};
+		}
+	}
+
+	/**
 	 * @brief Reference to a function in LIR.
 	 */
 	struct FunctionLiteral {
@@ -150,6 +170,8 @@ namespace compiler::lir {
 		bool                                                link_once;
 		std::shared_ptr<std::vector<CRef<tsl::TypeLayout>>> parameter_layouts;
 		CRef<tsl::TypeLayout>                               return_type_layout;
+		// Empty value indicates that a function is not an optional.
+		base::Optional<BuiltinFunctionKind> builtin_kind_opt;
 
 		static FunctionLiteral fromFunction(const Function&);
 	};

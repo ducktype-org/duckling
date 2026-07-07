@@ -31,6 +31,7 @@
 
 #include <query_framework/standard_query/query_impl.hpp>
 #include <string_id/string_id.hpp>
+#include "helios_private/symbols/pst_symbol_data.hpp"
 
 #include <functional>
 #include <unordered_set>
@@ -180,6 +181,10 @@ namespace compiler::helios {
 			},
 			getSymRef(id)->maybePstElement().value().unlock(ctx)
 		);
+	}
+
+	base::Optional<BuiltinKind> isBuiltin(SymID id) {
+		return getSymRef(id)->getDataOpt<BuiltinSemantics>().map(&BuiltinSemantics::builtin);
 	}
 
 	SymbolKind kind(SymID id) { return getSymRef(id)->common.kind; }
