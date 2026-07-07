@@ -46,11 +46,11 @@ namespace base {
 			static_assert(
 				IsPlainType<Deleter>,
 				"Deleter must be a plain type (non reference, non pointer). This requirement is "
-			    "not "
+				"not "
 				"expressed as a requires clause/concept "
 				"usage, to prevent the need to write it in friend declarations."
 				"See: http://en.cppreference.com/w/cpp/language/conflicting_declarations.html . "
-			    "This "
+				"This "
 				"is especially important as some conflicting declaration errors are "
 				"no-diagnostic-required cases on non matching requirement friend "
 				"redefinition."
@@ -117,7 +117,7 @@ namespace base {
 			u64 n_owners_before = ctrl_ptr->n_owners.fetch_sub(1, std::memory_order_acq_rel);
 
 			if (n_owners_before == 1) {
-				ctrl_ptr->del(data_ptr);
+				ctrl_ptr->del(data_ptr);  // NOLINT(clang-analyzer-cplusplus.NewDelete)
 				delete ctrl_ptr;
 			}
 			nullify();
@@ -128,7 +128,7 @@ namespace base {
 		 */
 		void nullify() noexcept {
 			data_ptr = nullptr;
-			ctrl_ptr = nullptr;
+			ctrl_ptr = nullptr;  // NOLINT(clang-analyzer-cplusplus.NewDeleteLeaks)
 		}
 
 	public:
