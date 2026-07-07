@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vm/bytecode/bytecode.hpp>
+#include <vm/bytecode/flags.hpp>
 #include <vm/bytecode/validator/local_stack_database.hpp>
 
 namespace vm::code::valid_function {
