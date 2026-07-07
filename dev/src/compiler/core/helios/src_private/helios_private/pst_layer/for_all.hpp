@@ -65,6 +65,16 @@ namespace compiler::helios {
 			return result;
 		}
 
+		/**
+		 * Default cutoff function for pstForAll, that never cuts off any branches.
+		 * This is needed to make CutoffFunctionT template parameter deduction possible
+		 */
+		struct CutoffFunctionTDefault final {
+			template<typename ElementT>
+			bool operator()(pst::Access<ElementT>) const {
+				return false;
+			}
+		};
 	}
 
 	/**
@@ -75,13 +85,13 @@ namespace compiler::helios {
 	 * @return If any query failed during the traversal, returns base::BAD. Otherwise, returns
 	 * base::OK.
 	 */
-	template<typename ElementT, typename FunctionT, typename CutoffFunctionT>
+	template<typename ElementT, typename FunctionT, typename CutoffFunctionT = internal::CutoffFunctionTDefault>
 	[[nodiscard]]
 	base::CheckedOkBad pstForAll(
 		query::Context&        ctx,
 		pst::Access<ElementT>  element,
 		const FunctionT&       function,
-		const CutoffFunctionT& cutoff_function = [](const auto&) { return false; }
+		const CutoffFunctionT& cutoff_function = internal::CutoffFunctionTDefault{}
 	) {
 		base::OkBad result = base::OK;
 
