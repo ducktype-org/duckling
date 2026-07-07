@@ -7,4 +7,4 @@ add_library(LIR STATIC
 
 make_module(LIR USES Base QueryFramework MIR TypeSystemLower)
 
-duck_add_test(compiler lir tests/lir_test.cpp USES Base PstParser HELIOS MIR LIR)
+duck_add_test(compiler lir tests/lir_test.cpp USES Base PstParser HELIOS MIR LIR Driver)

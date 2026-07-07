@@ -45,6 +45,7 @@ pub struct BuildContext<'duck, 'ctx> {
     pub storage: Storage,
     pub used_features: Vec<FeatureName>,
     pub profile: Profile,
+    pub jobs: usize,
 }
 
 /// Compile project inside the [`BuildContext`].
