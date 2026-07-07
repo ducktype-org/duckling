@@ -273,10 +273,7 @@ namespace compiler::helios {
 			variant_match(symbol_ref->other) {
 				variant_case_novalue(PstImplementedSemantics, BuiltinSemantics) {
 					// @note: function are handled in a special way, using QueryDeclOfFun.
-					if (kind(key) == SymbolKind::Function
-					    or kind(key) == SymbolKind::FunctionDeclaration
-					    or kind(key) == SymbolKind::Method)
-						return handleFunction(ctx, key);
+					if (isFunctionLike(kind(key))) return handleFunction(ctx, key);
 
 					PstVisitor_GetTypeOf visitor(ctx);
 					maybeSymbolPst(key)->unlock(ctx)->acceptVisitor(visitor);
@@ -288,11 +285,21 @@ namespace compiler::helios {
 
 					// @TODO: #1328 Properly handle value categories in class constructors.
 					// The implicit constructor takes a parameter per field, the default constructor
-					// takes none.
+					// takes none, and the copy constructor takes a single `const ref T` source.
 					std::vector<tsh::SymbolType<>> param_types;
-					if (ctor.kind == defgen::Constructor::Kind::Implicit) {
+					switch (ctor.kind) {
+					case defgen::Constructor::Kind::Implicit: {
 						auto fields = target_type.getInterface(ctx)->getFieldsView();
 						for (const auto& field: fields) param_types.push_back(field.getType(ctx));
+						break;
+					}
+					case defgen::Constructor::Kind::Default:
+						break;
+					case defgen::Constructor::Kind::Copy:
+						param_types.emplace_back(
+							target_type, tsh::ReferenceKind::Ref, tsh::Mutability::Immutable
+						);
+						break;
 					}
 
 					const auto return_type = tsh::SymbolType<>::withDefaults(target_type);

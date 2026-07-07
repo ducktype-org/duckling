@@ -9,7 +9,9 @@
 #include <helios/hout/hout.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/queries/function_queries.hpp>
+#include <helios/symbols/query_class_of_member.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
+#include <helios/symbols/query_type_symbol_data.hpp>
 #include <helios/tsh/abstract_type.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/utils/hout_walkers.hpp>
@@ -574,10 +576,6 @@ namespace compiler::helios {
 			);
 		}
 		case pst::StmtKind::CopyConstructor: {
-			// left for code consistency
-			[[maybe_unused]]
-			auto constructor
-				= stmt.dynamicCast<pst::CopyConstructor>().value();
 			return SymbolData::makePSTSymbolData(
 				{
 					.name                 = lang_def::keywordToStr(lang_def::Keyword::Copy),
@@ -1079,8 +1077,7 @@ namespace compiler::helios {
 	struct IMPLEMENT_QUERY(QueryDirectFunctionCalls, query::QResult<std::vector<SymID>>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			CORE_ASSERT(
-				kind(key) == SymbolKind::Function || kind(key) == SymbolKind::Method
-					|| kind(key) == SymbolKind::FunctionDeclaration,
+				isFunctionLike(kind(key)),
 				"Query function dependencies called on non-function symbol"
 			);
 
