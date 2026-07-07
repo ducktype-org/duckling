@@ -14,17 +14,17 @@
 #include "lir_lowering.hpp"
 
 #include "../lir_structure/lir_structure.hpp"
-#include "abi/type_system/type.hpp"
-#include "helios/symbols/symbol_abi.hpp"
-#include "tsl/c_abi_converter.hpp"
 
+#include <abi/type_system/type.hpp>
 #include <ctv/numeric_value.hpp>
 #include <frontend/pst_parser/lang_parser_element.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/mangler/mangler.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
+#include <helios/symbols/symbol_abi.hpp>
 #include <helios/tsh/queries.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
+#include <tsl/c_abi_converter.hpp>
 #include <tsl/queries.hpp>
 #include <tsl/type_layout.hpp>
 

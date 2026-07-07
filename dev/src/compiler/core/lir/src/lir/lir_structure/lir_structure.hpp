@@ -1,8 +1,8 @@
 #pragma once
 
-#include "abi/calling_conv/calling_conv.hpp"
 #include "lir_structure_fd.hpp"  // IWYU pragma: keep
 
+#include <abi/calling_conv/calling_conv.hpp>
 #include <ctv/ctv.hpp>
 #include <diagnostic_interactive/stable_position.hpp>
 #include <helios/hout/hout_fd.hpp>
