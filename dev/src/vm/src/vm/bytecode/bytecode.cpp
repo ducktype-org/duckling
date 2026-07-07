@@ -1,7 +1,5 @@
 #include "bytecode.hpp"
 
-#include <base/extend_cpp/vector_utils.hpp>
-
 namespace vm::code {
 
 	void CodeCollection::mergeFrom(CodeCollection&& other) {
@@ -26,18 +24,5 @@ namespace vm::code {
 			std::make_move_iterator(other.external_c_functions.end())
 		);
 		auto _ = std::move(other);
-	}
-
-	void CodeCollection::deduplicate() {
-		base::deduplicateBy(functions, [](const code::Function& func) {
-			return func.name.str.strView();
-		});
-		base::deduplicateBy(external_c_functions, [](const code::ExternalCFunction& func) {
-			return func.name.str.strView();
-		});
-		base::deduplicateBy(global_data, [](const vm::code::GlobalData& g) {
-			return g.name.str.strView();
-		});
-		base::deduplicateBy(types, [](const vm::code::TypeOfData& f) { return typeName(f); });
 	}
 }  // namespace vm::code

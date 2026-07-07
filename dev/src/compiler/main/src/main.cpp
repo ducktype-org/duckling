@@ -945,11 +945,12 @@ clah::Clah getClahForMain() {
 							   // `run` shares its stdout with the script being executed, so build
 		                       // progress (standard library compilation, archiving, ...) must not
 		                       // be printed there.
+							   auto prev_user_logs         = logger::enable_user_logs;
 							   logger::enable_user_logs    = false;
 							   auto std_compilation_result = compiler::driver::compilePackages(
 								   compiler::driver::getLoadedStdLibCompilationTasks()
 							   );
-							   logger::enable_user_logs = true;
+							   logger::enable_user_logs = prev_user_logs;
 							   if (std_compilation_result.isBad()) {
 								   compiler::driver::exit();
 								   return 1;

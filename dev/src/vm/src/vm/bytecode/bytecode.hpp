@@ -99,7 +99,5 @@ namespace vm::code {
 		 * Does not perform any assertions.
 		 */
 		void mergeFrom(CodeCollection&& other);
-
-		void deduplicate();
 	};
 }

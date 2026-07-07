@@ -93,6 +93,7 @@ namespace compiler::repl {
 		 * functions (e.g. from `core`) are callable from interactive statements. Failures are
 		 * reported as a warning and leave the session usable for code that does not rely on the
 		 * standard library.
+		 * @TODO: #3084 load only the core lib, and not the std lib after packages work.
 		 */
 		void preloadStandardLibrary();
 
