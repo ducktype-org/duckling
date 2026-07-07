@@ -52,60 +52,6 @@ namespace compiler::helios::defgen {
 
 	namespace {
 		/**
-		 * @brief Build a HOUT expression that produces a copy of `source`.
-		 *
-		 * - Trivially-copyable sources are returned as they where (which means they are byte
-		 *   copied).
-		 * - A `box T` source is deep-copied into a freshly allocated box holding a copy of the
-		 * 	 pointee.
-		 * - Non-trivially-copyable class, static-array, tuple and list members are copied by
-		 *   calling their own copy constructor with a reference to `source`.
-		 */
-		Box<code::Expr> makeCopyExpr(query::Context& ctx, Box<code::Expr> source) {
-			const tsh::SymbolType<> type = source->expression_type.getSymbolType();
-
-			if (type.isTriviallyCopyable(ctx)) return source;
-
-			// A `box T` is deep-copied. Allocate a new box holding a copy of the pointee
-			// `box(<copy of *source>)`. For a trivially-copyable pointee this collapses to
-			// `box(*source)`.
-			if (type.getRefKind() == tsh::ReferenceKind::Box) {
-				// Produce a copy of the underlying type.
-				auto pointee_copy = makeCopyExpr(
-					ctx, makeBox<code::DerefExpr>(ctx, code::generatedOrigin(), std::move(source))
-				);
-
-				// Now wrap it in a heap allocation.
-				return makeBox<code::BoxOfExpr>(
-					ctx, code::generatedOrigin(), std::move(pointee_copy)
-				);
-			}
-
-			// Now we have a direct value which should be copied.
-			const auto abstract_type = type.getType();
-			CORE_ASSERT(
-				abstract_type.getKind() == tsh::Kind::Class
-					or abstract_type.getKind() == tsh::Kind::StaticArray
-					or abstract_type.getKind() == tsh::Kind::Tuple
-					or abstract_type.getKind() == tsh::Kind::DynamicArray,
-				"Tried to generate a copy constructor for a type which shouldn't need it"
-			);
-
-			const SymID                  copy_sym = copyConstructorSymForType(ctx, abstract_type);
-			std::vector<Box<code::Expr>> args;
-			args.emplace_back(
-				makeBox<code::RefOfExpr>(ctx, code::generatedOrigin(), std::move(source))
-			);
-
-			return makeBox<code::CallExpr>(
-				ctx,
-				code::generatedOrigin(),
-				makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), copy_sym),
-				std::move(args)
-			);
-		}
-
-		/**
 		 * @brief Build `(*source).<member>` - a dereference of the `source` parameter followed by a
 		 * field access.
 		 * @TODO: #2776 Move this somewhere
@@ -481,4 +427,44 @@ namespace compiler::helios::defgen {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDefaultCopyConstructor);
+
+	Box<code::Expr> makeCopyExpr(query::Context& ctx, Box<code::Expr> source) {
+		const tsh::SymbolType<> type = source->expression_type.getSymbolType();
+
+		if (type.isTriviallyCopyable(ctx)) return source;
+
+		// A `box T` is deep-copied. Allocate a new box holding a copy of the pointee
+		// `box(<copy of *source>)`. For a trivially-copyable pointee this collapses to
+		// `box(*source)`.
+		if (type.getRefKind() == tsh::ReferenceKind::Box) {
+			// Produce a copy of the underlying type.
+			auto pointee_copy = makeCopyExpr(
+				ctx, makeBox<code::DerefExpr>(ctx, code::generatedOrigin(), std::move(source))
+			);
+
+			// Now wrap it in a heap allocation.
+			return makeBox<code::BoxOfExpr>(ctx, code::generatedOrigin(), std::move(pointee_copy));
+		}
+
+		// Now we have a direct value which should be copied.
+		const auto abstract_type = type.getType();
+		CORE_ASSERT(
+			abstract_type.getKind() == tsh::Kind::Class
+				or abstract_type.getKind() == tsh::Kind::StaticArray
+				or abstract_type.getKind() == tsh::Kind::Tuple
+				or abstract_type.getKind() == tsh::Kind::DynamicArray,
+			"Tried to generate a copy constructor for a type which shouldn't need it"
+		);
+
+		const SymID                  copy_sym = copyConstructorSymForType(ctx, abstract_type);
+		std::vector<Box<code::Expr>> args;
+		args.emplace_back(makeBox<code::RefOfExpr>(ctx, code::generatedOrigin(), std::move(source)));
+
+		return makeBox<code::CallExpr>(
+			ctx,
+			code::generatedOrigin(),
+			makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), copy_sym),
+			std::move(args)
+		);
+	}
 }

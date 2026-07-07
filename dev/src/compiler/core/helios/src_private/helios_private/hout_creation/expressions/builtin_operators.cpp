@@ -38,8 +38,8 @@ namespace {
 		auto rhs_direct = rhs_type.withReferenceKind(tsh::ReferenceKind::Direct);
 
 		// Try to coerce both values to the rhs direct type.
-		auto lhs_to_rhs = canCoerce(ctx, lhs_type, rhs_direct);
-		auto rhs_to_rhs = canCoerce(ctx, rhs_type, rhs_direct);
+		auto lhs_to_rhs = canCoerce(ctx, lhs->expression_type, rhs_direct);
+		auto rhs_to_rhs = canCoerce(ctx, rhs->expression_type, rhs_direct);
 
 		if (lhs_to_rhs.valueOrThrow().isValid() && rhs_to_rhs.valueOrThrow().isValid()) {
 			return std::make_tuple(
@@ -50,8 +50,8 @@ namespace {
 		}
 
 		// Try to coerce both values to the lhs direct type.
-		auto lhs_to_lhs = canCoerce(ctx, lhs_type, lhs_direct);
-		auto rhs_to_lhs = canCoerce(ctx, rhs_type, lhs_direct);
+		auto lhs_to_lhs = canCoerce(ctx, lhs->expression_type, lhs_direct);
+		auto rhs_to_lhs = canCoerce(ctx, rhs->expression_type, lhs_direct);
 
 		if (lhs_to_lhs.valueOrThrow().isValid() && rhs_to_lhs.valueOrThrow().isValid()) {
 			return std::make_tuple(
@@ -263,7 +263,7 @@ namespace compiler::helios::code {
 			// like: var x: i32 = -someReference.
 			if (source_type.getRefKind() != tsh::ReferenceKind::Direct) {
 				auto direct_type = source_type.withReferenceKind(tsh::ReferenceKind::Direct);
-				auto res         = canCoerce(ctx, source_type, direct_type);
+				auto res         = canCoerce(ctx, expr->expression_type, direct_type);
 				if (res.valueOrThrow().isValid())
 					return std::move(res.valueOrThrow()).getCoercion();
 			}

@@ -784,11 +784,12 @@ namespace compiler::helios::code {
 	AccessExpr::AccessExpr(
 		query::Context& ctx, ElementOrigin origin, Box<Expr> base, const SymID field
 	):
-		  // @TODO: #1549 Value category usage is not correct here.
 		  Expr(
 			  tsh::ExpressionType(
 				  ctx.query<QueryTypeOfSymbol>(field)->valueOrThrow(),
-				  tsh::ValueCategory(tsh::PrimaryCategory::Local)
+				  // The accessed field inherits the base's value category. If the class is a
+	              // Local/Global, then so is the accessed field.
+				  base->expression_type.getValueCategory()
 			  ),
 			  origin
 		  ),
@@ -840,10 +841,9 @@ namespace compiler::helios::code {
 						  CORE_PANIC("Cannot index a non-array like type");
 					  }
 				  }(),
-				  // @TODO: #1549 Value category usage may not be correct here.
-				  base->expression_type.getValueCategory(
-				  )  // Propagate the base category. If the array is a
-	                 // Local/Global, then the indexed element is as well.
+				  // Propagate the base category. If the array is a Local/Global, then the
+	              // indexed element is as well.
+				  base->expression_type.getValueCategory()
 			  ),
 			  origin
 

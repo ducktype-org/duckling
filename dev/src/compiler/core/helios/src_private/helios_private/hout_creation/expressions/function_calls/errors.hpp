@@ -59,7 +59,20 @@ namespace compiler::helios::code {
 		SymID function;
 	};
 
-	struct TypeNotTriviallyCopyable final {
+	/**
+	 * The argument's type cannot be copied at all (no copy constructor exists).
+	 */
+	struct TypeNotCopyable final {
+		usize             argument_index;
+		tsh::SymbolType<> given_type;
+		tsh::SymbolType<> expected_type;
+		SymID             function;
+	};
+
+	/** The non-trivially copyable argument would be copied implicitly. It must be passed with
+	 * `copy`/`move`.
+	 */
+	struct TypeRequiresExplicitCopyMove final {
 		usize             argument_index;
 		tsh::SymbolType<> given_type;
 		tsh::SymbolType<> expected_type;
@@ -72,7 +85,8 @@ namespace compiler::helios::code {
 		UnknownNamedArgument,
 		TypeMismatch,
 		MissingCallArgument,
-		TypeNotTriviallyCopyable>;
+		TypeNotCopyable,
+		TypeRequiresExplicitCopyMove>;
 
 	/**
 	 * @brief This variant stores errors that do not depend on the function declaration. All

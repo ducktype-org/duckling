@@ -1026,6 +1026,40 @@ private:
 			"Value category with full allows_semantic should contain same value category with "
 			"subset of allowed semantics."
 		);
+
+		const auto temporary = ValueCategory(PrimaryCategory::Temporary);
+		const auto local     = ValueCategory(PrimaryCategory::Local);
+		const auto global    = ValueCategory(PrimaryCategory::Global);
+		const auto literal   = ValueCategory(PrimaryCategory::Literal);
+
+		// Local and Global are lvalues, Temporary and Literal are rvalues.
+		assertTrue(local.isLValue() && global.isLValue(), "Local and Global should be lvalues.");
+		assertTrue(
+			temporary.isRValue() && literal.isRValue(), "Temporary and Literal should be rvalues."
+		);
+
+		// Only Temporary and Local are owned.
+		assertTrue(temporary.isOwned() && local.isOwned(), "Temporary and Local should be owned.");
+		assertTrue(
+			!global.isOwned() && !literal.isOwned(), "Global and Literal should not be owned."
+		);
+
+		// Temporary is an owned rvalue. Local is movable with `move`.
+		assertTrue(temporary.isOwnedRValue(), "Temporary should be an owned rvalue.");
+		assertTrue(local.isMovableFrom(), "Local should be a valid `move` operand.");
+		assertTrue(
+			!temporary.isMovableFrom() && !local.isOwnedRValue(),
+			"isOwnedRValue and isMovableFrom should be mutually exclusive."
+		);
+
+		// `move` is not forced unless it's requested.
+		assertTrue(
+			!local.mustMove() && !temporary.mustMove(), "Default categories should not force a move."
+		);
+		const auto forced_move = ValueCategory(
+			PrimaryCategory::Local, false, MOVE | COPY | REINIT | USE | DESTROY, MOVE
+		);
+		assertTrue(forced_move.mustMove(), "force_semantic with MOVE should mustMove().");
 	}
 
 	void simpleImplicitCoercibility() {

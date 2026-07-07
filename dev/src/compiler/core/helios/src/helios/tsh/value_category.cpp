@@ -6,7 +6,10 @@ namespace compiler::tsh {
 	PrimaryCategory primaryCategoryOfSymbol(compiler::helios::SymID symbol) {
 		compiler::helios::SymbolKind symbol_kind = kind(symbol);
 		// @TODO Properly check whether the symbol is local or global.
-		bool is_symbol_local = symbol_kind == compiler::helios::SymbolKind::Variable;
+		// Local variables and parameters are owned locals (the function owns them, so
+		// they can be moved from).
+		bool is_symbol_local = symbol_kind == compiler::helios::SymbolKind::Variable
+		                    || symbol_kind == compiler::helios::SymbolKind::Parameter;
 		return is_symbol_local ? PrimaryCategory::Local : PrimaryCategory::Global;
 	}
 

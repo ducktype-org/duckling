@@ -37,6 +37,22 @@ namespace compiler::tsh {
 	PrimaryCategory primaryCategoryOfSymbol(compiler::helios::SymID symbol);
 }
 
+/**
+ * @brief Flags describing what may be done with a value.
+ * Each `ValueCategory` carries an `allows_semantic` set (what may be done) and a `force_semantic`
+ * set (what must be done).
+ *
+ * - **MOVE**    The value is owned by the current scope, so ownership may be moved out of it. True
+ * 				 for `Temporary` and `Local`. Set in `force_semantic` by the `move` operator.
+ * - **COPY**    The value may be copied. Set for every category, because whether a copy
+ *               is possible is a property of the AbstractType::isCopyable, not of the value
+ * category.
+ * - **REINIT**  The value is an addressable storage location that may be re-assigned - lvalue. True
+ * 				 for `Local` and `Global`.
+ * - **USE**     The value may be read. Currently set for every category.
+ * - **DESTROY** The value's destructor runs at the end of the current scope. Currently set for
+ * owned values and literals.
+ */
 MAKE_FLAG_TYPE(compiler::tsh, ValueSemanticsOptions, ValueSemantics,
 	MOVE,
 	COPY,
@@ -47,7 +63,9 @@ MAKE_FLAG_TYPE(compiler::tsh, ValueSemanticsOptions, ValueSemantics,
 
 namespace compiler::tsh {
 	/**
-	 * Value category class describes properties of a value other than its type.
+	 * @brief Describes properties of a value that are independent of its type. Like:
+	 * - Where it came from - PrimaryCategory
+	 * - What may/must be done with it - ValueSemantics.
 	 */
 	class ValueCategory {
 		using enum ValueSemanticsOptions;
@@ -65,8 +83,8 @@ namespace compiler::tsh {
 		 */
 		ValueSemantics allows_semantic{ MOVE | COPY | REINIT | USE | DESTROY };
 		/**
-		 * Forces semantics describe what must be done with a value. Note that it might be redundant
-		 * because of information kept in allowed semantics.
+		 * Forced semantics describe what must be done with a value. Currently only the `MOVE` flag
+		 * is used, others may be redundant.
 		 */
 		ValueSemantics force_semantic{};
 
@@ -119,14 +137,73 @@ namespace compiler::tsh {
 		}
 
 		/**
+		 * @brief Whether the value represents an addressable location - an lvalue.
+		 *
+		 * True for Locals and Globals (they can be reinitialized/assigned to).
+		 */
+		[[nodiscard]]
+		bool isLValue() const {
+			return allows_semantic.contains(REINIT);
+		}
+
+		/**
+		 * @brief Whether the value is an rvalue.
+		 *
+		 * True for Temporaries and Literals.
+		 */
+		[[nodiscard]]
+		bool isRValue() const {
+			return !isLValue();
+		}
+
+		/**
+		 * @brief Whether the value is owned by the current scope.
+		 *
+		 * Its destructor would run here, so it may be moved from. True for Temporaries and Locals.
+		 */
+		[[nodiscard]]
+		bool isOwned() const {
+			return allows_semantic.contains(MOVE);
+		}
+
+		/**
+		 * @brief Whether the value is an owned rvalue (a Temporary).
+		 *
+		 * These are moved implicitly when moved into an owned destination.
+		 */
+		[[nodiscard]]
+		bool isOwnedRValue() const {
+			return isOwned() && isRValue();
+		}
+
+		/**
+		 * @brief Whether the value is a valid operand of the explicit `move` operator.
+		 *
+		 * An owned lvalue, i.e. a Local.
+		 */
+		[[nodiscard]]
+		bool isMovableFrom() const {
+			return isOwned() && isLValue();
+		}
+
+		/**
+		 * @brief Whether the value must be moved (e.g. the explicit `move` operator forces it).
+		 */
+		[[nodiscard]]
+		bool mustMove() const {
+			return force_semantic.contains(MOVE);
+		}
+
+		/**
 		 * Compares value categories in terms of what might be done with values they describe.
 		 * @param other Value category to compare
 		 * @return Whether the other value category is contained in this value category.
 		 */
 		[[nodiscard]]
 		bool contains(const ValueCategory& other) const {
-			return allows_semantic >= other.allows_semantic
-			    && force_semantic <= other.force_semantic && (!is_pure || other.is_pure);
+			// `this` must allow everything `other` allows, and force no more than `other` forces.
+			return allows_semantic.contains(other.allows_semantic)
+			    && other.force_semantic.contains(force_semantic) && (!is_pure || other.is_pure);
 		}
 
 		auto operator<=>(const ValueCategory& other) const = default;

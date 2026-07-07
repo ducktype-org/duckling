@@ -1,0 +1,25 @@
+# Tests for user-defined and default copy constructors.
+Tests:
+  aggregates:
+    Cases:
+      all:
+        backend: all
+        Output:
+          String: "1\n3\n4\n7\n10\n13\n"
+        ExitCode: 0
+
+  boxes:
+    Cases:
+      all:
+        backend: all
+        Output:
+          String: "1\n"
+        ExitCode: 0
+
+  function_calls:
+    Cases:
+      all:
+        backend: all
+        Output:
+          String: "0\n1\n1\n"
+        ExitCode: 0

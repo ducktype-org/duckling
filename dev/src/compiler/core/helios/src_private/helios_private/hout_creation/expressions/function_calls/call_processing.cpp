@@ -129,7 +129,7 @@ namespace compiler::helios::code {
 			tsh::SymbolType provided_type
 				= positional_arguments[i]->expression_type.getSymbolType();
 			tsh::SymbolType expected_type = decl.parameters[i].type;
-			auto            coercion      = canCoerce(ctx, provided_type, expected_type);
+			auto coercion = canCoerce(ctx, positional_arguments[i]->expression_type, expected_type);
 
 			if (coercion.valueOrThrow().isInvalid()) {
 				variant_match(coercion.valueOrThrow().getVariant()) {
@@ -142,9 +142,18 @@ namespace compiler::helios::code {
 											  .function       = fun,
                                         } };
 					}
-					variant_case_novalue(helios::TypeNotTriviallyCopyable) {
+					variant_case_novalue(helios::TypeNotCopyable) {
 						return NoMatch{ .function = fun,
-							            .reason   = code::TypeNotTriviallyCopyable{
+							            .reason   = code::TypeNotCopyable{
+											  .argument_index = i,
+											  .given_type     = provided_type,
+											  .expected_type  = expected_type,
+											  .function       = fun,
+                                        } };
+					}
+					variant_case_novalue(helios::TypeRequiresExplicitCopyMove) {
+						return NoMatch{ .function = fun,
+							            .reason   = code::TypeRequiresExplicitCopyMove{
 											  .argument_index = i,
 											  .given_type     = provided_type,
 											  .expected_type  = expected_type,
@@ -193,7 +202,8 @@ namespace compiler::helios::code {
 			tsh::SymbolType provided_type
 				= std::get<1>(named_arguments[i])->expression_type.getSymbolType();
 			tsh::SymbolType expected_type = decl.parameters[param_idx].type;
-			auto            coercion      = canCoerce(ctx, provided_type, expected_type);
+			auto            coercion
+				= canCoerce(ctx, std::get<1>(named_arguments[i])->expression_type, expected_type);
 
 			if (coercion.valueOrThrow().isInvalid()) {
 				variant_match(coercion.valueOrThrow().getVariant()) {
@@ -205,9 +215,18 @@ namespace compiler::helios::code {
                                                                 = positional_arguments.size() + i,
 							                                      .function = fun } };
 					}
-					variant_case_novalue(helios::TypeNotTriviallyCopyable) {
+					variant_case_novalue(helios::TypeNotCopyable) {
 						return NoMatch{ .function = fun,
-							            .reason   = code::TypeNotTriviallyCopyable{
+							            .reason   = code::TypeNotCopyable{
+											  .argument_index = positional_arguments.size() + i,
+											  .given_type     = provided_type,
+											  .expected_type  = expected_type,
+											  .function       = fun,
+                                        } };
+					}
+					variant_case_novalue(helios::TypeRequiresExplicitCopyMove) {
+						return NoMatch{ .function = fun,
+							            .reason   = code::TypeRequiresExplicitCopyMove{
 											  .argument_index = positional_arguments.size() + i,
 											  .given_type     = provided_type,
 											  .expected_type  = expected_type,

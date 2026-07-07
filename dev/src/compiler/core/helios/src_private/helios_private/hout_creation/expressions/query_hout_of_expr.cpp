@@ -18,6 +18,7 @@
 #include <helios/tsh/symbol_type.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/errors/dia_interactive_elements.hpp>
+#include <helios_private/hout_creation/definition_generation/copy_constructors.hpp>
 #include <helios_private/hout_creation/definition_generation/to_string_methods.hpp>
 #include <helios_private/hout_creation/expressions/builtin_operators.hpp>
 #include <helios_private/hout_creation/expressions/chain_expr.hpp>
@@ -803,7 +804,34 @@ namespace compiler::helios::code {
 					return;
 				} else if (stmt->getOperator().unlock(ctx)->unwrap().asKeyword()
 				           == lang_def::Keyword::Move) {
+					// `move x` is only valid on an owned lvalue (a local variable).
+					if (not inner->expression_type.getValueCategory().isMovableFrom()) {
+						ctx.logInt(makeBox<dia_int::PlaceholderError>(
+							"`move` can only be applied to an owned local variable.",
+							stmt->getStablePosition()
+						));
+						return;
+					}
 					node = makeBox<MoveExpr>(ctx, pstOrigin(stmt), std::move(inner));
+					return;
+				} else if (stmt->getOperator().unlock(ctx)->unwrap().asKeyword()
+				           == lang_def::Keyword::Copy) {
+					// `copy x` produces an explicit copy of `x` via its copy constructor. Copying
+					// through a reference copies the pointee.
+					tsh::SymbolType<> copy_type = inner_type;
+					Box<code::Expr>   to_copy   = std::move(inner);
+					if (inner_type.getRefKind() == tsh::ReferenceKind::Ref) {
+						to_copy   = makeBox<DerefExpr>(ctx, pstOrigin(stmt), std::move(to_copy));
+						copy_type = inner_type.withReferenceKind(tsh::ReferenceKind::Direct);
+					}
+					if (not copy_type.getType().isCopyable(ctx)) {
+						ctx.logInt(makeBox<dia_int::PlaceholderError>(
+							base::strConcat("Type `", copy_type.toString(), "` cannot be copied."),
+							stmt->getStablePosition()
+						));
+						return;
+					}
+					node = defgen::makeCopyExpr(ctx, std::move(to_copy));
 					return;
 				}
 
@@ -966,7 +994,7 @@ namespace compiler::helios {
 
 		const auto source_symbol_type = expr_hout->expression_type.getSymbolType();
 		const auto source_position    = pst_expr.element.unlock(ctx)->getStablePosition();
-		const auto coercion_qresult   = canCoerce(ctx, source_symbol_type, expected_type);
+		const auto coercion_qresult   = canCoerce(ctx, expr_hout->expression_type, expected_type);
 		if (coercion_qresult.hasFailed()) return query::Failed();
 
 		variant_match(coercion_qresult.valueOrThrow().getVariant()) {

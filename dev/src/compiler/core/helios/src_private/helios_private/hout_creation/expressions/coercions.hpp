@@ -35,9 +35,16 @@ namespace compiler::helios {
 	struct InvalidCoercion final {};
 
 	/**
-	 * @brief Type used to indicate a copy of a non-trivially-copyable type.
+	 * @brief Type used to indicate a copy of a non-copyable type (no copy constructor exists).
 	 */
-	struct TypeNotTriviallyCopyable final {};
+	struct TypeNotCopyable final {};
+
+	/**
+	 * @brief Type used to indicate that the coercion would implicitly copy a copyable, but not
+	 * trivially copyable value. Such copies must be accompanied by a `copy` (to copy) or a `move`
+	 * (to move).
+	 */
+	struct TypeRequiresExplicitCopyMove final {};
 
 	class CoercionResult;
 	using CoercionQResult = query::QResult<CoercionResult>;
@@ -83,7 +90,7 @@ namespace compiler::helios {
 		}
 
 		friend CoercionQResult canCoerce(
-			query::Context& ctx, tsh::SymbolType<> from, tsh::SymbolType<> to
+			query::Context& ctx, const tsh::ExpressionType<>& from, tsh::SymbolType<> to
 		);
 
 		[[nodiscard]] bool isEmptyCoercion() const noexcept {
@@ -107,11 +114,16 @@ namespace compiler::helios {
 	 */
 	class CoercionResult final {
 	public:
+		using StorageVariant
+			= std::variant<Coercion, InvalidCoercion, TypeNotCopyable, TypeRequiresExplicitCopyMove>;
+
 		CoercionResult(Coercion coercion): storage(std::move(coercion)) {}
 
 		CoercionResult(InvalidCoercion invalid): storage(invalid) {}
 
-		CoercionResult(TypeNotTriviallyCopyable invalid): storage(invalid) {}
+		CoercionResult(TypeNotCopyable invalid): storage(invalid) {}
+
+		CoercionResult(TypeRequiresExplicitCopyMove invalid): storage(invalid) {}
 
 		[[nodiscard]]
 		constexpr bool isValid() const noexcept {
@@ -144,27 +156,29 @@ namespace compiler::helios {
 		}
 
 		[[nodiscard]]
-		const std::variant<Coercion, InvalidCoercion, TypeNotTriviallyCopyable>& getVariant() const {
+		const StorageVariant& getVariant() const {
 			return storage;
 		}
 
 
 	private:
-		std::variant<Coercion, InvalidCoercion, TypeNotTriviallyCopyable> storage;
+		StorageVariant storage;
 	};
 
 	/**
-	 * @brief Checks if a coercion from `from` to `to` is possible and returns
+	 * @brief Checks if a coercion of value described by from `from` to `to` is possible and returns
 	 * a function performing the coercion if it is.
 	 */
-	CoercionQResult canCoerce(query::Context& ctx, tsh::SymbolType<> from, tsh::SymbolType<> to);
+	CoercionQResult canCoerce(
+		query::Context& ctx, const tsh::ExpressionType<>& from, tsh::SymbolType<> to
+	);
 
 	/**
-	 * @brief Checks if a coercion from `from` to the meta type is possible and returns
-	 * a function performing the coercion if it is.
+	 * @brief Checks if a coercion of the value described by `from` to the meta type is possible and
+	 * returns a function performing the coercion if it is.
 	 * @note This is a wrapper around `canCoerce` for the common case of coercing to the meta type.
 	 */
-	CoercionQResult canCoerceToMeta(query::Context& ctx, tsh::SymbolType<> from);
+	CoercionQResult canCoerceToMeta(query::Context& ctx, const tsh::ExpressionType<>& from);
 
 	/**
 	 * @brief Checks whether `expr` can be coerced to `expected_type`. Returns a coerced expression

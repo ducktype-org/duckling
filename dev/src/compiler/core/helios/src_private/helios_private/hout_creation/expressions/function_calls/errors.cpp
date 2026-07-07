@@ -247,34 +247,31 @@ namespace compiler::helios::code {
 							arg_pos, std::move(function_name)
 						);
 					}
-					variant_case(TypeNotTriviallyCopyable, data) {
+					variant_case(TypeNotCopyable, data) {
 						auto source_pos
 							= arguments_origin[data.argument_index].getStablePosition().value();
-						if (data.given_type.getRefKind() != tsh::ReferenceKind::Direct
-						    && data.expected_type.getRefKind() == tsh::ReferenceKind::Direct) {
-							return makeBox<dia_int::NotYetImplementedCodeError>(
-								base::strConcat(
-									"Copy constructor for non-trivially-copyable type `",
-									data.given_type.withReferenceKind(tsh::ReferenceKind::Direct)
-										.toString(),
-									"`. This was caused by the need of dereferencing a value of "
-									"type: "
-									"`",
-									data.given_type.toString(),
-									"`."
-								),
-								source_pos
-							);
-						} else {
-							return makeBox<dia_int::NotYetImplementedCodeError>(
-								base::strConcat(
-									"Copy constructor for non-trivially-copyable type `",
-									data.given_type.toString(),
-									"`."
-								),
-								source_pos
-							);
-						}
+						return makeBox<dia_int::NotYetImplementedCodeError>(
+							base::strConcat(
+								"Argument of type `",
+								data.given_type.withReferenceKind(tsh::ReferenceKind::Direct)
+									.toString(),
+								"` cannot be copied."
+							),
+							source_pos
+						);
+					}
+					variant_case(TypeRequiresExplicitCopyMove, data) {
+						auto source_pos
+							= arguments_origin[data.argument_index].getStablePosition().value();
+						return makeBox<dia_int::NotYetImplementedCodeError>(
+							base::strConcat(
+								"Cannot implicitly copy a value of non-trivially-copyable type `",
+								data.given_type.withReferenceKind(tsh::ReferenceKind::Direct)
+									.toString(),
+								"` as argument. Use `copy` to copy it or `move` to move it."
+							),
+							source_pos
+						);
 					}
 				}
 			}
