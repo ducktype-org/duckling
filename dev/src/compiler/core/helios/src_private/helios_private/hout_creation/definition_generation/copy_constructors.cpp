@@ -47,7 +47,7 @@ namespace compiler::helios::defgen {
 		return ctx.query<QueryGeneratedSymbol>({
 			.name = base::StrID("__copy"),
 			.generated_symbol_data
-			= GeneratedSymbolData{ GeneratedSymbolData::DefaultCopyConstructor{ type } },
+			= Constructor{ .type = type, .kind = Constructor::Kind::Copy },
 		});
 	}
 
@@ -136,7 +136,7 @@ namespace compiler::helios::defgen {
 			const SymID              source_symbol,
 			const tsh::SymbolType<>& result_symbol_type
 		) {
-			using Variable = GeneratedSymbolData::GeneratedFunctionVariable;
+			using Variable = GeneratedFunctionVariable;
 
 			const std::vector<tsh::InterfaceElement> fields
 				= owner_type.getInterface(ctx)->getFieldsView() | std::ranges::to<std::vector>();
@@ -148,8 +148,8 @@ namespace compiler::helios::defgen {
 			// var __result: T = <zero>;
 			const SymID result_symbol = ctx.query<QueryGeneratedSymbol>({
 				.name                  = base::StrID("__result"),
-				.generated_symbol_data = GeneratedSymbolData{ Variable{
-					.function_symbol = copy_sym, .variable_index = 0, .type = result_symbol_type } },
+				.generated_symbol_data = Variable{
+					.function_symbol = copy_sym, .variable_index = 0, .type = result_symbol_type },
 			});
 			body.emplace_back(makeBox<code::VariableStmt>(
 				code::generatedOrigin(),
@@ -192,7 +192,7 @@ namespace compiler::helios::defgen {
 			const SymID                         source_symbol,
 			const tsh::SymbolType<>&            result_symbol_type
 		) {
-			using Variable = GeneratedSymbolData::GeneratedFunctionVariable;
+			using Variable = GeneratedFunctionVariable;
 
 			const auto  element_type = array_type.getElementType();
 			const usize size         = array_type.getSize();
@@ -202,8 +202,8 @@ namespace compiler::helios::defgen {
 			// var __result: T[N] = <zero>;
 			const SymID res_sym = ctx.query<QueryGeneratedSymbol>({
 				.name                  = base::StrID("__result"),
-				.generated_symbol_data = GeneratedSymbolData{ Variable{
-					.function_symbol = copy_sym, .variable_index = 0, .type = result_symbol_type } },
+				.generated_symbol_data = Variable{
+					.function_symbol = copy_sym, .variable_index = 0, .type = result_symbol_type },
 			});
 			body.emplace_back(makeBox<code::VariableStmt>(
 				code::generatedOrigin(),
@@ -225,8 +225,8 @@ namespace compiler::helios::defgen {
 				// var __i: u64 = 0;
 				const SymID i_sym    = ctx.query<QueryGeneratedSymbol>({
 					   .name                  = base::StrID("__i"),
-					   .generated_symbol_data = GeneratedSymbolData{ Variable{
-						   .function_symbol = copy_sym, .variable_index = 1, .type = u64_type } },
+					   .generated_symbol_data = Variable{
+						   .function_symbol = copy_sym, .variable_index = 1, .type = u64_type },
                 });
 				auto        zero_val = numeric_value::NumericValue::createOfType(u64_abs_type)
 				                    .expect("u64 creation failed");
@@ -311,7 +311,7 @@ namespace compiler::helios::defgen {
 			const SymID                          source_symbol,
 			const tsh::SymbolType<>&             result_symbol_type
 		) {
-			using Variable = GeneratedSymbolData::GeneratedFunctionVariable;
+			using Variable = GeneratedFunctionVariable;
 
 			const auto element_type = array_type.getElementType();
 
@@ -320,8 +320,8 @@ namespace compiler::helios::defgen {
 			// var __result: List[T] = <zero>;
 			const SymID res_sym = ctx.query<QueryGeneratedSymbol>({
 				.name                  = base::StrID("__result"),
-				.generated_symbol_data = GeneratedSymbolData{ Variable{
-					.function_symbol = copy_sym, .variable_index = 0, .type = result_symbol_type } },
+				.generated_symbol_data = Variable{
+					.function_symbol = copy_sym, .variable_index = 0, .type = result_symbol_type },
 			});
 			body.emplace_back(makeBox<code::VariableStmt>(
 				code::generatedOrigin(),
@@ -341,8 +341,8 @@ namespace compiler::helios::defgen {
 			// var __i: u64 = 0;
 			const SymID i_sym    = ctx.query<QueryGeneratedSymbol>({
 				   .name                  = base::StrID("__i"),
-				   .generated_symbol_data = GeneratedSymbolData{ Variable{
-					   .function_symbol = copy_sym, .variable_index = 1, .type = u64_type } },
+				   .generated_symbol_data = Variable{
+					   .function_symbol = copy_sym, .variable_index = 1, .type = u64_type },
             });
 			auto        zero_val = numeric_value::NumericValue::createOfType(u64_abs_type)
 			                    .expect("u64 creation failed");

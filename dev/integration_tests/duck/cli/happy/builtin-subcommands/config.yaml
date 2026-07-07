@@ -1,7 +1,0 @@
-security:
-  typos:
-    enabled: true
-
-aliases:
-  my-custom-build-alias: build -j4
-  my-custom-build-alias-array: [build, -j4]

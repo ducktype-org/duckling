@@ -2821,10 +2821,10 @@ private:
 				// `WithInit`.
 				ASSERT_EQUAL_PRINT(2, deps.size());
 
-				auto dep_gsd = std::get<GeneratedSymbolData>(getSymRef(deps[0])->other);
-				ASSERT_TRUE(std::holds_alternative<GeneratedSymbolData::DefaultClassConstructor>(
-					dep_gsd.data
-				));
+				const auto* dep_ctor = std::get_if<Constructor>(&getSymRef(deps[0])->other);
+				ASSERT_TRUE(dep_ctor != nullptr);
+				ASSERT_EQUAL(dep_ctor->kind, Constructor::Kind::Default);
+				ASSERT_EQUAL(dep_ctor->type.getKind(), compiler::tsh::Kind::Class);
 			}
 
 			// ArrayHolder ctor should call a ctor of static array field, which calls a ctor of the
@@ -2843,10 +2843,9 @@ private:
 
 				bool found_array_ctor = false;
 				for (auto d: deps) {
-					auto gsd = std::get<GeneratedSymbolData>(getSymRef(d)->other);
-					if (std::holds_alternative<GeneratedSymbolData::DefaultStaticArrayConstructor>(
-							gsd.data
-						))
+					const auto* ctor = std::get_if<Constructor>(&getSymRef(d)->other);
+					if (ctor != nullptr && ctor->kind == Constructor::Kind::Default
+					    && ctor->type.getKind() == compiler::tsh::Kind::StaticArray)
 						found_array_ctor = true;
 				}
 				ASSERT_TRUE(found_array_ctor);
@@ -2942,11 +2941,10 @@ private:
 				auto call = dynamic_cast<const CallExpr*>(assign->new_value_expr.get());
 				ASSERT_TRUE(call != nullptr);
 
-				auto callee_sym = getIdentifierExprSymID(call->callee.ref()).value();
-				auto callee_gsd = std::get<GeneratedSymbolData>(getSymRef(callee_sym)->other);
-				ASSERT_TRUE(std::holds_alternative<GeneratedSymbolData::DefaultCopyConstructor>(
-					callee_gsd.data
-				));
+				auto        callee_sym = getIdentifierExprSymID(call->callee.ref()).value();
+				const auto* callee_ctor = std::get_if<Constructor>(&getSymRef(callee_sym)->other);
+				ASSERT_TRUE(callee_ctor != nullptr);
+				ASSERT_EQUAL(callee_ctor->kind, Constructor::Kind::Copy);
 			}
 
 			// A tuple is copied element-by-element just like a class. Trivial elements are
@@ -2977,9 +2975,10 @@ private:
 				ASSERT_TRUE(assign1 != nullptr);
 				auto call = dynamic_cast<const CallExpr*>(assign1->new_value_expr.get());
 				ASSERT_TRUE(call != nullptr);
-				auto callee_sym = getIdentifierExprSymID(call->callee.ref()).value();
-				auto callee_gsd = std::get<GeneratedSymbolData>(getSymRef(callee_sym)->other);
-				ASSERT_TRUE(v_matches(callee_gsd.data, GeneratedSymbolData::DefaultCopyConstructor));
+				auto        callee_sym = getIdentifierExprSymID(call->callee.ref()).value();
+				const auto* callee_ctor = std::get_if<Constructor>(&getSymRef(callee_sym)->other);
+				ASSERT_TRUE(callee_ctor != nullptr);
+				ASSERT_EQUAL(callee_ctor->kind, Constructor::Kind::Copy);
 			}
 
 			auto dump_cctor = [&](std::string_view            label,
@@ -3017,8 +3016,9 @@ private:
 			};
 
 			auto assert_generated_copy = [&](const Expr* expr) {
-				auto gsd = std::get<GeneratedSymbolData>(getSymRef(callee_of(expr))->other);
-				ASSERT_TRUE(v_matches(gsd.data, GeneratedSymbolData::DefaultCopyConstructor));
+				const auto* ctor = std::get_if<Constructor>(&getSymRef(callee_of(expr))->other);
+				ASSERT_TRUE(ctor != nullptr);
+				ASSERT_EQUAL(ctor->kind, Constructor::Kind::Copy);
 			};
 
 			// Trivially-copyable fields are byte-copied. The RHS is should be a plain field access.
@@ -3047,7 +3047,7 @@ private:
 
 			// A field whose class defines a user copy constructor calls the user code, not a
 			// generated one.
-			ASSERT_TRUE(v_matches(getSymRef(callee_of(rhs_of("nested_user")))->other, PstSymbolData)
+			ASSERT_TRUE(v_matches(getSymRef(callee_of(rhs_of("nested_user")))->other, PstImplementedSemantics)
 			);
 
 			// `box UserCopied` - deep copy whose inner pointee copy runs the user constructor.
@@ -3055,7 +3055,7 @@ private:
 				auto box_of = dynamic_cast<const BoxOfExpr*>(rhs_of("deep"));
 				ASSERT_TRUE(box_of != nullptr);
 				ASSERT_TRUE(
-					v_matches(getSymRef(callee_of(box_of->inner.get()))->other, PstSymbolData)
+					v_matches(getSymRef(callee_of(box_of->inner.get()))->other, PstImplementedSemantics)
 				);
 			}
 
