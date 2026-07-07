@@ -52,6 +52,34 @@ private:
 			// Expands are transparent to pstForAll, so they shouldn't be counted as elements.
 			ASSERT_EQUAL(element_types_count[pst::ElementKind::Expand], 0);
 		});
+
+		// Same test, but with cutoff:
+		query::utils::withContextDo([&](query::Context& ctx) {
+			auto module_file = ctx.query<compiler::frontend::QueryMainSourceFile>(module_id);
+			auto pst         = getFilePST(ctx, module_file);
+
+			auto root_element = pst->getRootElement().unlock(ctx);
+
+			std::map<pst::ElementKind, u64> element_types_count;
+
+			auto cutoff = [&](const auto& element) {
+				return element->getElementKind() == pst::ElementKind::Namespace;
+			};
+
+			auto for_all_result
+				= compiler::helios::pstForAll(ctx, root_element, [&](const auto& element) {
+					  element_types_count[element->getElementKind()]++;
+				  }, cutoff);
+
+			ASSERT_TRUE(for_all_result.status().isOk());
+
+			ASSERT_EQUAL(element_types_count[pst::ElementKind::Namespace], 0);
+			ASSERT_EQUAL(element_types_count[pst::ElementKind::Variable], 0);
+			ASSERT_EQUAL(element_types_count[pst::ElementKind::Fun], 1);
+
+			// Expands are transparent to pstForAll, so they shouldn't be counted as elements.
+			ASSERT_EQUAL(element_types_count[pst::ElementKind::Expand], 0);
+		});
 	}
 
 	void testGetStmtsFromStmtAggregate() {
