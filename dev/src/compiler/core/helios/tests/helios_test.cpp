@@ -2867,7 +2867,9 @@ private:
 				bool found_tup_ctor = false;
 				for (auto d: deps) {
 					const auto* ctor = std::get_if<Constructor>(&getSymRef(d)->other);
-					if (ctor != nullptr && ctor->kind == Constructor::Kind::Default && ctor->type.getKind() == compiler::tsh::Kind::Tuple) found_tup_ctor = true;
+					if (ctor != nullptr && ctor->kind == Constructor::Kind::Default
+					    && ctor->type.getKind() == compiler::tsh::Kind::Tuple)
+						found_tup_ctor = true;
 				}
 				ASSERT_TRUE(found_tup_ctor);
 			}

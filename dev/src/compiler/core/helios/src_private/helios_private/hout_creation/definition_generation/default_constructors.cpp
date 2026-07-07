@@ -146,12 +146,11 @@ namespace compiler::helios::defgen {
 				= tuple_interface->getFieldsView() | std::ranges::to<std::vector>();
 
 			// Prepare the ctor symbol and declaration.
-			const SymID ctor_symbol
-				= ctx.query<QueryGeneratedSymbol>({
-					.name = base::StrID("__init_tuple"),
-			        .generated_symbol_data
-					= Constructor{.type =  tuple_type, .kind = Constructor::Kind::Default},
-				});
+			const SymID ctor_symbol = ctx.query<QueryGeneratedSymbol>({
+				.name = base::StrID("__init_tuple"),
+				.generated_symbol_data
+				= Constructor{ .type = tuple_type, .kind = Constructor::Kind::Default },
+			});
 
 
 			const auto& ctor_decl = ctx.query<QueryDeclOfFun>(ctor_symbol)->valueOrThrow();
@@ -162,7 +161,7 @@ namespace compiler::helios::defgen {
 			body.reserve(1 + fields.size() + 1);
 
 			// - Declare result variable.
-			const auto  result_symbol_type = ctor_decl.return_type;
+			const auto result_symbol_type = ctor_decl.return_type;
 			const SymID result_symbol      = ctx.query<QueryGeneratedSymbol>({
 					 .name                  = base::StrID("__result"),
 					 .generated_symbol_data = GeneratedFunctionVariable{ 

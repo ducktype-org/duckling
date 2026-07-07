@@ -178,9 +178,11 @@ namespace compiler::helios {
 								)
 							    ->valueOrThrow();
 						case tsh::Kind::Tuple:
-							return ctx.query<defgen::QueryDefaultTupleConstructor>(
-								ctor.type.as<tsh::TupleAbstractType>()
-							) -> valueOrThrow();
+							return ctx
+							    .query<defgen::QueryDefaultTupleConstructor>(
+									ctor.type.as<tsh::TupleAbstractType>()
+								)
+							    ->valueOrThrow();
 						default:
 							CORE_PANIC("Unhandled default constructor type.");
 						}
