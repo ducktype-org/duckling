@@ -605,7 +605,7 @@ namespace compiler::helios {
 							template_parent.template_bake_data
 						);
 						for (const auto& param:
-						     *proper_data.template_arguments_symbols->load(std::memory_order_acq_rel
+						     *proper_data.template_arguments_symbols->load(std::memory_order_acquire
 						     )) {
 							out.emplace_back(param);
 						}
