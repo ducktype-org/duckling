@@ -2,7 +2,10 @@
 
 #include <tester/tester.hpp>
 
+#include <array>
+#include <ostream>
 #include <thread>
+#include <type_traits>
 
 // SharedBox asserts:
 static_assert(std::is_copy_constructible_v<SharedBox<int>>, "SharedBox should be copy constructible");
@@ -16,6 +19,11 @@ static_assert(std::is_move_assignable_v<SharedBox<int>>, "SharedBox should be mo
 static_assert(
 	not std::is_constructible_v<SharedBox<int>, std::nullptr_t>,
 	"SharedBox should not be constructible from nullptr"
+);
+
+static_assert(
+	std::is_constructible_v<SharedBox<long>, SharedBox<int>>,
+	"SharedBox should be constructible from compatible SharedBox"
 );
 
 struct InstancesCounter {
@@ -43,6 +51,7 @@ public:
 		TESTER_ADD_TEST(testSharedBox);
 		TESTER_ADD_TEST(testSharedBoxFromPtr);
 		TESTER_ADD_TEST(testCustomDeleter);
+		TESTER_ADD_TEST(testSharedBoxClassInheritence);
 		TESTER_ADD_TEST(testEquality);
 		TESTER_ADD_TEST(concurrentUsage<1>);
 		TESTER_ADD_TEST(concurrentUsage<2>);
@@ -190,13 +199,45 @@ private:
 
 	void testCustomDeleter() {
 		{
-			auto ib = SharedBox<int, StatefulDeleter<int>>::fromPointerWithCustomDeleter(
+			auto ib = SharedBox<int>::fromPointerWithCustomDeleter<StatefulDeleter<int>>(
 				new int(42), StatefulDeleter<int>()
 			);
 			ASSERT_EQUAL(*ib, 42);
 			ASSERT_EQUAL(StatefulDeleter<int>::s_state, 0);
 		}
 		ASSERT_EQUAL(StatefulDeleter<int>::s_state, 1);
+	}
+
+	void testSharedBoxClassInheritence() {
+		static int was_parent = 0;
+
+		class Parent {
+		public:
+			// This is non-virtual destructor, to test if the SharedBox calls the correct destructor.
+			~Parent() { was_parent += 1; }
+		};
+
+		class Child final: public Parent {
+		public:
+			std::array<int, 10> tab = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
+
+			~Child() { was_parent += 10; }
+		};
+
+		auto child = base::makeSharedBox<Child>();
+		// This should work
+		SharedBox<Parent> parent = child;
+
+		auto parent_move = std::move(parent);
+
+		child.reset();
+
+		ASSERT_EQUAL(was_parent, 0);
+
+		parent_move.reset();
+
+		// The destructor of the original object should be called, not the one of the parent class.
+		ASSERT_TRUE(was_parent == 11);
 	}
 
 	void testEquality() {
