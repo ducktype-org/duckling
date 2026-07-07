@@ -191,13 +191,21 @@ private:
 				{ directOf(many_pointer), "many-pointer" },
 				{ refOf(i32_type), "ref" },
 				{ boxOf(i32_type), "box" },
-				{ directOf(getStringType()), "string" },
 				{ directOf(getUnitType()), "unit" },
 				{ directOf(dynamic_array), "dynamic array" },
 				{ directOf(tuple), "tuple" },
 				{ directOf(function), "function" },
 			};
 			for (const auto& [symbol_type, what]: rejected) expectRejected(ctx, symbol_type, what);
+
+			// @TODO: #2636 `string` is not truly C-compatible, but the FFI
+			// builtin_stringify functions take string params, so it is accepted for
+			// now and lowered to a struct of pointer + length fields.
+			const auto& string_conv = queryConv(ctx, directOf(getStringType()));
+			ASSERT_TRUE(string_conv.has_value());
+			assertTrue(
+				base::holds<ats::StructType>(string_conv->value), "string should convert to a struct"
+			);
 		});
 	}
 

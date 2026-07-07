@@ -25,12 +25,14 @@ namespace abi::calling_conv {
 	}
 
 	/**
-	 * @brief Utility for flattening the nested structures into a vector of primitive types (int/float only).
-	 * 
+	 * @brief Utility for flattening the nested structures into a vector of primitive types
+	 * (int/float only).
+	 *
 	 * @param target Target architecture (differs in pointer size for example)
 	 * @param type The original type we want to flatten
-	 * @param expanded_layout[out] This is return parameter, where the fields will have calculated offsets
-	 * like in the original nested structure. This offset information is lost once we flatten the structures.
+	 * @param expanded_layout[out] This is return parameter, where the fields will have calculated
+	 * offsets like in the original nested structure. This offset information is lost once we
+	 * flatten the structures.
 	 */
 	std::vector<types::AbiType> flattenType(
 		const TargetABI& target, const types::AbiType& type, layout::ComputedLayout& expanded_layout

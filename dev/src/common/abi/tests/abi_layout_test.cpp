@@ -68,15 +68,17 @@ private:
 
 		// f80 (x87 long double) is present on x86_64 (16/16) but absent on
 		// aarch64; f128 (IEEE quad) is present on both.
-		const auto x_f80 = x.data_layout.float_layouts.atMaybeCopy(80);
+		const auto x_f80 = x.data_layout.float_layouts.atMaybeCopy(u64(80));
 		assertTrue(x_f80.has_value(), "x86_64 has an f80 entry");
 		assertTrue(usize(x_f80.value().size) == 16, "x86_64 f80 size");
 		assertTrue(usize(x_f80.value().alignment) == 16, "x86_64 f80 align");
 		assertTrue(
-			!a.data_layout.float_layouts.atMaybeCopy(80).has_value(), "aarch64 has no f80"
+			!a.data_layout.float_layouts.atMaybeCopy(u64(80)).has_value(), "aarch64 has no f80"
 		);
-		assertTrue(x.data_layout.float_layouts.atMaybeCopy(128).has_value(), "x86_64 has f128");
-		assertTrue(a.data_layout.float_layouts.atMaybeCopy(128).has_value(), "aarch64 has f128");
+		assertTrue(x.data_layout.float_layouts.atMaybeCopy(u64(128)).has_value(), "x86_64 has f128");
+		assertTrue(
+			a.data_layout.float_layouts.atMaybeCopy(u64(128)).has_value(), "aarch64 has f128"
+		);
 	}
 
 	static void expectLayout(
@@ -146,9 +148,8 @@ private:
 
 	void floatThenDoubleTest() {
 		// float@0..4, pad 4..8, double@8..16 → total 16, align 8.
-		auto layout = al::computeCLayout(
-			abi::x86_64Linux(), fieldsOf(at::floatType(32), at::floatType(64))
-		);
+		auto layout
+			= al::computeCLayout(abi::x86_64Linux(), fieldsOf(at::floatType(32), at::floatType(64)));
 		expectLayout(std::move(layout), 16, 8, { 0, 8 });
 	}
 
@@ -196,8 +197,7 @@ private:
 
 	void arrayOfI32Test() {
 		auto layout = al::computeCLayout(
-			abi::x86_64Linux(),
-			fieldsOf(at::arrayType(at::makeBoxAbiType(at::intType(32, true)), 3))
+			abi::x86_64Linux(), fieldsOf(at::arrayType(at::makeBoxAbiType(at::intType(32, true)), 3))
 		);
 		expectLayout(std::move(layout), 12, 4, { 0 });
 	}
@@ -206,20 +206,18 @@ private:
 		auto layout = al::computeCLayout(
 			abi::x86_64Linux(),
 			fieldsOf(
-				at::intType(8, true),
-				at::arrayType(at::makeBoxAbiType(at::intType(32, true)), 3)
+				at::intType(8, true), at::arrayType(at::makeBoxAbiType(at::intType(32, true)), 3)
 			)
 		);
 		expectLayout(std::move(layout), 16, 4, { 0, 4 });
 	}
 
 	void nestedStructTest() {
-		at::AbiType inner
-			= at::structType(fieldsOf(at::intType(8, true), at::intType(64, true)));
-		auto layout = al::computeCLayout(
-			abi::x86_64Linux(),
-			fieldsOf(at::intType(32, true), std::move(inner), at::intType(8, true))
-		);
+		at::AbiType inner  = at::structType(fieldsOf(at::intType(8, true), at::intType(64, true)));
+		auto        layout = al::computeCLayout(
+            abi::x86_64Linux(),
+            fieldsOf(at::intType(32, true), std::move(inner), at::intType(8, true))
+        );
 		// Layout: i32@0..4, pad 4..8, inner{i8,i64}@8..24, i8@24..25, pad 25..32.
 		expectLayout(std::move(layout), 32, 8, { 0, 8, 24 });
 	}

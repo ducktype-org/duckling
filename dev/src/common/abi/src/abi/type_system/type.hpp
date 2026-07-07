@@ -65,7 +65,7 @@ namespace abi::types {
 	 * borrows it (a `CRef`). Borrowing lets a converted type reference a
 	 * cached `QueryCAbiTypeOf` result for a sub-type without cloning it.
 	 */
-	using AbiTypePtr = base::BoxOrCRef<AbiType>;
+	using AbiTypePtr  = base::BoxOrCRef<AbiType>;
 	using AbiTypeCRef = base::CRef<AbiType>;
 
 	/**
@@ -81,7 +81,7 @@ namespace abi::types {
 		// `element` is an owning Box, so a copy must deep-clone it (a shallow
 		// copy is deleted by BoxOrCRef). Moves stay cheap.
 		ArrayType(const ArrayType& other);
-		ArrayType(ArrayType&&) noexcept            = default;
+		ArrayType(ArrayType&&) noexcept = default;
 		ArrayType& operator=(const ArrayType& other);
 		ArrayType& operator=(ArrayType&&) noexcept = default;
 		~ArrayType()                               = default;
@@ -102,7 +102,7 @@ namespace abi::types {
 		// Fields are owning Boxes, so a copy must deep-clone each one (a shallow
 		// copy is deleted by BoxOrCRef). Moves stay cheap.
 		StructType(const StructType& other);
-		StructType(StructType&&) noexcept            = default;
+		StructType(StructType&&) noexcept = default;
 		StructType& operator=(const StructType& other);
 		StructType& operator=(StructType&&) noexcept = default;
 		~StructType()                                = default;

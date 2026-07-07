@@ -122,7 +122,7 @@ private:
 	cc::ReturnEntry x86Return(TypeArena& arena, at::AbiType ret) {
 		std::unique_ptr<cc::TargetInfo> abi = std::make_unique<cc::X86_64ABIInfo>();
 		cc::FunctionType ft{ .return_type = arena.add(std::move(ret)), .param_types = {} };
-		return std::move(abi->computeInfo(ft).return_info);
+		return std::move(abi->computeInfo(ft).return_info).value();
 	}
 
 	cc::ArgInfo aarch64Arg(TypeArena& arena, at::AbiType arg) {
@@ -135,7 +135,7 @@ private:
 	cc::ReturnEntry aarch64Return(TypeArena& arena, at::AbiType ret) {
 		std::unique_ptr<cc::TargetInfo> abi = std::make_unique<cc::AArch64ABIInfo>();
 		cc::FunctionType ft{ .return_type = arena.add(std::move(ret)), .param_types = {} };
-		return std::move(abi->computeInfo(ft).return_info);
+		return std::move(abi->computeInfo(ft).return_info).value();
 	}
 
 	void x86Test() {

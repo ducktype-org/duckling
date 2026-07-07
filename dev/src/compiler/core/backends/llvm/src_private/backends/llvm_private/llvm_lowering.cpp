@@ -726,11 +726,11 @@ namespace compiler::backend_llvm {
 			CORE_UNREACHABLE();
 		}
 
-
 		/**
 		 * @brief Gets a LLVM pointer to the copy of a given LIRValue.
 		 *
-		 * - For `LIRPlace`, it returns the calculated address via `gepPointerFromLIRPlace` for the copied value.
+		 * - For `LIRPlace`, it returns the calculated address via `gepPointerFromLIRPlace` for the
+		 * copied value.
 		 * - For `LIRConstant`, it loads the constant value into a created temporary and returns the
 		 * address of the temporary.
 		 * - Panics for other LIRValue variants (like BlockRef or FunctionLiteral).
@@ -1033,10 +1033,9 @@ namespace compiler::backend_llvm {
 								u32(args.size()),
 								llvm::Attribute::getWithByValType(ctx, original_type)
 							);
-						}
-						else {
+						} else {
 							// If not passing by_val, but passing only by pointer,
-							// to ensure that the called function can't write to the 
+							// to ensure that the called function can't write to the
 							// original places we load it to the copy.
 							ptr = loadLIRValueToPointerCopy(lir_arg, builder);
 						}
@@ -1074,8 +1073,8 @@ namespace compiler::backend_llvm {
 						}
 					}
 					variant_case(cc::ArgInfo::ByPointer, data) {
-						// This ABI is probably not used anywhere, as it means the callee allocates a pointer
-						// and return the pointer.
+						// This ABI is probably not used anywhere, as it means the callee allocates
+						// a pointer and return the pointer.
 						result_value = builder.CreateLoad(return_original_type, call_instruction);
 					}
 				}

@@ -59,7 +59,7 @@ namespace abi::calling_conv {
 	};
 
 	struct ReturnEntry {
-		ArgInfo            info;
+		ArgInfo info;
 
 		/**
 		 * @brief Whether the return value should be passed as first argument.

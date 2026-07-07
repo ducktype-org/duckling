@@ -37,9 +37,7 @@ namespace compiler::backend_llvm {
 			// The calling-convention library lowers bool/char leaves to a single byte.
 			variant_case_novalue(at::BoolType) { return llvm::Type::getInt8Ty(context); }
 			variant_case_novalue(at::CharType) { return llvm::Type::getInt8Ty(context); }
-			variant_case_novalue(at::PointerType) {
-				return llvm::PointerType::getUnqual(context);
-			}
+			variant_case_novalue(at::PointerType) { return llvm::PointerType::getUnqual(context); }
 			variant_case(at::ArrayType, array_type) {
 				return llvm::ArrayType::get(
 					abiTypeToLLVMType(context, *array_type.element), array_type.count
