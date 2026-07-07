@@ -1,5 +1,7 @@
 #pragma once
 
+#include <base/collections/optional.hpp>
+
 #include <vm/debugger/debugger.hpp>
 
 #include <nlohmann/json.hpp>
@@ -45,7 +47,7 @@ namespace vm::debugger::debug_adapter {
 		// an arbitrary order. Deferring the launch execution ensures we only spin up the VM
 		// when fully configured, and fulfills VS Code's requirement that the 'launch' success
 		// response must be sent last, after 'configurationDone' is processed.
-		nlohmann::json deferred_launch_req = nullptr;
+		base::Optional<nlohmann::json> deferred_launch_req;
 
 		// DAP I/O
 		void send(const nlohmann::json& msg);
