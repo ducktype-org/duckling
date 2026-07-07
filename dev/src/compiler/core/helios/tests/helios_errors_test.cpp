@@ -125,7 +125,7 @@ private:
 				},
 				1
 			);
-			checkForErrorOnCompileModule(R"(fun a() = -true;)", { "No builtin unary operator" }, 1);
+			checkForErrorOnCompileModule(R"(fun a() = -true;)", { "Call failed because no matching functions were found." }, 1);
 		}
 
 		// ============================ Function calls ============================
@@ -165,7 +165,7 @@ private:
 					b(1,2,3);
 				}
 			)",
-				{ "no matching functions" },
+				{ "Call failed because no matching functions were found." },
 				1
 			);
 

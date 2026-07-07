@@ -31,33 +31,29 @@ namespace {
 		auto lhs_type = lhs->expression_type.getSymbolType();
 		auto rhs_type = rhs->expression_type.getSymbolType();
 
-		// Builtin operators only work on direct values. When provided with references or box types
+		// Numeric operators only work on direct values. When provided with references or box types
 		// we have to force a coercion to a direct type which will insert a DerefExpr. This is
 		// needed to handle cases like: var x = referenceA + referenceB.
 		auto lhs_direct = lhs_type.withReferenceKind(tsh::ReferenceKind::Direct);
 		auto rhs_direct = rhs_type.withReferenceKind(tsh::ReferenceKind::Direct);
 
 		// Try to coerce both values to the rhs direct type.
-		auto lhs_to_rhs = canCoerce(ctx, lhs_type, rhs_direct);
-		auto rhs_to_rhs = canCoerce(ctx, rhs_type, rhs_direct);
+		auto lhs_to_rhs = canCoerce(ctx, lhs_type, rhs_direct).valueOrThrow();
+		auto rhs_to_rhs = canCoerce(ctx, rhs_type, rhs_direct).valueOrThrow();
 
-		if (lhs_to_rhs.valueOrThrow().isValid() && rhs_to_rhs.valueOrThrow().isValid()) {
+		if (lhs_to_rhs.isValid() && rhs_to_rhs.isValid()) {
 			return std::make_tuple(
-				rhs_direct,
-				std::move(lhs_to_rhs.valueOrThrow()).getCoercion(),
-				std::move(rhs_to_rhs.valueOrThrow()).getCoercion()
+				rhs_direct, std::move(lhs_to_rhs).getCoercion(), std::move(rhs_to_rhs).getCoercion()
 			);
 		}
 
 		// Try to coerce both values to the lhs direct type.
-		auto lhs_to_lhs = canCoerce(ctx, lhs_type, lhs_direct);
-		auto rhs_to_lhs = canCoerce(ctx, rhs_type, lhs_direct);
+		auto lhs_to_lhs = canCoerce(ctx, lhs_type, lhs_direct).valueOrThrow();
+		auto rhs_to_lhs = canCoerce(ctx, rhs_type, lhs_direct).valueOrThrow();
 
-		if (lhs_to_lhs.valueOrThrow().isValid() && rhs_to_lhs.valueOrThrow().isValid()) {
+		if (lhs_to_lhs.isValid() && rhs_to_lhs.isValid()) {
 			return std::make_tuple(
-				lhs_direct,
-				std::move(lhs_to_lhs.valueOrThrow()).getCoercion(),
-				std::move(rhs_to_lhs.valueOrThrow()).getCoercion()
+				lhs_direct, std::move(lhs_to_lhs).getCoercion(), std::move(rhs_to_lhs).getCoercion()
 			);
 		}
 
@@ -68,9 +64,14 @@ namespace {
 
 namespace compiler::helios::code {
 	base::Optional<std::tuple<BuiltinUnary, Coercion>> findNumericUnaryBuiltin(
-		query::Context&, lexer::Operator op, const CRef<Expr> expr
+		query::Context& ctx, lexer::Operator op, const CRef<Expr> expr
 	) {
 		auto operation_kind = expr->expression_type.getType().getKind();
+		auto direct_type
+			= expr->expression_type.getSymbolType().withReferenceKind(tsh::ReferenceKind::Direct);
+		auto coercion
+			= canCoerce(ctx, expr->expression_type.getSymbolType(), direct_type).valueOrThrow();
+		if (not coercion.isValid()) return {};
 
 		const static base::Map<std::pair<lexer::Operator, tsh::Kind>, BuiltinUnary> numeric_operators
 			= {
@@ -82,7 +83,7 @@ namespace compiler::helios::code {
 		if (numeric_operators.contains({ op, operation_kind }))
 			return std::make_tuple(
 				numeric_operators.at({ op, operation_kind }),
-				Coercion::emptyCoercion(expr->expression_type.getSymbolType())
+				coercion.getCoercion()
 			);
 
 		return {};
@@ -194,14 +195,13 @@ namespace compiler::helios::code {
 										  const base::StrID                            builtin_name,
 										  const HOUTFunctionDeclaration::Operatoriness operatoriness
 									  ) -> void {
-				const auto gen_data
-					= defgen::BuiltinOperator{
+				const auto gen_data = defgen::BuiltinOperator{
 					ctx.query<tsh::QueryFunctionType>({
 						.parameter_types = param_types,
-							.result_type     = return_type,
-						}),
-						operatoriness,
-					} ;
+						.result_type     = return_type,
+					}),
+					operatoriness,
+				};
 				auto builtin = RegularBuiltinOperator{
 					.symbol = ctx.query<defgen::QueryGeneratedSymbol>({
 						.name                  = name,
