@@ -1,6 +1,6 @@
 #pragma once
 
-#include "helios/attributes/builtins.hpp"
+#include <helios/attributes/builtins.hpp>
 #include "lir_structure_fd.hpp"  // IWYU pragma: keep
 
 #include <ctv/ctv.hpp>
