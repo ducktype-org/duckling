@@ -1,0 +1,19 @@
+PreCase: |+
+  @{cd-tmp-dir}
+  @{duck-exe} init foo
+Tests:
+  nonexistent-feature:
+    Description: errors with a nonexistent feature
+    Cases:
+      nonexisting-feature:
+        test-cmd: duck -C foo build --features aaa
+        ExitCode: 1
+        Output:
+          String: |+
+            info: successfully synchronized venv \`foo\`
+        Err:
+          String: |+
+            error: while expanding features of the root package \`foo\`
+
+              Caused by:
+                there is no such feature as \`aaa\`

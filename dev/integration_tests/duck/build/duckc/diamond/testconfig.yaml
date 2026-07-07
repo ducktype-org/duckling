@@ -6,7 +6,7 @@
 PreCase: |+
   cd $DIT_TMP_DIR
   mkdir -p root/src foo/src bar/src baz/src
-  echo '@{default_src}' | tee root/src/src.dmf | tee foo/src/src.dmf | tee bar/src/src.dmf | tee baz/src/src.dmf
+  echo @{default-src} | tee root/src/src.dmf | tee foo/src/src.dmf | tee bar/src/src.dmf | tee baz/src/src.dmf
 
   echo "metadata:
     name: root
@@ -43,8 +43,8 @@ PreCase: |+
     version: 1.0.0" > baz/quackconfig.yaml
 PostCase: python3 check.py && @{cleanup_tmp_env}
 Tests:
-  duck/build/duckc/diamond:
+  diamond:
     Description: can build a project with dependencies
     Cases:
       build:
-        test_cmd: duck -C root build
+        test-cmd: duck -C root build

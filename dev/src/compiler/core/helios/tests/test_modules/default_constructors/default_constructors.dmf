@@ -15,10 +15,18 @@ class ArrayHolder {
     arr: WithInit[5];
 }
 
+class TupleHolder {
+    tup: (WithInit, WithInit);
+}
+
 class DeepStack {
     n: Nested;
 }
 
 class DeepStackTrivial {
     n: Trivial[2];
+}
+
+class TupleTrivial {
+    tup: (Trivial, Trivial);
 }

@@ -1,31 +1,18 @@
-tmp_env_files: "foo"
 features: ""
-run_post_case: "true"
-PostCase: |+
-  if [ @{run_post_case} == "true" ]; then
-    python3 check.py @{features}
-  fi
-  @{cleanup_tmp_env}
+PostCase: python3 check.py @{features} && @{cleanup_tmp_env}
+PreCase: |+
+  @{cd-tmp-dir}
+  @{duck-exe} init foo
+  echo "features:
+    foo: []
+    bar: [foo]" >> foo/quackconfig.yaml
 Tests:
-  build:
+  features:
     Description: can build a project with features
     Cases:
-      build_with_feature:
-        test_cmd: duck -C foo build --features foo
+      basic:
+        test-cmd: duck -C foo build --features foo
         features: "foo"
-      build_with_pulling_feature:
-        test_cmd: duck -C foo build --features bar
+      pulling-feature:
+        test-cmd: duck -C foo build --features bar
         features: bar foo
-      build_with_nonexisting_feature:
-        test_cmd: duck -C foo build --features aaa
-        run_post_case: "false"
-        ExitCode: 1
-        Output:
-          String: |+
-            info: successfully synchronized venv \`foo\`
-        Err:
-          String: |+
-            error: while expanding features of the root package \`foo\`
-
-              Caused by:
-                there is no such feature as \`aaa\`

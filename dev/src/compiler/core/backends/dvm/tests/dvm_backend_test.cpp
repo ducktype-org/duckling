@@ -182,7 +182,14 @@ private:
 	}
 
 	void staticArrayTest() {
-		runTest("static_arrays", {}, "1\n100\n200\n300\n600\n20\n42\n11\n13\n4\n", {}, 0);
+		runMultimoduleTest(
+			"static_arrays",
+			{ "core/builtins", "core/panicking" },
+			{},
+			"1\n100\n200\n300\n600\n20\n42\n11\n13\n4\n",
+			{},
+			0
+		);
 	}
 
 	// A string literal is lowered to a static byte-array global plus a `{ptr, len}` slice struct.
