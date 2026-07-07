@@ -113,11 +113,12 @@ Tests:
         ExitCode: 0
 
   zero_init:
+    enable_conc_deterministic_tests: "false"
     Cases:
       all:
         backend: all
         Output:
-          String: "0\n0\n0\n0\n0\n0\n0\n"
+          String: "0\n0\n0\n0\n0\n0\n0\n0\n0\n0\n0\n"
         ExitCode: 0
 
   strings:

@@ -1,8 +1,0 @@
-tmp_env_files: "foo bar"
-PostCase: python3 check.py && @{cleanup_tmp_env}
-Tests:
-  build:
-    Description: can build a project with dependencies
-    Cases:
-      build:
-        test_cmd: duck -C foo build

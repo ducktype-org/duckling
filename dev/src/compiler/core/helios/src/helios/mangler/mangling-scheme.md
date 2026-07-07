@@ -162,10 +162,9 @@ either in the scheme or it's implementation, they should be reflected here.
                         | "md"                              // module destructor
                         | "gc"                              // global variable constructor
                         | "gd"                              // global variable destructor
-                        | "ic" <function-type>              // implicit class constructor
-                        | "dc" <function-type>              // default class constructor
-                        | "ds" <function-type>              // default static array constructor
-                        | "dt" <function-type>              // default tuple constructor
+                        | "ic" <function-type>              // implicit constructor (any type: class, tuple, ...; the preceding mangled type disambiguates)
+                        | "dc" <function-type>              // default constructor (any type: class, static array, tuple, ...; the preceding mangled type disambiguates)
+                        | "cc" <function-type>              // default copy constructor (any type: class, static array, tuple, list; the preceding mangled type disambiguates)
                         | "dd" <function-type>              // default destructor
                         | "ts" <function-type>              // toString method
                         | "length" <function-type>          // length method

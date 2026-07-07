@@ -1,0 +1,19 @@
+PreCase: |+
+  @{cd-tmp-dir}
+  @{duck-exe} init foo
+  @{duck-exe} init bar
+  echo "dependencies:
+    bar:
+      source:
+        path: ../bar/
+      features: [b]" >> foo/quackconfig.yaml
+Tests:
+  nonexistent-dep-feature:
+    Description: cannot sync a project with a nonexistent dependency feature
+    Cases:
+      sync:
+        test-cmd: duck -C foo sync
+        ExitCode: 1
+        Err:
+          Run: |+
+            echo "error: package at the directory \`$DIT_TMP_DIR/bar\` does not have feature \`b\`"

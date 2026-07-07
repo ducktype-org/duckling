@@ -119,8 +119,8 @@ namespace compiler::helios {
 			variant_case(errors::Ambiguity, _) {
 				auto msg = makeBox<ShadowedVariableLookupError>(error_position.resolve(ctx));
 				for (auto& leaf: lookup_result->leaves) {
-					if_opt_some(getSymRef(leaf)->getPSTDataOpt(), pst_data) {
-						auto decl_pos = pst_data->getElement().unlock(ctx)->getStablePosition();
+					if_opt_some(getSymRef(leaf)->maybePstElement(), pst_elem) {
+						auto decl_pos = pst_elem.unlock(ctx)->getStablePosition();
 						msg->addAttachedMessage(makeBox<ShadowingDeclarationNote>(decl_pos));
 					}
 				}

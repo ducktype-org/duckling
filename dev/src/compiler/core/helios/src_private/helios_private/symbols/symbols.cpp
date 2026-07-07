@@ -9,7 +9,9 @@
 #include <helios/hout/hout.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/queries/function_queries.hpp>
+#include <helios/symbols/query_class_of_member.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
+#include <helios/symbols/query_type_symbol_data.hpp>
 #include <helios/tsh/abstract_type.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/utils/hout_walkers.hpp>
@@ -21,6 +23,7 @@
 #include <helios_private/lookup/lookup_chain.hpp>
 #include <helios_private/pst_layer/pst_parent.hpp>
 #include <helios_private/scopes/scopes.hpp>
+#include <helios_private/symbols/generated_symbol_data.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 
 #include <base/collections/optional.hpp>
@@ -37,37 +40,51 @@
 
 namespace compiler::helios {
 	bool implementsQueryCodeOfFun(SymID id) {
-		if (kind(id) != SymbolKind::Function && kind(id) != SymbolKind::Method) return false;
+		// Builtins have FunctionDeclaration kind, but can implement code of fun.
+		if (kind(id) != SymbolKind::Function && kind(id) != SymbolKind::Method
+		    && kind(id) != SymbolKind::FunctionDeclaration)
+			return false;
+
 		variant_match(getSymRef(id)->other) {
-			variant_case_novalue(PstSymbolData) { return true; }
-			variant_case(defgen::GeneratedSymbolData, generated_data) {
-				variant_match(generated_data.data) {
-					variant_case_novalue(defgen::GeneratedSymbolData::BuiltinOperator) {
-						return false;
-					}
-					variant_default { return true; }
-				}
+			variant_case_novalue(PstImplementedSemantics) { return true; }
+			variant_case(BuiltinSemantics, data) {
+				// Only if implemented in HOUT, then it can be called with code of fun.
+				return getBuiltinOrigins(data.builtin).contains(BuiltinOrigin::HOUT);
 			}
-			variant_default { CORE_PANIC("Case not covered"); }
+			variant_case_novalue(GENERATED_SYMBOL_SEMANTICS_LIST) {
+				return kind(id) != SymbolKind::FunctionDeclaration;
+			}
+			variant_default { CORE_PANIC("Not implemented."); }
 		}
 		CORE_UNREACHABLE();
 	}
 
 	EmissionPolicy emissionPolicy(SymID id) {
 		variant_match(getSymRef(id)->other) {
-			variant_case_novalue(PstSymbolData) { return EmissionPolicy::OwnerOnly; }
-			variant_case(defgen::GeneratedSymbolData, generated_data) {
-				variant_match(generated_data.data) {
-					variant_case_novalue(
-						defgen::GeneratedSymbolData::BuiltinOperator,
-						defgen::GeneratedSymbolData::ScriptMainWrapper
-					) {
-						return EmissionPolicy::OwnerOnly;
-					}
-					variant_default { return EmissionPolicy::Replicated; }
-				}
+			variant_case_novalue(PstImplementedSemantics) { return EmissionPolicy::OwnerOnly; }
+			variant_case(BuiltinSemantics, data) {
+				// Only if HOUT implements the builtin we want to replicate it.
+				return getBuiltinOrigins(data.builtin).contains(BuiltinOrigin::HOUT)
+				         ? EmissionPolicy::Replicated
+				         : EmissionPolicy::OwnerOnly;
 			}
-			variant_default { CORE_PANIC("Case not covered"); }
+			variant_case_novalue(defgen::BuiltinOperator, defgen::ScriptMainWrapper) {
+				return EmissionPolicy::OwnerOnly;
+			}
+			variant_case_novalue(
+				defgen::Constructor,
+				defgen::Method,
+				defgen::Parameter,
+				defgen::SelfParameter,
+				defgen::Field,
+				defgen::GeneratedFunctionVariable,
+				defgen::ControlFlowLocal,
+				defgen::ReplExpressionWrapper,
+				defgen::ReplInstructionWrapper
+			) {
+				return EmissionPolicy::Replicated;
+			}
+			variant_default { CORE_PANIC("Unhandled symbol semantics"); }
 		}
 		CORE_UNREACHABLE();
 	}
@@ -105,18 +122,9 @@ namespace compiler::helios {
 	bool isGlobalVar(query::Context& ctx, SymID id) {
 		CORE_ASSERT(getSymRef(id)->common.kind == SymbolKind::Variable, "Not a variable.");
 
-		// Generated symbol might have appeared here when adding new generated locals into the
-		// function when desugaring for loops. We filter them out here since rest of the function
-		// assumes we have a PST symbol.
-		CRef<SymbolData> symbol_data = getSymRef(id);
-		if (std::holds_alternative<defgen::GeneratedSymbolData>(symbol_data->other)) {
-			auto gsd = std::get<defgen::GeneratedSymbolData>(symbol_data->other);
-			variant_match(gsd.data) {
-				variant_case_novalue(defgen::GeneratedSymbolData::ControlFlowLocal) return false;
-				variant_default CORE_PANIC("Unhandled generated symbol in `isGlobalVar()`");
-			}
-		}
-
+		// For now if the symbol doesn't have a PST element it is not global,
+		// Maybe be not true if we have generated globals in the future.
+		if_opt_none(getSymRef(id)->maybePstElement()) return false;
 
 		// We go up the PST until we find a statement that determines whether the variable is global
 		// or not.
@@ -172,31 +180,22 @@ namespace compiler::helios {
 					CORE_UNREACHABLE();
 				}
 			},
-			getSymRef(id)->getPSTData()->getElement().unlock(ctx)
+			getSymRef(id)->maybePstElement().value().unlock(ctx)
 		);
 	}
 
 	SymbolKind kind(SymID id) { return getSymRef(id)->common.kind; }
 
-	ScopeID scope(SymID id) { return getSymRef(id)->getScope(); }
+	ScopeID scope(SymID id) { return getSymRef(id)->getScope().value(); }
 
-	base::Optional<ScopeID> maybeScope(SymID id) {
-		variant_match(getSymRef(id)->other) {
-			variant_case(PstSymbolData, pst_data) { return pst_data.scope; }
-			variant_case(defgen::GeneratedSymbolData, gen_data) { return gen_data.maybeScope(); }
-			variant_default { CORE_PANIC("Unhandled symbol kind"); }
-		}
-		CORE_UNREACHABLE();
-	}
+	base::Optional<ScopeID> maybeScope(SymID id) { return getSymRef(id)->getScope(); }
 
 	base::Optional<pst::Access<pst::Stmt>> stmt(query::Context& ctx, SymID id) {
 		return getSymRef(id)->stmtCast(ctx);
 	}
 
 	base::Optional<pst::AccessLocked<pst::LangElement>> maybeSymbolPst(SymID id) {
-		return getSymRef(id)->getPSTDataOpt().map([](CRef<PstSymbolData> data) {
-			return data->getElement();
-		});
+		return getSymRef(id)->maybePstElement();
 	}
 
 	template<typename Attribute>
@@ -259,9 +258,16 @@ namespace compiler::helios {
 				));
 				query::throwFailed();
 			}
-			auto ident    = pst_attr_value->getNameByIndex(0);
-			auto name     = ident.unlock(ctx)->unwrap();
-			auto attr_opt = attrFromStr(name);
+			auto ident = pst_attr_value->getNameByIndex(0);
+			auto name  = ident.unlock(ctx)->unwrap();
+
+			// Pass the attribute argument list (e.g. the "ptr_from_slice" in
+			// @builtin("ptr_from_slice")) to the per-attribute parser, empty when there is no
+			// `(...)`. Each parser validates and consumes the PST arguments itself.
+			base::Optional<pst::AccessLocked<pst::AtrArgList>> args;
+			if (pst_attr->hasArgs()) args = pst_attr->getArgs();
+
+			auto attr_opt = attrFromStr(ctx, name, args);
 			if_opt_none(attr_opt) {
 				ctx.logInt(makeBox<dia_int::PlaceholderError>(
 					base::strConcat("Attribute name '", name, "' is not recognized"),
@@ -309,11 +315,31 @@ namespace compiler::helios {
 	) {
 		// @TODO: change this function to visitor to avoid dynamic_casts
 
-		PstSymbolData pst_data(scope, stmt->getHash());
 
 		// Attribute handling
 		auto attributes           = attributesFromPSTStatement(ctx, stmt);
 		bool is_ignored_by_lookup = std::ranges::any_of(attributes, &disablesLookup);
+
+		// Check if it is a builtin.
+		if_opt_some(getAttrInVector<attributes::Builtin>(attributes), builtin_data) {
+			auto function = stmt.dynamicCast<pst::FunDecl>().value();
+			return SymbolData::makeBuiltinSymbolData(
+				{
+					.name                 = function->getName().unlock(ctx)->unwrap(),
+					.kind                 = SymbolKind::FunctionDeclaration,
+					.is_ignored_by_lookup = is_ignored_by_lookup,
+					.attributes           = std::move(attributes),
+
+				},
+				BuiltinSemantics{
+					scope,
+					stmt->getHash(),
+					builtin_data->builtin,
+				}
+			);
+		}
+
+		PstImplementedSemantics pst_data(scope, stmt->getHash());
 
 		switch (stmt->getStmtKind()) {
 		case pst::StmtKind::Fun: {
@@ -545,10 +571,6 @@ namespace compiler::helios {
 			);
 		}
 		case pst::StmtKind::CopyConstructor: {
-			// left for code consistency
-			[[maybe_unused]]
-			auto constructor
-				= stmt.dynamicCast<pst::CopyConstructor>().value();
 			return SymbolData::makePSTSymbolData(
 				{
 					.name                 = lang_def::keywordToStr(lang_def::Keyword::Copy),
@@ -609,7 +631,7 @@ namespace compiler::helios {
 					.name = parameter->getName().unlock(ctx)->unwrap(),
 					.kind = SymbolKind::Parameter,
 				},
-				PstSymbolData(scope, element->getHash())
+				PstImplementedSemantics(scope, element->getHash())
 			);
 		}
 
@@ -625,7 +647,7 @@ namespace compiler::helios {
 						.name = ident_wrapper->unwrap(),
 						.kind = SymbolKind::Variable,
 					},
-					PstSymbolData(scope, element->getHash())
+					PstImplementedSemantics(scope, element->getHash())
 				);
 			} else {
 				CORE_PANIC("IdentifierWrapper in QuerySymbolOfStmt with unsupported parent");
@@ -826,7 +848,7 @@ namespace compiler::helios {
 			case SymbolKind::Using:
 			case SymbolKind::Import: {
 				QueryLinkedScopeVisitor visitor(ctx, key);
-				key.ref->getPSTData()->getElement().unlock(ctx)->acceptVisitor(visitor);
+				key.ref->maybePstElement().value().unlock(ctx)->acceptVisitor(visitor);
 				return visitor.result_scope.value();
 			}
 			default: {
@@ -859,8 +881,8 @@ namespace compiler::helios {
 			std::vector<tpc::Identifier> pointed_chain;
 			if (kind(key) == SymbolKind::Using) {
 				auto dotted = getSymRef(key)
-				                  ->getPSTData()
-				                  ->getElement()
+				                  ->maybePstElement()
+				                  .value()
 				                  .unlock(ctx)
 				                  .dynamicCast<pst::Using>()
 				                  .value()
@@ -871,8 +893,8 @@ namespace compiler::helios {
 					pointed_chain[i] = { .value = dotted->getNameByIndex(i).unlock(ctx)->unwrap() };
 			} else if (kind(key) == SymbolKind::Alias) {
 				auto dotted = getSymRef(key)
-				                  ->getPSTData()
-				                  ->getElement()
+				                  ->maybePstElement()
+				                  .value()
 				                  .unlock(ctx)
 				                  .dynamicCast<pst::Alias>()
 				                  .value()
@@ -906,8 +928,8 @@ namespace compiler::helios {
 
 			// Get the const's data
 			const auto pst = getSymRef(key)
-			                     ->getPSTData()
-			                     ->getElement()
+			                     ->maybePstElement()
+			                     .value()
 			                     .unlock(ctx)
 			                     .dynamicCast<pst::Const>()
 			                     .value();
@@ -970,12 +992,12 @@ namespace compiler::helios {
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			std::vector<pst::AccessLocked<pst::StmtSpecifier>> specifiers;
-			if (std::holds_alternative<defgen::GeneratedSymbolData>(getSymRef(key)->other)) {
+			if (!std::holds_alternative<PstImplementedSemantics>(getSymRef(key)->other)) {
 				// Generated symbols have no specifiers (for now)
 				return {};
 			}
 
-			auto pst_element = getSymRef(key)->getPSTData()->getElement().unlock(ctx);
+			auto pst_element = getSymRef(key)->maybePstElement().value().unlock(ctx);
 
 			// SpecifierBlock only has a "CodeBlock" child, which can has "Stmt" children.
 			//
@@ -1012,13 +1034,14 @@ namespace compiler::helios {
 	namespace defgen {
 		base::Bit256 KeyFor_QueryGeneratedSymbol::queryUnstablePerfectHash() const {
 			return hashing::justHash<hashing::SHA256>(
-				std::hash<base::StrID>()(name), generated_symbol_data.queryUnstablePerfectHash()
+				std::hash<base::StrID>()(name),
+				generatedSymbolUnstablePerfectHash(generated_symbol_data)
 			);
 		}
 
 		struct IMPLEMENT_QUERY(QueryGeneratedSymbol, SymbolData) {
 			static auto provide(Context&, QKey key) -> PResult {
-				return SymbolData::makeGeneratedSymbol(key.name, key.generated_symbol_data);
+				return SymbolData::makeGeneratedSymbolData(key.name, key.generated_symbol_data);
 			}
 
 			QUERY_AUTO_CACHE_CONSTRUCT_FROM_CREF_IGNORE_CONSTRUCTIBILITY_CHECK
@@ -1048,8 +1071,7 @@ namespace compiler::helios {
 	struct IMPLEMENT_QUERY(QueryDirectFunctionCalls, query::QResult<std::vector<SymID>>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			CORE_ASSERT(
-				kind(key) == SymbolKind::Function || kind(key) == SymbolKind::Method
-					|| kind(key) == SymbolKind::FunctionDeclaration,
+				isFunctionLike(kind(key)),
 				"Query function dependencies called on non-function symbol"
 			);
 
