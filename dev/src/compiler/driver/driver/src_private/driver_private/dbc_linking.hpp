@@ -1,8 +1,8 @@
 #pragma once
 
-#include <artifacts/artifacts.hpp>
-
 #include <base/types/ok_bad.hpp>
+
+#include <artifacts/artifacts.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
 

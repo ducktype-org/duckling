@@ -100,7 +100,7 @@ namespace compiler::driver {
 			/**
 			 * @brief Whether to link the c standard library.
 			 */
-			bool native_link_c_standard_lib;
+			bool native_link_c_standard_lib = true;
 
 			/**
 			 * Options only supported on DVM backend.

@@ -525,7 +525,7 @@ namespace compiler::driver {
 				auto dvm_module = compileLIRModuleToDVM(&script_lir.value(), ctx, false);
 
 				auto script_obj_artifact = global_state::getRootCollection()->fileArtifactAtOrNew(
-					base::StrID(base::strConcat(script_lir->module_id, ".dbc"))
+					base::StrID(base::strConcat(script_lir->module_id, ".o.dbc"))
 				);
 				std::ofstream output_file(
 					script_obj_artifact.file.getFilePath().getPath(), std::ios::binary
@@ -546,7 +546,7 @@ namespace compiler::driver {
 
 				std::vector<artifacts::FileArtifact> dvm_objs = { std::move(script_obj_artifact) };
 				if (link_std_lib)
-					for (auto dvm_std_obj: getStdLibDVMArtifacts())
+					for (auto&& dvm_std_obj: getStdLibDVMArtifacts())
 						dvm_objs.emplace_back(std::move(dvm_std_obj));
 
 
@@ -604,6 +604,11 @@ namespace compiler::driver {
 					getStdLibDVMArtifacts() | transform(&artifacts::FileArtifact::file)
 					| to<std::vector>()
 				);
+				if (!parse_result.has_value()) {
+					error_message
+						= base::strConcat("Failed to load std bytecode: ", parse_result.error());
+					return;
+				}
 				dvm_module.code.mergeFrom(std::move(parse_result).value());
 				// @TODO: #2895 deal with this once weak/strong symbols are added
 				deduplicateCodeCollection(dvm_module.code);

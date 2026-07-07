@@ -942,18 +942,20 @@ clah::Clah getClahForMain() {
 								   return 1;
 							   }
 
-							   // `run` shares its stdout with the script being executed, so build
-		                       // progress (standard library compilation, archiving, ...) must not
-		                       // be printed there.
-							   auto prev_user_logs         = logger::enable_user_logs;
-							   logger::enable_user_logs    = false;
-							   auto std_compilation_result = compiler::driver::compilePackages(
-								   compiler::driver::getLoadedStdLibCompilationTasks()
-							   );
-							   logger::enable_user_logs = prev_user_logs;
-							   if (std_compilation_result.isBad()) {
-								   compiler::driver::exit();
-								   return 1;
+							   {
+								   // `run` shares its stdout with the script being executed, so
+			                       // build progress (standard library compilation, archiving, ...)
+			                       // must not be printed there for now.
+								   auto prev_user_logs      = logger::enable_user_logs;
+								   logger::enable_user_logs = false;
+								   defer(logger::enable_user_logs = prev_user_logs);
+								   auto std_compilation_result = compiler::driver::compilePackages(
+									   compiler::driver::getLoadedStdLibCompilationTasks()
+								   );
+								   if (std_compilation_result.isBad()) {
+									   compiler::driver::exit();
+									   return 1;
+								   }
 							   }
 
 							   auto run_result = driver::runScriptOnDVM(stdlib_options.stdActive());

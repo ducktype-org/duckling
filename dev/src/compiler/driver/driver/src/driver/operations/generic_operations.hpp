@@ -73,8 +73,9 @@ namespace compiler::driver {
 	 * The script file and artifact root must be set in global_state via init before calling this
 	 * function.
 	 *
-	 * @param backend_type     Whether to use DVM or LLVM backend.
-	 * @param linking_options  Linker configuration (ignored for DVM backend).
+	 * @param backend_type  Whether to use DVM or LLVM backend.
+	 * @param std_lib_opts  Standard library configuration.
+	 * @param linking_opts  Linking configuration.
 	 */
 	base::OkBad compileScript(
 		BackendType                          backend_type,

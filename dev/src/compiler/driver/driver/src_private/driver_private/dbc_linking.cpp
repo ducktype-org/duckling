@@ -1,7 +1,6 @@
 #include "dbc_linking.hpp"
 
 #include <debug_info/debug_info_io.hpp>
-
 #include <global_state/artifacts_location.hpp>
 #include <global_state/global_logger.hpp>
 #include <global_state/packages.hpp>
@@ -64,9 +63,8 @@ namespace compiler::driver {
 		// @TODO: #2895 deal with this once weak/strong symbols are added
 		deduplicateCodeCollection(merged_code);
 
-		auto output_file = global_state::getRootCollection()->fileArtifactAtOrNew(
-			base::StrID(output_file_name)
-		);
+		auto output_file
+			= global_state::getRootCollection()->fileArtifactAtOrNew(base::StrID(output_file_name));
 		std::ofstream out(output_file.file.getFilePath().getPath(), std::ios::binary);
 		if (!out.is_open()) CORE_PANIC("Failed to open DVM package output file for writing");
 		vm::code::serializeCode(merged_code, out);
