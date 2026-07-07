@@ -2747,9 +2747,11 @@ private:
 		auto trivial_sym      = getChain("Trivial", root_scope).back();
 		auto with_init_sym    = getChain("WithInit", root_scope).back();
 		auto nested_sym       = getChain("Nested", root_scope).back();
-		auto holder_sym       = getChain("ArrayHolder", root_scope).back();
+		auto arr_holder_sym   = getChain("ArrayHolder", root_scope).back();
+		auto tup_holder_sym   = getChain("TupleHolder", root_scope).back();
 		auto deep_sym         = getChain("DeepStack", root_scope).back();
 		auto deep_trivial_sym = getChain("DeepStackTrivial", root_scope).back();
+		auto tup_trivial_sym  = getChain("TupleTrivial", root_scope).back();
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto get_class_type = [&](SymID sym_id) {
@@ -2830,9 +2832,9 @@ private:
 			// ArrayHolder ctor should call a ctor of static array field, which calls a ctor of the
 			// inner element.
 			{
-				auto        holder_st = get_class_type(holder_sym);
+				auto        arr_holder_st = get_class_type(arr_holder_sym);
 				const auto& expr
-					= ctx.query<QueryDefaultInitializerExpr>(holder_st)->valueOrThrow();
+					= ctx.query<QueryDefaultInitializerExpr>(arr_holder_st)->valueOrThrow();
 
 				auto call     = dynamic_cast<const CallExpr*>(expr.get());
 				auto ctor_sym = getIdentifierExprSymID(call->callee.ref()).value();
@@ -2849,6 +2851,30 @@ private:
 						found_array_ctor = true;
 				}
 				ASSERT_TRUE(found_array_ctor);
+			}
+
+			// TupleHolder ctor should call a ctor of the tuple field, which calls a ctor of the
+			// inner element.
+			{
+				auto        tup_holder_st = get_class_type(tup_holder_sym);
+				const auto& expr
+					= ctx.query<QueryDefaultInitializerExpr>(tup_holder_st)->valueOrThrow();
+
+				auto call     = dynamic_cast<const CallExpr*>(expr.get());
+				auto ctor_sym = getIdentifierExprSymID(call->callee.ref()).value();
+				auto deps     = ctx.query<QueryTransitiveFunctionCalls>(ctor_sym)->valueOrThrow();
+
+				// Ctor(TupleHolder) -> Ctor((WithInit, WithInit)) -> Ctor(WithInit)
+				ASSERT_EQUAL_PRINT(3, deps.size());
+
+				bool found_tup_ctor = false;
+				for (auto d: deps) {
+					const auto* ctor = std::get_if<Constructor>(&getSymRef(d)->other);
+					if (ctor != nullptr && ctor->kind == Constructor::Kind::Default
+					    && ctor->type.getKind() == compiler::tsh::Kind::Tuple)
+						found_tup_ctor = true;
+				}
+				ASSERT_TRUE(found_tup_ctor);
 			}
 
 			// `DeepStack` ctor should call a ctor of the `Nested` field, which calls a ctor of
@@ -2872,6 +2898,16 @@ private:
 				auto        deep_trivial_st = get_class_type(deep_trivial_sym);
 				const auto& expr
 					= ctx.query<QueryDefaultInitializerExpr>(deep_trivial_st)->valueOrThrow();
+				ASSERT_TRUE(dynamic_cast<const DefaultValueExpr*>(expr.get()) != nullptr);
+			}
+
+			// `TupleTrivial` ctor should not call any default constructors, since it stores
+			// a tuple of trivially zero-initializable types which can be zero initialized,
+			// thus its zero-initializable.
+			{
+				auto        tup_trivial_st = get_class_type(tup_trivial_sym);
+				const auto& expr
+					= ctx.query<QueryDefaultInitializerExpr>(tup_trivial_st)->valueOrThrow();
 				ASSERT_TRUE(dynamic_cast<const DefaultValueExpr*>(expr.get()) != nullptr);
 			}
 		});

@@ -620,6 +620,19 @@ private:
 				{ "Type `List` cannot be default initialized" },
 				1
 			);
+
+			checkForErrorOnCompileModule(
+				R"(
+				class Inner { non_defaultable: ref i64; }
+
+				fun main() -> i64 = {
+					var tup: (Inner, i64);
+					return 0;
+				}
+			)",
+				{ "Type `Tuple(Class Inner, i64)` cannot be default initialized" },
+				1
+			);
 		}
 
 
@@ -872,19 +885,6 @@ private:
 				{ "Feature not implemented", "zero-sized classes" },
 				1
 			);
-
-			checkForErrorOnCompileModule(
-				R"(
-				class A { a: i64 = 1; }
-				fun main() -> i64 = {
-					var a: (i32, A);
-					return 0;
-				}
-			)",
-				{ "Feature not implemented", "Generating default constructors for", "tuple types" },
-				1
-			);
-
 
 			checkForErrorOnCompileModule(
 				R"(
