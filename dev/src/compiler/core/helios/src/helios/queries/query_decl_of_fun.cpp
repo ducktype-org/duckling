@@ -3,6 +3,7 @@
 #include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/elements/hierarchy/actions/all_actions.hpp>
 #include <frontend/pst_parser/elements/hierarchy/actions/return.hpp>
+#include <frontend/pst_parser/elements/hierarchy/class_elements/copy_constructor.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/field.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/method.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
@@ -13,6 +14,7 @@
 #include <helios/hout/elements.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/mangler/mangler.hpp>
+#include <helios/symbols/query_class_of_member.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/tsh/expression_type.hpp>
@@ -313,6 +315,18 @@ namespace compiler::helios {
 				                     .origin        = code::generatedOrigin() }
 				);
 			}
+
+			void visitCopyConstructor(pst::Access<pst::CopyConstructor> stmt) final {
+				emplaceDeclaration(stmt->getParams(), {});
+
+				const auto class_type
+					= ctx.query<QueryClassOfMember>(original_symbol)->valueOrThrow();
+				this->out->return_type = tsh::SymbolType<>{
+					class_type,
+					tsh::ReferenceKind::Direct,
+					tsh::Mutability::Mutable,
+				};
+			}
 		};
 
 		/**
@@ -470,7 +484,8 @@ namespace compiler::helios {
 			switch (kind(key)) {
 			case SymbolKind::Function:
 			case SymbolKind::FunctionDeclaration:
-			case SymbolKind::Method: {
+			case SymbolKind::Method:
+			case SymbolKind::Constructor: {
 				variant_match(getSymRef(key)->other) {
 					variant_case_novalue(PstImplementedSemantics, BuiltinSemantics) {
 						DeclarationVisitor decl_maker(ctx, key);
@@ -492,6 +507,8 @@ namespace compiler::helios {
 								key, return_type, {}, code::generatedOrigin()
 							};
 						}
+						case defgen::Constructor::Kind::Copy:
+							return funDeclFromType(ctx, key);
 						}
 						CORE_UNREACHABLE();
 					}

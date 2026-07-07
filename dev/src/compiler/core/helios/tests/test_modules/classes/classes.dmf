@@ -12,12 +12,13 @@ class FirstClassEver {
         a = new_a;
     }
 
-    private {
-        FirstClassEver.copy(other: FirstClassEver) = {
-            a = other.a;
-            b = other.b;
-        }
-    }
+    # @TODO: #2000 Re-enable once copy constructors are called in coercions. 
+    # User defined copy constructor causes this class to be not trivially copyable. 
+    # private {
+    #     FirstClassEver.copy(other: const ref FirstClassEver) = {
+    #         return FirstClassEver(other.a, other.b);
+    #     }
+    # }
 
     FirstClassEver.destroy() = {}
 }
