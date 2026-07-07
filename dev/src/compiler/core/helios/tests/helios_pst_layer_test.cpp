@@ -66,10 +66,12 @@ private:
 				return element->getElementKind() == pst::ElementKind::Namespace;
 			};
 
-			auto for_all_result
-				= compiler::helios::pstForAll(ctx, root_element, [&](const auto& element) {
-					  element_types_count[element->getElementKind()]++;
-				  }, cutoff);
+			auto for_all_result = compiler::helios::pstForAll(
+				ctx,
+				root_element,
+				[&](const auto& element) { element_types_count[element->getElementKind()]++; },
+				cutoff
+			);
 
 			ASSERT_TRUE(for_all_result.status().isOk());
 
