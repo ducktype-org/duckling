@@ -1,7 +1,6 @@
 #include "mir_builders.hpp"
 
 #include <helios/symbols/query_type_of_symbol.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <mir/mir_lowering/mir_lifetimes.hpp>
 #include <mir/mir_structure/mir_local_ref.hpp>

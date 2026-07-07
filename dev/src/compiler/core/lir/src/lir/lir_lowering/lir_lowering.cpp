@@ -20,7 +20,6 @@
 #include <helios/hout/hout.hpp>
 #include <helios/mangler/mangler.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/tsh/queries.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 #include <tsl/queries.hpp>
@@ -72,7 +71,7 @@ namespace compiler::lir {
 		auto symbol_abi = ctx.query<helios::QuerySymbolABI>(helios_id)->valueOrPanicMsg(
 			"Handling errors in MIR is not supported yet"
 		);
-		auto link_once    = helios::shouldLinkOnce(helios_id);
+		auto link_once    = helios::emissionPolicy(helios_id) == helios::EmissionPolicy::Replicated;
 		auto mangled_name = helios::mangler::getSimpleMangledName(ctx, helios_id);
 
 		auto return_type = mirReturnType2LirLayout(ctx, type.getResultType());
@@ -118,8 +117,6 @@ namespace compiler::lir {
 			return Operation::ListPush;
 		case mir::Operation::ListPop:
 			return Operation::ListPop;
-		case mir::Operation::ListLen:
-			return Operation::ListLen;
 		case mir::Operation::ZeroInitialize:
 			return Operation::ZeroInitialize;
 
@@ -592,7 +589,6 @@ namespace compiler::lir {
 					break;
 				}
 				case mir::Operation::AddressOf:
-				case mir::Operation::ListLen:
 				case mir::Operation::BoxAlloc:
 				case mir::Operation::IntegerAdd:
 				case mir::Operation::IntegerNeg:
@@ -650,7 +646,8 @@ namespace compiler::lir {
 					);
 					break;
 				}
-				case mir::Operation::DestructIf: {
+				case mir::Operation::DestructIf:
+				case mir::Operation::Destruct: {
 					const auto& to_destruct = mir_instruction.arguments.at(0).get<mir::MIRPlace>();
 					const auto& type        = to_destruct.type;
 
@@ -855,7 +852,8 @@ namespace compiler::lir {
 				auto [link_once, ignore_on_dvm, ignore_on_llvm] = [&]() {
 					variant_match(key.function->helios_id) {
 						variant_case(mir::FunctionSymID, sym) {
-							bool link_once_val = helios::shouldLinkOnce(sym.id);
+							bool link_once_val = helios::emissionPolicy(sym.id)
+							                  == helios::EmissionPolicy::Replicated;
 							bool ignore_on_dvm_val
 								= helios::hasAttribute<helios::attributes::NativeOnlyImpl>(sym.id);
 							bool ignore_on_llvm_val

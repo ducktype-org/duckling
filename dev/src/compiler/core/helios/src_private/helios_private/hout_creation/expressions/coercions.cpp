@@ -82,8 +82,7 @@ namespace compiler::helios {
 					ctx.query<defgen::QueryGeneratedSymbol>(
 						{ .name = base::StrID{ base::strConcat("_", i + 1) },
 				          .generated_symbol_data
-				          = defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::Field{
-							  .parent_type = source_type, .index = i } } }
+				          = defgen::Field{ .parent_type = source_type, .index = i } }
 					)
 				);
 
@@ -170,10 +169,7 @@ namespace compiler::helios {
 	}
 
 	CoercionQResult canCoerce(
-		query::Context&         ctx,
-		const tsh::SymbolType<> from,
-		const tsh::SymbolType<> to,
-		bool                    bypass_trivial_copyability_check
+		query::Context& ctx, const tsh::SymbolType<> from, const tsh::SymbolType<> to
 	) {
 		// First check that the type is even coercible to provide a invalid coercion error first.
 		const bool coercible = ctx.query<tsh::QueryImplicitCoercibilityOnSymbolType>({ from, to });
@@ -196,8 +192,7 @@ namespace compiler::helios {
 		}(from.getRefKind(), to.getRefKind());
 
 
-		if (!bypass_trivial_copyability_check && requires_copy_coercion
-		    && !from.getType().isTriviallyCopyable(ctx))
+		if (requires_copy_coercion && !from.getType().isTriviallyCopyable(ctx))
 			return TypeNotTriviallyCopyable{};
 
 		// If we got here, then the type is coercible and trivially copyable.

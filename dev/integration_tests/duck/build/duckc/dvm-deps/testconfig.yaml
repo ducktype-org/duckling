@@ -1,0 +1,22 @@
+PostCase: python3 check.py && @{cleanup_tmp_env}
+
+PreCase: |+
+  @{cd-tmp-dir}
+  @{duck-exe} init foo
+  @{duck-exe} init bar
+  # @TODO: #2920 This shouldn't be needed (manually fixup return type).
+  echo @{default-src} > foo/src/src.dmf
+  echo "dependencies:
+    bar:
+      source:
+        path: ../bar
+
+  profiles:
+    dvm:
+      dvm-bytecode: true" >> foo/quackconfig.yaml
+Tests:
+  dvm-deps:
+    Description: can build a project with dependencies
+    Cases:
+      build:
+        test-cmd: duck -C foo build --profile=dvm

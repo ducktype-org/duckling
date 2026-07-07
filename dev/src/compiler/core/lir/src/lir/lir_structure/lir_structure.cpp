@@ -3,7 +3,6 @@
 #include <frontend/pst_parser/lang_parser_element.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/mangler/mangler.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 #include <tsl/queries.hpp>
@@ -83,9 +82,6 @@ namespace compiler::lir {
 						  variant_match(current_layout->getVariant()) {
 							  variant_case(tsl::StaticArrayTypeLayout, static_array_layout) {
 								  current_layout = static_array_layout.getElementLayout();
-							  }
-							  variant_case(tsl::DynamicArrayTypeLayout, dynamic_array_layout) {
-								  current_layout = dynamic_array_layout.getElementLayout();
 							  }
 							  variant_case(tsl::PointerTypeLayout, many_pointer_layout) {
 								  current_layout = many_pointer_layout.getPointee();

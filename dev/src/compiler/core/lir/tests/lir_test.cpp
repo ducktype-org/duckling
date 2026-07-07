@@ -5,9 +5,9 @@
  */
 
 
+#include <driver/test_utils.hpp>
 #include <helios/mangler/mangler.hpp>
 #include <helios/queries/queries.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
@@ -19,6 +19,7 @@
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/extend_cpp/vector_utils.hpp>
 
+#include <filesystem/file.hpp>
 #include <query_framework/context/context.hpp>
 #include <query_framework/entry/query_entry_point.hpp>
 #include <query_framework/entry/with_context_do.hpp>
@@ -49,6 +50,15 @@ public:
 		TESTER_ADD_TEST(dynamicArrayTest);
 		TESTER_ADD_TEST(metaFunctionsTest);
 		TESTER_ADD_TEST(simpleConstant);
+	}
+
+protected:
+	void beforeAll() override {
+		// Initialize the compiler for the STD to load.
+		fs::FilePath artifacts_path = fs::FileManager::createRandomTempDirectory().getFilePath();
+		auto         init_result
+			= compiler::driver::test_utils::initializeCompilerForTests({}, artifacts_path);
+		assertTrue(init_result.status().isOk(), "Compiler initialization failed");
 	}
 
 private:
@@ -114,14 +124,6 @@ private:
 
 		withContextDo([&](query::Context& ctx) {
 			helios::HOUTUnit unit = ctx.query<helios::QueryModuleHOUT>(module)->valueOrPanic();
-
-			// We filter out toString methods here for test purposes
-			// @TODO: #2694 remove this filtering
-			// #2483 -- deal with this if needed
-			base::filterVectorInPlace(unit.functions, [](const CRef<helios::HOUTFunction>& func) {
-				return func->declaration->original_name != base::StrID("toString")
-				   and func->declaration->original_name != base::StrID("length");
-			});
 
 			auto mir_unit = mir::lowerToMIRUnit(ctx, &unit);
 			assertTrue(mir_unit.hasValue(), "MIR lowering failed!");
@@ -703,23 +705,16 @@ private:
 				case Operation::ZeroInitialize:
 					found_zero_init = true;
 					break;
-				case Operation::ListPush: {
-					ASSERT_TRUE(std::holds_alternative<ListOperationParameters>(instr.extra_params));
-					auto& params = std::get<ListOperationParameters>(instr.extra_params);
-					ASSERT_EQUAL(params.element_layout->getSize(), Bits(64));
-					found_push_with_params = true;
+				case Operation::Call: {
+					auto name = instr.arguments.at(0).get<FunctionLiteral>().mangled_name.strView();
+					if (name.contains("push"))
+						found_push_with_params = true;
+					else if (name.contains("pop"))
+						found_pop_with_params = true;
+					else if (name.contains("length"))
+						found_len = true;
 					break;
 				}
-				case Operation::ListPop: {
-					ASSERT_TRUE(std::holds_alternative<ListOperationParameters>(instr.extra_params));
-					auto& params = std::get<ListOperationParameters>(instr.extra_params);
-					ASSERT_EQUAL(params.element_layout->getSize(), Bits(64));
-					found_pop_with_params = true;
-					break;
-				}
-				case Operation::ListLen:
-					found_len = true;
-					break;
 				case Operation::ListFree:
 					found_free = true;
 					break;
