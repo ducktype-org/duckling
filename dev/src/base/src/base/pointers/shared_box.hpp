@@ -13,38 +13,57 @@
 
 namespace base {
 
-	struct BaseControlBlock {
-		std::atomic<u64> n_owners       = 1;
-		virtual void     del() noexcept = 0;
-		virtual ~BaseControlBlock()     = default;
-	};
+	namespace internal {
 
-	/**
-	 * @brief: A control block of SharedBox type.
-	 * Stores the number of owners.
-	 */
-	template<class T, class Deleter = base::DefaultBoxPtrDeleter<T>>
-	struct ControlBlock final: public BaseControlBlock {
-		static_assert(
-			IsPlainType<Deleter>,
-			"Deleter must be a plain type (non reference, non pointer). This requirement is not "
-			"expressed as a requires clause/concept "
-			"usage, to prevent the need to write it in friend declarations."
-			"See: http://en.cppreference.com/w/cpp/language/conflicting_declarations.html . This "
-			"is especially important as some conflicting declaration errors are "
-			"no-diagnostic-required cases on non matching requirement friend "
-			"redefinition."
-		);
+		/**
+		 * @brief. Stores the number of owners and the del function.
+		 * Base class is used, so we can convert SharedBoxes to compatible types
+		 * like SharedBox<const u32> = SharedBox(u32), otherwise this will not work, cos
+		 * The ControlBlock<u32> is not convertible to ControlBlock<const u32>
+		 */
+		struct BaseControlBlock {
+			std::atomic<u64> n_owners                = 1;
+			virtual void     del(void* ptr) noexcept = 0;
+			virtual ~BaseControlBlock()              = default;
+		};
 
-		T*                            original_ptr;
-		[[no_unique_address]] Deleter deleter;
+		template<class T, class Deleter = base::DefaultBoxPtrDeleter<T>>
 
-		void del() noexcept override { deleter.del(original_ptr); }
+		/**
+		 * @brief Control block that stores the owner count and holds a deleter for T.
+		 *
+		 * This type implements `BaseControlBlock` and provides a concrete `del(void*)`
+		 * override which forwards to the stored `Deleter`. The control block is
+		 * allocated alongside the managed object and shared between `SharedBox`
+		 * instances. Making the control block derive from `BaseControlBlock`
+		 * enables converting `SharedBox<U>` to `SharedBox<T>` when the pointer
+		 * types are compatible (e.g. `U` -> `const U`).
+		 *
+		 * @tparam T The pointed-to type.
+		 * @tparam Deleter Deleter type used to destroy `T` (must provide `del(T*)`).
+		 */
+		struct ControlBlock final: public BaseControlBlock {
+			static_assert(
+				IsPlainType<Deleter>,
+				"Deleter must be a plain type (non reference, non pointer). This requirement is "
+			    "not "
+				"expressed as a requires clause/concept "
+				"usage, to prevent the need to write it in friend declarations."
+				"See: http://en.cppreference.com/w/cpp/language/conflicting_declarations.html . "
+			    "This "
+				"is especially important as some conflicting declaration errors are "
+				"no-diagnostic-required cases on non matching requirement friend "
+				"redefinition."
+			);
+			static_assert(requires(Deleter d, T* p) { d.del(p); }, "Deleter must support d.del(T*)");
 
-		ControlBlock(T* original_ptr, Deleter deleter):
-			  original_ptr(original_ptr),
-			  deleter(std::move(deleter)) {}
-	};
+			[[no_unique_address]] Deleter deleter;
+
+			void del(void* ptr) noexcept override { deleter.del(static_cast<T*>(ptr)); }
+
+			ControlBlock(Deleter deleter): deleter(std::move(deleter)) {}
+		};
+	}
 
 	/**
 	 * @brief A pointer wrapper type, that shares the ownership of the pointer and deletes it
@@ -67,8 +86,8 @@ namespace base {
 	template<class T>
 	class SharedBox final {
 	private:
-		T*                data_ptr;
-		BaseControlBlock* ctrl_ptr;
+		T*                          data_ptr;
+		internal::BaseControlBlock* ctrl_ptr;
 
 		constexpr void assertNotNull() const {
 			if (data_ptr == nullptr || ctrl_ptr == nullptr)
@@ -80,7 +99,7 @@ namespace base {
 			return (data_ptr == nullptr && ctrl_ptr == nullptr);
 		}
 
-		explicit SharedBox(T* ptr, BaseControlBlock* ctrl) noexcept:
+		explicit SharedBox(T* ptr, internal::BaseControlBlock* ctrl) noexcept:
 			  data_ptr{ ptr },
 			  ctrl_ptr{ ctrl } {
 			assertNotNull();
@@ -98,7 +117,7 @@ namespace base {
 			u64 n_owners_before = ctrl_ptr->n_owners.fetch_sub(1, std::memory_order_acq_rel);
 
 			if (n_owners_before == 1) {
-				ctrl_ptr->del();
+				ctrl_ptr->del(data_ptr);
 				delete ctrl_ptr;
 			}
 			nullify();
@@ -128,7 +147,7 @@ namespace base {
 		 */
 		template<class Deleter>
 		static SharedBox fromPointerWithCustomDeleter(T* ptr, Deleter deleter) noexcept {
-			return SharedBox(ptr, new ControlBlock(ptr, std::move(deleter)));
+			return SharedBox(ptr, new internal::ControlBlock<T, Deleter>(std::move(deleter)));
 		}
 
 		/**
@@ -147,7 +166,7 @@ namespace base {
 		}
 
 		template<class U = T>
-		requires std::constructible_from<T, U> SharedBox(const SharedBox<U>& other) noexcept:
+		requires std::convertible_to<U*, T*> SharedBox(const SharedBox<U>& other) noexcept:
 			  data_ptr{ other.data_ptr },
 			  ctrl_ptr{ other.ctrl_ptr } {
 			if (isFullyNull()) return;
@@ -164,7 +183,7 @@ namespace base {
 		}
 
 		template<class U = T>
-		requires std::constructible_from<T, U> SharedBox(SharedBox<U>&& other) noexcept:
+		requires std::convertible_to<U*, T*> SharedBox(SharedBox<U>&& other) noexcept:
 			  data_ptr{ std::move(other).data_ptr },
 			  ctrl_ptr{ std::move(other).ctrl_ptr } {
 			if (isFullyNull()) return;
@@ -175,7 +194,7 @@ namespace base {
 		template<class Deleter>
 		explicit SharedBox(Box<T, Deleter>&& other) noexcept:
 			  data_ptr{ std::move(other).ptr },
-			  ctrl_ptr{ new ControlBlock(data_ptr, std::move(other).deleter) } {
+			  ctrl_ptr{ new internal::ControlBlock<T, Deleter>(std::move(other).deleter) } {
 			other.ptr = nullptr;
 			assertNotNull();
 		}
@@ -201,7 +220,7 @@ namespace base {
 		}
 
 		template<class U = T>
-		requires std::constructible_from<T, U>
+		requires std::convertible_to<U*, T*>
 		SharedBox& operator=(const SharedBox<U>& other) noexcept {
 			renounceOwnership();
 
@@ -231,7 +250,7 @@ namespace base {
 		}
 
 		template<class U = T>
-		requires std::constructible_from<T, U> SharedBox& operator=(SharedBox<U>&& other) noexcept {
+		requires std::convertible_to<U*, T*> SharedBox& operator=(SharedBox<U>&& other) noexcept {
 			renounceOwnership();
 
 			data_ptr = std::move(other).data_ptr;

@@ -3,7 +3,6 @@
 #include <tester/tester.hpp>
 
 #include <array>
-#include <ostream>
 #include <thread>
 #include <type_traits>
 
@@ -22,8 +21,13 @@ static_assert(
 );
 
 static_assert(
-	std::is_constructible_v<SharedBox<long>, SharedBox<int>>,
+	std::is_constructible_v<SharedBox<const u32>, SharedBox<u32>>,
 	"SharedBox should be constructible from compatible SharedBox"
+);
+
+static_assert(
+	!std::is_constructible_v<SharedBox<u64>, SharedBox<u32>>,
+	"SharedBox should not be constructible from incompatible SharedBox"
 );
 
 struct InstancesCounter {
@@ -51,7 +55,7 @@ public:
 		TESTER_ADD_TEST(testSharedBox);
 		TESTER_ADD_TEST(testSharedBoxFromPtr);
 		TESTER_ADD_TEST(testCustomDeleter);
-		TESTER_ADD_TEST(testSharedBoxClassInheritence);
+		TESTER_ADD_TEST(testSharedBoxClassInheritance);
 		TESTER_ADD_TEST(testEquality);
 		TESTER_ADD_TEST(concurrentUsage<1>);
 		TESTER_ADD_TEST(concurrentUsage<2>);
@@ -208,7 +212,7 @@ private:
 		ASSERT_EQUAL(StatefulDeleter<int>::s_state, 1);
 	}
 
-	void testSharedBoxClassInheritence() {
+	void testSharedBoxClassInheritance() {
 		static int was_parent = 0;
 
 		class Parent {
