@@ -86,13 +86,12 @@ namespace compiler::helios::templates {
 				// 	= ctx.query<QueryEvaluateHOUTExpression>({ hout_qresult.valueOrThrow().ref()
 				// }).valueOrThrow();
 
-				auto const_symbol = ctx.query<
-					defgen::QueryGeneratedSymbol>(defgen::KeyFor_QueryGeneratedSymbol{
-					.name = name,
-					.generated_symbol_data
-					= defgen::GeneratedConstant{
-						type, q_key.template_arguments.at(i++), scope },
-				});
+				auto const_symbol
+					= ctx.query<defgen::QueryGeneratedSymbol>(defgen::KeyFor_QueryGeneratedSymbol{
+						.name = name,
+						.generated_symbol_data
+						= defgen::GeneratedConstant{ type, q_key.template_arguments.at(i++), scope },
+					});
 
 				symbols.push_back(const_symbol);
 			}
@@ -168,7 +167,7 @@ namespace compiler::helios::templates {
 				pst::LangParserContext::programBaseContext(),  // ???,
 				hash_ctx                                       // ???
 
-				// context...?
+															   // context...?
 			    // hash...? from key hash + from template hash
 			);
 

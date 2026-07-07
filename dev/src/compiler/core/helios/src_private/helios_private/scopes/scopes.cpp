@@ -193,7 +193,7 @@ namespace compiler::helios {
 		case pst::ElementKind::TemplateStmt:
 			// This defined the scope only for for baked PST nodes,
 			// @TODO: #3071 probably change it to transparent
-			return ElementScopeKind::Standard;  
+			return ElementScopeKind::Standard;
 
 		case pst::ElementKind::TemplateDecl:
 			// This is a weird case, this is used to lookup on expressions inside template
@@ -572,8 +572,10 @@ namespace compiler::helios {
 				// @TODO: #3071 this is a hack, fix it!
 				// Scope of "template →(...)← {}"
 				// Here two different cases are handled:
-				// * for pre-bake PST template this defined no symbols, this is a scope in which the expressions from template "signature" are compiled
-				// * for baked PST template this defines generated symbols for the template arguments, which are used in the template body.
+				// * for pre-bake PST template this defined no symbols, this is a scope in which the
+				// expressions from template "signature" are compiled
+				// * for baked PST template this defines generated symbols for the template
+				// arguments, which are used in the template body.
 
 
 				std::vector<SymID> out;
@@ -599,7 +601,7 @@ namespace compiler::helios {
 					variant_default {
 						CORE_PANIC(
 							"Template declaration without BakedTemplateParent, this should not "
-						    "happen here."
+							"happen here."
 						);
 					}
 				}
@@ -623,7 +625,8 @@ namespace compiler::helios {
 				return filterSymbolsFromStmtList(ctx, getStmtsFromStmtAggregate(ctx, base_element));
 			} else if (base_element->isStatement()) {
 				// note: if this check fail, it might be that we are missing some cases
-				// @TODO: #3071 maybe modify this assertion or add a new else-if branch for template statements
+				// @TODO: #3071 maybe modify this assertion or add a new else-if branch for template
+				// statements
 				CORE_ASSERT(
 					getScopeKind(ctx, base_element) == ElementScopeKind::Standard,
 					"Bad element in QuerySymbolsInScope"

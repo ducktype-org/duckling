@@ -155,8 +155,7 @@ namespace compiler::helios {
 	 * compilation process would be halted and practically no HELIOS diagnostics would appear.
 	 *
 	 * \query_thread_safe_if_cache
-
-	 TODO PR: make it internal to query module hout
+	 * @TODO: #3080 consider making it internal helper of query module hout
 	 */
 	DECLARE_QUERY(
 		QueryScopesInModule,

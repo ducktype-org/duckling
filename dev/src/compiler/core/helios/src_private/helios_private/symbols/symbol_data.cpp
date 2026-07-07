@@ -72,7 +72,6 @@ namespace compiler::helios {
 			);
 		}
 
-
 		GeneratedConstant::GeneratedConstant(
 			tsh::SymbolType<> type, ctv::CompileTimeValue value, ScopeID scope
 		):
@@ -129,9 +128,7 @@ namespace compiler::helios {
 			variant_case_novalue(defgen::GeneratedFunctionVariable, defgen::ControlFlowLocal) {
 				kind = SymbolKind::Variable;
 			}
-			variant_case_novalue(defgen::GeneratedConstant) {
-				kind = SymbolKind::Const;
-			}
+			variant_case_novalue(defgen::GeneratedConstant) { kind = SymbolKind::Const; }
 			variant_default { CORE_UNREACHABLE(); }
 		}
 

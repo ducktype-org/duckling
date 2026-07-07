@@ -25,14 +25,14 @@ namespace compiler::ctv {
 				VISIT(val.getStorage(), inner_value, hashing::addToHash(hasher, inner_value););
 			}
 			variant_case(char, c) { hashing::addToHash(hasher, c); }
-			variant_case(base::StrID, val) {
-				hashing::addToHash(hasher, val);
-			}
+			variant_case(base::StrID, val) { hashing::addToHash(hasher, val); }
 			variant_case_novalue(UnitCTV) {
 				// nothing to add to hash
 			}
 			variant_case(TupleCTV, tuple) {
-				throw base::NotYetImplemented("Tuples are not supported yey in CTV::queryUnstablePerfectHash");
+				throw base::NotYetImplemented(
+					"Tuples are not supported yey in CTV::queryUnstablePerfectHash"
+				);
 			}
 			variant_case(tsh::SymbolType<>, val) {
 				hashing::addToHash(hasher, val.queryUnstablePerfectHash());

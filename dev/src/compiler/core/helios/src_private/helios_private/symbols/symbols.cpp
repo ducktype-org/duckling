@@ -946,9 +946,7 @@ namespace compiler::helios {
 			// Get the const's data
 
 			variant_match(getSymRef(key)->other) {
-				variant_case(defgen::GeneratedConstant, const_data) {
-					return const_data.value;
-				}
+				variant_case(defgen::GeneratedConstant, const_data) { return const_data.value; }
 
 				variant_case(PstImplementedSemantics, pst_data) {
 					const auto pst
