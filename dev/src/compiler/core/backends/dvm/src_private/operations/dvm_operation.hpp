@@ -140,6 +140,7 @@ namespace compiler::backend_vm::internal {
 	/**
 	 * @brief Constructs a variant value: sets the active alternative and stores the payload.
 	 */
+	// NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init): always aggregate-initialized
 	struct VariantConstructOperation {
 		lir::VariantParameters variant_params;
 		DVMValue               payload;
@@ -149,6 +150,7 @@ namespace compiler::backend_vm::internal {
 	/**
 	 * @brief Produces a pointer to the variant's payload, null on alternative mismatch.
 	 */
+	// NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init): always aggregate-initialized
 	struct VariantTryProjectOperation {
 		lir::VariantParameters variant_params;
 		DVMPlace               variant;
