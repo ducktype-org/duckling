@@ -60,6 +60,8 @@ namespace compiler::repl {
 				return "constructor";
 			case helios::SymbolKind::Destructor:
 				return "destructor";
+			case helios::SymbolKind::Template:
+				return "template";
 			case helios::SymbolKind::COUNT:
 				break;
 			}

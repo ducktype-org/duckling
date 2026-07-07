@@ -1,5 +1,6 @@
 #pragma once
 
+#include <ctv/ctv.hpp>
 #include <helios/scope_id.hpp>
 #include <helios/symbols/symbol_id.hpp>
 #include <helios/tsh/symbol_type.hpp>
@@ -66,6 +67,17 @@ namespace compiler::helios::defgen {
 	struct BuiltinOperator final {
 		// The type of the builtin operator this symbol represents.
 		tsh::FunctionAbstractType operator_type;
+
+		[[nodiscard]]
+		base::Bit256 queryUnstablePerfectHash() const;
+	};
+
+	struct GeneratedConstant final {
+		tsh::SymbolType<>     type;
+		ctv::CompileTimeValue value;
+		ScopeID               scope;
+
+		GeneratedConstant(tsh::SymbolType<> type, ctv::CompileTimeValue value, ScopeID scope);
 
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const;
@@ -216,7 +228,7 @@ namespace compiler::helios::defgen {
 	defgen::Constructor, defgen::Method, defgen::BuiltinOperator, defgen::Parameter,             \
 		defgen::SelfParameter, defgen::Field, defgen::GeneratedFunctionVariable,                 \
 		defgen::ControlFlowLocal, defgen::ReplExpressionWrapper, defgen::ReplInstructionWrapper, \
-		defgen::ScriptMainWrapper
+		defgen::ScriptMainWrapper, defgen::GeneratedConstant
 
 	using GeneratedSymbolDataVariant = std::variant<GENERATED_SYMBOL_SEMANTICS_LIST>;
 

@@ -71,11 +71,25 @@ namespace compiler::helios {
 				data.index(), VISIT(data, d, return d.queryUnstablePerfectHash();)
 			);
 		}
+
+		GeneratedConstant::GeneratedConstant(
+			tsh::SymbolType<> type, ctv::CompileTimeValue value, ScopeID scope
+		):
+			  type(type),
+			  value(std::move(value)),
+			  scope(scope) {}
+
+		base::Bit256 GeneratedConstant::queryUnstablePerfectHash() const {
+			hashing::SHA256 hasher;
+			hashing::addToHash(hasher, type.queryUnstablePerfectHash());
+			hashing::addToHash(hasher, value.queryUnstablePerfectHash());
+			return hasher.finalize();
+		}
 	}
 
 	SymbolData::SymbolData(CommonSymbolData common, SymbolSemantics other):
 		  common(std::move(common)),
-		  other(other),
+		  other(std::move(other)),
 		  id(SymbolDataID::next()) {}
 
 	SymbolData SymbolData::makeBuiltinSymbolData(
@@ -114,6 +128,7 @@ namespace compiler::helios {
 			variant_case_novalue(defgen::GeneratedFunctionVariable, defgen::ControlFlowLocal) {
 				kind = SymbolKind::Variable;
 			}
+			variant_case_novalue(defgen::GeneratedConstant) { kind = SymbolKind::Const; }
 			variant_default { CORE_UNREACHABLE(); }
 		}
 
@@ -136,6 +151,7 @@ namespace compiler::helios {
 			variant_case(defgen::SelfParameter, param) { return param.scope; }
 			variant_case(defgen::ControlFlowLocal, local) { return local.owning_scope; }
 			variant_case(defgen::ScriptMainWrapper, script) { return script.scope; }
+			variant_case(defgen::GeneratedConstant, gen_const) { return gen_const.scope; }
 			variant_default { return {}; }
 		}
 		CORE_UNREACHABLE();
