@@ -154,6 +154,7 @@ namespace compiler::helios {
 			variant_case(defgen::SelfParameter, param) { return param.scope; }
 			variant_case(defgen::ControlFlowLocal, local) { return local.owning_scope; }
 			variant_case(defgen::ScriptMainWrapper, script) { return script.scope; }
+			variant_case(defgen::GeneratedConstant, gen_const) { return gen_const.scope; }
 			variant_default { return {}; }
 		}
 		CORE_UNREACHABLE();
