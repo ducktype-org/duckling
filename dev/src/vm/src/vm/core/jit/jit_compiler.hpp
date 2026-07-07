@@ -12,16 +12,21 @@
 #include <vm/core/safe/low_program/cfg/loop_detector.hpp>
 #include <vm/core/safe/low_program/low_program.hpp>
 
-#ifdef BUILD_TYPE_RELEASE_
-// During testing compile always to check properly that jit integration works.
-constexpr inline uint CP_FUNC_COMPILATION_THRESHOLD   = 0;
-constexpr inline uint LLVM_FUNC_COMPILATION_THRESHOLD = -1;
-constexpr inline uint LOOP_COMPILATION_THRESHOLD      = -1;
+#ifdef BUILD_TYPE_RELEASE
+constexpr inline uint LLVM_FUNC_COMPILATION_THRESHOLD = 10_000;
+constexpr inline uint LOOP_COMPILATION_THRESHOLD      = 10_000;
 #else
-constexpr inline uint CP_FUNC_COMPILATION_THRESHOLD   = 0;
-constexpr inline uint LLVM_FUNC_COMPILATION_THRESHOLD = -1;
-constexpr inline uint LOOP_COMPILATION_THRESHOLD      = -1;
+// During testing compile always to check properly that jit integration works.
+constexpr inline uint LLVM_FUNC_COMPILATION_THRESHOLD = 0;
+constexpr inline uint LOOP_COMPILATION_THRESHOLD      = 0;
 #endif
+
+#if COMPILE_WITH_CNP
+constexpr inline uint CP_FUNC_COMPILATION_THRESHOLD   = 0;
+#endif
+
+
+
 namespace vm::jit {
 	using JitLLVMFunc
 		= int(const vm::MicroInstruction**, std::byte**, vm::Frame**, vm::SafeVMThread*);
@@ -41,7 +46,7 @@ namespace vm::jit {
 		std::vector<low::cf::ControlFlowGraph> cfgs;
 		std::vector<uint>                      until_compilation;
 		std::vector<MRef<JitLLVMFunc>>         llvm_compiled_code_ptrs;
-#if COMPILE_WITH_CP
+#if COMPILE_WITH_CNP
 		MRef<JitCPFunc> cp_compiled_func_ptr = nullptr;
 #endif
 
@@ -51,7 +56,7 @@ namespace vm::jit {
 			  cfgs(low::cf::detectLoopsInFunction(func)),
 			  until_compilation(cfgs.size(), LOOP_COMPILATION_THRESHOLD),
 			  llvm_compiled_code_ptrs(cfgs.size(), nullptr) {
-#if COMPILE_WITH_CP
+#if COMPILE_WITH_CNP
 			until_compilation[func.jit_func_entrypoint_offset] = CP_FUNC_COMPILATION_THRESHOLD;
 #else
 			until_compilation[func.jit_func_entrypoint_offset] = LLVM_FUNC_COMPILATION_THRESHOLD;

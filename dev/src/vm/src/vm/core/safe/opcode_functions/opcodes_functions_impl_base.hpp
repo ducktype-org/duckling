@@ -351,7 +351,7 @@ namespace vm {
 					&instr, &local_stack, &frame, &thread
 				);
 			}
-	#if COMPILE_WITH_CP
+	#if COMPILE_WITH_CNP
 			else if (my_data.cp_compiled_func_ptr) {
 				// is CP-compiled
 				if (0 < my_data.until_compilation[cfg_offset])
@@ -378,7 +378,7 @@ namespace vm {
 					--my_data.until_compilation[cfg_offset];
 				if (my_data.until_compilation[cfg_offset] == 0) {
 					// should be compiled with the first viable compiler
-	#if COMPILE_WITH_CP
+	#if COMPILE_WITH_CNP
 					auto compiled = jit::compileCP(my_data.cfgs[cfg_offset], original_function.bc);
 					my_data.cp_compiled_func_ptr = compiled.intoFunc<jit::JitCPFunc>();
 					(*my_data.cp_compiled_func_ptr)(CP_PASS_ARGS);

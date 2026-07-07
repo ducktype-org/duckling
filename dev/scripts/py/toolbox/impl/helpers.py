@@ -5,7 +5,18 @@ import re
 import shutil
 import subprocess as sp
 import sys
+import enum
 
+@enum.unique
+class JIT_options(enum.Enum):
+    NO = enum.auto()
+    LLVM_ONLY = enum.auto()
+    YES = enum.auto()
+    
+    def is_jit_enabled(self) -> bool:
+        return self != JIT_options.NO
+    def is_cnp_enabled(self) -> bool:
+        return self == JIT_options.YES
 
 # Regex patterns for compiler version detection
 CLANG_VERSION_PATTERN = re.compile(r"(?:^|/)clang\+\+-(\d+)$")
@@ -233,7 +244,7 @@ def infer_cc_compiler(ctx: click.Context):
     """Infer the default C compiler from the C++ compiler"""
     cc_compiler = ctx.params.get("cc_compiler")
     cxx_compiler = ctx.params.get("cxx_compiler")
-    enable_jit = ctx.params.get("enable_jit")
+    enable_jit = ctx.params.get("jit").is_jit_enabled()
 
     if not cc_compiler and cxx_compiler:
         if "clang++" in cxx_compiler:
@@ -258,7 +269,7 @@ def infer_cxx_compiler(ctx: click.Context):
     """Infer the default C++ compiler from the C compiler"""
     cc_compiler = ctx.params.get("cc_compiler")
     cxx_compiler = ctx.params.get("cxx_compiler")
-    enable_jit = ctx.params.get("enable_jit")
+    enable_jit = ctx.params.get("jit").is_jit_enabled()
 
     if not cxx_compiler and cc_compiler:
         if "clang" in cc_compiler:
