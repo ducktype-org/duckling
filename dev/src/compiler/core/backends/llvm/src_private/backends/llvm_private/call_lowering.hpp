@@ -24,14 +24,6 @@ namespace compiler::backend_llvm {
 	/**
 	 * @brief Get the LLVM function type based on the layouts of its parameters and return type.
 	 *
-	 * @note This is where the C/C++ ABI lowering will live: struct-like parameters passed by
-	 * pointer with `byval`, register coercion of small aggregates, `sret` returns, etc. That
-	 * logic is driven by the calling-convention library (@ref lir::LIRAbi::CAbi holds the
-	 * @ref abi::calling_conv::FunctionInfo) and @ref abiTypeToLLVMType. It is not implemented
-	 * yet — only the default ABI and the existing string-by-pointer special case are handled.
-	 * See:
-	 * https://yorickpeterse.com/articles/the-mess-that-is-handling-structure-arguments-and-returns-in-llvm/.
-	 *
 	 * @param module The LLVM module in which the function type will be used.
 	 * @param parameters The layouts of the parameters of the function.
 	 * @param return_type The layout of the return type of the function.
