@@ -77,11 +77,11 @@ namespace compiler::helios::desugaring {
 		return ctx.query<defgen::QueryGeneratedSymbol>({
 			.name = base::StrID(base::strConcat("__match_subject_", match_expr->getID().asInt())),
 			.generated_symbol_data
-			= defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::ControlFlowLocal{
+			= defgen::ControlFlowLocal{
 				.owning_scope = match_scope,
 				.role         = base::StrID("__match_subject"),
 				.type         = subject_local_type,
-			} },
+			},
 		});
 	}
 
