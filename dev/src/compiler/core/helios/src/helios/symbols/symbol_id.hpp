@@ -5,6 +5,8 @@
  */
 #pragma once
 
+#include "helios/attributes/builtins.hpp"
+
 #include <frontend/pst_parser/access.hpp>
 #include <frontend/pst_parser/elements/elements_list.hpp>
 #include <helios/scope_id.hpp>
@@ -15,7 +17,6 @@
 
 #include <hashing/add_to_hash.hpp>
 #include <string_id/string_id.hpp>
-#include "helios/attributes/builtins.hpp"
 
 namespace compiler::helios {
 	// Forwards:

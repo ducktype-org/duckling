@@ -1,5 +1,7 @@
 #include "symbols.hpp"
 
+#include "helios_private/symbols/pst_symbol_data.hpp"
+
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/all_class_elements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
@@ -31,7 +33,6 @@
 
 #include <query_framework/standard_query/query_impl.hpp>
 #include <string_id/string_id.hpp>
-#include "helios_private/symbols/pst_symbol_data.hpp"
 
 #include <functional>
 #include <unordered_set>

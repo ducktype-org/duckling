@@ -1,11 +1,10 @@
 import core.builtins.*;
 
+# Test usages of builtins.
 fun main() = {
     let x: i64 = builtin_input_i64();
     builtin_output_i64(x + 1);
 
-    # Exercises the `@builtin("ptr_from_slice")` fundecl from core.builtins: it has no body in
-    # source, its implementation is synthesized by the compiler (getBuiltinImpl).
     let p = ptr_from_slice("abc");
     builtin_output_char(p[0]);
 

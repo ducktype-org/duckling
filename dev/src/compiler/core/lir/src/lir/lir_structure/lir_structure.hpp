@@ -148,18 +148,7 @@ namespace compiler::lir {
 	 */
 	enum class BuiltinFunctionKind { DvmCharAlloc, DvmCharRealloc, DvmCharFree };
 
-	base::Optional<BuiltinFunctionKind> builtinKindFromHOUT(helios::BuiltinKind kind) {
-		switch(kind) {
-			case helios::BuiltinKind::DvmCharAlloc:
-				return BuiltinFunctionKind::DvmCharFree;
-			case helios::BuiltinKind::DvmCharRealloc:
-				return BuiltinFunctionKind::DvmCharRealloc;
-			case helios::BuiltinKind::DvmCharFree:
-				return BuiltinFunctionKind::DvmCharFree;
-			default:
-				return {};
-		}
-	}
+	base::Optional<BuiltinFunctionKind> getBuiltinKindFromHOUT(helios::BuiltinKind kind);
 
 	/**
 	 * @brief Reference to a function in LIR.

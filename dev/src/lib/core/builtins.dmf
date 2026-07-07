@@ -43,10 +43,10 @@ fundecl char_ptr_from_slice(s: slice char) -> manyptr char;
 fundecl char_slice_from_ptr_len(p: manyptr char, l: u64) -> slice char;
 
 @builtin("dvm_char_alloc")
-fundecl dvm_char_alloc(u64 size) -> manyptr char;
+fundecl dvm_char_alloc(size: u64) -> manyptr char;
 
 @builtin("dvm_char_realloc")
-fundecl dvm_char_realloc(manyptr char, u64 size) -> manyptr char;
+fundecl dvm_char_realloc(p: manyptr char, size: u64);
 
 @builtin("dvm_char_free")
-fundecl dvm_char_free(manyptr char);
+fundecl dvm_char_free(p: manyptr char);

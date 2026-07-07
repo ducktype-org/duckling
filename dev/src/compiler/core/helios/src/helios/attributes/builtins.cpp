@@ -8,7 +8,6 @@
 #include <helios/queries/function_queries.hpp>
 #include <helios/symbols/query_type_symbol_data.hpp>
 #include <helios/tsh/types.hpp>
-
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
@@ -39,7 +38,7 @@ namespace compiler::helios {
 	base::StrID builtinKindToStr(BuiltinKind type) {
 		switch (type) {
 		case BuiltinKind::CharPtrFromSlice:
-			return base::StrID("ptr_from_slice");
+			return base::StrID("char_ptr_from_slice");
 		case BuiltinKind::CharSliceFromPtrLen:
 			return base::StrID("char_slice_from_ptr_len");
 		case BuiltinKind::DvmCharAlloc:
@@ -63,12 +62,10 @@ namespace compiler::helios {
 		query::Context& ctx, base::Optional<pst::AccessLocked<pst::AtrArgList>> args
 	) {
 		if_opt_none(args) {
-			ctx.logInt(
-				makeBox<dia_int::PlaceholderError>(
-					"Attribute 'builtin' expects exactly one argument, got 0.",
-					base::Optional<dia_int::StablePosition>{}
-				)
-			);
+			ctx.logInt(makeBox<dia_int::PlaceholderError>(
+				"Attribute 'builtin' expects exactly one argument, got 0.",
+				base::Optional<dia_int::StablePosition>{}
+			));
 			query::throwFailed();
 		}
 
@@ -77,39 +74,31 @@ namespace compiler::helios {
 			                                                              arg_list->end() };
 
 		if (holders.size() != 1) {
-			ctx.logInt(
-				makeBox<dia_int::PlaceholderError>(
-					base::strConcat(
-						"Attribute 'builtin' expects exactly one argument, got ", holders.size(), "."
-					),
-					arg_list->getStablePosition()
-				)
-			);
+			ctx.logInt(makeBox<dia_int::PlaceholderError>(
+				base::strConcat(
+					"Attribute 'builtin' expects exactly one argument, got ", holders.size(), "."
+				),
+				arg_list->getStablePosition()
+			));
 			query::throwFailed();
 		}
 
 		auto holder  = holders.front().unlock(ctx);
 		auto str_lit = holder->getExpr().unlock(ctx).dynamicCast<pst::expr::ExprStrValue>();
 		if_opt_none(str_lit) {
-			ctx.logInt(
-				makeBox<dia_int::PlaceholderError>(
-					"Attribute 'builtin' expects a string literal naming the builtin.",
-					holder->getStablePosition()
-				)
-			);
+			ctx.logInt(makeBox<dia_int::PlaceholderError>(
+				"Attribute 'builtin' expects a string literal naming the builtin.",
+				holder->getStablePosition()
+			));
 			query::throwFailed();
 		}
 
 		auto builtin = builtinKindFromStr(str_lit.value()->getValue().value);
 		if_opt_none(builtin) {
-			ctx.logInt(
-				makeBox<dia_int::PlaceholderError>(
-					base::strConcat(
-						"Unknown builtin '", str_lit.value()->getValue().value.str(), "'."
-					),
-					holder->getStablePosition()
-				)
-			);
+			ctx.logInt(makeBox<dia_int::PlaceholderError>(
+				base::strConcat("Unknown builtin '", str_lit.value()->getValue().value.str(), "'."),
+				holder->getStablePosition()
+			));
 			query::throwFailed();
 		}
 
@@ -119,7 +108,7 @@ namespace compiler::helios {
 	HOUTFunction getBuiltinImpl(query::Context& ctx, SymID symbol, BuiltinKind type) {
 		switch (type) {
 		case BuiltinKind::CharPtrFromSlice: {
-			// `ptr_from_slice(slice T s) -> manyptr T` simply returns the slice's data pointer
+			// `char_ptr_from_slice(slice T s) -> manyptr T` simply returns the slice's data pointer
 			// field. This mirrors the `length` method, only reading a different field (`ptr` vs
 			// `len`).
 			auto& decl         = ctx.query<QueryDeclOfFun>(symbol)->valueOrThrow();
@@ -127,19 +116,17 @@ namespace compiler::helios {
 			auto  slice_fields = ctx.query<QuerySliceTypeData>(slice_type);
 
 			std::vector<Box<code::Stmt>> body{};
-			body.emplace_back(
-				makeBox<code::ReturnStmt>(
+			body.emplace_back(makeBox<code::ReturnStmt>(
+				code::generatedOrigin(),
+				makeBox<code::AccessExpr>(
+					ctx,
 					code::generatedOrigin(),
-					makeBox<code::AccessExpr>(
-						ctx,
-						code::generatedOrigin(),
-						makeBox<code::IdentifierExpr>(
-							ctx, code::generatedOrigin(), decl.parameters.at(0).helios_symbol
-						),
-						slice_fields->ptr
-					)
+					makeBox<code::IdentifierExpr>(
+						ctx, code::generatedOrigin(), decl.parameters.at(0).helios_symbol
+					),
+					slice_fields->ptr
 				)
-			);
+			));
 			return HOUTFunction(
 				code::generatedOrigin(),
 				&decl,
@@ -163,7 +150,9 @@ namespace compiler::helios {
 			// var __result: slice char = <default>;
 			const SymID result_symbol = ctx.query<defgen::QueryGeneratedSymbol>({
 				.name                  = base::StrID("__result"),
-				.generated_symbol_data = Variable{ .function_symbol=symbol, .variable_index=0, .type=result_sym_type },
+				.generated_symbol_data = Variable{ .function_symbol = symbol,
+			                                       .variable_index  = 0,
+			                                       .type            = result_sym_type },
 			});
 
 			std::vector<Box<code::Stmt>> body{};
