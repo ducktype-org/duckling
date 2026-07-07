@@ -337,13 +337,12 @@ namespace compiler::helios::code {
 					"resolveUnaryOperator should only filter for prefix or suffix operators"
 				);
 
-				// Binary operator resolution now happens in two steps:
-				// 1. If the arguments are both numeric (integral or float) and the operator is a
-				// built-in arithmetic operator, we look for promotions from left to right and from
-				// right to left, and then use the built-in operator on the promoted-to type.
+				// Unary operator resolution happens in two steps:
+				// 1. If the argument is numeric (integral or float) and the operator is a built-in
+				//    numeric operator, we perform any needed coercion and emit a UnaryOperatorExpr.
 				// 2. Otherwise, we perform "regular" lookup. This includes lookups in two places:
 				//    a. The calling scope (a user can define a standalone function named `+`).
-				//    b. The type of the left-hand side argument (for an operator method).
+				//    b. The type of the only argument (for an operator method).
 				// Next, we perform typical overload resolution.
 
 				// Step 1. — special path for numeric promotions
@@ -351,7 +350,10 @@ namespace compiler::helios::code {
 				    && isNumericOperator(op->unwrap())) {
 					auto numeric_builtin_opt
 						= findNumericUnaryBuiltin(ctx, op->unwrap(), inner.ref());
-					auto new_origin = inner->origin;
+					auto new_origin
+						= operatoriness == HOUTFunctionDeclaration::Operatoriness::Prefix
+					        ? elementOriginOrdered(pstOrigin(op), inner->origin)
+					        : elementOriginOrdered(inner->origin, pstOrigin(op));
 
 					if_opt_some(numeric_builtin_opt, numeric_builtin) {
 						auto [operation, coercion] = numeric_builtin;

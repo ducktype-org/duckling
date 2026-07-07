@@ -518,7 +518,8 @@ namespace compiler::helios {
 						);
 					}
 					variant_case(defgen::BuiltinOperator, builtin_op) {
-						// Currently, all builtins *participating in lookup* are binary operators.
+						// Currently, all builtins *participating in lookup* are unary or binary
+						// operators.
 						// TODO (this PR?) differentiate between builtin operators and their
 						// C++-defined impls.
 						return funDeclFromType(ctx, key, builtin_op.operatoriness);
