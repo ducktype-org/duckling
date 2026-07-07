@@ -1,10 +1,10 @@
 #pragma once
 
-#include <helios/attributes/builtins.hpp>
 #include "lir_structure_fd.hpp"  // IWYU pragma: keep
 
 #include <ctv/ctv.hpp>
 #include <diagnostic_interactive/stable_position.hpp>
+#include <helios/attributes/builtins.hpp>
 #include <helios/hout/hout_fd.hpp>
 #include <helios/symbols/symbol_abi.hpp>
 #include <helios/symbols/symbol_id.hpp>  // @TODO: #2796 untable this if possible (LIR structure should not depend on symbols if possible)
