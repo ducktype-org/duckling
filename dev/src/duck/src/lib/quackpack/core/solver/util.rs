@@ -1,11 +1,20 @@
 use std::collections::{HashMap, HashSet};
 
+use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
 use crate::quackpack::core::solver::types_common::{
     ExpandedLocation, ExpandedPackage, InternedLocation, Location, Package,
 };
 use crate::quackpack::core::version::CompatibilityCheck;
 use crate::quackpack::core::{Dependency, Version};
-use crate::{QuackResult, QuackResultContext};
+use crate::quackpack::util::with_version::WithVersion;
+use crate::{QuackResult, QuackResultContext, StrId};
+
+
+impl WithVersion<FullOrigin> {
+    pub fn transpose_to_identity(&self, name: StrId) -> WithVersion<FullIdentity> {
+        WithVersion::new(FullIdentity::new(name, *self.value()), self.version())
+    }
+}
 
 /// For a given dependency entry from the manifest and
 /// given all the found versions of a package from some location,

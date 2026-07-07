@@ -12,6 +12,7 @@ use crate::quackpack::core::identity::{Identity, Kind, Origin};
 use crate::quackpack::core::solver::types_common::{ExpandedLocation, ExpandedPackage};
 use crate::quackpack::util::interned_url::InternedUrl;
 use crate::quackpack::util::is_local_file::IsLocalFile;
+use crate::quackpack::util::to_path_buf::ToPathBuf;
 use crate::quackpack::util::to_url::ToUrl;
 use crate::{QuackResult, StrId};
 
@@ -58,6 +59,20 @@ impl FullIdentity {
             }
         };
         Self::new(name, origin)
+    }
+
+    pub fn descriptive_name(&self) -> String {
+        match self.origin.kind {
+            FullKind::Registry => format!("`{}", self.name),
+            FullKind::Git { .. } => format!("cloned from `{}`", self.origin.url),
+            FullKind::Local => {
+                if let Ok(path) = self.origin.url.to_path_buf() {
+                    format!("at the directory `{}`", path.display())
+                } else {
+                    format!("at the directory `{}`", self.origin.url)
+                }
+            }
+        }
     }
 }
 

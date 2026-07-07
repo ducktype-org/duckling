@@ -3,12 +3,14 @@ use std::hash::Hash;
 use std::ops::Deref;
 use std::sync::{Mutex, OnceLock};
 
+use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
 use crate::quackpack::core::solver::types_common::{ExpandedLocation, ExpandedPackage};
 use crate::quackpack::core::version::CompatibilityCheck;
-use crate::quackpack::core::{Dependency, GitReference, SourceKind, Version};
+use crate::quackpack::core::{Dependency, GitReference, Source, SourceKind, Version};
 use crate::quackpack::util::interned_url::InternedUrl;
+use crate::quackpack::util::with_version::WithVersion;
 use crate::util::extract::Extract;
-use crate::{QuackResult, StrId, qp_bail_internal};
+use crate::{QuackResult, QuackResultContext, StrId, qp_bail_internal};
 
 static INTERNED_LOCATION_CACHE: OnceLock<Mutex<HashSet<&'static Location>>> = OnceLock::new();
 
@@ -83,6 +85,17 @@ pub enum Location {
     Local {
         path: InternedUrl,
     },
+}
+
+impl WithVersion<Source> {
+    pub fn resolve(
+        self,
+        location_resolver: &HashMap<Source, FullOrigin>,
+    ) -> Option<WithVersion<FullOrigin>> {
+        location_resolver
+            .get(self.value())
+            .map(|identity| WithVersion::new(*identity, self.version()))
+    }
 }
 
 impl From<&Dependency> for Location {

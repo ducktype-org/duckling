@@ -9,7 +9,7 @@ use crate::quackpack::util::is_local_file::IsLocalFile;
 use crate::quackpack::util::to_url::ToUrl;
 use crate::{QuackError, QuackResult, StrId, qp_bail};
 
-#[derive(Debug, Clone, Eq, PartialEq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Serialize, Deserialize)]
 pub enum SourceKind {
     Registry,
     Local,
@@ -38,14 +38,14 @@ impl SourceKind {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Serialize, Deserialize)]
 pub struct Source {
     kind: SourceKind,
     url: InternedUrl,
 }
 
 impl Source {
-    fn new(url: InternedUrl, kind: SourceKind) -> Self {
+    pub fn new(url: InternedUrl, kind: SourceKind) -> Self {
         // kind = local => url.is_local_file
         debug_assert!(
             url.is_local_file() || !kind.is_local(),
