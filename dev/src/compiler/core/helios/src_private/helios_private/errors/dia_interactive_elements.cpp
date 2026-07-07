@@ -9,7 +9,6 @@
 #include <frontend/pst_parser/elements/hierarchy/expressions/identifier_literal.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/alias.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/pst_symbol_data.hpp>
@@ -82,8 +81,8 @@ namespace compiler::helios {
 				  auto nested = current.children[0];
 				  if (kind(nested.node) == SymbolKind::Alias) {
 					  auto alias_stmt = getSymRef(nested.node)
-				                            ->getPSTData()
-				                            ->getElement()
+				                            ->maybePstElement()
+				                            .value()
 				                            .unlock(ctx)
 				                            .dynamicCast<pst::Alias>()
 				                            .value();
@@ -192,7 +191,7 @@ namespace compiler::helios {
 	):
 		  function_symbol(function_symbol),
 		  pst_expr(std::move(pst_expr)) {
-		if_opt_some(getSymRef(function_symbol)->getDataOpt<PstSymbolData>(), pst_data) {
+		if_opt_some(getSymRef(function_symbol)->getDataOpt<PstImplementedSemantics>(), pst_data) {
 			auto position = getFunctionLikeSourcePosition(ctx, pst_data->getElement().unlock(ctx));
 			auto id       = MessageBase::getUniqueID();
 			this->linked_messages.put(std::move(id), makeBox<FunctionDeclaredHereNote>(position));

@@ -4,6 +4,8 @@
 #include <helios/tsh/types.hpp>
 #include <helios_private/comp_time/comptime_type_operations.hpp>
 
+#include <base/except/exceptions.hpp>
+
 #include <vm/api/vm.hpp>
 #include <vm/bytecode/validator/errors.hpp>
 #include <vm/bytecode/validator/valid_program.hpp>
@@ -275,9 +277,15 @@ namespace {
 	std::expected<void, VmEvaluationError> loadLIRUnit(
 		CompTimeDVM& comptime_dvm, const compiler::lir::LIRUnit& lir_unit, query::Context& query_ctx
 	) {
-		compiler::backend_vm::DVMCodeBuilder m(query_ctx, false, true);
+		static std::atomic<int> module_counter{};
 
-		// Insert comptime context intto the module, for the module to pass the validation. This code
+		// @TODO: #2971 So comp-time and repl are both loading the code incrementally into VM, but
+		// they are using different methods... Maybe use the repl incremental context here?
+		auto backend_module_name
+			= base::StrID(base::strConcat("module_", module_counter.fetch_add(1)));
+		compiler::backend_vm::DVMCodeBuilder m(query_ctx, backend_module_name, false, true);
+
+		// Insert comptime context into the module, for the module to pass the validation. This code
 		// although loaded here multiple times will be deduplicated by `CompTimeDVM::loadCode()`
 		auto comptime_code = comptime_ops::getComptimeTypeOperations(*comptime_dvm.getPID());
 		m.insertRawBytecodeDefinitions(comptime_code);
@@ -348,12 +356,17 @@ namespace {
 		// Free the owned arguments.
 		for (const auto& arg: owned_args) arg->freeData();
 
-		CORE_ASSERT(
-			maybe_exit_value.value().size() == 1,
-			"Compiler support for multiple values not implemented"
-		);
-		auto exit_value = maybe_exit_value.value().at(0);
-		return vmValueToCtv(return_type, exit_value);
+		variant_match(maybe_exit_value.value()) {
+			variant_case(std::vector<Ref<vm::VmValue>>, values) {
+				CORE_ASSERT(
+					values.size() == 1, "Compiler support for multiple values not implemented"
+				);
+				auto exit_value = values.at(0);
+				return vmValueToCtv(return_type, exit_value);
+			}
+			variant_default { CORE_PANIC("Unexpected non-vector return value from VM"); }
+		}
+		CORE_UNREACHABLE();
 	}
 }
 

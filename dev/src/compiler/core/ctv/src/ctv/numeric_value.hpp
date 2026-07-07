@@ -36,7 +36,7 @@ namespace compiler::numeric_value {
 		 * @brief Template constructor for all types which exist in the Storage variant.
 		 */
 		template<typename T>
-		requires(base::IS_VARIANT_MEMBER_V<T, Storage>) NumericValue(T val): value(val) {}
+		requires(base::IS_VARIANT_MEMBER_V<T, Storage>) constexpr NumericValue(T val): value(val) {}
 
 		/**
 		 * @brief Factory method for creating a NumericValue with the minimal needed type to store
@@ -45,7 +45,7 @@ namespace compiler::numeric_value {
 		 */
 		template<typename T>
 		requires(std::is_arithmetic_v<T>)
-		[[nodiscard]] static NumericValue createMinimized(T value) {
+		[[nodiscard]] static constexpr NumericValue createMinimized(T value) {
 			if constexpr (std::is_integral_v<T>) {
 				// Prioritize signed types as they're more general.
 				// @note: For now, the smallest deduced type is `i32`. We may decide to deduce `i8`

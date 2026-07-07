@@ -353,7 +353,7 @@ namespace compiler::backend_vm::internal {
 		case BoxFree: {
 			CORE_ASSERT(
 				instr.arguments.size() == 1,
-				"BoxAlloc operation expects 1 argument, got: ",
+				"BoxFree operation expects 1 argument, got: ",
 				instr.arguments.size()
 			);
 			return BoxFreeOperation{
@@ -363,6 +363,17 @@ namespace compiler::backend_vm::internal {
 		case Nop: {
 			// No instruction to generate, just skip.
 			return NoOperation{};
+		}
+		case ListPush:
+		case ListPop:
+		case ListFree: {
+			ctx.program_context.getActiveContext().value()->logInt(
+				makeBox<dia_int::NotYetImplementedCodeError>(
+					"Lists are not supported in DVM code generation yet."
+				)
+			);
+			query::throwFailed();
+			CORE_UNREACHABLE();
 		}
 		default:
 			CORE_PANIC("Invalid operation: ", base::enumToStr(operation));

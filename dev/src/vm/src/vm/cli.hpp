@@ -7,5 +7,8 @@
 
 #include <vm/core/supervisor/supervisor.hpp>
 
-int cli(const fs::File& filepath, const std::vector<std::string>& args = {});
-int cli();
+int cli(
+	const std::vector<fs::File>&    files,
+	const std::vector<std::string>& args    = {},
+	const vm::api::ProcessConfig&   options = {}
+);

@@ -11,7 +11,6 @@
 #include <frontend/pst_parser/elements/hierarchy/statements/specifier_block.hpp>
 #include <frontend/pst_parser/lang_parser_element.hpp>
 #include <frontend/pst_parser/pst_visitor.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
@@ -101,13 +100,8 @@ namespace compiler::helios {
 
 			// Builtin functions are implemented in C/C++ and use the C ABI.
 			variant_match(sym_ref->other) {
-				variant_case(defgen::GeneratedSymbolData, gen_data) {
-					variant_match(gen_data.data) {
-						variant_case_novalue(defgen::GeneratedSymbolData::BuiltinOperator) {
-							return CAbi{};
-						}
-					}
-				}
+				variant_case_novalue(defgen::BuiltinOperator) { return CAbi{}; }
+				variant_default {}
 			}
 
 			// @TODO: #895 fix it when we add script based package targets

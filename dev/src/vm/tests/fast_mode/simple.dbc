@@ -1,0 +1,8 @@
+function bar {} -> { i64 } {
+    mov_p64_imm ret0, 42;
+    ret;
+}
+function main {} -> { i64 } {
+    call_func bar;
+    ret;
+}

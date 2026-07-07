@@ -3,6 +3,9 @@
 #include "vm_repl.hpp"
 
 #include <clah/clah.hpp>
+#include <clah/clah_class.hpp>
+#include <clah/param_builder.hpp>
+#include <clah/value_parser.hpp>
 #include <init/init.hpp>
 #include <logger/logger.hpp>
 #include <printer/stream_printer.hpp>
@@ -13,6 +16,7 @@
 #include <vm/debugger/UI/debug_adapter/debug_adapter.hpp>
 
 #include <exception>
+#include <expected>
 
 void showVersion() {
 	std::cout << "VM version 0.0.\n";
@@ -62,53 +66,82 @@ clah::Clah getVmClah() {
 							   server(i32(port));
 							   return 0;
 						   }))
-	    .addSubcommand(clah::Clah("run", "Run a .dbc file.")
-	                       .addPositional(clah::FileParser::make("file"))
-	                       .setDefaultValueParser(clah::StringParser::make("program_argument"))
-	                       .setHandler([](const clah::ParsingResult& options) {
-							   vm::Supervisor::get();
-							   auto                     file = options.getPositional<fs::File>(0);
-							   std::vector<std::string> args;
-							   args.reserve(options.getExtraParameterCount());
-							   for (usize argc = 0; argc < options.getExtraParameterCount(); argc++)
-								   args.push_back(*options.getExtra<std::string>(argc));
-
-							   return cli(file, args);
-						   }))
 	    .addSubcommand(
-			clah::Clah("debug", "Start the VM CLI debugger.")
-				.add(clah::ParamBuilder::ofValue(clah::FileParser::make())
-	                     .addShortName('f')
-	                     .addLongName("file")
-	                     .addShortDesc(".dbc file to load")
-	                     .optional()
+			clah::Clah("run", "Starts VM in CLI mode")
+				.setDefaultValueParser(clah::FileParser::make("dbc file", std::regex(".*\\.dbc")))
+				.addCustomVerification(
+					[](const clah::ParsingResult& parsed) -> clah::VerificationResult {
+						if (parsed.getExtraParameterCount() == 0) {
+							if (!parsed.isFlag("debug"))
+								return std::unexpected<std::string>("Need at least one file");
+						} else if (parsed.getExtraParameterCount() != 1 && parsed.isFlag("debug"))
+							// @TODO: #3020 Add support for multi-file debugging
+							return std::unexpected<std::string>(
+								"Debugger currently supports only one file"
+							);
+
+						if (parsed.isFlag("debug") && parsed.isFlag("fast-mode"))
+							return std::unexpected<std::string>(
+								"Debugger does not support fast-mode"
+							);
+
+						return {};
+					}
+				)
+				.add(clah::ParamBuilder::ofFlag()
+	                     .addLongName("fast-mode")
+	                     .addShortDesc(
+							 "Fast mode for the VM, which does not perform certain runtime checks."
+						 )
 	                     .build())
-				.setDefaultValueParser(clah::StringParser::make("program_argument"))
-				.setHandler([](const clah::ParsingResult& options) {
+				.add(clah::ParamBuilder::ofFlag()
+	                     .addShortName('d')
+	                     .addLongName("debug")
+	                     .addShortDesc("Start the VM CLI debugger")
+	                     .build())
+				.add(clah::ParamBuilder::ofValue(clah::StringListParser::make("args"))
+	                     .addShortDesc(
+							 R"(Program arguments. To pass arguments such as "hello -n 5", enter them as a comma-separated list: "hello,-n,5".)"
+						 )
+	                     .addShortName('c')
+	                     .addLongName("args")
+	                     .build())
+				.setHandler([](const clah::ParsingResult& options) -> int {
 					vm::Supervisor::get();
 
-					auto cli = vm::debugger::cli::CLIDebugger();
+					std::vector<fs::File> source_files;
+					source_files.reserve(options.getExtraParameterCount());
+					for (usize i = 0; i < options.getExtraParameterCount(); i++)
+						source_files.push_back(*options.getExtra<fs::File>(i));
 
-					auto file   = options.getValue<fs::File>("file");
-					auto result = file ? cli.load(*file) : cli.loadDefault();
-					if (!result) {
-						printer::StreamPrinter::print({
-							{ "[ERROR] ", printer::Color::Red },
-							{ "Loading file failed with message:\n", printer::Color::Default },
-							{ vm::api::errorToString(result.error()), printer::Color::Default },
-							{ "\nAborting\n", printer::Color::Default },
-						});
+					std::vector<std::string> args
+						= options.getValue<std::vector<std::string>>("args").copyValueOr({});
 
-						return 1;
-					}
+					vm::api::ProcessConfig process_options{};
+					if (options.isFlag("fast-mode"))
+						process_options.mode = vm::api::ProcessMode::Fast;
 
-					std::vector<std::string> args;
-					args.reserve(options.getExtraParameterCount());
-					for (usize argc = 0; argc < options.getExtraParameterCount(); argc++)
-						args.push_back(*options.getExtra<std::string>(argc));
-					cli.setDefaultArgs(args);
+					if (options.isFlag("debug")) {
+						auto cli = vm::debugger::cli::CLIDebugger();
 
-					return cli.run();
+						auto result
+							= source_files.size() ? cli.load(source_files[0]) : cli.loadDefault();
+						if (!result) {
+							printer::StreamPrinter::print({
+								{ "[ERROR] ", printer::Color::Red },
+								{ "Loading file failed with message:\n", printer::Color::Default },
+								{ vm::api::errorToString(result.error()), printer::Color::Default },
+								{ "\nAborting\n", printer::Color::Default },
+							});
+
+							return 1;
+						}
+
+						cli.setProgramArguments(args);
+
+						return cli.run();
+					} else
+						return cli(source_files, args, process_options);
 				})
 		)
 	    .addSubcommand(clah::Clah("debug_adapter", "Start the VM debug adapter.")

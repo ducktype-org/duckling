@@ -51,6 +51,11 @@ namespace lexer {
 			return lang_def::strAsOperator(value);
 		}
 
+		[[nodiscard]]
+		lang_def::Keyword asKeyword() const {
+			return lang_def::strAsKeyword(value);
+		}
+
 		/**
 		 * @note This should do the corrected UTF-8 check in the future.
 		 */

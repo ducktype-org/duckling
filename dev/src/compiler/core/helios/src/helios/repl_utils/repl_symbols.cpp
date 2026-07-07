@@ -6,7 +6,6 @@
 #include <helios/queries/function_queries.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/query_type_symbol_data.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios_private/scopes/scopes.hpp>
 
 #include <base/except/exceptions.hpp>
@@ -17,15 +16,6 @@
 
 namespace compiler::repl {
 	namespace {
-		/**
-		 * @brief Return whether a symbol kind can be printed with function-style signature details.
-		 */
-		bool isFunctionLike(helios::SymbolKind kind) {
-			return kind == helios::SymbolKind::Function
-			    || kind == helios::SymbolKind::FunctionDeclaration
-			    || kind == helios::SymbolKind::Method;
-		}
-
 		/**
 		 * @brief Convert a compiler symbol kind into the short label used in REPL output.
 		 */
