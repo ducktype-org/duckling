@@ -197,13 +197,6 @@ namespace compiler::tsh {
 		std::string representation = "UNNAMED";
 	};
 
-	std::vector<Box<const AbstractTypeImpl>>& getTypes();
-
-	template<std::derived_from<AbstractTypeImpl> T>
-	void pushType(Box<T>&& type) {
-		getTypes().emplace_back(std::move(type));
-	}
-
 	class UnitAbstractTypeImpl final: public AbstractTypeImpl {
 	public:
 		[[nodiscard]]

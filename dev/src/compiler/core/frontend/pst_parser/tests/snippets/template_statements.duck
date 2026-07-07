@@ -1,0 +1,16 @@
+# @TODO: #3042 adjust the syntax here
+
+template(a: i64)
+namespace N { }
+
+template(a: i64 = 1)
+namespace N { }
+
+template() class C {}
+
+template(a: T, b: complex+expression = 1)
+class C {}
+
+template(a: T, b: Q, c: R)
+fun f() = { }
+

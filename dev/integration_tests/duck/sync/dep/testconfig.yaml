@@ -1,0 +1,20 @@
+PostCase: python3 check.py && @{cleanup_tmp_env}
+
+PreCase: |+
+  @{cd-tmp-dir}
+  @{duck-exe} init foo
+  @{duck-exe} init bar
+  echo "dependencies:
+    bar:
+      source:
+        path: ../bar" >> foo/quackconfig.yaml
+
+Tests:
+  dep:
+    Description: can sync a project with a single local dep
+    Cases:
+      sync:
+        test-cmd: duck -C foo sync
+        Output:
+          String: 'info: successfully synchronized venv \`foo\`\n'
+        

@@ -20,12 +20,14 @@
 #include <helios_private/hout_creation/definition_generation/default_constructors.hpp>
 #include <helios_private/hout_creation/definition_generation/default_destructors.hpp>
 #include <helios_private/hout_creation/definition_generation/length_methods.hpp>
+#include <helios_private/hout_creation/definition_generation/list_methods.hpp>
 #include <helios_private/hout_creation/definition_generation/to_string_methods.hpp>
 #include <helios_private/hout_creation/definition_generation/tuple_constructor.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/hout_creation/hout_stmt_compilation.hpp>
 #include <helios_private/pst_layer/stmts_from_aggregate.hpp>
 #include <helios_private/scopes/scopes.hpp>
+#include <helios_private/symbols/pst_symbol_data.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
@@ -126,75 +128,85 @@ namespace compiler::helios {
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			const auto& sym_ref = getSymRef(key);
-			// Non-generated symbol data.
-			if (sym_ref->getPSTDataOpt().has_value()) {
-				CORE_ASSERT(
-					kind(key) == SymbolKind::Function or kind(key) == SymbolKind::Method,
-					"Function creation called on non-function and non-method symbol"
-				);
-				HOUTFunctionMaker func_maker(ctx, key);
-				stmt(ctx, key).value()->acceptVisitor(func_maker);
-
-				return func_maker.out.value();
-			}
-
 
 			// Generated symbol data.
 			variant_match(sym_ref->other) {
-				variant_case(defgen::GeneratedSymbolData, gsd_data) {
-					variant_match(gsd_data.data) {
-						variant_case(defgen::GeneratedSymbolData::ImplicitConstructor, ctor) {
-							const auto& type = ctor.target_type;
-							if (type.getKind() == tsh::Kind::Class) {
-								const auto& class_type = type.as<tsh::ClassAbstractType>();
-								return ctx.query<defgen::QueryImplicitClassConstructor>(class_type)
-								    ->valueOrThrow();
-							} else if (type.getKind() == tsh::Kind::Tuple) {
-								const auto& tuple_type = type.as<tsh::TupleAbstractType>();
-								return ctx.query<defgen::QueryTuplePackConstructor>(tuple_type)
-								    ->valueOrThrow();
-							} else {
-								CORE_UNREACHABLE();
-							}
-						}
-						variant_case(defgen::GeneratedSymbolData::DefaultClassConstructor, ctor) {
-							const auto& type = ctx.query<QueryTypeFromDefinition>(ctor.class_symbol)
-							                       ->valueOrThrow()
-							                       .getType()
-							                       .as<tsh::ClassAbstractType>();
-							return ctx.query<defgen::QueryDefaultClassConstructor>(type)
-							    ->valueOrThrow();
-						}
-						variant_case(defgen::GeneratedSymbolData::DefaultDestructor, dtor) {
-							return ctx.query<defgen::QueryDefaultDestructor>(dtor.owner_type)
-							    ->valueOrThrow();
-						}
-						variant_case(
-							defgen::GeneratedSymbolData::DefaultStaticArrayConstructor, ctor
-						) {
+				variant_case(PstImplementedSemantics, data) {
+					CORE_ASSERT(
+						kind(key) == SymbolKind::Function or kind(key) == SymbolKind::Method,
+						"Function creation called on non-function and non-method symbol"
+					);
+					HOUTFunctionMaker func_maker(ctx, key);
+					stmt(ctx, key).value()->acceptVisitor(func_maker);
+
+					return func_maker.out.value();
+				}
+				variant_case(BuiltinSemantics, data) {
+					return getBuiltinImpl(ctx, key, data.builtin);
+				}
+				variant_case(defgen::Constructor, ctor) {
+					switch (ctor.kind) {
+					case defgen::Constructor::Kind::Implicit:
+						switch (ctor.type.getKind()) {
+						case tsh::Kind::Class:
 							return ctx
-							    .query<defgen::QueryDefaultStaticArrayConstructor>(ctor.array_type)
+							    .query<defgen::QueryImplicitClassConstructor>(
+									ctor.type.as<tsh::ClassAbstractType>()
+								)
 							    ->valueOrThrow();
-						}
-						variant_case(defgen::GeneratedSymbolData::ToStringMethod, to_string) {
-							return ctx.query<defgen::QueryToStringMethod>(to_string.owner_type)
+						case tsh::Kind::Tuple:
+							return ctx
+							    .query<defgen::QueryTuplePackConstructor>(
+									ctor.type.as<tsh::TupleAbstractType>()
+								)
 							    ->valueOrThrow();
+						default:
+							CORE_PANIC("Unhandled implicit constructor type.");
 						}
-						variant_case(defgen::GeneratedSymbolData::LengthMethod, length_method) {
-							return ctx.query<defgen::QueryLengthMethod>(length_method.owner_type)
+					case defgen::Constructor::Kind::Default:
+						switch (ctor.type.getKind()) {
+						case tsh::Kind::Class:
+							return ctx
+							    .query<defgen::QueryDefaultClassConstructor>(
+									ctor.type.as<tsh::ClassAbstractType>()
+								)
 							    ->valueOrThrow();
-						}
-						variant_default {
-							CORE_PANIC(base::strConcat(
-								"QueryTypeOfSymbol: Generated symbol '",
-								prettyDebugPrint(key, ctx),
-								"' not supported"
-							));
+						case tsh::Kind::StaticArray:
+							return ctx
+							    .query<defgen::QueryDefaultStaticArrayConstructor>(
+									ctor.type.as<tsh::StaticArrayAbstractType>()
+								)
+							    ->valueOrThrow();
+						default:
+							CORE_PANIC("Unhandled default constructor type.");
 						}
 					}
+					CORE_UNREACHABLE();
+				}
+				variant_case(defgen::Method, method) {
+					switch (method.kind) {
+					case defgen::Method::Kind::DefaultDestructor:
+						return ctx.query<defgen::QueryDefaultDestructor>(method.owner_type)
+						    ->valueOrThrow();
+					case defgen::Method::Kind::ToString:
+						return ctx.query<defgen::QueryToStringMethod>(method.owner_type)
+						    ->valueOrThrow();
+					case defgen::Method::Kind::LengthMethod:
+						return ctx.query<defgen::QueryLengthMethod>(method.owner_type)
+						    ->valueOrThrow();
+					case defgen::Method::Kind::Push:
+						return ctx.query<defgen::QueryPushMethod>(method.owner_type)->valueOrThrow();
+					case defgen::Method::Kind::Pop:
+						return ctx.query<defgen::QueryPopMethod>(method.owner_type)->valueOrThrow();
+					}
+					CORE_UNREACHABLE();
 				}
 				variant_default {
-					CORE_PANIC("QueryCodeOfFun: Symbol is neither PST nor Generated");
+					CORE_PANIC(base::strConcat(
+						"QueryCodeOfFun: symbol '",
+						prettyDebugPrint(key, ctx),
+						"' is neither a PST nor a supported generated function"
+					));
 				}
 			}
 		}

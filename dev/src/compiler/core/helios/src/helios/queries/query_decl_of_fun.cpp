@@ -28,6 +28,7 @@
 #include <helios_private/pst_layer/stmts_from_aggregate.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/generated_symbol_data.hpp>
+#include <helios_private/symbols/pst_symbol_data.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
@@ -298,8 +299,8 @@ namespace compiler::helios {
 				const SymID self_symbol = ctx.query<defgen::QueryGeneratedSymbol>({
 					.name = base::StrID("self"),
 					.generated_symbol_data
-					= defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::SelfParameter{
-						.method_symbol = this->original_symbol, .scope = self_scope } },
+					= defgen::SelfParameter{ .method_symbol = this->original_symbol,
+				                             .scope         = self_scope },
 				});
 
 				this->out->parameters.insert(
@@ -317,18 +318,15 @@ namespace compiler::helios {
 		/**
 		 * @brief Get the declaration of an implicit class constructor.
 		 */
-		static PResult getImplicitCtorDecl(
-			Context& ctx, const defgen::GeneratedSymbolData::ImplicitConstructor& ctor_data
-		) {
+		static PResult getImplicitCtorDecl(Context& ctx, const defgen::Constructor& ctor_data) {
 			// Preamble
-			using GeneratedSymbolData = defgen::GeneratedSymbolData;
-			using ImplicitConstructor = GeneratedSymbolData::ImplicitConstructor;
-			using Parameter           = GeneratedSymbolData::Parameter;
+			using defgen::Constructor;
+			using defgen::Parameter;
 			using std::ranges::to;
 			using std::views::transform;
 
 			// Get type data
-			const auto target_type = ctor_data.target_type;
+			const auto target_type = ctor_data.type;
 			auto       interface   = target_type.getInterface(ctx);
 
 			const std::vector<tsh::InterfaceElement> fields
@@ -353,8 +351,9 @@ namespace compiler::helios {
 
 			// Prepare the necessary symbols (of the constructor and its parameters).
 			const SymID ctor_symbol        = ctx.query<defgen::QueryGeneratedSymbol>({
-					   .name                  = ctor_name,
-					   .generated_symbol_data = GeneratedSymbolData{ ImplicitConstructor{ target_type } },
+					   .name = ctor_name,
+					   .generated_symbol_data
+                = Constructor{ .type = target_type, .kind = Constructor::Kind::Implicit },
             });
 			const auto  result_symbol_type = tsh::SymbolType<>{
                 target_type,
@@ -369,9 +368,9 @@ namespace compiler::helios {
 			for (const auto& field: fields) {
 				// Get the symbol of the constructor parameter corresponding to this field.
 				const SymID argument_symbol = ctx.query<defgen::QueryGeneratedSymbol>({
-					.name = base::StrID(name(field.getSymbol())),
-					.generated_symbol_data
-					= GeneratedSymbolData{ Parameter{ ctor_symbol, argument_index } },
+					.name                  = base::StrID(name(field.getSymbol())),
+					.generated_symbol_data = Parameter{ .function_symbol = ctor_symbol,
+				                                        .parameter_index = argument_index },
 				});
 
 				base::Optional<BoxOrCRef<code::Expr>> init_expr_coerced_opt = std::nullopt;
@@ -410,7 +409,7 @@ namespace compiler::helios {
 				argument_index++;
 			}
 
-			// Check that this logic did not diverge from `GeneratedSymbolData::getType()`.
+			// Check that this logic did not diverge from `getType()`.
 			const auto expected_function_type = ctx.query<QueryTypeOfSymbol>({ ctor_symbol })
 			                                        ->valueOrThrow()
 			                                        .getType()
@@ -444,12 +443,10 @@ namespace compiler::helios {
 			auto       parameters  = std::vector<code::Parameter>{};
 			for (u32 i = 0; const auto& param_type: builtin_type.getParameterTypes()) {
 				const auto param_symbol = ctx.query<defgen::QueryGeneratedSymbol>({
-					base::StrID(base::strConcat("_", i).c_str()),
-					defgen::GeneratedSymbolData{
-						defgen::GeneratedSymbolData::Parameter{
-							.function_symbol = fun,
-							.parameter_index = i,
-						},
+					.name=base::StrID(base::strConcat("_", i).c_str()),
+					.generated_symbol_data=defgen::Parameter{
+						.function_symbol = fun,
+						.parameter_index = i,
 					},
 				});
 				parameters.emplace_back(
@@ -475,82 +472,42 @@ namespace compiler::helios {
 			case SymbolKind::FunctionDeclaration:
 			case SymbolKind::Method: {
 				variant_match(getSymRef(key)->other) {
-					variant_case_novalue(PstSymbolData) {
+					variant_case_novalue(PstImplementedSemantics, BuiltinSemantics) {
 						DeclarationVisitor decl_maker(ctx, key);
 						stmt(ctx, key).value()->acceptVisitor(decl_maker);
 						auto result = std::move(decl_maker.out).value();
 						verifyFunctionAttributes(ctx, stmt(ctx, key).value(), result);
 						return result;
 					}
-					variant_case(defgen::GeneratedSymbolData, generated_data) {
-						variant_match(generated_data.data) {
-							variant_case(
-								defgen::GeneratedSymbolData::ImplicitConstructor, ctor_data
-							) {
-								return getImplicitCtorDecl(ctx, ctor_data);
-							}
-							variant_case(
-								defgen::GeneratedSymbolData::DefaultClassConstructor, ctor_data
-							) {
-								const auto class_type
-									= ctx.query<QueryTypeFromDefinition>({ ctor_data.class_symbol })
-								          ->valueOrThrow()
-								          .getType()
-								          .as<tsh::ClassAbstractType>();
+					variant_case(defgen::Constructor, ctor_data) {
+						switch (ctor_data.kind) {
+						case defgen::Constructor::Kind::Implicit:
+							return getImplicitCtorDecl(ctx, ctor_data);
+						case defgen::Constructor::Kind::Default: {
+							const auto return_type = tsh::SymbolType<>{ ctor_data.type,
+								                                        tsh::ReferenceKind::Direct,
+								                                        tsh::Mutability::Mutable };
 
-								const auto return_type = tsh::SymbolType<>{
-									class_type, tsh::ReferenceKind::Direct, tsh::Mutability::Mutable
-								};
-
-								return HOUTFunctionDeclaration{
-									key, return_type, {}, code::generatedOrigin()
-								};
-							}
-							variant_case(
-								defgen::GeneratedSymbolData::DefaultStaticArrayConstructor, ctor_data
-							) {
-								const auto return_type
-									= tsh::SymbolType<>{ ctor_data.array_type,
-									                     tsh::ReferenceKind::Direct,
-									                     tsh::Mutability::Mutable };
-
-								return HOUTFunctionDeclaration{
-									key, return_type, {}, code::generatedOrigin()
-								};
-							}
-							variant_case(
-								defgen::GeneratedSymbolData::ToStringMethod, to_string_data
-							) {
-								return funDeclFromType(ctx, key);
-							}
-							variant_case(defgen::GeneratedSymbolData::DefaultDestructor, dtor_data) {
-								return funDeclFromType(ctx, key);
-							}
-							variant_case(defgen::GeneratedSymbolData::LengthMethod, length_method) {
-								return funDeclFromType(ctx, key);
-							}
-							variant_case_novalue(defgen::GeneratedSymbolData::BuiltinOperator) {
-								return funDeclFromType(ctx, key);
-							}
-							variant_case_novalue(
-								defgen::GeneratedSymbolData::ReplExpressionWrapper,
-								defgen::GeneratedSymbolData::ReplInstructionWrapper
-							) {
-								return funDeclFromType(ctx, key);
-							}
-							variant_case_novalue(defgen::GeneratedSymbolData::ScriptMainWrapper) {
-								// Script main is a generated symbol with a regular function
-								// signature, so it needs a normal HOUT declaration for the backend
-								// pipeline.
-								return funDeclFromType(ctx, key);
-							}
-							variant_default {
-								// Other generated symbols are not functions.
-								CORE_UNREACHABLE();
-							}
+							return HOUTFunctionDeclaration{
+								key, return_type, {}, code::generatedOrigin()
+							};
 						}
+						}
+						CORE_UNREACHABLE();
 					}
-					variant_default { CORE_UNREACHABLE(); }
+					variant_case_novalue(
+						defgen::Method,
+						defgen::BuiltinOperator,
+						defgen::ReplExpressionWrapper,
+						defgen::ReplInstructionWrapper,
+						defgen::ScriptMainWrapper
+					) {
+						return funDeclFromType(ctx, key);
+					}
+					variant_default {
+						// Other symbols are not functions.
+						CORE_UNREACHABLE();
+					}
 				}
 				CORE_UNREACHABLE();
 			}

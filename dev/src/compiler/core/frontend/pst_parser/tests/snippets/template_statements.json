@@ -1,0 +1,641 @@
+{
+    "position": {
+        "sourceStart": 39,
+        "sourceEnd": 227
+    },
+    "Top Level": [
+        {
+            "position": {
+                "sourceStart": 39,
+                "sourceEnd": 70
+            },
+            "Template Statement": {
+                "template_decl": {
+                    "position": {
+                        "sourceStart": 39,
+                        "sourceEnd": 54
+                    },
+                    "Template Declaration": {
+                        "Parameters": {
+                            "position": {
+                                "sourceStart": 47,
+                                "sourceEnd": 54
+                            },
+                            "function parameter list": [
+                                {
+                                    "position": {
+                                        "sourceStart": 48,
+                                        "sourceEnd": 53
+                                    },
+                                    "Parameter": {
+                                        "Parameter": {
+                                            "name": {
+                                                "position": {
+                                                    "sourceStart": 48,
+                                                    "sourceEnd": 48
+                                                },
+                                                "Identifier Wrapper": {
+                                                    "value": "a"
+                                                }
+                                            },
+                                            "type": {
+                                                "position": {
+                                                    "sourceStart": 51,
+                                                    "sourceEnd": 53
+                                                },
+                                                "Top Level Expression": {
+                                                    "expr": {
+                                                        "position": {
+                                                            "sourceStart": 51,
+                                                            "sourceEnd": 53
+                                                        },
+                                                        "Keyword Expression": {
+                                                            "keyword": {
+                                                                "position": {
+                                                                    "sourceStart": 51,
+                                                                    "sourceEnd": 53
+                                                                },
+                                                                "Keyword Wrapper": {
+                                                                    "value": "i64"
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                            ]
+                        }
+                    }
+                },
+                "inner_statement": {
+                    "position": {
+                        "sourceStart": 56,
+                        "sourceEnd": 70
+                    },
+                    "Namespace": {
+                        "name": {
+                            "position": {
+                                "sourceStart": 66,
+                                "sourceEnd": 66
+                            },
+                            "Identifier Wrapper": {
+                                "value": "N"
+                            }
+                        },
+                        "block": {
+                            "position": {
+                                "sourceStart": 68,
+                                "sourceEnd": 70
+                            },
+                            "Code Block": []
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "position": {
+                "sourceStart": 73,
+                "sourceEnd": 108
+            },
+            "Template Statement": {
+                "template_decl": {
+                    "position": {
+                        "sourceStart": 73,
+                        "sourceEnd": 92
+                    },
+                    "Template Declaration": {
+                        "Parameters": {
+                            "position": {
+                                "sourceStart": 81,
+                                "sourceEnd": 92
+                            },
+                            "function parameter list": [
+                                {
+                                    "position": {
+                                        "sourceStart": 82,
+                                        "sourceEnd": 91
+                                    },
+                                    "Parameter": {
+                                        "Parameter": {
+                                            "name": {
+                                                "position": {
+                                                    "sourceStart": 82,
+                                                    "sourceEnd": 82
+                                                },
+                                                "Identifier Wrapper": {
+                                                    "value": "a"
+                                                }
+                                            },
+                                            "type": {
+                                                "position": {
+                                                    "sourceStart": 85,
+                                                    "sourceEnd": 87
+                                                },
+                                                "Top Level Expression": {
+                                                    "expr": {
+                                                        "position": {
+                                                            "sourceStart": 85,
+                                                            "sourceEnd": 87
+                                                        },
+                                                        "Keyword Expression": {
+                                                            "keyword": {
+                                                                "position": {
+                                                                    "sourceStart": 85,
+                                                                    "sourceEnd": 87
+                                                                },
+                                                                "Keyword Wrapper": {
+                                                                    "value": "i64"
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            },
+                                            "initial": {
+                                                "position": {
+                                                    "sourceStart": 91,
+                                                    "sourceEnd": 91
+                                                },
+                                                "Top Level Expression": {
+                                                    "expr": {
+                                                        "position": {
+                                                            "sourceStart": 91,
+                                                            "sourceEnd": 91
+                                                        },
+                                                        "Numeric Value Expr": {
+                                                            "number": "1"
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                            ]
+                        }
+                    }
+                },
+                "inner_statement": {
+                    "position": {
+                        "sourceStart": 94,
+                        "sourceEnd": 108
+                    },
+                    "Namespace": {
+                        "name": {
+                            "position": {
+                                "sourceStart": 104,
+                                "sourceEnd": 104
+                            },
+                            "Identifier Wrapper": {
+                                "value": "N"
+                            }
+                        },
+                        "block": {
+                            "position": {
+                                "sourceStart": 106,
+                                "sourceEnd": 108
+                            },
+                            "Code Block": []
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "position": {
+                "sourceStart": 111,
+                "sourceEnd": 131
+            },
+            "Template Statement": {
+                "template_decl": {
+                    "position": {
+                        "sourceStart": 111,
+                        "sourceEnd": 120
+                    },
+                    "Template Declaration": {
+                        "Parameters": {
+                            "position": {
+                                "sourceStart": 119,
+                                "sourceEnd": 120
+                            },
+                            "function parameter list": []
+                        }
+                    }
+                },
+                "inner_statement": {
+                    "position": {
+                        "sourceStart": 122,
+                        "sourceEnd": 131
+                    },
+                    "Class": {
+                        "name": {
+                            "position": {
+                                "sourceStart": 128,
+                                "sourceEnd": 128
+                            },
+                            "Identifier Wrapper": {
+                                "value": "C"
+                            }
+                        },
+                        "Base": "<nullptr>",
+                        "Implements": "<nullptr>",
+                        "body": {
+                            "position": {
+                                "sourceStart": 130,
+                                "sourceEnd": 131
+                            },
+                            "Code Block": []
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "position": {
+                "sourceStart": 134,
+                "sourceEnd": 185
+            },
+            "Template Statement": {
+                "template_decl": {
+                    "position": {
+                        "sourceStart": 134,
+                        "sourceEnd": 174
+                    },
+                    "Template Declaration": {
+                        "Parameters": {
+                            "position": {
+                                "sourceStart": 142,
+                                "sourceEnd": 174
+                            },
+                            "function parameter list": [
+                                {
+                                    "position": {
+                                        "sourceStart": 143,
+                                        "sourceEnd": 146
+                                    },
+                                    "Parameter": {
+                                        "Parameter": {
+                                            "name": {
+                                                "position": {
+                                                    "sourceStart": 143,
+                                                    "sourceEnd": 143
+                                                },
+                                                "Identifier Wrapper": {
+                                                    "value": "a"
+                                                }
+                                            },
+                                            "type": {
+                                                "position": {
+                                                    "sourceStart": 146,
+                                                    "sourceEnd": 146
+                                                },
+                                                "Top Level Expression": {
+                                                    "expr": {
+                                                        "position": {
+                                                            "sourceStart": 146,
+                                                            "sourceEnd": 146
+                                                        },
+                                                        "Identifier Expression": {
+                                                            "name": {
+                                                                "position": {
+                                                                    "sourceStart": 146,
+                                                                    "sourceEnd": 146
+                                                                },
+                                                                "Identifier Wrapper": {
+                                                                    "value": "T"
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                {
+                                    "position": {
+                                        "sourceStart": 149,
+                                        "sourceEnd": 173
+                                    },
+                                    "Parameter": {
+                                        "Parameter": {
+                                            "name": {
+                                                "position": {
+                                                    "sourceStart": 149,
+                                                    "sourceEnd": 149
+                                                },
+                                                "Identifier Wrapper": {
+                                                    "value": "b"
+                                                }
+                                            },
+                                            "type": {
+                                                "position": {
+                                                    "sourceStart": 152,
+                                                    "sourceEnd": 169
+                                                },
+                                                "Top Level Expression": {
+                                                    "expr": {
+                                                        "position": {
+                                                            "sourceStart": 152,
+                                                            "sourceEnd": 169
+                                                        },
+                                                        "Binary Operator": {
+                                                            "left_expr": {
+                                                                "position": {
+                                                                    "sourceStart": 152,
+                                                                    "sourceEnd": 158
+                                                                },
+                                                                "Identifier Expression": {
+                                                                    "name": {
+                                                                        "position": {
+                                                                            "sourceStart": 152,
+                                                                            "sourceEnd": 158
+                                                                        },
+                                                                        "Identifier Wrapper": {
+                                                                            "value": "complex"
+                                                                        }
+                                                                    }
+                                                                }
+                                                            },
+                                                            "operator": {
+                                                                "position": {
+                                                                    "sourceStart": 159,
+                                                                    "sourceEnd": 159
+                                                                },
+                                                                "Operator Wrapper": {
+                                                                    "value": "+"
+                                                                }
+                                                            },
+                                                            "right_expr": {
+                                                                "position": {
+                                                                    "sourceStart": 160,
+                                                                    "sourceEnd": 169
+                                                                },
+                                                                "Identifier Expression": {
+                                                                    "name": {
+                                                                        "position": {
+                                                                            "sourceStart": 160,
+                                                                            "sourceEnd": 169
+                                                                        },
+                                                                        "Identifier Wrapper": {
+                                                                            "value": "expression"
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            },
+                                            "initial": {
+                                                "position": {
+                                                    "sourceStart": 173,
+                                                    "sourceEnd": 173
+                                                },
+                                                "Top Level Expression": {
+                                                    "expr": {
+                                                        "position": {
+                                                            "sourceStart": 173,
+                                                            "sourceEnd": 173
+                                                        },
+                                                        "Numeric Value Expr": {
+                                                            "number": "1"
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                            ]
+                        }
+                    }
+                },
+                "inner_statement": {
+                    "position": {
+                        "sourceStart": 176,
+                        "sourceEnd": 185
+                    },
+                    "Class": {
+                        "name": {
+                            "position": {
+                                "sourceStart": 182,
+                                "sourceEnd": 182
+                            },
+                            "Identifier Wrapper": {
+                                "value": "C"
+                            }
+                        },
+                        "Base": "<nullptr>",
+                        "Implements": "<nullptr>",
+                        "body": {
+                            "position": {
+                                "sourceStart": 184,
+                                "sourceEnd": 185
+                            },
+                            "Code Block": []
+                        }
+                    }
+                }
+            }
+        },
+        {
+            "position": {
+                "sourceStart": 188,
+                "sourceEnd": 227
+            },
+            "Template Statement": {
+                "template_decl": {
+                    "position": {
+                        "sourceStart": 188,
+                        "sourceEnd": 213
+                    },
+                    "Template Declaration": {
+                        "Parameters": {
+                            "position": {
+                                "sourceStart": 196,
+                                "sourceEnd": 213
+                            },
+                            "function parameter list": [
+                                {
+                                    "position": {
+                                        "sourceStart": 197,
+                                        "sourceEnd": 200
+                                    },
+                                    "Parameter": {
+                                        "Parameter": {
+                                            "name": {
+                                                "position": {
+                                                    "sourceStart": 197,
+                                                    "sourceEnd": 197
+                                                },
+                                                "Identifier Wrapper": {
+                                                    "value": "a"
+                                                }
+                                            },
+                                            "type": {
+                                                "position": {
+                                                    "sourceStart": 200,
+                                                    "sourceEnd": 200
+                                                },
+                                                "Top Level Expression": {
+                                                    "expr": {
+                                                        "position": {
+                                                            "sourceStart": 200,
+                                                            "sourceEnd": 200
+                                                        },
+                                                        "Identifier Expression": {
+                                                            "name": {
+                                                                "position": {
+                                                                    "sourceStart": 200,
+                                                                    "sourceEnd": 200
+                                                                },
+                                                                "Identifier Wrapper": {
+                                                                    "value": "T"
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                {
+                                    "position": {
+                                        "sourceStart": 203,
+                                        "sourceEnd": 206
+                                    },
+                                    "Parameter": {
+                                        "Parameter": {
+                                            "name": {
+                                                "position": {
+                                                    "sourceStart": 203,
+                                                    "sourceEnd": 203
+                                                },
+                                                "Identifier Wrapper": {
+                                                    "value": "b"
+                                                }
+                                            },
+                                            "type": {
+                                                "position": {
+                                                    "sourceStart": 206,
+                                                    "sourceEnd": 206
+                                                },
+                                                "Top Level Expression": {
+                                                    "expr": {
+                                                        "position": {
+                                                            "sourceStart": 206,
+                                                            "sourceEnd": 206
+                                                        },
+                                                        "Identifier Expression": {
+                                                            "name": {
+                                                                "position": {
+                                                                    "sourceStart": 206,
+                                                                    "sourceEnd": 206
+                                                                },
+                                                                "Identifier Wrapper": {
+                                                                    "value": "Q"
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                {
+                                    "position": {
+                                        "sourceStart": 209,
+                                        "sourceEnd": 212
+                                    },
+                                    "Parameter": {
+                                        "Parameter": {
+                                            "name": {
+                                                "position": {
+                                                    "sourceStart": 209,
+                                                    "sourceEnd": 209
+                                                },
+                                                "Identifier Wrapper": {
+                                                    "value": "c"
+                                                }
+                                            },
+                                            "type": {
+                                                "position": {
+                                                    "sourceStart": 212,
+                                                    "sourceEnd": 212
+                                                },
+                                                "Top Level Expression": {
+                                                    "expr": {
+                                                        "position": {
+                                                            "sourceStart": 212,
+                                                            "sourceEnd": 212
+                                                        },
+                                                        "Identifier Expression": {
+                                                            "name": {
+                                                                "position": {
+                                                                    "sourceStart": 212,
+                                                                    "sourceEnd": 212
+                                                                },
+                                                                "Identifier Wrapper": {
+                                                                    "value": "R"
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                            ]
+                        }
+                    }
+                },
+                "inner_statement": {
+                    "position": {
+                        "sourceStart": 215,
+                        "sourceEnd": 227
+                    },
+                    "Function": {
+                        "name": {
+                            "position": {
+                                "sourceStart": 219,
+                                "sourceEnd": 219
+                            },
+                            "Identifier Wrapper": {
+                                "value": "f"
+                            }
+                        },
+                        "parameters": {
+                            "position": {
+                                "sourceStart": 220,
+                                "sourceEnd": 221
+                            },
+                            "function parameter list": []
+                        },
+                        "return": "unit",
+                        "body": {
+                            "position": {
+                                "sourceStart": 225,
+                                "sourceEnd": 227
+                            },
+                            "Code Block or Statement": {
+                                "position": {
+                                    "sourceStart": 225,
+                                    "sourceEnd": 227
+                                },
+                                "Code Block": []
+                            }
+                        }
+                    }
+                }
+            }
+        },
+    ]
+}
