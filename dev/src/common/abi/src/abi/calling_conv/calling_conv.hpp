@@ -18,16 +18,26 @@
 namespace abi::calling_conv {
 	class ArgInfo {
 	public:
+		/**
+		 * @brief We pass the value by pointer.
+		 */
 		struct ByPointer {
 			// If we want to pass the pointer with the `by_val` ptr attribute.
-			// If not, we have to copy the
+			// If not, we have to copy the value before the call and pass the pointer.
 			bool by_val;
 		};
 
+		/**
+		 * @brief We pass by value.
+		 */
 		struct ByValue {
-			types::AbiType coerce_to_type;
-			bool           sign_ext;
-			bool           zero_ext;
+			/**
+			 * @brief The type we coerce the original type to,
+			 * can be the same as the original type.
+			 */
+			types::AbiType        coerce_to_type;
+			[[maybe_unused]] bool sign_ext;
+			[[maybe_unused]] bool zero_ext;
 		};
 
 		using Kind = std::variant<ByPointer, ByValue>;
@@ -50,20 +60,41 @@ namespace abi::calling_conv {
 
 	struct ReturnEntry {
 		ArgInfo            info;
+
+		/**
+		 * @brief Whether the return value should be passed as first argument.
+		 * Only relevant if a return value is passed by pointer.
+		 * There may be more kind than just "ByPointer" in the future,
+		 * so that's why it is here and in inside the "ByPointer" info.
+		 */
 		bool               passed_as_param;
 		types::AbiTypeCRef original_type;
 	};
 
+	/**
+	 * @brief The calling convention information
+	 * to correctly construct LLVM C abi calls.
+	 */
 	struct FunctionInfo {
 		base::Optional<ReturnEntry> return_info;
 		std::vector<ArgEntry>       param_info;
 	};
 
+	/**
+	 * @brief The function type.
+	 */
 	struct FunctionType {
+		/**
+		 * @brief The return type, empty optional means function returns a void.
+		 */
 		base::Optional<types::AbiTypeCRef> return_type;
 		std::vector<types::AbiTypeCRef>    param_types;
 	};
 
+	/**
+	 * @brief Abstract class for constructing the `FunctionInfo`.
+	 * Specialized by different architectures ABIs.
+	 */
 	class TargetInfo {
 	public:
 		virtual ~TargetInfo()                                                            = default;
@@ -71,6 +102,9 @@ namespace abi::calling_conv {
 		[[nodiscard]] virtual FunctionInfo     computeInfo(const FunctionType& ft) const = 0;
 	};
 
+	/**
+	 * @brief X86_64 ABI.
+	 */
 	class X86_64ABIInfo final: public TargetInfo {
 	public:
 		[[nodiscard]] const TargetABI& myTargetABI() const final { return x86_64Linux(); }
@@ -78,6 +112,9 @@ namespace abi::calling_conv {
 		[[nodiscard]] FunctionInfo computeInfo(const FunctionType& ft) const final;
 	};
 
+	/**
+	 * @brief AArch64 ABI.
+	 */
 	class AArch64ABIInfo final: public TargetInfo {
 	public:
 		[[nodiscard]] const TargetABI& myTargetABI() const final { return aarch64Linux(); }
