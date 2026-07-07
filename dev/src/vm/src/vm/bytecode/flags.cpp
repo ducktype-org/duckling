@@ -1,5 +1,7 @@
 #include "flags.hpp"
 
+#include "validator/errors.hpp"
+
 #include <base/preproc/for_each.hpp>
 
 #include <vm/core/builtin_functions.hpp>
@@ -9,7 +11,7 @@ namespace vm::code {
 		using enum FunctionFlagOptions;
 
 		auto builtin_func_opt = builtins::getBuiltinFunctionID(name);
-		if (!builtin_func_opt) CORE_PANIC("Function name ", name, " is not a builtin function");
+		if (!builtin_func_opt) throw InvalidBuiltinFunctionError(opargs::BuiltinFunctionName(name));
 		switch (builtin_func_opt.value()) {
 		case builtins::BuiltinFunctionID::Abort:
 			// terminates the current execution

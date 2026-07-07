@@ -134,8 +134,11 @@ namespace vm::code {
 			);
 		}
 		for (const auto& [func_name, _]: transpose_call_graph)
-			if (!new_function_names.contains(func_name))
+			if (!new_function_names.contains(func_name)) {
+				if (!flags_in_functions.contains(func_name))
+					throw UnknownFunctionError(opargs::FunctionName(func_name));
 				direct_flags.put(func_name, flags_in_functions.at(func_name));
+			}
 
 		// Prepare helper result structure
 		base::HashMap<base::StrID, InstructionFlag> flags_in_new_functions;
@@ -153,10 +156,7 @@ namespace vm::code {
 
 			// Propagate via BFS
 			std::queue<base::StrID> to_visit;
-			for (const auto& func: marked_functions) {
-				to_visit.push(func);
-				marked_functions.insert(func);
-			}
+			for (const auto& func: marked_functions) to_visit.push(func);
 			while (!to_visit.empty()) {
 				auto current = to_visit.front();
 				to_visit.pop();
@@ -164,7 +164,7 @@ namespace vm::code {
 				for (const auto& next: transpose_call_graph.at(current))
 					if (!marked_functions.contains(next)) {
 						to_visit.push(next);
-						marked_functions.insert(current);
+						marked_functions.insert(next);
 					}
 			}
 
