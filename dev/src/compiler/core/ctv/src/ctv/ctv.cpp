@@ -15,35 +15,30 @@ namespace compiler::ctv {
 	const CompileTimeValue::Storage& CompileTimeValue::getStorage() const { return value; }
 
 	base::Bit256 CompileTimeValue::queryUnstablePerfectHash() const {
-		// PR TODO: proper handling!
-
 		hashing::SHA256 hasher;
 		hashing::addToHash(hasher, value.index());
 
 		variant_match(value) {
 			variant_case(bool, val) { hashing::addToHash(hasher, val); }
 			variant_case(NumericValue, val) {
-				// TODO PR: this is questionable
-				hashing::addToHash(hasher, val.coerceTo<i64>().value());
+				hashing::addToHash(hasher, val.getStorage().index());
+				VISIT(val.getStorage(), inner_value, hashing::addToHash(hasher, inner_value););
 			}
 			variant_case(char, c) { hashing::addToHash(hasher, c); }
 			variant_case(base::StrID, val) {
-				// TODO PR:
-				// std hash is ok here, but maybe just add .unstablePerfectHash() to StrID and use
-				// it instead?
-				hashing::addToHash(hasher, std::hash<base::StrID>()(val));
+				hashing::addToHash(hasher, val);
 			}
 			variant_case_novalue(UnitCTV) {
 				// nothing to add to hash
 			}
 			variant_case(TupleCTV, tuple) {
-				CORE_PANIC("Querying hash of tuple CTV is not implemented yet");
+				throw base::NotYetImplemented("Tuples are not supported yey in CTV::queryUnstablePerfectHash");
 			}
 			variant_case(tsh::SymbolType<>, val) {
 				hashing::addToHash(hasher, val.queryUnstablePerfectHash());
 			}
 			variant_default {
-				throw base::NotYetImplemented("Converting other CTV types to string");
+				throw base::NotYetImplemented("Unhandled CTV type in CTV::queryUnstablePerfectHash");
 			}
 		}
 

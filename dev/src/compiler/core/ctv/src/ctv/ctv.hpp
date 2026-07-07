@@ -102,8 +102,7 @@ namespace compiler::ctv {
 		[[nodiscard]] tsh::SymbolType<> getTypeOfStoredValue(query::Context& ctx) const;
 
 		/**
-		 * TODO PR: this might relate to mangling somehow.
-		 * Also: do we need stable one?
+		 * @note: This might be a subject of change in the future, especially, when VMValue CTVs will be introduced.
 		 */
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const;
