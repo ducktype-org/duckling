@@ -1,7 +1,5 @@
 #include "to_string_methods.hpp"
 
-#include "helios/symbols/lang_primitives.hpp"
-
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/hout/hout.hpp>
@@ -62,8 +60,7 @@ namespace compiler::helios::defgen {
 
 	Box<code::Expr> getStringFromLiteralExpr(query::Context& ctx, base::StrID value) {
 		std::vector<Box<code::Expr>> call_args;
-		call_args.emplace_back(
-			makeBox<code::LiteralStringExpr>(ctx, code::generatedOrigin(), value)
+		call_args.emplace_back(makeBox<code::LiteralStringExpr>(ctx, code::generatedOrigin(), value)
 		);
 		SymID callee_sym = stringifySym(
 			ctx, tsh::SymbolType<>::withDefaults(tsh::getCharSliceType(ctx)), "builtin_stringify_str"
@@ -85,21 +82,18 @@ namespace compiler::helios::defgen {
 			const auto builtin_sym = stringifySym(ctx, bool_type, "builtin_stringify_bool");
 
 			std::vector<Box<code::Expr>> args;
-			args.emplace_back(
-				makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), self_param)
+			args.emplace_back(makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), self_param)
 			);
 
-			body.emplace_back(
-				makeBox<code::ReturnStmt>(
+			body.emplace_back(makeBox<code::ReturnStmt>(
+				code::generatedOrigin(),
+				makeBox<code::CallExpr>(
+					ctx,
 					code::generatedOrigin(),
-					makeBox<code::CallExpr>(
-						ctx,
-						code::generatedOrigin(),
-						makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), builtin_sym),
-						std::move(args)
-					)
+					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), builtin_sym),
+					std::move(args)
 				)
-			);
+			));
 		}
 
 		static void stringifyIntegral(
@@ -114,15 +108,13 @@ namespace compiler::helios::defgen {
 			   == tsh::IntegralAbstractType::Signedness::Signed;
 			const auto target_builtin_name
 				= is_signed ? "builtin_stringify_i64" : "builtin_stringify_u64";
-			const auto target_int_type = tsh::SymbolType<>::withDefaults(
-				tsh::getIntegralType(
-					ctx,
-					64,
-					is_signed ? tsh::IntegralAbstractType::Signedness::Signed
-							  : tsh::IntegralAbstractType::Signedness::Unsigned
-				)
-			);
-			const auto builtin_sym = stringifySym(ctx, target_int_type, target_builtin_name);
+			const auto target_int_type = tsh::SymbolType<>::withDefaults(tsh::getIntegralType(
+				ctx,
+				64,
+				is_signed ? tsh::IntegralAbstractType::Signedness::Signed
+						  : tsh::IntegralAbstractType::Signedness::Unsigned
+			));
+			const auto builtin_sym     = stringifySym(ctx, target_int_type, target_builtin_name);
 
 			Box<code::Expr> arg_expr
 				= makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), self_param);
@@ -135,17 +127,15 @@ namespace compiler::helios::defgen {
 			std::vector<Box<code::Expr>> args;
 			args.emplace_back(std::move(arg_expr));
 
-			body.emplace_back(
-				makeBox<code::ReturnStmt>(
+			body.emplace_back(makeBox<code::ReturnStmt>(
+				code::generatedOrigin(),
+				makeBox<code::CallExpr>(
+					ctx,
 					code::generatedOrigin(),
-					makeBox<code::CallExpr>(
-						ctx,
-						code::generatedOrigin(),
-						makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), builtin_sym),
-						std::move(args)
-					)
+					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), builtin_sym),
+					std::move(args)
 				)
-			);
+			));
 		}
 
 		static void stringifyFloat(
@@ -170,17 +160,15 @@ namespace compiler::helios::defgen {
 			std::vector<Box<code::Expr>> args;
 			args.emplace_back(std::move(arg_expr));
 
-			body.emplace_back(
-				makeBox<code::ReturnStmt>(
+			body.emplace_back(makeBox<code::ReturnStmt>(
+				code::generatedOrigin(),
+				makeBox<code::CallExpr>(
+					ctx,
 					code::generatedOrigin(),
-					makeBox<code::CallExpr>(
-						ctx,
-						code::generatedOrigin(),
-						makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), builtin_sym),
-						std::move(args)
-					)
+					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), builtin_sym),
+					std::move(args)
 				)
-			);
+			));
 		}
 
 		static void stringifyChar(
@@ -193,21 +181,18 @@ namespace compiler::helios::defgen {
 			const auto builtin_sym = stringifySym(ctx, source_char_type, "builtin_stringify_char");
 
 			std::vector<Box<code::Expr>> args;
-			args.emplace_back(
-				makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), self_param)
+			args.emplace_back(makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), self_param)
 			);
 
-			body.emplace_back(
-				makeBox<code::ReturnStmt>(
+			body.emplace_back(makeBox<code::ReturnStmt>(
+				code::generatedOrigin(),
+				makeBox<code::CallExpr>(
+					ctx,
 					code::generatedOrigin(),
-					makeBox<code::CallExpr>(
-						ctx,
-						code::generatedOrigin(),
-						makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), builtin_sym),
-						std::move(args)
-					)
+					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), builtin_sym),
+					std::move(args)
 				)
-			);
+			));
 		}
 
 		static void stringifyString(
@@ -217,16 +202,14 @@ namespace compiler::helios::defgen {
 		) {
 			const auto self_param = to_string_decl.parameters.at(0).helios_symbol;
 
-			body.emplace_back(
-				makeBox<code::ReturnStmt>(
+			body.emplace_back(makeBox<code::ReturnStmt>(
+				code::generatedOrigin(),
+				makeBox<code::DerefExpr>(
+					ctx,
 					code::generatedOrigin(),
-					makeBox<code::DerefExpr>(
-						ctx,
-						code::generatedOrigin(),
-						makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), self_param)
-					)
+					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), self_param)
 				)
-			);
+			));
 		}
 
 		static void stringifySlice(
@@ -248,26 +231,20 @@ namespace compiler::helios::defgen {
 					= makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), callee_sym);
 
 				std::vector<Box<code::Expr>> call_args;
-				call_args.emplace_back(
-					makeBox<code::IdentifierExpr>(
-						ctx, code::generatedOrigin(), self_param.helios_symbol
-					)
-				);
+				call_args.emplace_back(makeBox<code::IdentifierExpr>(
+					ctx, code::generatedOrigin(), self_param.helios_symbol
+				));
 
-				body.emplace_back(
-					makeBox<code::ReturnStmt>(
-						code::generatedOrigin(),
-						makeBox<code::CallExpr>(
-							ctx, code::generatedOrigin(), std::move(callee), std::move(call_args)
-						)
+				body.emplace_back(makeBox<code::ReturnStmt>(
+					code::generatedOrigin(),
+					makeBox<code::CallExpr>(
+						ctx, code::generatedOrigin(), std::move(callee), std::move(call_args)
 					)
-				);
+				));
 			} else {
-				ctx.logInt(
-					makeBox<dia_int::NotYetImplementedCodeError>(
-						"toString for non-string slices not yet implemented."
-					)
-				);
+				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					"toString for non-string slices not yet implemented."
+				));
 			}
 		}
 
@@ -276,11 +253,9 @@ namespace compiler::helios::defgen {
 			const HOUTFunctionDeclaration& /* to_string_decl */,
 			std::vector<Box<code::Stmt>>& body
 		) {
-			body.emplace_back(
-				makeBox<code::ReturnStmt>(
-					code::generatedOrigin(), getStringFromLiteralExpr(ctx, base::StrID("()"))
-				)
-			);
+			body.emplace_back(makeBox<code::ReturnStmt>(
+				code::generatedOrigin(), getStringFromLiteralExpr(ctx, base::StrID("()"))
+			));
 		}
 
 		static void stringifyAggregate(
@@ -310,14 +285,12 @@ namespace compiler::helios::defgen {
 					  .variable_index  = 0,
 					  .type            = STRING_TYPE } } }
 			);
-			body.emplace_back(
-				makeBox<code::VariableStmt>(
-					code::generatedOrigin(),
-					getStringFromLiteralExpr(ctx, base::StrID(prefix)),
-					STRING_TYPE,
-					result_sym
-				)
-			);
+			body.emplace_back(makeBox<code::VariableStmt>(
+				code::generatedOrigin(),
+				getStringFromLiteralExpr(ctx, base::StrID(prefix)),
+				STRING_TYPE,
+				result_sym
+			));
 
 			// Main body: append the fields
 			const std::vector<tsh::InterfaceElement> fields
@@ -332,8 +305,8 @@ namespace compiler::helios::defgen {
 
 				auto            next_reusable_self_expr = reusable_self_expr->nextUse();
 				Box<code::Expr> accessed_field          = makeBox<code::AccessExpr>(
-					ctx, code::generatedOrigin(), std::move(reusable_self_expr), field.getSymbol()
-				);
+                    ctx, code::generatedOrigin(), std::move(reusable_self_expr), field.getSymbol()
+                );
 				// If the field is not a simple type, we must call its `toString` method on a reference.
 				if (not accessed_field->expression_type.getType().isSimple()
 				    and accessed_field->expression_type.getSymbolType().getRefKind()
@@ -368,18 +341,16 @@ namespace compiler::helios::defgen {
 					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), result_sym)
 				);
 				v2.emplace_back(std::move(std::move(stringified_field)));
-				body.emplace_back(
-					makeBox<code::AssignmentStmt>(
+				body.emplace_back(makeBox<code::AssignmentStmt>(
+					code::generatedOrigin(),
+					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), result_sym),
+					makeBox<code::CallExpr>(
+						ctx,
 						code::generatedOrigin(),
-						makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), result_sym),
-						makeBox<code::CallExpr>(
-							ctx,
-							code::generatedOrigin(),
-							makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), concat_sym),
-							std::move(v2)
-						)
+						makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), concat_sym),
+						std::move(v2)
 					)
-				);
+				));
 
 				// Concatenate the separator or closing parenthesis
 				std::vector<Box<code::Expr>> v3;
@@ -389,27 +360,23 @@ namespace compiler::helios::defgen {
 				v3.emplace_back(
 					getStringFromLiteralExpr(ctx, base::StrID(idx < num_fields - 1 ? "," : ")"))
 				);
-				body.emplace_back(
-					makeBox<code::AssignmentStmt>(
+				body.emplace_back(makeBox<code::AssignmentStmt>(
+					code::generatedOrigin(),
+					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), result_sym),
+					makeBox<code::CallExpr>(
+						ctx,
 						code::generatedOrigin(),
-						makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), result_sym),
-						makeBox<code::CallExpr>(
-							ctx,
-							code::generatedOrigin(),
-							makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), concat_sym),
-							std::move(v3)
-						)
+						makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), concat_sym),
+						std::move(v3)
 					)
-				);
+				));
 			}
 
 			// Finally, return
-			body.emplace_back(
-				makeBox<code::ReturnStmt>(
-					code::generatedOrigin(),
-					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), result_sym)
-				)
-			);
+			body.emplace_back(makeBox<code::ReturnStmt>(
+				code::generatedOrigin(),
+				makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), result_sym)
+			));
 		}
 
 		static void stringifyTuple(
@@ -485,11 +452,9 @@ namespace compiler::helios::defgen {
 			default: {
 				std::string msg
 					= "Stringification not yet implemented for " + owner_type.toString();
-				body.emplace_back(
-					makeBox<code::ReturnStmt>(
-						code::generatedOrigin(), getStringFromLiteralExpr(ctx, base::StrID(msg))
-					)
-				);
+				body.emplace_back(makeBox<code::ReturnStmt>(
+					code::generatedOrigin(), getStringFromLiteralExpr(ctx, base::StrID(msg))
+				));
 				break;
 			}
 			}

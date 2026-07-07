@@ -38,9 +38,10 @@ namespace compiler::backend_llvm {
 			std::vector<llvm::Type*>                     llvm_parameters;
 			std::vector<std::pair<u32, llvm::Attribute>> attributes;
 
-			// The LLVM type of a `ByValue` argument/return. When the calling convention passes the
-			// value without changing its representation (`coerce_to_type == original_type`) we keep
-			// its natural type computed by `typeFromLayout`.
+			// This is because the original type can have aliased structure name like
+			// "%MyStructure", where ABI type is a structure type literal like "{i32, i32}" and in
+			// LLVM those types are not compatible, even though they are the same.
+			// So if the coerced type is the same as original, we also use original LLVM type.
 			auto by_value_type = [&](const cc::ArgInfo::ByValue& data,
 			                         const CRef<tsl::TypeLayout> layout,
 			                         abi::types::AbiTypeCRef     original_type) -> llvm::Type* {
