@@ -191,9 +191,9 @@ namespace compiler::helios {
 			return ElementScopeKind::Transparent;
 
 		case pst::ElementKind::TemplateStmt:
-			// make sure this is ok!
-			// link the issue, this is a total hack
-			return ElementScopeKind::Standard;  // this sort of works only for baked ones now,
+			// This defined the scope only for for baked PST nodes,
+			// @TODO: #3071 probably change it to transparent
+			return ElementScopeKind::Standard;  
 
 		case pst::ElementKind::TemplateDecl:
 			// This is a weird case, this is used to lookup on expressions inside template
@@ -565,39 +565,25 @@ namespace compiler::helios {
 			void visitExprStmt(pst::Access<pst::ExprStmt>) override {
 				output(std::vector<SymID>{});
 			}
-		};
 
-		/**
-		 * This is an actual implementation of the query.
-		 * `provide` function simply calls it and validates output.
-		 */
-		static auto getSymbols(Context& ctx, QKey key) -> PResult {
-			if (not key.ref->related_pst_element_hash.has_value()) {
-				CORE_ASSERT(key.ref->is_root, "Non root scope without PST element!");
-				return {};
-			}
-			auto base_element = key.ref->relatedPSTElement().value().unlock(ctx);
-
-			if (base_element->isStatementAggregate()) {
-				return filterSymbolsFromStmtList(ctx, getStmtsFromStmtAggregate(ctx, base_element));
-			} else if (base_element->getElementKind() == pst::ElementKind::TemplateStmt) {
-				// THIS IS A GIGA HACK!
-				// @TODO: better solution
-
+			void visitTemplateStmt(pst::Access<pst::TemplateStmt> template_stmt) override {
 				// Scope of "template →(...)← {}"
-				// ONLY for BAKED templates, since they are the only ones that have a scope.
 
-				// @TODO: move in to the visitor?
-				auto template_decl = base_element.dynamicCast<pst::TemplateStmt>().value();
+				// @TODO: #3071 this is a hack, fix it!
+				// Scope of "template →(...)← {}"
+				// Here two different cases are handled:
+				// * for pre-bake PST template this defined no symbols, this is a scope in which the expressions from template "signature" are compiled
+				// * for baked PST template this defines generated symbols for the template arguments, which are used in the template body.
+
 
 				std::vector<SymID> out;
 
-				if (not template_decl->hasAdditionalRootData()) {
+				if (not template_stmt->hasAdditionalRootData()) {
 					// This is not a baked template, so it does define any symbols in its scope.
-					return out;
+					output(out);
 				}
 
-				const auto& additional_data = template_decl->getAdditionalRootData();
+				const auto& additional_data = template_stmt->getAdditionalRootData();
 
 				variant_match(additional_data.pst_parent) {
 					variant_case(pst::AdditionalRootData::BakedTemplateParent, template_parent) {
@@ -618,9 +604,26 @@ namespace compiler::helios {
 					}
 				}
 
-				return out;
+				output(out);
+			}
+		};
+
+		/**
+		 * This is an actual implementation of the query.
+		 * `provide` function simply calls it and validates output.
+		 */
+		static auto getSymbols(Context& ctx, QKey key) -> PResult {
+			if (not key.ref->related_pst_element_hash.has_value()) {
+				CORE_ASSERT(key.ref->is_root, "Non root scope without PST element!");
+				return {};
+			}
+			auto base_element = key.ref->relatedPSTElement().value().unlock(ctx);
+
+			if (base_element->isStatementAggregate()) {
+				return filterSymbolsFromStmtList(ctx, getStmtsFromStmtAggregate(ctx, base_element));
 			} else if (base_element->isStatement()) {
 				// note: if this check fail, it might be that we are missing some cases
+				// @TODO: #3071 maybe modify this assertion or add a new else-if branch for template statements
 				CORE_ASSERT(
 					getScopeKind(ctx, base_element) == ElementScopeKind::Standard,
 					"Bad element in QuerySymbolsInScope"
