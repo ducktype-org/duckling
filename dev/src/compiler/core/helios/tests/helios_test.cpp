@@ -2866,10 +2866,8 @@ private:
 
 				bool found_tup_ctor = false;
 				for (auto d: deps) {
-					auto gsd = std::get<GeneratedSymbolData>(getSymRef(d)->other);
-					if (std::holds_alternative<GeneratedSymbolData::DefaultTupleConstructor>(gsd.data
-					    ))
-						found_tup_ctor = true;
+					const auto* ctor = std::get_if<Constructor>(&getSymRef(d)->other);
+					if (ctor != nullptr && ctor->kind == Constructor::Kind::Default && ctor->type.getKind() == compiler::tsh::Kind::Tuple) found_tup_ctor = true;
 				}
 				ASSERT_TRUE(found_tup_ctor);
 			}

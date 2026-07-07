@@ -142,17 +142,16 @@ namespace compiler::helios::defgen {
 			// Preamble, get some basic data.
 			auto tuple_interface = tuple_type.getInterface(ctx);
 
-			using DefaultTupleConstructor = GeneratedSymbolData::DefaultTupleConstructor;
-			using Variable                = GeneratedSymbolData::GeneratedFunctionVariable;
-
 			const std::vector<tsh::InterfaceElement> fields
 				= tuple_interface->getFieldsView() | std::ranges::to<std::vector>();
 
 			// Prepare the ctor symbol and declaration.
 			const SymID ctor_symbol
-				= ctx.query<QueryGeneratedSymbol>({ .name = base::StrID("__init_tuple"),
-			                                        .generated_symbol_data = GeneratedSymbolData{
-														DefaultTupleConstructor{ tuple_type } } });
+				= ctx.query<QueryGeneratedSymbol>({
+					.name = base::StrID("__init_tuple"),
+			        .generated_symbol_data
+					= Constructor{.type =  tuple_type, .kind = Constructor::Kind::Default},
+				});
 
 
 			const auto& ctor_decl = ctx.query<QueryDeclOfFun>(ctor_symbol)->valueOrThrow();
@@ -166,11 +165,11 @@ namespace compiler::helios::defgen {
 			const auto  result_symbol_type = ctor_decl.return_type;
 			const SymID result_symbol      = ctx.query<QueryGeneratedSymbol>({
 					 .name                  = base::StrID("__result"),
-					 .generated_symbol_data = GeneratedSymbolData{ Variable{
+					 .generated_symbol_data = GeneratedFunctionVariable{ 
 						 .function_symbol = ctor_symbol,
 						 .variable_index  = 0,
 						 .type            = result_symbol_type,
-                } },
+                },
             });
 
 			// All fields are zeroed.
@@ -183,7 +182,7 @@ namespace compiler::helios::defgen {
 				result_symbol
 			));
 
-			// - Assign each field with the initializing expression or a default value expression.
+			// - Assign each field with the initializing expression.
 			for (const auto& field: fields) {
 				auto init_expr = ctx.query<QueryDefaultInitializerExpr>(field.getType(ctx))
 				                     ->valueOrThrow()
