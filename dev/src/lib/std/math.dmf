@@ -33,8 +33,8 @@ namespace libm_forward {
         fundecl fmod(x: f64, y: f64) -> f64;
 
         # Computes signed remainder of the floating-point division operation
-        fundecl reminderf(x: f32, y: f32) -> f32;
-        fundecl reminder(x: f64, y: f64) -> f64;
+        fundecl remainderf(x: f32, y: f32) -> f32;
+        fundecl remainder(x: f64, y: f64) -> f64;
 
         # Computes signed remainder as well as the three last bits of the division operation
         fundecl remquof(x: f32, y: f32, quo: cptr i32) -> f32;
