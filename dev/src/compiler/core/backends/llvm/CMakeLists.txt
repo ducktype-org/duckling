@@ -19,4 +19,4 @@ target_link_libraries(LLVMBackend ${llvm_libs})
 
 make_module(LLVMBackend USES Base GlobalState QueryFramework LIR llvm_helpers Init Logger)
 
-duck_add_test(compiler llvm tests/llvm_test.cpp USES Base Tester LLVMBackend)
+duck_add_test(compiler llvm tests/llvm_test.cpp USES Base Tester LLVMBackend Driver)

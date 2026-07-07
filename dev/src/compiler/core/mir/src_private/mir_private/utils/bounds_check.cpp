@@ -1,17 +1,14 @@
-#include "slices.hpp"
+#include "bounds_check.hpp"
 
 #include <helios/symbols/lang_primitives.hpp>
 
-#include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
-#include <base/extend_cpp/variant_match.hpp>
 
 namespace compiler::mir {
-	void sliceBoundsCheck(
+	void boundsCheck(
 		BoundsCheckBuilderContext                      context,
-		const helios::SliceTypeData&                   slice_data,
 		const MIRValue&                                index,
-		const MIRValue&                                slice,  // struct { ptr, length }
+		const MIRValue&                                length,
 		const base::Optional<dia_int::StablePosition>& pos
 	) {
 		auto& function        = context.function;
@@ -20,16 +17,8 @@ namespace compiler::mir {
 		auto& ok_block        = context.ok_block;
 		auto  scope           = context.scope;
 
-		base::Optional<MIRValue> slice_len;
-		variant_match(slice.getVariant()) {
-			variant_case(MIRPlace, place) {
-				slice_len.emplace(place.withField(function.getContext(), slice_data.len));
-			}
-			variant_default { CORE_PANIC("Slice base must be a MIRPlace"); }
-		}
-
 		auto panic_sym
-			= context.function.getContext()
+			= function.getContext()
 		          .query<helios::QueryLanguagePrimitiveSymID>({ helios::LanguagePrimitive::Panic })
 		          ->valueOrThrow();
 		fail_block->addInstruction(Instruction{
@@ -45,7 +34,7 @@ namespace compiler::mir {
 		fail_block->setTerminator({ Operation::Jump, {}, { ok_block->getID() }, {}, scope });
 
 		// The index is coerced to a signed integer, so both bounds must be verified:
-		// index < len alone lets negative indices through (signed comparison).
+		// index < length alone lets negative indices through (signed comparison).
 		//
 		// Note: instructions in a block are assembled in reverse execution order,
 		// so the BooleanAnd is added first and executes last.
@@ -79,7 +68,7 @@ namespace compiler::mir {
 		condition_block->addInstruction(Instruction(
 			Operation::IntegerLt,
 			MIRPlace(below_len_tmp),
-			{ index, slice_len.value() },
+			{ index, length },
 			{ flagConstruct(below_len_tmp) },
 			scope,
 			{},
