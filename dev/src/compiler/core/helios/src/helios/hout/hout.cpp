@@ -34,9 +34,8 @@ namespace compiler::helios {
 		  parameters(std::move(parameters)),
 		  origin(origin) {
 		CORE_ASSERT(
-			kind(symbol) == SymbolKind::Function or kind(symbol) == SymbolKind::FunctionDeclaration
-				or kind(symbol) == SymbolKind::Method,
-			"Symbol is not a function, function declaration nor method"
+			isFunctionLike(kind(symbol)),
+			"Symbol is not a function, function declaration, method, constructor nor destructor"
 		);
 	}
 
