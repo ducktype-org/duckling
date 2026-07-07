@@ -1,3 +1,4 @@
 SubDirs:
   - nonexistent-feature
   - nonexistent-profile
+  - workers-count
