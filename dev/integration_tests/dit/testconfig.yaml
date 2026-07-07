@@ -3,6 +3,7 @@ Description: "Self-tests of the DIT framework and its tmp-env helpers."
 
 Env:
     DIT_TMP_DIR: "@{new_tmp_dir}"
+PostCase: "@{cleanup_tmp_env}"
 
 Tests:
     tmp_env:
