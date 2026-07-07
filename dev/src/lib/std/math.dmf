@@ -11,7 +11,16 @@ namespace libm_forward {
 
         Forward interface from libc (cstdlib) and libm (cmath).
         See: https://en.cppreference.com/c/header/math
+        and: https://en.cppreference.com/c/numeric/math
     #}
+
+    namespace int_funcs { extern("C") {
+        # Computes absolute value of an integral value
+        fundecl abs(x: i32) -> i32;
+        fundecl labs(x: i64) -> i64;
+
+        # Possibly add `div`
+    }}
 
     # Basic operations
     namespace basic_ops { extern("C") {
