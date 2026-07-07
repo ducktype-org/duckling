@@ -43,7 +43,7 @@ namespace compiler::helios::templates {
 		std::atomic<std::vector<SymID>*>* ptr
 	) {
 		// Here we delete both raw pointer allocated with new and the atomic wrapper around it.
-		auto vec_ptr = ptr->load(std::memory_order_acq_rel);
+		auto vec_ptr = ptr->load(std::memory_order_acquire);
 		if (vec_ptr) delete vec_ptr;
 		delete ptr;
 	}
@@ -90,8 +90,8 @@ namespace compiler::helios::templates {
 					defgen::QueryGeneratedSymbol>(defgen::KeyFor_QueryGeneratedSymbol{
 					.name = name,
 					.generated_symbol_data
-					= defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::GeneratedConstant{
-						type, q_key.template_arguments.at(i++), scope } },
+					= defgen::GeneratedConstant{
+						type, q_key.template_arguments.at(i++), scope },
 				});
 
 				symbols.push_back(const_symbol);
@@ -206,7 +206,7 @@ namespace compiler::helios::templates {
 						 .template_bake_data
 				);
 			baked_root_data_pointer->template_arguments_symbols->store(
-				new std::vector<SymID>(std::move(args)), std::memory_order_acq_rel
+				new std::vector<SymID>(std::move(args)), std::memory_order_release
 			);
 
 
