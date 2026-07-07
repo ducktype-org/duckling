@@ -27,23 +27,12 @@ namespace compiler::repl {
 	// for friend:
 	struct ImplementationOf_QueryReplExpressionWrapper;
 	struct ImplementationOf_QueryReplInstructionWrapper;
-	struct ScriptMainWrapperBuilder;
 }
 
 namespace compiler::helios {
 
 	// for friend:
 	struct ImplementationOf_QueryDeclOfFun;
-
-	namespace defgen {
-		struct ImplementationOf_QueryImplicitClassConstructor;
-		struct ImplementationOf_QueryDefaultClassConstructor;
-		struct ImplementationOf_QueryDefaultStaticArrayConstructor;
-		struct ImplementationOf_QueryTuplePackConstructor;
-		struct ImplementationOf_QueryToStringMethod;
-		struct ImplementationOf_QueryDefaultDestructor;
-		struct ImplementationOf_QueryLengthMethod;
-	}
 
 	namespace code {
 		// Forward declaration:
@@ -121,26 +110,13 @@ namespace compiler::helios {
 	 * @note it should be used for all function-like entities (macros, methods, etc.)
 	 */
 	struct HOUTFunction final {
-	private:
+		HOUTFunction() = delete;
+
 		HOUTFunction(
 			code::ElementOrigin origin,
 			CRef<HOUTFunctionDeclaration>,
 			const std::shared_ptr<const code::CodeBlock>& body
 		);
-		friend struct ImplementationOf_QueryCodeOfFun;
-		friend defgen::ImplementationOf_QueryImplicitClassConstructor;
-		friend defgen::ImplementationOf_QueryTuplePackConstructor;
-		friend defgen::ImplementationOf_QueryDefaultClassConstructor;
-		friend defgen::ImplementationOf_QueryDefaultStaticArrayConstructor;
-		friend defgen::ImplementationOf_QueryToStringMethod;
-		friend defgen::ImplementationOf_QueryDefaultDestructor;
-		friend defgen::ImplementationOf_QueryLengthMethod;
-		friend compiler::repl::ImplementationOf_QueryReplExpressionWrapper;
-		friend compiler::repl::ImplementationOf_QueryReplInstructionWrapper;
-		friend compiler::repl::ScriptMainWrapperBuilder;
-
-	public:
-		HOUTFunction() = delete;
 
 		/**
 		 * @brief The information about how the function was created from code,

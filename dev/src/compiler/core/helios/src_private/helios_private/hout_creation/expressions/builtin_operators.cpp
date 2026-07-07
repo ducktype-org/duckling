@@ -11,8 +11,6 @@
 #include <lang_definitions/key_spec_op.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 
-#include "crow/json.h"
-
 #include <tuple>
 #include <utility>
 
@@ -172,13 +170,13 @@ namespace compiler::helios::code {
 					.symbol = ctx.query<defgen::QueryGeneratedSymbol>({
 						.name = name,
 						.generated_symbol_data
-						= defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::BuiltinOperator{
+						= defgen::BuiltinOperator{
 							ctx.query<tsh::QueryFunctionType>({
 								.parameter_types = std::move(param_types),
 								.result_type     = return_type,
 							}),
 							operatoriness,
-						} },
+						},
 					}),
 					.op     = [&]() -> RegularBuiltinOperator::HOUTRepresentation {
 						if (v_matches(bop, BuiltinUnary)) return std::get<BuiltinUnary>(bop);
@@ -197,13 +195,13 @@ namespace compiler::helios::code {
 										  const HOUTFunctionDeclaration::Operatoriness operatoriness
 									  ) -> void {
 				const auto gen_data
-					= defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::BuiltinOperator{
-						ctx.query<tsh::QueryFunctionType>({
-							.parameter_types = param_types,
+					= defgen::BuiltinOperator{
+					ctx.query<tsh::QueryFunctionType>({
+						.parameter_types = param_types,
 							.result_type     = return_type,
 						}),
 						operatoriness,
-					} };
+					} ;
 				auto builtin = RegularBuiltinOperator{
 					.symbol = ctx.query<defgen::QueryGeneratedSymbol>({
 						.name                  = name,

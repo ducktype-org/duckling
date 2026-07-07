@@ -3,7 +3,6 @@
 #include "coercions.hpp"
 #include "errors.hpp"
 #include "function_calls/call_processing.hpp"
-#include "helios/queries/function_queries.hpp"
 #include "hout_of_subexpr.hpp"
 #include "numeric_literals.hpp"
 
@@ -15,6 +14,7 @@
 #include <frontend/pst_parser/elements/hierarchy/not_statements/format_string_sub_elements/format_sub_string.hpp>
 #include <frontend/pst_parser/pst_expr_visitor.hpp>
 #include <helios/hout/elements/expr.hpp>
+#include <helios/queries/function_queries.hpp>
 #include <helios/tsh/queries.hpp>
 #include <helios/tsh/symbol_type.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
@@ -433,28 +433,9 @@ namespace compiler::helios::code {
 					return;
 				}
 
-				// Handle array length
-				if (op->unwrap() == lang_def::keywordToStr(lang_def::Keyword::Len)) {
-					// @TODO: #1970 If the operator is `len` we have to bypass the trivial
-					// copyability check for now. This is because the temporarily added `len`
-					// operator operates on direct values thus any usage of it on reference types
-					// would need to perform a deref (which means a copy, but copying lists is not
-					// yet implemented) thus `canCoerce` returns an error. Since `len` operator
-					// existence is temporary we mock it out and insert a deref either way. This
-					// will copy the list struct, but not copy the heap data, but this is acceptable
-					// in case of `len`. A more solid approach would be for the `len` operator to
-					// take a reference to the list, but this would require more architectural
-					// changes. `len` operator will be replaced by the `.length()` method/field in
-					// the future, thus for release purposes is mocked up.
-					auto direct_type = inner_type.withReferenceKind(tsh::ReferenceKind::Direct);
-					auto coercion_qresult = canCoerce(ctx, inner_type, direct_type, true);
-
-					node = makeBox<UnaryOperatorExpr>(
-						ctx,
-						pstOrigin(stmt),
-						BuiltinUnary::Len,
-						coercion_qresult.valueOrThrow().getCoercion().coerce(ctx, std::move(inner))
-					);
+				if (op->unwrap() == lang_def::keywordToStr(lang_def::Keyword::Move)) {
+					node = makeBox<MoveExpr>(ctx, pstOrigin(stmt), std::move(inner));
+					return;
 				}
 
 				node = resolveUnaryOperator(
@@ -964,7 +945,6 @@ namespace compiler::helios::code {
 				auto op = stmt->getAssignmentType().unlock(ctx)->unwrap();
 
 				auto var = stmt->getVariables();
-				auto val = stmt->getValue();
 
 				auto location_expr_qresult = subExprFromPST(ctx, var);
 				if (location_expr_qresult.hasFailed()) return;
@@ -983,49 +963,6 @@ namespace compiler::helios::code {
 						"Left side of assignment can't be immutable.", stmt->getStablePosition()
 					));
 					return;
-				}
-
-				if (op == base::StrID("+=")) {
-					// @TODO: #1970 This implementation is temporary and should be handled by the
-					// `+=` operator in the future.
-					if (location_type.getType().getKind() == tsh::Kind::DynamicArray) {
-						auto dyn_array
-							= location_type.getType().as<tsh::DynamicArrayAbstractType>();
-						auto element_type = dyn_array.getElementType();
-						auto value_expr_coerced_qresult
-							= subExprFromPSTWithType(ctx, val, element_type);
-						if (value_expr_coerced_qresult.hasFailed()) return;
-
-						node = makeBox<ListPushExpr>(
-							pstOrigin(stmt),
-							std::move(location_expr),
-							std::move(value_expr_coerced_qresult).valueOrThrow()
-						);
-						return;
-					}
-				} else if (op == base::StrID("-=")) {
-					// @TODO: #1970 This implementation is temporary and should be handled by the
-					// `-=` operator in the future.
-					if (location_type.getType().getKind() == tsh::Kind::DynamicArray) {
-						auto u64_type = tsh::SymbolType<>{
-							tsh::getIntegralType(
-								ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned
-							),
-							tsh::ReferenceKind::Direct,
-							tsh::Mutability::Mutable
-						};
-
-						auto value_expr_coerced_qresult
-							= subExprFromPSTWithType(ctx, val, u64_type);
-						if (value_expr_coerced_qresult.hasFailed()) return;
-
-						node = makeBox<ListPopExpr>(
-							pstOrigin(stmt),
-							std::move(location_expr),
-							std::move(value_expr_coerced_qresult).valueOrThrow()
-						);
-						return;
-					}
 				}
 
 				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(

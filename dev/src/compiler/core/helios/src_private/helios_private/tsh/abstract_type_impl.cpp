@@ -365,12 +365,16 @@ namespace compiler::tsh {
 		throw base::NotYetImplemented("String type interface not yet implemented");
 	}
 
-	CRef<TypeInterface> DynamicArrayAbstractTypeImpl::getDeclaredInterface(query::Context&) const {
-		throw base::NotYetImplemented("Dynamic array type interface not yet implemented");
+	CRef<TypeInterface> DynamicArrayAbstractTypeImpl::getDeclaredInterface(query::Context& ctx
+	) const {
+		const auto type = toAbstractType().as<DynamicArrayAbstractType>();
+		return &ctx.query<QueryInterfaceOfDynamicArray>(type)->valueOrThrow();
 	}
 
-	CRef<TypeInterface> StaticArrayAbstractTypeImpl::getDeclaredInterface(query::Context&) const {
-		throw base::NotYetImplemented("Static array type interface not yet implemented");
+	CRef<TypeInterface> StaticArrayAbstractTypeImpl::getDeclaredInterface(query::Context& ctx
+	) const {
+		const auto type = toAbstractType().as<StaticArrayAbstractType>();
+		return &ctx.query<QueryInterfaceOfStaticArray>(type)->valueOrThrow();
 	}
 
 	CRef<TypeInterface> TupleAbstractTypeImpl::getDeclaredInterface(query::Context& ctx) const {

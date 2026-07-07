@@ -1,0 +1,74 @@
+Name: dit
+Description: "Self-tests of the DIT framework and its tmp-env helpers."
+
+Env:
+    DIT_TMP_DIR: "@{new_tmp_dir}"
+
+Tests:
+    tmp_env:
+        Description: "Checks tmp_env.py: staging files, running inside the env, cleanup."
+        Cases:
+            make_and_exec:
+                tmp_env_files: "data/input.txt"
+                PreCase: "@{make_tmp_env}"
+                Run: "@{at_tmp_env} cat data/input.txt"
+                PostCase: "[ -d \"$DIT_TMP_DIR\" ] && @{cleanup_tmp_env} && [ ! -d \"$DIT_TMP_DIR\" ]"
+                Output:
+                    String: "quack\n"
+            isolation_first:
+                PreCase: "@{make_tmp_env}"
+                Run: "@{at_tmp_env} \"echo first > out.txt && sleep 0.2 && cat out.txt\""
+                PostCase: "@{cleanup_tmp_env}"
+                Output:
+                    String: "first\n"
+            isolation_second:
+                PreCase: "@{make_tmp_env}"
+                Run: "@{at_tmp_env} \"echo second > out.txt && sleep 0.2 && cat out.txt\""
+                PostCase: "@{cleanup_tmp_env}"
+                Output:
+                    String: "second\n"
+    env_key:
+        Description: "Checks the Env config key: ordered evaluation and derived variables."
+        Cases:
+            derived_variables:
+                Env:
+                    DERIVED: "echo $DIT_TMP_DIR/sub"
+                Run: "[ \"$DERIVED\" = \"$DIT_TMP_DIR/sub\" ] && echo ok"
+                PostCase: "@{cleanup_tmp_env}"
+                Output:
+                    String: "ok\n"
+            # Names are deliberately reverse-alphabetical: any ordering other
+            # than the definition order breaks the dependency chain.
+            ordered_evaluation:
+                Env:
+                    Z_FIRST: "echo 1"
+                    M_SECOND: "echo \"$Z_FIRST\"2"
+                    A_THIRD: "echo \"$M_SECOND\"3"
+                Run: "echo \"$A_THIRD\""
+                PostCase: "@{cleanup_tmp_env}"
+                Output:
+                    String: "123\n"
+    env_shadowing:
+        Description: "Checks that shadowing an Env key keeps its original evaluation position."
+        Env:
+            SHADOWED: "echo parent"
+            DERIVED_FROM_SHADOWED: "echo \"$SHADOWED\"-suffix"
+        Cases:
+            override_keeps_position:
+                Env:
+                    SHADOWED: "echo child"
+                Run: "echo \"$DERIVED_FROM_SHADOWED\""
+                PostCase: "@{cleanup_tmp_env}"
+                Output:
+                    String: "child-suffix\n"
+    config_dir_works:
+      Description: Checks that @{ConfigDir} points to the right directory
+      Cases:
+        run-to-output:
+          Run: echo @{ConfigDir}
+          Output:
+            Run: echo $(pwd)
+        output-to-run:
+          Run: echo -n $(pwd)
+          Output:
+            String: "@{ConfigDir}"

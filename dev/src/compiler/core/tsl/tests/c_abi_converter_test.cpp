@@ -108,7 +108,7 @@ private:
 			// aarch64 has no such format and must reject it.
 			const auto  f80_type = getFloatType(ctx, 80);
 			const auto& r        = queryConv(ctx, directOf(f80_type));
-			if (&compilerTargetABI() == &abi::layout::x86_64Linux())
+			if (compilerTargetABI().data_layout.float_layouts.contains(u8(80)))
 				expectFloat(r, 80);
 			else
 				assertFalse(r.has_value(), "f80 should be rejected without an x87 unit");
