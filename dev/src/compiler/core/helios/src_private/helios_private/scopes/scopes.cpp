@@ -177,6 +177,7 @@ namespace compiler::helios {
 		case pst::ElementKind::ExprElement:
 		case pst::ElementKind::RoundGroupExpr:
 		case pst::ElementKind::CallList:
+		case pst::ElementKind::AtrArgList:
 			return ElementScopeKind::Transparent;
 
 		case pst::ElementKind::ExprHolder: {
@@ -510,9 +511,9 @@ namespace compiler::helios {
 				out.emplace_back(ctx.query<defgen::QueryGeneratedSymbol>({
 					.name = base::StrID("self"),
 					.generated_symbol_data
-					= defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::SelfParameter{
-						.method_symbol = ctx.query<QuerySymbolOfSTMT>(meth).valueOrThrow(),
-						.scope         = key } },
+					= defgen::SelfParameter{ .method_symbol
+				                             = ctx.query<QuerySymbolOfSTMT>(meth).valueOrThrow(),
+				                             .scope = key },
 				}));
 
 				output(std::move(out));

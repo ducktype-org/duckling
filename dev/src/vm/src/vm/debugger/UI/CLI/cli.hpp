@@ -30,6 +30,7 @@ namespace vm::debugger::cli {
 	private:
 		events::Listener<api::ProcStatus> status_change_listener;
 		events::Listener<std::string>     error_listener;
+		events::Listener<std::string>     output_listener;
 		Debugger                          debugger;
 		std::mutex                        output_mutex;
 
@@ -49,7 +50,15 @@ namespace vm::debugger::cli {
 			std::cout << "\n";
 		}
 
+		template<typename... Args>
+		void printError(const Args&... content) {
+			std::stringstream sstr;
+			((sstr << content), ...);
+			printError({ sstr.str() });
+		}
+
 		void print(const printer::PrinterContentsSeq& content);
 		void printNL(const printer::PrinterContentsSeq& content);
+		void printError(const printer::PrinterContentsSeq& content);
 	};
 }
