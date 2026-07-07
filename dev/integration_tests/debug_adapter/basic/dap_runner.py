@@ -14,7 +14,5 @@ try:
 
     client.wait_for_event("terminated", "terminated event at the end of execution")
 
-    client.print_history()
-
 finally:
     client.close()

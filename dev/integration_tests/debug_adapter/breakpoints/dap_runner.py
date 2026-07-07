@@ -95,6 +95,16 @@ try:
         client.send_continue()
 
         client.wait_for(events=["stopped"]) # Stop - line 8
+    # =========================================================================
+    # Scenario 6: Adding wrong breakpoints
+    # =========================================================================     
+    elif scenario == "error":
+        bp_seq = client.send_set_breakpoints(client.program_name, [100])
+        
+        client.wait_for(responses=[bp_seq])
+        client.send_launch()
+
+        client.wait_for_text("Failed to set breakpoint:", "The breakpoint should not be placed, but it seems it has been.")
 
     else:
         sys.stderr.write(f"Error: Unknown scenario '{scenario}'\n")

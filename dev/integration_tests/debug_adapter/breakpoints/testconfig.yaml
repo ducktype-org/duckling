@@ -13,3 +13,5 @@ Tests:
         scenario: "add"
       remove:
         scenario: "remove"
+      error:
+        scenario: "error"

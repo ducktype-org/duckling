@@ -301,6 +301,7 @@ namespace vm::debugger::debug_adapter {
 					= "Failed to run main: '" + api::errorToString(res.error()) + '\'';
 
 				sendResponse(deferred_launch_req, false, { { "message", error_msg } });
+				sendEvent("terminated", {});
 				return;
 			}
 			sendResponse(deferred_launch_req, true, {});
@@ -348,7 +349,7 @@ namespace vm::debugger::debug_adapter {
 				std::string error_msg = "Failed to run main: '" + api::errorToString(res.error());
 
 				sendResponse(req, false, { { "message", error_msg } });
-				deferred_launch_req.reset();
+				sendEvent("terminated", {});
 				return;
 			}
 			sendResponse(req, true, {});

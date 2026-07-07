@@ -1,9 +1,0 @@
-{"body":{"supportsConfigurationDoneRequest":true,"supportsSetVariable":false},"command":"initialize","request_seq":1,"seq":1,"success":true,"type":"response"}
-{"event":"initialized","seq":2,"type":"event"}
-{"command":"configurationDone","request_seq":2,"seq":3,"success":true,"type":"response"}
-{"body":{"category":"console","output":"Running\n"},"event":"output","seq":4,"type":"event"}
-{"command":"launch","request_seq":3,"seq":5,"success":true,"type":"response"}
-{"body":{"category":"console","output":"ExecutionCompleted\n"},"event":"output","seq":6,"type":"event"}
-{"body":{"category":"console","output":"VM returned: [0]\n"},"event":"output","seq":7,"type":"event"}
-{"body":{"exitCode":0},"event":"exited","seq":8,"type":"event"}
-{"event":"terminated","seq":9,"type":"event"}
