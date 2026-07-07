@@ -2858,10 +2858,10 @@ private:
 				// `WithInit`.
 				ASSERT_EQUAL_PRINT(2, deps.size());
 
-				auto dep_gsd = std::get<GeneratedSymbolData>(getSymRef(deps[0])->other);
-				ASSERT_TRUE(std::holds_alternative<GeneratedSymbolData::DefaultClassConstructor>(
-					dep_gsd.data
-				));
+				const auto* dep_ctor = std::get_if<Constructor>(&getSymRef(deps[0])->other);
+				ASSERT_TRUE(dep_ctor != nullptr);
+				ASSERT_EQUAL(dep_ctor->kind, Constructor::Kind::Default);
+				ASSERT_EQUAL(dep_ctor->type.getKind(), compiler::tsh::Kind::Class);
 			}
 
 			// ArrayHolder ctor should call a ctor of static array field, which calls a ctor of the
@@ -2880,10 +2880,9 @@ private:
 
 				bool found_array_ctor = false;
 				for (auto d: deps) {
-					auto gsd = std::get<GeneratedSymbolData>(getSymRef(d)->other);
-					if (std::holds_alternative<GeneratedSymbolData::DefaultStaticArrayConstructor>(
-							gsd.data
-						))
+					const auto* ctor = std::get_if<Constructor>(&getSymRef(d)->other);
+					if (ctor != nullptr && ctor->kind == Constructor::Kind::Default
+					    && ctor->type.getKind() == compiler::tsh::Kind::StaticArray)
 						found_array_ctor = true;
 				}
 				ASSERT_TRUE(found_array_ctor);

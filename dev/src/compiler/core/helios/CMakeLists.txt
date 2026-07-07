@@ -1,6 +1,7 @@
 # This has to be static due to cyclic dependencies in helios->mir->lir->dvm for comp time, and helios<->TS cyclic dependency.
 add_library(HELIOS STATIC
 	src_private/helios_private/attributes/backend_dependent.cpp
+	src/helios/attributes/builtins.cpp
 	src_private/helios_private/hout/hout.cpp
 	src_private/helios_private/symbols/symbol_data.cpp
 	src_private/helios_private/symbols/symbols.cpp
@@ -82,6 +83,9 @@ make_module(HELIOS USES Base QueryFramework PstParser ModuleTree Hashing CTV Lib
 duck_add_test(compiler helios tests/helios_test.cpp
 	USES Base PstParser HELIOS
 	INCLUDE "${CMAKE_CURRENT_LIST_DIR}/src_private")
+
+duck_add_test(compiler helios_with_std tests/helios_with_std_test.cpp
+	USES Base PstParser HELIOS Driver)
 
 
 duck_add_test(compiler helios_errors tests/helios_errors_test.cpp
