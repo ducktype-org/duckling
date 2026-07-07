@@ -209,21 +209,18 @@ namespace compiler::helios {
 		 * with a previously seen definition.
 		 *
 		 * @param seen_declarations Mangled names seen so far, mapped to the source position of the
-		 * first definition that used them (if it originates from source).
+		 * first definition that used them.
 		 * @param sym_id The new SymID being inserted.
 		 * @param stable_pos Source position of the definition.
 		 * @return `true` if `sym_id` duplicates an earlier definition.
 		 */
 		static bool reportIfDuplicate(
-			query::Context& ctx,
-			std::unordered_map<base::StrID, base::Optional<dia_int::StablePosition>>&
-													seen_declarations,
-			SymID                                   sym_id,
-			base::StrID                             original_name,
-			base::Optional<dia_int::StablePosition> stable_pos
+			query::Context&                                           ctx,
+			std::unordered_map<base::StrID, dia_int::StablePosition>& seen_declarations,
+			SymID                                                     sym_id,
+			base::StrID                                               original_name,
+			dia_int::StablePosition                                   stable_pos
 		) {
-			if (not maybeSymbolPst(sym_id).has_value()) return false;
-
 			base::StrID mangled_name = compiler::helios::mangler::getSimpleMangledName(ctx, sym_id);
 			if (mangled_name.isBad()) return false;
 
@@ -236,16 +233,13 @@ namespace compiler::helios {
 			auto [entry, inserted] = seen_declarations.try_emplace(mangled_name, stable_pos);
 			if (inserted) return false;
 
-			auto error = makeBox<dia_int::DuplicatedDefinitionError>(
-				std::string(original_name.strView()), stable_pos
-			);
+			auto error
+				= makeBox<dia_int::DuplicatedDefinitionError>(original_name.str(), stable_pos);
 
-			// Attach the previous declaration if it exists (was not compiler generated).
-			const auto& previous_pos = entry->second;
-			if (previous_pos.has_value())
-				error->addAttachedMessage(makeBox<dia_int::PlaceholderNote>(
-					"Previous declaration here.", previous_pos.value()
-				));
+			// Point the user at the previous declaration.
+			error->addAttachedMessage(
+				makeBox<dia_int::PlaceholderNote>("Previous declaration here.", entry->second)
+			);
 
 			ctx.logInt(std::move(error));
 
@@ -264,38 +258,43 @@ namespace compiler::helios {
 		static base::OkBad duplicatesCheck(
 			query::Context& ctx, const HOUTUnit& unit, const std::vector<SymID>& class_symbols
 		) {
-			std::unordered_map<base::StrID, base::Optional<dia_int::StablePosition>>
-				 seen_declarations;
-			bool found_duplicate = false;
+			std::unordered_map<base::StrID, dia_int::StablePosition> seen_declarations;
+			bool                                                     found_duplicate = false;
 
-			for (const auto& func: unit.functions)
-				if (reportIfDuplicate(
-						ctx,
-						seen_declarations,
-						func->declaration->original_symbol,
-						func->declaration->original_name,
-						func->origin.getStablePosition()
-					))
-					found_duplicate = true;
+			for (const auto& func: unit.functions) {
+				if_opt_some(func->origin.getStablePosition(), stable_pos) {
+					if (reportIfDuplicate(
+							ctx,
+							seen_declarations,
+							func->declaration->original_symbol,
+							func->declaration->original_name,
+							stable_pos
+						))
+						found_duplicate = true;
+				}
+			}
 
-			for (const auto& global: unit.glob_data)
-				if (reportIfDuplicate(
-						ctx,
-						seen_declarations,
-						global->helios_symbol,
-						global->original_name,
-						global->origin.getStablePosition()
-					))
-					found_duplicate = true;
+			for (const auto& global: unit.glob_data) {
+				if_opt_some(global->origin.getStablePosition(), stable_pos) {
+					if (reportIfDuplicate(
+							ctx,
+							seen_declarations,
+							global->helios_symbol,
+							global->original_name,
+							stable_pos
+						))
+						found_duplicate = true;
+				}
+			}
 
 			for (SymID class_sym: class_symbols) {
-				auto stable_pos = maybeSymbolPst(class_sym).map([&](auto pst) {
-					return pst.unlock(ctx)->getStablePosition();
-				});
-				if (reportIfDuplicate(
-						ctx, seen_declarations, class_sym, name(class_sym), stable_pos
-					))
-					found_duplicate = true;
+				if_opt_some(maybeSymbolPst(class_sym), pst) {
+					auto stable_pos = pst.unlock(ctx)->getStablePosition();
+					if (reportIfDuplicate(
+							ctx, seen_declarations, class_sym, name(class_sym), stable_pos
+						))
+						found_duplicate = true;
+				}
 			}
 			return found_duplicate ? base::BAD : base::OK;
 		}
