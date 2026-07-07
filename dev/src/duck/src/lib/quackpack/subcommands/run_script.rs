@@ -4,6 +4,7 @@ use std::path::Path;
 use clap::ArgMatches;
 use tracing::debug;
 
+use crate::duck::driver::cli_ext::jobs_from_matches;
 use crate::quackpack::core::compile::duckc::ArtifactsDir;
 use crate::quackpack::core::compile::profiles::{DEFAULT_SCRIPT_PROFILE_NAME, Profile};
 use crate::quackpack::core::storage::venv_id::{ToVenvId, VenvId};
@@ -30,6 +31,8 @@ pub struct RunScriptOptions<'duck> {
     pub strict_errors: bool,
     /// Arguments to the script.
     pub args: Vec<OsString>,
+    /// Number of threads to use.
+    pub jobs: usize,
 }
 
 impl<'duck> RunScriptOptions<'duck> {
@@ -60,6 +63,7 @@ impl<'duck> RunScriptOptions<'duck> {
             frozen: matches.get_flag("frozen"),
             strict_errors: matches.get_flag("external-errors"),
             args,
+            jobs: jobs_from_matches(matches),
         })
     }
 
@@ -82,6 +86,7 @@ impl<'duck> RunScriptOptions<'duck> {
             frozen: false,
             strict_errors: false,
             args,
+            jobs: 1,
         })
     }
 }
@@ -101,6 +106,7 @@ pub fn run_script<'duck>(rs_options: RunScriptOptions<'duck>) -> QuackResult<()>
         frozen,
         strict_errors,
         args,
+        jobs: _,
     } = rs_options;
     let script_name = path
         .file_name()

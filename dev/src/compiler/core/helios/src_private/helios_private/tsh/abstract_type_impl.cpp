@@ -3,6 +3,7 @@
 #include "queries.hpp"
 
 #include <helios/symbols/query_type_of_symbol.hpp>
+#include <helios_private/hout_creation/definition_generation/copy_constructors.hpp>
 
 // @TODO: #2331 Remove these includes
 #include <frontend/pst_parser/elements/hierarchy/class_elements/field.hpp>
@@ -533,6 +534,9 @@ namespace compiler::tsh {
 	}
 
 	bool ClassAbstractTypeImpl::isCopyable(query::Context& ctx) const {
+		// A user-defined copy constructor makes the class copyable regardless of its fields.
+		if (compiler::helios::defgen::userCopyConstructorOf(ctx, symbol).has_value()) return true;
+
 		auto fields = getDeclaredInterface(ctx)->getFieldsView();
 		// All component types have to be copyable.
 		return std::ranges::all_of(fields, [&](const auto& field) {
@@ -541,6 +545,10 @@ namespace compiler::tsh {
 	}
 
 	bool ClassAbstractTypeImpl::isTriviallyCopyable(query::Context& ctx) const {
+		// A user-defined copy constructor means copies must run user code, so the class is never
+		// trivially copyable.
+		if (compiler::helios::defgen::userCopyConstructorOf(ctx, symbol).has_value()) return false;
+
 		auto fields = getDeclaredInterface(ctx)->getFieldsView();
 		// All component types have to be trivially copyable.
 		return std::ranges::all_of(fields, [&](const auto& field) {
