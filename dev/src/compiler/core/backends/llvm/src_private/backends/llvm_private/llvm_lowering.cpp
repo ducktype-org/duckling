@@ -726,6 +726,49 @@ namespace compiler::backend_llvm {
 			CORE_UNREACHABLE();
 		}
 
+
+		/**
+		 * @brief Gets a LLVM pointer to the copy of a given LIRValue.
+		 *
+		 * - For `LIRPlace`, it returns the calculated address via `gepPointerFromLIRPlace` for the copied value.
+		 * - For `LIRConstant`, it loads the constant value into a created temporary and returns the
+		 * address of the temporary.
+		 * - Panics for other LIRValue variants (like BlockRef or FunctionLiteral).
+		 *
+		 * @param lir_location The LIRValue to obtain a pointer for.
+		 * @param builder The LLVM IRBuilder to use for generating instructions.
+		 * @return `llvm::Value*` with the pointer to the data.
+		 */
+		auto loadLIRValueToPointerCopy(const lir::LIRValue& lir_location, llvm::IRBuilder<>& builder)
+			-> llvm::Value* {
+			variant_match(lir_location.getVariant()) {
+				variant_case(lir::LIRPlace, place) {
+					// Alloca the temporary and copy the projected place pointer into the tempoarary
+					// and return the temporary.
+					llvm::Type*  place_type = typeFromLayout(module, place.layout);
+					llvm::Value* place_ptr  = gepPointerFromLIRPlace(place, builder);
+					auto* alloca = builder.CreateAlloca(place_type, nullptr, "tmp_place_copy");
+					llvm::Value* value = builder.CreateLoad(place_type, place_ptr);
+					builder.CreateStore(value, alloca);
+					return alloca;
+				}
+				variant_case(lir::LIRConstant, constant) {
+					llvm::Value* val = loadLIRValue(lir_location, builder);
+					auto* alloca = builder.CreateAlloca(val->getType(), nullptr, "tmp_const_ptr");
+					builder.CreateStore(val, alloca);
+					return alloca;
+				}
+				variant_case(lir::FunctionLiteral, func) {
+					llvm::Value* val = loadLIRValue(lir_location, builder);
+					auto* alloca = builder.CreateAlloca(val->getType(), nullptr, "tmp_func_ptr");
+					builder.CreateStore(val, alloca);
+					return alloca;
+				}
+				variant_default { CORE_PANIC("Cannot get pointer to BlockRef"); }
+			}
+			CORE_UNREACHABLE();
+		}
+
 		void storeOutput(
 			const lir::LIRPlace& output, const Ref<llvm::Value> value, llvm::IRBuilder<>& builder
 		) {
@@ -983,12 +1026,19 @@ namespace compiler::backend_llvm {
 					}
 					variant_case(cc::ArgInfo::ByPointer, data) {
 						// Pass a pointer to the argument's storage.
-						auto* ptr = loadLIRValueToPointer(lir_arg, builder);
+						llvm::Value* ptr = nullptr;
 						if (data.by_val) {
+							ptr = loadLIRValueToPointer(lir_arg, builder);
 							attributes.emplace_back(
 								u32(args.size()),
 								llvm::Attribute::getWithByValType(ctx, original_type)
 							);
+						}
+						else {
+							// If not passing by_val, but passing only by pointer,
+							// to ensure that the called function can't write to the 
+							// original places we load it to the copy.
+							ptr = loadLIRValueToPointerCopy(lir_arg, builder);
 						}
 						args.push_back(ptr);
 					}

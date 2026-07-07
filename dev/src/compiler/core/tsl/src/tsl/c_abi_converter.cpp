@@ -69,17 +69,24 @@ namespace compiler::tsl {
 			);
 		}
 
-		// @TODO: #2636 Remove this. `string` is not actually C-compatible. We lower it here to
-		// its underlying `{ ptr, i64, i64, i64 }` representation (matching the string layout the
-		// LLVM backend emits) purely as a temporary measure, so that string arguments get correct
-		// ABI lowering until proper string FFI support exists.
+		// @TODO: #2636 Remove this. `string` is not actually C-compatible. We need this since the
+		// builtin_stringify_type functions are written in FFI and have string parameters.
 		CAbiConversionResult convertString() {
 			std::vector<ats::AbiTypePtr> fields;
 			fields.reserve(4);
-			// Written directly on abi::types: owning boxes, no cached conversion to borrow.
 			fields.emplace_back(ats::makeBoxAbiType(ats::pointerType()));
 			fields.emplace_back(ats::makeBoxAbiType(ats::intType(64, false)));
 			fields.emplace_back(ats::makeBoxAbiType(ats::intType(64, false)));
+			fields.emplace_back(ats::makeBoxAbiType(ats::intType(64, false)));
+			return ok(ats::structType(std::move(fields)));
+		}
+
+		// @TODO: #2636 Remove this once the builtin_stringify_str
+		// is written in HOUT and in in c++. `slice` is not actually C-compatible,
+		CAbiConversionResult convertSlice() {
+			std::vector<ats::AbiTypePtr> fields;
+			fields.reserve(4);
+			fields.emplace_back(ats::makeBoxAbiType(ats::pointerType()));
 			fields.emplace_back(ats::makeBoxAbiType(ats::intType(64, false)));
 			return ok(ats::structType(std::move(fields)));
 		}
@@ -176,7 +183,7 @@ namespace compiler::tsl {
 			case Kind::TypeTemplate:
 				return fail("non-runtime type cannot appear as a field type");
 			case tsh::Kind::Slice:
-				return fail("`slice` is not C-compatible");
+				return convertSlice();
 			default:
 				CORE_UNREACHABLE();
 			}
