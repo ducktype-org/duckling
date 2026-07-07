@@ -34,7 +34,7 @@ public:
 
 		// This test has some strange side effects. Putting it before `testErrorLogging` causes
 		// the tests to fail.
-		TESTER_ADD_TEST(testDuplicatedFunctionDeclaration);
+		TESTER_ADD_TEST(testDuplicatedDefinitions);
 
 		TESTER_ADD_TEST(testErrorLoggingExpandStatements);
 		TESTER_ADD_TEST(testErrorLoggingCyclicErrors);
@@ -1496,13 +1496,34 @@ private:
 		});
 	}
 
-	void testDuplicatedFunctionDeclaration() {
+	void testDuplicatedDefinitions() {
+		// Duplicated function.
 		checkForErrorOnCompileModule(
 			R"(
                 fun a() -> i64 = { return 1; }
                 fun a() -> i64 = { return 2; }
             )",
-			{ "Symbol 'a' is already defined." },
+			{ "Symbol 'a' is already defined.", "Previous declaration here." },
+			1
+		);
+
+		// Duplicated class.
+		checkForErrorOnCompileModule(
+			R"(
+                class T { x: i64 = 0; }
+                class T { x: i64 = 0; }
+            )",
+			{ "Symbol 'T' is already defined.", "Previous declaration here." },
+			1
+		);
+
+		// Duplicated global variable.
+		checkForErrorOnCompileModule(
+			R"(
+                var a: i64 = 123;
+                var a: i64 = 12;
+            )",
+			{ "Symbol 'a' is already defined.", "Previous declaration here." },
 			1
 		);
 	}
