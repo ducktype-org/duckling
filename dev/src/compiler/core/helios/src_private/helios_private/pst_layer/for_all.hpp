@@ -85,7 +85,10 @@ namespace compiler::helios {
 	 * @return If any query failed during the traversal, returns base::BAD. Otherwise, returns
 	 * base::OK.
 	 */
-	template<typename ElementT, typename FunctionT, typename CutoffFunctionT = internal::CutoffFunctionTDefault>
+	template<
+		typename ElementT,
+		typename FunctionT,
+		typename CutoffFunctionT = internal::CutoffFunctionTDefault>
 	[[nodiscard]]
 	base::CheckedOkBad pstForAll(
 		query::Context&        ctx,
