@@ -82,8 +82,7 @@ namespace compiler::helios::code {
 
 		if (numeric_operators.contains({ op, operation_kind }))
 			return std::make_tuple(
-				numeric_operators.at({ op, operation_kind }),
-				coercion.getCoercion()
+				numeric_operators.at({ op, operation_kind }), coercion.getCoercion()
 			);
 
 		return {};

@@ -125,7 +125,9 @@ private:
 				},
 				1
 			);
-			checkForErrorOnCompileModule(R"(fun a() = -true;)", { "Call failed because no matching functions were found." }, 1);
+			checkForErrorOnCompileModule(
+				R"(fun a() = -true;)", { "Call failed because no matching functions were found." }, 1
+			);
 		}
 
 		// ============================ Function calls ============================

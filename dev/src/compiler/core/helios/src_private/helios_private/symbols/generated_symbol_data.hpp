@@ -1,12 +1,11 @@
 #pragma once
 
+#include <helios/hout/hout.hpp>
 #include <helios/scope_id.hpp>
 #include <helios/symbols/symbol_id.hpp>
 #include <helios/tsh/symbol_type.hpp>
 #include <helios/tsh/types.hpp>
-#include <helios/hout/hout.hpp>
 
-#include <base/extend_cpp/variant_match.hpp>
 #include <base/types/bit256.hpp>
 #include <base/types/ints.hpp>
 
@@ -70,9 +69,9 @@ namespace compiler::helios::defgen {
 
 		HOUTFunctionDeclaration::Operatoriness operatoriness;
 
-			[[nodiscard]]
-			base::Bit256 queryUnstablePerfectHash() const;
-		};
+		[[nodiscard]]
+		base::Bit256 queryUnstablePerfectHash() const;
+	};
 
 	/**
 	 * Represents a compiler-generated parameter of a function. This function may itself be
