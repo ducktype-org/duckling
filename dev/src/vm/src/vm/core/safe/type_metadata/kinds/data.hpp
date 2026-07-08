@@ -23,6 +23,9 @@ namespace vm::kind {
 		base::HashMap<base::StrID, FieldID> field_name_map;
 		std::vector<FieldDesc>              fields;
 
+		/// Whether fields are laid out without alignment padding.
+		bool packed = false;
+
 		base::Optional<InheritanceMetadata> inheritance_metadata;
 	};
 }

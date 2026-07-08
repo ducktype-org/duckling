@@ -126,7 +126,7 @@ namespace {
 					    | to<std::vector>();
 					base::Optional<vm::InheritanceMetadata> inh_metadata
 						= buildInheritanceMetadata(*type_metadata, *type, data);
-					type_at_metadata->defineData(fields, inh_metadata);
+					type_at_metadata->defineData(fields, data.packed, inh_metadata);
 				}
 				variant_case(vm::code::valid_type::finalized::Variant, data) {
 					std::vector<vm::TypeRef> variants
@@ -185,4 +185,29 @@ void vm::code::detail::rebuildTypeMetadata(
 			"Type ID mismatch after rebuilding type metadata"
 		);
 	}
+
+#ifdef BUILD_TYPE_DEV
+	// The structure layout is computed twice: by the validator (dual-width offsets) and by the
+	// runtime above (16-byte pointers). Cross-check the two so the algorithms cannot silently
+	// diverge.
+	for (const auto& type: types) {
+		const auto structure = type.maybeGetKindAs<valid_type::finalized::Structure>();
+		if (!structure.has_value()) continue;
+		const auto runtime_type = type_metadata->at(type.getName());
+		CORE_ASSERT(
+			type.getSize().assumePointerSize(vm::Type::POINTER_SIZE) == runtime_type->getSize(),
+			"Validator and runtime disagree on the size of ",
+			type.getName()
+		);
+		for (const auto& field: structure.value()->fields)
+			CORE_ASSERT(
+				field.offset.assumePointerSize(vm::Type::POINTER_SIZE)
+					== runtime_type->getFieldOffsetByName(field.name).value(),
+				"Validator and runtime disagree on the offset of field ",
+				field.name,
+				" in ",
+				type.getName()
+			);
+	}
+#endif
 }

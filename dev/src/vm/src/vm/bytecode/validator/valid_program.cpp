@@ -189,14 +189,17 @@ void vm::code::ValidProgram::insertFFIFunctions(const std::vector<FFIFunction>& 
 			// every field is a primitive or a `cptr`.
 			if (structure.value()->inheritance_metadata.has_value())
 				throw FFIUnsupportedTypeError(*tp.value());
+			// Packed structures drop the alignment padding C inserts, so their layout cannot
+			// match the C ABI layout.
+			if (structure.value()->packed) throw FFIPackedTypeError(*tp.value());
 			for (const auto& field: structure.value()->fields) {
 				const auto& field_type = *types.at(field.type);
 				if (!is_ffi_primitive(field_type) && !is_cptr(field_type))
 					throw FFIUnsupportedTypeError(*tp.value());
 			}
 
-			// Verify the VM layout of the structure matches the C ABI layout libffi will use
-			// (the VM packs fields, C inserts alignment padding).
+			// Verify the VM layout of the structure matches the C ABI layout libffi will use.
+			// Non-packed structures follow the C layout rules, so this is a defensive check.
 			ffi_detail::FFITypeStorage storage;
 			ffi_type* struct_type = ffi_detail::buildFFIType(*tp.value(), types, storage);
 

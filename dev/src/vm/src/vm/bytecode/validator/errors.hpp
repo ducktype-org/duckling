@@ -211,9 +211,19 @@ namespace vm::code {
 	public:
 		constexpr static std::string_view ERR_MSG
 			= "The VM layout of this structure does not match the C ABI layout, so it cannot be "
-			  "used in an FFI function signature (C inserts alignment padding): ";
+			  "used in an FFI function signature: ";
 
 		FFIStructLayoutMismatchError(const valid_type::ValidType& type):
+			  ValidationError(base::strConcat(ERR_MSG, type.getName())) {}
+	};
+
+	class FFIPackedTypeError: public ValidationError {
+	public:
+		constexpr static std::string_view ERR_MSG
+			= "A `packed` data type cannot be used in an FFI function signature (its layout does "
+			  "not match the C ABI layout): ";
+
+		FFIPackedTypeError(const valid_type::ValidType& type):
 			  ValidationError(base::strConcat(ERR_MSG, type.getName())) {}
 	};
 

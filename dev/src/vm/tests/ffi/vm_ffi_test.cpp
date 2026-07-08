@@ -42,7 +42,10 @@ public:
 		TESTER_ADD_TEST(missingObjectFileFails);
 		TESTER_ADD_TEST(unsupportedTypeFails);
 		TESTER_ADD_TEST(multipleResultsFails);
-		TESTER_ADD_TEST(structLayoutMismatchFails);
+		TESTER_ADD_TEST(alignedStructByValue);
+		TESTER_ADD_TEST(packedStructInFfiFails);
+		TESTER_ADD_TEST(packedStructSize);
+		TESTER_ADD_TEST(alignedStructTailPadding);
 		TESTER_ADD_TEST(duplicateFfiFunctionFails);
 		TESTER_ADD_TEST(assertSizeMatches);
 		TESTER_ADD_TEST(assertSizeMismatchFails);
@@ -529,15 +532,61 @@ private:
 		);
 	}
 
-	// The VM packs struct fields while the C ABI pads them, so this layout must be rejected.
-	void structLayoutMismatchFails() {
-		expectLoadError(
-			"layout_mismatch",
+	// A non-packed struct follows the C layout rules (b is padded to offset 8), so it can be
+	// passed by value even though its fields are not naturally packed.
+	void alignedStructByValue() {
+		runProgram(
+			"aligned_struct",
 			ffiObjectHeader()
-				+ "type data: Mix { a: i8, b: i64 }\n"
-				  "ffi function ffi_add { Mix } -> { };\n",
-			{ "does not match the C ABI layout" }
+				+ "type data: Mix { a: i8, b: i64 } assert_size 16\n"
+				  "ffi function ffi_mix_sum { Mix } -> { i64 };\n"
+				  "function main { i64, ptr_argv } -> { i64 } {\n"
+				  "    init_pany_type a, i8;\n"
+				  "    init_pany_type b, i64;\n"
+				  "    init_pany_type res, i64;\n"
+				  "    init_pany_type m, Mix;\n"
+				  "    mov_p8_imm a, 2;\n"
+				  "    mov_p64_imm b, 40;\n"
+				  "    structStore_pste_pany_field m, a, Mix.a;\n"
+				  "    structStore_pste_pany_field m, b, Mix.b;\n"
+				  "    call_ffifunc ffi_mix_sum;\n"
+				  "    output_p64 res;\n"
+				  "    ret;\n"
+				  "}\n",
+			"42"
 		);
+	}
+
+	// A packed struct drops the padding the C ABI inserts, so it must be rejected in FFI
+	// signatures.
+	void packedStructInFfiFails() {
+		expectLoadError(
+			"packed_struct_ffi",
+			ffiObjectHeader()
+				+ "type data: Mix { a: i8, b: i64 } packed\n"
+				  "ffi function ffi_mix_sum { Mix } -> { i64 };\n",
+			{ "packed", "cannot be used in an FFI function signature" }
+		);
+	}
+
+	// `packed` restores the no-padding layout: 1 + 8 bytes.
+	void packedStructSize() {
+		auto file = writeTempDbc(
+			"packed_size",
+			"type data: Mix { a: i8, b: i64 } packed assert_size 9\n"
+			"function main { i64, ptr_argv } -> { i64 } { ret; }\n"
+		);
+		ASSERT_HAS_VALUE(vm::api::loadFiles(initProcess(), { file }));
+	}
+
+	// The total size of a non-packed struct is rounded up to its alignment (tail padding).
+	void alignedStructTailPadding() {
+		auto file = writeTempDbc(
+			"tail_padding",
+			"type data: Tail { a: i64, b: i8 } assert_size 16\n"
+			"function main { i64, ptr_argv } -> { i64 } { ret; }\n"
+		);
+		ASSERT_HAS_VALUE(vm::api::loadFiles(initProcess(), { file }));
 	}
 
 	void assertSizeMatches() {

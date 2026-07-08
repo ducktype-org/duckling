@@ -13,6 +13,24 @@
 namespace vm {
 	using base::Optional;
 
+	namespace {
+		/**
+		 * @brief Natural alignment of a type addressed purely by its byte size: the largest power
+		 * of two dividing the size, capped at 8 (the largest C scalar alignment).
+		 */
+		Bytes naturalAlignment(const Bytes size) {
+			const auto value = usize(size);
+			if (value == 0) return Bytes(1);
+			return Bytes(std::min<usize>(value & -value, 8));
+		}
+
+		Offset alignOffsetTo(const Offset offset, const Bytes alignment) {
+			CORE_ASSERT(usize(alignment) > 0, "Alignment must be positive");
+			const auto align = usize(alignment);
+			return Offset((usize(offset) + align - 1) / align * align);
+		}
+	}
+
 	void Type::isInstantiableImpl(kind::Data& data) {
 		auto is_concrete_class = [](const InheritanceMetadata& imd) {
 			variant_match(imd.kind) {
@@ -74,6 +92,7 @@ namespace vm {
 
 		kind_type = Kind::Primitive;
 		size      = pass_size;
+		alignment = naturalAlignment(pass_size);
 		kind      = kind::Primitive();
 		if (name == "void") am_i_instantiable = false;
 	}
@@ -83,6 +102,7 @@ namespace vm {
 		state = State::Defined;
 
 		size      = POINTER_SIZE;
+		alignment = POINTER_SIZE;
 		kind_type = Kind::Pointer;
 		kind      = kind::Pointer{ inner };
 	}
@@ -106,6 +126,7 @@ namespace vm {
 
 	void Type::defineData(
 		const std::vector<std::pair<base::StrID, TypeRef>>& fields_definitions,
+		const bool                                          packed,
 		base::Optional<InheritanceMetadata>                 inheritance_metadata
 	) {
 		CORE_ASSERT(state == State::Declared, "Bad type define");
@@ -118,6 +139,7 @@ namespace vm {
 			// offset is set during finalization
 			data.fields.emplace_back(kind::FieldDesc{ .offset = Offset(0), .type = sub_type });
 		}
+		data.packed               = packed;
 		data.inheritance_metadata = std::move(inheritance_metadata);
 		kind                      = data;
 	}
@@ -140,6 +162,7 @@ namespace vm {
 		state = State::Defined;
 
 		size      = POINTER_SIZE;
+		alignment = POINTER_SIZE;
 		kind_type = Kind::Function;
 		kind      = kind::Function{ .parameters   = std::move(parameters),
 			                        .result_types = std::move(result) };
@@ -151,6 +174,7 @@ namespace vm {
 
 		kind_type = Kind::Opaque;
 		size      = pass_size;
+		alignment = naturalAlignment(pass_size);
 		kind      = kind::Opaque{};
 	}
 
@@ -167,16 +191,27 @@ namespace vm {
 				fixed_size_table.inner_type->finalize();
 				this->size
 					= fixed_size_table.inner_type->getSize() * fixed_size_table.element_count;
+				this->alignment = fixed_size_table.inner_type->getAlignment();
 			}
 			variant_case(kind::Data, data) {
-				// calculate offset and size
+				// Calculate offsets and size. Non-packed data follows the C layout rules: each
+				// field is aligned to its type's alignment, and the total size is rounded up to
+				// the type's alignment (the maximum of the field alignments).
+				// @note This algorithm is mirrored in `valid_type::ValidType::finalize` (which
+				// computes dual-width offsets); keep the two in sync.
 				Offset offset(0);
+				Bytes  data_alignment(1);
 				for (auto& field: data.fields) {
-					field.offset = offset;
 					field.type->finalize();
+					if (!data.packed) {
+						offset         = alignOffsetTo(offset, field.type->getAlignment());
+						data_alignment = std::max(data_alignment, field.type->getAlignment());
+					}
+					field.offset = offset;
 					offset += field.type->getSize();
 				}
-				this->size = offset;
+				this->size      = alignOffsetTo(offset, data_alignment);
+				this->alignment = data_alignment;
 				if_opt_some(data.inheritance_metadata, imd) { inheritsFromImpl(imd); }
 				isInstantiableImpl(data);
 			}

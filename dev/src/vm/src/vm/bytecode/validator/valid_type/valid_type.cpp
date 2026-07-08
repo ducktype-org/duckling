@@ -12,6 +12,19 @@
 
 using namespace vm::code;
 
+namespace {
+	/**
+	 * @brief Natural alignment of a type addressed purely by its byte size: the largest power of
+	 * two dividing the size, capped at 8 (the largest C scalar alignment). Sizes 1/2/4/8 align to
+	 * themselves, matching the C ABI for scalars of those sizes.
+	 */
+	Bytes naturalAlignment(const Bytes size) {
+		const auto value = usize(size);
+		if (value == 0) return Bytes(1);
+		return Bytes(std::min<usize>(value & -value, 8));
+	}
+}
+
 valid_type::ValidType valid_type::ValidType::declareType(base::StrID name, ValidTypeID id) {
 	return { name, id };
 }
@@ -54,7 +67,7 @@ void valid_type::ValidType::defineDynamicTable(ValidTypeID inner) {
 }
 
 void valid_type::ValidType::defineData(
-	const std::vector<std::pair<base::StrID, ValidTypeID>>& fields_definitions
+	const std::vector<std::pair<base::StrID, ValidTypeID>>& fields_definitions, const bool packed
 ) {
 	variant_match(state) {
 		variant_case_novalue(ValidType::Declared) {
@@ -63,8 +76,10 @@ void valid_type::ValidType::defineData(
 			for (const auto& field_def: fields_definitions)
 				fields.emplace_back(defined::DefinedField{ .name = field_def.first,
 				                                           .type = field_def.second });
-			state = Defined{ .kind = defined::DefinedStructure{
-								 .field_definitions = fields, .forwarded_inheritance_data = {} } };
+			state
+				= Defined{ .kind = defined::DefinedStructure{ .field_definitions          = fields,
+				                                              .packed                     = packed,
+				                                              .forwarded_inheritance_data = {} } };
 		}
 		variant_default { CORE_PANIC("Bad type define: type already defined or finalized"); }
 	}
@@ -315,6 +330,7 @@ valid_type::finalized::Structure valid_type::ValidType::finalizeStructureData(
 		                      .type   = field_type },
 			field_name
 		);
+	new_structure.packed               = structure.packed;
 	new_structure.inheritance_metadata = std::move(inheritance_metadata);
 
 	return new_structure;
@@ -335,11 +351,13 @@ void valid_type::ValidType::finalize(ValidTypeMap& types) {
 	variant_match(std::get<Finalizing>(state).kind) {
 		variant_case(defined::DefinedPrimitive, primitive) {
 			this->size                  = valid_type::TypeSize(primitive.size, 0);
+			this->alignment             = valid_type::TypeSize(naturalAlignment(primitive.size), 0);
 			this->is_trivially_copyable = true;
 			state = Finalized{ .kind = finalized::Primitive{ primitive.size } };
 		}
 		variant_case(defined::DefinedPointer, pointer) {
 			this->size                  = valid_type::TypeSize::pointer();
+			this->alignment             = valid_type::TypeSize::pointer();
 			this->is_trivially_copyable = false;
 			state                       = Finalized{ .kind = finalized::Pointer{ pointer.inner } };
 		}
@@ -347,6 +365,7 @@ void valid_type::ValidType::finalize(ValidTypeMap& types) {
 			auto inner_type = types.at(fixed_size_table.inner);
 			inner_type->finalize(types);
 			this->size                  = inner_type->getSize() * fixed_size_table.element_count;
+			this->alignment             = inner_type->getAlignment();
 			this->is_trivially_copyable = inner_type->isTriviallyCopyable();
 			state                       = Finalized{ .kind = finalized::FixedSizeTable{
 														 .inner         = fixed_size_table.inner,
@@ -363,12 +382,14 @@ void valid_type::ValidType::finalize(ValidTypeMap& types) {
 		variant_case(defined::DefinedOpaque, opaque) {
 			// Opaque type size is known, so we don't need to do anything here.
 			this->size                  = valid_type::TypeSize(opaque.size, 0);
+			this->alignment             = valid_type::TypeSize(naturalAlignment(opaque.size), 0);
 			this->is_trivially_copyable = true;
 			state                       = Finalized{ .kind = finalized::Opaque{ opaque.size } };
 		}
 		variant_case(defined::DefinedFunction, function) {
 			// Function type size is known, so we don't need to do anything here.
 			this->size                  = valid_type::TypeSize::pointer();
+			this->alignment             = valid_type::TypeSize::pointer();
 			this->is_trivially_copyable = false;
 			state                       = Finalized{ .kind = finalized::Function{
 														 .parameters   = std::move(function.parameters),
@@ -407,15 +428,25 @@ void valid_type::ValidType::finalize(ValidTypeMap& types) {
 		variant_case(defined::DefinedStructure, structure) {
 			auto new_structure = finalizeStructureData(types, structure);
 
-			// Finalize the fields and calculate their offsets.
+			// Finalize the fields and calculate their offsets. Non-packed structures follow the C
+			// layout rules: each field is aligned to its type's alignment, and the total size is
+			// rounded up to the structure's alignment (the maximum of the field alignments).
+			// @note This algorithm is mirrored in `vm::Type::finalize` (the safe runtime computes
+			// its own offsets with 16-byte pointers); keep the two in sync.
 			valid_type::TypeSize offset(Bytes(0), 0);
+			valid_type::TypeSize struct_alignment(Bytes(1), Bytes(1));
 			for (auto& field: new_structure.fields) {
 				auto field_type = types.at(field.type);
 				field_type->finalize(types);
+				if (!new_structure.packed) {
+					offset           = offset.alignedTo(field_type->getAlignment());
+					struct_alignment = struct_alignment.fieldMax(field_type->getAlignment());
+				}
 				field.offset = offset;
 				offset += field_type->getSize();
 			}
-			this->size = offset;
+			this->size      = offset.alignedTo(struct_alignment);
+			this->alignment = struct_alignment;
 			this->is_trivially_copyable
 				= std::ranges::all_of(new_structure.fields, [&](const auto& field) {
 					  auto field_type = types.at(field.type);
@@ -507,6 +538,13 @@ void valid_type::ValidType::finalizeInstantiability(ValidTypeMap& types) {
 			return size;
 		}
 		variant_default { CORE_PANIC("Tried to get size of a type that was not finalized"); }
+	}
+}
+
+[[nodiscard]] valid_type::TypeSize valid_type::ValidType::getAlignment() const {
+	variant_match(state) {
+		variant_case_novalue(Finalized) { return alignment; }
+		variant_default { CORE_PANIC("Tried to get alignment of a type that was not finalized"); }
 	}
 }
 
