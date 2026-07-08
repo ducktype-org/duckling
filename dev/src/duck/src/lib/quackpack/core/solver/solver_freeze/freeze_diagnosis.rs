@@ -66,8 +66,8 @@ impl SolverFreeze {
     }
 
     /// Helper for [`Self::find_maximal_correct_dep_solution`]
-    /// Retains freezes of the old root package and all the packages which have dependencies
-    /// transitively satisfied.
+    /// Retains freezes of the old root package (if its manifest is coherent with the old freeze)
+    /// and all the packages which have dependencies transitively satisfied.
     fn retain_not_flawed_pkgs(
         &mut self,
         manifests: &HashMap<WithVersion<FullIdentity>, Box<Manifest>>,
@@ -85,18 +85,25 @@ impl SolverFreeze {
                 );
             }
         }
+        let main_freeze = self
+            .package_freezes
+            .get(&self.main_pkg)
+            .context_internal("Freeze without main package freeze")?;
+        let root_coherent_with_freeze =
+            Self::get_and_check_manifest(&self.main_pkg, manifests, &main_freeze.features)
+                .is_some();
         self.package_freezes.retain(|pkg, _| {
             let is_root_package = *pkg == self.main_pkg;
             let is_satisfied = still_satisfied_pkgs.contains(pkg);
             debug!(?pkg, is_root_package, is_satisfied);
-            is_root_package || is_satisfied
+            is_satisfied || (is_root_package && root_coherent_with_freeze)
         });
         Ok(())
     }
 
     /// Helper for [`Self::find_maximal_correct_dep_solution`].
     /// Finds which packages from the freeze are not immediately flawed:
-    ///     * we were able to obtain their manifests,
+    ///     * we were able to obtain their manifests and the manifests agrees with the package,
     ///     * all manifest dependencies are satisfied by appropriate freeze-written realizations.
     fn still_satisfied_pkgs(
         &self,
@@ -104,8 +111,7 @@ impl SolverFreeze {
     ) -> QuackResult<HashSet<WithVersion<FullIdentity>>> {
         let mut still_satisfied_pkgs = HashSet::new();
         for (pkg, freeze) in self.package_freezes.iter() {
-            let Some(manifest) =
-                Self::get_manifest_and_check_features_exist(pkg, manifests, &freeze.features)
+            let Some(manifest) = Self::get_and_check_manifest(pkg, manifests, &freeze.features)
             else {
                 continue;
             };
@@ -137,15 +143,19 @@ impl SolverFreeze {
 
     /// Helper for [`Self::still_satisfied_pkgs`].
     /// Checks if we have a manifest for a package and whether its coherent with the freeze, meaning:
+    ///     * name in the manifest agrees with the name in the freeze,
     ///     * all its freeze-present features still appear in the manifest,
     ///     * freeze-present features are expansion-closed,
     ///     * freeze-present version equals manifest version.
-    fn get_manifest_and_check_features_exist<'a>(
+    fn get_and_check_manifest<'a>(
         pkg: &WithVersion<FullIdentity>,
         manifests: &'a HashMap<WithVersion<FullIdentity>, Box<Manifest>>,
         features: &HashSet<FeatureName>,
     ) -> Option<&'a Manifest> {
         let manifest = manifests.get(pkg)?;
+        if manifest.name() != pkg.value().name() {
+            return None;
+        }
         if features
             .iter()
             .any(|f| !manifest.features().has_feature(*f))

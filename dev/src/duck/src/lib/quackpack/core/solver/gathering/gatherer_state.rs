@@ -16,9 +16,7 @@ use crate::quackpack::util::str_id::QpJoin;
 use crate::quackpack::util::with_version::WithVersion;
 use crate::util::error::MessageError;
 use crate::util::extend::QpExtend;
-use crate::{
-    QuackError, QuackResult, QuackResultContext, qp_bail, qp_bail_internal, qp_err, qp_internal,
-};
+use crate::{QuackError, QuackResult, QuackResultContext, qp_bail_internal, qp_err, qp_internal};
 
 /// Gathered information about a particular package.
 #[derive(Debug)]
@@ -168,7 +166,7 @@ impl GathererState {
                 Ok(GathererComputation::empty())
             }
             QueryState::Done => {
-                let result = self.update_features_not_pinned(
+                let result = self.update_features_for_versions_with_selector(
                     not_pinned_request.id,
                     not_pinned_request.versions,
                     not_pinned_request.features,
@@ -286,6 +284,7 @@ impl GathererState {
     }
 
     /// Handles a successful response to a pinned fetch.
+    /// Checks that the found package's version and name agree with the requested ones.
     fn handle_success_pinned(
         &mut self,
         pinned_success: PinnedSuccess,
@@ -301,7 +300,9 @@ impl GathererState {
         *state = QueryState::Done;
 
         // If received response declares a different version, the request failed.
-        if pinned_success.origin_version != pinned_success.answer_package.version() {
+        if pinned_success.origin_version != pinned_success.answer_package.version()
+            || pinned_success.origin_id.name != pinned_success.answer_package.value().name()
+        {
             return Ok(self
                 .fail_incoherent_success_pinned(
                     request_pkg,
@@ -339,6 +340,9 @@ impl GathererState {
     }
 
     /// Handles a successful response to a a not pinned fetch.
+    /// Checks that:
+    ///  * all the returned packages have common identity,
+    ///  * the identitie's name agrees with the requested name.
     fn handle_success_not_pinned(
         &mut self,
         not_pinned_response: NotPinnedSuccess,
@@ -362,6 +366,7 @@ impl GathererState {
             .collect();
         if answer_identities.len() == 1
             && let Some(answer_identity) = answer_identities.into_iter().next()
+            && answer_identity.name() == not_pinned_response.origin_id.name
         {
             self.location_resolver.insert(
                 not_pinned_response.origin_id.source,
@@ -484,10 +489,11 @@ impl GathererState {
                         qp_bail_internal!("No gathered versions for location {answer_identity:?}")
                     };
                     if !versions.contains(&pinned_request.version) {
-                        qp_bail!(
-                            "Request of pinned dependency {:?} could not find matching version",
-                            pinned_request.id.source
-                        )
+                        result.1.push(QuackError::message(format!(
+                            "Request of pinned dependency {:?} could not find matching version {}",
+                            pinned_request.id.source, pinned_request.version,
+                        )));
+                        return Ok(result);
                     }
                     result.extend(self.update_features(
                         WithVersion::new(answer_identity, pinned_request.version),
@@ -498,7 +504,7 @@ impl GathererState {
                     let id = not_pinned_request.id;
                     let selector = not_pinned_request.versions;
                     let requested_features = not_pinned_request.features;
-                    result.extend(self.update_features_not_pinned(
+                    result.extend(self.update_features_for_versions_with_selector(
                         id,
                         selector,
                         requested_features,
@@ -509,9 +515,9 @@ impl GathererState {
         Ok(result)
     }
 
-    /// After a fetch, considers all its associated requests, updates their associated packages data
-    /// and returns necessary new requests.
-    fn update_features_not_pinned(
+    /// After an unpinned fetch, considers all gotten packages.
+    /// Selects versions satisfying a given selector and updates features for them.
+    fn update_features_for_versions_with_selector(
         &mut self,
         id: RequestIdentifier,
         selector: Option<Vec<Version>>,
@@ -546,10 +552,12 @@ impl GathererState {
             }
         }
         if !any_matched {
-            qp_bail!(
+            result.1.push(
+                QuackError::message(
+            format!(
                 "There is a dependency on package in location {:?} with versions {selector:?}, but no matching versions exist",
                 id.source
-            )
+            )));
         }
         Ok(result)
     }

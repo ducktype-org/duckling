@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
 use tempfile::TempDir;
-use tracing::{debug, error};
+use tracing::debug;
 use url::Url;
 
 use crate::quackpack::core::fetcher::Fetcher;
@@ -30,7 +30,7 @@ use crate::quackpack::schemas::registry;
 use crate::quackpack::util::interned_url::InternedUrl;
 use crate::quackpack::util::to_path_buf::ToPathBuf;
 use crate::quackpack::util::with_version::WithVersion;
-use crate::{QuackResult, QuackResultContext, StrId, qp_bail_internal};
+use crate::{QuackError, QuackResult, QuackResultContext, StrId, qp_bail_internal};
 
 /// A struct for fetching manifests for all the packages potentially used in the dependency resolution.
 pub struct Gatherer<'duck, 'fetcher, 'access, Access: GitAccess> {
@@ -314,9 +314,11 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
             }
             Ok(None) => {}
             Err(e) => {
-                error!("failed to get cached git: {e}");
-                // @TODO: #2841 We can use `only_error`, because `FetchResponse` does not implement `Default`.
-                // return GathererComputation::only_error(e);
+                let mut result = GathererComputation::only_success(fetch_failure());
+                result.1.push(QuackError::message(format!(
+                    "failed to get cached git: {e}"
+                )));
+                return result;
             }
         }
         if self.fetcher.ctx().is_offline() {
