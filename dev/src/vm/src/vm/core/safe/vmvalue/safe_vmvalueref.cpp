@@ -4,14 +4,13 @@
 
 #include <vm/core/safe/safe_vmprocess.hpp>
 
-// NOLINTBEGIN(clang-analyzer-cplusplus.NewDeleteLeaks)
 SharedBox<vm::IVmValueRef> vm::SafeVmValueRef::makeShared(
 	SafeVMProcess& process, TypeCRef type, Pointer pointed_data
 ) {
-	return SharedBox<IVmValueRef>::fromPointer(new SafeVmValueRef(process, type, pointed_data));
+	// The concrete `SharedBox<SafeVmValueRef>` converts to the interface-typed box while keeping a
+	// control block that deletes as `SafeVmValueRef`.
+	return SharedBox<SafeVmValueRef>::fromPointer(new SafeVmValueRef(process, type, pointed_data));
 }
-
-// NOLINTEND(clang-analyzer-cplusplus.NewDeleteLeaks)
 
 vm::SafeTableElementAccess::SafeTableElementAccess(
 	SafeVMProcess& process, TypeCRef element_type, Pointer begin
@@ -22,28 +21,23 @@ vm::SafeTableElementAccess::SafeTableElementAccess(
 
 SharedBox<vm::IVmValueRef> vm::SafeTableElementAccess::get(usize index) const {
 	vm::Pointer pointer = begin.movedPointer(index * static_cast<usize>(element_type->getSize()));
-	// NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
 	return SafeVmValueRef::makeShared(*my_process.get(), element_type, pointer);
 }
 
 namespace vm {
 	namespace {
-		// NOLINTBEGIN(clang-analyzer-cplusplus.NewDeleteLeaks)
 		/** @brief Builds an interpreted table backed by lazy element access to safe VM memory. */
 		interpreted_data_variant::Table makeInterpretedTable(
 			SafeVMProcess& process, TypeCRef element_type, Pointer begin, usize size
 		) {
-			return { .elements = SharedBox<ITableElementAccess>::fromPointer(
+			return { .elements = SharedBox<SafeTableElementAccess>::fromPointer(
 						 new SafeTableElementAccess(process, element_type, begin)
 					 ),
 				     .size = size };
 		}
-
-		// NOLINTEND(clang-analyzer-cplusplus.NewDeleteLeaks)
 	}
 }
 
-// NOLINTBEGIN(clang-analyzer-cplusplus.NewDeleteLeaks)
 base::Optional<vm::InterpretedDataVariant> vm::SafeVmValueRef::readData() const {
 	variant_match(my_type->getKindVariant()) {
 		variant_case_novalue(vm::kind::Primitive) {
@@ -173,8 +167,6 @@ base::Optional<vm::InterpretedDataVariant> vm::SafeVmValueRef::readData() const 
 
 	CORE_UNREACHABLE();
 }
-
-// NOLINTEND(clang-analyzer-cplusplus.NewDeleteLeaks)
 
 vm::SafeVmValueRef::SafeVmValueRef(SafeVMProcess& process, TypeCRef type, Pointer pointed_data):
 	  my_process(&process),
