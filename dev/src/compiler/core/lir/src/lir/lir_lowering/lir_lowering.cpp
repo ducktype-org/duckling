@@ -73,6 +73,8 @@ namespace compiler::lir {
 		);
 		auto link_once    = helios::emissionPolicy(helios_id) == helios::EmissionPolicy::Replicated;
 		auto mangled_name = helios::mangler::getSimpleMangledName(ctx, helios_id);
+		base::Optional<BuiltinFunctionKind> builtin_kind_opt
+			= helios::isBuiltin(helios_id).flatMap(getBuiltinKindFromHOUT);
 
 		auto return_type = mirReturnType2LirLayout(ctx, type.getResultType());
 		std::vector<CRef<tsl::TypeLayout>> parameter_types;
@@ -93,6 +95,7 @@ namespace compiler::lir {
 			.parameter_layouts
 			= std::make_shared<std::vector<CRef<tsl::TypeLayout>>>(std::move(parameter_types)),
 			.return_type_layout = return_type,
+			.builtin_kind_opt   = builtin_kind_opt
 		};
 	}
 
