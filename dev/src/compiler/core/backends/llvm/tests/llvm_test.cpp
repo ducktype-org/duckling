@@ -162,9 +162,11 @@ private:
 		runTestForModule("modules/units/unit_simple_multiple_modules", 1, 2);
 	}
 
-	void classTest() { runTestForModule("modules/classes/records", 16, 21); }
+	// Prototype counts include the `llvm.memcpy` intrinsic declaration emitted
+	// for aggregate `byval`/`sret` argument copies.
+	void classTest() { runTestForModule("modules/classes/records", 16, 22); }
 
-	void stringsTest() { runTestForModule("modules/strings", 3, 5); }
+	void stringsTest() { runTestForModule("modules/strings", 3, 6); }
 
 	void ffiTest() { runTestForModule("modules/ffi", 1, 1); }
 
