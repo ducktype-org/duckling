@@ -24,6 +24,7 @@
 #include <helios_private/pst_layer/pst_parent.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/generated_symbol_data.hpp>
+#include <helios_private/symbols/pst_symbol_data.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 
 #include <base/collections/optional.hpp>
@@ -180,6 +181,10 @@ namespace compiler::helios {
 			},
 			getSymRef(id)->maybePstElement().value().unlock(ctx)
 		);
+	}
+
+	base::Optional<BuiltinKind> isBuiltin(SymID id) {
+		return getSymRef(id)->getDataOpt<BuiltinSemantics>().map(&BuiltinSemantics::builtin);
 	}
 
 	SymbolKind kind(SymID id) { return getSymRef(id)->common.kind; }

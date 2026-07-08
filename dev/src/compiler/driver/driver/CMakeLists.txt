@@ -9,6 +9,7 @@ add_library(Driver
 	src_private/driver_private/backend_operations/compile_llvm.cpp
 	src_private/driver_private/backend_operations/compile_dvm.cpp
 
+	src_private/driver_private/dbc_linking.cpp
 	src_private/driver_private/operations.cpp
 	src_private/driver_private/debug_artifacts.cpp
 	src_private/driver_private/save_artifacts.cpp
