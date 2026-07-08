@@ -195,11 +195,11 @@ namespace compiler::helios::code {
 										  const HOUTFunctionDeclaration::Operatoriness operatoriness
 									  ) -> void {
 				const auto gen_data = defgen::BuiltinOperator{
-					ctx.query<tsh::QueryFunctionType>({
+					.operator_type = ctx.query<tsh::QueryFunctionType>({
 						.parameter_types = param_types,
 						.result_type     = return_type,
 					}),
-					operatoriness,
+					.operatoriness = operatoriness,
 				};
 				auto builtin = RegularBuiltinOperator{
 					.symbol = ctx.query<defgen::QueryGeneratedSymbol>({
