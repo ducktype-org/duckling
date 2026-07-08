@@ -62,6 +62,31 @@ extern "C" {
 	};
 
 	int64_t ffi_mix_sum(Mix m) { return static_cast<int64_t>(m.a) + m.b; }
+
+	// Struct with an array field - flattened in the libffi descriptor (libffi has no array type).
+	struct WithArr {
+		int32_t v[4];
+		int64_t tail;
+	};
+
+	int64_t ffi_arr_sum(WithArr w) {
+		int64_t sum = w.tail;
+		for (int32_t x: w.v) sum += x;
+		return sum;
+	}
+
+	// Nested plain structs, passed by value.
+	struct Inner {
+		int32_t x;
+		int32_t y;
+	};
+
+	struct Outer {
+		Inner   first;
+		int64_t z;
+	};
+
+	int64_t ffi_nested_sum(Outer o) { return o.first.x + o.first.y + o.z; }
 }
 
 // NOLINTEND(readability-identifier-naming,cppcoreguidelines-no-malloc,cppcoreguidelines-owning-memory)

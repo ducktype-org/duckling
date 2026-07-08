@@ -163,9 +163,20 @@ namespace vm::code {
 	public:
 		constexpr static std::string_view ERR_MSG
 			= "Type cannot be used in an FFI function signature (expected a primitive of size 1, "
-			  "2, 4 or 8, `cptr`, or a data structure with only such fields): ";
+			  "2, 4 or 8, `cptr`, or a non-packed data structure whose fields are such types or "
+			  "fixed-size tables of them): ";
 
 		FFIUnsupportedTypeError(const valid_type::ValidType& type):
+			  ValidationError(base::strConcat(ERR_MSG, type.getName())) {}
+	};
+
+	class FFITableByValueError: public ValidationError {
+	public:
+		constexpr static std::string_view ERR_MSG
+			= "C has no by-value arrays, so a fixed-size table cannot be passed or returned "
+			  "directly by an FFI function (wrap it in a data structure): ";
+
+		FFITableByValueError(const valid_type::ValidType& type):
 			  ValidationError(base::strConcat(ERR_MSG, type.getName())) {}
 	};
 

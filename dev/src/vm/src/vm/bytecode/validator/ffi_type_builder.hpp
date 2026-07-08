@@ -24,11 +24,22 @@ namespace vm::code::ffi_detail {
 	 * the DVM backend emits for floating-point types; without this they would be classified
 	 * as integers, which breaks the C calling convention (e.g. SysV passes floats in XMM
 	 * registers).
-	 * @note The caller must ensure the type was validated as FFI-compatible.
+	 * libffi has no array type, so a fixed-size table structure field is flattened: its element
+	 * type is repeated `element_count` times in the structure's element list.
+	 * @note The caller must ensure the type is FFI-compliant (see `ValidType::isFFICompliant`).
 	 */
 	ffi_type* buildFFIType(
 		const valid_type::ValidType&    type,
 		const valid_type::ValidTypeMap& types,
 		FFITypeStorage&                 storage
+	);
+
+	/**
+	 * @brief Number of libffi struct elements a structure field of the given type expands to in
+	 * `buildFFIType`: a fixed-size table contributes its element type once per element
+	 * (recursively), any other type contributes one element.
+	 */
+	usize flattenedFFIElementCount(
+		const valid_type::ValidType& type, const valid_type::ValidTypeMap& types
 	);
 }
