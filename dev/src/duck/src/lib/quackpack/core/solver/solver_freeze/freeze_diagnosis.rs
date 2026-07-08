@@ -66,7 +66,7 @@ impl SolverFreeze {
     }
 
     /// Helper for [`Self::find_maximal_correct_dep_solution`]
-    /// Retains freezes of the old root package (if its manifest is coherent with the old freeze)
+    /// Retains freezes of the old root package (it is later substituted anyway)
     /// and all the packages which have dependencies transitively satisfied.
     fn retain_not_flawed_pkgs(
         &mut self,
@@ -85,18 +85,11 @@ impl SolverFreeze {
                 );
             }
         }
-        let main_freeze = self
-            .package_freezes
-            .get(&self.main_pkg)
-            .context_internal("Freeze without main package freeze")?;
-        let root_coherent_with_freeze =
-            Self::get_and_check_manifest(&self.main_pkg, manifests, &main_freeze.features)
-                .is_some();
         self.package_freezes.retain(|pkg, _| {
             let is_root_package = *pkg == self.main_pkg;
             let is_satisfied = still_satisfied_pkgs.contains(pkg);
             debug!(?pkg, is_root_package, is_satisfied);
-            is_satisfied || (is_root_package && root_coherent_with_freeze)
+            is_satisfied || is_root_package
         });
         Ok(())
     }
