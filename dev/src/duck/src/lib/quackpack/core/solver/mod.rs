@@ -16,12 +16,12 @@
 //! 6. Creating the new freeze, based on the reused part of the previous freeze and the solver-engine output.
 //! 7. Trimming the new freeze, to remove dependencies of the root package which were present previously
 //!    but have been since removed from its manifest.
+pub mod dependency_edge;
 pub mod gathering;
 pub mod git_access;
 pub mod solver_freeze;
 pub mod solver_mode;
 pub mod solving;
-pub mod types_common;
 pub mod util;
 
 #[cfg(test)]

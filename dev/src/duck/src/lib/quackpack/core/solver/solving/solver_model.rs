@@ -8,8 +8,8 @@ use russcip::{Model, ProblemCreated, Solution, Variable, WithSolutions};
 use tracing::debug;
 
 use crate::quackpack::core::full_identity::FullIdentity;
+use crate::quackpack::core::solver::dependency_edge::DependencyEdge;
 use crate::quackpack::core::solver::solving::scip_ext::BinModelExt;
-use crate::quackpack::core::solver::types_common::DependencyEdge;
 use crate::quackpack::core::{FeatureName, Version};
 use crate::quackpack::util::with_version::WithVersion;
 use crate::{QuackResult, QuackResultContext, StrId};

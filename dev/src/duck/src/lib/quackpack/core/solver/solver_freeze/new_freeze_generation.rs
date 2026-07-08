@@ -187,9 +187,9 @@ mod test {
     use tempfile::{TempDir, tempdir};
 
     use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
+    use crate::quackpack::core::solver::dependency_edge::DependencyEdge;
     use crate::quackpack::core::solver::solver_freeze::{SolverFreeze, SolverPackageFreeze};
     use crate::quackpack::core::solver::solving::FoundSolution;
-    use crate::quackpack::core::solver::types_common::DependencyEdge;
     use crate::quackpack::core::{FeatureName, Version, parse_manifest};
     use crate::quackpack::util::to_url::ToUrl;
     use crate::quackpack::util::with_version::WithVersion;

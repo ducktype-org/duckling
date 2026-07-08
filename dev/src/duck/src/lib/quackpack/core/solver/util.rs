@@ -1,16 +1,13 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
+use crate::quackpack::core::full_identity::{FullIdentity, FullKind, FullOrigin};
+use crate::quackpack::core::solver::gathering::fetch_types::{
+    ManifestsRequest, NotPinnedRequest, PinnedRequest, RequestIdentifier,
+};
 use crate::quackpack::core::version::CompatibilityCheck;
-use crate::quackpack::core::{Dependency, Source, Version};
+use crate::quackpack::core::{Dependency, GitReference, Source, SourceKind, Version};
 use crate::quackpack::util::with_version::WithVersion;
-use crate::{QuackResult, QuackResultContext, StrId};
-
-impl WithVersion<FullOrigin> {
-    pub fn transpose_to_identity(&self, name: StrId) -> WithVersion<FullIdentity> {
-        WithVersion::new(FullIdentity::new(name, *self.value()), self.version())
-    }
-}
+use crate::{QuackResult, QuackResultContext};
 
 /// For a given dependency entry from the manifest and
 /// given all the found versions of a package from some location,
@@ -56,6 +53,109 @@ pub fn get_possible_realizations(
             .into_iter()
             .map(|version| WithVersion::new(identity, version))
             .collect())
+    }
+}
+
+impl Source {
+    /// Creates a [`Source`] which could correspond to the given [`FullOrigin`].
+    /// Used for generating mapping Source -> FullIdentity for packages from the previous freeze.
+    pub fn canonical_source_for_origin(origin: FullOrigin) -> Self {
+        match origin.kind() {
+            FullKind::Registry => Self::for_registry(origin.url()),
+            FullKind::Git { commit } => Self::for_git(origin.url(), GitReference::Rev(commit)),
+            FullKind::Local => Self::new(origin.url(), SourceKind::Local),
+        }
+    }
+}
+
+impl WithVersion<FullIdentity> {
+    /// Creates a [`ManifestsRequest`] for a package.
+    /// Used for requesting fetches of packages from the previous freeze.
+    pub fn create_manifest_request(&self) -> QuackResult<ManifestsRequest> {
+        let identity = self.value();
+        let origin = identity.origin();
+        let request_id = RequestIdentifier {
+            source: Source::canonical_source_for_origin(origin),
+            name: identity.name(),
+        };
+        match origin.kind() {
+            FullKind::Registry => Ok(ManifestsRequest::Pinned(PinnedRequest {
+                id: request_id,
+                version: self.version(),
+                features: [].into(),
+            })),
+            FullKind::Git { .. } => Ok(ManifestsRequest::NotPinned(NotPinnedRequest {
+                id: request_id,
+                versions: Some(vec![self.version()]),
+                features: [].into(),
+            })),
+            FullKind::Local => Ok(ManifestsRequest::NotPinned(NotPinnedRequest {
+                id: request_id,
+                versions: Some(vec![self.version()]),
+                features: [].into(),
+            })),
+        }
+    }
+
+    /// Checks whether a dependency is still satisfied by the package.
+    /// This consists of checking that:
+    ///  * the packages origin satisfies the source requirements,
+    ///  * version requirements are satisfied,
+    ///  * package's name coincides with the required name.
+    pub fn still_satisfies_dep(&self, dependency: &Dependency) -> QuackResult<bool> {
+        if !self.check_satisfaction_of_versions(dependency)? {
+            return Ok(false);
+        }
+        let source = dependency.source();
+        if self.value().origin().url() != source.url() || self.value().name() != dependency.name() {
+            return Ok(false);
+        }
+        match (self.value().origin().kind(), source.kind()) {
+            (FullKind::Local, SourceKind::Local) => Ok(true),
+            (FullKind::Git { commit }, SourceKind::Git(reference)) => {
+                // If the git dependency specifies tag, branch or nothing (default branch),
+                // some new commits may have appeared.
+                if let GitReference::Rev(required_commit) = reference
+                    && commit == *required_commit
+                {
+                    Ok(true)
+                } else {
+                    Ok(false)
+                }
+            }
+            (FullKind::Registry, SourceKind::Registry) => Ok(true),
+            _ => Ok(false),
+        }
+    }
+
+    /// Helper for [`Self::still_satisfies_dep`].
+    fn check_satisfaction_of_versions(&self, dependency: &Dependency) -> QuackResult<bool> {
+        if dependency.is_pinned() {
+            let required_version = dependency
+                .versions()
+                .first()
+                .context_internal("Pinned dependency without specified version")?;
+            Ok(self.version() == *required_version)
+        } else {
+            Ok(dependency
+                .versions()
+                .iter()
+                .any(|required| required.can_be_upgraded_to(&self.version())))
+        }
+    }
+}
+
+impl WithVersion<RequestIdentifier> {
+    pub fn resolve(
+        self,
+        location_resolver: &HashMap<Source, FullOrigin>,
+    ) -> Option<WithVersion<FullIdentity>> {
+        location_resolver.get(&self.value().source).map(|origin| {
+            WithVersion::new(
+                FullIdentity::new(self.value().name, *origin),
+                self.version(),
+            )
+        })
     }
 }
 

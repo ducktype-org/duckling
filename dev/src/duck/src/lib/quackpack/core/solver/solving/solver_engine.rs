@@ -4,10 +4,10 @@ use std::iter::once;
 use russcip::ProblemCreated;
 
 use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
+use crate::quackpack::core::solver::dependency_edge::DependencyEdge;
 use crate::quackpack::core::solver::gathering::gatherer_state::GatheredInfo;
 use crate::quackpack::core::solver::solver_freeze::SolverFreeze;
 use crate::quackpack::core::solver::solving::solver_model::{FoundSolution, SolverModel};
-use crate::quackpack::core::solver::types_common::DependencyEdge;
 use crate::quackpack::core::solver::util::get_possible_realizations;
 use crate::quackpack::core::{Dependency, FeatureName, Manifest, Source, Version};
 use crate::quackpack::util::with_version::WithVersion;
