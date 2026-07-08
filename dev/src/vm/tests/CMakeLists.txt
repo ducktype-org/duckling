@@ -111,3 +111,5 @@ duck_add_test_custom(vm vm_bc_verification loader/verification/bc_verification.c
 duck_add_test_custom(vm vm_bc_building loader/assembly/bc_building.cpp USES LibVM_sc Tester VmTester_sc)
 duck_add_test_custom(vm vm_bc_parsing loader/assembly/bc_parsing.cpp USES LibVM_sc Tester VmTester_sc)
 duck_add_test_custom(vm vm_bc_serializer loader/serializer/bc_serializer.cpp USES LibVM_sc Tester VmTester_sc)
+
+add_subdirectory(ffi)
