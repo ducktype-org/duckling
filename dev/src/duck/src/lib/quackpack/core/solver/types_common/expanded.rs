@@ -1,17 +1,17 @@
-use std::collections::HashSet;
 use std::hash::Hash;
 
 use serde::{Deserialize, Serialize};
 use url::Url;
 
+use crate::quackpack::core::full_identity::{FullIdentity, FullKind};
 use crate::quackpack::core::solver::gathering::fetch_types::{
     ManifestsRequest, NotPinnedRequest, PinnedRequest,
 };
-use crate::quackpack::core::solver::types_common::{InternedLocation, Location};
 use crate::quackpack::core::version::CompatibilityCheck;
-use crate::quackpack::core::{Dependency, GitReference, SourceKind, Version};
+use crate::quackpack::core::{Dependency, GitReference, Source, SourceKind, Version};
 use crate::quackpack::util::interned_url::InternedUrl;
 use crate::quackpack::util::to_path_buf::ToPathBuf;
+use crate::quackpack::util::with_version::WithVersion;
 use crate::{QuackResult, QuackResultContext, StrId, qp_bail_internal};
 
 #[derive(Debug, Clone, Copy, Deserialize, Eq, Hash, PartialEq, Serialize)]
@@ -157,39 +157,82 @@ impl ExpandedPackage {
                     .any(|required| required.can_be_upgraded_to(&self_version)))
         }
     }
+}
 
-    /// Creates a [`ManifestsRequest`] for precisely that single package.
+impl WithVersion<FullIdentity> {
     pub fn create_manifest_request(&self) -> QuackResult<ManifestsRequest> {
-        match self.location {
-            ExpandedLocation::Registry { url, real_name } => {
-                let version = self
-                    .version
-                    .context_internal("Registry package without version")?;
-                Ok(ManifestsRequest::Pinned(PinnedRequest {
-                    location: InternedLocation::new(Location::Registry { url, real_name }),
-                    version,
-                    features: HashSet::new(),
-                }))
+        let identity = self.value();
+        let origin = identity.origin();
+        match origin.kind() {
+            FullKind::Registry => Ok(ManifestsRequest::Pinned(PinnedRequest
+                { source: Source::canonical_source_for_origin(origin),
+                    name: identity.name(), version: self.version(), features: [].into() })),
+            FullKind::Git { .. } => Ok(ManifestsRequest::NotPinned(NotPinnedRequest {
+                source: Source::canonical_source_for_origin(origin),
+                name: identity.name(),
+                versions: Some(vec![self.version()]),
+                features: [].into(),
+            })),
+            FullKind::Local => Ok(ManifestsRequest::NotPinned(NotPinnedRequest {
+                source: Source::canonical_source_for_origin(origin),
+                name: identity.name(),
+                versions: Some(vec![self.version()]),
+                features: [].into(),
+            })),
+        }
+    }
+
+    pub fn still_satisfies_dep(&self, dependency: &Dependency) -> QuackResult<bool> {
+        let source = dependency.source();
+        let dep_url = source.url();
+        match (self.value().origin().kind(), source.kind()) {
+            (FullKind::Local, SourceKind::Local) => {
+                Ok(self.value().origin().url() == dep_url)
             }
-            ExpandedLocation::Git { url, commit } => {
-                Ok(ManifestsRequest::NotPinned(NotPinnedRequest {
-                    location: InternedLocation::new(Location::Git {
-                        url,
-                        reference: GitReference::Rev(commit.as_str().into()),
-                    }),
-                    versions: None,
-                    features: HashSet::new(),
-                }))
+            (FullKind::Git { commit }, SourceKind::Git(reference)) => {
+                // If the git dependency specifies tag, branch or nothing (default branch),
+                // some new commits may have appeared.
+                if let GitReference::Rev(required_commit) = reference
+                    && commit == *required_commit
+                    && self.value().origin().url() == dep_url
+                {
+                    if let Some(required_version) = dependency.versions().first() {
+                        Ok(self.version() == *required_version)
+                    } else {
+                        Ok(true)
+                    }
+                } else {
+                    Ok(false)
+                }
             }
-            ExpandedLocation::Local { absolute_path } => {
-                Ok(ManifestsRequest::NotPinned(NotPinnedRequest {
-                    location: InternedLocation::new(Location::Local {
-                        path: absolute_path,
-                    }),
-                    versions: None,
-                    features: HashSet::new(),
-                }))
+            (FullKind::Registry, SourceKind::Registry) => {
+                self.check_satisfaction_for_registry(self.value().origin().url(), self.value().name(), dep_url, dependency)
             }
+            _ => Ok(false),
+        }
+    }
+
+    /// Helper for [`Self::still_satisfies_dep`].
+    fn check_satisfaction_for_registry(
+        &self,
+        url: InternedUrl,
+        real_name: StrId,
+        dep_url: InternedUrl,
+        dependency: &Dependency,
+    ) -> QuackResult<bool> {
+        let location_agreement = (url == dep_url) && (dependency.name() == real_name);
+        if dependency.is_pinned() {
+            let required_version = dependency
+                .versions()
+                .first()
+                .context_internal("Pinned dependency without specified version")?;
+            Ok(location_agreement && self.version() == *required_version)
+        } else {
+            Ok(location_agreement
+                && dependency
+                    .versions()
+                    .iter()
+                    .any(|required| required.can_be_upgraded_to(&self.version())))
         }
     }
 }

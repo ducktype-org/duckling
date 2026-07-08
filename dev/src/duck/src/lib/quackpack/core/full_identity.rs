@@ -7,9 +7,7 @@ use std::path::Path;
 
 use serde::{Deserialize, Serialize, de};
 
-use crate::quackpack::core::Manifest;
 use crate::quackpack::core::identity::{Identity, Kind, Origin};
-use crate::quackpack::core::solver::types_common::{ExpandedLocation, ExpandedPackage};
 use crate::quackpack::util::interned_url::InternedUrl;
 use crate::quackpack::util::is_local_file::IsLocalFile;
 use crate::quackpack::util::to_path_buf::ToPathBuf;
@@ -43,22 +41,6 @@ impl FullIdentity {
     /// Convert this [`FullIdentity`] into a [`Identity`].
     pub fn as_identity(&self) -> Identity {
         Identity::new(self.name(), self.origin().as_origin())
-    }
-
-    /// Helper for solver for creating storage's freeze.
-    pub fn from_realization_and_manifest(
-        realization: ExpandedPackage,
-        realization_manifest: &Manifest,
-    ) -> Self {
-        let name = realization_manifest.name();
-        let origin = match realization.location {
-            ExpandedLocation::Registry { url, .. } => FullOrigin::for_registry(url),
-            ExpandedLocation::Git { url, commit } => FullOrigin::for_git(url, commit),
-            ExpandedLocation::Local { absolute_path } => {
-                FullOrigin::new(absolute_path, FullKind::Local)
-            }
-        };
-        Self::new(name, origin)
     }
 
     pub fn descriptive_name(&self) -> String {

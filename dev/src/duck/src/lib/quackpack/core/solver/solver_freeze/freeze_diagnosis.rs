@@ -2,12 +2,13 @@ use std::collections::{HashMap, HashSet};
 
 use tracing::debug;
 
+use crate::quackpack::core::full_identity::FullIdentity;
 use crate::quackpack::core::solver::gathering::fetch_types::{FetchResponse, FetchSuccess};
 use crate::quackpack::core::solver::gathering::gatherer::Gatherer;
 use crate::quackpack::core::solver::git_access::GitAccess;
 use crate::quackpack::core::solver::solver_freeze::{SolverFreeze, SolverPackageFreeze};
-use crate::quackpack::core::solver::types_common::ExpandedPackage;
 use crate::quackpack::core::{Dependency, FeatureName, Manifest};
+use crate::quackpack::util::with_version::WithVersion;
 use crate::{QuackResult, QuackResultContext};
 
 impl SolverFreeze {
@@ -16,7 +17,7 @@ impl SolverFreeze {
     pub fn get_prev_freeze_manifests<Access: GitAccess>(
         &self,
         gatherer: &mut Gatherer<'_, '_, '_, Access>,
-    ) -> QuackResult<HashMap<ExpandedPackage, Box<Manifest>>> {
+    ) -> QuackResult<HashMap<WithVersion<FullIdentity>, Box<Manifest>>> {
         let mut tasks = vec![];
         for pkg in self.package_freezes.keys() {
             if *pkg == self.main_pkg {
@@ -34,7 +35,7 @@ impl SolverFreeze {
                 match success_response {
                     FetchSuccess::Pinned(pinned_success) => {
                         manifests.insert(
-                            pinned_success.expanded_package,
+                            pinned_success.answer_package,
                             pinned_success.fetched_manifest,
                         );
                     }
@@ -58,7 +59,7 @@ impl SolverFreeze {
     #[tracing::instrument(skip_all)]
     pub fn find_maximal_correct_dep_solution(
         mut self,
-        manifests: &HashMap<ExpandedPackage, Box<Manifest>>,
+        manifests: &HashMap<WithVersion<FullIdentity>, Box<Manifest>>,
     ) -> QuackResult<(Self, bool)> {
         self.retain_not_flawed_pkgs(manifests)?;
         self.substitute_root_pkg(manifests)
@@ -69,7 +70,7 @@ impl SolverFreeze {
     /// transitively satisfied.
     fn retain_not_flawed_pkgs(
         &mut self,
-        manifests: &HashMap<ExpandedPackage, Box<Manifest>>,
+        manifests: &HashMap<WithVersion<FullIdentity>, Box<Manifest>>,
     ) -> QuackResult<()> {
         let mut still_satisfied_pkgs = self.still_satisfied_pkgs(manifests)?;
         let reversed_graph = self.reversed_dependency_graph();
@@ -99,8 +100,8 @@ impl SolverFreeze {
     ///     * all manifest dependencies are satisfied by appropriate freeze-written realizations.
     fn still_satisfied_pkgs(
         &self,
-        manifests: &HashMap<ExpandedPackage, Box<Manifest>>,
-    ) -> QuackResult<HashSet<ExpandedPackage>> {
+        manifests: &HashMap<WithVersion<FullIdentity>, Box<Manifest>>,
+    ) -> QuackResult<HashSet<WithVersion<FullIdentity>>> {
         let mut still_satisfied_pkgs = HashSet::new();
         for (pkg, freeze) in self.package_freezes.iter() {
             let Some(manifest) =
@@ -140,8 +141,8 @@ impl SolverFreeze {
     ///     * freeze-present features are expansion-closed,
     ///     * freeze-present version equals manifest version.
     fn get_manifest_and_check_features_exist<'a>(
-        pkg: &ExpandedPackage,
-        manifests: &'a HashMap<ExpandedPackage, Box<Manifest>>,
+        pkg: &WithVersion<FullIdentity>,
+        manifests: &'a HashMap<WithVersion<FullIdentity>, Box<Manifest>>,
         features: &HashSet<FeatureName>,
     ) -> Option<&'a Manifest> {
         let manifest = manifests.get(pkg)?;
@@ -159,14 +160,10 @@ impl SolverFreeze {
         {
             return None;
         }
-        if let Some(pkg_version) = pkg.version {
-            if manifest.version() == pkg_version {
-                Some(manifest)
-            } else {
-                None
-            }
-        } else {
+        if manifest.version() == pkg.version() {
             Some(manifest)
+        } else {
+            None
         }
     }
 
@@ -198,10 +195,10 @@ impl SolverFreeze {
     /// Expands the notion of a flawed package in a dfs-like manner, by applying a rule that
     /// if for some package and its dependency, the realization is flawed, the package is as well.
     fn flawed_pkgs_dfs(
-        cur_pkg: &ExpandedPackage,
-        graph: &HashMap<ExpandedPackage, Vec<ExpandedPackage>>,
-        visited: &mut HashSet<ExpandedPackage>,
-        still_satisfied_pkgs: &mut HashSet<ExpandedPackage>,
+        cur_pkg: &WithVersion<FullIdentity>,
+        graph: &HashMap<WithVersion<FullIdentity>, Vec<WithVersion<FullIdentity>>>,
+        visited: &mut HashSet<WithVersion<FullIdentity>>,
+        still_satisfied_pkgs: &mut HashSet<WithVersion<FullIdentity>>,
     ) {
         visited.insert(*cur_pkg);
         still_satisfied_pkgs.remove(cur_pkg);
@@ -217,8 +214,8 @@ impl SolverFreeze {
 
     /// Helper for [`Self::retain_not_flawed_pkgs`].
     /// Generates the graph used by [`Self::flawed_pkgs_dfs`].
-    fn reversed_dependency_graph(&self) -> HashMap<ExpandedPackage, Vec<ExpandedPackage>> {
-        let mut reversed_graph: HashMap<ExpandedPackage, Vec<ExpandedPackage>> = HashMap::new();
+    fn reversed_dependency_graph(&self) -> HashMap<WithVersion<FullIdentity>, Vec<WithVersion<FullIdentity>>> {
+        let mut reversed_graph: HashMap<WithVersion<FullIdentity>, Vec<WithVersion<FullIdentity>>> = HashMap::new();
         for (pkg, freeze) in self.package_freezes.iter() {
             for (_, realization) in freeze.dependencies_realization.iter() {
                 reversed_graph.entry(*realization).or_default().push(*pkg);
@@ -232,7 +229,7 @@ impl SolverFreeze {
     /// Keeps only still satisfied realizations from the old root's package freeze.
     fn substitute_root_pkg(
         mut self,
-        manifests: &HashMap<ExpandedPackage, Box<Manifest>>,
+        manifests: &HashMap<WithVersion<FullIdentity>, Box<Manifest>>,
     ) -> QuackResult<(Self, bool)> {
         let main_pkg_freeze = self
             .package_freezes
@@ -285,11 +282,12 @@ mod test {
 
     use tempfile::{TempDir, tempdir};
 
-    use crate::quackpack::core::solver::solver_freeze::{SolverFreeze, SolverPackageFreeze};
-    use crate::quackpack::core::solver::types_common::{ExpandedLocation, ExpandedPackage};
+    use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
+use crate::quackpack::core::solver::solver_freeze::{SolverFreeze, SolverPackageFreeze};
     use crate::quackpack::core::{FeatureName, Version, parse_manifest};
     use crate::quackpack::util::to_url::ToUrl;
-    use crate::util::path_ops_ext::PathOpsExt;
+    use crate::quackpack::util::with_version::WithVersion;
+use crate::util::path_ops_ext::PathOpsExt;
     use crate::{DuckContext, StrId};
 
     fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {
@@ -333,28 +331,17 @@ features:
         let ctx = DuckContext::default();
         let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
         let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
-        let exp_location_a = ExpandedLocation::Registry {
-            url: "http://localhost:9001".to_url().unwrap().into(),
-            real_name: StrId::from("a"),
-        };
-        let exp_location_b = ExpandedLocation::Registry {
-            url: "http://localhost:9001".to_url().unwrap().into(),
-            real_name: StrId::from("b"),
-        };
-        let exp_pkg_a = ExpandedPackage {
-            location: exp_location_a,
-            version: Some(Version::new(1, 0, 0)),
-        };
-        let exp_pkg_b = ExpandedPackage {
-            location: exp_location_b,
-            version: Some(Version::new(2, 0, 0)),
-        };
+        let registry_origin = FullOrigin::for_registry("http://localhost:9001".to_url().unwrap());
+        let identity_a = FullIdentity::new("a".into(), registry_origin);
+        let identity_b = FullIdentity::new("b".into(), registry_origin);
+        let pkg_a = WithVersion::new(identity_a, Version::new(1, 0, 0));
+        let pkg_b = WithVersion::new(identity_b, Version::new(2, 0, 0));
         let manifests = HashMap::from([
-            (exp_pkg_a, Box::new(manifest_a.manifest().clone())),
-            (exp_pkg_b, Box::new(manifest_b.manifest().clone())),
+            (pkg_a, Box::new(manifest_a.manifest().clone())),
+            (pkg_b, Box::new(manifest_b.manifest().clone())),
         ]);
         let prev_a_freeze = SolverPackageFreeze {
-            dependencies_realization: HashMap::from([(StrId::new("b"), exp_pkg_b)]),
+            dependencies_realization: HashMap::from([(StrId::new("b"), pkg_b)]),
             features: HashSet::from([FeatureName::new("foo")]),
         };
         let prev_b_freeze = SolverPackageFreeze {
@@ -363,10 +350,10 @@ features:
         };
         let prev_freeze = SolverFreeze {
             package_freezes: HashMap::from([
-                (exp_pkg_a, prev_a_freeze),
-                (exp_pkg_b, prev_b_freeze),
+                (pkg_a, prev_a_freeze),
+                (pkg_b, prev_b_freeze),
             ]),
-            main_pkg: exp_pkg_a,
+            main_pkg: pkg_a,
         };
         let (new_freeze, _) = prev_freeze
             .clone()
@@ -404,28 +391,17 @@ metadata:
         let ctx = DuckContext::default();
         let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
         let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
-        let exp_location_a = ExpandedLocation::Registry {
-            url: "http://localhost:9001".to_url().unwrap().into(),
-            real_name: StrId::from("a"),
-        };
-        let exp_location_b = ExpandedLocation::Registry {
-            url: "http://localhost:9001".to_url().unwrap().into(),
-            real_name: StrId::from("b"),
-        };
-        let exp_pkg_a = ExpandedPackage {
-            location: exp_location_a,
-            version: Some(Version::new(1, 0, 0)),
-        };
-        let exp_pkg_b = ExpandedPackage {
-            location: exp_location_b,
-            version: Some(Version::new(2, 0, 0)),
-        };
+        let registry_origin = FullOrigin::for_registry("http://localhost:9001".to_url().unwrap());
+        let identity_a = FullIdentity::new("a".into(), registry_origin);
+        let identity_b = FullIdentity::new("b".into(), registry_origin);
+        let pkg_a = WithVersion::new(identity_a, Version::new(1, 0, 0));
+        let pkg_b = WithVersion::new(identity_b, Version::new(2, 0, 0));
         let manifests = HashMap::from([
-            (exp_pkg_a, Box::new(manifest_a.manifest().clone())),
-            (exp_pkg_b, Box::new(manifest_b.manifest().clone())),
+            (pkg_a, Box::new(manifest_a.manifest().clone())),
+            (pkg_b, Box::new(manifest_b.manifest().clone())),
         ]);
         let prev_a_freeze = SolverPackageFreeze {
-            dependencies_realization: HashMap::from([(StrId::new("b"), exp_pkg_b)]),
+            dependencies_realization: HashMap::from([(StrId::new("b"), pkg_b)]),
             features: HashSet::from([FeatureName::new("foo")]),
         };
         let prev_b_freeze = SolverPackageFreeze {
@@ -434,16 +410,16 @@ metadata:
         };
         let prev_freeze = SolverFreeze {
             package_freezes: HashMap::from([
-                (exp_pkg_a, prev_a_freeze),
-                (exp_pkg_b, prev_b_freeze),
+                (pkg_a, prev_a_freeze),
+                (pkg_b, prev_b_freeze),
             ]),
-            main_pkg: exp_pkg_a,
+            main_pkg: pkg_a,
         };
         let (new_freeze, _) = prev_freeze
             .clone()
             .find_maximal_correct_dep_solution(&manifests)
             .unwrap();
-        let freeze_a = new_freeze.package_freezes.get(&exp_pkg_a).unwrap();
+        let freeze_a = new_freeze.package_freezes.get(&pkg_a).unwrap();
         assert_eq!(new_freeze.package_freezes.len(), 1);
         assert!(freeze_a.dependencies_realization.is_empty());
         assert_eq!(freeze_a.features, HashSet::from([FeatureName::new("foo")]));
@@ -484,57 +460,40 @@ metadata:
         let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
         let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
         let manifest_c = parse_manifest(&path_c, &ctx).unwrap();
-        let exp_location_a = ExpandedLocation::Registry {
-            url: "http://localhost:9001".to_url().unwrap().into(),
-            real_name: StrId::from("a"),
-        };
-        let exp_location_b = ExpandedLocation::Registry {
-            url: "http://localhost:9001".to_url().unwrap().into(),
-            real_name: StrId::from("b"),
-        };
-        let exp_location_c = ExpandedLocation::Registry {
-            url: "http://localhost:9001".to_url().unwrap().into(),
-            real_name: StrId::from("c"),
-        };
-        let exp_pkg_a = ExpandedPackage {
-            location: exp_location_a,
-            version: Some(Version::new(1, 0, 0)),
-        };
-        let exp_pkg_b = ExpandedPackage {
-            location: exp_location_b,
-            version: Some(Version::new(2, 0, 0)),
-        };
-        let exp_pkg_c = ExpandedPackage {
-            location: exp_location_c,
-            version: Some(Version::new(3, 0, 0)),
-        };
+        let registry_origin = FullOrigin::for_registry("http://localhost:9001".to_url().unwrap());
+        let identity_a = FullIdentity::new("a".into(), registry_origin);
+        let identity_b = FullIdentity::new("b".into(), registry_origin);
+        let identity_c = FullIdentity::new("c".into(), registry_origin);
+        let pkg_a = WithVersion::new(identity_a, Version::new(1, 0, 0));
+        let pkg_b = WithVersion::new(identity_b, Version::new(2, 0, 0));
+        let pkg_c = WithVersion::new(identity_c, Version::new(3, 0, 0));
         let manifests = HashMap::from([
-            (exp_pkg_a, Box::new(manifest_a.manifest().clone())),
-            (exp_pkg_b, Box::new(manifest_b.manifest().clone())),
-            (exp_pkg_c, Box::new(manifest_c.manifest().clone())),
+            (pkg_a, Box::new(manifest_a.manifest().clone())),
+            (pkg_b, Box::new(manifest_b.manifest().clone())),
+            (pkg_c, Box::new(manifest_c.manifest().clone())),
         ]);
         let prev_a_freeze = SolverPackageFreeze {
-            dependencies_realization: HashMap::from([(StrId::new("b"), exp_pkg_b)]),
+            dependencies_realization: HashMap::from([(StrId::new("b"), pkg_b)]),
             features: HashSet::new(),
         };
         let prev_b_freeze = SolverPackageFreeze {
-            dependencies_realization: HashMap::from([(StrId::new("c"), exp_pkg_c)]),
+            dependencies_realization: HashMap::from([(StrId::new("c"), pkg_c)]),
             features: HashSet::new(),
         };
         let prev_c_freeze = SolverPackageFreeze::default();
         let prev_freeze = SolverFreeze {
             package_freezes: HashMap::from([
-                (exp_pkg_a, prev_a_freeze),
-                (exp_pkg_b, prev_b_freeze),
-                (exp_pkg_c, prev_c_freeze),
+                (pkg_a, prev_a_freeze),
+                (pkg_b, prev_b_freeze),
+                (pkg_c, prev_c_freeze),
             ]),
-            main_pkg: exp_pkg_a,
+            main_pkg: pkg_a,
         };
         let (new_freeze, _) = prev_freeze
             .find_maximal_correct_dep_solution(&manifests)
             .unwrap();
-        let freeze_a = new_freeze.package_freezes.get(&exp_pkg_a).unwrap();
-        let freeze_c = new_freeze.package_freezes.get(&exp_pkg_c).unwrap();
+        let freeze_a = new_freeze.package_freezes.get(&pkg_a).unwrap();
+        let freeze_c = new_freeze.package_freezes.get(&pkg_c).unwrap();
         assert_eq!(new_freeze.package_freezes.len(), 2);
         assert!(freeze_a.dependencies_realization.is_empty());
         assert!(freeze_c.dependencies_realization.is_empty());
@@ -587,71 +546,48 @@ metadata:
         let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
         let manifest_c = parse_manifest(&path_c, &ctx).unwrap();
         let manifest_d = parse_manifest(&path_d, &ctx).unwrap();
-        let exp_location_a = ExpandedLocation::Registry {
-            url: "http://localhost:9001".to_url().unwrap().into(),
-            real_name: StrId::from("a"),
-        };
-        let exp_location_b = ExpandedLocation::Registry {
-            url: "http://localhost:9001".to_url().unwrap().into(),
-            real_name: StrId::from("b"),
-        };
-        let exp_location_c = ExpandedLocation::Registry {
-            url: "http://localhost:9001".to_url().unwrap().into(),
-            real_name: StrId::from("c"),
-        };
-        let exp_location_d = ExpandedLocation::Registry {
-            url: "http://localhost:9001".to_url().unwrap().into(),
-            real_name: StrId::from("d"),
-        };
-        let exp_pkg_a = ExpandedPackage {
-            location: exp_location_a,
-            version: Some(Version::new(1, 0, 0)),
-        };
-        let exp_pkg_b = ExpandedPackage {
-            location: exp_location_b,
-            version: Some(Version::new(2, 0, 0)),
-        };
-        let exp_pkg_c = ExpandedPackage {
-            location: exp_location_c,
-            version: Some(Version::new(3, 0, 0)),
-        };
-        let exp_pkg_d = ExpandedPackage {
-            location: exp_location_d,
-            version: Some(Version::new(4, 0, 0)),
-        };
+        let registry_origin = FullOrigin::for_registry("http://localhost:9001".to_url().unwrap());
+        let identity_a = FullIdentity::new("a".into(), registry_origin);
+        let identity_b = FullIdentity::new("b".into(), registry_origin);
+        let identity_c = FullIdentity::new("c".into(), registry_origin);
+        let identity_d = FullIdentity::new("d".into(), registry_origin);
+        let pkg_a = WithVersion::new(identity_a, Version::new(1, 0, 0));
+        let pkg_b = WithVersion::new(identity_b, Version::new(2, 0, 0));
+        let pkg_c = WithVersion::new(identity_c, Version::new(3, 0, 0));
+        let pkg_d = WithVersion::new(identity_d, Version::new(4, 0, 0));
         let manifests = HashMap::from([
-            (exp_pkg_a, Box::new(manifest_a.manifest().clone())),
-            (exp_pkg_b, Box::new(manifest_b.manifest().clone())),
-            (exp_pkg_c, Box::new(manifest_c.manifest().clone())),
-            (exp_pkg_d, Box::new(manifest_d.manifest().clone())),
+            (pkg_a, Box::new(manifest_a.manifest().clone())),
+            (pkg_b, Box::new(manifest_b.manifest().clone())),
+            (pkg_c, Box::new(manifest_c.manifest().clone())),
+            (pkg_d, Box::new(manifest_d.manifest().clone())),
         ]);
         let prev_a_freeze = SolverPackageFreeze {
-            dependencies_realization: HashMap::from([(StrId::new("b"), exp_pkg_b)]),
+            dependencies_realization: HashMap::from([(StrId::new("b"), pkg_b)]),
             features: HashSet::new(),
         };
         let prev_b_freeze = SolverPackageFreeze {
-            dependencies_realization: HashMap::from([(StrId::new("c"), exp_pkg_c)]),
+            dependencies_realization: HashMap::from([(StrId::new("c"), pkg_c)]),
             features: HashSet::new(),
         };
         let prev_c_freeze = SolverPackageFreeze {
-            dependencies_realization: HashMap::from([(StrId::new("c"), exp_pkg_c)]),
+            dependencies_realization: HashMap::from([(StrId::new("c"), pkg_c)]),
             features: HashSet::new(),
         };
         let prev_d_freeze = SolverPackageFreeze::default();
         let prev_freeze = SolverFreeze {
             package_freezes: HashMap::from([
-                (exp_pkg_a, prev_a_freeze),
-                (exp_pkg_b, prev_b_freeze),
-                (exp_pkg_c, prev_c_freeze),
-                (exp_pkg_d, prev_d_freeze),
+                (pkg_a, prev_a_freeze),
+                (pkg_b, prev_b_freeze),
+                (pkg_c, prev_c_freeze),
+                (pkg_d, prev_d_freeze),
             ]),
-            main_pkg: exp_pkg_a,
+            main_pkg: pkg_a,
         };
         let (new_freeze, _) = prev_freeze
             .find_maximal_correct_dep_solution(&manifests)
             .unwrap();
-        let freeze_a = new_freeze.package_freezes.get(&exp_pkg_a).unwrap();
-        let freeze_d = new_freeze.package_freezes.get(&exp_pkg_d).unwrap();
+        let freeze_a = new_freeze.package_freezes.get(&pkg_a).unwrap();
+        let freeze_d = new_freeze.package_freezes.get(&pkg_d).unwrap();
         assert_eq!(new_freeze.package_freezes.len(), 2);
         assert!(freeze_a.dependencies_realization.is_empty());
         assert!(freeze_d.dependencies_realization.is_empty());
@@ -680,25 +616,14 @@ features:
         let ctx = DuckContext::default();
         let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
         let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
-        let exp_location_a = ExpandedLocation::Registry {
-            url: "http://localhost:9001".to_url().unwrap().into(),
-            real_name: StrId::from("a"),
-        };
-        let exp_location_b = ExpandedLocation::Registry {
-            url: "http://localhost:9001".to_url().unwrap().into(),
-            real_name: StrId::from("b"),
-        };
-        let exp_pkg_a = ExpandedPackage {
-            location: exp_location_a,
-            version: Some(Version::new(1, 0, 0)),
-        };
-        let exp_pkg_b = ExpandedPackage {
-            location: exp_location_b,
-            version: Some(Version::new(2, 0, 0)),
-        };
+        let registry_origin = FullOrigin::for_registry("http://localhost:9001".to_url().unwrap());
+        let identity_a = FullIdentity::new("a".into(), registry_origin);
+        let identity_b = FullIdentity::new("b".into(), registry_origin);
+        let pkg_a = WithVersion::new(identity_a, Version::new(1, 0, 0));
+        let pkg_b = WithVersion::new(identity_b, Version::new(2, 0, 0));
         let manifests = HashMap::from([
-            (exp_pkg_a, Box::new(manifest_a.manifest().clone())),
-            (exp_pkg_b, Box::new(manifest_b.manifest().clone())),
+            (pkg_a, Box::new(manifest_a.manifest().clone())),
+            (pkg_b, Box::new(manifest_b.manifest().clone())),
         ]);
         let prev_a_freeze = SolverPackageFreeze {
             dependencies_realization: [].into(),
@@ -710,10 +635,10 @@ features:
         };
         let prev_freeze = SolverFreeze {
             package_freezes: HashMap::from([
-                (exp_pkg_a, prev_a_freeze.clone()),
-                (exp_pkg_b, prev_b_freeze),
+                (pkg_a, prev_a_freeze.clone()),
+                (pkg_b, prev_b_freeze),
             ]),
-            main_pkg: exp_pkg_a,
+            main_pkg: pkg_a,
         };
         let (new_freeze, _) = prev_freeze
             .clone()
@@ -722,8 +647,8 @@ features:
         assert_eq!(
             new_freeze,
             SolverFreeze {
-                package_freezes: [(exp_pkg_a, prev_a_freeze)].into(),
-                main_pkg: exp_pkg_a,
+                package_freezes: [(pkg_a, prev_a_freeze)].into(),
+                main_pkg: pkg_a,
             }
         )
     }
