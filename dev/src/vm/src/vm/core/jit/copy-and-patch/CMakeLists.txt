@@ -90,7 +90,7 @@ endfunction()
 
 process_to_binary(${CMAKE_CURRENT_SOURCE_DIR}/tests/mock_stencils.c tests/jit_memory_test.cpp "mock_stencils")
 
-add_library(Stencils OBJECT memory/memory.cpp stencils/dynamic_library.cpp)
+add_library(Stencils OBJECT memory/memory.cpp ../../native/dynamic_library.cpp)
 make_module(Stencils USES Base)
 
 duck_add_test(vm jit_memory tests/jit_memory_test.cpp USES Base Stencils Tester)
@@ -104,7 +104,6 @@ process_to_binary($<TARGET_PROPERTY:CommonVMBitcode_sc,VM_COMMON_BC> copy-and-pa
 
 add_files(
     memory/memory.cpp
-    stencils/dynamic_library.cpp
 )
 set(vm_common_sources ${vm_common_sources} ${files} PARENT_SCOPE)
 

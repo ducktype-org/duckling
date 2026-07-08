@@ -9,6 +9,7 @@
 
 int cli(
 	const std::vector<fs::File>&    files,
-	const std::vector<std::string>& args    = {},
-	const vm::api::ProcessConfig&   options = {}
+	const std::vector<std::string>& args     = {},
+	const vm::api::ProcessConfig&   options  = {},
+	const std::vector<std::string>& ffi_libs = {}
 );

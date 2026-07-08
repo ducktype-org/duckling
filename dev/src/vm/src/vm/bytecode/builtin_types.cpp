@@ -46,6 +46,7 @@ namespace vm::code {
 			  TypeOfData(PointerType(base::StrID("ptr_argv"), base::StrID("argv"))) },
 			{ base::StrID("opaque_ptr"),
 			  TypeOfData(OpaqueType(base::StrID("opaque_ptr"), Bytes{ 8 })) },
+			{ base::StrID("cptr"), TypeOfData(OpaqueType(base::StrID("cptr"), Bytes{ 8 })) },
 			{ base::StrID("VTablePtr"), SpecialTypes::get().vtable_ptr },
 			{ base::StrID("mutex"), TypeOfData(OpaqueType(base::StrID("mutex"), Bytes{ 8 })) },
 			{ base::StrID("condition_variable"),
