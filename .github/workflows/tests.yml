@@ -110,9 +110,9 @@ jobs:
         id: set-jobs
         run: |
           if [[ "${{ matrix.build-type }}" == "Dev" && "${{ steps.set-self-hosted.outputs.is-self-hosted }}" == "true" ]]; then
-            echo "jobs=6" >> $GITHUB_OUTPUT
+            echo "jobs=$(nproc)" >> $GITHUB_OUTPUT
           elif [[ "${{ matrix.build-type }}" == "DevOpt" && "${{ steps.set-self-hosted.outputs.is-self-hosted }}" == "true" ]]; then
-            echo "jobs=6" >> $GITHUB_OUTPUT
+            echo "jobs=$(nproc)" >> $GITHUB_OUTPUT
           else
             echo "jobs=2" >> $GITHUB_OUTPUT
           fi
