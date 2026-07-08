@@ -273,20 +273,29 @@ namespace vm::builtins {
 		thread.safe_process.getSynchronizationPrimitives().removeCV(cv_id);
 	}
 
+	namespace {
+		// The copy always spans a whole block; a mid-block pointer would silently copy
+		// everything after it, so it is rejected instead.
+		void assertWholeBlockPointer(const Pointer& ptr, const char* builtin_name) {
+			if (ptr.getOffset() != 0)
+				throw vm::exceptions::VMRuntimeException(
+					base::strConcat(builtin_name, " requires a pointer to the beginning of a block")
+				);
+		}
+	}
+
 	void FunctionHandlers::builtinCptrRead(SafeVMThread& thread, u64 src, Pointer dst) {
-		auto  view      = thread.process_memory.getBlockViewUnsafe(dst.getBlock());
-		byte* dst_begin = view.getBegin() + dst.getOffset();
-		usize copy_size = view.size() - dst.getOffset();
+		assertWholeBlockPointer(dst, "builtin_cptr_read");
+		auto view = thread.process_memory.getBlockViewUnsafe(dst.getBlock());
 		// NOLINTNEXTLINE(performance-no-int-to-ptr): a cptr is a raw native address by definition.
-		std::memcpy(dst_begin, reinterpret_cast<const void*>(src), copy_size);
+		std::memcpy(view.getBegin(), reinterpret_cast<const void*>(src), view.size());
 	}
 
 	void FunctionHandlers::builtinCptrWrite(SafeVMThread& thread, u64 dst, Pointer src) {
-		auto  view      = thread.process_memory.getBlockViewUnsafe(src.getBlock());
-		byte* src_begin = view.getBegin() + src.getOffset();
-		usize copy_size = view.size() - src.getOffset();
+		assertWholeBlockPointer(src, "builtin_cptr_write");
+		auto view = thread.process_memory.getBlockViewUnsafe(src.getBlock());
 		// NOLINTNEXTLINE(performance-no-int-to-ptr): a cptr is a raw native address by definition.
-		std::memcpy(reinterpret_cast<void*>(dst), src_begin, copy_size);
+		std::memcpy(reinterpret_cast<void*>(dst), view.getBegin(), view.size());
 	}
 
 	base::Optional<Box<VmValue>> callBuiltinFunction(

@@ -169,6 +169,21 @@ namespace vm::code {
 			  ValidationError(base::strConcat(ERR_MSG, type.getName())) {}
 	};
 
+	class FFIMultipleResultsError: public ValidationError {
+	public:
+		constexpr static std::string_view ERR_MSG
+			= "An FFI function can return at most one value: ";
+		const code::FFIFunction function;
+
+		FFIMultipleResultsError(const code::FFIFunction& function):
+			  ValidationError(base::strConcat(ERR_MSG, function.name.str)),
+			  function(function) {}
+
+		[[nodiscard]] base::Optional<CRef<ElementBase>> maybeElement() const override {
+			return &function.name;
+		}
+	};
+
 	class FFIUnknownSymbolError: public ValidationError {
 	public:
 		constexpr static std::string_view ERR_MSG

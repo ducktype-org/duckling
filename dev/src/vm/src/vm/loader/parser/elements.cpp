@@ -1248,15 +1248,15 @@ namespace vm::loader::parser {
 	}
 
 	void FFIFunc::dprint(std::ostream& out) const {
-		out << "ffi function";
-		out << name.value.strView() << "{";
+		out << "ffi function ";
+		out << name.value.strView() << " { ";
 		bool first = true;
 		for (const auto& param: parameters) {
 			if (!first) out << ", ";
 			out << param.value.strView();
 			first = false;
 		}
-		out << "} -> { ";
+		out << " } -> { ";
 		first = true;
 		for (const auto& param: result_types) {
 			if (!first) out << ", ";

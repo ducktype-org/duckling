@@ -46,6 +46,14 @@ extern "C" {
 	};
 
 	FPair ffi_fpair_swap(FPair p) { return { .a = p.b, .b = p.a }; }
+
+	// Struct mixing a pointer (cptr) field with an integer, passed by value.
+	struct CPair {
+		void*   p;
+		int64_t v;
+	};
+
+	int64_t ffi_cpair_sum(CPair c) { return *static_cast<int64_t*>(c.p) + c.v; }
 }
 
 // NOLINTEND(readability-identifier-naming,cppcoreguidelines-no-malloc,cppcoreguidelines-owning-memory)

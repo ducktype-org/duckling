@@ -56,7 +56,7 @@ namespace vm::code {
 
 		const ObjIdNameMap<FFIFunction>& ffiFunctions() const;
 
-		const std::unordered_map<std::string, std::shared_ptr<native::DynamicLibrary>>& objectFiles(
+		const std::vector<std::pair<std::string, std::shared_ptr<native::DynamicLibrary>>>& objectFiles(
 		) const;
 
 	private:
@@ -68,10 +68,11 @@ namespace vm::code {
 
 		/**
 		 * @brief Shared objects declared with `ffi object`, loaded into the process and keyed by
-		 * the exact string passed to `dlopen`. The library handles are shared between program
-		 * copies and live for the lifetime of the program.
+		 * the exact string passed to `dlopen`. Kept in insertion order so symbol resolution is
+		 * deterministic (the earliest loaded object wins, like a linker). The library handles are
+		 * shared between program copies and live for the lifetime of the program.
 		 */
-		std::unordered_map<std::string, std::shared_ptr<native::DynamicLibrary>> object_files;
+		std::vector<std::pair<std::string, std::shared_ptr<native::DynamicLibrary>>> object_files;
 
 		/**
 		 * @brief Contains a mapping from function name to function signature for all functions

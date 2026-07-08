@@ -27,6 +27,8 @@ public:
 		TESTER_ADD_TEST(smallIntReturnWidening);
 		TESTER_ADD_TEST(cptrRoundTripThroughC);
 		TESTER_ADD_TEST(cptrCopyBuiltins);
+		TESTER_ADD_TEST(cptrStructField);
+		TESTER_ADD_TEST(midBlockPointerCopyFails);
 		TESTER_ADD_TEST(floatArgsAndReturn);
 		TESTER_ADD_TEST(doubleArgsAndReturn);
 		TESTER_ADD_TEST(mixedIntFloatArgs);
@@ -38,7 +40,10 @@ public:
 		TESTER_ADD_TEST(missingSymbolFails);
 		TESTER_ADD_TEST(missingObjectFileFails);
 		TESTER_ADD_TEST(unsupportedTypeFails);
+		TESTER_ADD_TEST(multipleResultsFails);
+		TESTER_ADD_TEST(structLayoutMismatchFails);
 		TESTER_ADD_TEST(duplicateFfiFunctionFails);
+		TESTER_ADD_TEST(conflictingSignatureRedeclarationFails);
 		TESTER_ADD_TEST(assertSizeMatches);
 		TESTER_ADD_TEST(assertSizeMismatchFails);
 	}
@@ -199,6 +204,74 @@ private:
 				  "    ret;\n"
 				  "}\n",
 			"555"
+		);
+	}
+
+	// A structure with a `cptr` field passed to C by value.
+	void cptrStructField() {
+		runProgram(
+			"cptr_struct",
+			ffiObjectHeader()
+				+ "type data: CPair { p: cptr, v: i64 } assert_size 16\n"
+				  "ffi function ffi_alloc8 { } -> { cptr };\n"
+				  "ffi function ffi_fill8 { cptr, i64 } -> { };\n"
+				  "ffi function ffi_cpair_sum { CPair } -> { i64 };\n"
+				  "ffi function ffi_free8 { cptr } -> { };\n"
+				  "function main { i64, ptr_argv } -> { i64 } {\n"
+				  "    init_pany_type buf, cptr;\n"
+				  "    call_ffifunc ffi_alloc8;\n"
+				  "    init_pany_type buf2, cptr;\n"
+				  "    mov_popq_popq buf2, buf;\n"
+				  "    init_pany_type v, i64;\n"
+				  "    mov_p64_imm v, 30;\n"
+				  "    call_ffifunc ffi_fill8;\n"
+				  "    init_pany_type bufc, cptr;\n"
+				  "    mov_popq_popq bufc, buf;\n"
+				  "    init_pany_type v2, i64;\n"
+				  "    mov_p64_imm v2, 12;\n"
+				  "    init_pany_type res, i64;\n"
+				  "    init_pany_type pair, CPair;\n"
+				  "    structStore_pste_pany_field pair, bufc, CPair.p;\n"
+				  "    structStore_pste_pany_field pair, v2, CPair.v;\n"
+				  "    call_ffifunc ffi_cpair_sum;\n"
+				  "    output_p64 res;\n"
+				  "    init_pany_type buf_f, cptr;\n"
+				  "    mov_popq_popq buf_f, buf;\n"
+				  "    call_ffifunc ffi_free8;\n"
+				  "    ret;\n"
+				  "}\n",
+			"42"
+		);
+	}
+
+	// The cptr copy builtins only accept pointers to the beginning of a block; a mid-block
+	// pointer (here: a struct field) must raise a runtime exception instead of copying
+	// everything after it.
+	void midBlockPointerCopyFails() {
+		auto pid = initProcess();
+		auto file = writeTempDbc(
+			"mid_block_ptr",
+			ffiObjectHeader()
+				+ "type data: Pair { a: i64, b: i64 }\n"
+				  "ffi function ffi_alloc8 { } -> { cptr };\n"
+				  "function main { i64, ptr_argv } -> { i64 } {\n"
+				  "    init_pany_type buf, cptr;\n"
+				  "    call_ffifunc ffi_alloc8;\n"
+				  "    init_pany_type s, Pair;\n"
+				  "    init_pany_type bp, ptr_i64;\n"
+				  "    structLea_pptr_pste_field bp, s, Pair.b;\n"
+				  "    init_pany_type buf_w, cptr;\n"
+				  "    mov_popq_popq buf_w, buf;\n"
+				  "    init_pany_type bp2, ptr_i64;\n"
+				  "    mov_pptr_pptr bp2, bp;\n"
+				  "    call_builtinfunc builtin_cptr_write_pptr;\n"
+				  "    ret;\n"
+				  "}\n"
+		);
+		auto load = vm::api::loadFiles(pid, { file });
+		if (!load.has_value()) fail(nlohmann::json(load.error()).dump());
+		assertExecutionPanickedWith(
+			runTestOnVmGetResult(pid), "requires a pointer to the beginning of a block"
 		);
 	}
 
@@ -399,6 +472,37 @@ private:
 			"bad_type",
 			ffiObjectHeader() + "ffi function ffi_add { string } -> { };\n",
 			{ "FFI function signature" }
+		);
+	}
+
+	void multipleResultsFails() {
+		expectLoadError(
+			"multi_result",
+			ffiObjectHeader() + "ffi function ffi_add { i64, i64 } -> { i64, i64 };\n",
+			{ "at most one" }
+		);
+	}
+
+	// The VM packs struct fields while the C ABI pads them, so this layout must be rejected.
+	void structLayoutMismatchFails() {
+		expectLoadError(
+			"layout_mismatch",
+			ffiObjectHeader()
+				+ "type data: Mix { a: i8, b: i64 }\n"
+				  "ffi function ffi_add { Mix } -> { };\n",
+			{ "does not match the C ABI layout" }
+		);
+	}
+
+	// Redeclaring an FFI function with a different signature is an ABI bug, not a harmless
+	// duplicate, so it is rejected instead of being silently deduplicated.
+	void conflictingSignatureRedeclarationFails() {
+		expectLoadError(
+			"conflicting_signature",
+			ffiObjectHeader()
+				+ "ffi function ffi_add { i64, i64 } -> { i64 };\n"
+				  "ffi function ffi_add { i64 } -> { i64 };\n",
+			{ "different signature" }
 		);
 	}
 

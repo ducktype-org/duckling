@@ -10,6 +10,8 @@
 #include <vm/bytecode/validator/initial_value.hpp>
 #include <vm/bytecode/validator/type_validator.hpp>
 
+#include <algorithm>
+
 vm::code::ValidProgram vm::code::ValidProgram::withBuiltins() {
 	auto program = ValidProgram();
 	program.insertTypes(getBuiltinTypes());
@@ -200,8 +202,11 @@ void vm::code::ValidProgram::insertFFIFunctions(const std::vector<FFIFunction>& 
 				= ffi_get_struct_offsets(FFI_DEFAULT_ABI, struct_type, c_offsets.data());
 			CORE_ASSERT(offsets_status == FFI_OK, "ffi_get_struct_offsets failed");
 
+			// The pointer size never enters here (fields are restricted to primitives and
+			// `cptr` above); `Bytes(8)` only keeps this consistent with the `assert_size`
+			// check in `insertTypes`.
 			auto to_bytes = [](const valid_type::TypeSize& size) {
-				return usize(size.assumePointerSize(Bytes(16)));
+				return usize(size.assumePointerSize(Bytes(8)));
 			};
 			if (to_bytes(tp.value()->getSize()) != struct_type->size)
 				throw FFIStructLayoutMismatchError(*tp.value());
@@ -229,12 +234,11 @@ void vm::code::ValidProgram::insertFFIFunctions(const std::vector<FFIFunction>& 
 		if (ffi_function_map.contains(new_func.name))
 			throw DuplicatedFFIFunctionError(new_func, *ffi_function_map.at(new_func.name));
 
-		if (new_func.signature.result_types.size()) {
-			CORE_ASSERT(
-				new_func.signature.result_types.size() == 1, "FFI functions return only one type"
-			);
+		// The compiler and the runtime handle at most one result; user bytecode must not get
+		// past validation with more.
+		if (new_func.signature.result_types.size() > 1) throw FFIMultipleResultsError(new_func);
+		if (!new_func.signature.result_types.empty())
 			validate_ffi_type(new_func.signature.result_types[0]);
-		}
 
 		for (const auto& type: new_func.signature.parameters) validate_ffi_type(type);
 
@@ -246,12 +250,15 @@ void vm::code::ValidProgram::insertFFIFunctions(const std::vector<FFIFunction>& 
 
 void vm::code::ValidProgram::insertObjectFiles(const std::vector<std::string>& new_files) {
 	for (const auto& file: new_files) {
-		if (object_files.contains(file)) continue;
+		if (std::ranges::any_of(object_files, [&](const auto& entry) {
+				return entry.first == file;
+			}))
+			continue;
 
 		auto library = native::DynamicLibrary::tryFromFile(file.c_str());
 		if (!library.has_value()) throw FFIObjectFileError(file, library.error());
 
-		object_files.emplace(
+		object_files.emplace_back(
 			file, std::make_shared<native::DynamicLibrary>(std::move(library).value())
 		);
 	}
@@ -265,7 +272,7 @@ const vm::ObjIdNameMap<vm::code::FFIFunction>& vm::code::ValidProgram::ffiFuncti
 	return ffi_function_map;
 }
 
-const std::unordered_map<std::string, std::shared_ptr<vm::native::DynamicLibrary>>& vm::code::
+const std::vector<std::pair<std::string, std::shared_ptr<vm::native::DynamicLibrary>>>& vm::code::
 	ValidProgram::objectFiles() const {
 	return object_files;
 }

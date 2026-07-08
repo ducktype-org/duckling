@@ -145,15 +145,19 @@ namespace vm::builtins {
 		 * @brief Copies the whole block pointed to by the VM pointer `dst` out of the raw C memory
 		 * addressed by `src` (a `cptr`). Used to read FFI results back into the VM.
 		 * @warning `src` must address at least the block's size of valid, readable memory.
+		 * @note `dst` must point to the beginning of a block; a mid-block pointer raises a
+		 * runtime exception.
 		 */
-		static void builtinCptrRead(SafeVMThread& process, u64 src, Pointer dst);
+		static void builtinCptrRead(SafeVMThread& thread, u64 src, Pointer dst);
 
 		/**
 		 * @brief Copies the whole block pointed to by the VM pointer `src` into the raw C memory
 		 * addressed by `dst` (a `cptr`). Used to hand VM data to FFI functions.
 		 * @warning `dst` must address at least the block's size of valid, writable memory.
+		 * @note `src` must point to the beginning of a block; a mid-block pointer raises a
+		 * runtime exception.
 		 */
-		static void builtinCptrWrite(SafeVMThread& process, u64 dst, Pointer src);
+		static void builtinCptrWrite(SafeVMThread& thread, u64 dst, Pointer src);
 	};
 
 	/**
