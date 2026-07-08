@@ -103,5 +103,6 @@ SubDirs:
   - macros
   - diagnostics
   - packages
+  - custom_operators
   - standard_library
   - conditional_compilation

@@ -76,6 +76,8 @@ public:
 		TESTER_ADD_TEST(testVisitorAlternative);
 		TESTER_ADD_TEST(testFunctionParameterVisitors);
 		TESTER_ADD_TEST(testFunDeclFFI);
+		TESTER_ADD_TEST(testOperatorFun);
+		TESTER_ADD_TEST(testOperatorFunErrors);
 		TESTER_ADD_TEST(testSimpleExpand);
 
 		// TESTER_ADD_TEST(testParsingHandler)
@@ -202,6 +204,13 @@ private:
 	}
 
 	void testFunDeclFFI() { testJsonRelativePath("ffi.duck", "ffi.json"); }
+
+	void testOperatorFun() { testJsonRelativePath("operator_fun.duck", "operator_fun.json"); }
+
+	void testOperatorFunErrors() {
+		pst::PST<> pst = prepare(path("snippets/operator_fun_err.duck"));
+		assertTrue(pst.getLogger()->errorCount() == 3, "Expected 3 errors");
+	}
 
 	void testNumericLiteralParsing() {
 		testJsonRelativePath("numeric_literals.duck", "numeric_literals.json");

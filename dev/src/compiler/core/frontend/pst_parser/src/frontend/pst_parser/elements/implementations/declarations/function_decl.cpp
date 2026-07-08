@@ -1,6 +1,7 @@
 #include "../../hierarchy/declarations/function_decl.hpp"
 
 #include "../../hierarchy/not_statements/code_block_or_statement.hpp"  // IWYU pragma: keep
+#include "function_name_parse.hpp"
 #include "preamble.hpp"
 
 namespace pst {
@@ -12,7 +13,8 @@ namespace pst {
 
 		if (!assertStmtChoice<FunDecl>(state, state[0].is(Keyword::FunDecl))) return nullptr;
 
-		PARSE().all(Keyword::FunDecl, &out->name);
+		PARSE().all(Keyword::FunDecl);
+		PARSE().with(&out->name, parseFunctionName);
 		PARSE().one(&out->params);
 
 		if (PARSE().tryEat(NamedOperator::SingleArrow)) PARSE().one(&out->ret);
