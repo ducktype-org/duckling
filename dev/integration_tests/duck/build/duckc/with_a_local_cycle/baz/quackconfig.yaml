@@ -1,8 +1,0 @@
-metadata:
-  name: baz
-  version: '1.0.0'
-
-dependencies:
-  foo:
-    source:
-      path: ../foo

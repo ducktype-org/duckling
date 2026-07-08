@@ -1,0 +1,10 @@
+Tests:
+  invalid-arguments:
+    Description: checks for invalid arguments
+    Cases:
+      doesnt-panic-when-passed-root:
+        test-cmd: duck init /
+        ExitCode: 1
+        Err:
+          String: |+
+            error: path \`/\` doesn't have a filename

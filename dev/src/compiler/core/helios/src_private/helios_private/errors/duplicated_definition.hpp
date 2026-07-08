@@ -3,10 +3,6 @@
 #include <diagnostic_interactive/message.hpp>
 #include <diagnostic_interactive/stable_position.hpp>
 
-#include <base/collections/optional.hpp>
-
-#include <string>
-
 namespace dia_int {
 
 	/**
@@ -22,9 +18,9 @@ namespace dia_int {
 
 	public:
 		DuplicatedDefinitionError(
-			std::string_view                        symbol_name,
-			base::Optional<dia_int::StablePosition> source_position,
-			std::string_view                        pointer_message_content = "here"
+			std::string_view        symbol_name,
+			dia_int::StablePosition source_position,
+			std::string_view        pointer_message_content = "here"
 		);
 	};
 

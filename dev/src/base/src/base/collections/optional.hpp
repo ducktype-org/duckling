@@ -37,6 +37,7 @@
 #include <compare>
 #include <functional>
 #include <optional>
+#include <type_traits>
 #include <utility>
 
 /* Some cool macros.
@@ -325,7 +326,7 @@ namespace base {
 		template<class Function, class Self>
 		requires std::invocable<Function&&, QualifiedT<Self>>
 		constexpr auto map(this Self&& self, Function&& function)
-			-> Optional<std::invoke_result_t<Function, QualifiedT<Self>>> {
+			-> Optional<std::remove_cvref_t<std::invoke_result_t<Function&&, QualifiedT<Self>>>> {
 			if (self.has_value()) {
 				return std::invoke(
 					std::forward<Function>(function), std::forward<Self>(self).value()

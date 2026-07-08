@@ -24,6 +24,7 @@ fn collects_packages() {
         storage: Storage::new(ctx.default_storage_root().into_not_locked_path()),
         used_features: vec!["full".into()],
         profile,
+        jobs: 1,
     };
     let graph = create_early_graph_from_bcx(&bcx).unwrap();
     let unit_graph = lower_early_graph(graph, &bcx);
@@ -54,6 +55,7 @@ fn collects_packages_cycle() {
         storage: Storage::new(ctx.default_storage_root().into_not_locked_path()),
         used_features: vec!["cycle".into()],
         profile,
+        jobs: 1,
     };
     let graph = create_early_graph_from_bcx(&bcx).unwrap();
     let unit_graph = lower_early_graph(graph, &bcx);

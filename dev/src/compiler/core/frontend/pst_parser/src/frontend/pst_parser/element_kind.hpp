@@ -85,6 +85,7 @@ namespace pst {
 		DottedName,
 		CallArgument,
 		NestedImportList,
+		AtrArgList,
 
 		TemplateDecl,
 

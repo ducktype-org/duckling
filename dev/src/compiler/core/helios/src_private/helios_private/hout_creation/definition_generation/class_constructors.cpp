@@ -17,8 +17,8 @@ namespace compiler::helios::defgen {
 			// Preamble, get some basic data.
 			auto class_interface = class_type.getInterface(ctx);
 
-			using ImplicitConstructor = GeneratedSymbolData::ImplicitConstructor;
-			using Variable            = GeneratedSymbolData::GeneratedFunctionVariable;
+			using defgen::Constructor;
+			using Variable = GeneratedFunctionVariable;
 			using std::ranges::to;
 			using std::views::transform;
 
@@ -30,8 +30,9 @@ namespace compiler::helios::defgen {
 
 			// Prepare the ctor symbol and declaration.
 			const SymID ctor_symbol = ctx.query<QueryGeneratedSymbol>({
-				.name                  = name(class_type.getSymbol()),
-				.generated_symbol_data = GeneratedSymbolData{ ImplicitConstructor{ class_type } },
+				.name = name(class_type.getSymbol()),
+				.generated_symbol_data
+				= Constructor{ .type = class_type, .kind = Constructor::Kind::Implicit },
 			});
 
 			const auto& ctor_decl = ctx.query<QueryDeclOfFun>(ctor_symbol)->valueOrThrow();
@@ -46,9 +47,8 @@ namespace compiler::helios::defgen {
 			const auto result_symbol_type = ctor_decl.return_type;
 			// @TODO: #2307 Classes with a field named `__result` don't work.
 			const SymID result_symbol = ctx.query<QueryGeneratedSymbol>({
-				.name = base::StrID("__result"),
-				.generated_symbol_data
-				= GeneratedSymbolData{ Variable{ ctor_symbol, 0, result_symbol_type } },
+				.name                  = base::StrID("__result"),
+				.generated_symbol_data = Variable{ ctor_symbol, 0, result_symbol_type },
 			});
 			body.emplace_back(makeBox<code::VariableStmt>(code::VariableStmt(
 				code::generatedOrigin(),
