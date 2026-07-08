@@ -64,9 +64,19 @@ def tester_impl(
 
     test_set = load_tests("integration_tests", user_values=user_values)
 
-    (succeeded, failed, disabled) = run_tests(
-        test_set, filter, [], clean, dry, fail_fast, verbose, log_file
-    )
+    try:
+        (succeeded, failed, disabled) = run_tests(
+            test_set, filter, [], clean, dry, fail_fast, verbose, log_file
+        )
+    except BashCommandError as e:
+        # A failure of a `Pre`/`Post` `Test`/`Node` command means the test
+        # environment is broken, so abort the whole run instead of
+        # continuing with the remaining tests.
+        error = f"A user-provided setup/teardown command has failed:{''.join(e.args)}\n"
+        write_log(error, log_file=log_file)
+        exit_with_error(
+            error + f"Please see log file '{log_file.absolute()}' for more info."
+        )
 
     if dry:
         return
