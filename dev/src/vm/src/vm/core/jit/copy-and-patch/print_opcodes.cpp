@@ -1,3 +1,11 @@
+/**
+ * @file print_opcodes.cpp
+ * @brief Print a json list of micro instruction names and corresponding opcode values. This
+ * includes special stencils.
+ * @details The goal here is to facilitate the communication between c++ and python at build-time
+ * and to maintain only one source of truth (c++);
+ */
+
 #include <iostream>
 
 #define PRINT(stencil_name) \

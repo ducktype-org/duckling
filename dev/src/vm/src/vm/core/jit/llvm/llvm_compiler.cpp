@@ -30,7 +30,7 @@ LLVM_INCLUDE_END()
 namespace vm::jit {
 
 	/**
-	 * @brief Optimizie Module with O3, inlining all calls to opfunctions.
+	 * @brief Optimize Module with O3, inlining all calls to opfunctions.
 	 */
 	void optimizeModule(llvm::Module& m) {
 		for (auto& fun: m) {
@@ -64,7 +64,7 @@ namespace vm::jit {
 		pb.registerFunctionAnalyses(fam);
 		// Register all available loop analysis passes.
 		pb.registerLoopAnalyses(lam);
-		// Connects all passess together, so they are not independent and can share analysis.
+		// Connects all passes together, so they are not independent and can share analysis.
 		pb.crossRegisterProxies(lam, fam, cgam, mam);
 		// Register all O3 optimizations.
 		auto mpm = pb.buildPerModuleDefaultPipeline(llvm::OptimizationLevel::O3);
