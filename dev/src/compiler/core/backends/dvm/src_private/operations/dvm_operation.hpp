@@ -77,6 +77,15 @@ namespace compiler::backend_vm::internal {
 	};
 
 	/**
+	 * @brief Represents a call DVM operation.
+	 */
+	struct BuiltinCallOperation final {
+		lir::BuiltinFunctionKind kind;
+		std::deque<DVMValue>     args;
+		base::Optional<DVMPlace> dest;
+	};
+
+	/**
 	 * @brief Represents a simple move operation.
 	 */
 	struct MoveOperation {
@@ -179,6 +188,7 @@ namespace compiler::backend_vm::internal {
 		MoveOperation,
 		ComparisonOperation,
 		CallOperation,
+		BuiltinCallOperation,
 		AddressOfOperation,
 		BoxAllocOperation,
 		BoxFreeOperation,
