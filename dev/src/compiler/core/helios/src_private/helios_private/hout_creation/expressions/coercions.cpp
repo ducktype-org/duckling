@@ -178,7 +178,6 @@ namespace compiler::helios {
 		// A value is copied when it's read out of a ref/box, when a Direct value is boxed, or when
 		// a Direct value is coerced to the same Direct kind. References that stay references never
 		// copy.
-		// TODOP: What about box to box?
 		const bool requires_copy = [](tsh::ReferenceKind from_kind, tsh::ReferenceKind to_kind) {
 			switch (from_kind) {
 			case tsh::ReferenceKind::Direct:

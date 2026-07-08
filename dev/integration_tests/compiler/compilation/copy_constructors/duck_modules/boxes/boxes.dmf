@@ -18,6 +18,9 @@ fun main() -> i64 = {
     var bc3: box Counter = move bc;     # +1
     builtin_output_i64(copies);         # 1
 
+    var a = 123;
+    var b = copy a;
+
     return 0;
     # If we don't crash with double free it means the heap data was actually copied. 
 }

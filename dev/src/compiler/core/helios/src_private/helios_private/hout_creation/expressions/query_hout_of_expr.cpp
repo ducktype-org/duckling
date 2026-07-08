@@ -824,7 +824,8 @@ namespace compiler::helios::code {
 							base::strConcat(
 								"Type `",
 								copy_type.toString(),
-								"` is trivially copyable. No need to use the explicit `copy`."
+								"` is trivially copyable. No need to use the explicit `copy` "
+								"keyword."
 							),
 							stmt->getStablePosition()
 						));
