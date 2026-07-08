@@ -31,7 +31,7 @@ namespace compiler::ctv {
 			}
 			variant_case(TupleCTV, tuple) {
 				throw base::NotYetImplemented(
-					"Tuples are not supported yey in CTV::queryUnstablePerfectHash"
+					"Tuples are not supported yet in CTV::queryUnstablePerfectHash"
 				);
 			}
 			variant_case(tsh::SymbolType<>, val) {

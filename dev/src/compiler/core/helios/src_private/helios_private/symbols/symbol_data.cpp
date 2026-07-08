@@ -84,6 +84,7 @@ namespace compiler::helios {
 			hashing::SHA256 hasher;
 			hashing::addToHash(hasher, type.queryUnstablePerfectHash());
 			hashing::addToHash(hasher, value.queryUnstablePerfectHash());
+			hashing::addToHash(hasher, scope.queryUnstablePerfectHash());
 			return hasher.finalize();
 		}
 	}
@@ -164,5 +165,9 @@ namespace compiler::helios {
 			variant_case(BuiltinSemantics, data) { return data.getElement(); }
 			variant_default { return {}; }
 		}
+	}
+
+	base::Optional<pst::Access<pst::Stmt>> SymbolData::stmtCast(query::Context& ctx) const {
+		return maybePstElement().value().unlock(ctx).dynamicCast<pst::Stmt>();
 	}
 }
