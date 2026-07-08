@@ -282,23 +282,22 @@ class FunctionValidator {
 		// Some builtins verify their argument types with a custom callback instead of exact
 		// name matching (e.g. a pointer to any type). When present, per-parameter names are
 		// placeholders and the callback validates the whole argument list.
-		builtins::BuiltinArgVerifier verifier = nullptr;
+		base::Optional<builtins::BuiltinArgVerifier> verifier = {};
 		if constexpr (std::is_same_v<opargs::BuiltinFunctionName, decltype(instr.function)>)
-			if (auto id = builtins::getBuiltinFunctionID(instr.function.function_name))
-				verifier = builtins::getBuiltinArgVerifier(*id);
+			verifier = builtins::getBuiltinArgVerifier(instr.function.function_name);
 
 		using namespace std::views;
 		std::vector<CRef<valid_type::ValidType>> arg_types;
 		for (auto param: params | reverse) {
 			arg_types.push_back(local_stack.back().type);
-			if (!verifier && local_stack.back().type->getName() != param.str)
+			if (!verifier.has_value() && local_stack.back().type->getName() != param.str)
 				throw InvalidFunctionCallArgumentsError(generic_arg);
 			local_stack.pop(instr);
 		}
 
-		if (verifier) {
+		if (verifier.has_value()) {
 			std::ranges::reverse(arg_types);  // restore call order
-			if (verifier(arg_types).has_value())
+			if (verifier.value()(arg_types).has_value())
 				throw InvalidFunctionCallArgumentsError(generic_arg);
 		}
 

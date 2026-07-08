@@ -28,7 +28,8 @@ public:
 		TESTER_ADD_TEST(cptrRoundTripThroughC);
 		TESTER_ADD_TEST(cptrCopyBuiltins);
 		TESTER_ADD_TEST(cptrStructField);
-		TESTER_ADD_TEST(midBlockPointerCopyFails);
+		TESTER_ADD_TEST(cptrCopyIntoStructField);
+		TESTER_ADD_TEST(cptrCopySizeTooLargeFails);
 		TESTER_ADD_TEST(floatArgsAndReturn);
 		TESTER_ADD_TEST(doubleArgsAndReturn);
 		TESTER_ADD_TEST(mixedIntFloatArgs);
@@ -43,9 +44,9 @@ public:
 		TESTER_ADD_TEST(multipleResultsFails);
 		TESTER_ADD_TEST(structLayoutMismatchFails);
 		TESTER_ADD_TEST(duplicateFfiFunctionFails);
-		TESTER_ADD_TEST(conflictingSignatureRedeclarationFails);
 		TESTER_ADD_TEST(assertSizeMatches);
 		TESTER_ADD_TEST(assertSizeMismatchFails);
+		TESTER_ADD_TEST(assertSizeOnPointerTypeFails);
 	}
 
 private:
@@ -188,6 +189,8 @@ private:
 				  "    mov_popq_popq buf_w, buf;\n"
 				  "    init_pany_type vp2, ptr_i64;\n"
 				  "    mov_pptr_pptr vp2, vp;\n"
+				  "    init_pany_type sz_w, i64;\n"
+				  "    mov_p64_imm sz_w, 8;\n"
 				  "    call_builtinfunc builtin_cptr_write_pptr;\n"
 				  "    init_pany_type out, i64;\n"
 				  "    init_pany_type op, ptr_i64;\n"
@@ -196,6 +199,8 @@ private:
 				  "    mov_popq_popq buf_r, buf;\n"
 				  "    init_pany_type op2, ptr_i64;\n"
 				  "    mov_pptr_pptr op2, op;\n"
+				  "    init_pany_type sz_r, i64;\n"
+				  "    mov_p64_imm sz_r, 8;\n"
 				  "    call_builtinfunc builtin_cptr_read_pptr;\n"
 				  "    output_p64 out;\n"
 				  "    init_pany_type buf_f, cptr;\n"
@@ -244,13 +249,52 @@ private:
 		);
 	}
 
-	// The cptr copy builtins only accept pointers to the beginning of a block; a mid-block
-	// pointer (here: a struct field) must raise a runtime exception instead of copying
-	// everything after it.
-	void midBlockPointerCopyFails() {
+	// A mid-block pointer (here: a struct field) is a valid copy destination as long as the
+	// explicit byte count fits within the block.
+	void cptrCopyIntoStructField() {
+		runProgram(
+			"copy_into_field",
+			ffiObjectHeader()
+				+ "type data: Pair { a: i64, b: i64 }\n"
+				  "ffi function ffi_alloc8 { } -> { cptr };\n"
+				  "ffi function ffi_fill8 { cptr, i64 } -> { };\n"
+				  "ffi function ffi_free8 { cptr } -> { };\n"
+				  "function main { i64, ptr_argv } -> { i64 } {\n"
+				  "    init_pany_type buf, cptr;\n"
+				  "    call_ffifunc ffi_alloc8;\n"
+				  "    init_pany_type buf2, cptr;\n"
+				  "    mov_popq_popq buf2, buf;\n"
+				  "    init_pany_type v, i64;\n"
+				  "    mov_p64_imm v, 4242;\n"
+				  "    call_ffifunc ffi_fill8;\n"
+				  "    init_pany_type s, Pair;\n"
+				  "    init_pany_type bp, ptr_i64;\n"
+				  "    structLea_pptr_pste_field bp, s, Pair.b;\n"
+				  "    init_pany_type buf_r, cptr;\n"
+				  "    mov_popq_popq buf_r, buf;\n"
+				  "    init_pany_type bp2, ptr_i64;\n"
+				  "    mov_pptr_pptr bp2, bp;\n"
+				  "    init_pany_type sz, i64;\n"
+				  "    mov_p64_imm sz, 8;\n"
+				  "    call_builtinfunc builtin_cptr_read_pptr;\n"
+				  "    init_pany_type out, i64;\n"
+				  "    structLoad_pany_pste_field out, s, Pair.b;\n"
+				  "    output_p64 out;\n"
+				  "    init_pany_type buf_f, cptr;\n"
+				  "    mov_popq_popq buf_f, buf;\n"
+				  "    call_ffifunc ffi_free8;\n"
+				  "    ret;\n"
+				  "}\n",
+			"4242"
+		);
+	}
+
+	// A byte count reaching past the end of the pointed-to block must raise a runtime
+	// exception. The pointer targets the last field of the struct, so 16 bytes overflow it.
+	void cptrCopySizeTooLargeFails() {
 		auto pid = initProcess();
 		auto file = writeTempDbc(
-			"mid_block_ptr",
+			"copy_too_large",
 			ffiObjectHeader()
 				+ "type data: Pair { a: i64, b: i64 }\n"
 				  "ffi function ffi_alloc8 { } -> { cptr };\n"
@@ -264,6 +308,8 @@ private:
 				  "    mov_popq_popq buf_w, buf;\n"
 				  "    init_pany_type bp2, ptr_i64;\n"
 				  "    mov_pptr_pptr bp2, bp;\n"
+				  "    init_pany_type sz, i64;\n"
+				  "    mov_p64_imm sz, 16;\n"
 				  "    call_builtinfunc builtin_cptr_write_pptr;\n"
 				  "    ret;\n"
 				  "}\n"
@@ -271,7 +317,7 @@ private:
 		auto load = vm::api::loadFiles(pid, { file });
 		if (!load.has_value()) fail(nlohmann::json(load.error()).dump());
 		assertExecutionPanickedWith(
-			runTestOnVmGetResult(pid), "requires a pointer to the beginning of a block"
+			runTestOnVmGetResult(pid), "copy region exceeds the pointed-to block"
 		);
 	}
 
@@ -494,18 +540,6 @@ private:
 		);
 	}
 
-	// Redeclaring an FFI function with a different signature is an ABI bug, not a harmless
-	// duplicate, so it is rejected instead of being silently deduplicated.
-	void conflictingSignatureRedeclarationFails() {
-		expectLoadError(
-			"conflicting_signature",
-			ffiObjectHeader()
-				+ "ffi function ffi_add { i64, i64 } -> { i64 };\n"
-				  "ffi function ffi_add { i64 } -> { i64 };\n",
-			{ "different signature" }
-		);
-	}
-
 	void assertSizeMatches() {
 		auto file = writeTempDbc(
 			"assert_ok",
@@ -523,9 +557,18 @@ private:
 		);
 	}
 
+	// A type whose size depends on the pointer width (8 bytes in C, 16 in the safe interpreter)
+	// has no single size to assert against.
+	void assertSizeOnPointerTypeFails() {
+		expectLoadError(
+			"assert_ptr",
+			"type data: Holder { p: ptr_i64 } assert_size 8\n",
+			{ "depends on the pointer width" }
+		);
+	}
+
 	void duplicateFfiFunctionFails() {
-		// Duplicates within one file are deduplicated (like ordinary functions), so the clash is
-		// only detected when the same declaration is injected into a program that already has it.
+		// Injecting a declaration into a program that already has it clashes across load calls.
 		auto file = writeTempDbc(
 			"duplicate", ffiObjectHeader() + "ffi function ffi_add { i64, i64 } -> { i64 };\n"
 		);

@@ -217,6 +217,16 @@ namespace vm::code {
 			  ValidationError(base::strConcat(ERR_MSG, type.getName())) {}
 	};
 
+	class TypeSizeAssertPointerDependentError: public ValidationError {
+	public:
+		constexpr static std::string_view ERR_MSG
+			= "`assert_size` cannot be used on a type whose size depends on the pointer width "
+			  "(the safe interpreter uses 16-byte pointers, C uses 8): ";
+
+		TypeSizeAssertPointerDependentError(base::StrID type_name):
+			  ValidationError(base::strConcat(ERR_MSG, type_name)) {}
+	};
+
 	class TypeSizeAssertError: public ValidationError {
 	public:
 		constexpr static std::string_view ERR_MSG = "`assert_size` mismatch for type ";

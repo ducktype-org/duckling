@@ -66,14 +66,18 @@ void vm::code::ValidProgram::insertCode(const CodeCollection& collection) {
 void vm::code::ValidProgram::insertTypes(const std::vector<TypeOfData>& new_types) {
 	type_context.insertAndValidate(new_types, function_signatures);
 
-	// Verify `assert_size` annotations against the computed layout (assuming 8-byte pointers).
+	// Verify `assert_size` annotations against the computed layout.
 	for (const auto& type: new_types) {
 		auto data = getTypeKind<DataType>(type);
 		if (!data.has_value() || !data->assert_size.has_value()) continue;
 
-		auto actual = usize(
-			type_context.getCurrentTypes().at(data->name)->getSize().assumePointerSize(Bytes(8))
-		);
+		// A size that depends on the pointer width has no single value to assert against (the
+		// safe interpreter uses 16-byte pointers, C uses 8), so it is rejected.
+		const auto& size = type_context.getCurrentTypes().at(data->name)->getSize();
+		if (size.assumePointerSize(Bytes(8)) != size.assumePointerSize(Bytes(16)))
+			throw TypeSizeAssertPointerDependentError(data->name);
+
+		auto actual = usize(size.assumePointerSize(Bytes(8)));
 		if (actual != data->assert_size.value())
 			throw TypeSizeAssertError(data->name, data->assert_size.value(), actual);
 	}

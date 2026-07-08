@@ -36,6 +36,17 @@ namespace {
 		instruction.visit([&](auto&& i) { i.bytecode_pos = opcode.position; });
 		return instruction;
 	}
+
+	// Shared between regular and FFI function declarations.
+	vm::code::FuncSignature makeSignature(
+		const std::vector<tpc::Identifier>& parameters,
+		const std::vector<tpc::Identifier>& result_types
+	) {
+		vm::code::FuncSignature signature;
+		for (const auto& param: parameters) signature.parameters.emplace_back(param);
+		for (const auto& reslt: result_types) signature.result_types.emplace_back(reslt);
+		return signature;
+	}
 }
 
 std::expected<vm::code::CodeCollection, LoaderLogger> Loader::parseFiles(
@@ -67,25 +78,8 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::parseFiles(
 				for (const auto& func: parsed_file.functions) {
 					code::Function function;
 					function.bytecode_pos = func->position;
-
-					code::Identifier func_name;
-					func_name.str          = func->name.value;
-					func_name.bytecode_pos = func->name.position;
-					function.name          = func_name;
-
-					for (const auto& param: func->parameters) {
-						code::Identifier param_id;
-						param_id.str          = param.value;
-						param_id.bytecode_pos = param.position;
-						function.signature.parameters.emplace_back(param_id);
-					}
-
-					for (const auto& reslt: func->result_types) {
-						code::Identifier result_type_id;
-						result_type_id.str          = reslt.value;
-						result_type_id.bytecode_pos = reslt.position;
-						function.signature.result_types.emplace_back(result_type_id);
-					}
+					function.name         = code::Identifier(func->name);
+					function.signature    = makeSignature(func->parameters, func->result_types);
 
 					for (const auto& instr: func->code->opcodes)
 						function.body.push_back(translateInstruction(*instr));
@@ -96,26 +90,9 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::parseFiles(
 				for (const auto& ffi_func: parsed_file.ffi_functions) {
 					code::FFIFunction function;
 					function.bytecode_pos = ffi_func->position;
-
-					code::Identifier func_name;
-					func_name.str          = ffi_func->name.value;
-					func_name.bytecode_pos = ffi_func->name.position;
-					function.name          = func_name;
-
-					for (const auto& param: ffi_func->parameters) {
-						code::Identifier param_id;
-						param_id.str          = param.value;
-						param_id.bytecode_pos = param.position;
-						function.signature.parameters.emplace_back(param_id);
-					}
-
-					for (const auto& reslt: ffi_func->result_types) {
-						code::Identifier result_type_id;
-						result_type_id.str          = reslt.value;
-						result_type_id.bytecode_pos = reslt.position;
-						function.signature.result_types.emplace_back(result_type_id);
-					}
-
+					function.name         = code::Identifier(ffi_func->name);
+					function.signature
+						= makeSignature(ffi_func->parameters, ffi_func->result_types);
 					new_code.ffi_functions.emplace_back(function);
 				}
 

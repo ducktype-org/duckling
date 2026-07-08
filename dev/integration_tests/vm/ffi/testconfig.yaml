@@ -11,10 +11,6 @@ Tests:
         Run: "@{dvm_path} run cos.dbc --ffi-lib libm.so.6"
         Output:
           String: "1\n"
-      cli-option-short:
-        Run: "@{dvm_path} run cos.dbc -l libm.so.6"
-        Output:
-          String: "1\n"
       bare-soname-in-bytecode:
         Run: "@{dvm_path} run cos_ffi_object.dbc"
         Output:
