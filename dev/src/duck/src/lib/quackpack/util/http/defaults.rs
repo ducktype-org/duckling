@@ -1,4 +1,4 @@
-//! Default values for [`HttpClient`](super::HttpClient).
+//! Default values for [`configure_easy2`](super::configure_easy2).
 use std::time::Duration;
 
 // https://docs.rs/reqwest/latest/reqwest/struct.ClientBuilder.html#method.user_agent

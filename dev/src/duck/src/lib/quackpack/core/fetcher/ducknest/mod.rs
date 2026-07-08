@@ -39,7 +39,8 @@ impl<'duck> DucknestClient<'duck> {
         let url = package.url.for_exact_metadata(&package.into())?;
 
         let response = self.client.get(&url)?;
-        response.deserialize_json()
+        let data = response.deserialize_json()?;
+        Ok(data)
     }
 
     /// Retrieve all metadata for a specific package from a Ducknest instance.
@@ -53,7 +54,8 @@ impl<'duck> DucknestClient<'duck> {
         let req_url = url.for_multi_metadata(package.as_str())?;
 
         let response = self.client.get(&req_url)?;
-        response.deserialize_json()
+        let data = response.deserialize_json()?;
+        Ok(data)
     }
 
     /// Publish a package to a Ducknest instance.
@@ -83,6 +85,7 @@ impl<'duck> DucknestClient<'duck> {
         let req_url = url.for_search(query)?;
 
         let response = self.client.get(&req_url)?;
-        response.deserialize_json()
+        let data = response.deserialize_json()?;
+        Ok(data)
     }
 }

@@ -1,4 +1,5 @@
 //! Various quackpack-only utilities.
+pub mod http;
 pub mod interned_url;
 pub mod is_local_file;
 pub mod paths;

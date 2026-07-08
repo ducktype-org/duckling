@@ -2,13 +2,14 @@
 
 use std::fs::File;
 use std::io::Write;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use curl::easy::Handler;
 use serde::Deserialize;
+use tracing::error;
 
-use crate::QuackResult;
 use crate::util::path_ops_ext::PathOpsExt;
+use crate::{QuackResult, QuackResultContext};
 
 #[derive(Clone, Debug, Default)]
 /// A basic collector which saves the entire HTTP response as a vector of `u8`.
@@ -28,8 +29,8 @@ impl ResponseCollector {
     }
 
     /// Helper for deserializing JSONs from [`data`](Self::data).
-    pub fn deserialize_json<T: for<'de> Deserialize<'de>>(&self) -> QuackResult<T> {
-        serde_json::from_slice(&self.data).map_err(Into::into)
+    pub fn deserialize_json<T: for<'de> Deserialize<'de>>(&self) -> Result<T, serde_json::Error> {
+        serde_json::from_slice(&self.data)
     }
 }
 
@@ -44,26 +45,35 @@ impl Handler for ResponseCollector {
 /// Collector which writes new bytes into a file.
 pub struct FileWriter {
     file: File,
+    path: PathBuf,
 }
 
 impl FileWriter {
     /// Create a new [`FileWriter`], which will write to the `path`.
     pub fn new(path: &Path) -> QuackResult<Self> {
         let file = path.touch()?;
-        Ok(Self { file })
+        Ok(Self {
+            file,
+            path: path.to_path_buf(),
+        })
     }
 
     /// Flush the underlying file.
     pub fn flush(&mut self) -> QuackResult<()> {
-        self.file.flush().map_err(Into::into)
+        self.file
+            .flush()
+            .with_context(|| format!("failed to flush `{}`", self.path.display()))
     }
 }
 
 impl Handler for FileWriter {
     fn write(&mut self, data: &[u8]) -> Result<usize, curl::easy::WriteError> {
-        self.file
-            .write_all(data)
-            .map_err(|_| curl::easy::WriteError::Pause)
-            .map(|_| data.len())
+        match self.file.write_all(data) {
+            Ok(_) => Ok(data.len()),
+            Err(e) => {
+                error!("failed to write data to `{}`: {e}", self.path.display());
+                Err(curl::easy::WriteError::Pause)
+            }
+        }
     }
 }
