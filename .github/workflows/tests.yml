@@ -109,10 +109,17 @@ jobs:
       - name: Set number of threads
         id: set-jobs
         run: |
+          # 1. If ALLOCATED_CPUS is defined and not empty, use it and exit early
+          if [[ -n "${ALLOCATED_CPUS}" ]]; then
+            echo "jobs=${ALLOCATED_CPUS}" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # 2. Fallback to existing logic if ALLOCATED_CPUS isn't provided
           if [[ "${{ matrix.build-type }}" == "Dev" && "${{ steps.set-self-hosted.outputs.is-self-hosted }}" == "true" ]]; then
-            echo "jobs=$(nproc)" >> $GITHUB_OUTPUT
+            echo "jobs=6" >> $GITHUB_OUTPUT
           elif [[ "${{ matrix.build-type }}" == "DevOpt" && "${{ steps.set-self-hosted.outputs.is-self-hosted }}" == "true" ]]; then
-            echo "jobs=$(nproc)" >> $GITHUB_OUTPUT
+            echo "jobs=6" >> $GITHUB_OUTPUT
           else
             echo "jobs=2" >> $GITHUB_OUTPUT
           fi
