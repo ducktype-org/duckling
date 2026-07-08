@@ -8,6 +8,7 @@ use crate::quackpack::core::solver::gathering::error_suppression::{
 use crate::quackpack::core::solver::gathering::fetch_types::{
     FetchFailure, FetchResponse, FetchSuccess, ManifestsRequest, NotPinnedFailure,
     NotPinnedRequest, NotPinnedSuccess, PinnedFailure, PinnedRequest, PinnedSuccess,
+    RequestIdentifier,
 };
 use crate::quackpack::core::version::CompatibilityCheck;
 use crate::quackpack::core::{FeatureName, Manifest, Source, Version};
@@ -16,7 +17,7 @@ use crate::quackpack::util::with_version::WithVersion;
 use crate::util::error::MessageError;
 use crate::util::extend::QpExtend;
 use crate::{
-    QuackError, QuackResult, QuackResultContext, StrId, qp_bail, qp_bail_internal, qp_err, qp_internal,
+    QuackError, QuackResult, QuackResultContext, qp_bail, qp_bail_internal, qp_err, qp_internal,
 };
 
 /// Gathered information about a particular package.
@@ -50,16 +51,20 @@ impl PackageData {
                     .copied()
                     .context_internal("Pinned dependency without version")?;
                 result.0.push(ManifestsRequest::Pinned(PinnedRequest {
-                    source: *source,
-                    name: dependency.name(),
+                    id: RequestIdentifier {
+                        source: *source,
+                        name: dependency.name(),
+                    },
                     version,
                     features,
                 }));
             } else {
                 let versions = dependency.versions().to_vec();
                 result.0.push(ManifestsRequest::NotPinned(NotPinnedRequest {
-                    source: *source,
-                    name: dependency.name(),
+                    id: RequestIdentifier {
+                        source: *source,
+                        name: dependency.name(),
+                    },
                     versions: if !versions.is_empty() {
                         Some(versions)
                     } else {
@@ -114,9 +119,9 @@ impl Default for RequestAction {
 #[derive(Debug, Default)]
 pub struct GathererState {
     /// Tracks the state of all the pending or finished not pinned fetches.
-    not_pinned_fetches: HashMap<Source, QueryState>,
+    not_pinned_fetches: HashMap<RequestIdentifier, QueryState>,
     /// Tracks the state of all the pending or finished pinned fetches.
-    pinned_fetches: HashMap<WithVersion<Source>, QueryState>,
+    pinned_fetches: HashMap<WithVersion<RequestIdentifier>, QueryState>,
 
     pkgs_data: HashMap<WithVersion<FullIdentity>, PackageData>,
     versions_for_location: HashMap<FullIdentity, HashSet<Version>>,
@@ -144,12 +149,9 @@ impl GathererState {
         &mut self,
         not_pinned_request: NotPinnedRequest,
     ) -> GathererResult<RequestAction> {
-        let Some(fetch_state) = self
-            .not_pinned_fetches
-            .get_mut(&not_pinned_request.source)
-        else {
+        let Some(fetch_state) = self.not_pinned_fetches.get_mut(&not_pinned_request.id) else {
             self.not_pinned_fetches.insert(
-                not_pinned_request.source,
+                not_pinned_request.id,
                 QueryState::Pending {
                     requests: vec![ManifestsRequest::NotPinned(not_pinned_request)],
                 },
@@ -167,8 +169,7 @@ impl GathererState {
             }
             QueryState::Done => {
                 let result = self.update_features_not_pinned(
-                    not_pinned_request.source,
-                    not_pinned_request.name,
+                    not_pinned_request.id,
                     not_pinned_request.versions,
                     not_pinned_request.features,
                 )?;
@@ -185,11 +186,10 @@ impl GathererState {
         &mut self,
         pinned_request: PinnedRequest,
     ) -> GathererResult<RequestAction> {
-        let request_pkg = WithVersion::new(pinned_request.source, pinned_request.version);
+        let request_pkg = WithVersion::new(pinned_request.id, pinned_request.version);
         let Some(fetch_state) = self.pinned_fetches.get_mut(&request_pkg) else {
             // If the pinned request has not been made, we may still have done an unpinned request for the corresponding location.
-            let Some(not_pinned_fetch_state) =
-                self.not_pinned_fetches.get_mut(&pinned_request.source)
+            let Some(not_pinned_fetch_state) = self.not_pinned_fetches.get_mut(&pinned_request.id)
             else {
                 self.pinned_fetches.insert(
                     request_pkg,
@@ -223,8 +223,7 @@ impl GathererState {
                         .resolve(&self.location_resolver)
                         .with_context_internal(|| {
                             format!("Could not expand the package {:?}", request_pkg)
-                        })?
-                        .transpose_to_identity(pinned_request.name);
+                        })?;
                     if !self.pkgs_data.contains_key(&answer_pkg) {
                         return Ok(GathererComputation::only_error(qp_err!(
                             "Pinned package {answer_pkg:?} was supposed to be already fetched by a not pinned fetch but has no data"
@@ -252,8 +251,7 @@ impl GathererState {
                     .resolve(&self.location_resolver)
                     .with_context_internal(|| {
                         format!("Could not expand the package {:?}", request_pkg)
-                    })?
-                    .transpose_to_identity(pinned_request.name);
+                    })?;
                 let result = self.update_features(answer_pkg, pinned_request.features)?;
                 Ok(GathererComputation(
                     RequestAction::More { requests: result.0 },
@@ -292,7 +290,7 @@ impl GathererState {
         &mut self,
         pinned_success: PinnedSuccess,
     ) -> GathererResult<Vec<ManifestsRequest>> {
-        let request_pkg = WithVersion::new(pinned_success.origin_source, pinned_success.origin_version);
+        let request_pkg = WithVersion::new(pinned_success.origin_id, pinned_success.origin_version);
         let Some(state) = self.pinned_fetches.get_mut(&request_pkg) else {
             qp_bail_internal!("Response with no associated request state");
         };
@@ -310,16 +308,12 @@ impl GathererState {
                     "Fetched manifest's version differs from required",
                 )?
                 .context(MessageError(
-                    format!(
-                        "While handling response for the fetch of {:?}",
-                        request_pkg
-                    )
-                    .into(),
+                    format!("While handling response for the fetch of {:?}", request_pkg).into(),
                 )));
         }
 
         self.location_resolver.insert(
-            pinned_success.origin_source,
+            pinned_success.origin_id.source,
             pinned_success.answer_package.value().origin(),
         );
         self.insert_manifests([(
@@ -332,7 +326,7 @@ impl GathererState {
     /// Creates errors for a successful pinned response incoherent with the request.
     fn fail_incoherent_success_pinned<U: Default>(
         &mut self,
-        pkg: WithVersion<Source>,
+        pkg: WithVersion<RequestIdentifier>,
         reason: impl Into<Cow<'static, str>>,
     ) -> GathererResult<U> {
         let Some(status) = self.pinned_fetches.get_mut(&pkg) else {
@@ -351,7 +345,7 @@ impl GathererState {
     ) -> GathererResult<Vec<ManifestsRequest>> {
         let Some(state) = self
             .not_pinned_fetches
-            .get_mut(&not_pinned_response.origin_source)
+            .get_mut(&not_pinned_response.origin_id)
         else {
             qp_bail_internal!("Response with no associated request state");
         };
@@ -369,20 +363,22 @@ impl GathererState {
         if answer_identities.len() == 1
             && let Some(answer_identity) = answer_identities.into_iter().next()
         {
-            self.location_resolver
-                .insert(not_pinned_response.origin_source, answer_identity.origin());
+            self.location_resolver.insert(
+                not_pinned_response.origin_id.source,
+                answer_identity.origin(),
+            );
             self.insert_manifests(not_pinned_response.fetched_manifests);
             self.complete_requests(requests)
         } else {
             Ok(self
                 .fail_incoherent_success_not_pinned(
-                    not_pinned_response.origin_source,
+                    not_pinned_response.origin_id,
                     "Invalid fetch response",
                 )?
                 .context(MessageError(
                     format!(
                         "While handling response for the fetch of {:?}",
-                        not_pinned_response.origin_source
+                        not_pinned_response.origin_id
                     )
                     .into(),
                 )))
@@ -392,10 +388,10 @@ impl GathererState {
     /// Creates errors for a successful not pinned response incoherent with the request.
     fn fail_incoherent_success_not_pinned<U: Default>(
         &mut self,
-        source: Source,
+        id: RequestIdentifier,
         reason: impl Into<Cow<'static, str>>,
     ) -> GathererResult<U> {
-        let Some(status) = self.not_pinned_fetches.get_mut(&source) else {
+        let Some(status) = self.not_pinned_fetches.get_mut(&id) else {
             return Err(
                 qp_internal!("Failed request with no status").context(MessageError(reason.into()))
             );
@@ -422,7 +418,10 @@ impl GathererState {
         &mut self,
         failure_pinned_response: PinnedFailure,
     ) -> GathererResult<Vec<ManifestsRequest>> {
-        let origin_package = WithVersion::new(failure_pinned_response.origin_source, failure_pinned_response.origin_version);
+        let origin_package = WithVersion::new(
+            failure_pinned_response.origin_id,
+            failure_pinned_response.origin_version,
+        );
         let Some(state) = self.pinned_fetches.get_mut(&origin_package) else {
             qp_bail_internal!("Response with no associated request state");
         };
@@ -437,7 +436,7 @@ impl GathererState {
     ) -> GathererResult<Vec<ManifestsRequest>> {
         let Some(state) = self
             .not_pinned_fetches
-            .get_mut(&failure_not_pinned_response.origin_source)
+            .get_mut(&failure_not_pinned_response.origin_id)
         else {
             qp_bail_internal!("Response with no associated request state");
         };
@@ -473,21 +472,21 @@ impl GathererState {
         for request in requests {
             match request {
                 ManifestsRequest::Pinned(pinned_request) => {
-                    let Some(answer_origin) = self.location_resolver.get(&pinned_request.source)
+                    let Some(answer_origin) = self.location_resolver.get(&pinned_request.id.source)
                     else {
                         qp_bail_internal!(
                             "Could not resolve location {:?}",
-                            pinned_request.source
+                            pinned_request.id.source
                         )
                     };
-                    let answer_identity = FullIdentity::new(pinned_request.name, *answer_origin);
+                    let answer_identity = FullIdentity::new(pinned_request.id.name, *answer_origin);
                     let Some(versions) = self.versions_for_location.get(&answer_identity) else {
                         qp_bail_internal!("No gathered versions for location {answer_identity:?}")
                     };
                     if !versions.contains(&pinned_request.version) {
                         qp_bail!(
                             "Request of pinned dependency {:?} could not find matching version",
-                            pinned_request.source
+                            pinned_request.id.source
                         )
                     }
                     result.extend(self.update_features(
@@ -496,12 +495,11 @@ impl GathererState {
                     )?);
                 }
                 ManifestsRequest::NotPinned(not_pinned_request) => {
-                    let source = not_pinned_request.source;
+                    let id = not_pinned_request.id;
                     let selector = not_pinned_request.versions;
                     let requested_features = not_pinned_request.features;
                     result.extend(self.update_features_not_pinned(
-                        source,
-                        not_pinned_request.name,
+                        id,
                         selector,
                         requested_features,
                     )?);
@@ -515,17 +513,16 @@ impl GathererState {
     /// and returns necessary new requests.
     fn update_features_not_pinned(
         &mut self,
-        source: Source,
-        name: StrId,
+        id: RequestIdentifier,
         selector: Option<Vec<Version>>,
         requested_features: HashSet<FeatureName>,
     ) -> GathererResult<Vec<ManifestsRequest>> {
         let mut result: GathererComputation<Vec<ManifestsRequest>> = GathererComputation::empty();
         let mut any_matched = false;
-        let Some(answer_origin) = self.location_resolver.get(&source).copied() else {
-            qp_bail_internal!("Could not resolve location {source:?}");
+        let Some(answer_origin) = self.location_resolver.get(&id.source).copied() else {
+            qp_bail_internal!("Could not resolve location {:?}", id.source);
         };
-        let answer_identity = FullIdentity::new(name, answer_origin);
+        let answer_identity = FullIdentity::new(id.name, answer_origin);
         let versions: Vec<Version> = self
             .versions_for_location
             .get(&answer_identity)
@@ -550,7 +547,8 @@ impl GathererState {
         }
         if !any_matched {
             qp_bail!(
-                "There is a dependency on package in location {source:?} with versions {selector:?}, but no matching versions exist"
+                "There is a dependency on package in location {:?} with versions {selector:?}, but no matching versions exist",
+                id.source
             )
         }
         Ok(result)
@@ -632,7 +630,7 @@ impl TryFrom<GathererState> for GatheredInfo {
             }
         }
         for pkg in unnecessary_pkgs {
-            let Some(versions) = value.versions_for_location.get_mut(&pkg.value()) else {
+            let Some(versions) = value.versions_for_location.get_mut(pkg.value()) else {
                 qp_bail_internal!(
                     "Unnecessary package's location not present in the versions for location map"
                 );

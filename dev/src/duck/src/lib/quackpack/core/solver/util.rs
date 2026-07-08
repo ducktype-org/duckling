@@ -6,7 +6,6 @@ use crate::quackpack::core::{Dependency, Source, Version};
 use crate::quackpack::util::with_version::WithVersion;
 use crate::{QuackResult, QuackResultContext, StrId};
 
-
 impl WithVersion<FullOrigin> {
     pub fn transpose_to_identity(&self, name: StrId) -> WithVersion<FullIdentity> {
         WithVersion::new(FullIdentity::new(name, *self.value()), self.version())
@@ -35,21 +34,24 @@ pub fn get_possible_realizations(
     } else {
         // Baseline versions are the versions specified in the manifest,
         // with which we want to check the compatibility of the existing packages.
-        let baseline_versions = dependency_description
-                .versions()
-                .clone();
+        // If they are empty, then there are no constraints on the version, so all versions are ok.
+        let baseline_versions = dependency_description.versions();
         let Some(possible_versions) = versions_for_location.get(&identity) else {
             return Ok(vec![]);
         };
-        let good_versions: Vec<Version> = possible_versions
-            .iter()
-            .filter(|version| {
-                baseline_versions
-                    .iter()
-                    .any(|baseline| baseline.can_be_upgraded_to(*version))
-            })
-            .copied()
-            .collect();
+        let good_versions: Vec<Version> = if baseline_versions.is_empty() {
+            possible_versions.iter().copied().collect()
+        } else {
+            possible_versions
+                .iter()
+                .filter(|version| {
+                    baseline_versions
+                        .iter()
+                        .any(|baseline| baseline.can_be_upgraded_to(*version))
+                })
+                .copied()
+                .collect()
+        };
         Ok(good_versions
             .into_iter()
             .map(|version| WithVersion::new(identity, version))
@@ -69,7 +71,7 @@ mod test {
     use crate::quackpack::core::{Source, Version, parse_manifest};
     use crate::quackpack::util::to_url::ToUrl;
     use crate::quackpack::util::with_version::WithVersion;
-use crate::util::path_ops_ext::PathOpsExt;
+    use crate::util::path_ops_ext::PathOpsExt;
     use crate::{DuckContext, StrId};
 
     fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {

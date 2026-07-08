@@ -5,9 +5,9 @@ use std::collections::{HashMap, HashSet};
 
 use tracing::debug;
 
+use crate::quackpack::core::FeatureName;
 use crate::quackpack::core::full_identity::FullIdentity;
 use crate::quackpack::core::storage::freeze::{FreezePackage, RootPackage, VenvFreeze};
-use crate::quackpack::core::FeatureName;
 use crate::quackpack::util::with_version::WithVersion;
 use crate::{QuackResult, QuackResultContext, StrId};
 
@@ -41,7 +41,10 @@ impl Default for SolverPackageFreeze {
 impl SolverFreeze {
     // @TODO: #2076 Fix issues with storage's freeze.
     #[tracing::instrument(skip_all)]
-    pub fn try_from_venv_freeze(root: WithVersion<FullIdentity>, value: &VenvFreeze) -> QuackResult<Self> {
+    pub fn try_from_venv_freeze(
+        root: WithVersion<FullIdentity>,
+        value: &VenvFreeze,
+    ) -> QuackResult<Self> {
         debug!(root = ?root, freeze = ?value);
         let mut expanded_pkgs_by_name = HashMap::new();
         for pkg_freeze in value.dependencies() {
@@ -145,23 +148,11 @@ impl SolverFreeze {
 mod test {
     use std::path::PathBuf;
 
-    use tempfile::{TempDir, tempdir};
-
     use super::*;
+    use crate::quackpack::core::Version;
     use crate::quackpack::core::full_identity::FullOrigin;
-use crate::quackpack::core::identity::{Identity, Origin};
-use crate::quackpack::core::{PackageLoader, Version};
+    use crate::quackpack::core::identity::{Identity, Origin};
     use crate::quackpack::util::to_url::ToUrl;
-    use crate::util::path_ops_ext::PathOpsExt;
-
-    fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {
-        let dir = tempdir().unwrap();
-        let manifest = dir.path().join(PackageLoader::MANIFEST_NAME);
-        manifest.touch().unwrap();
-        manifest.write(contents).unwrap();
-        dir.path().try_fsync_dir().unwrap();
-        (dir, manifest)
-    }
 
     #[test]
     fn storage_to_solver_freeze() {
@@ -243,7 +234,7 @@ use crate::quackpack::core::{PackageLoader, Version};
 
     #[test]
     fn solver_to_storage_freeze() {
-        let origin_root = FullOrigin::for_local( &PathBuf::from("/root_path")).unwrap();
+        let origin_root = FullOrigin::for_local(&PathBuf::from("/root_path")).unwrap();
         let origin_a = FullOrigin::for_registry("https://example.net".to_url().unwrap());
         // cSpell:disable-next-line
         let origin_b = FullOrigin::for_local(&PathBuf::from("/sialalala")).unwrap();
@@ -259,11 +250,8 @@ use crate::quackpack::core::{PackageLoader, Version};
                 (
                     pkg_root,
                     SolverPackageFreeze {
-                        dependencies_realization: [
-                            ("alias_a".into(), pkg_a),
-                            ("b".into(), pkg_b),
-                        ]
-                        .into(),
+                        dependencies_realization: [("alias_a".into(), pkg_a), ("b".into(), pkg_b)]
+                            .into(),
                         features: ["f_root".into()].into(),
                     },
                 ),

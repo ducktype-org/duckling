@@ -499,8 +499,8 @@ fn create_mock_server() -> MockServer {
 #[test]
 /// Not pinned registry dependencies test.
 /// Synopsis:
-/// * root depends on foo 1.0.0 or 2.0.0,
-/// * foo 1.0.0 depends on bar 3.0.0 or 4.0.0
+/// * root depends on foo 1 or 2,
+/// * foo 1 depends on bar 3 or 4
 fn not_pinned_registry() {
     let (ctx, _root) = setup_duck_ctx();
     let server = create_mock_server();
@@ -557,7 +557,7 @@ dependencies:
         WithVersion::new(identity_foo, Version::new(1, 0, 0)),
         WithVersion::new(identity_foo, Version::new(2, 0, 0)),
         WithVersion::new(identity_bar, Version::new(3, 0, 0)),
-        WithVersion::new(identity_bar, Version::new(4, 0, 0)),
+        WithVersion::new(identity_bar, Version::new(4, 1, 1)),
     ]);
     assert_eq!(
         packages,
@@ -585,10 +585,7 @@ dependencies:
                 Source::for_local(&root_path).unwrap(),
                 identity_root.origin()
             ),
-            (
-                Source::for_registry(url),
-                identity_foo.origin()
-            )
+            (Source::for_registry(url), identity_foo.origin())
         ])
     )
 }
@@ -801,12 +798,9 @@ dependencies:
     assert_eq!(
         gathered_info.possible_features,
         HashMap::from([
+            (WithVersion::new(identity_root, root_version), [].into()),
             (
-                WithVersion::new(identity_root, root_version),
-                [].into()
-            ),
-            (
-                WithVersion::new(identity_root, Version::new(1, 0, 0)),
+                WithVersion::new(identity_a, Version::new(1, 0, 0)),
                 ["f".into()].into()
             ),
             (
@@ -881,10 +875,7 @@ dependencies:
     assert_eq!(
         gathered_info.possible_features,
         HashMap::from([
-            (
-                WithVersion::new(identity_root, root_version),
-                [].into()
-            ),
+            (WithVersion::new(identity_root, root_version), [].into()),
             (
                 WithVersion::new(identity_u, Version::new(1, 0, 0)),
                 ["v".into()].into()
@@ -953,10 +944,7 @@ dependencies:
     assert_eq!(
         gathered_info.possible_features,
         HashMap::from([
-            (
-                WithVersion::new(identity_root, root_version),
-                [].into()
-            ),
+            (WithVersion::new(identity_root, root_version), [].into()),
             (
                 WithVersion::new(identity_n, Version::new(1, 0, 0)),
                 ["expandable".into(), "expanded".into()].into()

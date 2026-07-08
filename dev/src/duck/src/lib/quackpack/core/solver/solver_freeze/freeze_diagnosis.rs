@@ -214,8 +214,11 @@ impl SolverFreeze {
 
     /// Helper for [`Self::retain_not_flawed_pkgs`].
     /// Generates the graph used by [`Self::flawed_pkgs_dfs`].
-    fn reversed_dependency_graph(&self) -> HashMap<WithVersion<FullIdentity>, Vec<WithVersion<FullIdentity>>> {
-        let mut reversed_graph: HashMap<WithVersion<FullIdentity>, Vec<WithVersion<FullIdentity>>> = HashMap::new();
+    fn reversed_dependency_graph(
+        &self,
+    ) -> HashMap<WithVersion<FullIdentity>, Vec<WithVersion<FullIdentity>>> {
+        let mut reversed_graph: HashMap<WithVersion<FullIdentity>, Vec<WithVersion<FullIdentity>>> =
+            HashMap::new();
         for (pkg, freeze) in self.package_freezes.iter() {
             for (_, realization) in freeze.dependencies_realization.iter() {
                 reversed_graph.entry(*realization).or_default().push(*pkg);
@@ -283,11 +286,11 @@ mod test {
     use tempfile::{TempDir, tempdir};
 
     use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
-use crate::quackpack::core::solver::solver_freeze::{SolverFreeze, SolverPackageFreeze};
+    use crate::quackpack::core::solver::solver_freeze::{SolverFreeze, SolverPackageFreeze};
     use crate::quackpack::core::{FeatureName, Version, parse_manifest};
     use crate::quackpack::util::to_url::ToUrl;
     use crate::quackpack::util::with_version::WithVersion;
-use crate::util::path_ops_ext::PathOpsExt;
+    use crate::util::path_ops_ext::PathOpsExt;
     use crate::{DuckContext, StrId};
 
     fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {
@@ -349,10 +352,7 @@ features:
             features: HashSet::from([FeatureName::new("xd")]),
         };
         let prev_freeze = SolverFreeze {
-            package_freezes: HashMap::from([
-                (pkg_a, prev_a_freeze),
-                (pkg_b, prev_b_freeze),
-            ]),
+            package_freezes: HashMap::from([(pkg_a, prev_a_freeze), (pkg_b, prev_b_freeze)]),
             main_pkg: pkg_a,
         };
         let (new_freeze, _) = prev_freeze
@@ -409,10 +409,7 @@ metadata:
             features: HashSet::from([FeatureName::new("xd")]),
         };
         let prev_freeze = SolverFreeze {
-            package_freezes: HashMap::from([
-                (pkg_a, prev_a_freeze),
-                (pkg_b, prev_b_freeze),
-            ]),
+            package_freezes: HashMap::from([(pkg_a, prev_a_freeze), (pkg_b, prev_b_freeze)]),
             main_pkg: pkg_a,
         };
         let (new_freeze, _) = prev_freeze

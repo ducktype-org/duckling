@@ -175,7 +175,7 @@ impl<'a> SolverEngine<'a> {
         let Some(realization_ver) = self.input.preexisting_dependencies.get(&edge) else {
             return self.add_constraints_for_edge(&edge, manifest_dependency);
         };
-        let realisation = WithVersion::new(edge.dep_identity,*realization_ver);
+        let realisation = WithVersion::new(edge.dep_identity, *realization_ver);
 
         // Each feature of the parent may force some additional features of the child,
         // not present in the previous freeze.
@@ -403,7 +403,7 @@ metadata:
         let identity_a = FullIdentity::new("a".into(), registry_origin);
         let identity_b = FullIdentity::new("b".into(), registry_origin);
         let pkg_a = WithVersion::new(identity_a, Version::new(1, 0, 0));
-        let pkg_b = WithVersion::new(identity_b, Version::new(1, 0, 0));
+        let pkg_b = WithVersion::new(identity_b, Version::new(2, 0, 0));
         let gathered_manifests = HashMap::from([
             (pkg_a, Box::new(manifest_a.manifest().clone())),
             (pkg_b, Box::new(manifest_b.manifest().clone())),
@@ -414,8 +414,7 @@ metadata:
             (identity_a, HashSet::from([Version::new(1, 0, 0)])),
             (identity_b, HashSet::from([Version::new(2, 0, 0)])),
         ]);
-        let location_resolver =
-            HashMap::from([(registry_source, registry_origin)]);
+        let location_resolver = HashMap::from([(registry_source, registry_origin)]);
 
         let input = SolverInput {
             gathered_manifests,
@@ -495,8 +494,7 @@ dependencies:
             (identity_a, HashSet::from([Version::new(1, 0, 0)])),
             (identity_b, HashSet::from([Version::new(2, 0, 0)])),
         ]);
-        let location_resolver =
-            HashMap::from([(registry_source, registry_origin)]);
+        let location_resolver = HashMap::from([(registry_source, registry_origin)]);
         let input = SolverInput {
             gathered_manifests,
             all_possible_features,
@@ -528,7 +526,7 @@ dependencies:
                 (
                     DependencyEdge {
                         parent: pkg_b,
-                        dep_identity: identity_b,
+                        dep_identity: identity_a,
                         manifest_child_name: StrId::new("a"),
                     },
                     Version::new(1, 0, 0)
@@ -570,9 +568,9 @@ features:
         let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
         let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
         let identity_a = FullIdentity::new("a".into(), registry_origin);
-        let identity_b = FullIdentity::new("a".into(), registry_origin);
+        let identity_b = FullIdentity::new("b".into(), registry_origin);
         let pkg_a = WithVersion::new(identity_a, Version::new(1, 0, 0));
-        let pkg_b = WithVersion::new(identity_a, Version::new(2, 0, 0));
+        let pkg_b = WithVersion::new(identity_b, Version::new(2, 0, 0));
         let gathered_manifests = HashMap::from([
             (pkg_a, Box::new(manifest_a.manifest().clone())),
             (pkg_b, Box::new(manifest_b.manifest().clone())),
@@ -588,8 +586,7 @@ features:
             (identity_a, HashSet::from([Version::new(1, 0, 0)])),
             (identity_b, HashSet::from([Version::new(2, 0, 0)])),
         ]);
-        let location_resolver =
-            HashMap::from([(registry_source, registry_origin)]);
+        let location_resolver = HashMap::from([(registry_source, registry_origin)]);
 
         let preexisting_packages = HashSet::from([pkg_b]);
         let preexisting_features =
@@ -649,7 +646,7 @@ features:
         let identity_a = FullIdentity::new("a".into(), registry_origin);
         let identity_b = FullIdentity::new("b".into(), registry_origin);
         let pkg_a = WithVersion::new(identity_a, Version::new(1, 0, 0));
-        let pkg_b = WithVersion::new(identity_a, Version::new(2, 0, 0));
+        let pkg_b = WithVersion::new(identity_b, Version::new(2, 0, 0));
         let gathered_manifests = HashMap::from([
             (pkg_a, Box::new(manifest_a.manifest().clone())),
             (pkg_b, Box::new(manifest_b.manifest().clone())),
@@ -665,8 +662,7 @@ features:
             (identity_a, HashSet::from([Version::new(1, 0, 0)])),
             (identity_b, HashSet::from([Version::new(2, 0, 0)])),
         ]);
-        let location_resolver =
-            HashMap::from([(registry_source, registry_origin)]);
+        let location_resolver = HashMap::from([(registry_source, registry_origin)]);
 
         let preexisting_packages = HashSet::from([pkg_b]);
 
@@ -760,9 +756,7 @@ features:
             (identity_b, HashSet::from([Version::new(2, 0, 0)])),
             (identity_c, HashSet::from([Version::new(3, 0, 0)])),
         ]);
-        let location_resolver = HashMap::from([
-            (registry_source, registry_origin)
-        ]);
+        let location_resolver = HashMap::from([(registry_source, registry_origin)]);
 
         let preexisting_packages = HashSet::from([pkg_b, pkg_c]);
         let preexisting_dependencies = HashMap::from([(
@@ -844,8 +838,7 @@ features:
             (identity_a, HashSet::from([Version::new(1, 0, 0)])),
             (identity_b, HashSet::from([Version::new(2, 0, 0)])),
         ]);
-        let location_resolver =
-            HashMap::from([(registry_source, registry_origin)]);
+        let location_resolver = HashMap::from([(registry_source, registry_origin)]);
 
         let input = SolverInput {
             gathered_manifests,

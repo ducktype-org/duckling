@@ -5,7 +5,7 @@ use url::Url;
 
 use crate::quackpack::core::full_identity::{FullIdentity, FullKind};
 use crate::quackpack::core::solver::gathering::fetch_types::{
-    ManifestsRequest, NotPinnedRequest, PinnedRequest,
+    ManifestsRequest, NotPinnedRequest, PinnedRequest, RequestIdentifier,
 };
 use crate::quackpack::core::version::CompatibilityCheck;
 use crate::quackpack::core::{Dependency, GitReference, Source, SourceKind, Version};
@@ -163,19 +163,23 @@ impl WithVersion<FullIdentity> {
     pub fn create_manifest_request(&self) -> QuackResult<ManifestsRequest> {
         let identity = self.value();
         let origin = identity.origin();
+        let request_id = RequestIdentifier {
+            source: Source::canonical_source_for_origin(origin),
+            name: identity.name(),
+        };
         match origin.kind() {
-            FullKind::Registry => Ok(ManifestsRequest::Pinned(PinnedRequest
-                { source: Source::canonical_source_for_origin(origin),
-                    name: identity.name(), version: self.version(), features: [].into() })),
+            FullKind::Registry => Ok(ManifestsRequest::Pinned(PinnedRequest {
+                id: request_id,
+                version: self.version(),
+                features: [].into(),
+            })),
             FullKind::Git { .. } => Ok(ManifestsRequest::NotPinned(NotPinnedRequest {
-                source: Source::canonical_source_for_origin(origin),
-                name: identity.name(),
+                id: request_id,
                 versions: Some(vec![self.version()]),
                 features: [].into(),
             })),
             FullKind::Local => Ok(ManifestsRequest::NotPinned(NotPinnedRequest {
-                source: Source::canonical_source_for_origin(origin),
-                name: identity.name(),
+                id: request_id,
                 versions: Some(vec![self.version()]),
                 features: [].into(),
             })),
@@ -186,9 +190,7 @@ impl WithVersion<FullIdentity> {
         let source = dependency.source();
         let dep_url = source.url();
         match (self.value().origin().kind(), source.kind()) {
-            (FullKind::Local, SourceKind::Local) => {
-                Ok(self.value().origin().url() == dep_url)
-            }
+            (FullKind::Local, SourceKind::Local) => Ok(self.value().origin().url() == dep_url),
             (FullKind::Git { commit }, SourceKind::Git(reference)) => {
                 // If the git dependency specifies tag, branch or nothing (default branch),
                 // some new commits may have appeared.
@@ -205,9 +207,12 @@ impl WithVersion<FullIdentity> {
                     Ok(false)
                 }
             }
-            (FullKind::Registry, SourceKind::Registry) => {
-                self.check_satisfaction_for_registry(self.value().origin().url(), self.value().name(), dep_url, dependency)
-            }
+            (FullKind::Registry, SourceKind::Registry) => self.check_satisfaction_for_registry(
+                self.value().origin().url(),
+                self.value().name(),
+                dep_url,
+                dependency,
+            ),
             _ => Ok(false),
         }
     }

@@ -157,7 +157,11 @@ impl<'a> SolverModel<'a, ProblemCreated> {
     }
 
     /// Creates the variable associated with the (package, feature) pair and adds it to the model.
-    pub fn add_package_with_feature_var(&mut self, pkg: WithVersion<FullIdentity>, feature: FeatureName) {
+    pub fn add_package_with_feature_var(
+        &mut self,
+        pkg: WithVersion<FullIdentity>,
+        feature: FeatureName,
+    ) {
         let var_name = package_with_feature_var_name(&pkg, feature);
         self.package_to_feature_vars
             .entry(pkg)
@@ -271,13 +275,8 @@ impl<'a> SolverModel<'a, ProblemCreated> {
         for (pkg_version, version_realization_var) in
             self.get_version_to_var_map_for_dep(edge).clone()
         {
-            let pkg_var = self.get_package_variable(
-                &WithVersion::new(
-                    edge.dep_identity,
-                   pkg_version,
-                ),
-                None,
-            )?;
+            let pkg_var =
+                self.get_package_variable(&WithVersion::new(edge.dep_identity, pkg_version), None)?;
             self.model.implies(&version_realization_var, &pkg_var);
         }
         Ok(())

@@ -3,7 +3,8 @@ use std::hash::Hash;
 use std::ops::Deref;
 use std::sync::{Mutex, OnceLock};
 
-use crate::quackpack::core::full_identity::{FullKind, FullOrigin};
+use crate::quackpack::core::full_identity::{FullIdentity, FullKind, FullOrigin};
+use crate::quackpack::core::solver::gathering::fetch_types::RequestIdentifier;
 use crate::quackpack::core::solver::types_common::{ExpandedLocation, ExpandedPackage};
 use crate::quackpack::core::version::CompatibilityCheck;
 use crate::quackpack::core::{Dependency, GitReference, Source, SourceKind, Version};
@@ -11,7 +12,6 @@ use crate::quackpack::util::interned_url::InternedUrl;
 use crate::quackpack::util::with_version::WithVersion;
 use crate::util::extract::Extract;
 use crate::{QuackResult, StrId, qp_bail_internal};
-
 
 impl Source {
     pub fn canonical_source_for_origin(origin: FullOrigin) -> Self {
@@ -22,7 +22,6 @@ impl Source {
         }
     }
 }
-
 
 static INTERNED_LOCATION_CACHE: OnceLock<Mutex<HashSet<&'static Location>>> = OnceLock::new();
 
@@ -99,14 +98,17 @@ pub enum Location {
     },
 }
 
-impl WithVersion<Source> {
+impl WithVersion<RequestIdentifier> {
     pub fn resolve(
         self,
         location_resolver: &HashMap<Source, FullOrigin>,
-    ) -> Option<WithVersion<FullOrigin>> {
-        location_resolver
-            .get(self.value())
-            .map(|identity| WithVersion::new(*identity, self.version()))
+    ) -> Option<WithVersion<FullIdentity>> {
+        location_resolver.get(&self.value().source).map(|origin| {
+            WithVersion::new(
+                FullIdentity::new(self.value().name, *origin),
+                self.version(),
+            )
+        })
     }
 }
 

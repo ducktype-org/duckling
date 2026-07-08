@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
-use crate::quackpack::core::{Dependency, Source};
 use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
+use crate::quackpack::core::{Dependency, Source};
 use crate::quackpack::util::with_version::WithVersion;
 use crate::{QuackResult, QuackResultContext, StrId};
 

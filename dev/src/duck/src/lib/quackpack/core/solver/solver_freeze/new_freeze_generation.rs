@@ -187,13 +187,13 @@ mod test {
     use tempfile::{TempDir, tempdir};
 
     use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
-use crate::quackpack::core::solver::solver_freeze::{SolverFreeze, SolverPackageFreeze};
+    use crate::quackpack::core::solver::solver_freeze::{SolverFreeze, SolverPackageFreeze};
     use crate::quackpack::core::solver::solving::FoundSolution;
     use crate::quackpack::core::solver::types_common::DependencyEdge;
     use crate::quackpack::core::{FeatureName, Version, parse_manifest};
     use crate::quackpack::util::to_url::ToUrl;
     use crate::quackpack::util::with_version::WithVersion;
-use crate::util::path_ops_ext::PathOpsExt;
+    use crate::util::path_ops_ext::PathOpsExt;
     use crate::{DuckContext, StrId};
 
     fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {
@@ -263,10 +263,7 @@ metadata:
             features: HashSet::new(),
         };
         let prev_freeze = SolverFreeze {
-            package_freezes: HashMap::from([
-                (pkg_a, prev_a_freeze),
-                (pkg_b, prev_b_freeze),
-            ]),
+            package_freezes: HashMap::from([(pkg_a, prev_a_freeze), (pkg_b, prev_b_freeze)]),
             main_pkg: pkg_a,
         };
 
@@ -617,10 +614,7 @@ metadata:
             features: HashSet::new(),
         };
         let prev_freeze = SolverFreeze {
-            package_freezes: HashMap::from([
-                (pkg_a, prev_a_freeze),
-                (pkg_b, prev_b_freeze),
-            ]),
+            package_freezes: HashMap::from([(pkg_a, prev_a_freeze), (pkg_b, prev_b_freeze)]),
             main_pkg: pkg_a,
         };
 
