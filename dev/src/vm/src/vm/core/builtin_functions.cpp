@@ -403,9 +403,8 @@ namespace vm::builtins {
 			const std::vector<CRef<code::valid_type::ValidType>>& arg_types
 		) {
 			if (arg_types.size() != 3) return "expected exactly three arguments";
-			if (!(arg_types[0]->isKind<code::valid_type::finalized::Opaque>()
-			      && arg_types[0]->getName() == base::StrID("cptr")))
-				return "first argument must be a `cptr`";
+			if (!arg_types[0]->isKind<code::valid_type::finalized::CPointer>())
+				return "first argument must be a C pointer";
 			if (!arg_types[1]->isKind<code::valid_type::finalized::Pointer>())
 				return "second argument must be a pointer";
 			auto size_type = arg_types[2]->maybeGetKindAs<code::valid_type::finalized::Primitive>();

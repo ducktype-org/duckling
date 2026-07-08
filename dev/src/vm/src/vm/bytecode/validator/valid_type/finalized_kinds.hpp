@@ -30,6 +30,14 @@ namespace vm::code::valid_type {
 		};
 
 		/**
+		 * @brief C pointer type representation: a raw 8-byte native address. An absent inner
+		 * means an unknown pointee (C's `void*`); the builtin `cptr` has no inner.
+		 */
+		struct CPointer final {
+			base::Optional<ValidTypeID> inner;
+		};
+
+		/**
 		 * @brief Fixed-size table type representation.
 		 */
 		struct FixedSizeTable final {
@@ -164,9 +172,10 @@ namespace vm::code::valid_type {
 		};
 	}
 
-#define CONCRETE_TYPE_LIST                                                                        \
-	finalized::Primitive, finalized::Pointer, finalized::FixedSizeTable, finalized::DynamicTable, \
-		finalized::Structure, finalized::Variant, finalized::Function, finalized::Opaque
+#define CONCRETE_TYPE_LIST                                                                      \
+	finalized::Primitive, finalized::Pointer, finalized::CPointer, finalized::FixedSizeTable,   \
+		finalized::DynamicTable, finalized::Structure, finalized::Variant, finalized::Function, \
+		finalized::Opaque
 
 	template<class T>
 	concept ConcreteType = base::IsOneOf<T, CONCRETE_TYPE_LIST>;

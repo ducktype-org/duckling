@@ -196,6 +196,7 @@ namespace lang_def {
 		BCIsConstant,
 		BCInitialValue,
 		BCPacked,
+		BCCPointer,
 		COUNT,
 	};
 

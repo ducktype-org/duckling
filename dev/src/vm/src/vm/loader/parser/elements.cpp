@@ -823,6 +823,17 @@ namespace vm::loader::parser {
 			}
 			break;
 		}
+		case lang_def::Keyword::BCCPointer: {
+			// The pointee is optional: `type cpointer: Name [Inner]`. No inner means a pointer
+			// to an unknown pointee (C's `void*`).
+			base::Optional<base::StrID> inner;
+			if (state.notEmpty() && state[0].isIdentifier())
+				inner = state.tokens().next().getValue();
+			auto tp         = CPointerType{ name, inner };
+			tp.bytecode_pos = out->position;
+			out->datatype   = tp;
+			break;
+		}
 		case lang_def::Keyword::BCFixedSizeTable: {
 			auto type_name = state.tokens().next();
 			if (!type_name.isIdentifier()) {
