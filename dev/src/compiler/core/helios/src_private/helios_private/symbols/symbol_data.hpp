@@ -14,6 +14,7 @@
 
 #include <query_framework/context/context_fd.hpp>
 #include <string_id/string_id.hpp>
+
 #include <typeinfo>
 
 namespace compiler::helios {
