@@ -53,7 +53,8 @@ namespace pst {
 		auto name = state[0].getValue();
 
 		if (!op.isNotReserved()) {
-			if (op.isAssignment())
+			// Plain `=` has no base operator to suggest, so it counts as reserved.
+			if (op.isAssignment() && op.asNamed() != lang_def::NamedOperator::Assign)
 				state.logInt(makeBox<AssignmentOperatorFunNameError>(state.getPosition(), op.str()));
 			else
 				state.logInt(makeBox<ReservedOperatorFunNameError>(state.getPosition(), op.str()));
