@@ -186,7 +186,7 @@ namespace compiler::helios {
 			case tsh::ReferenceKind::Ref:
 				return to_kind == tsh::ReferenceKind::Direct || to_kind == tsh::ReferenceKind::Box;
 			case tsh::ReferenceKind::Box:
-				return to_kind == tsh::ReferenceKind::Direct;
+				return to_kind == tsh::ReferenceKind::Direct || to_kind == tsh::ReferenceKind::Box;
 			default:
 				return false;
 			}
@@ -200,7 +200,8 @@ namespace compiler::helios {
 			// pointee always survives) or when copying a non-trivial lvalue. Owned temporaries and
 			// the results of `copy`/`move` are Direct rvalues, so they fall through and are moved.
 			const bool reads_through_reference = from_type.getRefKind() == tsh::ReferenceKind::Ref
-			                                  || from_type.getRefKind() == tsh::ReferenceKind::Box;
+			                                  || (from_type.getRefKind() == tsh::ReferenceKind::Box
+			                                      && to.getRefKind() != tsh::ReferenceKind::Box);
 			const bool copies_lvalue = from.getValueCategory().isLValue();
 			if (reads_through_reference || copies_lvalue) {
 				if (!from_type.getType().isCopyable(ctx)) return TypeNotCopyable{};

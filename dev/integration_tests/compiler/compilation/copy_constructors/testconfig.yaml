@@ -13,7 +13,7 @@ Tests:
       all:
         backend: all
         Output:
-          String: "1\n"
+          String: "1\n1\n"
         ExitCode: 0
 
   function_calls:

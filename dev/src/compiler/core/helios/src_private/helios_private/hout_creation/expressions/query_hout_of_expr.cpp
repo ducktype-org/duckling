@@ -816,15 +816,20 @@ namespace compiler::helios::code {
 					return;
 				} else if (stmt->getOperator().unlock(ctx)->unwrap().asKeyword()
 				           == lang_def::Keyword::Copy) {
-					// `copy x` produces an explicit copy of `x` via its copy constructor. Copying
-					// through a reference copies the pointee.
-					// TODOP: Ref should be just a reference copy I think.
 					tsh::SymbolType<> copy_type = inner_type;
 					Box<code::Expr>   to_copy   = std::move(inner);
-					if (inner_type.getRefKind() == tsh::ReferenceKind::Ref) {
-						to_copy   = makeBox<DerefExpr>(ctx, pstOrigin(stmt), std::move(to_copy));
-						copy_type = inner_type.withReferenceKind(tsh::ReferenceKind::Direct);
+
+					if (copy_type.isTriviallyCopyable(ctx)) {
+						ctx.logInt(makeBox<dia_int::PlaceholderWarning>(
+							base::strConcat(
+								"Type `",
+								copy_type.toString(),
+								"` is trivially copyable. No need to use the explicit `copy`."
+							),
+							stmt->getStablePosition()
+						));
 					}
+
 					if (not copy_type.getType().isCopyable(ctx)) {
 						ctx.logInt(makeBox<dia_int::PlaceholderError>(
 							base::strConcat("Type `", copy_type.toString(), "` cannot be copied."),
