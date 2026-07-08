@@ -90,8 +90,15 @@ namespace vm {
 		std::byte* local_stack = frame->local_stack;
 
 		low::MicroOpcode opcode = getInstructionOpcode(*instr);
-		if (opcode == low::MicroOpcode::breakpoint || opcode == low::MicroOpcode::jitFuncEntrypoint
-		    || opcode == low::MicroOpcode::jitLoopEntrypoint) {
+		switch (opcode) {
+		case low::MicroOpcode::breakpoint:
+#ifdef jitLoopEntrypoint
+			[[fallthrough]];
+		case low::MicroOpcode::jitFuncEntrypoint:
+			[[fallthrough]];
+		case low::MicroOpcode::jitLoopEntrypoint:
+#endif
+		{
 			const auto* program_copy
 				= dynamic_cast<const low::LowVMProgramCopy*>(process_program.get());
 			CORE_ASSERT(
@@ -105,6 +112,10 @@ namespace vm {
 			          ->bc[static_cast<size_t>(frame->instr - &frame->current_function->bc[0])];
 
 			opcode = getInstructionOpcode(original_instr);
+			break;
+		}
+		default:
+			break;
 		}
 
 		// Execute the instruction by calling the debug opcode function.
