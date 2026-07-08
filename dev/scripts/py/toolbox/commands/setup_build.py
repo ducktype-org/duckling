@@ -84,9 +84,8 @@ def configure_presets(ctx, param, value):
 )
 @option(
     "--jit",
-    prompt="Enable JIT",
     help="Whether or not to enable JIT compilation.",
-    default="LLVM-only",
+    default="No",
     callback=lambda ctx, param, value: JIT_options[value.replace('-', '_').upper()],
     type=Choice(
         ["No", "LLVM-only", "Yes"],
