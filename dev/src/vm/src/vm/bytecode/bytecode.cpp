@@ -35,5 +35,4 @@ namespace vm::code {
 		);
 		auto _ = std::move(other);
 	}
-
 }  // namespace vm::code

@@ -139,43 +139,6 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::parseFiles(
 					new_code.object_files.emplace_back(path.string());
 				}
 			}
-			base::deduplicateBy(new_code.functions, [](const code::Function& func) {
-				return func.name.str.strView();
-			});
-			base::deduplicateBy(
-				new_code.external_c_functions,
-				[](const code::ExternalCFunction& func) { return func.name.str.strView(); }
-			);
-			// Silently deduplicating an `ffi function` redeclaration whose signature differs
-			// would hide an ABI bug, so it is rejected instead.
-			for (const auto& func: new_code.ffi_functions) {
-				auto first = std::ranges::find_if(
-					new_code.ffi_functions,
-					[&](const code::FFIFunction& other) { return other.name == func.name; }
-				);
-				if (&*first != &func && first->signature != func.signature) {
-					LoaderLogger log;
-					log.logMap(
-						func.name,
-						[&](auto& err) {
-							log.addNote(err, first->name, "Previous declaration here.");
-						},
-						"FFI function redeclared with a different signature."
-					);
-					return std::unexpected(std::move(log));
-				}
-			}
-			base::deduplicateBy(new_code.ffi_functions, [](const code::FFIFunction& func) {
-				return func.name.str.strView();
-			});
-			base::deduplicateBy(new_code.object_files, [](const std::string& file) { return file; });
-			base::deduplicateBy(new_code.global_data, [](const vm::code::GlobalData& g) {
-				return g.name.str.strView();
-			});
-			base::deduplicateBy(new_code.types, [](const vm::code::TypeOfData& f) {
-				return typeName(f);
-			});
-
 			return new_code;
 		}
 	}

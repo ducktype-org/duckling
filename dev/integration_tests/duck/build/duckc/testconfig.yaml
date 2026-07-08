@@ -11,3 +11,4 @@ SubDirs:
   - errors
   - features
   - local-cycle
+  - workers-count
