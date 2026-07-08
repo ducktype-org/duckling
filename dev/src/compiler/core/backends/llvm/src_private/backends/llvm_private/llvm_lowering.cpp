@@ -972,7 +972,7 @@ namespace compiler::backend_llvm {
 				auto* alloca_src = builder.CreateAlloca(src_type, nullptr, "tmp_coerce_src");
 				builder.CreateStore(src_val, alloca_src);
 				auto* dst = builder.CreateAlloca(desired_type, nullptr, "tmp_reinterpret");
-				memcpy_typed(dst, alloca_src, desired_type);
+				memcpy_typed(dst, alloca_src, src_type);
 				return builder.CreateLoad(desired_type, dst);
 			};
 
