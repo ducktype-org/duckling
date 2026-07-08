@@ -539,7 +539,7 @@ dependencies:
     let identity_foo = FullIdentity::new("foo".into(), FullOrigin::for_registry(url));
     let identity_bar = FullIdentity::new("bar".into(), FullOrigin::for_registry(url));
     assert_eq!(
-        gathered_info.versions_for_location,
+        gathered_info.versions_for_identity,
         HashMap::from([
             (identity_root, HashSet::from([root_version])),
             (
@@ -579,7 +579,7 @@ dependencies:
         assert!(features.is_empty());
     }
     assert_eq!(
-        gathered_info.location_resolver,
+        gathered_info.source_to_origin_resolver,
         HashMap::from([
             (
                 Source::for_local(&root_path).unwrap(),
@@ -641,7 +641,7 @@ dependencies:
     let identity_xd = FullIdentity::new("xd".into(), FullOrigin::for_registry(url));
     let identity_dx = FullIdentity::new("dx".into(), FullOrigin::for_registry(url));
     assert_eq!(
-        gathered_info.versions_for_location,
+        gathered_info.versions_for_identity,
         HashMap::from([
             (identity_root, HashSet::from([root_version])),
             (identity_xd, HashSet::from([Version::new(1, 0, 0)])),
@@ -784,7 +784,7 @@ dependencies:
     let identity_b = FullIdentity::new("b".into(), FullOrigin::for_registry(url));
     let identity_c = FullIdentity::new("c".into(), FullOrigin::for_registry(url));
     assert_eq!(
-        gathered_info.versions_for_location,
+        gathered_info.versions_for_identity,
         HashMap::from([
             (identity_root, [root_version].into()),
             (
@@ -865,7 +865,7 @@ dependencies:
     let identity_u = FullIdentity::new("u".into(), FullOrigin::for_registry(url));
     let identity_v = FullIdentity::new("v".into(), FullOrigin::for_registry(url));
     assert_eq!(
-        gathered_info.versions_for_location,
+        gathered_info.versions_for_identity,
         HashMap::from([
             (identity_root, [root_version].into()),
             (identity_u, [Version::new(1, 0, 0)].into()),
@@ -934,7 +934,7 @@ dependencies:
     let identity_n = FullIdentity::new("n".into(), FullOrigin::for_registry(url));
     let identity_m = FullIdentity::new("m".into(), FullOrigin::for_registry(url));
     assert_eq!(
-        gathered_info.versions_for_location,
+        gathered_info.versions_for_identity,
         HashMap::from([
             (identity_root, [root_version].into()),
             (identity_n, [Version::new(1, 0, 0)].into()),

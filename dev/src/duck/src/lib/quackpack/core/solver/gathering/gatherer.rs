@@ -205,7 +205,7 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
             }))
         };
         if !matches!(request.id.source.kind(), SourceKind::Registry) {
-            qp_bail_internal!("Tried to make pinned registry fetch for a non-registry location");
+            qp_bail_internal!("Tried to make pinned registry fetch for a non-registry source");
         };
         let pkg_to_fetch = PackageWithUrl {
             name: request.id.name,

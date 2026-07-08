@@ -31,6 +31,7 @@ pub struct PinnedRequest {
     pub features: HashSet<FeatureName>,
 }
 
+/// A common identifier of a request.
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
 pub struct RequestIdentifier {
     pub name: StrId,

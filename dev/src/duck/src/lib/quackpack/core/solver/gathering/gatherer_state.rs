@@ -106,9 +106,10 @@ impl Default for RequestAction {
 /// Note(terminology):
 /// ------------------
 /// 1. a *request* signifies a need to read the manifest of a given package (pinned request) or the
-///    manifests of all the packages from a given location, satisfying some versions constraints (not pinned request),
+///    manifests of all the packages with a given source and name satisfying some versions constraints (not pinned request),
 /// 2. a *fetch* is a process of obtaining manifest(s) for the first time, for example from Ducknest,
-/// 3. to satisfy a *request*, a *fetch* may be made, this usually happens for the first *request* referencing a specific location/package.
+/// 3. to satisfy a *request*, a *fetch* may be made, this usually happens for the first *request* referencing a specific source and name/package.
+/// 4. requests are identified by a pair (source, name), which is called the request's id.
 ///
 /// Pinned & Not Pinned vs Registry, Git & Local:
 /// ---------------------
@@ -122,8 +123,8 @@ pub struct GathererState {
     pinned_fetches: HashMap<WithVersion<RequestIdentifier>, QueryState>,
 
     pkgs_data: HashMap<WithVersion<FullIdentity>, PackageData>,
-    versions_for_location: HashMap<FullIdentity, HashSet<Version>>,
-    location_resolver: HashMap<Source, FullOrigin>,
+    versions_for_identity: HashMap<FullIdentity, HashSet<Version>>,
+    source_to_origin_resolver: HashMap<Source, FullOrigin>,
 }
 
 impl GathererState {
@@ -186,7 +187,7 @@ impl GathererState {
     ) -> GathererResult<RequestAction> {
         let request_pkg = WithVersion::new(pinned_request.id, pinned_request.version);
         let Some(fetch_state) = self.pinned_fetches.get_mut(&request_pkg) else {
-            // If the pinned request has not been made, we may still have done an unpinned request for the corresponding location.
+            // If the pinned request has not been made, we may still have done an unpinned request for the corresponding source and name.
             let Some(not_pinned_fetch_state) = self.not_pinned_fetches.get_mut(&pinned_request.id)
             else {
                 self.pinned_fetches.insert(
@@ -218,7 +219,7 @@ impl GathererState {
                 }
                 QueryState::Done => {
                     let answer_pkg = request_pkg
-                        .resolve(&self.location_resolver)
+                        .resolve(&self.source_to_origin_resolver)
                         .with_context_internal(|| {
                             format!("Could not expand the package {:?}", request_pkg)
                         })?;
@@ -246,7 +247,7 @@ impl GathererState {
             }
             QueryState::Done => {
                 let answer_pkg = request_pkg
-                    .resolve(&self.location_resolver)
+                    .resolve(&self.source_to_origin_resolver)
                     .with_context_internal(|| {
                         format!("Could not expand the package {:?}", request_pkg)
                     })?;
@@ -313,7 +314,7 @@ impl GathererState {
                 )));
         }
 
-        self.location_resolver.insert(
+        self.source_to_origin_resolver.insert(
             pinned_success.origin_id.source,
             pinned_success.answer_package.value().origin(),
         );
@@ -368,7 +369,7 @@ impl GathererState {
             && let Some(answer_identity) = answer_identities.into_iter().next()
             && answer_identity.name() == not_pinned_response.origin_id.name
         {
-            self.location_resolver.insert(
+            self.source_to_origin_resolver.insert(
                 not_pinned_response.origin_id.source,
                 answer_identity.origin(),
             );
@@ -455,7 +456,7 @@ impl GathererState {
         manifests: impl IntoIterator<Item = (WithVersion<FullIdentity>, Box<Manifest>)>,
     ) {
         for (pkg, manifest) in manifests.into_iter() {
-            self.versions_for_location
+            self.versions_for_identity
                 .entry(*pkg.value())
                 .or_default()
                 .insert(pkg.version());
@@ -477,16 +478,15 @@ impl GathererState {
         for request in requests {
             match request {
                 ManifestsRequest::Pinned(pinned_request) => {
-                    let Some(answer_origin) = self.location_resolver.get(&pinned_request.id.source)
+                    let Some(answer_origin) = self
+                        .source_to_origin_resolver
+                        .get(&pinned_request.id.source)
                     else {
-                        qp_bail_internal!(
-                            "Could not resolve location {:?}",
-                            pinned_request.id.source
-                        )
+                        qp_bail_internal!("Could not resolve source {:?}", pinned_request.id.source)
                     };
                     let answer_identity = FullIdentity::new(pinned_request.id.name, *answer_origin);
-                    let Some(versions) = self.versions_for_location.get(&answer_identity) else {
-                        qp_bail_internal!("No gathered versions for location {answer_identity:?}")
+                    let Some(versions) = self.versions_for_identity.get(&answer_identity) else {
+                        qp_bail_internal!("No gathered versions for identity {answer_identity:?}")
                     };
                     if !versions.contains(&pinned_request.version) {
                         result.1.push(QuackError::message(format!(
@@ -525,12 +525,12 @@ impl GathererState {
     ) -> GathererResult<Vec<ManifestsRequest>> {
         let mut result: GathererComputation<Vec<ManifestsRequest>> = GathererComputation::empty();
         let mut any_matched = false;
-        let Some(answer_origin) = self.location_resolver.get(&id.source).copied() else {
-            qp_bail_internal!("Could not resolve location {:?}", id.source);
+        let Some(answer_origin) = self.source_to_origin_resolver.get(&id.source).copied() else {
+            qp_bail_internal!("Could not resolve source {:?}", id.source);
         };
         let answer_identity = FullIdentity::new(id.name, answer_origin);
         let versions: Vec<Version> = self
-            .versions_for_location
+            .versions_for_identity
             .get(&answer_identity)
             .iter()
             .copied()
@@ -555,8 +555,9 @@ impl GathererState {
             result.1.push(
                 QuackError::message(
             format!(
-                "There is a dependency on package in location {:?} with versions {selector:?}, but no matching versions exist",
-                id.source
+                "There is a dependency on package of source {:?} and name {} with versions {selector:?}, but no matching versions exist",
+                id.source,
+                id.name,
             )));
         }
         Ok(result)
@@ -616,10 +617,10 @@ pub struct GatheredInfo {
     pub gathered_manifests: HashMap<WithVersion<FullIdentity>, Box<Manifest>>,
     /// The intersection of the manifest defined features and features referenced in the requests.
     pub possible_features: HashMap<WithVersion<FullIdentity>, HashSet<FeatureName>>,
-    /// The set of the possible versions of the packages satisfying a given location.
-    pub versions_for_location: HashMap<FullIdentity, HashSet<Version>>,
+    /// The set of the possible versions of the packages with a given identity.
+    pub versions_for_identity: HashMap<FullIdentity, HashSet<Version>>,
     /// The translation from [`Source`] to [`FullIdentity`].
-    pub location_resolver: HashMap<Source, FullOrigin>,
+    pub source_to_origin_resolver: HashMap<Source, FullOrigin>,
 }
 
 impl TryFrom<GathererState> for GatheredInfo {
@@ -638,9 +639,9 @@ impl TryFrom<GathererState> for GatheredInfo {
             }
         }
         for pkg in unnecessary_pkgs {
-            let Some(versions) = value.versions_for_location.get_mut(pkg.value()) else {
+            let Some(versions) = value.versions_for_identity.get_mut(pkg.value()) else {
                 qp_bail_internal!(
-                    "Unnecessary package's location not present in the versions for location map"
+                    "Unnecessary package's identity not present in the versions for identity map"
                 );
             };
             versions.remove(&pkg.version());
@@ -648,8 +649,8 @@ impl TryFrom<GathererState> for GatheredInfo {
         Ok(GatheredInfo {
             gathered_manifests,
             possible_features,
-            versions_for_location: value.versions_for_location,
-            location_resolver: value.location_resolver,
+            versions_for_identity: value.versions_for_identity,
+            source_to_origin_resolver: value.source_to_origin_resolver,
         })
     }
 }

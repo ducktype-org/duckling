@@ -18,8 +18,8 @@ use crate::{QuackResult, QuackResultContext, StrId};
 pub struct SolverInput {
     pub gathered_manifests: HashMap<WithVersion<FullIdentity>, Box<Manifest>>,
     pub all_possible_features: HashMap<WithVersion<FullIdentity>, HashSet<FeatureName>>,
-    pub versions_for_location: HashMap<FullIdentity, HashSet<Version>>,
-    pub location_resolver: HashMap<Source, FullOrigin>,
+    pub versions_for_identity: HashMap<FullIdentity, HashSet<Version>>,
+    pub source_to_origin_resolver: HashMap<Source, FullOrigin>,
 
     pub preexisting_packages: HashSet<WithVersion<FullIdentity>>,
     pub preexisting_features: HashMap<WithVersion<FullIdentity>, HashSet<FeatureName>>,
@@ -42,8 +42,8 @@ impl SolverInput {
             }
         }
         let mut all_possible_features = gathered_info.possible_features;
-        let mut versions_for_location = gathered_info.versions_for_location;
-        let mut location_resolver = gathered_info.location_resolver;
+        let mut versions_for_identity = gathered_info.versions_for_identity;
+        let mut source_to_origin_resolver = gathered_info.source_to_origin_resolver;
         let mut preexisting_packages = HashSet::new();
         let mut preexisting_features = HashMap::new();
         let mut preexisting_dependencies = HashMap::new();
@@ -52,11 +52,11 @@ impl SolverInput {
                 .entry(*pkg)
                 .or_default()
                 .extend(freeze.features.iter().copied());
-            versions_for_location
+            versions_for_identity
                 .entry(*pkg.value())
                 .or_default()
                 .insert(pkg.version());
-            location_resolver.insert(
+            source_to_origin_resolver.insert(
                 Source::canonical_source_for_origin(pkg.value().origin()),
                 pkg.value().origin(),
             );
@@ -76,8 +76,8 @@ impl SolverInput {
         Self {
             gathered_manifests,
             all_possible_features,
-            versions_for_location,
-            location_resolver,
+            versions_for_identity,
+            source_to_origin_resolver,
             preexisting_packages,
             preexisting_features,
             preexisting_dependencies,
@@ -167,9 +167,9 @@ impl<'a> SolverEngine<'a> {
         let edge = DependencyEdge::from_manifest_and_parent(
             *parent,
             manifest_dependency,
-            &self.input.location_resolver,
+            &self.input.source_to_origin_resolver,
         )
-        .context_internal("Failed to expand a location")?;
+        .context_internal("Failed to expand a source")?;
 
         // If this edge was not resolved in the previous freeze, we fallback to adding all constraints.
         let Some(realization_ver) = self.input.preexisting_dependencies.get(&edge) else {
@@ -225,8 +225,8 @@ impl<'a> SolverEngine<'a> {
     ) -> QuackResult<()> {
         let possible_realizations = get_possible_realizations(
             manifest_dependency,
-            &self.input.versions_for_location,
-            &self.input.location_resolver,
+            &self.input.versions_for_identity,
+            &self.input.source_to_origin_resolver,
         )?;
 
         self.create_dependency_version_realization_conditions(
@@ -410,17 +410,17 @@ metadata:
         ]);
         let all_possible_features =
             HashMap::from([(pkg_a, HashSet::new()), (pkg_b, HashSet::new())]);
-        let versions_for_location = HashMap::from([
+        let versions_for_identity = HashMap::from([
             (identity_a, HashSet::from([Version::new(1, 0, 0)])),
             (identity_b, HashSet::from([Version::new(2, 0, 0)])),
         ]);
-        let location_resolver = HashMap::from([(registry_source, registry_origin)]);
+        let source_to_origin_resolver = HashMap::from([(registry_source, registry_origin)]);
 
         let input = SolverInput {
             gathered_manifests,
             all_possible_features,
-            versions_for_location,
-            location_resolver,
+            versions_for_identity,
+            source_to_origin_resolver,
             preexisting_packages: HashSet::new(),
             preexisting_features: HashMap::new(),
             preexisting_dependencies: HashMap::new(),
@@ -490,16 +490,16 @@ dependencies:
             (pkg_a, HashSet::from([FeatureName::new("xd")])),
             (pkg_b, HashSet::new()),
         ]);
-        let versions_for_location = HashMap::from([
+        let versions_for_identity = HashMap::from([
             (identity_a, HashSet::from([Version::new(1, 0, 0)])),
             (identity_b, HashSet::from([Version::new(2, 0, 0)])),
         ]);
-        let location_resolver = HashMap::from([(registry_source, registry_origin)]);
+        let source_to_origin_resolver = HashMap::from([(registry_source, registry_origin)]);
         let input = SolverInput {
             gathered_manifests,
             all_possible_features,
-            versions_for_location,
-            location_resolver,
+            versions_for_identity,
+            source_to_origin_resolver,
             preexisting_packages: HashSet::new(),
             preexisting_features: HashMap::new(),
             preexisting_dependencies: HashMap::new(),
@@ -582,11 +582,11 @@ features:
                 HashSet::from([FeatureName::new("xd"), FeatureName::new("xdd")]),
             ),
         ]);
-        let versions_for_location = HashMap::from([
+        let versions_for_identity = HashMap::from([
             (identity_a, HashSet::from([Version::new(1, 0, 0)])),
             (identity_b, HashSet::from([Version::new(2, 0, 0)])),
         ]);
-        let location_resolver = HashMap::from([(registry_source, registry_origin)]);
+        let source_to_origin_resolver = HashMap::from([(registry_source, registry_origin)]);
 
         let preexisting_packages = HashSet::from([pkg_b]);
         let preexisting_features =
@@ -595,8 +595,8 @@ features:
         let input = SolverInput {
             gathered_manifests,
             all_possible_features,
-            versions_for_location,
-            location_resolver,
+            versions_for_identity,
+            source_to_origin_resolver,
             preexisting_packages,
             preexisting_features,
             preexisting_dependencies: HashMap::new(),
@@ -658,19 +658,19 @@ features:
                 HashSet::from([FeatureName::new("xd"), FeatureName::new("xdd")]),
             ),
         ]);
-        let versions_for_location = HashMap::from([
+        let versions_for_identity = HashMap::from([
             (identity_a, HashSet::from([Version::new(1, 0, 0)])),
             (identity_b, HashSet::from([Version::new(2, 0, 0)])),
         ]);
-        let location_resolver = HashMap::from([(registry_source, registry_origin)]);
+        let source_to_origin_resolver = HashMap::from([(registry_source, registry_origin)]);
 
         let preexisting_packages = HashSet::from([pkg_b]);
 
         let input = SolverInput {
             gathered_manifests,
             all_possible_features,
-            versions_for_location,
-            location_resolver,
+            versions_for_identity,
+            source_to_origin_resolver,
             preexisting_packages,
             preexisting_features: HashMap::new(),
             preexisting_dependencies: HashMap::new(),
@@ -751,12 +751,12 @@ features:
             (pkg_b, HashSet::from([FeatureName::new("xd")])),
             (pkg_c, HashSet::from([FeatureName::new("xdd")])),
         ]);
-        let versions_for_location = HashMap::from([
+        let versions_for_identity = HashMap::from([
             (identity_a, HashSet::from([Version::new(1, 0, 0)])),
             (identity_b, HashSet::from([Version::new(2, 0, 0)])),
             (identity_c, HashSet::from([Version::new(3, 0, 0)])),
         ]);
-        let location_resolver = HashMap::from([(registry_source, registry_origin)]);
+        let source_to_origin_resolver = HashMap::from([(registry_source, registry_origin)]);
 
         let preexisting_packages = HashSet::from([pkg_b, pkg_c]);
         let preexisting_dependencies = HashMap::from([(
@@ -771,8 +771,8 @@ features:
         let input = SolverInput {
             gathered_manifests,
             all_possible_features,
-            versions_for_location,
-            location_resolver,
+            versions_for_identity,
+            source_to_origin_resolver,
             preexisting_packages,
             preexisting_features: HashMap::new(),
             preexisting_dependencies,
@@ -834,17 +834,17 @@ features:
             (pkg_a, HashSet::new()),
             (pkg_b, ["f".into(), "g".into()].into()),
         ]);
-        let versions_for_location = HashMap::from([
+        let versions_for_identity = HashMap::from([
             (identity_a, HashSet::from([Version::new(1, 0, 0)])),
             (identity_b, HashSet::from([Version::new(2, 0, 0)])),
         ]);
-        let location_resolver = HashMap::from([(registry_source, registry_origin)]);
+        let source_to_origin_resolver = HashMap::from([(registry_source, registry_origin)]);
 
         let input = SolverInput {
             gathered_manifests,
             all_possible_features,
-            versions_for_location,
-            location_resolver,
+            versions_for_identity,
+            source_to_origin_resolver,
             preexisting_packages: HashSet::new(),
             preexisting_features: HashMap::new(),
             preexisting_dependencies: HashMap::new(),

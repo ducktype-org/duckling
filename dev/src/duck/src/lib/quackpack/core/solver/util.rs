@@ -10,14 +10,14 @@ use crate::quackpack::util::with_version::WithVersion;
 use crate::{QuackResult, QuackResultContext};
 
 /// For a given dependency entry from the manifest and
-/// given all the found versions of a package from some location,
+/// given all the found versions of a package with a given identity,
 /// find all the packages satisfying the dependency.
 pub fn get_possible_realizations(
     dependency_description: &Dependency,
-    versions_for_location: &HashMap<FullIdentity, HashSet<Version>>,
-    location_resolver: &HashMap<Source, FullOrigin>,
+    versions_for_identity: &HashMap<FullIdentity, HashSet<Version>>,
+    source_to_origin_resolver: &HashMap<Source, FullOrigin>,
 ) -> QuackResult<Vec<WithVersion<FullIdentity>>> {
-    let Some(origin) = location_resolver.get(dependency_description.source()) else {
+    let Some(origin) = source_to_origin_resolver.get(dependency_description.source()) else {
         return Ok(vec![]);
     };
     let identity = FullIdentity::new(dependency_description.name(), *origin);
@@ -33,7 +33,7 @@ pub fn get_possible_realizations(
         // with which we want to check the compatibility of the existing packages.
         // If they are empty, then there are no constraints on the version, so all versions are ok.
         let baseline_versions = dependency_description.versions();
-        let Some(possible_versions) = versions_for_location.get(&identity) else {
+        let Some(possible_versions) = versions_for_identity.get(&identity) else {
             return Ok(vec![]);
         };
         let good_versions: Vec<Version> = if baseline_versions.is_empty() {
@@ -148,14 +148,16 @@ impl WithVersion<FullIdentity> {
 impl WithVersion<RequestIdentifier> {
     pub fn resolve(
         self,
-        location_resolver: &HashMap<Source, FullOrigin>,
+        source_to_origin_resolver: &HashMap<Source, FullOrigin>,
     ) -> Option<WithVersion<FullIdentity>> {
-        location_resolver.get(&self.value().source).map(|origin| {
-            WithVersion::new(
-                FullIdentity::new(self.value().name, *origin),
-                self.version(),
-            )
-        })
+        source_to_origin_resolver
+            .get(&self.value().source)
+            .map(|origin| {
+                WithVersion::new(
+                    FullIdentity::new(self.value().name, *origin),
+                    self.version(),
+                )
+            })
     }
 }
 
@@ -206,9 +208,9 @@ dependencies:
             .unwrap();
         let source_b = Source::for_registry("http://localhost:9001".to_url().unwrap());
         let origin_b = FullOrigin::for_registry("http://localhost:9001".to_url().unwrap());
-        let location_resolver = HashMap::from([(source_b, origin_b)]);
+        let source_to_origin_resolver = HashMap::from([(source_b, origin_b)]);
         let identity_b = FullIdentity::new("b".into(), origin_b);
-        let versions_for_location = HashMap::from([(
+        let versions_for_identity = HashMap::from([(
             identity_b,
             HashSet::from([
                 Version::new(0, 0, 1),
@@ -219,8 +221,12 @@ dependencies:
                 Version::new(2, 0, 3),
             ]),
         )]);
-        let res = get_possible_realizations(dependency, &versions_for_location, &location_resolver)
-            .unwrap();
+        let res = get_possible_realizations(
+            dependency,
+            &versions_for_identity,
+            &source_to_origin_resolver,
+        )
+        .unwrap();
         assert_eq!(
             res,
             vec![WithVersion::new(identity_b, Version::new(1, 0, 3))]
@@ -249,9 +255,9 @@ dependencies:
             .unwrap();
         let source_b = Source::for_registry("http://localhost:9001".to_url().unwrap());
         let origin_b = FullOrigin::for_registry("http://localhost:9001".to_url().unwrap());
-        let location_resolver = HashMap::from([(source_b, origin_b)]);
+        let source_to_origin_resolver = HashMap::from([(source_b, origin_b)]);
         let identity_b = FullIdentity::new("b".into(), origin_b);
-        let versions_for_location = HashMap::from([(
+        let versions_for_identity = HashMap::from([(
             identity_b,
             HashSet::from([
                 Version::new(0, 0, 1),
@@ -262,8 +268,12 @@ dependencies:
                 Version::new(2, 0, 3),
             ]),
         )]);
-        let res = get_possible_realizations(dependency, &versions_for_location, &location_resolver)
-            .unwrap();
+        let res = get_possible_realizations(
+            dependency,
+            &versions_for_identity,
+            &source_to_origin_resolver,
+        )
+        .unwrap();
         assert_eq!(
             HashSet::from_iter(res),
             HashSet::from([
