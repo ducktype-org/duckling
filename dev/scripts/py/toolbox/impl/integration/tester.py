@@ -72,7 +72,7 @@ def tester_impl(
         # A failure of a `Pre`/`Post` `Test`/`Node` command means the test
         # environment is broken, so abort the whole run instead of
         # continuing with the remaining tests.
-        error = f"A user-provided setup/teardown command has failed:{''.join(e.args)}\n"
+        error = f"A user-provided setup/teardown command has failed:\n{''.join(e.args)}\n"
         write_log(error, log_file=log_file)
         exit_with_error(
             error + f"Please see log file '{log_file.absolute()}' for more info."
