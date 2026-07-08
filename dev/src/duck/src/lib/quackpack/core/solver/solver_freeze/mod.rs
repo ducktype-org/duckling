@@ -7,20 +7,20 @@ use tracing::debug;
 
 use crate::quackpack::core::full_identity::{FullIdentity, FullKind};
 use crate::quackpack::core::identity::Identity;
-use crate::quackpack::core::solver::types_common::{ExpandedLocation, ExpandedPackage};
 use crate::quackpack::core::storage::freeze::{FreezePackage, RootPackage, VenvFreeze};
 use crate::quackpack::core::{FeatureName, Manifest};
+use crate::quackpack::util::with_version::WithVersion;
 use crate::{QuackResult, QuackResultContext, StrId};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct SolverFreeze {
-    pub package_freezes: HashMap<ExpandedPackage, SolverPackageFreeze>,
-    pub main_pkg: ExpandedPackage,
+    pub package_freezes: HashMap<WithVersion<FullIdentity>, SolverPackageFreeze>,
+    pub main_pkg: WithVersion<FullIdentity>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct SolverPackageFreeze {
-    pub dependencies_realization: HashMap<StrId, ExpandedPackage>,
+    pub dependencies_realization: HashMap<StrId, WithVersion<FullIdentity>>,
     pub features: HashSet<FeatureName>,
 }
 
@@ -39,26 +39,26 @@ impl Default for SolverPackageFreeze {
     }
 }
 
-fn identity_to_expanded_loc(identity: &FullIdentity) -> ExpandedLocation {
+fn identity_to_expanded_loc(identity: &FullIdentity) -> FullIdentity {
     let url = identity.origin().url();
     match identity.origin().kind() {
-        FullKind::Registry => ExpandedLocation::Registry {
+        FullKind::Registry => FullIdentity::Registry {
             url,
             real_name: identity.name(),
         },
-        FullKind::Git { commit } => ExpandedLocation::Git { url, commit },
-        FullKind::Local => ExpandedLocation::Local { absolute_path: url },
+        FullKind::Git { commit } => FullIdentity::Git { url, commit },
+        FullKind::Local => FullIdentity::Local { absolute_path: url },
     }
 }
 
 impl SolverFreeze {
     // @TODO: #2076 Fix issues with storage's freeze.
     #[tracing::instrument(skip_all)]
-    pub fn try_from_venv_freeze(root: ExpandedPackage, value: &VenvFreeze) -> QuackResult<Self> {
+    pub fn try_from_venv_freeze(root: WithVersion<FullIdentity>, value: &VenvFreeze) -> QuackResult<Self> {
         debug!(root = ?root, freeze = ?value);
         let mut expanded_pkgs_by_name = HashMap::new();
         for pkg_freeze in value.dependencies() {
-            let pkg = ExpandedPackage {
+            let pkg = WithVersion<FullIdentity> {
                 location: identity_to_expanded_loc(pkg_freeze.identity()),
                 version: if pkg_freeze.identity().origin().kind().is_registry() {
                     Some(pkg_freeze.version())
@@ -115,7 +115,7 @@ impl SolverFreeze {
 
 impl SolverFreeze {
     #[tracing::instrument(skip_all)]
-    pub fn empty_with_root(root: ExpandedPackage) -> QuackResult<Self> {
+    pub fn empty_with_root(root: WithVersion<FullIdentity>) -> QuackResult<Self> {
         debug!(?root);
         Ok(Self {
             main_pkg: root,
@@ -126,7 +126,7 @@ impl SolverFreeze {
     #[tracing::instrument(skip_all)]
     pub fn generate_storage_freeze(
         self,
-        manifests: &HashMap<ExpandedPackage, Box<Manifest>>,
+        manifests: &HashMap<WithVersion<FullIdentity>, Box<Manifest>>,
     ) -> QuackResult<VenvFreeze> {
         debug!(root = ?self.main_pkg, freeze = ?self.package_freezes);
         let mut pkg_freezes = vec![];
@@ -190,7 +190,7 @@ mod test {
     use crate::DuckContext;
     use crate::quackpack::core::full_identity::FullOrigin;
     use crate::quackpack::core::identity::{Identity, Origin};
-    use crate::quackpack::core::solver::types_common::ExpandedLocation;
+    use crate::quackpack::core::solver::types_common::FullIdentity;
     use crate::quackpack::core::{PackageLoader, parse_manifest};
     use crate::quackpack::util::to_url::ToUrl;
     use crate::util::path_ops_ext::PathOpsExt;
@@ -206,18 +206,18 @@ mod test {
 
     #[test]
     fn storage_to_solver_freeze() {
-        let loc_a = ExpandedLocation::Registry {
+        let loc_a = FullIdentity::Registry {
             url: "https://example.net".to_url().unwrap().into(),
             real_name: "a".into(),
         };
-        let loc_b = ExpandedLocation::Local {
+        let loc_b = FullIdentity::Local {
             absolute_path: PathBuf::from("/xdd").to_url().unwrap().into(),
         };
-        let pkg_a = ExpandedPackage {
+        let pkg_a = WithVersion<FullIdentity> {
             location: loc_a,
             version: Some(1.into()),
         };
-        let pkg_b = ExpandedPackage {
+        let pkg_b = WithVersion<FullIdentity> {
             location: loc_b,
             version: None,
         };
@@ -257,8 +257,8 @@ mod test {
                 ),
             ],
         );
-        let root_pkg = ExpandedPackage {
-            location: ExpandedLocation::Local {
+        let root_pkg = WithVersion<FullIdentity> {
+            location: FullIdentity::Local {
                 absolute_path: PathBuf::from("/").to_url().unwrap().into(),
             },
             version: None,
@@ -347,26 +347,26 @@ features:
         let manifest_root = parse_manifest(&path_root, &ctx).unwrap();
         let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
         let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
-        let exp_location_root = ExpandedLocation::Local {
+        let exp_location_root = FullIdentity::Local {
             absolute_path: PathBuf::from("/root_path").to_url().unwrap().into(),
         };
-        let exp_location_a = ExpandedLocation::Registry {
+        let exp_location_a = FullIdentity::Registry {
             url: "https://example.net".to_url().unwrap().into(),
             real_name: StrId::from("a"),
         };
-        let exp_location_b = ExpandedLocation::Local {
+        let exp_location_b = FullIdentity::Local {
             // cSpell:disable-next-line
             absolute_path: PathBuf::from("/sialalala").to_url().unwrap().into(),
         };
-        let exp_pkg_root = ExpandedPackage {
+        let exp_pkg_root = WithVersion<FullIdentity> {
             location: exp_location_root,
             version: None,
         };
-        let exp_pkg_a = ExpandedPackage {
+        let exp_pkg_a = WithVersion<FullIdentity> {
             location: exp_location_a,
             version: Some(1.into()),
         };
-        let exp_pkg_b = ExpandedPackage {
+        let exp_pkg_b = WithVersion<FullIdentity> {
             location: exp_location_b,
             version: None,
         };

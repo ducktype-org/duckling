@@ -1,11 +1,8 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
-use crate::quackpack::core::solver::types_common::{
-    ExpandedLocation, ExpandedPackage, InternedLocation, Location, Package,
-};
 use crate::quackpack::core::version::CompatibilityCheck;
-use crate::quackpack::core::{Dependency, Version};
+use crate::quackpack::core::{Dependency, Source, Version};
 use crate::quackpack::util::with_version::WithVersion;
 use crate::{QuackResult, QuackResultContext, StrId};
 
@@ -21,43 +18,30 @@ impl WithVersion<FullOrigin> {
 /// find all the packages satisfying the dependency.
 pub fn get_possible_realizations(
     dependency_description: &Dependency,
-    versions_for_location: &HashMap<ExpandedLocation, HashSet<Option<Version>>>,
-    location_resolver: &HashMap<InternedLocation, ExpandedLocation>,
-) -> QuackResult<Vec<ExpandedPackage>> {
+    versions_for_location: &HashMap<FullIdentity, HashSet<Version>>,
+    location_resolver: &HashMap<Source, FullOrigin>,
+) -> QuackResult<Vec<WithVersion<FullIdentity>>> {
+    let Some(origin) = location_resolver.get(dependency_description.source()) else {
+        return Ok(vec![]);
+    };
+    let identity = FullIdentity::new(dependency_description.name(), *origin);
     if dependency_description.is_pinned() {
         // For a pinned dependency only one package can be a realization.
         let version = dependency_description
             .versions()
             .first()
             .context_internal("Pinned dependency should have exactly one version specified")?;
-        let only_package = Package {
-            location: InternedLocation::new(Location::from(dependency_description)),
-            version: Some(*version),
-        }
-        .resolve(location_resolver);
-        Ok(only_package.iter().cloned().collect())
+        Ok(vec![WithVersion::new(identity, *version)])
     } else {
-        let Some(location) = location_resolver.get(&InternedLocation::new(Location::from(
-            dependency_description,
-        ))) else {
-            return Ok(vec![]);
-        };
         // Baseline versions are the versions specified in the manifest,
         // with which we want to check the compatibility of the existing packages.
-        let baseline_versions = if location.is_local() || location.is_git() {
-            vec![None]
-        } else {
-            dependency_description
+        let baseline_versions = dependency_description
                 .versions()
-                .iter()
-                .copied()
-                .map(Some)
-                .collect()
-        };
-        let Some(possible_versions) = versions_for_location.get(location) else {
+                .clone();
+        let Some(possible_versions) = versions_for_location.get(&identity) else {
             return Ok(vec![]);
         };
-        let good_versions: Vec<Option<Version>> = possible_versions
+        let good_versions: Vec<Version> = possible_versions
             .iter()
             .filter(|version| {
                 baseline_versions
@@ -68,10 +52,7 @@ pub fn get_possible_realizations(
             .collect();
         Ok(good_versions
             .into_iter()
-            .map(|version| ExpandedPackage {
-                location: *location,
-                version,
-            })
+            .map(|version| WithVersion::new(identity, version))
             .collect())
     }
 }
@@ -83,13 +64,12 @@ mod test {
 
     use tempfile::{TempDir, tempdir};
 
-    use crate::quackpack::core::solver::types_common::{
-        ExpandedLocation, ExpandedPackage, Location,
-    };
+    use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
     use crate::quackpack::core::solver::util::get_possible_realizations;
-    use crate::quackpack::core::{Version, parse_manifest};
+    use crate::quackpack::core::{Source, Version, parse_manifest};
     use crate::quackpack::util::to_url::ToUrl;
-    use crate::util::path_ops_ext::PathOpsExt;
+    use crate::quackpack::util::with_version::WithVersion;
+use crate::util::path_ops_ext::PathOpsExt;
     use crate::{DuckContext, StrId};
 
     fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {
@@ -122,35 +102,26 @@ dependencies:
             .dependencies()
             .get_by_name(StrId::new("b"))
             .unwrap();
-        let location_b = Location::Registry {
-            url: "http://localhost:9001".to_url().unwrap().into(),
-            real_name: StrId::from("b"),
-        }
-        .into();
-        let exp_location_b = ExpandedLocation::Registry {
-            url: "http://localhost:9001".to_url().unwrap().into(),
-            real_name: StrId::from("b"),
-        };
-        let location_resolver = HashMap::from([(location_b, exp_location_b)]);
+        let source_b = Source::for_registry("http://localhost:9001".to_url().unwrap());
+        let origin_b = FullOrigin::for_registry("http://localhost:9001".to_url().unwrap());
+        let location_resolver = HashMap::from([(source_b, origin_b)]);
+        let identity_b = FullIdentity::new("b".into(), origin_b);
         let versions_for_location = HashMap::from([(
-            exp_location_b,
+            identity_b,
             HashSet::from([
-                Some(Version::new(0, 0, 1)),
-                Some(Version::new(1, 0, 0)),
-                Some(Version::new(1, 0, 3)),
-                Some(Version::new(1, 0, 5)),
-                Some(Version::new(1, 3, 3)),
-                Some(Version::new(2, 0, 3)),
+                Version::new(0, 0, 1),
+                Version::new(1, 0, 0),
+                Version::new(1, 0, 3),
+                Version::new(1, 0, 5),
+                Version::new(1, 3, 3),
+                Version::new(2, 0, 3),
             ]),
         )]);
         let res = get_possible_realizations(dependency, &versions_for_location, &location_resolver)
             .unwrap();
         assert_eq!(
             res,
-            vec![ExpandedPackage {
-                location: exp_location_b,
-                version: Some(Version::new(1, 0, 3))
-            }]
+            vec![WithVersion::new(identity_b, Version::new(1, 0, 3))]
         );
     }
 
@@ -174,25 +145,19 @@ dependencies:
             .dependencies()
             .get_by_name(StrId::new("b"))
             .unwrap();
-        let location_b = Location::Registry {
-            url: "http://localhost:9001".to_url().unwrap().into(),
-            real_name: StrId::from("b"),
-        }
-        .into();
-        let exp_location_b = ExpandedLocation::Registry {
-            url: "http://localhost:9001".to_url().unwrap().into(),
-            real_name: StrId::from("b"),
-        };
-        let location_resolver = HashMap::from([(location_b, exp_location_b)]);
+        let source_b = Source::for_registry("http://localhost:9001".to_url().unwrap());
+        let origin_b = FullOrigin::for_registry("http://localhost:9001".to_url().unwrap());
+        let location_resolver = HashMap::from([(source_b, origin_b)]);
+        let identity_b = FullIdentity::new("b".into(), origin_b);
         let versions_for_location = HashMap::from([(
-            exp_location_b,
+            identity_b,
             HashSet::from([
-                Some(Version::new(0, 0, 1)),
-                Some(Version::new(1, 0, 0)),
-                Some(Version::new(1, 0, 3)),
-                Some(Version::new(1, 0, 5)),
-                Some(Version::new(1, 3, 3)),
-                Some(Version::new(2, 0, 3)),
+                Version::new(0, 0, 1),
+                Version::new(1, 0, 0),
+                Version::new(1, 0, 3),
+                Version::new(1, 0, 5),
+                Version::new(1, 3, 3),
+                Version::new(2, 0, 3),
             ]),
         )]);
         let res = get_possible_realizations(dependency, &versions_for_location, &location_resolver)
@@ -200,18 +165,9 @@ dependencies:
         assert_eq!(
             HashSet::from_iter(res),
             HashSet::from([
-                ExpandedPackage {
-                    location: exp_location_b,
-                    version: Some(Version::new(1, 0, 3))
-                },
-                ExpandedPackage {
-                    location: exp_location_b,
-                    version: Some(Version::new(1, 0, 5))
-                },
-                ExpandedPackage {
-                    location: exp_location_b,
-                    version: Some(Version::new(1, 3, 3))
-                }
+                WithVersion::new(identity_b, Version::new(1, 0, 3)),
+                WithVersion::new(identity_b, Version::new(1, 0, 5)),
+                WithVersion::new(identity_b, Version::new(1, 3, 3)),
             ])
         );
     }
