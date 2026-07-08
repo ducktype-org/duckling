@@ -44,6 +44,7 @@ public:
 		TESTER_ADD_TEST(multipleResultsFails);
 		TESTER_ADD_TEST(alignedStructByValue);
 		TESTER_ADD_TEST(packedStructInFfiFails);
+		TESTER_ADD_TEST(packedStructWithMatchingLayoutStillFails);
 		TESTER_ADD_TEST(packedStructSize);
 		TESTER_ADD_TEST(alignedStructTailPadding);
 		TESTER_ADD_TEST(duplicateFfiFunctionFails);
@@ -557,7 +558,7 @@ private:
 		);
 	}
 
-	// A packed struct drops the padding the C ABI inserts, so it must be rejected in FFI
+	// libffi can only describe the C ABI layout, so packed structs are rejected in FFI
 	// signatures.
 	void packedStructInFfiFails() {
 		expectLoadError(
@@ -565,6 +566,20 @@ private:
 			ffiObjectHeader()
 				+ "type data: Mix { a: i8, b: i64 } packed\n"
 				  "ffi function ffi_mix_sum { Mix } -> { i64 };\n",
+			{ "packed", "cannot be used in an FFI function signature" }
+		);
+	}
+
+	// Rejected even when the packed layout coincides with the C ABI layout (all fields naturally
+	// aligned) - such a struct is identical to its non-packed version, so `packed` is dropped
+	// rather than special-cased.
+	void packedStructWithMatchingLayoutStillFails() {
+		expectLoadError(
+			"packed_struct_matching_ffi",
+			ffiObjectHeader()
+				+ "type primitive: f32 4\n"
+				  "type data: FPair { a: f32, b: f32 } packed assert_size 8\n"
+				  "ffi function ffi_fpair_swap { FPair } -> { FPair };\n",
 			{ "packed", "cannot be used in an FFI function signature" }
 		);
 	}
