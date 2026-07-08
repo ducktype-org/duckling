@@ -1,5 +1,6 @@
 #pragma once
 
+#include <base/comptime/is_complete.hpp>
 #include <base/comptime/type_traits.hpp>
 #include <base/misc/noexcept.hpp>
 #include <base/pointers/box.hpp>
@@ -16,18 +17,20 @@ namespace base {
 	namespace internal {
 
 		/**
-		 * @brief. Stores the number of owners and the del function.
-		 * Base class is used, so we can convert SharedBoxes to compatible types
-		 * like SharedBox<const u32> = SharedBox(u32), otherwise this will not work, cos
-		 * The ControlBlock<u32> is not convertible to ControlBlock<const u32>
+		 * @brief Stores the number of owners and the deleter function.
+		 *
+		 * The control block derives from this base type so that `SharedBox<U>` can be
+		 * converted to `SharedBox<T>` when the pointer types are compatible (for
+		 * example `U` -> `const U`). Note that `ControlBlock<Derived>` is not
+		 * convertible to `ControlBlock<Base>`, so storing the control block via a
+		 * `BaseControlBlock` pointer enables the required conversions of
+		 * `SharedBox` instances.
 		 */
 		struct BaseControlBlock {
 			std::atomic<u64> n_owners                = 1;
 			virtual void     del(void* ptr) noexcept = 0;
 			virtual ~BaseControlBlock()              = default;
 		};
-
-		template<class T, class Deleter = base::DefaultBoxPtrDeleter<T>>
 
 		/**
 		 * @brief Control block that stores the owner count and holds a deleter for T.
@@ -42,7 +45,9 @@ namespace base {
 		 * @tparam T The pointed-to type.
 		 * @tparam Deleter Deleter type used to destroy `T` (must provide `del(T*)`).
 		 */
+		template<class T, class Deleter = base::DefaultBoxPtrDeleter<T>>
 		struct ControlBlock final: public BaseControlBlock {
+			static_assert(IS_COMPLETE_V<T>, "Type T must be complete");
 			static_assert(
 				IsPlainType<Deleter>,
 				"Deleter must be a plain type (non reference, non pointer). This requirement is "
