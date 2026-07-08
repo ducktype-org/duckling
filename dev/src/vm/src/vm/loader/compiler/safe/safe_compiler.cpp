@@ -397,5 +397,4 @@ namespace vm::loader::compiler::safe {
 			.instruction_index = usize(candidate - mapping.begin()),
 		};
 	}
-
 }

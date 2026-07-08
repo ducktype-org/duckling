@@ -262,15 +262,16 @@ class FunctionValidator {
 	template<CallingInstruction CallInstructionType>
 	void validateCallAndPop(LocalStack& local_stack, const CallInstructionType& instr) {
 		// Used for errors.
-		auto                generic_arg = opargs::OpCodeArg{ instr.function };
-		CRef<FuncSignature> signature   = [&] -> CRef<FuncSignature> {
-            if constexpr (std::is_same_v<opargs::BuiltinFunctionName, decltype(instr.function)>)
-                return *builtins::getBuiltinFunctionSignature(instr.function.function_name);
-            if constexpr (std::is_same_v<opargs::ExtCFunctionName, decltype(instr.function)>)
-                return &ext_c_signatures.at(instr.function.function_name)->signature;
-            if constexpr (std::is_same_v<opargs::FFIFunctionName, decltype(instr.function)>)
-                return &ffi_signatures.at(instr.function.function_name)->signature;
-            return &signatures.at(instr.function.function_name);
+		auto generic_arg = opargs::OpCodeArg{ instr.function };
+
+		CRef<FuncSignature> signature = [&] -> CRef<FuncSignature> {
+			if constexpr (std::is_same_v<opargs::BuiltinFunctionName, decltype(instr.function)>)
+				return *builtins::getBuiltinFunctionSignature(instr.function.function_name);
+			if constexpr (std::is_same_v<opargs::ExtCFunctionName, decltype(instr.function)>)
+				return &ext_c_signatures.at(instr.function.function_name)->signature;
+			if constexpr (std::is_same_v<opargs::FFIFunctionName, decltype(instr.function)>)
+				return &ffi_signatures.at(instr.function.function_name)->signature;
+			return &signatures.at(instr.function.function_name);
 		}();
 
 		auto& params  = signature->parameters;
