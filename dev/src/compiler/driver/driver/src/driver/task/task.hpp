@@ -159,8 +159,8 @@ namespace compiler::driver {
 	 * @brief Construct linker options for a given task, based on the task's build target and the
 	 * standard library options.
 	 */
-	linker::LinkingOptions constructLinkerOptions(
-		const linker::LinkingOptions&       local_options,
-		const options_types::StdLibOptions& stdlib_options
+	linker::LinkingOptions constructNativeLinkerOptions(
+		const options_types::LinkingOptions& linking_options,
+		const options_types::StdLibOptions&  stdlib_options
 	);
 }
