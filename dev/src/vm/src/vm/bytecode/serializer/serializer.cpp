@@ -37,6 +37,8 @@ namespace vm::code {
 
 	std::string toString(opargs::ExtCFunctionName arg) { return arg.function_name.str(); }
 
+	std::string toString(opargs::FFIFunctionName arg) { return arg.function_name.str(); }
+
 	std::string toString(opargs::MethodName arg) { return arg.method_name.str(); }
 
 	std::string toString(opargs::Label arg) { return arg.label_name.str(); }
