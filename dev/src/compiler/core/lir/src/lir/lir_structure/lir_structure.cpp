@@ -416,6 +416,19 @@ namespace compiler::lir {
 		lir_functions = std::move(result_functions);
 	}
 
+	base::Optional<BuiltinFunctionKind> getBuiltinKindFromHOUT(helios::BuiltinKind kind) {
+		switch (kind) {
+		case helios::BuiltinKind::DvmCharAlloc:
+			return BuiltinFunctionKind::DvmCharAlloc;
+		case helios::BuiltinKind::DvmCharRealloc:
+			return BuiltinFunctionKind::DvmCharRealloc;
+		case helios::BuiltinKind::DvmCharFree:
+			return BuiltinFunctionKind::DvmCharFree;
+		default:
+			return {};
+		}
+	}
+
 	LIRLocalSpecialKind specialKindFromMIR(const mir::MIRLocal& mir_local) {
 		if (mir_local.lifetime_flags.contains(mir::LifetimeFlag::ReturnTmpValue))
 			return LIRLocalSpecialKind::ReturnValue;
