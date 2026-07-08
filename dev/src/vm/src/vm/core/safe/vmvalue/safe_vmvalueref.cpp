@@ -7,9 +7,9 @@
 SharedBox<vm::IVmValueRef> vm::SafeVmValueRef::makeShared(
 	SafeVMProcess& process, TypeCRef type, Pointer pointed_data
 ) {
-	// The concrete `SharedBox<SafeVmValueRef>` converts to the interface-typed box while keeping a
-	// control block that deletes as `SafeVmValueRef`.
-	return SharedBox<SafeVmValueRef>::fromPointer(new SafeVmValueRef(process, type, pointed_data));
+	// Build a concrete `SharedBox<SafeVmValueRef>` (its control block deletes as `SafeVmValueRef`)
+	// and let it convert to the interface-typed box on return.
+	return makeSharedBox<SafeVmValueRef>(process, type, pointed_data);
 }
 
 vm::SafeTableElementAccess::SafeTableElementAccess(
@@ -30,9 +30,7 @@ namespace vm {
 		interpreted_data_variant::Table makeInterpretedTable(
 			SafeVMProcess& process, TypeCRef element_type, Pointer begin, usize size
 		) {
-			return { .elements = SharedBox<SafeTableElementAccess>::fromPointer(
-						 new SafeTableElementAccess(process, element_type, begin)
-					 ),
+			return { .elements = makeSharedBox<SafeTableElementAccess>(process, element_type, begin),
 				     .size = size };
 		}
 	}
