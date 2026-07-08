@@ -17,15 +17,6 @@
 namespace compiler::repl {
 	namespace {
 		/**
-		 * @brief Return whether a symbol kind can be printed with function-style signature details.
-		 */
-		bool isFunctionLike(helios::SymbolKind kind) {
-			return kind == helios::SymbolKind::Function
-			    || kind == helios::SymbolKind::FunctionDeclaration
-			    || kind == helios::SymbolKind::Method;
-		}
-
-		/**
 		 * @brief Convert a compiler symbol kind into the short label used in REPL output.
 		 */
 		std::string symbolKindLabel(helios::SymbolKind kind) {
