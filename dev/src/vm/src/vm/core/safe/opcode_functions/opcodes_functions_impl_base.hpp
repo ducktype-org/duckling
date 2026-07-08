@@ -51,7 +51,6 @@
 #include <vm/utils/interpret.hpp>
 
 #include <cmath>
-#include <iostream>
 #include <limits>
 
 // jitable_interface.py depends on the instructions exact, fully-qualified names
