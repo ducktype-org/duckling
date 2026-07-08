@@ -431,8 +431,8 @@ void valid_type::ValidType::finalize(ValidTypeMap& types) {
 			// Finalize the fields and calculate their offsets. Non-packed structures follow the C
 			// layout rules: each field is aligned to its type's alignment, and the total size is
 			// rounded up to the structure's alignment (the maximum of the field alignments).
-			// @note This algorithm is mirrored in `vm::Type::finalize` (the safe runtime computes
-			// its own offsets with 16-byte pointers); keep the two in sync.
+			// @note This is the single source of truth for structure layout; the runtimes consume
+			// these offsets (resolved for their pointer width) instead of computing their own.
 			valid_type::TypeSize offset(Bytes(0), 0);
 			valid_type::TypeSize struct_alignment(Bytes(1), Bytes(1));
 			for (auto& field: new_structure.fields) {

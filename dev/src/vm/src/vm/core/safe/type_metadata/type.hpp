@@ -11,6 +11,7 @@
 
 #include <json/json.hpp>
 
+#include <tuple>
 #include <variant>
 
 namespace vm {
@@ -39,7 +40,6 @@ namespace vm {
 
 		base::StrID name;
 		TypeSize    size      = TypeSize(-1);
-		Bytes       alignment = Bytes(1);
 		Kind        kind_type = Kind::None;
 		TypeID      id{};
 		bool        am_i_instantiable = true;
@@ -85,10 +85,15 @@ namespace vm {
 		void definePointer(TypeCRef inner);
 		void defineFixedSizeTable(TypeRef inner, u64 table_size);
 		void defineDynamicTable(TypeRef inner);
+		/**
+		 * @brief Defines a data type from a validator-computed layout. The validator
+		 * (`valid_type::ValidType`) is the source of truth for field offsets and the total size;
+		 * the runtime does not compute any layout itself.
+		 */
 		void defineData(
-			const std::vector<std::pair<base::StrID, TypeRef>>& fields_definitions,
-			bool                                                packed,
-			base::Optional<InheritanceMetadata>                 inheritance_metadata
+			const std::vector<std::tuple<base::StrID, TypeRef, Offset>>& fields_definitions,
+			TypeSize                                                     data_size,
+			base::Optional<InheritanceMetadata>                          inheritance_metadata
 		);
 		void defineVariant(Bytes type_tag_size, const std::vector<TypeRef>& variants_definitions);
 		void defineFunction(std::vector<TypeCRef> parameters, std::vector<TypeCRef> result);
@@ -112,18 +117,6 @@ namespace vm {
 		TypeSize getSize() const {
 			CORE_ASSERT(size != TypeSize(-1), "getSize called before type finalization");
 			return size;
-		}
-
-		/**
-		 * @brief Alignment requirement of this type. Non-packed data types align each field to
-		 * the field type's alignment and round their total size up to the type's alignment (the C
-		 * layout rules). VM-only kinds (variants, dynamic tables) use alignment 1.
-		 * @note The layout algorithm is mirrored in `valid_type::ValidType::finalize`; keep the
-		 * two in sync.
-		 */
-		[[nodiscard]]
-		Bytes getAlignment() const {
-			return alignment;
 		}
 
 		template<class T>
