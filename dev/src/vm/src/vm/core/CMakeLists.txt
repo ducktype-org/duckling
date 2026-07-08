@@ -10,6 +10,7 @@ add_files(
 	process/proc_io.cpp
 	thread/ivmthread.cpp
 	builtin_functions.cpp
+	native/dynamic_library.cpp
 	safe/type_metadata/type_metadata.cpp
 	safe/type_metadata/type.cpp
 	safe/memory/initialization_from_const.cpp

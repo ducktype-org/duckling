@@ -27,6 +27,7 @@
 #include <string_id/string_id.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
+#include <vm/bytecode/validator/valid_type/valid_type.hpp>
 #include <vm/core/safe/safe_vmthread.hpp>
 
 namespace vm {
@@ -66,8 +67,54 @@ namespace vm::builtins {
 		WaitCV,
 		NotifyCV,
 		NotifyAllCV,
-		DestroyCV
+		DestroyCV,
+		CptrRead,
+		CptrWrite
 	};
+
+	/**
+	 * @brief Placeholder parameter type used for a builtin argument whose type is checked by the
+	 * builtin's own `arg_verifier` rather than by exact name match. It only contributes to the
+	 * parameter count; it is never resolved as a real type.
+	 */
+	inline constexpr std::string_view VERIFIER_CHECKED_PARAM = "$checked";
+
+	/**
+	 * @brief Verifies the argument types of a builtin call that cannot be expressed as a fixed
+	 * list of type names (e.g. a pointer to any type). Returns an error message if the types are
+	 * invalid, or an empty optional if they are acceptable.
+	 * @param arg_types The concrete types of the arguments on the stack, in call order.
+	 */
+	using BuiltinArgVerifier = base::Optional<std::string> (*)(
+		const std::vector<base::CRef<code::valid_type::ValidType>>& arg_types
+	);
+
+	/**
+	 * @brief Full description of a builtin function: its bytecode-visible name, its signature,
+	 * and an optional custom argument verifier.
+	 */
+	struct BuiltinFunction {
+		base::StrID         name;
+		code::FuncSignature signature;
+		/// When set, validates the whole argument list instead of exact per-parameter type-name
+		/// matching. Parameters it covers use `VERIFIER_CHECKED_PARAM` as a placeholder.
+		base::Optional<BuiltinArgVerifier> arg_verifier = {};
+
+		BuiltinFunction(
+			base::StrID                        name,
+			code::FuncSignature                signature,
+			base::Optional<BuiltinArgVerifier> arg_verifier = {}
+		):
+			  name(name),
+			  signature(std::move(signature)),
+			  arg_verifier(arg_verifier) {}
+	};
+
+	/**
+	 * @brief Returns the argument verifier for a builtin, or an empty optional if the name is not
+	 * a builtin or its arguments are checked by ordinary exact type-name matching.
+	 */
+	base::Optional<BuiltinArgVerifier> getBuiltinArgVerifier(base::StrID name);
 
 	/**
 	 * @brief Class for FunctionHandlers.
@@ -97,6 +144,24 @@ namespace vm::builtins {
 		static void builtinNotifyCV(SafeVMThread& process, u64 cv_id);
 		static void builtinNotifyAllCV(SafeVMThread& process, u64 cv_id);
 		static void builtinDestroyCV(SafeVMThread& process, u64 cv_id);
+
+		/**
+		 * @brief Copies `size` bytes out of the raw C memory addressed by `src` (a `cptr`) to the
+		 * location pointed to by the VM pointer `dst`. Used to read FFI results back into the VM.
+		 * @warning `src` must address at least `size` bytes of valid, readable memory.
+		 * @note The copy region must fit within `dst`'s block, otherwise a runtime exception is
+		 * raised.
+		 */
+		static void builtinCptrRead(SafeVMThread& thread, u64 src, Pointer dst, u64 size);
+
+		/**
+		 * @brief Copies `size` bytes from the location pointed to by the VM pointer `src` into the
+		 * raw C memory addressed by `dst` (a `cptr`). Used to hand VM data to FFI functions.
+		 * @warning `dst` must address at least `size` bytes of valid, writable memory.
+		 * @note The copy region must fit within `src`'s block, otherwise a runtime exception is
+		 * raised.
+		 */
+		static void builtinCptrWrite(SafeVMThread& thread, u64 dst, Pointer src, u64 size);
 	};
 
 	/**
@@ -111,16 +176,15 @@ namespace vm::builtins {
 	);
 
 	/**
-	 * @brief Returns the map of builtin functions types with lazy initialization.
+	 * @brief Returns the map of builtin functions with lazy initialization.
 	 * @note Function types here should match HELIOS types.
 	 * The types used for the parameters and the return value are defined in the @file
 	 * bytecode/builtin_types.hpp file (like "i64", "i32").
 	 */
-	auto getBuiltinFunctions()
-		-> CRef<std::unordered_map<BuiltinFunctionID, std::pair<base::StrID, code::FuncSignature>>>;
+	auto getBuiltinFunctions() -> CRef<std::unordered_map<BuiltinFunctionID, BuiltinFunction>>;
 
 	inline CRef<code::FuncSignature> getBuiltinFunctionSignature(BuiltinFunctionID id) {
-		return &getBuiltinFunctions()->at(id).second;
+		return &getBuiltinFunctions()->at(id).signature;
 	}
 
 	base::Optional<CRef<code::FuncSignature>> getBuiltinFunctionSignature(base::StrID name);

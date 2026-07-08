@@ -11,6 +11,10 @@ params:
   symbol_name:
     description: "The name of the duplicated symbol/function."
     component_type: "text"
+  code:
+    description: "The code snippet where the duplicated definition occurred."
+  code_location:
+    description: "The location of the code snippet."
   pointer_message_content:
     description: "Text under the error indicator arrows."
     component_type: "text"
@@ -18,7 +22,13 @@ params:
 header_message:
   - "Symbol '"
   - param: "symbol_name"
-  - "' is already defined." 
+  - "' is already defined."
+
+description:
+  - codeblock:
+      param: "code"
+    location:
+      param: "code_location"
 
 pointer_messages:
   cause:

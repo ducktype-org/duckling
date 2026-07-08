@@ -2,6 +2,7 @@
 
 #include <frontend/pst_parser/elements/hierarchy/actions/all_actions.hpp>
 #include <frontend/pst_parser/elements/hierarchy/actions/return.hpp>
+#include <frontend/pst_parser/elements/hierarchy/class_elements/copy_constructor.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/method.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
@@ -10,6 +11,7 @@
 #include <frontend/pst_parser/pst_visitor.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/hout/hout.hpp>
+#include <helios/symbols/query_class_of_member.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/tsh/symbol_type.hpp>
 #include <helios/tsh/type_interface.hpp>
@@ -17,6 +19,7 @@
 #include <helios_private/errors/dia_interactive_elements.hpp>
 #include <helios_private/errors/errors.hpp>
 #include <helios_private/hout_creation/definition_generation/class_constructors.hpp>
+#include <helios_private/hout_creation/definition_generation/copy_constructors.hpp>
 #include <helios_private/hout_creation/definition_generation/default_constructors.hpp>
 #include <helios_private/hout_creation/definition_generation/default_destructors.hpp>
 #include <helios_private/hout_creation/definition_generation/length_methods.hpp>
@@ -124,6 +127,58 @@ namespace compiler::helios {
 
 				this->out.emplace(HOUTFunction(code::pstOrigin(stmt), &decl, output_body));
 			}
+
+			void visitCopyConstructor(pst::Access<pst::CopyConstructor> stmt) final {
+				// declaration:
+				auto& decl = ctx.query<QueryDeclOfFun>(original_symbol)->valueOrThrow();
+				validateConstructorSource(stmt, decl);
+
+				// body:
+				auto output_body = processBody(decl, stmt->getBody());
+				this->out.emplace(HOUTFunction(code::pstOrigin(stmt), &decl, output_body));
+			}
+
+			// Validates a user-defined copy constructor's source parameter. The copy
+			// constructor must declare exactly one parameter, which must be a constant reference
+			// to its own class.
+			template<class ConstructorElement>
+			void validateConstructorSource(
+				pst::Access<ConstructorElement> stmt, const HOUTFunctionDeclaration& decl
+			) {
+				const auto class_type
+					= ctx.query<QueryClassOfMember>(original_symbol)->valueOrThrow();
+
+				const auto params_source = stmt->getParams().unlock(ctx)->getStablePosition();
+
+				if (decl.parameters.size() != 1) {
+					ctx.logInt(makeBox<dia_int::PlaceholderError>(
+						"A copy constructor must declare exactly one parameter: a reference to "
+						"the object being copied.",
+						params_source
+					));
+					query::throwFailed();
+				}
+
+				const auto other_type   = decl.parameters.at(0).type;
+				const bool is_reference = other_type.getRefKind() == tsh::ReferenceKind::Ref;
+				const bool is_const     = other_type.getMutability() == tsh::Mutability::Immutable;
+				const bool is_matching_class
+					= other_type.getType().getKind() == tsh::Kind::Class
+				   && other_type.getType().as<tsh::ClassAbstractType>().getSymbol()
+				          == class_type.getSymbol();
+				if (!is_reference || !is_matching_class || !is_const) {
+					ctx.logInt(makeBox<dia_int::PlaceholderError>(
+						base::strConcat(
+							"A copy constructor's parameter must be a constant reference to "
+							"its own class `",
+							name(class_type.getSymbol()),
+							"`."
+						),
+						params_source
+					));
+					query::throwFailed();
+				}
+			}
 		};
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
@@ -133,8 +188,9 @@ namespace compiler::helios {
 			variant_match(sym_ref->other) {
 				variant_case(PstImplementedSemantics, data) {
 					CORE_ASSERT(
-						kind(key) == SymbolKind::Function or kind(key) == SymbolKind::Method,
-						"Function creation called on non-function and non-method symbol"
+						isFunctionLike(kind(key)),
+						"Function creation called on non-function, non-method and non-constructor "
+						"symbol"
 					);
 					HOUTFunctionMaker func_maker(ctx, key);
 					stmt(ctx, key).value()->acceptVisitor(func_maker);
@@ -177,9 +233,18 @@ namespace compiler::helios {
 									ctor.type.as<tsh::StaticArrayAbstractType>()
 								)
 							    ->valueOrThrow();
+						case tsh::Kind::Tuple:
+							return ctx
+							    .query<defgen::QueryDefaultTupleConstructor>(
+									ctor.type.as<tsh::TupleAbstractType>()
+								)
+							    ->valueOrThrow();
 						default:
 							CORE_PANIC("Unhandled default constructor type.");
 						}
+					case defgen::Constructor::Kind::Copy:
+						return ctx.query<defgen::QueryDefaultCopyConstructor>(ctor.type)
+						    ->valueOrThrow();
 					}
 					CORE_UNREACHABLE();
 				}
