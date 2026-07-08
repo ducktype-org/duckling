@@ -230,6 +230,40 @@ namespace vm::loader::compiler::safe::detail {
 				// A C pointer is a plain 8-byte value in every mode.
 				addLow<Op_mov_p64_p64>(i.dst, i.src);
 			}
+			instr_case(high::Op_cptrLoad_pany_pcpt, i) {
+				// The verifier guarantees the pointee exists and dst is exactly of its type,
+				// so the byte count resolves at lowering time.
+				auto pointee = getPlaceType(i.src_ptr)
+				                   ->get<vm::kind::CPointer>()
+				                   .expect("cptrLoad source must be a cpointer")
+				                   ->inner_type.expect("cptrLoad source must have a pointee");
+				addLow<Op_cptrLoad_bany_p64>(i.dst, i.src_ptr);
+				addLow<Op_ext_imm>(vm::opargs::Immediate{ pointee->getSize().asInt() });
+			}
+			instr_case(high::Op_cptrStore_pcpt_pany, i) {
+				auto pointee = getPlaceType(i.dst_ptr)
+				                   ->get<vm::kind::CPointer>()
+				                   .expect("cptrStore destination must be a cpointer")
+				                   ->inner_type.expect("cptrStore destination must have a pointee");
+				addLow<Op_cptrStore_p64_bany>(i.dst_ptr, i.src);
+				addLow<Op_ext_imm>(vm::opargs::Immediate{ pointee->getSize().asInt() });
+			}
+			instr_case(high::Op_cptrRead_pptr_pcpt_p64, i) {
+				addLow<Op_cptrRead_pptr_p64>(i.dst_ptr, i.src_ptr);
+				addLow<Op_ext_p64>(i.size);
+			}
+			instr_case(high::Op_cptrWrite_pcpt_pptr_p64, i) {
+				addLow<Op_cptrWrite_p64_pptr>(i.dst_ptr, i.src_ptr);
+				addLow<Op_ext_p64>(i.size);
+			}
+			instr_case(high::Op_cptrCast_pcpt_pcpt, i) {
+				// A reinterpreting cast is a plain 8-byte move.
+				addLow<Op_mov_p64_p64>(i.dst, i.src);
+			}
+			instr_case(high::Op_cptrAddOffset_pcpt_pcpt_p64, i) {
+				addLow<Op_cptrAddOffset_p64_p64>(i.dst, i.src);
+				addLow<Op_ext_p64>(i.offset);
+			}
 			instr_case(high::Op_mov_pste_pste, i) { addLow<Op_mov_bste_bste>(i.dst, i.src); }
 			instr_case(high::Op_mov_pfst_pfst, i) { addLow<Op_mov_bfst_bfst>(i.dst, i.src); }
 			instr_case(high::Op_add_p64_p64, i) { addLow<Op_add_p64_p64>(i.dst, i.src); }

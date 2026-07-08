@@ -280,26 +280,11 @@ class FunctionValidator {
 		if (params.size() + results.size() > local_stack.size())
 			throw InvalidFunctionCallArgumentsError(generic_arg);
 
-		// Some builtins verify their argument types with a custom callback instead of exact
-		// name matching (e.g. a pointer to any type). When present, per-parameter names are
-		// placeholders and the callback validates the whole argument list.
-		base::Optional<builtins::BuiltinArgVerifier> verifier = {};
-		if constexpr (std::is_same_v<opargs::BuiltinFunctionName, decltype(instr.function)>)
-			verifier = builtins::getBuiltinArgVerifier(instr.function.function_name);
-
 		using namespace std::views;
-		std::vector<CRef<valid_type::ValidType>> arg_types;
 		for (auto param: params | reverse) {
-			arg_types.push_back(local_stack.back().type);
-			if (!verifier.has_value() && local_stack.back().type->getName() != param.str)
+			if (local_stack.back().type->getName() != param.str)
 				throw InvalidFunctionCallArgumentsError(generic_arg);
 			local_stack.pop(instr);
-		}
-
-		if (verifier.has_value()) {
-			std::ranges::reverse(arg_types);  // restore call order
-			if (verifier.value()(arg_types).has_value())
-				throw InvalidFunctionCallArgumentsError(generic_arg);
 		}
 
 		for (auto [idx, reslt]: enumerate(results | reverse))
@@ -699,8 +684,39 @@ class FunctionValidator {
 			instr_case_novalue(Op_mov_popq_popq) {}
 
 			instr_case(Op_mov_pcpt_pcpt, instr) {
-				// Strict: no implicit pointee change on copy. Reinterpreting casts will get an
-				// explicit instruction.
+				// Strict: no implicit pointee change on copy; reinterpretation goes through the
+				// explicit `cptrCast_pcpt_pcpt`.
+				auto src_type = getPlaceType(instr.src, current_stack)->getName();
+				auto dst_type = getPlaceType(instr.dst, current_stack)->getName();
+				if (src_type != dst_type) throw CPointerTypeMismatchError(instr);
+			}
+
+			instr_case(Op_cptrLoad_pany_pcpt, instr) {
+				const auto cpointer = getPlaceType(instr.src_ptr, current_stack)
+				                          ->getKindAs<valid_type::finalized::CPointer>();
+				// Dereferencing needs a known pointee whose VM layout matches the native one.
+				if (!cpointer->inner.has_value()
+				    || !types_ctx.at(*cpointer->inner)->isFFICompliant())
+					throw CPtrNotDereferenceableError(instr);
+				if (getPlaceType(instr.dst, current_stack)->getID() != *cpointer->inner)
+					throw CPtrPointeeMismatchError(instr);
+			}
+			instr_case(Op_cptrStore_pcpt_pany, instr) {
+				const auto cpointer = getPlaceType(instr.dst_ptr, current_stack)
+				                          ->getKindAs<valid_type::finalized::CPointer>();
+				if (!cpointer->inner.has_value()
+				    || !types_ctx.at(*cpointer->inner)->isFFICompliant())
+					throw CPtrNotDereferenceableError(instr);
+				if (getPlaceType(instr.src, current_stack)->getID() != *cpointer->inner)
+					throw CPtrPointeeMismatchError(instr);
+			}
+			// The raw byte copies work through any cpointer (the VM side is bounds-checked at
+			// runtime), and a cast converts any cpointer to any other - the generic argument
+			// validation already pins all operand kinds.
+			instr_case_novalue(Op_cptrRead_pptr_pcpt_p64) {}
+			instr_case_novalue(Op_cptrWrite_pcpt_pptr_p64) {}
+			instr_case_novalue(Op_cptrCast_pcpt_pcpt) {}
+			instr_case(Op_cptrAddOffset_pcpt_pcpt_p64, instr) {
 				auto src_type = getPlaceType(instr.src, current_stack)->getName();
 				auto dst_type = getPlaceType(instr.dst, current_stack)->getName();
 				if (src_type != dst_type) throw CPointerTypeMismatchError(instr);

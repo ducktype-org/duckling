@@ -32,10 +32,17 @@ public:
 		TESTER_ADD_TEST(addPrimitives);
 		TESTER_ADD_TEST(voidAndStateReadback);
 		TESTER_ADD_TEST(smallIntReturnWidening);
-		TESTER_ADD_TEST(cptrCopyBuiltins);
+		TESTER_ADD_TEST(cptrRawReadWrite);
 		TESTER_ADD_TEST(cptrStructField);
 		TESTER_ADD_TEST(cptrCopyIntoStructField);
 		TESTER_ADD_TEST(cptrCopySizeTooLargeFails);
+		TESTER_ADD_TEST(cptrTypedLoadStoreMallocWorkflow);
+		TESTER_ADD_TEST(cptrAddOffsetArrayWalk);
+		TESTER_ADD_TEST(cptrLoadThroughVoidCptrFails);
+		TESTER_ADD_TEST(cptrLoadPointeeMismatchFails);
+		TESTER_ADD_TEST(cptrLoadPackedPointeeFails);
+		TESTER_ADD_TEST(cptrAddOffsetAcrossTypesFails);
+		TESTER_ADD_TEST(cptrCopyBuiltinsRemoved);
 		TESTER_ADD_TEST(floatArgsAndReturn);
 		TESTER_ADD_TEST(doubleArgsAndReturn);
 		TESTER_ADD_TEST(mixedIntFloatArgs);
@@ -163,9 +170,10 @@ private:
 		);
 	}
 
-	void cptrCopyBuiltins() {
+	// Raw byte copies through a `void*`-like cpointer, via the cptrWrite/cptrRead instructions.
+	void cptrRawReadWrite() {
 		runProgram(
-			"cptr_copy",
+			"cptr_raw_copy",
 			ffiObjectHeader()
 				+ "ffi function ffi_alloc8 { } -> { cptr };\n"
 				  "ffi function ffi_free8 { cptr } -> { };\n"
@@ -176,23 +184,13 @@ private:
 				  "    mov_p64_imm v, 555;\n"
 				  "    init_pany_type vp, ptr_i64;\n"
 				  "    ref_pptr_pany vp, v;\n"
-				  "    init_pany_type buf_w, cptr;\n"
-				  "    mov_pcpt_pcpt buf_w, buf;\n"
-				  "    init_pany_type vp2, ptr_i64;\n"
-				  "    mov_pptr_pptr vp2, vp;\n"
-				  "    init_pany_type sz_w, i64;\n"
-				  "    mov_p64_imm sz_w, 8;\n"
-				  "    call_builtinfunc builtin_cptr_write_pptr;\n"
+				  "    init_pany_type sz, i64;\n"
+				  "    mov_p64_imm sz, 8;\n"
+				  "    cptrWrite_pcpt_pptr_p64 buf, vp, sz;\n"
 				  "    init_pany_type out, i64;\n"
 				  "    init_pany_type op, ptr_i64;\n"
 				  "    ref_pptr_pany op, out;\n"
-				  "    init_pany_type buf_r, cptr;\n"
-				  "    mov_pcpt_pcpt buf_r, buf;\n"
-				  "    init_pany_type op2, ptr_i64;\n"
-				  "    mov_pptr_pptr op2, op;\n"
-				  "    init_pany_type sz_r, i64;\n"
-				  "    mov_p64_imm sz_r, 8;\n"
-				  "    call_builtinfunc builtin_cptr_read_pptr;\n"
+				  "    cptrRead_pptr_pcpt_p64 op, buf, sz;\n"
 				  "    output_p64 out;\n"
 				  "    init_pany_type buf_f, cptr;\n"
 				  "    mov_pcpt_pcpt buf_f, buf;\n"
@@ -261,13 +259,9 @@ private:
 				  "    init_pany_type s, Pair;\n"
 				  "    init_pany_type bp, ptr_i64;\n"
 				  "    structLea_pptr_pste_field bp, s, Pair.b;\n"
-				  "    init_pany_type buf_r, cptr;\n"
-				  "    mov_pcpt_pcpt buf_r, buf;\n"
-				  "    init_pany_type bp2, ptr_i64;\n"
-				  "    mov_pptr_pptr bp2, bp;\n"
 				  "    init_pany_type sz, i64;\n"
 				  "    mov_p64_imm sz, 8;\n"
-				  "    call_builtinfunc builtin_cptr_read_pptr;\n"
+				  "    cptrRead_pptr_pcpt_p64 bp, buf, sz;\n"
 				  "    init_pany_type out, i64;\n"
 				  "    structLoad_pany_pste_field out, s, Pair.b;\n"
 				  "    output_p64 out;\n"
@@ -295,13 +289,9 @@ private:
 				  "    init_pany_type s, Pair;\n"
 				  "    init_pany_type bp, ptr_i64;\n"
 				  "    structLea_pptr_pste_field bp, s, Pair.b;\n"
-				  "    init_pany_type buf_w, cptr;\n"
-				  "    mov_pcpt_pcpt buf_w, buf;\n"
-				  "    init_pany_type bp2, ptr_i64;\n"
-				  "    mov_pptr_pptr bp2, bp;\n"
 				  "    init_pany_type sz, i64;\n"
 				  "    mov_p64_imm sz, 16;\n"
-				  "    call_builtinfunc builtin_cptr_write_pptr;\n"
+				  "    cptrWrite_pcpt_pptr_p64 buf, bp, sz;\n"
 				  "    ret;\n"
 				  "}\n"
 		);
@@ -988,6 +978,160 @@ private:
 		);
 		expect_mov_error(
 			"mov_pcpt_non_cpointer", "", "i64", "i64", "Invalid instruction argument type"
+		);
+	}
+
+	// The malloc workflow: allocate raw C memory, cast the `void*` to a typed cpointer, then
+	// move a whole struct across the boundary with the typed load/store instructions.
+	void cptrTypedLoadStoreMallocWorkflow() {
+		runProgram(
+			"typed_load_store",
+			ffiObjectHeader()
+				+ "type data: Pair { a: i64, b: i64 } assert_size 16\n"
+				  "type cpointer: PairPtr Pair\n"
+				  "ffi function ffi_alloc { i64 } -> { cptr };\n"
+				  "ffi function ffi_free { cptr } -> { };\n"
+				  "function main { i64, ptr_argv } -> { i64 } {\n"
+				  "    init_pany_type buf, cptr;\n"
+				  "    init_pany_type n, i64;\n"
+				  "    mov_p64_imm n, 16;\n"
+				  "    call_ffifunc ffi_alloc;\n"
+				  "    init_pany_type pp, PairPtr;\n"
+				  "    cptrCast_pcpt_pcpt pp, buf;\n"
+				  "    init_pany_type v, i64;\n"
+				  "    init_pany_type s, Pair;\n"
+				  "    mov_p64_imm v, 30;\n"
+				  "    structStore_pste_pany_field s, v, Pair.a;\n"
+				  "    mov_p64_imm v, 12;\n"
+				  "    structStore_pste_pany_field s, v, Pair.b;\n"
+				  "    cptrStore_pcpt_pany pp, s;\n"
+				  "    init_pany_type s2, Pair;\n"
+				  "    cptrLoad_pany_pcpt s2, pp;\n"
+				  "    init_pany_type x, i64;\n"
+				  "    init_pany_type sum, i64;\n"
+				  "    structLoad_pany_pste_field sum, s2, Pair.a;\n"
+				  "    structLoad_pany_pste_field x, s2, Pair.b;\n"
+				  "    add_p64_p64 sum, x;\n"
+				  "    output_p64 sum;\n"
+				  "    init_pany_type buf_f, cptr;\n"
+				  "    mov_pcpt_pcpt buf_f, buf;\n"
+				  "    call_ffifunc ffi_free;\n"
+				  "    ret;\n"
+				  "}\n",
+			"42"
+		);
+	}
+
+	// Walks a C array with byte-wise pointer arithmetic: store/load through offset cpointers.
+	void cptrAddOffsetArrayWalk() {
+		runProgram(
+			"add_offset_walk",
+			ffiObjectHeader()
+				+ "type cpointer: I64Ptr i64\n"
+				  "ffi function ffi_alloc { i64 } -> { cptr };\n"
+				  "ffi function ffi_free { cptr } -> { };\n"
+				  "function main { i64, ptr_argv } -> { i64 } {\n"
+				  "    init_pany_type buf, cptr;\n"
+				  "    init_pany_type n, i64;\n"
+				  "    mov_p64_imm n, 16;\n"
+				  "    call_ffifunc ffi_alloc;\n"
+				  "    init_pany_type p, I64Ptr;\n"
+				  "    cptrCast_pcpt_pcpt p, buf;\n"
+				  "    init_pany_type v, i64;\n"
+				  "    mov_p64_imm v, 40;\n"
+				  "    cptrStore_pcpt_pany p, v;\n"
+				  "    init_pany_type off, i64;\n"
+				  "    mov_p64_imm off, 8;\n"
+				  "    init_pany_type p2, I64Ptr;\n"
+				  "    cptrAddOffset_pcpt_pcpt_p64 p2, p, off;\n"
+				  "    mov_p64_imm v, 2;\n"
+				  "    cptrStore_pcpt_pany p2, v;\n"
+				  "    init_pany_type x0, i64;\n"
+				  "    cptrLoad_pany_pcpt x0, p;\n"
+				  "    init_pany_type x1, i64;\n"
+				  "    cptrLoad_pany_pcpt x1, p2;\n"
+				  "    add_p64_p64 x0, x1;\n"
+				  "    output_p64 x0;\n"
+				  "    init_pany_type buf_f, cptr;\n"
+				  "    mov_pcpt_pcpt buf_f, buf;\n"
+				  "    call_ffifunc ffi_free;\n"
+				  "    ret;\n"
+				  "}\n",
+			"42"
+		);
+	}
+
+	// The builtin `cptr` has no pointee, so it cannot be dereferenced with a typed load.
+	void cptrLoadThroughVoidCptrFails() {
+		expectLoadError(
+			"load_through_void",
+			"function main { i64, ptr_argv } -> { i64 } {\n"
+			"    init_pany_type c, cptr;\n"
+			"    init_pany_type v, i64;\n"
+			"    cptrLoad_pany_pcpt v, c;\n"
+			"    ret;\n"
+			"}\n",
+			{ "cannot be dereferenced" }
+		);
+	}
+
+	void cptrLoadPointeeMismatchFails() {
+		expectLoadError(
+			"load_pointee_mismatch",
+			"type cpointer: I64Ptr i64\n"
+			"function main { i64, ptr_argv } -> { i64 } {\n"
+			"    init_pany_type p, I64Ptr;\n"
+			"    init_pany_type v, i32;\n"
+			"    cptrLoad_pany_pcpt v, p;\n"
+			"    ret;\n"
+			"}\n",
+			{ "does not match the C pointer's pointee" }
+		);
+	}
+
+	// A packed pointee is not FFI-compliant, so its native layout cannot be assumed.
+	void cptrLoadPackedPointeeFails() {
+		expectLoadError(
+			"load_packed_pointee",
+			"type data: P { a: i8, b: i64 } packed\n"
+			"type cpointer: PPtr P\n"
+			"function main { i64, ptr_argv } -> { i64 } {\n"
+			"    init_pany_type p, PPtr;\n"
+			"    init_pany_type s, P;\n"
+			"    cptrLoad_pany_pcpt s, p;\n"
+			"    ret;\n"
+			"}\n",
+			{ "cannot be dereferenced" }
+		);
+	}
+
+	// Pointer arithmetic never changes the cpointer type; conversions go through cptrCast.
+	void cptrAddOffsetAcrossTypesFails() {
+		expectLoadError(
+			"add_offset_across_types",
+			"type cpointer: APtr i64\n"
+			"type cpointer: BPtr i32\n"
+			"function main { i64, ptr_argv } -> { i64 } {\n"
+			"    init_pany_type a, APtr;\n"
+			"    init_pany_type b, BPtr;\n"
+			"    init_pany_type off, i64;\n"
+			"    mov_p64_imm off, 8;\n"
+			"    cptrAddOffset_pcpt_pcpt_p64 a, b, off;\n"
+			"    ret;\n"
+			"}\n",
+			{ "C pointer type does not match" }
+		);
+	}
+
+	// The raw copy builtins are gone; the cptrRead/cptrWrite instructions replace them.
+	void cptrCopyBuiltinsRemoved() {
+		expectLoadError(
+			"builtins_removed",
+			"function main { i64, ptr_argv } -> { i64 } {\n"
+			"    call_builtinfunc builtin_cptr_read_pptr;\n"
+			"    ret;\n"
+			"}\n",
+			{ "not builtin" }
 		);
 	}
 

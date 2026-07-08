@@ -658,6 +658,41 @@ DEF_MICRO_INSTR(fptoui_p64_p64, vm::low::opargs::Place64, vm::low::opargs::Place
 DEF_MICRO_INSTR(fptrunc_p32_p64, vm::low::opargs::Place32, vm::low::opargs::Place64)
 DEF_MICRO_INSTR(fpext_p64_p32, vm::low::opargs::Place64, vm::low::opargs::Place32)
 
+// ========= CPOINTER OPERATIONS ========
+// Copies through raw C pointers (native addresses). The cpointer operand is a plain 8-byte
+// value, so it lives in a 64-bit offset place.
+
+/**
+ * @brief Copies bytes from the native memory addressed by the cpointer into the local block.
+ * Requires a `ext_imm` next (the byte count, resolved from the pointee at lowering time).
+ * @note Unoptimizable by JIT, listed in dev/scripts/py/jit/jitable_interface.py.
+ */
+DEF_MICRO_INSTR(cptrLoad_bany_p64, vm::low::opargs::PlaceBlockAny, vm::low::opargs::Place64)
+/**
+ * @brief Copies bytes from the local block to the native memory addressed by the cpointer.
+ * Requires a `ext_imm` next (the byte count, resolved from the pointee at lowering time).
+ * @note Unoptimizable by JIT, listed in dev/scripts/py/jit/jitable_interface.py.
+ */
+DEF_MICRO_INSTR(cptrStore_p64_bany, vm::low::opargs::Place64, vm::low::opargs::PlaceBlockAny)
+/**
+ * @brief Copies raw bytes from the native memory addressed by the cpointer to the VM memory
+ * under the pointer; the VM side is bounds-checked. Requires a `ext_p64` next (the byte count).
+ * @note Unoptimizable by JIT, listed in dev/scripts/py/jit/jitable_interface.py.
+ */
+DEF_MICRO_INSTR(cptrRead_pptr_p64, vm::low::opargs::PlacePtr, vm::low::opargs::Place64)
+/**
+ * @brief Copies raw bytes from the VM memory under the pointer to the native memory addressed
+ * by the cpointer; the VM side is bounds-checked. Requires a `ext_p64` next (the byte count).
+ * @note Unoptimizable by JIT, listed in dev/scripts/py/jit/jitable_interface.py.
+ */
+DEF_MICRO_INSTR(cptrWrite_p64_pptr, vm::low::opargs::Place64, vm::low::opargs::PlacePtr)
+/**
+ * @brief Byte-wise cpointer arithmetic: dst = src + offset. Requires a `ext_p64` next (the
+ * byte offset).
+ * @note Unoptimizable by JIT, listed in dev/scripts/py/jit/jitable_interface.py.
+ */
+DEF_MICRO_INSTR(cptrAddOffset_p64_p64, vm::low::opargs::Place64, vm::low::opargs::Place64)
+
 // ========= EXT DEFINITIONS ========
 
 // passes additional argument to preceding instruction

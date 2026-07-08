@@ -26,7 +26,12 @@ def nonjitable(func_name: str) -> bool:
         "jitEntrypoint",
         "call_builtinfunc",
         "call_ffifunc",
-        "breakpoint"
+        "breakpoint",
+        "cptrLoad_bany_p64",
+        "cptrStore_p64_bany",
+        "cptrRead_pptr_p64",
+        "cptrWrite_p64_pptr",
+        "cptrAddOffset_p64_p64"
     ]
 
     return any(op in func_name for op in unjitable_opfuncs)

@@ -370,8 +370,7 @@ namespace vm {
 			u64 first_arg_idx = block_ref_stack_count - arg_count;
 
 			// Create VmValue objects from local arguments. The argument's actual block type is
-			// used (verification guarantees it matches what the builtin expects); this also
-			// supports builtins with polymorphic parameters, e.g. the `cptr` copy builtins.
+			// used (verification guarantees it matches what the builtin expects).
 			for (u64 i = 0; i < arg_count; i++) {
 				auto     block     = Ref(frame->local_block_ref_stack_base[first_arg_idx + i]);
 				TypeCRef real_type = Memory::getBlockType(block);
@@ -896,6 +895,78 @@ namespace vm {
 			thread.process_memory.copyPointedData(dst_pointer, src_pointer, type);
 		}
 		FUNCTION_CONT(1);
+	}
+
+	/**
+	 * @brief The VM side of a raw C pointer copy must stay within the pointed-to block.
+	 */
+	inline void assertCptrCopyWithinBlock(
+		const Pointer& ptr, u64 size, usize block_size, const char* instr_name
+	) {
+		if (ptr.getOffset() > block_size || size > block_size - ptr.getOffset())
+			throw vm::exceptions::VMRuntimeException(
+				base::strConcat(instr_name, ": copy region exceeds the pointed-to block")
+			);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(cptrLoad_bany_p64)(FUNCTION_ARGS) {
+		{
+			const auto size      = instr[1].arg0;
+			auto       dst_block = READ_BLOCK_REF_FROM_ARG(instr->arg0);
+			auto       view      = thread.process_memory.getBlockViewUnsafe(dst_block);
+			const auto src       = READ_FROM_PLACE_ARG(u64, instr->arg1);
+			// The verifier pins the destination to the pointee type, so the byte count always
+			// fits the block.
+			// NOLINTNEXTLINE(performance-no-int-to-ptr): a cpointer is a raw native address.
+			std::memcpy(view.getBegin(), reinterpret_cast<const void*>(src), size);
+		}
+		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(cptrStore_p64_bany)(FUNCTION_ARGS) {
+		{
+			const auto size      = instr[1].arg0;
+			const auto dst       = READ_FROM_PLACE_ARG(u64, instr->arg0);
+			auto       src_block = READ_BLOCK_REF_FROM_ARG(instr->arg1);
+			auto       view      = thread.process_memory.getBlockViewUnsafe(src_block);
+			// NOLINTNEXTLINE(performance-no-int-to-ptr): a cpointer is a raw native address.
+			std::memcpy(reinterpret_cast<void*>(dst), view.getBegin(), size);
+		}
+		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(cptrRead_pptr_p64)(FUNCTION_ARGS) {
+		{
+			const auto size = READ_FROM_PLACE_ARG(u64, instr[1].arg0);
+			const auto dst  = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
+			const auto src  = READ_FROM_PLACE_ARG(u64, instr->arg1);
+			auto       view = thread.process_memory.getBlockViewUnsafe(dst.getBlock());
+			assertCptrCopyWithinBlock(dst, size, view.size(), "cptrRead");
+			// NOLINTNEXTLINE(performance-no-int-to-ptr): a cpointer is a raw native address.
+			std::memcpy(view.getBegin() + dst.getOffset(), reinterpret_cast<const void*>(src), size);
+		}
+		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(cptrWrite_p64_pptr)(FUNCTION_ARGS) {
+		{
+			const auto size = READ_FROM_PLACE_ARG(u64, instr[1].arg0);
+			const auto dst  = READ_FROM_PLACE_ARG(u64, instr->arg0);
+			const auto src  = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
+			auto       view = thread.process_memory.getBlockViewUnsafe(src.getBlock());
+			assertCptrCopyWithinBlock(src, size, view.size(), "cptrWrite");
+			// NOLINTNEXTLINE(performance-no-int-to-ptr): a cpointer is a raw native address.
+			std::memcpy(reinterpret_cast<void*>(dst), view.getBegin() + src.getOffset(), size);
+		}
+		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(cptrAddOffset_p64_p64)(FUNCTION_ARGS) {
+		{
+			const auto offset = READ_FROM_PLACE_ARG(u64, instr[1].arg0);
+			WRITE_TO_PLACE_ARG(u64, instr->arg0, READ_FROM_PLACE_ARG(u64, instr->arg1) + offset);
+		}
+		FUNCTION_CONT(2);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(structLea_pptr_pptr)(FUNCTION_ARGS) {

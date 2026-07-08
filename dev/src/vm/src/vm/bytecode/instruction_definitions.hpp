@@ -555,6 +555,66 @@ DEF_INSTR(
  */
 DEF_INSTR(strOutput_pptr, (vm::opargs::PlacePtr, string_ptr))
 
+// ========= CPOINTER OPERATIONS ========
+// Operations on raw C pointers (native addresses obtained via FFI). The native side of these
+// copies is unchecked by design - the address comes from foreign code the VM already trusts;
+// the typed variants remove size mistakes, and the VM side of every copy is bounds-checked.
+
+/**
+ * @brief Copies `sizeof(pointee)` bytes from the native memory addressed by `src_ptr` into
+ * `dst`. The source cpointer must have an FFI-compliant pointee, and `dst` must be of exactly
+ * the pointee type.
+ */
+DEF_INSTR(cptrLoad_pany_pcpt, (vm::opargs::PlaceAny, dst), (vm::opargs::PlaceCptr, src_ptr))
+
+/**
+ * @brief Copies `sizeof(pointee)` bytes from `src` to the native memory addressed by
+ * `dst_ptr`. The destination cpointer must have an FFI-compliant pointee, and `src` must be of
+ * exactly the pointee type.
+ */
+DEF_INSTR(cptrStore_pcpt_pany, (vm::opargs::PlaceCptr, dst_ptr), (vm::opargs::PlaceAny, src))
+
+/**
+ * @brief Copies `size` raw bytes from the native memory addressed by `src_ptr` to the VM
+ * memory pointed to by `dst_ptr`. Works with any cpointer; the VM side is bounds-checked at
+ * runtime.
+ */
+DEF_INSTR(
+	cptrRead_pptr_pcpt_p64,
+	(vm::opargs::PlacePtr, dst_ptr),
+	(vm::opargs::PlaceCptr, src_ptr),
+	(vm::opargs::Place64, size)
+)
+
+/**
+ * @brief Copies `size` raw bytes from the VM memory pointed to by `src_ptr` to the native
+ * memory addressed by `dst_ptr`. Works with any cpointer; the VM side is bounds-checked at
+ * runtime.
+ */
+DEF_INSTR(
+	cptrWrite_pcpt_pptr_p64,
+	(vm::opargs::PlaceCptr, dst_ptr),
+	(vm::opargs::PlacePtr, src_ptr),
+	(vm::opargs::Place64, size)
+)
+
+/**
+ * @brief Reinterprets a cpointer as another cpointer type (the analogue of a C cast). Any
+ * cpointer type converts to any other; the copy itself is a plain 8-byte move.
+ */
+DEF_INSTR(cptrCast_pcpt_pcpt, (vm::opargs::PlaceCptr, dst), (vm::opargs::PlaceCptr, src))
+
+/**
+ * @brief Sets `dst` to `src + offset` (byte-wise pointer arithmetic). Both places must have
+ * the identical cpointer type.
+ */
+DEF_INSTR(
+	cptrAddOffset_pcpt_pcpt_p64,
+	(vm::opargs::PlaceCptr, dst),
+	(vm::opargs::PlaceCptr, src),
+	(vm::opargs::Place64, offset)
+)
+
 // ========= TYPE OPERATIONS ========
 // Casts a primitive type in-place. This does nothing at runtime, but is needed
 // for type checking.

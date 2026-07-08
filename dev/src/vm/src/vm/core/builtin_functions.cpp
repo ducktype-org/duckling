@@ -342,32 +342,6 @@ namespace vm::builtins {
 		thread.safe_process.getSynchronizationPrimitives().removeCV(cv_id);
 	}
 
-	namespace {
-		// The VM side of the copy must stay within the pointed-to block.
-		void assertCopyWithinBlock(
-			const Pointer& ptr, u64 size, usize block_size, const char* builtin_name
-		) {
-			if (ptr.getOffset() > block_size || size > block_size - ptr.getOffset())
-				throw vm::exceptions::VMRuntimeException(
-					base::strConcat(builtin_name, ": copy region exceeds the pointed-to block")
-				);
-		}
-	}
-
-	void FunctionHandlers::builtinCptrRead(SafeVMThread& thread, u64 src, Pointer dst, u64 size) {
-		auto view = thread.process_memory.getBlockViewUnsafe(dst.getBlock());
-		assertCopyWithinBlock(dst, size, view.size(), "builtin_cptr_read");
-		// NOLINTNEXTLINE(performance-no-int-to-ptr): a cptr is a raw native address by definition.
-		std::memcpy(view.getBegin() + dst.getOffset(), reinterpret_cast<const void*>(src), size);
-	}
-
-	void FunctionHandlers::builtinCptrWrite(SafeVMThread& thread, u64 dst, Pointer src, u64 size) {
-		auto view = thread.process_memory.getBlockViewUnsafe(src.getBlock());
-		assertCopyWithinBlock(src, size, view.size(), "builtin_cptr_write");
-		// NOLINTNEXTLINE(performance-no-int-to-ptr): a cptr is a raw native address by definition.
-		std::memcpy(reinterpret_cast<void*>(dst), view.getBegin() + src.getOffset(), size);
-	}
-
 	base::Optional<Box<VmValue>> callBuiltinFunction(
 		BuiltinFunctionID                id,
 		const std::vector<TypeCRef>&     result_types,
@@ -407,31 +381,12 @@ namespace vm::builtins {
 				WaitCV,
 				NotifyCV,
 				NotifyAllCV,
-				DestroyCV,
-				CptrRead,
-				CptrWrite
+				DestroyCV
 			)
 
 
 		default:
 			CORE_PANIC("Invalid builtin function ID");
-		}
-	}
-
-	namespace {
-		// Shared verifier for the `cptr` copy builtins: (cptr, pointer-to-any-type, byte count).
-		base::Optional<std::string> verifyCptrCopyArgs(
-			const std::vector<CRef<code::valid_type::ValidType>>& arg_types
-		) {
-			if (arg_types.size() != 3) return "expected exactly three arguments";
-			if (!arg_types[0]->isKind<code::valid_type::finalized::CPointer>())
-				return "first argument must be a C pointer";
-			if (!arg_types[1]->isKind<code::valid_type::finalized::Pointer>())
-				return "second argument must be a pointer";
-			auto size_type = arg_types[2]->maybeGetKindAs<code::valid_type::finalized::Primitive>();
-			if (!size_type.has_value() || usize(size_type.value()->size) != 8)
-				return "third argument (byte count) must be an 8-byte primitive";
-			return {};
 		}
 	}
 
@@ -554,33 +509,9 @@ namespace vm::builtins {
 				{ base::StrID("builtin_destroy_cv"),
 			      code::FuncSignature({}, { base::StrID("condition_variable") }) },
 			},
-			{
-				BuiltinFunctionID::CptrRead,
-				{ base::StrID("builtin_cptr_read_pptr"),
-			      code::FuncSignature(
-					  {},
-					  { base::StrID("cptr"), base::StrID(VERIFIER_CHECKED_PARAM), base::StrID("i64") }
-				  ),
-			      &verifyCptrCopyArgs },
-			},
-			{
-				BuiltinFunctionID::CptrWrite,
-				{ base::StrID("builtin_cptr_write_pptr"),
-			      code::FuncSignature(
-					  {},
-					  { base::StrID("cptr"), base::StrID(VERIFIER_CHECKED_PARAM), base::StrID("i64") }
-				  ),
-			      &verifyCptrCopyArgs },
-			},
 		};
 
 		return &map;
-	}
-
-	base::Optional<BuiltinArgVerifier> getBuiltinArgVerifier(base::StrID name) {
-		auto id = getBuiltinFunctionID(name);
-		if (!id.has_value()) return {};
-		return getBuiltinFunctions()->at(id.value()).arg_verifier;
 	}
 
 	base::Optional<CRef<code::FuncSignature>> getBuiltinFunctionSignature(base::StrID name) {

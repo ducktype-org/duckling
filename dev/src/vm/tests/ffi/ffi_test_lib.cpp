@@ -22,6 +22,11 @@ extern "C" {
 	// Pointer (cptr) round-trip helpers.
 	void* ffi_alloc8() { return std::malloc(8); }
 
+	// Sized allocation, for the typed cpointer instructions (malloc workflow).
+	void* ffi_alloc(int64_t n) { return std::malloc(static_cast<size_t>(n)); }
+
+	void ffi_free(void* p) { std::free(p); }
+
 	void ffi_fill8(void* p, int64_t v) { *static_cast<int64_t*>(p) = v; }
 
 	int64_t ffi_read8(void* p) { return *static_cast<int64_t*>(p); }
