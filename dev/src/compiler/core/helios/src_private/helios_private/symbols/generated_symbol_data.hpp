@@ -78,11 +78,14 @@ namespace compiler::helios::defgen {
 	};
 
 	struct GeneratedConstant final {
-		tsh::SymbolType<>     type;
 		ctv::CompileTimeValue value;
+
+		/**
+		 * @TODO: #3099 maybe remove this, it will allow to make baking logic simpler.
+		 */
 		ScopeID               scope;
 
-		GeneratedConstant(tsh::SymbolType<> type, ctv::CompileTimeValue value, ScopeID scope);
+		GeneratedConstant(ctv::CompileTimeValue value, ScopeID scope);
 
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const;

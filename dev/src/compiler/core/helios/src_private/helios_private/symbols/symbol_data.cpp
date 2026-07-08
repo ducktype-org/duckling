@@ -74,15 +74,13 @@ namespace compiler::helios {
 		}
 
 		GeneratedConstant::GeneratedConstant(
-			tsh::SymbolType<> type, ctv::CompileTimeValue value, ScopeID scope
+			ctv::CompileTimeValue value, ScopeID scope
 		):
-			  type(type),
-			  value(std::move(value)),
+			value(std::move(value)),
 			  scope(scope) {}
 
 		base::Bit256 GeneratedConstant::queryUnstablePerfectHash() const {
 			hashing::SHA256 hasher;
-			hashing::addToHash(hasher, type.queryUnstablePerfectHash());
 			hashing::addToHash(hasher, value.queryUnstablePerfectHash());
 			hashing::addToHash(hasher, scope.queryUnstablePerfectHash());
 			return hasher.finalize();

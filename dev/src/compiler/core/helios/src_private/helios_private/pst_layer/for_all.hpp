@@ -10,6 +10,9 @@
 #include <query_framework/context/context.hpp>
 #include <query_framework/utils/query_failed_try.hpp>
 
+#include <type_traits>
+#include <functional>
+
 namespace compiler::helios {
 
 	namespace internal {
@@ -27,7 +30,7 @@ namespace compiler::helios {
 		) {
 			// Check if we should stop recursion before running the function, to allow cutoff
 			// function to skip some branches entirely.
-			if (cutoff_function(element)) return base::OK;
+			if (std::invoke(cutoff_function, element)) return base::OK;
 
 			if (element->getElementKind() == pst::ElementKind::Expand) {
 				auto expansion_result = ctx.query<QueryMacroExpansion>({
@@ -71,7 +74,7 @@ namespace compiler::helios {
 		 */
 		struct CutoffFunctionTDefault final {
 			template<typename ElementT>
-			bool operator()(pst::Access<ElementT>) const {
+			bool operator()(pst::Access<ElementT>) const noexcept {
 				return false;
 			}
 		};
@@ -89,6 +92,8 @@ namespace compiler::helios {
 		typename ElementT,
 		typename FunctionT,
 		typename CutoffFunctionT = internal::CutoffFunctionTDefault>
+	requires std::is_invocable_r_v<void,FunctionT, pst::Access<ElementT>>
+		&& std::is_invocable_r_v<bool, CutoffFunctionT, pst::Access<ElementT>>
 	[[nodiscard]]
 	base::CheckedOkBad pstForAll(
 		query::Context&        ctx,

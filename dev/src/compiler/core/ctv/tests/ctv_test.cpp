@@ -23,7 +23,7 @@ private:
 			unique_values.emplace_back(true);
 			unique_values.emplace_back(false);
 
-			for (i64 val = -10; val <= 10; val++) {
+			for (i64 val = -10; val <= 80; val++) {
 				for (u64 size: { 8u, 16u, 32u, 64u }) {
 					unique_values.emplace_back(
 						NumericValue::createOfType(

@@ -38,7 +38,7 @@ namespace compiler::ctv {
 				hashing::addToHash(hasher, val.queryUnstablePerfectHash());
 			}
 			variant_default {
-				throw base::NotYetImplemented("Unhandled CTV type in CTV::queryUnstablePerfectHash");
+				CORE_PANIC("Unhandled CTV type in CTV::queryUnstablePerfectHash");
 			}
 		}
 
