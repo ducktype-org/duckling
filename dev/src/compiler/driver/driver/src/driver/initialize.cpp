@@ -251,31 +251,23 @@ namespace compiler::driver {
 				handleIncrementalOptions(package_compilation_options.incremental);
 			}
 			variant_case(CompilerModeOfOperationAndOptions::ReplMode, repl_options) {
-				auto                         repl_packages_info = getScriptStubPackage();
-				options_types::StdLibOptions repl_linking_options{
-					.std_lib_type = options_types::StdLibOptions::DefaultStd{},
-				};
+				auto repl_packages_info = getScriptStubPackage();
 
 				auto package_success
-					= handlePackageOptions(repl_packages_info, repl_linking_options);
+					= handlePackageOptions(repl_packages_info, repl_options.stdlib_options);
 				if (package_success.isBad()) return base::BAD;
-
 
 				handleDebugOptions(repl_options.debug_options);
 				handleExecutionOptions(repl_options.execution_options);
 			}
 			variant_case(CompilerModeOfOperationAndOptions::ScriptMode, script_options) {
-				auto                         repl_packages_info = getScriptStubPackage();
-				options_types::StdLibOptions repl_linking_options{
-					.std_lib_type = options_types::StdLibOptions::DefaultStd{},
-				};
-
+				auto repl_packages_info = getScriptStubPackage();
 
 				handleDebugOptions(script_options.debug_options);
 				handleExecutionOptions(script_options.execution_options);
 				handleArtifactsOptions(script_options.compilation_artifacts);
 				auto package_success
-					= handlePackageOptions(repl_packages_info, repl_linking_options);
+					= handlePackageOptions(repl_packages_info, script_options.stdlib_options);
 				if (package_success.isBad()) return base::BAD;
 				handleBackendOptions(script_options.backend_options);
 				handleScriptContext(script_options.script_file);
