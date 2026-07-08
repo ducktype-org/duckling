@@ -352,7 +352,9 @@ namespace compiler::helios {
 						tsh::Mutability::Immutable,
 					};
 				}
-				variant_case(defgen::GeneratedConstant, gen_const) { return gen_const.value.getTypeOfStoredValue(ctx); }
+				variant_case(defgen::GeneratedConstant, gen_const) {
+					return gen_const.value.getTypeOfStoredValue(ctx);
+				}
 				variant_case(defgen::Parameter, param) {
 					const auto function_type
 						= ctx.query<QueryTypeOfSymbol>({ param.function_symbol })

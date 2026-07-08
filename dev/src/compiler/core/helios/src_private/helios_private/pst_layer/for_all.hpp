@@ -10,8 +10,8 @@
 #include <query_framework/context/context.hpp>
 #include <query_framework/utils/query_failed_try.hpp>
 
-#include <type_traits>
 #include <functional>
+#include <type_traits>
 
 namespace compiler::helios {
 
@@ -92,9 +92,8 @@ namespace compiler::helios {
 		typename ElementT,
 		typename FunctionT,
 		typename CutoffFunctionT = internal::CutoffFunctionTDefault>
-	requires std::is_invocable_r_v<void,FunctionT, pst::Access<ElementT>>
-		&& std::is_invocable_r_v<bool, CutoffFunctionT, pst::Access<ElementT>>
-	[[nodiscard]]
+	requires std::is_invocable_r_v<void, FunctionT, pst::Access<ElementT>>
+	      && std::is_invocable_r_v<bool, CutoffFunctionT, pst::Access<ElementT>> [[nodiscard]]
 	base::CheckedOkBad pstForAll(
 		query::Context&        ctx,
 		pst::Access<ElementT>  element,

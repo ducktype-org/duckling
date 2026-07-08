@@ -37,9 +37,7 @@ namespace compiler::ctv {
 			variant_case(tsh::SymbolType<>, val) {
 				hashing::addToHash(hasher, val.queryUnstablePerfectHash());
 			}
-			variant_default {
-				CORE_PANIC("Unhandled CTV type in CTV::queryUnstablePerfectHash");
-			}
+			variant_default { CORE_PANIC("Unhandled CTV type in CTV::queryUnstablePerfectHash"); }
 		}
 
 		return hasher.finalize();

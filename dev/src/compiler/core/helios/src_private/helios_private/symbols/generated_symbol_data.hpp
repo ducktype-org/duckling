@@ -83,7 +83,7 @@ namespace compiler::helios::defgen {
 		/**
 		 * @TODO: #3099 maybe remove this, it will allow to make baking logic simpler.
 		 */
-		ScopeID               scope;
+		ScopeID scope;
 
 		GeneratedConstant(ctv::CompileTimeValue value, ScopeID scope);
 

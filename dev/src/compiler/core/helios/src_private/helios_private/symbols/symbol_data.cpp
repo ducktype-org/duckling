@@ -73,10 +73,8 @@ namespace compiler::helios {
 			);
 		}
 
-		GeneratedConstant::GeneratedConstant(
-			ctv::CompileTimeValue value, ScopeID scope
-		):
-			value(std::move(value)),
+		GeneratedConstant::GeneratedConstant(ctv::CompileTimeValue value, ScopeID scope):
+			  value(std::move(value)),
 			  scope(scope) {}
 
 		base::Bit256 GeneratedConstant::queryUnstablePerfectHash() const {
