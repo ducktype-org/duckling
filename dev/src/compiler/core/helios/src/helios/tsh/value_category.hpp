@@ -23,10 +23,13 @@ namespace compiler::tsh {
 	 * Primary category describes source of the value.
 	 */
 	enum class PrimaryCategory {
-		Temporary, /**< Temporary values are product of expression evaluation. */
-		Local,     /**< Local values correspond to local variables. */
-		Global,    /**< Global values correspond to global variables. */
-		Literal    /**< Literal values store values explicitly written in the code. */
+		Temporary,    /**< Product of expression evaluation. An owned rvalue. */
+		Local,        /**< A local variable. An owned lvalue. */
+		Global,       /**< A global variable. A non-owned lvalue. */
+		Literal,      /**< A value written explicitly in the code. A non-owned rvalue. */
+		Dereferenced, /**< A location reached by dereferencing a pointer/reference/box. A non-owned
+		                   lvalue. It may be read or assigned to, but not moved out of, because this
+		                   expression does not own the pointee. */
 	};
 
 	/**

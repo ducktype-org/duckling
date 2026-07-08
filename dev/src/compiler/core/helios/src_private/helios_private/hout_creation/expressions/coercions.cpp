@@ -166,7 +166,7 @@ namespace compiler::helios {
 	}
 
 	CoercionQResult canCoerce(
-		query::Context& ctx, const tsh::ExpressionType<>& from, const tsh::SymbolType<> to
+		query::Context& ctx, const tsh::ExpressionType<>& from, const tsh::SymbolType<>& to
 	) {
 		const tsh::SymbolType<> from_type = from.getSymbolType();
 

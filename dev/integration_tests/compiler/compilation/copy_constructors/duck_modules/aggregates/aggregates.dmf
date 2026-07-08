@@ -38,22 +38,6 @@ fun main() -> i64 = {
     var arr: Counter[3];
     var arr2: Counter[3] = copy arr;    # +3
     builtin_output_i64(copies);         # 7
-    
-    var lst: List[Counter];
-    lst.push(Counter(1));
-    lst.push(Counter(1));
-    lst.push(Counter(1));
-
-    var lst2 = copy lst;                # +3
-    builtin_output_i64(copies);         # 10
-
-    var box_lst: List[box Counter];
-    box_lst.push(Counter(1));
-    box_lst.push(Counter(1));
-    box_lst.push(Counter(1));
-
-    var box_lst2 = copy box_lst;        # +3
-    builtin_output_i64(copies);         # 13
 
     return 0;
 }

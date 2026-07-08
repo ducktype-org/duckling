@@ -36,6 +36,14 @@ namespace compiler::tsh {
 			is_pure         = false;
 			allows_semantic = COPY | REINIT | USE;  // All but MOVE and DESTROY
 			break;
+		case PrimaryCategory::Dereferenced:
+			category = PrimaryCategory::Dereferenced;
+			// A dereferenced location may alias, so it is not pure. It is a non-owned lvalue. It
+			// can be read and assigned to, but not moved out of.
+			is_pure         = false;
+			allows_semantic = COPY | REINIT
+			                | USE;  // Same as Global (but it's not a global) - non-owned lvalue.
+			break;
 		case PrimaryCategory::Literal:
 			category        = PrimaryCategory::Literal;
 			is_pure         = true;

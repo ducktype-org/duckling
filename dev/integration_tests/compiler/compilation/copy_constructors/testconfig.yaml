@@ -5,7 +5,7 @@ Tests:
       all:
         backend: all
         Output:
-          String: "1\n3\n4\n7\n10\n13\n"
+          String: "1\n3\n4\n7\n"
         ExitCode: 0
 
   boxes:
@@ -22,4 +22,13 @@ Tests:
         backend: all
         Output:
           String: "0\n1\n1\n"
+        ExitCode: 0
+
+  # @TODO #2866 Merge this test with `aggregates` once Lists are supported in DVM.
+  list_copies:
+    Cases:
+      llvm:
+        backend: llvm
+        Output:
+          String: "3\n"
         ExitCode: 0

@@ -1060,7 +1060,8 @@ namespace compiler::helios::code {
 		  Expr(
 			  tsh::ExpressionType<>(
 				  inner->expression_type.getSymbolType().getPointeeSymbolType(),
-				  inner->expression_type.getValueCategory()
+				  // Dereferencing creates a non-owned lvalue.
+				  tsh::ValueCategory(tsh::PrimaryCategory::Dereferenced)
 			  ),
 			  origin
 		  ),

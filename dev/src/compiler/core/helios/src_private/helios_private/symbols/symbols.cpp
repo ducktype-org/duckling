@@ -41,7 +41,7 @@
 namespace compiler::helios {
 	bool implementsQueryCodeOfFun(SymID id) {
 		// Builtins have FunctionDeclaration kind, but can implement code of fun.
-		if (isFunctionLike(kind(id))) return false;
+		if (not isFunctionLike(kind(id))) return false;
 
 		variant_match(getSymRef(id)->other) {
 			variant_case_novalue(PstImplementedSemantics) { return true; }

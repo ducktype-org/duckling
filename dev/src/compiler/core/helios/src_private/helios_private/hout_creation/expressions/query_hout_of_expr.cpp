@@ -818,6 +818,7 @@ namespace compiler::helios::code {
 				           == lang_def::Keyword::Copy) {
 					// `copy x` produces an explicit copy of `x` via its copy constructor. Copying
 					// through a reference copies the pointee.
+					// TODOP: Ref should be just a reference copy I think.
 					tsh::SymbolType<> copy_type = inner_type;
 					Box<code::Expr>   to_copy   = std::move(inner);
 					if (inner_type.getRefKind() == tsh::ReferenceKind::Ref) {

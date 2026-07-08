@@ -90,7 +90,7 @@ namespace compiler::helios {
 		}
 
 		friend CoercionQResult canCoerce(
-			query::Context& ctx, const tsh::ExpressionType<>& from, tsh::SymbolType<> to
+			query::Context& ctx, const tsh::ExpressionType<>& from, const tsh::SymbolType<>& to
 		);
 
 		[[nodiscard]] bool isEmptyCoercion() const noexcept {
@@ -170,7 +170,7 @@ namespace compiler::helios {
 	 * a function performing the coercion if it is.
 	 */
 	CoercionQResult canCoerce(
-		query::Context& ctx, const tsh::ExpressionType<>& from, tsh::SymbolType<> to
+		query::Context& ctx, const tsh::ExpressionType<>& from, const tsh::SymbolType<>& to
 	);
 
 	/**
