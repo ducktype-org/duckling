@@ -7,6 +7,7 @@
 
 #include <frontend/pst_parser/access.hpp>
 #include <frontend/pst_parser/elements/elements_list.hpp>
+#include <helios/attributes/builtins.hpp>
 #include <helios/scope_id.hpp>
 #include <helios/symbols/attributes.hpp>
 #include <helios/symbols/symbol_kind.hpp>
@@ -91,6 +92,13 @@ namespace compiler::helios {
 	 * variables will appear (for example analog to C++ static variables).
 	 */
 	bool isGlobalVar(query::Context&, SymID);
+
+
+	/**
+	 * Check if a symbol is a builtin. If so, return the BuiltinKind.
+	 * Return empty optional is a symbol is not a builtin.
+	 */
+	base::Optional<BuiltinKind> isBuiltin(SymID);
 
 	/**
 	 * Whether a symbol is ignored by lookup.

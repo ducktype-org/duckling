@@ -17,6 +17,7 @@ namespace vm::code::detail {
 		const base::HashMap<base::StrID, FuncSignature>& signatures,
 		const ObjIdNameMap<ExternalCFunction>&           ext_c_functions,
 		const FlagContext&                               flag_context,
+		const ObjIdNameMap<FFIFunction>&                 ffi_functions,
 		const Function&                                  function
 	);
 }
