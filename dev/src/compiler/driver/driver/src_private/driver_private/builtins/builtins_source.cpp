@@ -81,6 +81,15 @@ extern "C" {
 	void builtin_list_pop(list* list, uint64_t count, uint64_t element_size);
 	void builtin_list_free(list* list);
 
+	// Number formatting into a caller-provided buffer. Each one writes the decimal
+	// representation of `v` into `p` and returns how many characters it wrote, or `0`
+	// when the representation does not fit into `max_len` characters.
+	// These back `core.runtime` and must stay in sync with the DVM builtins of the same
+	// names (see `vm::builtins::getBuiltinFunctions`).
+	uint64_t builtin_float_to_string(double v, char* p, uint64_t max_len);
+	uint64_t builtin_u64_to_string(uint64_t v, char* p, uint64_t max_len);
+	uint64_t builtin_i64_to_string(int64_t v, char* p, uint64_t max_len);
+
 	// Stringification @TODO: #2634 move to Duckling, probably
 	String builtin_stringify_i64(int64_t v);
 	String builtin_stringify_u64(uint64_t v);
@@ -295,6 +304,34 @@ void builtin_list_free(list* list) {
 		list->memory_begin_offset = 0;
 		list->memory_end_offset   = 0;
 	}
+}
+
+// Formats `value` with `format` and copies the result into `p`, provided it fits into
+// `max_len` characters. The scratch buffer holds the longest output of every caller:
+// 20 digits plus a sign for the integers, and `%g` never exceeds that for a double.
+template<typename T>
+static uint64_t write_formatted(char* p, uint64_t max_len, const char* format, T value) {
+	char      stringified[32];
+	const int written = snprintf(stringified, sizeof(stringified), format, value);
+	if (written < 0) exit(1);
+
+	const uint64_t length = uint64_t(written);
+	if (length > max_len) return 0;
+
+	memcpy(p, stringified, length);
+	return length;
+}
+
+uint64_t builtin_float_to_string(double v, char* p, uint64_t max_len) {
+	return write_formatted(p, max_len, "%g", v);
+}
+
+uint64_t builtin_u64_to_string(uint64_t v, char* p, uint64_t max_len) {
+	return write_formatted(p, max_len, "%lu", v);
+}
+
+uint64_t builtin_i64_to_string(int64_t v, char* p, uint64_t max_len) {
+	return write_formatted(p, max_len, "%ld", v);
 }
 
 String builtin_stringify_i64(int64_t v) {

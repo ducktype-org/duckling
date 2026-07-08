@@ -24,6 +24,8 @@
 #pragma once
 
 
+#include <base/types/floats.hpp>
+
 #include <string_id/string_id.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
@@ -51,6 +53,9 @@ namespace vm::builtins {
 		OutputI32,
 		OutputChar,
 		OutputString,
+		FloatToString,
+		U64ToString,
+		I64ToString,
 		Stoi,
 		StartThread,
 		JoinThread,
@@ -81,7 +86,20 @@ namespace vm::builtins {
 		static i64  builtinOutputI32(SafeVMThread& process, i32 arg);
 		static i64  builtinOutputChar(SafeVMThread& process, i8 arg);
 		static void builtinOutputString(SafeVMThread& process, Pointer ptr);
-		static i64  builtinStoi(SafeVMThread& process, Pointer ptr);
+
+		/**
+		 * @brief Number formatting into the char table under `ptr`.
+		 *
+		 * Each one writes the decimal representation of the value and returns how many
+		 * characters it wrote, or `0` when the representation does not fit into `max_len`
+		 * characters. These back `core.runtime` and must stay in sync with the native
+		 * builtins of the same names (see `builtins_source.cpp`).
+		 */
+		static u64 builtinFloatToString(SafeVMThread& process, f64 value, Pointer ptr, u64 max_len);
+		static u64 builtinU64ToString(SafeVMThread& process, u64 value, Pointer ptr, u64 max_len);
+		static u64 builtinI64ToString(SafeVMThread& process, i64 value, Pointer ptr, u64 max_len);
+
+		static i64 builtinStoi(SafeVMThread& process, Pointer ptr);
 		static i64  builtinStartThread(SafeVMThread& process);
 		static i64  builtinJoinThread(SafeVMThread& process, u64 thread_id);
 		static u64  builtinCreateMutex(SafeVMThread& process);

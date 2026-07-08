@@ -16,7 +16,10 @@
 #include <vm/core/thread/kill_process_exception.hpp>
 #include <vm/core/vmvalue/vmvalue.hpp>
 
+#include <array>
 #include <chrono>
+#include <cstdio>
+#include <cstring>
 
 namespace vm::builtins {
 
@@ -82,6 +85,31 @@ namespace vm::builtins {
 				std::index_sequence_for<FunArgs...>{}
 			);
 		}
+
+		/**
+		 * @brief Formats `value` with `format` and copies the result into the char table under
+		 * `ptr`, provided it fits into `max_len` characters. Returns the number of written
+		 * characters, or `0` when it does not fit.
+		 *
+		 * The scratch buffer holds the longest output of every caller: 20 digits plus a sign
+		 * for the integers, and `%g` never exceeds that for a double.
+		 */
+		template<typename T>
+		u64 writeFormatted(Pointer ptr, u64 max_len, const char* format, T value) {
+			std::array<char, 32> stringified{};
+			const int written
+				= std::snprintf(stringified.data(), stringified.size(), format, value);
+			CORE_ASSERT(written > 0, "Formatting a number into a string failed");
+
+			const auto length = base::safeIntConv<u64>(written);
+			if (length > max_len) return 0;
+
+			// Bounds-checked against the block behind `ptr`, so a caller lying about the
+			// capacity throws instead of corrupting the heap.
+			auto destination = Memory::getPointerData(ptr, length);
+			std::memcpy(destination.getBegin(), stringified.data(), length);
+			return length;
+		}
 	}
 
 	// ============================== BUILTIN IMPLEMENTATIONS ==============================
@@ -124,6 +152,24 @@ namespace vm::builtins {
 		auto block_data = thread.process_memory.requestBlockData(block_id);
 		auto str_data   = block_data.stdString();
 		thread.safe_process.getIO().writeOutput(str_data.substr(0, str_data.size() - 1) + "\n");
+	}
+
+	u64 FunctionHandlers::builtinFloatToString(
+		SafeVMThread& /*thread*/, f64 value, Pointer ptr, u64 max_len
+	) {
+		return writeFormatted(ptr, max_len, "%g", double(value));
+	}
+
+	u64 FunctionHandlers::builtinU64ToString(
+		SafeVMThread& /*thread*/, u64 value, Pointer ptr, u64 max_len
+	) {
+		return writeFormatted(ptr, max_len, "%lu", value);
+	}
+
+	u64 FunctionHandlers::builtinI64ToString(
+		SafeVMThread& /*thread*/, i64 value, Pointer ptr, u64 max_len
+	) {
+		return writeFormatted(ptr, max_len, "%ld", value);
 	}
 
 	i64 FunctionHandlers::builtinStoi(SafeVMThread& thread, Pointer ptr) {
@@ -294,6 +340,9 @@ namespace vm::builtins {
 				OutputI32,
 				OutputChar,
 				OutputString,
+				FloatToString,
+				U64ToString,
+				I64ToString,
 				Stoi,
 				StartThread,
 				JoinThread,
@@ -346,6 +395,38 @@ namespace vm::builtins {
 					BuiltinFunctionID::OutputString,
 					{ base::StrID("builtin_strOutput_pptr"),
 			          code::FuncSignature({}, { base::StrID("ptr_string") }) },
+				},
+				// `manyptr char` lowers to a pointer to a dynamic table of `i8`, and both `u64`
+				// and the returned length lower to `i64`.
+				{
+					BuiltinFunctionID::FloatToString,
+					{ base::StrID("builtin_float_to_string"),
+			          code::FuncSignature(
+						  { base::StrID("i64") },
+						  { base::StrID("f64"),
+			                base::StrID("ptr_dyntable_i8"),
+			                base::StrID("i64") }
+					  ) },
+				},
+				{
+					BuiltinFunctionID::U64ToString,
+					{ base::StrID("builtin_u64_to_string"),
+			          code::FuncSignature(
+						  { base::StrID("i64") },
+						  { base::StrID("i64"),
+			                base::StrID("ptr_dyntable_i8"),
+			                base::StrID("i64") }
+					  ) },
+				},
+				{
+					BuiltinFunctionID::I64ToString,
+					{ base::StrID("builtin_i64_to_string"),
+			          code::FuncSignature(
+						  { base::StrID("i64") },
+						  { base::StrID("i64"),
+			                base::StrID("ptr_dyntable_i8"),
+			                base::StrID("i64") }
+					  ) },
 				},
 				{
 					BuiltinFunctionID::Stoi,
