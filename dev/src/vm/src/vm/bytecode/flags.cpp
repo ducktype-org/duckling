@@ -42,6 +42,15 @@ namespace vm::code {
 		case builtins::BuiltinFunctionID::LockMutex:
 		case builtins::BuiltinFunctionID::WaitCV:
 			return FunctionFlag(Multithread) | MayBlock | ReleaseGIL;
+		case builtins::BuiltinFunctionID::CptrRead:
+		case builtins::BuiltinFunctionID::CptrWrite:
+			// Raw memory copies between VM memory and C memory addressed by a `cptr`. They perform
+			// no console I/O and do not spawn threads. The VM side is accessed through a pointer
+			// operand, and like every other pointer-deref write in this module (see the
+			// `deref_write` no-op in getFlagsForInstruction) such accesses are not classified as
+			// GlobalRead/GlobalWrite: the analysis cannot tell whether the pointer aliases a
+			// global. So no config restriction applies here.
+			return {};
 		}
 		CORE_PANIC("Invalid builtin function ID");
 	}
@@ -408,6 +417,14 @@ namespace vm::code {
 					"call_cfunc references unknown external C function"
 				);
 				// External C call is opaque: assume it can do IO and runs outside the VM.
+				flags |= CallExternal | InstructionFlag(ControlFlowModifying)
+				       | InstructionFlag(IORead) | InstructionFlag(IOWrite)
+				       | InstructionFlag(MayBlock) | InstructionFlag(ReleaseGIL);
+			}
+			instr_case(ins::Op_call_ffifunc, i) {
+				(void) i;
+				// An FFI call dispatches through libffi into a shared object: like an external C
+				// call it is opaque, may do IO, runs outside the VM, and can block.
 				flags |= CallExternal | InstructionFlag(ControlFlowModifying)
 				       | InstructionFlag(IORead) | InstructionFlag(IOWrite)
 				       | InstructionFlag(MayBlock) | InstructionFlag(ReleaseGIL);
