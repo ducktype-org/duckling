@@ -76,6 +76,7 @@ namespace compiler::helios::templates {
 				auto type = tsh::deductions::declarationTypeFromProvidedType(
 					type_ctv.get<tsh::SymbolType<>>().value(), tsh::Mutability::Immutable
 				);
+				// PR: TODO: check if types match!
 
 				// NOTE: this computes the default value, not the one passed here!
 				// const auto hout_qresult = getHoutOfExprWithExpectedType(
@@ -90,7 +91,7 @@ namespace compiler::helios::templates {
 					= ctx.query<defgen::QueryGeneratedSymbol>(defgen::KeyFor_QueryGeneratedSymbol{
 						.name = name,
 						.generated_symbol_data
-						= defgen::GeneratedConstant{ type, q_key.template_arguments.at(i++), scope },
+						= defgen::GeneratedConstant{ q_key.template_arguments.at(i++), scope },
 					});
 
 				symbols.push_back(const_symbol);

@@ -54,10 +54,7 @@ namespace compiler::helios::templates {
 	struct TemplateBakePSTLinkedData final {
 		pst::AccessLocked<pst::LangElement> pst_parent_element;
 
-		// hack 2:
-		// PR: change to mutable atomic, and set it inside the bake query.
-
-
+		// move the deleter to cpp now?
 		struct TemplateArgumentsSymbolsDeleter final {
 			void del(std::atomic<std::vector<SymID>*>* ptr);
 		};
@@ -70,7 +67,7 @@ namespace compiler::helios::templates {
 		 * @note: We use custom deleter to delete the vector, because we can't use unique_ptr inside
 		 * atomic.
 		 */
-		mutable SharedBox<std::atomic<std::vector<SymID>*>, TemplateArgumentsSymbolsDeleter>
+		mutable SharedBox<std::atomic<std::vector<SymID>*>>
 			template_arguments_symbols;
 	};
 
