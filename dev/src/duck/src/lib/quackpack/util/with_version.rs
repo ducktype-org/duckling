@@ -2,7 +2,6 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::quackpack::core::identity::FullIdentity;
 use crate::quackpack::core::Version;
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]

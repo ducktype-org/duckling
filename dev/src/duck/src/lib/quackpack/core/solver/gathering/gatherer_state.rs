@@ -308,7 +308,7 @@ impl GathererState {
                     "Fetched manifest's version differs from required",
                 )?
                 .context(MessageError(
-                    format!("while handling response for the fetch of a package {} in version {}", request_pkg.value().descriptive_name(), request_pkg.version()).into(),
+                    format!("while handling response for the fetch of a package {} in version {}", request_pkg.value().name, request_pkg.version()).into(),
                 )));
         }
 

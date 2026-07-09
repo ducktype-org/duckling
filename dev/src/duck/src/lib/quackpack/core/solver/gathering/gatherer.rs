@@ -24,7 +24,7 @@ use crate::quackpack::core::solver::gathering::gatherer_state::{
 use crate::quackpack::core::solver::git_access::GitAccess;
 use crate::quackpack::core::solver::solver_mode::SolverMode;
 use crate::quackpack::core::{
-    FeatureName, GitReference, Manifest, PackageLoader, Source, SourceKind, Version,
+    FeatureName, GitReference, Manifest, PackageLoader, Source, SourceKind,
 };
 use crate::quackpack::schemas::registry;
 use crate::quackpack::util::interned_url::InternedUrl;
