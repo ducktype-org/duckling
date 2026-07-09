@@ -11,7 +11,14 @@
 	#include <cstring>
 	#include <format>
 
-namespace vm::jit::cnp {
+namespace vm::native {
+	std::expected<DynamicLibrary, std::string> DynamicLibrary::tryFromFile(const char* path) {
+		void* handle = dlopen(path, RTLD_NOW);
+		if (!handle) return std::unexpected(dlerror());  // NOLINT(concurrency-mt-unsafe)
+
+		return DynamicLibrary{ -1, handle };
+	}
+
 	DynamicLibrary DynamicLibrary::fromMemory(std::span<const byte> library_bytes) {
 		int fd = memfd_create("lib", 0);
 		CORE_ASSERT_SYSCALL(fd != -1, "memfd_create failed:");

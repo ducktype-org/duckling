@@ -6,6 +6,8 @@
 #include "cfg/cf_graph.hpp"
 #include "instruction.hpp"
 
+#include <ffi.h>
+
 #include <base/pointers/box.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
@@ -112,6 +114,31 @@ namespace vm::low {
 		std::vector<TypeCRef> result_types;
 	};
 
+	/**
+	 * @brief Micro bytecode representation of an FFI function, ready to be called via libffi.
+	 * @note `cif` points into `ffi_arg_types` and `struct_types`, so instances must not be
+	 * mutated after `ffi_prep_cif` was performed on them (moving the whole object is fine, as
+	 * the pointed-to storage lives on the heap).
+	 */
+	struct LowFFIFunction {
+		base::StrID name;
+
+		/// Native symbol address resolved from one of the loaded object files.
+		void (*symbol)() = nullptr;
+
+		/// Mutable because `ffi_call` takes a non-const pointer, although it never modifies it.
+		mutable ffi_cif cif;
+		/// Argument types array `cif` points into.
+		std::vector<ffi_type*> ffi_arg_types;
+		/// Owning storage for libffi struct type descriptors used in the signature.
+		std::vector<Box<ffi_type>> struct_types;
+		/// Owning storage for the element arrays of `struct_types` entries.
+		std::vector<Box<std::vector<ffi_type*>>> struct_elements;
+
+		std::vector<TypeCRef> parameters;
+		std::vector<TypeCRef> result_types;
+	};
+
 	class ILowVMProgram {
 	public:
 		[[nodiscard]]
@@ -124,6 +151,10 @@ namespace vm::low {
 
 		[[nodiscard]]
 		virtual const StableObjIdNameMap<LowExternCFunction>& getExternCFunctions() const
+			= 0;
+
+		[[nodiscard]]
+		virtual const StableObjIdNameMap<LowFFIFunction>& getFFIFunctions() const
 			= 0;
 
 		[[nodiscard]]
@@ -181,6 +212,10 @@ namespace vm::low {
 			return extern_c_functions;
 		}
 
+		const StableObjIdNameMap<LowFFIFunction>& getFFIFunctions() const override {
+			return ffi_functions;
+		}
+
 		const ObjIdNameMap<LowGlobalData, GlobalDataID>& getGlobals() const override {
 			return global_data;
 		}
@@ -198,6 +233,7 @@ namespace vm::low {
 		Box<TypeMetadata>                         types = makeBox<TypeMetadata>();
 		ObjIdNameMap<LowFuncData, usize>          functions{};
 		StableObjIdNameMap<LowExternCFunction>    extern_c_functions{};
+		StableObjIdNameMap<LowFFIFunction>        ffi_functions{};
 		ObjIdNameMap<LowGlobalData, GlobalDataID> global_data{};
 		Bytes                                     global_buffer_size = Bytes(0);
 		usize                                     global_count       = 0;
@@ -231,6 +267,10 @@ namespace vm::low {
 
 		const StableObjIdNameMap<LowExternCFunction>& getExternCFunctions() const override {
 			return original_program->getExternCFunctions();
+		}
+
+		const StableObjIdNameMap<LowFFIFunction>& getFFIFunctions() const override {
+			return original_program->getFFIFunctions();
 		}
 
 		const ObjIdNameMap<LowGlobalData, GlobalDataID>& getGlobals() const override {

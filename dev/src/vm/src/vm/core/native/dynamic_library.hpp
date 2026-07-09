@@ -3,15 +3,17 @@
 #include <base/collections/optional.hpp>
 #include <base/types/ints.hpp>
 
+#include <expected>
 #include <span>
+#include <string>
 
 
 #if __unix__
 
-namespace vm::jit::cnp {
+namespace vm::native {
 
 	/**
-	 * @brief Links an in-memory dynamic library into the current process,
+	 * @brief Links a dynamic library into the current process,
 	 * allows to find where the symbols in it live.
 	 * @details It is a wrapper over a system linker.
 	 */
@@ -26,6 +28,7 @@ namespace vm::jit::cnp {
 		std::byte*                 findSymbol(const char* name) const;
 		base::Optional<std::byte*> maybeFindSymbol(const char* name) const;
 		static DynamicLibrary      fromMemory(std::span<const byte> library_bytes);
+		static std::expected<DynamicLibrary, std::string> tryFromFile(const char* path);
 
 	private:
 		DynamicLibrary(int in_lib_fd, void* in_lib_handle):
