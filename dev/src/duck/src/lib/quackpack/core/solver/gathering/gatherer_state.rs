@@ -489,10 +489,10 @@ impl GathererState {
                         qp_bail_internal!("no gathered versions for identity {answer_identity:?}")
                     };
                     if !versions.contains(&pinned_request.version) {
-                        result.1.push(QuackError::message(format!(
-                            "request of pinned dependency {:?} could not find matching version {}",
-                            pinned_request.id.source, pinned_request.version,
-                        )));
+                        result.1.push(qp_err!(
+                            "request of pinned dependency {} could not find matching version {}",
+                            pinned_request.id.name, pinned_request.version,
+                        ));
                         return Ok(result);
                     }
                     result.extend(self.update_features(
