@@ -1,6 +1,12 @@
 #{
     Standard mathematical functions.
 #}
+
+# int -> i32
+# long -> i64
+# float -> f32
+# double -> f64
+
 namespace libm_forward {
     #{
         These are marked `fundecl` since the definition
@@ -15,11 +21,23 @@ namespace libm_forward {
     #}
 
     namespace int_funcs { extern("C") {
-        # Computes absolute value of an integral value
-        fundecl labs(x: i32) -> i32;
-        fundecl llabs(x: i64) -> i64;
+        class div_t {
+            quot: i32;
+            rem: i32;
+        }
 
-        # Possibly add `div`
+        class ldiv_t {
+            quot: i64;
+            rem: i64;
+        }
+
+        # Computes absolute value of an integral value
+        fundecl abs(x: i32) -> i32;
+        fundecl labs(x: i64) -> i64;
+
+        # Computes quotient and remainder of integer division
+        fundecl div(x: i32, y: i32) -> div_t;
+        fundecl ldiv(x: i64, y: i64) -> ldiv_t;
     }}
 
     # Basic operations
@@ -216,8 +234,8 @@ namespace libm_forward {
         # Rounds to nearest integer, rounding away from zero in halfway cases
         fundecl roundf(x: f32) -> f32;
         fundecl round(x: f64) -> f64;
-        fundecl lroundf(x: f32) -> i32;
-        fundecl lround(x: f64) -> i32;
+        fundecl lroundf(x: f32) -> i64;
+        fundecl lround(x: f64) -> i64;
 
         # Rounds to an integer using current rounding mode
         fundecl nearbyintf(x: f32) -> f32;
@@ -226,8 +244,8 @@ namespace libm_forward {
         # Rounds to an integer using current rounding mode with exception if the result differs
         fundecl rintf(x: f32) -> f32;
         fundecl rint(x: f64) -> f64;
-        fundecl lrintf(x: f32) -> i32;
-        fundecl lrint(x: f64) -> i32;
+        fundecl lrintf(x: f32) -> i64;
+        fundecl lrint(x: f64) -> i64;
     }}
 
     # Floating-point manipulation functions
@@ -245,20 +263,23 @@ namespace libm_forward {
         fundecl modf(arg: f64, iptr: cptr f64) -> f64;
 
         # Computes efficiently a number times FLT_RADIX raised to a power
-        fundecl scalblnf(x: f32, exp: i32) -> f32;
-        fundecl scalbln(x: f64, exp: i32) -> f64;
+        fundecl scalbnf(x: f32, exp: i32) -> f32;
+        fundecl scalbn(x: f64, exp: i32) -> f64;
+        fundecl scalblnf(x: f32, exp: i64) -> f32;
+        fundecl scalbln(x: f64, exp: i64) -> f64;
 
         # Extracts exponent of the given number
-        fundecl ilogbf(x: f32) -> i16;
-        fundecl ilogb(x: f64) -> i16;
+        fundecl ilogbf(x: f32) -> i32;
+        fundecl ilogb(x: f64) -> i32;
         fundecl logbf(x: f32) -> f32;
         fundecl logb(x: f64) -> f64;
 
         # Determines next representable floating-point value towards the given value
         fundecl nextafterf(from_: f32, to: f32) -> f32;
         fundecl nextafter(from_: f64, to: f64) -> f64;
-        fundecl nexttowardf(from_: f32, to: f64) -> f32;
-        fundecl nexttoward(from_: f64, to: f64) -> f64;
+        # This takes `long double` in `to`
+        # fundecl nexttowardf(from_: f32, to: ) -> f32;
+        # fundecl nexttoward(from_: f64, to: ) -> f64;
 
         # Determines next representable floating-point value greater or less than the given value
         fundecl nextupf(x: f32) -> f32;
@@ -273,7 +294,8 @@ namespace libm_forward {
 
     # Classification and comparison
     namespace classification_and_comparison { extern("C") {
-        # Probably not needed, but we can add it if we want to expose the C interface for these functions.
+        # Probably not needed, but we can add it later.
+        # Note that these are macros, not functions, so external C implementation is needed.
     }}
 }
 
