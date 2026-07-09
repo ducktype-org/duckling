@@ -3,6 +3,8 @@ use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 
+use crate::quackpack::core::full_identity::FullKind;
+use crate::quackpack::core::full_identity::FullOrigin;
 use crate::quackpack::schemas::registry;
 use crate::quackpack::util::interned_url::InternedUrl;
 use crate::quackpack::util::is_local_file::IsLocalFile;
@@ -72,7 +74,7 @@ impl Source {
 
     /// Create a new [`Source`] for a local package, but the path to the package is a url.
     pub fn for_local_with_url(root: impl Into<InternedUrl>) -> Self {
-        Self::new(url.into(), SourceKind::Local)
+        Self::new(root.into(), SourceKind::Local)
     }
 
     /// Get an [`InternedUrl`] of this [`Source`].
