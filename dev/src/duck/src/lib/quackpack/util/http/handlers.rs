@@ -1,79 +1,65 @@
 //! Our implementations of the [`Handler`] trait.
 
-use std::fs::File;
-use std::io::Write;
-use std::path::{Path, PathBuf};
+use std::io::{Cursor, Read};
+use std::str::FromStr;
 
 use curl::easy::Handler;
-use serde::Deserialize;
-use tracing::error;
+use http::{HeaderName, HeaderValue};
 
-use crate::util::path_ops_ext::PathOpsExt;
-use crate::{QuackResult, QuackResultContext};
+use super::{Response, try_parse_header_value};
 
 #[derive(Clone, Debug, Default)]
 /// A basic collector which saves the entire HTTP response as a vector of `u8`.
-pub struct ResponseCollector {
-    data: Vec<u8>,
+pub struct Collector {
+    response: Response,
+    // Cursor so we advance the position.
+    request_body: Cursor<Vec<u8>>,
 }
 
-impl ResponseCollector {
+impl Collector {
     /// Create a new [`ResponseCollector`].
     pub fn new() -> Self {
         Self::default()
     }
 
-    /// Get the underlying bytes of an HTTP response.
-    pub fn data(&self) -> &[u8] {
-        &self.data
+    pub fn response(&self) -> &Response {
+        &self.response
     }
 
-    /// Helper for deserializing JSONs from [`data`](Self::data).
-    pub fn deserialize_json<T: for<'de> Deserialize<'de>>(&self) -> Result<T, serde_json::Error> {
-        serde_json::from_slice(&self.data)
+    pub fn request_body(&self) -> &Cursor<Vec<u8>> {
+        &self.request_body
+    }
+
+    pub fn request_body_mut(&mut self) -> &mut Cursor<Vec<u8>> {
+        &mut self.request_body
+    }
+
+    pub fn set_request_body(&mut self, request_body: Vec<u8>) {
+        self.request_body = Cursor::new(request_body);
     }
 }
 
-impl Handler for ResponseCollector {
+impl Handler for Collector {
     fn write(&mut self, data: &[u8]) -> Result<usize, curl::easy::WriteError> {
-        self.data.extend_from_slice(data);
+        self.response.body_mut().extend_from_slice(data);
         Ok(data.len())
     }
-}
 
-#[derive(Debug)]
-/// Collector which writes new bytes into a file.
-pub struct FileWriter {
-    file: File,
-    path: PathBuf,
-}
-
-impl FileWriter {
-    /// Create a new [`FileWriter`], which will write to the `path`.
-    pub fn new(path: &Path) -> QuackResult<Self> {
-        let file = path.touch()?;
-        Ok(Self {
-            file,
-            path: path.to_path_buf(),
-        })
+    fn read(&mut self, data: &mut [u8]) -> Result<usize, curl::easy::ReadError> {
+        let len = self
+            .request_body
+            .read(data)
+            .expect("read on Vec<u8> has returned an error?!");
+        Ok(len)
     }
 
-    /// Flush the underlying file.
-    pub fn flush(&mut self) -> QuackResult<()> {
-        self.file
-            .flush()
-            .with_context(|| format!("failed to flush `{}`", self.path.display()))
-    }
-}
-
-impl Handler for FileWriter {
-    fn write(&mut self, data: &[u8]) -> Result<usize, curl::easy::WriteError> {
-        match self.file.write_all(data) {
-            Ok(_) => Ok(data.len()),
-            Err(e) => {
-                error!("failed to write data to `{}`: {e}", self.path.display());
-                Err(curl::easy::WriteError::Pause)
-            }
+    fn header(&mut self, data: &[u8]) -> bool {
+        if let Some((header, value)) = try_parse_header_value(data)
+            && let Ok(header) = HeaderName::from_str(header)
+            && let Ok(value) = HeaderValue::from_str(value)
+        {
+            self.response.headers_mut().insert(header, value);
         }
+        true
     }
 }
