@@ -38,10 +38,23 @@ inline std::span<unsigned char> getBuiltinsArm64AppleDarwinBCSpan() {
 	};
 }
 
+// Intel (x86_64) macOS builtins, generated only on macOS x86_64 hosts.
+extern unsigned char builtins_x86_64_apple_darwin_bc[];  // NOLINT
+extern unsigned int  builtins_x86_64_apple_darwin_bc_len;
+
+inline std::span<unsigned char> getBuiltinsX8664AppleDarwinBCSpan() {
+	return {
+		static_cast<unsigned char*>(builtins_x86_64_apple_darwin_bc),
+		builtins_x86_64_apple_darwin_bc_len,
+	};
+}
+
 // Builtins bitcode matching the host the compiler runs on.
 inline std::span<unsigned char> getNativeBuiltinsBCSpan() {
 #if defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__))
 	return getBuiltinsArm64AppleDarwinBCSpan();
+#elif defined(__APPLE__)
+	return getBuiltinsX8664AppleDarwinBCSpan();
 #else
 	return getBuiltinsX8664LinuxGnuBCSpan();
 #endif
