@@ -37,6 +37,7 @@ def tester_impl(
     build_dir: str,
     tui: bool = False,
     rerun_failed: bool = False,
+    interactive: bool = False,
 ):
         # Debug print for filter_list after it is set
         # (must be after rerun_failed/filter logic)

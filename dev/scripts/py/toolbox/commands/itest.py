@@ -61,6 +61,13 @@ from click import command, option
     default=False,
     help="Use terminal UI for real-time test progress visualization.",
 )
+@option(
+    "-i",
+    "--interactive",
+    is_flag=True,
+    default=False,
+    help="Start an interactive session to select tests and configure options.",
+)
 @verbose(help="Prints some debug information about test cases")
 def itest(*args, **kwargs):
     """Runs integration tests"""

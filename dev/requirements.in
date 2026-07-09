@@ -5,3 +5,4 @@ click
 PyYAML
 requests
 rich
+questionary
