@@ -100,22 +100,7 @@ impl WithVersion<FullIdentity> {
         if self.value().origin().url() != source.url() || self.value().name() != dependency.name() {
             return Ok(false);
         }
-        match (self.value().origin().kind(), source.kind()) {
-            (FullKind::Local, SourceKind::Local) => Ok(true),
-            (FullKind::Git { commit }, SourceKind::Git(reference)) => {
-                // If the git dependency specifies tag, branch or nothing (default branch),
-                // some new commits may have appeared.
-                if let GitReference::Rev(required_commit) = reference
-                    && commit == *required_commit
-                {
-                    Ok(true)
-                } else {
-                    Ok(false)
-                }
-            }
-            (FullKind::Registry, SourceKind::Registry) => Ok(true),
-            _ => Ok(false),
-        }
+        Ok(self.value().origin().kind().satisfies_source_kind(*source.kind()))
     }
 
     /// Helper for [`Self::still_satisfies_dep`].

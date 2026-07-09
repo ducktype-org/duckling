@@ -7,6 +7,7 @@ use std::path::Path;
 
 use serde::{Deserialize, Serialize, de};
 
+use crate::quackpack::core::SourceKind;
 use crate::quackpack::core::identity::{Identity, Kind, Origin};
 use crate::quackpack::util::interned_url::InternedUrl;
 use crate::quackpack::util::is_local_file::IsLocalFile;
@@ -43,6 +44,7 @@ impl FullIdentity {
         Identity::new(self.name(), self.origin().as_origin())
     }
 
+    /// Generate a human-readable description of [`self`].
     pub fn descriptive_name(&self) -> String {
         match self.origin.kind {
             FullKind::Registry => format!("`{}", self.name),
@@ -253,6 +255,26 @@ impl FullKind {
             Self::Registry => Kind::Registry,
             Self::Git { .. } => Kind::Git,
             Self::Local => Kind::Local,
+        }
+    }
+
+    /// Checks that [`self`] satisfies the requirenments of some [`SourceKind`].
+    pub fn satisfies_source_kind(&self, source_kind: SourceKind) -> bool {
+        match (self, source_kind) {
+            (FullKind::Local, SourceKind::Local) => true,
+            (FullKind::Git { commit }, SourceKind::Git(reference)) => {
+                // If the git dependency specifies tag, branch or nothing (default branch),
+                // some new commits may have appeared.
+                if let GitReference::Rev(required_commit) = reference
+                    && commit == *required_commit
+                {
+                    true
+                } else {
+                    false
+                }
+            }
+            (FullKind::Registry, SourceKind::Registry) => true,
+            _ => false,
         }
     }
 }
