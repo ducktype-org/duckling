@@ -413,12 +413,8 @@ namespace compiler::helios::code {
 						));
 						return;  // failed
 					}
-					// @TODO: #1549 RefOfExpr is inserted here naively without any checks.
-					// This should change to take value category into consideration as well as the
-					// `unique`/`leaking` specifiers.
-					auto primary_category = inner->expression_type.getValueCategory().getCategory();
-					if (primary_category == tsh::PrimaryCategory::Literal
-					    || primary_category == tsh::PrimaryCategory::Temporary) {
+					// @TODO: #3109 Take `unique`/`leaking` specifiers into consideration.
+					if (inner->expression_type.getValueCategory().isRValue()) {
 						ctx.logInt(makeBox<dia_int::PlaceholderError>(
 							"Tried to reference a temporary", stmt->getStablePosition()
 						));
