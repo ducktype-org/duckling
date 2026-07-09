@@ -78,7 +78,7 @@ impl SolverFreeze {
         for pkg in reversed_graph.keys() {
             if !still_satisfied_pkgs.contains(pkg) {
                 Self::flawed_pkgs_dfs(
-                    pkg,
+                    *pkg,
                     &reversed_graph,
                     &mut visited,
                     &mut still_satisfied_pkgs,
@@ -104,7 +104,7 @@ impl SolverFreeze {
     ) -> QuackResult<HashSet<WithVersion<FullIdentity>>> {
         let mut still_satisfied_pkgs = HashSet::new();
         for (pkg, freeze) in self.package_freezes.iter() {
-            let Some(manifest) = Self::get_and_check_manifest(pkg, manifests, &freeze.features)
+            let Some(manifest) = Self::get_and_check_manifest(*pkg, manifests, &freeze.features)
             else {
                 continue;
             };
@@ -141,11 +141,11 @@ impl SolverFreeze {
     ///     * freeze-present features are expansion-closed,
     ///     * freeze-present version equals manifest version.
     fn get_and_check_manifest<'a>(
-        pkg: &WithVersion<FullIdentity>,
+        pkg: WithVersion<FullIdentity>,
         manifests: &'a HashMap<WithVersion<FullIdentity>, Box<Manifest>>,
         features: &HashSet<FeatureName>,
     ) -> Option<&'a Manifest> {
-        let manifest = manifests.get(pkg)?;
+        let manifest = manifests.get(&pkg)?;
         if manifest.name() != pkg.value().name() {
             return None;
         }
@@ -198,19 +198,19 @@ impl SolverFreeze {
     /// Expands the notion of a flawed package in a dfs-like manner, by applying a rule that
     /// if for some package and its dependency, the realization is flawed, the package is as well.
     fn flawed_pkgs_dfs(
-        cur_pkg: &WithVersion<FullIdentity>,
+        cur_pkg: WithVersion<FullIdentity>,
         graph: &HashMap<WithVersion<FullIdentity>, Vec<WithVersion<FullIdentity>>>,
         visited: &mut HashSet<WithVersion<FullIdentity>>,
         still_satisfied_pkgs: &mut HashSet<WithVersion<FullIdentity>>,
     ) {
-        visited.insert(*cur_pkg);
-        still_satisfied_pkgs.remove(cur_pkg);
-        let Some(edges) = graph.get(cur_pkg) else {
+        visited.insert(cur_pkg);
+        still_satisfied_pkgs.remove(&cur_pkg);
+        let Some(edges) = graph.get(&cur_pkg) else {
             return;
         };
         for parent in edges {
             if !visited.contains(parent) {
-                Self::flawed_pkgs_dfs(parent, graph, visited, still_satisfied_pkgs);
+                Self::flawed_pkgs_dfs(*parent, graph, visited, still_satisfied_pkgs);
             }
         }
     }
