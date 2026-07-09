@@ -514,9 +514,9 @@ impl GathererState {
         &mut self,
         request: NotPinnedRequest,
     ) -> GathererResult<Vec<ManifestsRequest>> {
-        let id = not_pinned_request.id;
-        let selector = not_pinned_request.versions;
-        let requested_features = not_pinned_request.features;
+        let id = request.id;
+        let selector = request.versions;
+        let requested_features = request.features;
         let mut result: GathererComputation<Vec<ManifestsRequest>> = GathererComputation::empty();
         let mut any_matched = false;
         let Some(answer_origin) = self.source_to_origin_resolver.get(&id.source).copied() else {

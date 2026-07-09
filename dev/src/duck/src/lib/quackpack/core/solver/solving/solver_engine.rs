@@ -302,7 +302,7 @@ impl<'a> SolverEngine<'a> {
                     .add_dependency_feature_realisation_var(edge, *feature);
             }
             self.model
-                .require_satisfying_dep_feature(edge, parent_feature.copied(), forced)?;
+                .require_satisfying_dep_feature(edge, parent_feature, forced)?;
         }
         Ok(())
     }

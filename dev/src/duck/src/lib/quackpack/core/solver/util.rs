@@ -5,7 +5,7 @@ use crate::quackpack::core::solver::gathering::fetch_types::{
     ManifestsRequest, NotPinnedRequest, PinnedRequest, RequestIdentifier,
 };
 use crate::quackpack::core::version::CompatibilityCheck;
-use crate::quackpack::core::{Dependency, GitReference, Source, SourceKind, Version};
+use crate::quackpack::core::{Dependency, Source, Version};
 use crate::quackpack::util::with_version::WithVersion;
 use crate::{QuackResult, QuackResultContext};
 
