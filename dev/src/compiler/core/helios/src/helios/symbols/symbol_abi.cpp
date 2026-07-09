@@ -86,6 +86,15 @@ namespace compiler::helios {
 				));
 				return query::Failed();
 			}
+		} else if (first_arg == base::StrID("DVM")) {
+			if (args.size() == 1) {  // `extern("DVM")` case
+				return DVMAbi{};
+			}
+			ctx.logInt(makeBox<dia_int::PlaceholderError>(
+				"Too many arguments for DVM ABI in extern()",
+				extern_args.unlock(ctx)->getStablePosition()
+			));
+			return query::Failed();
 		} else {
 			ctx.logInt(makeBox<dia_int::PlaceholderError>(
 				"Unsupported ABI specified in extern()", extern_args.unlock(ctx)->getStablePosition()

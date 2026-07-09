@@ -86,9 +86,9 @@ extern "C" {
 	// when the representation does not fit into `max_len` characters.
 	// These back `core.runtime` and must stay in sync with the DVM builtins of the same
 	// names (see `vm::builtins::getBuiltinFunctions`).
-	uint64_t builtin_float_to_string(double v, char* p, uint64_t max_len);
-	uint64_t builtin_u64_to_string(uint64_t v, char* p, uint64_t max_len);
-	uint64_t builtin_i64_to_string(int64_t v, char* p, uint64_t max_len);
+	uint64_t float_to_string(double v, char* p, uint64_t max_len);
+	uint64_t u64_to_string(uint64_t v, char* p, uint64_t max_len);
+	uint64_t i64_to_string(int64_t v, char* p, uint64_t max_len);
 
 	// Stringification @TODO: #2634 move to Duckling, probably
 	String builtin_stringify_i64(int64_t v);
@@ -322,15 +322,15 @@ static uint64_t write_formatted(char* p, uint64_t max_len, const char* format, T
 	return length;
 }
 
-uint64_t builtin_float_to_string(double v, char* p, uint64_t max_len) {
+uint64_t float_to_string(double v, char* p, uint64_t max_len) {
 	return write_formatted(p, max_len, "%g", v);
 }
 
-uint64_t builtin_u64_to_string(uint64_t v, char* p, uint64_t max_len) {
+uint64_t u64_to_string(uint64_t v, char* p, uint64_t max_len) {
 	return write_formatted(p, max_len, "%lu", v);
 }
 
-uint64_t builtin_i64_to_string(int64_t v, char* p, uint64_t max_len) {
+uint64_t i64_to_string(int64_t v, char* p, uint64_t max_len) {
 	return write_formatted(p, max_len, "%ld", v);
 }
 

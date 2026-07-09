@@ -66,7 +66,6 @@ class DuckString {
             if (new_cap == 0u64) new_cap = 1u64;
             while (new_cap < required) new_cap = new_cap * 2u64;
 
-            # A default constructed string has no buffer to reallocate yet.
             if (cap == 0u64) pointer = allocation.alloc(new_cap);
             else pointer = allocation.realloc(pointer, new_cap);
             cap = new_cap;
@@ -86,6 +85,13 @@ class DuckString {
         # `other.pointer` is read after `reserve`, growing self may have moved
         # the buffer `other` refers to when both are the same string.
         copyCharsAt(other.pointer, pointer, len, other_len);
+        len = len + other_len;
+    }
+
+    fun append(other: str) -> () = {
+        let other_len = other.length();
+        reserve(len + other_len);
+        copyCharsAt(builtins.char_ptr_from_slice(other), pointer, len, other_len);
         len = len + other_len;
     }
 
@@ -135,6 +141,15 @@ class DuckString {
         if (i < 0i64 or i >= i64(len)) panicking.panic();
         return &pointer[i];
     }
+}
+
+fun print(s: ref DuckString) -> u64 = {
+    var i = 0u64;
+    while (i < s.length()) {
+        builtins.builtin_output_char(s.at(i as i64));
+        i = i + 1u64;
+    }
+    return i;
 }
 
 fun duckStringReserve(cap: u64) -> DuckString = {

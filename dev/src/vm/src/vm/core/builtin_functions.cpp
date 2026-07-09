@@ -400,7 +400,7 @@ namespace vm::builtins {
 				// and the returned length lower to `i64`.
 				{
 					BuiltinFunctionID::FloatToString,
-					{ base::StrID("builtin_float_to_string"),
+					{ base::StrID("float_to_string"),
 			          code::FuncSignature(
 						  { base::StrID("i64") },
 						  { base::StrID("f64"),
@@ -410,7 +410,7 @@ namespace vm::builtins {
 				},
 				{
 					BuiltinFunctionID::U64ToString,
-					{ base::StrID("builtin_u64_to_string"),
+					{ base::StrID("u64_to_string"),
 			          code::FuncSignature(
 						  { base::StrID("i64") },
 						  { base::StrID("i64"),
@@ -420,7 +420,7 @@ namespace vm::builtins {
 				},
 				{
 					BuiltinFunctionID::I64ToString,
-					{ base::StrID("builtin_i64_to_string"),
+					{ base::StrID("i64_to_string"),
 			          code::FuncSignature(
 						  { base::StrID("i64") },
 						  { base::StrID("i64"),
