@@ -126,7 +126,20 @@ private:
 				},
 				1
 			);
-			checkForErrorOnCompileModule(R"(fun a() = -true;)", { "No builtin unary operator" }, 1);
+			checkForErrorOnCompileModule(
+				R"(fun a() = -true;)", { "Call failed because no matching functions were found." }, 1
+			);
+			checkForErrorOnCompileModule(
+				R"(
+				fun main() -> i64 = {
+					var x: i64 = 0;
+					x++;
+					return 0;
+				}
+			)",
+				{ "Call failed because no matching functions were found." },
+				1
+			);
 		}
 
 		// ============================ Function calls ============================
@@ -166,7 +179,7 @@ private:
 					b(1,2,3);
 				}
 			)",
-				{ "no matching functions" },
+				{ "Call failed because no matching functions were found." },
 				1
 			);
 
@@ -770,20 +783,6 @@ private:
 
 		// ========================= Not-yet-implemented errors =========================
 		{
-			// Note: just remove the tests when the features
-			// are implemented.
-			checkForErrorOnCompileModule(
-				R"(
-				fun main() -> i64 = {
-					var x: i64 = 0;
-					x++;
-					return 0;
-				}
-			)",
-				{ "Feature not implemented", "Suffix" },
-				1
-			);
-
 			checkForErrorOnCompileModule(
 				R"(
 				fun main() -> i64 = {

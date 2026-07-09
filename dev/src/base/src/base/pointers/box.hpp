@@ -41,7 +41,7 @@ namespace base {
 		template<class U, class UDeleter>
 		friend class MBox;
 
-		template<class U, class UDeleter>
+		template<class U>
 		friend class SharedBox;
 
 		constexpr void assertNotNull() const {

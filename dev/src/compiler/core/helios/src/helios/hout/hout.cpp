@@ -24,12 +24,14 @@ namespace compiler::helios {
 
 	HOUTFunctionDeclaration::HOUTFunctionDeclaration(
 		const SymID                  symbol,
+		const Operatoriness          operatoriness,
 		const tsh::SymbolType<>      ret_type,
 		std::vector<code::Parameter> parameters,
 		code::ElementOrigin          origin
 	):
 		  original_symbol(symbol),
 		  original_name(name(original_symbol)),
+		  operatoriness(operatoriness),
 		  return_type(ret_type),
 		  parameters(std::move(parameters)),
 		  origin(origin) {
