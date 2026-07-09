@@ -9,14 +9,19 @@ namespace {
 	Ref<fs::VFS> vfs = fs::VFS::getInstance();
 
 	/**
-	 * @brief Checks if the given path has a prefix that matches the system's temporary directory.
-	 * The path does not need to be real (point to an existing file).
+	 * @brief Checks whether `path` lives inside the system's temporary directory.
+	 *
+	 * Strategy: canonicalize the temp directory once, then string-compare `path` against it —
+	 * it matches if it *is* that directory or starts with it plus a separator. `path` need not
+	 * exist. Since the comparison is textual, both sides must be in the same form: the temp dir
+	 * is canonical, so a `path` given through a symlink would not match it (on macOS the temp dir
+	 * sits under /var, a symlink to /private/var). If the direct check fails, retry once with the
+	 * symlinks in `path` resolved via weakly_canonical (which tolerates non-existent paths).
 	 */
 	bool hasTemporaryPrefix(const std::filesystem::path& path) {
-		auto temp_dir = std::filesystem::canonical(std::filesystem::temp_directory_path());
-
+		auto temp_dir   = std::filesystem::canonical(std::filesystem::temp_directory_path());
 		auto temp_exact = temp_dir.generic_string();
-		// Ensure the prefix ends with a separator for correct prefix matching.
+		// Prefix to match children of the temp dir; guarantee a trailing separator.
 		auto temp_prefix = temp_exact;
 		if (!temp_prefix.empty() && temp_prefix.back() != '/') temp_prefix += '/';
 
@@ -27,9 +32,7 @@ namespace {
 
 		if (matches(path)) return true;
 
-		// The system temp dir may sit behind a symlink (on macOS /var -> /private/var), so a
-		// path expressed through the symlink won't share the canonical temp prefix. Retry after
-		// resolving symlinks; weakly_canonical tolerates paths that don't exist yet.
+		// Direct match failed: resolve symlinks in `path` and compare again (see strategy above).
 		if (path.is_absolute()) {
 			std::error_code ec;
 			auto            resolved = std::filesystem::weakly_canonical(path, ec);
