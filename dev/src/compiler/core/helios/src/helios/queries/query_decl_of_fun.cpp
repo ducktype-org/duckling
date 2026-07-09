@@ -324,7 +324,9 @@ namespace compiler::helios {
 			}
 
 			void visitCopyConstructor(pst::Access<pst::CopyConstructor> stmt) final {
-				emplaceDeclaration(stmt->getParams(), {});
+				emplaceDeclaration(
+					stmt->getParams(), {}, HOUTFunctionDeclaration::Operatoriness::None
+				);
 
 				const auto class_type
 					= ctx.query<QueryClassOfMember>(original_symbol)->valueOrThrow();
@@ -522,7 +524,9 @@ namespace compiler::helios {
 							};
 						}
 						case defgen::Constructor::Kind::Copy:
-							return funDeclFromType(ctx, key);
+							return funDeclFromType(
+								ctx, key, HOUTFunctionDeclaration::Operatoriness::None
+							);
 						}
 						CORE_UNREACHABLE();
 					}
