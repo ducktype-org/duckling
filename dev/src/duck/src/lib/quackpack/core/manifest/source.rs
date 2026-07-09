@@ -45,7 +45,7 @@ pub struct Source {
 }
 
 impl Source {
-    pub fn new(url: InternedUrl, kind: SourceKind) -> Self {
+    fn new(url: InternedUrl, kind: SourceKind) -> Self {
         // kind = local => url.is_local_file
         debug_assert!(
             url.is_local_file() || !kind.is_local(),
@@ -59,15 +59,20 @@ impl Source {
         Self::new(url.into(), SourceKind::Registry)
     }
 
-    /// Create a new [`Source`] for a git with a commit.
+    /// Create a new [`Source`] for a git with a reference.
     pub fn for_git(url: impl Into<InternedUrl>, reference: GitReference) -> Self {
         Self::new(url.into(), SourceKind::Git(reference))
     }
 
-    /// Create a new [`Source`] for a git with a reference.
+    /// Create a new [`Source`] for a local package.
     pub fn for_local(root: &Path) -> QuackResult<Self> {
         let url = root.to_url()?;
         Ok(Self::new(url.into(), SourceKind::Local))
+    }
+
+    /// Create a new [`Source`] for a local package, but the path to the package is a url.
+    pub fn for_local_with_url(root: impl Into<InternedUrl>) -> Self {
+        Self::new(url.into(), SourceKind::Local)
     }
 
     /// Get an [`InternedUrl`] of this [`Source`].
@@ -98,6 +103,17 @@ impl Source {
     /// Helper for `source.kind().maybe_reference()`.
     pub fn maybe_reference(&self) -> Option<GitReference> {
         self.kind.maybe_reference()
+    }
+
+    /// Creates a [`Source`] which could correspond to the given [`FullOrigin`].
+    /// Used for generating mapping Source -> FullOrigin for packages from the previous freeze.
+    /// Note that this mapping is many-to-one.
+    pub fn canonical_source_for_origin(origin: FullOrigin) -> Self {
+        match origin.kind() {
+            FullKind::Registry => Self::for_registry(origin.url()),
+            FullKind::Git { commit } => Self::for_git(origin.url(), GitReference::Rev(commit)),
+            FullKind::Local => Self::new(origin.url(), SourceKind::Local),
+        }
     }
 }
 

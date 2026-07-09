@@ -132,7 +132,7 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
         let Ok(root_url) = Url::from_file_path(root_path.clone()) else {
             qp_bail_internal!("failed to generate url from a path");
         };
-        let root_source = Source::new(root_url.into(), SourceKind::Local);
+        let root_source = Source::for_local_with_url(root_url);
         let root_request = NotPinnedRequest {
             id: RequestIdentifier {
                 name: root_name,

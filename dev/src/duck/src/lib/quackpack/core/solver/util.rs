@@ -58,18 +58,6 @@ pub fn get_possible_realizations(
     }
 }
 
-impl Source {
-    /// Creates a [`Source`] which could correspond to the given [`FullOrigin`].
-    /// Used for generating mapping Source -> FullIdentity for packages from the previous freeze.
-    pub fn canonical_source_for_origin(origin: FullOrigin) -> Self {
-        match origin.kind() {
-            FullKind::Registry => Self::for_registry(origin.url()),
-            FullKind::Git { commit } => Self::for_git(origin.url(), GitReference::Rev(commit)),
-            FullKind::Local => Self::new(origin.url(), SourceKind::Local),
-        }
-    }
-}
-
 impl WithVersion<FullIdentity> {
     /// Creates a [`ManifestsRequest`] for a package.
     /// Used for requesting fetches of packages from the previous freeze.
