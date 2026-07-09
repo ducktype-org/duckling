@@ -107,6 +107,10 @@ namespace compiler::helios::code {
 				  { { base::StrID("/"), tsh::Kind::Integral }, BuiltinBinary::IntegerDiv },
 				  { { base::StrID("%"), tsh::Kind::Integral }, BuiltinBinary::IntegerMod },
 				  { { base::StrID("**"), tsh::Kind::Integral }, BuiltinBinary::IntegerPow },
+				  { { base::StrID("+="), tsh::Kind::Integral }, BuiltinBinary::IntegerEqAdd },
+				  { { base::StrID("-="), tsh::Kind::Integral }, BuiltinBinary::IntegerEqSub },
+				  { { base::StrID("*="), tsh::Kind::Integral }, BuiltinBinary::IntegerEqMul },
+				  { { base::StrID("/="), tsh::Kind::Integral }, BuiltinBinary::IntegerEqDiv },
 
 				  /// Integer comparisons ///
 				  { { base::StrID("<"), tsh::Kind::Integral }, BuiltinBinary::IntegerLt },
@@ -123,6 +127,10 @@ namespace compiler::helios::code {
 				  { { base::StrID("/"), tsh::Kind::Float }, BuiltinBinary::FloatDiv },
 				  { { base::StrID("%"), tsh::Kind::Float }, BuiltinBinary::FloatMod },
 				  { { base::StrID("**"), tsh::Kind::Float }, BuiltinBinary::FloatPow },
+				  { { base::StrID("+="), tsh::Kind::Float }, BuiltinBinary::FloatEqAdd },
+				  { { base::StrID("-="), tsh::Kind::Float }, BuiltinBinary::FloatEqSub },
+				  { { base::StrID("*="), tsh::Kind::Float }, BuiltinBinary::FloatEqMul },
+				  { { base::StrID("/="), tsh::Kind::Float }, BuiltinBinary::FloatEqDiv },
 
 				  /// Floating point comparisons ///
 				  { { base::StrID("<"), tsh::Kind::Float }, BuiltinBinary::FloatLt },

@@ -247,6 +247,11 @@ namespace lang_def {
 		Divide,
 		Remainder,
 		Exponentiate,
+
+		EqPlus,
+		EqMinus,
+		EqMultiply,
+		EqDivide,
 	};
 
 	enum class NumericLiteralTypeSpecifier {

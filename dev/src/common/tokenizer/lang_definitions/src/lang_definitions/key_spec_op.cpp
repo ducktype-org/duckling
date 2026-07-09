@@ -252,6 +252,11 @@ namespace lang_def {
 		{ NamedOperator::Divide, "/" },
 		{ NamedOperator::Remainder, "%" },
 		{ NamedOperator::Exponentiate, "**" },
+		
+		{ NamedOperator::EqPlus, "+=" },
+		{ NamedOperator::EqMinus, "-=" },
+		{ NamedOperator::EqMultiply, "*=" },
+		{ NamedOperator::EqDivide, "/=" },
 	});
 
 	constexpr auto NUMERIC_LITERAL_TYPE_SPECIFIER_ARRAY

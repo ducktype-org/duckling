@@ -302,6 +302,10 @@ namespace compiler::helios::code {
 		IntegerDiv,
 		IntegerMod,
 		IntegerPow,
+		IntegerEqAdd,
+		IntegerEqSub,
+		IntegerEqMul,
+		IntegerEqDiv,
 
 		FloatAdd,
 		FloatSub,
@@ -309,6 +313,10 @@ namespace compiler::helios::code {
 		FloatDiv,
 		FloatMod,
 		FloatPow,
+		FloatEqAdd,
+		FloatEqSub,
+		FloatEqMul,
+		FloatEqDiv,
 
 		// Comparison operators
 		IntegerLt,    // Less than
