@@ -228,7 +228,6 @@ impl SolverEngineData {
     /// Returns a [`SolverAnswer`].
     #[tracing::instrument(skip_all)]
     pub fn solve(self) -> QuackResult<SolverAnswer> {
-        println!("{:?}", self.input.gathered_manifests);
         let manifests = self.input.gathered_manifests.clone();
         let solver_output =
             SolverEngine::run_engine(self.input, &(self.root_pkg, self.root_pkg_features))?;
