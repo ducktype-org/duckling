@@ -2,6 +2,7 @@
 
 #include <diagnostic_interactive/core/diagnostic_arguments.hpp>
 #include <diagnostic_interactive/message.hpp>
+#include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expr_holders.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
 #include <frontend/pst_parser/elements/hierarchy/lists/nested_import_list.hpp>
@@ -263,7 +264,7 @@ namespace compiler::helios::code {
 					variant_case(TypeRequiresExplicitCopyMove, data) {
 						auto source_pos
 							= arguments_origin[data.argument_index].getStablePosition().value();
-						return makeBox<dia_int::NotYetImplementedCodeError>(
+						return makeBox<dia_int::PlaceholderError>(
 							base::strConcat(
 								"Cannot implicitly copy a value of non-trivially-copyable type `",
 								data.given_type.withReferenceKind(tsh::ReferenceKind::Direct)

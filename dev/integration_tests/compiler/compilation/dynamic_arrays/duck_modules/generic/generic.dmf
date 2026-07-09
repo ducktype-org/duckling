@@ -89,43 +89,43 @@ fun staticArraysTest() -> () = {
     printSeparator();
 }
 
-# @TODO: #2000 Make this test come back.
+# @TODO: #2825 Make this test come back. When destructors are legit.
 # fun dynamicArraysTest() -> () = {
 #     var nested: List[List[i32]];
 #     var inner1: List[i32];
 #     inner1.push(1);
 #     inner1.push(2);
-
+#
 #     var inner2: List[i32];
 #     inner2.push(3);
-    
+#   
 #     nested.push(inner1);
 #     nested.push(inner2);
-    
+# 
 #     builtin_output_u64(nested[0].length()); # 2
 #     builtin_output_u64(nested[1].length()); # 1
-    
+#    
 #     builtin_output_i64(nested[0][0]); # 1
 #     builtin_output_i64(nested[0][1]); # 2
 #     builtin_output_i64(nested[1][0]); # 3
-    
+#    
 #     nested[1].push(4);
-
+#
 #     builtin_output_u64(nested[1].length()); # 2
 #     builtin_output_i64(nested[0][0]); # 1
 #     builtin_output_i64(nested[0][1]); # 2
 #     builtin_output_i64(nested[1][0]); # 3
 #     builtin_output_i64(nested[1][1]); # 4
-    
+#    
 #     # @TODO: #2000 Since we don't have any copy semantics implemented, 
 #     # this line will modify `nested` data. 
 #     # The proper way to do that would be to invoke a copy constructor in this line:
 #     # `nested.push(inner2)`
 #     # which would perform a deep copy instead of just the bit-wise copy.
 #     inner2.push(123); 
-
+#
 #     builtin_output_u64(nested[1].length()); # 2
-
+#
 #     printSeparator();
 # }
 
@@ -163,9 +163,7 @@ fun listOfRefsTest() -> () = {
 }
 
 
-# @TODO: #2000 Make this test come back. The push method performs a copy of the 
-# box, thus without copy constructors the naive destructor insertion causes a double 
-# free. This will come back soon.
+# @TODO: #2835 Make this test come back when destructors are legit.
 # fun listOfBoxesTest() -> () = {
 #     var list_of_boxes: List[box Point];
 #     var p1: box Point = Point(1, 2);
@@ -174,8 +172,8 @@ fun listOfRefsTest() -> () = {
 #     # @TODO: #1894 Make this work.
 #     # list_of_boxes.push(Point(1, 2));
 # 
-#     list_of_boxes.push(p1);
-#     list_of_boxes.push(p2);
+#     list_of_boxes.push(move p1);
+#     list_of_boxes.push(move p2);
 #     builtin_output_u64(list_of_boxes.length());
 #     printSeparator();
 # 
@@ -190,32 +188,30 @@ fun listOfRefsTest() -> () = {
 #     printSeparator();
 # }
 
-# @TODO: #2000 Make this test come back.
-# fun boxOfListTest() -> () = {
-#     var list: List[Point];
-#     builtin_output_u64(list.length());
-#     list.push(Point(1, 2));
-#     list.push(Point(3, 4));
-#     list.push(Point(5, 6));
-#     builtin_output_u64(list.length());
-#     printSeparator();
+fun boxOfListTest() -> () = {
+    var list: List[Point];
+    builtin_output_u64(list.length());
+    list.push(Point(1, 2));
+    list.push(Point(3, 4));
+    list.push(Point(5, 6));
+    builtin_output_u64(list.length());
+    printSeparator();
 
-#     printPointList(&list);
-#     printSeparator();
-    
-#     # @TODO: #1894 Make this work.
-#     # var box_list: box List[Point];
+    printPointList(&list);
+    printSeparator();
 
-#     var box_list: box List[Point] = list;
-#     builtin_output_u64(list.length());
-#     printSeparator();
-
-#     box_list[0].x = 100;
-#     box_list[1].x = 200;
-#     box_list[2].x = 300;
-#     printPointList(&list);
-#     printSeparator();
-# }
+    # @TODO: #2825 Copying a `List` into a `box` deep-copies correctly, but the
+    # boxed list double-frees at scope end because destructor insertion is still a stub.
+    # var box_list: box List[Point] = copy list;
+    # builtin_output_u64(list.length());
+    # printSeparator();
+    #
+    # box_list[0].x = 100;
+    # box_list[1].x = 200;
+    # box_list[2].x = 300;
+    # printPointList(&list);
+    # printSeparator();
+}
 
 
 fun main() -> i32 = {
@@ -223,10 +219,11 @@ fun main() -> i32 = {
     floatsTest();
     classesTest();
     staticArraysTest();
+    # dynamicArraysTest();
     listOfRefsTest();
     # listOfBoxesTest();
     # dynamicArraysTest();
-    # boxOfListTest();
+    boxOfListTest();
 
     return 0;
 }

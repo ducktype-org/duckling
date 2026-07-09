@@ -22,13 +22,14 @@ fun main() -> i64 = {
     var lst2: List[Counter] = copy lst;     # +3
     builtin_output_i64(copies);             # 3
 
-    # @TODO: #858 Uncomment when Boxes aren't destructed naively. Currently this double frees on push.
+    # @TODO: #2825 Storing a `box` in a list double-frees because destructor
+    # insertion is still a stub.
     # var box_lst: List[box Counter];
     # box_lst.push(Counter(1));
     # box_lst.push(Counter(1));
     # box_lst.push(Counter(1));
-    # var box_lst2: List[Counter] = copy box_lst;     # +3
-    # builtin_output_i64(copies);                     # 3
+    # var box_lst2: List[box Counter] = copy box_lst;  # +3
+    # builtin_output_i64(copies);                      # 6
 
     return 0;
 }

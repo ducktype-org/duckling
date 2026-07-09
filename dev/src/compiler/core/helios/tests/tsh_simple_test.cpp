@@ -436,10 +436,6 @@ private:
 				"String should be trivially zero-initializable."
 			);
 			assertTrue(string_st.isCopyable(ctx), "String should be copyable.");
-			// @TODO: #2000 Make this check come back after unmocking copy constructors.
-			// assertFalse(
-			// 	string_st.isTriviallyCopyable(ctx), "String should not be trivially copyable."
-			// );
 		});
 	}
 
