@@ -375,6 +375,36 @@ private:
 				{ "Type `f32` cannot be converted to type `i64`." },
 				1
 			);
+
+			checkForErrorOnCompileModule(
+				R"(
+				class MyClass {
+					x:i64 = 0;
+
+					MyClass.copy(other: const MyClass) = {
+						return MyClass(1);
+					}
+				}
+			)",
+				{ "A copy constructor's parameter must be a constant reference to its own class "
+			      "`MyClass`." },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				R"(
+				class MyClass {
+					x:i64 = 0;
+
+					MyClass.copy(other: const ref MyClass, a: i64) = {
+						return MyClass(1);
+					}
+				}
+			)",
+				{ "A copy constructor must declare exactly one parameter: a reference to the "
+			      "object being copied." },
+				1
+			);
 		}
 
 		// ============================ Typecheck errors ============================
@@ -601,6 +631,19 @@ private:
 				}
 			)",
 				{ "Type `List` cannot be default initialized" },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				R"(
+				class Inner { non_defaultable: ref i64; }
+
+				fun main() -> i64 = {
+					var tup: (Inner, i64);
+					return 0;
+				}
+			)",
+				{ "Type `Tuple(Class Inner, i64)` cannot be default initialized" },
 				1
 			);
 		}
@@ -841,19 +884,6 @@ private:
 				{ "Feature not implemented", "zero-sized classes" },
 				1
 			);
-
-			checkForErrorOnCompileModule(
-				R"(
-				class A { a: i64 = 1; }
-				fun main() -> i64 = {
-					var a: (i32, A);
-					return 0;
-				}
-			)",
-				{ "Feature not implemented", "Generating default constructors for", "tuple types" },
-				1
-			);
-
 
 			checkForErrorOnCompileModule(
 				R"(

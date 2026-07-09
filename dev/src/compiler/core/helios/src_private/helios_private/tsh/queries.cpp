@@ -4,6 +4,7 @@
 
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/query_type_symbol_data.hpp>
+#include <helios_private/hout_creation/definition_generation/copy_constructors.hpp>
 #include <helios_private/hout_creation/definition_generation/length_methods.hpp>
 #include <helios_private/hout_creation/definition_generation/list_methods.hpp>
 #include <helios_private/symbols/symbols.hpp>
@@ -36,6 +37,20 @@ namespace compiler::tsh {
 			for (const compiler::helios::SymID method_sym: class_data.methods) {
 				elements.push_back(InterfaceElement(
 					method_sym,
+					key.value->toAbstractType(),
+					declaration_order,
+					InterfaceElement::InterfaceElementKind::Method,
+					{}
+				));
+				declaration_order++;
+			}
+
+			for (const compiler::helios::SymID ctor_sym: class_data.constructors) {
+				// For now we just handle copy constructors.
+				if (!compiler::helios::defgen::isUserDefinedCopyConstructor(ctx, ctor_sym))
+					continue;
+				elements.push_back(InterfaceElement(
+					ctor_sym,
 					key.value->toAbstractType(),
 					declaration_order,
 					InterfaceElement::InterfaceElementKind::Method,

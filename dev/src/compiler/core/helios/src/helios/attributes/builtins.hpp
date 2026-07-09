@@ -31,7 +31,11 @@ namespace compiler::helios {
 	 * Can't use the STRINGIFIYABLE enum because camel case vs snake case.
 	 */
 	enum class BuiltinKind {
-		RawPtrFromSlice,
+		CharPtrFromSlice,
+		CharSliceFromPtrLen,
+		DvmCharAlloc,
+		DvmCharRealloc,
+		DvmCharFree
 	};
 
 	/**
