@@ -74,6 +74,9 @@ namespace compiler::helios::templates {
 	/**
 	 * @brief Query to bake a template symbol ID.
 	 * @important: Implementation of this query is very fragile for now.
+	 * It will likely be changed in the future, and should be use with care for now.
+	 *
+	 * @TODO: #3112 some of the logic from this query should probably be moved to a different place. Feel free to do it.
 	 *
 	 * @param key The template bake key.
 	 * @return The baked symbol ID.

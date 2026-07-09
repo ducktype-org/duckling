@@ -191,8 +191,9 @@ namespace compiler::helios {
 			return ElementScopeKind::Transparent;
 
 		case pst::ElementKind::TemplateStmt:
-			// This defined the scope only for for baked PST nodes,
-			// @TODO: #3071 probably change it to transparent
+			// This defines a non-empty scope only for for baked PST nodes,
+			// @TODO: #3071 probably change it to transparent,
+			// since this element should not be present in baked PSTs (or will be a trivial node).
 			return ElementScopeKind::Standard;
 
 		case pst::ElementKind::TemplateDecl:
@@ -372,7 +373,9 @@ namespace compiler::helios {
 					out->scopes.emplace_back(ctx.query<QueryPrimaryCodeScopeFor>(element));
 			};
 
-			// TODO: cutoff changes semantics of this query, consider making it internal somehow
+			// @TODO: #3080 cutoff changes semantics of this query, consider making it internal somehow.
+			// Note that more custom logic might be needed in the future (to optimize it, to compile lambdas, etc.)
+
 			auto cutoff_function = [](pst::Access<pst::LangElement> element) {
 				if (element->getElementKind() == pst::ElementKind::TemplateStmt) {
 					// we want to skip template bodies, since

@@ -10,8 +10,6 @@
 #include <diagnostic_interactive/stable_position.hpp>
 #include <time_stats/time_stats.hpp>
 
-#include <base/pointers/box_or_ref.hpp>
-
 #include <token_source/source.hpp>
 
 namespace pst {
@@ -81,7 +79,6 @@ namespace pst {
 		/**
 		 * Token source backing this PST (tokenized file or virtual input).
 		 */
-		// TODO: this is a hack, fix it in some better way
 		Box<tokenizer::TokenSource> file;
 
 		/**
@@ -187,26 +184,26 @@ namespace pst {
 			parse(std::move(parsing_ctx), std::forward<Args>(args)...);
 		}
 
-		// TODO: add clone dummy here:
+		/** 
+		 * @TODO: #3110 this constructor is totally hacked, change it.
+		 * Also: add clone dummy parameter here, to make it more explicit.
+		 */
 		explicit PST(
 			Box<Element>                cloned_element,
 			Box<tokenizer::TokenSource> token_source,
-			Box<LangParserContext>      parsing_ctx,  // should we use it?
 			hashing::ComponentHash      hash_ctx = {}
 		):
-			  // this is a total hack:
 			  file(std::move(token_source)),
 			  element(AccessInternalAnonymous<Element>(std::move(cloned_element))),
 			  hash_ctx_info(std::move(hash_ctx)) {
-			// TODO: imports???
+			
+			// @TODO: #3110 This does not clone imports.
+			// But also: maybe we should remove imports vector from PST,
+			// we don't use it in the end anyway.
 
-			std::cerr << "a\n";
 			calcElementPathHash();
-			std::cerr << "b\n";
 			calcHashes();
-			std::cerr << "c\n";
 			putInPSTHashHashMap();
-			std::cerr << "d\n";
 		}
 
 		/**
@@ -323,16 +320,18 @@ namespace pst {
 			return out;
 		}
 
+		/**
+		 * @brief Create a PST from a cloned element.
+		 * @TODO: #3110 this constructor is totally hacked, change it.
+		 */
 		static PST fromClone(
 			Box<Element>                cloned_element,
 			Box<tokenizer::TokenSource> token_source,
-			Box<LangParserContext>      parsing_ctx,
 			hashing::ComponentHash      hash_ctx
 		) {
 			return PST(
 				std::move(cloned_element),
 				std::move(token_source),
-				std::move(parsing_ctx),
 				std::move(hash_ctx)
 			);
 		}
