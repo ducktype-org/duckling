@@ -1,12 +1,12 @@
 #pragma once
 
 #include <ctv/ctv.hpp>
+#include <helios/hout/hout.hpp>
 #include <helios/scope_id.hpp>
 #include <helios/symbols/symbol_id.hpp>
 #include <helios/tsh/symbol_type.hpp>
 #include <helios/tsh/types.hpp>
 
-#include <base/extend_cpp/variant_match.hpp>
 #include <base/types/bit256.hpp>
 #include <base/types/ints.hpp>
 
@@ -72,6 +72,8 @@ namespace compiler::helios::defgen {
 	struct BuiltinOperator final {
 		// The type of the builtin operator this symbol represents.
 		tsh::FunctionAbstractType operator_type;
+
+		HOUTFunctionDeclaration::Operatoriness operatoriness;
 
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const;

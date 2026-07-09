@@ -30,7 +30,9 @@ namespace compiler::helios {
 		}
 
 		base::Bit256 BuiltinOperator::queryUnstablePerfectHash() const {
-			return { operator_type.queryUnstablePerfectHash() };
+			return hashing::justHash<hashing::SHA256>(
+				operator_type.queryUnstablePerfectHash(), static_cast<u64>(operatoriness)
+			);
 		}
 
 		base::Bit256 Parameter::queryUnstablePerfectHash() const {
