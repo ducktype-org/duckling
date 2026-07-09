@@ -1,1 +1,798 @@
-{"position": {"sourceStart": 0, "sourceEnd": 208}, "Top Level":[{"position": {"sourceStart": 0, "sourceEnd": 53}, "Function":{"name":{"position": {"sourceStart": 4, "sourceEnd": 5}, "Identifier Wrapper":{"value" : "+*"}},"parameters":{"position": {"sourceStart": 6, "sourceEnd": 21}, "function parameter list":[{"position": {"sourceStart": 7, "sourceEnd": 12}, "Parameter":{"Parameter": {"name": {"position": {"sourceStart": 7, "sourceEnd": 7}, "Identifier Wrapper":{"value" : "a"}},"type": {"position": {"sourceStart": 10, "sourceEnd": 12}, "Top Level Expression":{"expr":{"position": {"sourceStart": 10, "sourceEnd": 12}, "Keyword Expression":{"keyword": {"position": {"sourceStart": 10, "sourceEnd": 12}, "Keyword Wrapper":{"value" : "i64"}}}}}}}}},{"position": {"sourceStart": 15, "sourceEnd": 20}, "Parameter":{"Parameter": {"name": {"position": {"sourceStart": 15, "sourceEnd": 15}, "Identifier Wrapper":{"value" : "b"}},"type": {"position": {"sourceStart": 18, "sourceEnd": 20}, "Top Level Expression":{"expr":{"position": {"sourceStart": 18, "sourceEnd": 20}, "Keyword Expression":{"keyword": {"position": {"sourceStart": 18, "sourceEnd": 20}, "Keyword Wrapper":{"value" : "i64"}}}}}}}}},]},"return":{"position": {"sourceStart": 26, "sourceEnd": 28}, "Top Level Expression":{"expr":{"position": {"sourceStart": 26, "sourceEnd": 28}, "Keyword Expression":{"keyword": {"position": {"sourceStart": 26, "sourceEnd": 28}, "Keyword Wrapper":{"value" : "i64"}}}}}},"body":{"position": {"sourceStart": 32, "sourceEnd": 53}, "Code Block or Statement":{"position": {"sourceStart": 32, "sourceEnd": 53}, "Code Block":[{"position": {"sourceStart": 35, "sourceEnd": 51}, "Action":{"kind": "Return", "value":{"position": {"sourceStart": 42, "sourceEnd": 50}, "Top Level Expression":{"expr":{"position": {"sourceStart": 42, "sourceEnd": 50}, "Binary Operator":{"left_expr": {"position": {"sourceStart": 42, "sourceEnd": 46}, "Binary Operator":{"left_expr": {"position": {"sourceStart": 42, "sourceEnd": 42}, "Identifier Expression":{"name": {"position": {"sourceStart": 42, "sourceEnd": 42}, "Identifier Wrapper":{"value" : "a"}}}}, "operator": {"position": {"sourceStart": 44, "sourceEnd": 44}, "Operator Wrapper":{"value" : "*"}}, "right_expr": {"position": {"sourceStart": 46, "sourceEnd": 46}, "Identifier Expression":{"name": {"position": {"sourceStart": 46, "sourceEnd": 46}, "Identifier Wrapper":{"value" : "b"}}}}}}, "operator": {"position": {"sourceStart": 48, "sourceEnd": 48}, "Operator Wrapper":{"value" : "+"}}, "right_expr": {"position": {"sourceStart": 50, "sourceEnd": 50}, "Identifier Expression":{"name": {"position": {"sourceStart": 50, "sourceEnd": 50}, "Identifier Wrapper":{"value" : "a"}}}}}}}}}}, ]}}}}, {"position": {"sourceStart": 56, "sourceEnd": 100}, "Function":{"name":{"position": {"sourceStart": 60, "sourceEnd": 60}, "Identifier Wrapper":{"value" : "+"}},"parameters":{"position": {"sourceStart": 61, "sourceEnd": 76}, "function parameter list":[{"position": {"sourceStart": 62, "sourceEnd": 67}, "Parameter":{"Parameter": {"name": {"position": {"sourceStart": 62, "sourceEnd": 62}, "Identifier Wrapper":{"value" : "a"}},"type": {"position": {"sourceStart": 65, "sourceEnd": 67}, "Top Level Expression":{"expr":{"position": {"sourceStart": 65, "sourceEnd": 67}, "Identifier Expression":{"name": {"position": {"sourceStart": 65, "sourceEnd": 67}, "Identifier Wrapper":{"value" : "Foo"}}}}}}}}},{"position": {"sourceStart": 70, "sourceEnd": 75}, "Parameter":{"Parameter": {"name": {"position": {"sourceStart": 70, "sourceEnd": 70}, "Identifier Wrapper":{"value" : "b"}},"type": {"position": {"sourceStart": 73, "sourceEnd": 75}, "Top Level Expression":{"expr":{"position": {"sourceStart": 73, "sourceEnd": 75}, "Identifier Expression":{"name": {"position": {"sourceStart": 73, "sourceEnd": 75}, "Identifier Wrapper":{"value" : "Foo"}}}}}}}}},]},"return":{"position": {"sourceStart": 81, "sourceEnd": 83}, "Top Level Expression":{"expr":{"position": {"sourceStart": 81, "sourceEnd": 83}, "Identifier Expression":{"name": {"position": {"sourceStart": 81, "sourceEnd": 83}, "Identifier Wrapper":{"value" : "Foo"}}}}}},"body":{"position": {"sourceStart": 87, "sourceEnd": 100}, "Code Block or Statement":{"position": {"sourceStart": 87, "sourceEnd": 100}, "Code Block":[{"position": {"sourceStart": 90, "sourceEnd": 98}, "Action":{"kind": "Return", "value":{"position": {"sourceStart": 97, "sourceEnd": 97}, "Top Level Expression":{"expr":{"position": {"sourceStart": 97, "sourceEnd": 97}, "Identifier Expression":{"name": {"position": {"sourceStart": 97, "sourceEnd": 97}, "Identifier Wrapper":{"value" : "a"}}}}}}}}, ]}}}}, {"position": {"sourceStart": 103, "sourceEnd": 136}, "Function":{"name":{"position": {"sourceStart": 111, "sourceEnd": 112}, "Identifier Wrapper":{"value" : "-*"}},"parameters":{"position": {"sourceStart": 113, "sourceEnd": 128}, "function parameter list":[{"position": {"sourceStart": 114, "sourceEnd": 119}, "Parameter":{"Parameter": {"name": {"position": {"sourceStart": 114, "sourceEnd": 114}, "Identifier Wrapper":{"value" : "a"}},"type": {"position": {"sourceStart": 117, "sourceEnd": 119}, "Top Level Expression":{"expr":{"position": {"sourceStart": 117, "sourceEnd": 119}, "Keyword Expression":{"keyword": {"position": {"sourceStart": 117, "sourceEnd": 119}, "Keyword Wrapper":{"value" : "i64"}}}}}}}}},{"position": {"sourceStart": 122, "sourceEnd": 127}, "Parameter":{"Parameter": {"name": {"position": {"sourceStart": 122, "sourceEnd": 122}, "Identifier Wrapper":{"value" : "b"}},"type": {"position": {"sourceStart": 125, "sourceEnd": 127}, "Top Level Expression":{"expr":{"position": {"sourceStart": 125, "sourceEnd": 127}, "Keyword Expression":{"keyword": {"position": {"sourceStart": 125, "sourceEnd": 127}, "Keyword Wrapper":{"value" : "i64"}}}}}}}}},]},"return":{"position": {"sourceStart": 133, "sourceEnd": 135}, "Top Level Expression":{"expr":{"position": {"sourceStart": 133, "sourceEnd": 135}, "Keyword Expression":{"keyword": {"position": {"sourceStart": 133, "sourceEnd": 135}, "Keyword Wrapper":{"value" : "i64"}}}}}}}}, {"position": {"sourceStart": 139, "sourceEnd": 208}, "Class":{"name":{"position": {"sourceStart": 145, "sourceEnd": 147}, "Identifier Wrapper":{"value" : "Foo"}},"Base":"<nullptr>","Implements":"<nullptr>","body": {"position": {"sourceStart": 149, "sourceEnd": 208}, "Code Block":[{"position": {"sourceStart": 152, "sourceEnd": 160}, "Class Field":{"is mutable": "true","name": {"position": {"sourceStart": 152, "sourceEnd": 154}, "Identifier Wrapper":{"value" : "bar"}}, "type": {"position": {"sourceStart": 157, "sourceEnd": 159}, "Top Level Expression":{"expr":{"position": {"sourceStart": 157, "sourceEnd": 159}, "Keyword Expression":{"keyword": {"position": {"sourceStart": 157, "sourceEnd": 159}, "Keyword Wrapper":{"value" : "i64"}}}}}}}}, {"position": {"sourceStart": 164, "sourceEnd": 206}, "Class Method":{"name":{"position": {"sourceStart": 168, "sourceEnd": 169}, "Identifier Wrapper":{"value" : "+*"}},"parameters":{"position": {"sourceStart": 170, "sourceEnd": 177}, "function parameter list":[{"position": {"sourceStart": 171, "sourceEnd": 176}, "Parameter":{"Parameter": {"name": {"position": {"sourceStart": 171, "sourceEnd": 171}, "Identifier Wrapper":{"value" : "a"}},"type": {"position": {"sourceStart": 174, "sourceEnd": 176}, "Top Level Expression":{"expr":{"position": {"sourceStart": 174, "sourceEnd": 176}, "Keyword Expression":{"keyword": {"position": {"sourceStart": 174, "sourceEnd": 176}, "Keyword Wrapper":{"value" : "u64"}}}}}}}}},]},"return":{"position": {"sourceStart": 182, "sourceEnd": 184}, "Top Level Expression":{"expr":{"position": {"sourceStart": 182, "sourceEnd": 184}, "Identifier Expression":{"name": {"position": {"sourceStart": 182, "sourceEnd": 184}, "Identifier Wrapper":{"value" : "Foo"}}}}}},"body":{"position": {"sourceStart": 188, "sourceEnd": 206}, "Code Block or Statement":{"position": {"sourceStart": 188, "sourceEnd": 206}, "Code Block":[{"position": {"sourceStart": 192, "sourceEnd": 203}, "Action":{"kind": "Return", "value":{"position": {"sourceStart": 199, "sourceEnd": 202}, "Top Level Expression":{"expr":{"position": {"sourceStart": 199, "sourceEnd": 202}, "Keyword Expression":{"keyword": {"position": {"sourceStart": 199, "sourceEnd": 202}, "Keyword Wrapper":{"value" : "self"}}}}}}}}, ]}}}}, ]}}}, ]}
+{
+	"position": {
+		"sourceStart": 0,
+		"sourceEnd": 208
+	},
+	"Top Level": [
+		{
+			"position": {
+				"sourceStart": 0,
+				"sourceEnd": 53
+			},
+			"Function": {
+				"name": {
+					"position": {
+						"sourceStart": 4,
+						"sourceEnd": 5
+					},
+					"Identifier Wrapper": {
+						"value": "+*"
+					}
+				},
+				"parameters": {
+					"position": {
+						"sourceStart": 6,
+						"sourceEnd": 21
+					},
+					"function parameter list": [
+						{
+							"position": {
+								"sourceStart": 7,
+								"sourceEnd": 12
+							},
+							"Parameter": {
+								"Parameter": {
+									"name": {
+										"position": {
+											"sourceStart": 7,
+											"sourceEnd": 7
+										},
+										"Identifier Wrapper": {
+											"value": "a"
+										}
+									},
+									"type": {
+										"position": {
+											"sourceStart": 10,
+											"sourceEnd": 12
+										},
+										"Top Level Expression": {
+											"expr": {
+												"position": {
+													"sourceStart": 10,
+													"sourceEnd": 12
+												},
+												"Keyword Expression": {
+													"keyword": {
+														"position": {
+															"sourceStart": 10,
+															"sourceEnd": 12
+														},
+														"Keyword Wrapper": {
+															"value": "i64"
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						},
+						{
+							"position": {
+								"sourceStart": 15,
+								"sourceEnd": 20
+							},
+							"Parameter": {
+								"Parameter": {
+									"name": {
+										"position": {
+											"sourceStart": 15,
+											"sourceEnd": 15
+										},
+										"Identifier Wrapper": {
+											"value": "b"
+										}
+									},
+									"type": {
+										"position": {
+											"sourceStart": 18,
+											"sourceEnd": 20
+										},
+										"Top Level Expression": {
+											"expr": {
+												"position": {
+													"sourceStart": 18,
+													"sourceEnd": 20
+												},
+												"Keyword Expression": {
+													"keyword": {
+														"position": {
+															"sourceStart": 18,
+															"sourceEnd": 20
+														},
+														"Keyword Wrapper": {
+															"value": "i64"
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					]
+				},
+				"return": {
+					"position": {
+						"sourceStart": 26,
+						"sourceEnd": 28
+					},
+					"Top Level Expression": {
+						"expr": {
+							"position": {
+								"sourceStart": 26,
+								"sourceEnd": 28
+							},
+							"Keyword Expression": {
+								"keyword": {
+									"position": {
+										"sourceStart": 26,
+										"sourceEnd": 28
+									},
+									"Keyword Wrapper": {
+										"value": "i64"
+									}
+								}
+							}
+						}
+					}
+				},
+				"body": {
+					"position": {
+						"sourceStart": 32,
+						"sourceEnd": 53
+					},
+					"Code Block or Statement": {
+						"position": {
+							"sourceStart": 32,
+							"sourceEnd": 53
+						},
+						"Code Block": [
+							{
+								"position": {
+									"sourceStart": 35,
+									"sourceEnd": 51
+								},
+								"Action": {
+									"kind": "Return",
+									"value": {
+										"position": {
+											"sourceStart": 42,
+											"sourceEnd": 50
+										},
+										"Top Level Expression": {
+											"expr": {
+												"position": {
+													"sourceStart": 42,
+													"sourceEnd": 50
+												},
+												"Binary Operator": {
+													"left_expr": {
+														"position": {
+															"sourceStart": 42,
+															"sourceEnd": 46
+														},
+														"Binary Operator": {
+															"left_expr": {
+																"position": {
+																	"sourceStart": 42,
+																	"sourceEnd": 42
+																},
+																"Identifier Expression": {
+																	"name": {
+																		"position": {
+																			"sourceStart": 42,
+																			"sourceEnd": 42
+																		},
+																		"Identifier Wrapper": {
+																			"value": "a"
+																		}
+																	}
+																}
+															},
+															"operator": {
+																"position": {
+																	"sourceStart": 44,
+																	"sourceEnd": 44
+																},
+																"Operator Wrapper": {
+																	"value": "*"
+																}
+															},
+															"right_expr": {
+																"position": {
+																	"sourceStart": 46,
+																	"sourceEnd": 46
+																},
+																"Identifier Expression": {
+																	"name": {
+																		"position": {
+																			"sourceStart": 46,
+																			"sourceEnd": 46
+																		},
+																		"Identifier Wrapper": {
+																			"value": "b"
+																		}
+																	}
+																}
+															}
+														}
+													},
+													"operator": {
+														"position": {
+															"sourceStart": 48,
+															"sourceEnd": 48
+														},
+														"Operator Wrapper": {
+															"value": "+"
+														}
+													},
+													"right_expr": {
+														"position": {
+															"sourceStart": 50,
+															"sourceEnd": 50
+														},
+														"Identifier Expression": {
+															"name": {
+																"position": {
+																	"sourceStart": 50,
+																	"sourceEnd": 50
+																},
+																"Identifier Wrapper": {
+																	"value": "a"
+																}
+															}
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						]
+					}
+				}
+			}
+		},
+		{
+			"position": {
+				"sourceStart": 56,
+				"sourceEnd": 100
+			},
+			"Function": {
+				"name": {
+					"position": {
+						"sourceStart": 60,
+						"sourceEnd": 60
+					},
+					"Identifier Wrapper": {
+						"value": "+"
+					}
+				},
+				"parameters": {
+					"position": {
+						"sourceStart": 61,
+						"sourceEnd": 76
+					},
+					"function parameter list": [
+						{
+							"position": {
+								"sourceStart": 62,
+								"sourceEnd": 67
+							},
+							"Parameter": {
+								"Parameter": {
+									"name": {
+										"position": {
+											"sourceStart": 62,
+											"sourceEnd": 62
+										},
+										"Identifier Wrapper": {
+											"value": "a"
+										}
+									},
+									"type": {
+										"position": {
+											"sourceStart": 65,
+											"sourceEnd": 67
+										},
+										"Top Level Expression": {
+											"expr": {
+												"position": {
+													"sourceStart": 65,
+													"sourceEnd": 67
+												},
+												"Identifier Expression": {
+													"name": {
+														"position": {
+															"sourceStart": 65,
+															"sourceEnd": 67
+														},
+														"Identifier Wrapper": {
+															"value": "Foo"
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						},
+						{
+							"position": {
+								"sourceStart": 70,
+								"sourceEnd": 75
+							},
+							"Parameter": {
+								"Parameter": {
+									"name": {
+										"position": {
+											"sourceStart": 70,
+											"sourceEnd": 70
+										},
+										"Identifier Wrapper": {
+											"value": "b"
+										}
+									},
+									"type": {
+										"position": {
+											"sourceStart": 73,
+											"sourceEnd": 75
+										},
+										"Top Level Expression": {
+											"expr": {
+												"position": {
+													"sourceStart": 73,
+													"sourceEnd": 75
+												},
+												"Identifier Expression": {
+													"name": {
+														"position": {
+															"sourceStart": 73,
+															"sourceEnd": 75
+														},
+														"Identifier Wrapper": {
+															"value": "Foo"
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					]
+				},
+				"return": {
+					"position": {
+						"sourceStart": 81,
+						"sourceEnd": 83
+					},
+					"Top Level Expression": {
+						"expr": {
+							"position": {
+								"sourceStart": 81,
+								"sourceEnd": 83
+							},
+							"Identifier Expression": {
+								"name": {
+									"position": {
+										"sourceStart": 81,
+										"sourceEnd": 83
+									},
+									"Identifier Wrapper": {
+										"value": "Foo"
+									}
+								}
+							}
+						}
+					}
+				},
+				"body": {
+					"position": {
+						"sourceStart": 87,
+						"sourceEnd": 100
+					},
+					"Code Block or Statement": {
+						"position": {
+							"sourceStart": 87,
+							"sourceEnd": 100
+						},
+						"Code Block": [
+							{
+								"position": {
+									"sourceStart": 90,
+									"sourceEnd": 98
+								},
+								"Action": {
+									"kind": "Return",
+									"value": {
+										"position": {
+											"sourceStart": 97,
+											"sourceEnd": 97
+										},
+										"Top Level Expression": {
+											"expr": {
+												"position": {
+													"sourceStart": 97,
+													"sourceEnd": 97
+												},
+												"Identifier Expression": {
+													"name": {
+														"position": {
+															"sourceStart": 97,
+															"sourceEnd": 97
+														},
+														"Identifier Wrapper": {
+															"value": "a"
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						]
+					}
+				}
+			}
+		},
+		{
+			"position": {
+				"sourceStart": 103,
+				"sourceEnd": 136
+			},
+			"Function": {
+				"name": {
+					"position": {
+						"sourceStart": 111,
+						"sourceEnd": 112
+					},
+					"Identifier Wrapper": {
+						"value": "-*"
+					}
+				},
+				"parameters": {
+					"position": {
+						"sourceStart": 113,
+						"sourceEnd": 128
+					},
+					"function parameter list": [
+						{
+							"position": {
+								"sourceStart": 114,
+								"sourceEnd": 119
+							},
+							"Parameter": {
+								"Parameter": {
+									"name": {
+										"position": {
+											"sourceStart": 114,
+											"sourceEnd": 114
+										},
+										"Identifier Wrapper": {
+											"value": "a"
+										}
+									},
+									"type": {
+										"position": {
+											"sourceStart": 117,
+											"sourceEnd": 119
+										},
+										"Top Level Expression": {
+											"expr": {
+												"position": {
+													"sourceStart": 117,
+													"sourceEnd": 119
+												},
+												"Keyword Expression": {
+													"keyword": {
+														"position": {
+															"sourceStart": 117,
+															"sourceEnd": 119
+														},
+														"Keyword Wrapper": {
+															"value": "i64"
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						},
+						{
+							"position": {
+								"sourceStart": 122,
+								"sourceEnd": 127
+							},
+							"Parameter": {
+								"Parameter": {
+									"name": {
+										"position": {
+											"sourceStart": 122,
+											"sourceEnd": 122
+										},
+										"Identifier Wrapper": {
+											"value": "b"
+										}
+									},
+									"type": {
+										"position": {
+											"sourceStart": 125,
+											"sourceEnd": 127
+										},
+										"Top Level Expression": {
+											"expr": {
+												"position": {
+													"sourceStart": 125,
+													"sourceEnd": 127
+												},
+												"Keyword Expression": {
+													"keyword": {
+														"position": {
+															"sourceStart": 125,
+															"sourceEnd": 127
+														},
+														"Keyword Wrapper": {
+															"value": "i64"
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					]
+				},
+				"return": {
+					"position": {
+						"sourceStart": 133,
+						"sourceEnd": 135
+					},
+					"Top Level Expression": {
+						"expr": {
+							"position": {
+								"sourceStart": 133,
+								"sourceEnd": 135
+							},
+							"Keyword Expression": {
+								"keyword": {
+									"position": {
+										"sourceStart": 133,
+										"sourceEnd": 135
+									},
+									"Keyword Wrapper": {
+										"value": "i64"
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		{
+			"position": {
+				"sourceStart": 139,
+				"sourceEnd": 208
+			},
+			"Class": {
+				"name": {
+					"position": {
+						"sourceStart": 145,
+						"sourceEnd": 147
+					},
+					"Identifier Wrapper": {
+						"value": "Foo"
+					}
+				},
+				"Base": "<nullptr>",
+				"Implements": "<nullptr>",
+				"body": {
+					"position": {
+						"sourceStart": 149,
+						"sourceEnd": 208
+					},
+					"Code Block": [
+						{
+							"position": {
+								"sourceStart": 152,
+								"sourceEnd": 160
+							},
+							"Class Field": {
+								"is mutable": "true",
+								"name": {
+									"position": {
+										"sourceStart": 152,
+										"sourceEnd": 154
+									},
+									"Identifier Wrapper": {
+										"value": "bar"
+									}
+								},
+								"type": {
+									"position": {
+										"sourceStart": 157,
+										"sourceEnd": 159
+									},
+									"Top Level Expression": {
+										"expr": {
+											"position": {
+												"sourceStart": 157,
+												"sourceEnd": 159
+											},
+											"Keyword Expression": {
+												"keyword": {
+													"position": {
+														"sourceStart": 157,
+														"sourceEnd": 159
+													},
+													"Keyword Wrapper": {
+														"value": "i64"
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						},
+						{
+							"position": {
+								"sourceStart": 164,
+								"sourceEnd": 206
+							},
+							"Class Method": {
+								"name": {
+									"position": {
+										"sourceStart": 168,
+										"sourceEnd": 169
+									},
+									"Identifier Wrapper": {
+										"value": "+*"
+									}
+								},
+								"parameters": {
+									"position": {
+										"sourceStart": 170,
+										"sourceEnd": 177
+									},
+									"function parameter list": [
+										{
+											"position": {
+												"sourceStart": 171,
+												"sourceEnd": 176
+											},
+											"Parameter": {
+												"Parameter": {
+													"name": {
+														"position": {
+															"sourceStart": 171,
+															"sourceEnd": 171
+														},
+														"Identifier Wrapper": {
+															"value": "a"
+														}
+													},
+													"type": {
+														"position": {
+															"sourceStart": 174,
+															"sourceEnd": 176
+														},
+														"Top Level Expression": {
+															"expr": {
+																"position": {
+																	"sourceStart": 174,
+																	"sourceEnd": 176
+																},
+																"Keyword Expression": {
+																	"keyword": {
+																		"position": {
+																			"sourceStart": 174,
+																			"sourceEnd": 176
+																		},
+																		"Keyword Wrapper": {
+																			"value": "u64"
+																		}
+																	}
+																}
+															}
+														}
+													}
+												}
+											}
+										}
+									]
+								},
+								"return": {
+									"position": {
+										"sourceStart": 182,
+										"sourceEnd": 184
+									},
+									"Top Level Expression": {
+										"expr": {
+											"position": {
+												"sourceStart": 182,
+												"sourceEnd": 184
+											},
+											"Identifier Expression": {
+												"name": {
+													"position": {
+														"sourceStart": 182,
+														"sourceEnd": 184
+													},
+													"Identifier Wrapper": {
+														"value": "Foo"
+													}
+												}
+											}
+										}
+									}
+								},
+								"body": {
+									"position": {
+										"sourceStart": 188,
+										"sourceEnd": 206
+									},
+									"Code Block or Statement": {
+										"position": {
+											"sourceStart": 188,
+											"sourceEnd": 206
+										},
+										"Code Block": [
+											{
+												"position": {
+													"sourceStart": 192,
+													"sourceEnd": 203
+												},
+												"Action": {
+													"kind": "Return",
+													"value": {
+														"position": {
+															"sourceStart": 199,
+															"sourceEnd": 202
+														},
+														"Top Level Expression": {
+															"expr": {
+																"position": {
+																	"sourceStart": 199,
+																	"sourceEnd": 202
+																},
+																"Keyword Expression": {
+																	"keyword": {
+																		"position": {
+																			"sourceStart": 199,
+																			"sourceEnd": 202
+																		},
+																		"Keyword Wrapper": {
+																			"value": "self"
+																		}
+																	}
+																}
+															}
+														}
+													}
+												}
+											}
+										]
+									}
+								}
+							}
+						}
+					]
+				}
+			}
+		}
+	]
+}

@@ -49,8 +49,7 @@ namespace pst {
 	inline MBox<IdentifierWrapper> parseFunctionName(LangParserState& state) {
 		if (!state[0].isOperatorSymbol()) return IdentifierWrapper::parse(state);
 
-		auto op   = state[0].asBinaryOperator().value();
-		auto name = state[0].getValue();
+		auto op = state[0].asBinaryOperator().value();
 
 		if (!op.isNotReserved()) {
 			// Plain `=` has no base operator to suggest, so it counts as reserved.
@@ -58,10 +57,11 @@ namespace pst {
 				state.logInt(makeBox<AssignmentOperatorFunNameError>(state.getPosition(), op.str()));
 			else
 				state.logInt(makeBox<ReservedOperatorFunNameError>(state.getPosition(), op.str()));
-			name = base::StrID("bad identifier");
+			state.tokens().skip();
+			return nullptr;
 		}
 
-		Box<IdentifierWrapper> out = makeBox<IdentifierWrapper>(state, name);
+		Box<IdentifierWrapper> out = makeBox<IdentifierWrapper>(state, state[0].getValue());
 
 		PARSE().eatOne();
 
