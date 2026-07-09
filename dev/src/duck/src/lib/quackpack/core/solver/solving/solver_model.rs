@@ -216,6 +216,22 @@ impl<'a> SolverModel<'a, ProblemCreated> {
         Ok(())
     }
 
+    pub fn forbid_package(&mut self, pkg: &WithVersion<FullIdentity>) -> QuackResult<()> {
+        let var = self.get_package_variable(pkg, None)?;
+        self.model.add(cons().coef(&var, 1.0).eq(0.0));
+        Ok(())
+    }
+
+    pub fn forbid_package_with_feature(
+        &mut self,
+        pkg: &WithVersion<FullIdentity>,
+        feature: &FeatureName,
+    ) -> QuackResult<()> {
+        let var = self.get_package_variable(pkg, Some(feature))?;
+        self.model.add(cons().coef(&var, 1.0).eq(0.0));
+        Ok(())
+    }
+
     /// Adds a constraint that forces the child to be present with all of the required features.
     pub fn require_satisfying_dep_feature(
         &mut self,

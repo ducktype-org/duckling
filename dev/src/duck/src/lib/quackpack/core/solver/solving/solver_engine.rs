@@ -164,12 +164,16 @@ impl<'a> SolverEngine<'a> {
         parent: &WithVersion<FullIdentity>,
         manifest_dependency: &Dependency,
     ) -> QuackResult<()> {
-        let edge = DependencyEdge::from_manifest_and_parent(
+        let Ok(edge) = DependencyEdge::from_manifest_and_parent(
             *parent,
             manifest_dependency,
             &self.input.source_to_origin_resolver,
-        )
-        .context_internal("Failed to expand a source")?;
+        ) else {
+            // We could not translate the manifest entry into an identity of the dependency,
+            // so there are no possible realizations and we must forbid the parent package/its features
+            // forcing the dependency.
+            return self.forbid_forcing_features(parent, manifest_dependency)
+        };
 
         // If this edge was not resolved in the previous freeze, we fallback to adding all constraints.
         let Some(realization_ver) = self.input.preexisting_dependencies.get(&edge) else {
@@ -303,6 +307,22 @@ impl<'a> SolverEngine<'a> {
         Ok(())
     }
 
+    fn forbid_forcing_features(
+        &mut self,
+        parent: &WithVersion<FullIdentity>,
+        manifest_dependency: &Dependency
+    ) -> QuackResult<()> {
+        let is_dep_forced_default = manifest_dependency.is_enabled_for(vec![]);
+        if is_dep_forced_default {
+            self.model.forbid_package(parent)?;
+        } else {
+            for dep_forcing_feature in manifest_dependency.enabling_features() {
+                self.model.forbid_package_with_feature(parent, dep_forcing_feature)?;
+            }
+        }
+        Ok(())
+    }
+
     /// For all not previous-freeze present features adds constraints for features expansion
     /// (the presence of expandable feature forces the presence of expanded feature).
     /// Note: The constraints are added only if the feature expands to something more than itself.
@@ -345,7 +365,7 @@ fn parent_features_to_consider<'a>(
 ) -> impl Iterator<Item = Option<&'a StrId>> {
     input
         .all_possible_features
-        .get(&edge.parent)
+        .get(parent)
         .into_iter()
         .flatten()
         .map(Some)

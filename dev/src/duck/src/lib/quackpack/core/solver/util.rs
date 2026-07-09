@@ -23,10 +23,13 @@ pub fn get_possible_realizations(
     let identity = FullIdentity::new(dependency_description.name(), *origin);
     if dependency_description.is_pinned() {
         // For a pinned dependency only one package can be a realization.
-        let version = dependency_description
+        let versions = dependency_description
             .versions()
-            .first()
-            .context_internal("Pinned dependency should have exactly one version specified")?;
+            .collect();
+        if versions.len() != 1 {
+            return Ok(vec![]);
+        }
+        let version = versions[0];
         Ok(vec![WithVersion::new(identity, *version)])
     } else {
         // Baseline versions are the versions specified in the manifest,

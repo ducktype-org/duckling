@@ -399,7 +399,7 @@ impl GathererState {
     ) -> GathererResult<U> {
         let Some(status) = self.not_pinned_fetches.get_mut(&id) else {
             return Err(
-                qp_internal!("Failed request with no status").context(MessageError(reason.into()))
+                qp_internal!("failed request with no status").context(MessageError(reason.into()))
             );
         };
         *status = QueryState::Failed;
@@ -429,7 +429,7 @@ impl GathererState {
             failure_pinned_response.origin_version,
         );
         let Some(state) = self.pinned_fetches.get_mut(&origin_package) else {
-            qp_bail_internal!("Response with no associated request state");
+            qp_bail_internal!("response with no associated request state");
         };
         *state = QueryState::Failed;
         Ok(GathererComputation::empty())
@@ -444,7 +444,7 @@ impl GathererState {
             .not_pinned_fetches
             .get_mut(&failure_not_pinned_response.origin_id)
         else {
-            qp_bail_internal!("Response with no associated request state");
+            qp_bail_internal!("response with no associated request state");
         };
         *state = QueryState::Failed;
         Ok(GathererComputation::empty())
