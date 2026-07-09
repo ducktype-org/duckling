@@ -170,9 +170,6 @@ namespace vm {
 					= fixed_size_table.inner_type->getSize() * fixed_size_table.element_count;
 			}
 			variant_case(kind::Data, data) {
-				// Field offsets and the total size come precomputed from the validator
-				// (`valid_type::ValidType` is the source of truth for layout); only the field
-				// types themselves still need finalizing.
 				for (auto& field: data.fields) field.type->finalize();
 				if_opt_some(data.inheritance_metadata, imd) { inheritsFromImpl(imd); }
 				isInstantiableImpl(data);

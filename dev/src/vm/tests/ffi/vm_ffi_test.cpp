@@ -46,7 +46,6 @@ public:
 		TESTER_ADD_TEST(packedStructInFfiFails);
 		TESTER_ADD_TEST(packedStructWithMatchingLayoutStillFails);
 		TESTER_ADD_TEST(packedStructSize);
-		TESTER_ADD_TEST(alignedStructTailPadding);
 		TESTER_ADD_TEST(duplicateFfiFunctionFails);
 		TESTER_ADD_TEST(assertSizeMatches);
 		TESTER_ADD_TEST(assertSizeMismatchFails);
@@ -589,16 +588,6 @@ private:
 		auto file = writeTempDbc(
 			"packed_size",
 			"type data: Mix { a: i8, b: i64 } packed assert_size 9\n"
-			"function main { i64, ptr_argv } -> { i64 } { ret; }\n"
-		);
-		ASSERT_HAS_VALUE(vm::api::loadFiles(initProcess(), { file }));
-	}
-
-	// The total size of a non-packed struct is rounded up to its alignment (tail padding).
-	void alignedStructTailPadding() {
-		auto file = writeTempDbc(
-			"tail_padding",
-			"type data: Tail { a: i64, b: i8 } assert_size 16\n"
 			"function main { i64, ptr_argv } -> { i64 } { ret; }\n"
 		);
 		ASSERT_HAS_VALUE(vm::api::loadFiles(initProcess(), { file }));

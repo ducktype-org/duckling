@@ -220,9 +220,8 @@ namespace vm::code {
 	class FFIPackedTypeError: public ValidationError {
 	public:
 		constexpr static std::string_view ERR_MSG
-			= "A `packed` data type cannot be used in an FFI function signature: libffi can only "
-			  "describe the C ABI layout. If all fields are naturally aligned, drop `packed` - "
-			  "the layouts are identical: ";
+			= "A `packed` data type cannot be used in an FFI function signature by value: libffi "
+			  "can only describe the non-packed structures: ";
 
 		FFIPackedTypeError(const valid_type::ValidType& type):
 			  ValidationError(base::strConcat(ERR_MSG, type.getName())) {}
