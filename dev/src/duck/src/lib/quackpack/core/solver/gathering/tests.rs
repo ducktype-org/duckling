@@ -527,8 +527,6 @@ dependencies:
     let mut gatherer = Gatherer::new(&mut fetcher, &mut git_access);
     let gathered_info = gatherer
         .explore(
-            root_name,
-            root_version,
             root_path.clone(),
             root_manifest.manifest().clone(),
             HashSet::new(),
@@ -629,8 +627,6 @@ dependencies:
     let mut gatherer = Gatherer::new(&mut fetcher, &mut git_access);
     let gathered_info = gatherer
         .explore(
-            root_name,
-            root_version,
             root_path.clone(),
             root_manifest.manifest().clone(),
             HashSet::new(),
@@ -695,8 +691,6 @@ features:
     let mut gatherer = Gatherer::new(&mut fetcher, &mut git_access);
     let gathered_info = gatherer
         .explore(
-            root_name,
-            root_version,
             root_path.clone(),
             root_manifest.manifest().clone(),
             ["my_feature".into()].into(),
@@ -771,8 +765,6 @@ dependencies:
     let mut gatherer = Gatherer::new(&mut fetcher, &mut git_access);
     let gathered_info = gatherer
         .explore(
-            root_name,
-            root_version,
             root_path.clone(),
             root_manifest.manifest().clone(),
             [].into(),
@@ -853,8 +845,6 @@ dependencies:
     let mut gatherer = Gatherer::new(&mut fetcher, &mut git_access);
     let gathered_info = gatherer
         .explore(
-            root_name,
-            root_version,
             root_path.clone(),
             root_manifest.manifest().clone(),
             [].into(),
@@ -922,8 +912,6 @@ dependencies:
     let mut gatherer = Gatherer::new(&mut fetcher, &mut git_access);
     let gathered_info = gatherer
         .explore(
-            root_name,
-            root_version,
             root_path.clone(),
             root_manifest.manifest().clone(),
             [].into(),
