@@ -612,16 +612,15 @@ namespace compiler::helios {
 			);
 		}
 		case pst::StmtKind::TemplateStmt: {
-			auto template_decl = stmt.dynamicCast<pst::TemplateStmt>().value();
+			auto template_decl   = stmt.dynamicCast<pst::TemplateStmt>().value();
 			auto inner_statement = template_decl->getInnerStatement().unlock(ctx);
 
 			auto inner_statement_kind = inner_statement->getStmtKind();
 			if (inner_statement_kind != pst::StmtKind::Fun
 			    && inner_statement_kind != pst::StmtKind::FunDecl
 			    && inner_statement_kind != pst::StmtKind::Class
-				&& inner_statement_kind != pst::StmtKind::Namespace	
-				&& inner_statement_kind != pst::StmtKind::Const	
-			) {
+			    && inner_statement_kind != pst::StmtKind::Namespace
+			    && inner_statement_kind != pst::StmtKind::Const) {
 				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 					"Templates are only supported for functions, classes, namespaces and consts",
 					template_decl->getStablePosition()
@@ -631,9 +630,8 @@ namespace compiler::helios {
 
 			return SymbolData::makePSTSymbolData(
 				{
-					.name = template_decl->getDeclSymbolIdentifier()->unlock(ctx)->unwrap(
-					),
-					.kind                 = SymbolKind::Template,
+					.name = template_decl->getDeclSymbolIdentifier()->unlock(ctx)->unwrap(),
+					.kind = SymbolKind::Template,
 					.is_ignored_by_lookup = is_ignored_by_lookup,
 					.attributes           = std::move(attributes),
 				},

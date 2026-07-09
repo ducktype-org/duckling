@@ -373,8 +373,9 @@ namespace compiler::helios {
 					out->scopes.emplace_back(ctx.query<QueryPrimaryCodeScopeFor>(element));
 			};
 
-			// @TODO: #3080 cutoff changes semantics of this query, consider making it internal somehow.
-			// Note that more custom logic might be needed in the future (to optimize it, to compile lambdas, etc.)
+			// @TODO: #3080 cutoff changes semantics of this query, consider making it internal
+			// somehow. Note that more custom logic might be needed in the future (to optimize it,
+			// to compile lambdas, etc.)
 
 			auto cutoff_function = [](pst::Access<pst::LangElement> element) {
 				if (element->getElementKind() == pst::ElementKind::TemplateStmt) {
@@ -655,10 +656,10 @@ namespace compiler::helios {
 				for (auto sym: output.valueOrPanic()) {
 					// @TODO: #3099 generated symbols scopes are needed
 					// mostly here and potentially for mangling.
-					// Just removing this assertion for them is not a way to go, since this assertion ensures that scopes info is consistent.
-					// We could however add some kind of "QueryAdditionalScopelessSymbolsInScope".
-					// Tho this will not be trivial.
-					
+					// Just removing this assertion for them is not a way to go, since this assertion
+					// ensures that scopes info is consistent. We could however add some kind of
+					// "QueryAdditionalScopelessSymbolsInScope". Tho this will not be trivial.
+
 					CORE_ASSERT(
 						scope(sym) == key,
 						base::strConcat(

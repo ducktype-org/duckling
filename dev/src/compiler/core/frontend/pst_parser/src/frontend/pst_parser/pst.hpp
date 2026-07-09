@@ -184,7 +184,7 @@ namespace pst {
 			parse(std::move(parsing_ctx), std::forward<Args>(args)...);
 		}
 
-		/** 
+		/**
 		 * @TODO: #3110 this constructor is totally hacked, change it.
 		 * Also: add clone dummy parameter here, to make it more explicit.
 		 */
@@ -196,7 +196,6 @@ namespace pst {
 			  file(std::move(token_source)),
 			  element(AccessInternalAnonymous<Element>(std::move(cloned_element))),
 			  hash_ctx_info(std::move(hash_ctx)) {
-			
 			// @TODO: #3110 This does not clone imports.
 			// But also: maybe we should remove imports vector from PST,
 			// we don't use it in the end anyway.
@@ -329,11 +328,7 @@ namespace pst {
 			Box<tokenizer::TokenSource> token_source,
 			hashing::ComponentHash      hash_ctx
 		) {
-			return PST(
-				std::move(cloned_element),
-				std::move(token_source),
-				std::move(hash_ctx)
-			);
+			return PST(std::move(cloned_element), std::move(token_source), std::move(hash_ctx));
 		}
 
 		[[nodiscard]]

@@ -7,12 +7,12 @@
 #include <frontend/pst_parser/lang_parser_context.hpp>
 #include <frontend/pst_parser/pst.hpp>
 #include <helios/symbols/symbol_id.hpp>
+#include <helios/tsh/deductions.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/pst_layer/pst_parent.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
-#include <helios/tsh/deductions.hpp>
 
 #include <hashing/add_to_hash.hpp>
 #include <hashing/hashing_algorithms.hpp>
@@ -46,9 +46,8 @@ namespace compiler::helios::templates {
 		if (vec_ptr) delete vec_ptr;
 		delete ptr;
 	}
-	
+
 	struct IMPLEMENT_QUERY(QueryBakeTemplateSymID, query::QResult<TemplateBakeStorage>) {
-		
 		// TODO: this will act as a function, and we might want to allow template overloading.
 		// It would be cool to unify this logic.
 
@@ -167,10 +166,10 @@ namespace compiler::helios::templates {
 			auto baked_pst = pst::PST<pst::TemplateStmt>::fromClone(
 				std::move(cloned),
 				std::move(token_source_hack),
-				hash_ctx                                       // ???
+				hash_ctx  // ???
 
-															   // context...?
-			    // hash...? from key hash + from template hash
+						  // context...?
+				// hash...? from key hash + from template hash
 			);
 
 

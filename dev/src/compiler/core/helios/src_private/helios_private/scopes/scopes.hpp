@@ -156,7 +156,7 @@ namespace compiler::helios {
 	 *
 	 * \query_thread_safe_if_cache
 	 *
-	 * @TODO: #3080 consider making it internal helper of query module hout. This query is no longer 
+	 * @TODO: #3080 consider making it internal helper of query module hout. This query is no longer
 	 * a trivial walk-over-PST to get all of the scopes in the module.
 	 */
 	DECLARE_QUERY(

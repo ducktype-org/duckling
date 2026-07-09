@@ -62,13 +62,14 @@ namespace compiler::helios::templates {
 		/**
 		 * @brief The symbols for the template arguments.
 		 *
-		 * @TODO: #3099 Implementation of this is a bit hacky, as it is set by the bake template query after the PST is baked and used in other queries already. This could be changed if template_arguments_symbols didn't required a scope to be created.
+		 * @TODO: #3099 Implementation of this is a bit hacky, as it is set by the bake template
+		 * query after the PST is baked and used in other queries already. This could be changed if
+		 * template_arguments_symbols didn't required a scope to be created.
 		 *
 		 * @note: We use custom deleter to delete the vector, because we can't use unique_ptr inside
 		 * atomic.
 		 */
-		mutable SharedBox<std::atomic<std::vector<SymID>*>>
-			template_arguments_symbols;
+		mutable SharedBox<std::atomic<std::vector<SymID>*>> template_arguments_symbols;
 	};
 
 	/**
@@ -76,13 +77,15 @@ namespace compiler::helios::templates {
 	 * @important: Implementation of this query is very fragile for now.
 	 * It will likely be changed in the future, and should be use with care for now.
 	 *
-	 * @TODO: #3112 some of the logic from this query should probably be moved to a different place. Feel free to do it.
+	 * @TODO: #3112 some of the logic from this query should probably be moved to a different place.
+	 * Feel free to do it.
 	 *
 	 * @param key The template bake key.
 	 * @return The baked symbol ID.
 	 */
 	DECLARE_QUERY(QueryBakeTemplateSymID, TemplateBakeKey, query::QResult<SymID>, ({}));
 
-	// @NOTE: if we will have to bake templates to hout unit, it should probably first call QueryBakeTemplateSymID and
-	// then gather the content of the HOUTUnit based on the baked template symbol ID. 
+	// @NOTE: if we will have to bake templates to hout unit, it should probably first call
+	// QueryBakeTemplateSymID and then gather the content of the HOUTUnit based on the baked
+	// template symbol ID.
 }
