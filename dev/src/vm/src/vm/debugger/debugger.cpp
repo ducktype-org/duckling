@@ -27,7 +27,7 @@ namespace vm::debugger {
 			  }
 		  }),
 		  vm_output([&](const std::string& str) { on_output.emitEvent(str); }) {
-		api::spawn()
+		(void) api::spawn()
 			.and_then([&](const api::ProcessInfo& info) {
 				pid = info.pid;
 				return api::attachStatusListener(pid, &updater);
@@ -43,7 +43,7 @@ namespace vm::debugger {
 
 		// @TODO: #1222 Remove checking status and always kill after fixing kill
 
-		api::getExecutionStatus(pid)
+		(void) api::getExecutionStatus(pid)
 			.and_then([&](const api::ProcStatus& status) {
 				if (!std::holds_alternative<api::NotStarted>(status)) return api::kill(pid);
 
@@ -92,11 +92,11 @@ namespace vm::debugger {
 		    .value();
 	}
 
-	std::expected<void, api::ApiError> Debugger::loadFile(const fs::File& filepath) {
-		return api::loadFiles(pid, { filepath });
+	std::expected<void, api::ApiError> Debugger::loadFiles(const std::vector<fs::File>& files) {
+		return api::loadFiles(pid, files);
 	}
 
-	void Debugger::setDefaultArgs(const ProgramRunArguments& args) { main_args = args; }
+	void Debugger::setProgramArguments(const ProgramRunArguments& args) { main_args = args; }
 
 	std::expected<u64, api::ApiError> Debugger::getNumberOfStackFrames(api::ThreadID thread_id) {
 		return api::debuggerGetNumberOfStackFrames(pid, thread_id)
@@ -155,4 +155,8 @@ namespace vm::debugger {
 	}
 
 	std::expected<void, api::ApiError> Debugger::step() { return api::step(pid); }
+
+	std::expected<void, api::ApiError> Debugger::sendInput(const std::string& msg) {
+		return api::input(pid, msg);
+	}
 }

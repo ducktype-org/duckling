@@ -7,7 +7,7 @@
 
 namespace pst {
 	/**
-	 * @brief Class constructor element.
+	 * @brief Class copy constructor element.
 	 */
 	class CopyConstructor final: public ClassSpecial {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(CopyConstructor, ClassSpecial);
@@ -20,7 +20,7 @@ namespace pst {
 
 	public:
 		CLASS_STMT_SPEC_CONSTRUCTOR(CopyConstructor);
-		CLASS_STMT_PARSE(CopyConstructor);
+		PARSE_DECL();
 
 		~CopyConstructor() override = default;
 		void dprint(std::ostream& out) const final;

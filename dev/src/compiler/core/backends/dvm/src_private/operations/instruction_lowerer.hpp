@@ -26,6 +26,7 @@ namespace compiler::backend_vm::internal {
 		void lower(ComparisonOperation& op);
 
 		void lower(const CallOperation& op);
+		void lower(const BuiltinCallOperation& op);
 		void lower(const AddressOfOperation& op);
 		void lower(const BoxAllocOperation& op);
 		void lower(const BoxFreeOperation& op);

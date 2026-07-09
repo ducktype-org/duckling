@@ -69,6 +69,11 @@ impl Unit {
         dependencies: Vec<u64>,
         package_type: ArtifactsType,
     ) -> Self {
+        assert!(
+            dependencies.is_sorted(),
+            "dependencies IDs should be sorted: {:?}",
+            dependencies
+        );
         Self {
             inner: Arc::new(UnitInner {
                 unit_id,
@@ -91,7 +96,7 @@ impl Unit {
     }
 
     /// Get the ID's of all __direct__ dependencies of this [`Unit`].
-    pub fn deps_by_unit_id(&self) -> &[u64] {
+    pub fn deps_sorted_by_unit_id(&self) -> &[u64] {
         &self.inner.dependencies_by_id
     }
 
@@ -145,7 +150,7 @@ impl Unit {
         };
         let dependencies = {
             let mut result = vec![];
-            for dep_id in self.deps_by_unit_id() {
+            for dep_id in self.deps_sorted_by_unit_id() {
                 let unit_dep = graph.unit_for(*dep_id);
                 let dep_name = unit_dep.root_package().package().manifest().name();
                 let dep = package

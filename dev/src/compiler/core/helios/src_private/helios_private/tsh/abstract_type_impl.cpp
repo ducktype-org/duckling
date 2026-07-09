@@ -3,6 +3,7 @@
 #include "queries.hpp"
 
 #include <helios/symbols/query_type_of_symbol.hpp>
+#include <helios_private/hout_creation/definition_generation/copy_constructors.hpp>
 
 // @TODO: #2331 Remove these includes
 #include <frontend/pst_parser/elements/hierarchy/class_elements/field.hpp>
@@ -11,6 +12,7 @@
 #include <frontend/pst_parser/elements/hierarchy/lists/nested_import_list.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <helios/symbols/query_type_symbol_data.hpp>
+#include <helios/symbols/symbol_abi.hpp>
 #include <helios/tsh/queries/implicit_coercibility.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios_private/hout_creation/definition_generation/default_destructors.hpp>
@@ -364,12 +366,16 @@ namespace compiler::tsh {
 		throw base::NotYetImplemented("String type interface not yet implemented");
 	}
 
-	CRef<TypeInterface> DynamicArrayAbstractTypeImpl::getDeclaredInterface(query::Context&) const {
-		throw base::NotYetImplemented("Dynamic array type interface not yet implemented");
+	CRef<TypeInterface> DynamicArrayAbstractTypeImpl::getDeclaredInterface(query::Context& ctx
+	) const {
+		const auto type = toAbstractType().as<DynamicArrayAbstractType>();
+		return &ctx.query<QueryInterfaceOfDynamicArray>(type)->valueOrThrow();
 	}
 
-	CRef<TypeInterface> StaticArrayAbstractTypeImpl::getDeclaredInterface(query::Context&) const {
-		throw base::NotYetImplemented("Static array type interface not yet implemented");
+	CRef<TypeInterface> StaticArrayAbstractTypeImpl::getDeclaredInterface(query::Context& ctx
+	) const {
+		const auto type = toAbstractType().as<StaticArrayAbstractType>();
+		return &ctx.query<QueryInterfaceOfStaticArray>(type)->valueOrThrow();
 	}
 
 	CRef<TypeInterface> TupleAbstractTypeImpl::getDeclaredInterface(query::Context& ctx) const {
@@ -436,6 +442,10 @@ namespace compiler::tsh {
 		return {};
 	}
 
+	compiler::helios::SymbolABI ClassAbstractTypeImpl::getABI(query::Context& ctx) const {
+		return ctx.query<compiler::helios::QuerySymbolABI>(symbol)->valueOrThrow();
+	}
+
 	std::vector<ClassAbstractType> ClassAbstractTypeImpl::getImplementedInterfaceTypes(
 		query::Context& ctx
 	) const {
@@ -493,6 +503,9 @@ namespace compiler::tsh {
 	}
 
 	bool ClassAbstractTypeImpl::isCopyable(query::Context& ctx) const {
+		// A user-defined copy constructor makes the class copyable regardless of its fields.
+		if (compiler::helios::defgen::userCopyConstructorOf(ctx, symbol).has_value()) return true;
+
 		auto fields = getDeclaredInterface(ctx)->getFieldsView();
 		// All component types have to be copyable.
 		return std::ranges::all_of(fields, [&](const auto& field) {
@@ -501,6 +514,10 @@ namespace compiler::tsh {
 	}
 
 	bool ClassAbstractTypeImpl::isTriviallyCopyable(query::Context& ctx) const {
+		// A user-defined copy constructor means copies must run user code, so the class is never
+		// trivially copyable.
+		if (compiler::helios::defgen::userCopyConstructorOf(ctx, symbol).has_value()) return false;
+
 		auto fields = getDeclaredInterface(ctx)->getFieldsView();
 		// All component types have to be trivially copyable.
 		return std::ranges::all_of(fields, [&](const auto& field) {

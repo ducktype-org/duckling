@@ -19,7 +19,6 @@
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/query_type_symbol_data.hpp>
 #include <helios/symbols/symbol_abi.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <helios/tsh/mutability.hpp>
 #include <helios/tsh/queries/types.hpp>
@@ -28,6 +27,7 @@
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/errors/dia_interactive_elements.hpp>
 #include <helios_private/hout_creation/definition_generation/class_constructors.hpp>
+#include <helios_private/hout_creation/definition_generation/copy_constructors.hpp>
 #include <helios_private/hout_creation/definition_generation/default_constructors.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
@@ -97,6 +97,7 @@ public:
 		TESTER_ADD_TEST(testStmtSpecifiers);
 		TESTER_ADD_TEST(testOverloadResolution);
 		TESTER_ADD_TEST(testDefaultInitializers);
+		TESTER_ADD_TEST(testCopyConstructors);
 		TESTER_ADD_TEST(testCastsHout);
 		TESTER_ADD_TEST(testPointers);
 		TESTER_ADD_TEST(testTypeLifting);
@@ -442,9 +443,10 @@ private:
 
 		ASSERT_EQUAL(2, first_class_info.members.size());
 		ASSERT_EQUAL(2, first_class_info.methods.size());
-		ASSERT_EQUAL(1, first_class_info.constructors.size());
-		ASSERT_TRUE(first_class_info.destructor.has_value());
-		ASSERT_TRUE(not first_class_info.base.has_value());
+		// @TODO: #2000 Re-enable once copy constructors are called in coercions.
+		// ASSERT_EQUAL(1, first_class_info.constructors.size());
+		ASSERT_HAS_VALUE(first_class_info.destructor);
+		ASSERT_NO_VALUE(first_class_info.base);
 		ASSERT_EQUAL(0, first_class_info.implements.size());
 		ASSERT_EQUAL("FirstClassEver", first_class_info.name);
 
@@ -462,8 +464,8 @@ private:
 		ASSERT_EQUAL(0, second_class_info.members.size());
 		ASSERT_EQUAL(0, second_class_info.methods.size());
 		ASSERT_EQUAL(0, second_class_info.constructors.size());
-		ASSERT_TRUE(not second_class_info.destructor.has_value());
-		ASSERT_TRUE(second_class_info.base.has_value());
+		ASSERT_NO_VALUE(second_class_info.destructor);
+		ASSERT_HAS_VALUE(second_class_info.base);
 		ASSERT_EQUAL(first_class_abstract_type, second_class_info.base);
 		ASSERT_EQUAL("SecondClass", second_class_info.name);
 
@@ -866,10 +868,7 @@ private:
 			glob_data += hout->glob_data.size();
 		}
 
-		// @TODO: #2694 This should be 3, not 19, when toString methods
-		// for simple types are moved out of every HOUT unit.
-		// @TODO: #2424 When refactoring, add robust tests that the expected toString methods are added.
-		ASSERT_EQUAL_PRINT(functions, 19);
+		ASSERT_EQUAL_PRINT(functions, 3);
 		ASSERT_EQUAL(glob_data, 5);
 	}
 
@@ -887,10 +886,7 @@ private:
 			glob_data += hout->glob_data.size();
 		}
 
-		// @TODO: #2694 This should be 1, not 29 (1 + 2 * 14 + 1 (length)), when toString methods
-		// for simple types are moved out of every HOUT unit (there are two units in this test).
-		// @TODO: #2424 When refactoring, add robust tests that the expected toString methods are added.
-		ASSERT_EQUAL_PRINT(functions, 33);
+		ASSERT_EQUAL_PRINT(functions, 1);
 		ASSERT_EQUAL(glob_data, 5);
 	}
 
@@ -2008,23 +2004,22 @@ private:
 			ASSERT_TRUE(default_val != nullptr);
 		}
 		{
-			// l += 1;
+			// l.push(1);
 			auto& expr_stmt = dynamic_cast<const ExprStmt&>(*statements.at(1));
-			auto* push_expr = dynamic_cast<const ListPushExpr*>(expr_stmt.expr.get());
-			ASSERT_TRUE(push_expr != nullptr);
+			auto* call_expr = dynamic_cast<const CallExpr*>(expr_stmt.expr.get());
+			ASSERT_TRUE(call_expr != nullptr);
 		}
 		{
-			// l -= 1;
+			// l.pop(1);
 			auto& expr_stmt = dynamic_cast<const ExprStmt&>(*statements.at(2));
-			auto* pop_expr  = dynamic_cast<const ListPopExpr*>(expr_stmt.expr.get());
-			ASSERT_TRUE(pop_expr != nullptr);
+			auto* call_expr = dynamic_cast<const CallExpr*>(expr_stmt.expr.get());
+			ASSERT_TRUE(call_expr != nullptr);
 		}
 		{
-			// let l_len = len l;
-			auto& var_decl = dynamic_cast<const VariableStmt&>(*statements.at(3));
-			auto* len_expr = dynamic_cast<const UnaryOperatorExpr*>(var_decl.initial_value.get());
-			ASSERT_TRUE(len_expr != nullptr);
-			ASSERT_EQUAL(len_expr->operation, BuiltinUnary::Len);
+			// let l_len = l.length();
+			auto& var_decl  = dynamic_cast<const VariableStmt&>(*statements.at(3));
+			auto* call_expr = dynamic_cast<const CallExpr*>(var_decl.initial_value.get());
+			ASSERT_TRUE(call_expr != nullptr);
 		}
 		{
 			// l[0] = 42;
@@ -2563,7 +2558,7 @@ private:
 			ASSERT_TRUE(std::holds_alternative<compiler::helios::CAbi>(abi_value));
 			auto c_abi = std::get<compiler::helios::CAbi>(abi_value);
 			if (!expected_library.empty()) {
-				ASSERT_TRUE(c_abi.library.has_value());
+				ASSERT_HAS_VALUE(c_abi.library);
 				ASSERT_EQUAL(expected_library, c_abi.library.value().strView());
 			}
 		};
@@ -2752,9 +2747,11 @@ private:
 		auto trivial_sym      = getChain("Trivial", root_scope).back();
 		auto with_init_sym    = getChain("WithInit", root_scope).back();
 		auto nested_sym       = getChain("Nested", root_scope).back();
-		auto holder_sym       = getChain("ArrayHolder", root_scope).back();
+		auto arr_holder_sym   = getChain("ArrayHolder", root_scope).back();
+		auto tup_holder_sym   = getChain("TupleHolder", root_scope).back();
 		auto deep_sym         = getChain("DeepStack", root_scope).back();
 		auto deep_trivial_sym = getChain("DeepStackTrivial", root_scope).back();
+		auto tup_trivial_sym  = getChain("TupleTrivial", root_scope).back();
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto get_class_type = [&](SymID sym_id) {
@@ -2826,18 +2823,18 @@ private:
 				// `WithInit`.
 				ASSERT_EQUAL_PRINT(2, deps.size());
 
-				auto dep_gsd = std::get<GeneratedSymbolData>(getSymRef(deps[0])->other);
-				ASSERT_TRUE(std::holds_alternative<GeneratedSymbolData::DefaultClassConstructor>(
-					dep_gsd.data
-				));
+				const auto* dep_ctor = std::get_if<Constructor>(&getSymRef(deps[0])->other);
+				ASSERT_TRUE(dep_ctor != nullptr);
+				ASSERT_EQUAL(dep_ctor->kind, Constructor::Kind::Default);
+				ASSERT_EQUAL(dep_ctor->type.getKind(), compiler::tsh::Kind::Class);
 			}
 
 			// ArrayHolder ctor should call a ctor of static array field, which calls a ctor of the
 			// inner element.
 			{
-				auto        holder_st = get_class_type(holder_sym);
+				auto        arr_holder_st = get_class_type(arr_holder_sym);
 				const auto& expr
-					= ctx.query<QueryDefaultInitializerExpr>(holder_st)->valueOrThrow();
+					= ctx.query<QueryDefaultInitializerExpr>(arr_holder_st)->valueOrThrow();
 
 				auto call     = dynamic_cast<const CallExpr*>(expr.get());
 				auto ctor_sym = getIdentifierExprSymID(call->callee.ref()).value();
@@ -2848,13 +2845,36 @@ private:
 
 				bool found_array_ctor = false;
 				for (auto d: deps) {
-					auto gsd = std::get<GeneratedSymbolData>(getSymRef(d)->other);
-					if (std::holds_alternative<GeneratedSymbolData::DefaultStaticArrayConstructor>(
-							gsd.data
-						))
+					const auto* ctor = std::get_if<Constructor>(&getSymRef(d)->other);
+					if (ctor != nullptr && ctor->kind == Constructor::Kind::Default
+					    && ctor->type.getKind() == compiler::tsh::Kind::StaticArray)
 						found_array_ctor = true;
 				}
 				ASSERT_TRUE(found_array_ctor);
+			}
+
+			// TupleHolder ctor should call a ctor of the tuple field, which calls a ctor of the
+			// inner element.
+			{
+				auto        tup_holder_st = get_class_type(tup_holder_sym);
+				const auto& expr
+					= ctx.query<QueryDefaultInitializerExpr>(tup_holder_st)->valueOrThrow();
+
+				auto call     = dynamic_cast<const CallExpr*>(expr.get());
+				auto ctor_sym = getIdentifierExprSymID(call->callee.ref()).value();
+				auto deps     = ctx.query<QueryTransitiveFunctionCalls>(ctor_sym)->valueOrThrow();
+
+				// Ctor(TupleHolder) -> Ctor((WithInit, WithInit)) -> Ctor(WithInit)
+				ASSERT_EQUAL_PRINT(3, deps.size());
+
+				bool found_tup_ctor = false;
+				for (auto d: deps) {
+					const auto* ctor = std::get_if<Constructor>(&getSymRef(d)->other);
+					if (ctor != nullptr && ctor->kind == Constructor::Kind::Default
+					    && ctor->type.getKind() == compiler::tsh::Kind::Tuple)
+						found_tup_ctor = true;
+				}
+				ASSERT_TRUE(found_tup_ctor);
 			}
 
 			// `DeepStack` ctor should call a ctor of the `Nested` field, which calls a ctor of
@@ -2879,6 +2899,280 @@ private:
 				const auto& expr
 					= ctx.query<QueryDefaultInitializerExpr>(deep_trivial_st)->valueOrThrow();
 				ASSERT_TRUE(dynamic_cast<const DefaultValueExpr*>(expr.get()) != nullptr);
+			}
+
+			// `TupleTrivial` ctor should not call any default constructors, since it stores
+			// a tuple of trivially zero-initializable types which can be zero initialized,
+			// thus its zero-initializable.
+			{
+				auto        tup_trivial_st = get_class_type(tup_trivial_sym);
+				const auto& expr
+					= ctx.query<QueryDefaultInitializerExpr>(tup_trivial_st)->valueOrThrow();
+				ASSERT_TRUE(dynamic_cast<const DefaultValueExpr*>(expr.get()) != nullptr);
+			}
+		});
+	}
+
+	void testCopyConstructors() {
+		using namespace compiler::helios;
+		using namespace compiler::helios::code;
+		using namespace compiler::helios::defgen;
+
+		auto [module, root_scope] = getModule(fs::File(path("test_modules/copy_constructors")));
+
+		auto trivial_sym = getChain("Trivial", root_scope).back();
+		auto has_box_sym = getChain("HasBox", root_scope).back();
+		auto holds_sym   = getChain("HoldsNonTrivial", root_scope).back();
+		auto mega_sym    = getChain("FinalBoss", root_scope).back();
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			auto get_class_type = [&](SymID sym_id) {
+				return ctx.query<QueryTypeFromDefinition>(sym_id)->valueOrThrow().getType();
+			};
+
+			// For a trivially-copyable class, the copy constructor copies each field with byte
+			// copy, so each assignment's right-hand side is a field access, not a copy-ctor call.
+			{
+				auto        trivial_type = get_class_type(trivial_sym);
+				const auto& cctor
+					= ctx.query<QueryDefaultCopyConstructor>(trivial_type)->valueOrThrow();
+
+				// `(const ref Trivial) -> Trivial`.
+				ASSERT_EQUAL_PRINT(1, cctor.declaration->parameters.size());
+				const auto param_type = cctor.declaration->parameters.at(0).type;
+				ASSERT_EQUAL(compiler::tsh::ReferenceKind::Ref, param_type.getRefKind());
+				ASSERT_EQUAL(compiler::tsh::Mutability::Immutable, param_type.getMutability());
+				ASSERT_EQUAL(trivial_type, param_type.getType());
+				ASSERT_EQUAL(trivial_type, cctor.declaration->return_type.getType());
+
+				// var __result;
+				// __result.a = (*source).a;
+				// __result.b = (*source).b;
+				// return.
+				const auto& stmts = cctor.body->statements;
+				ASSERT_EQUAL_PRINT(4, stmts.size());
+				ASSERT_TRUE(dynamic_cast<const VariableStmt*>(stmts.front().get()) != nullptr);
+				ASSERT_TRUE(dynamic_cast<const ReturnStmt*>(stmts.back().get()) != nullptr);
+
+				auto assign = dynamic_cast<const AssignmentStmt*>(stmts.at(1).get());
+				ASSERT_TRUE(assign != nullptr);
+				ASSERT_TRUE(
+					dynamic_cast<const AccessExpr*>(assign->new_value_expr.get()) != nullptr
+				);
+			}
+
+			// For a class holding a non-trivially-copyable field, the copy constructor copies the
+			// field by calling that field type's copy constructor.
+			{
+				auto        holds_type = get_class_type(holds_sym);
+				const auto& cctor
+					= ctx.query<QueryDefaultCopyConstructor>(holds_type)->valueOrThrow();
+
+				const auto& stmts = cctor.body->statements;
+				ASSERT_EQUAL_PRINT(3, stmts.size());
+
+				auto assign = dynamic_cast<const AssignmentStmt*>(stmts.at(1).get());
+				ASSERT_TRUE(assign != nullptr);
+
+				auto call = dynamic_cast<const CallExpr*>(assign->new_value_expr.get());
+				ASSERT_TRUE(call != nullptr);
+
+				auto        callee_sym  = getIdentifierExprSymID(call->callee.ref()).value();
+				const auto* callee_ctor = std::get_if<Constructor>(&getSymRef(callee_sym)->other);
+				ASSERT_TRUE(callee_ctor != nullptr);
+				ASSERT_EQUAL(callee_ctor->kind, Constructor::Kind::Copy);
+			}
+
+			// A tuple is copied element-by-element just like a class. Trivial elements are
+			// byte-copied, non-trivially-copyable elements are copied with their own copy constructor.
+			{
+				auto i32_type = compiler::tsh::getIntegralType(
+					ctx, 32, compiler::tsh::IntegralAbstractType::Signedness::Signed
+				);
+				auto has_box_st = st(get_class_type(has_box_sym));
+				auto tuple_type
+					= ctx.query<compiler::tsh::QueryTupleType>({ { st(i32_type), has_box_st } });
+
+				const auto& cctor
+					= ctx.query<QueryDefaultCopyConstructor>(tuple_type)->valueOrThrow();
+
+				const auto& stmts = cctor.body->statements;
+				ASSERT_EQUAL_PRINT(4, stmts.size());
+
+				// First element is trivially copyable.
+				auto assign0 = dynamic_cast<const AssignmentStmt*>(stmts.at(1).get());
+				ASSERT_TRUE(assign0 != nullptr);
+				ASSERT_TRUE(
+					dynamic_cast<const AccessExpr*>(assign0->new_value_expr.get()) != nullptr
+				);
+
+				// Second element requires a copy ctor.
+				auto assign1 = dynamic_cast<const AssignmentStmt*>(stmts.at(2).get());
+				ASSERT_TRUE(assign1 != nullptr);
+				auto call = dynamic_cast<const CallExpr*>(assign1->new_value_expr.get());
+				ASSERT_TRUE(call != nullptr);
+				auto        callee_sym  = getIdentifierExprSymID(call->callee.ref()).value();
+				const auto* callee_ctor = std::get_if<Constructor>(&getSymRef(callee_sym)->other);
+				ASSERT_TRUE(callee_ctor != nullptr);
+				ASSERT_EQUAL(callee_ctor->kind, Constructor::Kind::Copy);
+			}
+
+			auto dump_cctor = [&](std::string_view            label,
+			                      compiler::tsh::AbstractType type) -> const HOUTFunction& {
+				const auto& cctor = ctx.query<QueryDefaultCopyConstructor>(type)->valueOrThrow();
+				std::cerr << "\n===== copy constructor: " << label << " =====\n";
+				for (const auto& stmt: cctor.body->statements) {
+					stmt->debugPrint(std::cerr, 1);
+					std::cerr << "\n";
+				}
+				return cctor;
+			};
+
+			const auto  final_boss_type  = get_class_type(mega_sym);
+			const auto& final_boss_cctor = dump_cctor("FinalBoss", final_boss_type);
+
+			// The right-hand side of the assignment that copies field `field_name`.
+			auto rhs_of = [&](std::string_view field_name) -> const Expr* {
+				for (const auto& stmt: final_boss_cctor.body->statements) {
+					auto assign = dynamic_cast<const AssignmentStmt*>(stmt.get());
+					if (assign == nullptr) continue;
+					auto access = dynamic_cast<const AccessExpr*>(assign->location_expr.get());
+					if (access != nullptr
+					    && compiler::helios::name(access->field).strView() == field_name)
+						return assign->new_value_expr.get();
+				}
+				CORE_PANIC("no assignment found for field");
+			};
+
+			// The symbol of the copy constructor invoked by a copy-ctor-call expression.
+			auto callee_of = [&](const Expr* expr) -> SymID {
+				auto call = dynamic_cast<const CallExpr*>(expr);
+				ASSERT_TRUE(call != nullptr);
+				return getIdentifierExprSymID(call->callee.ref()).value();
+			};
+
+			auto assert_generated_copy = [&](const Expr* expr) {
+				const auto* ctor = std::get_if<Constructor>(&getSymRef(callee_of(expr))->other);
+				ASSERT_TRUE(ctor != nullptr);
+				ASSERT_EQUAL(ctor->kind, Constructor::Kind::Copy);
+			};
+
+			// Trivially-copyable fields are byte-copied. The RHS is should be a plain field access.
+			for (std::string_view trivial_field:
+			     { "i", "f", "flag", "r", "p", "c", "m", "trivial_arr", "trivial_tup" })
+				ASSERT_TRUE(dynamic_cast<const AccessExpr*>(rhs_of(trivial_field)) != nullptr);
+
+			// `box i32` - deep copy of a trivial pointee -> box(*source.boxed_prim).
+			{
+				auto box_of = dynamic_cast<const BoxOfExpr*>(rhs_of("boxed_prim"));
+				ASSERT_TRUE(box_of != nullptr);
+				ASSERT_TRUE(dynamic_cast<const DerefExpr*>(box_of->inner.get()) != nullptr);
+			}
+
+			// `box HasBox` - deep copy of a non-trivial pointee -> box(HasBox.__copy(...)).
+			{
+				auto box_of = dynamic_cast<const BoxOfExpr*>(rhs_of("boxed_class"));
+				ASSERT_TRUE(box_of != nullptr);
+				assert_generated_copy(box_of->inner.get());
+			}
+
+			// Non-trivial aggregates call a copy constructor.
+			for (std::string_view aggregate_field:
+			     { "nontrivial_arr", "nontrivial_tup", "prim_list", "class_list", "nested_default" })
+				assert_generated_copy(rhs_of(aggregate_field));
+
+			// A field whose class defines a user copy constructor calls the user code, not a
+			// generated one.
+			ASSERT_TRUE(v_matches(
+				getSymRef(callee_of(rhs_of("nested_user")))->other, PstImplementedSemantics
+			));
+
+			// `box UserCopied` - deep copy whose inner pointee copy runs the user constructor.
+			{
+				auto box_of = dynamic_cast<const BoxOfExpr*>(rhs_of("deep"));
+				ASSERT_TRUE(box_of != nullptr);
+				ASSERT_TRUE(v_matches(
+					getSymRef(callee_of(box_of->inner.get()))->other, PstImplementedSemantics
+				));
+			}
+
+			auto field_abstract_type = [&](std::string_view field_name) {
+				return final_boss_type.getInterface(ctx)
+				    ->getElementsWithName(base::StrID(field_name))
+				    .back()
+				    .getType(ctx)
+				    .getType();
+			};
+
+			// HasBox -> box(*source.boxed).
+			{
+				const auto& cctor = dump_cctor("HasBox", get_class_type(has_box_sym));
+				const auto& stmts = cctor.body->statements;
+				ASSERT_EQUAL_PRINT(3, stmts.size());
+				auto assign = dynamic_cast<const AssignmentStmt*>(stmts.at(1).get());
+				ASSERT_TRUE(assign != nullptr);
+				auto box_of = dynamic_cast<const BoxOfExpr*>(assign->new_value_expr.get());
+				ASSERT_TRUE(box_of != nullptr);
+				ASSERT_TRUE(dynamic_cast<const DerefExpr*>(box_of->inner.get()) != nullptr);
+			}
+
+			// HoldsNonTrivial - copies its `HasBox` field with a copy-ctor call.
+			{
+				const auto& cctor = dump_cctor("HoldsNonTrivial", get_class_type(holds_sym));
+				const auto& stmts = cctor.body->statements;
+				ASSERT_EQUAL_PRINT(3, stmts.size());
+				auto assign = dynamic_cast<const AssignmentStmt*>(stmts.at(1).get());
+				ASSERT_TRUE(assign != nullptr);
+				assert_generated_copy(assign->new_value_expr.get());
+			}
+
+			// Static array - a copy loop element by element.
+			{
+				const auto& cctor = dump_cctor("HasBox[3]", field_abstract_type("nontrivial_arr"));
+				const auto& stmts = cctor.body->statements;
+				// var __result; var __i = 0; while (__i < 3) {...}; return __result;
+				ASSERT_EQUAL_PRINT(4, stmts.size());
+				ASSERT_TRUE(dynamic_cast<const WhileStmt*>(stmts.at(2).get()) != nullptr);
+			}
+
+			// Tuple with a non-trivial element - element 0 byte-copied, element 1 via a copy ctor.
+			{
+				const auto& cctor
+					= dump_cctor("(i32, HasBox)", field_abstract_type("nontrivial_tup"));
+				const auto& stmts = cctor.body->statements;
+				ASSERT_EQUAL_PRINT(4, stmts.size());
+				auto assign0 = dynamic_cast<const AssignmentStmt*>(stmts.at(1).get());
+				ASSERT_TRUE(assign0 != nullptr);
+				ASSERT_TRUE(
+					dynamic_cast<const AccessExpr*>(assign0->new_value_expr.get()) != nullptr
+				);
+				auto assign1 = dynamic_cast<const AssignmentStmt*>(stmts.at(2).get());
+				ASSERT_TRUE(assign1 != nullptr);
+				assert_generated_copy(assign1->new_value_expr.get());
+			}
+
+			// List of a trivial element.
+			{
+				const auto& cctor = dump_cctor("List[i32]", field_abstract_type("prim_list"));
+				const auto& stmts = cctor.body->statements;
+				ASSERT_EQUAL_PRINT(4, stmts.size());
+				ASSERT_TRUE(dynamic_cast<const WhileStmt*>(stmts.at(2).get()) != nullptr);
+			}
+
+			// List of a non-trivial element - each pushed element is a copy-ctor call.
+			{
+				const auto& cctor = dump_cctor("List[HasBox]", field_abstract_type("class_list"));
+				const auto& stmts = cctor.body->statements;
+				ASSERT_EQUAL_PRINT(4, stmts.size());
+				auto while_stmt = dynamic_cast<const WhileStmt*>(stmts.at(2).get());
+				ASSERT_TRUE(while_stmt != nullptr);
+				ASSERT_TRUE(!while_stmt->body.statements.empty());
+				auto push_stmt
+					= dynamic_cast<const ExprStmt*>(while_stmt->body.statements.at(0).get());
+				ASSERT_TRUE(push_stmt != nullptr);
+				auto push = dynamic_cast<const ListPushExpr*>(push_stmt->expr.get());
+				ASSERT_TRUE(push != nullptr);
+				assert_generated_copy(push->element.get());
 			}
 		});
 	}

@@ -68,6 +68,7 @@ public:
 		TESTER_ADD_TEST(testClass);
 		TESTER_ADD_TEST(testListParsing);
 		TESTER_ADD_TEST(testListParsingErrors);
+		TESTER_ADD_TEST(testTemplateStmtParsing);
 		TESTER_ADD_TEST(testUsingErrors);
 		TESTER_ADD_TEST(testParamListErrors);
 		TESTER_ADD_TEST(testMissingSemiErr);
@@ -192,6 +193,10 @@ private:
 
 	void testListParsing() { testJsonRelativePath("lists_ok.duck", "lists_ok.json"); }
 
+	void testTemplateStmtParsing() {
+		testJsonRelativePath("template_statements.duck", "template_statements.json");
+	}
+
 	void testFormatStrParsing() {
 		testJsonRelativePath("format_strings.duck", "format_strings.json");
 	}
@@ -233,7 +238,7 @@ private:
 		                   .illegalAccess()
 		                   .value()
 		                   .dynamicCast<pst::Fun>();
-		ASSERT_TRUE(fun_opt.has_value());
+		ASSERT_HAS_VALUE(fun_opt);
 		auto fun = fun_opt.value();
 
 		auto params = fun->getParams().illegalAccess().value();

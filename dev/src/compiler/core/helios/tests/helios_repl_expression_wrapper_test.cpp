@@ -5,7 +5,6 @@
 #include <helios/hout/visitors.hpp>
 #include <helios/mangler/mangler.hpp>
 #include <helios/repl_utils/repl_queries.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios_private/symbols/generated_symbol_data.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 
@@ -57,7 +56,7 @@ private:
 				.expr_stmt = expr_stmt,
 				.counter   = 7,
 			});
-			ASSERT_TRUE(wrapper_result.hasValue());
+			ASSERT_HAS_VALUE(wrapper_result);
 			auto& wrapper = wrapper_result.valueOrPanic();
 
 			ASSERT_EQUAL(wrapper.declaration->parameters.size(), 0u);
@@ -79,17 +78,12 @@ private:
 				.expr_stmt = expr_stmt,
 				.counter   = 13,
 			});
-			ASSERT_TRUE(wrapper_result.hasValue());
+			ASSERT_HAS_VALUE(wrapper_result);
 			auto& wrapper = wrapper_result.valueOrPanic();
 
-			auto sym_ref  = helios::getSymRef(wrapper.declaration->original_symbol);
-			auto gen_data = std::get_if<helios::defgen::GeneratedSymbolData>(&sym_ref->other);
-			assertTrue(gen_data != nullptr, "Expected generated symbol data");
+			auto sym_ref = helios::getSymRef(wrapper.declaration->original_symbol);
 
-			auto repl_data
-				= std::get_if<helios::defgen::GeneratedSymbolData::ReplExpressionWrapper>(
-					&gen_data->data
-				);
+			auto repl_data = std::get_if<helios::defgen::ReplExpressionWrapper>(&sym_ref->other);
 			assertTrue(repl_data != nullptr, "Expected ReplExpressionWrapper generated symbol");
 			ASSERT_EQUAL(repl_data->counter, 13u);
 			ASSERT_EQUAL(repl_data->return_type, wrapper.declaration->return_type);
@@ -111,8 +105,8 @@ private:
 				.expr_stmt = expr_stmt,
 				.counter   = 102,
 			});
-			ASSERT_TRUE(wrapper_result_a.hasValue());
-			ASSERT_TRUE(wrapper_result_b.hasValue());
+			ASSERT_HAS_VALUE(wrapper_result_a);
+			ASSERT_HAS_VALUE(wrapper_result_b);
 			auto& wrapper_a = wrapper_result_a.valueOrPanic();
 			auto& wrapper_b = wrapper_result_b.valueOrPanic();
 
@@ -148,30 +142,22 @@ private:
 				.expr_stmt = expr_f64,
 				.counter   = 999,
 			});
-			ASSERT_TRUE(wrapper_result_i32.hasValue());
-			ASSERT_TRUE(wrapper_result_f64.hasValue());
+			ASSERT_HAS_VALUE(wrapper_result_i32);
+			ASSERT_HAS_VALUE(wrapper_result_f64);
 			auto& wrapper_i32 = wrapper_result_i32.valueOrPanic();
 			auto& wrapper_f64 = wrapper_result_f64.valueOrPanic();
 
 			auto sym_i32 = helios::getSymRef(wrapper_i32.declaration->original_symbol);
 			auto sym_f64 = helios::getSymRef(wrapper_f64.declaration->original_symbol);
-			auto gen_i32 = std::get_if<helios::defgen::GeneratedSymbolData>(&sym_i32->other);
-			auto gen_f64 = std::get_if<helios::defgen::GeneratedSymbolData>(&sym_f64->other);
 
-			assertTrue(gen_i32 != nullptr && gen_f64 != nullptr, "Expected generated symbol data");
-
-			auto repl_i32 = std::get_if<helios::defgen::GeneratedSymbolData::ReplExpressionWrapper>(
-				&gen_i32->data
-			);
-			auto repl_f64 = std::get_if<helios::defgen::GeneratedSymbolData::ReplExpressionWrapper>(
-				&gen_f64->data
-			);
+			auto repl_i32 = std::get_if<helios::defgen::ReplExpressionWrapper>(&sym_i32->other);
+			auto repl_f64 = std::get_if<helios::defgen::ReplExpressionWrapper>(&sym_f64->other);
 
 			assertTrue(repl_i32 != nullptr && repl_f64 != nullptr, "Expected ReplExpressionWrapper");
 
 			// They have different hashes (good)
 			assertTrue(
-				gen_i32->queryUnstablePerfectHash() != gen_f64->queryUnstablePerfectHash(),
+				repl_i32->queryUnstablePerfectHash() != repl_f64->queryUnstablePerfectHash(),
 				"Different return types should produce different hashes"
 			);
 			// BUT: Their mangled names collide

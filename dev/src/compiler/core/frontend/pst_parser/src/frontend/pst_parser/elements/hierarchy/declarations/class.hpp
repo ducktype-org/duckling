@@ -16,7 +16,7 @@ namespace pst {
 		NAMED_CHILD(name, IdentifierWrapper);
 		NAMED_CHILD(base, ExtendsExprHolder);
 		NAMED_CHILD(implements, ImplementsList);
-		NAMED_CHILD(body, ClassBlock);
+		NAMED_CHILD(body, CodeBlock);
 
 	protected:
 		HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const override;
@@ -30,7 +30,7 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		AccessLocked<ClassBlock> getBody() const {
+		AccessLocked<CodeBlock> getBody() const {
 			return body.give();
 		}
 

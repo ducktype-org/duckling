@@ -6,6 +6,7 @@
 
 
 #include <vm/api/api.hpp>
+#include <vm/api/data/process_options.hpp>
 #include <vm/api/data/response.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/core/process/interface_types.hpp>
@@ -14,13 +15,14 @@
 namespace vm::api {
 	/**
 	 * @brief Create new process in DVM.
-	 * @param enable_deadlock_detection When true (defaults to false), the process will detect
+	 * @param options Process configuration. `options.mode` selects the execution mode (Safe/Fast);
+	 * `options.enable_deadlock_detection`, when true (defaults to false), makes the process detect
 	 * circular mutex wait chains at runtime and throw VMDeadlockException. When false, deadlock
 	 * detection is skipped and circular waits will block indefinitely until the process is stopped.
 	 * @return The response containing the PID of the newly created process or an API error if the
 	 * process wasn't created.
 	 */
-	std::expected<ProcessInfo, ApiError> spawn(bool enable_deadlock_detection = false);
+	std::expected<ProcessInfo, ApiError> spawn(const ProcessConfig& options = {});
 
 	/**
 	 * @brief Get the execution status of the process run on DVM.
@@ -209,7 +211,7 @@ namespace vm::api {
 
 	/**
 	 * @brief Attaches Listener to the on_status_changed Emitter
-	 * @return Nothing if attached succesfully
+	 * @return Nothing if attached successfully
 	 */
 	std::expected<void, ApiError> attachStatusListener(
 		PID pid, Ref<events::Listener<ProcStatus>> listener
@@ -217,7 +219,7 @@ namespace vm::api {
 
 	/**
 	 * @brief Attaches Listener to the output emitter
-	 * @return Nothing if attached succesfully
+	 * @return Nothing if attached successfully
 	 */
 	std::expected<void, ApiError> attachOutputListener(
 		PID pid, Ref<events::Listener<std::string>> listener

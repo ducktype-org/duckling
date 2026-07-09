@@ -28,6 +28,22 @@ namespace pst {
 			return name.give();
 		}
 
+		/**
+		 * @brief Whether the attribute has an argument list, e.g. `@builtin("x")` vs `@builtin`.
+		 */
+		[[nodiscard]]
+		bool hasArgs() const {
+			return static_cast<bool>(args.internal());
+		}
+
+		/**
+		 * @brief Argument list of the attribute. Only valid when hasArgs() is true.
+		 */
+		[[nodiscard]]
+		auto getArgs() const {
+			return args.give();
+		}
+
 		void     dprint(std::ostream& out) const final;
 		HashAlg& addElementDataToStableHash(HashAlg&) const override;
 

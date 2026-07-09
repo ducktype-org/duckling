@@ -108,8 +108,11 @@ namespace vm::code {
 		base::StrID        name;
 		std::vector<Field> fields;
 
+		/// Optional expected byte size (assuming 8-byte pointers), pinned via `assert_size`.
+		base::Optional<usize> assert_size;
+
 		bool operator==(const DataType& other) const {
-			return name == other.name && fields == other.fields;
+			return name == other.name && fields == other.fields && assert_size == other.assert_size;
 		}
 	};
 

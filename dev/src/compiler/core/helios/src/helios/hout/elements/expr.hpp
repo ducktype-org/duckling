@@ -382,8 +382,7 @@ namespace compiler::helios::code {
 		CPtr,
 		Slice,
 		Box,
-		Const,
-		Len,  // @TODO: #1970 Probably remove that in the future.
+		Const
 	};
 
 	/**
@@ -697,6 +696,28 @@ namespace compiler::helios::code {
 		FRIEND_MAKEBOX
 
 		RefOfExpr(tsh::ExpressionType<> expression_type, ElementOrigin origin, Box<Expr> inner);
+	};
+
+	/**
+	 * @brief Represents an explicit move expression (`move x`).
+	 *
+	 * It takes a place of type T and produces a value of the same type, but as a temporary,
+	 * signalling that ownership of the operand is transferred out of it. The source local is
+	 * marked as moved during MIR lowering, so using it afterwards is a use-after-move.
+	 */
+	struct MoveExpr final: public Expr {
+		Box<Expr> inner;
+
+		MoveExpr(query::Context& ctx, ElementOrigin origin, Box<Expr> inner);
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
+
+	private:
+		FRIEND_MAKEBOX
+
+		MoveExpr(tsh::ExpressionType<> expression_type, ElementOrigin origin, Box<Expr> inner);
 	};
 
 	/**

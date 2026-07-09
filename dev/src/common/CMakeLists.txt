@@ -1,3 +1,4 @@
+add_subdirectory(abi)
 add_subdirectory(clah)
 add_subdirectory(concurrent)
 add_subdirectory(debug_info)

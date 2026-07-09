@@ -80,11 +80,11 @@ namespace vm::debugger {
 		[[nodiscard]] api::ProcStatus getStatus();
 
 		/**
-		 * @brief Loads the file
+		 * @brief Loads files into debugger
 		 */
-		std::expected<void, api::ApiError> loadFile(const fs::File& filepath);
+		std::expected<void, api::ApiError> loadFiles(const std::vector<fs::File>& files);
 
-		void setDefaultArgs(const ProgramRunArguments& args);
+		void setProgramArguments(const ProgramRunArguments& args);
 
 		/**
 		 * @brief Returns number of stack frames
@@ -116,8 +116,8 @@ namespace vm::debugger {
 		/**
 		 * @brief Sets breakpoint
 		 * @param function_name Name of a function to set breakpoint in.
-		 * @param instr_number Index of instruction in function on which to set the beakpint.
-		 * @param enabled Decides whether the brakpoint should be enabled (inserted) or disabled
+		 * @param instr_number Index of instruction in function on which to set the breakpoint.
+		 * @param enabled Decides whether the breakpoint should be enabled (inserted) or disabled
 		 * (removed).
 		 */
 		std::expected<void, api::ApiError> setBreakpoint(
@@ -127,8 +127,8 @@ namespace vm::debugger {
 		/**
 		 * @brief Sets breakpoint
 		 * @param file File to set breakpoint in.
-		 * @param line Number of line in file on which to set the beakpint.
-		 * @param enabled Decides whether the brakpoint should be enabled (inserted) or disabled
+		 * @param line Number of line in file on which to set the breakpoint.
+		 * @param enabled Decides whether the breakpoint should be enabled (inserted) or disabled
 		 * (removed).
 		 */
 		std::expected<void, api::ApiError> setBreakpoint(
@@ -139,5 +139,10 @@ namespace vm::debugger {
 		 * @brief Execute one FatByteCode step in the VM
 		 */
 		std::expected<void, api::ApiError> step();
+
+		/**
+		 * @brief Send input to the VM
+		 */
+		std::expected<void, api::ApiError> sendInput(const std::string& msg);
 	};
 }
