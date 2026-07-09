@@ -5,6 +5,7 @@
 #include <abi/calling_conv/calling_conv.hpp>
 #include <ctv/ctv.hpp>
 #include <diagnostic_interactive/stable_position.hpp>
+#include <helios/attributes/builtins.hpp>
 #include <helios/hout/hout_fd.hpp>
 #include <helios/symbols/symbol_abi.hpp>
 #include <helios/symbols/symbol_id.hpp>  // @TODO: #2796 untable this if possible (LIR structure should not depend on symbols if possible)
@@ -154,14 +155,28 @@ namespace compiler::lir {
 	};
 
 	/**
+	 * @brief Function which call will be replaced
+	 * manually in the backend.
+	 */
+	enum class BuiltinFunctionKind { DvmCharAlloc, DvmCharRealloc, DvmCharFree };
+
+	base::Optional<BuiltinFunctionKind> getBuiltinKindFromHOUT(helios::BuiltinKind kind);
+
+	/**
 	 * @brief Reference to a function in LIR.
 	 */
-	struct FunctionLiteral {
+	struct FunctionLiteral final {
 		base::StrID                                         mangled_name;
 		LIRAbi                                              abi;
 		bool                                                link_once;
 		std::shared_ptr<std::vector<CRef<tsl::TypeLayout>>> parameter_layouts;
 		CRef<tsl::TypeLayout>                               return_type_layout;
+
+		/**
+		 * Optional indicates if a function literal is a builtin function.
+		 * Empty value indicates that a function is not a builtin.
+		 */
+		base::Optional<BuiltinFunctionKind> builtin_kind_opt;
 
 		static FunctionLiteral fromFunction(const Function&);
 	};
