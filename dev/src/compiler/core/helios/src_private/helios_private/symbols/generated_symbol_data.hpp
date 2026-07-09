@@ -93,17 +93,6 @@ namespace compiler::helios::defgen {
 		base::Bit256 queryUnstablePerfectHash() const;
 	};
 
-	struct GeneratedConstant final {
-		tsh::SymbolType<>     type;
-		ctv::CompileTimeValue value;
-		ScopeID               scope;
-
-		GeneratedConstant(tsh::SymbolType<> type, ctv::CompileTimeValue value, ScopeID scope);
-
-		[[nodiscard]]
-		base::Bit256 queryUnstablePerfectHash() const;
-	};
-
 	/**
 	 * Represents a compiler-generated parameter of a function. This function may itself be
 	 * compiler-generated, such as the implicit `Constructor`.
