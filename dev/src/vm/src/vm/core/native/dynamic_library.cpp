@@ -48,10 +48,14 @@ namespace vm::native {
 		lseek(fd, 0, SEEK_SET);
 
 	#if defined(__APPLE__)
-		void* handle = dlopen(tmp_path.c_str(), RTLD_NOW);
-		CORE_ASSERT_STRONG(handle, "dlopen failed: ", dlerror());  // NOLINT(concurrency-mt-unsafe)
-		// The loaded image stays valid after the backing file is removed.
+		void* handle = dlopen(tmp_path.c_str(), RTLD_NOW);  // NOLINT(concurrency-mt-unsafe)
+		// dlopen has read the file, so the backing file and fd are no longer needed regardless of
+		// the outcome (the loaded image stays valid without them). Clean up before checking the
+		// result so a failed dlopen does not leak the temp file.
 		unlink(tmp_path.c_str());
+		close(fd);
+		fd = -1;
+		CORE_ASSERT_STRONG(handle, "dlopen failed: ", dlerror());  // NOLINT(concurrency-mt-unsafe)
 	#else
 		auto  path   = std::format("/proc/self/fd/{}", fd);
 		void* handle = dlopen(path.data(), RTLD_NOW);
