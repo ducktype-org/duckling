@@ -55,6 +55,7 @@ namespace vm {
 		[[nodiscard]] base::CRef<code::valid_type::ValidType> getType() const;
 		[[nodiscard]] base::Optional<InterpretedDataVariant>  readData() const;
 		[[nodiscard]] std::string                             str() const;
+		[[nodiscard]] bool                                    isComplex() const;
 
 		template<class T>
 		requires std::is_trivially_copy_constructible_v<T> T readBytes() const {

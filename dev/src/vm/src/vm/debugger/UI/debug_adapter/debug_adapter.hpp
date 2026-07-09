@@ -1,5 +1,6 @@
 #pragma once
 
+#include <vm/core/vmvalue/vmvalueref.hpp>
 #include <vm/debugger/debugger.hpp>
 
 #include <nlohmann/json.hpp>
@@ -34,11 +35,31 @@ namespace vm::debugger::debug_adapter {
 		int                    next_seq = 1;
 		std::mutex             output_mutex;
 
+		u64 total_frames = 0;
+
+		struct VarInfo {
+			VMValueRef var;
+			// reference to childs, 0 if not necessary
+			u64 var_ref{};
+		};
+
+		using VariablesReferenceState
+			= std::variant<u64, VMValueRef, std::map<std::string, VarInfo>>;
+		// vector of variables references
+		std::vector<VariablesReferenceState> variables;
+
+		std::expected<std::pair<std::map<std::string, DebugAdapter::VarInfo>, base::StrID>, std::string>
+			varRefFromStackFrameData(u64 frame_id);
+		std::expected<std::map<std::string, VarInfo>, std::string> varRefFromVMValueRef(
+			VMValueRef& value
+		);
+
 		// DAP I/O
 		void send(const nlohmann::json& msg);
 		void sendResponse(
 			const nlohmann::json& request, bool success, const nlohmann::json& body = {}
 		);
+		void sendErrorResponse(const nlohmann::json& request, const std::string err_msg);
 		void sendEvent(const std::string& event, const nlohmann::json& body = {});
 
 		// Handlers
@@ -47,6 +68,9 @@ namespace vm::debugger::debug_adapter {
 		void handleConfigurationDone(const nlohmann::json& req);
 		void handleLaunch(const nlohmann::json& req);
 		void handleThreads(const nlohmann::json& req);
+		void handleStackTrace(const nlohmann::json& req);
+		void handleScopes(const nlohmann::json& req);
+		void handleVariables(const nlohmann::json& req);
 		void handleDisconnect(const nlohmann::json& req);
 		void handlePause(const nlohmann::json& req);
 		void handleContinue(const nlohmann::json& req);

@@ -1,5 +1,11 @@
 #include "debug_adapter.hpp"
 
+#include <base/collections/optional.hpp>
+
+#include <string_id/string_id.hpp>
+#include <token_source/source.hpp>
+
+#include "vm/api/data/thread_id.hpp"
 #include <vm/api/data/api_error.hpp>
 #include <vm/api/data/status.hpp>
 
@@ -27,7 +33,7 @@ namespace vm::debugger::debug_adapter {
 				  variant_case(api::Paused, status) {
 					  this->sendEvent(
 						  "stopped",
-						  { { "reason", "pause" }, { "threadId", 1 }, { "allThreadsStopped", true } }
+						  { { "reason", "pause" }, { "threadId", 0 }, { "allThreadsStopped", true } }
 					  );
 				  }
 				  variant_case(api::ExecutionCompleted, status) {
@@ -129,6 +135,12 @@ namespace vm::debugger::debug_adapter {
 			handleLaunch(req);
 		else if (cmd == "threads")
 			handleThreads(req);
+		else if (cmd == "stackTrace")
+			handleStackTrace(req);
+		else if (cmd == "scopes")
+			handleScopes(req);
+		else if (cmd == "variables")
+			handleVariables(req);
 		else if (cmd == "disconnect")
 			handleDisconnect(req);
 		else if (cmd == "pause")
@@ -138,7 +150,7 @@ namespace vm::debugger::debug_adapter {
 		else if (cmd == "next")
 			handleNext(req);
 		else
-			sendResponse(req, false, { { "message", "Unknown command" } });
+			sendErrorResponse(req, "Unknown command");
 	}
 
 	void DebugAdapter::send(const nlohmann::json& msg) {
@@ -164,6 +176,10 @@ namespace vm::debugger::debug_adapter {
 		if (!body.is_null() && !body.empty()) message["body"] = body;
 
 		send(message);
+	}
+
+	void DebugAdapter::sendErrorResponse(const nlohmann::json& request, const std::string err_msg) {
+		sendResponse(request, false, { "message", err_msg });
 	}
 
 	void DebugAdapter::sendEvent(const std::string& event, const nlohmann::json& body) {
@@ -197,25 +213,264 @@ namespace vm::debugger::debug_adapter {
 		auto        load_result = debugger.loadFile(fs::File(program));
 
 		if (!load_result.has_value()) {
-			std::string error_msg = "Failed to load file '" + program
-			                      + "': " + api::errorToString(load_result.error());
-
-			sendResponse(req, false, { { "message", error_msg } });
+			sendErrorResponse(
+				req,
+				"Failed to load file '" + program + "': " + api::errorToString(load_result.error())
+			);
 			return;
 		}
 
 		sendResponse(req, true, {});
 
 		// Immediately run the VM for test purpose for now
+		debugger.setBreakpoint(base::StrID("main"), 20);
 		debugger.runMain();
 	}
 
 	void DebugAdapter::handleThreads(const nlohmann::json& req) {
 		nlohmann::json body
 			= { { "threads",
-			      nlohmann::json::array({ { { "id", 1 }, { "name", "Main Thread" } } }) } };
+			      nlohmann::json::array({ { { "id", 0 }, { "name", "Main Thread" } } }) } };
 
 		sendResponse(req, true, body);
+	}
+
+	std::expected<std::pair<std::map<std::string, DebugAdapter::VarInfo>, base::StrID>, std::string>
+		DebugAdapter::varRefFromStackFrameData(u64 frame_id) {
+		auto frame_result = debugger.getStackFrameData(api::ThreadID(0), frame_id);
+		if (!frame_result.has_value()) return std::unexpected("Failed to get frame variables");
+
+		auto&                          data = frame_result.value();
+		std::map<std::string, VarInfo> children_map;
+		std::vector<VMValueRef>        complex_children_to_register;
+		u64                            next_ref = variables.size() + 1;
+
+
+		for (const auto& var: data.frame_vars) {
+			std::string name_str              = std::to_string(var.offset);
+			if_opt_some(var.name, n) name_str = n.str();
+			VarInfo info{ .var = var.value, .var_ref = 0 };
+
+			if (var.value.isComplex()) {
+				complex_children_to_register.push_back(var.value);
+
+				info.var_ref = next_ref;
+				next_ref++;
+
+				children_map.insert({ name_str, std::move(info) });
+
+			} else {
+				children_map.insert({ name_str, std::move(info) });
+			}
+		}
+		for (auto& child: complex_children_to_register) variables.emplace_back(std::move(child));
+
+
+		return { { children_map, data.function_name } };
+	}
+
+	std::expected<std::map<std::string, DebugAdapter::VarInfo>, std::string> DebugAdapter::varRefFromVMValueRef(
+		VMValueRef& value
+	) {
+		auto opt_data = value.readData();
+		if (!opt_data) return std::unexpected("Failed to read data");
+
+
+		namespace idv = interpreted_data_variant;
+		std::map<std::string, VarInfo> children_map;
+
+		std::vector<VMValueRef> complex_children_to_register;
+		u64                     next_ref = variables.size() + 1;
+
+		auto process_child = [&](const std::string& name, VMValueRef child) {
+			VarInfo info{ .var = child, .var_ref = 0 };
+
+			if (child.isComplex()) {
+				complex_children_to_register.push_back(child);
+				info.var_ref = next_ref;
+				next_ref++;
+			}
+			children_map.insert({ name, info });
+		};
+
+		variant_match(*opt_data) {
+			variant_case(idv::Data, data) {
+				for (const auto& [subname, index]: data.field_name_map)
+					process_child(subname.str(), data.fields[index].value);
+			}
+			variant_case(idv::Pointer, pointer) {
+				if_opt_some(pointer.referenced, r) { process_child("referenced", r); }
+			}
+			variant_case(idv::Table, table) {
+				for (usize i = 0; i < table.size; i++)
+					process_child(std::to_string(i), table.get(i));
+			}
+			variant_case(idv::Variant, variant) { process_child("referenced", variant.referenced); }
+		}
+		for (auto& child: complex_children_to_register) variables.emplace_back(std::move(child));
+
+		return children_map;
+	}
+
+	void DebugAdapter::handleStackTrace(const nlohmann::json& req) {
+		auto thread_id    = api::ThreadID((u64) req["arguments"].value("threadId", 0));
+		u64  start_frame  = (u64) req["arguments"].value("startFrame", 0);
+		u64  levels       = (u64) req["arguments"].value("levels", 0);
+		auto count_result = debugger.getNumberOfStackFrames(thread_id);
+		if (!count_result.has_value()) {
+			sendErrorResponse(
+				req, "Failed to get stack trace count: " + api::errorToString(count_result.error())
+			);
+			return;
+		}
+		total_frames = count_result.value();
+		for (u64 i = 0; i < total_frames; i++) variables.emplace_back(i);
+
+		u64 end_frame = (levels == 0) ? total_frames : std::min(start_frame + levels, total_frames);
+
+		nlohmann::json stack_frames = nlohmann::json::array();
+		u64            i            = end_frame;
+		while (i-- > start_frame) {
+			auto var_ref_frame = varRefFromStackFrameData(i);
+			if (!var_ref_frame.has_value()) {
+				sendErrorResponse(req, var_ref_frame.error());
+				return;
+			}
+			auto [refs, fun_name] = var_ref_frame.value();
+			variables[i]          = refs;
+
+			auto pos_result = debugger.getCurrentPosition();
+
+			if (!pos_result.has_value()) {
+				sendErrorResponse(
+					req, "Failed to get current position: " + api::errorToString(pos_result.error())
+				);
+				return;
+			}
+
+			const auto& pos = pos_result.value();
+
+			std::string file_path    = "";
+			u64         start_line   = 0;
+			u64         start_column = 0;
+			u64         end_line     = 0;
+			u64         end_column   = 0;
+
+
+			if (pos.source_position.has_value()) {
+				auto src      = pos.source_position.value();
+				auto [sl, sc] = src.getStartLineColumn();
+				auto [el, ec] = src.getEndLineColumn();
+				start_line    = sl;
+				start_column  = sc;
+				end_line      = el;
+				end_column    = ec;
+
+				file_path = std::string(src.getSource()->getFile().getFilePath().strView());
+
+			} else {
+				file_path  = "Function: " + std::string(pos.function_name.strView());
+				start_line = pos.instr_number;
+			}
+
+
+			nlohmann::json frame
+				= { { "id", i },
+				    { "name", fun_name.str() },
+				    { "line", start_line },
+				    { "column", start_column },
+				    { "endLine", end_line },
+				    { "endColumn", end_column },
+				    { "source",
+				      {
+						  { "name",
+				            std::filesystem::path(file_path).filename().string(
+							) },                 // Pure filename shown in panel dropdowns
+						  { "path", file_path }  // Absolute path used by IDE to open file
+					  } } };
+
+			stack_frames.push_back(frame);
+		}
+
+		nlohmann::json body = { { "stackFrames", stack_frames }, { "totalFrames", total_frames } };
+
+		sendResponse(req, true, body);
+	}
+
+	void DebugAdapter::handleScopes(const nlohmann::json& req) {
+		int frame_id = req["arguments"]["frameId"].get<int>();
+
+		nlohmann::json response_body
+			= { { "scopes",
+			      nlohmann::json::array({ { { "name", "Locals" },
+			                                { "variablesReference", frame_id + 1 },
+			                                { "presentationHint", "arguments" },
+			                                { "expensive", false } } }) } };
+
+		sendResponse(req, true, response_body);
+	}
+
+	void DebugAdapter::handleVariables(const nlohmann::json& req) {
+		try {
+			u64 var_ref = (u64) req["arguments"]["variablesReference"].get<int>();
+
+			if (var_ref == 0 || var_ref > variables.size()) {
+				sendResponse(
+					req,
+					false,
+					{ { "command", "variables" },
+				      { "message",
+				        "invalidVariablesReference: Reference " + std::to_string(var_ref)
+				            + " does not exist." } }
+				);
+				return;
+			}
+
+			auto& current_state = variables.at(var_ref - 1);
+			variant_match(current_state) {
+				variant_case(u64, frame_id) {
+					auto var_ref_frame = varRefFromStackFrameData(frame_id);
+					if (!var_ref_frame.has_value()) {
+						sendErrorResponse(req, var_ref_frame.error());
+						return;
+					}
+
+					variables[var_ref - 1] = var_ref_frame.value().first;
+				}
+				variant_case(VMValueRef, value) {
+					auto var_ref_value = varRefFromVMValueRef(value);
+					if (!var_ref_value.has_value()) {
+						sendErrorResponse(req, var_ref_value.error());
+						return;
+					}
+					variables[var_ref - 1] = var_ref_value.value();
+				}
+			}
+			const auto& variables_map
+				= std::get<std::map<std::string, VarInfo>>(variables.at(var_ref - 1));
+			nlohmann::json variables_json = nlohmann::json::array();
+
+			for (const auto& [key, var_info]: variables_map) {
+				nlohmann::json variable_item
+					= { { "name", key },
+					    { "value", var_info.var.str() },
+					    { "type", var_info.var.getType()->getName().str() },
+					    { "variablesReference", var_info.var_ref } };
+				variables_json.push_back(variable_item);
+			}
+
+			sendResponse(req, true, { { "variables", variables_json } });
+		} catch (const std::bad_variant_access& ex) {
+			sendErrorResponse(
+				req, std::string("DAP Critical Error: Bad variant access - ") + ex.what()
+			);
+		} catch (const nlohmann::json::exception& ex) {
+			sendErrorResponse(
+				req, std::string("DAP Protocol Error: Invalid JSON format - ") + ex.what()
+			);
+		} catch (const std::exception& ex) {
+			sendErrorResponse(req, std::string("Unknown Critical Error: ") + ex.what());
+		} catch (...) { sendErrorResponse(req, "Fatal unknown non-standard exception caught."); }
 	}
 
 	void DebugAdapter::handleDisconnect(const nlohmann::json& req) {
@@ -227,8 +482,7 @@ namespace vm::debugger::debug_adapter {
 		auto result = debugger.pause();
 
 		if (!result.has_value()) {
-			std::string error_msg = "Failed to pause: " + api::errorToString(result.error());
-			sendResponse(req, false, { { "message", error_msg } });
+			sendErrorResponse(req, "Failed to pause: " + api::errorToString(result.error()));
 			return;
 		}
 
@@ -238,8 +492,7 @@ namespace vm::debugger::debug_adapter {
 	void DebugAdapter::handleContinue(const nlohmann::json& req) {
 		auto result = debugger.resume();
 		if (!result.has_value()) {
-			std::string error_msg = "Failed to resume: " + api::errorToString(result.error());
-			sendResponse(req, false, { { "message", error_msg } });
+			sendErrorResponse(req, "Failed to resume: " + api::errorToString(result.error()));
 			return;
 		}
 
@@ -249,8 +502,7 @@ namespace vm::debugger::debug_adapter {
 	void DebugAdapter::handleNext(const nlohmann::json& req) {
 		auto result = debugger.step();
 		if (!result.has_value()) {
-			std::string error_msg = "Failed to step: " + api::errorToString(result.error());
-			sendResponse(req, false, { { "message", error_msg } });
+			sendErrorResponse(req, "Failed to step: " + api::errorToString(result.error()));
 			return;
 		}
 
