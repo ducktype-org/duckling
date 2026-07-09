@@ -287,7 +287,7 @@ impl<'a> SolverEngine<'a> {
                 None => &enabled_always,
                 Some(feature) => {
                     tmp_hash_set =
-                        HashSet::from_iter(manifest_dependency.enabled_features(vec![*feature]))
+                        HashSet::from_iter(manifest_dependency.enabled_features(vec![feature]))
                             .difference(&enabled_always)
                             .cloned()
                             .collect();
@@ -299,7 +299,7 @@ impl<'a> SolverEngine<'a> {
             }
             for feature in forced.iter() {
                 self.model
-                    .add_dependency_feature_realisation_var(edge.clone(), *feature);
+                    .add_dependency_feature_realisation_var(edge, *feature);
             }
             self.model
                 .require_satisfying_dep_feature(edge, parent_feature.copied(), forced)?;
@@ -359,15 +359,16 @@ impl<'a> SolverEngine<'a> {
 /// which features of the child are forced by which features of the parent.
 /// The [`None`] signifies the lack of any parent features,
 /// so that features of the child forced by default can be considered.
-fn parent_features_to_consider<'a>(
-    input: &'a SolverInput,
+fn parent_features_to_consider(
+    input: &SolverInput,
     edge: DependencyEdge,
-) -> impl Iterator<Item = Option<&'a StrId>> {
+) -> impl Iterator<Item = Option<StrId>> {
     input
         .all_possible_features
         .get(&edge.parent)
         .into_iter()
         .flatten()
+        .copied()
         .map(Some)
         .chain(once(None))
 }

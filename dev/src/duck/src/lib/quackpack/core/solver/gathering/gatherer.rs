@@ -98,7 +98,7 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
             if mode.suppress_foreign_manifests_errors {
                 for e in errors {
                     self.fetcher.ctx().error_console().info_verbose(format!(
-                        "Error\n{e}\nsuppressed due to the Merciful mode of the solver",
+                        "error\n{e}\nsuppressed due to the Merciful mode of the solver",
                     ))?;
                 }
             } else {
@@ -151,7 +151,7 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
                 },
                 fetched_manifests: HashMap::from([(
                     WithVersion::new(
-                        FullIdentity::new(root_name, FullOrigin::for_local(&root_path)?),
+                        FullIdentity::new(root_name, FullOrigin::for_local(&root_path).context_internal("failed to translate root path into url")?),
                         root_version,
                     ),
                     Box::new(root_manifest),
@@ -182,7 +182,8 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
                     }
                     SourceKind::Local => {
                         let path_url = not_pinned_request.id.source.url();
-                        let path = path_url.to_path_buf()?;
+                        let path = path_url.to_path_buf()
+                            .context_internal("could not convert request url to path")?;
                         Ok(self.fetch_local(&not_pinned_request, &path))
                     }
                 }

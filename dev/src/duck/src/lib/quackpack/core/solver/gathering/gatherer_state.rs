@@ -170,9 +170,7 @@ impl GathererState {
             }
             QueryState::Done => {
                 let result = self.update_features_for_versions_with_selector(
-                    not_pinned_request.id,
-                    not_pinned_request.versions,
-                    not_pinned_request.features,
+                    not_pinned_request
                 )?;
                 Ok(GathererComputation(
                     RequestAction::More { requests: result.0 },
@@ -501,13 +499,8 @@ impl GathererState {
                     )?);
                 }
                 ManifestsRequest::NotPinned(not_pinned_request) => {
-                    let id = not_pinned_request.id;
-                    let selector = not_pinned_request.versions;
-                    let requested_features = not_pinned_request.features;
                     result.extend(self.update_features_for_versions_with_selector(
-                        id,
-                        selector,
-                        requested_features,
+                        not_pinned_request
                     )?);
                 }
             }
@@ -519,10 +512,11 @@ impl GathererState {
     /// Selects versions satisfying a given selector and updates features for them.
     fn update_features_for_versions_with_selector(
         &mut self,
-        id: RequestIdentifier,
-        selector: Option<Vec<Version>>,
-        requested_features: HashSet<FeatureName>,
+        request: NotPinnedRequest,
     ) -> GathererResult<Vec<ManifestsRequest>> {
+        let id = not_pinned_request.id;
+        let selector = not_pinned_request.versions;
+        let requested_features = not_pinned_request.features;
         let mut result: GathererComputation<Vec<ManifestsRequest>> = GathererComputation::empty();
         let mut any_matched = false;
         let Some(answer_origin) = self.source_to_origin_resolver.get(&id.source).copied() else {
