@@ -55,22 +55,17 @@ brew install gcc cmake ninja graphviz lcov doxygen python@3.12 pkg-config libffi
 brew install llvm@19
 ```
 
-Select GCC as the compiler for every toolbox command (the toolbox otherwise picks up Apple clang):
+Pass GCC explicitly to the toolbox commands that build — `-x g++-15 -c gcc-15` on `install-llvm` and
+`setup-build` — otherwise the toolbox picks up Apple clang.
 
-```bash
-export CC=gcc-15
-export CXX=g++-15
-```
-
-The toolbox requires at least Python 3.12, while the macOS default is older. Homebrew also doesn't
-package most of the Python dependencies, so create a local virtual environment and use it whenever
-you run the toolbox (`.venv/bin/python3 toolbox.py ...`).
+The toolbox requires at least Python 3.12 (the macOS default is older), and Homebrew doesn't package
+most of the Python dependencies. Create a local virtual environment, activate it, and run the toolbox
+from it:
 ```bash
 cd dev/
 python3.12 -m venv .venv
 source .venv/bin/activate
-pip3 install click
-pip3 install -r requirements.txt
+pip3 install click -r requirements.txt
 ```
 
 ## Toolbox
@@ -152,21 +147,22 @@ Advanced options like unity compilation, LTO, and symbol stripping are available
 
 #### MacOS caveats
 
-On macOS the `install-llvm` step above is **required**, not optional: Homebrew's `llvm@19` is built
-against libc++, whose ABI is incompatible with the libstdc++ this project uses. `install-llvm` builds
-LLVM 19 from source with your `g++`, so the resulting libraries share the libstdc++ ABI. Make sure
-`CC`/`CXX` point at `gcc-15`/`g++-15` (see above) before running it and `setup-build`.
-
-The ICU bundled with the macOS SDK is a C-only subset, so install the full ICU from Homebrew and
-point CMake at it with `$ICU_ROOT` **before** running `setup-build`:
+On macOS the `install-llvm` step above is **required** (Homebrew's `llvm@19` is built against libc++,
+which is ABI-incompatible with the libstdc++ this project uses). Run it — and `setup-build` — with GCC:
 
 ```bash
-brew install icu4c
+./toolbox.py install-llvm -x g++-15 -c gcc-15
+```
+
+The ICU bundled with the macOS SDK is a C-only subset, so CMake must be pointed at the Homebrew ICU
+(installed above) with `$ICU_ROOT` **before** running `setup-build`:
+
+```bash
 export ICU_ROOT=${HOMEBREW_PREFIX}/opt/icu4c
 ```
 
-When `setup-build` prompts for a linker, choose the default (`ld64`). `mold` and `lld` are offered by
-the prompt but do not support the Mach-O object format, so the link step fails with them.
+`setup-build` auto-selects the system linker (`ld64`) on macOS; mold and lld only handle ELF, not the
+Mach-O format macOS uses.
 
 
 ## Compiling the project
