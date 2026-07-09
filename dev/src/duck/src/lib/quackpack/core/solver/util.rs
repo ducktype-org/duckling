@@ -24,8 +24,7 @@ pub fn get_possible_realizations(
     if dependency_description.is_pinned() {
         // For a pinned dependency only one package can be a realization.
         let versions = dependency_description
-            .versions()
-            .collect();
+            .versions();
         if versions.len() != 1 {
             return Ok(vec![]);
         }

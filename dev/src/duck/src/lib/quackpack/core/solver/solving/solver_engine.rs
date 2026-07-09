@@ -164,7 +164,7 @@ impl<'a> SolverEngine<'a> {
         parent: &WithVersion<FullIdentity>,
         manifest_dependency: &Dependency,
     ) -> QuackResult<()> {
-        let Ok(edge) = DependencyEdge::from_manifest_and_parent(
+        let Some(edge) = DependencyEdge::from_manifest_and_parent(
             *parent,
             manifest_dependency,
             &self.input.source_to_origin_resolver,
@@ -365,7 +365,7 @@ fn parent_features_to_consider<'a>(
 ) -> impl Iterator<Item = Option<&'a StrId>> {
     input
         .all_possible_features
-        .get(parent)
+        .get(&edge.parent)
         .into_iter()
         .flatten()
         .map(Some)
