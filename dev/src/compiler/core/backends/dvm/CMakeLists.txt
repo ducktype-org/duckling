@@ -11,6 +11,7 @@ add_library(DVMBackend STATIC
     src_private/operations/comparison.cpp
     src_private/operations/cast.cpp
     src_private/operations/call.cpp
+    src_private/operations/builtin_call.cpp
     src_private/operations/arithmetic.cpp
     src_private/operations/address_of.cpp
     src_private/operations/box.cpp

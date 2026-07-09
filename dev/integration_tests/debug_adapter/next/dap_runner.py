@@ -5,16 +5,15 @@ client = DAPTestClient(program_name="../examples/while_true.dbc")
 
 try:
     # Startup phase
-    client.send_request("initialize")
-    launch_seq = client.send_request("launch", {"program": client.program_name})
-    client.wait_for(responses=[launch_seq], outputs=["Running"])
+    client.start_session()
+    client.wait_for(outputs=["Running"])
 
     # Try 'next' while running (expecting failure)
-    client.send_request("next")
+    client.send_next()
     client.wait_for_text("Failed", "Failed output - next while running")
 
     # Request Pause and wait for all interleaved facts
-    pause_seq = client.send_request("pause", {"threadId": 1})
+    pause_seq = client.send_pause()
     client.wait_for(
         responses=[pause_seq],
         events=["stopped"],
@@ -24,7 +23,7 @@ try:
     sys.stderr.flush()
 
     # Try 'next' while paused (expecting successful response acknowledgment)
-    next_seq = client.send_request("next")
+    next_seq = client.send_next()
     client.wait_for(responses=[next_seq])
     sys.stderr.write("--> SUCCESS: Step 'next' successfully acknowledged!\n")
     sys.stderr.flush()
