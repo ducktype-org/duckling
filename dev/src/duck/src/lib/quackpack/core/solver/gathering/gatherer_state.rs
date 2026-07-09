@@ -1,6 +1,8 @@
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
 
+use itertools::Itertools;
+
 use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
 use crate::quackpack::core::solver::gathering::error_suppression::{
     GathererComputation, GathererResult,
@@ -549,12 +551,12 @@ impl GathererState {
                 )?);
             }
         }
+        let selector_text = selector.iter().flatten().join(", ");
         if !any_matched {
             result.1.push(
                 QuackError::message(
             format!(
-                "there is a dependency on package of source {:?} and name {} with versions {selector:?}, but no matching versions exist",
-                id.source,
+                "there is a dependency on package of name {} with versions {selector_text}, but no matching versions exist",
                 id.name,
             )));
         }

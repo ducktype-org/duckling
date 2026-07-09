@@ -177,8 +177,6 @@ impl<'duck, 'ctx> SolverGathererData<'duck, 'ctx> {
         freeze: &SolverFreeze,
         mode: SolverMode,
     ) -> QuackResult<GatheredInfo> {
-        let root_name = root_manifest.name();
-        let root_version = root_manifest.version();
         let root_manifest_for_gathering =
             Self::prepare_root_manifest_for_gathering(root_manifest, freeze)?;
         gatherer.explore(
