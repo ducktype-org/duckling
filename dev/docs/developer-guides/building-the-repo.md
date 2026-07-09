@@ -157,8 +157,8 @@ against libc++, whose ABI is incompatible with the libstdc++ this project uses. 
 LLVM 19 from source with your `g++`, so the resulting libraries share the libstdc++ ABI. Make sure
 `CC`/`CXX` point at `gcc-15`/`g++-15` (see above) before running it and `setup-build`.
 
-Xcode's Homebrew ICU is a C-only build, so install the full ICU from Homebrew and point CMake at it
-with `$ICU_ROOT` **before** running `setup-build`:
+The ICU bundled with the macOS SDK is a C-only subset, so install the full ICU from Homebrew and
+point CMake at it with `$ICU_ROOT` **before** running `setup-build`:
 
 ```bash
 brew install icu4c
