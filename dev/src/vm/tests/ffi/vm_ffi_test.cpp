@@ -14,6 +14,13 @@ namespace {
 	const std::string SO_PATH = FFI_TEST_LIB_PATH;
 
 	std::string ffiObjectHeader() { return "ffi object \"" + SO_PATH + "\";\n"; }
+
+	// Bare soname of the system math library, resolved via the platform's dynamic loader search.
+#ifdef __APPLE__
+	const std::string SYSTEM_MATH_LIB = "libm.dylib";
+#else
+	const std::string SYSTEM_MATH_LIB = "libm.so.6";
+#endif
 }
 
 class VmFfiTest: public VmTestSuite {
@@ -440,7 +447,7 @@ private:
 		auto pid = initProcess();
 
 		vm::code::CodeCollection libs;
-		libs.object_files.emplace_back("libm.so.6");
+		libs.object_files.emplace_back(SYSTEM_MATH_LIB);
 		ASSERT_HAS_VALUE(vm::api::loadCode(pid, libs));
 
 		auto file = writeTempDbc(
@@ -469,7 +476,7 @@ private:
 	void bareSonameInBytecode() {
 		runProgram(
 			"system_lib_bytecode",
-			"ffi object \"libm.so.6\";\n"
+			"ffi object \"" + SYSTEM_MATH_LIB + "\";\n"
 			"type primitive: f64 8\n"
 			"ffi function cos { f64 } -> { f64 };\n"
 			"function main { i64, ptr_argv } -> { i64 } {\n"
