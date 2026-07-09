@@ -28,6 +28,7 @@
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
+#include <base/extend_cpp/vector_utils.hpp>
 #include <base/pointers/box.hpp>
 
 #include <query_framework/query_result.hpp>
@@ -122,17 +123,14 @@ namespace compiler::helios::code {
 			return sub_exprs;
 		}
 
-		std::vector<SymID> filterFunctionsByOperatoriness(
+		void filterFunctionsByOperatoriness(
 			query::Context&                              ctx,
-			const std::vector<SymID>&                    function_syms,
-			const HOUTFunctionDeclaration::Operatoriness operatoriness
+			std::vector<SymID>&                          function_syms,
+			const HOUTFunctionDeclaration::Operatoriness opiness
 		) {
-			std::vector<SymID> result;
-			for (const auto& sym: function_syms)
-				if (const auto sym_decl = ctx.query<QueryDeclOfFun>(sym);
-				    sym_decl->valueOrThrow().operatoriness == operatoriness)
-					result.push_back(sym);
-			return result;
+			base::filterVectorInPlace(function_syms, [&](const SymID& sym) {
+				return ctx.query<QueryDeclOfFun>(sym)->valueOrThrow().operatoriness == opiness;
+			});
 		}
 
 		/**
@@ -374,7 +372,7 @@ namespace compiler::helios::code {
 					if (name(builtin_operator_sym) == op->unwrap().value)
 						all_candidates.push_back(builtin_operator_sym);
 				}
-				all_candidates = filterFunctionsByOperatoriness(ctx, all_candidates, operatoriness);
+				filterFunctionsByOperatoriness(ctx, all_candidates, operatoriness);
 				return processUnaryOperatorCall(
 						   ctx, all_candidates, std::move(inner), pstOrigin(op), operatoriness
 				)
@@ -382,12 +380,18 @@ namespace compiler::helios::code {
 			}
 
 			void visitSuffixOperator(pst::Access<pst::expr::SuffixOperator> stmt) override {
-				// note: here we will have to compile things like `a++`, `a--`, `T?`.
-				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-					"Suffix operators are not implemented yet in HOUT, since they don't exist yet.",
-					stmt->getStablePosition()
-				));
-				return;  // failed
+				const auto op    = stmt->getOperator().unlock(ctx);
+				auto       inner = subExprFromPST(ctx, stmt->getExpr()).valueOrThrow();
+				// If necessary, this is the place to handle any particularly tricky cases.
+				// Currently, there are none.
+
+				// After the tricky cases have been handled, execute standard procedures.
+				node = resolveUnaryOperator(
+					op,
+					std::move(inner),
+					ctx.query<QueryPrimaryCodeScopeFor>({ stmt }),
+					HOUTFunctionDeclaration::Operatoriness::Prefix
+				);
 			}
 
 			void visitPrefixOperator(pst::Access<pst::expr::PrefixOperator> stmt) override {
@@ -440,6 +444,7 @@ namespace compiler::helios::code {
 					return;
 				}
 
+				// After the tricky cases have been handled, execute standard procedures.
 				node = resolveUnaryOperator(
 					op,
 					std::move(inner),
@@ -501,7 +506,7 @@ namespace compiler::helios::code {
 					if (name(builtin_operator_sym) == op->unwrap().value)
 						all_candidates.push_back(builtin_operator_sym);
 				}
-				all_candidates = filterFunctionsByOperatoriness(
+				filterFunctionsByOperatoriness(
 					ctx, all_candidates, HOUTFunctionDeclaration::Operatoriness::Infix
 				);
 				return processBinaryOperatorCall(

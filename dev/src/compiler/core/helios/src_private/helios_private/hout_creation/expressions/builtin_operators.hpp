@@ -17,7 +17,7 @@
 namespace compiler::helios::code {
 	/**
 	 * @brief Finds a numeric builtin unary operator for an expression and a given name.
-	 * If types don't match directly, checks whether one can implicitly coerce to another.
+	 * If necessary, returns the required coercion for the argument type to match the operator.
 	 * @return Returns the operation along with coercions to apply to operands in format
 	 * (builtin_operation, coercion)
 	 */
