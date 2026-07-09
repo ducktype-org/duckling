@@ -182,8 +182,6 @@ impl<'duck, 'ctx> SolverGathererData<'duck, 'ctx> {
         let root_manifest_for_gathering =
             Self::prepare_root_manifest_for_gathering(root_manifest, freeze)?;
         gatherer.explore(
-            root_name,
-            root_version,
             root_path,
             root_manifest_for_gathering,
             root_features,

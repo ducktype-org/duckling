@@ -221,12 +221,10 @@ impl GathererState {
                     let answer_pkg = request_pkg
                         .resolve(&self.source_to_origin_resolver)
                         .with_context_internal(|| {
-                            format!("Could not expand the package {:?}", request_pkg)
+                            format!("could not expand the package {:?}", request_pkg)
                         })?;
                     if !self.pkgs_data.contains_key(&answer_pkg) {
-                        return Ok(GathererComputation::only_error(qp_err!(
-                            "Pinned package {answer_pkg:?} was supposed to be already fetched by a not pinned fetch but has no data"
-                        )));
+                        qp_bail_internal!("pinned package {answer_pkg:?} was supposed to be already fetched by a not pinned fetch but has no data");
                     }
                     let result = self.update_features(answer_pkg, pinned_request.features)?;
                     return Ok(GathererComputation(
@@ -249,7 +247,7 @@ impl GathererState {
                 let answer_pkg = request_pkg
                     .resolve(&self.source_to_origin_resolver)
                     .with_context_internal(|| {
-                        format!("Could not expand the package {:?}", request_pkg)
+                        format!("could not expand the package {:?}", request_pkg)
                     })?;
                 let result = self.update_features(answer_pkg, pinned_request.features)?;
                 Ok(GathererComputation(
@@ -292,10 +290,10 @@ impl GathererState {
     ) -> GathererResult<Vec<ManifestsRequest>> {
         let request_pkg = WithVersion::new(pinned_success.origin_id, pinned_success.origin_version);
         let Some(state) = self.pinned_fetches.get_mut(&request_pkg) else {
-            qp_bail_internal!("Response with no associated request state");
+            qp_bail_internal!("response with no associated request state");
         };
         let QueryState::Pending { requests } = state else {
-            qp_bail_internal!("Query not in PENDING state");
+            qp_bail_internal!("query not in PENDING state");
         };
         let requests = requests.clone();
         *state = QueryState::Done;
@@ -310,7 +308,7 @@ impl GathererState {
                     "Fetched manifest's version differs from required",
                 )?
                 .context(MessageError(
-                    format!("While handling response for the fetch of {:?}", request_pkg).into(),
+                    format!("while handling response for the fetch of {:?}", request_pkg).into(),
                 )));
         }
 
@@ -352,10 +350,10 @@ impl GathererState {
             .not_pinned_fetches
             .get_mut(&not_pinned_response.origin_id)
         else {
-            qp_bail_internal!("Response with no associated request state");
+            qp_bail_internal!("response with no associated request state");
         };
         let QueryState::Pending { requests } = state else {
-            qp_bail_internal!("Query not in PENDING state");
+            qp_bail_internal!("query not in PENDING state");
         };
         let requests = requests.clone();
         *state = QueryState::Done;
@@ -379,7 +377,7 @@ impl GathererState {
             Ok(self
                 .fail_incoherent_success_not_pinned(
                     not_pinned_response.origin_id,
-                    "Invalid fetch response",
+                    "invalid fetch response",
                 )?
                 .context(MessageError(
                     format!(
@@ -482,15 +480,15 @@ impl GathererState {
                         .source_to_origin_resolver
                         .get(&pinned_request.id.source)
                     else {
-                        qp_bail_internal!("Could not resolve source {:?}", pinned_request.id.source)
+                        qp_bail_internal!("could not resolve source {:?}", pinned_request.id.source)
                     };
                     let answer_identity = FullIdentity::new(pinned_request.id.name, *answer_origin);
                     let Some(versions) = self.versions_for_identity.get(&answer_identity) else {
-                        qp_bail_internal!("No gathered versions for identity {answer_identity:?}")
+                        qp_bail_internal!("no gathered versions for identity {answer_identity:?}")
                     };
                     if !versions.contains(&pinned_request.version) {
                         result.1.push(QuackError::message(format!(
-                            "Request of pinned dependency {:?} could not find matching version {}",
+                            "request of pinned dependency {:?} could not find matching version {}",
                             pinned_request.id.source, pinned_request.version,
                         )));
                         return Ok(result);
@@ -526,7 +524,7 @@ impl GathererState {
         let mut result: GathererComputation<Vec<ManifestsRequest>> = GathererComputation::empty();
         let mut any_matched = false;
         let Some(answer_origin) = self.source_to_origin_resolver.get(&id.source).copied() else {
-            qp_bail_internal!("Could not resolve source {:?}", id.source);
+            qp_bail_internal!("could not resolve source {:?}", id.source);
         };
         let answer_identity = FullIdentity::new(id.name, answer_origin);
         let versions: Vec<Version> = self
@@ -555,7 +553,7 @@ impl GathererState {
             result.1.push(
                 QuackError::message(
             format!(
-                "There is a dependency on package of source {:?} and name {} with versions {selector:?}, but no matching versions exist",
+                "there is a dependency on package of source {:?} and name {} with versions {selector:?}, but no matching versions exist",
                 id.source,
                 id.name,
             )));
@@ -641,7 +639,7 @@ impl TryFrom<GathererState> for GatheredInfo {
         for pkg in unnecessary_pkgs {
             let Some(versions) = value.versions_for_identity.get_mut(pkg.value()) else {
                 qp_bail_internal!(
-                    "Unnecessary package's identity not present in the versions for identity map"
+                    "unnecessary package's identity not present in the versions for identity map"
                 );
             };
             versions.remove(&pkg.version());

@@ -53,8 +53,6 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
     #[tracing::instrument(skip_all, fields(mode, offline = self.fetcher.ctx().is_offline()))]
     pub fn explore(
         &mut self,
-        root_name: StrId,
-        root_version: Version,
         root_path: PathBuf,
         root_manifest: Manifest,
         root_features: HashSet<FeatureName>,
@@ -62,8 +60,6 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
     ) -> QuackResult<GatheredInfo> {
         let mut state = GathererState::default();
         let root_fetch_result = self.fetch_root(
-            root_name,
-            root_version,
             root_path,
             root_manifest,
             root_features,
@@ -119,13 +115,13 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
     #[tracing::instrument(skip_all, fields(root_path))]
     fn fetch_root(
         &self,
-        root_name: StrId,
-        root_version: Version,
         root_path: PathBuf,
         root_manifest: Manifest,
         root_features: HashSet<FeatureName>,
         state: &mut GathererState,
     ) -> QuackResult<FetchResponse> {
+        let root_name = root_manifest.name();
+        let root_version = root_manifest.version();
         if cfg!(debug_assertions) {
             assert_root_features_are_expanded(&root_manifest, &root_features);
         }
@@ -204,7 +200,7 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
                 origin_version: request.version,
             }))
         };
-        if !request.id.source.kind().is_registry() {
+        if !matches!(request.id.source.kind(), SourceKind::Registry) {
             qp_bail_internal!("Tried to make pinned registry fetch for a non-registry source");
         };
         let pkg_to_fetch = PackageWithUrl {

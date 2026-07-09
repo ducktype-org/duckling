@@ -5,7 +5,7 @@ use crate::quackpack::core::{Dependency, Source};
 use crate::quackpack::util::with_version::WithVersion;
 use crate::StrId;
 
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 /// A struct describing a dependency of a package on some identity.
 pub struct DependencyEdge {
     pub parent: WithVersion<FullIdentity>,
