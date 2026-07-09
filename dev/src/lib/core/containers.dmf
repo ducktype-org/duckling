@@ -198,24 +198,28 @@ fun stringifyBool(x: bool) -> DuckString = {
     return stringifyStr("false");
 }
 
+# The `*_to_string` runtime builtins write via `snprintf`, which appends a terminating
+# NUL, so `buffer_cap` is the total buffer size: it fits at most `buffer_cap - 1`
+# characters. 21 bytes hold the 20-character extremes of `i64`/`u64` plus the NUL, and
+# `%g` never exceeds that for a double.
 fun stringifyI64(x: i64) -> DuckString = {
-    let max_size = 21u64;
-    var result   = duckStringReserve(max_size);
-    result.len   = runtime.i64_to_string(x, result.pointer, max_size);
+    let buffer_cap = 21u64;
+    var result     = duckStringReserve(buffer_cap);
+    result.len     = runtime.i64_to_string(x, result.pointer, buffer_cap);
     return result;
 }
 
 fun stringifyU64(x: u64) -> DuckString = {
-    let max_size = 21u64;
-    var result   = duckStringReserve(max_size);
-    result.len   = runtime.u64_to_string(x, result.pointer, max_size);
+    let buffer_cap = 21u64;
+    var result     = duckStringReserve(buffer_cap);
+    result.len     = runtime.u64_to_string(x, result.pointer, buffer_cap);
     return result;
 }
 
 fun stringifyF64(x: f64) -> DuckString = {
-    let max_size = 20u64;
-    var result   = duckStringReserve(max_size);
-    result.len   = runtime.float_to_string(x, result.pointer, max_size);
+    let buffer_cap = 21u64;
+    var result     = duckStringReserve(buffer_cap);
+    result.len     = runtime.float_to_string(x, result.pointer, buffer_cap);
     return result;
 }
 
