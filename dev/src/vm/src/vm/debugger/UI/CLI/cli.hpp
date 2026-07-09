@@ -37,7 +37,7 @@ namespace vm::debugger::cli {
 		base::Optional<fs::File>           selected_file;
 		std::expected<void, api::ApiError> load_result = {};
 
-		void printCodePosition(CodePosition position);
+		void printCodePosition(const CodePosition& position);
 
 		template<typename... Args>
 		void print(const Args&... content) {

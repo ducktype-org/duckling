@@ -4,8 +4,6 @@
 
 #include <vm/api/vm.hpp>
 
-#define lambdify(inner) ([this](auto&& arg) { return inner(arg); })
-
 namespace {
 	inline std::string statusToString(const vm::api::ProcStatus& status) {
 		return std::visit(
@@ -151,8 +149,7 @@ namespace vm::debugger {
 			                             + ", allowed state is Running." } });
 				}
 			)
-		    .transform(lambdify(mapCodePosition));
-		;
+		    .transform(std::bind_front(&Debugger::mapCodePosition, this));
 	}
 
 	std::expected<void, api::ApiError> Debugger::resume() {
@@ -168,7 +165,9 @@ namespace vm::debugger {
 	}
 
 	std::expected<CodePosition, api::ApiError> Debugger::getCurrentPosition() {
-		return api::getCurrentPosition(pid).transform(lambdify(mapCodePosition));
+		return api::getCurrentPosition(pid).transform(
+			std::bind_front(&Debugger::mapCodePosition, this)
+		);
 	}
 
 	std::expected<void, api::ApiError> Debugger::setBreakpoint(
@@ -204,20 +203,24 @@ namespace vm::debugger {
 	}
 
 	std::expected<CodePosition, api::ApiError> Debugger::mappedStep() {
-		while (true) {
-			auto response = step();
-			if (!response) return response;
-			if (!response->mapped_position) continue;
-			auto mapped   = *response->mapped_position;
+		auto response = step();
+
+		for (usize guard = 1'024; response && guard; response = step(), guard--) {
+			if (!response->mapped_position) return response;
+			auto mapped = *response->mapped_position;
+
 			auto unmapped = mapper.mapSourcePositionToCodePosition(
 				mapped.getLocation()->getSourceFile().getFilePath(),
 				mapped.getStartLineColumn().first
 			);
-			if (!unmapped) continue;
+
+			if (!unmapped) return response;
 			if (unmapped->first == response->function_name
 			    && unmapped->second == response->instr_number)
 				return response;
 		}
+
+		return response;
 	}
 
 	std::expected<void, api::ApiError> Debugger::sendInput(const std::string& msg) {

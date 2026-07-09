@@ -20,14 +20,19 @@ namespace {
 		return std::nullopt;
 	}
 
-	debug_info::FilePosition getfp(const debug_info::SourcePosition& sp) {
-		return std::get<debug_info::FilePosition>(sp.line_col_position);
+	base::Optional<debug_info::FilePosition> getfp(const debug_info::SourcePosition& sp) {
+		variant_match(sp.line_col_position) {
+			variant_case(debug_info::FilePosition, fp) { return fp; }
+			variant_default { return std::nullopt; }
+		}
+		CORE_UNREACHABLE();
 	}
 
 	base::Optional<debug_info::FilePosition> getfp(
 		const base::Optional<debug_info::SourcePosition>& sp
 	) {
-		return sp.map([&](const debug_info::SourcePosition& spv) { return getfp(spv); });
+		if_opt_some(sp, sp) { return getfp(sp); }
+		return std::nullopt;
 	}
 
 	base::Optional<debug_info::FilePosition> getfp(
@@ -40,11 +45,21 @@ namespace {
 namespace vm::debugger {
 	std::expected<void, std::string> Mapper::loadMapping(const fs::File& mapping_file) {
 		std::fstream stream(mapping_file.getFilePath().getPath());
-		auto         maybe_debug_info = debug_info::loadFromStream(stream);
-		if (!maybe_debug_info) return std::unexpected(maybe_debug_info.error());
-		auto di = maybe_debug_info.value();
+		if (!stream.is_open()) return std::unexpected("Failed to open provided mapping file.");
 
-		infos.push_back(di);
+		auto maybe_debug_info = debug_info::loadFromStream(stream);
+		if (!maybe_debug_info) return std::unexpected(maybe_debug_info.error());
+		infos.push_back(std::move(maybe_debug_info).value());
+
+		// ensure no function duplicates (since we don't support overloading for FatBytecode)
+		for (const auto& [name, metadata]: infos.back().functions) {
+			auto fsid = base::StrID(name);
+			if (functions.contains(fsid)) {
+				infos.pop_back();
+				return std::unexpected("This mapping file contains already mapped functions.");
+			}
+		}
+
 		for (const auto& [name, metadata]: infos.back().functions) {
 			auto fsid     = base::StrID(name);
 			auto [it, _]  = functions.put(fsid, &metadata);
@@ -84,30 +99,46 @@ namespace vm::debugger {
 		if (!fp) return std::nullopt;
 
 		auto file_path = fs::FilePath(fp->file_path);
+		if (!file_path.exists()) return std::nullopt;
+
 		if (!token_sources.contains(file_path)) {
 			auto file  = fs::File(file_path);
 			auto token = tokenizer::makeTokenSource(file);
-			token->tokenize();
+			if (!token->tokenize()) return std::nullopt;
 			token_sources.put(file_path, std::move(token));
 		}
 		const auto& token_source = token_sources.at(file_path);
 
-		return dia::SourcePosition(
-			token_source->getLocation(),
-			token_source->getLine(fp->start_line).first + fp->start_column - 1,
-			token_source->getLine(fp->end_line).first + fp->end_column - 1
-		);
+		try {
+			return dia::SourcePosition(
+				token_source->getLocation(),
+				token_source->getLine(fp->start_line).first + fp->start_column - 1,
+				token_source->getLine(fp->end_line).first + fp->end_column - 1
+			);
+		} catch (const std::out_of_range&) {  // getLine
+			return std::nullopt;
+		} catch (const base::LogicError&) {   // SourcePosition
+			return std::nullopt;
+		}
 	}
 
 	base::Optional<std::pair<base::StrID, usize>> Mapper::mapSourcePositionToCodePosition(
 		const fs::FilePath& filepath, usize line
 	) const {
 		for (const auto& [function_name, function]: functions) {
-			auto function_position = getfp(function.metadata->position);
-			if (!function_position || function_position->file_path != filepath
-			    || line < function_position->start_line || function_position->end_line < line)
-				continue;
+			// quick check if this function is worth considering
+			match_optional(getfp(function.metadata->position)) {
+				opt_none continue;
+				opt_some(pos) {
+					// ensure this function is in provided file
+					if (pos.file_path != filepath) continue;
 
+					// ensure provided line is in this function
+					if (line < pos.start_line || pos.end_line < line) continue;
+				}
+			}
+
+			// scan for the first FatBC starting not later then in that line (if such exists)
 			usize ret = 0;
 			for (const auto& [offset, meta]: function.instr_offsets) {
 				auto pos = getfp(meta);
@@ -132,7 +163,7 @@ namespace vm::debugger {
 		return fp->file_path;
 	}
 
-	bool Mapper::containsFile(fs::FilePath filepath) const {
+	bool Mapper::containsFile(const fs::FilePath& filepath) const {
 		return std::ranges::any_of(functions, [&](const auto& p) {
 			const auto& [_, function] = p;
 			auto function_position    = getfp(function.metadata->position);

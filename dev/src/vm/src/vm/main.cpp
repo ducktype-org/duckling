@@ -146,7 +146,7 @@ clah::Clah getVmClah() {
 						auto result
 							= source_files.size() ? cli.load(source_files[0]) : cli.loadDefault();
 						if (!result) {
-							std::string error_string = "";
+							std::string error_string;
 							variant_match(result.error()) {
 								variant_case(vm::api::ApiError, error) {
 									error_string = vm::api::errorToString(error);

@@ -208,7 +208,7 @@ namespace vm::debugger::cli {
 		return 0;
 	}
 
-	void CLIDebugger::printCodePosition(CodePosition position) {
+	void CLIDebugger::printCodePosition(const CodePosition& position) {
 		printNL(
 			"Function `", position.function_name.strView(), "` instruction ", position.instr_number
 		);

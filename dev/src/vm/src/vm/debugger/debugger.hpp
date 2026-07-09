@@ -151,7 +151,8 @@ namespace vm::debugger {
 		std::expected<CodePosition, api::ApiError> step();
 
 		/**
-		 * @brief Execute one FatByteCode step in the VM
+		 * @brief Execute multiple FatByteCode steps in the VM until next position in source file is
+		 * reached (or just steps if there is no mapping avaliable)
 		 */
 		std::expected<CodePosition, api::ApiError> mappedStep();
 
