@@ -1,0 +1,7 @@
+import core.builtins.*;
+
+# `print` is a standard library function (not a raw builtin). It only resolves
+# if the std is loaded with the default compiler options, so this exercises std
+# usage in scripts. Calling it on a string literal also covers string literal
+# support in both backends.
+print("abc");

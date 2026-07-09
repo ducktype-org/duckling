@@ -1,12 +1,12 @@
 #pragma once
 
 #include <ctv/ctv.hpp>
+#include <helios/hout/hout.hpp> // PR: try to relax it, its just for Operatoriness, we could move it elsewhere
 #include <helios/scope_id.hpp>
 #include <helios/symbols/symbol_id.hpp>
 #include <helios/tsh/symbol_type.hpp>
 #include <helios/tsh/types.hpp>
 
-#include <base/extend_cpp/variant_match.hpp>
 #include <base/types/bit256.hpp>
 #include <base/types/ints.hpp>
 
@@ -30,11 +30,16 @@ namespace compiler::helios::defgen {
 	 *   the array, it takes no parameters and loops through the static array initializing its
 	 * fields with a default value (which may mean a call to another constructor); returns the
 	 * initialized static array value.
+	 *
+	 * - `Copy`: the compiler-generated default copy constructor. It takes a single `const ref T`
+	 *   source and returns a new `T` that copies each member (trivially-copyable members are
+	 *   byte-copied, non-trivially-copyable members are copied via their own copy constructor).
 	 */
 	struct Constructor final {
 		enum class Kind {
 			Implicit,
 			Default,
+			Copy,
 		};
 
 		tsh::AbstractType type;  // The type this constructor belongs to.
@@ -67,6 +72,22 @@ namespace compiler::helios::defgen {
 	struct BuiltinOperator final {
 		// The type of the builtin operator this symbol represents.
 		tsh::FunctionAbstractType operator_type;
+
+		HOUTFunctionDeclaration::Operatoriness operatoriness;
+
+		[[nodiscard]]
+		base::Bit256 queryUnstablePerfectHash() const;
+	};
+
+	struct GeneratedConstant final {
+		ctv::CompileTimeValue value;
+
+		/**
+		 * @TODO: #3099 maybe remove this, it will allow to make baking logic simpler.
+		 */
+		ScopeID scope;
+
+		GeneratedConstant(ctv::CompileTimeValue value, ScopeID scope);
 
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const;

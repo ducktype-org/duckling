@@ -12,8 +12,10 @@
 
 #include <base/except/exceptions.hpp>
 
-#include <query_framework/context/context.hpp>  // @TODO: #404 relax to fd
+#include <query_framework/context/context_fd.hpp>
 #include <string_id/string_id.hpp>
+
+#include <typeinfo>
 
 namespace compiler::helios {
 	/**
@@ -136,9 +138,7 @@ namespace compiler::helios {
 		 * Panics if element is not a statement or if symbol is not associated with PST element.
 		 */
 		[[nodiscard]]
-		base::Optional<pst::Access<pst::Stmt>> stmtCast(query::Context& ctx) const {
-			return maybePstElement().value().unlock(ctx).dynamicCast<pst::Stmt>();
-		}
+		base::Optional<pst::Access<pst::Stmt>> stmtCast(query::Context& ctx) const;
 	};
 
 	/**

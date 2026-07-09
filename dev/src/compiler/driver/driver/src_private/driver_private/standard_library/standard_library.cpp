@@ -202,7 +202,7 @@ namespace compiler::driver {
 		return appendStandardLibraryPackages(packages_info, std_path, report);
 	}
 
-	std::vector<PackageCompilationTask> getStandardLibraryCompilationTasks() {
+	std::vector<PackageCompilationTask> getLoadedStdLibCompilationTasks() {
 		std::vector<PackageCompilationTask> tasks;
 		for (const auto& config: STD_PACKAGES_CONFIG) {
 			auto pkg = std::find_if(
@@ -212,18 +212,17 @@ namespace compiler::driver {
 					return pkg_info.getPackageID() == base::StrID(config.name);
 				}
 			);
-			CORE_ASSERT(
-				pkg != global_state::getPackages().end(),
-				"Standard library package not found in global state"
-			);
+			// If pkg is not loaded then we skip it.
+			if (pkg == global_state::getPackages().end()) continue;
 
-			tasks.emplace_back(
-				pkg->getRootModule().illegalAccess().getID(),
-				BuildTargetLLVMStaticLibrary{
-					.output_file_name  = base::StrID(config.name + ".a"),
-					.archiving_options = {},
-				}
-			);
+			if (global_state::getBackendOptions()->llvm_backend.has_value())
+				tasks.emplace_back(
+					pkg->getRootModule().illegalAccess().getID(),
+					BuildTargetLLVMStaticLibrary{
+						.output_file_name  = base::StrID(config.name + ".a"),
+						.archiving_options = {},
+					}
+				);
 			tasks.emplace_back(
 				pkg->getRootModule().illegalAccess().getID(),
 				BuildTargetDVMLibrary{
@@ -234,7 +233,7 @@ namespace compiler::driver {
 		return tasks;
 	}
 
-	base::Optional<std::string> getStdLibLinkingArgs(
+	base::Optional<std::string> getNativeStdLibLinkingArgs(
 		const options_types::StdLibOptions& linking_options
 	) {
 		if_opt_some(resolveStdPath(linking_options), _) {

@@ -31,15 +31,13 @@ namespace compiler::ctv {
 			}
 			variant_case(TupleCTV, tuple) {
 				throw base::NotYetImplemented(
-					"Tuples are not supported yey in CTV::queryUnstablePerfectHash"
+					"Tuples are not supported yet in CTV::queryUnstablePerfectHash"
 				);
 			}
 			variant_case(tsh::SymbolType<>, val) {
 				hashing::addToHash(hasher, val.queryUnstablePerfectHash());
 			}
-			variant_default {
-				throw base::NotYetImplemented("Unhandled CTV type in CTV::queryUnstablePerfectHash");
-			}
+			variant_default { CORE_PANIC("Unhandled CTV type in CTV::queryUnstablePerfectHash"); }
 		}
 
 		return hasher.finalize();

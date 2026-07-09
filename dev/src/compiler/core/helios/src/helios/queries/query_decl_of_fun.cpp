@@ -3,6 +3,7 @@
 #include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/elements/hierarchy/actions/all_actions.hpp>
 #include <frontend/pst_parser/elements/hierarchy/actions/return.hpp>
+#include <frontend/pst_parser/elements/hierarchy/class_elements/copy_constructor.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/field.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/method.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
@@ -13,6 +14,7 @@
 #include <helios/hout/elements.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/mangler/mangler.hpp>
+#include <helios/symbols/query_class_of_member.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/tsh/expression_type.hpp>
@@ -217,7 +219,8 @@ namespace compiler::helios {
 
 			void emplaceDeclaration(
 				pst::AccessLocked<pst::ParamList>                  param_list,
-				base::Optional<pst::AccessLocked<pst::ExprHolder>> ret
+				base::Optional<pst::AccessLocked<pst::ExprHolder>> ret,
+				HOUTFunctionDeclaration::Operatoriness             operatoriness
 			) {
 				// Default return type is a direct unit.
 				auto ret_type = tsh::SymbolType<>{
@@ -276,7 +279,7 @@ namespace compiler::helios {
 				}
 
 				HOUTFunctionDeclaration output(
-					original_symbol, ret_type, std::move(parameters), origin
+					original_symbol, operatoriness, ret_type, std::move(parameters), origin
 				);
 
 				this->out.emplace(std::move(output));
@@ -285,15 +288,21 @@ namespace compiler::helios {
 			// @TODO: #1029 make failure more explicit
 			void visitFun(pst::Access<pst::Fun> stmt) final {
 				// @TODO: #1029 rest, flags, attributes, etc
-				emplaceDeclaration(stmt->getParams(), stmt->getRet());
+				emplaceDeclaration(
+					stmt->getParams(), stmt->getRet(), HOUTFunctionDeclaration::Operatoriness::None
+				);
 			}
 
 			void visitFunDecl(pst::Access<pst::FunDecl> stmt) final {
-				emplaceDeclaration(stmt->getParams(), stmt->getRet());
+				emplaceDeclaration(
+					stmt->getParams(), stmt->getRet(), HOUTFunctionDeclaration::Operatoriness::None
+				);
 			}
 
 			void visitMethod(pst::Access<pst::Method> stmt) final {
-				emplaceDeclaration(stmt->getParams(), stmt->getRet());
+				emplaceDeclaration(
+					stmt->getParams(), stmt->getRet(), HOUTFunctionDeclaration::Operatoriness::None
+				);
 
 				const auto  self_scope  = ctx.query<QueryPrimaryCodeScopeFor>(stmt);
 				const SymID self_symbol = ctx.query<defgen::QueryGeneratedSymbol>({
@@ -312,6 +321,20 @@ namespace compiler::helios {
 				                     .helios_symbol = self_symbol,
 				                     .origin        = code::generatedOrigin() }
 				);
+			}
+
+			void visitCopyConstructor(pst::Access<pst::CopyConstructor> stmt) final {
+				emplaceDeclaration(
+					stmt->getParams(), {}, HOUTFunctionDeclaration::Operatoriness::None
+				);
+
+				const auto class_type
+					= ctx.query<QueryClassOfMember>(original_symbol)->valueOrThrow();
+				this->out->return_type = tsh::SymbolType<>{
+					class_type,
+					tsh::ReferenceKind::Direct,
+					tsh::Mutability::Mutable,
+				};
 			}
 		};
 
@@ -427,14 +450,20 @@ namespace compiler::helios {
 
 			// Return the declaration.
 			return HOUTFunctionDeclaration{
-				ctor_symbol, result_symbol_type, std::move(parameters), code::generatedOrigin()
+				ctor_symbol,
+				HOUTFunctionDeclaration::Operatoriness::None,
+				result_symbol_type,
+				std::move(parameters),
+				code::generatedOrigin(),
 			};
 		}
 
 		/**
 		 * @brief Get the declaration of a function-like symbol based on its type.
 		 */
-		static PResult funDeclFromType(Context& ctx, QKey fun) {
+		static PResult funDeclFromType(
+			Context& ctx, QKey fun, const HOUTFunctionDeclaration::Operatoriness operatoriness
+		) {
 			const auto builtin_type = ctx.query<QueryTypeOfSymbol>({ fun })
 			                              ->valueOrThrow()
 			                              .getType()
@@ -459,10 +488,7 @@ namespace compiler::helios {
 				i++;
 			}
 			return HOUTFunctionDeclaration{
-				fun,
-				return_type,
-				std::move(parameters),
-				code::generatedOrigin(),
+				fun, operatoriness, return_type, std::move(parameters), code::generatedOrigin(),
 			};
 		}
 
@@ -470,7 +496,8 @@ namespace compiler::helios {
 			switch (kind(key)) {
 			case SymbolKind::Function:
 			case SymbolKind::FunctionDeclaration:
-			case SymbolKind::Method: {
+			case SymbolKind::Method:
+			case SymbolKind::Constructor: {
 				variant_match(getSymRef(key)->other) {
 					variant_case_novalue(PstImplementedSemantics, BuiltinSemantics) {
 						DeclarationVisitor decl_maker(ctx, key);
@@ -489,20 +516,36 @@ namespace compiler::helios {
 								                                        tsh::Mutability::Mutable };
 
 							return HOUTFunctionDeclaration{
-								key, return_type, {}, code::generatedOrigin()
+								key,
+								HOUTFunctionDeclaration::Operatoriness::None,
+								return_type,
+								{},
+								code::generatedOrigin(),
 							};
 						}
+						case defgen::Constructor::Kind::Copy:
+							return funDeclFromType(
+								ctx, key, HOUTFunctionDeclaration::Operatoriness::None
+							);
 						}
 						CORE_UNREACHABLE();
 					}
 					variant_case_novalue(
 						defgen::Method,
-						defgen::BuiltinOperator,
 						defgen::ReplExpressionWrapper,
 						defgen::ReplInstructionWrapper,
 						defgen::ScriptMainWrapper
 					) {
-						return funDeclFromType(ctx, key);
+						return funDeclFromType(
+							ctx, key, HOUTFunctionDeclaration::Operatoriness::None
+						);
+					}
+					variant_case(defgen::BuiltinOperator, builtin_op) {
+						// Currently, all builtins *participating in lookup* are unary or binary
+						// operators.
+						// @TODO: #3092 Do not use BuiltinOperator for any other purposes, such as
+						// to denote C++-implemented builtin functions.
+						return funDeclFromType(ctx, key, builtin_op.operatoriness);
 					}
 					variant_default {
 						// Other symbols are not functions.
