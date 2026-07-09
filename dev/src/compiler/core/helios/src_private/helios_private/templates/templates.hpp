@@ -80,6 +80,6 @@ namespace compiler::helios::templates {
 	 */
 	DECLARE_QUERY(QueryBakeTemplateSymID, TemplateBakeKey, query::QResult<SymID>, ({}));
 
-	// @NOTE: if we will have bale to hout unit, it should first bake everything to the sym id, and
-	// then gather the content of the HOUTUnit
+	// @NOTE: if we will have to bake templates to hout unit, it should probably first call QueryBakeTemplateSymID and
+	// then gather the content of the HOUTUnit based on the baked template symbol ID. 
 }

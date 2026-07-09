@@ -315,7 +315,7 @@ namespace compiler::helios {
 	 * @param stmt
 	 * @return Ref<SymbolData>
 	 */
-	SymbolData makeSymbolFromStatement(
+	query::QResult<SymbolData> makeSymbolFromStatement(
 		query::Context& ctx, ScopeID scope, pst::Access<pst::Stmt> stmt
 	) {
 		// @TODO: change this function to visitor to avoid dynamic_casts
@@ -613,10 +613,26 @@ namespace compiler::helios {
 		}
 		case pst::StmtKind::TemplateStmt: {
 			auto template_decl = stmt.dynamicCast<pst::TemplateStmt>().value();
+			auto inner_statement = template_decl->getInnerStatement().unlock(ctx);
+
+			auto inner_statement_kind = inner_statement->getStmtKind();
+			if (inner_statement_kind != pst::StmtKind::Fun
+			    && inner_statement_kind != pst::StmtKind::FunDecl
+			    && inner_statement_kind != pst::StmtKind::Class
+				&& inner_statement_kind != pst::StmtKind::Namespace	
+				&& inner_statement_kind != pst::StmtKind::Const	
+			) {
+				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					"Templates are only supported for functions, classes, namespaces and consts",
+					template_decl->getStablePosition()
+				));
+				return query::Failed();
+			}
+
 			return SymbolData::makePSTSymbolData(
 				{
 					.name = template_decl->getDeclSymbolIdentifier()->unlock(ctx)->unwrap(
-					),  // TODO: inc double check
+					),
 					.kind                 = SymbolKind::Template,
 					.is_ignored_by_lookup = is_ignored_by_lookup,
 					.attributes           = std::move(attributes),
@@ -703,7 +719,7 @@ namespace compiler::helios {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			auto scope = getPSTElementParentScope(ctx, key.element);
 			if (auto stmt = key.element.unlock(ctx).dynamicCast<pst::Stmt>())
-				return PResult{ makeSymbolFromStatement(ctx, scope, stmt.value()) };
+				return PResult{ makeSymbolFromStatement(ctx, scope, stmt.value()).valueOrThrow() };
 			else
 				return PResult{ makeSymbolFromPSTElement(scope, key.element.unlock(ctx), ctx) };
 		}
