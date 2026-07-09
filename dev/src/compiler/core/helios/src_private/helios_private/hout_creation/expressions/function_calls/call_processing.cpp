@@ -329,9 +329,10 @@ namespace compiler::helios::code {
 	}
 
 	/**
-	 * @brief Given function symbol and Box<Expr> of all the arguments and argument origins
-	 * constructs a helios Expr representing the call of the function. Construction of the
-	 * expressions will move the arguments.
+	 * @brief Given function symbol (assumed to be a builtin operator) and Box<Expr> of all the
+	 * arguments and argument origins, constructs a helios Expr representing the evaluation of
+	 * the operator. This will end up being a Builtin(Bi/U)naryExpr, or defer to a CallExpr.
+	 * Construction of the expressions will move the arguments.
 	 * @p argument_origin defines the actual structure of the arguments, while @p
 	 * positional_arguments and @p named_arguments define their content.
 	 *
