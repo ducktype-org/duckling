@@ -3,6 +3,8 @@
 #include <ctv/numeric_value.hpp>
 #include <helios/tsh/queries/types.hpp>
 
+#include <hashing/add_to_hash.hpp>
+#include <hashing/hashing_algorithms.hpp>
 #include <query_framework/context/context.hpp>
 #include <string_id/string_id.hpp>
 
@@ -11,6 +13,35 @@
 
 namespace compiler::ctv {
 	const CompileTimeValue::Storage& CompileTimeValue::getStorage() const { return value; }
+
+	base::Bit256 CompileTimeValue::queryUnstablePerfectHash() const {
+		hashing::SHA256 hasher;
+		hashing::addToHash(hasher, value.index());
+
+		variant_match(value) {
+			variant_case(bool, val) { hashing::addToHash(hasher, val); }
+			variant_case(NumericValue, val) {
+				hashing::addToHash(hasher, val.getStorage().index());
+				VISIT(val.getStorage(), inner_value, hashing::addToHash(hasher, inner_value););
+			}
+			variant_case(char, c) { hashing::addToHash(hasher, c); }
+			variant_case(base::StrID, val) { hashing::addToHash(hasher, val); }
+			variant_case_novalue(UnitCTV) {
+				// nothing to add to hash
+			}
+			variant_case(TupleCTV, tuple) {
+				throw base::NotYetImplemented(
+					"Tuples are not supported yet in CTV::queryUnstablePerfectHash"
+				);
+			}
+			variant_case(tsh::SymbolType<>, val) {
+				hashing::addToHash(hasher, val.queryUnstablePerfectHash());
+			}
+			variant_default { CORE_PANIC("Unhandled CTV type in CTV::queryUnstablePerfectHash"); }
+		}
+
+		return hasher.finalize();
+	}
 
 	std::string CompileTimeValue::toString() const {
 		variant_match(value) {

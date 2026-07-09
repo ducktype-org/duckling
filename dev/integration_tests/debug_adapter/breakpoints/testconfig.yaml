@@ -1,0 +1,17 @@
+Tests:
+  debug_breakpoints:
+    Run: "PYTHONPATH=../helpers python3 dap_runner.py @{build_dir} @{scenario}"
+    TimeOut: 1
+    Cases:
+      launch_set_conf:
+        scenario: "launch_set_conf"
+      set_launch_conf:
+        scenario: "set_launch_conf"
+      set_conf_launch:
+        scenario: "set_conf_launch"
+      add:
+        scenario: "add"
+      remove:
+        scenario: "remove"
+      error:
+        scenario: "error"
