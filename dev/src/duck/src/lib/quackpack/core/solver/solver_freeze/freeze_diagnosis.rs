@@ -220,8 +220,7 @@ impl SolverFreeze {
     fn reversed_dependency_graph(
         &self,
     ) -> HashMap<WithVersion<FullIdentity>, Vec<WithVersion<FullIdentity>>> {
-        let mut reversed_graph: HashMap<WithVersion<FullIdentity>, Vec<WithVersion<FullIdentity>>> =
-            HashMap::new();
+        let mut reversed_graph = HashMap::new();
         for (pkg, freeze) in self.package_freezes.iter() {
             for (_, realization) in freeze.dependencies_realization.iter() {
                 reversed_graph.entry(*realization).or_default().push(*pkg);
