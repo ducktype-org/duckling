@@ -145,13 +145,14 @@ namespace compiler::helios {
 	}
 
 	base::Optional<ScopeID> SymbolData::getScope() const {
+		// @TODO: #3099 a lot of scopes could be removed from generated symbols.
 		variant_match(other) {
 			variant_case(PstImplementedSemantics, pst_data) { return pst_data.scope; }
 			variant_case(BuiltinSemantics, data) { return data.scope; }
 			variant_case(defgen::SelfParameter, param) { return param.scope; }
 			variant_case(defgen::ControlFlowLocal, local) { return local.owning_scope; }
 			variant_case(defgen::ScriptMainWrapper, script) { return script.scope; }
-			variant_case(defgen::GeneratedConstant, gen_const) { return {}; /* return gen_const.scope; HMMMMMMM*/ }
+			variant_case(defgen::GeneratedConstant, gen_const) { return gen_const.scope; }
 			variant_default { return {}; }
 		}
 		CORE_UNREACHABLE();

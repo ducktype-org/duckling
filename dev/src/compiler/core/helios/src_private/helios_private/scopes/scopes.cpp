@@ -650,8 +650,14 @@ namespace compiler::helios {
 			// Sanity check that the output symbols have correct scope.
 			if (output.hasValue()) {
 				for (auto sym: output.valueOrPanic()) {
+					// @TODO: #3099 generated symbols scopes are needed
+					// mostly here and potentially for mangling.
+					// Just removing this assertion for them is not a way to go, since this assertion ensures that scopes info is consistent.
+					// We could however add some kind of "QueryAdditionalScopelessSymbolsInScope".
+					// Tho this will not be trivial.
+					
 					CORE_ASSERT(
-						true, // scope(sym) == key, HHMMM
+						scope(sym) == key,
 						base::strConcat(
 							"Scope mismatch in QuerySymbolsInScope and QuerySymbolOfSTMT\n",
 							" for symbol: ",

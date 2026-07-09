@@ -62,7 +62,7 @@ namespace compiler::helios::templates {
 		/**
 		 * @brief The symbols for the template arguments.
 		 *
-		 * @TODO: Implementation of this is a bit hacky, try to improve this.
+		 * @TODO: #3099 Implementation of this is a bit hacky, as it is set by the bake template query after the PST is baked and used in other queries already. This could be changed if template_arguments_symbols didn't required a scope to be created.
 		 *
 		 * @note: We use custom deleter to delete the vector, because we can't use unique_ptr inside
 		 * atomic.
