@@ -85,6 +85,15 @@ clah::Clah getVmClah() {
 								"Debugger does not support fast-mode"
 							);
 
+						// @TODO: #3077 Support --ffi-lib in the debugger load path.
+						if (parsed.isFlag("debug")
+		                    && !parsed.getValue<std::vector<std::string>>("ffi-lib")
+		                            .copyValueOr({})
+		                            .empty())
+							return std::unexpected<std::string>(
+								"Debugger does not support --ffi-lib yet"
+							);
+
 						return {};
 					}
 				)
@@ -106,6 +115,13 @@ clah::Clah getVmClah() {
 	                     .addShortName('c')
 	                     .addLongName("args")
 	                     .build())
+				.add(clah::ParamBuilder::ofValue(clah::StringListParser::make("libs"))
+	                     .addShortDesc(
+							 R"(Shared libraries for `ffi function` symbol resolution, as a comma-separated list. A bare name (e.g. "libm.so.6") is searched in the system library paths, a path is loaded as given.)"
+						 )
+	                     .addShortName('l')
+	                     .addLongName("ffi-lib")
+	                     .build())
 				.setHandler([](const clah::ParsingResult& options) -> int {
 					vm::Supervisor::get();
 
@@ -116,6 +132,9 @@ clah::Clah getVmClah() {
 
 					std::vector<std::string> args
 						= options.getValue<std::vector<std::string>>("args").copyValueOr({});
+
+					std::vector<std::string> ffi_libs
+						= options.getValue<std::vector<std::string>>("ffi-lib").copyValueOr({});
 
 					vm::api::ProcessConfig process_options{};
 					if (options.isFlag("fast-mode"))
@@ -141,7 +160,7 @@ clah::Clah getVmClah() {
 
 						return cli.run();
 					} else
-						return cli(source_files, args, process_options);
+						return cli(source_files, args, process_options, ffi_libs);
 				})
 		)
 	    .addSubcommand(clah::Clah("debug_adapter", "Start the VM debug adapter.")

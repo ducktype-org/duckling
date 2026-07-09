@@ -65,6 +65,11 @@ namespace vm::loader::compiler {
 		                     | std::ranges::to<std::vector<code::ExternalCFunction>>();
 		compileNewExtCFunctions(new_c_functions);
 
+		auto new_ffi_functions = high_program.ffiFunctions()
+		                       | std::views::drop(sizes.ffi_function_count)
+		                       | std::ranges::to<std::vector<code::FFIFunction>>();
+		compileNewFFIFunctions(new_ffi_functions);
+
 		auto new_globals = high_program.globals() | std::views::drop(sizes.global_count)
 		                 | std::ranges::to<std::vector<code::GlobalData>>();
 

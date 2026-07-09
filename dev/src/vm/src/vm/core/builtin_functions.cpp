@@ -6,6 +6,7 @@
 
 #include <vm/api/vm.hpp>
 #include <vm/bytecode/bytecode.hpp>
+#include <vm/bytecode/validator/valid_type/finalized_kinds.hpp>
 #include <vm/core/builtin_functions.hpp>
 #include <vm/core/process/ivmprocess.hpp>
 #include <vm/core/process/proc_io.hpp>
@@ -18,6 +19,7 @@
 
 #include <chrono>
 #include <cstdio>
+#include <cstring>
 
 namespace vm::builtins {
 
@@ -313,6 +315,32 @@ namespace vm::builtins {
 		thread.safe_process.getSynchronizationPrimitives().removeCV(cv_id);
 	}
 
+	namespace {
+		// The VM side of the copy must stay within the pointed-to block.
+		void assertCopyWithinBlock(
+			const Pointer& ptr, u64 size, usize block_size, const char* builtin_name
+		) {
+			if (ptr.getOffset() > block_size || size > block_size - ptr.getOffset())
+				throw vm::exceptions::VMRuntimeException(
+					base::strConcat(builtin_name, ": copy region exceeds the pointed-to block")
+				);
+		}
+	}
+
+	void FunctionHandlers::builtinCptrRead(SafeVMThread& thread, u64 src, Pointer dst, u64 size) {
+		auto view = thread.process_memory.getBlockViewUnsafe(dst.getBlock());
+		assertCopyWithinBlock(dst, size, view.size(), "builtin_cptr_read");
+		// NOLINTNEXTLINE(performance-no-int-to-ptr): a cptr is a raw native address by definition.
+		std::memcpy(view.getBegin() + dst.getOffset(), reinterpret_cast<const void*>(src), size);
+	}
+
+	void FunctionHandlers::builtinCptrWrite(SafeVMThread& thread, u64 dst, Pointer src, u64 size) {
+		auto view = thread.process_memory.getBlockViewUnsafe(src.getBlock());
+		assertCopyWithinBlock(src, size, view.size(), "builtin_cptr_write");
+		// NOLINTNEXTLINE(performance-no-int-to-ptr): a cptr is a raw native address by definition.
+		std::memcpy(reinterpret_cast<void*>(dst), view.getBegin() + src.getOffset(), size);
+	}
+
 	base::Optional<Box<VmValue>> callBuiltinFunction(
 		BuiltinFunctionID                id,
 		const std::vector<TypeCRef>&     result_types,
@@ -350,7 +378,9 @@ namespace vm::builtins {
 				WaitCV,
 				NotifyCV,
 				NotifyAllCV,
-				DestroyCV
+				DestroyCV,
+				CptrRead,
+				CptrWrite
 			)
 
 
@@ -359,116 +389,156 @@ namespace vm::builtins {
 		}
 	}
 
-	auto getBuiltinFunctions()
-		-> CRef<std::unordered_map<BuiltinFunctionID, std::pair<base::StrID, code::FuncSignature>>> {
-		static const std::unordered_map<BuiltinFunctionID, std::pair<base::StrID, code::FuncSignature>>
-			map{
+	namespace {
+		// Shared verifier for the `cptr` copy builtins: (cptr, pointer-to-any-type, byte count).
+		base::Optional<std::string> verifyCptrCopyArgs(
+			const std::vector<CRef<code::valid_type::ValidType>>& arg_types
+		) {
+			if (arg_types.size() != 3) return "expected exactly three arguments";
+			if (!(arg_types[0]->isKind<code::valid_type::finalized::Opaque>()
+			      && arg_types[0]->getName() == base::StrID("cptr")))
+				return "first argument must be a `cptr`";
+			if (!arg_types[1]->isKind<code::valid_type::finalized::Pointer>())
+				return "second argument must be a pointer";
+			auto size_type = arg_types[2]->maybeGetKindAs<code::valid_type::finalized::Primitive>();
+			if (!size_type.has_value() || usize(size_type.value()->size) != 8)
+				return "third argument (byte count) must be an 8-byte primitive";
+			return {};
+		}
+	}
+
+	auto getBuiltinFunctions() -> CRef<std::unordered_map<BuiltinFunctionID, BuiltinFunction>> {
+		static const std::unordered_map<BuiltinFunctionID, BuiltinFunction> map{
+			{
+				BuiltinFunctionID::Abort,
+				{ base::StrID("abort"), code::FuncSignature({}, {}) },
+			},
+			{
+				BuiltinFunctionID::InputI64,
+				{ base::StrID("builtin_input_i64"),
+			      code::FuncSignature({ base::StrID("i64") }, {}) },
+			},
+			{
+				BuiltinFunctionID::OutputI64,
+				{ base::StrID("builtin_output_i64"),
+			      code::FuncSignature({ base::StrID("i64") }, { base::StrID("i64") }) },
+			},
+			{
+				BuiltinFunctionID::OutputI32,
+				{ base::StrID("builtin_output_i32"),
+			      code::FuncSignature({ base::StrID("i64") }, { base::StrID("i32") }) },
+			},
+			{
+				BuiltinFunctionID::OutputChar,
+				{ base::StrID("builtin_output_char"),
+			      code::FuncSignature({ base::StrID("i64") }, { base::StrID("i8") }) },
+			},
+			{
+				BuiltinFunctionID::OutputString,
+				{ base::StrID("builtin_strOutput_pptr"),
+			      code::FuncSignature({}, { base::StrID("ptr_string") }) },
+			},
+			{
+				BuiltinFunctionID::Stoi,
 				{
-					BuiltinFunctionID::Abort,
-					{ base::StrID("abort"), code::FuncSignature({}, {}) },
+					base::StrID("builtin_stoi_pptr"),
+					code::FuncSignature({ base::StrID("i64") }, { base::StrID("ptr_string") }),
 				},
-				{
-					BuiltinFunctionID::InputI64,
-					{ base::StrID("builtin_input_i64"),
-			          code::FuncSignature({ base::StrID("i64") }, {}) },
-				},
-				{
-					BuiltinFunctionID::OutputI64,
-					{ base::StrID("builtin_output_i64"),
-			          code::FuncSignature({ base::StrID("i64") }, { base::StrID("i64") }) },
-				},
-				{
-					BuiltinFunctionID::OutputI32,
-					{ base::StrID("builtin_output_i32"),
-			          code::FuncSignature({ base::StrID("i64") }, { base::StrID("i32") }) },
-				},
-				{
-					BuiltinFunctionID::OutputChar,
-					{ base::StrID("builtin_output_char"),
-			          code::FuncSignature({ base::StrID("i64") }, { base::StrID("i8") }) },
-				},
-				{
-					BuiltinFunctionID::OutputString,
-					{ base::StrID("builtin_strOutput_pptr"),
-			          code::FuncSignature({}, { base::StrID("ptr_string") }) },
-				},
-				// `manyptr char` lowers to a pointer to a dynamic table of `i8`, and both `u64`
-			    // and the returned length lower to `i64`.
-				{
-					BuiltinFunctionID::FloatToString,
-					{ base::StrID("float_to_string"),
-			          code::FuncSignature(
-						  { base::StrID("i64") },
-						  { base::StrID("f64"), base::StrID("ptr_dyntable_i8"), base::StrID("i64") }
-					  ) },
-				},
-				{
-					BuiltinFunctionID::U64ToString,
-					{ base::StrID("u64_to_string"),
-			          code::FuncSignature(
-						  { base::StrID("i64") },
-						  { base::StrID("i64"), base::StrID("ptr_dyntable_i8"), base::StrID("i64") }
-					  ) },
-				},
-				{
-					BuiltinFunctionID::I64ToString,
-					{ base::StrID("i64_to_string"),
-			          code::FuncSignature(
-						  { base::StrID("i64") },
-						  { base::StrID("i64"), base::StrID("ptr_dyntable_i8"), base::StrID("i64") }
-					  ) },
-				},
-				{
-					BuiltinFunctionID::Stoi,
-					{
-						base::StrID("builtin_stoi_pptr"),
-						code::FuncSignature({ base::StrID("i64") }, { base::StrID("ptr_string") }),
-					},
-				},
-				{
-					BuiltinFunctionID::StartThread,
-					{ base::StrID("builtin_start_thread"),
-			          code::FuncSignature({ base::StrID("i64") }, {}) },
-				},
-				{
-					BuiltinFunctionID::JoinThread,
-					{ base::StrID("builtin_join_thread"),
-			          code::FuncSignature({ base::StrID("i64") }, { base::StrID("i64") }) },
-				},
-				{ BuiltinFunctionID::CreateMutex,
-			      { base::StrID("builtin_create_mutex"),
-			        code::FuncSignature({ base::StrID("mutex") }, {}) } },
-				{ BuiltinFunctionID::LockMutex,
-			      { base::StrID("builtin_lock_mutex"),
-			        code::FuncSignature({}, { base::StrID("mutex") }) } },
-				{ BuiltinFunctionID::UnlockMutex,
-			      { base::StrID("builtin_unlock_mutex"),
-			        code::FuncSignature({}, { base::StrID("mutex") }) } },
-				{ BuiltinFunctionID::DestroyMutex,
-			      { base::StrID("builtin_destroy_mutex"),
-			        code::FuncSignature({}, { base::StrID("mutex") }) } },
-				{ BuiltinFunctionID::CreateCV,
-			      { base::StrID("builtin_create_cv"),
-			        code::FuncSignature({ base::StrID("condition_variable") }, {}) } },
-				{ BuiltinFunctionID::WaitCV,
-			      { base::StrID("builtin_wait_cv"),
-			        code::FuncSignature(
-						{}, { base::StrID("condition_variable"), base::StrID("mutex") }
-					) } },
-				{ BuiltinFunctionID::NotifyCV,
-			      { base::StrID("builtin_notify_cv"),
-			        code::FuncSignature({}, { base::StrID("condition_variable") }) } },
-				{ BuiltinFunctionID::NotifyAllCV,
-			      { base::StrID("builtin_notify_all_cv"),
-			        code::FuncSignature({}, { base::StrID("condition_variable") }) } },
-				{
-					BuiltinFunctionID::DestroyCV,
-					{ base::StrID("builtin_destroy_cv"),
-			          code::FuncSignature({}, { base::StrID("condition_variable") }) },
-				},
-			};
+			},
+			// `manyptr char` lowers to a pointer to a dynamic table of `i8`, and both `u64`
+			// and the returned length lower to `i64`.
+			{
+				BuiltinFunctionID::FloatToString,
+				{ base::StrID("float_to_string"),
+				  code::FuncSignature(
+					  { base::StrID("i64") },
+					  { base::StrID("f64"), base::StrID("ptr_dyntable_i8"), base::StrID("i64") }
+				  ) },
+			},
+			{
+				BuiltinFunctionID::U64ToString,
+				{ base::StrID("u64_to_string"),
+				  code::FuncSignature(
+					  { base::StrID("i64") },
+					  { base::StrID("i64"), base::StrID("ptr_dyntable_i8"), base::StrID("i64") }
+				  ) },
+			},
+			{
+				BuiltinFunctionID::I64ToString,
+				{ base::StrID("i64_to_string"),
+				  code::FuncSignature(
+					  { base::StrID("i64") },
+					  { base::StrID("i64"), base::StrID("ptr_dyntable_i8"), base::StrID("i64") }
+				  ) },
+			},
+			{
+				BuiltinFunctionID::StartThread,
+				{ base::StrID("builtin_start_thread"),
+			      code::FuncSignature({ base::StrID("i64") }, {}) },
+			},
+			{
+				BuiltinFunctionID::JoinThread,
+				{ base::StrID("builtin_join_thread"),
+			      code::FuncSignature({ base::StrID("i64") }, { base::StrID("i64") }) },
+			},
+			{ BuiltinFunctionID::CreateMutex,
+			  { base::StrID("builtin_create_mutex"),
+			    code::FuncSignature({ base::StrID("mutex") }, {}) } },
+			{ BuiltinFunctionID::LockMutex,
+			  { base::StrID("builtin_lock_mutex"),
+			    code::FuncSignature({}, { base::StrID("mutex") }) } },
+			{ BuiltinFunctionID::UnlockMutex,
+			  { base::StrID("builtin_unlock_mutex"),
+			    code::FuncSignature({}, { base::StrID("mutex") }) } },
+			{ BuiltinFunctionID::DestroyMutex,
+			  { base::StrID("builtin_destroy_mutex"),
+			    code::FuncSignature({}, { base::StrID("mutex") }) } },
+			{ BuiltinFunctionID::CreateCV,
+			  { base::StrID("builtin_create_cv"),
+			    code::FuncSignature({ base::StrID("condition_variable") }, {}) } },
+			{ BuiltinFunctionID::WaitCV,
+			  { base::StrID("builtin_wait_cv"),
+			    code::FuncSignature(
+					{}, { base::StrID("condition_variable"), base::StrID("mutex") }
+				) } },
+			{ BuiltinFunctionID::NotifyCV,
+			  { base::StrID("builtin_notify_cv"),
+			    code::FuncSignature({}, { base::StrID("condition_variable") }) } },
+			{ BuiltinFunctionID::NotifyAllCV,
+			  { base::StrID("builtin_notify_all_cv"),
+			    code::FuncSignature({}, { base::StrID("condition_variable") }) } },
+			{
+				BuiltinFunctionID::DestroyCV,
+				{ base::StrID("builtin_destroy_cv"),
+			      code::FuncSignature({}, { base::StrID("condition_variable") }) },
+			},
+			{
+				BuiltinFunctionID::CptrRead,
+				{ base::StrID("builtin_cptr_read_pptr"),
+			      code::FuncSignature(
+					  {},
+					  { base::StrID("cptr"), base::StrID(VERIFIER_CHECKED_PARAM), base::StrID("i64") }
+				  ),
+			      &verifyCptrCopyArgs },
+			},
+			{
+				BuiltinFunctionID::CptrWrite,
+				{ base::StrID("builtin_cptr_write_pptr"),
+			      code::FuncSignature(
+					  {},
+					  { base::StrID("cptr"), base::StrID(VERIFIER_CHECKED_PARAM), base::StrID("i64") }
+				  ),
+			      &verifyCptrCopyArgs },
+			},
+		};
 
 		return &map;
+	}
+
+	base::Optional<BuiltinArgVerifier> getBuiltinArgVerifier(base::StrID name) {
+		auto id = getBuiltinFunctionID(name);
+		if (!id.has_value()) return {};
+		return getBuiltinFunctions()->at(id.value()).arg_verifier;
 	}
 
 	base::Optional<CRef<code::FuncSignature>> getBuiltinFunctionSignature(base::StrID name) {
@@ -483,8 +553,8 @@ namespace vm::builtins {
 			= [] {
 				  std::unordered_map<base::StrID, BuiltinFunctionID> indices;
 
-				  for (const auto& [id, func_pair]: *getBuiltinFunctions())
-					  indices.emplace(func_pair.first, id);
+				  for (const auto& [id, func]: *getBuiltinFunctions())
+					  indices.emplace(func.name, id);
 				  return indices;
 			  }();
 

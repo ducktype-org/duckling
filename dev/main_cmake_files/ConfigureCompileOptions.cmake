@@ -28,6 +28,7 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 		"-Werror=conversion "
 		"-Werror=implicit-fallthrough "
 		"-Werror=reorder "
+		"-Werror=invalid-memory-model "
 		"-Wall -Wextra "
 		"-pedantic "
 		"-Wno-sign-compare "
