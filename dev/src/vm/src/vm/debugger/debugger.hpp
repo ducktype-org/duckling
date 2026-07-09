@@ -161,6 +161,6 @@ namespace vm::debugger {
 		 */
 		std::expected<void, api::ApiError> sendInput(const std::string& msg);
 
-		Mapper& getMapper();
+		const Mapper& getMapper();
 	};
 }

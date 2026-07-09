@@ -227,5 +227,5 @@ namespace vm::debugger {
 		return api::input(pid, msg);
 	}
 
-	Mapper& Debugger::getMapper() { return mapper; }
+	const Mapper& Debugger::getMapper() { return mapper; }
 }
