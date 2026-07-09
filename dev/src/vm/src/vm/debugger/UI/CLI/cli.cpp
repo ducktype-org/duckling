@@ -139,7 +139,7 @@ namespace vm::debugger::cli {
 										 if (response)
 											 printCodePosition(*response);
 										 else
-											 printNL("Faild to obtain position!");
+											 printNL("Failed to obtain position!");
 										 return 0;
 									 }))
 		          .addSubcommand(clah::Clah("step", "executes one step")
@@ -154,7 +154,7 @@ namespace vm::debugger::cli {
 										 if (response)
 											 printCodePosition(*response);
 										 else
-											 printNL("Faild to obtain position!");
+											 printNL("Failed to obtain position!");
 
 										 return 0;
 									 }))
