@@ -29,7 +29,7 @@ pub fn get_possible_realizations(
             return Ok(vec![]);
         }
         let version = versions[0];
-        Ok(vec![WithVersion::new(identity, *version)])
+        Ok(vec![WithVersion::new(identity, version)])
     } else {
         // Baseline versions are the versions specified in the manifest,
         // with which we want to check the compatibility of the existing packages.
