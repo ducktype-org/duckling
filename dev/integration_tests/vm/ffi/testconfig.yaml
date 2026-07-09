@@ -16,15 +16,9 @@ Tests:
         Run: "@{dvm_path} run cos.dbc --ffi-lib $math_lib"
         Output:
           String: "1\n"
-      # cos_ffi_object.dbc bakes in `libm.so.6`; copy it to a scratch dir and rewrite the soname
-      # to the platform's before running.
+      # The soname is baked into the bytecode, so use the fixture for the running platform.
       bare-soname-in-bytecode:
-        Env:
-            DIT_TMP_DIR: "@{new_tmp_dir}"
-        tmp_env_files: "cos_ffi_object.dbc"
-        PreCase: "@{make_tmp_env}"
-        Run: '@{at_tmp_env} "sed \"s|libm.so.6|$math_lib|\" cos_ffi_object.dbc > prog.dbc && @{dvm_path} run prog.dbc"'
-        PostCase: "@{cleanup_tmp_env}"
+        Run: '@{dvm_path} run $([ "@{is_macos}" = true ] && echo cos_ffi_object_macos.dbc || echo cos_ffi_object.dbc)'
         Output:
           String: "1\n"
       # The quoted grep pattern must be a single word, DIT splits the command naively.
