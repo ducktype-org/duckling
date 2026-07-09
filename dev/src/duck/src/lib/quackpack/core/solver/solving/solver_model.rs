@@ -105,7 +105,7 @@ impl<'a> SolverModel<'a, ProblemCreated> {
     /// Returns the mapping from child features to variables, associated with the given dependency.
     fn get_feature_to_var_map_for_dep(&mut self, dep: DependencyEdge) -> &ChildFeaturesToVars {
         self.dependency_to_feature_vars
-            .entry(dep.clone())
+            .entry(dep)
             .or_default()
     }
 
@@ -124,7 +124,7 @@ impl<'a> SolverModel<'a, ProblemCreated> {
     /// Returns the mapping from child versions to variables, associated with the given dependency.
     fn get_version_to_var_map_for_dep(&mut self, dep: DependencyEdge) -> &ChildVersionsToVars {
         self.dependency_to_version_vars
-            .entry(dep.clone())
+            .entry(dep)
             .or_default()
     }
 
