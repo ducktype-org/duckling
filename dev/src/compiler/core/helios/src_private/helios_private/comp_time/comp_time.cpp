@@ -33,6 +33,35 @@
 namespace compiler::helios {
 	using namespace ctv;
 
+	// Integer exponentiation with deterministic two's-complement wraparound.
+	// std::pow routes through double and the out-of-range float->int cast is UB:
+	// x86 wraps, arm64 saturates. Comptime relies on wrapping (e.g. `2 ** 31 - 1`),
+	// so compute it via modular unsigned arithmetic instead.
+	template<typename IntT>
+	IntT comptimeIntPow(IntT base, IntT exp) {
+		static_assert(std::is_integral_v<IntT>);
+		// A negative exponent is only representable for signed types.
+		if constexpr (std::is_signed_v<IntT>) {
+			if (exp < 0) {
+				// std::pow of |base| > 1 with a negative exponent truncates to 0; base
+				// magnitude 1 is exact.
+				if (base == 1) return 1;
+				if (base == -1) return (exp % 2 == 0) ? 1 : -1;
+				return 0;
+			}
+		}
+		using UnsignedT  = std::make_unsigned_t<IntT>;
+		UnsignedT result = 1;
+		auto      b      = static_cast<UnsignedT>(base);
+		auto      e      = static_cast<UnsignedT>(exp);
+		while (e > 0) {
+			if ((e & 1u) != 0) result = static_cast<UnsignedT>(result * b);
+			b = static_cast<UnsignedT>(b * b);
+			e >>= 1;
+		}
+		return static_cast<IntT>(result);
+	}
+
 	struct IMPLEMENT_QUERY(QueryEvaluateHOUTExpression, CompTimeEvalResult) {
 		/**
 		 * @brief Error indicating that an expression was to complex for a simple tree evaluation.
@@ -363,9 +392,13 @@ namespace compiler::helios {
 										break;
 									case IntegerPow:
 									case FloatPow:
-										set_num_result(
-											static_cast<ResultT>(std::pow(lhs_val, rhs_val))
-										);
+										if constexpr (std::is_integral_v<ResultT>)
+											set_num_result(comptimeIntPow<ResultT>(lhs_val, rhs_val)
+									        );
+										else
+											set_num_result(
+												static_cast<ResultT>(std::pow(lhs_val, rhs_val))
+											);
 										break;
 									default:
 										ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
