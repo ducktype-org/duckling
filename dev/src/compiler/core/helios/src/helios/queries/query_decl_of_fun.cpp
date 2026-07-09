@@ -285,22 +285,24 @@ namespace compiler::helios {
 				this->out.emplace(std::move(output));
 			}
 
-			// @TODO: #2251 Extract operatoriness from declaration.
-			static constexpr auto DUMMY_OPERATORINESS
-				= HOUTFunctionDeclaration::Operatoriness::None;
-
 			// @TODO: #1029 make failure more explicit
 			void visitFun(pst::Access<pst::Fun> stmt) final {
 				// @TODO: #1029 rest, flags, attributes, etc
-				emplaceDeclaration(stmt->getParams(), stmt->getRet(), DUMMY_OPERATORINESS);
+				emplaceDeclaration(
+					stmt->getParams(), stmt->getRet(), HOUTFunctionDeclaration::Operatoriness::None
+				);
 			}
 
 			void visitFunDecl(pst::Access<pst::FunDecl> stmt) final {
-				emplaceDeclaration(stmt->getParams(), stmt->getRet(), DUMMY_OPERATORINESS);
+				emplaceDeclaration(
+					stmt->getParams(), stmt->getRet(), HOUTFunctionDeclaration::Operatoriness::None
+				);
 			}
 
 			void visitMethod(pst::Access<pst::Method> stmt) final {
-				emplaceDeclaration(stmt->getParams(), stmt->getRet(), DUMMY_OPERATORINESS);
+				emplaceDeclaration(
+					stmt->getParams(), stmt->getRet(), HOUTFunctionDeclaration::Operatoriness::None
+				);
 
 				const auto  self_scope  = ctx.query<QueryPrimaryCodeScopeFor>(stmt);
 				const SymID self_symbol = ctx.query<defgen::QueryGeneratedSymbol>({
