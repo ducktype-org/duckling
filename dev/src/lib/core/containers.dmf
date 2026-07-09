@@ -178,7 +178,7 @@ fun copyChars(source: manyptr char, dest: manyptr char, count: u64) -> () = {
     copyCharsAt(source, dest, 0u64, count);
 }
 
-fun stringify_str(x: str) -> DuckString = {
+fun stringifyStr(x: str) -> DuckString = {
     let size   = x.length();
     var result = duckStringReserve(size);
     copyChars(builtins.char_ptr_from_slice(x), result.pointer, size);
@@ -186,33 +186,33 @@ fun stringify_str(x: str) -> DuckString = {
     return result;
 }
 
-fun stringify_char(x: char) -> DuckString = {
+fun stringifyChar(x: char) -> DuckString = {
     var result        = duckStringReserve(1u64);
     result.pointer[0] = x;
     result.len        = 1u64;
     return result;
 }
 
-fun stringify_bool(x: bool) -> DuckString = {
-    if (x) return stringify_str("true");
-    return stringify_str("false");
+fun stringifyBool(x: bool) -> DuckString = {
+    if (x) return stringifyStr("true");
+    return stringifyStr("false");
 }
 
-fun stringify_i64(x: i64) -> DuckString = {
+fun stringifyI64(x: i64) -> DuckString = {
     let max_size = 21u64;
     var result   = duckStringReserve(max_size);
     result.len   = runtime.i64_to_string(x, result.pointer, max_size);
     return result;
 }
 
-fun stringify_u64(x: u64) -> DuckString = {
+fun stringifyU64(x: u64) -> DuckString = {
     let max_size = 21u64;
     var result   = duckStringReserve(max_size);
     result.len   = runtime.u64_to_string(x, result.pointer, max_size);
     return result;
 }
 
-fun stringify_f64(x: f64) -> DuckString = {
+fun stringifyF64(x: f64) -> DuckString = {
     let max_size = 20u64;
     var result   = duckStringReserve(max_size);
     result.len   = runtime.float_to_string(x, result.pointer, max_size);
