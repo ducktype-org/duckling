@@ -195,6 +195,7 @@ namespace lang_def {
 		BCFalse,
 		BCIsConstant,
 		BCInitialValue,
+		BCPacked,
 		COUNT,
 	};
 
