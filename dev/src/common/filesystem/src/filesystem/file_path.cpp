@@ -15,15 +15,28 @@ namespace {
 	bool hasTemporaryPrefix(const std::filesystem::path& path) {
 		auto temp_dir = std::filesystem::canonical(std::filesystem::temp_directory_path());
 
-		auto temp_str = temp_dir.generic_string();
-		auto path_str = path.generic_string();
+		auto temp_exact = temp_dir.generic_string();
+		// Ensure the prefix ends with a separator for correct prefix matching.
+		auto temp_prefix = temp_exact;
+		if (!temp_prefix.empty() && temp_prefix.back() != '/') temp_prefix += '/';
 
-		if (path_str == temp_str) return true;  // Exact match
+		auto matches = [&](const std::filesystem::path& p) {
+			auto p_str = p.generic_string();
+			return p_str == temp_exact || p_str.starts_with(temp_prefix);
+		};
 
-		// Ensure temp_str ends with a separator for correct prefix matching
-		if (!temp_str.empty() && temp_str.back() != '/') temp_str += '/';
+		if (matches(path)) return true;
 
-		return path_str.starts_with(temp_str);
+		// The system temp dir may sit behind a symlink (on macOS /var -> /private/var), so a
+		// path expressed through the symlink won't share the canonical temp prefix. Retry after
+		// resolving symlinks; weakly_canonical tolerates paths that don't exist yet.
+		if (path.is_absolute()) {
+			std::error_code ec;
+			auto            resolved = std::filesystem::weakly_canonical(path, ec);
+			if (!ec && matches(resolved)) return true;
+		}
+
+		return false;
 	}
 }
 
