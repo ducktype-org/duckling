@@ -1,0 +1,22 @@
+# Tests that scripts can use the standard library with the default compiler
+# options. `print` is a std function, so these only pass if the std is loaded:
+#  - direct: `duckc run` (DVM)
+#  - vm:     `duckc compile_script --dvm-backend` then `dvm run` (DVM backend)
+#  - exe:    `duckc compile_script` then run executable (LLVM backend)
+
+Tests:
+  print_string:
+    folder: "print_string"
+    Cases:
+      direct:
+        mode: direct
+        Output:
+          String: "abc"
+      vm:
+        mode: vm
+        Output:
+          String: "abc"
+      exe:
+        mode: exe
+        Output:
+          String: "abc"

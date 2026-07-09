@@ -1,5 +1,12 @@
+import core.builtins.*;
 
+# Test usages of builtins.
 fun main() = {
     let x: i64 = builtin_input_i64();
     builtin_output_i64(x + 1);
+
+    let p = char_ptr_from_slice("abc");
+    builtin_output_char(p[0]);
+
+    return 0;
 }

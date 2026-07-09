@@ -106,10 +106,8 @@ namespace compiler::helios {
 				tuple_info.members.push_back(ctx.query<defgen::QueryGeneratedSymbol>(
 					{ // Tuple field names are _1, _2, ...
 				      // Starting from 1, not 0!
-				      .name = base::StrID{ base::strConcat("_", order + 1) },
-				      .generated_symbol_data
-				      = defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::Field{
-						  .parent_type = key, .index = order } } }
+				      .name                  = base::StrID{ base::strConcat("_", order + 1) },
+				      .generated_symbol_data = defgen::Field{ .parent_type = key, .index = order } }
 				));
 			}
 
@@ -125,16 +123,12 @@ namespace compiler::helios {
 		static auto provide(Context& ctx, const QKey key) -> PResult {
 			// The fields of a slice type are always `ptr` and `len`, in that order.
 			SymID ptr = ctx.query<defgen::QueryGeneratedSymbol>(
-				{ .name = base::StrID{ "ptr" },
-			      .generated_symbol_data
-			      = defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::Field{
-					  .parent_type = key, .index = 0 } } }
+				{ .name                  = base::StrID{ "ptr" },
+			      .generated_symbol_data = defgen::Field{ .parent_type = key, .index = 0 } }
 			);
 			SymID len = ctx.query<defgen::QueryGeneratedSymbol>(
-				{ .name = base::StrID{ "len" },
-			      .generated_symbol_data
-			      = defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::Field{
-					  .parent_type = key, .index = 1 } } }
+				{ .name                  = base::StrID{ "len" },
+			      .generated_symbol_data = defgen::Field{ .parent_type = key, .index = 1 } }
 			);
 
 			return SliceTypeData{ .ptr = ptr, .len = len };
@@ -144,4 +138,41 @@ namespace compiler::helios {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySliceTypeData);
+
+	struct IMPLEMENT_QUERY(QueryDynamicArrayTypeData, DynamicArrayTypeData) {
+		static auto provide(Context& ctx, const QKey key) -> PResult {
+			// The fields of a dynamic array type are always:
+			// - `ptr` - to the start of the data
+			// - `len` - length of the list
+			// - `off_start_reserved` - offset of the start of reserved memory
+			// - `off_end_reserved` - offset of the end of reserved memory
+			SymID ptr = ctx.query<defgen::QueryGeneratedSymbol>(
+				{ .name                  = base::StrID{ "ptr" },
+			      .generated_symbol_data = defgen::Field{ .parent_type = key, .index = 0 } }
+			);
+			SymID len = ctx.query<defgen::QueryGeneratedSymbol>(
+				{ .name                  = base::StrID{ "len" },
+			      .generated_symbol_data = defgen::Field{ .parent_type = key, .index = 1 } }
+			);
+			SymID off_start_reserved = ctx.query<defgen::QueryGeneratedSymbol>(
+				{ .name                  = base::StrID{ "off_start_reserved" },
+			      .generated_symbol_data = defgen::Field{ .parent_type = key, .index = 2 } }
+			);
+			SymID off_end_reserved = ctx.query<defgen::QueryGeneratedSymbol>(
+				{ .name                  = base::StrID{ "off_end_reserved" },
+			      .generated_symbol_data = defgen::Field{ .parent_type = key, .index = 3 } }
+			);
+
+			return DynamicArrayTypeData{
+				.ptr                = ptr,
+				.len                = len,
+				.off_start_reserved = off_start_reserved,
+				.off_end_reserved   = off_end_reserved,
+			};
+		}
+
+		QUERY_AUTO_CACHE_CREF
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDynamicArrayTypeData);
 }

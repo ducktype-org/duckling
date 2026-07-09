@@ -14,6 +14,7 @@
 #include <frontend/pst_parser/elements/hierarchy/not_statements/format_string_sub_elements/format_sub_string.hpp>
 #include <frontend/pst_parser/pst_expr_visitor.hpp>
 #include <helios/hout/elements/expr.hpp>
+#include <helios/queries/function_queries.hpp>
 #include <helios/tsh/queries.hpp>
 #include <helios/tsh/symbol_type.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
@@ -27,6 +28,7 @@
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
+#include <base/extend_cpp/vector_utils.hpp>
 #include <base/pointers/box.hpp>
 
 #include <query_framework/query_result.hpp>
@@ -119,6 +121,16 @@ namespace compiler::helios::code {
 			getVariantSubExprsInPlace(ctx, expr.unlock(ctx)->getLeftOperand(), sub_exprs);
 			getVariantSubExprsInPlace(ctx, expr.unlock(ctx)->getRightOperand(), sub_exprs);
 			return sub_exprs;
+		}
+
+		void filterFunctionsByOperatoriness(
+			query::Context&                              ctx,
+			std::vector<SymID>&                          function_syms,
+			const HOUTFunctionDeclaration::Operatoriness opiness
+		) {
+			base::filterVectorInPlace(function_syms, [&](const SymID& sym) {
+				return ctx.query<QueryDeclOfFun>(sym)->valueOrThrow().operatoriness == opiness;
+			});
 		}
 
 		/**
@@ -301,29 +313,151 @@ namespace compiler::helios::code {
 			}
 
 			/**
-			 * If a valid builtin exists (special characters only), returns it.
-			 * Otherwise, returns None.
+			 * @brief Finds the appropriate unary operator to call and constructs the corresponding
+			 * HOUT expression. Consumes the provided argument expression.
+			 * Some cases, such as the ampersand and asterisk for references are not handled here.
+			 * Perhaps they will be moved here later.
+			 * @param op The operator
+			 * @param inner The precomputed argument
+			 * @param scope The scope in which the operator call happens
+			 * @param operatoriness Whether the operator is prefix or suffix
 			 */
-			base::Optional<Box<Expr>> unaryBuiltin(
-				lexer::Operator op, Box<Expr> expr, ElementOrigin origin
-			) {
-				auto result = findUnaryBuiltin(ctx, op, expr.ref());
-				match_optional(result) {
-					opt_some_move(value) {
-						auto [operation, coercion] = value;
-						auto coerced               = coercion.coerce(ctx, std::move(expr));
+			[[nodiscard]]
+			Box<Expr> resolveUnaryOperator(
+				const pst::Access<pst::OperatorWrapper>      op,
+				Box<Expr>                                    inner,
+				const ScopeID                                scope,
+				const HOUTFunctionDeclaration::Operatoriness operatoriness
+			) const {
+				CORE_ASSERT(
+					operatoriness == HOUTFunctionDeclaration::Operatoriness::Prefix
+						|| operatoriness == HOUTFunctionDeclaration::Operatoriness::Suffix,
+					"resolveUnaryOperator should only filter for prefix or suffix operators"
+				);
+
+				// Unary operator resolution happens in two steps:
+				// 1. If the argument is numeric (integral or float) and the operator is a built-in
+				//    numeric operator, we perform any needed coercion and emit a UnaryOperatorExpr.
+				// 2. Otherwise, we perform "regular" lookup. This includes lookups in two places:
+				//    a. The calling scope (a user can define a standalone function named `+`).
+				//    b. The type of the only argument (for an operator method).
+				// Next, we perform typical overload resolution.
+
+				// Step 1. — special path for numeric promotions
+				if (isNumericType(inner->expression_type.getType())
+				    && isNumericOperator(op->unwrap())) {
+					auto numeric_builtin_opt
+						= findNumericUnaryBuiltin(ctx, op->unwrap(), inner.ref());
+					auto new_origin
+						= operatoriness == HOUTFunctionDeclaration::Operatoriness::Prefix
+					        ? elementOriginOrdered(pstOrigin(op), inner->origin)
+					        : elementOriginOrdered(inner->origin, pstOrigin(op));
+
+					if_opt_some(numeric_builtin_opt, numeric_builtin) {
+						auto [operation, coercion] = numeric_builtin;
+						auto coerced_inner         = coercion.coerce(ctx, std::move(inner));
 						return makeBox<UnaryOperatorExpr>(
-							ctx, origin, operation, std::move(coerced)
+							ctx, new_origin, operation, std::move(coerced_inner)
 						);
 					}
-					opt_none { return {}; }
 				}
-				CORE_UNREACHABLE();
+
+				// Step 2. — Regular lookup and overload resolution
+				const auto lookup_result
+					= HInterface::ofScopeWithParents(scope).lookup(ctx, op->unwrap().value);
+				// @TODO: #1412 fix dealias
+				auto all_candidates = lookup_result->valueOrThrow().leaves;
+				for (const auto [builtin_operator_sym, _]:
+				     *ctx.query<QueryRegularBuiltinOperatorSymbols>({})) {
+					if (name(builtin_operator_sym) == op->unwrap().value)
+						all_candidates.push_back(builtin_operator_sym);
+				}
+				filterFunctionsByOperatoriness(ctx, all_candidates, operatoriness);
+				return processUnaryOperatorCall(
+						   ctx, all_candidates, std::move(inner), pstOrigin(op), operatoriness
+				)
+				    .valueOrThrow();
+			}
+
+			void visitSuffixOperator(pst::Access<pst::expr::SuffixOperator> stmt) override {
+				const auto op    = stmt->getOperator().unlock(ctx);
+				auto       inner = subExprFromPST(ctx, stmt->getExpr()).valueOrThrow();
+				// If necessary, this is the place to handle any particularly tricky cases.
+				// Currently, there are none.
+
+				// After the tricky cases have been handled, execute standard procedures.
+				node = resolveUnaryOperator(
+					op,
+					std::move(inner),
+					ctx.query<QueryPrimaryCodeScopeFor>({ stmt }),
+					HOUTFunctionDeclaration::Operatoriness::Prefix
+				);
+			}
+
+			void visitPrefixOperator(pst::Access<pst::expr::PrefixOperator> stmt) override {
+				const auto op         = stmt->getOperator().unlock(ctx);
+				auto       inner      = subExprFromPST(ctx, stmt->getExpr()).valueOrThrow();
+				auto       inner_type = inner->expression_type.getSymbolType();
+
+				// Handle taking references
+				if (op->unwrap() == lang_def::NamedOperator::Ampersand) {
+					// @TODO: #1956 remove the check bellow.
+					// This is a temporary check to prevent us from taking reference of types that
+					// do not carry information.
+					if (not inner_type.getType().carriesInformation(ctx)) {
+						ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+							"Taking reference of type that does not carry information is not "
+							"supported yet.",
+							stmt->getStablePosition()
+						));
+						return;  // failed
+					}
+					// @TODO: #1549 RefOfExpr is inserted here naively without any checks.
+					// This should change to take value category into consideration as well as the
+					// `unique`/`leaking` specifiers.
+					auto primary_category = inner->expression_type.getValueCategory().getCategory();
+					if (primary_category == tsh::PrimaryCategory::Literal
+					    || primary_category == tsh::PrimaryCategory::Temporary) {
+						ctx.logInt(makeBox<dia_int::PlaceholderError>(
+							"Tried to reference a temporary", stmt->getStablePosition()
+						));
+						return;
+					}
+					node = makeBox<RefOfExpr>(ctx, pstOrigin(stmt), std::move(inner));
+					return;
+				}
+
+				// Handle dereferencing
+				if (op->unwrap() == lang_def::NamedOperator::Multiply) {
+					if (not tsh::isPointerKind(inner_type.getType().getKind())) {
+						ctx.logInt(makeBox<dia_int::PlaceholderError>(
+							"Tried to dereference a non-pointer type", stmt->getStablePosition()
+						));
+						return;
+					}
+					node = makeBox<DerefExpr>(ctx, pstOrigin(stmt), std::move(inner));
+					return;
+				}
+
+				if (op->unwrap() == lang_def::keywordToStr(lang_def::Keyword::Move)) {
+					node = makeBox<MoveExpr>(ctx, pstOrigin(stmt), std::move(inner));
+					return;
+				}
+
+				// After the tricky cases have been handled, execute standard procedures.
+				node = resolveUnaryOperator(
+					op,
+					std::move(inner),
+					ctx.query<QueryPrimaryCodeScopeFor>({ stmt }),
+					HOUTFunctionDeclaration::Operatoriness::Prefix
+				);
 			}
 
 			/**
 			 * @brief Finds the appropriate binary operator to call and constructs the corresponding
 			 * HOUT expression. Consumes the provided expressions of the arguments.
+			 * Currently used for all operators other than `As` (type cast) and `Pipe` (variant type
+			 * construction). Perhaps they will be moved here later.
 			 * @param op The operator
 			 * @param lhs The precomputed left-hand side argument
 			 * @param rhs The precomputed right-hand side argument
@@ -368,10 +502,13 @@ namespace compiler::helios::code {
 				// @TODO: #1412 fix dealias
 				auto all_candidates = lookup_result->valueOrThrow().leaves;
 				for (const auto [builtin_operator_sym, _]:
-				     *ctx.query<QueryRegularBinaryBuiltinSymbols>({})) {
+				     *ctx.query<QueryRegularBuiltinOperatorSymbols>({})) {
 					if (name(builtin_operator_sym) == op->unwrap().value)
 						all_candidates.push_back(builtin_operator_sym);
 				}
+				filterFunctionsByOperatoriness(
+					ctx, all_candidates, HOUTFunctionDeclaration::Operatoriness::Infix
+				);
 				return processBinaryOperatorCall(
 						   ctx, all_candidates, std::move(lhs), std::move(rhs), pstOrigin(op)
 				)
@@ -379,7 +516,7 @@ namespace compiler::helios::code {
 			}
 
 			void visitBinaryOperator(pst::Access<pst::expr::BinaryOperator> stmt) override {
-				// handle variants:
+				// Handle explicit type conversions
 				const auto op = stmt->getOperator().unlock(ctx);
 				if (op->unwrap() == lang_def::NamedOperator::As) {
 					const auto meta_type = tsh::SymbolType<>::withDefaults(tsh::getMetaType());
@@ -399,6 +536,7 @@ namespace compiler::helios::code {
 					return;
 				}
 
+				// Handle variant type construction
 				if (op->unwrap() == lang_def::NamedOperator::Pipe) {
 					auto                   sub_exprs = getVariantSubExprs(ctx, stmt);
 					std::vector<Box<Expr>> all_subtypes;
@@ -742,83 +880,6 @@ namespace compiler::helios::code {
 				node = makeBox<TupleExpr>(ctx, pstOrigin(stmt), std::move(expressions));
 			}
 
-			void visitSuffixOperator(pst::Access<pst::expr::SuffixOperator> stmt) override {
-				// note: here we will have to compile things like `a++`, `a--`, `T?`.
-				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-					"Suffix operators are not implemented yet in HOUT, since they don't exist "
-					"yet.",
-					stmt->getStablePosition()
-				));
-				return;  // failed
-			}
-
-			void visitPrefixOperator(pst::Access<pst::expr::PrefixOperator> stmt) override {
-				// @NOTE: This is a mockup
-				auto inner = subExprFromPST(ctx, stmt->getExpr()).valueOrThrow();
-
-				// @todo here we should:
-				// * lookup for user defined operators
-				// * type check
-				// * make function call
-				// For now we support just builtins
-
-				// if no function call is found, we try to use builtin operators:
-				auto inner_type = inner->expression_type.getSymbolType();
-
-				if (stmt->getOperator().unlock(ctx)->unwrap()
-				    == lang_def::NamedOperator::Ampersand) {
-					// @TODO: #1956 remove the check bellow.
-					// This is a temporary check to prevent us from taking reference of types that
-					// do not carry information.
-					if (not inner_type.getType().carriesInformation(ctx)) {
-						ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-							"Taking reference of type that does not carry information is not "
-							"supported yet.",
-							stmt->getStablePosition()
-						));
-						return;  // failed
-					}
-					// @TODO: #1549 RefOfExpr is inserted here naively without any checks.
-					// This should change to take value category into consideration as well as the
-					// `unique`/`leaking` specifiers.
-					auto primary_category = inner->expression_type.getValueCategory().getCategory();
-					if (primary_category == tsh::PrimaryCategory::Literal
-					    || primary_category == tsh::PrimaryCategory::Temporary) {
-						ctx.logInt(makeBox<dia_int::PlaceholderError>(
-							"Tried to reference a temporary", stmt->getStablePosition()
-						));
-						return;
-					}
-					node = makeBox<RefOfExpr>(ctx, pstOrigin(stmt), std::move(inner));
-					return;
-				} else if (stmt->getOperator().unlock(ctx)->unwrap()
-				           == lang_def::NamedOperator::Multiply) {
-					if (not tsh::isPointerKind(inner_type.getType().getKind())) {
-						ctx.logInt(makeBox<dia_int::PlaceholderError>(
-							"Tried to dereference a non-pointer type", stmt->getStablePosition()
-						));
-						return;
-					}
-					node = makeBox<DerefExpr>(ctx, pstOrigin(stmt), std::move(inner));
-					return;
-				}
-
-				auto builtin = unaryBuiltin(
-					stmt->getOperator().unlock(ctx)->unwrap(), std::move(inner), pstOrigin(stmt)
-				);
-				if (builtin.has_value()) {
-					node = std::move(builtin).value();
-					return;
-				} else {
-					ctx.logInt(makeBox<UndefinedUnaryOperatorError>(
-						stmt->getStablePosition(),
-						stmt->getOperator().unlock(ctx)->unwrap().str(),
-						makeBox<InteractiveType>(ctx, inner_type)
-					));
-					// failed
-				}
-			}
-
 			void visitTernary(pst::Access<pst::expr::Ternary> stmt) override {
 				const auto bool_type = tsh::SymbolType<>::withDefaults(tsh::getBoolType());
 				auto condition_res   = subExprFromPSTWithType(ctx, stmt->getCondition(), bool_type);
@@ -891,7 +952,6 @@ namespace compiler::helios::code {
 				auto op = stmt->getAssignmentType().unlock(ctx)->unwrap();
 
 				auto var = stmt->getVariables();
-				auto val = stmt->getValue();
 
 				auto location_expr_qresult = subExprFromPST(ctx, var);
 				if (location_expr_qresult.hasFailed()) return;
@@ -910,49 +970,6 @@ namespace compiler::helios::code {
 						"Left side of assignment can't be immutable.", stmt->getStablePosition()
 					));
 					return;
-				}
-
-				if (op == base::StrID("+=")) {
-					// @TODO: #1970 This implementation is temporary and should be handled by the
-					// `+=` operator in the future.
-					if (location_type.getType().getKind() == tsh::Kind::DynamicArray) {
-						auto dyn_array
-							= location_type.getType().as<tsh::DynamicArrayAbstractType>();
-						auto element_type = dyn_array.getElementType();
-						auto value_expr_coerced_qresult
-							= subExprFromPSTWithType(ctx, val, element_type);
-						if (value_expr_coerced_qresult.hasFailed()) return;
-
-						node = makeBox<ListPushExpr>(
-							pstOrigin(stmt),
-							std::move(location_expr),
-							std::move(value_expr_coerced_qresult).valueOrThrow()
-						);
-						return;
-					}
-				} else if (op == base::StrID("-=")) {
-					// @TODO: #1970 This implementation is temporary and should be handled by the
-					// `-=` operator in the future.
-					if (location_type.getType().getKind() == tsh::Kind::DynamicArray) {
-						auto u64_type = tsh::SymbolType<>{
-							tsh::getIntegralType(
-								ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned
-							),
-							tsh::ReferenceKind::Direct,
-							tsh::Mutability::Mutable
-						};
-
-						auto value_expr_coerced_qresult
-							= subExprFromPSTWithType(ctx, val, u64_type);
-						if (value_expr_coerced_qresult.hasFailed()) return;
-
-						node = makeBox<ListPopExpr>(
-							pstOrigin(stmt),
-							std::move(location_expr),
-							std::move(value_expr_coerced_qresult).valueOrThrow()
-						);
-						return;
-					}
 				}
 
 				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(

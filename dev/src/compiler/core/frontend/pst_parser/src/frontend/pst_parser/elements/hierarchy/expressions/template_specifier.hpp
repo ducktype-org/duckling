@@ -16,9 +16,16 @@ namespace pst::expr {
 		NAMED_CHILD(inner, TemplateList);
 
 	public:
-		TemplateSpecifier(const LangParserState& state): ExprElement(state, 300) {}
+		TemplateSpecifier(const LangParserState& state): ExprElement(state, 300) {
+			this->element_kind = ElementKind::ExprElement;
+		}
 
 		static MBox<ExprElement> parse(LangParserState& state);
+
+		[[nodiscard]]
+		auto getArgumentList() const -> AccessLocked<TemplateList> {
+			return inner.give();
+		}
 
 		~TemplateSpecifier() override = default;
 		void     dprint(std::ostream& out) const final;

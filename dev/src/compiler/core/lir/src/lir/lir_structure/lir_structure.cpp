@@ -83,9 +83,6 @@ namespace compiler::lir {
 							  variant_case(tsl::StaticArrayTypeLayout, static_array_layout) {
 								  current_layout = static_array_layout.getElementLayout();
 							  }
-							  variant_case(tsl::DynamicArrayTypeLayout, dynamic_array_layout) {
-								  current_layout = dynamic_array_layout.getElementLayout();
-							  }
 							  variant_case(tsl::PointerTypeLayout, many_pointer_layout) {
 								  current_layout = many_pointer_layout.getPointee();
 							  }
@@ -417,6 +414,19 @@ namespace compiler::lir {
 			}
 		}
 		lir_functions = std::move(result_functions);
+	}
+
+	base::Optional<BuiltinFunctionKind> getBuiltinKindFromHOUT(helios::BuiltinKind kind) {
+		switch (kind) {
+		case helios::BuiltinKind::DvmCharAlloc:
+			return BuiltinFunctionKind::DvmCharAlloc;
+		case helios::BuiltinKind::DvmCharRealloc:
+			return BuiltinFunctionKind::DvmCharRealloc;
+		case helios::BuiltinKind::DvmCharFree:
+			return BuiltinFunctionKind::DvmCharFree;
+		default:
+			return {};
+		}
 	}
 
 	LIRLocalSpecialKind specialKindFromMIR(const mir::MIRLocal& mir_local) {

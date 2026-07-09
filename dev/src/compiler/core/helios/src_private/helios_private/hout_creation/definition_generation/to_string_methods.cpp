@@ -22,9 +22,8 @@
 namespace compiler::helios::defgen {
 	SymID toStringSymForType(query::Context& ctx, const tsh::AbstractType type) {
 		return ctx.query<QueryGeneratedSymbol>({
-			.name = base::StrID("toString"),
-			.generated_symbol_data
-			= GeneratedSymbolData{ GeneratedSymbolData::ToStringMethod{ type } },
+			.name                  = base::StrID("toString"),
+			.generated_symbol_data = Method{ .owner_type = type, .kind = Method::Kind::ToString },
 		});
 	}
 
@@ -36,12 +35,13 @@ namespace compiler::helios::defgen {
 		) {
 			return ctx.query<QueryGeneratedSymbol>({
 				.name                  = base::StrID(name),
-				.generated_symbol_data = GeneratedSymbolData{ GeneratedSymbolData::BuiltinOperator{
+				.generated_symbol_data = BuiltinOperator{
 					.operator_type = ctx.query<tsh::QueryFunctionType>({
 						{ type },
 						STRING_TYPE,
 					}),
-				} },
+					.operatoriness = HOUTFunctionDeclaration::Operatoriness::None,
+				},
 			});
 		}
 	}
@@ -49,12 +49,13 @@ namespace compiler::helios::defgen {
 	SymID concatSym(query::Context& ctx) {
 		return ctx.query<QueryGeneratedSymbol>({
 			.name                  = base::StrID("builtin_string_concatenated"),
-			.generated_symbol_data = GeneratedSymbolData{ GeneratedSymbolData::BuiltinOperator{
+			.generated_symbol_data = BuiltinOperator{
 				.operator_type = ctx.query<tsh::QueryFunctionType>({
 					{ STRING_TYPE, STRING_TYPE },
 					STRING_TYPE,
 				}),
-			} },
+				.operatoriness = HOUTFunctionDeclaration::Operatoriness::None,
+			},
 		});
 	}
 
@@ -280,10 +281,9 @@ namespace compiler::helios::defgen {
 			const auto result_sym = ctx.query<QueryGeneratedSymbol>(
 				{ .name = base::StrID("__result"),
 			      .generated_symbol_data
-			      = GeneratedSymbolData{ GeneratedSymbolData::GeneratedFunctionVariable{
-					  .function_symbol = to_string_decl.original_symbol,
-					  .variable_index  = 0,
-					  .type            = STRING_TYPE } } }
+			      = GeneratedFunctionVariable{ .function_symbol = to_string_decl.original_symbol,
+			                                   .variable_index  = 0,
+			                                   .type            = STRING_TYPE } }
 			);
 			body.emplace_back(makeBox<code::VariableStmt>(
 				code::generatedOrigin(),

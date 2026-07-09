@@ -365,6 +365,7 @@ DEF_INSTR(jmpIfNot_label, (vm::opargs::Label, label))
 DEF_INSTR(call_func, (vm::opargs::FunctionName, function))
 DEF_INSTR(call_builtinfunc, (vm::opargs::BuiltinFunctionName, function))
 DEF_INSTR(call_cfunc, (vm::opargs::ExtCFunctionName, function))
+DEF_INSTR(call_ffifunc, (vm::opargs::FFIFunctionName, function))
 
 DEF_INSTR(set_threadctx, (vm::opargs::FunctionName, function))
 

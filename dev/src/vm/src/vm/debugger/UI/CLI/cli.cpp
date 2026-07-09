@@ -51,9 +51,13 @@ namespace vm::debugger::cli {
 			  printProcStatus(out, status);
 			  printNL(out.getContents());
 		  }),
-		  error_listener([&](const std::string& err) { printNL("Error: ", err); }) {
+		  error_listener([&](const std::string& err) { printError(err); }),
+		  output_listener([&](const std::string& str) {
+			  print({ { str, printer::Color::BrightCyan } });
+		  }) {
 		debugger.attachOnStatusChangedListener(status_change_listener);
 		debugger.attachOnErrorListener(error_listener);
+		debugger.attachOnOutputListener(output_listener);
 	}
 
 	std::expected<void, api::ApiError> CLIDebugger::load(const fs::File& file) {
@@ -80,17 +84,15 @@ namespace vm::debugger::cli {
 
 	int CLIDebugger::run() {
 		if (!load_result) {
-			printNL("Failed to load file");
+			printError("Failed to load file");
 
 			variant_match(load_result.error()) {
-				variant_case(api::LoadProgramError, load_error) {
-					printNL("Error: ", load_error.why);
-				}
+				variant_case(api::LoadProgramError, load_error) { printError(load_error.why); }
 				variant_default {
 					std::visit(
 						[&](auto&& arg) {
 							using T = std::decay_t<decltype(arg)>;
-							printNL("Error: ", TypeParseTraits<T>::NAME.data());
+							printError(TypeParseTraits<T>::NAME.data());
 						},
 						load_result.error()
 					);
@@ -112,19 +114,19 @@ namespace vm::debugger::cli {
 		          .addSubcommand(clah::Clah("run", "runs main function")
 		                             .setHandler([&](const clah::ParsingResult&) -> int {
 										 auto response = debugger.runMain();
-										 if (!response) printNL("Run failed!");
+										 if (!response) printError("Run failed!");
 										 return 0;
 									 }))
 		          .addSubcommand(clah::Clah("pause", "pauses running VM")
 		                             .setHandler([&](const clah::ParsingResult&) -> int {
 										 auto response = debugger.pause();
-										 if (!response) printNL("Pause failed!");
+										 if (!response) printError("Pause failed!");
 										 return 0;
 									 }))
 		          .addSubcommand(clah::Clah("continue", "resumes VM execution")
 		                             .setHandler([&](const clah::ParsingResult&) -> int {
 										 auto response = debugger.resume();
-										 if (!response) printNL("Continue failed!");
+										 if (!response) printError("Continue failed!");
 										 return 0;
 									 }))
 		          .addSubcommand(clah::Clah("status", "writes current VM status")
@@ -169,7 +171,7 @@ namespace vm::debugger::cli {
 							  auto line   = base::safeIntConv<usize>(options.getPositional<i64>(1));
 
 							  if (!selected_file) {
-								  printNL("No selected file");
+								  printError("No selected file");
 								  return 0;
 							  }
 
@@ -187,7 +189,7 @@ namespace vm::debugger::cli {
 									  (enable ? "set." : "unset.")
 								  );
 							  } else {
-								  printNL("Modyfing breakpoint failed!");
+								  printError("Modyfing breakpoint failed!");
 							  }
 
 							  return 0;
@@ -229,6 +231,15 @@ namespace vm::debugger::cli {
 
 	void CLIDebugger::printNL(const printer::PrinterContentsSeq& content) {
 		std::lock_guard lk(output_mutex);
+		printer::StreamPrinter::print(content, std::cout);
+		printer::StreamPrinter::newline(1, std::cout);
+	}
+
+	void CLIDebugger::printError(const printer::PrinterContentsSeq& content) {
+		std::lock_guard lk(output_mutex);
+		printer::StreamPrinter::print(
+			{ { "[Debug error]: ", printer::Color::BrightRed } }, std::cout
+		);
 		printer::StreamPrinter::print(content, std::cout);
 		printer::StreamPrinter::newline(1, std::cout);
 	}

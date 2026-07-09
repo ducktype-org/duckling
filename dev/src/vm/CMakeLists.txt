@@ -36,7 +36,7 @@ set(vm_internal_deps
 )
 
 set(vm_external_deps
-    Crow::Crow JSON
+    Crow::Crow JSON PkgConfig::LIBFFI
 )
 
 set(vm_dependencies

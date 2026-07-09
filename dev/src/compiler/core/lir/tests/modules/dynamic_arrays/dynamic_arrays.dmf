@@ -1,6 +1,6 @@
 fun dynamic_array_test() -> () = {
     var l: List[i64];
-    l += 1;
-    let x = len l;
-    l -= 1u64;
+    l.push(1);
+    let x = l.length();
+    l.pop(1u64);
 } 

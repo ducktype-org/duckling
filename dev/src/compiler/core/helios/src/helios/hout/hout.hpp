@@ -27,23 +27,12 @@ namespace compiler::repl {
 	// for friend:
 	struct ImplementationOf_QueryReplExpressionWrapper;
 	struct ImplementationOf_QueryReplInstructionWrapper;
-	struct ScriptMainWrapperBuilder;
 }
 
 namespace compiler::helios {
 
 	// for friend:
 	struct ImplementationOf_QueryDeclOfFun;
-
-	namespace defgen {
-		struct ImplementationOf_QueryImplicitClassConstructor;
-		struct ImplementationOf_QueryDefaultClassConstructor;
-		struct ImplementationOf_QueryDefaultStaticArrayConstructor;
-		struct ImplementationOf_QueryTuplePackConstructor;
-		struct ImplementationOf_QueryToStringMethod;
-		struct ImplementationOf_QueryDefaultDestructor;
-		struct ImplementationOf_QueryLengthMethod;
-	}
 
 	namespace code {
 		// Forward declaration:
@@ -55,6 +44,22 @@ namespace compiler::helios {
 	 * @brief Storage of information coming from function declaration without processing its body.
 	 */
 	struct HOUTFunctionDeclaration final {
+		/**
+		 * @brief Classifies functions by what kind of operator they are (infix, prefix, suffix), or
+		 * if they are not an operator (none).
+		 *
+		 * This information is useful during overload resolution, when lookup by name returns multiple
+		 * candidates, some being of incorrect operatoriness in the given context. For example, if
+		 * the user defines both a prefix and suffix `++` operator, lookup will return both, but
+		 * the expression can only ever consider at most one of these candidates for resolution.
+		 */
+		enum class Operatoriness {
+			None,    ///< The function is not an operator
+			Infix,   ///< The function is a binary, infix operator
+			Prefix,  ///< The function is a unary, prefix operator
+			Suffix   ///< The function is a unary, suffix operator
+		};
+
 		// @TODO: decide if HOUT functions declarations should contain its HELIOS SymID
 		// - flags like "pure", "thread safe", "shared-thread-function", etc
 
@@ -73,6 +78,8 @@ namespace compiler::helios {
 
 		base::StrID original_name;
 
+		Operatoriness operatoriness;
+
 		tsh::SymbolType<> return_type;
 
 		std::vector<code::Parameter> parameters;
@@ -87,6 +94,7 @@ namespace compiler::helios {
 	private:
 		HOUTFunctionDeclaration(
 			SymID                        symbol,
+			Operatoriness                operatoriness,
 			tsh::SymbolType<>            ret_type,
 			std::vector<code::Parameter> parameters,
 			code::ElementOrigin          origin
@@ -101,26 +109,13 @@ namespace compiler::helios {
 	 * @note it should be used for all function-like entities (macros, methods, etc.)
 	 */
 	struct HOUTFunction final {
-	private:
+		HOUTFunction() = delete;
+
 		HOUTFunction(
 			code::ElementOrigin origin,
 			CRef<HOUTFunctionDeclaration>,
 			const std::shared_ptr<const code::CodeBlock>& body
 		);
-		friend struct ImplementationOf_QueryCodeOfFun;
-		friend defgen::ImplementationOf_QueryImplicitClassConstructor;
-		friend defgen::ImplementationOf_QueryTuplePackConstructor;
-		friend defgen::ImplementationOf_QueryDefaultClassConstructor;
-		friend defgen::ImplementationOf_QueryDefaultStaticArrayConstructor;
-		friend defgen::ImplementationOf_QueryToStringMethod;
-		friend defgen::ImplementationOf_QueryDefaultDestructor;
-		friend defgen::ImplementationOf_QueryLengthMethod;
-		friend compiler::repl::ImplementationOf_QueryReplExpressionWrapper;
-		friend compiler::repl::ImplementationOf_QueryReplInstructionWrapper;
-		friend compiler::repl::ScriptMainWrapperBuilder;
-
-	public:
-		HOUTFunction() = delete;
 
 		/**
 		 * @brief The information about how the function was created from code,

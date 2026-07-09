@@ -439,7 +439,6 @@ namespace compiler::repl {
 		  m_frontend(completions_enabled, bracketed_paste_enabled),
 		  m_lowering_context() {
 		initDVM();
-		preloadStandardLibrary();
 	}
 
 	ReplResult ReplSession::loadScriptFile(std::string_view file_path) {
