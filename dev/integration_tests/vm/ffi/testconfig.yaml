@@ -7,7 +7,7 @@ PreNode: ""
 # Bare soname of the system math library, resolved by the platform's dynamic loader
 # (libm.so.6 on Linux, libm.dylib on macOS).
 Env:
-    math_lib: 'if [ "$(uname)" = "Darwin" ]; then echo libm.dylib; else echo libm.so.6; fi'
+    math_lib: '[ "@{is_macos}" = true ] && echo libm.dylib || echo libm.so.6'
 
 Tests:
   ffi-system-lib:
