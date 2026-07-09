@@ -163,7 +163,7 @@ fun listOfRefsTest() -> () = {
 }
 
 
-# @TODO: #2835 Make this test come back when destructors are legit.
+# @TODO: #2825 Make this test come back when destructors are legit.
 # fun listOfBoxesTest() -> () = {
 #     var list_of_boxes: List[box Point];
 #     var p1: box Point = Point(1, 2);

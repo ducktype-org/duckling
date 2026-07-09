@@ -461,7 +461,7 @@ namespace compiler::helios::code {
 								"Type `",
 								inner_type.toString(),
 								"` is trivially copyable. No need to use the explicit `copy` "
-						        "keyword."
+								"keyword."
 							),
 							stmt->getStablePosition()
 						));

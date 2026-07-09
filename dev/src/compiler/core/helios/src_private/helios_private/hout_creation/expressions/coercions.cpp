@@ -51,8 +51,9 @@ namespace compiler::helios {
 				if (to_kind == tsh::ReferenceKind::Direct)
 					// var x: T = box_T; -> Dereference the rhs.
 					return makeBox<code::DerefExpr>(ctx, origin, std::move(expr));
-				// Should be explicit: var x: ref T = &box_T;
-				CORE_PANIC("Illegal Box -> Ref coercion, should be caught earlier");
+				else if (to_kind == tsh::ReferenceKind::Ref)
+					// Should be explicit: var x: ref T = &box_T;
+					CORE_PANIC("Illegal Box -> Ref coercion, should be caught earlier");
 			}
 
 			return std::move(expr);
@@ -195,9 +196,9 @@ namespace compiler::helios {
 		// A non-trivial copy is only allowed when it is an implicit move of an owned temporary.
 		// Otherwise it is an implicit copy which should be explicit, thus we error.
 		if (requires_copy && !from_type.getType().isTriviallyCopyable(ctx)) {
-			// The copy is implicit (and disallowed) when reading out of a reference/box (the
-			// pointee always survives) or when copying a non-trivial lvalue. Owned temporaries and
-			// the results of `copy`/`move` are Direct rvalues, so they fall through and are moved.
+			// The copy is implicit (and disallowed) when reading out of a reference/box or when
+			// copying a non-trivial lvalue. Owned temporaries and the results of `copy`/`move` are
+			// Direct rvalues, so they fall through and are moved.
 			const bool reads_through_reference = from_type.getRefKind() == tsh::ReferenceKind::Ref
 			                                  || (from_type.getRefKind() == tsh::ReferenceKind::Box
 			                                      && to.getRefKind() != tsh::ReferenceKind::Box);
