@@ -419,7 +419,7 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
                 debug!("failed to parse a package: {e}");
                 let mut result = GathererComputation::only_success(fetch_failure());
                 result.1.push(e);
-                return result;
+                result
             }
         }
     }
