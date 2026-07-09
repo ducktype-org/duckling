@@ -338,7 +338,7 @@ namespace compiler::helios::code {
 	 * @note May construct a BinaryOperatorExpr or a CallExpr depending on what the HELIoS operator
 	 * translates to in the lower level.
 	 */
-	Box<Expr> constructOperatorExpr(
+	Box<Expr> constructHOUTBuiltinOpExpr(
 		query::Context&                              ctx,
 		const CallPstOrigin&                         pst_origin,
 		const SymID                                  fun,
@@ -789,7 +789,7 @@ namespace compiler::helios::code {
 		// as that case is handled earlier, before considering overload resolution.
 		variant_match(getSymRef(callee_sym)->other) {
 			variant_case_novalue(defgen::BuiltinOperator) {
-				return constructOperatorExpr(
+				return constructHOUTBuiltinOpExpr(
 					ctx, pst_origin, callee_sym, std::move(call_arguments), coercions
 				);
 			}
@@ -839,7 +839,7 @@ namespace compiler::helios::code {
 		// handling which may not be simply a single function call.
 		variant_match(getSymRef(callee_sym)->other) {
 			variant_case(defgen::BuiltinOperator, generated) {
-				return constructOperatorExpr(
+				return constructHOUTBuiltinOpExpr(
 					ctx, pst_origin, callee_sym, std::move(call_arguments), coercions
 				);
 			}
