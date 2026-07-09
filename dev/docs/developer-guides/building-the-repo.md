@@ -38,35 +38,37 @@ sudo pacman -S python python-pip python-click doxygen graphviz lcov pkgconf libf
 
 #### MacOS
 
-First of all, the toolbox requires at least Python3.12, while macOS default Python is Python3.9.
-Secondly, there are two ways of installing clang on MacOS:
-1. using official Apple clang provided by Xcode,
-2. installing it from the Homebrew.
+The project is designed around **libstdc++** (for example it links `-lstdc++exp` for `<stacktrace>`),
+so on macOS it is built with **Homebrew GCC**, not Apple clang or Homebrew's clang (those use
+libc++, whose ABI is incompatible). The supported toolchain is `g++-15` + libstdc++ together with a
+copy of LLVM 19 built from source with the same compiler (see the [install-llvm](#optional-but-recommended-installing-custom-llvm-library)
+step below), so its libraries share the libstdc++ ABI. Xcode's command line tools are still needed
+for the macOS SDK and the system linker (`ld64`).
 
-You need to have at least Xcode 16.3 (clang version string `17.0.0`, run `clang --version` to check), so that it corresponds to the upstream clang 19.
-You can check the mapping between Apple and LLVM versions [on the English Xcode Wikipedia page](https://en.wikipedia.org/wiki/Xcode#Toolchain_versions).
 ```bash
-# For macOS clang
 xcode-select --install
 
-# For LLVM clang
+# GCC (provides g++-15 / gcc-15), the build tools, ICU and libffi.
+brew install gcc cmake ninja graphviz lcov doxygen python@3.12 pkg-config libffi icu4c
+
+# clang-format / clang-tidy 19 are only used for linting (pr-validate / cpp-linter).
 brew install llvm@19
 ```
 
+Select GCC as the compiler for every toolbox command (the toolbox otherwise picks up Apple clang):
+
 ```bash
-# Install remaining dependencies
-brew install cmake ninja graphviz lcov doxygen python@3.12 clang-format pkg-config libffi
+export CC=gcc-15
+export CXX=g++-15
 ```
 
-Also, unlike many Linuxes, Homebrew doesn't provide a lot of Python packages in their repositories.
-Therefore, you have to create a local virtual environment and use it when running the toolbox.
+The toolbox requires at least Python 3.12, while the macOS default is older. Homebrew also doesn't
+package most of the Python dependencies, so create a local virtual environment and use it whenever
+you run the toolbox (`.venv/bin/python3 toolbox.py ...`).
 ```bash
 cd dev/
-# Verify you are running at least Python3.12
-python3 --version
-python3 -m venv .venv
+python3.12 -m venv .venv
 source .venv/bin/activate
-# Manually install Python dependencies
 pip3 install click
 pip3 install -r requirements.txt
 ```
@@ -150,27 +152,21 @@ Advanced options like unity compilation, LTO, and symbol stripping are available
 
 #### MacOS caveats
 
-CMake may not found LLVM installed from the Homebrew.
-To prevent that set the LLVM directory **before** executing the above command.
+On macOS the `install-llvm` step above is **required**, not optional: Homebrew's `llvm@19` is built
+against libc++, whose ABI is incompatible with the libstdc++ this project uses. `install-llvm` builds
+LLVM 19 from source with your `g++`, so the resulting libraries share the libstdc++ ABI. Make sure
+`CC`/`CXX` point at `gcc-15`/`g++-15` (see above) before running it and `setup-build`.
 
-```bash
-export LLVM_DIR=${HOMEBREW_PREFIX}/opt/llvm@19
-```
-
-It's also possible to add it to the `$CMAKE_PREFIX_PATH` variable, but this can resolve in compiling with the upstream clang instead of the Apple one.
-
-Also, ICU bundled with Apple Xcode doesn't provide the `<unicode/unistr.h>` header, therefore you are advised to install it with the Homebrew too.
+Xcode's Homebrew ICU is a C-only build, so install the full ICU from Homebrew and point CMake at it
+with `$ICU_ROOT` **before** running `setup-build`:
 
 ```bash
 brew install icu4c
-```
-
-As is the case with LLVM, CMake doesn't find ICU either.
-Set the `$ICU_ROOT` variable **before** executing the `setup-build` toolbox command.
-
-```bash
 export ICU_ROOT=${HOMEBREW_PREFIX}/opt/icu4c
 ```
+
+When `setup-build` prompts for a linker, choose the default (`ld64`). `mold` and `lld` are offered by
+the prompt but do not support the Mach-O object format, so the link step fails with them.
 
 
 ## Compiling the project

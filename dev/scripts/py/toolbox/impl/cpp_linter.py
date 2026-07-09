@@ -1,5 +1,9 @@
 from concurrent.futures import ThreadPoolExecutor
+from functools import lru_cache
 from pathlib import Path
+import os
+import platform
+import subprocess
 import sys
 import tempfile
 
@@ -120,6 +124,69 @@ def get_files_for_linter(
     }
 
 
+@lru_cache(maxsize=None)
+def gcc_clang_tidy_extra_args(build_folder: Path) -> str:
+    """
+    clang-tidy parses translation units with clang. On macOS a build configured with GCC
+    (g++/libstdc++) leaves clang unable to find libstdc++ or the macOS SDK headers on its own,
+    so every file fails with e.g. `'type_traits' file not found`. Return the --extra-arg flags
+    that point clang at the GCC libstdc++ headers and the SDK. Empty on non-macOS or non-GCC
+    builds (Apple/Homebrew clang builds use libc++ and need no help).
+    """
+    if platform.system() != "Darwin":
+        return ""
+
+    compiler = ""
+    try:
+        for line in (build_folder / "CMakeCache.txt").read_text().splitlines():
+            if line.startswith("CMAKE_CXX_COMPILER:"):
+                compiler = line.split("=", 1)[1].strip()
+                break
+    except OSError:
+        return ""
+
+    name = Path(compiler).name.lower()
+    if not compiler or "clang" in name or not ("g++" in name or "gcc" in name):
+        return ""
+
+    # Ask the GCC driver for its libstdc++ header search paths.
+    include_dirs: list[str] = []
+    try:
+        search = subprocess.run(
+            [compiler, "-std=c++23", "-E", "-x", "c++", "-v", "/dev/null"],
+            capture_output=True,
+            text=True,
+        ).stderr
+    except OSError:
+        return ""
+    in_search = False
+    for line in search.splitlines():
+        if "#include <...> search starts here:" in line:
+            in_search = True
+        elif "End of search list." in line:
+            break
+        elif in_search and "/c++/" in line:
+            include_dirs.append(os.path.realpath(line.strip()))
+
+    if not include_dirs:
+        return ""
+
+    # -nostdinc++ drops clang's own C++ stdlib search (which would resolve to libc++ and warn that
+    # libstdc++ wasn't found); the -isystem paths below supply libstdc++ instead.
+    args = ["--extra-arg=-nostdinc++"]
+    try:
+        sdk = subprocess.run(
+            ["xcrun", "--show-sdk-path"], capture_output=True, text=True
+        ).stdout.strip()
+        if sdk:
+            args += ["--extra-arg=-isysroot", f"--extra-arg={sdk}"]
+    except OSError:
+        pass
+    for include_dir in include_dirs:
+        args += ["--extra-arg=-isystem", f"--extra-arg={include_dir}"]
+    return " " + " ".join(args)
+
+
 def clang_tidy_on(
     clang_tidy_path: str,
     build_folder: Path,
@@ -138,7 +205,7 @@ def clang_tidy_on(
         tidy_out, _ = bash_command_get_output(
             f"{clang_tidy_path} -p {build_folder} --format-style file --config-file .clang-tidy"
             f' --line-filter="[{{"name": "{file}", "lines": {file_diffs}}}]"'
-            f" --extra-arg=-std=c++23 {file}",
+            f" --extra-arg=-std=c++23{gcc_clang_tidy_extra_args(build_folder)} {file}",
             log_file=log_file,
         )
         if tidy_out:
