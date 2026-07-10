@@ -99,6 +99,7 @@ SubDirs:
   - pointers
   - globals
   - tuples
+  - templates
   - imports
   - macros
   - diagnostics

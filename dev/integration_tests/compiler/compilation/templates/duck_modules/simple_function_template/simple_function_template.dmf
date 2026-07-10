@@ -1,0 +1,12 @@
+import core.builtins.*;
+
+
+template(s: str)
+fun printer() = builtin_output_str(s);
+
+fun main() -> i64 = {
+    printer:{"Hello, world!"}();
+    
+
+    return 0;
+}

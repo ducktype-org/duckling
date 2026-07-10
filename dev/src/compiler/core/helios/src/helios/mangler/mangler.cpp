@@ -17,6 +17,8 @@
 #include <helios_private/pst_layer/pst_parent.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
+#include <helios_private/templates/templates.hpp>
+#include <helios_private/symbols/symbols.hpp>
 
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
@@ -216,7 +218,44 @@ namespace compiler::helios::mangler {
 						path_parts.push_back(
 							identifier(class_v->getName().unlock(ctx)->unwrap().strView())
 						);
-					}
+					} else if (ancestor->getElementKind() == pst::ElementKind::TemplateStmt) {
+						// @TODO: #2607 will likely have to change.
+
+						auto template_stmt_v = ancestor.dynamicCast<pst::TemplateStmt>().value();
+
+						path_parts.push_back(
+							identifier(template_stmt_v->getInnerStatement().unlock(ctx)->getDeclSymbolIdentifier()->unlock(ctx)->unwrap().strView())
+						);
+
+						if (template_stmt_v->hasAdditionalRootData()) {
+							// We are inside baked template
+							// PR: what will happen for `expand "template()"`?
+							// will unbacked template have a macro parent?
+							
+							auto root_data = template_stmt_v->getAdditionalRootData();
+							variant_match(root_data.pst_parent) {
+								variant_case(pst::AdditionalRootData::BakedTemplateParent, template_parent) {
+									auto template_bake_data_any = template_parent.template_bake_data;
+									auto template_bake_data
+									= base::anyCast<templates::TemplateBakePSTLinkedData>(template_bake_data_any);
+									for (const auto& bake_argument: *template_bake_data.template_arguments_symbols->load(std::memory_order_acquire)) {
+
+										// @TODO: #2607 This is questionable, note that this only work, because
+										// queryUnstablePerfectHash is actually stable (at least at the moment of witting it)
+										auto value = ctx.query<helios::QueryConstValueOf>(bake_argument).valueOrThrow();
+										path_parts.push_back(
+											identifier(value.queryUnstablePerfectHash().toStringHex())
+										);
+									}
+								}
+								variant_default {
+									CORE_PANIC(
+										"TemplateStmt has no PST parent, this should not happen here."
+									);
+								}
+							}
+						}
+					} 
 
 					ancestor_opt = getPSTElementParent(ctx, ancestor);
 				}
