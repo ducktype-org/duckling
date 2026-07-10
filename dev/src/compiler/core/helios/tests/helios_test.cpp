@@ -9,6 +9,7 @@
 #include <frontend/pst_parser/elements/hierarchy/statements/specifier_block.hpp>
 #include <frontend/pst_parser/pst_query/code_dependency.hpp>
 #include <frontend/pst_parser/test_utils/pst_test_utils.hpp>
+#include <helios/attributes/builtins.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/hout/visitors.hpp>
@@ -29,6 +30,7 @@
 #include <helios_private/hout_creation/definition_generation/class_constructors.hpp>
 #include <helios_private/hout_creation/definition_generation/copy_constructors.hpp>
 #include <helios_private/hout_creation/definition_generation/default_constructors.hpp>
+#include <helios_private/hout_creation/definition_generation/default_destructors.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
@@ -98,6 +100,7 @@ public:
 		TESTER_ADD_TEST(testOverloadResolution);
 		TESTER_ADD_TEST(testDefaultInitializers);
 		TESTER_ADD_TEST(testCopyConstructors);
+		TESTER_ADD_TEST(testDestructors);
 		TESTER_ADD_TEST(testCastsHout);
 		TESTER_ADD_TEST(testPointers);
 		TESTER_ADD_TEST(testTypeLifting);
@@ -169,6 +172,20 @@ private:
 			compiler::tsh::ReferenceKind::Ref,
 			Mutable,
 		};
+	}
+
+	/**
+	 * Get the value boxed by the `boxAlloc` call or nullptr on error.
+	 */
+	const compiler::helios::code::Expr* boxAllocArg(const compiler::helios::code::Expr* expr) {
+		using namespace compiler::helios;
+		const auto* call = dynamic_cast<const code::CallExpr*>(expr);
+		if (call == nullptr) return nullptr;
+		const auto callee = getIdentifierExprSymID(call->callee.ref());
+		if (!callee.has_value()) return nullptr;
+		const auto builtin = isBuiltin(callee.value());
+		if (!builtin.has_value() || builtin.value() != BuiltinKind::BoxAlloc) return nullptr;
+		return call->arguments.at(0).get();
 	}
 
 	void testConstants() {
@@ -1440,11 +1457,10 @@ private:
 			auto* var_stmt = dynamic_cast<const VariableStmt*>(body.statements[0].get());
 			ASSERT_TRUE(var_stmt != nullptr);
 
-			auto* make_box_expr = dynamic_cast<const BoxOfExpr*>(var_stmt->initial_value.get());
-			ASSERT_TRUE(make_box_expr != nullptr);
+			auto* boxed_value = boxAllocArg(var_stmt->initial_value.get());
+			ASSERT_TRUE(boxed_value != nullptr);
 
-			auto* literal_expr
-				= dynamic_cast<const LiteralNumericExpr*>(make_box_expr->inner.get());
+			auto* literal_expr = dynamic_cast<const LiteralNumericExpr*>(boxed_value);
 			ASSERT_TRUE(literal_expr != nullptr);
 
 			auto var_type = var_stmt->type;
@@ -1577,10 +1593,10 @@ private:
 		{
 			const auto& var_stmt = get_var_stmt(5);
 			ASSERT_EQUAL(var_stmt.type, box_i32);
-			// This should create a copy. `BoxOfExpr(DerefExpr(...))`
-			auto* box_of = dynamic_cast<const BoxOfExpr*>(var_stmt.initial_value.get());
-			ASSERT_TRUE(box_of != nullptr);
-			auto* deref = dynamic_cast<const DerefExpr*>(box_of->inner.get());
+			// This should create a copy. `box_alloc(DerefExpr(...))`
+			auto* boxed_value = boxAllocArg(var_stmt.initial_value.get());
+			ASSERT_TRUE(boxed_value != nullptr);
+			auto* deref = dynamic_cast<const DerefExpr*>(boxed_value);
 			ASSERT_TRUE(deref != nullptr);
 		}
 		// var box_box_a: box i32 = box_a; (Box -> Box)
@@ -3062,18 +3078,18 @@ private:
 			     { "i", "f", "flag", "r", "p", "c", "m", "trivial_arr", "trivial_tup" })
 				ASSERT_TRUE(dynamic_cast<const AccessExpr*>(rhs_of(trivial_field)) != nullptr);
 
-			// `box i32` - deep copy of a trivial pointee -> box(*source.boxed_prim).
+			// `box i32` - deep copy of a trivial pointee -> box_alloc(*source.boxed_prim).
 			{
-				auto box_of = dynamic_cast<const BoxOfExpr*>(rhs_of("boxed_prim"));
-				ASSERT_TRUE(box_of != nullptr);
-				ASSERT_TRUE(dynamic_cast<const DerefExpr*>(box_of->inner.get()) != nullptr);
+				auto boxed = boxAllocArg(rhs_of("boxed_prim"));
+				ASSERT_TRUE(boxed != nullptr);
+				ASSERT_TRUE(dynamic_cast<const DerefExpr*>(boxed) != nullptr);
 			}
 
-			// `box HasBox` - deep copy of a non-trivial pointee -> box(HasBox.__copy(...)).
+			// `box HasBox` - deep copy of a non-trivial pointee -> box_alloc(HasBox.__copy(...)).
 			{
-				auto box_of = dynamic_cast<const BoxOfExpr*>(rhs_of("boxed_class"));
-				ASSERT_TRUE(box_of != nullptr);
-				assert_generated_copy(box_of->inner.get());
+				auto boxed = boxAllocArg(rhs_of("boxed_class"));
+				ASSERT_TRUE(boxed != nullptr);
+				assert_generated_copy(boxed);
 			}
 
 			// Non-trivial aggregates call a copy constructor.
@@ -3089,11 +3105,9 @@ private:
 
 			// `box UserCopied` - deep copy whose inner pointee copy runs the user constructor.
 			{
-				auto box_of = dynamic_cast<const BoxOfExpr*>(rhs_of("deep"));
-				ASSERT_TRUE(box_of != nullptr);
-				ASSERT_TRUE(v_matches(
-					getSymRef(callee_of(box_of->inner.get()))->other, PstImplementedSemantics
-				));
+				auto boxed = boxAllocArg(rhs_of("deep"));
+				ASSERT_TRUE(boxed != nullptr);
+				ASSERT_TRUE(v_matches(getSymRef(callee_of(boxed))->other, PstImplementedSemantics));
 			}
 
 			auto field_abstract_type = [&](std::string_view field_name) {
@@ -3104,16 +3118,16 @@ private:
 				    .getType();
 			};
 
-			// HasBox -> box(*source.boxed).
+			// HasBox -> box_alloc(*source.boxed).
 			{
 				const auto& cctor = dump_cctor("HasBox", get_class_type(has_box_sym));
 				const auto& stmts = cctor.body->statements;
 				ASSERT_EQUAL_PRINT(3, stmts.size());
 				auto assign = dynamic_cast<const AssignmentStmt*>(stmts.at(1).get());
 				ASSERT_TRUE(assign != nullptr);
-				auto box_of = dynamic_cast<const BoxOfExpr*>(assign->new_value_expr.get());
-				ASSERT_TRUE(box_of != nullptr);
-				ASSERT_TRUE(dynamic_cast<const DerefExpr*>(box_of->inner.get()) != nullptr);
+				auto boxed = boxAllocArg(assign->new_value_expr.get());
+				ASSERT_TRUE(boxed != nullptr);
+				ASSERT_TRUE(dynamic_cast<const DerefExpr*>(boxed) != nullptr);
 			}
 
 			// HoldsNonTrivial - copies its `HasBox` field with a copy-ctor call.
@@ -3173,6 +3187,178 @@ private:
 				auto push = dynamic_cast<const ListPushExpr*>(push_stmt->expr.get());
 				ASSERT_TRUE(push != nullptr);
 				assert_generated_copy(push->element.get());
+			}
+		});
+	}
+
+	void testDestructors() {
+		using namespace compiler::helios;
+		using namespace compiler::helios::code;
+		using namespace compiler::helios::defgen;
+
+		auto [module, root_scope] = getModule(fs::File(path("test_modules/destructors")));
+
+		auto trivial_sym      = getChain("Trivial", root_scope).back();
+		auto has_box_sym      = getChain("HasBox", root_scope).back();
+		auto user_sym         = getChain("UserDestroyed", root_scope).back();
+		auto holds_sym        = getChain("HoldsNonTrivial", root_scope).back();
+		auto user_members_sym = getChain("UserAndMembers", root_scope).back();
+		auto boss_sym         = getChain("FinalBoss", root_scope).back();
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			auto get_class_type = [&](SymID sym_id) {
+				return ctx.query<QueryTypeFromDefinition>(sym_id)->valueOrThrow().getType();
+			};
+
+			auto is_builtin_call = [&](const Stmt* stmt, BuiltinKind kind) -> bool {
+				auto expr_stmt = dynamic_cast<const ExprStmt*>(stmt);
+				if (expr_stmt == nullptr) return false;
+				auto call = dynamic_cast<const CallExpr*>(expr_stmt->expr.get());
+				if (call == nullptr) return false;
+				auto callee = getIdentifierExprSymID(call->callee.ref());
+				if (!callee.has_value()) return false;
+				auto builtin = isBuiltin(callee.value());
+				return builtin.has_value() && builtin.value() == kind;
+			};
+
+			auto is_method_call = [&](const Stmt* stmt, Method::Kind kind) -> bool {
+				auto expr_stmt = dynamic_cast<const ExprStmt*>(stmt);
+				if (expr_stmt == nullptr) return false;
+				auto call = dynamic_cast<const CallExpr*>(expr_stmt->expr.get());
+				if (call == nullptr) return false;
+				auto callee = getIdentifierExprSymID(call->callee.ref());
+				if (!callee.has_value()) return false;
+				const auto* method = std::get_if<Method>(&getSymRef(callee.value())->other);
+				return method != nullptr && method->kind == kind;
+			};
+
+			// A trivially-destructible class has an empty destructor and a no-op destructor.
+			{
+				const auto  type = get_class_type(trivial_sym);
+				const auto& dtor = ctx.query<QueryDefaultDestructor>(type)->valueOrThrow();
+
+				// `(ref mut Trivial) -> ()`.
+				ASSERT_EQUAL_PRINT(1, dtor.declaration->parameters.size());
+				const auto self_type = dtor.declaration->parameters.at(0).type;
+				ASSERT_EQUAL(compiler::tsh::ReferenceKind::Ref, self_type.getRefKind());
+				ASSERT_EQUAL(compiler::tsh::Mutability::Mutable, self_type.getMutability());
+				ASSERT_EQUAL(type, self_type.getType());
+				ASSERT_EQUAL(
+					compiler::tsh::Kind::Unit, dtor.declaration->return_type.getType().getKind()
+				);
+
+				ASSERT_TRUE(dtor.body->statements.empty());
+				ASSERT_TRUE(type.hasNoOpDestructor(ctx));
+			}
+
+			// A class owning a `box i32` frees the box with a `box_free` builtin call. The pointee
+			// is trivial, so there is no pointee destruction, only the free.
+			{
+				const auto type = get_class_type(has_box_sym);
+				ASSERT_TRUE(!type.hasNoOpDestructor(ctx));
+
+				const auto& dtor  = ctx.query<QueryDefaultDestructor>(type)->valueOrThrow();
+				const auto& stmts = dtor.body->statements;
+				ASSERT_EQUAL_PRINT(1, stmts.size());
+				ASSERT_TRUE(is_builtin_call(stmts.at(0).get(), BuiltinKind::BoxFree));
+			}
+
+			// A class holding a non-trivially-destructible member destroys it via that member's own
+			// destructor.
+			{
+				const auto  type  = get_class_type(holds_sym);
+				const auto& dtor  = ctx.query<QueryDefaultDestructor>(type)->valueOrThrow();
+				const auto& stmts = dtor.body->statements;
+				ASSERT_EQUAL_PRINT(1, stmts.size());
+				ASSERT_TRUE(is_method_call(stmts.at(0).get(), Method::Kind::DefaultDestructor));
+			}
+
+			// A class that declares a user destructor should call the user code first.
+			{
+				const auto type = get_class_type(user_sym);
+				ASSERT_TRUE(!type.hasNoOpDestructor(ctx));
+
+				const auto user_dtor = userDestructorOf(ctx, user_sym);
+				ASSERT_HAS_VALUE(user_dtor);
+				ASSERT_TRUE(isUserDefinedDestructor(ctx, user_dtor.value()));
+				ctx.query<QueryCodeOfFun>(user_dtor.value())->valueOrThrow();
+
+				const auto& dtor  = ctx.query<QueryDefaultDestructor>(type)->valueOrThrow();
+				const auto& stmts = dtor.body->statements;
+				ASSERT_EQUAL_PRINT(1, stmts.size());
+
+				auto expr_stmt = dynamic_cast<const ExprStmt*>(stmts.at(0).get());
+				ASSERT_TRUE(expr_stmt != nullptr);
+				auto call = dynamic_cast<const CallExpr*>(expr_stmt->expr.get());
+				ASSERT_TRUE(call != nullptr);
+				ASSERT_EQUAL(user_dtor.value(), getIdentifierExprSymID(call->callee.ref()).value());
+			}
+
+			// A class with a user destructor and non-trivial members should call the user code
+			// first, then destroy the members in reverse order.
+			{
+				const auto  type  = get_class_type(user_members_sym);
+				const auto& dtor  = ctx.query<QueryDefaultDestructor>(type)->valueOrThrow();
+				const auto& stmts = dtor.body->statements;
+				ASSERT_EQUAL_PRINT(3, stmts.size());
+
+				// [0] user destructor call.
+				const auto user_dtor = userDestructorOf(ctx, user_members_sym).value();
+				auto       user_call = dynamic_cast<const CallExpr*>(
+                    dynamic_cast<const ExprStmt*>(stmts.at(0).get())->expr.get()
+                );
+				ASSERT_TRUE(user_call != nullptr);
+				ASSERT_EQUAL(user_dtor, getIdentifierExprSymID(user_call->callee.ref()).value());
+
+				// [1] `second` (box i32) freed
+				ASSERT_TRUE(is_builtin_call(stmts.at(1).get(), BuiltinKind::BoxFree));
+				// [2] `first` (HasBox) destroyed
+				ASSERT_TRUE(is_method_call(stmts.at(2).get(), Method::Kind::DefaultDestructor));
+			}
+
+			auto field_abstract_type = [&](std::string_view field_name) {
+				return get_class_type(boss_sym)
+				    .getInterface(ctx)
+				    ->getElementsWithName(base::StrID(field_name))
+				    .back()
+				    .getType(ctx)
+				    .getType();
+			};
+
+			// Static array of a non-trivial element - a destructor loop.
+			{
+				const auto  arr_type = field_abstract_type("nontrivial_arr");
+				const auto& dtor     = ctx.query<QueryDefaultDestructor>(arr_type)->valueOrThrow();
+				const auto& stmts    = dtor.body->statements;
+				// var __i = 0; while (__i < 3) { ... }
+				ASSERT_EQUAL_PRINT(2, stmts.size());
+				ASSERT_TRUE(dynamic_cast<const WhileStmt*>(stmts.at(1).get()) != nullptr);
+			}
+
+			// Static array of a trivial element - empty destructor.
+			{
+				const auto  arr_type = field_abstract_type("trivial_arr");
+				const auto& dtor     = ctx.query<QueryDefaultDestructor>(arr_type)->valueOrThrow();
+				ASSERT_TRUE(dtor.body->statements.empty());
+			}
+
+			// List of a non-trivial element - a destruction loop over the elements.
+			{
+				const auto  list_type = field_abstract_type("class_list");
+				const auto& dtor  = ctx.query<QueryDefaultDestructor>(list_type)->valueOrThrow();
+				const auto& stmts = dtor.body->statements;
+				ASSERT_EQUAL_PRINT(2, stmts.size());
+				ASSERT_TRUE(dynamic_cast<const WhileStmt*>(stmts.at(1).get()) != nullptr);
+			}
+
+			// Tuple with a non-trivial element - destroys that element via its destructor.
+			{
+				const auto  tup_type = field_abstract_type("nontrivial_tup");
+				const auto& dtor     = ctx.query<QueryDefaultDestructor>(tup_type)->valueOrThrow();
+				const auto& stmts    = dtor.body->statements;
+				// Only the `HasBox` needs destruction.
+				ASSERT_EQUAL_PRINT(1, stmts.size());
+				ASSERT_TRUE(is_method_call(stmts.at(0).get(), Method::Kind::DefaultDestructor));
 			}
 		});
 	}
