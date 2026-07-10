@@ -101,13 +101,11 @@ private:
 		const auto void_2 = getVoidType();
 		assertTrue(void_1 == void_2, "There should only be one Void type.");
 		assertTrue(void_1.getKind() == Void, "Void type should have kind Void.");
-		assertTrue(void_1.hasNoOpDestructor(), "Void should have no op destructor.");
 
 		const auto unit_1 = getUnitType();
 		const auto unit_2 = getUnitType();
 		assertTrue(unit_1 == unit_2, "There should only be one Unit type.");
 		assertTrue(unit_1.getKind() == Unit, "Unit type should have kind Unit.");
-		assertTrue(unit_1.hasNoOpDestructor(), "Unit should have no op destructor.");
 
 		assertTrue(void_1 != unit_1, "Void and Unit should be different types.");
 
@@ -120,6 +118,9 @@ private:
 		assertTrue(unit_3.getKind() == Unit, "Unit should survive casting.");
 
 		query::utils::withContextDo([&](query::Context& ctx) {
+			assertTrue(void_1.hasNoOpDestructor(ctx), "Void should have no op destructor.");
+			assertTrue(unit_1.hasNoOpDestructor(ctx), "Unit should have no op destructor.");
+
 			const auto unit_st = st(unit_1);
 			assertTrue(unit_st.isDefaultConstructible(ctx), "Unit should be default constructible.");
 			assertFalse(
@@ -149,17 +150,14 @@ private:
 		const auto byte_1 = getByteType();
 
 		assertTrue(byte_1.getKind() == Byte, "Byte type should have kind Byte.");
-		assertTrue(byte_1.hasNoOpDestructor(), "Byte should have no op destructor.");
 
 		const auto bool_1 = getBoolType();
 
 		assertTrue(bool_1.getKind() == Bool, "Bool type should have kind Bool.");
-		assertTrue(bool_1.hasNoOpDestructor(), "Bool should have no op destructor.");
 
 		const auto char_1 = getCharType();
 
 		assertTrue(char_1.getKind() == Char, "Char type should have kind Char.");
-		assertTrue(char_1.hasNoOpDestructor(), "Char should have no op destructor.");
 
 		assertTrue(
 			byte_1 != bool_1 && bool_1 != char_1 && char_1 != byte_1,
