@@ -257,4 +257,19 @@ namespace compiler::helios {
 		                                                 .kind = defgen::BoxBuiltin::Kind::Free },
 		});
 	}
+
+	Box<code::Expr> makeBoxAllocCall(
+		query::Context& ctx, code::ElementOrigin origin, Box<code::Expr> inner
+	) {
+		const auto pointee_type = inner->expression_type.getSymbolType().getType();
+
+		std::vector<Box<code::Expr>> args;
+		args.emplace_back(std::move(inner));
+		return makeBox<code::CallExpr>(
+			ctx,
+			origin,
+			makeBox<code::IdentifierExpr>(ctx, origin, boxAllocSymForType(ctx, pointee_type)),
+			std::move(args)
+		);
+	}
 }

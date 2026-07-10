@@ -1,7 +1,5 @@
 #include "query_type_of_symbol.hpp"
 
-#include "helios/tsh/symbol_type.hpp"
-
 #include <frontend/pst_parser/elements/hierarchy/class_elements/field.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>

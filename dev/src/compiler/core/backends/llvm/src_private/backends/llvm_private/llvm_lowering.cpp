@@ -1238,10 +1238,8 @@ namespace compiler::backend_llvm {
 				const auto function_literal
 					= lir_instruction.arguments.at(0).get<lir::FunctionLiteral>();
 
-				const auto maybe_builtin_kind = function_literal.builtin_kind_opt;
-				if_opt_some(maybe_builtin_kind, builtin_kind) {
-					switch (builtin_kind) {
-					case lir::BuiltinFunctionKind::BoxAlloc: {
+				if_opt_some(function_literal.builtin_kind_opt, builtin_kind) {
+					if (builtin_kind == lir::BuiltinFunctionKind::BoxAlloc) {
 						const auto value_to_box
 							= loadLIRValue(lir_instruction.arguments.at(1), builder);
 						const usize size
@@ -1257,8 +1255,7 @@ namespace compiler::backend_llvm {
 						builder.CreateStore(value_to_box, allocated_ptr);
 						storeOutput(lir_instruction.output.value(), allocated_ptr, builder);
 						break;
-					}
-					case lir::BuiltinFunctionKind::BoxFree: {
+					} else if (builtin_kind == lir::BuiltinFunctionKind::BoxFree) {
 						const auto ptr_to_free
 							= loadLIRValue(lir_instruction.arguments.at(1), builder);
 						auto free_func = loadBuiltin(
@@ -1266,10 +1263,6 @@ namespace compiler::backend_llvm {
 						);
 						builder.CreateCall(free_func, { ptr_to_free });
 						break;
-					}
-					default: {
-						CORE_PANIC("Unsupported builtin reached LLVM backend.");
-					}
 					}
 				}
 

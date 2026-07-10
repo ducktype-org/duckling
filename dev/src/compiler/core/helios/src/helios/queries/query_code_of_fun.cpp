@@ -144,7 +144,6 @@ namespace compiler::helios {
 				auto& decl = ctx.query<QueryDeclOfFun>(original_symbol)->valueOrThrow();
 
 				// body: a destructor body is always a code block
-				// TODOP: Validate that it returns a unit?
 				auto output_body = compileCodeOfCodeBlock(ctx, stmt->getBody(), decl.return_type);
 				this->out.emplace(HOUTFunction(code::pstOrigin(stmt), &decl, output_body));
 			}

@@ -2,6 +2,7 @@
 
 #include <frontend/pst_parser/access.hpp>
 #include <helios/hout/hout_fd.hpp>
+#include <helios/hout/origin.hpp>
 #include <helios/tsh/abstract_type.hpp>
 
 #include <base/collections/optional.hpp>
@@ -15,6 +16,10 @@ namespace query {
 
 namespace pst {
 	class AtrArgList;
+}
+
+namespace compiler::helios::code {
+	struct Expr;
 }
 
 /**
@@ -89,4 +94,11 @@ namespace compiler::helios {
 	 * The returned symbol is a declaration only, it's implemented in both backends.
 	 */
 	SymID boxFreeSymForType(query::Context& ctx, tsh::AbstractType pointee_type);
+
+	/**
+	 * @brief Build a HOUT expression that constructs a `box T` holding `inner`.
+	 */
+	Box<code::Expr> makeBoxAllocCall(
+		query::Context& ctx, code::ElementOrigin origin, Box<code::Expr> inner
+	);
 }
