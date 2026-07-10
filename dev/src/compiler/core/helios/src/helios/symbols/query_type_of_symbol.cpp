@@ -362,7 +362,6 @@ namespace compiler::helios {
 						= [&]() -> std::pair<std::vector<tsh::SymbolType<>>, tsh::SymbolType<>> {
 						switch (box.kind) {
 						case defgen::BoxBuiltin::Kind::Alloc:
-							// TODOP: By ref?
 							return { { tsh::SymbolType<>::withDefaults(box.pointee_type) },
 								     box_type };
 						case defgen::BoxBuiltin::Kind::Free:

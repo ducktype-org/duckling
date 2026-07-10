@@ -36,7 +36,8 @@ namespace compiler::helios::defgen {
 		 * @brief Append the statements that destroy the value denoted by the lvalue `location`.
 		 *
 		 * - Trivially-destructible values do nothing.
-		 * - A `box T` destroys its pointee and performs a call to free the heap memory.
+		 * - A `box T` destroys its pointee and performs a call to a builtin `boxFree` to free the
+		 * heap memory.
 		 * - Non-trivially-destructible class, static-array, tuple and dynamic-array members are
 		 *   destroyed by calling their own destructor with a reference to `location`.
 		 */
@@ -270,7 +271,6 @@ namespace compiler::helios::defgen {
 			std::vector<Box<code::Stmt>> body;
 
 			// Destroy each element only if the element type is not trivially destructible.
-			// TODOP: Handle boxes here.
 			if (array_type.getElementType().hasNoOpDestructor(ctx)) return body;
 
 			// var __i: u64 = 0;
