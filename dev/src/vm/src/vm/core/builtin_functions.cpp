@@ -450,7 +450,7 @@ namespace vm::builtins {
 			{
 				BuiltinFunctionID::FloatToString,
 				{ base::StrID("float_to_string"),
-				  code::FuncSignature(
+			      code::FuncSignature(
 					  { base::StrID("i64") },
 					  { base::StrID("f64"), base::StrID("ptr_dyntable_i8"), base::StrID("i64") }
 				  ) },
@@ -458,7 +458,7 @@ namespace vm::builtins {
 			{
 				BuiltinFunctionID::U64ToString,
 				{ base::StrID("u64_to_string"),
-				  code::FuncSignature(
+			      code::FuncSignature(
 					  { base::StrID("i64") },
 					  { base::StrID("i64"), base::StrID("ptr_dyntable_i8"), base::StrID("i64") }
 				  ) },
@@ -466,7 +466,7 @@ namespace vm::builtins {
 			{
 				BuiltinFunctionID::I64ToString,
 				{ base::StrID("i64_to_string"),
-				  code::FuncSignature(
+			      code::FuncSignature(
 					  { base::StrID("i64") },
 					  { base::StrID("i64"), base::StrID("ptr_dyntable_i8"), base::StrID("i64") }
 				  ) },
