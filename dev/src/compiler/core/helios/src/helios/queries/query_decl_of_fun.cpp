@@ -528,7 +528,8 @@ namespace compiler::helios {
 			case SymbolKind::Function:
 			case SymbolKind::FunctionDeclaration:
 			case SymbolKind::Method:
-			case SymbolKind::Constructor: {
+			case SymbolKind::Constructor:
+			case SymbolKind::Destructor: {
 				variant_match(getSymRef(key)->other) {
 					variant_case_novalue(PstImplementedSemantics, BuiltinSemantics) {
 						DeclarationVisitor decl_maker(ctx, key);
@@ -563,6 +564,7 @@ namespace compiler::helios {
 					}
 					variant_case_novalue(
 						defgen::Method,
+						defgen::BoxBuiltin,
 						defgen::ReplExpressionWrapper,
 						defgen::ReplInstructionWrapper,
 						defgen::ScriptMainWrapper

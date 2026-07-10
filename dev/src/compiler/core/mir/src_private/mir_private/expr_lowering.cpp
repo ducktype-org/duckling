@@ -648,17 +648,25 @@ namespace compiler::mir {
 				"BoxOfExpr on a non direct type"
 			);
 
+			auto&      ctx           = function.getContext();
 			auto       hole          = continuation->addHole();
 			auto       lowered_inner = lowerSubExpr(*expr.inner, continuation);
 			const auto res_inner     = lowered_inner.getResult(function);
 			const auto result_type   = expr.expression_type.getSymbolType();
 
+			// `box T (value)` is lowered to a call to the compiler-generated
+			// `box_alloc(value: T) -> box T`.
+			// TODOP: Link it in constuctors?
+			const auto pointee_type = expr.inner->expression_type.getSymbolType().getType();
+
+			std::vector<MIRValue> args;
+			args.emplace_back(MIRFunctionLiteral{ helios::boxAllocSymForType(ctx, pointee_type) });
+			args.emplace_back(res_inner);
+
 			noValueOutput(
 				lowered_inner.begin,
 				hole,
-				Instruction(
-					Operation::BoxAlloc, {}, { res_inner }, {}, expr_scope, {}, { expr.getPosition() }
-				),
+				Instruction{ Operation::Call, {}, args, {}, expr_scope, {}, { expr.getPosition() } },
 				result_type
 			);
 		}

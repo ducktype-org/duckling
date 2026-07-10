@@ -47,6 +47,10 @@ namespace compiler::helios {
 			return base::StrID("dvm_char_realloc");
 		case BuiltinKind::DvmCharFree:
 			return base::StrID("dvm_char_free");
+		case BuiltinKind::BoxAlloc:
+			return base::StrID("box_alloc");
+		case BuiltinKind::BoxFree:
+			return base::StrID("box_free");
 		}
 		CORE_UNREACHABLE();
 	}
@@ -230,8 +234,27 @@ namespace compiler::helios {
 			return BuiltinOrigin::DVMBackend;
 		case BuiltinKind::DvmCharFree:
 			return BuiltinOrigin::DVMBackend;
+		case BuiltinKind::BoxAlloc:
+		case BuiltinKind::BoxFree:
+			return BuiltinOrigin::DVMBackend | BuiltinOrigin::NativeBackend;
 		}
 
 		CORE_UNREACHABLE();
+	}
+
+	SymID boxAllocSymForType(query::Context& ctx, tsh::AbstractType pointee_type) {
+		return ctx.query<defgen::QueryGeneratedSymbol>({
+			.name                  = base::StrID("box_alloc"),
+			.generated_symbol_data = defgen::BoxBuiltin{ .pointee_type = pointee_type,
+		                                                 .kind = defgen::BoxBuiltin::Kind::Alloc },
+		});
+	}
+
+	SymID boxFreeSymForType(query::Context& ctx, tsh::AbstractType pointee_type) {
+		return ctx.query<defgen::QueryGeneratedSymbol>({
+			.name                  = base::StrID("box_free"),
+			.generated_symbol_data = defgen::BoxBuiltin{ .pointee_type = pointee_type,
+		                                                 .kind = defgen::BoxBuiltin::Kind::Free },
+		});
 	}
 }

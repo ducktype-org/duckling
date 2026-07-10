@@ -1072,43 +1072,6 @@ namespace compiler::backend_llvm {
 				builder.CreateStore(llvm::Constant::getNullValue(type), ptr);
 				break;
 			}
-			case BoxAlloc: {
-				// First, get the value to box.
-				const auto  value_to_box = loadLIRValue(lir_instruction.arguments.at(0), builder);
-				llvm::Type* pointee_type = value_to_box->getType();
-
-				// Calculate the layout size for malloc.
-				const llvm::DataLayout& data_layout = module->getDataLayout();
-				usize                   size        = data_layout.getTypeAllocSize(pointee_type);
-
-				// Get or insert the allocator.
-				auto alloc_func
-					= loadBuiltin("builtin_alloc", builder.getPtrTy(), { builder.getInt64Ty() });
-
-				// Actually call the allocator.
-				llvm::Value* size_val = builder.getInt64(size);
-				llvm::Value* allocated_ptr
-					= builder.CreateCall(alloc_func, { size_val }, "box_ptr");
-
-				// Store the value in the allocated memory.
-				// @TODO: #1895 This is suboptimal. In the future class constructors should take the
-				// allocated memory pointer as a parameter and construct it in-place.
-				builder.CreateStore(value_to_box, allocated_ptr);
-				storeOutput(lir_instruction.output.value(), allocated_ptr, builder);
-				break;
-			}
-			case BoxFree: {
-				// @TODO: #1894 This may change based on the way we handle destructors.
-				const auto ptr_to_free = loadLIRValue(lir_instruction.arguments.at(0), builder);
-
-				// Get or insert the free function.
-				auto free_func
-					= loadBuiltin("builtin_dealloc", builder.getVoidTy(), { builder.getPtrTy() });
-
-				// Actually free the memory.
-				builder.CreateCall(free_func, { ptr_to_free });
-				break;
-			}
 			case ListPush:
 			case ListPop:
 			case ListFree: {
@@ -1274,6 +1237,42 @@ namespace compiler::backend_llvm {
 
 				const auto function_literal
 					= lir_instruction.arguments.at(0).get<lir::FunctionLiteral>();
+
+				const auto maybe_builtin_kind = function_literal.builtin_kind_opt;
+				if_opt_some(maybe_builtin_kind, builtin_kind) {
+					switch (builtin_kind) {
+					case lir::BuiltinFunctionKind::BoxAlloc: {
+						const auto value_to_box
+							= loadLIRValue(lir_instruction.arguments.at(1), builder);
+						const usize size
+							= module->getDataLayout().getTypeAllocSize(value_to_box->getType());
+						auto alloc_func = loadBuiltin(
+							"builtin_alloc", builder.getPtrTy(), { builder.getInt64Ty() }
+						);
+						llvm::Value* allocated_ptr
+							= builder.CreateCall(alloc_func, { builder.getInt64(size) }, "box_ptr");
+						// @TODO: #1895 This is suboptimal. In the future class constructors should
+						// take the allocated memory pointer as a parameter and construct it
+						// in-place.
+						builder.CreateStore(value_to_box, allocated_ptr);
+						storeOutput(lir_instruction.output.value(), allocated_ptr, builder);
+						break;
+					}
+					case lir::BuiltinFunctionKind::BoxFree: {
+						const auto ptr_to_free
+							= loadLIRValue(lir_instruction.arguments.at(1), builder);
+						auto free_func = loadBuiltin(
+							"builtin_dealloc", builder.getVoidTy(), { builder.getPtrTy() }
+						);
+						builder.CreateCall(free_func, { ptr_to_free });
+						break;
+					}
+					default: {
+						CORE_PANIC("Unsupported builtin reached LLVM backend.");
+					}
+					}
+				}
+
 				auto callee = getOrInsertFunctionPrototypeFromLiteral(module, function_literal);
 
 				auto args = loadLIRValueList(

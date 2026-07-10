@@ -281,6 +281,7 @@ namespace compiler::helios::mangler {
 			case SymbolKind::Function:
 			case SymbolKind::Method:
 			case SymbolKind::Constructor:
+			case SymbolKind::Destructor:
 			case SymbolKind::FunctionDeclaration: {
 				variant_match(getSymRef(symbol_id)->other) {
 					variant_case_novalue(PstImplementedSemantics, BuiltinSemantics) {
@@ -326,6 +327,18 @@ namespace compiler::helios::mangler {
 							return "Hpush" + func(ctx, symbol_id) + "E";
 						case defgen::Method::Kind::Pop:
 							return "Hpop" + func(ctx, symbol_id) + "E";
+						}
+						CORE_UNREACHABLE();
+					}
+					variant_case(defgen::BoxBuiltin, box) {
+						// We do not have a reliable "path to type" in these cases (esp. for simple
+						// types such as i32), so we omit it. Any ambiguities are solved by the
+						// function type anyway.
+						switch (box.kind) {
+						case defgen::BoxBuiltin::Kind::Alloc:
+							return "Hba" + func(ctx, symbol_id) + "E";
+						case defgen::BoxBuiltin::Kind::Free:
+							return "Hbf" + func(ctx, symbol_id) + "E";
 						}
 						CORE_UNREACHABLE();
 					}

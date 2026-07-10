@@ -47,15 +47,30 @@ namespace compiler::helios::defgen {
 
 			if (type.hasNoOpDestructor(ctx)) return;
 
-			// A `box T` owns its pointee, so destroy `*location`. For a trivially-destructible
-			// pointee this recursion produces nothing.
-			// @TODO: #2825 free the box memory once destructors are actually called.
+			// A `box T` owns its pointee and its heap storage. First destroy the pointee, then free
+			// the memory.
 			if (type.getRefKind() == tsh::ReferenceKind::Box) {
+				const auto pointee_type = type.getType();
+
 				appendDestruction(
 					ctx,
 					body,
-					makeBox<code::DerefExpr>(ctx, code::generatedOrigin(), std::move(location))
+					makeBox<code::DerefExpr>(ctx, code::generatedOrigin(), location->clone())
 				);
+
+				std::vector<Box<code::Expr>> free_args;
+				free_args.emplace_back(std::move(location));
+				body.emplace_back(makeBox<code::ExprStmt>(
+					code::generatedOrigin(),
+					makeBox<code::CallExpr>(
+						ctx,
+						code::generatedOrigin(),
+						makeBox<code::IdentifierExpr>(
+							ctx, code::generatedOrigin(), boxFreeSymForType(ctx, pointee_type)
+						),
+						std::move(free_args)
+					)
+				));
 				return;
 			}
 
@@ -65,7 +80,9 @@ namespace compiler::helios::defgen {
 				abstract_type.getKind() == tsh::Kind::Class
 					or abstract_type.getKind() == tsh::Kind::StaticArray
 					or abstract_type.getKind() == tsh::Kind::Tuple
-					or abstract_type.getKind() == tsh::Kind::DynamicArray,
+					or abstract_type.getKind() == tsh::Kind::DynamicArray
+					or abstract_type.getKind() == tsh::Kind::String
+					or abstract_type.getKind() == tsh::Kind::Variant,
 				"Tried to generate a destructor call for a type which shouldn't need one"
 			);
 
