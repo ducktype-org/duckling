@@ -54,6 +54,7 @@ class DuckString {
     pointer: manyptr char;
     len: u64;
     cap: u64;
+    offset: u64;
 
     #{
         Makes sure at least `required` characters fit into the buffer.
@@ -153,15 +154,8 @@ fun print(s: ref DuckString) -> u64 = {
 }
 
 fun duckStringReserve(cap: u64) -> DuckString = {
-    # Never allocate an empty buffer, `reserve` treats `cap == 0` as "there is
-    # nothing to reallocate yet".
-    var initial_cap = cap;
-    if (initial_cap == 0u64) initial_cap = 1u64;
-
     var result: DuckString;
-    result.pointer = allocation.alloc(initial_cap);
-    result.len     = 0u64;
-    result.cap     = initial_cap;
+    result.reserve(cap);
     return result;
 }
 
