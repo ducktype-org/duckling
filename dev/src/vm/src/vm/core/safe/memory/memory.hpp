@@ -19,7 +19,6 @@
 
 #include <algorithm>
 #include <deque>
-#include <iostream>
 
 namespace vm {
 	/**
@@ -37,7 +36,7 @@ namespace vm {
 	 * All of process'es memory - thread stacks (thread local data) and global data is stored here.
 	 */
 	template<typename EntryT, typename BlockT = GenericBlock<EntryT>>
-	class IMemory final {
+	class GenericMemory final {
 	private:
 		HeapAllocator<EntryT>  heap_allocator;
 		DummyAllocator<EntryT> dummy_allocator;
@@ -194,14 +193,14 @@ namespace vm {
 		 * @param block The block to source the data from.
 		 */
 		void runDataDestructors(Ref<BlockT> block) {
-			iterateOverDataAndExecute(block, &IMemory::runObjectDestructor);
+			iterateOverDataAndExecute(block, &GenericMemory::runObjectDestructor);
 		}
 
 		/**
 		 * @brief Executes destructors on a range of objects, that lay next to each other.
 		 */
 		void runDataDestructors(base::TypedModRawView<EntryT> data, TypeCRef type) {
-			iterateOverDataAndExecute(data, type, &IMemory::runObjectDestructor);
+			iterateOverDataAndExecute(data, type, &GenericMemory::runObjectDestructor);
 		}
 
 		/**
@@ -209,14 +208,14 @@ namespace vm {
 		 * @param block The block to source the data from.
 		 */
 		void runDataCopyConstructors(Ref<BlockT> block) {
-			iterateOverDataAndExecute(block, &IMemory::runObjectCopyConstructor);
+			iterateOverDataAndExecute(block, &GenericMemory::runObjectCopyConstructor);
 		}
 
 		/**
 		 * @brief Executes copy constructors on a range of objects, that lay next to each other.
 		 */
 		void runDataCopyConstructors(base::TypedModRawView<EntryT> data, TypeCRef type) {
-			iterateOverDataAndExecute(data, type, &IMemory::runObjectCopyConstructor);
+			iterateOverDataAndExecute(data, type, &GenericMemory::runObjectCopyConstructor);
 		}
 
 		/**
@@ -226,7 +225,7 @@ namespace vm {
 		 */
 		void iterateOverDataAndExecute(
 			Ref<BlockT> block,
-			void (IMemory::*callback)(base::TypedModRawView<EntryT> data, TypeCRef type)
+			void (GenericMemory::*callback)(base::TypedModRawView<EntryT> data, TypeCRef type)
 		) {
 			iterateOverDataAndExecute(block->data.view, block->data.element_type, callback);
 		}
@@ -241,7 +240,7 @@ namespace vm {
 		void iterateOverDataAndExecute(
 			base::TypedModRawView<EntryT> data,
 			TypeCRef                      type,
-			void (IMemory::*callback)(base::TypedModRawView<EntryT> data, TypeCRef type)
+			void (GenericMemory::*callback)(base::TypedModRawView<EntryT> data, TypeCRef type)
 		) {
 			if (type->getKind() != Type::Kind::DynamicTable) {
 				// Only types other than dynamic_table can be next to each other.
@@ -364,7 +363,7 @@ namespace vm {
 		}
 
 	public:
-		IMemory() = default;
+		GenericMemory() = default;
 
 		[[nodiscard]]
 		Ref<BlockT> getBlock(BlockID id) {
@@ -385,41 +384,13 @@ namespace vm {
 		 * no leaks, etc.
 		 * @return True if memory was used correctly, false otherwise.
 		 */
-		bool validateMemoryState() const {
-#define TEST_HERE(test)                                              \
-	if (test) {                                                      \
-		std::cerr << #test ", BlockID=" << block.id.asInt() << "\n"; \
-		return false;                                                \
-	}
-			for (const auto& block: blocks) {
-				TEST_HERE(block.refcount != 0)
-				TEST_HERE(!block.deallocated)
-			}
-			return true;
-		}
+		// Defined in memory.cpp so the header does not need <iostream> for std::cerr.
+		bool validateMemoryState() const;
 
 		/**
 		 * @brief Frees all the global data
 		 */
-		void deinitGlobals() {
-			try {
-				// We are first freeing all the data and then decreasing the refcounts.
-				// This is very important, because there might be links between the global
-				// variables, and if we were to free them and decrease the refcount in the wrong
-				// order we might throw a false-positive exception. This solution avoids this
-				// problem.
-
-				for (const auto& block_ptr: global_data_blocks) freeBlockData(Ref(block_ptr));
-
-				for (const auto& block_ptr: global_data_blocks)
-					decreaseBlockRefcount(Ref(block_ptr));
-			} catch (exceptions::VMFoundMemoryLeakException&) {
-				std::cerr << "Leak during global data deinitialization - e.g. there was a global "
-							 "pointer to "
-							 "data, that was not freed.\n";
-				throw;
-			}
-		}
+		void deinitGlobals();
 
 		struct GlobalBlocksConfig {
 			std::vector<usize>    global_data_offsets;
@@ -617,8 +588,8 @@ namespace vm {
 
 		/**
 		 * @brief Gets the nested block from block at offset.
-		 * @note Parent pointer also stores offset within the parent block where to take the
-		 * nested view block from.
+		 * @note `parent_block` is non-null by construction of `Ref`; callers resolving it from a
+		 * `Pointer` get a `VMNullPointerAccessException` from `Pointer::getBlock()` on null.
 		 */
 		static MRef<BlockT> getNestedViewBlock(Ref<BlockT> parent_block, u64 offset, TypeCRef type) {
 			if_opt_some(parent_block->children_blocks.atMaybe(offset), nested) {
@@ -629,8 +600,8 @@ namespace vm {
 
 		/**
 		 * @brief Creates new block at position.
-		 * @note Parent pointer also stores offset within the parent block where to create the new
-		 * nested view block.
+		 * @note `parent_block` is non-null by construction of `Ref`; callers resolving it from a
+		 * `Pointer` get a `VMNullPointerAccessException` from `Pointer::getBlock()` on null.
 		 */
 		void setNestedViewBlock(Ref<BlockT> parent_block, u64 offset, TypeCRef type) {
 			auto& children = parent_block->children_blocks;
@@ -760,7 +731,15 @@ namespace vm {
 		}
 	};
 
-	using Memory                      = IMemory<std::byte>;
+	using Memory                      = GenericMemory<std::byte>;
 	using PointerGeneric              = Pointer;
 	using GlobalBufferPointersGeneric = GlobalBufferPointers<std::byte>;
+
+	// The member specialization is defined in initialization_from_const.cpp. It must be declared
+	// here so it is visible in every TU before the explicit instantiation of
+	// GenericMemory<std::byte> (in memory.cpp) and any implicit instantiation ([temp.expl.spec]).
+	template<>
+	void Memory::initializeBlockFromConstValue(
+		Ref<Block> block, const code::ConstantValue& const_value
+	);
 }

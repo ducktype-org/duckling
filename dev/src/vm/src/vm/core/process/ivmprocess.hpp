@@ -35,8 +35,6 @@ namespace vm {
 	 *
 	 */
 	class IVMProcess {
-		friend class IVMThread;
-
 	protected:
 		PID                              my_pid;
 		ProcIO                           io;

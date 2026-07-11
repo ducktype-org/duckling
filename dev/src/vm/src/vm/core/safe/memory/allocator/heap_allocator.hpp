@@ -27,6 +27,11 @@ namespace vm {
 	template<typename EntryT>
 	class HeapAllocator final: public IAllocator<EntryT> {
 		// It's a mock, it should be replaced with something faster.
+		//
+		// @note Intentionally byte-only for now: `size` below comes from Type::getSize() (a byte
+		// count) but is passed to heapAllocOrThrow (an element count). Those coincide only while
+		// sizeof(EntryT) == 1 (enforced by the static_asserts); widening EntryT requires
+		// separating byte counts from entry counts here.
 		std::deque<base::TypedOwningView<EntryT>> allocated;
 
 	public:

@@ -15,7 +15,7 @@ namespace vm {
 	using Block = GenericBlock<std::byte>;
 
 	template<typename EntryT, typename BlockT>
-	class IMemory;
+	class GenericMemory;
 
 	/**
 	 * @brief Basic pointer used in the VM.
@@ -33,7 +33,7 @@ namespace vm {
 		constexpr Pointer(): block(nullptr), offset(0) {}
 
 		template<typename E, typename B>
-		friend class IMemory;
+		friend class GenericMemory;
 
 	public:
 		constexpr Pointer(Ref<Block> block, u64 offset): block(block.get()), offset(offset) {}

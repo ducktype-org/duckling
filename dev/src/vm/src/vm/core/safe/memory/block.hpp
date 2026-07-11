@@ -11,7 +11,7 @@ namespace vm {
 	STRONG_TYPEDEF_ID_DIRECT_CREATION(BlockID);
 
 	template<typename EntryT, typename BlockT>
-	class IMemory;
+	class GenericMemory;
 
 	/**
 	 * @brief Main block data structure.
@@ -51,7 +51,7 @@ namespace vm {
 		// name ...
 
 		template<typename E, typename B>
-		friend class IMemory;
+		friend class GenericMemory;
 
 		// Think of it as a view on parent's bytes that has it's own type and lifetime.
 		base::Map<usize, Ref<GenericBlock<EntryT>>> children_blocks{};  // offset to block
