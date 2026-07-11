@@ -1,0 +1,30 @@
+#pragma once
+
+#include "shadow_entry.hpp"
+
+#include <vm/core/safe/memory/memory.hpp>
+
+namespace vm {
+
+	/**
+	 * @brief Shadow memory implementation using GenericMemory template.
+	 * Maps 1:1 with application memory bytes, but stores ShadowEntry instead.
+	 */
+	using ShadowMemory = GenericMemory<ShadowEntry>;
+
+	/**
+	 * @brief Shadow memory block.
+	 */
+	using ShadowBlock = GenericBlock<ShadowEntry>;
+
+	/**
+	 * @brief Shadow thread stack.
+	 */
+	using ShadowThreadStack = GenericThreadStack<ShadowEntry>;
+
+	/**
+	 * @brief Shadow global buffer pointers.
+	 */
+	using ShadowGlobalBufferPointers = GlobalBufferPointers<ShadowEntry>;
+
+}

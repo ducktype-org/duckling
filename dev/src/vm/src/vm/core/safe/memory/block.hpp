@@ -4,6 +4,7 @@
 #include <base/extend_cpp/strongly_typed_id.hpp>
 #include <base/types/ints.hpp>
 
+#include <vm/core/process/concurrency/fast_track/shadow_entry.hpp>
 #include <vm/core/safe/memory/allocator/block_data.hpp>
 
 namespace vm {
@@ -69,7 +70,9 @@ namespace vm {
 		[[nodiscard]] BlockID getID() const { return id; }
 	};
 
-	using Block = GenericBlock<std::byte>;
+	using Block        = GenericBlock<std::byte>;
+	using ShadowBlock  = GenericBlock<ShadowEntry>;
+	using BlockGeneric = Block;
 }
 
 ID_STD_HASH(vm::BlockID);

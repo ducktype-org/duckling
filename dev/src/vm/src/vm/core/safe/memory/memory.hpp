@@ -167,7 +167,11 @@ namespace vm {
 
 	public:
 		void updateBlockDataView(Ref<BlockT> block, base::TypedModRawView<EntryT> new_view) {
-			usize expected_size = block->data.element_type->getSize().asInt();
+			usize expected_size;
+			if constexpr (std::is_same_v<EntryT, vm::ShadowEntry>)
+				expected_size = block->data.element_type->getShadowSize();
+			else
+				expected_size = block->data.element_type->getSize().asInt();
 			CORE_ASSERT(
 				expected_size == new_view.size(), "New view size must match the block's type size"
 			);
@@ -270,7 +274,7 @@ namespace vm {
 			}
 			case Type::Kind::Data: {
 				// Iterate over data's fields
-				for (const auto& fields = **type->getFields(); auto [offset, tp]: fields)
+				for (const auto& fields = **type->getFields(); auto [offset, shadowOffset, tp]: fields)
 					(this->*callback)(
 						base::TypedModRawView<EntryT>{ data.getBegin() + offset.asInt(),
 					                                   tp->getSize().asInt() },
@@ -612,7 +616,11 @@ namespace vm {
 
 			auto block_data         = parent_block->data;
 			block_data.element_type = type;
-			u64 entry_count         = type->getSize().asInt();
+			u64 entry_count;
+			if constexpr (std::is_same_v<EntryT, vm::ShadowEntry>)
+				entry_count = type->getShadowSize();
+			else
+				entry_count = type->getSize().asInt();
 			if (parent_block->deallocated) throw exceptions::VMUseAfterFreeException();
 			if (offset + entry_count > parent_block->data.view.size())
 				throw exceptions::VMOutOfBlockBoundsException();

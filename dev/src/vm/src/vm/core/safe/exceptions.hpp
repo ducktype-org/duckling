@@ -38,6 +38,15 @@ namespace vm::exceptions {
 		VMDynTableReAllocTypeMismatch, "dynTableReAlloc called on a non-dynamic-table block"
 	);
 
+	struct VMDataRaceException: public VMRuntimeException {
+		constexpr static std::string_view ERR_MSG = "[FastTrack] Data race detected";
+
+		VMDataRaceException(): VMRuntimeException(std::string(ERR_MSG)) {}
+
+		explicit VMDataRaceException(std::string detail):
+			  VMRuntimeException(std::string(ERR_MSG) + ": " + std::move(detail)) {}
+	};
+
 #define VM_RUNTIME_EXCEPTION_WITH_PARAM(name, msg, type)                 \
 	struct name: public VMRuntimeException {                             \
 		type                              value;                         \

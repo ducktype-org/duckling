@@ -24,6 +24,8 @@ add_files(
 	fast/program/type.cpp
 )
 
+add_subdirectory(process/concurrency/fast_track)
+
 set(vm_common_sources ${vm_common_sources} ${files} PARENT_SCOPE)
 
 add_files(

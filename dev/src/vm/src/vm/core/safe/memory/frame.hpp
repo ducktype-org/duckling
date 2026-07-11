@@ -14,6 +14,7 @@
 
 #include <vm/core/safe/memory/block.hpp>
 #include <vm/core/safe/memory/pointer.hpp>
+#include <vm/core/process/concurrency/fast_track/shadow_entry.hpp>
 
 #include <cstddef>
 
@@ -74,5 +75,14 @@ namespace vm {
 		MCRef<low::LowFuncData> current_function;
 
 		void resetFrameData() { *this = Frame(); }
+	};
+
+	/**
+	 * @brief Separate ShadowFrame stack frame for FastTrack Scheme B.
+	 * Decouples shadow stack management from raw data execution frames.
+	 */
+	struct ShadowFrame {
+		ShadowEntry* local_shadow_data_stack = nullptr;
+		u32          local_shadow_data_head  = 0;
 	};
 }

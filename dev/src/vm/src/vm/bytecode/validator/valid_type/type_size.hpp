@@ -7,6 +7,9 @@
 #include <hashing/hash.hpp>
 
 namespace vm::code::valid_type {
+	using ShadowSize  = u32;
+	using PointerSize = u32;
+
 	/**
 	 * @brief TypeSize represents the size of a type in bytes. It takes into account the fact that
 	 * pointer sizes can be different on different architectures. This is useful for calculating the

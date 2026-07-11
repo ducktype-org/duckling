@@ -12,8 +12,9 @@
 namespace vm::kind {
 
 	struct FieldDesc {
-		Offset  offset;
-		TypeRef type;
+		Offset       offset;
+		ShadowOffset shadow_offset;
+		TypeRef      type;
 	};
 
 	struct Data {
@@ -24,5 +25,6 @@ namespace vm::kind {
 		std::vector<FieldDesc>              fields;
 
 		base::Optional<InheritanceMetadata> inheritance_metadata;
+		std::vector<u32>                    byte_to_shadow;
 	};
 }
