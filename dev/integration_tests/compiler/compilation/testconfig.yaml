@@ -11,6 +11,15 @@ backend: "nobackend"
 # If set to "true" the produced duckling executable will be run with valgrind and checked for leaks.
 valgrind: "false"
 
+# Optional regexes matched against the run's stdout/stderr instead of a literal
+# `Output`/`Err` comparison, for cases whose output has volatile parts (e.g. a
+# DVM panic's `BlockID=N`). When either is set the dvm and (non-valgrind) llvm
+# runs are wrapped with the `expect_output` helper, which asserts the regexes,
+# forwards stdout, and swallows the volatile stderr. See
+# integration_tests/helpers/expect_output.py.
+stdout_regex: ""
+stderr_regex: ""
+
 compile_dvm_options: ""
 compile_llvm_options: ""
 # Runs an extra deterministic compile check before normal compile_package.
@@ -55,10 +64,18 @@ PreCase: "mkdir -p @{case_build};
 
 Run: "
   case '@{backend}' in
-    dvm) @{dvm_path} run @{compiled_to_dvm}       ;;
+    dvm)
+      if [ -n \"@{stdout_regex}\" ] || [ -n \"@{stderr_regex}\" ]; then
+        @{expect_output} --out-regex \"@{stdout_regex}\" --err-regex \"@{stderr_regex}\" -- @{dvm_path} run @{compiled_to_dvm};
+      else
+        @{dvm_path} run @{compiled_to_dvm};
+      fi
+      ;;
     llvm)
       if [ '@{valgrind}' = 'true' ]; then
         valgrind --leak-check=full --error-exitcode=1 @{compiled_to_llvm};
+      elif [ -n \"@{stdout_regex}\" ] || [ -n \"@{stderr_regex}\" ]; then
+        @{expect_output} --out-regex \"@{stdout_regex}\" --err-regex \"@{stderr_regex}\" -- @{compiled_to_llvm};
       else
         @{compiled_to_llvm};
       fi
