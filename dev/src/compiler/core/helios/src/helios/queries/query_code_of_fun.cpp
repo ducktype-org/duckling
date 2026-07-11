@@ -3,7 +3,6 @@
 #include <frontend/pst_parser/elements/hierarchy/actions/all_actions.hpp>
 #include <frontend/pst_parser/elements/hierarchy/actions/return.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/copy_constructor.hpp>
-#include <frontend/pst_parser/elements/hierarchy/class_elements/destructor.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/method.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
@@ -136,15 +135,6 @@ namespace compiler::helios {
 
 				// body:
 				auto output_body = processBody(decl, stmt->getBody());
-				this->out.emplace(HOUTFunction(code::pstOrigin(stmt), &decl, output_body));
-			}
-
-			void visitDestructor(pst::Access<pst::Destructor> stmt) final {
-				// declaration:
-				auto& decl = ctx.query<QueryDeclOfFun>(original_symbol)->valueOrThrow();
-
-				// body: a destructor body is always a code block
-				auto output_body = compileCodeOfCodeBlock(ctx, stmt->getBody(), decl.return_type);
 				this->out.emplace(HOUTFunction(code::pstOrigin(stmt), &decl, output_body));
 			}
 

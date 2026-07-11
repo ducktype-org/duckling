@@ -101,11 +101,13 @@ private:
 		const auto void_2 = getVoidType();
 		assertTrue(void_1 == void_2, "There should only be one Void type.");
 		assertTrue(void_1.getKind() == Void, "Void type should have kind Void.");
+		assertTrue(void_1.hasNoOpDestructor(), "Void should have no op destructor.");
 
 		const auto unit_1 = getUnitType();
 		const auto unit_2 = getUnitType();
 		assertTrue(unit_1 == unit_2, "There should only be one Unit type.");
 		assertTrue(unit_1.getKind() == Unit, "Unit type should have kind Unit.");
+		assertTrue(unit_1.hasNoOpDestructor(), "Unit should have no op destructor.");
 
 		assertTrue(void_1 != unit_1, "Void and Unit should be different types.");
 
@@ -118,9 +120,6 @@ private:
 		assertTrue(unit_3.getKind() == Unit, "Unit should survive casting.");
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			assertTrue(void_1.hasNoOpDestructor(ctx), "Void should have no op destructor.");
-			assertTrue(unit_1.hasNoOpDestructor(ctx), "Unit should have no op destructor.");
-
 			const auto unit_st = st(unit_1);
 			assertTrue(unit_st.isDefaultConstructible(ctx), "Unit should be default constructible.");
 			assertFalse(
@@ -150,14 +149,17 @@ private:
 		const auto byte_1 = getByteType();
 
 		assertTrue(byte_1.getKind() == Byte, "Byte type should have kind Byte.");
+		assertTrue(byte_1.hasNoOpDestructor(), "Byte should have no op destructor.");
 
 		const auto bool_1 = getBoolType();
 
 		assertTrue(bool_1.getKind() == Bool, "Bool type should have kind Bool.");
+		assertTrue(bool_1.hasNoOpDestructor(), "Bool should have no op destructor.");
 
 		const auto char_1 = getCharType();
 
 		assertTrue(char_1.getKind() == Char, "Char type should have kind Char.");
+		assertTrue(char_1.hasNoOpDestructor(), "Char should have no op destructor.");
 
 		assertTrue(
 			byte_1 != bool_1 && bool_1 != char_1 && char_1 != byte_1,
@@ -247,12 +249,10 @@ private:
 			ASSERT_TRUE(int_u.getSignedness() == Unsigned);
 			ASSERT_TRUE(int_3.getSignedness() == Signed);
 
-			query::utils::withContextDo([&](query::Context& ctx) {
-				assertTrue(
-					int_1.hasNoOpDestructor(ctx) && int_u.hasNoOpDestructor(ctx),
-					"Ints should have no op destructor."
-				);
-			});
+			assertTrue(
+				int_1.hasNoOpDestructor() && int_u.hasNoOpDestructor(),
+				"Ints should have no op destructor."
+			);
 		}
 
 		assertTrue(
@@ -320,9 +320,7 @@ private:
 			FloatAbstractType float_3    = type_float;
 			assertTrue(float_3.getKind() == Float, "Float should survive casting.");
 
-			query::utils::withContextDo([&](query::Context& ctx) {
-				assertTrue(float_1.hasNoOpDestructor(ctx), "Floats should have no op destructor.");
-			});
+			assertTrue(float_1.hasNoOpDestructor(), "Floats should have no op destructor.");
 		}
 
 		assertTrue(
@@ -426,9 +424,9 @@ private:
 		const StringAbstractType str_3    = type_str;
 		assertTrue(str_3.getKind() == String, "String should survive casting.");
 
-		query::utils::withContextDo([&](query::Context& ctx) {
-			assertFalse(str_1.hasNoOpDestructor(ctx), "String should not have no op destructor.");
+		assertFalse(str_1.hasNoOpDestructor(), "String should not have no op destructor.");
 
+		query::utils::withContextDo([&](query::Context& ctx) {
 			const auto string_st = st(str_1);
 			assertTrue(
 				string_st.isDefaultConstructible(ctx), "String should be default constructible."
@@ -477,12 +475,12 @@ private:
 			"DynamicArrays with element with different mutability should be different."
 		);
 
-		query::utils::withContextDo([&](query::Context& ctx) {
-			assertFalse(
-				arr_1.hasNoOpDestructor(ctx) && arr_4.hasNoOpDestructor(ctx),
-				"DynamicArrays should not have no op destructors."
-			);
+		assertFalse(
+			arr_1.hasNoOpDestructor() && arr_4.hasNoOpDestructor(),
+			"DynamicArrays should not have no op destructors."
+		);
 
+		query::utils::withContextDo([&](query::Context& ctx) {
 			const auto arr_st = st(arr_1);
 			assertTrue(
 				arr_st.isDefaultConstructible(ctx), "DynamicArray should be default constructible."
@@ -553,18 +551,15 @@ private:
 			"StaticArrays with element with different mutability should be different."
 		);
 
+		assertTrue(arr_1.hasNoOpDestructor(), "StaticArray of Ints should have a no-op destructor.");
+
 		const auto str_type = getStringType();
 		const auto arr_str  = query::entryPoint<QueryStaticArrayType>({ st(str_type), 5 });
+		assertFalse(
+			arr_str.hasNoOpDestructor(), "StaticArray of Strings should not have a no-op destructor."
+		);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			assertTrue(
-				arr_1.hasNoOpDestructor(ctx), "StaticArray of Ints should have a no-op destructor."
-			);
-			assertFalse(
-				arr_str.hasNoOpDestructor(ctx),
-				"StaticArray of Strings should not have a no-op destructor."
-			);
-
 			assertTrue(arr_1.carriesInformation(ctx), "Array of ints should carry information");
 			const auto unit = getUnitType();
 
@@ -654,19 +649,18 @@ private:
 		const auto tup_5 = query::entryPoint<QueryTupleType>({ { st(int_16, true), st(int_32) } });
 		assertTrue(tup_1 != tup_5, "Tuples with different mutability should be different.");
 
+		assertTrue(
+			tup_1.hasNoOpDestructor() && tup_4.hasNoOpDestructor() && tup_5.hasNoOpDestructor(),
+			"Tuples of Ints should have no op destructors."
+		);
+
 		const auto str   = getStringType();
 		const auto tup_6 = query::entryPoint<QueryTupleType>({ { st(int_16), st(str) } });
+		assertFalse(
+			tup_6.hasNoOpDestructor(), "Tuple with String should not have no op destructor."
+		);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			assertTrue(
-				tup_1.hasNoOpDestructor(ctx) && tup_4.hasNoOpDestructor(ctx)
-					&& tup_5.hasNoOpDestructor(ctx),
-				"Tuples of Ints should have no op destructors."
-			);
-			assertFalse(
-				tup_6.hasNoOpDestructor(ctx), "Tuple with String should not have no op destructor."
-			);
-
 			const auto tup_st_trivial = st(tup_1);
 			assertTrue(
 				tup_st_trivial.isDefaultConstructible(ctx),
@@ -739,18 +733,18 @@ private:
 		const auto var_4 = query::entryPoint<QueryVariantType>({ { st(int_32), st(int_32) } });
 		assertTrue(var_1 != var_4, "Variants with different underlying types should be different.");
 
+		assertTrue(
+			var_1.hasNoOpDestructor() && var_4.hasNoOpDestructor(),
+			"Variants of Ints should have no op destructors."
+		);
+
 		const auto str   = getStringType();
 		const auto var_5 = query::entryPoint<QueryVariantType>({ { st(int_16), st(str) } });
+		assertFalse(
+			var_5.hasNoOpDestructor(), "Variant with String should not have no op destructor."
+		);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			assertTrue(
-				var_1.hasNoOpDestructor(ctx) && var_4.hasNoOpDestructor(ctx),
-				"Variants of Ints should have no op destructors."
-			);
-			assertFalse(
-				var_5.hasNoOpDestructor(ctx), "Variant with String should not have no op destructor."
-			);
-
 			const auto var_st = st(var_1);
 			assertFalse(
 				var_st.isDefaultConstructible(ctx),
@@ -841,6 +835,7 @@ private:
 		assertTrue(nspace == nspace_2, "There shouldn't be multiple different Namespace types.");
 
 		assertTrue(nspace.getKind() == Namespace, "NamespaceType should have kind Meta.");
+		assertTrue(nspace.hasNoOpDestructor(), "NamespaceType should have no op destructor.");
 
 		const AbstractType          nspace_type = nspace;
 		const NamespaceAbstractType nspace_3    = nspace_type;
@@ -852,17 +847,13 @@ private:
 		assertTrue(module == module_2, "There shouldn't be multiple different Module types.");
 
 		assertTrue(module.getKind() == Module, "ModuleType should have kind Meta.");
+		assertFalse(module.hasNoOpDestructor(), "ModuleType should not have no op destructor.");
 
 		const AbstractType       module_type = module;
 		const ModuleAbstractType module_3    = module_type;
 		assertTrue(module_3.getKind() == Module, "ModuleType should survive casting.");
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			assertTrue(nspace.hasNoOpDestructor(ctx), "NamespaceType should have no op destructor.");
-			assertFalse(
-				module.hasNoOpDestructor(ctx), "ModuleType should not have no op destructor."
-			);
-
 			assertFalse(st(nspace).isCopyable(ctx), "Namespace should not be copyable.");
 			assertFalse(
 				st(nspace).isDefaultConstructible(ctx),
@@ -883,13 +874,13 @@ private:
 		assertTrue(meta == meta_2, "There shouldn't be multiple different 'type' types.");
 
 		assertTrue(meta.getKind() == Meta, "MetaType should have kind Meta.");
+		assertTrue(meta.hasNoOpDestructor(), "MetaType should have no op destructor.");
 
 		const AbstractType     meta_type = meta;
 		const MetaAbstractType met_3     = meta_type;
 		assertTrue(met_3.getKind() == Meta, "MetaType should survive casting.");
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			assertTrue(meta.hasNoOpDestructor(ctx), "MetaType should have no op destructor.");
 			assertTrue(
 				st(meta).isDefaultConstructible(ctx),
 				"Meta type should be default constructible (e.g. to void)."
@@ -919,7 +910,7 @@ private:
 			);
 
 			assertTrue(
-				list_template_type.hasNoOpDestructor(ctx),
+				list_template_type.hasNoOpDestructor(),
 				"Type templates should have a no-op destructor."
 			);
 

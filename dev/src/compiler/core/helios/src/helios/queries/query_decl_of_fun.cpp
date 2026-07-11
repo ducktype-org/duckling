@@ -4,7 +4,6 @@
 #include <frontend/pst_parser/elements/hierarchy/actions/all_actions.hpp>
 #include <frontend/pst_parser/elements/hierarchy/actions/return.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/copy_constructor.hpp>
-#include <frontend/pst_parser/elements/hierarchy/class_elements/destructor.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/field.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/method.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
@@ -337,36 +336,6 @@ namespace compiler::helios {
 					tsh::Mutability::Mutable,
 				};
 			}
-
-			void visitDestructor(pst::Access<pst::Destructor> stmt) final {
-				// A destructor takes an implicit `ref T` and returns unit
-				const auto  self_scope  = ctx.query<QueryPrimaryCodeScopeFor>(stmt);
-				const SymID self_symbol = ctx.query<defgen::QueryGeneratedSymbol>({
-					.name = base::StrID("self"),
-					.generated_symbol_data
-					= defgen::SelfParameter{ .method_symbol = this->original_symbol,
-				                             .scope         = self_scope },
-				});
-
-				std::vector<code::Parameter> parameters;
-				parameters.emplace_back(
-					name(self_symbol),
-					ctx.query<QueryTypeOfSymbol>(self_symbol)->valueOrThrow(),
-					std::nullopt,
-					self_symbol,
-					code::generatedOrigin()
-				);
-
-				const auto unit_ret = tsh::SymbolType<>::withDefaults(tsh::getUnitType());
-
-				this->out.emplace(HOUTFunctionDeclaration(
-					original_symbol,
-					HOUTFunctionDeclaration::Operatoriness::None,
-					unit_ret,
-					std::move(parameters),
-					code::pstOrigin(stmt)
-				));
-			}
 		};
 
 		/**
@@ -528,8 +497,7 @@ namespace compiler::helios {
 			case SymbolKind::Function:
 			case SymbolKind::FunctionDeclaration:
 			case SymbolKind::Method:
-			case SymbolKind::Constructor:
-			case SymbolKind::Destructor: {
+			case SymbolKind::Constructor: {
 				variant_match(getSymRef(key)->other) {
 					variant_case_novalue(PstImplementedSemantics, BuiltinSemantics) {
 						DeclarationVisitor decl_maker(ctx, key);

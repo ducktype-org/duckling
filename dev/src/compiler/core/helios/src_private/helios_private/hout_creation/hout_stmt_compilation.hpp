@@ -38,17 +38,6 @@ namespace compiler::helios {
 	);
 
 	/**
-	 * @brief Overload for a bare `pst::CodeBlock` container.
-	 *
-	 * Used for function-like bodies that are always a code block, like the class destructor.
-	 */
-	std::shared_ptr<const code::CodeBlock> compileCodeOfCodeBlock(
-		query::Context&                   ctx,
-		pst::AccessLocked<pst::CodeBlock> container,
-		tsh::SymbolType<>                 return_type
-	);
-
-	/**
 	 * @brief Compile a single PST statement into a HOUT CodeBlock.
 	 *
 	 * Uses HoutStmtMaker internally to convert the given PST statement (e.g. if/while/for/block)

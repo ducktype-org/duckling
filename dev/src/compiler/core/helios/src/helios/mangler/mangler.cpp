@@ -281,7 +281,6 @@ namespace compiler::helios::mangler {
 			case SymbolKind::Function:
 			case SymbolKind::Method:
 			case SymbolKind::Constructor:
-			case SymbolKind::Destructor:
 			case SymbolKind::FunctionDeclaration: {
 				variant_match(getSymRef(symbol_id)->other) {
 					variant_case_novalue(PstImplementedSemantics, BuiltinSemantics) {

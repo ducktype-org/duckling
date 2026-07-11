@@ -505,15 +505,14 @@ private:
 		ASSERT_EQUAL(3, module.globals.size());
 		ASSERT_EQUAL(3, module.lir_unit.lir_globals.size());
 
-		auto my_int   = module.houtGlobal("my_int");
-		auto my_bool  = module.houtGlobal("my_bool");
-		auto my_float = module.houtGlobal("my_float");
+		auto my_int = module.houtGlobal("my_int");
+		ASSERT_TRUE(my_int->type.hasNoOpDestructor());
 
-		withContextDo([&](query::Context& ctx) {
-			ASSERT_TRUE(my_int->type.hasNoOpDestructor(ctx));
-			ASSERT_TRUE(my_bool->type.hasNoOpDestructor(ctx));
-			ASSERT_TRUE(my_float->type.hasNoOpDestructor(ctx));
-		});
+		auto my_bool = module.houtGlobal("my_bool");
+		ASSERT_TRUE(my_bool->type.hasNoOpDestructor());
+
+		auto my_float = module.houtGlobal("my_float");
+		ASSERT_TRUE(my_float->type.hasNoOpDestructor());
 	}
 
 	void simpleConstant() {
