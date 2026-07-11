@@ -27,14 +27,15 @@ namespace vm {
 	template<typename EntryT>
 	class HeapAllocator final: public IAllocator<EntryT> {
 		// It's a mock, it should be replaced with something faster.
-		//
-		// @note Intentionally byte-only for now: `size` below comes from Type::getSize() (a byte
-		// count) but is passed to heapAllocOrThrow (an element count). Those coincide only while
-		// sizeof(EntryT) == 1 (enforced by the static_asserts); widening EntryT requires
-		// separating byte counts from entry counts here.
 		std::deque<base::TypedOwningView<EntryT>> allocated;
 
 	public:
+		// @note `size` here is a byte count (from Type::getSize()) but is passed to
+		// heapAllocOrThrow<EntryT>(size) -> new EntryT[size], where the argument is an element
+		// count. The two only coincide while sizeof(EntryT) == 1, which the static_assert below
+		// enforces. This path is intentionally byte-only for now; widening EntryT will need the
+		// bytes-vs-entries distinction resolved here deliberately, instead of silently
+		// over-allocating.
 		BlockData<EntryT> allocate(TypeCRef type) {
 			static_assert(sizeof(EntryT) == 1);
 			usize size = type->getSize().asInt();
@@ -50,6 +51,7 @@ namespace vm {
 		 * `inner_type`.
 		 * @note Assumes that `table_type` is a dynamic table type with inner type `inner_type`,
 		 *  to assign the correct type to the new `BlockData` object.
+		 * @note Same byte-count/element-count aliasing as `allocate()` above, see its note.
 		 */
 		BlockData<EntryT> dynTableAllocateN(TypeCRef table_type, TypeCRef inner_type, u64 n) {
 			static_assert(sizeof(EntryT) == 1);
