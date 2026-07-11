@@ -13,17 +13,20 @@ namespace pst {
 
 	protected:
 		base::StrID name;
+
 	public:
 		explicit IdentifierWrapper(LangParserState& state, base::StrID name):
 			  NotStmt(state),
 			  name(name) {
 			element_kind = ElementKind::IdentifierWrapper;
 		}
+
 		static MBox<IdentifierWrapper> parse(LangParserState& state);
 		/**
-		 * @brief Separate parsing function that handles names that can also be operators (like in function definition).
-	 	 *
-	 	 * @TODO: #3119 This will probably end up being a separate subclass here.
+		 * @brief Separate parsing function that handles names that can also be operators (like in
+		 * function definition).
+		 *
+		 * @TODO: #3119 This will probably end up being a separate subclass here.
 		 */
 		static MBox<IdentifierWrapper> parseFunctionName(LangParserState& state);
 		~IdentifierWrapper() final = default;
