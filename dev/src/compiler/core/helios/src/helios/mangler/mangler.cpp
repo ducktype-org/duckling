@@ -69,6 +69,7 @@ namespace compiler::helios::mangler {
 			if (auto abi = ctx.query<QuerySymbolABI>(sym_id); abi->hasValue()) {
 				variant_match(abi->valueOrThrow()) {
 					variant_case_novalue(CAbi) { return false; }
+					variant_case_novalue(DVMAbi) { return false; }
 					variant_case_novalue(DefaultAbi) { return true; }
 					variant_default { CORE_UNREACHABLE(); }
 				}
