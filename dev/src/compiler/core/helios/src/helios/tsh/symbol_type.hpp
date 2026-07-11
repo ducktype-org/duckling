@@ -220,8 +220,6 @@ namespace compiler::tsh {
 				return false;
 			}
 			if (abstract_type.hasNoOpDestructor(ctx)) return true;
-			// @TODO #1271: add more cases where destructor is trivial
-			// NOTE: abstract_type check should probably be the last one as it may be expensive
 			return false;
 		}
 

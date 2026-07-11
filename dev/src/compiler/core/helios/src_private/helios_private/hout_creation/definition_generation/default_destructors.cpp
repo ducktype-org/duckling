@@ -33,7 +33,7 @@ namespace compiler::helios::defgen {
 
 	namespace {
 		/**
-		 * @brief Append the statements that destroy the value denoted by the lvalue `location`.
+		 * @brief Append the statements that destroy the `location` value.
 		 *
 		 * - Trivially-destructible values do nothing.
 		 * - A `box T` destroys its pointee and performs a call to a builtin `boxFree` to free the

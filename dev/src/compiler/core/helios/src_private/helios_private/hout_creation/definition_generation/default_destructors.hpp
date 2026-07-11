@@ -9,10 +9,6 @@
 namespace compiler::helios::defgen {
 	/**
 	 * @brief Get the symbol of the compiler-generated destructor for a given type.
-	 *
-	 * The returned symbol always refers to the generated `__destruct` method. For a class that
-	 * declares its own destructor, the generated `__destruct` runs the user code first and then
-	 * destroys the members.
 	 */
 	SymID destructSymForType(query::Context& ctx, tsh::AbstractType type);
 
@@ -31,11 +27,8 @@ namespace compiler::helios::defgen {
 	/**
 	 * @brief Get the compiler-generated HOUT representation of a type's destructor.
 	 *
-	 * The destructor takes a single `ref T self` and returns unit. Destroys each
-	 * non-trivially-destructible member by recursively invoking it's destructor.
-	 * `box T` members destroy their pointee and frees the heap memory. For a
-	 * class that declares a user-defined destructor, the user code runs before the members are
-	 * destroyed.
+	 * The destructor takes a `ref T self` parameter and returns unit. Destroys each
+	 * non-trivially-destructible member by invoking it's destructor.
 	 *
 	 * \query_thread_safe_if_cache
 	 */
