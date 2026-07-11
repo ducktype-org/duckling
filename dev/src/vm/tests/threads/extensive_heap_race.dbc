@@ -1,0 +1,103 @@
+type fixed_size_table: InnerArray i64 5
+type data: Level2 { pad_l2: i64, arr: InnerArray }
+type data: Level1 { pad_l1: i64, l2: Level2 }
+type data: Root   { pad_root: i64, l1: Level1 }
+
+type pointer: ptr_Root Root
+type pointer: ptr_Level1 Level1
+type pointer: ptr_Level2 Level2
+type pointer: ptr_InnerArray InnerArray
+type pointer: ptr_i64 i64
+
+global_data g_heap_ptr ptr_Root {}
+
+function child_thread {} -> {} {
+    init_pany_type val1, i64;
+    mov_p64_imm val1, 42;
+
+    init_pany_type local_heap_ptr, ptr_Root;
+    mov_pptr_pptr local_heap_ptr, g_heap_ptr;
+    init_pany_type p_l1, ptr_Level1;
+    structLea_pptr_pptr_field p_l1, local_heap_ptr, Root.l1;
+    init_pany_type p_l2, ptr_Level2;
+    structLea_pptr_pptr_field p_l2, p_l1, Level1.l2;
+    init_pany_type p_arr, ptr_InnerArray;
+    structLea_pptr_pptr_field p_arr, p_l2, Level2.arr;
+    init_pany_type p_val, ptr_i64;
+    init_pany_type idx, i64;
+    mov_p64_imm idx, 2;
+    fixedSizeTableLea_pptr_pptr_p64 p_val, p_arr, idx;
+    store_pptr_pany p_val, val1;
+
+    deinit; # idx
+    deinit; # p_val
+    deinit; # p_arr
+    deinit; # p_l2
+    deinit; # p_l1
+    deinit; # local_heap_ptr
+    deinit; # val1
+    ret;
+}
+
+function main { i64, ptr_argv } -> { i64 } {
+    init_pany_type heap_ptr, ptr_Root;
+    alloc_pptr_type heap_ptr, Root;
+    mov_pptr_pptr g_heap_ptr, heap_ptr;
+
+    init_pany_type thread_id, i64;
+    set_threadctx child_thread;
+    call_builtinfunc builtin_start_thread;
+
+    # CONCURRENT UNSYNCHRONIZED WRITE (RACE) on the heap nested struct array element!
+    init_pany_type temp, i64;
+    mov_p64_imm temp, 1337;
+    init_pany_type p_l1, ptr_Level1;
+    structLea_pptr_pptr_field p_l1, heap_ptr, Root.l1;
+    init_pany_type p_l2, ptr_Level2;
+    structLea_pptr_pptr_field p_l2, p_l1, Level1.l2;
+    init_pany_type p_arr, ptr_InnerArray;
+    structLea_pptr_pptr_field p_arr, p_l2, Level2.arr;
+    init_pany_type p_val, ptr_i64;
+    init_pany_type idx, i64;
+    mov_p64_imm idx, 2;
+    fixedSizeTableLea_pptr_pptr_p64 p_val, p_arr, idx;
+    store_pptr_pany p_val, temp;
+
+    init_pany_type join_ret, i64;
+    init_pany_type join_id, i64;
+    mov_p64_p64 join_id, thread_id;
+    call_builtinfunc builtin_join_thread;
+
+    free_pptr heap_ptr;
+
+    # If the join failed (returned negative status due to joinee's panic),
+    # main thread panics with division-by-zero to terminate the process!
+    cmpLt_p64_imm join_ret, 0;
+    jmpIf_label PanicLabel;
+
+    deinit; # join_id
+    deinit; # join_ret
+    deinit; # idx
+    deinit; # p_val
+    deinit; # p_arr
+    deinit; # p_l2
+    deinit; # p_l1
+    deinit; # temp
+    deinit; # thread_id
+    deinit; # heap_ptr
+    ret;
+
+    label PanicLabel;
+    div_p64_imm thread_id, 0;
+    deinit; # join_id
+    deinit; # join_ret
+    deinit; # idx
+    deinit; # p_val
+    deinit; # p_arr
+    deinit; # p_l2
+    deinit; # p_l1
+    deinit; # temp
+    deinit; # thread_id
+    deinit; # heap_ptr
+    ret;
+}

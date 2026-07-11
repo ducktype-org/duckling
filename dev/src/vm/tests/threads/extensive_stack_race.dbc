@@ -1,0 +1,60 @@
+type pointer: ptr_i64 i64
+
+global_data g_stack_ptr ptr_i64 {}
+
+function child_thread {} -> {} {
+    init_pany_type val1, i64;
+    mov_p64_imm val1, 42;
+
+    init_pany_type local_stack_ptr, ptr_i64;
+    mov_pptr_pptr local_stack_ptr, g_stack_ptr;
+    store_pptr_pany local_stack_ptr, val1;
+
+    deinit; # local_stack_ptr
+    deinit; # val1
+    ret;
+}
+
+function main { i64, ptr_argv } -> { i64 } {
+    init_pany_type stack_var, i64;
+    init_pany_type stack_ptr, ptr_i64;
+    ref_pptr_pany stack_ptr, stack_var;
+    mov_pptr_pptr g_stack_ptr, stack_ptr;
+
+    init_pany_type thread_id, i64;
+    set_threadctx child_thread;
+    call_builtinfunc builtin_start_thread;
+
+    # CONCURRENT UNSYNCHRONIZED WRITE (RACE) on the stack variable via pointer!
+    init_pany_type temp, i64;
+    mov_p64_imm temp, 1337;
+    store_pptr_pany stack_ptr, temp;
+
+    init_pany_type join_ret, i64;
+    init_pany_type join_id, i64;
+    mov_p64_p64 join_id, thread_id;
+    call_builtinfunc builtin_join_thread;
+
+    # If the join failed (returned negative status due to joinee's panic),
+    # main thread panics with division-by-zero to terminate the process!
+    cmpLt_p64_imm join_ret, 0;
+    jmpIf_label PanicLabel;
+
+    deinit; # join_id
+    deinit; # join_ret
+    deinit; # temp
+    deinit; # thread_id
+    deinit; # stack_ptr
+    deinit; # stack_var
+    ret;
+
+    label PanicLabel;
+    div_p64_imm thread_id, 0;
+    deinit; # join_id
+    deinit; # join_ret
+    deinit; # temp
+    deinit; # thread_id
+    deinit; # stack_ptr
+    deinit; # stack_var
+    ret;
+}

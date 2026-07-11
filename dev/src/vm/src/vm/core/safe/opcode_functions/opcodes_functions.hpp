@@ -270,7 +270,33 @@ namespace vm {
 			pushLocalSlot(frame, type, data_ptr, type->getSize().asInt(), block.get());
 		}
 
+		/**
+		 * @brief Releases the shadow of the top local slot, the Fast Track counterpart of
+		 * `performDeinit`. Every local of a Fast Track thread got a block in `ft_init_bany_type`,
+		 * which is how its shadow is found; a slot without one never had a shadow.
+		 */
+		[[gnu::noinline]]
+		static void popShadowOfTopSlot(Frame* frame, SafeVMThread& thread) {
+			Block* data_block = frame->local_slot_stack_end[-1].block;
+			if (data_block == nullptr) return;
+			auto&        globals = thread.safe_process.getFastTrackGlobals();
+			ShadowBlock* shadow  = globals.getShadow(data_block->getID());
+			if (shadow == nullptr) return;
+
+			auto&            shadow_memory = globals.getShadowDataMemory();
+			const ShadowSize shadow_size   = ShadowMemory::getBlockType(shadow)->getShadowSize();
+			shadow_memory.freeBlockData(Ref(shadow));
+			shadow_memory.decreaseBlockRefcount(Ref(shadow));
+			globals.clearShadow(data_block->getID());
+			thread.ft_data->getShadowFrame()->local_shadow_data_head -= shadow_size;
+		}
+
 		static VM_OPFUN_INLINE void performDeinit(Frame*& frame, SafeVMThread& thread) {
+			// The shadow goes first: it is found through the slot's block. This is the single
+			// place a local is popped, by the `deinit` opcodes and by the calls that consume
+			// their arguments alike, so the shadow stack follows the slot stack everywhere.
+			if (thread.ft_data) [[unlikely]]
+				popShadowOfTopSlot(frame, thread);
 			// A variable that never needed a block has none to free.
 			if (Block* block = frame->local_slot_stack_end[-1].block) {
 				thread.process_memory.freeBlockData(block);

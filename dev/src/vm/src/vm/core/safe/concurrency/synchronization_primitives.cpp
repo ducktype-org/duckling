@@ -8,10 +8,10 @@ namespace vm {
 	SynchronizationPrimitives::~SynchronizationPrimitives() {
 		// A DVM thread that panicked or was killed while holding a mutex leaves it locked; clear
 		// it so the pooled timed_mutex is not destroyed while locked (see clearAbandonedLock).
-		for (auto& mutex: mutex_pool) os_utils::clearAbandonedLock(mutex);
+		for (auto& mutex: mutex_pool) os_utils::clearAbandonedLock(mutex.os_mutex);
 	}
 
-	Ref<std::timed_mutex> SynchronizationPrimitives::getMutex(usize mutex_id) {
+	Ref<Mutex> SynchronizationPrimitives::getMutex(usize mutex_id) {
 		return mutex_pool.maybeGet(mutex_id).expect<exceptions::VMResourceDoesNotExist>("mutex");
 	}
 

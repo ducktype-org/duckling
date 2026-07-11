@@ -2,6 +2,7 @@
 
 #include "../ivm_compiler.hpp"
 
+#include <vm/api/data/process_options.hpp>
 #include <vm/bytecode/validator/valid_program.hpp>
 #include <vm/core/safe/low_program/low_program.hpp>
 #include <vm/core/safe/low_program/micro_instruction_args.hpp>
@@ -55,11 +56,22 @@ namespace vm::loader::compiler::safe {
 			recompile();
 		}
 
+		SafeCompiler(const code::ValidProgram& high_program, const api::ProcessConfig& config):
+			  vm::loader::compiler::IVMCompiler(high_program),
+#ifdef ENABLE_JIT
+			  jit_enabled(config.enable_jit),
+#endif
+			  config(config) {
+			recompile();
+		}
+
 		/**
 		 * @brief Provides read-only access to the internally managed `LowVMProgram`.
 		 * @return A constant reference to the current, fully compiled low-level program.
 		 */
 		[[nodiscard]] CRef<vm::low::LowVMProgram> getLowProgram() const;
+
+		[[nodiscard]] const code::ValidProgram& getHighProgram() const { return high_program; }
 
 		[[nodiscard]] std::expected<FatBytecodePosition, MappingException>
 			mapLowVMProgramPositionToCodeCollectionPosition(low::LowCodePosition position) const;
@@ -101,6 +113,12 @@ namespace vm::loader::compiler::safe {
 #endif
 
 		detail::SafeProgramCompilationContext program_ctx;
+
+		/**
+		 * @brief Process configuration that controls conditional lowering: with
+		 * `enable_fast_track` every memory access is lowered next to its `ft_*` counterpart.
+		 */
+		api::ProcessConfig config{};
 
 		/**
 		 * @brief Fills out label arguments from IDs to label offsets in micro-bytecode.

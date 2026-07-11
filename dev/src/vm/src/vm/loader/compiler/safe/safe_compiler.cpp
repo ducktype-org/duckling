@@ -22,6 +22,38 @@ namespace vm::loader::compiler::safe {
 
 	namespace detail {
 
+		static u64 getLocalShadowDataOffset(
+			const SafeCompiler&                                       compiler,
+			const vm::loader::compiler::detail::FunctionStackContext& stack_ctx,
+			code::StackStateID                                        stack_state_id,
+			const code::valid_type::TypeSize&                         var_offset
+		) {
+			u64   shadow_data_offset = 0;
+			usize target_offset_val  = getIntTypeSize(var_offset);
+			auto& db                 = stack_ctx.function.local_stack;
+			usize active_size        = db.size(stack_state_id);
+
+			for (usize i = 0; i < active_size; ++i) {
+				auto name_opt = db.getName(stack_state_id, i);
+				if (!name_opt) continue;
+				auto byte_offset_opt = db.getByteOffset(stack_state_id, *name_opt);
+				if (!byte_offset_opt) continue;
+
+				if (getIntTypeSize(*byte_offset_opt) < target_offset_val) {
+					auto type_name_opt = db.getTypeName(stack_state_id, i);
+					if (type_name_opt) {
+						auto valid_type
+							= compiler.getHighProgram().getTypeContext().getCurrentTypes().at(
+								*type_name_opt
+							);
+						shadow_data_offset += valid_type->getShadowSize();
+					}
+				}
+			}
+
+			return shadow_data_offset;
+		}
+
 #define DEFINE_LOWER_ARGUMENT_IMPL_FOR_FAMILY(FAMILY_CONCEPT, ...)                                   \
 	template<FAMILY_CONCEPT ToType>                                                                  \
 	struct LowerArgumentImpl<ToType> final {                                                         \
@@ -130,6 +162,26 @@ namespace vm::loader::compiler::safe {
 				label_id_map.put(opcode_arg.label_name, label_id_map.size());
 			return label_id_map.at(opcode_arg.label_name);
 		);
+
+		// Fast Track: shadow places and shadow field offsets.
+		DEFINE_LOWER_ARGUMENT_IMPL_FOR_FAMILY(
+			low::opargs::ShadowPlaceDataArgumentType,
+			if (auto maybe_offset = stack_ctx.function.local_stack.getByteOffset(stack_state_id, opcode_arg.var_name); maybe_offset.has_value()) {
+				return getLocalShadowDataOffset(compiler, stack_ctx, stack_state_id, *maybe_offset);
+			}
+			return compiler.low_program.getGlobals().at(opcode_arg.var_name)->global_shadow_data_offset | (1ULL << 63);
+		);
+
+		DEFINE_LOWER_ARGUMENT_IMPL(
+			low::opargs::ShadowField,
+			opargs::Field,
+			return static_cast<u64>(*compiler.getHighProgram()
+		                                 .getTypeContext()
+		                                 .getCurrentTypes()
+		                                 .at(opcode_arg.type_name)
+		                                 ->getFieldShadowOffsetByName(opcode_arg.field_name));
+		);
+
 		// clang-format on
 
 #undef DEFINE_LOWER_ARGUMENT_IMPL

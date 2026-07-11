@@ -699,6 +699,11 @@ namespace vm {
 				"Start function should not be called in the runtime!"
 			);
 
+			// The callee's `ft_ret` pops a shadow frame, so the call has to push one. A virtual
+			// call only resolves its callee here, so unlike `call_func` it has no `ft_*` prefix.
+			if (thread.ft_data)
+				pushShadowFrame(FT_RT, thread.process_program->getFunctions()[function_id]);
+
 			performFunctionCall(instr, local_stack, frame, thread, function_id, instr[1].arg0, 2);
 		}
 		FUNCTION_CONT(0);
@@ -1556,6 +1561,525 @@ namespace vm {
 			const auto& safe_vm_value = *std::bit_cast<const SafeVMValue*>(instr->arg0);
 			performInit(local_stack, frame, thread, instr->arg1, safe_vm_value.type);
 			safe_vm_value.exportData({ Ref(frame->local_slot_stack_end[-1].block), 0 });
+		}
+		FUNCTION_CONT(1);
+	}
+
+	// ========= FAST TRACK IMPLEMENTATIONS ========
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ft_alloc_pptr_type)(FUNCTION_ARGS) {
+		{
+			auto type = READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1);
+			auto ptr  = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
+
+			FT_GLOBALS.removeZombie(ptr.getBlock()->getID());
+			if (type->getShadowSize() > 0) {
+				auto         shadow_block = FT_SHADOW_MEMORY.allocateHeap(type);
+				auto         tid          = FT_DATA.thread_id;
+				auto         epoch        = FT_DATA.getVC()[tid];
+				ShadowEntry* base         = shadow_block->getData();
+				for (u32 i = 0; i < type->getShadowSize(); ++i) {
+					base[i].last_write      = Epoch(tid, epoch);
+					base[i].last_read_epoch = Epoch(tid, epoch);
+				}
+				FT_GLOBALS.registerShadow(ptr.getBlock()->getID(), shadow_block.get());
+				FT_SHADOW_MEMORY.increaseBlockRefcount(shadow_block);
+			}
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ft_free_pptr)(FUNCTION_ARGS) {
+		{
+			auto ptr = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
+			if (!ptr.isNull()) {
+				ShadowBlock* sb = FT_GLOBALS.getShadow(ptr.getBlock()->getID());
+				if (sb) {
+					auto         type  = FT_SHADOW_MEMORY.getBlockType(sb);
+					auto         tid   = FT_DATA.thread_id;
+					auto         epoch = FT_DATA.getVC()[tid];
+					ShadowEntry* base  = sb->getData();
+					for (u32 i = 0; i < type->getShadowSize(); ++i) {
+						base[i].processWrite(tid, epoch, FT_DATA.getVC());
+						base[i].reset();
+					}
+					// Record a zombie so concurrent threads can detect the free-vs-write race
+					// even after the shadow is torn down.
+					FT_GLOBALS.addZombie(ptr.getBlock()->getID(), Epoch(tid, epoch));
+					FT_SHADOW_MEMORY.freeBlockData(Ref(sb));
+					FT_SHADOW_MEMORY.decreaseBlockRefcount(Ref(sb));
+					FT_GLOBALS.clearShadow(ptr.getBlock()->getID());
+				}
+			}
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ft_init_bany_type)(FUNCTION_ARGS) {
+		{
+			auto* sf         = FT_DATA.getShadowFrame();
+			auto  type       = READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1);
+			auto  data_block = READ_BLOCK_REF_FROM_ARG(instr->arg0);
+
+			auto shadow_data_ptr = sf->local_shadow_data_stack + sf->local_shadow_data_head;
+			if (shadow_data_ptr + type->getShadowSize() > FT_RT.shadow_data_stack_end)
+				throw exceptions::VMStackOverflowException();
+			auto shadow_block = FT_SHADOW_MEMORY.allocateDummy(type, shadow_data_ptr);
+			FT_SHADOW_MEMORY.increaseBlockRefcount(shadow_block);
+
+			u64 n = type->getShadowSize();
+			for (u64 i = 0; i < n; ++i) {
+				shadow_data_ptr[i].processWrite(FT_EPOCH_ARGS);
+				shadow_data_ptr[i].processRead(FT_EPOCH_ARGS);
+			}
+
+			FT_GLOBALS.registerShadow(data_block->getID(), shadow_block.get());
+			sf->local_shadow_data_head += type->getShadowSize();
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ft_call_func)(FUNCTION_ARGS) {
+		{
+			const auto function_id = static_cast<usize>(instr->arg0);
+			pushShadowFrame(FT_RT, thread.process_program->getFunctions()[function_id]);
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ft_ret)(FUNCTION_ARGS) {
+		{
+			// The lowering deinitializes every live local (the arguments included) before `ret`,
+			// so only the return values are left: their shadow entries go back to the caller,
+			// which lent them in `ft_call_func` together with the arguments'.
+			auto* callee_sf = FT_RT.shadow_frame_stack_current;
+
+			*callee_sf = ShadowFrame();
+			FT_RT.shadow_frame_stack_current--;
+			FT_RT.shadow_frame_stack_current->local_shadow_data_head
+				+= base::safeIntConv<u32>(frame->current_function->ret_shadow_size);
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ft_placeRead)(FUNCTION_ARGS) {
+		{
+			ShadowEntry* entry = GET_SHADOW_ENTRY_PTR(instr->arg0);
+			entry->processRead(FT_EPOCH_ARGS);
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ft_placeWrite)(FUNCTION_ARGS) {
+		{
+			ShadowEntry* entry = GET_SHADOW_ENTRY_PTR(instr->arg0);
+			entry->processWrite(FT_EPOCH_ARGS);
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ft_placeCRead)(FUNCTION_ARGS) {
+		if (frame->flags.flag) {
+			ShadowEntry* entry = GET_SHADOW_ENTRY_PTR(instr->arg0);
+			entry->processRead(FT_EPOCH_ARGS);
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ft_placeCWrite)(FUNCTION_ARGS) {
+		if (frame->flags.flag) {
+			ShadowEntry* entry = GET_SHADOW_ENTRY_PTR(instr->arg0);
+			entry->processWrite(FT_EPOCH_ARGS);
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ft_structRead)(FUNCTION_ARGS) {
+		{
+			auto ptr        = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
+			auto field_type = READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1);
+			// The field's byte offset rides the same `ext_field` the data op gets.
+			const u64 field_offset = READ_FROM_DIRECT_ARG(u64, instr[1].arg0);
+			if (!ptr.isNull()) {
+				ShadowBlock* sb = FT_GLOBALS.getShadow(ptr.getBlock()->getID());
+				if (sb) {
+					u32 shadow_idx = FT_SHADOW_MEMORY.getBlockType(Ref(sb))->getShadowEntryIndex(
+						ptr.getOffset() + field_offset
+					);
+					u32  shadow_size = field_type->getShadowSize();
+					auto tid         = FT_DATA.thread_id;
+					auto epoch       = FT_DATA.getVC()[tid];
+					for (u32 i = 0; i < shadow_size; ++i)
+						sb->getData()[shadow_idx + i].processRead(tid, epoch, FT_DATA.getVC());
+				} else {
+					Epoch zombie = FT_GLOBALS.getZombie(ptr.getBlock()->getID());
+					if (zombie != Epoch{} && !(zombie <= FT_DATA.getVC()))
+						ShadowEntry::reportRace(
+							"Free-Read",
+							zombie,
+							Epoch(FT_DATA.thread_id, FT_DATA.getVC()[FT_DATA.thread_id])
+						);
+				}
+			}
+		}
+		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ft_structWrite)(FUNCTION_ARGS) {
+		{
+			auto ptr        = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
+			auto field_type = READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1);
+			// The field's byte offset rides the same `ext_field` the data op gets.
+			const u64 field_offset = READ_FROM_DIRECT_ARG(u64, instr[1].arg0);
+			if (!ptr.isNull()) {
+				ShadowBlock* sb = FT_GLOBALS.getShadow(ptr.getBlock()->getID());
+				if (sb) {
+					u32 shadow_idx = FT_SHADOW_MEMORY.getBlockType(Ref(sb))->getShadowEntryIndex(
+						ptr.getOffset() + field_offset
+					);
+					u32  shadow_size = field_type->getShadowSize();
+					auto tid         = FT_DATA.thread_id;
+					auto epoch       = FT_DATA.getVC()[tid];
+					for (u32 i = 0; i < shadow_size; ++i)
+						sb->getData()[shadow_idx + i].processWrite(tid, epoch, FT_DATA.getVC());
+				} else {
+					Epoch zombie = FT_GLOBALS.getZombie(ptr.getBlock()->getID());
+					if (zombie != Epoch{} && !(zombie <= FT_DATA.getVC()))
+						ShadowEntry::reportRace(
+							"Free-Write",
+							zombie,
+							Epoch(FT_DATA.thread_id, FT_DATA.getVC()[FT_DATA.thread_id])
+						);
+				}
+			}
+		}
+		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ft_arrayRead)(FUNCTION_ARGS) {
+		{
+			auto ptr       = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
+			auto idx       = READ_FROM_PLACE_ARG(u64, instr->arg1);
+			auto elem_type = READ_FROM_DIRECT_ARG(TypeCRef, instr[1].arg1);
+			if (!ptr.isNull()) {
+				ShadowBlock* sb = FT_GLOBALS.getShadow(ptr.getBlock()->getID());
+				if (sb) {
+					u32 shadow_size = elem_type->getShadowSize();
+					u32 base_shadow = FT_SHADOW_MEMORY.getBlockType(Ref(sb))->getShadowEntryIndex(
+						ptr.getOffset()
+					);
+					u32  shadow_idx = base_shadow + static_cast<u32>(idx * shadow_size);
+					auto tid        = FT_DATA.thread_id;
+					auto epoch      = FT_DATA.getVC()[tid];
+					for (u32 i = 0; i < shadow_size; ++i)
+						sb->getData()[shadow_idx + i].processRead(tid, epoch, FT_DATA.getVC());
+				} else {
+					Epoch zombie = FT_GLOBALS.getZombie(ptr.getBlock()->getID());
+					if (zombie != Epoch{} && !(zombie <= FT_DATA.getVC()))
+						ShadowEntry::reportRace(
+							"Free-Read",
+							zombie,
+							Epoch(FT_DATA.thread_id, FT_DATA.getVC()[FT_DATA.thread_id])
+						);
+				}
+			}
+		}
+		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ft_arrayWrite)(FUNCTION_ARGS) {
+		{
+			auto ptr       = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
+			auto idx       = READ_FROM_PLACE_ARG(u64, instr->arg1);
+			auto elem_type = READ_FROM_DIRECT_ARG(TypeCRef, instr[1].arg1);
+			if (!ptr.isNull()) {
+				ShadowBlock* sb = FT_GLOBALS.getShadow(ptr.getBlock()->getID());
+				if (sb) {
+					u32 shadow_size = elem_type->getShadowSize();
+					u32 base_shadow = FT_SHADOW_MEMORY.getBlockType(Ref(sb))->getShadowEntryIndex(
+						ptr.getOffset()
+					);
+					u32  shadow_idx = base_shadow + static_cast<u32>(idx * shadow_size);
+					auto tid        = FT_DATA.thread_id;
+					auto epoch      = FT_DATA.getVC()[tid];
+					for (u32 i = 0; i < shadow_size; ++i)
+						sb->getData()[shadow_idx + i].processWrite(tid, epoch, FT_DATA.getVC());
+				} else {
+					Epoch zombie = FT_GLOBALS.getZombie(ptr.getBlock()->getID());
+					if (zombie != Epoch{} && !(zombie <= FT_DATA.getVC()))
+						ShadowEntry::reportRace(
+							"Free-Write",
+							zombie,
+							Epoch(FT_DATA.thread_id, FT_DATA.getVC()[FT_DATA.thread_id])
+						);
+				}
+			}
+		}
+		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ft_structRead_pste)(FUNCTION_ARGS) {
+		{
+			auto         data_block = READ_BLOCK_REF_FROM_ARG(instr->arg0);
+			u32          shadow_fld = static_cast<u32>(instr->arg1);
+			ShadowBlock* sb         = FT_GLOBALS.getShadow(data_block->getID());
+			if (sb) {
+				TypeCRef struct_type = FT_SHADOW_MEMORY.getBlockType(sb);
+				u32      size        = 1;
+				if_opt_some(struct_type->getFields(), fields) {
+					for (const auto& field: *fields) {
+						if (field.shadow_offset == shadow_fld) {
+							size = field.type->getShadowSize();
+							break;
+						}
+					}
+				}
+				auto tid   = FT_DATA.thread_id;
+				auto epoch = FT_DATA.getVC()[tid];
+				for (u32 i = 0; i < size; ++i)
+					sb->getData()[shadow_fld + i].processRead(tid, epoch, FT_DATA.getVC());
+			}
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ft_structWrite_pste)(FUNCTION_ARGS) {
+		{
+			auto         data_block = READ_BLOCK_REF_FROM_ARG(instr->arg0);
+			u32          shadow_fld = static_cast<u32>(instr->arg1);
+			ShadowBlock* sb         = FT_GLOBALS.getShadow(data_block->getID());
+			if (sb) {
+				TypeCRef struct_type = FT_SHADOW_MEMORY.getBlockType(sb);
+				u32      size        = 1;
+				if_opt_some(struct_type->getFields(), fields) {
+					for (const auto& field: *fields) {
+						if (field.shadow_offset == shadow_fld) {
+							size = field.type->getShadowSize();
+							break;
+						}
+					}
+				}
+				auto tid   = FT_DATA.thread_id;
+				auto epoch = FT_DATA.getVC()[tid];
+				for (u32 i = 0; i < size; ++i)
+					sb->getData()[shadow_fld + i].processWrite(tid, epoch, FT_DATA.getVC());
+			}
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ft_read_pste)(FUNCTION_ARGS) {
+		{
+			auto         src_block = READ_BLOCK_REF_FROM_ARG(instr->arg0);
+			auto         type      = READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1);
+			ShadowBlock* sb        = FT_GLOBALS.getShadow(src_block->getID());
+			if (sb) {
+				auto tid   = FT_DATA.thread_id;
+				auto epoch = FT_DATA.getVC()[tid];
+				for (u32 i = 0; i < type->getShadowSize(); ++i)
+					sb->getData()[i].processRead(tid, epoch, FT_DATA.getVC());
+			}
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ft_write_pste)(FUNCTION_ARGS) {
+		{
+			auto         dst_block = READ_BLOCK_REF_FROM_ARG(instr->arg0);
+			auto         type      = READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1);
+			ShadowBlock* sb        = FT_GLOBALS.getShadow(dst_block->getID());
+			if (sb) {
+				auto tid   = FT_DATA.thread_id;
+				auto epoch = FT_DATA.getVC()[tid];
+				for (u32 i = 0; i < type->getShadowSize(); ++i)
+					sb->getData()[i].processWrite(tid, epoch, FT_DATA.getVC());
+			}
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ft_arrayRead_pfst)(FUNCTION_ARGS) {
+		{
+			auto         data_block = READ_BLOCK_REF_FROM_ARG(instr->arg0);
+			auto         idx        = READ_FROM_PLACE_ARG(u64, instr->arg1);
+			auto         elem_type  = READ_FROM_DIRECT_ARG(TypeCRef, instr[1].arg1);
+			ShadowBlock* sb         = FT_GLOBALS.getShadow(data_block->getID());
+			if (sb) {
+				u32  shadow_size = elem_type->getShadowSize();
+				u32  shadow_idx  = static_cast<u32>(idx * shadow_size);
+				auto tid         = FT_DATA.thread_id;
+				auto epoch       = FT_DATA.getVC()[tid];
+				for (u32 i = 0; i < shadow_size; ++i)
+					sb->getData()[shadow_idx + i].processRead(tid, epoch, FT_DATA.getVC());
+			}
+		}
+		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ft_arrayWrite_pfst)(FUNCTION_ARGS) {
+		{
+			auto         data_block = READ_BLOCK_REF_FROM_ARG(instr->arg0);
+			auto         idx        = READ_FROM_PLACE_ARG(u64, instr->arg1);
+			auto         elem_type  = READ_FROM_DIRECT_ARG(TypeCRef, instr[1].arg1);
+			ShadowBlock* sb         = FT_GLOBALS.getShadow(data_block->getID());
+			if (sb) {
+				u32  shadow_size = elem_type->getShadowSize();
+				u32  shadow_idx  = static_cast<u32>(idx * shadow_size);
+				auto tid         = FT_DATA.thread_id;
+				auto epoch       = FT_DATA.getVC()[tid];
+				for (u32 i = 0; i < shadow_size; ++i)
+					sb->getData()[shadow_idx + i].processWrite(tid, epoch, FT_DATA.getVC());
+			}
+		}
+		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ft_read_pfst)(FUNCTION_ARGS) {
+		{
+			auto         src_block = READ_BLOCK_REF_FROM_ARG(instr->arg0);
+			auto         type      = READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1);
+			ShadowBlock* sb        = FT_GLOBALS.getShadow(src_block->getID());
+			if (sb) {
+				auto tid   = FT_DATA.thread_id;
+				auto epoch = FT_DATA.getVC()[tid];
+				for (u32 i = 0; i < type->getShadowSize(); ++i)
+					sb->getData()[i].processRead(tid, epoch, FT_DATA.getVC());
+			}
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ft_write_pfst)(FUNCTION_ARGS) {
+		{
+			auto         dst_block = READ_BLOCK_REF_FROM_ARG(instr->arg0);
+			auto         type      = READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1);
+			ShadowBlock* sb        = FT_GLOBALS.getShadow(dst_block->getID());
+			if (sb) {
+				auto tid   = FT_DATA.thread_id;
+				auto epoch = FT_DATA.getVC()[tid];
+				for (u32 i = 0; i < type->getShadowSize(); ++i)
+					sb->getData()[i].processWrite(tid, epoch, FT_DATA.getVC());
+			}
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ft_dynTableReAlloc)(FUNCTION_ARGS) {
+		{
+			auto ptr            = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
+			auto table_type     = READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1);
+			auto new_elem_count = READ_FROM_PLACE_ARG(u64, instr[1].arg0);
+
+			if (ptr.isNull()) {
+				FUNCTION_CONT(2);
+				return;
+			}
+
+			auto         main_id = ptr.getBlock()->getID();
+			ShadowBlock* sb      = FT_GLOBALS.getShadow(main_id);
+
+			if (new_elem_count == 0) {
+				if (sb) {
+					auto         type  = FT_SHADOW_MEMORY.getBlockType(sb);
+					auto         tid   = FT_DATA.thread_id;
+					auto         epoch = FT_DATA.getVC()[tid];
+					ShadowEntry* base  = sb->getData();
+					for (usize i = 0; i < type->getShadowSize(); ++i) {
+						base[i].processWrite(tid, epoch, FT_DATA.getVC());
+						base[i].reset();
+					}
+					FT_SHADOW_MEMORY.freeBlockData(Ref(sb));
+					FT_SHADOW_MEMORY.decreaseBlockRefcount(Ref(sb));
+					FT_GLOBALS.clearShadow(main_id);
+				}
+			} else if (sb == nullptr) {
+				auto inner_type = table_type->getInnerType().value();
+				if (inner_type->getShadowSize() > 0) {
+					auto shadow_block
+						= FT_SHADOW_MEMORY.dynTableAllocateHeapN(table_type, new_elem_count);
+					auto         tid               = FT_DATA.thread_id;
+					auto         epoch             = FT_DATA.getVC()[tid];
+					ShadowEntry* base              = shadow_block->getData();
+					usize        total_shadow_size = inner_type->getShadowSize() * new_elem_count;
+					for (usize i = 0; i < total_shadow_size; ++i) {
+						base[i].last_write      = Epoch(tid, epoch);
+						base[i].last_read_epoch = Epoch(tid, epoch);
+					}
+					FT_GLOBALS.registerShadow(main_id, shadow_block.get());
+					FT_SHADOW_MEMORY.increaseBlockRefcount(shadow_block);
+				}
+			} else {
+				auto inner_type = table_type->getInnerType().value();
+				if (inner_type->getShadowSize() > 0) {
+					auto old_size = FT_SHADOW_MEMORY.getBlockViewUnsafe(sb).size();
+					FT_SHADOW_MEMORY.dynTableReallocateBlockDataN(sb, new_elem_count);
+					auto new_size = FT_SHADOW_MEMORY.getBlockViewUnsafe(sb).size();
+					if (new_size > old_size) {
+						auto         tid   = FT_DATA.thread_id;
+						auto         epoch = FT_DATA.getVC()[tid];
+						ShadowEntry* base  = sb->getData();
+						for (usize i = old_size; i < new_size; ++i) {
+							base[i].last_write      = Epoch(tid, epoch);
+							base[i].last_read_epoch = Epoch(tid, epoch);
+						}
+					}
+				}
+			}
+		}
+		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ft_variantSetInner_psbvnt_type)(FUNCTION_ARGS) {
+		{
+			auto         data_block  = READ_BLOCK_REF_FROM_ARG(instr->arg0);
+			auto         wanted_type = READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1);
+			ShadowBlock* sb          = FT_GLOBALS.getShadow(data_block->getID());
+			if (sb) {
+				auto         tid       = FT_DATA.thread_id;
+				auto         epoch     = FT_DATA.getVC()[tid];
+				ShadowEntry* tag_entry = sb->getData();
+				tag_entry->processWrite(tid, epoch, FT_DATA.getVC());
+				FT_SHADOW_MEMORY.setNestedViewBlock(Ref(sb), 1, wanted_type);
+			}
+		}
+		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ft_variantSetInner_pptr_type)(FUNCTION_ARGS) {
+		{
+			auto ptr         = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
+			auto wanted_type = READ_FROM_DIRECT_ARG(TypeCRef, instr->arg1);
+
+			if (!ptr.isNull()) {
+				ShadowBlock* sb = FT_GLOBALS.getShadow(ptr.getBlock()->getID());
+				if (sb) {
+					u32 tag_idx = FT_SHADOW_MEMORY.getBlockType(Ref(sb))->getShadowEntryIndex(
+						ptr.getOffset()
+					);
+					auto tid   = FT_DATA.thread_id;
+					auto epoch = FT_DATA.getVC()[tid];
+					sb->getData()[tag_idx].processWrite(tid, epoch, FT_DATA.getVC());
+					FT_SHADOW_MEMORY.setNestedViewBlock(Ref(sb), tag_idx + 1, wanted_type);
+				}
+			}
+		}
+		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ft_variantTagRead_pptr)(FUNCTION_ARGS) {
+		{
+			auto ptr = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
+			if (!ptr.isNull()) {
+				ShadowBlock* sb = FT_GLOBALS.getShadow(ptr.getBlock()->getID());
+				if (sb) {
+					u32 tag_idx = FT_SHADOW_MEMORY.getBlockType(Ref(sb))->getShadowEntryIndex(
+						ptr.getOffset()
+					);
+					auto tid   = FT_DATA.thread_id;
+					auto epoch = FT_DATA.getVC()[tid];
+					sb->getData()[tag_idx].processRead(tid, epoch, FT_DATA.getVC());
+				}
+			}
 		}
 		FUNCTION_CONT(1);
 	}

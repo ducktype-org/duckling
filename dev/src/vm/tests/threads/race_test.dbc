@@ -1,0 +1,51 @@
+global_data counter i64 {}
+
+function inc {} -> {} {
+    init_pany_type temp, i64;
+    mov_p64_imm temp, 42;
+    mov_p64_p64 counter, temp;
+    deinit;
+    ret;
+}
+
+function main { i64, ptr_argv } -> { i64 } {
+    init_pany_type x, i64;
+    init_pany_type y, i64;
+    init_pany_type z, i64;
+    mov_p64_imm x, 43;
+    mov_p64_imm y, 43;
+    mov_p64_imm z, 43;
+    init_pany_type thread_id, i64;
+    set_threadctx inc;
+    call_builtinfunc builtin_start_thread;
+
+    # Data race: main thread immediately writes to counter without synchronization
+    init_pany_type temp2, i64;
+    mov_p64_imm temp2, 100;
+    mov_p64_p64 counter, temp2;
+
+    init_pany_type join_ret, i64;
+    init_pany_type join_id, i64;
+    mov_p64_p64 join_id, thread_id;
+    call_builtinfunc builtin_join_thread;
+
+    # If the join failed (returned negative status due to joinee's panic),
+    # main thread panics with division-by-zero to terminate the process!
+    cmpLt_p64_imm join_ret, 0;
+    jmpIf_label PanicLabel;
+
+    # Normal successful return if no race panic occurred
+    deinit; # join_id
+    deinit; # join_ret
+    deinit; # temp2
+    deinit; # thread_id
+    ret;
+
+    label PanicLabel;
+    div_p64_imm counter, 0;
+    deinit; # join_id
+    deinit; # join_ret
+    deinit; # temp2
+    deinit; # thread_id
+    ret;
+}

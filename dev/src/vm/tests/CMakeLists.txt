@@ -83,6 +83,10 @@ function(duck_add_vm_tests suffix)
                 USES ${libvm} Tester ${vmtester})
         duck_disable_tc_when_not_opt("threads_test" ${test_set})
 
+        duck_add_test_custom(vm ${test_set}_fast_track_test threads/fast_track_tests.cpp
+                USES ${libvm} Tester ${vmtester})
+        duck_disable_tc_when_not_opt("fast_track_test" ${test_set})
+
         # @TODO: #761 re-enable on gcc >= 15
         if (NOT (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 15))
                 duck_add_test_custom(vm ${test_set}_fast_mode_test fast_mode/fast_mode_test.cpp

@@ -201,6 +201,9 @@ namespace vm::builtins {
 		auto result = thread.safe_process.startNewThreadFromExecutionThread(thread.getThreadCtx());
 		thread.acquireGil();
 		if (!result.has_value()) return -vm::api::errorToErrno(result.error());
+		// Fast Track fork: the child took a copy of this clock when it was spawned, this thread
+		// moves on to a new epoch.
+		if (thread.ft_data) thread.ft_data->vc.increment(thread.getThreadID());
 		return static_cast<i64>(result.value().asInt());
 	}
 
@@ -209,11 +212,18 @@ namespace vm::builtins {
 		auto result = vm::api::join(thread.safe_process.getPID(), api::ThreadID{ thread_id });
 		thread.acquireGil();
 		if (!result.has_value()) return -vm::api::errorToErrno(result.error());
+		// Fast Track join: everything the joined thread did happens-before this point. Its slot
+		// cannot be recycled while this thread holds the GIL.
+		if (thread.ft_data)
+			thread.safe_process.joinFastTrackClock(thread, api::ThreadID{ thread_id });
 		return 0;  // success
 	}
 
 	u64 FunctionHandlers::builtinCreateMutex(SafeVMThread& thread) {
-		return thread.safe_process.getSynchronizationPrimitives().addMutex();
+		const u64 mutex_id = thread.safe_process.getSynchronizationPrimitives().addMutex();
+		if (thread.ft_data)
+			thread.safe_process.getSynchronizationPrimitives().getMutex(mutex_id)->vc.emplace();
+		return mutex_id;
 	}
 
 	void FunctionHandlers::builtinLockMutex(SafeVMThread& thread, u64 mutex_id) {
@@ -229,8 +239,9 @@ namespace vm::builtins {
 		// Fast path: mutex is free — grab it with a non-blocking CAS while still holding the
 		// GIL. Skips the GIL release/acquire pair and the expensive timed syscall. We also
 		// skip the intermediate "waiting" state in the detector because we never waited.
-		if (mutex->try_lock()) {
+		if (mutex->os_mutex.try_lock()) {
 			if_opt_some(detector, d) d.markThreadAcquiredMutex(thread_id, mutex_id);
+			if (thread.ft_data) thread.ft_data->onAcquire(*mutex->vc);
 			return;
 		}
 
@@ -240,7 +251,7 @@ namespace vm::builtins {
 		bool terminate_requested = false;
 		{
 			const SafeVMThread::ScopedBlockingWait blocking_wait(thread);
-			while (!mutex->try_lock_for(std::chrono::milliseconds{ 500 })) {
+			while (!mutex->os_mutex.try_lock_for(std::chrono::milliseconds{ 500 })) {
 				if (thread.isTerminateRequested()) {
 					terminate_requested = true;
 					break;
@@ -253,6 +264,7 @@ namespace vm::builtins {
 			throw vm::KillProcessException{};
 		}
 		if_opt_some(detector, d) d.markThreadAcquiredMutex(thread_id, mutex_id);
+		if (thread.ft_data) thread.ft_data->onAcquire(*mutex->vc);
 	}
 
 	void FunctionHandlers::builtinUnlockMutex(SafeVMThread& thread, u64 mutex_id) {
@@ -260,7 +272,8 @@ namespace vm::builtins {
 
 		auto  thread_id = thread.getThreadID();
 		auto* detector  = thread.safe_process.getDeadlockDetector();
-		mutex->unlock();
+		if (thread.ft_data) thread.ft_data->onRelease(*mutex->vc);
+		mutex->os_mutex.unlock();
 		if_opt_some(detector, d) d.markThreadReleasedMutex(thread_id, mutex_id);
 	}
 
@@ -270,8 +283,8 @@ namespace vm::builtins {
 		// the mutex is currently locked (by this or any thread), so use it to detect and report
 		// the misuse instead of silently destroying a locked mutex (which also aborts at teardown
 		// on macOS). On the success path the mutex was free and we now own it, so release it.
-		if (!mutex->try_lock()) throw vm::exceptions::VMDestroyLockedMutexException{};
-		mutex->unlock();
+		if (!mutex->os_mutex.try_lock()) throw vm::exceptions::VMDestroyLockedMutexException{};
+		mutex->os_mutex.unlock();
 
 		if_opt_some(thread.safe_process.getDeadlockDetector(), d) d.clearMutexState(mutex_id);
 		thread.safe_process.getSynchronizationPrimitives().removeMutex(mutex_id);
@@ -290,11 +303,13 @@ namespace vm::builtins {
 		// cv->wait atomically unlocks the mutex then relocks it before returning (on any path),
 		// so we mirror that in the detector: release ownership now, reacquire after the wait.
 		if_opt_some(detector, d) d.markThreadReleasedMutex(thread_id, mutex_id);
+		// The same goes for Fast Track: the wait releases the mutex and reacquires it.
+		if (thread.ft_data) thread.ft_data->onRelease(*mutex->vc);
 		try {
 			const SafeVMThread::ScopedBlockingWait blocking_wait(thread);
 
 			const bool interrupted
-				= cv->wait(*mutex, [&thread] { return thread.isTerminateRequested(); });
+				= cv->wait(mutex->os_mutex, [&thread] { return thread.isTerminateRequested(); });
 			if (interrupted) throw vm::KillProcessException{};
 		} catch (const vm::exceptions::VMRuntimeException&) {
 			if_opt_some(detector, d) d.markThreadAcquiredMutex(thread_id, mutex_id);
@@ -317,6 +332,7 @@ namespace vm::builtins {
 		}
 		// The guard reacquired the GIL: bytecode execution requires holding it.
 		if_opt_some(detector, d) d.markThreadAcquiredMutex(thread_id, mutex_id);
+		if (thread.ft_data) thread.ft_data->onAcquire(*mutex->vc);
 	}
 
 	void FunctionHandlers::builtinNotifyCV(SafeVMThread& thread, u64 cv_id) {

@@ -49,7 +49,15 @@ namespace vm {
 		  ),
 		  safe_process(process),
 		  process_memory(process.getMemory()),
-		  process_program(process.getLoadedProgram()) {}
+		  process_program(process.getLoadedProgram()) {
+		if (process.getConfig().enable_fast_track) {
+			ft_stack = std::make_unique<FastTrackThreadStack>();
+			ft_data.emplace();
+			ft_data->init(
+				*ft_stack, thread_id, process.getFastTrackGlobals().getGlobalShadowMemory()
+			);
+		}
+	}
 
 	/**
 	 * @brief Tail call written function that handles the execution pause request.
@@ -163,18 +171,25 @@ namespace vm {
 			                             .result_types        = func.result_types,
 			                             .instruction_mapping = {} };
 
-		const u64 called_function_id = process_program->getFunctions().idOf(func.name).value();
+		const u64  called_function_id = process_program->getFunctions().idOf(func.name).value();
+		const bool fast_track         = safe_process.getConfig().enable_fast_track;
 
 		// Byte offset of the next variable initialized on the start function's local stack.
 		u64 stack_offset = 0;
 
-		for (const auto& res: func.result_types) {
+		for (const auto& [idx, res]: std::views::enumerate(func.result_types)) {
 			// Initialize an exit code/return value spot. In case of non-void functions the
 			// exit_code is the return value of the function. Void functions always return with the
 			// exit_code = 0.
-			start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(
-				init_off_type, stack_offset, safeReadObjectBytes<u64>(res)
-			));
+			const u64 res_type_arg = safeReadObjectBytes<u64>(res);
+			start_function.bc.push_back(
+				MAKE_BYTECODE_INSTRUCTION(init_off_type, stack_offset, res_type_arg)
+			);
+			// The shadow opcodes address a local by its slot, numbered in init order.
+			if (fast_track)
+				start_function.bc.push_back(
+					MAKE_BYTECODE_INSTRUCTION(ft_init_bany_type, u64(idx), res_type_arg)
+				);
 			stack_offset += res->getSize().asInt();
 		}
 
@@ -189,25 +204,32 @@ namespace vm {
 				std::bit_cast<u64>(dynamic_cast<const SafeVMValue*>(&*arg_value)),
 				stack_offset
 			));
+			if (fast_track)
+				start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(
+					ft_init_bany_type,
+					func.result_types.size() + i,
+					safeReadObjectBytes<u64>(arg_type)
+				));
 			stack_offset += arg_type->getSize().asInt();
 			start_function.local_stack_size += arg_type->getSize().asInt();
 			start_function.parameters.push_back(arg_type);
 			start_function.arg_size += arg_type->getSize().asInt();
 		}
 
-		start_function.bc.insert(
-			start_function.bc.end(),
-			{
-				MAKE_BYTECODE_INSTRUCTION(stepGil, 0, 0),  // We need to acquire GIL
-				// The start function's whole local stack is the space shared with the callee,
-		        // so the callee's local stack starts at the very same address.
-				MAKE_BYTECODE_INSTRUCTION(call_func, called_function_id, 0),
-				// @note: Only one block is left on the stack in this place, so there is no need
-		        // for any deinits. It's being deinitialized by the thread after obtaining the
-		        // return value/exit_code.
-				MAKE_BYTECODE_INSTRUCTION(exit, 0, 0),
-			}
-		);
+
+		start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(stepGil, 0, 0));  // acquire GIL
+		// The callee's shadow frame mirrors its data frame, see `ft_ret`.
+		if (fast_track)
+			start_function.bc.push_back(
+				MAKE_BYTECODE_INSTRUCTION(ft_call_func, called_function_id, 0)
+			);
+		// The start function's whole local stack is the space shared with the callee, so the
+		// callee's local stack starts at the very same address.
+		start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(call_func, called_function_id, 0));
+		// @note: Only one block is left on the stack in this place, so there is no need for any
+		// deinits. It's being deinitialized by the thread after obtaining the return
+		// value/exit_code.
+		start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(exit, 0, 0));
 		start_function.orig_bc = start_function.bc;
 
 		return start_function;
@@ -270,26 +292,36 @@ namespace vm {
 
 		const u64  called_function_id = process_program->getFunctions().idOf(func.name).value();
 		const bool main_has_args      = !func.parameters.empty();
+		const bool fast_track         = safe_process.getConfig().enable_fast_track;
+
+		auto& bc = start_function.bc;
+		// With Fast Track every init and the call get their shadow counterpart (a deinit releases
+		// the shadow by itself). The shadow opcodes address a local by its slot, numbered in init
+		// order, not by its byte offset.
+		auto init = [&](u64 byte_offset, u64 slot_idx, u64 type_arg) {
+			bc.push_back(MAKE_BYTECODE_INSTRUCTION(init_off_type, byte_offset, type_arg));
+			if (fast_track)
+				bc.push_back(MAKE_BYTECODE_INSTRUCTION(ft_init_bany_type, slot_idx, type_arg));
+		};
+		auto deinit = [&](bool holds_pointer_references) {
+			bc.push_back(makeLowInstruction(
+				holds_pointer_references ? low::MicroOpcode::deinitDtor : low::MicroOpcode::deinit,
+				0,
+				0
+			));
+		};
 
 		// Initialize the needed data first - argc and argv dynamic table.
 		// Note that `argv` and `argc` are always initialized even if `main` takes no arguments.
 		// This is for the offsets to not get changed when generating the start function.
-		start_function.bc.insert(
-			start_function.bc.end(),
+		// Program return value is fixes to return `i64`.
+		init(0, 0, i64_type_arg);       // stack [0, 8), slot 0 program ret_val
+		init(8, 1, argv_ptr_type_arg);  // stack [8, 24) slot 1 *argv_internal
+		init(24, 2, i64_type_arg);      // stack [24, 32) slot 2 argc_internal
+		init(32, 3, i64_type_arg);      // stack [32, 40) slot 3 ix
+		bc.insert(
+			bc.end(),
 			{
-				// Program return value is fixes to return `i64`.
-				MAKE_BYTECODE_INSTRUCTION(
-					init_off_type, 0, i64_type_arg
-				),  // stack [0, 8), block idx 0 program ret_val
-				MAKE_BYTECODE_INSTRUCTION(
-					init_off_type, 8, argv_ptr_type_arg
-				),  // stack [8, 24) block idx 1 *argv_internal
-				MAKE_BYTECODE_INSTRUCTION(
-					init_off_type, 24, i64_type_arg
-				),  // stack  [24, 32) block idx 2 argc_internal
-				MAKE_BYTECODE_INSTRUCTION(
-					init_off_type, 32, i64_type_arg
-				),  // stack [32, 40) block idx 3 ix
 				MAKE_BYTECODE_INSTRUCTION(
 					mov_p64_imm, 24, args.size()
 				),  // argc_internal := args.size()
@@ -304,15 +336,11 @@ namespace vm {
 		if (main_has_args) {
 			for (const auto& [argv_index, arg]:
 			     std::views::zip(std::ranges::views::iota(0u), args)) {
-				start_function.bc.insert(
-					start_function.bc.end(),
+				init(40, 4, str_ptr_type_arg);  // stack [40, 56) slot 4 ptr_tmp_store
+				init(56, 5, byte_type_arg);     // stack [56, 57) slot 5 char_tmp_store
+				bc.insert(
+					bc.end(),
 					{
-						MAKE_BYTECODE_INSTRUCTION(
-							init_off_type, 40, str_ptr_type_arg
-						),  // stack [40, 56) block idx 4 ptr_tmp_store
-						MAKE_BYTECODE_INSTRUCTION(
-							init_off_type, 56, byte_type_arg
-						),  // stack [56, 57) block idx 5 char_tmp_store
 						MAKE_BYTECODE_INSTRUCTION(
 							mov_p64_imm, 24, arg.size() + 1
 						),  // argc_internal := arg.size() + 1 (for the \0 character)
@@ -324,8 +352,8 @@ namespace vm {
 					}
 				);
 				for (auto c: arg) {
-					start_function.bc.insert(
-						start_function.bc.end(),
+					bc.insert(
+						bc.end(),
 						{ MAKE_BYTECODE_INSTRUCTION(
 							  mov_p8_imm, 56, static_cast<u64>(c)
 						  ),  // char_tmp_store := c
@@ -336,8 +364,8 @@ namespace vm {
 					      MAKE_BYTECODE_INSTRUCTION(add_p64_imm, 32, 1) }
 					);
 				}
-				start_function.bc.insert(
-					start_function.bc.end(),
+				bc.insert(
+					bc.end(),
 					{
 						// At this point ix == arg.size().
 						MAKE_BYTECODE_INSTRUCTION(mov_p8_imm, 56, 0),  // char_tmp_store := \0
@@ -350,52 +378,49 @@ namespace vm {
 							anyArrayStore_pptr_bany, 8, 4
 						),  // argv_internal[ix] := ptr_tmp_store
 						MAKE_BYTECODE_INSTRUCTION(ext_p64_type, 32, str_ptr_type_arg),
-						MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),      // deinit char_tmp_store
-						MAKE_BYTECODE_INSTRUCTION(deinitDtor, 0, 0),  // deinit ptr_tmp_store
 					}
 				);
+				deinit(false);  // deinit char_tmp_store
+				deinit(true);   // deinit ptr_tmp_store
 			}
 		}
 
 
 		// Now actually prepare to call 'main'.
-		start_function.bc.push_back(
-			MAKE_BYTECODE_INSTRUCTION(init_off_type, 40, i64_type_arg)  // [40, 48) main ret_val
-		);
+		init(40, 4, i64_type_arg);  // [40, 48) slot 4 main ret_val
 
 		// Pass the command line arguments only if main signature specifies it.
 		if (main_has_args) {
-			start_function.bc.insert(
-				start_function.bc.end(),
+			init(48, 5, i64_type_arg);       // [48, 56) slot 5 argc
+			init(56, 6, argv_ptr_type_arg);  // [56, 72) slot 6 *argv
+			bc.insert(
+				bc.end(),
 				{
-					MAKE_BYTECODE_INSTRUCTION(init_off_type, 48, i64_type_arg),  // [48, 56) argc
-					MAKE_BYTECODE_INSTRUCTION(
-						init_off_type, 56, argv_ptr_type_arg
-					),                                                        // [56, 72) *argv
 					MAKE_BYTECODE_INSTRUCTION(mov_p64_imm, 48, args.size()),  // argc := args.size()
 					MAKE_BYTECODE_INSTRUCTION(mov_pptr_pptr, 56, 8),  // argv := argv_internal
 				}
 			);
 		}
 
-		start_function.bc.insert(
-			start_function.bc.end(),
+		bc.push_back(MAKE_BYTECODE_INSTRUCTION(stepGil, 0, 0));  // We need to acquire GIL
+		// The callee's shadow frame mirrors its data frame, see `ft_ret`.
+		if (fast_track)
+			bc.push_back(MAKE_BYTECODE_INSTRUCTION(ft_call_func, called_function_id, 0));
+		// `main`'s frame begins at its return value, which the layout above puts at 40.
+		bc.push_back(MAKE_BYTECODE_INSTRUCTION(call_func, called_function_id, 40));  // call main
+		bc.insert(
+			bc.end(),
 			{
-				MAKE_BYTECODE_INSTRUCTION(stepGil, 0, 0),  // We need to acquire GIL
-				// `main`'s frame begins at its return value, which the layout above puts at 40.
-				MAKE_BYTECODE_INSTRUCTION(call_func, called_function_id, 40),  // call main
 				MAKE_BYTECODE_INSTRUCTION(mov_p64_p64, 0, 40),  // ret_val := main_ret_val
 				MAKE_BYTECODE_INSTRUCTION(mov_p64_imm, 32, 0),  // ix := 0
-				MAKE_BYTECODE_INSTRUCTION(
-					init_off_type, 48, str_ptr_type_arg
-				),  // [48, 64) ptr_tmp_store
 			}
 		);
+		init(48, 5, str_ptr_type_arg);  // [48, 64) slot 5 ptr_tmp_store
 
 		// After 'main' returned, free all the allocated strings in the argv table.
 		for ([[maybe_unused]] const auto& arg: args) {
-			start_function.bc.insert(
-				start_function.bc.end(),
+			bc.insert(
+				bc.end(),
 				{
 					MAKE_BYTECODE_INSTRUCTION(
 						anyArrayLoad_bany_pptr, 5, 8
@@ -408,20 +433,15 @@ namespace vm {
 		}
 
 		// Lastly, free all the data allocated by the start function.
-		start_function.bc.insert(
-			start_function.bc.end(),
-			{
-				MAKE_BYTECODE_INSTRUCTION(free_pptr, 8, 0),   // free *argv_internal
-				MAKE_BYTECODE_INSTRUCTION(deinitDtor, 0, 0),  // deinit ptr_tmp_store
-				MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),      // deinit main_ret_val
-				MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),      // deinit ix
-				MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),      // deinit argc_internal
-				MAKE_BYTECODE_INSTRUCTION(deinitDtor, 0, 0),  // deinit *argv_internal
-				// At this point only the start function return value (which is the program exit
-		        // code) remains on the stack.
-				MAKE_BYTECODE_INSTRUCTION(exit, 0, 0),
-			}
-		);
+		bc.push_back(MAKE_BYTECODE_INSTRUCTION(free_pptr, 8, 0));  // free *argv_internal
+		deinit(true);                                              // deinit ptr_tmp_store
+		deinit(false);                                             // deinit main_ret_val
+		deinit(false);                                             // deinit ix
+		deinit(false);                                             // deinit argc_internal
+		deinit(true);                                              // deinit *argv_internal
+		// At this point only the start function return value (which is the program exit code)
+		// remains on the stack.
+		bc.push_back(MAKE_BYTECODE_INSTRUCTION(exit, 0, 0));
 
 		start_function.orig_bc = start_function.bc;
 
@@ -516,6 +536,7 @@ namespace vm {
 		frame->local_slot_stack_end  = runtime_data.slot_stack_base;
 
 		const auto* instr = start_function.bc.data();
+		if (ft_data) initShadowFrame();
 
 		// Make sure the frame will be moved back after the interpreter runs. Even if it throws a
 		// `KillProcessException` so the state stays valid.
@@ -561,6 +582,9 @@ namespace vm {
 		     idx < usize(frame->local_slot_stack_end - frame->local_slot_stack_base);
 		     idx++) {
 			if (Block* block = frame->local_slot_stack_base[idx].block) {
+				// The shadow first: a registration left behind would be found again once the
+				// pool hands the block's ID to a new block.
+				if (ft_data) releaseShadowOf(block);
 				process_memory.freeBlockData(block);
 				process_memory.decreaseBlockRefcount(block);
 				continue;
@@ -749,5 +773,30 @@ namespace vm {
 	) {
 		runtime_data.global_data_buffer_base      = global_buffer_pointers.data_buffer_base;
 		runtime_data.global_block_ref_buffer_base = global_buffer_pointers.blocks_buffer_base;
+	}
+
+	void SafeVMThread::updateFastTrackGlobalPointers(ShadowGlobalBufferPointers global_shadow_pointers
+	) {
+		ft_data->updateGlobalPointers(global_shadow_pointers);
+	}
+
+	void SafeVMThread::releaseShadowOf(Block* block) {
+		auto&        globals = safe_process.getFastTrackGlobals();
+		ShadowBlock* shadow  = globals.getShadow(block->getID());
+		if (shadow == nullptr) return;
+		auto& shadow_memory = globals.getShadowDataMemory();
+		shadow_memory.freeBlockData(Ref(shadow));
+		shadow_memory.decreaseBlockRefcount(Ref(shadow));
+		globals.clearShadow(block->getID());
+	}
+
+	void SafeVMThread::initShadowFrame() {
+		auto& runtime = ft_data->ft_runtime;
+		// Rewound like the data frame stack is, so a thread slot reused after an aborted run
+		// starts clean.
+		runtime.shadow_frame_stack_current    = runtime.shadow_frame_stack_base;
+		auto* shadow_frame                    = runtime.shadow_frame_stack_current;
+		shadow_frame->local_shadow_data_stack = runtime.shadow_data_stack_base;
+		shadow_frame->local_shadow_data_head  = 0;
 	}
 }
