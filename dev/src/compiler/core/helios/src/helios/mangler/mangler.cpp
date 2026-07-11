@@ -330,6 +330,18 @@ namespace compiler::helios::mangler {
 						}
 						CORE_UNREACHABLE();
 					}
+					variant_case(defgen::BoxBuiltin, box) {
+						// We do not have a reliable "path to type" in these cases (esp. for simple
+						// types such as i32), so we omit it. Any ambiguities are solved by the
+						// function type anyway.
+						switch (box.kind) {
+						case defgen::BoxBuiltin::Kind::Alloc:
+							return "Hba" + func(ctx, symbol_id) + "E";
+						case defgen::BoxBuiltin::Kind::Free:
+							return "Hbf" + func(ctx, symbol_id) + "E";
+						}
+						CORE_UNREACHABLE();
+					}
 					variant_case(defgen::ReplExpressionWrapper, repl_wrapper) {
 						return base::strConcat("__repl_expr_wrapper_", repl_wrapper.counter);
 					}
