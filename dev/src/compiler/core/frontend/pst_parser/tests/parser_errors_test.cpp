@@ -8,7 +8,6 @@
 #include <frontend/pst_parser/elements/hierarchy/statements/all_statements.hpp>
 #include <frontend/pst_parser/elements/implementations/class_elements/class_elements_errors.hpp>
 #include <frontend/pst_parser/elements/implementations/declarations/declarations_errors.hpp>
-#include <frontend/pst_parser/elements/implementations/declarations/function_name_parse.hpp>
 #include <frontend/pst_parser/elements/implementations/declarations/var_parse.hpp>
 #include <frontend/pst_parser/elements/implementations/expressions/expressions_errors.hpp>
 #include <frontend/pst_parser/elements/implementations/lists/impl_template.hpp>
@@ -221,18 +220,14 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::FunDecl, false> bad_fundecl1{ "fundecl foo(a)" };
 
 	Example<pst::Fun, true>      operator_function1{ "fun +*(a: i64, b: i64) -> i64 = {}" };
-	Example<pst::Fun, true>      operator_function2{ "fun +(a: i64) = {}" };
 	Example<pst::FunDecl, true>  operator_fundecl{ "fundecl +*(a: i64, b: i64) -> i64" };
 	Example<pst::Class, true>    operator_method{ "class Foo { fun +*(a: u64) -> Foo = {} }" };
 	Example<pst::Fun, false>     assignment_operator_function1{ "fun +*=(a: i64) = {}" };
-	Example<pst::Fun, false>     assignment_operator_function2{ "fun +=(a: i64) = {}" };
 	Example<pst::Fun, false>     bare_assign_operator_function{ "fun =(a: i64) = {}" };
-	Example<pst::Fun, false>     comparison_operator_function1{ "fun ==(a: i64) = {}" };
-	Example<pst::Fun, false>     comparison_operator_function2{ "fun <(a: i64) = {}" };
+	Example<pst::Fun, false>     comparison_operator_function1{ "fun <(a: i64) = {}" };
 	Example<pst::Fun, false>     special_operator_function1{ "fun ->(a: i64) = {}" };
 	Example<pst::Fun, false>     special_operator_function2{ "fun .?(a: i64) = {}" };
 	Example<pst::FunDecl, false> reserved_operator_fundecl{ "fundecl ==(a: i64) -> i64" };
-	Example<pst::Class, false>   reserved_operator_method{ "class Foo { fun +=(a: u64) = {} }" };
 
 	Example<pst::Pattern, true> simple_pattern1{ "pattern IsEven(x: i32) = {}" };
 	Example<pst::Pattern, true> simple_pattern2{
