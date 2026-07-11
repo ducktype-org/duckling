@@ -1,5 +1,8 @@
 # This has to be static due to cyclic dependencies in helios->mir->lir->dvm for comp time, and helios<->TS cyclic dependency.
 add_library(HELIOS STATIC
+	src_private/helios_private/attributes/backend_dependent.cpp
+	src/helios/attributes/builtins.cpp
+	src_private/helios_private/hout/hout.cpp
 	src_private/helios_private/symbols/symbol_data.cpp
 	src_private/helios_private/symbols/symbols.cpp
 	src_private/helios_private/scopes/scopes.cpp
@@ -24,8 +27,10 @@ add_library(HELIOS STATIC
 	src_private/helios_private/hout_creation/definition_generation/class_constructors.cpp
 	src_private/helios_private/hout_creation/definition_generation/tuple_constructor.cpp
 	src_private/helios_private/hout_creation/definition_generation/default_constructors.cpp
+	src_private/helios_private/hout_creation/definition_generation/copy_constructors.cpp
 	src_private/helios_private/hout_creation/definition_generation/default_destructors.cpp
 	src_private/helios_private/hout_creation/definition_generation/length_methods.cpp
+	src_private/helios_private/hout_creation/definition_generation/list_methods.cpp
 	src_private/helios_private/hout_creation/definition_generation/to_string_methods.cpp
 	src_private/helios_private/hout_creation/desugaring/for.cpp
 	src_private/helios_private/hout_creation/hout_stmt_compilation.cpp
@@ -34,6 +39,8 @@ add_library(HELIOS STATIC
 	src_private/helios_private/tsh/abstract_type_impl.cpp
 	src_private/helios_private/tsh/queries.cpp
 
+	src/helios/errors/extern_c_class_empty.cpp
+	src/helios/errors/field_not_c_compatible.cpp
 	src/helios/queries/queries.cpp
 	src/helios/queries/query_code_of_fun.cpp
 	src/helios/queries/query_decl_of_fun.cpp
@@ -50,12 +57,15 @@ add_library(HELIOS STATIC
 	src/helios/symbols/query_type_symbol_data.cpp
 	src/helios/symbols/query_type_from_definition.cpp
 	src/helios/symbols/query_class_of_member.cpp
+	src/helios/symbols/attributes.cpp
 	src/helios/symbols/symbol_abi.cpp
 	src/helios/symbols/symbol_id.cpp
 	src/helios/utils/get_expr_symid.cpp
+	src/helios/utils/hout_walkers.cpp
 	src/helios/utils/symbol_list.cpp
 	src/helios/repl_utils/repl_queries.cpp
 	src/helios/repl_utils/script_helpers.cpp
+	src/helios/repl_utils/repl_symbols.cpp
 	src/helios/ls_utils/ls_utils.cpp
 	src/helios/utils/go_to_definition.cpp
 	src/helios/tsh/queries/implicit_coercibility.cpp
@@ -73,6 +83,9 @@ make_module(HELIOS USES Base QueryFramework PstParser ModuleTree Hashing CTV Lib
 duck_add_test(compiler helios tests/helios_test.cpp
 	USES Base PstParser HELIOS
 	INCLUDE "${CMAKE_CURRENT_LIST_DIR}/src_private")
+
+duck_add_test(compiler helios_with_std tests/helios_with_std_test.cpp
+	USES Base PstParser HELIOS Driver)
 
 
 duck_add_test(compiler helios_errors tests/helios_errors_test.cpp

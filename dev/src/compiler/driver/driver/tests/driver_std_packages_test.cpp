@@ -143,7 +143,7 @@ private:
 			auto task_opt = driver::convertRawTaskToTask(
 				raw_task, global_opts, compiler::driver::diagnostics::makeGlobalLoggerReporter()
 			);
-			ASSERT_TRUE(task_opt.has_value());
+			ASSERT_HAS_VALUE(task_opt);
 			ASSERT_TRUE(task_opt->type == driver::TaskType::PackageCompilation);
 
 			auto task_data = std::get<driver::PackageCompilationTask>(task_opt->task_data);
@@ -151,13 +151,13 @@ private:
 			if (auto* target_exe
 			    = std::get_if<driver::BuildTargetLLVMExecutable>(&task_data.build_target)) {
 				// We expect the correct stdlib linking options based on getStdLibLinkingArgs
-				auto lib_args = driver::getStdLibLinkingArgs(global_opts);
-				ASSERT_TRUE(lib_args.has_value());
+				auto lib_args = driver::getNativeStdLibLinkingArgs(global_opts);
+				ASSERT_HAS_VALUE(lib_args);
 
 				// Ensure the options contain the stdlib args
 				assertTrue(
 					target_exe->linking_options.stdlib_link_options
-						== driver::getStdLibLinkingArgs(global_opts),
+						== driver::getNativeStdLibLinkingArgs(global_opts),
 					"Converted task linking options do not contain the standard library linking "
 					"arguments"
 				);
@@ -169,13 +169,13 @@ private:
 	 * @brief Compiles all standard library packages and verifies output artifacts.
 	 */
 	void compileStdPackages() {
-		auto tasks = driver::getStandardLibraryCompilationTasks();
+		auto tasks = driver::getLoadedStdLibCompilationTasks();
 
 		// Run standard library compilation
 		ASSERT_TRUE(driver::compilePackages(tasks).isOk());
 
 		// Verify expected artifacts
-		for (const auto& art: driver::getStdLibArtifacts()) {
+		for (const auto& art: driver::getStdLibNativeArtifacts()) {
 			assertTrue(
 				std::filesystem::exists(art.file.getFilePath().getPath()),
 				base::strConcat(

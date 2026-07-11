@@ -15,8 +15,10 @@
 #include <driver/repl_utils/script_helpers.hpp>
 #include <driver_private/backend_operations/compile_dvm.hpp>
 #include <driver_private/backend_operations/compile_llvm.hpp>
+#include <driver_private/dbc_linking.hpp>
 #include <driver_private/debug_artifacts.hpp>
 #include <driver_private/operations.hpp>
+#include <driver_private/standard_library/standard_library.hpp>
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_id.hpp>
 #include <frontend/module_tree/module_tree.hpp>
@@ -50,11 +52,13 @@
 #include <vm/bytecode/serializer/serializer.hpp>
 #include <vm/bytecode/validator/errors.hpp>
 #include <vm/bytecode/validator/valid_program.hpp>
+#include <vm/core/vmvalue/vmvalue.hpp>
 #include <vm/loader/loader.hpp>
 
 #include <algorithm>
 #include <fstream>
 #include <iostream>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -167,7 +171,7 @@ namespace compiler::driver {
 
 			auto output_names = getModuleOutputName(key);
 			auto code_output  = getQueryArtifactsCollection()->fileArtifactAtOrNew(
-                base::StrID(output_names.object_file.c_str())
+                base::StrID(output_names.object_file)
             );
 
 			base::Optional<debug_info::DebugInfo>   debug_info_output;
@@ -344,8 +348,8 @@ namespace compiler::driver {
 			u64                                statement_counter = 0;
 
 			if (split_result->empty()) {
-				// Empty input should still produce a valid synthetic script main wrapper with no
-				// statement calls.
+				// Empty input should still produce a valid synthetic script main wrapper with
+				// no statement calls.
 				auto empty_script_module
 					= repl::createEphemeralChainedStatementModule("", {}, 0, "script_");
 				parent_module_id = empty_script_module->getModuleID();
@@ -509,7 +513,7 @@ namespace compiler::driver {
 			return base::OK;
 		}
 
-		base::OkBad compileScriptToDVMBytecode() {
+		base::OkBad compileScriptToDVMBytecode(bool link_std_lib) {
 			base::Optional<std::string> error_message;
 			query::utils::withContextDo([&](query::Context& ctx) {
 				auto script_lir = compileScriptToLIRModuleData(ctx);
@@ -520,17 +524,16 @@ namespace compiler::driver {
 
 				auto dvm_module = compileLIRModuleToDVM(&script_lir.value(), ctx, false);
 
-				auto& script_context  = global_state::getScriptContext();
-				auto  output_artifact = global_state::getRootCollection()->fileArtifactAtOrNew(
-                    base::StrID(base::strConcat(script_context.script_file.stem(), ".dbc").c_str())
-                );
+				auto script_obj_artifact = global_state::getRootCollection()->fileArtifactAtOrNew(
+					base::StrID(base::strConcat(script_lir->module_id, ".o.dbc"))
+				);
 				std::ofstream output_file(
-					output_artifact.file.getFilePath().getPath(), std::ios::binary
+					script_obj_artifact.file.getFilePath().getPath(), std::ios::binary
 				);
 				if (!output_file.is_open()) {
 					error_message = base::strConcat(
 						"Failed to open output file for script bytecode: ",
-						output_artifact.file.getFilePath().string()
+						script_obj_artifact.file.getFilePath().string()
 					);
 					return;
 				}
@@ -538,9 +541,21 @@ namespace compiler::driver {
 				vm::code::serializeCode(dvm_module.code, output_file);
 				output_file.close();
 
-				CORE_USER_LOG(
-					"Script bytecode written to: ", output_artifact.file.getFilePath().string(), "\n"
-				);
+				auto& script_context   = global_state::getScriptContext();
+				auto  output_file_name = base::strConcat(script_context.script_file.stem(), ".dbc");
+
+				std::vector<artifacts::FileArtifact> dvm_objs = { std::move(script_obj_artifact) };
+				if (link_std_lib)
+					for (auto&& dvm_std_obj: getStdLibDVMArtifacts())
+						dvm_objs.emplace_back(std::move(dvm_std_obj));
+
+
+				if (linkDVMPackage(dvm_objs, {}, output_file_name).isBad()) {
+					error_message = "Linking of the DVM objects failed.";
+					return;
+				}
+
+				CORE_USER_LOG("Script bytecode written to: ", output_file_name, "\n");
 			});
 
 			if (error_message.has_value()) {
@@ -553,19 +568,23 @@ namespace compiler::driver {
 	}
 
 	base::OkBad compileScript(
-		BackendType backend_type, [[maybe_unused]] const linker::LinkingOptions& linking_options
+		BackendType                          backend_type,
+		const options_types::StdLibOptions&  std_lib_opts,
+		const options_types::LinkingOptions& linking_opts
 	) {
 		switch (backend_type) {
 		case BackendType::LLVM:
-			return compileScriptToLLVMExecutable(linking_options);
+			return compileScriptToLLVMExecutable(
+				constructNativeLinkerOptions(linking_opts, std_lib_opts)
+			);
 		case BackendType::DVM:
-			return compileScriptToDVMBytecode();
+			return compileScriptToDVMBytecode(std_lib_opts.stdActive());
 		default:
 			CORE_PANIC("bad backend type");
 		}
 	}
 
-	std::expected<RunOutput, std::string> runScriptOnDVM() {
+	std::expected<RunOutput, std::string> runScriptOnDVM(bool load_stdlib) {
 		base::Optional<std::string> error_message;
 		base::Optional<RunOutput>   output;
 
@@ -578,6 +597,23 @@ namespace compiler::driver {
 
 			auto dvm_module = compileLIRModuleToDVM(&script_lir.value(), ctx, false);
 
+			if (load_stdlib) {
+				using std::ranges::to;
+				using std::ranges::views::transform;
+				auto parse_result = vm::loader::Loader{}.parseCodeCollectionFromFiles(
+					getStdLibDVMArtifacts() | transform(&artifacts::FileArtifact::file)
+					| to<std::vector>()
+				);
+				if (!parse_result.has_value()) {
+					error_message
+						= base::strConcat("Failed to load std bytecode: ", parse_result.error());
+					return;
+				}
+				dvm_module.code.mergeFrom(std::move(parse_result).value());
+				// @TODO: #2895 deal with this once weak/strong symbols are added
+				deduplicateCodeCollection(dvm_module.code);
+			}
+
 			vm::PID pid{};
 			auto    run_result
 				= vm::api::spawn()
@@ -585,16 +621,22 @@ namespace compiler::driver {
 						  pid = process.pid;
 						  return std::expected<void, vm::api::ApiError>{};
 					  })
-			          .and_then([&] { return vm::api::loadCode(pid, { dvm_module.code }); })
+			          .and_then([&] { return vm::api::loadCode(pid, dvm_module.code); })
 			          .and_then([&] { return vm::api::attach(pid, std::cin, std::cout); })
 			          .and_then([&] { return vm::api::run(pid); })
 			          .and_then([&] { return vm::api::join(pid); })
 			          .and_then([&] { return vm::api::getExitValue(pid); })
 			          .transform_error(vm::api::errorToString)
 			          .transform([](vm::api::ExitValue exit_values) {
-						  CORE_ASSERT(exit_values.size() == 1, "Expected single exit value");
+						  CORE_ASSERT(
+							  v_matches(exit_values, std::vector<Ref<vm::VmValue>>),
+							  "Expected exit value to be vector"
+						  );
+						  const auto& exit_values_vec
+							  = std::get<std::vector<Ref<vm::VmValue>>>(exit_values);
+						  CORE_ASSERT(exit_values_vec.size() == 1, "Expected single exit value");
 						  return RunOutput{ .exit_code = base::safeIntConv<int>(
-												exit_values.at(0)->readBytes<i64>()
+												exit_values_vec.at(0)->readBytes<i64>()
 											) };
 					  });
 
@@ -606,82 +648,6 @@ namespace compiler::driver {
 
 		if (error_message.has_value()) return std::unexpected(error_message.value());
 		return output.value();
-	}
-
-	/**
-	 * @brief Links all per-module DVM .dbc files into a single merged package .dbc,
-	 * and merges per-module debug info files if provided.
-	 *
-	 * This is the DVM analogue of linking .o object files for LLVM.
-	 */
-	base::OkBad linkDVMPackage(
-		const std::vector<artifacts::FileArtifact>& objects,
-		const std::vector<artifacts::FileArtifact>& debug_info_artifacts,
-		const std::string&                          output_file_stem
-	) {
-		vm::loader::Loader dvm_linker;
-		std::string        output_file_name = base::strConcat(output_file_stem, ".dbc");
-
-		using std::ranges::to;
-		using std::ranges::views::transform;
-		auto parse_result = dvm_linker.parseCodeCollectionFromFiles(
-			objects | transform(&artifacts::FileArtifact::file) | to<std::vector>()
-		);
-
-		if (!parse_result.has_value()) {
-			CORE_USER_LOG(
-				"DVM linking failed: could not parse compiler-generated module bytecode file.\n"
-				"Reason: ",
-				parse_result.error(),
-				"\n"
-			);
-			return base::BAD;
-		}
-		vm::code::CodeCollection merged_code = std::move(parse_result.value());
-
-		auto output_file
-			= global_state::getRootCollection()->fileArtifactAtOrNew(base::StrID(output_file_name));
-		std::ofstream out(output_file.file.getFilePath().getPath(), std::ios::binary);
-		if (!out.is_open()) CORE_PANIC("Failed to open DVM package output file for writing");
-		vm::code::serializeCode(merged_code, out);
-
-		// Merge per-module debug info files into a single package debug info file.
-		if (!debug_info_artifacts.empty()) {
-			base::Optional<debug_info::DebugInfo> merged_debug_info;
-
-			for (const auto& di_art: debug_info_artifacts) {
-				std::ifstream in(di_art.file.getFilePath().getPath(), std::ios::binary);
-				if (!in.is_open()) {
-					CORE_USER_LOG("DVM: failed to open debug info artifact for merging\n");
-					return base::BAD;
-				}
-				auto di_or_error = debug_info::loadFromStream(in);
-				if (!di_or_error.has_value()) {
-					CORE_USER_LOG(
-						"DVM: failed to parse debug info file: ", di_or_error.error(), "\n"
-					);
-					return base::BAD;
-				}
-				if (!merged_debug_info.has_value())
-					merged_debug_info.emplace(std::move(di_or_error.value()));
-				else
-					merged_debug_info->mergeFrom(std::move(di_or_error.value()));
-			}
-
-			if (merged_debug_info.has_value()) {
-				merged_debug_info->module_path = output_file.file.getFilePath().string();
-
-				auto di_output = global_state::getRootCollection()->fileArtifactAtOrNew(
-					base::StrID(base::strConcat(output_file_stem, ".di.json").c_str())
-				);
-				std::ofstream di_out(di_output.file.getFilePath().getPath(), std::ios::binary);
-				if (!di_out.is_open())
-					CORE_PANIC("Failed to open DVM package debug info output file for writing");
-				debug_info::saveToStream(*merged_debug_info, di_out);
-			}
-		}
-
-		return base::OK;
 	}
 
 	namespace {
@@ -743,7 +709,7 @@ namespace compiler::driver {
 
 		for (const auto& task: tasks) {
 			variant_match(task.build_target) {
-				variant_case_novalue(BuildTargetDVM) {
+				variant_case_novalue(BuildTargetDVMLibrary, BuildTargetDVMExecutable) {
 					collect_modules(task.root_module, BackendType::DVM, task.root_module);
 				}
 				variant_default {
@@ -753,10 +719,11 @@ namespace compiler::driver {
 		}
 
 		// Sort + dedup: a single (module_id, backend, build_debug_info, root_module) should be
-		// compiled at most once even if multiple tasks reference it. The sort key is the module's
-		// content hash, which is effectively random across modules — that gives us deterministic
-		// output *and* spreads sibling modules across the worker queue (better load balancing
-		// than feeding workers a depth-first traversal), so no separate shuffle is needed.
+		// compiled at most once even if multiple tasks reference it. The sort key is the
+		// module's content hash, which is effectively random across modules — that gives us
+		// deterministic output *and* spreads sibling modules across the worker queue (better
+		// load balancing than feeding workers a depth-first traversal), so no separate shuffle
+		// is needed.
 		std::ranges::sort(modules_to_compile, lessModuleToCompile);
 		modules_to_compile.erase(
 			std::ranges::unique(modules_to_compile).begin(), modules_to_compile.end()
@@ -826,10 +793,9 @@ namespace compiler::driver {
 		for (const auto& task: tasks) {
 			variant_match(task.build_target) {
 				variant_case(BuildTargetLLVMExecutable, target_exe) {
-					auto output_file
-						= global_state::getRootCollection()->fileArtifactAtOrNew(base::StrID(
-							base::strConcat(target_exe.output_file_stem.strView(), ".exe").c_str()
-						));
+					auto output_file = global_state::getRootCollection()->fileArtifactAtOrNew(
+						target_exe.output_file_name
+					);
 
 					llvm_objects_by_root_module.atMaybe(task.root_module)
 						.value()
@@ -857,10 +823,9 @@ namespace compiler::driver {
 				variant_case(BuildTargetLLVMStaticLibrary, target_lib) {
 					// Note, if you change this convention, please also change the one in the
 					// `getStdLibArtifacts`
-					auto output_file
-						= global_state::getRootCollection()->fileArtifactAtOrNew(base::StrID(
-							base::strConcat(target_lib.output_file_stem.strView(), ".a").c_str()
-						));
+					auto output_file = global_state::getRootCollection()->fileArtifactAtOrNew(
+						target_lib.output_file_name
+					);
 
 					auto archive_result = archiver::createArchive(
 						output_file,
@@ -884,7 +849,7 @@ namespace compiler::driver {
 				variant_case_novalue(BuildTargetLLVM) {
 					// Do nothing for plain object files
 				}
-				variant_case(BuildTargetDVM, target_dvm) {
+				variant_case(BuildTargetDVMLibrary, target_dvm) {
 					auto debug_info_opt
 						= debug_info_artifacts_by_root_module.atMaybe(task.root_module);
 
@@ -892,8 +857,30 @@ namespace compiler::driver {
 							*dvm_objects_by_root_module.atMaybe(task.root_module).value(),
 							debug_info_opt.has_value() ? *debug_info_opt.value()
 													   : std::vector<artifacts::FileArtifact>(),
-							std::string(target_dvm.output_file_stem.strView())
+							target_dvm.output_file_name.str()
 						)
+					        .isBad())
+						result = base::BAD;
+				}
+				variant_case(BuildTargetDVMExecutable, target_dvm) {
+					// If the `target_dvm.link_std_packages` is on, we link the std packages as well.
+					std::vector<artifacts::FileArtifact> dbc_arts
+						= *dvm_objects_by_root_module.atMaybe(task.root_module).value();
+					if (target_dvm.link_std_packages)
+						for (auto& art: getStdLibDVMArtifacts()) dbc_arts.push_back(std::move(art));
+
+					std::vector<artifacts::FileArtifact> debug_info_arts;
+
+					if_opt_some(
+						debug_info_artifacts_by_root_module.atMaybe(task.root_module), debug_arts
+					) {
+						for (const auto& art: *debug_arts) debug_info_arts.push_back(art);
+						if (target_dvm.link_std_packages)
+							for (auto& art: getStdLibDVMDebugInfoArtifacts())
+								debug_info_arts.push_back(std::move(art));
+					}
+
+					if (linkDVMPackage(dbc_arts, debug_info_arts, target_dvm.output_file_name.str())
 					        .isBad())
 						result = base::BAD;
 				}
@@ -901,34 +888,5 @@ namespace compiler::driver {
 		}
 
 		return result;
-	}
-
-	std::expected<RunOutput, std::string> runModuleOnDVM(
-		query::Context& ctx, frontend::ModuleID module_id
-	) {
-		auto lir_data            = compileModuleToLIRModuleData(ctx, module_id).valueOrPanic();
-		auto dvm_code_collection = compileLIRModuleToDVM(&lir_data, ctx, false);
-
-		vm::PID pid{};
-
-		return vm::api::spawn()
-		    .and_then([&](vm::api::ProcessInfo process) {
-				pid = process.pid;
-				return std::expected<void, vm::api::ApiError>{};
-			})
-		    .and_then([&] { return vm::api::loadCode(pid, { dvm_code_collection.code }); })
-		    .and_then([&] { return vm::api::attach(pid, std::cin, std::cout); })
-		    .and_then([&] { return vm::api::run(pid); })
-		    .and_then([&] { return vm::api::join(pid); })
-		    .and_then([&] { return vm::api::getExitValue(pid); })
-		    .transform_error(vm::api::errorToString)
-		    .transform([](vm::api::ExitValue exit_values) {
-				CORE_ASSERT(
-					exit_values.size() == 1,
-					"Support for multiple return values in compiler not implemented"
-				);
-				return RunOutput{ .exit_code
-				                  = base::safeIntConv<int>(exit_values.at(0)->readBytes<i64>()) };
-			});
 	}
 }

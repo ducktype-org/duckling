@@ -34,11 +34,14 @@ public:
 
 		// This test has some strange side effects. Putting it before `testErrorLogging` causes
 		// the tests to fail.
-		TESTER_ADD_TEST(testDuplicatedFunctionDeclaration);
+		TESTER_ADD_TEST(testDuplicatedDefinitions);
 
 		TESTER_ADD_TEST(testErrorLoggingExpandStatements);
 		TESTER_ADD_TEST(testErrorLoggingCyclicErrors);
 		TESTER_ADD_TEST(testPointerCastErrors);
+		TESTER_ADD_TEST(testBackendDependentAttributeErrors);
+
+
 		TESTER_ADD_TEST(testErrorBadExpr);
 		TESTER_ADD_TEST(testDiagnosticErrorsCorrectness);
 	}
@@ -77,7 +80,7 @@ private:
 
 		std::stringstream logged_messages;
 		logger->terminalPrint(logged_messages);
-		std::cerr << "Logged messages:\n" << logged_messages.str() << "\n";
+		// std::cerr << "Logged messages:\n" << logged_messages.str() << "\n";
 		auto msg_count = logger->messageCount();
 		assertEqual(
 			msg_count,
@@ -122,7 +125,20 @@ private:
 				},
 				1
 			);
-			checkForErrorOnCompileModule(R"(fun a() = -true;)", { "No builtin unary operator" }, 1);
+			checkForErrorOnCompileModule(
+				R"(fun a() = -true;)", { "Call failed because no matching functions were found." }, 1
+			);
+			checkForErrorOnCompileModule(
+				R"(
+				fun main() -> i64 = {
+					var x: i64 = 0;
+					x++;
+					return 0;
+				}
+			)",
+				{ "Call failed because no matching functions were found." },
+				1
+			);
 		}
 
 		// ============================ Function calls ============================
@@ -162,7 +178,7 @@ private:
 					b(1,2,3);
 				}
 			)",
-				{ "no matching functions" },
+				{ "Call failed because no matching functions were found." },
 				1
 			);
 
@@ -357,6 +373,36 @@ private:
 				}
 			)",
 				{ "Type `f32` cannot be converted to type `i64`." },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				R"(
+				class MyClass {
+					x:i64 = 0;
+
+					MyClass.copy(other: const MyClass) = {
+						return MyClass(1);
+					}
+				}
+			)",
+				{ "A copy constructor's parameter must be a constant reference to its own class "
+			      "`MyClass`." },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				R"(
+				class MyClass {
+					x:i64 = 0;
+
+					MyClass.copy(other: const ref MyClass, a: i64) = {
+						return MyClass(1);
+					}
+				}
+			)",
+				{ "A copy constructor must declare exactly one parameter: a reference to the "
+			      "object being copied." },
 				1
 			);
 		}
@@ -587,6 +633,19 @@ private:
 				{ "Type `List` cannot be default initialized" },
 				1
 			);
+
+			checkForErrorOnCompileModule(
+				R"(
+				class Inner { non_defaultable: ref i64; }
+
+				fun main() -> i64 = {
+					var tup: (Inner, i64);
+					return 0;
+				}
+			)",
+				{ "Type `Tuple(Class Inner, i64)` cannot be default initialized" },
+				1
+			);
 		}
 
 
@@ -712,40 +771,6 @@ private:
 			checkForErrorOnCompileModule(
 				R"(
 				fun main() = {
-					var l: List[i64];
-					l += 1.5;
-				}
-			)",
-				{ "Type `f32` cannot be converted to type `i64`" },
-				1
-			);
-
-			checkForErrorOnCompileModule(
-				R"(
-				fun main() = {
-					var l: List[i64];
-					l -= "sth";
-				}
-			)",
-				{ "Type `const slice char` cannot be converted to type `u64`" },
-				1
-			);
-
-			checkForErrorOnCompileModule(
-				R"(
-				fun main() = {
-					var x = 10;
-					var length = len x;
-				}
-			)",
-				{ "No builtin unary operator `len` for type `i32`" },
-				1
-			);
-
-
-			checkForErrorOnCompileModule(
-				R"(
-				fun main() = {
 					var l1: List[i64];
 					var l2: List[f64] = l1;
 				}
@@ -757,20 +782,6 @@ private:
 
 		// ========================= Not-yet-implemented errors =========================
 		{
-			// Note: just remove the tests when the features
-			// are implemented.
-			checkForErrorOnCompileModule(
-				R"(
-				fun main() -> i64 = {
-					var x: i64 = 0;
-					x++;
-					return 0;
-				}
-			)",
-				{ "Feature not implemented", "Suffix" },
-				1
-			);
-
 			checkForErrorOnCompileModule(
 				R"(
 				fun main() -> i64 = {
@@ -873,19 +884,6 @@ private:
 				{ "Feature not implemented", "zero-sized classes" },
 				1
 			);
-
-			checkForErrorOnCompileModule(
-				R"(
-				class A { a: i64 = 1; }
-				fun main() -> i64 = {
-					var a: (i32, A);
-					return 0;
-				}
-			)",
-				{ "Feature not implemented", "Generating default constructors for", "tuple types" },
-				1
-			);
-
 
 			checkForErrorOnCompileModule(
 				R"(
@@ -1007,7 +1005,7 @@ private:
 				fun main() -> i64 = {
     				var nested: List[List[i32]];
     				var inner: List[i32];
-    				nested += inner;    
+    				nested.push(inner);    
     				return 0;
 				}
 			)",
@@ -1527,13 +1525,154 @@ private:
 		});
 	}
 
-	void testDuplicatedFunctionDeclaration() {
+	void testDuplicatedDefinitions() {
+		// Duplicated function.
 		checkForErrorOnCompileModule(
 			R"(
                 fun a() -> i64 = { return 1; }
                 fun a() -> i64 = { return 2; }
             )",
-			{ "Symbol 'a' is already defined." },
+			{ "Symbol 'a' is already defined.", "Previous declaration here." },
+			1
+		);
+
+		// Duplicated class.
+		checkForErrorOnCompileModule(
+			R"(
+                class T { x: i64 = 0; }
+                class T { x: i64 = 0; }
+            )",
+			{ "Symbol 'T' is already defined.", "Previous declaration here." },
+			1
+		);
+
+		// Duplicated global variable.
+		checkForErrorOnCompileModule(
+			R"(
+                var a: i64 = 123;
+                var a: i64 = 12;
+            )",
+			{ "Symbol 'a' is already defined.", "Previous declaration here." },
+			1
+		);
+	}
+
+	void testBackendDependentAttributeErrors() {
+		// ==================== Attribute format errors ====================
+
+		checkForErrorOnCompileModule(
+			R"(@unknown_attr fun a() -> i32 = 0;)", { "is not recognized" }, 1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(@foo.bar fun a() -> i32 = 0;)", { "Attribute is not supported" }, 1
+		);
+
+		// @backend_dependent on `fun` instead of `fundecl`
+		checkForErrorOnCompileModule(
+			R"(@backend_dependent fun a() -> i32 = 0;)",
+			{ "Attribute is not supported on this type of statement" },
+			1
+		);
+
+		// Mutually exclusive @dvm_only_impl and @native_only_impl on same function
+		// (also triggers missing @backend_dependent fundecl, so 2 errors total)
+		checkForErrorOnCompileModule(
+			R"(@dvm_only_impl @native_only_impl fun func() -> i32 = { return 10; })",
+			{ "exclusive" },
+			2
+		);
+
+		// ==================== Missing counterpart errors ====================
+
+		// @backend_dependent fundecl with no @dvm_only_impl implementation
+		checkForErrorOnCompileModule(
+			R"(
+                @backend_dependent
+                fundecl func() -> i32;
+
+                @native_only_impl
+                fun func() -> i32 = { return 20; }
+            )",
+			{ "dvm_only_impl" },
+			1
+		);
+
+		// @dvm_only_impl with no corresponding @backend_dependent fundecl
+		checkForErrorOnCompileModule(
+			R"(
+                @dvm_only_impl
+                fun func() -> i32 = { return 10; }
+            )",
+			{ "backend_dependent" },
+			1
+		);
+
+		// ==================== Signature mismatch errors ====================
+
+		// Return type mismatch between fundecl and dvm impl
+		checkForErrorOnCompileModule(
+			R"(
+                @backend_dependent
+                fundecl func() -> i32;
+
+                @dvm_only_impl
+                fun func() -> i64 = { return 10; }
+
+                @native_only_impl
+                fun func() -> i32 = { return 20; }
+            )",
+			{ "does not match" },
+			1
+		);
+
+		// Parameter type mismatch between fundecl and dvm impl
+		checkForErrorOnCompileModule(
+			R"(
+                @backend_dependent
+                fundecl func(x: i32) -> i32;
+
+                @dvm_only_impl
+                fun func(x: i64) -> i32 = { return 0; }
+
+                @native_only_impl
+                fun func(x: i32) -> i32 = { return x; }
+            )",
+			{ "does not match" },
+			1
+		);
+
+		// Parameter name mismatch between fundecl and dvm impl
+		checkForErrorOnCompileModule(
+			R"(
+                @backend_dependent
+                fundecl func(x: i32) -> i32;
+
+                @dvm_only_impl
+                fun func(y: i32) -> i32 = { return y; }
+
+                @native_only_impl
+                fun func(x: i32) -> i32 = { return x; }
+            )",
+			{ "does not match" },
+			1
+		);
+
+		// ==================== Initial value errors ====================
+
+		// @dvm_only_impl with a parameter that has a default value
+		checkForErrorOnCompileModule(
+			R"(
+                @backend_dependent
+                fundecl func(x: i32) -> i32;
+
+                @dvm_only_impl
+                fun func(x: i32 = 5) -> i32 = { return x; }
+
+                @native_only_impl
+                fun func(x: i32) -> i32 = { return x; }
+            )",
+			{ "Initial value is not allowed here" },
 			1
 		);
 	}

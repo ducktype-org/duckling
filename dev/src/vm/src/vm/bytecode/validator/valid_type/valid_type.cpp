@@ -12,6 +12,19 @@
 
 using namespace vm::code;
 
+namespace {
+	/**
+	 * @brief Natural alignment of a type addressed purely by its byte size: the largest power of
+	 * two dividing the size, capped at 8 (the largest C scalar alignment). Sizes 1/2/4/8 align to
+	 * themselves, matching the C ABI for scalars of those sizes.
+	 */
+	Bytes naturalAlignment(const Bytes size) {
+		const auto value = usize(size);
+		if (value == 0) return Bytes(1);
+		return Bytes(std::min<usize>(value & -value, 8));
+	}
+}
+
 valid_type::ValidType valid_type::ValidType::declareType(base::StrID name, ValidTypeID id) {
 	return { name, id };
 }
@@ -54,7 +67,7 @@ void valid_type::ValidType::defineDynamicTable(ValidTypeID inner) {
 }
 
 void valid_type::ValidType::defineData(
-	const std::vector<std::pair<base::StrID, ValidTypeID>>& fields_definitions
+	const std::vector<std::pair<base::StrID, ValidTypeID>>& fields_definitions, const bool packed
 ) {
 	variant_match(state) {
 		variant_case_novalue(ValidType::Declared) {
@@ -63,8 +76,10 @@ void valid_type::ValidType::defineData(
 			for (const auto& field_def: fields_definitions)
 				fields.emplace_back(defined::DefinedField{ .name = field_def.first,
 				                                           .type = field_def.second });
-			state = Defined{ .kind = defined::DefinedStructure{
-								 .field_definitions = fields, .forwarded_inheritance_data = {} } };
+			state
+				= Defined{ .kind = defined::DefinedStructure{ .field_definitions          = fields,
+				                                              .packed                     = packed,
+				                                              .forwarded_inheritance_data = {} } };
 		}
 		variant_default { CORE_PANIC("Bad type define: type already defined or finalized"); }
 	}
@@ -315,6 +330,7 @@ valid_type::finalized::Structure valid_type::ValidType::finalizeStructureData(
 		                      .type   = field_type },
 			field_name
 		);
+	new_structure.packed               = structure.packed;
 	new_structure.inheritance_metadata = std::move(inheritance_metadata);
 
 	return new_structure;
@@ -336,14 +352,14 @@ void valid_type::ValidType::finalize(ValidTypeMap& types) {
 		variant_case(defined::DefinedPrimitive, primitive) {
 			this->size                  = valid_type::TypeSize(primitive.size, 0);
 			this->shadow_size           = 1;
-			this->pointer_size          = 0;
+			this->alignment             = valid_type::TypeSize(naturalAlignment(primitive.size), 0);
 			this->is_trivially_copyable = true;
 			state = Finalized{ .kind = finalized::Primitive{ primitive.size } };
 		}
 		variant_case(defined::DefinedPointer, pointer) {
 			this->size                  = valid_type::TypeSize::pointer();
 			this->shadow_size           = 1;
-			this->pointer_size          = 1;
+			this->alignment             = valid_type::TypeSize::pointer();
 			this->is_trivially_copyable = false;
 			state                       = Finalized{ .kind = finalized::Pointer{ pointer.inner } };
 		}
@@ -354,9 +370,7 @@ void valid_type::ValidType::finalize(ValidTypeMap& types) {
 			this->shadow_size = static_cast<ShadowSize>(
 				inner_type->getShadowSize() * fixed_size_table.element_count
 			);
-			this->pointer_size = static_cast<PointerSize>(
-				inner_type->getPointerSize() * fixed_size_table.element_count
-			);
+			this->alignment             = inner_type->getAlignment();
 			this->is_trivially_copyable = inner_type->isTriviallyCopyable();
 			state                       = Finalized{ .kind = finalized::FixedSizeTable{
 														 .inner         = fixed_size_table.inner,
@@ -368,7 +382,6 @@ void valid_type::ValidType::finalize(ValidTypeMap& types) {
 			/// through this object. Dynamic table is only accessed by a pointer.
 			this->size                  = valid_type::TypeSize(Bytes(0), 0);
 			this->shadow_size           = 1;
-			this->pointer_size          = 1;
 			this->is_trivially_copyable = false;
 			state = Finalized{ .kind = finalized::DynamicTable{ .inner = dynamic_table.inner } };
 		}
@@ -376,7 +389,7 @@ void valid_type::ValidType::finalize(ValidTypeMap& types) {
 			// Opaque type size is known, so we don't need to do anything here.
 			this->size                  = valid_type::TypeSize(opaque.size, 0);
 			this->shadow_size           = 1;
-			this->pointer_size          = 0;
+			this->alignment             = valid_type::TypeSize(naturalAlignment(opaque.size), 0);
 			this->is_trivially_copyable = true;
 			state                       = Finalized{ .kind = finalized::Opaque{ opaque.size } };
 		}
@@ -384,7 +397,7 @@ void valid_type::ValidType::finalize(ValidTypeMap& types) {
 			// Function type size is known, so we don't need to do anything here.
 			this->size                  = valid_type::TypeSize::pointer();
 			this->shadow_size           = 1;
-			this->pointer_size          = 1;
+			this->alignment             = valid_type::TypeSize::pointer();
 			this->is_trivially_copyable = false;
 			state                       = Finalized{ .kind = finalized::Function{
 														 .parameters   = std::move(function.parameters),
@@ -406,18 +419,15 @@ void valid_type::ValidType::finalize(ValidTypeMap& types) {
 			// because technically it's the maximum of the sizes of the alternatives, but we also
 			// need to take into account different pointer sizes. More info in TypeSize's doc-comment.
 			valid_type::TypeSize data_segment_size(Bytes(0), 0);
-			ShadowSize           max_shadow_size  = 0;
-			PointerSize          max_pointer_size = 0;
+			ShadowSize           max_shadow_size = 0;
 			for (auto& alternative: variant.alternatives) {
 				auto alternative_type = types.at(alternative);
 				alternative_type->finalize(types);
 				data_segment_size = data_segment_size.fieldMax(alternative_type->getSize());
 				max_shadow_size   = std::max(max_shadow_size, alternative_type->getShadowSize());
-				max_pointer_size  = std::max(max_pointer_size, alternative_type->getPointerSize());
 			}
-			this->size         = valid_type::TypeSize(type_tag_size, 0) + data_segment_size;
-			this->shadow_size  = 1 + max_shadow_size;
-			this->pointer_size = max_pointer_size;
+			this->size                  = valid_type::TypeSize(type_tag_size, 0) + data_segment_size;
+			this->shadow_size           = 1 + max_shadow_size;
 			this->is_trivially_copyable = false;
 			state                       = Finalized{ .kind = finalized::Variant{
 														 .type_tag_size        = type_tag_size,
@@ -429,26 +439,32 @@ void valid_type::ValidType::finalize(ValidTypeMap& types) {
 		variant_case(defined::DefinedStructure, structure) {
 			auto new_structure = finalizeStructureData(types, structure);
 
-			// Finalize the fields and calculate their offsets.
+			// Finalize the fields and calculate their offsets. Non-packed structures follow the C
+			// layout rules: each field is aligned to its type's alignment, and the total size is
+			// rounded up to the structure's alignment (the maximum of the field alignments).
+			// @note This is the single source of truth for structure layout; the runtimes consume
+			// these offsets (resolved for their pointer width) instead of computing their own.
 			valid_type::TypeSize offset(Bytes(0), 0);
-			u32                  shadow_offset  = 0;
-			u32                  pointer_offset = 0;
+			valid_type::TypeSize struct_alignment(Bytes(1), Bytes(1));
+			u32                  shadow_offset = 0;
 			for (auto& field: new_structure.fields) {
 				auto field_type = types.at(field.type);
 				field_type->finalize(types);
-				field.offset         = offset;
-				field.shadow_offset  = shadow_offset;
-				field.pointer_offset = pointer_offset;
+				if (!new_structure.packed) {
+					offset           = offset.alignedTo(field_type->getAlignment());
+					struct_alignment = struct_alignment.fieldMax(field_type->getAlignment());
+				}
+				field.offset        = offset;
+				field.shadow_offset = shadow_offset;
 				offset += field_type->getSize();
 				shadow_offset += field_type->getShadowSize();
-				pointer_offset += field_type->getPointerSize();
 			}
-			this->size         = offset;
+			this->size         = offset.alignedTo(struct_alignment);
+			this->alignment    = struct_alignment;
 			this->shadow_size  = shadow_offset;
-			this->pointer_size = pointer_offset;
 
 			// Build byte_to_shadow: flat array mapping each concrete byte offset → shadow index.
-			const u32 total_bytes = static_cast<u32>(offset.assumePointerSize(Bytes(16)));
+			const u32 total_bytes = static_cast<u32>(this->size.assumePointerSize(Bytes(16)));
 			new_structure.byte_to_shadow.assign(total_bytes, 0);
 			for (auto& field: new_structure.fields) {
 				auto field_type  = types.at(field.type);
@@ -553,6 +569,13 @@ void valid_type::ValidType::finalizeInstantiability(ValidTypeMap& types) {
 	}
 }
 
+[[nodiscard]] valid_type::TypeSize valid_type::ValidType::getAlignment() const {
+	variant_match(state) {
+		variant_case_novalue(Finalized) { return alignment; }
+		variant_default { CORE_PANIC("Tried to get alignment of a type that was not finalized"); }
+	}
+}
+
 [[nodiscard]]
 bool valid_type::ValidType::isInstantiable() const {
 	variant_match(state) {
@@ -599,34 +622,10 @@ bool valid_type::ValidType::isInstantiable() const {
 	}
 }
 
-[[nodiscard]] base::Optional<u32> valid_type::ValidType::getFieldPointerOffsetByName(
-	base::StrID field_name
-) const {
-	variant_match(state) {
-		variant_case(Finalized, finalized) {
-			const auto* structure = std::get_if<finalized::Structure>(&finalized.kind);
-			if (!structure) return {};
-			for (const auto& field: structure->fields)
-				if (field.name == field_name) return field.pointer_offset;
-			return {};
-		}
-		variant_default { CORE_PANIC("getFieldPointerOffsetByName called on non-finalized type"); }
-	}
-}
-
 [[nodiscard]] valid_type::ShadowSize valid_type::ValidType::getShadowSize() const {
 	variant_match(state) {
 		variant_case(Finalized, finalized) { return shadow_size; }
 		variant_default { CORE_PANIC("Tried to get shadow size of a type that was not finalized"); }
-	}
-}
-
-[[nodiscard]] valid_type::PointerSize valid_type::ValidType::getPointerSize() const {
-	variant_match(state) {
-		variant_case(Finalized, finalized) { return pointer_size; }
-		variant_default {
-			CORE_PANIC("Tried to get pointer size of a type that was not finalized");
-		}
 	}
 }
 

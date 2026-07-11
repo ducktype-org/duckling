@@ -12,7 +12,7 @@ namespace vm {
 	STRONG_TYPEDEF_ID_DIRECT_CREATION(BlockID);
 
 	template<typename EntryT, typename BlockT>
-	class IMemory;
+	class GenericMemory;
 
 	/**
 	 * @brief Main block data structure.
@@ -21,7 +21,7 @@ namespace vm {
 	 * The blocks are managed by the `vm::Memory` class.
 	 */
 	template<typename EntryT>
-	class BasicBlock {
+	class GenericBlock {
 		/**
 		 * @brief The unique identifier for the block.
 		 */
@@ -52,23 +52,26 @@ namespace vm {
 		// name ...
 
 		template<typename E, typename B>
-		friend class IMemory;
+		friend class GenericMemory;
 
 		// Think of it as a view on parent's bytes that has it's own type and lifetime.
-		base::Map<usize, Ref<BasicBlock<EntryT>>> children_blocks{};  // offset to block
-		MRef<BasicBlock<EntryT>>                  parent = nullptr;
+		base::Map<usize, Ref<GenericBlock<EntryT>>> children_blocks{};  // offset to block
+		MRef<GenericBlock<EntryT>>                  parent = nullptr;
 
 	public:
-		BasicBlock(BlockID id, BlockData<EntryT> data): id(id), data(data) {}
+		GenericBlock(BlockID id, BlockData<EntryT> data): id(id), data(data) {}
 
 		[[nodiscard]] EntryT* getData() { return data.view.getBegin(); }
+
 		[[nodiscard]] const EntryT* getData() const { return data.view.getBegin(); }
+
 		[[nodiscard]] bool isDeallocated() const { return deallocated; }
+
 		[[nodiscard]] BlockID getID() const { return id; }
 	};
 
-	using Block = BasicBlock<std::byte>;
-	using ShadowBlock = BasicBlock<ShadowEntry>;
+	using Block        = GenericBlock<std::byte>;
+	using ShadowBlock  = GenericBlock<ShadowEntry>;
 	using BlockGeneric = Block;
 }
 

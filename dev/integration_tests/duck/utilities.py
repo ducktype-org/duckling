@@ -57,7 +57,18 @@ def check_venv_metadata(file: Path) -> None:
         sys.exit(1)
 
 
+def project_root(name: str) -> Path:
+    """Root of the project fixture the test operates on. Tests that run
+    inside a tmp env (build/, init/) copy or create their projects under
+    $DIT_TMP_DIR; the fallback is the test's own directory."""
+    if tmp_dir := os.environ.get("DIT_TMP_DIR"):
+        return Path(tmp_dir).resolve() / name
+    return Path.cwd() / name
+
+
 def default_duck_home() -> Path:
+    if duck_home := os.environ.get("DUCK_HOME"):
+        return Path(duck_home)
     return Path.cwd() / "duck_home"
 
 
@@ -151,3 +162,27 @@ def check_is_git_root(root: Path):
 
 def check_not_git_root(root: Path):
     assert_eq(is_git_root(root), False)
+
+
+def artifacts_dir_for_root(root: Path) -> Path:
+    return root / ".duck_build"
+
+
+def artifacts_for_profile(root: Path, profile: str) -> Path:
+    return root / profile
+
+
+def unit_dir_name_for(name: str, version: str, source: Path | str) -> str:
+    if isinstance(source, Path):
+        source = str(source)
+        source = f"local+file://{source}"
+    hash = hashlib.sha256(source.encode()).hexdigest()
+    return f"{name}-{version}-{hash}"
+
+
+def deps_json_path_for_dep(dir: Path) -> Path:
+    return dir / "deps.json"
+
+
+def locks_path(dir: Path) -> Path:
+    return dir / ".duck_lock"

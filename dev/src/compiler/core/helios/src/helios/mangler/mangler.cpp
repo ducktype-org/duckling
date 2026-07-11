@@ -13,7 +13,6 @@
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_abi.hpp>
 #include <helios/symbols/symbol_id.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/tsh/types.hpp>
 #include <helios_private/pst_layer/pst_parent.hpp>
 #include <helios_private/scopes/scopes.hpp>
@@ -70,6 +69,7 @@ namespace compiler::helios::mangler {
 			if (auto abi = ctx.query<QuerySymbolABI>(sym_id); abi->hasValue()) {
 				variant_match(abi->valueOrThrow()) {
 					variant_case_novalue(CAbi) { return false; }
+					variant_case_novalue(DVMAbi) { return false; }
 					variant_case_novalue(DefaultAbi) { return true; }
 					variant_default { CORE_UNREACHABLE(); }
 				}
@@ -247,9 +247,7 @@ namespace compiler::helios::mangler {
 		 */
 		std::string func(query::Context& ctx, SymID symbol_id) {
 			std::stringstream ret;
-			if (kind(symbol_id) == SymbolKind::Function
-			    or kind(symbol_id) == SymbolKind::FunctionDeclaration
-			    or kind(symbol_id) == SymbolKind::Method) {
+			if (isFunctionLike(kind(symbol_id))) {
 				// @TODO: #2255 Function qualifiers?
 
 				auto function_type = ctx.query<QueryTypeOfSymbol>(symbol_id)->valueOrThrow();
@@ -283,70 +281,74 @@ namespace compiler::helios::mangler {
 
 			case SymbolKind::Function:
 			case SymbolKind::Method:
+			case SymbolKind::Constructor:
 			case SymbolKind::FunctionDeclaration: {
 				variant_match(getSymRef(symbol_id)->other) {
-					variant_case_novalue(PstSymbolData) {
-						// If the symbol originates from the PST, use its path.
+					variant_case_novalue(PstImplementedSemantics, BuiltinSemantics) {
+						// If the symbol originates from the PST (including builtins), use its path.
 						return path(ctx, symbol_id) + func(ctx, symbol_id);
 					}
-					variant_case(defgen::GeneratedSymbolData, gen_data) {
-						// If the symbol is generated, it has no path.
-						variant_match(gen_data.data) {
-							variant_case(defgen::GeneratedSymbolData::ImplicitConstructor, ctor) {
-								const auto mangled_class = ctx.query<QueryMangledType>(
-									tsh::SymbolType<>::withDefaults(ctor.target_type)
-								);
-								const auto ctor_suffix = "Hic" + func(ctx, symbol_id) + "E";
-								return mangled_class->valueOrThrow().str() + ctor_suffix;
+					// If the symbol is generated, it has no path.
+					variant_case(defgen::Constructor, ctor) {
+						// The mangled type identifies which type the constructor belongs to (works
+						// for any kind: class, tuple, static array, ...). The infix tag
+						// distinguishes the implicit, default and copy constructors.
+						const auto mangled_type
+							= ctx.query<QueryMangledType>(tsh::SymbolType<>::withDefaults(ctor.type))
+						          ->valueOrThrow()
+						          .str();
+
+						const char* ctor_tag = [&]() -> const char* {
+							switch (ctor.kind) {
+							case defgen::Constructor::Kind::Implicit:
+								return "Hic";
+							case defgen::Constructor::Kind::Default:
+								return "Hdc";
+							case defgen::Constructor::Kind::Copy:
+								return "Hcc";
 							}
-							variant_case(
-								defgen::GeneratedSymbolData::DefaultClassConstructor, ctor
-							) {
-								const auto path_to_class = path(ctx, ctor.class_symbol);
-								const auto ctor_suffix   = "Hdc" + func(ctx, symbol_id) + "E";
-								return path_to_class + ctor_suffix;
-							}
-							variant_case(
-								defgen::GeneratedSymbolData::DefaultStaticArrayConstructor, ctor
-							) {
-								return "Hds"
-								     + ctx.query<QueryMangledType>(
-											  tsh::SymbolType<>::withDefaults(ctor.array_type)
-									 )
-								           ->valueOrThrow()
-								           .str()
-								     + "E";
-							}
-							variant_case(defgen::GeneratedSymbolData::DefaultDestructor, dtor) {
-								// We do not have a reliable "path to type" in this case, so we omit
-								// it. Any ambiguities are solved by the function type anyway.
-								return "Hdd" + func(ctx, symbol_id) + "E";
-							}
-							variant_case(defgen::GeneratedSymbolData::ToStringMethod, to_string) {
-								// We do not have a reliable "path to type" in this case
-								// (esp. for simple types such as i32), so we omit it.
-								// Any ambiguities are solved by the function type anyway.
-								return "HtoString" + func(ctx, symbol_id) + "E";
-							}
-							variant_case(defgen::GeneratedSymbolData::LengthMethod, length_method) {
-								return "Hlength" + func(ctx, symbol_id) + "E";
-							}
-							variant_case(
-								defgen::GeneratedSymbolData::ReplExpressionWrapper, repl_wrapper
-							) {
-								return base::strConcat("__repl_expr_wrapper_", repl_wrapper.counter);
-							}
-							variant_case(
-								defgen::GeneratedSymbolData::ReplInstructionWrapper,
-								repl_instr_wrapper
-							) {
-								return base::strConcat(
-									"__repl_instr_wrapper_", repl_instr_wrapper.counter
-								);
-							}
-							// Other cases of generated symbols cannot be functions.
-						}
+							CORE_UNREACHABLE();
+						}();
+
+						return mangled_type + ctor_tag + func(ctx, symbol_id) + "E";
 					}
+					variant_case(defgen::Method, method) {
+						// We do not have a reliable "path to type" in these cases (esp. for simple
+						// types such as i32), so we omit it. Any ambiguities are solved by the
+						// function type anyway.
+						switch (method.kind) {
+						case defgen::Method::Kind::DefaultDestructor:
+							return "Hdd" + func(ctx, symbol_id) + "E";
+						case defgen::Method::Kind::ToString:
+							return "HtoString" + func(ctx, symbol_id) + "E";
+						case defgen::Method::Kind::LengthMethod:
+							return "Hlength" + func(ctx, symbol_id) + "E";
+						case defgen::Method::Kind::Push:
+							return "Hpush" + func(ctx, symbol_id) + "E";
+						case defgen::Method::Kind::Pop:
+							return "Hpop" + func(ctx, symbol_id) + "E";
+						}
+						CORE_UNREACHABLE();
+					}
+					variant_case(defgen::BoxBuiltin, box) {
+						// We do not have a reliable "path to type" in these cases (esp. for simple
+						// types such as i32), so we omit it. Any ambiguities are solved by the
+						// function type anyway.
+						switch (box.kind) {
+						case defgen::BoxBuiltin::Kind::Alloc:
+							return "Hba" + func(ctx, symbol_id) + "E";
+						case defgen::BoxBuiltin::Kind::Free:
+							return "Hbf" + func(ctx, symbol_id) + "E";
+						}
+						CORE_UNREACHABLE();
+					}
+					variant_case(defgen::ReplExpressionWrapper, repl_wrapper) {
+						return base::strConcat("__repl_expr_wrapper_", repl_wrapper.counter);
+					}
+					variant_case(defgen::ReplInstructionWrapper, repl_instr_wrapper) {
+						return base::strConcat("__repl_instr_wrapper_", repl_instr_wrapper.counter);
+					}
+					// Other cases of generated symbols cannot be functions.
 				}
 				CORE_UNREACHABLE();
 			}

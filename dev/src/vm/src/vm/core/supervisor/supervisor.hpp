@@ -1,5 +1,6 @@
 #pragma once
 
+#include <base/collections/maps.hpp>
 #include <base/pointers/box.hpp>
 #include <base/pointers/ref.hpp>
 
@@ -8,7 +9,6 @@
 
 #include <expected>
 #include <shared_mutex>
-#include <unordered_map>
 
 namespace vm {
 	class IVMProcess;
@@ -18,9 +18,9 @@ namespace vm {
 		Supervisor() = default;
 		~Supervisor();
 
-		std::shared_mutex                        rw_process_table;
-		PID                                      next = 0;
-		std::unordered_map<PID, Box<IVMProcess>> process_table;
+		std::shared_mutex                   rw_process_table;
+		u64                                 next_pid = 0;
+		base::HashMap<PID, Box<IVMProcess>> process_table;
 
 		std::expected<Ref<IVMProcess>, api::ApiError> getProcess(PID pid);
 
@@ -31,7 +31,7 @@ namespace vm {
 		// Each of the following methods should synchronize access to the processTable, but should
 		// not synchronize usage of each of the processes. Each process synchronizes its resources
 		// by itself
-		std::expected<PID, api::ApiError>                    newProcess(const api::ProcessSettings& settings = {});
+		std::expected<PID, api::ApiError> newProcess(const api::ProcessSettings& settings = {});
 		std::expected<api::response::Boolean, api::ApiError> deinitAndValidate(PID pid);
 		std::expected<api::Response, api::ApiError> doRequest(const api::SupervisorRequest& request);
 		std::expected<void, api::ApiError> killProcess(PID pid);

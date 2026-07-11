@@ -1,0 +1,23 @@
+PreCase: |+
+  @{cd-tmp-dir}
+  @{duck-exe} init foo
+  echo "features:
+    flag: [absent]" >> foo/quackconfig.yaml
+Tests:
+  absent-flag:
+    Description: cannot sync a project with malformed manifest (missing feature flags)
+    Cases:
+      sync:
+        test-cmd: duck -C foo sync
+        ExitCode: 1
+        Err:
+          Run: |+
+            echo "error: when trying to parse the user manifest at \`$DIT_TMP_DIR/foo/quackconfig.yaml\`
+            
+              Caused by:
+                when parsing the field \`features\`
+            
+              Caused by:
+                the feature \`flag\` requires a feature \`absent\` which is not declared
+
+            hint: every feature needs to pull in some features, try adding \`absent: []\` to your manifest"

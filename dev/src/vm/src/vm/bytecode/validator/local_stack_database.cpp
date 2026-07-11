@@ -52,8 +52,8 @@ base::Optional<ls_db::NameStackEntry> ls_db::getNameEntryByIdx(StackStateID stat
 
 	if (it == occurences.end()) return std::nullopt;
 
-	auto [deinit, init] = it->first;
-	if (init > entry.lifetime.deinit_idx || deinit < entry.lifetime.init_idx) {
+	if (auto [deinit, init] = it->first;
+	    init > entry.lifetime.deinit_idx || deinit < entry.lifetime.init_idx) {
 		return std::nullopt;
 	}
 

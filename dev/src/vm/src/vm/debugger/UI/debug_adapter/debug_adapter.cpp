@@ -2,6 +2,7 @@
 
 #include <vm/api/data/api_error.hpp>
 #include <vm/api/data/status.hpp>
+#include <vm/core/vmvalue/vmvalue.hpp>
 
 #include <iostream>
 #include <variant>
@@ -34,7 +35,14 @@ namespace vm::debugger::debug_adapter {
 					  std::string return_str = "[";
 					  bool        is_first   = true;
 
-					  for (auto val: status.exit_value) {
+					  // status.exit_value
+					  CORE_ASSERT(
+						  std::holds_alternative<std::vector<Ref<vm::VmValue>>>(status.exit_value),
+						  "Wrong variant member"
+					  );
+					  const auto& exit_value
+						  = std::get<std::vector<Ref<vm::VmValue>>>(status.exit_value);
+					  for (CRef<VmValue> val: exit_value) {
 						  std::string rendered_value     = "";
 						  bool        has_rendered_value = false;
 
@@ -67,9 +75,13 @@ namespace vm::debugger::debug_adapter {
 				  }
 			  }
 		  }),
+		  output_listener([this](const std::string& str) {
+			  this->sendEvent("output", { { "category", "console" }, { "output", str } });
+		  }),
 
 		  debugger() {
 		debugger.attachOnStatusChangedListener(status_change_listener);
+		debugger.attachOnOutputListener(output_listener);
 	}
 
 	DebugAdapter DebugAdapter::get() { return {}; }
@@ -123,6 +135,8 @@ namespace vm::debugger::debug_adapter {
 
 		if (cmd == "initialize")
 			handleInitialize(req);
+		else if (cmd == "setBreakpoints")
+			handleSetBreakpoints(req);
 		else if (cmd == "configurationDone")
 			handleConfigurationDone(req);
 		else if (cmd == "launch")
@@ -135,6 +149,10 @@ namespace vm::debugger::debug_adapter {
 			handlePause(req);
 		else if (cmd == "continue")
 			handleContinue(req);
+		else if (cmd == "next")
+			handleNext(req);
+		else if (cmd == "evaluate")
+			handleEvaluate(req);
 		else
 			sendResponse(req, false, { { "message", "Unknown command" } });
 	}
@@ -186,13 +204,121 @@ namespace vm::debugger::debug_adapter {
 		sendEvent("initialized");
 	}
 
+	void DebugAdapter::handleSetBreakpoints(const nlohmann::json& req) {
+		auto        args      = req["arguments"];
+		std::string file_path = args["source"]["path"].get<std::string>();
+
+		// In DAP, client sends which breakpoints they want to have
+		// Therefore, adapter should remember which one it has put
+		// and add and remove breakpoint accordingly
+		std::set<size_t>    incoming_lines_set;
+		std::vector<size_t> incoming_lines_vector;
+		if (args.contains("breakpoints"))
+			for (const auto& bp: args["breakpoints"]) {
+				incoming_lines_set.insert(bp["line"].get<size_t>());
+				incoming_lines_vector.push_back(bp["line"].get<size_t>());
+			}
+
+		std::set<size_t>& current_lines = active_breakpoints[file_path];
+
+		std::set<size_t> lines_to_remove;
+		std::set<size_t> lines_to_add;
+
+		std::set<size_t> lines_not_removed;
+
+
+		std::ranges::set_difference(
+			current_lines,
+			incoming_lines_set,
+			std::inserter(lines_to_remove, lines_to_remove.begin())
+		);
+
+		std::ranges::set_difference(
+			incoming_lines_set, current_lines, std::inserter(lines_to_add, lines_to_add.begin())
+		);
+
+		// The response must contain the verification status of all breakpoints
+		// currently requested by the client for this file.
+		nlohmann::json breakpoints_json = nlohmann::json::array();
+
+		if (deferred_launch_req.has_value()) {
+			std::vector<size_t> failed_lines;
+			for (size_t line: incoming_lines_vector) {
+				if (lines_to_add.contains(line)) {
+					auto res = debugger.setBreakpoint(fs::File(file_path), line, true);
+
+					if (!res.has_value()) {  // The VM rejected the breakpoint, so we must not keep
+						                     // it in our state
+						failed_lines.push_back(line);
+						breakpoints_json.push_back({ { "verified", false },
+						                             { "line", line },
+						                             { "message",
+						                               "Failed to set breakpoint: "
+						                                   + api::errorToString(res.error()) } });
+						continue;
+					}
+				}
+
+				breakpoints_json.push_back({ { "verified", true }, { "line", line } });
+			}
+			// Erase after the for-loop to avoid breaking it by modifying the collection we iterate over.
+			for (size_t line: failed_lines) incoming_lines_set.erase(line);
+
+			for (size_t line: lines_to_remove) {
+				auto res = debugger.setBreakpoint(fs::File(file_path), line, false);
+
+				if (!res.has_value()) {
+					// ERROR: failed to remove breakpoint
+					// Inform client that it is still there
+					lines_not_removed.insert(line);
+				}
+			}
+		} else {
+			// Before 'launch' (therefore before loading the target file)
+			// These breakpoints will be put while handling launch request
+			for (size_t line: incoming_lines_vector)
+				breakpoints_json.push_back(
+					{ { "verified", false }, { "line", line }, { "message", "Before launch" } }
+				);
+		}
+
+		current_lines = std::move(incoming_lines_set);
+
+		sendResponse(req, true, { { "breakpoints", breakpoints_json } });
+
+		if (!lines_not_removed.empty()) {
+			breakpoints_json = nlohmann::json::array();
+
+			for (size_t line: lines_not_removed)
+				breakpoints_json.push_back({ { "verified", false }, { "line", line } });
+
+			sendEvent(
+				"breakpoint", { { "reason", "changed" }, { "breakpoints", breakpoints_json } }
+			);
+		}
+	}
+
 	void DebugAdapter::handleConfigurationDone(const nlohmann::json& req) {
+		is_configuration_done = true;
 		sendResponse(req, true);
+
+		if (deferred_launch_req.has_value()) {
+			auto res = debugger.runMain();
+			if (!res.has_value()) {
+				std::string error_msg
+					= "Failed to run main: '" + api::errorToString(res.error()) + '\'';
+
+				sendResponse(deferred_launch_req, false, { { "message", error_msg } });
+				sendEvent("terminated", {});
+				return;
+			}
+			sendResponse(deferred_launch_req, true, {});
+		}
 	}
 
 	void DebugAdapter::handleLaunch(const nlohmann::json& req) {
 		std::string program     = req["arguments"]["program"];
-		auto        load_result = debugger.loadFile(fs::File(program));
+		auto        load_result = debugger.loadFiles({ fs::File(program) });
 
 		if (!load_result.has_value()) {
 			std::string error_msg = "Failed to load file '" + program
@@ -202,10 +328,40 @@ namespace vm::debugger::debug_adapter {
 			return;
 		}
 
-		sendResponse(req, true, {});
+		deferred_launch_req = req;
 
-		// Immediately run the VM for test purpose for now
-		debugger.runMain();
+		for (const auto& [file_path, lines]: active_breakpoints) {
+			nlohmann::json breakpoints_json = nlohmann::json::array();
+
+			for (size_t line: lines) {
+				auto res      = debugger.setBreakpoint(fs::File(file_path), line, true);
+				bool verified = res.has_value();
+				if (!res.has_value())
+					breakpoints_json.push_back({ { "verified", verified },
+					                             { "line", line },
+					                             { "message",
+					                               "Failed to set breakpoint: "
+					                                   + api::errorToString(res.error()) } });
+				else
+					breakpoints_json.push_back({ { "verified", verified }, { "line", line } });
+			}
+
+			sendEvent(
+				"breakpoint", { { "reason", "changed" }, { "breakpoints", breakpoints_json } }
+			);
+		}
+
+		if (is_configuration_done) {
+			auto res = debugger.runMain();
+			if (!res.has_value()) {
+				std::string error_msg = "Failed to run main: '" + api::errorToString(res.error());
+
+				sendResponse(req, false, { { "message", error_msg } });
+				sendEvent("terminated", {});
+				return;
+			}
+			sendResponse(req, true, {});
+		}
 	}
 
 	void DebugAdapter::handleThreads(const nlohmann::json& req) {
@@ -242,5 +398,35 @@ namespace vm::debugger::debug_adapter {
 		}
 
 		sendResponse(req, true);
+	}
+
+	void DebugAdapter::handleNext(const nlohmann::json& req) {
+		auto result = debugger.step();
+		if (!result.has_value()) {
+			std::string error_msg = "Failed to step: " + api::errorToString(result.error());
+			sendResponse(req, false, { { "message", error_msg } });
+			return;
+		}
+
+		sendResponse(req, true);
+	}
+
+	void DebugAdapter::handleEvaluate(const nlohmann::json& req) {
+		auto args = req["arguments"];
+
+		std::string user_input = args["expression"].get<std::string>();
+
+		auto result = debugger.sendInput(user_input);
+
+		if (!result.has_value()) {
+			std::string error_msg
+				= "Failed to process input: " + api::errorToString(result.error());
+			sendResponse(req, false, { { "message", error_msg } });
+			return;
+		}
+		nlohmann::json response_body
+			= { { "result", "Input accepted: " + user_input }, { "variablesReference", 0 } };
+
+		sendResponse(req, true, response_body);
 	}
 }

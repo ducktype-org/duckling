@@ -11,6 +11,7 @@
 
 #include <json/json.hpp>
 
+#include <tuple>
 #include <variant>
 
 namespace vm {
@@ -80,19 +81,20 @@ namespace vm {
 		// Type declaration:
 		static Type declareType(base::StrID name);
 
-		struct FieldDefinition {
-			base::StrID  name;
-			TypeRef      type;
-			ShadowOffset shadow_offset;
-		};
-
 		// Type definition:
 		void definePrimitive(TypeSize size, ShadowSize shadow_size);
 		void definePointer(TypeCRef inner, ShadowSize shadow_size);
 		void defineFixedSizeTable(TypeRef inner, u64 table_size, ShadowSize shadow_size);
 		void defineDynamicTable(TypeRef inner, ShadowSize shadow_size);
+		/**
+		 * @brief Defines a data type from a validator-computed layout. The validator
+		 * (`valid_type::ValidType`) is the source of truth for field byte offsets, shadow offsets,
+		 * and the total size; the runtime does not compute any layout itself.
+		 */
 		void defineData(
-			const std::vector<FieldDefinition>&  fields_definitions,
+			const std::vector<std::tuple<base::StrID, TypeRef, Offset, ShadowOffset>>&
+			                                     fields_definitions,
+			TypeSize                             data_size,
 			base::Optional<InheritanceMetadata>  inheritance_metadata,
 			ShadowSize                           shadow_size
 		);
@@ -160,6 +162,8 @@ namespace vm {
 		base::Optional<Offset> getFieldOffsetByName(base::StrID field_name) const;
         [[nodiscard]]
         base::Optional<ShadowOffset> getFieldShadowOffsetByName(base::StrID field_name) const;
+		[[nodiscard]]
+		base::Optional<TypeCRef> getFieldTypeByName(base::StrID field_name) const;
 		[[nodiscard]]
 		base::Optional<CRef<std::vector<kind::FieldDesc>>> getFields() const;
 

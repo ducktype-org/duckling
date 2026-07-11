@@ -132,7 +132,7 @@ namespace base {
 
 		[[nodiscard]]
 		std::string_view stringView() const {
-			return { reinterpret_cast<const char*>(begin), arr_size };
+			return { reinterpret_cast<const char*>(begin), arr_size * sizeof(T) };
 		}
 
 		[[nodiscard]]
@@ -143,6 +143,10 @@ namespace base {
 		[[nodiscard]]
 		ModRawView modRawView() const {
 			return { reinterpret_cast<byte*>(begin), arr_size * sizeof(T) };
+		}
+
+		operator ModRawView() const requires std::same_as<std::remove_const_t<T>, std::byte> {
+			return { begin, arr_size };
 		}
 	};
 

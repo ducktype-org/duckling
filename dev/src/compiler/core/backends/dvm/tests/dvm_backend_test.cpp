@@ -6,6 +6,8 @@
 #include <mir/mir_lowering/mir_unit.hpp>
 #include <vm_tester_utils.hpp>
 
+#include <base/extend_cpp/vector_utils.hpp>
+
 #include <query_framework/context/context.hpp>
 #include <query_framework/entry/with_context_do.hpp>
 
@@ -31,9 +33,12 @@ public:
 		TESTER_ADD_TEST(referencesTest);
 		TESTER_ADD_TEST(recordsTest);
 		TESTER_ADD_TEST(staticArrayTest);
+		TESTER_ADD_TEST(stringSliceTest);
 		TESTER_ADD_TEST(unitsTest);
 		TESTER_ADD_TEST(initsDeinitsTest);
 		TESTER_ADD_TEST(pointersTest);
+		TESTER_ADD_TEST(backendDependentTest);
+		TESTER_ADD_TEST(charAllocTest);
 	}
 
 protected:
@@ -55,9 +60,12 @@ protected:
 			{ fs::FilePath(path("modules/records/")), "records" },
 			{ fs::FilePath(path("modules/references/")), "references" },
 			{ fs::FilePath(path("modules/static_arrays/")), "static_arrays" },
+			{ fs::FilePath(path("modules/strings/")), "strings" },
 			{ fs::FilePath(path("modules/units/")), "units" },
 			{ fs::FilePath(path("modules/inits_deinits/")), "inits_deinits" },
 			{ fs::FilePath(path("modules/pointers/")), "pointers" },
+			{ fs::FilePath(path("modules/backend_dependent/")), "backend_dependent" },
+			{ fs::FilePath(path("modules/char_alloc/")), "char_alloc" },
 		};
 		auto init_result
 			= compiler::driver::test_utils::initializeCompilerForTests(packages, artifacts_path);
@@ -65,55 +73,75 @@ protected:
 	}
 
 private:
-	auto getModuleFromPath(std::string module_path) {
+	auto getModuleFromPath(
+		const std::string&              main_module_path,
+		const std::vector<std::string>& module_paths_to_load = {}
+	) {
 		using namespace compiler;
 
 		vm::code::CodeCollection code;
-		auto                     module = driver::test_utils::getModuleIdFromPath(module_path);
+		auto                     append_module_to_code = [&](const std::string& module_path) {
+            auto module = driver::test_utils::getModuleIdFromPath(module_path);
+            query::utils::withContextDo([&](query::Context& ctx) {
+                auto& top_level = ctx.query<helios::QueryModuleHOUT>(module)->valueOrPanic();
 
-		query::utils::withContextDo([&](query::Context& ctx) {
-			auto& top_level = ctx.query<helios::QueryModuleHOUT>(module)->valueOrPanic();
+                auto mir_unit = mir::lowerToMIRUnit(ctx, &top_level);
+                assertTrue(mir_unit.hasValue(), "MIR lowering failed");
 
-			auto mir_unit = mir::lowerToMIRUnit(ctx, &top_level);
-			assertTrue(mir_unit.hasValue(), "MIR lowering failed");
+                auto lir_unit = lir::lowerToLIRUnit(ctx, mir_unit.valueOrPanic());
 
-			auto lir_unit = lir::lowerToLIRUnit(ctx, mir_unit.valueOrPanic());
+                backend_vm::DVMCodeBuilder m(ctx, base::StrID(module_path), false, false);
+                m.insertLIRUnit(lir_unit);
 
-			backend_vm::DVMCodeBuilder m(ctx, false, false);
-			m.insertLIRUnit(lir_unit);
+                code.mergeFrom(m.build());
+            });
+		};
+		for (auto& module_path: module_paths_to_load) append_module_to_code(module_path);
+		append_module_to_code(main_module_path);
 
-			code = m.build();
-		});
+		base::deduplicateBy(code.functions, [](const vm::code::Function& f) { return f.name.str; });
+		base::deduplicateBy(code.types, [](const vm::code::TypeOfData& f) { return typeName(f); });
 		return code;
 	}
 
-	void runTest(
-		std::string                        module_path,
+	void runMultimoduleTest(
+		const std::string&                 module_path,
+		const std::vector<std::string>&    module_paths_to_load,
 		const base::Optional<std::string>& input     = {},
 		const base::Optional<std::string>& output    = {},
 		const std::vector<std::string>&    args      = {},
 		i64                                exit_code = 0
 	) {
 		using namespace compiler;
-		auto code = getModuleFromPath(std::move(module_path));
-		for (auto& type: code.types) vm::code::serializeType(type, std::cerr);
-		for (auto& func: code.functions) vm::code::serializeFunction(func, std::cerr);
+		auto code = getModuleFromPath(module_path, module_paths_to_load);
+		// for (auto& type: code.types) vm::code::serializeType(type, std::cerr);
+		// for (auto& func: code.functions) vm::code::serializeFunction(func, std::cerr);
 		runTestOnVm(code, input, output, args, exit_code);
 	}
 
+	void runTest(
+		const std::string&                 module_path,
+		const base::Optional<std::string>& input     = {},
+		const base::Optional<std::string>& output    = {},
+		const std::vector<std::string>&    args      = {},
+		i64                                exit_code = 0
+	) {
+		runMultimoduleTest(module_path, {}, input, output, args, exit_code);
+	}
+
 	void runFailTest(
-		std::string                        module_path,
+		const std::string&                 module_path,
 		const std::string&                 fail_msg = "",
 		const base::Optional<std::string>& input    = {},
 		const base::Optional<std::string>& output   = {},
 		const std::vector<std::string>&    args     = {}
 	) {
 		using namespace compiler;
-		auto code = getModuleFromPath(std::move(module_path));
-		for (auto& type: code.types) vm::code::serializeType(type, std::cerr);
-		for (auto& func: code.functions) vm::code::serializeFunction(func, std::cerr);
+		auto code = getModuleFromPath(module_path);
+		// for (auto& type: code.types) vm::code::serializeType(type, std::cerr);
+		// for (auto& func: code.functions) vm::code::serializeFunction(func, std::cerr);
 		auto result = runTestOnVmGetResult(code, input, output, args);
-		ASSERT_TRUE(not result.run_result.has_value());
+		ASSERT_NO_VALUE(result.run_result);
 		auto err_str = to_string(nlohmann::json(result.run_result.error()));
 		if (not err_str.contains(fail_msg)) {
 			fail(base::strConcat(
@@ -121,7 +149,7 @@ private:
 			));
 		}
 		const auto validation_result = vm::api::deinitAndValidate(result.pid);
-		ASSERT_TRUE(validation_result.has_value());
+		ASSERT_HAS_VALUE(validation_result);
 	}
 
 	void simpleTest() { runTest("simple", {}, {}, {}, 42); }
@@ -156,7 +184,22 @@ private:
 	}
 
 	void staticArrayTest() {
-		runTest("static_arrays", {}, "1\n100\n200\n300\n600\n20\n42\n11\n13\n4\n", {}, 0);
+		runMultimoduleTest(
+			"static_arrays",
+			{ "core/builtins", "core/panicking" },
+			{},
+			"1\n100\n200\n300\n600\n20\n42\n11\n13\n4\n",
+			{},
+			0
+		);
+	}
+
+	// A string literal is lowered to a static byte-array global plus a `{ptr, len}` slice struct.
+	// Reading the length and indexing into the slice exercises the generated slice bytecode.
+	void stringSliceTest() {
+		runMultimoduleTest(
+			"strings", { "core/builtins", "core/panicking" }, {}, "14\nhello from vm!", {}, 0
+		);
 	}
 
 	void unitsTest() { runTest("units", {}, {}, {}, 0); }
@@ -164,6 +207,17 @@ private:
 	void pointersTest() { runFailTest("pointers", "Accessing null pointer", {}, {}, {}); }
 
 	void initsDeinitsTest() { runTest("inits_deinits", {}, { "100\n" }, {}, 0); }
+
+	// The DVM backend must select the `@dvm_only_impl` of the `@backend_dependent`
+	// `getValue` (returning 10), not the `@native_only_impl` one (returning 20).
+	void backendDependentTest() { runTest("backend_dependent", {}, {}, {}, 10); }
+
+	// Allocating, reallocating and freeing a dynamic char table exercises the DVM-backend
+	// `dvm_char_alloc`/`dvm_char_realloc`/`dvm_char_free` builtins lowered to `dynTableReAlloc`
+	// and `free`. Returns 42 when the written chars survive the round-trip.
+	void charAllocTest() {
+		runMultimoduleTest("char_alloc", { "core/builtins", "core/panicking" }, {}, {}, {}, 42);
+	}
 };
 
 

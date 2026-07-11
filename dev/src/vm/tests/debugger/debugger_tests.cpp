@@ -107,17 +107,17 @@ private:
 				vm::api::setBreakpoint(pid, base::StrID("main"), breakpoint, true).has_value()
 			);
 
-		ASSERT_TRUE(vm::api::setBreakpoint(pid, base::StrID("main"), 5, false).has_value());
+		ASSERT_HAS_VALUE(vm::api::setBreakpoint(pid, base::StrID("main"), 5, false));
 
-		ASSERT_TRUE(vm::api::run(pid).has_value());
+		ASSERT_HAS_VALUE(vm::api::run(pid));
 
 		auto execution_position = vm::api::waitForBreakpoint(pid);
-		ASSERT_TRUE(execution_position.has_value());
+		ASSERT_HAS_VALUE(execution_position);
 
 		ASSERT_EQUAL_PRINT(8, execution_position->instr_number);
 
-		ASSERT_TRUE(vm::api::resume(pid).has_value());
-		ASSERT_TRUE(vm::api::stop(pid).has_value());
+		ASSERT_HAS_VALUE(vm::api::resume(pid));
+		ASSERT_HAS_VALUE(vm::api::stop(pid));
 	}
 
 	/**
@@ -192,7 +192,7 @@ private:
 			fs::File file(path("vm_api_tests.dbc"));
 			auto     map_response = vm::api::mapFileLineToCodeCollectionPosition(pid, file, line);
 
-			ASSERT_TRUE(map_response.has_value());
+			ASSERT_HAS_VALUE(map_response);
 			auto code_position = map_response.value();
 
 			ASSERT_EQUAL_PRINT(code_position.function_name, "main");
@@ -223,29 +223,29 @@ private:
 	 */
 	void vmApiMemoryAllTypes() {
 		auto pid = loadProgram("breakpoint_all_types.dbc");
-		ASSERT_TRUE(vm::api::setBreakpoint(pid, base::StrID("main"), 20, true).has_value());
+		ASSERT_HAS_VALUE(vm::api::setBreakpoint(pid, base::StrID("main"), 20, true));
 		auto tid = vm::api::ThreadID(0);
 
-		ASSERT_TRUE(vm::api::run(pid).has_value());
-		ASSERT_TRUE(vm::api::waitForBreakpoint(pid).has_value());
+		ASSERT_HAS_VALUE(vm::api::run(pid));
+		ASSERT_HAS_VALUE(vm::api::waitForBreakpoint(pid));
 
 		{
 			auto response = vm::api::debuggerGetNumberOfStackFrames(pid, tid);
-			ASSERT_TRUE(response.has_value());
+			ASSERT_HAS_VALUE(response);
 			auto num_frames_response = response.value();
 			ASSERT_EQUAL_PRINT(num_frames_response.number_of_stack_frames, 2);
 		}
 
 		{
 			auto response = vm::api::debuggerGetStackFrameData(pid, tid, 2);
-			ASSERT_TRUE(!response.has_value());
+			ASSERT_NO_VALUE(response);
 		}
 
 		{
 			namespace idv = vm::interpreted_data_variant;
 
 			auto response = vm::api::debuggerGetStackFrameData(pid, tid, 1);
-			ASSERT_TRUE(response.has_value());
+			ASSERT_HAS_VALUE(response);
 
 			auto stack_frame_data = response.value();
 			ASSERT_EQUAL_PRINT(stack_frame_data.function_name, "main");
@@ -253,11 +253,11 @@ private:
 			for (const auto& var: stack_frame_data.frame_vars) {
 				if (var.value.getType()->getName() == base::StrID("ptr_struct")) {
 					auto struct_pointer_data_opt = var.value.readData();
-					ASSERT_TRUE(struct_pointer_data_opt.has_value());
+					ASSERT_HAS_VALUE(struct_pointer_data_opt);
 
 					auto struct_pointer_data
 						= std::get<idv::Pointer>(struct_pointer_data_opt.value());
-					ASSERT_TRUE(struct_pointer_data.referenced.has_value());
+					ASSERT_HAS_VALUE(struct_pointer_data.referenced);
 
 					auto struct_data
 						= getVMValueRefData<idv::Data>(struct_pointer_data.referenced.value());
@@ -292,7 +292,7 @@ private:
 							base::StrID("ptr_dyntable_i64"),
 							base::StrID("var_dyntable_pointer")
 						);
-						ASSERT_TRUE(table_pointer.referenced.has_value());
+						ASSERT_HAS_VALUE(table_pointer.referenced);
 						auto table
 							= getVMValueRefData<idv::Table>(table_pointer.referenced.value());
 						auto first_elem      = table.get(0);
@@ -306,7 +306,7 @@ private:
 							base::StrID("ptr_fixtable_i64"),
 							base::StrID("var_fixtable_pointer")
 						);
-						ASSERT_TRUE(table_pointer.referenced.has_value());
+						ASSERT_HAS_VALUE(table_pointer.referenced);
 						auto table
 							= getVMValueRefData<idv::Table>(table_pointer.referenced.value());
 						auto first_elem      = table.get(0);
@@ -327,14 +327,19 @@ private:
 			}
 		}
 
-		ASSERT_TRUE(vm::api::resume(pid).has_value());
-		ASSERT_TRUE(vm::api::join(pid).has_value());
+		ASSERT_HAS_VALUE(vm::api::resume(pid));
+		ASSERT_HAS_VALUE(vm::api::join(pid));
 
 		{
 			auto exit_code_response = vm::api::getExitValue(pid);
-			ASSERT_TRUE(exit_code_response.has_value());
-			ASSERT_EQUAL(exit_code_response.value().size(), 1);
-			ASSERT_EQUAL_PRINT(exit_code_response.value().at(0)->readBytes<i64>(), 0);
+			ASSERT_HAS_VALUE(exit_code_response);
+			ASSERT_TRUE(
+				std::holds_alternative<std::vector<Ref<vm::VmValue>>>(exit_code_response.value())
+			);
+			auto& exit_value_vec
+				= std::get<std::vector<Ref<vm::VmValue>>>(exit_code_response.value());
+			ASSERT_EQUAL(exit_value_vec.size(), 1);
+			ASSERT_EQUAL_PRINT(exit_value_vec.at(0)->readBytes<i64>(), 0);
 		}
 	}
 
@@ -353,15 +358,15 @@ private:
 			cv.notify_all();
 		});
 
-		ASSERT_TRUE(vm::api::attachOutputListener(pid, &output_listener).has_value());
+		ASSERT_HAS_VALUE(vm::api::attachOutputListener(pid, &output_listener));
 
-		ASSERT_TRUE(vm::api::run(pid).has_value());
+		ASSERT_HAS_VALUE(vm::api::run(pid));
 
 		std::unique_lock lk(m);
 		// Test timeout
 		ASSERT_TRUE(cv.wait_for(lk, std::chrono::milliseconds(100), [&] { return output.load(); }));
 
-		ASSERT_TRUE(vm::api::stop(pid).has_value());
+		ASSERT_HAS_VALUE(vm::api::stop(pid));
 	}
 };
 

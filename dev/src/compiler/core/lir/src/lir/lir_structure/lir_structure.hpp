@@ -4,6 +4,7 @@
 
 #include <ctv/ctv.hpp>
 #include <diagnostic_interactive/stable_position.hpp>
+#include <helios/attributes/builtins.hpp>
 #include <helios/hout/hout_fd.hpp>
 #include <helios/symbols/symbol_abi.hpp>
 #include <helios/symbols/symbol_id.hpp>  // @TODO: #2796 untable this if possible (LIR structure should not depend on symbols if possible)
@@ -31,15 +32,11 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 	/** Simple byte by byte assignment. */
 	Assign,
 	AddressOf, 
-	BoxAlloc,
-	// @TODO: #1894 This approach (for both `BoxFree` and `ListFree`) may be temporary and 
-	// depends on how we handle destructors in the future.
-	BoxFree,
+	// @TODO: #1894 Remove the `List*` when Lists are implemented in STD.
 	ListFree,
 
 	ListPush,
 	ListPop,
-	ListLen,
 
 	/**
 		@brief Placeholder.
@@ -143,14 +140,28 @@ namespace compiler::lir {
 	using BlockRef = CRef<Block>;
 
 	/**
+	 * @brief Function which call will be replaced
+	 * manually in the backend.
+	 */
+	enum class BuiltinFunctionKind { DvmCharAlloc, DvmCharRealloc, DvmCharFree, BoxAlloc, BoxFree };
+
+	base::Optional<BuiltinFunctionKind> getBuiltinKindFromHOUT(helios::BuiltinKind kind);
+
+	/**
 	 * @brief Reference to a function in LIR.
 	 */
-	struct FunctionLiteral {
+	struct FunctionLiteral final {
 		base::StrID                                         mangled_name;
 		helios::SymbolABI                                   abi;
 		bool                                                link_once;
 		std::shared_ptr<std::vector<CRef<tsl::TypeLayout>>> parameter_layouts;
 		CRef<tsl::TypeLayout>                               return_type_layout;
+
+		/**
+		 * Optional indicates if a function literal is a builtin function.
+		 * Empty value indicates that a function is not a builtin.
+		 */
+		base::Optional<BuiltinFunctionKind> builtin_kind_opt;
 
 		static FunctionLiteral fromFunction(const Function&);
 	};
@@ -581,7 +592,27 @@ namespace compiler::lir {
 	struct Function final {
 		base::StrID       mangled_name;
 		helios::SymbolABI abi;
-		bool              link_once;
+
+		/**
+		 * If true, this function can have repeated definitions
+		 * across many modules and has weak linkage.
+		 * Used when having identical function in many modules.
+		 */
+		bool link_once;
+
+		/**
+		 * If true, this function is not added to the module
+		 * on the DVM backend, even if explicitely requested.
+		 * Used by the DVM/native conditional compilation.
+		 */
+		bool ignore_on_dvm;
+
+		/**
+		 * If true, this function is not added to the module
+		 * on the LLVM backend, even if explicitely requested.
+		 * Used by the DVM/native conditional compilation.
+		 */
+		bool ignore_on_llvm;
 
 		std::vector<CRef<tsl::TypeLayout>> parameter_layouts;
 		CRef<tsl::TypeLayout>              return_type_layout;

@@ -5,9 +5,13 @@
 
 #pragma once
 
+#include <vm/api/settings.hpp>
 #include <vm/core/supervisor/supervisor.hpp>
 
-#include <vm/api/settings.hpp>
-
-int cli(const fs::File& filepath, const std::vector<std::string>& args = {}, const vm::api::ProcessSettings& settings = {});
+int cli(
+	const std::vector<fs::File>&    files,
+	const std::vector<std::string>& args     = {},
+	const vm::api::ProcessSettings& settings = {},
+	const std::vector<std::string>& ffi_libs = {}
+);
 int cli();

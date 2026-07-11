@@ -8,14 +8,23 @@ namespace pst {
 	 * @brief Class destructor element.
 	 */
 	class Destructor final: public ClassSpecial {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(Destructor, ClassSpecial);
+		CLONE_SUBELEMENTS();
+
+	protected:
 		NAMED_CHILD(body, CodeBlock);
 
 	public:
 		CLASS_STMT_SPEC_CONSTRUCTOR(Destructor);
-		CLASS_STMT_PARSE(Destructor);
+		PARSE_DECL();
 
 		~Destructor() override = default;
 		void dprint(std::ostream& out) const final;
+
+		[[nodiscard]]
+		AccessLocked<CodeBlock> getBody() const {
+			return body.give();
+		}
 
 		[[nodiscard]]
 		std::string elementType() const override {

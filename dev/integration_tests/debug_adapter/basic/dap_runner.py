@@ -1,24 +1,18 @@
-from helpers import *
+import sys
+from dap_client import DAPTestClient
 
-# --- MAIN ---
-vm_process = start_vm(*sys.argv)
+client = DAPTestClient(program_name="../examples/simple.dbc")
 
-vm_process.stdin.buffer.write(format_dap('{"seq":1,"type":"request","command":"initialize","arguments":{}}'))
-vm_process.stdin.buffer.write(format_dap('{"seq":2,"type":"request","command":"launch","arguments":{"program":"simple.dbc"}}'))
-vm_process.stdin.flush()
+try:
+    in_seq = client.send_initialize()
+    client.wait_for(responses=[in_seq])
 
-full_output = ""
+    cd_seq = client.send_configuration_done()
+    client.wait_for(responses=[cd_seq])
 
-# waiting for terminated event
-while True:
-    msg = read_dap_message(vm_process.stdout)
-    if msg is None:
-        break
-    full_output += msg + '\n'
-    if "terminated" in msg:
-        break
+    client.send_launch()
 
-# -1 to not print additional "\n"
-print(full_output[:-1])
+    client.wait_for_event("terminated", "terminated event at the end of execution")
 
-vm_process.terminate()
+finally:
+    client.close()

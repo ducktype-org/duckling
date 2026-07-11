@@ -5,14 +5,17 @@
 
 #include <frontend/pst_parser/access.hpp>
 #include <frontend/pst_parser/elements/includes/basic.hpp>
+#include <helios/symbols/attributes.hpp>
 #include <helios/symbols/symbol_id.hpp>
 #include <helios/symbols/symbol_kind.hpp>
 #include <helios/tsh/type_interface.hpp>
 
 #include <base/except/exceptions.hpp>
 
-#include <query_framework/context/context.hpp>  // @TODO: #404 relax to fd
+#include <query_framework/context/context_fd.hpp>
 #include <string_id/string_id.hpp>
+
+#include <typeinfo>
 
 namespace compiler::helios {
 	/**
@@ -64,6 +67,16 @@ namespace compiler::helios {
 		 * context, e.g. class fields.
 		 */
 		bool dependent = false;
+
+		/**
+		 * When this is true, the symbol is ignored by the lookup.
+		 */
+		bool is_ignored_by_lookup = false;
+
+		/**
+		 * List of attributes on a symbol.
+		 */
+		std::vector<Attribute> attributes = {};
 	};
 
 	/**
@@ -72,33 +85,41 @@ namespace compiler::helios {
 	 * SymbolData is by design a "read-only" structure.
 	 */
 	struct SymbolData final {
-		using OtherData = std::variant<PstSymbolData, defgen::GeneratedSymbolData>;
+		using SymbolSemantics
+			= std::variant<PstImplementedSemantics, BuiltinSemantics, GENERATED_SYMBOL_SEMANTICS_LIST>;
 
-		SymbolData(CommonSymbolData common, OtherData other);
+		SymbolData(CommonSymbolData common, SymbolSemantics other);
 
 		CommonSymbolData common;
-		OtherData        other;
+		SymbolSemantics  other;
 		SymbolDataID     id;
 
-		static SymbolData makePSTSymbolData(CommonSymbolData common_data, PstSymbolData pst_data);
+		static SymbolData makeBuiltinSymbolData(
+			CommonSymbolData common_data, BuiltinSemantics builtin_data
+		);
 
-		static SymbolData makeGeneratedSymbol(
-			base::StrID name, defgen::GeneratedSymbolData generated_data
+		static SymbolData makePSTSymbolData(
+			CommonSymbolData common_data, PstImplementedSemantics pst_data
+		);
+
+		static SymbolData makeGeneratedSymbolData(
+			base::StrID name, defgen::GeneratedSymbolDataVariant generated_data
 		);
 
 		[[nodiscard]]
-		ScopeID getScope() const {
-			variant_match(other) {
-				variant_case(PstSymbolData, pst_data) { return pst_data.scope; }
-				variant_case(defgen::GeneratedSymbolData, gen_data) { return gen_data.getScope(); }
-				variant_default { CORE_UNREACHABLE(); }
-			}
-			CORE_UNREACHABLE();
-		}
+		base::Optional<ScopeID> getScope() const;
 
 		template<class T>
 		[[nodiscard]]
 		CRef<T> getData() const {
+			CORE_ASSERT(
+				std::holds_alternative<T>(other),
+				"SymbolData does not hold the requested type. ",
+				"Symbol: ",
+				common.name.strView(),
+				" Requested type: ",
+				typeid(T).name()
+			);
 			return &std::get<T>(other);
 		}
 
@@ -110,25 +131,14 @@ namespace compiler::helios {
 		}
 
 		[[nodiscard]]
-		CRef<PstSymbolData> getPSTData() const {
-			return getData<PstSymbolData>();
-		}
-
-		[[nodiscard]]
-		base::Optional<CRef<PstSymbolData>> getPSTDataOpt() const {
-			if (auto ptr = std::get_if<PstSymbolData>(&other); ptr != nullptr)
-				return CRef<PstSymbolData>(ptr);
-			return std::nullopt;
-		}
+		base::Optional<pst::AccessLocked<pst::LangElement>> maybePstElement() const;
 
 		/**
 		 * Return associated pst_element cast to Stmt.
 		 * Panics if element is not a statement or if symbol is not associated with PST element.
 		 */
 		[[nodiscard]]
-		base::Optional<pst::Access<pst::Stmt>> stmtCast(query::Context& ctx) const {
-			return getPSTData()->getElement().unlock(ctx).dynamicCast<pst::Stmt>();
-		}
+		base::Optional<pst::Access<pst::Stmt>> stmtCast(query::Context& ctx) const;
 	};
 
 	/**

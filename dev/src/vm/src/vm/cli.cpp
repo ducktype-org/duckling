@@ -2,11 +2,13 @@
 
 #include <diagnostic_interactive/module_flags/module_flags.hpp>
 
+#include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <vm/api/api.hpp>
 #include <vm/api/data/api_error.hpp>
 #include <vm/api/data/process_info.hpp>
+#include <vm/bytecode/bytecode.hpp>
 
 #include <iostream>
 
@@ -22,12 +24,18 @@ int cli() {
 	std::cout << "Path to file: ";
 	std::cin >> filepath;
 
-	return cli(fs::File(filepath));
+	return cli({ fs::File(filepath) });
 }
 
-int cli(const fs::File& filepath, const std::vector<std::string>& args, const vm::api::ProcessSettings& settings) {
+int cli(
+	const std::vector<fs::File>&    files,
+	const std::vector<std::string>& args,
+	const vm::api::ProcessSettings& settings,
+	const std::vector<std::string>& ffi_libs
+) {
 	vm::PID pid{};
 	dia_int::configureTerminalPrinterColors(true);
+
 
 	std::expected<i64, std::string> result
 		= vm::api::spawn(settings)
@@ -36,19 +44,35 @@ int cli(const fs::File& filepath, const std::vector<std::string>& args, const vm
 
 				  return std::expected<void, vm::api::ApiError>{};
 			  })
-	          .and_then([&] { return vm::api::loadFiles(pid, { filepath }); })
+	          .and_then([&] -> std::expected<void, vm::api::ApiError> {
+				  if (ffi_libs.empty()) return {};
+				  // Registered before the bytecode loads, so `ffi function` declarations can
+		          // resolve their symbols from these libraries.
+				  vm::code::CodeCollection libs;
+				  for (const auto& lib: ffi_libs) libs.object_files.emplace_back(lib);
+				  return vm::api::loadCode(pid, libs);
+			  })
+	          .and_then([&] { return vm::api::loadFiles(pid, files); })
 	          .and_then([&] { return vm::api::attach(pid, std::cin, std::cout); })
 	          .and_then([&] { return vm::api::run(pid, args); })
 	          .and_then([&] { return vm::api::join(pid); })
 	          .and_then([&] { return vm::api::getExitValue(pid); })
 	          .transform([&](vm::api::ExitValue vm_values) {
-				  CORE_ASSERT(vm_values.size() == 1, "Program returned more than one return value");
-				  auto& vm_value = vm_values.at(0);
-				  CORE_ASSERT(
-					  vm_value->type->getName() == base::StrID("i64"),
-					  "DVM program returned and exit value different than i64"
-				  );
-				  return vm_value->readBytes<i64>();
+				  variant_match(vm_values) {
+					  variant_case(i64, exit_code) { return exit_code; }
+					  variant_case(std::vector<Ref<vm::VmValue>>, values) {
+						  CORE_ASSERT(
+							  values.size() == 1, "Program returned more than one return value"
+						  );
+						  auto& vm_value = values.at(0);
+						  CORE_ASSERT(
+							  vm_value->type->getName() == base::StrID("i64"),
+							  "DVM program returned and exit value different than i64"
+						  );
+						  return vm_value->readBytes<i64>();
+					  }
+				  }
+				  CORE_UNREACHABLE();
 			  })
 	          .transform_error(convertError);
 

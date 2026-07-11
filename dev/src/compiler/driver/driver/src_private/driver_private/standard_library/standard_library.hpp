@@ -9,11 +9,13 @@
 #pragma once
 
 #include <driver/options.hpp>
+#include <frontend/module_tree/module_id.hpp>
 
 #include <artifacts/artifacts.hpp>
 #include <filesystem/file_path.hpp>
 
 #include <array>
+#include <vector>
 
 namespace compiler::driver {
 	/**
@@ -55,12 +57,28 @@ namespace compiler::driver {
 	 * @brief Based on the `StdLibOptions` returns the string with the arguments needed to
 	 * link the standard library. Can be empty if the standard library is not used.
 	 */
-	base::Optional<std::string> getStdLibLinkingArgs(
+	base::Optional<std::string> getNativeStdLibLinkingArgs(
 		const options_types::StdLibOptions& linking_options
 	);
 
 	/**
-	 * @brief The place where the compiled standard library binaries are placed.
+	 * @brief The place where the compiled standard library binaries for native targets are placed.
 	 */
-	std::vector<artifacts::FileArtifact> getStdLibArtifacts();
+	std::vector<artifacts::FileArtifact> getStdLibNativeArtifacts();
+
+	/**
+	 * @brief The place where the compiled standard library DVM artifacts are placed.
+	 */
+	std::vector<artifacts::FileArtifact> getStdLibDVMArtifacts();
+
+	/**
+	 * @brief The place where the compiled standard library DVM debug info artifacts are placed.
+	 */
+	std::vector<artifacts::FileArtifact> getStdLibDVMDebugInfoArtifacts();
+
+	/**
+	 * @brief Returns the root module IDs of the registered standard library packages.
+	 * @note This is only for REPL usage.
+	 */
+	std::vector<frontend::ModuleID> getStandardLibraryRootModules();
 }

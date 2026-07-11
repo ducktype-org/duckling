@@ -2,6 +2,7 @@
 
 #include "instruction_lowering.hpp"
 
+#include <vm/bytecode/validator/ffi_type_builder.hpp>
 #include <vm/bytecode/validator/valid_type/type_size.hpp>
 #include <vm/core/builtin_functions.hpp>
 #include <vm/core/safe/low_program/low_program.hpp>
@@ -130,6 +131,11 @@ namespace vm::loader::compiler::safe {
 			low::opargs::ExtCFunction,
 			opargs::ExtCFunctionName,
 			return safeReadObjectBytes<u64>(compiler.low_program.getExternCFunctions().at(opcode_arg.function_name));
+		);
+		DEFINE_LOWER_ARGUMENT_IMPL(
+			low::opargs::FFIFunction,
+			opargs::FFIFunctionName,
+			return safeReadObjectBytes<u64>(compiler.low_program.getFFIFunctions().at(opcode_arg.function_name));
 		);
 		DEFINE_LOWER_ARGUMENT_IMPL(
 			low::opargs::MethodName,
@@ -287,14 +293,22 @@ namespace vm::loader::compiler::safe {
 
 	void SafeCompiler::compileNewGlobals(const std::vector<code::GlobalData>& new_globals) {
 		for (const auto& global: new_globals) {
-			base::Optional<base::StrID> ctor_name, dtor_name;
-			if (global.ctor_name.has_value()) ctor_name = global.ctor_name->str;
-			if (global.dtor_name.has_value()) dtor_name = global.dtor_name->str;
+			auto global_init = [&] -> low::GlobalInit {
+				if_opt_some(global.initial_value, initial_value) {
+					// It's a bummer we have to copy here...
+					// @TODO: #1306 Think if we can avoid copying here
+					return low::GlobalInitialValue{ initial_value };
+				}
+				return low::GlobalCtorDtor{
+					.ctor_name = global.ctor_name.map([](auto ident) { return ident.str; }),
+					.dtor_name = global.dtor_name.map([](auto ident) { return ident.str; })
+				};
+			}();
+
 
 			low::LowGlobalData data{
 				.type                      = low_program.types->at(global.type),
-				.ctor_name                 = ctor_name,
-				.dtor_name                 = dtor_name,
+				.init                      = global_init,
 				.global_buffer_offset      = program_ctx.global_buffer_size.asInt(),
 				.global_block_idx          = program_ctx.global_count,
 				.global_shadow_data_offset = program_ctx.global_shadow_buffer_size,
@@ -320,7 +334,8 @@ namespace vm::loader::compiler::safe {
 		return { .function_count       = low_program.functions.size(),
 			     .global_count         = low_program.global_data.size(),
 			     .type_count           = low_program.types->size(),
-			     .ext_c_function_count = low_program.extern_c_functions.size() };
+			     .ext_c_function_count = low_program.extern_c_functions.size(),
+			     .ffi_function_count   = low_program.ffi_functions.size() };
 	}
 
 	void SafeCompiler::compileNewTypes(const std::vector<code::valid_type::ValidType>& new_types) {
@@ -381,6 +396,50 @@ namespace vm::loader::compiler::safe {
 		}
 	}
 
+	void SafeCompiler::compileNewFFIFunctions(const std::vector<code::FFIFunction>& new_functions) {
+		const auto& high_types = high_program.getTypeContext().getCurrentTypes();
+
+		for (const auto& new_func: new_functions) {
+			low::LowFFIFunction low_func;
+			low_func.name   = new_func.name;
+			low_func.symbol = new_func.symbol;
+
+			code::ffi_detail::FFITypeStorage storage;
+
+			for (const auto& param: new_func.signature.parameters) {
+				CRef<code::valid_type::ValidType> type = high_types.at(param.str);
+				low_func.parameters.emplace_back(low_program.types->at(type->getName()));
+				low_func.ffi_arg_types.push_back(
+					code::ffi_detail::buildFFIType(*type, high_types, storage)
+				);
+			}
+
+			ffi_type* result_type = &ffi_type_void;
+			for (const auto& ret: new_func.signature.result_types) {
+				CRef<code::valid_type::ValidType> type = high_types.at(ret.str);
+				low_func.result_types.emplace_back(low_program.types->at(type->getName()));
+				result_type = code::ffi_detail::buildFFIType(*type, high_types, storage);
+			}
+
+			low_func.struct_types    = std::move(storage.struct_types);
+			low_func.struct_elements = std::move(storage.struct_elements);
+
+			// The cif captures pointers into `ffi_arg_types` and `struct_types` - moving the
+			// whole object afterwards is fine, as those live on the heap.
+			// Kept out of CORE_ASSERT: its condition is not evaluated in release builds.
+			[[maybe_unused]] ffi_status status = ffi_prep_cif(
+				&low_func.cif,
+				FFI_DEFAULT_ABI,
+				base::safeIntConv<unsigned>(low_func.ffi_arg_types.size()),
+				result_type,
+				low_func.ffi_arg_types.data()
+			);
+			CORE_ASSERT(status == FFI_OK, "ffi_prep_cif failed for FFI function");
+
+			low_program.ffi_functions.insert(std::move(low_func), new_func.name);
+		}
+	}
+
 	std::expected<vm::loader::FatBytecodePosition, vm::loader::MappingException> SafeCompiler::
 		mapLowVMProgramPositionToCodeCollectionPosition(vm::low::LowCodePosition position) const {
 		auto& mapping = position.function->instruction_mapping;
@@ -406,5 +465,4 @@ namespace vm::loader::compiler::safe {
 			.instruction_index = usize(candidate - mapping.begin()),
 		};
 	}
-
 }

@@ -118,4 +118,56 @@ namespace pst {
 		NoExternArgumentError(dia::SourcePosition pos):
 			  dia_int::MessageWithCodeFragmentAndCause(pos) {}
 	};
+
+	/**
+	 * @brief Error for when a template statement is missing a parameter list.
+	 */
+	class TemplateNoListError final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "template_no_list_error" };
+		}
+
+	public:
+		TemplateNoListError(dia::SourcePosition pos):
+			  dia_int::MessageWithCodeFragmentAndCause(pos) {}
+	};
+
+	/**
+	 * @brief Error for operators that cannot be used as function names.
+	 */
+	class ReservedOperatorFunNameError final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "reserved_operator_fun_name" };
+		}
+
+	public:
+		ReservedOperatorFunNameError(dia::SourcePosition pos, std::string op):
+			  dia_int::MessageWithCodeFragmentAndCause(pos) {
+			addArgument<dia_int::TextArgument>("operator", std::move(op));
+		}
+	};
+
+	/**
+	 * @brief Error for custom assignment operators, which are not supported yet.
+	 */
+	class AssignmentOperatorFunNameError final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "parser",
+				     .name          = "assignment_operator_fun_name" };
+		}
+
+	public:
+		AssignmentOperatorFunNameError(dia::SourcePosition pos, std::string op):
+			  dia_int::MessageWithCodeFragmentAndCause(pos) {
+			addArgument<dia_int::TextArgument>("operator", std::move(op));
+		}
+	};
 }

@@ -1,7 +1,8 @@
 use clap::{ArgMatches, Command};
 
 use crate::duck::driver::cli_ext::{
-    CommandExt, features_from_matches, flag, multi, profile_from_matches, subcommand,
+    CommandExt, features_from_matches, flag, jobs_from_matches, multi, profile_from_matches,
+    subcommand,
 };
 use crate::quackpack::core::{AllowGlobalPackage, PackageLoader};
 use crate::quackpack::subcommands::build::{BuildOptions, compile};
@@ -42,7 +43,7 @@ pub fn execute(ctx: &DuckContext, matches: &ArgMatches) -> QuackResult<()> {
     // We do not allow to build the global package.
     // It has no src folder and is purely for running scripts.
     let pcx = PackageLoader::find_from_cwd(ctx, AllowGlobalPackage::No)?;
-    let features = features_from_matches(matches, pcx.package());
+    let features = features_from_matches(matches, pcx.package().get_package());
     let profile = profile_from_matches(matches);
     let opts = BuildOptions {
         pcx,
@@ -51,6 +52,7 @@ pub fn execute(ctx: &DuckContext, matches: &ArgMatches) -> QuackResult<()> {
         overwrite: matches.get_flag("overwrite"),
         frozen: matches.get_flag("frozen"),
         strict_errors: matches.get_flag("external-errors"),
+        jobs: jobs_from_matches(matches),
     };
     compile(opts)?;
     Ok(())

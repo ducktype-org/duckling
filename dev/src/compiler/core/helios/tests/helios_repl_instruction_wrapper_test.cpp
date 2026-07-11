@@ -5,7 +5,6 @@
 #include <helios/hout/visitors.hpp>
 #include <helios/mangler/mangler.hpp>
 #include <helios/repl_utils/repl_queries.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios_private/symbols/generated_symbol_data.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
@@ -64,7 +63,7 @@ private:
 				.stmt    = stmt,
 				.counter = 17,
 			});
-			ASSERT_TRUE(wrapper_result.hasValue());
+			ASSERT_HAS_VALUE(wrapper_result);
 			auto& wrapper = wrapper_result.valueOrPanic();
 
 			ASSERT_EQUAL(wrapper.declaration->parameters.size(), 0u);
@@ -76,13 +75,9 @@ private:
 			ASSERT_EQUAL(counter.while_count, 1u);
 			ASSERT_EQUAL(counter.void_return_count, 1u);
 
-			auto sym_ref  = helios::getSymRef(wrapper.declaration->original_symbol);
-			auto gen_data = std::get_if<helios::defgen::GeneratedSymbolData>(&sym_ref->other);
-			assertTrue(gen_data != nullptr, "Expected generated symbol data");
+			auto sym_ref = helios::getSymRef(wrapper.declaration->original_symbol);
 			assertTrue(
-				std::holds_alternative<helios::defgen::GeneratedSymbolData::ReplInstructionWrapper>(
-					gen_data->data
-				),
+				std::holds_alternative<helios::defgen::ReplInstructionWrapper>(sym_ref->other),
 				"Expected ReplInstructionWrapper generated symbol kind"
 			);
 
@@ -108,8 +103,8 @@ private:
 				.stmt    = stmt,
 				.counter = 22,
 			});
-			ASSERT_TRUE(wrapper_result_a.hasValue());
-			ASSERT_TRUE(wrapper_result_b.hasValue());
+			ASSERT_HAS_VALUE(wrapper_result_a);
+			ASSERT_HAS_VALUE(wrapper_result_b);
 			auto& wrapper_a = wrapper_result_a.valueOrPanic();
 			auto& wrapper_b = wrapper_result_b.valueOrPanic();
 
@@ -142,7 +137,7 @@ private:
 				.stmt    = stmt,
 				.counter = 31,
 			});
-			ASSERT_TRUE(wrapper_result.hasValue());
+			ASSERT_HAS_VALUE(wrapper_result);
 			auto& wrapper = wrapper_result.valueOrPanic();
 
 			ASSERT_EQUAL(wrapper.declaration->parameters.size(), 0u);
@@ -154,14 +149,9 @@ private:
 			auto sym = wrapper.declaration->original_symbol;
 			ASSERT_EQUAL(helios::kind(sym), helios::SymbolKind::Function);
 
-			auto sym_ref  = helios::getSymRef(sym);
-			auto gen_data = std::get_if<helios::defgen::GeneratedSymbolData>(&sym_ref->other);
-			assertTrue(gen_data != nullptr, "Expected generated symbol data");
+			auto sym_ref = helios::getSymRef(sym);
 
-			auto repl_data
-				= std::get_if<helios::defgen::GeneratedSymbolData::ReplInstructionWrapper>(
-					&gen_data->data
-				);
+			auto repl_data = std::get_if<helios::defgen::ReplInstructionWrapper>(&sym_ref->other);
 			assertTrue(repl_data != nullptr, "Expected ReplInstructionWrapper generated symbol");
 			ASSERT_EQUAL(repl_data->counter, 31u);
 		});
@@ -175,7 +165,7 @@ private:
 				.stmt    = stmt,
 				.counter = 41,
 			});
-			ASSERT_TRUE(wrapper_result.hasValue());
+			ASSERT_HAS_VALUE(wrapper_result);
 			auto& wrapper = wrapper_result.valueOrPanic();
 
 			ASSERT_EQUAL(wrapper.body->statements.size(), 2u);
@@ -200,8 +190,8 @@ private:
 				.stmt    = stmt,
 				.counter = 55,
 			});
-			ASSERT_TRUE(wrapper_result_a.hasValue());
-			ASSERT_TRUE(wrapper_result_b.hasValue());
+			ASSERT_HAS_VALUE(wrapper_result_a);
+			ASSERT_HAS_VALUE(wrapper_result_b);
 			auto& wrapper_a = wrapper_result_a.valueOrPanic();
 			auto& wrapper_b = wrapper_result_b.valueOrPanic();
 

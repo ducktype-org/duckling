@@ -1,12 +1,22 @@
 //! [`Unit`] is supposed to be all information required to invoke a single instance of duckc.
 
+use std::env::consts::{DLL_PREFIX, DLL_SUFFIX, EXE_SUFFIX};
+use std::hash::Hash;
 use std::sync::Arc;
 
+use self::graph::UnitGraph;
+use super::duckc::multipackage_schema;
 use crate::quackpack::core::compile::compiler_package::CompilerPackage;
 use crate::quackpack::core::identity::Identity;
 use crate::util::hash::sha256_string;
 
 pub mod graph;
+
+// Missing constants from [`std::env::consts`].
+const STATIC_LIB_SUFFIX: &str = ".a";
+
+// Duckling specific.
+const DVM_SUFFIX: &str = ".dbc";
 
 #[cfg(test)]
 mod tests;
@@ -59,6 +69,11 @@ impl Unit {
         dependencies: Vec<u64>,
         package_type: ArtifactsType,
     ) -> Self {
+        assert!(
+            dependencies.is_sorted(),
+            "dependencies IDs should be sorted: {:?}",
+            dependencies
+        );
         Self {
             inner: Arc::new(UnitInner {
                 unit_id,
@@ -81,7 +96,7 @@ impl Unit {
     }
 
     /// Get the ID's of all __direct__ dependencies of this [`Unit`].
-    pub fn deps_by_unit_id(&self) -> &[u64] {
+    pub fn deps_sorted_by_unit_id(&self) -> &[u64] {
         &self.inner.dependencies_by_id
     }
 
@@ -104,6 +119,69 @@ impl Unit {
         let version = self.root_package().package().manifest().version();
         format!("{}-{}-{}", name, version, id)
     }
+
+    /// Get the filename of the output of this [`Unit`].
+    pub fn output_file_name(&self) -> String {
+        let name = self.root_package().package().manifest().name();
+        match self.artifacts_type() {
+            ArtifactsType::Binary => format!("{}{}", name, EXE_SUFFIX),
+            ArtifactsType::Library => format!("{}{}{}", DLL_PREFIX, name, DLL_SUFFIX),
+            ArtifactsType::Dvm => format!("{}{}", name, DVM_SUFFIX),
+            ArtifactsType::IsADependencyArtifact => {
+                format!("{}{}", self.unique_name(), STATIC_LIB_SUFFIX)
+            }
+        }
+    }
+
+    /// Get a single [`multipackage_schema::Package`] for this [`Unit`].
+    pub fn multipackage_schema_package(&self, graph: &UnitGraph) -> multipackage_schema::Package {
+        let package = self.root_package().package();
+        let name = package.manifest().name();
+        let version = package.manifest().version();
+        let features = {
+            let mut features = self
+                .root_package()
+                .enabled_features()
+                .iter()
+                .copied()
+                .collect::<Vec<_>>();
+            features.sort();
+            features
+        };
+        let dependencies = {
+            let mut result = vec![];
+            for dep_id in self.deps_sorted_by_unit_id() {
+                let unit_dep = graph.unit_for(*dep_id);
+                let dep_name = unit_dep.root_package().package().manifest().name();
+                let dep = package
+                    .manifest()
+                    .dependencies()
+                    .get_by_name(dep_name)
+                    .unwrap_or_else(|| {
+                        panic!(
+                            "unit=({},{}) has dep=({},{}), but it's not in the manifest?!",
+                            self.unit_id(),
+                            name,
+                            dep_id,
+                            dep_name
+                        )
+                    });
+                result.push(multipackage_schema::Dependency {
+                    id: unit_dep.unique_name().into(),
+                    alias: dep.alias(),
+                });
+            }
+            result
+        };
+        multipackage_schema::Package {
+            id: self.unique_name().into(),
+            import_name: name,
+            version,
+            features,
+            path_to_the_src_directory: package.src().to_path_buf(),
+            dependencies,
+        }
+    }
 }
 
 impl PartialEq for Unit {
@@ -113,3 +191,10 @@ impl PartialEq for Unit {
 }
 
 impl Eq for Unit {}
+
+impl Hash for Unit {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        let ptr = Arc::as_ptr(&self.inner);
+        std::ptr::hash(ptr, state)
+    }
+}

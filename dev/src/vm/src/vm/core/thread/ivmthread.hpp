@@ -17,6 +17,10 @@
 namespace vm {
 	class IVMProcess;
 
+	/**
+	 * @brief An execution request posted by the VMProcess.
+	 * This is serves as a channel to communicate VMProcess with VMThread.
+	 */
 	enum class ExecutionRequest : std::uint8_t { Resume, Pause, ExecuteOneStep, Stop, NoRequest };
 
 	/**
@@ -46,15 +50,13 @@ namespace vm {
 		 * @return true if the thread was successfully created and the program is running, false if
 		 * there is already a thread running.
 		 */
-		virtual bool spawnThreadAndRun(
-			const std::string& func_name, const RunArguments& run_arguments
-		);
+		bool spawnThreadAndRun(const std::string& func_name, const RunArguments& run_arguments);
 
 		/**
 		 * @brief Runs a program and waits for it to finish.
 		 * Does not create a new thread, runs the program in the current execution thread.
 		 */
-		virtual void runNoSpawn(const std::string& func_name, const RunArguments& run_arguments);
+		void runNoSpawn(const std::string& func_name, const RunArguments& run_arguments);
 
 		/**
 		 * @brief Pauses the execution of a program.
@@ -62,7 +64,7 @@ namespace vm {
 		 * "Assumes execution status is `running`"
 		 * @return true if and only if program was in the running state and was successfully paused
 		 */
-		virtual bool pause();
+		bool pause();
 
 		/**
 		 * @brief Resumes the execution of a program.
@@ -70,7 +72,7 @@ namespace vm {
 		 * "Assumes execution status is `paused`"
 		 * @return true if and only if program was in the paused state and was successfully resumed
 		 */
-		virtual bool resume();
+		bool resume();
 
 		/**
 		 * @brief Execute one step of the program.
@@ -78,14 +80,14 @@ namespace vm {
 		 * Waits for the program to perform one step and pause.
 		 * @return true if the program successfully performed one step and paused
 		 */
-		virtual bool step();
+		bool step();
 
 		/**
 		 * @brief End the execution of a program.
 		 * Waits for the execution thread to respond.
 		 * @return true if the program is in the end stopped.
 		 */
-		virtual bool stop();
+		bool stop();
 		/**
 		 * @brief Check if thread has an active execution thread handle.
 		 * @return true if exec_thread is active and joinable.
@@ -97,7 +99,7 @@ namespace vm {
 		/**
 		 * @brief Waits for the execution thread to finish and returns final response.
 		 */
-		virtual std::expected<api::Response, api::ApiError> join();
+		std::expected<api::Response, api::ApiError> join();
 
 		virtual bool isPauseRequested();
 
@@ -115,12 +117,12 @@ namespace vm {
 		 * Used from the thread loop when e.g. the VMProcess requests to pause or stop the execution
 		 * while the VMThread is running.
 		 */
-		virtual void breakActiveExecution();
+		void breakActiveExecution();
 
 		/**
 		 * @brief Wakes a thread waiting in paused state.
 		 */
-		virtual void notifyPaused();
+		void notifyPaused();
 
 		[[nodiscard]] const api::ProcStatus& getStatus() const { return status; }
 
@@ -151,6 +153,9 @@ namespace vm {
 		 */
 		BlockingQueue<api::ProcStatus> execution_response_queue;
 
+		/**
+		 * @brief The process this VMThread belongs to.
+		 */
 		IVMProcess& my_process;
 
 		/**

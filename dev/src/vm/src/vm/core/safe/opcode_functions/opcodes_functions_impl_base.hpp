@@ -370,11 +370,12 @@ namespace vm {
 				= usize(frame->local_block_ref_stack_end - frame->local_block_ref_stack_base);
 			u64 first_arg_idx = block_ref_stack_count - arg_count;
 
-			// Create VmValue objects from local arguments.
+			// Create VmValue objects from local arguments. The argument's actual block type is
+			// used (verification guarantees it matches what the builtin expects); this also
+			// supports builtins with polymorphic parameters, e.g. the `cptr` copy builtins.
 			for (u64 i = 0; i < arg_count; i++) {
-				const base::StrID arg_type  = function_signature->parameters[i];
-				TypeCRef          real_type = thread.process_program->getTypes().at(arg_type);
-				auto              block = Ref(frame->local_block_ref_stack_base[first_arg_idx + i]);
+				auto     block     = Ref(frame->local_block_ref_stack_base[first_arg_idx + i]);
+				TypeCRef real_type = Memory::getBlockType(block);
 				args.push_back(thread.safe_process.createOwnedVmValue(real_type, Pointer(block, 0)));
 			}
 
@@ -452,6 +453,56 @@ namespace vm {
 
 				for (u64 i = 0; i < arg_count; i++) performDeinit(frame, thread);
 			}
+		}
+
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(call_ffifunc)(FUNCTION_ARGS) {
+		{
+			auto ffi_func = READ_FROM_DIRECT_ARG(CRef<low::LowFFIFunction>, instr->arg0);
+
+			auto arg_count = ffi_func->parameters.size();
+			bool is_void   = ffi_func->result_types.size() == 0;
+			CORE_ASSERT(
+				ffi_func->result_types.size() <= 1, "FFI function cannot return more than 1 type"
+			);
+
+			// Local stack layout is the same as for call_cfunc:
+			// [..., result_value (if any), arg0, ..., argN], each in its own block.
+			u64 block_ref_stack_count
+				= u64(frame->local_block_ref_stack_end - frame->local_block_ref_stack_base);
+			u64 first_block_idx = block_ref_stack_count - arg_count - (is_void ? 0 : 1);
+			u64 first_arg_idx   = first_block_idx + (is_void ? 0 : 1);
+
+			std::vector<void*> arg_values(arg_count);
+			for (u64 i = 0; i < arg_count; i++) {
+				auto block    = Ref(frame->local_block_ref_stack_base[first_arg_idx + i]);
+				arg_values[i] = thread.process_memory.getBlockViewUnsafe(block).getBegin();
+			}
+
+			auto* cif = &ffi_func->cif;
+
+			if (is_void) {
+				ffi_call(cif, ffi_func->symbol, nullptr, arg_values.data());
+			} else {
+				auto  result_block = Ref(frame->local_block_ref_stack_base[first_block_idx]);
+				byte* result_pointer
+					= thread.process_memory.getBlockViewUnsafe(result_block).getBegin();
+				usize result_size = ffi_func->result_types.at(0)->getSize().asInt();
+
+				if (result_size >= sizeof(ffi_arg)) {
+					ffi_call(cif, ffi_func->symbol, result_pointer, arg_values.data());
+				} else {
+					// libffi requires the return buffer to be at least sizeof(ffi_arg) big -
+					// call into a temporary and copy the low bytes (little-endian).
+					ffi_arg tmp_result = 0;
+					ffi_call(cif, ffi_func->symbol, &tmp_result, arg_values.data());
+					std::memcpy(result_pointer, &tmp_result, result_size);
+				}
+			}
+
+			for (u64 i = 0; i < arg_count; i++) performDeinit(frame, thread);
 		}
 
 		FUNCTION_CONT(1);
@@ -696,15 +747,6 @@ namespace vm {
 		FUNCTION_CONT(2);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_popq_imm)(FUNCTION_ARGS) {
-		{
-			// @TODO: #1728 remove this evil instruction
-			void* value = READ_FROM_DIRECT_ARG(void*, instr->arg1);
-			WRITE_TO_PLACE_ARG(void*, instr->arg0, value);
-		}
-		FUNCTION_CONT(1);
-	}
-
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_bste_bste)(FUNCTION_ARGS) {
 		{
 			auto dst_block = READ_BLOCK_REF_FROM_ARG(instr->arg0);
@@ -808,17 +850,6 @@ namespace vm {
 		}
 
 		FUNCTION_CONT(2);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(upcast_pptr_pptr)(FUNCTION_ARGS) {
-		{
-			// Same as move_pptr_pptr, treated differently by static analysis.
-			const auto    dst     = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
-			const auto    src     = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
-			const Pointer new_dst = thread.process_memory.updatePointerAssignment(dst, src);
-			WRITE_TO_PLACE_ARG(Pointer, instr->arg0, new_dst);
-		}
-		FUNCTION_CONT(1);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(downcast_pptr_pptr)(FUNCTION_ARGS) {
@@ -1078,7 +1109,10 @@ namespace vm {
 				// It might be desired to switch to second approach in the future, depending on the
 				// semantics of Duckling arrays.
 				if (!tbl_pointer.isNull()) {
-					thread.process_memory.freeBlockData(tbl_pointer.getBlock());
+					auto tbl_block = tbl_pointer.getBlock();
+					if (Memory::getBlockType(tbl_block)->getKind() != Type::Kind::DynamicTable)
+						throw exceptions::VMDynTableReAllocTypeMismatch();
+					thread.process_memory.freeBlockData(tbl_block);
 					const Pointer new_dst = thread.process_memory.updatePointerAssignment(
 						tbl_pointer, Pointer::null()
 					);
@@ -1092,6 +1126,8 @@ namespace vm {
 				WRITE_TO_PLACE_ARG(Pointer, instr->arg0, new_dst);
 			} else {
 				auto tbl_block = tbl_pointer.getBlock();
+				if (Memory::getBlockType(tbl_block)->getKind() != Type::Kind::DynamicTable)
+					throw exceptions::VMDynTableReAllocTypeMismatch();
 				thread.process_memory.dynTableReallocateBlockDataN(tbl_block, new_elem_count);
 			}
 		}

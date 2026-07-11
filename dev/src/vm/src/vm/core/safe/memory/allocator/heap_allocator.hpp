@@ -32,18 +32,23 @@ namespace vm {
 		std::deque<base::TypedOwningView<EntryT>> allocated;
 
 	public:
+		// @note `size` below is an *element count* passed to heapAllocOrThrow<EntryT>(size) ->
+		// new EntryT[size]. For the byte path, Type::getSize() (a byte count) and the element
+		// count coincide only because sizeof(std::byte) == 1; for ShadowEntry it's
+		// Type::getShadowSize() that already returns the correct element count. Any future EntryT
+		// must resolve its own byte-count-to-element-count mapping here explicitly rather than
+		// relying on sizeof(EntryT) == 1.
 		BlockData<EntryT> allocate(TypeCRef type) {
-			usize   size = 0;
-			if constexpr (std::is_same_v<EntryT, vm::ShadowEntry>) {
+			usize size;
+			if constexpr (std::is_same_v<EntryT, vm::ShadowEntry>)
 				size = type->getShadowSize();
-			} else {
+			else
 				size = type->getSize().asInt();
-			}
-			auto    ptr  = heapAllocOrThrow<EntryT>(size);
+			auto ptr = heapAllocOrThrow<EntryT>(size);
 			allocated.emplace_back(ptr, size);
-			return BlockData<EntryT>{
-				type, base::TypedModRawView<EntryT>{ ptr, size }, Ref<IAllocator<EntryT>>{ this }
-			};
+			return BlockData<EntryT>{ type,
+				                      base::TypedModRawView<EntryT>{ ptr, size },
+				                      Ref<IAllocator<EntryT>>{ this } };
 		}
 
 		/**
@@ -51,19 +56,19 @@ namespace vm {
 		 * `inner_type`.
 		 * @note Assumes that `table_type` is a dynamic table type with inner type `inner_type`,
 		 *  to assign the correct type to the new `BlockData` object.
+		 * @note Same byte-count/element-count aliasing as `allocate()` above, see its note.
 		 */
 		BlockData<EntryT> dynTableAllocateN(TypeCRef table_type, TypeCRef inner_type, u64 n) {
-			usize   size = 0;
-			if constexpr (std::is_same_v<EntryT, vm::ShadowEntry>) {
+			usize size;
+			if constexpr (std::is_same_v<EntryT, vm::ShadowEntry>)
 				size = inner_type->getShadowSize() * n;
-			} else {
+			else
 				size = inner_type->getSize().asInt() * n;
-			}
-			EntryT* ptr  = heapAllocOrThrow<EntryT>(size);
+			EntryT* ptr = heapAllocOrThrow<EntryT>(size);
 			allocated.emplace_back(ptr, size);
-			return BlockData<EntryT>{
-				table_type, base::TypedModRawView<EntryT>{ ptr, size }, Ref<IAllocator<EntryT>>(this)
-			};
+			return BlockData<EntryT>{ table_type,
+				                      base::TypedModRawView<EntryT>{ ptr, size },
+				                      Ref<IAllocator<EntryT>>(this) };
 		}
 
 		void deallocate(Ref<BlockData<EntryT>> data) final {

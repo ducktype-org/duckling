@@ -1,6 +1,7 @@
 #include "supervisor.hpp"
 
-#include <vm/core/process/vmprocess.hpp>
+#include <vm/core/fast/fast_vmprocess.hpp>
+#include <vm/core/process/ivmprocess.hpp>
 #include <vm/core/safe/safe_vmprocess.hpp>
 #include <vm/core/safe/fast_track_safe_vmprocess.hpp>
 
@@ -20,11 +21,19 @@ namespace vm {
 
 	std::expected<PID, api::ApiError> Supervisor::newProcess(const api::ProcessSettings& settings) {
 		std::unique_lock lock(rw_process_table);
-		PID              pid = next++;
-		IVMProcess* process = settings.enable_fast_track
-		                        ? static_cast<IVMProcess*>(new FastTrackSafeVMProcess(pid, settings))
-		                        : static_cast<IVMProcess*>(new SafeVMProcess(pid, settings));
-		process_table.emplace(pid, Box<IVMProcess>::fromPointer(process));
+		PID              pid = PID::fromU64(next_pid++);
+		switch (settings.mode) {
+		case api::ProcessMode::Safe: {
+			IVMProcess* process = settings.enable_fast_track
+			                        ? static_cast<IVMProcess*>(new FastTrackSafeVMProcess(pid, settings))
+			                        : static_cast<IVMProcess*>(new SafeVMProcess(pid, settings));
+			process_table.emplace(pid, Box<IVMProcess>::fromPointer(process));
+			break;
+		}
+		case api::ProcessMode::Fast:
+			process_table.emplace(pid, Box<IVMProcess>::fromPointer(new fast::FastVMProcess(pid)));
+			break;
+		}
 		return pid;
 	}
 
@@ -62,6 +71,7 @@ namespace vm {
 	Supervisor::~Supervisor() {
 		// @TODO: #1354 add asserts here, that the processes are stopped and if not then cerr the
 		// warnings about it.
-		for (auto& [pid, proc]: process_table) proc->doRequest(api::request::DeinitAndValidate{});
+		for (auto& [pid, proc]: process_table)
+			(void) proc->doRequest(api::request::DeinitAndValidate{});
 	}
 }

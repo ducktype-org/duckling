@@ -36,7 +36,7 @@ namespace {
 				field_definitions.reserve(data.fields.size());
 				for (const auto& field: data.fields)
 					field_definitions.emplace_back(field.name, types.at(field.type)->getID());
-				tp.defineData(field_definitions);
+				tp.defineData(field_definitions, data.packed);
 			}
 			variant_case(vm::code::VariantType, variant) {
 				std::vector<vm::code::valid_type::ValidTypeID> variant_types;

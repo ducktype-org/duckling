@@ -1,10 +1,24 @@
 # Compilation tests
 
-clean_cmd: "rm -rf build"
+# Every case gets a private scratch directory for its build artifacts,
+# so cases can run concurrently and never dirty the source tree.
+Env:
+    DIT_TMP_DIR: "@{new_tmp_dir}"
+
+case_build: "$DIT_TMP_DIR/build"
 
 backend: "nobackend"
 # If set to "true" the produced duckling executable will be run with valgrind and checked for leaks.
 valgrind: "false"
+
+# Optional regexes matched against the run's stdout/stderr instead of a literal
+# `Output`/`Err` comparison, for cases whose output has volatile parts (e.g. a
+# DVM panic's `BlockID=N`). When either is set the dvm and (non-valgrind) llvm
+# runs are wrapped with the `expect_output` helper, which asserts the regexes,
+# forwards stdout, and swallows the volatile stderr. See
+# integration_tests/helpers/expect_output.py.
+stdout_regex: ""
+stderr_regex: ""
 
 compile_dvm_options: ""
 compile_llvm_options: ""
@@ -24,21 +38,21 @@ module_to_compile: "@{Name}"
 compile_dvm_backend_deterministically_cmd: "if [ '@{enable_conc_deterministic_tests}' = 'true' ]; then python3 @{compile_determinism_script} --duckc-path @{duckc_path} --module-name @{module_to_compile} --duckc-worker-count @{duckc_worker_count} --compile-options='@{compile_dvm_options}' --backend dvm; else true; fi"
 compile_llvm_backend_deterministically_cmd: "if [ '@{enable_conc_deterministic_tests}' = 'true' ]; then python3 @{compile_determinism_script} --duckc-path @{duckc_path} --module-name @{module_to_compile} --duckc-worker-count @{duckc_worker_count} --compile-options='@{compile_llvm_options}' --backend llvm; else true; fi"
 
-compile_dvm_backend_cmd:  "@{compile_dvm_backend_deterministically_cmd} && @{duckc_path} compile_package duck_modules/@{module_to_compile} -w @{duckc_worker_count} -a build -n package_@{module_to_compile} @{compile_dvm_options} --dvm-backend"
-compile_llvm_backend_cmd: "@{compile_llvm_backend_deterministically_cmd} && @{duckc_path} compile_package duck_modules/@{module_to_compile} -w @{duckc_worker_count} -a build -n package_@{module_to_compile} @{compile_llvm_options}"
+compile_dvm_backend_cmd:  "@{compile_dvm_backend_deterministically_cmd} && @{duckc_path} compile_package duck_modules/@{module_to_compile} -w @{duckc_worker_count} -a @{case_build} -n package_@{module_to_compile} @{compile_dvm_options} --dvm-backend"
+compile_llvm_backend_cmd: "@{compile_llvm_backend_deterministically_cmd} && @{duckc_path} compile_package duck_modules/@{module_to_compile} -w @{duckc_worker_count} -a @{case_build} -n package_@{module_to_compile} @{compile_llvm_options}"
 
 # "compile only" commands used by the all backend (determinism checks run separately before these).
-compile_dvm_only_cmd: "@{duckc_path} compile_package duck_modules/@{module_to_compile} -w @{duckc_worker_count} -a build -n package_@{module_to_compile} @{compile_dvm_options} --dvm-backend"
-compile_llvm_only_cmd: "@{duckc_path} compile_package duck_modules/@{module_to_compile} -w @{duckc_worker_count} -a build -n package_@{module_to_compile} @{compile_llvm_options}"
+compile_dvm_only_cmd: "@{duckc_path} compile_package duck_modules/@{module_to_compile} -w @{duckc_worker_count} -a @{case_build} -n package_@{module_to_compile} @{compile_dvm_options} --dvm-backend"
+compile_llvm_only_cmd: "@{duckc_path} compile_package duck_modules/@{module_to_compile} -w @{duckc_worker_count} -a @{case_build} -n package_@{module_to_compile} @{compile_llvm_options}"
 
-compiled_to_llvm: "./build/package_llvm.exe"
-compiled_to_dvm: "./build/package_dvm.dbc"
+compiled_to_llvm: "@{case_build}/package_llvm.exe"
+compiled_to_dvm: "@{case_build}/package_dvm.dbc"
 
 # Deliberately empty, so as not to recompile duckc and dvm for each test.
 PreNode: ""
 
-Clean: "@{clean_cmd}"
-PreCase: "@{clean_cmd} && mkdir build;
+PostCase: "@{cleanup_tmp_env}"
+PreCase: "mkdir -p @{case_build};
   case '@{backend}' in
     dvm)       @{compile_dvm_backend_cmd}                                                                                ;;
     llvm)      @{compile_llvm_backend_cmd}                                                                               ;;
@@ -50,10 +64,18 @@ PreCase: "@{clean_cmd} && mkdir build;
 
 Run: "
   case '@{backend}' in
-    dvm) @{dvm_path} run @{compiled_to_dvm}       ;;
+    dvm)
+      if [ -n \"@{stdout_regex}\" ] || [ -n \"@{stderr_regex}\" ]; then
+        @{expect_output} --out-regex \"@{stdout_regex}\" --err-regex \"@{stderr_regex}\" -- @{dvm_path} run @{compiled_to_dvm};
+      else
+        @{dvm_path} run @{compiled_to_dvm};
+      fi
+      ;;
     llvm)
       if [ '@{valgrind}' = 'true' ]; then
         valgrind --leak-check=full --error-exitcode=1 @{compiled_to_llvm};
+      elif [ -n \"@{stdout_regex}\" ] || [ -n \"@{stderr_regex}\" ]; then
+        @{expect_output} --out-regex \"@{stdout_regex}\" --err-regex \"@{stderr_regex}\" -- @{compiled_to_llvm};
       else
         @{compiled_to_llvm};
       fi
@@ -85,6 +107,7 @@ SubDirs:
   - functions
   - constants
   - classes
+  - extern_c
   - static_arrays
   - dynamic_arrays
   - optimisations
@@ -97,4 +120,6 @@ SubDirs:
   - macros
   - diagnostics
   - packages
+  - custom_operators
   - standard_library
+  - conditional_compilation

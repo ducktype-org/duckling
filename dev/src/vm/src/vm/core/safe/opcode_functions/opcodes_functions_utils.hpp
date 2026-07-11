@@ -6,7 +6,7 @@
 #include <base/pointers/ref.hpp>
 #include <base/types/ints.hpp>
 
-#include <vm/core/safe/memory/block.hpp>
+#include <vm/core/musttail.hpp>
 #include <vm/core/safe/memory/frame.hpp>
 #include <vm/utils/interpret.hpp>
 #include <vm/core/safe/safe_vmthread.hpp>
@@ -16,6 +16,9 @@
 #include <vm/core/safe/low_program/low_program.hpp>
 
 namespace vm {
+	template<typename EntryT>
+	class GenericBlock;
+	using Block = GenericBlock<std::byte>;
 }
 
 /**
@@ -161,19 +164,6 @@ template<typename T>
 inline static void writeToView(base::ModRawView view, const T& value) {
 	vm::safeWriteBytes<T>(view.getBegin(), value);
 }
-
-#if defined(__clang_major__) && __clang_major__ >= 13
-	#define MUST_TAIL [[clang::musttail]]
-#elif defined(__GNUG__) && __GNUG__ >= 15
-	#define MUST_TAIL [[gnu::musttail]]
-#else
-	#define MUST_TAIL
-
-	#ifdef USE_TAIL_CALLS
-		#warning \
-			"USE_TAIL_CALLS without support from compiler. This can potentially cause stack-overflow."
-	#endif
-#endif
 
 /**
  * @brief Execute next instruction of the bytecode.

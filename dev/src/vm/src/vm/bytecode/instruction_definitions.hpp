@@ -75,9 +75,6 @@ DEF_INSTR(setNull_pptr, (vm::opargs::PlacePtr, dst))
 // Copies an opaque value
 DEF_INSTR(mov_popq_popq, (vm::opargs::PlaceOpq, dst), (vm::opargs::PlaceOpq, src))
 
-// Copies an opaque value between globals and locals
-DEF_INSTR(mov_popq_imm, (vm::opargs::PlaceOpq, dst), (vm::opargs::Immediate, src))
-
 
 // ========= SIGNED INTEGER ARITHMETIC OPERATIONS ========
 
@@ -368,6 +365,7 @@ DEF_INSTR(jmpIfNot_label, (vm::opargs::Label, label))
 DEF_INSTR(call_func, (vm::opargs::FunctionName, function))
 DEF_INSTR(call_builtinfunc, (vm::opargs::BuiltinFunctionName, function))
 DEF_INSTR(call_cfunc, (vm::opargs::ExtCFunctionName, function))
+DEF_INSTR(call_ffifunc, (vm::opargs::FFIFunctionName, function))
 
 DEF_INSTR(set_threadctx, (vm::opargs::FunctionName, function))
 
@@ -561,6 +559,15 @@ DEF_INSTR(cast_p8_type, (vm::opargs::Place8, value), (vm::opargs::Type, target_t
 DEF_INSTR(cast_p16_type, (vm::opargs::Place16, value), (vm::opargs::Type, target_type))
 DEF_INSTR(cast_p32_type, (vm::opargs::Place32, value), (vm::opargs::Type, target_type))
 DEF_INSTR(cast_p64_type, (vm::opargs::Place64, value), (vm::opargs::Type, target_type))
+
+// Copies a pointer to a fixed-size table into a pointer to a dynamic table with the same
+// element type. The pointer value is unchanged; this is a type-system-only reinterpretation.
+// @note The resulting pointer must not be passed to dynTableReAlloc.
+DEF_INSTR(
+	fstToDynTable_pptr_pptr,
+	(vm::opargs::PlacePtr, dst_table_ptr),
+	(vm::opargs::PlacePtr, src_table_ptr)
+)
 
 // ========= CONVERSION OPERATIONS ========
 

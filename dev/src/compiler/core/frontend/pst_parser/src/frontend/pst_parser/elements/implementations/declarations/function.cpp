@@ -4,13 +4,16 @@
 #include "preamble.hpp"
 
 namespace pst {
+	CLONE_SUB_ELEMENTS_DEF(Fun, name, params, ret, body);
+
 	// @TODO: make better
 	MBox<Fun> Fun::parse(LangParserState& state) {
 		auto out = makeBox<Fun>(state);
 
 		if (!assertStmtChoice<Fun>(state, state[0].is(Keyword::Fun))) return nullptr;
 
-		PARSE().all(Keyword::Fun, &out->name);
+		PARSE().all(Keyword::Fun);
+		PARSE().with(&out->name, IdentifierWrapper::parseFunctionName);
 		PARSE().one(&out->params);
 
 		if (PARSE().tryEat(NamedOperator::SingleArrow)) PARSE().one(&out->ret);

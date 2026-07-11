@@ -34,8 +34,10 @@
 #include <base/except/exceptions.hpp>
 #include <base/preproc/diagnostics.hpp>
 
+#include <compare>
 #include <functional>
 #include <optional>
+#include <type_traits>
 #include <utility>
 
 /* Some cool macros.
@@ -324,7 +326,7 @@ namespace base {
 		template<class Function, class Self>
 		requires std::invocable<Function&&, QualifiedT<Self>>
 		constexpr auto map(this Self&& self, Function&& function)
-			-> Optional<std::invoke_result_t<Function, QualifiedT<Self>>> {
+			-> Optional<std::remove_cvref_t<std::invoke_result_t<Function&&, QualifiedT<Self>>>> {
 			if (self.has_value()) {
 				return std::invoke(
 					std::forward<Function>(function), std::forward<Self>(self).value()
@@ -391,6 +393,16 @@ namespace base {
 	constexpr bool operator>=(const Optional<U>& one, const Optional<T>& other) {
 		return (one.has_value() && other.has_value() && one.value() >= other.value())
 		    || one.has_value();
+	}
+
+	// An empty Optional orders before any engaged one, matching the relational operators above.
+	template<class U, class T>
+	constexpr auto operator<=>(const Optional<U>& one, const Optional<T>& other)
+		-> decltype(one.value() <=> other.value()) {
+		if (one.has_value() && other.has_value()) return one.value() <=> other.value();
+		return static_cast<decltype(one.value() <=> other.value())>(
+			one.has_value() <=> other.has_value()
+		);
 	}
 
 	template<class T>

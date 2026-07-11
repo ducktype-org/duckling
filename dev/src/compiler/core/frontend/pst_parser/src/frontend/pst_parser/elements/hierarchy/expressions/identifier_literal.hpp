@@ -7,6 +7,10 @@ namespace pst::expr {
 	 * @brief Element that represents an identifier literal in an expression
 	 */
 	class IdentifierLiteral final: public ExprElement {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(IdentifierLiteral, ExprElement);
+		CLONE_SUBELEMENTS();
+
+	protected:
 		NAMED_CHILD(name, IdentifierWrapper);
 		NAMED_CHILD_OPT(template_specifier, ExprElement);
 
@@ -23,6 +27,12 @@ namespace pst::expr {
 		[[nodiscard]]
 		AccessLocked<IdentifierWrapper> getName() const {
 			return name.give();
+		}
+
+		[[nodiscard]]
+		auto getTemplateSpecifier() const -> base::Optional<AccessLocked<ExprElement>> {
+			if (template_specifier) return template_specifier.value().give();
+			return {};
 		}
 
 		[[nodiscard]]

@@ -6,10 +6,13 @@
 #include <lang_definitions/key_spec_op.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
+#include <vm/bytecode/const_value.hpp>
+#include <vm/bytecode/const_value_visitor.hpp>
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/type_of_data.hpp>
 
+#include <bit>
 #include <iomanip>
 #include <ranges>
 
@@ -33,6 +36,8 @@ namespace vm::code {
 	std::string toString(opargs::BuiltinFunctionName arg) { return arg.function_name.str(); }
 
 	std::string toString(opargs::ExtCFunctionName arg) { return arg.function_name.str(); }
+
+	std::string toString(opargs::FFIFunctionName arg) { return arg.function_name.str(); }
 
 	std::string toString(opargs::MethodName arg) { return arg.method_name.str(); }
 
@@ -161,7 +166,10 @@ namespace vm::code {
 				out << type.name.strView() << " {\n";
 				for (auto field: type.fields)
 					out << "    " << field.name.strView() << ": " << field.type.strView() << ",\n";
-				out << "}\n";
+				out << "}";
+				if (type.packed) out << " packed";
+				if (type.assert_size.has_value()) out << " assert_size " << *type.assert_size;
+				out << "\n";
 			}
 
 			void operator()(const VariantType&) const {
@@ -232,6 +240,55 @@ namespace vm::code {
 		void display() const { std::visit(TypeSerializerVisitor{ out }, type); }
 	};
 
+	class ConstValueSerializer final: public code::ConstVisitor {
+		std::ostream& out;
+
+		void visitConstantImmediate(const code::ConstantImmediate& val) final {
+			static_assert(
+				std::endian::native == std::endian::little,
+				"Only little-endian platforms are supported"
+			);
+			// Output as hex literal: 0x followed by exactly (2*size) hex digits.
+			// This makes the byte count inferable from the serialized form.
+			out << "0x";
+			// We save the number in the big endianness.
+			for (size_t i = val.size.asInt(); i-- > 0;)
+				out << std::format("{:02X}", std::to_integer<unsigned>(val.content.at(i)));
+		}
+
+		void visitConstantClass(const code::ConstantClass& val) final {
+			out << lang_def::keywordToStr(lang_def::Keyword::BCClass).strView() << " { ";
+			bool first = true;
+			for (const auto& [name, field_val]: val.fields) {
+				if (!first) out << ", ";
+				out << name.strView() << ": ";
+				field_val->acceptVisitor(*this);
+				first = false;
+			}
+			out << " }";
+		}
+
+		void visitConstantFixedSizeTable(const code::ConstantFixedSizeTable& val) final {
+			out << lang_def::keywordToStr(lang_def::Keyword::BCFixedSizeTable).strView() << " [ ";
+			bool first = true;
+			for (const auto& elem: val.elements) {
+				if (!first) out << ", ";
+				elem->acceptVisitor(*this);
+				first = false;
+			}
+			out << " ]";
+		}
+
+	public:
+		ConstValueSerializer(std::ostream& out): out(out) {}
+	};
+
+	void serializeConstValue(const ConstantValue& const_value, std::ostream& out) {
+		out << lang_def::keywordToStr(lang_def::Keyword::BCInitialValue).strView() << ": ";
+		ConstValueSerializer serializer(out);
+		const_value.data->acceptVisitor(serializer);
+	}
+
 	class GlobalDataSerializer final {
 		std::ostream&     out;
 		const GlobalData& global_data;
@@ -244,17 +301,35 @@ namespace vm::code {
 		void display() {
 			out << lang_def::keywordToStr(lang_def::Keyword::BCGlobalData).strView() << ' ';
 			out << global_data.name.str.strView() << " " << global_data.type.str.strView() << " {";
+			bool has_content   = false;
+			auto maybe_newline = [&] {
+				if (has_content) out << ",";
+				out << "\n    ";
+				has_content = true;
+			};
+
+			if (global_data.is_constant) {
+				maybe_newline();
+				out << lang_def::keywordToStr(lang_def::Keyword::BCIsConstant).strView() << ": ";
+				out << lang_def::keywordToStr(lang_def::Keyword::BCTrue).strView();
+			}
+
+			if (global_data.initial_value.has_value()) {
+				maybe_newline();
+				serializeConstValue(global_data.initial_value.value(), out);
+			}
+
 			if (global_data.ctor_name.has_value()) {
-				out << "\n    "
-					<< lang_def::keywordToStr(lang_def::Keyword::BCGlobalConstructor).strView()
-					<< ": " << global_data.ctor_name.value().str.strView() << ",\n";
+				maybe_newline();
+				out << lang_def::keywordToStr(lang_def::Keyword::BCGlobalConstructor).strView()
+					<< ": " << global_data.ctor_name.value().str.strView();
 			}
 			if (global_data.dtor_name.has_value()) {
-				out << "\n    "
-					<< lang_def::keywordToStr(lang_def::Keyword::BCGlobalDestructor).strView()
-					<< ": " << global_data.dtor_name.value().str.strView() << ",\n";
+				maybe_newline();
+				out << lang_def::keywordToStr(lang_def::Keyword::BCGlobalDestructor).strView()
+					<< ": " << global_data.dtor_name.value().str.strView();
 			}
-			out << '}' << lang_def::specialToStr(lang_def::Special::Semicolon).strView();
+			out << "\n}";
 		}
 	};
 

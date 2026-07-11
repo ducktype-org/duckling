@@ -12,19 +12,19 @@
 #include <base/pointers/ref.hpp>
 #include <base/types/ints.hpp>
 
+#include <vm/bytecode/constant_value_fd.hpp>
 #include <vm/core/safe/exceptions.hpp>
 #include <vm/core/safe/type_metadata/definitions.hpp>
 #include <vm/utils/interpret.hpp>
 
-#include <deque>
-#include <iostream>
 #include <algorithm>
+#include <deque>
 
 namespace vm {
 	/**
 	 * @brief Helper structure that holds pointers to the global data buffer and global blocks buffer.
 	 */
-	template<typename EntryT, typename BlockT = BasicBlock<EntryT>>
+	template<typename EntryT, typename BlockT = GenericBlock<EntryT>>
 	struct GlobalBufferPointers {
 		EntryT*  data_buffer_base;    /// Base pointer to the global data buffer.
 		BlockT** blocks_buffer_base;  /// Base pointer to the global blocks buffer.
@@ -35,13 +35,13 @@ namespace vm {
 	 * @note Memory is single threaded!
 	 * All of process'es memory - thread stacks (thread local data) and global data is stored here.
 	 */
-	template<typename EntryT, typename BlockT = BasicBlock<EntryT>>
-	class IMemory final {
+	template<typename EntryT, typename BlockT = GenericBlock<EntryT>>
+	class GenericMemory final {
 	private:
 		HeapAllocator<EntryT>  heap_allocator;
 		DummyAllocator<EntryT> dummy_allocator;
 
-		std::deque<BasicThreadStack<EntryT>> threads_frame_stacks;
+		std::deque<GenericThreadStack<EntryT>> threads_frame_stacks;
 
 		/// Buffer for the global data
 		std::vector<EntryT> global_data_buffer{};
@@ -64,11 +64,10 @@ namespace vm {
 
 		[[nodiscard]]
 		Ref<BlockT> createBlock(BlockData<EntryT> data) {
-			if constexpr (std::is_trivially_default_constructible_v<EntryT>) {
+			if constexpr (std::is_trivially_default_constructible_v<EntryT>)
 				std::memset(data.view.getBegin(), 0, data.view.size() * sizeof(EntryT));
-			} else {
+			else
 				std::fill(data.view.getBegin(), data.view.getBegin() + data.view.size(), EntryT{});
-			}
 
 			if (free_ids.empty()) {
 				auto id = BlockID(blocks.size());
@@ -126,15 +125,15 @@ namespace vm {
 			// Free all child blocks on suffix.
 			auto& dst_child_blocks = dst->children_blocks;
 			for (auto iter = dst_child_blocks.lower_bound(0); iter != dst_child_blocks.end();
-				 iter      = dst_child_blocks.erase(iter)) {
+			     iter      = dst_child_blocks.erase(iter)) {
 				freeBlockData(iter->second);
 			}
 
 			// Copy the child blocks.
 			auto& src_child_blocks = src->children_blocks;
 			for (auto iter = src_child_blocks.lower_bound(0);
-				 iter != src_child_blocks.end() && iter->first < entry_count;
-				 ++iter) {
+			     iter != src_child_blocks.end() && iter->first < entry_count;
+			     ++iter) {
 				auto offset = iter->first;
 				setNestedViewBlock(dst, offset, iter->second->data.element_type);
 				moveBlocksRecursively(dst->children_blocks[offset], iter->second);
@@ -145,7 +144,9 @@ namespace vm {
 			// because the data being is "moved".
 			if constexpr (std::is_trivially_copyable_v<EntryT>) {
 				std::memcpy(
-					dst->data.view.getBegin(), src->data.view.getBegin(), entry_count * sizeof(EntryT)
+					dst->data.view.getBegin(),
+					src->data.view.getBegin(),
+					entry_count * sizeof(EntryT)
 				);
 			} else {
 				std::copy(
@@ -163,6 +164,7 @@ namespace vm {
 		 * @param block The block to update the data view for.
 		 * @param new_view The new view to set for the block.
 		 */
+
 	public:
 		void updateBlockDataView(Ref<BlockT> block, base::TypedModRawView<EntryT> new_view) {
 			usize expected_size;
@@ -171,14 +173,13 @@ namespace vm {
 			else
 				expected_size = block->data.element_type->getSize().asInt();
 			CORE_ASSERT(
-				expected_size == new_view.size(),
-				"New view size must match the block's type size"
+				expected_size == new_view.size(), "New view size must match the block's type size"
 			);
 			base::TypedModRawView<EntryT> old_root_view = block->data.view;
 
 			std::function<void(Ref<BlockT>)> update_block_data_recursively
 				= [&](Ref<BlockT> current_block) -> void {
-				base::TypedModRawView<EntryT> current_view      = current_block->data.view;
+				base::TypedModRawView<EntryT> current_view = current_block->data.view;
 				auto offset_from_start = current_view.getBegin() - old_root_view.getBegin();
 				current_block->data.view
 					= { new_view.getBegin() + offset_from_start, current_view.size() };
@@ -189,21 +190,21 @@ namespace vm {
 
 			update_block_data_recursively(block);
 		}
-	private:
 
+	private:
 		/**
 		 * @brief Executes destructors on individual objects that are in the block.
 		 * @param block The block to source the data from.
 		 */
 		void runDataDestructors(Ref<BlockT> block) {
-			iterateOverDataAndExecute(block, &IMemory::runObjectDestructor);
+			iterateOverDataAndExecute(block, &GenericMemory::runObjectDestructor);
 		}
 
 		/**
 		 * @brief Executes destructors on a range of objects, that lay next to each other.
 		 */
 		void runDataDestructors(base::TypedModRawView<EntryT> data, TypeCRef type) {
-			iterateOverDataAndExecute(data, type, &IMemory::runObjectDestructor);
+			iterateOverDataAndExecute(data, type, &GenericMemory::runObjectDestructor);
 		}
 
 		/**
@@ -211,14 +212,14 @@ namespace vm {
 		 * @param block The block to source the data from.
 		 */
 		void runDataCopyConstructors(Ref<BlockT> block) {
-			iterateOverDataAndExecute(block, &IMemory::runObjectCopyConstructor);
+			iterateOverDataAndExecute(block, &GenericMemory::runObjectCopyConstructor);
 		}
 
 		/**
 		 * @brief Executes copy constructors on a range of objects, that lay next to each other.
 		 */
 		void runDataCopyConstructors(base::TypedModRawView<EntryT> data, TypeCRef type) {
-			iterateOverDataAndExecute(data, type, &IMemory::runObjectCopyConstructor);
+			iterateOverDataAndExecute(data, type, &GenericMemory::runObjectCopyConstructor);
 		}
 
 		/**
@@ -228,7 +229,7 @@ namespace vm {
 		 */
 		void iterateOverDataAndExecute(
 			Ref<BlockT> block,
-			void (IMemory::*callback)(base::TypedModRawView<EntryT> data, TypeCRef type)
+			void (GenericMemory::*callback)(base::TypedModRawView<EntryT> data, TypeCRef type)
 		) {
 			iterateOverDataAndExecute(block->data.view, block->data.element_type, callback);
 		}
@@ -243,7 +244,7 @@ namespace vm {
 		void iterateOverDataAndExecute(
 			base::TypedModRawView<EntryT> data,
 			TypeCRef                      type,
-			void (IMemory::*callback)(base::TypedModRawView<EntryT> data, TypeCRef type)
+			void (GenericMemory::*callback)(base::TypedModRawView<EntryT> data, TypeCRef type)
 		) {
 			if (type->getKind() != Type::Kind::DynamicTable) {
 				// Only types other than dynamic_table can be next to each other.
@@ -276,7 +277,7 @@ namespace vm {
 				for (const auto& fields = **type->getFields(); auto [offset, shadowOffset, tp]: fields)
 					(this->*callback)(
 						base::TypedModRawView<EntryT>{ data.getBegin() + offset.asInt(),
-													   tp->getSize().asInt() },
+					                                   tp->getSize().asInt() },
 						tp
 					);
 				break;
@@ -290,10 +291,10 @@ namespace vm {
 				// laying next to each other, then iterate over those as well. Here we start from
 				// the second, since the first one was handled above
 				for (auto next_item = type->getSize().asInt(); next_item < data.size();
-					 next_item += type->getSize().asInt()) {
+				     next_item += type->getSize().asInt()) {
 					iterateOverDataAndExecute(
 						base::TypedModRawView<EntryT>{ data.getBegin() + next_item,
-													   type->getSize().asInt() },
+					                                   type->getSize().asInt() },
 						type,
 						callback
 					);
@@ -366,7 +367,7 @@ namespace vm {
 		}
 
 	public:
-		IMemory() = default;
+		GenericMemory() = default;
 
 		[[nodiscard]]
 		Ref<BlockT> getBlock(BlockID id) {
@@ -387,41 +388,13 @@ namespace vm {
 		 * no leaks, etc.
 		 * @return True if memory was used correctly, false otherwise.
 		 */
-		bool validateMemoryState() const {
-#define TEST_HERE(test)                                              \
-	if (test) {                                                      \
-		std::cerr << #test ", BlockID=" << block.id.asInt() << "\n"; \
-		return false;                                                \
-	}
-			for (const auto& block: blocks) {
-				TEST_HERE(block.refcount != 0)
-				TEST_HERE(!block.deallocated)
-			}
-			return true;
-		}
+		// Defined in memory.cpp so the header does not need <iostream> for std::cerr.
+		bool validateMemoryState() const;
 
 		/**
 		 * @brief Frees all the global data
 		 */
-		void deinitGlobals() {
-			try {
-				// We are first freeing all the data and then decreasing the refcounts.
-				// This is very important, because there might be links between the global
-				// variables, and if we were to free them and decrease the refcount in the wrong
-				// order we might throw a false-positive exception. This solution avoids this
-				// problem.
-
-				for (const auto& block_ptr: global_data_blocks) freeBlockData(Ref(block_ptr));
-
-				for (const auto& block_ptr: global_data_blocks)
-					decreaseBlockRefcount(Ref(block_ptr));
-			} catch (exceptions::VMFoundMemoryLeakException&) {
-				std::cerr << "Leak during global data deinitialization - e.g. there was a global "
-							 "pointer to "
-							 "data, that was not freed.\n";
-				throw;
-			}
-		}
+		void deinitGlobals();
 
 		struct GlobalBlocksConfig {
 			std::vector<usize>    global_data_offsets;
@@ -501,7 +474,7 @@ namespace vm {
 
 		// =================== Used by executor ===================
 
-		auto initializeFrameStack() -> Ref<BasicThreadStack<EntryT>> {
+		auto initializeFrameStack() -> Ref<GenericThreadStack<EntryT>> {
 			threads_frame_stacks.emplace_back();
 			return &threads_frame_stacks.back();
 		}
@@ -512,7 +485,7 @@ namespace vm {
 		 */
 		GlobalBufferPointers<EntryT, BlockT> getGlobalDataMemory() {
 			return { .data_buffer_base   = global_data_buffer.data(),
-					 .blocks_buffer_base = global_data_blocks.data() };
+				     .blocks_buffer_base = global_data_blocks.data() };
 		}
 
 		auto allocateHeap(TypeCRef type) -> Ref<BlockT> {
@@ -541,11 +514,12 @@ namespace vm {
 		   a table of size n with elements of type equal to type's inner type.
 		 */
 		auto dynTableReallocateBlockDataN(Ref<BlockT> block, u64 n) -> void {
-			auto              tbl_type       = block->data.element_type;
-			auto              inner_type     = tbl_type->getInnerType().value();
-			BlockData<EntryT> new_block_data = heap_allocator.dynTableAllocateN(tbl_type, inner_type, n);
-			auto              old_view_size  = block->data.view.size();
-			auto              new_view_size  = new_block_data.view.size();
+			auto              tbl_type   = block->data.element_type;
+			auto              inner_type = tbl_type->getInnerType().value();
+			BlockData<EntryT> new_block_data
+				= heap_allocator.dynTableAllocateN(tbl_type, inner_type, n);
+			auto old_view_size = block->data.view.size();
+			auto new_view_size = new_block_data.view.size();
 
 			BlockT mock_block{ BlockID{ 0 }, new_block_data };
 
@@ -561,7 +535,8 @@ namespace vm {
 		 * For the block to be freed, use deleteBlock.
 		 */
 		void freeBlockData(Ref<BlockT> block) {
-			for (const auto child: block->children_blocks | std::views::values) freeBlockData(child);
+			for (const auto child: block->children_blocks | std::views::values)
+				freeBlockData(child);
 
 			runDataDestructors(block);
 
@@ -602,6 +577,8 @@ namespace vm {
 			initialized_globals.insert(global_block->id);
 		}
 
+		void initializeBlockFromConstValue(Ref<Block> block, const code::ConstantValue& const_value);
+
 		/**
 		 * @brief Returns a view of block's data
 		 */
@@ -615,8 +592,8 @@ namespace vm {
 
 		/**
 		 * @brief Gets the nested block from block at offset.
-		 * @note Parent pointer also stores offset within the parent block where to take the
-		 * nested view block from.
+		 * @note `parent_block` is non-null by construction of `Ref`; callers resolving it from a
+		 * `Pointer` get a `VMNullPointerAccessException` from `Pointer::getBlock()` on null.
 		 */
 		static MRef<BlockT> getNestedViewBlock(Ref<BlockT> parent_block, u64 offset, TypeCRef type) {
 			if_opt_some(parent_block->children_blocks.atMaybe(offset), nested) {
@@ -627,8 +604,8 @@ namespace vm {
 
 		/**
 		 * @brief Creates new block at position.
-		 * @note Parent pointer also stores offset within the parent block where to create the new
-		 * nested view block.
+		 * @note `parent_block` is non-null by construction of `Ref`; callers resolving it from a
+		 * `Pointer` get a `VMNullPointerAccessException` from `Pointer::getBlock()` on null.
 		 */
 		void setNestedViewBlock(Ref<BlockT> parent_block, u64 offset, TypeCRef type) {
 			auto& children = parent_block->children_blocks;
@@ -640,11 +617,10 @@ namespace vm {
 			auto block_data         = parent_block->data;
 			block_data.element_type = type;
 			u64 entry_count;
-			if constexpr (std::is_same_v<EntryT, vm::ShadowEntry>) {
+			if constexpr (std::is_same_v<EntryT, vm::ShadowEntry>)
 				entry_count = type->getShadowSize();
-			} else {
+			else
 				entry_count = type->getSize().asInt();
-			}
 			if (parent_block->deallocated) throw exceptions::VMUseAfterFreeException();
 			if (offset + entry_count > parent_block->data.view.size())
 				throw exceptions::VMOutOfBlockBoundsException();
@@ -676,18 +652,15 @@ namespace vm {
 
 		[[nodiscard]]
 		static auto newBlockReference(Ref<Block> block, u64 offset) -> Pointer
-			requires std::is_same_v<EntryT, std::byte>
-		{
+			requires std::is_same_v<EntryT, std::byte> {
 			increaseBlockRefcount(block);
 			return { block, offset };
 		}
 
 		[[nodiscard]]
-		static constexpr __attribute__((always_inline)) auto getPointerData(
-			Pointer pointer, u64 entry_count
-		) -> base::TypedModRawView<std::byte>
-			requires std::is_same_v<EntryT, std::byte>
-		{
+		static constexpr
+			__attribute__((always_inline)) auto getPointerData(Pointer pointer, u64 entry_count)
+				-> base::TypedModRawView<std::byte> requires std::is_same_v<EntryT, std::byte> {
 			if (pointer.block == nullptr) throw exceptions::VMNullPointerAccessException();
 			if (pointer.block->deallocated) throw exceptions::VMUseAfterFreeException();
 			if (pointer.offset + entry_count > pointer.block->data.view.size())
@@ -701,8 +674,7 @@ namespace vm {
 		 * that it is the type of the blocks pointed-to by `dst` and `src`.
 		 */
 		auto copyPointedData(Pointer dst, Pointer src, TypeCRef type) -> void
-			requires std::is_same_v<EntryT, std::byte>
-		{
+			requires std::is_same_v<EntryT, std::byte> {
 			if (dst.isNull() || src.isNull()) throw exceptions::VMNullPointerCopyException();
 
 			const usize entry_count = type->getSize().asInt();
@@ -710,8 +682,8 @@ namespace vm {
 			// Free child blocks.
 			auto& dst_child_blocks = dst.getBlock()->children_blocks;
 			for (auto iter = dst_child_blocks.lower_bound(dst.offset);
-				 iter != dst_child_blocks.end() && iter->first < dst.offset + entry_count;
-				 iter = dst_child_blocks.erase(iter)) {
+			     iter != dst_child_blocks.end() && iter->first < dst.offset + entry_count;
+			     iter = dst_child_blocks.erase(iter)) {
 				freeBlockData(iter->second);
 			}
 
@@ -722,8 +694,8 @@ namespace vm {
 			// Copy the child blocks
 			auto& src_child_blocks = src.getBlock()->children_blocks;
 			for (auto iter = src_child_blocks.lower_bound(src.offset);
-				 iter != src_child_blocks.end() && iter->first < src.offset + entry_count;
-				 ++iter) {
+			     iter != src_child_blocks.end() && iter->first < src.offset + entry_count;
+			     ++iter) {
 				auto offset = dst.offset + iter->first - src.offset;
 				setNestedViewBlock(dst.getBlock(), offset, iter->second->data.element_type);
 				copyBlocksRecursively(dst.getBlock()->children_blocks[offset], iter->second);
@@ -735,14 +707,12 @@ namespace vm {
 		}
 
 		auto destroyBlockReference(Pointer pointer) -> void
-			requires std::is_same_v<EntryT, std::byte>
-		{
+			requires std::is_same_v<EntryT, std::byte> {
 			if_opt_some(pointer.block.toOpt(), block) { decreaseBlockRefcount(block); }
 		}
 
 		auto updatePointerAssignment(Pointer dst, Pointer src) -> Pointer
-			requires std::is_same_v<EntryT, std::byte>
-		{
+			requires std::is_same_v<EntryT, std::byte> {
 			if (dst.block != src.block) {
 				destroyBlockReference(dst);
 				if_opt_some(src.block.toOpt(), block) { increaseBlockRefcount(block); }
@@ -769,7 +739,15 @@ namespace vm {
 		}
 	};
 
-	using Memory = IMemory<std::byte>;
-	using PointerGeneric = Pointer;
+	using Memory                      = GenericMemory<std::byte>;
+	using PointerGeneric              = Pointer;
 	using GlobalBufferPointersGeneric = GlobalBufferPointers<std::byte>;
+
+	// The member specialization is defined in initialization_from_const.cpp. It must be declared
+	// here so it is visible in every TU before the explicit instantiation of
+	// GenericMemory<std::byte> (in memory.cpp) and any implicit instantiation ([temp.expl.spec]).
+	template<>
+	void Memory::initializeBlockFromConstValue(
+		Ref<Block> block, const code::ConstantValue& const_value
+	);
 }

@@ -11,6 +11,7 @@
 #include <vm/core/safe/memory/memory.hpp>
 #include <vm/core/safe/memory/thread_stack.hpp>
 #include <vm/core/thread/ivmthread.hpp>
+#include <vm/core/thread/kill_process_exception.hpp>
 #include <vm/core/vmvalue/vmvalue.hpp>
 
 #include <limits>
@@ -68,10 +69,7 @@ namespace vm {
 		std::byte* global_data_buffer_base;    /// Pointer to the start of global data buffer.
 		Block** global_block_ref_buffer_base;  /// Pointer to the start of global block ref buffer.
 
-		RuntimeData(
-			Ref<ThreadStack>            stack,
-			GlobalBufferPointersGeneric global_buffer_pointers
-		):
+		RuntimeData(Ref<ThreadStack> stack, GlobalBufferPointersGeneric global_buffer_pointers):
 			  frame_stack_base(stack->getFrameStack()->data()),
 			  frame_stack_end(stack->getFrameStack()->data() + stack->getFrameStack()->size()),
 			  frame_stack_current(stack->getFrameStack()->data()),
@@ -176,6 +174,8 @@ namespace vm {
 
 		void execGlobalDestructors() override;
 
+		void handleKillProcessException(const KillProcessException& e);
+
 	protected:
 		void executeOneStep() override;
 
@@ -190,7 +190,9 @@ namespace vm {
 		 */
 		void run(const std::string& func_name, const RunArguments& run_arguments) override;
 
-		std::expected<low::LowCodePosition, api::ApiError> getCurrentPosition();
+		std::expected<low::LowCodePosition, api::ApiError> getCurrentPosition(
+			base::Optional<usize> frame_idx = std::nullopt
+		);
 
 		friend class SafeVMProcess;
 		friend class FastTrackSafeVMThread;

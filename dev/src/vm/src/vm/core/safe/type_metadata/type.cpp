@@ -109,22 +109,23 @@ namespace vm {
 	}
 
 	void Type::defineData(
-		const std::vector<FieldDefinition>&  fields_definitions,
-		base::Optional<InheritanceMetadata>  inheritance_metadata,
-		ShadowSize                           pass_shadow_size
+		const std::vector<std::tuple<base::StrID, TypeRef, Offset, ShadowOffset>>& fields_definitions,
+		const TypeSize                                                             data_size,
+		base::Optional<InheritanceMetadata>                                        inheritance_metadata,
+		ShadowSize                                                                 pass_shadow_size
 	) {
 		CORE_ASSERT(state == State::Declared, "Bad type define");
 		state = State::Defined;
 
 		kind_type   = Kind::Data;
+		size        = data_size;
 		shadow_size = pass_shadow_size;
 		auto data   = kind::Data{};
-		for (const auto& field_def: fields_definitions) {
-			data.field_name_map.put(field_def.name, data.fields.size());
-			// byte offset is set during finalization; shadow offset comes from ValidType
-			data.fields.emplace_back(kind::FieldDesc{ .offset        = Offset(0),
-				.shadow_offset = field_def.shadow_offset,
-				.type          = field_def.type });
+		for (auto [sub_name, sub_type, sub_offset, sub_shadow_offset]: fields_definitions) {
+			data.field_name_map.put(sub_name, data.fields.size());
+			data.fields.emplace_back(kind::FieldDesc{ .offset        = sub_offset,
+				                                       .shadow_offset = sub_shadow_offset,
+				                                       .type          = sub_type });
 		}
 		data.inheritance_metadata = std::move(inheritance_metadata);
 		kind                      = data;
@@ -180,14 +181,9 @@ namespace vm {
 				// shadow_size is pre-set from ValidType via defineFixedSizeTable
 			}
 			variant_case(kind::Data, data) {
-				// calculate byte offsets only; shadow offsets are pre-set from ValidType
-				Offset offset(0);
-				for (auto& field: data.fields) {
-					field.offset = offset;
-					field.type->finalize();
-					offset += field.type->getSize();
-				}
-				this->size = offset;
+				// Byte offsets, shadow offsets and the total size are pre-set from ValidType via
+				// defineData(); the validator is the single source of truth for structure layout.
+				for (auto& field: data.fields) field.type->finalize();
 				if_opt_some(data.inheritance_metadata, imd) { inheritsFromImpl(imd); }
 				isInstantiableImpl(data);
 			}
@@ -233,7 +229,7 @@ namespace vm {
 		);
 	}
 
-    base::Optional<ShadowOffset> Type::getFieldShadowOffsetByName(base::StrID field_name) const {
+	base::Optional<ShadowOffset> Type::getFieldShadowOffsetByName(base::StrID field_name) const {
 		return get<kind::Data>().flatMap(
 			[field_name](CRef<kind::Data> data) -> base::Optional<ShadowOffset> {
 				if_opt_some(data->field_name_map.atMaybe(field_name), field_index) {
@@ -242,8 +238,18 @@ namespace vm {
 				return {};
 			}
 		);
+	}
 
-    }
+	base::Optional<TypeCRef> Type::getFieldTypeByName(base::StrID field_name) const {
+		return get<kind::Data>().flatMap(
+			[field_name](CRef<kind::Data> data) -> base::Optional<TypeCRef> {
+				if_opt_some(data->field_name_map.atMaybe(field_name), field_index) {
+					return data->fields[*field_index].type;
+				}
+				return {};
+			}
+		);
+	}
 
 	base::Optional<CRef<std::vector<kind::FieldDesc>>> Type::getFields() const {
 		return get<kind::Data>().map([](CRef<kind::Data> data) { return CRef(&data->fields); });

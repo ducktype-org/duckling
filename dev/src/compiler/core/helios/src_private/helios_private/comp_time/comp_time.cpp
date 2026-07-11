@@ -3,13 +3,14 @@
 #include <ctv/ctv.hpp>
 #include <ctv/numeric_value.hpp>
 #include <diagnostic_interactive/placeholder.hpp>
+#include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/includes/basic.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/mangler/mangler.hpp>
 #include <helios/queries/function_queries.hpp>
 #include <helios/queries/queries.hpp>
+#include <helios/symbols/lang_primitives.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios_private/comp_time/vm_evaluator.hpp>
 #include <helios_private/hout_creation/expressions/coercions.hpp>
@@ -27,6 +28,7 @@
 #include <cmath>
 #include <ranges>
 #include <type_traits>
+#include <unordered_set>
 
 namespace compiler::helios {
 	using namespace ctv;
@@ -207,14 +209,14 @@ namespace compiler::helios {
 			}
 
 			void visitIdentifierExpr(const code::IdentifierExpr& expr) final {
-				// Type Evaluation.
-				if (expr.expression_type.getType().getKind() == tsh::Kind::Meta) {
-					auto type = ctx.query<QueryTypeFromDefinition>({ expr.symbol });
-					result    = type->valueOrThrow();
-				} else if (kind(expr.symbol) == SymbolKind::Const) {
+				if (kind(expr.symbol) == SymbolKind::Const) {
 					// Constant Evaluation.
 					auto const_val_result = ctx.query<QueryConstValueOf>({ expr.symbol });
 					result                = const_val_result.valueOrThrow();
+				} else if (kind(expr.symbol) == SymbolKind::Class) {
+					// Special case for type definitions.
+					auto type = ctx.query<QueryTypeFromDefinition>({ expr.symbol });
+					result    = type->valueOrThrow();
 				} else {
 					match_optional(expr.origin.getStablePosition()) {
 						opt_some(pos) {
@@ -496,6 +498,10 @@ namespace compiler::helios {
 								return ctv::CompileTimeValue{ tsh::SymbolType<>::withDefaults(
 									ctx.query<tsh::QueryCPointerType>({ val })
 								) };
+							case Slice:
+								return ctv::CompileTimeValue{ tsh::SymbolType<>::withDefaults(
+									ctx.query<tsh::QuerySliceType>({ val })
+								) };
 							default:
 								ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 									"Evaluation of this unary operator at compile "
@@ -674,9 +680,9 @@ namespace compiler::helios {
 				result = CompileTimeValue{ maybe_new_numeric.value() };
 			}
 
-			void visitRefOfExpr(const code::RefOfExpr&) final { result = CouldNotShortPath{}; }
+			void visitMoveExpr(const code::MoveExpr&) final { result = CouldNotShortPath{}; }
 
-			void visitBoxOfExpr(const code::BoxOfExpr&) final { result = CouldNotShortPath{}; }
+			void visitRefOfExpr(const code::RefOfExpr&) final { result = CouldNotShortPath{}; }
 
 			void visitDerefExpr(const code::DerefExpr&) final { result = CouldNotShortPath{}; }
 
@@ -783,9 +789,10 @@ namespace compiler::helios {
 		 * 					  evaluate `func_to_call`
 		 */
 		struct LIRBuildResult final {
-			std::string func_to_call;  // Mangled name of the function we evaluate.
-			std::vector<CRef<lir::Function>>
-				functions;             // List of LIR functions needed to evaluate `func_to_call`.
+			/// Mangled name of the function we evaluate.
+			std::string func_to_call;
+			/// List of LIR functions and other entites needed to evaluate `func_to_call`.
+			lir::LIRUnit lir_unit;
 		};
 
 		/**
@@ -811,11 +818,35 @@ namespace compiler::helios {
 				= &ctx.query<QueryTransitiveFunctionCalls>(function_sym_id)->valueOrThrow();
 
 			auto mangled_name_function_to_call
-				= ctx.query<mangler::QueryMangledSymbol>({ function_sym_id });
+				= ctx.query<mangler::QueryMangledSymbol>({ .symbol_key = function_sym_id });
+
+			std::vector<SymID>        all_dependencies;
+			std::unordered_set<SymID> seen_dependencies;
+			auto                      add_dependencies = [&](const std::vector<SymID>& deps) {
+                for (const SymID& func_id: deps)
+                    if (seen_dependencies.insert(func_id).second)
+                        all_dependencies.push_back(func_id);
+			};
+			add_dependencies(*dependencies);
+
+			// Some dependencies are injected by MIR lowering rather than being present in the HOUT,
+			// so they are invisible to the HOUT-level transitive call collection. In particular
+			// array/slice bounds checks emit a call to `panic`, thus we must load it into the VM as
+			// well.
+			if (frontend::getModuleByAbsolutePath(
+					ctx, base::StrID("core"), { base::StrID("panicking") }
+				)) {
+				auto panic_sym
+					= ctx.query<QueryLanguagePrimitiveSymID>({ LanguagePrimitive::Panic })
+				          ->valueOrThrow();
+				Ref panic_dependencies
+					= &ctx.query<QueryTransitiveFunctionCalls>(panic_sym)->valueOrThrow();
+				add_dependencies(*panic_dependencies);
+			}
 
 			// temporary hout unit used to lower functions to LIR
 			HOUTUnit hout_unit;
-			for (const SymID& func_id: *dependencies) {
+			for (const SymID& func_id: all_dependencies) {
 				auto& hout_func = ctx.query<QueryCodeOfFun>(func_id)->valueOrThrow();
 				hout_unit.functions.emplace_back(&hout_func);
 			}
@@ -825,7 +856,7 @@ namespace compiler::helios {
 			// Note: the assumptions bellow might change,
 			// for example when we will add consts to comp time.
 			CORE_ASSERT(
-				lir_unit.lir_functions.size() == dependencies->size(),
+				lir_unit.lir_functions.size() == all_dependencies.size(),
 				"Number of lir functions should be the same as number of dependencies collected."
 			);
 			CORE_ASSERT(
@@ -835,7 +866,7 @@ namespace compiler::helios {
 
 			return LIRBuildResult{
 				.func_to_call = mangled_name_function_to_call.str(),
-				.functions    = std::move(lir_unit.lir_functions),
+				.lir_unit     = std::move(lir_unit),
 			};
 		}
 
@@ -875,7 +906,7 @@ namespace compiler::helios {
 
 			auto lir_build_result = prepareLIRForDVM(ctx, function_sym_id);
 			if (lir_build_result.hasFailed()) return query::Failed();
-			const auto& [func_to_call_name, all_lir_functions] = lir_build_result.valueOrThrow();
+			const auto& [func_to_call_name, lir_unit] = lir_build_result.valueOrThrow();
 
 
 			// Retrieve the functions return type.
@@ -887,7 +918,7 @@ namespace compiler::helios {
 			tsh::FunctionAbstractType func_type(callee_abs_type);
 
 			auto vm_eval_result = executeInVm(
-				ctx, func_to_call_name, all_lir_functions, ctv_arguments, func_type.getResultType()
+				ctx, func_to_call_name, lir_unit, ctv_arguments, func_type.getResultType()
 			);
 
 			if (!vm_eval_result) {

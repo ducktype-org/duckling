@@ -41,7 +41,9 @@ namespace vm::code::valid_type {
 
 		void defineDynamicTable(ValidTypeID inner);
 
-		void defineData(const std::vector<std::pair<base::StrID, ValidTypeID>>& fields_definitions);
+		void defineData(
+			const std::vector<std::pair<base::StrID, ValidTypeID>>& fields_definitions, bool packed
+		);
 
 		void defineClass(
 			const std::vector<std::pair<base::StrID, ValidTypeID>>& fields_definitions,
@@ -121,14 +123,21 @@ namespace vm::code::valid_type {
 
 		[[nodiscard]] TypeSize getSize() const;
 
-		[[nodiscard]] ShadowSize  getShadowSize() const;
-		[[nodiscard]] PointerSize getPointerSize() const;
+		/**
+		 * @brief Alignment requirement of this type, as a dual-width value (like size, alignment
+		 * can differ between the 8- and 16-byte pointer modes). Non-packed structures align each
+		 * field to the field type's alignment and round their total size up to the structure's
+		 * alignment (the C layout rules). VM-only kinds (variants, dynamic tables) use alignment
+		 * 1, as they are accessed via memcpy and never cross the FFI boundary.
+		 */
+		[[nodiscard]] TypeSize getAlignment() const;
+
+		[[nodiscard]] ShadowSize getShadowSize() const;
 
 		// O(1) lookup: shadow entry index for any concrete byte offset within this structure type.
 		[[nodiscard]] u32 getShadowOffsetForByteOffset(u32 byte_offset) const;
 
 		[[nodiscard]] base::Optional<u32> getFieldShadowOffsetByName(base::StrID field_name) const;
-		[[nodiscard]] base::Optional<u32> getFieldPointerOffsetByName(base::StrID field_name) const;
 
 		bool operator==(const ValidType& other) const;
 
@@ -169,9 +178,10 @@ namespace vm::code::valid_type {
 		 */
 		bool is_trivially_copyable = true;
 
-		TypeSize    size         = TypeSize(Bytes(0), 0);
-		ShadowSize  shadow_size  = 0;
-		PointerSize pointer_size = 0;
+		TypeSize   size        = TypeSize(Bytes(0), 0);
+		ShadowSize shadow_size = 0;
+
+		TypeSize alignment = TypeSize(Bytes(1), Bytes(1));
 
 		ValidType(base::StrID name, ValidTypeID id);
 

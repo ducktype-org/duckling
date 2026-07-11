@@ -122,18 +122,29 @@ namespace {
 					);
 				}
 				variant_case(vm::code::valid_type::finalized::Structure, data) {
-					std::vector<vm::Type::FieldDefinition> fields
-						= data.fields
-					    | transform([&](auto& field) -> vm::Type::FieldDefinition {
-							  return { .name          = field.name,
-							           .type          = type_metadata->at(vm::TypeID(field.type.asInt())),
-							           .shadow_offset = static_cast<vm::ShadowOffset>(field.shadow_offset) };
+					// The validator is the source of truth for layout: field byte offsets, shadow
+					// offsets, and the total size are taken from it, byte offsets resolved for
+					// this runtime's pointer width.
+					auto resolve_size = [](const vm::code::valid_type::TypeSize& size) {
+						return size.assumePointerSize(vm::Type::POINTER_SIZE);
+					};
+					std::vector<std::tuple<base::StrID, vm::TypeRef, vm::Offset, vm::ShadowOffset>>
+						fields
+						= data.fields | transform([&](auto& field) {
+							  return std::tuple{
+								  field.name,
+								  type_metadata->at(vm::TypeID(field.type.asInt())),
+								  resolve_size(field.offset),
+								  static_cast<vm::ShadowOffset>(field.shadow_offset)
+							  };
 						  })
 					    | to<std::vector>();
 					base::Optional<vm::InheritanceMetadata> inh_metadata
 						= buildInheritanceMetadata(*type_metadata, *type, data);
-					type_at_metadata->defineData(fields, inh_metadata, vt_shadow_size);
-				type_at_metadata->setByteToShadow(data.byte_to_shadow);
+					type_at_metadata->defineData(
+						fields, resolve_size(type->getSize()), inh_metadata, vt_shadow_size
+					);
+					type_at_metadata->setByteToShadow(data.byte_to_shadow);
 				}
 				variant_case(vm::code::valid_type::finalized::Variant, data) {
 					std::vector<vm::TypeRef> variants

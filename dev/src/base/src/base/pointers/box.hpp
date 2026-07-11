@@ -41,7 +41,7 @@ namespace base {
 		template<class U, class UDeleter>
 		friend class MBox;
 
-		template<class U, class UDeleter>
+		template<class U>
 		friend class SharedBox;
 
 		constexpr void assertNotNull() const {
@@ -330,6 +330,26 @@ namespace base {
 		T& operator*() const {
 			assertNotNull();
 			return *ptr;
+		}
+
+		template<class U, class UDeleter = base::DefaultBoxPtrDeleter<U>>
+		requires std::is_constructible_v<UDeleter, Deleter&&> MBox<U, UDeleter> dynamicCast() && {
+			U* ret = dynamic_cast<U*>(ptr);
+
+			if (ret == nullptr and ptr != nullptr) {
+				// This branch guards against a memory leak.
+
+				// CORE_PANIC is not perfect here, but it is also not trivial what should happen in
+				// this case, and there is no std counterpart to this operation. If you need this
+				// not to panic, feel free to implement this logic somehow. It would probably be
+				// best to keep the *this object intact, and return a null MBox, but then we need to
+				// construct a new deleter for the new MBox, which is unintuitive.
+
+				CORE_PANIC("Failed to dynamic cast MBox for: ", typeid(T).name(), typeid(U).name());
+			}
+
+			ptr = nullptr;
+			return MBox<U, UDeleter>(ret, std::move(deleter));
 		}
 
 		/**

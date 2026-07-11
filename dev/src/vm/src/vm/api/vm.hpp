@@ -16,6 +16,11 @@
 namespace vm::api {
 	/**
 	 * @brief Create new process in DVM.
+	 * @param settings Process configuration. `settings.mode` selects the execution mode
+	 * (Safe/Fast); `settings.enable_deadlock_detection`, when true (defaults to false), makes the
+	 * process detect circular mutex wait chains at runtime and throw VMDeadlockException. When
+	 * false, deadlock detection is skipped and circular waits will block indefinitely until the
+	 * process is stopped. `settings.enable_fast_track` enables data-race detection.
 	 * @return The response containing the PID of the newly created process or an API error if the
 	 * process wasn't created.
 	 */
@@ -208,7 +213,7 @@ namespace vm::api {
 
 	/**
 	 * @brief Attaches Listener to the on_status_changed Emitter
-	 * @return Nothing if attached succesfully
+	 * @return Nothing if attached successfully
 	 */
 	std::expected<void, ApiError> attachStatusListener(
 		PID pid, Ref<events::Listener<ProcStatus>> listener
@@ -216,7 +221,7 @@ namespace vm::api {
 
 	/**
 	 * @brief Attaches Listener to the output emitter
-	 * @return Nothing if attached succesfully
+	 * @return Nothing if attached successfully
 	 */
 	std::expected<void, ApiError> attachOutputListener(
 		PID pid, Ref<events::Listener<std::string>> listener

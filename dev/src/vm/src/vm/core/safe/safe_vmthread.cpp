@@ -689,18 +689,32 @@ namespace vm {
 		for (const auto& [global, id, name]: process_program->getGlobals().allData()) {
 			auto block_ref
 				= Ref(runtime_data.global_block_ref_buffer_base[global->global_block_idx]);
-			// Insert the global data if it hasn't been initialized; then run constructor if present
-			if (not process_memory.isGlobalInitialized(block_ref) && global->ctor_name.has_value()) {
-				try {
-					const auto& func
-						= *process_program->getFunctions().atMaybe(global->ctor_name.value()).value();
-					low::LowFuncData start_function = createStartFunctionFor(func, {});
-					executeFunction(start_function, func);
-					process_memory.setGlobalInitialized(block_ref);
-				} catch (const KillProcessException& e) {
-					respondExecutionRequest(api::ExecutionPanicked{ e.what() });
-					return;
+			if (not process_memory.isGlobalInitialized(block_ref)) {
+				variant_match(global->init) {
+					variant_case(low::GlobalCtorDtor, ctor_dtor) {
+						if (ctor_dtor.ctor_name.has_value()) {
+							try {
+								const auto& func = *process_program->getFunctions()
+								                        .atMaybe(ctor_dtor.ctor_name.value())
+								                        .value();
+								low::LowFuncData start_function = createStartFunctionFor(func, {});
+								executeFunction(start_function, func);
+							} catch (const KillProcessException& e) {
+								auto status = safe_process.getCurrentStatus();
+								if (std::holds_alternative<api::ExecutionPanicked>(status))
+									respondExecutionRequest(status);
+								else
+									respondExecutionRequest(api::ExecutionPanicked{ e.what() });
+								return;
+							}
+						}
+					}
+					variant_case(low::GlobalInitialValue, value_init) {
+						// Copy the constant initial value bytes directly to the global's memory.
+						process_memory.initializeBlockFromConstValue(block_ref, value_init.value);
+					}
 				}
+				process_memory.setGlobalInitialized(block_ref);
 			}
 		}
 
@@ -740,9 +754,14 @@ namespace vm {
 				respondExecutionRequest(current_status);
 			else
 				respondExecutionRequest(api::ExecutionCompleted{ exit_value });
-		} catch (const KillProcessException& e) {
+		} catch (const KillProcessException& e) { handleKillProcessException(e); }
+	}
+
+	void SafeVMThread::handleKillProcessException(const KillProcessException& e) {
+		if (safe_process.isExecutionPanicked())
+			respondExecutionRequest(safe_process.getCurrentStatus());
+		else
 			respondExecutionRequest(api::ExecutionPanicked{ e.what() });
-		}
 	}
 
 	void SafeVMThread::execGlobalDestructors() {
@@ -752,28 +771,39 @@ namespace vm {
 		// earlier-created resources is destroyed first, preventing use-after-destruction and
 		// keeping teardown safe and logically consistent.
 		for (const auto& [global, id, name]: std::ranges::reverse_view(globals)) {
-			if (global->dtor_name.has_value()) {
+			auto* ctor_dtor = std::get_if<low::GlobalCtorDtor>(&global->init);
+			if (ctor_dtor && ctor_dtor->dtor_name.has_value()) {
 				try {
-					const auto&      func = *executing_program->getFunctions()
-					                             .atMaybe(base::StrID(global->dtor_name.value()))
-					                             .expect(
-													 "Called function does not exist: "
-													 + global->dtor_name.value().str()
-												 );
+					const auto& func = *executing_program->getFunctions()
+					                        .atMaybe(ctor_dtor->dtor_name.value())
+					                        .expect(
+												"Called function does not exist: "
+												+ ctor_dtor->dtor_name.value().str()
+											);
 					low::LowFuncData start_function = createStartFunctionFor(func, {});
 					executeFunction(start_function, func);
-				} catch (const KillProcessException& e) {
-					respondExecutionRequest(api::ExecutionPanicked{ e.what() });
-				}
+				} catch (const KillProcessException& e) { handleKillProcessException(e); }
 			}
 		}
 	}
 
-	std::expected<low::LowCodePosition, api::ApiError> SafeVMThread::getCurrentPosition() {
+	std::expected<low::LowCodePosition, api::ApiError> SafeVMThread::getCurrentPosition(
+		base::Optional<usize> opt_frame_idx
+	) {
 		variant_match(getStatus()) {
 			variant_case_novalue(api::Paused) {
-				auto  frame = runtime_data.frame_stack_current;
-				auto& func  = *frame->current_function;
+				auto frame = runtime_data.frame_stack_current;
+
+				if_opt_some(opt_frame_idx, frame_index) {
+					u64 frames = getNumberOfCurrentStackFrames();
+					if (frame_index >= frames)
+						return std::unexpected(api::ApiError{
+							api::OtherError{ "Frame index out of bounds" } });
+
+					frame = &getStackFrame(frame_index);
+				}
+
+				auto& func = *frame->current_function;
 
 				return low::LowCodePosition{
 					.function          = &func,
