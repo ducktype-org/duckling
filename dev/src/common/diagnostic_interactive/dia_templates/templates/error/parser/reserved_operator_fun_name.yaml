@@ -1,0 +1,34 @@
+metadata:
+  type: "error"
+  family: "parser"
+  name: "reserved_operator_fun_name"
+  code: "0"
+  active_from: "0.0.1"
+  active_until: "now"
+  template_type: "message"
+
+params:
+  code:
+    description: "The code snippet where the error occurred."
+  code_location:
+    description: "The location of the code snippet."
+  operator:
+    description: "The reserved operator used as a function name."
+
+header_message:
+  - "Operator `"
+  - param: "operator"
+  - "` is reserved and cannot be user-defined."
+
+description:
+  - codeblock:
+      param: "code"
+    location:
+      param: "code_location"
+
+pointer_messages:
+  cause:
+    priority: 1
+    type: "error"
+    content:
+      - "here"
