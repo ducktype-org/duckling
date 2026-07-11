@@ -32,6 +32,8 @@ namespace vm::debugger::debug_adapter {
 
 			  variant_match(status) {
 				  variant_case(api::Paused, status) {
+					  std::lock_guard<std::mutex> lock(variables_mutex);
+					  variables.clear();
 					  this->sendEvent(
 						  "stopped",
 						  { { "reason", "pause" }, { "threadId", 0 }, { "allThreadsStopped", true } }
@@ -194,7 +196,7 @@ namespace vm::debugger::debug_adapter {
 		send(message);
 	}
 
-	void DebugAdapter::sendErrorResponse(const nlohmann::json& request, const std::string err_msg) {
+	void DebugAdapter::sendErrorResponse(const nlohmann::json& request, const std::string& err_msg) {
 		sendResponse(request, false, { "message", err_msg });
 	}
 
@@ -440,10 +442,10 @@ namespace vm::debugger::debug_adapter {
 				info.var_ref = next_ref;
 				next_ref++;
 
-				children_map.insert({ name_str, std::move(info) });
+				children_map.insert({ name_str, info });
 
 			} else {
-				children_map.insert({ name_str, std::move(info) });
+				children_map.insert({ name_str, info });
 			}
 		}
 		for (auto& child: complex_children_to_register) variables.emplace_back(std::move(child));
@@ -496,6 +498,7 @@ namespace vm::debugger::debug_adapter {
 	}
 
 	void DebugAdapter::handleStackTrace(const nlohmann::json& req) {
+		std::lock_guard<std::mutex> lock(variables_mutex);
 		auto thread_id     = api::ThreadID((u64) req["arguments"].value("threadId", 0));
 		u64  start_frame   = (u64) req["arguments"].value("startFrame", 0);
 		u64  levels        = (u64) req["arguments"].value("levels", 0);
@@ -552,7 +555,8 @@ namespace vm::debugger::debug_adapter {
 	}
 
 	void DebugAdapter::handleScopes(const nlohmann::json& req) {
-		int frame_id = req["arguments"]["frameId"].get<int>();
+		std::lock_guard<std::mutex> lock(variables_mutex);
+		int                         frame_id = req["arguments"]["frameId"].get<int>();
 
 		nlohmann::json response_body
 			= { { "scopes",
@@ -565,6 +569,7 @@ namespace vm::debugger::debug_adapter {
 	}
 
 	void DebugAdapter::handleVariables(const nlohmann::json& req) {
+		std::lock_guard<std::mutex> lock(variables_mutex);
 		try {
 			u64 var_ref = (u64) req["arguments"]["variablesReference"].get<int>();
 
