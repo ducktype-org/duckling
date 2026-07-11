@@ -1,4 +1,5 @@
 #include <diagnostic_interactive/logger.hpp>
+#include <driver/test_utils.hpp>
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
@@ -110,6 +111,18 @@ public:
 		// so we test all the scopes created in helios tests:
 		TESTER_ADD_TEST(testScopeParentsAndDepth);
 		TESTER_ADD_TEST(testScopeSymbolsConsistency);
+	}
+
+protected:
+	void beforeAll() override {
+		// Initialize the compiler so the standard library is loaded. Some tests lower functions
+		// to MIR (e.g. transitive default-constructor dependencies), and MIR lowering of array
+		// indexing inserts a bounds-check call to the `Panic` language primitive, which lives in
+		// the std `core.panicking` module.
+		fs::FilePath artifacts_path = fs::FileManager::createRandomTempDirectory().getFilePath();
+		auto         init_result
+			= compiler::driver::test_utils::initializeCompilerForTests({}, artifacts_path);
+		assertTrue(init_result.status().isOk(), "Compiler initialization failed");
 	}
 
 private:
@@ -2816,7 +2829,8 @@ private:
 				ASSERT_TRUE(call != nullptr);
 
 				auto ctor_sym = getIdentifierExprSymID(call->callee.ref()).value();
-				auto deps     = ctx.query<QueryTransitiveFunctionCalls>(ctor_sym)->valueOrThrow();
+				auto deps
+					= ctx.query<QueryTransitiveUsedSymbols>(ctor_sym)->valueOrThrow().used_functions;
 
 				// Should not call any recursive ctors.
 				ASSERT_EQUAL_PRINT(1, deps.size());
@@ -2831,7 +2845,8 @@ private:
 
 				auto call     = dynamic_cast<const CallExpr*>(expr.get());
 				auto ctor_sym = getIdentifierExprSymID(call->callee.ref()).value();
-				auto deps     = ctx.query<QueryTransitiveFunctionCalls>(ctor_sym)->valueOrThrow();
+				auto deps
+					= ctx.query<QueryTransitiveUsedSymbols>(ctor_sym)->valueOrThrow().used_functions;
 
 				// The top-level constructor should call one function which is a default ctor of
 				// `WithInit`.
@@ -2852,10 +2867,13 @@ private:
 
 				auto call     = dynamic_cast<const CallExpr*>(expr.get());
 				auto ctor_sym = getIdentifierExprSymID(call->callee.ref()).value();
-				auto deps     = ctx.query<QueryTransitiveFunctionCalls>(ctor_sym)->valueOrThrow();
+				auto deps
+					= ctx.query<QueryTransitiveUsedSymbols>(ctor_sym)->valueOrThrow().used_functions;
 
-				// Ctor(ArrayHolder) -> Ctor(WithInit[5]) -> Ctor(WithInit)
-				ASSERT_EQUAL_PRINT(3, deps.size());
+				// Ctor(ArrayHolder) -> Ctor(WithInit[5]) -> Ctor(WithInit), plus the bounds-check
+				// chain emitted by the static-array init loop (`panic`, `builtin_output_str`,
+				// `length`), which the MIR-level used-symbol collection now sees.
+				ASSERT_EQUAL_PRINT(6, deps.size());
 
 				bool found_array_ctor = false;
 				for (auto d: deps) {
@@ -2876,7 +2894,8 @@ private:
 
 				auto call     = dynamic_cast<const CallExpr*>(expr.get());
 				auto ctor_sym = getIdentifierExprSymID(call->callee.ref()).value();
-				auto deps     = ctx.query<QueryTransitiveFunctionCalls>(ctor_sym)->valueOrThrow();
+				auto deps
+					= ctx.query<QueryTransitiveUsedSymbols>(ctor_sym)->valueOrThrow().used_functions;
 
 				// Ctor(TupleHolder) -> Ctor((WithInit, WithInit)) -> Ctor(WithInit)
 				ASSERT_EQUAL_PRINT(3, deps.size());
@@ -2899,7 +2918,8 @@ private:
 
 				auto call     = dynamic_cast<const CallExpr*>(expr.get());
 				auto ctor_sym = getIdentifierExprSymID(call->callee.ref()).value();
-				auto deps     = ctx.query<QueryTransitiveFunctionCalls>(ctor_sym)->valueOrThrow();
+				auto deps
+					= ctx.query<QueryTransitiveUsedSymbols>(ctor_sym)->valueOrThrow().used_functions;
 
 				// Ctor(DeepStack) -> Ctor(Nested) -> Ctor(WithInit)
 				ASSERT_EQUAL_PRINT(3, deps.size());

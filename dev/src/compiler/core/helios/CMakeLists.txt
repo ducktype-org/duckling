@@ -81,7 +81,7 @@ add_library(HELIOS STATIC
 make_module(HELIOS USES Base QueryFramework PstParser ModuleTree Hashing CTV LibVM MIR LIR DVMBackend)
 
 duck_add_test(compiler helios tests/helios_test.cpp
-	USES Base PstParser HELIOS
+	USES Base PstParser HELIOS Driver
 	INCLUDE "${CMAKE_CURRENT_LIST_DIR}/src_private")
 
 duck_add_test(compiler helios_with_std tests/helios_with_std_test.cpp

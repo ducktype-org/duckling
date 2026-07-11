@@ -55,4 +55,25 @@ namespace compiler::mir {
 	 * @note Exposed in the interface mostly for tests
 	 */
 	Function lowerToPreMIRFunction(query::Context&, CRef<helios::HOUTFunction> function);
+
+	/**
+	 * @brief Symbols used directly by a function, as collected from its MIR code.
+	 * @details `used_functions` holds the HELIOS SymID-s of functions referenced by the code
+	 * (e.g. call targets), `used_globals` holds the HELIOS SymID-s of global variables and global
+	 * constants that the code reads or writes. Both lists are deduplicated.
+	 */
+	struct MIRUsedSymbols final {
+		std::vector<helios::SymID> used_functions;
+		std::vector<helios::SymID> used_globals;
+	};
+
+	/**
+	 * @brief Queries the MIR code of a function and walks its structure to collect all symbols
+	 * (functions and global variables) used directly by that function.
+	 *
+	 * @note This is a plain helper, not a query. It expects a function SymID that has MIR code,
+	 * i.e. one for which `helios::implementsQueryCodeOfFun` returns true; callers are responsible
+	 * for that check.
+	 */
+	MIRUsedSymbols getMIRUsedSymbols(query::Context& ctx, helios::SymID function_id);
 }

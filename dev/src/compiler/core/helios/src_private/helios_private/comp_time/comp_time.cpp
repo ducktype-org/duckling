@@ -814,8 +814,9 @@ namespace compiler::helios {
 		) {
 			// Collect all function dependencies for this function. All functions needed in
 			// order to evaluate this one.
-			Ref dependencies
-				= &ctx.query<QueryTransitiveFunctionCalls>(function_sym_id)->valueOrThrow();
+			Ref dependencies = &ctx.query<QueryTransitiveUsedSymbols>(function_sym_id)
+			                        ->valueOrThrow()
+			                        .used_functions;
 
 			auto mangled_name_function_to_call
 				= ctx.query<mangler::QueryMangledSymbol>({ .symbol_key = function_sym_id });
@@ -829,24 +830,10 @@ namespace compiler::helios {
 			};
 			add_dependencies(*dependencies);
 
-			// Some dependencies are injected by MIR lowering rather than being present in the HOUT,
-			// so they are invisible to the HOUT-level transitive call collection. In particular
-			// array/slice bounds checks emit a call to `panic`, thus we must load it into the VM as
-			// well.
-			if (frontend::getModuleByAbsolutePath(
-					ctx, base::StrID("core"), { base::StrID("panicking") }
-				)) {
-				auto panic_sym
-					= ctx.query<QueryLanguagePrimitiveSymID>({ LanguagePrimitive::Panic })
-				          ->valueOrThrow();
-				Ref panic_dependencies
-					= &ctx.query<QueryTransitiveFunctionCalls>(panic_sym)->valueOrThrow();
-				add_dependencies(*panic_dependencies);
-			}
-
 			// temporary hout unit used to lower functions to LIR
 			HOUTUnit hout_unit;
 			for (const SymID& func_id: all_dependencies) {
+				if (not implementsQueryCodeOfFun(func_id)) continue;
 				auto& hout_func = ctx.query<QueryCodeOfFun>(func_id)->valueOrThrow();
 				hout_unit.functions.emplace_back(&hout_func);
 			}

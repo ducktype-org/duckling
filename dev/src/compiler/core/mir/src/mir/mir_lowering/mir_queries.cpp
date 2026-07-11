@@ -8,11 +8,13 @@
 #include <helios/hout/hout.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/mangler/mangler.hpp>
+#include <helios/queries/function_queries.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <mir_private/expr_lowering.hpp>
 #include <mir_private/mir_builders.hpp>
 #include <mir_private/stmt_lowering.hpp>
 
+#include <base/extend_cpp/variant_match.hpp>
 #include <base/str/str_utils.hpp>
 
 #include <query_framework/query_int.hpp>
@@ -316,4 +318,87 @@ namespace compiler::mir {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(LowerToMIRFunction);
+
+	namespace {
+		void collectUsedSymbolsFromValue(
+			const MIRValue&                    value,
+			MIRUsedSymbols&                    out,
+			std::unordered_set<helios::SymID>& seen_functions,
+			std::unordered_set<helios::SymID>& seen_globals
+		);
+
+		void collectUsedSymbolsFromPlace(
+			const MIRPlace&                    place,
+			MIRUsedSymbols&                    out,
+			std::unordered_set<helios::SymID>& seen_functions,
+			std::unordered_set<helios::SymID>& seen_globals
+		) {
+			if (place.isGlobal()) {
+				auto global_id = place.getBase<MIRGlobal>().helios_id;
+				if (seen_globals.insert(global_id).second) out.used_globals.push_back(global_id);
+			}
+
+			// Index projections carry a nested MIRValue that may itself reference symbols.
+			for (const auto& projection: place.projection_chain)
+				if (auto* index_proj = std::get_if<MIRPlace::IndexProjection>(&projection.storage))
+					collectUsedSymbolsFromValue(
+						*index_proj->index, out, seen_functions, seen_globals
+					);
+		}
+
+		void collectUsedSymbolsFromValue(
+			const MIRValue&                    value,
+			MIRUsedSymbols&                    out,
+			std::unordered_set<helios::SymID>& seen_functions,
+			std::unordered_set<helios::SymID>& seen_globals
+		) {
+			variant_match(value.getVariant()) {
+				variant_case(MIRPlace, place) {
+					collectUsedSymbolsFromPlace(place, out, seen_functions, seen_globals);
+				}
+				variant_case(MIRFunctionLiteral, function_literal) {
+					if (seen_functions.insert(function_literal.helios_id).second)
+						out.used_functions.push_back(function_literal.helios_id);
+				}
+				// MIRConstant and BlockID do not reference functions or globals.
+				variant_default {}
+			}
+		}
+
+		void collectUsedSymbolsFromInstruction(
+			const Instruction&                 instruction,
+			MIRUsedSymbols&                    out,
+			std::unordered_set<helios::SymID>& seen_functions,
+			std::unordered_set<helios::SymID>& seen_globals
+		) {
+			if (instruction.output.has_value())
+				collectUsedSymbolsFromPlace(
+					instruction.output.value(), out, seen_functions, seen_globals
+				);
+
+			for (const auto& argument: instruction.arguments)
+				collectUsedSymbolsFromValue(argument, out, seen_functions, seen_globals);
+		}
+	}
+
+	MIRUsedSymbols getMIRUsedSymbols(query::Context& ctx, helios::SymID function_id) {
+		const auto& hout_function = ctx.query<helios::QueryCodeOfFun>(function_id)->valueOrThrow();
+		const auto& mir_function
+			= ctx.query<mir::LowerToMIRFunction>({ &hout_function })->valueOrThrow();
+
+		MIRUsedSymbols                    result;
+		std::unordered_set<helios::SymID> seen_functions;
+		std::unordered_set<helios::SymID> seen_globals;
+
+		for (const auto& block_id: mir_function.block_order) {
+			const auto& block = mir_function.blocks[block_id];
+			for (const auto& instruction: block.instructions)
+				collectUsedSymbolsFromInstruction(instruction, result, seen_functions, seen_globals);
+			collectUsedSymbolsFromInstruction(
+				block.terminator, result, seen_functions, seen_globals
+			);
+		}
+
+		return result;
+	}
 }

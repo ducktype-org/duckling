@@ -26,6 +26,7 @@
 #include <helios_private/symbols/generated_symbol_data.hpp>
 #include <helios_private/symbols/pst_symbol_data.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
+#include <mir/mir_lowering/mir_queries.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
@@ -1081,7 +1082,7 @@ namespace compiler::helios {
 		QUERY_IMPLEMENTATION_BOILERPLATE(QueryGeneratedSymbol);
 	}
 
-	struct IMPLEMENT_QUERY(QueryDirectFunctionCalls, query::QResult<std::vector<SymID>>) {
+	struct IMPLEMENT_QUERY(QueryDirectUsedSymbols, query::QResult<UsedSymbols>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			CORE_ASSERT(
 				isFunctionLike(kind(key)),
@@ -1093,7 +1094,10 @@ namespace compiler::helios {
 				// dependent symbol.
 				if (hasAttribute<attributes::BackendDependent>(key)) {
 					// If yes then we append all the results from all implementations.
-					return getBackendDependentImplementations(ctx, key);
+					return UsedSymbols{
+						.used_functions = getBackendDependentImplementations(ctx, key),
+						.used_globals   = {},
+					};
 				} else {
 					return {};
 				}
@@ -1101,25 +1105,32 @@ namespace compiler::helios {
 
 			if (not implementsQueryCodeOfFun(key)) return {};
 
-			const auto& fun_hout_result = ctx.query<QueryCodeOfFun>(key)->valueOrThrow();
-			return code::collectCalledSymbols(fun_hout_result);
+			// Walk the function's MIR to collect the symbols it uses, then re-package them into
+			// the HELIOS-level result type.
+			auto mir_used_symbols = mir::getMIRUsedSymbols(ctx, key);
+			return UsedSymbols{
+				.used_functions = std::move(mir_used_symbols.used_functions),
+				.used_globals   = std::move(mir_used_symbols.used_globals),
+			};
 		}
 
 		QUERY_AUTO_CACHE_CREF
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDirectFunctionCalls);
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDirectUsedSymbols);
 
-	struct IMPLEMENT_QUERY(QueryTransitiveFunctionCalls, query::QResult<std::vector<SymID>>) {
+	struct IMPLEMENT_QUERY(QueryTransitiveUsedSymbols, query::QResult<UsedSymbols>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			CORE_ASSERT(
 				kind(key) == SymbolKind::Function || kind(key) == SymbolKind::FunctionDeclaration,
-				"Query transitive function dependencies called on non-function symbol"
+				"Query transitive used symbols called on non-function symbol"
 			);
 
 			std::vector<SymID>        worklist;
 			std::unordered_set<SymID> visited_functions;
-			std::vector<SymID>        all_dependencies;
+			std::vector<SymID>        all_functions;
+			std::vector<SymID>        all_globals;
+			std::unordered_set<SymID> seen_globals;
 
 			worklist.push_back(key);  // Insert root function SymID.
 			visited_functions.insert(key);
@@ -1128,29 +1139,37 @@ namespace compiler::helios {
 				SymID current_func = worklist.back();
 				worklist.pop_back();
 
-				all_dependencies.push_back(current_func);
+				all_functions.push_back(current_func);
 
-				Ref direct_dependencies
-					= &ctx.query<QueryDirectFunctionCalls>(current_func)->valueOrThrow();
+				const auto& direct_used_symbols
+					= ctx.query<QueryDirectUsedSymbols>(current_func)->valueOrThrow();
 
-				for (const SymID& dependency: *direct_dependencies) {
+				// Follow the transitive call graph through the used functions...
+				for (const SymID& dependency: direct_used_symbols.used_functions) {
 					if (!visited_functions.contains(dependency)) {
 						visited_functions.insert(dependency);
 						worklist.push_back(dependency);
 					}
 				}
+
+				// ...while accumulating every global reachable along the way, deduplicated.
+				for (const SymID& global: direct_used_symbols.used_globals)
+					if (seen_globals.insert(global).second) all_globals.push_back(global);
 			}
 
-			base::filterVectorInPlace(all_dependencies, [](auto sym) {
+			base::filterVectorInPlace(all_functions, [](auto sym) {
 				return kind(sym) != SymbolKind::FunctionDeclaration;
 			});
-			return all_dependencies;
+			return UsedSymbols{
+				.used_functions = std::move(all_functions),
+				.used_globals   = std::move(all_globals),
+			};
 		}
 
 		QUERY_AUTO_CACHE_CREF
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTransitiveFunctionCalls);
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTransitiveUsedSymbols);
 
 	std::vector<SymID> getAllHeliosSymbols() {
 		// this implementation is fragile, adjust if needed

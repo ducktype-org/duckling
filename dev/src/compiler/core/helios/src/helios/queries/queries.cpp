@@ -175,12 +175,12 @@ namespace compiler::helios {
 				// Note, to make the templated global variables work (or templated class static
 				// variables) we have to not only look for calls, but also for usages of the global
 				// variables and add them to worklist.
-				auto qresult = ctx.query<QueryDirectFunctionCalls>(current_fun);
+				auto qresult = ctx.query<QueryDirectUsedSymbols>(current_fun);
 				if (qresult->hasFailed()) {
 					result = base::BAD;
 					continue;
 				}
-				auto& called_funs = qresult->valueOrThrow();
+				auto& called_funs = qresult->valueOrThrow().used_functions;
 
 				for (auto called_fun: called_funs) {
 					if (visited_function_symbols.contains(called_fun)) continue;

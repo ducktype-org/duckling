@@ -11,6 +11,7 @@
 #include <base/pointers/box.hpp>
 
 #include <filesystem/file.hpp>
+#include <logger/logger.hpp>
 #include <query_framework/context/context.hpp>
 #include <query_framework/entry/with_context_do.hpp>
 #include <query_framework/query_result.hpp>
@@ -24,6 +25,10 @@ class HeliosErrorsTests: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+		logger::enable_dev_logs = true;
+		logger::enableDevCategoryByStringName("QueryStacktraces");
+		logger::enableDevCategoryByStringName("Query");
+
 		TESTER_ADD_TEST(testErrorLogging);
 		TESTER_ADD_TEST(testMoveErrors);
 		TESTER_ADD_TEST(testUseBeforeInit);

@@ -119,26 +119,40 @@ namespace compiler::helios {
 	}
 
 	/**
-	 * @brief Query all function called from a function (e.g. for a given function SymID, return
-	 * all SymID-s of functions called directly by this one.
+	 * @brief Symbols used by a function, split by kind so callers can pick the ones they care
+	 * about: `used_functions` are the functions it references (e.g. call targets), `used_globals`
+	 * are the global variables/constants it reads or writes.
+	 * @note Shared by both the direct (@ref QueryDirectUsedSymbols) and transitive (@ref
+	 * QueryTransitiveUsedSymbols) queries.
+	 */
+	struct UsedSymbols final {
+		std::vector<SymID> used_functions;
+		std::vector<SymID> used_globals;
+	};
+
+	/**
+	 * @brief Query all symbols used directly by a function: the functions it calls and the global
+	 * variables/constants it references. See @ref UsedSymbols.
 	 * @note Works only for SymID-s that represent functions (both PST and generated).
 	 *
 	 * \query_thread_safe_if_cache
 	 */
-	DECLARE_QUERY(QueryDirectFunctionCalls, SymID, CRef<query::QResult<std::vector<SymID>>>, ({}));
+	DECLARE_QUERY(QueryDirectUsedSymbols, SymID, CRef<query::QResult<UsedSymbols>>, ({}));
 
 	/**
-	 * @brief Query all function dependencies of a function (e.g. SymID-s of all functions called by
-	 * this function or all functions called by the called functions). A function is considered its
-	 * own dependency, meaning calling this query with a function which doesn't call any other
-	 * functions will return a vector containing the SymID provided in the key.
+	 * @brief Query all symbols transitively used by a function: every function reachable through
+	 * the call graph and every global variable/constant referenced by any of those functions. See
+	 * @ref UsedSymbols.
+	 *
+	 * `used_functions` is the transitive closure of the call graph. A function is considered its
+	 * own dependency, so calling this query with a function which doesn't call any other functions
+	 * returns a `used_functions` vector containing just the SymID provided in the key.
+	 * `used_globals` is the union of the globals directly used by every function in that closure.
 	 * @note This query is used to determine all other functions that have to be compiled when
 	 * compile time evaluating a function and when collecting default constructor dependencies.
 	 * @note Works only for SymID-s that represent functions (both PST and generated).
 	 *
 	 * \query_thread_safe_if_cache
 	 */
-	DECLARE_QUERY(
-		QueryTransitiveFunctionCalls, SymID, CRef<query::QResult<std::vector<SymID>>>, ({})
-	);
+	DECLARE_QUERY(QueryTransitiveUsedSymbols, SymID, CRef<query::QResult<UsedSymbols>>, ({}));
 }
