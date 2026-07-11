@@ -11,6 +11,7 @@
 #include <vm/core/process/ivmprocess.hpp>
 #include <vm/core/process/proc_io.hpp>
 #include <vm/core/safe/concurrency/synchronization_primitives.hpp>
+#include <vm/core/safe/fast_track_safe_vmthread.hpp>
 #include <vm/core/safe/safe_vmprocess.hpp>
 #include <vm/core/safe/safe_vmthread.hpp>
 #include <vm/core/safe/type_metadata/definitions.hpp>
@@ -20,6 +21,7 @@
 #include <chrono>
 #include <cstdio>
 #include <cstring>
+#include <optional>
 
 namespace vm::builtins {
 
@@ -181,7 +183,14 @@ namespace vm::builtins {
 
 	i64 FunctionHandlers::builtinStartThread(SafeVMThread& thread) {
 		thread.releaseGil();
+
 		auto result = vm::api::runFunction(thread.safe_process.getPID(), thread.getThreadCtx());
+
+		if (result.has_value() && thread.safe_process.getSettings().enable_fast_track) {
+			auto& ft = static_cast<FastTrackSafeVMThread&>(thread);
+			ft.getFTData().vc.increment(ft.getFTData().thread_id);
+		}
+
 		thread.acquireGil();
 		if (!result.has_value()) return -vm::api::errorToErrno(result.error());
 		return static_cast<i64>(result.value().asInt());
@@ -191,12 +200,27 @@ namespace vm::builtins {
 		thread.releaseGil();
 		auto result = vm::api::join(thread.safe_process.getPID(), api::ThreadID{ thread_id });
 		thread.acquireGil();
+
+		// Read the joinee's final VC after the join has completed and GIL is held again.
+		// The slot cannot be recycled while we hold the GIL.
+		if (result.has_value() && thread.safe_process.getSettings().enable_fast_track) {
+			auto target = thread.safe_process.getVMThreadByID(api::ThreadID{ thread_id });
+			if (target) {
+				auto& ft_joinee = static_cast<FastTrackSafeVMThread&>(*target.value());
+				auto& ft_joiner = static_cast<FastTrackSafeVMThread&>(thread);
+				ft_joiner.getFTData().joinVC(ft_joinee.getFTData().getVC());
+			}
+		}
+
 		if (!result.has_value()) return -vm::api::errorToErrno(result.error());
 		return 0;  // success
 	}
 
 	u64 FunctionHandlers::builtinCreateMutex(SafeVMThread& thread) {
-		return thread.safe_process.getSynchronizationPrimitives().addMutex();
+		auto id = thread.safe_process.getSynchronizationPrimitives().addMutex();
+		if (thread.safe_process.getSettings().enable_fast_track)
+			thread.safe_process.getSynchronizationPrimitives().getMutex(id)->vc.emplace();
+		return id;
 	}
 
 	void FunctionHandlers::builtinLockMutex(SafeVMThread& thread, u64 mutex_id) {
@@ -212,8 +236,10 @@ namespace vm::builtins {
 		// Fast path: mutex is free — grab it with a non-blocking CAS while still holding the
 		// GIL. Skips the GIL release/acquire pair and the expensive timed syscall. We also
 		// skip the intermediate "waiting" state in the detector because we never waited.
-		if (mutex->try_lock()) {
+		if (mutex->m.try_lock()) {
 			if_opt_some(detector, d) d.markThreadAcquiredMutex(thread_id, mutex_id);
+			if (thread.safe_process.getSettings().enable_fast_track)
+				static_cast<FastTrackSafeVMThread&>(thread).getFTData().onAcquire(*mutex->vc);
 			return;
 		}
 
@@ -221,7 +247,7 @@ namespace vm::builtins {
 		// other DVM threads can run while we block.
 		if_opt_some(detector, d) d.markThreadWaitingForMutex(thread_id, mutex_id);
 		thread.releaseGil();
-		while (!mutex->try_lock_for(std::chrono::milliseconds{ 500 })) {
+		while (!mutex->m.try_lock_for(std::chrono::milliseconds{ 500 })) {
 			if (thread.isTerminateRequested()) {
 				// Acquire GIL before throwing: exception handlers and destructors need exclusive
 				// access to process state (memory blocks, primitives, thread metadata) during cleanup.
@@ -233,6 +259,8 @@ namespace vm::builtins {
 		// Acquire GIL after blocking: bytecode execution requires holding the GIL.
 		thread.acquireGil();
 		if_opt_some(detector, d) d.markThreadAcquiredMutex(thread_id, mutex_id);
+		if (thread.safe_process.getSettings().enable_fast_track)
+			static_cast<FastTrackSafeVMThread&>(thread).getFTData().onAcquire(*mutex->vc);
 	}
 
 	void FunctionHandlers::builtinUnlockMutex(SafeVMThread& thread, u64 mutex_id) {
@@ -240,7 +268,9 @@ namespace vm::builtins {
 
 		auto  thread_id = thread.getThreadID();
 		auto* detector  = thread.safe_process.getDeadlockDetector();
-		mutex->unlock();
+		if (thread.safe_process.getSettings().enable_fast_track)
+			static_cast<FastTrackSafeVMThread&>(thread).getFTData().onRelease(*mutex->vc);
+		mutex->m.unlock();
 		if_opt_some(detector, d) d.markThreadReleasedMutex(thread_id, mutex_id);
 	}
 
@@ -254,18 +284,23 @@ namespace vm::builtins {
 	}
 
 	void FunctionHandlers::builtinWaitCV(SafeVMThread& thread, u64 cv_id, u64 mutex_id) {
-		auto  cv        = thread.safe_process.getSynchronizationPrimitives().getCV(cv_id);
-		auto  mutex     = thread.safe_process.getSynchronizationPrimitives().getMutex(mutex_id);
-		auto  thread_id = thread.getThreadID();
-		auto* detector  = thread.safe_process.getDeadlockDetector();
+		auto       cv         = thread.safe_process.getSynchronizationPrimitives().getCV(cv_id);
+		auto       mutex      = thread.safe_process.getSynchronizationPrimitives().getMutex(mutex_id);
+		auto       thread_id  = thread.getThreadID();
+		auto*      detector   = thread.safe_process.getDeadlockDetector();
+		const bool ft_enabled = thread.safe_process.getSettings().enable_fast_track;
 
 		// cv->wait atomically unlocks the mutex then relocks it before returning (on any path),
 		// so we mirror that in the detector: release ownership now, reacquire after the wait.
 		if_opt_some(detector, d) d.markThreadReleasedMutex(thread_id, mutex_id);
 		thread.releaseGil();
 		try {
+			if (ft_enabled)
+				static_cast<FastTrackSafeVMThread&>(thread).getFTData().onRelease(*mutex->vc);
 			const bool interrupted
-				= cv->wait(*mutex, [&thread] { return thread.isTerminateRequested(); });
+				= cv->wait(mutex->m, [&thread] { return thread.isTerminateRequested(); });
+			if (ft_enabled)
+				static_cast<FastTrackSafeVMThread&>(thread).getFTData().onAcquire(*mutex->vc);
 			if (interrupted) throw vm::KillProcessException{};
 		} catch (const vm::exceptions::VMRuntimeException&) {
 			// Acquire GIL: exception handlers and destructors need exclusive access to process

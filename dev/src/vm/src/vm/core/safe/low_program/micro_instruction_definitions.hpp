@@ -670,6 +670,47 @@ DEF_MICRO_INSTR(ext_type_field, vm::low::opargs::Type, vm::low::opargs::Field)
 DEF_MICRO_INSTR(ext_type_p64, vm::low::opargs::Type, vm::low::opargs::Place64)
 DEF_MICRO_INSTR(ext_type_type, vm::low::opargs::Type, vm::low::opargs::Type)
 
+
+// ========= Fast Track Definitions ========
+
+// 4.4: Allocation & Initialization
+DEF_MICRO_INSTR(ft_alloc_pptr_type, vm::low::opargs::PlacePtr, vm::low::opargs::Type)
+DEF_MICRO_INSTR(ft_free_pptr, vm::low::opargs::PlacePtr)
+DEF_MICRO_INSTR(ft_init_bany_type, vm::low::opargs::PlaceBlockAny, vm::low::opargs::Type)
+DEF_MICRO_INSTR(ft_deinit)
+DEF_MICRO_INSTR(ft_call_func, vm::low::opargs::FunctionID)
+DEF_MICRO_INSTR(ft_ret)
+
+// 5.1: Direct Place Instrumentation
+DEF_MICRO_INSTR(ft_placeRead, vm::low::opargs::PlaceShadowAny)
+DEF_MICRO_INSTR(ft_placeWrite, vm::low::opargs::PlaceShadowAny)
+DEF_MICRO_INSTR(ft_placeCRead, vm::low::opargs::PlaceShadowAny)
+DEF_MICRO_INSTR(ft_placeCWrite, vm::low::opargs::PlaceShadowAny)
+
+// 5.2: Direct Heap/Struct Instrumentation
+DEF_MICRO_INSTR(ft_structRead, vm::low::opargs::PlacePtr, vm::low::opargs::Type)
+DEF_MICRO_INSTR(ft_structWrite, vm::low::opargs::PlacePtr, vm::low::opargs::Type)
+DEF_MICRO_INSTR(ft_arrayRead, vm::low::opargs::PlacePtr, vm::low::opargs::Place64)
+DEF_MICRO_INSTR(ft_arrayWrite, vm::low::opargs::PlacePtr, vm::low::opargs::Place64)
+
+// 5.3: Stack Struct Instrumentation
+DEF_MICRO_INSTR(ft_structRead_pste, vm::low::opargs::PlaceBlockStructure, vm::low::opargs::ShadowField)
+DEF_MICRO_INSTR(ft_structWrite_pste, vm::low::opargs::PlaceBlockStructure, vm::low::opargs::ShadowField)
+DEF_MICRO_INSTR(ft_read_pste, vm::low::opargs::PlaceBlockStructure, vm::low::opargs::Type)
+DEF_MICRO_INSTR(ft_write_pste, vm::low::opargs::PlaceBlockStructure, vm::low::opargs::Type)
+
+// 5.4: Stack Fixed-Size Table Instrumentation
+DEF_MICRO_INSTR(ft_arrayRead_pfst, vm::low::opargs::PlaceBlockFSTable, vm::low::opargs::Place64)
+DEF_MICRO_INSTR(ft_arrayWrite_pfst, vm::low::opargs::PlaceBlockFSTable, vm::low::opargs::Place64)
+DEF_MICRO_INSTR(ft_read_pfst, vm::low::opargs::PlaceBlockFSTable, vm::low::opargs::Type)
+DEF_MICRO_INSTR(ft_write_pfst, vm::low::opargs::PlaceBlockFSTable, vm::low::opargs::Type)
+DEF_MICRO_INSTR(ft_dynTableReAlloc, vm::low::opargs::PlacePtr, vm::low::opargs::Type)
+
+// 5.5: Stack & Heap Variant Instrumentation
+DEF_MICRO_INSTR(ft_variantSetInner_psbvnt_type, vm::low::opargs::PlaceBlockVariant, vm::low::opargs::Type)
+DEF_MICRO_INSTR(ft_variantSetInner_pptr_type, vm::low::opargs::PlacePtr, vm::low::opargs::Type)
+DEF_MICRO_INSTR(ft_variantTagRead_pptr, vm::low::opargs::PlacePtr)
+
 // ========= MISC ========
 
 DEF_MICRO_INSTR(check_strategy)

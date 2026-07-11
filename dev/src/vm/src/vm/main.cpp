@@ -2,6 +2,8 @@
 #include "server.hpp"
 #include "vm_repl.hpp"
 
+#include <vm/api/settings.hpp>
+
 #include <clah/clah.hpp>
 #include <clah/clah_class.hpp>
 #include <clah/param_builder.hpp>
@@ -122,6 +124,10 @@ clah::Clah getVmClah() {
 	                     .addShortName('l')
 	                     .addLongName("ffi-lib")
 	                     .build())
+				.add(clah::ParamBuilder::ofFlag()
+	                     .addLongName("fast-track")
+	                     .addShortDesc("Enable FastTrack data-race detection.")
+	                     .build())
 				.setHandler([](const clah::ParsingResult& options) -> int {
 					vm::Supervisor::get();
 
@@ -136,9 +142,10 @@ clah::Clah getVmClah() {
 					std::vector<std::string> ffi_libs
 						= options.getValue<std::vector<std::string>>("ffi-lib").copyValueOr({});
 
-					vm::api::ProcessConfig process_options{};
+					vm::api::ProcessSettings process_options{};
 					if (options.isFlag("fast-mode"))
 						process_options.mode = vm::api::ProcessMode::Fast;
+					process_options.enable_fast_track = options.isFlag("fast-track");
 
 					if (options.isFlag("debug")) {
 						auto cli = vm::debugger::cli::CLIDebugger();

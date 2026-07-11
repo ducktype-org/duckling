@@ -7,7 +7,13 @@
 #include <base/types/ints.hpp>
 
 #include <vm/core/musttail.hpp>
+#include <vm/core/safe/memory/frame.hpp>
 #include <vm/utils/interpret.hpp>
+#include <vm/core/safe/safe_vmthread.hpp>
+#include <vm/core/safe/safe_vmprocess.hpp>
+#include <vm/core/safe/fast_track_safe_vmthread.hpp>
+#include <vm/core/safe/fast_track_safe_vmprocess.hpp>
+#include <vm/core/safe/low_program/low_program.hpp>
 
 namespace vm {
 	template<typename EntryT>
@@ -90,10 +96,56 @@ inline static void writeToPlace(
 	getBlockRefFromArg(                                                                          \
 		frame->local_block_ref_stack_base, thread.runtime_data.global_block_ref_buffer_base, ARG \
 	)
-/**
- * @brief Helper macro for reading a value from a immediate argument.
- */
 #define READ_FROM_DIRECT_ARG(TYPE, ARG) safeReadObjectBytes<TYPE>(ARG)
+
+/**
+ * @brief Convenience macros for accessing FastTrack data from ft_* opcode functions.
+ * The thread argument is always SafeVMThread& but ft_* opcodes only execute when a
+ * FastTrackSafeVMThread is in use, so the downcast is safe.
+ */
+#define FT_THREAD      (static_cast<vm::FastTrackSafeVMThread&>(thread))
+#define FT_DATA        (FT_THREAD.ft_data)
+#define FT_RT          (FT_DATA.ft_runtime)
+#define FT_GLOBALS     (FT_THREAD.getFTGlobals())
+// Expands to the three args every processRead/processWrite call needs.
+#define FT_EPOCH_ARGS  FT_DATA.thread_id, FT_DATA.getVC()[FT_DATA.thread_id], FT_DATA.getVC()
+
+[[nodiscard]] [[gnu::always_inline]]
+inline static bool isGlobalPlace(u64 place_arg) {
+	return (place_arg >> 63) != 0;
+}
+
+[[nodiscard]] [[gnu::always_inline]]
+inline static vm::ShadowEntry* getShadowEntryPtr(
+	vm::Frame*, vm::FastTrackSafeVMThread& ft_thread, u64 place_arg
+) {
+	u64 offset = place_arg & ~(1ULL << 63);
+	if (isGlobalPlace(place_arg)) {
+		return ft_thread.getFTData().getGlobalShadowDataBase() + offset;
+	} else {
+		return ft_thread.getFTData().getShadowFrame()->local_shadow_data_stack + offset;
+	}
+}
+
+#define GET_SHADOW_ENTRY_PTR(ARG)   getShadowEntryPtr(frame, FT_THREAD, ARG)
+
+/**
+ * @brief Reads a value of a given TYPE from the beginning of the given view.
+ */
+template<typename T, typename EntryT>
+[[nodiscard]] [[gnu::always_inline]]
+inline static T readFromView(base::TypedModRawView<EntryT> view) {
+	return vm::safeReadPointerBytes<T>(view.getBegin());
+}
+
+/**
+ * @brief Writes a value of a given TYPE to the beginning of the given view.
+ */
+template<typename T, typename EntryT>
+[[gnu::always_inline]]
+inline static void writeToView(base::TypedModRawView<EntryT> view, const T& value) {
+	vm::safeWriteBytes<T>(view.getBegin(), value);
+}
 
 /**
  * @brief Reads a value of a given TYPE from the beginning of the given view.
@@ -110,7 +162,7 @@ inline static T readFromView(base::ModRawView view) {
 template<typename T>
 [[gnu::always_inline]]
 inline static void writeToView(base::ModRawView view, const T& value) {
-	return vm::safeWriteBytes<T>(view.getBegin(), value);
+	vm::safeWriteBytes<T>(view.getBegin(), value);
 }
 
 /**

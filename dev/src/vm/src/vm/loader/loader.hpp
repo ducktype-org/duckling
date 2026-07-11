@@ -4,8 +4,10 @@
 
 #include <filesystem/file.hpp>
 
+#include <vm/api/settings.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/validator/valid_program.hpp>
+#include <vm/core/safe/low_program/low_program.hpp>
 
 #include <expected>
 
@@ -52,7 +54,8 @@ namespace vm::loader {
 		/**
 		 * @brief Injects new code from a given high-level code representation.
 		 */
-		std::expected<void, LoaderLogger> loadAndValidate(const code::CodeCollection& code_collection
+		std::expected<void, LoaderLogger> loadAndValidate(
+			const code::CodeCollection& code_collection
 		);
 
 		CRef<code::ValidProgram> getHighProgram() const;

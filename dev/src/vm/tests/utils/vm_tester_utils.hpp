@@ -4,6 +4,7 @@
 
 #include <vm/api/api.hpp>
 #include <vm/api/data/api_error.hpp>
+#include <vm/api/settings.hpp>
 
 #include <expected>
 
@@ -23,7 +24,7 @@ protected:
 		std::expected<i64, vm::api::ApiError> run_result;  // exit code or error
 	};
 
-	vm::PID initProcess(const vm::api::ProcessConfig& config = {});
+	vm::PID initProcess(const vm::api::ProcessSettings& settings = {});
 
 	void handleTestResult(const TestResult& test_result, i64 exit_code);
 

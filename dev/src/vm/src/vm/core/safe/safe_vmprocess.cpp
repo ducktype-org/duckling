@@ -1,5 +1,7 @@
 #include "safe_vmprocess.hpp"
 
+#include <vm/core/safe/memory/block.hpp>
+#include <thread>
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
@@ -23,9 +25,32 @@
 #include <sstream>
 #include <thread>
 #include <variant>
+#include <iostream>
 
 namespace vm {
 	Memory& SafeVMProcess::getMemory() { return memory; }
+
+	// ---- Virtual thread-pool hooks (default: use vm_threads) ----
+
+	SafeVMThread& SafeVMProcess::doGetMainThread() {
+		return *vm_threads.get(api::ThreadID{ 0 });
+	}
+
+	SafeVMThread& SafeVMProcess::doGetOrCreateEmptyThread() {
+		for (auto& thread: vm_threads) {
+			if (!api::isExecuting(thread.getStatus()) && !thread.hasActiveThread()) return thread;
+		}
+		return *vm_threads.get(vm_threads.add(*this));
+	}
+
+	base::Optional<Ref<SafeVMThread>> SafeVMProcess::doGetThreadByID(api::ThreadID thread_id) {
+		if_opt_some(vm_threads.maybeGet(thread_id), thread) return thread;
+		return std::nullopt;
+	}
+
+	void SafeVMProcess::forEachThread(const std::function<void(SafeVMThread&)>& fn) {
+		for (auto& thread: vm_threads) fn(thread);
+	}
 
 	std::expected<api::Response, api::LoadProgramError> SafeVMProcess::loadProgram(
 		const std::variant<std::vector<fs::File>, code::CodeCollection>& source
@@ -57,6 +82,9 @@ namespace vm {
 		std::unique_lock lock(rw_global);
 		SafeVMThread&    thread = getEmptyThread();
 		thread.setThreadCtx(func_name);
+
+		onBeforeThreadSpawn(thread);
+
 		bool response = thread.spawnThreadAndRun(func_name, run_arguments);
 
 		if (!response) {
@@ -96,18 +124,18 @@ namespace vm {
 	}
 
 	std::expected<api::Response, api::ApiError> SafeVMProcess::stop() {
-		for (auto& thread: vm_threads) {
+		std::expected<api::Response, api::ApiError> result = api::response::Empty{};
+		forEachThread([&](SafeVMThread& thread) {
+			if (!result.has_value()) return;
 			auto response = thread.stop();
-
-			if (!thread.joinExecutionThread())
-				return std::unexpected(api::ApiError{ api::JoinError{} });
-
-			// @TODO: #1222 make two different "stop" functions, one that throws error if
-			// program was not stopped successfully and another that does nothing
-			if (!response) return std::unexpected(api::OtherError{ "unexpected status response" });
-		}
-
-		return api::response::Empty{};
+			if (!thread.joinExecutionThread()) {
+				result = std::unexpected(api::ApiError{ api::JoinError{} });
+				return;
+			}
+			if (!response)
+				result = std::unexpected(api::OtherError{ "unexpected status response" });
+		});
+		return result;
 	}
 
 	void SafeVMProcess::onTerminalStatus(const api::ProcStatus& status) noexcept {
@@ -172,28 +200,25 @@ namespace vm {
 		return Box<VmValue>::fromPointer(new VmValue(*this, type, src));
 	}
 
-	SafeVMProcess::SafeVMProcess(const PID my_pid, bool enable_deadlock_detection):
+	SafeVMProcess::SafeVMProcess(const PID my_pid, const api::ProcessSettings& settings):
 		  IVMProcess(my_pid),
+		  loader(),
+		  compiler(*loader.getHighProgram(), settings),
 		  loaded_program(&loaded_program_copy),
-		  loaded_program_copy(compiler.getLowProgram()) {
-		if (enable_deadlock_detection) deadlock_detector.emplace();
+		  loaded_program_copy(compiler.getLowProgram()),
+		  settings_(settings) {
+		if (settings.enable_deadlock_detection) deadlock_detector.emplace();
 		vm_threads.add(*this);
 	}
 
-	SafeVMThread& SafeVMProcess::getMainVMThread() { return *vm_threads.get(api::ThreadID{ 0 }); }
+
+	SafeVMThread& SafeVMProcess::getMainVMThread() { return doGetMainThread(); }
 
 	base::Optional<Ref<SafeVMThread>> SafeVMProcess::getVMThreadByID(api::ThreadID thread_id) {
-		if_opt_some(vm_threads.maybeGet(thread_id), thread) return thread;
-		return std::nullopt;
+		return doGetThreadByID(thread_id);
 	}
 
-	SafeVMThread& SafeVMProcess::getEmptyThread() {
-		for (auto& thread: vm_threads) {
-			// Thread must not be executing AND must not have an active exec_thread handle
-			if (!api::isExecuting(thread.getStatus()) && !thread.hasActiveThread()) return thread;
-		}
-		return *vm_threads.get(vm_threads.add(*this));
-	}
+	SafeVMThread& SafeVMProcess::getEmptyThread() { return doGetOrCreateEmptyThread(); }
 
 	std::expected<api::Response, api::StateError> SafeVMProcess::getExitCode() {
 		std::unique_lock lock(rw_global);
@@ -460,8 +485,9 @@ namespace vm {
 	std::vector<api::ThreadID> SafeVMProcess::getAllThreadIDs() {
 		std::shared_lock           lock(rw_global);
 		std::vector<api::ThreadID> thread_ids;
-		for (const auto& thread: vm_threads)
+		forEachThread([&](SafeVMThread& thread) {
 			if (api::isExecuting(thread.getStatus())) thread_ids.push_back(thread.getThreadID());
+		});
 		return thread_ids;
 	}
 
@@ -539,15 +565,16 @@ namespace vm {
 
 		auto new_global_buffer_pointers
 			= memory.initializeNewGlobalBlocks(Memory::GlobalBlocksConfig{
-				.global_data_offsets    = std::move(global_offsets),
-				.global_blocks_idxs     = std::move(global_indices),
-				.global_types           = std::move(global_types),
+				.global_data_offsets    = global_offsets,
+				.global_blocks_idxs     = global_indices,
+				.global_types           = global_types,
 				.total_global_data_size = global_buffer_config.buffer_size,
 				.global_count           = global_buffer_config.global_count,
 			});
 
-		for (auto& thread: vm_threads)
+		forEachThread([&](SafeVMThread& thread) {
 			thread.updateGlobalDataBufferPointers(new_global_buffer_pointers);
+		});
 	}
 
 	GIL& SafeVMProcess::getGIL() { return gil; }

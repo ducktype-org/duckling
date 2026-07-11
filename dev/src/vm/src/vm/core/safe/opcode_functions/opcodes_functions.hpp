@@ -133,7 +133,7 @@ namespace vm {
 				);
 
 			// Size of the shared stack space between called functions.
-			auto shared_stack_space_size = called_func.arg_size + called_func.ret_size;
+			auto shared_stack_space_size   = called_func.arg_size + called_func.ret_size;
 
 			auto arg_count           = called_func.parameters.size();
 			auto ret_count           = called_func.result_types.size();
@@ -142,8 +142,8 @@ namespace vm {
 				= u64(frame->local_block_ref_stack_end - frame->local_block_ref_stack_base);
 
 			// Save current registers and flow.
-			frame->instr       = instr + 1;
-			frame->local_stack = local_stack;
+			frame->instr                     = instr + 1;
+			frame->local_stack               = local_stack;
 
 			// Save the last frame
 			auto* prev_frame = frame;
@@ -169,7 +169,7 @@ namespace vm {
 			    >= runtime_data.block_ref_stack_end)
 				throw exceptions::VMStackOverflowException();
 
-			frame->local_stack_head          = shared_stack_space_size;
+			frame->local_stack_head           = shared_stack_space_size;
 			frame->local_block_ref_stack_end = prev_frame->local_block_ref_stack_end;
 
 			// Remove the argument blocks from caller's block stack. Only the return value stays in
@@ -195,8 +195,7 @@ namespace vm {
 			auto data_ptr = local_stack + frame->local_stack_head;
 			auto block    = thread.process_memory.allocateDummy(type, data_ptr);
 
-			thread.process_memory.increaseBlockRefcount(block
-			);  // so that nobody can delete our block
+			thread.process_memory.increaseBlockRefcount(block);
 
 			*frame->local_block_ref_stack_end = block.get();
 			frame->local_block_ref_stack_end += 1;
@@ -214,6 +213,7 @@ namespace vm {
 
 			thread.process_memory.freeBlockData(block);
 			thread.process_memory.decreaseBlockRefcount(block);
+
 			frame->local_stack_head -= type->getSize().asInt();
 			frame->local_block_ref_stack_end -= 1;
 		}

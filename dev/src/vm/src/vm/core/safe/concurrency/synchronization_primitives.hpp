@@ -7,15 +7,23 @@
 #include <base/pointers/ref.hpp>
 #include <base/types/ints.hpp>
 
+#include <vm/core/process/concurrency/fast_track/vc.hpp>
+
 #include <mutex>
+#include <optional>
 
 namespace vm {
+	struct Mutex {
+		std::timed_mutex           m;
+		std::optional<VectorClock> vc;  // only populated when FastTrack is enabled
+	};
+
 	class SynchronizationPrimitives final {
 	private:
 		/**
 		 * @brief Pool for mutexes used in the process.
 		 */
-		base::StableObjectPool<std::timed_mutex, u64, false> mutex_pool;
+		base::StableObjectPool<Mutex, u64, false> mutex_pool;
 
 		/**
 		 * @brief Pool for condition variables used in the process.
@@ -27,7 +35,7 @@ namespace vm {
 		/**
 		 * @brief Getter for mutexes in the pool.
 		 */
-		Ref<std::timed_mutex> getMutex(usize mutex_id);
+		Ref<Mutex> getMutex(usize mutex_id);
 
 		/**
 		 * @brief Adds new mutex into pool.

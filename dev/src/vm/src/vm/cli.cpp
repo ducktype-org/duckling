@@ -8,7 +8,6 @@
 #include <vm/api/api.hpp>
 #include <vm/api/data/api_error.hpp>
 #include <vm/api/data/process_info.hpp>
-#include <vm/api/data/process_options.hpp>
 #include <vm/bytecode/bytecode.hpp>
 
 #include <iostream>
@@ -20,10 +19,18 @@ std::string convertError(const vm::api::ApiError& api_error) {
 	return vm::api::errorToString(api_error);
 }
 
+int cli() {
+	std::string filepath;
+	std::cout << "Path to file: ";
+	std::cin >> filepath;
+
+	return cli({ fs::File(filepath) });
+}
+
 int cli(
 	const std::vector<fs::File>&    files,
 	const std::vector<std::string>& args,
-	const vm::api::ProcessConfig&   options,
+	const vm::api::ProcessSettings& settings,
 	const std::vector<std::string>& ffi_libs
 ) {
 	vm::PID pid{};
@@ -31,7 +38,7 @@ int cli(
 
 
 	std::expected<i64, std::string> result
-		= vm::api::spawn(options)
+		= vm::api::spawn(settings)
 	          .and_then([&](vm::api::ProcessInfo info) {
 				  pid = info.pid;
 

@@ -1,0 +1,369 @@
+#include <vm_tester_utils.hpp>
+
+#include <tester/tester.hpp>
+
+#include <vm/core/safe/exceptions.hpp>
+#include <iostream>
+#include <nlohmann/json.hpp>
+
+class VmFastTrackTest: public VmTestSuite {
+#undef TESTER_CLASS
+#define TESTER_CLASS VmFastTrackTest
+
+public:
+	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+		TESTER_ADD_TEST(fastTrackRaceTest);
+		TESTER_ADD_TEST(fastTrackNoRaceTest);
+		TESTER_ADD_TEST(fastTrackDisabledRaceTest);
+		TESTER_ADD_TEST(extensiveNoRaceTest);
+		TESTER_ADD_TEST(extensiveStackRaceTest);
+		TESTER_ADD_TEST(extensiveHeapRaceTest);
+		TESTER_ADD_TEST(block1ScalarRaceTest);
+		TESTER_ADD_TEST(block1CmovRaceTest);
+		TESTER_ADD_TEST(block1CmovNoRaceTest);
+		TESTER_ADD_TEST(block2FreeRaceTest);
+		TESTER_ADD_TEST(block3StructRaceTest);
+		TESTER_ADD_TEST(block4ArrayRaceTest);
+		TESTER_ADD_TEST(block5VariantRaceTest);
+		TESTER_ADD_TEST(block6OpaqueRaceTest);
+		TESTER_ADD_TEST(block7DyntableRaceTest);
+		TESTER_ADD_TEST(block8SharedWriteRaceTest);
+		TESTER_ADD_TEST(block8SharedNoRaceTest);
+		TESTER_ADD_TEST(block9FreeReadRaceTest);
+		TESTER_ADD_TEST(noRaceTest2);
+		TESTER_ADD_TEST(block10CvNoRaceTest);
+		TESTER_ADD_TEST(block11ExclusiveSharedNoRaceTest);
+		TESTER_ADD_TEST(block12DyntableReallocRaceTest);
+		TESTER_ADD_TEST(block13DyntableReallocNoRaceTest);
+	}
+
+private:
+	void fastTrackRaceTest() {
+		// Enable FastTrack process settings
+		vm::api::ProcessSettings settings;
+		settings.enable_fast_track = true;
+		auto pid = initProcess(settings);
+
+		// Load race_test.dbc which has a data race
+		auto file = fs::File(path("race_test.dbc"));
+		auto load_res = vm::api::loadFiles(pid, { file });
+		ASSERT_TRUE(load_res.has_value());
+
+		// Running it should trigger a race and panic
+		auto result = runTestOnVmGetResult(pid, "", {}, {});
+
+		auto exec_status = vm::api::getExecutionStatus(pid);
+		bool got_race_panic = false;
+		if (exec_status.has_value()) {
+			nlohmann::json status_json = exec_status.value();
+			std::cout << "RACE TEST FINAL STATUS: " << status_json.dump() << std::endl;
+			
+			variant_match(exec_status.value()) {
+				variant_case(vm::api::ExecutionPanicked, panicked) {
+					got_race_panic = panicked.error_message.contains("[FastTrack] Data race detected");
+				}
+				variant_default {}
+			}
+		}
+		ASSERT_TRUE(got_race_panic);
+
+		// Clean up the panicked process to prevent memory leaks and thread warnings
+		const auto validation_result = vm::api::deinitAndValidate(pid);
+		ASSERT_TRUE(validation_result.has_value());
+	}
+
+	void fastTrackNoRaceTest() {
+		// Enable FastTrack process settings
+		vm::api::ProcessSettings settings;
+		settings.enable_fast_track = true;
+		auto pid = initProcess(settings);
+
+		// Load no_race_test.dbc which has no data race
+		auto file = fs::File(path("no_race_test.dbc"));
+		auto load_res = vm::api::loadFiles(pid, { file });
+		ASSERT_TRUE(load_res.has_value());
+
+		// Running it should complete successfully
+		runTestOnVm(pid, "", {}, {});
+	}
+
+	void fastTrackDisabledRaceTest() {
+		// Keep FastTrack disabled
+		vm::api::ProcessSettings settings;
+		settings.enable_fast_track = false;
+		auto pid = initProcess(settings);
+
+		// Load race_test.dbc which has a data race
+		auto file = fs::File(path("race_test.dbc"));
+		auto load_res = vm::api::loadFiles(pid, { file });
+		ASSERT_TRUE(load_res.has_value());
+
+		// Running it should complete successfully (without throwing exception)
+		auto result = runTestOnVmGetResult(pid, "", {}, {});
+		if (!result.run_result.has_value()) {
+			std::cout << "DISABLED RACE TEST FAILED to run: " << to_string(nlohmann::json(result.run_result.error())) << std::endl;
+		} else {
+			std::cout << "DISABLED RACE TEST completed. Exit code: " << result.run_result.value() << std::endl;
+		}
+
+		auto program_output = vm::api::output(pid);
+		if (program_output.has_value()) {
+			std::cout << "DISABLED RACE TEST OUTPUT: [" << program_output->output << "]" << std::endl;
+		}
+
+		// Validation
+		const auto validation_result = vm::api::deinitAndValidate(pid);
+		ASSERT_TRUE(validation_result.has_value());
+		ASSERT_TRUE(validation_result.value());
+	}
+
+	// ---------------------------------------------------------------
+	// Extensive tests: heap/stack/global + nested structs + tables
+	// ---------------------------------------------------------------
+
+	/** All reads/writes happen AFTER join – FastTrack must NOT report a race. */
+	void extensiveNoRaceTest() {
+		vm::api::ProcessSettings settings;
+		settings.enable_fast_track = true;
+		auto pid = initProcess(settings);
+
+		auto file = fs::File(path("minimal_no_race.dbc"));
+		auto load_res = vm::api::loadFiles(pid, { file });
+		ASSERT_TRUE(load_res.has_value());
+
+		// Must complete without any panic
+		runTestOnVm(pid, "", {}, {});
+	}
+
+	/** Main thread and child thread both write to the same nested heap struct
+	 *  array element without synchronisation – FastTrack MUST detect a race. */
+	void extensiveHeapRaceTest() {
+		vm::api::ProcessSettings settings;
+		settings.enable_fast_track = true;
+		auto pid = initProcess(settings);
+
+		auto file = fs::File(path("extensive_heap_race.dbc"));
+		auto load_res = vm::api::loadFiles(pid, { file });
+		ASSERT_TRUE(load_res.has_value());
+
+		auto result = runTestOnVmGetResult(pid, "", {}, {});
+
+		auto exec_status = vm::api::getExecutionStatus(pid);
+		bool got_race_panic = false;
+		if (exec_status.has_value()) {
+			nlohmann::json status_json = exec_status.value();
+			std::cout << "EXTENSIVE HEAP RACE STATUS: " << status_json.dump() << std::endl;
+
+			variant_match(exec_status.value()) {
+				variant_case(vm::api::ExecutionPanicked, panicked) {
+					got_race_panic = panicked.error_message.contains("[FastTrack] Data race detected");
+				}
+				variant_default {}
+			}
+		}
+		ASSERT_TRUE(got_race_panic);
+
+		const auto validation_result = vm::api::deinitAndValidate(pid);
+		ASSERT_TRUE(validation_result.has_value());
+	}
+
+	/** Main thread and child thread both write to the same stack variable via a
+	 *  shared pointer without synchronisation – FastTrack MUST detect a race. */
+	void extensiveStackRaceTest() {
+		vm::api::ProcessSettings settings;
+		settings.enable_fast_track = true;
+		auto pid = initProcess(settings);
+
+		auto file = fs::File(path("extensive_stack_race.dbc"));
+		auto load_res = vm::api::loadFiles(pid, { file });
+		ASSERT_TRUE(load_res.has_value());
+
+		auto result = runTestOnVmGetResult(pid, "", {}, {});
+
+		auto exec_status = vm::api::getExecutionStatus(pid);
+		bool got_race_panic = false;
+		if (exec_status.has_value()) {
+			nlohmann::json status_json = exec_status.value();
+			std::cout << "EXTENSIVE STACK RACE STATUS: " << status_json.dump() << std::endl;
+
+			variant_match(exec_status.value()) {
+				variant_case(vm::api::ExecutionPanicked, panicked) {
+					got_race_panic = panicked.error_message.contains("[FastTrack] Data race detected");
+				}
+				variant_default {}
+			}
+		}
+		ASSERT_TRUE(got_race_panic);
+
+		const auto validation_result = vm::api::deinitAndValidate(pid);
+		ASSERT_TRUE(validation_result.has_value());
+	}
+
+	void runRaceTest(const std::string& filename, const std::string& test_name) {
+		vm::api::ProcessSettings settings;
+		settings.enable_fast_track = true;
+		auto pid = initProcess(settings);
+
+		auto file = fs::File(path(filename));
+		auto load_res = vm::api::loadFiles(pid, { file });
+		ASSERT_TRUE(load_res.has_value());
+
+		auto result = runTestOnVmGetResult(pid, "", {}, {});
+
+		auto exec_status = vm::api::getExecutionStatus(pid);
+		bool got_race_panic = false;
+		if (exec_status.has_value()) {
+			nlohmann::json status_json = exec_status.value();
+			std::cout << test_name << " STATUS: " << status_json.dump() << std::endl;
+
+			variant_match(exec_status.value()) {
+				variant_case(vm::api::ExecutionPanicked, panicked) {
+					got_race_panic = panicked.error_message.contains("[FastTrack] Data race detected");
+				}
+				variant_default {}
+			}
+		}
+
+		if (got_race_panic) {
+			std::cout << test_name << ": OK (Race detected successfully)" << std::endl;
+		} else {
+			std::cout << test_name << ": FAIL (Race NOT detected - FastTrack Lowering Gap is active)" << std::endl;
+		}
+
+		ASSERT_TRUE(got_race_panic);
+
+		const auto validation_result = vm::api::deinitAndValidate(pid);
+		ASSERT_TRUE(validation_result.has_value());
+	}
+
+	void block1ScalarRaceTest() {
+		runRaceTest("block1_scalar_race.dbc", "block1ScalarRaceTest");
+	}
+
+	/** Two threads both cmov_p64_p64 / cmov_p64_imm to the same global with the
+	 *  condition always true and no synchronisation – FastTrack MUST detect a race. */
+	void block1CmovRaceTest() {
+		runRaceTest("block1_cmov_race.dbc", "block1CmovRaceTest");
+	}
+
+	/** Same cmov pattern but the child is joined before the main thread writes –
+	 *  FastTrack must NOT produce a false-positive race report. */
+	void block1CmovNoRaceTest() {
+		vm::api::ProcessSettings settings;
+		settings.enable_fast_track = true;
+		auto pid = initProcess(settings);
+
+		auto file = fs::File(path("block1_cmov_no_race.dbc"));
+		auto load_res = vm::api::loadFiles(pid, { file });
+		ASSERT_TRUE(load_res.has_value());
+
+		// Must complete without any race panic
+		runTestOnVm(pid, "", {}, {});
+	}
+
+	void block2FreeRaceTest() {
+		runRaceTest("block2_free_race.dbc", "block2FreeRaceTest");
+	}
+
+	void block3StructRaceTest() {
+		runRaceTest("block3_struct_race.dbc", "block3StructRaceTest");
+	}
+
+	void block4ArrayRaceTest() {
+		runRaceTest("block4_array_race.dbc", "block4ArrayRaceTest");
+	}
+
+	void block5VariantRaceTest() {
+		runRaceTest("block5_variant_race.dbc", "block5VariantRaceTest");
+	}
+
+	void block6OpaqueRaceTest() {
+		runRaceTest("block6_opaque_race.dbc", "block6OpaqueRaceTest");
+	}
+
+	void block7DyntableRaceTest() {
+		runRaceTest("block7_dyntable_race.dbc", "block7DyntableRaceTest");
+	}
+
+	void block8SharedWriteRaceTest() {
+		runRaceTest("block8_shared_write_race.dbc", "block8SharedWriteRaceTest");
+	}
+
+	void block8SharedNoRaceTest() {
+		vm::api::ProcessSettings settings;
+		settings.enable_fast_track = true;
+		auto pid = initProcess(settings);
+
+		auto file = fs::File(path("block8_shared_no_race.dbc"));
+		auto load_res = vm::api::loadFiles(pid, { file });
+		ASSERT_TRUE(load_res.has_value());
+
+		runTestOnVm(pid, "", {}, {});
+	}
+
+	void block9FreeReadRaceTest() {
+		runRaceTest("block9_free_read_race.dbc", "block9FreeReadRaceTest");
+	}
+
+	void noRaceTest2() {
+		vm::api::ProcessSettings settings;
+		settings.enable_fast_track = true;
+		auto pid = initProcess(settings);
+
+		auto file = fs::File(path("no_race_test_2.dbc"));
+		auto load_res = vm::api::loadFiles(pid, { file });
+		ASSERT_TRUE(load_res.has_value());
+
+		runTestOnVm(pid, "", {}, {});
+	}
+
+	// CV happens-before: write outside lock, signal inside lock, read outside lock after wait.
+	// Verifies no false-positive race when HB flows through mutex lock_vc (pitfall: broken onAcquire).
+	void block10CvNoRaceTest() {
+		vm::api::ProcessSettings settings;
+		settings.enable_fast_track = true;
+		auto pid = initProcess(settings);
+
+		auto file = fs::File(path("block10_cv_no_race.dbc"));
+		auto load_res = vm::api::loadFiles(pid, { file });
+		ASSERT_TRUE(load_res.has_value());
+
+		runTestOnVm(pid, "", {}, {});
+	}
+
+	// Exclusive-to-Shared shadow transition: two readers trigger E->S, writer after join must not race.
+	// Verifies no false-positive after E->S transition (pitfall: stale epoch in Shared VC construction).
+	void block11ExclusiveSharedNoRaceTest() {
+		vm::api::ProcessSettings settings;
+		settings.enable_fast_track = true;
+		auto pid = initProcess(settings);
+
+		auto file = fs::File(path("block11_exclusive_shared_no_race.dbc"));
+		auto load_res = vm::api::loadFiles(pid, { file });
+		ASSERT_TRUE(load_res.has_value());
+
+		runTestOnVm(pid, "", {}, {});
+	}
+
+	// DynTable realloc race: concurrent writes to a newly-added element must be detected.
+	// Verifies ft_dynTableReAlloc properly tracks new elements (pitfall: missing shadow init).
+	void block12DyntableReallocRaceTest() {
+		runRaceTest("block12_dyntable_realloc_race.dbc", "block12DyntableReallocRaceTest");
+	}
+
+	// DynTable realloc no-race: write after join+realloc must not produce a false positive.
+	// Verifies that realloc preserves existing shadow HB (pitfall: realloc wiping old entries).
+	void block13DyntableReallocNoRaceTest() {
+		vm::api::ProcessSettings settings;
+		settings.enable_fast_track = true;
+		auto pid = initProcess(settings);
+
+		auto file = fs::File(path("block13_dyntable_realloc_no_race.dbc"));
+		auto load_res = vm::api::loadFiles(pid, { file });
+		ASSERT_TRUE(load_res.has_value());
+
+		runTestOnVm(pid, "", {}, {});
+	}
+};
+
+TESTER_COMMON_MAIN("/src/vm/tests/threads/");

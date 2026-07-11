@@ -160,22 +160,28 @@ namespace vm {
 		const bool is_terminal_failure = std::holds_alternative<api::ExecutionPanicked>(new_status)
 		                              || std::holds_alternative<api::ExecutionStopped>(new_status);
 
-		// Only main thread can set overall process status
 		if (!is_main_thread) {
 			// Child threads can publish terminal failures if process is not already terminal
 			if (is_terminal_failure) setStatusIfNotTerminal(new_status, thread_id);
 			return;
 		}
 
+		// Main thread: for terminal failures use first-wins to avoid overwriting a child's
+		// panic (e.g. race detection) with a secondary panic (e.g. div-by-zero after bad join).
+		bool updated = false;
 		{
 			std::unique_lock<std::shared_mutex> lock(rw_status);
-			status = new_status;
+			if (!is_terminal_failure || !api::isStatusTerminal(status)) {
+				status  = new_status;
+				updated = true;
+			}
 		}
 		// Emit after releasing rw_status: observers may call isExecutionPanicked() which
 		// takes a shared_lock on rw_status; emitting under the unique_lock would self-deadlock.
-		on_status_changed.emitEvent(new_status);
-		status_cv.notify_all();
-
+		if (updated) {
+			on_status_changed.emitEvent(new_status);
+			status_cv.notify_all();
+		}
 		if (api::isStatusTerminal(new_status)) onTerminalStatus(new_status);
 	}
 

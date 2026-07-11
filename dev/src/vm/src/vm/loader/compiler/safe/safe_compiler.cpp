@@ -21,6 +21,37 @@ namespace vm::loader::compiler::safe {
 
 	namespace detail {
 
+		static u64 getLocalShadowDataOffset(
+			const SafeCompiler&                                       compiler,
+			const vm::loader::compiler::detail::FunctionStackContext& stack_ctx,
+			code::StackStateID                                        stack_state_id,
+			const code::valid_type::TypeSize&                         var_offset
+		) {
+			u64   shadow_data_offset = 0;
+			usize target_offset_val  = getIntTypeSize(var_offset);
+			auto& db                 = stack_ctx.function.local_stack;
+			usize active_size        = db.size(stack_state_id);
+
+			for (usize i = 0; i < active_size; ++i) {
+				auto name_opt = db.getName(stack_state_id, i);
+				if (!name_opt) continue;
+				auto byte_offset_opt = db.getByteOffset(stack_state_id, *name_opt);
+				if (!byte_offset_opt) continue;
+
+				if (getIntTypeSize(*byte_offset_opt) < target_offset_val) {
+					auto type_name_opt = db.getTypeName(stack_state_id, i);
+					if (type_name_opt) {
+						auto valid_type = compiler.getHighProgram().getTypeContext()
+						                     .getCurrentTypes()
+						                     .at(*type_name_opt);
+						shadow_data_offset += valid_type->getShadowSize();
+					}
+				}
+			}
+
+			return shadow_data_offset;
+		}
+
 #define DEFINE_LOWER_ARGUMENT_IMPL_FOR_FAMILY(FAMILY_CONCEPT, ...)                                   \
 	template<FAMILY_CONCEPT ToType>                                                                  \
 	struct LowerArgumentImpl<ToType> {                                                               \
@@ -129,6 +160,29 @@ namespace vm::loader::compiler::safe {
 				label_id_map.put(opcode_arg.label_name, label_id_map.size());
 			return label_id_map.at(opcode_arg.label_name);
 		);
+
+///
+///    Shadow Arg types 
+///
+        
+		DEFINE_LOWER_ARGUMENT_IMPL_FOR_FAMILY(
+			low::opargs::ShadowPlaceDataArgumentType,
+			if (auto maybe_offset = stack_ctx.function.local_stack.getByteOffset(stack_state_id, opcode_arg.var_name); maybe_offset.has_value()) {
+				return getLocalShadowDataOffset(compiler, stack_ctx, stack_state_id, *maybe_offset);
+			}
+			return compiler.low_program.getGlobals().at(opcode_arg.var_name)->global_shadow_data_offset | (1ULL << 63);
+		);
+
+		DEFINE_LOWER_ARGUMENT_IMPL(
+			low::opargs::ShadowField,
+			opargs::Field,
+			return static_cast<u64>(*compiler.getHighProgram()
+		                                 .getTypeContext()
+		                                 .getCurrentTypes()
+		                                 .at(opcode_arg.type_name)
+		                                 ->getFieldShadowOffsetByName(opcode_arg.field_name));
+		);
+
 		// clang-format on
 
 #undef DEFINE_LOWER_ARGUMENT_IMPL
@@ -188,8 +242,9 @@ namespace vm::loader::compiler::safe {
 			auto [bytecode, instruction_mapping] = lowerInstructions(ctx);
 
 			// Calculate the functions metadata.
-			code::FuncSignature        signature       = function.signature;
-			code::valid_type::TypeSize parameters_size = {};
+			code::FuncSignature        signature               = function.signature;
+			code::valid_type::TypeSize parameters_size         = {};
+			usize                      parameters_shadow_size  = 0;
 			std::vector<TypeCRef>      parameters;
 			parameters.reserve(signature.parameters.size());
 
@@ -197,13 +252,18 @@ namespace vm::loader::compiler::safe {
 				CRef<code::valid_type::ValidType> type
 					= high_program.getTypeContext().getCurrentTypes().at(param.str);
 				parameters.emplace_back(low_program.getTypes().at(type->getName()));
-				parameters_size += type->getSize();
+				parameters_size         += type->getSize();
+				parameters_shadow_size  += type->getShadowSize();
 			}
 
-			code::valid_type::TypeSize ret_type_sum = {};
-			std::vector<TypeCRef>      result_types = {};
+			code::valid_type::TypeSize ret_type_sum    = {};
+			usize                      ret_shadow_sum  = 0;
+			std::vector<TypeCRef>      result_types    = {};
 			for (auto& ret: signature.result_types) {
-				ret_type_sum += high_program.getTypeContext().getCurrentTypes().at(ret)->getSize();
+				CRef<code::valid_type::ValidType> type
+					= high_program.getTypeContext().getCurrentTypes().at(ret);
+				ret_type_sum    += type->getSize();
+				ret_shadow_sum  += type->getShadowSize();
 				result_types.emplace_back(low_program.types->at(ret));
 			}
 
@@ -218,6 +278,8 @@ namespace vm::loader::compiler::safe {
 			                      .local_block_count   = ctx.local_block_count,
 			                      .arg_size            = getIntTypeSize(parameters_size),
 			                      .ret_size            = getIntTypeSize(ret_type_sum),
+			                      .arg_shadow_size     = parameters_shadow_size,
+			                      .ret_shadow_size     = ret_shadow_sum,
 			                      .parameters          = std::move(parameters),
 			                      .result_types        = std::move(result_types),
 			                      .instruction_mapping = std::move(instruction_mapping) },
@@ -245,19 +307,25 @@ namespace vm::loader::compiler::safe {
 
 
 			low::LowGlobalData data{
-				.type                 = low_program.types->at(global.type),
-				.init                 = global_init,
-				.global_buffer_offset = program_ctx.global_buffer_size.asInt(),
-				.global_block_idx     = program_ctx.global_count,
+				.type                      = low_program.types->at(global.type),
+				.init                      = global_init,
+				.global_buffer_offset      = program_ctx.global_buffer_size.asInt(),
+				.global_block_idx          = program_ctx.global_count,
+				.global_shadow_data_offset = program_ctx.global_shadow_buffer_size,
 			};
 			low_program.global_data.insert(data, global.name);
 
+			const auto& valid_type_for_global = high_program.getTypeContext()
+			                                        .getCurrentTypes()
+			                                        .at(global.type);
 			program_ctx.global_count += 1;
-			program_ctx.global_buffer_size += Bytes(data.type->getSize().asInt());
+			program_ctx.global_buffer_size        += Bytes(data.type->getSize().asInt());
+			program_ctx.global_shadow_buffer_size += valid_type_for_global->getShadowSize();
 		}
 
-		low_program.global_buffer_size = program_ctx.global_buffer_size;
-		low_program.global_count       = program_ctx.global_count;
+		low_program.global_buffer_size        = program_ctx.global_buffer_size;
+		low_program.global_count              = program_ctx.global_count;
+		low_program.global_shadow_buffer_size = program_ctx.global_shadow_buffer_size;
 	}
 
 	CRef<vm::low::LowVMProgram> SafeCompiler::getLowProgram() const { return &low_program; }

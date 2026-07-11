@@ -7,6 +7,7 @@
 #include <vm/api/data/api_error.hpp>
 #include <vm/api/data/request.hpp>
 #include <vm/api/data/status.hpp>
+#include <vm/api/settings.hpp>
 #include <vm/core/process/interface_types.hpp>
 #include <vm/core/process/ivmprocess.hpp>
 #include <vm/core/safe/concurrency/deadlock_detection.hpp>
@@ -18,6 +19,7 @@
 #include <vm/loader/loader.hpp>
 
 #include <expected>
+#include <functional>
 #include <string>
 #include <variant>
 #include <vector>
@@ -30,9 +32,10 @@ namespace vm {
 	 * @note Only execution of the code is done in the separate thread,
 	 * loading and parsing of the program is done in the caller's thread.
 	 */
-	class SafeVMProcess final: public IVMProcess {
+	class SafeVMProcess : public IVMProcess {
 		friend class VmValue;
 		friend class VMValueRef;
+		friend class SafeVMThread;
 
 	private:
 		std::shared_mutex rw_global;
@@ -53,7 +56,7 @@ namespace vm {
 
 		low::LowVMProgramCopy loaded_program_copy;
 
-		Memory memory;
+		Memory                 memory;
 
 		base::Optional<DeadlockDetector> deadlock_detector;
 		GIL                              gil;
@@ -79,18 +82,38 @@ namespace vm {
 		SafeVMThread& getMainVMThread();
 
 		/**
-		 * @brief Returns thread by id and if id doesn't exist or it is equal 0
-		 * then it returns main thread
-		 */
-		base::Optional<Ref<SafeVMThread>> getVMThreadByID(api::ThreadID thread_id);
-
-		/**
 		 * @brief Returns reference to either existing empty thread or
 		 * creates new thread without worker and returns it
 		 */
 		SafeVMThread& getEmptyThread();
 
 		base::Optional<api::ApiError> assertProcessCanRespond();
+
+		api::ProcessSettings settings_;
+
+	protected:
+		virtual SafeVMThread&                     doGetMainThread();
+		virtual SafeVMThread&                     doGetOrCreateEmptyThread();
+		virtual base::Optional<Ref<SafeVMThread>> doGetThreadByID(api::ThreadID thread_id);
+		virtual void forEachThread(const std::function<void(SafeVMThread&)>& fn);
+
+		/**
+		 * @brief Called inside runFunction (under the global lock) just before spawning the
+		 * child thread. Override to inject synchronization-primitive bookkeeping (e.g. FT fork).
+		 */
+		virtual void onBeforeThreadSpawn(SafeVMThread& /*child*/) {}
+
+	public:
+		SafeVMProcess(PID my_pid, const api::ProcessSettings& settings = {});
+		~SafeVMProcess() override = default;
+
+		/**
+		 * @brief Returns thread by id and if id doesn't exist or it is equal 0
+		 * then it returns main thread
+		 */
+		base::Optional<Ref<SafeVMThread>> getVMThreadByID(api::ThreadID thread_id);
+
+		Memory& getMemory();
 
 		std::expected<api::Response, api::LoadProgramError> loadProgram(
 			const std::variant<std::vector<fs::File>, code::CodeCollection>& source
@@ -118,7 +141,8 @@ namespace vm {
 
 		base::Optional<api::ApiError> stepVMThread(api::ThreadID thread_id) override;
 
-		std::expected<api::Response, api::ApiError> getVMThreadCurrentPosition(api::ThreadID thread_id
+		std::expected<api::Response, api::ApiError> getVMThreadCurrentPosition(
+			api::ThreadID thread_id
 		) override;
 
 		void notifyPausedVMThread(api::ThreadID thread_id) override;
@@ -133,10 +157,12 @@ namespace vm {
 			api::ThreadID thread_id, u64 frame_index
 		) override;
 
-		std::expected<api::Response, api::ApiError> getTypeMetadata(const std::string& type_name
+		std::expected<api::Response, api::ApiError> getTypeMetadata(
+			const std::string& type_name
 		) override;
 
-		std::expected<api::Response, api::ApiError> getVMValueForType(const std::string& type_name
+		std::expected<api::Response, api::ApiError> getVMValueForType(
+			const std::string& type_name
 		) override;
 
 		api::ThreadID getMainThreadID() override;
@@ -160,17 +186,13 @@ namespace vm {
 		 * Should be called after loading a new globals.
 		 * @param program The program with the new globals.
 		 */
-		void updateGlobalDataMemory(CRef<low::ILowVMProgram> program);
-
-	public:
-		SafeVMProcess(PID my_pid, bool enable_deadlock_detection = false);
+		virtual void updateGlobalDataMemory(CRef<low::ILowVMProgram> program);
 
 		DeadlockDetector* getDeadlockDetector() {
 			return deadlock_detector ? &*deadlock_detector : nullptr;
 		}
 
-		Memory& getMemory();
-
+	public:
 		[[nodiscard]] api::ProcStatus getCurrentStatus() { return getStatus(); }
 
 		Ref<VmValue> createVmValue(TypeCRef type) override;
@@ -182,6 +204,8 @@ namespace vm {
 		Box<VmValue> createOwnedVmValue(TypeCRef type, Pointer src) override;
 
 		CRef<low::ILowVMProgram> getLoadedProgram() const { return loaded_program; }
+
+		const api::ProcessSettings& getSettings() const { return settings_; }
 
 		/**
 		 * @brief Get the GIL of the process.

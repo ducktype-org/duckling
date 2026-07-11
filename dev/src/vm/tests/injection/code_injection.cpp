@@ -347,11 +347,12 @@ private:
 	}
 
 	void runFunctionArgumentValidation() {
-		vm::PID  pid = initProcess();
-		fs::File file(path("call_non_void_function.dbc"));
-		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file }));
 		{
 			// Not enough arguments.
+			vm::PID  pid = initProcess();
+			fs::File file(path("call_non_void_function.dbc"));
+			ASSERT_TRUE(vm::api::loadFiles(pid, { file }).has_value());
+
 			OwnedArgumentList arguments;
 			arguments.push_back(getIntVmValue(pid, 10));
 			auto func_args = createArgumentList(arguments);
@@ -362,9 +363,14 @@ private:
 			);
 
 			freeArguments(arguments);
+			vm::api::deinitAndValidate(pid);
 		}
 		{
 			// Too many arguments.
+			vm::PID  pid = initProcess();
+			fs::File file(path("call_non_void_function.dbc"));
+			ASSERT_TRUE(vm::api::loadFiles(pid, { file }).has_value());
+
 			OwnedArgumentList arguments;
 			arguments.push_back(getIntVmValue(pid, 10));
 			arguments.push_back(getIntVmValue(pid, 20));
@@ -377,10 +383,15 @@ private:
 			);
 
 			freeArguments(arguments);
+			vm::api::deinitAndValidate(pid);
 		}
 
 		{
 			// Argument type mismatch.
+			vm::PID  pid = initProcess();
+			fs::File file(path("call_non_void_function.dbc"));
+			ASSERT_TRUE(vm::api::loadFiles(pid, { file }).has_value());
+
 			OwnedArgumentList arguments;
 			arguments.push_back(getIntVmValue(pid, 10));
 
@@ -396,10 +407,15 @@ private:
 			);
 
 			freeArguments(arguments);
+			vm::api::deinitAndValidate(pid);
 		}
 
 		{
 			// VMValue from different process.
+			vm::PID  pid = initProcess();
+			fs::File file(path("call_non_void_function.dbc"));
+			ASSERT_TRUE(vm::api::loadFiles(pid, { file }).has_value());
+
 			vm::PID other_pid = initProcess();
 
 			OwnedArgumentList arguments;
@@ -414,9 +430,8 @@ private:
 
 			freeArguments(arguments);
 			vm::api::deinitAndValidate(other_pid);
+			vm::api::deinitAndValidate(pid);
 		}
-
-		vm::api::deinitAndValidate(pid);
 	}
 };
 

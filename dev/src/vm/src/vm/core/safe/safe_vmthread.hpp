@@ -30,6 +30,7 @@ namespace vm {
 	}
 
 	class SafeVMProcess;
+	class FastTrackSafeVMThread;
 
 	/**
 	 * @brief Frames are on stack, this is the maximum number of frame pointers available.
@@ -85,7 +86,7 @@ namespace vm {
 	/**
 	 * @brief Safe implementation of the IVMThread interface.
 	 */
-	class SafeVMThread final: public IVMThread {
+	class SafeVMThread: public IVMThread {
 	private:
 		RuntimeData runtime_data;
 
@@ -181,6 +182,9 @@ namespace vm {
 	public:
 		SafeVMThread(api::ThreadID thread_id, SafeVMProcess& process);
 
+		[[nodiscard]] SafeVMProcess& getProcess() { return safe_process; }
+		[[nodiscard]] const SafeVMProcess& getProcess() const { return safe_process; }
+
 		/**
 		 * @brief Run a single function with given parameters.
 		 */
@@ -191,8 +195,15 @@ namespace vm {
 		);
 
 		friend class SafeVMProcess;
+		friend class FastTrackSafeVMThread;
 		friend class OpFuns;
 		friend class builtins::FunctionHandlers;
+
+		/**
+		 * @brief Called inside executeFunction just before runInterpreter.
+		 * Override to perform per-execution setup (e.g. shadow frame initialisation).
+		 */
+		virtual void onBeforeExecute() {}
 
 		/**
 		 * @brief Runs GIL logic. Should be called periodically to allow GIL release.
@@ -241,6 +252,10 @@ namespace vm {
 		 * reallocated and the pointers change.
 		 */
 		void updateGlobalDataBufferPointers(GlobalBufferPointersGeneric global_buffer_pointers);
+
+		[[nodiscard]] CRef<vm::low::ILowVMProgram> getProgram() const {
+			return process_program;
+		}
 	};
 
 	/**

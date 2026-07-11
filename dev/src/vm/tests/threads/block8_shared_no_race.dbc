@@ -1,0 +1,43 @@
+global_data shared_val i64 {}
+
+function reader_thread {} -> {} {
+    init_pany_type local_val, i64;
+    mov_p64_p64 local_val, shared_val;
+    deinit;
+    ret;
+}
+
+# r1 and r2 are spawned from the same VC baseline without an intervening join,
+# so their initial VCs do not include each other's reads.  The second reader to
+# execute triggers the Exclusive->Shared transition.  No write is concurrent,
+# so FastTrack must NOT report a race.
+function main { i64, ptr_argv } -> { i64 } {
+    init_pany_type init_val, i64;
+    mov_p64_imm init_val, 1;
+    mov_p64_p64 shared_val, init_val;
+
+    init_pany_type r1_id, i64;
+    set_threadctx reader_thread;
+    call_builtinfunc builtin_start_thread;
+
+    init_pany_type r2_id, i64;
+    set_threadctx reader_thread;
+    call_builtinfunc builtin_start_thread;
+
+    init_pany_type r1_ret, i64;
+    init_pany_type j1_id, i64;
+    mov_p64_p64 j1_id, r1_id;
+    call_builtinfunc builtin_join_thread;
+
+    init_pany_type r2_ret, i64;
+    init_pany_type j2_id, i64;
+    mov_p64_p64 j2_id, r2_id;
+    call_builtinfunc builtin_join_thread;
+
+    deinit; # r2_ret
+    deinit; # r1_ret
+    deinit; # r2_id
+    deinit; # r1_id
+    deinit; # init_val
+    ret;
+}

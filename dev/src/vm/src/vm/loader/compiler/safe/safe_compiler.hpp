@@ -2,6 +2,7 @@
 
 #include "../ivm_compiler.hpp"
 
+#include <vm/api/settings.hpp>
 #include <vm/bytecode/validator/valid_program.hpp>
 #include <vm/core/safe/low_program/low_program.hpp>
 #include <vm/core/safe/low_program/micro_instruction_args.hpp>
@@ -32,6 +33,10 @@ namespace vm::loader::compiler::safe {
 			 * @brief Total size of the globals compiled up to this point, in bytes.
 			 */
 			Bytes global_buffer_size = Bytes(0);
+			/**
+			 * @brief Total shadow slot count for all globals compiled so far.
+			 */
+			usize global_shadow_buffer_size = 0;
 		};
 	}
 
@@ -46,11 +51,18 @@ namespace vm::loader::compiler::safe {
 			recompile();
 		}
 
+		explicit SafeCompiler(
+			const code::ValidProgram& high_program, const api::ProcessSettings& settings
+		): vm::loader::compiler::IVMCompiler(high_program), settings_(settings) {
+			recompile();
+		}
+
 		/**
 		 * @brief Provides read-only access to the internally managed `LowVMProgram`.
 		 * @return A constant reference to the current, fully compiled low-level program.
 		 */
 		[[nodiscard]] CRef<vm::low::LowVMProgram> getLowProgram() const;
+		[[nodiscard]] const code::ValidProgram& getHighProgram() const { return high_program; }
 
 		[[nodiscard]] std::expected<FatBytecodePosition, MappingException>
 			mapLowVMProgramPositionToCodeCollectionPosition(low::LowCodePosition position) const;
@@ -73,6 +85,11 @@ namespace vm::loader::compiler::safe {
 		vm::low::LowVMProgram low_program;
 
 		detail::SafeProgramCompilationContext program_ctx;
+
+		/**
+		 * @brief Process settings (e.g. enable_fast_track) that control conditional lowering.
+		 */
+		api::ProcessSettings settings_{};
 
 		/**
 		 * @brief Fills out label arguments from IDs to label offsets in micro-bytecode.

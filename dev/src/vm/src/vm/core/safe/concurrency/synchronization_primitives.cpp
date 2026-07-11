@@ -3,7 +3,7 @@
 #include <vm/core/safe/exceptions.hpp>
 
 namespace vm {
-	Ref<std::timed_mutex> SynchronizationPrimitives::getMutex(usize mutex_id) {
+	Ref<Mutex> SynchronizationPrimitives::getMutex(usize mutex_id) {
 		return mutex_pool.maybeGet(mutex_id).expect<exceptions::VMResourceDoesNotExist>("mutex");
 	}
 
