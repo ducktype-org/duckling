@@ -170,5 +170,4 @@ namespace pst {
 			addArgument<dia_int::TextArgument>("operator", std::move(op));
 		}
 	};
-
 }
