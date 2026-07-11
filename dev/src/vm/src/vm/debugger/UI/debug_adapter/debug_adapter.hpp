@@ -61,8 +61,17 @@ namespace vm::debugger::debug_adapter {
 		// vector of variables references
 		std::vector<VariablesReferenceState> variables;
 
+		struct SourcePositionInfo {
+			std::string file_path;
+			u64         start_line   = 0;
+			u64         start_column = 0;
+			u64         end_line     = 0;
+			u64         end_column   = 0;
+		};
+
+		std::expected<SourcePositionInfo, std::string> getSourcePositionInfo();
 		std::expected<std::pair<std::map<std::string, DebugAdapter::VarInfo>, base::StrID>, std::string>
-			varRefFromStackFrameData(u64 frame_id);
+			varRefFromStackFrameData(api::ThreadID thread_id, u64 frame_id);
 		std::expected<std::map<std::string, VarInfo>, std::string> varRefFromVMValueRef(
 			VMValueRef& value
 		);

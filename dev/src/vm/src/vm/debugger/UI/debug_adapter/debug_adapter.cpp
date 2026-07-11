@@ -5,9 +5,9 @@
 #include <string_id/string_id.hpp>
 #include <token_source/source.hpp>
 
-#include "vm/api/data/thread_id.hpp"
 #include <vm/api/data/api_error.hpp>
 #include <vm/api/data/status.hpp>
+#include <vm/api/data/thread_id.hpp>
 #include <vm/core/vmvalue/vmvalue.hpp>
 
 #include <iostream>
@@ -388,9 +388,40 @@ namespace vm::debugger::debug_adapter {
 		sendResponse(req, true, body);
 	}
 
+	std::expected<DebugAdapter::SourcePositionInfo, std::string> DebugAdapter::getSourcePositionInfo(
+	) {
+		auto pos_result = debugger.getCurrentPosition();
+
+		if (!pos_result.has_value()) {
+			return std::unexpected(
+				"Failed to get current position: " + api::errorToString(pos_result.error())
+			);
+		}
+
+		const auto&        pos = pos_result.value();
+		SourcePositionInfo info;
+
+		if (pos.source_position.has_value()) {
+			auto src          = pos.source_position.value();
+			auto [sl, sc]     = src.getStartLineColumn();
+			auto [el, ec]     = src.getEndLineColumn();
+			info.start_line   = sl;
+			info.start_column = sc;
+			info.end_line     = el;
+			info.end_column   = ec;
+
+			info.file_path = std::string(src.getSource()->getFile().getFilePath().strView());
+		} else {
+			info.file_path  = "Function: " + std::string(pos.function_name.strView());
+			info.start_line = pos.instr_number;
+		}
+
+		return info;
+	}
+
 	std::expected<std::pair<std::map<std::string, DebugAdapter::VarInfo>, base::StrID>, std::string>
-		DebugAdapter::varRefFromStackFrameData(u64 frame_id) {
-		auto frame_result = debugger.getStackFrameData(api::ThreadID(0), frame_id);
+		DebugAdapter::varRefFromStackFrameData(api::ThreadID thread_id, u64 frame_id) {
+		auto frame_result = debugger.getStackFrameData(thread_id, frame_id);
 		if (!frame_result.has_value()) return std::unexpected("Failed to get frame variables");
 
 		auto&                          data = frame_result.value();
@@ -446,7 +477,7 @@ namespace vm::debugger::debug_adapter {
 			children_map.insert({ name, info });
 		};
 
-		variant_match(*opt_data) {
+		variant_match(opt_data.value()) {
 			variant_case(idv::Data, data) {
 				for (const auto& [subname, index]: data.field_name_map)
 					process_child(subname.str(), data.fields[index].value);
@@ -466,25 +497,29 @@ namespace vm::debugger::debug_adapter {
 	}
 
 	void DebugAdapter::handleStackTrace(const nlohmann::json& req) {
-		auto thread_id    = api::ThreadID((u64) req["arguments"].value("threadId", 0));
-		u64  start_frame  = (u64) req["arguments"].value("startFrame", 0);
-		u64  levels       = (u64) req["arguments"].value("levels", 0);
-		auto count_result = debugger.getNumberOfStackFrames(thread_id);
-		if (!count_result.has_value()) {
+		auto thread_id     = api::ThreadID((u64) req["arguments"].value("threadId", 0));
+		u64  start_frame   = (u64) req["arguments"].value("startFrame", 0);
+		u64  levels        = (u64) req["arguments"].value("levels", 0);
+		auto number_result = debugger.getNumberOfStackFrames(thread_id);
+		if (!number_result.has_value()) {
 			sendErrorResponse(
-				req, "Failed to get stack trace count: " + api::errorToString(count_result.error())
+				req, "Failed to get stack trace count: " + api::errorToString(number_result.error())
 			);
 			return;
 		}
-		total_frames = count_result.value();
+		total_frames = number_result.value();
 		for (u64 i = 0; i < total_frames; i++) variables.emplace_back(i);
 
-		u64 end_frame = (levels == 0) ? total_frames : std::min(start_frame + levels, total_frames);
+		u64 requested_levels = (levels == 0) ? (total_frames - start_frame) : levels;
+
+		u64 end_frame = (total_frames > start_frame) ? (total_frames - start_frame) : 0;
+
+		start_frame = (end_frame >= requested_levels) ? (end_frame - requested_levels) : 0;
 
 		nlohmann::json stack_frames = nlohmann::json::array();
 		u64            i            = end_frame;
 		while (i-- > start_frame) {
-			auto var_ref_frame = varRefFromStackFrameData(i);
+			auto var_ref_frame = varRefFromStackFrameData(thread_id, i);
 			if (!var_ref_frame.has_value()) {
 				sendErrorResponse(req, var_ref_frame.error());
 				return;
@@ -492,55 +527,22 @@ namespace vm::debugger::debug_adapter {
 			auto [refs, fun_name] = var_ref_frame.value();
 			variables[i]          = refs;
 
-			auto pos_result = debugger.getCurrentPosition();
-
-			if (!pos_result.has_value()) {
-				sendErrorResponse(
-					req, "Failed to get current position: " + api::errorToString(pos_result.error())
-				);
+			auto pos_info = getSourcePositionInfo();
+			if (!pos_info.has_value()) {
+				sendErrorResponse(req, pos_info.error());
 				return;
 			}
-
-			const auto& pos = pos_result.value();
-
-			std::string file_path    = "";
-			u64         start_line   = 0;
-			u64         start_column = 0;
-			u64         end_line     = 0;
-			u64         end_column   = 0;
-
-
-			if (pos.source_position.has_value()) {
-				auto src      = pos.source_position.value();
-				auto [sl, sc] = src.getStartLineColumn();
-				auto [el, ec] = src.getEndLineColumn();
-				start_line    = sl;
-				start_column  = sc;
-				end_line      = el;
-				end_column    = ec;
-
-				file_path = std::string(src.getSource()->getFile().getFilePath().strView());
-
-			} else {
-				file_path  = "Function: " + std::string(pos.function_name.strView());
-				start_line = pos.instr_number;
-			}
-
 
 			nlohmann::json frame
 				= { { "id", i },
 				    { "name", fun_name.str() },
-				    { "line", start_line },
-				    { "column", start_column },
-				    { "endLine", end_line },
-				    { "endColumn", end_column },
+				    { "line", pos_info->start_line },
+				    { "column", pos_info->start_column },
+				    { "endLine", pos_info->end_line },
+				    { "endColumn", pos_info->end_column },
 				    { "source",
-				      {
-						  { "name",
-				            std::filesystem::path(file_path).filename().string(
-							) },                 // Pure filename shown in panel dropdowns
-						  { "path", file_path }  // Absolute path used by IDE to open file
-					  } } };
+				      { { "name", std::filesystem::path(pos_info->file_path).filename().string() },
+				        { "path", pos_info->file_path } } } };
 
 			stack_frames.push_back(frame);
 		}
@@ -582,7 +584,7 @@ namespace vm::debugger::debug_adapter {
 			auto& current_state = variables.at(var_ref - 1);
 			variant_match(current_state) {
 				variant_case(u64, frame_id) {
-					auto var_ref_frame = varRefFromStackFrameData(frame_id);
+					auto var_ref_frame = varRefFromStackFrameData(api::ThreadID(0), frame_id);
 					if (!var_ref_frame.has_value()) {
 						sendErrorResponse(req, var_ref_frame.error());
 						return;

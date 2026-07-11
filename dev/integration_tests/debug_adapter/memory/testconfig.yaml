@@ -1,0 +1,9 @@
+Tests:
+  debug_memory:
+    Run: "PYTHONPATH=../helpers python3 dap_runner.py @{build_dir} @{scenario}"
+    TimeOut: 1
+    Cases:
+      inspect_complex_types:
+        scenario: "inspect_complex_types"
+      test_double_expansion:
+        scenario: "test_double_expansion"
