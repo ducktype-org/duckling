@@ -24,7 +24,7 @@ namespace vm {
 		sf->local_shadow_data_head  = 0;
 	}
 
-	IMemory<ShadowEntry>& FastTrackSafeVMThread::getShadowDataMemory() {
+	GenericMemory<ShadowEntry>& FastTrackSafeVMThread::getShadowDataMemory() {
 		return static_cast<FastTrackSafeVMProcess&>(safe_process).getFTGlobals().getShadowDataMemory();
 	}
 

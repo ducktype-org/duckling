@@ -7,20 +7,20 @@
 namespace vm {
 
 	/**
-	 * @brief Shadow memory implementation using IMemory template.
+	 * @brief Shadow memory implementation using GenericMemory template.
 	 * Maps 1:1 with application memory bytes, but stores ShadowEntry instead.
 	 */
-	using ShadowMemory = IMemory<ShadowEntry>;
+	using ShadowMemory = GenericMemory<ShadowEntry>;
 
 	/**
 	 * @brief Shadow memory block.
 	 */
-	using ShadowBlock = BasicBlock<ShadowEntry>;
+	using ShadowBlock = GenericBlock<ShadowEntry>;
 
 	/**
 	 * @brief Shadow thread stack.
 	 */
-	using ShadowThreadStack = BasicThreadStack<ShadowEntry>;
+	using ShadowThreadStack = GenericThreadStack<ShadowEntry>;
 
 	/**
 	 * @brief Shadow global buffer pointers.

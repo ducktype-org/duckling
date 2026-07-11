@@ -2,5 +2,5 @@
 
 namespace vm {
 	// Explicit instantiation for ShadowMemory
-	template class IMemory<ShadowEntry>;
+	template class GenericMemory<ShadowEntry>;
 }

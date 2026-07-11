@@ -20,7 +20,7 @@ namespace vm {
 	 * SafeVMProcess carries no Fast Track overhead.
 	 */
 	class FastTrackGlobals {
-		IMemory<ShadowEntry> shadow_data_memory;
+		GenericMemory<ShadowEntry> shadow_data_memory;
 
 		std::vector<ShadowEntry>  global_shadow_data;
 		std::vector<ShadowBlock*> global_shadow_blocks;
@@ -51,7 +51,7 @@ namespace vm {
 			return { global_shadow_blocks.at(idx) };
 		}
 
-		[[nodiscard]] IMemory<ShadowEntry>& getShadowDataMemory() { return shadow_data_memory; }
+		[[nodiscard]] GenericMemory<ShadowEntry>& getShadowDataMemory() { return shadow_data_memory; }
 
 		void registerShadow(BlockID id, ShadowBlock* sb) {
 			auto idx = static_cast<usize>(id);

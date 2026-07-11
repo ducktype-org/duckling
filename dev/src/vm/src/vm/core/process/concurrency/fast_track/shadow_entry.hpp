@@ -42,7 +42,7 @@ namespace vm {
 			if (last_read_vc) last_read_vc->decRef();
 		}
 
-		// Support copy for IMemory/std::fill/std::copy
+		// Support copy for GenericMemory/std::fill/std::copy
 		ShadowEntry(const ShadowEntry& other):
 			  last_write(other.last_write),
 			  last_read_epoch(other.last_read_epoch),
