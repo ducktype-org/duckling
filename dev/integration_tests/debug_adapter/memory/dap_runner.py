@@ -164,7 +164,73 @@ try:
             client.fail_test("Critical: Variables reference changed or corrupted during second expansion loop!")
         
         sys.stdout.write("SUCCESS: Zero state-mutation corruption detected. Variant fix holds perfectly stable.\n")
+    
+    # =========================================================================
+    # Scenario 3: Multi-phase stack trace fetching & cache reset via 'next'
+    # =========================================================================
+    elif scenario == "test_multi_phase_and_next_reset":
+        # ---------------------------------------------------------------------
+        # Fetch the top of the stack at the 1st stop point
+        # ---------------------------------------------------------------------
+        st_seq1 = client.send_stack_trace(thread_id=0, start_frame=0, levels=1)
+        st_resp1 = client.wait_for_response(st_seq1, "Fetching top frame (stop 1)", expect_success=True)
+        
+        frames1 = st_resp1.get("body", {}).get("stackFrames", [])
+        if not frames1:
+            client.fail_test("Phase 1: No stack frames returned")
+            
+        top_frame_1 = frames1[0]
+        
+        # Get scopes and variables to initialize and populate the cache (stop 1)
+        scopes_seq1 = client.send_scopes(top_frame_1["id"])
+        scopes_resp1 = client.wait_for_response(scopes_seq1, "Scopes phase 1", expect_success=True)
+        ref_stop_1 = scopes_resp1["body"]["scopes"][0]["variablesReference"]
+        
+        vars_seq1 = client.send_variables(ref_stop_1)
+        vars_resp1 = client.wait_for_response(vars_seq1, "Variables phase 1", expect_success=True)
+        vars_count_1 = len(vars_resp1["body"]["variables"])
 
+        # ---------------------------------------------------------------------
+        # Fetch the next frame lazily within the same stop point
+        # ---------------------------------------------------------------------
+        st_seq2 = client.send_stack_trace(thread_id=0, start_frame=1, levels=1)
+        st_resp2 = client.wait_for_response(st_seq2, "Fetching second frame (offset 1)", expect_success=True)
+        
+        # Idempotency verification: Check if variables from Phase 1 are still alive and stable
+        vars_seq_check = client.send_variables(ref_stop_1)
+        vars_resp_check = client.wait_for_response(vars_seq_check, "Checking idempotency", expect_success=True)
+        
+        if len(vars_resp_check["body"]["variables"]) != vars_count_1:
+            client.fail_test("Critical: Variable cache corrupted during multi-phase fetch within the same stop!")
+
+        # ---------------------------------------------------------------------
+        # 'Next' command
+        # ---------------------------------------------------------------------
+        client.send_next()
+        client.wait_for(events=["stopped"])
+
+        # ---------------------------------------------------------------------
+        # Fetch stack trace and variables in the new execution state
+        # ---------------------------------------------------------------------
+        st_seq3 = client.send_stack_trace(thread_id=0, start_frame=0, levels=1)
+        st_resp3 = client.wait_for_response(st_seq3, "Fetching top frame (stop 2)", expect_success=True)
+        
+        top_frame_2 = st_resp3["body"]["stackFrames"][0]
+        
+        scopes_seq2 = client.send_scopes(top_frame_2["id"])
+        scopes_resp2 = client.wait_for_response(scopes_seq2, "Scopes phase 2", expect_success=True)
+        ref_stop_2 = scopes_resp2["body"]["scopes"][0]["variablesReference"]
+
+        vars_seq2 = client.send_variables(ref_stop_2)
+        vars_resp2 = client.wait_for_response(vars_seq2, "Variables after next step", expect_success=True)
+        
+        # Validation: if everything works, the new request will succeed,
+        # and variables will be parsed properly inside the freshly cleared vector.
+        if "variables" not in vars_resp2.get("body", {}):
+            client.fail_test("Critical: Variables fetch failed after 'next' step. Cache reset might have broken allocation.")
+
+        sys.stdout.write("SUCCESS: Multi-phase idempotency and 'next' cache reset executed perfectly.\n")
+    
     else:
         sys.stderr.write(f"Error: Unknown scenario '{scenario}'\n")
         sys.exit(1)
