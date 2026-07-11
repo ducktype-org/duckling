@@ -54,6 +54,14 @@ extern "C" {
 	};
 
 	int64_t ffi_cpair_sum(CPair c) { return *static_cast<int64_t*>(c.p) + c.v; }
+
+	// Struct whose C layout needs alignment padding (b sits at offset 8, size is 16).
+	struct Mix {
+		int8_t  a;
+		int64_t b;
+	};
+
+	int64_t ffi_mix_sum(Mix m) { return static_cast<int64_t>(m.a) + m.b; }
 }
 
 // NOLINTEND(readability-identifier-naming,cppcoreguidelines-no-malloc,cppcoreguidelines-owning-memory)

@@ -19,7 +19,7 @@ namespace compiler::numeric_value {
 	 * @brief Represents a numeric value representing a numeric literal.
 	 * @TODO: #1498 Add support for f16, f128, i128.
 	 */
-	class NumericValue {
+	class NumericValue final {
 		// @note: std::uint8_t and std::int8_t are used here instead of our `STRONG_TYPEDEF_INT` u8
 		// and i8 so the generic code operating on numeric value won't get too complicated (we would
 		// have to implement basically every numeric trait from the std to include our u8 and i8).

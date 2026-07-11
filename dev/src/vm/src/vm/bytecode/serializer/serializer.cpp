@@ -166,7 +166,10 @@ namespace vm::code {
 				out << type.name.strView() << " {\n";
 				for (auto field: type.fields)
 					out << "    " << field.name.strView() << ": " << field.type.strView() << ",\n";
-				out << "}\n";
+				out << "}";
+				if (type.packed) out << " packed";
+				if (type.assert_size.has_value()) out << " assert_size " << *type.assert_size;
+				out << "\n";
 			}
 
 			void operator()(const VariantType&) const {
