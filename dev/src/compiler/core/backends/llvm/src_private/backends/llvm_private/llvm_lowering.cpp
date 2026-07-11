@@ -411,6 +411,7 @@ namespace compiler::backend_llvm {
 		variant_match(abi) {
 			variant_case(helios::DefaultAbi, name) { return llvm::CallingConv::C; }
 			variant_case(helios::CAbi, name) { return llvm::CallingConv::C; }
+			variant_case(helios::DVMAbi, name) { return llvm::CallingConv::C; }
 		}
 		CORE_UNREACHABLE();
 	}
