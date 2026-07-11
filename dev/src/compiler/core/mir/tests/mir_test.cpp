@@ -743,10 +743,19 @@ private:
 			using namespace compiler::mir;
 			for (const auto& block_id: mir_func.block_order) {
 				for (const auto& instr: mir_func.blocks[block_id].instructions) {
-					if (instr.operation == Operation::BoxAlloc) {
+					const auto callee_builtin
+						= instr.operation == Operation::Call
+					        ? compiler::helios::isBuiltin(
+								  instr.arguments[0].get<MIRFunctionLiteral>().helios_id
+							  )
+					        : base::Optional<compiler::helios::BuiltinKind>{};
+					const bool is_box_alloc
+						= callee_builtin.has_value()
+					   && callee_builtin.value() == compiler::helios::BuiltinKind::BoxAlloc;
+					if (is_box_alloc) {
 						// var b_int: box i32 = 42;
 						// var b_point: box Point = Point(10, 20);
-						const auto& arg = instr.arguments[0];
+						const auto& arg = instr.arguments[1];
 						if (arg.isConstant())
 							found_alloc_box_int = true;
 						else

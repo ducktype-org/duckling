@@ -1,6 +1,7 @@
 #include "coercions.hpp"
 
 #include <ctv/numeric_value.hpp>
+#include <helios/attributes/builtins.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/tsh/queries/implicit_coercibility.hpp>
@@ -30,7 +31,7 @@ namespace compiler::helios {
 					CORE_PANIC("Illegal Direct -> Ref coercion, should be caught earlier");
 				else if (to_kind == tsh::ReferenceKind::Box) {
 					// var x: box T = T(); -> Implicit box creation.
-					return makeBox<code::BoxOfExpr>(ctx, origin, std::move(expr));
+					return makeBoxAllocCall(ctx, origin, std::move(expr));
 				}
 			} else if (from_kind == tsh::ReferenceKind::Ref) {
 				// --- From Reference ---
@@ -44,7 +45,7 @@ namespace compiler::helios {
 					// reference, thus we first dereference the rhs.
 					// @TODO: #2000 Call a copy constructor here in the future.
 					auto dereferenced = makeBox<code::DerefExpr>(ctx, origin, std::move(expr));
-					return makeBox<code::BoxOfExpr>(ctx, origin, std::move(dereferenced));
+					return makeBoxAllocCall(ctx, origin, std::move(dereferenced));
 				}
 			} else if (from_kind == tsh::ReferenceKind::Box) {
 				// --- From Box ---
