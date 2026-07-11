@@ -27,6 +27,9 @@ namespace pst {
 	class FormatSubExpression;
 	class FormatSubString;
 	class TemplateDecl;
+	// Synthetic non-statements
+	class TemplateExpansionAssignment;
+	class TemplateTopLevel;
 	// Wrappers
 	class OperatorWrapper;
 	class IdentifierWrapper;
