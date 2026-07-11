@@ -9,10 +9,10 @@ type pointer: ptr_Level2 Level2
 type pointer: ptr_InnerArray InnerArray
 type pointer: ptr_i64 i64
 
-global_data g_counter i64 {};
-global_data g_stack_ptr ptr_i64 {};
-global_data g_heap_ptr ptr_Root {};
-global_data g_table_ptr ptr_InnerArray {};
+global_data g_counter i64 {}
+global_data g_stack_ptr ptr_i64 {}
+global_data g_heap_ptr ptr_Root {}
+global_data g_table_ptr ptr_InnerArray {}
 
 function child_thread {} -> {} {
     # 1. Global race test target

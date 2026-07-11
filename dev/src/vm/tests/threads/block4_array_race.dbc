@@ -2,7 +2,7 @@ type fixed_size_table: TableI64 i64 5
 type pointer: ptr_TableI64 TableI64
 type pointer: ptr_i64 i64
 
-global_data g_array_ptr ptr_TableI64 {};
+global_data g_array_ptr ptr_TableI64 {}
 
 function child_thread {} -> {} {
     init_pany_type local_arr_ptr, ptr_TableI64;

@@ -9,10 +9,10 @@
 # because the unlock carries the write epoch into lock_vc, and the
 # re-acquire after wait_cv merges lock_vc into the consumer's VC.
 
-global_data shared_val i64 {};
-global_data ready i64 {};
-global_data lock mutex {};
-global_data cv condition_variable {};
+global_data shared_val i64 {}
+global_data ready i64 {}
+global_data lock mutex {}
+global_data cv condition_variable {}
 
 function consumer {} -> {} {
     init_pany_type lock_enter, mutex;

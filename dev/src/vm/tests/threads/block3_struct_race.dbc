@@ -6,7 +6,7 @@ type data: SimpleStruct {
 type pointer: ptr_SimpleStruct SimpleStruct
 type pointer: ptr_i64 i64
 
-global_data g_struct_ptr ptr_SimpleStruct {};
+global_data g_struct_ptr ptr_SimpleStruct {}
 
 function child_thread {} -> {} {
     init_pany_type local_struct_ptr, ptr_SimpleStruct;

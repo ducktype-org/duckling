@@ -1,4 +1,4 @@
-global_data counter i64 {};
+global_data counter i64 {}
 
 function inc {} -> {} {
     init_pany_type temp, i64;

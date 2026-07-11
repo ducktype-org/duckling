@@ -9,7 +9,7 @@ type pointer: ptr_Level2 Level2
 type pointer: ptr_InnerArray InnerArray
 type pointer: ptr_i64 i64
 
-global_data g_heap_ptr ptr_Root {};
+global_data g_heap_ptr ptr_Root {}
 
 function child_thread {} -> {} {
     init_pany_type val1, i64;

@@ -2,7 +2,7 @@ type opaque: OpaqueType 16
 type pointer: ptr_OpaqueType OpaqueType
 type pointer: ptr_i64 i64
 
-global_data g_opaque_ptr ptr_OpaqueType {};
+global_data g_opaque_ptr ptr_OpaqueType {}
 
 function child_thread {} -> {} {
     init_pany_type local_opaque_ptr, ptr_OpaqueType;

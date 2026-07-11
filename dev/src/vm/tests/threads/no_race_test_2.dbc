@@ -2,8 +2,8 @@
 type fixed_size_table: tablei64 i64 1 
 type pointer: ptr_tablei64 tablei64
 
-global_data counter i64 {};
-global_data lock mutex {};
+global_data counter i64 {}
+global_data lock mutex {}
 
 function inc {} -> {} {
     init_pany_type			temp, i64;

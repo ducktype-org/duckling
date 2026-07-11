@@ -16,7 +16,7 @@
 #   main:   join A, join B         (main.vc >= A's and B's clocks)
 #   main:   write shared_val = 200 (last_read_vc <= main.vc -> no race)
 
-global_data shared_val i64 {};
+global_data shared_val i64 {}
 
 function reader {} -> {} {
     init_pany_type val, i64;

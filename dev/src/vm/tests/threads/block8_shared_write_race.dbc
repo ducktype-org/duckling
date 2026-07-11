@@ -1,4 +1,4 @@
-global_data shared_val i64 {};
+global_data shared_val i64 {}
 
 function reader_thread {} -> {} {
     init_pany_type local_val, i64;

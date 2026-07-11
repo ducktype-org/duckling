@@ -6,7 +6,7 @@
 #
 # The ft_placeCRead / ft_placeCWrite handlers must fire and report the race.
 
-global_data shared_val i64 {};
+global_data shared_val i64 {}
 
 function child_thread {} -> {} {
     init_pany_type one, i64;

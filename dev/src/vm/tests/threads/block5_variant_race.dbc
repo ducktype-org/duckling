@@ -2,7 +2,7 @@ type variant: VarType { i64, i32 }
 type pointer: ptr_VarType VarType
 type pointer: ptr_i64 i64
 
-global_data g_var_ptr ptr_VarType {};
+global_data g_var_ptr ptr_VarType {}
 
 function child_thread {} -> {} {
     init_pany_type local_var_ptr, ptr_VarType;

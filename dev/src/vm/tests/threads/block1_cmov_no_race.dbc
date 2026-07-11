@@ -4,7 +4,7 @@
 # The condition is always true, so both threads write – but they are serialised
 # by the join barrier.  ft_placeCWrite must NOT raise a race here.
 
-global_data shared_val i64 {};
+global_data shared_val i64 {}
 
 function child_thread {} -> {} {
     init_pany_type one, i64;

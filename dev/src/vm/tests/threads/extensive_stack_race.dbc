@@ -1,6 +1,6 @@
 type pointer: ptr_i64 i64
 
-global_data g_stack_ptr ptr_i64 {};
+global_data g_stack_ptr ptr_i64 {}
 
 function child_thread {} -> {} {
     init_pany_type val1, i64;

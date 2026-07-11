@@ -1,4 +1,4 @@
-global_data counter32 i32 {};
+global_data counter32 i32 {}
 
 function child_thread {} -> {} {
     # Exposes missing ftWrite check on mov_p32_imm

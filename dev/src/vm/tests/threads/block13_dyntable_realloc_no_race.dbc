@@ -20,7 +20,7 @@
 type dynamic_table: dtablei64 i64
 type pointer: ptr_dtablei64 dtablei64
 
-global_data g_tbl_ptr ptr_dtablei64 {};
+global_data g_tbl_ptr ptr_dtablei64 {}
 
 function child_thread {} -> {} {
     init_pany_type local_ptr, ptr_dtablei64;

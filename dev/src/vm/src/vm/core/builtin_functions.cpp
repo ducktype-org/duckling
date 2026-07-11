@@ -236,7 +236,7 @@ namespace vm::builtins {
 		// Fast path: mutex is free — grab it with a non-blocking CAS while still holding the
 		// GIL. Skips the GIL release/acquire pair and the expensive timed syscall. We also
 		// skip the intermediate "waiting" state in the detector because we never waited.
-		if (mutex->try_lock()) {
+		if (mutex->m.try_lock()) {
 			if_opt_some(detector, d) d.markThreadAcquiredMutex(thread_id, mutex_id);
 			if (thread.safe_process.getSettings().enable_fast_track)
 				static_cast<FastTrackSafeVMThread&>(thread).getFTData().onAcquire(*mutex->vc);
