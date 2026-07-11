@@ -12,8 +12,9 @@
 namespace vm::kind {
 
 	struct FieldDesc final {
-		Offset  offset;
-		TypeRef type;
+		Offset       offset;
+		ShadowOffset shadow_offset;
+		TypeRef      type;
 	};
 
 	struct Data final {
@@ -24,5 +25,11 @@ namespace vm::kind {
 		std::vector<FieldDesc>              fields;
 
 		base::Optional<InheritanceMetadata> inheritance_metadata;
+
+		/**
+		 * @brief Shadow entry index of every byte of the type, indexed by byte offset. Padding
+		 * bytes belong to no field and hold `NO_SHADOW_ENTRY`. Filled in by `Type::finalize`.
+		 */
+		std::vector<ShadowOffset> byte_to_shadow;
 	};
 }

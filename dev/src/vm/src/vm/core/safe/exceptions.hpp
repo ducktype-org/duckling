@@ -40,6 +40,19 @@ namespace vm::exceptions {
 		VMDynTableReAllocTypeMismatch, "dynTableReAlloc called on a non-dynamic-table block"
 	);
 
+	/**
+	 * @brief Thrown by the Fast Track engine when a memory access races with an earlier one.
+	 * Like every `VMRuntimeException` it is caught by the VM thread's run loop and turns into a
+	 * panic of the accessing thread: the first race a thread hits is reported and that thread
+	 * stops, the rest of the process keeps running.
+	 */
+	struct VMDataRaceException: public VMRuntimeException {
+		constexpr static std::string_view ERR_MSG = "[FastTrack] Data race detected";
+
+		explicit VMDataRaceException(const std::string& detail):
+			  VMRuntimeException(base::strConcat(ERR_MSG, ": ", detail)) {}
+	};
+
 #define VM_RUNTIME_EXCEPTION_WITH_PARAM(name, msg, type)                 \
 	struct name final: public VMRuntimeException {                       \
 		type                              value;                         \

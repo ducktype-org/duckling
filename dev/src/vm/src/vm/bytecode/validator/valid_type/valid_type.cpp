@@ -372,6 +372,7 @@ void valid_type::ValidType::finalize(ValidTypeMap& types) {
 	variant_match(std::get<Finalizing>(state).kind) {
 		variant_case(defined::DefinedPrimitive, primitive) {
 			this->size                  = valid_type::TypeSize(primitive.size, 0);
+			this->shadow_size           = 1;
 			this->alignment             = valid_type::TypeSize(naturalAlignment(primitive.size), 0);
 			this->is_trivially_copyable = true;
 			this->is_ffi_compliant      = ffiCompliantPrimitive(name, primitive.size);
@@ -381,6 +382,7 @@ void valid_type::ValidType::finalize(ValidTypeMap& types) {
 		}
 		variant_case(defined::DefinedPointer, pointer) {
 			this->size                  = valid_type::TypeSize::pointer();
+			this->shadow_size           = 1;
 			this->alignment             = valid_type::TypeSize::pointer();
 			this->is_trivially_copyable = false;
 			this->is_ffi_compliant      = false;
@@ -392,6 +394,7 @@ void valid_type::ValidType::finalize(ValidTypeMap& types) {
 			// A raw native address: 8 bytes in both pointer modes (unlike `Pointer`, which is a
 			// fat block reference in the safe mode).
 			this->size = this->alignment = valid_type::TypeSize(Bytes(8), 0);
+			this->shadow_size            = 1;
 			this->is_trivially_copyable  = true;
 			this->is_ffi_compliant       = true;
 			// A raw address owns nothing.
@@ -401,7 +404,10 @@ void valid_type::ValidType::finalize(ValidTypeMap& types) {
 		variant_case(defined::DefinedFixedSizeTable, fixed_size_table) {
 			auto inner_type = types.at(fixed_size_table.inner);
 			inner_type->finalize(types);
-			this->size                  = inner_type->getSize() * fixed_size_table.element_count;
+			this->size        = inner_type->getSize() * fixed_size_table.element_count;
+			this->shadow_size = static_cast<ShadowSize>(
+				inner_type->getShadowSize() * fixed_size_table.element_count
+			);
 			this->alignment             = inner_type->getAlignment();
 			this->is_trivially_copyable = inner_type->isTriviallyCopyable();
 			// A zero-length table would flatten to no libffi elements, breaking the FFI layout
@@ -418,6 +424,7 @@ void valid_type::ValidType::finalize(ValidTypeMap& types) {
 			/// as this is a runtime property, so size should never be queried,
 			/// through this object. Dynamic table is only accessed by a pointer.
 			this->size                  = valid_type::TypeSize(Bytes(0), 0);
+			this->shadow_size           = 0;
 			this->is_trivially_copyable = false;
 			// Uninstantiable, so it never reaches a scope exit as a local; its elements are
 			// released through the block that holds them.
@@ -427,6 +434,7 @@ void valid_type::ValidType::finalize(ValidTypeMap& types) {
 		variant_case(defined::DefinedOpaque, opaque) {
 			// Opaque type size is known, so we don't need to do anything here.
 			this->size                  = valid_type::TypeSize(opaque.size, 0);
+			this->shadow_size           = 1;
 			this->alignment             = valid_type::TypeSize(naturalAlignment(opaque.size), 0);
 			this->is_trivially_copyable = true;
 			// The VM cannot see inside it, so it can hold nothing it would have to release.
@@ -436,6 +444,7 @@ void valid_type::ValidType::finalize(ValidTypeMap& types) {
 		variant_case(defined::DefinedFunction, function) {
 			// Function type size is known, so we don't need to do anything here.
 			this->size                  = valid_type::TypeSize::pointer();
+			this->shadow_size           = 1;
 			this->alignment             = valid_type::TypeSize::pointer();
 			this->is_trivially_copyable = false;
 			// A code address, not a block reference.
@@ -460,12 +469,15 @@ void valid_type::ValidType::finalize(ValidTypeMap& types) {
 			// because technically it's the maximum of the sizes of the alternatives, but we also
 			// need to take into account different pointer sizes. More info in TypeSize's doc-comment.
 			valid_type::TypeSize data_segment_size(Bytes(0), 0);
+			ShadowSize           max_shadow_size = 0;
 			for (auto& alternative: variant.alternatives) {
 				auto alternative_type = types.at(alternative);
 				alternative_type->finalize(types);
 				data_segment_size = data_segment_size.fieldMax(alternative_type->getSize());
+				max_shadow_size   = std::max(max_shadow_size, alternative_type->getShadowSize());
 			}
-			this->size = valid_type::TypeSize(type_tag_size, 0) + data_segment_size;
+			this->size        = valid_type::TypeSize(type_tag_size, 0) + data_segment_size;
+			this->shadow_size = 1 + max_shadow_size;
 			this->is_trivially_copyable = false;
 			// Whatever the active alternative holds is released through the variant's nested
 			// block, so the variant itself has nothing to run.
@@ -487,6 +499,7 @@ void valid_type::ValidType::finalize(ValidTypeMap& types) {
 			// these offsets (resolved for their pointer width) instead of computing their own.
 			valid_type::TypeSize offset(Bytes(0), 0);
 			valid_type::TypeSize struct_alignment(Bytes(1), Bytes(1));
+			ShadowOffset         shadow_offset = 0;
 			for (auto& field: new_structure.fields) {
 				auto field_type = types.at(field.type);
 				field_type->finalize(types);
@@ -494,11 +507,14 @@ void valid_type::ValidType::finalize(ValidTypeMap& types) {
 					offset           = offset.alignedTo(field_type->getAlignment());
 					struct_alignment = struct_alignment.fieldMax(field_type->getAlignment());
 				}
-				field.offset = offset;
+				field.offset        = offset;
+				field.shadow_offset = shadow_offset;
 				offset += field_type->getSize();
+				shadow_offset += field_type->getShadowSize();
 			}
-			this->size      = offset.alignedTo(struct_alignment);
-			this->alignment = struct_alignment;
+			this->size        = offset.alignedTo(struct_alignment);
+			this->alignment   = struct_alignment;
+			this->shadow_size = shadow_offset;
 			this->is_trivially_copyable
 				= std::ranges::all_of(new_structure.fields, [&](const auto& field) {
 					  auto field_type = types.at(field.type);
@@ -633,6 +649,28 @@ bool valid_type::ValidType::isInstantiable() const {
 	variant_match(state) {
 		variant_case(Finalized, finalized) { return finalized.kind; }
 		variant_default { CORE_PANIC("Tried to get kind of a type that was not finalized"); }
+	}
+}
+
+[[nodiscard]] valid_type::ShadowSize valid_type::ValidType::getShadowSize() const {
+	variant_match(state) {
+		variant_case_novalue(Finalized) { return shadow_size; }
+		variant_default { CORE_PANIC("Tried to get shadow size of a type that was not finalized"); }
+	}
+}
+
+[[nodiscard]] base::Optional<valid_type::ShadowOffset> valid_type::ValidType::getFieldShadowOffsetByName(
+	base::StrID field_name
+) const {
+	variant_match(state) {
+		variant_case(Finalized, finalized) {
+			const auto* structure = std::get_if<finalized::Structure>(&finalized.kind);
+			if (structure == nullptr) return {};
+			for (const auto& field: structure->fields)
+				if (field.name == field_name) return field.shadow_offset;
+			return {};
+		}
+		variant_default { CORE_PANIC("getFieldShadowOffsetByName called on non-finalized type"); }
 	}
 }
 

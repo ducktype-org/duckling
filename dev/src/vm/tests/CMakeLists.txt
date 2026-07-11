@@ -111,6 +111,8 @@ duck_add_test_custom(vm persistent_structures_test utils/persistent_structures_t
         USES LibVM Tester)
 duck_add_test_custom(vm vm_memory_test memory/memory_test.cpp
         USES LibVM_sc Tester VmTester_sc)
+duck_add_test_custom(vm vm_fast_track_engine_test fast_track/fast_track_engine_test.cpp
+        USES LibVM_sc Tester)
 
 duck_add_test_custom(vm vm_bc_verification loader/verification/bc_verification.cpp USES LibVM_sc Tester VmTester_sc)
 duck_add_test_custom(vm vm_bc_building loader/assembly/bc_building.cpp USES LibVM_sc Tester VmTester_sc)

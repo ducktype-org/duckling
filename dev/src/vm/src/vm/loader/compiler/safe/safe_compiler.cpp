@@ -196,8 +196,9 @@ namespace vm::loader::compiler::safe {
 			auto [bytecode, instruction_mapping] = lowerInstructions(ctx);
 
 			// Calculate the functions metadata.
-			code::FuncSignature        signature       = function.signature;
-			code::valid_type::TypeSize parameters_size = {};
+			code::FuncSignature        signature              = function.signature;
+			code::valid_type::TypeSize parameters_size        = {};
+			usize                      parameters_shadow_size = 0;
 			std::vector<TypeCRef>      parameters;
 			parameters.reserve(signature.parameters.size());
 
@@ -206,12 +207,17 @@ namespace vm::loader::compiler::safe {
 					= high_program.getTypeContext().getCurrentTypes().at(param.str);
 				parameters.emplace_back(low_program.getTypes().at(type->getName()));
 				parameters_size += type->getSize();
+				parameters_shadow_size += type->getShadowSize();
 			}
 
-			code::valid_type::TypeSize ret_type_sum = {};
-			std::vector<TypeCRef>      result_types = {};
+			code::valid_type::TypeSize ret_type_sum    = {};
+			usize                      ret_shadow_size = 0;
+			std::vector<TypeCRef>      result_types    = {};
 			for (auto& ret: signature.result_types) {
-				ret_type_sum += high_program.getTypeContext().getCurrentTypes().at(ret)->getSize();
+				CRef<code::valid_type::ValidType> type
+					= high_program.getTypeContext().getCurrentTypes().at(ret);
+				ret_type_sum += type->getSize();
+				ret_shadow_size += type->getShadowSize();
 				result_types.emplace_back(low_program.types->at(ret));
 			}
 
@@ -228,6 +234,8 @@ namespace vm::loader::compiler::safe {
 			                      .local_slot_count    = ctx.local_slot_count,
 			                      .arg_size            = getIntTypeSize(parameters_size),
 			                      .ret_size            = getIntTypeSize(ret_type_sum),
+			                      .arg_shadow_size     = parameters_shadow_size,
+			                      .ret_shadow_size     = ret_shadow_size,
 			                      .parameters          = std::move(parameters),
 			                      .result_types        = std::move(result_types),
 			                      .instruction_mapping = std::move(instruction_mapping) },
@@ -255,19 +263,22 @@ namespace vm::loader::compiler::safe {
 
 
 			low::LowGlobalData data{
-				.type                 = low_program.types->at(global.type),
-				.init                 = global_init,
-				.global_buffer_offset = program_ctx.global_buffer_size.asInt(),
-				.global_block_idx     = program_ctx.global_count,
+				.type                      = low_program.types->at(global.type),
+				.init                      = global_init,
+				.global_buffer_offset      = program_ctx.global_buffer_size.asInt(),
+				.global_block_idx          = program_ctx.global_count,
+				.global_shadow_data_offset = program_ctx.global_shadow_buffer_size,
 			};
 			low_program.global_data.insert(data, global.name);
 
 			program_ctx.global_count += 1;
 			program_ctx.global_buffer_size += Bytes(data.type->getSize().asInt());
+			program_ctx.global_shadow_buffer_size += data.type->getShadowSize();
 		}
 
-		low_program.global_buffer_size = program_ctx.global_buffer_size;
-		low_program.global_count       = program_ctx.global_count;
+		low_program.global_buffer_size        = program_ctx.global_buffer_size;
+		low_program.global_count              = program_ctx.global_count;
+		low_program.global_shadow_buffer_size = program_ctx.global_shadow_buffer_size;
 	}
 
 	CRef<vm::low::LowVMProgram> SafeCompiler::getLowProgram() const { return &low_program; }

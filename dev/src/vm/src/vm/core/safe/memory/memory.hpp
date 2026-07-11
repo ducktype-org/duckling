@@ -4,6 +4,7 @@
 #include "allocator/dummy_allocator.hpp"
 #include "allocator/heap_allocator.hpp"
 #include "block.hpp"
+#include "entry_count.hpp"
 #include "pointer.hpp"
 #include "thread_stack.hpp"
 
@@ -117,8 +118,7 @@ namespace vm {
 		 * @note The part of `new_data` past the moved objects is cleared.
 		 * @note The old data is deallocated with its own allocator.
 		 */
-		// @TODO: #3447 `children_blocks` is keyed by a byte offset while `entries_to_move` is an
-		// entry count; the two are interchangeable only while `sizeof(EntryT) == 1`.
+		// @note `children_blocks` is keyed by an entry offset, the same unit as `entries_to_move`.
 		void changeBlockData(Ref<BlockT> block, BlockData<EntryT> new_data) {
 			BlockData<EntryT> old_data = block->data;
 			usize entries_to_move      = std::min(old_data.view.size(), new_data.view.size());
@@ -272,7 +272,7 @@ namespace vm {
 			//    by recursing on the tail.
 
 			const bool  is_dynamic_table = type->getKind() == Type::Kind::DynamicTable;
-			const usize object_size      = is_dynamic_table ? data.size() : type->getSize().asInt();
+			const usize object_size = is_dynamic_table ? data.size() : entryCountFor<EntryT>(type);
 
 			// Nothing to walk in an empty range, and a zero-sized object would never advance the
 			// loop. Such a type cannot hold a pointer either, so there is nothing for a callback
@@ -310,11 +310,12 @@ namespace vm {
 					break;
 				case Type::Kind::Data:
 					// Iterate over data's fields
-					for (const auto& fields = **type->getFields(); auto [offset, tp]: fields)
+					for (const auto& field: **type->getFields())
 						iterateOverDataAndExecute(
-							base::TypedModRawView<EntryT>{ object.getBegin() + offset.asInt(),
-						                                   tp->getSize().asInt() },
-							tp,
+							base::TypedModRawView<EntryT>{ object.getBegin()
+						                                       + fieldEntryOffsetFor<EntryT>(field),
+						                                   entryCountFor<EntryT>(field.type) },
+							field.type,
 							callback
 						);
 					break;
@@ -330,29 +331,40 @@ namespace vm {
 		 * @note `data` has to represent a single object, not multiple objects - e.g. it can't be a
 		 * range of objects from a table, but it can be a single object from a table, or from
 		 * somewhere else.
+		 * @note Only the data memory holds block references. A shadow entry owns nothing that
+		 * points into the memory, so there is nothing to destroy in the shadow memory.
 		 */
-		void runObjectDestructor(base::TypedModRawView<EntryT> data, TypeCRef type)
-			requires std::is_same_v<EntryT, byte> {
-			switch (type->getKind()) {
-			case Type::Kind::Pointer: {
-				const auto ptr = safeReadPointerBytes<Pointer>(data.getBegin());
-				destroyBlockReference(ptr);
-				break;
-			}
-			case Type::Kind::Primitive:
-			case Type::Kind::Function:
-			case Type::Kind::Opaque:
-			case Type::Kind::CPointer:
-			case Type::Kind::DynamicTable:
-			case Type::Kind::FixedSizeTable:
-			case Type::Kind::Data:
-			case Type::Kind::Variant:
-				// There is nothing to do with variant, data and tables, because the data should
-				// be already deleted thanks to the nested blocks structure, that deletes the
-				// nested block's data first.
-				break;
-			default:
-				CORE_PANIC("Handling default");
+		void runObjectDestructor(
+			[[maybe_unused]] base::TypedModRawView<EntryT> data, [[maybe_unused]] TypeCRef type
+		) {
+			if constexpr (std::is_same_v<EntryT, byte>) {
+				switch (type->getKind()) {
+				case Type::Kind::Pointer: {
+					const auto ptr = safeReadPointerBytes<Pointer>(data.getBegin());
+					destroyBlockReference(ptr);
+					break;
+				}
+				case Type::Kind::Primitive:
+				case Type::Kind::Function:
+				case Type::Kind::Opaque:
+				case Type::Kind::CPointer:
+				case Type::Kind::DynamicTable:
+				case Type::Kind::FixedSizeTable:
+				case Type::Kind::Data:
+				case Type::Kind::Variant:
+					// There is nothing to do with variant, data and tables, because the data
+					// should be already deleted thanks to the nested blocks structure, that
+					// deletes the nested block's data first.
+					break;
+				default:
+					CORE_PANIC("Handling default");
+				}
+			} else {
+				static_assert(
+					std::is_same_v<EntryT, ShadowEntry>,
+					"Shadow entries own no block references; any other EntryT has to say what "
+					"it owns"
+				);
 			}
 		}
 
@@ -362,29 +374,39 @@ namespace vm {
 		 * @note `data` has to represent a single object, not multiple objects - e.g. it can't be a
 		 * range of objects from a table, but it can be a single object from a table, or from
 		 * somewhere else.
+		 * @note See `runObjectDestructor` on why the shadow memory has nothing to do here.
 		 */
-		void runObjectCopyConstructor(base::TypedModRawView<EntryT> data, TypeCRef type)
-			requires std::is_same_v<EntryT, byte> {
-			switch (type->getKind()) {
-			case Type::Kind::Pointer: {
-				const auto ptr = safeReadPointerBytes<Pointer>(data.getBegin());
-				if_opt_some(ptr.block.toOpt(), block) increaseBlockRefcount(block);
-				break;
-			}
-			case Type::Kind::Primitive:
-			case Type::Kind::Function:
-			case Type::Kind::Opaque:
-			case Type::Kind::CPointer:
-			case Type::Kind::DynamicTable:
-			case Type::Kind::FixedSizeTable:
-			case Type::Kind::Data:
-			case Type::Kind::Variant:
-				// There is nothing to do with variant, data and tables, because the data should
-				// be already copied thanks to the nested blocks structure, that deletes the
-				// nested block's data first.
-				break;
-			default:
-				CORE_PANIC("Handling default");
+		void runObjectCopyConstructor(
+			[[maybe_unused]] base::TypedModRawView<EntryT> data, [[maybe_unused]] TypeCRef type
+		) {
+			if constexpr (std::is_same_v<EntryT, byte>) {
+				switch (type->getKind()) {
+				case Type::Kind::Pointer: {
+					const auto ptr = safeReadPointerBytes<Pointer>(data.getBegin());
+					if_opt_some(ptr.block.toOpt(), block) increaseBlockRefcount(block);
+					break;
+				}
+				case Type::Kind::Primitive:
+				case Type::Kind::Function:
+				case Type::Kind::Opaque:
+				case Type::Kind::CPointer:
+				case Type::Kind::DynamicTable:
+				case Type::Kind::FixedSizeTable:
+				case Type::Kind::Data:
+				case Type::Kind::Variant:
+					// There is nothing to do with variant, data and tables, because the data
+					// should be already copied thanks to the nested blocks structure, that
+					// deletes the nested block's data first.
+					break;
+				default:
+					CORE_PANIC("Handling default");
+				}
+			} else {
+				static_assert(
+					std::is_same_v<EntryT, ShadowEntry>,
+					"Shadow entries own no block references; any other EntryT has to say what "
+					"it owns"
+				);
 			}
 		}
 
@@ -392,8 +414,7 @@ namespace vm {
 		/**
 		 * @brief Executes destructors on a range of objects, that lay next to each other.
 		 */
-		void runDataDestructors(base::TypedModRawView<EntryT> data, TypeCRef type)
-			requires std::is_same_v<EntryT, byte> {
+		void runDataDestructors(base::TypedModRawView<EntryT> data, TypeCRef type) {
 			iterateOverDataAndExecute(data, type, &GenericMemory::runObjectDestructor);
 		}
 
@@ -424,10 +445,10 @@ namespace vm {
 		void freeAllocatedBlockData();
 
 		struct GlobalBlocksConfig final {
-			std::vector<usize>    global_data_offsets;
+			std::vector<usize>    global_data_offsets;  /// In entries, like every offset here.
 			std::vector<usize>    global_blocks_idxs;
 			std::vector<TypeCRef> global_types;
-			Bytes                 total_global_data_size = Bytes(0);
+			usize                 total_global_data_size = 0;  /// In entries.
 			usize                 global_count           = 0;
 		};
 
@@ -454,18 +475,18 @@ namespace vm {
 				"Global blocks buffer cannot be shrunk"
 			);
 			CORE_ASSERT(
-				global_blocks.total_global_data_size.asInt() >= global_data_buffer.size(),
+				global_blocks.total_global_data_size >= global_data_buffer.size(),
 				"Global data buffer cannot be shrunk"
 			);
 
-			global_data_buffer.resize(global_blocks.total_global_data_size.asInt());
+			global_data_buffer.resize(global_blocks.total_global_data_size);
 			global_data_blocks.resize(global_blocks.global_count);
 
 			for (usize i = 0; i < global_blocks.global_count; i++) {
 				usize    block_idx = global_blocks.global_blocks_idxs[i];
 				usize    off       = global_blocks.global_data_offsets[i];
 				TypeCRef type      = global_blocks.global_types[i];
-				usize    type_size = type->getSize().asInt();
+				usize    type_size = entryCountFor<EntryT>(type);
 				CORE_ASSERT(
 					block_idx < global_data_blocks.size(),
 					"Global block index is out of bounds of the global blocks buffer"
@@ -648,7 +669,7 @@ namespace vm {
 
 			auto block_data         = parent_block->data;
 			block_data.element_type = type;
-			u64 entry_count         = type->getSize().asInt();
+			u64 entry_count         = entryCountFor<EntryT>(type);
 			if (parent_block->deallocated) throw exceptions::VMUseAfterFreeException();
 			if (offset + entry_count > parent_block->data.view.size())
 				throw exceptions::VMOutOfBlockBoundsException();

@@ -6,7 +6,13 @@
 
 #include <hashing/hash.hpp>
 
+#include <vm/core/safe/type_metadata/definitions.hpp>
+
 namespace vm::code::valid_type {
+	/// Shadow sizes and offsets are the same unit on both sides of the validator/runtime boundary.
+	using ShadowSize   = vm::ShadowSize;
+	using ShadowOffset = vm::ShadowOffset;
+
 	/**
 	 * @brief TypeSize represents the size of a type in bytes. It takes into account the fact that
 	 * pointer sizes can be different on different architectures. This is useful for calculating the

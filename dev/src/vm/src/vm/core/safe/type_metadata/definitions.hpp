@@ -11,6 +11,15 @@ namespace vm {
 
 	using Offset = Bytes;
 
+	/// Size of a type's shadow layout, in shadow entries (see `ShadowEntry`)
+	using ShadowSize = u32;
+
+	/// Offset inside a type's shadow layout, in shadow entries
+	using ShadowOffset = u32;
+
+	/// Marks a byte that no shadow entry covers (padding inside a data type).
+	inline constexpr ShadowOffset NO_SHADOW_ENTRY = ShadowOffset(-1);
+
 	class Type;
 
 	using TypeRef  = Ref<Type>;
