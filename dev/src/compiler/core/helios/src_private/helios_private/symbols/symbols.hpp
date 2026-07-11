@@ -18,7 +18,6 @@
 #include <string_id/string_id.hpp>
 
 namespace compiler::helios {
-
 	/**
 	 * @brief Return all symbols currently stored by HELIOS.
 	 * @note: This should be used for tests and debug only,
@@ -99,8 +98,8 @@ namespace compiler::helios {
 
 	namespace defgen {
 		struct KeyFor_QueryGeneratedSymbol {
-			base::StrID         name;
-			GeneratedSymbolData generated_symbol_data;
+			base::StrID                name;
+			GeneratedSymbolDataVariant generated_symbol_data;
 
 			[[nodiscard]]
 			base::Bit256 queryUnstablePerfectHash() const;

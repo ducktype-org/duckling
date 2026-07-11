@@ -44,17 +44,17 @@ private:
 		ASSERT_EQUAL(queue.size(), 4ULL);
 
 		auto first = queue.tryPop();
-		ASSERT_TRUE(first.has_value());
+		ASSERT_HAS_VALUE(first);
 		ASSERT_EQUAL(first.value(), 1);
 		ASSERT_EQUAL(queue.size(), 3ULL);
 
 		auto even = queue.tryPopIf([](base::CRef<int> value) { return *value % 2 == 0; });
-		ASSERT_TRUE(even.has_value());
+		ASSERT_HAS_VALUE(even);
 		ASSERT_EQUAL(even.value(), 2);
 		ASSERT_EQUAL(queue.size(), 2ULL);
 
 		auto extracted = queue.extractIf([](base::CRef<int> value) { return *value == 4; });
-		ASSERT_TRUE(extracted.has_value());
+		ASSERT_HAS_VALUE(extracted);
 		ASSERT_EQUAL(extracted.value(), 4);
 		ASSERT_EQUAL(queue.size(), 1ULL);
 
@@ -63,7 +63,7 @@ private:
 		ASSERT_EQUAL(queue.size(), 1ULL);
 
 		auto last = queue.tryPop();
-		ASSERT_TRUE(last.has_value());
+		ASSERT_HAS_VALUE(last);
 		ASSERT_EQUAL(last.value(), 3);
 
 		ASSERT_TRUE(queue.tryPop().empty());

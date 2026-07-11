@@ -117,7 +117,7 @@ class PSTErrorTests: public tester::TestSuite {
 		}
 	};
 
-	template<std::derived_from<pst::ClassStmt> Element, bool good = true, typename Parser = Element>
+	template<std::derived_from<pst::Stmt> Element, bool good = true, typename Parser = Element>
 	struct ClassStmtExample: public GenExample {
 		base::StrID class_name;
 
@@ -130,7 +130,9 @@ class PSTErrorTests: public tester::TestSuite {
 		bool operator()() override {
 			auto parsed = pst::PST<Element, Parser>::fromContentsWithArgs(
 				this->code,
-				makeBox<pst::LangParserContext>(class_name, pst::BlockOrderType::Unordered),
+				makeBox<pst::LangParserContext>(
+					class_name, pst::BlockOrderType::Unordered, pst::StmtContext::Class
+				),
 				hashing::ComponentHash{}
 			);
 			return ((not parsed.hasErrors()) == good && testCloning(parsed).isOk());
@@ -217,6 +219,16 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::FunDecl, true>  simple_fundecl2{ "fundecl foo()" };
 	Example<pst::FunDecl, false> bad_fundecl1{ "fundecl foo(a)" };
 
+	Example<pst::Fun, true>      operator_function1{ "fun +*(a: i64, b: i64) -> i64 = {}" };
+	Example<pst::FunDecl, true>  operator_fundecl{ "fundecl +*(a: i64, b: i64) -> i64" };
+	Example<pst::Class, true>    operator_method{ "class Foo { fun +*(a: u64) -> Foo = {} }" };
+	Example<pst::Fun, false>     assignment_operator_function1{ "fun +*=(a: i64) = {}" };
+	Example<pst::Fun, false>     bare_assign_operator_function{ "fun =(a: i64) = {}" };
+	Example<pst::Fun, false>     comparison_operator_function1{ "fun <(a: i64) = {}" };
+	Example<pst::Fun, false>     special_operator_function1{ "fun ->(a: i64) = {}" };
+	Example<pst::Fun, false>     special_operator_function2{ "fun .?(a: i64) = {}" };
+	Example<pst::FunDecl, false> reserved_operator_fundecl{ "fundecl ==(a: i64) -> i64" };
+
 	Example<pst::Pattern, true> simple_pattern1{ "pattern IsEven(x: i32) = {}" };
 	Example<pst::Pattern, true> simple_pattern2{
 		"pattern Point(p: Point) -> (i32, i32) = {return (p.x, p.y);}"
@@ -302,14 +314,18 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::Expand, false> empty_expand{ "expand ;" };
 	Example<pst::Expand, false> unclosed_expand{ "expand \"return 0;;" };
 
-	ClassStmtExample<pst::NonClassStmt, true> class_using{ "using std.math;" };
-	ClassStmtExample<pst::NonClassStmt, true> class_alias{ "alias sqrt=std.math.sqrt;" };
+	Example<pst::TemplateStmt, true>  simple_template{ "template () class C {}" };
+	Example<pst::TemplateStmt, false> no_template_list{ "template class C {}" };
+	Example<pst::TemplateStmt, false> no_statement{ "template ()" };
 
-	ClassStmtExample<pst::ClassStmt, true> public_access_block{ "public {}" };
-	ClassStmtExample<pst::ClassStmt, true> private_access_block{ "private {}" };
-	ClassStmtExample<pst::ClassStmt, true> protected_access_block{ "protected {}" };
-	ClassStmtExample<pst::ClassStmt, true> multi_specifier_block{ "public private {}" };
-	ClassStmtExample<pst::ClassStmt, true> simple_specified_field{ "public static x: i32 = 5;" };
+	ClassStmtExample<pst::Stmt, true> class_using{ "using std.math;" };
+	ClassStmtExample<pst::Stmt, true> class_alias{ "alias sqrt=std.math.sqrt;" };
+
+	ClassStmtExample<pst::Stmt, true> public_access_block{ "public {}" };
+	ClassStmtExample<pst::Stmt, true> private_access_block{ "private {}" };
+	ClassStmtExample<pst::Stmt, true> protected_access_block{ "protected {}" };
+	ClassStmtExample<pst::Stmt, true> multi_specifier_block{ "public private {}" };
+	ClassStmtExample<pst::Stmt, true> simple_specified_field{ "public static x: i32 = 5;" };
 
 	ClassStmtExample<pst::Field, true>  simple_field{ "x: i32 = 5" };
 	ClassStmtExample<pst::Field, true>  simple_var_field{ "var x: i32 = 5" };
@@ -528,6 +544,12 @@ class PSTErrorTests: public tester::TestSuite {
 			ss, dia::SourcePosition::fakePosition()
 		);
 		testDiagnosticMessage<pst::NoExternArgumentError>(ss, dia::SourcePosition::fakePosition());
+		testDiagnosticMessage<pst::ReservedOperatorFunNameError>(
+			ss, dia::SourcePosition::fakePosition(), std::string("==")
+		);
+		testDiagnosticMessage<pst::AssignmentOperatorFunNameError>(
+			ss, dia::SourcePosition::fakePosition(), std::string("+*=")
+		);
 
 		testDiagnosticMessage<
 			pst::OpeningBracketMissingError<pst::internal::NameGetters::inheritanceList>>(

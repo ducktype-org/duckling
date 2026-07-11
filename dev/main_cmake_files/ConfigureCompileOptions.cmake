@@ -13,7 +13,7 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 	message("-- GNU compiler")
 
 	if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 14)
-        message(WARNING 
+        message(WARNING
 				"We know the project won't compile on versions lower than 14. "
 				"If it is a mistake feel free to ignore this.")
     endif()
@@ -27,6 +27,8 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 		"-Werror=free-nonheap-object "
 		"-Werror=conversion "
 		"-Werror=implicit-fallthrough "
+		"-Werror=reorder "
+		"-Werror=invalid-memory-model "
 		"-Wall -Wextra "
 		"-pedantic "
 		"-Wno-sign-compare "
@@ -40,7 +42,7 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL
 	message("-- ${CMAKE_CXX_COMPILER_ID} compiler")
 
 	if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 19)
-		message(WARNING 
+		message(WARNING
 				"We know the project won't compile on versions lower than 19. "
 				"If it is a mistake feel free to ignore this.")
 	elseif (CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 16.3)

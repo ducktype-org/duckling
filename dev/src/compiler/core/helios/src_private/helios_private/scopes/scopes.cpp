@@ -13,7 +13,6 @@
 #include <frontend/pst_parser/elements/hierarchy/statements/using.hpp>
 #include <frontend/pst_parser/lang_parser_element.hpp>
 #include <frontend/pst_parser/pst_visitor.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios_private/hout_creation/desugaring/for.hpp>
 #include <helios_private/lookup/interface.hpp>
@@ -119,16 +118,6 @@ namespace compiler::helios {
 		case pst::ElementKind::CodeBlockOrStmt:
 			return ElementScopeKind::Standard;
 
-		case pst::ElementKind::ClassBlock: {
-			// This is because AccessBlocks store a ClassBlock inside.
-			// Only the "top-class" ClassBlock has a scope.
-			auto parent_kind = element->getParent().value().unlock(ctx)->getElementKind();
-			if (parent_kind == pst::ElementKind::Class)
-				return ElementScopeKind::Standard;
-			else
-				return ElementScopeKind::Transparent;
-		}
-
 		// I don't know if this is correct
 		case pst::ElementKind::SpecifierBlock:
 			return ElementScopeKind::Transparent;
@@ -154,10 +143,6 @@ namespace compiler::helios {
 		case pst::ElementKind::ClassSpecifierBlock:
 			return ElementScopeKind::Transparent;
 
-		// @TODO: #2087 this is a mock, figure out proper handling of non-class statements
-		case pst::ElementKind::NonClassStmt:
-			return ElementScopeKind::Transparent;
-
 		case pst::ElementKind::If:
 		case pst::ElementKind::While:
 		case pst::ElementKind::For:
@@ -180,6 +165,7 @@ namespace compiler::helios {
 		case pst::ElementKind::ExprElement:
 		case pst::ElementKind::RoundGroupExpr:
 		case pst::ElementKind::CallList:
+		case pst::ElementKind::AtrArgList:
 			return ElementScopeKind::Transparent;
 
 		case pst::ElementKind::ExprHolder: {
@@ -506,9 +492,9 @@ namespace compiler::helios {
 				out.emplace_back(ctx.query<defgen::QueryGeneratedSymbol>({
 					.name = base::StrID("self"),
 					.generated_symbol_data
-					= defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::SelfParameter{
-						.method_symbol = ctx.query<QuerySymbolOfSTMT>(meth).valueOrThrow(),
-						.scope         = key } },
+					= defgen::SelfParameter{ .method_symbol
+				                             = ctx.query<QuerySymbolOfSTMT>(meth).valueOrThrow(),
+				                             .scope = key },
 				}));
 
 				output(std::move(out));
@@ -519,8 +505,7 @@ namespace compiler::helios {
 			}
 
 			void visitCopyConstructor(pst::Access<pst::CopyConstructor> cctor) override {
-				// Scope of "fun →()← {}"
-
+				// Scope of "T.copy →(other)← = {}".
 				std::vector<SymID> out;
 				for (auto params: *cctor->getParams().unlock(ctx))
 					out.emplace_back(ctx.query<QuerySymbolOfSTMT>(params).valueOrThrow());

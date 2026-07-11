@@ -33,7 +33,8 @@ namespace compiler::driver::test_utils {
 	base::CheckedOkBad initializeCompilerForTests(
 		const std::vector<PackagePathAndName>& packages,
 		const fs::FilePath&                    artifacts_path,
-		const options_types::StdLibOptions&    stdlib_options
+		const options_types::StdLibOptions&    stdlib_options,
+		const global_state::BackendOptions&    backend_options
 	) {
 		initializeGlobalLogger();
 
@@ -56,9 +57,7 @@ namespace compiler::driver::test_utils {
 			.compilation_artifacts = {
 				.artifacts_path = artifacts_path,
 			},
-			.backend_options = {
-				.llvm_backend = {},
-			},
+			.backend_options   = backend_options,
 			.debug_options     = {},
 			.incremental       = {},
 			.execution_options = { .worker_count = 1 },

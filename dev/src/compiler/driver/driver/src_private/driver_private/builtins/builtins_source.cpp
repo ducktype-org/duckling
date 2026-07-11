@@ -77,10 +77,19 @@ extern "C" {
 	void  builtin_dealloc(void* ptr);
 
 	// List
-	void     builtin_list_push(list* list, void* element_ptr, uint64_t element_size);
-	void     builtin_list_pop(list* list, uint64_t count, uint64_t element_size);
-	uint64_t builtin_list_len(list* list);
-	void     builtin_list_free(list* list);
+	void builtin_list_push(list* list, void* element_ptr, uint64_t element_size);
+	void builtin_list_pop(list* list, uint64_t count, uint64_t element_size);
+	void builtin_list_free(list* list);
+
+	// Number formatting into a caller-provided buffer of `buffer_cap` bytes. Each one
+	// writes the decimal representation of `v` into `p` followed by a terminating NUL and
+	// returns how many characters it wrote (excluding the NUL), or `0` when the
+	// representation plus its NUL does not fit into `buffer_cap` bytes.
+	// These back `core.runtime` and must stay in sync with the DVM builtins of the same
+	// names (see `vm::builtins::getBuiltinFunctions`).
+	uint64_t float_to_string(double v, char* p, uint64_t buffer_cap);
+	uint64_t u64_to_string(uint64_t v, char* p, uint64_t buffer_cap);
+	uint64_t i64_to_string(int64_t v, char* p, uint64_t buffer_cap);
 
 	// Stringification @TODO: #2634 move to Duckling, probably
 	String builtin_stringify_i64(int64_t v);
@@ -286,9 +295,6 @@ void builtin_list_pop(list* list, uint64_t count, uint64_t element_size) {
 	list->length -= to_remove;
 }
 
-// len(vec: List[T]) -> u64
-uint64_t builtin_list_len(list* list) { return list->length; }
-
 void builtin_list_free(list* list) {
 	if (list->data != NULL) {
 		// The data pointer might not be the start of the allocation.
@@ -299,6 +305,34 @@ void builtin_list_free(list* list) {
 		list->memory_begin_offset = 0;
 		list->memory_end_offset   = 0;
 	}
+}
+
+// Formats `value` with `format` directly into `p`, whose total capacity is `buffer_cap`
+// bytes. Writes at most `buffer_cap - 1` characters followed by a terminating NUL, as
+// `snprintf` does. Returns the number of characters written (excluding the NUL), or `0`
+// when the representation plus its NUL does not fit; on a non-fit the buffer may hold a
+// truncated result, so callers must ignore it when `0` is returned.
+template<typename T>
+static uint64_t write_formatted(char* p, uint64_t buffer_cap, const char* format, T value) {
+	const int written = snprintf(p, buffer_cap, format, value);
+	if (written < 0) exit(1);
+
+	const uint64_t length = uint64_t(written);
+	if (length >= buffer_cap) return 0;
+
+	return length;
+}
+
+uint64_t float_to_string(double v, char* p, uint64_t buffer_cap) {
+	return write_formatted(p, buffer_cap, "%g", v);
+}
+
+uint64_t u64_to_string(uint64_t v, char* p, uint64_t buffer_cap) {
+	return write_formatted(p, buffer_cap, "%lu", v);
+}
+
+uint64_t i64_to_string(int64_t v, char* p, uint64_t buffer_cap) {
+	return write_formatted(p, buffer_cap, "%ld", v);
 }
 
 String builtin_stringify_i64(int64_t v) {

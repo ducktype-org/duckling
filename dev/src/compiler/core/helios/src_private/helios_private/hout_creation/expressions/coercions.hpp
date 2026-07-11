@@ -83,10 +83,7 @@ namespace compiler::helios {
 		}
 
 		friend CoercionQResult canCoerce(
-			query::Context&   ctx,
-			tsh::SymbolType<> from,
-			tsh::SymbolType<> to,
-			bool              bypass_trivial_copyability_check
+			query::Context& ctx, tsh::SymbolType<> from, tsh::SymbolType<> to
 		);
 
 		[[nodiscard]] bool isEmptyCoercion() const noexcept {
@@ -160,12 +157,7 @@ namespace compiler::helios {
 	 * @brief Checks if a coercion from `from` to `to` is possible and returns
 	 * a function performing the coercion if it is.
 	 */
-	CoercionQResult canCoerce(
-		query::Context&   ctx,
-		tsh::SymbolType<> from,
-		tsh::SymbolType<> to,
-		bool              bypass_trivial_copyability_check = false
-	);
+	CoercionQResult canCoerce(query::Context& ctx, tsh::SymbolType<> from, tsh::SymbolType<> to);
 
 	/**
 	 * @brief Checks if a coercion from `from` to the meta type is possible and returns

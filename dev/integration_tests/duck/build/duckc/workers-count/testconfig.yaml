@@ -1,0 +1,14 @@
+workers: '1'
+test-cmd: duck -C foo build --jobs @{workers}
+PreCase: |+
+  @{cd-tmp-dir}
+  @{duck-exe} init foo
+Tests:
+  workers:
+    Description: can build a project with different number of workers
+    Cases:
+      default: {}
+      all-available:
+        workers: 0
+      in-between:
+        workers: 2

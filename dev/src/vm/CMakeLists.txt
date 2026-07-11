@@ -36,11 +36,11 @@ set(vm_internal_deps
 )
 
 set(vm_external_deps
-    Crow::Crow JSON
+    Crow::Crow JSON PkgConfig::LIBFFI
 )
 
 set(vm_dependencies
-    ${vm_internal_deps} 
+    ${vm_internal_deps}
     ${vm_external_deps}
 )
 
@@ -145,14 +145,14 @@ function(add_vm_variant suffix compile_def)
                 ${vm_dep_objects_bc}
                 -o ${common_bc}
             COMMAND_EXPAND_LISTS
-        
-            # Get all microopcodes names to add them to api later. Heuristic used: contains "OpFuns", "op_" and not "debug"            
+
+            # Get all microopcodes names to add them to api later. Heuristic used: contains "OpFuns", "op_" and not "debug"
             COMMAND /usr/bin/env python3
                 ${CMAKE_SOURCE_DIR}/scripts/py/jit/jitable_interface.py
                 ${LLVM_TOOLS_ARGS}
                 -i ${common_bc}
                 -o ${extracted_func_file}
-            
+
             # Strip global constructors, they are not necessery for jit.
             COMMAND ${LLVM_EXTRACT} --delete --glob=llvm.global_ctors  ${common_bc} -o ${common_bc}
 
@@ -188,11 +188,11 @@ function(add_vm_variant suffix compile_def)
         )
 
         add_library(${lib_vm_name} $<TARGET_OBJECTS:LibCommonVM> $<TARGET_OBJECTS:${lib_thread_vm_name}> $<TARGET_OBJECTS:JitDep>)
-        
+
         target_link_libraries(${lib_vm_name} ${llvm_libs})
 
         make_module(${lib_vm_name} USES llvm_helpers ${vm_dependencies})
-        
+
         target_compile_options(JitDep PRIVATE
             "--embed-dir=$<TARGET_PROPERTY:JitDep,BINARY_DIR>"
         )

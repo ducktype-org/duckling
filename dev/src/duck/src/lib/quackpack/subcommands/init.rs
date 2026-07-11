@@ -52,7 +52,7 @@ pub fn init(opts: InitOptions<'_, '_>) -> QuackResult<()> {
         None => opts
             .at
             .file_name()
-            .expect("file without a filename")
+            .with_context(|| format!("path `{}` doesn't have a filename", opts.at.display()))?
             .to_string_lossy()
             .into_owned(),
     };

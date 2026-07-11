@@ -1,5 +1,6 @@
 PreNode: ""
 
 SubDirs:
-  - happy
-  - unhappy
+  - builtin-subcommands
+  - errors
+  - external-subcommands
