@@ -211,7 +211,6 @@ namespace vm::debugger::debug_adapter {
 	void DebugAdapter::handleInitialize(const nlohmann::json& req) {
 		nlohmann::json capabilities = {
 			{ "supportsConfigurationDoneRequest", true },
-			// @TODO: #2558 support set variable (generally memory part of debugger)
 			{ "supportsSetVariable", false },
 		};
 
