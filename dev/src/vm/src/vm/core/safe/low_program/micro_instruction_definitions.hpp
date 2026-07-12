@@ -449,7 +449,11 @@ DEF_MICRO_INSTR(setVTable_pptr_type, vm::low::opargs::PlacePtr, vm::low::opargs:
 DEF_MICRO_INSTR(resetVTable_pptr, vm::low::opargs::PlacePtr)
 // tries to cast pointed object to its subclass, requires that ext_64 is next
 DEF_MICRO_INSTR(downcast_pptr_pptr, vm::low::opargs::PlacePtr, vm::low::opargs::PlacePtr)
-// calls a method of specified name on an a pointer. Performs the dynamic dispatch.
+
+/**
+ * @brief Calls a method of specified name on an a pointer. Performs the dynamic dispatch.
+ * @note Unoptimizable by JIT, listed in dev/scripts/py/jit/jitable_interface.py.
+ */
 DEF_MICRO_INSTR(virtual_call_pptr_method, vm::low::opargs::PlacePtr, vm::low::opargs::MethodName)
 
 // ========= GENERAL POINTER OPERATIONS ========
@@ -681,6 +685,9 @@ DEF_MICRO_INSTR(ext_type_type, vm::low::opargs::Type, vm::low::opargs::Type)
 
 // ========= MISC ========
 
+/**
+ * @note Unoptimizable by JIT, listed in dev/scripts/py/jit/jitable_interface.py.
+ */
 DEF_MICRO_INSTR(check_strategy)
 DEF_MICRO_INSTR(nop)
 
@@ -692,6 +699,9 @@ DEF_MICRO_INSTR(exit)
  */
 DEF_MICRO_INSTR(breakpoint)
 
+/**
+ * @note Unoptimizable by JIT, listed in dev/scripts/py/jit/jitable_interface.py.
+ */
 DEF_MICRO_INSTR(stepGil)
 
 /**
