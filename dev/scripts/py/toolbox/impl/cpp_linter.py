@@ -145,8 +145,13 @@ def gcc_clang_tidy_extra_args(build_folder: Path) -> str:
     except OSError:
         return ""
 
+    if not compiler:
+        return ""
     name = Path(compiler).name.lower()
-    if not compiler or "clang" in name or not ("g++" in name or "gcc" in name):
+    # Rule out clang first: "clang++" contains "g++" as a substring.
+    if "clang" in name:
+        return ""
+    if "g++" not in name and "gcc" not in name:
         return ""
 
     # Ask the GCC driver for its libstdc++ header search paths.
@@ -184,7 +189,7 @@ def gcc_clang_tidy_extra_args(build_folder: Path) -> str:
         pass
     for include_dir in include_dirs:
         args += ["--extra-arg=-isystem", f"--extra-arg={include_dir}"]
-    return " " + " ".join(args)
+    return " ".join(args)
 
 
 def clang_tidy_on(
@@ -205,7 +210,7 @@ def clang_tidy_on(
         tidy_out, _ = bash_command_get_output(
             f"{clang_tidy_path} -p {build_folder} --format-style file --config-file .clang-tidy"
             f' --line-filter="[{{"name": "{file}", "lines": {file_diffs}}}]"'
-            f" --extra-arg=-std=c++23{gcc_clang_tidy_extra_args(build_folder)} {file}",
+            f" --extra-arg=-std=c++23 {gcc_clang_tidy_extra_args(build_folder)} {file}",
             log_file=log_file,
         )
         if tidy_out:

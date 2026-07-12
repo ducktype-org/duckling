@@ -40,9 +40,6 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 		# The macOS SDK headers use the C keyword _Static_assert, which GCC rejects
 		# in C++ mode; map it onto C++'s static_assert.
 		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_Static_assert=static_assert")
-		# arm64 defaults `char` to unsigned; x86-64 Linux uses signed. Match Linux so
-		# char/byte-sensitive logic behaves identically across platforms.
-		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsigned-char")
 	endif()
 
 	# Debug version uses O0.

@@ -49,7 +49,7 @@ for the macOS SDK and the system linker (`ld64`).
 xcode-select --install
 
 # GCC (provides g++-15 / gcc-15), the build tools, ICU and libffi.
-brew install gcc cmake ninja graphviz lcov doxygen python@3.12 pkg-config libffi icu4c
+brew install gcc@15 cmake ninja graphviz lcov doxygen python pkg-config libffi icu4c
 
 # clang-format / clang-tidy 19 are only used for linting (pr-validate / cpp-linter).
 brew install llvm@19
@@ -58,12 +58,12 @@ brew install llvm@19
 Pass GCC explicitly to the toolbox commands that build — `-x g++-15 -c gcc-15` on `install-llvm` and
 `setup-build` — otherwise the toolbox picks up Apple clang.
 
-The toolbox requires at least Python 3.12 (the macOS default is older), and Homebrew doesn't package
-most of the Python dependencies. Create a local virtual environment, activate it, and run the toolbox
-from it:
+The toolbox requires at least Python 3.12 (the macOS system Python is older; any newer Homebrew
+Python works), and Homebrew doesn't package most of the Python dependencies. Create a local virtual
+environment, activate it, and run the toolbox from it:
 ```bash
 cd dev/
-python3.12 -m venv .venv
+python3 -m venv .venv
 source .venv/bin/activate
 pip3 install click -r requirements.txt
 ```
