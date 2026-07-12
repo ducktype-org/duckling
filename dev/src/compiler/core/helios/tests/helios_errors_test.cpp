@@ -1316,6 +1316,27 @@ private:
 		);
 	}
 
+	void testErrorLoggingTemplates() {
+		// @TODO: #3042 adjust the tests here
+
+		// ============================ Errors inside template ============================
+
+		checkForErrorOnCompileModule(
+			R"(
+				template T(a: i64)
+				fun foo() = {
+					return a + b;
+				}
+
+				fun main() = {
+					T:{1}();
+				}
+			)",
+			{ "b", "not found" },
+			1
+		);
+	}
+
 	void testPointerCastErrors() {
 		checkForErrorOnCompileModule(
 			R"(
