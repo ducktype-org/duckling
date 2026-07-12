@@ -20,6 +20,8 @@ pub struct BuildOptions<'duck> {
     pub frozen: bool,
     /// Artefact from [`StorageSyncOptions`].
     pub strict_errors: bool,
+    /// Number of threads to use.
+    pub jobs: usize,
 }
 
 /// Compile given options.
@@ -31,6 +33,7 @@ pub fn compile(options: BuildOptions<'_>) -> QuackResult<()> {
         overwrite,
         frozen,
         strict_errors,
+        jobs,
     } = options;
     let root_identity = pcx.package().as_a_local_identity()?;
     let (lock, venv, storage) = sync(
@@ -50,6 +53,7 @@ pub fn compile(options: BuildOptions<'_>) -> QuackResult<()> {
         storage,
         used_features,
         profile,
+        jobs,
     };
     compile::compile(bcx)?;
     Ok(())

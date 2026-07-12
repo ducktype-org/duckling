@@ -36,11 +36,11 @@ set(vm_internal_deps
 )
 
 set(vm_external_deps
-    Crow::Crow JSON
+    Crow::Crow JSON PkgConfig::LIBFFI
 )
 
 set(vm_dependencies
-    ${vm_internal_deps} 
+    ${vm_internal_deps}
     ${vm_external_deps}
 )
 
@@ -118,6 +118,10 @@ function(add_vm_variant suffix compile_def)
     set(lib_thread_vm_name "LibThreadVM_${suffix}")
     set(lib_vm_name "LibVM_${suffix}")
     set(exec_name "VM_${suffix}")
+    set(lib_vm_sources
+        $<TARGET_OBJECTS:LibCommonVM>
+        $<TARGET_OBJECTS:${lib_thread_vm_name}>
+    )
 
     add_library(${lib_thread_vm_name} OBJECT ${vm_config_dependent_sources})
     target_compile_definitions(${lib_thread_vm_name} PRIVATE ${compile_def})
@@ -149,8 +153,8 @@ function(add_vm_variant suffix compile_def)
                 ${vm_dep_objects_bc}
                 -o ${common_bc}
             COMMAND_EXPAND_LISTS
-        
-            # Get all microopcodes names to add them to api later. Heuristic used: contains "OpFuns", "op_" and not "debug"            
+
+            # Get all microopcodes names to add them to api later. Heuristic used: contains "OpFuns", "op_" and not "debug"
             COMMAND /usr/bin/env python3
                 ${CMAKE_SOURCE_DIR}/scripts/py/jit/jitable_interface.py
                 ${LLVM_TOOLS_ARGS}
@@ -190,19 +194,20 @@ function(add_vm_variant suffix compile_def)
                 VM_COMMON_BC ${common_bc}
         )
 
-        
+        list(APPEND lib_vm_sources $<TARGET_OBJECTS:JitDep>)
+
         target_compile_options(JitDep PRIVATE
             "--embed-dir=$<TARGET_PROPERTY:JitDep,BINARY_DIR>"
         )
     endif()
 
-    add_library(${lib_vm_name} $<TARGET_OBJECTS:LibCommonVM> $<TARGET_OBJECTS:${lib_thread_vm_name}> )
+    add_library(${lib_vm_name} ${lib_vm_sources})
     if (JIT_ENABLED)
         target_link_libraries(${lib_vm_name} ${llvm_libs})
-        target_sources(${lib_vm_name} PRIVATE $<TARGET_OBJECTS:JitDep>)
+        make_module(${lib_vm_name} USES llvm_helpers ${vm_dependencies})
+    else()
+        make_module(${lib_vm_name} USES ${vm_dependencies})
     endif()
-
-    make_module(${lib_vm_name} USES ${vm_dependencies})
 
     add_executable(${exec_name} $<TARGET_OBJECTS:MainVM>)
     target_link_libraries(${exec_name} PRIVATE ${lib_vm_name})

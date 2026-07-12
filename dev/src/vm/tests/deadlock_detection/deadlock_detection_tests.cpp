@@ -20,7 +20,7 @@ public:
 
 private:
 	TestResult runWithDetection(const std::string& filename) {
-		auto pid = initProcess(true);
+		auto pid = initProcess({ .enable_deadlock_detection = true });
 		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { fs::File(path(filename)) }));
 		return runTestOnVmGetResult(pid);
 	}
@@ -52,7 +52,7 @@ private:
 	void detectionDisabledAllowsNormalMutexUse() {
 		// Spawn a process with deadlock detection disabled (the default) and verify normal mutex
 		// usage still works.
-		auto pid  = initProcess(false);
+		auto pid  = initProcess({});
 		auto file = fs::File(path("safe_mutex.dbc"));
 		ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { file }));
 		handleTestResult(runTestOnVmGetResult(pid), 0);

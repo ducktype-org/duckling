@@ -12,6 +12,7 @@
 - [alternatively to g++] **clang++** with version 19 or higher is required for building the project.
 - **lcov** is used for generating coverage reports.
 - **LLVM** with version 19 is required for building the project.
+- **pkg-config** and **libffi** (development headers) are required for the dynamic foreign function interface.
 
 
 #### Debian/Ubuntu
@@ -21,14 +22,14 @@ Note that the dependencies listed below are listed without versions. Update the 
 
 ```bash
 sudo apt update -y && \
-sudo apt install python3 python3-click doxygen graphviz-dev cmake ninja-build g++-14 lcov llvm-dev clang-tidy libzstd-dev zlib1g-dev -y
+sudo apt install python3 python3-click doxygen graphviz-dev cmake ninja-build g++-14 lcov llvm-dev clang-tidy libzstd-dev zlib1g-dev pkg-config libffi-dev -y
 ```
 
 
 #### Arch linux
 
 ```bash
-sudo pacman -S python python-pip python-click doxygen graphviz lcov --noconfirm
+sudo pacman -S python python-pip python-click doxygen graphviz lcov pkgconf libffi --noconfirm
 ```
 
 > **Note**  
@@ -54,7 +55,7 @@ brew install llvm@19
 
 ```bash
 # Install remaining dependencies
-brew install cmake ninja graphviz lcov doxygen python@3.12 clang-format
+brew install cmake ninja graphviz lcov doxygen python@3.12 clang-format pkg-config libffi
 ```
 
 Also, unlike many Linuxes, Homebrew doesn't provide a lot of Python packages in their repositories.

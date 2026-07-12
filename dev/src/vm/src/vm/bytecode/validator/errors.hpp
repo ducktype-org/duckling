@@ -155,6 +155,103 @@ namespace vm::code {
 	DEFINE_DUPLICATED_ELEMENT_ERROR(
 		DuplicatedExtCFunctionError, code::ExternalCFunction, "Duplicated external C function: "
 	);
+	DEFINE_DUPLICATED_ELEMENT_ERROR(
+		DuplicatedFFIFunctionError, code::FFIFunction, "Duplicated FFI function: "
+	);
+
+	class FFIUnsupportedTypeError: public ValidationError {
+	public:
+		constexpr static std::string_view ERR_MSG
+			= "Type cannot be used in an FFI function signature (expected a primitive of size 1, "
+			  "2, 4 or 8, `cptr`, or a data structure with only such fields): ";
+
+		FFIUnsupportedTypeError(const valid_type::ValidType& type):
+			  ValidationError(base::strConcat(ERR_MSG, type.getName())) {}
+	};
+
+	class FFIMultipleResultsError: public ValidationError {
+	public:
+		constexpr static std::string_view ERR_MSG
+			= "An FFI function can return at most one value: ";
+		const code::FFIFunction function;
+
+		FFIMultipleResultsError(const code::FFIFunction& function):
+			  ValidationError(base::strConcat(ERR_MSG, function.name.str)),
+			  function(function) {}
+
+		[[nodiscard]] base::Optional<CRef<ElementBase>> maybeElement() const override {
+			return &function.name;
+		}
+	};
+
+	class FFIUnknownSymbolError: public ValidationError {
+	public:
+		constexpr static std::string_view ERR_MSG
+			= "Symbol not found in any of the loaded `ffi object` files: ";
+		const code::FFIFunction function;
+
+		FFIUnknownSymbolError(const code::FFIFunction& function):
+			  ValidationError(base::strConcat(ERR_MSG, function.name.str)),
+			  function(function) {}
+
+		[[nodiscard]] base::Optional<CRef<ElementBase>> maybeElement() const override {
+			return &function.name;
+		}
+	};
+
+	class FFIObjectFileError: public ValidationError {
+	public:
+		constexpr static std::string_view ERR_MSG = "Failed to load `ffi object` file: ";
+
+		FFIObjectFileError(const std::string& file, const std::string& reason):
+			  ValidationError(base::strConcat(ERR_MSG, file, ": ", reason)) {}
+	};
+
+	class FFIStructLayoutMismatchError: public ValidationError {
+	public:
+		constexpr static std::string_view ERR_MSG
+			= "The VM layout of this structure does not match the C ABI layout, so it cannot be "
+			  "used in an FFI function signature: ";
+
+		FFIStructLayoutMismatchError(const valid_type::ValidType& type):
+			  ValidationError(base::strConcat(ERR_MSG, type.getName())) {}
+	};
+
+	class FFIPackedTypeError: public ValidationError {
+	public:
+		constexpr static std::string_view ERR_MSG
+			= "A `packed` data type cannot be used in an FFI function signature by value: libffi "
+			  "can only describe the non-packed structures: ";
+
+		FFIPackedTypeError(const valid_type::ValidType& type):
+			  ValidationError(base::strConcat(ERR_MSG, type.getName())) {}
+	};
+
+	class TypeSizeAssertPointerDependentError: public ValidationError {
+	public:
+		constexpr static std::string_view ERR_MSG
+			= "`assert_size` cannot be used on a type whose size depends on the pointer width "
+			  "(the safe interpreter uses 16-byte pointers, C uses 8): ";
+
+		TypeSizeAssertPointerDependentError(base::StrID type_name):
+			  ValidationError(base::strConcat(ERR_MSG, type_name)) {}
+	};
+
+	class TypeSizeAssertError: public ValidationError {
+	public:
+		constexpr static std::string_view ERR_MSG = "`assert_size` mismatch for type ";
+
+		TypeSizeAssertError(base::StrID type_name, usize expected, usize actual):
+			  ValidationError(base::strConcat(
+				  ERR_MSG,
+				  type_name,
+				  ": expected ",
+				  base::toString(expected),
+				  " bytes, computed ",
+				  base::toString(actual),
+				  " bytes."
+			  )) {}
+	};
 
 	/**
 	 * @note A type may be trivially copyable if its bits can be just copied and its

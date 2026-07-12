@@ -415,7 +415,13 @@ DEF_MICRO_INSTR(jitLoopEntrypoint)
  * @note Unoptimizable by JIT, listed in dev/scripts/py/jit/jitable_interface.py.
  */
 DEF_MICRO_INSTR(call_builtinfunc, vm::low::opargs::BuiltinFunctionID)
+
 DEF_MICRO_INSTR(call_cfunc, vm::low::opargs::ExtCFunction)
+
+/**
+ * @note Unoptimizable by JIT, listed in dev/scripts/py/jit/jitable_interface.py.
+ */
+DEF_MICRO_INSTR(call_ffifunc, vm::low::opargs::FFIFunction)
 
 DEF_MICRO_INSTR(set_threadctx, vm::low::opargs::FunctionID)
 

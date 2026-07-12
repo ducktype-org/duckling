@@ -63,9 +63,13 @@ def exec_bash_command(
     verbose: bool = False,
     decode: bool = True,
     log_to_file=sys.stdout,
+    env: dict[str, str] | None = None,
 ) -> tuple[bytes | str, bytes | str]:
     """
     This is the lowest level access to calling a bash command in toolbox.
+
+    `env` replaces the environment of the spawned process; `None` inherits
+    the toolbox's environment.
     """
     if isinstance(cwd, str):
         cwd = pathlib.Path(cwd)
@@ -79,6 +83,7 @@ def exec_bash_command(
     proc = sp.Popen(
         ["/bin/bash", "-c", command],
         cwd=cwd,
+        env=env,
         stdin=sp.PIPE if input else None,
         stdout=sp.PIPE if capture_output else None,
         stderr=sp.PIPE if capture_output else None,
