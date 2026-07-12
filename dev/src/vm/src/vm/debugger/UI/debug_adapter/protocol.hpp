@@ -45,7 +45,7 @@ namespace dap {
 	};
 
 	struct ExitedEvent: public Event {
-		int64_t exitCode;
+		int64_t exitCode;  // NOLINT(readability-identifier-naming)
 
 		explicit ExitedEvent(int64_t code): exitCode(code) {}
 
@@ -62,8 +62,8 @@ namespace dap {
 
 	struct StoppedEvent: public Event {
 		std::string reason;
-		uint64_t    threadId;
-		bool        allThreadsStopped = true;
+		uint64_t    threadId;                  // NOLINT(readability-identifier-naming)
+		bool        allThreadsStopped = true;  // NOLINT(readability-identifier-naming)
 
 		StoppedEvent(std::string r, uint64_t tid, bool ats = true):
 			  reason(std::move(r)),

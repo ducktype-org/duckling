@@ -244,7 +244,7 @@ namespace vm::debugger::debug_adapter {
 					auto res = debugger.setBreakpoint(fs::File(file_path), line, true);
 
 					if (!res.has_value()) {  // The VM rejected the breakpoint, so we must not keep
-											 // it in our state
+						                     // it in our state
 						dap::Breakpoint bp{ .verified = false,
 							                .line     = line,
 							                .message  = "Failed to set breakpoint: "
