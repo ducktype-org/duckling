@@ -2,7 +2,7 @@
 
 #include "relocations.hpp"
 
-#include <vm/core/native/dynamic_library.hpp>
+#include "../../../native/dynamic_library.hpp"
 
 #include <algorithm>
 #include <array>
