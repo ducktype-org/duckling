@@ -88,18 +88,21 @@ fun writeString(s: ref containers.String) -> () = {
 fun writeI64(x: i64) -> () = {
     var s = x.toString();
     writeString(&s);
+    writeChar('\n');
     s.dispose();
 }
 
 fun writeU64(x: u64) -> () = {
     var s = x.toString();
     writeString(&s);
+    writeChar('\n');
     s.dispose();
 }
 
 fun writeF64(x: f64) -> () = {
     var s = x.toString();
     writeString(&s);
+    writeChar('\n');
     s.dispose();
 }
 
@@ -159,7 +162,7 @@ fun readF64() -> f64 = {
 }
 
 #{
-    Reads characters up to (and discarding) the next newline into a fresh String.
+    Reads characters up to (and discarding) the next newline into a fresh containers.String.
 #}
 fun readString() -> containers.String = {
     var result: containers.String;
@@ -170,28 +173,3 @@ fun readString() -> containers.String = {
     }
     return result;
 }
-
-
-#{
-    Old entry points
-#}
-fun builtin_input_char() -> char = io.readChar();
-fun builtin_output_char(c: char) -> i64 = io.writeChar(c);
-
-fun builtin_input_i64() -> i64 = io.readI64();
-fun builtin_input_u64() -> u64 = io.readU64();
-fun builtin_input_f64() -> f64 = io.readF64();
-fun builtin_input_string() -> containers.String = io.readString();
-
-fun builtin_output_str(s: str) -> i32 = {
-    var i = 0u32;
-    while (i < s.length()) {
-        builtin_output_char(s[i]);
-        i = i + 1u32;
-    }
-    return i as i32;
-}
-
-fun print(x: str) -> i32 = builtin_output_str(x);
-
-fun print(s: ref String) -> u64 = builtin_output_str(s.asSlice());

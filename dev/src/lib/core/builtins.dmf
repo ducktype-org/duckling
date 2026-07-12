@@ -19,3 +19,52 @@ fundecl dvm_char_realloc(p: manyptr char, size: u64);
 
 @builtin("dvm_char_free")
 fundecl dvm_char_free(p: manyptr char);
+
+
+
+#{
+    Old entry points
+#}
+fun builtin_input_char() -> char = io.readChar();
+fun builtin_input_i64() -> i64 = io.readI64();
+fun builtin_input_u64() -> u64 = io.readU64();
+fun builtin_input_f64() -> f64 = io.readF64();
+fun builtin_input_string() -> containers.String = io.readString();
+
+fun builtin_output_char(c: char) -> i64 = io.writeChar(c);
+
+# `toString` allocates a String whose buffer must be released explicitly (destructors are not
+# generated yet), so these cannot be a bare `print(&v.toString())` — that would leak the buffer.
+fun builtin_output_i64(v: i64) -> u64 = {
+    var s = v.toString();
+    let n = print(&s);
+    io.writeChar('\n');
+    s.dispose();
+    return n;
+}
+fun builtin_output_u64(v: u64) -> u64 = {
+    var s = v.toString();
+    let n = print(&s);
+    io.writeChar('\n');
+    s.dispose();
+    return n;
+}
+fun builtin_output_f64(v: f64) -> u64 = {
+    var s = v.toString();
+    let n = print(&s);
+    io.writeChar('\n');
+    s.dispose();
+    return n;
+}
+fun builtin_output_str(s: str) -> u64 = {
+    var i = 0u32;
+    while (i < s.length()) {
+        builtin_output_char(s[i]);
+        i = i + 1u32;
+    }
+    return i;
+}
+
+fun print(x: str) -> u64 = builtin_output_str(x);
+
+fun print(s: ref containers.String) -> u64 = builtin_output_str(s.asSlice());

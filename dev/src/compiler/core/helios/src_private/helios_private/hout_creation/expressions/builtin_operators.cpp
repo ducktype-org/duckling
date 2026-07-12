@@ -267,7 +267,7 @@ namespace compiler::helios::code {
 
 			/// String operators ///
 			const auto str_t = tsh::SymbolType<>{
-				tsh::getStringType(),
+				tsh::getStringType(ctx),
 				tsh::ReferenceKind::Direct,
 				tsh::Mutability::Immutable,
 			};

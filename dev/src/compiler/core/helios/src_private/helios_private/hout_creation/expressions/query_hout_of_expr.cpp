@@ -206,7 +206,7 @@ namespace compiler::helios::code {
 			void visitExprFormatStrValue(pst::Access<pst::expr::ExprFormatStrValue> stmt) override {
 				const auto concat_sym
 					= ctx.query<QueryLanguagePrimitiveSymID>({ LanguagePrimitive::ConcatStrings })
-						  ->valueOrThrow();
+				          ->valueOrThrow();
 
 				// `concatStrings(a: ref String, b: ref String)` takes its operands by reference.
 				const auto ref_of_string = [&](MBox<Expr> str_expr) -> Box<Expr> {
@@ -425,8 +425,7 @@ namespace compiler::helios::code {
 					// This should change to take value category into consideration as well as the
 					// `unique`/`leaking` specifiers.
 					auto primary_category = inner->expression_type.getValueCategory().getCategory();
-					if (primary_category == tsh::PrimaryCategory::Literal
-					    || primary_category == tsh::PrimaryCategory::Temporary) {
+					if (primary_category == tsh::PrimaryCategory::Literal) {
 						ctx.logInt(makeBox<dia_int::PlaceholderError>(
 							"Tried to reference a temporary", stmt->getStablePosition()
 						));
@@ -700,7 +699,8 @@ namespace compiler::helios::code {
 					}
 				}
 				// Temporarily allow casts from CPointer to Pointer and ManyPointer, with a warning.
-				if (found_match && from.getType().getKind() == tsh::Kind::CPointer) {
+				if (found_match && from.getRefKind() == ReferenceKind::Direct
+				    && from.getType().getKind() == tsh::Kind::CPointer) {
 					ctx.logInt(makeBox<dia_int::PlaceholderWarning>(
 						"Casts from CPointer will be disabled in the future and only work on "
 						"native targets.",
@@ -763,10 +763,6 @@ namespace compiler::helios::code {
 				case pst::Keyword::Str:
 					node
 						= makeBox<LiteralTypeExpr>(ctx, pstOrigin(stmt), tsh::getCharSliceType(ctx));
-					break;
-
-				case pst::Keyword::BigStr:
-					node = makeBox<LiteralTypeExpr>(ctx, pstOrigin(stmt), tsh::getStringType());
 					break;
 
 				case pst::Keyword::Type:
