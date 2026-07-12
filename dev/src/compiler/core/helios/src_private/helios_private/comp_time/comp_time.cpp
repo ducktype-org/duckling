@@ -814,23 +814,14 @@ namespace compiler::helios {
 		) {
 			// Collect all function dependencies for this function. All functions needed in
 			// order to evaluate this one.
-			Ref dependencies = &ctx.query<QueryTransitiveUsedSymbols>(function_sym_id)
-			                        ->valueOrThrow()
-			                        .used_functions;
+			auto& all_dependencies = ctx.query<QueryTransitiveUsedSymbols>(function_sym_id)
+			                             ->valueOrThrow()
+			                             .used_functions;
 
 			auto mangled_name_function_to_call
 				= ctx.query<mangler::QueryMangledSymbol>({ .symbol_key = function_sym_id });
 
-			std::vector<SymID>        all_dependencies;
-			std::unordered_set<SymID> seen_dependencies;
-			auto                      add_dependencies = [&](const std::vector<SymID>& deps) {
-                for (const SymID& func_id: deps)
-                    if (seen_dependencies.insert(func_id).second)
-                        all_dependencies.push_back(func_id);
-			};
-			add_dependencies(*dependencies);
-
-			// temporary hout unit used to lower functions to LIR
+			// Temporary hout unit used to lower functions to LIR.
 			HOUTUnit hout_unit;
 			for (const SymID& func_id: all_dependencies) {
 				if (not implementsQueryCodeOfFun(func_id)) continue;
@@ -842,9 +833,11 @@ namespace compiler::helios {
 
 			// Note: the assumptions bellow might change,
 			// for example when we will add consts to comp time.
+			// Bare declarations (no lowerable body) are filtered out above, so we compare against
+			// the functions actually lowered, not every collected dependency.
 			CORE_ASSERT(
-				lir_unit.lir_functions.size() == all_dependencies.size(),
-				"Number of lir functions should be the same as number of dependencies collected."
+				lir_unit.lir_functions.size() == hout_unit.functions.size(),
+				"Number of lir functions should be the same as number of lowered dependencies."
 			);
 			CORE_ASSERT(
 				lir_unit.lir_globals.empty(),

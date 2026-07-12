@@ -166,9 +166,10 @@ private:
 			ASSERT_EQUAL(2, globals.size());
 			ASSERT_EQUAL(base::StrID("c"), globals.at(0)->original_name);
 
-			auto& c_ctor = ctx.query<compiler::mir::LowerGlobalDataToMIRCtor>({ globals.at(0) })
-			                   ->valueOrThrow();
-			ASSERT_TRUE(c_ctor.name.strView() == "constructor_of_c");
+			auto& c_data
+				= ctx.query<compiler::mir::LowerGlobalData>({ globals.at(0) })->valueOrThrow();
+			auto c_ctor = std::get<CRef<compiler::mir::Function>>(c_data.initial_value);
+			ASSERT_TRUE(c_ctor->name.strView() == "constructor_of_c");
 
 			auto foo_mir = compiler::mir::lowerToPreMIRFunction(ctx, functions.at(0));
 			ASSERT_EQUAL(foo_mir.name, base::StrID("foo"));

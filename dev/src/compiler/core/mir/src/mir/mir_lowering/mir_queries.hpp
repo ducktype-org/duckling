@@ -28,33 +28,18 @@ namespace compiler::mir {
 	 */
 	DECLARE_QUERY(LowerToMIRFunction, KeyOf_LowerToMIRFunction, CRef<LowerToMIRFunctionResult>, ({}))
 
-	struct KeyOf_LowerGlobalDataToMIRFunction {
+	struct KeyOf_LowerGlobalData {
 		CRef<helios::HOUTGlobalData> global_data;
-
 		[[nodiscard]]
 		u64 queryUnstablePerfectHash() const;
 	};
-
-	using LowerGlobalDataToMIRFunctionResult = query::QResult<Function>;
 
 	/**
 	 * @brief Creates a ctor function for a global data.
 	 *
 	 * \query_thread_safe_if_cache
 	 */
-	DECLARE_QUERY(
-		LowerGlobalDataToMIRCtor,
-		KeyOf_LowerGlobalDataToMIRFunction,
-		CRef<LowerGlobalDataToMIRFunctionResult>,
-		({})
-	)
-
-	/**
-	 * @brief Lower a HOUTFunction to a "Pre" MIRFunction.
-	 * It creates MIR function, but does not perform lifetime analysis and or any checks.
-	 * @note Exposed in the interface mostly for tests
-	 */
-	Function lowerToPreMIRFunction(query::Context&, CRef<helios::HOUTFunction> function);
+	DECLARE_QUERY(LowerGlobalData, KeyOf_LowerGlobalData, CRef<query::QResult<MIRGlobalData>>, ({}))
 
 	/**
 	 * @brief Symbols used directly by a function, as collected from its MIR code.
@@ -68,12 +53,25 @@ namespace compiler::mir {
 	};
 
 	/**
-	 * @brief Queries the MIR code of a function and walks its structure to collect all symbols
+	 * @brief Compiles the function to MIR code and walks its structure to collect all symbols
 	 * (functions and global variables) used directly by that function.
 	 *
 	 * @note This is a plain helper, not a query. It expects a function SymID that has MIR code,
 	 * i.e. one for which `helios::implementsQueryCodeOfFun` returns true; callers are responsible
 	 * for that check.
 	 */
-	MIRUsedSymbols getMIRUsedSymbols(query::Context& ctx, helios::SymID function_id);
+	MIRUsedSymbols getMIRUsedSymbolsByFunction(query::Context& ctx, helios::SymID function_id);
+
+	/**
+	 * @brief Compiles the global data to MIR code and walks its structure to collect all symbols
+	 * (functions and global variables) used directly by that global data (ex. by constructor).
+	 */
+	MIRUsedSymbols getMIRUsedSymbolsByGlobal(query::Context& ctx, helios::SymID global_id);
+
+	/**
+	 * @brief Lower a HOUTFunction to a "Pre" MIRFunction.
+	 * It creates MIR function, but does not perform lifetime analysis and or any checks.
+	 * @note Exposed in the interface mostly for tests
+	 */
+	Function lowerToPreMIRFunction(query::Context&, CRef<helios::HOUTFunction> function);
 }

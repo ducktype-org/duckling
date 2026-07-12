@@ -42,13 +42,12 @@
 
 namespace compiler::helios {
 	bool implementsQueryCodeOfFun(SymID id) {
-		// Builtins have FunctionDeclaration kind, but can implement code of fun.
-		if (kind(id) != SymbolKind::Function && kind(id) != SymbolKind::Method
-		    && kind(id) != SymbolKind::FunctionDeclaration)
-			return false;
+		if (not isFunctionLike(kind(id))) return false;
 
 		variant_match(getSymRef(id)->other) {
-			variant_case_novalue(PstImplementedSemantics) { return true; }
+			variant_case_novalue(PstImplementedSemantics) {
+				return kind(id) != SymbolKind::FunctionDeclaration;
+			}
 			variant_case(BuiltinSemantics, data) {
 				// Only if implemented in HOUT, then it can be called with code of fun.
 				return getBuiltinOrigins(data.builtin).contains(BuiltinOrigin::HOUT);
@@ -1084,11 +1083,6 @@ namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QueryDirectUsedSymbols, query::QResult<UsedSymbols>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			CORE_ASSERT(
-				isFunctionLike(kind(key)),
-				"Query function dependencies called on non-function symbol"
-			);
-
 			if (kind(key) == SymbolKind::FunctionDeclaration) {
 				// For function declarations we check if a function declaration is a backend
 				// dependent symbol.
@@ -1102,12 +1096,12 @@ namespace compiler::helios {
 					return {};
 				}
 			}
+			mir::MIRUsedSymbols mir_used_symbols;
+			if (implementsQueryCodeOfFun(key))
+				mir_used_symbols = mir::getMIRUsedSymbolsByFunction(ctx, key);
+			else
+				mir_used_symbols = mir::getMIRUsedSymbolsByGlobal(ctx, key);
 
-			if (not implementsQueryCodeOfFun(key)) return {};
-
-			// Walk the function's MIR to collect the symbols it uses, then re-package them into
-			// the HELIOS-level result type.
-			auto mir_used_symbols = mir::getMIRUsedSymbols(ctx, key);
 			return UsedSymbols{
 				.used_functions = std::move(mir_used_symbols.used_functions),
 				.used_globals   = std::move(mir_used_symbols.used_globals),
@@ -1121,19 +1115,13 @@ namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QueryTransitiveUsedSymbols, query::QResult<UsedSymbols>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			CORE_ASSERT(
-				kind(key) == SymbolKind::Function || kind(key) == SymbolKind::FunctionDeclaration,
-				"Query transitive used symbols called on non-function symbol"
-			);
-
 			std::vector<SymID>        worklist;
-			std::unordered_set<SymID> visited_functions;
+			std::unordered_set<SymID> visited_symbols;
 			std::vector<SymID>        all_functions;
 			std::vector<SymID>        all_globals;
-			std::unordered_set<SymID> seen_globals;
 
 			worklist.push_back(key);  // Insert root function SymID.
-			visited_functions.insert(key);
+			visited_symbols.insert(key);
 
 			while (!worklist.empty()) {
 				SymID current_func = worklist.back();
@@ -1146,20 +1134,20 @@ namespace compiler::helios {
 
 				// Follow the transitive call graph through the used functions...
 				for (const SymID& dependency: direct_used_symbols.used_functions) {
-					if (!visited_functions.contains(dependency)) {
-						visited_functions.insert(dependency);
+					if (visited_symbols.insert(dependency).second) {
+						visited_symbols.insert(dependency);
 						worklist.push_back(dependency);
 					}
 				}
 
-				// ...while accumulating every global reachable along the way, deduplicated.
-				for (const SymID& global: direct_used_symbols.used_globals)
-					if (seen_globals.insert(global).second) all_globals.push_back(global);
+				for (const SymID& dependency: direct_used_symbols.used_globals) {
+					if (visited_symbols.insert(dependency).second) {
+						all_globals.push_back(dependency);
+						worklist.push_back(dependency);
+					}
+				}
 			}
 
-			base::filterVectorInPlace(all_functions, [](auto sym) {
-				return kind(sym) != SymbolKind::FunctionDeclaration;
-			});
 			return UsedSymbols{
 				.used_functions = std::move(all_functions),
 				.used_globals   = std::move(all_globals),

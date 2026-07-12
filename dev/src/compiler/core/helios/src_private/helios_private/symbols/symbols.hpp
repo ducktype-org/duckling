@@ -143,6 +143,7 @@ namespace compiler::helios {
 	 * @brief Query all symbols transitively used by a function: every function reachable through
 	 * the call graph and every global variable/constant referenced by any of those functions. See
 	 * @ref UsedSymbols.
+	 * @TODO fix this
 	 *
 	 * `used_functions` is the transitive closure of the call graph. A function is considered its
 	 * own dependency, so calling this query with a function which doesn't call any other functions

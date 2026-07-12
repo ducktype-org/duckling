@@ -26,6 +26,7 @@
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/type_interface.hpp>
 #include <helios/utils/get_expr_symid.hpp>
+#include <helios/utils/hout_walkers.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/errors/dia_interactive_elements.hpp>
 #include <helios_private/hout_creation/definition_generation/class_constructors.hpp>
@@ -84,6 +85,7 @@ public:
 		TESTER_ADD_TEST(testFunctionParameters);
 		TESTER_ADD_TEST(testExprScopes);
 		TESTER_ADD_TEST(testFunctionCallExpr);
+		TESTER_ADD_TEST(testHoutWalkers);
 		TESTER_ADD_TEST(testFunctions);
 		TESTER_ADD_TEST(testStrings);
 		TESTER_ADD_TEST(testStaticArrays);
@@ -1845,6 +1847,33 @@ private:
 		});
 	}
 
+	void testHoutWalkers() {
+		auto [module, scope] = getModule(fs::File(path("test_modules/function_calls")));
+
+		auto& hout
+			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+		ASSERT_EQUAL(4, hout.functions.size());
+
+		using namespace compiler::helios::code;
+
+		auto square_symbol = getChain("square", scope).back();
+
+		// foo() calls square() twice; the collected list is deduplicated to one entry.
+		const auto& foo = *hout.functions.at(1);
+		ASSERT_EQUAL(foo.declaration->original_name, "foo");
+
+		auto called_from_fun = collectCalledSymbolsFromHOUT(foo);
+		ASSERT_EQUAL(1, called_from_fun.size());
+		ASSERT_EQUAL(square_symbol, called_from_fun.at(0));
+
+		// The last statement is `return square(a_squared + b);` — walking just that
+		// expression tree should also find the call to square().
+		const auto& return_stmt = dynamic_cast<const ReturnStmt&>(*foo.body->statements.back());
+		auto        called_from_expr = collectCalledSymbolsFromHOUT(*return_stmt.value);
+		ASSERT_EQUAL(1, called_from_expr.size());
+		ASSERT_EQUAL(square_symbol, called_from_expr.at(0));
+	}
+
 	void testFunctions() {
 		auto [module, scope] = getModule(fs::File(path("test_modules/functions")));
 		auto& hout
@@ -2872,8 +2901,10 @@ private:
 
 				// Ctor(ArrayHolder) -> Ctor(WithInit[5]) -> Ctor(WithInit), plus the bounds-check
 				// chain emitted by the static-array init loop (`panic`, `builtin_output_str`,
-				// `length`), which the MIR-level used-symbol collection now sees.
-				ASSERT_EQUAL_PRINT(6, deps.size());
+				// `length`) and its own transitive callees (`abort` from `panic`,
+				// `builtin_output_char` from `builtin_output_str`), which the MIR-level used-symbol
+				// collection now sees.
+				ASSERT_EQUAL_PRINT(8, deps.size());
 
 				bool found_array_ctor = false;
 				for (auto d: deps) {
