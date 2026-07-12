@@ -138,15 +138,6 @@ class String {
     }
 }
 
-fun print(s: ref String) -> u64 = {
-    var i = 0u64;
-    while (i < s.length()) {
-        builtins.builtin_output_char(s.at(i as i64));
-        i = i + 1u64;
-    }
-    return i;
-}
-
 fun stringReserve(cap: u64) -> String = {
     var result: String;
     result.reserve(cap);

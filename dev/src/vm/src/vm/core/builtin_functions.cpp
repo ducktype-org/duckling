@@ -19,6 +19,7 @@
 
 #include <chrono>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 
 namespace vm::builtins {
@@ -123,6 +124,13 @@ namespace vm::builtins {
 		return return_value;
 	}
 
+	i8 FunctionHandlers::builtinInputChar(SafeVMThread& thread) {
+		thread.setProcessStatus(api::Sleeping{});
+		const char c = thread.safe_process.getIO().getRawChar(thread);
+		thread.setProcessStatus(api::Running{});
+		return static_cast<i8>(c);
+	}
+
 	i64 FunctionHandlers::builtinOutputI64(SafeVMThread& thread, i64 arg) {
 		const std::string output = std::to_string(arg) + "\n";
 		thread.safe_process.getIO().writeOutput(output);
@@ -177,6 +185,15 @@ namespace vm::builtins {
 
 		auto str_data = block_data.stdString();
 		return std::stoll(str_data);
+	}
+
+	f64 FunctionHandlers::builtinStrtod(SafeVMThread& thread, Pointer ptr) {
+		auto block      = ptr.getBlock();
+		auto block_id   = thread.process_memory.requestBlockID(block);
+		auto block_data = thread.process_memory.requestBlockData(block_id);
+
+		auto str_data = block_data.stdString();
+		return std::strtod(str_data.c_str(), nullptr);
 	}
 
 	i64 FunctionHandlers::builtinStartThread(SafeVMThread& thread) {
@@ -360,6 +377,7 @@ namespace vm::builtins {
 				CASE_FUNC,
 				Abort,
 				InputI64,
+				InputChar,
 				OutputI64,
 				OutputI32,
 				OutputChar,
@@ -368,6 +386,7 @@ namespace vm::builtins {
 				U64ToString,
 				I64ToString,
 				Stoi,
+				Strtod,
 				StartThread,
 				JoinThread,
 				CreateMutex,
@@ -419,6 +438,11 @@ namespace vm::builtins {
 			      code::FuncSignature({ base::StrID("i64") }, {}) },
 			},
 			{
+				BuiltinFunctionID::InputChar,
+				{ base::StrID("builtin_input_char"),
+			      code::FuncSignature({ base::StrID("i8") }, {}) },
+			},
+			{
 				BuiltinFunctionID::OutputI64,
 				{ base::StrID("builtin_output_i64"),
 			      code::FuncSignature({ base::StrID("i64") }, { base::StrID("i64") }) },
@@ -443,6 +467,17 @@ namespace vm::builtins {
 				{
 					base::StrID("builtin_stoi_pptr"),
 					code::FuncSignature({ base::StrID("i64") }, { base::StrID("ptr_string") }),
+				},
+			},
+			// `manyptr char` lowers to a pointer to a dynamic table of `i8`; the parsed value is
+			// an `f64`.
+			{
+				BuiltinFunctionID::Strtod,
+				{
+					base::StrID("strtod"),
+					code::FuncSignature(
+						{ base::StrID("f64") }, { base::StrID("ptr_dyntable_i8") }
+					),
 				},
 			},
 			// `manyptr char` lowers to a pointer to a dynamic table of `i8`, and both `u64`

@@ -50,6 +50,7 @@ namespace vm::builtins {
 	enum class BuiltinFunctionID : usize {
 		Abort,
 		InputI64,
+		InputChar,
 		OutputI64,
 		OutputI32,
 		OutputChar,
@@ -58,6 +59,7 @@ namespace vm::builtins {
 		U64ToString,
 		I64ToString,
 		Stoi,
+		Strtod,
 		StartThread,
 		JoinThread,
 		CreateMutex,
@@ -129,6 +131,12 @@ namespace vm::builtins {
 	public:
 		static void builtinAbort(SafeVMThread& process);
 		static i64  builtinInputI64(SafeVMThread& process);
+
+		/**
+		 * @brief Reads a single raw byte from input (no whitespace skipping, matching the
+		 * native `read(2)` byte semantics). Backs `core.io.readChar` on the DVM.
+		 */
+		static i8   builtinInputChar(SafeVMThread& process);
 		static i64  builtinOutputI64(SafeVMThread& process, i64 arg);
 		static i64  builtinOutputI32(SafeVMThread& process, i32 arg);
 		static i64  builtinOutputChar(SafeVMThread& process, i8 arg);
@@ -150,6 +158,13 @@ namespace vm::builtins {
 		static u64 builtinI64ToString(SafeVMThread& process, i64 value, Pointer ptr, u64 buffer_cap);
 
 		static i64  builtinStoi(SafeVMThread& process, Pointer ptr);
+
+		/**
+		 * @brief Parses the leading floating-point number out of the NUL-terminated char table
+		 * under `ptr`. Backs `core.io.strtod` on the DVM; the native backend uses libc `strtod`
+		 * directly (see `core.clib`).
+		 */
+		static f64  builtinStrtod(SafeVMThread& process, Pointer ptr);
 		static i64  builtinStartThread(SafeVMThread& process);
 		static i64  builtinJoinThread(SafeVMThread& process, u64 thread_id);
 		static u64  builtinCreateMutex(SafeVMThread& process);

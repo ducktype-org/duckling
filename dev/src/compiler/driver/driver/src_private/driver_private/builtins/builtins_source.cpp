@@ -32,8 +32,8 @@ struct list {
 // The definitions will be given below.
 extern "C" {
 	// Basic small I/O @TODO: #2635 move to Duckling, probably
-	int64_t  builtin_output_char(char c);
-	char     builtin_input_char();
+	// `builtin_output_char` / `builtin_input_char` now live in `core.io` (native: `read`/`write`
+	// syscalls via `core.clib`; DVM: VM builtins).
 	int64_t  builtin_output_i64(int64_t v);
 	int64_t  builtin_input_i64();
 	int32_t  builtin_output_u64(uint64_t v);
@@ -59,14 +59,6 @@ extern "C" {
 	uint64_t float_to_string(double v, char* p, uint64_t buffer_cap);
 	uint64_t u64_to_string(uint64_t v, char* p, uint64_t buffer_cap);
 	uint64_t i64_to_string(int64_t v, char* p, uint64_t buffer_cap);
-}
-
-int64_t builtin_output_char(char c) { return printf("%c", c); }
-
-char builtin_input_char() {
-	char c;
-	if (scanf(" %c", &c) != 1) exit(1);
-	return c;
 }
 
 // @TODO: #1782 change return type to i32 when updating builtins in VM.

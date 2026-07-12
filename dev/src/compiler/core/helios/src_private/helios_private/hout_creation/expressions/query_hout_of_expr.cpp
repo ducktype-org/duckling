@@ -15,6 +15,7 @@
 #include <frontend/pst_parser/pst_expr_visitor.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/queries/function_queries.hpp>
+#include <helios/symbols/lang_primitives.hpp>
 #include <helios/tsh/queries.hpp>
 #include <helios/tsh/symbol_type.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
@@ -203,12 +204,20 @@ namespace compiler::helios::code {
 			}
 
 			void visitExprFormatStrValue(pst::Access<pst::expr::ExprFormatStrValue> stmt) override {
-				auto concat_sym = defgen::concatSym(ctx);
+				const auto concat_sym
+					= ctx.query<QueryLanguagePrimitiveSymID>({ LanguagePrimitive::ConcatStrings })
+						  ->valueOrThrow();
 
-				// Construct the expression, initially empty.
-				MBox<Expr> result_expr
-					= makeBox<LiteralStringExpr>(ctx, generatedOrigin(), base::StrID(""));
-				bool failed = false;
+				// `concatStrings(a: ref String, b: ref String)` takes its operands by reference.
+				const auto ref_of_string = [&](MBox<Expr> str_expr) -> Box<Expr> {
+					return makeBox<RefOfExpr>(
+						ctx, generatedOrigin(), std::move(str_expr).toOptBox().value()
+					);
+				};
+
+				// Construct the expression, initially an empty String.
+				MBox<Expr> result_expr = defgen::getStringFromLiteralExpr(ctx, base::StrID(""));
+				bool       failed      = false;
 
 				// - For each sub element
 				for (auto sub_locked: stmt->getSubElements()) {
@@ -284,8 +293,8 @@ namespace compiler::helios::code {
 
 					// - Concatenate the result with the next string.
 					std::vector<Box<Expr>> arguments;
-					arguments.emplace_back(std::move(result_expr).toOptBox().value());
-					arguments.emplace_back(std::move(next_string).toOptBox().value());
+					arguments.emplace_back(ref_of_string(std::move(result_expr)));
+					arguments.emplace_back(ref_of_string(std::move(next_string)));
 
 					result_expr = makeBox<CallExpr>(
 						ctx,
