@@ -54,6 +54,9 @@ namespace compiler::helios::code {
 	 *
 	 * @TODO: #3095 remove it, move the relevant code to the handling of the new :{} PST node.
 	 *
+	 * @note Usage of this function is added only in few places for now, after #3095 the number of required
+	 * places to handle templates here will be much lower either way.
+	 *
 	 * @return QResult<base::Optional<SymID>> - the resulting symbol id of the baked template, or empty if the template did not happen (with standard QResult semantics on top of it).
 	 */
 	template<typename T>
@@ -122,6 +125,61 @@ namespace compiler::helios::code {
 		
 		if (resulting_symbol.hasFailed()) return query::Failed();
 		return resulting_symbol.valueOrPanic();
+	}
+
+	/**
+	 * This this temporary helper used before #3095 and before #3112
+	 * 
+	 * @TODO: #3095 remove or adjust it, move the relevant code to the handling of the new :{} PST node.
+	 */
+	template<typename T>
+	query::QResult<base::Optional<SymID>> transformTemplateBakeLookupResult(
+		query::Context&                           query_ctx,
+		CRef<LookupResult>                        lookup_result,
+		pst::Access<T>                            element_with_template_specifier
+	)
+	requires requires(T t) { t.getTemplateSpecifier(); }
+	{
+		if (not element_with_template_specifier->getTemplateSpecifier().has_value()) {
+			return base::Optional<SymID>{};  // no template specifier, no bake
+		}
+
+		auto as_single = lookup_result->getAsSingle();
+
+		if (as_single.hasFailed()) return query::Failed();
+
+		variant_match(as_single.valueOrPanic()) {
+			variant_case(SymbolList, symbol_list) {
+				CORE_ASSERT(not symbol_list.empty(), "Invalid state: empty symbol list in lookup result");
+
+				// @TODO: #1412 fix dealias, this discards all aliases and takes the last symbol in the list
+				auto template_sym_id = symbol_list.list.back();
+				return transformTemplateBake(query_ctx, template_sym_id, element_with_template_specifier);
+			}
+
+			variant_case(errors::Ambiguity, _) {
+				query_ctx.logInt(makeBox<dia_int::PlaceholderError>(
+					"template bake called on ambiguous lookup result",
+					element_with_template_specifier->getStablePosition()
+				));
+				return query::Failed();
+			}
+
+			variant_case(errors::SymbolNotFound, _) {
+				query_ctx.logInt(makeBox<dia_int::PlaceholderError>(
+					"Symbol not found in lookup",
+					element_with_template_specifier->getStablePosition()
+				));
+				return query::Failed();
+			}
+
+			variant_default {
+				CORE_PANIC("Invalid state: unexpected variant in lookup result");
+			}
+
+		}
+
+		CORE_UNREACHABLE();
 	}
 
 	/**
@@ -418,8 +476,22 @@ namespace compiler::helios::code {
 				const auto lookup_qresult
 					= h_interface.lookup(query_ctx, ident->getName().unlock(query_ctx)->unwrap());
 				UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup_qresult);
+
+				std::vector<SymID> call_candidates;
+
+				auto maybe_bake = transformTemplateBakeLookupResult(query_ctx, lookup_result, ident);
+				if (maybe_bake.hasFailed()) return query::Failed();
+				
+				if (maybe_bake.valueOrPanic().has_value()) {
+					auto resulting_sym_id = maybe_bake.valueOrPanic().value();
+					call_candidates.push_back(resulting_sym_id);
+				}
+				else {
+					call_candidates = lookup_result->leaves;
+				}
+
 				// @TODO: #1412 fix dealias
-				const auto callees_q_result = getCallableCandidates(lookup_result->leaves);
+				const auto callees_q_result = getCallableCandidates(call_candidates);
 				UNPACK_QRESULT_MOVE(const auto& callees =, callees_q_result);
 
 				auto res = processFunctionOrMethodNoSelfCall(query_ctx, callees, ident, call_expr);
