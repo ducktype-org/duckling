@@ -48,6 +48,8 @@ var z = (
     )
 );
 
+let zz = (if true then 1i64 else 2i64, if false then 3i64 else 4i64);
+
 # Helpers
 class Wrapper {
     a: (i64, i64);
@@ -92,6 +94,10 @@ fun main() = {
     var tup2: (i32, i32) = makeTuple(1, 2);
     var tup3: (i64, i64) = unwrap(w1);
     var tup4: (i64, i64) = w2.a;
+
+
+    builtin_output_i64(zz._1);
+    builtin_output_i64(zz._2);
 
     return 0;
 }

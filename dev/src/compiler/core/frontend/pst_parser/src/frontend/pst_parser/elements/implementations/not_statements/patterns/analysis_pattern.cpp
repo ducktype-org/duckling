@@ -2,7 +2,6 @@
 #include "../preamble.hpp"
 
 namespace pst {
-
 	MBox<AnalysisPattern> AnalysisPattern::parse(LangParserState& state) {
 		// Wildcard pattern: '_'
 		if (state[0].is(Special::Underscore)) return WildcardPattern::parse(state);

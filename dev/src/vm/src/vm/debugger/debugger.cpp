@@ -17,8 +17,7 @@ namespace {
 }
 
 namespace vm::debugger {
-	Debugger::Debugger(const std::vector<std::string>& main_args):
-		  main_args(main_args),
+	Debugger::Debugger():
 		  updater([&](const api::ProcStatus& status) {
 			  on_status_changed.emitEvent(status);
 			  variant_match(status) {
@@ -28,7 +27,7 @@ namespace vm::debugger {
 			  }
 		  }),
 		  vm_output([&](const std::string& str) { on_output.emitEvent(str); }) {
-		api::spawn()
+		(void) api::spawn()
 			.and_then([&](const api::ProcessInfo& info) {
 				pid = info.pid;
 				return api::attachStatusListener(pid, &updater);
@@ -39,19 +38,12 @@ namespace vm::debugger {
 			});
 	}
 
-	Debugger::Debugger(const fs::File& filepath, const std::vector<std::string>& main_args):
-		  Debugger(main_args) {
-		loadFile(filepath).transform_error([&](const api::ApiError& api_error) -> std::monostate {
-			throw std::runtime_error(api::errorToString(api_error));
-		});
-	}
-
 	Debugger::~Debugger() {
 		updater.detach();
 
 		// @TODO: #1222 Remove checking status and always kill after fixing kill
 
-		api::getExecutionStatus(pid)
+		(void) api::getExecutionStatus(pid)
 			.and_then([&](const api::ProcStatus& status) {
 				if (!std::holds_alternative<api::NotStarted>(status)) return api::kill(pid);
 
@@ -103,6 +95,8 @@ namespace vm::debugger {
 	std::expected<void, api::ApiError> Debugger::loadFile(const fs::File& filepath) {
 		return api::loadFiles(pid, { filepath });
 	}
+
+	void Debugger::setDefaultArgs(const ProgramRunArguments& args) { main_args = args; }
 
 	std::expected<u64, api::ApiError> Debugger::getNumberOfStackFrames(api::ThreadID thread_id) {
 		return api::debuggerGetNumberOfStackFrames(pid, thread_id)
@@ -161,4 +155,8 @@ namespace vm::debugger {
 	}
 
 	std::expected<void, api::ApiError> Debugger::step() { return api::step(pid); }
+
+	std::expected<void, api::ApiError> Debugger::sendInput(const std::string& msg) {
+		return api::input(pid, msg);
+	}
 }

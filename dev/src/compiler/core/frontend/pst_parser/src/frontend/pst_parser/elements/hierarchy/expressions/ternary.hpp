@@ -13,6 +13,10 @@ namespace pst::expr {
 	 * would cause parsing problems.
 	 */
 	class Ternary final: public ExprElement {
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(Ternary, ExprElement);
+		CLONE_SUBELEMENTS();
+
+	protected:
 		using Lower = LogicOr;
 
 		NAMED_CHILD(condition, ExprElement);

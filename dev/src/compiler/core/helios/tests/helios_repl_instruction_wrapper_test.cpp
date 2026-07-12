@@ -64,7 +64,7 @@ private:
 				.stmt    = stmt,
 				.counter = 17,
 			});
-			ASSERT_TRUE(wrapper_result.hasValue());
+			ASSERT_HAS_VALUE(wrapper_result);
 			auto& wrapper = wrapper_result.valueOrPanic();
 
 			ASSERT_EQUAL(wrapper.declaration->parameters.size(), 0u);
@@ -108,8 +108,8 @@ private:
 				.stmt    = stmt,
 				.counter = 22,
 			});
-			ASSERT_TRUE(wrapper_result_a.hasValue());
-			ASSERT_TRUE(wrapper_result_b.hasValue());
+			ASSERT_HAS_VALUE(wrapper_result_a);
+			ASSERT_HAS_VALUE(wrapper_result_b);
 			auto& wrapper_a = wrapper_result_a.valueOrPanic();
 			auto& wrapper_b = wrapper_result_b.valueOrPanic();
 
@@ -142,7 +142,7 @@ private:
 				.stmt    = stmt,
 				.counter = 31,
 			});
-			ASSERT_TRUE(wrapper_result.hasValue());
+			ASSERT_HAS_VALUE(wrapper_result);
 			auto& wrapper = wrapper_result.valueOrPanic();
 
 			ASSERT_EQUAL(wrapper.declaration->parameters.size(), 0u);
@@ -175,7 +175,7 @@ private:
 				.stmt    = stmt,
 				.counter = 41,
 			});
-			ASSERT_TRUE(wrapper_result.hasValue());
+			ASSERT_HAS_VALUE(wrapper_result);
 			auto& wrapper = wrapper_result.valueOrPanic();
 
 			ASSERT_EQUAL(wrapper.body->statements.size(), 2u);
@@ -200,8 +200,8 @@ private:
 				.stmt    = stmt,
 				.counter = 55,
 			});
-			ASSERT_TRUE(wrapper_result_a.hasValue());
-			ASSERT_TRUE(wrapper_result_b.hasValue());
+			ASSERT_HAS_VALUE(wrapper_result_a);
+			ASSERT_HAS_VALUE(wrapper_result_b);
 			auto& wrapper_a = wrapper_result_a.valueOrPanic();
 			auto& wrapper_b = wrapper_result_b.valueOrPanic();
 

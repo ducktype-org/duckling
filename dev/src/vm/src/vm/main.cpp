@@ -76,27 +76,49 @@ clah::Clah getVmClah() {
 							   return cli(file, args);
 						   }))
 #ifndef ENABLE_JIT
-	    .addSubcommand(clah::Clah("debug", "Start the VM CLI debugger.")
-	                       .addPositional(clah::FileParser::make("file"))
-	                       .setDefaultValueParser(clah::StringParser::make("program_argument"))
-	                       .setHandler([](const clah::ParsingResult& options) {
-							   vm::Supervisor::get();
-							   auto                     file = options.getPositional<fs::File>(0);
-							   std::vector<std::string> args;
-							   args.reserve(options.getExtraParameterCount());
-							   for (usize argc = 0; argc < options.getExtraParameterCount(); argc++)
-								   args.push_back(*options.getExtra<std::string>(argc));
+	    .addSubcommand(
+			clah::Clah("debug", "Start the VM CLI debugger.")
+				.add(clah::ParamBuilder::ofValue(clah::FileParser::make())
+	                     .addShortName('f')
+	                     .addLongName("file")
+	                     .addShortDesc(".dbc file to load")
+	                     .optional()
+	                     .build())
+				.setDefaultValueParser(clah::StringParser::make("program_argument"))
+				.setHandler([](const clah::ParsingResult& options) {
+					vm::Supervisor::get();
 
-							   auto cli = vm::debugger::cli::CLIDebugger(file, args);
-							   return cli.run();
-						   }))
+					auto cli = vm::debugger::cli::CLIDebugger();
+
+					auto file   = options.getValue<fs::File>("file");
+					auto result = file ? cli.load(*file) : cli.loadDefault();
+					if (!result) {
+						printer::StreamPrinter::print({
+							{ "[ERROR] ", printer::Color::Red },
+							{ "Loading file failed with message:\n", printer::Color::Default },
+							{ vm::api::errorToString(result.error()), printer::Color::Default },
+							{ "\nAborting\n", printer::Color::Default },
+						});
+
+						return 1;
+					}
+
+					std::vector<std::string> args;
+					args.reserve(options.getExtraParameterCount());
+					for (usize argc = 0; argc < options.getExtraParameterCount(); argc++)
+						args.push_back(*options.getExtra<std::string>(argc));
+					cli.setDefaultArgs(args);
+
+					return cli.run();
+				})
+		)
 	    .addSubcommand(clah::Clah("debug_adapter", "Start the VM debug adapter.")
 	                       .setHandler([](const clah::ParsingResult&) -> int {
 							   vm::Supervisor::get();
 							   vm::debugger::debug_adapter::DebugAdapter::get().run();
 							   return 0;
 						   }))
-#endif
+#endif // ENABLE_JIT
 	    .addSubcommand(clah::Clah("repl", "Start the VM in REPL mode.")
 	                       .setHandler([](const clah::ParsingResult&) -> int {
 							   vm::Supervisor::get();

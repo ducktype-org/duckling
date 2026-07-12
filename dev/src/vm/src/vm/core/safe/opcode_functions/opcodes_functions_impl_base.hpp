@@ -793,15 +793,6 @@ namespace vm {
 		FUNCTION_CONT(2);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_popq_imm)(FUNCTION_ARGS) {
-		{
-			// @TODO: #1728 remove this evil instruction
-			void* value = READ_FROM_DIRECT_ARG(void*, instr->arg1);
-			WRITE_TO_PLACE_ARG(void*, instr->arg0, value);
-		}
-		FUNCTION_CONT(1);
-	}
-
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_bste_bste)(FUNCTION_ARGS) {
 		{
 			auto dst_block = READ_BLOCK_REF_FROM_ARG(instr->arg0);

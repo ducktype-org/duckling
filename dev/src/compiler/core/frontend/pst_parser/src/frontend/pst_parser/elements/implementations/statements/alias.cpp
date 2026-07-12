@@ -4,6 +4,7 @@
 #include "preamble.hpp"
 
 namespace pst {
+	CLONE_SUB_ELEMENTS_DEF(Alias, name, points_to);
 
 	MBox<Alias> Alias::parse(LangParserState& state) {
 		auto out = makeBox<Alias>(state);
