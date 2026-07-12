@@ -78,7 +78,7 @@ namespace compiler::helios::code {
 
 		auto template_specifier = element_with_template_specifier->getTemplateSpecifier().value();
 		auto template_specifier_dc =
-			template_specifier.template dynamicCast<pst::expr::TemplateSpecifier>().value();
+			template_specifier.template dynamicCast<pst::expr::TemplateSpecifier>().unlock(query_ctx);
 
 		templates::TemplateBakeKey key{
 			.template_sym_id    = template_sym_id,
@@ -101,14 +101,15 @@ namespace compiler::helios::code {
 
 		// u64 parameter_index = 0;
 		for (const auto& [arg, parameter]: std::views::zip(*argument_list, template_signature.parameters)) {
-			auto arg_expr_result = subExprFromPST(query_ctx, arg.unlock(query_ctx)->getExpr());
+			auto arg_unlocked = arg.unlock(query_ctx);
+			auto arg_expr_result = subExprFromPST(query_ctx, arg_unlocked->getExpr());
 			
 			if (arg_expr_result.hasFailed()) return query::Failed();
 			auto arg_expr        = std::move(arg_expr_result).valueOrPanic();
-			auto coerced_arg_expr_result = coerceFromBox(query_ctx, std::move(arg_expr), parameter.type);
+			auto coerced_arg_expr_result = coerceFromBox(query_ctx, std::move(arg_expr), parameter.type, arg_unlocked->getStablePosition());
 			if (coerced_arg_expr_result.empty()) return query::Failed();
 
-			auto ctv       = query_ctx.query<QueryEvaluateHOUTExpression>({ arg_expr.value().ref() });
+			auto ctv       = query_ctx.query<QueryEvaluateHOUTExpression>({ coerced_arg_expr_result.value().ref() });
 			
 			if (ctv.hasFailed()) return query::Failed();
 			auto ctv_value = std::move(ctv).valueOrPanic();

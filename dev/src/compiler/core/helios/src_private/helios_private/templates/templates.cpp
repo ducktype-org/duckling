@@ -116,9 +116,9 @@ namespace compiler::helios::templates {
 				auto type_ctv
 					= getTypeCTVFromPST(ctx, type_expression.unlock(ctx)->getExpr()).valueOrThrow();
 
-				auto type = tsh::deductions::declarationTypeFromProvidedType(
-					type_ctv.get<tsh::SymbolType<>>().value(), tsh::Mutability::Immutable
-				);
+				// auto type = tsh::deductions::declarationTypeFromProvidedType(
+				// 	type_ctv.get<tsh::SymbolType<>>().value(), tsh::Mutability::Immutable
+				// );
 				// PR: TODO: check if types match!
 
 				// NOTE: this computes the default value, not the one passed here!
