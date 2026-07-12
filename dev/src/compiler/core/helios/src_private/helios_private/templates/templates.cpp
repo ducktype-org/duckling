@@ -54,7 +54,10 @@ namespace compiler::helios::templates {
 				= getTypeCTVFromPST(ctx, type_expression.unlock(ctx)->getExpr());
 			if (type_ctv.hasFailed()) return query::Failed();
 
-			auto type = type_ctv.valueOrPanic().get<tsh::SymbolType<>>().value();
+			// Template parameters are baked to constants so the type of the parameter is always immutable. 
+			auto type = type_ctv.valueOrPanic().get<tsh::SymbolType<>>().value().withMutability(
+				tsh::Mutability::Immutable
+			);
 
 			if (param_unlocked->getValue().has_value()) {
 				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
@@ -104,7 +107,10 @@ namespace compiler::helios::templates {
 				auto ctv = q_key.template_arguments.at(i);
 				i++;
 
-				CORE_ASSERT(ctv.getTypeOfStoredValue(ctx) == param.type, "Template argument type does not match template parameter type");
+				CORE_ASSERT(ctv.getTypeOfStoredValue(ctx) == param.type,
+					"Template argument type does not match template parameter type",
+					ctv.getTypeOfStoredValue(ctx).toString(), param.type.toString()
+				);
 
 				auto const_symbol
 					= ctx.query<defgen::QueryGeneratedSymbol>(defgen::KeyFor_QueryGeneratedSymbol{
