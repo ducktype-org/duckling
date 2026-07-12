@@ -3,6 +3,7 @@
 #include <base/collections/optional.hpp>
 
 #include <vm/debugger/debugger.hpp>
+#include <vm/debugger/UI/debug_adapter/protocol.hpp>
 
 #include <nlohmann/json.hpp>
 
@@ -54,7 +55,7 @@ namespace vm::debugger::debug_adapter {
 		void sendResponse(
 			const nlohmann::json& request, bool success, const nlohmann::json& body = {}
 		);
-		void sendEvent(const std::string& event, const nlohmann::json& body = {});
+		void sendEvent(const dap::Event& event);
 
 		// Handlers
 		void handleRequest(const nlohmann::json& req);
