@@ -117,7 +117,7 @@ namespace compiler::helios {
 					ctx, location_expr->origin.generatedFrom(), location_expr->clone()
 				);
 
-			if (not location_expr->expression_type.getValueCategory().isLValue()) {
+			if (not location_expr->expression_type.getValueCategory().canBeAssignedTo()) {
 				ctx.logInt(makeBox<dia_int::PlaceholderError>(
 					"Left side of assignment must be addressable location",
 					var.unlock(ctx)->getStablePosition(),

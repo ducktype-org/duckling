@@ -34,10 +34,11 @@ namespace compiler::tsh {
 
 	/**
 	 * @brief Get the primary category of a symbol: either Local or Global.
+	 * @param ctx The query context, needed to distinguish local variables from global ones.
 	 * @param symbol The symbol in question.
 	 * @return The symbol's primary category.
 	 */
-	PrimaryCategory primaryCategoryOfSymbol(compiler::helios::SymID symbol);
+	PrimaryCategory primaryCategoryOfSymbol(query::Context& ctx, compiler::helios::SymID symbol);
 }
 
 /**
@@ -140,43 +141,32 @@ namespace compiler::tsh {
 		}
 
 		/**
-		 * @brief Whether the value represents an addressable location - an lvalue.
+		 * @brief Whether the value is an addressable location that may be re-assigned - an lvalue.
 		 *
-		 * True for Locals and Globals (they can be reinitialized/assigned to).
+		 * True for Locals, Globals and Dereferenced.
 		 */
 		[[nodiscard]]
-		bool isLValue() const {
-			return allows_semantic.contains(REINIT);
+		bool canBeAssignedTo() const {
+			switch (category) {
+			case PrimaryCategory::Local:
+			case PrimaryCategory::Global:
+			case PrimaryCategory::Dereferenced:
+				return true;
+			case PrimaryCategory::Temporary:
+			case PrimaryCategory::Literal:
+				return false;
+			}
+			CORE_UNREACHABLE();
 		}
 
 		/**
-		 * @brief Whether the value is an rvalue.
+		 * @brief Whether the value has no location - is an rvalue.
 		 *
 		 * True for Temporaries and Literals.
 		 */
 		[[nodiscard]]
-		bool isRValue() const {
-			return !isLValue();
-		}
-
-		/**
-		 * @brief Whether the value is owned by the current scope.
-		 *
-		 * Its destructor would run here, so it may be moved from. True for Temporaries and Locals.
-		 */
-		[[nodiscard]]
-		bool isOwned() const {
-			return allows_semantic.contains(MOVE);
-		}
-
-		/**
-		 * @brief Whether the value is an owned rvalue (a Temporary).
-		 *
-		 * These are moved implicitly when moved into an owned destination.
-		 */
-		[[nodiscard]]
-		bool isOwnedRValue() const {
-			return isOwned() && isRValue();
+		bool cannotBeAssignedTo() const {
+			return !canBeAssignedTo();
 		}
 
 		/**
@@ -186,7 +176,7 @@ namespace compiler::tsh {
 		 */
 		[[nodiscard]]
 		bool isMovableFrom() const {
-			return isOwned() && isLValue();
+			return category == PrimaryCategory::Local;
 		}
 
 		/**

@@ -3,14 +3,19 @@
 #include <helios/symbols/symbol_kind.hpp>
 
 namespace compiler::tsh {
-	PrimaryCategory primaryCategoryOfSymbol(compiler::helios::SymID symbol) {
+	PrimaryCategory primaryCategoryOfSymbol(query::Context& ctx, compiler::helios::SymID symbol) {
 		compiler::helios::SymbolKind symbol_kind = kind(symbol);
-		// @TODO Properly check whether the symbol is local or global.
-		// Local variables and parameters are owned locals (the function owns them, so
-		// they can be moved from).
-		bool is_symbol_local = symbol_kind == compiler::helios::SymbolKind::Variable
-		                    || symbol_kind == compiler::helios::SymbolKind::Parameter;
-		return is_symbol_local ? PrimaryCategory::Local : PrimaryCategory::Global;
+
+		// Parameters are owned locals (the function owns them, so they can be moved from).
+		if (symbol_kind == compiler::helios::SymbolKind::Parameter) return PrimaryCategory::Local;
+
+		// A `Variable` may be either a local or a global variable.
+		if (symbol_kind == compiler::helios::SymbolKind::Variable)
+			return compiler::helios::isGlobalVar(ctx, symbol) ? PrimaryCategory::Global
+			                                                  : PrimaryCategory::Local;
+
+		// Everything else is a global.
+		return PrimaryCategory::Global;
 	}
 
 	/**

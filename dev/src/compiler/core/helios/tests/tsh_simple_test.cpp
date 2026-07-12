@@ -1028,24 +1028,21 @@ private:
 		const auto global    = ValueCategory(PrimaryCategory::Global);
 		const auto literal   = ValueCategory(PrimaryCategory::Literal);
 
-		// Local and Global are lvalues, Temporary and Literal are rvalues.
-		assertTrue(local.isLValue() && global.isLValue(), "Local and Global should be lvalues.");
+		// Local and Global are assignable, Temporary and Literal are not assignable.
 		assertTrue(
-			temporary.isRValue() && literal.isRValue(), "Temporary and Literal should be rvalues."
+			local.canBeAssignedTo() && global.canBeAssignedTo(),
+			"Local and Global should be assignable."
+		);
+		assertTrue(
+			temporary.cannotBeAssignedTo() && literal.cannotBeAssignedTo(),
+			"Temporary and Literal should be not assignalble."
 		);
 
-		// Only Temporary and Local are owned.
-		assertTrue(temporary.isOwned() && local.isOwned(), "Temporary and Local should be owned.");
-		assertTrue(
-			!global.isOwned() && !literal.isOwned(), "Global and Literal should not be owned."
-		);
-
-		// Temporary is an owned rvalue. Local is movable with `move`.
-		assertTrue(temporary.isOwnedRValue(), "Temporary should be an owned rvalue.");
+		// Only a Local is a valid operand of the explicit `move` operator.
 		assertTrue(local.isMovableFrom(), "Local should be a valid `move` operand.");
 		assertTrue(
-			!temporary.isMovableFrom() && !local.isOwnedRValue(),
-			"isOwnedRValue and isMovableFrom should be mutually exclusive."
+			!temporary.isMovableFrom() && !global.isMovableFrom() && !literal.isMovableFrom(),
+			"Only a Local should be a valid `move` operand."
 		);
 
 		// `move` is not forced unless it's requested.

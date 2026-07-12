@@ -221,7 +221,7 @@ namespace compiler::helios::code {
 
 			  tsh::ExpressionType<>(
 				  ctx.query<QueryTypeOfSymbol>(symbol)->valueOrThrow(),
-				  tsh::ValueCategory(tsh::primaryCategoryOfSymbol(symbol))
+				  tsh::ValueCategory(tsh::primaryCategoryOfSymbol(ctx, symbol))
 			  ),
 			  origin
 		  ),

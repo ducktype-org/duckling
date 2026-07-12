@@ -69,8 +69,8 @@ namespace compiler::helios::code {
 		SymID             function;
 	};
 
-	/** The non-trivially copyable argument would be copied implicitly. It must be passed with
-	 * `copy`/`move`.
+	/** The non-trivially copyable argument would be copied implicitly, but the user didn't specify
+	 * the passing semantic. It must be passed with `copy`/`move`.
 	 */
 	struct TypeRequiresExplicitCopyMove final {
 		usize             argument_index;

@@ -183,7 +183,7 @@ namespace compiler::helios {
 		const bool requires_copy = [](tsh::ReferenceKind from_kind, tsh::ReferenceKind to_kind) {
 			switch (from_kind) {
 			case tsh::ReferenceKind::Direct:
-				return to_kind == tsh::ReferenceKind::Box || to_kind == tsh::ReferenceKind::Direct;
+				return to_kind == tsh::ReferenceKind::Direct || to_kind == tsh::ReferenceKind::Box;
 			case tsh::ReferenceKind::Ref:
 				return to_kind == tsh::ReferenceKind::Direct || to_kind == tsh::ReferenceKind::Box;
 			case tsh::ReferenceKind::Box:
@@ -203,7 +203,7 @@ namespace compiler::helios {
 			const bool reads_through_reference = from_type.getRefKind() == tsh::ReferenceKind::Ref
 			                                  || (from_type.getRefKind() == tsh::ReferenceKind::Box
 			                                      && to.getRefKind() != tsh::ReferenceKind::Box);
-			const bool copies_lvalue = from.getValueCategory().isLValue();
+			const bool copies_lvalue = from.getValueCategory().canBeAssignedTo();
 			if (reads_through_reference || copies_lvalue) {
 				if (!from_type.getType().isCopyable(ctx)) return TypeNotCopyable{};
 				return TypeRequiresExplicitCopyMove{};

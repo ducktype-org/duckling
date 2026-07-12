@@ -198,12 +198,12 @@ namespace compiler::helios::code {
                                                                 = positional_arguments.size() + i,
 					                                              .function = fun } };
 
-			usize           param_idx = param_idx_with_matching_name.value();
-			tsh::SymbolType provided_type
-				= std::get<1>(named_arguments[i])->expression_type.getSymbolType();
+			usize               param_idx = param_idx_with_matching_name.value();
+			tsh::ExpressionType provided_expr_type
+				= std::get<1>(named_arguments[i])->expression_type;
+			tsh::SymbolType provided_type = provided_expr_type.getSymbolType();
 			tsh::SymbolType expected_type = decl.parameters[param_idx].type;
-			auto            coercion
-				= canCoerce(ctx, std::get<1>(named_arguments[i])->expression_type, expected_type);
+			auto            coercion      = canCoerce(ctx, provided_expr_type, expected_type);
 
 			if (coercion.valueOrThrow().isInvalid()) {
 				variant_match(coercion.valueOrThrow().getVariant()) {
