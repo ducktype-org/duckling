@@ -105,6 +105,7 @@ public:
 		TESTER_ADD_TEST(testHoutElementsOrigin);
 		TESTER_ADD_TEST(testAliases);
 		TESTER_ADD_TEST(testBackendDependentCompTime);
+		TESTER_ADD_TEST(testOperatoriness);
 
 		// this is at the end
 		// so we test all the scopes created in helios tests:
@@ -3576,6 +3577,48 @@ private:
 		// (returning 10) rather than the `@native_only_impl` one (returning 20). Evaluating
 		// the const therefore checks that comp time picks the right implementation.
 		ASSERT_EQUAL(10, getConstValueAs<i32>("VALUE", root_scope));
+	}
+
+	void testOperatoriness() {
+		auto [_, root_scope] = getModule(fs::File(path("test_modules/operatoriness")));
+		using Operatoriness  = compiler::helios::HOUTFunctionDeclaration::Operatoriness;
+
+		// Plain identifier, 2 params: not an operator.
+		ASSERT_EQUAL(
+			Operatoriness::None,
+			query::entryPoint<compiler::helios::QueryDeclOfFun>(getChain("foo", root_scope).back())
+				->valueOrThrow()
+				.operatoriness
+		);
+
+		// Free operator function, 2 params: infix.
+		ASSERT_EQUAL(
+			Operatoriness::Infix,
+			query::entryPoint<compiler::helios::QueryDeclOfFun>(getChain("+*", root_scope).back())
+				->valueOrThrow()
+				.operatoriness
+		);
+
+		// Free operator function, 1 param: prefix (fixity keywords don't exist yet, so a
+		// single-parameter operator name is assumed prefix).
+		ASSERT_EQUAL(
+			Operatoriness::Prefix,
+			query::entryPoint<compiler::helios::QueryDeclOfFun>(getChain("-*", root_scope).back())
+				->valueOrThrow()
+				.operatoriness
+		);
+
+		// Operator method: 1 explicit param + implicit `self` = infix.
+		auto foo_class = getChain("Foo", root_scope).back();
+		auto foo_class_info
+			= query::entryPoint<compiler::helios::QueryClassSymbolData>(foo_class)->valueOrThrow();
+		ASSERT_EQUAL(1, foo_class_info.methods.size());
+		ASSERT_EQUAL(
+			Operatoriness::Infix,
+			query::entryPoint<compiler::helios::QueryDeclOfFun>(foo_class_info.methods.at(0))
+				->valueOrThrow()
+				.operatoriness
+		);
 	}
 
 	void testScopeParentsAndDepth() {
