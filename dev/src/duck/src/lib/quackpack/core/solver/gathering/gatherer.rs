@@ -59,12 +59,8 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
         mode: SolverMode,
     ) -> QuackResult<GatheredInfo> {
         let mut state = GathererState::default();
-        let root_fetch_result = self.fetch_root(
-            root_path,
-            root_manifest,
-            root_features,
-            &mut state,
-        )?;
+        let root_fetch_result =
+            self.fetch_root(root_path, root_manifest, root_features, &mut state)?;
 
         let mut errors = vec![];
         let mut fetches = vec![];
@@ -151,7 +147,11 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
                 },
                 fetched_manifests: HashMap::from([(
                     WithVersion::new(
-                        FullIdentity::new(root_name, FullOrigin::for_local(&root_path).context_internal("failed to translate root path into url")?),
+                        FullIdentity::new(
+                            root_name,
+                            FullOrigin::for_local(&root_path)
+                                .context_internal("failed to translate root path into url")?,
+                        ),
                         root_version,
                     ),
                     Box::new(root_manifest),
@@ -182,7 +182,8 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
                     }
                     SourceKind::Local => {
                         let path_url = not_pinned_request.id.source.url();
-                        let path = path_url.to_path_buf()
+                        let path = path_url
+                            .to_path_buf()
                             .context_internal("could not convert request url to path")?;
                         Ok(self.fetch_local(&not_pinned_request, &path))
                     }

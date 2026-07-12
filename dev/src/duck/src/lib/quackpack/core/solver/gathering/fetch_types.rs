@@ -1,12 +1,9 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::{
-    StrId,
-    quackpack::{
-        core::{FeatureName, Manifest, Source, Version, full_identity::FullIdentity},
-        util::with_version::WithVersion,
-    },
-};
+use crate::StrId;
+use crate::quackpack::core::full_identity::FullIdentity;
+use crate::quackpack::core::{FeatureName, Manifest, Source, Version};
+use crate::quackpack::util::with_version::WithVersion;
 
 /// Type representing a request to get manifests for a single/multiple packages.
 #[derive(Clone, Debug, PartialEq, Eq)]

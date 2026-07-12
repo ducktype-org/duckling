@@ -172,7 +172,7 @@ impl<'a> SolverEngine<'a> {
             // We could not translate the manifest entry into an identity of the dependency,
             // so there are no possible realizations and we must forbid the parent package/its features
             // forcing the dependency.
-            return self.forbid_forcing_features(parent, manifest_dependency)
+            return self.forbid_forcing_features(parent, manifest_dependency);
         };
 
         // If this edge was not resolved in the previous freeze, we fallback to adding all constraints.
@@ -310,14 +310,15 @@ impl<'a> SolverEngine<'a> {
     fn forbid_forcing_features(
         &mut self,
         parent: WithVersion<FullIdentity>,
-        manifest_dependency: &Dependency
+        manifest_dependency: &Dependency,
     ) -> QuackResult<()> {
         let is_dep_forced_default = manifest_dependency.is_enabled_for(vec![]);
         if is_dep_forced_default {
             self.model.forbid_package(parent)?;
         } else {
             for dep_forcing_feature in manifest_dependency.enabling_features() {
-                self.model.forbid_package_with_feature(parent, *dep_forcing_feature)?;
+                self.model
+                    .forbid_package_with_feature(parent, *dep_forcing_feature)?;
             }
         }
         Ok(())

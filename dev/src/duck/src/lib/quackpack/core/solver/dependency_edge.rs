@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 
+use crate::StrId;
 use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
 use crate::quackpack::core::{Dependency, Source};
 use crate::quackpack::util::with_version::WithVersion;
-use crate::StrId;
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 /// A struct describing a dependency of a package on some identity.

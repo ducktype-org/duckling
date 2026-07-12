@@ -7,8 +7,8 @@ use std::path::Path;
 
 use serde::{Deserialize, Serialize, de};
 
-use crate::quackpack::core::{GitReference, SourceKind};
 use crate::quackpack::core::identity::{Identity, Kind, Origin};
+use crate::quackpack::core::{GitReference, SourceKind};
 use crate::quackpack::util::interned_url::InternedUrl;
 use crate::quackpack::util::is_local_file::IsLocalFile;
 use crate::quackpack::util::to_path_buf::ToPathBuf;

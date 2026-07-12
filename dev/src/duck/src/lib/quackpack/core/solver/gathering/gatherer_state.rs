@@ -169,9 +169,7 @@ impl GathererState {
                 Ok(GathererComputation::empty())
             }
             QueryState::Done => {
-                let result = self.update_features_for_versions_with_selector(
-                    not_pinned_request
-                )?;
+                let result = self.update_features_for_versions_with_selector(not_pinned_request)?;
                 Ok(GathererComputation(
                     RequestAction::More { requests: result.0 },
                     result.1,
@@ -224,7 +222,9 @@ impl GathererState {
                             format!("could not expand the package {:?}", request_pkg)
                         })?;
                     if !self.pkgs_data.contains_key(&answer_pkg) {
-                        qp_bail_internal!("pinned package {answer_pkg:?} was supposed to be already fetched by a not pinned fetch but has no data");
+                        qp_bail_internal!(
+                            "pinned package {answer_pkg:?} was supposed to be already fetched by a not pinned fetch but has no data"
+                        );
                     }
                     let result = self.update_features(answer_pkg, pinned_request.features)?;
                     return Ok(GathererComputation(
@@ -308,7 +308,12 @@ impl GathererState {
                     "Fetched manifest's version differs from required",
                 )?
                 .context(MessageError(
-                    format!("while handling response for the fetch of a package {} in version {}", request_pkg.value().name, request_pkg.version()).into(),
+                    format!(
+                        "while handling response for the fetch of a package {} in version {}",
+                        request_pkg.value().name,
+                        request_pkg.version()
+                    )
+                    .into(),
                 )));
         }
 
@@ -489,7 +494,8 @@ impl GathererState {
                     if !versions.contains(&pinned_request.version) {
                         result.1.push(qp_err!(
                             "request of pinned dependency {} could not find matching version {}",
-                            pinned_request.id.name, pinned_request.version,
+                            pinned_request.id.name,
+                            pinned_request.version,
                         ));
                         return Ok(result);
                     }
@@ -499,9 +505,9 @@ impl GathererState {
                     )?);
                 }
                 ManifestsRequest::NotPinned(not_pinned_request) => {
-                    result.extend(self.update_features_for_versions_with_selector(
-                        not_pinned_request
-                    )?);
+                    result.extend(
+                        self.update_features_for_versions_with_selector(not_pinned_request)?,
+                    );
                 }
             }
         }

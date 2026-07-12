@@ -23,8 +23,7 @@ pub fn get_possible_realizations(
     let identity = FullIdentity::new(dependency_description.name(), *origin);
     if dependency_description.is_pinned() {
         // For a pinned dependency only one package can be a realization.
-        let versions = dependency_description
-            .versions();
+        let versions = dependency_description.versions();
         if versions.len() != 1 {
             return Ok(vec![]);
         }
@@ -100,7 +99,11 @@ impl WithVersion<FullIdentity> {
         if self.value().origin().url() != source.url() || self.value().name() != dependency.name() {
             return Ok(false);
         }
-        Ok(self.value().origin().kind().satisfies_source_kind(*source.kind()))
+        Ok(self
+            .value()
+            .origin()
+            .kind()
+            .satisfies_source_kind(*source.kind()))
     }
 
     /// Helper for [`Self::still_satisfies_dep`].

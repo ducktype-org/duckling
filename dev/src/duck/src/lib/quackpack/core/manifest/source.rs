@@ -3,8 +3,7 @@ use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 
-use crate::quackpack::core::full_identity::FullKind;
-use crate::quackpack::core::full_identity::FullOrigin;
+use crate::quackpack::core::full_identity::{FullKind, FullOrigin};
 use crate::quackpack::schemas::registry;
 use crate::quackpack::util::interned_url::InternedUrl;
 use crate::quackpack::util::is_local_file::IsLocalFile;

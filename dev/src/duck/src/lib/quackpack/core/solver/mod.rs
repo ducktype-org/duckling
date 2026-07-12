@@ -179,12 +179,7 @@ impl<'duck, 'ctx> SolverGathererData<'duck, 'ctx> {
     ) -> QuackResult<GatheredInfo> {
         let root_manifest_for_gathering =
             Self::prepare_root_manifest_for_gathering(root_manifest, freeze)?;
-        gatherer.explore(
-            root_path,
-            root_manifest_for_gathering,
-            root_features,
-            mode,
-        )
+        gatherer.explore(root_path, root_manifest_for_gathering, root_features, mode)
     }
 
     /// Helper for [`Self::run_solver_gatherer`].
