@@ -170,6 +170,8 @@ either in the scheme or it's implementation, they should be reflected here.
                         | "length" <function-type>          // length method
                         | "push" <function-type>            // push method
                         | "pop" <function-type>             // pop method
+                        | "ba" <function-type>              // box alloc
+                        | "bf" <function-type>             // box free
 //                      | ...                               // @future: virtual tables, generic structures, named parameter tables, guard variables, ...
 
 <back-reference> ::= "B" <compact-number>                   // reference to a previously defined node
