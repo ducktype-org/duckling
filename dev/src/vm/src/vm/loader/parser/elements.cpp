@@ -829,6 +829,13 @@ namespace vm::loader::parser {
 			base::Optional<base::StrID> inner;
 			if (state.notEmpty() && state[0].isIdentifier())
 				inner = state.tokens().next().getValue();
+			if (state.notEmpty() && (state[0].isNumLiteralGroup() || state[0].isString())) {
+				state.logInt(makeBox<dia_int::PlaceholderError>(
+					"Expected an identifier (pointee type) or end of declaration.",
+					state.getPosition()
+				));
+				state.tokens().skip();
+			}
 			auto tp         = CPointerType{ name, inner };
 			tp.bytecode_pos = out->position;
 			out->datatype   = tp;

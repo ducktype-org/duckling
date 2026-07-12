@@ -30,6 +30,7 @@ namespace vm::code::detail {
 							return primitive.size;
 						}
 						variant_case(valid_type::finalized::Opaque, opaque) { return opaque.size; }
+						variant_case_novalue(valid_type::finalized::CPointer) { return Bytes(8); }
 						variant_default { THROW_ERROR("Got immediate initial value instead."); }
 					}
 					CORE_UNREACHABLE();

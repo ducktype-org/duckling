@@ -62,10 +62,14 @@ public:
 		TESTER_ADD_TEST(packedStructWithMatchingLayoutStillFails);
 		TESTER_ADD_TEST(packedStructSize);
 		TESTER_ADD_TEST(typedCPointerThroughC);
+		TESTER_ADD_TEST(typedCPointerStructFieldThroughC);
+		TESTER_ADD_TEST(cpointerGlobalAsPcptOperand);
 		TESTER_ADD_TEST(forwardDeclaredPointee);
 		TESTER_ADD_TEST(selfReferentialCPointerLoads);
 		TESTER_ADD_TEST(cpointerToUnknownTypeFails);
 		TESTER_ADD_TEST(movPcptAcrossTypesFails);
+		TESTER_ADD_TEST(movPcptCptrToTypedFails);
+		TESTER_ADD_TEST(movPcptSamePointeeAcrossTypesFails);
 		TESTER_ADD_TEST(movPcptOnNonCPointerFails);
 		TESTER_ADD_TEST(duplicateFfiFunctionFails);
 		TESTER_ADD_TEST(assertSizeMatches);
@@ -937,6 +941,79 @@ private:
 		);
 	}
 
+	// A struct with a typed cpointer field passed to C by value; C writes through the pointer.
+	void typedCPointerStructFieldThroughC() {
+		runProgram(
+			"typed_cpointer_struct",
+			ffiObjectHeader()
+				+ "type cpointer: I64Ptr i64\n"
+				  "type data: Tagged { p: I64Ptr, tag: i64 } assert_size 16\n"
+				  "ffi function ffi_alloc8 { } -> { I64Ptr };\n"
+				  "ffi function ffi_tagged_store { Tagged } -> { };\n"
+				  "ffi function ffi_read8 { I64Ptr } -> { i64 };\n"
+				  "ffi function ffi_free8 { I64Ptr } -> { };\n"
+				  "function main { i64, ptr_argv } -> { i64 } {\n"
+				  "    init_pany_type buf, I64Ptr;\n"
+				  "    call_ffifunc ffi_alloc8;\n"
+				  "    init_pany_type bufc, I64Ptr;\n"
+				  "    mov_pcpt_pcpt bufc, buf;\n"
+				  "    init_pany_type tag, i64;\n"
+				  "    mov_p64_imm tag, 42;\n"
+				  "    init_pany_type t, Tagged;\n"
+				  "    structStore_pste_pany_field t, bufc, Tagged.p;\n"
+				  "    structStore_pste_pany_field t, tag, Tagged.tag;\n"
+				  "    call_ffifunc ffi_tagged_store;\n"
+				  "    init_pany_type res, i64;\n"
+				  "    init_pany_type buf2, I64Ptr;\n"
+				  "    mov_pcpt_pcpt buf2, buf;\n"
+				  "    call_ffifunc ffi_read8;\n"
+				  "    output_p64 res;\n"
+				  "    init_pany_type buf3, I64Ptr;\n"
+				  "    mov_pcpt_pcpt buf3, buf;\n"
+				  "    call_ffifunc ffi_free8;\n"
+				  "    ret;\n"
+				  "}\n",
+			"42"
+		);
+	}
+
+	// A cpointer global with an immediate initial value (a null handle) loads and works as a
+	// `pcpt` operand in both directions.
+	void cpointerGlobalAsPcptOperand() {
+		runProgram(
+			"cpointer_global",
+			ffiObjectHeader()
+				+ "global_data gbuf cptr {\n"
+				  "    is_constant: false,\n"
+				  "    initial_value: 0x0000000000000000\n"
+				  "}\n"
+				  "ffi function ffi_alloc8 { } -> { cptr };\n"
+				  "ffi function ffi_fill8 { cptr, i64 } -> { };\n"
+				  "ffi function ffi_read8 { cptr } -> { i64 };\n"
+				  "ffi function ffi_free8 { cptr } -> { };\n"
+				  "function main { i64, ptr_argv } -> { i64 } {\n"
+				  "    init_pany_type buf, cptr;\n"
+				  "    call_ffifunc ffi_alloc8;\n"
+				  "    mov_pcpt_pcpt gbuf, buf;\n"
+				  "    init_pany_type buf2, cptr;\n"
+				  "    mov_pcpt_pcpt buf2, gbuf;\n"
+				  "    init_pany_type v, i64;\n"
+				  "    mov_p64_imm v, 4242;\n"
+				  "    call_ffifunc ffi_fill8;\n"
+				  "    init_pany_type res, i64;\n"
+				  "    init_pany_type buf3, cptr;\n"
+				  "    mov_pcpt_pcpt buf3, gbuf;\n"
+				  "    call_ffifunc ffi_read8;\n"
+				  "    output_p64 res;\n"
+				  "    init_pany_type buf4, cptr;\n"
+				  "    mov_pcpt_pcpt buf4, gbuf;\n"
+				  "    call_ffifunc ffi_free8;\n"
+				  "    ret;\n"
+				  "}\n",
+			"4242"
+		);
+	}
+
 	// The C idiom for handles (e.g. `FILE*`): the pointee is a forward-declared opaque type, so
 	// the pointer is passable but the pointee is never inspected.
 	void forwardDeclaredPointee() {
@@ -988,6 +1065,37 @@ private:
 			"mov_pcpt_across_types",
 			"type cpointer: APtr i64\n"
 			"type cpointer: BPtr i32\n"
+			"function main { i64, ptr_argv } -> { i64 } {\n"
+			"    init_pany_type a, APtr;\n"
+			"    init_pany_type b, BPtr;\n"
+			"    mov_pcpt_pcpt a, b;\n"
+			"    ret;\n"
+			"}\n",
+			{ "C pointer type does not match" }
+		);
+	}
+
+	// The builtin `cptr` (unknown pointee) and a typed cpointer are distinct types.
+	void movPcptCptrToTypedFails() {
+		expectLoadError(
+			"mov_pcpt_cptr_to_typed",
+			"type cpointer: APtr i64\n"
+			"function main { i64, ptr_argv } -> { i64 } {\n"
+			"    init_pany_type a, APtr;\n"
+			"    init_pany_type b, cptr;\n"
+			"    mov_pcpt_pcpt a, b;\n"
+			"    ret;\n"
+			"}\n",
+			{ "C pointer type does not match" }
+		);
+	}
+
+	// Two differently-named cpointer types stay distinct even with the same pointee.
+	void movPcptSamePointeeAcrossTypesFails() {
+		expectLoadError(
+			"mov_pcpt_same_pointee",
+			"type cpointer: APtr i64\n"
+			"type cpointer: BPtr i64\n"
 			"function main { i64, ptr_argv } -> { i64 } {\n"
 			"    init_pany_type a, APtr;\n"
 			"    init_pany_type b, BPtr;\n"
