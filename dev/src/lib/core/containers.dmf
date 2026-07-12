@@ -50,7 +50,7 @@ namespace allocation {
     }
 }
 
-class DuckString {
+class String {
     pointer: manyptr char;
     len: u64;
     cap: u64;
@@ -79,7 +79,7 @@ class DuckString {
         len               = len + 1u64;
     }
 
-    fun append(other: ref DuckString) -> () = {
+    fun append(other: ref String) -> () = {
         let other_len = other.length();
         reserve(len + other_len);
 
@@ -127,13 +127,7 @@ class DuckString {
     }
 
     fun length() -> u64 = len;
-
-    #{
-        `toCString` is missing on purpose. It has to hand out a `cptr char`, and
-        DVM code generation rejects `cptr` anywhere in a module, so having it
-        here would make `core.containers` uncompilable for the DVM. Reintroduce
-        it once the DVM supports C pointers.
-    #}
+    
     fun asSlice() -> str = {
         return builtins.char_slice_from_ptr_len(pointer, len);
     }
@@ -144,7 +138,7 @@ class DuckString {
     }
 }
 
-fun print(s: ref DuckString) -> u64 = {
+fun print(s: ref String) -> u64 = {
     var i = 0u64;
     while (i < s.length()) {
         builtins.builtin_output_char(s.at(i as i64));
@@ -153,8 +147,8 @@ fun print(s: ref DuckString) -> u64 = {
     return i;
 }
 
-fun duckStringReserve(cap: u64) -> DuckString = {
-    var result: DuckString;
+fun stringReserve(cap: u64) -> String = {
+    var result: String;
     result.reserve(cap);
     return result;
 }
@@ -172,22 +166,29 @@ fun copyChars(source: manyptr char, dest: manyptr char, count: u64) -> () = {
     copyCharsAt(source, dest, 0u64, count);
 }
 
-fun stringifyStr(x: str) -> DuckString = {
+fun concatStrings(a: ref String, b: ref String) -> String = {
+    var result = stringReserve(a.length() + b.length());
+    result.append(a);
+    result.append(b);
+    return result;
+}
+
+fun stringifyStr(x: str) -> String = {
     let size   = x.length();
-    var result = duckStringReserve(size);
+    var result = stringReserve(size);
     copyChars(builtins.char_ptr_from_slice(x), result.pointer, size);
     result.len = size;
     return result;
 }
 
-fun stringifyChar(x: char) -> DuckString = {
-    var result        = duckStringReserve(1u64);
+fun stringifyChar(x: char) -> String = {
+    var result        = stringReserve(1u64);
     result.pointer[0] = x;
     result.len        = 1u64;
     return result;
 }
 
-fun stringifyBool(x: bool) -> DuckString = {
+fun stringifyBool(x: bool) -> String = {
     if (x) return stringifyStr("true");
     return stringifyStr("false");
 }
@@ -196,23 +197,23 @@ fun stringifyBool(x: bool) -> DuckString = {
 # NUL, so `buffer_cap` is the total buffer size: it fits at most `buffer_cap - 1`
 # characters. 21 bytes hold the 20-character extremes of `i64`/`u64` plus the NUL, and
 # `%g` never exceeds that for a double.
-fun stringifyI64(x: i64) -> DuckString = {
+fun stringifyI64(x: i64) -> String = {
     let buffer_cap = 21u64;
-    var result     = duckStringReserve(buffer_cap);
+    var result     = stringReserve(buffer_cap);
     result.len     = runtime.i64_to_string(x, result.pointer, buffer_cap);
     return result;
 }
 
-fun stringifyU64(x: u64) -> DuckString = {
+fun stringifyU64(x: u64) -> String = {
     let buffer_cap = 21u64;
-    var result     = duckStringReserve(buffer_cap);
+    var result     = stringReserve(buffer_cap);
     result.len     = runtime.u64_to_string(x, result.pointer, buffer_cap);
     return result;
 }
 
-fun stringifyF64(x: f64) -> DuckString = {
+fun stringifyF64(x: f64) -> String = {
     let buffer_cap = 21u64;
-    var result     = duckStringReserve(buffer_cap);
+    var result     = stringReserve(buffer_cap);
     result.len     = runtime.float_to_string(x, result.pointer, buffer_cap);
     return result;
 }

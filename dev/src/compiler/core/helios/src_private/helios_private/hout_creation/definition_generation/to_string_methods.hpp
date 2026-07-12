@@ -13,17 +13,20 @@ namespace compiler::helios::defgen {
 	SymID toStringSymForType(query::Context& ctx, tsh::AbstractType type);
 
 	/**
-	 * @brief Get the "concatenate" Strings function symbol.
-	 */
-	SymID concatSym(query::Context& ctx);
-
-	/**
 	 * @brief Internal utility function to get a String HOUT expression
 	 * from a string literal value.
 	 * @param ctx The query context.
 	 * @param value The string literal value.
 	 */
 	Box<code::Expr> getStringFromLiteralExpr(query::Context& ctx, base::StrID value);
+
+	/**
+	 * @brief Utility function to get the append String method symbol on String class.
+	 * 
+	 * @param ctx 
+	 * @return SymID 
+	 */
+	SymID appendStringMethodSym(query::Context& ctx);
 
 	/**
 	 * @brief Get the compiler-generated HOUT representation of the toString method for a type.

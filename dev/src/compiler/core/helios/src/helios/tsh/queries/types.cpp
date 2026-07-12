@@ -1,6 +1,7 @@
 #include "types.hpp"
 
 #include <diagnostic_interactive/placeholder.hpp>
+#include <helios/symbols/lang_primitives.hpp>
 #include <helios_private/tsh/abstract_type_impl.hpp>
 
 #include <query_framework/standard_query/query_impl.hpp>
@@ -87,9 +88,15 @@ namespace compiler::tsh {
 		return RawPointerAbstractType{ &raw_pointer_impl.at(mutable_pointer) };
 	}
 
-	StringAbstractType getStringType() {
-		static auto string_impl = StringAbstractTypeImpl{};
-		return StringAbstractType{ &string_impl };
+	ClassAbstractType getStringType(query::Context& ctx) {
+		// The `String` type is the `String` class from `core.containers`, looked up as a
+		// language primitive rather than being a compiler-builtin abstract type.
+		const auto sym
+			= ctx.query<compiler::helios::QueryLanguagePrimitiveSymID>(
+				  { compiler::helios::LanguagePrimitive::String }
+			  )
+				  ->valueOrThrow();
+		return ctx.query<QueryClassType>(sym);
 	}
 
 	SliceAbstractType getCharSliceType(query::Context& ctx) {

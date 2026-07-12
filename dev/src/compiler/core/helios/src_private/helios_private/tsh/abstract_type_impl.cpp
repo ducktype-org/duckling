@@ -362,10 +362,6 @@ namespace compiler::tsh {
 		return &cached_interface;
 	}
 
-	CRef<TypeInterface> StringAbstractTypeImpl::getDeclaredInterface(query::Context&) const {
-		throw base::NotYetImplemented("String type interface not yet implemented");
-	}
-
 	CRef<TypeInterface> DynamicArrayAbstractTypeImpl::getDeclaredInterface(query::Context& ctx
 	) const {
 		const auto type = toAbstractType().as<DynamicArrayAbstractType>();

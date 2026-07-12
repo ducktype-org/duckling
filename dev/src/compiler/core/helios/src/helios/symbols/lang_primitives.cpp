@@ -60,6 +60,46 @@ namespace compiler::helios {
 					ctx, LanguagePrimitive::Panic, "core", { "panicking" }, "panic"
 				);
 			}
+			case LanguagePrimitive::String: {
+				return lookupPrimitive(
+					ctx, LanguagePrimitive::String, "core", { "containers" }, "String"
+				);
+			}
+			case LanguagePrimitive::StringifyStr: {
+				return lookupPrimitive(
+					ctx, LanguagePrimitive::StringifyStr, "core", { "containers" }, "stringifyStr"
+				);
+			}
+			case LanguagePrimitive::StringifyChar: {
+				return lookupPrimitive(
+					ctx, LanguagePrimitive::StringifyChar, "core", { "containers" }, "stringifyChar"
+				);
+			}
+			case LanguagePrimitive::StringifyBool: {
+				return lookupPrimitive(
+					ctx, LanguagePrimitive::StringifyBool, "core", { "containers" }, "stringifyBool"
+				);
+			}
+			case LanguagePrimitive::StringifyI64: {
+				return lookupPrimitive(
+					ctx, LanguagePrimitive::StringifyI64, "core", { "containers" }, "stringifyI64"
+				);
+			}
+			case LanguagePrimitive::StringifyU64: {
+				return lookupPrimitive(
+					ctx, LanguagePrimitive::StringifyU64, "core", { "containers" }, "stringifyU64"
+				);
+			}
+			case LanguagePrimitive::StringifyF64: {
+				return lookupPrimitive(
+					ctx, LanguagePrimitive::StringifyF64, "core", { "containers" }, "stringifyF64"
+				);
+			}
+			case LanguagePrimitive::ConcatStrings: {
+				return lookupPrimitive(
+					ctx, LanguagePrimitive::ConcatStrings, "core", { "containers" }, "concatStrings"
+				);
+			}
 			default:
 				CORE_PANIC("Unknown language primitive: ", key.primitive);
 			}

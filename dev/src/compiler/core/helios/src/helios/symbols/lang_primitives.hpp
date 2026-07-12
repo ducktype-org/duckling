@@ -8,8 +8,15 @@
 #include <query_framework/query_result.hpp>
 
 MAKE_STRINGIFYABLE_ENUM(compiler::helios, u32, LanguagePrimitive,
-    Panic
-	// String
+    Panic,
+	String,
+	StringifyStr,
+	StringifyChar,
+	StringifyBool,
+	StringifyI64,
+	StringifyU64,
+	StringifyF64,
+	ConcatStrings
 	// List
 	// PanicOutOfBounds
 )
