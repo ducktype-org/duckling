@@ -8,6 +8,7 @@
 #include <helios/hout/visitors.hpp>
 #include <helios/mangler/mangler.hpp>
 #include <helios/queries/function_queries.hpp>
+#include <helios/queries/global_data_queries.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 #include <mir_private/expr_lowering.hpp>
