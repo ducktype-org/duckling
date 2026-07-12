@@ -240,11 +240,16 @@ def default_compiler_from_ctx(default_name: str):
     return OptionDefaultFromCtx
 
 
+def _jit_enabled_from_ctx(ctx: click.Context) -> bool:
+    jit_option = ctx.params.get("jit")
+    return jit_option.is_jit_enabled() if jit_option else False
+
+
 def infer_cc_compiler(ctx: click.Context):
     """Infer the default C compiler from the C++ compiler"""
     cc_compiler = ctx.params.get("cc_compiler")
     cxx_compiler = ctx.params.get("cxx_compiler")
-    enable_jit = ctx.params.get("jit").is_jit_enabled()
+    enable_jit = _jit_enabled_from_ctx(ctx)
 
     if not cc_compiler and cxx_compiler:
         if "clang++" in cxx_compiler:
@@ -269,7 +274,7 @@ def infer_cxx_compiler(ctx: click.Context):
     """Infer the default C++ compiler from the C compiler"""
     cc_compiler = ctx.params.get("cc_compiler")
     cxx_compiler = ctx.params.get("cxx_compiler")
-    enable_jit = ctx.params.get("jit").is_jit_enabled()
+    enable_jit = _jit_enabled_from_ctx(ctx)
 
     if not cxx_compiler and cc_compiler:
         if "clang" in cc_compiler:
