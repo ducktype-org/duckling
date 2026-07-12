@@ -63,7 +63,8 @@ namespace compiler::helios::desugaring {
 			Box<code::Expr>   iterable_hout = iterable_hout_res->valueOrThrow()->clone();
 			tsh::SymbolType<> iterable_type = iterable_hout->expression_type.getSymbolType();
 			tsh::Kind         kind          = iterable_type.getType().getKind();
-			bool iterable_is_r_value = iterable_hout->expression_type.getValueCategory().isRValue();
+			bool              iterable_is_r_value
+				= iterable_hout->expression_type.getValueCategory().cannotBeAssignedTo();
 
 			if (kind != tsh::Kind::DynamicArray && kind != tsh::Kind::StaticArray) {
 				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(

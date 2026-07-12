@@ -99,6 +99,75 @@ namespace compiler::helios {
 
 			return makeBox<code::TupleExpr>(ctx, tuple->origin.generatedFrom(), std::move(elements));
 		}
+
+		/**
+		 * @brief Whether the reference-kind transition creates a new value (which may require a
+		 * copy).
+		 */
+		bool requiresValueCopy(tsh::ReferenceKind from_kind, tsh::ReferenceKind to_kind) {
+			switch (from_kind) {
+			case tsh::ReferenceKind::Direct:
+			case tsh::ReferenceKind::Ref:
+			case tsh::ReferenceKind::Box:
+				return to_kind == tsh::ReferenceKind::Direct || to_kind == tsh::ReferenceKind::Box;
+			}
+			return false;
+		}
+
+		/**
+		 * @brief The value a copying coercion actually copies.
+		 *
+		 * When the reference-kind coercion reads a value out of a `ref`/`box`, the value that gets
+		 * copied is the dereferenced one, not the reference itself.
+		 */
+		tsh::ExpressionType<> valueBeingCopied(
+			const tsh::ExpressionType<>& from, const tsh::SymbolType<>& to
+		) {
+			const tsh::ReferenceKind from_kind               = from.getSymbolType().getRefKind();
+			const bool               reads_through_reference = from_kind == tsh::ReferenceKind::Ref
+			                                  || (from_kind == tsh::ReferenceKind::Box
+			                                      && to.getRefKind() == tsh::ReferenceKind::Direct);
+
+			if (!reads_through_reference) return from;
+			return tsh::ExpressionType<>(
+				from.getSymbolType().getPointeeSymbolType(),
+				tsh::ValueCategory(tsh::PrimaryCategory::Dereferenced)
+			);
+		}
+
+		/**
+		 * @brief How a copying coercion may hand over a value.
+		 */
+		enum class PassingMethod {
+			ByteCopy,            ///< Trivially copyable, copied by copying its bytes.
+			ImplicitMove,        ///< Owned rvalue (a temporary), moved implicitly.
+			ExplicitCopyOrMove,  ///< Non-trivial assignable value (lvalue), needs an explicit
+			                     ///< `copy`/`move`.
+			NotCopyable,  ///< Non-trivial assignable value (lvalue) value with no copy constructor.
+		};
+
+		/**
+		 * @brief Decides how the given value may passed, based on its value category and the
+		 * abilities of its type.
+		 */
+		PassingMethod passingMethod(query::Context& ctx, const tsh::ExpressionType<>& value) {
+			const auto type    = value.getType();
+			const bool trivial = type.isTriviallyCopyable(ctx);
+
+			switch (value.getValueCategory().getCategory()) {
+			case tsh::PrimaryCategory::Temporary:
+				return trivial ? PassingMethod::ByteCopy : PassingMethod::ImplicitMove;
+			case tsh::PrimaryCategory::Literal:
+				return PassingMethod::ByteCopy;
+			case tsh::PrimaryCategory::Local:
+			case tsh::PrimaryCategory::Global:
+			case tsh::PrimaryCategory::Dereferenced:
+				if (trivial) return PassingMethod::ByteCopy;
+				return type.isCopyable(ctx) ? PassingMethod::ExplicitCopyOrMove
+				                            : PassingMethod::NotCopyable;
+			}
+			CORE_UNREACHABLE();
+		}
 	}
 
 	IncompatibleTypesError::IncompatibleTypesError(
@@ -177,40 +246,21 @@ namespace compiler::helios {
 			= ctx.query<tsh::QueryImplicitCoercibilityOnSymbolType>({ from_type, to });
 		if (!coercible) return InvalidCoercion{};
 
-		// A value is copied when it's read out of a ref/box, when a Direct value is boxed, or when
-		// a Direct value is coerced to the same Direct kind. References that stay references never
-		// copy.
-		const bool requires_copy = [](tsh::ReferenceKind from_kind, tsh::ReferenceKind to_kind) {
-			switch (from_kind) {
-			case tsh::ReferenceKind::Direct:
-				return to_kind == tsh::ReferenceKind::Direct || to_kind == tsh::ReferenceKind::Box;
-			case tsh::ReferenceKind::Ref:
-				return to_kind == tsh::ReferenceKind::Direct || to_kind == tsh::ReferenceKind::Box;
-			case tsh::ReferenceKind::Box:
-				return to_kind == tsh::ReferenceKind::Direct || to_kind == tsh::ReferenceKind::Box;
-			default:
-				return false;
-			}
-		}(from_type.getRefKind(), to.getRefKind());
+		// A coercion that only rebinds a reference never copies, so it is always fine.
+		if (not requiresValueCopy(from_type.getRefKind(), to.getRefKind()))
+			return Coercion(from_type, to);
 
-		// Trivially-copyable values are byte-copied.
-		// A non-trivial copy is only allowed when it is an implicit move of an owned temporary.
-		// Otherwise it is an implicit copy which should be explicit, thus we error.
-		if (requires_copy && !from_type.getType().isTriviallyCopyable(ctx)) {
-			// The copy is implicit (and disallowed) when reading out of a reference/box or when
-			// copying a non-trivial lvalue. Owned temporaries and the results of `copy`/`move` are
-			// Direct rvalues, so they fall through and are moved.
-			const bool reads_through_reference = from_type.getRefKind() == tsh::ReferenceKind::Ref
-			                                  || (from_type.getRefKind() == tsh::ReferenceKind::Box
-			                                      && to.getRefKind() != tsh::ReferenceKind::Box);
-			const bool copies_lvalue = from.getValueCategory().canBeAssignedTo();
-			if (reads_through_reference || copies_lvalue) {
-				if (!from_type.getType().isCopyable(ctx)) return TypeNotCopyable{};
-				return TypeRequiresExplicitCopyMove{};
-			}
+		// Otherwise a value has to be copied.
+		switch (passingMethod(ctx, valueBeingCopied(from, to))) {
+		case PassingMethod::ByteCopy:
+		case PassingMethod::ImplicitMove:
+			return Coercion(from_type, to);
+		case PassingMethod::ExplicitCopyOrMove:
+			return TypeRequiresExplicitCopyMove{};
+		case PassingMethod::NotCopyable:
+			return TypeNotCopyable{};
 		}
-
-		return Coercion(from_type, to);
+		CORE_UNREACHABLE();
 	}
 
 	CoercionQResult canCoerceToMeta(query::Context& ctx, const tsh::ExpressionType<>& from) {

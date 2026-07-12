@@ -414,7 +414,7 @@ namespace compiler::helios::code {
 						return;  // failed
 					}
 					// @TODO: #3109 Take `unique`/`leaking` specifiers into consideration.
-					if (inner->expression_type.getValueCategory().isRValue()) {
+					if (inner->expression_type.getValueCategory().cannotBeAssignedTo()) {
 						ctx.logInt(makeBox<dia_int::PlaceholderError>(
 							"Tried to reference a temporary", stmt->getStablePosition()
 						));
