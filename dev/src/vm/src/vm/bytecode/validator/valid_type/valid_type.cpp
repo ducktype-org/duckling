@@ -380,10 +380,13 @@ void valid_type::ValidType::finalize(ValidTypeMap& types) {
 			this->size                  = inner_type->getSize() * fixed_size_table.element_count;
 			this->alignment             = inner_type->getAlignment();
 			this->is_trivially_copyable = inner_type->isTriviallyCopyable();
-			this->is_ffi_compliant      = inner_type->isFFICompliant();
-			state                       = Finalized{ .kind = finalized::FixedSizeTable{
-														 .inner         = fixed_size_table.inner,
-														 .element_count = fixed_size_table.element_count } };
+			// A zero-length table would flatten to no libffi elements, breaking the FFI layout
+			// cross-check.
+			this->is_ffi_compliant
+				= fixed_size_table.element_count != 0 && inner_type->isFFICompliant();
+			state = Finalized{ .kind = finalized::FixedSizeTable{
+								   .inner         = fixed_size_table.inner,
+								   .element_count = fixed_size_table.element_count } };
 		}
 		variant_case(defined::DefinedDynamicTable, dynamic_table) {
 			/// @note Size of dynamicTable is unknown at this point,

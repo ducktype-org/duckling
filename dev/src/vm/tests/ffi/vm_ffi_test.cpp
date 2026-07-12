@@ -47,6 +47,7 @@ public:
 		TESTER_ADD_TEST(structWithNestedTablesByValue);
 		TESTER_ADD_TEST(nestedStructByValue);
 		TESTER_ADD_TEST(tableByValueFails);
+		TESTER_ADD_TEST(structWithZeroLengthTableFails);
 		TESTER_ADD_TEST(structWithPackedFieldFails);
 		TESTER_ADD_TEST(packedStructInFfiFails);
 		TESTER_ADD_TEST(packedStructWithMatchingLayoutStillFails);
@@ -683,6 +684,18 @@ private:
 				+ "type fixed_size_table: arr4 i32 4\n"
 				  "ffi function ffi_add { arr4 } -> { i64 };\n",
 			{ "by-value arrays", "fixed-size table" }
+		);
+	}
+
+	// A zero-length table flattens to no libffi elements, so it is not FFI-compliant.
+	void structWithZeroLengthTableFails() {
+		expectLoadError(
+			"zero_length_table_struct",
+			ffiObjectHeader()
+				+ "type fixed_size_table: arr0 i32 0\n"
+				  "type data: WithEmpty { v: arr0 }\n"
+				  "ffi function ffi_add { WithEmpty } -> { i64 };\n",
+			{ "WithEmpty", "cannot be used in an FFI function signature" }
 		);
 	}
 

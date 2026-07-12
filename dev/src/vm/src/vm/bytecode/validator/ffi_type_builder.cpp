@@ -22,6 +22,7 @@ namespace vm::code::ffi_detail {
 			if (auto table = type.maybeGetKindAs<valid_type::finalized::FixedSizeTable>()) {
 				std::vector<ffi_type*> element;
 				appendFieldFFITypes(*types.at(table.value()->inner), types, storage, element);
+				elements.reserve(elements.size() + element.size() * table.value()->element_count);
 				for (usize i = 0; i < table.value()->element_count; ++i)
 					elements.insert(elements.end(), element.begin(), element.end());
 				return;

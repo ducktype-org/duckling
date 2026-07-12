@@ -163,8 +163,8 @@ namespace vm::code {
 	public:
 		constexpr static std::string_view ERR_MSG
 			= "Type cannot be used in an FFI function signature (expected a primitive of size 1, "
-			  "2, 4 or 8, `cptr`, or a non-packed data structure whose fields are such types or "
-			  "fixed-size tables of them): ";
+			  "2, 4 or 8, `cptr`, or a non-packed data structure whose fields are themselves "
+			  "FFI-compliant, including nested structures and non-empty fixed-size tables): ";
 
 		FFIUnsupportedTypeError(const valid_type::ValidType& type):
 			  ValidationError(base::strConcat(ERR_MSG, type.getName())) {}
