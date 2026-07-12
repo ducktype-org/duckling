@@ -101,7 +101,8 @@ namespace compiler::helios {
 				defgen::GeneratedFunctionVariable,
 				defgen::ControlFlowLocal,
 				defgen::ReplExpressionWrapper,
-				defgen::ReplInstructionWrapper
+				defgen::ReplInstructionWrapper,
+				defgen::GeneratedConstant
 			) {
 				return EmissionPolicy::Replicated;
 			}

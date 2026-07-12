@@ -19,6 +19,7 @@
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/templates/templates.hpp>
 #include <helios_private/symbols/symbols.hpp>
+#include <helios_private/scopes/scope_data.hpp>
 
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
@@ -203,11 +204,34 @@ namespace compiler::helios::mangler {
 			} else {
 				std::vector<std::string> path_parts;
 
-				auto ancestor     = maybeSymbolPst(symbol_id).value().unlock(ctx);
-				auto ancestor_opt = getPSTElementParent(ctx, ancestor);
+				// This function can be only called for symbols
+				// that have clear PST-path mangling.
+				// This means that all PstImplementedSemantics work, and few 
+				// additional cases that are handled bellow.
+				auto ancestor_opt = [&]() {
+					variant_match(getSymRef(symbol_id)->other) {
+						variant_case_novalue(PstImplementedSemantics) {
+							auto ancestor     = maybeSymbolPst(symbol_id).value().unlock(ctx);
+							return getPSTElementParent(ctx, ancestor);
+						}
+						variant_case(defgen::GeneratedConstant, const_data) {
+							// EHHHHH:!
+							// scopes<->pst link is weird...
+
+							auto scope = const_data.scope;
+							auto ancestor = ScopeAccess_Functor::get(scope)->relatedPSTElement().value();
+							return PSTParentResult{ancestor};
+							
+						}
+					}
+					CORE_UNREACHABLE();
+				}();
+				
+				
+				
 
 				while (ancestor_opt.isLangElement()) {
-					ancestor = ancestor_opt.getAsLangElement().unlock(ctx);
+					auto ancestor = ancestor_opt.getAsLangElement().unlock(ctx);
 
 					if (ancestor->getElementKind() == pst::ElementKind::Namespace) {
 						auto namespace_v = ancestor.dynamicCast<pst::Namespace>().value();

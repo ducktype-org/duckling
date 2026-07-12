@@ -96,7 +96,7 @@ namespace compiler::helios::templates {
 
 		static std::vector<SymID> bakeTemplateArgumentsSymbols(
 			Context&                    ctx,
-			TemplateDeclarationSignature signature,
+			const TemplateDeclarationSignature& signature,
 			ScopeID                     scope,
 			const QKey&                 q_key
 		) {

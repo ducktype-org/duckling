@@ -82,4 +82,10 @@ namespace compiler::helios {
 		ScopeData& operator=(const ScopeData&) = delete;
 	};
 
+	struct ScopeAccess_Functor final {
+		static auto get(ScopeID id) { return id.ref; }
+
+		static auto idOf(Ref<ScopeData> ref) { return ScopeID(ref); }
+	};
+
 }
