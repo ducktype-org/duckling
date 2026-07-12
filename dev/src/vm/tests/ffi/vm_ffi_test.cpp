@@ -36,11 +36,19 @@ public:
 		TESTER_ADD_TEST(cptrStructField);
 		TESTER_ADD_TEST(cptrCopyIntoStructField);
 		TESTER_ADD_TEST(cptrCopySizeTooLargeFails);
+		TESTER_ADD_TEST(cptrReadSizeTooLargeFails);
+		TESTER_ADD_TEST(cptrNullTypedLoadFails);
+		TESTER_ADD_TEST(cptrNullRawReadFails);
 		TESTER_ADD_TEST(cptrTypedLoadStoreMallocWorkflow);
 		TESTER_ADD_TEST(cptrAddOffsetArrayWalk);
 		TESTER_ADD_TEST(cptrLoadThroughVoidCptrFails);
 		TESTER_ADD_TEST(cptrLoadPointeeMismatchFails);
 		TESTER_ADD_TEST(cptrLoadPackedPointeeFails);
+		TESTER_ADD_TEST(cptrStoreThroughVoidCptrFails);
+		TESTER_ADD_TEST(cptrStorePointeeMismatchFails);
+		TESTER_ADD_TEST(cptrStorePackedPointeeFails);
+		TESTER_ADD_TEST(cptrReadIntoPointerPointeeFails);
+		TESTER_ADD_TEST(cptrWriteFromPointerPointeeFails);
 		TESTER_ADD_TEST(cptrAddOffsetAcrossTypesFails);
 		TESTER_ADD_TEST(cptrCopyBuiltinsRemoved);
 		TESTER_ADD_TEST(floatArgsAndReturn);
@@ -300,6 +308,72 @@ private:
 		assertExecutionPanickedWith(
 			runTestOnVmGetResult(pid), "copy region exceeds the pointed-to block"
 		);
+	}
+
+	// The read-direction mirror of cptrCopySizeTooLargeFails.
+	void cptrReadSizeTooLargeFails() {
+		auto pid = initProcess();
+		auto file = writeTempDbc(
+			"read_too_large",
+			ffiObjectHeader()
+				+ "type data: Pair { a: i64, b: i64 }\n"
+				  "ffi function ffi_alloc8 { } -> { cptr };\n"
+				  "function main { i64, ptr_argv } -> { i64 } {\n"
+				  "    init_pany_type buf, cptr;\n"
+				  "    call_ffifunc ffi_alloc8;\n"
+				  "    init_pany_type s, Pair;\n"
+				  "    init_pany_type bp, ptr_i64;\n"
+				  "    structLea_pptr_pste_field bp, s, Pair.b;\n"
+				  "    init_pany_type sz, i64;\n"
+				  "    mov_p64_imm sz, 16;\n"
+				  "    cptrRead_pptr_pcpt_p64 bp, buf, sz;\n"
+				  "    ret;\n"
+				  "}\n"
+		);
+		auto load = vm::api::loadFiles(pid, { file });
+		if (!load.has_value()) fail(nlohmann::json(load.error()).dump());
+		assertExecutionPanickedWith(
+			runTestOnVmGetResult(pid), "cptrRead: copy region exceeds the pointed-to block"
+		);
+	}
+
+	// A default-initialized cpointer is null; a typed load must fail cleanly, not crash.
+	void cptrNullTypedLoadFails() {
+		auto pid  = initProcess();
+		auto file = writeTempDbc(
+			"null_typed_load",
+			"type cpointer: I64Ptr i64\n"
+			"function main { i64, ptr_argv } -> { i64 } {\n"
+			"    init_pany_type p, I64Ptr;\n"
+			"    init_pany_type v, i64;\n"
+			"    cptrLoad_pany_pcpt v, p;\n"
+			"    ret;\n"
+			"}\n"
+		);
+		auto load = vm::api::loadFiles(pid, { file });
+		if (!load.has_value()) fail(nlohmann::json(load.error()).dump());
+		assertExecutionPanickedWith(runTestOnVmGetResult(pid), "Accessing null pointer");
+	}
+
+	// The same for the raw byte copy.
+	void cptrNullRawReadFails() {
+		auto pid  = initProcess();
+		auto file = writeTempDbc(
+			"null_raw_read",
+			"function main { i64, ptr_argv } -> { i64 } {\n"
+			"    init_pany_type c, cptr;\n"
+			"    init_pany_type out, i64;\n"
+			"    init_pany_type op, ptr_i64;\n"
+			"    ref_pptr_pany op, out;\n"
+			"    init_pany_type sz, i64;\n"
+			"    mov_p64_imm sz, 8;\n"
+			"    cptrRead_pptr_pcpt_p64 op, c, sz;\n"
+			"    ret;\n"
+			"}\n"
+		);
+		auto load = vm::api::loadFiles(pid, { file });
+		if (!load.has_value()) fail(nlohmann::json(load.error()).dump());
+		assertExecutionPanickedWith(runTestOnVmGetResult(pid), "Accessing null pointer");
 	}
 
 	void floatArgsAndReturn() {
@@ -1102,6 +1176,87 @@ private:
 			"    ret;\n"
 			"}\n",
 			{ "cannot be dereferenced" }
+		);
+	}
+
+	// The store-side mirror of cptrLoadThroughVoidCptrFails.
+	void cptrStoreThroughVoidCptrFails() {
+		expectLoadError(
+			"store_through_void",
+			"function main { i64, ptr_argv } -> { i64 } {\n"
+			"    init_pany_type c, cptr;\n"
+			"    init_pany_type v, i64;\n"
+			"    cptrStore_pcpt_pany c, v;\n"
+			"    ret;\n"
+			"}\n",
+			{ "cannot be dereferenced" }
+		);
+	}
+
+	// The store-side mirror of cptrLoadPointeeMismatchFails.
+	void cptrStorePointeeMismatchFails() {
+		expectLoadError(
+			"store_pointee_mismatch",
+			"type cpointer: I64Ptr i64\n"
+			"function main { i64, ptr_argv } -> { i64 } {\n"
+			"    init_pany_type p, I64Ptr;\n"
+			"    init_pany_type v, i32;\n"
+			"    cptrStore_pcpt_pany p, v;\n"
+			"    ret;\n"
+			"}\n",
+			{ "does not match the C pointer's pointee" }
+		);
+	}
+
+	// The store-side mirror of cptrLoadPackedPointeeFails.
+	void cptrStorePackedPointeeFails() {
+		expectLoadError(
+			"store_packed_pointee",
+			"type data: P { a: i8, b: i64 } packed\n"
+			"type cpointer: PPtr P\n"
+			"function main { i64, ptr_argv } -> { i64 } {\n"
+			"    init_pany_type p, PPtr;\n"
+			"    init_pany_type s, P;\n"
+			"    cptrStore_pcpt_pany p, s;\n"
+			"    ret;\n"
+			"}\n",
+			{ "cannot be dereferenced" }
+		);
+	}
+
+	// A raw copy must not overwrite VM-managed data (here: a struct with a pointer field).
+	void cptrReadIntoPointerPointeeFails() {
+		expectLoadError(
+			"read_into_pointer_pointee",
+			"type data: Holder { p: ptr_i64, v: i64 }\n"
+			"type pointer: HolderPtr Holder\n"
+			"function main { i64, ptr_argv } -> { i64 } {\n"
+			"    init_pany_type c, cptr;\n"
+			"    init_pany_type hp, HolderPtr;\n"
+			"    init_pany_type sz, i64;\n"
+			"    mov_p64_imm sz, 16;\n"
+			"    cptrRead_pptr_pcpt_p64 hp, c, sz;\n"
+			"    ret;\n"
+			"}\n",
+			{ "trivially copyable" }
+		);
+	}
+
+	// A raw copy must not leak raw block addresses to native memory either.
+	void cptrWriteFromPointerPointeeFails() {
+		expectLoadError(
+			"write_from_pointer_pointee",
+			"type data: Holder { p: ptr_i64, v: i64 }\n"
+			"type pointer: HolderPtr Holder\n"
+			"function main { i64, ptr_argv } -> { i64 } {\n"
+			"    init_pany_type c, cptr;\n"
+			"    init_pany_type hp, HolderPtr;\n"
+			"    init_pany_type sz, i64;\n"
+			"    mov_p64_imm sz, 16;\n"
+			"    cptrWrite_pcpt_pptr_p64 c, hp, sz;\n"
+			"    ret;\n"
+			"}\n",
+			{ "trivially copyable" }
 		);
 	}
 

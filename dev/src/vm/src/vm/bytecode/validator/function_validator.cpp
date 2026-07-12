@@ -686,9 +686,9 @@ class FunctionValidator {
 			instr_case(Op_mov_pcpt_pcpt, instr) {
 				// Strict: no implicit pointee change on copy; reinterpretation goes through the
 				// explicit `cptrCast_pcpt_pcpt`.
-				auto src_type = getPlaceType(instr.src, current_stack)->getName();
-				auto dst_type = getPlaceType(instr.dst, current_stack)->getName();
-				if (src_type != dst_type) throw CPointerTypeMismatchError(instr);
+				if (getPlaceType(instr.src, current_stack)->getID()
+				    != getPlaceType(instr.dst, current_stack)->getID())
+					throw CPointerTypeMismatchError(instr);
 			}
 
 			instr_case(Op_cptrLoad_pany_pcpt, instr) {
@@ -711,15 +711,27 @@ class FunctionValidator {
 					throw CPtrPointeeMismatchError(instr);
 			}
 			// The raw byte copies work through any cpointer (the VM side is bounds-checked at
-			// runtime), and a cast converts any cpointer to any other - the generic argument
-			// validation already pins all operand kinds.
-			instr_case_novalue(Op_cptrRead_pptr_pcpt_p64) {}
-			instr_case_novalue(Op_cptrWrite_pcpt_pptr_p64) {}
+			// runtime), but the VM-side pointee must be trivially copyable, so raw native bytes
+			// never overwrite (or leak) VM-managed data.
+			instr_case(Op_cptrRead_pptr_pcpt_p64, instr) {
+				const auto pointer = getPlaceType(instr.dst_ptr, current_stack)
+				                         ->getKindAs<valid_type::finalized::Pointer>();
+				if (!types_ctx.at(pointer->inner)->isTriviallyCopyable())
+					throw CPtrRawCopyPointeeError(instr);
+			}
+			instr_case(Op_cptrWrite_pcpt_pptr_p64, instr) {
+				const auto pointer = getPlaceType(instr.src_ptr, current_stack)
+				                         ->getKindAs<valid_type::finalized::Pointer>();
+				if (!types_ctx.at(pointer->inner)->isTriviallyCopyable())
+					throw CPtrRawCopyPointeeError(instr);
+			}
+			// A cast converts any cpointer to any other - the generic argument validation
+			// already pins the operand kinds.
 			instr_case_novalue(Op_cptrCast_pcpt_pcpt) {}
 			instr_case(Op_cptrAddOffset_pcpt_pcpt_p64, instr) {
-				auto src_type = getPlaceType(instr.src, current_stack)->getName();
-				auto dst_type = getPlaceType(instr.dst, current_stack)->getName();
-				if (src_type != dst_type) throw CPointerTypeMismatchError(instr);
+				if (getPlaceType(instr.src, current_stack)->getID()
+				    != getPlaceType(instr.dst, current_stack)->getID())
+					throw CPointerTypeMismatchError(instr);
 			}
 
 			instr_case(Op_mov_pste_pste, instr) {

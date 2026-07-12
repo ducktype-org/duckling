@@ -909,12 +909,20 @@ namespace vm {
 			);
 	}
 
+	/**
+	 * @brief A null cpointer (e.g. a default-initialized local) must not be dereferenced.
+	 */
+	inline void assertCptrNotNull(u64 cptr) {
+		if (cptr == 0) throw vm::exceptions::VMNullPointerAccessException();
+	}
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(cptrLoad_bany_p64)(FUNCTION_ARGS) {
 		{
 			const auto size      = instr[1].arg0;
 			auto       dst_block = READ_BLOCK_REF_FROM_ARG(instr->arg0);
 			auto       view      = thread.process_memory.getBlockViewUnsafe(dst_block);
 			const auto src       = READ_FROM_PLACE_ARG(u64, instr->arg1);
+			assertCptrNotNull(src);
 			// The verifier pins the destination to the pointee type, so the byte count always
 			// fits the block.
 			// NOLINTNEXTLINE(performance-no-int-to-ptr): a cpointer is a raw native address.
@@ -929,6 +937,7 @@ namespace vm {
 			const auto dst       = READ_FROM_PLACE_ARG(u64, instr->arg0);
 			auto       src_block = READ_BLOCK_REF_FROM_ARG(instr->arg1);
 			auto       view      = thread.process_memory.getBlockViewUnsafe(src_block);
+			assertCptrNotNull(dst);
 			// NOLINTNEXTLINE(performance-no-int-to-ptr): a cpointer is a raw native address.
 			std::memcpy(reinterpret_cast<void*>(dst), view.getBegin(), size);
 		}
@@ -940,7 +949,8 @@ namespace vm {
 			const auto size = READ_FROM_PLACE_ARG(u64, instr[1].arg0);
 			const auto dst  = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
 			const auto src  = READ_FROM_PLACE_ARG(u64, instr->arg1);
-			auto       view = thread.process_memory.getBlockViewUnsafe(dst.getBlock());
+			assertCptrNotNull(src);
+			auto view = thread.process_memory.getBlockViewUnsafe(dst.getBlock());
 			assertCptrCopyWithinBlock(dst, size, view.size(), "cptrRead");
 			// NOLINTNEXTLINE(performance-no-int-to-ptr): a cpointer is a raw native address.
 			std::memcpy(view.getBegin() + dst.getOffset(), reinterpret_cast<const void*>(src), size);
@@ -953,7 +963,8 @@ namespace vm {
 			const auto size = READ_FROM_PLACE_ARG(u64, instr[1].arg0);
 			const auto dst  = READ_FROM_PLACE_ARG(u64, instr->arg0);
 			const auto src  = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
-			auto       view = thread.process_memory.getBlockViewUnsafe(src.getBlock());
+			assertCptrNotNull(dst);
+			auto view = thread.process_memory.getBlockViewUnsafe(src.getBlock());
 			assertCptrCopyWithinBlock(src, size, view.size(), "cptrWrite");
 			// NOLINTNEXTLINE(performance-no-int-to-ptr): a cpointer is a raw native address.
 			std::memcpy(reinterpret_cast<void*>(dst), view.getBegin() + src.getOffset(), size);

@@ -23,7 +23,10 @@ extern "C" {
 	void* ffi_alloc8() { return std::malloc(8); }
 
 	// Sized allocation, for the typed cpointer instructions (malloc workflow).
-	void* ffi_alloc(int64_t n) { return std::malloc(static_cast<size_t>(n)); }
+	void* ffi_alloc(int64_t n) {
+		if (n <= 0) return nullptr;
+		return std::malloc(static_cast<size_t>(n));
+	}
 
 	void ffi_free(void* p) { std::free(p); }
 

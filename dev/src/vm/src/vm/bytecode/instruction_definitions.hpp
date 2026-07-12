@@ -557,8 +557,9 @@ DEF_INSTR(strOutput_pptr, (vm::opargs::PlacePtr, string_ptr))
 
 // ========= CPOINTER OPERATIONS ========
 // Operations on raw C pointers (native addresses obtained via FFI). The native side of these
-// copies is unchecked by design - the address comes from foreign code the VM already trusts;
-// the typed variants remove size mistakes, and the VM side of every copy is bounds-checked.
+// copies is unchecked by design - the program is trusted for the native address. On the VM side
+// the typed variants are pinned to the pointee type by the validator, and the raw copies are
+// bounds-checked at runtime.
 
 /**
  * @brief Copies `sizeof(pointee)` bytes from the native memory addressed by `src_ptr` into
@@ -576,8 +577,8 @@ DEF_INSTR(cptrStore_pcpt_pany, (vm::opargs::PlaceCptr, dst_ptr), (vm::opargs::Pl
 
 /**
  * @brief Copies `size` raw bytes from the native memory addressed by `src_ptr` to the VM
- * memory pointed to by `dst_ptr`. Works with any cpointer; the VM side is bounds-checked at
- * runtime.
+ * memory pointed to by `dst_ptr`. Works with any cpointer; `dst_ptr`'s pointee must be
+ * trivially copyable, and the VM side is bounds-checked at runtime.
  */
 DEF_INSTR(
 	cptrRead_pptr_pcpt_p64,
@@ -588,8 +589,8 @@ DEF_INSTR(
 
 /**
  * @brief Copies `size` raw bytes from the VM memory pointed to by `src_ptr` to the native
- * memory addressed by `dst_ptr`. Works with any cpointer; the VM side is bounds-checked at
- * runtime.
+ * memory addressed by `dst_ptr`. Works with any cpointer; `src_ptr`'s pointee must be
+ * trivially copyable, and the VM side is bounds-checked at runtime.
  */
 DEF_INSTR(
 	cptrWrite_pcpt_pptr_p64,
