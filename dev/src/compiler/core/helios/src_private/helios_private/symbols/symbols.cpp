@@ -60,9 +60,27 @@ namespace compiler::helios {
 		CORE_UNREACHABLE();
 	}
 
-	EmissionPolicy emissionPolicy(SymID id) {
+	EmissionPolicy emissionPolicy(query::Context& ctx, SymID id) {
 		variant_match(getSymRef(id)->other) {
-			variant_case_novalue(PstImplementedSemantics) { return EmissionPolicy::OwnerOnly; }
+			variant_case(PstImplementedSemantics, pst_data) { 
+				// This is a very simple, and very suboptimal heuristic for now, we can improve it later if needed.
+				// @TODO: #2996 change it to a better implementation.
+				// Symbol should just know this!
+				auto pst_element_ancestor =
+					getPSTElementParent( ctx, pst_data.getElement().unlock(ctx));
+				while (pst_element_ancestor.isLangElement()) {
+					auto element = pst_element_ancestor.getAsLangElement().unlock(ctx);
+					if (element->getElementKind()
+					    == pst::ElementKind::TemplateStmt) {
+
+						// Symbols from within templates, are (probably) replicated
+						return EmissionPolicy::Replicated;
+					}
+					pst_element_ancestor = getPSTElementParent(ctx, element);
+				}
+				
+				return EmissionPolicy::OwnerOnly;
+			}
 			variant_case(BuiltinSemantics, data) {
 				// Only if HOUT implements the builtin we want to replicate it.
 				return getBuiltinOrigins(data.builtin).contains(BuiltinOrigin::HOUT)

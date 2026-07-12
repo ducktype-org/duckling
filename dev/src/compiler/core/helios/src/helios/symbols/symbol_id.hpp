@@ -126,7 +126,7 @@ namespace compiler::helios {
 		OwnerOnly,
 		Replicated,
 	};
-	EmissionPolicy emissionPolicy(SymID id);
+	EmissionPolicy emissionPolicy(query::Context& ctx, SymID id);
 
 	/**
 	 * @brief Whether the symbol can be called

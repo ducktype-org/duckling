@@ -90,51 +90,27 @@ namespace compiler::helios::templates {
 	}
 
 	struct IMPLEMENT_QUERY(QueryBakeTemplateSymID, query::QResult<TemplateBakeStorage>) {
-		// TODO: this will act as a function, and we might want to allow template overloading.
-		// It would be cool to unify this logic.
-
 
 		static std::vector<SymID> bakeTemplateArgumentsSymbols(
 			Context&                    ctx,
-			pst::Access<pst::ParamList> template_params,
+			TemplateDeclarationSignature signature,
 			ScopeID                     scope,
 			const QKey&                 q_key
 		) {
 			std::vector<SymID> symbols;
 
 			u64 i = 0;
-			for (const auto& param: *template_params) {
-				auto param_unlocked = param.unlock(ctx);
+			for (const auto& param: signature.parameters) {
+				auto ctv = q_key.template_arguments.at(i);
+				i++;
 
-				auto type_expression = param_unlocked->getType();
-
-				// This gets the optional default value:
-				// auto value_expression = param_unlocked->getValue()->unlock(ctx)->getExpr();
-
-				auto name = param_unlocked->getName().unlock(ctx)->unwrap();
-
-				auto type_ctv
-					= getTypeCTVFromPST(ctx, type_expression.unlock(ctx)->getExpr()).valueOrThrow();
-
-				// auto type = tsh::deductions::declarationTypeFromProvidedType(
-				// 	type_ctv.get<tsh::SymbolType<>>().value(), tsh::Mutability::Immutable
-				// );
-				// PR: TODO: check if types match!
-
-				// NOTE: this computes the default value, not the one passed here!
-				// const auto hout_qresult = getHoutOfExprWithExpectedType(
-				// 	ctx, value_expression,
-				//    type
-				// );
-				// auto value_ctv
-				// 	= ctx.query<QueryEvaluateHOUTExpression>({ hout_qresult.valueOrThrow().ref()
-				// }).valueOrThrow();
+				CORE_ASSERT(ctv.getTypeOfStoredValue(ctx) == param.type, "Template argument type does not match template parameter type");
 
 				auto const_symbol
 					= ctx.query<defgen::QueryGeneratedSymbol>(defgen::KeyFor_QueryGeneratedSymbol{
-						.name = name,
+						.name = param.name,
 						.generated_symbol_data
-						= defgen::GeneratedConstant{ q_key.template_arguments.at(i++), scope },
+						= defgen::GeneratedConstant{ ctv, scope },
 					});
 
 				symbols.push_back(const_symbol);
@@ -168,6 +144,11 @@ namespace compiler::helios::templates {
 				kind(key.template_sym_id) == SymbolKind::Template, "SymID is not a Template"
 			);
 
+			auto signature_qr = getTemplateDeclarationSignature(ctx, key.template_sym_id);
+			if (signature_qr.hasFailed()) return query::Failed();
+			const auto& signature = signature_qr.valueOrPanic();
+
+
 			auto pst_statement      = stmt(ctx, key.template_sym_id).value();
 			auto template_statement = pst_statement.dynamicCast<pst::TemplateStmt>().value();
 
@@ -178,7 +159,7 @@ namespace compiler::helios::templates {
 			// level as function overloads:!!
 			// @TODO: also assert CTV types
 			CORE_ASSERT(
-				template_params->size() == key.template_arguments.size(),
+				signature.parameters.size() == key.template_arguments.size(),
 				"Template arguments count does not match template parameters count"
 			);
 
@@ -191,8 +172,6 @@ namespace compiler::helios::templates {
 			hashing::ComponentHash hash_ctx
 				= hashing::ComponentHash(base::StrID(key.queryUnstablePerfectHash().toStringHex()));
 
-
-			std::cerr << "Running clone now!  \n";
 
 			auto cloned
 				= template_statement->clone().dynamicCast<pst::TemplateStmt>().toOptBox().value();
@@ -215,8 +194,6 @@ namespace compiler::helios::templates {
 			);
 
 
-			std::cerr << "Baked template pst!  \n";
-
 			auto baked_root      = baked_pst.getRootElement().unlock(ctx);
 			auto baked_statement = baked_root->getInnerStatement();
 
@@ -232,7 +209,7 @@ namespace compiler::helios::templates {
 			            ) } } });
 
 			auto args = bakeTemplateArgumentsSymbols(
-				ctx, template_params, ctx.query<QueryPrimaryCodeScopeFor>({ baked_root }), key
+				ctx, signature, ctx.query<QueryPrimaryCodeScopeFor>({ baked_root }), key
 			);
 
 			// @TODO: #3072 try to improve this.

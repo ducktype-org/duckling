@@ -161,7 +161,7 @@ namespace compiler::helios {
 				if (auto global_variable = std::get_if<HOUTGlobalVariable>(&g->value)) {
 					for (auto called_fun: collectCalledSymbols(*global_variable->initial_value)) {
 						if (visited_function_symbols.contains(called_fun)) continue;
-						if (emissionPolicy(called_fun) != EmissionPolicy::Replicated) continue;
+						if (emissionPolicy(ctx, called_fun) != EmissionPolicy::Replicated) continue;
 						functions_stack.push_back(called_fun);
 						visited_function_symbols.insert(called_fun);
 					}
@@ -184,7 +184,7 @@ namespace compiler::helios {
 
 				for (auto called_fun: called_funs) {
 					if (visited_function_symbols.contains(called_fun)) continue;
-					if (emissionPolicy(called_fun) != EmissionPolicy::Replicated) continue;
+					if (emissionPolicy(ctx, called_fun) != EmissionPolicy::Replicated) continue;
 
 					functions_stack.push_back(called_fun);
 					visited_function_symbols.insert(called_fun);

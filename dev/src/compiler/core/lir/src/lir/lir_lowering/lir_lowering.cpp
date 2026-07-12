@@ -71,7 +71,7 @@ namespace compiler::lir {
 		auto symbol_abi = ctx.query<helios::QuerySymbolABI>(helios_id)->valueOrPanicMsg(
 			"Handling errors in MIR is not supported yet"
 		);
-		auto link_once    = helios::emissionPolicy(helios_id) == helios::EmissionPolicy::Replicated;
+		auto link_once    = helios::emissionPolicy(ctx,helios_id) == helios::EmissionPolicy::Replicated;
 		auto mangled_name = helios::mangler::getSimpleMangledName(ctx, helios_id);
 		base::Optional<BuiltinFunctionKind> builtin_kind_opt
 			= helios::isBuiltin(helios_id).flatMap(getBuiltinKindFromHOUT);
@@ -860,7 +860,7 @@ namespace compiler::lir {
 				auto [link_once, ignore_on_dvm, ignore_on_llvm] = [&]() {
 					variant_match(key.function->helios_id) {
 						variant_case(mir::FunctionSymID, sym) {
-							bool link_once_val = helios::emissionPolicy(sym.id)
+							bool link_once_val = helios::emissionPolicy(ctx, sym.id)
 							                  == helios::EmissionPolicy::Replicated;
 							bool ignore_on_dvm_val
 								= helios::hasAttribute<helios::attributes::NativeOnlyImpl>(sym.id);
