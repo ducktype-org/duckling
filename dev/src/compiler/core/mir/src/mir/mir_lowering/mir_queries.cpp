@@ -1,7 +1,5 @@
 #include "mir_queries.hpp"
 
-#include "../mir_structure/mir_structure.hpp"
-#include "helios/queries/global_data_queries.hpp"
 #include "mir_lifetimes.hpp"
 #include "mir_validation.hpp"
 
@@ -11,11 +9,11 @@
 #include <helios/mangler/mangler.hpp>
 #include <helios/queries/function_queries.hpp>
 #include <helios/tsh/queries/types.hpp>
+#include <mir/mir_structure/mir_structure.hpp>
 #include <mir_private/expr_lowering.hpp>
 #include <mir_private/mir_builders.hpp>
 #include <mir_private/stmt_lowering.hpp>
 
-#include "base/except/exceptions.hpp"
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/str/str_utils.hpp>
 
