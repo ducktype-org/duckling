@@ -336,7 +336,8 @@ namespace compiler::lir {
 			.link_once    = function.link_once,
 			.parameter_layouts
 			= std::make_shared<std::vector<CRef<tsl::TypeLayout>>>(function.parameter_layouts),
-			.return_type_layout = function.return_type_layout
+			.return_type_layout = function.return_type_layout,
+			.builtin_kind_opt   = {},
 		};
 	}
 
@@ -424,6 +425,10 @@ namespace compiler::lir {
 			return BuiltinFunctionKind::DvmCharRealloc;
 		case helios::BuiltinKind::DvmCharFree:
 			return BuiltinFunctionKind::DvmCharFree;
+		case helios::BuiltinKind::BoxAlloc:
+			return BuiltinFunctionKind::BoxAlloc;
+		case helios::BuiltinKind::BoxFree:
+			return BuiltinFunctionKind::BoxFree;
 		default:
 			return {};
 		}

@@ -3,6 +3,7 @@
 #include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/copy_constructor.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
+#include <helios/attributes/builtins.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/queries/function_queries.hpp>
@@ -443,7 +444,7 @@ namespace compiler::helios::defgen {
 			);
 
 			// Now wrap it in a heap allocation.
-			return makeBox<code::BoxOfExpr>(ctx, code::generatedOrigin(), std::move(pointee_copy));
+			return makeBoxAllocCall(ctx, code::generatedOrigin(), std::move(pointee_copy));
 		}
 
 		// Now we have a direct value which should be copied.

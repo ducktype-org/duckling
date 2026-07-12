@@ -67,7 +67,9 @@ namespace compiler::helios {
 				         ? EmissionPolicy::Replicated
 				         : EmissionPolicy::OwnerOnly;
 			}
-			variant_case_novalue(defgen::BuiltinOperator, defgen::ScriptMainWrapper) {
+			variant_case_novalue(
+				defgen::BuiltinOperator, defgen::BoxBuiltin, defgen::ScriptMainWrapper
+			) {
 				return EmissionPolicy::OwnerOnly;
 			}
 			variant_case_novalue(
@@ -184,7 +186,13 @@ namespace compiler::helios {
 	}
 
 	base::Optional<BuiltinKind> isBuiltin(SymID id) {
-		return getSymRef(id)->getDataOpt<BuiltinSemantics>().map(&BuiltinSemantics::builtin);
+		if (const auto builtin = getSymRef(id)->getDataOpt<BuiltinSemantics>())
+			return builtin.value()->builtin;
+		// Box alloc/free functions are backend-implemented builtins too.
+		if (const auto box = getSymRef(id)->getDataOpt<defgen::BoxBuiltin>())
+			return box.value()->kind == defgen::BoxBuiltin::Kind::Alloc ? BuiltinKind::BoxAlloc
+			                                                            : BuiltinKind::BoxFree;
+		return {};
 	}
 
 	SymbolKind kind(SymID id) { return getSymRef(id)->common.kind; }
