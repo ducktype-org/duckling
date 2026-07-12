@@ -26,6 +26,7 @@
 #include <query_framework/standard_query/query_impl.hpp>
 
 #include <cmath>
+#include <concepts>
 #include <ranges>
 #include <type_traits>
 #include <unordered_set>
@@ -37,9 +38,8 @@ namespace compiler::helios {
 	// std::pow routes through double and the out-of-range float->int cast is UB:
 	// x86 wraps, arm64 saturates. Comptime relies on wrapping (e.g. `2 ** 31 - 1`),
 	// so compute it via modular unsigned arithmetic instead.
-	template<typename IntT>
+	template<std::integral IntT>
 	IntT comptimeIntPow(IntT base, IntT exp) {
-		static_assert(std::is_integral_v<IntT>);
 		// A negative exponent is only representable for signed types.
 		if constexpr (std::is_signed_v<IntT>) {
 			if (exp < 0) {
@@ -55,7 +55,7 @@ namespace compiler::helios {
 		auto      b      = static_cast<UnsignedT>(base);
 		auto      e      = static_cast<UnsignedT>(exp);
 		while (e > 0) {
-			if ((e & 1u) != 0) result = static_cast<UnsignedT>(result * b);
+			if (e % 2 == 1) result = static_cast<UnsignedT>(result * b);
 			b = static_cast<UnsignedT>(b * b);
 			e >>= 1;
 		}
