@@ -1092,7 +1092,7 @@ namespace compiler::helios {
 		}
 
 		struct IMPLEMENT_QUERY(QueryGeneratedSymbol, SymbolData) {
-			static auto provide(Context&, QKey key) -> PResult {
+			static auto provide(Context&, const QKey& key) -> PResult {
 				return SymbolData::makeGeneratedSymbolData(key.name, key.generated_symbol_data);
 			}
 

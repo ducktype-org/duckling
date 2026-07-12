@@ -31,6 +31,48 @@ namespace compiler::helios::templates {
 		return hasher.finalize();
 	}
 
+	query::QResult<TemplateDeclarationSignature> getTemplateDeclarationSignature(
+		query::Context& ctx, SymID template_sym_id
+	) {
+		CORE_ASSERT(kind(template_sym_id) == SymbolKind::Template, "SymID is not a Template");
+
+		auto pst_statement      = stmt(ctx, template_sym_id).value();
+		auto template_statement = pst_statement.dynamicCast<pst::TemplateStmt>().value();
+
+		auto template_params
+			= template_statement->getTemplateDecl().unlock(ctx)->getParams().unlock(ctx);
+
+		TemplateDeclarationSignature output;
+
+		for (const auto& param: *template_params) {
+			auto param_unlocked = param.unlock(ctx);
+
+			auto name = param_unlocked->getName().unlock(ctx)->unwrap();
+			
+			auto type_expression = param_unlocked->getType();
+			auto type_ctv
+				= getTypeCTVFromPST(ctx, type_expression.unlock(ctx)->getExpr());
+			if (type_ctv.hasFailed()) return query::Failed();
+
+			auto type = type_ctv.valueOrPanic().get<tsh::SymbolType<>>().value();
+
+			if (param_unlocked->getValue().has_value()) {
+				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					"Default values for template parameters are not yet supported",
+					param_unlocked->getStablePosition()
+				));
+				return query::Failed();
+			}
+
+			output.parameters.emplace_back(TemplateDeclarationSignature::Parameter{
+				.name = name,
+				.type = type,
+			});
+		}
+
+		return output;
+	}
+
 	struct TemplateBakeStorage final {
 		SymID baked_template_sym_id;
 

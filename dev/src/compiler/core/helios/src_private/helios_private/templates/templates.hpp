@@ -85,6 +85,25 @@ namespace compiler::helios::templates {
 	 */
 	DECLARE_QUERY(QueryBakeTemplateSymID, TemplateBakeKey, query::QResult<SymID>, ({}));
 
+	/**
+	 * @brief Signature for a template declaration.
+	 * @TODO: #3112 unify this structure with the ones used in function call processing
+	 */
+	struct TemplateDeclarationSignature final {
+		struct Parameter final {
+			base::StrID name;
+			tsh::SymbolType<> type;
+
+			// Not yet supported:
+			// base::Optional<ctv::CompileTimeValue> default_value;
+		};
+
+		std::vector<Parameter> parameters;
+	};
+
+	query::QResult<TemplateDeclarationSignature> getTemplateDeclarationSignature(query::Context& ctx, SymID template_sym_id);
+
+
 	// @NOTE: if we will have to bake templates to hout unit, it should probably first call
 	// QueryBakeTemplateSymID and then gather the content of the HOUTUnit based on the baked
 	// template symbol ID.

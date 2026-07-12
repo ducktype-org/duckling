@@ -43,45 +43,84 @@
 #include <query_framework/context/context.hpp>
 #include <query_framework/query_result.hpp>
 
+#include <ranges>
+
 namespace compiler::helios::code {
 
 	/**
-	 * This helper will likely evolve once :{} is a separate access expression
+	 * This this temporary helper used before #3095.
+	 * It is written in a way that it can be used with minimal boilerplate with the current chain
+	 * chain expression processing code (as both chain expression processing and this function are soon to be refactored)
+	 *
+	 * @TODO: #3095 remove it, move the relevant code to the handling of the new :{} PST node.
+	 *
+	 * @return QResult<base::Optional<SymID>> - the resulting symbol id of the baked template, or empty if the template did not happen (with standard QResult semantics on top of it).
 	 */
-	SymID transformTemplateBake(
+	template<typename T>
+	query::QResult<base::Optional<SymID>> transformTemplateBake(
 		query::Context&                           query_ctx,
 		SymID                                     template_sym_id,
-		pst::Access<pst::expr::TemplateSpecifier> template_specifier
-	) {
-		CORE_ASSERT(kind(template_sym_id) == SymbolKind::Template, "SymID is not a Template");
+		pst::Access<T>                            element_with_template_specifier
+	) 
+	requires requires(T t) { t.getTemplateSpecifier(); }
+	{
+		if (kind(template_sym_id) != SymbolKind::Template) {
+			query_ctx.logInt(makeBox<dia_int::PlaceholderError>(
+				"template bake called on non-template symbol",
+				element_with_template_specifier->getStablePosition()
+			));
+			return query::Failed();
+		}
 
-		// std::cerr << "Chain expr template access with template specifier!\n";
+		if (not element_with_template_specifier->getTemplateSpecifier().has_value()) {
+			return base::Optional<SymID>{};  // no template specifier, no bake
+		}
 
-		// auto template_specifier =
-		// access_pst.value()->getTemplateSpecifier().value().unlock(query_ctx); auto
-		// template_specifier_dc =
-		// template_specifier.dynamicCast<pst::expr::TemplateSpecifier>().value();
+		auto template_specifier = element_with_template_specifier->getTemplateSpecifier().value();
+		auto template_specifier_dc =
+			template_specifier.template dynamicCast<pst::expr::TemplateSpecifier>().value();
 
 		templates::TemplateBakeKey key{
 			.template_sym_id    = template_sym_id,
 			.template_arguments = {},
 		};
 
-		for (const auto& arg: *template_specifier->getArgumentList().unlock(query_ctx)) {
-			auto arg_expr_result = subExprFromPST(query_ctx, arg.unlock(query_ctx)->getExpr());
-			auto arg_expr        = std::move(arg_expr_result).valueOrPanic();  // TODO: no panic
+		auto template_signature_qr = templates::getTemplateDeclarationSignature(query_ctx, template_sym_id);
+		if (template_signature_qr.hasFailed()) return query::Failed();
+		const auto& template_signature = template_signature_qr.valueOrPanic();
 
-			auto ctv       = query_ctx.query<QueryEvaluateHOUTExpression>({ arg_expr.ref() });
-			auto ctv_value = std::move(ctv).valueOrPanic();  // TODO: no panic
+		auto argument_list = template_specifier_dc->getArgumentList().unlock(query_ctx);
+
+		if (template_signature.parameters.size() != argument_list->size()) {
+			query_ctx.logInt(makeBox<dia_int::PlaceholderError>(
+				"template arguments count does not match template parameters count",
+				element_with_template_specifier->getStablePosition()
+			));
+			return query::Failed();
+		}
+
+		// u64 parameter_index = 0;
+		for (const auto& [arg, parameter]: std::views::zip(*argument_list, template_signature.parameters)) {
+			auto arg_expr_result = subExprFromPST(query_ctx, arg.unlock(query_ctx)->getExpr());
+			
+			if (arg_expr_result.hasFailed()) return query::Failed();
+			auto arg_expr        = std::move(arg_expr_result).valueOrPanic();
+			auto coerced_arg_expr_result = coerceFromBox(query_ctx, std::move(arg_expr), parameter.type);
+			if (coerced_arg_expr_result.empty()) return query::Failed();
+
+			auto ctv       = query_ctx.query<QueryEvaluateHOUTExpression>({ arg_expr.value().ref() });
+			
+			if (ctv.hasFailed()) return query::Failed();
+			auto ctv_value = std::move(ctv).valueOrPanic();
 
 			key.template_arguments.emplace_back(std::move(ctv_value));
 		}
 
 		auto resulting_symbol
-			= query_ctx.query<helios::templates::QueryBakeTemplateSymID>({ key }).valueOrPanic(
-			);  // PR: no panic!
-
-		return resulting_symbol;
+			= query_ctx.query<helios::templates::QueryBakeTemplateSymID>({ key });
+		
+		if (resulting_symbol.hasFailed()) return query::Failed();
+		return resulting_symbol.valueOrPanic();
 	}
 
 	/**
@@ -506,21 +545,12 @@ namespace compiler::helios::code {
 			UNPACK_QRESULT_MOVE(const auto& sym_list =, lookup_result);
 			auto mock_symbol = sym_list.back();
 
-			if (ident->getTemplateSpecifier().has_value()
-			    and kind(mock_symbol) == SymbolKind::Template) {
-				// This handles :{} part of the chain.
-				// It will change in #TODO
-
-				auto template_bake = transformTemplateBake(
-					query_ctx,
-					mock_symbol,
-					ident->getTemplateSpecifier()
-						.value()
-						.unlock(query_ctx)
-						.dynamicCast<pst::expr::TemplateSpecifier>()
-						.value()
+			auto maybe_template_bake = transformTemplateBake(query_ctx, mock_symbol, ident);
+			if (maybe_template_bake.hasFailed()) return query::Failed();
+			if (maybe_template_bake.valueOrPanic().has_value()) {
+				return processNamespaceOrValue(
+					maybe_template_bake.valueOrPanic().value(), pstOrigin(ident), ident
 				);
-				return processNamespaceOrValue(template_bake, pstOrigin(ident), ident);
 			}
 
 			return processNamespaceOrValue(sym_list.back(), pstOrigin(ident), ident);
