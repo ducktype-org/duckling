@@ -64,16 +64,16 @@ namespace compiler::helios::code {
 	) 
 	requires requires(T t) { t.getTemplateSpecifier(); }
 	{
+		if (not element_with_template_specifier->getTemplateSpecifier().has_value()) {
+			return base::Optional<SymID>{};  // no template specifier, no bake
+		}
+
 		if (kind(template_sym_id) != SymbolKind::Template) {
 			query_ctx.logInt(makeBox<dia_int::PlaceholderError>(
 				"template bake called on non-template symbol",
 				element_with_template_specifier->getStablePosition()
 			));
 			return query::Failed();
-		}
-
-		if (not element_with_template_specifier->getTemplateSpecifier().has_value()) {
-			return base::Optional<SymID>{};  // no template specifier, no bake
 		}
 
 		auto template_specifier = element_with_template_specifier->getTemplateSpecifier().value();
