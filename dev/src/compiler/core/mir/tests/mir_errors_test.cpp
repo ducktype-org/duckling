@@ -25,10 +25,6 @@ class HeliosErrorsTests: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		logger::enable_dev_logs = true;
-		logger::enableDevCategoryByStringName("QueryStacktraces");
-		logger::enableDevCategoryByStringName("Query");
-
 		TESTER_ADD_TEST(testErrorLogging);
 		TESTER_ADD_TEST(testMoveErrors);
 		TESTER_ADD_TEST(testUseBeforeInit);
