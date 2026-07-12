@@ -41,13 +41,6 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 	ListPop,
 
 	/**
-		FreeBox doesn't exist in MIR. It will get created from DestructIf in LIR
-		@TODO: #1894 This approach may be temporary and depends on how we handle
-		destructors in the future. Remove the comment if the approach changes.
-	 */
-	BoxAlloc,
-
-	/**
 		@brief Placeholder.
 		@todo  Some decisions here to be made about operations like that.
 	*//**

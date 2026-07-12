@@ -117,16 +117,23 @@ namespace {
 					);
 				}
 				variant_case(vm::code::valid_type::finalized::Structure, data) {
-					std::vector<std::pair<base::StrID, vm::TypeRef>> fields
-						= data.fields
-					    | transform([&](auto& field) -> std::pair<base::StrID, vm::TypeRef> {
-							  return { field.name,
-							           type_metadata->at(vm::TypeID(field.type.asInt())) };
+					// The validator is the source of truth for layout: field offsets and the
+					// total size are taken from it, resolved for this runtime's pointer width.
+					auto resolve_size = [](const vm::code::valid_type::TypeSize& size) {
+						return size.assumePointerSize(vm::Type::POINTER_SIZE);
+					};
+					std::vector<std::tuple<base::StrID, vm::TypeRef, vm::Offset>> fields
+						= data.fields | transform([&](auto& field) {
+							  return std::tuple{ field.name,
+							                     type_metadata->at(vm::TypeID(field.type.asInt())),
+							                     resolve_size(field.offset) };
 						  })
 					    | to<std::vector>();
 					base::Optional<vm::InheritanceMetadata> inh_metadata
 						= buildInheritanceMetadata(*type_metadata, *type, data);
-					type_at_metadata->defineData(fields, inh_metadata);
+					type_at_metadata->defineData(
+						fields, resolve_size(type->getSize()), inh_metadata
+					);
 				}
 				variant_case(vm::code::valid_type::finalized::Variant, data) {
 					std::vector<vm::TypeRef> variants

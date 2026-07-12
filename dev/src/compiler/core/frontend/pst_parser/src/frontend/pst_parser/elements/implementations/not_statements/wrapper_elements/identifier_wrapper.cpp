@@ -23,6 +23,30 @@ namespace pst {
 		PST_RETURN out;
 	}
 
+	/**
+	 * @brief Parses a function name: an identifier or a non-reserved operator symbol.
+	 */
+	MBox<IdentifierWrapper> IdentifierWrapper::parseFunctionName(LangParserState& state) {
+		if (!state[0].isOperatorSymbol()) return IdentifierWrapper::parse(state);
+
+		auto op = state[0].asBinaryOperator().value();
+
+		if (!op.isNotReserved()) {
+			// Plain `=` has no base operator to suggest, so it counts as reserved.
+			if (op.isAssignment() && op.asNamed() != lang_def::NamedOperator::Assign)
+				state.logInt(makeBox<AssignmentOperatorFunNameError>(state.getPosition(), op.str()));
+			else
+				state.logInt(makeBox<ReservedOperatorFunNameError>(state.getPosition(), op.str()));
+			return nullptr;
+		}
+
+		Box<IdentifierWrapper> out = makeBox<IdentifierWrapper>(state, state[0].getValue());
+
+		PARSE().eatOne();
+
+		PST_RETURN out;
+	}
+
 	HashAlg& IdentifierWrapper::addElementDataToStableHash(HashAlg& partial_hash) const {
 		addToHash(partial_hash, name);
 		return partial_hash;
