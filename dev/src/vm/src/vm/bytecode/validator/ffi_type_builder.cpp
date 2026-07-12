@@ -6,6 +6,8 @@
 
 #include <vm/bytecode/validator/valid_type/finalized_kinds.hpp>
 
+#include <limits>
+
 namespace vm::code::ffi_detail {
 	namespace {
 		/**
@@ -78,9 +80,14 @@ namespace vm::code::ffi_detail {
 	usize flattenedFFIElementCount(
 		const valid_type::ValidType& type, const valid_type::ValidTypeMap& types
 	) {
-		if (auto table = type.maybeGetKindAs<valid_type::finalized::FixedSizeTable>())
-			return table.value()->element_count
-			     * flattenedFFIElementCount(*types.at(table.value()->inner), types);
+		if (auto table = type.maybeGetKindAs<valid_type::finalized::FixedSizeTable>()) {
+			const usize inner = flattenedFFIElementCount(*types.at(table.value()->inner), types);
+			const usize count = table.value()->element_count;
+			// Saturate instead of wrapping on nested-table multiplication overflow.
+			if (inner != 0 && count > std::numeric_limits<usize>::max() / inner)
+				return std::numeric_limits<usize>::max();
+			return count * inner;
+		}
 		return 1;
 	}
 }

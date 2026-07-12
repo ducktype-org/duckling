@@ -7,6 +7,10 @@
 #include <vm/bytecode/validator/valid_type/valid_type.hpp>
 
 namespace vm::code::ffi_detail {
+	/// Flattening materializes one `ffi_type*` per element, so the flattened element count of a
+	/// struct must stay bounded; over-cap types must be rejected before calling `buildFFIType`.
+	inline constexpr usize MAX_FLATTENED_FFI_ELEMENTS = 65'536;
+
 	/**
 	 * @brief Owning storage for libffi struct type descriptors. Must outlive any `ffi_cif`
 	 * prepared with types built by `buildFFIType`.
@@ -19,7 +23,8 @@ namespace vm::code::ffi_detail {
 	/**
 	 * @brief Returns the libffi type describing the given VM type.
 	 * Supports primitives of size 1, 2, 4 or 8 (mapped to signed integers), opaque types
-	 * (mapped to a pointer, used for the builtin `cptr`) and data structures of the above.
+	 * (mapped to a pointer, used for the builtin `cptr`) and data structures of the above,
+	 * including nested structures and fixed-size table fields.
 	 * Primitives named `f32` (size 4) and `f64` (size 8) map to `float`/`double` — the names
 	 * the DVM backend emits for floating-point types; without this they would be classified
 	 * as integers, which breaks the C calling convention (e.g. SysV passes floats in XMM
@@ -37,7 +42,8 @@ namespace vm::code::ffi_detail {
 	/**
 	 * @brief Number of libffi struct elements a structure field of the given type expands to in
 	 * `buildFFIType`: a fixed-size table contributes its element type once per element
-	 * (recursively), any other type contributes one element.
+	 * (recursively), any other type contributes one element. Saturates at `usize` max instead of
+	 * overflowing.
 	 */
 	usize flattenedFFIElementCount(
 		const valid_type::ValidType& type, const valid_type::ValidTypeMap& types

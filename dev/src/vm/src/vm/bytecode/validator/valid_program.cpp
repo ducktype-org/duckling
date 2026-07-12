@@ -11,6 +11,7 @@
 #include <vm/bytecode/validator/type_validator.hpp>
 
 #include <algorithm>
+#include <limits>
 
 vm::code::ValidProgram vm::code::ValidProgram::withBuiltins() {
 	auto program = ValidProgram();
@@ -183,22 +184,30 @@ void vm::code::ValidProgram::insertFFIFunctions(const std::vector<FFIFunction>& 
 		}
 
 		if (auto structure = tp.value()->maybeGetKindAs<valid_type::finalized::Structure>()) {
+			// Fixed-size table fields are flattened in the libffi descriptor, so a field can
+			// span several elements; each VM field is compared against its first one.
+			// Computed (with saturating addition) before building the descriptor: flattening
+			// materializes one `ffi_type*` per element, so the count must be capped first.
+			usize element_count = 0;
+			for (const auto& field: structure.value()->fields) {
+				const usize field_count
+					= ffi_detail::flattenedFFIElementCount(*types.at(field.type), types);
+				element_count = element_count > std::numeric_limits<usize>::max() - field_count
+				                  ? std::numeric_limits<usize>::max()
+				                  : element_count + field_count;
+			}
+			if (element_count > ffi_detail::MAX_FLATTENED_FFI_ELEMENTS)
+				throw FFIUnsupportedTypeError(*tp.value());
+
 			// Verify the VM layout of the structure matches the C ABI layout libffi will use.
 			// FFI-compliant structures follow the C layout rules, so this is a defensive check.
 			ffi_detail::FFITypeStorage storage;
 			ffi_type* struct_type = ffi_detail::buildFFIType(*tp.value(), types, storage);
 
-			// Fixed-size table fields are flattened in the libffi descriptor, so a field can
-			// span several elements; each VM field is compared against its first one.
-			usize element_count = 0;
-			for (const auto& field: structure.value()->fields)
-				element_count += ffi_detail::flattenedFFIElementCount(*types.at(field.type), types);
-
 			std::vector<size_t> c_offsets(element_count);
-			// Kept out of CORE_ASSERT: its condition is not evaluated in release builds.
-			[[maybe_unused]] ffi_status offsets_status
+			ffi_status          offsets_status
 				= ffi_get_struct_offsets(FFI_DEFAULT_ABI, struct_type, c_offsets.data());
-			CORE_ASSERT(offsets_status == FFI_OK, "ffi_get_struct_offsets failed");
+			if (offsets_status != FFI_OK) throw FFIStructLayoutMismatchError(*tp.value());
 
 			// The pointer size never enters here (FFI-compliant fields have pointer-independent
 			// sizes); `Bytes(8)` only keeps this consistent with the `assert_size` check in

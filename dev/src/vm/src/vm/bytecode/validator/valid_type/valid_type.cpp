@@ -475,8 +475,10 @@ void valid_type::ValidType::finalize(ValidTypeMap& types) {
 			// A packed structure never complies: libffi can only describe the C ABI layout, and a
 			// packed layout that happens to match it is identical to the non-packed one anyway.
 			// Classes and interfaces are not C-compatible either.
+			// A field-less structure has size 0, which libffi rejects as an aggregate.
 			this->is_ffi_compliant
 				= !new_structure.packed && !new_structure.inheritance_metadata.has_value()
+			   && new_structure.fields.size() != 0
 			   && std::ranges::all_of(new_structure.fields, [&](const auto& field) {
 					  return types.at(field.type)->isFFICompliant();
 				  });

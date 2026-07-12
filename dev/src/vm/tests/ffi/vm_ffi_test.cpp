@@ -45,9 +45,14 @@ public:
 		TESTER_ADD_TEST(alignedStructByValue);
 		TESTER_ADD_TEST(structWithTableByValue);
 		TESTER_ADD_TEST(structWithNestedTablesByValue);
+		TESTER_ADD_TEST(structWithTableOfStructsByValue);
+		TESTER_ADD_TEST(structWithFloatTableByValue);
+		TESTER_ADD_TEST(structWithTableReturnedFromC);
 		TESTER_ADD_TEST(nestedStructByValue);
 		TESTER_ADD_TEST(tableByValueFails);
 		TESTER_ADD_TEST(structWithZeroLengthTableFails);
+		TESTER_ADD_TEST(structWithNoFieldsFails);
+		TESTER_ADD_TEST(hugeFlattenedTableFails);
 		TESTER_ADD_TEST(structWithPackedFieldFails);
 		TESTER_ADD_TEST(packedStructInFfiFails);
 		TESTER_ADD_TEST(packedStructWithMatchingLayoutStillFails);
@@ -647,6 +652,131 @@ private:
 		);
 	}
 
+	// A fixed-size table of structs flattens to the struct type repeated per element, matching
+	// the C layout of an array-of-structs member.
+	void structWithTableOfStructsByValue() {
+		runProgram(
+			"struct_with_table_of_structs",
+			ffiObjectHeader()
+				+ "type data: Inner { x: i32, y: i32 } assert_size 8\n"
+				  "type fixed_size_table: inner2 Inner 2\n"
+				  "type data: PtTab { pts: inner2, tail: i64 } assert_size 24\n"
+				  "ffi function ffi_pt_sum { PtTab } -> { i64 };\n"
+				  "function main { i64, ptr_argv } -> { i64 } {\n"
+				  "    init_pany_type v, i32;\n"
+				  "    init_pany_type p, Inner;\n"
+				  "    init_pany_type i, i64;\n"
+				  "    init_pany_type ps, inner2;\n"
+				  "    init_pany_type t, i64;\n"
+				  "    init_pany_type res, i64;\n"
+				  "    init_pany_type s, PtTab;\n"
+				  "    mov_p32_imm v, 5;\n"
+				  "    structStore_pste_pany_field p, v, Inner.x;\n"
+				  "    mov_p32_imm v, 7;\n"
+				  "    structStore_pste_pany_field p, v, Inner.y;\n"
+				  "    mov_p64_imm i, 0;\n"
+				  "    fixedSizeTableStore_pfst_pany_p64 ps, p, i;\n"
+				  "    mov_p32_imm v, 9;\n"
+				  "    structStore_pste_pany_field p, v, Inner.x;\n"
+				  "    mov_p32_imm v, 11;\n"
+				  "    structStore_pste_pany_field p, v, Inner.y;\n"
+				  "    mov_p64_imm i, 1;\n"
+				  "    fixedSizeTableStore_pfst_pany_p64 ps, p, i;\n"
+				  "    structStore_pste_pany_field s, ps, PtTab.pts;\n"
+				  "    mov_p64_imm t, 10;\n"
+				  "    structStore_pste_pany_field s, t, PtTab.tail;\n"
+				  "    call_ffifunc ffi_pt_sum;\n"
+				  "    output_p64 res;\n"
+				  "    ret;\n"
+				  "}\n",
+			"42"
+		);
+	}
+
+	// A struct holding a table of `f32` is an all-SSE aggregate on SysV; the flattened elements
+	// must map to `float`, not integers, for the correct classification.
+	void structWithFloatTableByValue() {
+		runProgram(
+			"struct_with_float_table",
+			ffiObjectHeader()
+				+ "type primitive: f32 4\n"
+				  "type fixed_size_table: farr4 f32 4\n"
+				  "type data: FQuad { v: farr4 } assert_size 16\n"
+				  "ffi function ffi_fquad_sum { FQuad } -> { f32 };\n"
+				  "function main { i64, ptr_argv } -> { i64 } {\n"
+				  "    init_pany_type x, f32;\n"
+				  "    init_pany_type i, i64;\n"
+				  "    init_pany_type a, farr4;\n"
+				  "    init_pany_type res, f32;\n"
+				  "    init_pany_type q, FQuad;\n"
+				  "    mov_p32_imm x, 10.5f32;\n"
+				  "    mov_p64_imm i, 0;\n"
+				  "    fixedSizeTableStore_pfst_pany_p64 a, x, i;\n"
+				  "    mov_p32_imm x, 10.25f32;\n"
+				  "    mov_p64_imm i, 1;\n"
+				  "    fixedSizeTableStore_pfst_pany_p64 a, x, i;\n"
+				  "    mov_p32_imm x, 10.75f32;\n"
+				  "    mov_p64_imm i, 2;\n"
+				  "    fixedSizeTableStore_pfst_pany_p64 a, x, i;\n"
+				  "    mov_p32_imm x, 10.5f32;\n"
+				  "    mov_p64_imm i, 3;\n"
+				  "    fixedSizeTableStore_pfst_pany_p64 a, x, i;\n"
+				  "    structStore_pste_pany_field q, a, FQuad.v;\n"
+				  "    call_ffifunc ffi_fquad_sum;\n"
+				  "    init_pany_type r, i64;\n"
+				  "    init_pany_type ires, i32;\n"
+				  "    fptosi_p32_p32 ires, res;\n"
+				  "    call_builtinfunc builtin_output_i32;\n"
+				  "    ret;\n"
+				  "}\n",
+			"42\n"
+		);
+	}
+
+	// A struct with a table field returned from C by value (the return path goes through a
+	// hidden pointer for a 24-byte aggregate, unlike the argument path).
+	void structWithTableReturnedFromC() {
+		runProgram(
+			"struct_with_table_returned",
+			ffiObjectHeader()
+				+ "type fixed_size_table: arr4 i32 4\n"
+				  "type data: WithArr { v: arr4, tail: i64 } assert_size 24\n"
+				  "ffi function ffi_arr_make { i32 } -> { WithArr };\n"
+				  "function main { i64, ptr_argv } -> { i64 } {\n"
+				  "    init_pany_type res, WithArr;\n"
+				  "    init_pany_type base, i32;\n"
+				  "    mov_p32_imm base, 6;\n"
+				  "    call_ffifunc ffi_arr_make;\n"
+				  "    init_pany_type a4, arr4;\n"
+				  "    structLoad_pany_pste_field a4, res, WithArr.v;\n"
+				  "    init_pany_type sum, i32;\n"
+				  "    init_pany_type x, i32;\n"
+				  "    init_pany_type i, i64;\n"
+				  "    mov_p32_imm sum, 0;\n"
+				  "    mov_p64_imm i, 0;\n"
+				  "    fixedSizeTableLoad_pany_pfst_p64 x, a4, i;\n"
+				  "    add_p32_p32 sum, x;\n"
+				  "    mov_p64_imm i, 1;\n"
+				  "    fixedSizeTableLoad_pany_pfst_p64 x, a4, i;\n"
+				  "    add_p32_p32 sum, x;\n"
+				  "    mov_p64_imm i, 2;\n"
+				  "    fixedSizeTableLoad_pany_pfst_p64 x, a4, i;\n"
+				  "    add_p32_p32 sum, x;\n"
+				  "    mov_p64_imm i, 3;\n"
+				  "    fixedSizeTableLoad_pany_pfst_p64 x, a4, i;\n"
+				  "    add_p32_p32 sum, x;\n"
+				  "    init_pany_type tail, i64;\n"
+				  "    structLoad_pany_pste_field tail, res, WithArr.tail;\n"
+				  "    init_pany_type total, i64;\n"
+				  "    sext_p64_p32 total, sum;\n"
+				  "    add_p64_p64 total, tail;\n"
+				  "    output_p64 total;\n"
+				  "    ret;\n"
+				  "}\n",
+			"42"
+		);
+	}
+
 	// A plain struct nested in another plain struct is FFI-compliant (compliance is recursive).
 	void nestedStructByValue() {
 		runProgram(
@@ -696,6 +826,30 @@ private:
 				  "type data: WithEmpty { v: arr0 }\n"
 				  "ffi function ffi_add { WithEmpty } -> { i64 };\n",
 			{ "WithEmpty", "cannot be used in an FFI function signature" }
+		);
+	}
+
+	// A field-less struct has size 0, which libffi rejects as an aggregate.
+	void structWithNoFieldsFails() {
+		expectLoadError(
+			"empty_struct",
+			ffiObjectHeader()
+				+ "type data: Empty { }\n"
+				  "ffi function ffi_add { Empty } -> { i64 };\n",
+			{ "Empty", "cannot be used in an FFI function signature" }
+		);
+	}
+
+	// The libffi descriptor holds one element per flattened table element, so an oversized
+	// element count must be rejected before it is materialized.
+	void hugeFlattenedTableFails() {
+		expectLoadError(
+			"huge_table_struct",
+			ffiObjectHeader()
+				+ "type fixed_size_table: huge i32 100000000\n"
+				  "type data: WithHuge { v: huge }\n"
+				  "ffi function ffi_add { WithHuge } -> { i64 };\n",
+			{ "WithHuge", "cannot be used in an FFI function signature" }
 		);
 	}
 
