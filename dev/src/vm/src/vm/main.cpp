@@ -105,13 +105,14 @@ clah::Clah getVmClah() {
 	                     .build())
 #ifndef ENABLE_JIT
 				// JIT and debugger are mutually exclusive due to common usage of LowVMProgramCopy,
-				// with both JIT and debugger assuming exclusive control of program copy opcode modification.
+	            // with both JIT and debugger assuming exclusive control of program copy opcode
+	            // modification.
 				.add(clah::ParamBuilder::ofFlag()
 	                     .addShortName('d')
 	                     .addLongName("debug")
 	                     .addShortDesc("Start the VM CLI debugger")
 	                     .build())
-#endif // ENABLE_JIT
+#endif  // ENABLE_JIT
 				.add(clah::ParamBuilder::ofValue(clah::StringListParser::make("args"))
 	                     .addShortDesc(
 							 R"(Program arguments. To pass arguments such as "hello -n 5", enter them as a comma-separated list: "hello,-n,5".)"
@@ -174,7 +175,7 @@ clah::Clah getVmClah() {
 							   vm::debugger::debug_adapter::DebugAdapter::get().run();
 							   return 0;
 						   }))
-#endif // ENABLE_JIT
+#endif  // ENABLE_JIT
 	    .addSubcommand(clah::Clah("repl", "Start the VM in REPL mode.")
 	                       .setHandler([](const clah::ParsingResult&) -> int {
 							   vm::Supervisor::get();
