@@ -14,7 +14,6 @@ add_library(DVMBackend STATIC
     src_private/operations/builtin_call.cpp
     src_private/operations/arithmetic.cpp
     src_private/operations/address_of.cpp
-    src_private/operations/box.cpp
     src/backends/dvm/repl_lowering.cpp
     src/backends/dvm/dvm_backend.cpp
 )

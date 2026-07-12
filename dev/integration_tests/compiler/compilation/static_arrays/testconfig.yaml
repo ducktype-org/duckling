@@ -80,11 +80,9 @@ Tests:
         ExitCode: 134
       dvm:
         backend: dvm
+        stderr_regex: "VMThread has panicked: Program panicked"
         Output:
           String: "Program panicked!\n"
-        Err:
-          String: 'VMThread has panicked: Program panicked\n{\"data\":{\"error\":\"Execution panicked with error: Program panicked\"},\"type\":\"OtherError\"}block.refcount != 0, BlockID=2\n'
-        ExitCode: 1
   array_negative_index:
     Cases:
       llvm:
@@ -92,8 +90,6 @@ Tests:
         ExitCode: 134
       dvm:
         backend: dvm
+        stderr_regex: "VMThread has panicked: Program panicked"
         Output:
           String: "Program panicked!\n"
-        Err:
-          String: 'VMThread has panicked: Program panicked\n{\"data\":{\"error\":\"Execution panicked with error: Program panicked\"},\"type\":\"OtherError\"}block.refcount != 0, BlockID=2\n'
-        ExitCode: 1

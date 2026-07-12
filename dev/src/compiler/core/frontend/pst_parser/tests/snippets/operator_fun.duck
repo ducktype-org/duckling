@@ -1,0 +1,17 @@
+fun +*(a: i64, b: i64) -> i64 = {
+	return a * b + a;
+}
+
+fun +(a: Foo, b: Foo) -> Foo = {
+	return a;
+}
+
+fundecl -*(a: i64, b: i64) -> i64;
+
+class Foo {
+	bar: i64;
+
+	fun +*(a: u64) -> Foo = {
+		return self;
+	}
+}
