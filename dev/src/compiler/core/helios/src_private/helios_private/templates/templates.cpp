@@ -152,23 +152,15 @@ namespace compiler::helios::templates {
 			auto pst_statement      = stmt(ctx, key.template_sym_id).value();
 			auto template_statement = pst_statement.dynamicCast<pst::TemplateStmt>().value();
 
-			auto template_params
-				= template_statement->getTemplateDecl().unlock(ctx)->getParams().unlock(ctx);
-
 			// This is not an error (but could be for UX sake), as this should be catch at the same
 			// level as function overloads:!!
-			// @TODO: also assert CTV types
 			CORE_ASSERT(
 				signature.parameters.size() == key.template_arguments.size(),
 				"Template arguments count does not match template parameters count"
 			);
 
 
-			// pass this to clone:?
-			// auto dummy_token_source =
-			// template_statement->getStablePosition().getActiveSourcePosition(ctx).getSource();
-
-			// TODO: get hash from context???
+			// @TODO: #3110 see if this is ok:
 			hashing::ComponentHash hash_ctx
 				= hashing::ComponentHash(base::StrID(key.queryUnstablePerfectHash().toStringHex()));
 
@@ -176,8 +168,10 @@ namespace compiler::helios::templates {
 			auto cloned
 				= template_statement->clone().dynamicCast<pst::TemplateStmt>().toOptBox().value();
 
-			std::cerr << "Baking pst now!  \n";
-
+			// @TODO: #3110 this is a total hack,
+			// the tokens inside the cloned pst are still pointing to the original source,
+			// this is just a good-ish, but total hack copy of a token source,
+			// so we have a token source to construct the new PST with.
 			auto token_source_hack
 				= tokenizer::makeTokenSource(template_statement->getStablePosition()
 			                                     .getActiveSourcePositionIllegalAccess()
@@ -187,17 +181,13 @@ namespace compiler::helios::templates {
 			auto baked_pst = pst::PST<pst::TemplateStmt>::fromClone(
 				std::move(cloned),
 				std::move(token_source_hack),
-				hash_ctx  // ???
-
-						  // context...?
-				// hash...? from key hash + from template hash
+				hash_ctx
 			);
 
 
 			auto baked_root      = baked_pst.getRootElement().unlock(ctx);
 			auto baked_statement = baked_root->getInnerStatement();
 
-			// we are looping here with the scope i think:
 			baked_pst.setAdditionalRootData(pst::AdditionalRootData{
 				.pst_parent = pst::AdditionalRootData::BakedTemplateParent{
 					.template_bake_data = TemplateBakePSTLinkedData{
@@ -229,16 +219,10 @@ namespace compiler::helios::templates {
 			);
 
 
-			std::cerr << "Baked statement!  \n";
-
-
 			auto baked_sym_id = ctx.query<QuerySymbolOfSTMT>(baked_statement).valueOrThrow();
 
-			std::cerr << "Baked template sym_id: " << name(baked_sym_id).strView() << "\n";
-
-
 			return TemplateBakeStorage{ .baked_template_sym_id = baked_sym_id,
-				                        .baked_template_pst    = std::move(baked_pst) };
+				                        .baked_template_pst    = std::move(baked_pst), };
 		}
 
 		QUERY_AUTO_CACHE_CONSTRUCT_BY_LAMBDA([](CRef<PResult> result) -> QResult {
