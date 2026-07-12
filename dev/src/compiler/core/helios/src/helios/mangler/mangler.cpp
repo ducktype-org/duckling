@@ -71,6 +71,7 @@ namespace compiler::helios::mangler {
 			if (auto abi = ctx.query<QuerySymbolABI>(sym_id); abi->hasValue()) {
 				variant_match(abi->valueOrThrow()) {
 					variant_case_novalue(CAbi) { return false; }
+					variant_case_novalue(DVMAbi) { return false; }
 					variant_case_novalue(DefaultAbi) { return true; }
 					variant_default { CORE_UNREACHABLE(); }
 				}
@@ -365,6 +366,18 @@ namespace compiler::helios::mangler {
 							return "Hpush" + func(ctx, symbol_id) + "E";
 						case defgen::Method::Kind::Pop:
 							return "Hpop" + func(ctx, symbol_id) + "E";
+						}
+						CORE_UNREACHABLE();
+					}
+					variant_case(defgen::BoxBuiltin, box) {
+						// We do not have a reliable "path to type" in these cases (esp. for simple
+						// types such as i32), so we omit it. Any ambiguities are solved by the
+						// function type anyway.
+						switch (box.kind) {
+						case defgen::BoxBuiltin::Kind::Alloc:
+							return "Hba" + func(ctx, symbol_id) + "E";
+						case defgen::BoxBuiltin::Kind::Free:
+							return "Hbf" + func(ctx, symbol_id) + "E";
 						}
 						CORE_UNREACHABLE();
 					}

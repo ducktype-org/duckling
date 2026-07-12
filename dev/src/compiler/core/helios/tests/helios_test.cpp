@@ -9,6 +9,7 @@
 #include <frontend/pst_parser/elements/hierarchy/statements/specifier_block.hpp>
 #include <frontend/pst_parser/pst_query/code_dependency.hpp>
 #include <frontend/pst_parser/test_utils/pst_test_utils.hpp>
+#include <helios/attributes/builtins.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/hout/visitors.hpp>
@@ -169,6 +170,20 @@ private:
 			compiler::tsh::ReferenceKind::Ref,
 			Mutable,
 		};
+	}
+
+	/**
+	 * Get the value boxed by the `boxAlloc` call or nullptr on error.
+	 */
+	const compiler::helios::code::Expr* boxAllocArg(const compiler::helios::code::Expr* expr) {
+		using namespace compiler::helios;
+		const auto* call = dynamic_cast<const code::CallExpr*>(expr);
+		if (call == nullptr) return nullptr;
+		const auto callee = getIdentifierExprSymID(call->callee.ref());
+		if (!callee.has_value()) return nullptr;
+		const auto builtin = isBuiltin(callee.value());
+		if (!builtin.has_value() || builtin.value() != BuiltinKind::BoxAlloc) return nullptr;
+		return call->arguments.at(0).get();
 	}
 
 	void testConstants() {
@@ -1440,11 +1455,10 @@ private:
 			auto* var_stmt = dynamic_cast<const VariableStmt*>(body.statements[0].get());
 			ASSERT_TRUE(var_stmt != nullptr);
 
-			auto* make_box_expr = dynamic_cast<const BoxOfExpr*>(var_stmt->initial_value.get());
-			ASSERT_TRUE(make_box_expr != nullptr);
+			auto* boxed_value = boxAllocArg(var_stmt->initial_value.get());
+			ASSERT_TRUE(boxed_value != nullptr);
 
-			auto* literal_expr
-				= dynamic_cast<const LiteralNumericExpr*>(make_box_expr->inner.get());
+			auto* literal_expr = dynamic_cast<const LiteralNumericExpr*>(boxed_value);
 			ASSERT_TRUE(literal_expr != nullptr);
 
 			auto var_type = var_stmt->type;
@@ -1577,10 +1591,10 @@ private:
 		{
 			const auto& var_stmt = get_var_stmt(5);
 			ASSERT_EQUAL(var_stmt.type, box_i32);
-			// This should create a copy. `BoxOfExpr(DerefExpr(...))`
-			auto* box_of = dynamic_cast<const BoxOfExpr*>(var_stmt.initial_value.get());
-			ASSERT_TRUE(box_of != nullptr);
-			auto* deref = dynamic_cast<const DerefExpr*>(box_of->inner.get());
+			// This should create a copy. `box_alloc(DerefExpr(...))`
+			auto* boxed_value = boxAllocArg(var_stmt.initial_value.get());
+			ASSERT_TRUE(boxed_value != nullptr);
+			auto* deref = dynamic_cast<const DerefExpr*>(boxed_value);
 			ASSERT_TRUE(deref != nullptr);
 		}
 		// var box_box_a: box i32 = box_a; (Box -> Box)
@@ -3062,18 +3076,18 @@ private:
 			     { "i", "f", "flag", "r", "p", "c", "m", "trivial_arr", "trivial_tup" })
 				ASSERT_TRUE(dynamic_cast<const AccessExpr*>(rhs_of(trivial_field)) != nullptr);
 
-			// `box i32` - deep copy of a trivial pointee -> box(*source.boxed_prim).
+			// `box i32` - deep copy of a trivial pointee -> box_alloc(*source.boxed_prim).
 			{
-				auto box_of = dynamic_cast<const BoxOfExpr*>(rhs_of("boxed_prim"));
-				ASSERT_TRUE(box_of != nullptr);
-				ASSERT_TRUE(dynamic_cast<const DerefExpr*>(box_of->inner.get()) != nullptr);
+				auto boxed = boxAllocArg(rhs_of("boxed_prim"));
+				ASSERT_TRUE(boxed != nullptr);
+				ASSERT_TRUE(dynamic_cast<const DerefExpr*>(boxed) != nullptr);
 			}
 
-			// `box HasBox` - deep copy of a non-trivial pointee -> box(HasBox.__copy(...)).
+			// `box HasBox` - deep copy of a non-trivial pointee -> box_alloc(HasBox.__copy(...)).
 			{
-				auto box_of = dynamic_cast<const BoxOfExpr*>(rhs_of("boxed_class"));
-				ASSERT_TRUE(box_of != nullptr);
-				assert_generated_copy(box_of->inner.get());
+				auto boxed = boxAllocArg(rhs_of("boxed_class"));
+				ASSERT_TRUE(boxed != nullptr);
+				assert_generated_copy(boxed);
 			}
 
 			// Non-trivial aggregates call a copy constructor.
@@ -3089,11 +3103,9 @@ private:
 
 			// `box UserCopied` - deep copy whose inner pointee copy runs the user constructor.
 			{
-				auto box_of = dynamic_cast<const BoxOfExpr*>(rhs_of("deep"));
-				ASSERT_TRUE(box_of != nullptr);
-				ASSERT_TRUE(v_matches(
-					getSymRef(callee_of(box_of->inner.get()))->other, PstImplementedSemantics
-				));
+				auto boxed = boxAllocArg(rhs_of("deep"));
+				ASSERT_TRUE(boxed != nullptr);
+				ASSERT_TRUE(v_matches(getSymRef(callee_of(boxed))->other, PstImplementedSemantics));
 			}
 
 			auto field_abstract_type = [&](std::string_view field_name) {
@@ -3104,16 +3116,16 @@ private:
 				    .getType();
 			};
 
-			// HasBox -> box(*source.boxed).
+			// HasBox -> box_alloc(*source.boxed).
 			{
 				const auto& cctor = dump_cctor("HasBox", get_class_type(has_box_sym));
 				const auto& stmts = cctor.body->statements;
 				ASSERT_EQUAL_PRINT(3, stmts.size());
 				auto assign = dynamic_cast<const AssignmentStmt*>(stmts.at(1).get());
 				ASSERT_TRUE(assign != nullptr);
-				auto box_of = dynamic_cast<const BoxOfExpr*>(assign->new_value_expr.get());
-				ASSERT_TRUE(box_of != nullptr);
-				ASSERT_TRUE(dynamic_cast<const DerefExpr*>(box_of->inner.get()) != nullptr);
+				auto boxed = boxAllocArg(assign->new_value_expr.get());
+				ASSERT_TRUE(boxed != nullptr);
+				ASSERT_TRUE(dynamic_cast<const DerefExpr*>(boxed) != nullptr);
 			}
 
 			// HoldsNonTrivial - copies its `HasBox` field with a copy-ctor call.
