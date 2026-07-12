@@ -92,6 +92,7 @@ public:
 		TESTER_ADD_TEST(testMethodCalls);
 		TESTER_ADD_TEST(testMangler);
 		TESTER_ADD_TEST(testManglerSpecialMembers);
+		TESTER_ADD_TEST(testManglerOperators);
 		TESTER_ADD_TEST(testGlobalVariableExpressions);
 		TESTER_ADD_TEST(testTypeOfConstAndVar);
 		TESTER_ADD_TEST(testDebugPrint);
@@ -2355,6 +2356,38 @@ private:
 			ASSERT_EQUAL("_Q_M20mangling_special_memN1M1BEgc", mangled_b_constr.str());
 			ASSERT_EQUAL("_Q_M20mangling_special_memN1M1BEgd", mangled_b_destr.str());
 		});
+	}
+
+	void testManglerOperators() {
+		auto [module, root_scope] = getModule(fs::File(path("test_modules/mangling_operators")));
+		(void) module;
+
+		auto mangle = [&](compiler::helios::SymID sym) {
+			return query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
+				{ .symbol_key = sym,
+			      .kind       = compiler::helios::mangler::ManglingSymbolKind::Standard,
+			      .mangling_scheme_version = 0,
+			      .additional_metadata     = std::nullopt }
+			);
+		};
+
+		auto infix_free   = mangle(getChain("+*", root_scope).back());
+		auto prefix_free  = mangle(getChain("-*", root_scope).back());
+		auto unicode_free = mangle(getChain("+×", root_scope).back());
+
+		auto foo_class = getChain("Foo", root_scope).back();
+		auto foo_class_info
+			= query::entryPoint<compiler::helios::QueryClassSymbolData>(foo_class)->valueOrThrow();
+		ASSERT_EQUAL(1, foo_class_info.methods.size());
+		auto infix_method = mangle(foo_class_info.methods.at(0));
+
+		ASSERT_EQUAL("_Q_M18mangling_operatorsGOi4plmlFi64i64i64E1a1bE", infix_free.str());
+		ASSERT_EQUAL("_Q_M18mangling_operatorsGOp4mimlFi64i64E1aE", prefix_free.str());
+		ASSERT_EQUAL("_Q_M18mangling_operatorsGOi6plxd7_Fi64i64i64E1a1bE", unicode_free.str());
+		ASSERT_EQUAL(
+			"_Q_M18mangling_operatorsN3FooOi4plmlEFi64R_Q_CM18mangling_operatorsG3Fooi64E4self1aE",
+			infix_method.str()
+		);
 	}
 
 	void testGlobalVariableExpressions() {
