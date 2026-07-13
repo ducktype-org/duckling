@@ -113,7 +113,7 @@ impl Source {
         match origin.kind() {
             FullKind::Registry => Self::for_registry(origin.url()),
             FullKind::Git { commit } => Self::for_git(origin.url(), GitReference::Rev(commit)),
-            FullKind::Local => Self::new(origin.url(), SourceKind::Local),
+            FullKind::Local => Self::for_local_with_url(origin.url()),
         }
     }
 }

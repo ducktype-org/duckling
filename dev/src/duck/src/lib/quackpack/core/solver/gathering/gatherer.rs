@@ -3,7 +3,6 @@ use std::path::{Path, PathBuf};
 
 use tempfile::TempDir;
 use tracing::debug;
-use url::Url;
 
 use crate::quackpack::core::fetcher::Fetcher;
 use crate::quackpack::core::fetcher::types::{
@@ -29,6 +28,7 @@ use crate::quackpack::core::{
 use crate::quackpack::schemas::registry;
 use crate::quackpack::util::interned_url::InternedUrl;
 use crate::quackpack::util::to_path_buf::ToPathBuf;
+use crate::quackpack::util::to_url::ToUrl;
 use crate::quackpack::util::with_version::WithVersion;
 use crate::{QuackError, QuackResult, QuackResultContext, StrId, qp_bail_internal};
 
@@ -121,9 +121,9 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
         if cfg!(debug_assertions) {
             assert_root_features_are_expanded(&root_manifest, &root_features);
         }
-        let Ok(root_url) = Url::from_file_path(root_path.clone()) else {
-            qp_bail_internal!("failed to generate url from a path");
-        };
+        let root_url = root_path
+            .to_url()
+            .context_internal("failed to generate url from a path")?;
         let root_source = Source::for_local_with_url(root_url);
         let root_request = NotPinnedRequest {
             id: RequestIdentifier {
@@ -182,9 +182,7 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
                     }
                     SourceKind::Local => {
                         let path_url = not_pinned_request.id.source.url();
-                        let path = path_url
-                            .to_path_buf()
-                            .context_internal("could not convert request url to path")?;
+                        let path = path_url.to_path_buf()?;
                         Ok(self.fetch_local(&not_pinned_request, &path))
                     }
                 }

@@ -551,8 +551,8 @@ impl GathererState {
                 )?);
             }
         }
-        let selector_text = selector.iter().flatten().join(", ");
         if !any_matched {
+            let selector_text = selector.iter().flatten().join(", ");
             result.1.push(
                 QuackError::message(
             format!(
