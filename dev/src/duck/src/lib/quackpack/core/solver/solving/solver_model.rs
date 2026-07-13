@@ -132,7 +132,7 @@ impl<'a> SolverModel<'a, ProblemCreated> {
     ) -> QuackResult<Rc<Variable>> {
         let version_to_var_map = self.get_version_to_var_map_for_dep(dep);
         version_to_var_map.get(&version).cloned().context_internal(
-            "Dependency with version variable not added to the model before retrieval attempt",
+            "dependency with version variable not added to the model before retrieval attempt",
         )
     }
 
