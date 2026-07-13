@@ -293,8 +293,14 @@ mod tests {
             assert_eq!(origin.to_string(), "git+https://localhost:9001/");
         }
         {
+            #[cfg(windows)]
+            let root = PathBuf::from("C:\\");
+            #[cfg(not(windows))]
             let root = PathBuf::from("/tmp");
             let origin = FullOrigin::for_local(&root).unwrap();
+            #[cfg(windows)]
+            assert_eq!(origin.to_string(), "local+file:///C:/");
+            #[cfg(not(windows))]
             assert_eq!(origin.to_string(), "local+file:///tmp");
         }
     }
@@ -325,9 +331,20 @@ mod tests {
             );
         }
         {
+            #[cfg(windows)]
+            let root = PathBuf::from("C:\\");
+            #[cfg(not(windows))]
             let root = PathBuf::from("/tmp");
             let origin = FullOrigin::for_local(&root).unwrap();
             let formatted = serde_json::to_string_pretty(&origin).unwrap();
+            #[cfg(windows)]
+            assert_eq!(
+                formatted,
+                r#"{
+  "source": "local+file:///C:/"
+}"#
+            );
+            #[cfg(not(windows))]
             assert_eq!(
                 formatted,
                 r#"{
@@ -354,6 +371,9 @@ mod tests {
             assert_eq!(parsed, origin);
         }
         {
+            #[cfg(windows)]
+            let root = PathBuf::from("C:\\");
+            #[cfg(not(windows))]
             let root = PathBuf::from("/tmp");
             let origin = FullOrigin::for_local(&root).unwrap();
             let formatted = serde_json::to_string_pretty(&origin).unwrap();
@@ -442,10 +462,22 @@ mod tests {
             );
         }
         {
+            #[cfg(windows)]
+            let root = PathBuf::from("C:\\");
+            #[cfg(not(windows))]
             let root = PathBuf::from("/tmp");
             let origin = FullOrigin::for_local(&root).unwrap();
             let identity = FullIdentity::new("foo".into(), origin);
             let formatted = serde_json::to_string_pretty(&identity).unwrap();
+            #[cfg(windows)]
+            assert_eq!(
+                formatted,
+                r#"{
+  "name": "foo",
+  "source": "local+file:///C:/"
+}"#
+            );
+            #[cfg(not(windows))]
             assert_eq!(
                 formatted,
                 r#"{
@@ -475,6 +507,9 @@ mod tests {
             assert_eq!(parsed, identity);
         }
         {
+            #[cfg(windows)]
+            let root = PathBuf::from("C:\\");
+            #[cfg(not(windows))]
             let root = PathBuf::from("/tmp");
             let origin = FullOrigin::for_local(&root).unwrap();
             let identity = FullIdentity::new("foo".into(), origin);

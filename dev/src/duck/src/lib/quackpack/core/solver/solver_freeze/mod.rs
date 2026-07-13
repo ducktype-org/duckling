@@ -211,7 +211,10 @@ mod test {
             real_name: "a".into(),
         };
         let loc_b = ExpandedLocation::Local {
+            #[cfg(not(windows))]
             absolute_path: PathBuf::from("/xdd").to_url().unwrap().into(),
+            #[cfg(windows)]
+            absolute_path: PathBuf::from("C:\\xdd").to_url().unwrap().into(),
         };
         let pkg_a = ExpandedPackage {
             location: loc_a,
@@ -233,7 +236,10 @@ mod test {
         let freeze_pkg_b = FreezePackage::new(
             FullIdentity::new(
                 "b".into(),
+                #[cfg(not(windows))]
                 FullOrigin::for_local(&PathBuf::from("/xdd")).unwrap(),
+                #[cfg(windows)]
+                FullOrigin::for_local(&PathBuf::from("C:\\xdd")).unwrap(),
             ),
             2.into(),
             vec!["f_b1".into(), "f_b2".into()],
@@ -253,13 +259,19 @@ mod test {
                 ),
                 Identity::new(
                     "b".into(),
+                    #[cfg(not(windows))]
                     Origin::for_local(&PathBuf::from("/xdd")).unwrap(),
+                    #[cfg(windows)]
+                    Origin::for_local(&PathBuf::from("C:\\xdd")).unwrap(),
                 ),
             ],
         );
         let root_pkg = ExpandedPackage {
             location: ExpandedLocation::Local {
+                #[cfg(not(windows))]
                 absolute_path: PathBuf::from("/").to_url().unwrap().into(),
+                #[cfg(windows)]
+                absolute_path: PathBuf::from("C:\\").to_url().unwrap().into(),
             },
             version: None,
         };
@@ -348,15 +360,22 @@ features:
         let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
         let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
         let exp_location_root = ExpandedLocation::Local {
+            #[cfg(not(windows))]
             absolute_path: PathBuf::from("/root_path").to_url().unwrap().into(),
+            #[cfg(windows)]
+            absolute_path: PathBuf::from("C:\\root_path").to_url().unwrap().into(),
         };
         let exp_location_a = ExpandedLocation::Registry {
             url: "https://example.net".to_url().unwrap().into(),
             real_name: StrId::from("a"),
         };
         let exp_location_b = ExpandedLocation::Local {
+            #[cfg(not(windows))]
             // cSpell:disable-next-line
             absolute_path: PathBuf::from("/sialalala").to_url().unwrap().into(),
+            #[cfg(windows)]
+            // cSpell:disable-next-line
+            absolute_path: PathBuf::from("C:\\sialalala").to_url().unwrap().into(),
         };
         let exp_pkg_root = ExpandedPackage {
             location: exp_location_root,
@@ -421,7 +440,10 @@ features:
                 ),
                 Identity::new(
                     "b".into(),
+                    #[cfg(not(windows))]
                     Origin::for_local(&PathBuf::from("/sialalala")).unwrap(),
+                    #[cfg(windows)]
+                    Origin::for_local(&PathBuf::from("C:\\sialalala")).unwrap(),
                 ),
             ])
         );
@@ -441,7 +463,10 @@ features:
         let pkg_freeze_b = FreezePackage::new(
             FullIdentity::new(
                 "b".into(),
+                #[cfg(not(windows))]
                 FullOrigin::for_local(&PathBuf::from("/sialalala")).unwrap(),
+                #[cfg(windows)]
+                FullOrigin::for_local(&PathBuf::from("C:\\sialalala")).unwrap(),
             ),
             2.into(),
             vec!["f_b".into()],

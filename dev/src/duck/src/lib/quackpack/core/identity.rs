@@ -361,8 +361,14 @@ mod tests {
             assert_eq!(origin.to_string(), "git+https://localhost:9001/");
         }
         {
+            #[cfg(windows)]
+            let root = PathBuf::from("C:\\");
+            #[cfg(not(windows))]
             let root = PathBuf::from("/tmp");
             let origin = Origin::for_local(&root).unwrap();
+            #[cfg(windows)]
+            assert_eq!(origin.to_string(), "local+file:///C:/");
+            #[cfg(not(windows))]
             assert_eq!(origin.to_string(), "local+file:///tmp");
         }
     }
@@ -384,6 +390,9 @@ mod tests {
             assert_eq!(parsed, origin);
         }
         {
+            #[cfg(windows)]
+            let root = PathBuf::from("C:\\");
+            #[cfg(not(windows))]
             let root = PathBuf::from("/tmp");
             let origin = Origin::for_local(&root).unwrap();
             let formatted = origin.to_string();
@@ -432,10 +441,16 @@ mod tests {
             assert_eq!(formatted, "foo git+https://localhost:9001/");
         }
         {
+            #[cfg(windows)]
+            let root = PathBuf::from("C:\\");
+            #[cfg(not(windows))]
             let root = PathBuf::from("/tmp");
             let origin = Origin::for_local(&root).unwrap();
             let identity = Identity::new("foo".into(), origin);
             let formatted = identity.to_string();
+            #[cfg(windows)]
+            assert_eq!(formatted, "foo local+file:///C:/");
+            #[cfg(not(windows))]
             assert_eq!(formatted, "foo local+file:///tmp");
         }
     }
@@ -448,6 +463,9 @@ mod tests {
         let url = "https://localhost:9001".to_url().unwrap();
         let origin = Origin::for_git(url);
         let foo_git = Identity::new("foo".into(), origin);
+        #[cfg(windows)]
+        let root = PathBuf::from("C:\\");
+        #[cfg(not(windows))]
         let root = PathBuf::from("/tmp");
         let origin = Origin::for_local(&root).unwrap();
         let foo_local = Identity::new("foo".into(), origin);
@@ -458,6 +476,9 @@ mod tests {
         let url = "https://localhost:9001".to_url().unwrap();
         let origin = Origin::for_git(url);
         let bar_git = Identity::new("bar".into(), origin);
+        #[cfg(windows)]
+        let root = PathBuf::from("C:\\");
+        #[cfg(not(windows))]
         let root = PathBuf::from("/tmp");
         let origin = Origin::for_local(&root).unwrap();
         let bar_local = Identity::new("bar".into(), origin);
@@ -551,6 +572,9 @@ mod tests {
             assert_eq!(parsed, identity);
         }
         {
+            #[cfg(windows)]
+            let root = PathBuf::from("C:\\");
+            #[cfg(not(windows))]
             let root = PathBuf::from("/tmp");
             let origin = Origin::for_local(&root).unwrap();
             let identity = Identity::new("foo".into(), origin);

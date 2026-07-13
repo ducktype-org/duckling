@@ -11,6 +11,11 @@ use crate::quackpack::util::to_path_buf::ToPathBuf;
 use crate::util::path_ops_ext::PathOpsExt;
 use crate::{DuckContext, QpContext, StrId};
 
+#[cfg(windows)]
+static PATH_JOINER: &str = "\\";
+#[cfg(not(windows))]
+static PATH_JOINER: &str = "/";
+
 fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {
     let dir = tempdir().unwrap();
     let manifest = dir.path().join("x");
@@ -33,8 +38,9 @@ fn prepare_frontmatter(contents: &str) -> (TempDir, PathBuf) {
 
 fn make_errors_message<const N: usize>(root: &TempDir, errors: [&str; N]) -> String {
     let mut vec = [format!(
-        "when trying to parse the user manifest at `{}/x`",
-        root.path().display()
+        "when trying to parse the user manifest at `{}{}x`",
+        root.path().display(),
+        PATH_JOINER
     )]
     .to_vec();
     vec.extend(errors.iter().map(|&x| String::from(x)));
@@ -43,8 +49,9 @@ fn make_errors_message<const N: usize>(root: &TempDir, errors: [&str; N]) -> Str
 
 fn make_errors_message_frontmatter<const N: usize>(root: &TempDir, errors: [&str; N]) -> String {
     let mut vec = [format!(
-        "when trying to parse the frontmatter of the script at `{}/x`",
-        root.path().display()
+        "when trying to parse the frontmatter of the script at `{}{}x`",
+        root.path().display(),
+        PATH_JOINER
     )]
     .to_vec();
     vec.extend(errors.iter().map(|&x| String::from(x)));
@@ -422,6 +429,17 @@ dependencies:
     let a = summary.dependencies().get_by_name(StrId::new("a")).unwrap();
     assert!(a.source().is_local());
     let path = a.source().url().to_path_buf().unwrap();
+    #[cfg(windows)]
+    assert_eq!(
+        PathBuf::from(format!("\\\\?\\{}", path.display())),
+        manifest_path
+            .parent()
+            .unwrap()
+            .resolve()
+            .unwrap()
+            .join("xd")
+    );
+    #[cfg(not(windows))]
     assert_eq!(
         path,
         manifest_path
@@ -442,6 +460,19 @@ dependencies:
     assert!(a1.source().is_local());
 
     let path = a1.source().url().to_path_buf().unwrap();
+    #[cfg(windows)]
+    assert_eq!(
+        PathBuf::from(format!("\\\\?\\{}", path.display())),
+        manifest_path
+            .parent()
+            .unwrap()
+            .parent()
+            .unwrap()
+            .resolve()
+            .unwrap()
+            .join("xd")
+    );
+    #[cfg(not(windows))]
     assert_eq!(
         path,
         manifest_path
@@ -470,8 +501,11 @@ dependencies:
         .get_by_name(StrId::new("a3"))
         .unwrap();
     assert!(a3.source().is_local());
-    let path = a3.source().url().to_path_buf().unwrap();
-    assert_eq!(path, PathBuf::from("/xd"));
+    #[cfg(not(windows))]
+    {
+        let path = a3.source().url().to_path_buf().unwrap();
+        assert_eq!(path, PathBuf::from(format!("/xd")));
+    }
     assert!(a3.alias().is_none());
 
     let b = summary.dependencies().get_by_name(StrId::new("b")).unwrap();
@@ -826,6 +860,8 @@ dependencies:
 }
 
 #[test]
+#[cfg(not(windows))]
+// @TODO: #3135
 fn git_url_points_to_local_dir() {
     let root_dir = TempDir::new().unwrap();
     let (dir, manifest_path) = prepare_manifest(&format!(
