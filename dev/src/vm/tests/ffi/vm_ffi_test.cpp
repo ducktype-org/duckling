@@ -32,7 +32,6 @@ public:
 		TESTER_ADD_TEST(addPrimitives);
 		TESTER_ADD_TEST(voidAndStateReadback);
 		TESTER_ADD_TEST(smallIntReturnWidening);
-		TESTER_ADD_TEST(cptrRoundTripThroughC);
 		TESTER_ADD_TEST(cptrCopyBuiltins);
 		TESTER_ADD_TEST(cptrStructField);
 		TESTER_ADD_TEST(cptrCopyIntoStructField);
@@ -61,16 +60,11 @@ public:
 		TESTER_ADD_TEST(packedStructInFfiFails);
 		TESTER_ADD_TEST(packedStructWithMatchingLayoutStillFails);
 		TESTER_ADD_TEST(packedStructSize);
-		TESTER_ADD_TEST(typedCPointerThroughC);
 		TESTER_ADD_TEST(typedCPointerStructFieldThroughC);
 		TESTER_ADD_TEST(cpointerGlobalAsPcptOperand);
 		TESTER_ADD_TEST(forwardDeclaredPointee);
-		TESTER_ADD_TEST(selfReferentialCPointerLoads);
 		TESTER_ADD_TEST(cpointerToUnknownTypeFails);
-		TESTER_ADD_TEST(movPcptAcrossTypesFails);
-		TESTER_ADD_TEST(movPcptCptrToTypedFails);
-		TESTER_ADD_TEST(movPcptSamePointeeAcrossTypesFails);
-		TESTER_ADD_TEST(movPcptOnNonCPointerFails);
+		TESTER_ADD_TEST(movPcptStrictnessFails);
 		TESTER_ADD_TEST(duplicateFfiFunctionFails);
 		TESTER_ADD_TEST(assertSizeMatches);
 		TESTER_ADD_TEST(assertSizeMismatchFails);
@@ -167,36 +161,6 @@ private:
 				  "    ret;\n"
 				  "}\n",
 			"12345\n"
-		);
-	}
-
-	void cptrRoundTripThroughC() {
-		runProgram(
-			"cptr_c",
-			ffiObjectHeader()
-				+ "ffi function ffi_alloc8 { } -> { cptr };\n"
-				  "ffi function ffi_fill8 { cptr, i64 } -> { };\n"
-				  "ffi function ffi_read8 { cptr } -> { i64 };\n"
-				  "ffi function ffi_free8 { cptr } -> { };\n"
-				  "function main { i64, ptr_argv } -> { i64 } {\n"
-				  "    init_pany_type buf, cptr;\n"
-				  "    call_ffifunc ffi_alloc8;\n"
-				  "    init_pany_type buf2, cptr;\n"
-				  "    mov_pcpt_pcpt buf2, buf;\n"
-				  "    init_pany_type v, i64;\n"
-				  "    mov_p64_imm v, 777;\n"
-				  "    call_ffifunc ffi_fill8;\n"
-				  "    init_pany_type res, i64;\n"
-				  "    init_pany_type buf3, cptr;\n"
-				  "    mov_pcpt_pcpt buf3, buf;\n"
-				  "    call_ffifunc ffi_read8;\n"
-				  "    output_p64 res;\n"
-				  "    init_pany_type buf4, cptr;\n"
-				  "    mov_pcpt_pcpt buf4, buf;\n"
-				  "    call_ffifunc ffi_free8;\n"
-				  "    ret;\n"
-				  "}\n",
-			"777"
 		);
 	}
 
@@ -908,40 +872,9 @@ private:
 		);
 	}
 
-	// A typed cpointer crosses the FFI boundary like the builtin `cptr`; the pointee type only
-	// exists on the VM side.
-	void typedCPointerThroughC() {
-		runProgram(
-			"typed_cpointer",
-			ffiObjectHeader()
-				+ "type cpointer: I64Buf i64\n"
-				  "ffi function ffi_alloc8 { } -> { I64Buf };\n"
-				  "ffi function ffi_fill8 { I64Buf, i64 } -> { };\n"
-				  "ffi function ffi_read8 { I64Buf } -> { i64 };\n"
-				  "ffi function ffi_free8 { I64Buf } -> { };\n"
-				  "function main { i64, ptr_argv } -> { i64 } {\n"
-				  "    init_pany_type buf, I64Buf;\n"
-				  "    call_ffifunc ffi_alloc8;\n"
-				  "    init_pany_type buf2, I64Buf;\n"
-				  "    mov_pcpt_pcpt buf2, buf;\n"
-				  "    init_pany_type v, i64;\n"
-				  "    mov_p64_imm v, 4242;\n"
-				  "    call_ffifunc ffi_fill8;\n"
-				  "    init_pany_type res, i64;\n"
-				  "    init_pany_type buf3, I64Buf;\n"
-				  "    mov_pcpt_pcpt buf3, buf;\n"
-				  "    call_ffifunc ffi_read8;\n"
-				  "    output_p64 res;\n"
-				  "    init_pany_type buf4, I64Buf;\n"
-				  "    mov_pcpt_pcpt buf4, buf;\n"
-				  "    call_ffifunc ffi_free8;\n"
-				  "    ret;\n"
-				  "}\n",
-			"4242"
-		);
-	}
-
-	// A struct with a typed cpointer field passed to C by value; C writes through the pointer.
+	// A typed cpointer crosses the FFI boundary like the builtin `cptr` (the pointee type only
+	// exists on the VM side), both as a bare argument/result and as a by-value struct field; C
+	// writes through the pointer.
 	void typedCPointerStructFieldThroughC() {
 		runProgram(
 			"typed_cpointer_struct",
@@ -1014,14 +947,17 @@ private:
 		);
 	}
 
-	// The C idiom for handles (e.g. `FILE*`): the pointee is a forward-declared opaque type, so
-	// the pointer is passable but the pointee is never inspected.
+	// A cpointer never recurses into its pointee, covering the C handle idiom (e.g. `FILE*`:
+	// the pointee is an opaque type that is never inspected) and the linked-list idiom (a
+	// structure containing a cpointer to itself, declared before the structure).
 	void forwardDeclaredPointee() {
 		runProgram(
 			"forward_declared_pointee",
 			ffiObjectHeader()
 				+ "type opaque: Handle 8\n"
 				  "type cpointer: HandlePtr Handle\n"
+				  "type cpointer: NodePtr Node\n"
+				  "type data: Node { next: NodePtr, v: i64 } assert_size 16\n"
 				  "ffi function ffi_alloc8 { } -> { HandlePtr };\n"
 				  "ffi function ffi_free8 { HandlePtr } -> { };\n"
 				  "function main { i64, ptr_argv } -> { i64 } {\n"
@@ -1039,18 +975,6 @@ private:
 		);
 	}
 
-	// A cpointer never recurses into its pointee, so a structure containing a cpointer to
-	// itself is legal (C's linked-list idiom).
-	void selfReferentialCPointerLoads() {
-		auto file = writeTempDbc(
-			"self_referential_cpointer",
-			"type cpointer: NodePtr Node\n"
-			"type data: Node { next: NodePtr, v: i64 } assert_size 16\n"
-			"function main { i64, ptr_argv } -> { i64 } { ret; }\n"
-		);
-		ASSERT_HAS_VALUE(vm::api::loadFiles(initProcess(), { file }));
-	}
-
 	void cpointerToUnknownTypeFails() {
 		expectLoadError(
 			"cpointer_unknown_inner",
@@ -1059,63 +983,49 @@ private:
 		);
 	}
 
-	// `mov_pcpt_pcpt` is strict: no implicit pointee change on copy.
-	void movPcptAcrossTypesFails() {
-		expectLoadError(
+	// `mov_pcpt_pcpt` requires identical types on both sides: no implicit pointee change, no
+	// mixing the builtin `cptr` (unknown pointee) with a typed cpointer, distinct names stay
+	// distinct even with the same pointee, and non-cpointer operands are rejected outright.
+	void movPcptStrictnessFails() {
+		auto expect_mov_error = [&](const std::string& name,
+		                            const std::string& types,
+		                            const std::string& a_type,
+		                            const std::string& b_type,
+		                            std::string_view   keyword) {
+			expectLoadError(
+				name,
+				types + "function main { i64, ptr_argv } -> { i64 } {\n"
+				      + "    init_pany_type a, " + a_type + ";\n"
+				      + "    init_pany_type b, " + b_type + ";\n"
+				      + "    mov_pcpt_pcpt a, b;\n"
+				        "    ret;\n"
+				        "}\n",
+				{ keyword }
+			);
+		};
+		expect_mov_error(
 			"mov_pcpt_across_types",
-			"type cpointer: APtr i64\n"
-			"type cpointer: BPtr i32\n"
-			"function main { i64, ptr_argv } -> { i64 } {\n"
-			"    init_pany_type a, APtr;\n"
-			"    init_pany_type b, BPtr;\n"
-			"    mov_pcpt_pcpt a, b;\n"
-			"    ret;\n"
-			"}\n",
-			{ "C pointer type does not match" }
+			"type cpointer: APtr i64\ntype cpointer: BPtr i32\n",
+			"APtr",
+			"BPtr",
+			"C pointer type does not match"
 		);
-	}
-
-	// The builtin `cptr` (unknown pointee) and a typed cpointer are distinct types.
-	void movPcptCptrToTypedFails() {
-		expectLoadError(
+		expect_mov_error(
 			"mov_pcpt_cptr_to_typed",
-			"type cpointer: APtr i64\n"
-			"function main { i64, ptr_argv } -> { i64 } {\n"
-			"    init_pany_type a, APtr;\n"
-			"    init_pany_type b, cptr;\n"
-			"    mov_pcpt_pcpt a, b;\n"
-			"    ret;\n"
-			"}\n",
-			{ "C pointer type does not match" }
+			"type cpointer: APtr i64\n",
+			"APtr",
+			"cptr",
+			"C pointer type does not match"
 		);
-	}
-
-	// Two differently-named cpointer types stay distinct even with the same pointee.
-	void movPcptSamePointeeAcrossTypesFails() {
-		expectLoadError(
+		expect_mov_error(
 			"mov_pcpt_same_pointee",
-			"type cpointer: APtr i64\n"
-			"type cpointer: BPtr i64\n"
-			"function main { i64, ptr_argv } -> { i64 } {\n"
-			"    init_pany_type a, APtr;\n"
-			"    init_pany_type b, BPtr;\n"
-			"    mov_pcpt_pcpt a, b;\n"
-			"    ret;\n"
-			"}\n",
-			{ "C pointer type does not match" }
+			"type cpointer: APtr i64\ntype cpointer: BPtr i64\n",
+			"APtr",
+			"BPtr",
+			"C pointer type does not match"
 		);
-	}
-
-	void movPcptOnNonCPointerFails() {
-		expectLoadError(
-			"mov_pcpt_non_cpointer",
-			"function main { i64, ptr_argv } -> { i64 } {\n"
-			"    init_pany_type a, i64;\n"
-			"    init_pany_type b, i64;\n"
-			"    mov_pcpt_pcpt a, b;\n"
-			"    ret;\n"
-			"}\n",
-			{ "Invalid instruction argument type" }
+		expect_mov_error(
+			"mov_pcpt_non_cpointer", "", "i64", "i64", "Invalid instruction argument type"
 		);
 	}
 
