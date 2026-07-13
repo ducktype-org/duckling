@@ -51,6 +51,7 @@ pub fn configure_easy2<H>(
     Ok(())
 }
 
+/// Convert an [`http::header::HeaderMap`] into a [`curl::easy::List`] headers.
 fn http_headers_to_curl_list(headers: &header::HeaderMap) -> Result<easy::List, curl::Error> {
     let mut list = easy::List::new();
     for (header, value) in headers.iter() {
@@ -83,6 +84,9 @@ fn http_headers_to_curl_list(headers: &header::HeaderMap) -> Result<easy::List, 
     Ok(list)
 }
 
+/// Set an HTTP method on the given handler.
+///
+/// Most methods map to [`custom_request`](Easy2::custom_request).
 fn set_http_method_on_curl<H>(
     handler: &mut Easy2<H>,
     method: &http::Method,

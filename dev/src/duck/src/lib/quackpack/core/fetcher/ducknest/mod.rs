@@ -113,11 +113,7 @@ impl<'duck> DucknestClient<'duck> {
 }
 
 fn create_get_request(url: &Url) -> QuackResult<Request> {
-    create_bodyless_http_request(url, http::Method::GET)
-}
-
-fn create_bodyless_http_request(url: &Url, method: http::Method) -> QuackResult<Request> {
-    create_http_request(url, method, vec![])
+    create_http_request(url, http::Method::GET, vec![])
 }
 
 fn create_http_request(url: &Url, method: http::Method, body: Vec<u8>) -> QuackResult<Request> {

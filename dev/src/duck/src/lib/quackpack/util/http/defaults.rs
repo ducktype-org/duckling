@@ -33,4 +33,5 @@ pub const REQUEST_TIMEOUT: Duration = Duration::from_secs(60);
 /// Maximal allowed number of redirects.
 pub const MAX_REDIRECTS: usize = 5;
 
+/// A value for a valueless HTTP header.
 pub const NO_VALUE: HeaderValue = HeaderValue::from_static("");
