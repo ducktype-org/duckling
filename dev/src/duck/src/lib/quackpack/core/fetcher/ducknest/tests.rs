@@ -7,6 +7,7 @@ use super::*;
 use crate::quackpack::core::Version;
 use crate::quackpack::core::fetcher::types;
 use crate::quackpack::schemas::registry;
+use crate::util::file_locks::FileLockManager;
 use crate::util::path_ops_ext::PathOpsExt;
 
 fn create_mock_server() -> (MockServer, DuckContext) {
@@ -193,8 +194,9 @@ fn multi_metadata() {
 #[test]
 fn download_blob() {
     let dir = tempdir().unwrap();
-    let path = dir.path().join("target");
     let (server, ctx) = create_mock_server();
+    let manager = FileLockManager::new(dir.path().to_path_buf());
+    let path = manager.open_exclusive("target", &ctx).unwrap();
     let client = DucknestClient::new(&ctx);
     client
         .fetch_blob(
@@ -203,10 +205,13 @@ fn download_blob() {
                 version: Version::new(1, 2, 3),
                 url: server.base_url().parse().unwrap(),
             },
-            &path,
+            path,
         )
         .unwrap();
-    assert_eq!(path.read_to_string().unwrap(), "foo-1.2.3");
+    assert_eq!(
+        dir.path().join("target").read_to_string().unwrap(),
+        "foo-1.2.3"
+    );
 }
 
 #[test]
