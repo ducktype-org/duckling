@@ -72,7 +72,7 @@ namespace compiler::ctv {
 				return tsh::SymbolType<>{
 					tsh::getBoolType(),
 					tsh::ReferenceKind::Direct,
-					tsh::Mutability::Mutable,
+					tsh::Mutability::Immutable,
 				};
 			}
 			variant_case(NumericValue, numeric) { return numeric.getTypeOfStoredValue(ctx); }
@@ -80,7 +80,7 @@ namespace compiler::ctv {
 				return tsh::SymbolType<>{
 					tsh::getCharType(),
 					tsh::ReferenceKind::Direct,
-					tsh::Mutability::Mutable,
+					tsh::Mutability::Immutable,
 				};
 			}
 			variant_case_novalue(base::StrID) {
@@ -94,7 +94,7 @@ namespace compiler::ctv {
 				return tsh::SymbolType<>{
 					tsh::getUnitType(),
 					tsh::ReferenceKind::Direct,
-					tsh::Mutability::Mutable,
+					tsh::Mutability::Immutable,
 				};
 			}
 			variant_case(TupleCTV, tuple) {
@@ -106,7 +106,7 @@ namespace compiler::ctv {
 				return tsh::SymbolType<>{
 					ctx.query<tsh::QueryTupleType>({ std::move(component_types) }),
 					tsh::ReferenceKind::Direct,
-					tsh::Mutability::Mutable,
+					tsh::Mutability::Immutable,
 				};
 			}
 
@@ -114,7 +114,7 @@ namespace compiler::ctv {
 				return tsh::SymbolType<>{
 					tsh::getMetaType(),
 					tsh::ReferenceKind::Direct,
-					tsh::Mutability::Mutable,
+					tsh::Mutability::Immutable,
 				};
 			}
 		}

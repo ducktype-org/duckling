@@ -1,12 +1,13 @@
 import core.builtins.*;
 
 
-template(s: str)
-fun printer() = builtin_output_str(s);
+template(T: type)
+fun printer(a: T) = print(f"{a}\n");
 
 fun main() -> i64 = {
-    printer:{"Hello, world!"}();
-    
+    printer:{i64}(2);
+    printer:{f64}(2.0);
+    printer:{str}("abc");
 
     return 0;
 }

@@ -108,8 +108,8 @@ namespace compiler::helios::templates {
 				i++;
 
 				CORE_ASSERT(ctv.getTypeOfStoredValue(ctx) == param.type,
-					"Template argument type does not match template parameter type",
-					ctv.getTypeOfStoredValue(ctx).toString(), param.type.toString()
+					"Template argument type does not match template parameter type: ",
+					ctv.getTypeOfStoredValue(ctx).toString(), " vs ", param.type.toString()
 				);
 
 				auto const_symbol
