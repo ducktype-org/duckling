@@ -38,6 +38,33 @@
  */
 namespace compiler::helios::mangler {
 
+	namespace {
+		/**
+		 * @brief Mangles a compile-time value.
+		 * @TODO: #2607 This is a temporary, mock solution
+		 */
+		std::string mangleCTV(query::Context& ctx, const ctv::CompileTimeValue& ctv) {
+			variant_match(ctv.getStorage()) {
+				variant_case_novalue(bool, numeric_value::NumericValue, char, base::StrID, ctv::CompileTimeValue::UnitCTV) {
+					// @TODO: #2607 This is questionable, note that this only
+					// work, because queryUnstablePerfectHash is actually stable for these types
+					// (at least at the moment of witting it)
+					return ctv.queryUnstablePerfectHash().toStringHex();
+				}
+				variant_case(ctv::CompileTimeValue::TupleCTV, tuple) {
+					throw base::NotYetImplemented("Mangle CTV tuple is not implemented yet");
+				}
+				variant_case(tsh::SymbolType<>, symbol_type) {
+					return ctx.query<QueryMangledType>(symbol_type)->valueOrThrow().str();
+				}
+				variant_default {
+					CORE_PANIC("Unhandled CTV type in mangleCTV");
+				}
+			}
+			CORE_UNREACHABLE();
+		}
+	} 
+
 	void addToHash(hashing::hash_algorithm auto& h, const KeyOf_MangledSymbol& k) RELEASE_NOEXCEPT {
 		addToHash(h, k.symbol_key.index());
 		if (k.symbol_key.index() == 0)
@@ -273,14 +300,12 @@ namespace compiler::helios::mangler {
 									     *template_bake_data.template_arguments_symbols->load(
 											 std::memory_order_acquire
 										 )) {
-										// @TODO: #2607 This is questionable, note that this only
-										// work, because queryUnstablePerfectHash is actually stable
-										// (at least at the moment of witting it)
+										// @TODO: #2607 This is a mock
 										auto value
 											= ctx.query<helios::QueryConstValueOf>(bake_argument)
 										          .valueOrThrow();
 										path_parts.push_back(identifier(
-											value.queryUnstablePerfectHash().toStringHex()
+											mangleCTV(ctx, value)
 										));
 									}
 								}

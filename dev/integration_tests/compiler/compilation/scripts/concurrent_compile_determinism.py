@@ -222,7 +222,7 @@ def diff_snapshots(single: dict[str, str], concurrent: dict[str, str]) -> list[s
     if extra_in_concurrent:
         diffs.append("Extra in concurrent build: " + ", ".join(extra_in_concurrent[:10]))
 
-    changed = sorted(path for path in (single_paths & concurrent_paths) if single[path] != concurrent[path])
+    changed = sorted(path + ": " + concurrent[path] + "\n" for path in (single_paths & concurrent_paths) if single[path] != concurrent[path])
     if changed:
         diffs.append("Content differs: " + ", ".join(changed[:10]))
 

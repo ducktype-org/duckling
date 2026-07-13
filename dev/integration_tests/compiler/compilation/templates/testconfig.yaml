@@ -1,7 +1,7 @@
 
 Tests:
   simple_class_templates:
-    enable_conc_deterministic_tests: false
+    # enable_conc_deterministic_tests: false
     Cases:
       all:
         backend: all
@@ -10,7 +10,7 @@ Tests:
         ExitCode: 0
 
   simple_function_template:
-    enable_conc_deterministic_tests: false
+    # enable_conc_deterministic_tests: false
     Cases:
       all:
         # @TODO: #2483 reenable, strings are not yet supported in the DVM backend
@@ -21,7 +21,7 @@ Tests:
 
 
   templates_and_macros:
-    enable_conc_deterministic_tests: false
+    # enable_conc_deterministic_tests: false
     Cases:
       all:
         backend: all
