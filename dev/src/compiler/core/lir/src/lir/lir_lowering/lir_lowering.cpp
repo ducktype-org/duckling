@@ -71,7 +71,8 @@ namespace compiler::lir {
 		auto symbol_abi = ctx.query<helios::QuerySymbolABI>(helios_id)->valueOrPanicMsg(
 			"Handling errors in MIR is not supported yet"
 		);
-		auto link_once    = helios::emissionPolicy(ctx,helios_id) == helios::EmissionPolicy::Replicated;
+		auto link_once
+			= helios::emissionPolicy(ctx, helios_id) == helios::EmissionPolicy::Replicated;
 		auto mangled_name = helios::mangler::getSimpleMangledName(ctx, helios_id);
 		base::Optional<BuiltinFunctionKind> builtin_kind_opt
 			= helios::isBuiltin(helios_id).flatMap(getBuiltinKindFromHOUT);

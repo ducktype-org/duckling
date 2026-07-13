@@ -38,7 +38,6 @@
 
 namespace compiler::helios {
 
-	
 
 	auto getScopeRef(ScopeID id) { return ScopeAccess_Functor::get(id); }
 

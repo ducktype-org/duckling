@@ -48,13 +48,13 @@ namespace compiler::helios::templates {
 			auto param_unlocked = param.unlock(ctx);
 
 			auto name = param_unlocked->getName().unlock(ctx)->unwrap();
-			
+
 			auto type_expression = param_unlocked->getType();
-			auto type_ctv
-				= getTypeCTVFromPST(ctx, type_expression.unlock(ctx)->getExpr());
+			auto type_ctv        = getTypeCTVFromPST(ctx, type_expression.unlock(ctx)->getExpr());
 			if (type_ctv.hasFailed()) return query::Failed();
 
-			// Template parameters are baked to constants so the type of the parameter is always immutable. 
+			// Template parameters are baked to constants so the type of the parameter is always
+			// immutable.
 			auto type = type_ctv.valueOrPanic().get<tsh::SymbolType<>>().value().withMutability(
 				tsh::Mutability::Immutable
 			);
@@ -93,12 +93,11 @@ namespace compiler::helios::templates {
 	}
 
 	struct IMPLEMENT_QUERY(QueryBakeTemplateSymID, query::QResult<TemplateBakeStorage>) {
-
 		static std::vector<SymID> bakeTemplateArgumentsSymbols(
-			Context&                    ctx,
+			Context&                            ctx,
 			const TemplateDeclarationSignature& signature,
-			ScopeID                     scope,
-			const QKey&                 q_key
+			ScopeID                             scope,
+			const QKey&                         q_key
 		) {
 			std::vector<SymID> symbols;
 
@@ -107,16 +106,18 @@ namespace compiler::helios::templates {
 				auto ctv = q_key.template_arguments.at(i);
 				i++;
 
-				CORE_ASSERT(ctv.getTypeOfStoredValue(ctx) == param.type,
+				CORE_ASSERT(
+					ctv.getTypeOfStoredValue(ctx) == param.type,
 					"Template argument type does not match template parameter type: ",
-					ctv.getTypeOfStoredValue(ctx).toString(), " vs ", param.type.toString()
+					ctv.getTypeOfStoredValue(ctx).toString(),
+					" vs ",
+					param.type.toString()
 				);
 
 				auto const_symbol
 					= ctx.query<defgen::QueryGeneratedSymbol>(defgen::KeyFor_QueryGeneratedSymbol{
-						.name = param.name,
-						.generated_symbol_data
-						= defgen::GeneratedConstant{ ctv, scope },
+						.name                  = param.name,
+						.generated_symbol_data = defgen::GeneratedConstant{ ctv, scope },
 					});
 
 				symbols.push_back(const_symbol);
@@ -185,9 +186,7 @@ namespace compiler::helios::templates {
 			                                     ->getFile());
 
 			auto baked_pst = pst::PST<pst::TemplateStmt>::fromClone(
-				std::move(cloned),
-				std::move(token_source_hack),
-				hash_ctx
+				std::move(cloned), std::move(token_source_hack), hash_ctx
 			);
 
 
@@ -227,8 +226,10 @@ namespace compiler::helios::templates {
 
 			auto baked_sym_id = ctx.query<QuerySymbolOfSTMT>(baked_statement).valueOrThrow();
 
-			return TemplateBakeStorage{ .baked_template_sym_id = baked_sym_id,
-				                        .baked_template_pst    = std::move(baked_pst), };
+			return TemplateBakeStorage{
+				.baked_template_sym_id = baked_sym_id,
+				.baked_template_pst    = std::move(baked_pst),
+			};
 		}
 
 		QUERY_AUTO_CACHE_CONSTRUCT_BY_LAMBDA([](CRef<PResult> result) -> QResult {

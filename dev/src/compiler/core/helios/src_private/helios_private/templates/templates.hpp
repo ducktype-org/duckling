@@ -75,7 +75,8 @@ namespace compiler::helios::templates {
 	/**
 	 * @brief Query to bake a template symbol ID.
 	 * @important: Implementation of this query is very fragile for now.
-	 * It will likely be changed in the future, parts of it might be moved elsewhere, and in general should be use with care for now.
+	 * It will likely be changed in the future, parts of it might be moved elsewhere, and in general
+	 * should be use with care for now.
 	 *
 	 * @TODO: #3112 some of the logic from this query should probably be moved to a different place.
 	 * Feel free to do it.
@@ -91,7 +92,7 @@ namespace compiler::helios::templates {
 	 */
 	struct TemplateDeclarationSignature final {
 		struct Parameter final {
-			base::StrID name;
+			base::StrID       name;
 			tsh::SymbolType<> type;
 
 			// Not yet supported:
@@ -101,7 +102,9 @@ namespace compiler::helios::templates {
 		std::vector<Parameter> parameters;
 	};
 
-	query::QResult<TemplateDeclarationSignature> getTemplateDeclarationSignature(query::Context& ctx, SymID template_sym_id);
+	query::QResult<TemplateDeclarationSignature> getTemplateDeclarationSignature(
+		query::Context& ctx, SymID template_sym_id
+	);
 
 
 	// @NOTE: if we will have to bake templates to hout unit, it should probably first call
