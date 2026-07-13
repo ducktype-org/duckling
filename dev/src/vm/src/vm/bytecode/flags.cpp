@@ -27,6 +27,13 @@ namespace vm::code {
 		case builtins::BuiltinFunctionID::Stoi:
 			// pure conversion, no observable effects
 			return {};
+		case builtins::BuiltinFunctionID::FloatToString:
+		case builtins::BuiltinFunctionID::U64ToString:
+		case builtins::BuiltinFunctionID::I64ToString:
+			// Number-to-string conversions that write the result through a pointer operand.
+			// No console I/O and no threading; like every other pointer-deref write (see the
+			// CptrRead/CptrWrite note below) they are not classified as GlobalRead/GlobalWrite.
+			return {};
 		case builtins::BuiltinFunctionID::StartThread:
 			return FunctionFlag(Multithread) | ControlFlowModifying;
 		case builtins::BuiltinFunctionID::JoinThread:
