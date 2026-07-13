@@ -202,6 +202,30 @@ namespace compiler::helios::code {
 				}
 			}
 
+			/**
+			 * Prepares a HOUT Expr for a method call, e.g. by automatically taking a reference, as
+			 * required by `self`.
+			 * @note The algorithm is a bit more complicated and depends on whether the type is
+			 * simple or complex, as methods on simple types take copies instead, and then
+			 * references to simple types need to be dereffed.
+			 * @param expr The expression on which a method is called.
+			 * @return The modified (reffed or dereffed) expression.
+			 */
+			[[nodiscard]]
+			Box<Expr> prepareForMethodCall(Box<Expr> expr) const {
+				if (not expr->expression_type.getType().isSimple()
+				    and expr->expression_type.getSymbolType().getRefKind()
+				            != tsh::ReferenceKind::Ref) {
+					return makeBox<RefOfExpr>(ctx, expr->origin.generatedFrom(), std::move(expr));
+				}
+				if (expr->expression_type.getType().isSimple()
+				    and expr->expression_type.getSymbolType().getRefKind()
+				            != tsh::ReferenceKind::Direct) {
+					return makeBox<DerefExpr>(ctx, expr->origin.generatedFrom(), std::move(expr));
+				}
+				return expr;
+			}
+
 			void visitExprFormatStrValue(pst::Access<pst::expr::ExprFormatStrValue> stmt) override {
 				auto concat_sym = defgen::concatSym(ctx);
 
@@ -247,20 +271,7 @@ namespace compiler::helios::code {
 						const auto to_string_sym = defgen::toStringSymForType(ctx, sub_expr_type);
 
 						// - - Correct for passing by copy or reference depending on type
-						if (not sub_expr_hout->expression_type.getType().isSimple()
-						    and sub_expr_hout->expression_type.getSymbolType().getRefKind()
-						            != tsh::ReferenceKind::Ref) {
-							sub_expr_hout = makeBox<RefOfExpr>(
-								ctx, generatedOrigin(), std::move(sub_expr_hout)
-							);
-						}
-						if (sub_expr_hout->expression_type.getType().isSimple()
-						    and sub_expr_hout->expression_type.getSymbolType().getRefKind()
-						            != tsh::ReferenceKind::Direct) {
-							sub_expr_hout = makeBox<DerefExpr>(
-								ctx, generatedOrigin(), std::move(sub_expr_hout)
-							);
-						}
+						sub_expr_hout = prepareForMethodCall(std::move(sub_expr_hout));
 
 						// - - Create HOUT Expr
 						std::vector<Box<Expr>> arguments;
@@ -373,6 +384,29 @@ namespace compiler::helios::code {
 						all_candidates.push_back(builtin_operator_sym);
 				}
 				filterFunctionsByOperatoriness(ctx, all_candidates, operatoriness);
+
+				// Step 2b. — If nothing was found in the calling scope or among builtins, fall
+				// back to an operator method declared on the operand's own type.
+				// @TODO: #3133 This should be unified.
+				if (all_candidates.empty()) {
+					const auto inner_type = inner->expression_type.getType();
+					const auto method_lookup_result
+						= HInterface::ofTypeInstance(inner_type).lookup(ctx, op->unwrap().value);
+					auto method_candidates = method_lookup_result->valueOrThrow().leaves;
+					filterFunctionsByOperatoriness(ctx, method_candidates, operatoriness);
+					if (!method_candidates.empty()) {
+						auto self_expr = prepareForMethodCall(std::move(inner));
+						return processUnaryOperatorCall(
+								   ctx,
+								   method_candidates,
+								   std::move(self_expr),
+								   pstOrigin(op),
+								   operatoriness
+						)
+						    .valueOrThrow();
+					}
+				}
+
 				return processUnaryOperatorCall(
 						   ctx, all_candidates, std::move(inner), pstOrigin(op), operatoriness
 				)
@@ -390,7 +424,7 @@ namespace compiler::helios::code {
 					op,
 					std::move(inner),
 					ctx.query<QueryPrimaryCodeScopeFor>({ stmt }),
-					HOUTFunctionDeclaration::Operatoriness::Prefix
+					HOUTFunctionDeclaration::Operatoriness::Suffix
 				);
 			}
 
@@ -509,6 +543,31 @@ namespace compiler::helios::code {
 				filterFunctionsByOperatoriness(
 					ctx, all_candidates, HOUTFunctionDeclaration::Operatoriness::Infix
 				);
+
+				// Step 2b. — if nothing was found in the calling scope or among builtins, fall
+				// back to an operator method declared on the left-hand side's own type.
+				// @TODO: #3133 This should be unified.
+				if (all_candidates.empty()) {
+					const auto lhs_abstract_type    = lhs_type.getType();
+					const auto method_lookup_result = HInterface::ofTypeInstance(lhs_abstract_type)
+					                                      .lookup(ctx, op->unwrap().value);
+					auto method_candidates = method_lookup_result->valueOrThrow().leaves;
+					filterFunctionsByOperatoriness(
+						ctx, method_candidates, HOUTFunctionDeclaration::Operatoriness::Infix
+					);
+					if (!method_candidates.empty()) {
+						auto self_expr = prepareForMethodCall(std::move(lhs));
+						return processBinaryOperatorCall(
+								   ctx,
+								   method_candidates,
+								   std::move(self_expr),
+								   std::move(rhs),
+								   pstOrigin(op)
+						)
+						    .valueOrThrow();
+					}
+				}
+
 				return processBinaryOperatorCall(
 						   ctx, all_candidates, std::move(lhs), std::move(rhs), pstOrigin(op)
 				)
