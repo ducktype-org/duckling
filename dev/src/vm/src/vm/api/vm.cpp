@@ -62,8 +62,8 @@ namespace vm::api {
 		    .and_then(mapOrWrongResponse<response::CodePosition>);
 	}
 
-	std::expected<ProcessInfo, ApiError> spawn(bool enable_deadlock_detection) {
-		return Supervisor::get().newProcess(enable_deadlock_detection).transform([](const auto& x) {
+	std::expected<ProcessInfo, ApiError> spawn(const ProcessConfig& options) {
+		return Supervisor::get().newProcess(options).transform([](const auto& x) {
 			return ProcessInfo{ x };
 		});
 	}
@@ -112,6 +112,12 @@ namespace vm::api {
 				pid, request::RunFunctionAwait{ .func_name = function_name, .func_args = args }
 			))
 		    .and_then(mapOrWrongResponse<ExitValue>);
+	}
+
+	std::expected<void, ApiError> setExecutionConfig(PID pid, ExecutionConfig config) {
+		return Supervisor::get()
+		    .doRequest(SupervisorRequest(pid, request::SetExecutionConfig{ config }))
+		    .transform(ignoreResponse);
 	}
 
 	std::expected<void, ApiError> join(PID pid) {

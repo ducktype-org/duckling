@@ -317,8 +317,11 @@ namespace pst {
 
 		MBox<Stmt> out;
 
-		// Specifier block handling
-		if (!prefixes.specifiers.empty() && state[0].isBracketGroup(Token::Curly)) {
+		if (state[0].is(Keyword::Template)) {
+			// Template statement handling
+			out = TemplateStmt::parse(state);
+		} else if (!prefixes.specifiers.empty() && state[0].isBracketGroup(Token::Curly)) {
+			// Specifier block handling
 			out = internal::parseStmt<SpecifierBlock>(state);
 		} else {
 			// Parse Statement based on context

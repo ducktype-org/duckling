@@ -86,6 +86,17 @@ namespace compiler::repl {
 		 */
 		[[nodiscard]] bool getResetReplaySilent() const { return m_reset_state.replay_silent; }
 
+		/**
+		 * @brief Compile the standard library and load it into the DVM process.
+		 *
+		 * Called once during initialization, after initDVM(), so that imported standard library
+		 * functions (e.g. from `core`) are callable from interactive statements. Failures are
+		 * reported as a warning and leave the session usable for code that does not rely on the
+		 * standard library.
+		 * @TODO: #3084 load only the core lib, and not the std lib after packages work.
+		 */
+		void preloadStandardLibrary();
+
 	private:
 		/**
 		 * @brief Grant ReplSimulationTest access to private members for testing.
@@ -223,16 +234,6 @@ namespace compiler::repl {
 		 * once during REPL session initialization.
 		 */
 		void initDVM();
-
-		/**
-		 * @brief Compile the standard library and load it into the DVM process.
-		 *
-		 * Called once during initialization, after initDVM(), so that imported standard library
-		 * functions (e.g. from `core`) are callable from interactive statements. Failures are
-		 * reported as a warning and leave the session usable for code that does not rely on the
-		 * standard library.
-		 */
-		void preloadStandardLibrary();
 
 		/**
 		 * @brief Return a simple error result.

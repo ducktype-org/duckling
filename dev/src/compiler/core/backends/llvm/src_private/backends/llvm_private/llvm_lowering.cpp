@@ -25,7 +25,6 @@ LLVM_INCLUDE_END()
 #include "module_impl.hpp"
 
 #include <ctv/numeric_value.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 #include <tsl/type_layout.hpp>
 
@@ -293,35 +292,6 @@ namespace compiler::backend_llvm {
 
 				return string_type;
 			}
-			variant_case(tsl::DynamicArrayTypeLayout, list_layout) {
-				const auto list_type_name = list_layout.getMangledName().strView();
-
-				// Get the list type from the context, if it has been previously defined.
-				if (llvm::StructType* list_type
-				    = llvm::StructType::getTypeByName(llvm_context, list_type_name);
-				    list_type) {
-					return list_type;
-				}
-
-				// Otherwise, define the dynamic list type in LLVM, in line with the TSL definition.
-				llvm::StructType* list_type
-					= llvm::StructType::create(llvm_context, list_type_name);
-				list_type->setBody(
-					{
-						llvm::PointerType::getUnqual(llvm_context),
-						i64Type(llvm_context),
-						i64Type(llvm_context),
-						i64Type(llvm_context),
-					},
-					/*is_packed=*/false
-				);
-
-				// @TODO: #1842 Add layout verification, that the LLVM struct layout matches:
-				// - the TSL type layout, and
-				// - the struct defined in the built-ins module.
-
-				return list_type;
-			}
 			variant_case(tsl::ClassTypeLayout, class_layout) {
 				const auto class_name = class_layout.getMangledName().strView();
 
@@ -441,6 +411,7 @@ namespace compiler::backend_llvm {
 		variant_match(abi) {
 			variant_case(helios::DefaultAbi, name) { return llvm::CallingConv::C; }
 			variant_case(helios::CAbi, name) { return llvm::CallingConv::C; }
+			variant_case(helios::DVMAbi, name) { return llvm::CallingConv::C; }
 		}
 		CORE_UNREACHABLE();
 	}
@@ -736,37 +707,6 @@ namespace compiler::backend_llvm {
 								gep_indices.push_back(index_value);
 								// Lastly, update the current layout.
 								current_layout = static_array_layout.getElementLayout();
-							}
-							variant_case(tsl::DynamicArrayTypeLayout, dynamic_array_layout) {
-								// @TODO: #1970 This branch currently performs an access to a 'data'
-								// field of the list, dereferences it and performs an index
-								// projection on the pointer to the heap data. If `List[T]` had a
-								// proper type interface (including a 'data' field which returns a
-								// `ref T` or `T*`), a dynamic array index access could be
-								// represented by `Field(Data), Deref, IndexProjection`. Then the
-								// whole implementation of this case for the DynamicArrayTypeLayout,
-								// would be the same as for static arrays. For now, this
-								// programmatically implements the thing described above.
-								ensure_structural_base();
-
-								// Add an additional FieldProjection('data') so we access the data
-								// field with one GEP. Note that data is at 0 index in the struct.
-								gep_indices.push_back(llvm_i32(0));
-
-								// Emit the current GEP to get pointer to the heap data.
-								flush_gep();
-
-								// Now load the actual data of the list. This now points directly to
-								// the data on the heap.
-								current_ptr = builder.CreateLoad(builder.getPtrTy(), current_ptr);
-
-								// Now push the actual index from the IndexProjection. This GEP now
-								// operates on the heap memory.
-								gep_indices.push_back(index_value);
-
-								// Lastly, update the types and layouts.
-								current_layout = dynamic_array_layout.getElementLayout();
-								current_type   = typeFromLayout(module, current_layout);
 							}
 							variant_case(tsl::PointerTypeLayout, pointer_layout) {
 								// Finish any struct/array GEP first
@@ -1133,46 +1073,8 @@ namespace compiler::backend_llvm {
 				builder.CreateStore(llvm::Constant::getNullValue(type), ptr);
 				break;
 			}
-			case BoxAlloc: {
-				// First, get the value to box.
-				const auto  value_to_box = loadLIRValue(lir_instruction.arguments.at(0), builder);
-				llvm::Type* pointee_type = value_to_box->getType();
-
-				// Calculate the layout size for malloc.
-				const llvm::DataLayout& data_layout = module->getDataLayout();
-				usize                   size        = data_layout.getTypeAllocSize(pointee_type);
-
-				// Get or insert the allocator.
-				auto alloc_func
-					= loadBuiltin("builtin_alloc", builder.getPtrTy(), { builder.getInt64Ty() });
-
-				// Actually call the allocator.
-				llvm::Value* size_val = builder.getInt64(size);
-				llvm::Value* allocated_ptr
-					= builder.CreateCall(alloc_func, { size_val }, "box_ptr");
-
-				// Store the value in the allocated memory.
-				// @TODO: #1895 This is suboptimal. In the future class constructors should take the
-				// allocated memory pointer as a parameter and construct it in-place.
-				builder.CreateStore(value_to_box, allocated_ptr);
-				storeOutput(lir_instruction.output.value(), allocated_ptr, builder);
-				break;
-			}
-			case BoxFree: {
-				// @TODO: #1894 This may change based on the way we handle destructors.
-				const auto ptr_to_free = loadLIRValue(lir_instruction.arguments.at(0), builder);
-
-				// Get or insert the free function.
-				auto free_func
-					= loadBuiltin("builtin_dealloc", builder.getVoidTy(), { builder.getPtrTy() });
-
-				// Actually free the memory.
-				builder.CreateCall(free_func, { ptr_to_free });
-				break;
-			}
 			case ListPush:
 			case ListPop:
-			case ListLen:
 			case ListFree: {
 				llvm::Value* list_ptr
 					= loadLIRValueToPointer(lir_instruction.arguments.at(0), builder);
@@ -1211,15 +1113,6 @@ namespace compiler::backend_llvm {
 					);
 
 					builder.CreateCall(pop_func, { list_ptr, count_val, get_elem_size() });
-					break;
-				}
-				case ListLen: {
-					auto len_func = loadBuiltin(
-						"builtin_list_len", builder.getInt64Ty(), { builder.getPtrTy() }
-					);
-
-					llvm::Value* result = builder.CreateCall(len_func, { list_ptr });
-					storeOutput(lir_instruction.output.value(), result, builder);
 					break;
 				}
 				case ListFree: {
@@ -1345,6 +1238,35 @@ namespace compiler::backend_llvm {
 
 				const auto function_literal
 					= lir_instruction.arguments.at(0).get<lir::FunctionLiteral>();
+
+				if_opt_some(function_literal.builtin_kind_opt, builtin_kind) {
+					if (builtin_kind == lir::BuiltinFunctionKind::BoxAlloc) {
+						const auto value_to_box
+							= loadLIRValue(lir_instruction.arguments.at(1), builder);
+						const usize size
+							= module->getDataLayout().getTypeAllocSize(value_to_box->getType());
+						auto alloc_func = loadBuiltin(
+							"builtin_alloc", builder.getPtrTy(), { builder.getInt64Ty() }
+						);
+						llvm::Value* allocated_ptr
+							= builder.CreateCall(alloc_func, { builder.getInt64(size) }, "box_ptr");
+						// @TODO: #1895 This is suboptimal. In the future class constructors should
+						// take the allocated memory pointer as a parameter and construct it
+						// in-place.
+						builder.CreateStore(value_to_box, allocated_ptr);
+						storeOutput(lir_instruction.output.value(), allocated_ptr, builder);
+						break;
+					} else if (builtin_kind == lir::BuiltinFunctionKind::BoxFree) {
+						const auto ptr_to_free
+							= loadLIRValue(lir_instruction.arguments.at(1), builder);
+						auto free_func = loadBuiltin(
+							"builtin_dealloc", builder.getVoidTy(), { builder.getPtrTy() }
+						);
+						builder.CreateCall(free_func, { ptr_to_free });
+						break;
+					}
+				}
+
 				auto callee = getOrInsertFunctionPrototypeFromLiteral(module, function_literal);
 
 				auto args = loadLIRValueList(

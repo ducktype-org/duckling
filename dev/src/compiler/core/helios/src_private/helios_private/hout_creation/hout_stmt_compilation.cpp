@@ -94,19 +94,12 @@ namespace compiler::helios {
 
 		void handleAssignmentExpr(pst::Access<pst::expr::Assignment> assignment) {
 			auto op = assignment->getAssignmentType().unlock(ctx)->unwrap();
-			if (op != base::StrID("=") && op != base::StrID("+=") && op != base::StrID("-=")) {
+			if (op != base::StrID("=")) {
 				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 					base::strConcat("This assignment type: '", op.str(), "'."),
 					assignment->getStablePosition()
 				));
 				query::throwFailed();
-			}
-
-			if (op != base::StrID("=")) {
-				auto assignment_expr
-					= ctx.query<QueryHoutOfExpr>({ assignment })->valueOrThrow().ref();
-				output(code::ExprStmt(code::pstOrigin(assignment), assignment_expr));
-				return;
 			}
 
 			auto var = assignment->getVariables();
@@ -414,6 +407,14 @@ namespace compiler::helios {
 		query::Context&                         ctx,
 		pst::AccessLocked<pst::CodeBlockOrStmt> container,
 		tsh::SymbolType<>                       return_type
+	) {
+		return std::make_shared<const code::CodeBlock>(processBlock(ctx, container, return_type));
+	}
+
+	std::shared_ptr<const code::CodeBlock> compileCodeOfCodeBlock(
+		query::Context&                   ctx,
+		pst::AccessLocked<pst::CodeBlock> container,
+		tsh::SymbolType<>                 return_type
 	) {
 		return std::make_shared<const code::CodeBlock>(processBlock(ctx, container, return_type));
 	}

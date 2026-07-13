@@ -91,4 +91,24 @@ namespace compiler::helios {
 	DECLARE_QUERY(
 		QuerySliceTypeData, tsh::SliceAbstractType, CRef<SliceTypeData>, ({ .uses_qresult = false })
 	)
+
+	struct DynamicArrayTypeData {
+		SymID ptr;
+		SymID len;
+		SymID off_start_reserved;
+		SymID off_end_reserved;
+	};
+
+	/**
+	 * @brief Query field symbols of a dynamic array type.
+	 * Panics if the given type is not a dynamic array.
+	 *
+	 * \query_thread_safe_if_cache
+	 */
+	DECLARE_QUERY(
+		QueryDynamicArrayTypeData,
+		tsh::DynamicArrayAbstractType,
+		CRef<DynamicArrayTypeData>,
+		({ .uses_qresult = false })
+	)
 }

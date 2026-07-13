@@ -37,6 +37,7 @@ namespace pst {
 		Field,
 		Constructor,
 		CopyConstructor,
+		MoveConstructor,
 		Destructor,
 		ClassSpecifierBlock,
 		Param,
@@ -49,5 +50,6 @@ namespace pst {
 		BindingPattern,
 		ValuePattern,
 		Expand,
+		TemplateStmt
 	);
 }

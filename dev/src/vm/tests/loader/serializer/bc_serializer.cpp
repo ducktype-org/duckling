@@ -39,11 +39,14 @@ private:
 		// Type 1: primitive i64 (8 bytes)
 		code.types.emplace_back(PrimitiveType(base::StrID("i32"), Bytes{ 4 }));
 		// Type 2: data Point { x: i64, y: i64 }
-		code.types.emplace_back(DataType(
+		auto point = DataType(
 			base::StrID("Point"),
 			{ Field(base::StrID("x"), base::StrID("i32")),
 		      Field(base::StrID("y"), base::StrID("i32")) }
-		));
+		);
+		point.packed      = true;
+		point.assert_size = 8;
+		code.types.emplace_back(std::move(point));
 		code.types.emplace_back(FixedSizeTableType(base::StrID("points"), base::StrID("Point"), 3));
 
 		// Global data: constant answer i64 with initial_value 42
@@ -115,6 +118,11 @@ private:
 		const auto& data = std::get<DataType>(parsed.types[1]);
 		assertEqual(data.name, base::StrID("Point"), "Data type name should be Point");
 		assertEqual(data.fields.size(), static_cast<usize>(2), "Data type should have 2 fields");
+		assertTrue(data.packed, "Data type should stay packed after round-trip");
+		assertTrue(
+			data.assert_size == base::Optional<usize>(8),
+			"Data type should keep assert_size after round-trip"
+		);
 
 		// Check global data
 		assertEqual(
@@ -154,6 +162,11 @@ type data: Point {
     y: i32,
     is_ok: i8,
 }
+
+type data: PackedPoint {
+    x: i32,
+    y: i32,
+} packed assert_size 8
 
 type fixed_size_table: point_arr Point 2
 

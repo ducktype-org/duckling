@@ -14,14 +14,14 @@ use crate::quackpack::core::fetcher::types::{FetcherResponse, PackageWithUrl};
 use crate::quackpack::schemas::registry;
 use crate::quackpack::util::interned_url::InternedUrl;
 use crate::util::file_locks::FileLockManager;
-use crate::util::path_ops_ext::{MkdirOptions, PathOpsExt};
-use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail_internal};
+use crate::{DuckContext, QuackResult, QuackResultContext, StrId};
 
 pub mod cache;
 pub mod ducknest;
 pub mod git;
 pub mod http;
 pub mod types;
+pub mod util;
 
 #[cfg(test)]
 mod tests;
@@ -99,7 +99,7 @@ impl<'duck> Fetcher<'duck> {
             .with_context(|| {
                 format!(
                     "while getting a metadata of `{}` version `{}`",
-                    package.id, package.version
+                    package.name, package.version
                 )
             })?;
         self.cache
@@ -122,7 +122,7 @@ impl<'duck> Fetcher<'duck> {
     ) -> QuackResult<FetcherResponse<types::MultiMetadata>> {
         if self.ctx.is_offline() {
             let package = PackageWithUrl {
-                id: package_name,
+                name: package_name,
                 version: 1.into(),
                 url,
             };
@@ -145,7 +145,7 @@ impl<'duck> Fetcher<'duck> {
     pub fn fetch_package_blob(&self, package: &types::PackageWithUrl) -> QuackResult<PathBuf> {
         let destination = self
             .download_cache_path
-            .join(package.id)
+            .join(package.name)
             .join(package.version.to_string());
 
         let blob_path = destination
@@ -157,17 +157,14 @@ impl<'duck> Fetcher<'duck> {
             return Ok(blob_path);
         }
 
-        if let Some(parent) = blob_path.parent() {
-            parent.mkdir(MkdirOptions::WithParents)?;
-        } else {
-            qp_bail_internal!("path without a parent")
-        }
+        let blob = destination.open_exclusive(Self::DEFAULT_BLOB_FILENAME, self.ctx)?;
+
         self.ducknest_client
-            .fetch_blob(package, &blob_path)
+            .fetch_blob(package, blob)
             .with_context(|| {
                 format!(
                     "while downloading a source of `{}` version `{}`",
-                    package.id, package.version
+                    package.name, package.version
                 )
             })?;
         Ok(blob_path)

@@ -60,7 +60,6 @@ impl BuildContext<'_, '_> {
 ///
 /// Right now, order of the vector is indeterministic.
 /// (To be precise, it's a normal DFS order).
-// @TODO: #2907 Make it deterministic? Or maybe sort the output by `id`/`name`?
 pub(crate) fn collect_packages(
     unit: &Unit,
     graph: &UnitGraph,
@@ -78,7 +77,7 @@ pub(crate) fn collect_packages(
         }
         visited.insert(current.clone());
         result.push(current.multipackage_schema_package(graph));
-        for dep_id in current.deps_by_unit_id() {
+        for dep_id in current.deps_sorted_by_unit_id() {
             let dep = graph.unit_for(*dep_id);
             dfs(dep, graph, result, visited);
         }
@@ -136,7 +135,7 @@ pub(crate) fn get_deps_outputs(
         result: &mut Vec<(Unit, PathBuf)>,
         visited: &mut HashSet<Unit>,
     ) {
-        for dep_id in current.deps_by_unit_id() {
+        for dep_id in current.deps_sorted_by_unit_id() {
             let dep = graph.unit_for(*dep_id);
             if visited.contains(dep) {
                 continue;
@@ -200,7 +199,8 @@ pub(crate) fn finished_builder_for_layout_and_profile(
         .set_artifacts_dir(&layout.compiler_artifacts())
         .set_c_std(profile.c_std)
         .set_opt_level(profile.opt_level)
-        .set_incremental(profile.incremental);
+        .set_incremental(profile.incremental)
+        .set_workers_count(bcx.jobs);
     builder
 }
 
@@ -228,7 +228,7 @@ pub(crate) fn compile_single_unit_with_schema(
     bcx: &BuildContext<'_, '_>,
     schema: multipackage_schema::MultiPackage,
 ) -> QuackResult<()> {
-    let name = unit.root_package().package().manifest().name();
+    let name = unit.root_package().package().name();
     let status = (|| {
         let unit_layout = layout.for_dependency(&unit.unique_name());
         let builder = finished_builder_for_layout_and_profile(bcx, &unit_layout, &bcx.profile);

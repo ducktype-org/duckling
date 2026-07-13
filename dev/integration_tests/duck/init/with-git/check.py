@@ -1,0 +1,21 @@
+import sys
+from pathlib import Path
+
+# Make ../../utilities.py import work
+sys.path.append(str(Path(__file__).resolve().parents[2]))
+
+from utilities import *
+
+root = project_root("foo")
+
+quackconfig = """metadata:
+  name: foo
+  version: '1.0.0'
+"""
+
+real_qp = (root / "quackconfig.yaml").read_text()
+assert_eq(quackconfig, real_qp)
+
+check_src_from_root(root)
+check_gitignore_from_root(root)
+check_is_git_root(root)

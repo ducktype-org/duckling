@@ -9,7 +9,6 @@
 #include <helios/queries/function_queries.hpp>
 #include <helios/queries/queries.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/type_interface.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
@@ -69,8 +68,8 @@ namespace compiler::repl {
 			auto synthetic_symbol = ctx.query<helios::defgen::QueryGeneratedSymbol>(
 				{ .name = base::StrID("__repl_expr_wrapper__"),
 			      .generated_symbol_data
-			      = helios::defgen::GeneratedSymbolData{ helios::defgen::GeneratedSymbolData::ReplExpressionWrapper{
-					  .counter = key.counter, .return_type = return_type } } }
+			      = helios::defgen::ReplExpressionWrapper{ .counter     = key.counter,
+			                                               .return_type = return_type } }
 			);
 
 			CORE_DEV_LOG(REPL, "Creating function declaration\n");
@@ -120,8 +119,7 @@ namespace compiler::repl {
 			auto synthetic_symbol = ctx.query<helios::defgen::QueryGeneratedSymbol>(
 				{ .name = base::StrID("__repl_instr_wrapper__"),
 			      .generated_symbol_data
-			      = helios::defgen::GeneratedSymbolData{ helios::defgen::GeneratedSymbolData::ReplInstructionWrapper{
-					  .counter = key.counter } } }
+			      = helios::defgen::ReplInstructionWrapper{ .counter = key.counter } }
 			);
 
 			CORE_DEV_LOG(REPL, "Creating function declaration\n");

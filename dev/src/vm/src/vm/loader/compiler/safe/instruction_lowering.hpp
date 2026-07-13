@@ -192,6 +192,7 @@ namespace vm::loader::compiler::safe::detail {
 			instr_case(high::Op_jmpIfNot_label, _) { is_control_flow = true; }
 			instr_case(high::Op_call_builtinfunc, _) { is_control_flow = true; }
 			instr_case(high::Op_call_cfunc, _) { is_control_flow = true; }
+			instr_case(high::Op_call_ffifunc, _) { is_control_flow = true; }
 			instr_case(high::Op_call_func, _) { is_control_flow = true; }
 			instr_case(high::Op_virtual_call_pptr_method, _) { is_control_flow = true; }
 			instr_default { is_control_flow = false; }
@@ -225,7 +226,6 @@ namespace vm::loader::compiler::safe::detail {
 				addLow<Op_mov_popq_popq>(i.dst, i.src);
 				addLow<Op_ext_imm>(vm::opargs::Immediate{ type_size });
 			}
-			instr_case(high::Op_mov_popq_imm, i) { addLow<Op_mov_popq_imm>(i.dst, i.src); }
 			instr_case(high::Op_mov_pste_pste, i) { addLow<Op_mov_bste_bste>(i.dst, i.src); }
 			instr_case(high::Op_mov_pfst_pfst, i) { addLow<Op_mov_bfst_bfst>(i.dst, i.src); }
 			instr_case(high::Op_add_p64_p64, i) { addLow<Op_add_p64_p64>(i.dst, i.src); }
@@ -455,6 +455,7 @@ namespace vm::loader::compiler::safe::detail {
 			instr_case(high::Op_call_func, i) { addLow<Op_call_func>(i.function); }
 			instr_case(high::Op_call_builtinfunc, i) { addLow<Op_call_builtinfunc>(i.function); }
 			instr_case(high::Op_call_cfunc, i) { addLow<Op_call_cfunc>(i.function); }
+			instr_case(high::Op_call_ffifunc, i) { addLow<Op_call_ffifunc>(i.function); }
 			instr_case(high::Op_set_threadctx, i) { addLow<Op_set_threadctx>(i.function); }
 			instr_case(high::Op_ret_tailcall_func, i) { addLow<Op_ret_tailcall_func>(i.function); }
 			instr_case(high::Op_ret, i) { addLow<Op_ret>(); }

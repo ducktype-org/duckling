@@ -1,0 +1,17 @@
+PreCase: |+
+  @{cd-tmp-dir}
+  @{duck-exe} init foo
+  echo "dependencies:
+    bar:
+      source:
+        path: ../bar" >> foo/quackconfig.yaml
+Tests:
+  nonexistent-local-dep:
+    Description: cannot sync a project with a nonexistent dependency
+    Cases:
+      sync:
+        test-cmd: duck -C foo sync
+        ExitCode: 1
+        Err:
+          Run: |+
+            echo "error: the path \`$DIT_TMP_DIR/bar\` is not a directory"

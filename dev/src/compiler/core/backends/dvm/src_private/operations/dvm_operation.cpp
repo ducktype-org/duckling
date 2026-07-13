@@ -179,19 +179,29 @@ namespace compiler::backend_vm::internal {
 		case Call: {
 			CORE_ASSERT(!instr.arguments.empty(), "Call expects at least 1 argument (the callable)");
 			auto func_literal = instr.arguments[0].get<lir::FunctionLiteral>();
-			auto dvm_call_info
-				= FunctionCallInfo::fromLirFunction(func_literal, ctx.program_context);
 
 			auto call_args = instr.arguments | std::views::drop(1)  // Drop the FunctionLiteral
 			               | std::views::transform([&](const auto& lir_arg) {
 								 return ctx.lowerLirValue(lir_arg);
 							 })
 			               | std::ranges::to<std::deque>();
+			auto dest = lower_opt_dest();
 
+
+			if_opt_some(func_literal.builtin_kind_opt, builtin) {
+				return BuiltinCallOperation{
+					.kind = builtin,
+					.args = std::move(call_args),
+					.dest = std::move(dest),
+				};
+			}
+
+			auto dvm_call_info
+				= FunctionCallInfo::fromLirFunction(func_literal, ctx.program_context);
 			return CallOperation{
 				.call_info = dvm_call_info,
 				.args      = std::move(call_args),
-				.dest      = lower_opt_dest(),
+				.dest      = std::move(dest),
 			};
 		}
 		case AddressOf: {
@@ -339,30 +349,20 @@ namespace compiler::backend_vm::internal {
 				.scope_flags = instr.scope_flags,
 			};
 		}
-		case BoxAlloc: {
-			CORE_ASSERT(
-				instr.arguments.size() == 1,
-				"BoxAlloc operation expects 1 argument, got: ",
-				instr.arguments.size()
-			);
-			return BoxAllocOperation{
-				.src  = lower_arg(instr.arguments[0]),
-				.dest = lower_opt_dest(),
-			};
-		}
-		case BoxFree: {
-			CORE_ASSERT(
-				instr.arguments.size() == 1,
-				"BoxAlloc operation expects 1 argument, got: ",
-				instr.arguments.size()
-			);
-			return BoxFreeOperation{
-				.src = lower_arg(instr.arguments[0]),
-			};
-		}
 		case Nop: {
 			// No instruction to generate, just skip.
 			return NoOperation{};
+		}
+		case ListPush:
+		case ListPop:
+		case ListFree: {
+			ctx.program_context.getActiveContext().value()->logInt(
+				makeBox<dia_int::NotYetImplementedCodeError>(
+					"Lists are not supported in DVM code generation yet."
+				)
+			);
+			query::throwFailed();
+			CORE_UNREACHABLE();
 		}
 		default:
 			CORE_PANIC("Invalid operation: ", base::enumToStr(operation));

@@ -10,6 +10,9 @@
 #include <query_framework/context/context.hpp>
 #include <query_framework/utils/query_failed_try.hpp>
 
+#include <functional>
+#include <type_traits>
+
 namespace compiler::helios {
 
 	namespace internal {
@@ -17,11 +20,18 @@ namespace compiler::helios {
 		/**
 		 * Helper function for pstForAll, that performs the actual recursion.
 		 */
-		template<typename ElementT, typename FunctionT>
+		template<typename ElementT, typename FunctionT, typename CutoffFunctionT>
 		[[nodiscard]]
 		base::OkBad pstForAllAux(
-			query::Context& ctx, pst::Access<ElementT> element, const FunctionT& function
+			query::Context&        ctx,
+			pst::Access<ElementT>  element,
+			const FunctionT&       function,
+			const CutoffFunctionT& cutoff_function
 		) {
+			// Check if we should stop recursion before running the function, to allow cutoff
+			// function to skip some branches entirely.
+			if (std::invoke(cutoff_function, element)) return base::OK;
+
 			if (element->getElementKind() == pst::ElementKind::Expand) {
 				auto expansion_result = ctx.query<QueryMacroExpansion>({
 					element.template dynamicCast<pst::Expand>().value(),
@@ -30,7 +40,7 @@ namespace compiler::helios {
 				if (expansion_result.hasFailed()) return base::BAD;
 
 				auto inner_result = internal::pstForAllAux(
-					ctx, expansion_result.valueOrPanic().unlock(ctx), function
+					ctx, expansion_result.valueOrPanic().unlock(ctx), function, cutoff_function
 				);
 
 				return inner_result;
@@ -50,31 +60,50 @@ namespace compiler::helios {
 					"View children should only contain valid element (no null ptrs)"
 				);
 
-				auto inner_result = internal::pstForAllAux(ctx, child_unlocked.value(), function);
+				auto inner_result
+					= internal::pstForAllAux(ctx, child_unlocked.value(), function, cutoff_function);
 				if (inner_result.isBad()) result = base::BAD;
 			}
 
 			return result;
 		}
 
+		/**
+		 * Default cutoff function for pstForAll, that never cuts off any branches.
+		 * This is needed to make CutoffFunctionT template parameter deduction possible
+		 */
+		struct CutoffFunctionTDefault final {
+			template<typename ElementT>
+			bool operator()(pst::Access<ElementT>) const noexcept {
+				return false;
+			}
+		};
 	}
 
 	/**
 	 * Runs given function for a PST element and all its subelements.
 	 * Performs recursive calls into macro expansions.
+	 * Skips subtrees for which the cutoff function returns true.
 	 *
 	 * @return If any query failed during the traversal, returns base::BAD. Otherwise, returns
 	 * base::OK.
 	 */
-	template<typename ElementT, typename FunctionT>
-	[[nodiscard]]
+	template<
+		typename ElementT,
+		typename FunctionT,
+		typename CutoffFunctionT = internal::CutoffFunctionTDefault>
+	requires std::is_invocable_r_v<void, FunctionT, pst::Access<ElementT>>
+	      && std::is_invocable_r_v<bool, CutoffFunctionT, pst::Access<ElementT>> [[nodiscard]]
 	base::CheckedOkBad pstForAll(
-		query::Context& ctx, pst::Access<ElementT> element, const FunctionT& function
+		query::Context&        ctx,
+		pst::Access<ElementT>  element,
+		const FunctionT&       function,
+		const CutoffFunctionT& cutoff_function = internal::CutoffFunctionTDefault{}
 	) {
 		base::OkBad result = base::OK;
 
 		auto with_failed_exception = query::runFuncWithQueryFailedHandling([&] {
-			result = internal::pstForAllAux(ctx, element, function);
+			result = internal::pstForAllAux(ctx, element, function, cutoff_function);
 		});
 		if (with_failed_exception.status().isBad()) return base::BAD;
 		return result;

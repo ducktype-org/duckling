@@ -13,7 +13,6 @@
 #include <frontend/pst_parser/elements/hierarchy/statements/using.hpp>
 #include <frontend/pst_parser/lang_parser_element.hpp>
 #include <frontend/pst_parser/pst_visitor.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios_private/hout_creation/desugaring/for.hpp>
 #include <helios_private/lookup/interface.hpp>
@@ -166,6 +165,7 @@ namespace compiler::helios {
 		case pst::ElementKind::ExprElement:
 		case pst::ElementKind::RoundGroupExpr:
 		case pst::ElementKind::CallList:
+		case pst::ElementKind::AtrArgList:
 			return ElementScopeKind::Transparent;
 
 		case pst::ElementKind::ExprHolder: {
@@ -492,21 +492,31 @@ namespace compiler::helios {
 				out.emplace_back(ctx.query<defgen::QueryGeneratedSymbol>({
 					.name = base::StrID("self"),
 					.generated_symbol_data
-					= defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::SelfParameter{
-						.method_symbol = ctx.query<QuerySymbolOfSTMT>(meth).valueOrThrow(),
-						.scope         = key } },
+					= defgen::SelfParameter{ .method_symbol
+				                             = ctx.query<QuerySymbolOfSTMT>(meth).valueOrThrow(),
+				                             .scope = key },
 				}));
 
 				output(std::move(out));
 			}
 
-			void visitDestructor(pst::Access<pst::Destructor>) override {
-				output(std::vector<SymID>{});
+			void visitDestructor(pst::Access<pst::Destructor> dtor) override {
+				// Scope of "T.destroy →()← = {}". A destructor has no parameters, only an
+				// implicit `self`.
+				std::vector<SymID> out;
+				out.emplace_back(ctx.query<defgen::QueryGeneratedSymbol>({
+					.name = base::StrID("self"),
+					.generated_symbol_data
+					= defgen::SelfParameter{ .method_symbol
+				                             = ctx.query<QuerySymbolOfSTMT>(dtor).valueOrThrow(),
+				                             .scope = key },
+				}));
+
+				output(std::move(out));
 			}
 
 			void visitCopyConstructor(pst::Access<pst::CopyConstructor> cctor) override {
-				// Scope of "fun →()← {}"
-
+				// Scope of "T.copy →(other)← = {}".
 				std::vector<SymID> out;
 				for (auto params: *cctor->getParams().unlock(ctx))
 					out.emplace_back(ctx.query<QuerySymbolOfSTMT>(params).valueOrThrow());

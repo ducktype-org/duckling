@@ -34,7 +34,7 @@ public:
 
 		// This test has some strange side effects. Putting it before `testErrorLogging` causes
 		// the tests to fail.
-		TESTER_ADD_TEST(testDuplicatedFunctionDeclaration);
+		TESTER_ADD_TEST(testDuplicatedDefinitions);
 
 		TESTER_ADD_TEST(testErrorLoggingExpandStatements);
 		TESTER_ADD_TEST(testErrorLoggingCyclicErrors);
@@ -125,7 +125,20 @@ private:
 				},
 				1
 			);
-			checkForErrorOnCompileModule(R"(fun a() = -true;)", { "No builtin unary operator" }, 1);
+			checkForErrorOnCompileModule(
+				R"(fun a() = -true;)", { "Call failed because no matching functions were found." }, 1
+			);
+			checkForErrorOnCompileModule(
+				R"(
+				fun main() -> i64 = {
+					var x: i64 = 0;
+					x++;
+					return 0;
+				}
+			)",
+				{ "Call failed because no matching functions were found." },
+				1
+			);
 		}
 
 		// ============================ Function calls ============================
@@ -165,7 +178,7 @@ private:
 					b(1,2,3);
 				}
 			)",
-				{ "no matching functions" },
+				{ "Call failed because no matching functions were found." },
 				1
 			);
 
@@ -360,6 +373,36 @@ private:
 				}
 			)",
 				{ "Type `f32` cannot be converted to type `i64`." },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				R"(
+				class MyClass {
+					x:i64 = 0;
+
+					MyClass.copy(other: const MyClass) = {
+						return MyClass(1);
+					}
+				}
+			)",
+				{ "A copy constructor's parameter must be a constant reference to its own class "
+			      "`MyClass`." },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				R"(
+				class MyClass {
+					x:i64 = 0;
+
+					MyClass.copy(other: const ref MyClass, a: i64) = {
+						return MyClass(1);
+					}
+				}
+			)",
+				{ "A copy constructor must declare exactly one parameter: a reference to the "
+			      "object being copied." },
 				1
 			);
 		}
@@ -590,6 +633,19 @@ private:
 				{ "Type `List` cannot be default initialized" },
 				1
 			);
+
+			checkForErrorOnCompileModule(
+				R"(
+				class Inner { non_defaultable: ref i64; }
+
+				fun main() -> i64 = {
+					var tup: (Inner, i64);
+					return 0;
+				}
+			)",
+				{ "Type `Tuple(Class Inner, i64)` cannot be default initialized" },
+				1
+			);
 		}
 
 
@@ -715,40 +771,6 @@ private:
 			checkForErrorOnCompileModule(
 				R"(
 				fun main() = {
-					var l: List[i64];
-					l += 1.5;
-				}
-			)",
-				{ "Type `f32` cannot be converted to type `i64`" },
-				1
-			);
-
-			checkForErrorOnCompileModule(
-				R"(
-				fun main() = {
-					var l: List[i64];
-					l -= "sth";
-				}
-			)",
-				{ "Type `const slice char` cannot be converted to type `u64`" },
-				1
-			);
-
-			checkForErrorOnCompileModule(
-				R"(
-				fun main() = {
-					var x = 10;
-					var length = len x;
-				}
-			)",
-				{ "No builtin unary operator `len` for type `i32`" },
-				1
-			);
-
-
-			checkForErrorOnCompileModule(
-				R"(
-				fun main() = {
 					var l1: List[i64];
 					var l2: List[f64] = l1;
 				}
@@ -760,20 +782,6 @@ private:
 
 		// ========================= Not-yet-implemented errors =========================
 		{
-			// Note: just remove the tests when the features
-			// are implemented.
-			checkForErrorOnCompileModule(
-				R"(
-				fun main() -> i64 = {
-					var x: i64 = 0;
-					x++;
-					return 0;
-				}
-			)",
-				{ "Feature not implemented", "Suffix" },
-				1
-			);
-
 			checkForErrorOnCompileModule(
 				R"(
 				fun main() -> i64 = {
@@ -876,19 +884,6 @@ private:
 				{ "Feature not implemented", "zero-sized classes" },
 				1
 			);
-
-			checkForErrorOnCompileModule(
-				R"(
-				class A { a: i64 = 1; }
-				fun main() -> i64 = {
-					var a: (i32, A);
-					return 0;
-				}
-			)",
-				{ "Feature not implemented", "Generating default constructors for", "tuple types" },
-				1
-			);
-
 
 			checkForErrorOnCompileModule(
 				R"(
@@ -1010,7 +1005,7 @@ private:
 				fun main() -> i64 = {
     				var nested: List[List[i32]];
     				var inner: List[i32];
-    				nested += inner;    
+    				nested.push(inner);    
     				return 0;
 				}
 			)",
@@ -1530,13 +1525,34 @@ private:
 		});
 	}
 
-	void testDuplicatedFunctionDeclaration() {
+	void testDuplicatedDefinitions() {
+		// Duplicated function.
 		checkForErrorOnCompileModule(
 			R"(
                 fun a() -> i64 = { return 1; }
                 fun a() -> i64 = { return 2; }
             )",
-			{ "Symbol 'a' is already defined." },
+			{ "Symbol 'a' is already defined.", "Previous declaration here." },
+			1
+		);
+
+		// Duplicated class.
+		checkForErrorOnCompileModule(
+			R"(
+                class T { x: i64 = 0; }
+                class T { x: i64 = 0; }
+            )",
+			{ "Symbol 'T' is already defined.", "Previous declaration here." },
+			1
+		);
+
+		// Duplicated global variable.
+		checkForErrorOnCompileModule(
+			R"(
+                var a: i64 = 123;
+                var a: i64 = 12;
+            )",
+			{ "Symbol 'a' is already defined.", "Previous declaration here." },
 			1
 		);
 	}

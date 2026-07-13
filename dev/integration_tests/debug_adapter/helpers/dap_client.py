@@ -23,6 +23,10 @@ class DAPTestClient:
             text=False,  
             bufsize=0    
         )
+    def start_session(self):
+        self.send_initialize()
+        self.send_configuration_done()
+        self.send_launch()
 
     def send_request(self, command: str, arguments: dict = None) -> int:
         if arguments is None:
@@ -45,6 +49,34 @@ class DAPTestClient:
         assigned_seq = self.current_seq
         self.current_seq += 1
         return assigned_seq
+
+    def send_initialize(self) -> int:
+        return self.send_request("initialize")
+
+    def send_launch(self) -> int:
+        return self.send_request("launch", {"program": self.program_name})
+
+    def send_set_breakpoints(self, file_path: str, lines: list[int]) -> int:
+        breakpoints_arg = [{"line": line} for line in lines]
+        return self.send_request("setBreakpoints", {
+            "source": {"path": file_path},
+            "breakpoints": breakpoints_arg
+        })
+
+    def send_configuration_done(self) -> int:
+        return self.send_request("configurationDone")
+
+    def send_continue(self) -> int:
+        return self.send_request("continue")
+    
+    def send_pause(self) -> int:
+        return self.send_request("pause")
+
+    def send_next(self) -> int:
+        return self.send_request("next")
+    
+    def send_evaluate(self, number) -> int:
+        return self.send_request("evaluate", {"expression": f"{number}", "context": "repl"})
 
     def read_message(self) -> dict or None:
         content_length = 0

@@ -1,7 +1,9 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::quackpack::core::solver::types_common::{ExpandedPackage, InternedLocation};
-use crate::quackpack::core::{FeatureName, Manifest, Version};
+use crate::StrId;
+use crate::quackpack::core::full_identity::FullIdentity;
+use crate::quackpack::core::{FeatureName, Manifest, Source, Version};
+use crate::quackpack::util::with_version::WithVersion;
 
 /// Type representing a request to get manifests for a single/multiple packages.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -10,10 +12,10 @@ pub enum ManifestsRequest {
     NotPinned(NotPinnedRequest),
 }
 
-/// Request to get manifests for all packages from a given location, satisfying given versions selector.
+/// Request to get manifests for all packages from a given source, satisfying given versions selector.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct NotPinnedRequest {
-    pub location: InternedLocation,
+    pub id: RequestIdentifier,
     pub versions: Option<Vec<Version>>,
     pub features: HashSet<FeatureName>,
 }
@@ -21,9 +23,16 @@ pub struct NotPinnedRequest {
 /// Request to get manifest for a particular package.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PinnedRequest {
-    pub location: InternedLocation,
+    pub id: RequestIdentifier,
     pub version: Version,
     pub features: HashSet<FeatureName>,
+}
+
+/// A common identifier of a request.
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
+pub struct RequestIdentifier {
+    pub name: StrId,
+    pub source: Source,
 }
 
 /// Type representing non-error results of a fetch.
@@ -42,17 +51,17 @@ pub enum FetchSuccess {
 /// Result of a successful fetch of a single package's manifest.
 #[derive(Debug)]
 pub struct PinnedSuccess {
-    pub origin_location: InternedLocation,
+    pub origin_id: RequestIdentifier,
     pub origin_version: Version,
-    pub expanded_package: ExpandedPackage,
+    pub answer_package: WithVersion<FullIdentity>,
     pub fetched_manifest: Box<Manifest>,
 }
 
-/// Result of a successful fetch of manifests of all packages from a location.
+/// Result of a successful fetch of manifests of all packages from a source.
 #[derive(Debug)]
 pub struct NotPinnedSuccess {
-    pub origin_location: InternedLocation,
-    pub fetched_manifests: HashMap<ExpandedPackage, Box<Manifest>>,
+    pub origin_id: RequestIdentifier,
+    pub fetched_manifests: HashMap<WithVersion<FullIdentity>, Box<Manifest>>,
 }
 
 /// Type representing a failed fetch.
@@ -65,12 +74,12 @@ pub enum FetchFailure {
 /// Failed fetch of a single package's manifest.
 #[derive(Debug)]
 pub struct PinnedFailure {
-    pub origin_location: InternedLocation,
+    pub origin_id: RequestIdentifier,
     pub origin_version: Version,
 }
 
-/// Failed fetch of manifests of all packages from a location.
+/// Failed fetch of manifests of all packages from a source.
 #[derive(Debug)]
 pub struct NotPinnedFailure {
-    pub origin_location: InternedLocation,
+    pub origin_id: RequestIdentifier,
 }

@@ -221,8 +221,11 @@ impl<'de> Deserialize<'de> for StrId {
     where
         D: serde::Deserializer<'de>,
     {
-        let str = <&'de str>::deserialize(deserializer)?;
-        Ok(Self::from(str))
+        serde_untagged::UntaggedEnumVisitor::new()
+            .expecting("a string")
+            .string(|string| Ok(string.into()))
+            .borrowed_str(|string| Ok(string.into()))
+            .deserialize(deserializer)
     }
 }
 

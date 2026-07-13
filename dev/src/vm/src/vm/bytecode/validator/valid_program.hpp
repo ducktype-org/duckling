@@ -1,10 +1,15 @@
 #pragma once
 
+#include "flag_context.hpp"
+
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/type_of_data.hpp>
 #include <vm/bytecode/validator/valid_function.hpp>
 #include <vm/bytecode/validator/valid_type/type_context.hpp>
+#include <vm/core/native/dynamic_library.hpp>
 #include <vm/utils/stable_obj_id_name_map.hpp>
+
+#include <memory>
 
 namespace vm::code {
 	/**
@@ -39,7 +44,8 @@ namespace vm::code {
 		 * @note If the newly injected code were to create an unvalid state,
 		 * an exception of ValidationError base will be thrown.
 		 */
-		ValidProgram tryInsertCode(const CodeCollection& collection) const;
+		ValidProgram tryInsertCode(const CodeCollection& collection, api::ExecutionConfig config)
+			const;
 
 		const valid_type::ValidTypeMap& types() const;
 
@@ -51,11 +57,26 @@ namespace vm::code {
 
 		const ObjIdNameMap<ExternalCFunction>& extCFunctions() const;
 
+		const ObjIdNameMap<FFIFunction>& ffiFunctions() const;
+
+		const std::vector<std::pair<std::string, std::shared_ptr<native::DynamicLibrary>>>& objectFiles(
+		) const;
+
 	private:
 		ObjIdNameMap<valid_function::ValidFunction> function_map;
 		ObjIdNameMap<ExternalCFunction>             ext_c_function_map;
+		ObjIdNameMap<FFIFunction>                   ffi_function_map;
 		ObjIdNameMap<GlobalData>                    globals_map;
 		TypeContext                                 type_context;
+		FlagContext                                 flag_context;
+
+		/**
+		 * @brief Shared objects declared with `ffi object`, loaded into the process and keyed by
+		 * the exact string passed to `dlopen`. Kept in insertion order so symbol resolution is
+		 * deterministic (the earliest loaded object wins, like a linker). The library handles are
+		 * shared between program copies and live for the lifetime of the program.
+		 */
+		std::vector<std::pair<std::string, std::shared_ptr<native::DynamicLibrary>>> object_files;
 
 		/**
 		 * @brief Contains a mapping from function name to function signature for all functions
@@ -72,7 +93,7 @@ namespace vm::code {
 		 * base is thrown. This means this object will contain invalid code and mustn't be used! If
 		 * you don't want to lose the state, place use `tryInsertCode`.
 		 */
-		void insertCode(const CodeCollection& collection);
+		void insertCode(const CodeCollection& collection, api::ExecutionConfig config);
 
 		/**
 		 * @brief Inserts types. May invalidate state.
@@ -92,12 +113,27 @@ namespace vm::code {
 		 * function must not contain any dead-code, but Duckling's compiler, as of 21.05.2025, may
 		 * produce dead code.
 		 */
-		void insertFunctions(const std::vector<Function>& new_functions);
+		void insertFunctions(const std::vector<Function>& new_functions, api::ExecutionConfig config);
 
 		/**
 		 * @brief Inserts an ExternalCFunction. May invalidate state.
 		 * Cannot insert multiple ExternalCFunctions with the same name.
 		 */
 		void insertExternalCFunctions(const std::vector<ExternalCFunction>& new_functions);
+
+		/**
+		 * @brief Inserts an FFIFunction. May invalidate state.
+		 * Cannot insert multiple FFIFunctions with the same name. Signature types must be
+		 * primitives of size 1, 2, 4 or 8, the builtin `cptr` type, or data structures whose
+		 * every field is such a primitive or `cptr`. Resolves each function's native symbol from
+		 * the loaded object files.
+		 */
+		void insertFFIFunctions(const std::vector<FFIFunction>& new_functions);
+
+		/**
+		 * @brief Loads new shared objects into the process. May invalidate state.
+		 * Object files already loaded (by the same dlopen string) are skipped.
+		 */
+		void insertObjectFiles(const std::vector<std::string>& new_files);
 	};
 }

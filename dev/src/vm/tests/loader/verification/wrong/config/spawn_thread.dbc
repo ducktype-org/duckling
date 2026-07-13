@@ -1,0 +1,12 @@
+# main spawns a thread; under single_thread the multithreading effect must be rejected.
+function worker {} -> {} {
+	ret;
+}
+
+function main {  } -> { i64 } {
+	init_pany_type		thread_id, i64;
+	set_threadctx		worker;
+	call_builtinfunc	builtin_start_thread;
+	deinit;
+	ret;
+}

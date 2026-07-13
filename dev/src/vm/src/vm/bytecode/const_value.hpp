@@ -72,6 +72,14 @@ namespace vm::code {
 			return result;
 		}
 
+		static ConstantImmediate fromU64AndSize(u64 value, Bytes size) {
+			CORE_ASSERT(size.asInt() <= 8, "Size must be <= 8 bytes");
+			ConstantImmediate result;
+			result.size = size;
+			std::memcpy(result.content.data(), &value, size.asInt());
+			return result;
+		}
+
 		void acceptVisitor(ConstVisitor&) const final;
 	};
 
@@ -123,6 +131,10 @@ namespace vm::code {
 
 		static ConstantValue fromImmediate(ConstantImmediate immediate) {
 			return { makeBox<ConstantImmediate>(std::move(immediate)) };
+		}
+
+		static ConstantValue fromU64AndSize(u64 value, Bytes size) {
+			return fromImmediate(ConstantImmediate::fromU64AndSize(value, size));
 		}
 
 		template<std::derived_from<ConstantBase> DataTypeElement>
