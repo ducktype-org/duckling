@@ -16,6 +16,30 @@ rather than a syntax tree keeps the formatter simple, fast (no query state, no
 driver), and robust against incomplete or in-progress code — but it also bounds
 what the formatter can know. See *Limitations* below.
 
+### Example
+
+With `max_line_length = 20`, a call that no longer fits explodes one element per
+line, and a trailing comment stays attached to its element:
+
+```
+foo(aaaa, # first
+bbbb, cccc);
+```
+
+becomes
+
+```
+foo(
+	aaaa, # first
+	bbbb,
+	cccc
+);
+```
+
+Method chains break before each `.` that follows a call, long expressions break
+at binary operators, and over-long comments re-flow — see the golden tests in
+`tests/formatter_test.cpp` for the full behavior catalogue.
+
 ### Round-trip safety
 
 Because the whole token stream (comments included) is preserved, the result is
@@ -115,9 +139,18 @@ prevailing Duckling style.
 | `max_empty_lines`       | `2`     | max consecutive blank lines kept between statements  |
 | `space_around_operators`| `true`  | `a + b` vs `a+b`                                      |
 
-`FormatConfig::fromJson` reads the same options from JSON (keys `indentStyle`,
-`indentWidth`, `maxLineLength`, `maxEmptyLines`, `spaceAroundOperators`);
-unknown keys are ignored, missing keys keep their default.
+`FormatConfig::fromJson` reads the same options from JSON; unknown keys are
+ignored, missing keys keep their default:
+
+```json
+{
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "maxLineLength": 80,
+    "maxEmptyLines": 1,
+    "spaceAroundOperators": true
+}
+```
 
 ## The `duckfmt` CLI
 
