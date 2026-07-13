@@ -125,7 +125,7 @@ namespace compiler::helios::templates {
 
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
 			// Most template heavy lifting happens here, and in usage of pst root data.
-			
+
 			CORE_ASSERT(
 				kind(key.template_sym_id) == SymbolKind::Template, "SymID is not a Template"
 			);
