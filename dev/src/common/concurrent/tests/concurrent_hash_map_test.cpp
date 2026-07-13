@@ -404,7 +404,7 @@ private:
 
 		threads.reserve(thread_count);
 		for (u64 i = 0; i < thread_count; i++) {
-			std::minstd_rand rng(42 * i);
+			std::minstd_rand rng(static_cast<std::minstd_rand::result_type>(42 * i));
 
 			threads.emplace_back([&map, &erase_count, rng]() mutable {
 				for (u64 j = 0; j < OPS_PER_THREAD; j++) {
