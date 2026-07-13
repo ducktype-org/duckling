@@ -49,7 +49,7 @@ impl PackageData {
                     .versions()
                     .first()
                     .copied()
-                    .context_internal("Pinned dependency without version")?;
+                    .context_internal("pinned dependency without version")?;
                 result.0.push(ManifestsRequest::Pinned(PinnedRequest {
                     id: RequestIdentifier {
                         source: *source,
