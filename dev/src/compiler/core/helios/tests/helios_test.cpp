@@ -3605,7 +3605,7 @@ private:
 			// baked to an immutable `i64` constant.
 			auto number_signature
 				= templates::getTemplateDeclarationSignature(ctx, number_template).valueOrPanic();
-			
+
 			ASSERT_EQUAL(number_signature.parameters.size(), 1u);
 			ASSERT_EQUAL_PRINT(number_signature.parameters.at(0).name, base::StrID("a"));
 			ASSERT_EQUAL(
@@ -3620,7 +3620,8 @@ private:
 				const templates::TemplateBakeKey key{
 					.template_sym_id = number_template,
 					.template_arguments
-					= { compiler::ctv::CompileTimeValue(compiler::numeric_value::NumericValue(value)) },
+					= { compiler::ctv::CompileTimeValue(compiler::numeric_value::NumericValue(value)
+					) },
 				};
 				return ctx.query<templates::QueryBakeTemplateSymID>(key).valueOrThrow();
 			};
