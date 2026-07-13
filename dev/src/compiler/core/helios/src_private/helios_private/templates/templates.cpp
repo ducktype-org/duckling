@@ -124,26 +124,8 @@ namespace compiler::helios::templates {
 		}
 
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
-			// most heavy lifting will happen here, and in usage of pst root data
-
-			// outline
-			// 1. Assert template symbol ID is valid and is indeed a template
-			// 2. Assert template arguments are valid for the template (count, types, etc.)
-			// 3. prepare TemplateInstantiationData
-			// 4. generate PST-copy with clone machinery and custom data for template arguments
-			//    this design is not perfect, but it will fly for now, we will have to change it
-			//    once we remove root_data in favor of proper PST nodes with data, but it will
-			//    require more work, so let's do it later
-			// 5. generate symbol ID for the baked template, and return it, linking the new pst-root
-			// as its pst-data
-			//
-			// NOTE: we will likely not generate template parameter constants here,
-			// but rather in query scopes. Although, we could generate them here and link them to
-			// the baked symbol ID / TemplateInstantiationData
-			//
-			// NOTE: it might be good to put TemplateInstantiationData in symbol data,
-			// and put just SymID in PST root data
-
+			// Most template heavy lifting happens here, and in usage of pst root data.
+			
 			CORE_ASSERT(
 				kind(key.template_sym_id) == SymbolKind::Template, "SymID is not a Template"
 			);
