@@ -38,6 +38,7 @@
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
+#include <lexer/token_common.hpp>
 #include <query_framework/query_errors.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 
@@ -206,6 +207,32 @@ namespace compiler::helios {
 		}
 	}
 
+	/**
+	 * @brief Deduces the operatoriness of a user-declared function/method from its name and arity
+	 * (parameter count, including an implicit `self` for methods).
+	 *
+	 * @note There is no dedicated syntax yet to declare fixity (prefix vs. suffix), so a
+	 * single-parameter operator name is assumed to be a prefix operator. Suffix stays unreachable
+	 * from user code until that syntax exists.
+	 * @TODO: #3131 Extract fixity in unary operators from keywords used in PST.
+	 */
+	static HOUTFunctionDeclaration::Operatoriness operatorinessFromNameAndArity(
+		base::StrID name, u64 arity
+	) {
+		using Operatoriness = HOUTFunctionDeclaration::Operatoriness;
+
+		if (!lexer::isOperatorSymbolString(name.strView())) return Operatoriness::None;
+
+		switch (arity) {
+		case 1:
+			return Operatoriness::Prefix;
+		case 2:
+			return Operatoriness::Infix;
+		default:
+			return Operatoriness::None;
+		}
+	}
+
 	struct IMPLEMENT_QUERY(QueryDeclOfFun, query::QResult<HOUTFunctionDeclaration>) {
 		struct DeclarationVisitor final: public pst::PstVisitorPanicky {
 			query::Context& ctx;
@@ -288,21 +315,25 @@ namespace compiler::helios {
 			// @TODO: #1029 make failure more explicit
 			void visitFun(pst::Access<pst::Fun> stmt) final {
 				// @TODO: #1029 rest, flags, attributes, etc
-				emplaceDeclaration(
-					stmt->getParams(), stmt->getRet(), HOUTFunctionDeclaration::Operatoriness::None
+				const auto operatoriness = operatorinessFromNameAndArity(
+					name(original_symbol), stmt->getParams().unlock(ctx)->size()
 				);
+				emplaceDeclaration(stmt->getParams(), stmt->getRet(), operatoriness);
 			}
 
 			void visitFunDecl(pst::Access<pst::FunDecl> stmt) final {
-				emplaceDeclaration(
-					stmt->getParams(), stmt->getRet(), HOUTFunctionDeclaration::Operatoriness::None
+				const auto operatoriness = operatorinessFromNameAndArity(
+					name(original_symbol), stmt->getParams().unlock(ctx)->size()
 				);
+				emplaceDeclaration(stmt->getParams(), stmt->getRet(), operatoriness);
 			}
 
 			void visitMethod(pst::Access<pst::Method> stmt) final {
-				emplaceDeclaration(
-					stmt->getParams(), stmt->getRet(), HOUTFunctionDeclaration::Operatoriness::None
+				// +1 for the implicit `self` parameter.
+				const auto operatoriness = operatorinessFromNameAndArity(
+					name(original_symbol), stmt->getParams().unlock(ctx)->size() + 1
 				);
+				emplaceDeclaration(stmt->getParams(), stmt->getRet(), operatoriness);
 
 				const auto  self_scope  = ctx.query<QueryPrimaryCodeScopeFor>(stmt);
 				const SymID self_symbol = ctx.query<defgen::QueryGeneratedSymbol>({
