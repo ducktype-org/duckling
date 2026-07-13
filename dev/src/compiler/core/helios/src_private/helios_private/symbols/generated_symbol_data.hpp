@@ -79,6 +79,26 @@ namespace compiler::helios::defgen {
 		base::Bit256 queryUnstablePerfectHash() const;
 	};
 
+	/**
+	 * Represents a compiler-generated box allocation/deallocation builtin, for a specific pointee
+	 * type.
+	 *
+	 * These are declaration-only functions. Implementation is provided by the backends.
+	 */
+	struct BoxBuiltin final {
+		enum class Kind {
+			Alloc,  //< `box_alloc(value: T) -> box T` - allocates sizeof(`T`), move `value` into it
+			        // and return the owning `box`.
+			Free,   //< `box_free(b: box T)` - release the storage owned by the box.
+		};
+
+		tsh::AbstractType pointee_type;  // The `T` in `box T`.
+		BoxBuiltin::Kind  kind;
+
+		[[nodiscard]]
+		base::Bit256 queryUnstablePerfectHash() const;
+	};
+
 	struct GeneratedConstant final {
 		ctv::CompileTimeValue value;
 
@@ -234,11 +254,12 @@ namespace compiler::helios::defgen {
 		base::Bit256 queryUnstablePerfectHash() const;
 	};
 
-#define GENERATED_SYMBOL_SEMANTICS_LIST                                                          \
-	defgen::Constructor, defgen::Method, defgen::BuiltinOperator, defgen::Parameter,             \
-		defgen::SelfParameter, defgen::Field, defgen::GeneratedFunctionVariable,                 \
-		defgen::ControlFlowLocal, defgen::ReplExpressionWrapper, defgen::ReplInstructionWrapper, \
-		defgen::ScriptMainWrapper, defgen::GeneratedConstant
+#define GENERATED_SYMBOL_SEMANTICS_LIST                                                           \
+	defgen::Constructor, defgen::Method, defgen::BuiltinOperator, defgen::BoxBuiltin,             \
+		defgen::Parameter, defgen::SelfParameter, defgen::Field,                                  \
+		defgen::GeneratedFunctionVariable, defgen::ControlFlowLocal,                              \
+		defgen::ReplExpressionWrapper, defgen::ReplInstructionWrapper, defgen::ScriptMainWrapper, \
+		defgen::GeneratedConstant
 
 	using GeneratedSymbolDataVariant = std::variant<GENERATED_SYMBOL_SEMANTICS_LIST>;
 

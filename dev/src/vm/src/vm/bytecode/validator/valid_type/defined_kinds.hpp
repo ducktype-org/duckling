@@ -104,6 +104,9 @@ namespace vm::code::valid_type {
 		struct DefinedStructure final {
 			std::vector<DefinedField> field_definitions;
 
+			/// Whether fields are laid out without alignment padding.
+			bool packed = false;
+
 			base::Optional<InheritanceDefinitionData> forwarded_inheritance_data;
 		};
 
