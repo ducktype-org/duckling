@@ -43,6 +43,11 @@ namespace compiler::tsh {
 			Other,
 		};
 
+		enum class SpecialKind {
+			ToString,
+			None
+		};
+
 	private:
 		/**
 		 * @brief The symbol corresponding to this element.
@@ -91,7 +96,7 @@ namespace compiler::tsh {
 			const AbstractType            source,
 			const u32                     declaration_order,
 			const InterfaceElementKind    kind,
-			const ClassMemberVisibility   visibility
+			const ClassMemberVisibility   visibility,
 		):
 			  symbol(symbol),
 			  source(source),
@@ -165,6 +170,14 @@ namespace compiler::tsh {
 		[[nodiscard]]
 		ClassMemberVisibility getVisibility() const {
 			return visibility;
+		}
+
+		/**
+		 * Get the symbol name of the element.
+		 */
+		[[nodiscard]]
+		base::StrID name() const {
+			return helios::name(symbol);
 		}
 
 		/**
