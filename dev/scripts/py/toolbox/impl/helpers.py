@@ -1,6 +1,7 @@
 from typing import NoReturn
 import click
 import pathlib
+import platform
 import re
 import shutil
 import subprocess as sp
@@ -355,6 +356,10 @@ def should_add_linker_flags(linker: str):
 
 def detect_available_linker():
     """Detect and return the best available linker (mold > lld > default)"""
+    # macOS links Mach-O objects, which mold and lld do not support; only the system linker
+    # (ld64, selected by "default") works there.
+    if platform.system() == "Darwin":
+        return "default"
     if shutil.which("mold") is not None:
         return "mold"
     # Check for LLD (can be named 'lld' or 'ld.lld' depending on the system)
