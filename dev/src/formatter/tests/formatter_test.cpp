@@ -25,7 +25,7 @@ namespace {
 		auto token_source
 			= tokenizer::makeTokenSource(fs::FileManager::createRandomVirtualFile(source));
 		token_source->tokenize(/*keep_comments=*/true);
-		return formatter::formatTokens(token_source->getTokenData(), config, source);
+		return formatter::formatTokens(token_source->getTokenData(), config);
 	}
 
 	/**
@@ -133,6 +133,16 @@ public:
 		TESTER_ADD_TEST(testTrailingComment);
 		TESTER_ADD_TEST(testBlockCommentInline);
 		TESTER_ADD_TEST(testCommentWrapIdempotent);
+		TESTER_ADD_TEST(testMixedCommentPrefixReflow);
+		TESTER_ADD_TEST(testTrailingCommentReflow);
+
+		// Comments inside bracket groups.
+		TESTER_ADD_TEST(testCommentInExplodedGroup);
+		TESTER_ADD_TEST(testStandaloneCommentInGroup);
+		TESTER_ADD_TEST(testCommentForcesExplosion);
+		TESTER_ADD_TEST(testCommentInCommalessGroup);
+		TESTER_ADD_TEST(testBlockCommentInGroupStaysFlat);
+		TESTER_ADD_TEST(testDeepNestingStress);
 
 		// Empty line tests.
 		TESTER_ADD_TEST(testEmptyLinesPreserved);
@@ -722,13 +732,14 @@ fun f() = {
 	}
 
 	void testWrapCommentInBlock() {
-		// Continuation lines keep the indentation of the comment.
+		// Continuation lines keep the indentation of the comment. The tab indent counts as
+		// indent_width visual columns, so the wrap point honors what an editor shows.
 		check(
 			"fun f() = {# explanation of the tricky part of this code\nx = 1;}",
 			golden(R"(
 fun f() = {
-	# explanation of the tricky
-	# part of this code
+	# explanation of the
+	# tricky part of this code
 	x = 1;
 }
 )"),
@@ -808,6 +819,113 @@ b = 2;
 			const auto once = fmt(sample);
 			ASSERT_EQUAL_PRINT(once, fmt(once));
 		}
+	}
+
+	void testMixedCommentPrefixReflow() {
+		// Continuation lines repeat the full prefix whatever its length.
+		check(
+			"### three hash comment that is long enough to need reflowing",
+			golden(R"(
+### three hash comment that is
+### long enough to need
+### reflowing
+)"),
+			narrowConfig(30)
+		);
+	}
+
+	void testTrailingCommentReflow() {
+		// An over-long comment trailing a statement re-flows; continuations start at the
+		// statement's indentation.
+		check(
+			"a = 1; # a trailing comment so long that it does not fit on the statement line",
+			golden(R"(
+a = 1; # a trailing comment so long that
+# it does not fit on the statement line
+)"),
+			narrowConfig(40)
+		);
+	}
+
+	/** A line comment between arguments stays with its element when the group explodes. */
+	void testCommentInExplodedGroup() {
+		const std::string_view source = "foo(aaaa, # first\nbbbb, cccc);";
+		check(
+			source,
+			golden(R"(
+foo(
+	aaaa, # first
+	bbbb,
+	cccc
+);
+)"),
+			narrowConfig(20)
+		);
+
+		// The comment must not swallow the following element on re-tokenization.
+		ASSERT_EQUAL(signatureOf(source) == signatureOf(fmt(source, narrowConfig(20))), true);
+		const auto once = fmt(source, narrowConfig(20));
+		ASSERT_EQUAL_PRINT(once, fmt(once, narrowConfig(20)));
+	}
+
+	void testStandaloneCommentInGroup() {
+		// A comment on its own source line keeps its own line inside the exploded group.
+		check("foo(aaaa,\n# pick wisely\nbbbb);", golden(R"(
+foo(
+	aaaa,
+	# pick wisely
+	bbbb
+);
+)"));
+	}
+
+	void testCommentForcesExplosion() {
+		// The group fits the default line length, but a line comment can never render inline.
+		check("foo(a, # note\nb);", golden(R"(
+foo(
+	a, # note
+	b
+);
+)"));
+	}
+
+	void testCommentInCommalessGroup() {
+		const std::string_view source = "foo(aaaa # why\n);";
+		check(source, golden(R"(
+foo(
+	aaaa # why
+);
+)"));
+		ASSERT_EQUAL(signatureOf(source) == signatureOf(fmt(source)), true);
+	}
+
+	void testBlockCommentInGroupStaysFlat() {
+		// A `#{ ... #}` comment does not end its line, so the group stays inline.
+		check("foo(a, #{ ok #} b);", "foo(a, #{ ok #} b);\n");
+	}
+
+	void testDeepNestingStress() {
+		const auto             config = narrowConfig(20);
+		const std::string_view source = "x = f(g(h(aaaa, bbbb), cccc), dddd);";
+		check(
+			source,
+			golden(R"(
+x = f(
+	g(
+		h(
+			aaaa,
+			bbbb
+		),
+		cccc
+	),
+	dddd
+);
+)"),
+			config
+		);
+		ASSERT_EQUAL(signatureOf(source) == signatureOf(fmt(source, config)), true);
+		const auto once = fmt(source, config);
+		ASSERT_EQUAL_PRINT(once, fmt(once, config));
 	}
 
 	void testCommentWrapIdempotent() {

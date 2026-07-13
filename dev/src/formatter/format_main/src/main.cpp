@@ -76,8 +76,7 @@ namespace {
 			return 1;
 		}
 
-		const auto formatted
-			= formatter::formatTokens(token_source->getTokenData(), format_config, source_view);
+		const auto formatted = formatter::formatTokens(token_source->getTokenData(), format_config);
 
 		if (options.isFlag("check")) {
 			if (formatted == source_view) return 0;

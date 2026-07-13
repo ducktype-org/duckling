@@ -28,7 +28,10 @@ namespace formatter {
 		/** Indent with tabs or spaces. */
 		IndentStyle indent_style = IndentStyle::Tab;
 
-		/** Number of spaces per indentation level (only used when indent_style == Space). */
+		/**
+		 * Visual columns per indentation level: the number of spaces rendered when
+		 * indent_style == Space, and the width a tab counts for against max_line_length.
+		 */
 		u32 indent_width = 4;
 
 		/**
