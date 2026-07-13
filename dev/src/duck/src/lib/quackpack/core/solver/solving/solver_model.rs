@@ -96,7 +96,7 @@ impl<'a> SolverModel<'a, ProblemCreated> {
                 "Package variable was not added to the model before retrieval attempt",
             ),
             Some(feature) => {
-                let feature_to_var_map = self.package_to_feature_vars.get(&pkg).context_internal("Package and feature variable was not added to the model before retrieval attempt")?;
+                let feature_to_var_map = self.package_to_feature_vars.get(&pkg).context_internal("package and feature variable was not added to the model before retrieval attempt")?;
                 feature_to_var_map.get(&feature).cloned().context_internal("Package with feature variable was not added to the model before retrieval attempt")
             }
         }
