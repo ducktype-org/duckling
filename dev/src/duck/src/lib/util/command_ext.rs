@@ -9,8 +9,6 @@ use itertools::Itertools;
 use crate::QuackResult;
 #[cfg(not(windows))]
 use crate::QuackResultContext;
-#[cfg(windows)]
-use crate::qp_err;
 
 /// Adds a portable [`exec_replace`](CommandExt::exec_replace) method to the [`Command`].
 pub trait CommandExt {
@@ -49,9 +47,9 @@ impl CommandExt for Command {
         }
         unsafe {
             if SetConsoleCtrlHandler(Some(handler), TRUE) == FALSE {
-                return Err(qp_err!(io::Error::other(
+                return Err(io::Error::other(
                     "failed to overwrite ctrl-c handler"
-                )));
+                ).into());
             }
         }
         let status = self.spawn()?.wait()?;
