@@ -3594,9 +3594,9 @@ private:
 		ASSERT_EQUAL(3, getConstValueAs<i64>("three_1", root_scope));
 		ASSERT_EQUAL(3, getConstValueAs<i64>("three_2", root_scope));
 
-		const auto number_template   = getChain("Number", root_scope).back();
+		const auto number_template = getChain("Number", root_scope).back();
 		ASSERT_EQUAL(kind(number_template), compiler::helios::SymbolKind::Template);
-		
+
 		query::utils::withContextDo([&](query::Context& ctx) {
 			// namespace templates = compiler::helios::templates;
 
@@ -3687,7 +3687,11 @@ private:
 					break;
 				}
 			}
-			assertTrue(found, std::string("Symbol was not found in its scope: ") + compiler::helios::name(symbol).str());
+			assertTrue(
+				found,
+				std::string("Symbol was not found in its scope: ")
+					+ compiler::helios::name(symbol).str()
+			);
 		}
 	}
 };

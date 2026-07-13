@@ -53,15 +53,15 @@ namespace compiler::helios::templates {
 	 */
 	struct TemplateBakePSTLinkedData final {
 		pst::AccessLocked<pst::LangElement> pst_parent_element;
-		
+
 		struct PostponedData final {
 			/**
 			 * @brief The baked symbol ID of the template.
 			 */
 			SymID baked_symbol;
-			
+
 			/**
-			 * @brief The symbols for the template arguments. 
+			 * @brief The symbols for the template arguments.
 			 */
 			std::vector<SymID> template_arguments_symbols;
 		};
@@ -73,10 +73,11 @@ namespace compiler::helios::templates {
 		/**
 		 * @TODO: #3099 Implementation of this is a bit hacky, as it is set by the bake template
 		 * query after the PST is baked and used in other queries already. This could be changed if
-		 * template_arguments_symbols / creation of the baked SymID didn't required a scope to be created.
+		 * template_arguments_symbols / creation of the baked SymID didn't required a scope to be
+		 * created.
 		 *
-		 * @note: We use raw pointer + custom deleter in this SharedBox to delete the PostponedData, because we can't use unique_ptr inside
-		 * atomic.
+		 * @note: We use raw pointer + custom deleter in this SharedBox to delete the PostponedData,
+		 * because we can't use unique_ptr inside atomic.
 		 */
 		mutable SharedBox<std::atomic<PostponedData*>> postponed_data;
 	};

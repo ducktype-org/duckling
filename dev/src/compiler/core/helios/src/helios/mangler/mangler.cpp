@@ -301,9 +301,9 @@ namespace compiler::helios::mangler {
 											template_bake_data_any
 										);
 									for (const auto& bake_argument:
-									     template_bake_data.postponed_data->load(
-											 std::memory_order_acquire
-										 )->template_arguments_symbols) {
+									     template_bake_data.postponed_data
+									         ->load(std::memory_order_acquire)
+									         ->template_arguments_symbols) {
 										// @TODO: #2607 This is a mock
 										auto value
 											= ctx.query<helios::QueryConstValueOf>(bake_argument)

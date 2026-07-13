@@ -591,12 +591,11 @@ namespace compiler::helios {
 						auto proper_data = base::anyCast<templates::TemplateBakePSTLinkedData>(
 							template_parent.template_bake_data
 						);
-						Ref postponed_data = proper_data.postponed_data->load(std::memory_order_acquire);
+						Ref postponed_data
+							= proper_data.postponed_data->load(std::memory_order_acquire);
 
-						for (const auto& param:
-						     postponed_data->template_arguments_symbols) {
+						for (const auto& param: postponed_data->template_arguments_symbols)
 							out.emplace_back(param);
-						}
 						out.emplace_back(postponed_data->baked_symbol);
 					}
 					variant_default {
