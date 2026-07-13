@@ -1,13 +1,9 @@
 #include "templates.hpp"
 
-#include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>  // PR relax it?
 #include <frontend/pst_parser/elements/hierarchy/declarations/template_stmt.hpp>
-#include <frontend/pst_parser/elements/hierarchy/lists/all_lists.hpp>                // PR relax it?
-#include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>  //PR relax it?
 #include <frontend/pst_parser/lang_parser_context.hpp>
 #include <frontend/pst_parser/pst.hpp>
 #include <helios/symbols/symbol_id.hpp>
-#include <helios/tsh/deductions.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/pst_layer/pst_parent.hpp>
@@ -79,7 +75,7 @@ namespace compiler::helios::templates {
 	struct TemplateBakeStorage final {
 		SymID baked_template_sym_id;
 
-		// TODO: add custom pst element todo issue (link root pst data one)
+		// @TODO: #3071 see if anything will have to be changed here
 		pst::PST<pst::TemplateStmt> baked_template_pst;
 	};
 
