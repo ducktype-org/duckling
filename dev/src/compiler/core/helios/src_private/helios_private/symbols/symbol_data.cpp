@@ -30,7 +30,15 @@ namespace compiler::helios {
 		}
 
 		base::Bit256 BuiltinOperator::queryUnstablePerfectHash() const {
-			return { operator_type.queryUnstablePerfectHash() };
+			return hashing::justHash<hashing::SHA256>(
+				operator_type.queryUnstablePerfectHash(), static_cast<u64>(operatoriness)
+			);
+		}
+
+		base::Bit256 BoxBuiltin::queryUnstablePerfectHash() const {
+			return hashing::justHash<hashing::SHA256>(
+				pointee_type.queryUnstablePerfectHash(), static_cast<u64>(kind)
+			);
 		}
 
 		base::Bit256 Parameter::queryUnstablePerfectHash() const {
@@ -107,7 +115,7 @@ namespace compiler::helios {
 	) {
 		SymbolKind kind{};
 		variant_match(generated_data) {
-			variant_case_novalue(defgen::BuiltinOperator) {
+			variant_case_novalue(defgen::BuiltinOperator, defgen::BoxBuiltin) {
 				kind = SymbolKind::FunctionDeclaration;
 			}
 			variant_case_novalue(

@@ -126,6 +126,9 @@ namespace vm::code::valid_type {
 			 */
 			ObjIdNameMap<Field, FieldID> fields;
 
+			/// Whether fields are laid out without alignment padding.
+			bool packed = false;
+
 			/**
 			 * @brief Inheritance metadata for this structure type.
 			 * @note Only classes and interfaces have this metadata.
