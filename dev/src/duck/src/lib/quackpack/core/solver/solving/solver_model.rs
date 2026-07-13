@@ -115,7 +115,7 @@ impl<'a> SolverModel<'a, ProblemCreated> {
     ) -> QuackResult<Rc<Variable>> {
         let feature_to_var_map = self.get_feature_to_var_map_for_dep(dep);
         feature_to_var_map.get(&feature).cloned().context_internal(
-            "Dependency with feature variable not added to the model before retrieval of variable attempt",
+            "dependency with feature variable not added to the model before retrieval of variable attempt",
         )
     }
 
