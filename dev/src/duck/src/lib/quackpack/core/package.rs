@@ -2,11 +2,11 @@
 use std::fmt;
 use std::path::{Path, PathBuf};
 
-use crate::QuackResult;
 use crate::quackpack::core::compile::artifacts_layout::ArtifactsLayout;
 use crate::quackpack::core::identity::{Identity, Origin};
-use crate::quackpack::core::{Dependencies, Manifest, Profiles};
+use crate::quackpack::core::{Dependencies, Manifest, Profiles, Version};
 use crate::quackpack::schemas::manifest::Manifest as ManifestSchema;
+use crate::{QuackResult, StrId};
 
 #[derive(Clone, Debug)]
 /// Entities which can be treated as a package by implementing [`AnyPackage`] trait.
@@ -136,6 +136,14 @@ impl AnyPackage {
     /// Check if this package is a script's frontmatter.
     pub fn is_frontmatter(&self) -> bool {
         matches!(self, AnyPackage::Frontmatter(..))
+    }
+
+    pub fn name(&self) -> StrId {
+        self.manifest().name()
+    }
+
+    pub fn version(&self) -> Version {
+        self.manifest().version()
     }
 }
 

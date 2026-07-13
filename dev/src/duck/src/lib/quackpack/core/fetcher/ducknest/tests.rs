@@ -161,7 +161,7 @@ fn single_metadata() {
     let client = DucknestClient::new(&ctx);
     let response = client
         .get_exact_metadata(&types::PackageWithUrl {
-            id: "foo".into(),
+            name: "foo".into(),
             version: Version::new(1, 2, 3),
             url: server.base_url().parse().unwrap(),
         })
@@ -173,7 +173,7 @@ fn single_metadata() {
     assert!(
         client
             .get_exact_metadata(&types::PackageWithUrl {
-                id: "foo".into(),
+                name: "foo".into(),
                 version: Version::new(1, 2, 4),
                 url: server.base_url().parse().unwrap(),
             })
@@ -201,7 +201,7 @@ fn download_blob() {
     client
         .fetch_blob(
             &types::PackageWithUrl {
-                id: "foo".into(),
+                name: "foo".into(),
                 version: Version::new(1, 2, 3),
                 url: server.base_url().parse().unwrap(),
             },
@@ -220,7 +220,7 @@ fn not_found_in_response() {
     let client = DucknestClient::new(&ctx);
     let err = client
         .get_exact_metadata(&types::PackageWithUrl {
-            id: "foo".into(),
+            name: "foo".into(),
             version: Version::new(2137, 6, 7),
             url: server.base_url().parse().unwrap(),
         })

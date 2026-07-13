@@ -1800,6 +1800,7 @@ vm::code::valid_function::ValidFunction vm::code::detail::validateAndExtractReac
 	const ObjIdNameMap<GlobalData>&                  globals_map,
 	const base::HashMap<base::StrID, FuncSignature>& signatures,
 	const ObjIdNameMap<ExternalCFunction>&           ext_c_signatures,
+	const FlagContext&                               flag_context,
 	const ObjIdNameMap<FFIFunction>&                 ffi_signatures,
 	const Function&                                  function
 ) {
@@ -1816,6 +1817,7 @@ vm::code::valid_function::ValidFunction vm::code::detail::validateAndExtractReac
 		= validator.validateAndExtractReachableCode();
 	new_function.bytecode_pos = function.bytecode_pos;
 	new_function.signature    = signature;
+	new_function.flags        = flag_context.getFlagsForFunction(function.name.str);
 
 	return new_function;
 }

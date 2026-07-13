@@ -31,11 +31,12 @@ vm::code::CodeCollection vm::code::ValidProgram::produceValidCodeCollection() co
 		     .object_files = std::ranges::to<std::vector>(object_files | std::views::keys) };
 }
 
-vm::code::ValidProgram vm::code::ValidProgram::tryInsertCode(const code::CodeCollection& collection
+vm::code::ValidProgram vm::code::ValidProgram::tryInsertCode(
+	const code::CodeCollection& collection, api::ExecutionConfig config
 ) const {
 	// @TODO: #1306 We could get rid of copying of the whole program.
 	ValidProgram copy = *this;
-	copy.insertCode(collection);
+	copy.insertCode(collection, config);
 	return copy;
 }
 
@@ -54,14 +55,16 @@ const vm::ObjIdNameMap<vm::code::valid_function::ValidFunction>& vm::code::Valid
 	return function_map;
 }
 
-void vm::code::ValidProgram::insertCode(const CodeCollection& collection) {
+void vm::code::ValidProgram::insertCode(
+	const CodeCollection& collection, api::ExecutionConfig config
+) {
 	for (const auto& func: collection.functions) function_signatures.put(func.name, func.signature);
 	insertTypes(collection.types);
 	insertGlobals(collection.global_data);
 	insertExternalCFunctions(collection.external_c_functions);
 	insertObjectFiles(collection.object_files);
 	insertFFIFunctions(collection.ffi_functions);
-	insertFunctions(collection.functions);
+	insertFunctions(collection.functions, config);
 }
 
 void vm::code::ValidProgram::insertTypes(const std::vector<TypeOfData>& new_types) {
@@ -107,9 +110,11 @@ void vm::code::ValidProgram::insertGlobals(const std::vector<GlobalData>& new_gl
 	}
 }
 
-void vm::code::ValidProgram::insertFunctions(const std::vector<Function>& new_functions) {
+void vm::code::ValidProgram::insertFunctions(
+	const std::vector<Function>& new_functions, api::ExecutionConfig config
+) {
 	if (new_functions.empty()) return;
-
+	flag_context.insertAndValidate(new_functions, globals_map, ext_c_function_map, config);
 	for (const auto& func: new_functions) {
 		if (function_map.contains(func.name))
 			throw DuplicatedFunctionError(func, function_map.at(func.name)->toNormal());
@@ -119,6 +124,7 @@ void vm::code::ValidProgram::insertFunctions(const std::vector<Function>& new_fu
 			globals_map,
 			function_signatures,
 			ext_c_function_map,
+			flag_context,
 			ffi_function_map,
 			func
 		);
