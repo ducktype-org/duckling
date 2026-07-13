@@ -137,7 +137,7 @@ class String {
         return &pointer[i];
     }
 
-    fun toString() = {
+    fun toString() -> String = {
         return self;
     }
 }

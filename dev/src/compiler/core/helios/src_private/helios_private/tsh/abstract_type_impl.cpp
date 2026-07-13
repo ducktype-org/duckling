@@ -40,9 +40,14 @@ namespace compiler::tsh {
 		using helios::defgen::destructSymForType;
 		using helios::defgen::generatedToStringSymForType;
 
+		// The generated `toString` returns a `String`, which lives in `core.containers`. It only
+		// exists when a standard library is available, so skip it otherwise (e.g. no-std builds) —
+		// resolving its type would fail to find the `String` language primitive.
+		const bool has_to_string = isStringTypePresent(ctx);
+
 		// @TODO: #1956 Methods don't work for zero-sized types yet, due to taking ref to self
 		if (not type.carriesInformation(ctx)) {
-			if (type.getKind() == Kind::Unit) {
+			if (type.getKind() == Kind::Unit && has_to_string) {
 				// The unit type has a `toString` method, even though it doesn't carry information,
 				// because it is a simple type and it's passed by value.
 				return TypeInterface{ std::vector{ InterfaceElement{
@@ -59,15 +64,17 @@ namespace compiler::tsh {
 
 		std::vector<InterfaceElement> elements;
 
-		// Every type has a `toString` method.
-		elements.emplace_back(
-			generatedToStringSymForType(ctx, type),
-			type,
-			0,
-			InterfaceElement::InterfaceElementKind::Method,
-			ClassMemberVisibility::Public,
-			InterfaceElement::SpecialKind::ToString
-		);
+		// Every type has a `toString` method (when a standard library provides `String`).
+		if (has_to_string) {
+			elements.emplace_back(
+				generatedToStringSymForType(ctx, type),
+				type,
+				0,
+				InterfaceElement::InterfaceElementKind::Method,
+				ClassMemberVisibility::Public,
+				InterfaceElement::SpecialKind::ToString
+			);
+		}
 
 		// Only classes have destructors (for now)
 		if (type.getKind() == Kind::Class) {
@@ -420,7 +427,8 @@ namespace compiler::tsh {
 	}
 
 	CRef<TypeInterface> MetaAbstractTypeImpl::getDeclaredInterface(query::Context&) const {
-		throw base::NotYetImplemented("Meta type interface not yet implemented");
+		static TypeInterface empty{};
+		return &empty;
 	}
 
 	CRef<TypeInterface> ImportAbstractTypeImpl::getDeclaredInterface(query::Context&) const {

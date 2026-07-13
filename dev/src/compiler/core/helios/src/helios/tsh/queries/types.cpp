@@ -1,6 +1,7 @@
 #include "types.hpp"
 
 #include <diagnostic_interactive/placeholder.hpp>
+#include <frontend/module_tree/queries.hpp>
 #include <helios/symbols/lang_primitives.hpp>
 #include <helios_private/tsh/abstract_type_impl.hpp>
 
@@ -97,6 +98,13 @@ namespace compiler::tsh {
 			  )
 				  ->valueOrThrow();
 		return ctx.query<QueryClassType>(sym);
+	}
+
+	bool isStringTypePresent(query::Context& ctx) {
+		return frontend::getModuleByAbsolutePath(
+				   ctx, base::StrID("core"), { base::StrID("containers") }
+		)
+		    .has_value();
 	}
 
 	SliceAbstractType getCharSliceType(query::Context& ctx) {

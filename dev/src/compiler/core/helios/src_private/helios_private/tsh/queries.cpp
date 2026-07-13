@@ -20,15 +20,18 @@
 namespace compiler::tsh {
 	struct IMPLEMENT_QUERY(QueryInterfaceOfClass, query::QResult<TypeInterface>) {
 		static InterfaceElement::SpecialKind getMethodSpecialKind(Context& ctx, helios::SymID sym) {
+#define METHOD_HAS_NO_PARAMS(type) type.getParameterTypes().size() == 1
+
 			auto name = helios::name(sym);
 			if (name == base::StrID("toString")) {
-				auto expected_type = ctx.query<tsh::QueryFunctionType>(
-					{ .parameter_types = {},
-				      .result_type     = tsh::SymbolType<>::withDefaults(getStringType(ctx)) }
-				);
-				if (ctx.query<helios::QueryTypeOfSymbol>(sym)->valueOrThrow().getType()
-				    == expected_type)
-					return InterfaceElement::SpecialKind::ToString;
+				const auto method_type
+					= ctx.query<helios::QueryTypeOfSymbol>(sym)->valueOrThrow().getType();
+				if (method_type.getKind() == tsh::Kind::Function) {
+					const auto fn_type = method_type.as<tsh::FunctionAbstractType>();
+					if (METHOD_HAS_NO_PARAMS(fn_type)
+					    && fn_type.getResultType() == SymbolType<>::withDefaults(getStringType(ctx)))
+						return InterfaceElement::SpecialKind::ToString;
+				}
 			}
 			return InterfaceElement::SpecialKind::None;
 		}

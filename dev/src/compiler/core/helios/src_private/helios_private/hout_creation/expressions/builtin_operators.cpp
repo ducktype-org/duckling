@@ -266,33 +266,37 @@ namespace compiler::helios::code {
 			builtin_op(base::StrID("+"), { u8_t, char_t }, char_t, IntegerAdd, Infix);
 			builtin_op(base::StrID("+"), { char_t, u8_t }, char_t, IntegerAdd, Infix);
 
-			/// String operators ///
-			const auto str_t = tsh::SymbolType<>{
-				tsh::getStringType(ctx),
-				tsh::ReferenceKind::Direct,
-				tsh::Mutability::Immutable,
-			};
-			builtin_call(
-				base::StrID("+:"),
-				{ char_t, str_t },
-				str_t,
-				LanguagePrimitive::PrependChar,
-				Infix
-			);
-			builtin_call(
-				base::StrID(":+"),
-				{ str_t, char_t },
-				str_t,
-				LanguagePrimitive::AppendChar,
-				Infix
-			);
-			builtin_call(
-				base::StrID("++"),
-				{ str_t, str_t },
-				str_t,
-				LanguagePrimitive::ConcatStrings,
-				Infix
-			);
+			// The `String` type and its operators live in `core.containers`, so they only exist when
+			// a standard library is available. Skip them otherwise (e.g. no-std builds), as looking
+			// up the `String` language primitive would fail and take the whole query with it.
+			if (tsh::isStringTypePresent(ctx)) {
+				const auto str_t = tsh::SymbolType<>{
+					tsh::getStringType(ctx),
+					tsh::ReferenceKind::Direct,
+					tsh::Mutability::Immutable,
+				};
+				builtin_call(
+					base::StrID("+:"),
+					{ char_t, str_t },
+					str_t,
+					LanguagePrimitive::PrependChar,
+					Infix
+				);
+				builtin_call(
+					base::StrID(":+"),
+					{ str_t, char_t },
+					str_t,
+					LanguagePrimitive::AppendChar,
+					Infix
+				);
+				builtin_call(
+					base::StrID("++"),
+					{ str_t, str_t },
+					str_t,
+					LanguagePrimitive::ConcatStrings,
+					Infix
+				);
+			}
 
 			// Return
 			return result_ops;

@@ -69,6 +69,13 @@ namespace compiler::tsh {
 	ClassAbstractType getStringType(query::Context& ctx);
 
 	/**
+	 * @brief Checks whether the `String` type is available, i.e. whether `core.containers` (and thus
+	 * a standard library) is present. Use this to guard code that would otherwise fail resolving the
+	 * `String` language primitive in no-std builds.
+	 */
+	bool isStringTypePresent(query::Context& ctx);
+
+	/**
 	 * @brief Get the type of a slice of characters, which is used for string literals and string
 	 * slices.
 	 */
