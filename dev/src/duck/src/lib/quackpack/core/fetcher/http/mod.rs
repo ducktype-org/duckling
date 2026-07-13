@@ -2,8 +2,8 @@
 
 use curl::easy::{Easy2, Handler};
 
-use crate::quackpack::util::http::handlers::Collector;
-use crate::quackpack::util::http::{Request, Response, check_http_status_code, configure_easy2};
+use super::util::http::handlers::Collector;
+use super::util::http::{Request, Response, check_http_status_code, configure_easy2};
 use crate::{DuckContext, QuackResult, QuackResultContext};
 
 #[derive(Debug, Clone)]

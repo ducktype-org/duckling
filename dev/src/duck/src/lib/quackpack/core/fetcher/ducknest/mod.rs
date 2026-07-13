@@ -7,10 +7,10 @@ use tracing::debug;
 use url::Url;
 
 use super::http::HttpClient;
-use crate::quackpack::core::fetcher::types;
+use super::types;
+use super::util::http::Request;
+use super::util::http::traits_extensions::ResponseExt;
 use crate::quackpack::schemas::registry;
-use crate::quackpack::util::http::Request;
-use crate::quackpack::util::http::traits_extensions::ResponseExt;
 use crate::util::file_locks::LockedFile;
 use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail_internal};
 

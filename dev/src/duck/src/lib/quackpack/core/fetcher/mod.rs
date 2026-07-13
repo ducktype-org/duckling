@@ -21,6 +21,7 @@ pub mod ducknest;
 pub mod git;
 pub mod http;
 pub mod types;
+pub mod util;
 
 #[cfg(test)]
 mod tests;
