@@ -1335,6 +1335,7 @@ private:
 			{ "b", "not found" },
 			1
 		);
+		
 	}
 
 	void testPointerCastErrors() {

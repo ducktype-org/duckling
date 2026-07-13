@@ -25,3 +25,11 @@ Tests:
           String: "42\n42\n"
         ExitCode: 0
 
+  more_templates:
+    Cases:
+      all:
+        backend: all
+        Output:
+          String: "3\n3\n3\n"
+        ExitCode: 0
+
