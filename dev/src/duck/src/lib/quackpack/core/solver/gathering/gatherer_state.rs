@@ -305,7 +305,7 @@ impl GathererState {
             return Ok(self
                 .fail_incoherent_success_pinned(
                     request_pkg,
-                    "Fetched manifest's version differs from required",
+                    "fetched manifest's version differs from required",
                 )?
                 .context(MessageError(
                     format!(
