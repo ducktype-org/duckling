@@ -4,7 +4,8 @@ use crate::quackpack::core::compile::BuildContext;
 use crate::quackpack::core::compile::early_graph::creating_graph::create_early_graph_from_bcx;
 use crate::quackpack::core::compile::early_graph::tests::cycling::setup::*;
 use crate::quackpack::core::compile::profiles::Profile;
-use crate::quackpack::core::compile::unit::ArtifactsType;
+use crate::quackpack::core::compile::unit::unit_visitor::UnitVisitor;
+use crate::quackpack::core::compile::unit::{ArtifactsType, Unit};
 use crate::quackpack::core::fetcher::Fetcher;
 use crate::quackpack::core::identity::{Identity, Origin};
 use crate::quackpack::core::storage::paths::Storage;
@@ -17,6 +18,15 @@ use crate::quackpack::util::to_url::ToUrl;
 
 // **NOTE**
 // To de-duplicate some code, we reuse setup from early_graph/ tests.
+
+#[derive(Default)]
+struct IdOrder(Vec<u64>);
+
+impl UnitVisitor for IdOrder {
+    fn visit(&mut self, unit: &Unit) {
+        self.0.push(unit.unit_id());
+    }
+}
 
 #[test]
 fn lowers_early_graph() {
@@ -140,4 +150,115 @@ fn lowers_early_graph_with_cycle() {
     assert_eq!(cycle.unit_id(), cycle_id);
     assert_eq!(cycle.deps_sorted_by_unit_id(), [root_id]);
     assert_eq!(cycle.identity(), identity_for("cycle"));
+}
+
+#[test]
+fn basic_visitor_order_cycle() {
+    let (ctx, root) = setup_mock_storage();
+    let package = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
+    let profile =
+        Profile::construct_profile("dev".into(), package.package().manifest().profiles()).unwrap();
+    let root_origin = Origin::for_local(&root.path().join("root")).unwrap();
+    let root_identity = Identity::new("root".into(), root_origin);
+    let bcx = BuildContext {
+        pcx: &package,
+        root_identity,
+        freeze: freeze(root.path()),
+        storage: Storage::new(ctx.default_storage_root().into_not_locked_path()),
+        used_features: vec!["cycle".into()],
+        profile,
+        jobs: 1,
+    };
+    let graph = create_early_graph_from_bcx(&bcx).unwrap();
+    let unit_graph = lower_early_graph(graph, &bcx);
+    let root_id = 0;
+    let foo_id = 3;
+    let bar_id = 1;
+    let cycle_id = 2;
+    {
+        let mut visitor = IdOrder::default();
+
+        unit_graph.root_unit().accept(&mut visitor, &unit_graph);
+
+        assert_eq!(visitor.0, [root_id, bar_id, cycle_id, foo_id]);
+    }
+    {
+        let mut visitor = IdOrder::default();
+
+        unit_graph
+            .unit_for(cycle_id)
+            .accept(&mut visitor, &unit_graph);
+
+        assert_eq!(visitor.0, [cycle_id, root_id, bar_id, foo_id]);
+    }
+    {
+        let mut visitor = IdOrder::default();
+        unit_graph
+            .unit_for(foo_id)
+            .accept(&mut visitor, &unit_graph);
+
+        assert_eq!(visitor.0, [foo_id]);
+    }
+}
+
+#[test]
+fn basic_visitor_order() {
+    let (ctx, root) = setup_mock_storage();
+    let package = PackageLoader::find_at_exact_directory(&root.path().join("root"), &ctx).unwrap();
+    let profile =
+        Profile::construct_profile("dev".into(), package.package().manifest().profiles()).unwrap();
+    let root_origin = Origin::for_local(&root.path().join("root")).unwrap();
+    let root_identity = Identity::new("root".into(), root_origin);
+    let bcx = BuildContext {
+        pcx: &package,
+        root_identity,
+        freeze: freeze(root.path()),
+        storage: Storage::new(ctx.default_storage_root().into_not_locked_path()),
+        used_features: vec!["full".into()],
+        profile,
+        jobs: 1,
+    };
+    let graph = create_early_graph_from_bcx(&bcx).unwrap();
+    let unit_graph = lower_early_graph(graph, &bcx);
+
+    let root_id = 0;
+    let foo_id = 2;
+    let bar_id = 1;
+    let baz_id = 3;
+
+    {
+        let mut visitor = IdOrder::default();
+
+        unit_graph.root_unit().accept(&mut visitor, &unit_graph);
+
+        assert_eq!(visitor.0, [root_id, bar_id, foo_id, baz_id]);
+    }
+    {
+        let mut visitor = IdOrder::default();
+
+        unit_graph
+            .unit_for(foo_id)
+            .accept(&mut visitor, &unit_graph);
+
+        assert_eq!(visitor.0, [foo_id, baz_id]);
+    }
+    {
+        let mut visitor = IdOrder::default();
+
+        unit_graph
+            .unit_for(bar_id)
+            .accept(&mut visitor, &unit_graph);
+
+        assert_eq!(visitor.0, [bar_id, baz_id]);
+    }
+
+    {
+        let mut visitor = IdOrder::default();
+
+        unit_graph
+            .unit_for(baz_id)
+            .accept(&mut visitor, &unit_graph);
+
+        assert_eq!(visitor.0, [baz_id]);
+    }
 }
