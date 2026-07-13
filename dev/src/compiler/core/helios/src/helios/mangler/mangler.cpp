@@ -45,7 +45,13 @@ namespace compiler::helios::mangler {
 		 */
 		std::string mangleCTV(query::Context& ctx, const ctv::CompileTimeValue& ctv) {
 			variant_match(ctv.getStorage()) {
-				variant_case_novalue(bool, numeric_value::NumericValue, char, base::StrID, ctv::CompileTimeValue::UnitCTV) {
+				variant_case_novalue(
+					bool,
+					numeric_value::NumericValue,
+					char,
+					base::StrID,
+					ctv::CompileTimeValue::UnitCTV
+				) {
 					// @TODO: #2607 This is questionable, note that this only
 					// work, because queryUnstablePerfectHash is actually stable for these types
 					// (at least at the moment of witting it)
@@ -57,13 +63,11 @@ namespace compiler::helios::mangler {
 				variant_case(tsh::SymbolType<>, symbol_type) {
 					return ctx.query<QueryMangledType>(symbol_type)->valueOrThrow().str();
 				}
-				variant_default {
-					CORE_PANIC("Unhandled CTV type in mangleCTV");
-				}
+				variant_default { CORE_PANIC("Unhandled CTV type in mangleCTV"); }
 			}
 			CORE_UNREACHABLE();
 		}
-	} 
+	}
 
 	void addToHash(hashing::hash_algorithm auto& h, const KeyOf_MangledSymbol& k) RELEASE_NOEXCEPT {
 		addToHash(h, k.symbol_key.index());
@@ -304,9 +308,7 @@ namespace compiler::helios::mangler {
 										auto value
 											= ctx.query<helios::QueryConstValueOf>(bake_argument)
 										          .valueOrThrow();
-										path_parts.push_back(identifier(
-											mangleCTV(ctx, value)
-										));
+										path_parts.push_back(identifier(mangleCTV(ctx, value)));
 									}
 								}
 								variant_default {
