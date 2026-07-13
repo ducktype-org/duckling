@@ -81,7 +81,7 @@ namespace pst {
 		 */
 		explicit LangElement(pst::CloneDummy, const LangElement& other):
 			  source_position(other.source_position),
-			  context_hash(other.context_hash),
+			  context_hash(),
 			  element_kind(other.element_kind),
 			  id(PstID::next()) {}
 

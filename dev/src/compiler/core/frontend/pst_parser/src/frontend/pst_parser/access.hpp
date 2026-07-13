@@ -179,6 +179,9 @@ namespace pst {
 		template<std::derived_from<LangElement>, std::derived_from<LangElement>>
 		friend class PST;
 
+		template<std::derived_from<LangElement>>
+		friend class GeneratedSubPST;
+
 		template<typename E>
 		AccessInternalAnonymous& operator=(AccessInternalAnonymous<E>&& oth) noexcept {
 			box = std::move(oth).box;

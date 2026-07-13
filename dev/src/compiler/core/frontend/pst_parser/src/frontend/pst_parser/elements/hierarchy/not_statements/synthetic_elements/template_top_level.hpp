@@ -1,4 +1,6 @@
-#include "../meta.hpp"
+#pragma once
+
+#include "../../meta.hpp"
 #include "template_expansion_assignments.hpp"
 
 namespace pst {
@@ -14,6 +16,8 @@ namespace pst {
 
 	protected:
 		HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const override;
+
+		friend class ElementSynthesizer;
 
 	public:
 		void                      dprint(std::ostream& out) const final;
