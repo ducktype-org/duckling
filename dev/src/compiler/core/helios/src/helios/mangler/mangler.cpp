@@ -287,7 +287,7 @@ namespace compiler::helios::mangler {
 								variant_default {
 									CORE_PANIC(
 										"TemplateStmt has no PST parent, this should not happen "
-									    "here."
+										"here."
 									);
 								}
 							}

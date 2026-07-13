@@ -3384,8 +3384,12 @@ private:
 					= ctx.query<compiler::helios::QueryConstValueOf>(sym_id).valueOrThrow();
 				const auto actual_type
 					= symbol_value.getTypeOfStoredValue(ctx).withMutability(Immutable);
-				assertEqual(actual_type, expected_type, message + " Expected: "
-					+ expected_type.toString() + ", Actual: " + actual_type.toString());
+				assertEqual(
+					actual_type,
+					expected_type,
+					message + " Expected: " + expected_type.toString()
+						+ ", Actual: " + actual_type.toString()
+				);
 			};
 
 			const auto meta_st     = stConst(compiler::tsh::getMetaType());
