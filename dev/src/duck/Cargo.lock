@@ -539,7 +539,6 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "url",
- "winapi",
  "windows-sys 0.61.2",
 ]
 
