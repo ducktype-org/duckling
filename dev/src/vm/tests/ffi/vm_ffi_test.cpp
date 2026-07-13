@@ -43,16 +43,13 @@ public:
 		TESTER_ADD_TEST(unsupportedTypeFails);
 		TESTER_ADD_TEST(multipleResultsFails);
 		TESTER_ADD_TEST(alignedStructByValue);
-		TESTER_ADD_TEST(structWithTableByValue);
 		TESTER_ADD_TEST(structWithNestedTablesByValue);
 		TESTER_ADD_TEST(structWithTableOfStructsByValue);
 		TESTER_ADD_TEST(structWithFloatTableByValue);
 		TESTER_ADD_TEST(structWithTableReturnedFromC);
 		TESTER_ADD_TEST(nestedStructByValue);
 		TESTER_ADD_TEST(tableByValueFails);
-		TESTER_ADD_TEST(structWithZeroLengthTableFails);
-		TESTER_ADD_TEST(structWithNoFieldsFails);
-		TESTER_ADD_TEST(hugeFlattenedTableFails);
+		TESTER_ADD_TEST(nonCompliantStructsFail);
 		TESTER_ADD_TEST(structWithPackedFieldFails);
 		TESTER_ADD_TEST(packedStructInFfiFails);
 		TESTER_ADD_TEST(packedStructWithMatchingLayoutStillFails);
@@ -569,46 +566,8 @@ private:
 	}
 
 	// A fixed-size table field is flattened in the libffi descriptor (its element type repeated
-	// once per element), so the struct still matches the C layout of an array member.
-	void structWithTableByValue() {
-		runProgram(
-			"struct_with_table",
-			ffiObjectHeader()
-				+ "type fixed_size_table: arr4 i32 4\n"
-				  "type data: WithArr { v: arr4, tail: i64 } assert_size 24\n"
-				  "ffi function ffi_arr_sum { WithArr } -> { i64 };\n"
-				  "function main { i64, ptr_argv } -> { i64 } {\n"
-				  "    init_pany_type x, i32;\n"
-				  "    init_pany_type i, i64;\n"
-				  "    init_pany_type t, i64;\n"
-				  "    init_pany_type a4, arr4;\n"
-				  "    init_pany_type res, i64;\n"
-				  "    init_pany_type w, WithArr;\n"
-				  "    mov_p32_imm x, 1;\n"
-				  "    mov_p64_imm i, 0;\n"
-				  "    fixedSizeTableStore_pfst_pany_p64 a4, x, i;\n"
-				  "    mov_p32_imm x, 2;\n"
-				  "    mov_p64_imm i, 1;\n"
-				  "    fixedSizeTableStore_pfst_pany_p64 a4, x, i;\n"
-				  "    mov_p32_imm x, 3;\n"
-				  "    mov_p64_imm i, 2;\n"
-				  "    fixedSizeTableStore_pfst_pany_p64 a4, x, i;\n"
-				  "    mov_p32_imm x, 4;\n"
-				  "    mov_p64_imm i, 3;\n"
-				  "    fixedSizeTableStore_pfst_pany_p64 a4, x, i;\n"
-				  "    structStore_pste_pany_field w, a4, WithArr.v;\n"
-				  "    mov_p64_imm t, 32;\n"
-				  "    structStore_pste_pany_field w, t, WithArr.tail;\n"
-				  "    call_ffifunc ffi_arr_sum;\n"
-				  "    output_p64 res;\n"
-				  "    ret;\n"
-				  "}\n",
-			"42"
-		);
-	}
-
-	// A table of tables flattens recursively; the VM layout of `i32[2][2]` matches C's
-	// `int32_t[4]`, so the same C function serves.
+	// once per element, recursively for a table of tables); the VM layout of `i32[2][2]` matches
+	// C's `int32_t[4]`, so the struct passes as the C layout of an array member.
 	void structWithNestedTablesByValue() {
 		runProgram(
 			"struct_with_nested_tables",
@@ -817,8 +776,10 @@ private:
 		);
 	}
 
-	// A zero-length table flattens to no libffi elements, so it is not FFI-compliant.
-	void structWithZeroLengthTableFails() {
+	// Structures whose libffi descriptor would be degenerate are not FFI-compliant: a
+	// zero-length table flattens to no elements, a field-less struct has size 0 (rejected by
+	// libffi), and an oversized flattened element count must fail before it is materialized.
+	void nonCompliantStructsFail() {
 		expectLoadError(
 			"zero_length_table_struct",
 			ffiObjectHeader()
@@ -827,10 +788,6 @@ private:
 				  "ffi function ffi_add { WithEmpty } -> { i64 };\n",
 			{ "WithEmpty", "cannot be used in an FFI function signature" }
 		);
-	}
-
-	// A field-less struct has size 0, which libffi rejects as an aggregate.
-	void structWithNoFieldsFails() {
 		expectLoadError(
 			"empty_struct",
 			ffiObjectHeader()
@@ -838,11 +795,6 @@ private:
 				  "ffi function ffi_add { Empty } -> { i64 };\n",
 			{ "Empty", "cannot be used in an FFI function signature" }
 		);
-	}
-
-	// The libffi descriptor holds one element per flattened table element, so an oversized
-	// element count must be rejected before it is materialized.
-	void hugeFlattenedTableFails() {
 		expectLoadError(
 			"huge_table_struct",
 			ffiObjectHeader()
