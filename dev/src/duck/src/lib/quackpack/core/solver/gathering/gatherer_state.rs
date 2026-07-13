@@ -386,7 +386,7 @@ impl GathererState {
                 )?
                 .context(MessageError(
                     format!(
-                        "While handling response for the fetch of {:?}",
+                        "while handling response for the fetch of {:?}",
                         not_pinned_response.origin_id
                     )
                     .into(),
