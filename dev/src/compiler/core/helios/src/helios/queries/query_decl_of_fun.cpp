@@ -214,6 +214,7 @@ namespace compiler::helios {
 	 * @note There is no dedicated syntax yet to declare fixity (prefix vs. suffix), so a
 	 * single-parameter operator name is assumed to be a prefix operator. Suffix stays unreachable
 	 * from user code until that syntax exists.
+	 * @TODO: #3131 Extract fixity in unary operators from keywords used in PST.
 	 */
 	static HOUTFunctionDeclaration::Operatoriness operatorinessFromNameAndArity(
 		base::StrID name, u64 arity
