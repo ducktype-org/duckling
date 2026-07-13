@@ -107,7 +107,7 @@ namespace compiler::helios::templates {
 				i++;
 
 				CORE_ASSERT(
-					ctv.getTypeOfStoredValue(ctx) == param.type,
+					ctv.getTypeOfStoredValue(ctx).withMutability(tsh::Mutability::Immutable) == param.type,
 					"Template argument type does not match template parameter type: ",
 					ctv.getTypeOfStoredValue(ctx).toString(),
 					" vs ",
