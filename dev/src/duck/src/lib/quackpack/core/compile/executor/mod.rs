@@ -122,18 +122,22 @@ pub(crate) fn get_deps_outputs(
     struct UnitOutputVisitor<'a> {
         graph: &'a UnitGraph,
         layout: &'a ProfileLayout,
+        root: &'a Unit,
         outputs: Vec<(Unit, PathBuf)>,
     }
 
     impl UnitVisitor for UnitOutputVisitor<'_> {
         fn visit(&mut self, unit: &Unit) {
-            self.outputs
-                .push((unit.clone(), unit_output(unit, self.graph, self.layout)))
+            if self.root != unit {
+                self.outputs
+                    .push((unit.clone(), unit_output(unit, self.graph, self.layout)))
+            }
         }
     }
     let mut visitor = UnitOutputVisitor {
         graph,
         layout,
+        root: unit,
         outputs: vec![],
     };
     unit.accept(&mut visitor, graph);
