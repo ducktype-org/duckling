@@ -79,12 +79,12 @@ namespace compiler::helios::templates {
 		pst::PST<pst::TemplateStmt> baked_template_pst;
 	};
 
-	void TemplateBakePSTLinkedData::TemplateArgumentsSymbolsDeleter::del(
-		std::atomic<std::vector<SymID>*>* ptr
+	void TemplateBakePSTLinkedData::PostponedDataDeleter::del(
+		std::atomic<PostponedData*>* ptr
 	) {
 		// Here we delete both raw pointer allocated with new and the atomic wrapper around it.
-		auto vec_ptr = ptr->load(std::memory_order_acquire);
-		if (vec_ptr) delete vec_ptr;
+		auto data_ptr = ptr->load(std::memory_order_acquire);
+		if (data_ptr) delete data_ptr;
 		delete ptr;
 	}
 
@@ -177,19 +177,21 @@ namespace compiler::helios::templates {
 					.template_bake_data = TemplateBakePSTLinkedData{
 						.pst_parent_element
 						= getPSTElementParent(ctx, template_statement).getAsLangElement(),
-						.template_arguments_symbols = makeSharedBox<
-							std::atomic<std::vector<SymID>*>,
-							TemplateBakePSTLinkedData::TemplateArgumentsSymbolsDeleter>(nullptr
+						.postponed_data = makeSharedBox<
+							std::atomic<TemplateBakePSTLinkedData::PostponedData*>,
+							TemplateBakePSTLinkedData::PostponedDataDeleter>(nullptr
 			            ) } } });
 
 			auto args = bakeTemplateArgumentsSymbols(
 				ctx, signature, ctx.query<QueryPrimaryCodeScopeFor>({ baked_root }), key
 			);
+			auto baked_sym_id = ctx.query<QuerySymbolOfSTMT>(baked_statement).valueOrThrow();
+			
 
 			// @TODO: #3072 try to improve this.
-			// We atomically set template_arguments_symbols here,
+			// We atomically set postponed_data here,
 			// The reason we can't do it in the initial setAdditionalRootData call is because
-			// we can't call QueryPrimaryCodeScopeFor(baked_root) without pst_parent_element set.
+			// we can't call QueryPrimaryCodeScopeFor(baked_root) or QuerySymbolOfSTMT(baked_statement) without pst_parent_element set (it is needed for relevant scopes be created).
 			// At the same time this scope is needed to generate the template argument symbols, so
 			// we have to do it in two steps.
 			CRef<TemplateBakePSTLinkedData> baked_root_data_pointer
@@ -198,12 +200,13 @@ namespace compiler::helios::templates {
 						 .getAs<pst::AdditionalRootData::BakedTemplateParent>()
 						 .template_bake_data
 				);
-			baked_root_data_pointer->template_arguments_symbols->store(
-				new std::vector<SymID>(std::move(args)), std::memory_order_release
+			baked_root_data_pointer->postponed_data->store(
+				new TemplateBakePSTLinkedData::PostponedData{
+					.baked_symbol = baked_sym_id,
+					.template_arguments_symbols = std::move(args)
+				},
+				std::memory_order_release
 			);
-
-
-			auto baked_sym_id = ctx.query<QuerySymbolOfSTMT>(baked_statement).valueOrThrow();
 
 			return TemplateBakeStorage{
 				.baked_template_sym_id = baked_sym_id,

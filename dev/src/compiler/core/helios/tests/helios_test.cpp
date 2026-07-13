@@ -105,6 +105,7 @@ public:
 		TESTER_ADD_TEST(testHoutElementsOrigin);
 		TESTER_ADD_TEST(testAliases);
 		TESTER_ADD_TEST(testBackendDependentCompTime);
+		TESTER_ADD_TEST(testTemplates);
 
 		// this is at the end
 		// so we test all the scopes created in helios tests:
@@ -3583,6 +3584,64 @@ private:
 		ASSERT_EQUAL(10, getConstValueAs<i32>("VALUE", root_scope));
 	}
 
+	void testTemplates() {
+		auto [_, root_scope] = getModule(fs::File(path("test_modules/templates")));
+
+		// `Number:{1i64}.inner` and `Number:{2i64}.inner` each bake a distinct instantiation of
+		// the `Number` template namespace and evaluate the resulting constant.
+		ASSERT_EQUAL(1, getConstValueAs<i64>("one", root_scope));
+		ASSERT_EQUAL(2, getConstValueAs<i64>("two", root_scope));
+		ASSERT_EQUAL(3, getConstValueAs<i64>("three_1", root_scope));
+		ASSERT_EQUAL(3, getConstValueAs<i64>("three_2", root_scope));
+
+		const auto number_template   = getChain("Number", root_scope).back();
+		ASSERT_EQUAL(kind(number_template), compiler::helios::SymbolKind::Template);
+		
+		query::utils::withContextDo([&](query::Context& ctx) {
+			// namespace templates = compiler::helios::templates;
+
+			// // The declared signature of `template(a: i64)` should carry a single parameter `a`,
+			// // baked to an immutable `i64` constant.
+			// const auto& number_signature
+			// 	= templates::getTemplateDeclarationSignature(ctx, number_template).valueOrThrow();
+			// ASSERT_EQUAL(number_signature.parameters.size(), 1u);
+			// ASSERT_EQUAL(number_signature.parameters.at(0).name, base::StrID("a"));
+			// ASSERT_EQUAL(
+			// 	number_signature.parameters.at(0).type,
+			// 	stConst(compiler::tsh::getIntegralType(ctx, 64, Signed))
+			// );
+
+			// // The declared signature of `template(T: type)` should carry a single parameter `T`,
+			// // baked to an immutable meta-type constant.
+			// const auto& wrapper_signature
+			// 	= templates::getTemplateDeclarationSignature(ctx, wrapper_template).valueOrThrow();
+			// ASSERT_EQUAL(wrapper_signature.parameters.size(), 1u);
+			// ASSERT_EQUAL(wrapper_signature.parameters.at(0).name, base::StrID("T"));
+			// ASSERT_EQUAL(
+			// 	wrapper_signature.parameters.at(0).type, stConst(compiler::tsh::getMetaType())
+			// );
+
+			// // Baking the same template symbol with equal arguments must be cached, and return
+			// // the exact same symbol, while different arguments must produce distinct symbols.
+			// const auto bake = [&](i64 value) {
+			// 	const templates::TemplateBakeKey key{
+			// 		.template_sym_id = number_template,
+			// 		.template_arguments
+			// 		= { ctv::CompileTimeValue(numeric_value::NumericValue(value)) },
+			// 	};
+			// 	return ctx.query<templates::QueryBakeTemplateSymID>(key).valueOrThrow();
+			// };
+
+			// const auto baked_one       = bake(1);
+			// const auto baked_one_again = bake(1);
+			// const auto baked_two       = bake(2);
+
+			// ASSERT_EQUAL(baked_one, baked_one_again);
+			// ASSERT_TRUE(baked_one != baked_two);
+			// ASSERT_EQUAL(kind(baked_one), compiler::helios::SymbolKind::Namespace);
+		});
+	}
+
 	void testScopeParentsAndDepth() {
 		auto all_scopes = compiler::helios::getAllHeliosScopes();
 		message(base::strConcat("Scope count: ", all_scopes.size()));
@@ -3616,6 +3675,7 @@ private:
 		for (auto symbol: all_symbols) {
 			auto maybe_scope = compiler::helios::maybeScope(symbol);
 			if (maybe_scope.empty()) continue;
+
 			auto scope = maybe_scope.value();
 			Ref  symbols_in_scope
 				= &query::entryPoint<compiler::helios::QuerySymbolsInScope>(scope)->valueOrPanic();
@@ -3627,7 +3687,7 @@ private:
 					break;
 				}
 			}
-			assertTrue(found, "Symbol was not fount in its scope");
+			assertTrue(found, std::string("Symbol was not found in its scope: ") + compiler::helios::name(symbol).str());
 		}
 	}
 };

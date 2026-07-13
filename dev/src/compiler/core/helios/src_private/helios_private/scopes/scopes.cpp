@@ -566,6 +566,7 @@ namespace compiler::helios {
 
 			void visitTemplateStmt(pst::Access<pst::TemplateStmt> template_stmt) override {
 				// Scope of "template →(...)← {}"
+				// This also inserts the baked template symbols into this scope.
 
 				// @TODO: #3071 this is a hack, fix it!
 				// Scope of "template →(...)← {}"
@@ -590,11 +591,13 @@ namespace compiler::helios {
 						auto proper_data = base::anyCast<templates::TemplateBakePSTLinkedData>(
 							template_parent.template_bake_data
 						);
+						Ref postponed_data = proper_data.postponed_data->load(std::memory_order_acquire);
+
 						for (const auto& param:
-						     *proper_data.template_arguments_symbols->load(std::memory_order_acquire
-						     )) {
+						     postponed_data->template_arguments_symbols) {
 							out.emplace_back(param);
 						}
+						out.emplace_back(postponed_data->baked_symbol);
 					}
 					variant_default {
 						CORE_PANIC(
