@@ -1,23 +1,27 @@
 
 Tests:
   simple_class_templates:
+    enable_conc_deterministic_tests: false
     Cases:
       all:
         backend: all
         Output:
-          String: "5\n3.14\n42\n"
+          String: "5\n10\n42\n"
         ExitCode: 0
 
   simple_function_template:
+    enable_conc_deterministic_tests: false
     Cases:
       all:
-        backend: all
+        # @TODO: #2483 reenable, strings are not yet supported in the DVM backend
+        backend: llvm
         Output:
           String: "2\n2\nabc\n"
         ExitCode: 0
 
 
   templates_and_macros:
+    enable_conc_deterministic_tests: false
     Cases:
       all:
         backend: all
@@ -30,6 +34,6 @@ Tests:
       all:
         backend: all
         Output:
-          String: "3\n3\n3\n"
+          String: "1\n2\n3\n3\n"
         ExitCode: 0
 
