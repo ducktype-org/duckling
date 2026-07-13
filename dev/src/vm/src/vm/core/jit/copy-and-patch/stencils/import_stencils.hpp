@@ -1,8 +1,7 @@
 #pragma once
 
-#include "relocations.hpp"
-
 #include "../../../native/dynamic_library.hpp"
+#include "relocations.hpp"
 
 #include <algorithm>
 #include <array>
