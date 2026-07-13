@@ -107,6 +107,7 @@ public:
 		TESTER_ADD_TEST(testAliases);
 		TESTER_ADD_TEST(testBackendDependentCompTime);
 		TESTER_ADD_TEST(testOperatoriness);
+		TESTER_ADD_TEST(testMethodOperatorResolution);
 
 		// this is at the end
 		// so we test all the scopes created in helios tests:
@@ -2378,8 +2379,17 @@ private:
 		auto foo_class = getChain("Foo", root_scope).back();
 		auto foo_class_info
 			= query::entryPoint<compiler::helios::QueryClassSymbolData>(foo_class)->valueOrThrow();
-		ASSERT_EQUAL(1, foo_class_info.methods.size());
-		auto infix_method = mangle(foo_class_info.methods.at(0));
+		ASSERT_EQUAL(2, foo_class_info.methods.size());
+
+		auto find_method = [&](std::string_view name) {
+			for (const auto& method: foo_class_info.methods)
+				if (compiler::helios::name(method) == base::StrID(name)) return method;
+			fail(base::strConcat("Method ", name, " not found"));
+			return foo_class_info.methods.at(0);
+		};
+
+		auto infix_method  = mangle(find_method("+*"));
+		auto prefix_method = mangle(find_method("-*"));
 
 		ASSERT_EQUAL("_Q_M18mangling_operatorsGOi4plmlFi64i64i64E1a1bE", infix_free.str());
 		ASSERT_EQUAL("_Q_M18mangling_operatorsGOp4mimlFi64i64E1aE", prefix_free.str());
@@ -2388,6 +2398,14 @@ private:
 			"_Q_M18mangling_operatorsN3FooOi4plmlEFi64R_Q_CM18mangling_operatorsG3Fooi64E4self1aE",
 			infix_method.str()
 		);
+		ASSERT_EQUAL(
+			"_Q_M18mangling_operatorsN3FooOp4mimlEFi64R_Q_CM18mangling_operatorsG3FooE4selfE",
+			prefix_method.str()
+		);
+
+		// Suffix has no declaration syntax yet (see testOperatoriness) -- nothing to mangle here
+		// until fixity keywords exist. Once they do, add e.g.:
+		// ASSERT_EQUAL("...", mangle(.../* a suffix-declared operator */).str());
 	}
 
 	void testGlobalVariableExpressions() {
@@ -3641,17 +3659,86 @@ private:
 				.operatoriness
 		);
 
-		// Operator method: 1 explicit param + implicit `self` = infix.
+		// Operator methods: 1 explicit param + implicit `self` = infix; 0 explicit params +
+		// implicit `self` = prefix.
 		auto foo_class = getChain("Foo", root_scope).back();
 		auto foo_class_info
 			= query::entryPoint<compiler::helios::QueryClassSymbolData>(foo_class)->valueOrThrow();
-		ASSERT_EQUAL(1, foo_class_info.methods.size());
+		ASSERT_EQUAL(2, foo_class_info.methods.size());
+
+		auto find_method = [&](std::string_view name) {
+			for (const auto& method: foo_class_info.methods)
+				if (compiler::helios::name(method) == base::StrID(name)) return method;
+			fail(base::strConcat("Method ", name, " not found"));
+			return foo_class_info.methods.at(0);
+		};
+
 		ASSERT_EQUAL(
 			Operatoriness::Infix,
-			query::entryPoint<compiler::helios::QueryDeclOfFun>(foo_class_info.methods.at(0))
+			query::entryPoint<compiler::helios::QueryDeclOfFun>(find_method("+*"))
 				->valueOrThrow()
 				.operatoriness
 		);
+		ASSERT_EQUAL(
+			Operatoriness::Prefix,
+			query::entryPoint<compiler::helios::QueryDeclOfFun>(find_method("-*"))
+				->valueOrThrow()
+				.operatoriness
+		);
+
+		// @TODO: #3131 Add cases for suffix operators.
+	}
+
+	void testMethodOperatorResolution() {
+		auto [module, root_scope] = getModule(fs::File(path("test_modules/method_operators")));
+		using namespace compiler::helios::code;
+		(void) module;
+
+		auto foo_class = getChain("Foo", root_scope).back();
+		auto foo_class_info
+			= query::entryPoint<compiler::helios::QueryClassSymbolData>(foo_class)->valueOrThrow();
+		ASSERT_EQUAL(2, foo_class_info.methods.size());
+
+		auto find_method = [&](std::string_view name) {
+			for (const auto& method: foo_class_info.methods)
+				if (compiler::helios::name(method) == base::StrID(name)) return method;
+			fail(base::strConcat("Method ", name, " not found"));
+			return foo_class_info.methods.at(0);
+		};
+		auto infix_method_sym  = find_method("+*");
+		auto prefix_method_sym = find_method("-*");
+
+		auto get_return_call = [&](compiler::helios::SymID fn_sym) -> const CallExpr& {
+			const auto& fn_hout
+				= query::entryPoint<compiler::helios::QueryCodeOfFun>({ fn_sym })->valueOrPanic();
+			ASSERT_EQUAL(2, fn_hout.body->statements.size());
+			const auto* ret_stmt
+				= dynamic_cast<const ReturnStmt*>(fn_hout.body->statements.at(1).get());
+			ASSERT_TRUE(ret_stmt != nullptr);
+			const auto* call_expr = dynamic_cast<const CallExpr*>(ret_stmt->value.get());
+			ASSERT_TRUE(call_expr != nullptr);
+			return *call_expr;
+		};
+
+		// `foo +* 5` inside useInfix must resolve to Foo's `+*` method, with `foo` self-bound as a
+		// reference (exactly like a regular method call `foo.someMethod()` would bind `self`).
+		const auto& infix_call   = get_return_call(getChain("useInfix", root_scope).back());
+		const auto* infix_callee = dynamic_cast<const IdentifierExpr*>(infix_call.callee.get());
+		ASSERT_TRUE(infix_callee != nullptr);
+		ASSERT_EQUAL(infix_method_sym, infix_callee->symbol);
+		ASSERT_EQUAL(2, infix_call.arguments.size());
+		ASSERT_TRUE(dynamic_cast<const RefOfExpr*>(infix_call.arguments.at(0).get()) != nullptr);
+
+		// `-*foo` inside usePrefix must resolve to Foo's `-*` method, with `foo` self-bound the
+		// same way.
+		const auto& prefix_call   = get_return_call(getChain("usePrefix", root_scope).back());
+		const auto* prefix_callee = dynamic_cast<const IdentifierExpr*>(prefix_call.callee.get());
+		ASSERT_TRUE(prefix_callee != nullptr);
+		ASSERT_EQUAL(prefix_method_sym, prefix_callee->symbol);
+		ASSERT_EQUAL(1, prefix_call.arguments.size());
+		ASSERT_TRUE(dynamic_cast<const RefOfExpr*>(prefix_call.arguments.at(0).get()) != nullptr);
+
+		// @TODO: #3131 Add case for suffix operator.
 	}
 
 	void testScopeParentsAndDepth() {

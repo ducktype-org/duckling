@@ -16,4 +16,8 @@ class Foo {
     fun +*(a: i64) -> i64 = {
         return a;
     }
+
+    fun -*() -> i64 = {
+        return x;
+    }
 }
