@@ -38,6 +38,7 @@ public:
 
 		TESTER_ADD_TEST(testErrorLoggingExpandStatements);
 		TESTER_ADD_TEST(testErrorLoggingCyclicErrors);
+		TESTER_ADD_TEST(testErrorLoggingTemplates);
 		TESTER_ADD_TEST(testPointerCastErrors);
 		TESTER_ADD_TEST(testBackendDependentAttributeErrors);
 
@@ -67,6 +68,7 @@ private:
 		const std::vector<std::string_view>& present_phrases,
 		u64                                  logged_msg_count
 	) {
+		// std::cerr << module_content <<"\n";
 		frontend::ModuleID module_id = frontend::createModuleTreeFromContents(module_content);
 
 		auto result = query::entryPoint<helios::QueryModuleHOUT>(module_id);
@@ -1012,6 +1014,21 @@ private:
 				{ "Copy constructor for non-trivially-copyable type `List[i32]`" },
 				1
 			);
+
+			checkForErrorOnCompileModule(
+				R"(
+				template(a: i64 = 2)
+				namespace N { }
+
+				fun main() -> i64 = {
+					N:{};
+					return 0;
+				}
+
+			)",
+				{ "Feature not implemented", "Default values" },
+				1
+			);
 		}
 
 		// ============================ Other errors ============================
@@ -1323,7 +1340,7 @@ private:
 
 		checkForErrorOnCompileModule(
 			R"(
-				template T(a: i64)
+				template(a: i64)
 				fun foo() = {
 					return a + b;
 				}
@@ -1335,7 +1352,53 @@ private:
 			{ "b", "not found" },
 			1
 		);
-		
+
+		// ============================ Errors inside arguments ============================
+
+		checkForErrorOnCompileModule(
+			R"(
+				template(a: i64)
+				namespace N { }
+
+				fun main() -> i64 = {
+					N:{1, 2, 3};
+					return 0;
+				}
+
+			)",
+			{ "argument count", "parameter count" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				template(a: i64)
+				namespace N { }
+
+				fun main() -> i64 = {
+					N:{i64};
+					return 0;
+				}
+
+			)",
+			{ "cannot be converted to type" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				template(a: i64)
+				namespace N { }
+
+				fun main() -> i64 = {
+					N:{a};
+					return 0;
+				}
+
+			)",
+			{ "not found" },
+			1
+		);
 	}
 
 	void testPointerCastErrors() {

@@ -98,7 +98,7 @@ namespace compiler::helios::code {
 
 		if (template_signature.parameters.size() != argument_list->size()) {
 			query_ctx.logInt(makeBox<dia_int::PlaceholderError>(
-				"template arguments count does not match template parameters count",
+				"argument count does not match template parameter count",
 				element_with_template_specifier->getStablePosition()
 			));
 			return query::Failed();

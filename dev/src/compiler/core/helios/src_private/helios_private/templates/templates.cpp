@@ -142,7 +142,7 @@ namespace compiler::helios::templates {
 			// level as function overloads:!!
 			CORE_ASSERT(
 				signature.parameters.size() == key.template_arguments.size(),
-				"Template arguments count does not match template parameters count"
+				"argument count does not match template parameter count"
 			);
 
 
