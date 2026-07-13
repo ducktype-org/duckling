@@ -202,6 +202,13 @@ namespace compiler::helios::code {
 				}
 			}
 
+			/**
+			 * Prepares a HOUT Expr for a method call, e.g. by automatically taking a reference, as required by `self`.
+			 * @note The algorithm is a bit more complicated and depends on whether the type is simple or complex,
+			 * as methods on simple types take copies instead, and then references to simple types need to be dereffed.
+			 * @param expr The expression on which a method is called.
+			 * @return The modified (reffed or dereffed) expression.
+			 */
 			[[nodiscard]]
 			Box<Expr> prepareForMethodCall(Box<Expr> expr) const {
 				if (not expr->expression_type.getType().isSimple()
