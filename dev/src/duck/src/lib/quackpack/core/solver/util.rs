@@ -112,7 +112,7 @@ impl WithVersion<FullIdentity> {
             let required_version = dependency
                 .versions()
                 .first()
-                .context_internal("Pinned dependency without specified version")?;
+                .context_internal("pinned dependency without specified version")?;
             Ok(self.version() == *required_version)
         } else {
             Ok(dependency
