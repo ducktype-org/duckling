@@ -1857,11 +1857,20 @@ private:
 		using namespace compiler::helios::code;
 
 		auto square_symbol = getChain("square", scope).back();
+		auto foo1_symbol   = getChain("foo1", scope).back();
+
+		// Look up the HOUT functions by name so the test does not depend on emission order.
+		auto find_fun = [&](std::string_view target) -> const auto& {
+			for (const auto& fun: hout.functions)
+				if (fun->declaration->original_name.strView() == target) return *fun;
+			CORE_PANIC(base::strConcat("function not found in HOUT unit: ", target));
+		};
+
+		const auto& square = find_fun("square");
+		const auto& foo    = find_fun("foo");
+		const auto& main   = find_fun("main");
 
 		// foo() calls square() twice; the collected list is deduplicated to one entry.
-		const auto& foo = *hout.functions.at(1);
-		ASSERT_EQUAL(foo.declaration->original_name, "foo");
-
 		auto called_from_fun = collectCalledSymbolsFromHOUT(foo);
 		ASSERT_EQUAL(1, called_from_fun.size());
 		ASSERT_EQUAL(square_symbol, called_from_fun.at(0));
@@ -1872,6 +1881,23 @@ private:
 		auto        called_from_expr = collectCalledSymbolsFromHOUT(*return_stmt.value);
 		ASSERT_EQUAL(1, called_from_expr.size());
 		ASSERT_EQUAL(square_symbol, called_from_expr.at(0));
+
+		// square() is a leaf: it calls no other functions.
+		auto called_from_square = collectCalledSymbolsFromHOUT(square);
+		ASSERT_EQUAL(0, called_from_square.size());
+
+		// main() calls foo1() four times (with different argument styles); the collected list is
+		// still deduplicated to a single entry.
+		auto called_from_main = collectCalledSymbolsFromHOUT(main);
+		ASSERT_EQUAL(1, called_from_main.size());
+		ASSERT_EQUAL(foo1_symbol, called_from_main.at(0));
+
+		// Walking a single call statement's expression tree finds just that callee.
+		const auto& first_stmt
+			= dynamic_cast<const ExprStmt&>(*main.body->statements.at(0));
+		auto called_from_first = collectCalledSymbolsFromHOUT(*first_stmt.expr);
+		ASSERT_EQUAL(1, called_from_first.size());
+		ASSERT_EQUAL(foo1_symbol, called_from_first.at(0));
 	}
 
 	void testFunctions() {
@@ -2861,8 +2887,9 @@ private:
 				auto deps
 					= ctx.query<QueryTransitiveUsedSymbols>(ctor_sym)->valueOrThrow().used_functions;
 
-				// Should not call any recursive ctors.
-				ASSERT_EQUAL_PRINT(1, deps.size());
+				// The ctor only assigns a literal to the field, so it transitively uses no
+				// functions (the root ctor itself is excluded from the result).
+				ASSERT_EQUAL_PRINT(0, deps.size());
 			}
 
 			// Class with a class field which is non zero-initializable should emit a ctor call.
@@ -2877,9 +2904,9 @@ private:
 				auto deps
 					= ctx.query<QueryTransitiveUsedSymbols>(ctor_sym)->valueOrThrow().used_functions;
 
-				// The top-level constructor should call one function which is a default ctor of
-				// `WithInit`.
-				ASSERT_EQUAL_PRINT(2, deps.size());
+				// The top-level constructor (excluded from the result) transitively uses one
+				// function: a default ctor of `WithInit`.
+				ASSERT_EQUAL_PRINT(1, deps.size());
 
 				const auto* dep_ctor = std::get_if<Constructor>(&getSymRef(deps[0])->other);
 				ASSERT_TRUE(dep_ctor != nullptr);
@@ -2899,12 +2926,13 @@ private:
 				auto deps
 					= ctx.query<QueryTransitiveUsedSymbols>(ctor_sym)->valueOrThrow().used_functions;
 
-				// Ctor(ArrayHolder) -> Ctor(WithInit[5]) -> Ctor(WithInit), plus the bounds-check
+				// Ctor(ArrayHolder) (the root, excluded) -> Ctor(WithInit[5]) -> Ctor(WithInit), plus
+				// the bounds-check
 				// chain emitted by the static-array init loop (`panic`, `builtin_output_str`,
 				// `length`) and its own transitive callees (`abort` from `panic`,
 				// `builtin_output_char` from `builtin_output_str`), which the MIR-level used-symbol
-				// collection now sees.
-				ASSERT_EQUAL_PRINT(8, deps.size());
+				// collection sees.
+				ASSERT_EQUAL_PRINT(7, deps.size());
 
 				bool found_array_ctor = false;
 				for (auto d: deps) {
@@ -2928,8 +2956,9 @@ private:
 				auto deps
 					= ctx.query<QueryTransitiveUsedSymbols>(ctor_sym)->valueOrThrow().used_functions;
 
-				// Ctor(TupleHolder) -> Ctor((WithInit, WithInit)) -> Ctor(WithInit)
-				ASSERT_EQUAL_PRINT(3, deps.size());
+				// Ctor(TupleHolder) (the root, excluded) -> Ctor((WithInit, WithInit)) ->
+				// Ctor(WithInit)
+				ASSERT_EQUAL_PRINT(2, deps.size());
 
 				bool found_tup_ctor = false;
 				for (auto d: deps) {
@@ -2952,8 +2981,8 @@ private:
 				auto deps
 					= ctx.query<QueryTransitiveUsedSymbols>(ctor_sym)->valueOrThrow().used_functions;
 
-				// Ctor(DeepStack) -> Ctor(Nested) -> Ctor(WithInit)
-				ASSERT_EQUAL_PRINT(3, deps.size());
+				// Ctor(DeepStack) (the root, excluded) -> Ctor(Nested) -> Ctor(WithInit)
+				ASSERT_EQUAL_PRINT(2, deps.size());
 			}
 
 			// `DeepStackTrivial` ctor should not call any default constructors, since it stores

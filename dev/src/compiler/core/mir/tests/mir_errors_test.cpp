@@ -11,7 +11,6 @@
 #include <base/pointers/box.hpp>
 
 #include <filesystem/file.hpp>
-#include <logger/logger.hpp>
 #include <query_framework/context/context.hpp>
 #include <query_framework/entry/with_context_do.hpp>
 #include <query_framework/query_result.hpp>

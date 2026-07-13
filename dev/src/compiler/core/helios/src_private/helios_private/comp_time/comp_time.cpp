@@ -821,8 +821,13 @@ namespace compiler::helios {
 			auto mangled_name_function_to_call
 				= ctx.query<mangler::QueryMangledSymbol>({ .symbol_key = function_sym_id });
 
-			// Temporary hout unit used to lower functions to LIR.
+			// Temporary hout unit used to lower functions to LIR. `all_dependencies` excludes the
+			// target function itself, so we lower it explicitly alongside its transitive callees.
 			HOUTUnit hout_unit;
+			if (implementsQueryCodeOfFun(function_sym_id))
+				hout_unit.functions.emplace_back(
+					&ctx.query<QueryCodeOfFun>(function_sym_id)->valueOrThrow()
+				);
 			for (const SymID& func_id: all_dependencies) {
 				if (not implementsQueryCodeOfFun(func_id)) continue;
 				auto& hout_func = ctx.query<QueryCodeOfFun>(func_id)->valueOrThrow();

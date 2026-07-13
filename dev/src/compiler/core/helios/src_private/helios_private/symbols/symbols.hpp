@@ -131,7 +131,7 @@ namespace compiler::helios {
 	};
 
 	/**
-	 * @brief Query all symbols used directly by a function global symbol: the functions it calls
+	 * @brief Query all symbols used directly by a function or global symbol: the functions it calls
 	 * and the global variables/constants it references. See @ref UsedSymbols.
 	 * @note Works only for SymID-s that represent functions (both PST and generated).
 	 *

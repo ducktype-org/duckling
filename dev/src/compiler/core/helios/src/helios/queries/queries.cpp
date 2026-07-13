@@ -165,8 +165,9 @@ namespace compiler::helios {
 					result = base::BAD;
 					continue;
 				}
+				auto& used_symbols = qresult->valueOrPanic();
 
-				for (auto used_fun: qresult->valueOrPanic().used_functions) {
+				for (auto used_fun: used_symbols.used_functions) {
 					if (added_symbols.contains(used_fun)) continue;
 					if (emissionPolicy(used_fun) != EmissionPolicy::Replicated) continue;
 
@@ -177,7 +178,7 @@ namespace compiler::helios {
 						);
 					symbol_stack.push_back(used_fun);
 				}
-				for (auto used_global: qresult->valueOrPanic().used_globals) {
+				for (auto used_global: used_symbols.used_globals) {
 					if (added_symbols.contains(used_global)) continue;
 					if (emissionPolicy(used_global) != EmissionPolicy::Replicated) continue;
 

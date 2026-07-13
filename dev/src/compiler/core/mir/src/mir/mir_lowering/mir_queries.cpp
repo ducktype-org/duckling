@@ -202,14 +202,16 @@ namespace compiler::mir {
 			function.blocks[last_block_id].terminator.operation = Operation::ReturnVoid;
 			return function;
 		} else {
-			ctx.logInt(makeBox<dia_int::PlaceholderError>(
-				base::strConcat(
-					"The function `",
-					function.name,
-					"` is missing a return statement or does not always return."
-				),
-				""
-			));
+			ctx.logInt(
+				makeBox<dia_int::PlaceholderError>(
+					base::strConcat(
+						"The function `",
+						function.name,
+						"` is missing a return statement or does not always return."
+					),
+					""
+				)
+			);
 			return query::Failed();
 		}
 	}
@@ -275,9 +277,12 @@ namespace compiler::mir {
 			FunctionBuilder function_builder{ ctx,
 				                              GlobalVariableCTOR{ key.global_data->helios_symbol },
 				                              function_type };
-			function_builder.setName(base::StrID(
-				base::strConcat("constructor_of_", key.global_data->original_name.strView()).c_str()
-			));
+			function_builder.setName(
+				base::StrID(
+					base::strConcat("constructor_of_", key.global_data->original_name.strView())
+						.c_str()
+				)
+			);
 
 			auto last_block = function_builder.newBlock();
 			last_block->setTerminator(
@@ -293,20 +298,24 @@ namespace compiler::mir {
 				function_builder.getTopLevelScope()
 			);
 
-			assign_instr.fill(Instruction{
-				Operation::Assign,
-				// Note: we know its a variable here, since this query only works for variables,
-				{
-					MIRGlobal({ key.global_data->helios_symbol,
-			                    key.global_data->type,
-			                    MIRGlobal::Kind::Variable }),
-				},
-				{
-					lowerexpr_res.getResult(function_builder),
-				},
-				{},
-				function_builder.getTopLevelScope(),
-			});
+			assign_instr.fill(
+				Instruction{
+					Operation::Assign,
+					// Note: we know its a variable here, since this query only works for variables,
+					{
+						MIRGlobal(
+							{ key.global_data->helios_symbol,
+			                  key.global_data->type,
+			                  MIRGlobal::Kind::Variable }
+						),
+					},
+					{
+						lowerexpr_res.getResult(function_builder),
+					},
+					{},
+					function_builder.getTopLevelScope(),
+				}
+			);
 
 			function_builder.setEntry(lowerexpr_res.begin);
 
@@ -389,7 +398,7 @@ namespace compiler::mir {
 
 			// Index projections carry a nested MIRValue that may itself reference symbols.
 			for (const auto& projection: place.projection_chain)
-				if (auto* index_proj = std::get_if<MIRPlace::IndexProjection>(&projection.storage))
+				v_if_matches(projection.storage, MIRPlace::IndexProjection, index_proj)
 					collectUsedSymbolsFromValue(
 						*index_proj->index, out, seen_functions, seen_globals
 					);
@@ -428,21 +437,23 @@ namespace compiler::mir {
 			for (const auto& argument: instruction.arguments)
 				collectUsedSymbolsFromValue(argument, out, seen_functions, seen_globals);
 		}
-	}
 
-	void usedSymbolsFromBody(
-		CRef<Function>                     function,
-		MIRUsedSymbols&                    result,
-		std::unordered_set<helios::SymID>& seen_functions,
-		std::unordered_set<helios::SymID>& seen_globals
-	) {
-		for (const auto& block_id: function->block_order) {
-			const auto& block = function->blocks[block_id];
-			for (const auto& instruction: block.instructions)
-				collectUsedSymbolsFromInstruction(instruction, result, seen_functions, seen_globals);
-			collectUsedSymbolsFromInstruction(
-				block.terminator, result, seen_functions, seen_globals
-			);
+		void usedSymbolsFromBody(
+			CRef<Function>                     function,
+			MIRUsedSymbols&                    result,
+			std::unordered_set<helios::SymID>& seen_functions,
+			std::unordered_set<helios::SymID>& seen_globals
+		) {
+			for (const auto& block_id: function->block_order) {
+				const auto& block = function->blocks[block_id];
+				for (const auto& instruction: block.instructions)
+					collectUsedSymbolsFromInstruction(
+						instruction, result, seen_functions, seen_globals
+					);
+				collectUsedSymbolsFromInstruction(
+					block.terminator, result, seen_functions, seen_globals
+				);
+			}
 		}
 	}
 
