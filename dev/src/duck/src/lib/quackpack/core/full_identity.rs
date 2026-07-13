@@ -47,7 +47,7 @@ impl FullIdentity {
     /// Generate a human-readable description of [`self`].
     pub fn descriptive_name(&self) -> String {
         match self.origin.kind {
-            FullKind::Registry => format!("`{}", self.name),
+            FullKind::Registry => format!("`{}`", self.name),
             FullKind::Git { .. } => format!("cloned from `{}`", self.origin.url),
             FullKind::Local => {
                 if let Ok(path) = self.origin.url.to_path_buf() {
