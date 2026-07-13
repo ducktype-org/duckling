@@ -34,6 +34,7 @@
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
+#include <helios_private/templates/templates.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
@@ -3598,47 +3599,41 @@ private:
 		ASSERT_EQUAL(kind(number_template), compiler::helios::SymbolKind::Template);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			// namespace templates = compiler::helios::templates;
+			namespace templates = compiler::helios::templates;
 
-			// // The declared signature of `template(a: i64)` should carry a single parameter `a`,
-			// // baked to an immutable `i64` constant.
-			// const auto& number_signature
-			// 	= templates::getTemplateDeclarationSignature(ctx, number_template).valueOrThrow();
-			// ASSERT_EQUAL(number_signature.parameters.size(), 1u);
-			// ASSERT_EQUAL(number_signature.parameters.at(0).name, base::StrID("a"));
-			// ASSERT_EQUAL(
-			// 	number_signature.parameters.at(0).type,
-			// 	stConst(compiler::tsh::getIntegralType(ctx, 64, Signed))
-			// );
+			// The declared signature of `template(a: i64)` should carry a single parameter `a`,
+			// baked to an immutable `i64` constant.
+			auto number_signature
+				= templates::getTemplateDeclarationSignature(ctx, number_template).valueOrPanic();
+			
+			ASSERT_EQUAL(number_signature.parameters.size(), 1u);
+			ASSERT_EQUAL_PRINT(number_signature.parameters.at(0).name, base::StrID("a"));
+			ASSERT_EQUAL(
+				number_signature.parameters.at(0).type,
+				stConst(compiler::tsh::getIntegralType(ctx, 64, Signed))
+			);
 
-			// // The declared signature of `template(T: type)` should carry a single parameter `T`,
-			// // baked to an immutable meta-type constant.
-			// const auto& wrapper_signature
-			// 	= templates::getTemplateDeclarationSignature(ctx, wrapper_template).valueOrThrow();
-			// ASSERT_EQUAL(wrapper_signature.parameters.size(), 1u);
-			// ASSERT_EQUAL(wrapper_signature.parameters.at(0).name, base::StrID("T"));
-			// ASSERT_EQUAL(
-			// 	wrapper_signature.parameters.at(0).type, stConst(compiler::tsh::getMetaType())
-			// );
+			// Baking the same template symbol with equal arguments must return
+			// the exact same symbol, while different arguments must produce distinct symbols.
 
-			// // Baking the same template symbol with equal arguments must be cached, and return
-			// // the exact same symbol, while different arguments must produce distinct symbols.
-			// const auto bake = [&](i64 value) {
-			// 	const templates::TemplateBakeKey key{
-			// 		.template_sym_id = number_template,
-			// 		.template_arguments
-			// 		= { ctv::CompileTimeValue(numeric_value::NumericValue(value)) },
-			// 	};
-			// 	return ctx.query<templates::QueryBakeTemplateSymID>(key).valueOrThrow();
-			// };
+			const auto bake = [&](i64 value) {
+				const templates::TemplateBakeKey key{
+					.template_sym_id = number_template,
+					.template_arguments
+					= { compiler::ctv::CompileTimeValue(compiler::numeric_value::NumericValue(value)) },
+				};
+				return ctx.query<templates::QueryBakeTemplateSymID>(key).valueOrThrow();
+			};
 
-			// const auto baked_one       = bake(1);
-			// const auto baked_one_again = bake(1);
-			// const auto baked_two       = bake(2);
+			const auto baked_one       = bake(1);
+			const auto baked_one_again = bake(1);
+			const auto baked_two       = bake(2);
 
-			// ASSERT_EQUAL(baked_one, baked_one_again);
-			// ASSERT_TRUE(baked_one != baked_two);
-			// ASSERT_EQUAL(kind(baked_one), compiler::helios::SymbolKind::Namespace);
+			ASSERT_EQUAL(baked_one, baked_one_again);
+			ASSERT_TRUE(baked_one != baked_two);
+
+			ASSERT_EQUAL(kind(baked_one), compiler::helios::SymbolKind::Namespace);
+			ASSERT_EQUAL(kind(baked_two), compiler::helios::SymbolKind::Namespace);
 		});
 	}
 
