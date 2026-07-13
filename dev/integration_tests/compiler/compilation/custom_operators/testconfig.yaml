@@ -1,15 +1,10 @@
 # Tests for user-defined custom operators
-#
-# NOTE: disabled until operator names are mangled properly — the mangled symbol
-# embeds the operator characters verbatim (e.g. `...G2+*Fi64i64i64E...`), which
-# the DVM bytecode parser cannot lex. Parsing/sema/codegen already work.
 
 Tests:
-  free_operator:
+  operators_simple:
     Cases:
       all:
-        Enabled: "false"
         backend: all
         Output:
-          String: "42\n"
+          String: "42\n42\n42\n42\n"
         ExitCode: 0
