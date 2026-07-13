@@ -124,11 +124,11 @@ namespace vm::builtins {
 		return return_value;
 	}
 
-	i8 FunctionHandlers::builtinInputChar(SafeVMThread& thread) {
+	i32 FunctionHandlers::builtinInputChar(SafeVMThread& thread) {
 		thread.setProcessStatus(api::Sleeping{});
-		const char c = thread.safe_process.getIO().getRawChar(thread);
+		const int c = thread.safe_process.getIO().getRawChar(thread);
 		thread.setProcessStatus(api::Running{});
-		return static_cast<i8>(c);
+		return static_cast<i32>(c);
 	}
 
 	i64 FunctionHandlers::builtinOutputI64(SafeVMThread& thread, i64 arg) {
@@ -440,7 +440,7 @@ namespace vm::builtins {
 			{
 				BuiltinFunctionID::InputChar,
 				{ base::StrID("builtin_input_char"),
-			      code::FuncSignature({ base::StrID("i8") }, {}) },
+			      code::FuncSignature({ base::StrID("i32") }, {}) },
 			},
 			{
 				BuiltinFunctionID::OutputI64,

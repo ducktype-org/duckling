@@ -100,6 +100,16 @@ namespace compiler::helios {
 					ctx, LanguagePrimitive::ConcatStrings, "core", { "containers" }, "concatStrings"
 				);
 			}
+			case LanguagePrimitive::PrependChar: {
+				return lookupPrimitive(
+					ctx, LanguagePrimitive::PrependChar, "core", { "containers" }, "prependChar"
+				);
+			}
+			case LanguagePrimitive::AppendChar: {
+				return lookupPrimitive(
+					ctx, LanguagePrimitive::AppendChar, "core", { "containers" }, "appendChar"
+				);
+			}
 			default:
 				CORE_PANIC("Unknown language primitive: ", key.primitive);
 			}

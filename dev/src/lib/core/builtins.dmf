@@ -36,25 +36,19 @@ fun builtin_output_char(c: char) -> i64 = io.writeChar(c);
 # `toString` allocates a String whose buffer must be released explicitly (destructors are not
 # generated yet), so these cannot be a bare `print(&v.toString())` — that would leak the buffer.
 fun builtin_output_i64(v: i64) -> u64 = {
-    var s = v.toString();
-    let n = print(&s);
+    let n = print(v.toString());
     io.writeChar('\n');
-    s.dispose();
-    return n;
+    return n + 1u32;
 }
 fun builtin_output_u64(v: u64) -> u64 = {
-    var s = v.toString();
-    let n = print(&s);
+    let n = print(v.toString());
     io.writeChar('\n');
-    s.dispose();
-    return n;
+    return n + 1u32;
 }
 fun builtin_output_f64(v: f64) -> u64 = {
-    var s = v.toString();
-    let n = print(&s);
+    let n = print(v.toString());
     io.writeChar('\n');
-    s.dispose();
-    return n;
+    return n + 1u32;
 }
 fun builtin_output_str(s: str) -> u64 = {
     var i = 0u32;
@@ -68,3 +62,9 @@ fun builtin_output_str(s: str) -> u64 = {
 fun print(x: str) -> u64 = builtin_output_str(x);
 
 fun print(s: ref containers.String) -> u64 = builtin_output_str(s.asSlice());
+
+fun print(s: containers.String) -> u64 = {
+    let result = builtin_output_str(s.asSlice());
+    s.dispose();
+    return result;
+}

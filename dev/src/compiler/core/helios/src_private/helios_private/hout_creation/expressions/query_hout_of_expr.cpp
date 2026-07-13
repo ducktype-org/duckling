@@ -208,13 +208,6 @@ namespace compiler::helios::code {
 					= ctx.query<QueryLanguagePrimitiveSymID>({ LanguagePrimitive::ConcatStrings })
 				          ->valueOrThrow();
 
-				// `concatStrings(a: ref String, b: ref String)` takes its operands by reference.
-				const auto ref_of_string = [&](MBox<Expr> str_expr) -> Box<Expr> {
-					return makeBox<RefOfExpr>(
-						ctx, generatedOrigin(), std::move(str_expr).toOptBox().value()
-					);
-				};
-
 				// Construct the expression, initially an empty String.
 				MBox<Expr> result_expr = defgen::getStringFromLiteralExpr(ctx, base::StrID(""));
 				bool       failed      = false;
@@ -292,9 +285,10 @@ namespace compiler::helios::code {
 					}
 
 					// - Concatenate the result with the next string.
+					// `concatStrings(a: String, b: String)` takes its operands by value.
 					std::vector<Box<Expr>> arguments;
-					arguments.emplace_back(ref_of_string(std::move(result_expr)));
-					arguments.emplace_back(ref_of_string(std::move(next_string)));
+					arguments.emplace_back(std::move(result_expr).toOptBox().value());
+					arguments.emplace_back(std::move(next_string).toOptBox().value());
 
 					result_expr = makeBox<CallExpr>(
 						ctx,

@@ -133,10 +133,11 @@ namespace vm::builtins {
 		static i64  builtinInputI64(SafeVMThread& process);
 
 		/**
-		 * @brief Reads a single raw byte from input (no whitespace skipping, matching the
-		 * native `read(2)` byte semantics). Backs `core.io.readChar` on the DVM.
+		 * @brief Reads a single raw byte from input (no whitespace skipping), returning it as an
+		 * `i32`, or `-1` at end of input (matching libc `getchar`). Backs `core.io.readCharCode`
+		 * on the DVM.
 		 */
-		static i8   builtinInputChar(SafeVMThread& process);
+		static i32  builtinInputChar(SafeVMThread& process);
 		static i64  builtinOutputI64(SafeVMThread& process, i64 arg);
 		static i64  builtinOutputI32(SafeVMThread& process, i32 arg);
 		static i64  builtinOutputChar(SafeVMThread& process, i8 arg);

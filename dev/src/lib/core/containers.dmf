@@ -136,6 +136,10 @@ class String {
         if (i < 0i64 or i >= i64(len)) panicking.panic();
         return &pointer[i];
     }
+
+    fun toString() = {
+        return self;
+    }
 }
 
 fun stringReserve(cap: u64) -> String = {
@@ -157,10 +161,28 @@ fun copyChars(source: manyptr char, dest: manyptr char, count: u64) -> () = {
     copyCharsAt(source, dest, 0u64, count);
 }
 
-fun concatStrings(a: ref String, b: ref String) -> String = {
+# These build a fresh String and must NOT dispose their operands: a by-value String is a shallow
+# copy sharing the caller's buffer (no deep-copy constructor yet), so disposing it would free
+# memory the caller still owns — a double free when the caller reuses the value. The operand
+# buffers therefore leak until destructors exist.
+fun concatStrings(a: String, b: String) -> String = {
     var result = stringReserve(a.length() + b.length());
-    result.append(a);
-    result.append(b);
+    result.append(&a);
+    result.append(&b);
+    return result;
+}
+
+fun prependChar(c: char, s: String) -> String = {
+    var result = stringReserve(s.length() + 1u64);
+    result.append(c);
+    result.append(&s);
+    return result;
+}
+
+fun appendChar(s: String, c: char) -> String = {
+    var result = stringReserve(s.length() + 1u64);
+    result.append(&s);
+    result.append(c);
     return result;
 }
 

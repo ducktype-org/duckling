@@ -49,10 +49,11 @@ namespace vm {
 
 		/**
 		 * Reads a single raw byte, including whitespace (unlike getInput, which uses
-		 * formatted extraction and skips whitespace). Returns '\0' if terminated while waiting.
+		 * formatted extraction and skips whitespace). Returns the byte as an int, or -1 at end
+		 * of input (or if terminated while waiting), matching libc `getchar`.
 		 * For thread use only.
 		 */
-		char getRawChar(IVMThread& thread) {
+		int getRawChar(IVMThread& thread) {
 			auto lck = lock();
 
 			if (!attached) {
@@ -62,9 +63,8 @@ namespace vm {
 				});
 			}
 
-			char c = '\0';
-			if (!thread.isTerminateRequested()) input_stream.get(c);
-			return c;
+			if (thread.isTerminateRequested()) return -1;
+			return input_stream.get();
 		}
 
 		template<class T>

@@ -1,5 +1,6 @@
 #include "builtin_operators.hpp"
 
+#include <helios/symbols/lang_primitives.hpp>
 #include <helios/symbols/symbol_kind.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/types.hpp>
@@ -186,12 +187,13 @@ namespace compiler::helios::code {
 				};
 				result_ops.put(builtin.symbol, builtin);
 			};
-			// - Helper function to register a builtin operation that results in a function call.
+			// - Helper function to register a builtin operation that lowers to a call of a language
+			//   primitive (a real stdlib function written in Duckling, e.g. `core.containers`).
 			const auto builtin_call = [&ctx, &result_ops](
 										  const base::StrID                            name,
 										  const std::vector<tsh::SymbolType<>>&        param_types,
 										  const tsh::SymbolType<>                      return_type,
-										  const base::StrID                            builtin_name,
+										  const LanguagePrimitive                      primitive,
 										  const HOUTFunctionDeclaration::Operatoriness operatoriness
 									  ) -> void {
 				const auto gen_data = defgen::BuiltinOperator{
@@ -206,10 +208,9 @@ namespace compiler::helios::code {
 						.name                  = name,
 						.generated_symbol_data = gen_data,
 					}),
-					.op
-					= RegularBuiltinOperator::FunctionCall{ ctx.query<defgen::QueryGeneratedSymbol>(
-						{ .name = builtin_name, .generated_symbol_data = gen_data }
-					) },
+					.op    = RegularBuiltinOperator::FunctionCall{
+						ctx.query<QueryLanguagePrimitiveSymID>({ primitive })->valueOrThrow()
+					},
 				};
 				result_ops.put(builtin.symbol, builtin);
 			};
@@ -275,21 +276,21 @@ namespace compiler::helios::code {
 				base::StrID("+:"),
 				{ char_t, str_t },
 				str_t,
-				base::StrID("builtin_string_prepended"),
+				LanguagePrimitive::PrependChar,
 				Infix
 			);
 			builtin_call(
 				base::StrID(":+"),
 				{ str_t, char_t },
 				str_t,
-				base::StrID("builtin_string_appended"),
+				LanguagePrimitive::AppendChar,
 				Infix
 			);
 			builtin_call(
 				base::StrID("++"),
 				{ str_t, str_t },
 				str_t,
-				base::StrID("builtin_string_concatenated"),
+				LanguagePrimitive::ConcatStrings,
 				Infix
 			);
 

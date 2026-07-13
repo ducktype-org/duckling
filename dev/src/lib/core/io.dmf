@@ -1,10 +1,11 @@
 #{
     Standard input/output written in Duckling.
 
-    Character I/O goes through `readChar` / `writeChar`, which are backend dependent: native
-    targets use the `read(2)` / `write(2)` syscalls from `core.clib`, the DVM uses its char
-    builtins. Everything else is built on top: writers rely on `toString()` and `writeChar`,
-    readers rely on `readChar`. Integers are parsed by hand, floats through `strtod`.
+    Character I/O goes through `readCharCode` / `writeChar`, which are backend dependent: native
+    targets use libc `getchar` / `putchar` from `core.clib`, the DVM uses its char builtins.
+    Everything else is built on top: writers rely on `toString()` and `writeChar`, readers on
+    `readCharCode` (end of input is a negative code). Integers are parsed by hand, floats via
+    `strtod`.
 #}
 import core.builtins;
 import core.clib;
@@ -12,7 +13,7 @@ import core.containers;
 
 namespace dvm {
     extern("DVM") {
-        fundecl builtin_input_char() -> char;
+        fundecl builtin_input_char() -> i32;
         fundecl builtin_output_char(c: char) -> i64;
         fundecl strtod(p: manyptr char) -> f64;
     }
@@ -21,23 +22,28 @@ namespace dvm {
 # --------------------------------------------------------- char primitives ---
 
 #{
-    Native char I/O uses `getchar`/`putchar`. `getchar` returns a negative `EOF` sentinel at
-    end of input; the readers below do not yet act on it (so a reader waiting for a delimiter can
-    still spin on EOF). Handling that sentinel — and any buffered layer on top of raw
-    `read`/`write` — is left for later.
+    Reads one byte of input as its character code, or a negative value (`EOF`) at end of input,
+    matching libc `getchar`. Callers that scan for a delimiter MUST stop on a negative result,
+    otherwise they spin forever at end of input.
 #}
 @backend_dependent
-fundecl readChar() -> char;
+fundecl readCharCode() -> i32;
 
 @native_only_impl
-fun readChar() -> char = {
-    return char(clib.getchar());
+fun readCharCode() -> i32 = {
+    return clib.getchar();
 }
 
 @dvm_only_impl
-fun readChar() -> char = {
+fun readCharCode() -> i32 = {
     return dvm.builtin_input_char();
 }
+
+#{
+    Reads one character. At end of input the code is negative; the resulting `char` is then not
+    meaningful, so use `readCharCode` directly when end of input must be detected.
+#}
+fun readChar() -> char = char(readCharCode());
 
 @backend_dependent
 fundecl writeChar(c: char) -> i64;
@@ -146,13 +152,12 @@ fun readU64() -> u64 = {
 }
 
 fun readF64() -> f64 = {
-    # Gather the number token (everything up to the next blank) into a NUL-terminated buffer
-    # and let `strtod` parse it.
     var buffer: containers.String;
-    var c = skipBlanks();
-    while (c != ' ' and c != '\t' and c != '\n') {
-        buffer.append(c);
-        c = readChar();
+    var c = readCharCode();
+    while (c == i32(' ') or c == i32('\t') or c == i32('\n')) c = readCharCode();
+    while (c >= 0 and c != i32(' ') and c != i32('\t') and c != i32('\n')) {
+        buffer.append(char(c));
+        c = readCharCode();
     }
     buffer.append('\0');
 
@@ -161,15 +166,12 @@ fun readF64() -> f64 = {
     return value;
 }
 
-#{
-    Reads characters up to (and discarding) the next newline into a fresh containers.String.
-#}
 fun readString() -> containers.String = {
     var result: containers.String;
-    var c = readChar();
-    while (c != '\n') {
-        result.append(c);
-        c = readChar();
+    var c = readCharCode();
+    while (c >= 0 and c != i32('\n')) {
+        result.append(char(c));
+        c = readCharCode();
     }
     return result;
 }
