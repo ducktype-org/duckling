@@ -99,7 +99,7 @@ impl<'duck> Fetcher<'duck> {
             .with_context(|| {
                 format!(
                     "while getting a metadata of `{}` version `{}`",
-                    package.id, package.version
+                    package.name, package.version
                 )
             })?;
         self.cache
@@ -122,7 +122,7 @@ impl<'duck> Fetcher<'duck> {
     ) -> QuackResult<FetcherResponse<types::MultiMetadata>> {
         if self.ctx.is_offline() {
             let package = PackageWithUrl {
-                id: package_name,
+                name: package_name,
                 version: 1.into(),
                 url,
             };
@@ -145,7 +145,7 @@ impl<'duck> Fetcher<'duck> {
     pub fn fetch_package_blob(&self, package: &types::PackageWithUrl) -> QuackResult<PathBuf> {
         let destination = self
             .download_cache_path
-            .join(package.id)
+            .join(package.name)
             .join(package.version.to_string());
 
         let blob_path = destination
@@ -164,7 +164,7 @@ impl<'duck> Fetcher<'duck> {
             .with_context(|| {
                 format!(
                     "while downloading a source of `{}` version `{}`",
-                    package.id, package.version
+                    package.name, package.version
                 )
             })?;
         Ok(blob_path)

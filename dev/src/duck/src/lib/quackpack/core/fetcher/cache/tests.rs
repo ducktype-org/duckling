@@ -44,7 +44,7 @@ fn create_sample_metadata() -> registry::Manifest {
 
 fn create_example_package() -> PackageWithUrl {
     PackageWithUrl {
-        id: "quackpack".into(),
+        name: "quackpack".into(),
         version: Version::new(1, 2, 3),
         url: "https://localhost:9001".to_url().unwrap().into(),
     }
