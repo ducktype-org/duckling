@@ -36,6 +36,12 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 		)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ADDITIONAL_GNU_FLAGS}")
 
+	if(APPLE)
+		# The macOS SDK headers use the C keyword _Static_assert, which GCC rejects
+		# in C++ mode; map it onto C++'s static_assert.
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_Static_assert=static_assert")
+	endif()
+
 	# Debug version uses O0.
 
 elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")

@@ -34,6 +34,7 @@ namespace vm::exceptions {
 	// @TODO: #1431 remove this
 	VM_RUNTIME_EXCEPTION(VMGlobalNotFoundException, "Global variable not found");
 	VM_RUNTIME_EXCEPTION(VMDeadlockException, "Deadlock detected");
+	VM_RUNTIME_EXCEPTION(VMDestroyLockedMutexException, "Destroying a locked mutex");
 	VM_RUNTIME_EXCEPTION(
 		VMDynTableReAllocTypeMismatch, "dynTableReAlloc called on a non-dynamic-table block"
 	);

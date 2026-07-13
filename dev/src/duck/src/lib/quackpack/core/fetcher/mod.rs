@@ -14,14 +14,14 @@ use crate::quackpack::core::fetcher::types::{FetcherResponse, PackageWithUrl};
 use crate::quackpack::schemas::registry;
 use crate::quackpack::util::interned_url::InternedUrl;
 use crate::util::file_locks::FileLockManager;
-use crate::util::path_ops_ext::{MkdirOptions, PathOpsExt};
-use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail_internal};
+use crate::{DuckContext, QuackResult, QuackResultContext, StrId};
 
 pub mod cache;
 pub mod ducknest;
 pub mod git;
 pub mod http;
 pub mod types;
+pub mod util;
 
 #[cfg(test)]
 mod tests;
@@ -157,13 +157,10 @@ impl<'duck> Fetcher<'duck> {
             return Ok(blob_path);
         }
 
-        if let Some(parent) = blob_path.parent() {
-            parent.mkdir(MkdirOptions::WithParents)?;
-        } else {
-            qp_bail_internal!("path without a parent")
-        }
+        let blob = destination.open_exclusive(Self::DEFAULT_BLOB_FILENAME, self.ctx)?;
+
         self.ducknest_client
-            .fetch_blob(package, &blob_path)
+            .fetch_blob(package, blob)
             .with_context(|| {
                 format!(
                     "while downloading a source of `{}` version `{}`",

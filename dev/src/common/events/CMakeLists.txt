@@ -1,5 +1,6 @@
 add_library(Events
         src/events/emitter.hpp
+        src/events/emitter.cpp
 )
 
 make_module(Events USES Base)
