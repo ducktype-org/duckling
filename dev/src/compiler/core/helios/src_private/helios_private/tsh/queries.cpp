@@ -1,6 +1,10 @@
 #include "queries.hpp"
 
 #include "abstract_type_impl.hpp"
+#include "helios/symbols/symbol_id.hpp"
+#include "helios/tsh/queries/types.hpp"
+#include "helios/tsh/type_interface.hpp"
+#include "helios/tsh/types.hpp"
 
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/query_type_symbol_data.hpp>
@@ -11,8 +15,24 @@
 
 #include <query_framework/standard_query/query_impl.hpp>
 
+#include <unordered_set>
+
 namespace compiler::tsh {
 	struct IMPLEMENT_QUERY(QueryInterfaceOfClass, query::QResult<TypeInterface>) {
+		static InterfaceElement::SpecialKind getMethodSpecialKind(Context& ctx, helios::SymID sym) {
+			auto name = helios::name(sym);
+			if (name == base::StrID("toString")) {
+				auto expected_type = ctx.query<tsh::QueryFunctionType>(
+					{ .parameter_types = {},
+				      .result_type     = tsh::SymbolType<>::withDefaults(getStringType(ctx)) }
+				);
+				if (ctx.query<helios::QueryTypeOfSymbol>(sym)->valueOrThrow().getType()
+				    == expected_type)
+					return InterfaceElement::SpecialKind::ToString;
+			}
+			return InterfaceElement::SpecialKind::None;
+		}
+
 		static auto provide(Context& ctx, const QKey key) -> PResult {
 			const compiler::helios::SymID symbol = key.value->getSymbol();
 
@@ -40,7 +60,8 @@ namespace compiler::tsh {
 					key.value->toAbstractType(),
 					declaration_order,
 					InterfaceElement::InterfaceElementKind::Method,
-					{}
+					{},
+					getMethodSpecialKind(ctx, method_sym)
 				));
 				declaration_order++;
 			}
@@ -75,7 +96,7 @@ namespace compiler::tsh {
 			auto components = ctx.query<helios::QueryTupleTypeData>(key.value->toAbstractType())
 			                      ->valueOrThrow()
 			                      .members;
-			u32 declaration_order = 0;
+			u32  declaration_order = 0;
 			for (const auto& component: components) {
 				elements.emplace_back(
 					component,

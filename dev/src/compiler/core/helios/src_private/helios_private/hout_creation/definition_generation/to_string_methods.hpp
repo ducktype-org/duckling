@@ -12,6 +12,13 @@ namespace compiler::helios::defgen {
 	 */
 	SymID toStringSymForType(query::Context& ctx, tsh::AbstractType type);
 
+
+	/**
+	 * @brief Get the symbol of the generated toString method for a type.
+	 * Note that this symbol should not be used if the user implemented it's own type.
+	 */
+	SymID generatedToStringSymForType(query::Context& ctx, tsh::AbstractType type);
+
 	/**
 	 * @brief Internal utility function to get a String HOUT expression
 	 * from a string literal value.

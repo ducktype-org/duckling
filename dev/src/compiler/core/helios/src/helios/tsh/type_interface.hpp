@@ -43,10 +43,11 @@ namespace compiler::tsh {
 			Other,
 		};
 
-		enum class SpecialKind {
-			ToString,
-			None
-		};
+		/**
+		 * These are methods that are special and there should be only
+		 * one instance of this special method in the interface.
+		 */
+		enum class SpecialKind { ToString, None };
 
 	private:
 		/**
@@ -81,6 +82,11 @@ namespace compiler::tsh {
 		 */
 		ClassMemberVisibility visibility;
 
+		/**
+		 * This makes special method is more visible to the lookup and generating code.
+		 */
+		SpecialKind special;
+
 	public:
 		/**
 		 * @brief Construct an element of an interface of a type.
@@ -97,12 +103,14 @@ namespace compiler::tsh {
 			const u32                     declaration_order,
 			const InterfaceElementKind    kind,
 			const ClassMemberVisibility   visibility,
+			const SpecialKind             special = SpecialKind::None
 		):
 			  symbol(symbol),
 			  source(source),
 			  declaration_order(declaration_order),
 			  kind(kind),
-			  visibility(visibility) {}
+			  visibility(visibility),
+			  special(special) {}
 
 		/**
 		 * @brief Gets the symbol of this element.
@@ -170,6 +178,14 @@ namespace compiler::tsh {
 		[[nodiscard]]
 		ClassMemberVisibility getVisibility() const {
 			return visibility;
+		}
+
+		/**
+		 * @brief Get special kind.
+		 */
+		[[nodiscard]]
+		SpecialKind specialKind() const {
+			return special;
 		}
 
 		/**

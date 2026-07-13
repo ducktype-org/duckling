@@ -1,6 +1,7 @@
 #include "to_string_methods.hpp"
 
 #include "diagnostic_interactive/placeholder.hpp"
+#include "helios/tsh/type_interface.hpp"
 
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/elements/stmt.hpp>
@@ -28,6 +29,14 @@
 
 namespace compiler::helios::defgen {
 	SymID toStringSymForType(query::Context& ctx, const tsh::AbstractType type) {
+		for (auto& elem : type.getInterface(ctx)->getElementsWithName(base::StrID("toString"))) {
+			if (elem.specialKind() == tsh::InterfaceElement::SpecialKind::ToString)
+				return elem.getSymbol();
+		}
+		CORE_PANIC("Every symbol should have toString.");
+	}
+
+	SymID generatedToStringSymForType(query::Context& ctx, const tsh::AbstractType type) {
 		return ctx.query<QueryGeneratedSymbol>({
 			.name                  = base::StrID("toString"),
 			.generated_symbol_data = Method{ .owner_type = type, .kind = Method::Kind::ToString },

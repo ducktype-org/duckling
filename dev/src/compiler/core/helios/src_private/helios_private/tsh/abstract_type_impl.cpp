@@ -1,5 +1,6 @@
 #include "abstract_type_impl.hpp"
 
+#include "helios/tsh/type_interface.hpp"
 #include "queries.hpp"
 
 #include <helios/symbols/query_type_of_symbol.hpp>
@@ -24,6 +25,7 @@
 #include <query_framework/context/context.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 
+#include <unordered_set>
 #include <utility>
 
 namespace compiler::tsh {
@@ -35,34 +37,36 @@ namespace compiler::tsh {
 	 * @return The default interface for the given type.
 	 */
 	TypeInterface getDefaultTypeInterfaceForType(query::Context& ctx, const AbstractType type) {
+		using helios::defgen::destructSymForType;
+		using helios::defgen::generatedToStringSymForType;
+
 		// @TODO: #1956 Methods don't work for zero-sized types yet, due to taking ref to self
 		if (not type.carriesInformation(ctx)) {
 			if (type.getKind() == Kind::Unit) {
 				// The unit type has a `toString` method, even though it doesn't carry information,
 				// because it is a simple type and it's passed by value.
 				return TypeInterface{ std::vector{ InterfaceElement{
-					helios::defgen::toStringSymForType(ctx, type),
+					generatedToStringSymForType(ctx, type),
 					type,
 					0,
 					InterfaceElement::InterfaceElementKind::Method,
 					ClassMemberVisibility::Public,
+					InterfaceElement::SpecialKind::ToString,
 				} } };
 			}
 			return {};
 		}
 
-		using helios::defgen::destructSymForType;
-		using helios::defgen::toStringSymForType;
-
 		std::vector<InterfaceElement> elements;
 
 		// Every type has a `toString` method.
 		elements.emplace_back(
-			toStringSymForType(ctx, type),
+			generatedToStringSymForType(ctx, type),
 			type,
 			0,
 			InterfaceElement::InterfaceElementKind::Method,
-			ClassMemberVisibility::Public
+			ClassMemberVisibility::Public,
+			InterfaceElement::SpecialKind::ToString
 		);
 
 		// Only classes have destructors (for now)
@@ -108,10 +112,30 @@ namespace compiler::tsh {
 	}
 
 	struct IMPLEMENT_QUERY(QueryTypeInterface, TypeInterface) {
+		/**
+		 * Combines the default interface with the declared one (by the user).
+		 * It doesn't add the elements with special kind already existing.
+		 */
+		static TypeInterface addDefaultInterface(
+			Context& ctx, CRef<TypeInterface> declared, const QKey key
+		) {
+			std::vector<InterfaceElement>                     new_elements;
+			std::unordered_set<InterfaceElement::SpecialKind> declared_specials;
+			for (auto& elem: declared->getElements()) {
+				new_elements.push_back(elem);
+				if (elem.specialKind() != InterfaceElement::SpecialKind::None)
+					declared_specials.insert(elem.specialKind());
+			}
+
+			for (auto& elem: getDefaultTypeInterfaceForType(ctx, key).getElements()) {
+				if (declared_specials.contains(elem.specialKind())) continue;
+				new_elements.push_back(elem);
+			}
+			return TypeInterface(new_elements);
+		}
+
 		static auto provide(Context& ctx, const QKey key) -> PResult {
-			return getDefaultTypeInterfaceForType(ctx, key).combine(
-				key.getPimpl()->getDeclaredInterface(ctx)
-			);
+			return addDefaultInterface(ctx, key.getPimpl()->getDeclaredInterface(ctx), key);
 		}
 
 		QUERY_AUTO_CACHE_CREF
@@ -134,8 +158,9 @@ namespace compiler::tsh {
 		return res.str();
 	}
 
-	bool UnitAbstractTypeImpl::isImplicitlyCoercible(const AbstractType target, query::Context&)
-		const {
+	bool UnitAbstractTypeImpl::isImplicitlyCoercible(
+		const AbstractType target, query::Context&
+	) const {
 		// The unit type can be coerced to the meta type
 		// because unit values can be interpreted as unit types.
 		return target.getKind() == Kind::Meta;
@@ -362,14 +387,14 @@ namespace compiler::tsh {
 		return &cached_interface;
 	}
 
-	CRef<TypeInterface> DynamicArrayAbstractTypeImpl::getDeclaredInterface(query::Context& ctx
+	CRef<TypeInterface> DynamicArrayAbstractTypeImpl::getDeclaredInterface(
+		query::Context& ctx
 	) const {
 		const auto type = toAbstractType().as<DynamicArrayAbstractType>();
 		return &ctx.query<QueryInterfaceOfDynamicArray>(type)->valueOrThrow();
 	}
 
-	CRef<TypeInterface> StaticArrayAbstractTypeImpl::getDeclaredInterface(query::Context& ctx
-	) const {
+	CRef<TypeInterface> StaticArrayAbstractTypeImpl::getDeclaredInterface(query::Context& ctx) const {
 		const auto type = toAbstractType().as<StaticArrayAbstractType>();
 		return &ctx.query<QueryInterfaceOfStaticArray>(type)->valueOrThrow();
 	}
@@ -416,22 +441,27 @@ namespace compiler::tsh {
 					return ctx.query<tsh::QueryDynamicArrayType>({ element_type });
 				}
 				default: {
-					throw base::NotYetImplemented(base::strConcat(
-						"Instantiation of a builtin type template type: ", representation
-					));
+					throw base::NotYetImplemented(
+						base::strConcat(
+							"Instantiation of a builtin type template type: ", representation
+						)
+					);
 				}
 				}
 			}
 			variant_default {
-				throw base::NotYetImplemented(base::strConcat(
-					"Instantiation of a non-builtin type template type: ", representation
-				));
+				throw base::NotYetImplemented(
+					base::strConcat(
+						"Instantiation of a non-builtin type template type: ", representation
+					)
+				);
 			}
 		}
 		CORE_UNREACHABLE();
 	}
 
-	base::Optional<ClassAbstractType> ClassAbstractTypeImpl::getBaseClassType(query::Context& ctx
+	base::Optional<ClassAbstractType> ClassAbstractTypeImpl::getBaseClassType(
+		query::Context& ctx
 	) const {
 		auto& base = ctx.query<compiler::helios::QueryClassSymbolData>(symbol)->valueOrThrow().base;
 		if (base.has_value()) return { ClassAbstractType(base.value()) };
@@ -521,8 +551,9 @@ namespace compiler::tsh {
 		});
 	}
 
-	bool StaticArrayAbstractTypeImpl::isImplicitlyCoercible(AbstractType target, query::Context&)
-		const {
+	bool StaticArrayAbstractTypeImpl::isImplicitlyCoercible(
+		AbstractType target, query::Context&
+	) const {
 		// Static arrays are implicitly coercible to dynamic arrays storing the same type.
 		if (target.getKind() == Kind::DynamicArray) {
 			auto dynamic_array_type = DynamicArrayAbstractType(target);
