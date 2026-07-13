@@ -47,9 +47,7 @@ impl CommandExt for Command {
         }
         unsafe {
             if SetConsoleCtrlHandler(Some(handler), TRUE) == FALSE {
-                return Err(io::Error::other(
-                    "failed to overwrite ctrl-c handler"
-                ).into());
+                return Err(io::Error::other("failed to overwrite ctrl-c handler").into());
             }
         }
         let status = self.spawn()?.wait()?;
