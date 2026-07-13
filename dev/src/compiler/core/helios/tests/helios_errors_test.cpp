@@ -68,7 +68,6 @@ private:
 		const std::vector<std::string_view>& present_phrases,
 		u64                                  logged_msg_count
 	) {
-		// std::cerr << module_content <<"\n";
 		frontend::ModuleID module_id = frontend::createModuleTreeFromContents(module_content);
 
 		auto result = query::entryPoint<helios::QueryModuleHOUT>(module_id);
