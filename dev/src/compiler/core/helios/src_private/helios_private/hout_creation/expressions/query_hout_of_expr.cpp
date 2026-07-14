@@ -1041,10 +1041,10 @@ namespace compiler::helios {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryHoutOfExpr)
 
 	query::QResult<BoxOrCRef<code::Expr>> getHoutOfExprWithExpectedType(
-		query::Context&                                      ctx,
-		const pst::GenericPSTQueryKey<pst::ExprElement>&     pst_expr,
-		const tsh::SymbolType<>                              expected_type,
-		base::Optional<std::function<void(query::Context&)>> log_error
+		query::Context&                                  ctx,
+		const pst::GenericPSTQueryKey<pst::ExprElement>& pst_expr,
+		const tsh::SymbolType<>                          expected_type,
+		CoercionErrorOverrides                           error_overrides
 	) {
 		auto expr_hout_qresult = ctx.query<QueryHoutOfExpr>({ pst_expr.element });
 
@@ -1065,23 +1065,23 @@ namespace compiler::helios {
 			source_symbol_type,
 			expected_type,
 			source_position,
-			std::move(log_error)
+			std::move(error_overrides)
 		);
 		return query::Failed();
 	}
 
 	query::QResult<Box<code::Expr>> code::subExprFromPSTWithType(
-		query::Context&                                      ctx,
-		pst::AccessLocked<pst::ExprElement>                  element,
-		tsh::SymbolType<>                                    expected_type,
-		base::Optional<std::function<void(query::Context&)>> log_error
+		query::Context&                     ctx,
+		pst::AccessLocked<pst::ExprElement> element,
+		tsh::SymbolType<>                   expected_type,
+		helios::CoercionErrorOverrides      error_overrides
 	) {
 		auto expr_hout_qresult = code::subExprFromPST(ctx, element);
 		UNPACK_QRESULT_MOVE(auto expr_hout =, expr_hout_qresult);
 		const auto source_position = element.unlock(ctx)->getStablePosition();
 
 		auto maybe_coerced = coerceFromBox(
-			ctx, std::move(expr_hout), expected_type, source_position, std::move(log_error)
+			ctx, std::move(expr_hout), expected_type, source_position, std::move(error_overrides)
 		);
 		if (maybe_coerced.has_value()) return std::move(maybe_coerced.value());
 		return query::Failed();

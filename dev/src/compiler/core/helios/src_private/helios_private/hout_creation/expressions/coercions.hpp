@@ -179,26 +179,42 @@ namespace compiler::helios {
 	CoercionQResult canCoerceToMeta(query::Context& ctx, const tsh::ExpressionType<>& from);
 
 	/**
+	 * @brief Optional overrides of the default coercion failure errors.
+	 */
+	struct CoercionErrorOverrides final {
+		using Logger = std::function<void(query::Context&)>;
+
+		/// Override for `InvalidCoercionReason::IncompatibleTypes`.
+		base::Optional<Logger> incompatible_types = {};
+		/// Override for `InvalidCoercionReason::TypeNotCopyable`.
+		base::Optional<Logger> type_not_copyable = {};
+		/// Override for `InvalidCoercionReason::RequiresExplicitCopyMove`.
+		base::Optional<Logger> requires_explicit_copy_move = {};
+	};
+
+	/**
 	 * @brief Checks whether `expr` can be coerced to `expected_type`. Returns a coerced expression
-	 * when the coercion is valid, logs an error via `log_error` when `expr` is not coercible to the
-	 * given type.
+	 * when the coercion is valid, logs an error when `expr` is not coercible to the given type.
+	 * Logs errors via `error_overrides` if ones are provided.
+	 *
 	 * @note This is a convenience wrapper around `canCoerce` + `coercion.coerce()` for the common
 	 * case of coercing expressions with a `Box<code::Expr>` in hand, which is usual when handling
 	 * compiler generated code.
 	 * @return The coerced expression or an empty optional on error.
 	 */
 	base::Optional<Box<code::Expr>> coerceFromBox(
-		query::Context&                                      ctx,
-		Box<code::Expr>                                      expr,
-		const tsh::SymbolType<>                              expected_type,
-		dia_int::StablePosition                              source_position,
-		base::Optional<std::function<void(query::Context&)>> log_error = {}
+		query::Context&         ctx,
+		Box<code::Expr>         expr,
+		const tsh::SymbolType<> expected_type,
+		dia_int::StablePosition source_position,
+		CoercionErrorOverrides  error_overrides = {}
 	);
 
 	/**
-	 * @brief Builds the diagnostic message describing why a coercion failed, based on the `reason`.
+	 * @brief Builds the default diagnostic message describing why a coercion failed, based on the
+	 * `reason`.
 	 */
-	[[nodiscard]] Box<dia_int::MessageBase> makeCoercionFailureMessage(
+	[[nodiscard]] Box<dia_int::MessageBase> makeDefaultCoercionErrorMessage(
 		query::Context&          ctx,
 		InvalidCoercionReason    reason,
 		const tsh::SymbolType<>& source_symbol_type,
@@ -207,16 +223,15 @@ namespace compiler::helios {
 	);
 
 	/**
-	 * @brief Logs the default coercion failure message (see `makeCoercionFailureMessage`).
-	 *
-	 * @param log_error Optional overrides of the default
+	 * @brief Logs the coercion failure for `reason`. Uses the matching override in
+	 * `error_overrides` if one is provided, otherwise logs the default message.
 	 */
 	void logCoercionFailure(
-		query::Context&                                      ctx,
-		InvalidCoercionReason                                reason,
-		const tsh::SymbolType<>&                             source_symbol_type,
-		const tsh::SymbolType<>&                             expected_type,
-		dia_int::StablePosition                              source_position,
-		base::Optional<std::function<void(query::Context&)>> log_error = {}
+		query::Context&          ctx,
+		InvalidCoercionReason    reason,
+		const tsh::SymbolType<>& source_symbol_type,
+		const tsh::SymbolType<>& expected_type,
+		dia_int::StablePosition  source_position,
+		CoercionErrorOverrides   error_overrides = {}
 	);
 }

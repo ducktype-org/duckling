@@ -284,11 +284,11 @@ namespace compiler::helios {
 	}
 
 	base::Optional<Box<code::Expr>> coerceFromBox(
-		query::Context&                                      ctx,
-		Box<code::Expr>                                      expr,
-		const tsh::SymbolType<>                              expected_type,
-		dia_int::StablePosition                              source_position,
-		base::Optional<std::function<void(query::Context&)>> log_error
+		query::Context&         ctx,
+		Box<code::Expr>         expr,
+		const tsh::SymbolType<> expected_type,
+		dia_int::StablePosition source_position,
+		CoercionErrorOverrides  error_overrides
 	) {
 		const tsh::SymbolType<> source_symbol_type = expr->expression_type.getSymbolType();
 		const auto coercion_qresult = canCoerce(ctx, expr->expression_type, expected_type);
@@ -304,12 +304,12 @@ namespace compiler::helios {
 			source_symbol_type,
 			expected_type,
 			source_position,
-			std::move(log_error)
+			std::move(error_overrides)
 		);
 		return {};
 	}
 
-	Box<dia_int::MessageBase> makeCoercionFailureMessage(
+	Box<dia_int::MessageBase> makeDefaultCoercionErrorMessage(
 		query::Context&          ctx,
 		InvalidCoercionReason    reason,
 		const tsh::SymbolType<>& source_symbol_type,
@@ -346,20 +346,31 @@ namespace compiler::helios {
 	}
 
 	void logCoercionFailure(
-		query::Context&                                      ctx,
-		InvalidCoercionReason                                reason,
-		const tsh::SymbolType<>&                             source_symbol_type,
-		const tsh::SymbolType<>&                             expected_type,
-		dia_int::StablePosition                              source_position,
-		base::Optional<std::function<void(query::Context&)>> log_error
+		query::Context&          ctx,
+		InvalidCoercionReason    reason,
+		const tsh::SymbolType<>& source_symbol_type,
+		const tsh::SymbolType<>& expected_type,
+		dia_int::StablePosition  source_position,
+		CoercionErrorOverrides   error_overrides
 	) {
-		// The custom override only applies to a plain type mismatch; the copy-related reasons
-		// always use the canonical message.
-		if (reason == InvalidCoercionReason::IncompatibleTypes && log_error.has_value()) {
-			(*log_error)(ctx);
+		// Use the caller's override if one is set, otherwise the default message.
+		const base::Optional<CoercionErrorOverrides::Logger>& override = [&]() -> const auto& {
+			switch (reason) {
+			case InvalidCoercionReason::IncompatibleTypes:
+				return error_overrides.incompatible_types;
+			case InvalidCoercionReason::TypeNotCopyable:
+				return error_overrides.type_not_copyable;
+			case InvalidCoercionReason::RequiresExplicitCopyMove:
+				return error_overrides.requires_explicit_copy_move;
+			}
+			CORE_UNREACHABLE();
+		}();
+
+		if (override.has_value()) {
+			(*override)(ctx);
 			return;
 		}
-		ctx.logInt(makeCoercionFailureMessage(
+		ctx.logInt(makeDefaultCoercionErrorMessage(
 			ctx, reason, source_symbol_type, expected_type, source_position
 		));
 	}

@@ -227,7 +227,7 @@ namespace compiler::helios::code {
 
 						auto source_pos
 							= arguments_origin[data.argument_index].getStablePosition().value();
-						return helios::makeCoercionFailureMessage(
+						return helios::makeDefaultCoercionErrorMessage(
 							ctx, data.reason, data.given_type, data.expected_type, source_pos
 						);
 					}

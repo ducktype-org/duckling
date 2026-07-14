@@ -176,17 +176,20 @@ namespace compiler::helios::desugaring {
                 std::move(raw_element),
                 iter_type,
                 iter_pst_pos,
-                [&](query::Context& error_ctx) {
-                    error_ctx.logInt(makeBox<dia_int::PlaceholderError>(
-                        base::strConcat(
-                            "Cannot coerce collection element type '",
-                            element_sym_type.toString(),
-                            "' to iterator type '",
-                            iter_type.toString(),
-                            "'."
-                        ),
-                        iter_pst_pos
-                    ));
+                CoercionErrorOverrides{
+						.incompatible_types =
+                        [&](query::Context& error_ctx) {
+                            error_ctx.logInt(makeBox<dia_int::PlaceholderError>(
+                                base::strConcat(
+                                    "Cannot coerce collection element type '",
+                                    element_sym_type.toString(),
+                                    "' to iterator type '",
+                                    iter_type.toString(),
+                                    "'."
+                                ),
+                                iter_pst_pos
+                            ));
+                        },
                 }
             );
 			if (!element_expr.has_value()) return {};
