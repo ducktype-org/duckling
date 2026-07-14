@@ -1473,9 +1473,7 @@ private:
 		}
 		{
 			// take_int_ref(&b_int);
-			// `&` on `box i32` yields `ref i32`, which matches the `ref i32` parameter exactly, so
-			// the argument is a plain `RefOfExpr` with no `ref i32 -> ref i64` cast (element-type
-			// coercions on references/boxes are disallowed, see #2185).
+			// `&` on `box i32` creates a `ref i32`
 			ASSERT_TRUE(body.statements.size() > 2);
 			auto* expr_stmt = dynamic_cast<const ExprStmt*>(body.statements[1].get());
 			ASSERT_TRUE(expr_stmt != nullptr);
