@@ -785,7 +785,8 @@ private:
 
 	// Structures whose libffi descriptor would be degenerate are not FFI-compliant: a
 	// zero-length table flattens to no elements, a field-less struct has size 0 (rejected by
-	// libffi), and an oversized flattened element count must fail before it is materialized.
+	// libffi), and an oversized flattened element count must fail before it is materialized —
+	// also when the elements hide inside nested structure descriptors.
 	void nonCompliantStructsFail() {
 		expectLoadError(
 			"zero_length_table_struct",
@@ -809,6 +810,16 @@ private:
 				  "type data: WithHuge { v: huge }\n"
 				  "ffi function ffi_add { WithHuge } -> { i64 };\n",
 			{ "WithHuge", "cannot be used in an FFI function signature" }
+		);
+		// Each nested struct is under the cap on its own; their sum is not.
+		expectLoadError(
+			"nested_struct_cap_bypass",
+			ffiObjectHeader()
+				+ "type fixed_size_table: big i32 40000\n"
+				  "type data: Inner { v: big }\n"
+				  "type data: Outer { a: Inner, b: Inner }\n"
+				  "ffi function ffi_add { Outer } -> { i64 };\n",
+			{ "Outer", "cannot be used in an FFI function signature" }
 		);
 	}
 

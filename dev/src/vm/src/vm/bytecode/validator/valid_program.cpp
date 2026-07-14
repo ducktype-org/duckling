@@ -11,7 +11,6 @@
 #include <vm/bytecode/validator/type_validator.hpp>
 
 #include <algorithm>
-#include <limits>
 
 vm::code::ValidProgram vm::code::ValidProgram::withBuiltins() {
 	auto program = ValidProgram();
@@ -190,20 +189,18 @@ void vm::code::ValidProgram::insertFFIFunctions(const std::vector<FFIFunction>& 
 		}
 
 		if (auto structure = tp.value()->maybeGetKindAs<valid_type::finalized::Structure>()) {
-			// Fixed-size table fields are flattened in the libffi descriptor, so a field can
-			// span several elements; each VM field is compared against its first one.
-			// Computed (with saturating addition) before building the descriptor: flattening
-			// materializes one `ffi_type*` per element, so the count must be capped first.
-			usize element_count = 0;
-			for (const auto& field: structure.value()->fields) {
-				const usize field_count
-					= ffi_detail::flattenedFFIElementCount(*types.at(field.type), types);
-				element_count = element_count > std::numeric_limits<usize>::max() - field_count
-				                  ? std::numeric_limits<usize>::max()
-				                  : element_count + field_count;
-			}
-			if (element_count > ffi_detail::MAX_FLATTENED_FFI_ELEMENTS)
+			// Building the descriptor materializes one `ffi_type*` per element, nested structure
+			// descriptors included, so the total is capped before anything is built.
+			if (ffi_detail::totalFFIDescriptorElementCount(*tp.value(), types)
+			    > ffi_detail::MAX_FLATTENED_FFI_ELEMENTS)
 				throw FFIUnsupportedTypeError(*tp.value());
+
+			// Fixed-size table fields are flattened in the libffi descriptor, so a field can
+			// span several elements; each VM field is compared against its first one. The sum
+			// cannot overflow: it is bounded by the capped total above.
+			usize element_count = 0;
+			for (const auto& field: structure.value()->fields)
+				element_count += ffi_detail::flattenedFFIElementCount(*types.at(field.type), types);
 
 			// Verify the VM layout of the structure matches the C ABI layout libffi will use.
 			// FFI-compliant structures follow the C layout rules, so this is a defensive check.

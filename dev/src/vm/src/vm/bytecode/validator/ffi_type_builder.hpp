@@ -44,8 +44,22 @@ namespace vm::code::ffi_detail {
 	 * `buildFFIType`: a fixed-size table contributes its element type once per element
 	 * (recursively), any other type contributes one element. Saturates at `usize` max instead of
 	 * overflowing.
+	 * @note A nested structure counts as one element here (it is a single `ffi_type*` in the
+	 * enclosing descriptor); use `totalFFIDescriptorElementCount` to bound descriptor memory.
 	 */
 	usize flattenedFFIElementCount(
+		const valid_type::ValidType& type, const valid_type::ValidTypeMap& types
+	);
+
+	/**
+	 * @brief Total number of descriptor elements `buildFFIType` materializes for the given type,
+	 * including the elements of every nested structure descriptor. This is the count
+	 * `MAX_FLATTENED_FFI_ELEMENTS` bounds; unlike `flattenedFFIElementCount` it cannot be dodged
+	 * by hiding large tables behind nested structure fields. Saturates at `usize` max; a table of
+	 * structures overcounts (the shared element descriptor is multiplied), erring toward
+	 * rejection.
+	 */
+	usize totalFFIDescriptorElementCount(
 		const valid_type::ValidType& type, const valid_type::ValidTypeMap& types
 	);
 }

@@ -90,4 +90,27 @@ namespace vm::code::ffi_detail {
 		}
 		return 1;
 	}
+
+	usize totalFFIDescriptorElementCount(
+		const valid_type::ValidType& type, const valid_type::ValidTypeMap& types
+	) {
+		constexpr usize MAX = std::numeric_limits<usize>::max();
+		if (auto table = type.maybeGetKindAs<valid_type::finalized::FixedSizeTable>()) {
+			const usize inner
+				= totalFFIDescriptorElementCount(*types.at(table.value()->inner), types);
+			const usize count = table.value()->element_count;
+			if (inner != 0 && count > MAX / inner) return MAX;
+			return count * inner;
+		}
+		if (auto structure = type.maybeGetKindAs<valid_type::finalized::Structure>()) {
+			usize total = 0;
+			for (const auto& field: structure.value()->fields) {
+				const usize field_count
+					= totalFFIDescriptorElementCount(*types.at(field.type), types);
+				total = total > MAX - field_count ? MAX : total + field_count;
+			}
+			return total;
+		}
+		return 1;
+	}
 }
