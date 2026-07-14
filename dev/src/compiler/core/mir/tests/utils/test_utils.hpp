@@ -51,9 +51,10 @@ namespace compiler::mir::test_utils {
 			= frontend::createModuleTreeFromContents(module_content, "test_package");
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			auto hout_result = ctx.query<helios::QueryModuleHOUT>(module_id);
+			auto hout_result = ctx.query<helios::QueryTopLevelEntities>(module_id);
 			CORE_ASSERT(
-				hout_result->hasValue(), "Expected HOUT query to succeed for module content."
+				hout_result->hasValue(),
+				"Expected top-level entities query to succeed for module content."
 			);
 			auto logger = query::Context::dumpToOneLoggerAndClear();
 			CORE_ASSERT(!logger->hasErrors(), "Expected no errors to be logged by HELIOS.");
