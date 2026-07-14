@@ -341,8 +341,10 @@ namespace compiler::helios {
 				),
 				source_position
 			);
+
+		default:
+			CORE_UNREACHABLE();
 		}
-		CORE_UNREACHABLE();
 	}
 
 	void logCoercionFailure(
@@ -362,8 +364,9 @@ namespace compiler::helios {
 				return error_overrides.type_not_copyable;
 			case InvalidCoercionReason::RequiresExplicitCopyMove:
 				return error_overrides.requires_explicit_copy_move;
+			default:
+				CORE_UNREACHABLE();
 			}
-			CORE_UNREACHABLE();
 		}();
 
 		if (override.has_value()) {

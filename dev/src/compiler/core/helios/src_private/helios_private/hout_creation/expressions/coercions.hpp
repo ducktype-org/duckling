@@ -5,10 +5,26 @@
 #include <helios/tsh/symbol_type.hpp>
 #include <helios_private/errors/dia_interactive_elements.hpp>
 
+#include <base/extend_cpp/stringifyable_enum.hpp>
 #include <base/pointers/box_or_ref.hpp>
 
 #include <query_framework/context/context.hpp>
 #include <query_framework/query_result.hpp>
+
+#include <cstdint>
+
+/**
+ * @brief The specific reason a coercion cannot be performed.
+ */
+MAKE_STRINGIFYABLE_ENUM(compiler::helios, uint8_t, InvalidCoercionReason, 
+		/// The source type is not coercible to the target type.
+		IncompatibleTypes,
+		/// The value's type is not copyable, but this coercion required a copy.
+		TypeNotCopyable,
+		/// The value is copyable but not trivially copyable. The implicit copy must be made explicit
+		/// with `copy` or `move` keyword.
+		RequiresExplicitCopyMove
+);
 
 namespace compiler::helios {
 
@@ -27,19 +43,6 @@ namespace compiler::helios {
 			Box<InteractiveType>    actual_type,
 			Box<InteractiveType>    expected_type
 		);
-	};
-
-	/**
-	 * @brief The specific reason a coercion cannot be performed.
-	 */
-	enum class InvalidCoercionReason {
-		/// The source type is not coercible to the target type.
-		IncompatibleTypes,
-		/// The value's type is not copyable, but this coercion required a copy.
-		TypeNotCopyable,
-		/// The value is copyable but not trivially copyable. The implicit copy must be made explicit
-		/// with `copy` or `move` keyword.
-		RequiresExplicitCopyMove,
 	};
 
 	/**
