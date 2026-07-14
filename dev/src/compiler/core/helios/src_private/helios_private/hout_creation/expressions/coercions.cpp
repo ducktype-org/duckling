@@ -17,6 +17,8 @@
 
 namespace compiler::helios {
 	namespace {
+		using tsh::ExpressionType;
+
 		Box<code::Expr> handleReferenceKindCoercion(
 			query::Context& ctx, Box<code::Expr> expr, const tsh::SymbolType<>& to
 		) {
@@ -132,10 +134,8 @@ namespace compiler::helios {
 			   || (from_kind == tsh::ReferenceKind::Box && to_kind == tsh::ReferenceKind::Direct);
 
 			if (!reads_through_reference) return from;
-			return tsh::ExpressionType<>(
-				from.getSymbolType().getPointeeSymbolType(),
-				tsh::ValueCategory(tsh::PrimaryCategory::Dereferenced)
-			);
+			return { from.getSymbolType().getPointeeSymbolType(),
+				     tsh::ValueCategory(tsh::PrimaryCategory::Dereferenced) };
 		}
 
 		/**
