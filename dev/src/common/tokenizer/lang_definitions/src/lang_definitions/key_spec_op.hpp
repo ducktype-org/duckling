@@ -140,6 +140,7 @@ namespace lang_def {
 		// General text prefix operators (Not doesn't count)
 		Ref,
 		Box,
+		New,
 		Ptr,
 		CPtr,
 		ManyPtr,

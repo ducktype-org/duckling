@@ -13,6 +13,7 @@
 #include <frontend/pst_parser/elements/hierarchy/not_statements/format_string_sub_elements/format_sub_expression.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/format_string_sub_elements/format_sub_string.hpp>
 #include <frontend/pst_parser/pst_expr_visitor.hpp>
+#include <helios/attributes/builtins.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/queries/function_queries.hpp>
 #include <helios/tsh/queries.hpp>
@@ -478,6 +479,12 @@ namespace compiler::helios::code {
 					return;
 				}
 
+				// Box creation
+				if (op->unwrap() == lang_def::keywordToStr(lang_def::Keyword::New)) {
+					node = makeBoxCreation(std::move(inner), stmt->getStablePosition());
+					return;
+				}
+
 				// After the tricky cases have been handled, execute standard procedures.
 				node = resolveUnaryOperator(
 					op,
@@ -485,6 +492,30 @@ namespace compiler::helios::code {
 					ctx.query<QueryPrimaryCodeScopeFor>({ stmt }),
 					HOUTFunctionDeclaration::Operatoriness::Prefix
 				);
+			}
+
+			/**
+			 * @brief Builds the HOUT for an explicit box creation (`new inner`).
+			 *
+			 * A box owns a Direct value, so the operand is first coerced to the Direct then, the
+			 * resulting value is boxed.
+			 *
+			 * @return The box allocation expression, or an empty optional (with an error logged)
+			 * when the underlying value cannot be boxed.
+			 */
+			[[nodiscard]]
+			base::Optional<Box<Expr>> makeBoxCreation(
+				Box<Expr> inner, dia_int::StablePosition position
+			) const {
+				const auto origin      = inner->origin.generatedFrom();
+				const auto direct_type = inner->expression_type.getSymbolType().withReferenceKind(
+					tsh::ReferenceKind::Direct
+				);
+
+				auto value = coerceFromBox(ctx, std::move(inner), direct_type, position, {});
+				if (not value.has_value()) return {};
+
+				return makeBoxAllocCall(ctx, origin, std::move(value.value()));
 			}
 
 			/**

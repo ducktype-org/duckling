@@ -1,7 +1,6 @@
 #include "coercions.hpp"
 
 #include <ctv/numeric_value.hpp>
-#include <helios/attributes/builtins.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/tsh/queries/implicit_coercibility.hpp>
@@ -29,24 +28,18 @@ namespace compiler::helios {
 				if (to_kind == tsh::ReferenceKind::Ref)
 					// Should be explicit: var x: ref T = &T;
 					CORE_PANIC("Illegal Direct -> Ref coercion, should be caught earlier");
-				else if (to_kind == tsh::ReferenceKind::Box) {
-					// var x: box T = T(); -> Implicit box creation.
-					return makeBoxAllocCall(ctx, origin, std::move(expr));
-				}
+				else if (to_kind == tsh::ReferenceKind::Box)
+					// Should be explicit: var x: box T = new T();
+					CORE_PANIC("Illegal Direct -> Box coercion, should be caught earlier");
 			} else if (from_kind == tsh::ReferenceKind::Ref) {
 				// --- From Reference ---
 				if (to_kind == tsh::ReferenceKind::Direct) {
 					// var x: T = ref_T; -> Dereference the rhs.
 					// @TODO: #2000 Call a copy constructor here in the future.
 					return makeBox<code::DerefExpr>(ctx, origin, std::move(expr));
-				} else if (to_kind == tsh::ReferenceKind::Box) {
-					// var x: box T = ref_T; -> Creating a box from a ref, requires to perform a
-					// copy of the inner ref value. Since we can't just take ownership from a
-					// reference, thus we first dereference the rhs.
-					// @TODO: #2000 Call a copy constructor here in the future.
-					auto dereferenced = makeBox<code::DerefExpr>(ctx, origin, std::move(expr));
-					return makeBoxAllocCall(ctx, origin, std::move(dereferenced));
-				}
+				} else if (to_kind == tsh::ReferenceKind::Box)
+					// Should be explicit: var x: box T = new ref_T;
+					CORE_PANIC("Illegal Ref -> Box coercion, should be caught earlier");
 			} else if (from_kind == tsh::ReferenceKind::Box) {
 				// --- From Box ---
 				if (to_kind == tsh::ReferenceKind::Direct)
@@ -182,9 +175,7 @@ namespace compiler::helios {
 		auto requires_copy_coercion = [](tsh::ReferenceKind from_kind, tsh::ReferenceKind to_kind) {
 			switch (from_kind) {
 			case tsh::ReferenceKind::Direct:
-				return to_kind == tsh::ReferenceKind::Box || to_kind == tsh::ReferenceKind::Direct;
 			case tsh::ReferenceKind::Ref:
-				return to_kind == tsh::ReferenceKind::Direct || to_kind == tsh::ReferenceKind::Box;
 			case tsh::ReferenceKind::Box:
 				return to_kind == tsh::ReferenceKind::Direct;
 			default:

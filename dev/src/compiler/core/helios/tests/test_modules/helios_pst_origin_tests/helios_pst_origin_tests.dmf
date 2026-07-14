@@ -7,7 +7,7 @@ namespace NS1 {
         b: B;
     }
     var a: A = A(B(7));
-    var box_a: box A = A(B(7));
+    var box_a: box A = new A(B(7));
 
     var smaller_int: i32 = 5;
 
