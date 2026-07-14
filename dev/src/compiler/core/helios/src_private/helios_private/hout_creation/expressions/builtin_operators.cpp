@@ -186,33 +186,6 @@ namespace compiler::helios::code {
 				};
 				result_ops.put(builtin.symbol, builtin);
 			};
-			// - Helper function to register a builtin operation that lowers to a call of a language
-			//   primitive (a real stdlib function written in Duckling, e.g. `core.containers`).
-			const auto builtin_call = [&ctx, &result_ops](
-										  const base::StrID                            name,
-										  const std::vector<tsh::SymbolType<>>&        param_types,
-										  const tsh::SymbolType<>                      return_type,
-										  const LanguagePrimitive                      primitive,
-										  const HOUTFunctionDeclaration::Operatoriness operatoriness
-									  ) -> void {
-				const auto gen_data = defgen::BuiltinOperator{
-					.operator_type = ctx.query<tsh::QueryFunctionType>({
-						.parameter_types = param_types,
-						.result_type     = return_type,
-					}),
-					.operatoriness = operatoriness,
-				};
-				auto builtin = RegularBuiltinOperator{
-					.symbol = ctx.query<defgen::QueryGeneratedSymbol>({
-						.name                  = name,
-						.generated_symbol_data = gen_data,
-					}),
-					.op    = RegularBuiltinOperator::FunctionCall{
-						ctx.query<QueryLanguagePrimitiveSymID>({ primitive })->valueOrThrow()
-					},
-				};
-				result_ops.put(builtin.symbol, builtin);
-			};
 
 			/// Boolean operations ///
 			builtin_op(keywordToStr(lang_def::Keyword::Not), { bool_t }, bool_t, BooleanNot, Prefix);
@@ -264,38 +237,6 @@ namespace compiler::helios::code {
 			builtin_op(base::StrID("-"), { char_t, char_t }, u8_t, IntegerSub, Infix);
 			builtin_op(base::StrID("+"), { u8_t, char_t }, char_t, IntegerAdd, Infix);
 			builtin_op(base::StrID("+"), { char_t, u8_t }, char_t, IntegerAdd, Infix);
-
-			// The `String` type and its operators live in `core.containers`, so they only exist when
-			// a standard library is available. Skip them otherwise (e.g. no-std builds), as looking
-			// up the `String` language primitive would fail and take the whole query with it.
-			if (tsh::isStringTypePresent(ctx)) {
-				const auto str_t = tsh::SymbolType<>{
-					tsh::getStringType(ctx),
-					tsh::ReferenceKind::Direct,
-					tsh::Mutability::Immutable,
-				};
-				builtin_call(
-					base::StrID("+:"),
-					{ char_t, str_t },
-					str_t,
-					LanguagePrimitive::PrependChar,
-					Infix
-				);
-				builtin_call(
-					base::StrID(":+"),
-					{ str_t, char_t },
-					str_t,
-					LanguagePrimitive::AppendChar,
-					Infix
-				);
-				builtin_call(
-					base::StrID("++"),
-					{ str_t, str_t },
-					str_t,
-					LanguagePrimitive::ConcatStrings,
-					Infix
-				);
-			}
 
 			// Return
 			return result_ops;

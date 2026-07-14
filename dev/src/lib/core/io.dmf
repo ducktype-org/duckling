@@ -173,5 +173,5 @@ fun readString() -> containers.String = {
         result.append(char(c));
         c = readCharCode();
     }
-    return result;
+    return move result;
 }

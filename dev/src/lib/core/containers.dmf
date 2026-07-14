@@ -138,14 +138,20 @@ class String {
     }
 
     fun toString() -> String = {
-        return self;
+        return copy *(self as ptr String);
+    }
+
+    String.copy(other: const ref String) = {
+        var result = stringReserve(other.length());
+        copyChars(other.pointer, result.pointer, result.length());
+        return move result;
     }
 }
 
 fun stringReserve(cap: u64) -> String = {
     var result: String;
     result.reserve(cap);
-    return result;
+    return move result;
 }
 
 fun copyCharsAt(source: manyptr char, dest: manyptr char, dest_offset: u64, count: u64) -> () = {
@@ -161,29 +167,50 @@ fun copyChars(source: manyptr char, dest: manyptr char, count: u64) -> () = {
     copyCharsAt(source, dest, 0u64, count);
 }
 
-# These build a fresh String and must NOT dispose their operands: a by-value String is a shallow
-# copy sharing the caller's buffer (no deep-copy constructor yet), so disposing it would free
-# memory the caller still owns — a double free when the caller reuses the value. The operand
-# buffers therefore leak until destructors exist.
-fun concatStrings(a: String, b: String) -> String = {
+fun ++(a: String, b: String) -> String = {
     var result = stringReserve(a.length() + b.length());
     result.append(&a);
     result.append(&b);
-    return result;
+    a.dispose();
+    b.dispose();
+    return move result;
 }
 
-fun prependChar(c: char, s: String) -> String = {
+fun ++(a: ref String, b: ref String) -> String = {
+    var result = stringReserve(a.length() + b.length());
+    result.append(&a);
+    result.append(&b);
+    return move result;
+}
+
+fun +:(c: char, s: String) -> String = {
     var result = stringReserve(s.length() + 1u64);
     result.append(c);
     result.append(&s);
-    return result;
+    s.dispose();
+    return move result;
 }
 
-fun appendChar(s: String, c: char) -> String = {
+fun +:(c: char, s: ref String) -> String = {
+    var result = stringReserve(s.length() + 1u64);
+    result.append(c);
+    result.append(&s);
+    return move result;
+}
+
+fun :+(s: String, c: char) -> String = {
     var result = stringReserve(s.length() + 1u64);
     result.append(&s);
     result.append(c);
-    return result;
+    s.dispose();
+    return move result;
+}
+
+fun :+(s: ref String, c: char) -> String = {
+    var result = stringReserve(s.length() + 1u64);
+    result.append(&s);
+    result.append(c);
+    return move result;
 }
 
 fun stringifyStr(x: str) -> String = {
@@ -191,14 +218,14 @@ fun stringifyStr(x: str) -> String = {
     var result = stringReserve(size);
     copyChars(builtins.char_ptr_from_slice(x), result.pointer, size);
     result.len = size;
-    return result;
+    return move result;
 }
 
 fun stringifyChar(x: char) -> String = {
     var result        = stringReserve(1u64);
     result.pointer[0] = x;
     result.len        = 1u64;
-    return result;
+    return move result;
 }
 
 fun stringifyBool(x: bool) -> String = {
@@ -214,20 +241,20 @@ fun stringifyI64(x: i64) -> String = {
     let buffer_cap = 21u64;
     var result     = stringReserve(buffer_cap);
     result.len     = runtime.i64_to_string(x, result.pointer, buffer_cap);
-    return result;
+    return move result;
 }
 
 fun stringifyU64(x: u64) -> String = {
     let buffer_cap = 21u64;
     var result     = stringReserve(buffer_cap);
     result.len     = runtime.u64_to_string(x, result.pointer, buffer_cap);
-    return result;
+    return move result;
 }
 
 fun stringifyF64(x: f64) -> String = {
     let buffer_cap = 21u64;
     var result     = stringReserve(buffer_cap);
     result.len     = runtime.float_to_string(x, result.pointer, buffer_cap);
-    return result;
+    return move result;
 }
 
