@@ -31,6 +31,7 @@ class HeliosErrorsTests: public tester::TestSuite {
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(testErrorLogging);
+		TESTER_ADD_TEST(testCopyabilityErrors);
 
 		// This test has some strange side effects. Putting it before `testErrorLogging` causes
 		// the tests to fail.
@@ -386,7 +387,7 @@ private:
 					}
 				}
 			)",
-				{ "A copy constructor's parameter must be a constant reference to its own class "
+				{ "A copy constructor's parameter must be a reference to its own class "
 			      "`MyClass`." },
 				1
 			);
@@ -916,7 +917,7 @@ private:
 					return 0;
 				};
 			)",
-				{ "Copy constructor for non-trivially-copyable type `List[i32]`" },
+				{ "Cannot implicitly copy a value of non-trivially-copyable type `List[i32]`" },
 				1
 			);
 
@@ -925,9 +926,9 @@ private:
 				fun main() -> i64 = {
 					var dyn_matrix: List[List[i64]];
 					for (row in dyn_matrix) {} # `row` creates a copy.
-				};
+				}
 			)",
-				{ "Copy constructor for non-trivially-copyable type `List[i64]`" },
+				{ "Cannot implicitly copy a value of non-trivially-copyable type `List[i64]`" },
 				1
 			);
 
@@ -942,7 +943,7 @@ private:
 					return 0;
 				};
 			)",
-				{ "Copy constructor for non-trivially-copyable type `Class T`" },
+				{ "Cannot implicitly copy a value of non-trivially-copyable type `Class T`" },
 				1
 			);
 
@@ -957,10 +958,11 @@ private:
 				    return 0;
 				}
 			)",
-				{ "Copy constructor for non-trivially-copyable type `List[i32]`",
-			      "return a",
-			      "foo()" },
-				2
+				// `return a` implicitly copies the owned local `a`; `var list = foo()` moves the
+			    // temporary and is fine. @TODO: #858 `return` should implicitly move owned locals.
+				{ "Cannot implicitly copy a value of non-trivially-copyable type `List[i32]`",
+			      "return a" },
+				1
 			);
 
 			checkForErrorOnCompileModule(
@@ -974,7 +976,7 @@ private:
 				    return 0;
 				}
 			)",
-				{ "Copy constructor for non-trivially-copyable type `List[i32]`" },
+				{ "Cannot implicitly copy a value of non-trivially-copyable type `List[i32]`" },
 				1
 			);
 
@@ -990,7 +992,7 @@ private:
 				    return 0;
 				}
 			)",
-				{ "Copy constructor for non-trivially-copyable type `List[i32]`" },
+				{ "Cannot implicitly copy a value of non-trivially-copyable type `List[i32]`" },
 				1
 			);
 
@@ -1004,7 +1006,7 @@ private:
 					return 0;
 				}
 			)",
-				{ "Copy constructor for non-trivially-copyable type `List[i32]`" },
+				{ "Cannot implicitly copy a value of non-trivially-copyable type `List[i32]`" },
 				1
 			);
 
@@ -1018,8 +1020,7 @@ private:
 					return 0;
 				}
 			)",
-				{ "Copy constructor for non-trivially-copyable type `List[i32]`",
-			      "This was caused by the need" },
+				{ "Cannot implicitly copy a value of non-trivially-copyable type `List[i32]`" },
 				1
 			);
 
@@ -1032,7 +1033,7 @@ private:
     				return 0;
 				}
 			)",
-				{ "Copy constructor for non-trivially-copyable type `List[i32]`" },
+				{ "Cannot implicitly copy a value of non-trivially-copyable type `List[i32]`" },
 				1
 			);
 		}
@@ -1154,6 +1155,102 @@ private:
 				1
 			);
 		}
+	}
+
+	void testCopyabilityErrors() {
+		const std::string_view msg
+			= "Cannot implicitly copy a value of non-trivially-copyable type `List[i32]`";
+
+		checkForErrorOnCompileModule(
+			R"( fun main() -> i64 = {
+				var a: List[i32];
+				var b: List[i32] = a;
+				return 0;
+			} )",
+			{ msg },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"( fun main() -> i64 = {
+				var a: List[i32];
+				var b = a;
+				return 0;
+			} )",
+			{ msg },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"( class H { l: List[i32]; }
+			fun main() -> i64 = {
+				var h: H;
+				var b: List[i32] = h.l;
+				return 0;
+			} )",
+			{ msg },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"( fun main() -> i64 = {
+				var arr: List[i32][2];
+				var b: List[i32] = arr[0];
+				return 0;
+			} )",
+			{ msg },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"( fun main() -> i64 = {
+				var a: List[i32];
+				var b: box List[i32] = a;
+				return 0;
+			} )",
+			{ msg },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"( fun f(r: ref List[i32]) -> i32 = {
+				var b: List[i32] = r;
+				return 0;
+			})",
+			{ msg },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"( fun f(bl: box List[i32]) -> i32 = {
+				var x: List[i32] = bl;
+				return 0;
+			})",
+			{ msg },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"( fun foo(x: List[i32]) -> i32 = 0;
+			fun main() -> i64 = {
+				var a: List[i32];
+				foo(a);
+				return 0;
+			} )",
+			{ msg },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"( fun main() -> i64 = {
+				var t: (i32, List[i32]);
+				var b: (i32, List[i32]) = t;
+				return 0;
+			} )",
+			{ "Cannot implicitly copy a value of non-trivially-copyable type "
+		      "`Tuple(i32, List[i32])`" },
+			1
+		);
 	}
 
 	/**

@@ -875,7 +875,7 @@ namespace compiler::mir {
 	 */
 	struct MIRUnit final {
 		std::vector<CRef<mir::Function>> mir_functions;
-		std::vector<MIRGlobalData>       mir_globals;
+		std::vector<CRef<MIRGlobalData>> mir_globals;
 
 		void debugPrint(query::Context& ctx, std::ostream& out) const;
 	};

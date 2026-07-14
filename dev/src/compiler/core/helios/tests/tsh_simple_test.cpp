@@ -438,10 +438,6 @@ private:
 				"String should be trivially zero-initializable."
 			);
 			assertTrue(string_st.isCopyable(ctx), "String should be copyable.");
-			// @TODO: #2000 Make this check come back after unmocking copy constructors.
-			// assertFalse(
-			// 	string_st.isTriviallyCopyable(ctx), "String should not be trivially copyable."
-			// );
 		});
 	}
 
@@ -1035,6 +1031,48 @@ private:
 			"Value category with full allows_semantic should contain same value category with "
 			"subset of allowed semantics."
 		);
+
+		const auto temporary    = ValueCategory(PrimaryCategory::Temporary);
+		const auto local        = ValueCategory(PrimaryCategory::Local);
+		const auto global       = ValueCategory(PrimaryCategory::Global);
+		const auto literal      = ValueCategory(PrimaryCategory::Literal);
+		const auto dereferenced = ValueCategory(PrimaryCategory::Dereferenced);
+
+		// Local and Global are assignable, Temporary and Literal are not assignable.
+		assertTrue(
+			local.canBeAssignedTo() && global.canBeAssignedTo(),
+			"Local and Global should be assignable."
+		);
+		assertTrue(
+			!temporary.canBeAssignedTo() && !literal.canBeAssignedTo(),
+			"Temporary and Literal should be not assignable."
+		);
+
+		// Local, Global and Dereferenced are addressable, Temporary and Literal are not.
+		assertTrue(
+			local.addressable() && global.addressable() && dereferenced.addressable(),
+			"Local, Global and Dereferenced should be addressable."
+		);
+		assertTrue(
+			!temporary.addressable() && !literal.addressable(),
+			"Temporary and Literal should not be addressable."
+		);
+
+		// Only a Local is a valid operand of the explicit `move` operator.
+		assertTrue(local.isMovableFrom(), "Local should be a valid `move` operand.");
+		assertTrue(
+			!temporary.isMovableFrom() && !global.isMovableFrom() && !literal.isMovableFrom(),
+			"Only a Local should be a valid `move` operand."
+		);
+
+		// `move` is not forced unless it's requested.
+		assertTrue(
+			!local.mustMove() && !temporary.mustMove(), "Default categories should not force a move."
+		);
+		const auto forced_move = ValueCategory(
+			PrimaryCategory::Local, false, MOVE | COPY | REINIT | USE | DESTROY, MOVE
+		);
+		assertTrue(forced_move.mustMove(), "force_semantic with MOVE should mustMove().");
 	}
 
 	void simpleImplicitCoercibility() {

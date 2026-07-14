@@ -3,6 +3,7 @@
 #include "coercions.hpp"
 #include "errors.hpp"
 #include "function_calls/call_processing.hpp"
+#include "helios/hout/elements/stmt.hpp"
 #include "hout_of_subexpr.hpp"
 #include "numeric_literals.hpp"
 
@@ -20,6 +21,7 @@
 #include <helios/tsh/symbol_type.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/errors/dia_interactive_elements.hpp>
+#include <helios_private/hout_creation/definition_generation/copy_constructors.hpp>
 #include <helios_private/hout_creation/definition_generation/to_string_methods.hpp>
 #include <helios_private/hout_creation/expressions/builtin_operators.hpp>
 #include <helios_private/hout_creation/expressions/chain_expr.hpp>
@@ -447,12 +449,8 @@ namespace compiler::helios::code {
 						));
 						return;  // failed
 					}
-					// @TODO: #1549 RefOfExpr is inserted here naively without any checks.
-					// This should change to take value category into consideration as well as the
-					// `unique`/`leaking` specifiers.
-					auto primary_category = inner->expression_type.getValueCategory().getCategory();
-					if (primary_category == tsh::PrimaryCategory::Literal
-					    || primary_category == tsh::PrimaryCategory::Temporary) {
+					// @TODO: #3109 Take `unique`/`leaking` specifiers into consideration.
+					if (not inner->expression_type.getValueCategory().addressable()) {
 						ctx.logInt(makeBox<dia_int::PlaceholderError>(
 							"Tried to reference a temporary", stmt->getStablePosition()
 						));
@@ -475,6 +473,14 @@ namespace compiler::helios::code {
 				}
 
 				if (op->unwrap() == lang_def::keywordToStr(lang_def::Keyword::Move)) {
+					// `move x` is only valid on an owned lvalue (a local variable).
+					if (not inner->expression_type.getValueCategory().isMovableFrom()) {
+						ctx.logInt(makeBox<dia_int::PlaceholderError>(
+							"`move` can only be applied to an owned local variable.",
+							stmt->getStablePosition()
+						));
+						return;
+					}
 					node = makeBox<MoveExpr>(ctx, pstOrigin(stmt), std::move(inner));
 					return;
 				}
@@ -482,6 +488,44 @@ namespace compiler::helios::code {
 				// Box creation
 				if (op->unwrap() == lang_def::keywordToStr(lang_def::Keyword::New)) {
 					node = makeBoxCreation(std::move(inner), stmt->getStablePosition());
+					return;
+
+					const auto origin = inner->origin.generatedFrom();
+					const auto direct_type
+						= inner->expression_type.getSymbolType().withReferenceKind(
+							tsh::ReferenceKind::Direct
+						);
+
+					auto value = coerceFromBox(
+						ctx, std::move(inner), direct_type, stmt->getStablePosition(), {}
+					);
+
+					if (value.has_value())
+						node = makeBoxAllocCall(ctx, origin, std::move(value.value()));
+					return;
+				}
+
+				// `copy x` produces an explicit copy of `x` via its copy constructor.
+				if (op->unwrap() == lang_def::keywordToStr(lang_def::Keyword::Copy)) {
+					if (inner_type.isTriviallyCopyable(ctx)) {
+						ctx.logInt(makeBox<dia_int::PlaceholderWarning>(
+							base::strConcat(
+								"Type `",
+								inner_type.toString(),
+								"` is trivially copyable. No need to use the explicit `copy` "
+								"keyword."
+							),
+							stmt->getStablePosition()
+						));
+					}
+					if (not inner_type.getType().isCopyable(ctx)) {
+						ctx.logInt(makeBox<dia_int::PlaceholderError>(
+							base::strConcat("Type `", inner_type.toString(), "` cannot be copied."),
+							stmt->getStablePosition()
+						));
+						return;
+					}
+					node = defgen::makeCopyExpr(ctx, std::move(inner));
 					return;
 				}
 
@@ -1113,7 +1157,7 @@ namespace compiler::helios {
 
 		const auto source_symbol_type = expr_hout->expression_type.getSymbolType();
 		const auto source_position    = pst_expr.element.unlock(ctx)->getStablePosition();
-		const auto coercion_qresult   = canCoerce(ctx, source_symbol_type, expected_type);
+		const auto coercion_qresult   = canCoerce(ctx, expr_hout->expression_type, expected_type);
 		if (coercion_qresult.hasFailed()) return query::Failed();
 
 		variant_match(coercion_qresult.valueOrThrow().getVariant()) {
