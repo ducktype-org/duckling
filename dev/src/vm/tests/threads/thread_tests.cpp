@@ -13,6 +13,7 @@ public:
 	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(multithreadingTest);
 		TESTER_ADD_TEST(mutexTest);
+		TESTER_ADD_TEST(destroyLockedMutexTest);
 		TESTER_ADD_TEST(multithreadZeroDiv);
 		TESTER_ADD_TEST(cvTest);
 		TESTER_ADD_TEST(reuseThreadTest);
@@ -57,6 +58,14 @@ private:
 	void mutexTest() {
 		// On the contrary here, this test should give clear result
 		for (usize i = 0; i < 5; i++) runTestOnVm("mutex.dbc", "", "20000", {});
+	}
+
+	void destroyLockedMutexTest() {
+		// Destroying a mutex that is still held is a program error the VM must report.
+		assertExecutionPanickedWith(
+			runTestOnVmGetResult("destroy_locked_mutex.dbc"),
+			vm::exceptions::VMDestroyLockedMutexException::ERR_MSG
+		);
 	}
 
 	void cvTest() {

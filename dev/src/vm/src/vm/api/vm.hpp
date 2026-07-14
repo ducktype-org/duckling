@@ -6,6 +6,7 @@
 
 
 #include <vm/api/api.hpp>
+#include <vm/api/data/execution_config.hpp>
 #include <vm/api/data/process_options.hpp>
 #include <vm/api/data/response.hpp>
 #include <vm/bytecode/bytecode.hpp>
@@ -29,6 +30,15 @@ namespace vm::api {
 	 * @return The execution status of the specified process or an API error.
 	 */
 	std::expected<ProcStatus, ApiError> getExecutionStatus(PID pid);
+
+	/**
+	 * @brief Set the execution config of a VMProcess.
+	 * @note This affects static checks performed when *loading new code*. While data computed for
+	 * already loaded code does not need to be recomputed, compliance of old code wrt. the config
+	 * is *not* checked.
+	 * @return Nothing if the config was set successfully or an API error otherwise.
+	 */
+	std::expected<void, ApiError> setExecutionConfig(PID pid, ExecutionConfig config);
 
 	/**
 	 * @brief Load the code from given files into a specified process on DVM.

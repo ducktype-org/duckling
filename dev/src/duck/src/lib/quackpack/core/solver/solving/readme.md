@@ -16,8 +16,8 @@ Linear program
 --------------
 
 ### General case
-Assume that we have a package `P`, identified by its location `L(P)` and version `V(P)`.
-Assume that it has a dependency on a package `Q` and the dependency is described by a location `L(Q)` and a list of possible versions `V(Q)_1, ..., V(Q)_n` (those are all the versions compatible with the ones described in the manifest of `P`).
+Assume that we have a package `P`, identified by its identity `I(P)` and version `V(P)`.
+Assume that it has a dependency on a package `Q` and the dependency is described by an identity `I(Q)` and a list of possible versions `V(Q)_1, ..., V(Q)_n` (those are all the versions compatible with the ones described in the manifest of `P`).
 
 Then we would have the following inequalities:
 

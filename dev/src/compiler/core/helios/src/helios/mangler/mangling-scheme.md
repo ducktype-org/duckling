@@ -150,12 +150,6 @@ either in the scheme or it's implementation, they should be reflected here.
                   | <special-symbol-encoding>               // special symbols that are created by the compiler
                   | <back-reference>
 
-<operator-name> ::= <chain-operator>
-                  | <unary-operator-name>                   // inside class, no need for argument type
-                  | <binary-operator-name> <type> <type>    // outside class
-
-<chain-operator> ::= "ch" <type> (<binary-operator-name> <type>)* "E"
-
 // special symbols like virtual tables, RTTI, guard variables, structures for generics, etc.
 <special-symbol-encoding> ::= "H" <special-symbol-name> "E"
 <special-symbol-name> ::= "mc"                              // module constructor
@@ -182,53 +176,47 @@ either in the scheme or it's implementation, they should be reflected here.
 // e.g.: 0 -> "_", 1 -> "0_", 11 -> "a_", 62 -> "Z_"
 <compact-number> ::= "0-9a-zA-Z"* "_"
 
-// more operators can be added in the future
-<unary-operator-name> ::= "ps"                              // +
-                        | "ng"	                            // -
-                        | "ad"	                            // &
-                        | "de"	                            // *
+// Operator names are transliterated character-by-character rather than looked up as whole
+// strings: operator names admit arbitrary Unicode (see the lexer's `operator_start`/
+// `operator_continue` character classes), so a table keyed on entire operator strings could never
+// be complete. A compound operator is just the concatenation of its characters' tags, e.g.
+// `+*` -> "plml", `==` -> "eqeq", `<=` -> "lteq" -- no per-combination table needed.
+//
+// <operatoriness> is required (not inferred from operand count) because e.g. a unary prefix
+// `++a` and a unary suffix `a++` have identical arity/types and would otherwise mangle identically.
+<operator-name> ::= "O" <operatoriness> <base-10-number> <op-translit-unit>*
+                     // <base-10-number> = byte length of the following <op-translit-unit>* run
 
-// more operators can be added in the future
-<binary-operator-name> ::= "co"	                            // ~
-                         | "pl"	                            // +
-                         | "mi"	                            // -
-                         | "ml"	                            // *
-                         | "dv"	                            // /
-                         | "rm"	                            // %
-                         | "an"	                            // &
-                         | "or"	                            // |
-                         | "eo"	                            // ^
-                         | "aS"	                            // =
-                         | "pL"	                            // +=
-                         | "mI"	                            // -=
-                         | "mL"	                            // *=
-                         | "dV"	                            // /=
-                         | "rM"	                            // %=
-                         | "aN"	                            // &=
-                         | "oR"	                            // |=
-                         | "eO"	                            // ^=
-                         | "ls"	                            // <<
-                         | "rs"	                            // >>
-                         | "lS"	                            // <<=
-                         | "rS"	                            // >>=
-                         | "eq"	                            // ==
-                         | "ne"	                            // !=
-                         | "lt"	                            // <
-                         | "gt"	                            // >
-                         | "le"	                            // <=
-                         | "ge"	                            // >=
-                         | "nt"	                            // !
-                         | "aa"	                            // &&
-                         | "oo"	                            // ||
-                         | "pp"	                            // ++
-                         | "mm"	                            // --
-                         | "pt"	                            // ->
-                         | "cl"	                            // ()
-                         | "ix"	                            // []
-                         | "cv" <type>	                    // (cast)
-                         | "nm" <identifier> <type> <type>  // (named binary operator)
-                         | "nu" <identifier> <type>         // (named unary prefix operator)
-                         | "nU" <identifier> <type>         // (named unary postfix operator)
+<operatoriness> ::= "i"                                     // infix (binary)
+                  | "p"                                     // prefix (unary)
+                  | "s"                                      // suffix (unary, postfix)
+
+<op-translit-unit> ::= <fixed-operator-tag>                    // one recognized operator character
+                  | "x" <hex-codepoint> "_"                 // escape for any other codepoint
+                     // Not `;`-terminated: `;` isn't a safe symbol character for some
+                     // backends (e.g. LLVM). `_` is reused from <compact-number>'s terminator.
+                     // Note: `x` must not appear at the beginning of a <fixed-operator-tag>.
+
+// One fixed 2-letter tag per operator *character* (not per operator name).
+// More characters/tags can be added in the future.
+<fixed-operator-tag> ::= "nt"                               // !
+                       | "rm"                                // %
+                       | "an"                                // &
+                       | "ml"                                // *
+                       | "pl"                                // +
+                       | "mi"                                // -
+                       | "pd"                                // .
+                       | "dv"                                // /
+                       | "co"                                // :
+                       | "lt"                                // <
+                       | "eq"                                // =
+                       | "gt"                                // >
+                       | "qm"                                // ?
+                       | "bs"                                // \
+                       | "eo"                                // ^
+                       | "bt"                                // `
+                       | "or"                                // |
+                       | "ti"                                // ~
 
 <opt-metadata> ::= "" | <metadata>
 // there are no restrictions on <vendor-metadata>, any characters are allowed

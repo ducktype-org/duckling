@@ -409,6 +409,14 @@ namespace compiler::helios {
 		return std::make_shared<const code::CodeBlock>(processBlock(ctx, container, return_type));
 	}
 
+	std::shared_ptr<const code::CodeBlock> compileCodeOfCodeBlock(
+		query::Context&                   ctx,
+		pst::AccessLocked<pst::CodeBlock> container,
+		tsh::SymbolType<>                 return_type
+	) {
+		return std::make_shared<const code::CodeBlock>(processBlock(ctx, container, return_type));
+	}
+
 	code::CodeBlock compileSingleStatement(
 		query::Context& ctx, pst::AccessLocked<pst::Stmt> stmt, tsh::SymbolType<> return_type
 	) {

@@ -2,14 +2,16 @@
 
 #include <base/except/exceptions.hpp>
 
-#if __unix__
+#if defined(__unix__) || defined(__APPLE__)
 
 	#include <dlfcn.h>
 	#include <sys/mman.h>
 	#include <unistd.h>
 
+	#include <cstdlib>
 	#include <cstring>
 	#include <format>
+	#include <string>
 
 namespace vm::native {
 	std::expected<DynamicLibrary, std::string> DynamicLibrary::tryFromFile(const char* path) {
@@ -20,8 +22,16 @@ namespace vm::native {
 	}
 
 	DynamicLibrary DynamicLibrary::fromMemory(std::span<const byte> library_bytes) {
+	#if defined(__APPLE__)
+		// macOS has neither memfd_create nor /proc/self/fd, and dlopen requires a real
+		// path, so stage the library in a temp file that is unlinked once it is loaded.
+		std::string tmp_path = "/tmp/duckling_lib_XXXXXX";
+		int         fd       = mkstemp(tmp_path.data());
+		CORE_ASSERT_SYSCALL(fd != -1, "mkstemp failed:");
+	#else
 		int fd = memfd_create("lib", 0);
 		CORE_ASSERT_SYSCALL(fd != -1, "memfd_create failed:");
+	#endif
 
 		auto write_n = [&]() {
 			usize to_write = library_bytes.size();
@@ -37,10 +47,20 @@ namespace vm::native {
 		write_n();
 		lseek(fd, 0, SEEK_SET);
 
-
+	#if defined(__APPLE__)
+		void* handle = dlopen(tmp_path.c_str(), RTLD_NOW);  // NOLINT(concurrency-mt-unsafe)
+		// dlopen has read the file, so the backing file and fd are no longer needed regardless of
+		// the outcome (the loaded image stays valid without them). Clean up before checking the
+		// result so a failed dlopen does not leak the temp file.
+		unlink(tmp_path.c_str());
+		close(fd);
+		fd = -1;
+		CORE_ASSERT_STRONG(handle, "dlopen failed: ", dlerror());  // NOLINT(concurrency-mt-unsafe)
+	#else
 		auto  path   = std::format("/proc/self/fd/{}", fd);
 		void* handle = dlopen(path.data(), RTLD_NOW);
 		CORE_ASSERT_STRONG(handle, "dlopen failed: ", dlerror());  // NOLINT(concurrency-mt-unsafe)
+	#endif
 
 		return DynamicLibrary{ fd, handle };
 	}
