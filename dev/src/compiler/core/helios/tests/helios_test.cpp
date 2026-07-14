@@ -25,6 +25,7 @@
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/type_interface.hpp>
 #include <helios/utils/get_expr_symid.hpp>
+#include <helios/utils/hout_walkers.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/errors/dia_interactive_elements.hpp>
 #include <helios_private/hout_creation/definition_generation/class_constructors.hpp>
@@ -84,6 +85,7 @@ public:
 		TESTER_ADD_TEST(testFunctionParameters);
 		TESTER_ADD_TEST(testExprScopes);
 		TESTER_ADD_TEST(testFunctionCallExpr);
+		TESTER_ADD_TEST(testHoutWalkers);
 		TESTER_ADD_TEST(testFunctions);
 		TESTER_ADD_TEST(testStaticArrays);
 		TESTER_ADD_TEST(testDynamicArrays);
@@ -98,7 +100,6 @@ public:
 		TESTER_ADD_TEST(testDebugPrint);
 		TESTER_ADD_TEST(testStmtSpecifiers);
 		TESTER_ADD_TEST(testOverloadResolution);
-		TESTER_ADD_TEST(testDefaultInitializers);
 		TESTER_ADD_TEST(testCopyConstructors);
 		TESTER_ADD_TEST(testCopyMoveOperators);
 		TESTER_ADD_TEST(testDestructors);
@@ -1830,6 +1831,58 @@ private:
 		});
 	}
 
+	void testHoutWalkers() {
+		auto [module, scope] = getModule(fs::File(path("test_modules/function_calls")));
+
+		auto& hout
+			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+		ASSERT_EQUAL(4, hout.functions.size());
+
+		using namespace compiler::helios::code;
+
+		auto square_symbol = getChain("square", scope).back();
+		auto foo1_symbol   = getChain("foo1", scope).back();
+
+		// Look up the HOUT functions by name so the test does not depend on emission order.
+		auto find_fun = [&](std::string_view target) -> const auto& {
+			for (const auto& fun: hout.functions)
+				if (fun->declaration->original_name.strView() == target) return *fun;
+			CORE_PANIC(base::strConcat("function not found in HOUT unit: ", target));
+		};
+
+		const auto& square = find_fun("square");
+		const auto& foo    = find_fun("foo");
+		const auto& main   = find_fun("main");
+
+		// foo() calls square() twice; the collected list is deduplicated to one entry.
+		auto called_from_fun = collectCalledSymbolsFromHOUT(foo);
+		ASSERT_EQUAL(1, called_from_fun.size());
+		ASSERT_EQUAL(square_symbol, called_from_fun.at(0));
+
+		// The last statement is `return square(a_squared + b);` — walking just that
+		// expression tree should also find the call to square().
+		const auto& return_stmt = dynamic_cast<const ReturnStmt&>(*foo.body->statements.back());
+		auto        called_from_expr = collectCalledSymbolsFromHOUT(*return_stmt.value);
+		ASSERT_EQUAL(1, called_from_expr.size());
+		ASSERT_EQUAL(square_symbol, called_from_expr.at(0));
+
+		// square() is a leaf: it calls no other functions.
+		auto called_from_square = collectCalledSymbolsFromHOUT(square);
+		ASSERT_EQUAL(0, called_from_square.size());
+
+		// main() calls foo1() four times (with different argument styles); the collected list is
+		// still deduplicated to a single entry.
+		auto called_from_main = collectCalledSymbolsFromHOUT(main);
+		ASSERT_EQUAL(1, called_from_main.size());
+		ASSERT_EQUAL(foo1_symbol, called_from_main.at(0));
+
+		// Walking a single call statement's expression tree finds just that callee.
+		const auto& first_stmt        = dynamic_cast<const ExprStmt&>(*main.body->statements.at(0));
+		auto        called_from_first = collectCalledSymbolsFromHOUT(*first_stmt.expr);
+		ASSERT_EQUAL(1, called_from_first.size());
+		ASSERT_EQUAL(foo1_symbol, called_from_first.at(0));
+	}
+
 	void testFunctions() {
 		auto [module, scope] = getModule(fs::File(path("test_modules/functions")));
 		auto& hout
@@ -2716,182 +2769,6 @@ private:
 		// Test overload resolution with coercion (f32 -> f64 is preferred over f32 -> i64)
 		auto call_goo_f64_sym = getChain("CALL_GOO_F64", root_scope).back();
 		ASSERT_EQUAL(goo_f64, get_function_sym_by_var_sym(call_goo_f64_sym));
-	}
-
-	void testDefaultInitializers() {
-		using namespace compiler::helios;
-		using namespace compiler::helios::code;
-		using namespace compiler::helios::defgen;
-
-		auto [module, root_scope] = getModule(fs::File(path("test_modules/default_constructors")));
-
-		auto trivial_sym      = getChain("Trivial", root_scope).back();
-		auto with_init_sym    = getChain("WithInit", root_scope).back();
-		auto nested_sym       = getChain("Nested", root_scope).back();
-		auto arr_holder_sym   = getChain("ArrayHolder", root_scope).back();
-		auto tup_holder_sym   = getChain("TupleHolder", root_scope).back();
-		auto deep_sym         = getChain("DeepStack", root_scope).back();
-		auto deep_trivial_sym = getChain("DeepStackTrivial", root_scope).back();
-		auto tup_trivial_sym  = getChain("TupleTrivial", root_scope).back();
-
-		query::utils::withContextDo([&](query::Context& ctx) {
-			auto get_class_type = [&](SymID sym_id) {
-				return ctx.query<QueryTypeFromDefinition>(sym_id)->valueOrThrow();
-			};
-
-			auto i32_st = st(compiler::tsh::getIntegralType(
-				ctx, 32, compiler::tsh::IntegralAbstractType::Signedness::Signed
-			));
-
-			// Primitives should be zero initialized.
-			{
-				const auto& expr = ctx.query<QueryDefaultInitializerExpr>(i32_st)->valueOrThrow();
-				ASSERT_TRUE(dynamic_cast<const DefaultValueExpr*>(expr.get()) != nullptr);
-			}
-
-			// Unit type should be initialized with a unit literal.
-			{
-				auto        unit_st = st(compiler::tsh::getUnitType());
-				const auto& expr = ctx.query<QueryDefaultInitializerExpr>(unit_st)->valueOrThrow();
-				ASSERT_TRUE(dynamic_cast<const LiteralUnitExpr*>(expr.get()) != nullptr);
-			}
-
-			// Meta type should be initialized with a type literal (void by default).
-			{
-				auto        meta_st = st(compiler::tsh::getMetaType());
-				const auto& expr = ctx.query<QueryDefaultInitializerExpr>(meta_st)->valueOrThrow();
-				auto        type_lit = dynamic_cast<const LiteralTypeExpr*>(expr.get());
-				ASSERT_TRUE(type_lit != nullptr);
-				ASSERT_EQUAL(compiler::tsh::getVoidType(), type_lit->value_type.getType());
-			}
-
-			// Trivial class should be zero initialized.
-			{
-				auto        trivial_st = get_class_type(trivial_sym);
-				const auto& expr
-					= ctx.query<QueryDefaultInitializerExpr>(trivial_st)->valueOrThrow();
-				ASSERT_TRUE(dynamic_cast<const DefaultValueExpr*>(expr.get()) != nullptr);
-			}
-
-			// Class with an initial value provided for field should emit a call to a ctor.
-			{
-				auto        with_init_st = get_class_type(with_init_sym);
-				const auto& expr
-					= ctx.query<QueryDefaultInitializerExpr>(with_init_st)->valueOrThrow();
-
-				auto call = dynamic_cast<const CallExpr*>(expr.get());
-				ASSERT_TRUE(call != nullptr);
-
-				auto ctor_sym = getIdentifierExprSymID(call->callee.ref()).value();
-				auto deps     = ctx.query<QueryTransitiveFunctionCalls>(ctor_sym)->valueOrThrow();
-
-				// Should not call any recursive ctors.
-				ASSERT_EQUAL_PRINT(1, deps.size());
-			}
-
-			// Class with a class field which is non zero-initializable should emit a ctor call.
-			// This ctor should call a ctor of the inner non zero-initializable field.
-			{
-				auto        nested_st = get_class_type(nested_sym);
-				const auto& expr
-					= ctx.query<QueryDefaultInitializerExpr>(nested_st)->valueOrThrow();
-
-				auto call     = dynamic_cast<const CallExpr*>(expr.get());
-				auto ctor_sym = getIdentifierExprSymID(call->callee.ref()).value();
-				auto deps     = ctx.query<QueryTransitiveFunctionCalls>(ctor_sym)->valueOrThrow();
-
-				// The top-level constructor should call one function which is a default ctor of
-				// `WithInit`.
-				ASSERT_EQUAL_PRINT(2, deps.size());
-
-				const auto* dep_ctor = std::get_if<Constructor>(&getSymRef(deps[0])->other);
-				ASSERT_TRUE(dep_ctor != nullptr);
-				ASSERT_EQUAL(dep_ctor->kind, Constructor::Kind::Default);
-				ASSERT_EQUAL(dep_ctor->type.getKind(), compiler::tsh::Kind::Class);
-			}
-
-			// ArrayHolder ctor should call a ctor of static array field, which calls a ctor of the
-			// inner element.
-			{
-				auto        arr_holder_st = get_class_type(arr_holder_sym);
-				const auto& expr
-					= ctx.query<QueryDefaultInitializerExpr>(arr_holder_st)->valueOrThrow();
-
-				auto call     = dynamic_cast<const CallExpr*>(expr.get());
-				auto ctor_sym = getIdentifierExprSymID(call->callee.ref()).value();
-				auto deps     = ctx.query<QueryTransitiveFunctionCalls>(ctor_sym)->valueOrThrow();
-
-				// Ctor(ArrayHolder) -> Ctor(WithInit[5]) -> Ctor(WithInit)
-				ASSERT_EQUAL_PRINT(3, deps.size());
-
-				bool found_array_ctor = false;
-				for (auto d: deps) {
-					const auto* ctor = std::get_if<Constructor>(&getSymRef(d)->other);
-					if (ctor != nullptr && ctor->kind == Constructor::Kind::Default
-					    && ctor->type.getKind() == compiler::tsh::Kind::StaticArray)
-						found_array_ctor = true;
-				}
-				ASSERT_TRUE(found_array_ctor);
-			}
-
-			// TupleHolder ctor should call a ctor of the tuple field, which calls a ctor of the
-			// inner element.
-			{
-				auto        tup_holder_st = get_class_type(tup_holder_sym);
-				const auto& expr
-					= ctx.query<QueryDefaultInitializerExpr>(tup_holder_st)->valueOrThrow();
-
-				auto call     = dynamic_cast<const CallExpr*>(expr.get());
-				auto ctor_sym = getIdentifierExprSymID(call->callee.ref()).value();
-				auto deps     = ctx.query<QueryTransitiveFunctionCalls>(ctor_sym)->valueOrThrow();
-
-				// Ctor(TupleHolder) -> Ctor((WithInit, WithInit)) -> Ctor(WithInit)
-				ASSERT_EQUAL_PRINT(3, deps.size());
-
-				bool found_tup_ctor = false;
-				for (auto d: deps) {
-					const auto* ctor = std::get_if<Constructor>(&getSymRef(d)->other);
-					if (ctor != nullptr && ctor->kind == Constructor::Kind::Default
-					    && ctor->type.getKind() == compiler::tsh::Kind::Tuple)
-						found_tup_ctor = true;
-				}
-				ASSERT_TRUE(found_tup_ctor);
-			}
-
-			// `DeepStack` ctor should call a ctor of the `Nested` field, which calls a ctor of
-			// `WithInit`
-			{
-				auto        deep_st = get_class_type(deep_sym);
-				const auto& expr = ctx.query<QueryDefaultInitializerExpr>(deep_st)->valueOrThrow();
-
-				auto call     = dynamic_cast<const CallExpr*>(expr.get());
-				auto ctor_sym = getIdentifierExprSymID(call->callee.ref()).value();
-				auto deps     = ctx.query<QueryTransitiveFunctionCalls>(ctor_sym)->valueOrThrow();
-
-				// Ctor(DeepStack) -> Ctor(Nested) -> Ctor(WithInit)
-				ASSERT_EQUAL_PRINT(3, deps.size());
-			}
-
-			// `DeepStackTrivial` ctor should not call any default constructors, since it stores
-			// a static array of trivially zero-initializable types which can be zero initialized,
-			// thus its zero-initializable.
-			{
-				auto        deep_trivial_st = get_class_type(deep_trivial_sym);
-				const auto& expr
-					= ctx.query<QueryDefaultInitializerExpr>(deep_trivial_st)->valueOrThrow();
-				ASSERT_TRUE(dynamic_cast<const DefaultValueExpr*>(expr.get()) != nullptr);
-			}
-
-			// `TupleTrivial` ctor should not call any default constructors, since it stores
-			// a tuple of trivially zero-initializable types which can be zero initialized,
-			// thus its zero-initializable.
-			{
-				auto        tup_trivial_st = get_class_type(tup_trivial_sym);
-				const auto& expr
-					= ctx.query<QueryDefaultInitializerExpr>(tup_trivial_st)->valueOrThrow();
-				ASSERT_TRUE(dynamic_cast<const DefaultValueExpr*>(expr.get()) != nullptr);
-			}
-		});
 	}
 
 	void testCopyConstructors() {

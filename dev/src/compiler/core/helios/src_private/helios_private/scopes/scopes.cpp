@@ -133,7 +133,6 @@ namespace compiler::helios {
 		case pst::ElementKind::Block:  //< note that Block != CodeBlock
 		case pst::ElementKind::ClassField:
 		case pst::ElementKind::CallArgument:
-		case pst::ElementKind::FunDecl:
 		case pst::ElementKind::Attribute:
 			// this is transparent, since we don't need this scope:
 			return ElementScopeKind::Transparent;
@@ -147,6 +146,7 @@ namespace compiler::helios {
 		case pst::ElementKind::While:
 		case pst::ElementKind::For:
 		case pst::ElementKind::Fun:
+		case pst::ElementKind::FunDecl:
 		case pst::ElementKind::ClassMethod:
 		case pst::ElementKind::ClassSpecial:
 			return ElementScopeKind::Standard;
@@ -479,6 +479,13 @@ namespace compiler::helios {
 				for (auto params: *fun->getParams().unlock(ctx))
 					out.emplace_back(ctx.query<QuerySymbolOfSTMT>(params).valueOrThrow());
 
+				output(std::move(out));
+			}
+
+			void visitFunDecl(pst::Access<pst::FunDecl> fun_decl) override {
+				std::vector<SymID> out;
+				for (auto param: *fun_decl->getParams().unlock(ctx))
+					out.emplace_back(ctx.query<QuerySymbolOfSTMT>(param).valueOrThrow());
 				output(std::move(out));
 			}
 
