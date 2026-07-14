@@ -1852,7 +1852,6 @@ private:
 		}
 	}
 
-
 	void testStaticArrays() {
 		auto [module, top_scope] = getModule(fs::File(path("test_modules/static_arrays")));
 		auto& hout

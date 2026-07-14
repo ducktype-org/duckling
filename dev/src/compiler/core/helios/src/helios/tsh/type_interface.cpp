@@ -33,7 +33,7 @@ namespace compiler::tsh {
 		  elements_by_name(groupElementsByName(elements)) {
 		CORE_ASSERT(checkForDuplicates().isOk(), "Duplicate elements in type interface");
 	}
-	
+
 	const base::Map<base::StrID, std::vector<InterfaceElement>>& TypeInterface::getElementsByName(
 	) const {
 		return elements_by_name;

@@ -483,9 +483,7 @@ namespace vm::builtins {
 				BuiltinFunctionID::Strtod,
 				{
 					base::StrID("strtod"),
-					code::FuncSignature(
-						{ base::StrID("f64") }, { base::StrID("ptr_dyntable_i8") }
-					),
+					code::FuncSignature({ base::StrID("f64") }, { base::StrID("ptr_dyntable_i8") }),
 				},
 			},
 			// `manyptr char` lowers to a pointer to a dynamic table of `i8`, and both `u64`

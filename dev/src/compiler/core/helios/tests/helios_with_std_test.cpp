@@ -5,19 +5,18 @@
  * helios_test.cpp which builds standalone module trees without a std.
  */
 
-#include "helios/hout/elements/stmt.hpp"
-#include "helios/test_utils/helios_test_utils.hpp"
-#include "helios/tsh/mutability.hpp"
-#include "helios/tsh/queries/types.hpp"
-
 #include <driver/test_utils.hpp>
+#include <helios/hout/elements/stmt.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/queries/queries.hpp>
+#include <helios/test_utils/helios_test_utils.hpp>
+#include <helios/tsh/mutability.hpp>
+#include <helios/tsh/queries/types.hpp>
 
-#include "query_framework/entry/with_context_do.hpp"
 #include <filesystem/file.hpp>
 #include <filesystem/file_path.hpp>
 #include <query_framework/entry/query_entry_point.hpp>
+#include <query_framework/entry/with_context_do.hpp>
 #include <string_id/string_id.hpp>
 #include <tester/tester.hpp>
 
@@ -67,11 +66,9 @@ private:
 	 * WithContextCompute helper wrapper to avoid boilerplate.
 	 */
 	auto getStringTypeNoContext() {
-		return std::any_cast<compiler::tsh::ClassAbstractType>(
-			query::utils::withContextCompute([&](query::Context& ctx) {
-				return compiler::tsh::getStringType(ctx);
-			})
-		);
+		return std::any_cast<compiler::tsh::ClassAbstractType>(query::utils::withContextCompute(
+			[&](query::Context& ctx) { return compiler::tsh::getStringType(ctx); }
+		));
 	}
 
 	/**

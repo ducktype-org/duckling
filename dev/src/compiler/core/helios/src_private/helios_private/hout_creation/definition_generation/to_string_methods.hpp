@@ -29,9 +29,9 @@ namespace compiler::helios::defgen {
 
 	/**
 	 * @brief Utility function to get the append String method symbol on String class.
-	 * 
-	 * @param ctx 
-	 * @return SymID 
+	 *
+	 * @param ctx
+	 * @return SymID
 	 */
 	SymID appendStringMethodSym(query::Context& ctx);
 

@@ -1,13 +1,13 @@
 #include "queries.hpp"
 
 #include "abstract_type_impl.hpp"
-#include "helios/symbols/symbol_id.hpp"
-#include "helios/tsh/queries/types.hpp"
-#include "helios/tsh/type_interface.hpp"
-#include "helios/tsh/types.hpp"
 
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/query_type_symbol_data.hpp>
+#include <helios/symbols/symbol_id.hpp>
+#include <helios/tsh/queries/types.hpp>
+#include <helios/tsh/type_interface.hpp>
+#include <helios/tsh/types.hpp>
 #include <helios_private/hout_creation/definition_generation/copy_constructors.hpp>
 #include <helios_private/hout_creation/definition_generation/length_methods.hpp>
 #include <helios_private/hout_creation/definition_generation/list_methods.hpp>
@@ -20,15 +20,14 @@
 namespace compiler::tsh {
 	struct IMPLEMENT_QUERY(QueryInterfaceOfClass, query::QResult<TypeInterface>) {
 		static InterfaceElement::SpecialKind getMethodSpecialKind(Context& ctx, helios::SymID sym) {
-#define METHOD_HAS_NO_PARAMS(type) type.getParameterTypes().size() == 1
-
 			auto name = helios::name(sym);
 			if (name == base::StrID("toString")) {
 				const auto method_type
 					= ctx.query<helios::QueryTypeOfSymbol>(sym)->valueOrThrow().getType();
 				if (method_type.getKind() == tsh::Kind::Function) {
 					const auto fn_type = method_type.as<tsh::FunctionAbstractType>();
-					if (METHOD_HAS_NO_PARAMS(fn_type)
+					// parameterTypes.size() == 1 means method has not params except self.
+					if (fn_type.getParameterTypes().size() == 1
 					    && fn_type.getResultType() == SymbolType<>::withDefaults(getStringType(ctx)))
 						return InterfaceElement::SpecialKind::ToString;
 				}
@@ -99,7 +98,7 @@ namespace compiler::tsh {
 			auto components = ctx.query<helios::QueryTupleTypeData>(key.value->toAbstractType())
 			                      ->valueOrThrow()
 			                      .members;
-			u32  declaration_order = 0;
+			u32 declaration_order = 0;
 			for (const auto& component: components) {
 				elements.emplace_back(
 					component,

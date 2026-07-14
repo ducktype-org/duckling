@@ -92,11 +92,10 @@ namespace compiler::tsh {
 	ClassAbstractType getStringType(query::Context& ctx) {
 		// The `String` type is the `String` class from `core.containers`, looked up as a
 		// language primitive rather than being a compiler-builtin abstract type.
-		const auto sym
-			= ctx.query<compiler::helios::QueryLanguagePrimitiveSymID>(
-				  { compiler::helios::LanguagePrimitive::String }
-			  )
-				  ->valueOrThrow();
+		const auto sym = ctx.query<compiler::helios::QueryLanguagePrimitiveSymID>(
+								{ compiler::helios::LanguagePrimitive::String }
+		)
+		                     ->valueOrThrow();
 		return ctx.query<QueryClassType>(sym);
 	}
 

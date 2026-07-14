@@ -1,8 +1,6 @@
 #include "to_string_methods.hpp"
 
-#include "diagnostic_interactive/placeholder.hpp"
-#include "helios/tsh/type_interface.hpp"
-
+#include <diagnostic_interactive/placeholder.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/hout/hout.hpp>
@@ -12,6 +10,7 @@
 #include <helios/tsh/abstract_type.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/symbol_type.hpp>
+#include <helios/tsh/type_interface.hpp>
 #include <helios/tsh/types.hpp>
 #include <helios_private/hout_creation/expressions/coercions.hpp>
 #include <helios_private/lookup/interface.hpp>
@@ -29,10 +28,9 @@
 
 namespace compiler::helios::defgen {
 	SymID toStringSymForType(query::Context& ctx, const tsh::AbstractType type) {
-		for (auto& elem : type.getInterface(ctx)->getElementsWithName(base::StrID("toString"))) {
+		for (auto& elem: type.getInterface(ctx)->getElementsWithName(base::StrID("toString")))
 			if (elem.specialKind() == tsh::InterfaceElement::SpecialKind::ToString)
 				return elem.getSymbol();
-		}
 		CORE_PANIC("Every symbol should have toString.");
 	}
 

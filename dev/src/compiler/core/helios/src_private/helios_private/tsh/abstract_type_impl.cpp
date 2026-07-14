@@ -1,9 +1,9 @@
 #include "abstract_type_impl.hpp"
 
-#include "helios/tsh/type_interface.hpp"
 #include "queries.hpp"
 
 #include <helios/symbols/query_type_of_symbol.hpp>
+#include <helios/tsh/type_interface.hpp>
 #include <helios_private/hout_creation/definition_generation/copy_constructors.hpp>
 
 // @TODO: #2331 Remove these includes
@@ -165,9 +165,8 @@ namespace compiler::tsh {
 		return res.str();
 	}
 
-	bool UnitAbstractTypeImpl::isImplicitlyCoercible(
-		const AbstractType target, query::Context&
-	) const {
+	bool UnitAbstractTypeImpl::isImplicitlyCoercible(const AbstractType target, query::Context&)
+		const {
 		// The unit type can be coerced to the meta type
 		// because unit values can be interpreted as unit types.
 		return target.getKind() == Kind::Meta;
@@ -394,14 +393,14 @@ namespace compiler::tsh {
 		return &cached_interface;
 	}
 
-	CRef<TypeInterface> DynamicArrayAbstractTypeImpl::getDeclaredInterface(
-		query::Context& ctx
+	CRef<TypeInterface> DynamicArrayAbstractTypeImpl::getDeclaredInterface(query::Context& ctx
 	) const {
 		const auto type = toAbstractType().as<DynamicArrayAbstractType>();
 		return &ctx.query<QueryInterfaceOfDynamicArray>(type)->valueOrThrow();
 	}
 
-	CRef<TypeInterface> StaticArrayAbstractTypeImpl::getDeclaredInterface(query::Context& ctx) const {
+	CRef<TypeInterface> StaticArrayAbstractTypeImpl::getDeclaredInterface(query::Context& ctx
+	) const {
 		const auto type = toAbstractType().as<StaticArrayAbstractType>();
 		return &ctx.query<QueryInterfaceOfStaticArray>(type)->valueOrThrow();
 	}
@@ -449,27 +448,22 @@ namespace compiler::tsh {
 					return ctx.query<tsh::QueryDynamicArrayType>({ element_type });
 				}
 				default: {
-					throw base::NotYetImplemented(
-						base::strConcat(
-							"Instantiation of a builtin type template type: ", representation
-						)
-					);
+					throw base::NotYetImplemented(base::strConcat(
+						"Instantiation of a builtin type template type: ", representation
+					));
 				}
 				}
 			}
 			variant_default {
-				throw base::NotYetImplemented(
-					base::strConcat(
-						"Instantiation of a non-builtin type template type: ", representation
-					)
-				);
+				throw base::NotYetImplemented(base::strConcat(
+					"Instantiation of a non-builtin type template type: ", representation
+				));
 			}
 		}
 		CORE_UNREACHABLE();
 	}
 
-	base::Optional<ClassAbstractType> ClassAbstractTypeImpl::getBaseClassType(
-		query::Context& ctx
+	base::Optional<ClassAbstractType> ClassAbstractTypeImpl::getBaseClassType(query::Context& ctx
 	) const {
 		auto& base = ctx.query<compiler::helios::QueryClassSymbolData>(symbol)->valueOrThrow().base;
 		if (base.has_value()) return { ClassAbstractType(base.value()) };

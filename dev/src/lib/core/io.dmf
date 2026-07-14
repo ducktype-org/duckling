@@ -86,14 +86,14 @@ fun strtod(p: manyptr char) -> f64 = {
 fun writeStr(s: str) -> u64 = {
     var i = 0u64;
     while (i < s.length()) {
-        writeChar(s[i]));
+        writeChar(s[i as i64]);
         i = i + 1u64;
     }
     return i;
 }
 
 fun writeString(v: ref containers.String) -> u64 = {
-    return v.asSlice();
+    return writeStr(v.asSlice());
 }
 
 fun writeI64(x: i64) -> u64 = {
@@ -101,7 +101,7 @@ fun writeI64(x: i64) -> u64 = {
     let result = writeString(&s);
     writeChar('\n');
     s.dispose();
-    return result + 1;
+    return result + 1u64;
 }
 
 fun writeU64(x: u64) -> u64 = {
@@ -109,7 +109,7 @@ fun writeU64(x: u64) -> u64 = {
     let result = writeString(&s);
     writeChar('\n');
     s.dispose();
-    return result + 1;
+    return result + 1u64;
 }
 
 fun writeF64(x: f64) -> u64 = {
@@ -117,7 +117,7 @@ fun writeF64(x: f64) -> u64 = {
     let result = writeString(&s);
     writeChar('\n');
     s.dispose();
-    return result + 1;
+    return result + 1u64;
 }
 
 # ------------------------------------------------------------------- readers ---

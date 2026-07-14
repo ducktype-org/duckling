@@ -158,7 +158,7 @@ namespace vm::builtins {
 		static u64 builtinU64ToString(SafeVMThread& process, u64 value, Pointer ptr, u64 buffer_cap);
 		static u64 builtinI64ToString(SafeVMThread& process, i64 value, Pointer ptr, u64 buffer_cap);
 
-		static i64  builtinStoi(SafeVMThread& process, Pointer ptr);
+		static i64 builtinStoi(SafeVMThread& process, Pointer ptr);
 
 		/**
 		 * @brief Parses the leading floating-point number out of the NUL-terminated char table
