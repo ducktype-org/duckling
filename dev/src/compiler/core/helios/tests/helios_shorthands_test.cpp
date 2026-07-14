@@ -221,12 +221,12 @@ public:
 			);
 
 			// A cast carries the requested target type.
-			const auto casted = cast(litNum(5), i64_sym_type);
+			const auto casted = cast(litNum(5, i32_type), i64_sym_type);
 			ASSERT_EQUAL(casted->expression_type.getType().getKind(), tsh::Kind::Integral);
 			ASSERT_EQUAL(
-				casted->expression_type.getType().as<tsh::IntegralAbstractType>().getSize(), Bits(32)
+				casted->expression_type.getType().as<tsh::IntegralAbstractType>().getSize(), Bits(64)
 			);
-			ASSERT_EQUAL(dprint(casted), std::string("cast 5 to i64"));
+			ASSERT_EQUAL(dprint(casted), std::string("cast[to=i64](5)"));
 
 			// `refof x` has reference type; dereferencing it recovers the (direct) pointee.
 			const auto ref = refOf(litNum(5));
@@ -262,7 +262,7 @@ public:
 			// A default value carries the given type.
 			const auto zero = defaultValue(i64_type);
 			ASSERT_EQUAL(zero->expression_type.getType().getKind(), tsh::Kind::Integral);
-			ASSERT_EQUAL_PRINT(dprint(zero), std::string("default_value(i64)"));
+			ASSERT_EQUAL(dprint(zero), std::string("default_value(const i64)"));
 			ASSERT_TRUE(dynamic_cast<const DefaultValueExpr*>(zero.get()) != nullptr);
 
 			// Lifting a value to a type produces a `meta` value.
