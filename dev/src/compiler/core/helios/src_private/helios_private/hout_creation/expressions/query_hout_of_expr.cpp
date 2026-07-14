@@ -539,30 +539,6 @@ namespace compiler::helios::code {
 			}
 
 			/**
-			 * @brief Builds the HOUT for an explicit box creation (`new inner`).
-			 *
-			 * A box owns a Direct value, so the operand is first coerced to the Direct then, the
-			 * resulting value is boxed.
-			 *
-			 * @return The box allocation expression, or an empty optional (with an error logged)
-			 * when the underlying value cannot be boxed.
-			 */
-			[[nodiscard]]
-			base::Optional<Box<Expr>> makeBoxCreation(
-				Box<Expr> inner, dia_int::StablePosition position
-			) const {
-				const auto origin      = inner->origin.generatedFrom();
-				const auto direct_type = inner->expression_type.getSymbolType().withReferenceKind(
-					tsh::ReferenceKind::Direct
-				);
-
-				auto value = coerceFromBox(ctx, std::move(inner), direct_type, position, {});
-				if (not value.has_value()) return {};
-
-				return makeBoxAllocCall(ctx, origin, std::move(value.value()));
-			}
-
-			/**
 			 * @brief Finds the appropriate binary operator to call and constructs the corresponding
 			 * HOUT expression. Consumes the provided expressions of the arguments.
 			 * Currently used for all operators other than `As` (type cast) and `Pipe` (variant type
