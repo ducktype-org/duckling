@@ -124,9 +124,9 @@ namespace vm::code {
 		/**
 		 * @brief Inserts an FFIFunction. May invalidate state.
 		 * Cannot insert multiple FFIFunctions with the same name. Signature types must be
-		 * primitives of size 1, 2, 4 or 8, the builtin `cptr` type, or data structures whose
-		 * every field is such a primitive or `cptr`. Resolves each function's native symbol from
-		 * the loaded object files.
+		 * FFI-compliant (see `ValidType::isFFICompliant`); fixed-size tables are additionally
+		 * rejected at the top level, as C has no by-value arrays. Resolves each function's native
+		 * symbol from the loaded object files.
 		 */
 		void insertFFIFunctions(const std::vector<FFIFunction>& new_functions);
 
