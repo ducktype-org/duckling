@@ -12,3 +12,6 @@ package-lock.json
 *.tsbuildinfo
 
 !.devcontainer/
+
+# AI-agent guidance
+CLAUDE.md
