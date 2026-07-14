@@ -3,9 +3,12 @@
  * @brief Tests for the HOUT construction shorthands (@ref shorthands.hpp).
  */
 
+#include <frontend/pst_parser/lang_parser_element.hpp>
 #include <helios/hout/elements.hpp>
+#include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <helios/tsh/queries/types.hpp>
+#include <helios/tsh/type_interface.hpp>
 #include <helios/tsh/types.hpp>
 #include <helios/utils/get_expr_symid.hpp>
 #include <helios_private/hout_creation/shorthands/shorthands.hpp>
@@ -13,7 +16,6 @@
 #include <base/pointers/box.hpp>
 
 #include <filesystem/file.hpp>
-#include <frontend/pst_parser/lang_parser_element.hpp>
 #include <query_framework/context/context.hpp>
 #include <query_framework/entry/with_context_do.hpp>
 #include <tester/tester.hpp>
@@ -46,6 +48,9 @@ public:
 		TESTER_ADD_TEST(testTypedNumericLiteral);
 		TESTER_ADD_TEST(testReusable);
 		TESTER_ADD_TEST(testCall);
+		TESTER_ADD_TEST(testConversionExprs);
+		TESTER_ADD_TEST(testMiscExprs);
+		TESTER_ADD_TEST(testAccess);
 		TESTER_ADD_TEST(testStatements);
 		TESTER_ADD_TEST(testGeneratedOrigins);
 		TESTER_ADD_TEST(testWithOrigin);
@@ -66,13 +71,30 @@ public:
 			// A bare integer literal is minimized to i32 (its type came from `ctx`).
 			const auto forty = litNum(40);
 			ASSERT_EQUAL(forty->expression_type.getType().getKind(), tsh::Kind::Integral);
+
+			// A string literal is a char slice.
+			const auto hello = litStr(base::StrID("hello"));
+			ASSERT_EQUAL(dprint(hello), std::string("hello"));
+			ASSERT_EQUAL(hello->value.str(), std::string("hello"));
+			ASSERT_EQUAL(hello->expression_type.getType().getKind(), tsh::Kind::Slice);
+
+			// A type literal is itself a `meta` value, wrapping the `i64` type it carries.
+			const auto i64_type
+				= tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed);
+			const auto i64_literal = litType(i64_type);
+			ASSERT_EQUAL(i64_literal->expression_type.getType().getKind(), tsh::Kind::Meta);
+			ASSERT_EQUAL(i64_literal->value_type.getType().getKind(), tsh::Kind::Integral);
 		});
 	}
 
-	/** Composite builders wire children through and pick the operator. */
+	/** Composite builders produce the expected nodes. */
 	void testComposites() {
 		query::utils::withContextDo([&](query::Context& ctx) {
-			Shorthand sh{ ctx };
+			using enum BuiltinBinary;
+			Shorthand  sh{ ctx };
+			const auto i64_type
+				= tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed);
+			const auto bool_type = tsh::getBoolType();
 
 			ASSERT_EQUAL(
 				dprint(binOp(litNum(40), BuiltinBinary::IntegerAdd, litNum(2))),
@@ -83,11 +105,51 @@ public:
 			);
 
 			// Nesting composes as expected: (40 + 2) * 3.
-			using enum BuiltinBinary;
 			const auto nested
 				= binOp(binOp(litNum(40), IntegerAdd, litNum(2)), IntegerMul, litNum(3));
 			ASSERT_EQUAL(dprint(nested), std::string("40 + 2 * 3"));
 			ASSERT_EQUAL(nested->expression_type.getType().getKind(), tsh::Kind::Integral);
+
+			// A ternary takes the type of its `then` branch.
+			const auto tern = ternary(litBool(true), litNum(1), litNum(2));
+			ASSERT_EQUAL(dprint(tern), std::string("if true then 1 else 2"));
+			ASSERT_EQUAL(tern->expression_type.getType().getKind(), tsh::Kind::Integral);
+
+			// A sequence yields its last expression's value and type.
+			const auto sequence = seq(litNum(1), litNum(2), litBool(true));
+			ASSERT_EQUAL(dprint(sequence), std::string("1, 2, true"));
+			ASSERT_EQUAL(sequence->expression_type.getType().getKind(), tsh::Kind::Bool);
+
+			// The pack and vector overloads are equivalent.
+			std::vector<Box<Expr>> elements;
+			elements.emplace_back(litNum(1));
+			elements.emplace_back(litNum(2));
+			ASSERT_EQUAL(dprint(seq(std::move(elements))), dprint(seq(litNum(1), litNum(2))));
+
+			// A chain comparison is the boolean AND of its comparisons.
+			// note: Usually this includes a ReusableExpr, but that's not required.
+			const auto chain = chainCmp(
+				binOp(litNum(1), IntegerLt, litNum(2)), binOp(litNum(2), IntegerLt, litNum(3))
+			);
+			ASSERT_EQUAL(dprint(chain), std::string("1 < 2 and 2 < 3"));
+			ASSERT_EQUAL(chain->expression_type.getType().getKind(), tsh::Kind::Bool);
+
+			// A variant type constructor is a `meta` value over its subtypes.
+			const auto variant_ctor = variant(litType(i64_type), litType(bool_type));
+			ASSERT_EQUAL(variant_ctor->expression_type.getType().getKind(), tsh::Kind::Meta);
+			const auto* variant_expr
+				= dynamic_cast<const VariantTypeConstructorExpr*>(variant_ctor.get());
+			ASSERT_TRUE(variant_expr != nullptr);
+			ASSERT_EQUAL(variant_expr->subtypes.size(), 2UL);
+
+			// A tuple value has a tuple type built from its element types.
+			const auto pair = tuple(litNum(1), litBool(true));
+			ASSERT_EQUAL(dprint(pair), std::string("(1, true)"));
+			ASSERT_EQUAL(pair->expression_type.getType().getKind(), tsh::Kind::Tuple);
+
+			// Indexing a type value builds a static-array type (`i64[4]`), itself a `meta` value.
+			const auto array_type = index(litType(i64_type), litNum(4));
+			ASSERT_EQUAL(array_type->expression_type.getType().getKind(), tsh::Kind::Meta);
 		});
 	}
 
@@ -121,11 +183,7 @@ public:
 	}
 
 	/**
-	 * Builds a call to `square(a: i64) -> i64`. This is the path that exercises `ident` and a
-	 * composite whose type is resolved *by a query during construction*: building `ident(square)`
-	 * runs QueryTypeOfSymbol (yielding the function type), and the call's own type is that
-	 * function's i64 result. It therefore validates the ambient guard across a query-triggering
-	 * construction against a real symbol.
+	 * `call` builds the expected CallExpr.
 	 */
 	void testCall() {
 		const auto [module, scope] = getModule(fs::File(path("test_modules/function_calls")));
@@ -151,6 +209,114 @@ public:
 		});
 	}
 
+	/** `cast`, `refOf`, `deref` and `moveOf` reshape an operand's type as expected. */
+	void testConversionExprs() {
+		query::utils::withContextDo([&](query::Context& ctx) {
+			Shorthand sh{ ctx };
+
+			const auto i32_type
+				= tsh::getIntegralType(ctx, 32, tsh::IntegralAbstractType::Signedness::Signed);
+			const auto i64_sym_type = tsh::SymbolType<>::withDefaults(
+				tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed)
+			);
+
+			// A cast carries the requested target type.
+			const auto casted = cast(litNum(5), i64_sym_type);
+			ASSERT_EQUAL(casted->expression_type.getType().getKind(), tsh::Kind::Integral);
+			ASSERT_EQUAL(
+				casted->expression_type.getType().as<tsh::IntegralAbstractType>().getSize(), Bits(32)
+			);
+			ASSERT_EQUAL(dprint(casted), std::string("cast 5 to i64"));
+
+			// `refof x` has reference type; dereferencing it recovers the (direct) pointee.
+			const auto ref = refOf(litNum(5));
+			ASSERT_EQUAL(dprint(ref), std::string("refof(5)"));
+			ASSERT_EQUAL(ref->expression_type.getSymbolType().getRefKind(), tsh::ReferenceKind::Ref);
+
+			const auto derefed = deref(refOf(litNum(5)));
+			ASSERT_EQUAL(dprint(derefed), std::string("deref(refof(5))"));
+			ASSERT_EQUAL(
+				derefed->expression_type.getSymbolType().getRefKind(), tsh::ReferenceKind::Direct
+			);
+			ASSERT_EQUAL(derefed->expression_type.getType().getKind(), tsh::Kind::Integral);
+
+			// `move x` preserves the operand type as a temporary.
+			const auto moved = moveOf(litNum(5));
+			ASSERT_EQUAL(dprint(moved), std::string("move(5)"));
+			ASSERT_EQUAL(moved->expression_type.getType().getKind(), tsh::Kind::Integral);
+			ASSERT_EQUAL(
+				moved->expression_type.getValueCategory().getCategory(),
+				tsh::PrimaryCategory::Temporary
+			);
+		});
+	}
+
+	/** `defaultValue`, `liftToType`, and the list push/pop builders. */
+	void testMiscExprs() {
+		query::utils::withContextDo([&](query::Context& ctx) {
+			Shorthand sh{ ctx };
+
+			const auto i64_type
+				= tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed);
+
+			// A default value carries the given type.
+			const auto zero = defaultValue(i64_type);
+			ASSERT_EQUAL(zero->expression_type.getType().getKind(), tsh::Kind::Integral);
+			ASSERT_EQUAL_PRINT(dprint(zero), std::string("default_value(i64)"));
+			ASSERT_TRUE(dynamic_cast<const DefaultValueExpr*>(zero.get()) != nullptr);
+
+			// Lifting a value to a type produces a `meta` value.
+			const auto lifted = liftToType(litUnit());
+			ASSERT_EQUAL(dprint(lifted), std::string("lift[to=type](())"));
+			ASSERT_EQUAL(lifted->expression_type.getType().getKind(), tsh::Kind::Meta);
+
+			// listPush / listPop are structural wrappers evaluating to unit; like the underlying
+			// nodes they do not type-check their operands, so plain literals exercise the wiring.
+			// `1` is not a list, but whatever, these are going away anyway soon.
+			const auto push = listPush(litNum(1), litNum(2));
+			ASSERT_EQUAL(dprint(push), std::string("list_push(1, 2)"));
+			ASSERT_EQUAL(push->expression_type.getType().getKind(), tsh::Kind::Unit);
+
+			const auto pop = listPop(litNum(1), litNum(2));
+			ASSERT_EQUAL(dprint(pop), std::string("list_pop(1, 2)"));
+			ASSERT_EQUAL(pop->expression_type.getType().getKind(), tsh::Kind::Unit);
+		});
+	}
+
+	/**
+	 * `access` builds a field access `base.field`. Its result type comes from a query on the field
+	 * symbol, so a module supplying a real struct field (`Point.x`) is loaded.
+	 */
+	void testAccess() {
+		const auto [module, scope] = getModule(fs::File(path("test_modules/shorthands/access")));
+		const auto point_var       = getChain("point", scope).back();
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			Shorthand sh{ ctx };
+
+			// Resolve the `x` field of `point`'s struct type through its type interface.
+			const auto x_field = ctx.query<helios::QueryTypeOfSymbol>(point_var)
+			                         ->valueOrThrow()
+			                         .getType()
+			                         .getInterface(ctx)
+			                         ->getElementsWithName(base::StrID("x"))
+			                         .back()
+			                         .getSymbol();
+
+			const auto field_access = access(ident(point_var), x_field);
+
+			const auto* access_expr = dynamic_cast<const AccessExpr*>(field_access.get());
+			ASSERT_TRUE(access_expr != nullptr);
+			// The access wires `point` as the base and `x` as the accessed field.
+			ASSERT_EQUAL(
+				compiler::helios::getIdentifierExprSymID(access_expr->base.ref()).value(), point_var
+			);
+			ASSERT_TRUE(access_expr->field == x_field);
+			// The access's type is the field's type (`i64`).
+			ASSERT_EQUAL(field_access->expression_type.getType().getKind(), tsh::Kind::Integral);
+		});
+	}
+
 	/**
 	 * Statement builders wrap their operands and compose into `CodeBlock`s (including nested bodies).
 	 * The builders don't type-check, they just assemble the tree.
@@ -158,7 +324,7 @@ public:
 	 */
 	void testStatements() {
 		const auto [module, scope] = getModule(fs::File(path("test_modules/dummy")));
-		const auto dummy_symbol   = getChain("dummy", scope).back();
+		const auto dummy_symbol    = getChain("dummy", scope).back();
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			Shorthand sh{ ctx };
@@ -250,7 +416,8 @@ public:
 			// Check that origin is generated before override.
 			ASSERT_TRUE(dummy_ident->origin.isGenerated());
 
-			// Override the origin (this isn't strictly correct, but OK for the test).
+			// Override the origin (this isn't strictly correct, in terms of constructing valid
+			// HOUT, but OK for the test).
 			dummy_ident = withOrigin(pst_origin, std::move(dummy_ident));
 
 			// The HOUT Expr now carries the specified origin.
