@@ -1,0 +1,14 @@
+thread local caching -- only one check per thread in global data!
+
+
+
+
+This diagnosis is right — shared_mutex is the killer. Every "read" lock still does an atomic RMW on the lock word, so 16 threads hitting the same hot shard ping-pong that cache line exactly like a plain lock. Let me rebuild around two principles:
+
+The lookup path must do zero writes to shared memory. Not "lock-free" — write-free. Pure loads on read-mostly data replicate in every core's cache in shared state, so repeated lookups of the same keys cause literally no coherence traffic. Achievable here precisely because you never delete: open addressing where a slot, once published (release-store of a metadata word), is immutable forever.
+A thread-local L1 cache in front, since you said the same keys repeat a lot and thread-local indirection is cheap. A hit touches only TLS — not even shared read-only lines.
+
+Inserts (rare after warmup) take your style of spinlock, per shard, which also makes resizing trivial: build the bigger table under the lock, publish the pointer with a release store, and retire the old table without freeing it — concurrent readers can keep probing it safely, and since sizes double, retired tables cost less than 1x the final table. Let me build and benchmark it against your spinlock+unordered_map design.
+
+
+

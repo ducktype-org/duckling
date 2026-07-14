@@ -24,10 +24,11 @@ namespace query::internal {
 	 */
 
 	struct QueryID final {
+		// PRPRPRP: TODO
+		constexpr explicit QueryID(u64 val): val(val) {}
 	private:
 		u64 val;
 
-		constexpr explicit QueryID(u64 val): val(val) {}
 
 		friend struct QueryIDMaker;
 		friend class QueryGraph;
