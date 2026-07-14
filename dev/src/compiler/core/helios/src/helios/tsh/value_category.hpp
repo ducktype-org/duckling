@@ -160,13 +160,22 @@ namespace compiler::tsh {
 		}
 
 		/**
-		 * @brief Whether the value has no location - is an rvalue.
-		 *
-		 * True for Temporaries and Literals.
+		 * @brief Whether a reference to the value may be formed, i.e. it has an address.
+		 * Implemented separately from `canBeAssignedTo` since those two may diverge in the future
+		 * (for example allowing const reference to temporaries).
 		 */
 		[[nodiscard]]
-		bool cannotBeAssignedTo() const {
-			return !canBeAssignedTo();
+		bool addressable() const {
+			switch (category) {
+			case PrimaryCategory::Local:
+			case PrimaryCategory::Global:
+			case PrimaryCategory::Dereferenced:
+				return true;
+			case PrimaryCategory::Temporary:
+			case PrimaryCategory::Literal:
+				return false;
+			}
+			CORE_UNREACHABLE();
 		}
 
 		/**

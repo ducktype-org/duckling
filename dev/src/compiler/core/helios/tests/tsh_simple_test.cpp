@@ -1023,10 +1023,11 @@ private:
 			"subset of allowed semantics."
 		);
 
-		const auto temporary = ValueCategory(PrimaryCategory::Temporary);
-		const auto local     = ValueCategory(PrimaryCategory::Local);
-		const auto global    = ValueCategory(PrimaryCategory::Global);
-		const auto literal   = ValueCategory(PrimaryCategory::Literal);
+		const auto temporary    = ValueCategory(PrimaryCategory::Temporary);
+		const auto local        = ValueCategory(PrimaryCategory::Local);
+		const auto global       = ValueCategory(PrimaryCategory::Global);
+		const auto literal      = ValueCategory(PrimaryCategory::Literal);
+		const auto dereferenced = ValueCategory(PrimaryCategory::Dereferenced);
 
 		// Local and Global are assignable, Temporary and Literal are not assignable.
 		assertTrue(
@@ -1034,8 +1035,18 @@ private:
 			"Local and Global should be assignable."
 		);
 		assertTrue(
-			temporary.cannotBeAssignedTo() && literal.cannotBeAssignedTo(),
-			"Temporary and Literal should be not assignalble."
+			!temporary.canBeAssignedTo() && !literal.canBeAssignedTo(),
+			"Temporary and Literal should be not assignable."
+		);
+
+		// Local, Global and Dereferenced are addressable, Temporary and Literal are not.
+		assertTrue(
+			local.addressable() && global.addressable() && dereferenced.addressable(),
+			"Local, Global and Dereferenced should be addressable."
+		);
+		assertTrue(
+			!temporary.addressable() && !literal.addressable(),
+			"Temporary and Literal should not be addressable."
 		);
 
 		// Only a Local is a valid operand of the explicit `move` operator.
