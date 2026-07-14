@@ -1,5 +1,7 @@
 #include "errors.hpp"
 
+#include "helios_private/hout_creation/expressions/coercions.hpp"
+
 #include <diagnostic_interactive/core/diagnostic_arguments.hpp>
 #include <diagnostic_interactive/message.hpp>
 #include <diagnostic_interactive/placeholder.hpp>
@@ -205,16 +207,16 @@ namespace compiler::helios::code {
 						);
 					}
 					variant_case(ArgumentCoercionFailure, data) {
-						if (data.reason == helios::InvalidCoercionReason::IncompatibleTypes) {
-							dia_int::StablePosition pos = [&] {
-								if_opt_some(
-									arguments_origin[data.argument_index].getStablePosition(), pos
-								) {
-									return pos;
-								}
-								return whole_call_origin.getStablePosition().value();
-							}();
+						dia_int::StablePosition pos = [&] {
+							if_opt_some(
+								arguments_origin[data.argument_index].getStablePosition(), pos
+							) {
+								return pos;
+							}
+							return whole_call_origin.getStablePosition().value();
+						}();
 
+						if (data.reason == helios::InvalidCoercionReason::IncompatibleTypes) {
 							base::Optional<Box<InteractiveFunction>> function_name
 								= get_interactive_function(data.function);
 							return makeBox<ArgumentIncompatibleTypeError>(
@@ -225,10 +227,8 @@ namespace compiler::helios::code {
 							);
 						}
 
-						auto source_pos
-							= arguments_origin[data.argument_index].getStablePosition().value();
 						return helios::makeDefaultCoercionErrorMessage(
-							ctx, data.reason, data.given_type, data.expected_type, source_pos
+							ctx, data.reason, data.given_type, data.expected_type, pos
 						);
 					}
 					variant_case(MissingCallArgument, data) {
