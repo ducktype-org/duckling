@@ -388,10 +388,9 @@ void valid_type::ValidType::finalize(ValidTypeMap& types) {
 			// fat block reference in the safe mode). The pointee is intentionally not finalized
 			// here - a C pointer never depends on its pointee's layout, which keeps
 			// self-referential structures and pointers to forward-declared types legal.
-			this->size                  = valid_type::TypeSize(Bytes(8), 0);
-			this->alignment             = valid_type::TypeSize(Bytes(8), 0);
-			this->is_trivially_copyable = true;
-			this->is_ffi_compliant      = true;
+			this->size = this->alignment = valid_type::TypeSize(Bytes(sizeof(void*)), 0);
+			this->is_trivially_copyable  = true;
+			this->is_ffi_compliant       = true;
 			state = Finalized{ .kind = finalized::CPointer{ .inner = cpointer.inner } };
 		}
 		variant_case(defined::DefinedFixedSizeTable, fixed_size_table) {
