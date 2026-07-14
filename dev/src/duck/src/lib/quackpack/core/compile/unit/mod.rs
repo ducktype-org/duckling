@@ -1,16 +1,19 @@
 //! [`Unit`] is supposed to be all information required to invoke a single instance of duckc.
 
+use std::collections::{HashSet, VecDeque};
 use std::env::consts::{DLL_PREFIX, DLL_SUFFIX, EXE_SUFFIX};
 use std::hash::Hash;
 use std::sync::Arc;
 
 use self::graph::UnitGraph;
+use self::unit_visitor::UnitVisitor;
 use super::duckc::multipackage_schema;
 use crate::quackpack::core::compile::compiler_package::CompilerPackage;
 use crate::quackpack::core::identity::Identity;
 use crate::util::hash::sha256_string;
 
 pub mod graph;
+pub mod unit_visitor;
 
 // Missing constants from [`std::env::consts`].
 const STATIC_LIB_SUFFIX: &str = ".a";
@@ -180,6 +183,23 @@ impl Unit {
             features,
             path_to_the_src_directory: package.src().to_path_buf(),
             dependencies,
+        }
+    }
+
+    /// Accept a [`UnitVisitor`].
+    ///
+    /// This method should only drive the visitor through dependencies of this [`Unit`].
+    pub fn accept<V: UnitVisitor + ?Sized>(&self, visitor: &mut V, graph: &UnitGraph) {
+        let mut stack = VecDeque::from([self.unit_id()]);
+        let mut visited = HashSet::new();
+        while let Some(id) = stack.pop_front() {
+            if visited.contains(&id) {
+                continue;
+            }
+            visited.insert(id);
+            let unit = graph.unit_for(id);
+            visitor.visit(unit);
+            stack.extend(unit.deps_sorted_by_unit_id());
         }
     }
 }

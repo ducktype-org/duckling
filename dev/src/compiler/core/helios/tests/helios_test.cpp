@@ -101,6 +101,7 @@ public:
 		TESTER_ADD_TEST(testOverloadResolution);
 		TESTER_ADD_TEST(testDefaultInitializers);
 		TESTER_ADD_TEST(testCopyConstructors);
+		TESTER_ADD_TEST(testCopyMoveOperators);
 		TESTER_ADD_TEST(testDestructors);
 		TESTER_ADD_TEST(testCastsHout);
 		TESTER_ADD_TEST(testPointers);
@@ -463,8 +464,7 @@ private:
 
 		ASSERT_EQUAL(2, first_class_info.members.size());
 		ASSERT_EQUAL(2, first_class_info.methods.size());
-		// @TODO: #2000 Re-enable once copy constructors are called in coercions.
-		// ASSERT_EQUAL(1, first_class_info.constructors.size());
+		ASSERT_EQUAL(1, first_class_info.constructors.size());
 		ASSERT_HAS_VALUE(first_class_info.destructor);
 		ASSERT_NO_VALUE(first_class_info.base);
 		ASSERT_EQUAL(0, first_class_info.implements.size());
@@ -1205,7 +1205,7 @@ private:
 		ASSERT_EQUAL(function->declaration->original_name, "foo");
 
 		// note that alias should not be included here:
-		ASSERT_EQUAL(function->body->statements.size(), 8);
+		ASSERT_EQUAL(function->body->statements.size(), 7);
 
 		auto& statements = function->body->statements;
 
@@ -3241,6 +3241,38 @@ private:
 				assert_generated_copy(push->element.get());
 			}
 		});
+	}
+
+	void testCopyMoveOperators() {
+		using namespace compiler::helios;
+		using namespace compiler::helios::code;
+
+		auto [module, _] = getModule(fs::File(path("test_modules/copy_move_ops")));
+
+		auto& hout
+			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+
+		const HOUTFunction* fn = nullptr;
+		for (auto& f: hout.functions)
+			if (f->declaration->original_name == "usesOps") fn = &*f;
+		ASSERT_TRUE(fn != nullptr);
+
+		// var a = W(1);
+		// var b = copy a;
+		// var c = move a;
+		// return c.x;
+		const auto& stmts = fn->body->statements;
+		ASSERT_EQUAL_PRINT(4, stmts.size());
+
+		// `copy a` lowers to a copy ctor call.
+		const auto* b_var = dynamic_cast<const VariableStmt*>(stmts.at(1).get());
+		ASSERT_TRUE(b_var != nullptr);
+		ASSERT_TRUE(dynamic_cast<const CallExpr*>(b_var->initial_value.get()) != nullptr);
+
+		// `move a` lowers to a MoveExpr.
+		const auto* c_var = dynamic_cast<const VariableStmt*>(stmts.at(2).get());
+		ASSERT_TRUE(c_var != nullptr);
+		ASSERT_TRUE(dynamic_cast<const MoveExpr*>(c_var->initial_value.get()) != nullptr);
 	}
 
 	void testDestructors() {
