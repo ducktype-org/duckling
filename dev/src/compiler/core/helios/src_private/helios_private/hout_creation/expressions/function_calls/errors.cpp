@@ -204,23 +204,31 @@ namespace compiler::helios::code {
 							arg_pos, data.name.str(), std::move(function_name)
 						);
 					}
-					variant_case(TypeMismatch, data) {
-						dia_int::StablePosition pos = [&] {
-							if_opt_some(
-								arguments_origin[data.argument_index].getStablePosition(), pos
-							) {
-								return pos;
-							}
-							return whole_call_origin.getStablePosition().value();
-						}();
+					variant_case(ArgumentCoercionFailure, data) {
+						if (data.reason == helios::InvalidCoercionReason::IncompatibleTypes) {
+							dia_int::StablePosition pos = [&] {
+								if_opt_some(
+									arguments_origin[data.argument_index].getStablePosition(), pos
+								) {
+									return pos;
+								}
+								return whole_call_origin.getStablePosition().value();
+							}();
 
-						base::Optional<Box<InteractiveFunction>> function_name
-							= get_interactive_function(data.function);
-						return makeBox<ArgumentIncompatibleTypeError>(
-							pos,
-							makeBox<InteractiveType>(ctx, data.expected_type),
-							makeBox<InteractiveType>(ctx, data.given_type),
-							std::move(function_name)
+							base::Optional<Box<InteractiveFunction>> function_name
+								= get_interactive_function(data.function);
+							return makeBox<ArgumentIncompatibleTypeError>(
+								pos,
+								makeBox<InteractiveType>(ctx, data.expected_type),
+								makeBox<InteractiveType>(ctx, data.given_type),
+								std::move(function_name)
+							);
+						}
+
+						auto source_pos
+							= arguments_origin[data.argument_index].getStablePosition().value();
+						return helios::makeCoercionFailureMessage(
+							ctx, data.reason, data.given_type, data.expected_type, source_pos
 						);
 					}
 					variant_case(MissingCallArgument, data) {
@@ -246,32 +254,6 @@ namespace compiler::helios::code {
 							= get_interactive_function(data.function);
 						return makeBox<NamedArgumentProvidedByPositionalError>(
 							arg_pos, std::move(function_name)
-						);
-					}
-					variant_case(TypeNotCopyable, data) {
-						auto source_pos
-							= arguments_origin[data.argument_index].getStablePosition().value();
-						return makeBox<dia_int::NotYetImplementedCodeError>(
-							base::strConcat(
-								"Argument of type `",
-								data.given_type.withReferenceKind(tsh::ReferenceKind::Direct)
-									.toString(),
-								"` cannot be copied."
-							),
-							source_pos
-						);
-					}
-					variant_case(TypeRequiresExplicitCopyMove, data) {
-						auto source_pos
-							= arguments_origin[data.argument_index].getStablePosition().value();
-						return makeBox<dia_int::PlaceholderError>(
-							base::strConcat(
-								"Cannot implicitly copy a value of non-trivially-copyable type `",
-								data.given_type.withReferenceKind(tsh::ReferenceKind::Direct)
-									.toString(),
-								"` as argument. Use `copy` to copy it or `move` to move it."
-							),
-							source_pos
 						);
 					}
 				}

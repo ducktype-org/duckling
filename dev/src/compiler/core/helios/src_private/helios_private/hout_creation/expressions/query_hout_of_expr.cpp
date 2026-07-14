@@ -1055,21 +1055,19 @@ namespace compiler::helios {
 		const auto coercion_qresult   = canCoerce(ctx, expr_hout->expression_type, expected_type);
 		if (coercion_qresult.hasFailed()) return query::Failed();
 
-		variant_match(coercion_qresult.valueOrThrow().getVariant()) {
-			variant_case(Coercion, coercion) { return coercion.coerceFromRef(ctx, expr_hout); }
-			variant_default {
-				logCoercionFailure(
-					ctx,
-					coercion_qresult,
-					source_symbol_type,
-					expected_type,
-					source_position,
-					std::move(log_error)
-				);
-				return query::Failed();
-			}
-		}
-		CORE_UNREACHABLE();
+		const auto& coercion_result = coercion_qresult.valueOrThrow();
+		if (coercion_result.isValid())
+			return coercion_result.getCoercion().coerceFromRef(ctx, expr_hout);
+
+		logCoercionFailure(
+			ctx,
+			coercion_result.getInvalidReason(),
+			source_symbol_type,
+			expected_type,
+			source_position,
+			std::move(log_error)
+		);
+		return query::Failed();
 	}
 
 	query::QResult<Box<code::Expr>> code::subExprFromPSTWithType(

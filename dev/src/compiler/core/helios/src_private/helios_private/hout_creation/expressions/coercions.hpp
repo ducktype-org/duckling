@@ -30,21 +30,24 @@ namespace compiler::helios {
 	};
 
 	/**
+	 * @brief The specific reason a coercion cannot be performed.
+	 */
+	enum class InvalidCoercionReason {
+		/// The source type is not coercible to the target type.
+		IncompatibleTypes,
+		/// The value's type is not copyable, but this coercion required a copy.
+		TypeNotCopyable,
+		/// The value is copyable but not trivially copyable. The implicit copy must be made explicit
+		/// with `copy` or `move` keyword.
+		RequiresExplicitCopyMove,
+	};
+
+	/**
 	 * @brief Type used to indicate an invalid coercion, i.e. coercion that cannot be performed.
 	 */
-	struct InvalidCoercion final {};
-
-	/**
-	 * @brief Type used to indicate a copy of a non-copyable type (no copy constructor exists).
-	 */
-	struct TypeNotCopyable final {};
-
-	/**
-	 * @brief Type used to indicate that the coercion would implicitly copy a copyable, but not
-	 * trivially copyable value. Such copies must be accompanied by a `copy` (to copy) or a `move`
-	 * (to move).
-	 */
-	struct TypeRequiresExplicitCopyMove final {};
+	struct InvalidCoercion final {
+		InvalidCoercionReason reason;
+	};
 
 	class CoercionResult;
 	using CoercionQResult = query::QResult<CoercionResult>;
@@ -114,16 +117,9 @@ namespace compiler::helios {
 	 */
 	class CoercionResult final {
 	public:
-		using StorageVariant
-			= std::variant<Coercion, InvalidCoercion, TypeNotCopyable, TypeRequiresExplicitCopyMove>;
-
 		CoercionResult(Coercion coercion): storage(std::move(coercion)) {}
 
 		CoercionResult(InvalidCoercion invalid): storage(invalid) {}
-
-		CoercionResult(TypeNotCopyable invalid): storage(invalid) {}
-
-		CoercionResult(TypeRequiresExplicitCopyMove invalid): storage(invalid) {}
 
 		[[nodiscard]]
 		constexpr bool isValid() const noexcept {
@@ -147,6 +143,14 @@ namespace compiler::helios {
 			return std::move(std::get<Coercion>(storage));
 		}
 
+		[[nodiscard]]
+		InvalidCoercionReason getInvalidReason() const {
+			CORE_ASSERT(
+				isInvalid(), "Attempting to get the invalid reason from a valid CoercionResult."
+			);
+			return std::get<InvalidCoercion>(storage).reason;
+		}
+
 		/**
 		 * Main function that creates a coerced expression from the old one.
 		 */
@@ -155,14 +159,8 @@ namespace compiler::helios {
 			return std::get<Coercion>(storage).coerce(ctx, std::move(from));
 		}
 
-		[[nodiscard]]
-		const StorageVariant& getVariant() const {
-			return storage;
-		}
-
-
 	private:
-		StorageVariant storage;
+		std::variant<Coercion, InvalidCoercion> storage;
 	};
 
 	/**
@@ -198,14 +196,27 @@ namespace compiler::helios {
 	);
 
 	/**
-	 * @brief A convenience function for typical coercion error logging based on `CoercionQResult`.
+	 * @brief Builds the diagnostic message describing why a coercion failed, based on the `reason`.
+	 */
+	[[nodiscard]] Box<dia_int::MessageBase> makeCoercionFailureMessage(
+		query::Context&          ctx,
+		InvalidCoercionReason    reason,
+		const tsh::SymbolType<>& source_symbol_type,
+		const tsh::SymbolType<>& expected_type,
+		dia_int::StablePosition  source_position
+	);
+
+	/**
+	 * @brief Logs the default coercion failure message (see `makeCoercionFailureMessage`).
+	 *
+	 * @param log_error Optional overrides of the default
 	 */
 	void logCoercionFailure(
 		query::Context&                                      ctx,
-		const CoercionQResult&                               coercion_qresult,
+		InvalidCoercionReason                                reason,
 		const tsh::SymbolType<>&                             source_symbol_type,
 		const tsh::SymbolType<>&                             expected_type,
 		dia_int::StablePosition                              source_position,
-		base::Optional<std::function<void(query::Context&)>> log_error
+		base::Optional<std::function<void(query::Context&)>> log_error = {}
 	);
 }
