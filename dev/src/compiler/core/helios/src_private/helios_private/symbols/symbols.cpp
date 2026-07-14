@@ -1119,11 +1119,11 @@ namespace compiler::helios {
 			visited_symbols.insert(key);
 
 			while (!worklist.empty()) {
-				SymID current_func = worklist.back();
+				SymID current_sym = worklist.back();
 				worklist.pop_back();
 
 				const auto& direct_used_symbols
-					= ctx.query<QueryDirectUsedSymbols>(current_func)->valueOrThrow();
+					= ctx.query<QueryDirectUsedSymbols>(current_sym)->valueOrThrow();
 
 				for (const SymID& dependency: direct_used_symbols.used_functions) {
 					if (visited_symbols.insert(dependency).second) {

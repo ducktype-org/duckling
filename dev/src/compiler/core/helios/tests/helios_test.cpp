@@ -114,8 +114,6 @@ public:
 		TESTER_ADD_TEST(testScopeSymbolsConsistency);
 	}
 
-protected:
-
 private:
 	using enum compiler::tsh::Mutability;
 	using enum compiler::tsh::IntegralAbstractType::Signedness;

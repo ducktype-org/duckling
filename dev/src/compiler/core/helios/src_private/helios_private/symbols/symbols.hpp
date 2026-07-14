@@ -134,6 +134,7 @@ namespace compiler::helios {
 	 * @brief Query all symbols used directly by a function or global symbol: the functions it calls
 	 * and the global variables/constants it references. See @ref UsedSymbols.
 	 * @note Works only for SymID-s that represent functions (both PST and generated).
+	 * The result doesn't include the queried symbol.
 	 *
 	 * \query_thread_safe_if_cache
 	 */
@@ -142,8 +143,7 @@ namespace compiler::helios {
 	/**
 	 * @brief Query all symbols transitively used by a function or global symbol: every function
 	 * reachable through the call graph and every global variable/constant referenced by any of
-	 * those functions. See
-	 * @ref UsedSymbols.
+	 * those functions. See @ref UsedSymbols. The result doesn't include the queried symbol.
 	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(QueryTransitiveUsedSymbols, SymID, CRef<query::QResult<UsedSymbols>>, ({}));
