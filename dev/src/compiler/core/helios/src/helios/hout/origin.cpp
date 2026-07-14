@@ -69,4 +69,14 @@ namespace compiler::helios::code {
 
 		return { pos, {}, false };
 	}
+
+	ElementOrigin elementOriginOrdered(const std::vector<ElementOrigin>& ordered_origins) {
+		// An element with no sub-origins (e.g. an empty tuple) has no source position of its own.
+		if (ordered_origins.empty()) return generatedOrigin();
+
+		ElementOrigin folded = ordered_origins.front();
+		for (usize i{ 1 }; i < ordered_origins.size(); ++i)
+			folded = elementOriginOrdered(folded, ordered_origins[i]);
+		return folded;
+	}
 }

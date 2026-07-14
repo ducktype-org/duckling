@@ -117,4 +117,14 @@ namespace compiler::helios::code {
 	ElementOrigin multiplePstOriginOrdered(
 		const std::vector<pst::Access<pst::LangElement>>& ordered_pst_elements
 	);
+
+	/**
+	 * @brief Folds multiple existing origins into one, in order, by repeatedly applying the binary
+	 * `elementOriginOrdered`. Returns a generated origin when `ordered_origins` is empty.
+	 *
+	 * This is the n-ary companion to `elementOriginOrdered`, meant for HOUT elements that own a
+	 * variable number of sub-expressions (tuples, calls, sequences, ...).
+	 * @warning The order of the elements should be the same in every compilation.
+	 */
+	ElementOrigin elementOriginOrdered(const std::vector<ElementOrigin>& ordered_origins);
 }
