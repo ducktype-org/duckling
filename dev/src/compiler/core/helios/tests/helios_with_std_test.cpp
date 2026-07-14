@@ -39,7 +39,8 @@ protected:
 	void beforeAll() override {
 		fs::FilePath artifacts_path = fs::FileManager::createRandomTempDirectory().getFilePath();
 		std::vector<compiler::driver::test_utils::PackagePathAndName> packages{
-			{ fs::FilePath(path("test_modules/builtins")), "builtins" }
+			{ fs::FilePath(path("test_modules/builtins")), "builtins" },
+			{ fs::FilePath(path("test_modules/strings")), "strings" }
 		};
 		auto init_result
 			= compiler::driver::test_utils::initializeCompilerForTests(packages, artifacts_path);
@@ -116,7 +117,8 @@ private:
 	}
 
 	void testStrings() {
-		auto [module, scope] = getModule(fs::File(path("test_modules/strings")));
+		auto  module = compiler::driver::test_utils::getModuleIdFromPath("strings");
+		auto  scope  = getModuleScope(module);
 		auto& hout
 			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
 		auto& function   = hout.functions.at(0);
@@ -125,7 +127,7 @@ private:
 		using namespace compiler::helios::code;
 
 		{
-			// let ab = 'a' +: b;
+			// let ab = 'a' +: (&b);
 			const auto& prepended_stmt = dynamic_cast<const VariableStmt&>(*statements.at(1));
 			const auto  prepended_expr
 				= dynamic_cast<const CallExpr*>(prepended_stmt.initial_value.get());
@@ -133,21 +135,21 @@ private:
 				= dynamic_cast<IdentifierExpr*>(prepended_expr->callee.get());
 			assertEqual(
 				compiler::helios::name(prepended_callee->symbol),
-				base::StrID("prependChar"),
-				"The prepended expression should call prependChar"
+				base::StrID("+:"),
+				"The prepended expression should call the `+:` operator"
 			);
 		}
 
 		{
-			// let bcd = b :+ 'c' :+ 'd';
+			// let bcd = (&b) :+ 'c' :+ 'd';
 			const auto& appended_stmt = dynamic_cast<const VariableStmt&>(*statements.at(2));
 			const auto  appended_expr
 				= dynamic_cast<const CallExpr*>(appended_stmt.initial_value.get());
 			const auto appended_callee = dynamic_cast<IdentifierExpr*>(appended_expr->callee.get());
 			assertEqual(
 				compiler::helios::name(appended_callee->symbol),
-				base::StrID("appendChar"),
-				"The appended expression should call appendChar"
+				base::StrID(":+"),
+				"The appended expression should call the `:+` operator"
 			);
 		}
 
@@ -159,22 +161,22 @@ private:
 				= dynamic_cast<IdentifierExpr*>(concatenated_expr->callee.get());
 			assertEqual(
 				compiler::helios::name(concatenated_callee->symbol),
-				base::StrID("concatStrings"),
-				"The concatenated expression should call concatStrings"
+				base::StrID("++"),
+				"The concatenated expression should call the `++` operator"
 			);
 		}
 
 		{
 			// let x = 1;
 			// let y = 2;
-			// let format = "Did you know that {x} plus {y} equals ({x + y})?";
+			// let format = f"Did you know that {x} plus {y} equals ({x + y})?";
 			const auto& format_stmt = dynamic_cast<const VariableStmt&>(*statements.at(8));
 			const auto format_expr = dynamic_cast<const CallExpr*>(format_stmt.initial_value.get());
 			const auto format_callee = dynamic_cast<IdentifierExpr*>(format_expr->callee.get());
 			assertEqual(
 				compiler::helios::name(format_callee->symbol),
-				base::StrID("concatStrings"),
-				"The format string expression should call concatStrings"
+				base::StrID("toString"),
+				"The format string expression should call toString"
 			);
 		}
 
