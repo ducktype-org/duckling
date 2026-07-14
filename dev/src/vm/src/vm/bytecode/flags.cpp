@@ -34,7 +34,8 @@ namespace vm::code {
 		case builtins::BuiltinFunctionID::I64ToString:
 			// Number-to-string conversions that write the result through a pointer operand.
 			// No console I/O and no threading; like every other pointer-deref write (see the
-			// CptrRead/CptrWrite note below) they are not classified as GlobalRead/GlobalWrite.
+			// `deref_write` no-op in getFlagsForInstruction) they are not classified as
+			// GlobalRead/GlobalWrite.
 			return {};
 		case builtins::BuiltinFunctionID::StartThread:
 			return FunctionFlag(Multithread) | ControlFlowModifying;
@@ -51,15 +52,6 @@ namespace vm::code {
 		case builtins::BuiltinFunctionID::LockMutex:
 		case builtins::BuiltinFunctionID::WaitCV:
 			return FunctionFlag(Multithread) | MayBlock | ReleaseGIL;
-		case builtins::BuiltinFunctionID::CptrRead:
-		case builtins::BuiltinFunctionID::CptrWrite:
-			// Raw memory copies between VM memory and C memory addressed by a `cptr`. They perform
-			// no console I/O and do not spawn threads. The VM side is accessed through a pointer
-			// operand, and like every other pointer-deref write in this module (see the
-			// `deref_write` no-op in getFlagsForInstruction) such accesses are not classified as
-			// GlobalRead/GlobalWrite: the analysis cannot tell whether the pointer aliases a
-			// global. So no config restriction applies here.
-			return {};
 		}
 		CORE_PANIC("Invalid builtin function ID");
 	}
@@ -539,6 +531,40 @@ namespace vm::code {
 			instr_case(ins::Op_ref_pptr_pvnt, i) {
 				wr(i.dst_ptr);
 				rd(i.src);
+			}
+
+			// ===== C pointers =====
+			// Native-memory accesses through a cpointer contribute no global flags: the native
+			// side is outside the VM's global model, and the VM side goes through a pointer
+			// operand (see the `deref_write` no-op above).
+			instr_case(ins::Op_cptrLoad_pany_pcpt, i) {
+				wr(i.dst);
+				rd(i.src_ptr);
+			}
+			instr_case(ins::Op_cptrStore_pcpt_pany, i) {
+				rd(i.dst_ptr);
+				rd(i.src);
+			}
+			instr_case(ins::Op_cptrRead_pptr_pcpt_p64, i) {
+				rd(i.dst_ptr);
+				rd(i.src_ptr);
+				rd(i.size);
+				deref_write();
+			}
+			instr_case(ins::Op_cptrWrite_pcpt_pptr_p64, i) {
+				rd(i.dst_ptr);
+				rd(i.src_ptr);
+				rd(i.size);
+				deref_read();
+			}
+			instr_case(ins::Op_cptrCast_pcpt_pcpt, i) {
+				wr(i.dst);
+				rd(i.src);
+			}
+			instr_case(ins::Op_cptrAddOffset_pcpt_pcpt_p64, i) {
+				wr(i.dst);
+				rd(i.src);
+				rd(i.offset);
 			}
 
 			// ===== Structs =====
