@@ -11,11 +11,6 @@ use crate::quackpack::util::to_path_buf::ToPathBuf;
 use crate::util::path_ops_ext::PathOpsExt;
 use crate::{DuckContext, QpContext, StrId};
 
-#[cfg(windows)]
-static PATH_JOINER: &str = "\\";
-#[cfg(not(windows))]
-static PATH_JOINER: &str = "/";
-
 fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {
     let dir = tempdir().unwrap();
     let manifest = dir.path().join("x");
@@ -38,9 +33,8 @@ fn prepare_frontmatter(contents: &str) -> (TempDir, PathBuf) {
 
 fn make_errors_message<const N: usize>(root: &TempDir, errors: [&str; N]) -> String {
     let mut vec = [format!(
-        "when trying to parse the user manifest at `{}{}x`",
-        root.path().display(),
-        PATH_JOINER
+        "when trying to parse the user manifest at `{}`",
+        root.path().join("x").display()
     )]
     .to_vec();
     vec.extend(errors.iter().map(|&x| String::from(x)));
@@ -49,9 +43,8 @@ fn make_errors_message<const N: usize>(root: &TempDir, errors: [&str; N]) -> Str
 
 fn make_errors_message_frontmatter<const N: usize>(root: &TempDir, errors: [&str; N]) -> String {
     let mut vec = [format!(
-        "when trying to parse the frontmatter of the script at `{}{}x`",
-        root.path().display(),
-        PATH_JOINER
+        "when trying to parse the frontmatter of the script at `{}`",
+        root.path().join("x").display(),
     )]
     .to_vec();
     vec.extend(errors.iter().map(|&x| String::from(x)));
