@@ -100,10 +100,7 @@ namespace compiler::tsh {
 	}
 
 	bool isStringTypePresent(query::Context& ctx) {
-		return frontend::getModuleByAbsolutePath(
-				   ctx, base::StrID("core"), { base::StrID("containers") }
-		)
-		    .has_value();
+		return helios::isLanguagePrimitivePresent(ctx, helios::LanguagePrimitive::String);
 	}
 
 	SliceAbstractType getCharSliceType(query::Context& ctx) {

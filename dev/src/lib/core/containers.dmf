@@ -194,8 +194,6 @@ fun ++(a: ref String, b: ref String) -> String = {
     return move result;
 }
 
-fun concatStrings(a: String, b: String) = (move a) ++ (move b);
-
 fun +:(c: char, s: String) -> String = {
     var result = stringReserve(s.length() + 1u64);
     result.append(c);
