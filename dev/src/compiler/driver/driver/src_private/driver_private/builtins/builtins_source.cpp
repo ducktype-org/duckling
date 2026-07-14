@@ -31,16 +31,6 @@ struct list {
 // Here, we declare the entire interface as extern "C" to avoid name mangling.
 // The definitions will be given below.
 extern "C" {
-	// Basic small I/O @TODO: #2635 move to Duckling, probably
-	// `builtin_output_char` / `builtin_input_char` now live in `core.io` (native: `read`/`write`
-	// syscalls via `core.clib`; DVM: VM builtins).
-	int64_t  builtin_output_i64(int64_t v);
-	int64_t  builtin_input_i64();
-	int32_t  builtin_output_u64(uint64_t v);
-	uint64_t builtin_input_u64();
-	int32_t  builtin_output_f64(double v);
-	double   builtin_input_f64();
-
 	// Runtime Allocators
 	void* builtin_alloc(uint64_t size);
 	void  builtin_dealloc(void* ptr);
@@ -59,31 +49,6 @@ extern "C" {
 	uint64_t float_to_string(double v, char* p, uint64_t buffer_cap);
 	uint64_t u64_to_string(uint64_t v, char* p, uint64_t buffer_cap);
 	uint64_t i64_to_string(int64_t v, char* p, uint64_t buffer_cap);
-}
-
-// @TODO: #1782 change return type to i32 when updating builtins in VM.
-int64_t builtin_output_i64(int64_t v) { return printf("%ld\n", v); }
-
-int64_t builtin_input_i64() {
-	int64_t v;
-	if (scanf("%ld", &v) != 1) exit(1);
-	return v;
-}
-
-int32_t builtin_output_u64(uint64_t v) { return printf("%lu\n", v); }
-
-uint64_t builtin_input_u64() {
-	uint64_t v;
-	if (scanf("%lu", &v) != 1) exit(1);
-	return v;
-}
-
-int32_t builtin_output_f64(double v) { return printf("%.4lg\n", v); }
-
-double builtin_input_f64() {
-	double v;
-	if (scanf("%lg", &v) != 1) exit(1);
-	return v;
 }
 
 // This is an intended abstraction over the allocation. In the future, different allocators for

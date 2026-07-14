@@ -17,6 +17,7 @@ namespace vm::code {
 			// terminates the current execution
 			return { ControlFlowModifying };
 		case builtins::BuiltinFunctionID::InputI64:
+		case builtins::BuiltinFunctionID::InputChar:
 			// reads from stdin, blocks waiting for the user
 			return FunctionFlag(IORead) | MayBlock | ReleaseGIL;
 		case builtins::BuiltinFunctionID::OutputI64:
@@ -25,6 +26,7 @@ namespace vm::code {
 		case builtins::BuiltinFunctionID::OutputString:
 			return FunctionFlag(IOWrite) | RequiresGIL;
 		case builtins::BuiltinFunctionID::Stoi:
+		case builtins::BuiltinFunctionID::Strtod:
 			// pure conversion, no observable effects
 			return {};
 		case builtins::BuiltinFunctionID::FloatToString:

@@ -83,33 +83,41 @@ fun strtod(p: manyptr char) -> f64 = {
 #{
     Writes every character of `s` through `writeChar`.
 #}
-fun writeString(s: ref containers.String) -> () = {
+fun writeStr(s: str) -> u64 = {
     var i = 0u64;
     while (i < s.length()) {
-        writeChar(s.at(i64(i)));
+        writeChar(s[i]));
         i = i + 1u64;
     }
+    return i;
 }
 
-fun writeI64(x: i64) -> () = {
-    var s = x.toString();
-    writeString(&s);
-    writeChar('\n');
-    s.dispose();
+fun writeString(v: ref containers.String) -> u64 = {
+    return v.asSlice();
 }
 
-fun writeU64(x: u64) -> () = {
+fun writeI64(x: i64) -> u64 = {
     var s = x.toString();
-    writeString(&s);
+    let result = writeString(&s);
     writeChar('\n');
     s.dispose();
+    return result + 1;
 }
 
-fun writeF64(x: f64) -> () = {
+fun writeU64(x: u64) -> u64 = {
     var s = x.toString();
-    writeString(&s);
+    let result = writeString(&s);
     writeChar('\n');
     s.dispose();
+    return result + 1;
+}
+
+fun writeF64(x: f64) -> u64 = {
+    var s = x.toString();
+    let result = writeString(&s);
+    writeChar('\n');
+    s.dispose();
+    return result + 1;
 }
 
 # ------------------------------------------------------------------- readers ---
