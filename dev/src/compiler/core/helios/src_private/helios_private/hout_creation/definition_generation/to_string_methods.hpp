@@ -30,10 +30,13 @@ namespace compiler::helios::defgen {
 	/**
 	 * @brief Utility function to get the append String method symbol on String class.
 	 *
-	 * @param ctx
+	 * `String` overloads `append` for both a by-reference and a by-value `String` argument.
+	 * @param ctx The query context.
+	 * @param arg_by_reference When true, selects the `append(other: ref String)` overload;
+	 * when false, selects the `append(other: String)` overload (which consumes its argument).
 	 * @return SymID
 	 */
-	SymID appendStringMethodSym(query::Context& ctx);
+	SymID stringAppendMethodSym(query::Context& ctx, bool arg_by_reference);
 
 	/**
 	 * @brief Get the compiler-generated HOUT representation of the toString method for a type.

@@ -83,9 +83,9 @@ namespace compiler::tsh {
 		ClassMemberVisibility visibility;
 
 		/**
-		 * This makes special method is more visible to the lookup and generating code.
+		 * This makes special method more visible to the lookup and generating code.
 		 */
-		SpecialKind special;
+		SpecialKind special_kind;
 
 	public:
 		/**
@@ -110,7 +110,7 @@ namespace compiler::tsh {
 			  declaration_order(declaration_order),
 			  kind(kind),
 			  visibility(visibility),
-			  special(special) {}
+			  special_kind(special) {}
 
 		/**
 		 * @brief Gets the symbol of this element.
@@ -185,7 +185,7 @@ namespace compiler::tsh {
 		 */
 		[[nodiscard]]
 		SpecialKind specialKind() const {
-			return special;
+			return special_kind;
 		}
 
 		/**

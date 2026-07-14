@@ -97,17 +97,7 @@ namespace compiler::helios {
 			}
 			case LanguagePrimitive::ConcatStrings: {
 				return lookupPrimitive(
-					ctx, LanguagePrimitive::ConcatStrings, "core", { "containers" }, "concatStrings"
-				);
-			}
-			case LanguagePrimitive::PrependChar: {
-				return lookupPrimitive(
-					ctx, LanguagePrimitive::PrependChar, "core", { "containers" }, "prependChar"
-				);
-			}
-			case LanguagePrimitive::AppendChar: {
-				return lookupPrimitive(
-					ctx, LanguagePrimitive::AppendChar, "core", { "containers" }, "appendChar"
+					ctx, LanguagePrimitive::StringifyF64, "core", { "containers" }, "concatStrings"
 				);
 			}
 			default:

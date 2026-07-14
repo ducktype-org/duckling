@@ -70,7 +70,7 @@ fundecl strtod(p: manyptr char) -> f64;
 fun strtod(p: manyptr char) -> f64 = {
     # `strtod` needs a writable end pointer; we point it at a throwaway local and ignore it.
     var endptr: cptr char = p as cptr char;
-    return clib.strtod(p as cptr char, &endptr as ptr cptr char as cptr cptr char);
+    return clib.strtod(p as cptr char, &endptr as cptr cptr char);
 }
 
 @dvm_only_impl

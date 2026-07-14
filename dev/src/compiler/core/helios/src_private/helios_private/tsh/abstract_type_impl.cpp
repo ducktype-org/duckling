@@ -135,7 +135,9 @@ namespace compiler::tsh {
 			}
 
 			for (auto& elem: getDefaultTypeInterfaceForType(ctx, key).getElements()) {
-				if (declared_specials.contains(elem.specialKind())) continue;
+				if (elem.specialKind() != InterfaceElement::SpecialKind::None
+				    && declared_specials.contains(elem.specialKind()))
+					continue;
 				new_elements.push_back(elem);
 			}
 			return TypeInterface(new_elements);

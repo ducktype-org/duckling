@@ -42,27 +42,34 @@ namespace compiler::helios::defgen {
 	}
 
 #define STRING_TYPE tsh::SymbolType<>::withDefaults(tsh::getStringType(ctx))
-#define STRINGIFY_LANG_PRIMITIVE(primitive) \
+#define LANG_PRIMITIVE(primitive) \
 	ctx.query<QueryLanguagePrimitiveSymID>({ primitive })->valueOrThrow()
 
 	Box<code::Expr> getStringFromLiteralExpr(query::Context& ctx, base::StrID value) {
 		std::vector<Box<code::Expr>> call_args;
 		call_args.emplace_back(makeBox<code::LiteralStringExpr>(ctx, code::generatedOrigin(), value)
 		);
-		SymID callee_sym = STRINGIFY_LANG_PRIMITIVE(LanguagePrimitive::StringifyStr);
+		SymID callee_sym = LANG_PRIMITIVE(LanguagePrimitive::StringifyStr);
 		auto  callee     = makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), callee_sym);
 		return makeBox<code::CallExpr>(
 			ctx, code::generatedOrigin(), std::move(callee), std::move(call_args)
 		);
 	}
 
-	SymID appendStringMethodSym(query::Context& ctx) {
-		// Look up the `append(other: ref String)` method on the `String` class. `append` is
-		// overloaded, so we select the overload whose single (non-self) parameter is a `String`.
-		const auto  string_type   = tsh::getStringType(ctx);
-		const auto& lookup_result = HInterface::ofTypeInstance(string_type)
+	SymID stringAppendMethodSym(query::Context& ctx, const bool arg_by_reference) {
+		// Look up the `append` method on the `String` class. `append` is overloaded on a `String`
+		// argument, so we select either the by-reference (`append(other: ref String)`) or the
+		// by-value (`append(other: String)`) overload depending on `arg_by_reference`.
+		auto       string_abstract_type = tsh::getStringType(ctx);
+		const auto expected_arg_type
+			= tsh::SymbolType<>::withDefaults(string_abstract_type)
+		          .withReferenceKind(
+					  arg_by_reference ? tsh::ReferenceKind::Ref : tsh::ReferenceKind::Direct
+				  );
+		const auto& lookup_result = HInterface::ofTypeInstance(string_abstract_type)
 		                                .lookup(ctx, base::StrID("append"))
 		                                ->valueOrThrow();
+
 
 		for (const SymID candidate: lookup_result.leaves) {
 			const auto fn_type = ctx.query<QueryTypeOfSymbol>(candidate)
@@ -70,11 +77,14 @@ namespace compiler::helios::defgen {
 			                         .getType()
 			                         .as<tsh::FunctionAbstractType>();
 			const auto& params = fn_type.getParameterTypes();
-			// [0] is the `self` parameter, [1] is `other`.
-			if (params.size() == 2 && params.at(1).getType() == string_type) return candidate;
+			if (params.size() == 2 && params.at(1) == expected_arg_type) return candidate;
 		}
 		ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-			"The String class language primitive doesn't have the `append(ref String)` method.",
+			base::strConcat(
+				"The String class language primitive doesn't have the `append(",
+				arg_by_reference ? "ref " : "",
+				"String)` method."
+			),
 			"This method is required for the compiler to work."
 		));
 		query::throwFailed();
@@ -88,7 +98,7 @@ namespace compiler::helios::defgen {
 			std::vector<Box<code::Stmt>>&  body
 		) {
 			const auto self_param  = to_string_decl.parameters.at(0).helios_symbol;
-			const auto builtin_sym = STRINGIFY_LANG_PRIMITIVE(LanguagePrimitive::StringifyBool);
+			const auto builtin_sym = LANG_PRIMITIVE(LanguagePrimitive::StringifyBool);
 
 			std::vector<Box<code::Expr>> args;
 			args.emplace_back(makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), self_param)
@@ -121,7 +131,7 @@ namespace compiler::helios::defgen {
 				is_signed ? tsh::IntegralAbstractType::Signedness::Signed
 						  : tsh::IntegralAbstractType::Signedness::Unsigned
 			));
-			const auto builtin_sym     = STRINGIFY_LANG_PRIMITIVE(
+			const auto builtin_sym     = LANG_PRIMITIVE(
                 is_signed ? LanguagePrimitive::StringifyI64 : LanguagePrimitive::StringifyU64
 			);
 
@@ -155,7 +165,7 @@ namespace compiler::helios::defgen {
 			const auto self_param = to_string_decl.parameters.at(0).helios_symbol;
 			const auto target_float_type
 				= tsh::SymbolType<>::withDefaults(tsh::getFloatType(ctx, 64));
-			const auto builtin_sym = STRINGIFY_LANG_PRIMITIVE(LanguagePrimitive::StringifyF64);
+			const auto builtin_sym = LANG_PRIMITIVE(LanguagePrimitive::StringifyF64);
 
 			Box<code::Expr> arg_expr
 				= makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), self_param);
@@ -185,7 +195,7 @@ namespace compiler::helios::defgen {
 			std::vector<Box<code::Stmt>>&  body
 		) {
 			const auto self_param  = to_string_decl.parameters.at(0).helios_symbol;
-			const auto builtin_sym = STRINGIFY_LANG_PRIMITIVE(LanguagePrimitive::StringifyChar);
+			const auto builtin_sym = LANG_PRIMITIVE(LanguagePrimitive::StringifyChar);
 
 			std::vector<Box<code::Expr>> args;
 			args.emplace_back(makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), self_param)
@@ -229,7 +239,7 @@ namespace compiler::helios::defgen {
 			auto  slice_element_type = slice_type.getElementType();
 			if (slice_element_type.getType() == tsh::getCharType()
 			    and slice_element_type.getRefKind() == tsh::ReferenceKind::Direct) {
-				SymID callee_sym = STRINGIFY_LANG_PRIMITIVE(LanguagePrimitive::StringifyStr);
+				SymID callee_sym = LANG_PRIMITIVE(LanguagePrimitive::StringifyStr);
 				auto  callee
 					= makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), callee_sym);
 
@@ -268,7 +278,7 @@ namespace compiler::helios::defgen {
 			const base::StrID              prefix,
 			const CRef<tsh::TypeInterface> type_interface
 		) {
-			const auto append_sym = appendStringMethodSym(ctx);
+			const auto append_sym = stringAppendMethodSym(ctx, true);
 			// Create a reusable expression of the de-reffed self (self is passed by reference)
 			auto self_expr = makeBox<code::DerefExpr>(
 				ctx,

@@ -73,13 +73,14 @@ class String {
         }
     }
 
-    fun append(c: char) -> () = {
+    fun append(c: char) -> ref String = {
         reserve(len + 1u64);
         pointer[i64(len)] = c;
         len               = len + 1u64;
+        return self;
     }
 
-    fun append(other: ref String) -> () = {
+    fun append(other: ref String) -> ref String = {
         let other_len = other.length();
         reserve(len + other_len);
 
@@ -87,16 +88,24 @@ class String {
         # the buffer `other` refers to when both are the same string.
         copyCharsAt(other.pointer, pointer, len, other_len);
         len = len + other_len;
+        return self;
     }
 
-    fun append(other: str) -> () = {
+    fun append(other: String) -> ref String = {
+        append(&other);
+        other.dispose();
+        return self;
+    }
+
+    fun append(other: str) -> ref String = {
         let other_len = other.length();
         reserve(len + other_len);
         copyCharsAt(builtins.char_ptr_from_slice(other), pointer, len, other_len);
         len = len + other_len;
+        return self;
     }
 
-    fun prepend(c: char) -> () = {
+    fun prepend(c: char) -> ref String = {
         reserve(len + 1u64);
 
         # Shift right back to front, so moved characters are never clobbered.
@@ -107,6 +116,7 @@ class String {
         }
         pointer[0] = c;
         len        = len + 1u64;
+        return self;
     }
 
     #{
@@ -143,7 +153,8 @@ class String {
 
     String.copy(other: const ref String) = {
         var result = stringReserve(other.length());
-        copyChars(other.pointer, result.pointer, result.length());
+        copyChars(other.pointer, result.pointer, other.length());
+        result.len = other.length();
         return move result;
     }
 }
@@ -182,6 +193,8 @@ fun ++(a: ref String, b: ref String) -> String = {
     result.append(&b);
     return move result;
 }
+
+fun concatStrings(a: String, b: String) = (move a) ++ (move b);
 
 fun +:(c: char, s: String) -> String = {
     var result = stringReserve(s.length() + 1u64);
