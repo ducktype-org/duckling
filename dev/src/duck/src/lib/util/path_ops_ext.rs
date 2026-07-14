@@ -150,6 +150,7 @@ impl PathOpsExt for Path {
         Ok(())
     }
 
+    #[cfg(not(windows))]
     fn try_fsync_dir(&self) -> QuackResult<()> {
         let dir = {
             let mut opts = OpenOptions::new();
@@ -161,6 +162,12 @@ impl PathOpsExt for Path {
             Err(e) if matches!(e.kind(), io::ErrorKind::Unsupported) => Ok(()),
             Err(e) => Err(e).with_context(|| format!("failed to sync `{}", self.display())),
         }
+    }
+
+    #[cfg(windows)]
+    fn try_fsync_dir(&self) -> QuackResult<()> {
+        // sync_data and sync_all are unreliable on Windows and usually unneeded.
+        Ok(())
     }
 
     fn touch(&self) -> QuackResult<File> {

@@ -155,6 +155,10 @@ metadata:
 
     #[test]
     fn no_package_from_directory() {
+        #[cfg(windows)]
+        let root = "\\\\?\\C:\\";
+        #[cfg(not(windows))]
+        let root = "/";
         let tmp_file = tempdir().unwrap();
         let ctx = DuckContext::default();
         let err =
@@ -162,8 +166,9 @@ metadata:
         assert_eq!(
             format!("{err}"),
             format!(
-                "no manifest has been found from the `{}` to the `/`",
-                tmp_file.path().resolve().unwrap().display()
+                "no manifest has been found from the `{}` to the `{}`",
+                tmp_file.path().resolve().unwrap().display(),
+                root
             )
         );
     }
