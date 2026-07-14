@@ -44,10 +44,11 @@ public:
 		TESTER_ADD_TEST(testLiterals);
 		TESTER_ADD_TEST(testComposites);
 		TESTER_ADD_TEST(testTypedNumericLiteral);
-		TESTER_ADD_TEST(testGeneratedOrigins);
-		TESTER_ADD_TEST(testWithOrigin);
 		TESTER_ADD_TEST(testReusable);
 		TESTER_ADD_TEST(testCall);
+		TESTER_ADD_TEST(testStatements);
+		TESTER_ADD_TEST(testGeneratedOrigins);
+		TESTER_ADD_TEST(testWithOrigin);
 		TESTER_ADD_TEST(testGuardSaveRestore);
 	}
 
@@ -106,54 +107,6 @@ public:
 		});
 	}
 
-	/** Trees built purely from shorthands carry generated origins. */
-	void testGeneratedOrigins() {
-		query::utils::withContextDo([&](query::Context& ctx) {
-			Shorthand sh{ ctx };
-
-			const auto leaf = litNum(1);
-			ASSERT_TRUE(leaf->origin.isGenerated());
-
-			const auto composite = binOp(litNum(1), BuiltinBinary::IntegerAdd, litNum(2));
-			ASSERT_TRUE(composite->origin.isGenerated());
-		});
-	}
-
-	/**
-	 * `withOrigin` changes the origin of an expression, so that a specific origin can be applied
-	 * over the default `generatedOrigin()`. Verified with a *real*,
-	 * non-generated PST origin (from `square`'s declaration) so the override is observable — a node
-	 * that starts generated/positionless ends up non-generated and carrying a source position.
-	 */
-	void testWithOrigin() {
-		const auto [module, scope] = getModule(fs::File(path("test_modules/with_origin")));
-		const auto dummy_symbol    = getChain("dummy", scope).back();
-
-		query::utils::withContextDo([&](query::Context& ctx) {
-			Shorthand sh{ ctx };
-
-			// Create a compiler-generated HOUT Expression,
-			// which is an IdentifierExpr pointing to the dummy variable.
-			auto dummy_ident = ident(dummy_symbol);
-
-			// Get a genuine, positioned (non-generated) origin taken from dummy's PST declaration.
-			const auto pst_origin
-				= pstOrigin(compiler::helios::maybeSymbolPst(dummy_symbol).value().unlock(ctx));
-			ASSERT_TRUE(!pst_origin.isGenerated());
-			ASSERT_TRUE(pst_origin.getStablePosition().has_value());
-
-			// Check that origin is generated before override.
-			ASSERT_TRUE(dummy_ident->origin.isGenerated());
-
-			// Override the origin (this isn't strictly correct, but OK for the test).
-			dummy_ident = withOrigin(pst_origin, std::move(dummy_ident));
-
-			// The HOUT Expr now carries the specified origin.
-			ASSERT_TRUE(!dummy_ident->origin.isGenerated());
-			ASSERT_TRUE(dummy_ident->origin.getStablePosition().has_value());
-		});
-	}
-
 	/** `reusable` marks the first use; `nextUse` shares the inner for subsequent uses. */
 	void testReusable() {
 		query::utils::withContextDo([&](query::Context& ctx) {
@@ -195,6 +148,114 @@ public:
 				square_symbol,
 				compiler::helios::getIdentifierExprSymID(call_expr->callee.ref()).value()
 			);
+		});
+	}
+
+	/**
+	 * Statement builders wrap their operands and compose into `CodeBlock`s (including nested bodies).
+	 * The builders don't type-check, they just assemble the tree.
+	 * `varDecl` needs a real symbol and a type, so a module is loaded to supply them.
+	 */
+	void testStatements() {
+		const auto [module, scope] = getModule(fs::File(path("test_modules/dummy")));
+		const auto dummy_symbol   = getChain("dummy", scope).back();
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			Shorthand sh{ ctx };
+
+			const auto i64_type
+				= tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed);
+			const auto i64_sym_type = litNum(0, i64_type)->expression_type.getSymbolType();
+
+			// Simple statements wrap their expression operand.
+			const auto decl = var(dummy_symbol, i64_sym_type, litNum(0, i64_type));
+			ASSERT_TRUE(decl->initial_value.isBox());
+			ASSERT_TRUE(decl->helios_symbol == dummy_symbol);
+
+			const auto assignment = assign(ident(dummy_symbol), litNum(1, i64_type));
+			ASSERT_TRUE(assignment->location_expr.isBox());
+			ASSERT_TRUE(assignment->new_value_expr.isBox());
+
+			ASSERT_TRUE(ret(litNum(1))->value.isBox());
+			ASSERT_TRUE(expr(litBool(true))->expr.isBox());
+			ASSERT_TRUE(ret()->origin.isGenerated());
+
+			// Body arguments accept a braced list of statements directly.
+			const auto loop = whileStmt(litBool(true), { expr(litNum(0)), ret() });
+			ASSERT_TRUE(loop->condition.isBox());
+			ASSERT_EQUAL(loop->body.statements.size(), 2UL);
+
+			// if with and without else.
+			const auto if_no_else = ifStmt(litBool(true), { ret() });
+			ASSERT_EQUAL(if_no_else->then_body.statements.size(), 1UL);
+			ASSERT_EQUAL(if_no_else->else_body.statements.size(), 0UL);
+
+			const auto if_else = ifStmt(litBool(false), { ret() }, { ret(), ret() });
+			ASSERT_EQUAL(if_else->then_body.statements.size(), 1UL);
+			ASSERT_EQUAL(if_else->else_body.statements.size(), 2UL);
+
+			// block(...) wraps a body as a BlockStmt.
+			ASSERT_EQUAL(block({ ret(), ret() })->body.statements.size(), 2UL);
+
+			// An empty braced list is a valid (empty) body.
+			ASSERT_EQUAL(ifStmt(litBool(true), {})->then_body.statements.size(), 0UL);
+
+			// A standalone CodeBlock (e.g. a whole function body) via StmtPack::toCodeBlock.
+			const auto body = StmtPack{ ret(litNum(1)), expr(litNum(2)) }.toCodeBlock();
+			ASSERT_EQUAL(body.statements.size(), 2UL);
+
+			// Box<Derived> -> Box<Stmt> accumulation, wrapped through StmtPack's vector constructor.
+			std::vector<Box<Stmt>> collected;
+			collected.emplace_back(ret(litNum(7)));
+			ASSERT_EQUAL(StmtPack{ std::move(collected) }.toCodeBlock().statements.size(), 1UL);
+		});
+	}
+
+	/** Trees built purely from shorthands carry generated origins. */
+	void testGeneratedOrigins() {
+		query::utils::withContextDo([&](query::Context& ctx) {
+			Shorthand sh{ ctx };
+
+			const auto leaf = litNum(1);
+			ASSERT_TRUE(leaf->origin.isGenerated());
+
+			const auto composite = binOp(litNum(1), BuiltinBinary::IntegerAdd, litNum(2));
+			ASSERT_TRUE(composite->origin.isGenerated());
+		});
+	}
+
+	/**
+	 * `withOrigin` changes the origin of an expression, so that a specific origin can be applied
+	 * over the default `generatedOrigin()`. Verified with a *real*,
+	 * non-generated PST origin (from `square`'s declaration) so the override is observable — a node
+	 * that starts generated/positionless ends up non-generated and carrying a source position.
+	 */
+	void testWithOrigin() {
+		const auto [module, scope] = getModule(fs::File(path("test_modules/dummy")));
+		const auto dummy_symbol    = getChain("dummy", scope).back();
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			Shorthand sh{ ctx };
+
+			// Create a compiler-generated HOUT Expression,
+			// which is an IdentifierExpr pointing to the dummy variable.
+			auto dummy_ident = ident(dummy_symbol);
+
+			// Get a genuine, positioned (non-generated) origin taken from dummy's PST declaration.
+			const auto pst_origin
+				= pstOrigin(compiler::helios::maybeSymbolPst(dummy_symbol).value().unlock(ctx));
+			ASSERT_TRUE(!pst_origin.isGenerated());
+			ASSERT_TRUE(pst_origin.getStablePosition().has_value());
+
+			// Check that origin is generated before override.
+			ASSERT_TRUE(dummy_ident->origin.isGenerated());
+
+			// Override the origin (this isn't strictly correct, but OK for the test).
+			dummy_ident = withOrigin(pst_origin, std::move(dummy_ident));
+
+			// The HOUT Expr now carries the specified origin.
+			ASSERT_TRUE(!dummy_ident->origin.isGenerated());
+			ASSERT_TRUE(dummy_ident->origin.getStablePosition().has_value());
 		});
 	}
 
