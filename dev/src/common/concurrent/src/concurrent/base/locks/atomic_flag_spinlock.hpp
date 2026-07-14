@@ -29,8 +29,9 @@ namespace concurrent {
 	 * possible, it might be worth to benchmark it in real scenarios and potentially swap it /
 	 * improve it.
 	 */
-	class AtomicFlagSpinlock final {
-		std::atomic_flag atomic_flag{};
+	class alignas(128) AtomicFlagSpinlock final {
+		// std::atomic_flag atomic_flag{};
+		std::atomic<bool> atomic_flag{false};
 		
 		[[maybe_unused]]
 		char padding[128 - sizeof(std::atomic_flag)]; // NOLINT
@@ -43,14 +44,17 @@ namespace concurrent {
 		void lock() noexcept {
 			u64 wait_repetitions = 2;
 			while (true) {
-				if (!atomic_flag.test_and_set(std::memory_order_acquire)) return;
-				wait_repetitions *= 2;
+				if (atomic_flag.exchange(true, std::memory_order_acquire) == false) return; // lock acquired
 
-				if (wait_repetitions > 128) {
-					std::this_thread::sleep_for(std::chrono::nanoseconds(50));
-					wait_repetitions = 4;
-				} else {
-					concurrent::nopWait(wait_repetitions);
+				while (atomic_flag.load(std::memory_order_relaxed) == true) {
+					wait_repetitions *= 2;
+
+					if (wait_repetitions > 128) {
+						std::this_thread::sleep_for(std::chrono::nanoseconds(50));
+						wait_repetitions = 4;
+					} else {
+						concurrent::nopWait(wait_repetitions);
+					}
 				}
 			}
 		}
@@ -68,6 +72,6 @@ namespace concurrent {
 		/**
 		 * Releases the lock.
 		 */
-		void unlock() noexcept { atomic_flag.clear(std::memory_order_release); }
+		void unlock() noexcept { atomic_flag.store(false, std::memory_order_release); }
 	};
 }

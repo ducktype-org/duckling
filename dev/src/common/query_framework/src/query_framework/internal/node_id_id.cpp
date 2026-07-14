@@ -5,11 +5,22 @@
 #include <concurrent/base/collections/hash_map.hpp>
 
 // #include "internerner/interner.hpp"
-#include "internerner/interner2.hpp"
+// #include "internerner/interner2.hpp"
 
 namespace query::internal {
 
     namespace {
+
+        auto& getNodeIDToIDMapLocalCache() {
+            static thread_local base::StableHashMap<NodeID, u64> node_id_to_id_map;
+            return node_id_to_id_map;
+        }
+
+        auto& getIDToNodeIDMapLocalCache() {
+            static thread_local base::StableHashMap<u64, NodeID> id_to_node_id_map;
+            return id_to_node_id_map;
+        }
+
         auto& getNodeIDToIDMap() {
             static concurrent::ConHashMap<NodeID, u64> node_id_to_id_map;
             return node_id_to_id_map;
@@ -28,12 +39,18 @@ namespace query::internal {
 
     NodeIDID::NodeIDID(NodeID node_id) {
 
-        this->id = mapToKeyID(Key{
-            .id = node_id.q_id.asInt(),
-            .hash = {node_id.hash.val.data[0], node_id.hash.val.data[1], node_id.hash.val.data[2], node_id.hash.val.data[3]}
-        }).id;
+        // this->id = mapToKeyID(Key{
+        //     .id = node_id.q_id.asInt(),
+        //     .hash = {node_id.hash.val.data[0], node_id.hash.val.data[1], node_id.hash.val.data[2], node_id.hash.val.data[3]}
+        // }).id;
 
-        return;
+        // return;
+
+        auto& node_id_to_id_map_local = getNodeIDToIDMapLocalCache();
+        if (auto id = node_id_to_id_map_local.atMaybeCopy(node_id)) {
+            this->id = *id;
+            return;
+        }
 
         auto& node_id_to_id_map = getNodeIDToIDMap();
         auto& id_to_node_id_map = getIDToNodeIDMap();
@@ -45,7 +62,7 @@ namespace query::internal {
             if (*existing_id != MAX_ID) {
                 my_id = *existing_id;
             }
-            else [[likely]] {
+            else {
                 my_id = next_id.fetch_add(1, std::memory_order_relaxed);
                 *existing_id = my_id;
                 was_new = true;
@@ -53,6 +70,10 @@ namespace query::internal {
         });
 
         this->id = my_id;
+        
+        // it didn't have it before, so we are save to put:
+        node_id_to_id_map_local.put(node_id, my_id);
+        getIDToNodeIDMapLocalCache().put(my_id, node_id);
 
         if (was_new) {
             id_to_node_id_map.put(my_id, node_id);
@@ -60,13 +81,19 @@ namespace query::internal {
     }
 
     NodeID NodeIDID::getID() const {
-        // auto& id_to_node_id_map = getIDToNodeIDMap();
-        // return id_to_node_id_map.getCopy(id);
+        auto& id_to_node_id_map_local = getIDToNodeIDMapLocalCache();
+        if (auto node_id = id_to_node_id_map_local.atMaybeCopy(id)) {
+            return *node_id;
+        }
 
-        KeyID key_id {.id = id};
-        auto org =  key_id.getOriginalKey();
+        // Btw this is not correct on its own, it might not find the node_id:
+        auto& id_to_node_id_map = getIDToNodeIDMap();
+        return id_to_node_id_map.getCopy(id);
 
-        return NodeID{QueryID(org.id), KeyHash{base::Bit256(org.hash[0], org.hash[1], org.hash[2], org.hash[3])}};
+        // KeyID key_id {.id = id};
+        // auto org =  key_id.getOriginalKey();
+
+        // return NodeID{QueryID(org.id), KeyHash{base::Bit256(org.hash[0], org.hash[1], org.hash[2], org.hash[3])}};
 
     }
 
