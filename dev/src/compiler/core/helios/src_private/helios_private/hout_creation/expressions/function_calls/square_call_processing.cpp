@@ -137,7 +137,7 @@ namespace compiler::helios::code {
 
 		auto arg_pst = (*args->begin()).unlock(ctx)->getArg().unlock(ctx)->getExpr();
 
-		auto meta_res = canCoerceToMeta(ctx, base->expression_type.getSymbolType());
+		auto meta_res = canCoerceToMeta(ctx, base->expression_type);
 		UNPACK_QRESULT_MOVE(auto meta_coercion_res =, meta_res);
 
 		// If base is coercible to meta, this is an array type creation.
