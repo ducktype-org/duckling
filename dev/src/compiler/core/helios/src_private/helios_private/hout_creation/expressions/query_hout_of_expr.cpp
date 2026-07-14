@@ -19,6 +19,7 @@
 #include <helios/tsh/symbol_type.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/errors/dia_interactive_elements.hpp>
+#include <helios_private/hout_creation/definition_generation/copy_constructors.hpp>
 #include <helios_private/hout_creation/definition_generation/to_string_methods.hpp>
 #include <helios_private/hout_creation/expressions/builtin_operators.hpp>
 #include <helios_private/hout_creation/expressions/chain_expr.hpp>
@@ -202,6 +203,30 @@ namespace compiler::helios::code {
 				}
 			}
 
+			/**
+			 * Prepares a HOUT Expr for a method call, e.g. by automatically taking a reference, as
+			 * required by `self`.
+			 * @note The algorithm is a bit more complicated and depends on whether the type is
+			 * simple or complex, as methods on simple types take copies instead, and then
+			 * references to simple types need to be dereffed.
+			 * @param expr The expression on which a method is called.
+			 * @return The modified (reffed or dereffed) expression.
+			 */
+			[[nodiscard]]
+			Box<Expr> prepareForMethodCall(Box<Expr> expr) const {
+				if (not expr->expression_type.getType().isSimple()
+				    and expr->expression_type.getSymbolType().getRefKind()
+				            != tsh::ReferenceKind::Ref) {
+					return makeBox<RefOfExpr>(ctx, expr->origin.generatedFrom(), std::move(expr));
+				}
+				if (expr->expression_type.getType().isSimple()
+				    and expr->expression_type.getSymbolType().getRefKind()
+				            != tsh::ReferenceKind::Direct) {
+					return makeBox<DerefExpr>(ctx, expr->origin.generatedFrom(), std::move(expr));
+				}
+				return expr;
+			}
+
 			void visitExprFormatStrValue(pst::Access<pst::expr::ExprFormatStrValue> stmt) override {
 				auto concat_sym = defgen::concatSym(ctx);
 
@@ -247,20 +272,7 @@ namespace compiler::helios::code {
 						const auto to_string_sym = defgen::toStringSymForType(ctx, sub_expr_type);
 
 						// - - Correct for passing by copy or reference depending on type
-						if (not sub_expr_hout->expression_type.getType().isSimple()
-						    and sub_expr_hout->expression_type.getSymbolType().getRefKind()
-						            != tsh::ReferenceKind::Ref) {
-							sub_expr_hout = makeBox<RefOfExpr>(
-								ctx, generatedOrigin(), std::move(sub_expr_hout)
-							);
-						}
-						if (sub_expr_hout->expression_type.getType().isSimple()
-						    and sub_expr_hout->expression_type.getSymbolType().getRefKind()
-						            != tsh::ReferenceKind::Direct) {
-							sub_expr_hout = makeBox<DerefExpr>(
-								ctx, generatedOrigin(), std::move(sub_expr_hout)
-							);
-						}
+						sub_expr_hout = prepareForMethodCall(std::move(sub_expr_hout));
 
 						// - - Create HOUT Expr
 						std::vector<Box<Expr>> arguments;
@@ -373,6 +385,29 @@ namespace compiler::helios::code {
 						all_candidates.push_back(builtin_operator_sym);
 				}
 				filterFunctionsByOperatoriness(ctx, all_candidates, operatoriness);
+
+				// Step 2b. — If nothing was found in the calling scope or among builtins, fall
+				// back to an operator method declared on the operand's own type.
+				// @TODO: #3133 This should be unified.
+				if (all_candidates.empty()) {
+					const auto inner_type = inner->expression_type.getType();
+					const auto method_lookup_result
+						= HInterface::ofTypeInstance(inner_type).lookup(ctx, op->unwrap().value);
+					auto method_candidates = method_lookup_result->valueOrThrow().leaves;
+					filterFunctionsByOperatoriness(ctx, method_candidates, operatoriness);
+					if (!method_candidates.empty()) {
+						auto self_expr = prepareForMethodCall(std::move(inner));
+						return processUnaryOperatorCall(
+								   ctx,
+								   method_candidates,
+								   std::move(self_expr),
+								   pstOrigin(op),
+								   operatoriness
+						)
+						    .valueOrThrow();
+					}
+				}
+
 				return processUnaryOperatorCall(
 						   ctx, all_candidates, std::move(inner), pstOrigin(op), operatoriness
 				)
@@ -390,7 +425,7 @@ namespace compiler::helios::code {
 					op,
 					std::move(inner),
 					ctx.query<QueryPrimaryCodeScopeFor>({ stmt }),
-					HOUTFunctionDeclaration::Operatoriness::Prefix
+					HOUTFunctionDeclaration::Operatoriness::Suffix
 				);
 			}
 
@@ -412,12 +447,8 @@ namespace compiler::helios::code {
 						));
 						return;  // failed
 					}
-					// @TODO: #1549 RefOfExpr is inserted here naively without any checks.
-					// This should change to take value category into consideration as well as the
-					// `unique`/`leaking` specifiers.
-					auto primary_category = inner->expression_type.getValueCategory().getCategory();
-					if (primary_category == tsh::PrimaryCategory::Literal
-					    || primary_category == tsh::PrimaryCategory::Temporary) {
+					// @TODO: #3109 Take `unique`/`leaking` specifiers into consideration.
+					if (not inner->expression_type.getValueCategory().addressable()) {
 						ctx.logInt(makeBox<dia_int::PlaceholderError>(
 							"Tried to reference a temporary", stmt->getStablePosition()
 						));
@@ -440,7 +471,39 @@ namespace compiler::helios::code {
 				}
 
 				if (op->unwrap() == lang_def::keywordToStr(lang_def::Keyword::Move)) {
+					// `move x` is only valid on an owned lvalue (a local variable).
+					if (not inner->expression_type.getValueCategory().isMovableFrom()) {
+						ctx.logInt(makeBox<dia_int::PlaceholderError>(
+							"`move` can only be applied to an owned local variable.",
+							stmt->getStablePosition()
+						));
+						return;
+					}
 					node = makeBox<MoveExpr>(ctx, pstOrigin(stmt), std::move(inner));
+					return;
+				}
+
+				// `copy x` produces an explicit copy of `x` via its copy constructor.
+				if (op->unwrap() == lang_def::keywordToStr(lang_def::Keyword::Copy)) {
+					if (inner_type.isTriviallyCopyable(ctx)) {
+						ctx.logInt(makeBox<dia_int::PlaceholderWarning>(
+							base::strConcat(
+								"Type `",
+								inner_type.toString(),
+								"` is trivially copyable. No need to use the explicit `copy` "
+								"keyword."
+							),
+							stmt->getStablePosition()
+						));
+					}
+					if (not inner_type.getType().isCopyable(ctx)) {
+						ctx.logInt(makeBox<dia_int::PlaceholderError>(
+							base::strConcat("Type `", inner_type.toString(), "` cannot be copied."),
+							stmt->getStablePosition()
+						));
+						return;
+					}
+					node = defgen::makeCopyExpr(ctx, std::move(inner));
 					return;
 				}
 
@@ -509,6 +572,31 @@ namespace compiler::helios::code {
 				filterFunctionsByOperatoriness(
 					ctx, all_candidates, HOUTFunctionDeclaration::Operatoriness::Infix
 				);
+
+				// Step 2b. — if nothing was found in the calling scope or among builtins, fall
+				// back to an operator method declared on the left-hand side's own type.
+				// @TODO: #3133 This should be unified.
+				if (all_candidates.empty()) {
+					const auto lhs_abstract_type    = lhs_type.getType();
+					const auto method_lookup_result = HInterface::ofTypeInstance(lhs_abstract_type)
+					                                      .lookup(ctx, op->unwrap().value);
+					auto method_candidates = method_lookup_result->valueOrThrow().leaves;
+					filterFunctionsByOperatoriness(
+						ctx, method_candidates, HOUTFunctionDeclaration::Operatoriness::Infix
+					);
+					if (!method_candidates.empty()) {
+						auto self_expr = prepareForMethodCall(std::move(lhs));
+						return processBinaryOperatorCall(
+								   ctx,
+								   method_candidates,
+								   std::move(self_expr),
+								   std::move(rhs),
+								   pstOrigin(op)
+						)
+						    .valueOrThrow();
+					}
+				}
+
 				return processBinaryOperatorCall(
 						   ctx, all_candidates, std::move(lhs), std::move(rhs), pstOrigin(op)
 				)
@@ -1023,7 +1111,7 @@ namespace compiler::helios {
 
 		const auto source_symbol_type = expr_hout->expression_type.getSymbolType();
 		const auto source_position    = pst_expr.element.unlock(ctx)->getStablePosition();
-		const auto coercion_qresult   = canCoerce(ctx, source_symbol_type, expected_type);
+		const auto coercion_qresult   = canCoerce(ctx, expr_hout->expression_type, expected_type);
 		if (coercion_qresult.hasFailed()) return query::Failed();
 
 		variant_match(coercion_qresult.valueOrThrow().getVariant()) {

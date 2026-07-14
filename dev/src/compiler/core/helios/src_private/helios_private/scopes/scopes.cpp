@@ -129,7 +129,6 @@ namespace compiler::helios {
 		case pst::ElementKind::Block:  //< note that Block != CodeBlock
 		case pst::ElementKind::ClassField:
 		case pst::ElementKind::CallArgument:
-		case pst::ElementKind::FunDecl:
 		case pst::ElementKind::Attribute:
 			// this is transparent, since we don't need this scope:
 			return ElementScopeKind::Transparent;
@@ -143,6 +142,7 @@ namespace compiler::helios {
 		case pst::ElementKind::While:
 		case pst::ElementKind::For:
 		case pst::ElementKind::Fun:
+		case pst::ElementKind::FunDecl:
 		case pst::ElementKind::ClassMethod:
 		case pst::ElementKind::ClassSpecial:
 			return ElementScopeKind::Standard;
@@ -504,6 +504,13 @@ namespace compiler::helios {
 				output(std::move(out));
 			}
 
+			void visitFunDecl(pst::Access<pst::FunDecl> fun_decl) override {
+				std::vector<SymID> out;
+				for (auto param: *fun_decl->getParams().unlock(ctx))
+					out.emplace_back(ctx.query<QuerySymbolOfSTMT>(param).valueOrThrow());
+				output(std::move(out));
+			}
+
 			void visitMethod(pst::Access<pst::Method> meth) override {
 				// Scope of "fun →()← {}"
 
@@ -522,8 +529,19 @@ namespace compiler::helios {
 				output(std::move(out));
 			}
 
-			void visitDestructor(pst::Access<pst::Destructor>) override {
-				output(std::vector<SymID>{});
+			void visitDestructor(pst::Access<pst::Destructor> dtor) override {
+				// Scope of "T.destroy →()← = {}". A destructor has no parameters, only an
+				// implicit `self`.
+				std::vector<SymID> out;
+				out.emplace_back(ctx.query<defgen::QueryGeneratedSymbol>({
+					.name = base::StrID("self"),
+					.generated_symbol_data
+					= defgen::SelfParameter{ .method_symbol
+				                             = ctx.query<QuerySymbolOfSTMT>(dtor).valueOrThrow(),
+				                             .scope = key },
+				}));
+
+				output(std::move(out));
 			}
 
 			void visitCopyConstructor(pst::Access<pst::CopyConstructor> cctor) override {

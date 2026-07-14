@@ -1,0 +1,6 @@
+# Loaded after io_lib under no_io: main calls the old does_io, so IO must
+# propagate from the old function to this new one.
+function main {  } -> { i64 } {
+	call_func			does_io;
+	ret;
+}

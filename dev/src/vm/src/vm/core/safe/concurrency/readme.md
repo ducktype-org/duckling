@@ -48,7 +48,7 @@ The VM provides built-in functions for thread management:
 - `builtin_create_mutex`: Creates a new synchronization mutex.
 - `builtin_lock_mutex`: Acquires a mutex.
 - `builtin_unlock_mutex`: Releases a mutex.
-- `builtin_destroy_mutex`: Destroys a mutex.
+- `builtin_destroy_mutex`: Destroys a mutex. Panics if the mutex is still locked (a program error).
 
 ## Notes
 

@@ -143,58 +143,51 @@ namespace compiler::helios {
 		 */
 		static base::OkBad collectReplicatedSymbols(query::Context& ctx, HOUTUnit& out_unit) {
 			// We perform a DFS traversal of the HOUT Unit. We keep track of the visited functions.
-			std::unordered_set<SymID> visited_function_symbols;
-			std::vector<SymID>        functions_stack;
+			std::unordered_set<SymID> added_symbols;
+			std::vector<SymID>        symbol_stack;
 			base::OkBad               result = base::OK;
 
 			for (auto f: out_unit.functions) {
-				visited_function_symbols.insert(f->declaration->original_symbol);
-				functions_stack.push_back(f->declaration->original_symbol);
+				added_symbols.insert(f->declaration->original_symbol);
+				symbol_stack.push_back(f->declaration->original_symbol);
 			}
-			// We will add all the function symbols we visit. This includes the initally collected
-			// function symbols, which were added to the stack. To avoid duplication, we clear the
-			// unit first.
-			out_unit.functions.clear();
-
-			// Append calls from the global variable initial value expression.
 			for (auto g: out_unit.glob_data) {
-				if (auto global_variable = std::get_if<HOUTGlobalVariable>(&g->value)) {
-					for (auto called_fun: collectCalledSymbols(*global_variable->initial_value)) {
-						if (visited_function_symbols.contains(called_fun)) continue;
-						if (emissionPolicy(ctx, called_fun) != EmissionPolicy::Replicated) continue;
-						functions_stack.push_back(called_fun);
-						visited_function_symbols.insert(called_fun);
-					}
-				}
+				added_symbols.insert(g->helios_symbol);
+				symbol_stack.push_back(g->helios_symbol);
 			}
 
-			while (not functions_stack.empty()) {
-				auto current_fun = functions_stack.back();
-				functions_stack.pop_back();
+			while (not symbol_stack.empty()) {
+				auto current_sym = symbol_stack.back();
+				symbol_stack.pop_back();
 
-				// Note, to make the templated global variables work (or templated class static
-				// variables) we have to not only look for calls, but also for usages of the global
-				// variables and add them to worklist.
-				auto qresult = ctx.query<QueryDirectFunctionCalls>(current_fun);
+				auto qresult = ctx.query<QueryDirectUsedSymbols>(current_sym);
 				if (qresult->hasFailed()) {
 					result = base::BAD;
 					continue;
 				}
-				auto& called_funs = qresult->valueOrThrow();
+				auto& used_symbols = qresult->valueOrPanic();
 
-				for (auto called_fun: called_funs) {
-					if (visited_function_symbols.contains(called_fun)) continue;
-					if (emissionPolicy(ctx, called_fun) != EmissionPolicy::Replicated) continue;
+				for (auto used_fun: used_symbols.used_functions) {
+					if (added_symbols.contains(used_fun)) continue;
+					if (emissionPolicy(ctx, used_fun) != EmissionPolicy::Replicated) continue;
 
-					functions_stack.push_back(called_fun);
-					visited_function_symbols.insert(called_fun);
+					added_symbols.insert(used_fun);
+					if (implementsQueryCodeOfFun(used_fun))
+						out_unit.functions.emplace_back(
+							&ctx.query<QueryCodeOfFun>(used_fun)->valueOrThrow()
+						);
+					symbol_stack.push_back(used_fun);
 				}
+				for (auto used_global: used_symbols.used_globals) {
+					if (added_symbols.contains(used_global)) continue;
+					if (emissionPolicy(ctx, used_global) != EmissionPolicy::Replicated) continue;
 
-				if (implementsQueryCodeOfFun(current_fun))
-					out_unit.functions.emplace_back(
-						&ctx.query<QueryCodeOfFun>(current_fun)->valueOrThrow()
+					added_symbols.insert(used_global);
+					out_unit.glob_data.emplace_back(
+						&ctx.query<QueryHOUTGlobalData>(used_global)->valueOrThrow()
 					);
-				visited_function_symbols.insert(current_fun);
+					symbol_stack.push_back(used_global);
+				}
 			}
 			return result;
 		}
