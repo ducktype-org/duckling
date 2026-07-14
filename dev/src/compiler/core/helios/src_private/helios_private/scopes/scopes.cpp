@@ -507,8 +507,19 @@ namespace compiler::helios {
 				output(std::move(out));
 			}
 
-			void visitDestructor(pst::Access<pst::Destructor>) override {
-				output(std::vector<SymID>{});
+			void visitDestructor(pst::Access<pst::Destructor> dtor) override {
+				// Scope of "T.destroy →()← = {}". A destructor has no parameters, only an
+				// implicit `self`.
+				std::vector<SymID> out;
+				out.emplace_back(ctx.query<defgen::QueryGeneratedSymbol>({
+					.name = base::StrID("self"),
+					.generated_symbol_data
+					= defgen::SelfParameter{ .method_symbol
+				                             = ctx.query<QuerySymbolOfSTMT>(dtor).valueOrThrow(),
+				                             .scope = key },
+				}));
+
+				output(std::move(out));
 			}
 
 			void visitCopyConstructor(pst::Access<pst::CopyConstructor> cctor) override {
