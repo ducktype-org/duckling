@@ -235,14 +235,14 @@ private:
 			auto goo_mir = compiler::mir::lowerToPreMIRFunction(ctx, functions.at(1));
 			ASSERT_EQUAL(goo_mir.name, base::StrID("goo"));
 
-			ASSERT_EQUAL(goo_mir.local_list.size(), 2);
+			ASSERT_EQUAL(goo_mir.local_list.size(), 1);
 
-			// assert that in the first block we have an assignment
+			// assert that in the first block we have the two assignments and the call
 			ASSERT_EQUAL(goo_mir.block_order.size(), 1);
 
 			auto first_block_id = goo_mir.block_order[0];
 
-			ASSERT_EQUAL(goo_mir.blocks[first_block_id].instructions.size(), 5);
+			ASSERT_EQUAL(goo_mir.blocks[first_block_id].instructions.size(), 4);
 			ASSERT_EQUAL(
 				goo_mir.blocks[first_block_id].instructions.at(0).operation,
 				compiler::mir::Operation::Assign
@@ -254,10 +254,6 @@ private:
 			ASSERT_EQUAL(
 				goo_mir.blocks[first_block_id].instructions.at(2).operation,
 				compiler::mir::Operation::Call
-			);
-			ASSERT_EQUAL(
-				goo_mir.blocks[first_block_id].instructions.at(3).operation,
-				compiler::mir::Operation::Cast
 			);
 		});
 	}

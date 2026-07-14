@@ -117,11 +117,9 @@ namespace compiler::helios {
 					ctx, location_expr->origin.generatedFrom(), location_expr->clone()
 				);
 
-			auto location_value_category
-				= location_expr->expression_type.getValueCategory().getCategory();
-			if (location_value_category == tsh::PrimaryCategory::Literal) {
+			if (not location_expr->expression_type.getValueCategory().canBeAssignedTo()) {
 				ctx.logInt(makeBox<dia_int::PlaceholderError>(
-					"Left side of assignment is a literal",
+					"Left side of assignment must be addressable location",
 					var.unlock(ctx)->getStablePosition(),
 					"",
 					"here"
