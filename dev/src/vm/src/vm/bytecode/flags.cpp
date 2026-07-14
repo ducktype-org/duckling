@@ -370,6 +370,7 @@ namespace vm::code {
 			FLAGS_CMP_IMM(fcmpLt_p32_imm)
 			FLAGS_CMP(fcmpLe_p32_p32)
 			FLAGS_CMP_IMM(fcmpLe_p32_imm) instr_case(ins::Op_cmpNull_pptr, i) { rd(i.ptr); }
+			instr_case(ins::Op_cmpNull_pcpt, i) { rd(i.ptr); }
 
 			// ===== Variants =====
 			instr_case(ins::Op_variantSetInner_pvnt_type, i) { rdwr(i.variant); }

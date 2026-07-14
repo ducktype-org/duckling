@@ -733,6 +733,8 @@ class FunctionValidator {
 				    != getPlaceType(instr.dst, current_stack)->getID())
 					throw CPointerTypeMismatchError(instr);
 			}
+			// A null check works through any cpointer type.
+			instr_case_novalue(Op_cmpNull_pcpt) {}
 
 			instr_case(Op_mov_pste_pste, instr) {
 				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);

@@ -616,6 +616,9 @@ DEF_INSTR(
 	(vm::opargs::Place64, offset)
 )
 
+// Sets the flag if the C pointer is null (the native address 0). Works with any cpointer type.
+DEF_INSTR(cmpNull_pcpt, (vm::opargs::PlaceCptr, ptr))
+
 // ========= TYPE OPERATIONS ========
 // Casts a primitive type in-place. This does nothing at runtime, but is needed
 // for type checking.

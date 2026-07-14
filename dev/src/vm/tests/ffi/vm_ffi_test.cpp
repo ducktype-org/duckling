@@ -39,6 +39,7 @@ public:
 		TESTER_ADD_TEST(cptrReadSizeTooLargeFails);
 		TESTER_ADD_TEST(cptrNullTypedLoadFails);
 		TESTER_ADD_TEST(cptrNullRawReadFails);
+		TESTER_ADD_TEST(cptrNullCompare);
 		TESTER_ADD_TEST(cptrTypedLoadStoreMallocWorkflow);
 		TESTER_ADD_TEST(cptrAddOffsetArrayWalk);
 		TESTER_ADD_TEST(cptrLoadThroughVoidCptrFails);
@@ -374,6 +375,37 @@ private:
 		auto load = vm::api::loadFiles(pid, { file });
 		if (!load.has_value()) fail(nlohmann::json(load.error()).dump());
 		assertExecutionPanickedWith(runTestOnVmGetResult(pid), "Accessing null pointer");
+	}
+
+	// `cmpNull_pcpt` sets the flag on a null cpointer (default-initialized here) and clears it
+	// on a live allocation; `cmov` materializes the flag as 1/0.
+	void cptrNullCompare() {
+		runProgram(
+			"cptr_null_compare",
+			ffiObjectHeader()
+				+ "ffi function ffi_alloc8 { } -> { cptr };\n"
+				  "ffi function ffi_free8 { cptr } -> { };\n"
+				  "function main { i64, ptr_argv } -> { i64 } {\n"
+				  "    init_pany_type nul, cptr;\n"
+				  "    init_pany_type a, i64;\n"
+				  "    mov_p64_imm a, 0;\n"
+				  "    cmpNull_pcpt nul;\n"
+				  "    cmov_p64_imm a, 1;\n"
+				  "    output_p64 a;\n"
+				  "    init_pany_type buf, cptr;\n"
+				  "    call_ffifunc ffi_alloc8;\n"
+				  "    init_pany_type b, i64;\n"
+				  "    mov_p64_imm b, 0;\n"
+				  "    cmpNull_pcpt buf;\n"
+				  "    cmov_p64_imm b, 1;\n"
+				  "    output_p64 b;\n"
+				  "    init_pany_type buf_f, cptr;\n"
+				  "    mov_pcpt_pcpt buf_f, buf;\n"
+				  "    call_ffifunc ffi_free8;\n"
+				  "    ret;\n"
+				  "}\n",
+			"10"
+		);
 	}
 
 	void floatArgsAndReturn() {

@@ -264,6 +264,10 @@ namespace vm::loader::compiler::safe::detail {
 				addLow<Op_cptrAddOffset_p64_p64>(i.dst, i.src);
 				addLow<Op_ext_p64>(i.offset);
 			}
+			instr_case(high::Op_cmpNull_pcpt, i) {
+				// A null cpointer is the native address 0.
+				addLow<Op_cmpEq_p64_imm>(i.ptr, vm::opargs::Immediate{ 0 });
+			}
 			instr_case(high::Op_mov_pste_pste, i) { addLow<Op_mov_bste_bste>(i.dst, i.src); }
 			instr_case(high::Op_mov_pfst_pfst, i) { addLow<Op_mov_bfst_bfst>(i.dst, i.src); }
 			instr_case(high::Op_add_p64_p64, i) { addLow<Op_add_p64_p64>(i.dst, i.src); }
