@@ -58,20 +58,10 @@ namespace compiler::helios::code::shorthands {
 		inline query::Context& ctx() { return *active_ctx; }
 
 		/**
-		 * @brief Collects the origins of a list of expressions, preserving order.
-		 */
-		inline std::vector<ElementOrigin> originsOf(const std::vector<Box<Expr>>& exprs) {
-			std::vector<ElementOrigin> origins;
-			origins.reserve(exprs.size());
-			for (const auto& expr: exprs) origins.emplace_back(expr->origin);
-			return origins;
-		}
-
-		/**
 		 * @brief Moves a pack of `Box<Expr>` into a vector, preserving order.
 		 */
 		template<typename... Exprs>
-		requires(std::is_same_v<std::remove_cvref_t<Exprs>, Box<Expr>> && ...)
+		requires(std::is_constructible_v<Box<Expr>, Exprs&&> && ...)
 		std::vector<Box<Expr>> packToVector(Exprs&&... exprs) {
 			std::vector<Box<Expr>> result;
 			result.reserve(sizeof...(exprs));
@@ -110,17 +100,38 @@ namespace compiler::helios::code::shorthands {
 		Shorthand& operator=(Shorthand&&)      = delete;
 	};
 
+	/***********************
+	 *   ORIGIN OVERRIDE   *
+	 ***********************/
+
+	/**
+	 * @brief Overrides the origin of an already-built expression and returns it.
+	 *
+	 * Builders always use `generatedOrigin()`, which is correct for generated-only HOUT (the
+	 * main use case of this library). When a node must carry a specific origin instead — e.g. when
+	 * lowering PST, where diagnostics must point back at the source — wrap the builder call:
+	 * @code
+	 *   pst_origin = multiplePstOriginOrdered({lhs_pst, rhs_pst})
+	 *   withOrigin(pst_origin, binOp(a, BuiltinBinary::IntegerLt, b));
+	 * @endcode
+	 */
+	template<typename E>
+	Box<E> withOrigin(ElementOrigin origin, Box<E> expr) {
+		expr->origin = std::move(origin);
+		return expr;
+	}
+
 	/****************
 	 *   LITERALS   *
 	 ****************/
 
 	/** @brief The unit literal `()`. */
-	inline Box<Expr> litUnit() {
+	inline Box<LiteralUnitExpr> litUnit() {
 		return makeBox<LiteralUnitExpr>(internal::ctx(), generatedOrigin());
 	}
 
-	/** @brief A numeric literal from an explicit @ref numeric_value::NumericValue. */
-	inline Box<Expr> litNum(numeric_value::NumericValue value) {
+	/** @brief A numeric literal from an explicit `numeric_value::NumericValue`. */
+	inline Box<LiteralNumericExpr> litNum(numeric_value::NumericValue value) {
 		return makeBox<LiteralNumericExpr>(internal::ctx(), generatedOrigin(), std::move(value));
 	}
 
@@ -131,39 +142,40 @@ namespace compiler::helios::code::shorthands {
 	 * use the `(value, type)` overload or pass a pre-typed @ref numeric_value::NumericValue.
 	 */
 	template<typename T>
-	requires(std::is_arithmetic_v<T>) Box<Expr> litNum(T value) {
+	requires(std::is_arithmetic_v<T>) Box<LiteralNumericExpr> litNum(T value) {
 		return litNum(numeric_value::NumericValue::createMinimized(value));
 	}
 
 	/** @brief A numeric literal of a specific type. Panics if `value` does not fit `type`. */
 	template<typename T>
-	requires(std::is_arithmetic_v<T>) Box<Expr> litNum(T value, const tsh::AbstractType& type) {
+	requires(std::is_arithmetic_v<T>)
+		Box<LiteralNumericExpr> litNum(T value, const tsh::AbstractType& type) {
 		return litNum(numeric_value::NumericValue::createOfType(type, value)
 		                  .expect("litNum: value does not fit the requested type"));
 	}
 
 	/** @brief A boolean literal. */
-	inline Box<Expr> litBool(bool value) {
+	inline Box<LiteralBoolExpr> litBool(bool value) {
 		return makeBox<LiteralBoolExpr>(internal::ctx(), generatedOrigin(), value);
 	}
 
 	/** @brief A character literal. */
-	inline Box<Expr> litChar(char value) {
+	inline Box<LiteralCharExpr> litChar(char value) {
 		return makeBox<LiteralCharExpr>(internal::ctx(), generatedOrigin(), value);
 	}
 
 	/** @brief A string literal. */
-	inline Box<Expr> litStr(base::StrID value) {
+	inline Box<LiteralStringExpr> litStr(base::StrID value) {
 		return makeBox<LiteralStringExpr>(internal::ctx(), generatedOrigin(), value);
 	}
 
 	/** @brief A type literal (e.g. `i32`, `bool`), carrying `type` as its value. */
-	inline Box<Expr> litType(tsh::AbstractType type) {
+	inline Box<LiteralTypeExpr> litType(tsh::AbstractType type) {
 		return makeBox<LiteralTypeExpr>(internal::ctx(), generatedOrigin(), std::move(type));
 	}
 
 	/** @brief An identifier expression referring to `symbol`. */
-	inline Box<Expr> ident(SymID symbol) {
+	inline Box<IdentifierExpr> ident(SymID symbol) {
 		return makeBox<IdentifierExpr>(internal::ctx(), generatedOrigin(), symbol);
 	}
 
@@ -187,137 +199,131 @@ namespace compiler::helios::code::shorthands {
 	 *************************/
 
 	/** @brief A binary operator `lhs op rhs`. */
-	inline Box<Expr> binOp(Box<Expr> lhs, BuiltinBinary op, Box<Expr> rhs) {
-		auto origin = elementOriginOrdered(lhs->origin, rhs->origin);
+	inline Box<BinaryOperatorExpr> binOp(Box<Expr> lhs, BuiltinBinary op, Box<Expr> rhs) {
 		return makeBox<BinaryOperatorExpr>(
-			internal::ctx(), origin, op, std::move(lhs), std::move(rhs)
+			internal::ctx(), generatedOrigin(), op, std::move(lhs), std::move(rhs)
 		);
 	}
 
 	/** @brief A unary operator `op operand`. */
-	inline Box<Expr> unOp(BuiltinUnary op, Box<Expr> operand) {
-		auto origin = operand->origin;
-		return makeBox<UnaryOperatorExpr>(internal::ctx(), origin, op, std::move(operand));
+	inline Box<UnaryOperatorExpr> unOp(BuiltinUnary op, Box<Expr> operand) {
+		return makeBox<UnaryOperatorExpr>(
+			internal::ctx(), generatedOrigin(), op, std::move(operand)
+		);
 	}
 
 	/** @brief A ternary `if condition then if_true else if_false`. */
-	inline Box<Expr> ternary(Box<Expr> condition, Box<Expr> if_true, Box<Expr> if_false) {
-		auto origin
-			= elementOriginOrdered({ condition->origin, if_true->origin, if_false->origin });
+	inline Box<TernaryOperatorExpr> ternary(Box<Expr> condition, Box<Expr> if_true, Box<Expr> if_false) {
 		return makeBox<TernaryOperatorExpr>(
-			internal::ctx(), origin, std::move(condition), std::move(if_true), std::move(if_false)
+			internal::ctx(),
+			generatedOrigin(),
+			std::move(condition),
+			std::move(if_true),
+			std::move(if_false)
 		);
 	}
 
 	/** @brief A tuple value `(elements, ...)`. */
-	inline Box<Expr> tuple(std::vector<Box<Expr>> elements) {
-		auto origin = elementOriginOrdered(internal::originsOf(elements));
-		return makeBox<TupleExpr>(internal::ctx(), origin, std::move(elements));
+	inline Box<TupleExpr> tuple(std::vector<Box<Expr>> elements) {
+		return makeBox<TupleExpr>(internal::ctx(), generatedOrigin(), std::move(elements));
 	}
 
 	/** @brief A tuple value from a pack of elements. */
 	template<typename... Exprs>
-	requires(std::is_same_v<std::remove_cvref_t<Exprs>, Box<Expr>> && ...)
-	Box<Expr> tuple(Exprs&&... elements) {
+	requires(std::is_constructible_v<Box<Expr>, Exprs&&> && ...)
+	Box<TupleExpr> tuple(Exprs&&... elements) {
 		return tuple(internal::packToVector(std::forward<Exprs>(elements)...));
 	}
 
 	/** @brief A variant type constructor `(subtypes | ...)`. */
-	inline Box<Expr> variant(std::vector<Box<Expr>> subtypes) {
-		auto origin = elementOriginOrdered(internal::originsOf(subtypes));
-		return makeBox<VariantTypeConstructorExpr>(internal::ctx(), origin, std::move(subtypes));
+	inline Box<VariantTypeConstructorExpr> variant(std::vector<Box<Expr>> subtypes) {
+		return makeBox<VariantTypeConstructorExpr>(
+			internal::ctx(), generatedOrigin(), std::move(subtypes)
+		);
 	}
 
 	/** @brief A variant type constructor from a pack of subtypes. */
 	template<typename... Exprs>
-	requires(std::is_same_v<std::remove_cvref_t<Exprs>, Box<Expr>> && ...)
-	Box<Expr> variant(Exprs&&... subtypes) {
+	requires(std::is_constructible_v<Box<Expr>, Exprs&&> && ...)
+	Box<VariantTypeConstructorExpr> variant(Exprs&&... subtypes) {
 		return variant(internal::packToVector(std::forward<Exprs>(subtypes)...));
 	}
 
 	/** @brief A field access `base.field`. */
-	inline Box<Expr> access(Box<Expr> base, SymID field) {
-		auto origin = base->origin;
-		return makeBox<AccessExpr>(internal::ctx(), origin, std::move(base), field);
+	inline Box<AccessExpr> access(Box<Expr> base, SymID field) {
+		return makeBox<AccessExpr>(internal::ctx(), generatedOrigin(), std::move(base), field);
 	}
 
 	/** @brief An index expression `base[idx]`. */
-	inline Box<Expr> index(Box<Expr> base, Box<Expr> idx) {
-		auto origin = elementOriginOrdered(base->origin, idx->origin);
-		return makeBox<IndexExpr>(internal::ctx(), origin, std::move(base), std::move(idx));
+	inline Box<IndexExpr> index(Box<Expr> base, Box<Expr> idx) {
+		return makeBox<IndexExpr>(
+			internal::ctx(), generatedOrigin(), std::move(base), std::move(idx)
+		);
 	}
 
 	/** @brief A call `callee(arguments...)`. */
-	inline Box<Expr> call(Box<Expr> callee, std::vector<Box<Expr>> arguments) {
-		std::vector<ElementOrigin> origins;
-		origins.reserve(arguments.size() + 1);
-		origins.emplace_back(callee->origin);
-		for (const auto& arg: arguments) origins.emplace_back(arg->origin);
-
-		auto origin = elementOriginOrdered(origins);
-		return makeBox<CallExpr>(internal::ctx(), origin, std::move(callee), std::move(arguments));
+	inline Box<CallExpr> call(Box<Expr> callee, std::vector<Box<Expr>> arguments) {
+		return makeBox<CallExpr>(
+			internal::ctx(), generatedOrigin(), std::move(callee), std::move(arguments)
+		);
 	}
 
 	/** @brief A call from a callee and a pack of arguments. */
 	template<typename... Args>
-	requires(std::is_same_v<std::remove_cvref_t<Args>, Box<Expr>> && ...)
-	Box<Expr> call(Box<Expr> callee, Args&&... arguments) {
+	requires(std::is_constructible_v<Box<Expr>, Args&&> && ...)
+	Box<CallExpr> call(Box<Expr> callee, Args&&... arguments) {
 		return call(std::move(callee), internal::packToVector(std::forward<Args>(arguments)...));
 	}
 
 	/** @brief A sequence `expressions, ...` (comma operator); the last one is the result. */
-	inline Box<Expr> seq(std::vector<Box<Expr>> expressions) {
+	inline Box<SequenceExpr> seq(std::vector<Box<Expr>> expressions) {
 		CORE_ASSERT(!expressions.empty(), "seq(): a SequenceExpr requires at least one expression");
-		auto origin = elementOriginOrdered(internal::originsOf(expressions));
-		return makeBox<SequenceExpr>(internal::ctx(), origin, std::move(expressions));
+		return makeBox<SequenceExpr>(internal::ctx(), generatedOrigin(), std::move(expressions));
 	}
 
 	/** @brief A sequence from a pack of expressions. */
 	template<typename... Exprs>
-	requires(std::is_same_v<std::remove_cvref_t<Exprs>, Box<Expr>> && ...)
-	Box<Expr> seq(Exprs&&... expressions) {
+	requires(std::is_constructible_v<Box<Expr>, Exprs&&> && ...)
+	Box<SequenceExpr> seq(Exprs&&... expressions) {
 		return seq(internal::packToVector(std::forward<Exprs>(expressions)...));
 	}
 
 	/** @brief A chain comparison, the logical AND of each comparison (e.g. `a < b < c`). */
-	inline Box<Expr> chainCmp(std::vector<Box<Expr>> comparisons) {
+	inline Box<ChainComparisonExpr> chainCmp(std::vector<Box<Expr>> comparisons) {
 		CORE_ASSERT(
 			!comparisons.empty(),
 			"chainCmp(): a ChainComparisonExpr requires at least one comparison"
 		);
-		auto origin = elementOriginOrdered(internal::originsOf(comparisons));
-		return makeBox<ChainComparisonExpr>(internal::ctx(), origin, std::move(comparisons));
+		return makeBox<ChainComparisonExpr>(
+			internal::ctx(), generatedOrigin(), std::move(comparisons)
+		);
 	}
 
 	/** @brief A chain comparison from a pack of comparisons. */
 	template<typename... Exprs>
-	requires(std::is_same_v<std::remove_cvref_t<Exprs>, Box<Expr>> && ...)
-	Box<Expr> chainCmp(Exprs&&... comparisons) {
+	requires(std::is_constructible_v<Box<Expr>, Exprs&&> && ...)
+	Box<ChainComparisonExpr> chainCmp(Exprs&&... comparisons) {
 		return chainCmp(internal::packToVector(std::forward<Exprs>(comparisons)...));
 	}
 
 	/** @brief A cast of `source` to `target_type`. */
-	inline Box<Expr> cast(Box<Expr> source, tsh::SymbolType<> target_type) {
-		auto origin = source->origin;
-		return makeBox<CastExpr>(internal::ctx(), origin, std::move(source), target_type);
+	inline Box<CastExpr> cast(Box<Expr> source, tsh::SymbolType<> target_type) {
+		return makeBox<CastExpr>(internal::ctx(), generatedOrigin(), std::move(source), target_type);
 	}
 
 	/** @brief A reference creation `refof inner`. */
-	inline Box<Expr> refOf(Box<Expr> inner) {
-		auto origin = inner->origin;
-		return makeBox<RefOfExpr>(internal::ctx(), origin, std::move(inner));
+	inline Box<RefOfExpr> refOf(Box<Expr> inner) {
+		return makeBox<RefOfExpr>(internal::ctx(), generatedOrigin(), std::move(inner));
 	}
 
 	/** @brief An explicit move `move inner`. Named `moveOf` to avoid clashing with `std::move`. */
-	inline Box<Expr> moveOf(Box<Expr> inner) {
-		auto origin = inner->origin;
-		return makeBox<MoveExpr>(internal::ctx(), origin, std::move(inner));
+	inline Box<MoveExpr> moveOf(Box<Expr> inner) {
+		return makeBox<MoveExpr>(internal::ctx(), generatedOrigin(), std::move(inner));
 	}
 
 	/** @brief A dereference `deref inner`. */
-	inline Box<Expr> deref(Box<Expr> inner) {
-		auto origin = inner->origin;
-		return makeBox<DerefExpr>(internal::ctx(), origin, std::move(inner));
+	inline Box<DerefExpr> deref(Box<Expr> inner) {
+		return makeBox<DerefExpr>(internal::ctx(), generatedOrigin(), std::move(inner));
 	}
 
 	/*********************
@@ -325,14 +331,13 @@ namespace compiler::helios::code::shorthands {
 	 *********************/
 
 	/** @brief A default value of `type`. */
-	inline Box<Expr> defaultValue(tsh::AbstractType type) {
+	inline Box<DefaultValueExpr> defaultValue(tsh::AbstractType type) {
 		return makeBox<DefaultValueExpr>(internal::ctx(), generatedOrigin(), std::move(type));
 	}
 
 	/** @brief A compile-time lift of `value` to a type. */
-	inline Box<Expr> liftToType(Box<Expr> value) {
-		auto origin = value->origin;
-		return makeBox<LiftToTypeExpr>(internal::ctx(), origin, std::move(value));
+	inline Box<LiftToTypeExpr> liftToType(Box<Expr> value) {
+		return makeBox<LiftToTypeExpr>(internal::ctx(), generatedOrigin(), std::move(value));
 	}
 
 	/************
@@ -343,14 +348,12 @@ namespace compiler::helios::code::shorthands {
 	// query::Context, so these builders do not read the ambient context.
 
 	/** @brief A push `list += element`. */
-	inline Box<Expr> listPush(Box<Expr> list, Box<Expr> element) {
-		auto origin = elementOriginOrdered(list->origin, element->origin);
-		return makeBox<ListPushExpr>(origin, std::move(list), std::move(element));
+	inline Box<ListPushExpr> listPush(Box<Expr> list, Box<Expr> element) {
+		return makeBox<ListPushExpr>(generatedOrigin(), std::move(list), std::move(element));
 	}
 
 	/** @brief A pop of `count` elements from `list`. */
-	inline Box<Expr> listPop(Box<Expr> list, Box<Expr> count) {
-		auto origin = elementOriginOrdered(list->origin, count->origin);
-		return makeBox<ListPopExpr>(origin, std::move(list), std::move(count));
+	inline Box<ListPopExpr> listPop(Box<Expr> list, Box<Expr> count) {
+		return makeBox<ListPopExpr>(generatedOrigin(), std::move(list), std::move(count));
 	}
 }

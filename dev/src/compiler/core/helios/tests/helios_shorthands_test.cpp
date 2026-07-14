@@ -13,6 +13,7 @@
 #include <base/pointers/box.hpp>
 
 #include <filesystem/file.hpp>
+#include <frontend/pst_parser/lang_parser_element.hpp>
 #include <query_framework/context/context.hpp>
 #include <query_framework/entry/with_context_do.hpp>
 #include <tester/tester.hpp>
@@ -44,6 +45,7 @@ public:
 		TESTER_ADD_TEST(testComposites);
 		TESTER_ADD_TEST(testTypedNumericLiteral);
 		TESTER_ADD_TEST(testGeneratedOrigins);
+		TESTER_ADD_TEST(testWithOrigin);
 		TESTER_ADD_TEST(testReusable);
 		TESTER_ADD_TEST(testCall);
 		TESTER_ADD_TEST(testGuardSaveRestore);
@@ -114,6 +116,41 @@ public:
 
 			const auto composite = binOp(litNum(1), BuiltinBinary::IntegerAdd, litNum(2));
 			ASSERT_TRUE(composite->origin.isGenerated());
+		});
+	}
+
+	/**
+	 * `withOrigin` changes the origin of an expression, so that a specific origin can be applied
+	 * over the default `generatedOrigin()`. Verified with a *real*,
+	 * non-generated PST origin (from `square`'s declaration) so the override is observable — a node
+	 * that starts generated/positionless ends up non-generated and carrying a source position.
+	 */
+	void testWithOrigin() {
+		const auto [module, scope] = getModule(fs::File(path("test_modules/with_origin")));
+		const auto dummy_symbol    = getChain("dummy", scope).back();
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			Shorthand sh{ ctx };
+
+			// Create a compiler-generated HOUT Expression,
+			// which is an IdentifierExpr pointing to the dummy variable.
+			auto dummy_ident = ident(dummy_symbol);
+
+			// Get a genuine, positioned (non-generated) origin taken from dummy's PST declaration.
+			const auto pst_origin
+				= pstOrigin(compiler::helios::maybeSymbolPst(dummy_symbol).value().unlock(ctx));
+			ASSERT_TRUE(!pst_origin.isGenerated());
+			ASSERT_TRUE(pst_origin.getStablePosition().has_value());
+
+			// Check that origin is generated before override.
+			ASSERT_TRUE(dummy_ident->origin.isGenerated());
+
+			// Override the origin (this isn't strictly correct, but OK for the test).
+			dummy_ident = withOrigin(pst_origin, std::move(dummy_ident));
+
+			// The HOUT Expr now carries the specified origin.
+			ASSERT_TRUE(!dummy_ident->origin.isGenerated());
+			ASSERT_TRUE(dummy_ident->origin.getStablePosition().has_value());
 		});
 	}
 
