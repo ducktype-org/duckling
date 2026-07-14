@@ -854,7 +854,7 @@ dependencies:
 
 #[test]
 #[cfg(not(windows))]
-// @TODO: #3135
+// @TODO: #3135 Fix to_url() calls on paths on windows
 fn git_url_points_to_local_dir() {
     let root_dir = TempDir::new().unwrap();
     let (dir, manifest_path) = prepare_manifest(&format!(
