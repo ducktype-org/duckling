@@ -19,13 +19,13 @@ namespace compiler::lir {
 		// Globals:
 		for (const auto& mir_global: mir_unit.mir_globals) {
 			CORE_ASSERT(
-				mir_global.global.type.getType().carriesInformation(ctx),
+				mir_global->global.type.getType().carriesInformation(ctx),
 				"Information-less global should have been discarded in MIR lowering"
 			);
 
-			auto lir_global = LIRGlobal::fromMIR(ctx, mir_global.global);
+			auto lir_global = LIRGlobal::fromMIR(ctx, mir_global->global);
 
-			variant_match(mir_global.initial_value) {
+			variant_match(mir_global->initial_value) {
 				variant_case(ctv::CompileTimeValue, ctv_initial_value) {
 					// @future #1554 -- const ctors will probably be added here (or in backends), if
 					// we decide to add them. See #1554 for more details.
