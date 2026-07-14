@@ -27,7 +27,7 @@ impl DependencyGraph {
                         panic!(
                             "{}",
                             missing_depenendcy_in_manifest_message(
-                                &this.package().manifest().name(),
+                                &this.package().name(),
                                 &dep.name()
                             )
                         )
@@ -88,7 +88,7 @@ impl EarlyGraph {
                             panic!(
                                 "{}",
                                 missing_depenendcy_in_manifest_message(
-                                    &this.package().manifest().name(),
+                                    &this.package().name(),
                                     &dep.name()
                                 )
                             )

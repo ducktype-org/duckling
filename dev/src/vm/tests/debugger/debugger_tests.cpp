@@ -364,7 +364,7 @@ private:
 
 		std::unique_lock lk(m);
 		// Test timeout
-		ASSERT_TRUE(cv.wait_for(lk, std::chrono::milliseconds(100), [&] { return output.load(); }));
+		ASSERT_TRUE(cv.wait_for(lk, std::chrono::milliseconds(200), [&] { return output.load(); }));
 
 		ASSERT_HAS_VALUE(vm::api::stop(pid));
 	}

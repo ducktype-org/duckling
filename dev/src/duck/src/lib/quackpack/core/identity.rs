@@ -14,9 +14,7 @@ use std::str::FromStr;
 
 use serde::{Deserialize, Serialize, de};
 
-use crate::quackpack::core::Manifest;
 use crate::quackpack::core::full_identity::{FullIdentity, FullKind, FullOrigin};
-use crate::quackpack::core::solver::types_common::{ExpandedLocation, ExpandedPackage};
 use crate::quackpack::util::interned_url::InternedUrl;
 use crate::quackpack::util::is_local_file::IsLocalFile;
 use crate::quackpack::util::to_url::ToUrl;
@@ -43,20 +41,6 @@ impl Identity {
     /// Get the [`Origin`].
     pub fn origin(&self) -> Origin {
         self.origin
-    }
-
-    /// Helper for solver for creating storage's freeze.
-    pub fn from_realization_and_manifest(
-        realization: ExpandedPackage,
-        realization_manifest: &Manifest,
-    ) -> Self {
-        let name = realization_manifest.name();
-        let origin = match realization.location {
-            ExpandedLocation::Registry { url, .. } => Origin::for_registry(url),
-            ExpandedLocation::Git { url, .. } => Origin::for_git(url),
-            ExpandedLocation::Local { absolute_path } => Origin::new(absolute_path, Kind::Local),
-        };
-        Self::new(name, origin)
     }
 
     /// Compare `lhs` and `rhs` in a stable way!

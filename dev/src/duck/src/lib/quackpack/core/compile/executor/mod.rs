@@ -223,7 +223,7 @@ pub(crate) fn compile_single_unit_with_schema(
     bcx: &BuildContext<'_, '_>,
     schema: multipackage_schema::MultiPackage,
 ) -> QuackResult<()> {
-    let name = unit.root_package().package().manifest().name();
+    let name = unit.root_package().package().name();
     let status = (|| {
         let unit_layout = layout.for_dependency(&unit.unique_name());
         let builder = finished_builder_for_layout_and_profile(bcx, &unit_layout, &bcx.profile);

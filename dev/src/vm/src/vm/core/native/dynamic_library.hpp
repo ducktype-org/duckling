@@ -8,7 +8,7 @@
 #include <string>
 
 
-#if __unix__
+#if defined(__unix__) || defined(__APPLE__)
 
 namespace vm::native {
 

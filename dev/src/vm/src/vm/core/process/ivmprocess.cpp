@@ -132,6 +132,10 @@ namespace vm {
 				return mapFileLineToCodeCollectionPosition(request.file, request.line_number);
 			}
 
+			variant_case(api::request::SetExecutionConfig, request) {
+				return setExecutionConfig(request.config);
+			}
+
 			variant_default { return api::Response(api::response::Empty()); }
 		}
 
