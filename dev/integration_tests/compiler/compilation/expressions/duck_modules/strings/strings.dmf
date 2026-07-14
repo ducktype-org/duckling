@@ -9,9 +9,9 @@ fun helloWorld() = {
 
 fun prependAppend() = {
     let b = "b".toString();
-    print('a' +: copy b);
+    print('a' +: (&b));
     print("\n");
-    print(copy b :+ 'c' :+ 'd');
+    print(&b :+ 'c' :+ 'd');
     print("\n");
 }
 
