@@ -1,5 +1,6 @@
 #pragma once
 
+#include "execution_config.hpp"
 #include "process_info.hpp"
 
 #include <events/emitter.hpp>
@@ -102,6 +103,10 @@ namespace vm::api {
 			Ref<events::Listener<ProcStatus>> listener;
 		};
 
+		struct SetExecutionConfig {
+			api::ExecutionConfig config;
+		};
+
 		struct AttachOutputListener {
 			Ref<events::Listener<std::string>> listener;
 		};
@@ -143,6 +148,7 @@ namespace vm::api {
 		request::ExitCodeRequest,
 		request::DeinitAndValidate,
 		request::AttachStatusListener,
+		request::SetExecutionConfig,
 		request::AttachOutputListener,
 		request::SetBreakpoint,
 		request::MapFileLineToCodeCollectionPosition>;

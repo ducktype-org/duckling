@@ -262,6 +262,14 @@ namespace vm::builtins {
 	}
 
 	void FunctionHandlers::builtinDestroyMutex(SafeVMThread& thread, u64 mutex_id) {
+		auto mutex = thread.safe_process.getSynchronizationPrimitives().getMutex(mutex_id);
+		// Destroying a still-held mutex is a program error. try_lock() never blocks and fails iff
+		// the mutex is currently locked (by this or any thread), so use it to detect and report
+		// the misuse instead of silently destroying a locked mutex (which also aborts at teardown
+		// on macOS). On the success path the mutex was free and we now own it, so release it.
+		if (!mutex->try_lock()) throw vm::exceptions::VMDestroyLockedMutexException{};
+		mutex->unlock();
+
 		if_opt_some(thread.safe_process.getDeadlockDetector(), d) d.clearMutexState(mutex_id);
 		thread.safe_process.getSynchronizationPrimitives().removeMutex(mutex_id);
 	}

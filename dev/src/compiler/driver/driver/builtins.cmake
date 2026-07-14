@@ -1,16 +1,37 @@
 # The different targets supported by the compiler,
 # thus also the targets for which built-in libraries are built.
-set(BUILTIN_TARGETS
-        x86_64-linux-gnu
+# The builtins are compiled for the host target. Apple targets require the
+# macOS SDK and can only be built on macOS hosts, so the list is host-dependent.
+if(APPLE)
+    if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm64|aarch64")
+        set(BUILTIN_TARGETS arm64-apple-darwin)
+    else()
+        set(BUILTIN_TARGETS x86_64-apple-darwin)
+    endif()
+else()
+    set(BUILTIN_TARGETS
+            x86_64-linux-gnu
 
-        # This target requires further configuration so that clang
-        # can find the appropriate sysroot and libraries.
-        #        aarch64-linux-gnu
+            # This target requires further configuration so that clang
+            # can find the appropriate sysroot and libraries.
+            #        aarch64-linux-gnu
+    )
+endif()
 
-        # This target requires proprietary Apple libraries and SDKs,
-        # so can only be built on macOS hosts.
-        #        x86_64-apple-darwin
-)
+# On macOS, point clang at the active SDK so it can find the system headers
+# while cross-emitting bitcode for the apple-darwin target.
+set(BUILTINS_EXTRA_CLANG_FLAGS "")
+if(APPLE)
+    execute_process(
+            COMMAND xcrun --show-sdk-path
+            OUTPUT_VARIABLE MACOS_SDK_PATH
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+            ERROR_QUIET
+    )
+    if(MACOS_SDK_PATH)
+        list(APPEND BUILTINS_EXTRA_CLANG_FLAGS -isysroot ${MACOS_SDK_PATH})
+    endif()
+endif()
 
 # Before going further, ensure that there exists a Clang version on the system which
 # matches the LLVM version used by the compiler. This is important because the builtins
@@ -74,6 +95,7 @@ foreach (target IN LISTS BUILTIN_TARGETS)
             COMMAND ${CMAKE_COMMAND} -E make_directory ${GENERATED_DIR}
             COMMAND ${CLANG_BIN}
             --target=${target}
+            ${BUILTINS_EXTRA_CLANG_FLAGS}
             -O2
             -emit-llvm
             -c ${BUILTINS_SOURCE_DIR}/builtins_source.cpp

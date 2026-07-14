@@ -283,9 +283,9 @@ namespace compiler::tsh {
 		representation = "Variant " + stringifyTypeVector(underlying_types);
 	}
 
-	bool VariantAbstractTypeImpl::hasNoOpDestructor() const {
+	bool VariantAbstractTypeImpl::hasNoOpDestructor(query::Context& ctx) const {
 		for (const auto& type: underlying_types)
-			if (!type.hasNoOpDestructor()) return false;
+			if (!type.hasNoOpDestructor(ctx)) return false;
 		return true;
 	}
 
@@ -559,9 +559,22 @@ namespace compiler::tsh {
 		});
 	}
 
-	bool StaticArrayAbstractTypeImpl::isImplicitlyCoercible(
-		AbstractType target, query::Context&
-	) const {
+	bool ClassAbstractTypeImpl::hasNoOpDestructor(query::Context& ctx) const {
+		// A user-defined destructor code, means the class is not trivially destructible.
+		if (ctx.query<compiler::helios::QueryClassSymbolData>(symbol)
+		        ->valueOrThrow()
+		        .destructor.has_value())
+			return false;
+
+		auto fields = getDeclaredInterface(ctx)->getFieldsView();
+		// Otherwise the destructor is a no-op only if every field is trivially destructible.
+		return std::ranges::all_of(fields, [&](const auto& field) {
+			return field.getType(ctx).hasNoOpDestructor(ctx);
+		});
+	}
+
+	bool StaticArrayAbstractTypeImpl::isImplicitlyCoercible(AbstractType target, query::Context&)
+		const {
 		// Static arrays are implicitly coercible to dynamic arrays storing the same type.
 		if (target.getKind() == Kind::DynamicArray) {
 			auto dynamic_array_type = DynamicArrayAbstractType(target);
@@ -575,10 +588,10 @@ namespace compiler::tsh {
 		return false;
 	}
 
-	bool StaticArrayAbstractTypeImpl::hasNoOpDestructor() const {
+	bool StaticArrayAbstractTypeImpl::hasNoOpDestructor(query::Context& ctx) const {
 		// Static arrays have trivial destructors if the inner type has a noOpDestructor or they
 		// are zero sized.
-		return size == 0 || element_type.getType().hasNoOpDestructor();
+		return size == 0 || element_type.getType().hasNoOpDestructor(ctx);
 	}
 
 	bool StaticArrayAbstractTypeImpl::isDefaultConstructible(query::Context& ctx) const {
@@ -603,9 +616,9 @@ namespace compiler::tsh {
 		return element_type.getType().carriesInformation(ctx) && size > 0;
 	}
 
-	bool TupleAbstractTypeImpl::hasNoOpDestructor() const {
+	bool TupleAbstractTypeImpl::hasNoOpDestructor(query::Context& ctx) const {
 		return std::ranges::all_of(components, [&](const auto& component) {
-			return component.hasNoOpDestructor();
+			return component.hasNoOpDestructor(ctx);
 		});
 	}
 

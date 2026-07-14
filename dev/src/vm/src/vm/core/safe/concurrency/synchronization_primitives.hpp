@@ -24,6 +24,8 @@ namespace vm {
 
 
 	public:
+		~SynchronizationPrimitives();
+
 		/**
 		 * @brief Getter for mutexes in the pool.
 		 */

@@ -1,0 +1,21 @@
+class Foo {
+    x: i64 = 0;
+
+    fun +*(a: i64) -> i64 = {
+        return x + a;
+    }
+
+    fun -*() -> i64 = {
+        return x;
+    }
+}
+
+fun useInfix() -> i64 = {
+    var foo = Foo(7);
+    return foo +* 5;
+}
+
+fun usePrefix() -> i64 = {
+    var foo = Foo(7);
+    return -*foo;
+}

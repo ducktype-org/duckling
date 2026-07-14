@@ -18,14 +18,17 @@
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 
+#include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <hashing/hash.hpp>
 #include <logger/logger.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
+#include <unicode_classification/classifications.hpp>
 
 #include <algorithm>
+#include <sstream>
 #include <string_view>
 
 /**
@@ -179,10 +182,121 @@ namespace compiler::helios::mangler {
 		}
 
 		/**
-		 * @brief Returns the bare name of the symbol prefixed with its size
+		 * @brief Returns the fixed 2-letter mnemonic tag for a single recognized operator
+		 * character, or an empty `Optional` if the codepoint isn't one of them.
+		 * @note: See mangling-scheme.md's `<fixed-operator-tag>` for details
+		 */
+		base::Optional<std::string_view> fixedOperatorTag(UChar32 codepoint) {
+			switch (codepoint) {
+			case U'!':
+				return std::string_view{ "nt" };
+			case U'%':
+				return std::string_view{ "rm" };
+			case U'&':
+				return std::string_view{ "an" };
+			case U'*':
+				return std::string_view{ "ml" };
+			case U'+':
+				return std::string_view{ "pl" };
+			case U'-':
+				return std::string_view{ "mi" };
+			case U'.':
+				return std::string_view{ "pd" };
+			case U'/':
+				return std::string_view{ "dv" };
+			case U':':
+				return std::string_view{ "co" };
+			case U'<':
+				return std::string_view{ "lt" };
+			case U'=':
+				return std::string_view{ "eq" };
+			case U'>':
+				return std::string_view{ "gt" };
+			case U'?':
+				return std::string_view{ "qm" };
+			case U'\\':
+				return std::string_view{ "bs" };
+			case U'^':
+				return std::string_view{ "eo" };
+			case U'`':
+				return std::string_view{ "bt" };
+			case U'|':
+				return std::string_view{ "or" };
+			case U'~':
+				return std::string_view{ "ti" };
+			default:
+				return {};
+			}
+		}
+
+		/**
+		 * @brief Transliterates an operator name character-by-character: each recognized operator
+		 * character becomes its fixed 2-letter tag, and any other codepoint is escaped as
+		 * `"x" <hex-codepoint> "_"`.
+		 * @note: See mangling-scheme.md's `<translit-unit>` for details
+		 */
+		std::string transliterateOperatorName(std::string_view raw_name) {
+			const icu::UnicodeString unicode_name = icu::UnicodeString::fromUTF8(
+				icu::StringPiece(raw_name.data(), static_cast<i32>(raw_name.size()))
+			);
+			const i32 length = unicode_name.length();
+
+			std::stringstream ret;
+			i32               index = 0;
+			while (index < length) {
+				const UChar32                          codepoint = unicode_name.char32At(index);
+				const base::Optional<std::string_view> tag       = fixedOperatorTag(codepoint);
+				if (tag.has_value())
+					ret << tag.value();
+				else
+					ret << "x" << std::hex << static_cast<u32>(codepoint) << std::dec << "_";
+				index = unicode_name.moveIndex32(index, 1);
+			}
+			return ret.str();
+		}
+
+		/**
+		 * @brief Returns the mangled `<operator-name>` for an operator function/method.
+		 * @note: See mangling-scheme.md's `<operator-name>` for details.
+		 */
+		std::string operatorNameEncoding(const HOUTFunctionDeclaration& fun_decl) {
+			using Operatoriness = HOUTFunctionDeclaration::Operatoriness;
+
+			const char operatoriness_tag = [&] {
+				switch (fun_decl.operatoriness) {
+				case Operatoriness::Infix:
+					return 'i';
+				case Operatoriness::Prefix:
+					return 'p';
+				case Operatoriness::Suffix:
+					return 's';
+				case Operatoriness::None:
+					break;
+				}
+				CORE_UNREACHABLE();
+			}();
+
+			const std::string translit
+				= transliterateOperatorName(fun_decl.original_name.strView());
+
+			std::stringstream ret;
+			ret << "O" << operatoriness_tag << translit.size() << translit;
+
+			return ret.str();
+		}
+
+		/**
+		 * @brief Returns the bare name of the symbol prefixed with its size, or the mangled
+		 * `<operator-name>` if the symbol is an operator function/method.
 		 * @note: See mangling-scheme.md for details
 		 */
-		std::string unscopedName(SymID symbol_id) {
+		std::string unscopedName(query::Context& ctx, SymID symbol_id) {
+			if (isFunctionLike(kind(symbol_id))) {
+				const auto& fun_decl
+					= ctx.query<compiler::helios::QueryDeclOfFun>(symbol_id).get()->valueOrPanic();
+				if (fun_decl.operatoriness != HOUTFunctionDeclaration::Operatoriness::None)
+					return operatorNameEncoding(fun_decl);
+			}
 			return identifier(compiler::helios::name(symbol_id).strView());
 		}
 
@@ -197,7 +311,7 @@ namespace compiler::helios::mangler {
 			auto scope_id = scope(symbol_id);
 
 			if (scopeDepth(scope_id) == 1) {
-				return "G" + unscopedName(symbol_id);
+				return "G" + unscopedName(ctx, symbol_id);
 			} else {
 				std::vector<std::string> path_parts;
 
@@ -225,7 +339,7 @@ namespace compiler::helios::mangler {
 				std::string ret = "N";
 				for (auto&& it = path_parts.rbegin(); it != path_parts.rend(); ++it) ret += *it;
 
-				ret += unscopedName(symbol_id);
+				ret += unscopedName(ctx, symbol_id);
 
 				return ret + "E";
 			}
@@ -282,6 +396,7 @@ namespace compiler::helios::mangler {
 			case SymbolKind::Function:
 			case SymbolKind::Method:
 			case SymbolKind::Constructor:
+			case SymbolKind::Destructor:
 			case SymbolKind::FunctionDeclaration: {
 				variant_match(getSymRef(symbol_id)->other) {
 					variant_case_novalue(PstImplementedSemantics, BuiltinSemantics) {
