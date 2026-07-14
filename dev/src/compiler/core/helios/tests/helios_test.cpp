@@ -30,6 +30,7 @@
 #include <helios_private/hout_creation/definition_generation/class_constructors.hpp>
 #include <helios_private/hout_creation/definition_generation/copy_constructors.hpp>
 #include <helios_private/hout_creation/definition_generation/default_constructors.hpp>
+#include <helios_private/hout_creation/definition_generation/default_destructors.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
@@ -92,6 +93,7 @@ public:
 		TESTER_ADD_TEST(testMethodCalls);
 		TESTER_ADD_TEST(testMangler);
 		TESTER_ADD_TEST(testManglerSpecialMembers);
+		TESTER_ADD_TEST(testManglerOperators);
 		TESTER_ADD_TEST(testGlobalVariableExpressions);
 		TESTER_ADD_TEST(testTypeOfConstAndVar);
 		TESTER_ADD_TEST(testDebugPrint);
@@ -100,12 +102,15 @@ public:
 		TESTER_ADD_TEST(testDefaultInitializers);
 		TESTER_ADD_TEST(testCopyConstructors);
 		TESTER_ADD_TEST(testCopyMoveOperators);
+		TESTER_ADD_TEST(testDestructors);
 		TESTER_ADD_TEST(testCastsHout);
 		TESTER_ADD_TEST(testPointers);
 		TESTER_ADD_TEST(testTypeLifting);
 		TESTER_ADD_TEST(testHoutElementsOrigin);
 		TESTER_ADD_TEST(testAliases);
 		TESTER_ADD_TEST(testBackendDependentCompTime);
+		TESTER_ADD_TEST(testOperatoriness);
+		TESTER_ADD_TEST(testMethodOperatorResolution);
 
 		// this is at the end
 		// so we test all the scopes created in helios tests:
@@ -2356,6 +2361,55 @@ private:
 		});
 	}
 
+	void testManglerOperators() {
+		auto [module, root_scope] = getModule(fs::File(path("test_modules/mangling_operators")));
+		(void) module;
+
+		auto mangle = [&](compiler::helios::SymID sym) {
+			return query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
+				{ .symbol_key = sym,
+			      .kind       = compiler::helios::mangler::ManglingSymbolKind::Standard,
+			      .mangling_scheme_version = 0,
+			      .additional_metadata     = std::nullopt }
+			);
+		};
+
+		auto infix_free   = mangle(getChain("+*", root_scope).back());
+		auto prefix_free  = mangle(getChain("-*", root_scope).back());
+		auto unicode_free = mangle(getChain("+×", root_scope).back());
+
+		auto foo_class = getChain("Foo", root_scope).back();
+		auto foo_class_info
+			= query::entryPoint<compiler::helios::QueryClassSymbolData>(foo_class)->valueOrThrow();
+		ASSERT_EQUAL(2, foo_class_info.methods.size());
+
+		auto find_method = [&](std::string_view name) {
+			for (const auto& method: foo_class_info.methods)
+				if (compiler::helios::name(method) == base::StrID(name)) return method;
+			fail(base::strConcat("Method ", name, " not found"));
+			return foo_class_info.methods.at(0);
+		};
+
+		auto infix_method  = mangle(find_method("+*"));
+		auto prefix_method = mangle(find_method("-*"));
+
+		ASSERT_EQUAL("_Q_M18mangling_operatorsGOi4plmlFi64i64i64E1a1bE", infix_free.str());
+		ASSERT_EQUAL("_Q_M18mangling_operatorsGOp4mimlFi64i64E1aE", prefix_free.str());
+		ASSERT_EQUAL("_Q_M18mangling_operatorsGOi6plxd7_Fi64i64i64E1a1bE", unicode_free.str());
+		ASSERT_EQUAL(
+			"_Q_M18mangling_operatorsN3FooOi4plmlEFi64R_Q_CM18mangling_operatorsG3Fooi64E4self1aE",
+			infix_method.str()
+		);
+		ASSERT_EQUAL(
+			"_Q_M18mangling_operatorsN3FooOp4mimlEFi64R_Q_CM18mangling_operatorsG3FooE4selfE",
+			prefix_method.str()
+		);
+
+		// Suffix has no declaration syntax yet (see testOperatoriness) -- nothing to mangle here
+		// until fixity keywords exist. Once they do, add e.g.:
+		// ASSERT_EQUAL("...", mangle(.../* a suffix-declared operator */).str());
+	}
+
 	void testGlobalVariableExpressions() {
 		auto find_function = [&](const compiler::helios::HOUTUnit& unit, const base::StrID& name
 		                     ) -> base::Optional<CRef<compiler::helios::HOUTFunction>> {
@@ -3221,6 +3275,178 @@ private:
 		ASSERT_TRUE(dynamic_cast<const MoveExpr*>(c_var->initial_value.get()) != nullptr);
 	}
 
+	void testDestructors() {
+		using namespace compiler::helios;
+		using namespace compiler::helios::code;
+		using namespace compiler::helios::defgen;
+
+		auto [module, root_scope] = getModule(fs::File(path("test_modules/destructors")));
+
+		auto trivial_sym      = getChain("Trivial", root_scope).back();
+		auto has_box_sym      = getChain("HasBox", root_scope).back();
+		auto user_sym         = getChain("UserDestroyed", root_scope).back();
+		auto holds_sym        = getChain("HoldsNonTrivial", root_scope).back();
+		auto user_members_sym = getChain("UserAndMembers", root_scope).back();
+		auto boss_sym         = getChain("FinalBoss", root_scope).back();
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			auto get_class_type = [&](SymID sym_id) {
+				return ctx.query<QueryTypeFromDefinition>(sym_id)->valueOrThrow().getType();
+			};
+
+			auto is_builtin_call = [&](const Stmt* stmt, BuiltinKind kind) -> bool {
+				auto expr_stmt = dynamic_cast<const ExprStmt*>(stmt);
+				if (expr_stmt == nullptr) return false;
+				auto call = dynamic_cast<const CallExpr*>(expr_stmt->expr.get());
+				if (call == nullptr) return false;
+				auto callee = getIdentifierExprSymID(call->callee.ref());
+				if (!callee.has_value()) return false;
+				auto builtin = isBuiltin(callee.value());
+				return builtin.has_value() && builtin.value() == kind;
+			};
+
+			auto is_method_call = [&](const Stmt* stmt, Method::Kind kind) -> bool {
+				auto expr_stmt = dynamic_cast<const ExprStmt*>(stmt);
+				if (expr_stmt == nullptr) return false;
+				auto call = dynamic_cast<const CallExpr*>(expr_stmt->expr.get());
+				if (call == nullptr) return false;
+				auto callee = getIdentifierExprSymID(call->callee.ref());
+				if (!callee.has_value()) return false;
+				const auto* method = std::get_if<Method>(&getSymRef(callee.value())->other);
+				return method != nullptr && method->kind == kind;
+			};
+
+			// A trivially-destructible class has an empty destructor and a no-op destructor.
+			{
+				const auto  type = get_class_type(trivial_sym);
+				const auto& dtor = ctx.query<QueryDefaultDestructor>(type)->valueOrThrow();
+
+				// `(ref mut Trivial) -> ()`.
+				ASSERT_EQUAL_PRINT(1, dtor.declaration->parameters.size());
+				const auto self_type = dtor.declaration->parameters.at(0).type;
+				ASSERT_EQUAL(compiler::tsh::ReferenceKind::Ref, self_type.getRefKind());
+				ASSERT_EQUAL(compiler::tsh::Mutability::Mutable, self_type.getMutability());
+				ASSERT_EQUAL(type, self_type.getType());
+				ASSERT_EQUAL(
+					compiler::tsh::Kind::Unit, dtor.declaration->return_type.getType().getKind()
+				);
+
+				ASSERT_TRUE(dtor.body->statements.empty());
+				ASSERT_TRUE(type.hasNoOpDestructor(ctx));
+			}
+
+			// A class owning a `box i32` frees the box with a `box_free` builtin call. The pointee
+			// is trivial, so there is no pointee destruction, only the free.
+			{
+				const auto type = get_class_type(has_box_sym);
+				ASSERT_TRUE(!type.hasNoOpDestructor(ctx));
+
+				const auto& dtor  = ctx.query<QueryDefaultDestructor>(type)->valueOrThrow();
+				const auto& stmts = dtor.body->statements;
+				ASSERT_EQUAL_PRINT(1, stmts.size());
+				ASSERT_TRUE(is_builtin_call(stmts.at(0).get(), BuiltinKind::BoxFree));
+			}
+
+			// A class holding a non-trivially-destructible member destroys it via that member's own
+			// destructor.
+			{
+				const auto  type  = get_class_type(holds_sym);
+				const auto& dtor  = ctx.query<QueryDefaultDestructor>(type)->valueOrThrow();
+				const auto& stmts = dtor.body->statements;
+				ASSERT_EQUAL_PRINT(1, stmts.size());
+				ASSERT_TRUE(is_method_call(stmts.at(0).get(), Method::Kind::DefaultDestructor));
+			}
+
+			// A class that declares a user destructor should call the user code first.
+			{
+				const auto type = get_class_type(user_sym);
+				ASSERT_TRUE(!type.hasNoOpDestructor(ctx));
+
+				const auto user_dtor = userDestructorOf(ctx, user_sym);
+				ASSERT_HAS_VALUE(user_dtor);
+				ASSERT_TRUE(isUserDefinedDestructor(ctx, user_dtor.value()));
+				ctx.query<QueryCodeOfFun>(user_dtor.value())->valueOrThrow();
+
+				const auto& dtor  = ctx.query<QueryDefaultDestructor>(type)->valueOrThrow();
+				const auto& stmts = dtor.body->statements;
+				ASSERT_EQUAL_PRINT(1, stmts.size());
+
+				auto expr_stmt = dynamic_cast<const ExprStmt*>(stmts.at(0).get());
+				ASSERT_TRUE(expr_stmt != nullptr);
+				auto call = dynamic_cast<const CallExpr*>(expr_stmt->expr.get());
+				ASSERT_TRUE(call != nullptr);
+				ASSERT_EQUAL(user_dtor.value(), getIdentifierExprSymID(call->callee.ref()).value());
+			}
+
+			// A class with a user destructor and non-trivial members should call the user code
+			// first, then destroy the members in reverse order.
+			{
+				const auto  type  = get_class_type(user_members_sym);
+				const auto& dtor  = ctx.query<QueryDefaultDestructor>(type)->valueOrThrow();
+				const auto& stmts = dtor.body->statements;
+				ASSERT_EQUAL_PRINT(3, stmts.size());
+
+				// [0] user destructor call.
+				const auto user_dtor = userDestructorOf(ctx, user_members_sym).value();
+				auto       user_call = dynamic_cast<const CallExpr*>(
+                    dynamic_cast<const ExprStmt*>(stmts.at(0).get())->expr.get()
+                );
+				ASSERT_TRUE(user_call != nullptr);
+				ASSERT_EQUAL(user_dtor, getIdentifierExprSymID(user_call->callee.ref()).value());
+
+				// [1] `second` (box i32) freed
+				ASSERT_TRUE(is_builtin_call(stmts.at(1).get(), BuiltinKind::BoxFree));
+				// [2] `first` (HasBox) destroyed
+				ASSERT_TRUE(is_method_call(stmts.at(2).get(), Method::Kind::DefaultDestructor));
+			}
+
+			auto field_abstract_type = [&](std::string_view field_name) {
+				return get_class_type(boss_sym)
+				    .getInterface(ctx)
+				    ->getElementsWithName(base::StrID(field_name))
+				    .back()
+				    .getType(ctx)
+				    .getType();
+			};
+
+			// Static array of a non-trivial element - a destructor loop.
+			{
+				const auto  arr_type = field_abstract_type("nontrivial_arr");
+				const auto& dtor     = ctx.query<QueryDefaultDestructor>(arr_type)->valueOrThrow();
+				const auto& stmts    = dtor.body->statements;
+				// var __i = 0; while (__i < 3) { ... }
+				ASSERT_EQUAL_PRINT(2, stmts.size());
+				ASSERT_TRUE(dynamic_cast<const WhileStmt*>(stmts.at(1).get()) != nullptr);
+			}
+
+			// Static array of a trivial element - empty destructor.
+			{
+				const auto  arr_type = field_abstract_type("trivial_arr");
+				const auto& dtor     = ctx.query<QueryDefaultDestructor>(arr_type)->valueOrThrow();
+				ASSERT_TRUE(dtor.body->statements.empty());
+			}
+
+			// List of a non-trivial element - a destruction loop over the elements.
+			{
+				const auto  list_type = field_abstract_type("class_list");
+				const auto& dtor  = ctx.query<QueryDefaultDestructor>(list_type)->valueOrThrow();
+				const auto& stmts = dtor.body->statements;
+				ASSERT_EQUAL_PRINT(2, stmts.size());
+				ASSERT_TRUE(dynamic_cast<const WhileStmt*>(stmts.at(1).get()) != nullptr);
+			}
+
+			// Tuple with a non-trivial element - destroys that element via its destructor.
+			{
+				const auto  tup_type = field_abstract_type("nontrivial_tup");
+				const auto& dtor     = ctx.query<QueryDefaultDestructor>(tup_type)->valueOrThrow();
+				const auto& stmts    = dtor.body->statements;
+				// Only the `HasBox` needs destruction.
+				ASSERT_EQUAL_PRINT(1, stmts.size());
+				ASSERT_TRUE(is_method_call(stmts.at(0).get(), Method::Kind::DefaultDestructor));
+			}
+		});
+	}
+
 	void testCastsHout() {
 		// Load the small test module we added under test_modules/casts
 		auto [module, root_scope] = getModule(fs::File(path("test_modules/casts")));
@@ -3608,6 +3834,117 @@ private:
 		// (returning 10) rather than the `@native_only_impl` one (returning 20). Evaluating
 		// the const therefore checks that comp time picks the right implementation.
 		ASSERT_EQUAL(10, getConstValueAs<i32>("VALUE", root_scope));
+	}
+
+	void testOperatoriness() {
+		auto [_, root_scope] = getModule(fs::File(path("test_modules/operatoriness")));
+		using Operatoriness  = compiler::helios::HOUTFunctionDeclaration::Operatoriness;
+
+		// Plain identifier, 2 params: not an operator.
+		ASSERT_EQUAL(
+			Operatoriness::None,
+			query::entryPoint<compiler::helios::QueryDeclOfFun>(getChain("foo", root_scope).back())
+				->valueOrThrow()
+				.operatoriness
+		);
+
+		// Free operator function, 2 params: infix.
+		ASSERT_EQUAL(
+			Operatoriness::Infix,
+			query::entryPoint<compiler::helios::QueryDeclOfFun>(getChain("+*", root_scope).back())
+				->valueOrThrow()
+				.operatoriness
+		);
+
+		// Free operator function, 1 param: prefix (fixity keywords don't exist yet, so a
+		// single-parameter operator name is assumed prefix).
+		ASSERT_EQUAL(
+			Operatoriness::Prefix,
+			query::entryPoint<compiler::helios::QueryDeclOfFun>(getChain("-*", root_scope).back())
+				->valueOrThrow()
+				.operatoriness
+		);
+
+		// Operator methods: 1 explicit param + implicit `self` = infix; 0 explicit params +
+		// implicit `self` = prefix.
+		auto foo_class = getChain("Foo", root_scope).back();
+		auto foo_class_info
+			= query::entryPoint<compiler::helios::QueryClassSymbolData>(foo_class)->valueOrThrow();
+		ASSERT_EQUAL(2, foo_class_info.methods.size());
+
+		auto find_method = [&](std::string_view name) {
+			for (const auto& method: foo_class_info.methods)
+				if (compiler::helios::name(method) == base::StrID(name)) return method;
+			fail(base::strConcat("Method ", name, " not found"));
+			return foo_class_info.methods.at(0);
+		};
+
+		ASSERT_EQUAL(
+			Operatoriness::Infix,
+			query::entryPoint<compiler::helios::QueryDeclOfFun>(find_method("+*"))
+				->valueOrThrow()
+				.operatoriness
+		);
+		ASSERT_EQUAL(
+			Operatoriness::Prefix,
+			query::entryPoint<compiler::helios::QueryDeclOfFun>(find_method("-*"))
+				->valueOrThrow()
+				.operatoriness
+		);
+
+		// @TODO: #3131 Add cases for suffix operators.
+	}
+
+	void testMethodOperatorResolution() {
+		auto [module, root_scope] = getModule(fs::File(path("test_modules/method_operators")));
+		using namespace compiler::helios::code;
+		(void) module;
+
+		auto foo_class = getChain("Foo", root_scope).back();
+		auto foo_class_info
+			= query::entryPoint<compiler::helios::QueryClassSymbolData>(foo_class)->valueOrThrow();
+		ASSERT_EQUAL(2, foo_class_info.methods.size());
+
+		auto find_method = [&](std::string_view name) {
+			for (const auto& method: foo_class_info.methods)
+				if (compiler::helios::name(method) == base::StrID(name)) return method;
+			fail(base::strConcat("Method ", name, " not found"));
+			return foo_class_info.methods.at(0);
+		};
+		auto infix_method_sym  = find_method("+*");
+		auto prefix_method_sym = find_method("-*");
+
+		auto get_return_call = [&](compiler::helios::SymID fn_sym) -> const CallExpr& {
+			const auto& fn_hout
+				= query::entryPoint<compiler::helios::QueryCodeOfFun>({ fn_sym })->valueOrPanic();
+			ASSERT_EQUAL(2, fn_hout.body->statements.size());
+			const auto* ret_stmt
+				= dynamic_cast<const ReturnStmt*>(fn_hout.body->statements.at(1).get());
+			ASSERT_TRUE(ret_stmt != nullptr);
+			const auto* call_expr = dynamic_cast<const CallExpr*>(ret_stmt->value.get());
+			ASSERT_TRUE(call_expr != nullptr);
+			return *call_expr;
+		};
+
+		// `foo +* 5` inside useInfix must resolve to Foo's `+*` method, with `foo` self-bound as a
+		// reference (exactly like a regular method call `foo.someMethod()` would bind `self`).
+		const auto& infix_call   = get_return_call(getChain("useInfix", root_scope).back());
+		const auto* infix_callee = dynamic_cast<const IdentifierExpr*>(infix_call.callee.get());
+		ASSERT_TRUE(infix_callee != nullptr);
+		ASSERT_EQUAL(infix_method_sym, infix_callee->symbol);
+		ASSERT_EQUAL(2, infix_call.arguments.size());
+		ASSERT_TRUE(dynamic_cast<const RefOfExpr*>(infix_call.arguments.at(0).get()) != nullptr);
+
+		// `-*foo` inside usePrefix must resolve to Foo's `-*` method, with `foo` self-bound the
+		// same way.
+		const auto& prefix_call   = get_return_call(getChain("usePrefix", root_scope).back());
+		const auto* prefix_callee = dynamic_cast<const IdentifierExpr*>(prefix_call.callee.get());
+		ASSERT_TRUE(prefix_callee != nullptr);
+		ASSERT_EQUAL(prefix_method_sym, prefix_callee->symbol);
+		ASSERT_EQUAL(1, prefix_call.arguments.size());
+		ASSERT_TRUE(dynamic_cast<const RefOfExpr*>(prefix_call.arguments.at(0).get()) != nullptr);
+
+		// @TODO: #3131 Add case for suffix operator.
 	}
 
 	void testScopeParentsAndDepth() {

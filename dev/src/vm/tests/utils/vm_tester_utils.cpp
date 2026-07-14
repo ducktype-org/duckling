@@ -9,9 +9,14 @@
 
 #include <variant>
 
-vm::PID VmTestSuite::initProcess(const vm::api::ProcessConfig& config) {
+vm::PID VmTestSuite::initProcess(
+	const vm::api::ProcessConfig& config, vm::api::ExecutionConfig execution_config
+) {
 	auto process_pid_response = vm::api::spawn(config);
 	ASSERT_HAS_VALUE(process_pid_response);
+	auto set_config_response
+		= vm::api::setExecutionConfig(process_pid_response->pid, execution_config);
+	ASSERT_HAS_VALUE(set_config_response);
 	return process_pid_response->pid;
 }
 
@@ -70,11 +75,15 @@ void VmTestSuite::assertExecutionPanickedWith(
 }
 
 void VmTestSuite::loadInvalidDbc(
-	const std::string& dbc_filename, const std::vector<std::string_view>& error_keywords
+	const std::string&                   dbc_filename,
+	const std::vector<std::string_view>& error_keywords,
+	const vm::api::ExecutionConfig       config
 ) {
 	fs::File file(path(dbc_filename));
-	auto     loaded_file_response = vm::api::loadFiles(initProcess(), { file });
+
+	auto loaded_file_response = vm::api::loadFiles(initProcess({}, config), { file });
 	ASSERT_NO_VALUE(loaded_file_response);
+
 	auto err = loaded_file_response.error();
 	ASSERT_TRUE(std::holds_alternative<vm::api::LoadProgramError>(err));
 	auto err_str = std::get<vm::api::LoadProgramError>(err).why;
@@ -86,8 +95,37 @@ void VmTestSuite::loadInvalidDbc(
 	}
 }
 
-void VmTestSuite::loadValidDbc(const std::string& dbc_filename) {
-	auto res = vm::api::loadFiles(initProcess(), { fs::File(path(dbc_filename)) });
+void VmTestSuite::loadThenLoadInvalidDbc(
+	const std::string&                   first_dbc,
+	const std::string&                   second_dbc,
+	const std::vector<std::string_view>& error_keywords,
+	const vm::api::ExecutionConfig       config
+) {
+	// Load the first batch under an unrestricted config so its functions become already
+	// validated "old" functions, then tighten the config before loading the second batch.
+	auto pid = initProcess();
+	ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { fs::File(path(first_dbc)) }));
+
+	ASSERT_HAS_VALUE(vm::api::setExecutionConfig(pid, config));
+
+	auto second_response = vm::api::loadFiles(pid, { fs::File(path(second_dbc)) });
+	ASSERT_NO_VALUE(second_response);
+
+	auto err = second_response.error();
+	ASSERT_TRUE(std::holds_alternative<vm::api::LoadProgramError>(err));
+	auto err_str = std::get<vm::api::LoadProgramError>(err).why;
+	std::cerr << err_str << '\n';
+	for (auto err_key: error_keywords) {
+		assertTrue(
+			err_str.find(err_key) != std::string::npos, base::strConcat("Not found: ", err_key)
+		);
+	}
+}
+
+void VmTestSuite::loadValidDbc(
+	const std::string& dbc_filename, const vm::api::ExecutionConfig config
+) {
+	auto res = vm::api::loadFiles(initProcess({}, config), { fs::File(path(dbc_filename)) });
 	if (!res.has_value()) std::cerr << nlohmann::json(res.error()) << '\n';
 	ASSERT_HAS_VALUE(res);
 }

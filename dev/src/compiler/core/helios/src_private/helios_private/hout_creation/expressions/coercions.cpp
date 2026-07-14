@@ -17,6 +17,8 @@
 
 namespace compiler::helios {
 	namespace {
+		using tsh::ExpressionType;
+
 		Box<code::Expr> handleReferenceKindCoercion(
 			query::Context& ctx, Box<code::Expr> expr, const tsh::SymbolType<>& to
 		) {
@@ -123,16 +125,17 @@ namespace compiler::helios {
 		tsh::ExpressionType<> valueBeingCopied(
 			const tsh::ExpressionType<>& from, const tsh::SymbolType<>& to
 		) {
-			const tsh::ReferenceKind from_kind               = from.getSymbolType().getRefKind();
-			const bool               reads_through_reference = from_kind == tsh::ReferenceKind::Ref
-			                                  || (from_kind == tsh::ReferenceKind::Box
-			                                      && to.getRefKind() == tsh::ReferenceKind::Direct);
+			const tsh::ReferenceKind from_kind = from.getSymbolType().getRefKind();
+			const tsh::ReferenceKind to_kind   = to.getRefKind();
+
+			const bool reads_through_reference
+				= (from_kind == tsh::ReferenceKind::Ref
+			       && (to_kind == tsh::ReferenceKind::Direct || to_kind == tsh::ReferenceKind::Box))
+			   || (from_kind == tsh::ReferenceKind::Box && to_kind == tsh::ReferenceKind::Direct);
 
 			if (!reads_through_reference) return from;
-			return tsh::ExpressionType<>(
-				from.getSymbolType().getPointeeSymbolType(),
-				tsh::ValueCategory(tsh::PrimaryCategory::Dereferenced)
-			);
+			return { from.getSymbolType().getPointeeSymbolType(),
+				     tsh::ValueCategory(tsh::PrimaryCategory::Dereferenced) };
 		}
 
 		/**

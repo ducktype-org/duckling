@@ -11,6 +11,10 @@ backend: "nobackend"
 # If set to "true" the produced duckling executable will be run with valgrind and checked for leaks.
 valgrind: "false"
 
+# Skip valgrind cases on macOS (no valgrind on Apple Silicon). Inherited by every case;
+# non-valgrind cases are always enabled. Enabled iff not-a-valgrind-case OR not-macOS.
+Enabled: '[ "@{valgrind}" != "true" ] || [ "@{is_macos}" != "true" ]'
+
 # Optional regexes matched against the run's stdout/stderr instead of a literal
 # `Output`/`Err` comparison, for cases whose output has volatile parts (e.g. a
 # DVM panic's `BlockID=N`). When either is set the dvm and (non-valgrind) llvm
