@@ -849,7 +849,6 @@ dependencies:
         make_errors_message(
             &dir,
             [
-                &format!("`{}` is not a valid URL", root_dir.path().display()),
                 "git dependency points to a file on the disk",
                 &format!(
                     "either change it to a local dependency or change the URL to `file://{}`",
