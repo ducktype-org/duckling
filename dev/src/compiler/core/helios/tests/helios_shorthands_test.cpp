@@ -154,7 +154,7 @@ public:
 	/**
 	 * Statement builders wrap their operands and compose into `CodeBlock`s (including nested bodies).
 	 * The builders don't type-check, they just assemble the tree.
-	 * `varDecl` needs a real symbol and a type, so a module is loaded to supply them.
+	 * `var` needs a real symbol and a type, so a module is loaded to supply them.
 	 */
 	void testStatements() {
 		const auto [module, scope] = getModule(fs::File(path("test_modules/dummy")));

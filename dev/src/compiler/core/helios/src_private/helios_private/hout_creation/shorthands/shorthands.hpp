@@ -2,7 +2,7 @@
 
 /**
  * @file shorthands.hpp
- * @brief DSL-like helpers for constructing HOUT @ref compiler::helios::code::Expr trees.
+ * @brief DSL-like helpers for constructing HOUT Expr and Stmt trees.
  *
  * Regular, handwritten HOUT objects often take up way too many lines. This small library
  * alleviates this problem by storing and deducing some data (query context and element origin)
@@ -52,20 +52,34 @@ namespace compiler::helios::code::shorthands {
 		inline thread_local base::MRef<query::Context> active_ctx{};
 
 		/**
-		 * @brief The active context, or a panic (via `MRef::operator*`) if no @ref Shorthand guard
-		 * is currently in scope on this thread.
+		 * @brief The active context, or a panic if no `Shorthand` guard is currently in scope.
 		 */
-		inline query::Context& ctx() { return *active_ctx; }
+		inline query::Context& ctx() {
+			CORE_ASSERT(
+				active_ctx != nullptr,
+				"Shorthand expression builder called with no Shorthand guard alive on this thread."
+			);
+			return *active_ctx;
+		}
 
 		/**
-		 * @brief Moves a pack of `Box<Expr>` into a vector, preserving order.
+		 * @brief Arithmetic types that denote a numeric literal.
 		 */
-		template<typename... Exprs>
-		requires(std::is_constructible_v<Box<Expr>, Exprs &&> && ...)
-		std::vector<Box<Expr>> packToVector(Exprs&&... exprs) {
-			std::vector<Box<Expr>> result;
-			result.reserve(sizeof...(exprs));
-			(result.emplace_back(std::forward<Exprs>(exprs)), ...);
+		template<typename T>
+		concept NumericLiteralValue
+			= base::IS_VARIANT_MEMBER_V<T, numeric_value::NumericValue::Storage>;
+
+		/**
+		 * @brief Moves a pack of items into a `std::vector<Element>`, preserving order.
+		 * The element type is explicit (it cannot be deduced when items are, e.g., derived-type
+		 * boxes): `packToVector<Box<Expr>>(a, b)` / `packToVector<Box<Stmt>>(s1, s2)`.
+		 */
+		template<typename Element, typename... Items>
+		requires(std::is_constructible_v<Element, Items &&> && ...)
+		std::vector<Element> packToVector(Items&&... items) {
+			std::vector<Element> result;
+			result.reserve(sizeof...(items));
+			(result.emplace_back(std::forward<Items>(items)), ...);
 			return result;
 		}
 	}
@@ -142,14 +156,13 @@ namespace compiler::helios::code::shorthands {
 	 * (currently `i32`/`u32`/`i64`/`u64` for integrals). If you need a specific type (e.g. `u64`),
 	 * use the `(value, type)` overload or pass a pre-typed @ref numeric_value::NumericValue.
 	 */
-	template<typename T>
-	requires(std::is_arithmetic_v<T>) Box<LiteralNumericExpr> litNum(T value) {
+	template<internal::NumericLiteralValue T>
+	Box<LiteralNumericExpr> litNum(T value) {
 		return litNum(numeric_value::NumericValue::createMinimized(value));
 	}
 
 	/** @brief A numeric literal of a specific type. Panics if `value` does not fit `type`. */
-	template<typename T>
-	requires(std::is_arithmetic_v<T>)
+	template<internal::NumericLiteralValue T>
 	Box<LiteralNumericExpr> litNum(T value, const tsh::AbstractType& type) {
 		return litNum(numeric_value::NumericValue::createOfType(type, value)
 		                  .expect("litNum: value does not fit the requested type"));
@@ -199,6 +212,23 @@ namespace compiler::helios::code::shorthands {
 	 *   REGULAR COMPOSITE   *
 	 *************************/
 
+	/**
+	 * @brief Defines the variadic pack overload of a builder that already has a
+	 * `std::vector<Box<Expr>>` overload, forwarding the pack through `internal::packToVector`.
+	 *
+	 * `min_arity` is the least number of expressions the builder accepts; it is enforced at compile
+	 * time, so an under-arity call (e.g. `variant()`) is a build error rather than a runtime assert.
+	 * (`call` does not benefit here — its leading `callee` parameter gives it a different shape.)
+	 */
+#define HOUT_EXPR_PACK_OVERLOAD(builder, ReturnType, min_arity)                                  \
+	template<typename... Exprs>                                                                  \
+	requires(                                                                                    \
+		sizeof...(Exprs) >= (min_arity) && (std::is_constructible_v<Box<Expr>, Exprs &&> && ...) \
+	)                                                                                            \
+	Box<ReturnType> builder(Exprs&&... exprs) {                                                  \
+		return builder(internal::packToVector<Box<Expr>>(std::forward<Exprs>(exprs)...));        \
+	}
+
 	/** @brief A binary operator `lhs op rhs`. */
 	inline Box<BinaryOperatorExpr> binOp(Box<Expr> lhs, BuiltinBinary op, Box<Expr> rhs) {
 		return makeBox<BinaryOperatorExpr>(
@@ -232,11 +262,7 @@ namespace compiler::helios::code::shorthands {
 	}
 
 	/** @brief A tuple value from a pack of elements. */
-	template<typename... Exprs>
-	requires(std::is_constructible_v<Box<Expr>, Exprs &&> && ...)
-	Box<TupleExpr> tuple(Exprs&&... elements) {
-		return tuple(internal::packToVector(std::forward<Exprs>(elements)...));
-	}
+	HOUT_EXPR_PACK_OVERLOAD(tuple, TupleExpr, 2)
 
 	/** @brief A variant type constructor `(subtypes | ...)`. */
 	inline Box<VariantTypeConstructorExpr> variant(std::vector<Box<Expr>> subtypes) {
@@ -246,11 +272,7 @@ namespace compiler::helios::code::shorthands {
 	}
 
 	/** @brief A variant type constructor from a pack of subtypes. */
-	template<typename... Exprs>
-	requires(std::is_constructible_v<Box<Expr>, Exprs &&> && ...)
-	Box<VariantTypeConstructorExpr> variant(Exprs&&... subtypes) {
-		return variant(internal::packToVector(std::forward<Exprs>(subtypes)...));
-	}
+	HOUT_EXPR_PACK_OVERLOAD(variant, VariantTypeConstructorExpr, 2)
 
 	/** @brief A field access `base.field`. */
 	inline Box<AccessExpr> access(Box<Expr> base, SymID field) {
@@ -275,7 +297,9 @@ namespace compiler::helios::code::shorthands {
 	template<typename... Args>
 	requires(std::is_constructible_v<Box<Expr>, Args &&> && ...)
 	Box<CallExpr> call(Box<Expr> callee, Args&&... arguments) {
-		return call(std::move(callee), internal::packToVector(std::forward<Args>(arguments)...));
+		return call(
+			std::move(callee), internal::packToVector<Box<Expr>>(std::forward<Args>(arguments)...)
+		);
 	}
 
 	/** @brief A sequence `expressions, ...` (comma operator); the last one is the result. */
@@ -285,11 +309,7 @@ namespace compiler::helios::code::shorthands {
 	}
 
 	/** @brief A sequence from a pack of expressions. */
-	template<typename... Exprs>
-	requires(std::is_constructible_v<Box<Expr>, Exprs &&> && ...)
-	Box<SequenceExpr> seq(Exprs&&... expressions) {
-		return seq(internal::packToVector(std::forward<Exprs>(expressions)...));
-	}
+	HOUT_EXPR_PACK_OVERLOAD(seq, SequenceExpr, 2)
 
 	/** @brief A chain comparison, the logical AND of each comparison (e.g. `a < b < c`). */
 	inline Box<ChainComparisonExpr> chainCmp(std::vector<Box<Expr>> comparisons) {
@@ -303,11 +323,7 @@ namespace compiler::helios::code::shorthands {
 	}
 
 	/** @brief A chain comparison from a pack of comparisons. */
-	template<typename... Exprs>
-	requires(std::is_constructible_v<Box<Expr>, Exprs &&> && ...)
-	Box<ChainComparisonExpr> chainCmp(Exprs&&... comparisons) {
-		return chainCmp(internal::packToVector(std::forward<Exprs>(comparisons)...));
-	}
+	HOUT_EXPR_PACK_OVERLOAD(chainCmp, ChainComparisonExpr, 1)
 
 	/** @brief A cast of `source` to `target_type`. */
 	inline Box<CastExpr> cast(Box<Expr> source, tsh::SymbolType<> target_type) {
@@ -386,10 +402,8 @@ namespace compiler::helios::code::shorthands {
 		/** @brief From a braced list / pack of statements: enables `{ s1, s2, ... }`. */
 		template<typename... Stmts>
 		requires(sizeof...(Stmts) >= 1 && (std::is_constructible_v<Box<Stmt>, Stmts &&> && ...))
-		StmtPack(Stmts&&... stmts) {
-			statements.reserve(sizeof...(stmts));
-			(statements.emplace_back(std::forward<Stmts>(stmts)), ...);
-		}
+		StmtPack(Stmts&&... stmts):
+			  statements(internal::packToVector<Box<Stmt>>(std::forward<Stmts>(stmts)...)) {}
 
 		StmtPack(std::vector<Box<Stmt>> statements): statements(std::move(statements)) {}
 
@@ -452,3 +466,5 @@ namespace compiler::helios::code::shorthands {
 		);
 	}
 }
+
+#undef HOUT_EXPR_PACK_OVERLOAD
