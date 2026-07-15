@@ -3,7 +3,7 @@
 use std::path::Path;
 
 use git2::build::RepoBuilder;
-use git2::{Cred, FetchOptions, Oid, RemoteCallbacks, Repository};
+use git2::{Cred, CredentialType, FetchOptions, Oid, RemoteCallbacks, Repository};
 use tracing::debug;
 use url::Url;
 
@@ -19,6 +19,9 @@ mod tests;
 /// Client implementing interaction with Git repositories.
 /// Currently it provides only static methods.
 pub struct GitClient {}
+
+/// Maximal number of authentication attempts.
+static MAX_AUTHENTICATION_NUMBER: u32 = 3;
 
 impl GitClient {
     /// Clone a repository pointed by `source` into `destination`, and parse a package it contains.
@@ -41,7 +44,13 @@ impl GitClient {
             Ok(repository) => repository,
             Err(e) => {
                 debug!("failed to clone: {e}");
+                ctx.console().info(format!("failed to clone: {e}"))?;
+                ctx
+                    .console()
+                    .info("retrying with a full clone instead of shallow clone")?;
                 // We've failed to clone a repository, try to fallback to a non-shallow clone.
+                // TODO: #3146 Change this to only retry clone if the error could be from unsupporting shallow clone.
+                // Exceeding authentications limit return ErrorCode::GeneralError.
                 if !can_shallow_clone(url, reference) {
                     return Err(e.into());
                 }
@@ -95,7 +104,7 @@ fn fetch_options_for<'duck>(
         fetch_options.depth(1);
     }
 
-    fetch_options.remote_callbacks(callbacks(url, ctx));
+    fetch_options.remote_callbacks(callbacks(ctx));
     fetch_options
 }
 
@@ -109,40 +118,45 @@ fn can_shallow_clone(url: &Url, reference: GitReference) -> bool {
 }
 
 /// Create callbacks for authentication.
-fn callbacks<'duck>(url: &Url, ctx: &'duck DuckContext) -> RemoteCallbacks<'duck> {
+fn callbacks<'duck>(ctx: &'duck DuckContext) -> RemoteCallbacks<'duck> {
+    let attempts = std::cell::RefCell::new(0);
     let mut callbacks = RemoteCallbacks::new();
-    match url.scheme() {
-        "ssh" => setup_ssh_authentication(&mut callbacks),
-        "http" => setup_http_authentication(&mut callbacks, ctx),
-        _ => {}
-    };
+    callbacks.credentials(move |_url, username_from_url, cred_types| {
+        let mut attempts = attempts.borrow_mut();
+        *attempts += 1;
+        if *attempts > MAX_AUTHENTICATION_NUMBER {
+            return Err(git2::Error::from_str("too many authentication attempts. Make sure the repository supports chosen authentication method."));
+        }
+        if cred_types.contains(CredentialType::DEFAULT) {
+            Cred::default()
+        } else if cred_types.contains(CredentialType::SSH_KEY) {
+            ssh_callback(username_from_url)
+        } else if cred_types.contains(CredentialType::USER_PASS_PLAINTEXT) {
+            username_and_password_callback(ctx)
+        } else {
+            Err(git2::Error::from_str("unsupported authentication method"))
+        }
+    });
     callbacks
 }
 
-/// Setup ssh authentication.
-fn setup_ssh_authentication(callbacks: &mut RemoteCallbacks) {
-    callbacks.credentials(|_url, username_from_url, _allowed_types| {
-        let username = username_from_url.unwrap_or("git");
-        Cred::ssh_key_from_agent(username)
-    });
+/// Callback for ssh authentication.
+fn ssh_callback(username_from_url: Option<&str>) -> Result<Cred, git2::Error> {
+    let username = username_from_url.unwrap_or("git");
+    Cred::ssh_key_from_agent(username)
 }
 
-/// Setup simple username + password authentication.
-fn setup_http_authentication<'duck>(
-    callbacks: &mut RemoteCallbacks<'duck>,
-    ctx: &'duck DuckContext,
-) {
-    callbacks.credentials(|_url, _username_from_url, _allowed_types| {
-        let username = ctx
-            .console()
-            .prompt_once("username: ")
-            .map_err(|_| git2::Error::from_str("failed to get username"))?;
-        let password = ctx
-            .console()
-            .password_once("password: ")
-            .map_err(|_| git2::Error::from_str("failed to get password"))?;
-        Cred::userpass_plaintext(&username, &password)
-    });
+/// Callback for simple username + password authentication.
+fn username_and_password_callback(ctx: &DuckContext) -> Result<Cred, git2::Error> {
+    let username = ctx
+        .console()
+        .prompt_once("username: ")
+        .map_err(|_| git2::Error::from_str("failed to get username"))?;
+    let password = ctx
+        .console()
+        .password_once("password: ")
+        .map_err(|_| git2::Error::from_str("failed to get password"))?;
+    Cred::userpass_plaintext(&username, &password)
 }
 
 /// A helper trait for repository methods.

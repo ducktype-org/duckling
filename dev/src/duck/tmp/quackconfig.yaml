@@ -1,0 +1,8 @@
+metadata:
+  name: tmp
+  version: '1.0.0'
+
+dependencies:
+  xd:
+    source:
+      git-url: "https://github.com/ducktype-org/duckling.git"
