@@ -50,18 +50,21 @@ impl<'duck> GitClient<'duck> {
             Ok(repository) => repository,
             Err(e) => {
                 debug!("failed to clone: {e}");
-                self.ctx.console().info(format!("failed to clone: {e}"))?;
-                self.ctx
-                    .console()
-                    .info("retrying with a full clone instead of shallow clone")?;
                 // We've failed to clone a repository, try to fallback to a non-shallow clone.
                 // @TODO: #3146 Change this to only retry clone if the error could be from unsupporting shallow clone.
                 if matches!(e.code(), git2::ErrorCode::Auth) {
                     return Err(e.into());
                 }
-                if !Self::can_shallow_clone(url, reference) {
+                if !can_shallow_clone(url, reference) {
                     return Err(e.into());
                 }
+                // We print this onlu here because otherwise the user gets information from the error.
+                self.ctx
+                    .console()
+                    .info(format!("failed to clone the repository at {url}: {e}"))?;
+                self.ctx
+                    .console()
+                    .info("retrying with a full clone instead of a shallow clone")?;
                 let mut fetch_options = self.fetch_options_for(url, reference);
                 fetch_options.depth(0);
                 builder.fetch_options(fetch_options);
@@ -103,21 +106,12 @@ impl<'duck> GitClient<'duck> {
     /// Get specific [`FetchOptions`] for cloning the given `url` with `reference`.
     fn fetch_options_for(&self, url: &Url, reference: GitReference) -> FetchOptions<'_> {
         let mut fetch_options = FetchOptions::new();
-        if Self::can_shallow_clone(url, reference) {
+        if can_shallow_clone(url, reference) {
             fetch_options.depth(1);
         }
 
         fetch_options.remote_callbacks(self.callbacks());
         fetch_options
-    }
-
-    /// Check, if we can shallow clone a `reference` from `url`.
-    /// Right now conditions are as follow:
-    /// 1. `url` must not be a local repository (i.e. schema != "file"),
-    /// 2. reference must NOT point to specific commit (it's either a default branch, or a specific branch).
-    fn can_shallow_clone(url: &Url, reference: GitReference) -> bool {
-        let is_local_repository_url = url.is_local_file();
-        !is_local_repository_url && (reference.is_default() || reference.is_branch())
     }
 
     /// Create callbacks for authentication.
@@ -135,7 +129,7 @@ impl<'duck> GitClient<'duck> {
             if cred_types.contains(CredentialType::DEFAULT) {
                 Cred::default()
             } else if cred_types.contains(CredentialType::SSH_KEY) {
-                Self::ssh_callback(username_from_url)
+                ssh_callback(username_from_url)
             } else if cred_types.contains(CredentialType::USER_PASS_PLAINTEXT) {
                 self.username_and_password_callback()
             } else {
@@ -143,12 +137,6 @@ impl<'duck> GitClient<'duck> {
             }
         });
         callbacks
-    }
-
-    /// Callback for ssh authentication.
-    fn ssh_callback(username_from_url: Option<&str>) -> Result<Cred, git2::Error> {
-        let username = username_from_url.unwrap_or("git");
-        Cred::ssh_key_from_agent(username)
     }
 
     /// Callback for simple username + password authentication.
@@ -165,6 +153,21 @@ impl<'duck> GitClient<'duck> {
             .map_err(|_| git2::Error::from_str("failed to get password"))?;
         Cred::userpass_plaintext(&username, &password)
     }
+}
+
+/// Check, if we can shallow clone a `reference` from `url`.
+/// Right now conditions are as follow:
+/// 1. `url` must not be a local repository (i.e. schema != "file"),
+/// 2. reference must NOT point to specific commit (it's either a default branch, or a specific branch).
+fn can_shallow_clone(url: &Url, reference: GitReference) -> bool {
+    let is_local_repository_url = url.is_local_file();
+    !is_local_repository_url && (reference.is_default() || reference.is_branch())
+}
+
+/// Callback for ssh authentication.
+fn ssh_callback(username_from_url: Option<&str>) -> Result<Cred, git2::Error> {
+    let username = username_from_url.unwrap_or("git");
+    Cred::ssh_key_from_agent(username)
 }
 
 /// A helper trait for repository methods.
