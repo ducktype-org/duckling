@@ -54,26 +54,25 @@ public:
 		TESTER_ADD_TEST(testStatements);
 		TESTER_ADD_TEST(testGeneratedOrigins);
 		TESTER_ADD_TEST(testWithOrigin);
-		TESTER_ADD_TEST(testGuardSaveRestore);
 	}
 
 	/** Leaf builders produce the expected nodes and derive types from `ctx`. */
 	void testLiterals() {
 		query::utils::withContextDo([&](query::Context& ctx) {
-			Shorthand sh{ ctx };
+			const Shorthand s{ ctx };
 
-			ASSERT_EQUAL(dprint(litUnit()), std::string("()"));
-			ASSERT_EQUAL(dprint(litBool(true)), std::string("true"));
-			ASSERT_EQUAL(dprint(litBool(false)), std::string("false"));
-			ASSERT_EQUAL(dprint(litChar('x')), std::string("'x'"));
-			ASSERT_EQUAL(dprint(litNum(40)), std::string("40"));
+			ASSERT_EQUAL(dprint(s.litUnit()), std::string("()"));
+			ASSERT_EQUAL(dprint(s.litBool(true)), std::string("true"));
+			ASSERT_EQUAL(dprint(s.litBool(false)), std::string("false"));
+			ASSERT_EQUAL(dprint(s.litChar('x')), std::string("'x'"));
+			ASSERT_EQUAL(dprint(s.litNum(40)), std::string("40"));
 
 			// A bare integer literal is minimized to i32 (its type came from `ctx`).
-			const auto forty = litNum(40);
+			const auto forty = s.litNum(40);
 			ASSERT_EQUAL(forty->expression_type.getType().getKind(), tsh::Kind::Integral);
 
 			// A string literal is a char slice.
-			const auto hello = litStr(base::StrID("hello"));
+			const auto hello = s.litStr(base::StrID("hello"));
 			ASSERT_EQUAL(dprint(hello), std::string("hello"));
 			ASSERT_EQUAL(hello->value.str(), std::string("hello"));
 			ASSERT_EQUAL(hello->expression_type.getType().getKind(), tsh::Kind::Slice);
@@ -81,7 +80,7 @@ public:
 			// A type literal is itself a `meta` value, wrapping the `i64` type it carries.
 			const auto i64_type
 				= tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed);
-			const auto i64_literal = litType(i64_type);
+			const auto i64_literal = s.litType(i64_type);
 			ASSERT_EQUAL(i64_literal->expression_type.getType().getKind(), tsh::Kind::Meta);
 			ASSERT_EQUAL(i64_literal->value_type.getType().getKind(), tsh::Kind::Integral);
 		});
@@ -91,51 +90,54 @@ public:
 	void testComposites() {
 		query::utils::withContextDo([&](query::Context& ctx) {
 			using enum BuiltinBinary;
-			Shorthand  sh{ ctx };
-			const auto i64_type
+			const Shorthand s{ ctx };
+			const auto      i64_type
 				= tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed);
 			const auto bool_type = tsh::getBoolType();
 
 			ASSERT_EQUAL(
-				dprint(binOp(litNum(40), BuiltinBinary::IntegerAdd, litNum(2))),
+				dprint(s.binOp(s.litNum(40), BuiltinBinary::IntegerAdd, s.litNum(2))),
 				std::string("40 + 2")
 			);
 			ASSERT_EQUAL(
-				dprint(unOp(BuiltinUnary::BooleanNot, litBool(true))), std::string("not true")
+				dprint(s.unOp(BuiltinUnary::BooleanNot, s.litBool(true))), std::string("not true")
 			);
 
 			// Nesting composes as expected: (40 + 2) * 3.
 			const auto nested
-				= binOp(binOp(litNum(40), IntegerAdd, litNum(2)), IntegerMul, litNum(3));
+				= s.binOp(s.binOp(s.litNum(40), IntegerAdd, s.litNum(2)), IntegerMul, s.litNum(3));
 			ASSERT_EQUAL(dprint(nested), std::string("40 + 2 * 3"));
 			ASSERT_EQUAL(nested->expression_type.getType().getKind(), tsh::Kind::Integral);
 
 			// A ternary takes the type of its `then` branch.
-			const auto tern = ternary(litBool(true), litNum(1), litNum(2));
+			const auto tern = s.ternary(s.litBool(true), s.litNum(1), s.litNum(2));
 			ASSERT_EQUAL(dprint(tern), std::string("if true then 1 else 2"));
 			ASSERT_EQUAL(tern->expression_type.getType().getKind(), tsh::Kind::Integral);
 
-			// A sequence yields its last expression's value and type.
-			const auto sequence = seq(litNum(1), litNum(2), litBool(true));
+			// A s.sequence yields its last expression's value and type.
+			const auto sequence = s.seq(s.litNum(1), s.litNum(2), s.litBool(true));
 			ASSERT_EQUAL(dprint(sequence), std::string("1, 2, true"));
 			ASSERT_EQUAL(sequence->expression_type.getType().getKind(), tsh::Kind::Bool);
 
 			// The pack and vector overloads are equivalent.
 			std::vector<Box<Expr>> elements;
-			elements.emplace_back(litNum(1));
-			elements.emplace_back(litNum(2));
-			ASSERT_EQUAL(dprint(seq(std::move(elements))), dprint(seq(litNum(1), litNum(2))));
+			elements.emplace_back(s.litNum(1));
+			elements.emplace_back(s.litNum(2));
+			ASSERT_EQUAL(
+				dprint(s.seq(std::move(elements))), dprint(s.seq(s.litNum(1), s.litNum(2)))
+			);
 
 			// A chain comparison is the boolean AND of its comparisons.
 			// note: Usually this includes a ReusableExpr, but that's not required.
-			const auto chain = chainCmp(
-				binOp(litNum(1), IntegerLt, litNum(2)), binOp(litNum(2), IntegerLt, litNum(3))
+			const auto chain = s.chainCmp(
+				s.binOp(s.litNum(1), IntegerLt, s.litNum(2)),
+				s.binOp(s.litNum(2), IntegerLt, s.litNum(3))
 			);
 			ASSERT_EQUAL(dprint(chain), std::string("1 < 2 and 2 < 3"));
 			ASSERT_EQUAL(chain->expression_type.getType().getKind(), tsh::Kind::Bool);
 
-			// A variant type constructor is a `meta` value over its subtypes.
-			const auto variant_ctor = variant(litType(i64_type), litType(bool_type));
+			// A s.variant type constructor is a `meta` value over its subtypes.
+			const auto variant_ctor = s.variant(s.litType(i64_type), s.litType(bool_type));
 			ASSERT_EQUAL(variant_ctor->expression_type.getType().getKind(), tsh::Kind::Meta);
 			const auto* variant_expr
 				= dynamic_cast<const VariantTypeConstructorExpr*>(variant_ctor.get());
@@ -143,12 +145,12 @@ public:
 			ASSERT_EQUAL(variant_expr->subtypes.size(), 2UL);
 
 			// A tuple value has a tuple type built from its element types.
-			const auto pair = tuple(litNum(1), litBool(true));
+			const auto pair = s.tuple(s.litNum(1), s.litBool(true));
 			ASSERT_EQUAL(dprint(pair), std::string("(1, true)"));
 			ASSERT_EQUAL(pair->expression_type.getType().getKind(), tsh::Kind::Tuple);
 
 			// Indexing a type value builds a static-array type (`i64[4]`), itself a `meta` value.
-			const auto array_type = index(litType(i64_type), litNum(4));
+			const auto array_type = s.index(s.litType(i64_type), s.litNum(4));
 			ASSERT_EQUAL(array_type->expression_type.getType().getKind(), tsh::Kind::Meta);
 		});
 	}
@@ -160,11 +162,12 @@ public:
 	 */
 	void testTypedNumericLiteral() {
 		query::utils::withContextDo([&](query::Context& ctx) {
-			Shorthand sh{ ctx };
+			const Shorthand s{ ctx };
 
 			const auto u8_type
 				= tsh::getIntegralType(ctx, 8, tsh::IntegralAbstractType::Signedness::Unsigned);
-			const auto sum = binOp(litChar('a'), BuiltinBinary::IntegerAdd, litNum(1, u8_type));
+			const auto sum
+				= s.binOp(s.litChar('a'), BuiltinBinary::IntegerAdd, s.litNum(1, u8_type));
 			ASSERT_EQUAL(sum->expression_type.getType().getKind(), tsh::Kind::Char);
 		});
 	}
@@ -172,9 +175,9 @@ public:
 	/** `reusable` marks the first use; `nextUse` shares the inner for subsequent uses. */
 	void testReusable() {
 		query::utils::withContextDo([&](query::Context& ctx) {
-			Shorthand sh{ ctx };
+			const Shorthand s{ ctx };
 
-			const auto first  = reusable(litNum(5));
+			const auto first  = s.reusable(s.litNum(5));
 			const auto second = first->nextUse();
 
 			ASSERT_EQUAL(dprint(first), std::string("[tmp](5)"));
@@ -190,11 +193,11 @@ public:
 		const auto square_symbol   = getChain("square", scope).back();
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			Shorthand sh{ ctx };
+			const Shorthand s{ ctx };
 
 			const auto i64_type
 				= tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed);
-			const auto square_call = call(ident(square_symbol), litNum(5, i64_type));
+			const auto square_call = s.call(s.ident(square_symbol), s.litNum(5, i64_type));
 
 			// The call's type is square's i64 return type.
 			ASSERT_EQUAL(square_call->expression_type.getType().getKind(), tsh::Kind::Integral);
@@ -212,7 +215,7 @@ public:
 	/** `cast`, `refOf`, `deref` and `moveOf` reshape an operand's type as expected. */
 	void testConversionExprs() {
 		query::utils::withContextDo([&](query::Context& ctx) {
-			Shorthand sh{ ctx };
+			const Shorthand s{ ctx };
 
 			const auto i32_type
 				= tsh::getIntegralType(ctx, 32, tsh::IntegralAbstractType::Signedness::Signed);
@@ -221,27 +224,27 @@ public:
 			);
 
 			// A cast carries the requested target type.
-			const auto casted = cast(litNum(5, i32_type), i64_sym_type);
+			const auto casted = s.cast(s.litNum(5, i32_type), i64_sym_type);
 			ASSERT_EQUAL(casted->expression_type.getType().getKind(), tsh::Kind::Integral);
 			ASSERT_EQUAL(
 				casted->expression_type.getType().as<tsh::IntegralAbstractType>().getSize(), Bits(64)
 			);
 			ASSERT_EQUAL(dprint(casted), std::string("cast[to=i64](5)"));
 
-			// `refof x` has reference type; dereferencing it recovers the (direct) pointee.
-			const auto ref = refOf(litNum(5));
+			// `refof x` has reference type; s.dereferencing it recovers the (direct) pointee.
+			const auto ref = s.refOf(s.litNum(5));
 			ASSERT_EQUAL(dprint(ref), std::string("refof(5)"));
 			ASSERT_EQUAL(ref->expression_type.getSymbolType().getRefKind(), tsh::ReferenceKind::Ref);
 
-			const auto derefed = deref(refOf(litNum(5)));
-			ASSERT_EQUAL(dprint(derefed), std::string("deref(refof(5))"));
+			const auto derefed = s.deref(s.refOf(s.litNum(5)));
+			ASSERT_EQUAL(dprint(derefed), std::string("deref(s.refof(5))"));
 			ASSERT_EQUAL(
 				derefed->expression_type.getSymbolType().getRefKind(), tsh::ReferenceKind::Direct
 			);
 			ASSERT_EQUAL(derefed->expression_type.getType().getKind(), tsh::Kind::Integral);
 
 			// `move x` preserves the operand type as a temporary.
-			const auto moved = moveOf(litNum(5));
+			const auto moved = s.moveOf(s.litNum(5));
 			ASSERT_EQUAL(dprint(moved), std::string("move(5)"));
 			ASSERT_EQUAL(moved->expression_type.getType().getKind(), tsh::Kind::Integral);
 			ASSERT_EQUAL(
@@ -254,30 +257,30 @@ public:
 	/** `defaultValue`, `liftToType`, and the list push/pop builders. */
 	void testMiscExprs() {
 		query::utils::withContextDo([&](query::Context& ctx) {
-			Shorthand sh{ ctx };
+			const Shorthand s{ ctx };
 
 			const auto i64_type
 				= tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed);
 
 			// A default value carries the given type.
-			const auto zero = defaultValue(i64_type);
+			const auto zero = s.defaultValue(i64_type);
 			ASSERT_EQUAL(zero->expression_type.getType().getKind(), tsh::Kind::Integral);
 			ASSERT_EQUAL(dprint(zero), std::string("default_value(const i64)"));
 			ASSERT_TRUE(dynamic_cast<const DefaultValueExpr*>(zero.get()) != nullptr);
 
 			// Lifting a value to a type produces a `meta` value.
-			const auto lifted = liftToType(litUnit());
+			const auto lifted = s.liftToType(s.litUnit());
 			ASSERT_EQUAL(dprint(lifted), std::string("lift[to=type](())"));
 			ASSERT_EQUAL(lifted->expression_type.getType().getKind(), tsh::Kind::Meta);
 
 			// listPush / listPop are structural wrappers evaluating to unit; like the underlying
 			// nodes they do not type-check their operands, so plain literals exercise the wiring.
 			// `1` is not a list, but whatever, these are going away anyway soon.
-			const auto push = listPush(litNum(1), litNum(2));
+			const auto push = s.listPush(s.litNum(1), s.litNum(2));
 			ASSERT_EQUAL(dprint(push), std::string("list_push(1, 2)"));
 			ASSERT_EQUAL(push->expression_type.getType().getKind(), tsh::Kind::Unit);
 
-			const auto pop = listPop(litNum(1), litNum(2));
+			const auto pop = s.listPop(s.litNum(1), s.litNum(2));
 			ASSERT_EQUAL(dprint(pop), std::string("list_pop(1, 2)"));
 			ASSERT_EQUAL(pop->expression_type.getType().getKind(), tsh::Kind::Unit);
 		});
@@ -292,7 +295,7 @@ public:
 		const auto point_var       = getChain("point", scope).back();
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			Shorthand sh{ ctx };
+			const Shorthand s{ ctx };
 
 			// Resolve the `x` field of `point`'s struct type through its type interface.
 			const auto x_field = ctx.query<helios::QueryTypeOfSymbol>(point_var)
@@ -303,7 +306,7 @@ public:
 			                         .back()
 			                         .getSymbol();
 
-			const auto field_access = access(ident(point_var), x_field);
+			const auto field_access = s.access(s.ident(point_var), x_field);
 
 			const auto* access_expr = dynamic_cast<const AccessExpr*>(field_access.get());
 			ASSERT_TRUE(access_expr != nullptr);
@@ -327,52 +330,52 @@ public:
 		const auto dummy_symbol    = getChain("dummy", scope).back();
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			Shorthand sh{ ctx };
+			const Shorthand s{ ctx };
 
 			const auto i64_type
 				= tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed);
-			const auto i64_sym_type = litNum(0, i64_type)->expression_type.getSymbolType();
+			const auto i64_sym_type = s.litNum(0, i64_type)->expression_type.getSymbolType();
 
 			// Simple statements wrap their expression operand.
-			const auto decl = var(dummy_symbol, i64_sym_type, litNum(0, i64_type));
+			const auto decl = s.var(dummy_symbol, i64_sym_type, s.litNum(0, i64_type));
 			ASSERT_TRUE(decl->initial_value.isBox());
 			ASSERT_TRUE(decl->helios_symbol == dummy_symbol);
 
-			const auto assignment = assign(ident(dummy_symbol), litNum(1, i64_type));
+			const auto assignment = s.assign(s.ident(dummy_symbol), s.litNum(1, i64_type));
 			ASSERT_TRUE(assignment->location_expr.isBox());
 			ASSERT_TRUE(assignment->new_value_expr.isBox());
 
-			ASSERT_TRUE(ret(litNum(1))->value.isBox());
-			ASSERT_TRUE(expr(litBool(true))->expr.isBox());
-			ASSERT_TRUE(ret()->origin.isGenerated());
+			ASSERT_TRUE(s.ret(s.litNum(1))->value.isBox());
+			ASSERT_TRUE(s.expr(s.litBool(true))->expr.isBox());
+			ASSERT_TRUE(s.ret()->origin.isGenerated());
 
 			// Body arguments accept a braced list of statements directly.
-			const auto loop = whileStmt(litBool(true), { expr(litNum(0)), ret() });
+			const auto loop = s.whileStmt(s.litBool(true), { s.expr(s.litNum(0)), s.ret() });
 			ASSERT_TRUE(loop->condition.isBox());
 			ASSERT_EQUAL(loop->body.statements.size(), 2UL);
 
 			// if with and without else.
-			const auto if_no_else = ifStmt(litBool(true), { ret() });
+			const auto if_no_else = s.ifStmt(s.litBool(true), { s.ret() });
 			ASSERT_EQUAL(if_no_else->then_body.statements.size(), 1UL);
 			ASSERT_EQUAL(if_no_else->else_body.statements.size(), 0UL);
 
-			const auto if_else = ifStmt(litBool(false), { ret() }, { ret(), ret() });
+			const auto if_else = s.ifStmt(s.litBool(false), { s.ret() }, { s.ret(), s.ret() });
 			ASSERT_EQUAL(if_else->then_body.statements.size(), 1UL);
 			ASSERT_EQUAL(if_else->else_body.statements.size(), 2UL);
 
 			// block(...) wraps a body as a BlockStmt.
-			ASSERT_EQUAL(block({ ret(), ret() })->body.statements.size(), 2UL);
+			ASSERT_EQUAL(s.block({ s.ret(), s.ret() })->body.statements.size(), 2UL);
 
 			// An empty braced list is a valid (empty) body.
-			ASSERT_EQUAL(ifStmt(litBool(true), {})->then_body.statements.size(), 0UL);
+			ASSERT_EQUAL(s.ifStmt(s.litBool(true), {})->then_body.statements.size(), 0UL);
 
 			// A standalone CodeBlock (e.g. a whole function body) via StmtPack::toCodeBlock.
-			const auto body = StmtPack{ ret(litNum(1)), expr(litNum(2)) }.toCodeBlock();
+			const auto body = StmtPack{ s.ret(s.litNum(1)), s.expr(s.litNum(2)) }.toCodeBlock();
 			ASSERT_EQUAL(body.statements.size(), 2UL);
 
 			// Box<Derived> -> Box<Stmt> accumulation, wrapped through StmtPack's vector constructor.
 			std::vector<Box<Stmt>> collected;
-			collected.emplace_back(ret(litNum(7)));
+			collected.emplace_back(s.ret(s.litNum(7)));
 			ASSERT_EQUAL(StmtPack{ std::move(collected) }.toCodeBlock().statements.size(), 1UL);
 		});
 	}
@@ -380,12 +383,12 @@ public:
 	/** Trees built purely from shorthands carry generated origins. */
 	void testGeneratedOrigins() {
 		query::utils::withContextDo([&](query::Context& ctx) {
-			Shorthand sh{ ctx };
+			const Shorthand s{ ctx };
 
-			const auto leaf = litNum(1);
+			const auto leaf = s.litNum(1);
 			ASSERT_TRUE(leaf->origin.isGenerated());
 
-			const auto composite = binOp(litNum(1), BuiltinBinary::IntegerAdd, litNum(2));
+			const auto composite = s.binOp(s.litNum(1), BuiltinBinary::IntegerAdd, s.litNum(2));
 			ASSERT_TRUE(composite->origin.isGenerated());
 		});
 	}
@@ -401,11 +404,11 @@ public:
 		const auto dummy_symbol    = getChain("dummy", scope).back();
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			Shorthand sh{ ctx };
+			const Shorthand s{ ctx };
 
 			// Create a compiler-generated HOUT Expression,
 			// which is an IdentifierExpr pointing to the dummy variable.
-			auto dummy_ident = ident(dummy_symbol);
+			auto dummy_ident = s.ident(dummy_symbol);
 
 			// Get a genuine, positioned (non-generated) origin taken from dummy's PST declaration.
 			const auto pst_origin
@@ -424,35 +427,6 @@ public:
 			ASSERT_TRUE(!dummy_ident->origin.isGenerated());
 			ASSERT_TRUE(dummy_ident->origin.getStablePosition().has_value());
 		});
-	}
-
-	/**
-	 * The guard restores the previous ambient context on destruction rather than nulling it, so a
-	 * nested guard does not break an ongoing outer construction. If the destructor nulled the
-	 * context, the `litNum` after the inner scope would dereference a null MRef and panic.
-	 */
-	void testGuardSaveRestore() {
-		query::utils::withContextDo([&](query::Context& ctx) {
-			ASSERT_TRUE(shorthands::internal::active_ctx == nullptr);
-
-			Shorthand outer{ ctx };
-			ASSERT_TRUE(&*shorthands::internal::active_ctx == &ctx);
-
-			const auto before = litNum(1);
-			{
-				Shorthand inner{ ctx };
-				ASSERT_TRUE(&*shorthands::internal::active_ctx == &ctx);
-				const auto within = litNum(2);
-			}
-
-			// Restored to the outer guard's context, not nulled.
-			ASSERT_TRUE(&*shorthands::internal::active_ctx == &ctx);
-			const auto after = litNum(3);
-			ASSERT_EQUAL(dprint(after), std::string("3"));
-		});
-
-		// Once every guard is gone, the ambient context is null again.
-		ASSERT_TRUE(shorthands::internal::active_ctx == nullptr);
 	}
 };
 
