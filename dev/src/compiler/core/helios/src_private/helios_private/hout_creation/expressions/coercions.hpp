@@ -5,10 +5,26 @@
 #include <helios/tsh/symbol_type.hpp>
 #include <helios_private/errors/dia_interactive_elements.hpp>
 
+#include <base/extend_cpp/stringifyable_enum.hpp>
 #include <base/pointers/box_or_ref.hpp>
 
 #include <query_framework/context/context.hpp>
 #include <query_framework/query_result.hpp>
+
+#include <cstdint>
+
+/**
+ * @brief The specific reason a coercion cannot be performed.
+ */
+MAKE_STRINGIFYABLE_ENUM(compiler::helios, uint8_t, InvalidCoercionReason, 
+		/// The source type is not coercible to the target type.
+		IncompatibleTypes,
+		/// The value's type is not copyable, but this coercion required a copy.
+		TypeNotCopyable,
+		/// The value is copyable but not trivially copyable. The implicit copy must be made explicit
+		/// with `copy` or `move` keyword.
+		RequiresExplicitCopyMove
+);
 
 namespace compiler::helios {
 
@@ -32,19 +48,9 @@ namespace compiler::helios {
 	/**
 	 * @brief Type used to indicate an invalid coercion, i.e. coercion that cannot be performed.
 	 */
-	struct InvalidCoercion final {};
-
-	/**
-	 * @brief Type used to indicate a copy of a non-copyable type (no copy constructor exists).
-	 */
-	struct TypeNotCopyable final {};
-
-	/**
-	 * @brief Type used to indicate that the coercion would implicitly copy a copyable, but not
-	 * trivially copyable value. Such copies must be accompanied by a `copy` (to copy) or a `move`
-	 * (to move).
-	 */
-	struct TypeRequiresExplicitCopyMove final {};
+	struct InvalidCoercion final {
+		InvalidCoercionReason reason;
+	};
 
 	class CoercionResult;
 	using CoercionQResult = query::QResult<CoercionResult>;
@@ -114,16 +120,9 @@ namespace compiler::helios {
 	 */
 	class CoercionResult final {
 	public:
-		using StorageVariant
-			= std::variant<Coercion, InvalidCoercion, TypeNotCopyable, TypeRequiresExplicitCopyMove>;
-
 		CoercionResult(Coercion coercion): storage(std::move(coercion)) {}
 
 		CoercionResult(InvalidCoercion invalid): storage(invalid) {}
-
-		CoercionResult(TypeNotCopyable invalid): storage(invalid) {}
-
-		CoercionResult(TypeRequiresExplicitCopyMove invalid): storage(invalid) {}
 
 		[[nodiscard]]
 		constexpr bool isValid() const noexcept {
@@ -147,6 +146,14 @@ namespace compiler::helios {
 			return std::move(std::get<Coercion>(storage));
 		}
 
+		[[nodiscard]]
+		InvalidCoercionReason getInvalidReason() const {
+			CORE_ASSERT(
+				isInvalid(), "Attempting to get the invalid reason from a valid CoercionResult."
+			);
+			return std::get<InvalidCoercion>(storage).reason;
+		}
+
 		/**
 		 * Main function that creates a coerced expression from the old one.
 		 */
@@ -155,14 +162,8 @@ namespace compiler::helios {
 			return std::get<Coercion>(storage).coerce(ctx, std::move(from));
 		}
 
-		[[nodiscard]]
-		const StorageVariant& getVariant() const {
-			return storage;
-		}
-
-
 	private:
-		StorageVariant storage;
+		std::variant<Coercion, InvalidCoercion> storage;
 	};
 
 	/**
@@ -181,31 +182,59 @@ namespace compiler::helios {
 	CoercionQResult canCoerceToMeta(query::Context& ctx, const tsh::ExpressionType<>& from);
 
 	/**
+	 * @brief Optional overrides of the default coercion failure errors.
+	 */
+	struct CoercionErrorOverrides final {
+		using Logger = std::function<void(query::Context&)>;
+
+		/// Override for `InvalidCoercionReason::IncompatibleTypes`.
+		base::Optional<Logger> incompatible_types = {};
+		/// Override for `InvalidCoercionReason::TypeNotCopyable`.
+		base::Optional<Logger> type_not_copyable = {};
+		/// Override for `InvalidCoercionReason::RequiresExplicitCopyMove`.
+		base::Optional<Logger> requires_explicit_copy_move = {};
+	};
+
+	/**
 	 * @brief Checks whether `expr` can be coerced to `expected_type`. Returns a coerced expression
-	 * when the coercion is valid, logs an error via `log_error` when `expr` is not coercible to the
-	 * given type.
+	 * when the coercion is valid, logs an error when `expr` is not coercible to the given type.
+	 * Logs errors via `error_overrides` if ones are provided.
+	 *
 	 * @note This is a convenience wrapper around `canCoerce` + `coercion.coerce()` for the common
 	 * case of coercing expressions with a `Box<code::Expr>` in hand, which is usual when handling
 	 * compiler generated code.
 	 * @return The coerced expression or an empty optional on error.
 	 */
 	base::Optional<Box<code::Expr>> coerceFromBox(
-		query::Context&                                      ctx,
-		Box<code::Expr>                                      expr,
-		const tsh::SymbolType<>                              expected_type,
-		dia_int::StablePosition                              source_position,
-		base::Optional<std::function<void(query::Context&)>> log_error = {}
+		query::Context&         ctx,
+		Box<code::Expr>         expr,
+		const tsh::SymbolType<> expected_type,
+		dia_int::StablePosition source_position,
+		CoercionErrorOverrides  error_overrides = {}
 	);
 
 	/**
-	 * @brief A convenience function for typical coercion error logging based on `CoercionQResult`.
+	 * @brief Builds the default diagnostic message describing why a coercion failed, based on the
+	 * `reason`.
+	 */
+	[[nodiscard]] Box<dia_int::MessageBase> makeDefaultCoercionErrorMessage(
+		query::Context&          ctx,
+		InvalidCoercionReason    reason,
+		const tsh::SymbolType<>& source_symbol_type,
+		const tsh::SymbolType<>& expected_type,
+		dia_int::StablePosition  source_position
+	);
+
+	/**
+	 * @brief Logs the coercion failure for `reason`. Uses the matching override in
+	 * `error_overrides` if one is provided, otherwise logs the default message.
 	 */
 	void logCoercionFailure(
-		query::Context&                                      ctx,
-		const CoercionQResult&                               coercion_qresult,
-		const tsh::SymbolType<>&                             source_symbol_type,
-		const tsh::SymbolType<>&                             expected_type,
-		dia_int::StablePosition                              source_position,
-		base::Optional<std::function<void(query::Context&)>> log_error
+		query::Context&          ctx,
+		InvalidCoercionReason    reason,
+		const tsh::SymbolType<>& source_symbol_type,
+		const tsh::SymbolType<>& expected_type,
+		dia_int::StablePosition  source_position,
+		CoercionErrorOverrides   error_overrides = {}
 	);
 }
