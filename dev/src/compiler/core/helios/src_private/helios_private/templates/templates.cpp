@@ -85,7 +85,8 @@ namespace compiler::helios::templates {
 		pst::PST<pst::TemplateStmt> baked_template_pst;
 	};
 
-	void TemplateBakePSTLinkedData::PostponedDataDeleter::del(std::atomic<MRef<PostponedData>>* ptr) {
+	void TemplateBakePSTLinkedData::PostponedDataDeleter::del(std::atomic<MRef<PostponedData>>* ptr
+	) {
 		// Here we delete both raw pointer allocated with new and the atomic wrapper around it.
 		auto data_ptr = ptr->load(std::memory_order_acquire);
 		if (data_ptr) delete data_ptr.toOpt()->get();
