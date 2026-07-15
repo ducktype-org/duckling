@@ -67,7 +67,7 @@ namespace compiler::helios::templates {
 		};
 
 		struct PostponedDataDeleter final {
-			void del(std::atomic<PostponedData*>* ptr);
+			void del(std::atomic<MRef<PostponedData>>* ptr);
 		};
 
 		/**

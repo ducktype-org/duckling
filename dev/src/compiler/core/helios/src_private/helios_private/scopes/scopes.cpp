@@ -609,7 +609,7 @@ namespace compiler::helios {
 						auto proper_data = base::anyCast<templates::TemplateBakePSTLinkedData>(
 							template_parent.template_bake_data
 						);
-						Ref postponed_data
+						auto postponed_data
 							= proper_data.postponed_data->load(std::memory_order_acquire);
 
 						for (const auto& param: postponed_data->template_arguments_symbols)

@@ -1,0 +1,12 @@
+
+template(T: type)
+fun countDown(n: T) = {
+    builtin_output_i64(n);
+    if (n == 0) return 0;
+    return countDown:{T}(n - 1);
+}
+
+fun main() -> i64 = {
+    countDown:{i64}(3);
+    return 0;
+}
