@@ -1,0 +1,7 @@
+# Pure computation: no IO, no global writes, no threads. Must pass under every config.
+function main {  } -> { i64 } {
+	init_pany_type		x, i64;
+	mov_p64_imm			x, 42;
+	deinit;
+	ret;
+}

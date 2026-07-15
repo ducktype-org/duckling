@@ -1,5 +1,6 @@
 add_library(StateMachine
 	src/state_machine/state_machine.hpp
+	src/state_machine/state_machine.cpp
 )
 
 make_module(StateMachine USES Base)

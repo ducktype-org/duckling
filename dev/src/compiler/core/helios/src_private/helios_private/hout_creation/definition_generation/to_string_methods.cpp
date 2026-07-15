@@ -121,7 +121,7 @@ namespace compiler::helios::defgen {
 				= makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), self_param);
 
 			const auto coercion_res
-				= canCoerce(ctx, source_int_type, target_int_type).valueOrThrow();
+				= canCoerce(ctx, arg_expr->expression_type, target_int_type).valueOrThrow();
 			if (!coercion_res.getCoercion().isEmptyCoercion())
 				arg_expr = coercion_res.coerce(ctx, std::move(arg_expr));
 
@@ -144,8 +144,7 @@ namespace compiler::helios::defgen {
 			const HOUTFunctionDeclaration& to_string_decl,
 			std::vector<Box<code::Stmt>>&  body
 		) {
-			const auto self_param        = to_string_decl.parameters.at(0).helios_symbol;
-			const auto source_float_type = to_string_decl.parameters.at(0).type;
+			const auto self_param = to_string_decl.parameters.at(0).helios_symbol;
 			const auto target_float_type
 				= tsh::SymbolType<>::withDefaults(tsh::getFloatType(ctx, 64));
 			const auto builtin_sym = stringifySym(ctx, target_float_type, "builtin_stringify_f64");
@@ -154,7 +153,7 @@ namespace compiler::helios::defgen {
 				= makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), self_param);
 
 			const auto coercion_res
-				= canCoerce(ctx, source_float_type, target_float_type).valueOrThrow();
+				= canCoerce(ctx, arg_expr->expression_type, target_float_type).valueOrThrow();
 			if (!coercion_res.getCoercion().isEmptyCoercion())
 				arg_expr = coercion_res.coerce(ctx, std::move(arg_expr));
 
