@@ -8,8 +8,9 @@ namespace pst {
 	 * @brief Special top-level element for instantiated templates.
 	 */
 	class TemplateTopLevel final: public NotStmt {
-		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(TemplateTopLevel, NotStmt);	
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(TemplateTopLevel, NotStmt);
 		CLONE_SUBELEMENTS();
+
 	protected:
 		std::vector<AccessInternalAnonymous<TemplateExpansionAssignment>> assignments;
 		NAMED_CHILD(stmt, Stmt);
@@ -20,7 +21,7 @@ namespace pst {
 		friend class ElementSynthesizer;
 
 	public:
-		void                      dprint(std::ostream& out) const final;
+		void dprint(std::ostream& out) const final;
 		~TemplateTopLevel() final = default;
 
 		[[nodiscard]]

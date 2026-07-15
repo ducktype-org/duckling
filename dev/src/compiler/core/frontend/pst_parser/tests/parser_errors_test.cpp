@@ -61,7 +61,8 @@ class PSTErrorTests: public tester::TestSuite {
 		Example(std::string code): GenExample(std::move(code)) {}
 
 		bool operator()() override {
-			auto parsed = pst::ParsedPST<Element, Parser>::fromContents(code, pst::PSTType::Program);
+			auto parsed
+				= pst::ParsedPST<Element, Parser>::fromContents(code, pst::PSTType::Program);
 			return ((not parsed->hasErrors()) == good && testCloning<Element>(parsed.ref()).isOk());
 		}
 

@@ -66,7 +66,8 @@ namespace compiler::helios {
 			}
 		}
 
-		static auto extractResult(CRef<query::QResult<Box<pst::ParsedPST<pst::Stmt>>>> p_result) -> QResult {
+		static auto extractResult(CRef<query::QResult<Box<pst::ParsedPST<pst::Stmt>>>> p_result)
+			-> QResult {
 			if (p_result->hasFailed())
 				return query::Failed{};
 			else {

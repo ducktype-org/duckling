@@ -7,8 +7,9 @@ namespace pst {
 	 * @brief Special top-level element for instantiated templates.
 	 */
 	class TemplateExpansionAssignment final: public NotStmt {
-		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(TemplateExpansionAssignment, NotStmt);	
+		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(TemplateExpansionAssignment, NotStmt);
 		CLONE_SUBELEMENTS();
+
 	protected:
 		NAMED_CHILD(name, IdentifierWrapper);
 
@@ -22,7 +23,7 @@ namespace pst {
 		friend class ElementSynthesizer;
 
 	public:
-		void                      dprint(std::ostream& out) const final;
+		void dprint(std::ostream& out) const final;
 		~TemplateExpansionAssignment() final = default;
 
 		[[nodiscard]]

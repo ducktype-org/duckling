@@ -83,7 +83,7 @@ public:
 
 private:
 	auto prepare(const std::string& filename) {
-		return pst::ParsedPST<>::fromFile(fs::File(filename), pst::PSTType::Program );
+		return pst::ParsedPST<>::fromFile(fs::File(filename), pst::PSTType::Program);
 	}
 
 	void testVisitorImpl(const std::string& filename, usize expected_counter) {
@@ -271,8 +271,9 @@ private:
 	void testSimpleExpand() {
 		auto pos      = dia_int::StablePosition::fakePosition();
 		auto contents = "var a: T = 5;";
-		auto pst
-			= pst::ParsedPST<>::fromExpand(pos, contents, pst::LangParserContext::programBaseContext());
+		auto pst      = pst::ParsedPST<>::fromExpand(
+            pos, contents, pst::LangParserContext::programBaseContext()
+        );
 		assertTrue(pst->getLogger()->messageCount() == 0, "Expected 0 errors");
 	}
 

@@ -96,9 +96,9 @@ private:
 	void singleEquivalency(const std::string& local_path) {
 		const std::string error        = "outputs from parsing on file " + local_path + "differ.";
 		const std::string filepath     = path(local_path);
-		auto pst_manual   = manualSteps<Element>(filepath);
-		auto pst_content  = fromContents<Element>(filepath);
-		auto pst_filename = fromFilename<Element>(filepath);
+		auto              pst_manual   = manualSteps<Element>(filepath);
+		auto              pst_content  = fromContents<Element>(filepath);
+		auto              pst_filename = fromFilename<Element>(filepath);
 		assertTrue(pst_manual->getLogger()->good() == pst_content->getLogger()->good(), error);
 		assertTrue(pst_manual->getLogger()->good() == pst_filename->getLogger()->good(), error);
 		std::string manual_print   = stringDprint<Element>(pst_manual.ref());

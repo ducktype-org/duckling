@@ -40,7 +40,7 @@ namespace pst {
 		|    PROTECTED METHODS    |
 		\***********************/
 
-		PST<>(hashing::ComponentHash&& hash_ctx_info): hash_ctx_info(std::move(hash_ctx_info)) {};
+		PST<>(hashing::ComponentHash&& hash_ctx_info): hash_ctx_info(std::move(hash_ctx_info)){};
 
 		void assignRoot(MBox<Element>&& box) {
 			CORE_ASSERT(!element.internal(), "Tried to overwrite root element.");
@@ -95,7 +95,8 @@ namespace pst {
 		 * @brief Does the additional work needed for input PSTs
 		 */
 		void finishInputPST() {
-			// Calculating paths should work for PSTs with parsing errors but if it becomes unstable we might need to add an if for hasErrors.
+			// Calculating paths should work for PSTs with parsing errors but if it becomes unstable
+			// we might need to add an if for hasErrors.
 			calcElementPathHash();
 			calcHashes();
 

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "pst.hpp"
 #include "lang_parser_context.hpp"
+#include "pst.hpp"
 #include "pst_state_forward.hpp"
 #include "pst_type.hpp"
 
@@ -172,10 +172,12 @@ namespace pst {
 		 */
 		explicit ParsedPST(
 			Box<tokenizer::TokenSource> file,
-		    PSTContext&&                pst_ctx,
-		    hashing::ComponentHash      hash_ctx = {})
+			PSTContext&&                pst_ctx,
+			hashing::ComponentHash      hash_ctx = {}
+		)
 
-		requires PARSE_ABLE_EMPTY: PST<Element>(std::move(hash_ctx)), file(std::move(file)) {
+			requires PARSE_ABLE_EMPTY
+			  : PST<Element>(std::move(hash_ctx)), file(std::move(file)) {
 			if (getLogger()->bad()) return;
 			parseInput(makeParserContext(std::move(pst_ctx)));
 		}
@@ -183,11 +185,12 @@ namespace pst {
 		/**
 		 * @brief Construct a new Pst from file path
 		 */
-		explicit ParsedPST(const fs::File& path, PSTContext&& pst_ctx, hashing::ComponentHash hash_ctx = {})
+		explicit ParsedPST(
+			const fs::File& path, PSTContext&& pst_ctx, hashing::ComponentHash hash_ctx = {}
+		)
 
-		requires PARSE_ABLE_EMPTY:
-			  PST<Element>(std::move(hash_ctx)),
-			  file(tokenizer::makeTokenSource(path)){
+			requires PARSE_ABLE_EMPTY
+			  : PST<Element>(std::move(hash_ctx)), file(tokenizer::makeTokenSource(path)) {
 			if (!file->tokenize()) return;
 			parseInput(makeParserContext(std::move(pst_ctx)));
 		}
@@ -229,23 +232,17 @@ namespace pst {
 
 		static Box<ParsedPST> fromFile(
 			Box<tokenizer::TokenSource>&& file,
-		    PSTContext&&                pst_ctx,
-		    hashing::ComponentHash      hash_ctx = {})
-		requires PARSE_ABLE_EMPTY {
-			auto out = makeBox<ParsedPST>(
-				std::move(file), std::move(pst_ctx), std::move(hash_ctx)
-			);
+			PSTContext&&                  pst_ctx,
+			hashing::ComponentHash        hash_ctx = {}
+		) requires PARSE_ABLE_EMPTY {
+			auto out = makeBox<ParsedPST>(std::move(file), std::move(pst_ctx), std::move(hash_ctx));
 			return out;
 		}
 
 		static Box<ParsedPST> fromFile(
-			const fs::File& path,
-		    PSTContext&&                pst_ctx,
-		    hashing::ComponentHash      hash_ctx = {})
-		requires PARSE_ABLE_EMPTY {
-			auto out = makeBox<ParsedPST>(
-				path, std::move(pst_ctx), std::move(hash_ctx)
-			);
+			const fs::File& path, PSTContext&& pst_ctx, hashing::ComponentHash hash_ctx = {}
+		) requires PARSE_ABLE_EMPTY {
+			auto out = makeBox<ParsedPST>(path, std::move(pst_ctx), std::move(hash_ctx));
 			return out;
 		}
 

@@ -39,7 +39,7 @@ namespace compiler::frontend {
 		fs::File                                file;
 		base::StrID                             lang_file_name;
 		ModuleID                                linked_module;
-		MBox<pst::ParsedPST<>>              parse_tree;
+		MBox<pst::ParsedPST<>>                  parse_tree;
 		base::Optional<usize> storage_handle;  //< Key to support removal from static storage
 		// this is a self pointer, it is necessary to get the FileID from the const SourceFile
 		base::Optional<FileID> file_id;
