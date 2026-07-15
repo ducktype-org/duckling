@@ -125,6 +125,10 @@ namespace vm {
 
 		void waitForBreakpoint() override;
 
+		std::expected<api::Response, api::ApiError> setExecutionConfig(
+			const api::ExecutionConfig& config
+		) override;
+
 		std::expected<api::Response, api::ApiError> getNumberOfCurrentStackFrames(
 			api::ThreadID thread_id
 		) override;

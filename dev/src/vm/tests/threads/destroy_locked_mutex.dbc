@@ -1,0 +1,18 @@
+global_data lock mutex {}
+
+function main { i64, ptr_argv } -> { i64 } {
+	init_pany_type			lock1, mutex;
+	call_builtinfunc		builtin_create_mutex;
+	mov_popq_popq			lock, lock1;
+
+	init_pany_type			lock2, mutex;
+	mov_popq_popq			lock2, lock;
+	call_builtinfunc		builtin_lock_mutex;
+
+	# Destroy the mutex while it is still held -> the VM must panic.
+	init_pany_type			lock3, mutex;
+	mov_popq_popq			lock3, lock;
+	call_builtinfunc		builtin_destroy_mutex;
+
+	ret;
+}

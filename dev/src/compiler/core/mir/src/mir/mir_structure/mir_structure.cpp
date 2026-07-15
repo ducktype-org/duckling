@@ -330,7 +330,7 @@ namespace compiler::mir {
 		os << "MIRUnit:\n";
 		os << "Globals:\n";
 		for (const auto& global: mir_globals) {
-			global.debugPrint(ctx, os);
+			global->debugPrint(ctx, os);
 			os << "\n";
 		}
 		os << "Functions:\n";
