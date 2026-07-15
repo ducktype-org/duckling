@@ -360,8 +360,7 @@ namespace compiler::helios::mangler {
 							return getPSTElementParent(ctx, ancestor);
 						}
 						variant_case(defgen::GeneratedConstant, const_data) {
-							// EHHHHH:!
-							// scopes<->pst link is weird...
+							// @TODO: #2587 adjust code here
 
 							auto scope = const_data.scope;
 							auto ancestor
