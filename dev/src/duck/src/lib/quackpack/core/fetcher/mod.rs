@@ -32,7 +32,7 @@ pub struct Fetcher<'duck> {
     ctx: &'duck DuckContext,
     ducknest_client: ducknest::DucknestClient<'duck>,
     #[allow(unused)] // @TODO: #1737 Remove this
-    git_client: git::GitClient,
+    git_client: git::GitClient<'duck>,
     cache: cache::ManifestCache,
     download_cache_path: FileLockManager,
     #[allow(unused)] // @TODO: #1905 Remove this
@@ -66,7 +66,7 @@ impl<'duck> Fetcher<'duck> {
         );
         let ducknest_client = ducknest::DucknestClient::new(ctx);
         let cache = cache::ManifestCache::new(cache::CacheLocation::Path(metadata_path.as_path()))?;
-        let git_client = git::GitClient {};
+        let git_client = git::GitClient::new(ctx);
         Ok(Self {
             ctx,
             ducknest_client,
@@ -178,7 +178,8 @@ impl<'duck> Fetcher<'duck> {
         reference: GitReference,
         destination_directory: &std::path::Path,
     ) -> QuackResult<types::GitCloneResponse> {
-        git::GitClient::clone_blocking(url, reference, destination_directory, self.ctx)
+        self.git_client
+            .clone_blocking(url, reference, destination_directory)
     }
 
     /// Same as [`clone_from_git_to_directory`](Self::clone_from_git_to_directory), but a target directory is a temporary
