@@ -487,9 +487,6 @@ namespace compiler::helios::code {
 
 				// Box creation
 				if (op->unwrap() == lang_def::keywordToStr(lang_def::Keyword::New)) {
-					node = makeBoxCreation(std::move(inner), stmt->getStablePosition());
-					return;
-
 					const auto origin = inner->origin.generatedFrom();
 					const auto direct_type
 						= inner->expression_type.getSymbolType().withReferenceKind(
