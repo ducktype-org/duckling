@@ -192,8 +192,10 @@ namespace vm::builtins {
 		auto block_id   = thread.process_memory.requestBlockID(block);
 		auto block_data = thread.process_memory.requestBlockData(block_id);
 
-		auto str_data = block_data.stdString();
-		return std::strtod(str_data.c_str(), nullptr);
+		// The block spans the whole allocated buffer, which may be larger than the string content.
+		// The content is NUL-terminated, so hand the raw pointer to `strtod` directly: it stops at
+		// the NUL and never reads the trailing (possibly uninitialized) bytes.
+		return std::strtod(reinterpret_cast<const char*>(block_data.getBegin()), nullptr);
 	}
 
 	i64 FunctionHandlers::builtinStartThread(SafeVMThread& thread) {

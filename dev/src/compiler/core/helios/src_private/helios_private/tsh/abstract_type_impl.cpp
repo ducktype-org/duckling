@@ -428,8 +428,7 @@ namespace compiler::tsh {
 	}
 
 	CRef<TypeInterface> MetaAbstractTypeImpl::getDeclaredInterface(query::Context&) const {
-		static TypeInterface empty{};
-		return &empty;
+		CORE_PANIC("Meta type interface does not exist yet.");
 	}
 
 	CRef<TypeInterface> ImportAbstractTypeImpl::getDeclaredInterface(query::Context&) const {
