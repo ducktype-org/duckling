@@ -186,6 +186,8 @@ namespace pst {
 
 		/**
 		 * @TODO: #3110 this constructor is totally hacked, change it.
+		 * We should somehow be able to share token_source between the original and cloned PST.
+		 *
 		 * Also: add clone dummy parameter here, to make it more explicit.
 		 */
 		explicit PST(
@@ -322,6 +324,7 @@ namespace pst {
 		/**
 		 * @brief Create a PST from a cloned element.
 		 * @TODO: #3110 this constructor is totally hacked, change it.
+		 * We should somehow be able to share token_source between the original and cloned PST.
 		 */
 		static PST fromClone(
 			Box<Element>                cloned_element,

@@ -1029,6 +1029,16 @@ private:
 				{ "Feature not implemented", "Default values" },
 				1
 			);
+
+			checkForErrorOnCompileModule(
+				R"(
+				template(a: i64 = 2)
+				var b = a;
+
+			)",
+				{ "Feature not implemented" },
+				1
+			);
 		}
 
 		// ============================ Other errors ============================
