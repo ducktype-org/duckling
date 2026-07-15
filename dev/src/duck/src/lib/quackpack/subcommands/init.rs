@@ -150,7 +150,7 @@ fn bail_on_overriding_project(ctx: &DuckContext, root: &Path) -> QuackError {
     };
     qp_err!(
         "cannot reinitialize project `{}` at `{}`",
-        package.package().manifest().name(),
+        package.package().name(),
         package.package().root().display()
     )
 }

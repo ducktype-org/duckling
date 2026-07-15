@@ -5,7 +5,7 @@ use crate::quackpack::core::Version;
 use crate::quackpack::util::interned_url::InternedUrl;
 use crate::util::hash::sha256_string;
 
-#[derive(Debug, Deserialize, Serialize, Clone, Hash, PartialEq, Eq)]
+#[derive(Debug, Deserialize, Serialize, Clone, Copy, Hash, PartialEq, Eq)]
 /// An ID of a stored package.
 pub enum PackageId {
     /// A registry package.
@@ -60,7 +60,7 @@ impl From<LocalId> for PackageId {
     }
 }
 
-#[derive(Deserialize, Debug, Serialize, Clone, Hash, PartialEq, Eq)]
+#[derive(Deserialize, Debug, Serialize, Clone, Copy, Hash, PartialEq, Eq)]
 /// An ID of a stored registry package.
 pub struct RegistryId {
     id: StrId,
@@ -118,7 +118,7 @@ impl RegistryId {
     }
 }
 
-#[derive(Deserialize, Debug, Serialize, Clone, Hash, PartialEq, Eq)]
+#[derive(Deserialize, Debug, Serialize, Clone, Copy, Hash, PartialEq, Eq)]
 /// An ID of a stored git package.
 pub struct GitId {
     url: InternedUrl,
@@ -165,7 +165,7 @@ impl GitId {
     }
 }
 
-#[derive(Deserialize, Debug, Serialize, Clone, Hash, PartialEq, Eq)]
+#[derive(Deserialize, Debug, Serialize, Clone, Copy, Hash, PartialEq, Eq)]
 /// An ID of a local package.
 pub struct LocalId {
     path: InternedUrl,

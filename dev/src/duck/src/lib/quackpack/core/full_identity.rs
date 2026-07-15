@@ -7,11 +7,11 @@ use std::path::Path;
 
 use serde::{Deserialize, Serialize, de};
 
-use crate::quackpack::core::Manifest;
 use crate::quackpack::core::identity::{Identity, Kind, Origin};
-use crate::quackpack::core::solver::types_common::{ExpandedLocation, ExpandedPackage};
+use crate::quackpack::core::{GitReference, SourceKind};
 use crate::quackpack::util::interned_url::InternedUrl;
 use crate::quackpack::util::is_local_file::IsLocalFile;
+use crate::quackpack::util::to_path_buf::ToPathBuf;
 use crate::quackpack::util::to_url::ToUrl;
 use crate::{QuackResult, StrId};
 
@@ -44,20 +44,19 @@ impl FullIdentity {
         Identity::new(self.name(), self.origin().as_origin())
     }
 
-    /// Helper for solver for creating storage's freeze.
-    pub fn from_realization_and_manifest(
-        realization: ExpandedPackage,
-        realization_manifest: &Manifest,
-    ) -> Self {
-        let name = realization_manifest.name();
-        let origin = match realization.location {
-            ExpandedLocation::Registry { url, .. } => FullOrigin::for_registry(url),
-            ExpandedLocation::Git { url, commit } => FullOrigin::for_git(url, commit),
-            ExpandedLocation::Local { absolute_path } => {
-                FullOrigin::new(absolute_path, FullKind::Local)
+    /// Generate a human-readable description of [`self`].
+    pub fn descriptive_name(&self) -> String {
+        match self.origin.kind {
+            FullKind::Registry => format!("`{}`", self.name),
+            FullKind::Git { .. } => format!("cloned from `{}`", self.origin.url),
+            FullKind::Local => {
+                if let Ok(path) = self.origin.url.to_path_buf() {
+                    format!("at the directory `{}`", path.display())
+                } else {
+                    format!("at the directory `{}`", self.origin.url)
+                }
             }
-        };
-        Self::new(name, origin)
+        }
     }
 }
 
@@ -258,6 +257,26 @@ impl FullKind {
             Self::Local => Kind::Local,
         }
     }
+
+    /// Checks that [`self`] satisfies the requirenments of some [`SourceKind`].
+    pub fn satisfies_source_kind(&self, source_kind: SourceKind) -> bool {
+        match (self, source_kind) {
+            (Self::Local, SourceKind::Local) => true,
+            (Self::Git { commit }, SourceKind::Git(reference)) => {
+                // If the git dependency specifies tag, branch or nothing (default branch),
+                // some new commits may have appeared.
+                if let GitReference::Rev(required_commit) = reference
+                    && *commit == required_commit
+                {
+                    true
+                } else {
+                    false
+                }
+            }
+            (Self::Registry, SourceKind::Registry) => true,
+            _ => false,
+        }
+    }
 }
 
 impl From<FullKind> for Kind {
@@ -293,8 +312,14 @@ mod tests {
             assert_eq!(origin.to_string(), "git+https://localhost:9001/");
         }
         {
+            #[cfg(windows)]
+            let root = PathBuf::from("C:\\");
+            #[cfg(not(windows))]
             let root = PathBuf::from("/tmp");
             let origin = FullOrigin::for_local(&root).unwrap();
+            #[cfg(windows)]
+            assert_eq!(origin.to_string(), "local+file:///C:/");
+            #[cfg(not(windows))]
             assert_eq!(origin.to_string(), "local+file:///tmp");
         }
     }
@@ -325,9 +350,20 @@ mod tests {
             );
         }
         {
+            #[cfg(windows)]
+            let root = PathBuf::from("C:\\");
+            #[cfg(not(windows))]
             let root = PathBuf::from("/tmp");
             let origin = FullOrigin::for_local(&root).unwrap();
             let formatted = serde_json::to_string_pretty(&origin).unwrap();
+            #[cfg(windows)]
+            assert_eq!(
+                formatted,
+                r#"{
+  "source": "local+file:///C:/"
+}"#
+            );
+            #[cfg(not(windows))]
             assert_eq!(
                 formatted,
                 r#"{
@@ -354,6 +390,9 @@ mod tests {
             assert_eq!(parsed, origin);
         }
         {
+            #[cfg(windows)]
+            let root = PathBuf::from("C:\\");
+            #[cfg(not(windows))]
             let root = PathBuf::from("/tmp");
             let origin = FullOrigin::for_local(&root).unwrap();
             let formatted = serde_json::to_string_pretty(&origin).unwrap();
@@ -442,10 +481,22 @@ mod tests {
             );
         }
         {
+            #[cfg(windows)]
+            let root = PathBuf::from("C:\\");
+            #[cfg(not(windows))]
             let root = PathBuf::from("/tmp");
             let origin = FullOrigin::for_local(&root).unwrap();
             let identity = FullIdentity::new("foo".into(), origin);
             let formatted = serde_json::to_string_pretty(&identity).unwrap();
+            #[cfg(windows)]
+            assert_eq!(
+                formatted,
+                r#"{
+  "name": "foo",
+  "source": "local+file:///C:/"
+}"#
+            );
+            #[cfg(not(windows))]
             assert_eq!(
                 formatted,
                 r#"{
@@ -475,6 +526,9 @@ mod tests {
             assert_eq!(parsed, identity);
         }
         {
+            #[cfg(windows)]
+            let root = PathBuf::from("C:\\");
+            #[cfg(not(windows))]
             let root = PathBuf::from("/tmp");
             let origin = FullOrigin::for_local(&root).unwrap();
             let identity = FullIdentity::new("foo".into(), origin);

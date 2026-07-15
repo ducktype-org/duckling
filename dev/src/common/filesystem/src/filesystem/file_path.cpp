@@ -9,21 +9,32 @@ namespace {
 	Ref<fs::VFS> vfs = fs::VFS::getInstance();
 
 	/**
-	 * @brief Checks if the given path has a prefix that matches the system's temporary directory.
-	 * The path does not need to be real (point to an existing file).
+	 * @brief Checks whether `path` lives inside the system's temporary directory.
+	 *
+	 * The check is textual: `path` (which may not exist) matches if it equals the canonical
+	 * temp directory or starts with it plus a separator. A path that reaches the temp dir
+	 * through a symlink (on macOS the temp dir sits under /var -> /private/var) cannot match
+	 * textually, so it is retried once with its own symlinks resolved.
 	 */
 	bool hasTemporaryPrefix(const std::filesystem::path& path) {
-		auto temp_dir = std::filesystem::canonical(std::filesystem::temp_directory_path());
+		// Only absolute paths can point into the temp directory.
+		if (!path.is_absolute()) return false;
 
-		auto temp_str = temp_dir.generic_string();
-		auto path_str = path.generic_string();
+		auto temp_dir
+			= std::filesystem::canonical(std::filesystem::temp_directory_path()).generic_string();
+		auto is_in_temp_dir = [&temp_dir](const std::filesystem::path& p) {
+			auto str = p.generic_string();
+			if (!str.starts_with(temp_dir)) return false;
+			// Reject siblings like `/tmpfoo`: the prefix must end exactly at a separator.
+			return str.size() == temp_dir.size() || str[temp_dir.size()] == '/';
+		};
 
-		if (path_str == temp_str) return true;  // Exact match
+		if (is_in_temp_dir(path)) return true;
 
-		// Ensure temp_str ends with a separator for correct prefix matching
-		if (!temp_str.empty() && temp_str.back() != '/') temp_str += '/';
-
-		return path_str.starts_with(temp_str);
+		// Retry with symlinks resolved; weakly_canonical tolerates non-existent paths.
+		std::error_code ec;
+		auto            resolved = std::filesystem::weakly_canonical(path, ec);
+		return !ec && is_in_temp_dir(resolved);
 	}
 }
 

@@ -641,28 +641,6 @@ namespace compiler::mir {
 			}
 		}
 
-		void visitBoxOfExpr(const hc::BoxOfExpr& expr) override {
-			CORE_ASSERT(
-				expr.inner->expression_type.getSymbolType().getRefKind()
-					== tsh::ReferenceKind::Direct,
-				"BoxOfExpr on a non direct type"
-			);
-
-			auto       hole          = continuation->addHole();
-			auto       lowered_inner = lowerSubExpr(*expr.inner, continuation);
-			const auto res_inner     = lowered_inner.getResult(function);
-			const auto result_type   = expr.expression_type.getSymbolType();
-
-			noValueOutput(
-				lowered_inner.begin,
-				hole,
-				Instruction(
-					Operation::BoxAlloc, {}, { res_inner }, {}, expr_scope, {}, { expr.getPosition() }
-				),
-				result_type
-			);
-		}
-
 		void visitDerefExpr(const hc::DerefExpr& expr) override {
 			auto lowered_inner = lowerSubExpr(*expr.inner, continuation);
 			auto value         = lowered_inner.getResult(function);

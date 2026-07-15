@@ -74,6 +74,21 @@ namespace vm::code::valid_type {
 				     std::max(size_when_ptr_is_16_bytes, other.size_when_ptr_is_16_bytes) };
 		}
 
+		/**
+		 * @brief Round each component up to the nearest multiple of the corresponding component of
+		 * `alignment`. Used for computing aligned field offsets, where TypeSize doubles as a
+		 * dual-width alignment value (alignment can differ between the 8- and 16-byte pointer
+		 * modes, e.g. for pointer fields).
+		 */
+		[[nodiscard]] constexpr TypeSize alignedTo(const TypeSize& alignment) const {
+			auto round_up = [](Bytes value, Bytes align) {
+				CORE_ASSERT(usize(align) > 0, "Alignment must be positive");
+				return Bytes((usize(value) + usize(align) - 1) / usize(align) * usize(align));
+			};
+			return { round_up(size_when_ptr_is_8_bytes, alignment.size_when_ptr_is_8_bytes),
+				     round_up(size_when_ptr_is_16_bytes, alignment.size_when_ptr_is_16_bytes) };
+		}
+
 		[[nodiscard]] constexpr Bytes assumePointerSize(Bytes pointer_size) const {
 			switch (usize(pointer_size)) {
 			case 8:

@@ -16,12 +16,12 @@
 //! 6. Creating the new freeze, based on the reused part of the previous freeze and the solver-engine output.
 //! 7. Trimming the new freeze, to remove dependencies of the root package which were present previously
 //!    but have been since removed from its manifest.
+pub mod dependency_edge;
 pub mod gathering;
 pub mod git_access;
 pub mod solver_freeze;
 pub mod solver_mode;
 pub mod solving;
-pub mod types_common;
 pub mod util;
 
 #[cfg(test)]
@@ -34,21 +34,21 @@ use std::path::PathBuf;
 use tracing::debug;
 
 use crate::quackpack::core::fetcher::Fetcher;
+use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
 use crate::quackpack::core::solver::gathering::gatherer::Gatherer;
 use crate::quackpack::core::solver::gathering::gatherer_state::GatheredInfo;
 use crate::quackpack::core::solver::git_access::GitAccess;
 use crate::quackpack::core::solver::solver_freeze::SolverFreeze;
 use crate::quackpack::core::solver::solver_mode::SolverMode;
 use crate::quackpack::core::solver::solving::solver_engine::{SolverEngine, SolverInput};
-use crate::quackpack::core::solver::types_common::{ExpandedLocation, ExpandedPackage};
 use crate::quackpack::core::{FeatureName, Manifest, PackageContext};
-use crate::quackpack::util::to_url::ToUrl;
+use crate::quackpack::util::with_version::WithVersion;
 use crate::{QuackResult, qp_bail, qp_bail_internal};
 
 /// A struct designated to finding the full dependency graph of a given package.
 pub struct SolverGathererData<'duck, 'ctx> {
     root_pcx: &'ctx PackageContext<'duck>,
-    root_pkg: ExpandedPackage,
+    root_pkg: WithVersion<FullIdentity>,
     root_pkg_features: HashSet<FeatureName>,
     current_freeze: SolverFreeze,
     mode: SolverMode,
@@ -59,7 +59,7 @@ pub struct SolverGathererData<'duck, 'ctx> {
 /// and its packages manifests to generate a serializable freeze.
 pub struct SolverAnswer {
     pub new_freeze: SolverFreeze,
-    pub pkgs_manifests: HashMap<ExpandedPackage, Box<Manifest>>,
+    pub pkgs_manifests: HashMap<WithVersion<FullIdentity>, Box<Manifest>>,
 }
 
 /// [`prepare_solving`](SolverGathererData::prepare_solving) response describing whether we should
@@ -86,14 +86,11 @@ impl<'duck, 'ctx> SolverGathererData<'duck, 'ctx> {
         current_freeze: SolverFreeze,
         mode: SolverMode,
     ) -> QuackResult<Self> {
+        let root_origin = FullOrigin::for_local(pcx.package().root())?;
+        let root_identity = FullIdentity::new(pcx.package().name(), root_origin);
         Ok(Self {
             root_pcx: pcx,
-            root_pkg: ExpandedPackage {
-                location: ExpandedLocation::Local {
-                    absolute_path: pcx.package().root().to_url()?.into(),
-                },
-                version: None,
-            },
+            root_pkg: WithVersion::new(root_identity, pcx.package().version()),
             root_pkg_features: pcx
                 .package()
                 .manifest()
@@ -212,7 +209,7 @@ impl<'duck, 'ctx> SolverGathererData<'duck, 'ctx> {
 /// It can be created by [`prepare_solving`](SolverGathererData::prepare_solving).
 pub struct SolverEngineData {
     input: SolverInput,
-    root_pkg: ExpandedPackage,
+    root_pkg: WithVersion<FullIdentity>,
     root_pkg_features: HashSet<FeatureName>,
     current_freeze: SolverFreeze,
 }

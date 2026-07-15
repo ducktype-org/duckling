@@ -38,8 +38,8 @@ namespace {
 		auto rhs_direct = rhs_type.withReferenceKind(tsh::ReferenceKind::Direct);
 
 		// Try to coerce both values to the rhs direct type.
-		auto lhs_to_rhs = canCoerce(ctx, lhs_type, rhs_direct).valueOrThrow();
-		auto rhs_to_rhs = canCoerce(ctx, rhs_type, rhs_direct).valueOrThrow();
+		auto lhs_to_rhs = canCoerce(ctx, lhs->expression_type, rhs_direct).valueOrThrow();
+		auto rhs_to_rhs = canCoerce(ctx, rhs->expression_type, rhs_direct).valueOrThrow();
 
 		if (lhs_to_rhs.isValid() && rhs_to_rhs.isValid()) {
 			return std::make_tuple(
@@ -48,8 +48,8 @@ namespace {
 		}
 
 		// Try to coerce both values to the lhs direct type.
-		auto lhs_to_lhs = canCoerce(ctx, lhs_type, lhs_direct).valueOrThrow();
-		auto rhs_to_lhs = canCoerce(ctx, rhs_type, lhs_direct).valueOrThrow();
+		auto lhs_to_lhs = canCoerce(ctx, lhs->expression_type, lhs_direct).valueOrThrow();
+		auto rhs_to_lhs = canCoerce(ctx, rhs->expression_type, lhs_direct).valueOrThrow();
 
 		if (lhs_to_lhs.isValid() && rhs_to_lhs.isValid()) {
 			return std::make_tuple(
@@ -69,8 +69,7 @@ namespace compiler::helios::code {
 		auto operation_kind = expr->expression_type.getType().getKind();
 		auto direct_type
 			= expr->expression_type.getSymbolType().withReferenceKind(tsh::ReferenceKind::Direct);
-		auto coercion
-			= canCoerce(ctx, expr->expression_type.getSymbolType(), direct_type).valueOrThrow();
+		auto coercion = canCoerce(ctx, expr->expression_type, direct_type).valueOrThrow();
 		if (not coercion.isValid()) return {};
 
 		const static base::Map<std::pair<lexer::Operator, tsh::Kind>, BuiltinUnary> numeric_operators

@@ -129,29 +129,17 @@ namespace compiler::helios::code {
 			tsh::SymbolType provided_type
 				= positional_arguments[i]->expression_type.getSymbolType();
 			tsh::SymbolType expected_type = decl.parameters[i].type;
-			auto            coercion      = canCoerce(ctx, provided_type, expected_type);
+			auto coercion = canCoerce(ctx, positional_arguments[i]->expression_type, expected_type);
 
 			if (coercion.valueOrThrow().isInvalid()) {
-				variant_match(coercion.valueOrThrow().getVariant()) {
-					variant_case_novalue(InvalidCoercion) {
-						return NoMatch{ .function = fun,
-							            .reason   = TypeMismatch{
-											  .given_type     = provided_type,
-											  .expected_type  = expected_type,
-											  .argument_index = i,
-											  .function       = fun,
-                                        } };
-					}
-					variant_case_novalue(helios::TypeNotTriviallyCopyable) {
-						return NoMatch{ .function = fun,
-							            .reason   = code::TypeNotTriviallyCopyable{
-											  .argument_index = i,
-											  .given_type     = provided_type,
-											  .expected_type  = expected_type,
-											  .function       = fun,
-                                        } };
-					}
-				}
+				return NoMatch{ .function = fun,
+					            .reason   = ArgumentCoercionFailure{
+									  .reason         = coercion.valueOrThrow().getInvalidReason(),
+									  .given_type     = provided_type,
+									  .expected_type  = expected_type,
+									  .argument_index = i,
+									  .function       = fun,
+                                } };
 			}
 
 			bool is_empty = coercion.valueOrThrow().getCoercion().isEmptyCoercion();
@@ -189,32 +177,22 @@ namespace compiler::helios::code {
                                                                 = positional_arguments.size() + i,
 					                                              .function = fun } };
 
-			usize           param_idx = param_idx_with_matching_name.value();
-			tsh::SymbolType provided_type
-				= std::get<1>(named_arguments[i])->expression_type.getSymbolType();
+			usize               param_idx = param_idx_with_matching_name.value();
+			tsh::ExpressionType provided_expr_type
+				= std::get<1>(named_arguments[i])->expression_type;
+			tsh::SymbolType provided_type = provided_expr_type.getSymbolType();
 			tsh::SymbolType expected_type = decl.parameters[param_idx].type;
-			auto            coercion      = canCoerce(ctx, provided_type, expected_type);
+			auto            coercion      = canCoerce(ctx, provided_expr_type, expected_type);
 
 			if (coercion.valueOrThrow().isInvalid()) {
-				variant_match(coercion.valueOrThrow().getVariant()) {
-					variant_case_novalue(InvalidCoercion) {
-						return NoMatch{ .function = fun,
-							            .reason   = TypeMismatch{ .given_type    = provided_type,
-							                                      .expected_type = expected_type,
-							                                      .argument_index
-                                                                = positional_arguments.size() + i,
-							                                      .function = fun } };
-					}
-					variant_case_novalue(helios::TypeNotTriviallyCopyable) {
-						return NoMatch{ .function = fun,
-							            .reason   = code::TypeNotTriviallyCopyable{
-											  .argument_index = positional_arguments.size() + i,
-											  .given_type     = provided_type,
-											  .expected_type  = expected_type,
-											  .function       = fun,
-                                        } };
-					}
-				}
+				return NoMatch{ .function = fun,
+					            .reason   = ArgumentCoercionFailure{
+									  .reason         = coercion.valueOrThrow().getInvalidReason(),
+									  .given_type     = provided_type,
+									  .expected_type  = expected_type,
+									  .argument_index = positional_arguments.size() + i,
+									  .function       = fun,
+                                } };
 			}
 
 			bool is_empty = coercion.valueOrThrow().getCoercion().isEmptyCoercion();

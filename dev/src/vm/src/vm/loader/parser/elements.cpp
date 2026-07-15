@@ -860,15 +860,23 @@ namespace vm::loader::parser {
 		}
 		case lang_def::Keyword::BCData: {
 			auto tp = DataType{ name, parseFields(state) };
-			if (state.notEmpty() && state[0].is(lang_def::Keyword::BCAssertSize)) {
-				state.tokens().next();
-				auto size_token = state.tokens().next();
-				if (!size_token.isNumLiteralGroup()) {
-					state.logInt(makeBox<dia_int::PlaceholderError>(
-						"Expected a numeric literal after `assert_size`.", state.getPosition()
-					));
+			// Trailing modifiers, accepted in any order: `packed`, `assert_size N`.
+			while (state.notEmpty()) {
+				if (state[0].is(lang_def::Keyword::BCPacked)) {
+					state.tokens().next();
+					tp.packed = true;
+				} else if (state[0].is(lang_def::Keyword::BCAssertSize)) {
+					state.tokens().next();
+					auto size_token = state.tokens().next();
+					if (!size_token.isNumLiteralGroup()) {
+						state.logInt(makeBox<dia_int::PlaceholderError>(
+							"Expected a numeric literal after `assert_size`.", state.getPosition()
+						));
+					} else {
+						tp.assert_size = static_cast<usize>(strIDToNum(size_token.getValue()));
+					}
 				} else {
-					tp.assert_size = static_cast<usize>(strIDToNum(size_token.getValue()));
+					break;
 				}
 			}
 			tp.bytecode_pos = out->position;

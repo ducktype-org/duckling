@@ -166,9 +166,10 @@ private:
 			ASSERT_EQUAL(2, globals.size());
 			ASSERT_EQUAL(base::StrID("c"), globals.at(0)->original_name);
 
-			auto& c_ctor = ctx.query<compiler::mir::LowerGlobalDataToMIRCtor>({ globals.at(0) })
-			                   ->valueOrThrow();
-			ASSERT_TRUE(c_ctor.name.strView() == "constructor_of_c");
+			auto& c_data
+				= ctx.query<compiler::mir::LowerGlobalData>({ globals.at(0) })->valueOrThrow();
+			auto c_ctor = std::get<CRef<compiler::mir::Function>>(c_data.initial_value);
+			ASSERT_TRUE(c_ctor->name.strView() == "constructor_of_c");
 
 			auto foo_mir = compiler::mir::lowerToPreMIRFunction(ctx, functions.at(0));
 			ASSERT_EQUAL(foo_mir.name, base::StrID("foo"));
@@ -234,14 +235,14 @@ private:
 			auto goo_mir = compiler::mir::lowerToPreMIRFunction(ctx, functions.at(1));
 			ASSERT_EQUAL(goo_mir.name, base::StrID("goo"));
 
-			ASSERT_EQUAL(goo_mir.local_list.size(), 2);
+			ASSERT_EQUAL(goo_mir.local_list.size(), 1);
 
-			// assert that in the first block we have an assignment
+			// assert that in the first block we have the two assignments and the call
 			ASSERT_EQUAL(goo_mir.block_order.size(), 1);
 
 			auto first_block_id = goo_mir.block_order[0];
 
-			ASSERT_EQUAL(goo_mir.blocks[first_block_id].instructions.size(), 5);
+			ASSERT_EQUAL(goo_mir.blocks[first_block_id].instructions.size(), 4);
 			ASSERT_EQUAL(
 				goo_mir.blocks[first_block_id].instructions.at(0).operation,
 				compiler::mir::Operation::Assign
@@ -253,10 +254,6 @@ private:
 			ASSERT_EQUAL(
 				goo_mir.blocks[first_block_id].instructions.at(2).operation,
 				compiler::mir::Operation::Call
-			);
-			ASSERT_EQUAL(
-				goo_mir.blocks[first_block_id].instructions.at(3).operation,
-				compiler::mir::Operation::Cast
 			);
 		});
 	}
@@ -743,10 +740,19 @@ private:
 			using namespace compiler::mir;
 			for (const auto& block_id: mir_func.block_order) {
 				for (const auto& instr: mir_func.blocks[block_id].instructions) {
-					if (instr.operation == Operation::BoxAlloc) {
+					const auto callee_builtin
+						= instr.operation == Operation::Call
+					        ? compiler::helios::isBuiltin(
+								  instr.arguments[0].get<MIRFunctionLiteral>().helios_id
+							  )
+					        : base::Optional<compiler::helios::BuiltinKind>{};
+					const bool is_box_alloc
+						= callee_builtin.has_value()
+					   && callee_builtin.value() == compiler::helios::BuiltinKind::BoxAlloc;
+					if (is_box_alloc) {
 						// var b_int: box i32 = 42;
 						// var b_point: box Point = Point(10, 20);
-						const auto& arg = instr.arguments[0];
+						const auto& arg = instr.arguments[1];
 						if (arg.isConstant())
 							found_alloc_box_int = true;
 						else

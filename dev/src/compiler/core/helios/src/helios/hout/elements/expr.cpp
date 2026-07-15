@@ -49,7 +49,6 @@ namespace compiler::helios::code {
 	EXPR_VISITOR(IndexExpr)
 	EXPR_VISITOR(SequenceExpr)
 	EXPR_VISITOR(MoveExpr)
-	EXPR_VISITOR(BoxOfExpr)
 	EXPR_VISITOR(RefOfExpr)
 	EXPR_VISITOR(DerefExpr)
 	EXPR_VISITOR(DefaultValueExpr)
@@ -222,7 +221,7 @@ namespace compiler::helios::code {
 
 			  tsh::ExpressionType<>(
 				  ctx.query<QueryTypeOfSymbol>(symbol)->valueOrThrow(),
-				  tsh::ValueCategory(tsh::primaryCategoryOfSymbol(symbol))
+				  tsh::ValueCategory(tsh::primaryCategoryOfSymbol(ctx, symbol))
 			  ),
 			  origin
 		  ),
@@ -784,11 +783,12 @@ namespace compiler::helios::code {
 	AccessExpr::AccessExpr(
 		query::Context& ctx, ElementOrigin origin, Box<Expr> base, const SymID field
 	):
-		  // @TODO: #1549 Value category usage is not correct here.
 		  Expr(
 			  tsh::ExpressionType(
 				  ctx.query<QueryTypeOfSymbol>(field)->valueOrThrow(),
-				  tsh::ValueCategory(tsh::PrimaryCategory::Local)
+				  // The accessed field inherits the base's value category. If the class is a
+	              // Local/Global, then so is the accessed field.
+				  base->expression_type.getValueCategory()
 			  ),
 			  origin
 		  ),
@@ -840,10 +840,9 @@ namespace compiler::helios::code {
 						  CORE_PANIC("Cannot index a non-array like type");
 					  }
 				  }(),
-				  // @TODO: #1549 Value category usage may not be correct here.
-				  base->expression_type.getValueCategory(
-				  )  // Propagate the base category. If the array is a
-	                 // Local/Global, then the indexed element is as well.
+				  // Propagate the base category. If the array is a Local/Global, then the
+	              // indexed element is as well.
+				  base->expression_type.getValueCategory()
 			  ),
 			  origin
 
@@ -1030,37 +1029,12 @@ namespace compiler::helios::code {
 		return makeBox<MoveExpr>(expression_type, origin, inner->clone());
 	}
 
-	BoxOfExpr::BoxOfExpr(query::Context&, ElementOrigin origin, Box<Expr> inner):
-		  Expr(
-			  tsh::ExpressionType<>(
-				  inner->expression_type.getSymbolType().withReferenceKind(tsh::ReferenceKind::Box),
-				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
-			  ),
-			  origin
-		  ),
-		  inner(std::move(inner)) {}
-
-	BoxOfExpr::BoxOfExpr(
-		tsh::ExpressionType<> expression_type, ElementOrigin origin, Box<Expr> inner
-	):
-		  Expr(expression_type, origin),
-		  inner(std::move(inner)) {}
-
-	void BoxOfExpr::debugPrint(std::ostream& out) const {
-		out << "boxof(";
-		inner->debugPrint(out);
-		out << ")";
-	}
-
-	Box<Expr> BoxOfExpr::clone() const {
-		return makeBox<BoxOfExpr>(expression_type, origin, inner->clone());
-	}
-
 	DerefExpr::DerefExpr(query::Context&, ElementOrigin origin, Box<Expr> inner):
 		  Expr(
 			  tsh::ExpressionType<>(
 				  inner->expression_type.getSymbolType().getPointeeSymbolType(),
-				  inner->expression_type.getValueCategory()
+				  // Dereferencing creates a non-owned lvalue.
+				  tsh::ValueCategory(tsh::PrimaryCategory::Dereferenced)
 			  ),
 			  origin
 		  ),
