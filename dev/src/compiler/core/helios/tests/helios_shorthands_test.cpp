@@ -237,7 +237,7 @@ public:
 			ASSERT_EQUAL(ref->expression_type.getSymbolType().getRefKind(), tsh::ReferenceKind::Ref);
 
 			const auto derefed = s.deref(s.refOf(s.litNum(5)));
-			ASSERT_EQUAL(dprint(derefed), std::string("deref(s.refof(5))"));
+			ASSERT_EQUAL(dprint(derefed), std::string("deref(refof(5))"));
 			ASSERT_EQUAL(
 				derefed->expression_type.getSymbolType().getRefKind(), tsh::ReferenceKind::Direct
 			);
