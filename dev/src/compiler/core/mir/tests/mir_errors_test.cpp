@@ -66,7 +66,7 @@ private:
                    else { eat(move a); }
                    eat(a);
                })",
-			{ "Use of a moved value.", "value moved here" },
+			{ "is used after it has been moved out of.", "Value moved here." },
 			1
 		);
 
@@ -94,11 +94,13 @@ private:
                    }
                    return;
                })",
-			{ "Use of an uninitialized value.", "is used before it is initialized" },
+			{ "is used before it is initialized" },
 			1
 		);
 
-		// `c` is read before its declaration further down the function.
+		// `c` is read before its declaration further down the function, and is also assigned
+		// (`c = 1`) before that declaration — the read is reported as a use-before-init and the
+		// assignment as a write-before-init, so two diagnostics are emitted.
 		compiler::mir::test_utils::checkForErrorOnCompileModule(
 			R"(fun useBeforeInitBranch(x: i64) = {
                    c + 1;
@@ -108,7 +110,40 @@ private:
                    var c = 20;
                    return;
                })",
-			{ "Use of an uninitialized value.", "is used before it is initialized" },
+			{ "is used before it is initialized", "is used before it is initialized" },
+			2
+		);
+
+		compiler::mir::test_utils::checkForErrorOnCompileModule(
+			R"(fun writeBeforeInit() = {
+                   n = 5;
+                   var n: i64 = 0;
+                   return;
+               })",
+			{ "is used before it is initialized" },
+			1
+		);
+
+		compiler::mir::test_utils::checkForErrorOnCompileModule(
+			R"(class Cls { x: i64; }
+               fun writeBeforeInitField() = {
+                   a.x = 20;
+                   var a: Cls = Cls(0);
+                   return;
+               })",
+			{ "is used before it is initialized" },
+			1
+		);
+
+		compiler::mir::test_utils::checkForErrorOnCompileModule(
+			R"(class Cls { x: i64; }
+               fun writeBeforeInitField() = {
+                   var a: Cls = Cls(0);
+				   let b = move a;
+                   a.x = 20;
+                   return;
+               })",
+			{ "is used after it has been moved out of" },
 			1
 		);
 	}
