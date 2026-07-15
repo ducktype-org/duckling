@@ -58,7 +58,7 @@ impl<'duck> GitClient<'duck> {
                 if !can_shallow_clone(url, reference) {
                     return Err(e.into());
                 }
-                // We print this onlu here because otherwise the user gets information from the error.
+                // We print this only here because otherwise the user gets information from the error.
                 self.ctx
                     .console()
                     .info(format!("failed to clone the repository at {url}: {e}"))?;
@@ -66,6 +66,7 @@ impl<'duck> GitClient<'duck> {
                     .console()
                     .info("retrying with a full clone instead of a shallow clone")?;
                 let mut fetch_options = self.fetch_options_for(url, reference);
+                // Here we always want to perform full clone, so set depth to 0.
                 fetch_options.depth(0);
                 builder.fetch_options(fetch_options);
                 builder.clone(url.as_str(), destination)?

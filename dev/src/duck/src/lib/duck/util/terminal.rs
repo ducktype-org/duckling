@@ -192,7 +192,8 @@ impl Terminal {
             .interact_text_on(&self.term)?)
     }
 
-    /// Get a [`String`] input from the user.
+    /// Get a [`String`] input from the user as password.
+    /// This means that the inputted letters are invisible.
     pub fn password_once(&self, prompt: impl Into<String>) -> QuackResult<String> {
         Ok(Password::new()
             .with_prompt(prompt)
