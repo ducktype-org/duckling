@@ -56,7 +56,9 @@ impl<'duck> GitClient<'duck> {
                     .info("retrying with a full clone instead of shallow clone")?;
                 // We've failed to clone a repository, try to fallback to a non-shallow clone.
                 // @TODO: #3146 Change this to only retry clone if the error could be from unsupporting shallow clone.
-                // Exceeding authentications limit return ErrorCode::GeneralError.
+                if matches!(e.code(), git2::ErrorCode::Auth) {
+                    return Err(e.into());
+                }
                 if !Self::can_shallow_clone(url, reference) {
                     return Err(e.into());
                 }
@@ -126,7 +128,9 @@ impl<'duck> GitClient<'duck> {
             let mut attempts = attempts.borrow_mut();
             *attempts += 1;
             if *attempts > MAX_AUTHENTICATION_NUMBER {
-                return Err(git2::Error::from_str("too many authentication attempts. Make sure the repository supports chosen authentication method."));
+                let mut err = git2::Error::from_str("too many authentication attempts. Make sure the repository supports chosen authentication method.");
+                err.set_code(git2::ErrorCode::Auth);
+                err.set_class(git2::ErrorClass::Callback);
             }
             if cred_types.contains(CredentialType::DEFAULT) {
                 Cred::default()
