@@ -31,7 +31,6 @@ mod tests;
 pub struct Fetcher<'duck> {
     ctx: &'duck DuckContext,
     ducknest_client: ducknest::DucknestClient<'duck>,
-    #[allow(unused)] // @TODO: #1737 Remove this
     git_client: git::GitClient<'duck>,
     cache: cache::ManifestCache,
     download_cache_path: FileLockManager,
