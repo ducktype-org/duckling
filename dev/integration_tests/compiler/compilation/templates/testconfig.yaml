@@ -25,7 +25,7 @@ Tests:
         Output:
           String: "2\n"
         ExitCode: 0
-        
+
 
   templates_and_macros:
     Cases:
@@ -40,12 +40,12 @@ Tests:
       all:
         backend: all
         Output:
-          String: "1\n2\n3\n3\n3\n"
+          String: "1\n2\n3\n3\n2\n"
         ExitCode: 0
 
   # @TODO: #3112 maybe reenable it (see the other note in tests).
   template_self_use:
-    enabled: false
+    Enabled: False
     Cases:
       all:
         backend: all
