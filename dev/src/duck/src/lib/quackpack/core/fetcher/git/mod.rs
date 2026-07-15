@@ -23,7 +23,7 @@ pub struct GitClient<'duck> {
 }
 
 /// Maximal number of authentication attempts.
-static MAX_AUTHENTICATION_NUMBER: u32 = 3;
+const MAX_AUTHENTICATION_NUMBER: u32 = 3;
 
 impl<'duck> GitClient<'duck> {
     pub fn new(ctx: &'duck DuckContext) -> Self {
