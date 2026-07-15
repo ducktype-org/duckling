@@ -32,6 +32,8 @@ public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(testErrorLogging);
 		TESTER_ADD_TEST(testCopyabilityErrors);
+		TESTER_ADD_TEST(testImplicitBoxCreationErrors);
+		TESTER_ADD_TEST(testReferenceElementTypeCoercionErrors);
 
 		// This test has some strange side effects. Putting it before `testErrorLogging` causes
 		// the tests to fail.
@@ -1205,7 +1207,7 @@ private:
 		checkForErrorOnCompileModule(
 			R"( fun main() -> i64 = {
 				var a: List[i32];
-				var b: box List[i32] = a;
+				var b: box List[i32] = new a;
 				return 0;
 			} )",
 			{ msg },
