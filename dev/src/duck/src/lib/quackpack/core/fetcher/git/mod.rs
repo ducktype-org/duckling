@@ -146,12 +146,12 @@ impl<'duck> GitClient<'duck> {
         let username = self
             .ctx
             .console()
-            .prompt_once("username: ")
+            .prompt_once("username")
             .map_err(|_| git2::Error::from_str("failed to get username"))?;
         let password = self
             .ctx
             .console()
-            .password_once("password: ")
+            .password_once("password")
             .map_err(|_| git2::Error::from_str("failed to get password"))?;
         Cred::userpass_plaintext(&username, &password)
     }
