@@ -128,7 +128,7 @@ impl<'duck> GitClient<'duck> {
             let mut attempts = attempts.borrow_mut();
             *attempts += 1;
             if *attempts > MAX_AUTHENTICATION_NUMBER {
-                let mut err = git2::Error::from_str("too many authentication attempts. Make sure the repository supports chosen authentication method.");
+                let mut err = git2::Error::from_str("too many authentication attempts; make sure the repository supports chosen authentication method");
                 err.set_code(git2::ErrorCode::Auth);
                 err.set_class(git2::ErrorClass::Callback);
             }
