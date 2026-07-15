@@ -8,6 +8,7 @@ mod build;
 mod generate;
 mod init;
 mod repl;
+mod run;
 pub mod run_script;
 mod sync;
 
@@ -21,6 +22,7 @@ pub fn subcommands() -> Vec<Command> {
         run_script::get_parser(),
         sync::get_parser(),
         repl::get_parser(),
+        run::get_parser(),
     ]
 }
 
@@ -39,6 +41,7 @@ pub fn exec_for(name: &str) -> Option<ExecFn> {
         "run-script" => run_script::execute,
         "sync" => sync::execute,
         "repl" => repl::execute,
+        "run" => run::execute,
         _ => return None,
     };
     Some(f)
