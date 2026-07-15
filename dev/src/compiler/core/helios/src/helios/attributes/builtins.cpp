@@ -8,6 +8,7 @@
 #include <helios/queries/function_queries.hpp>
 #include <helios/symbols/query_type_symbol_data.hpp>
 #include <helios/tsh/types.hpp>
+#include <helios_private/hout_creation/shorthands/shorthands.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
@@ -110,33 +111,26 @@ namespace compiler::helios {
 	}
 
 	HOUTFunction getBuiltinImpl(query::Context& ctx, SymID symbol, BuiltinKind type) {
+		using namespace code::shorthands;
+		const Shorthand s{ ctx };
+
 		switch (type) {
 		case BuiltinKind::CharPtrFromSlice: {
 			// `char_ptr_from_slice(slice T s) -> manyptr T` simply returns the slice's data pointer
-			// field. This mirrors the `length` method, only reading a different field (`ptr` vs
-			// `len`).
+			// field. This mirrors the `length` method, only reading a different field (`ptr` vs `len`).
 			auto& decl         = ctx.query<QueryDeclOfFun>(symbol)->valueOrThrow();
 			auto  slice_type   = decl.parameters.at(0).type.getType().as<tsh::SliceAbstractType>();
 			auto  slice_fields = ctx.query<QuerySliceTypeData>(slice_type);
 
-			std::vector<Box<code::Stmt>> body{};
-			body.emplace_back(makeBox<code::ReturnStmt>(
-				code::generatedOrigin(),
-				makeBox<code::AccessExpr>(
-					ctx,
-					code::generatedOrigin(),
-					makeBox<code::IdentifierExpr>(
-						ctx, code::generatedOrigin(), decl.parameters.at(0).helios_symbol
-					),
-					slice_fields->ptr
-				)
-			));
+			auto body
+				= StmtPack{ s.ret(s.access(
+								s.ident(decl.parameters.at(0).helios_symbol), slice_fields->ptr
+							)) }
+			          .toCodeBlock();
 			return HOUTFunction(
 				code::generatedOrigin(),
 				&decl,
-				std::make_shared<const code::CodeBlock>(code::CodeBlock{
-					.statements = std::move(body),
-				})
+				std::make_shared<const code::CodeBlock>(std::move(body))
 			);
 		}
 		case BuiltinKind::CharSliceFromPtrLen: {
@@ -159,58 +153,29 @@ namespace compiler::helios {
 			                                       .type            = result_sym_type },
 			});
 
-			std::vector<Box<code::Stmt>> body{};
-			// - One declaration, one assignment per field, one return.
-			body.reserve(4);
-			body.emplace_back(makeBox<code::VariableStmt>(
-				code::generatedOrigin(),
-				makeBox<code::DefaultValueExpr>(
-					ctx, code::generatedOrigin(), result_sym_type.getType()
+			auto body = StmtPack{
+				// var __result: slice char = <default>;
+				s.var(
+					result_symbol, result_sym_type, s.defaultValue(result_sym_type.getType())
 				),
-				result_sym_type,
-				result_symbol
-			));
-
-			// __result.ptr = p;
-			body.emplace_back(makeBox<code::AssignmentStmt>(
-				code::generatedOrigin(),
-				makeBox<code::AccessExpr>(
-					ctx,
-					code::generatedOrigin(),
-					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), result_symbol),
-					slice_fields->ptr
+				// __result.ptr = p;
+				s.assign(
+					s.access(s.ident(result_symbol), slice_fields->ptr),
+					s.ident(decl.parameters.at(0).helios_symbol)
 				),
-				makeBox<code::IdentifierExpr>(
-					ctx, code::generatedOrigin(), decl.parameters.at(0).helios_symbol
-				)
-			));
-
-			// __result.len = l;
-			body.emplace_back(makeBox<code::AssignmentStmt>(
-				code::generatedOrigin(),
-				makeBox<code::AccessExpr>(
-					ctx,
-					code::generatedOrigin(),
-					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), result_symbol),
-					slice_fields->len
+				// __result.len = l;
+				s.assign(
+					s.access(s.ident(result_symbol), slice_fields->len),
+					s.ident(decl.parameters.at(1).helios_symbol)
 				),
-				makeBox<code::IdentifierExpr>(
-					ctx, code::generatedOrigin(), decl.parameters.at(1).helios_symbol
-				)
-			));
-
-			// return __result;
-			body.emplace_back(makeBox<code::ReturnStmt>(
-				code::generatedOrigin(),
-				makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), result_symbol)
-			));
+				// return __result;
+				s.ret(s.ident(result_symbol)),
+			}.toCodeBlock();
 
 			return HOUTFunction(
 				code::generatedOrigin(),
 				&decl,
-				std::make_shared<const code::CodeBlock>(code::CodeBlock{
-					.statements = std::move(body),
-				})
+				std::make_shared<const code::CodeBlock>(std::move(body))
 			);
 		}
 		default: {
@@ -261,15 +226,13 @@ namespace compiler::helios {
 	Box<code::Expr> makeBoxAllocCall(
 		query::Context& ctx, code::ElementOrigin origin, Box<code::Expr> inner
 	) {
-		const auto pointee_type = inner->expression_type.getSymbolType().getType();
+		using namespace code::shorthands;
+		const Shorthand s{ ctx };
+		const auto      pointee_type = inner->expression_type.getSymbolType().getType();
 
-		std::vector<Box<code::Expr>> args;
-		args.emplace_back(std::move(inner));
-		return makeBox<code::CallExpr>(
-			ctx,
-			origin,
-			makeBox<code::IdentifierExpr>(ctx, origin, boxAllocSymForType(ctx, pointee_type)),
-			std::move(args)
-		);
+		// This helper preserves the caller-supplied `origin` rather than the builders' default
+		// `generatedOrigin()`, so both the callee identifier and the call itself carry it.
+		auto callee = withOrigin(origin, s.ident(boxAllocSymForType(ctx, pointee_type)));
+		return withOrigin(origin, s.call(std::move(callee), std::move(inner)));
 	}
 }
