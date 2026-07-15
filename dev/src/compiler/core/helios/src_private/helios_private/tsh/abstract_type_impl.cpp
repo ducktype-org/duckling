@@ -134,7 +134,8 @@ namespace compiler::tsh {
 					declared_specials.insert(elem.specialKind());
 			}
 
-			for (auto& elem: getDefaultTypeInterfaceForType(ctx, key).getElements()) {
+			const TypeInterface default_interface = getDefaultTypeInterfaceForType(ctx, key);
+			for (auto& elem: default_interface.getElements()) {
 				if (elem.specialKind() != InterfaceElement::SpecialKind::None
 				    && declared_specials.contains(elem.specialKind()))
 					continue;
