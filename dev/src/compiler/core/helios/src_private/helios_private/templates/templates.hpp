@@ -79,7 +79,7 @@ namespace compiler::helios::templates {
 		 * @note: We use raw pointer + custom deleter in this SharedBox to delete the PostponedData,
 		 * because we can't use unique_ptr inside atomic.
 		 */
-		mutable SharedBox<std::atomic<PostponedData*>> postponed_data;
+		mutable SharedBox<std::atomic<MRef<PostponedData>>> postponed_data;
 	};
 
 	/**

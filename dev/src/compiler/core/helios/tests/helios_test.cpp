@@ -3772,7 +3772,7 @@ private:
 			ASSERT_EQUAL(kind(baked_two), compiler::helios::SymbolKind::Namespace);
 		});
 	}
-	
+
 	void testOperatoriness() {
 		auto [_, root_scope] = getModule(fs::File(path("test_modules/operatoriness")));
 		using Operatoriness  = compiler::helios::HOUTFunctionDeclaration::Operatoriness;

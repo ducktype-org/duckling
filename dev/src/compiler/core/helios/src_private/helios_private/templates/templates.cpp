@@ -16,6 +16,12 @@
 
 namespace compiler::helios::templates {
 
+	static_assert(
+		std::remove_reference_t<decltype(*std::declval<TemplateBakePSTLinkedData>()
+	                                          .postponed_data.get())>::is_always_lock_free,
+		"postponed_data atomic should be always lock free"
+	);
+
 	base::Bit256 TemplateBakeKey::queryUnstablePerfectHash() const {
 		hashing::SHA256 hasher;
 		hashing::addToHash(hasher, template_sym_id.queryUnstablePerfectHash());
@@ -176,7 +182,7 @@ namespace compiler::helios::templates {
 						.pst_parent_element
 						= getPSTElementParent(ctx, template_statement).getAsLangElement(),
 						.postponed_data = makeSharedBox<
-							std::atomic<TemplateBakePSTLinkedData::PostponedData*>,
+							std::atomic<MRef<TemplateBakePSTLinkedData::PostponedData>>,
 							TemplateBakePSTLinkedData::PostponedDataDeleter>(nullptr) } } });
 
 			auto args = bakeTemplateArgumentsSymbols(
