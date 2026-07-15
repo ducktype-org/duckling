@@ -106,7 +106,6 @@ private:
 		);
 	}
 
-	
 	void testDefaultInitializers() {
 		using namespace compiler::helios;
 		using namespace compiler::helios::code;

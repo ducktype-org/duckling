@@ -704,7 +704,7 @@ private:
 		assertTrue(var_1 != var_4, "Variants with different underlying types should be different.");
 
 		const auto list_elem = query::entryPoint<QueryDynamicArrayType>({ st(int_16) });
-		const auto var_5     = query::entryPoint<QueryVariantType>({ { st(int_16), st(list_elem) } });
+		const auto var_5 = query::entryPoint<QueryVariantType>({ { st(int_16), st(list_elem) } });
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			assertTrue(

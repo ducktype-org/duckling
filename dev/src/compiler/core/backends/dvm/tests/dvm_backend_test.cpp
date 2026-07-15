@@ -213,9 +213,7 @@ private:
 	// Allocating, reallocating and freeing a dynamic char table exercises the DVM-backend
 	// `dvm_char_alloc`/`dvm_char_realloc`/`dvm_char_free` builtins lowered to `dynTableReAlloc`
 	// and `free`. Returns 42 when the written chars survive the round-trip.
-	void charAllocTest() {
-		runMultimoduleTest("char_alloc", ALL_CORE_MODULES, {}, {}, {}, 42);
-	}
+	void charAllocTest() { runMultimoduleTest("char_alloc", ALL_CORE_MODULES, {}, {}, {}, 42); }
 };
 
 
