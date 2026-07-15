@@ -48,6 +48,8 @@ pub fn configure_easy2<H>(
     handler.http_headers(headers)?;
     handler.url(&request.uri().to_string())?;
     set_http_method_on_curl(handler, request.method())?;
+    set_http_version_on_curl(handler, request.version())?;
+    handler.pipewait(true)?;
     Ok(())
 }
 
@@ -96,6 +98,22 @@ fn set_http_method_on_curl<H>(
         http::Method::POST => handler.post(true)?,
         http::Method::PUT => handler.put(true)?,
         _ => handler.custom_request(method.as_str())?,
+    };
+    Ok(())
+}
+
+/// Set an HTTP version on the given handler.
+fn set_http_version_on_curl<H>(
+    handler: &mut Easy2<H>,
+    version: http::Version,
+) -> Result<(), curl::Error> {
+    match version {
+        http::Version::HTTP_09 => handler.http_09_allowed(true)?,
+        http::Version::HTTP_10 => handler.http_version(curl::easy::HttpVersion::V10)?,
+        http::Version::HTTP_11 => handler.http_version(curl::easy::HttpVersion::V11)?,
+        http::Version::HTTP_2 => handler.http_version(curl::easy::HttpVersion::V2)?,
+        http::Version::HTTP_3 => handler.http_version(curl::easy::HttpVersion::V3)?,
+        _ => error!("unknown HTTP version: `{version:?}`, ignoring..."),
     };
     Ok(())
 }
