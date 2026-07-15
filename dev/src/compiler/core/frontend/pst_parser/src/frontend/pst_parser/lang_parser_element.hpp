@@ -111,7 +111,7 @@ namespace pst {
 		/**
 		 * @brief Needed for access to element path methods.
 		 */
-		template<std::derived_from<LangElement>, std::derived_from<LangElement>>
+		template<std::derived_from<LangElement>>
 		friend class PST;
 
 		/**

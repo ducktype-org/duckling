@@ -3435,7 +3435,7 @@ private:
 		};
 
 		auto main_file = query::entryPoint<compiler::frontend::QueryMainSourceFile>({ module });
-		base::Optional<CRef<pst::PST<>>> pst;
+		base::Optional<CRef<pst::ParsedPST<>>> pst;
 		query::utils::withContextDo([&](::query::Context& ctx) { pst = getFilePST(ctx, main_file); }
 		);
 		auto all_variables

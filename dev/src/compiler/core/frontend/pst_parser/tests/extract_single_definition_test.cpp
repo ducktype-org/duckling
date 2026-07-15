@@ -1,4 +1,4 @@
-#include <frontend/pst_parser/pst.hpp>
+#include <frontend/pst_parser/parsed_pst.hpp>
 #include <frontend/pst_parser/utility.hpp>
 
 #include <query_framework/entry/with_context_do.hpp>
@@ -23,11 +23,11 @@ public:
 
 private:
 	base::Optional<pst::AccessLocked<pst::Stmt>> extract(std::string_view code) {
-		auto pst = pst::PST<>::fromContents(code, pst::PSTType::Program);
+		auto pst = pst::ParsedPST<>::fromContents(code, pst::PSTType::Program);
 
 		base::Optional<pst::AccessLocked<pst::Stmt>> result;
 		query::utils::withContextDo([&](query::Context& ctx) {
-			result = pst::extractSingleDefinition(ctx, pst.getRootElement());
+			result = pst::extractSingleDefinition(ctx, pst->getRootElement());
 		});
 		return result;
 	}

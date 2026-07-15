@@ -1,7 +1,7 @@
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <frontend/pst_parser/elements/hierarchy/lists/all_lists.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
-#include <frontend/pst_parser/pst.hpp>
+#include <frontend/pst_parser/parsed_pst.hpp>
 
 #include <filesystem/file.hpp>
 #include <tester/tester.hpp>
@@ -29,8 +29,8 @@ class PSTBuilderTest: public tester::TestSuite {
 		std::string code;
 
 		bool operator()() {
-			auto parsed = pst::PST<Element>::fromContents(code, pst::PSTType::Program);
-			return parsed.getLogger()->good() == good;
+			auto parsed = pst::ParsedPST<Element>::fromContents(code, pst::PSTType::Program);
+			return parsed->getLogger()->good() == good;
 		}
 
 		[[nodiscard]]
@@ -68,27 +68,27 @@ public:
 
 private:
 	template<typename Element>
-	pst::PST<Element> manualSteps(const std::string& filename) {
+	auto manualSteps(const std::string& filename) {
 		auto file = tokenizer::makeTokenSource(fs::File(filename));
 		file->tokenize();
-		return { std::move(file), pst::PSTType::Program };
+		return pst::ParsedPST<Element>::fromFile(std::move(file), pst::PSTType::Program);
 	}
 
 	template<typename Element>
-	pst::PST<Element> fromContents(const std::string& filename) {
+	auto fromContents(const std::string& filename) {
 		std::string contents{ fs::File(filename).getContent().view().stringView() };
-		return pst::PST<Element>::fromContents(contents, pst::PSTType::Program);
+		return pst::ParsedPST<Element>::fromContents(contents, pst::PSTType::Program);
 	}
 
 	template<typename Element>
-	pst::PST<Element> fromFilename(const std::string& filename) {
-		return { fs::File(filename), pst::PSTType::Program };
+	auto fromFilename(const std::string& filename) {
+		return pst::ParsedPST<Element>::fromFile(fs::File(filename), pst::PSTType::Program);
 	}
 
 	template<typename Element>
-	std::string stringDprint(const pst::PST<Element>& pst) {
+	std::string stringDprint(CRef<pst::PST<Element>> pst) {
 		std::stringstream ss;
-		pst.dprint(ss);
+		pst->dprint(ss);
 		return ss.str();
 	}
 
@@ -96,14 +96,14 @@ private:
 	void singleEquivalency(const std::string& local_path) {
 		const std::string error        = "outputs from parsing on file " + local_path + "differ.";
 		const std::string filepath     = path(local_path);
-		pst::PST<Element> pst_manual   = manualSteps<Element>(filepath);
-		pst::PST<Element> pst_content  = fromContents<Element>(filepath);
-		pst::PST<Element> pst_filename = fromFilename<Element>(filepath);
-		assertTrue(pst_manual.getLogger()->good() == pst_content.getLogger()->good(), error);
-		assertTrue(pst_manual.getLogger()->good() == pst_filename.getLogger()->good(), error);
-		std::string manual_print   = stringDprint(pst_manual);
-		std::string content_print  = stringDprint(pst_content);
-		std::string filename_print = stringDprint(pst_filename);
+		auto pst_manual   = manualSteps<Element>(filepath);
+		auto pst_content  = fromContents<Element>(filepath);
+		auto pst_filename = fromFilename<Element>(filepath);
+		assertTrue(pst_manual->getLogger()->good() == pst_content->getLogger()->good(), error);
+		assertTrue(pst_manual->getLogger()->good() == pst_filename->getLogger()->good(), error);
+		std::string manual_print   = stringDprint<Element>(pst_manual.ref());
+		std::string content_print  = stringDprint<Element>(pst_content.ref());
+		std::string filename_print = stringDprint<Element>(pst_filename.ref());
 		assertTrue(manual_print == content_print, error);
 		assertTrue(manual_print == filename_print, error);
 	}

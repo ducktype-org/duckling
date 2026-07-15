@@ -176,7 +176,7 @@ namespace pst {
 		friend class PSTAutomatic;
 		friend class CloningUtils;
 
-		template<std::derived_from<LangElement>, std::derived_from<LangElement>>
+		template<std::derived_from<LangElement>>
 		friend class PST;
 
 		template<std::derived_from<LangElement>>

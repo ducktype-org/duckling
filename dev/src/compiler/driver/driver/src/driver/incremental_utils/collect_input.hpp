@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 #pragma once
 
-#include <frontend/pst_parser/pst.hpp>
+#include <frontend/pst_parser/parsed_pst.hpp>
 
 #include <query_framework/external/api.hpp>
 
@@ -12,7 +12,7 @@ namespace compiler::driver {
 	 * Collect PST access side inputs for root and all subtree elements.
 	 */
 	void collectQueryInputsFromPst(
-		CRef<pst::PST<>> pst_ref, std::vector<query::external::InputData>& out
+		CRef<pst::ParsedPST<>> pst_ref, std::vector<query::external::InputData>& out
 	);
 
 	/**

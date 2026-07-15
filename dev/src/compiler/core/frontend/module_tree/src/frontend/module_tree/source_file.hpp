@@ -4,7 +4,7 @@
 #include <frontend/module_tree/access.hpp>
 #include <frontend/module_tree/file_id.hpp>
 #include <frontend/module_tree/module_id.hpp>
-#include <frontend/pst_parser/pst.hpp>
+#include <frontend/pst_parser/parsed_pst.hpp>
 #include <frontend/pst_parser/pst_id.hpp>
 
 #include <base/collections/optional.hpp>
@@ -39,7 +39,7 @@ namespace compiler::frontend {
 		fs::File                                file;
 		base::StrID                             lang_file_name;
 		ModuleID                                linked_module;
-		base::Optional<pst::PST<>>              parse_tree;
+		MBox<pst::ParsedPST<>>              parse_tree;
 		base::Optional<usize> storage_handle;  //< Key to support removal from static storage
 		// this is a self pointer, it is necessary to get the FileID from the const SourceFile
 		base::Optional<FileID> file_id;
@@ -139,7 +139,7 @@ namespace compiler::frontend {
 		 * @return CRef<pst::PST>
 		 * @note The parse tree is cached after the first parse.
 		 */
-		CRef<pst::PST<>> getPST();
+		CRef<pst::ParsedPST<>> getPST();
 
 		/**
 		 * @brief Returns cached content for this SourceFile.

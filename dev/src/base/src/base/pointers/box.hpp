@@ -238,6 +238,11 @@ namespace base {
 
 		MBox& operator=(const MBox& other) = delete;
 
+		void reset() noexcept {
+			deleter.del(ptr);
+			ptr = nullptr;
+		}
+
 		/**
 		 * @brief Move assignment. The object previously pointed to by the MBox is deleted.
 		 *

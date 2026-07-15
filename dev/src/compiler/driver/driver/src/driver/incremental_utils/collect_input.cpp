@@ -74,7 +74,7 @@ namespace compiler::driver {
 	}
 
 	void collectQueryInputsFromPst(
-		CRef<pst::PST<>> pst_ref, std::vector<query::external::InputData>& out
+		CRef<pst::ParsedPST<>> pst_ref, std::vector<query::external::InputData>& out
 	) {
 		auto root = pst_ref->getRootElement();
 		if (auto maybe_root = root.illegalAccess()) {
