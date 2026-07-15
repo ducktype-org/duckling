@@ -242,7 +242,7 @@ namespace compiler::helios {
 		// First check that the type is even coercible to provide a invalid coercion error first.
 		const bool coercible
 			= ctx.query<tsh::QueryImplicitCoercibilityOnSymbolType>({ from_type, to });
-		if (!coercible) return InvalidCoercion{};
+		if (!coercible) return InvalidCoercion{ InvalidCoercionReason::IncompatibleTypes };
 
 		// A coercion that only rebinds a reference never copies, so it is always fine.
 		if (not requiresValueCopy(from_type.getRefKind(), to.getRefKind()))
@@ -254,9 +254,9 @@ namespace compiler::helios {
 		case PassingMethod::ImplicitMove:
 			return Coercion(from_type, to);
 		case PassingMethod::ExplicitCopyOrMove:
-			return TypeRequiresExplicitCopyMove{};
+			return InvalidCoercion{ InvalidCoercionReason::RequiresExplicitCopyMove };
 		case PassingMethod::NotCopyable:
-			return TypeNotCopyable{};
+			return InvalidCoercion{ InvalidCoercionReason::TypeNotCopyable };
 		}
 		CORE_UNREACHABLE();
 	}
@@ -282,78 +282,97 @@ namespace compiler::helios {
 	}
 
 	base::Optional<Box<code::Expr>> coerceFromBox(
-		query::Context&                                      ctx,
-		Box<code::Expr>                                      expr,
-		const tsh::SymbolType<>                              expected_type,
-		dia_int::StablePosition                              source_position,
-		base::Optional<std::function<void(query::Context&)>> log_error
+		query::Context&         ctx,
+		Box<code::Expr>         expr,
+		const tsh::SymbolType<> expected_type,
+		dia_int::StablePosition source_position,
+		CoercionErrorOverrides  error_overrides
 	) {
 		const tsh::SymbolType<> source_symbol_type = expr->expression_type.getSymbolType();
 		const auto coercion_qresult = canCoerce(ctx, expr->expression_type, expected_type);
 		if (coercion_qresult.hasFailed()) return {};
 
-		variant_match(coercion_qresult.valueOrThrow().getVariant()) {
-			variant_case(Coercion, coercion) { return coercion.coerce(ctx, std::move(expr)); }
-			variant_default {
-				logCoercionFailure(
-					ctx,
-					coercion_qresult,
-					source_symbol_type,
-					expected_type,
-					source_position,
-					std::move(log_error)
-				);
-				return {};
-			}
+		const CoercionResult& coercion_result = coercion_qresult.valueOrThrow();
+		if (coercion_result.isValid())
+			return coercion_result.getCoercion().coerce(ctx, std::move(expr));
+
+		logCoercionFailure(
+			ctx,
+			coercion_result.getInvalidReason(),
+			source_symbol_type,
+			expected_type,
+			source_position,
+			std::move(error_overrides)
+		);
+		return {};
+	}
+
+	Box<dia_int::MessageBase> makeDefaultCoercionErrorMessage(
+		query::Context&          ctx,
+		InvalidCoercionReason    reason,
+		const tsh::SymbolType<>& source_symbol_type,
+		const tsh::SymbolType<>& expected_type,
+		dia_int::StablePosition  source_position
+	) {
+		switch (reason) {
+		case InvalidCoercionReason::IncompatibleTypes:
+			return makeBox<IncompatibleTypesError>(
+				source_position,
+				makeBox<InteractiveType>(ctx, source_symbol_type),
+				makeBox<InteractiveType>(ctx, expected_type)
+			);
+		case InvalidCoercionReason::TypeNotCopyable:
+			return makeBox<dia_int::PlaceholderError>(
+				base::strConcat(
+					"Type `",
+					source_symbol_type.withReferenceKind(tsh::ReferenceKind::Direct).toString(),
+					"` cannot be copied."
+				),
+				source_position
+			);
+		case InvalidCoercionReason::RequiresExplicitCopyMove:
+			return makeBox<dia_int::PlaceholderError>(
+				base::strConcat(
+					"Cannot implicitly copy a value of non-trivially-copyable type `",
+					source_symbol_type.withReferenceKind(tsh::ReferenceKind::Direct).toString(),
+					"`. Use `copy` to copy it or `move` to move it."
+				),
+				source_position
+			);
+
+		default:
+			CORE_UNREACHABLE();
 		}
-		CORE_UNREACHABLE();
 	}
 
 	void logCoercionFailure(
-		query::Context&                                      ctx,
-		const CoercionQResult&                               coercion_qresult,
-		const tsh::SymbolType<>&                             source_symbol_type,
-		const tsh::SymbolType<>&                             expected_type,
-		dia_int::StablePosition                              source_position,
-		base::Optional<std::function<void(query::Context&)>> log_error
+		query::Context&          ctx,
+		InvalidCoercionReason    reason,
+		const tsh::SymbolType<>& source_symbol_type,
+		const tsh::SymbolType<>& expected_type,
+		dia_int::StablePosition  source_position,
+		CoercionErrorOverrides   error_overrides
 	) {
-		variant_match(coercion_qresult.valueOrThrow().getVariant()) {
-			variant_case(InvalidCoercion, _) {
-				if (log_error.has_value()) {
-					(*log_error)(ctx);
-				} else {
-					ctx.logInt(makeBox<IncompatibleTypesError>(
-						source_position,
-						makeBox<InteractiveType>(ctx, source_symbol_type),
-						makeBox<InteractiveType>(ctx, expected_type)
-					));
-				}
-				return;
+		// Use the caller's override if one is set, otherwise the default message.
+		const base::Optional<CoercionErrorOverrides::Logger>& override = [&]() -> const auto& {
+			switch (reason) {
+			case InvalidCoercionReason::IncompatibleTypes:
+				return error_overrides.incompatible_types;
+			case InvalidCoercionReason::TypeNotCopyable:
+				return error_overrides.type_not_copyable;
+			case InvalidCoercionReason::RequiresExplicitCopyMove:
+				return error_overrides.requires_explicit_copy_move;
+			default:
+				CORE_UNREACHABLE();
 			}
-			variant_case(TypeNotCopyable, _) {
-				ctx.logInt(makeBox<dia_int::PlaceholderError>(
-					base::strConcat(
-						"Type `",
-						source_symbol_type.withReferenceKind(tsh::ReferenceKind::Direct).toString(),
-						"` cannot be copied."
-					),
-					source_position
-				));
-				return;
-			}
-			variant_case(TypeRequiresExplicitCopyMove, _) {
-				ctx.logInt(makeBox<dia_int::PlaceholderError>(
-					base::strConcat(
-						"Cannot implicitly copy a value of non-trivially-copyable type `",
-						source_symbol_type.withReferenceKind(tsh::ReferenceKind::Direct).toString(),
-						"`. Use `copy` to copy it or `move` to move it."
-					),
-					source_position
-				));
-				return;
-			}
-			variant_default { CORE_PANIC("Unhandled coercion result variant."); }
+		}();
+
+		if (override.has_value()) {
+			(*override)(ctx);
+			return;
 		}
-		return;
+		ctx.logInt(makeDefaultCoercionErrorMessage(
+			ctx, reason, source_symbol_type, expected_type, source_position
+		));
 	}
 }
