@@ -4,6 +4,7 @@
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/module_tree/source_file.hpp>
+#include <frontend/packages/packages.hpp>
 #include <frontend/pst_parser/pst_query/pst_access_side_input.hpp>
 #include <frontend/pst_parser/test_utils/pst_test_utils.hpp>
 #include <global_state/packages.hpp>
@@ -196,7 +197,11 @@ namespace compiler::driver {
 			query::external::getMetadataFromAllPrevNodes<frontend::metadata_ModuleLookup>()
 		);
 
-		return collectInputDataFromGlobalPackagesImpl(lookups_map);
+		auto out = collectInputDataFromGlobalPackagesImpl(lookups_map);
+		auto package_inputs
+			= frontend::packages::collectPackageInputData(global_state::getPackages(), true);
+		out.insert(out.end(), package_inputs.begin(), package_inputs.end());
+		return out;
 	}
 
 	std::vector<query::external::InputData> collectInputDataFromGlobalPackagesFromCurrentMetadata() {
@@ -204,7 +209,11 @@ namespace compiler::driver {
 			query::external::getMetadataFromAllCurrentNodes<frontend::metadata_ModuleLookup>()
 		);
 
-		return collectInputDataFromGlobalPackagesImpl(lookups_map);
+		auto out = collectInputDataFromGlobalPackagesImpl(lookups_map);
+		auto package_inputs
+			= frontend::packages::collectPackageInputData(global_state::getPackages(), false);
+		out.insert(out.end(), package_inputs.begin(), package_inputs.end());
+		return out;
 	}
 
 }  // namespace compiler::driver

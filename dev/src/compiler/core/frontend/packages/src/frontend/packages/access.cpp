@@ -177,4 +177,57 @@ namespace compiler::frontend::packages {
 		return PackageAccessLocked(*m_dependency_package_id);
 	}
 
+	std::vector<query::external::InputData> collectPackageInputData(
+		const std::vector<PackageInfo>& packages, bool from_previous_metadata
+	) {
+		std::vector<query::external::InputData> out;
+
+		for (const auto& package: packages) {
+			out.emplace_back(
+				QueryPackageSideInput::getID(),
+				KeyOf_PackageSideInput{ package.getPackageHash() }.queryStablePerfectHash()
+			);
+			out.emplace_back(
+				QueryPackageDependencyCountSideInput::getID(),
+				KeyOf_PackageDependencyCountSideInput::computeHash(
+					package.getPackageID(), package.getDependencies().illegalAccess().size()
+				)
+					.queryStablePerfectHash()
+			);
+		}
+
+		auto lookups
+			= from_previous_metadata
+		        ? query::external::getMetadataFromAllPrevNodes<metadata_PackageDependencyAliasLookup>(
+				  )
+		        : query::external::getMetadataFromAllCurrentNodes<
+					  metadata_PackageDependencyAliasLookup>();
+
+		for (const auto& lookup: lookups) {
+			// Metadata may be attached to other query types as well.
+			if (lookup.input_data.q_id != QueryPackageDependencyAliasSideInput::getID()) continue;
+			const auto& key = lookup.value->value;
+
+			const PackageInfo* owner = nullptr;
+			for (const auto& package: packages)
+				if (package.getPackageHash() == key.package_hash) {
+					owner = &package;
+					break;
+				}
+			// Owner package no longer exists -> the lookup node stays red.
+			if (owner == nullptr) continue;
+
+			auto       target = owner->getPackageDependencyByAlias(key.alias).illegalAccess();
+			const bool found  = target.has_value();
+			if (found != key.found) continue;
+			if (found && target.value().illegalAccess().getID() != key.target_package_id.value())
+				continue;
+
+			// Lookup result is unchanged -> reuse the stored InputData.
+			out.emplace_back(lookup.input_data);
+		}
+
+		return out;
+	}
+
 }  // namespace compiler::frontend::packages

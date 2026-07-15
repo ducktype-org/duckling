@@ -10,6 +10,7 @@
 
 #include <filesystem/file_path.hpp>
 #include <hashing/component_hash.hpp>
+#include <query_framework/external/api.hpp>
 #include <string_id/string_id.hpp>
 
 #include <json/diagnostics.hpp>
@@ -183,6 +184,20 @@ namespace compiler::frontend::packages {
 	 */
 	void filterUndeclaredDependencies(
 		std::vector<RawPackageInfo>& packages_info, const DiagnosticReporter& report
+	);
+
+	/**
+	 * @brief Collect InputData for all package-related side inputs of @p packages.
+	 *
+	 * Produces QueryPackageSideInput and QueryPackageDependencyCountSideInput entries for every
+	 * package, plus QueryPackageDependencyAliasSideInput entries re-created from stored
+	 * metadata_PackageDependencyAliasLookup for lookups whose result is unchanged.
+	 *
+	 * @param from_previous_metadata If true, alias-lookup metadata is read from the previous
+	 * compilation's nodes (driver init); otherwise from the current graph's nodes.
+	 */
+	std::vector<query::external::InputData> collectPackageInputData(
+		const std::vector<PackageInfo>& packages, bool from_previous_metadata
 	);
 
 }  // namespace compiler::frontend::packages
