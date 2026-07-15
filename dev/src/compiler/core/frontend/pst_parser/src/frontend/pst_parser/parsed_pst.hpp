@@ -20,6 +20,9 @@ namespace pst {
 		std::vector<ImportType> extractState(Box<LangParserState>);
 
 		void finalizeParsing(Ref<LangParserState>);
+
+		template<typename T>
+		class ConstructorTemplateInference {};
 	}
 
 	/**
@@ -30,21 +33,13 @@ namespace pst {
 	 *
 	 * @tparam Element Root Element to parse.
 	 */
-	template<
-		std::derived_from<LangElement> Element = TopLevel,
-		std::derived_from<LangElement> Parser  = Element>
+	template<std::derived_from<LangElement> Element = TopLevel>
 	class ParsedPST final: public PST<Element> {
 	public:
 		/**
 		 * @brief Checks if an element is pars-able using given arguments.
 		 */
-		constexpr static bool PARSE_ABLE_EMPTY
-			= tpc::ParseAbleElement<Element, Parser, LangParserState>;
-
-		/**
-		 * @brief Checks if an element is pars-able using given arguments.
-		 */
-		template<typename... Args>
+		template<std::derived_from<LangElement> Parser, typename... Args>
 		constexpr static bool PARSE_ABLE
 			= tpc::ParseAbleElement<Element, Parser, LangParserState, Args...>;
 
@@ -81,9 +76,9 @@ namespace pst {
 		/**
 		 * @note Requires that the file was successfully tokenized.
 		 */
-		template<typename... Args>
+		template<std::derived_from<LangElement> Parser, typename... Args>
 		void parse(Box<LangParserContext>&& parsing_ctx, Args&&... args)
-			requires PARSE_ABLE<Args...> {
+			requires PARSE_ABLE<Parser, Args...> {
 			time_stats::TrackCategoryTime track_time(time_stats::TimeCategories::PSTConstruction);
 
 			const lexer::TokenData& token_data = file->getTokenData();
@@ -103,15 +98,15 @@ namespace pst {
 			imports = internal::extractState(std::move(state_box));
 		}
 
-		template<typename... Args>
+		template<typename Parser, typename... Args>
 		void parseGenerated(Args&&... args) {
-			parse(std::forward<Args>(args)...);
+			parse<Parser>(std::forward<Args>(args)...);
 			PST<Element>::finishGeneratedPST();
 		}
 
-		template<typename... Args>
+		template<typename Parser, typename... Args>
 		void parseInput(Args&&... args) {
-			parse(std::forward<Args>(args)...);
+			parse<Parser>(std::forward<Args>(args)...);
 			PST<Element>::finishInputPST();
 		}
 
@@ -131,68 +126,82 @@ namespace pst {
 			CORE_UNREACHABLE();
 		}
 
-	public:
-		// These constructors shouldn't be used but they have to be visible to use makeBox
-		// @TODO: #1364 might change the status so that it's possible to make them private.
+		/**
+		 * @brief A custom makeBox with extended visibility.
+		 */
+		template<typename Parser, typename... Args>
+		static auto makeParsedPstBox(Args&&... args) {
+			return Box<ParsedPST>::fromPointer(new ParsedPST(
+				internal::ConstructorTemplateInference<Parser>(), std::forward<Args>(args)...
+			));
+		}
 
 		/**
 		 * @brief Construct a new Pst from text content
 		 */
-		template<typename... Args>
+		template<typename Parser, typename... Args>
 		explicit ParsedPST(
+			internal::ConstructorTemplateInference<Parser>,
 			std::string_view         content,
 			Box<LangParserContext>&& parsing_ctx,
 			hashing::ComponentHash   hash_ctx = {},
 			Args&&... args
-		) requires PARSE_ABLE<Args...>:
+		) requires PARSE_ABLE<Parser, Args...>:
 			  PST<Element>(std::move(hash_ctx)),
 			  file(tokenizer::makeTokenSource(fs::FileManager::createRandomVirtualFile(content))) {
 			if (!file->tokenize()) return;
-			parseInput(std::move(parsing_ctx), std::forward<Args>(args)...);
+			parseInput<Parser>(std::move(parsing_ctx), std::forward<Args>(args)...);
 		}
 
 		/**
 		 * @brief Construct a new Pst from expanded text
 		 */
-		template<typename... Args>
+		template<typename Parser, typename... Args>
 		explicit ParsedPST(
+			internal::ConstructorTemplateInference<Parser>,
 			dia_int::StablePosition pos,
 			std::string_view        content,
 			Box<LangParserContext>  parsing_ctx,
 			hashing::ComponentHash  hash_ctx = {},
 			Args&&... args
-		) requires PARSE_ABLE<Args...>
+		) requires PARSE_ABLE<Parser, Args...>
 			  : PST<Element>(std::move(hash_ctx)), file(tokenizer::makeTokenSource(pos, content)) {
 			if (!file->tokenize()) return;
-			parseGenerated(std::move(parsing_ctx), std::forward<Args>(args)...);
+			parseGenerated<Parser>(std::move(parsing_ctx), std::forward<Args>(args)...);
 		}
 
 		/**
 		 * @brief Construct a new Pst from tokenized file
 		 */
+		template<typename Parser>
 		explicit ParsedPST(
+			internal::ConstructorTemplateInference<Parser>,
 			Box<tokenizer::TokenSource> file,
 			PSTContext&&                pst_ctx,
 			hashing::ComponentHash      hash_ctx = {}
 		)
 
-			requires PARSE_ABLE_EMPTY
+			requires PARSE_ABLE<Parser>
 			  : PST<Element>(std::move(hash_ctx)), file(std::move(file)) {
 			if (getLogger()->bad()) return;
-			parseInput(makeParserContext(std::move(pst_ctx)));
+			parseInput<Parser>(makeParserContext(std::move(pst_ctx)));
 		}
 
 		/**
 		 * @brief Construct a new Pst from file path
 		 */
+		template<typename Parser>
 		explicit ParsedPST(
-			const fs::File& path, PSTContext&& pst_ctx, hashing::ComponentHash hash_ctx = {}
+			internal::ConstructorTemplateInference<Parser>,
+			const fs::File&        path,
+			PSTContext&&           pst_ctx,
+			hashing::ComponentHash hash_ctx = {}
 		)
 
-			requires PARSE_ABLE_EMPTY
+			requires PARSE_ABLE<Parser>
 			  : PST<Element>(std::move(hash_ctx)), file(tokenizer::makeTokenSource(path)) {
 			if (!file->tokenize()) return;
-			parseInput(makeParserContext(std::move(pst_ctx)));
+			parseInput<Parser>(makeParserContext(std::move(pst_ctx)));
 		}
 
 	public:
@@ -200,14 +209,14 @@ namespace pst {
 		|    PUBLIC METHODS    |
 		\**********************/
 
-		template<typename... Args>
+		template<typename Parser = Element, typename... Args>
 		static Box<ParsedPST> fromContents(
 			std::string_view       contents,
 			PSTContext&&           pst_ctx,
 			hashing::ComponentHash hash_ctx = {},
 			Args&&... args
-		) requires PARSE_ABLE<Args...> {
-			return makeBox<ParsedPST>(
+		) requires PARSE_ABLE<Parser, Args...> {
+			return makeParsedPstBox<Parser>(
 				contents,
 				makeParserContext(std::move(pst_ctx)),
 				std::move(hash_ctx),
@@ -215,34 +224,37 @@ namespace pst {
 			);
 		}
 
-		template<typename... Args>
+		template<typename Parser = Element, typename... Args>
 		static Box<ParsedPST> fromExpand(
 			dia_int::StablePosition pos,
 			std::string_view        contents,
 			Box<LangParserContext>  parsing_ctx,
 			hashing::ComponentHash  hash_ctx = {},
 			Args&&... args
-		) requires PARSE_ABLE<Args...> {
-			auto out = makeBox<ParsedPST>(
+		) requires PARSE_ABLE<Parser, Args...> {
+			auto out = makeParsedPstBox<Parser>(
 				pos, contents, std::move(parsing_ctx), std::move(hash_ctx), std::forward<Args>(args)...
 			);
 			CORE_ASSERT(out->imports.size() == 0, "Imports are not supported in expands");
 			return out;
 		}
 
+		template<typename Parser = Element>
 		static Box<ParsedPST> fromFile(
 			Box<tokenizer::TokenSource>&& file,
 			PSTContext&&                  pst_ctx,
 			hashing::ComponentHash        hash_ctx = {}
-		) requires PARSE_ABLE_EMPTY {
-			auto out = makeBox<ParsedPST>(std::move(file), std::move(pst_ctx), std::move(hash_ctx));
+		) requires PARSE_ABLE<Parser> {
+			auto out
+				= makeParsedPstBox<Parser>(std::move(file), std::move(pst_ctx), std::move(hash_ctx));
 			return out;
 		}
 
+		template<typename Parser = Element>
 		static Box<ParsedPST> fromFile(
 			const fs::File& path, PSTContext&& pst_ctx, hashing::ComponentHash hash_ctx = {}
-		) requires PARSE_ABLE_EMPTY {
-			auto out = makeBox<ParsedPST>(path, std::move(pst_ctx), std::move(hash_ctx));
+		) requires PARSE_ABLE<Parser> {
+			auto out = makeParsedPstBox<Parser>(path, std::move(pst_ctx), std::move(hash_ctx));
 			return out;
 		}
 

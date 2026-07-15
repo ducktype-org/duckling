@@ -1,4 +1,4 @@
-#include <frontend/pst_parser/pst.hpp>
+#include <frontend/pst_parser/parsed_pst.hpp>
 
 #include <base/extend_cpp/variant_match.hpp>
 
@@ -119,17 +119,17 @@ int main(int argc, char** argv) {
 		return 1;
 	}
 	fs::File file(argv[1]);
-	pst::PST pst(file, pst::PSTType::Program);
+	auto     pst = pst::ParsedPST<>::fromFile(file, pst::PSTType::Program);
 
-	if (pst.getLogger()->bad()) {
-		pst.getLogger()->dumpLog(false, std::cerr);
+	if (pst->getLogger()->bad()) {
+		pst->getLogger()->dumpLog(false, std::cerr);
 		std::cerr << "\nThere are errors.\n";
-		pst.dprint(std::cerr);
+		pst->dprint(std::cerr);
 		std::cerr << "\n";
 	}
-	if (pst.getRootElement().illegalAccess()) {
+	if (pst->getRootElement().illegalAccess()) {
 		Handler hdl("graph");
-		dotElement(hdl, pst.getRootElement().illegalAccess().value());
+		dotElement(hdl, pst->getRootElement().illegalAccess().value());
 		hdl.writeToSVG(argv[2]);
 	}
 }
