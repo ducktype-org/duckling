@@ -19,6 +19,7 @@ console = "0.16.3"
 curl = "0.4.49"
 dialoguer = "0.12.0"
 flate2 = { version = "1.1.9", default-features = false, features = ["zlib-rs"] }
+futures = "0.3.32"
 git2 = "0.20.4"
 http = "1.4.2"
 indicatif = "0.18.4"
