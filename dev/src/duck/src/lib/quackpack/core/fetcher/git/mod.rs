@@ -55,7 +55,7 @@ impl<'duck> GitClient<'duck> {
                     .console()
                     .info("retrying with a full clone instead of shallow clone")?;
                 // We've failed to clone a repository, try to fallback to a non-shallow clone.
-                // TODO: #3146 Change this to only retry clone if the error could be from unsupporting shallow clone.
+                // @TODO: #3146 Change this to only retry clone if the error could be from unsupporting shallow clone.
                 // Exceeding authentications limit return ErrorCode::GeneralError.
                 if !Self::can_shallow_clone(url, reference) {
                     return Err(e.into());
