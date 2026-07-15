@@ -1,9 +1,7 @@
 #include "query_hout_of_expr.hpp"
 
 #include "coercions.hpp"
-#include "errors.hpp"
 #include "function_calls/call_processing.hpp"
-#include "helios/hout/elements/stmt.hpp"
 #include "hout_of_subexpr.hpp"
 #include "numeric_literals.hpp"
 
@@ -37,8 +35,6 @@
 #include <query_framework/query_result.hpp>
 #include <query_framework/standard_query/query_cache_macros.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
-
-#include <unordered_set>
 
 namespace compiler::helios::code {
 
