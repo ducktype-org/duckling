@@ -126,6 +126,7 @@ impl<'duck> GitClient<'duck> {
                 let mut err = git2::Error::from_str("too many authentication attempts; make sure the repository supports chosen authentication method");
                 err.set_code(git2::ErrorCode::Auth);
                 err.set_class(git2::ErrorClass::Callback);
+                return Err(err);
             }
             if cred_types.contains(CredentialType::DEFAULT) {
                 Cred::default()
