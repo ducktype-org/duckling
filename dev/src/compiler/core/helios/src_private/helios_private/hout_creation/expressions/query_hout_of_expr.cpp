@@ -1124,10 +1124,10 @@ namespace compiler::helios {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryHoutOfExpr)
 
 	query::QResult<BoxOrCRef<code::Expr>> getHoutOfExprWithExpectedType(
-		query::Context&                                      ctx,
-		const pst::GenericPSTQueryKey<pst::ExprElement>&     pst_expr,
-		const tsh::SymbolType<>                              expected_type,
-		base::Optional<std::function<void(query::Context&)>> log_error
+		query::Context&                                  ctx,
+		const pst::GenericPSTQueryKey<pst::ExprElement>& pst_expr,
+		const tsh::SymbolType<>                          expected_type,
+		CoercionErrorOverrides                           error_overrides
 	) {
 		auto expr_hout_qresult = ctx.query<QueryHoutOfExpr>({ pst_expr.element });
 
@@ -1138,35 +1138,33 @@ namespace compiler::helios {
 		const auto coercion_qresult   = canCoerce(ctx, expr_hout->expression_type, expected_type);
 		if (coercion_qresult.hasFailed()) return query::Failed();
 
-		variant_match(coercion_qresult.valueOrThrow().getVariant()) {
-			variant_case(Coercion, coercion) { return coercion.coerceFromRef(ctx, expr_hout); }
-			variant_default {
-				logCoercionFailure(
-					ctx,
-					coercion_qresult,
-					source_symbol_type,
-					expected_type,
-					source_position,
-					std::move(log_error)
-				);
-				return query::Failed();
-			}
-		}
-		CORE_UNREACHABLE();
+		const auto& coercion_result = coercion_qresult.valueOrThrow();
+		if (coercion_result.isValid())
+			return coercion_result.getCoercion().coerceFromRef(ctx, expr_hout);
+
+		logCoercionFailure(
+			ctx,
+			coercion_result.getInvalidReason(),
+			source_symbol_type,
+			expected_type,
+			source_position,
+			std::move(error_overrides)
+		);
+		return query::Failed();
 	}
 
 	query::QResult<Box<code::Expr>> code::subExprFromPSTWithType(
-		query::Context&                                      ctx,
-		pst::AccessLocked<pst::ExprElement>                  element,
-		tsh::SymbolType<>                                    expected_type,
-		base::Optional<std::function<void(query::Context&)>> log_error
+		query::Context&                     ctx,
+		pst::AccessLocked<pst::ExprElement> element,
+		tsh::SymbolType<>                   expected_type,
+		helios::CoercionErrorOverrides      error_overrides
 	) {
 		auto expr_hout_qresult = code::subExprFromPST(ctx, element);
 		UNPACK_QRESULT_MOVE(auto expr_hout =, expr_hout_qresult);
 		const auto source_position = element.unlock(ctx)->getStablePosition();
 
 		auto maybe_coerced = coerceFromBox(
-			ctx, std::move(expr_hout), expected_type, source_position, std::move(log_error)
+			ctx, std::move(expr_hout), expected_type, source_position, std::move(error_overrides)
 		);
 		if (maybe_coerced.has_value()) return std::move(maybe_coerced.value());
 		return query::Failed();
