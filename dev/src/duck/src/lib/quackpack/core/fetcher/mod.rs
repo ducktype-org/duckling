@@ -179,6 +179,7 @@ impl<'duck> Fetcher<'duck> {
     ) -> QuackResult<types::GitCloneResponse> {
         self.git_client
             .clone_blocking(url, reference, destination_directory)
+            .context(format!("failed to clone the repository at {url}"))
     }
 
     /// Same as [`clone_from_git_to_directory`](Self::clone_from_git_to_directory), but a target directory is a temporary
@@ -193,9 +194,7 @@ impl<'duck> Fetcher<'duck> {
         reference: GitReference,
     ) -> QuackResult<(types::GitCloneResponse, TempDir)> {
         let dir = tempfile::tempdir().context("failed to create a temporary directory")?;
-        let result = self
-            .clone_from_git_to_directory(url, reference, dir.path())
-            .context(format!("failed to clone the repository at {url}"))?;
+        let result = self.clone_from_git_to_directory(url, reference, dir.path())?;
         Ok((result, dir))
     }
 
