@@ -31,6 +31,8 @@
 
 #include <vm/bytecode/opcode_args.hpp>
 
+#include <memory>
+
 // Useful for turning a name to a properly qualified type name in X-macros.
 #define VM_INSTR_FROM_NAME(name)  vm::code::instructions::Op_##name
 #define VM_OPCODE_FROM_NAME(name) vm::code::OpCode::Op_##name
@@ -71,12 +73,10 @@ namespace vm::code {
 #define ARG_DECLARE(type, name) type name;
 #define ARG_COMPARE(type, name) name == other.name&&
 #define ARG_TYPE(type, name)    type
-#define ARG_NAME(type, name)    name
 #define ARG_PARAM(type, name)   type name,
 #define ARG_INIT_LIST(type, name) \
 	, name { std::move(name) }
-#define ARG_ALIAS(instr_name, arg_type_name) &alts.op_##instr_name.ARG_NAME arg_type_name,
-#define ARG_TYPE_LIST(type, name)            , type
+#define ARG_TYPE_LIST(type, name) , type
 
 		// Concrete instruction type
 		// Be careful when editing: notice that many things have to be separately defined
@@ -147,13 +147,10 @@ namespace vm::code {
 	/// Handmade variant of all concrete instructions with helper accessors.
 	// Be careful when editing: notice that many things have to be separately defined
 	// for `Comment` as it's not an instruction defined in the definition file.
+	// Per-instruction member definitions live in `instructions.cpp` — keeping them
+	// (and the repeated `instruction_definitions.hpp` expansions) out of this header
+	// saves a lot of memory and time in every including TU.
 	class Instruction final {
-		// Sanity check for better errors.
-#define HANDLE_INSTR(name) static_assert(internal::VeryTrivial<VM_INSTR_FROM_NAME(name)>);
-#include "instruction_definitions.hpp"
-#undef HANDLE_INSTR
-		static_assert(internal::VeryTrivial<instructions::Comment>);
-
 	public:
 		Instruction()                              = delete;
 		Instruction(const Instruction&)            = default;
@@ -161,36 +158,30 @@ namespace vm::code {
 		Instruction& operator=(const Instruction&) = default;
 		Instruction& operator=(Instruction&&)      = default;
 
-		// Constructors from concrete instructions
-#define HANDLE_INSTR_ARGS(name, ...)                        \
-	Instruction(const VM_INSTR_FROM_NAME(name) & concrete): \
-		  code{ VM_OPCODE_FROM_NAME(name) },                \
-		  alts{ .op_##name = concrete } {}
-#include "instruction_definitions.hpp"
-#undef HANDLE_INSTR_ARGS
-
-		Instruction(const instructions::Comment& concrete):
-			  code{ OpCode::Comment },
-			  alts{ .comment = concrete } {}
+		/// Constructor from any concrete instruction (including `instructions::Comment`).
+		template<IsInstruction T>
+		Instruction(const T& concrete): code{ T::OPCODE } {
+			static_assert(internal::VeryTrivial<T>);
+			// A placement-new is how one activates a union member without naming it.
+			std::construct_at(reinterpret_cast<T*>(&alts), concrete);
+		}
 
 		[[nodiscard]] OpCode opcode() const { return code; }
 
-		[[nodiscard]] base::StrID name() const {
-			static std::array<base::StrID, INSTR_COUNT> map = {
-#define HANDLE_INSTR(name) base::StrID(#name),
-#include "instruction_definitions.hpp"
-#undef HANDLE_INSTR
-				base::StrID("[comment]")
-			};
-			return map.at(std::to_underlying(opcode()));
+		[[nodiscard]] base::StrID name() const;
+
+		template<IsInstruction T>
+		[[nodiscard]] base::Optional<Ref<T>> getMaybe() {
+			if (opcode() != T::OPCODE) return std::nullopt;
+			// A union is pointer-interconvertible with each of its members.
+			return reinterpret_cast<T*>(&alts);
 		}
 
-		// Specializations are outside the class, as required by gcc
 		template<IsInstruction T>
-		[[nodiscard]] base::Optional<Ref<T>> getMaybe();
-
-		template<IsInstruction T>
-		[[nodiscard]] base::Optional<CRef<T>> getMaybe() const;
+		[[nodiscard]] base::Optional<CRef<T>> getMaybe() const {
+			if (opcode() != T::OPCODE) return std::nullopt;
+			return reinterpret_cast<const T*>(&alts);
+		}
 
 		template<IsInstruction T>
 		[[nodiscard]] T& get() {
@@ -221,26 +212,16 @@ namespace vm::code {
 		}
 
 		/// View of instruction arguments for generic operations.
-		[[nodiscard]] std::vector<opargs::OpCodeArgCRef> args() const {
-			switch (opcode()) {
-#define HANDLE_INSTR_ARGS(name, ...)                           \
-	case VM_OPCODE_FROM_NAME(name):                            \
-		return { FOR_EACH_ARG(ARG_ALIAS, name, __VA_ARGS__) }; \
-		break;
-#include "instruction_definitions.hpp"
-#undef HANDLE_INSTR_ARGS
-			case OpCode::Comment:
-				return {};
-				break;
-			}
-			CORE_UNREACHABLE();
-		}
+		[[nodiscard]] std::vector<opargs::OpCodeArgCRef> args() const;
 
 
 	private:
 		OpCode code;
 
 		union Alts {
+			// No member is active until the Instruction constructor placement-news one.
+			Alts() {}
+
 #define HANDLE_INSTR(name) VM_INSTR_FROM_NAME(name) op_##name;
 #include "instruction_definitions.hpp"
 #undef HANDLE_INSTR
@@ -248,67 +229,13 @@ namespace vm::code {
 		} alts;
 	};
 
-#define HANDLE_INSTR(name)                                                                       \
-	template<>                                                                                   \
-	[[nodiscard]] inline base::Optional<Ref<VM_INSTR_FROM_NAME(name)>> Instruction::getMaybe() { \
-		if (opcode() == VM_OPCODE_FROM_NAME(name)) {                                             \
-			return &alts.op_##name;                                                              \
-		} else {                                                                                 \
-			return std::nullopt;                                                                 \
-		}                                                                                        \
-	}                                                                                            \
-	template<>                                                                                   \
-	[[nodiscard]] inline base::Optional<CRef<VM_INSTR_FROM_NAME(name)>> Instruction::getMaybe()  \
-		const {                                                                                  \
-		if (opcode() == VM_OPCODE_FROM_NAME(name)) {                                             \
-			return &alts.op_##name;                                                              \
-		} else {                                                                                 \
-			return std::nullopt;                                                                 \
-		}                                                                                        \
-	}
-#include "instruction_definitions.hpp"
-#undef HANDLE_INSTR
-
-	template<>
-	[[nodiscard]] inline base::Optional<Ref<instructions::Comment>> Instruction::getMaybe() {
-		if (opcode() == OpCode::Comment)
-			return &alts.comment;
-		else
-			return std::nullopt;
-	}
-
-	template<>
-	[[nodiscard]] inline base::Optional<CRef<instructions::Comment>> Instruction::getMaybe() const {
-		if (opcode() == OpCode::Comment)
-			return &alts.comment;
-		else
-			return std::nullopt;
-	}
-
-	constexpr bool operator==(const Instruction& a, const Instruction& b) {
-		if (a.opcode() != b.opcode()) return false;
-
-		switch (a.opcode()) {
-#define HANDLE_INSTR(name)          \
-	case VM_OPCODE_FROM_NAME(name): \
-		return a.get<VM_INSTR_FROM_NAME(name)>() == b.get<VM_INSTR_FROM_NAME(name)>();
-			break;
-#include "instruction_definitions.hpp"
-#undef HANDLE_INSTR
-		case OpCode::Comment:
-			return a.get<instructions::Comment>() == b.get<instructions::Comment>();
-			break;
-		}
-		CORE_UNREACHABLE();
-	}
+	[[nodiscard]] bool operator==(const Instruction& a, const Instruction& b);
 
 #undef ARG_DECLARE
 #undef ARG_COMPARE
 #undef ARG_TYPE
-#undef ARG_NAME
 #undef ARG_PARAM
 #undef ARG_INIT_LIST
-#undef ARG_ALIAS
 #undef ARG_TYPE_LIST
 }
 
