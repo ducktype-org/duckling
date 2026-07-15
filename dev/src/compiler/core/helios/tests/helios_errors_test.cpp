@@ -4,6 +4,7 @@
 #include <frontend/module_tree/module_tree.hpp>
 #include <helios/queries/queries.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
+#include <driver/test_utils.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/types.hpp>
 #include <helios_private/errors/errors.hpp>
@@ -45,6 +46,14 @@ public:
 
 		TESTER_ADD_TEST(testErrorBadExpr);
 		TESTER_ADD_TEST(testDiagnosticErrorsCorrectness);
+	}
+protected:
+	void beforeAll() override {
+		
+		fs::FilePath artifacts_path = fs::FileManager::createRandomTempDirectory().getFilePath();
+		auto init_result
+			= compiler::driver::test_utils::initializeCompilerForTests({}, artifacts_path);
+		assertTrue(init_result.status().isOk(), "Compiler initialization failed");
 	}
 
 private:
@@ -301,7 +310,7 @@ private:
 					return obj.method("abc");
 				}
 			)",
-				{ " Call failed due to ambiguous overload resolution." },
+				{ "Call failed due to ambiguous overload resolution." },
 				1
 			);
 

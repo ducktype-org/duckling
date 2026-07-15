@@ -42,7 +42,6 @@ public:
 		TESTER_ADD_TEST(simpleInts);
 		TESTER_ADD_TEST(simpleFloats);
 		TESTER_ADD_TEST(simplePointer);
-		TESTER_ADD_TEST(simpleString);
 		TESTER_ADD_TEST(simpleDynamicArray);
 		TESTER_ADD_TEST(simpleStaticArray);
 		TESTER_ADD_TEST(simpleTuple);
@@ -412,36 +411,6 @@ private:
 	}
 
 	/**
-	 * Test that there is only one string type, and that it is correctly cast.
-	 */
-	void simpleString() {
-		const auto str_1 = getStringType();
-		const auto str_2 = getStringType();
-
-		assertTrue(str_1 == str_2, "There should only be one String type.");
-
-		assertTrue(str_1.getKind() == String, "String type should have kind String.");
-
-		const AbstractType       type_str = str_1;
-		const StringAbstractType str_3    = type_str;
-		assertTrue(str_3.getKind() == String, "String should survive casting.");
-
-		query::utils::withContextDo([&](query::Context& ctx) {
-			assertFalse(str_1.hasNoOpDestructor(ctx), "String should not have no op destructor.");
-
-			const auto string_st = st(str_1);
-			assertTrue(
-				string_st.isDefaultConstructible(ctx), "String should be default constructible."
-			);
-			assertTrue(
-				string_st.isTriviallyZeroInitializable(ctx),
-				"String should be trivially zero-initializable."
-			);
-			assertTrue(string_st.isCopyable(ctx), "String should be copyable.");
-		});
-	}
-
-	/**
 	 * Test that dynamic array with different elements are different types
 	 * and that they are correctly cast.
 	 */
@@ -549,16 +518,16 @@ private:
 			"StaticArrays with element with different mutability should be different."
 		);
 
-		const auto str_type = getStringType();
-		const auto arr_str  = query::entryPoint<QueryStaticArrayType>({ st(str_type), 5 });
+		const auto list_elem = query::entryPoint<QueryDynamicArrayType>({ st(int_16) });
+		const auto arr_list  = query::entryPoint<QueryStaticArrayType>({ st(list_elem), 5 });
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			assertTrue(
 				arr_1.hasNoOpDestructor(ctx), "StaticArray of Ints should have a no-op destructor."
 			);
 			assertFalse(
-				arr_str.hasNoOpDestructor(ctx),
-				"StaticArray of Strings should not have a no-op destructor."
+				arr_list.hasNoOpDestructor(ctx),
+				"StaticArray of Lists should not have a no-op destructor."
 			);
 
 			assertTrue(arr_1.carriesInformation(ctx), "Array of ints should carry information");
@@ -589,9 +558,8 @@ private:
 				"StaticArray of Ints should be trivially copyable."
 			);
 
-			const auto list_type = ctx.query<QueryDynamicArrayType>({ st(str_type) });
 			const auto arr_st_complex
-				= ctx.query<QueryStaticArrayType>({ .element_type = st(list_type), .size = 2 });
+				= ctx.query<QueryStaticArrayType>({ .element_type = st(list_elem), .size = 2 });
 			assertTrue(
 				arr_st_complex.isDefaultConstructible(ctx),
 				"StaticArray of Lists should be default constructible."
@@ -650,8 +618,8 @@ private:
 		const auto tup_5 = query::entryPoint<QueryTupleType>({ { st(int_16, true), st(int_32) } });
 		assertTrue(tup_1 != tup_5, "Tuples with different mutability should be different.");
 
-		const auto str   = getStringType();
-		const auto tup_6 = query::entryPoint<QueryTupleType>({ { st(int_16), st(str) } });
+		const auto list_elem = query::entryPoint<QueryDynamicArrayType>({ st(int_16) });
+		const auto tup_6     = query::entryPoint<QueryTupleType>({ { st(int_16), st(list_elem) } });
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			assertTrue(
@@ -660,7 +628,7 @@ private:
 				"Tuples of Ints should have no op destructors."
 			);
 			assertFalse(
-				tup_6.hasNoOpDestructor(ctx), "Tuple with String should not have no op destructor."
+				tup_6.hasNoOpDestructor(ctx), "Tuple with List should not have no op destructor."
 			);
 
 			const auto tup_st_trivial = st(tup_1);
@@ -735,8 +703,8 @@ private:
 		const auto var_4 = query::entryPoint<QueryVariantType>({ { st(int_32), st(int_32) } });
 		assertTrue(var_1 != var_4, "Variants with different underlying types should be different.");
 
-		const auto str   = getStringType();
-		const auto var_5 = query::entryPoint<QueryVariantType>({ { st(int_16), st(str) } });
+		const auto list_elem = query::entryPoint<QueryDynamicArrayType>({ st(int_16) });
+		const auto var_5     = query::entryPoint<QueryVariantType>({ { st(int_16), st(list_elem) } });
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			assertTrue(
@@ -744,7 +712,7 @@ private:
 				"Variants of Ints should have no op destructors."
 			);
 			assertFalse(
-				var_5.hasNoOpDestructor(ctx), "Variant with String should not have no op destructor."
+				var_5.hasNoOpDestructor(ctx), "Variant with List should not have no op destructor."
 			);
 
 			const auto var_st = st(var_1);

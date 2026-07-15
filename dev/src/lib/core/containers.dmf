@@ -157,6 +157,10 @@ class String {
         result.len = other.length();
         return move result;
     }
+
+    String.destroy() = {
+        allocation.free(pointer);   
+    }
 }
 
 fun stringReserve(cap: u64) -> String = {

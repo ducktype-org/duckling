@@ -30,7 +30,6 @@ class LowerTypeSystemSimpleTest final: public tester::TestSuite {
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(basicTypesTest);
-		TESTER_ADD_TEST(stringTest);
 		TESTER_ADD_TEST(dynamicArrayTest);
 		TESTER_ADD_TEST(variantTest);
 		TESTER_ADD_TEST(tupleTest);
@@ -198,23 +197,6 @@ private:
 				variant_default { fail("Layout of pointer type should be pointer-like."); }
 			}
 			testPrinting(unit_pointer_layout, ctx);
-		});
-	}
-
-	void stringTest() {
-		withContextDo([&](query::Context& ctx) -> void {
-			const StringAbstractType string_type   = getStringType();
-			auto                     string_layout = queryLayout(ctx, string_type);
-
-			assertTrue(
-				string_layout->getSourceType().getType() == string_type,
-				"Layout should have source type as constructed."
-			);
-			variant_match(string_layout->getVariant()) {
-				variant_case(StringTypeLayout, l) { /* good */ }
-				variant_default { fail("Layout of string type should be string-like."); }
-			}
-			testPrinting(string_layout, ctx, true);
 		});
 	}
 

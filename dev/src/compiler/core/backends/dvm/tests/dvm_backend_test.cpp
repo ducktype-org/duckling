@@ -73,6 +73,11 @@ protected:
 	}
 
 private:
+	static inline const std::vector<std::string> ALL_CORE_MODULES{
+		"core/builtins", "core/io",        "core/containers",
+		"core/runtime",  "core/panicking", "core/clib",
+	};
+
 	auto getModuleFromPath(
 		const std::string&              main_module_path,
 		const std::vector<std::string>& module_paths_to_load = {}
@@ -185,21 +190,14 @@ private:
 
 	void staticArrayTest() {
 		runMultimoduleTest(
-			"static_arrays",
-			{ "core/builtins", "core/panicking" },
-			{},
-			"1\n100\n200\n300\n600\n20\n42\n11\n13\n4\n",
-			{},
-			0
+			"static_arrays", ALL_CORE_MODULES, {}, "1\n100\n200\n300\n600\n20\n42\n11\n13\n4\n", {}, 0
 		);
 	}
 
 	// A string literal is lowered to a static byte-array global plus a `{ptr, len}` slice struct.
 	// Reading the length and indexing into the slice exercises the generated slice bytecode.
 	void stringSliceTest() {
-		runMultimoduleTest(
-			"strings", { "core/builtins", "core/panicking" }, {}, "14\nhello from vm!", {}, 0
-		);
+		runMultimoduleTest("strings", ALL_CORE_MODULES, {}, "14\nhello from vm!", {}, 0);
 	}
 
 	void unitsTest() { runTest("units", {}, {}, {}, 0); }
@@ -216,7 +214,7 @@ private:
 	// `dvm_char_alloc`/`dvm_char_realloc`/`dvm_char_free` builtins lowered to `dynTableReAlloc`
 	// and `free`. Returns 42 when the written chars survive the round-trip.
 	void charAllocTest() {
-		runMultimoduleTest("char_alloc", { "core/builtins", "core/panicking" }, {}, {}, {}, 42);
+		runMultimoduleTest("char_alloc", ALL_CORE_MODULES, {}, {}, {}, 42);
 	}
 };
 

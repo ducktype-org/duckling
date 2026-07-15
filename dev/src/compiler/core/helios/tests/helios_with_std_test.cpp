@@ -41,6 +41,7 @@ public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(testBuiltinDefinitionInModuleHOUT);
 		TESTER_ADD_TEST(testStrings);
+		TESTER_ADD_TEST(testStringClassProperties);
 		TESTER_ADD_TEST(testDefaultInitializers);
 	}
 
@@ -105,9 +106,7 @@ private:
 		);
 	}
 
-	// Lowers default constructors to MIR; MIR lowering of static-array indexing inserts a
-	// bounds-check call to the `Panic` language primitive from the std `core.panicking` module,
-	// so this test needs the standard library available.
+	
 	void testDefaultInitializers() {
 		using namespace compiler::helios;
 		using namespace compiler::helios::code;
@@ -315,6 +314,40 @@ private:
 			found_char_ptr_from_slice,
 			"char_ptr_from_slice builtin definition should be emitted into the module HOUT"
 		);
+	}
+
+	// `String` is now an ordinary standard-library class (no longer a special compiler type), so
+	// its type properties are only observable with the std available. This checks the properties
+	// the old (removed) `tsh` `simpleString` test used to assert against the compiler builtin.
+	void testStringClassProperties() {
+		const auto string_type = getStringTypeNoContext();
+
+		assertTrue(
+			string_type.getKind() == compiler::tsh::Kind::Class,
+			"String should now be an ordinary class type."
+		);
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			assertFalse(
+				string_type.hasNoOpDestructor(ctx),
+				"String should not have a no-op destructor: it defines one to free its buffer."
+			);
+
+			const auto string_st = st(string_type);
+
+			assertTrue(
+				string_st.isDefaultConstructible(ctx), "String should be default constructible."
+			);
+			assertTrue(
+				string_st.isTriviallyZeroInitializable(ctx),
+				"String should be trivially zero-initializable (the empty string is all-zero)."
+			);
+			assertTrue(string_st.isCopyable(ctx), "String should be copyable.");
+			assertFalse(
+				string_st.isTriviallyCopyable(ctx),
+				"String should not be trivially copyable: it has a user-defined `copy`."
+			);
+		});
 	}
 
 	void testStrings() {
