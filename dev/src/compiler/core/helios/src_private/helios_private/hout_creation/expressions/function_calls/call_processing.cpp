@@ -132,35 +132,14 @@ namespace compiler::helios::code {
 			auto coercion = canCoerce(ctx, positional_arguments[i]->expression_type, expected_type);
 
 			if (coercion.valueOrThrow().isInvalid()) {
-				variant_match(coercion.valueOrThrow().getVariant()) {
-					variant_case_novalue(InvalidCoercion) {
-						return NoMatch{ .function = fun,
-							            .reason   = TypeMismatch{
-											  .given_type     = provided_type,
-											  .expected_type  = expected_type,
-											  .argument_index = i,
-											  .function       = fun,
-                                        } };
-					}
-					variant_case_novalue(helios::TypeNotCopyable) {
-						return NoMatch{ .function = fun,
-							            .reason   = code::TypeNotCopyable{
-											  .argument_index = i,
-											  .given_type     = provided_type,
-											  .expected_type  = expected_type,
-											  .function       = fun,
-                                        } };
-					}
-					variant_case_novalue(helios::TypeRequiresExplicitCopyMove) {
-						return NoMatch{ .function = fun,
-							            .reason   = code::TypeRequiresExplicitCopyMove{
-											  .argument_index = i,
-											  .given_type     = provided_type,
-											  .expected_type  = expected_type,
-											  .function       = fun,
-                                        } };
-					}
-				}
+				return NoMatch{ .function = fun,
+					            .reason   = ArgumentCoercionFailure{
+									  .reason         = coercion.valueOrThrow().getInvalidReason(),
+									  .given_type     = provided_type,
+									  .expected_type  = expected_type,
+									  .argument_index = i,
+									  .function       = fun,
+                                } };
 			}
 
 			bool is_empty = coercion.valueOrThrow().getCoercion().isEmptyCoercion();
@@ -206,34 +185,14 @@ namespace compiler::helios::code {
 			auto            coercion      = canCoerce(ctx, provided_expr_type, expected_type);
 
 			if (coercion.valueOrThrow().isInvalid()) {
-				variant_match(coercion.valueOrThrow().getVariant()) {
-					variant_case_novalue(InvalidCoercion) {
-						return NoMatch{ .function = fun,
-							            .reason   = TypeMismatch{ .given_type    = provided_type,
-							                                      .expected_type = expected_type,
-							                                      .argument_index
-                                                                = positional_arguments.size() + i,
-							                                      .function = fun } };
-					}
-					variant_case_novalue(helios::TypeNotCopyable) {
-						return NoMatch{ .function = fun,
-							            .reason   = code::TypeNotCopyable{
-											  .argument_index = positional_arguments.size() + i,
-											  .given_type     = provided_type,
-											  .expected_type  = expected_type,
-											  .function       = fun,
-                                        } };
-					}
-					variant_case_novalue(helios::TypeRequiresExplicitCopyMove) {
-						return NoMatch{ .function = fun,
-							            .reason   = code::TypeRequiresExplicitCopyMove{
-											  .argument_index = positional_arguments.size() + i,
-											  .given_type     = provided_type,
-											  .expected_type  = expected_type,
-											  .function       = fun,
-                                        } };
-					}
-				}
+				return NoMatch{ .function = fun,
+					            .reason   = ArgumentCoercionFailure{
+									  .reason         = coercion.valueOrThrow().getInvalidReason(),
+									  .given_type     = provided_type,
+									  .expected_type  = expected_type,
+									  .argument_index = positional_arguments.size() + i,
+									  .function       = fun,
+                                } };
 			}
 
 			bool is_empty = coercion.valueOrThrow().getCoercion().isEmptyCoercion();
