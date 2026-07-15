@@ -31,11 +31,11 @@ fun builtin_input_u64() -> u64 = io.readU64();
 fun builtin_input_f64() -> f64 = io.readF64();
 fun builtin_input_string() -> containers.String = io.readString();
 
-fun builtin_output_char(c: char) -> i64 = io.writeChar(c);
-fun builtin_output_i64(v: i64) -> u64 = io.writeI64(v);
-fun builtin_output_u64(v: u64) -> u64 = io.writeU64(v);
-fun builtin_output_f64(v: f64) -> u64 = io.writeF64(v);
-fun builtin_output_str(v: str) -> u64 = io.writeStr(v);
+fun builtin_output_char(c: char) -> i64 = io.writeChar(c) as i64;
+fun builtin_output_i64(v: i64) -> i64 = io.writeI64(v) as i64;
+fun builtin_output_u64(v: u64) -> i64 = io.writeU64(v) as i64;
+fun builtin_output_f64(v: f64) -> i64 = io.writeF64(v) as i64;
+fun builtin_output_str(v: str) -> i64 = io.writeStr(v) as i64;
 
 fun print(v: str) -> u64 = io.writeStr(v);
 

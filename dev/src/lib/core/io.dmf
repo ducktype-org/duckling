@@ -46,16 +46,16 @@ fun readCharCode() -> i32 = {
 fun readChar() -> char = char(readCharCode());
 
 @backend_dependent
-fundecl writeChar(c: char) -> i64;
+fundecl writeChar(c: char) -> u64;
 
 @native_only_impl
-fun writeChar(c: char) -> i64 = {
-    return i64(clib.putchar(i32(c)));
+fun writeChar(c: char) -> u64 = {
+    return clib.putchar(i32(c)) as u64;
 }
 
 @dvm_only_impl
-fun writeChar(c: char) -> i64 = {
-    return dvm.builtin_output_char(c);
+fun writeChar(c: char) -> u64 = {
+    return dvm.builtin_output_char(c) as u64;
 }
 
 #{
