@@ -2,6 +2,7 @@
 
 #include <base/except/exceptions.hpp>
 
+#include <logger/logger.hpp>
 #include <query_framework/external/api.hpp>  // for query::external::InputData definition
 #include <query_framework/internal/context_access.hpp>
 #include <query_framework/internal/query_graph/node_id.hpp>
@@ -118,6 +119,15 @@ namespace query::internal {
 			);
 
 			CORE_ASSERT(node.q_id.registered(), "Node from previous graph must be registered.");
+
+			CORE_DEV_LOG(
+				Incremental,
+				"[markInputs] Red input: ",
+				node.q_id.getData().name,
+				" hash=",
+				node.hash.val.toStringHex(),
+				"\n"
+			);
 
 			state->setPrevNodeColor(node, QueryState::PrevColor::Red);
 		};

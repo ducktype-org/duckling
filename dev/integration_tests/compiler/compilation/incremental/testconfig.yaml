@@ -1,0 +1,61 @@
+# Incremental compilation tests.
+#
+# Each case compiles the fixture package into a per-case artifacts directory (PreCase),
+# optionally modifies one module, then runs the compiler again via check_incremental.py.
+# The script asserts which modules are "Recompiling" vs "Cached, loading artifact from disk"
+# on the second run and validates the displayed task numbering ([id/total] lines).
+
+# The fixture is copied into the case tmp dir so modifying cases never touch the source tree.
+pkg_src: "$DIT_TMP_DIR/duck_modules/incr_pkg"
+copy_fixture: "cp -r @{ConfigDir}/duck_modules $DIT_TMP_DIR/"
+
+workers: "1"
+# Pair of flags: duckc backend selection and the matching check_incremental.py flag.
+backend_flag: "--dvm-backend"
+script_backend_flag: "--dvm"
+
+# Command run between the first and the second compilation; overridden by touch-* cases.
+modify_cmd: "true"
+
+# Comma-separated module names expected to recompile on the second run; empty means fully cached.
+expect_recompiled: ""
+
+first_compile_cmd: "@{duckc_path} compile_package @{pkg_src} -w @{workers} -a @{case_build} -n pkg @{backend_flag}"
+
+PreCase: "mkdir -p @{case_build} && @{copy_fixture} && @{first_compile_cmd} && @{modify_cmd}"
+
+Run: "python3 @{ConfigDir}/scripts/check_incremental.py
+  --duckc @{duckc_path}
+  --package @{pkg_src}
+  --artifacts @{case_build}
+  --workers @{workers}
+  @{script_backend_flag}
+  --expect-recompiled=@{expect_recompiled}"
+
+TimeOut: "60"
+
+Tests:
+  incremental:
+    Cases:
+      warm_cache_dvm:
+        Output:
+          String: "INCREMENTAL OK\n"
+
+      warm_cache_llvm:
+        backend_flag: ""
+        script_backend_flag: ""
+        workers: "3"
+        Output:
+          String: "INCREMENTAL OK\n"
+
+      touch_leaf_module:
+        modify_cmd: "sed -i.bak 's/return 10;/return 11;/' @{pkg_src}/beta.dmf"
+        expect_recompiled: "incr_pkg/beta"
+        Output:
+          String: "INCREMENTAL OK\n"
+
+      touch_root_module:
+        modify_cmd: "sed -i.bak 's/return 0;/return 1;/' @{pkg_src}/incr_pkg.dmf"
+        expect_recompiled: "incr_pkg"
+        Output:
+          String: "INCREMENTAL OK\n"

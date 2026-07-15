@@ -227,7 +227,17 @@ namespace query::internal {
 		if (prev_color_opt.has_value()) return **prev_color_opt;
 
 		// If the node does not exist in the previous graph -> needs recomputation
-		if (!prev_graph.nodeExists(start_node)) return PrevColor::Red;
+		if (!prev_graph.nodeExists(start_node)) {
+			CORE_DEV_LOG(
+				Incremental,
+				"[redGreenSweep] Node not in previous graph: ",
+				start_node.q_id.getData().name,
+				" hash=",
+				start_node.hash.val.toStringHex(),
+				"\n"
+			);
+			return PrevColor::Red;
+		}
 
 		// Iterative DFS (post-order) over previous graph starting from start_node.
 		// A node becomes Green iff all its direct dependencies are Green; otherwise Red.
@@ -303,6 +313,18 @@ namespace query::internal {
 			for (const auto& c: *deps_holder) {
 				auto itc = node_colors->atMaybe(c);
 				if (!itc.has_value() || *itc.value() != PrevColor::Green) {
+					CORE_DEV_LOG(
+						Incremental,
+						"[redGreenSweep] Node ",
+						node.q_id.getData().name,
+						" is Red because dep ",
+						c.q_id.getData().name,
+						" hash=",
+						c.hash.val.toStringHex(),
+						" is ",
+						itc.has_value() ? "Red" : "uncolored",
+						"\n"
+					);
 					all_green = false;
 					break;
 				}
@@ -326,6 +348,18 @@ namespace query::internal {
 		static base::VectorMap<QueryID, QueryID> old_to_new;
 
 		if (node.q_id.registered() && node.q_id.getData().usesStableHashing()) return node;
+
+		CORE_DEV_LOG(
+			Incremental,
+			"[deserialize] Remapping node to dummy: q_id=",
+			node.q_id.asInt(),
+			" registered=",
+			node.q_id.registered(),
+			node.q_id.registered() ? node.q_id.getData().name : "",
+			" hash=",
+			node.hash.val.toStringHex(),
+			"\n"
+		);
 
 		// Here the QueryID is either unregistered or uses unstable hashing, so we do remapping
 
@@ -960,6 +994,40 @@ namespace query::internal {
 			std::swap(number_of_children, number_of_parents);
 		}
 
+		// STEP 3: Contract every remaining node with an unstable hash, regardless of degree.
+		// Such nodes cannot be matched against the next compilation's graph (their NodeID is not
+		// reproducible), so if serialized they deserialize as Dummy nodes that are permanently Red
+		// and poison every dependent node. Splice them out: connect all their parents directly to
+		// all their children.
+		//
+		// Removal-order independence: when a node is contracted, its children are appended to every
+		// live parent and its parents are appended to every live child. A removed neighbor can be
+		// skipped safely, because the edges it owned were already propagated when it was removed.
+		for (usize node_idx = 0; node_idx < node_count; ++node_idx) {
+			if (removed[node_idx]) continue;
+
+			const auto& node = idx_to_node[node_idx];
+			if (node.q_id.getData().usesStableHashing()) continue;
+			if (is_preserve_node[node_idx]) continue;
+
+			removed[node_idx] = true;
+
+			for (const auto parent: parent_map[node_idx]) {
+				if (removed[parent]) continue;
+				for (const auto child: opt_graph[node_idx]) {
+					if (removed[child]) continue;
+					opt_graph[parent].push_back(child);
+				}
+			}
+			for (const auto child: opt_graph[node_idx]) {
+				if (removed[child]) continue;
+				for (const auto parent: parent_map[node_idx]) {
+					if (removed[parent]) continue;
+					parent_map[child].push_back(parent);
+				}
+			}
+		}
+
 		// END OF THE OPTIMIZATION ALGORITHM
 
 		// Here we need to create a compacted version of the graph without removed nodes
@@ -985,8 +1053,9 @@ namespace query::internal {
 		for (usize node_idx = 0; node_idx < node_count; ++node_idx) {
 			if (removed[node_idx]) continue;
 
-			// Remove removed children from the node children list from the last optimization step
-			deduplicate_or_remove(opt_graph[node_idx], false, true);
+			// Remove removed children from the node children list from the last optimization step,
+			// and deduplicate edges introduced by the unstable-node contraction (step 3).
+			deduplicate_or_remove(opt_graph[node_idx], true, true);
 
 			const auto& deps = opt_graph[node_idx];
 

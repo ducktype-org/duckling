@@ -1,0 +1,10 @@
+import core.builtins.*;
+
+import alpha as alpha;
+import gamma as gamma;
+
+fun main() -> i64 = {
+    builtin_output_i64(alpha.alphaValue());
+    builtin_output_i64(gamma.gammaValue());
+    return 0;
+}

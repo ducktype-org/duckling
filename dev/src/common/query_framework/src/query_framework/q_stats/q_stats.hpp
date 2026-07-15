@@ -57,4 +57,10 @@ namespace query {
 	 * Print collected statistics to the cerr.
 	 */
 	void printStats();
+
+	/**
+	 * Number of calls to the given query that executed provide() (i.e. were not served from
+	 * the in-memory cache or loaded from disk). Returns 0 for queries that were never called.
+	 */
+	u64 getProvideCallCount(internal::QueryID query_id);
 }

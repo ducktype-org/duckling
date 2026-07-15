@@ -81,8 +81,22 @@ namespace compiler::driver {
 		QUERY_ARTIFACTS_MACROS
 		QUERY_AUTO_CACHE_CREF
 
-		/** Helper variable for printing user logs, change freely if needed */
-		constinit static inline std::atomic<u64> total_module_count = 0;
+		/** Helper variables for printing user logs, change freely if needed.
+		 * Numbering is per compilation batch: `beginModuleLogBatch` stores the number of distinct
+		 * modules in the batch and the counter offset, so every batch displays ids 1..total even
+		 * though the underlying counter and cache are process-wide. */
+		constinit static inline std::atomic<u64> total_module_count  = 0;
+		constinit static inline std::atomic<u64> batch_number_offset = 0;
+
+		static inline concurrent::ConHashMap<frontend::ModuleID, u64> module_number_cache;
+		constinit static inline std::atomic<u64>                      next_module_number = 1;
+
+		static void beginModuleLogBatch(u64 distinct_module_count) {
+			total_module_count.store(distinct_module_count, std::memory_order_relaxed);
+			batch_number_offset.store(
+				next_module_number.load(std::memory_order_relaxed) - 1, std::memory_order_relaxed
+			);
+		}
 
 		/**
 		 * Helper function to get full module name for logging purposes.
@@ -103,10 +117,6 @@ namespace compiler::driver {
 		 * Helper function to log module compilation info.
 		 */
 		static void moduleLog(const QKey& key, std::string_view info) {
-			/** Helper variables for printing user logs, change freely if needed */
-			static concurrent::ConHashMap<frontend::ModuleID, u64> module_number_cache;
-			static std::atomic<u64>                                next_module_number = 1;
-
 			u64 id = 0;
 			module_number_cache.maybePutAndUpdate(key.module_id, u64{ 0 }, [&](Ref<u64> number) {
 				if (*number == 0) {
@@ -119,7 +129,7 @@ namespace compiler::driver {
 			auto total = total_module_count.load(std::memory_order_relaxed);
 			CORE_USER_LOG(
 				"[",
-				id,
+				id - batch_number_offset.load(std::memory_order_relaxed),
 				"/",
 				total == 0 ? "?" : std::to_string(total),
 				"] ",
@@ -729,7 +739,10 @@ namespace compiler::driver {
 			std::ranges::unique(modules_to_compile).begin(), modules_to_compile.end()
 		);
 
-		ImplementationOf_CompileModule::total_module_count.store(modules_to_compile.size());
+		base::HashMap<frontend::ModuleID, bool> distinct_modules;
+		for (const auto& module: modules_to_compile)
+			distinct_modules.emplace(module.module_id, true);
+		ImplementationOf_CompileModule::beginModuleLogBatch(distinct_modules.size());
 
 		// Schedule compilation of every module up front so worker threads can run
 		// them concurrently, then collect the results in a second pass.

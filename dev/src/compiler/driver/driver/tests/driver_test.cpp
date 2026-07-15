@@ -297,6 +297,21 @@ private:
 		}
 
 		// ================================================================================
+		// CHECK 1b: No node with an unstable hash may survive optimization. Their NodeID is
+		// not reproducible across processes, so they would deserialize as Dummy nodes that are
+		// permanently Red and force every dependent to recompile.
+		// ================================================================================
+		for (const auto& node: all_nodes) {
+			assertTrue(
+				node.q_id.getData().usesStableHashing(),
+				base::strConcat(
+					"Graph inconsistency: unstable-hash node survived optimization: ",
+					node.q_id.getData().name
+				)
+			);
+		}
+
+		// ================================================================================
 		// CHECK 2: Only preserved nodes can have no parents (be roots)
 		// All non-preserved nodes must have at least two parents
 		// This is because non-preserved nodes with one (or zero) parents can be removed

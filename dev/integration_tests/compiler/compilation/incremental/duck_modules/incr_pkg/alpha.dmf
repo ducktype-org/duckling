@@ -1,0 +1,5 @@
+import incr_pkg.beta as beta;
+
+fun alphaValue() -> i64 = {
+    return beta.betaValue() + 1;
+}

@@ -7,6 +7,7 @@
 #include <base/types/bit256.hpp>
 #include <base/types/ints.hpp>  // IWYU pragma: export
 
+#include <logger/logger.hpp>
 #include <query_framework/module_flags/module_flags.hpp>
 
 #include <cstring>
@@ -180,6 +181,16 @@ namespace query::internal {
 
 		usize next_index = 0;
 		for (const auto& [node, _]: *node_deps) {
+			if (!node.q_id.registered() || !node.q_id.getData().usesStableHashing()) {
+				CORE_DEV_LOG(
+					Incremental,
+					"[serialize] Unstable/unregistered node: ",
+					node.q_id.registered() ? node.q_id.getData().name : "<unregistered>",
+					" hash=",
+					node.hash.val.toStringHex(),
+					"\n"
+				);
+			}
 			node_to_index.emplace(node, next_index++);
 			nodes.push_back(node);
 		}

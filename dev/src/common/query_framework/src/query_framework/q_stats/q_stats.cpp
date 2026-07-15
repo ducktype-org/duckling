@@ -64,6 +64,12 @@ namespace query {
 		data_ref->total_call_time.add(this->call_time.duration());
 	}
 
+	u64 getProvideCallCount(internal::QueryID query_id) {
+		auto maybe_data = data.atMaybe(query_id);
+		if (!maybe_data.has_value()) return 0;
+		return maybe_data.value()->num_provide_calls.load(std::memory_order_relaxed);
+	}
+
 	void printStats() {
 		std::cerr << "=== Query Framework Per Query Statistics ===\n\n";
 		for (const auto& [query_id, stat_data]: data) {

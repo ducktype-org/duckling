@@ -122,6 +122,7 @@ SubDirs:
   - globals
   - tuples
   - imports
+  - incremental
   - macros
   - diagnostics
   - packages
