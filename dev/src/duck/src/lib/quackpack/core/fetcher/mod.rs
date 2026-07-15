@@ -179,6 +179,7 @@ impl<'duck> Fetcher<'duck> {
     ) -> QuackResult<types::GitCloneResponse> {
         self.git_client
             .clone_blocking(url, reference, destination_directory)
+            .with_context(|| format!("failed to clone the repository at `{url}`"))
     }
 
     /// Same as [`clone_from_git_to_directory`](Self::clone_from_git_to_directory), but a target directory is a temporary
