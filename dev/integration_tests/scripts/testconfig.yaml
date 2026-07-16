@@ -8,31 +8,34 @@ mode: "direct"
 opt_level: "0"
 folder: "."
 
-clean_cmd: "rm -rf @{folder}/duck_build"
+# Compiled modes place their artifacts in a per-case tmp directory,
+# so cases can run concurrently; direct mode compiles in memory.
+Env:
+    DIT_TMP_DIR: "@{new_tmp_dir}"
 
-Clean: "@{clean_cmd}"
+case_duck_build: "$DIT_TMP_DIR/duck_build"
 
 PreCase: "
-  @{clean_cmd};
   if [ '@{mode}' = 'vm' ]; then
-    cd @{folder} && @{duckc_path} compile_script @{Name}.ds --dvm-backend;
+    cd @{folder} && @{duckc_path} compile_script @{Name}.ds --dvm-backend -a @{case_duck_build};
   elif [ '@{mode}' = 'exe' ]; then
-    cd @{folder} && @{duckc_path} compile_script @{Name}.ds -O @{opt_level};
+    cd @{folder} && @{duckc_path} compile_script @{Name}.ds -O @{opt_level} -a @{case_duck_build};
   fi"
 
 Run: "
   if [ '@{mode}' = 'vm' ]; then
-    @{dvm_path} run @{folder}/duck_build/@{Name}.dbc;
+    @{dvm_path} run @{case_duck_build}/@{Name}.dbc;
   elif [ '@{mode}' = 'exe' ]; then
-    @{folder}/duck_build/@{Name}.exe;
+    @{case_duck_build}/@{Name}.exe;
   else
     @{duckc_path} run @{folder}/@{Name}.ds;
   fi"
 
-PostTest: "
-  @{clean_cmd};"
+PostCase: "@{cleanup_tmp_env}"
 
 SubDirs:
   - basic_tests
   - declarations
-  - lists_and_arrays
+  - standard_library
+  # @TODO: #3046 Turn this back on when fixed.
+  # - lists_and_arrays

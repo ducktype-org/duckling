@@ -56,8 +56,10 @@ namespace vm::jit::cnp {
 
 	JitFuncMemory& JitFuncMemory::operator=(JitFuncMemory&& other) noexcept {
 		if (this != &other) {
-			if (addr != nullptr)
-				CORE_ASSERT_NOEXCEPT(munmap(addr, size) == 0, "unable to unmap memory");
+			if (addr != nullptr) {
+				int res = munmap(addr, size);
+				CORE_ASSERT_NOEXCEPT(res == 0, "unable to unmap memory");
+			}
 			addr       = other.addr;
 			size       = other.size;
 			other.addr = nullptr;
@@ -67,8 +69,10 @@ namespace vm::jit::cnp {
 	}
 
 	JitFuncMemory::~JitFuncMemory() noexcept {
-		if (addr != nullptr)
-			CORE_ASSERT_NOEXCEPT(munmap(addr, size) == 0, "unable to unmap memory");
+		if (addr != nullptr) {
+			int res = munmap(addr, size);
+			CORE_ASSERT_NOEXCEPT(res == 0, "unable to unmap memory");
+		}
 	}
 }
 

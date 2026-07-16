@@ -20,7 +20,6 @@
 #include <helios/hout/hout.hpp>
 #include <helios/mangler/mangler.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/tsh/queries.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 #include <tsl/queries.hpp>
@@ -53,11 +52,14 @@ namespace compiler::lir {
 	 */
 	CRef<tsl::TypeLayout> mirReturnType2LirLayout(query::Context& ctx, tsh::SymbolType<> type) {
 		if (type.getType().carriesInformation(ctx))
-			return ctx.query<tsl::QuerySymbolTypeLayout>(type);
+			return &ctx.query<tsl::QuerySymbolTypeLayout>(type)->valueOrPanicMsg(
+				"layout query failed at LIR stage"
+			);
 		else
 			// Change the return type to Unit if the function returns a type which doesn't carry
 			// information (e.g. for class/array constructors which don't carry information).
-			return ctx.query<tsl::QueryAbstractTypeLayout>(tsh::getUnitType());
+			return &ctx.query<tsl::QueryAbstractTypeLayout>(tsh::getUnitType())
+			            ->valueOrPanicMsg("layout query failed at LIR stage");
 	}
 
 	FunctionLiteral getFunctionLiteralfromHELIOSID(query::Context& ctx, helios::SymID helios_id) {
@@ -69,8 +71,10 @@ namespace compiler::lir {
 		auto symbol_abi = ctx.query<helios::QuerySymbolABI>(helios_id)->valueOrPanicMsg(
 			"Handling errors in MIR is not supported yet"
 		);
-		auto link_once    = helios::shouldLinkOnce(helios_id);
+		auto link_once    = helios::emissionPolicy(helios_id) == helios::EmissionPolicy::Replicated;
 		auto mangled_name = helios::mangler::getSimpleMangledName(ctx, helios_id);
+		base::Optional<BuiltinFunctionKind> builtin_kind_opt
+			= helios::isBuiltin(helios_id).flatMap(getBuiltinKindFromHOUT);
 
 		auto return_type = mirReturnType2LirLayout(ctx, type.getResultType());
 		std::vector<CRef<tsl::TypeLayout>> parameter_types;
@@ -78,7 +82,11 @@ namespace compiler::lir {
 		for (const auto& param: type.getParameterTypes())
 			// Discard information-less parameters from LIR function parameter lists.
 			if (param.getType().carriesInformation(ctx))
-				parameter_types.push_back(ctx.query<tsl::QuerySymbolTypeLayout>(param));
+				parameter_types.emplace_back(
+					&ctx.query<tsl::QuerySymbolTypeLayout>(param)->valueOrPanicMsg(
+						"layout query failed at LIR stage"
+					)
+				);
 
 		return FunctionLiteral{
 			.mangled_name = mangled_name,
@@ -87,6 +95,7 @@ namespace compiler::lir {
 			.parameter_layouts
 			= std::make_shared<std::vector<CRef<tsl::TypeLayout>>>(std::move(parameter_types)),
 			.return_type_layout = return_type,
+			.builtin_kind_opt   = builtin_kind_opt
 		};
 	}
 
@@ -105,14 +114,10 @@ namespace compiler::lir {
 			return Operation::Assign;
 		case mir::Operation::AddressOf:
 			return Operation::AddressOf;
-		case mir::Operation::BoxAlloc:
-			return Operation::BoxAlloc;
 		case mir::Operation::ListPush:
 			return Operation::ListPush;
 		case mir::Operation::ListPop:
 			return Operation::ListPop;
-		case mir::Operation::ListLen:
-			return Operation::ListLen;
 		case mir::Operation::ZeroInitialize:
 			return Operation::ZeroInitialize;
 
@@ -326,8 +331,11 @@ namespace compiler::lir {
 						if (value.value.has<ctv::CompileTimeValue::UnitCTV>())
 							CORE_PANIC("Cannot get location of MIR unit.");
 
-						auto layout = ctx.query<tsl::QuerySymbolTypeLayout>(
-							value.value.getTypeOfStoredValue(ctx)
+						auto layout = CRef<tsl::TypeLayout>(
+							&ctx.query<tsl::QuerySymbolTypeLayout>(
+									value.value.getTypeOfStoredValue(ctx)
+							)
+								 ->valueOrPanicMsg("layout query failed at LIR stage")
 						);
 						return LIRValue{ LIRConstant{ .value = value.value, .layout = layout } };
 					}
@@ -381,7 +389,7 @@ namespace compiler::lir {
 					mir_to_lir_local.put(&mir_local, locals[local_index]);
 
 					// Only create lifetime flag if needed
-					if (!mir_local.type.hasNoOpDestructor()) {
+					if (!mir_local.type.hasNoOpDestructor(ctx)) {
 						auto lifetime_flag = LIRLocal::boolLocal(ctx);
 						locals.pushBack(lifetime_flag);
 						auto flag_index = locals.lastIndex();
@@ -567,8 +575,10 @@ namespace compiler::lir {
 
 					auto dynamic_array_type
 						= list_place.type.getType().as<tsh::DynamicArrayAbstractType>();
-					auto element_layout
-						= ctx.query<tsl::QuerySymbolTypeLayout>(dynamic_array_type.getElementType());
+					auto element_layout = CRef<tsl::TypeLayout>(
+						&ctx.query<tsl::QuerySymbolTypeLayout>(dynamic_array_type.getElementType())
+							 ->valueOrPanicMsg("layout query failed at LIR stage")
+					);
 
 					curr_block->instructions.emplace_back(
 						mir2lirOperation(mir_instruction.operation, false),
@@ -580,8 +590,6 @@ namespace compiler::lir {
 					break;
 				}
 				case mir::Operation::AddressOf:
-				case mir::Operation::ListLen:
-				case mir::Operation::BoxAlloc:
 				case mir::Operation::IntegerAdd:
 				case mir::Operation::IntegerNeg:
 				case mir::Operation::IntegerSub:
@@ -638,7 +646,8 @@ namespace compiler::lir {
 					);
 					break;
 				}
-				case mir::Operation::DestructIf: {
+				case mir::Operation::DestructIf:
+				case mir::Operation::Destruct: {
 					const auto& to_destruct = mir_instruction.arguments.at(0).get<mir::MIRPlace>();
 					const auto& type        = to_destruct.type;
 
@@ -664,16 +673,24 @@ namespace compiler::lir {
 					// Currently this approach generates a free on every DestructIf if it operates
 					// on a box type (even if the box was moved). This will cause double free's if
 					// the box was moved around between other box variables. In the future we should
-					// insert a proper destructor call here before the FreeBox.
+					// insert a proper destructor call here before the free.
 					if (type.getRefKind() == tsh::ReferenceKind::Box) {
 						auto lir_place = getLocation(to_destruct);
 
-						// FreeBox is discarded if it operates on no information (ex. Unit).
+						// The free is discarded if it operates on no information (ex. Unit).
 						if (lir_place.has_value()) {
+							// Emit a call to the `box_free(b: box T)` builtin, which will be
+							// lowered to deallocation by the backend.
+							const helios::SymID free_sym
+								= helios::boxFreeSymForType(ctx, type.getType());
+							std::vector<LIRValue> call_args;
+							call_args.emplace_back(getFunctionLiteralfromHELIOSID(ctx, free_sym));
+							call_args.emplace_back(lir_place.value());
+
 							curr_block->instructions.emplace_back(
-								Operation::BoxFree,
+								Operation::Call,
 								base::Optional<LIRPlace>{},
-								std::vector{ lir_place.value() },
+								std::move(call_args),
 								mir_instruction.metadata
 							);
 							break;
@@ -713,9 +730,12 @@ namespace compiler::lir {
 							.source_type = cast_parameters->source_type,
 							.target_type = cast_parameters->target_type,
 							.source_layout
-							= ctx.query<tsl::QuerySymbolTypeLayout>(cast_parameters->source_type),
+							= &ctx.query<tsl::QuerySymbolTypeLayout>(cast_parameters->source_type)
+					               ->valueOrPanicMsg("layout query failed at LIR stage"),
 							.target_layout
-							= ctx.query<tsl::QuerySymbolTypeLayout>(cast_parameters->target_type) }
+							= &ctx.query<tsl::QuerySymbolTypeLayout>(cast_parameters->target_type)
+					               ->valueOrPanicMsg("layout query failed at LIR stage"),
+						}
 					);
 					break;
 				}
@@ -818,7 +838,11 @@ namespace compiler::lir {
 				for (const auto& param: key.function->parameter_types)
 					// Discard information-less parameters from LIR function parameter lists.
 					if (param.getType().carriesInformation(ctx))
-						parameter_types.push_back(ctx.query<tsl::QuerySymbolTypeLayout>(param));
+						parameter_types.emplace_back(
+							&ctx.query<tsl::QuerySymbolTypeLayout>(param)->valueOrPanicMsg(
+								"layout query failed at LIR stage"
+							)
+						);
 
 
 				auto abi = [&]() -> helios::SymbolABI {
@@ -836,7 +860,8 @@ namespace compiler::lir {
 				auto [link_once, ignore_on_dvm, ignore_on_llvm] = [&]() {
 					variant_match(key.function->helios_id) {
 						variant_case(mir::FunctionSymID, sym) {
-							bool link_once_val = helios::shouldLinkOnce(sym.id);
+							bool link_once_val = helios::emissionPolicy(sym.id)
+							                  == helios::EmissionPolicy::Replicated;
 							bool ignore_on_dvm_val
 								= helios::hasAttribute<helios::attributes::NativeOnlyImpl>(sym.id);
 							bool ignore_on_llvm_val
@@ -939,7 +964,10 @@ namespace compiler::lir {
 			},
 		});
 
-		auto return_type = ctx.query<tsl::QuerySymbolTypeLayout>(function_type.getResultType());
+		auto return_type = CRef<tsl::TypeLayout>(
+			&ctx.query<tsl::QuerySymbolTypeLayout>(function_type.getResultType())
+				 ->valueOrPanicMsg("layout query failed at LIR stage")
+		);
 
 		Block entry_block;
 		entry_block.terminator = Instruction{ Operation::ReturnVoid, {}, {}, {} };

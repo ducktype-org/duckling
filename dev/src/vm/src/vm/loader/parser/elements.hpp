@@ -100,8 +100,36 @@ namespace vm::loader::parser {
 		~Func() override = default;
 	};
 
+	struct FFIFunc final: AsmElement {
+		using AsmElement::AsmElement;
+
+		tpc::Identifier              name;
+		std::vector<tpc::Identifier> parameters;
+		std::vector<tpc::Identifier> result_types;
+
+		static MBox<FFIFunc> parse(F8ParserState& state);
+
+		void dprint(std::ostream& out) const override;
+
+		~FFIFunc() override = default;
+	};
+
+	struct FFIObject final: AsmElement {
+		using AsmElement::AsmElement;
+
+		base::StrID path;
+
+		static MBox<FFIObject> parse(F8ParserState& state);
+
+		void dprint(std::ostream& out) const override;
+
+		~FFIObject() override = default;
+	};
+
 	struct ParsedFile final {
 		std::vector<Box<Func>>       functions;
+		std::vector<Box<FFIFunc>>    ffi_functions;
+		std::vector<Box<FFIObject>>  ffi_objects;
 		std::vector<Box<Type>>       types;
 		std::vector<Box<GlobalData>> global_data;
 		fs::File                     source_file;

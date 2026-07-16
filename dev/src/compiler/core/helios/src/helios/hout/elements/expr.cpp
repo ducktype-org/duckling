@@ -11,7 +11,6 @@
 #include <helios/mangler/mangler.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_id.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/tsh/abstract_type.hpp>
 #include <helios/tsh/expression_type.hpp>
 #include <helios/tsh/queries.hpp>
@@ -49,7 +48,7 @@ namespace compiler::helios::code {
 	EXPR_VISITOR(AccessExpr)
 	EXPR_VISITOR(IndexExpr)
 	EXPR_VISITOR(SequenceExpr)
-	EXPR_VISITOR(BoxOfExpr)
+	EXPR_VISITOR(MoveExpr)
 	EXPR_VISITOR(RefOfExpr)
 	EXPR_VISITOR(DerefExpr)
 	EXPR_VISITOR(DefaultValueExpr)
@@ -222,7 +221,7 @@ namespace compiler::helios::code {
 
 			  tsh::ExpressionType<>(
 				  ctx.query<QueryTypeOfSymbol>(symbol)->valueOrThrow(),
-				  tsh::ValueCategory(tsh::primaryCategoryOfSymbol(symbol))
+				  tsh::ValueCategory(tsh::primaryCategoryOfSymbol(ctx, symbol))
 			  ),
 			  origin
 		  ),
@@ -548,8 +547,8 @@ namespace compiler::helios::code {
 			  { .name = ctx.query<mangler::QueryMangledType>(expression_type.getSymbolType())
 	                        ->valueOrThrow(),
 	            .generated_symbol_data
-	            = defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::ImplicitConstructor{
-					expression_type.getType() } } }
+	            = defgen::Constructor{ .type = expression_type.getType(),
+	                                   .kind = defgen::Constructor::Kind::Implicit } }
 		  )) {}
 
 	TupleExpr::TupleExpr(
@@ -624,7 +623,7 @@ namespace compiler::helios::code {
 	}
 
 	tsh::AbstractType builtinUnaryOperationToReturnType(
-		query::Context& ctx, BuiltinUnary operation, tsh::AbstractType argument_type
+		[[maybe_unused]] query::Context& ctx, BuiltinUnary operation, tsh::AbstractType argument_type
 	) {
 		using enum BuiltinUnary;
 		switch (operation) {
@@ -636,13 +635,11 @@ namespace compiler::helios::code {
 		case BuiltinUnary::Ptr:
 		case BuiltinUnary::CPtr:
 		case BuiltinUnary::ManyPtr:
+		case BuiltinUnary::Slice:
 		case BuiltinUnary::Const:
 			// For most of the unary operators the result is the same as their argument type:
 			// (Int -> Int, Bool -> Bool, Meta -> Meta, etc.)
 			return argument_type;
-		case BuiltinUnary::Len: {
-			return tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned);
-		}
 		default:
 			CORE_UNREACHABLE();
 		}
@@ -695,10 +692,6 @@ namespace compiler::helios::code {
 			break;
 		case BuiltinUnary::Const:
 			out << "const ";
-			expr->debugPrint(out);
-			break;
-		case BuiltinUnary::Len:
-			out << "len ";
 			expr->debugPrint(out);
 			break;
 		case BuiltinUnary::Ptr:
@@ -790,11 +783,12 @@ namespace compiler::helios::code {
 	AccessExpr::AccessExpr(
 		query::Context& ctx, ElementOrigin origin, Box<Expr> base, const SymID field
 	):
-		  // @TODO: #1549 Value category usage is not correct here.
 		  Expr(
 			  tsh::ExpressionType(
 				  ctx.query<QueryTypeOfSymbol>(field)->valueOrThrow(),
-				  tsh::ValueCategory(tsh::PrimaryCategory::Local)
+				  // The accessed field inherits the base's value category. If the class is a
+	              // Local/Global, then so is the accessed field.
+				  base->expression_type.getValueCategory()
 			  ),
 			  origin
 		  ),
@@ -846,10 +840,9 @@ namespace compiler::helios::code {
 						  CORE_PANIC("Cannot index a non-array like type");
 					  }
 				  }(),
-				  // @TODO: #1549 Value category usage may not be correct here.
-				  base->expression_type.getValueCategory(
-				  )  // Propagate the base category. If the array is a
-	                 // Local/Global, then the indexed element is as well.
+				  // Propagate the base category. If the array is a Local/Global, then the
+	              // indexed element is as well.
+				  base->expression_type.getValueCategory()
 			  ),
 			  origin
 
@@ -1012,37 +1005,36 @@ namespace compiler::helios::code {
 		return makeBox<RefOfExpr>(expression_type, origin, inner->clone());
 	}
 
-	BoxOfExpr::BoxOfExpr(query::Context&, ElementOrigin origin, Box<Expr> inner):
+	MoveExpr::MoveExpr(query::Context&, ElementOrigin origin, Box<Expr> inner):
 		  Expr(
 			  tsh::ExpressionType<>(
-				  inner->expression_type.getSymbolType().withReferenceKind(tsh::ReferenceKind::Box),
+				  inner->expression_type.getSymbolType(),
 				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
 			  ),
 			  origin
 		  ),
 		  inner(std::move(inner)) {}
 
-	BoxOfExpr::BoxOfExpr(
-		tsh::ExpressionType<> expression_type, ElementOrigin origin, Box<Expr> inner
-	):
+	MoveExpr::MoveExpr(tsh::ExpressionType<> expression_type, ElementOrigin origin, Box<Expr> inner):
 		  Expr(expression_type, origin),
 		  inner(std::move(inner)) {}
 
-	void BoxOfExpr::debugPrint(std::ostream& out) const {
-		out << "boxof(";
+	void MoveExpr::debugPrint(std::ostream& out) const {
+		out << "move(";
 		inner->debugPrint(out);
 		out << ")";
 	}
 
-	Box<Expr> BoxOfExpr::clone() const {
-		return makeBox<BoxOfExpr>(expression_type, origin, inner->clone());
+	Box<Expr> MoveExpr::clone() const {
+		return makeBox<MoveExpr>(expression_type, origin, inner->clone());
 	}
 
 	DerefExpr::DerefExpr(query::Context&, ElementOrigin origin, Box<Expr> inner):
 		  Expr(
 			  tsh::ExpressionType<>(
 				  inner->expression_type.getSymbolType().getPointeeSymbolType(),
-				  inner->expression_type.getValueCategory()
+				  // Dereferencing creates a non-owned lvalue.
+				  tsh::ValueCategory(tsh::PrimaryCategory::Dereferenced)
 			  ),
 			  origin
 		  ),

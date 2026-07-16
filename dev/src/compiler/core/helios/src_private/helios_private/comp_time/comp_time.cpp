@@ -3,13 +3,14 @@
 #include <ctv/ctv.hpp>
 #include <ctv/numeric_value.hpp>
 #include <diagnostic_interactive/placeholder.hpp>
+#include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/includes/basic.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/mangler/mangler.hpp>
 #include <helios/queries/function_queries.hpp>
 #include <helios/queries/queries.hpp>
+#include <helios/symbols/lang_primitives.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios_private/comp_time/vm_evaluator.hpp>
 #include <helios_private/hout_creation/expressions/coercions.hpp>
@@ -25,11 +26,37 @@
 #include <query_framework/standard_query/query_impl.hpp>
 
 #include <cmath>
+#include <concepts>
 #include <ranges>
 #include <type_traits>
+#include <unordered_set>
 
 namespace compiler::helios {
 	using namespace ctv;
+
+	// Integer exponentiation with deterministic two's-complement wraparound.
+	// std::pow routes through double and the out-of-range float->int cast is UB:
+	// x86 wraps, arm64 saturates. Comptime relies on wrapping (e.g. `2 ** 31 - 1`),
+	// so compute it via modular unsigned arithmetic instead.
+	template<std::integral IntT>
+	IntT comptimeIntPow(IntT base, IntT exp) {
+		// A negative exponent truncates toward zero: only |base| == 1 survives.
+		if constexpr (std::is_signed_v<IntT>) {
+			if (exp < 0) {
+				if (base != 1 && base != -1) return 0;
+				return exp % 2 == 0 ? IntT{ 1 } : base;
+			}
+		}
+		// Square-and-multiply mod 2^64. Signed values sign-extend, which preserves
+		// congruence mod 2^N, so the final truncation is the exact wrapped result.
+		u64  result = 1;
+		auto b      = static_cast<u64>(base);
+		for (auto e = static_cast<u64>(exp); e != 0; e /= 2) {
+			if (e % 2 == 1) result *= b;
+			b *= b;
+		}
+		return static_cast<IntT>(result);
+	}
 
 	struct IMPLEMENT_QUERY(QueryEvaluateHOUTExpression, CompTimeEvalResult) {
 		/**
@@ -207,14 +234,14 @@ namespace compiler::helios {
 			}
 
 			void visitIdentifierExpr(const code::IdentifierExpr& expr) final {
-				// Type Evaluation.
-				if (expr.expression_type.getType().getKind() == tsh::Kind::Meta) {
-					auto type = ctx.query<QueryTypeFromDefinition>({ expr.symbol });
-					result    = type->valueOrThrow();
-				} else if (kind(expr.symbol) == SymbolKind::Const) {
+				if (kind(expr.symbol) == SymbolKind::Const) {
 					// Constant Evaluation.
 					auto const_val_result = ctx.query<QueryConstValueOf>({ expr.symbol });
 					result                = const_val_result.valueOrThrow();
+				} else if (kind(expr.symbol) == SymbolKind::Class) {
+					// Special case for type definitions.
+					auto type = ctx.query<QueryTypeFromDefinition>({ expr.symbol });
+					result    = type->valueOrThrow();
 				} else {
 					match_optional(expr.origin.getStablePosition()) {
 						opt_some(pos) {
@@ -361,9 +388,13 @@ namespace compiler::helios {
 										break;
 									case IntegerPow:
 									case FloatPow:
-										set_num_result(
-											static_cast<ResultT>(std::pow(lhs_val, rhs_val))
-										);
+										if constexpr (std::is_integral_v<ResultT>)
+											set_num_result(comptimeIntPow<ResultT>(lhs_val, rhs_val)
+									        );
+										else
+											set_num_result(
+												static_cast<ResultT>(std::pow(lhs_val, rhs_val))
+											);
 										break;
 									default:
 										ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
@@ -495,6 +526,10 @@ namespace compiler::helios {
 							case CPtr:
 								return ctv::CompileTimeValue{ tsh::SymbolType<>::withDefaults(
 									ctx.query<tsh::QueryCPointerType>({ val })
+								) };
+							case Slice:
+								return ctv::CompileTimeValue{ tsh::SymbolType<>::withDefaults(
+									ctx.query<tsh::QuerySliceType>({ val })
 								) };
 							default:
 								ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
@@ -674,9 +709,9 @@ namespace compiler::helios {
 				result = CompileTimeValue{ maybe_new_numeric.value() };
 			}
 
-			void visitRefOfExpr(const code::RefOfExpr&) final { result = CouldNotShortPath{}; }
+			void visitMoveExpr(const code::MoveExpr&) final { result = CouldNotShortPath{}; }
 
-			void visitBoxOfExpr(const code::BoxOfExpr&) final { result = CouldNotShortPath{}; }
+			void visitRefOfExpr(const code::RefOfExpr&) final { result = CouldNotShortPath{}; }
 
 			void visitDerefExpr(const code::DerefExpr&) final { result = CouldNotShortPath{}; }
 
@@ -808,15 +843,22 @@ namespace compiler::helios {
 		) {
 			// Collect all function dependencies for this function. All functions needed in
 			// order to evaluate this one.
-			Ref dependencies
-				= &ctx.query<QueryTransitiveFunctionCalls>(function_sym_id)->valueOrThrow();
+			auto& all_dependencies = ctx.query<QueryTransitiveUsedSymbols>(function_sym_id)
+			                             ->valueOrThrow()
+			                             .used_functions;
 
 			auto mangled_name_function_to_call
-				= ctx.query<mangler::QueryMangledSymbol>({ function_sym_id });
+				= ctx.query<mangler::QueryMangledSymbol>({ .symbol_key = function_sym_id });
 
-			// temporary hout unit used to lower functions to LIR
+			// Temporary hout unit used to lower functions to LIR. `all_dependencies` excludes the
+			// target function itself, so we lower it explicitly alongside its transitive callees.
 			HOUTUnit hout_unit;
-			for (const SymID& func_id: *dependencies) {
+			if (implementsQueryCodeOfFun(function_sym_id))
+				hout_unit.functions.emplace_back(
+					&ctx.query<QueryCodeOfFun>(function_sym_id)->valueOrThrow()
+				);
+			for (const SymID& func_id: all_dependencies) {
+				if (not implementsQueryCodeOfFun(func_id)) continue;
 				auto& hout_func = ctx.query<QueryCodeOfFun>(func_id)->valueOrThrow();
 				hout_unit.functions.emplace_back(&hout_func);
 			}
@@ -825,9 +867,11 @@ namespace compiler::helios {
 
 			// Note: the assumptions bellow might change,
 			// for example when we will add consts to comp time.
+			// Bare declarations (no lowerable body) are filtered out above, so we compare against
+			// the functions actually lowered, not every collected dependency.
 			CORE_ASSERT(
-				lir_unit.lir_functions.size() == dependencies->size(),
-				"Number of lir functions should be the same as number of dependencies collected."
+				lir_unit.lir_functions.size() == hout_unit.functions.size(),
+				"Number of lir functions should be the same as number of lowered dependencies."
 			);
 			CORE_ASSERT(
 				lir_unit.lir_globals.empty(),

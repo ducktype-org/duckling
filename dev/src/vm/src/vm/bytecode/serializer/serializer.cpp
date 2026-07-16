@@ -37,6 +37,8 @@ namespace vm::code {
 
 	std::string toString(opargs::ExtCFunctionName arg) { return arg.function_name.str(); }
 
+	std::string toString(opargs::FFIFunctionName arg) { return arg.function_name.str(); }
+
 	std::string toString(opargs::MethodName arg) { return arg.method_name.str(); }
 
 	std::string toString(opargs::Label arg) { return arg.label_name.str(); }
@@ -164,7 +166,10 @@ namespace vm::code {
 				out << type.name.strView() << " {\n";
 				for (auto field: type.fields)
 					out << "    " << field.name.strView() << ": " << field.type.strView() << ",\n";
-				out << "}\n";
+				out << "}";
+				if (type.packed) out << " packed";
+				if (type.assert_size.has_value()) out << " assert_size " << *type.assert_size;
+				out << "\n";
 			}
 
 			void operator()(const VariantType&) const {

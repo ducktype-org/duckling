@@ -1,8 +1,31 @@
 #include "token_common.hpp"
 
+#include <unicode_classification/classifications.hpp>
+
 #include <set>
 
 namespace lexer {
+	bool isOperatorSymbolString(std::string_view name) {
+		using Class = unicode::Classifications;
+
+		if (name.empty()) return false;
+
+		const icu::UnicodeString unicode_name = icu::UnicodeString::fromUTF8(
+			icu::StringPiece(name.data(), static_cast<i32>(name.size()))
+		);
+		const i32 length = unicode_name.length();
+
+		i32 index = 0;
+		if (!Class::operator_start.contains(unicode_name.char32At(index))) return false;
+		index = unicode_name.moveIndex32(index, 1);
+
+		while (index < length) {
+			if (!Class::operator_continue.contains(unicode_name.char32At(index))) return false;
+			index = unicode_name.moveIndex32(index, 1);
+		}
+		return true;
+	}
+
 	bool Operator::isComparison() const {
 		using namespace lang_def;
 		static std::set<NamedOperator> comparisons = {

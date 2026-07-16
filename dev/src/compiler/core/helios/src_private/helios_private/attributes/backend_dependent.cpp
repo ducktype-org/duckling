@@ -3,7 +3,6 @@
 #include <diagnostic_interactive/placeholder.hpp>
 #include <helios/queries/function_queries.hpp>
 #include <helios/symbols/attributes.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios_private/hout/hout.hpp>
 #include <helios_private/scopes/scopes.hpp>
 

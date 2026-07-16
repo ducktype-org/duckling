@@ -1,6 +1,7 @@
 use std::any::Any;
 
-use clap::{Arg, ArgAction, ArgMatches, Command};
+use clap::{Arg, ArgAction, ArgMatches, Command, value_parser};
+use tracing::error;
 
 use crate::StrId;
 use crate::quackpack::core::Package;
@@ -31,7 +32,7 @@ pub trait CommandExt: Sized {
             )
             .short('j')
             .value_name("N")
-            .value_parser(1..),
+            .value_parser(value_parser!(usize)),
         )
     }
 }
@@ -96,6 +97,28 @@ pub fn features_from_matches(args: &ArgMatches, pkg: &Package) -> Vec<StrId> {
         cli_features.map(StrId::from).collect()
     } else {
         vec![]
+    }
+}
+
+/// Get the number of `jobs` from `args`.
+pub fn jobs_from_matches(args: &ArgMatches) -> usize {
+    let jobs = args.get_one("jobs");
+    match jobs {
+        None => 1,
+        Some(0) => get_available_parallelism(),
+        Some(n) => *n,
+    }
+}
+
+/// Get the number of available threads in the system.
+/// This will return 1 in case of an error.
+fn get_available_parallelism() -> usize {
+    match std::thread::available_parallelism() {
+        Ok(value) => value.get(),
+        Err(e) => {
+            error!("failed to determine number of available threads: {e}; falling back to 1");
+            1
+        }
     }
 }
 

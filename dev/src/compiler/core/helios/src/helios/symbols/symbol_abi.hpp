@@ -27,7 +27,17 @@ namespace compiler::helios {
 
 	struct DefaultAbi final {};
 
-	using SymbolABI = std::variant<DefaultAbi, CAbi>;
+	/**
+	 * @brief ABI of symbols declared with `extern("DVM")`.
+	 *
+	 * Behaves like `DefaultAbi` (no C-ABI type requirements, so pointers stay `manyptr`
+	 * instead of being lowered to C pointers, which the DVM does not support) but, like
+	 * `CAbi`, the name is not mangled. This lets `fundecl`s keep the plain name the DVM
+	 * builtin registry (`vm::builtins::getBuiltinFunctions`) looks up.
+	 */
+	struct DVMAbi final {};
+
+	using SymbolABI = std::variant<DefaultAbi, CAbi, DVMAbi>;
 
 	using QuerySymbolABI_Result = query::QResult<SymbolABI>;
 

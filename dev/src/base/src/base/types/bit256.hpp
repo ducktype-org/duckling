@@ -6,6 +6,7 @@
 #include <base/types/monostate.hpp>
 
 #include <array>
+#include <compare>
 #include <string>
 
 namespace base {
@@ -79,16 +80,13 @@ namespace base {
 			return data.at(0);
 		}
 
-		constexpr bool operator<(const Bit256& other) const noexcept {
+		constexpr std::strong_ordering operator<=>(const Bit256& other) const noexcept {
 			for (usize i = 4;
 			     i-- > 0;) {  // Iterate from the most significant to the least significant
-				if (data.at(i) < other.data.at(i)) return true;
-				if (data.at(i) > other.data.at(i)) return false;
+				if (auto cmp = data.at(i) <=> other.data.at(i); cmp != 0) return cmp;
 			}
-			return false;
+			return std::strong_ordering::equal;
 		}
-
-		constexpr bool operator>(const Bit256& other) const noexcept { return other < *this; }
 
 		/**
 		 * @brief Outputs the Bit256 object to a stream in the format {a, b, c, d}.

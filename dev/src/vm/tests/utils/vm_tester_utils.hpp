@@ -23,9 +23,9 @@ protected:
 		std::expected<i64, vm::api::ApiError> run_result;  // exit code or error
 	};
 
-protected:
-	vm::PID initProcess(bool enable_deadlock_detection = false);
-
+	vm::PID initProcess(
+		const vm::api::ProcessConfig& config = {}, vm::api::ExecutionConfig execution_config = {}
+	);
 	void handleTestResult(const TestResult& test_result, i64 exit_code);
 
 	/**
@@ -112,11 +112,26 @@ protected:
 	 * guidelines. Asserts what error keywords are present in the error message.
 	 */
 	void loadInvalidDbc(
-		const std::string& dbc_filename, const std::vector<std::string_view>& error_keywords
+		const std::string&                   dbc_filename,
+		const std::vector<std::string_view>& error_keywords,
+		vm::api::ExecutionConfig             config = {}
+	);
+
+	/**
+	 * @brief Loads @p first_dbc under an unrestricted config, then loads @p second_dbc under
+	 * @p config on the same process, asserting the second load fails verification with the
+	 * given error keywords. Exercises flag propagation from already-loaded ("old") functions
+	 * to newly loaded ones.
+	 */
+	void loadThenLoadInvalidDbc(
+		const std::string&                   first_dbc,
+		const std::string&                   second_dbc,
+		const std::vector<std::string_view>& error_keywords,
+		vm::api::ExecutionConfig             config = {}
 	);
 
 	/**
 	 * @brief Loads a file containing a valid bytecode program and asserts it was loaded correctly.
 	 */
-	void loadValidDbc(const std::string& dbc_filename);
+	void loadValidDbc(const std::string& dbc_filename, vm::api::ExecutionConfig config = {});
 };

@@ -1,7 +1,8 @@
 #pragma once
 
-#include "dynamic_library.hpp"
 #include "relocations.hpp"
+
+#include <vm/core/native/dynamic_library.hpp>
 
 #include <algorithm>
 #include <array>
@@ -14,6 +15,7 @@
 #include <vector>
 
 namespace vm::jit::cnp {
+	using vm::native::DynamicLibrary;
 
 	/**
 	 * @brief All informations used for future patching of the copied stencil.

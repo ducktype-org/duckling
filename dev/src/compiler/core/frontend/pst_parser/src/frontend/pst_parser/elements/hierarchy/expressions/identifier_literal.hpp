@@ -30,6 +30,12 @@ namespace pst::expr {
 		}
 
 		[[nodiscard]]
+		auto getTemplateSpecifier() const -> base::Optional<AccessLocked<ExprElement>> {
+			if (template_specifier) return template_specifier.value().give();
+			return {};
+		}
+
+		[[nodiscard]]
 		std::string elementType() const override {
 			return "Identifier Expression";
 		}

@@ -4,7 +4,6 @@
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/queries/function_queries.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/tsh/abstract_type.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/symbol_type.hpp>
@@ -23,9 +22,8 @@
 namespace compiler::helios::defgen {
 	SymID toStringSymForType(query::Context& ctx, const tsh::AbstractType type) {
 		return ctx.query<QueryGeneratedSymbol>({
-			.name = base::StrID("toString"),
-			.generated_symbol_data
-			= GeneratedSymbolData{ GeneratedSymbolData::ToStringMethod{ type } },
+			.name                  = base::StrID("toString"),
+			.generated_symbol_data = Method{ .owner_type = type, .kind = Method::Kind::ToString },
 		});
 	}
 
@@ -37,12 +35,13 @@ namespace compiler::helios::defgen {
 		) {
 			return ctx.query<QueryGeneratedSymbol>({
 				.name                  = base::StrID(name),
-				.generated_symbol_data = GeneratedSymbolData{ GeneratedSymbolData::BuiltinOperator{
+				.generated_symbol_data = BuiltinOperator{
 					.operator_type = ctx.query<tsh::QueryFunctionType>({
 						{ type },
 						STRING_TYPE,
 					}),
-				} },
+					.operatoriness = HOUTFunctionDeclaration::Operatoriness::None,
+				},
 			});
 		}
 	}
@@ -50,12 +49,13 @@ namespace compiler::helios::defgen {
 	SymID concatSym(query::Context& ctx) {
 		return ctx.query<QueryGeneratedSymbol>({
 			.name                  = base::StrID("builtin_string_concatenated"),
-			.generated_symbol_data = GeneratedSymbolData{ GeneratedSymbolData::BuiltinOperator{
+			.generated_symbol_data = BuiltinOperator{
 				.operator_type = ctx.query<tsh::QueryFunctionType>({
 					{ STRING_TYPE, STRING_TYPE },
 					STRING_TYPE,
 				}),
-			} },
+				.operatoriness = HOUTFunctionDeclaration::Operatoriness::None,
+			},
 		});
 	}
 
@@ -121,7 +121,7 @@ namespace compiler::helios::defgen {
 				= makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), self_param);
 
 			const auto coercion_res
-				= canCoerce(ctx, source_int_type, target_int_type).valueOrThrow();
+				= canCoerce(ctx, arg_expr->expression_type, target_int_type).valueOrThrow();
 			if (!coercion_res.getCoercion().isEmptyCoercion())
 				arg_expr = coercion_res.coerce(ctx, std::move(arg_expr));
 
@@ -144,8 +144,7 @@ namespace compiler::helios::defgen {
 			const HOUTFunctionDeclaration& to_string_decl,
 			std::vector<Box<code::Stmt>>&  body
 		) {
-			const auto self_param        = to_string_decl.parameters.at(0).helios_symbol;
-			const auto source_float_type = to_string_decl.parameters.at(0).type;
+			const auto self_param = to_string_decl.parameters.at(0).helios_symbol;
 			const auto target_float_type
 				= tsh::SymbolType<>::withDefaults(tsh::getFloatType(ctx, 64));
 			const auto builtin_sym = stringifySym(ctx, target_float_type, "builtin_stringify_f64");
@@ -154,7 +153,7 @@ namespace compiler::helios::defgen {
 				= makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), self_param);
 
 			const auto coercion_res
-				= canCoerce(ctx, source_float_type, target_float_type).valueOrThrow();
+				= canCoerce(ctx, arg_expr->expression_type, target_float_type).valueOrThrow();
 			if (!coercion_res.getCoercion().isEmptyCoercion())
 				arg_expr = coercion_res.coerce(ctx, std::move(arg_expr));
 
@@ -281,10 +280,9 @@ namespace compiler::helios::defgen {
 			const auto result_sym = ctx.query<QueryGeneratedSymbol>(
 				{ .name = base::StrID("__result"),
 			      .generated_symbol_data
-			      = GeneratedSymbolData{ GeneratedSymbolData::GeneratedFunctionVariable{
-					  .function_symbol = to_string_decl.original_symbol,
-					  .variable_index  = 0,
-					  .type            = STRING_TYPE } } }
+			      = GeneratedFunctionVariable{ .function_symbol = to_string_decl.original_symbol,
+			                                   .variable_index  = 0,
+			                                   .type            = STRING_TYPE } }
 			);
 			body.emplace_back(makeBox<code::VariableStmt>(
 				code::generatedOrigin(),

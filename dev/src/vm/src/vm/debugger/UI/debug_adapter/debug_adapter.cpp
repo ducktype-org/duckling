@@ -2,6 +2,8 @@
 
 #include <vm/api/data/api_error.hpp>
 #include <vm/api/data/status.hpp>
+#include <vm/core/vmvalue/vmvalue.hpp>
+#include <vm/debugger/UI/debug_adapter/protocol.hpp>
 
 #include <iostream>
 #include <variant>
@@ -21,20 +23,24 @@ namespace vm::debugger::debug_adapter {
 			  );
 			  message += "\n";
 
-			  this->sendEvent("output", { { "category", "console" }, { "output", message } });
+			  this->sendEvent(dap::OutputEvent(message, "console"));
 
 			  variant_match(status) {
 				  variant_case(api::Paused, status) {
-					  this->sendEvent(
-						  "stopped",
-						  { { "reason", "pause" }, { "threadId", 1 }, { "allThreadsStopped", true } }
-					  );
+					  this->sendEvent(dap::StoppedEvent("pause", 0, true));
 				  }
 				  variant_case(api::ExecutionCompleted, status) {
 					  std::string return_str = "[";
 					  bool        is_first   = true;
 
-					  for (auto val: status.exit_value) {
+					  // status.exit_value
+					  CORE_ASSERT(
+						  std::holds_alternative<std::vector<Ref<vm::VmValue>>>(status.exit_value),
+						  "Wrong variant member"
+					  );
+					  const auto& exit_value
+						  = std::get<std::vector<Ref<vm::VmValue>>>(status.exit_value);
+					  for (CRef<VmValue> val: exit_value) {
 						  std::string rendered_value     = "";
 						  bool        has_rendered_value = false;
 
@@ -57,18 +63,16 @@ namespace vm::debugger::debug_adapter {
 
 					  message = "VM returned: " + return_str + "\n";
 
-					  this->sendEvent(
-						  "output", { { "category", "console" }, { "output", message } }
-					  );
+					  this->sendEvent(dap::OutputEvent(message, "console"));
 
-					  this->sendEvent("exited", { { "exitCode", 0 } });
+					  this->sendEvent(dap::ExitedEvent(0));
 
-					  this->sendEvent("terminated", {});
+					  this->sendEvent(dap::TerminatedEvent());
 				  }
 			  }
 		  }),
 		  output_listener([this](const std::string& str) {
-			  this->sendEvent("output", { { "category", "console" }, { "output", str } });
+			  this->sendEvent(dap::OutputEvent(str, "console"));
 		  }),
 
 		  debugger() {
@@ -127,6 +131,8 @@ namespace vm::debugger::debug_adapter {
 
 		if (cmd == "initialize")
 			handleInitialize(req);
+		else if (cmd == "setBreakpoints")
+			handleSetBreakpoints(req);
 		else if (cmd == "configurationDone")
 			handleConfigurationDone(req);
 		else if (cmd == "launch")
@@ -172,12 +178,12 @@ namespace vm::debugger::debug_adapter {
 		send(message);
 	}
 
-	void DebugAdapter::sendEvent(const std::string& event, const nlohmann::json& body) {
-		nlohmann::json message = { { "type", "event" }, { "event", event } };
+	void DebugAdapter::sendEvent(const dap::Event& event) {
+		nlohmann::json msg = { { "type", "event" }, { "event", dap::toString(event.getType()) } };
 
-		if (!body.is_null() && !body.empty()) message["body"] = body;
+		if (event.hasBody()) msg["body"] = event.getBody();
 
-		send(message);
+		this->send(msg);
 	}
 
 	// ------------------- Handlers -------------------
@@ -191,16 +197,122 @@ namespace vm::debugger::debug_adapter {
 
 		sendResponse(req, true, capabilities);
 
-		sendEvent("initialized");
+		sendEvent(dap::InitializedEvent());
+	}
+
+	void DebugAdapter::handleSetBreakpoints(const nlohmann::json& req) {
+		auto        args      = req["arguments"];
+		std::string file_path = args["source"]["path"].get<std::string>();
+
+		// In DAP, client sends which breakpoints they want to have
+		// Therefore, adapter should remember which one it has put
+		// and add and remove breakpoint accordingly
+		std::set<size_t>    incoming_lines_set;
+		std::vector<size_t> incoming_lines_vector;
+		if (args.contains("breakpoints"))
+			for (const auto& bp: args["breakpoints"]) {
+				incoming_lines_set.insert(bp["line"].get<size_t>());
+				incoming_lines_vector.push_back(bp["line"].get<size_t>());
+			}
+
+		std::set<size_t>& current_lines = active_breakpoints[file_path];
+
+		std::set<size_t> lines_to_remove;
+		std::set<size_t> lines_to_add;
+
+		std::set<size_t> lines_not_removed;
+
+
+		std::ranges::set_difference(
+			current_lines,
+			incoming_lines_set,
+			std::inserter(lines_to_remove, lines_to_remove.begin())
+		);
+
+		std::ranges::set_difference(
+			incoming_lines_set, current_lines, std::inserter(lines_to_add, lines_to_add.begin())
+		);
+
+		// The response must contain the verification status of all breakpoints
+		// currently requested by the client for this file.
+		nlohmann::json breakpoints_json = nlohmann::json::array();
+
+		if (deferred_launch_req.has_value()) {
+			std::vector<size_t> failed_lines;
+			for (size_t line: incoming_lines_vector) {
+				if (lines_to_add.contains(line)) {
+					auto res = debugger.setBreakpoint(fs::File(file_path), line, true);
+
+					if (!res.has_value()) {  // The VM rejected the breakpoint, so we must not keep
+						                     // it in our state
+						dap::Breakpoint bp{ .verified = false,
+							                .line     = line,
+							                .message  = "Failed to set breakpoint: "
+							                         + api::errorToString(res.error()) };
+						failed_lines.push_back(line);
+						breakpoints_json.push_back(bp.toJson());
+						continue;
+					}
+				}
+
+				dap::Breakpoint bp{ .verified = true, .line = line, .message = std::nullopt };
+				breakpoints_json.push_back(bp.toJson());
+			}
+			// Erase after the for-loop to avoid breaking it by modifying the collection we iterate over.
+			for (size_t line: failed_lines) incoming_lines_set.erase(line);
+
+			for (size_t line: lines_to_remove) {
+				auto res = debugger.setBreakpoint(fs::File(file_path), line, false);
+
+				if (!res.has_value()) {
+					// ERROR: failed to remove breakpoint
+					// Inform client that it is still there
+					lines_not_removed.insert(line);
+				}
+			}
+		} else {
+			// Before 'launch' (therefore before loading the target file)
+			// These breakpoints will be put while handling launch request
+			for (size_t line: incoming_lines_vector) {
+				dap::Breakpoint bp{ .verified = false, .line = line, .message = "Before launch" };
+				breakpoints_json.push_back(bp.toJson());
+			}
+		}
+
+		current_lines = std::move(incoming_lines_set);
+
+		sendResponse(req, true, { { "breakpoints", breakpoints_json } });
+
+		if (!lines_not_removed.empty()) {
+			for (size_t line: lines_not_removed) {
+				dap::Breakpoint bp{ .verified = false, .line = line, .message = std::nullopt };
+
+				this->sendEvent(dap::BreakpointEvent("changed", bp));
+			}
+		}
 	}
 
 	void DebugAdapter::handleConfigurationDone(const nlohmann::json& req) {
+		is_configuration_done = true;
 		sendResponse(req, true);
+
+		if (deferred_launch_req.has_value()) {
+			auto res = debugger.runMain();
+			if (!res.has_value()) {
+				std::string error_msg
+					= "Failed to run main: '" + api::errorToString(res.error()) + '\'';
+
+				sendResponse(deferred_launch_req, false, { { "message", error_msg } });
+				sendEvent(dap::TerminatedEvent());
+				return;
+			}
+			sendResponse(deferred_launch_req, true, {});
+		}
 	}
 
 	void DebugAdapter::handleLaunch(const nlohmann::json& req) {
 		std::string program     = req["arguments"]["program"];
-		auto        load_result = debugger.loadFile(fs::File(program));
+		auto        load_result = debugger.loadFiles({ fs::File(program) });
 
 		if (!load_result.has_value()) {
 			std::string error_msg = "Failed to load file '" + program
@@ -210,10 +322,37 @@ namespace vm::debugger::debug_adapter {
 			return;
 		}
 
-		sendResponse(req, true, {});
+		deferred_launch_req = req;
 
-		// Immediately run the VM for test purpose for now
-		debugger.runMain();
+		for (const auto& [file_path, lines]: active_breakpoints) {
+			nlohmann::json breakpoints_json = nlohmann::json::array();
+
+			for (size_t line: lines) {
+				auto res      = debugger.setBreakpoint(fs::File(file_path), line, true);
+				bool verified = res.has_value();
+
+				dap::Breakpoint bp;
+				bp.verified = verified;
+				bp.line     = line;
+
+				if (!verified)
+					bp.message = "Failed to set breakpoint: " + api::errorToString(res.error());
+
+				this->sendEvent(dap::BreakpointEvent("changed", bp));
+			}
+		}
+
+		if (is_configuration_done) {
+			auto res = debugger.runMain();
+			if (!res.has_value()) {
+				std::string error_msg = "Failed to run main: '" + api::errorToString(res.error());
+
+				sendResponse(req, false, { { "message", error_msg } });
+				sendEvent(dap::TerminatedEvent());
+				return;
+			}
+			sendResponse(req, true, {});
+		}
 	}
 
 	void DebugAdapter::handleThreads(const nlohmann::json& req) {
@@ -226,7 +365,7 @@ namespace vm::debugger::debug_adapter {
 
 	void DebugAdapter::handleDisconnect(const nlohmann::json& req) {
 		sendResponse(req, true);
-		sendEvent("terminated");
+		sendEvent(dap::TerminatedEvent());
 	}
 
 	void DebugAdapter::handlePause(const nlohmann::json& req) {

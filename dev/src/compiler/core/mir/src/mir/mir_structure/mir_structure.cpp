@@ -1,7 +1,6 @@
 #include "mir_structure.hpp"
 
 #include <helios/symbols/query_type_of_symbol.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/extend_cpp/variant_match.hpp>
@@ -295,6 +294,9 @@ namespace compiler::mir {
 		case Flag::Construct:
 			os << "Construct";
 			break;
+		case Flag::Reinit:
+			os << "Reinit";
+			break;
 		case Flag::Destruct:
 			os << "Destruct";
 			break;
@@ -328,7 +330,7 @@ namespace compiler::mir {
 		os << "MIRUnit:\n";
 		os << "Globals:\n";
 		for (const auto& global: mir_globals) {
-			global.debugPrint(ctx, os);
+			global->debugPrint(ctx, os);
 			os << "\n";
 		}
 		os << "Functions:\n";
