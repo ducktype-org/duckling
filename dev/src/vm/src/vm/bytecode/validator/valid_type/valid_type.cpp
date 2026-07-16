@@ -385,10 +385,10 @@ void valid_type::ValidType::finalize(ValidTypeMap& types) {
 		}
 		variant_case(defined::DefinedCPointer, cpointer) {
 			// A raw native address: 8 bytes in both pointer modes (unlike `Pointer`, which is a
-			// fat block reference in the safe mode). The pointee is intentionally not finalized
-			// here - a C pointer never depends on its pointee's layout, which keeps
-			// self-referential structures and pointers to forward-declared types legal.
-			this->size = this->alignment = valid_type::TypeSize(Bytes(sizeof(void*)), 0);
+			// fat block reference in the safe mode). Like `Pointer`, the pointee is not
+			// finalized here, so self-referential structures and pointers to forward-declared
+			// types stay legal.
+			this->size = this->alignment = valid_type::TypeSize(Bytes(8), 0);
 			this->is_trivially_copyable  = true;
 			this->is_ffi_compliant       = true;
 			state = Finalized{ .kind = finalized::CPointer{ .inner = cpointer.inner } };
