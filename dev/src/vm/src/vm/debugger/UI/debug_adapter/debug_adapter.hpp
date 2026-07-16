@@ -2,6 +2,7 @@
 
 #include <vm/core/vmvalue/vmvalueref.hpp>
 #include <vm/debugger/debugger.hpp>
+#include <vm/debugger/UI/debug_adapter/protocol.hpp>
 
 #include <nlohmann/json.hpp>
 
@@ -93,6 +94,7 @@ namespace vm::debugger::debug_adapter {
 		);
 		void sendErrorResponse(const nlohmann::json& request, const std::string& err_msg);
 		void sendEvent(const std::string& event, const nlohmann::json& body = {});
+		void sendEvent(const dap::Event& event);
 
 		// Handlers
 		void handleRequest(const nlohmann::json& req);
