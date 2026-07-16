@@ -31,14 +31,14 @@ namespace compiler::helios::code {
 		}
 	}
 
-	std::vector<SymID> collectCalledSymbols(const HOUTFunction& fun) {
+	std::vector<SymID> collectCalledSymbolsFromHOUT(const HOUTFunction& fun) {
 		std::vector<SymID>        result;
 		std::unordered_set<SymID> visited;
 		walkFunctionTree(fun, calledSymbolCollector(result, visited));
 		return result;
 	}
 
-	std::vector<SymID> collectCalledSymbols(const Expr& expr) {
+	std::vector<SymID> collectCalledSymbolsFromHOUT(const Expr& expr) {
 		std::vector<SymID>        result;
 		std::unordered_set<SymID> visited;
 		walkExprTree(expr, calledSymbolCollector(result, visited));

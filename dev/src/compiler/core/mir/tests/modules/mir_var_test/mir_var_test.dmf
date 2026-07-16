@@ -13,10 +13,10 @@ fun foo() = {
 	return 0;
 }
 
-fun goo() = { 
+fun goo() = {
 	var a: i32 = 23;
 	a = 24;
-	hoo() = 15;
+	c = hoo();
 }
 
 fun hoo() -> i64 = {

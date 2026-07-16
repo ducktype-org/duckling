@@ -291,25 +291,25 @@ fn fetch_source_code(
         FullKind::Local => Ok(false),
         FullKind::Git { commit } => {
             let pkg_id = GitId::new(origin.url(), commit).into();
-            if storage.is_package_stored(&pkg_id) {
+            if storage.is_package_stored(pkg_id) {
                 return Ok(false);
             }
             if git_access.is_stored(origin.url(), &commit) {
-                storage.mark_as_stored(&pkg_id)?;
+                storage.mark_as_stored(pkg_id)?;
                 return Ok(true);
             }
             fetcher.clone_from_git_to_directory(
                 &origin.url(),
                 GitReference::Rev(commit),
-                &storage.pkg_dir(&pkg_id),
+                &storage.pkg_dir(pkg_id),
             )?;
-            storage.mark_as_stored(&pkg_id)?;
-            storage.pkg_dir(&pkg_id).try_fsync_dir()?;
+            storage.mark_as_stored(pkg_id)?;
+            storage.pkg_dir(pkg_id).try_fsync_dir()?;
             Ok(true)
         }
         FullKind::Registry => {
             let pkg_id = RegistryId::new(identity.name(), pkg.version(), origin.url()).into();
-            if storage.is_package_stored(&pkg_id) {
+            if storage.is_package_stored(pkg_id) {
                 return Ok(false);
             }
             let mut successfully_fetched = false;
@@ -337,7 +337,7 @@ fn fetch_source_code(
             if !successfully_fetched {
                 qp_bail!("Failed to fetch a package");
             }
-            let pkg_dir = storage.pkg_dir(&pkg_id);
+            let pkg_dir = storage.pkg_dir(pkg_id);
             if pkg_dir.exists() {
                 pkg_dir.rm()?;
             }
@@ -345,7 +345,7 @@ fn fetch_source_code(
             let decompressed = GzDecoder::new(file);
             let mut archive = Archive::new(decompressed);
             archive.unpack(pkg_dir.clone())?;
-            storage.mark_as_stored(&pkg_id)?;
+            storage.mark_as_stored(pkg_id)?;
             pkg_dir.try_fsync_dir()?;
             Ok(true)
         }

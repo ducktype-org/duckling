@@ -55,56 +55,6 @@ namespace compiler::helios::defgen {
 	}
 
 	namespace {
-		/**
-		 * @brief Build a HOUT expression that produces a copy of `source`.
-		 *
-		 * - Trivially-copyable sources are returned as they where (which means they are byte
-		 *   copied).
-		 * - A `box T` source is deep-copied into a freshly allocated box holding a copy of the
-		 * 	 pointee.
-		 * - Non-trivially-copyable class, static-array, tuple and list members are copied by
-		 *   calling their own copy constructor with a reference to `source`.
-		 */
-		Box<code::Expr> makeCopyExpr(query::Context& ctx, Box<code::Expr> source) {
-			const tsh::SymbolType<> type = source->expression_type.getSymbolType();
-
-			if (type.isTriviallyCopyable(ctx)) return source;
-
-			const Shorthand s{ ctx };
-
-			// A `box T` is deep-copied. Allocate a new box holding a copy of the pointee
-			// `box(<copy of *source>)`. For a trivially-copyable pointee this collapses to
-			// `box(*source)`.
-			if (type.getRefKind() == tsh::ReferenceKind::Box) {
-				// Produce a copy of the underlying type, then wrap it in a heap allocation.
-				auto pointee_copy = makeCopyExpr(ctx, s.deref(std::move(source)));
-				return makeBoxAllocCall(ctx, code::generatedOrigin(), std::move(pointee_copy));
-			}
-
-			// Now we have a direct value which should be copied.
-			const auto abstract_type = type.getType();
-			CORE_ASSERT(
-				abstract_type.getKind() == tsh::Kind::Class
-					or abstract_type.getKind() == tsh::Kind::StaticArray
-					or abstract_type.getKind() == tsh::Kind::Tuple
-					or abstract_type.getKind() == tsh::Kind::DynamicArray,
-				"Tried to generate a copy constructor for a type which shouldn't need it"
-			);
-
-			const SymID copy_sym = copyConstructorSymForType(ctx, abstract_type);
-			return s.call(s.ident(copy_sym), s.refOf(std::move(source)));
-		}
-
-		/**
-		 * @brief Build `(*source).<member>` - a dereference of the `source` parameter followed by a
-		 * field access.
-		 * @TODO: #2776 Move this somewhere
-		 */
-		Box<code::Expr> derefSourceField(query::Context& ctx, SymID source_symbol, SymID field) {
-			const Shorthand s{ ctx };
-			return s.access(s.deref(s.ident(source_symbol)), field);
-		}
-
 		// Builds the copy-constructor body for a class or tuple.
 		std::vector<Box<code::Stmt>> buildAggregateCopyBody(
 			query::Context&          ctx,
@@ -138,7 +88,7 @@ namespace compiler::helios::defgen {
 			// __result.field = <copy of (*source).field>;
 			for (const auto& field: fields) {
 				auto field_copy
-					= makeCopyExpr(ctx, derefSourceField(ctx, source_symbol, field.getSymbol()));
+					= s.copy(s.access(s.deref(s.ident(source_symbol)), field.getSymbol()));
 				body.emplace_back(s.assign(
 					s.access(s.ident(result_symbol), field.getSymbol()), std::move(field_copy)
 				));
@@ -206,9 +156,7 @@ namespace compiler::helios::defgen {
 					{
 						s.assign(
 							s.index(s.ident(res_sym), s.ident(i_sym)),
-							makeCopyExpr(
-								ctx, s.index(s.deref(s.ident(source_symbol)), s.ident(i_sym))
-							)
+							s.copy(s.index(s.deref(s.ident(source_symbol)), s.ident(i_sym)))
 						),
 						s.assign(
 							s.ident(i_sym), s.binOp(s.ident(i_sym), IntegerAdd, s.litNum(one_val))
@@ -279,7 +227,7 @@ namespace compiler::helios::defgen {
 				{
 					s.expr(s.listPush(
 						s.ident(res_sym),
-						makeCopyExpr(ctx, s.index(s.deref(s.ident(source_symbol)), s.ident(i_sym)))
+						s.copy(s.index(s.deref(s.ident(source_symbol)), s.ident(i_sym)))
 					)),
 					s.assign(s.ident(i_sym), s.binOp(s.ident(i_sym), IntegerAdd, s.litNum(one_val))),
 				}

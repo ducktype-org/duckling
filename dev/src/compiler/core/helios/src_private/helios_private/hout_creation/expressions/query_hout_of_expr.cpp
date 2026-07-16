@@ -19,6 +19,7 @@
 #include <helios/tsh/symbol_type.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/errors/dia_interactive_elements.hpp>
+#include <helios_private/hout_creation/definition_generation/copy_constructors.hpp>
 #include <helios_private/hout_creation/definition_generation/to_string_methods.hpp>
 #include <helios_private/hout_creation/expressions/builtin_operators.hpp>
 #include <helios_private/hout_creation/expressions/chain_expr.hpp>
@@ -417,12 +418,8 @@ namespace compiler::helios::code {
 						));
 						return;  // failed
 					}
-					// @TODO: #1549 RefOfExpr is inserted here naively without any checks.
-					// This should change to take value category into consideration as well as the
-					// `unique`/`leaking` specifiers.
-					auto primary_category = inner->expression_type.getValueCategory().getCategory();
-					if (primary_category == tsh::PrimaryCategory::Literal
-					    || primary_category == tsh::PrimaryCategory::Temporary) {
+					// @TODO: #3109 Take `unique`/`leaking` specifiers into consideration.
+					if (not inner->expression_type.getValueCategory().addressable()) {
 						ctx.logInt(makeBox<dia_int::PlaceholderError>(
 							"Tried to reference a temporary", stmt->getStablePosition()
 						));
@@ -445,7 +442,39 @@ namespace compiler::helios::code {
 				}
 
 				if (op->unwrap() == lang_def::keywordToStr(lang_def::Keyword::Move)) {
+					// `move x` is only valid on an owned lvalue (a local variable).
+					if (not inner->expression_type.getValueCategory().isMovableFrom()) {
+						ctx.logInt(makeBox<dia_int::PlaceholderError>(
+							"`move` can only be applied to an owned local variable.",
+							stmt->getStablePosition()
+						));
+						return;
+					}
 					node = makeBox<MoveExpr>(ctx, pstOrigin(stmt), std::move(inner));
+					return;
+				}
+
+				// `copy x` produces an explicit copy of `x` via its copy constructor.
+				if (op->unwrap() == lang_def::keywordToStr(lang_def::Keyword::Copy)) {
+					if (inner_type.isTriviallyCopyable(ctx)) {
+						ctx.logInt(makeBox<dia_int::PlaceholderWarning>(
+							base::strConcat(
+								"Type `",
+								inner_type.toString(),
+								"` is trivially copyable. No need to use the explicit `copy` "
+								"keyword."
+							),
+							stmt->getStablePosition()
+						));
+					}
+					if (not inner_type.getType().isCopyable(ctx)) {
+						ctx.logInt(makeBox<dia_int::PlaceholderError>(
+							base::strConcat("Type `", inner_type.toString(), "` cannot be copied."),
+							stmt->getStablePosition()
+						));
+						return;
+					}
+					node = Shorthand{ ctx }.copy(std::move(inner));
 					return;
 				}
 
@@ -1043,10 +1072,10 @@ namespace compiler::helios {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryHoutOfExpr)
 
 	query::QResult<BoxOrCRef<code::Expr>> getHoutOfExprWithExpectedType(
-		query::Context&                                      ctx,
-		const pst::GenericPSTQueryKey<pst::ExprElement>&     pst_expr,
-		const tsh::SymbolType<>                              expected_type,
-		base::Optional<std::function<void(query::Context&)>> log_error
+		query::Context&                                  ctx,
+		const pst::GenericPSTQueryKey<pst::ExprElement>& pst_expr,
+		const tsh::SymbolType<>                          expected_type,
+		CoercionErrorOverrides                           error_overrides
 	) {
 		auto expr_hout_qresult = ctx.query<QueryHoutOfExpr>({ pst_expr.element });
 
@@ -1054,38 +1083,36 @@ namespace compiler::helios {
 
 		const auto source_symbol_type = expr_hout->expression_type.getSymbolType();
 		const auto source_position    = pst_expr.element.unlock(ctx)->getStablePosition();
-		const auto coercion_qresult   = canCoerce(ctx, source_symbol_type, expected_type);
+		const auto coercion_qresult   = canCoerce(ctx, expr_hout->expression_type, expected_type);
 		if (coercion_qresult.hasFailed()) return query::Failed();
 
-		variant_match(coercion_qresult.valueOrThrow().getVariant()) {
-			variant_case(Coercion, coercion) { return coercion.coerceFromRef(ctx, expr_hout); }
-			variant_default {
-				logCoercionFailure(
-					ctx,
-					coercion_qresult,
-					source_symbol_type,
-					expected_type,
-					source_position,
-					std::move(log_error)
-				);
-				return query::Failed();
-			}
-		}
-		CORE_UNREACHABLE();
+		const auto& coercion_result = coercion_qresult.valueOrThrow();
+		if (coercion_result.isValid())
+			return coercion_result.getCoercion().coerceFromRef(ctx, expr_hout);
+
+		logCoercionFailure(
+			ctx,
+			coercion_result.getInvalidReason(),
+			source_symbol_type,
+			expected_type,
+			source_position,
+			std::move(error_overrides)
+		);
+		return query::Failed();
 	}
 
 	query::QResult<Box<code::Expr>> code::subExprFromPSTWithType(
-		query::Context&                                      ctx,
-		pst::AccessLocked<pst::ExprElement>                  element,
-		tsh::SymbolType<>                                    expected_type,
-		base::Optional<std::function<void(query::Context&)>> log_error
+		query::Context&                     ctx,
+		pst::AccessLocked<pst::ExprElement> element,
+		tsh::SymbolType<>                   expected_type,
+		helios::CoercionErrorOverrides      error_overrides
 	) {
 		auto expr_hout_qresult = code::subExprFromPST(ctx, element);
 		UNPACK_QRESULT_MOVE(auto expr_hout =, expr_hout_qresult);
 		const auto source_position = element.unlock(ctx)->getStablePosition();
 
 		auto maybe_coerced = coerceFromBox(
-			ctx, std::move(expr_hout), expected_type, source_position, std::move(log_error)
+			ctx, std::move(expr_hout), expected_type, source_position, std::move(error_overrides)
 		);
 		if (maybe_coerced.has_value()) return std::move(maybe_coerced.value());
 		return query::Failed();

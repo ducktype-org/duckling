@@ -157,6 +157,9 @@ mod test {
     #[test]
     fn storage_to_solver_freeze() {
         let origin_a = FullOrigin::for_registry("https://example.net".to_url().unwrap());
+        #[cfg(windows)]
+        let origin_b = FullOrigin::for_local(&PathBuf::from("C:\\xdd")).unwrap();
+        #[cfg(not(windows))]
         let origin_b = FullOrigin::for_local(&PathBuf::from("/xdd")).unwrap();
         let identity_a = FullIdentity::new("a".into(), origin_a);
         let identity_b = FullIdentity::new("b".into(), origin_b);
@@ -174,7 +177,10 @@ mod test {
         let freeze_pkg_b = FreezePackage::new(
             FullIdentity::new(
                 "b".into(),
+                #[cfg(not(windows))]
                 FullOrigin::for_local(&PathBuf::from("/xdd")).unwrap(),
+                #[cfg(windows)]
+                FullOrigin::for_local(&PathBuf::from("C:\\xdd")).unwrap(),
             ),
             2.into(),
             vec!["f_b1".into(), "f_b2".into()],
@@ -194,10 +200,16 @@ mod test {
                 ),
                 Identity::new(
                     "b".into(),
+                    #[cfg(not(windows))]
                     Origin::for_local(&PathBuf::from("/xdd")).unwrap(),
+                    #[cfg(windows)]
+                    Origin::for_local(&PathBuf::from("C:\\xdd")).unwrap(),
                 ),
             ],
         );
+        #[cfg(windows)]
+        let origin_root = FullOrigin::for_local(&PathBuf::from("C:\\")).unwrap();
+        #[cfg(not(windows))]
         let origin_root = FullOrigin::for_local(&PathBuf::from("/")).unwrap();
         let identity_root = FullIdentity::new("root".into(), origin_root);
         let pkg_root = WithVersion::new(identity_root, Version::new(3, 0, 0));
@@ -234,8 +246,15 @@ mod test {
 
     #[test]
     fn solver_to_storage_freeze() {
+        #[cfg(windows)]
+        let origin_root = FullOrigin::for_local(&PathBuf::from("C:\\root_path")).unwrap();
+        #[cfg(not(windows))]
         let origin_root = FullOrigin::for_local(&PathBuf::from("/root_path")).unwrap();
         let origin_a = FullOrigin::for_registry("https://example.net".to_url().unwrap());
+        #[cfg(windows)]
+        // cSpell:disable-next-line
+        let origin_b = FullOrigin::for_local(&PathBuf::from("C:\\sialalala")).unwrap();
+        #[cfg(not(windows))]
         // cSpell:disable-next-line
         let origin_b = FullOrigin::for_local(&PathBuf::from("/sialalala")).unwrap();
         let identity_root = FullIdentity::new("root".into(), origin_root);
@@ -287,7 +306,10 @@ mod test {
                 ),
                 Identity::new(
                     "b".into(),
+                    #[cfg(not(windows))]
                     Origin::for_local(&PathBuf::from("/sialalala")).unwrap(),
+                    #[cfg(windows)]
+                    Origin::for_local(&PathBuf::from("C:\\sialalala")).unwrap(),
                 ),
             ])
         );
@@ -307,7 +329,10 @@ mod test {
         let pkg_freeze_b = FreezePackage::new(
             FullIdentity::new(
                 "b".into(),
+                #[cfg(not(windows))]
                 FullOrigin::for_local(&PathBuf::from("/sialalala")).unwrap(),
+                #[cfg(windows)]
+                FullOrigin::for_local(&PathBuf::from("C:\\sialalala")).unwrap(),
             ),
             2.into(),
             vec!["f_b".into()],
