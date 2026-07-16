@@ -31,4 +31,4 @@ For scripts of type 1 & 2 it is the venv of the package the script is located in
 Thus we construct `AnyPackage::Package`.
 Scripts with frontmatters have their own venvs, thus we construct `AnyPackage::Venv`.
 
-2. Then the process is homogenous, we synchronize the venvs, compile all the venv's dependencies and then compile the script.
+2. Then the process is homogenous, we synchronize the venv, compile all the venv's dependencies and then compile the script.
