@@ -275,8 +275,12 @@ namespace compiler::lir {
 				output_value << " :=";
 			}
 			output << output_value.str() << ' ';
+			std::string op_name{ base::enumToStr(instruction.operation) };
+			if (instruction.operation == Operation::Meta)
+				if (const auto* meta_params = std::get_if<MetaParameters>(&instruction.extra_params))
+					op_name += ":" + std::string{ base::enumToStr(meta_params->kind) };
 			output << std::left << std::setw(15);
-			output << base::enumToStr(instruction.operation) << "  ";
+			output << op_name << "  ";
 			if (!instruction.output.has_value()) output << std::left << std::setw(12);
 
 			std::string_view sep = "";

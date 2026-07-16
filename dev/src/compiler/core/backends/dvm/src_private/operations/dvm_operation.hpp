@@ -121,7 +121,7 @@ namespace compiler::backend_vm::internal {
 	 * to a series of extern C function calls.
 	 */
 	struct MetaOperation {
-		lir::Operation           meta_op;
+		lir::MetaKind            meta_kind;
 		std::deque<DVMValue>     args;
 		base::Optional<DVMPlace> dest;
 	};

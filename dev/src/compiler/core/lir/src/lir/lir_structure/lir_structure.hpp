@@ -84,14 +84,11 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 	FloatEq,
 	FloatNeq,
 
-	/** Meta type operations. */
-	MetaCreateBox,
-	MetaCreateRef,
-	MetaCreateConst,
-	MetaCreateTuple, // N arguments, types to create the tuple type from
-	MetaCreateVariant, // N arguments, types to create the variant type from
-	MetaEq,
-	MetaNeq,
+	/**
+		Meta type operation. The specific operation is parametrized by `MetaParameters` (a
+		`MetaKind`) stored in the instruction's `extra_params`.
+	*/
+	Meta,
 
 	BooleanAnd,
 	BooleanOr,
@@ -110,6 +107,35 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 	// Nop can be useful when lowering the instruction flags and MIR instr translates
 	// to zero instructions in LIR, but we want to have the flags in correct place.
 	Nop
+)
+
+/**
+    @brief The specific kind of a `Operation::Meta` instruction.
+    Stored in the instruction's `extra_params` as `MetaParameters`. Mirrors `mir::MetaKind`.
+*/
+MAKE_STRINGIFYABLE_ENUM(compiler::lir, u32, MetaKind,
+	/** Create a boxed reference type from a type. Single argument. */
+	CreateBox,
+	/** Create a (non-owning) reference type from a type. Single argument. */
+	CreateRef,
+	/** Create an immutable (const) type from a type. Single argument. */
+	CreateConst,
+	/** Create a pointer type from a type. Single argument. */
+	CreatePtr,
+	/** Create a many-pointer type from a type. Single argument. */
+	CreateManyPtr,
+	/** Create a const-pointer type from a type. Single argument. */
+	CreateCPtr,
+	/** Create a slice type from a type. Single argument. */
+	CreateSlice,
+	/** Create a tuple type. N arguments, the element types. */
+	CreateTuple,
+	/** Create a variant type. N arguments, the subtypes. */
+	CreateVariant,
+	/** Compare two types for equality. Two arguments. */
+	Eq,
+	/** Compare two types for inequality. Two arguments. */
+	Neq
 )
 
 /// A helper tag that indicates that a value has some special meaning
@@ -505,10 +531,18 @@ namespace compiler::lir {
 	};
 
 	/**
+	 * @brief Additional parameters for a `Operation::Meta` instruction, selecting which meta
+	 * operation it is.
+	 */
+	struct MetaParameters final {
+		MetaKind kind;
+	};
+
+	/**
 	 * @brief Additional parameters for LIR instructions that depend on the operation type.
 	 */
 	using InstrParameters
-		= std::variant<NoInstrParameters, CastParameters, ListOperationParameters>;
+		= std::variant<NoInstrParameters, CastParameters, ListOperationParameters, MetaParameters>;
 
 	struct InstructionMetadata {
 		base::Optional<dia_int::StablePosition> position;

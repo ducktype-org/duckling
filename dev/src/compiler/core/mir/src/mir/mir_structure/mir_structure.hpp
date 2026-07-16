@@ -79,14 +79,12 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 	BooleanNot,
 
 
-	/** Operations on meta types for compile time function evaluation */
-	MetaCreateBox,
-	MetaCreateRef,
-	MetaCreateConst,
-	MetaCreateTuple, // N arguments, types to create the tuple type from
-	MetaCreateVariant, // N arguments, types to create the variant type from
-	MetaEq,
-	MetaNeq,
+	/**
+		@brief Operation on meta types for compile time function evaluation.
+		The specific meta operation is parametrized by `MetaParameters` (a `MetaKind`) stored in the
+		instruction's `extra_params`.
+	*/
+	Meta,
 
 	/** Cast is also parametrized by the source type and the target type */
 	Cast,
@@ -111,6 +109,36 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 		@note  It is always implicitly added at the end of a function.
 	*/
 	FunctionEnd
+)
+
+/**
+    @brief The specific kind of a `Operation::Meta` instruction.
+    Stored in the instruction's `extra_params` as `MetaParameters`. Each kind maps to a compile-time
+    type operation lowered by the DVM backend to extern-C `comptime_*` calls.
+*/
+MAKE_STRINGIFYABLE_ENUM(compiler::mir, u32, MetaKind,
+	/** Create a boxed reference type from a type. Single argument. */
+	CreateBox,
+	/** Create a (non-owning) reference type from a type. Single argument. */
+	CreateRef,
+	/** Create an immutable (const) type from a type. Single argument. */
+	CreateConst,
+	/** Create a pointer type from a type. Single argument. */
+	CreatePtr,
+	/** Create a many-pointer type from a type. Single argument. */
+	CreateManyPtr,
+	/** Create a const-pointer type from a type. Single argument. */
+	CreateCPtr,
+	/** Create a slice type from a type. Single argument. */
+	CreateSlice,
+	/** Create a tuple type. N arguments, the element types. */
+	CreateTuple,
+	/** Create a variant type. N arguments, the subtypes. */
+	CreateVariant,
+	/** Compare two types for equality. Two arguments. */
+	Eq,
+	/** Compare two types for inequality. Two arguments. */
+	Neq
 )
 
 namespace compiler::mir {
@@ -635,11 +663,19 @@ namespace compiler::mir {
 	};
 
 	/**
+	 * @brief Additional parameters for a `Operation::Meta` instruction, selecting which meta
+	 * operation it is.
+	 */
+	struct MetaParameters final {
+		MetaKind kind;
+	};
+
+	/**
 	 * @brief Additional parameters for MIR instructions that depend on the operation type.
 	 * For example, cast instruction needs to know
 	 * from which type to which type it is casting.
 	 */
-	using InstrParameters = std::variant<NoInstrParameters, CastParameters>;
+	using InstrParameters = std::variant<NoInstrParameters, CastParameters, MetaParameters>;
 
 	/**
 	 * @brief Single instruction of MIR code.

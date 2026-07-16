@@ -21,6 +21,16 @@
 namespace compiler::mir {
 
 	/**
+	 * @brief A resolved MIR operation together with the `extra_params` it needs.
+	 * Used by the builtin-operator lowering helpers, since meta operations lower to a single
+	 * `Operation::Meta` parametrized by `MetaParameters`.
+	 */
+	struct OperationWithParams {
+		Operation       operation;
+		InstrParameters params = NoInstrParameters{};
+	};
+
+	/**
 	 * @brief Visitor that implements actual logic of lowering expression.
 	 * @note The result of the visitor is stored in out member. To store expr
 	 * result somewhere, call finalize with place to store it
@@ -157,14 +167,20 @@ namespace compiler::mir {
 			const auto res_left      = lowered_left.getResult(function);
 
 			// Fill the hole with the binary operation.
-			const auto      result_type = expr.expression_type.getSymbolType();
-			const Operation operation   = builtinBinaryToOperation(expr.operation);
+			const auto result_type        = expr.expression_type.getSymbolType();
+			const auto [operation, param] = builtinBinaryToOperation(expr.operation);
 
 			noValueOutput(
 				lowered_left.begin,
 				target_construction_hole,
 				Instruction(
-					operation, {}, { res_left, res_right }, {}, expr_scope, {}, { expr.getPosition() }
+					operation,
+					{},
+					{ res_left, res_right },
+					{},
+					expr_scope,
+					param,
+					{ expr.getPosition() }
 				),
 				result_type
 			);
@@ -178,13 +194,13 @@ namespace compiler::mir {
 
 			const auto result_type = expr.expression_type.getSymbolType();
 
-			const Operation operation = builtinUnaryToOperation(expr.operation);
+			const auto [operation, param] = builtinUnaryToOperation(expr.operation);
 
 			noValueOutput(
 				lowered.begin,
 				target_construction_hole,
 				Instruction(
-					operation, {}, { res_lowered }, {}, expr_scope, {}, { expr.getPosition() }
+					operation, {}, { res_lowered }, {}, expr_scope, param, { expr.getPosition() }
 				),
 				result_type
 			);
@@ -293,12 +309,12 @@ namespace compiler::mir {
 				current,
 				hole,
 				Instruction(
-					Operation::MetaCreateVariant,
+					Operation::Meta,
 					{},
 					subtype_values,
 					{},
 					expr_scope,
-					{},
+					MetaParameters{ MetaKind::CreateVariant },
 					{ expr.getPosition() }
 				),
 				result_type
@@ -740,11 +756,16 @@ namespace compiler::mir {
 
 				return ExprLowerRes(
 					current,
-					ExprLowerRes::Finalizer{
-						.hole = hole,
-						.instr
-						= Instruction(Operation::MetaCreateTuple, {}, element_types, {}, expr_scope),
-						.type = result_type }
+					ExprLowerRes::Finalizer{ .hole  = hole,
+				                             .instr = Instruction(
+												 Operation::Meta,
+												 {},
+												 element_types,
+												 {},
+												 expr_scope,
+												 MetaParameters{ MetaKind::CreateTuple }
+											 ),
+				                             .type = result_type }
 				);
 			} else if (const auto* paren_expr = dynamic_cast<const hc::ParenthesisExpr*>(&expr)) {
 				return lowerAndLiftToTypeRecursively(*paren_expr->inner, continuation);
@@ -756,94 +777,102 @@ namespace compiler::mir {
 			return lowerSubExpr(expr, continuation);
 		}
 
-		static Operation builtinBinaryToOperation(const hc::BuiltinBinary builtin) {
+		static OperationWithParams builtinBinaryToOperation(const hc::BuiltinBinary builtin) {
 			using enum hc::BuiltinBinary;
 			switch (builtin) {
 			/// Integer arithmetic ///
 			case IntegerAdd:
-				return Operation::IntegerAdd;
+				return { Operation::IntegerAdd };
 			case IntegerSub:
-				return Operation::IntegerSub;
+				return { Operation::IntegerSub };
 			case IntegerMul:
-				return Operation::IntegerMul;
+				return { Operation::IntegerMul };
 			case IntegerDiv:
-				return Operation::IntegerDiv;
+				return { Operation::IntegerDiv };
 			case IntegerMod:
-				return Operation::IntegerMod;
+				return { Operation::IntegerMod };
 			case IntegerPow:
 				// @TODO: #1610 Implement exponentiation as a function call.
 				throw base::NotYetImplemented("Exponentiation on variables");
 
 			/// Integer comparisons ///
 			case IntegerLt:
-				return Operation::IntegerLt;
+				return { Operation::IntegerLt };
 			case IntegerGt:
-				return Operation::IntegerGt;
+				return { Operation::IntegerGt };
 			case IntegerLteq:
-				return Operation::IntegerLteq;
+				return { Operation::IntegerLteq };
 			case IntegerGteq:
-				return Operation::IntegerGteq;
+				return { Operation::IntegerGteq };
 			case IntegerEq:
-				return Operation::IntegerEq;
+				return { Operation::IntegerEq };
 			case IntegerNeq:
-				return Operation::IntegerNeq;
+				return { Operation::IntegerNeq };
 
 			/// Floating point arithmetic d///
 			case FloatAdd:
-				return Operation::FloatAdd;
+				return { Operation::FloatAdd };
 			case FloatSub:
-				return Operation::FloatSub;
+				return { Operation::FloatSub };
 			case FloatMul:
-				return Operation::FloatMul;
+				return { Operation::FloatMul };
 			case FloatDiv:
-				return Operation::FloatDiv;
+				return { Operation::FloatDiv };
 			case FloatPow:
 				// @TODO: #1610 Implement exponentiation as a function call.
 				throw base::NotYetImplemented("Exponentiation on variables");
 
 			/// Floating point comparisons ///
 			case FloatLt:
-				return Operation::FloatLt;
+				return { Operation::FloatLt };
 			case FloatGt:
-				return Operation::FloatGt;
+				return { Operation::FloatGt };
 			case FloatLteq:
-				return Operation::FloatLteq;
+				return { Operation::FloatLteq };
 			case FloatGteq:
-				return Operation::FloatGteq;
+				return { Operation::FloatGteq };
 			case FloatEq:
-				return Operation::FloatEq;
+				return { Operation::FloatEq };
 			case FloatNeq:
-				return Operation::FloatNeq;
+				return { Operation::FloatNeq };
 
 			case MetaEq:
-				return Operation::MetaEq;
+				return { Operation::Meta, MetaParameters{ MetaKind::Eq } };
 			case MetaNeq:
-				return Operation::MetaNeq;
+				return { Operation::Meta, MetaParameters{ MetaKind::Neq } };
 
 			case BooleanAnd:
-				return Operation::BooleanAnd;
+				return { Operation::BooleanAnd };
 			case BooleanOr:
-				return Operation::BooleanOr;
+				return { Operation::BooleanOr };
 			default:
 				CORE_UNREACHABLE();
 			}
 		}
 
-		static Operation builtinUnaryToOperation(const hc::BuiltinUnary builtin) {
+		static OperationWithParams builtinUnaryToOperation(const hc::BuiltinUnary builtin) {
 			using enum hc::BuiltinUnary;
 			switch (builtin) {
 			case IntegerNegation:
-				return Operation::IntegerNeg;
+				return { Operation::IntegerNeg };
 			case FloatNegation:
-				return Operation::FloatNeg;
+				return { Operation::FloatNeg };
 			case BooleanNot:
-				return Operation::BooleanNot;
+				return { Operation::BooleanNot };
 			case Box:
-				return Operation::MetaCreateBox;
+				return { Operation::Meta, MetaParameters{ MetaKind::CreateBox } };
 			case Ref:
-				return Operation::MetaCreateRef;
+				return { Operation::Meta, MetaParameters{ MetaKind::CreateRef } };
 			case Const:
-				return Operation::MetaCreateConst;
+				return { Operation::Meta, MetaParameters{ MetaKind::CreateConst } };
+			case Ptr:
+				return { Operation::Meta, MetaParameters{ MetaKind::CreatePtr } };
+			case ManyPtr:
+				return { Operation::Meta, MetaParameters{ MetaKind::CreateManyPtr } };
+			case CPtr:
+				return { Operation::Meta, MetaParameters{ MetaKind::CreateCPtr } };
+			case Slice:
+				return { Operation::Meta, MetaParameters{ MetaKind::CreateSlice } };
 			default:
 				CORE_UNREACHABLE();
 			}
