@@ -226,8 +226,6 @@ namespace compiler::helios::code {
 						const auto unescape_result = base::unescapeString(escaped_string);
 						match_optional(unescape_result) {
 							opt_some(result) {
-								// TODO (review) this previously constructed a String object,
-								// now constructs a slice. Is this good? (Technically faster.)
 								next_string = s.litStr(base::StrID(result.value));
 							}
 							opt_err(error) {
