@@ -1,82 +1,81 @@
 #include "memory.hpp"
 
+#include <expected>
+
 #if __unix__
 	#include <sys/mman.h>
 	#include <unistd.h>
 
 	#include <base/except/exceptions.hpp>
 
-	#include <cstddef>
-	#include <functional>
-	#include <iostream>
-
 namespace vm::jit::cnp {
-	inline usize getPageSize() {
-		static usize page_size = std::invoke([]() {
-			long result = sysconf(_SC_PAGESIZE);
-			CORE_ASSERT_SYSCALL(result != -1, "couldn't get the page size");
-			return static_cast<usize>(result);
-		});
-
-		return page_size;
+	namespace {
+		std::expected<usize, std::string> getPageSize() {
+			static auto page_size = []() -> std::expected<usize, std::string> {
+				long result = sysconf(_SC_PAGESIZE);
+				if (result == -1) return std::unexpected<std::string>("couldn't get the page size");
+				return static_cast<usize>(result);
+			}();
+			return page_size;
+		}
 	}
 
-	JitFuncMemory JitFuncMemory::allocate(usize size) {
-		// Aligns the size to page boundaries
-		// ceil(a / b) = floor((a + b - 1) / b)
-		size = (size + getPageSize() - 1) / getPageSize() * getPageSize();
-		CORE_ASSERT(size % getPageSize() == 0, "should be aligned to page size");
+	std::expected<JitFuncMemory, std::string> JitFuncMemory::allocate(usize size) {
+		return getPageSize().and_then(
+			[&](usize page_size) -> std::expected<JitFuncMemory, std::string> {
+				// Aligns the size to page boundaries
+			    // ceil(a / b) = floor((a + b - 1) / b)
+				size = (size + page_size - 1) / page_size * page_size;
+				CORE_ASSERT(size % page_size == 0, "should be aligned to page size");
 
-		int  flags = MAP_ANONYMOUS | MAP_PRIVATE;
-		auto memory
-			= reinterpret_cast<byte*>(mmap(nullptr, size, PROT_READ | PROT_WRITE, flags, -1, 0));
+				int  flags  = MAP_ANONYMOUS | MAP_PRIVATE;
+				auto memory = reinterpret_cast<byte*>(
+					mmap(nullptr, size, PROT_READ | PROT_WRITE, flags, -1, 0)
+				);
 
-		CORE_ASSERT_SYSCALL(memory != MAP_FAILED, "unable to allocate memory");
-		return JitFuncMemory{ memory, size };
-	}
+				if (memory == MAP_FAILED)
+					return std::unexpected<std::string>("unable to allocate memory");
 
-	void JitFuncMemory::markExecutable() {
-		CORE_ASSERT_SYSCALL(
-			mprotect(addr, size, PROT_READ | PROT_EXEC) == 0, "unable to mark memory as executable"
+				return JitFuncMemory{ memory, size };
+			}
 		);
 	}
 
+	std::expected<void, std::string> JitFuncMemory::markExecutable() {
+		if (mprotect(addr, size, PROT_READ | PROT_EXEC) != 0)
+			return std::unexpected<std::string>("unable to mark memory as executable");
+		return {};
+	}
+
+	JitFuncMemory::JitFuncMemory(JitFuncMemory&& other) noexcept:
+		  addr{ other.addr },
+		  size{ other.size } {
+		other.addr = nullptr;
+		other.size = 0;
+	}
+
+	JitFuncMemory& JitFuncMemory::operator=(JitFuncMemory&& other) noexcept {
+		if (this != &other) {
+			if (addr != nullptr) {
+				int res = munmap(addr, size);
+				CORE_ASSERT_NOEXCEPT(res == 0, "unable to unmap memory");
+			}
+			addr       = other.addr;
+			size       = other.size;
+			other.addr = nullptr;
+			other.size = 0;
+		}
+		return *this;
+	}
+
 	JitFuncMemory::~JitFuncMemory() noexcept {
-		CORE_ASSERT_SYSCALL_NOEXCEPT(munmap(addr, size) == 0, "unable to unmap memory");
+		if (addr != nullptr) {
+			int res = munmap(addr, size);
+			CORE_ASSERT_NOEXCEPT(res == 0, "unable to unmap memory");
+		}
 	}
 }
 
-#elif _WIN32
-	#include <windows.h>
-
-	#include <cstddef>
-	#include <iostream>
-
-namespace vm::jit::cnp {
-	usize getPageSize() {
-		static SYSTEM_INFO system_info = []() {
-			SYSTEM_INFO system_info;
-			GetSystemInfo(&system_info);
-			return system_info;
-		};
-		return system_info.dwPageSize;
-	}
-
-	JitMemory JitMemory::allocate(usize size) {
-		CORE_ASSERT(size % getPageSize() == 0, "should be aligned to page size");
-		int   flags = MAP_ANONYMOUS | MAP_PRIVATE;
-		auto* memory
-			= reinterpret_cast<byte*>(VirtualAlloc(nullptr, size, MEM_COMMIT, PAGE_READWRITE););
-
-		return JitMemory{ .memory = memory, .size = size };
-	}
-
-	void JitMemory::mark_executable() {
-		DWORD dummy;
-		VirtualProtect(memory, size, PAGE_EXECUTE_READ, &dummy);
-	}
-
-	void JitMemory::free_jit_memory() { VirtualFree(memory, 0, MEM_RELEASE); }
-
-}
+#else
+	#error "Unsupported system"
 #endif

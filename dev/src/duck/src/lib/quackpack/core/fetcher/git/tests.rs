@@ -59,7 +59,8 @@ fn clone_local_repo() {
     let reference = GitReference::Default;
 
     let ctx = DuckContext::default();
-    let _ = GitClient::clone_blocking(&url, reference, &target, &ctx).unwrap();
+    let client = GitClient::new(&ctx);
+    let _ = client.clone_blocking(&url, reference, &target).unwrap();
 
     assert!(target.exists());
     assert!(target.is_dir());
@@ -80,7 +81,8 @@ fn clone_local_repo_with_branch() {
     let reference = GitReference::Branch("test-branch".into());
 
     let ctx = DuckContext::default();
-    let _ = GitClient::clone_blocking(&url, reference, &target, &ctx).unwrap();
+    let client = GitClient::new(&ctx);
+    let _ = client.clone_blocking(&url, reference, &target).unwrap();
 
     let repo = Repository::open(&target).unwrap();
     assert_eq!(repo.head().unwrap().shorthand().unwrap(), "test-branch");
@@ -95,7 +97,8 @@ fn clone_local_repo_with_tag() {
     let reference = GitReference::Tag("v1.0.0".into());
 
     let ctx = DuckContext::default();
-    let _ = GitClient::clone_blocking(&url, reference, &target, &ctx).unwrap();
+    let client = GitClient::new(&ctx);
+    let _ = client.clone_blocking(&url, reference, &target).unwrap();
 
     let repo = Repository::open(&target).unwrap();
     let mut opts = DescribeOptions::new();
@@ -119,7 +122,8 @@ fn clone_local_repo_with_rev() {
     let reference = GitReference::Rev(original_commit.id().to_string().into());
 
     let ctx = DuckContext::default();
-    let _ = GitClient::clone_blocking(&url, reference, &target, &ctx).unwrap();
+    let client = GitClient::new(&ctx);
+    let _ = client.clone_blocking(&url, reference, &target).unwrap();
 
     let repo = Repository::open(&target).unwrap();
     let new_commit = repo.head().unwrap().peel_to_commit().unwrap();
