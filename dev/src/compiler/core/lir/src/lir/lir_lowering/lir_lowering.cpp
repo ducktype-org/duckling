@@ -232,6 +232,10 @@ namespace compiler::lir {
 			return lir::MetaKind::Eq;
 		case Neq:
 			return lir::MetaKind::Neq;
+		case SizeOf:
+			return lir::MetaKind::SizeOf;
+		case AlignOf:
+			return lir::MetaKind::AlignOf;
 		}
 		CORE_UNREACHABLE();
 	}

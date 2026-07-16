@@ -873,6 +873,10 @@ namespace compiler::mir {
 				return { Operation::Meta, MetaParameters{ MetaKind::CreateCPtr } };
 			case Slice:
 				return { Operation::Meta, MetaParameters{ MetaKind::CreateSlice } };
+			case SizeOf:
+				return { Operation::Meta, MetaParameters{ MetaKind::SizeOf } };
+			case AlignOf:
+				return { Operation::Meta, MetaParameters{ MetaKind::AlignOf } };
 			default:
 				CORE_UNREACHABLE();
 			}

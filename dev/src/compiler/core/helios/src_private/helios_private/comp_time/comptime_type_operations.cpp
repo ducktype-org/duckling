@@ -20,6 +20,10 @@
 
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/symbol_type.hpp>
+#include <tsl/queries.hpp>
+#include <tsl/type_layout.hpp>
+
+#include <base/types/bits_and_bytes.hpp>
 
 #include <query_framework/context/context.hpp>
 
@@ -200,6 +204,28 @@ namespace compiler::helios::comptime_ops {
 	}
 
 	DEF_VM_EXT_C_FUNC(
+		i64,
+		"i64",
+		comptime_size_of,
+		(query::Context*, "opaque_ptr", ctx_ptr),
+		(tsh::SymbolType<>*, "opaque_ptr", type_ptr)
+	) {
+		const auto& layout = ctx_ptr->query<tsl::QuerySymbolTypeLayout>(*type_ptr)->valueOrThrow();
+		return static_cast<i64>(base::bits2bytesRoundUp(layout.getSize()).asInt());
+	}
+
+	DEF_VM_EXT_C_FUNC(
+		i64,
+		"i64",
+		comptime_align_of,
+		(query::Context*, "opaque_ptr", ctx_ptr),
+		(tsh::SymbolType<>*, "opaque_ptr", type_ptr)
+	) {
+		const auto& layout = ctx_ptr->query<tsl::QuerySymbolTypeLayout>(*type_ptr)->valueOrThrow();
+		return static_cast<i64>(layout.getAlignment().asInt());
+	}
+
+	DEF_VM_EXT_C_FUNC(
 		bool,
 		"i8",
 		comptime_types_equal,
@@ -228,6 +254,8 @@ namespace compiler::helios::comptime_ops {
 			VM_INSTANCE_EXT_C_FUNC(comptime_create_many_ptr, comptime_create_many_ptr, pid),
 			VM_INSTANCE_EXT_C_FUNC(comptime_create_cptr, comptime_create_cptr, pid),
 			VM_INSTANCE_EXT_C_FUNC(comptime_create_slice, comptime_create_slice, pid),
+			VM_INSTANCE_EXT_C_FUNC(comptime_size_of, comptime_size_of, pid),
+			VM_INSTANCE_EXT_C_FUNC(comptime_align_of, comptime_align_of, pid),
 			VM_INSTANCE_EXT_C_FUNC(comptime_tuple_builder_new, comptime_tuple_builder_new, pid),
 			VM_INSTANCE_EXT_C_FUNC(comptime_tuple_builder_push, comptime_tuple_builder_push, pid),
 			VM_INSTANCE_EXT_C_FUNC(

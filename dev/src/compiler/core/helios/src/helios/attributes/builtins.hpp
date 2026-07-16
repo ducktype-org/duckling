@@ -42,6 +42,10 @@ namespace compiler::helios {
 		DvmCharAlloc,
 		DvmCharRealloc,
 		DvmCharFree,
+		/** `size_of(v: meta) -> i64`: byte size of a type. Implemented in HOUT as a `SizeOf` op. */
+		SizeOf,
+		/** `alignment_of(v: meta) -> i64`: byte alignment of a type. HOUT `AlignOf` op. */
+		AlignmentOf,
 		/**
 		 * Box allocation / deallocation. Unlike the other builtins these are not selected by the
 		 * `@builtin("...")` attribute. They are only called by the compiler in `box T` constructors

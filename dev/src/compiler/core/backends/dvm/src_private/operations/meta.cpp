@@ -22,6 +22,8 @@ namespace comptime_func_names {
 	constexpr auto CREATE_MANY_PTR          = "comptime_create_many_ptr";
 	constexpr auto CREATE_CPTR              = "comptime_create_cptr";
 	constexpr auto CREATE_SLICE             = "comptime_create_slice";
+	constexpr auto SIZE_OF                  = "comptime_size_of";
+	constexpr auto ALIGN_OF                 = "comptime_align_of";
 	constexpr auto TYPES_EQUAL              = "comptime_types_equal";
 	constexpr auto TYPES_NOT_EQUAL          = "comptime_types_not_equal";
 	constexpr auto TUPLE_BUILDER_NEW        = "comptime_tuple_builder_new";
@@ -148,6 +150,12 @@ namespace compiler::backend_vm::internal {
 			break;
 		case lir::MetaKind::Neq:
 			lower_single_call(base::StrID(comptime_func_names::TYPES_NOT_EQUAL), op.args, op.dest);
+			break;
+		case lir::MetaKind::SizeOf:
+			lower_ctx_call(base::StrID(comptime_func_names::SIZE_OF));
+			break;
+		case lir::MetaKind::AlignOf:
+			lower_ctx_call(base::StrID(comptime_func_names::ALIGN_OF));
 			break;
 		}
 	}

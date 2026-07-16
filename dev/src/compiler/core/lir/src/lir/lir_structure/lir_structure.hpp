@@ -135,7 +135,11 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u32, MetaKind,
 	/** Compare two types for equality. Two arguments. */
 	Eq,
 	/** Compare two types for inequality. Two arguments. */
-	Neq
+	Neq,
+	/** Byte size of a type, as i64. Single argument. */
+	SizeOf,
+	/** Byte alignment of a type, as i64. Single argument. */
+	AlignOf
 )
 
 /// A helper tag that indicates that a value has some special meaning
