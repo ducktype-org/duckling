@@ -134,10 +134,11 @@ namespace compiler::helios {
 						const auto& layout
 							= ctx.query<tsl::QuerySymbolTypeLayout>(type)->valueOrThrow();
 
-						const i64 value
-							= (builtin.value() == BuiltinKind::SizeOf)
-						        ? base::safeIntConv<i64>(base::bits2bytesRoundUp(layout.getSize()).asInt())
-						        : base::safeIntConv<i64>(layout.getAlignment().asInt());
+						const i64 value = (builtin.value() == BuiltinKind::SizeOf)
+						                    ? base::safeIntConv<i64>(
+												  base::bits2bytesRoundUp(layout.getSize()).asInt()
+											  )
+						                    : base::safeIntConv<i64>(layout.getAlignment().asInt());
 
 						result = CompileTimeValue{ NumericValue{ value } };
 						return;
