@@ -22,8 +22,8 @@
 #include <helios/hout/origin.hpp>
 #include <helios/symbols/symbol_id.hpp>
 #include <helios/tsh/abstract_type.hpp>
-#include <helios/tsh/symbol_type.hpp>
 #include <helios/tsh/queries/types.hpp>
+#include <helios/tsh/symbol_type.hpp>
 #include <helios_private/hout_creation/expressions/coercions.hpp>
 #include <helios_private/symbols/symbols.hpp>
 

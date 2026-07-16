@@ -116,7 +116,7 @@ namespace compiler::helios::defgen {
 			const HOUTFunctionDeclaration& to_string_decl,
 			std::vector<Box<code::Stmt>>&  body
 		) {
-			const auto self_param        = to_string_decl.parameters.at(0).helios_symbol;
+			const auto self_param = to_string_decl.parameters.at(0).helios_symbol;
 			const auto target_float_type
 				= tsh::SymbolType<>::withDefaults(tsh::getFloatType(ctx, 64));
 			const auto builtin_sym = stringifySym(ctx, target_float_type, "builtin_stringify_f64");

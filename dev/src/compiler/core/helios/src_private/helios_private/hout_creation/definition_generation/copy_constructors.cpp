@@ -131,9 +131,9 @@ namespace compiler::helios::defgen {
 			                                       .variable_index  = 0,
 			                                       .type            = result_symbol_type },
 			});
-			body.emplace_back(
-				s.var(result_symbol, result_symbol_type, s.defaultValue(result_symbol_type.getType()))
-			);
+			body.emplace_back(s.var(
+				result_symbol, result_symbol_type, s.defaultValue(result_symbol_type.getType())
+			));
 
 			// __result.field = <copy of (*source).field>;
 			for (const auto& field: fields) {
@@ -211,8 +211,7 @@ namespace compiler::helios::defgen {
 							)
 						),
 						s.assign(
-							s.ident(i_sym),
-							s.binOp(s.ident(i_sym), IntegerAdd, s.litNum(one_val))
+							s.ident(i_sym), s.binOp(s.ident(i_sym), IntegerAdd, s.litNum(one_val))
 						),
 					}
 				));
@@ -273,7 +272,9 @@ namespace compiler::helios::defgen {
 			// while (__i < source.length()) { __result += <copy of (*source)[__i]>; __i = __i + 1; }
 			body.emplace_back(s.whileStmt(
 				s.binOp(
-					s.ident(i_sym), IntegerLt, s.call(s.ident(length_method_sym), s.ident(source_symbol))
+					s.ident(i_sym),
+					IntegerLt,
+					s.call(s.ident(length_method_sym), s.ident(source_symbol))
 				),
 				{
 					s.expr(s.listPush(

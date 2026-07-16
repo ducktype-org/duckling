@@ -225,9 +225,7 @@ namespace compiler::helios::code {
 						const auto escaped_string  = substr.value()->getValue().value.strView();
 						const auto unescape_result = base::unescapeString(escaped_string);
 						match_optional(unescape_result) {
-							opt_some(result) {
-								next_string = s.litStr(base::StrID(result.value));
-							}
+							opt_some(result) { next_string = s.litStr(base::StrID(result.value)); }
 							opt_err(error) {
 								ctx.logInt(makeBox<UnknownEscapeSequenceError>(
 									stmt->getStablePosition(), error.value
