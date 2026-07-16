@@ -23,3 +23,12 @@ Build artifacts
 The precise artifacts directory is `<path to the folder of the script>/.duck_build/<name of the script>`.
 
 Thus all the differences are abstracted away before compilation, which can be then performed homogenously.
+
+Handling
+--------
+1.  For all types of scripts we first get their venvs.
+For scripts of type 1 & 2 it is the venv of the package the script is located in / the global venv.
+Thus we construct `AnyPackage::Package`.
+Scripts with frontmatters have their own venvs, thus we construct `AnyPackage::Venv`.
+
+2. Then the process is homogenous, we synchronize the venvs, compile all the venv's dependencies and then compile the script.

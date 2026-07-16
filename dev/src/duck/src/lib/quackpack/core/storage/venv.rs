@@ -214,7 +214,8 @@ impl VenvData {
         self.is_ephemeral = is_ephemeral;
     }
 
-    /// Get the last known directory of this venv.
+    /// Get the last known location of this venv.
+    /// This is either root of the package for packages or path to the script for scripts with frontmatters.
     pub fn last_known_location(&self) -> &Path {
         &self.last_known_location
     }
@@ -224,7 +225,7 @@ impl VenvData {
         &mut self.last_known_location
     }
 
-    /// Set the last know directory of this venv.
+    /// Set the last know location of this venv.
     pub fn set_last_known_location(&mut self, last_known_location: PathBuf) {
         self.last_known_location = last_known_location;
     }

@@ -8,10 +8,10 @@ use std::sync::Arc;
 use self::graph::UnitGraph;
 use self::unit_visitor::UnitVisitor;
 use super::duckc::multipackage_schema;
-use crate::QuackResult;
 use crate::quackpack::core::compile::compiler_package::CompilerPackage;
 use crate::quackpack::core::identity::Identity;
 use crate::util::hash::sha256_string;
+use crate::{QuackResult, QuackResultContext};
 
 pub mod graph;
 pub mod unit_visitor;
@@ -185,7 +185,12 @@ impl Unit {
             import_name: name,
             version,
             features,
-            path_to_the_src_directory: package.src()?.to_path_buf(),
+            path_to_the_src_directory: package
+                .src()
+                .context_internal(
+                    "asked for src directory of the global package or a script with frontmatter",
+                )?
+                .to_path_buf(),
             dependencies,
         })
     }

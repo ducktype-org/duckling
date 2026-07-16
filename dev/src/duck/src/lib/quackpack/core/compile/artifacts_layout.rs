@@ -7,16 +7,11 @@
 //! │   │   ├── artifacts/ # Duckc artifacts directory
 //! │   │   ├── deps.json # JSON used to communicate between QuackPack and duckc.
 //! │   │   └── .duck_lock # Per dependency lock
-//! │   ├── *script artifacts*/
-//! │   │   ├── *generated artifacts of the script*
-//! │   │   ├── artifacts/ # Duckc artifacts directory
-//! │   │   ├── deps.json # JSON used to communicate between QuackPack and duckc.
-//! │   │   └── .duck_lock # Per script lock
 //! │   ├── *root package artifacts*/
 //! │   │   ├── artifacts/ # Duckc artifacts directory
 //! │   │   ├── deps.json # JSON used to communicate between QuackPack and duckc.
 //! │   │   └── .duck_lock
-//! │   └── *useful artifacts of the root package* # artifacts like main executable, main binary, etc
+//! │   └── *useful artifacts of the root package* # artifacts like main executable, main binary, compiled scripts, etc
 //! └── .duck_lock # Global artifacts lock
 
 use std::path::{Path, PathBuf};
@@ -82,13 +77,6 @@ impl ProfileLayout {
 
     /// Get the layout for a specific dependency.
     pub fn for_dependency(&self, name: &str) -> DependencyLayout {
-        DependencyLayout {
-            root: self.root.join(name),
-        }
-    }
-
-    /// Get the layout for a specific script.
-    pub fn for_script(&self, name: &str) -> DependencyLayout {
         DependencyLayout {
             root: self.root.join(name),
         }
