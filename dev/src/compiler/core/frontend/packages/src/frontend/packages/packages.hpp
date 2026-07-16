@@ -196,8 +196,10 @@ namespace compiler::frontend::packages {
 	 * @param from_previous_metadata If true, alias-lookup metadata is read from the previous
 	 * compilation's nodes (driver init); otherwise from the current graph's nodes.
 	 */
-	std::vector<query::external::InputData> collectPackageInputData(
-		const std::vector<PackageInfo>& packages, bool from_previous_metadata
+	void collectPackageInputData(
+		const std::vector<PackageInfo>&          packages,
+		bool                                     from_previous_metadata,
+		std::vector<query::external::InputData>& out
 	);
 
 }  // namespace compiler::frontend::packages
