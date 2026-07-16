@@ -218,7 +218,7 @@ impl Package {
     }
 
     /// Get the path to the source directory.
-    /// Global package has no src folder, so this function returns
+    /// Global package has no src folder, so in that case this function returns [`None`].
     pub fn source_directory(&self) -> Option<&Path> {
         if self.is_global() {
             None
