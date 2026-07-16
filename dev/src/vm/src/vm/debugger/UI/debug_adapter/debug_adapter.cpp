@@ -194,8 +194,6 @@ namespace vm::debugger::debug_adapter {
 		sendResponse(request, false, { "message", err_msg });
 	}
 
-	void DebugAdapter::sendEvent(const std::string& event, const nlohmann::json& body) {
-		nlohmann::json message = { { "type", "event" }, { "event", event } };
 	void DebugAdapter::sendEvent(const dap::Event& event) {
 		nlohmann::json msg = { { "type", "event" }, { "event", dap::toString(event.getType()) } };
 
