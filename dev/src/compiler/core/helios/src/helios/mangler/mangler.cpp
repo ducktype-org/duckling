@@ -36,26 +36,32 @@
  */
 namespace compiler::helios::mangler {
 
-	void addToHash(hashing::hash_algorithm auto& h, const KeyOf_MangledSymbol& k) RELEASE_NOEXCEPT {
-		addToHash(h, k.symbol_key.index());
-		if (k.symbol_key.index() == 0)
-			addToHash(h, std::get<0>(k.symbol_key));
-		else if (k.symbol_key.index() == 1)
-			addToHash(h, std::get<1>(k.symbol_key));
-		else
-			CORE_PANIC("KeyOf_MangledSymbol has an unexpected symbol_key index");
-
-		addToHash(h, k.kind);
-		addToHash(h, k.mangling_scheme_version);
-		addToHash(h, k.additional_metadata.has_value());
-		if (k.additional_metadata) addToHash(h, k.additional_metadata.value());
-	}
-
-	base::Bit256 KeyOf_MangledSymbol::queryUnstablePerfectHash() const {
-		return hashing::justHash<hashing::SHA256>(*this);
-	}
+	using namespace std::literals::string_view_literals;
 
 	namespace internal {
+		static constexpr auto BASE_62_DIGITS
+			= "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"sv;
+
+		void addToHash(hashing::hash_algorithm auto& h, const KeyOf_MangledSymbol& k)
+			RELEASE_NOEXCEPT {
+			addToHash(h, k.symbol_key.index());
+			if (k.symbol_key.index() == 0)
+				addToHash(h, std::get<0>(k.symbol_key));
+			else if (k.symbol_key.index() == 1)
+				addToHash(h, std::get<1>(k.symbol_key));
+			else
+				CORE_PANIC("KeyOf_MangledSymbol has an unexpected symbol_key index");
+
+			addToHash(h, k.kind);
+			addToHash(h, k.mangling_scheme_version);
+			addToHash(h, k.additional_metadata.has_value());
+			if (k.additional_metadata) addToHash(h, k.additional_metadata.value());
+		}
+
+		base::Bit256 KeyOf_MangledSymbol::queryUnstablePerfectHash() const {
+			return hashing::justHash<hashing::SHA256>(*this);
+		}
+
 		/**
 		 * @brief Check if the symbol should be mangled in the first place.
 		 * @note: See mangling-scheme.md for details
@@ -71,7 +77,7 @@ namespace compiler::helios::mangler {
 				variant_match(abi->valueOrThrow()) {
 					variant_case_novalue(CAbi) { return false; }
 					variant_case_novalue(DefaultAbi) { return true; }
-					variant_default { CORE_UNREACHABLE(); }
+					variant_default { CORE_PANIC("Unknown ABI in shouldMangle()"); }
 				}
 			}
 
@@ -83,18 +89,14 @@ namespace compiler::helios::mangler {
 		 * @note: See mangling-scheme.md for details
 		 */
 		std::string compactNumber(u64 number) {
-			using namespace std::literals::string_view_literals;
-
 			if (number == 0) return "_";
 
-			static constexpr auto DIGITS
-				= "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"sv;
-			constexpr u64 BASE = DIGITS.size();
+			constexpr u64 BASE = BASE_62_DIGITS.size();
 
 			std::string ret;
 			--number;
 			do {
-				ret += DIGITS[number % BASE];
+				ret += BASE_62_DIGITS[number % BASE];
 				number /= BASE;
 			} while (number > 0);
 			std::ranges::reverse(ret);
@@ -279,7 +281,6 @@ namespace compiler::helios::mangler {
 			case SymbolKind::Field:
 			case SymbolKind::Const:
 				return path(ctx, symbol_id);
-				break;
 
 			case SymbolKind::Function:
 			case SymbolKind::Method:
@@ -289,7 +290,9 @@ namespace compiler::helios::mangler {
 						// If the symbol originates from the PST, use its path.
 						return path(ctx, symbol_id) + func(ctx, symbol_id);
 					}
-					variant_case(defgen::GeneratedSymbolData, gen_data) {
+					variant_case(
+						defgen::GeneratedSymbolData, gen_data
+					) /* @taw3e8 @todo: check those */ {
 						// If the symbol is generated, it has no path.
 						variant_match(gen_data.data) {
 							variant_case(defgen::GeneratedSymbolData::ImplicitConstructor, ctor) {
@@ -357,7 +360,6 @@ namespace compiler::helios::mangler {
 				throw base::LogicError{
 					base::strConcat("Cannot mangle symbol of type: ", kind(symbol_id))
 				};
-				break;
 			}
 		}
 
@@ -442,7 +444,7 @@ namespace compiler::helios::mangler {
 				break;
 
 			default:
-				CORE_UNREACHABLE();
+				CORE_PANIC("Unknown ManglingSymbolKind in encoding()");
 			}
 		}
 
@@ -459,8 +461,6 @@ namespace compiler::helios::mangler {
 
 	struct IMPLEMENT_QUERY(QueryMangledSymbol, base::StrID) {
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
-			using namespace std::literals::string_view_literals;
-
 			if (not internal::shouldMangle(ctx, key)) return name(std::get<SymID>(key.symbol_key));
 
 			// note: global identifiers starting with underscore and a capital letter are
@@ -497,9 +497,10 @@ namespace compiler::helios::mangler {
 		static std::string mangle(query::Context&, tsh::CharAbstractType) { return "c"; }
 
 		static std::string mangle(query::Context&, tsh::IntegralAbstractType type) {
-			bool is_signed  = type.getSignedness() == tsh::IntegralAbstractType::Signedness::Signed;
-			u32  size       = type.getSize().asInt();
-			std::string ret = (is_signed ? "i" : "j");
+			const bool is_signed
+				= type.getSignedness() == tsh::IntegralAbstractType::Signedness::Signed;
+			const u32   size = type.getSize().asInt();
+			std::string ret  = (is_signed ? "i" : "j");
 			switch (size) {
 			case 8:
 				ret += "b";
@@ -525,6 +526,7 @@ namespace compiler::helios::mangler {
 			default:
 				ret = (is_signed ? "k" : "l") + std::to_string(size) + "_";
 			}
+			return ret;
 		}
 
 		static std::string mangle(query::Context&, tsh::FloatAbstractType type) {
@@ -544,7 +546,7 @@ namespace compiler::helios::mangler {
 				return "o";
 			default:
 				// @future: "b" for brain float
-				CORE_UNREACHABLE();
+				CORE_PANIC("Unknown floating-point type in mangle(FloatAbstractType)");
 			}
 		}
 
@@ -648,72 +650,71 @@ namespace compiler::helios::mangler {
 		static std::string mangleValue(
 			query::Context& ctx, compiler::numeric_value::NumericValue num
 		) {
-			auto value = num.getStorage();
+			static constexpr auto HEX_DIGITS = "0123456789abcdef";
+			const auto&           value      = num.getStorage();
 			// int8_t, i16, i32, i64, uint8_t, u16, u32, u64, f32, f64
+
 			if (value.index() <= 3) {
-				i64 int_value
+				const i64 int_value
 					= std::visit([&](auto&& arg) -> i64 { return static_cast<i64>(arg); }, value);
-				return base::strConcat((int_value < 0 ? "n" : ""), std::abs(int_value));
+				return base::strConcat((int_value < 0 ? "n" : ""), std::abs(int_value), "_");
 			} else if (value.index() <= 7) {
-				u64 uint_value
+				const u64 uint_value
 					= std::visit([&](auto&& arg) -> u64 { return static_cast<u64>(arg); }, value);
-				return std::to_string(uint_value);
+				return base::strConcat(uint_value, "_");
 			} else if (value.index() == 8) {
-				f32                                    float_value = std::get<f32>(value);
+				const f32                              float_value = std::get<f32>(value);
 				std::array<unsigned char, sizeof(f32)> bytes;
 				std::memcpy(bytes.data(), &float_value, sizeof(f32));
 				std::string hex_str;
 				hex_str.reserve(bytes.size() * 2);
 				for (unsigned char byte: bytes) {
-					hex_str += "0123456789abcdef"[byte >> 4];
-					hex_str += "0123456789abcdef"[byte & 0x0F];
+					hex_str += HEX_DIGITS[byte >> 4];
+					hex_str += HEX_DIGITS[byte & 0x0F];
 				}
 				return hex_str;
 			} else if (value.index() == 9) {
-				f64                                    double_value = std::get<f64>(value);
+				const f64                              double_value = std::get<f64>(value);
 				std::array<unsigned char, sizeof(f64)> bytes;
 				std::memcpy(bytes.data(), &double_value, sizeof(f64));
 				std::string hex_str;
 				hex_str.reserve(bytes.size() * 2);
 				for (unsigned char byte: bytes) {
-					hex_str += "0123456789abcdef"[byte >> 4];
-					hex_str += "0123456789abcdef"[byte & 0x0F];
+					hex_str += HEX_DIGITS[byte >> 4];
+					hex_str += HEX_DIGITS[byte & 0x0F];
 				}
 				return hex_str;
 			} else {
-				CORE_UNREACHABLE();
+				CORE_PANIC("Unknown type in mangleValue()");
 			}
 		}
 
 		static std::string mangle(query::Context& ctx, compiler::ctv::CompileTimeValue value) {
-			std::string ret;
-
 			variant_match(value.getStorage()) {
 				variant_case(bool, b) { return base::strConcat("b", (b ? "1" : "0")); }
 				variant_case(compiler::numeric_value::NumericValue, num) {
-					return mangle(ctx, num) + mangleValue(ctx, num) + "_";
+					return mangle(ctx, num) + mangleValue(ctx, num);  // adds '_' to ints
 				}
-				variant_case(char, c) {
-					ret = base::strConcat("c", std::to_string(static_cast<u32>(c)), "_");
-				}
+				variant_case(char, c) { return base::strConcat("c", static_cast<u32>(c), "_"); }
 				variant_case(base::StrID, str) {
-					auto view = str.strView();
-					ret       = base::strConcat("s", view.size(), view);
+					const auto view = str.strView();
+					for (char c: view)
+						if (not(c == '_' or internal::BASE_62_DIGITS.contains(c)))
+							CORE_PANIC("Not allowed character in CTV string in mangle(CTV)"
+							);  // @future: punnycode
+					return base::strConcat("s", view.size(), "_", view);
 				}
-				variant_case(compiler::ctv::CompileTimeValue::UnitCTV, unit) { ret = "u"; }
+				variant_case(compiler::ctv::CompileTimeValue::UnitCTV, unit) { return "u"; }
 				variant_case(compiler::ctv::CompileTimeValue::TupleCTV, tuple) {
-					ret = "T";
+					std::string ret = "T";
 					for (auto&& elem: tuple.getElements()) ret += mangle(ctx, elem);
-					ret += "E";
+					return ret += "E";
 				}
 				variant_case(tsh::SymbolType<>, sym) {
-					// @taw3e8 @todo: is it all we want to mangle here?
-					ret = "t" + ctx.query<QueryMangledType>({ sym })->valueOrThrow().str();
+					return "t" + ctx.query<QueryMangledType>({ sym })->valueOrThrow().str();
 				}
-				variant_default { CORE_UNREACHABLE(); }
+				variant_default { CORE_PANIC("Unknown CTV type in mangle(CTV)"); }
 			}
-
-			return ret;
 		}
 
 		static query::QResult<std::string> mangle(query::Context& ctx, tsh::AbstractType type) {
