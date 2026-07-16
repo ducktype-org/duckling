@@ -72,6 +72,7 @@ fn collects_packages_cycle() {
 
 fn assert_packages_names(unit: &Unit, graph: &UnitGraph, expected: &[&str]) {
     let mut names = collect_packages(unit, graph)
+        .unwrap()
         .into_iter()
         .map(|package| package.import_name.as_str())
         .collect::<Vec<_>>();

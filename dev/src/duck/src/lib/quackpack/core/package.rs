@@ -1,4 +1,5 @@
 //! A general package abstraction.
+use std::ffi::{OsStr, OsString};
 use std::fmt;
 use std::path::{Path, PathBuf};
 
@@ -6,7 +7,7 @@ use crate::quackpack::core::compile::artifacts_layout::ArtifactsLayout;
 use crate::quackpack::core::identity::{Identity, Origin};
 use crate::quackpack::core::{Dependencies, Manifest, Profiles, Version};
 use crate::quackpack::schemas::manifest::Manifest as ManifestSchema;
-use crate::{QuackResult, StrId};
+use crate::{QuackResult, QuackResultContext, StrId, qp_bail_internal};
 
 #[derive(Clone, Debug)]
 /// Entities which can be treated as a package by implementing [`AnyPackage`] trait.
@@ -32,11 +33,13 @@ impl AnyPackage {
         }
     }
 
-    /// Get path to the source directory / path of the script.
-    pub fn src(&self) -> &Path {
+    /// Get path to the source directory / bail for scripts with frontmatters.
+    pub fn src(&self) -> QuackResult<&Path> {
         match self {
-            Self::Package(package) => package.source_directory(),
-            Self::Frontmatter(frontmatter) => frontmatter.script_file(),
+            Self::Package(package) => Ok(package.source_directory()),
+            Self::Frontmatter(_) => {
+                qp_bail_internal!("asked for src folder for a script with frontmatter")
+            }
         }
     }
 
@@ -45,6 +48,14 @@ impl AnyPackage {
         match self {
             Self::Package(package) => package.is_global(),
             Self::Frontmatter(_) => false,
+        }
+    }
+
+    /// Get the artifacts layout.
+    pub fn artifacts_dir(&self) -> &ArtifactsLayout {
+        match self {
+            Self::Package(package) => package.artifacts_directory(),
+            Self::Frontmatter(frontmatter_script) => frontmatter_script.artifacts_directory(),
         }
     }
 
@@ -244,18 +255,36 @@ impl fmt::Debug for Package {
 #[derive(Clone)]
 pub struct FrontMatterScript {
     path: PathBuf,
+    script_folder: PathBuf,
+    script_name: OsString,
     original_schema: ManifestSchema,
     manifest: Manifest,
+    artifacts_dir: ArtifactsLayout,
 }
 
 impl FrontMatterScript {
     /// Create a new [`FrontMatterScript`].
-    pub fn new(path: PathBuf, original_schema: ManifestSchema, manifest: Manifest) -> Self {
-        Self {
-            path,
+    pub fn new(
+        path: PathBuf,
+        original_schema: ManifestSchema,
+        manifest: Manifest,
+    ) -> QuackResult<Self> {
+        let script_folder = path
+            .parent()
+            .context_internal("script path without parent")?;
+        let script_name = path
+            .file_stem()
+            .context_internal("script path without file stem")?;
+        let artifacts_dir =
+            ArtifactsLayout::new(script_folder.join(".duck_build").join(script_name));
+        Ok(Self {
+            path: path.clone(),
+            script_folder: script_folder.to_path_buf(),
+            script_name: script_name.to_os_string(),
             original_schema,
             manifest,
-        }
+            artifacts_dir,
+        })
     }
 
     /// Get the path of the script.
@@ -263,9 +292,24 @@ impl FrontMatterScript {
         &self.path
     }
 
+    /// Get the folder of the script.
+    pub fn script_folder(&self) -> &Path {
+        &self.script_folder
+    }
+
+    /// Get the name of the script.
+    pub fn script_name(&self) -> &OsStr {
+        &self.script_name
+    }
+
     /// Get the schema of the script's frontmatter.
     pub fn original_schema(&self) -> &ManifestSchema {
         &self.original_schema
+    }
+
+    /// Get the path to the artifacts directory.
+    pub fn artifacts_directory(&self) -> &ArtifactsLayout {
+        &self.artifacts_dir
     }
 
     /// Get the manifest constructed from the script's frontmatter.
