@@ -17,7 +17,7 @@ namespace vm::native {
 	 * allows to find where the symbols in it live.
 	 * @details It is a wrapper over a system linker.
 	 */
-	struct DynamicLibrary {
+	struct DynamicLibrary final {
 		DynamicLibrary(const DynamicLibrary&)            = delete;
 		DynamicLibrary& operator=(const DynamicLibrary&) = delete;
 
