@@ -41,6 +41,8 @@
 namespace compiler::helios::code {
 
 	namespace {
+		using namespace shorthands;
+
 		/**
 		 * @brief This error message is used when there is a string literal with escape sequences
 		 * that failed to parse.
@@ -206,12 +208,11 @@ namespace compiler::helios::code {
 			void visitExprFormatStrValue(pst::Access<pst::expr::ExprFormatStrValue> stmt) override {
 				auto concat_sym = defgen::concatSym(ctx);
 
-				shorthands::Shorthand s{ ctx };
+				const Shorthand s{ ctx };
 
 				// Construct the expression, initially empty.
-				MBox<Expr> result_expr
-					= makeBox<LiteralStringExpr>(ctx, generatedOrigin(), base::StrID(""));
-				bool failed = false;
+				MBox<Expr> result_expr = s.litStr(base::StrID(""));
+				bool       failed      = false;
 
 				// - For each sub element
 				for (auto sub_locked: stmt->getSubElements()) {
@@ -227,8 +228,7 @@ namespace compiler::helios::code {
 							opt_some(result) {
 								// TODO (review) this previously constructed a String object,
 								// now constructs a slice. Is this good? (Technically faster.)
-								next_string
-									= shorthands::Shorthand{ ctx }.litStr(base::StrID(result.value));
+								next_string = s.litStr(base::StrID(result.value));
 							}
 							opt_err(error) {
 								ctx.logInt(makeBox<UnknownEscapeSequenceError>(
@@ -253,16 +253,14 @@ namespace compiler::helios::code {
 						// - - Correct for passing by copy or reference depending on type
 						sub_expr_hout = s.prepToPassSelf(std::move(sub_expr_hout));
 
-						// - - Create HOUT Expr
-						std::vector<Box<Expr>> arguments;
-						arguments.emplace_back(std::move(sub_expr_hout));
-						next_string = makeBox<CallExpr>(
-							ctx,
+						// - - Create HOUT Expr. Both the call and its builtin `toString` callee
+						// reference carry the substitution's (generated) origin.
+						next_string = withOrigin(
 							pstOrigin(sub).generatedFrom(),
-							makeBox<IdentifierExpr>(
-								ctx, pstOrigin(sub).generatedFrom(), to_string_sym
-							),
-							std::move(arguments)
+							s.call(
+								withOrigin(pstOrigin(sub).generatedFrom(), s.ident(to_string_sym)),
+								std::move(sub_expr_hout)
+							)
 						);
 					} else {
 						CORE_UNREACHABLE();
@@ -274,15 +272,13 @@ namespace compiler::helios::code {
 					}
 
 					// - Concatenate the result with the next string.
-					std::vector<Box<Expr>> arguments;
-					arguments.emplace_back(std::move(result_expr).toOptBox().value());
-					arguments.emplace_back(std::move(next_string).toOptBox().value());
-
-					result_expr = makeBox<CallExpr>(
-						ctx,
+					result_expr = withOrigin(
 						pstOrigin(sub).generatedFrom(),
-						makeBox<IdentifierExpr>(ctx, pstOrigin(sub).generatedFrom(), concat_sym),
-						std::move(arguments)
+						s.call(
+							withOrigin(pstOrigin(sub).generatedFrom(), s.ident(concat_sym)),
+							std::move(result_expr).toOptBox().value(),
+							std::move(next_string).toOptBox().value()
+						)
 					);
 				}
 
@@ -325,8 +321,6 @@ namespace compiler::helios::code {
 						|| operatoriness == HOUTFunctionDeclaration::Operatoriness::Suffix,
 					"resolveUnaryOperator should only filter for prefix or suffix operators"
 				);
-				shorthands::Shorthand s{ ctx };
-
 				// Unary operator resolution happens in two steps:
 				// 1. If the argument is numeric (integral or float) and the operator is a built-in
 				//    numeric operator, we perform any needed coercion and emit a UnaryOperatorExpr.
@@ -376,7 +370,7 @@ namespace compiler::helios::code {
 					auto method_candidates = method_lookup_result->valueOrThrow().leaves;
 					filterFunctionsByOperatoriness(ctx, method_candidates, operatoriness);
 					if (!method_candidates.empty()) {
-						auto self_expr = s.prepToPassSelf(std::move(inner));
+						auto self_expr = Shorthand{ ctx }.prepToPassSelf(std::move(inner));
 						return processUnaryOperatorCall(
 								   ctx,
 								   method_candidates,
@@ -482,9 +476,9 @@ namespace compiler::helios::code {
 			Box<Expr> resolveBinaryOperator(
 				pst::Access<pst::OperatorWrapper> op, Box<Expr> lhs, Box<Expr> rhs, ScopeID scope
 			) const {
-				const auto            lhs_type = lhs->expression_type.getSymbolType();
-				const auto            rhs_type = rhs->expression_type.getSymbolType();
-				shorthands::Shorthand s{ ctx };
+				const auto lhs_type = lhs->expression_type.getSymbolType();
+				const auto rhs_type = rhs->expression_type.getSymbolType();
+				Shorthand  s{ ctx };
 
 				// Binary operator resolution now happens in two steps:
 				// 1. If the arguments are both numeric (integral or float) and the operator is a
