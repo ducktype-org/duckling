@@ -126,6 +126,7 @@ impl<'duck> GitClient<'duck> {
                 let mut err = git2::Error::from_str("too many authentication attempts; make sure the repository supports chosen authentication method");
                 err.set_code(git2::ErrorCode::Auth);
                 err.set_class(git2::ErrorClass::Callback);
+                return Err(err);
             }
             if cred_types.contains(CredentialType::DEFAULT) {
                 Cred::default()
@@ -145,12 +146,12 @@ impl<'duck> GitClient<'duck> {
         let username = self
             .ctx
             .console()
-            .prompt_once("username: ")
+            .prompt_once("username")
             .map_err(|_| git2::Error::from_str("failed to get username"))?;
         let password = self
             .ctx
             .console()
-            .password_once("password: ")
+            .password_once("password")
             .map_err(|_| git2::Error::from_str("failed to get password"))?;
         Cred::userpass_plaintext(&username, &password)
     }
