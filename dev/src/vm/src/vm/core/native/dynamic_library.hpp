@@ -17,7 +17,7 @@ namespace vm::native {
 	 * allows to find where the symbols in it live.
 	 * @details It is a wrapper over a system linker.
 	 */
-	struct DynamicLibrary {
+	struct DynamicLibrary final {
 		DynamicLibrary(const DynamicLibrary&)            = delete;
 		DynamicLibrary& operator=(const DynamicLibrary&) = delete;
 
@@ -25,9 +25,11 @@ namespace vm::native {
 		DynamicLibrary& operator=(DynamicLibrary&&) noexcept;
 		~DynamicLibrary() noexcept;
 
-		std::byte*                 findSymbol(const char* name) const;
-		base::Optional<std::byte*> maybeFindSymbol(const char* name) const;
-		static DynamicLibrary      fromMemory(std::span<const byte> library_bytes);
+		std::byte*                                        findSymbol(const char* name) const;
+		base::Optional<std::byte*>                        maybeFindSymbol(const char* name) const;
+		static std::expected<DynamicLibrary, std::string> fromMemory(
+			std::span<const byte> library_bytes
+		);
 		static std::expected<DynamicLibrary, std::string> tryFromFile(const char* path);
 
 	private:
