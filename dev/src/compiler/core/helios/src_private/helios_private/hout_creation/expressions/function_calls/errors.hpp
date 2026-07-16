@@ -10,6 +10,7 @@
 #include <helios/hout/origin.hpp>
 #include <helios/symbols/symbol_id.hpp>
 #include <helios/tsh/symbol_type.hpp>
+#include <helios_private/hout_creation/expressions/coercions.hpp>
 
 #include <diagnostic/source_position.hpp>
 
@@ -46,7 +47,9 @@ namespace compiler::helios::code {
 		SymID       function;
 	};
 
-	struct TypeMismatch final {
+	struct ArgumentCoercionFailure final {
+		helios::InvalidCoercionReason reason;  // The reason for the failure (i.e. type mismatch,
+		                                       // not implicitly copyable, etc.)
 		tsh::SymbolType<> given_type;
 		tsh::SymbolType<> expected_type;
 		usize             argument_index;
@@ -59,20 +62,12 @@ namespace compiler::helios::code {
 		SymID function;
 	};
 
-	struct TypeNotTriviallyCopyable final {
-		usize             argument_index;
-		tsh::SymbolType<> given_type;
-		tsh::SymbolType<> expected_type;
-		SymID             function;
-	};
-
 	using FunctionMatchFailure = std::variant<
 		TooManyCallArguments,
 		NamedArgumentProvidedByPositional,
 		UnknownNamedArgument,
-		TypeMismatch,
-		MissingCallArgument,
-		TypeNotTriviallyCopyable>;
+		ArgumentCoercionFailure,
+		MissingCallArgument>;
 
 	/**
 	 * @brief This variant stores errors that do not depend on the function declaration. All

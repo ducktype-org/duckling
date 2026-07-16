@@ -843,39 +843,22 @@ namespace compiler::helios {
 		) {
 			// Collect all function dependencies for this function. All functions needed in
 			// order to evaluate this one.
-			Ref dependencies
-				= &ctx.query<QueryTransitiveFunctionCalls>(function_sym_id)->valueOrThrow();
+			auto& all_dependencies = ctx.query<QueryTransitiveUsedSymbols>(function_sym_id)
+			                             ->valueOrThrow()
+			                             .used_functions;
 
 			auto mangled_name_function_to_call
 				= ctx.query<mangler::QueryMangledSymbol>({ .symbol_key = function_sym_id });
 
-			std::vector<SymID>        all_dependencies;
-			std::unordered_set<SymID> seen_dependencies;
-			auto                      add_dependencies = [&](const std::vector<SymID>& deps) {
-                for (const SymID& func_id: deps)
-                    if (seen_dependencies.insert(func_id).second)
-                        all_dependencies.push_back(func_id);
-			};
-			add_dependencies(*dependencies);
-
-			// Some dependencies are injected by MIR lowering rather than being present in the HOUT,
-			// so they are invisible to the HOUT-level transitive call collection. In particular
-			// array/slice bounds checks emit a call to `panic`, thus we must load it into the VM as
-			// well.
-			if (frontend::getModuleByAbsolutePath(
-					ctx, base::StrID("core"), { base::StrID("panicking") }
-				)) {
-				auto panic_sym
-					= ctx.query<QueryLanguagePrimitiveSymID>({ LanguagePrimitive::Panic })
-				          ->valueOrThrow();
-				Ref panic_dependencies
-					= &ctx.query<QueryTransitiveFunctionCalls>(panic_sym)->valueOrThrow();
-				add_dependencies(*panic_dependencies);
-			}
-
-			// temporary hout unit used to lower functions to LIR
+			// Temporary hout unit used to lower functions to LIR. `all_dependencies` excludes the
+			// target function itself, so we lower it explicitly alongside its transitive callees.
 			HOUTUnit hout_unit;
+			if (implementsQueryCodeOfFun(function_sym_id))
+				hout_unit.functions.emplace_back(
+					&ctx.query<QueryCodeOfFun>(function_sym_id)->valueOrThrow()
+				);
 			for (const SymID& func_id: all_dependencies) {
+				if (not implementsQueryCodeOfFun(func_id)) continue;
 				auto& hout_func = ctx.query<QueryCodeOfFun>(func_id)->valueOrThrow();
 				hout_unit.functions.emplace_back(&hout_func);
 			}
@@ -884,9 +867,11 @@ namespace compiler::helios {
 
 			// Note: the assumptions bellow might change,
 			// for example when we will add consts to comp time.
+			// Bare declarations (no lowerable body) are filtered out above, so we compare against
+			// the functions actually lowered, not every collected dependency.
 			CORE_ASSERT(
-				lir_unit.lir_functions.size() == all_dependencies.size(),
-				"Number of lir functions should be the same as number of dependencies collected."
+				lir_unit.lir_functions.size() == hout_unit.functions.size(),
+				"Number of lir functions should be the same as number of lowered dependencies."
 			);
 			CORE_ASSERT(
 				lir_unit.lir_globals.empty(),
