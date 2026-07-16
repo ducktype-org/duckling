@@ -234,10 +234,13 @@ namespace compiler::mir {
 	}
 
 	/**
-	 * Get the vector of locals, to which the instruction writes when they are not constructed by
-	 * this instruction. Don't return locals, where the instruction also read in
+	 * Get the vector of locals, to which the instruction writes (excluding those which are
+	 * constructed by this instruction). Don't return locals, where the instruction also read in
 	 * instructionReads. For example `a[1] = ...` both reads and writes to `a`, so it won't be
 	 * returned. we only return direct writes, like `a = ...`.
+	 *
+	 * @note We don't return values with Construct flag in this instruction, as we want to catch the
+	 * values used before construction.
 	 */
 	std::vector<MIRLocalRef> instructionReinitDirectWrites(const Instruction& instr) {
 		// If we construct a result, then this is not a write

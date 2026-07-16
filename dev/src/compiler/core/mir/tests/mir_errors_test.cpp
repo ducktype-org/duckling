@@ -138,10 +138,10 @@ private:
 		compiler::mir::test_utils::checkForErrorOnCompileModule(
 			R"(class Cls { x: i64; }
                fun writeBeforeInitField() = {
-                   var a: Cls = Cls(0);
-				   let b = move a;
-                   a.x = 20;
-                   return;
+					var a: Cls = Cls(0);
+					let b = move a;
+					a.x = 20;
+					return;
                })",
 			{ "is used after it has been moved out of" },
 			1
