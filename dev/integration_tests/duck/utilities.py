@@ -84,7 +84,7 @@ def get_venv_freeze(file: Path) -> dict[str, Any]:
 
 def check_venv_last_location(*, file: Path, expected: Path) -> None:
     data = get_venv_data(file)
-    location = Path(data["last_known_directory"])
+    location = Path(data["last_known_location"])
     if expected != location:
         print(f"expected last location to be {expected}, but instead is {location}")
         sys.exit(1)
