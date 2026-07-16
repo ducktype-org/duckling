@@ -1452,10 +1452,10 @@ private:
 				}
 
 				fun main() = {
-					T:{1}();
+					foo:{1}();
 				}
 			)",
-			{ "b", "not found" },
+			{ "Symbol 'b' not found in lookup" },
 			1
 		);
 
