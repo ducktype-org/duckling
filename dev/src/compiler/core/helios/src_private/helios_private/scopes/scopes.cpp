@@ -600,6 +600,7 @@ namespace compiler::helios {
 				if (not template_stmt->hasAdditionalRootData()) {
 					// This is not a baked template, so it does define any symbols in its scope.
 					output(out);
+					return;
 				}
 
 				const auto& additional_data = template_stmt->getAdditionalRootData();

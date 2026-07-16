@@ -205,10 +205,13 @@ namespace compiler::helios::templates {
 						 .getAs<pst::AdditionalRootData::BakedTemplateParent>()
 						 .template_bake_data
 				);
-			baked_root_data_pointer->postponed_data->store(
+			auto prev = baked_root_data_pointer->postponed_data->exchange(
 				new TemplateBakePSTLinkedData::PostponedData{
 					.baked_symbol = baked_sym_id, .template_arguments_symbols = std::move(args) },
 				std::memory_order_release
+			);
+			CORE_ASSERT(
+				prev == nullptr, "postponed_data should be null before it is set for the first time"
 			);
 
 			return TemplateBakeStorage{

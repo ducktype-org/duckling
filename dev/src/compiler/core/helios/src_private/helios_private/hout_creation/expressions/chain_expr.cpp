@@ -104,7 +104,6 @@ namespace compiler::helios::code {
 			return query::Failed();
 		}
 
-		// u64 parameter_index = 0;
 		for (const auto& [arg, parameter]:
 		     std::views::zip(*argument_list, template_signature.parameters)) {
 			auto arg_unlocked    = arg.unlock(query_ctx);

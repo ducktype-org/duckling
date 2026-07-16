@@ -397,10 +397,12 @@ namespace compiler::helios::mangler {
 						                                    ->unwrap()
 						                                    .strView()));
 
+						CORE_ASSERT(
+							template_stmt_v->hasAdditionalRootData(),
+							"TemplateStmt has no additional root data, it is not baked, it should not happen in mangling."
+						);
 						if (template_stmt_v->hasAdditionalRootData()) {
 							// We are inside baked template
-							// PR: what will happen for `expand "template()"`?
-							// will unbacked template have a macro parent?
 
 							auto root_data = template_stmt_v->getAdditionalRootData();
 							variant_match(root_data.pst_parent) {
