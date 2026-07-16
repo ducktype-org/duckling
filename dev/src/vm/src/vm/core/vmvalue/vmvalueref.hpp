@@ -55,6 +55,21 @@ namespace vm {
 		[[nodiscard]] base::CRef<code::valid_type::ValidType> getType() const;
 		[[nodiscard]] base::Optional<InterpretedDataVariant>  readData() const;
 		[[nodiscard]] std::string                             str() const;
+		/**
+		* @brief Checks if the value is a complex type.
+		*
+		* In the context of the VM and the Debug Adapter Protocol (DAP), 
+		* a "complex" value is one that contains child properties and can be expanded 
+		* in the debugger interface (e.g., objects, arrays, or valid pointers).
+		* 
+		* Evaluation rules:
+		* - Uninitialized types (`std::monostate`) and primitives are NOT complex.
+		* - Functions are NOT complex (they represent executable code, not data structures with expandable children).
+		* - Pointers are considered complex ONLY if they hold a valid, dereferenceable target.
+		* - All other composite types are considered complex.
+		*
+		* @return true if the value is complex (has potential children/references), false otherwise.
+		*/
 		[[nodiscard]] bool                                    isComplex() const;
 
 		template<class T>
