@@ -16,13 +16,13 @@ mod sync;
 pub fn subcommands() -> Vec<Command> {
     vec![
         build::get_parser(),
+        run::get_parser(),
         #[cfg(feature = "shell-completion")]
         generate::get_parser(),
         init::get_parser(),
         run_script::get_parser(),
         sync::get_parser(),
         repl::get_parser(),
-        run::get_parser(),
     ]
 }
 
@@ -35,13 +35,13 @@ pub type ExecFn = fn(&DuckContext, &ArgMatches) -> QuackResult<()>;
 pub fn exec_for(name: &str) -> Option<ExecFn> {
     let f = match name {
         "build" => build::execute,
+        "run" => run::execute,
         #[cfg(feature = "shell-completion")]
         "generate" => generate::execute,
         "init" => init::execute,
         "run-script" => run_script::execute,
         "sync" => sync::execute,
         "repl" => repl::execute,
-        "run" => run::execute,
         _ => return None,
     };
     Some(f)

@@ -1,4 +1,5 @@
 //! `build` subcommand execution logic.
+use std::convert::Infallible;
 use std::ffi::OsString;
 
 use crate::quackpack::core::{FeatureName, PackageContext, run};
@@ -43,7 +44,7 @@ impl<'a> From<RunOptions<'a>> for (BuildOptions<'a>, Vec<OsString>) {
 }
 
 /// Compile and run given options.
-pub fn run(options: RunOptions<'_>) -> QuackResult<()> {
+pub fn run(options: RunOptions<'_>) -> QuackResult<Infallible> {
     let (build_options, args) = options.into();
     let output = build::compile(build_options)?;
     run::run(output, args)
