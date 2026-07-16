@@ -76,7 +76,7 @@ impl Storage {
     }
 
     /// Get the root directory for storing package `package`.
-    pub fn pkg_dir(&self, package: &PackageId) -> PathBuf {
+    pub fn pkg_dir(&self, package: PackageId) -> PathBuf {
         self.packages_root_dir().join(package.storage_name())
     }
 
@@ -156,7 +156,7 @@ impl Storage {
     }
 
     /// Check if package `id` is stored in storage.
-    pub fn is_package_stored(&self, id: &PackageId) -> bool {
+    pub fn is_package_stored(&self, id: PackageId) -> bool {
         if id.is_local() {
             return false;
         }
@@ -165,7 +165,7 @@ impl Storage {
     }
 
     /// Mark package `id` as fully stored in storage.
-    pub fn mark_as_stored(&self, id: &PackageId) -> QuackResult<()> {
+    pub fn mark_as_stored(&self, id: PackageId) -> QuackResult<()> {
         if id.is_local() {
             qp_bail_internal!("attempting to store a local package")
         }
