@@ -211,7 +211,7 @@ namespace compiler::helios::comptime_ops {
 		(tsh::SymbolType<>*, "opaque_ptr", type_ptr)
 	) {
 		const auto& layout = ctx_ptr->query<tsl::QuerySymbolTypeLayout>(*type_ptr)->valueOrThrow();
-		return static_cast<i64>(base::bits2bytesRoundUp(layout.getSize()).asInt());
+		return base::safeIntConv<i64>(base::bits2bytesRoundUp(layout.getSize()).asInt());
 	}
 
 	DEF_VM_EXT_C_FUNC(
@@ -222,7 +222,7 @@ namespace compiler::helios::comptime_ops {
 		(tsh::SymbolType<>*, "opaque_ptr", type_ptr)
 	) {
 		const auto& layout = ctx_ptr->query<tsl::QuerySymbolTypeLayout>(*type_ptr)->valueOrThrow();
-		return static_cast<i64>(layout.getAlignment().asInt());
+		return base::safeIntConv<i64>(layout.getAlignment().asInt());
 	}
 
 	DEF_VM_EXT_C_FUNC(
