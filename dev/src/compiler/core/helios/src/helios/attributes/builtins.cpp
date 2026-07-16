@@ -127,11 +127,11 @@ namespace compiler::helios {
 								s.ident(decl.parameters.at(0).helios_symbol), slice_fields->ptr
 							)) }
 			          .toCodeBlock();
-			return HOUTFunction(
+			return {
 				code::generatedOrigin(),
 				&decl,
-				std::make_shared<const code::CodeBlock>(std::move(body))
-			);
+				std::make_shared<const code::CodeBlock>(std::move(body)),
+			};
 		}
 		case BuiltinKind::CharSliceFromPtrLen: {
 			// `char_slice_from_ptr_len(p: ptr char, l: u64) -> slice char` builds a slice value

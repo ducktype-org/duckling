@@ -122,13 +122,15 @@ namespace compiler::helios::code::shorthands {
 		 ****************/
 
 		/** @brief The unit literal `()`. */
+		[[nodiscard]]
 		Box<LiteralUnitExpr> litUnit() const {
 			return makeBox<LiteralUnitExpr>(*ctx, generatedOrigin());
 		}
 
 		/** @brief A numeric literal from an explicit `numeric_value::NumericValue`. */
+		[[nodiscard]]
 		Box<LiteralNumericExpr> litNum(numeric_value::NumericValue value) const {
-			return makeBox<LiteralNumericExpr>(*ctx, generatedOrigin(), std::move(value));
+			return makeBox<LiteralNumericExpr>(*ctx, generatedOrigin(), value);
 		}
 
 		/**
@@ -139,33 +141,39 @@ namespace compiler::helios::code::shorthands {
 		 * numeric_value::NumericValue.
 		 */
 		template<internal::NumericLiteralValue T>
+		[[nodiscard]]
 		Box<LiteralNumericExpr> litNum(T value) const {
 			return litNum(numeric_value::NumericValue::createMinimized(value));
 		}
 
 		/** @brief A numeric literal of a specific type. Panics if `value` does not fit `type`. */
 		template<internal::NumericLiteralValue T>
+		[[nodiscard]]
 		Box<LiteralNumericExpr> litNum(T value, const tsh::AbstractType& type) const {
 			return litNum(numeric_value::NumericValue::createOfType(type, value)
 			                  .expect("litNum: value does not fit the requested type"));
 		}
 
 		/** @brief A boolean literal. */
+		[[nodiscard]]
 		Box<LiteralBoolExpr> litBool(bool value) const {
 			return makeBox<LiteralBoolExpr>(*ctx, generatedOrigin(), value);
 		}
 
 		/** @brief A character literal. */
+		[[nodiscard]]
 		Box<LiteralCharExpr> litChar(char value) const {
 			return makeBox<LiteralCharExpr>(*ctx, generatedOrigin(), value);
 		}
 
 		/** @brief A string literal, as char slice. */
+		[[nodiscard]]
 		Box<LiteralStringExpr> litStr(base::StrID value) const {
 			return makeBox<LiteralStringExpr>(*ctx, generatedOrigin(), value);
 		}
 
 		/** @brief A string literal, as String. */
+		[[nodiscard]]
 		Box<Expr> litStrObj(base::StrID value) const {
 			SymID callee_sym = ctx->query<defgen::QueryGeneratedSymbol>({
 				.name                  = base::StrID("builtin_stringify_str"),
@@ -181,11 +189,13 @@ namespace compiler::helios::code::shorthands {
 		}
 
 		/** @brief A type literal (e.g. `i32`, `bool`), carrying `type` as its value. */
+		[[nodiscard]]
 		Box<LiteralTypeExpr> litType(tsh::AbstractType type) const {
-			return makeBox<LiteralTypeExpr>(*ctx, generatedOrigin(), std::move(type));
+			return makeBox<LiteralTypeExpr>(*ctx, generatedOrigin(), type);
 		}
 
 		/** @brief An identifier expression referring to `symbol`. */
+		[[nodiscard]]
 		Box<IdentifierExpr> ident(SymID symbol) const {
 			return makeBox<IdentifierExpr>(*ctx, generatedOrigin(), symbol);
 		}
@@ -201,6 +211,7 @@ namespace compiler::helios::code::shorthands {
 		 * @note You are likely to need to save the result of this function in a variable,
 		 * as you will need to invoke the `->nextUse()` method.
 		 */
+		[[nodiscard]]
 		Box<ReusableExpr> reusable(Box<Expr> inner) const {
 			return makeBox<ReusableExpr>(*ctx, std::move(inner));
 		}
@@ -220,12 +231,13 @@ namespace compiler::helios::code::shorthands {
 	template<typename... Exprs>                                                                  \
 	requires(                                                                                    \
 		sizeof...(Exprs) >= (min_arity) && (std::is_constructible_v<Box<Expr>, Exprs &&> && ...) \
-	)                                                                                            \
+	) [[nodiscard]]                                                                              \
 	Box<ReturnType> builder(Exprs&&... exprs) const {                                            \
 		return builder(base::packToVector<Box<Expr>>(std::forward<Exprs>(exprs)...));            \
 	}
 
 		/** @brief A binary operator `lhs op rhs`. */
+		[[nodiscard]]
 		Box<BinaryOperatorExpr> binOp(Box<Expr> lhs, BuiltinBinary op, Box<Expr> rhs) const {
 			return makeBox<BinaryOperatorExpr>(
 				*ctx, generatedOrigin(), op, std::move(lhs), std::move(rhs)
@@ -233,11 +245,13 @@ namespace compiler::helios::code::shorthands {
 		}
 
 		/** @brief A unary operator `op operand`. */
+		[[nodiscard]]
 		Box<UnaryOperatorExpr> unOp(BuiltinUnary op, Box<Expr> operand) const {
 			return makeBox<UnaryOperatorExpr>(*ctx, generatedOrigin(), op, std::move(operand));
 		}
 
 		/** @brief A ternary `if condition then if_true else if_false`. */
+		[[nodiscard]]
 		Box<TernaryOperatorExpr> ternary(Box<Expr> condition, Box<Expr> if_true, Box<Expr> if_false)
 			const {
 			return makeBox<TernaryOperatorExpr>(
@@ -246,6 +260,7 @@ namespace compiler::helios::code::shorthands {
 		}
 
 		/** @brief A tuple value `(elements, ...)`. */
+		[[nodiscard]]
 		Box<TupleExpr> tuple(std::vector<Box<Expr>> elements) const {
 			return makeBox<TupleExpr>(*ctx, generatedOrigin(), std::move(elements));
 		}
@@ -254,6 +269,7 @@ namespace compiler::helios::code::shorthands {
 		HOUT_EXPR_PACK_OVERLOAD(tuple, TupleExpr, 2)
 
 		/** @brief A variant type constructor `(subtypes | ...)`. */
+		[[nodiscard]]
 		Box<VariantTypeConstructorExpr> variant(std::vector<Box<Expr>> subtypes) const {
 			return makeBox<VariantTypeConstructorExpr>(*ctx, generatedOrigin(), std::move(subtypes));
 		}
@@ -262,16 +278,19 @@ namespace compiler::helios::code::shorthands {
 		HOUT_EXPR_PACK_OVERLOAD(variant, VariantTypeConstructorExpr, 2)
 
 		/** @brief A field access `base.field`. */
+		[[nodiscard]]
 		Box<AccessExpr> access(Box<Expr> base, SymID field) const {
 			return makeBox<AccessExpr>(*ctx, generatedOrigin(), std::move(base), field);
 		}
 
 		/** @brief An index expression `base[idx]`. */
+		[[nodiscard]]
 		Box<IndexExpr> index(Box<Expr> base, Box<Expr> idx) const {
 			return makeBox<IndexExpr>(*ctx, generatedOrigin(), std::move(base), std::move(idx));
 		}
 
 		/** @brief A call `callee(arguments...)`. */
+		[[nodiscard]]
 		Box<CallExpr> call(Box<Expr> callee, std::vector<Box<Expr>> arguments) const {
 			return makeBox<CallExpr>(
 				*ctx, generatedOrigin(), std::move(callee), std::move(arguments)
@@ -280,7 +299,7 @@ namespace compiler::helios::code::shorthands {
 
 		/** @brief A call from a callee and a pack of arguments. */
 		template<typename... Args>
-		requires(std::is_constructible_v<Box<Expr>, Args &&> && ...)
+		requires(std::is_constructible_v<Box<Expr>, Args &&> && ...) [[nodiscard]]
 		Box<CallExpr> call(Box<Expr> callee, Args&&... arguments) const {
 			return call(
 				std::move(callee), base::packToVector<Box<Expr>>(std::forward<Args>(arguments)...)
@@ -288,6 +307,7 @@ namespace compiler::helios::code::shorthands {
 		}
 
 		/** @brief A sequence `expressions, ...` (comma operator); the last one is the result. */
+		[[nodiscard]]
 		Box<SequenceExpr> seq(std::vector<Box<Expr>> expressions) const {
 			CORE_ASSERT(
 				!expressions.empty(), "seq(): a SequenceExpr requires at least one expression"
@@ -299,6 +319,7 @@ namespace compiler::helios::code::shorthands {
 		HOUT_EXPR_PACK_OVERLOAD(seq, SequenceExpr, 2)
 
 		/** @brief A chain comparison, the logical AND of each comparison (e.g. `a < b < c`). */
+		[[nodiscard]]
 		Box<ChainComparisonExpr> chainCmp(std::vector<Box<Expr>> comparisons) const {
 			CORE_ASSERT(
 				!comparisons.empty(),
@@ -311,21 +332,25 @@ namespace compiler::helios::code::shorthands {
 		HOUT_EXPR_PACK_OVERLOAD(chainCmp, ChainComparisonExpr, 1)
 
 		/** @brief A cast of `source` to `target_type`. */
+		[[nodiscard]]
 		Box<CastExpr> cast(Box<Expr> source, tsh::SymbolType<> target_type) const {
 			return makeBox<CastExpr>(*ctx, generatedOrigin(), std::move(source), target_type);
 		}
 
 		/** @brief A reference creation `refof inner`. */
+		[[nodiscard]]
 		Box<RefOfExpr> refOf(Box<Expr> inner) const {
 			return makeBox<RefOfExpr>(*ctx, generatedOrigin(), std::move(inner));
 		}
 
 		/** @brief An explicit move `move inner`. Named `moveOf` to avoid clashing with `std::move`. */
+		[[nodiscard]]
 		Box<MoveExpr> moveOf(Box<Expr> inner) const {
 			return makeBox<MoveExpr>(*ctx, generatedOrigin(), std::move(inner));
 		}
 
 		/** @brief A dereference `deref inner`. */
+		[[nodiscard]]
 		Box<DerefExpr> deref(Box<Expr> inner) const {
 			return makeBox<DerefExpr>(*ctx, generatedOrigin(), std::move(inner));
 		}
@@ -335,11 +360,13 @@ namespace compiler::helios::code::shorthands {
 		 *********************/
 
 		/** @brief A default value of `type`. */
+		[[nodiscard]]
 		Box<DefaultValueExpr> defaultValue(tsh::AbstractType type) const {
-			return makeBox<DefaultValueExpr>(*ctx, generatedOrigin(), std::move(type));
+			return makeBox<DefaultValueExpr>(*ctx, generatedOrigin(), type);
 		}
 
 		/** @brief A compile-time lift of `value` to a type. */
+		[[nodiscard]]
 		Box<LiftToTypeExpr> liftToType(Box<Expr> value) const {
 			return makeBox<LiftToTypeExpr>(*ctx, generatedOrigin(), std::move(value));
 		}
@@ -352,11 +379,13 @@ namespace compiler::helios::code::shorthands {
 		// query::Context, so these builders do not read the stored context.
 
 		/** @brief A push `list += element`. */
+		[[nodiscard]]
 		static Box<ListPushExpr> listPush(Box<Expr> list, Box<Expr> element) {
 			return makeBox<ListPushExpr>(generatedOrigin(), std::move(list), std::move(element));
 		}
 
 		/** @brief A pop of `count` elements from `list`. */
+		[[nodiscard]]
 		static Box<ListPopExpr> listPop(Box<Expr> list, Box<Expr> count) {
 			return makeBox<ListPopExpr>(generatedOrigin(), std::move(list), std::move(count));
 		}
@@ -370,35 +399,44 @@ namespace compiler::helios::code::shorthands {
 		// builders do.
 
 		/** @brief A bare block statement `{ body }`. Accepts a braced list: `block({s1, s2})`. */
+		[[nodiscard]]
 		static Box<BlockStmt> block(StmtPack body) {
 			return makeBox<BlockStmt>(generatedOrigin(), std::move(body).toCodeBlock());
 		}
 
 		/** @brief A variable declaration `var/let symbol: type = init;`. */
+		[[nodiscard]]
 		static Box<VariableStmt> var(SymID symbol, tsh::SymbolType<> type, Box<Expr> init) {
 			return makeBox<VariableStmt>(generatedOrigin(), std::move(init), type, symbol);
 		}
 
 		/** @brief An assignment `location = value;`. */
+		[[nodiscard]]
 		static Box<AssignmentStmt> assign(Box<Expr> location, Box<Expr> value) {
 			return makeBox<AssignmentStmt>(generatedOrigin(), std::move(location), std::move(value));
 		}
 
 		/** @brief A `return value;`. */
+		[[nodiscard]]
 		static Box<ReturnStmt> ret(Box<Expr> value) {
 			return makeBox<ReturnStmt>(generatedOrigin(), std::move(value));
 		}
 
 		/** @brief A `return;` (no value). */
-		static Box<VoidReturnStmt> ret() { return makeBox<VoidReturnStmt>(generatedOrigin()); }
+		[[nodiscard]]
+		static Box<VoidReturnStmt> ret() {
+			return makeBox<VoidReturnStmt>(generatedOrigin());
+		}
 
 		/** @brief An expression statement `expr;` (result discarded). */
+		[[nodiscard]]
 		static Box<ExprStmt> expr(Box<Expr> expr) {
 			return makeBox<ExprStmt>(generatedOrigin(), std::move(expr));
 		}
 
 		/** @brief An `if (condition) { then_body }`.
 		 * Accepts a braced list: `ifStmt(cond, {s1, s2})`. */
+		[[nodiscard]]
 		static Box<IfStmt> ifStmt(Box<Expr> condition, StmtPack then_body) {
 			return makeBox<IfStmt>(
 				generatedOrigin(), std::move(condition), std::move(then_body).toCodeBlock()
@@ -407,6 +445,7 @@ namespace compiler::helios::code::shorthands {
 
 		/** @brief An `if (condition) { then_body } else { else_body }`.
 		 * Accepts braced lists: `ifStmt(cond, {s1, s2}, {s3, s4})`.*/
+		[[nodiscard]]
 		static Box<IfStmt> ifStmt(Box<Expr> condition, StmtPack then_body, StmtPack else_body) {
 			return makeBox<IfStmt>(
 				generatedOrigin(),
@@ -418,6 +457,7 @@ namespace compiler::helios::code::shorthands {
 
 		/** @brief A `while (condition) { body }`.
 		 * Accepts a braced list: `whileStmt(cond, {s1, s2})`. */
+		[[nodiscard]]
 		static Box<WhileStmt> whileStmt(Box<Expr> condition, StmtPack body) {
 			return makeBox<WhileStmt>(
 				generatedOrigin(), std::move(condition), std::move(body).toCodeBlock()
@@ -432,6 +472,7 @@ namespace compiler::helios::code::shorthands {
 		 * @brief Forcefully coerces an expression to the target type.
 		 * @note Assumes the coercion will succeed.
 		 */
+		[[nodiscard]]
 		Box<Expr> coerce(Box<Expr> expr, const tsh::SymbolType<> target_type) const {
 			auto coercion = canCoerce(*ctx, expr->expression_type.getSymbolType(), target_type);
 			return coercion.valueOrThrow().coerce(*ctx, std::move(expr));
@@ -443,6 +484,7 @@ namespace compiler::helios::code::shorthands {
 		 * Essentially enforces that the expression is a reference. Unless the type is a simple
 		 * type, in which case it is enforced by-value instead.
 		 */
+		[[nodiscard]]
 		Box<Expr> prepToPassSelf(Box<Expr> expr) const {
 			// If the expr is not a simple type, we must call its method on a reference.
 			if (not expr->expression_type.getType().isSimple()
