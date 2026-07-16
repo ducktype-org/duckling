@@ -20,15 +20,15 @@ either in the scheme or it's implementation, they should be reflected here.
 
 // REPL expression wrappers use simplified mangling for now. @TODO: #1768 decide
 // if it's correct.
-<repl-expression-wrapper> ::= "__repl_expr_wrapper_" <base-10-number>               // @taw3e8 @todo: no known length
+<repl-expression-wrapper> ::= "__repl_expr_wrapper_" <base-10-number>
 
 // Same with REPL instruction wrappers.
-<repl-instruction-wrapper> ::= "__repl_instr_wrapper_" <base-10-number>             // @taw3e8 @todo: no known length
+<repl-instruction-wrapper> ::= "__repl_instr_wrapper_" <base-10-number>
 
 <path> ::= <path-prefix> <symbol-name>
          | <back-reference>
 
-<path-prefix> ::= "P" <package-name> <module-name>+                 // module-path of the module in a package (note: ends with <symbol-name>)
+<path-prefix> ::= "P" <package-name> <module-name>+                 // module-path of the module in a package
                 | "S" <script-name>                                 // standalone script
                 | "M" <module-name>                                 // standalone module
                 | "R" <package-name> <module-name>+ <script-name>   // script in a package
@@ -46,13 +46,11 @@ either in the scheme or it's implementation, they should be reflected here.
 
 // base-10-number - the length in bytes of the raw identifier
 // raw-identifier - the actual name of the symbol encoded according to the encoding-identifier
-// note: always starts with a digit/"U"
 <identifier> ::= <encoding-identifier> <base-10-number> <raw-identifier>
                | <back-reference>
 // if the identifier contains a unicode character, it is encoded using punycode
-// note: raw-identifiers should start with a letter or an underscore and should consist of letters, digits, and underscores @Taw3e8 @todo: check & enforce this in the compiler
 <encoding-identifier> ::= ""                                // no encoding
-                        | "U"                               // punycode for encoding unicode characters
+                        | "U"                               // punycode
 
 <symbol-name> ::= "N" <name-prefix>+ <unscoped-name> "E"    // nested symbol
                 | "G" <unscoped-name>                       // global symbol
@@ -67,7 +65,7 @@ either in the scheme or it's implementation, they should be reflected here.
 
 <generic-arg> ::= <type>
 
-<templ-arg> ::= <type>                          // @Taw3e8 @todo: in function types we may need to reference the template parameters; consider: "T" <compact-number> 
+<templ-arg> ::= <type>
               | <variadic-arg>
               | <value-arg>
 
@@ -83,11 +81,11 @@ either in the scheme or it's implementation, they should be reflected here.
          | <back-reference>
 // there could possibly be more qualifiers
 // should not repeat
-<type-modifier> ::= "N"                                     // const           // @Taw3e8 @todo: to refactor -> conflicts with pointer types?
-                  | "M"                                     // unique           // @Taw3e8 @todo: to refactor -> conflicts with pointer types?
-                  | "L"                                     // leaking          // @Taw3e8 @todo: to refactor -> conflicts with pointer types?
-                  | "R"                                     // reference        // @Taw3e8 @todo: to refactor -> conflicts with pointer types?
-                  | "X"                                     // box              // @Taw3e8 @todo: to refactor -> conflicts with pointer types?
+<type-modifier> ::= "N"                                     // const
+                  | "M"                                     // unique
+                  | "L"                                     // leaking
+                  | "R"                                     // reference
+                  | "X"                                     // box
 
 // more types could be added in the future
 <builtin-type> ::= "u"                                      // unit
@@ -95,28 +93,22 @@ either in the scheme or it's implementation, they should be reflected here.
                  | "y"                                      // byte
                  | "b"                                      // bool
                  | "c"                                      // char
-                 | ""
-                 | ""
-                 
-                 
-                 | "i" <base-10-number>                     // i64 etc.                     // @Taw3e8 @todo: use itanium ABI manging for lengths
-                 | "j" <base-10-number>                     // u64 etc.                     // @Taw3e8 @todo: use itanium ABI manging for lengths
-                 | "f" <base-10-number>                     // f64 etc.                     // @Taw3e8 @todo: use itanium ABI manging for lengths
-
-
+                 | "i" <base-10-number>                     // i64 etc.
+                 | "j" <base-10-number>                     // u64 etc.
+                 | "f" <base-10-number>                     // f64 etc.
                  | "s"                                      // string
                  | "t"                                      // meta (type type)
 
 <pointer-type> ::= "P"                                      // raw pointer
                  | "P" <type> "E"                           // pointer
                  | "MP" <type> "E"                          // many pointer
-                 | "CP" <type> "E"                          // c pointer                    // @Taw3e8 @todo: "C" prefix conflicts with class type
+                 | "CP" <type> "E"                          // c pointer
 
 <variant-type> ::= "V" <type>* "E"                          // variant type
 
 <tuple-type> ::= "T" <type>* "E"                            // tuple type
 
-<array-type> ::= "A" <base-10-number> <type> "E"            // static array type           // @Taw3e8 @todo: consider compact number for length (or base-32/16)
+<array-type> ::= "A" <base-10-number> <type> "E"            // static array type
                | "D" <type> "E"                             // dynamic array type
 <class-type> ::= "C" <path>                                 // class-like types (class, enum, etc.)
 
@@ -129,53 +121,26 @@ either in the scheme or it's implementation, they should be reflected here.
 // additional qualifiers for functions including member functions
 // more qualifiers should be added in the future
 // should not repeat, sorted lexicographically
-<function-qualifiers> ::= "C"                               // const member function       // @Taw3e8 @todo: conflicts with class type
+<function-qualifiers> ::= "C"                               // const member function
                         | "T"                               // thread-safe
                         | "V"                               // virtual function
 
-<unnamed-type-name> ::= "Y" <disambiguator>      // unnamed type
-                      | <closure>              // types of lambda expressions
-<disambiguator> ::= <compact-number>               // number of a given unnamed type/lambda in a given namespace/class
-
-<closure> ::= <closure-type> <parameter-name>* "E"
-               where <closure-type>.<argument-type>.count == <parameter-name>.count
-<closure-type> ::= "W" <captures> <return-type> <argument-type>* "E" <disambiguator>  // closure type
-<captures> ::= <type>* "G"                                      // types of captured variables
+<unnamed-type-name> ::= "Y" <path> "E" <disambiguator>      // unnamed type
+                      | "W" <captures> "G" <return-type> <type>* "E" <disambiguator>  // closure type
+<captures> ::= <type>*                                      // types of captured variables
+// first unnamed symbol in the scope uses no disambiguator, second gets "_"
+// subsequent ones get "(n-2)_" represented in base 62
+<disambiguator> ::= ""
+                  | <compact-number>
 
 <variadic-arg> ::= "J" <templ-arg>* "E"                     // variadic arguments
 
-// @Taw3e8 @todo: conider renaming value arg to CTV
-// @taw3e8 @todo: fit those into the mangling scheme, and add support for them
-/*
-CTV
-    -bool
-    -NumericValue
-        std::int8_t
-        i16
-        i32
-        i64
-        std::uint8_t
-        u16
-        u32
-        u64
-        f32
-        f64
-    -char
-    base::StrID         
-    -UnitCTV
-    -TupleCTV            // at least 2 values
-    tsh::SymbolType
-*/
-
-<value-arg> ::= "Z" (
-              // built-in types without string; integers and chars are encoded in base-10, 'n' is used for negative numbers instead of '-'; bools use '0' and '1' for false and true; floats are encoded in their hex representation using "0-91-f", high bits first 
-               <builtin-type> <literal-value> "_"
-              // string literals encoded with length prefix
-              | <base-10-number> "_" <literal-value>
+<value-arg> ::= "Z" ( <builtin-type> <literal-value> "_"    // built-in types without string, 'n' is used for negative numbers instead of '-', bools use '0' and '1'
+              | <base-10-number> "_" <literal-value>        // string literals encoded with length prefix
               | "V" <value-arg>* "E"                        // variant
               | "T" <value-arg>* "E"                        // tuple
-              | <function-type> <hex-value> "_"             // function as a hex address
-              | <pointer-type> <hex-value> "_"              // pointer as a hex address
+              | <function-type> <hex-value> "_"             // function
+              | <pointer-type> <hex-value> "_"              // pointer
               | <enum-type> <base-10-number> "_")           // enum
               | <back-reference>
 
@@ -186,7 +151,7 @@ CTV
                   | <back-reference>
 
 <operator-name> ::= <chain-operator>
-                  | <unary-operator-name>                   // inside class; no need for argument type
+                  | <unary-operator-name>                   // inside class, no need for argument type
                   | <binary-operator-name> <type> <type>    // outside class
 
 <chain-operator> ::= "ch" <type> (<binary-operator-name> <type>)* "E"
@@ -197,12 +162,12 @@ CTV
                         | "md"                              // module destructor
                         | "gc"                              // global variable constructor
                         | "gd"                              // global variable destructor
-                        | "ic" <function-type>              // implicit class constructor           // @Taw3e8 @todo: all those seem kinda sus...
-                        | "dc" <function-type>              // default class constructor            // @Taw3e8 @todo: all those seem kinda sus...
-                        | "ds" <function-type>              // default static array constructor     // @Taw3e8 @todo: all those seem kinda sus...
-                        | "dt" <function-type>              // default tuple constructor            // @Taw3e8 @todo: all those seem kinda sus...
+                        | "ic" <function-type>              // implicit class constructor
+                        | "dc" <function-type>              // default class constructor
+                        | "ds" <function-type>              // default static array constructor
+                        | "dt" <function-type>              // default tuple constructor
                         | "dd" <function-type>              // default destructor
-                        | "ts" <function-type>              // toString method                      // @Taw3e8 @todo: make sure this should be a special symbol and not a regular method
+                        | "ts" <function-type>              // toString method
 //                      | ...                               // @future: virtual tables, generic structures, named parameter tables, guard variables, ...
 
 <back-reference> ::= "B" <compact-number>                   // reference to a previously defined node
@@ -211,17 +176,13 @@ CTV
 // 0 is encoded as "_"; other numbers get one subtracted from them
 // and the result is encoded in base 62 using as digits 0-9, a-z, A-Z
 // e.g.: 0 -> "_", 1 -> "0_", 11 -> "a_", 62 -> "Z_"
-// note: since it starts with any character, it can only appear in ocntexts where it is expected
 <compact-number> ::= "0-9a-zA-Z"* "_"
 
 // more operators can be added in the future
-// note: inside class; no need for argument type
-<unary-operator-name> ::= "ps"                             // +
+<unary-operator-name> ::= "ps"                              // +
                         | "ng"	                            // -
                         | "ad"	                            // &
                         | "de"	                            // *
-                        | "nu" <identifier>                 // (named unary prefix operator)
-                        | "nU" <identifier>                 // (named unary postfix operator)
 
 // more operators can be added in the future
 <binary-operator-name> ::= "co"	                            // ~
@@ -260,8 +221,10 @@ CTV
                          | "pt"	                            // ->
                          | "cl"	                            // ()
                          | "ix"	                            // []
-                         | "cv" 	                        // (cast)
-                         | "nm" <identifier>                // (named binary operator)
+                         | "cv" <type>	                    // (cast)
+                         | "nm" <identifier> <type> <type>  // (named binary operator)
+                         | "nu" <identifier> <type>         // (named unary prefix operator)
+                         | "nU" <identifier> <type>         // (named unary postfix operator)
 
 <opt-metadata> ::= "" | <metadata>
 // there are no restrictions on <vendor-metadata>, any characters are allowed
