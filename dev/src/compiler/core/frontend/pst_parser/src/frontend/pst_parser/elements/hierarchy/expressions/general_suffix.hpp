@@ -17,7 +17,7 @@ namespace pst::expr {
 		static MBox<ExprElement> parseRecursive(LangParserState& state, u64 iter);
 
 	public:
-		explicit GeneralSuffix(const LangParserState& state): SuffixOperator(state, 450) {}
+		explicit GeneralSuffix(LangElementConstructionArgument state): SuffixOperator(state, 450) {}
 
 		static MBox<ExprElement> parse(LangParserState& state);
 

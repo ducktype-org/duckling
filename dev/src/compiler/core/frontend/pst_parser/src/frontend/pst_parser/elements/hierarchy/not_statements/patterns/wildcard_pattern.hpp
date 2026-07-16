@@ -13,7 +13,7 @@ namespace pst {
 		HashAlg& addElementDataToStableHash(HashAlg&) const override;
 
 	public:
-		explicit WildcardPattern(const LangParserState& state): AnalysisPattern(state) {
+		explicit WildcardPattern(LangElementConstructionArgument state): AnalysisPattern(state) {
 			this->element_kind = ElementKind::WildcardPattern;
 		}
 

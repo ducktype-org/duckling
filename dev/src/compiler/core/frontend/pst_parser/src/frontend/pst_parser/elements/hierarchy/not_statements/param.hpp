@@ -16,7 +16,7 @@ namespace pst {
 		NAMED_CHILD_OPT(initial, UniversalExprHolder);
 
 	public:
-		explicit Param(const LangParserState& state): NotStmt(state) {
+		explicit Param(LangElementConstructionArgument state): NotStmt(state) {
 			this->element_kind = ElementKind::Param;
 		}
 

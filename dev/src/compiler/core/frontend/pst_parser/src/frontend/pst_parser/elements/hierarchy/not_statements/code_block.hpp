@@ -32,7 +32,7 @@ namespace pst {
 	public:
 		DECLARE_CONST_ELEMENT_ITERATOR(statements, Stmt)
 
-		explicit CodeBlock(const LangParserState& state): NotStmt(state) {
+		explicit CodeBlock(LangElementConstructionArgument state): NotStmt(state) {
 			this->element_kind = ElementKind::CodeBlock;
 		}
 

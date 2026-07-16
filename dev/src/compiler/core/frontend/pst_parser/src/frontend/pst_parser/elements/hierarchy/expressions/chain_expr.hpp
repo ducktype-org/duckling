@@ -22,7 +22,7 @@ namespace pst::expr {
 		static i64 toNextLink(const LangParserState& state);
 
 	public:
-		ChainExpr(const LangParserState& state): ExprElement(state, 300) {}
+		explicit ChainExpr(LangElementConstructionArgument state): ExprElement(state, 300) {}
 
 		static MBox<ExprElement> parse(LangParserState& state);
 		void                     dprint(std::ostream& out) const final;

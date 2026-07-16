@@ -7,7 +7,7 @@ namespace pst {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(Break, Action);
 
 	public:
-		explicit Break(const LangParserState& state): Action(state) {}
+		explicit Break(LangElementConstructionArgument state): Action(state) {}
 
 		void dprint(std::ostream& out) const final;
 		~Break() final = default;

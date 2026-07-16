@@ -13,7 +13,7 @@ namespace pst {
 		CLONE_SUBELEMENTS();
 
 	public:
-		explicit NestedImportList(const LangParserState& state): List(state) {
+		explicit NestedImportList(LangElementConstructionArgument state): List(state) {
 			this->element_kind = ElementKind::NestedImportList;
 		}
 

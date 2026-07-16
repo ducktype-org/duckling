@@ -12,7 +12,7 @@ namespace pst {
 		CLONE_SUBELEMENTS();
 
 	public:
-		explicit CallList(const LangParserState& state): List(state) {
+		explicit CallList(LangElementConstructionArgument state): List(state) {
 			this->element_kind = ElementKind::CallList;
 		}
 

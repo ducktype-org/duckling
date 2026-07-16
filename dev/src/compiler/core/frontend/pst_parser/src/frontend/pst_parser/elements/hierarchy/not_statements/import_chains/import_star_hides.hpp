@@ -15,7 +15,7 @@ namespace pst {
 		base::Optional<std::vector<AccessInternalAnonymous<IdentifierWrapper>>> hides;
 
 	public:
-		explicit ImportStarHides(const LangParserState& state): ImportChain(state) {
+		explicit ImportStarHides(LangElementConstructionArgument state): ImportChain(state) {
 			this->element_kind = ElementKind::ImportStarHides;
 		}
 

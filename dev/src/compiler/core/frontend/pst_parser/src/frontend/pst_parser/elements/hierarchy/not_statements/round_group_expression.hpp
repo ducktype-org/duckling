@@ -14,7 +14,7 @@ namespace pst {
 		NAMED_CHILD(expr, CommaAllowBlocksExprHolder);
 
 	public:
-		explicit RoundGroupExpr(const LangParserState& state): NotStmt(state) {
+		explicit RoundGroupExpr(LangElementConstructionArgument state): NotStmt(state) {
 			this->element_kind = ElementKind::RoundGroupExpr;
 		}
 

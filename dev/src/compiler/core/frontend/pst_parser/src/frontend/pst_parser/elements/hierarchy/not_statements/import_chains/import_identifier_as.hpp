@@ -15,7 +15,7 @@ namespace pst {
 		NAMED_CHILD_OPT(as, IdentifierWrapper);
 
 	public:
-		explicit ImportIdentifierAs(const LangParserState& state): ImportChain(state) {
+		explicit ImportIdentifierAs(LangElementConstructionArgument state): ImportChain(state) {
 			this->element_kind = ElementKind::ImportIdentifierAs;
 		}
 

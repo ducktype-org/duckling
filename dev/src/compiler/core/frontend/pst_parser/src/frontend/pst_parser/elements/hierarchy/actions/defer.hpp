@@ -7,7 +7,7 @@ namespace pst {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(Defer, Action);
 
 	public:
-		explicit Defer(const LangParserState& state): Action(state) {}
+		explicit Defer(LangElementConstructionArgument state): Action(state) {}
 
 		void dprint(std::ostream& out) const final;
 		~Defer() final = default;

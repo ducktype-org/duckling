@@ -45,6 +45,116 @@ namespace pst {
 	class LangParserState;
 	using TokenStreamCondition = bool(const TokenStream&, i64);
 
+	/**
+	 * @brief Place for automatic sub-functionalities that aren't dependent on the state
+	 */
+	class FreeAutomatic {
+	public:
+		/**
+		 * @brief Assigned an already parsed subtree to a variable with all of the automation.
+		 *
+		 * @param parent The parent element.
+		 * @param sink Place to store the new value(works with optionals).
+		 * @param fun The value.
+		 */
+		template<
+			std::derived_from<LangElement> ParentEl,
+			std::derived_from<LangElement> El,
+			base::TemplateStringLiteral    name,
+			std::derived_from<LangElement> El2>
+		static void assign(
+			Ref<ParentEl> parent, AccessInternal<El, name>* sink, MBox<El2>&& sub_tree
+		) {
+			if (sub_tree) {
+				sub_tree->setParent(parent);
+				std::string str_name(name.value);
+				parent->addNamedChild(str_name, sub_tree.refMut());
+				*sink = std::move(sub_tree);
+			}
+		}
+
+		/**
+		 * @brief Assigned an already parsed subtree to a variable with all of the automation.
+		 *
+		 * @param parent The parent element.
+		 * @param sink Place to store the new value(works with optionals).
+		 * @param fun The value.
+		 */
+		template<
+			std::derived_from<LangElement> ParentEl,
+			std::derived_from<LangElement> El,
+			base::TemplateStringLiteral    name,
+			std::derived_from<LangElement> El2>
+		static void assign(
+			Ref<ParentEl>                             parent,
+			base::Optional<AccessInternal<El, name>>* sink,
+			MBox<El2>&&                               sub_tree
+		) {
+			if (sub_tree) {
+				sub_tree->setParent(parent);
+				std::string str_name(name.value);
+				parent->addNamedChild(str_name, sub_tree.refMut());
+				sink->emplace(std::move(sub_tree));
+			}
+		}
+
+		/**
+		 * @brief Assigned an already parsed subtree to a variable with all of the automation.
+		 *
+		 * @param parent The parent element.
+		 * @param sink Place to store the new value(works with optionals).
+		 * @param fun The value.
+		 */
+		template<
+			std::derived_from<LangElement> ParentEl,
+			std::derived_from<LangElement> El,
+			std::derived_from<LangElement> El2>
+		static void assign(
+			Ref<ParentEl> parent, AccessInternalAnonymous<El>* sink, MBox<El2>&& sub_tree
+		) {
+			if (sub_tree) {
+				sub_tree->setParent(parent);
+				parent->addChild(sub_tree);
+				*sink = std::move(sub_tree);
+			}
+		}
+
+		/**
+		 * @brief Assigned an already parsed subtree to a variable with all of the automation.
+		 *
+		 * @param parent The parent element.
+		 * @param sink Place to store the new value(works with optionals).
+		 * @param fun The value.
+		 */
+		template<
+			std::derived_from<LangElement> ParentEl,
+			std::derived_from<LangElement> El,
+			std::derived_from<LangElement> El2>
+		static void assign(
+			Ref<ParentEl>                                parent,
+			base::Optional<AccessInternalAnonymous<El>>* sink,
+			MBox<El2>&&                                  sub_tree
+		) {
+			if (sub_tree) {
+				sub_tree->setParent(parent);
+				parent->addChild(sub_tree);
+				sink->emplace(std::move(sub_tree));
+			}
+		}
+
+		/**
+		 * @brief Assigned an already parsed subtree to a variable with all of the automation.
+		 *
+		 * @param parent The parent element.
+		 * @param sink Place to store the new value(works with optionals).
+		 * @param fun The value.
+		 */
+		template<std::derived_from<LangElement> ParentEl, std::derived_from<LangElement> El, typename Sink>
+		static void assign(Ref<ParentEl>, Sink* sink, MBox<El>&& sub_tree) {
+			if (sub_tree) *sink = std::move(sub_tree);
+		}
+	};
+
 	template<typename State>
 	class PSTAutomatic {
 	protected:
@@ -254,89 +364,9 @@ namespace pst {
 			return *this;
 		}
 
-		/**
-		 * @brief Assigned an already parsed subtree to a variable with all of the automation.
-		 *
-		 * @param sink Place to store the new value(works with optionals).
-		 * @param fun The value.
-		 */
-		template<
-			std::derived_from<LangElement> El,
-			base::TemplateStringLiteral    name,
-			std::derived_from<LangElement> El2>
-		PSTAutomatic& assign(AccessInternal<El, name>* sink, MBox<El2>&& sub_tree) {
-			if (sub_tree) {
-				sub_tree->setParent(el);
-				std::string str_name(name.value);
-				el->addNamedChild(str_name, sub_tree.refMut());
-				*sink = std::move(sub_tree);
-			}
-			return *this;
-		}
-
-		/**
-		 * @brief Assigned an already parsed subtree to a variable with all of the automation.
-		 *
-		 * @param sink Place to store the new value(works with optionals).
-		 * @param fun The value.
-		 */
-		template<
-			std::derived_from<LangElement> El,
-			base::TemplateStringLiteral    name,
-			std::derived_from<LangElement> El2>
-		PSTAutomatic& assign(base::Optional<AccessInternal<El, name>>* sink, MBox<El2>&& sub_tree) {
-			if (sub_tree) {
-				sub_tree->setParent(el);
-				std::string str_name(name.value);
-				el->addNamedChild(str_name, sub_tree.refMut());
-				sink->emplace(std::move(sub_tree));
-			}
-			return *this;
-		}
-
-		/**
-		 * @brief Assigned an already parsed subtree to a variable with all of the automation.
-		 *
-		 * @param sink Place to store the new value(works with optionals).
-		 * @param fun The value.
-		 */
-		template<std::derived_from<LangElement> El, std::derived_from<LangElement> El2>
-		PSTAutomatic& assign(AccessInternalAnonymous<El>* sink, MBox<El2>&& sub_tree) {
-			if (sub_tree) {
-				sub_tree->setParent(el);
-				el->addChild(sub_tree);
-				*sink = std::move(sub_tree);
-			}
-			return *this;
-		}
-
-		/**
-		 * @brief Assigned an already parsed subtree to a variable with all of the automation.
-		 *
-		 * @param sink Place to store the new value(works with optionals).
-		 * @param fun The value.
-		 */
-		template<std::derived_from<LangElement> El, std::derived_from<LangElement> El2>
-		PSTAutomatic& assign(
-			base::Optional<AccessInternalAnonymous<El>>* sink, MBox<El2>&& sub_tree
-		) {
-			if (sub_tree) {
-				sub_tree->setParent(el);
-				el->addChild(sub_tree);
-				sink->emplace(std::move(sub_tree));
-			}
-			return *this;
-		}
-
-		/**
-		 * @brief Assigned an already parsed subtree to a variable with all of the automation.
-		 *
-		 * @param sink Place to store the new value(works with optionals).
-		 * @param fun The value.
-		 */
-		template<std::derived_from<LangElement> El, typename Sink>
-		PSTAutomatic& assign(Sink* sink, MBox<El>&& sub_tree) {
-			if (sub_tree) *sink = std::move(sub_tree);
+		template<typename... Args>
+		PSTAutomatic& assign(Args&&... args) {
+			FreeAutomatic::assign(el, std::forward<Args>(args)...);
 			return *this;
 		}
 

@@ -13,7 +13,7 @@ namespace pst {
 		CLONE_SUBELEMENTS();
 
 	public:
-		explicit FlowPatternList(const LangParserState& state): List(state) {
+		explicit FlowPatternList(LangElementConstructionArgument state): List(state) {
 			this->element_kind = ElementKind::FlowPatternList;
 		}
 

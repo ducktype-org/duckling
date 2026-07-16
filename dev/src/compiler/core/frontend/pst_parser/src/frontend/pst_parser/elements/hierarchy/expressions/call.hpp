@@ -17,7 +17,7 @@ namespace pst::expr {
 		NAMED_CHILD(args, CallList);
 
 	public:
-		Call(const LangParserState& state): ExprElement(state, 300) {}
+		explicit Call(LangElementConstructionArgument state): ExprElement(state, 300) {}
 
 		static MBox<ExprElement> parse(LangParserState& state);
 

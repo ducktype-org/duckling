@@ -27,7 +27,7 @@ namespace pst::expr {
 		};
 
 	public:
-		explicit GeneralBinary(const LangParserState& state, Operator op):
+		explicit GeneralBinary(LangElementConstructionArgument state, Operator op):
 			  BinaryOperator(state, op.getGenBinOpPrecedence()) {}
 
 		/**

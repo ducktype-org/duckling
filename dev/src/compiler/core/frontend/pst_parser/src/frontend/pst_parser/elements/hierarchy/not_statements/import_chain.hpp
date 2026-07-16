@@ -16,7 +16,7 @@ namespace pst {
 	public:
 		ELEMENT_CLONE_DECL(ImportChain);
 
-		explicit ImportChain(const LangParserState& state): NotStmt(state) {}
+		explicit ImportChain(LangElementConstructionArgument state): NotStmt(state) {}
 
 		[[nodiscard]]
 		std::string elementType() const override {

@@ -16,7 +16,7 @@ namespace pst::expr {
 		NAMED_CHILD(inner, TemplateList);
 
 	public:
-		TemplateSpecifier(const LangParserState& state): ExprElement(state, 300) {
+		explicit TemplateSpecifier(LangElementConstructionArgument state): ExprElement(state, 300) {
 			this->element_kind = ElementKind::ExprElement;
 		}
 

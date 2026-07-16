@@ -15,7 +15,7 @@ namespace pst {
 		NAMED_CHILD(nested_import, NestedImportList);
 
 	public:
-		explicit ImportNested(const LangParserState& state): ImportChain(state) {
+		explicit ImportNested(LangElementConstructionArgument state): ImportChain(state) {
 			this->element_kind = ElementKind::ImportNested;
 		}
 

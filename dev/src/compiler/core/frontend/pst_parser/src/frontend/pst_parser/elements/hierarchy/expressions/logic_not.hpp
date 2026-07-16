@@ -16,7 +16,7 @@ namespace pst::expr {
 		using Self  = LogicNot;
 
 	public:
-		explicit LogicNot(const LangParserState& state): PrefixOperator(state, 730) {}
+		explicit LogicNot(LangElementConstructionArgument state): PrefixOperator(state, 730) {}
 
 		static MBox<ExprElement> parse(LangParserState& state);
 

@@ -12,7 +12,7 @@ namespace pst {
 		CLONE_SUBELEMENTS();
 
 	public:
-		explicit ParamList(const LangParserState& state): List(state) {
+		explicit ParamList(LangElementConstructionArgument state): List(state) {
 			this->element_kind = ElementKind::ParamList;
 		}
 

@@ -14,8 +14,8 @@ namespace pst {
 		NAMED_CHILD(name, IdentifierWrapper);
 
 		// These are generic ExprHolders as this class doesn't take part in parsing.
-		NAMED_CHILD_OPT(type, ExprHolder);
-		NAMED_CHILD_OPT(value, ExprHolder);
+		NAMED_CHILD_OPT(type, ExprHolder);  // Not sure if the type can be deductible
+		NAMED_CHILD(value, ExprHolder);
 
 	protected:
 		HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const override;
@@ -23,6 +23,8 @@ namespace pst {
 		friend class ElementSynthesizer;
 
 	public:
+		TemplateExpansionAssignment(LangParserElementConstructionData data): NotStmt(data) {}
+
 		void dprint(std::ostream& out) const final;
 		~TemplateExpansionAssignment() final = default;
 

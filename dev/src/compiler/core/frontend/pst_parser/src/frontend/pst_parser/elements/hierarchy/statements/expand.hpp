@@ -27,7 +27,7 @@ namespace pst {
 			  ParentClass(dummy, other),
 			  context(makeBox<LangParserContext>(other.context.ref())) {}
 
-		Expand(const LangParserState& state, CRef<LangParserContext> context):
+		explicit Expand(LangElementConstructionArgument state, CRef<LangParserContext> context):
 			  Stmt(StmtKind::Expand, state),
 			  context(makeBox<LangParserContext>(context)) {
 			this->element_kind = ElementKind::Expand;

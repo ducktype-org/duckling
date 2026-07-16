@@ -14,7 +14,7 @@ namespace pst {
 		CLONE_SUBELEMENTS();
 
 	public:
-		explicit InitList(const LangParserState& state): List(state) {}
+		explicit InitList(LangElementConstructionArgument state): List(state) {}
 
 		static MBox<InitList> parse(LangParserState& state);
 

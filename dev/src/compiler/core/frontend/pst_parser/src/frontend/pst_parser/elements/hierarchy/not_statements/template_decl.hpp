@@ -19,7 +19,7 @@ namespace pst {
 		HashAlg& addElementDataToStableHash(HashAlg& partial_hash) const override;
 
 	public:
-		explicit TemplateDecl(const LangParserState& state): NotStmt(state) {
+		explicit TemplateDecl(LangElementConstructionArgument state): NotStmt(state) {
 			this->element_kind = ElementKind::TemplateDecl;
 		}
 

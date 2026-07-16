@@ -26,7 +26,7 @@ namespace pst::expr {
 		HashAlg& addElementDataToStableHash(HashAlg&) const override;
 
 	public:
-		explicit MatchExpr(const LangParserState& state): ExprElement(state, 810) {
+		explicit MatchExpr(LangElementConstructionArgument state): ExprElement(state, 810) {
 			this->element_kind = ElementKind::Match;
 		}
 

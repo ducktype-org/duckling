@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../../meta.hpp"
-#include "template_expansion_assignments.hpp"
+#include "template_expansion_assignment.hpp"
 
 namespace pst {
 	/**
@@ -21,6 +21,8 @@ namespace pst {
 		friend class ElementSynthesizer;
 
 	public:
+		TemplateTopLevel(LangParserElementConstructionData data): NotStmt(data) {}
+
 		void dprint(std::ostream& out) const final;
 		~TemplateTopLevel() final = default;
 

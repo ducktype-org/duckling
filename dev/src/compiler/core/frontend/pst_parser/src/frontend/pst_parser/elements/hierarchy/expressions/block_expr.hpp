@@ -16,7 +16,7 @@ namespace pst::expr {
 		NAMED_CHILD(block, CodeBlock);
 
 	public:
-		explicit BlockExpr(const LangParserState& state): ExprElement(state, 200) {}
+		explicit BlockExpr(LangElementConstructionArgument state): ExprElement(state, 200) {}
 
 		static MBox<ExprElement> parse(LangParserState& state);
 
