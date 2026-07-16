@@ -23,6 +23,9 @@
 #include <helios/symbols/symbol_id.hpp>
 #include <helios/tsh/abstract_type.hpp>
 #include <helios/tsh/symbol_type.hpp>
+#include <helios/tsh/queries/types.hpp>
+#include <helios_private/hout_creation/expressions/coercions.hpp>
+#include <helios_private/symbols/symbols.hpp>
 
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/vector_utils.hpp>
@@ -157,9 +160,24 @@ namespace compiler::helios::code::shorthands {
 			return makeBox<LiteralCharExpr>(*ctx, generatedOrigin(), value);
 		}
 
-		/** @brief A string literal. */
+		/** @brief A string literal, as char slice. */
 		Box<LiteralStringExpr> litStr(base::StrID value) const {
 			return makeBox<LiteralStringExpr>(*ctx, generatedOrigin(), value);
+		}
+
+		/** @brief A string literal, as String. */
+		Box<Expr> litStrObj(base::StrID value) const {
+			SymID callee_sym = ctx->query<defgen::QueryGeneratedSymbol>({
+				.name                  = base::StrID("builtin_stringify_str"),
+				.generated_symbol_data = defgen::BuiltinOperator{
+					.operator_type = ctx->query<tsh::QueryFunctionType>({
+						{ tsh::SymbolType<>::withDefaults(tsh::getCharSliceType(*ctx)) },
+						tsh::SymbolType<>::withDefaults(tsh::getStringType()) ,
+					}),
+					.operatoriness = HOUTFunctionDeclaration::Operatoriness::None,
+				},
+			});
+			return call(ident(callee_sym), litStr(value));
 		}
 
 		/** @brief A type literal (e.g. `i32`, `bool`), carrying `type` as its value. */
@@ -404,6 +422,40 @@ namespace compiler::helios::code::shorthands {
 			return makeBox<WhileStmt>(
 				generatedOrigin(), std::move(condition), std::move(body).toCodeBlock()
 			);
+		}
+
+		/*****************
+		 *   AUXILIARY   *
+		 *****************/
+
+		/**
+		 * @brief Forcefully coerces an expression to the target type.
+		 * @note Assumes the coercion will succeed.
+		 */
+		Box<Expr> coerce(Box<Expr> expr, const tsh::SymbolType<> target_type) const {
+			auto coercion = canCoerce(*ctx, expr->expression_type.getSymbolType(), target_type);
+			return coercion.valueOrThrow().coerce(*ctx, std::move(expr));
+		}
+
+		/**
+		 * @brief Coerces the expression to one which can be passed as self to a method of its type.
+		 *
+		 * Essentially enforces that the expression is a reference. Unless the type is a simple
+		 * type, in which case it is enforced by-value instead.
+		 */
+		Box<Expr> prepToPassSelf(Box<Expr> expr) const {
+			// If the expr is not a simple type, we must call its method on a reference.
+			if (not expr->expression_type.getType().isSimple()
+			    and expr->expression_type.getSymbolType().getRefKind() != tsh::ReferenceKind::Ref) {
+				expr = refOf(std::move(expr));
+			}
+			// But also if the accessed field is a reference to a simple type, we must deref it.
+			if (expr->expression_type.getType().isSimple()
+			    and expr->expression_type.getSymbolType().getRefKind()
+			            != tsh::ReferenceKind::Direct) {
+				expr = deref(std::move(expr));
+			}
+			return expr;
 		}
 	};
 }

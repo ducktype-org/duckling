@@ -18,14 +18,6 @@ namespace compiler::helios::defgen {
 	SymID concatSym(query::Context& ctx);
 
 	/**
-	 * @brief Internal utility function to get a String HOUT expression
-	 * from a string literal value.
-	 * @param ctx The query context.
-	 * @param value The string literal value.
-	 */
-	Box<code::Expr> getStringFromLiteralExpr(query::Context& ctx, base::StrID value);
-
-	/**
 	 * @brief Get the compiler-generated HOUT representation of the toString method for a type.
 	 * \query_thread_safe_if_cache
 	 */

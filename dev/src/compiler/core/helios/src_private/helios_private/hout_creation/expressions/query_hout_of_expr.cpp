@@ -22,6 +22,7 @@
 #include <helios_private/hout_creation/definition_generation/to_string_methods.hpp>
 #include <helios_private/hout_creation/expressions/builtin_operators.hpp>
 #include <helios_private/hout_creation/expressions/chain_expr.hpp>
+#include <helios_private/hout_creation/shorthands/shorthands.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
@@ -202,32 +203,10 @@ namespace compiler::helios::code {
 				}
 			}
 
-			/**
-			 * Prepares a HOUT Expr for a method call, e.g. by automatically taking a reference, as
-			 * required by `self`.
-			 * @note The algorithm is a bit more complicated and depends on whether the type is
-			 * simple or complex, as methods on simple types take copies instead, and then
-			 * references to simple types need to be dereffed.
-			 * @param expr The expression on which a method is called.
-			 * @return The modified (reffed or dereffed) expression.
-			 */
-			[[nodiscard]]
-			Box<Expr> prepareForMethodCall(Box<Expr> expr) const {
-				if (not expr->expression_type.getType().isSimple()
-				    and expr->expression_type.getSymbolType().getRefKind()
-				            != tsh::ReferenceKind::Ref) {
-					return makeBox<RefOfExpr>(ctx, expr->origin.generatedFrom(), std::move(expr));
-				}
-				if (expr->expression_type.getType().isSimple()
-				    and expr->expression_type.getSymbolType().getRefKind()
-				            != tsh::ReferenceKind::Direct) {
-					return makeBox<DerefExpr>(ctx, expr->origin.generatedFrom(), std::move(expr));
-				}
-				return expr;
-			}
-
 			void visitExprFormatStrValue(pst::Access<pst::expr::ExprFormatStrValue> stmt) override {
 				auto concat_sym = defgen::concatSym(ctx);
+
+				shorthands::Shorthand s{ ctx };
 
 				// Construct the expression, initially empty.
 				MBox<Expr> result_expr
@@ -246,9 +225,10 @@ namespace compiler::helios::code {
 						const auto unescape_result = base::unescapeString(escaped_string);
 						match_optional(unescape_result) {
 							opt_some(result) {
-								next_string = defgen::getStringFromLiteralExpr(
-									ctx, base::StrID(result.value)
-								);
+								// TODO (review) this previously constructed a String object,
+								// now constructs a slice. Is this good? (Technically faster.)
+								next_string
+									= shorthands::Shorthand{ ctx }.litStr(base::StrID(result.value));
 							}
 							opt_err(error) {
 								ctx.logInt(makeBox<UnknownEscapeSequenceError>(
@@ -271,7 +251,7 @@ namespace compiler::helios::code {
 						const auto to_string_sym = defgen::toStringSymForType(ctx, sub_expr_type);
 
 						// - - Correct for passing by copy or reference depending on type
-						sub_expr_hout = prepareForMethodCall(std::move(sub_expr_hout));
+						sub_expr_hout = s.prepToPassSelf(std::move(sub_expr_hout));
 
 						// - - Create HOUT Expr
 						std::vector<Box<Expr>> arguments;
@@ -345,6 +325,7 @@ namespace compiler::helios::code {
 						|| operatoriness == HOUTFunctionDeclaration::Operatoriness::Suffix,
 					"resolveUnaryOperator should only filter for prefix or suffix operators"
 				);
+				shorthands::Shorthand s{ ctx };
 
 				// Unary operator resolution happens in two steps:
 				// 1. If the argument is numeric (integral or float) and the operator is a built-in
@@ -395,7 +376,7 @@ namespace compiler::helios::code {
 					auto method_candidates = method_lookup_result->valueOrThrow().leaves;
 					filterFunctionsByOperatoriness(ctx, method_candidates, operatoriness);
 					if (!method_candidates.empty()) {
-						auto self_expr = prepareForMethodCall(std::move(inner));
+						auto self_expr = s.prepToPassSelf(std::move(inner));
 						return processUnaryOperatorCall(
 								   ctx,
 								   method_candidates,
@@ -501,8 +482,9 @@ namespace compiler::helios::code {
 			Box<Expr> resolveBinaryOperator(
 				pst::Access<pst::OperatorWrapper> op, Box<Expr> lhs, Box<Expr> rhs, ScopeID scope
 			) const {
-				const auto lhs_type = lhs->expression_type.getSymbolType();
-				const auto rhs_type = rhs->expression_type.getSymbolType();
+				const auto            lhs_type = lhs->expression_type.getSymbolType();
+				const auto            rhs_type = rhs->expression_type.getSymbolType();
+				shorthands::Shorthand s{ ctx };
 
 				// Binary operator resolution now happens in two steps:
 				// 1. If the arguments are both numeric (integral or float) and the operator is a
@@ -556,7 +538,7 @@ namespace compiler::helios::code {
 						ctx, method_candidates, HOUTFunctionDeclaration::Operatoriness::Infix
 					);
 					if (!method_candidates.empty()) {
-						auto self_expr = prepareForMethodCall(std::move(lhs));
+						auto self_expr = s.prepToPassSelf(std::move(lhs));
 						return processBinaryOperatorCall(
 								   ctx,
 								   method_candidates,
