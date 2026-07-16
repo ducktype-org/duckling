@@ -52,6 +52,8 @@ public:
 		TESTER_ADD_TEST(testMiscExprs);
 		TESTER_ADD_TEST(testAccess);
 		TESTER_ADD_TEST(testStatements);
+		TESTER_ADD_TEST(testCoerce);
+		TESTER_ADD_TEST(testPrepToPassSelf);
 		TESTER_ADD_TEST(testGeneratedOrigins);
 		TESTER_ADD_TEST(testWithOrigin);
 	}
@@ -76,6 +78,22 @@ public:
 			ASSERT_EQUAL(dprint(hello), std::string("hello"));
 			ASSERT_EQUAL(hello->value.str(), std::string("hello"));
 			ASSERT_EQUAL(hello->expression_type.getType().getKind(), tsh::Kind::Slice);
+
+			// Unlike `litStr` (a char slice), this evaluates to a `String`.
+			const auto str_obj = s.litStrObj(base::StrID("hi"));
+			ASSERT_EQUAL(str_obj->expression_type.getType().getKind(), tsh::Kind::String);
+
+			// - It is a call `builtin_stringify_str(<char slice "hi">)`.
+			const auto* call_expr = dynamic_cast<const CallExpr*>(str_obj.get());
+			ASSERT_TRUE(call_expr != nullptr);
+			ASSERT_EQUAL(call_expr->arguments.size(), 1UL);
+
+			// - The sole argument is the char-slice string literal carrying the value.
+			const auto* arg
+				= dynamic_cast<const LiteralStringExpr*>(call_expr->arguments.at(0).get());
+			ASSERT_TRUE(arg != nullptr);
+			ASSERT_EQUAL(arg->value.str(), std::string("hi"));
+			ASSERT_EQUAL(arg->expression_type.getType().getKind(), tsh::Kind::Slice);
 
 			// A type literal is itself a `meta` value, wrapping the `i64` type it carries.
 			const auto i64_type
@@ -377,6 +395,76 @@ public:
 			std::vector<Box<Stmt>> collected;
 			collected.emplace_back(s.ret(s.litNum(7)));
 			ASSERT_EQUAL(StmtPack{ std::move(collected) }.toCodeBlock().statements.size(), 1UL);
+		});
+	}
+
+	/**
+	 * `coerce` forcefully coerces an expression to a target type. A widening promotion inserts a
+	 * cast, while an identity coercion (target == source) is an identity transformation.
+	 */
+	void testCoerce() {
+		query::utils::withContextDo([&](query::Context& ctx) {
+			const Shorthand s{ ctx };
+
+			const auto i32_type
+				= tsh::getIntegralType(ctx, 32, tsh::IntegralAbstractType::Signedness::Signed);
+			const auto i64_sym_type = tsh::SymbolType<>::withDefaults(
+				tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed)
+			);
+
+			// Widening i32 -> i64 inserts a numeric promotion cast.
+			const auto promoted = s.coerce(s.litNum(5, i32_type), i64_sym_type);
+			ASSERT_TRUE(dynamic_cast<const CastExpr*>(promoted.get()) != nullptr);
+			ASSERT_EQUAL(promoted->expression_type.getType().getKind(), tsh::Kind::Integral);
+			ASSERT_EQUAL(
+				promoted->expression_type.getType().as<tsh::IntegralAbstractType>().getSize(),
+				Bits(64)
+			);
+
+			// Coercing to the operand's own type is an identity coercion: the operand is returned
+			// unwrapped (no cast node is introduced).
+			const auto literal   = s.litNum(5, i32_type);
+			const auto self_type = literal->expression_type.getSymbolType();
+			const auto unchanged = s.coerce(s.litNum(5, i32_type), self_type);
+			ASSERT_TRUE(dynamic_cast<const LiteralNumericExpr*>(unchanged.get()) != nullptr);
+			ASSERT_EQUAL(dprint(unchanged), std::string("5"));
+		});
+	}
+
+	/**
+	 * `prepToPassSelf` reshapes an expression so it can be passed as `self` to a method of its
+	 * type: complex types are passed by reference, simple types by value. It is idempotent — an
+	 * operand already in the right shape is returned untouched. `ident`/access on a real class
+	 * field needs a loaded module (`Point`).
+	 */
+	void testPrepToPassSelf() {
+		const auto [module, scope] = getModule(fs::File(path("test_modules/shorthands/access")));
+		const auto point_var       = getChain("point", scope).back();
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			const Shorthand s{ ctx };
+
+			const auto i64_type
+				= tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed);
+
+			// Simple + direct: methods on simple types take a copy, so it is passed as-is.
+			const auto simple_direct = s.prepToPassSelf(s.litNum(5, i64_type));
+			ASSERT_TRUE(dynamic_cast<const LiteralNumericExpr*>(simple_direct.get()) != nullptr);
+
+			// Simple + reference: dereffed back down to a value.
+			const auto simple_ref = s.prepToPassSelf(s.refOf(s.litNum(5, i64_type)));
+			ASSERT_TRUE(dynamic_cast<const DerefExpr*>(simple_ref.get()) != nullptr);
+
+			// Complex (a class) + direct: reffed up so it can be passed as `self`.
+			auto       point_ident = s.ident(point_var);
+			const auto obj_direct  = s.prepToPassSelf(std::move(point_ident));
+			ASSERT_TRUE(dynamic_cast<const RefOfExpr*>(obj_direct.get()) != nullptr);
+
+			// Complex + already a reference: passed as-is, not wrapped in a second `refof`.
+			const auto  obj_ref  = s.prepToPassSelf(s.refOf(s.ident(point_var)));
+			const auto* ref_expr = dynamic_cast<const RefOfExpr*>(obj_ref.get());
+			ASSERT_TRUE(ref_expr != nullptr);
+			ASSERT_TRUE(dynamic_cast<const IdentifierExpr*>(ref_expr->inner.get()) != nullptr);
 		});
 	}
 

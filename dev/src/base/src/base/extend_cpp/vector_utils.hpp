@@ -45,7 +45,7 @@ namespace base {
 
 	/**
 	 * @brief Moves a pack of items into a `std::vector<Element>`, preserving order.
-	 * The element type is explicit (it cannot be deduced when items are, e.g., derived-type.
+	 * The element type is explicit — it cannot be deduced when items are, e.g., derived-type.
 	 */
 	template<typename Element, typename... Items>
 	requires(std::is_constructible_v<Element, Items &&> && ...)

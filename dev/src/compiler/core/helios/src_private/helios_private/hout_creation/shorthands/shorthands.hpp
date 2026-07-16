@@ -486,16 +486,17 @@ namespace compiler::helios::code::shorthands {
 		 */
 		[[nodiscard]]
 		Box<Expr> prepToPassSelf(Box<Expr> expr) const {
+			const auto new_origin = expr->origin.generatedFrom();
 			// If the expr is not a simple type, we must call its method on a reference.
 			if (not expr->expression_type.getType().isSimple()
 			    and expr->expression_type.getSymbolType().getRefKind() != tsh::ReferenceKind::Ref) {
-				expr = refOf(std::move(expr));
+				expr = withOrigin(new_origin, refOf(std::move(expr)));
 			}
 			// But also if the accessed field is a reference to a simple type, we must deref it.
 			if (expr->expression_type.getType().isSimple()
 			    and expr->expression_type.getSymbolType().getRefKind()
 			            != tsh::ReferenceKind::Direct) {
-				expr = deref(std::move(expr));
+				expr = withOrigin(new_origin, deref(std::move(expr)));
 			}
 			return expr;
 		}
