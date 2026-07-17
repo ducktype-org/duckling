@@ -74,9 +74,12 @@ impl DuckcProcessBuilder {
     }
 
     /// Set source directory of the currently compiling package.
-    pub fn set_src_dir(&mut self, package: &Package) -> &mut Self {
-        self.inner.arg(package.source_directory());
-        self
+    pub fn set_src_dir(&mut self, package: &Package) -> QuackResult<&mut Self> {
+        let source_directory = package.source_directory().context_internal(
+            "asked for src directory of the global package or a script with frontmatter",
+        )?;
+        self.inner.arg(source_directory);
+        Ok(self)
     }
 
     /// Set the number of workers to be used by duckc.

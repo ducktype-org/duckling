@@ -60,7 +60,7 @@ fn compile_unit(
     layout: &ProfileLayout,
     bcx: &BuildContext<'_, '_>,
 ) -> QuackResult<()> {
-    let task = create_task(unit, graph, layout);
+    let task = create_task(unit, graph, layout)?;
     compile_single_unit_with_tasks(unit, graph, layout, bcx, vec![task])
 }
 
@@ -70,7 +70,7 @@ fn create_task(
     unit: &Unit,
     graph: &UnitGraph,
     layout: &ProfileLayout,
-) -> multipackage_schema::Task {
+) -> QuackResult<multipackage_schema::Task> {
     let strategy = match unit.artifacts_type() {
         ArtifactsType::Binary => {
             assert!(
@@ -79,7 +79,7 @@ fn create_task(
             );
             multipackage_schema::PackageCompilationStrategy::Binary {
                 output_file: unit_output(unit, graph, layout),
-                linking_options: get_linker_options(unit, graph, layout),
+                linking_options: get_linker_options(unit, graph, layout)?,
             }
         }
         ArtifactsType::IsADependencyArtifact => {
@@ -92,8 +92,8 @@ fn create_task(
         ArtifactsType::Dvm => unreachable!("DVM tasks should be handled by the `DvmExecutor`"),
         ArtifactsType::Library => unreachable!("library tasks are unsupported"),
     };
-    multipackage_schema::Task {
+    Ok(multipackage_schema::Task {
         package_id: unit.unique_name().into(),
         strategy,
-    }
+    })
 }
