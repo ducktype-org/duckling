@@ -45,7 +45,7 @@ Tests:
 
   # @TODO: #3112 maybe reenable it (see the other note in tests).
   template_self_use:
-    Enabled: False
+    Enabled: "false"
     Cases:
       all:
         backend: all
