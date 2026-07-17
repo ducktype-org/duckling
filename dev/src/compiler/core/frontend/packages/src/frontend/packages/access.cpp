@@ -177,11 +177,11 @@ namespace compiler::frontend::packages {
 		return PackageAccessLocked(*m_dependency_package_id);
 	}
 
-	std::vector<query::external::InputData> collectPackageInputData(
-		const std::vector<PackageInfo>& packages, bool from_previous_metadata
+	void collectPackageInputData(
+		const std::vector<PackageInfo>&          packages,
+		bool                                     from_previous_metadata,
+		std::vector<query::external::InputData>& out
 	) {
-		std::vector<query::external::InputData> out;
-
 		for (const auto& package: packages) {
 			out.emplace_back(
 				QueryPackageSideInput::getID(),
@@ -226,8 +226,6 @@ namespace compiler::frontend::packages {
 			// Lookup result is unchanged -> reuse the stored InputData.
 			out.emplace_back(lookup.input_data);
 		}
-
-		return out;
 	}
 
 }  // namespace compiler::frontend::packages
