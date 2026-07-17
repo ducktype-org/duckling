@@ -76,6 +76,9 @@ namespace compiler::driver {
 	 */
 	std::vector<artifacts::FileArtifact> getStdLibDVMDebugInfoArtifacts();
 
+	/**
+	 * @brief Return true or false if all the standard library artifact files are present.
+	 */
 	bool allStdlibArtifactsPresent();
 
 	/**

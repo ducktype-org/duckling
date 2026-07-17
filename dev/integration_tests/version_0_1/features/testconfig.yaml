@@ -4,6 +4,7 @@
 # so cases can run concurrently and never dirty the source tree.
 Env:
     DIT_TMP_DIR: "@{new_tmp_dir}"
+    DUCKC_STD_ARTIFACTS_PATH: "echo @{std_artifacts_dir}"
 
 case_build: "$DIT_TMP_DIR/build"
 
@@ -13,6 +14,7 @@ valgrind: "false"
 
 compile_dvm_options: ""
 compile_llvm_options: ""
+std_artifacts_path_flag: "--custom-std-artifacts-path @{std_artifacts_dir}"
 # Runs an extra deterministic compile check before normal compile_package.
 # You can override this to "false" in any subtree/test when duplication-based checks fail
 # for test-specific reasons (for example repeated globals or intentionally conflicting symbols).
@@ -28,12 +30,11 @@ compare_runs_script: "@{dev_dir}/integration_tests/compiler/compilation/scripts/
 compile_dvm_backend_deterministically_cmd: "if [ '@{enable_conc_deterministic_tests}' = 'true' ]; then python3 @{compile_determinism_script} --duckc-path @{duckc_path} --module-name @{Name} --duckc-worker-count @{duckc_worker_count} --compile-options='@{compile_dvm_options}' --backend dvm; else true; fi"
 compile_llvm_backend_deterministically_cmd: "if [ '@{enable_conc_deterministic_tests}' = 'true' ]; then python3 @{compile_determinism_script} --duckc-path @{duckc_path} --module-name @{Name} --duckc-worker-count @{duckc_worker_count} --compile-options='@{compile_llvm_options}' --backend llvm; else true; fi"
 
-compile_dvm_backend_cmd: "@{compile_dvm_backend_deterministically_cmd} && @{duckc_path} compile_package duck_modules/@{Name} -w @{duckc_worker_count} -a @{case_build} -n package_@{Name} @{compile_dvm_options} --dvm-backend"
-compile_llvm_backend_cmd: "@{compile_llvm_backend_deterministically_cmd} && @{duckc_path} compile_package duck_modules/@{Name} -w @{duckc_worker_count} -a @{case_build} -n package_@{Name} @{compile_llvm_options}"
+compile_dvm_backend_cmd: "@{compile_dvm_backend_deterministically_cmd} && @{duckc_path} compile_package duck_modules/@{Name} -w @{duckc_worker_count} -a @{case_build} -n package_@{Name} @{std_artifacts_path_flag} @{compile_dvm_options} --dvm-backend"
+compile_llvm_backend_cmd: "@{compile_llvm_backend_deterministically_cmd} && @{duckc_path} compile_package duck_modules/@{Name} -w @{duckc_worker_count} -a @{case_build} -n package_@{Name} @{std_artifacts_path_flag} @{compile_llvm_options}"
 
-# "compile only" commands used by the all backend (determinism checks run separately before these).
-compile_dvm_only_cmd: "@{duckc_path} compile_package duck_modules/@{Name} -w @{duckc_worker_count} -a @{case_build} -n package_@{Name} @{compile_dvm_options} --dvm-backend"
-compile_llvm_only_cmd: "@{duckc_path} compile_package duck_modules/@{Name} -w @{duckc_worker_count} -a @{case_build} -n package_@{Name} @{compile_llvm_options}"
+compile_dvm_only_cmd: "@{duckc_path} compile_package duck_modules/@{Name} -w @{duckc_worker_count} -a @{case_build} -n package_@{Name} @{std_artifacts_path_flag} @{compile_dvm_options} --dvm-backend"
+compile_llvm_only_cmd: "@{duckc_path} compile_package duck_modules/@{Name} -w @{duckc_worker_count} -a @{case_build} -n package_@{Name} @{std_artifacts_path_flag} @{compile_llvm_options}"
 
 compiled_to_llvm: "@{case_build}/package_llvm.exe"
 compiled_to_dvm: "@{case_build}/package_dvm.dbc"
