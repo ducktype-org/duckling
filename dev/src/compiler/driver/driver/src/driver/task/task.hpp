@@ -8,7 +8,7 @@
 
 #include <base/extend_cpp/stringifyable_enum.hpp>
 
-#include "artifacts/artifacts.hpp"
+#include <artifacts/artifacts.hpp>
 #include <filesystem/file_path.hpp>
 #include <string_id/string_id.hpp>
 

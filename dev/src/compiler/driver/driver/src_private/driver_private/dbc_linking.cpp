@@ -9,7 +9,7 @@
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/vector_utils.hpp>
 
-#include "artifacts/artifacts.hpp"
+#include <artifacts/artifacts.hpp>
 #include <logger/logger.hpp>
 #include <string_id/string_id.hpp>
 
