@@ -114,8 +114,6 @@ namespace compiler::lir {
 			return Operation::Assign;
 		case mir::Operation::AddressOf:
 			return Operation::AddressOf;
-		case mir::Operation::BoxAlloc:
-			return Operation::BoxAlloc;
 		case mir::Operation::ListPush:
 			return Operation::ListPush;
 		case mir::Operation::ListPop:
@@ -391,7 +389,7 @@ namespace compiler::lir {
 					mir_to_lir_local.put(&mir_local, locals[local_index]);
 
 					// Only create lifetime flag if needed
-					if (!mir_local.type.hasNoOpDestructor()) {
+					if (!mir_local.type.hasNoOpDestructor(ctx)) {
 						auto lifetime_flag = LIRLocal::boolLocal(ctx);
 						locals.pushBack(lifetime_flag);
 						auto flag_index = locals.lastIndex();
@@ -592,7 +590,6 @@ namespace compiler::lir {
 					break;
 				}
 				case mir::Operation::AddressOf:
-				case mir::Operation::BoxAlloc:
 				case mir::Operation::IntegerAdd:
 				case mir::Operation::IntegerNeg:
 				case mir::Operation::IntegerSub:
@@ -676,16 +673,24 @@ namespace compiler::lir {
 					// Currently this approach generates a free on every DestructIf if it operates
 					// on a box type (even if the box was moved). This will cause double free's if
 					// the box was moved around between other box variables. In the future we should
-					// insert a proper destructor call here before the FreeBox.
+					// insert a proper destructor call here before the free.
 					if (type.getRefKind() == tsh::ReferenceKind::Box) {
 						auto lir_place = getLocation(to_destruct);
 
-						// FreeBox is discarded if it operates on no information (ex. Unit).
+						// The free is discarded if it operates on no information (ex. Unit).
 						if (lir_place.has_value()) {
+							// Emit a call to the `box_free(b: box T)` builtin, which will be
+							// lowered to deallocation by the backend.
+							const helios::SymID free_sym
+								= helios::boxFreeSymForType(ctx, type.getType());
+							std::vector<LIRValue> call_args;
+							call_args.emplace_back(getFunctionLiteralfromHELIOSID(ctx, free_sym));
+							call_args.emplace_back(lir_place.value());
+
 							curr_block->instructions.emplace_back(
-								Operation::BoxFree,
+								Operation::Call,
 								base::Optional<LIRPlace>{},
-								std::vector{ lir_place.value() },
+								std::move(call_args),
 								mir_instruction.metadata
 							);
 							break;

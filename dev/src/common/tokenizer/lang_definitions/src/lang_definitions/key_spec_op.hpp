@@ -168,6 +168,9 @@ namespace lang_def {
 
 		// BC:
 		BCFunction,
+		BCFfi,
+		BCObject,
+		BCAssertSize,
 		BCType,
 		BCPrimitive,
 		BCPointer,
@@ -192,6 +195,7 @@ namespace lang_def {
 		BCFalse,
 		BCIsConstant,
 		BCInitialValue,
+		BCPacked,
 		COUNT,
 	};
 

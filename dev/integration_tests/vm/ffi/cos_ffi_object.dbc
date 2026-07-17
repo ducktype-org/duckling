@@ -1,0 +1,14 @@
+ffi object "libm.so.6";
+type primitive: f64 8
+ffi function cos { f64 } -> { f64 };
+function main { i64, ptr_argv } -> { i64 } {
+    init_pany_type res, f64;
+    init_pany_type a, f64;
+    mov_p64_imm a, 0.0;
+    call_ffifunc cos;
+    init_pany_type r, i64;
+    init_pany_type ires, i32;
+    fptosi_p32_p64 ires, res;
+    call_builtinfunc builtin_output_i32;
+    ret;
+}

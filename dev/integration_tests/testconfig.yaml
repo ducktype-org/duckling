@@ -13,7 +13,14 @@ compile_dvm: "cmake --build @{build_dir} -j -- VM"
 # PreNode, otherwise this one reruns concurrently for each of its nodes.
 PreNode: "@{tmp_env_tool} sweep && @{compile_duckc} && @{compile_dvm}"
 
+expect_output: "python3 @{dev_dir}/integration_tests/helpers/expect_output.py"
+
 is_jit_enabled: "cmake -L -N @{build_dir} | grep JIT_ENABLED | cut -d \"=\" -f 2"
+
+# Platform predicates, evaluated in the shell that runs each command, so they can be interpolated
+# anywhere a value ends up in a command (Run, Enabled, Env, ...), e.g. `[ "@{is_macos}" = true ]`.
+is_macos: "$([ \"$(uname)\" = Darwin ] && echo true || echo false)"
+is_linux: "$([ \"$(uname)\" = Linux ] && echo true || echo false)"
 
 # Per-case temporary environment (opt-in). A subtree that needs a scratch
 # directory defines `Env: { DIT_TMP_DIR: "@{new_tmp_dir}" }` and then uses
@@ -41,3 +48,4 @@ SubDirs:
     - debugger_cli
     - scripts
     - version_0_1
+    - vm

@@ -7,3 +7,5 @@ SubDirs:
   - next
   - input
   - output
+  - breakpoints
+  - memory

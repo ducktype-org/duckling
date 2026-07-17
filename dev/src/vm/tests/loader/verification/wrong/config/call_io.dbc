@@ -1,0 +1,14 @@
+# main calls does_io, which performs IO. Under no_io the IO effect must
+# propagate along the call graph so the whole program is rejected.
+function does_io {} -> {} {
+	init_pany_type		val, i64;
+	mov_p64_imm			val, 42;
+	output_p64			val;
+	deinit;
+	ret;
+}
+
+function main {  } -> { i64 } {
+	call_func			does_io;
+	ret;
+}

@@ -170,6 +170,9 @@ namespace lang_def {
 	constexpr auto BC_KEYWORDS_ARRAY
 		= std::to_array<std::tuple<Keyword, std::string_view, KeywordFlags>>({
 			{ Keyword::BCFunction, "function", KeywordFlags() },
+			{ Keyword::BCFfi, "ffi", KeywordFlags() },
+			{ Keyword::BCObject, "object", KeywordFlags() },
+			{ Keyword::BCAssertSize, "assert_size", KeywordFlags() },
 			{ Keyword::BCType, "type", KeywordFlags() },
 			{ Keyword::BCPrimitive, "primitive", KeywordFlags() },
 			{ Keyword::BCPointer, "pointer", KeywordFlags() },
@@ -194,6 +197,7 @@ namespace lang_def {
 			{ Keyword::BCFalse, "false", KeywordFlags() },
 			{ Keyword::BCIsConstant, "is_constant", KeywordFlags() },
 			{ Keyword::BCInitialValue, "initial_value", KeywordFlags() },
+			{ Keyword::BCPacked, "packed", KeywordFlags() },
 		});
 
 	// `- 1` because of `Keyword::NotAKeyword`

@@ -105,18 +105,19 @@ namespace vm {
 	}
 
 	void Type::defineData(
-		const std::vector<std::pair<base::StrID, TypeRef>>& fields_definitions,
-		base::Optional<InheritanceMetadata>                 inheritance_metadata
+		const std::vector<std::tuple<base::StrID, TypeRef, Offset>>& fields_definitions,
+		const TypeSize                                               data_size,
+		base::Optional<InheritanceMetadata>                          inheritance_metadata
 	) {
 		CORE_ASSERT(state == State::Declared, "Bad type define");
 		state = State::Defined;
 
 		kind_type = Kind::Data;
+		size      = data_size;
 		auto data = kind::Data{};
-		for (auto [sub_name, sub_type]: fields_definitions) {
+		for (auto [sub_name, sub_type, sub_offset]: fields_definitions) {
 			data.field_name_map.put(sub_name, data.fields.size());
-			// offset is set during finalization
-			data.fields.emplace_back(kind::FieldDesc{ .offset = Offset(0), .type = sub_type });
+			data.fields.emplace_back(kind::FieldDesc{ .offset = sub_offset, .type = sub_type });
 		}
 		data.inheritance_metadata = std::move(inheritance_metadata);
 		kind                      = data;
@@ -169,14 +170,7 @@ namespace vm {
 					= fixed_size_table.inner_type->getSize() * fixed_size_table.element_count;
 			}
 			variant_case(kind::Data, data) {
-				// calculate offset and size
-				Offset offset(0);
-				for (auto& field: data.fields) {
-					field.offset = offset;
-					field.type->finalize();
-					offset += field.type->getSize();
-				}
-				this->size = offset;
+				for (auto& field: data.fields) field.type->finalize();
 				if_opt_some(data.inheritance_metadata, imd) { inheritsFromImpl(imd); }
 				isInstantiableImpl(data);
 			}

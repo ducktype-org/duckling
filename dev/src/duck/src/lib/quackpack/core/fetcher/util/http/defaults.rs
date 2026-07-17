@@ -1,5 +1,7 @@
-//! Default values for [`HttpClient`](super::HttpClient).
+//! Default values for [`configure_easy2`](super::configure_easy2).
 use std::time::Duration;
+
+use http::HeaderValue;
 
 // https://docs.rs/reqwest/latest/reqwest/struct.ClientBuilder.html#method.user_agent
 /// Duck's user agent value.
@@ -30,5 +32,6 @@ pub const REQUEST_TIMEOUT: Duration = Duration::from_secs(60);
 
 /// Maximal allowed number of redirects.
 pub const MAX_REDIRECTS: usize = 5;
-/// `application/json` value for the Content-type header.
-pub const _APPLICATION_JSON: &str = "application/json";
+
+/// A value for a valueless HTTP header.
+pub const NO_VALUE: HeaderValue = HeaderValue::from_static("");

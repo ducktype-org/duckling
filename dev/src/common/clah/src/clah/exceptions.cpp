@@ -28,7 +28,8 @@ namespace {
 		if (at - back > 0) shortened += "...";
 
 		shortened += source.substr(
-			usize(std::max(0L, at - back)), source.size() - usize(std::max(0L, at - front)) + 1
+			usize(std::max<i64>(0, at - back)),
+			source.size() - usize(std::max<i64>(0, at - front)) + 1
 		);
 
 		if (at + front < source.size() - 1) shortened += "...";

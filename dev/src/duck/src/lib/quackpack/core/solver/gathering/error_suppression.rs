@@ -3,6 +3,8 @@ use std::error::Error;
 use crate::{QuackError, QuackResult};
 
 /// Represents a type with a list of suppressed errors, which occurred during some computation.
+/// The idea is to use [`GathererResult`], but store internal errors in the top level Err variant and other
+/// errors inside [`GathererComputation`] in Ok variant.
 #[derive(Debug)]
 pub struct GathererComputation<T>(pub T, pub Vec<QuackError>);
 /// Represents a type with a list of suppressed errors or a critical, not suppressed error.

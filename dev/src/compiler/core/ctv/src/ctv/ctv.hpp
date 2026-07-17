@@ -100,5 +100,12 @@ namespace compiler::ctv {
 		 * @return The type of the value stored in the CTV.
 		 */
 		[[nodiscard]] tsh::SymbolType<> getTypeOfStoredValue(query::Context& ctx) const;
+
+		/**
+		 * @note: This might be a subject of change in the future, especially, when VMValue CTVs
+		 * will be introduced.
+		 */
+		[[nodiscard]]
+		base::Bit256 queryUnstablePerfectHash() const;
 	};
 }
