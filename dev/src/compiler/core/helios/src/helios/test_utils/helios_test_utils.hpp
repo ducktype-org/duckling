@@ -22,6 +22,14 @@ namespace compiler::helios::test_utils {
 	std::pair<frontend::ModuleID, ScopeID> getModule(const fs::File& path);
 
 	/**
+	 * Get the ScopeID of the main file of a module that was registered as a package (e.g. via the
+	 * driver test utils), so that its `import`s of the standard library resolve.
+	 * @param module The module's ModuleID.
+	 * @return The module's main-file root ScopeID.
+	 */
+	ScopeID getModuleScope(frontend::ModuleID module);
+
+	/**
 	 * Get the SymIDs of all symbols in a chain in a given scope.
 	 * @param chain The symbol chain to look up, e.g. `"N1.N2.X"`.
 	 * @param scope The scope in which to perform the lookup, like the scope of a module.

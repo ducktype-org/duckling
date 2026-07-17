@@ -48,6 +48,9 @@ private:
 		point.assert_size = 8;
 		code.types.emplace_back(std::move(point));
 		code.types.emplace_back(FixedSizeTableType(base::StrID("points"), base::StrID("Point"), 3));
+		// C pointers: one typed, one with an unknown pointee (no inner).
+		code.types.emplace_back(CPointerType(base::StrID("point_ptr"), base::StrID("Point")));
+		code.types.emplace_back(CPointerType(base::StrID("raw_ptr"), {}));
 
 		// Global data: constant answer i64 with initial_value 42
 		GlobalData global;
@@ -124,6 +127,18 @@ private:
 			"Data type should keep assert_size after round-trip"
 		);
 
+		const auto& typed_cptr = std::get<CPointerType>(parsed.types[3]);
+		assertEqual(typed_cptr.name, base::StrID("point_ptr"), "C pointer name should survive");
+		assertTrue(
+			typed_cptr.inner == base::Optional<base::StrID>(base::StrID("Point")),
+			"C pointer inner should survive round-trip"
+		);
+		const auto& void_cptr = std::get<CPointerType>(parsed.types[4]);
+		assertEqual(void_cptr.name, base::StrID("raw_ptr"), "C pointer name should survive");
+		assertTrue(
+			!void_cptr.inner.has_value(), "An absent C pointer inner should survive round-trip"
+		);
+
 		// Check global data
 		assertEqual(
 			parsed.global_data.size(), original.global_data.size(), "Global count should match"
@@ -169,6 +184,8 @@ type data: PackedPoint {
 } packed assert_size 8
 
 type fixed_size_table: point_arr Point 2
+type cpointer: point_ptr Point
+type cpointer: raw_ptr
 
 global_data answers point_arr {
     is_constant: true,

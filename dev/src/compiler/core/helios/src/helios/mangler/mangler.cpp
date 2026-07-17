@@ -756,8 +756,6 @@ namespace compiler::helios::mangler {
 			);
 		}
 
-		static std::string mangle(query::Context&, tsh::StringAbstractType) { return "s"; }
-
 		static std::string mangle(query::Context& ctx, tsh::FunctionAbstractType type) {
 			std::stringstream res;
 			res << "F"
@@ -840,8 +838,6 @@ namespace compiler::helios::mangler {
 				return mangle(ctx, type.as<tsh::CPointerAbstractType>());
 			case Slice:
 				return mangle(ctx, type.as<tsh::SliceAbstractType>());
-			case String:
-				return mangle(ctx, type.as<tsh::StringAbstractType>());
 			case Function:
 				return mangle(ctx, type.as<tsh::FunctionAbstractType>());
 			case DynamicArray:

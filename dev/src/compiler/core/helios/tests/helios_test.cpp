@@ -88,7 +88,6 @@ public:
 		TESTER_ADD_TEST(testFunctionCallExpr);
 		TESTER_ADD_TEST(testHoutWalkers);
 		TESTER_ADD_TEST(testFunctions);
-		TESTER_ADD_TEST(testStrings);
 		TESTER_ADD_TEST(testStaticArrays);
 		TESTER_ADD_TEST(testDynamicArrays);
 		TESTER_ADD_TEST(testFunctionReturnTypeDeduction);
@@ -662,7 +661,6 @@ private:
 		const auto f32_type   = getFloatTypeNoContext(32);
 		const auto bool_type  = compiler::tsh::getBoolType();
 		const auto meta_type  = compiler::tsh::getMetaType();
-		const auto str_type   = compiler::tsh::getStringType();
 
 		const auto int32_mut_symbol_type   = st(int32_type).withMutability(Mutable);
 		const auto int32_immut_symbol_type = stConst(int32_type);
@@ -673,7 +671,6 @@ private:
 
 		ASSERT_EQUAL(f32_type, getTypeOf("SimpleFloat", root_scope));
 		ASSERT_EQUAL(bool_type, getTypeOf("SimpleBool", root_scope));
-		ASSERT_EQUAL(str_type, getTypeOf("SimpleString", root_scope));
 
 		const auto tuple_int_int               = getTypeOf("TupleII", root_scope);
 		const auto tuple_int_int_abstract_type = query::entryPoint<compiler::tsh::QueryTupleType>(
@@ -1641,8 +1638,6 @@ private:
 
 		auto bool_type = compiler::tsh::getBoolType();
 
-		auto str_type = compiler::tsh::getStringType();
-
 		// a simple way to get function scope through hout:
 		auto foo            = getChain("foo", top_scope).back();
 		auto foo_body_scope = getFunctionBodyScope(foo);
@@ -1671,8 +1666,6 @@ private:
 
 		ASSERT_EQUAL(bool_type, getTypeOf("v_bool_t", foo_body_scope));
 		ASSERT_EQUAL(bool_type, getTypeOf("v_bool_f", foo_body_scope));
-
-		ASSERT_EQUAL(str_type, getTypeOf("v_str", foo_body_scope));
 
 		// true, false literals:
 		auto true_expr  = getExprOfVariable(getChain("v_bool_t", foo_body_scope).back());
@@ -1911,86 +1904,6 @@ private:
 				          .valueOrThrow();
 				ASSERT_EQUAL(1, ctv.get<compiler::numeric_value::NumericValue>()->get<i64>());
 			}
-		}
-	}
-
-	void testStrings() {
-		auto [module, top_scope] = getModule(fs::File(path("test_modules/strings")));
-		auto& hout
-			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
-		auto& function   = hout.functions.at(0);
-		auto  fun_sym    = getChain("main", top_scope).back();
-		auto& statements = function->body->statements;
-		using namespace compiler::helios::code;
-
-		{
-			// let ab = 'a' +: b;
-			const auto& prepended_stmt = dynamic_cast<const VariableStmt&>(*statements.at(1));
-			const auto  prepended_expr
-				= dynamic_cast<const CallExpr*>(prepended_stmt.initial_value.get());
-			const auto prepended_callee
-				= dynamic_cast<IdentifierExpr*>(prepended_expr->callee.get());
-			assertEqual(
-				compiler::helios::name(prepended_callee->symbol),
-				base::StrID("builtin_string_prepended"),
-				"The prepended expression should call builtin_string_prepended"
-			);
-		}
-
-		{
-			// let bcd = b :+ 'c' :+ 'd';
-			const auto& appended_stmt = dynamic_cast<const VariableStmt&>(*statements.at(2));
-			const auto  appended_expr
-				= dynamic_cast<const CallExpr*>(appended_stmt.initial_value.get());
-			const auto appended_callee = dynamic_cast<IdentifierExpr*>(appended_expr->callee.get());
-			assertEqual(
-				compiler::helios::name(appended_callee->symbol),
-				base::StrID("builtin_string_appended"),
-				"The appended expression should call builtin_string_appended"
-			);
-		}
-
-		{
-			// let helloWorld = hello ++ world;
-			const auto& concatenated_stmt = dynamic_cast<const VariableStmt&>(*statements.at(5));
-			const auto  concatenated_expr
-				= dynamic_cast<const CallExpr*>(concatenated_stmt.initial_value.get());
-			const auto concatenated_callee
-				= dynamic_cast<IdentifierExpr*>(concatenated_expr->callee.get());
-			assertEqual(
-				compiler::helios::name(concatenated_callee->symbol),
-				base::StrID("builtin_string_concatenated"),
-				"The prepended expression should call builtin_string_concatenated"
-			);
-		}
-
-		{
-			// let x = 1;
-			// let y = 2;
-			// let format = "Did you know that {x} plus {y} equals ({x + y})?";
-			const auto& format_stmt = dynamic_cast<const VariableStmt&>(*statements.at(8));
-			const auto format_expr = dynamic_cast<const CallExpr*>(format_stmt.initial_value.get());
-			const auto format_callee = dynamic_cast<IdentifierExpr*>(format_expr->callee.get());
-			assertEqual(
-				compiler::helios::name(format_callee->symbol),
-				base::StrID("builtin_string_concatenated"),
-				"The format string expression should call builtin_string_concatenated"
-			);
-		}
-
-		{
-			const auto char_type       = compiler::tsh::getCharType();
-			const auto str_type        = compiler::tsh::getStringType();
-			const auto u64_type        = getIntegralTypeNoContext(64, Unsigned);
-			const auto char_slice_type = getSliceTypeNoContext(st(char_type));
-
-			auto fun_body_scope = getFunctionBodyScope(fun_sym);
-
-			// Vars
-			ASSERT_EQUAL(char_slice_type, getTypeOf("should_char_slice", fun_body_scope));
-			ASSERT_EQUAL(char_type, getTypeOf("should_char", fun_body_scope));
-			ASSERT_EQUAL(u64_type, getTypeOf("should_u64", fun_body_scope));
-			ASSERT_EQUAL(str_type, getTypeOf("should_string", fun_body_scope));
 		}
 	}
 
