@@ -54,7 +54,7 @@ namespace compiler::driver {
 		/**
 		 * @brief If a value is present, use this artifact collection
 		 * instead of the default.
-		 * @TODO #3158 Solving this would remove the need for this option.
+		 * @TODO: #3158 Solving this would remove the need for this option.
 		 */
 		base::Optional<Ref<artifacts::ArtifactCollection>> custom_art_collection = {};
 	};
@@ -103,7 +103,7 @@ namespace compiler::driver {
 		/**
 		 * @brief If a value is present, use this artifact collection
 		 * instead of the default.
-		 * @TODO #3158 Solving this would remove the need for this option.
+		 * @TODO: #3158 Solving this would remove the need for this option.
 		 */
 		base::Optional<Ref<artifacts::ArtifactCollection>> custom_art_collection = {};
 	};
