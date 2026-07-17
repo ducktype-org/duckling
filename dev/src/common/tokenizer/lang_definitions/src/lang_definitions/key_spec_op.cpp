@@ -197,6 +197,7 @@ namespace lang_def {
 			{ Keyword::BCIsConstant, "is_constant", KeywordFlags() },
 			{ Keyword::BCInitialValue, "initial_value", KeywordFlags() },
 			{ Keyword::BCPacked, "packed", KeywordFlags() },
+			{ Keyword::BCCPointer, "cpointer", KeywordFlags() },
 		});
 
 	// `- 1` because of `Keyword::NotAKeyword`
