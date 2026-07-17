@@ -191,7 +191,6 @@ private:
 				{ directOf(many_pointer), "many-pointer" },
 				{ refOf(i32_type), "ref" },
 				{ boxOf(i32_type), "box" },
-				{ directOf(getStringType()), "string" },
 				{ directOf(getUnitType()), "unit" },
 				{ directOf(dynamic_array), "dynamic array" },
 				{ directOf(tuple), "tuple" },

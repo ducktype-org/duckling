@@ -667,47 +667,6 @@ namespace compiler::tsh {
 		CRef<TypeInterface> getDeclaredInterface(query::Context&) const override;
 	};
 
-	class StringAbstractTypeImpl final: public AbstractTypeImpl {
-	public:
-		[[nodiscard]]
-		Kind getKind() const override {
-			return STATIC_KIND;
-		}
-
-		/**
-		 * @brief The Kind of types described by objects of this class.
-		 */
-		static constexpr Kind STATIC_KIND = Kind::String;
-
-		StringAbstractTypeImpl() { representation = "string"; }
-
-		/**
-		 * @brief Strings have nontrivial destructors because destruction of a string requires to
-		 * free memory.
-		 */
-		[[nodiscard]] bool hasNoOpDestructor(query::Context&) const override { return false; }
-
-		[[nodiscard]] bool isDefaultConstructible(query::Context&) const override { return true; }
-
-		/**
-		 * @brief Strings are trivially zero initializable and initialized with an empty string and
-		 * the data field equal to null. The data is allocated on the first insertion.
-		 */
-		[[nodiscard]] bool isTriviallyZeroInitializable(query::Context&) const override {
-			return true;
-		}
-
-		[[nodiscard]] bool isCopyable(query::Context&) const override { return true; }
-
-		/**
-		 * @brief Strings are not trivially copyable because the require a deep copy of memory.
-		 */
-		[[nodiscard]] bool isTriviallyCopyable(query::Context&) const override { return true; }
-
-		[[nodiscard]]
-		CRef<TypeInterface> getDeclaredInterface(query::Context& ctx) const override;
-	};
-
 	class DynamicArrayAbstractTypeImpl final: public AbstractTypeImpl {
 		SymbolType<> element_type;
 

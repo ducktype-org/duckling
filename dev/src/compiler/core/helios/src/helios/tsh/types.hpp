@@ -29,7 +29,6 @@ namespace compiler::tsh {
 	class ManyPointerAbstractTypeImpl;
 	class CPointerAbstractTypeImpl;
 	class SliceAbstractTypeImpl;
-	class StringAbstractTypeImpl;
 	class TupleAbstractTypeImpl;
 	class FunctionAbstractTypeImpl;
 	class DynamicArrayAbstractTypeImpl;
@@ -551,15 +550,6 @@ namespace compiler::tsh {
 	/***********************\
 	|  MISCELLANEOUS TYPES  |
 	\***********************/
-
-	class StringAbstractType: public AbstractType {
-	public:
-		SETUP_TYPE_WITH_BASE(StringAbstractType, AbstractType)
-
-		CONSTRUCT_WITH_CHECKED_CAST(StringAbstractType)
-
-		CONSTRUCT_FROM_IMPLEMENTATION(StringAbstractType)
-	};
 
 	class NamespaceAbstractType: public AbstractType {
 	public:

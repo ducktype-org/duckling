@@ -263,35 +263,6 @@ namespace compiler::backend_llvm {
 					CORE_PANIC("Float size different than 32 or 64 not implemented yet.");
 				}
 			}
-			variant_case(tsl::StringTypeLayout, string_layout) {
-				const auto string_type_name = string_layout.getMangledName().strView();
-
-				// Get the string type from the context, if it has been previously defined.
-				if (llvm::StructType* string_type
-				    = llvm::StructType::getTypeByName(llvm_context, string_type_name);
-				    string_type) {
-					return string_type;
-				}
-
-				// Otherwise, define the string type in LLVM, in line with the TSL definition.
-				llvm::StructType* string_type
-					= llvm::StructType::create(llvm_context, string_type_name);
-				string_type->setBody(
-					{
-						llvm::PointerType::getUnqual(llvm_context),
-						i64Type(llvm_context),
-						i64Type(llvm_context),
-						i64Type(llvm_context),
-					},
-					/*is_packed=*/false
-				);
-
-				// @TODO: #1842 Add layout verification, that the LLVM struct layout matches:
-				// - the TSL type layout, and
-				// - the struct defined in the built-ins module.
-
-				return string_type;
-			}
 			variant_case(tsl::ClassTypeLayout, class_layout) {
 				const auto class_name = class_layout.getMangledName().strView();
 
@@ -398,10 +369,7 @@ namespace compiler::backend_llvm {
 
 		// Prepare parameter types.
 		for (const auto& param: parameters)
-			if (std::holds_alternative<helios::CAbi>(abi) and param->is<tsl::StringTypeLayout>())
-				llvm_parameters.push_back(llvm::PointerType::getUnqual(module->getContext()));
-			else
-				llvm_parameters.push_back(typeFromLayout(module, param));
+			llvm_parameters.push_back(typeFromLayout(module, param));
 
 		// Prepare function type, including return type.
 		return llvm::FunctionType::get(typeFromLayout(module, return_type), llvm_parameters, false);
@@ -448,21 +416,6 @@ namespace compiler::backend_llvm {
 			function->setCallingConv(getCallingConvFromABI(function_literal.abi));
 			if (function_literal.link_once)
 				function->setLinkage(llvm::GlobalValue::LinkOnceODRLinkage);
-
-			// If the function uses C ABI, we need to pass structs by pointer with `byval` attribute.
-			if (std::holds_alternative<helios::CAbi>(function_literal.abi)) {
-				for (usize i = 0; i < function_literal.parameter_layouts->size(); i++) {
-					if (const auto param_layout = function_literal.parameter_layouts->at(i);
-					    param_layout->is<tsl::StringTypeLayout>()) {
-						function->addParamAttr(
-							u32(i),
-							llvm::Attribute::getWithByValType(
-								module->getContext(), typeFromLayout(module, param_layout)
-							)
-						);
-					}
-				}
-			}
 		}
 
 		return callee;
@@ -1275,21 +1228,6 @@ namespace compiler::backend_llvm {
 					),
 					builder
 				);
-				// If the function uses C ABI, we need to pass structs by pointer.
-				std::vector<usize> byval_indices{};
-				if (std::holds_alternative<helios::CAbi>(function_literal.abi)) {
-					for (usize i = 0; i < function_literal.parameter_layouts->size(); i++) {
-						if (const auto param_layout = function_literal.parameter_layouts->at(i);
-						    param_layout->is<tsl::StringTypeLayout>()) {
-							byval_indices.push_back(i);
-							const auto str_type = typeFromLayout(module, param_layout);
-							const auto arg_ptr  = builder.CreateAlloca(str_type);
-							builder.CreateStore(args.at(i), arg_ptr);
-							args.at(i) = arg_ptr;
-						}
-					}
-				}
-
 				llvm::CallInst* call_instruction = nullptr;
 				if (lir_instruction.output.has_value()) {
 					const auto output = lir_instruction.output.value();
@@ -1303,13 +1241,6 @@ namespace compiler::backend_llvm {
 						"to remove assertion if the compiler internals change."
 					);
 					call_instruction = builder.CreateCall(callee, args);
-				}
-				for (const auto byval_idx: byval_indices) {
-					const auto arg_type
-						= typeFromLayout(module, function_literal.parameter_layouts->at(byval_idx));
-					call_instruction->addParamAttr(
-						u32(byval_idx), llvm::Attribute::getWithByValType(context, arg_type)
-					);
 				}
 
 				break;

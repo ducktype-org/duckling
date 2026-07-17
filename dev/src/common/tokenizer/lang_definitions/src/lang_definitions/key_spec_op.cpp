@@ -146,7 +146,6 @@ namespace lang_def {
 			{ Keyword::Char, "char", KeywordFlags() },
 			{ Keyword::Bool, "bool", KeywordFlags() },
 			{ Keyword::Str, "str", KeywordFlags() },
-			{ Keyword::BigStr, "String", KeywordFlags() },
 			{ Keyword::Type, "type", KeywordFlags() },
 
 			{ Keyword::List, "List", KeywordFlags() },
