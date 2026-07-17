@@ -87,6 +87,16 @@ namespace vm {
 		kind      = kind::Pointer{ inner };
 	}
 
+	void Type::defineCPointer(base::Optional<TypeCRef> inner) {
+		CORE_ASSERT(state == State::Declared, "Bad type define");
+		state = State::Defined;
+
+		// A raw native address, not a fat VM pointer - always 8 bytes.
+		size      = TypeSize(Bytes(8));
+		kind_type = Kind::CPointer;
+		kind      = kind::CPointer{ .inner_type = inner };
+	}
+
 	void Type::defineFixedSizeTable(TypeRef inner, u64 element_count) {
 		CORE_ASSERT(state == State::Declared, "Bad type define");
 		state = State::Defined;
@@ -340,6 +350,7 @@ namespace vm {
 			variant_case(kind::Variant, variant) { return false; }
 			variant_case(kind::Function, function) { return false; }
 			variant_case(kind::Pointer, pointer) { return false; }
+			variant_case(kind::CPointer, cpointer) { return true; }
 			variant_case(kind::Opaque, opaque) { return true; }
 			variant_case(kind::Primitive, primitive) { return true; }
 			variant_default { CORE_PANIC("This should never happen"); }

@@ -54,9 +54,8 @@ namespace vm::code::ffi_detail {
 			default:
 				break;
 			}
-		} else if (type.isKind<valid_type::finalized::Opaque>()) {
-			// Only the builtin `cptr` opaque maps to a C pointer.
-			if (type.getName() == base::StrID("cptr")) return &ffi_type_pointer;
+		} else if (type.isKind<valid_type::finalized::CPointer>()) {
+			return &ffi_type_pointer;
 		} else if (auto structure = type.maybeGetKindAs<valid_type::finalized::Structure>()) {
 			auto elements = makeBox<std::vector<ffi_type*>>();
 			for (const auto& field: structure.value()->fields)

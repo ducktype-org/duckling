@@ -13,6 +13,7 @@ public:
 		TESTER_ADD_TEST(invalidOpcode);
 		TESTER_ADD_TEST(noSemicolon);
 		TESTER_ADD_TEST(invalidLocalName);
+		TESTER_ADD_TEST(cpointerBadPointee);
 		TESTER_ADD_TEST(opcodeSourcePositions);
 	}
 
@@ -61,6 +62,13 @@ private:
 
 	void invalidLocalName() {
 		parseInvalidDbc("invalid_local_name.dbc", { "Expected an identifier here" });
+	}
+
+	void cpointerBadPointee() {
+		parseInvalidDbc(
+			"cpointer_bad_pointee.dbc",
+			{ "Expected an identifier (pointee type) or end of declaration." }
+		);
 	}
 
 	/**
