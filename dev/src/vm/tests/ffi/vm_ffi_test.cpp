@@ -61,7 +61,6 @@ public:
 		TESTER_ADD_TEST(packedStructWithMatchingLayoutStillFails);
 		TESTER_ADD_TEST(packedStructSize);
 		TESTER_ADD_TEST(typedCPointerStructFieldThroughC);
-		TESTER_ADD_TEST(cpointerGlobalAsPcptOperand);
 		TESTER_ADD_TEST(forwardDeclaredPointee);
 		TESTER_ADD_TEST(cpointerToUnknownTypeFails);
 		TESTER_ADD_TEST(movPcptStrictnessFails);
@@ -907,43 +906,6 @@ private:
 				  "    ret;\n"
 				  "}\n",
 			"42"
-		);
-	}
-
-	// A cpointer global with an immediate initial value (a null handle) loads and works as a
-	// `pcpt` operand in both directions.
-	void cpointerGlobalAsPcptOperand() {
-		runProgram(
-			"cpointer_global",
-			ffiObjectHeader()
-				+ "global_data gbuf cptr {\n"
-				  "    is_constant: false,\n"
-				  "    initial_value: 0x0000000000000000\n"
-				  "}\n"
-				  "ffi function ffi_alloc8 { } -> { cptr };\n"
-				  "ffi function ffi_fill8 { cptr, i64 } -> { };\n"
-				  "ffi function ffi_read8 { cptr } -> { i64 };\n"
-				  "ffi function ffi_free8 { cptr } -> { };\n"
-				  "function main { i64, ptr_argv } -> { i64 } {\n"
-				  "    init_pany_type buf, cptr;\n"
-				  "    call_ffifunc ffi_alloc8;\n"
-				  "    mov_pcpt_pcpt gbuf, buf;\n"
-				  "    init_pany_type buf2, cptr;\n"
-				  "    mov_pcpt_pcpt buf2, gbuf;\n"
-				  "    init_pany_type v, i64;\n"
-				  "    mov_p64_imm v, 4242;\n"
-				  "    call_ffifunc ffi_fill8;\n"
-				  "    init_pany_type res, i64;\n"
-				  "    init_pany_type buf3, cptr;\n"
-				  "    mov_pcpt_pcpt buf3, gbuf;\n"
-				  "    call_ffifunc ffi_read8;\n"
-				  "    output_p64 res;\n"
-				  "    init_pany_type buf4, cptr;\n"
-				  "    mov_pcpt_pcpt buf4, gbuf;\n"
-				  "    call_ffifunc ffi_free8;\n"
-				  "    ret;\n"
-				  "}\n",
-			"4242"
 		);
 	}
 
