@@ -315,6 +315,9 @@ namespace vm {
 				-> base::ModRawView {
 			if (pointer.block == nullptr) throw exceptions::VMNullPointerAccessException();
 			if (pointer.block->deallocated) throw exceptions::VMUseAfterFreeException();
+			if (size_bytes == 0)
+				return { pointer.block->data.view.getBegin() + pointer.offset,
+					     pointer.block->data.view.size() - pointer.offset };
 			if (pointer.offset + size_bytes > pointer.block->data.view.size())
 				throw exceptions::VMOutOfBlockBoundsException();
 			return { pointer.block->data.view.getBegin() + pointer.offset, size_bytes };

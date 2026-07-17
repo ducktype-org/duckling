@@ -13,6 +13,11 @@ vm::VMValueRef vm::interpreted_data_variant::Table::get(usize index) {
 	return { *process.get(), type, pointer };
 }
 
+[[nodiscard]] base::ModRawView vm::interpreted_data_variant::Table::asBytesView() const {
+	return process->getMemory().getPointerData(begin, 0);
+}
+
+
 base::Optional<vm::InterpretedDataVariant> vm::VMValueRef::readData() const {
 	variant_match(my_type->getKindVariant()) {
 		variant_case_novalue(vm::kind::Primitive) {
@@ -72,13 +77,15 @@ base::Optional<vm::InterpretedDataVariant> vm::VMValueRef::readData() const {
 
 			fields.reserve(data_kind.fields.size());
 			for (const auto& field_desc: data_kind.fields) {
-				fields.push_back(vm::interpreted_data_variant::Data::FieldDesc{
-					.offset = field_desc.offset,
-					.value  = VMValueRef(
-                        *my_process.get(),
-                        field_desc.type,
-                        pointed_data.movedPointer(static_cast<i64>(field_desc.offset.asInt()))
-                    ) });
+				fields.push_back(
+					vm::interpreted_data_variant::Data::FieldDesc{
+						.offset = field_desc.offset,
+						.value  = VMValueRef(
+							*my_process.get(),
+							field_desc.type,
+							pointed_data.movedPointer(static_cast<i64>(field_desc.offset.asInt()))
+						) }
+				);
 			}
 
 			return vm::interpreted_data_variant::Data{

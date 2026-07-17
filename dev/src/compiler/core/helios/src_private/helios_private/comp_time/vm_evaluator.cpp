@@ -1,5 +1,6 @@
 #include "vm_evaluator.hpp"
 
+#include "ctv/ctv.hpp"
 #include "helios/mangler/mangler.hpp"
 #include "helios/tsh/queries/types.hpp"
 #include "helios/tsh/symbol_type.hpp"
@@ -99,13 +100,36 @@ namespace {
 	}
 
 	/**
+	 * @brief Reads the pointer+length pair backing a char-slice/String VmValue into a CTV string.
+	 * @note Assumes `vm_value`'s type was already confirmed to be the char-slice or String type.
+	 */
+	base::RawView charBackedVmValueToCtv(Ref<vm::VmValue> vm_value) {
+		using namespace vm::interpreted_data_variant;
+		auto vm_value_ref = vm_value->asRef();
+		auto data         = vm_value_ref.readData<Data>().value();
+		auto pointer      = data.fields.at(0).value.readData<Pointer>().value();
+		auto length       = data.fields.at(1).value.readData<Primitive>().value();
+		auto content      = pointer.referenced->readData<Table>().value().asBytesView();
+		CORE_ASSERT(content.size() > length.value, "Invalid char slice comp-time data.");
+		return {content.getBegin(), length.value} ;
+	}
+
+	/**
 	 * @brief Converts a given `vm_value` to CTV representing a specified `type`.
 	 * @return The converted value or a VmEvaluationError if the conversion failed.
 	 */
 	std::expected<CompileTimeValue, VmEvaluationError> vmValueToCtv(
 		query::Context& ctx, const compiler::tsh::SymbolType<>& type, Ref<vm::VmValue> vm_value
 	) {
-		const auto kind = type.getType().getKind();
+		const auto kind        = type.getType().getKind();
+		auto       error_value = std::unexpected(VmEvaluationError(
+			VmEvaluationError::Kind::ReturnConversionFailed,
+			base::strConcat(
+				"VMValue to CTV conversion for type: ",
+				base::enumToStr(kind),
+				" is not implemented yet."
+			)
+		));
 		switch (kind) {
 		case compiler::tsh::Kind::Integral: {
 			compiler::tsh::IntegralAbstractType int_type(type.getType());
@@ -174,23 +198,22 @@ namespace {
 		case compiler::tsh::Kind::Slice: {
 			auto char_slice_type = tsh::SymbolType<>::withDefaults(tsh::getCharSliceType(ctx));
 			if (vm_value->type->getName()
-			    == ctx.query<mangler::QueryMangledType>(char_slice_type)->valueOrThrow()) {
-				auto vm_value_ref = vm_value->asRef();
-				auto value = vm_value_ref.readData().value();
-				CORE_ASSERT(v_matches(value, vm::interpreted_data_variant::Data), "Invalid vm type.");
-				auto& data = v_get(value, vm::interpreted_data_variant::Data);
-				data.fields.at(0).value.readData()
+			    == ctx.query<mangler::QueryMangledType>(char_slice_type)->valueOrThrow())
+				return CompileTimeValue{ base::StrID(charBackedVmValueToCtv(vm_value)) };
+			return error_value;
+		}
+		case compiler::tsh::Kind::Class: {
+			if (tsh::isStringTypePresent(ctx)) {
+				auto string_type = tsh::SymbolType<>::withDefaults(tsh::getStringType(ctx));
+				if (vm_value->type->getName()
+				    == ctx.query<mangler::QueryMangledType>(string_type)->valueOrThrow())
+					return CompileTimeValue{ StringClassValue{
+						base::StrID(charBackedVmValueToCtv(vm_value)) } };
 			}
+			return error_value;
 		}
 		default: {
-			return std::unexpected(VmEvaluationError(
-				VmEvaluationError::Kind::ReturnConversionFailed,
-				base::strConcat(
-					"VMValue to CTV conversion for type: ",
-					base::enumToStr(kind),
-					" is not implemented yet."
-				)
-			));
+			return error_value;
 		}
 		}
 	}

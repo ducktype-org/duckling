@@ -70,7 +70,8 @@ namespace compiler::backend_vm::internal {
 			ProgramLoweringContext& pctx,
 			base::StrID             global_name,
 			const DVMPlace&         inserted_global_place,
-			base::StrID             content
+			base::StrID             content,
+			bool                    is_string_class
 		);
 
 		/**

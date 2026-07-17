@@ -1,5 +1,6 @@
 #pragma once
 
+#include "base/misc/raw_view.hpp"
 #include <base/collections/optional.hpp>
 
 #include <vm/api/data/process_info.hpp>
@@ -84,7 +85,9 @@ namespace vm {
 			return vm::safeReadPointerBytes<T>(view.getBegin());
 		}
 
-		// template<
+		template<class T>
+		requires(base::IS_VARIANT_MEMBER_V<T, InterpretedDataVariant>)
+		base::Optional<T> readData() const;
 	};
 
 	namespace interpreted_data_variant {
@@ -107,6 +110,9 @@ namespace vm {
 		public:
 			const usize size;
 			VMValueRef  get(usize index);
+
+
+			[[nodiscard]] base::ModRawView asBytesView() const;
 
 		private:
 			Table(base::Ref<SafeVMProcess> process, vm::Pointer begin, TypeCRef type, usize size);
@@ -131,4 +137,15 @@ namespace vm {
 
 		struct Opaque final {};
 	}
+
+	template<class T>
+	requires(base::IS_VARIANT_MEMBER_V<T, InterpretedDataVariant>)
+	base::Optional<T> VMValueRef::readData() const {
+		auto data = readData();
+		if (data.empty()) return {};
+		if (auto* value = std::get_if<T>(&data.value())) return *value;
+
+		return {};
+	}
+
 }

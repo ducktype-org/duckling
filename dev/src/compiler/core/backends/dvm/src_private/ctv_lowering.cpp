@@ -1,6 +1,7 @@
 #include "ctv_lowering.hpp"
 
 #include "common.hpp"
+#include "ctv/ctv.hpp"
 #include "function_lowering_context.hpp"
 #include "program_lowering_context.hpp"
 
@@ -97,7 +98,15 @@ namespace compiler::backend_vm::internal {
 				);
 			}
 			variant_case(base::StrID, str) {
-				auto ctor = lowerStringLiteral(pctx, global_name, inserted_global_place, str);
+				auto ctor
+					= lowerStringLiteral(pctx, global_name, inserted_global_place, str, false);
+				global_data.ctor_name = ctor.ctor.name;
+				pctx.extra_bytecode_functions.push_back(std::move(ctor.ctor));
+			}
+			variant_case(ctv::StringClassValue, value) {
+				auto ctor = lowerStringLiteral(
+					pctx, global_name, inserted_global_place, value.value, true
+				);
 				global_data.ctor_name = ctor.ctor.name;
 				pctx.extra_bytecode_functions.push_back(std::move(ctor.ctor));
 			}
@@ -111,7 +120,8 @@ namespace compiler::backend_vm::internal {
 		ProgramLoweringContext& pctx,
 		base::StrID             global_name,
 		const DVMPlace&         inserted_global_place,
-		base::StrID             content
+		base::StrID             content,
+		bool                    is_string_class
 	) {
 		// A char slice is a class `{ _0: ptr-to-dynamic-table, _1: i64 length }`. We derive
 		// every type we need from the slice's `_0` field, so the static byte array, the
@@ -157,19 +167,32 @@ namespace compiler::backend_vm::internal {
 		// dynamic-table pointer (the slice's `_0`).
 		const vm::code::TypeOfData& ptr_to_array_type = pctx.getOrInsertPointerType(array_type);
 		DVMPlace fst_ptr = ctor_ctx.pushTempLocal(ptr_to_array_type, "str_fst_ptr");
-		ctor_ctx.pushInstruction({ OpKind::ref, fst_ptr.asArgument(), array_global.asAnyArgument() }
+		ctor_ctx.pushInstruction(
+			{ OpKind::ref, fst_ptr.asArgument(), array_global.asAnyArgument() }
 		);
 		DVMPlace dyn_ptr = ctor_ctx.pushTempLocal(dyn_ptr_type, "str_dyn_ptr");
 		ctor_ctx.pushInstruction(
 			{ OpKind::fstToDynTable, dyn_ptr.asArgument(), fst_ptr.asArgument() }
 		);
 
-		constructStructureFromValues(
-			ctor_ctx,
-			inserted_global_place,
-			slice_data,
-			{ DVMValue{ dyn_ptr }, DVMValue{ DVMImmediate::i64(static_cast<i64>(length)) } }
-		);
+		if (not is_string_class) {
+			constructStructureFromValues(
+				ctor_ctx,
+				inserted_global_place,
+				slice_data,
+				{ DVMValue{ dyn_ptr }, DVMValue{ DVMImmediate::u64(length) } }
+			);
+		} else {
+			constructStructureFromValues(
+				ctor_ctx,
+				inserted_global_place,
+				slice_data,
+				{ DVMValue{ dyn_ptr },
+			      DVMValue{ DVMImmediate::u64(length) },
+			      DVMValue{ DVMImmediate::u64(length) },
+			      DVMValue{ DVMImmediate::u64(0) } }
+			);
+		}
 
 		ctor_ctx.cleanUpRegisteredTemps();
 		ctor_ctx.pushInstruction(vm::code::builders::InstructionBuilder(OpKind::ret).build());
@@ -193,10 +216,12 @@ namespace compiler::backend_vm::internal {
 
 			auto ptr_to_field_type = ctor_ctx.program_context.getOrInsertPointerType(field.type);
 			DVMPlace field_ptr     = ctor_ctx.pushTempLocal(ptr_to_field_type, "str_slice_field");
-			ctor_ctx.pushInstruction({ OpKind::structLea,
-			                           field_ptr,
-			                           destination,
-			                           vm::opargs::Field{ structure_type.name, field.name } });
+			ctor_ctx.pushInstruction(
+				{ OpKind::structLea,
+			      field_ptr,
+			      destination,
+			      vm::opargs::Field{ structure_type.name, field.name } }
+			);
 
 			ctor_ctx.maybeStoreResult(
 				field_ptr.withAccessKind(DVMPlace::AccessKind::Pointer), field_value

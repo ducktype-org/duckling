@@ -13,6 +13,10 @@
 namespace compiler::ctv {
 	using numeric_value::NumericValue;
 
+	struct StringClassValue {
+		base::StrID value;
+	};
+
 	/**
 	 * @brief Represents a value known at compile time.
 	 */
@@ -44,7 +48,7 @@ namespace compiler::ctv {
 
 	private:
 		using Storage
-			= std::variant<bool, NumericValue, char, base::StrID, UnitCTV, TupleCTV, tsh::SymbolType<>>;
+			= std::variant<bool, NumericValue, char, base::StrID, StringClassValue, UnitCTV, TupleCTV, tsh::SymbolType<>>;
 		Storage value;
 
 	public:
