@@ -1,4 +1,5 @@
 import os
+import time
 from pathlib import Path
 
 from .classes import Case, Test
@@ -53,24 +54,33 @@ def run_single_case(
     )
     case_path = path + "/" + case.name
     stop = False
+    start = time.perf_counter()
+
+    def elapsed() -> str:
+        return f"({time.perf_counter() - start:.1f} s)"
+
     try:
         match run_case(test, case, case_path, ctx, clog):
             case OutputMismatch(error):
                 clog.emit(
-                    print_failure, f"Case `{case.name}` has failed because {error}"
+                    print_failure,
+                    f"Case `{case.name}` has failed because {error} {elapsed()}",
                 )
                 stats.failed.append(case_path)
                 stop = ctx.fail_fast
             case Success():
                 if not ctx.dry:
                     stats.succeeded.append(case_path)
-                    clog.emit(print_success, f"Case `{case.name}` passed")
+                    clog.emit(print_success, f"Case `{case.name}` passed {elapsed()}")
             case Disabled():
                 if not ctx.dry:
                     stats.disabled.append(case_path)
                     clog.emit(print_neutral, f"Case `{case.name}` disabled")
     except BashCommandError as e:
-        clog.emit(print_failure, f"Case `{test.name}/{case.name}` has {e.reason_string}.")
+        clog.emit(
+            print_failure,
+            f"Case `{test.name}/{case.name}` has {e.reason_string}. {elapsed()}",
+        )
         clog.log(f"{case_path} has failed:\n{''.join(e.args)}\n")
         stats.failed.append(case_path)
         stop = ctx.fail_fast
