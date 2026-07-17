@@ -83,6 +83,8 @@ namespace vm {
 			auto view = memory->getPointerData(pointed_data, sizeof(T));
 			return vm::safeReadPointerBytes<T>(view.getBegin());
 		}
+
+		// template<
 	};
 
 	namespace interpreted_data_variant {

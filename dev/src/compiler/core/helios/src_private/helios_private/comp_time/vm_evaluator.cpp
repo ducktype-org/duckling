@@ -1,11 +1,16 @@
 #include "vm_evaluator.hpp"
 
+#include "helios/mangler/mangler.hpp"
+#include "helios/tsh/queries/types.hpp"
+#include "helios/tsh/symbol_type.hpp"
+
 #include <backends/dvm/dvm_backend.hpp>
 #include <helios/tsh/types.hpp>
 #include <helios_private/comp_time/comptime_type_operations.hpp>
 
 #include <base/except/exceptions.hpp>
 
+#include "vm/core/vmvalue/vmvalueref.hpp"
 #include <vm/api/vm.hpp>
 #include <vm/bytecode/validator/errors.hpp>
 #include <vm/bytecode/validator/valid_program.hpp>
@@ -17,6 +22,7 @@
 namespace {
 	using namespace compiler::helios;
 	using namespace compiler::ctv;
+	using namespace compiler;
 
 	/**
 	 * @brief Converts a given `ctv` to VmValue.
@@ -97,7 +103,7 @@ namespace {
 	 * @return The converted value or a VmEvaluationError if the conversion failed.
 	 */
 	std::expected<CompileTimeValue, VmEvaluationError> vmValueToCtv(
-		const compiler::tsh::SymbolType<>& type, Ref<vm::VmValue> vm_value
+		query::Context& ctx, const compiler::tsh::SymbolType<>& type, Ref<vm::VmValue> vm_value
 	) {
 		const auto kind = type.getType().getKind();
 		switch (kind) {
@@ -164,6 +170,17 @@ namespace {
 				));
 			auto* meta_ptr = vm_value->readBytes<compiler::tsh::SymbolType<>*>();
 			return CompileTimeValue{ *meta_ptr };
+		}
+		case compiler::tsh::Kind::Slice: {
+			auto char_slice_type = tsh::SymbolType<>::withDefaults(tsh::getCharSliceType(ctx));
+			if (vm_value->type->getName()
+			    == ctx.query<mangler::QueryMangledType>(char_slice_type)->valueOrThrow()) {
+				auto vm_value_ref = vm_value->asRef();
+				auto value = vm_value_ref.readData().value();
+				CORE_ASSERT(v_matches(value, vm::interpreted_data_variant::Data), "Invalid vm type.");
+				auto& data = v_get(value, vm::interpreted_data_variant::Data);
+				data.fields.at(0).value.readData()
+			}
 		}
 		default: {
 			return std::unexpected(VmEvaluationError(
@@ -254,11 +271,11 @@ namespace {
 		vm::code::CodeCollection filterOutLoaded(const vm::code::CodeCollection& code) {
 			vm::code::CodeCollection filtered;
 			auto                     by_name = [](const auto& item) -> base::StrID {
-                using T = std::decay_t<decltype(item)>;
-                if constexpr (std::is_same_v<T, vm::code::TypeOfData>)
-                    return vm::code::typeName(item);
-                else
-                    return item.name;
+				using T = std::decay_t<decltype(item)>;
+				if constexpr (std::is_same_v<T, vm::code::TypeOfData>)
+					return vm::code::typeName(item);
+				else
+					return item.name;
 			};
 
 			auto insert_if_new = [&](const auto& source, auto& destination, auto name_getter) {
@@ -334,6 +351,7 @@ namespace {
 	}
 
 	std::expected<compiler::ctv::CompileTimeValue, VmEvaluationError> runAndGetResult(
+		query::Context&                      ctx,
 		CompTimeDVM&                         comptime_dvm,
 		const std::string&                   func_name,
 		const std::vector<Box<vm::VmValue>>& owned_args,
@@ -362,7 +380,7 @@ namespace {
 					values.size() == 1, "Compiler support for multiple values not implemented"
 				);
 				auto exit_value = values.at(0);
-				return vmValueToCtv(return_type, exit_value);
+				return vmValueToCtv(ctx, return_type, exit_value);
 			}
 			variant_default { CORE_PANIC("Unexpected non-vector return value from VM"); }
 		}
@@ -400,6 +418,6 @@ namespace compiler::helios {
 		auto owned_args = prepareArguments(comptime_dvm, args);
 		if (!owned_args) return std::unexpected(owned_args.error());
 
-		return runAndGetResult(comptime_dvm, func_name, *owned_args, return_type);
+		return runAndGetResult(ctx, comptime_dvm, func_name, *owned_args, return_type);
 	}
 }
