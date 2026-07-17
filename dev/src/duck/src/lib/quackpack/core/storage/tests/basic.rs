@@ -295,7 +295,7 @@ fn sync() {
     assert_eq!(venv.id(), "my-package".to_venv_id());
     let data = venv.data();
     assert!(!data.is_ephemeral());
-    assert_eq!(data.last_known_directory(), root.path());
+    assert_eq!(data.last_known_location(), root.path());
     assert_eq!(storage.root(), storage_root);
     let freeze = data.freeze();
     let root_package = freeze.root();
@@ -374,7 +374,7 @@ fn sync_overwrite_success() {
     assert_eq!(venv.id(), "my-package".to_venv_id());
     let data = venv.data();
     assert!(!data.is_ephemeral());
-    assert_eq!(data.last_known_directory(), root2.path());
+    assert_eq!(data.last_known_location(), root2.path());
     assert_eq!(storage.root(), storage_root);
     let freeze = data.freeze();
     let root_package = freeze.root();
@@ -442,7 +442,7 @@ fn can_sync_after_clean() {
     assert_eq!(venv.id(), "my-package".to_venv_id());
     let data = venv.data();
     assert!(!data.is_ephemeral());
-    assert_eq!(data.last_known_directory(), root2.path());
+    assert_eq!(data.last_known_location(), root2.path());
     assert_eq!(storage.root(), storage_root);
     let freeze = data.freeze();
     let root_package = freeze.root();
@@ -480,7 +480,7 @@ fn sync_with_deps() {
     assert_eq!(venv.id(), "my-package".to_venv_id());
     let data = venv.data();
     assert!(!data.is_ephemeral());
-    assert_eq!(data.last_known_directory(), root.path().join("root"));
+    assert_eq!(data.last_known_location(), root.path().join("root"));
     assert_eq!(storage.root(), storage_root);
     let freeze = data.freeze();
     let root_package = freeze.root();
@@ -535,7 +535,7 @@ fn sync_with_deps_and_expose_freezefile() {
     assert_eq!(venv.id(), "my-package".to_venv_id());
     let data = venv.data();
     assert!(!data.is_ephemeral());
-    assert_eq!(data.last_known_directory(), root.path().join("root"));
+    assert_eq!(data.last_known_location(), root.path().join("root"));
     assert_eq!(storage.root(), storage_root);
     let freeze = data.freeze();
     let root_package = freeze.root();
