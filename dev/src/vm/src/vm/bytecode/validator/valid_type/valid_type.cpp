@@ -385,7 +385,7 @@ void valid_type::ValidType::finalize(ValidTypeMap& types) {
 		}
 		variant_case(defined::DefinedCPointer, cpointer) {
 			// A raw native address: 8 bytes in both pointer modes (unlike `Pointer`, which is a
-			// fat block reference in the safe mode). 
+			// fat block reference in the safe mode).
 			this->size = this->alignment = valid_type::TypeSize(Bytes(8), 0);
 			this->is_trivially_copyable  = true;
 			this->is_ffi_compliant       = true;
