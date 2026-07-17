@@ -60,24 +60,25 @@ impl BuildContext<'_, '_> {
 pub(crate) fn collect_packages(
     unit: &Unit,
     graph: &UnitGraph,
-) -> Vec<multipackage_schema::Package> {
+) -> QuackResult<Vec<multipackage_schema::Package>> {
     struct PackageVisitor<'graph> {
         graph: &'graph UnitGraph,
         packages: Vec<multipackage_schema::Package>,
     }
 
     impl UnitVisitor for PackageVisitor<'_> {
-        fn visit(&mut self, unit: &Unit) {
+        fn visit(&mut self, unit: &Unit) -> QuackResult<()> {
             self.packages
-                .push(unit.multipackage_schema_package(self.graph));
+                .push(unit.multipackage_schema_package(self.graph)?);
+            Ok(())
         }
     }
     let mut visitor = PackageVisitor {
         graph,
         packages: vec![],
     };
-    unit.accept(&mut visitor, graph);
-    visitor.packages
+    unit.accept(&mut visitor, graph)?;
+    Ok(visitor.packages)
 }
 
 /// Get linker options appropriate for the given `unit`.
@@ -90,10 +91,10 @@ pub(crate) fn get_linker_options(
     unit: &Unit,
     graph: &UnitGraph,
     layout: &ProfileLayout,
-) -> Option<multipackage_schema::LinkerOptions> {
-    let outputs = get_deps_outputs(unit, graph, layout);
+) -> QuackResult<Option<multipackage_schema::LinkerOptions>> {
+    let outputs = get_deps_outputs(unit, graph, layout)?;
     if outputs.is_empty() {
-        return None;
+        return Ok(None);
     }
     let string = outputs
         .into_iter()
@@ -108,9 +109,11 @@ pub(crate) fn get_linker_options(
         .join(" ");
     debug!("raw linker args are `{string}`");
     if string.is_empty() {
-        return None;
+        return Ok(None);
     }
-    Some(multipackage_schema::LinkerOptions::RawLinkerArgs(string))
+    Ok(Some(multipackage_schema::LinkerOptions::RawLinkerArgs(
+        string,
+    )))
 }
 
 /// Collect _all_ (including `.a`!) outputs of dependencies (direct and transitive) of this `unit`.
@@ -118,7 +121,7 @@ pub(crate) fn get_deps_outputs(
     unit: &Unit,
     graph: &UnitGraph,
     layout: &ProfileLayout,
-) -> Vec<(Unit, PathBuf)> {
+) -> QuackResult<Vec<(Unit, PathBuf)>> {
     struct UnitOutputVisitor<'a> {
         graph: &'a UnitGraph,
         layout: &'a ProfileLayout,
@@ -127,11 +130,12 @@ pub(crate) fn get_deps_outputs(
     }
 
     impl UnitVisitor for UnitOutputVisitor<'_> {
-        fn visit(&mut self, unit: &Unit) {
+        fn visit(&mut self, unit: &Unit) -> QuackResult<()> {
             if self.root != unit {
                 self.outputs
                     .push((unit.clone(), unit_output(unit, self.graph, self.layout)))
             }
+            Ok(())
         }
     }
     let mut visitor = UnitOutputVisitor {
@@ -140,8 +144,8 @@ pub(crate) fn get_deps_outputs(
         root: unit,
         outputs: vec![],
     };
-    unit.accept(&mut visitor, graph);
-    visitor.outputs
+    unit.accept(&mut visitor, graph)?;
+    Ok(visitor.outputs)
 }
 
 /// Get a path to the output artifact of this `unit`.
@@ -251,7 +255,7 @@ pub(crate) fn compile_single_unit_with_tasks(
     bcx: &BuildContext<'_, '_>,
     tasks: Vec<multipackage_schema::Task>,
 ) -> QuackResult<()> {
-    let packages = collect_packages(unit, graph);
+    let packages = collect_packages(unit, graph)?;
     let schema = multipackage_schema::MultiPackage { packages, tasks };
     compile_single_unit_with_schema(unit, layout, bcx, schema)
 }
