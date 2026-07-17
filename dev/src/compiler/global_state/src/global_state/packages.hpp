@@ -34,7 +34,7 @@ namespace global_state {
 	base::CRef<compiler::frontend::packages::PackageInfo> getPackageRef(base::StrID package_id);
 
 	/**
-	 * @brief Get the std custom artifact collection for the stdlib binaries.
+	 * @brief Returns the custom artifact collection used for the stdlib binaries, if one is set.
 	 */
 	base::Optional<base::Ref<artifacts::ArtifactCollection>> getStdArtifactsCollection();
 
@@ -50,7 +50,7 @@ namespace global_state {
 		/** @brief Removes a package by its root module ID. */
 		void removePackage(compiler::frontend::ModuleID root_module);
 
-		/** @brief Set the custom artifact collection for the stdlib binaries.  */
+		/** @brief Sets the custom artifact collection for the stdlib binaries. */
 		void setCustomStdArtifactsCollection(
 			base::Box<artifacts::ArtifactCollection> custom_art_collection
 		);

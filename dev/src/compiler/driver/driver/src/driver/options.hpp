@@ -82,8 +82,8 @@ namespace compiler::driver {
 			std::variant<NoStd, DefaultStd, CustomStd> std_lib_type = NoStd{};
 
 			/**
-			 * If value is present, do not recompile the standard library
-			 * and try to use the compiled pacakges from this path.
+			 * If a value is present, do not recompile the standard library
+			 * and try to use the compiled packages from this path.
 			 */
 			base::Optional<fs::FilePath> std_artifacts_path = {};
 

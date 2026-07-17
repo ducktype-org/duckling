@@ -1,3 +1,5 @@
+#pragma once
+
 namespace artifacts {
-    class ArtifactCollection;
+	class ArtifactCollection;
 }

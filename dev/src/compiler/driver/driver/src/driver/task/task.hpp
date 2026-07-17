@@ -52,7 +52,7 @@ namespace compiler::driver {
 		base::StrID output_file_name = base::StrID("package_dvm.dbc");
 
 		/**
-		 * @brief If values is present, use this artifact collection
+		 * @brief If a value is present, use this artifact collection
 		 * instead of the default.
 		 * @TODO #3158 Solving this would remove the need for this option.
 		 */
@@ -101,7 +101,7 @@ namespace compiler::driver {
 		archiver::ArchivingOptions archiving_options;
 
 		/**
-		 * @brief If values is present, use this artifact collection
+		 * @brief If a value is present, use this artifact collection
 		 * instead of the default.
 		 * @TODO #3158 Solving this would remove the need for this option.
 		 */

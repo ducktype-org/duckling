@@ -219,8 +219,8 @@ namespace compiler::driver {
 			}
 
 			CORE_USER_LOG(
-				"Failed to use compiled standard library binaries from the custom directory, "
-			    "missing files.\n"
+				"Could not use compiled standard library binaries from the custom directory: "
+				"some files are missing.\n"
 			);
 			art_collection = stdlib_art_collection;
 		}

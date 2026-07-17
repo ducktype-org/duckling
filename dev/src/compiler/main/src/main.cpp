@@ -172,10 +172,10 @@ auto getClahStdLibOptions() {
 			.addLongName("custom-std-artifacts-path")
 			.addShortDesc("Path to the standard library artifacts.")
 			.addLongDesc("Uses existing compiled standard library artifacts.\n"
-		                 "If the compiled binaries are available in the provided directory, \n"
+		                 "If the compiled binaries are available in the provided directory,\n"
 		                 "standard library compilation is skipped.\n"
 		                 "When this option is enabled, incremental compilation is disabled\n"
-		                 "on the standard library packages and changes to \n"
+		                 "on the standard library packages and changes to\n"
 		                 "the standard library source code are ignored.\n"
 		                 "Use with caution.\n")
 			.build(),
