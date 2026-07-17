@@ -1,6 +1,7 @@
 #pragma once
 
 #include "definitions.hpp"             // IWYU pragma: export
+#include "kinds/cpointer.hpp"          // IWYU pragma: export
 #include "kinds/data.hpp"              // IWYU pragma: export
 #include "kinds/dynamic_table.hpp"     // IWYU pragma: export
 #include "kinds/fixed_size_table.hpp"  // IWYU pragma: export

@@ -155,6 +155,7 @@ namespace vm::code {
 			FLAGS_W_R(mov_p32_p32)
 			FLAGS_W_R(mov_p64_p64)
 			FLAGS_W_R(mov_pptr_pptr)
+			FLAGS_W_R(mov_pcpt_pcpt)
 			FLAGS_W_R(mov_pste_pste)
 			FLAGS_W_R(mov_pfst_pfst)
 			FLAGS_W_R(mov_popq_popq)
