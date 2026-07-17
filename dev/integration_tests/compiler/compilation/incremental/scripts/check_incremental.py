@@ -110,7 +110,10 @@ def main() -> None:
             log,
         )
     if cached & expected_recompiled:
-        fail(f"modules both cached and expected recompiled: {sorted(cached & recompiled)}", log)
+        fail(
+            f"modules both cached and expected recompiled: {sorted(cached & expected_recompiled)}",
+            log,
+        )
 
     check_numbering(entries, log)
 
