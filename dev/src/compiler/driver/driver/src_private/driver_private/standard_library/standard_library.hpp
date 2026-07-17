@@ -62,19 +62,21 @@ namespace compiler::driver {
 	);
 
 	/**
-	 * @brief The place where the compiled standard library binaries for native targets are placed.
+	 * @brief The existing compiled standard library binaries for native targets.
 	 */
 	std::vector<artifacts::FileArtifact> getStdLibNativeArtifacts();
 
 	/**
-	 * @brief The place where the compiled standard library DVM artifacts are placed.
+	 * @brief The existing compiled standard library DVM artifacts.
 	 */
 	std::vector<artifacts::FileArtifact> getStdLibDVMArtifacts();
 
 	/**
-	 * @brief The place where the compiled standard library DVM debug info artifacts are placed.
+	 * @brief The existing compiled standard library DVM debug info artifacts.
 	 */
 	std::vector<artifacts::FileArtifact> getStdLibDVMDebugInfoArtifacts();
+
+	bool allStdlibArtifactsPresent();
 
 	/**
 	 * @brief Returns the root module IDs of the registered standard library packages.

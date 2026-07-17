@@ -5,15 +5,22 @@
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
 
+#include <artifacts/artifacts.hpp>
+
 namespace global_state {
 
 	using compiler::frontend::packages::PackageInfo;
 
 	namespace {
-		std::vector<PackageInfo> packages;
+		std::vector<PackageInfo>                           packages;
+		base::Optional<Box<artifacts::ArtifactCollection>> std_art_collection;
 	}
 
 	const std::vector<PackageInfo>& getPackages() { return packages; }
+
+	base::Optional<base::Ref<artifacts::ArtifactCollection>> getStdArtifactsCollection() {
+		return std_art_collection.map([](auto& box) { return box.refMut(); });
+	}
 
 	base::CRef<PackageInfo> getPackageRef(base::StrID package_id) {
 		for (const auto& pkg: packages)
@@ -45,6 +52,12 @@ namespace global_state {
 			std::erase_if(packages, [&](const PackageInfo& pkg) {
 				return pkg.getRootModule().illegalAccess().getID() == root_module;
 			});
+		}
+
+		void setCustomStdArtifactsCollection(
+			base::Box<artifacts::ArtifactCollection> custom_art_collection
+		) {
+			std_art_collection = std::move(custom_art_collection);
 		}
 	}
 

@@ -4,7 +4,11 @@
 #include <global_state/artifacts_location.hpp>
 #include <global_state/packages.hpp>
 
+#include "base/collections/optional.hpp"
 #include <base/extend_cpp/variant_match.hpp>
+
+#include "artifacts/artifacts.hpp"
+#include "logger/logger.hpp"
 
 #include <algorithm>
 
@@ -202,7 +206,25 @@ namespace compiler::driver {
 		return appendStandardLibraryPackages(packages_info, std_path, report);
 	}
 
-	std::vector<PackageCompilationTask> getLoadedStdLibCompilationTasks() {
+	std::vector<PackageCompilationTask> getRequiredStdLibCompilationTasks() {
+		base::Ref<artifacts::ArtifactCollection> art_collection = global_state::getRootCollection();
+		if_opt_some(global_state::getStdArtifactsCollection(), stdlib_art_collection) {
+			// If we use custom artifacts location and the required artifacts are present,
+			// we don't require any tasks.
+			if (allStdlibArtifactsPresent()) {
+				CORE_USER_LOG(
+					"Using compiled standard library binaries from the custom directory.\n"
+				);
+				return {};
+			}
+
+			CORE_USER_LOG(
+				"Failed to use compiled standard library binaries from the custom directory, "
+			    "missing files.\n"
+			);
+			art_collection = stdlib_art_collection;
+		}
+
 		std::vector<PackageCompilationTask> tasks;
 		for (const auto& config: STD_PACKAGES_CONFIG) {
 			auto pkg = std::find_if(
@@ -218,16 +240,15 @@ namespace compiler::driver {
 			if (global_state::getBackendOptions()->llvm_backend.has_value())
 				tasks.emplace_back(
 					pkg->getRootModule().illegalAccess().getID(),
-					BuildTargetLLVMStaticLibrary{
-						.output_file_name  = base::StrID(config.name + ".a"),
-						.archiving_options = {},
-					}
+					BuildTargetLLVMStaticLibrary{ .output_file_name
+				                                  = base::StrID(config.name + ".a"),
+				                                  .archiving_options     = {},
+				                                  .custom_art_collection = art_collection }
 				);
 			tasks.emplace_back(
 				pkg->getRootModule().illegalAccess().getID(),
-				BuildTargetDVMLibrary{
-					.output_file_name = base::StrID(config.name + ".dbc"),
-				}
+				BuildTargetDVMLibrary{ .output_file_name      = base::StrID(config.name + ".dbc"),
+			                           .custom_art_collection = art_collection }
 			);
 		}
 		return tasks;
@@ -267,27 +288,44 @@ namespace compiler::driver {
 		 * @brief Small helper that gets the standard library artifacts from the
 		 * root collection based on the provided extension.
 		 */
-		std::vector<artifacts::FileArtifact> getStdLibArtifacts(std::string_view extension) {
-			std::vector<artifacts::FileArtifact> artifacts;
+		std::pair<std::vector<artifacts::FileArtifact>, bool> getStdLibArtifacts(
+			std::string_view extension
+		) {
+			std::vector<artifacts::FileArtifact>     artifacts;
+			base::Ref<artifacts::ArtifactCollection> root_collection
+				= global_state::getRootCollection();
+			if_opt_some(global_state::getStdArtifactsCollection(), std_art_collection) {
+				root_collection = std_art_collection;
+			}
+			bool all_present = true;
+
 			for (const auto& config: STD_PACKAGES_CONFIG) {
-				auto artifact = global_state::getRootCollection()->fileArtifactAtOrNew(
+				auto opt_artifact = root_collection->fileArtifactAtMaybe(
 					base::StrID(base::strConcat(config.name, extension))
 				);
-				artifacts.push_back(std::move(artifact));
+				if_opt_some(opt_artifact, art) { artifacts.push_back(*art); }
+				if_opt_none(opt_artifact) { all_present = false; }
 			}
-			return artifacts;
+			return { artifacts, all_present };
 		}
 	}
 
 	std::vector<artifacts::FileArtifact> getStdLibNativeArtifacts() {
-		return getStdLibArtifacts(".a");
+		return getStdLibArtifacts(".a").first;
 	}
 
 	std::vector<artifacts::FileArtifact> getStdLibDVMArtifacts() {
-		return getStdLibArtifacts(".dbc");
+		return getStdLibArtifacts(".dbc").first;
 	}
 
 	std::vector<artifacts::FileArtifact> getStdLibDVMDebugInfoArtifacts() {
-		return getStdLibArtifacts(".di.json");
+		return getStdLibArtifacts(".di.json").first;
+	}
+
+	bool allStdlibArtifactsPresent() {
+		bool native = getStdLibArtifacts(".a").second;
+		bool dvm    = getStdLibArtifacts(".dbc").second;
+		bool di     = getStdLibArtifacts(".di.json").second;
+		return native && dvm && di;
 	}
 }

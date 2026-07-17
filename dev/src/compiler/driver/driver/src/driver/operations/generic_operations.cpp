@@ -527,10 +527,10 @@ namespace compiler::driver {
 				auto script_obj_artifact = global_state::getRootCollection()->fileArtifactAtOrNew(
 					base::StrID(base::strConcat(script_lir->module_id, ".o.dbc"))
 				);
-				std::ofstream output_file(
+				std::ofstream module_output_file(
 					script_obj_artifact.file.getFilePath().getPath(), std::ios::binary
 				);
-				if (!output_file.is_open()) {
+				if (!module_output_file.is_open()) {
 					error_message = base::strConcat(
 						"Failed to open output file for script bytecode: ",
 						script_obj_artifact.file.getFilePath().string()
@@ -538,11 +538,13 @@ namespace compiler::driver {
 					return;
 				}
 
-				vm::code::serializeCode(dvm_module.code, output_file);
-				output_file.close();
+				vm::code::serializeCode(dvm_module.code, module_output_file);
+				module_output_file.close();
 
-				auto& script_context   = global_state::getScriptContext();
-				auto  output_file_name = base::strConcat(script_context.script_file.stem(), ".dbc");
+				auto& script_context = global_state::getScriptContext();
+				auto  output_file    = global_state::getRootCollection()->fileArtifactAtOrNew(
+                    base::StrID(base::strConcat(script_context.script_file.stem(), ".dbc"))
+                );
 
 				std::vector<artifacts::FileArtifact> dvm_objs = { std::move(script_obj_artifact) };
 				if (link_std_lib)
@@ -550,12 +552,14 @@ namespace compiler::driver {
 						dvm_objs.emplace_back(std::move(dvm_std_obj));
 
 
-				if (linkDVMPackage(dvm_objs, {}, output_file_name).isBad()) {
+				if (linkDVMPackage(dvm_objs, {}, output_file).isBad()) {
 					error_message = "Linking of the DVM objects failed.";
 					return;
 				}
 
-				CORE_USER_LOG("Script bytecode written to: ", output_file_name, "\n");
+				CORE_USER_LOG(
+					"Script bytecode written to: ", output_file.file.getFilePath().strView(), "\n"
+				);
 			});
 
 			if (error_message.has_value()) {
@@ -821,11 +825,14 @@ namespace compiler::driver {
 					}
 				}
 				variant_case(BuildTargetLLVMStaticLibrary, target_lib) {
+					auto root_collection = global_state::getRootCollection();
+					if_opt_some(target_lib.custom_art_collection, custom_art_collection) {
+						root_collection = custom_art_collection;
+					}
 					// Note, if you change this convention, please also change the one in the
 					// `getStdLibArtifacts`
-					auto output_file = global_state::getRootCollection()->fileArtifactAtOrNew(
-						target_lib.output_file_name
-					);
+					auto output_file
+						= root_collection->fileArtifactAtOrNew(target_lib.output_file_name);
 
 					auto archive_result = archiver::createArchive(
 						output_file,
@@ -850,6 +857,13 @@ namespace compiler::driver {
 					// Do nothing for plain object files
 				}
 				variant_case(BuildTargetDVMLibrary, target_dvm) {
+					auto root_collection = global_state::getRootCollection();
+					if_opt_some(target_dvm.custom_art_collection, custom_art_collection) {
+						root_collection = custom_art_collection;
+					}
+					auto output_file
+						= root_collection->fileArtifactAtOrNew(target_dvm.output_file_name);
+
 					auto debug_info_opt
 						= debug_info_artifacts_by_root_module.atMaybe(task.root_module);
 
@@ -857,7 +871,7 @@ namespace compiler::driver {
 							*dvm_objects_by_root_module.atMaybe(task.root_module).value(),
 							debug_info_opt.has_value() ? *debug_info_opt.value()
 													   : std::vector<artifacts::FileArtifact>(),
-							target_dvm.output_file_name.str()
+							output_file
 						)
 					        .isBad())
 						result = base::BAD;
@@ -880,8 +894,10 @@ namespace compiler::driver {
 								debug_info_arts.push_back(std::move(art));
 					}
 
-					if (linkDVMPackage(dbc_arts, debug_info_arts, target_dvm.output_file_name.str())
-					        .isBad())
+					auto output_file = global_state::getRootCollection()->fileArtifactAtOrNew(
+						target_dvm.output_file_name
+					);
+					if (linkDVMPackage(dbc_arts, debug_info_arts, output_file).isBad())
 						result = base::BAD;
 				}
 			}

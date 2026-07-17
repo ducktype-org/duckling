@@ -9,8 +9,10 @@
 
 namespace compiler::driver {
 	/**
-	 * @brief Returns the loaded compilation tasks that would compile the standard library
-	 * packages. Can return empty vector.
+	 * @brief Returns the compilation tasks that would compile the standard library
+	 * packages. Can return empty vector if the compiled is configured to run without
+	 * stdlib packages. Return only those packages, that are not already compiled when
+	 * using
 	 */
-	std::vector<PackageCompilationTask> getLoadedStdLibCompilationTasks();
+	std::vector<PackageCompilationTask> getRequiredStdLibCompilationTasks();
 }
