@@ -327,7 +327,7 @@ namespace compiler::helios {
 					return base::BAD;
 				}
 				// We only here add the methods that are owner only.
-				if (emissionPolicy(method_sym) != EmissionPolicy::OwnerOnly) continue;
+				if (emissionPolicy(ctx, method_sym) != EmissionPolicy::OwnerOnly) continue;
 
 				out_function_code_tasks.push_back(ctx.schedule<QueryCodeOfFun>(method_sym));
 			}
