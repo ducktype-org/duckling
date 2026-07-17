@@ -29,7 +29,7 @@ Tests:
       all:
         backend: all
         Output:
-          String: "20\n84\n"
+          String: "x\nx\n"
 
   # We test if disabling the std and using it in the user code causes the expected compile error.
   no_std_fails:
