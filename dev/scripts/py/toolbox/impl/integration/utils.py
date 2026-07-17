@@ -54,7 +54,12 @@ def dit_exec_command(
     verbose: bool = False,
     env: dict[str, str] | None = None,
     timeout: float | None = None,
+    core_dumps: bool = False,
 ) -> tuple[bytes, bytes]:
+    # A crashing command does not exit until the system core-dump handler
+    # drains its core, so cores are disabled unless explicitly requested.
+    if not core_dumps:
+        command = f"ulimit -c 0; {command}"
     return exec_bash_command(
         command=command,
         cwd=cwd,

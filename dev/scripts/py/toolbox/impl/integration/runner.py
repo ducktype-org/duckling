@@ -113,6 +113,7 @@ def run_case(
                 dry=dry,
                 verbose=verbose,
                 exitcode=0,  # expects 0 -- 0 means it has evaluated to `true`
+                core_dumps=ctx.core_dumps,
             )
         except BashCommandError:
             return Disabled()
@@ -126,7 +127,12 @@ def run_case(
         case_env = os.environ.copy()
         for name, command in case.env.items():
             value, _ = dit_exec_command(
-                command, cwd=test.cwd, dry=dry, verbose=verbose, env=case_env
+                command,
+                cwd=test.cwd,
+                dry=dry,
+                verbose=verbose,
+                env=case_env,
+                core_dumps=ctx.core_dumps,
             )
             case_env[name] = value.decode("UTF-8").strip()
 
@@ -140,6 +146,7 @@ def run_case(
             dry=dry,
             verbose=verbose,
             env=case_env,
+            core_dumps=ctx.core_dumps,
         )
 
     # Get input.
@@ -152,6 +159,7 @@ def run_case(
             dry=dry,
             verbose=verbose,
             env=case_env,
+            core_dumps=ctx.core_dumps,
         )
 
     # Run test.
@@ -164,7 +172,12 @@ def run_case(
         dry=dry,
         verbose=verbose,
         env=case_env,
-        timeout=None if dry else resolve_timeout(case.timeout, test.cwd),
+        timeout=(
+            None
+            if dry
+            else ctx.timeout_scale * resolve_timeout(case.timeout, test.cwd)
+        ),
+        core_dumps=ctx.core_dumps,
     )
 
     # Compare test and expected output.
@@ -176,6 +189,7 @@ def run_case(
             verbose=verbose,
             dry=dry,
             env=case_env,
+            core_dumps=ctx.core_dumps,
         )
         if not dry and test_output != test_expected_output:
             log_test_out_differs(
@@ -197,6 +211,7 @@ def run_case(
             verbose=verbose,
             dry=dry,
             env=case_env,
+            core_dumps=ctx.core_dumps,
         )
         if not dry and test_err != test_expected_err:
             log_test_out_differs(
@@ -220,6 +235,7 @@ def run_case(
             verbose=verbose,
             dry=dry,
             env=case_env,
+            core_dumps=ctx.core_dumps,
         )
 
     return Success()
@@ -238,6 +254,7 @@ def clean_test(test: Test, path: str, ctx: RunContext):
                 capture_output=False,
                 dry=ctx.dry,
                 verbose=ctx.verbose,
+                core_dumps=ctx.core_dumps,
             )
     except BashCommandError:
         log_warning(f"Cleaning has (partially) failed on {test.name}.")

@@ -72,6 +72,21 @@ from click import command, option
     "the completion order.",
 )
 @option(
+    "--core-dumps",
+    is_flag=True,
+    default=False,
+    help="Keep core dumps enabled for test commands. By default every command runs "
+    "with `ulimit -c 0`, so a crashing test exits without waiting for the system "
+    "core-dump handler.",
+)
+@option(
+    "--timeout-scale",
+    type=float,
+    default=1.0,
+    help="Multiply every resolved TimeOut by this factor, e.g. on slow or heavily "
+    "loaded machines.",
+)
+@option(
     "--custom-values",
     type=str,
     default="{}",

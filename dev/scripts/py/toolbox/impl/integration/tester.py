@@ -30,6 +30,8 @@ def tester_impl(
     custom_values: str = "{}",
     jobs: int = 1,
     deterministic_output: bool = False,
+    core_dumps: bool = False,
+    timeout_scale: float = 1.0,
 ):
     """
     The driver function of Duckling Integration Tests framework.
@@ -64,6 +66,8 @@ def tester_impl(
         verbose=verbose,
         log_file=log_file,
         jobs=jobs,
+        core_dumps=core_dumps,
+        timeout_scale=timeout_scale,
         output=CompletionOutput(),
     )
 

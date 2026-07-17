@@ -195,9 +195,16 @@ A test can opt out with `NoParallel: true` (settable on the test or inherited
 from any ancestor node): all such tests are deferred to a second phase after
 every other test has finished, where their cases run **strictly one at a time
 on an otherwise idle machine**. Use it sparingly, for tests sensitive to
-machine load: tight timeouts, or cases that abort (SIGABRT) and thus wait for
-the system core-dump handler, which can take seconds on a busy machine. A
-`PostNode` above a `NoParallel` test correctly waits for that second phase.
+machine load, e.g. tight timeouts. A `PostNode` above a `NoParallel` test
+correctly waits for that second phase.
+
+Every command runs with core dumps disabled (`ulimit -c 0`): a crashing case
+would otherwise not exit until the system core-dump handler drains its core,
+which can take seconds on a busy machine and stalls unrelated tests behind a
+system-wide handler. Pass `--core-dumps` to keep cores when debugging a crash.
+
+`TimeOut`s are wall-clock and tuned for a lightly loaded machine; on slow or
+busy machines scale them all with `--timeout-scale <factor>`.
 
 Each finished test prints its output as one atomic section, by default in
 completion order; pass `--deterministic-output` to print in the definition

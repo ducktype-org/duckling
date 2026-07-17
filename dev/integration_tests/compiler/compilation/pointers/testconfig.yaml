@@ -72,9 +72,8 @@ Tests:
         Output:
           String: "Hello from VM!\nl\n15\nHello from Duckling!\n"
         ExitCode: 0
-  # The llvm cases abort (SIGABRT), which pipes the core to the system
-  # crash handler (e.g. apport); on a loaded machine that can delay process
-  # exit by seconds, so these run exclusively and with a longer timeout.
+  # The llvm cases abort (SIGABRT). DIT disables core dumps, so the abort
+  # exits promptly; these still run exclusively out of caution.
   slices_out_of_bounds:
     enable_conc_deterministic_tests: "false"
     NoParallel: true

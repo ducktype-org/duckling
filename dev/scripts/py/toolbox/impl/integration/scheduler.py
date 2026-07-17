@@ -130,6 +130,7 @@ def _ensure_open(state: NodeState, ctx: RunContext):
                     capture_output=not ctx.verbose,
                     dry=ctx.dry,
                     verbose=ctx.verbose,
+                    core_dumps=ctx.core_dumps,
                 )
             except Exception as e:
                 state.open_error = NodeOpenError(state)
@@ -158,6 +159,7 @@ def _release(state: NodeState, ctx: RunContext):
                 capture_output=not ctx.verbose,
                 dry=ctx.dry,
                 verbose=ctx.verbose,
+                core_dumps=ctx.core_dumps,
             )
         except Exception as e:
             ctx.output.emit_now(
@@ -220,6 +222,7 @@ def _start_group(group: TestGroup, ctx: RunContext) -> bool:
                 capture_output=not ctx.verbose,
                 dry=ctx.dry,
                 verbose=ctx.verbose,
+                core_dumps=ctx.core_dumps,
             )
         except Exception as e:
             group.stats.failed.append(group.path)
@@ -277,6 +280,7 @@ def _finish_group(group: TestGroup, ctx: RunContext):
                 capture_output=not ctx.verbose,
                 dry=ctx.dry,
                 verbose=ctx.verbose,
+                core_dumps=ctx.core_dumps,
             )
         except Exception as e:
             group.stats.failed.append(group.path)
