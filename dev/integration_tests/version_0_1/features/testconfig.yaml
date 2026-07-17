@@ -30,8 +30,8 @@ compare_runs_script: "@{dev_dir}/integration_tests/compiler/compilation/scripts/
 compile_dvm_backend_deterministically_cmd: "if [ '@{enable_conc_deterministic_tests}' = 'true' ]; then python3 @{compile_determinism_script} --duckc-path @{duckc_path} --module-name @{Name} --duckc-worker-count @{duckc_worker_count} --compile-options='@{compile_dvm_options}' --backend dvm; else true; fi"
 compile_llvm_backend_deterministically_cmd: "if [ '@{enable_conc_deterministic_tests}' = 'true' ]; then python3 @{compile_determinism_script} --duckc-path @{duckc_path} --module-name @{Name} --duckc-worker-count @{duckc_worker_count} --compile-options='@{compile_llvm_options}' --backend llvm; else true; fi"
 
-compile_dvm_backend_cmd: "@{compile_dvm_backend_deterministically_cmd} && @{duckc_path} compile_package duck_modules/@{Name} -w @{duckc_worker_count} -a @{case_build} -n package_@{Name} @{std_artifacts_path_flag} @{compile_dvm_options} --dvm-backend"
-compile_llvm_backend_cmd: "@{compile_llvm_backend_deterministically_cmd} && @{duckc_path} compile_package duck_modules/@{Name} -w @{duckc_worker_count} -a @{case_build} -n package_@{Name} @{std_artifacts_path_flag} @{compile_llvm_options}"
+compile_dvm_backend_cmd: "@{duckc_path} compile_package duck_modules/@{Name} -w @{duckc_worker_count} -a @{case_build} -n package_@{Name} @{std_artifacts_path_flag} @{compile_dvm_options} --dvm-backend && @{compile_dvm_backend_deterministically_cmd}"
+compile_llvm_backend_cmd: "@{duckc_path} compile_package duck_modules/@{Name} -w @{duckc_worker_count} -a @{case_build} -n package_@{Name} @{std_artifacts_path_flag} @{compile_llvm_options} && @{compile_llvm_backend_deterministically_cmd}"
 
 compile_dvm_only_cmd: "@{duckc_path} compile_package duck_modules/@{Name} -w @{duckc_worker_count} -a @{case_build} -n package_@{Name} @{std_artifacts_path_flag} @{compile_dvm_options} --dvm-backend"
 compile_llvm_only_cmd: "@{duckc_path} compile_package duck_modules/@{Name} -w @{duckc_worker_count} -a @{case_build} -n package_@{Name} @{std_artifacts_path_flag} @{compile_llvm_options}"
@@ -47,8 +47,8 @@ PreCase: "mkdir -p @{case_build};
   case '@{backend}' in
     dvm)       @{compile_dvm_backend_cmd}                                                                                ;;
     llvm)      @{compile_llvm_backend_cmd}                                                                               ;;
-    all)       @{compile_dvm_backend_deterministically_cmd} && @{compile_llvm_backend_deterministically_cmd} &&
-               @{compile_dvm_only_cmd} && @{compile_llvm_only_cmd}                                                      ;;
+    all)       @{compile_dvm_only_cmd} && @{compile_llvm_only_cmd} &&
+               @{compile_dvm_backend_deterministically_cmd} && @{compile_llvm_backend_deterministically_cmd}           ;;
     nobackend) echo 'Backend undefined'; exit 1                                                                          ;;
     *)         echo 'Unknown backend';   exit 1                                                                          ;;
   esac;"
