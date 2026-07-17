@@ -316,6 +316,10 @@ namespace {
 				if (!tod_types.contains(pointer.inner))
 					throw UnknownSubtypeError(pointer, pointer.inner);
 			}
+			variant_case(CPointerType, cpointer) {
+				if (cpointer.inner.has_value() && !tod_types.contains(*cpointer.inner))
+					throw UnknownSubtypeError(cpointer, *cpointer.inner);
+			}
 			variant_case(FixedSizeTableType, fixed_table) {
 				if (!tod_types.contains(fixed_table.inner))
 					throw UnknownSubtypeError(fixed_table, fixed_table.inner);
@@ -432,6 +436,9 @@ namespace {
 			variant_match(type) {
 				variant_case(PrimitiveType, primitive) {}
 				variant_case(PointerType, pointer) {}
+				// A C pointer never recurses into its pointee: self-referential C structs and
+				// pointers to forward-declared (opaque) types are legal.
+				variant_case(CPointerType, cpointer) {}
 				variant_case(FixedSizeTableType, fixed_table) {
 					if (!tod_types.contains(fixed_table.inner))
 						throw UnknownSubtypeError(fixed_table, fixed_table.inner);
