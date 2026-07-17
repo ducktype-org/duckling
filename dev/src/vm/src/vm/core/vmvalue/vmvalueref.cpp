@@ -185,3 +185,19 @@ std::string vm::VMValueRef::str() const {
 	}
 	return "<unknown>";
 }
+
+bool vm::VMValueRef::isComplex() const {
+	variant_match(my_type->getKindVariant()) {
+		variant_case_novalue(std::monostate, kind::Primitive, kind::Function) { return false; }
+		variant_case(kind::Pointer, val) {
+			auto opt_data = readData().value();
+			variant_match(opt_data) {
+				variant_case(interpreted_data_variant::Pointer, val) {
+					return val.referenced.has_value();
+				}
+			}
+			return false;
+		}
+	}
+	return true;
+}
