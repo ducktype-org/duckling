@@ -785,7 +785,7 @@ namespace compiler::helios::mangler {
 				return hex_str;
 			} else if (value.index() == 9) {
 				const f64                              double_value = std::get<f64>(value);
-				std::array<unsigned char, sizeof(f64)> bytes;
+				std::array<unsigned char, sizeof(f64)> bytes{};
 				std::memcpy(bytes.data(), &double_value, sizeof(f64));
 				std::string hex_str;
 				hex_str.reserve(bytes.size() * 2);
