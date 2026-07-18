@@ -125,7 +125,7 @@ namespace vm::low {
 
 			[[nodiscard]] std::ranges::range auto instructions(const vm::low::MicroBytecode& bc
 			) const {
-				return std::span(&bc[start], &bc[end]);
+				return std::span(bc).subspan(start, end - start);
 			}
 
 			/**
