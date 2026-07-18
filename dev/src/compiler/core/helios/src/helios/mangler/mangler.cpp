@@ -774,7 +774,7 @@ namespace compiler::helios::mangler {
 				return base::strConcat(uint_value, "_");
 			} else if (value.index() == 8) {
 				const f32                              float_value = std::get<f32>(value);
-				std::array<unsigned char, sizeof(f32)> bytes;
+				std::array<unsigned char, sizeof(f32)> bytes{};
 				std::memcpy(bytes.data(), &float_value, sizeof(f32));
 				std::string hex_str;
 				hex_str.reserve(bytes.size() * 2);
