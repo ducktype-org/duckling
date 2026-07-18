@@ -198,7 +198,7 @@ namespace vm::low {
 			 * @param bc Micro-bytecode of lowered function.
 			 * @param block_beginnings Sorted block start instruction offsets.
 			 */
-			void createCFG(const low::MicroBytecode& bc, const std::vector<usize>& block_beginnings);
+			void createFuncCFG(const low::MicroBytecode& bc, const std::vector<usize>& block_beginnings);
 
 		public:
 			ControlFlowGraph() = default;

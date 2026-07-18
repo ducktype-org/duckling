@@ -90,7 +90,7 @@ namespace vm::low::cf {
 	usize BasicBlock::edgeCount() const { return succ.size(); }
 
 	ControlFlowGraph::ControlFlowGraph(const low::MicroBytecode& bc) {
-		createCFG(bc, basicBlockBeginnings(bc));
+		createFuncCFG(bc, basicBlockBeginnings(bc));
 	}
 
 	bool ControlFlowGraph::empty() const { return blocks.empty(); }
@@ -102,7 +102,7 @@ namespace vm::low::cf {
 		return blocks[id];
 	}
 
-	void ControlFlowGraph::createCFG(
+	void ControlFlowGraph::createFuncCFG(
 		const low::MicroBytecode& bc, const std::vector<usize>& block_beginnings
 	) {
 		blocks.clear();
