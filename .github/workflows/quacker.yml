@@ -1,0 +1,111 @@
+# Single entry point for quacker-bot. Four triggers, one file. The `setup` job (on ubuntu-latest)
+# decides the mode + args and mints the GitHub App token (the private key never touches the
+# self-hosted runner). The `agent` job (only on runner1-server4) resolves any runtime args and runs
+# ci/run.sh <mode> <positional args...> from the config repo.
+name: Quacker
+
+on:
+  issues:
+    types: [labeled]                    # label "quacker" -> task
+  pull_request:
+    types: [opened, ready_for_review]   # human PR -> review
+  issue_comment:
+    types: [created]                    # "/quack ..." or "@quacker-bot" on a PR -> comment
+  workflow_run:
+    workflows: [tests, linter, rust]    # failed CI on a bot branch -> ci-fix (self-heal)
+    types: [completed]
+
+concurrency:
+  group: quacker-${{ github.event.issue.number || github.event.pull_request.number || github.event.workflow_run.head_branch || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      run: ${{ steps.d.outputs.run }}
+      mode: ${{ steps.d.outputs.mode }}
+      a1: ${{ steps.d.outputs.a1 }}
+      a2: ${{ steps.d.outputs.a2 }}
+      token: ${{ steps.app.outputs.token }}
+      slug: ${{ steps.app.outputs.app-slug }}
+    steps:
+      - name: Determine mode
+        id: d
+        env:  # untrusted values go through env, never interpolated into the script body
+          EVENT: ${{ github.event_name }}
+          LABEL: ${{ github.event.label.name }}
+          ISSUE_NUM: ${{ github.event.issue.number }}
+          IS_PR: ${{ github.event.issue.pull_request.url }}
+          COMMENT_BODY: ${{ github.event.comment.body }}
+          COMMENT_USER_TYPE: ${{ github.event.comment.user.type }}
+          PR_NUM: ${{ github.event.pull_request.number }}
+          PR_DRAFT: ${{ github.event.pull_request.draft }}
+          PR_USER_TYPE: ${{ github.event.pull_request.user.type }}
+          WR_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          WR_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          WR_ID: ${{ github.event.workflow_run.id }}
+        run: |
+          run=false; mode=; a1=; a2=
+          case "$EVENT" in
+            issues)
+              [ "$LABEL" = "quacker" ] && { run=true; mode=task; a1="$ISSUE_NUM"; } ;;
+            pull_request)
+              if [ "$PR_DRAFT" = "false" ] && [ "$PR_USER_TYPE" != "Bot" ]; then
+                run=true; mode=review; a1="$PR_NUM"
+              fi ;;
+            issue_comment)
+              # ignore comments from bots (incl. quacker itself) to prevent trigger loops
+              if [ -n "$IS_PR" ] && [ "$COMMENT_USER_TYPE" != "Bot" ] && \
+                 printf '%s' "$COMMENT_BODY" | grep -qE '^[[:space:]]*/quack|@quacker-bot'; then
+                run=true; mode=comment; a1="$ISSUE_NUM"
+              fi ;;
+            workflow_run)
+              if [ "$WR_CONCLUSION" = "failure" ] && printf '%s' "$WR_BRANCH" | grep -qE '^quacker-bot/'; then
+                run=true; mode=ci-fix; a1="$WR_BRANCH"; a2="$WR_ID"
+              fi ;;
+          esac
+          { echo "run=$run"; echo "mode=$mode"; echo "a1=$a1"; echo "a2=$a2"; } >> "$GITHUB_OUTPUT"
+      - name: Mint app token
+        id: app
+        if: steps.d.outputs.run == 'true'
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1  # v3.2.0 (SHA-pinned)
+        with:
+          app-id: ${{ secrets.QUACKER_APP_ID }}
+          private-key: ${{ secrets.QUACKER_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: |
+            duckling
+            agent-config
+          skip-token-revoke: true   # the agent job (a separate job) uses this token
+
+  agent:
+    needs: setup
+    if: needs.setup.outputs.run == 'true'
+    runs-on:
+      group: SelfHostedRunners
+      labels: [quacker-bot]
+    timeout-minutes: 90
+    env:
+      GITHUB_APP_TOKEN: ${{ needs.setup.outputs.token }}
+      GH_TOKEN: ${{ needs.setup.outputs.token }}
+      QUACKER_BOT_ID: ${{ secrets.QUACKER_BOT_ID }}
+      SLUG: ${{ needs.setup.outputs.slug }}
+      DUCKLING_REPO: ${{ github.repository }}
+      CONFIG_REPO: ${{ github.repository_owner }}/agent-config
+      CONFIG_DIR: ${{ runner.temp }}/config
+      MODE: ${{ needs.setup.outputs.mode }}
+      A1: ${{ needs.setup.outputs.a1 }}
+      A2: ${{ needs.setup.outputs.a2 }}
+      COMMENT_BODY: ${{ github.event.comment.body }}
+    steps:
+      - name: Clone config repo
+        run: |
+          rm -rf "$CONFIG_DIR"
+          git clone "https://x-access-token:${GITHUB_APP_TOKEN}@github.com/${CONFIG_REPO}.git" "$CONFIG_DIR"
+      - name: Run agent
+        # All arg resolution (PR head ref, PR-from-branch, ci-fix skip checks) lives in ci/run.sh.
+        # Claude Code authenticates via the subscription OAuth token (scoped to this step only).
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.AGENT_OAUTH_TOKEN }}
+        run: bash "$CONFIG_DIR/ci/run.sh" "$MODE" "$A1" "$A2" "$COMMENT_BODY"
