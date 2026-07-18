@@ -343,6 +343,9 @@ namespace vm {
 			const auto& original_function
 				= program_copy->getOriginalProgram()->getFunctions()[current_func_id];
 
+			CORE_ASSERT(
+				current_func_id < jit_data.size(), "current_func_id out of bounds for jit_data"
+			);
 			jit::JitFuncData& my_data = jit_data[current_func_id];
 			if (my_data.llvm_compiled_code_ptrs[cfg_offset]) {
 				// is LLVM-compiled
@@ -410,6 +413,9 @@ namespace vm {
 			auto        current_func_id  = current_func_obj.id;
 			auto        cfg_offset       = instr - current_func_obj.bc.data();
 			CORE_ASSERT(cfg_offset, "loop cfg offset should never be null");
+			CORE_ASSERT(
+				current_func_id < jit_data.size(), "current_func_id out of bounds for jit_data"
+			);
 			jit::JitFuncData& my_data = jit_data[current_func_id];
 
 			auto& llvm_compiled_code_ptr = my_data.llvm_compiled_code_ptrs[cfg_offset];
