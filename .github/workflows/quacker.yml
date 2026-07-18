@@ -11,7 +11,7 @@ on:
   issue_comment:
     types: [created]                    # "@quacker-bot" mentioned on a PR gets a reply
   pull_request_review_comment:
-    types: [created]
+    types: [created]                     # "@quacker-bot" mentioned in an inline PR review comment
   workflow_run:
     workflows: [tests, linter, rust]    # failed CI on a bot branch triggers a self-fix
     types: [completed]
@@ -29,38 +29,74 @@ jobs:
       a1: ${{ steps.d.outputs.a1 }}
       a2: ${{ steps.d.outputs.a2 }}
     steps:
+      - name: Mint app token
+        id: app
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1  # v3.2.0
+        with:
+          app-id: ${{ secrets.QUACKER_APP_ID }}
+          private-key: ${{ secrets.QUACKER_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
       - name: Determine mode
         id: d
         env:  # untrusted event data is passed via env vars, never interpolated into the script
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          ORG: ${{ github.repository_owner }}
+          CORE_DEV_TEAM: core-dev
           EVENT: ${{ github.event_name }}
           LABEL: ${{ github.event.label.name }}
+          SENDER: ${{ github.event.sender.login }}
           ISSUE_NUM: ${{ github.event.issue.number }}
           IS_PR: ${{ github.event.issue.pull_request.url }}
           COMMENT_BODY: ${{ github.event.comment.body }}
+          COMMENT_USER: ${{ github.event.comment.user.login }}
           COMMENT_USER_TYPE: ${{ github.event.comment.user.type }}
           PR_NUM: ${{ github.event.pull_request.number }}
-          PR_DRAFT: ${{ github.event.pull_request.draft }}
-          PR_USER_TYPE: ${{ github.event.pull_request.user.type }}
           WR_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
           WR_BRANCH: ${{ github.event.workflow_run.head_branch }}
           WR_ID: ${{ github.event.workflow_run.id }}
+          WR_ACTOR_TYPE: ${{ github.event.workflow_run.actor.type }}
+          WR_HEAD_REPO: ${{ github.event.workflow_run.head_repository.full_name }}
+          REPO: ${{ github.repository }}
         run: |
           run=false; mode=; a1=; a2=
+          # Returns 0 (true) iff the given GitHub user is an active member of the core-dev team.
+          # Requires the Quacker App to hold the organization "Members: read" permission; if it
+          # does not, this fails closed (no one can trigger the bot) rather than open.
+          is_core_dev() {
+            [ -n "$1" ] || return 1
+            local state
+            state="$(gh api "orgs/$ORG/teams/$CORE_DEV_TEAM/memberships/$1" --jq '.state' 2>/dev/null || true)"
+            [ "$state" = "active" ]
+          }
           case "$EVENT" in
             issues)
-              [ "$LABEL" = "quacker" ] && { run=true; mode=task; a1="$ISSUE_NUM"; } ;;
-            pull_request)
-              if [ "$PR_DRAFT" = "false" ] && [ "$PR_USER_TYPE" != "Bot" ]; then
-                run=true; mode=review; a1="$PR_NUM"
-              fi ;;
+              # Only core-dev members may start a task by adding the "quacker" label.
+              [ "$LABEL" = "quacker" ] && is_core_dev "$SENDER" && { run=true; mode=task; a1="$ISSUE_NUM"; } ;;
             issue_comment)
-              # skip bot comments (including quacker's own) so the bot can't trigger itself
+              # Only core-dev members may invoke the bot via @quacker-bot — it runs with the App
+              # token's write access and can push commits to the branch. Bot comments are skipped
+              # (including quacker's own) so the bot can't trigger itself.
               if [ -n "$IS_PR" ] && [ "$COMMENT_USER_TYPE" != "Bot" ] && \
-                 printf '%s' "$COMMENT_BODY" | grep -qF '@quacker-bot'; then
+                 printf '%s' "$COMMENT_BODY" | grep -qF '@quacker-bot' && \
+                 is_core_dev "$COMMENT_USER"; then
                 run=true; mode=comment; a1="$ISSUE_NUM"
               fi ;;
+            pull_request_review_comment)
+              # Inline/review-comment mention of @quacker-bot — same core-dev gate as above.
+              if [ "$COMMENT_USER_TYPE" != "Bot" ] && \
+                 printf '%s' "$COMMENT_BODY" | grep -qF '@quacker-bot' && \
+                 is_core_dev "$COMMENT_USER"; then
+                run=true; mode=comment; a1="$PR_NUM"
+              fi ;;
             workflow_run)
-              if [ "$WR_CONCLUSION" = "failure" ] && printf '%s' "$WR_BRANCH" | grep -qE '^quacker-bot/'; then
+              # Self-heal only the bot's own failed CI. Require all of:
+              #  - failure conclusion,
+              #  - the failed run was triggered by a Bot (not a human PR author),
+              #  - the run originated in this repo (not a fork),
+              #  - a quacker-bot/* branch the bot created.
+              if [ "$WR_CONCLUSION" = "failure" ] && [ "$WR_ACTOR_TYPE" = "Bot" ] && \
+                 [ "$WR_HEAD_REPO" = "$REPO" ] && \
+                 printf '%s' "$WR_BRANCH" | grep -qE '^quacker-bot/'; then
                 run=true; mode=ci-fix; a1="$WR_BRANCH"; a2="$WR_ID"
               fi ;;
           esac
