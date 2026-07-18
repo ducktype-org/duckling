@@ -13,8 +13,8 @@
 #include <vm/core/safe/low_program/low_program.hpp>
 
 #ifdef BUILD_TYPE_RELEASE
-constexpr inline uint LLVM_FUNC_COMPILATION_THRESHOLD = 10_000;
-constexpr inline uint LOOP_COMPILATION_THRESHOLD      = 10_000;
+constexpr inline uint LLVM_FUNC_COMPILATION_THRESHOLD = 10'000;
+constexpr inline uint LOOP_COMPILATION_THRESHOLD      = 10'000;
 #else
 // During testing compile always to check properly that jit integration works.
 constexpr inline uint LLVM_FUNC_COMPILATION_THRESHOLD = 0;
