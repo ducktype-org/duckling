@@ -1,7 +1,8 @@
 # Entry point for quacker-bot: one workflow handling all four triggers.
-# The `setup` job runs on a GitHub-hosted runner, picks the mode, and mints the
-# GitHub App token there so the private key never reaches the self-hosted machine.
-# The `agent` job then runs ci/run.sh from the config repo on a self-hosted runner.
+# The `setup` job runs on a GitHub-hosted runner and decides whether and in which
+# mode the bot should run. The `agent` job then mints a GitHub App token (tokens
+# cannot be passed between jobs — Actions drops outputs that contain secrets)
+# and runs ci/run.sh from the config repo on a self-hosted runner.
 name: Quacker
 
 on:
@@ -27,8 +28,6 @@ jobs:
       mode: ${{ steps.d.outputs.mode }}
       a1: ${{ steps.d.outputs.a1 }}
       a2: ${{ steps.d.outputs.a2 }}
-      token: ${{ steps.app.outputs.token }}
-      slug: ${{ steps.app.outputs.app-slug }}
     steps:
       - name: Determine mode
         id: d
@@ -66,18 +65,6 @@ jobs:
               fi ;;
           esac
           { echo "run=$run"; echo "mode=$mode"; echo "a1=$a1"; echo "a2=$a2"; } >> "$GITHUB_OUTPUT"
-      - name: Mint app token
-        id: app
-        if: steps.d.outputs.run == 'true'
-        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1  # v3.2.0
-        with:
-          app-id: ${{ secrets.QUACKER_APP_ID }}
-          private-key: ${{ secrets.QUACKER_APP_PRIVATE_KEY }}
-          owner: ${{ github.repository_owner }}
-          repositories: |
-            duckling
-            agent-config
-          skip-token-revoke: true   # the agent job still needs this token after setup ends
 
   agent:
     needs: setup
@@ -87,10 +74,7 @@ jobs:
       labels: [quacker-bot]
     timeout-minutes: 90
     env:
-      GITHUB_APP_TOKEN: ${{ needs.setup.outputs.token }}
-      GH_TOKEN: ${{ needs.setup.outputs.token }}
       QUACKER_BOT_ID: ${{ secrets.QUACKER_BOT_ID }}
-      SLUG: ${{ needs.setup.outputs.slug }}
       DUCKLING_REPO: ${{ github.repository }}
       CONFIG_REPO: ${{ github.repository_owner }}/agent-config
       MODE: ${{ needs.setup.outputs.mode }}
@@ -98,7 +82,19 @@ jobs:
       A2: ${{ needs.setup.outputs.a2 }}
       COMMENT_BODY: ${{ github.event.comment.body }}
     steps:
+      - name: Mint app token
+        id: app
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1  # v3.2.0
+        with:
+          app-id: ${{ secrets.QUACKER_APP_ID }}
+          private-key: ${{ secrets.QUACKER_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: |
+            duckling
+            agent-config
       - name: Clone config repo
+        env:
+          GITHUB_APP_TOKEN: ${{ steps.app.outputs.token }}
         run: |
           CONFIG_DIR="$RUNNER_TEMP/config"
           echo "CONFIG_DIR=$CONFIG_DIR" >> "$GITHUB_ENV"
@@ -108,5 +104,8 @@ jobs:
         # ci/run.sh resolves the remaining runtime args (PR head ref, ci-fix checks)
         # and drives Claude Code; the OAuth token is exposed to this step only.
         env:
+          GITHUB_APP_TOKEN: ${{ steps.app.outputs.token }}
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          SLUG: ${{ steps.app.outputs.app-slug }}
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.AGENT_OAUTH_TOKEN }}
         run: bash "$CONFIG_DIR/ci/run.sh" "$MODE" "$A1" "$A2" "$COMMENT_BODY"
