@@ -1,18 +1,18 @@
-# Single entry point for quacker-bot. Four triggers, one file. The `setup` job (on ubuntu-latest)
-# decides the mode + args and mints the GitHub App token (the private key never touches the
-# self-hosted runner). The `agent` job (only on runner1-server4) resolves any runtime args and runs
-# ci/run.sh <mode> <positional args...> from the config repo.
+# Entry point for quacker-bot: one workflow handling all four triggers.
+# The `setup` job runs on a GitHub-hosted runner, picks the mode, and mints the
+# GitHub App token there so the private key never reaches the self-hosted machine.
+# The `agent` job then runs ci/run.sh from the config repo on a self-hosted runner.
 name: Quacker
 
 on:
   issues:
-    types: [labeled]                    # label "quacker" -> task
+    types: [labeled]                    # "quacker" label on an issue starts a task
   pull_request:
-    types: [opened, ready_for_review]   # human PR -> review
+    types: [opened, ready_for_review]   # a human's PR gets an automatic review
   issue_comment:
-    types: [created]                    # "/quack ..." or "@quacker-bot" on a PR -> comment
+    types: [created]                    # "@quacker-bot" mentioned on a PR gets a reply
   workflow_run:
-    workflows: [tests, linter, rust]    # failed CI on a bot branch -> ci-fix (self-heal)
+    workflows: [tests, linter, rust]    # failed CI on a bot branch triggers a self-fix
     types: [completed]
 
 concurrency:
@@ -32,7 +32,7 @@ jobs:
     steps:
       - name: Determine mode
         id: d
-        env:  # untrusted values go through env, never interpolated into the script body
+        env:  # untrusted event data is passed via env vars, never interpolated into the script
           EVENT: ${{ github.event_name }}
           LABEL: ${{ github.event.label.name }}
           ISSUE_NUM: ${{ github.event.issue.number }}
@@ -55,9 +55,9 @@ jobs:
                 run=true; mode=review; a1="$PR_NUM"
               fi ;;
             issue_comment)
-              # ignore comments from bots (incl. quacker itself) to prevent trigger loops
+              # skip bot comments (including quacker's own) so the bot can't trigger itself
               if [ -n "$IS_PR" ] && [ "$COMMENT_USER_TYPE" != "Bot" ] && \
-                 printf '%s' "$COMMENT_BODY" | grep -qE '^[[:space:]]*/quack|@quacker-bot'; then
+                 printf '%s' "$COMMENT_BODY" | grep -qF '@quacker-bot'; then
                 run=true; mode=comment; a1="$ISSUE_NUM"
               fi ;;
             workflow_run)
@@ -69,7 +69,7 @@ jobs:
       - name: Mint app token
         id: app
         if: steps.d.outputs.run == 'true'
-        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1  # v3.2.0 (SHA-pinned)
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1  # v3.2.0
         with:
           app-id: ${{ secrets.QUACKER_APP_ID }}
           private-key: ${{ secrets.QUACKER_APP_PRIVATE_KEY }}
@@ -77,7 +77,7 @@ jobs:
           repositories: |
             duckling
             agent-config
-          skip-token-revoke: true   # the agent job (a separate job) uses this token
+          skip-token-revoke: true   # the agent job still needs this token after setup ends
 
   agent:
     needs: setup
@@ -93,7 +93,6 @@ jobs:
       SLUG: ${{ needs.setup.outputs.slug }}
       DUCKLING_REPO: ${{ github.repository }}
       CONFIG_REPO: ${{ github.repository_owner }}/agent-config
-      CONFIG_DIR: ${{ runner.temp }}/config
       MODE: ${{ needs.setup.outputs.mode }}
       A1: ${{ needs.setup.outputs.a1 }}
       A2: ${{ needs.setup.outputs.a2 }}
@@ -101,11 +100,13 @@ jobs:
     steps:
       - name: Clone config repo
         run: |
+          CONFIG_DIR="$RUNNER_TEMP/config"
+          echo "CONFIG_DIR=$CONFIG_DIR" >> "$GITHUB_ENV"
           rm -rf "$CONFIG_DIR"
           git clone "https://x-access-token:${GITHUB_APP_TOKEN}@github.com/${CONFIG_REPO}.git" "$CONFIG_DIR"
       - name: Run agent
-        # All arg resolution (PR head ref, PR-from-branch, ci-fix skip checks) lives in ci/run.sh.
-        # Claude Code authenticates via the subscription OAuth token (scoped to this step only).
+        # ci/run.sh resolves the remaining runtime args (PR head ref, ci-fix checks)
+        # and drives Claude Code; the OAuth token is exposed to this step only.
         env:
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.AGENT_OAUTH_TOKEN }}
         run: bash "$CONFIG_DIR/ci/run.sh" "$MODE" "$A1" "$A2" "$COMMENT_BODY"
