@@ -228,13 +228,17 @@ namespace vm::low {
 			[[nodiscard]] const BasicBlock& getBlock(BasicBlockID id) const;
 
 			/**
-			 * @brief Builds a CFG containing only selected blocks.
+			 * @brief Builds an induced subgraph with an entry block containing only chosen blocks.
+			 * @param entry_block_id Block that becomes the new entry (subgraph block 0).
 			 * @param other_block_ids Block ids to keep in the resulting graph.
-			 * @return A remapped CFG subgraph with out-of-subset edges redirected.
-			 * @note Current implementation redirects external edges to a synthetic dummy block.
+			 * @param dummy_exit_blocks If true, external edges are redirected to synthetic dummy
+			 * blocks. If false, all edges must point to blocks in the subgraph.
+			 * @return A standalone CFG representing the created induced subgraph.
 			 */
-			[[nodiscard]] ControlFlowGraph loopSubgraph(
-				BasicBlockID entry_block_id, const std::vector<BasicBlockID>& other_block_ids
+			[[nodiscard]] ControlFlowGraph inducedSubgraph(
+				BasicBlockID entry_block_id,
+				const std::vector<BasicBlockID>& other_block_ids,
+				bool dummy_exit_blocks
 			) const;
 
 			/**

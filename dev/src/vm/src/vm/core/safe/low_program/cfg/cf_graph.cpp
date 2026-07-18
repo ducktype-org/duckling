@@ -171,10 +171,32 @@ namespace vm::low::cf {
 			}
 			}
 		}
+
+		// Remove unreachable blocks
+		std::vector<BasicBlockID> reachable{ 0 };
+		std::vector<bool> visited(blocks.size(), false);
+		visited[0] = true;
+		usize stack_ptr = 0;
+
+		while (stack_ptr < reachable.size()) {
+			const auto curr = reachable[stack_ptr++];
+
+			for (usize i = 0; i < blocks[curr].edgeCount(); ++i) {
+				BasicBlockID v = blocks[curr].edge(i);
+				if (!visited[v]) {
+					visited[v] = true;
+					reachable.push_back(v);
+				}
+			}
+		}
+
+		*this = inducedSubgraph(0, reachable, false);
 	}
 
-	ControlFlowGraph ControlFlowGraph::loopSubgraph(
-		BasicBlockID entry_block_id, const std::vector<BasicBlockID>& other_block_ids
+	ControlFlowGraph ControlFlowGraph::inducedSubgraph(
+		BasicBlockID entry_block_id,
+		const std::vector<BasicBlockID>& other_block_ids,
+		bool dummy_exit_blocks
 	) const {
 		ControlFlowGraph subgraph;
 		subgraph.blocks.emplace_back(0, blocks[entry_block_id].start, blocks[entry_block_id].end);
@@ -182,7 +204,7 @@ namespace vm::low::cf {
 		const auto undefined_id = static_cast<BasicBlockID>(-1);
 
 		std::vector<BasicBlockID> old_block_ids = { entry_block_id };
-		std::vector<BasicBlockID> old_to_new_id(blocks.size() + 1, undefined_id);
+		std::vector<BasicBlockID> old_to_new_id(blocks.size(), undefined_id);
 		old_to_new_id[entry_block_id] = 0;
 
 		for (BasicBlockID old_id: other_block_ids) {
@@ -196,7 +218,7 @@ namespace vm::low::cf {
 			old_block_ids.push_back(old_id);
 		}
 
-		const auto loop_entry_pos = static_cast<i64>(subgraph.blocks[0].start);
+		const auto entry_pos = static_cast<i64>(subgraph.blocks[0].start);
 
 		for (BasicBlockID old_id: old_block_ids) {
 			const BasicBlockID new_id = old_to_new_id[old_id];
@@ -208,12 +230,17 @@ namespace vm::low::cf {
 				BasicBlockID old_target_id = src->edge(i);
 				BasicBlockID new_target_id = old_to_new_id[old_target_id];
 				if (new_target_id == undefined_id) {
+					CORE_ASSERT(
+						dummy_exit_blocks,
+						"Induced subgraph contains an edge to a block not in the subgraph "
+						"while dummy exit blocks are disabled"
+					);
 					auto jmp_dest_pos = static_cast<i64>(blocks[old_target_id].start);
 
 					// Create empty exit block representing this outgoing edge
 					new_target_id = static_cast<BasicBlockID>(subgraph.blocks.size());
 					subgraph.blocks.emplace_back(new_target_id, jmp_dest_pos, jmp_dest_pos);
-					subgraph.blocks.back().setRetValue(jmp_dest_pos - loop_entry_pos);
+					subgraph.blocks.back().setRetValue(jmp_dest_pos - entry_pos);
 
 					// Update mapping to avoid creating multiple identical dummy blocks
 					old_to_new_id[old_target_id] = new_target_id;

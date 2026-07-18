@@ -73,7 +73,7 @@ namespace vm::low::cf {
 						cfg.getBlock(bid).start != function_entrypoint,
 						"Function entrypoint cannot be a loop header"
 					);
-					auto loop_cfg           = cfg.loopSubgraph(bid, stack);
+					auto loop_cfg           = cfg.inducedSubgraph(bid, stack, true);
 					auto loop_start_offset  = cfg.getBlock(bid).start;
 					cfgs[loop_start_offset] = std::move(loop_cfg);
 				}
