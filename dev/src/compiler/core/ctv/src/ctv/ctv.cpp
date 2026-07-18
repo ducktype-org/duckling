@@ -12,10 +12,6 @@
 #include <string>
 
 namespace compiler::ctv {
-<<<<<<< HEAD
-=======
-	const CompileTimeValue::Storage& CompileTimeValue::getStorage() const { return value; }
-
 	base::Bit256 CompileTimeValue::queryUnstablePerfectHash() const {
 		hashing::SHA256 hasher;
 		hashing::addToHash(hasher, value.index());
@@ -45,7 +41,6 @@ namespace compiler::ctv {
 		return hasher.finalize();
 	}
 
->>>>>>> origin/main
 	std::string CompileTimeValue::toString() const {
 		variant_match(value) {
 			variant_case(bool, val) { return val ? "true" : "false"; }

@@ -2277,7 +2277,7 @@ private:
 		std::cerr << "Mangled symbol: " << mangled_sub_cnst.strView() << '\n';
 
 		ASSERT_EQUAL(
-			"_Q1Y_M8manglingN4Mspc3Ooo5gooooEFi32i32f64E1a1bE$metadata_v123", mangled_goo.str()
+			"_Q1Y_M8manglingN4Mspc3Ooo5gooooEFididdE1a1bE$metadata_v123", mangled_goo.str()
 		);
 		ASSERT_EQUAL("_Q5a_M8manglingN5Nmspc1BE$metadata_v321", mangled_glob_b.str());
 
@@ -2285,7 +2285,7 @@ private:
 
 		ASSERT_EQUAL("_Q5a_M8manglingN4Mspc3Ooo4CnstE$metadata_v321", mangled_g_const.str());
 
-		ASSERT_EQUAL("_Q4_M8mangling3subN5inSub6subFunEFi32EE$metadata_v5", mangled_sub_fun.str());
+		ASSERT_EQUAL("_Q4_M8mangling3subN5inSub6subFunEFidEE$metadata_v5", mangled_sub_fun.str());
 		ASSERT_EQUAL("_Q4_M8mangling3subN5inSub8subConstE$metadata_v5", mangled_sub_cnst.str());
 	}
 
@@ -2359,15 +2359,15 @@ private:
 		auto infix_method  = mangle(find_method("+*"));
 		auto prefix_method = mangle(find_method("-*"));
 
-		ASSERT_EQUAL("_Q_M18mangling_operatorsGOi4plmlFi64i64i64E1a1bE", infix_free.str());
-		ASSERT_EQUAL("_Q_M18mangling_operatorsGOp4mimlFi64i64E1aE", prefix_free.str());
-		ASSERT_EQUAL("_Q_M18mangling_operatorsGOi6plxd7_Fi64i64i64E1a1bE", unicode_free.str());
+		ASSERT_EQUAL("_Q_M18mangling_operatorsGOi4plmlFiqiqiqE1a1bE", infix_free.str());
+		ASSERT_EQUAL("_Q_M18mangling_operatorsGOp4mimlFiqiqE1aE", prefix_free.str());
+		ASSERT_EQUAL("_Q_M18mangling_operatorsGOi6plxd7_FiqiqiqE1a1bE", unicode_free.str());
 		ASSERT_EQUAL(
-			"_Q_M18mangling_operatorsN3FooOi4plmlEFi64R_Q_CM18mangling_operatorsG3Fooi64E4self1aE",
+			"_Q_M18mangling_operatorsN3FooOi4plmlEFiqR_Q_CM18mangling_operatorsG3FooiqE4self1aE",
 			infix_method.str()
 		);
 		ASSERT_EQUAL(
-			"_Q_M18mangling_operatorsN3FooOp4mimlEFi64R_Q_CM18mangling_operatorsG3FooE4selfE",
+			"_Q_M18mangling_operatorsN3FooOp4mimlEFiqR_Q_CM18mangling_operatorsG3FooE4selfE",
 			prefix_method.str()
 		);
 
