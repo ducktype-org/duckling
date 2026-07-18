@@ -28,7 +28,7 @@ constexpr inline uint CP_FUNC_COMPILATION_THRESHOLD = 0;
 
 namespace vm::jit {
 	using JitLLVMFunc
-		= int(const vm::MicroInstruction**, std::byte**, vm::Frame**, vm::SafeVMThread*);
+		= i64(const vm::MicroInstruction**, std::byte**, vm::Frame**, vm::SafeVMThread*);
 
 
 #define CP_RETURN __attribute__((preserve_none)) void
