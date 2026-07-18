@@ -133,7 +133,7 @@ impl PackageLoader {
         let Some(venv) = Venv::fix_and_load(&storage, venv_id, ctx)? else {
             qp_bail!("Could not find venv {} in the main storage", venv_id);
         };
-        let dir = venv.data().last_known_directory();
+        let dir = venv.data().last_known_location();
         Self::find_at_exact_directory(dir, ctx)
             .with_context(|| format!("Lost track of the venv {venv_id}"))
     }
@@ -155,6 +155,10 @@ metadata:
 
     #[test]
     fn no_package_from_directory() {
+        #[cfg(windows)]
+        let root = "\\\\?\\C:\\";
+        #[cfg(not(windows))]
+        let root = "/";
         let tmp_file = tempdir().unwrap();
         let ctx = DuckContext::default();
         let err =
@@ -162,8 +166,9 @@ metadata:
         assert_eq!(
             format!("{err}"),
             format!(
-                "no manifest has been found from the `{}` to the `/`",
-                tmp_file.path().resolve().unwrap().display()
+                "no manifest has been found from the `{}` to the `{}`",
+                tmp_file.path().resolve().unwrap().display(),
+                root
             )
         );
     }

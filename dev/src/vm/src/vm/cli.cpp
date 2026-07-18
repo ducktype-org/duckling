@@ -9,6 +9,7 @@
 #include <vm/api/data/api_error.hpp>
 #include <vm/api/data/process_info.hpp>
 #include <vm/api/data/process_options.hpp>
+#include <vm/bytecode/bytecode.hpp>
 
 #include <iostream>
 
@@ -19,18 +20,11 @@ std::string convertError(const vm::api::ApiError& api_error) {
 	return vm::api::errorToString(api_error);
 }
 
-int cli() {
-	std::string filepath;
-	std::cout << "Path to file: ";
-	std::cin >> filepath;
-
-	return cli(fs::File(filepath));
-}
-
 int cli(
-	const fs::File&                 filepath,
+	const std::vector<fs::File>&    files,
 	const std::vector<std::string>& args,
-	const vm::api::ProcessConfig&   options
+	const vm::api::ProcessConfig&   options,
+	const std::vector<std::string>& ffi_libs
 ) {
 	vm::PID pid{};
 	dia_int::configureTerminalPrinterColors(true);
@@ -43,7 +37,15 @@ int cli(
 
 				  return std::expected<void, vm::api::ApiError>{};
 			  })
-	          .and_then([&] { return vm::api::loadFiles(pid, { filepath }); })
+	          .and_then([&] -> std::expected<void, vm::api::ApiError> {
+				  if (ffi_libs.empty()) return {};
+				  // Registered before the bytecode loads, so `ffi function` declarations can
+		          // resolve their symbols from these libraries.
+				  vm::code::CodeCollection libs;
+				  for (const auto& lib: ffi_libs) libs.object_files.emplace_back(lib);
+				  return vm::api::loadCode(pid, libs);
+			  })
+	          .and_then([&] { return vm::api::loadFiles(pid, files); })
 	          .and_then([&] { return vm::api::attach(pid, std::cin, std::cout); })
 	          .and_then([&] { return vm::api::run(pid, args); })
 	          .and_then([&] { return vm::api::join(pid); })

@@ -24,11 +24,12 @@ fn collects_packages() {
         storage: Storage::new(ctx.default_storage_root().into_not_locked_path()),
         used_features: vec!["full".into()],
         profile,
+        jobs: 1,
     };
     let graph = create_early_graph_from_bcx(&bcx).unwrap();
     let unit_graph = lower_early_graph(graph, &bcx);
-    for unit in unit_graph.any_units_order() {
-        let expected: &[&str] = match unit.root_package().package().manifest().name().as_str() {
+    for unit in unit_graph.units_sorted_by_id() {
+        let expected: &[&str] = match unit.root_package().package().name().as_str() {
             "root" => &["bar", "baz", "foo", "root"],
             "foo" => &["baz", "foo"],
             "bar" => &["bar", "baz"],
@@ -54,11 +55,12 @@ fn collects_packages_cycle() {
         storage: Storage::new(ctx.default_storage_root().into_not_locked_path()),
         used_features: vec!["cycle".into()],
         profile,
+        jobs: 1,
     };
     let graph = create_early_graph_from_bcx(&bcx).unwrap();
     let unit_graph = lower_early_graph(graph, &bcx);
-    for unit in unit_graph.any_units_order() {
-        let expected: &[&str] = match unit.root_package().package().manifest().name().as_str() {
+    for unit in unit_graph.units_sorted_by_id() {
+        let expected: &[&str] = match unit.root_package().package().name().as_str() {
             "root" | "cycle" => &["bar", "cycle", "foo", "root"],
             "foo" => &["foo"],
             "bar" => &["bar"],
@@ -70,6 +72,7 @@ fn collects_packages_cycle() {
 
 fn assert_packages_names(unit: &Unit, graph: &UnitGraph, expected: &[&str]) {
     let mut names = collect_packages(unit, graph)
+        .unwrap()
         .into_iter()
         .map(|package| package.import_name.as_str())
         .collect::<Vec<_>>();

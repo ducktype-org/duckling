@@ -68,6 +68,7 @@ public:
 		TESTER_ADD_TEST(testClass);
 		TESTER_ADD_TEST(testListParsing);
 		TESTER_ADD_TEST(testListParsingErrors);
+		TESTER_ADD_TEST(testTemplateStmtParsing);
 		TESTER_ADD_TEST(testUsingErrors);
 		TESTER_ADD_TEST(testParamListErrors);
 		TESTER_ADD_TEST(testMissingSemiErr);
@@ -75,6 +76,7 @@ public:
 		TESTER_ADD_TEST(testVisitorAlternative);
 		TESTER_ADD_TEST(testFunctionParameterVisitors);
 		TESTER_ADD_TEST(testFunDeclFFI);
+		TESTER_ADD_TEST(testOperatorFun);
 		TESTER_ADD_TEST(testSimpleExpand);
 
 		// TESTER_ADD_TEST(testParsingHandler)
@@ -192,11 +194,17 @@ private:
 
 	void testListParsing() { testJsonRelativePath("lists_ok.duck", "lists_ok.json"); }
 
+	void testTemplateStmtParsing() {
+		testJsonRelativePath("template_statements.duck", "template_statements.json");
+	}
+
 	void testFormatStrParsing() {
 		testJsonRelativePath("format_strings.duck", "format_strings.json");
 	}
 
 	void testFunDeclFFI() { testJsonRelativePath("ffi.duck", "ffi.json"); }
+
+	void testOperatorFun() { testJsonRelativePath("operator_fun.duck", "operator_fun.json"); }
 
 	void testNumericLiteralParsing() {
 		testJsonRelativePath("numeric_literals.duck", "numeric_literals.json");

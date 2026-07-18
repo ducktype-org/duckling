@@ -38,6 +38,7 @@ public:
 		TESTER_ADD_TEST(initsDeinitsTest);
 		TESTER_ADD_TEST(pointersTest);
 		TESTER_ADD_TEST(backendDependentTest);
+		TESTER_ADD_TEST(charAllocTest);
 	}
 
 protected:
@@ -64,6 +65,7 @@ protected:
 			{ fs::FilePath(path("modules/inits_deinits/")), "inits_deinits" },
 			{ fs::FilePath(path("modules/pointers/")), "pointers" },
 			{ fs::FilePath(path("modules/backend_dependent/")), "backend_dependent" },
+			{ fs::FilePath(path("modules/char_alloc/")), "char_alloc" },
 		};
 		auto init_result
 			= compiler::driver::test_utils::initializeCompilerForTests(packages, artifacts_path);
@@ -71,6 +73,11 @@ protected:
 	}
 
 private:
+	static inline const std::vector<std::string> ALL_CORE_MODULES{
+		"core/builtins", "core/io",        "core/containers",
+		"core/runtime",  "core/panicking", "core/clib",
+	};
+
 	auto getModuleFromPath(
 		const std::string&              main_module_path,
 		const std::vector<std::string>& module_paths_to_load = {}
@@ -182,15 +189,15 @@ private:
 	}
 
 	void staticArrayTest() {
-		runTest("static_arrays", {}, "1\n100\n200\n300\n600\n20\n42\n11\n13\n4\n", {}, 0);
+		runMultimoduleTest(
+			"static_arrays", ALL_CORE_MODULES, {}, "1\n100\n200\n300\n600\n20\n42\n11\n13\n4\n", {}, 0
+		);
 	}
 
 	// A string literal is lowered to a static byte-array global plus a `{ptr, len}` slice struct.
 	// Reading the length and indexing into the slice exercises the generated slice bytecode.
 	void stringSliceTest() {
-		runMultimoduleTest(
-			"strings", { "core/builtins", "core/panicking" }, {}, "14\nhello from vm!", {}, 0
-		);
+		runMultimoduleTest("strings", ALL_CORE_MODULES, {}, "14\nhello from vm!", {}, 0);
 	}
 
 	void unitsTest() { runTest("units", {}, {}, {}, 0); }
@@ -202,6 +209,11 @@ private:
 	// The DVM backend must select the `@dvm_only_impl` of the `@backend_dependent`
 	// `getValue` (returning 10), not the `@native_only_impl` one (returning 20).
 	void backendDependentTest() { runTest("backend_dependent", {}, {}, {}, 10); }
+
+	// Allocating, reallocating and freeing a dynamic char table exercises the DVM-backend
+	// `dvm_char_alloc`/`dvm_char_realloc`/`dvm_char_free` builtins lowered to `dynTableReAlloc`
+	// and `free`. Returns 42 when the written chars survive the round-trip.
+	void charAllocTest() { runMultimoduleTest("char_alloc", ALL_CORE_MODULES, {}, {}, {}, 42); }
 };
 
 

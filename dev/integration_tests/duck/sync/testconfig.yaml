@@ -1,21 +1,14 @@
-before_cmd: export DUCK_HOME="$(pwd)/duck_home"
-
-PostTest: rm -rf $(pwd)/duck_home
-
 PreNode: ""
 
 SubDirs:
-  - basic_project
-  - basic_project_with_flags
-  - project_with_cycle_in_flags
-  - project_with_absent_flag
-  - with_a_nonexistent_dep_feature
-  - with_a_nonexistent_local_dep
-  - with_a_single_local_dep
-  - with_a_single_local_dep_and_conditions
-  - with_a_single_local_dep_and_conditions2
-  - with_a_single_local_dep_and_flags
-  - with_a_single_local_dep_and_flags2
-  - with_exposed_freeze
-  - with_exposed_freeze_and_deps
-  - would_overwrite_error
+  - basic
+  - basic-with-flags
+  - cycle-in-flags
+  - dep
+  - dep-and-conditions
+  - dep-and-conditions2
+  - dep-and-flags
+  - dep-and-flags2
+  - errors
+  - exposed-freezefile
+  - exposed-freezefile-and-deps

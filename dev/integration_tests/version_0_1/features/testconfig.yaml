@@ -1,6 +1,11 @@
 # Tests for Duckling's version 0.1.
 
-clean_cmd: "rm -rf build"
+# Every case gets a private scratch directory for its build artifacts,
+# so cases can run concurrently and never dirty the source tree.
+Env:
+    DIT_TMP_DIR: "@{new_tmp_dir}"
+
+case_build: "$DIT_TMP_DIR/build"
 
 backend: "nobackend"
 # If set to "true" the produced duckling executable will be run with valgrind and checked for leaks.
@@ -23,21 +28,21 @@ compare_runs_script: "@{dev_dir}/integration_tests/compiler/compilation/scripts/
 compile_dvm_backend_deterministically_cmd: "if [ '@{enable_conc_deterministic_tests}' = 'true' ]; then python3 @{compile_determinism_script} --duckc-path @{duckc_path} --module-name @{Name} --duckc-worker-count @{duckc_worker_count} --compile-options='@{compile_dvm_options}' --backend dvm; else true; fi"
 compile_llvm_backend_deterministically_cmd: "if [ '@{enable_conc_deterministic_tests}' = 'true' ]; then python3 @{compile_determinism_script} --duckc-path @{duckc_path} --module-name @{Name} --duckc-worker-count @{duckc_worker_count} --compile-options='@{compile_llvm_options}' --backend llvm; else true; fi"
 
-compile_dvm_backend_cmd: "@{compile_dvm_backend_deterministically_cmd} && @{duckc_path} compile_package duck_modules/@{Name} -w @{duckc_worker_count} -a build -n package_@{Name} @{compile_dvm_options} --dvm-backend"
-compile_llvm_backend_cmd: "@{compile_llvm_backend_deterministically_cmd} && @{duckc_path} compile_package duck_modules/@{Name} -w @{duckc_worker_count} -a build -n package_@{Name} @{compile_llvm_options}"
+compile_dvm_backend_cmd: "@{compile_dvm_backend_deterministically_cmd} && @{duckc_path} compile_package duck_modules/@{Name} -w @{duckc_worker_count} -a @{case_build} -n package_@{Name} @{compile_dvm_options} --dvm-backend"
+compile_llvm_backend_cmd: "@{compile_llvm_backend_deterministically_cmd} && @{duckc_path} compile_package duck_modules/@{Name} -w @{duckc_worker_count} -a @{case_build} -n package_@{Name} @{compile_llvm_options}"
 
 # "compile only" commands used by the all backend (determinism checks run separately before these).
-compile_dvm_only_cmd: "@{duckc_path} compile_package duck_modules/@{Name} -w @{duckc_worker_count} -a build -n package_@{Name} @{compile_dvm_options} --dvm-backend"
-compile_llvm_only_cmd: "@{duckc_path} compile_package duck_modules/@{Name} -w @{duckc_worker_count} -a build -n package_@{Name} @{compile_llvm_options}"
+compile_dvm_only_cmd: "@{duckc_path} compile_package duck_modules/@{Name} -w @{duckc_worker_count} -a @{case_build} -n package_@{Name} @{compile_dvm_options} --dvm-backend"
+compile_llvm_only_cmd: "@{duckc_path} compile_package duck_modules/@{Name} -w @{duckc_worker_count} -a @{case_build} -n package_@{Name} @{compile_llvm_options}"
 
-compiled_to_llvm: "./build/package_llvm.exe"
-compiled_to_dvm: "./build/package_dvm.dbc"
+compiled_to_llvm: "@{case_build}/package_llvm.exe"
+compiled_to_dvm: "@{case_build}/package_dvm.dbc"
 
 # Deliberately empty, so as not to recompile duckc and dvm for each test.
 PreNode: ""
 
-Clean: "@{clean_cmd}"
-PreCase: "@{clean_cmd} && mkdir build;
+PostCase: "@{cleanup_tmp_env}"
+PreCase: "mkdir -p @{case_build};
   case '@{backend}' in
     dvm)       @{compile_dvm_backend_cmd}                                                                                ;;
     llvm)      @{compile_llvm_backend_cmd}                                                                               ;;

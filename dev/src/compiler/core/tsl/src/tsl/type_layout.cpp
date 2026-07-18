@@ -12,7 +12,7 @@
 #include <helios/mangler/mangler.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_abi.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
+#include <helios/symbols/symbol_id.hpp>
 #include <helios/tsh/type_interface.hpp>
 #include <helios/tsh/types.hpp>
 
@@ -351,36 +351,6 @@ namespace compiler::tsl {
 		  source_type(source_type),
 		  mangled_name(ctx.query<helios::mangler::QueryMangledType>(source_type)->valueOrThrow()) {}
 
-	DynamicArrayTypeLayout::DynamicArrayTypeLayout(
-		const tsh::DynamicArrayAbstractType dynamic_array_type, query::Context& ctx
-	):
-		  TypeLayoutABC(
-			  POINTER_SIZE + bytes2bits(METADATA_SIZE) * 3,
-			  /*alignment=*/POINTER_SIZE_BYTES,
-			  tsh::SymbolType<>::withDefaults(dynamic_array_type),
-			  ctx
-		  ),
-		  element_layout(
-			  &ctx.query<QuerySymbolTypeLayout>(dynamic_array_type.getElementType())->valueOrThrow()
-		  ) {}
-
-	std::string DynamicArrayTypeLayout::toStringDefinition(
-		query::Context& ctx, bool recursive, const u32 indent
-	) const {
-		std::stringstream ss{};
-		ss << getIndent(indent) << "dynamic_array {\n";
-
-		// Display the element layout
-		if (recursive)
-			ss << element_layout->toStringDefinition(ctx, recursive, indent + 1) << "\n";
-		else
-			ss << getIndent(indent + 1) << element_layout->toStringIdentification() << "\n";
-
-		// Display the total size
-		ss << getIndent(indent) << "} : " << base::toString(getSize());
-		return ss.str();
-	}
-
 	StaticArrayTypeLayout::StaticArrayTypeLayout(
 		const tsh::StaticArrayAbstractType static_array_type, query::Context& ctx
 	):
@@ -571,6 +541,18 @@ namespace compiler::tsl {
 			  layout_idx_to_sym_id(getLayoutIndicesToSymIDs(field_elements, field_offsets)),
 			  total_size(offsetsToTotalSize(field_offsets, field_layouts)),
 			  max_alignment(maxTypeLayoutAlignmentInVector(field_layouts)) {}
+
+		ClassTypeLayoutConstructionHelper(
+			const tsh::DynamicArrayAbstractType dynamic_array_type, query::Context& ctx
+		):
+			  type(dynamic_array_type),
+			  field_elements(getFieldsOfInterface(dynamic_array_type.getInterface(ctx))),
+			  field_layouts(getLayoutVector(getElementTypes(field_elements, ctx), ctx)),
+			  field_offsets(alignOffsetsForLayoutVector(field_layouts)),
+			  layout_idx_to_field_idx(offsetsToPermutation(field_offsets)),
+			  layout_idx_to_sym_id(getLayoutIndicesToSymIDs(field_elements, field_offsets)),
+			  total_size(offsetsToTotalSize(field_offsets, field_layouts)),
+			  max_alignment(maxTypeLayoutAlignmentInVector(field_layouts)) {}
 	};
 
 	ClassTypeLayout::ClassTypeLayout(const tsh::ClassAbstractType class_type, query::Context& ctx):
@@ -581,6 +563,11 @@ namespace compiler::tsl {
 
 	ClassTypeLayout::ClassTypeLayout(const tsh::SliceAbstractType slice_type, query::Context& ctx):
 		  ClassTypeLayout(ClassTypeLayoutConstructionHelper(slice_type, ctx), ctx) {}
+
+	ClassTypeLayout::ClassTypeLayout(
+		const tsh::DynamicArrayAbstractType dynamic_array_type, query::Context& ctx
+	):
+		  ClassTypeLayout(ClassTypeLayoutConstructionHelper(dynamic_array_type, ctx), ctx) {}
 
 	ClassTypeLayout::ClassTypeLayout(ClassTypeLayoutConstructionHelper&& helper, query::Context& ctx):
 		  TypeLayoutABC(
@@ -655,27 +642,21 @@ namespace compiler::tsl {
 		const tsh::PointerAbstractType pointer_type, query::Context& ctx
 	):
 		  TypeLayoutABC(POINTER_SIZE, tsh::SymbolType<>::withDefaults(pointer_type), ctx),
-		  pointee(
-			  &ctx.query<QueryAbstractTypeLayout>(pointer_type.getUnderlyingType())->valueOrThrow()
-		  ),
+		  pointee(&ctx.query<QuerySymbolTypeLayout>(pointer_type.getPointee())->valueOrThrow()),
 		  pointer_kind(PointerKind::SinglePointer) {}
 
 	PointerTypeLayout::PointerTypeLayout(
 		const tsh::ManyPointerAbstractType pointer_type, query::Context& ctx
 	):
 		  TypeLayoutABC(POINTER_SIZE, tsh::SymbolType<>::withDefaults(pointer_type), ctx),
-		  pointee(
-			  &ctx.query<QueryAbstractTypeLayout>(pointer_type.getUnderlyingType())->valueOrThrow()
-		  ),
+		  pointee(&ctx.query<QuerySymbolTypeLayout>(pointer_type.getPointee())->valueOrThrow()),
 		  pointer_kind(PointerKind::ManyPointer) {}
 
 	PointerTypeLayout::PointerTypeLayout(
 		const tsh::CPointerAbstractType pointer_type, query::Context& ctx
 	):
 		  TypeLayoutABC(POINTER_SIZE, tsh::SymbolType<>::withDefaults(pointer_type), ctx),
-		  pointee(
-			  &ctx.query<QueryAbstractTypeLayout>(pointer_type.getUnderlyingType())->valueOrThrow()
-		  ),
+		  pointee(&ctx.query<QuerySymbolTypeLayout>(pointer_type.getPointee())->valueOrThrow()),
 		  pointer_kind(PointerKind::CPointer) {}
 
 	PointerTypeLayout::PointerTypeLayout(const tsh::SymbolType<> symbol_type, query::Context& ctx):

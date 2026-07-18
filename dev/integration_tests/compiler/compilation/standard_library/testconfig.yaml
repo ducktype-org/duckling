@@ -29,35 +29,35 @@ Tests:
       all:
         backend: all
         Output:
-          String: "20\n84\n"
+          String: "x\nx\n"
 
   # We test if disabling the std and using it in the user code causes the expected compile error.
   no_std_fails:
     module_to_compile: "uses_std"
-    PreCase: "@{clean_cmd} && mkdir build"
+    PreCase: "mkdir -p @{case_build}"
     Cases:
       dvm:
-        Run: "@{duckc_path} compile_package duck_modules/@{module_to_compile} -a build -n package_@{module_to_compile} -w @{duckc_worker_count} --no-std --dvm-backend"
+        Run: "@{duckc_path} compile_package duck_modules/@{module_to_compile} -a @{case_build} -n package_@{module_to_compile} -w @{duckc_worker_count} --no-std --dvm-backend"
         ExitCode: 1
       llvm:
-        Run: "@{duckc_path} compile_package duck_modules/@{module_to_compile} -a build -n package_@{module_to_compile} -w @{duckc_worker_count} --no-std"
+        Run: "@{duckc_path} compile_package duck_modules/@{module_to_compile} -a @{case_build} -n package_@{module_to_compile} -w @{duckc_worker_count} --no-std"
         ExitCode: 1
 
   both_options_fail:
     module_to_compile: "no_std"
-    PreCase: "@{clean_cmd} && mkdir build"
+    PreCase: "mkdir -p @{case_build}"
     Cases:
       dvm:
-        Run: "@{duckc_path} compile_package duck_modules/@{module_to_compile} -a build -n package_@{module_to_compile} -w @{duckc_worker_count} --no-std --custom-std-path custom_std --dvm-backend"
+        Run: "@{duckc_path} compile_package duck_modules/@{module_to_compile} -a @{case_build} -n package_@{module_to_compile} -w @{duckc_worker_count} --no-std --custom-std-path custom_std --dvm-backend"
         ExitCode: 1
       llvm:
-        Run: "@{duckc_path} compile_package duck_modules/@{module_to_compile} -a build -n package_@{module_to_compile} -w @{duckc_worker_count} --no-std --custom-std-path custom_std"
+        Run: "@{duckc_path} compile_package duck_modules/@{module_to_compile} -a @{case_build} -n package_@{module_to_compile} -w @{duckc_worker_count} --no-std --custom-std-path custom_std"
         ExitCode: 1
   
   compile_packages_default_std:
     module_to_compile: "uses_std"
-    compile_dvm_only_cmd: "@{duckc_path} compile_packages duck_modules/@{module_to_compile}/manifest.json -a build"
-    compile_llvm_only_cmd: "@{duckc_path} compile_packages duck_modules/@{module_to_compile}/manifest.json -a build"
+    compile_dvm_only_cmd: "@{duckc_path} compile_packages duck_modules/@{module_to_compile}/manifest.json -a @{case_build}"
+    compile_llvm_only_cmd: "@{duckc_path} compile_packages duck_modules/@{module_to_compile}/manifest.json -a @{case_build}"
     Cases:
       all:
         backend: all

@@ -13,20 +13,22 @@
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_abi.hpp>
 #include <helios/symbols/symbol_id.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/tsh/types.hpp>
 #include <helios_private/pst_layer/pst_parent.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 
+#include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <hashing/hash.hpp>
 #include <logger/logger.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
+#include <unicode_classification/classifications.hpp>
 
 #include <algorithm>
+#include <sstream>
 #include <string_view>
 
 /**
@@ -75,6 +77,7 @@ namespace compiler::helios::mangler {
 			if (auto abi = ctx.query<QuerySymbolABI>(sym_id); abi->hasValue()) {
 				variant_match(abi->valueOrThrow()) {
 					variant_case_novalue(CAbi) { return false; }
+					variant_case_novalue(DVMAbi) { return false; }
 					variant_case_novalue(DefaultAbi) { return true; }
 					variant_default { CORE_PANIC("Unknown ABI in shouldMangle()"); }
 				}
@@ -180,10 +183,121 @@ namespace compiler::helios::mangler {
 		}
 
 		/**
-		 * @brief Returns the bare name of the symbol prefixed with its size
+		 * @brief Returns the fixed 2-letter mnemonic tag for a single recognized operator
+		 * character, or an empty `Optional` if the codepoint isn't one of them.
+		 * @note: See mangling-scheme.md's `<fixed-operator-tag>` for details
+		 */
+		base::Optional<std::string_view> fixedOperatorTag(UChar32 codepoint) {
+			switch (codepoint) {
+			case U'!':
+				return std::string_view{ "nt" };
+			case U'%':
+				return std::string_view{ "rm" };
+			case U'&':
+				return std::string_view{ "an" };
+			case U'*':
+				return std::string_view{ "ml" };
+			case U'+':
+				return std::string_view{ "pl" };
+			case U'-':
+				return std::string_view{ "mi" };
+			case U'.':
+				return std::string_view{ "pd" };
+			case U'/':
+				return std::string_view{ "dv" };
+			case U':':
+				return std::string_view{ "co" };
+			case U'<':
+				return std::string_view{ "lt" };
+			case U'=':
+				return std::string_view{ "eq" };
+			case U'>':
+				return std::string_view{ "gt" };
+			case U'?':
+				return std::string_view{ "qm" };
+			case U'\\':
+				return std::string_view{ "bs" };
+			case U'^':
+				return std::string_view{ "eo" };
+			case U'`':
+				return std::string_view{ "bt" };
+			case U'|':
+				return std::string_view{ "or" };
+			case U'~':
+				return std::string_view{ "ti" };
+			default:
+				return {};
+			}
+		}
+
+		/**
+		 * @brief Transliterates an operator name character-by-character: each recognized operator
+		 * character becomes its fixed 2-letter tag, and any other codepoint is escaped as
+		 * `"x" <hex-codepoint> "_"`.
+		 * @note: See mangling-scheme.md's `<translit-unit>` for details
+		 */
+		std::string transliterateOperatorName(std::string_view raw_name) {
+			const icu::UnicodeString unicode_name = icu::UnicodeString::fromUTF8(
+				icu::StringPiece(raw_name.data(), static_cast<i32>(raw_name.size()))
+			);
+			const i32 length = unicode_name.length();
+
+			std::stringstream ret;
+			i32               index = 0;
+			while (index < length) {
+				const UChar32                          codepoint = unicode_name.char32At(index);
+				const base::Optional<std::string_view> tag       = fixedOperatorTag(codepoint);
+				if (tag.has_value())
+					ret << tag.value();
+				else
+					ret << "x" << std::hex << static_cast<u32>(codepoint) << std::dec << "_";
+				index = unicode_name.moveIndex32(index, 1);
+			}
+			return ret.str();
+		}
+
+		/**
+		 * @brief Returns the mangled `<operator-name>` for an operator function/method.
+		 * @note: See mangling-scheme.md's `<operator-name>` for details.
+		 */
+		std::string operatorNameEncoding(const HOUTFunctionDeclaration& fun_decl) {
+			using Operatoriness = HOUTFunctionDeclaration::Operatoriness;
+
+			const char operatoriness_tag = [&] {
+				switch (fun_decl.operatoriness) {
+				case Operatoriness::Infix:
+					return 'i';
+				case Operatoriness::Prefix:
+					return 'p';
+				case Operatoriness::Suffix:
+					return 's';
+				case Operatoriness::None:
+					break;
+				}
+				CORE_UNREACHABLE();
+			}();
+
+			const std::string translit
+				= transliterateOperatorName(fun_decl.original_name.strView());
+
+			std::stringstream ret;
+			ret << "O" << operatoriness_tag << translit.size() << translit;
+
+			return ret.str();
+		}
+
+		/**
+		 * @brief Returns the bare name of the symbol prefixed with its size, or the mangled
+		 * `<operator-name>` if the symbol is an operator function/method.
 		 * @note: See mangling-scheme.md for details
 		 */
-		std::string unscopedName(SymID symbol_id) {
+		std::string unscopedName(query::Context& ctx, SymID symbol_id) {
+			if (isFunctionLike(kind(symbol_id))) {
+				const auto& fun_decl
+					= ctx.query<compiler::helios::QueryDeclOfFun>(symbol_id).get()->valueOrPanic();
+				if (fun_decl.operatoriness != HOUTFunctionDeclaration::Operatoriness::None)
+					return operatorNameEncoding(fun_decl);
+			}
 			return identifier(compiler::helios::name(symbol_id).strView());
 		}
 
@@ -198,7 +312,7 @@ namespace compiler::helios::mangler {
 			auto scope_id = scope(symbol_id);
 
 			if (scopeDepth(scope_id) == 1) {
-				return "G" + unscopedName(symbol_id);
+				return "G" + unscopedName(ctx, symbol_id);
 			} else {
 				std::vector<std::string> path_parts;
 
@@ -226,7 +340,7 @@ namespace compiler::helios::mangler {
 				std::string ret = "N";
 				for (auto&& it = path_parts.rbegin(); it != path_parts.rend(); ++it) ret += *it;
 
-				ret += unscopedName(symbol_id);
+				ret += unscopedName(ctx, symbol_id);
 
 				return ret + "E";
 			}
@@ -248,9 +362,7 @@ namespace compiler::helios::mangler {
 		 */
 		std::string func(query::Context& ctx, SymID symbol_id) {
 			std::stringstream ret;
-			if (kind(symbol_id) == SymbolKind::Function
-			    or kind(symbol_id) == SymbolKind::FunctionDeclaration
-			    or kind(symbol_id) == SymbolKind::Method) {
+			if (isFunctionLike(kind(symbol_id))) {
 				// @TODO: #2255 Function qualifiers?
 
 				auto function_type = ctx.query<QueryTypeOfSymbol>(symbol_id)->valueOrThrow();
@@ -283,72 +395,75 @@ namespace compiler::helios::mangler {
 
 			case SymbolKind::Function:
 			case SymbolKind::Method:
+			case SymbolKind::Constructor:
+			case SymbolKind::Destructor:
 			case SymbolKind::FunctionDeclaration: {
 				variant_match(getSymRef(symbol_id)->other) {
-					variant_case_novalue(PstSymbolData) {
-						// If the symbol originates from the PST, use its path.
+					variant_case_novalue(PstImplementedSemantics, BuiltinSemantics) {
+						// If the symbol originates from the PST (including builtins), use its path.
 						return path(ctx, symbol_id) + func(ctx, symbol_id);
 					}
-					variant_case(
-						defgen::GeneratedSymbolData, gen_data
-					) /* @taw3e8 @todo: check those */ {
-						// If the symbol is generated, it has no path.
-						variant_match(gen_data.data) {
-							variant_case(defgen::GeneratedSymbolData::ImplicitConstructor, ctor) {
-								const auto mangled_class = ctx.query<QueryMangledType>(
-									tsh::SymbolType<>::withDefaults(ctor.target_type)
-								);
-								const auto ctor_suffix = "Hic" + func(ctx, symbol_id) + "E";
-								return mangled_class->valueOrThrow().str() + ctor_suffix;
+					// If the symbol is generated, it has no path.
+					variant_case(defgen::Constructor, ctor) {
+						// The mangled type identifies which type the constructor belongs to (works
+						// for any kind: class, tuple, static array, ...). The infix tag
+						// distinguishes the implicit, default and copy constructors.
+						const auto mangled_type
+							= ctx.query<QueryMangledType>(tsh::SymbolType<>::withDefaults(ctor.type))
+						          ->valueOrThrow()
+						          .str();
+
+						const char* ctor_tag = [&]() -> const char* {
+							switch (ctor.kind) {
+							case defgen::Constructor::Kind::Implicit:
+								return "Hic";
+							case defgen::Constructor::Kind::Default:
+								return "Hdc";
+							case defgen::Constructor::Kind::Copy:
+								return "Hcc";
 							}
-							variant_case(
-								defgen::GeneratedSymbolData::DefaultClassConstructor, ctor
-							) {
-								const auto path_to_class = path(ctx, ctor.class_symbol);
-								const auto ctor_suffix   = "Hdc" + func(ctx, symbol_id) + "E";
-								return path_to_class + ctor_suffix;
-							}
-							variant_case(
-								defgen::GeneratedSymbolData::DefaultStaticArrayConstructor, ctor
-							) {
-								return "Hds"
-								     + ctx.query<QueryMangledType>(
-											  tsh::SymbolType<>::withDefaults(ctor.array_type)
-									 )
-								           ->valueOrThrow()
-								           .str()
-								     + "E";
-							}
-							variant_case(defgen::GeneratedSymbolData::DefaultDestructor, dtor) {
-								// We do not have a reliable "path to type" in this case, so we omit
-								// it. Any ambiguities are solved by the function type anyway.
-								return "Hdd" + func(ctx, symbol_id) + "E";
-							}
-							variant_case(defgen::GeneratedSymbolData::ToStringMethod, to_string) {
-								// We do not have a reliable "path to type" in this case
-								// (esp. for simple types such as i32), so we omit it.
-								// Any ambiguities are solved by the function type anyway.
-								return "HtoString" + func(ctx, symbol_id) + "E";
-							}
-							variant_case(defgen::GeneratedSymbolData::LengthMethod, length_method) {
-								return "Hlength" + func(ctx, symbol_id) + "E";
-							}
-							variant_case(
-								defgen::GeneratedSymbolData::ReplExpressionWrapper, repl_wrapper
-							) {
-								return base::strConcat("__repl_expr_wrapper_", repl_wrapper.counter);
-							}
-							variant_case(
-								defgen::GeneratedSymbolData::ReplInstructionWrapper,
-								repl_instr_wrapper
-							) {
-								return base::strConcat(
-									"__repl_instr_wrapper_", repl_instr_wrapper.counter
-								);
-							}
-							// Other cases of generated symbols cannot be functions.
-						}
+							CORE_UNREACHABLE();
+						}();
+
+						return mangled_type + ctor_tag + func(ctx, symbol_id) + "E";
 					}
+					variant_case(defgen::Method, method) {
+						// We do not have a reliable "path to type" in these cases (esp. for simple
+						// types such as i32), so we omit it. Any ambiguities are solved by the
+						// function type anyway.
+						switch (method.kind) {
+						case defgen::Method::Kind::DefaultDestructor:
+							return "Hdd" + func(ctx, symbol_id) + "E";
+						case defgen::Method::Kind::ToString:
+							return "HtoString" + func(ctx, symbol_id) + "E";
+						case defgen::Method::Kind::LengthMethod:
+							return "Hlength" + func(ctx, symbol_id) + "E";
+						case defgen::Method::Kind::Push:
+							return "Hpush" + func(ctx, symbol_id) + "E";
+						case defgen::Method::Kind::Pop:
+							return "Hpop" + func(ctx, symbol_id) + "E";
+						}
+						CORE_UNREACHABLE();
+					}
+					variant_case(defgen::BoxBuiltin, box) {
+						// We do not have a reliable "path to type" in these cases (esp. for simple
+						// types such as i32), so we omit it. Any ambiguities are solved by the
+						// function type anyway.
+						switch (box.kind) {
+						case defgen::BoxBuiltin::Kind::Alloc:
+							return "Hba" + func(ctx, symbol_id) + "E";
+						case defgen::BoxBuiltin::Kind::Free:
+							return "Hbf" + func(ctx, symbol_id) + "E";
+						}
+						CORE_UNREACHABLE();
+					}
+					variant_case(defgen::ReplExpressionWrapper, repl_wrapper) {
+						return base::strConcat("__repl_expr_wrapper_", repl_wrapper.counter);
+					}
+					variant_case(defgen::ReplInstructionWrapper, repl_instr_wrapper) {
+						return base::strConcat("__repl_instr_wrapper_", repl_instr_wrapper.counter);
+					}
+					// Other cases of generated symbols cannot be functions.
 				}
 				CORE_UNREACHABLE();
 			}
@@ -577,8 +692,6 @@ namespace compiler::helios::mangler {
 			);
 		}
 
-		static std::string mangle(query::Context&, tsh::StringAbstractType) { return "s"; }
-
 		static std::string mangle(query::Context& ctx, tsh::FunctionAbstractType type) {
 			std::stringstream res;
 			res << "F"
@@ -741,8 +854,6 @@ namespace compiler::helios::mangler {
 				return mangle(ctx, type.as<tsh::CPointerAbstractType>());
 			case Slice:
 				return mangle(ctx, type.as<tsh::SliceAbstractType>());
-			case String:
-				return mangle(ctx, type.as<tsh::StringAbstractType>());
 			case Function:
 				return mangle(ctx, type.as<tsh::FunctionAbstractType>());
 			case DynamicArray:

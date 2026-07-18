@@ -33,12 +33,10 @@ namespace compiler::tsl {
 				return PointerTypeLayout(tsh::CPointerAbstractType(key), ctx);
 			case Slice:
 				return ClassTypeLayout(tsh::SliceAbstractType(key), ctx);
-			case String:
-				return StringTypeLayout(key, ctx);
 			case Function:
 				return FunctionalTypeLayout(key, ctx);
 			case DynamicArray:
-				return DynamicArrayTypeLayout(tsh::DynamicArrayAbstractType(key), ctx);
+				return ClassTypeLayout(tsh::DynamicArrayAbstractType(key), ctx);
 			case StaticArray:
 				return StaticArrayTypeLayout(tsh::StaticArrayAbstractType(key), ctx);
 			case Variant:

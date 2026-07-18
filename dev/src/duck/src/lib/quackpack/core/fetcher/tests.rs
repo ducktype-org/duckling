@@ -187,7 +187,7 @@ fn all_metadata_adds_to_cache() {
     assert_eq!(response.packages_metadata.len(), 2);
     let FetcherResponse::Some(fetched_from_cache) = fetcher
         .get_package_metadata(&types::PackageWithUrl {
-            id: "foo".into(),
+            name: "foo".into(),
             version: Version::new(1, 2, 5),
             url: server.base_url().parse().unwrap(),
         })
@@ -206,7 +206,7 @@ fn without_cache_fetch_fails() {
     let fetcher = Fetcher::new(&ctx).unwrap();
     let err = fetcher
         .get_package_metadata(&types::PackageWithUrl {
-            id: "foo".into(),
+            name: "foo".into(),
             version: Version::new(1, 2, 5),
             url: server.base_url().parse().unwrap(),
         })

@@ -65,6 +65,9 @@ namespace lang_def {
 		Switch,
 		Case,
 
+		// Templates:
+		Template,
+
 		// Macro
 		Expand,
 
@@ -111,7 +114,6 @@ namespace lang_def {
 		Char,
 		Bool,
 		Str,
-		BigStr,
 		Type,  // ...
 
 		// @TODO: do we need all of them?
@@ -135,8 +137,6 @@ namespace lang_def {
 		Xor,
 
 		// General text prefix operators (Not doesn't count)
-		Len,  // @TODO: #1970 This being an operator may be temporary. This should probably be
-		      // removed one we can use builtin methods/fields.
 		Ref,
 		Box,
 		Ptr,
@@ -167,6 +167,9 @@ namespace lang_def {
 
 		// BC:
 		BCFunction,
+		BCFfi,
+		BCObject,
+		BCAssertSize,
 		BCType,
 		BCPrimitive,
 		BCPointer,
@@ -191,6 +194,8 @@ namespace lang_def {
 		BCFalse,
 		BCIsConstant,
 		BCInitialValue,
+		BCPacked,
+		BCCPointer,
 		COUNT,
 	};
 

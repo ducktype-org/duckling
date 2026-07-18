@@ -19,7 +19,7 @@ namespace compiler::numeric_value {
 	 * @brief Represents a numeric value representing a numeric literal.
 	 * @TODO: #1498 Add support for f16, f128, i128.
 	 */
-	class NumericValue {
+	class NumericValue final {
 		// @note: std::uint8_t and std::int8_t are used here instead of our `STRONG_TYPEDEF_INT` u8
 		// and i8 so the generic code operating on numeric value won't get too complicated (we would
 		// have to implement basically every numeric trait from the std to include our u8 and i8).
@@ -36,7 +36,7 @@ namespace compiler::numeric_value {
 		 * @brief Template constructor for all types which exist in the Storage variant.
 		 */
 		template<typename T>
-		requires(base::IS_VARIANT_MEMBER_V<T, Storage>) NumericValue(T val): value(val) {}
+		requires(base::IS_VARIANT_MEMBER_V<T, Storage>) constexpr NumericValue(T val): value(val) {}
 
 		/**
 		 * @brief Factory method for creating a NumericValue with the minimal needed type to store
@@ -45,7 +45,7 @@ namespace compiler::numeric_value {
 		 */
 		template<typename T>
 		requires(std::is_arithmetic_v<T>)
-		[[nodiscard]] static NumericValue createMinimized(T value) {
+		[[nodiscard]] static constexpr NumericValue createMinimized(T value) {
 			if constexpr (std::is_integral_v<T>) {
 				// Prioritize signed types as they're more general.
 				// @note: For now, the smallest deduced type is `i32`. We may decide to deduce `i8`

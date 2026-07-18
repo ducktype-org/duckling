@@ -6,7 +6,24 @@ dvm_path: "@{dvm_dir}/VM"
 compile_duckc: "cmake --build @{build_dir} -j -- duckc"
 compile_dvm: "cmake --build @{build_dir} -j -- VM"
 
+expect_output: "python3 @{dev_dir}/integration_tests/helpers/expect_output.py"
+
 is_jit_enabled: "cmake -L -N @{build_dir} | grep JIT_ENABLED | cut -d \"=\" -f 2"
+
+# Platform predicates, evaluated in the shell that runs each command, so they can be interpolated
+# anywhere a value ends up in a command (Run, Enabled, Env, ...), e.g. `[ "@{is_macos}" = true ]`.
+is_macos: "$([ \"$(uname)\" = Darwin ] && echo true || echo false)"
+is_linux: "$([ \"$(uname)\" = Linux ] && echo true || echo false)"
+
+# Per-case temporary environment (opt-in). A subtree that needs a scratch
+# directory defines `Env: { DIT_TMP_DIR: "@{new_tmp_dir}" }` and then uses
+# the helpers below; tests set `tmp_env_files` to the files they need copied.
+new_tmp_dir: "mkdir -p /tmp/dit && realpath $(mktemp -d -p /tmp/dit case-XXXXXXXX)"
+tmp_env_tool: "python3 @{dev_dir}/integration_tests/helpers/tmp_env.py"
+tmp_env_files: ""
+make_tmp_env: "@{tmp_env_tool} make @{tmp_env_files}"
+at_tmp_env: "@{tmp_env_tool} exec --"
+cleanup_tmp_env: "@{tmp_env_tool} clean"
 
 # If JIT is enabled then set timeout to 10s
 timeout_jit: 10
@@ -16,6 +33,7 @@ timeout_default: 2
 TimeOut: "$([ \"$(@{is_jit_enabled})\" = \"ON\" ] && echo @{timeout_jit} || echo @{timeout_default})"
 
 SubDirs:
+    - dit
     - compiler
     - duck
     - repl
@@ -23,3 +41,4 @@ SubDirs:
     - debugger_cli
     - scripts
     - version_0_1
+    - vm

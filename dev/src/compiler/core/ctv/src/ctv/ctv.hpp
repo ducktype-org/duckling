@@ -54,7 +54,8 @@ namespace compiler::ctv {
 		 * @brief Template constructor of CTV for all types which exist in the Storage variant.
 		 */
 		template<typename T>
-		requires(base::IS_VARIANT_MEMBER_V<T, Storage>) CompileTimeValue(T val): value(val) {}
+		requires(base::IS_VARIANT_MEMBER_V<T, Storage>)
+		constexpr CompileTimeValue(T val): value(std::move(val)) {}
 
 		/**
 		 * @brief Returns a constant reference to the CTVs internal value storage.
@@ -79,7 +80,7 @@ namespace compiler::ctv {
 		 */
 		template<typename T>
 		requires(base::IS_VARIANT_MEMBER_V<T, Storage>)
-		[[nodiscard]] base::Optional<T> get() const {
+		[[nodiscard]] constexpr base::Optional<T> get() const {
 			variant_match(value) {
 				variant_case(T, val) { return val; }
 			}
@@ -91,7 +92,7 @@ namespace compiler::ctv {
 		 * @return True, if the value of a given type is stored in the CTV, false otherwise.
 		 */
 		template<typename T>
-		requires(base::IS_VARIANT_MEMBER_V<T, Storage>) [[nodiscard]] bool has() const {
+		requires(base::IS_VARIANT_MEMBER_V<T, Storage>) [[nodiscard]] constexpr bool has() const {
 			return std::holds_alternative<T>(value);
 		}
 
@@ -101,5 +102,12 @@ namespace compiler::ctv {
 		 * @return The type of the value stored in the CTV.
 		 */
 		[[nodiscard]] tsh::SymbolType<> getTypeOfStoredValue(query::Context& ctx) const;
+
+		/**
+		 * @note: This might be a subject of change in the future, especially, when VMValue CTVs
+		 * will be introduced.
+		 */
+		[[nodiscard]]
+		base::Bit256 queryUnstablePerfectHash() const;
 	};
 }

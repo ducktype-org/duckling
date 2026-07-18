@@ -30,7 +30,6 @@ class LowerTypeSystemSimpleTest final: public tester::TestSuite {
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(basicTypesTest);
-		TESTER_ADD_TEST(stringTest);
 		TESTER_ADD_TEST(dynamicArrayTest);
 		TESTER_ADD_TEST(variantTest);
 		TESTER_ADD_TEST(tupleTest);
@@ -189,38 +188,21 @@ private:
 			variant_match(unit_pointer_layout->getVariant()) {
 				variant_case(PointerTypeLayout, l) {
 					assertTrue(l.hasPointee(), "Typed pointer layout should have pointee.");
-					assertTrue(
-						l.getPointee() == unit_layout,
+					assertEqual(
+						*l.getPointee(),
+						*unit_layout,
 						"Pointee should be a layout of the pointed-to type."
 					);
 				}
-				variant_default { fail("Layout of raw pointer type should be pointer-like."); }
+				variant_default { fail("Layout of pointer type should be pointer-like."); }
 			}
 			testPrinting(unit_pointer_layout, ctx);
 		});
 	}
 
-	void stringTest() {
-		withContextDo([&](query::Context& ctx) -> void {
-			const StringAbstractType string_type   = getStringType();
-			auto                     string_layout = queryLayout(ctx, string_type);
-
-			assertTrue(
-				string_layout->getSourceType().getType() == string_type,
-				"Layout should have source type as constructed."
-			);
-			variant_match(string_layout->getVariant()) {
-				variant_case(StringTypeLayout, l) { /* good */ }
-				variant_default { fail("Layout of string type should be string-like."); }
-			}
-			testPrinting(string_layout, ctx, true);
-		});
-	}
-
 	void dynamicArrayTest() {
 		withContextDo([&](query::Context& ctx) -> void {
-			const UnitAbstractType unit_type   = getUnitType();
-			const auto             unit_layout = queryLayout(ctx, unit_type);
+			const UnitAbstractType unit_type = getUnitType();
 
 			const DynamicArrayAbstractType dynamic_array_type
 				= ctx.query<QueryDynamicArrayType>(st(unit_type));
@@ -232,16 +214,17 @@ private:
 				"Layout should have source type as constructed."
 			);
 			variant_match(dynamic_array_layout->getVariant()) {
-				variant_case(DynamicArrayTypeLayout, l) {
-					// Comparison uses dereference because the (cached) layout of the abstract type
-					// will have a different address than the (cached) layout of the symbol type.
+				variant_case(ClassTypeLayout, l) {
 					assertEqual(
-						*l.getElementLayout(),
-						*unit_layout,
-						"Element layout should be the layout of the element type."
+						l.getNumSubLayouts(),
+						usize(4),
+						"Dynamic array layout should have 4 fields (ptr, len, off_start_reserved, "
+						"off_end_reserved)."
 					);
 				}
-				variant_default { fail("Layout of dynamic array type should be array-like."); }
+				variant_default {
+					fail("Layout of dynamic array type should be a class-like struct.");
+				}
 			}
 
 			testPrinting(dynamic_array_layout, ctx, true);

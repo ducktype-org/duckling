@@ -20,7 +20,6 @@
 #include <helios/hout/hout.hpp>
 #include <helios/mangler/mangler.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/tsh/queries.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 #include <tsl/queries.hpp>
@@ -72,8 +71,10 @@ namespace compiler::lir {
 		auto symbol_abi = ctx.query<helios::QuerySymbolABI>(helios_id)->valueOrPanicMsg(
 			"Handling errors in MIR is not supported yet"
 		);
-		auto link_once    = helios::shouldLinkOnce(helios_id);
+		auto link_once    = helios::emissionPolicy(helios_id) == helios::EmissionPolicy::Replicated;
 		auto mangled_name = helios::mangler::getSimpleMangledName(ctx, helios_id);
+		base::Optional<BuiltinFunctionKind> builtin_kind_opt
+			= helios::isBuiltin(helios_id).flatMap(getBuiltinKindFromHOUT);
 
 		auto return_type = mirReturnType2LirLayout(ctx, type.getResultType());
 		std::vector<CRef<tsl::TypeLayout>> parameter_types;
@@ -94,6 +95,7 @@ namespace compiler::lir {
 			.parameter_layouts
 			= std::make_shared<std::vector<CRef<tsl::TypeLayout>>>(std::move(parameter_types)),
 			.return_type_layout = return_type,
+			.builtin_kind_opt   = builtin_kind_opt
 		};
 	}
 
@@ -112,14 +114,10 @@ namespace compiler::lir {
 			return Operation::Assign;
 		case mir::Operation::AddressOf:
 			return Operation::AddressOf;
-		case mir::Operation::BoxAlloc:
-			return Operation::BoxAlloc;
 		case mir::Operation::ListPush:
 			return Operation::ListPush;
 		case mir::Operation::ListPop:
 			return Operation::ListPop;
-		case mir::Operation::ListLen:
-			return Operation::ListLen;
 		case mir::Operation::ZeroInitialize:
 			return Operation::ZeroInitialize;
 
@@ -391,7 +389,7 @@ namespace compiler::lir {
 					mir_to_lir_local.put(&mir_local, locals[local_index]);
 
 					// Only create lifetime flag if needed
-					if (!mir_local.type.hasNoOpDestructor()) {
+					if (!mir_local.type.hasNoOpDestructor(ctx)) {
 						auto lifetime_flag = LIRLocal::boolLocal(ctx);
 						locals.pushBack(lifetime_flag);
 						auto flag_index = locals.lastIndex();
@@ -592,8 +590,6 @@ namespace compiler::lir {
 					break;
 				}
 				case mir::Operation::AddressOf:
-				case mir::Operation::ListLen:
-				case mir::Operation::BoxAlloc:
 				case mir::Operation::IntegerAdd:
 				case mir::Operation::IntegerNeg:
 				case mir::Operation::IntegerSub:
@@ -650,7 +646,8 @@ namespace compiler::lir {
 					);
 					break;
 				}
-				case mir::Operation::DestructIf: {
+				case mir::Operation::DestructIf:
+				case mir::Operation::Destruct: {
 					const auto& to_destruct = mir_instruction.arguments.at(0).get<mir::MIRPlace>();
 					const auto& type        = to_destruct.type;
 
@@ -676,16 +673,24 @@ namespace compiler::lir {
 					// Currently this approach generates a free on every DestructIf if it operates
 					// on a box type (even if the box was moved). This will cause double free's if
 					// the box was moved around between other box variables. In the future we should
-					// insert a proper destructor call here before the FreeBox.
+					// insert a proper destructor call here before the free.
 					if (type.getRefKind() == tsh::ReferenceKind::Box) {
 						auto lir_place = getLocation(to_destruct);
 
-						// FreeBox is discarded if it operates on no information (ex. Unit).
+						// The free is discarded if it operates on no information (ex. Unit).
 						if (lir_place.has_value()) {
+							// Emit a call to the `box_free(b: box T)` builtin, which will be
+							// lowered to deallocation by the backend.
+							const helios::SymID free_sym
+								= helios::boxFreeSymForType(ctx, type.getType());
+							std::vector<LIRValue> call_args;
+							call_args.emplace_back(getFunctionLiteralfromHELIOSID(ctx, free_sym));
+							call_args.emplace_back(lir_place.value());
+
 							curr_block->instructions.emplace_back(
-								Operation::BoxFree,
+								Operation::Call,
 								base::Optional<LIRPlace>{},
-								std::vector{ lir_place.value() },
+								std::move(call_args),
 								mir_instruction.metadata
 							);
 							break;
@@ -855,7 +860,8 @@ namespace compiler::lir {
 				auto [link_once, ignore_on_dvm, ignore_on_llvm] = [&]() {
 					variant_match(key.function->helios_id) {
 						variant_case(mir::FunctionSymID, sym) {
-							bool link_once_val = helios::shouldLinkOnce(sym.id);
+							bool link_once_val = helios::emissionPolicy(sym.id)
+							                  == helios::EmissionPolicy::Replicated;
 							bool ignore_on_dvm_val
 								= helios::hasAttribute<helios::attributes::NativeOnlyImpl>(sym.id);
 							bool ignore_on_llvm_val
