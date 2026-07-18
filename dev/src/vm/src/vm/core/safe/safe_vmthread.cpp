@@ -92,7 +92,7 @@ namespace vm {
 		low::MicroOpcode opcode = getInstructionOpcode(*instr);
 		switch (opcode) {
 		case low::MicroOpcode::breakpoint:
-#ifdef jitLoopEntrypoint
+#ifdef ENABLE_JIT
 			[[fallthrough]];
 		case low::MicroOpcode::jitFuncEntrypoint:
 			[[fallthrough]];
