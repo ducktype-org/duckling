@@ -38,29 +38,28 @@ namespace compiler::helios::mangler {
 
 	using namespace std::literals::string_view_literals;
 
+	void addToHash(hashing::hash_algorithm auto& h, const KeyOf_MangledSymbol& k) RELEASE_NOEXCEPT {
+		addToHash(h, k.symbol_key.index());
+		if (k.symbol_key.index() == 0)
+			addToHash(h, std::get<0>(k.symbol_key));
+		else if (k.symbol_key.index() == 1)
+			addToHash(h, std::get<1>(k.symbol_key));
+		else
+			CORE_PANIC("KeyOf_MangledSymbol has an unexpected symbol_key index");
+
+		addToHash(h, k.kind);
+		addToHash(h, k.mangling_scheme_version);
+		addToHash(h, k.additional_metadata.has_value());
+		if (k.additional_metadata) addToHash(h, k.additional_metadata.value());
+	}
+
+	base::Bit256 KeyOf_MangledSymbol::queryUnstablePerfectHash() const {
+		return hashing::justHash<hashing::SHA256>(*this);
+	}
+
 	namespace internal {
 		static constexpr auto BASE_62_DIGITS
 			= "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"sv;
-
-		void addToHash(hashing::hash_algorithm auto& h, const KeyOf_MangledSymbol& k)
-			RELEASE_NOEXCEPT {
-			addToHash(h, k.symbol_key.index());
-			if (k.symbol_key.index() == 0)
-				addToHash(h, std::get<0>(k.symbol_key));
-			else if (k.symbol_key.index() == 1)
-				addToHash(h, std::get<1>(k.symbol_key));
-			else
-				CORE_PANIC("KeyOf_MangledSymbol has an unexpected symbol_key index");
-
-			addToHash(h, k.kind);
-			addToHash(h, k.mangling_scheme_version);
-			addToHash(h, k.additional_metadata.has_value());
-			if (k.additional_metadata) addToHash(h, k.additional_metadata.value());
-		}
-
-		base::Bit256 KeyOf_MangledSymbol::queryUnstablePerfectHash() const {
-			return hashing::justHash<hashing::SHA256>(*this);
-		}
 
 		/**
 		 * @brief Check if the symbol should be mangled in the first place.
@@ -499,7 +498,7 @@ namespace compiler::helios::mangler {
 		static std::string mangle(query::Context&, tsh::IntegralAbstractType type) {
 			const bool is_signed
 				= type.getSignedness() == tsh::IntegralAbstractType::Signedness::Signed;
-			const u32   size = type.getSize().asInt();
+			const auto  size = type.getSize().asInt();
 			std::string ret  = (is_signed ? "i" : "j");
 			switch (size) {
 			case 8:
@@ -647,9 +646,7 @@ namespace compiler::helios::mangler {
 			}
 		}
 
-		static std::string mangleValue(
-			query::Context& ctx, compiler::numeric_value::NumericValue num
-		) {
+		static std::string mangleValue(query::Context&, compiler::numeric_value::NumericValue num) {
 			static constexpr auto HEX_DIGITS = "0123456789abcdef";
 			const auto&           value      = num.getStorage();
 			// int8_t, i16, i32, i64, uint8_t, u16, u32, u64, f32, f64
@@ -781,7 +778,7 @@ namespace compiler::helios::mangler {
 		}
 
 		QUERY_AUTO_CACHE_CREF
-	}
+	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryMangledType);
 
