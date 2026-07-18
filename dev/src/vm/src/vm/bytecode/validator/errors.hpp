@@ -502,6 +502,9 @@ namespace vm::code {
 	DEFINE_INSTRUCTION_ERROR(
 		PointerTypeMismatchError, "Pointer type does not match the expected type."
 	);
+	DEFINE_INSTRUCTION_ERROR(
+		CPointerTypeMismatchError, "C pointer type does not match the expected type."
+	);
 	DEFINE_INSTRUCTION_ERROR(FieldTypeMismatchError, "Field type does not match the expected type.");
 	DEFINE_INSTRUCTION_ERROR(
 		InvalidVirtualCallError, "Provided method does not exists for a given argument."

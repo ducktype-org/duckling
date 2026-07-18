@@ -62,7 +62,7 @@ fn try_parse_inner(path: PathBuf, ctx: &DuckContext) -> QuackResult<Option<Front
         return Ok(None);
     };
     let frontmatter = parse(&schema, &path, ParseMode::FrontMatterScript, ctx)?;
-    Ok(Some(FrontMatterScript::new(path, schema, frontmatter)))
+    Ok(Some(FrontMatterScript::new(path, schema, frontmatter)?))
 }
 
 /// Helper for [`_try_parse_frontmatter`].

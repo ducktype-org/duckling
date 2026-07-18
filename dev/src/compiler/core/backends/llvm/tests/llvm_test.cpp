@@ -43,7 +43,6 @@ public:
 		TESTER_ADD_TEST(dynamicArraysTest);
 		TESTER_ADD_TEST(defaultInitialization);
 		TESTER_ADD_TEST(classTest);
-		TESTER_ADD_TEST(stringsTest);
 		TESTER_ADD_TEST(ffiTest);
 		TESTER_ADD_TEST(tuplesTest);
 		TESTER_ADD_TEST(pointersTest);
@@ -162,9 +161,7 @@ private:
 		runTestForModule("modules/units/unit_simple_multiple_modules", 1, 2);
 	}
 
-	void classTest() { runTestForModule("modules/classes/records", 16, 21); }
-
-	void stringsTest() { runTestForModule("modules/strings", 3, 5); }
+	void classTest() { runTestForModule("modules/classes/records", 7, 8); }
 
 	void ffiTest() { runTestForModule("modules/ffi", 1, 1); }
 

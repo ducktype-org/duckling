@@ -32,7 +32,6 @@ public:
 		TESTER_ADD_TEST(addPrimitives);
 		TESTER_ADD_TEST(voidAndStateReadback);
 		TESTER_ADD_TEST(smallIntReturnWidening);
-		TESTER_ADD_TEST(cptrRoundTripThroughC);
 		TESTER_ADD_TEST(cptrCopyBuiltins);
 		TESTER_ADD_TEST(cptrStructField);
 		TESTER_ADD_TEST(cptrCopyIntoStructField);
@@ -61,6 +60,10 @@ public:
 		TESTER_ADD_TEST(packedStructInFfiFails);
 		TESTER_ADD_TEST(packedStructWithMatchingLayoutStillFails);
 		TESTER_ADD_TEST(packedStructSize);
+		TESTER_ADD_TEST(typedCPointerStructFieldThroughC);
+		TESTER_ADD_TEST(forwardDeclaredPointee);
+		TESTER_ADD_TEST(cpointerToUnknownTypeFails);
+		TESTER_ADD_TEST(movPcptStrictnessFails);
 		TESTER_ADD_TEST(duplicateFfiFunctionFails);
 		TESTER_ADD_TEST(assertSizeMatches);
 		TESTER_ADD_TEST(assertSizeMismatchFails);
@@ -160,36 +163,6 @@ private:
 		);
 	}
 
-	void cptrRoundTripThroughC() {
-		runProgram(
-			"cptr_c",
-			ffiObjectHeader()
-				+ "ffi function ffi_alloc8 { } -> { cptr };\n"
-				  "ffi function ffi_fill8 { cptr, i64 } -> { };\n"
-				  "ffi function ffi_read8 { cptr } -> { i64 };\n"
-				  "ffi function ffi_free8 { cptr } -> { };\n"
-				  "function main { i64, ptr_argv } -> { i64 } {\n"
-				  "    init_pany_type buf, cptr;\n"
-				  "    call_ffifunc ffi_alloc8;\n"
-				  "    init_pany_type buf2, cptr;\n"
-				  "    mov_popq_popq buf2, buf;\n"
-				  "    init_pany_type v, i64;\n"
-				  "    mov_p64_imm v, 777;\n"
-				  "    call_ffifunc ffi_fill8;\n"
-				  "    init_pany_type res, i64;\n"
-				  "    init_pany_type buf3, cptr;\n"
-				  "    mov_popq_popq buf3, buf;\n"
-				  "    call_ffifunc ffi_read8;\n"
-				  "    output_p64 res;\n"
-				  "    init_pany_type buf4, cptr;\n"
-				  "    mov_popq_popq buf4, buf;\n"
-				  "    call_ffifunc ffi_free8;\n"
-				  "    ret;\n"
-				  "}\n",
-			"777"
-		);
-	}
-
 	void cptrCopyBuiltins() {
 		runProgram(
 			"cptr_copy",
@@ -204,7 +177,7 @@ private:
 				  "    init_pany_type vp, ptr_i64;\n"
 				  "    ref_pptr_pany vp, v;\n"
 				  "    init_pany_type buf_w, cptr;\n"
-				  "    mov_popq_popq buf_w, buf;\n"
+				  "    mov_pcpt_pcpt buf_w, buf;\n"
 				  "    init_pany_type vp2, ptr_i64;\n"
 				  "    mov_pptr_pptr vp2, vp;\n"
 				  "    init_pany_type sz_w, i64;\n"
@@ -214,7 +187,7 @@ private:
 				  "    init_pany_type op, ptr_i64;\n"
 				  "    ref_pptr_pany op, out;\n"
 				  "    init_pany_type buf_r, cptr;\n"
-				  "    mov_popq_popq buf_r, buf;\n"
+				  "    mov_pcpt_pcpt buf_r, buf;\n"
 				  "    init_pany_type op2, ptr_i64;\n"
 				  "    mov_pptr_pptr op2, op;\n"
 				  "    init_pany_type sz_r, i64;\n"
@@ -222,7 +195,7 @@ private:
 				  "    call_builtinfunc builtin_cptr_read_pptr;\n"
 				  "    output_p64 out;\n"
 				  "    init_pany_type buf_f, cptr;\n"
-				  "    mov_popq_popq buf_f, buf;\n"
+				  "    mov_pcpt_pcpt buf_f, buf;\n"
 				  "    call_ffifunc ffi_free8;\n"
 				  "    ret;\n"
 				  "}\n",
@@ -244,12 +217,12 @@ private:
 				  "    init_pany_type buf, cptr;\n"
 				  "    call_ffifunc ffi_alloc8;\n"
 				  "    init_pany_type buf2, cptr;\n"
-				  "    mov_popq_popq buf2, buf;\n"
+				  "    mov_pcpt_pcpt buf2, buf;\n"
 				  "    init_pany_type v, i64;\n"
 				  "    mov_p64_imm v, 30;\n"
 				  "    call_ffifunc ffi_fill8;\n"
 				  "    init_pany_type bufc, cptr;\n"
-				  "    mov_popq_popq bufc, buf;\n"
+				  "    mov_pcpt_pcpt bufc, buf;\n"
 				  "    init_pany_type v2, i64;\n"
 				  "    mov_p64_imm v2, 12;\n"
 				  "    init_pany_type res, i64;\n"
@@ -259,7 +232,7 @@ private:
 				  "    call_ffifunc ffi_cpair_sum;\n"
 				  "    output_p64 res;\n"
 				  "    init_pany_type buf_f, cptr;\n"
-				  "    mov_popq_popq buf_f, buf;\n"
+				  "    mov_pcpt_pcpt buf_f, buf;\n"
 				  "    call_ffifunc ffi_free8;\n"
 				  "    ret;\n"
 				  "}\n",
@@ -281,7 +254,7 @@ private:
 				  "    init_pany_type buf, cptr;\n"
 				  "    call_ffifunc ffi_alloc8;\n"
 				  "    init_pany_type buf2, cptr;\n"
-				  "    mov_popq_popq buf2, buf;\n"
+				  "    mov_pcpt_pcpt buf2, buf;\n"
 				  "    init_pany_type v, i64;\n"
 				  "    mov_p64_imm v, 4242;\n"
 				  "    call_ffifunc ffi_fill8;\n"
@@ -289,7 +262,7 @@ private:
 				  "    init_pany_type bp, ptr_i64;\n"
 				  "    structLea_pptr_pste_field bp, s, Pair.b;\n"
 				  "    init_pany_type buf_r, cptr;\n"
-				  "    mov_popq_popq buf_r, buf;\n"
+				  "    mov_pcpt_pcpt buf_r, buf;\n"
 				  "    init_pany_type bp2, ptr_i64;\n"
 				  "    mov_pptr_pptr bp2, bp;\n"
 				  "    init_pany_type sz, i64;\n"
@@ -299,7 +272,7 @@ private:
 				  "    structLoad_pany_pste_field out, s, Pair.b;\n"
 				  "    output_p64 out;\n"
 				  "    init_pany_type buf_f, cptr;\n"
-				  "    mov_popq_popq buf_f, buf;\n"
+				  "    mov_pcpt_pcpt buf_f, buf;\n"
 				  "    call_ffifunc ffi_free8;\n"
 				  "    ret;\n"
 				  "}\n",
@@ -323,7 +296,7 @@ private:
 				  "    init_pany_type bp, ptr_i64;\n"
 				  "    structLea_pptr_pste_field bp, s, Pair.b;\n"
 				  "    init_pany_type buf_w, cptr;\n"
-				  "    mov_popq_popq buf_w, buf;\n"
+				  "    mov_pcpt_pcpt buf_w, buf;\n"
 				  "    init_pany_type bp2, ptr_i64;\n"
 				  "    mov_pptr_pptr bp2, bp;\n"
 				  "    init_pany_type sz, i64;\n"
@@ -895,6 +868,126 @@ private:
 			"assert_ptr",
 			"type data: Holder { p: ptr_i64 } assert_size 8\n",
 			{ "depends on the pointer width" }
+		);
+	}
+
+	// A typed cpointer crosses the FFI boundary like the builtin `cptr` (the pointee type only
+	// exists on the VM side), both as a bare argument/result and as a by-value struct field; C
+	// writes through the pointer.
+	void typedCPointerStructFieldThroughC() {
+		runProgram(
+			"typed_cpointer_struct",
+			ffiObjectHeader()
+				+ "type cpointer: I64Ptr i64\n"
+				  "type data: Tagged { p: I64Ptr, tag: i64 } assert_size 16\n"
+				  "ffi function ffi_alloc8 { } -> { I64Ptr };\n"
+				  "ffi function ffi_tagged_store { Tagged } -> { };\n"
+				  "ffi function ffi_read8 { I64Ptr } -> { i64 };\n"
+				  "ffi function ffi_free8 { I64Ptr } -> { };\n"
+				  "function main { i64, ptr_argv } -> { i64 } {\n"
+				  "    init_pany_type buf, I64Ptr;\n"
+				  "    call_ffifunc ffi_alloc8;\n"
+				  "    init_pany_type bufc, I64Ptr;\n"
+				  "    mov_pcpt_pcpt bufc, buf;\n"
+				  "    init_pany_type tag, i64;\n"
+				  "    mov_p64_imm tag, 42;\n"
+				  "    init_pany_type t, Tagged;\n"
+				  "    structStore_pste_pany_field t, bufc, Tagged.p;\n"
+				  "    structStore_pste_pany_field t, tag, Tagged.tag;\n"
+				  "    call_ffifunc ffi_tagged_store;\n"
+				  "    init_pany_type res, i64;\n"
+				  "    init_pany_type buf2, I64Ptr;\n"
+				  "    mov_pcpt_pcpt buf2, buf;\n"
+				  "    call_ffifunc ffi_read8;\n"
+				  "    output_p64 res;\n"
+				  "    init_pany_type buf3, I64Ptr;\n"
+				  "    mov_pcpt_pcpt buf3, buf;\n"
+				  "    call_ffifunc ffi_free8;\n"
+				  "    ret;\n"
+				  "}\n",
+			"42"
+		);
+	}
+
+	// A cpointer never recurses into its pointee, covering the C handle idiom (e.g. `FILE*`:
+	// the pointee is an opaque type that is never inspected) and the linked-list idiom (a
+	// structure containing a cpointer to itself, declared before the structure).
+	void forwardDeclaredPointee() {
+		runProgram(
+			"forward_declared_pointee",
+			ffiObjectHeader()
+				+ "type opaque: Handle 8\n"
+				  "type cpointer: HandlePtr Handle\n"
+				  "type cpointer: NodePtr Node\n"
+				  "type data: Node { next: NodePtr, v: i64 } assert_size 16\n"
+				  "ffi function ffi_alloc8 { } -> { HandlePtr };\n"
+				  "ffi function ffi_free8 { HandlePtr } -> { };\n"
+				  "function main { i64, ptr_argv } -> { i64 } {\n"
+				  "    init_pany_type h, HandlePtr;\n"
+				  "    call_ffifunc ffi_alloc8;\n"
+				  "    init_pany_type h2, HandlePtr;\n"
+				  "    mov_pcpt_pcpt h2, h;\n"
+				  "    call_ffifunc ffi_free8;\n"
+				  "    init_pany_type ok, i64;\n"
+				  "    mov_p64_imm ok, 1;\n"
+				  "    output_p64 ok;\n"
+				  "    ret;\n"
+				  "}\n",
+			"1"
+		);
+	}
+
+	void cpointerToUnknownTypeFails() {
+		expectLoadError(
+			"cpointer_unknown_inner",
+			"type cpointer: BadPtr NoSuchType\n",
+			{ "subtype is not defined", "NoSuchType" }
+		);
+	}
+
+	// `mov_pcpt_pcpt` requires identical types on both sides: no implicit pointee change, no
+	// mixing the builtin `cptr` (unknown pointee) with a typed cpointer, distinct names stay
+	// distinct even with the same pointee, and non-cpointer operands are rejected outright.
+	void movPcptStrictnessFails() {
+		auto expect_mov_error = [&](const std::string& name,
+		                            const std::string& types,
+		                            const std::string& a_type,
+		                            const std::string& b_type,
+		                            std::string_view   keyword) {
+			expectLoadError(
+				name,
+				types + "function main { i64, ptr_argv } -> { i64 } {\n"
+				      + "    init_pany_type a, " + a_type + ";\n"
+				      + "    init_pany_type b, " + b_type + ";\n"
+				      + "    mov_pcpt_pcpt a, b;\n"
+				        "    ret;\n"
+				        "}\n",
+				{ keyword }
+			);
+		};
+		expect_mov_error(
+			"mov_pcpt_across_types",
+			"type cpointer: APtr i64\ntype cpointer: BPtr i32\n",
+			"APtr",
+			"BPtr",
+			"C pointer type does not match"
+		);
+		expect_mov_error(
+			"mov_pcpt_cptr_to_typed",
+			"type cpointer: APtr i64\n",
+			"APtr",
+			"cptr",
+			"C pointer type does not match"
+		);
+		expect_mov_error(
+			"mov_pcpt_same_pointee",
+			"type cpointer: APtr i64\ntype cpointer: BPtr i64\n",
+			"APtr",
+			"BPtr",
+			"C pointer type does not match"
+		);
+		expect_mov_error(
+			"mov_pcpt_non_cpointer", "", "i64", "i64", "Invalid instruction argument type"
 		);
 	}
 

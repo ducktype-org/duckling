@@ -59,6 +59,15 @@ void valid_type::ValidType::definePointer(ValidTypeID inner) {
 	}
 }
 
+void valid_type::ValidType::defineCPointer(const base::Optional<ValidTypeID>& inner) {
+	variant_match(state) {
+		variant_case_novalue(ValidType::Declared) {
+			state = Defined{ .kind = defined::DefinedCPointer{ .inner = inner } };
+		}
+		variant_default { CORE_PANIC("Bad type define: type already defined or finalized"); }
+	}
+}
+
 void valid_type::ValidType::defineFixedSizeTable(ValidTypeID inner, usize element_count) {
 	variant_match(state) {
 		variant_case_novalue(ValidType::Declared) {
@@ -374,6 +383,14 @@ void valid_type::ValidType::finalize(ValidTypeMap& types) {
 			this->is_trivially_copyable = false;
 			state                       = Finalized{ .kind = finalized::Pointer{ pointer.inner } };
 		}
+		variant_case(defined::DefinedCPointer, cpointer) {
+			// A raw native address: 8 bytes in both pointer modes (unlike `Pointer`, which is a
+			// fat block reference in the safe mode).
+			this->size = this->alignment = valid_type::TypeSize(Bytes(8), 0);
+			this->is_trivially_copyable  = true;
+			this->is_ffi_compliant       = true;
+			state = Finalized{ .kind = finalized::CPointer{ .inner = cpointer.inner } };
+		}
 		variant_case(defined::DefinedFixedSizeTable, fixed_size_table) {
 			auto inner_type = types.at(fixed_size_table.inner);
 			inner_type->finalize(types);
@@ -401,10 +418,7 @@ void valid_type::ValidType::finalize(ValidTypeMap& types) {
 			this->size                  = valid_type::TypeSize(opaque.size, 0);
 			this->alignment             = valid_type::TypeSize(naturalAlignment(opaque.size), 0);
 			this->is_trivially_copyable = true;
-			// @TODO: #3091 The builtin `cptr` opaque is the only opaque mapping to a C pointer;
-			// replace this name check with the cpointer type kind.
-			this->is_ffi_compliant = name == base::StrID("cptr");
-			state                  = Finalized{ .kind = finalized::Opaque{ opaque.size } };
+			state                       = Finalized{ .kind = finalized::Opaque{ opaque.size } };
 		}
 		variant_case(defined::DefinedFunction, function) {
 			// Function type size is known, so we don't need to do anything here.
@@ -511,6 +525,11 @@ void valid_type::ValidType::finalizeInstantiability(ValidTypeMap& types) {
 		variant_case_novalue(finalized::Primitive) { is_instantiable = true; }
 		variant_case_novalue(finalized::Pointer) {
 			// Any pointer is instantiable.
+			is_instantiable = true;
+		}
+		variant_case_novalue(finalized::CPointer) {
+			// A C pointer is a plain 8-byte value; the pointee (even a forward-declared one)
+			// never affects instantiability.
 			is_instantiable = true;
 		}
 		variant_case(finalized::FixedSizeTable, fixed_size_table) {

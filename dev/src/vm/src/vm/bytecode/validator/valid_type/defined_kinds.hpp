@@ -36,6 +36,14 @@ namespace vm::code::valid_type {
 		};
 
 		/**
+		 * @brief C pointer type representation. An absent inner means an unknown pointee (C's
+		 * `void*`).
+		 */
+		struct DefinedCPointer final {
+			base::Optional<ValidTypeID> inner;
+		};
+
+		/**
 		 * @brief Fixed-size table type representation.
 		 */
 		struct DefinedFixedSizeTable final {
@@ -135,10 +143,10 @@ namespace vm::code::valid_type {
 		};
 	}
 
-#define DEFINED_TYPE_LIST                                                                 \
-	defined::DefinedPrimitive, defined::DefinedPointer, defined::DefinedFixedSizeTable,   \
-		defined::DefinedDynamicTable, defined::DefinedStructure, defined::DefinedVariant, \
-		defined::DefinedFunction, defined::DefinedOpaque
+#define DEFINED_TYPE_LIST                                                                        \
+	defined::DefinedPrimitive, defined::DefinedPointer, defined::DefinedCPointer,                \
+		defined::DefinedFixedSizeTable, defined::DefinedDynamicTable, defined::DefinedStructure, \
+		defined::DefinedVariant, defined::DefinedFunction, defined::DefinedOpaque
 
 	template<class T>
 	concept DefinedType = base::IsOneOf<T, DEFINED_TYPE_LIST>;

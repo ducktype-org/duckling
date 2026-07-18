@@ -50,7 +50,7 @@ namespace allocation {
     }
 }
 
-class DuckString {
+class String {
     pointer: manyptr char;
     len: u64;
     cap: u64;
@@ -73,13 +73,14 @@ class DuckString {
         }
     }
 
-    fun append(c: char) -> () = {
+    fun append(c: char) -> ref String = {
         reserve(len + 1u64);
         pointer[i64(len)] = c;
         len               = len + 1u64;
+        return self;
     }
 
-    fun append(other: ref DuckString) -> () = {
+    fun append(other: ref String) -> ref String = {
         let other_len = other.length();
         reserve(len + other_len);
 
@@ -87,16 +88,24 @@ class DuckString {
         # the buffer `other` refers to when both are the same string.
         copyCharsAt(other.pointer, pointer, len, other_len);
         len = len + other_len;
+        return self;
     }
 
-    fun append(other: str) -> () = {
+    fun append(other: String) -> ref String = {
+        append(&other);
+        other.dispose();
+        return self;
+    }
+
+    fun append(other: str) -> ref String = {
         let other_len = other.length();
         reserve(len + other_len);
         copyCharsAt(builtins.char_ptr_from_slice(other), pointer, len, other_len);
         len = len + other_len;
+        return self;
     }
 
-    fun prepend(c: char) -> () = {
+    fun prepend(c: char) -> ref String = {
         reserve(len + 1u64);
 
         # Shift right back to front, so moved characters are never clobbered.
@@ -107,6 +116,7 @@ class DuckString {
         }
         pointer[0] = c;
         len        = len + 1u64;
+        return self;
     }
 
     #{
@@ -127,13 +137,7 @@ class DuckString {
     }
 
     fun length() -> u64 = len;
-
-    #{
-        `toCString` is missing on purpose. It has to hand out a `cptr char`, and
-        DVM code generation rejects `cptr` anywhere in a module, so having it
-        here would make `core.containers` uncompilable for the DVM. Reintroduce
-        it once the DVM supports C pointers.
-    #}
+    
     fun asSlice() -> str = {
         return builtins.char_slice_from_ptr_len(pointer, len);
     }
@@ -142,21 +146,27 @@ class DuckString {
         if (i < 0i64 or i >= i64(len)) panicking.panic();
         return &pointer[i];
     }
-}
 
-fun print(s: ref DuckString) -> u64 = {
-    var i = 0u64;
-    while (i < s.length()) {
-        builtins.builtin_output_char(s.at(i as i64));
-        i = i + 1u64;
+    fun toString() -> String = {
+        return copy *(self as ptr String);
     }
-    return i;
+
+    String.copy(other: const ref String) = {
+        var result = stringReserve(other.length());
+        copyChars(other.pointer, result.pointer, other.length());
+        result.len = other.length();
+        return move result;
+    }
+
+    String.destroy() = {
+        allocation.free(pointer);   
+    }
 }
 
-fun duckStringReserve(cap: u64) -> DuckString = {
-    var result: DuckString;
+fun stringReserve(cap: u64) -> String = {
+    var result: String;
     result.reserve(cap);
-    return result;
+    return move result;
 }
 
 fun copyCharsAt(source: manyptr char, dest: manyptr char, dest_offset: u64, count: u64) -> () = {
@@ -172,22 +182,68 @@ fun copyChars(source: manyptr char, dest: manyptr char, count: u64) -> () = {
     copyCharsAt(source, dest, 0u64, count);
 }
 
-fun stringifyStr(x: str) -> DuckString = {
+fun ++(a: String, b: String) -> String = {
+    var result = stringReserve(a.length() + b.length());
+    result.append(&a);
+    result.append(&b);
+    a.dispose();
+    b.dispose();
+    return move result;
+}
+
+fun ++(a: ref String, b: ref String) -> String = {
+    var result = stringReserve(a.length() + b.length());
+    result.append(&a);
+    result.append(&b);
+    return move result;
+}
+
+fun +:(c: char, s: String) -> String = {
+    var result = stringReserve(s.length() + 1u64);
+    result.append(c);
+    result.append(&s);
+    s.dispose();
+    return move result;
+}
+
+fun +:(c: char, s: ref String) -> String = {
+    var result = stringReserve(s.length() + 1u64);
+    result.append(c);
+    result.append(&s);
+    return move result;
+}
+
+fun :+(s: String, c: char) -> String = {
+    var result = stringReserve(s.length() + 1u64);
+    result.append(&s);
+    result.append(c);
+    s.dispose();
+    return move result;
+}
+
+fun :+(s: ref String, c: char) -> String = {
+    var result = stringReserve(s.length() + 1u64);
+    result.append(&s);
+    result.append(c);
+    return move result;
+}
+
+fun stringifyStr(x: str) -> String = {
     let size   = x.length();
-    var result = duckStringReserve(size);
+    var result = stringReserve(size);
     copyChars(builtins.char_ptr_from_slice(x), result.pointer, size);
     result.len = size;
-    return result;
+    return move result;
 }
 
-fun stringifyChar(x: char) -> DuckString = {
-    var result        = duckStringReserve(1u64);
+fun stringifyChar(x: char) -> String = {
+    var result        = stringReserve(1u64);
     result.pointer[0] = x;
     result.len        = 1u64;
-    return result;
+    return move result;
 }
 
-fun stringifyBool(x: bool) -> DuckString = {
+fun stringifyBool(x: bool) -> String = {
     if (x) return stringifyStr("true");
     return stringifyStr("false");
 }
@@ -196,24 +252,24 @@ fun stringifyBool(x: bool) -> DuckString = {
 # NUL, so `buffer_cap` is the total buffer size: it fits at most `buffer_cap - 1`
 # characters. 21 bytes hold the 20-character extremes of `i64`/`u64` plus the NUL, and
 # `%g` never exceeds that for a double.
-fun stringifyI64(x: i64) -> DuckString = {
+fun stringifyI64(x: i64) -> String = {
     let buffer_cap = 21u64;
-    var result     = duckStringReserve(buffer_cap);
+    var result     = stringReserve(buffer_cap);
     result.len     = runtime.i64_to_string(x, result.pointer, buffer_cap);
-    return result;
+    return move result;
 }
 
-fun stringifyU64(x: u64) -> DuckString = {
+fun stringifyU64(x: u64) -> String = {
     let buffer_cap = 21u64;
-    var result     = duckStringReserve(buffer_cap);
+    var result     = stringReserve(buffer_cap);
     result.len     = runtime.u64_to_string(x, result.pointer, buffer_cap);
-    return result;
+    return move result;
 }
 
-fun stringifyF64(x: f64) -> DuckString = {
+fun stringifyF64(x: f64) -> String = {
     let buffer_cap = 21u64;
-    var result     = duckStringReserve(buffer_cap);
+    var result     = stringReserve(buffer_cap);
     result.len     = runtime.float_to_string(x, result.pointer, buffer_cap);
-    return result;
+    return move result;
 }
 
