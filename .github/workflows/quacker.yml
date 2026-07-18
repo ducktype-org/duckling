@@ -10,6 +10,8 @@ on:
     types: [labeled]                    # "quacker" label on an issue starts a task
   issue_comment:
     types: [created]                    # "@quacker-bot" mentioned on a PR gets a reply
+  pull_request_review_comment:
+    types: [created]
   workflow_run:
     workflows: [tests, linter, rust]    # failed CI on a bot branch triggers a self-fix
     types: [completed]
