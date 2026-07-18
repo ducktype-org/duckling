@@ -8,8 +8,6 @@ name: Quacker
 on:
   issues:
     types: [labeled]                    # "quacker" label on an issue starts a task
-  pull_request:
-    types: [opened, ready_for_review]   # a human's PR gets an automatic review
   issue_comment:
     types: [created]                    # "@quacker-bot" mentioned on a PR gets a reply
   workflow_run:
