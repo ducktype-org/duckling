@@ -8,9 +8,12 @@
 #include "lir/lir_structure/lir_structure.hpp"
 
 #include <backends/dvm/dvm_backend.hpp>
+#include <helios/symbols/symbol_abi.hpp>
 #include <helios/tsh/types.hpp>
 #include <helios_private/comp_time/comptime_type_operations.hpp>
+#include <tsl/queries.hpp>
 
+#include <base/collections/stable_container.hpp>
 #include <base/except/exceptions.hpp>
 
 #include "vm/core/vmvalue/vmvalueref.hpp"
@@ -95,11 +98,120 @@ namespace {
 	};
 
 	/**
+	 * @brief Materializes an aggregate CTV (e.g. a char-slice or String) as an owned VmValue by
+	 * letting the DVM backend lower it.
+	 *
+	 * Aggregate values are not representable as a single scalar written with `writeBytes`: their VM
+	 * layout is a struct that references backing globals (the character content). Instead of
+	 * re-implementing that lowering here, we synthesize a nullary function `fun anon() -> T = {ctv}`
+	 * in LIR and hand it to the incremental code builder. Lowering the `return` of a `LIRConstant`
+	 * runs the exact same `CTVLowering` path used for regular code, which emits the content globals
+	 * for us. Running the function then yields the fully-formed VM value.
+	 *
+	 * The VM owns the value returned by the call (its lifetime is tied to the process), so we copy
+	 * its bytes into a caller-owned `Box` that can be passed as an argument and freed independently.
+	 * The copied struct still references the content globals, which live for the whole process.
+	 */
+	std::expected<Box<vm::VmValue>, VmEvaluationError> materializeAggregateCtv(
+		query::Context&                    ctx,
+		CompTimeDVM&                       comptime_dvm,
+		const CompileTimeValue&            ctv,
+		const compiler::tsh::SymbolType<>& value_type
+	) {
+		static std::atomic<u64> anon_counter{ 0 };
+
+		vm::PID     pid        = *comptime_dvm.getPID();
+		const auto& layout     = ctx.query<tsl::QuerySymbolTypeLayout>(value_type)->valueOrThrow();
+		auto        layout_ref = CRef<tsl::TypeLayout>(&layout);
+
+		// Build `fun anon() -> value_type = return {ctv};`.
+		lir::Block entry_block;
+		entry_block.terminator = lir::Instruction{
+			lir::Operation::ReturnValue,
+			{},
+			{ lir::LIRValue{ lir::LIRConstant{ ctv, layout_ref } } },
+			{},
+		};
+
+		base::StableVector<lir::Block> blocks;
+		blocks.emplaceBack(std::move(entry_block));
+		lir::BlockRef entry_block_ref = blocks.last();
+
+		base::StrID func_name
+			= base::StrID(base::strConcat("comptime_ctv_arg_", anon_counter.fetch_add(1)));
+
+		lir::Function func{
+			.mangled_name       = func_name,
+			.abi                = helios::DefaultAbi{},
+			.link_once          = false,
+			.ignore_on_dvm      = false,
+			.ignore_on_llvm     = true,
+			.parameter_layouts  = {},
+			.return_type_layout = layout_ref,
+			.blocks             = std::move(blocks),
+			.local_list         = {},
+			.block_order        = { entry_block_ref },
+			.metadata           = { .position = {}, .source_code_name = {} },
+		};
+
+		lir::LIRUnit unit;
+		unit.lir_functions.emplace_back(&func);
+
+		if (auto res = comptime_dvm.loadCode(ctx, unit); !res) return std::unexpected(res.error());
+
+		auto maybe_exit_value = vm::api::runFunctionAwait(pid, func_name.str());
+		if (!maybe_exit_value.has_value())
+			return std::unexpected(VmEvaluationError(
+				VmEvaluationError::Kind::FunctionRunFailed,
+				base::strConcat(
+					"Failed to run a function '", func_name, "' on VM. Reason: `",
+					errorToString(maybe_exit_value.error())
+				)
+			));
+
+		Ref<vm::VmValue> returned = [&]() -> Ref<vm::VmValue> {
+			variant_match(maybe_exit_value.value()) {
+				variant_case(std::vector<Ref<vm::VmValue>>, values) {
+					CORE_ASSERT(values.size() == 1, "Expected a single materialized CTV value.");
+					return values.at(0);
+				}
+				variant_default {
+					CORE_PANIC("Unexpected non-vector return value when materializing a CTV.");
+				}
+			}
+			CORE_UNREACHABLE();
+		}();
+
+		// Obtain a caller-owned value of the same type and copy the materialized bytes into it.
+		auto mangled_type_name = ctx.query<mangler::QueryMangledType>(value_type)->valueOrThrow();
+		auto owned_response    = vm::api::getVmValue(pid, mangled_type_name.str());
+		if (!owned_response.has_value())
+			return std::unexpected(VmEvaluationError(
+				VmEvaluationError::Kind::ArgConversionFailed,
+				base::strConcat(
+					"Failed to allocate an owned VM value for '", mangled_type_name.strView(), "'."
+				)
+			));
+		auto owned = std::move(owned_response->vm_value);
+
+		CORE_ASSERT(
+			owned->type->getSize() == returned->type->getSize(),
+			"Mismatched sizes when copying a materialized CTV value."
+		);
+		// A refcount-aware deep copy: the struct's pointer field references the content block
+		// (owned by a global), so we must go through `copyPointedData` to bump its refcount.
+		// A raw byte copy would leave the later `freeData` decrementing an unincremented block.
+		owned->importData(returned->pointer);
+
+		return owned;
+	}
+
+	/**
 	 * @brief Converts a given `ctv` to VmValue.
 	 * @return The converted VmValue or a VmEvaluationError if the conversion failed.
 	 */
 	std::expected<Box<vm::VmValue>, VmEvaluationError> ctvToVmValue(
-		CompTimeDVM& comptime_dvm, const CompileTimeValue& ctv
+		query::Context& ctx, CompTimeDVM& comptime_dvm, const CompileTimeValue& ctv
 	) {
 		auto get_vm_value
 			= [&](base::StrID type_name) -> std::expected<Box<vm::VmValue>, VmEvaluationError> {
@@ -156,6 +268,27 @@ namespace {
 				(*maybe_vm_value)->writeBytes<const compiler::tsh::SymbolType<>*>(&type);
 				return maybe_vm_value;
 			}
+			variant_case(base::StrID, _) {
+				return materializeAggregateCtv(
+					ctx,
+					comptime_dvm,
+					ctv,
+					compiler::tsh::SymbolType<>::withDefaults(tsh::getCharSliceType(ctx))
+				);
+			}
+			variant_case(compiler::ctv::StringClassValue, _) {
+				if (!tsh::isStringTypePresent(ctx))
+					return std::unexpected(VmEvaluationError(
+						VmEvaluationError::Kind::ArgConversionFailed,
+						"String class type is not available in this compilation."
+					));
+				return materializeAggregateCtv(
+					ctx,
+					comptime_dvm,
+					ctv,
+					compiler::tsh::SymbolType<>::withDefaults(tsh::getStringType(ctx))
+				);
+			}
 			variant_default {
 				throw base::NotYetImplemented(
 					"Conversion from ctv to VmValue for this type is not implemented yet"
@@ -179,7 +312,7 @@ namespace {
 		auto pointer      = data.fields.at(0).value.readData<Pointer>().value();
 		auto length       = data.fields.at(1).value.readData<Primitive>().value();
 		auto content      = pointer.referenced->readData<Table>().value().asBytesView();
-		CORE_ASSERT(content.size() > length.value, "Invalid char slice comp-time data.");
+		CORE_ASSERT(content.size() >= length.value, "Invalid char slice comp-time data.");
 		return { content.getBegin(), length.value };
 	}
 
@@ -288,12 +421,14 @@ namespace {
 	}
 
 	std::expected<std::vector<Box<vm::VmValue>>, VmEvaluationError> prepareArguments(
-		CompTimeDVM& comptime_dvm, const std::vector<compiler::ctv::CompileTimeValue>& args
+		query::Context&                                     ctx,
+		CompTimeDVM&                                        comptime_dvm,
+		const std::vector<compiler::ctv::CompileTimeValue>& args
 	) {
 		std::vector<Box<vm::VmValue>> owned_arguments;
 		owned_arguments.reserve(args.size());
 		for (const auto& ctv_arg: args) {
-			auto res = ctvToVmValue(comptime_dvm, ctv_arg);
+			auto res = ctvToVmValue(ctx, comptime_dvm, ctv_arg);
 			if (!res) return std::unexpected(res.error());
 			owned_arguments.push_back(std::move(*res));
 		}
@@ -342,7 +477,10 @@ namespace {
 		if (!maybe_exit_value.has_value())
 			return std::unexpected(VmEvaluationError(
 				VmEvaluationError::Kind::FunctionRunFailed,
-				"Failed to run a function '" + func_name + "' on VM."
+				base::strConcat(
+					"Failed to run a function '", func_name, "' on VM. Reason: `",
+					errorToString(maybe_exit_value.error())
+				)
 			));
 
 		// Free the owned arguments.
@@ -390,7 +528,7 @@ namespace compiler::helios {
 		if (auto res = setQueryContext(comptime_dvm, ctx); !res)
 			return std::unexpected(res.error());
 
-		auto owned_args = prepareArguments(comptime_dvm, args);
+		auto owned_args = prepareArguments(ctx, comptime_dvm, args);
 		if (!owned_args) return std::unexpected(owned_args.error());
 
 		return runAndGetResult(ctx, comptime_dvm, func_name, *owned_args, return_type);
