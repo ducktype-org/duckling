@@ -897,6 +897,8 @@ namespace compiler::driver {
 					auto output_file = global_state::getRootCollection()->fileArtifactAtOrNew(
 						target_dvm.output_file_name
 					);
+					// We may mix artifacts from different collections here (std
+					// artifacts can come from a separate collection).
 					if (linkDVMPackage(dbc_arts, debug_info_arts, output_file).isBad())
 						result = base::BAD;
 				}

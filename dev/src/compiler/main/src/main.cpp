@@ -174,9 +174,9 @@ auto getClahStdLibOptions() {
 			.addLongDesc("Uses existing compiled standard library artifacts.\n"
 		                 "If the compiled binaries are available in the provided directory,\n"
 		                 "standard library compilation is skipped.\n"
-		                 "When this option is enabled, incremental compilation is disabled\n"
-		                 "on the standard library packages and changes to\n"
-		                 "the standard library source code are ignored.\n"
+		                 "This can produce errors if the standard library\n"
+		                 "source code changed after the artifacts in the provided directory\n"
+		                 "were compiled.\n"
 		                 "Use with caution.\n")
 			.build(),
 	};

@@ -285,12 +285,19 @@ namespace compiler::driver {
 
 	namespace {
 		/**
+		 * @brief Result of collecting standard library artifacts for an extension.
+		 */
+		struct StdLibArtifacts {
+			std::vector<artifacts::FileArtifact> artifacts;
+			/// Whether an artifact was found for every standard library package.
+			bool all_present;
+		};
+
+		/**
 		 * @brief Small helper that gets the standard library artifacts from the
 		 * root collection based on the provided extension.
 		 */
-		std::pair<std::vector<artifacts::FileArtifact>, bool> getStdLibArtifacts(
-			std::string_view extension
-		) {
+		StdLibArtifacts getStdLibArtifacts(std::string_view extension) {
 			std::vector<artifacts::FileArtifact>     artifacts;
 			base::Ref<artifacts::ArtifactCollection> root_collection
 				= global_state::getRootCollection();
@@ -306,26 +313,26 @@ namespace compiler::driver {
 				if_opt_some(opt_artifact, art) { artifacts.push_back(*art); }
 				if_opt_none(opt_artifact) { all_present = false; }
 			}
-			return { artifacts, all_present };
+			return { std::move(artifacts), all_present };
 		}
 	}
 
 	std::vector<artifacts::FileArtifact> getStdLibNativeArtifacts() {
-		return getStdLibArtifacts(".a").first;
+		return getStdLibArtifacts(".a").artifacts;
 	}
 
 	std::vector<artifacts::FileArtifact> getStdLibDVMArtifacts() {
-		return getStdLibArtifacts(".dbc").first;
+		return getStdLibArtifacts(".dbc").artifacts;
 	}
 
 	std::vector<artifacts::FileArtifact> getStdLibDVMDebugInfoArtifacts() {
-		return getStdLibArtifacts(".di.json").first;
+		return getStdLibArtifacts(".di.json").artifacts;
 	}
 
 	bool allStdlibArtifactsPresent() {
-		bool native = getStdLibArtifacts(".a").second;
-		bool dvm    = getStdLibArtifacts(".dbc").second;
-		bool di     = getStdLibArtifacts(".di.json").second;
+		bool native = getStdLibArtifacts(".a").all_present;
+		bool dvm    = getStdLibArtifacts(".dbc").all_present;
+		bool di     = getStdLibArtifacts(".di.json").all_present;
 		return native && dvm && di;
 	}
 }

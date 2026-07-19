@@ -54,6 +54,8 @@ namespace compiler::driver {
 		/**
 		 * @brief If a value is present, use this artifact collection
 		 * instead of the default.
+		 * @note This only affects the compiled package output, not any
+		 * other query artifacts (if present).
 		 * @TODO: #3158 Solving this would remove the need for this option.
 		 */
 		base::Optional<Ref<artifacts::ArtifactCollection>> custom_art_collection = {};
@@ -103,6 +105,8 @@ namespace compiler::driver {
 		/**
 		 * @brief If a value is present, use this artifact collection
 		 * instead of the default.
+		 * @note This only affects the compiled package output, not any
+		 * other query artifacts (if present).
 		 * @TODO: #3158 Solving this would remove the need for this option.
 		 */
 		base::Optional<Ref<artifacts::ArtifactCollection>> custom_art_collection = {};

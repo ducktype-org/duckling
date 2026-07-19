@@ -57,6 +57,7 @@ namespace global_state {
 		void setCustomStdArtifactsCollection(
 			base::Box<artifacts::ArtifactCollection> custom_art_collection
 		) {
+			CORE_ASSERT(std_art_collection.empty(), "custom std artifacts collection already set");
 			std_art_collection = std::move(custom_art_collection);
 		}
 	}
