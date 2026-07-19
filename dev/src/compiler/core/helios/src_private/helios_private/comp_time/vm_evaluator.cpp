@@ -112,7 +112,7 @@ namespace {
 	 * its bytes into a caller-owned `Box` that can be passed as an argument and freed independently.
 	 * The copied struct still references the content globals, which live for the whole process.
 	 */
-	std::expected<Box<vm::VmValue>, VmEvaluationError> materializeAggregateCtv(
+	std::expected<Box<vm::VmValue>, VmEvaluationError> getCtvFromBackendLowering(
 		query::Context&                    ctx,
 		CompTimeDVM&                       comptime_dvm,
 		const CompileTimeValue&            ctv,
@@ -269,7 +269,7 @@ namespace {
 				return maybe_vm_value;
 			}
 			variant_case(base::StrID, _) {
-				return materializeAggregateCtv(
+				return getCtvFromBackendLowering(
 					ctx,
 					comptime_dvm,
 					ctv,
@@ -282,7 +282,7 @@ namespace {
 						VmEvaluationError::Kind::ArgConversionFailed,
 						"String class type is not available in this compilation."
 					));
-				return materializeAggregateCtv(
+				return getCtvFromBackendLowering(
 					ctx,
 					comptime_dvm,
 					ctv,
