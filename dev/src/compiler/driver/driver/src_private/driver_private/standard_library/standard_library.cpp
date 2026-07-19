@@ -313,7 +313,7 @@ namespace compiler::driver {
 				if_opt_some(opt_artifact, art) { artifacts.push_back(*art); }
 				if_opt_none(opt_artifact) { all_present = false; }
 			}
-			return { std::move(artifacts), all_present };
+			return { .artifacts = std::move(artifacts), .all_present = all_present };
 		}
 	}
 
