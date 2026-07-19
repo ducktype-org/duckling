@@ -730,10 +730,6 @@ namespace compiler::helios {
 					result = ctv::CompileTimeValue(false);
 					break;
 				}
-				case tsh::Kind::String: {
-					result = ctv::CompileTimeValue(base::StrID(""));
-					break;
-				}
 				default:
 					ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 						base::strConcat(

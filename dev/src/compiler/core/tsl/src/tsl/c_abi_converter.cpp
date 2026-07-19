@@ -143,8 +143,6 @@ namespace compiler::tsl {
 				return ok(ats::boolType());
 			case Kind::Char:
 				return ok(ats::charType());
-			case Kind::String:
-				return fail("`string` is not C-compatible");
 			case Kind::DynamicArray:
 				return fail("dynamic arrays are not C-compatible");
 			case Kind::Function:
