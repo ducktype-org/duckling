@@ -24,6 +24,7 @@
 
 #include <query_framework/context/context.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
+#include "helios/queries/global_data_queries.hpp"
 
 #include <cmath>
 #include <concepts>
@@ -840,8 +841,7 @@ namespace compiler::helios {
 			// Collect all function dependencies for this function. All functions needed in
 			// order to evaluate this one.
 			auto& all_dependencies = ctx.query<QueryTransitiveUsedSymbols>(function_sym_id)
-			                             ->valueOrThrow()
-			                             .used_functions;
+			                             ->valueOrThrow();
 
 			auto mangled_name_function_to_call
 				= ctx.query<mangler::QueryMangledSymbol>({ .symbol_key = function_sym_id });
@@ -853,10 +853,16 @@ namespace compiler::helios {
 				hout_unit.functions.emplace_back(
 					&ctx.query<QueryCodeOfFun>(function_sym_id)->valueOrThrow()
 				);
-			for (const SymID& func_id: all_dependencies) {
+			for (const SymID& func_id: all_dependencies.used_functions) {
 				if (not implementsQueryCodeOfFun(func_id)) continue;
 				auto& hout_func = ctx.query<QueryCodeOfFun>(func_id)->valueOrThrow();
 				hout_unit.functions.emplace_back(&hout_func);
+				CORE_DEV_LOG(Compiler, "Lowered function `", hout_func.declaration->original_name, "` for comp-time.");
+			}
+			for (const SymID& glob_id: all_dependencies.used_globals) {
+				auto& hout_glob = ctx.query<QueryHOUTGlobalData>(glob_id)->valueOrThrow();
+				hout_unit.glob_data.emplace_back(&hout_glob);
+				CORE_DEV_LOG(Compiler, "Lowered global `", hout_glob.original_name, "` for comp-time.");
 			}
 			auto lir_unit
 				= lir::lowerToLIRUnit(ctx, mir::lowerToMIRUnit(ctx, &hout_unit).valueOrThrow());
@@ -868,10 +874,6 @@ namespace compiler::helios {
 			CORE_ASSERT(
 				lir_unit.lir_functions.size() == hout_unit.functions.size(),
 				"Number of lir functions should be the same as number of lowered dependencies."
-			);
-			CORE_ASSERT(
-				lir_unit.lir_globals.empty(),
-				"LIR global variables are not supported in compile time evaluation."
 			);
 
 			return LIRBuildResult{

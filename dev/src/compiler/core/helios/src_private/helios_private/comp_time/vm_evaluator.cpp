@@ -1,9 +1,11 @@
 #include "vm_evaluator.hpp"
 
+#include "backends/dvm/repl_lowering.hpp"
 #include "ctv/ctv.hpp"
 #include "helios/mangler/mangler.hpp"
 #include "helios/tsh/queries/types.hpp"
 #include "helios/tsh/symbol_type.hpp"
+#include "lir/lir_structure/lir_structure.hpp"
 
 #include <backends/dvm/dvm_backend.hpp>
 #include <helios/tsh/types.hpp>
@@ -26,15 +28,82 @@ namespace {
 	using namespace compiler;
 
 	/**
+	 * @brief A class representing a compile time DVM instance. Spawns a VMProcess when
+	 * constructed and loads all the needed context for compile time evaluations into the process.
+	 * This includes initializing the global query context pointer, injecting all extern C functions
+	 * operating on meta types.
+	 *
+	 * Handles the deduplication of the code being loaded into the VM.
+	 * Kills the VMProcess when compilation ends.
+	 */
+	class CompTimeDVM {
+		base::Optional<vm::PID> pid{};
+
+		/**
+		 * Code builder, uses repl for incremental loading - it automatically handles
+		 * deduplication and only lowers new elements.
+		 */
+		backend_vm::ReplDVMCodeBuilder code_builder;
+
+	public:
+		/**
+		 * @brief Creates a VM comp time instance, loads all of the needed code for compile time
+		 * evaluations and initializes the global context pointer needed for meta type compile time
+		 * evaluations.
+		 */
+		CompTimeDVM(query::Context& ctx): code_builder(ctx, true) {
+			if (auto res = vm::api::spawn()) {
+				pid = res->pid;
+				if (!initializeCompTimeOps()) pid.reset();
+			}
+		}
+
+		CompTimeDVM(const CompTimeDVM&)            = delete;
+		CompTimeDVM& operator=(const CompTimeDVM&) = delete;
+
+		// @TODO: #1222 Kill the CompTime VM process in the destructor once we get rid of the
+		// deadlock.
+		~CompTimeDVM() = default;
+
+		[[nodiscard]] base::Optional<vm::PID> getPID() const { return pid; }
+
+		[[nodiscard]] bool isAlive() const { return pid.has_value(); }
+
+		/**
+		 * @brief Loads the bytecode into the VM. Skips duplicated symbols.
+		 */
+		std::expected<void, VmEvaluationError> loadCode(
+			query::Context& ctx, const lir::LIRUnit& lir_code
+		) {
+			code_builder.setContext(ctx);
+			auto new_code = code_builder.insertLIRUnitAndCollectNewlyLoweredCode(lir_code);
+			if (!vm::api::loadCode(*pid, new_code)) {
+				return std::unexpected(VmEvaluationError(
+					VmEvaluationError::Kind::CodeLoadFailed, "Failed to load code into VM."
+				));
+			}
+			return {};
+		}
+
+	private:
+		bool initializeCompTimeOps() {
+			auto code = comptime_ops::getComptimeTypeOperations(*pid);
+			code_builder.insertRawBytecodeDefinitions(code);
+			if (vm::api::loadCode(*pid, code)) return true;
+			return false;
+		}
+	};
+
+	/**
 	 * @brief Converts a given `ctv` to VmValue.
 	 * @return The converted VmValue or a VmEvaluationError if the conversion failed.
 	 */
 	std::expected<Box<vm::VmValue>, VmEvaluationError> ctvToVmValue(
-		vm::PID pid, const CompileTimeValue& ctv
+		CompTimeDVM& comptime_dvm, const CompileTimeValue& ctv
 	) {
 		auto get_vm_value
 			= [&](base::StrID type_name) -> std::expected<Box<vm::VmValue>, VmEvaluationError> {
-			auto vm_value_response = vm::api::getVmValue(pid, type_name.str());
+			auto vm_value_response = vm::api::getVmValue(*comptime_dvm.getPID(), type_name.str());
 			if (!vm_value_response.has_value())
 				return std::unexpected(VmEvaluationError(
 					VmEvaluationError::Kind::ArgConversionFailed,
@@ -111,7 +180,7 @@ namespace {
 		auto length       = data.fields.at(1).value.readData<Primitive>().value();
 		auto content      = pointer.referenced->readData<Table>().value().asBytesView();
 		CORE_ASSERT(content.size() > length.value, "Invalid char slice comp-time data.");
-		return {content.getBegin(), length.value} ;
+		return { content.getBegin(), length.value };
 	}
 
 	/**
@@ -218,131 +287,13 @@ namespace {
 		}
 	}
 
-	/**
-	 * @brief A class representing a compile time DVM instance. Spawns a VMProcess when
-	 * constructed and loads all the needed context for compile time evaluations into the process.
-	 * This includes initializing the global query context pointer, injecting all extern C functions
-	 * operating on meta types.
-	 *
-	 * Handles the deduplication of the code being loaded into the VM.
-	 * Kills the VMProcess when compilation ends.
-	 */
-	class CompTimeDVM {
-		base::Optional<vm::PID> pid{};
-		/**
-		 * @brief Code already loaded into this VMs process.
-		 * @note This set operates on mangled names, thus theres no need to distinguish between
-		 * functions, types, globals, etc.
-		 */
-		std::unordered_set<base::StrID> loaded_symbols;
-
-	public:
-		/**
-		 * @brief Creates a VM comp time instance, loads all of the needed code for compile time
-		 * evaluations and initializes the global context pointer needed for meta type compile time
-		 * evaluations.
-		 */
-		CompTimeDVM() {
-			if (auto res = vm::api::spawn()) {
-				pid = res->pid;
-				if (!initializeCompTimeOps()) pid.reset();
-			}
-		}
-
-		CompTimeDVM(const CompTimeDVM&)            = delete;
-		CompTimeDVM& operator=(const CompTimeDVM&) = delete;
-
-		// @TODO: #1222 Kill the CompTime VM process in the destructor once we get rid of the
-		// deadlock.
-		~CompTimeDVM() = default;
-
-		[[nodiscard]] base::Optional<vm::PID> getPID() const { return pid; }
-
-		[[nodiscard]] bool isAlive() const { return pid.has_value(); }
-
-		/**
-		 * @brief Loads the bytecode into the VM. Skips duplicated symbols.
-		 */
-		std::expected<void, VmEvaluationError> loadCode(const vm::code::CodeCollection& code) {
-			auto new_code = filterOutLoaded(code);
-			if (!vm::api::loadCode(*pid, new_code)) {
-				return std::unexpected(VmEvaluationError(
-					VmEvaluationError::Kind::CodeLoadFailed, "Failed to load code into VM."
-				));
-			}
-			markAsLoaded(new_code);
-			return {};
-		}
-
-	private:
-		bool initializeCompTimeOps() {
-			auto code = comptime_ops::getComptimeTypeOperations(*pid);
-			if (vm::api::loadCode(*pid, code)) {
-				markAsLoaded(code);
-				return true;
-			}
-			return false;
-		}
-
-		void markAsLoaded(vm::code::CodeCollection& loaded) {
-			for (const auto& f: loaded.functions) loaded_symbols.insert(f.name);
-			for (const auto& t: loaded.types) loaded_symbols.insert(vm::code::typeName(t));
-			for (const auto& g: loaded.global_data) loaded_symbols.insert(g.name);
-			for (const auto& e: loaded.external_c_functions) loaded_symbols.insert(e.name);
-		}
-
-		vm::code::CodeCollection filterOutLoaded(const vm::code::CodeCollection& code) {
-			vm::code::CodeCollection filtered;
-			auto                     by_name = [](const auto& item) -> base::StrID {
-				using T = std::decay_t<decltype(item)>;
-				if constexpr (std::is_same_v<T, vm::code::TypeOfData>)
-					return vm::code::typeName(item);
-				else
-					return item.name;
-			};
-
-			auto insert_if_new = [&](const auto& source, auto& destination, auto name_getter) {
-				for (const auto& item: source)
-					if (!loaded_symbols.contains(name_getter(item))) destination.push_back(item);
-			};
-
-			insert_if_new(code.functions, filtered.functions, by_name);
-			insert_if_new(code.types, filtered.types, by_name);
-			insert_if_new(code.global_data, filtered.global_data, by_name);
-			insert_if_new(code.external_c_functions, filtered.external_c_functions, by_name);
-			return filtered;
-		}
-	};
-
-	std::expected<void, VmEvaluationError> loadLIRUnit(
-		CompTimeDVM& comptime_dvm, const compiler::lir::LIRUnit& lir_unit, query::Context& query_ctx
-	) {
-		static std::atomic<int> module_counter{};
-
-		// @TODO: #2971 So comp-time and repl are both loading the code incrementally into VM, but
-		// they are using different methods... Maybe use the repl incremental context here?
-		auto backend_module_name
-			= base::StrID(base::strConcat("module_", module_counter.fetch_add(1)));
-		compiler::backend_vm::DVMCodeBuilder m(query_ctx, backend_module_name, false, true);
-
-		// Insert comptime context into the module, for the module to pass the validation. This code
-		// although loaded here multiple times will be deduplicated by `CompTimeDVM::loadCode()`
-		auto comptime_code = comptime_ops::getComptimeTypeOperations(*comptime_dvm.getPID());
-		m.insertRawBytecodeDefinitions(comptime_code);
-		m.insertLIRUnit(lir_unit);
-
-		auto bytecode = m.build();
-
-		return comptime_dvm.loadCode(bytecode);
-	}
-
 	std::expected<std::vector<Box<vm::VmValue>>, VmEvaluationError> prepareArguments(
 		CompTimeDVM& comptime_dvm, const std::vector<compiler::ctv::CompileTimeValue>& args
 	) {
 		std::vector<Box<vm::VmValue>> owned_arguments;
 		owned_arguments.reserve(args.size());
 		for (const auto& ctv_arg: args) {
-			auto res = ctvToVmValue(*comptime_dvm.getPID(), ctv_arg);
+			auto res = ctvToVmValue(comptime_dvm, ctv_arg);
 			if (!res) return std::unexpected(res.error());
 			owned_arguments.push_back(std::move(*res));
 		}
@@ -425,14 +376,15 @@ namespace compiler::helios {
 		// @note: comptime_dvm is initialized (spawns the DVM compile-time evaluation process and
 		// initializes it) once upon the first call to executeInVm and its lifetime extends for the
 		// duration of the program. When deinitialized, it kills the spawned process.
-		static CompTimeDVM comptime_dvm;
+		static CompTimeDVM comptime_dvm(ctx);
+
 		if (!comptime_dvm.isAlive())
 			return std::unexpected(VmEvaluationError(
 				VmEvaluationError::Kind::VmInitializationFailed,
 				"Failed to initialize the comptime DVM process."
 			));
 
-		if (auto res = loadLIRUnit(comptime_dvm, lir_unit, ctx); !res)
+		if (auto res = comptime_dvm.loadCode(ctx, lir_unit); !res)
 			return std::unexpected(res.error());
 
 		if (auto res = setQueryContext(comptime_dvm, ctx); !res)

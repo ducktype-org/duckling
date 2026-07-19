@@ -37,7 +37,7 @@ namespace compiler::backend_vm {
 	 */
 	class ReplDVMCodeBuilder final {
 	public:
-		explicit ReplDVMCodeBuilder(query::Context& query_ctx);
+		explicit ReplDVMCodeBuilder(query::Context& query_ctx, bool is_comp_time_lowering);
 		~ReplDVMCodeBuilder();
 
 		// Non-copyable, movable
@@ -76,8 +76,16 @@ namespace compiler::backend_vm {
 		 * as some of them might have been lowered in previous statements and are already present in
 		 * the context.
 		 */
-		vm::code::CodeCollection insertLIRUnitAndCollectNewlyLoweredCode(const lir::LIRUnit& lir_unit
+		vm::code::CodeCollection insertLIRUnitAndCollectNewlyLoweredCode(
+			const lir::LIRUnit& lir_unit
 		);
+
+		/**
+		 * @brief Insert raw bytecode into a module.
+		 * @note We can extend this function to return the CodeCollection of the new symbols only
+		 * if we want to.
+		 */
+		void insertRawBytecodeDefinitions(const vm::code::CodeCollection& bytecode);
 
 	private:
 		/**
