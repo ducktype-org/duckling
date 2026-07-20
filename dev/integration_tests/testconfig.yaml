@@ -11,7 +11,7 @@ compile_dvm: "cmake --build @{build_dir} -j -- VM"
 # and concurrent builds of the same build dir race. NOTE: PreNode is
 # INHERITED - every direct subtree must define its own (possibly empty)
 # PreNode, otherwise this one reruns concurrently for each of its nodes.
-PreNode: "@{tmp_env_tool} sweep && @{compile_duckc} && @{compile_dvm}"
+PreNode: "@{tmp_env_tool} sweep && @{compile_duckc} && @{compile_dvm} && @{warmup_std_artifacts}"
 
 expect_output: "python3 @{dev_dir}/integration_tests/helpers/expect_output.py"
 
@@ -33,6 +33,16 @@ at_tmp_env: "@{tmp_env_tool} exec --"
 cleanup_tmp_env: "@{tmp_env_tool} clean"
 
 std_artifacts_dir: "/tmp/dit/std_artifacts"
+
+# Populates @{std_artifacts_dir} once, before any case runs, by compiling a
+# trivial script; concurrent cases then only read the shared std artifacts.
+# The old directory is removed first: duckc was just rebuilt, so leftover
+# artifacts may not match the new compiler. The script must live outside the
+# `-a` directory, which duckc may clear on a build-id mismatch.
+warmup_std_artifacts: "rm -rf @{std_artifacts_dir} /tmp/dit/std_warmup
+  && mkdir -p /tmp/dit && printf 'fun main() -> i64 = { return 0; }' > /tmp/dit/std_warmup.ds
+  && @{duckc_path} compile_script /tmp/dit/std_warmup.ds -a /tmp/dit/std_warmup
+  --custom-std-artifacts-path @{std_artifacts_dir}"
 
 # If JIT is enabled then set timeout to 10s
 timeout_jit: 10
