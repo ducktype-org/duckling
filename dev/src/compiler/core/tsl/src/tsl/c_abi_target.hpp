@@ -17,5 +17,4 @@ namespace compiler::tsl {
 	 * resolves to `abi::layout::hostTargetABI()`.
 	 */
 	const abi::TargetABI& compilerTargetABI();
-
 }

@@ -69,28 +69,6 @@ namespace compiler::tsl {
 			);
 		}
 
-		// @TODO: #2636 Remove this. `string` is not actually C-compatible. We need this since the
-		// builtin_stringify_type functions are written in FFI and have string parameters.
-		CAbiConversionResult convertString() {
-			std::vector<ats::AbiTypePtr> fields;
-			fields.reserve(4);
-			fields.emplace_back(ats::makeBoxAbiType(ats::pointerType()));
-			fields.emplace_back(ats::makeBoxAbiType(ats::intType(64, false)));
-			fields.emplace_back(ats::makeBoxAbiType(ats::intType(64, false)));
-			fields.emplace_back(ats::makeBoxAbiType(ats::intType(64, false)));
-			return ok(ats::structType(std::move(fields)));
-		}
-
-		// @TODO: #2636 Remove this once the builtin_stringify_str
-		// is written in HOUT and in in c++. `slice` is not actually C-compatible,
-		CAbiConversionResult convertSlice() {
-			std::vector<ats::AbiTypePtr> fields;
-			fields.reserve(4);
-			fields.emplace_back(ats::makeBoxAbiType(ats::pointerType()));
-			fields.emplace_back(ats::makeBoxAbiType(ats::intType(64, false)));
-			return ok(ats::structType(std::move(fields)));
-		}
-
 		CAbiConversionResult convertClass(tsh::ClassAbstractType class_type, query::Context& ctx) {
 			const helios::SymbolABI abi = class_type.getABI(ctx);
 			variant_match(abi) {
@@ -166,7 +144,7 @@ namespace compiler::tsl {
 			case Kind::Char:
 				return ok(ats::charType());
 			case Kind::String:
-				return convertString();
+				return fail("`string` is not C-compatible");
 			case Kind::DynamicArray:
 				return fail("dynamic arrays are not C-compatible");
 			case Kind::Function:
@@ -183,7 +161,7 @@ namespace compiler::tsl {
 			case Kind::TypeTemplate:
 				return fail("non-runtime type cannot appear as a field type");
 			case tsh::Kind::Slice:
-				return convertSlice();
+				return fail("`slice` is not C-compatible");
 			default:
 				CORE_UNREACHABLE();
 			}

@@ -198,19 +198,10 @@ private:
 			};
 			for (const auto& [symbol_type, what]: rejected) expectRejected(ctx, symbol_type, what);
 
-			// @TODO: #2636 `string` is not truly C-compatible, but the FFI
-			// builtin_stringify functions take string params, so it is accepted for
-			// now and lowered to a struct of pointer + length fields.
 			// `String` is a standard library class, so this can only be checked when a
 			// standard library is loaded into the context (not the case in this bare test context).
-			if (isStringTypePresent(ctx)) {
-				const auto& string_conv = queryConv(ctx, directOf(getStringType(ctx)));
-				ASSERT_TRUE(string_conv.has_value());
-				assertTrue(
-					base::holds<ats::StructType>(string_conv->value),
-					"string should convert to a struct"
-				);
-			}
+			if (isStringTypePresent(ctx))
+				expectRejected(ctx, directOf(getStringType(ctx)), "string");
 		});
 	}
 

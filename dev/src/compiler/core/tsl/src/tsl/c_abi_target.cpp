@@ -4,5 +4,4 @@
 namespace compiler::tsl {
 
 	const abi::TargetABI& compilerTargetABI() { return abi::hostTargetABI(); }
-
 }
