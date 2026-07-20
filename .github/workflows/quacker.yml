@@ -170,3 +170,14 @@ jobs:
           SLUG: ${{ steps.app.outputs.app-slug }}
           AGENT_OAUTH_TOKEN: ${{ secrets.AGENT_OAUTH_TOKEN }}
         run: bash "$CONFIG_DIR/ci/run.sh" "$MODE" "$A1" "$A2" "$COMMENT_BODY"
+
+      - name: Upload bot output artifact
+        # Upload full bot reasoning/output for debugging (no truncation)
+        # Runs always (even if agent failed) so logs are available for troubleshooting
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quacker-bot-output-run-${{ github.run_id }}
+          path: ${{ runner.temp }}/quacker-bot-full-output-*.log
+          retention-days: 7
+          if-no-files-found: ignore
