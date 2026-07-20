@@ -29,7 +29,7 @@ namespace vm::native {
 		// path, so stage the library in a temp file that is unlinked once it is loaded.
 		std::string tmp_path = "/tmp/duckling_lib_XXXXXX";
 		int         fd       = mkstemp(tmp_path.data());
-		CORE_ASSERT_SYSCALL(fd != -1, "mkstemp failed:");
+		if (fd == -1) return std::unexpected<std::string>("mkstemp failed:");
 	#else
 		int fd = memfd_create("lib", 0);
 		if (fd == -1) return std::unexpected<std::string>("memfd_create failed:");
