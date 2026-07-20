@@ -6,7 +6,9 @@ use crate::{DuckContext, QuackResult};
 mod build;
 #[cfg(feature = "shell-completion")]
 mod generate;
+mod info;
 mod init;
+mod list;
 mod repl;
 mod run;
 pub mod run_script;
@@ -23,6 +25,8 @@ pub fn subcommands() -> Vec<Command> {
         run_script::get_parser(),
         sync::get_parser(),
         repl::get_parser(),
+        list::get_parser(),
+        info::get_parser(),
     ]
 }
 
@@ -42,6 +46,8 @@ pub fn exec_for(name: &str) -> Option<ExecFn> {
         "run-script" => run_script::execute,
         "sync" => sync::execute,
         "repl" => repl::execute,
+        "list" => list::execute,
+        "info" => info::execute,
         _ => return None,
     };
     Some(f)

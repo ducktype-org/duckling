@@ -121,6 +121,7 @@ fn info() {
         output
             .get(&"root1".to_venv_id())
             .unwrap()
+            .0
             .data()
             .freeze()
             .root()
@@ -132,6 +133,7 @@ fn info() {
         output
             .get(&"root1".to_venv_id())
             .unwrap()
+            .0
             .data()
             .freeze()
             .root()
@@ -143,6 +145,7 @@ fn info() {
         output
             .get(&"root2".to_venv_id())
             .unwrap()
+            .0
             .data()
             .freeze()
             .root()
@@ -154,6 +157,7 @@ fn info() {
         output
             .get(&"root3".to_venv_id())
             .unwrap()
+            .0
             .data()
             .freeze()
             .root()
@@ -165,6 +169,7 @@ fn info() {
         output
             .get(&"root4".to_venv_id())
             .unwrap()
+            .0
             .data()
             .freeze()
             .root()
@@ -176,6 +181,7 @@ fn info() {
         output
             .get(&"root2".to_venv_id())
             .unwrap()
+            .0
             .data()
             .freeze()
             .root()
@@ -187,6 +193,7 @@ fn info() {
         output
             .get(&"root3".to_venv_id())
             .unwrap()
+            .0
             .data()
             .freeze()
             .root()
@@ -198,6 +205,7 @@ fn info() {
         output
             .get(&"root3".to_venv_id())
             .unwrap()
+            .0
             .data()
             .freeze()
             .root()
@@ -210,6 +218,7 @@ fn info() {
         output
             .get(&"root2".to_venv_id())
             .unwrap()
+            .0
             .data()
             .freeze()
             .dependencies()
@@ -220,6 +229,7 @@ fn info() {
         output
             .get(&"root1".to_venv_id())
             .unwrap()
+            .0
             .data()
             .freeze()
             .root()
