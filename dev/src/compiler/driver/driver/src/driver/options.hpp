@@ -81,6 +81,13 @@ namespace compiler::driver {
 			 */
 			std::variant<NoStd, DefaultStd, CustomStd> std_lib_type = NoStd{};
 
+			/**
+			 * If a value is present, do not recompile the standard library
+			 * and try to use the compiled packages from this path.
+			 * @note The path should point to valid compiler artifacts location
+			 */
+			base::Optional<fs::FilePath> std_artifacts_path = {};
+
 			[[nodiscard]] bool stdActive() const { return not base::holds<NoStd>(std_lib_type); }
 		};
 
