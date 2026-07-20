@@ -927,13 +927,6 @@ namespace compiler::backend_llvm {
 			std::vector<std::pair<u32, llvm::Attribute>> attributes;
 			std::vector<llvm::Value*>                    args;
 
-			// memcpy `type`-sized bytes from `src` to `dst`, using the ABI alignment of `type`.
-			auto memcpy_typed = [&](llvm::Value* dst, llvm::Value* src, llvm::Type* type) {
-				const auto size  = data_layout.getTypeAllocSize(type);
-				const auto align = data_layout.getABITypeAlign(type);
-				builder.CreateMemCpy(dst, align, src, align, size);
-			};
-
 			// Reinterpret the bytes behind `src_value` as `desired_type`:
 			// Accept the `src_value` and `src_type` and get the value of a `desired_type`
 			// that is mem-copied under the hood.
@@ -943,7 +936,7 @@ namespace compiler::backend_llvm {
 				auto* alloca_src = builder.CreateAlloca(src_type, nullptr, "tmp_coerce_src");
 				builder.CreateStore(src_val, alloca_src);
 				auto* dst = builder.CreateAlloca(desired_type, nullptr, "tmp_reinterpret");
-				
+
 				const auto copy_size = std::min(
 					data_layout.getTypeAllocSize(src_type),
 					data_layout.getTypeAllocSize(desired_type)
