@@ -1,6 +1,5 @@
 from typing import NoReturn
 import click
-import os
 import pathlib
 import platform
 import re
@@ -391,14 +390,10 @@ def darwin_lld_linker_flags():
     if lld_dir is None:
         return None
     macos_version = ".".join(platform.mac_ver()[0].split(".")[:2]) or "26.0"
-    # Setting CMAKE_*_LINKER_FLAGS explicitly overrides CMake's seeding from
-    # $LDFLAGS, so carry it over.
-    env_ldflags = os.environ.get("LDFLAGS", "").strip()
-    flags = (
+    return (
         f"-B{lld_dir} -fuse-ld=lld "
         f"-Wl,-platform_version,macos,{macos_version},{macos_version}"
     )
-    return f"{env_ldflags} {flags}".strip()
 
 
 def detect_available_linker():

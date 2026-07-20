@@ -1,3 +1,4 @@
+import os
 import platform
 
 from pathlib import Path
@@ -112,11 +113,23 @@ def setup_build_impl(
 
     if should_add_linker_flags(linker):
         if platform.system() == "Darwin":
-            # CMAKE_LINKER_TYPE=LLD expands to a bare -fuse-ld=lld, which is not
-            # enough for GCC on macOS (see darwin_lld_linker_flags).
+            # The default LLD linker type expands to a bare -fuse-ld=lld, which is
+            # not enough for GCC on macOS (see darwin_lld_linker_flags), so the
+            # expansion is overridden through CMAKE_<LANG>_USING_LINKER_LLD.
             lld_flags = darwin_lld_linker_flags()
-            for kind in ("EXE", "SHARED", "MODULE"):
-                cmd_parts.append(f'-D CMAKE_{kind}_LINKER_FLAGS="{lld_flags}"')
+            if supports_cmake_linker_type():
+                using_linker = lld_flags.replace(" ", ";")
+                cmd_parts.append("-D CMAKE_LINKER_TYPE=LLD")
+                for lang in ("C", "CXX"):
+                    cmd_parts.append(
+                        f'-D CMAKE_{lang}_USING_LINKER_LLD="{using_linker}"'
+                    )
+            else:
+                # Overriding CMAKE_*_LINKER_FLAGS drops CMake's seeding from
+                # $LDFLAGS, so carry it over.
+                flags = f"{os.environ.get('LDFLAGS', '').strip()} {lld_flags}".strip()
+                for kind in ("EXE", "SHARED", "MODULE"):
+                    cmd_parts.append(f'-D CMAKE_{kind}_LINKER_FLAGS="{flags}"')
         elif supports_cmake_linker_type():
             cmd_parts.append(f"-D CMAKE_LINKER_TYPE={linker.upper()}")
         else:
