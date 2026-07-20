@@ -136,7 +136,8 @@ def configure_presets(ctx, param, value):
 )
 @option(
     "--linker",
-    help="Specify the linker type to use. Auto-detects mold or lld if available.",
+    help="Specify the linker type to use. Auto-detects mold or lld if available "
+    "(on macOS: ld64.lld, which is required — Apple's linker corrupts GCC output).",
     default=None,
     cls=default_linker_from_ctx(),
 )

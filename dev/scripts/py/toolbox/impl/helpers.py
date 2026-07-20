@@ -1,5 +1,6 @@
 from typing import NoReturn
 import click
+import os
 import pathlib
 import platform
 import re
@@ -346,6 +347,8 @@ def supports_cmake_linker_type():
 def should_add_linker_flags(linker: str):
     if linker == "default":
         return False
+    if platform.system() == "Darwin" and linker == "lld":
+        return find_darwin_lld_dir() is not None
     if shutil.which(linker) is not None:
         return True
     exit_with_error(
@@ -354,12 +357,56 @@ def should_add_linker_flags(linker: str):
     )
 
 
+def find_darwin_lld_dir():
+    """Find a directory containing ld64.lld (lld's Mach-O driver), or None.
+
+    Checked in order: the project-local LLVM installed by `install-llvm`
+    (any version), PATH, Homebrew LLVM kegs (any version).
+    """
+    dev_root = pathlib.Path(__file__).resolve().parents[4]
+    for candidate in sorted(
+        dev_root.glob("scripts/downloads/llvm_lib_*/bin/ld64.lld"), reverse=True
+    ):
+        return str(candidate.parent)
+    on_path = shutil.which("ld64.lld")
+    if on_path is not None:
+        return str(pathlib.Path(on_path).parent)
+    for prefix in ("/opt/homebrew/opt", "/usr/local/opt"):
+        for pattern in ("lld*/bin/ld64.lld", "llvm*/bin/ld64.lld"):
+            for candidate in sorted(pathlib.Path(prefix).glob(pattern), reverse=True):
+                return str(candidate.parent)
+    return None
+
+
+def darwin_lld_linker_flags():
+    """Linker flags that make GCC link with ld64.lld on macOS.
+
+    Apple's linkers (both ld-prime and -ld_classic) drop the bytes trailing a
+    coalesced weak atom, silently zeroing GCC's weak-symbol-anchored anonymous
+    constants (e.g. libstdc++ to_chars digit tables), so lld is required.
+    GCC does not forward the platform version to ld64.lld, and finds it only
+    through -B or PATH, hence the explicit flags.
+    """
+    lld_dir = find_darwin_lld_dir()
+    if lld_dir is None:
+        return None
+    macos_version = ".".join(platform.mac_ver()[0].split(".")[:2]) or "26.0"
+    # Setting CMAKE_*_LINKER_FLAGS explicitly overrides CMake's seeding from
+    # $LDFLAGS, so carry it over.
+    env_ldflags = os.environ.get("LDFLAGS", "").strip()
+    flags = (
+        f"-B{lld_dir} -fuse-ld=lld "
+        f"-Wl,-platform_version,macos,{macos_version},{macos_version}"
+    )
+    return f"{env_ldflags} {flags}".strip()
+
+
 def detect_available_linker():
     """Detect and return the best available linker (mold > lld > default)"""
-    # macOS links Mach-O objects, which mold and lld do not support; only the system linker
-    # (ld64, selected by "default") works there.
     if platform.system() == "Darwin":
-        return "default"
+        # Apple's system linker miscompiles GCC output (see darwin_lld_linker_flags);
+        # use lld's Mach-O driver whenever one can be found. mold is ELF-only.
+        return "lld" if find_darwin_lld_dir() is not None else "default"
     if shutil.which("mold") is not None:
         return "mold"
     # Check for LLD (can be named 'lld' or 'ld.lld' depending on the system)

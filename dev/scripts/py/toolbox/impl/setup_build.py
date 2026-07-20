@@ -1,13 +1,17 @@
+import platform
+
 from pathlib import Path
 from shutil import rmtree
 
 from .helpers import (
     bash_command,
     log_info,
+    log_warning,
     with_venv,
     check_if_compilers_are_compatible,
     supports_cmake_linker_type,
     should_add_linker_flags,
+    darwin_lld_linker_flags,
     exit_with_error,
 )
 
@@ -99,8 +103,21 @@ def setup_build_impl(
     if clang_for_builtins:
         cmd_parts.append(f"-D CLANG_BIN={clang_for_builtins}")
 
+    if platform.system() == "Darwin" and not should_add_linker_flags(linker):
+        log_warning(
+            "No ld64.lld found — falling back to Apple's linker, which corrupts "
+            "GCC binaries (weak-atom coalescing zeroes anchored constants). "
+            "Run `brew install lld` and rerun setup-build."
+        )
+
     if should_add_linker_flags(linker):
-        if supports_cmake_linker_type():
+        if platform.system() == "Darwin":
+            # CMAKE_LINKER_TYPE=LLD expands to a bare -fuse-ld=lld, which is not
+            # enough for GCC on macOS (see darwin_lld_linker_flags).
+            lld_flags = darwin_lld_linker_flags()
+            for kind in ("EXE", "SHARED", "MODULE"):
+                cmd_parts.append(f'-D CMAKE_{kind}_LINKER_FLAGS="{lld_flags}"')
+        elif supports_cmake_linker_type():
             cmd_parts.append(f"-D CMAKE_LINKER_TYPE={linker.upper()}")
         else:
             cmd_parts.append(f'-D CMAKE_EXE_LINKER_FLAGS="-fuse-ld={linker.lower()}"')

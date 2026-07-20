@@ -49,7 +49,7 @@ for the macOS SDK and the system linker (`ld64`).
 xcode-select --install
 
 # GCC (provides g++-15 / gcc-15), the build tools, ICU and libffi.
-brew install gcc@15 cmake ninja graphviz lcov doxygen python pkg-config libffi icu4c
+brew install gcc@15 cmake ninja graphviz lcov doxygen python pkg-config libffi icu4c lld
 
 # clang-format / clang-tidy 19 are only used for linting (pr-validate / cpp-linter).
 brew install llvm@19
@@ -169,23 +169,20 @@ Do **not** link with Apple's system linker — neither the default one (`ld-prim
 the bytes that trail a coalesced weak atom, so those constants silently read as **zeros** at
 runtime. The known symptom: `duckc` writes corrupt `.dbc` query artifacts whose hex literals look
 like `0x  ` (NUL bytes where digits belong) and every integration test fails, while unit tests may
-still pass by link-order luck.
+still pass by link-order luck. mold is not an option either — it is ELF-only.
 
-Use the Mach-O backend of lld instead (`ld64.lld`, already part of the LLVM that `install-llvm`
-builds) — it coalesces whole subsections and links these objects correctly. mold is not an option
-on macOS: it is ELF-only (its Mach-O spin-off "sold" was abandoned).
-
-GCC does not forward `-arch` and `-platform_version` to `ld64.lld`, so they have to be passed
-explicitly. After `setup-build`, add the linker flags to the build folder (adjust the platform
-version to your macOS/SDK):
+The linker to use is lld's Mach-O driver, `ld64.lld`:
 
 ```bash
-LLD_FLAGS="-L${ICU_ROOT}/lib -B$(pwd)/scripts/downloads/llvm_lib_19.1.7_native/bin -fuse-ld=lld -Wl,-arch,arm64 -Wl,-platform_version,macos,26.0,26.0"
-cmake -B build \
-  -D CMAKE_EXE_LINKER_FLAGS="$LLD_FLAGS" \
-  -D CMAKE_SHARED_LINKER_FLAGS="$LLD_FLAGS" \
-  -D CMAKE_MODULE_LINKER_FLAGS="$LLD_FLAGS"
+brew install lld
 ```
+
+That is all: on macOS `setup-build` finds `ld64.lld` automatically (it checks the project-local
+LLVM in `scripts/downloads`, `PATH`, and Homebrew's `lld`/`llvm*` kegs — any lld version works,
+independently of the LLVM version the compiler links against) and configures the build folder
+with the flags GCC needs to use it (`-B`/`-fuse-ld=lld` plus an explicit
+`-Wl,-platform_version`, which GCC does not forward on its own). If `setup-build` prints a
+warning that no `ld64.lld` was found, do not build — install lld and rerun `setup-build`.
 
 To check which linker produced a binary: `otool -l build/bin/duckc | grep -A3 'tool '` — tool `4`
 is LLD (correct), tool `3` is Apple ld.
