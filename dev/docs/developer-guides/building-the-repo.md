@@ -161,8 +161,34 @@ The ICU bundled with the macOS SDK is a C-only subset, so CMake must be pointed 
 export ICU_ROOT=${HOMEBREW_PREFIX}/opt/icu4c
 ```
 
-`setup-build` auto-selects the system linker (`ld64`) on macOS; mold and lld only handle ELF, not the
-Mach-O format macOS uses.
+##### Linker: lld is required, Apple's ld is not usable
+
+Do **not** link with Apple's system linker — neither the default one (`ld-prime`) nor
+`-ld_classic`. GCC emits references to anonymous constants (for example libstdc++'s
+`std::format`/`std::to_chars` digit tables) as `weak symbol + offset`, and Apple's linkers drop
+the bytes that trail a coalesced weak atom, so those constants silently read as **zeros** at
+runtime. The known symptom: `duckc` writes corrupt `.dbc` query artifacts whose hex literals look
+like `0x  ` (NUL bytes where digits belong) and every integration test fails, while unit tests may
+still pass by link-order luck.
+
+Use the Mach-O backend of lld instead (`ld64.lld`, already part of the LLVM that `install-llvm`
+builds) — it coalesces whole subsections and links these objects correctly. mold is not an option
+on macOS: it is ELF-only (its Mach-O spin-off "sold" was abandoned).
+
+GCC does not forward `-arch` and `-platform_version` to `ld64.lld`, so they have to be passed
+explicitly. After `setup-build`, add the linker flags to the build folder (adjust the platform
+version to your macOS/SDK):
+
+```bash
+LLD_FLAGS="-L${ICU_ROOT}/lib -B$(pwd)/scripts/downloads/llvm_lib_19.1.7_native/bin -fuse-ld=lld -Wl,-arch,arm64 -Wl,-platform_version,macos,26.0,26.0"
+cmake -B build \
+  -D CMAKE_EXE_LINKER_FLAGS="$LLD_FLAGS" \
+  -D CMAKE_SHARED_LINKER_FLAGS="$LLD_FLAGS" \
+  -D CMAKE_MODULE_LINKER_FLAGS="$LLD_FLAGS"
+```
+
+To check which linker produced a binary: `otool -l build/bin/duckc | grep -A3 'tool '` — tool `4`
+is LLD (correct), tool `3` is Apple ld.
 
 
 ## Compiling the project
