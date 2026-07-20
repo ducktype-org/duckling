@@ -1,10 +1,10 @@
 #include "ctv_lowering.hpp"
 
 #include "common.hpp"
-#include "ctv/ctv.hpp"
 #include "function_lowering_context.hpp"
 #include "program_lowering_context.hpp"
 
+#include <ctv/ctv.hpp>
 #include <ctv/numeric_value.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 

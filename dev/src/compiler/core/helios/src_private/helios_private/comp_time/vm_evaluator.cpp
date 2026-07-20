@@ -1,26 +1,25 @@
 #include "vm_evaluator.hpp"
 
-#include "backends/dvm/repl_lowering.hpp"
-#include "ctv/ctv.hpp"
-#include "helios/mangler/mangler.hpp"
-#include "helios/tsh/queries/types.hpp"
-#include "helios/tsh/symbol_type.hpp"
-#include "lir/lir_structure/lir_structure.hpp"
-
 #include <backends/dvm/dvm_backend.hpp>
+#include <backends/dvm/repl_lowering.hpp>
+#include <ctv/ctv.hpp>
+#include <helios/mangler/mangler.hpp>
 #include <helios/symbols/symbol_abi.hpp>
+#include <helios/tsh/queries/types.hpp>
+#include <helios/tsh/symbol_type.hpp>
 #include <helios/tsh/types.hpp>
 #include <helios_private/comp_time/comptime_type_operations.hpp>
+#include <lir/lir_structure/lir_structure.hpp>
 #include <tsl/queries.hpp>
 
 #include <base/collections/stable_container.hpp>
 #include <base/except/exceptions.hpp>
 
-#include "vm/core/vmvalue/vmvalueref.hpp"
 #include <vm/api/vm.hpp>
 #include <vm/bytecode/validator/errors.hpp>
 #include <vm/bytecode/validator/valid_program.hpp>
 #include <vm/core/vmvalue/vmvalue.hpp>
+#include <vm/core/vmvalue/vmvalueref.hpp>
 
 #include <expected>
 #include <mutex>
