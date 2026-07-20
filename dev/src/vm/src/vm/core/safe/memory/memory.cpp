@@ -14,29 +14,21 @@ namespace vm {
 
 	Ref<Block> Memory::createBlock(BlockData data) {
 		std::memset(data.view.getBegin(), 0, data.view.size());
-
-		if (free_ids.empty()) {
-			auto id = BlockID(blocks.size());
-			blocks.emplace_back(id, data);
-			return &blocks.back();
-		} else {
-			BlockID id = free_ids.back();
-			free_ids.pop_back();
-			blocks[usize(id)] = Block(id, data);
-			return &blocks[static_cast<u64>(id)];
-		}
+		auto id = blocks_pool.add(std::move(data));
+		return blocks_pool.get(id);
 	}
 
 	void Memory::deleteBlock(Ref<Block> block) {
 		if (!block->deallocated) throw exceptions::VMFoundMemoryLeakException();
-		free_ids.push_back(block->id);
+		blocks_pool.remove(block->id.asInt());
 	}
 
 	Ref<Block> Memory::getBlock(BlockID id) {
-		const auto block_index = static_cast<usize>(id);
-		if (block_index >= blocks.size()) throw exceptions::VMOutOfBlockBoundsException();
-		if (blocks[block_index].deallocated) throw exceptions::VMUseAfterFreeException();
-		return &blocks[block_index];
+		auto opt = blocks_pool.maybeGet(id.asInt());
+		if (!opt.has_value()) throw exceptions::VMOutOfBlockBoundsException();
+		// Note: StableObjectPool handles the "use after free" check internally —
+		// maybeGet returns empty for removed (deallocated) blocks.
+		return opt.value();
 	}
 
 	auto Memory::initializeFrameStack() -> Ref<ThreadStack> {
@@ -374,13 +366,13 @@ namespace vm {
 		}
 	}
 
-	bool Memory::validateMemoryState() const {
+	bool Memory::validateMemoryState() {
 #define TEST_HERE(test)                                              \
 	if (test) {                                                      \
 		std::cerr << #test ", BlockID=" << block.id.asInt() << "\n"; \
 		return false;                                                \
 	}
-		for (const auto& block: blocks) {
+		for (const auto& block: blocks_pool) {
 			TEST_HERE(block.refcount != 0)
 			TEST_HERE(!block.deallocated)
 		}
