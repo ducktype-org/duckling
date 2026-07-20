@@ -74,8 +74,6 @@ namespace compiler::lir {
 		auto sym_abi = ctx.query<helios::QuerySymbolABI>(sym)->valueOrPanicMsg(
 			"Handling errors in MIR is not supported yet"
 		);
-		// DVMAbi behaves like DefaultAbi at the LIR/codegen level (no C-ABI type requirements);
-		// it only differs in name mangling, which is handled elsewhere.
 		if (v_matches(sym_abi, helios::DefaultAbi) or v_matches(sym_abi, helios::DVMAbi))
 			return { LIRAbi::DefaultAbi{} };
 

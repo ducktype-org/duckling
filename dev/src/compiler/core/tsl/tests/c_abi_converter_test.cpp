@@ -197,11 +197,6 @@ private:
 				{ directOf(function), "function" },
 			};
 			for (const auto& [symbol_type, what]: rejected) expectRejected(ctx, symbol_type, what);
-
-			// `String` is a standard library class, so this can only be checked when a
-			// standard library is loaded into the context (not the case in this bare test context).
-			if (isStringTypePresent(ctx))
-				expectRejected(ctx, directOf(getStringType(ctx)), "string");
 		});
 	}
 

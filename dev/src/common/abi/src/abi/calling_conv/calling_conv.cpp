@@ -29,7 +29,7 @@ namespace abi::calling_conv {
 	 *
 	 * @param target Target architecture (differs in pointer size for example)
 	 * @param type The original type we want to flatten
-	 * @param expanded_layout[out] This is return parameter, where the fields will have calculated
+	 * @param[out] expanded_layout This is return parameter, where the fields will have calculated
 	 * offsets like in the original nested structure. This offset information is lost once we
 	 * flatten the structures.
 	 */
@@ -69,11 +69,11 @@ namespace abi::calling_conv {
 					auto struct_layout = layout::computeCLayout(target, v.fields);
 					for (auto&& [field, field_offset]:
 					     std::views::zip(v.fields, struct_layout.field_offsets))
-						self(self, *field, field_offset);
+						self(self, *field, offset + field_offset);
 				}
 				variant_case(types::ArrayType, v) {
 					auto elem_size_align = layout::sizeAlignOf(target, *v.element);
-					for (int i{ 0 }; i < v.count; i++) {
+					for (usize i{ 0 }; i < v.count; i++) {
 						self(self, *v.element, offset);
 						offset += elem_size_align.size;
 					}
@@ -102,6 +102,9 @@ namespace abi::calling_conv {
 		const std::vector<types::AbiType>& flattened,
 		const layout::ComputedLayout&      expanded_layout
 	) {
+		CORE_ASSERT(
+			expanded_layout.size <= Bytes(16), "This function only works for structs up to 16 bytes"
+		);
 		enum class Eightbyte { NoClass, Integer, Sse };
 
 		std::array<Eightbyte, 2> classes = { Eightbyte::NoClass, Eightbyte::NoClass };
@@ -256,7 +259,7 @@ namespace abi::calling_conv {
 				))
 				return ARG_ENTRY(ArgInfo::byValue(types::cloneAbiType(*original_type)));
 
-			[[maybe_unused]] layout::ComputedLayout computed_layout;
+			layout::ComputedLayout computed_layout;
 			auto flattened_types = flattenType(myTargetABI(), *original_type, computed_layout);
 			if (isHomogeneous(flattened_types))
 				return ARG_ENTRY(homogeneous_arg_info(std::move(flattened_types)));

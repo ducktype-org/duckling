@@ -1,3 +1,4 @@
+#pragma once
 /**
  * @file calling_conv.hpp
  * @author Wojciech Rzeplinski
@@ -16,12 +17,12 @@
  * packed struct are supported very easily).
  */
 namespace abi::calling_conv {
-	class ArgInfo {
+	class ArgInfo final {
 	public:
 		/**
 		 * @brief We pass the value by pointer.
 		 */
-		struct ByPointer {
+		struct ByPointer final {
 			// If we want to pass the pointer with the `by_val` ptr attribute.
 			// If not, we have to copy the value before the call and pass the pointer.
 			bool by_val;
@@ -30,7 +31,7 @@ namespace abi::calling_conv {
 		/**
 		 * @brief We pass by value.
 		 */
-		struct ByValue {
+		struct ByValue final {
 			/**
 			 * @brief The type we coerce the original type to,
 			 * can be the same as the original type.
@@ -47,18 +48,18 @@ namespace abi::calling_conv {
 		static ArgInfo byValue(types::AbiType type, bool sign_ext = false, bool zero_ext = false);
 
 		template<typename Alternative>
-		base::Optional<CRef<Alternative>> getKind() {
+		base::Optional<CRef<Alternative>> getKind() const {
 			if (auto value = std::get_if<Alternative>(&kind)) return { CRef<Alternative>(value) };
 			return {};
 		}
 	};
 
-	struct ArgEntry {
+	struct ArgEntry final {
 		ArgInfo            info;
 		types::AbiTypeCRef original_type;
 	};
 
-	struct ReturnEntry {
+	struct ReturnEntry final {
 		ArgInfo info;
 
 		/**
@@ -75,7 +76,7 @@ namespace abi::calling_conv {
 	 * @brief The calling convention information
 	 * to correctly construct LLVM C abi calls.
 	 */
-	struct FunctionInfo {
+	struct FunctionInfo final {
 		base::Optional<ReturnEntry> return_info;
 		std::vector<ArgEntry>       param_info;
 	};
@@ -83,7 +84,7 @@ namespace abi::calling_conv {
 	/**
 	 * @brief The function type.
 	 */
-	struct FunctionType {
+	struct FunctionType final {
 		/**
 		 * @brief The return type, empty optional means function returns a void.
 		 */

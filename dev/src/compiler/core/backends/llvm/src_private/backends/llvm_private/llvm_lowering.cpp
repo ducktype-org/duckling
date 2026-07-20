@@ -713,7 +713,7 @@ namespace compiler::backend_llvm {
 			-> llvm::Value* {
 			variant_match(lir_location.getVariant()) {
 				variant_case(lir::LIRPlace, place) {
-					// Alloca the temporary and copy the projected place pointer into the tempoarary
+					// Alloca the temporary and copy the projected place pointer into the temporary
 					// and return the temporary.
 					llvm::Type*  place_type = typeFromLayout(module, place.layout);
 					llvm::Value* place_ptr  = gepPointerFromLIRPlace(place, builder);
@@ -943,7 +943,14 @@ namespace compiler::backend_llvm {
 				auto* alloca_src = builder.CreateAlloca(src_type, nullptr, "tmp_coerce_src");
 				builder.CreateStore(src_val, alloca_src);
 				auto* dst = builder.CreateAlloca(desired_type, nullptr, "tmp_reinterpret");
-				memcpy_typed(dst, alloca_src, src_type);
+				
+				const auto copy_size = std::min(
+					data_layout.getTypeAllocSize(src_type),
+					data_layout.getTypeAllocSize(desired_type)
+				);
+				const auto src_align = data_layout.getABITypeAlign(src_type);
+				const auto dst_align = data_layout.getABITypeAlign(desired_type);
+				builder.CreateMemCpy(dst, dst_align, alloca_src, src_align, copy_size);
 				return builder.CreateLoad(desired_type, dst);
 			};
 

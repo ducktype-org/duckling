@@ -185,6 +185,7 @@ private:
 		expectByValue(x86Arg(arena, s(i(64), i(16))), s(i(64), i(16)), "{i64,i16}");
 		expectByValue(x86Arg(arena, s(i(64), i(32))), s(i(64), i(32)), "{i64,i32}");
 		expectByValue(x86Arg(arena, s(i(64), i(64))), s(i(64), i(64)), "{i64,i64}");
+		expectByValue(x86Arg(arena, s(i(64), s(i(32), i(32)))), s(i(64), i(64)), "{i64,{i32,i32}}");
 		expectByPointer(x86Arg(arena, s(i(64), i(64), i(8))), /*by_val=*/true, "{i64,i64,i8}");
 		expectByValue(x86Arg(arena, p()), p(), "ptr");
 
