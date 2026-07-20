@@ -131,6 +131,8 @@ private:
 		fs::File              fs_root_path  = fs::FileManager::createRandomTempDirectory();
 		std::filesystem::path root          = fs_root_path.getFilePath().getPath();
 		const auto            build_id_path = root / artifacts::ArtifactCollection::BUILD_ID_FILE;
+		// getArtcFile() is private; mirror its path construction (PATH / (PATH.filename() + ".artc")).
+		const auto artc_path = root / (root.filename().string() + ".artc");
 
 		const auto b0 = base::StrID("b0");
 
@@ -143,6 +145,7 @@ private:
 		}
 
 		const auto build_id_mtime_before = std::filesystem::last_write_time(build_id_path);
+		const auto artc_mtime_before     = std::filesystem::last_write_time(artc_path);
 
 		{
 			// Load the warm collection and only read from it: no new blob/data is written.
@@ -154,6 +157,7 @@ private:
 		}
 
 		ASSERT_TRUE(std::filesystem::last_write_time(build_id_path) == build_id_mtime_before);
+		ASSERT_TRUE(std::filesystem::last_write_time(artc_path) == artc_mtime_before);
 	}
 };
 

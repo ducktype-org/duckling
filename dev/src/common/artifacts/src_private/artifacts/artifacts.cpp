@@ -21,19 +21,22 @@ constexpr char ARTC_DELIM = ';';
 
 namespace {
 	/**
-	 * @brief Writes `content` to `path` atomically: writes to a uniquely-named temp file in the
-	 * same directory, then renames it over `path`. `rename` within one directory/filesystem is
-	 * atomic, so a concurrent reader of `path` always sees either the old or the new content in
-	 * full, never a truncated/partial write.
+	 * @brief Writes to `path` atomically: `write_content` is handed an output stream over a
+	 * uniquely-named temp file in the same directory, which is then renamed over `path`. `rename`
+	 * within one directory/filesystem is atomic, so a concurrent reader of `path` always sees
+	 * either the old or the new content in full, never a truncated/partial write. `write_content`
+	 * writes straight to the temp file stream, so callers with large payloads (e.g. blob data)
+	 * don't need to buffer the whole content in a separate in-memory copy first.
 	 */
-	void writeFileAtomically(const std::filesystem::path& path, std::string_view content) {
+	template<typename WriteContentFn>
+	void writeFileAtomically(const std::filesystem::path& path, WriteContentFn&& write_content) {
 		static thread_local std::mt19937_64 rng{ std::random_device{}() };
 		const auto tmp_path = path.string() + ".tmp-" + std::to_string(rng());
 
 		{
 			std::ofstream tmp_file(tmp_path, std::ios::out | std::ios::trunc | std::ios::binary);
 			if (!tmp_file) CORE_PANIC("Failed to open temp file for atomic write: " + tmp_path);
-			tmp_file.write(content.data(), base::safeIntConv<std::streamsize>(content.size()));
+			std::forward<WriteContentFn>(write_content)(tmp_file);
 			if (!tmp_file) CORE_PANIC("Failed to write temp file for atomic write: " + tmp_path);
 		}
 
@@ -47,6 +50,13 @@ namespace {
 				+ "': " + ec.message()
 			);
 		}
+	}
+
+	/** @brief writeFileAtomically overload for callers that already have the content as a string. */
+	void writeFileAtomically(const std::filesystem::path& path, std::string_view content) {
+		writeFileAtomically(path, [&](std::ostream& out) {
+			out.write(content.data(), base::safeIntConv<std::streamsize>(content.size()));
+		});
 	}
 }
 
@@ -316,21 +326,23 @@ void artifacts::ArtifactCollection::flushDown() {
 		"\n"
 	);
 
-	std::ostringstream content;
-	content << std::to_string(blob_artifacts.size()) << ARTC_DELIM;
-	for (const auto& [blob_name, blob]: blob_artifacts) {
-		const auto& data = blob_data[blob_name];
-		// Name
-		content << blob_name.strView().size() << ARTC_DELIM << blob_name.strView();
-		// Content
-		content << data->size() << ARTC_DELIM;
-		content.write(
-			reinterpret_cast<const char*>(data->data()), base::safeIntConv<u32>(data->size())
-		);
-	}
 	// Written to a temp file and renamed into place so a concurrent reader constructing an
-	// ArtifactCollection at this path never observes a half-written .artc blob.
-	writeFileAtomically(artc_file_path.getPath(), content.str());
+	// ArtifactCollection at this path never observes a half-written .artc blob. Streamed directly
+	// to the temp file rather than staged in an in-memory buffer first, since blob data (e.g.
+	// cached LLVM IR/object bytes) can be large enough that a full extra copy matters.
+	writeFileAtomically(artc_file_path.getPath(), [&](std::ostream& content) {
+		content << std::to_string(blob_artifacts.size()) << ARTC_DELIM;
+		for (const auto& [blob_name, blob]: blob_artifacts) {
+			const auto& data = blob_data[blob_name];
+			// Name
+			content << blob_name.strView().size() << ARTC_DELIM << blob_name.strView();
+			// Content
+			content << data->size() << ARTC_DELIM;
+			content.write(
+				reinterpret_cast<const char*>(data->data()), base::safeIntConv<u32>(data->size())
+			);
+		}
+	});
 
 	for (auto&& [_, sub_collection]: sub_collections) sub_collection->flushDown();
 }
