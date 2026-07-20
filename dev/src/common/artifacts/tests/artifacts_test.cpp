@@ -126,7 +126,7 @@ private:
 	// Regression test for a race where a pure-reader process (e.g. a warm
 	// `--custom-std-artifacts-path` consumer) rewrote `.artc`/`.build_id` on every flush, even
 	// though it compiled nothing. Concurrent readers could then observe a half-written marker
-	// and wipe the shared directory out from under an in-progress compile (issue #3169).
+	// and wipe the shared directory out from under an in-progress compile.
 	void flushIsNoOpWhenNothingWasWritten() {
 		fs::File              fs_root_path  = fs::FileManager::createRandomTempDirectory();
 		std::filesystem::path root          = fs_root_path.getFilePath().getPath();
