@@ -1,5 +1,7 @@
 #include "comp_time.hpp"
 
+#include "helios/queries/global_data_queries.hpp"
+
 #include <ctv/ctv.hpp>
 #include <ctv/numeric_value.hpp>
 #include <diagnostic_interactive/placeholder.hpp>
@@ -24,7 +26,6 @@
 
 #include <query_framework/context/context.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
-#include "helios/queries/global_data_queries.hpp"
 
 #include <cmath>
 #include <concepts>
@@ -840,8 +841,8 @@ namespace compiler::helios {
 		) {
 			// Collect all function dependencies for this function. All functions needed in
 			// order to evaluate this one.
-			auto& all_dependencies = ctx.query<QueryTransitiveUsedSymbols>(function_sym_id)
-			                             ->valueOrThrow();
+			auto& all_dependencies
+				= ctx.query<QueryTransitiveUsedSymbols>(function_sym_id)->valueOrThrow();
 
 			auto mangled_name_function_to_call
 				= ctx.query<mangler::QueryMangledSymbol>({ .symbol_key = function_sym_id });
@@ -857,12 +858,19 @@ namespace compiler::helios {
 				if (not implementsQueryCodeOfFun(func_id)) continue;
 				auto& hout_func = ctx.query<QueryCodeOfFun>(func_id)->valueOrThrow();
 				hout_unit.functions.emplace_back(&hout_func);
-				CORE_DEV_LOG(Compiler, "Lowered function `", hout_func.declaration->original_name, "` for comp-time.");
+				CORE_DEV_LOG(
+					Compiler,
+					"Lowered function `",
+					hout_func.declaration->original_name,
+					"` for comp-time."
+				);
 			}
 			for (const SymID& glob_id: all_dependencies.used_globals) {
 				auto& hout_glob = ctx.query<QueryHOUTGlobalData>(glob_id)->valueOrThrow();
 				hout_unit.glob_data.emplace_back(&hout_glob);
-				CORE_DEV_LOG(Compiler, "Lowered global `", hout_glob.original_name, "` for comp-time.");
+				CORE_DEV_LOG(
+					Compiler, "Lowered global `", hout_glob.original_name, "` for comp-time."
+				);
 			}
 			auto lir_unit
 				= lir::lowerToLIRUnit(ctx, mir::lowerToMIRUnit(ctx, &hout_unit).valueOrThrow());

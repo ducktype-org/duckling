@@ -320,13 +320,13 @@ namespace {
 	) {
 		const auto kind        = type.getType().getKind();
 		auto       error_value = std::unexpected(VmEvaluationError(
-			VmEvaluationError::Kind::ReturnConversionFailed,
-			base::strConcat(
-				"VMValue to CTV conversion for type: ",
-				base::enumToStr(kind),
-				" is not implemented yet."
-			)
-		));
+            VmEvaluationError::Kind::ReturnConversionFailed,
+            base::strConcat(
+                "VMValue to CTV conversion for type: ",
+                base::enumToStr(kind),
+                " is not implemented yet."
+            )
+        ));
 		switch (kind) {
 		case compiler::tsh::Kind::Integral: {
 			compiler::tsh::IntegralAbstractType int_type(type.getType());

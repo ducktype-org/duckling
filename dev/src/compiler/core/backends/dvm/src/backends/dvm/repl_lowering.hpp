@@ -76,8 +76,7 @@ namespace compiler::backend_vm {
 		 * as some of them might have been lowered in previous statements and are already present in
 		 * the context.
 		 */
-		vm::code::CodeCollection insertLIRUnitAndCollectNewlyLoweredCode(
-			const lir::LIRUnit& lir_unit
+		vm::code::CodeCollection insertLIRUnitAndCollectNewlyLoweredCode(const lir::LIRUnit& lir_unit
 		);
 
 		/**

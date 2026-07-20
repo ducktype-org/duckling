@@ -47,8 +47,15 @@ namespace compiler::ctv {
 		};
 
 	private:
-		using Storage
-			= std::variant<bool, NumericValue, char, base::StrID, StringClassValue, UnitCTV, TupleCTV, tsh::SymbolType<>>;
+		using Storage = std::variant<
+			bool,
+			NumericValue,
+			char,
+			base::StrID,
+			StringClassValue,
+			UnitCTV,
+			TupleCTV,
+			tsh::SymbolType<>>;
 		Storage value;
 
 	public:

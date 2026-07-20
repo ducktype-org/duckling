@@ -14,11 +14,9 @@ namespace compiler::backend_vm {
 		bool            build_debug_info,
 		bool            is_comp_time_lowering
 	):
-		  program_context(
-			  makeBox<internal::ProgramLoweringContext>(
-				  query_ctx, module_id, build_debug_info, is_comp_time_lowering
-			  )
-		  ),
+		  program_context(makeBox<internal::ProgramLoweringContext>(
+			  query_ctx, module_id, build_debug_info, is_comp_time_lowering
+		  )),
 		  build_debug_info(build_debug_info) {}
 
 	vm::code::CodeCollection DVMCodeBuilder::build() const {

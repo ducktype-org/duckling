@@ -26,8 +26,8 @@ namespace compiler::helios {
 			auto expand = key.element.unlock(ctx);
 
 			// `expand` accepts either a `str` (char slice) or a `String`, so we can't use
-			// `getHoutOfExprWithExpectedType` (single expected type). Build the HOUT directly and try
-			// both coercions.
+			// `getHoutOfExprWithExpectedType` (single expected type). Build the HOUT directly and
+			// try both coercions.
 			auto expand_expr       = expand->getValue().unlock(ctx)->getExpr();
 			auto expr_hout_qresult = ctx.query<QueryHoutOfExpr>({ expand_expr });
 			if (expr_hout_qresult->hasFailed()) return query::Failed();
@@ -38,16 +38,22 @@ namespace compiler::helios {
 				expr_hout->expression_type,
 				tsh::SymbolType<>::withDefaultsConst(tsh::getCharSliceType(ctx))
 			);
-			auto string_coercion = canCoerce(
-				ctx,
-				expr_hout->expression_type,
-				tsh::SymbolType<>::withDefaultsConst(tsh::getStringType(ctx))
-			);
-			if (str_coercion.hasFailed() || string_coercion.hasFailed()) return query::Failed();
+			if (str_coercion.hasFailed()) return query::Failed();
+			const auto& str_result = str_coercion.valueOrThrow();
 
-			const auto& str_result    = str_coercion.valueOrThrow();
-			const auto& string_result = string_coercion.valueOrThrow();
-			if (str_result.isInvalid() && string_result.isInvalid()) {
+			const bool      string_present  = tsh::isStringTypePresent(ctx);
+			CoercionQResult string_coercion = [&]() -> CoercionQResult {
+				if (!string_present) return query::Failed();
+				return canCoerce(
+					ctx,
+					expr_hout->expression_type,
+					tsh::SymbolType<>::withDefaultsConst(tsh::getStringType(ctx))
+				);
+			}();
+			if (string_present && string_coercion.hasFailed()) return query::Failed();
+
+			const bool string_valid = string_present && string_coercion.valueOrThrow().isValid();
+			if (str_result.isInvalid() && !string_valid) {
 				ctx.logInt(makeBox<dia_int::PlaceholderError>(
 					base::strConcat(
 						"expand argument has to be either str or String, but got ",
@@ -58,10 +64,11 @@ namespace compiler::helios {
 				return query::Failed();
 			}
 
-			const auto& coercion
-				= str_result.isValid() ? str_result.getCoercion() : string_result.getCoercion();
-			auto expand_hout = coercion.coerceFromRef(ctx, expr_hout);
-			auto expand_ctv
+			const auto& coercion    = str_result.isValid()
+			                            ? str_result.getCoercion()
+			                            : string_coercion.valueOrThrow().getCoercion();
+			auto        expand_hout = coercion.coerceFromRef(ctx, expr_hout);
+			auto        expand_ctv
 				= ctx.query<QueryEvaluateHOUTExpression>({ expand_hout.ref() }).valueOrThrow();
 
 			auto get_ctv_string_content
@@ -70,42 +77,37 @@ namespace compiler::helios {
 				v_if_matches(ctv.getStorage(), ctv::StringClassValue, val) return val->value;
 				return {};
 			};
-			if(auto exapnd_str_opt = get_ctv_string_content(expand_ctv)) {
+			if (auto exapnd_str_opt = get_ctv_string_content(expand_ctv)) {
 				auto expand_str = exapnd_str_opt.value();
-				auto pst = pst::PST<pst::Stmt>::fromExpand(
-					expand->getStablePosition(),
-					// @TODO: #2471 change to strView, once it is fixed
-					expand_str.str(),
-					makeBox<pst::LangParserContext>(expand->getContext()),
+				auto pst        = pst::PST<pst::Stmt>::fromExpand(
+                    expand->getStablePosition(),
+                    // @TODO: #2471 change to strView, once it is fixed
+                    expand_str.str(),
+                    makeBox<pst::LangParserContext>(expand->getContext()),
 
-					// This is a little weird, we create a path context hash by hashing the string
-				    // representation of the expand argument bit256 hash.
-				    // Note that this is generally correct since hash(hash) keeps all the necessary
-				    // properties we need, and the expand argument hash includes the bits related to
-				    // the expand path.
-					hashing::ComponentHash({}, expand->getHash().toStringHex())
-				);
+                    // This is a little weird, we create a path context hash by hashing the string
+                    // representation of the expand argument bit256 hash.
+                    // Note that this is generally correct since hash(hash) keeps all the necessary
+                    // properties we need, and the expand argument hash includes the bits related to
+                    // the expand path.
+                    hashing::ComponentHash({}, expand->getHash().toStringHex())
+                );
 				bool parse_errors = pst.hasErrors();
 
 				ctx.moveDiagnosticsFrom(*pst.getLoggerMut());
 				if (parse_errors) return query::Failed();
 
 				if (pst.getRootElement().unlockOpt(ctx).has_value()) {
-					pst.setAdditionalRootData(
-						pst::AdditionalRootData{ pst::AdditionalRootData::MacroExpansionParent{
-							.expand_element = expand } }
-					);
+					pst.setAdditionalRootData(pst::AdditionalRootData{
+						pst::AdditionalRootData::MacroExpansionParent{ .expand_element = expand } });
 				}
 
 				return pst;
-			}
-			else {
-				ctx.logInt(
-					makeBox<dia_int::PlaceholderError>(
-						"The expression in expand statements did not evaluate to a string value.",
-						expand->getValue().unlock(ctx)->getExpr().unlock(ctx)->getStablePosition()
-					)
-				);
+			} else {
+				ctx.logInt(makeBox<dia_int::PlaceholderError>(
+					"The expression in expand statements did not evaluate to a string value.",
+					expand->getValue().unlock(ctx)->getExpr().unlock(ctx)->getStablePosition()
+				));
 				return query::Failed();
 			}
 		}

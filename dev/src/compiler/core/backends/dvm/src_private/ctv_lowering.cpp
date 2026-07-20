@@ -167,8 +167,7 @@ namespace compiler::backend_vm::internal {
 		// dynamic-table pointer (the slice's `_0`).
 		const vm::code::TypeOfData& ptr_to_array_type = pctx.getOrInsertPointerType(array_type);
 		DVMPlace fst_ptr = ctor_ctx.pushTempLocal(ptr_to_array_type, "str_fst_ptr");
-		ctor_ctx.pushInstruction(
-			{ OpKind::ref, fst_ptr.asArgument(), array_global.asAnyArgument() }
+		ctor_ctx.pushInstruction({ OpKind::ref, fst_ptr.asArgument(), array_global.asAnyArgument() }
 		);
 		DVMPlace dyn_ptr = ctor_ctx.pushTempLocal(dyn_ptr_type, "str_dyn_ptr");
 		ctor_ctx.pushInstruction(
@@ -216,12 +215,10 @@ namespace compiler::backend_vm::internal {
 
 			auto ptr_to_field_type = ctor_ctx.program_context.getOrInsertPointerType(field.type);
 			DVMPlace field_ptr     = ctor_ctx.pushTempLocal(ptr_to_field_type, "str_slice_field");
-			ctor_ctx.pushInstruction(
-				{ OpKind::structLea,
-			      field_ptr,
-			      destination,
-			      vm::opargs::Field{ structure_type.name, field.name } }
-			);
+			ctor_ctx.pushInstruction({ OpKind::structLea,
+			                           field_ptr,
+			                           destination,
+			                           vm::opargs::Field{ structure_type.name, field.name } });
 
 			ctor_ctx.maybeStoreResult(
 				field_ptr.withAccessKind(DVMPlace::AccessKind::Pointer), field_value
