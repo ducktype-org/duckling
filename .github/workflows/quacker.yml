@@ -138,10 +138,10 @@ jobs:
           git clone "https://x-access-token:${GITHUB_APP_TOKEN}@github.com/${CONFIG_REPO}.git" "$CONFIG_DIR"
       - name: Run agent
         # ci/run.sh resolves the remaining runtime args (PR head ref, ci-fix checks)
-        # and drives Claude Code; the OAuth token is exposed to this step only.
+        # and drives the agent; the OAuth token is exposed to this step only.
         env:
           GITHUB_APP_TOKEN: ${{ steps.app.outputs.token }}
           GH_TOKEN: ${{ steps.app.outputs.token }}
           SLUG: ${{ steps.app.outputs.app-slug }}
-          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.AGENT_OAUTH_TOKEN }}
+          AGENT_OAUTH_TOKEN: ${{ secrets.AGENT_OAUTH_TOKEN }}
         run: bash "$CONFIG_DIR/ci/run.sh" "$MODE" "$A1" "$A2" "$COMMENT_BODY"
