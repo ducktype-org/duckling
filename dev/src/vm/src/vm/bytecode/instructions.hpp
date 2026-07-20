@@ -149,7 +149,7 @@ namespace vm::code {
 	// for `Comment` as it's not an instruction defined in the definition file.
 	// Per-instruction member definitions live in `instructions.cpp` — keeping them
 	// (and the repeated `instruction_definitions.hpp` expansions) out of this header
-	// saves a lot of memory and time in every including TU.
+	// saves a lot of compilation memory and time in every including TU.
 	class Instruction final {
 	public:
 		Instruction()                              = delete;
