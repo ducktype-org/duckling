@@ -32,8 +32,8 @@ namespace vm {
 	 * loading and parsing of the program is done in the caller's thread.
 	 */
 	class SafeVMProcess final: public IVMProcess {
-		friend class SafeVmValue;
-		friend class SafeVmValueRef;
+		friend class SafeVMValue;
+		friend class SafeVMValueRef;
 
 	private:
 		std::shared_mutex rw_global;
@@ -61,11 +61,11 @@ namespace vm {
 		SynchronizationPrimitives        synchronization_primitives;
 
 		/**
-		 * @brief Storage for all VmValues which belong to this process.
-		 * @note Lifetime of these VmValues is controlled by this process. They will be destructed
+		 * @brief Storage for all VMValues which belong to this process.
+		 * @note Lifetime of these VMValues is controlled by this process. They will be destructed
 		 * when process is deinitialized.
 		 */
-		std::vector<Box<SafeVmValue>> owned_vm_values;
+		std::vector<Box<SafeVMValue>> owned_vm_values;
 
 		/**
 		 * @brief Pool of threads in this process.
@@ -178,33 +178,33 @@ namespace vm {
 
 		[[nodiscard]] api::ProcStatus getCurrentStatus() { return getStatus(); }
 
-		Ref<IVmValue> createVmValue(code::valid_type::ValidTypeID type_id) override;
+		Ref<IVMValue> createVMValue(code::valid_type::ValidTypeID type_id) override;
 
-		Box<IVmValue> createOwnedVmValue(code::valid_type::ValidTypeID type_id) override;
+		Box<IVMValue> createOwnedVMValue(code::valid_type::ValidTypeID type_id) override;
 
 		/**
-		 * @brief Creates an empty, process-owned SafeVmValue from safe type metadata.
+		 * @brief Creates an empty, process-owned SafeVMValue from safe type metadata.
 		 * Safe-VM-internal counterpart of the interface factory.
 		 */
-		Ref<SafeVmValue> createVmValue(TypeCRef type);
+		Ref<SafeVMValue> createVMValue(TypeCRef type);
 
 		/**
-		 * @brief Creates a process-owned SafeVmValue from safe type metadata, filled with the
+		 * @brief Creates a process-owned SafeVMValue from safe type metadata, filled with the
 		 * bytes pointed to by `src`. Safe-VM-internal only.
 		 */
-		Ref<SafeVmValue> createVmValue(TypeCRef type, Pointer src);
+		Ref<SafeVMValue> createVMValue(TypeCRef type, Pointer src);
 
 		/**
-		 * @brief Creates an empty, caller-owned SafeVmValue from safe type metadata.
+		 * @brief Creates an empty, caller-owned SafeVMValue from safe type metadata.
 		 * Safe-VM-internal counterpart of the interface factory.
 		 */
-		Box<SafeVmValue> createOwnedVmValue(TypeCRef type);
+		Box<SafeVMValue> createOwnedVMValue(TypeCRef type);
 
 		/**
-		 * @brief Creates a caller-owned SafeVmValue from safe type metadata, filled with the
+		 * @brief Creates a caller-owned SafeVMValue from safe type metadata, filled with the
 		 * bytes pointed to by `src`. Safe-VM-internal only.
 		 */
-		Box<SafeVmValue> createOwnedVmValue(TypeCRef type, Pointer src);
+		Box<SafeVMValue> createOwnedVMValue(TypeCRef type, Pointer src);
 
 		CRef<low::ILowVMProgram> getLoadedProgram() const { return loaded_program; }
 

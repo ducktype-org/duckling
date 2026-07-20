@@ -18,7 +18,7 @@
 #include <vector>
 
 namespace vm {
-	class IVmValueRef;
+	class IVMValueRef;
 
 	namespace interpreted_data_variant {
 		struct Primitive;
@@ -42,12 +42,12 @@ namespace vm {
 	/**
 	 * @brief Common interface for value references. A value reference gives access to a value from
 	 * outside a VM without copying it - only the referenced data is observed.
-	 * @note `IVmValueRef`s can only be used within the same process where they were initialized.
+	 * @note `IVMValueRef`s can only be used within the same process where they were initialized.
 	 * They cannot be transferred to different processes.
 	 */
-	class IVmValueRef {
+	class IVMValueRef {
 	public:
-		virtual ~IVmValueRef() = default;
+		virtual ~IVMValueRef() = default;
 
 		/** @brief Returns the high-level (compiler) type of the referenced value. */
 		[[nodiscard]] virtual base::CRef<code::valid_type::ValidType> getType() const = 0;
@@ -57,6 +57,12 @@ namespace vm {
 
 		/** @brief Returns a short, human-readable representation of the referenced value. */
 		[[nodiscard]] virtual std::string str() const = 0;
+
+		/**
+		 * @brief Returns whether the referenced value has inspectable child values (a data
+		 * structure, a non-null pointer, a table or a variant) rather than being a single scalar.
+		 */
+		[[nodiscard]] virtual bool isComplex() const = 0;
 	};
 
 	/**
@@ -68,7 +74,7 @@ namespace vm {
 		virtual ~ITableElementAccess() = default;
 
 		/** @brief Creates a reference to the table element at `index`. */
-		[[nodiscard]] virtual SharedBox<IVmValueRef> get(usize index) const = 0;
+		[[nodiscard]] virtual SharedBox<IVMValueRef> get(usize index) const = 0;
 	};
 
 	namespace interpreted_data_variant {
@@ -77,7 +83,7 @@ namespace vm {
 		};
 
 		struct Pointer final {
-			base::Optional<SharedBox<IVmValueRef>> referenced;
+			base::Optional<SharedBox<IVMValueRef>> referenced;
 		};
 
 		struct Table final {
@@ -89,7 +95,7 @@ namespace vm {
 			 * @brief Returns a reference to the table element at `index`.
 			 * @throws std::out_of_range when `index` is outside the table.
 			 */
-			[[nodiscard]] SharedBox<IVmValueRef> get(usize index) const {
+			[[nodiscard]] SharedBox<IVMValueRef> get(usize index) const {
 				if (index >= size) throw std::out_of_range("Table index out of range");
 				return elements->get(index);
 			}
@@ -98,7 +104,7 @@ namespace vm {
 		struct Data final {
 			struct FieldDesc {
 				Bytes                  offset = Bytes(0);
-				SharedBox<IVmValueRef> value;
+				SharedBox<IVMValueRef> value;
 			};
 
 			std::vector<FieldDesc>            fields;
@@ -107,7 +113,7 @@ namespace vm {
 
 		struct Variant final {
 			u64                    type_tag = 0;
-			SharedBox<IVmValueRef> referenced;
+			SharedBox<IVMValueRef> referenced;
 		};
 
 		struct Function final {};

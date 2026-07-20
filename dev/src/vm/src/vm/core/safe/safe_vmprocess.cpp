@@ -157,33 +157,33 @@ namespace vm {
 		return {};
 	}
 
-	Ref<IVmValue> SafeVMProcess::createVmValue(code::valid_type::ValidTypeID type_id) {
+	Ref<IVMValue> SafeVMProcess::createVMValue(code::valid_type::ValidTypeID type_id) {
 		// Safe TypeIDs are asserted (in the type builder) to be numerically equal to ValidTypeIDs.
-		return createVmValue(loaded_program->getTypes().at(TypeID(type_id.asInt())));
+		return createVMValue(loaded_program->getTypes().at(TypeID(type_id.asInt())));
 	}
 
-	Box<IVmValue> SafeVMProcess::createOwnedVmValue(code::valid_type::ValidTypeID type_id) {
-		return createOwnedVmValue(loaded_program->getTypes().at(TypeID(type_id.asInt())));
+	Box<IVMValue> SafeVMProcess::createOwnedVMValue(code::valid_type::ValidTypeID type_id) {
+		return createOwnedVMValue(loaded_program->getTypes().at(TypeID(type_id.asInt())));
 	}
 
-	Ref<SafeVmValue> SafeVMProcess::createVmValue(TypeCRef type) {
-		auto value = Box<SafeVmValue>::fromPointer(new SafeVmValue(*this, type));
+	Ref<SafeVMValue> SafeVMProcess::createVMValue(TypeCRef type) {
+		auto value = Box<SafeVMValue>::fromPointer(new SafeVMValue(*this, type));
 		owned_vm_values.emplace_back(std::move(value));
 		return owned_vm_values.back().refMut();
 	}
 
-	Ref<SafeVmValue> SafeVMProcess::createVmValue(TypeCRef type, Pointer src) {
-		auto value = Box<SafeVmValue>::fromPointer(new SafeVmValue(*this, type, src));
+	Ref<SafeVMValue> SafeVMProcess::createVMValue(TypeCRef type, Pointer src) {
+		auto value = Box<SafeVMValue>::fromPointer(new SafeVMValue(*this, type, src));
 		owned_vm_values.emplace_back(std::move(value));
 		return owned_vm_values.back().refMut();
 	}
 
-	Box<SafeVmValue> SafeVMProcess::createOwnedVmValue(TypeCRef type) {
-		return Box<SafeVmValue>::fromPointer(new SafeVmValue(*this, type));
+	Box<SafeVMValue> SafeVMProcess::createOwnedVMValue(TypeCRef type) {
+		return Box<SafeVMValue>::fromPointer(new SafeVMValue(*this, type));
 	}
 
-	Box<SafeVmValue> SafeVMProcess::createOwnedVmValue(TypeCRef type, Pointer src) {
-		return Box<SafeVmValue>::fromPointer(new SafeVmValue(*this, type, src));
+	Box<SafeVMValue> SafeVMProcess::createOwnedVMValue(TypeCRef type, Pointer src) {
+		return Box<SafeVMValue>::fromPointer(new SafeVMValue(*this, type, src));
 	}
 
 	SafeVMProcess::SafeVMProcess(const PID my_pid, bool enable_deadlock_detection):
@@ -403,7 +403,7 @@ namespace vm {
 						.offset = offset,
 						.name   = std::nullopt,
 						.type   = std::nullopt,
-						.value  = SafeVmValueRef::makeShared(
+						.value  = SafeVMValueRef::makeShared(
                             *this, memory.getBlockType(block), Pointer(block, 0)
                         ),
 					});
@@ -469,8 +469,8 @@ namespace vm {
 					= loaded_program->getTypes().atMaybe(base::StrID(type_name.c_str()));
 				match_optional(maybe_type) {
 					opt_some(type) {
-						auto vm_value = createOwnedVmValue(type);
-						return api::response::VmValue{ std::move(vm_value) };
+						auto vm_value = createOwnedVMValue(type);
+						return api::response::VMValue{ std::move(vm_value) };
 					}
 					opt_none {
 						return std::unexpected(api::ApiError{ api::OtherError{ "Type not found" } });

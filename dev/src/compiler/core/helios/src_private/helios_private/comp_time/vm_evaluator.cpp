@@ -19,15 +19,15 @@ namespace {
 	using namespace compiler::ctv;
 
 	/**
-	 * @brief Converts a given `ctv` to VmValue.
-	 * @return The converted VmValue or a VmEvaluationError if the conversion failed.
+	 * @brief Converts a given `ctv` to VMValue.
+	 * @return The converted VMValue or a VmEvaluationError if the conversion failed.
 	 */
-	std::expected<Box<vm::IVmValue>, VmEvaluationError> ctvToVmValue(
+	std::expected<Box<vm::IVMValue>, VmEvaluationError> ctvToVMValue(
 		vm::PID pid, const CompileTimeValue& ctv
 	) {
 		auto get_vm_value
-			= [&](base::StrID type_name) -> std::expected<Box<vm::IVmValue>, VmEvaluationError> {
-			auto vm_value_response = vm::api::getVmValue(pid, type_name.str());
+			= [&](base::StrID type_name) -> std::expected<Box<vm::IVMValue>, VmEvaluationError> {
+			auto vm_value_response = vm::api::getVMValue(pid, type_name.str());
 			if (!vm_value_response.has_value())
 				return std::unexpected(VmEvaluationError(
 					VmEvaluationError::Kind::ArgConversionFailed,
@@ -39,10 +39,10 @@ namespace {
 		variant_match(ctv.getStorage()) {
 			variant_case(NumericValue, val) {
 				return std::visit(
-					[&](auto&& num_val) -> std::expected<Box<vm::IVmValue>, VmEvaluationError> {
+					[&](auto&& num_val) -> std::expected<Box<vm::IVMValue>, VmEvaluationError> {
 						using NumT = std::decay_t<decltype(num_val)>;
 
-						// @TODO: #899 Once CTV will be VmValue based (contain the VMValue and
+						// @TODO: #899 Once CTV will be VMValue based (contain the VMValue and
 					    // compiler::tsh::SymbolType) we should perform this conversion based on the
 					    // `SymbolType` not C++ type sizes.
 						base::StrID dvm_type_name;
@@ -56,7 +56,7 @@ namespace {
 							dvm_type_name = base::StrID("i64");
 						else {
 							throw base::NotYetImplemented(
-								"Conversion from CTV to VmValue for bigger numeric sizes"
+								"Conversion from CTV to VMValue for bigger numeric sizes"
 							);
 						}
 
@@ -82,13 +82,13 @@ namespace {
 			}
 			variant_default {
 				throw base::NotYetImplemented(
-					"Conversion from ctv to VmValue for this type is not implemented yet"
+					"Conversion from ctv to VMValue for this type is not implemented yet"
 				);
 			}
 		}
 		return std::unexpected(VmEvaluationError(
 			VmEvaluationError::Kind::ArgConversionFailed,
-			"Unknown error during CompileTimeValue to VmValue conversion"
+			"Unknown error during CompileTimeValue to VMValue conversion"
 		));
 	}
 
@@ -97,7 +97,7 @@ namespace {
 	 * @return The converted value or a VmEvaluationError if the conversion failed.
 	 */
 	std::expected<CompileTimeValue, VmEvaluationError> vmValueToCtv(
-		const compiler::tsh::SymbolType<>& type, Ref<vm::IVmValue> vm_value
+		const compiler::tsh::SymbolType<>& type, Ref<vm::IVMValue> vm_value
 	) {
 		const auto kind = type.getType().getKind();
 		switch (kind) {
@@ -296,13 +296,13 @@ namespace {
 		return comptime_dvm.loadCode(bytecode);
 	}
 
-	std::expected<std::vector<Box<vm::IVmValue>>, VmEvaluationError> prepareArguments(
+	std::expected<std::vector<Box<vm::IVMValue>>, VmEvaluationError> prepareArguments(
 		CompTimeDVM& comptime_dvm, const std::vector<compiler::ctv::CompileTimeValue>& args
 	) {
-		std::vector<Box<vm::IVmValue>> owned_arguments;
+		std::vector<Box<vm::IVMValue>> owned_arguments;
 		owned_arguments.reserve(args.size());
 		for (const auto& ctv_arg: args) {
-			auto res = ctvToVmValue(*comptime_dvm.getPID(), ctv_arg);
+			auto res = ctvToVMValue(*comptime_dvm.getPID(), ctv_arg);
 			if (!res) return std::unexpected(res.error());
 			owned_arguments.push_back(std::move(*res));
 		}
@@ -314,7 +314,7 @@ namespace {
 	) {
 		vm::PID pid = *comptime_dvm.getPID();
 		// Pass the query context into DVM.
-		auto response = vm::api::getVmValue(pid, "opaque_ptr");
+		auto response = vm::api::getVMValue(pid, "opaque_ptr");
 		if (!response.has_value())
 			return std::unexpected(VmEvaluationError(
 				VmEvaluationError::Kind::ArgConversionFailed,
@@ -336,7 +336,7 @@ namespace {
 	std::expected<compiler::ctv::CompileTimeValue, VmEvaluationError> runAndGetResult(
 		CompTimeDVM&                          comptime_dvm,
 		const std::string&                    func_name,
-		const std::vector<Box<vm::IVmValue>>& owned_args,
+		const std::vector<Box<vm::IVMValue>>& owned_args,
 		const compiler::tsh::SymbolType<>     return_type
 	) {
 		vm::PID pid = *comptime_dvm.getPID();
@@ -357,7 +357,7 @@ namespace {
 		for (const auto& arg: owned_args) arg->freeData();
 
 		variant_match(maybe_exit_value.value()) {
-			variant_case(std::vector<Ref<vm::IVmValue>>, values) {
+			variant_case(std::vector<Ref<vm::IVMValue>>, values) {
 				CORE_ASSERT(
 					values.size() == 1, "Compiler support for multiple values not implemented"
 				);

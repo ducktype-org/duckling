@@ -26,8 +26,8 @@ namespace {
 		os.add(printer::PrinterContent(typeToString(status)));
 		if (v_matches(status, vm::api::ExecutionCompleted)) {
 			const auto& exit_value = std::get<vm::api::ExecutionCompleted>(status).exit_value;
-			if (v_matches(exit_value, std::vector<Ref<vm::IVmValue>>)) {
-				for (auto val: std::get<std::vector<Ref<vm::IVmValue>>>(exit_value)) {
+			if (v_matches(exit_value, std::vector<Ref<vm::IVMValue>>)) {
+				for (auto val: std::get<std::vector<Ref<vm::IVMValue>>>(exit_value)) {
 					if_opt_some(val->readData(), data) {
 						variant_match(data) {
 							variant_case(vm::interpreted_data_variant::Primitive, primitive) {

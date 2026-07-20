@@ -69,11 +69,11 @@ private:
 				variant_match(status) {
 					variant_case(vm::api::ExecutionCompleted, completed) {
 						auto exit_value_variant = completed.exit_value;
-						ASSERT_TRUE(std::holds_alternative<std::vector<Ref<vm::IVmValue>>>(
+						ASSERT_TRUE(std::holds_alternative<std::vector<Ref<vm::IVMValue>>>(
 							exit_value_variant
 						));
 						auto exit_value
-							= std::get<std::vector<Ref<vm::IVmValue>>>(exit_value_variant);
+							= std::get<std::vector<Ref<vm::IVMValue>>>(exit_value_variant);
 
 						ASSERT_TRUE(ret_val_counter < expected_values.size());
 						ASSERT_EQUAL_PRINT(1, exit_value.size());
@@ -251,11 +251,11 @@ private:
 				variant_match(status) {
 					variant_case(vm::api::ExecutionCompleted, completed) {
 						auto exit_value_variant = completed.exit_value;
-						ASSERT_TRUE(std::holds_alternative<std::vector<Ref<vm::IVmValue>>>(
+						ASSERT_TRUE(std::holds_alternative<std::vector<Ref<vm::IVMValue>>>(
 							exit_value_variant
 						));
 						auto exit_value
-							= std::get<std::vector<Ref<vm::IVmValue>>>(exit_value_variant);
+							= std::get<std::vector<Ref<vm::IVMValue>>>(exit_value_variant);
 
 						ASSERT_TRUE(ret_val_counter < expected_values.size());
 						ASSERT_EQUAL_PRINT(1, exit_value.size());
@@ -424,7 +424,7 @@ private:
 
 		auto  status         = debugger.getStatus();
 		auto  completed_info = std::get<vm::api::ExecutionCompleted>(status);
-		auto& exit_value     = std::get<std::vector<Ref<vm::IVmValue>>>(completed_info.exit_value);
+		auto& exit_value     = std::get<std::vector<Ref<vm::IVMValue>>>(completed_info.exit_value);
 		auto  optional_data  = exit_value[0]->readData();
 
 		ASSERT_HAS_VALUE(optional_data);

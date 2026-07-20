@@ -10,17 +10,17 @@ namespace vm::fast {
 		vm_threads.add(*this, compiler.getProgramBase(), &functions);
 	}
 
-	Ref<IVmValue> FastVMProcess::createVmValue([[maybe_unused]] code::valid_type::ValidTypeID type_id
+	Ref<IVMValue> FastVMProcess::createVMValue([[maybe_unused]] code::valid_type::ValidTypeID type_id
 	) {
 		// @TODO: #2102 Implement this pure virtual method.
-		throw vm::VMNotImplemented("Method `createVmValue` is not implemented.");
+		throw vm::VMNotImplemented("Method `createVMValue` is not implemented.");
 	}
 
-	Box<IVmValue> FastVMProcess::createOwnedVmValue(
+	Box<IVMValue> FastVMProcess::createOwnedVMValue(
 		[[maybe_unused]] code::valid_type::ValidTypeID type_id
 	) {
 		// @TODO: #2102 Implement this pure virtual method.
-		throw vm::VMNotImplemented("Method `createOwnedVmValue` is not implemented.");
+		throw vm::VMNotImplemented("Method `createOwnedVMValue` is not implemented.");
 	}
 
 	std::expected<api::Response, api::ApiError> FastVMProcess::doRequest(

@@ -25,9 +25,9 @@ namespace vm::api {
 			NLOHMANN_DEFINE_TYPE_INTRUSIVE(Type, type);
 		};
 
-		struct VmValue {
-			Box<::vm::IVmValue> vm_value;
-			NLOHMANN_DEFINE_TYPE_INTRUSIVE(VmValue, vm_value);
+		struct VMValue {
+			Box<::vm::IVMValue> vm_value;
+			NLOHMANN_DEFINE_TYPE_INTRUSIVE(VMValue, vm_value);
 		};
 
 		struct CodePosition {
@@ -46,7 +46,7 @@ namespace vm::api {
 				u64                          offset = 0;
 				base::Optional<base::StrID>  name;
 				base::Optional<base::StrID>  type;
-				SharedBox<::vm::IVmValueRef> value;
+				SharedBox<::vm::IVMValueRef> value;
 			};
 
 			base::StrID           function_name;
@@ -62,7 +62,7 @@ namespace vm::api {
 		response::Type,
 		response::Empty,
 		response::CodePosition,
-		response::VmValue,
+		response::VMValue,
 		response::Boolean,
 		ThreadID,
 		response::NumberOfCurrentStackFrames,

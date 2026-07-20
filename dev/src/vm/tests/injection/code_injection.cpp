@@ -31,24 +31,24 @@ public:
 	}
 
 private:
-	using OwnedArgumentList = std::vector<Box<vm::IVmValue>>;
+	using OwnedArgumentList = std::vector<Box<vm::IVMValue>>;
 
 	/**
-	 * @brief An IVmValue implementation which does not come from the safe VM. Used to check that
+	 * @brief An IVMValue implementation which does not come from the safe VM. Used to check that
 	 * the safe VM rejects values it did not create, even when their PID matches.
 	 */
-	class ForeignVmValue final: public vm::IVmValue {
+	class ForeignVMValue final: public vm::IVMValue {
 	public:
-		explicit ForeignVmValue(vm::PID pid): pid(pid) {}
+		explicit ForeignVMValue(vm::PID pid): pid(pid) {}
 
 		void freeData() override {}
 
 		[[nodiscard]] base::CRef<vm::code::valid_type::ValidType> getType() const override {
-			CORE_PANIC("ForeignVmValue has no type");
+			CORE_PANIC("ForeignVMValue has no type");
 		}
 
 		[[nodiscard]] vm::code::valid_type::ValidTypeID getTypeID() const override {
-			CORE_PANIC("ForeignVmValue has no type");
+			CORE_PANIC("ForeignVMValue has no type");
 		}
 
 		[[nodiscard]] Bytes getDataSize() const override { return Bytes(sizeof(data)); }
@@ -64,7 +64,7 @@ private:
 		[[nodiscard]] const byte* getBytes() const override { return data.data(); }
 
 		void dprint(std::ostream& out, const std::string& indent) const override {
-			out << indent << "ForeignVmValue\n";
+			out << indent << "ForeignVMValue\n";
 		}
 
 	private:
@@ -123,8 +123,8 @@ private:
 		auto exit_code_response = vm::api::getExitValue(pid);
 		ASSERT_HAS_VALUE(exit_code_response);
 		const auto& exit_value = exit_code_response.value();
-		ASSERT_TRUE(std::holds_alternative<std::vector<Ref<vm::IVmValue>>>(exit_value));
-		auto& exit_value_vec = std::get<std::vector<Ref<vm::IVmValue>>>(exit_value);
+		ASSERT_TRUE(std::holds_alternative<std::vector<Ref<vm::IVMValue>>>(exit_value));
+		auto& exit_value_vec = std::get<std::vector<Ref<vm::IVMValue>>>(exit_value);
 
 		match_optional(expected_return_values) {
 			opt_some(exp) {
@@ -164,10 +164,10 @@ private:
 	}
 
 	/**
-	 * @brief Create an owned VmValue containing a specified value.
+	 * @brief Create an owned VMValue containing a specified value.
 	 */
-	Box<vm::IVmValue> getIntVmValue(vm::PID pid, i64 value) {
-		auto response = vm::api::getVmValue(pid, "i64");
+	Box<vm::IVMValue> getIntVMValue(vm::PID pid, i64 value) {
+		auto response = vm::api::getVMValue(pid, "i64");
 		ASSERT_HAS_VALUE(response);
 		auto vm_value = std::move(response->vm_value);
 		vm_value->writeBytes<i64>(value);
@@ -175,16 +175,16 @@ private:
 	}
 
 	/**
-	 * @brief Create a list of owned VmValues containing a specified values.
+	 * @brief Create a list of owned VMValues containing a specified values.
 	 */
 	OwnedArgumentList getOwnedArgumentList(vm::PID pid, std::vector<i64> values) {
 		return values
-		     | std::views::transform([this, pid](i64 value) { return getIntVmValue(pid, value); })
+		     | std::views::transform([this, pid](i64 value) { return getIntVMValue(pid, value); })
 		     | std::ranges::to<OwnedArgumentList>();
 	}
 
 	/**
-	 * @brief Create a list of references to owned VmValues which can be passed to the VM.
+	 * @brief Create a list of references to owned VMValues which can be passed to the VM.
 	 */
 	vm::FunctionRunArguments createArgumentList(OwnedArgumentList& arguments) {
 		return arguments | std::views::transform([](auto& value) { return value.refMut(); })
@@ -394,7 +394,7 @@ private:
 		{
 			// Not enough arguments.
 			OwnedArgumentList arguments;
-			arguments.push_back(getIntVmValue(pid, 10));
+			arguments.push_back(getIntVMValue(pid, 10));
 			auto func_args = createArgumentList(arguments);
 
 			assertExecutionPanickedWith(
@@ -407,9 +407,9 @@ private:
 		{
 			// Too many arguments.
 			OwnedArgumentList arguments;
-			arguments.push_back(getIntVmValue(pid, 10));
-			arguments.push_back(getIntVmValue(pid, 20));
-			arguments.push_back(getIntVmValue(pid, 30));
+			arguments.push_back(getIntVMValue(pid, 10));
+			arguments.push_back(getIntVMValue(pid, 20));
+			arguments.push_back(getIntVMValue(pid, 30));
 			auto func_args = createArgumentList(arguments);
 
 			assertExecutionPanickedWith(
@@ -423,9 +423,9 @@ private:
 		{
 			// Argument type mismatch.
 			OwnedArgumentList arguments;
-			arguments.push_back(getIntVmValue(pid, 10));
+			arguments.push_back(getIntVMValue(pid, 10));
 
-			auto i32_value = vm::api::getVmValue(pid, "i32");
+			auto i32_value = vm::api::getVMValue(pid, "i32");
 			ASSERT_HAS_VALUE(i32_value);
 			arguments.push_back(std::move(i32_value->vm_value));
 
@@ -442,8 +442,8 @@ private:
 		{
 			// VMValue with a matching PID, but not created by the safe VM implementation.
 			OwnedArgumentList arguments;
-			arguments.push_back(getIntVmValue(pid, 5));
-			arguments.push_back(Box<vm::IVmValue>::fromPointer(new ForeignVmValue(pid)));
+			arguments.push_back(getIntVMValue(pid, 5));
+			arguments.push_back(Box<vm::IVMValue>::fromPointer(new ForeignVMValue(pid)));
 			auto func_args = createArgumentList(arguments);
 
 			assertExecutionPanickedWith(
@@ -460,8 +460,8 @@ private:
 			vm::PID other_pid = initProcess();
 
 			OwnedArgumentList arguments;
-			arguments.push_back(getIntVmValue(pid, 5));
-			arguments.push_back(getIntVmValue(other_pid, 99));
+			arguments.push_back(getIntVMValue(pid, 5));
+			arguments.push_back(getIntVMValue(other_pid, 99));
 			auto func_args = createArgumentList(arguments);
 
 			assertExecutionPanickedWith(

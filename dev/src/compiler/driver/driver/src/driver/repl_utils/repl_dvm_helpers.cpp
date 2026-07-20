@@ -176,11 +176,11 @@ namespace compiler::repl {
 				[type_view](vm::api::ExitValue exit_values
 		        ) -> std::expected<std::string, std::string> {
 					CORE_ASSERT(
-						std::holds_alternative<std::vector<Ref<vm::IVmValue>>>(exit_values),
-						"Expecting exit values to be a vector of VmValue references"
+						std::holds_alternative<std::vector<Ref<vm::IVMValue>>>(exit_values),
+						"Expecting exit values to be a vector of VMValue references"
 					);
 					const auto& exit_values_vec
-						= std::get<std::vector<Ref<vm::IVmValue>>>(exit_values);
+						= std::get<std::vector<Ref<vm::IVMValue>>>(exit_values);
 					if (type_view == "()") {
 						CORE_ASSERT(
 							exit_values_vec.empty(),

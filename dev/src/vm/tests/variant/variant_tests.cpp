@@ -74,10 +74,10 @@ private:
 
 	void variantTypeTagTest() {
 		/**
-		 * @brief Create an owned VmValue containing a specified value.
+		 * @brief Create an owned VMValue containing a specified value.
 		 */
-		const auto get_int_vm_value = [&](vm::PID pid, u64 value) -> Box<vm::IVmValue> {
-			auto response = vm::api::getVmValue(pid, "i64");
+		const auto get_int_vm_value = [&](vm::PID pid, u64 value) -> Box<vm::IVMValue> {
+			auto response = vm::api::getVMValue(pid, "i64");
 			ASSERT_HAS_VALUE(response);
 			auto vm_value = std::move(response->vm_value);
 			vm_value->writeBytes<u64>(value);
@@ -104,12 +104,12 @@ private:
 			auto value = vm::api::getExitValue(pid);
 			if (!value.has_value()) {
 				fail(
-					"Could not load VmValue for: " + function_name
+					"Could not load VMValue for: " + function_name
 					+ ", reason: " + vm::api::errorToString(value.error())
 				);
 			}
-			ASSERT_TRUE(std::holds_alternative<std::vector<Ref<vm::IVmValue>>>(value.value()));
-			auto& value_vec = std::get<std::vector<Ref<vm::IVmValue>>>(value.value());
+			ASSERT_TRUE(std::holds_alternative<std::vector<Ref<vm::IVMValue>>>(value.value()));
+			auto& value_vec = std::get<std::vector<Ref<vm::IVMValue>>>(value.value());
 			ASSERT_EQUAL(value_vec.size(), 1);
 			const auto vm_value = value_vec.at(0);
 			switch (type_tag_bits) {

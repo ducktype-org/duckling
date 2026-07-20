@@ -174,10 +174,10 @@ namespace vm {
 				);
 			}
 
-			// Downcast once at the API boundary, so the initFromVmValue opcode can rely on the
-			// embedded pointer being a SafeVmValue without any runtime checks.
-			const auto maybe_safe_value = SafeVmValue::tryCast(*arg_value);
-			if (!maybe_safe_value.has_value()) {
+			// Downcast once at the API boundary, so the initFromVMValue opcode can rely on the
+			// embedded pointer being a SafeVMValue without any runtime checks.
+			const auto* safe_value = dynamic_cast<const SafeVMValue*>(&*arg_value);
+			if (safe_value == nullptr) {
 				throw exceptions::VMRuntimeException(base::strConcat(
 					"VMValue for argument ",
 					i,
@@ -200,9 +200,9 @@ namespace vm {
 				));
 			}
 
-			start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(
-				initFromVmValue, std::bit_cast<u64>(maybe_safe_value.value().get()), 0
-			));
+			start_function.bc.push_back(
+				MAKE_BYTECODE_INSTRUCTION(initFromVMValue, std::bit_cast<u64>(safe_value), 0)
+			);
 			start_function.local_stack_size += arg_type->getSize().asInt();
 			start_function.parameters.push_back(arg_type);
 			start_function.arg_size += arg_type->getSize().asInt();
@@ -492,7 +492,7 @@ namespace vm {
 	#pragma GCC pop_options
 #endif
 
-	std::vector<Ref<SafeVmValue>> SafeVMThread::executeFunction(
+	std::vector<Ref<SafeVMValue>> SafeVMThread::executeFunction(
 		const low::LowFuncData& start_function, const low::LowFuncData& func
 	) {
 		ScopedGilGuard gil_guard(*this);
@@ -526,9 +526,9 @@ namespace vm {
 			"result."
 		);
 
-		exit_value_storage = { std::vector<Ref<SafeVmValue>>{} };
+		exit_value_storage = { std::vector<Ref<SafeVMValue>>{} };
 		for (u64 idx = 0; idx < func.result_types.size(); idx++) {
-			exit_value_storage.value().emplace_back(safe_process.createVmValue(
+			exit_value_storage.value().emplace_back(safe_process.createVMValue(
 				func.result_types[idx],
 				Pointer(frame->local_block_ref_stack_base[orig_block_stack_size + idx], 0)
 			));
@@ -620,7 +620,7 @@ namespace vm {
 				respondExecutionRequest(current_status);
 			else
 				respondExecutionRequest(api::ExecutionCompleted{
-					std::vector<Ref<IVmValue>>(exit_value.begin(), exit_value.end()) });
+					std::vector<Ref<IVMValue>>(exit_value.begin(), exit_value.end()) });
 		} catch (const KillProcessException& e) { handleKillProcessException(e); }
 	}
 

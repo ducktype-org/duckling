@@ -12,13 +12,10 @@ namespace vm {
 	class SafeVMProcess;
 
 	/**
-	 * @brief Reference for a value in the safe VM. It is meant to give access to the value from
-	 * outside the VM. It is NOT meant to be used by the internal memory module.
-	 * @note Passed data is NOT copied - only referenced.
-	 * @note `SafeVmValueRef`s can only be used within the same process where they were initialized.
-	 * They cannot be transferred to different processes.
+	 * @brief Safe VM implementation of `IVMValueRef`. References a value living in the safe VM's
+	 * memory module; it is NOT meant to be used by the internal memory module itself.
 	 */
-	class SafeVmValueRef final: public IVmValueRef {
+	class SafeVMValueRef final: public IVMValueRef {
 	private:
 		const Ref<SafeVMProcess> my_process;
 		const Ref<Memory>        memory;
@@ -26,25 +23,26 @@ namespace vm {
 		const Pointer            pointed_data;
 
 	public:
-		SafeVmValueRef(SafeVMProcess& process, TypeCRef type, Pointer pointed_data);
+		SafeVMValueRef(SafeVMProcess& process, TypeCRef type, Pointer pointed_data);
 
 		/**
 		 * @brief Creates a shared, interface-typed reference to safe VM data.
-		 * Single place funneling the allocation of `SafeVmValueRef`s into a `SharedBox`.
+		 * Single place funneling the allocation of `SafeVMValueRef`s into a `SharedBox`.
 		 */
-		[[nodiscard]] static SharedBox<IVmValueRef> makeShared(
+		[[nodiscard]] static SharedBox<IVMValueRef> makeShared(
 			SafeVMProcess& process, TypeCRef type, Pointer pointed_data
 		);
 
 		[[nodiscard]] base::CRef<code::valid_type::ValidType> getType() const override;
 		[[nodiscard]] base::Optional<InterpretedDataVariant>  readData() const override;
 		[[nodiscard]] std::string                             str() const override;
+		[[nodiscard]] bool                                    isComplex() const override;
 
 		template<class T>
 		requires std::is_trivially_copy_constructible_v<T> T readBytes() const {
-			CORE_ASSERT(my_type->getName() != "void", "Interpreting VmValueRef bytes of type void!");
+			CORE_ASSERT(my_type->getName() != "void", "Interpreting VMValueRef bytes of type void!");
 			CORE_ASSERT(
-				sizeof(T) <= static_cast<usize>(my_type->getSize()), "VmValueRef: Out of bounds read"
+				sizeof(T) <= static_cast<usize>(my_type->getSize()), "VMValueRef: Out of bounds read"
 			);
 
 			auto view = memory->getPointerData(pointed_data, sizeof(T));
@@ -54,7 +52,7 @@ namespace vm {
 
 	/**
 	 * @brief Element access to a table stored in the safe VM's memory.
-	 * Elements are resolved lazily - a `SafeVmValueRef` is created per requested index.
+	 * Elements are resolved lazily - a `SafeVMValueRef` is created per requested index.
 	 */
 	class SafeTableElementAccess final: public ITableElementAccess {
 	private:
@@ -65,6 +63,6 @@ namespace vm {
 	public:
 		SafeTableElementAccess(SafeVMProcess& process, TypeCRef element_type, Pointer begin);
 
-		[[nodiscard]] SharedBox<IVmValueRef> get(usize index) const override;
+		[[nodiscard]] SharedBox<IVMValueRef> get(usize index) const override;
 	};
 }

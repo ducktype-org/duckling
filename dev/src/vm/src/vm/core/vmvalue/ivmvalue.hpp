@@ -18,17 +18,17 @@ namespace vm {
 	/**
 	 * @brief Common interface for a value stored outside the VM. It is meant to import a value
 	 * into / export a value out of the VM. It is NOT meant to be used by the internal memory module.
-	 * @note VmValues can be used only in the processes which were used when initializing them.
+	 * @note VMValues can be used only in the processes which were used when initializing them.
 	 * They can't be transferred in between different processes.
 	 */
-	class IVmValue {
+	class IVMValue {
 	public:
-		virtual ~IVmValue() = default;
+		virtual ~IVMValue() = default;
 
 		/**
 		 * @brief Frees the data of the value (deinitializes the blocks in the memory module).
 		 * This function has to be called when using values created with the
-		 * `VMProcess::createOwnedVmValue()` function.
+		 * `VMProcess::createOwnedVMValue()` function.
 		 */
 		virtual void freeData() = 0;
 
@@ -71,7 +71,7 @@ namespace vm {
 		template<class T>
 		T readBytes() const {
 			CORE_ASSERT(
-				sizeof(T) <= static_cast<usize>(getDataSize()), "VmValue: Out of bounds read"
+				sizeof(T) <= static_cast<usize>(getDataSize()), "VMValue: Out of bounds read"
 			);
 			return vm::safeReadPointerBytes<T>(getBytes());
 		}
@@ -83,21 +83,21 @@ namespace vm {
 		void writeBytes(const T& value, const usize offset = 0) {
 			CORE_ASSERT(
 				offset + sizeof(T) <= static_cast<usize>(getDataSize()),
-				"VmValue: Out of bounds write"
+				"VMValue: Out of bounds write"
 			);
 			return vm::safeWriteBytes<T>(getBytes(), value, offset);
 		}
 	};
 }
 
-JSON_REGISTER_TYPE_WITH_NAME(vm::IVmValue, "VmValue");
-JSON_REGISTER_TYPE_WITH_NAME(Ref<vm::IVmValue>, "Ref<VmValue>");
+JSON_REGISTER_TYPE_WITH_NAME(vm::IVMValue, "VMValue");
+JSON_REGISTER_TYPE_WITH_NAME(Ref<vm::IVMValue>, "Ref<VMValue>");
 
 // NOLINTBEGIN(readability-identifier-naming)
 template<>
-struct nlohmann::adl_serializer<vm::IVmValue> {
-	static void to_json(json& j, const vm::IVmValue& v) {
-		j["type"]        = std::string(TypeParseTraits<vm::IVmValue>::NAME.data());
+struct nlohmann::adl_serializer<vm::IVMValue> {
+	static void to_json(json& j, const vm::IVMValue& v) {
+		j["type"]        = std::string(TypeParseTraits<vm::IVMValue>::NAME.data());
 		j["data_type"]   = v.getType()->getName().str();
 		j["data_length"] = v.getDataSize();
 		// Convert value's bytes to HEX string
@@ -108,8 +108,8 @@ struct nlohmann::adl_serializer<vm::IVmValue> {
 		j["data"] = ss.str();
 	}
 
-	static void from_json(const json&, const vm::IVmValue&) {
-		CORE_PANIC("Parsing data from JSON into a VmValue is not supported (yet).");
+	static void from_json(const json&, const vm::IVMValue&) {
+		CORE_PANIC("Parsing data from JSON into a VMValue is not supported (yet).");
 	}
 };
 

@@ -633,11 +633,11 @@ namespace compiler::driver {
 			          .transform_error(vm::api::errorToString)
 			          .transform([](vm::api::ExitValue exit_values) {
 						  CORE_ASSERT(
-							  v_matches(exit_values, std::vector<Ref<vm::IVmValue>>),
+							  v_matches(exit_values, std::vector<Ref<vm::IVMValue>>),
 							  "Expected exit value to be vector"
 						  );
 						  const auto& exit_values_vec
-							  = std::get<std::vector<Ref<vm::IVmValue>>>(exit_values);
+							  = std::get<std::vector<Ref<vm::IVMValue>>>(exit_values);
 						  CORE_ASSERT(exit_values_vec.size() == 1, "Expected single exit value");
 						  return RunOutput{ .exit_code = base::safeIntConv<int>(
 												exit_values_vec.at(0)->readBytes<i64>()
@@ -906,40 +906,5 @@ namespace compiler::driver {
 		}
 
 		return result;
-	}
-
-	std::expected<RunOutput, std::string> runModuleOnDVM(
-		query::Context& ctx, frontend::ModuleID module_id
-	) {
-		auto lir_data            = compileModuleToLIRModuleData(ctx, module_id).valueOrPanic();
-		auto dvm_code_collection = compileLIRModuleToDVM(&lir_data, ctx, false);
-
-		vm::PID pid{};
-
-		return vm::api::spawn()
-		    .and_then([&](vm::api::ProcessInfo process) {
-				pid = process.pid;
-				return std::expected<void, vm::api::ApiError>{};
-			})
-		    .and_then([&] { return vm::api::loadCode(pid, { dvm_code_collection.code }); })
-		    .and_then([&] { return vm::api::attach(pid, std::cin, std::cout); })
-		    .and_then([&] { return vm::api::run(pid); })
-		    .and_then([&] { return vm::api::join(pid); })
-		    .and_then([&] { return vm::api::getExitValue(pid); })
-		    .transform_error(vm::api::errorToString)
-		    .transform([](vm::api::ExitValue exit_values) {
-				CORE_ASSERT(
-					v_matches(exit_values, std::vector<Ref<vm::IVmValue>>),
-					"Expected exit value to be vector"
-				);
-				const auto& exit_values_vec = std::get<std::vector<Ref<vm::IVmValue>>>(exit_values);
-				CORE_ASSERT(
-					exit_values_vec.size() == 1,
-					"Support for multiple return values in compiler not implemented"
-				);
-				return RunOutput{
-					.exit_code = base::safeIntConv<int>(exit_values_vec.at(0)->readBytes<i64>())
-				};
-			});
 	}
 }

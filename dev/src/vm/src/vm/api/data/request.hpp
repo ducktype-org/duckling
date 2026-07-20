@@ -66,7 +66,7 @@ namespace vm::api {
 			std::string type_name;
 		};
 
-		struct VmValue {
+		struct VMValue {
 			std::string type_name;
 		};
 
@@ -136,7 +136,7 @@ namespace vm::api {
 		request::WaitForBreakpoint,
 		request::ExecutionPosition,
 		request::TypeMetadata,
-		request::VmValue,
+		request::VMValue,
 		request::StatusRequest,
 		request::DebuggerGetNumberOfCurrentStackFrames,
 		request::DebuggerGetStackFrameData,

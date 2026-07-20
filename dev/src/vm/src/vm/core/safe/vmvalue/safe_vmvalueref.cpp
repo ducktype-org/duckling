@@ -4,12 +4,12 @@
 
 #include <vm/core/safe/safe_vmprocess.hpp>
 
-SharedBox<vm::IVmValueRef> vm::SafeVmValueRef::makeShared(
+SharedBox<vm::IVMValueRef> vm::SafeVMValueRef::makeShared(
 	SafeVMProcess& process, TypeCRef type, Pointer pointed_data
 ) {
-	// Build a concrete `SharedBox<SafeVmValueRef>` (its control block deletes as `SafeVmValueRef`)
+	// Build a concrete `SharedBox<SafeVMValueRef>` (its control block deletes as `SafeVMValueRef`)
 	// and let it convert to the interface-typed box on return.
-	return makeSharedBox<SafeVmValueRef>(process, type, pointed_data);
+	return makeSharedBox<SafeVMValueRef>(process, type, pointed_data);
 }
 
 vm::SafeTableElementAccess::SafeTableElementAccess(
@@ -19,9 +19,9 @@ vm::SafeTableElementAccess::SafeTableElementAccess(
 	  element_type(element_type),
 	  begin(begin) {}
 
-SharedBox<vm::IVmValueRef> vm::SafeTableElementAccess::get(usize index) const {
+SharedBox<vm::IVMValueRef> vm::SafeTableElementAccess::get(usize index) const {
 	vm::Pointer pointer = begin.movedPointer(index * static_cast<usize>(element_type->getSize()));
-	return SafeVmValueRef::makeShared(*my_process.get(), element_type, pointer);
+	return SafeVMValueRef::makeShared(*my_process.get(), element_type, pointer);
 }
 
 namespace vm {
@@ -36,7 +36,7 @@ namespace vm {
 	}
 }
 
-base::Optional<vm::InterpretedDataVariant> vm::SafeVmValueRef::readData() const {
+base::Optional<vm::InterpretedDataVariant> vm::SafeVMValueRef::readData() const {
 	variant_match(my_type->getKindVariant()) {
 		variant_case_novalue(vm::kind::Primitive) {
 			const auto type_name = my_type->getName();
@@ -171,19 +171,19 @@ base::Optional<vm::InterpretedDataVariant> vm::SafeVmValueRef::readData() const 
 	CORE_UNREACHABLE();
 }
 
-vm::SafeVmValueRef::SafeVmValueRef(SafeVMProcess& process, TypeCRef type, Pointer pointed_data):
+vm::SafeVMValueRef::SafeVMValueRef(SafeVMProcess& process, TypeCRef type, Pointer pointed_data):
 	  my_process(&process),
 	  memory(&process.getMemory()),
 	  my_type(type),
 	  pointed_data(pointed_data) {}
 
-base::CRef<vm::code::valid_type::ValidType> vm::SafeVmValueRef::getType() const {
+base::CRef<vm::code::valid_type::ValidType> vm::SafeVMValueRef::getType() const {
 	auto        type_id = static_cast<code::valid_type::ValidTypeID>(my_type->getID().asInt());
 	const auto& types   = my_process->loader.getHighProgram()->types();
 	return types.at(type_id);
 }
 
-std::string vm::SafeVmValueRef::str() const {
+std::string vm::SafeVMValueRef::str() const {
 	auto var = readData();
 	if (!var.has_value()) return "<none>";
 
@@ -202,7 +202,7 @@ std::string vm::SafeVmValueRef::str() const {
 	return "<unknown>";
 }
 
-bool vm::VMValueRef::isComplex() const {
+bool vm::SafeVMValueRef::isComplex() const {
 	variant_match(my_type->getKindVariant()) {
 		variant_case_novalue(std::monostate, kind::Primitive, kind::Function) { return false; }
 		variant_case(kind::Pointer, val) {

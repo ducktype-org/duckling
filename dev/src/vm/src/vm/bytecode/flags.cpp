@@ -707,7 +707,7 @@ namespace vm::code {
 				(void) i;
 				flags |= ControlFlowModifying;
 			}
-			instr_case(ins::Op_initFromVmValue, i) { (void) i; }
+			instr_case(ins::Op_initFromVMValue, i) { (void) i; }
 			instr_case(ins::Comment, i) { (void) i; }
 			instr_default { CORE_PANIC("Unhandled instruction: ", internal_value.name()); }
 		}

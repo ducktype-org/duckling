@@ -33,7 +33,7 @@
 #include <vm/core/safe/safe_vmthread.hpp>
 
 namespace vm {
-	class SafeVmValue;
+	class SafeVMValue;
 	class SafeVMProcess;
 }
 
@@ -204,12 +204,12 @@ namespace vm::builtins {
 	/**
 	 * @brief Calls a builtin function with the given ID and arguments.
 	 */
-	base::Optional<Box<SafeVmValue>> callBuiltinFunction(
+	base::Optional<Box<SafeVMValue>> callBuiltinFunction(
 		BuiltinFunctionID                    id,
 		const std::vector<TypeCRef>&         result_types,
 		SafeVMProcess&                       process,
 		SafeVMThread&                        thread,
-		const std::vector<Box<SafeVmValue>>& arguments
+		const std::vector<Box<SafeVMValue>>& arguments
 	);
 
 	/**

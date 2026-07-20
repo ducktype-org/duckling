@@ -162,7 +162,7 @@ private:
 	}
 
 	template<typename FieldDataType>
-	FieldDataType getVMValueRefData(const SharedBox<vm::IVmValueRef>& vmvalue_ref) {
+	FieldDataType getVMValueRefData(const SharedBox<vm::IVMValueRef>& vmvalue_ref) {
 		auto data_opt = vmvalue_ref->readData();
 		assertTrue(data_opt.has_value(), "VMValueRef: Referenced memory is dead");
 		return std::get<FieldDataType>(data_opt.value());
@@ -334,10 +334,10 @@ private:
 			auto exit_code_response = vm::api::getExitValue(pid);
 			ASSERT_HAS_VALUE(exit_code_response);
 			ASSERT_TRUE(
-				std::holds_alternative<std::vector<Ref<vm::IVmValue>>>(exit_code_response.value())
+				std::holds_alternative<std::vector<Ref<vm::IVMValue>>>(exit_code_response.value())
 			);
 			auto& exit_value_vec
-				= std::get<std::vector<Ref<vm::IVmValue>>>(exit_code_response.value());
+				= std::get<std::vector<Ref<vm::IVMValue>>>(exit_code_response.value());
 			ASSERT_EQUAL(exit_value_vec.size(), 1);
 			ASSERT_EQUAL_PRINT(exit_value_vec.at(0)->readBytes<i64>(), 0);
 		}

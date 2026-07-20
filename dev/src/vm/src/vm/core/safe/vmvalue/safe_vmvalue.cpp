@@ -29,13 +29,7 @@ namespace {
 	}
 }
 
-base::Optional<base::CRef<vm::SafeVmValue>> vm::SafeVmValue::tryCast(const IVmValue& value) {
-	const auto* safe_value = dynamic_cast<const SafeVmValue*>(&value);
-	if (safe_value == nullptr) return {};
-	return base::CRef<SafeVmValue>(safe_value);
-}
-
-vm::SafeVmValue::SafeVmValue(SafeVMProcess& process, TypeCRef type):
+vm::SafeVMValue::SafeVMValue(SafeVMProcess& process, TypeCRef type):
 	  data(type->getSize()),
 	  my_process(&process),
 	  memory(&process.getMemory()),
@@ -44,47 +38,47 @@ vm::SafeVmValue::SafeVmValue(SafeVMProcess& process, TypeCRef type):
 	memory->increaseBlockRefcount(pointer.getBlock());
 }
 
-vm::SafeVmValue::SafeVmValue(SafeVMProcess& process, TypeCRef type, Pointer src):
-	  SafeVmValue(process, type) {
+vm::SafeVMValue::SafeVMValue(SafeVMProcess& process, TypeCRef type, Pointer src):
+	  SafeVMValue(process, type) {
 	importData(src);
 }
 
-vm::SafeVmValue::~SafeVmValue() {
-	if (!pointer.isNull()) CORE_DEV_LOG(DVM, "VmValue not freed!\n");
+vm::SafeVMValue::~SafeVMValue() {
+	if (!pointer.isNull()) CORE_DEV_LOG(DVM, "VMValue not freed!\n");
 }
 
-void vm::SafeVmValue::exportData(Pointer dst) const { memory->copyPointedData(dst, pointer, type); }
+void vm::SafeVMValue::exportData(Pointer dst) const { memory->copyPointedData(dst, pointer, type); }
 
-void vm::SafeVmValue::importData(Pointer src) { memory->copyPointedData(pointer, src, type); }
+void vm::SafeVMValue::importData(Pointer src) { memory->copyPointedData(pointer, src, type); }
 
-vm::SafeVmValueRef vm::SafeVmValue::asRef() const { return { *my_process.get(), type, pointer }; }
+vm::SafeVMValueRef vm::SafeVMValue::asRef() const { return { *my_process.get(), type, pointer }; }
 
-void vm::SafeVmValue::freeData() {
+void vm::SafeVMValue::freeData() {
 	memory->freeBlockData(pointer.getBlock());
 	memory->decreaseBlockRefcount(pointer.getBlock());
 	pointer = Pointer::null();
 }
 
-vm::PID vm::SafeVmValue::getPID() const { return my_process->getPID(); }
+vm::PID vm::SafeVMValue::getPID() const { return my_process->getPID(); }
 
-base::CRef<vm::code::valid_type::ValidType> vm::SafeVmValue::getType() const {
+base::CRef<vm::code::valid_type::ValidType> vm::SafeVMValue::getType() const {
 	const auto& types = my_process->loader.getHighProgram()->types();
 	return types.at(getTypeID());
 }
 
-vm::code::valid_type::ValidTypeID vm::SafeVmValue::getTypeID() const {
+vm::code::valid_type::ValidTypeID vm::SafeVMValue::getTypeID() const {
 	// Safe TypeIDs are asserted (in the type builder) to be numerically equal to ValidTypeIDs.
 	return code::valid_type::ValidTypeID(type->getID().asInt());
 }
 
-Bytes vm::SafeVmValue::getDataSize() const { return type->getSize(); }
+Bytes vm::SafeVMValue::getDataSize() const { return type->getSize(); }
 
-byte* vm::SafeVmValue::getBytes() { return data.data(); }
+byte* vm::SafeVMValue::getBytes() { return data.data(); }
 
-const byte* vm::SafeVmValue::getBytes() const { return data.data(); }
+const byte* vm::SafeVMValue::getBytes() const { return data.data(); }
 
-void vm::SafeVmValue::dprint(std::ostream& out, const std::string& indent) const {
-	out << indent << "---- VmValue ----\n";
+void vm::SafeVMValue::dprint(std::ostream& out, const std::string& indent) const {
+	out << indent << "---- VMValue ----\n";
 	out << indent << "Type: " << type->getName().str() << " (Size: " << type->getSize().asInt()
 		<< " bytes)\n";
 	out << indent << "Value:";
@@ -107,6 +101,6 @@ void vm::SafeVmValue::dprint(std::ostream& out, const std::string& indent) const
 	out << indent << "-----------------\n";
 }
 
-base::Optional<vm::InterpretedDataVariant> vm::SafeVmValue::readData() const {
+base::Optional<vm::InterpretedDataVariant> vm::SafeVMValue::readData() const {
 	return asRef().readData();
 }
