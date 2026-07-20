@@ -4,6 +4,7 @@ use crate::{DuckContext, QuackResult};
 
 // @TODO: #1650 Restore removed subcommands once they are implemented.
 mod build;
+mod clean;
 #[cfg(feature = "shell-completion")]
 mod generate;
 mod info;
@@ -27,6 +28,7 @@ pub fn subcommands() -> Vec<Command> {
         repl::get_parser(),
         list::get_parser(),
         info::get_parser(),
+        clean::get_parser(),
     ]
 }
 
@@ -48,6 +50,7 @@ pub fn exec_for(name: &str) -> Option<ExecFn> {
         "repl" => repl::execute,
         "list" => list::execute,
         "info" => info::execute,
+        "clean" => clean::execute,
         _ => return None,
     };
     Some(f)

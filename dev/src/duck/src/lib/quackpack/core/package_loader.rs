@@ -129,7 +129,7 @@ impl PackageLoader {
         venv_id: VenvId,
     ) -> QuackResult<PackageContext<'duck>> {
         let storage_loc = ctx.default_storage_root();
-        let storage = Storage::new(storage_loc.into_not_locked_path());
+        let storage = Storage::new(storage_loc.into_not_locked_path())?;
         let Some(venv) = Venv::fix_and_load(&storage, venv_id, ctx)? else {
             qp_bail!("Could not find venv {} in the main storage", venv_id);
         };

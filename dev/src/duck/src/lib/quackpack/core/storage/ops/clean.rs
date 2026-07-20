@@ -26,7 +26,7 @@ pub struct CleanOutput {
 /// Delete a virtual environment from storage.
 pub fn delete_venv(ctx: &DuckContext, storage_root: &Path, venv: impl ToVenvId) -> QuackResult<()> {
     debug!("deleting venv `{}`", venv.to_venv_id());
-    let storage = paths::Storage::new(storage_root);
+    let storage = paths::Storage::new(storage_root)?;
     let venv_id = venv.to_venv_id();
 
     let _sync_lock = {
@@ -54,7 +54,7 @@ pub fn delete_venv(ctx: &DuckContext, storage_root: &Path, venv: impl ToVenvId) 
 pub fn clean_storage(ctx: &DuckContext, storage_root: &Path) -> QuackResult<CleanOutput> {
     debug!("cleaning storage");
     let temporary_lifetime = ctx.duck_cfg().storage_tmp_lifetime()?;
-    let storage = paths::Storage::new(storage_root);
+    let storage = paths::Storage::new(storage_root)?;
     let mut removed_venvs = vec![];
     let _lock = locks::CleanLock::new(&storage, ctx).context("failed to acquire a clean lock")?;
     let mut all_deps = HashSet::new();

@@ -5,7 +5,7 @@ use std::time::SystemTime;
 use crate::quackpack::core::storage::paths::Storage;
 use crate::quackpack::core::storage::venv::Venv;
 use crate::quackpack::core::storage::{display_venv_info, list_venvs};
-use crate::{DuckContext, QuackResult};
+use crate::{DuckContext, QuackResult, QuackResultContext};
 
 /// Options for the list operation.
 pub struct ListOptions<'duck> {
@@ -64,9 +64,11 @@ pub fn list(opts: ListOptions<'_>) -> QuackResult<()> {
         reverse_order,
         storage,
     } = opts;
-    let storage = Storage::new(storage);
-    let venvs_list: Vec<(Venv, SystemTime)> =
-        list_venvs(storage.root(), ctx)?.into_values().collect();
+    let storage = Storage::new(storage)?;
+    let venvs_list: Vec<(Venv, SystemTime)> = list_venvs(storage.root(), ctx)
+        .context("when listing the venvs")?
+        .into_values()
+        .collect();
     // This list operation counts as access to the venv, modyfying the last_access to now.
     // To display a meaningful value of the last_access, we substitute the last_access field
     // with the last_access prior to this current list operation.

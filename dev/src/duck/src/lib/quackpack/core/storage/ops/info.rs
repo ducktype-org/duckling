@@ -20,7 +20,7 @@ pub fn list_venvs(
     storage_root: &Path,
     ctx: &DuckContext,
 ) -> QuackResult<HashMap<VenvId, (Venv, SystemTime)>> {
-    let storage = paths::Storage::new(storage_root);
+    let storage = paths::Storage::new(storage_root)?;
     let mut metadata = HashMap::new();
     let venvs = storage.iter_venvs()?.collect::<Result<Vec<_>, _>>()?;
     for venv in venvs {
@@ -42,7 +42,7 @@ pub fn venv_info(
     id: impl ToVenvId,
     ctx: &DuckContext,
 ) -> QuackResult<Option<(Venv, SystemTime)>> {
-    let storage = paths::Storage::new(storage_root);
+    let storage = paths::Storage::new(storage_root)?;
     let id = id.to_venv_id();
     let data = Venv::fix_and_load_with_last_access(&storage, id, ctx)?;
     Ok(data)

@@ -27,7 +27,7 @@ use std::path::{Path, PathBuf};
 use super::package_id::PackageId;
 use crate::quackpack::core::storage::venv_id::VenvId;
 use crate::util::file_locks::{FileLockManager, LockedFile};
-use crate::util::path_ops_ext::PathOpsExt;
+use crate::util::path_ops_ext::{MkdirOptions, PathOpsExt};
 use crate::{DuckContext, QuackResult, qp_bail_internal};
 
 const LOCKS_DIRECTORY_NAME: &str = "locks";
@@ -50,9 +50,12 @@ pub struct Storage {
 
 impl Storage {
     /// Create a new [`Storage`] rooted at `root`.
-    pub fn new(root: impl Into<PathBuf>) -> Self {
+    pub fn new(root: impl Into<PathBuf>) -> QuackResult<Self> {
         let root = root.into();
-        Self { root }
+        root.mkdir(MkdirOptions::WithParents)?;
+        root.join(PKGS_DIR_NAME).mkdir(MkdirOptions::WithParents)?;
+        root.join(VENVS_DIR_NAME).mkdir(MkdirOptions::WithParents)?;
+        Ok(Self { root })
     }
 
     /// Get the root of this storage.
