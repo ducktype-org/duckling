@@ -161,6 +161,11 @@ base::Optional<vm::InterpretedDataVariant> vm::SafeVmValueRef::readData() const 
 		variant_case(vm::kind::Opaque, opaque_kind) {
 			return vm::interpreted_data_variant::Opaque{};
 		}
+
+		variant_case(vm::kind::CPointer, cpointer_kind) {
+			// A raw native address is opaque to the VM's value inspection.
+			return vm::interpreted_data_variant::Opaque{};
+		}
 	}
 
 	CORE_UNREACHABLE();
@@ -195,4 +200,20 @@ std::string vm::SafeVmValueRef::str() const {
 		variant_case_novalue(interpreted_data_variant::Opaque) { return "<opaque>"; }
 	}
 	return "<unknown>";
+}
+
+bool vm::VMValueRef::isComplex() const {
+	variant_match(my_type->getKindVariant()) {
+		variant_case_novalue(std::monostate, kind::Primitive, kind::Function) { return false; }
+		variant_case(kind::Pointer, val) {
+			auto opt_data = readData().value();
+			variant_match(opt_data) {
+				variant_case(interpreted_data_variant::Pointer, val) {
+					return val.referenced.has_value();
+				}
+			}
+			return false;
+		}
+	}
+	return true;
 }

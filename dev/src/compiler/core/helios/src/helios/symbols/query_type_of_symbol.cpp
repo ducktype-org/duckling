@@ -299,7 +299,7 @@ namespace compiler::helios {
 						switch (method.kind) {
 						case defgen::Method::Kind::ToString:
 							return { { immmut_self },
-								     tsh::SymbolType<>::withDefaults(tsh::getStringType()) };
+								     tsh::SymbolType<>::withDefaults(tsh::getStringType(ctx)) };
 						case defgen::Method::Kind::LengthMethod:
 							return { { immmut_self },
 								     tsh::SymbolType<>::withDefaults(tsh::getIntegralType(
@@ -351,6 +351,33 @@ namespace compiler::helios {
 						tsh::ReferenceKind::Direct,
 						tsh::Mutability::Immutable,
 					};
+				}
+				variant_case(defgen::BoxBuiltin, box) {
+					// `box_alloc(value: T) -> box T` and `box_free(b: box T) -> ()`.
+					const auto box_type = tsh::SymbolType<>{ box.pointee_type,
+						                                     tsh::ReferenceKind::Box,
+						                                     tsh::Mutability::Mutable };
+
+					auto [arg_types, return_type]
+						= [&]() -> std::pair<std::vector<tsh::SymbolType<>>, tsh::SymbolType<>> {
+						switch (box.kind) {
+						case defgen::BoxBuiltin::Kind::Alloc:
+							return { { tsh::SymbolType<>::withDefaults(box.pointee_type) },
+								     box_type };
+						case defgen::BoxBuiltin::Kind::Free:
+							return { { box_type },
+								     tsh::SymbolType<>::withDefaults(tsh::getUnitType()) };
+						}
+						CORE_UNREACHABLE();
+					}();
+
+					const auto fn_type = ctx.query<tsh::QueryFunctionType>(
+						{ .parameter_types = std::move(arg_types), .result_type = return_type }
+					);
+					return tsh::SymbolType<>::withDefaults(fn_type);
+				}
+				variant_case(defgen::GeneratedConstant, gen_const) {
+					return gen_const.value.getTypeOfStoredValue(ctx);
 				}
 				variant_case(defgen::Parameter, param) {
 					const auto function_type

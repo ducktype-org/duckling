@@ -490,6 +490,12 @@ class FunctionValidator {
 					if (!type->isKind<valid_type::finalized::Opaque>())
 						throw InvalidArgumentTypeError(*place);
 				}
+				variant_case(CRef<opargs::PlaceCptr>, place) {
+					CRef<valid_type::ValidType> type
+						= validateAndGetPlaceType(*place, current_stack);
+					if (!type->isKind<valid_type::finalized::CPointer>())
+						throw InvalidArgumentTypeError(*place);
+				}
 				variant_case_novalue(CRef<opargs::Immediate>) {}
 				variant_case(CRef<opargs::Type>, type_value) {
 					if (!types_ctx.contains(type_value->type_name))
@@ -691,6 +697,14 @@ class FunctionValidator {
 			}
 
 			instr_case_novalue(Op_mov_popq_popq) {}
+
+			instr_case(Op_mov_pcpt_pcpt, instr) {
+				// Strict: no implicit pointee change on copy. Reinterpreting casts will get an
+				// explicit instruction.
+				auto src_type = getPlaceType(instr.src, current_stack)->getName();
+				auto dst_type = getPlaceType(instr.dst, current_stack)->getName();
+				if (src_type != dst_type) throw CPointerTypeMismatchError(instr);
+			}
 
 			instr_case(Op_mov_pste_pste, instr) {
 				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
@@ -1800,6 +1814,7 @@ vm::code::valid_function::ValidFunction vm::code::detail::validateAndExtractReac
 	const ObjIdNameMap<GlobalData>&                  globals_map,
 	const base::HashMap<base::StrID, FuncSignature>& signatures,
 	const ObjIdNameMap<ExternalCFunction>&           ext_c_signatures,
+	const FlagContext&                               flag_context,
 	const ObjIdNameMap<FFIFunction>&                 ffi_signatures,
 	const Function&                                  function
 ) {
@@ -1816,6 +1831,7 @@ vm::code::valid_function::ValidFunction vm::code::detail::validateAndExtractReac
 		= validator.validateAndExtractReachableCode();
 	new_function.bytecode_pos = function.bytecode_pos;
 	new_function.signature    = signature;
+	new_function.flags        = flag_context.getFlagsForFunction(function.name.str);
 
 	return new_function;
 }

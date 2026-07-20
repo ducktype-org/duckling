@@ -63,9 +63,17 @@ namespace compiler::tsh {
 	RawPointerAbstractType getRawPointerType(bool mutable_pointer);
 
 	/**
-	 * @brief Simple getter to create and get string type.
+	 * @brief Get the `String` type, i.e. the `String` class from `core.containers`.
+	 * Resolved through the language-primitive lookup, so it requires a query context.
 	 */
-	StringAbstractType getStringType();
+	ClassAbstractType getStringType(query::Context& ctx);
+
+	/**
+	 * @brief Checks whether the `String` type is available, i.e. whether `core.containers` (and
+	 * thus a standard library) is present. Use this to guard code that would otherwise fail
+	 * resolving the `String` language primitive in no-std builds.
+	 */
+	bool isStringTypePresent(query::Context& ctx);
 
 	/**
 	 * @brief Get the type of a slice of characters, which is used for string literals and string

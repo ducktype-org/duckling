@@ -11,7 +11,9 @@ namespace pst {
 
 		if (!assertStmtChoice<Fun>(state, state[0].is(Keyword::Fun))) return nullptr;
 
-		PARSE().all(Keyword::Fun, &out->name, &out->params);
+		PARSE().all(Keyword::Fun);
+		PARSE().with(&out->name, IdentifierWrapper::parseFunctionName);
+		PARSE().one(&out->params);
 		if (PARSE().tryEat(NamedOperator::SingleArrow)) PARSE().one(&out->ret);
 
 		PST_NEW_CONTEXT({

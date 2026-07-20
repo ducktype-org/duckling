@@ -30,7 +30,15 @@ namespace compiler::helios {
 		}
 
 		base::Bit256 BuiltinOperator::queryUnstablePerfectHash() const {
-			return { operator_type.queryUnstablePerfectHash() };
+			return hashing::justHash<hashing::SHA256>(
+				operator_type.queryUnstablePerfectHash(), static_cast<u64>(operatoriness)
+			);
+		}
+
+		base::Bit256 BoxBuiltin::queryUnstablePerfectHash() const {
+			return hashing::justHash<hashing::SHA256>(
+				pointee_type.queryUnstablePerfectHash(), static_cast<u64>(kind)
+			);
 		}
 
 		base::Bit256 Parameter::queryUnstablePerfectHash() const {
@@ -72,11 +80,22 @@ namespace compiler::helios {
 				data.index(), VISIT(data, d, return d.queryUnstablePerfectHash();)
 			);
 		}
+
+		GeneratedConstant::GeneratedConstant(ctv::CompileTimeValue value, ScopeID scope):
+			  value(std::move(value)),
+			  scope(scope) {}
+
+		base::Bit256 GeneratedConstant::queryUnstablePerfectHash() const {
+			hashing::SHA256 hasher;
+			hashing::addToHash(hasher, value.queryUnstablePerfectHash());
+			hashing::addToHash(hasher, scope.queryUnstablePerfectHash());
+			return hasher.finalize();
+		}
 	}
 
 	SymbolData::SymbolData(CommonSymbolData common, SymbolSemantics other):
 		  common(std::move(common)),
-		  other(other),
+		  other(std::move(other)),
 		  id(SymbolDataID::next()) {}
 
 	SymbolData SymbolData::makeBuiltinSymbolData(
@@ -96,7 +115,7 @@ namespace compiler::helios {
 	) {
 		SymbolKind kind{};
 		variant_match(generated_data) {
-			variant_case_novalue(defgen::BuiltinOperator) {
+			variant_case_novalue(defgen::BuiltinOperator, defgen::BoxBuiltin) {
 				kind = SymbolKind::FunctionDeclaration;
 			}
 			variant_case_novalue(
@@ -115,6 +134,7 @@ namespace compiler::helios {
 			variant_case_novalue(defgen::GeneratedFunctionVariable, defgen::ControlFlowLocal) {
 				kind = SymbolKind::Variable;
 			}
+			variant_case_novalue(defgen::GeneratedConstant) { kind = SymbolKind::Const; }
 			variant_default { CORE_UNREACHABLE(); }
 		}
 
@@ -137,6 +157,7 @@ namespace compiler::helios {
 			variant_case(defgen::SelfParameter, param) { return param.scope; }
 			variant_case(defgen::ControlFlowLocal, local) { return local.owning_scope; }
 			variant_case(defgen::ScriptMainWrapper, script) { return script.scope; }
+			variant_case(defgen::GeneratedConstant, gen_const) { return gen_const.scope; }
 			variant_default { return {}; }
 		}
 		CORE_UNREACHABLE();
@@ -148,5 +169,9 @@ namespace compiler::helios {
 			variant_case(BuiltinSemantics, data) { return data.getElement(); }
 			variant_default { return {}; }
 		}
+	}
+
+	base::Optional<pst::Access<pst::Stmt>> SymbolData::stmtCast(query::Context& ctx) const {
+		return maybePstElement().value().unlock(ctx).dynamicCast<pst::Stmt>();
 	}
 }

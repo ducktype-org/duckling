@@ -297,5 +297,5 @@ fn parse_git_url(
         ));
         err = err.add_note("git dependency points to a file on the disk");
     }
-    Err(err).context(format!("`{manifest_git_url}` is not a valid URL"))
+    Err(err)
 }

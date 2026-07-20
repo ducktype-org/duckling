@@ -47,6 +47,8 @@ namespace vm {
 		std::shared_mutex           rw_status;
 		std::condition_variable_any status_cv;
 
+		api::ExecutionConfig execution_config;
+
 		/**
 		 * @brief Emits after the process status has changed.
 		 */
@@ -160,6 +162,10 @@ namespace vm {
 		virtual void notifyPausedVMThread(api::ThreadID thread_id) = 0;
 
 		virtual void waitForBreakpoint() = 0;
+
+		virtual std::expected<api::Response, api::ApiError> setExecutionConfig(
+			const api::ExecutionConfig& config
+		) = 0;
 
 		/**
 		 * @brief Gets type metadata for a given type name. Type must be defined in the loaded

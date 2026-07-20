@@ -41,8 +41,12 @@ namespace vm::fast {
 		std::scoped_lock                          lock(data_lock);
 		std::expected<void, loader::LoaderLogger> code_result = [&] {
 			variant_match(source) {
-				variant_case(std::vector<fs::File>, files) { return loader.loadAndValidate(files); }
-				variant_case(code::CodeCollection, code) { return loader.loadAndValidate(code); }
+				variant_case(std::vector<fs::File>, files) {
+					return loader.loadAndValidate(files, execution_config);
+				}
+				variant_case(code::CodeCollection, code) {
+					return loader.loadAndValidate(code, execution_config);
+				}
 			}
 			CORE_UNREACHABLE();
 		}();
@@ -189,6 +193,14 @@ namespace vm::fast {
 	void FastVMProcess::waitForBreakpoint() {
 		// @TODO: #2102 Implement this pure virtual method.
 		throw vm::VMNotImplemented("Method `waitForBreakpoint` is not implemented.");
+	}
+
+	std::expected<api::Response, api::ApiError> FastVMProcess::setExecutionConfig(
+		const api::ExecutionConfig& config
+	) {
+		std::scoped_lock lock(data_lock);
+		execution_config = config;
+		return api::Response(api::response::Empty());
 	}
 
 	std::expected<api::Response, api::ApiError> FastVMProcess::getTypeMetadata(

@@ -823,6 +823,24 @@ namespace vm::loader::parser {
 			}
 			break;
 		}
+		case lang_def::Keyword::BCCPointer: {
+			// The pointee is optional: `type cpointer: Name [Inner]`. No inner means a pointer
+			// to an unknown pointee (C's `void*`).
+			base::Optional<base::StrID> inner;
+			if (state.notEmpty() && state[0].isIdentifier())
+				inner = state.tokens().next().getValue();
+			if (state.notEmpty() && (state[0].isNumLiteralGroup() || state[0].isString())) {
+				state.logInt(makeBox<dia_int::PlaceholderError>(
+					"Expected an identifier (pointee type) or end of declaration.",
+					state.getPosition()
+				));
+				state.tokens().skip();
+			}
+			auto tp         = CPointerType{ name, inner };
+			tp.bytecode_pos = out->position;
+			out->datatype   = tp;
+			break;
+		}
 		case lang_def::Keyword::BCFixedSizeTable: {
 			auto type_name = state.tokens().next();
 			if (!type_name.isIdentifier()) {
@@ -860,15 +878,23 @@ namespace vm::loader::parser {
 		}
 		case lang_def::Keyword::BCData: {
 			auto tp = DataType{ name, parseFields(state) };
-			if (state.notEmpty() && state[0].is(lang_def::Keyword::BCAssertSize)) {
-				state.tokens().next();
-				auto size_token = state.tokens().next();
-				if (!size_token.isNumLiteralGroup()) {
-					state.logInt(makeBox<dia_int::PlaceholderError>(
-						"Expected a numeric literal after `assert_size`.", state.getPosition()
-					));
+			// Trailing modifiers, accepted in any order: `packed`, `assert_size N`.
+			while (state.notEmpty()) {
+				if (state[0].is(lang_def::Keyword::BCPacked)) {
+					state.tokens().next();
+					tp.packed = true;
+				} else if (state[0].is(lang_def::Keyword::BCAssertSize)) {
+					state.tokens().next();
+					auto size_token = state.tokens().next();
+					if (!size_token.isNumLiteralGroup()) {
+						state.logInt(makeBox<dia_int::PlaceholderError>(
+							"Expected a numeric literal after `assert_size`.", state.getPosition()
+						));
+					} else {
+						tp.assert_size = static_cast<usize>(strIDToNum(size_token.getValue()));
+					}
 				} else {
-					tp.assert_size = static_cast<usize>(strIDToNum(size_token.getValue()));
+					break;
 				}
 			}
 			tp.bytecode_pos = out->position;
