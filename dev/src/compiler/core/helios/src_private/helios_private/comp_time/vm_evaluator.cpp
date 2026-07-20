@@ -101,16 +101,11 @@ namespace {
 	 * @brief Materializes an aggregate CTV (e.g. a char-slice or String) as an owned VmValue by
 	 * letting the DVM backend lower it.
 	 *
-	 * Aggregate values are not representable as a single scalar written with `writeBytes`: their VM
-	 * layout is a struct that references backing globals (the character content). Instead of
-	 * re-implementing that lowering here, we synthesize a nullary function `fun anon() -> T = {ctv}`
+	 * We synthesize a function like `fun anon() -> T = {return ctv;}`
 	 * in LIR and hand it to the incremental code builder. Lowering the `return` of a `LIRConstant`
-	 * runs the exact same `CTVLowering` path used for regular code, which emits the content globals
-	 * for us. Running the function then yields the fully-formed VM value.
-	 *
-	 * The VM owns the value returned by the call (its lifetime is tied to the process), so we copy
-	 * its bytes into a caller-owned `Box` that can be passed as an argument and freed independently.
-	 * The copied struct still references the content globals, which live for the whole process.
+	 * runs the exact same `CTVLowering` path used for regular code, which emits the the DVM code
+	 * returning the VMValue with the ctv. The DVM backend may generate new globals in the
+	 * process.
 	 */
 	std::expected<Box<vm::VmValue>, VmEvaluationError> getCtvFromBackendLowering(
 		query::Context&                    ctx,
@@ -164,8 +159,11 @@ namespace {
 			return std::unexpected(VmEvaluationError(
 				VmEvaluationError::Kind::FunctionRunFailed,
 				base::strConcat(
-					"Failed to run a function '", func_name, "' on VM. Reason: `",
-					errorToString(maybe_exit_value.error())
+					"Failed to run a function '",
+					func_name,
+					"' on VM. Reason: `",
+					errorToString(maybe_exit_value.error()),
+					"`."
 				)
 			));
 
@@ -182,14 +180,14 @@ namespace {
 			CORE_UNREACHABLE();
 		}();
 
-		// Obtain a caller-owned value of the same type and copy the materialized bytes into it.
-		auto mangled_type_name = ctx.query<mangler::QueryMangledType>(value_type)->valueOrThrow();
-		auto owned_response    = vm::api::getVmValue(pid, mangled_type_name.str());
+		auto owned_response = vm::api::getVmValue(pid, returned->getType()->getName().str());
 		if (!owned_response.has_value())
 			return std::unexpected(VmEvaluationError(
 				VmEvaluationError::Kind::ArgConversionFailed,
 				base::strConcat(
-					"Failed to allocate an owned VM value for '", mangled_type_name.strView(), "'."
+					"Failed to allocate an owned VM value for '",
+					returned->getType()->getName(),
+					"'."
 				)
 			));
 		auto owned = std::move(owned_response->vm_value);
@@ -198,9 +196,6 @@ namespace {
 			owned->type->getSize() == returned->type->getSize(),
 			"Mismatched sizes when copying a materialized CTV value."
 		);
-		// A refcount-aware deep copy: the struct's pointer field references the content block
-		// (owned by a global), so we must go through `copyPointedData` to bump its refcount.
-		// A raw byte copy would leave the later `freeData` decrementing an unincremented block.
 		owned->importData(returned->pointer);
 
 		return owned;
@@ -478,8 +473,11 @@ namespace {
 			return std::unexpected(VmEvaluationError(
 				VmEvaluationError::Kind::FunctionRunFailed,
 				base::strConcat(
-					"Failed to run a function '", func_name, "' on VM. Reason: `",
-					errorToString(maybe_exit_value.error())
+					"Failed to run a function '",
+					func_name,
+					"' on VM. Reason: `",
+					errorToString(maybe_exit_value.error()),
+					"`."
 				)
 			));
 
