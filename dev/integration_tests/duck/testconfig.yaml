@@ -52,9 +52,5 @@ SubDirs:
 # @TODO: #2920 This shouldn't need ` -> i64`.
 # NOTE: This needs to be quoted like this, so `echo` receives `'<string>'` as an argument.
 # (It must be in single quotes!)
-default-src: "'import core.builtins.*;\n\nfun main() -> i64 = {\n    return 0;\n}'"
-
-# @TODO: #2920 This shouldn't need ` -> i64`.
-# NOTE: This needs to be quoted like this, so `echo` receives `'<string>'` as an argument.
-# (It must be in single quotes!)
-nonzero-return-src: "'import core.builtins.*;\n\nfun main() -> i64 = {\n    return 42;\n}'"
+default-src: "'import core.builtins.*;\n\nfun main() -> i64 = {\n    return @{default-src-rc};\n}'"
+default-src-rc: 0
