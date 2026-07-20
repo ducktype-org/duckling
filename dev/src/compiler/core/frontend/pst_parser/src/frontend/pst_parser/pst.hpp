@@ -156,14 +156,17 @@ namespace pst {
 		 * @brief Construct a new Pst from text content
 		 */
 		template<typename... Args>
+		// clang-format off
 		explicit PST(
 			std::string_view         content,
 			Box<LangParserContext>&& parsing_ctx,
 			hashing::ComponentHash   hash_ctx = {},
 			Args&&... args
-		) requires PARSE_ABLE<Args...>:
-			  file(tokenizer::makeTokenSource(fs::FileManager::createRandomVirtualFile(content))),
+		)
+			requires PARSE_ABLE<Args...>
+			: file(tokenizer::makeTokenSource(fs::FileManager::createRandomVirtualFile(content))),
 			  hash_ctx_info(std::move(hash_ctx)) {
+			// clang-format on
 			if (!file->tokenize()) return;
 			parse(std::move(parsing_ctx), std::forward<Args>(args)...);
 		}
@@ -172,14 +175,17 @@ namespace pst {
 		 * @brief Construct a new Pst from expanded text
 		 */
 		template<typename... Args>
+		// clang-format off
 		explicit PST(
 			dia_int::StablePosition pos,
 			std::string_view        content,
 			Box<LangParserContext>  parsing_ctx,
 			hashing::ComponentHash  hash_ctx = {},
 			Args&&... args
-		) requires PARSE_ABLE<Args...>
-			  : file(tokenizer::makeTokenSource(pos, content)), hash_ctx_info(std::move(hash_ctx)) {
+		)
+			requires PARSE_ABLE<Args...>
+			: file(tokenizer::makeTokenSource(pos, content)), hash_ctx_info(std::move(hash_ctx)) {
+			// clang-format on
 			if (!file->tokenize()) return;
 			parse(std::move(parsing_ctx), std::forward<Args>(args)...);
 		}
@@ -223,11 +229,13 @@ namespace pst {
 		/**
 		 * @brief Construct a new Pst from tokenized file
 		 */
+		// clang-format off
 		PST(Box<tokenizer::TokenSource> file,
 		    PSTContext&&                pst_ctx,
 		    hashing::ComponentHash      hash_ctx = {})
-
-		requires PARSE_ABLE_EMPTY: file(std::move(file)), hash_ctx_info(std::move(hash_ctx)) {
+			requires PARSE_ABLE_EMPTY
+			: file(std::move(file)), hash_ctx_info(std::move(hash_ctx)) {
+			// clang-format on
 			if (getLogger()->bad()) return;
 			parse(makeParserContext(std::move(pst_ctx)));
 		}
@@ -235,11 +243,11 @@ namespace pst {
 		/**
 		 * @brief Construct a new Pst from file path
 		 */
+		// clang-format off
 		PST(const fs::File& path, PSTContext&& pst_ctx, hashing::ComponentHash hash_ctx = {})
-
-		requires PARSE_ABLE_EMPTY:
-			  file(tokenizer::makeTokenSource(path)),
-			  hash_ctx_info(std::move(hash_ctx)) {
+			requires PARSE_ABLE_EMPTY
+			: file(tokenizer::makeTokenSource(path)), hash_ctx_info(std::move(hash_ctx)) {
+			// clang-format on
 			if (!file->tokenize()) return;
 			parse(makeParserContext(std::move(pst_ctx)));
 		}
