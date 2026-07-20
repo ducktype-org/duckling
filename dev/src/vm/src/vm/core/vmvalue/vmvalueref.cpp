@@ -7,8 +7,7 @@
 vm::VMValueRef vm::interpreted_data_variant::Table::get(usize index) {
 	if (index >= size) throw std::out_of_range("Table index out of range");
 
-	vm::Pointer pointer
-		= begin.movedPointer(static_cast<i64>(index * static_cast<usize>(type->getSize())));
+	vm::Pointer pointer = begin.movedPointer(index * static_cast<usize>(type->getSize()));
 
 	return { *process.get(), type, pointer };
 }
@@ -77,15 +76,13 @@ base::Optional<vm::InterpretedDataVariant> vm::VMValueRef::readData() const {
 
 			fields.reserve(data_kind.fields.size());
 			for (const auto& field_desc: data_kind.fields) {
-				fields.push_back(
-					vm::interpreted_data_variant::Data::FieldDesc{
-						.offset = field_desc.offset,
-						.value  = VMValueRef(
-							*my_process.get(),
-							field_desc.type,
-							pointed_data.movedPointer(static_cast<i64>(field_desc.offset.asInt()))
-						) }
-				);
+				fields.push_back(vm::interpreted_data_variant::Data::FieldDesc{
+					.offset = field_desc.offset,
+					.value  = VMValueRef(
+                        *my_process.get(),
+                        field_desc.type,
+                        pointed_data.movedPointer(static_cast<u64>(field_desc.offset.asInt()))
+                    ) });
 			}
 
 			return vm::interpreted_data_variant::Data{
@@ -123,7 +120,7 @@ base::Optional<vm::InterpretedDataVariant> vm::VMValueRef::readData() const {
 			TypeCRef inner_type = variant_kind.alternatives.at(alternative_index);
 
 			auto view_block_ref = memory->getNestedViewBlock(
-				pointed_data.movedPointer(static_cast<i64>(variant_kind.type_tag_size)), inner_type
+				pointed_data.movedPointer(static_cast<u64>(variant_kind.type_tag_size)), inner_type
 			);
 
 			match_optional(view_block_ref.toOpt()) {
@@ -143,6 +140,11 @@ base::Optional<vm::InterpretedDataVariant> vm::VMValueRef::readData() const {
 		}
 
 		variant_case(vm::kind::Opaque, opaque_kind) {
+			return vm::interpreted_data_variant::Opaque{};
+		}
+
+		variant_case(vm::kind::CPointer, cpointer_kind) {
+			// A raw native address is opaque to the VM's value inspection.
 			return vm::interpreted_data_variant::Opaque{};
 		}
 	}

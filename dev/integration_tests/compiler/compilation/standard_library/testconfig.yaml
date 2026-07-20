@@ -25,6 +25,7 @@ Tests:
     module_to_compile: "uses_std"
     compile_dvm_options: "--custom-std-path custom_std"
     compile_llvm_options: "--custom-std-path custom_std"
+    std_artifacts_path_flag: ""
     Cases:
       all:
         backend: all

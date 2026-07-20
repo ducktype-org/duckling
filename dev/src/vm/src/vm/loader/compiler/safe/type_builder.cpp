@@ -106,6 +106,13 @@ namespace {
 					type_at_metadata->definePointer(type_metadata->at(vm::TypeID(data.inner.asInt())
 					));
 				}
+				variant_case(vm::code::valid_type::finalized::CPointer, data) {
+					type_at_metadata->defineCPointer(
+						data.inner.map([&](const auto& inner) -> vm::TypeCRef {
+							return type_metadata->at(vm::TypeID(inner.asInt()));
+						})
+					);
+				}
 				variant_case(vm::code::valid_type::finalized::FixedSizeTable, data) {
 					type_at_metadata->defineFixedSizeTable(
 						type_metadata->at(vm::TypeID(data.inner.asInt())), data.element_count
