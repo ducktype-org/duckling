@@ -37,6 +37,12 @@ namespace vm::code::valid_type {
 
 		void definePointer(ValidTypeID inner);
 
+		/**
+		 * @brief Defines a C pointer: a raw 8-byte native address. An absent inner means an
+		 * unknown pointee (C's `void*`).
+		 */
+		void defineCPointer(const base::Optional<ValidTypeID>& inner);
+
 		void defineFixedSizeTable(ValidTypeID inner, usize element_count);
 
 		void defineDynamicTable(ValidTypeID inner);
@@ -143,7 +149,7 @@ namespace vm::code::valid_type {
 
 		/**
 		 * @brief Whether this type can cross the FFI boundary. FFI-compliant types are: primitives
-		 * of size 1, 2, 4 or 8 (`f32`/`f64` must have their exact C sizes), the builtin `cptr`,
+		 * of size 1, 2, 4 or 8 (`f32`/`f64` must have their exact C sizes), C pointers,
 		 * fixed-size tables of FFI-compliant types, and non-packed plain data structures (no
 		 * classes or interfaces) whose every field is FFI-compliant.
 		 */

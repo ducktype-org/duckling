@@ -39,12 +39,12 @@ private:
 			// these values might need to be updated.
 
 			assertTrue(
-				my_class_interface->getElements().size() == 8,
-				"There should be exactly six members, plus toString and dtor"
+				my_class_interface->getElements().size() == 7,
+				"There should be exactly six members, plus the generated destructor"
 			);
 			assertTrue(
-				my_class_interface->getElementsByName().size() == 6,
-				"There should be exactly four unique names, plus toString and dtor"
+				my_class_interface->getElementsByName().size() == 5,
+				"There should be exactly four unique names, plus the generated destructor"
 			);
 
 			assertTrue(

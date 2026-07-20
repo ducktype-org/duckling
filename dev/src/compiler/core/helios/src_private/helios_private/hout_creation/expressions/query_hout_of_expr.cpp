@@ -15,6 +15,7 @@
 #include <frontend/pst_parser/pst_expr_visitor.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/queries/function_queries.hpp>
+#include <helios/symbols/lang_primitives.hpp>
 #include <helios/tsh/queries.hpp>
 #include <helios/tsh/symbol_type.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
@@ -228,12 +229,13 @@ namespace compiler::helios::code {
 			}
 
 			void visitExprFormatStrValue(pst::Access<pst::expr::ExprFormatStrValue> stmt) override {
-				auto concat_sym = defgen::concatSym(ctx);
+				// Build the formatted string as `""` accumulated through a chain of by-value append
+				//  `String("").append(part0).append(..)...append(partn).toString()`
+				const auto append_sym = defgen::stringAppendMethodSym(ctx, false);
 
-				// Construct the expression, initially empty.
-				MBox<Expr> result_expr
-					= makeBox<LiteralStringExpr>(ctx, generatedOrigin(), base::StrID(""));
-				bool failed = false;
+				// Construct the expression, initially an empty String.
+				MBox<Expr> result_expr = defgen::getStringFromLiteralExpr(ctx, base::StrID(""));
+				bool       failed      = false;
 
 				// - For each sub element
 				for (auto sub_locked: stmt->getSubElements()) {
@@ -294,21 +296,39 @@ namespace compiler::helios::code {
 						continue;
 					}
 
-					// - Concatenate the result with the next string.
 					std::vector<Box<Expr>> arguments;
-					arguments.emplace_back(std::move(result_expr).toOptBox().value());
+					arguments.emplace_back(
+						prepareForMethodCall(std::move(result_expr).toOptBox().value())
+					);
 					arguments.emplace_back(std::move(next_string).toOptBox().value());
 
 					result_expr = makeBox<CallExpr>(
 						ctx,
 						pstOrigin(sub).generatedFrom(),
-						makeBox<IdentifierExpr>(ctx, pstOrigin(sub).generatedFrom(), concat_sym),
+						makeBox<IdentifierExpr>(ctx, pstOrigin(sub).generatedFrom(), append_sym),
 						std::move(arguments)
 					);
 				}
 
 				// If any sub-expression failed to be processed, fail the entire visit.
 				if (failed) return;
+
+				// The `append` chain yields a `ref String`; convert it to an owned `String` value
+				// via `toString()`.
+				const auto string_to_string_sym
+					= defgen::toStringSymForType(ctx, tsh::getStringType(ctx));
+				std::vector<Box<Expr>> to_string_args;
+				to_string_args.emplace_back(
+					prepareForMethodCall(std::move(result_expr).toOptBox().value())
+				);
+				result_expr = makeBox<CallExpr>(
+					ctx,
+					pstOrigin(stmt).generatedFrom(),
+					makeBox<IdentifierExpr>(
+						ctx, pstOrigin(stmt).generatedFrom(), string_to_string_sym
+					),
+					std::move(to_string_args)
+				);
 
 				node = std::move(result_expr).toOptBox().value();
 			}
@@ -706,6 +726,13 @@ namespace compiler::helios::code {
 						.same_pointee_type = true,
 					},
 					{
+						.from_ref_kind     = ReferenceKind::Ref,
+						.from_kind         = {},
+						.to_ref_kind       = ReferenceKind::Direct,
+						.to_kind           = tsh::Kind::CPointer,
+						.same_pointee_type = false,
+					},
+					{
 						.from_ref_kind     = ReferenceKind::Box,
 						.from_kind         = {},
 						.to_ref_kind       = ReferenceKind::Direct,
@@ -779,7 +806,8 @@ namespace compiler::helios::code {
 					}
 				}
 				// Temporarily allow casts from CPointer to Pointer and ManyPointer, with a warning.
-				if (found_match && from.getType().getKind() == tsh::Kind::CPointer) {
+				if (found_match && from.getRefKind() == ReferenceKind::Direct
+				    && from.getType().getKind() == tsh::Kind::CPointer) {
 					ctx.logInt(makeBox<dia_int::PlaceholderWarning>(
 						"Casts from CPointer will be disabled in the future and only work on "
 						"native targets.",
@@ -842,10 +870,6 @@ namespace compiler::helios::code {
 				case pst::Keyword::Str:
 					node
 						= makeBox<LiteralTypeExpr>(ctx, pstOrigin(stmt), tsh::getCharSliceType(ctx));
-					break;
-
-				case pst::Keyword::BigStr:
-					node = makeBox<LiteralTypeExpr>(ctx, pstOrigin(stmt), tsh::getStringType());
 					break;
 
 				case pst::Keyword::Type:
