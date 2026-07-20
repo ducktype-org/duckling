@@ -1,7 +1,7 @@
 disable-bracketed-paste: "--disable-bracketed-paste"
 PreNode: "@{compile_duckc}"
 
-Run: "@{duckc_path} repl @{disable-bracketed-paste}"
+Run: "@{duckc_path} repl @{disable-bracketed-paste} --custom-std-artifacts-path @{std_artifacts_dir}"
 
 prompt: "duckling> "
 welcome_message: "Duckling REPL\nType /help for available commands, /exit to quit.\nPress Enter to submit. Press Alt+Enter for new line.\n"

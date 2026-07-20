@@ -5,7 +5,7 @@ interface down to the core execution engine.
 
 The primary components in this flow are:
 
-1.  **User (API / REPL / CLI):** The entry point for all interactions. A user submits requests to run programs,
+1.  **User (API / CLI):** The entry point for all interactions. A user submits requests to run programs,
     send input, or retrieve output through either a API or a CLI.
 
 2.  **[`Supervisor`](./src/vm/core/supervisor/readme.md):** The top-level manager and request router. The Supervisor

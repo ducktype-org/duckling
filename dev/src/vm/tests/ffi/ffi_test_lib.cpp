@@ -55,6 +55,14 @@ extern "C" {
 
 	int64_t ffi_cpair_sum(CPair c) { return *static_cast<int64_t*>(c.p) + c.v; }
 
+	// Struct with a pointer field passed by value; C writes through the pointer.
+	struct Tagged {
+		void*   p;
+		int64_t tag;
+	};
+
+	void ffi_tagged_store(Tagged t) { *static_cast<int64_t*>(t.p) = t.tag; }
+
 	// Struct whose C layout needs alignment padding (b sits at offset 8, size is 16).
 	struct Mix {
 		int8_t  a;

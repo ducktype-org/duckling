@@ -7,7 +7,11 @@
 //! │   │   ├── artifacts/ # Duckc artifacts directory
 //! │   │   ├── deps.json # JSON used to communicate between QuackPack and duckc.
 //! │   │   └── .duck_lock # Per dependency lock
-//! │   └── *useful artifacts of the root package* # artifacts like main executable, main binary, etc
+//! │   ├── *root package artifacts*/
+//! │   │   ├── artifacts/ # Duckc artifacts directory
+//! │   │   ├── deps.json # JSON used to communicate between QuackPack and duckc.
+//! │   │   └── .duck_lock
+//! │   └── *useful artifacts of the root package* # artifacts like main executable, main binary, compiled scripts, etc
 //! └── .duck_lock # Global artifacts lock
 
 use std::path::{Path, PathBuf};
