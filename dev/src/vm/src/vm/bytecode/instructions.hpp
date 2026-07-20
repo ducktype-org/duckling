@@ -32,6 +32,7 @@
 #include <vm/bytecode/opcode_args.hpp>
 
 #include <memory>
+#include <type_traits>
 
 // Useful for turning a name to a properly qualified type name in X-macros.
 #define VM_INSTR_FROM_NAME(name)  vm::code::instructions::Op_##name
@@ -141,7 +142,8 @@ namespace vm::code {
 		template<typename T>
 		concept VeryTrivial
 			= std::is_trivially_copy_constructible_v<T> && std::is_trivially_move_constructible_v<T>
-		   && std::is_trivially_copy_assignable_v<T> && std::is_trivially_move_assignable_v<T>;
+		   && std::is_trivially_copy_assignable_v<T> && std::is_trivially_move_assignable_v<T>
+		   && std::is_trivially_destructible_v<T>;
 	}
 
 	/// Handmade variant of all concrete instructions with helper accessors.
