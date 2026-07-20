@@ -1,0 +1,277 @@
+name: tests-full
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+on:
+  push:
+    branches: ["main", "dev"]
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, labeled]
+  pull_request_review:
+    types: [submitted]
+  workflow_dispatch:
+
+env:
+  WORKSPACE: ${{ github.workspace }}/dev
+  BUILD_DIR: ${{ github.workspace }}/dev/build
+  CCACHE_DIR: ${{ github.workspace }}/dev/.ccache
+  BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
+  IF_MAIN_PR: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main'}}
+  BUILD_SYSTEM: Ninja
+
+jobs:
+  check-approval:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false || github.event_name != 'pull_request'
+    outputs:
+      run: ${{ steps.decide.outputs.run }}
+    steps:
+      - name: Check if PR has approval or label
+        id: check
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_NUM="${{ github.event.pull_request.number }}"
+          REPO="${{ github.repository }}"
+
+          # Check for "Run All Workflows" label
+          if [ "${{ github.event.action }}" = "labeled" ] && [ "${{ github.event.label.name }}" = "Run All Workflows" ]; then
+            echo "has_label=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Check if PR has "Run All Workflows" label
+          LABEL_COUNT=$(gh api "/repos/$REPO/issues/$PR_NUM/labels" --jq '[.[] | select(.name == "Run All Workflows")] | length')
+          if [ "$LABEL_COUNT" -gt 0 ]; then
+            echo "has_label=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Check if PR has approval
+          APPROVED=$(gh api "/repos/$REPO/pulls/$PR_NUM/reviews" --jq '[.[] | select(.state == "APPROVED")] | length')
+          if [ "$APPROVED" -gt 0 ]; then
+            echo "has_approval=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "has_label=false" >> "$GITHUB_OUTPUT"
+          echo "has_approval=false" >> "$GITHUB_OUTPUT"
+
+      - name: Decide if should run
+        id: decide
+        run: |
+          # Always run on push to main/dev or workflow_dispatch
+          if [ "${{ github.event_name }}" = "push" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Run on pull_request_review if approved
+          if [ "${{ github.event_name }}" = "pull_request_review" ] && [ "${{ github.event.review.state }}" = "approved" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Run on pull_request if has label or approval
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            if [ "${{ steps.check.outputs.has_label }}" = "true" ] || [ "${{ steps.check.outputs.has_approval }}" = "true" ]; then
+              echo "run=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          fi
+
+          echo "run=false" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: [check-approval]
+    if: needs.check-approval.outputs.run == 'true'
+    name: ${{ matrix.build-type }} / ${{ matrix.compiler.name }}
+
+    strategy:
+      matrix:
+        build-type: [Dev, DevOpt]
+        compiler:
+          - name: gcc
+            cxx: g++-14
+            cc: gcc-14
+            gcov: gcov-14
+            linker: mold
+            cache-prefix: gcc-build
+          - name: clang
+            cxx: clang++-19
+            cc: clang-19
+            linker: mold
+            cache-prefix: clang-build
+        exclude:
+          # Dev/gcc already runs in tests-minimal.yml
+          - build-type: Dev
+            compiler:
+              name: gcc
+      fail-fast: false
+
+    timeout-minutes: 60
+    runs-on:
+      group: SelfHostedRunners
+      labels: ${{ matrix.build-type == 'Dev' && 'debug' || 'release' }}
+
+    env:
+      BUILD_DEPLOYABLES: ${{ matrix.build-type == 'DevOpt' }}
+      COVERAGE_ENABLED: false
+
+    steps:
+      - name: Set self-hosted placeholder
+        id: set-self-hosted
+        run: echo "is-self-hosted=true" >> $GITHUB_OUTPUT
+
+      - name: Set number of threads
+        id: set-jobs
+        run: |
+          read -r quota period < /sys/fs/cgroup/cpu.max
+          cpus=$((quota / period + 1))
+          echo "jobs=$cpus" >> $GITHUB_OUTPUT
+
+      - name: Clean workspace
+        if: ${{ steps.set-self-hosted.outputs.is-self-hosted == 'true' }}
+        run: |
+          echo "Cleaning up workspace on self-hosted runner..."
+          rm -rf ${{ github.workspace }}
+          mkdir -p ${{ github.workspace }}
+          echo "Workspace cleaned."
+
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Update apt
+        run: sudo apt update
+
+      - name: Install graphviz
+        if: ${{ env.BUILD_DEPLOYABLES == 'true' }}
+        run: sudo apt -y install libgraphviz-dev
+
+      - name: Install LLVM
+        run: sudo apt -y install llvm-19 llvm-19-dev
+
+      - name: Install clang
+        run: sudo apt -y install clang-19 clang-tools-19
+
+      - name: Install xxd
+        run: sudo apt -y install xxd
+
+      - name: Install mold
+        if: ${{ matrix.compiler.linker == 'mold' }}
+        run: sudo apt -y install mold
+
+      - name: Install GCC 14
+        if: ${{ matrix.compiler.name == 'gcc' }}
+        run: sudo apt install -y ${{ matrix.compiler.cc }} ${{ matrix.compiler.cxx }}
+
+      - name: Install Ninja
+        run: sudo apt -y install ninja-build
+
+      - name: Install Valgrind
+        run: sudo apt -y install valgrind
+
+      - name: Install pkg-config + libffi
+        run: sudo apt -y install pkg-config libffi-dev
+
+      - name: Setup duck dependencies
+        uses: ./.github/actions/setup-duck-dependencies/
+
+      - name: Check installations
+        run: |
+          ${{ matrix.compiler.cxx }} --version
+          ${{ matrix.compiler.cc }} --version
+
+      - name: Install ccache
+        working-directory: ${{ env.WORKSPACE }}
+        run: ./toolbox.py download-binaries -s ccache
+
+      - name: Prepare cache timestamp
+        id: cache-timestamp
+        shell: cmake -P {0}
+        run: |
+          string(TIMESTAMP current_date "%Y-%m-%d-%H::%M::%S" UTC)
+          file(APPEND "$ENV{GITHUB_OUTPUT}" "timestamp=${current_date}")
+
+      - name: Restore build cache
+        id: restore-build-cache
+        uses: actions/cache/restore@v5
+        with:
+          path: |
+            ${{ env.CCACHE_DIR }}
+          key: ${{ runner.os }}-${{ matrix.compiler.cache-prefix }}-${{ matrix.build-type }}-${{ env.BRANCH_NAME }}-${{ steps.cache-timestamp.outputs.timestamp }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.compiler.cache-prefix }}-${{ matrix.build-type }}-${{ env.BRANCH_NAME }}
+            ${{ runner.os }}-${{ matrix.compiler.cache-prefix }}-${{ matrix.build-type }}-main
+            ${{ runner.os }}-${{ matrix.compiler.cache-prefix }}-${{ matrix.build-type }}
+
+      - name: Restore sccache cache
+        id: restore-sccache-cache
+        uses: actions/cache/restore@v5
+        with:
+          path: |
+            ${{ env.SCCACHE_DIR }}
+          key: ${{ runner.os }}-sccache-${{ env.BRANCH_NAME }}-${{ steps.cache-timestamp.outputs.timestamp }}
+          restore-keys: |
+            ${{ runner.os }}-sccache-${{ env.BRANCH_NAME }}-
+            ${{ runner.os }}-sccache-main-
+            ${{ runner.os }}-sccache-
+
+      - name: Remove ccache on main
+        if: ${{ env.BRANCH_NAME == 'main' }}
+        id: ccache-main-rm
+        run: rm -rf ${CCACHE_DIR}
+
+      - name: Remove sccache on main
+        if: ${{ env.BRANCH_NAME == 'main' }}
+        id: sccache-main-rm
+        run: rm -rf ${SCCACHE_DIR}
+
+      - name: Initialize project
+        working-directory: ${{ env.WORKSPACE }}
+        run: ./toolbox.py init
+
+      - name: Additional setup-build flags
+        id: setup-build-flags
+        run: echo flags=--no-coverage >> $GITHUB_OUTPUT
+
+      - name: Setup build
+        working-directory: ${{ env.WORKSPACE }}
+        run: >
+          ./toolbox.py setup-build
+          -x ${{ matrix.compiler.cxx }}
+          -c ${{ matrix.compiler.cc }}
+          -l ${{ matrix.compiler.linker }}
+          -b ${{ matrix.build-type }}
+          ${{ steps.setup-build-flags.outputs.flags }}
+
+      - name: Build
+        working-directory: ${{ env.BUILD_DIR }}
+        run: ninja -j ${{ steps.set-jobs.outputs.jobs }}
+
+      - name: Run unit tests
+        working-directory: ${{ env.WORKSPACE }}
+        run: ./toolbox.py test
+
+      - name: Run integration tests
+        working-directory: ${{ env.WORKSPACE }}
+        run: ./toolbox.py itest
+
+      - name: Save build cache
+        uses: actions/cache/save@v5
+        if: always()
+        with:
+          path: |
+            ${{ env.CCACHE_DIR }}
+          key: ${{ steps.restore-build-cache.outputs.cache-primary-key }}
+
+      - name: Save sccache cache
+        uses: actions/cache/save@v5
+        if: always()
+        with:
+          path: |
+            ${{ env.SCCACHE_DIR }}
+          key: ${{ steps.restore-sccache-cache.outputs.cache-primary-key }}

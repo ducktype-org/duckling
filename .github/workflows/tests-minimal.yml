@@ -1,0 +1,280 @@
+name: tests-minimal
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+on:
+  push:
+    branches: ["main", "dev"]
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, labeled]
+  workflow_dispatch:
+
+env:
+  WORKSPACE: ${{ github.workspace }}/dev
+  BUILD_DIR: ${{ github.workspace }}/dev/build
+  CCACHE_DIR: ${{ github.workspace }}/dev/.ccache
+  BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
+  IF_MAIN_PR: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main'}}
+  BUILD_SYSTEM: Ninja
+
+jobs:
+  build:
+    name: Dev / gcc
+    if: >-
+      github.event_name == 'push' ||
+      github.event_name == 'workflow_dispatch' ||
+      (
+        github.event_name == 'pull_request' &&
+        github.event.pull_request.draft == false &&
+        (github.event.action != 'labeled' || github.event.label.name == 'Override Coverage Check' || github.event.label.name == 'Run All Workflows')
+      )
+
+    strategy:
+      fail-fast: false
+
+    outputs:
+      coverage-value: ${{ steps.test-coverage.outputs.coverage-percent }}
+      itest-coverage-value: ${{ steps.test-coverage-itests.outputs.coverage-percent }}
+      todo-count: ${{ steps.todo-counter.outputs.todo-count }}
+
+    timeout-minutes: 60
+    runs-on:
+      group: SelfHostedRunners
+      labels: debug
+
+    env:
+      BUILD_DEPLOYABLES: false
+      COVERAGE_ENABLED: true
+      COMPILER_NAME: gcc
+      COMPILER_CXX: g++-14
+      COMPILER_CC: gcc-14
+      COMPILER_GCOV: gcov-14
+      COMPILER_LINKER: mold
+      BUILD_TYPE: Dev
+
+    steps:
+      - name: Set self-hosted placeholder
+        id: set-self-hosted
+        run: echo "is-self-hosted=true" >> $GITHUB_OUTPUT
+
+      - name: Set number of threads
+        id: set-jobs
+        run: |
+          read -r quota period < /sys/fs/cgroup/cpu.max
+          cpus=$((quota / period + 1))
+          echo "jobs=$cpus" >> $GITHUB_OUTPUT
+
+      - name: Clean workspace
+        if: ${{ steps.set-self-hosted.outputs.is-self-hosted == 'true' }}
+        run: |
+          echo "Cleaning up workspace on self-hosted runner..."
+          rm -rf ${{ github.workspace }}
+          mkdir -p ${{ github.workspace }}
+          echo "Workspace cleaned."
+
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Update apt
+        run: sudo apt update
+
+      - name: Install lcov
+        run: sudo apt -y install lcov
+
+      - name: Install fastcov
+        run: sudo pip install fastcov --break-system-packages --no-input
+
+      - name: Install LLVM
+        run: sudo apt -y install llvm-19 llvm-19-dev
+
+      - name: Install clang
+        run: sudo apt -y install clang-19 clang-tools-19
+
+      - name: Install xxd
+        run: sudo apt -y install xxd
+
+      - name: Install mold
+        run: sudo apt -y install mold
+
+      - name: Install GCC 14 and gcov-14
+        run: sudo apt install -y ${{ env.COMPILER_CC }} ${{ env.COMPILER_CXX }}
+
+      - name: Install Ninja
+        run: sudo apt -y install ninja-build
+
+      - name: Install Valgrind
+        run: sudo apt -y install valgrind
+
+      - name: Install pkg-config + libffi
+        run: sudo apt -y install pkg-config libffi-dev
+
+      - name: Setup duck dependencies
+        uses: ./.github/actions/setup-duck-dependencies/
+
+      - name: Check installations
+        run: |
+          ${{ env.COMPILER_CXX }} --version
+          ${{ env.COMPILER_CC }} --version
+          ${{ env.COMPILER_GCOV }} --version
+
+      - name: Install ccache
+        working-directory: ${{ env.WORKSPACE }}
+        run: ./toolbox.py download-binaries -s ccache
+
+      - name: Prepare cache timestamp
+        id: cache-timestamp
+        shell: cmake -P {0}
+        run: |
+          string(TIMESTAMP current_date "%Y-%m-%d-%H::%M::%S" UTC)
+          file(APPEND "$ENV{GITHUB_OUTPUT}" "timestamp=${current_date}")
+
+      - name: Restore build cache
+        id: restore-build-cache
+        uses: actions/cache/restore@v5
+        with:
+          path: |
+            ${{ env.CCACHE_DIR }}
+          key: ${{ runner.os }}-gcc-build-${{ env.BUILD_TYPE }}-${{ env.BRANCH_NAME }}-${{ steps.cache-timestamp.outputs.timestamp }}
+          restore-keys: |
+            ${{ runner.os }}-gcc-build-${{ env.BUILD_TYPE }}-${{ env.BRANCH_NAME }}
+            ${{ runner.os }}-gcc-build-${{ env.BUILD_TYPE }}-main
+            ${{ runner.os }}-gcc-build-${{ env.BUILD_TYPE }}
+
+      - name: Restore sccache cache
+        id: restore-sccache-cache
+        uses: actions/cache/restore@v5
+        with:
+          path: |
+            ${{ env.SCCACHE_DIR }}
+          key: ${{ runner.os }}-sccache-${{ env.BRANCH_NAME }}-${{ steps.cache-timestamp.outputs.timestamp }}
+          restore-keys: |
+            ${{ runner.os }}-sccache-${{ env.BRANCH_NAME }}-
+            ${{ runner.os }}-sccache-main-
+            ${{ runner.os }}-sccache-
+
+      - name: Remove ccache on main
+        if: ${{ env.BRANCH_NAME == 'main' }}
+        id: ccache-main-rm
+        run: rm -rf ${CCACHE_DIR}
+
+      - name: Remove sccache on main
+        if: ${{ env.BRANCH_NAME == 'main' }}
+        id: sccache-main-rm
+        run: rm -rf ${SCCACHE_DIR}
+
+      - name: Initialize project
+        working-directory: ${{ env.WORKSPACE }}
+        run: ./toolbox.py init
+
+      - name: Additional setup-build flags
+        id: setup-build-flags
+        run: echo flags=--coverage --gcov-version ${{ env.COMPILER_GCOV }} >> $GITHUB_OUTPUT
+
+      - name: Setup build
+        working-directory: ${{ env.WORKSPACE }}
+        run: >
+          ./toolbox.py setup-build
+          -x ${{ env.COMPILER_CXX }}
+          -c ${{ env.COMPILER_CC }}
+          -l ${{ env.COMPILER_LINKER }}
+          -b ${{ env.BUILD_TYPE }}
+          ${{ steps.setup-build-flags.outputs.flags }}
+
+      - name: Build
+        working-directory: ${{ env.BUILD_DIR }}
+        run: ninja -j ${{ steps.set-jobs.outputs.jobs }}
+
+      - name: Run unit tests
+        working-directory: ${{ env.WORKSPACE }}
+        run: ./toolbox.py test
+
+      - name: Run integration tests
+        working-directory: ${{ env.WORKSPACE }}
+        run: ./toolbox.py itest
+
+      - name: Count coverage
+        id: test-coverage
+        working-directory: ${{ env.WORKSPACE }}
+        run: |
+          PERCENT=$(./toolbox.py test --coverage-only | grep -oP 'lines\.*: \K[0-9.]+')
+          echo "coverage-percent=$PERCENT" >> "$GITHUB_OUTPUT"
+          echo "Unit test coverage: $PERCENT%"
+
+      - name: Count itest coverage
+        id: test-coverage-itests
+        working-directory: ${{ env.WORKSPACE }}
+        run: |
+          PERCENT=$(./toolbox.py itest --coverage-only | grep -oP 'lines\.*: \K[0-9.]+')
+          echo "coverage-percent=$PERCENT" >> "$GITHUB_OUTPUT"
+          echo "Integration test coverage: $PERCENT%"
+
+      - name: Generate Cobertura XML
+        working-directory: ${{ env.WORKSPACE }}
+        run: ./toolbox.py test --coverage-only --xml
+
+      - name: Upload coverage report
+        uses: codecov/codecov-action@v5
+        with:
+          files: ${{ env.WORKSPACE }}/build/test_coverage.xml
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Count TODOs
+        id: todo-counter
+        working-directory: ${{ env.WORKSPACE }}
+        run: |
+          TODO_COUNT=$(./toolbox.py count-todos)
+          echo "todo-count=$TODO_COUNT" >> "$GITHUB_OUTPUT"
+          echo "TODO count: $TODO_COUNT"
+
+      - name: Save build cache
+        uses: actions/cache/save@v5
+        if: always()
+        with:
+          path: |
+            ${{ env.CCACHE_DIR }}
+          key: ${{ steps.restore-build-cache.outputs.cache-primary-key }}
+
+      - name: Save sccache cache
+        uses: actions/cache/save@v5
+        if: always()
+        with:
+          path: |
+            ${{ env.SCCACHE_DIR }}
+          key: ${{ steps.restore-sccache-cache.outputs.cache-primary-key }}
+
+  coverage-check:
+    needs: [build]
+    if: github.event_name == 'pull_request' && needs.build.outputs.coverage-value != ''
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Get base branch coverage
+        id: base-coverage
+        run: |
+          BASE_BRANCH="${{ github.event.pull_request.base.ref }}"
+          git fetch origin "$BASE_BRANCH"
+          BASE_SHA=$(git rev-parse "origin/$BASE_BRANCH")
+
+          COVERAGE=$(gh api "/repos/${{ github.repository }}/actions/workflows/tests-minimal.yml/runs?branch=$BASE_BRANCH&status=success&per_page=1" \
+            --jq '.workflow_runs[0].id' | xargs -I{} \
+            gh api "/repos/${{ github.repository }}/actions/runs/{}/jobs" \
+            --jq '.jobs[] | select(.name == "Dev / gcc") | .steps[] | select(.name == "Count coverage") | .conclusion')
+
+          echo "Base coverage check outcome: $COVERAGE"
+          echo "outcome=$COVERAGE" >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compare coverage
+        run: |
+          CURRENT=${{ needs.build.outputs.coverage-value }}
+          echo "Current PR coverage: $CURRENT%"
+          echo "Coverage check complete"

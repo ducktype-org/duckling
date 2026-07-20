@@ -13,7 +13,7 @@ on:
   pull_request_review_comment:
     types: [created]                     # "@quacker-bot" mentioned in an inline PR review comment
   workflow_run:
-    workflows: [tests, linter, rust]    # failed CI on a bot branch triggers a self-fix
+    workflows: [tests-minimal, tests-full, linter, rust]    # failed CI on a bot branch triggers a self-fix
     types: [completed]
 
 concurrency:
