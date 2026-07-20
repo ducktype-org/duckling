@@ -143,6 +143,8 @@ namespace artifacts {
 
 		/**
 		 * @brief Flushes ArtifactCollection tree data to the disk.
+		 * @note A no-op if nothing was written to the tree since construction/last flush, so a
+		 * process that only reads a warm collection never touches its files on disk.
 		 */
 		void flush();
 
@@ -291,6 +293,34 @@ namespace artifacts {
 		 */
 
 		const base::Optional<Ref<ArtifactCollection>> PARENT;
+
+		/**
+		 * @brief Whether this collection tree holds writes that have not been flushed to disk
+		 * yet. Only meaningful on the root collection, since `flush()` always delegates up to
+		 * it. Lets `flush()` skip touching disk entirely on a pure-reader run (e.g. a warm
+		 * `--custom-std-artifacts-path` consumer that recompiled nothing).
+		 */
+		bool dirty = false;
+
+		/**
+		 * @brief True while `loadData()` is reconstructing in-memory state from files already on
+		 * disk, so that reconstructing existing blobs does not spuriously mark the collection
+		 * dirty.
+		 */
+		bool is_loading = false;
+
+		/**
+		 * @brief Marks this collection's tree as dirty (see \ref dirty), propagating up to the
+		 * root. Safe to call from any context; locks this collection (and, transitively, each
+		 * ancestor) before mutating state.
+		 */
+		void markDirty();
+
+		/**
+		 * @brief NoLock implementation of \ref markDirty. Caller must already hold this
+		 * collection's own lock.
+		 */
+		void markDirtyNoLock();
 
 		/**
 		 * @brief Implementation that writes the blob data on the disk and propagates down the

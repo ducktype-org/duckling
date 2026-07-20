@@ -1,5 +1,6 @@
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
+#include <base/extend_cpp/defer.hpp>
 #include <base/misc/int_conv.hpp>
 
 #include <artifacts/artifacts.hpp>
@@ -11,10 +12,43 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <random>
+#include <sstream>
 #include <string>
 #include <utility>
 
 constexpr char ARTC_DELIM = ';';
+
+namespace {
+	/**
+	 * @brief Writes `content` to `path` atomically: writes to a uniquely-named temp file in the
+	 * same directory, then renames it over `path`. `rename` within one directory/filesystem is
+	 * atomic, so a concurrent reader of `path` always sees either the old or the new content in
+	 * full, never a truncated/partial write.
+	 */
+	void writeFileAtomically(const std::filesystem::path& path, std::string_view content) {
+		static thread_local std::mt19937_64 rng{ std::random_device{}() };
+		const auto tmp_path = path.string() + ".tmp-" + std::to_string(rng());
+
+		{
+			std::ofstream tmp_file(tmp_path, std::ios::out | std::ios::trunc | std::ios::binary);
+			if (!tmp_file) CORE_PANIC("Failed to open temp file for atomic write: " + tmp_path);
+			tmp_file.write(content.data(), base::safeIntConv<std::streamsize>(content.size()));
+			if (!tmp_file) CORE_PANIC("Failed to write temp file for atomic write: " + tmp_path);
+		}
+
+		std::error_code ec;
+		std::filesystem::rename(tmp_path, path, ec);
+		if (ec) {
+			std::error_code remove_ec;
+			std::filesystem::remove(tmp_path, remove_ec);
+			CORE_PANIC(
+				"Failed to atomically move '" + tmp_path + "' to '" + path.string()
+				+ "': " + ec.message()
+			);
+		}
+	}
+}
 
 void artifacts::BlobArtifact::setData(const byte* ptr, usize n_bytes) {
 	parent->setBlobData(*this, ptr, n_bytes);
@@ -45,6 +79,10 @@ void artifacts::ArtifactCollection::validateOrWipeBuildId() {
 	}
 
 	if (has_file && stored_id == BUILD_ID) return;
+
+	// Contents are stale, foreign, or missing a marker entirely: this run must (re)write a
+	// fresh `.build_id` once it flushes, even if it ends up compiling nothing itself.
+	dirty = true;
 
 	if (has_file) {
 		CORE_USER_LOG(
@@ -90,9 +128,11 @@ void artifacts::ArtifactCollection::validateOrWipeBuildId() {
 }
 
 void artifacts::ArtifactCollection::writeBuildIdFile() {
-	const auto name     = base::StrID(std::string(BUILD_ID_FILE));
-	const auto artifact = fileArtifactAtOrNewNoLock(name);
-	artifact.file.writeToFile(BUILD_ID);
+	// Write atomically first, then register the FileArtifact: fileArtifactAtOrNewNoLock only
+	// creates an (empty) placeholder file when none exists yet, so writing first means it
+	// always finds the real content already in place and never exposes a transient empty file.
+	writeFileAtomically(PATH / BUILD_ID_FILE, BUILD_ID);
+	fileArtifactAtOrNewNoLock(base::StrID(std::string(BUILD_ID_FILE)));
 }
 
 void artifacts::ArtifactCollection::flush() {
@@ -241,6 +281,11 @@ void artifacts::ArtifactCollection::parseBlobsFromBytes(std::stringstream& conte
 }
 
 void artifacts::ArtifactCollection::loadData() {
+	// Reconstructing existing on-disk state below (via blobArtifactNew/setData/fileArtifactNew)
+	// must not be mistaken for new writes that need flushing.
+	is_loading = true;
+	defer(is_loading = false);
+
 	// Read blob data.
 	auto artc_file_path = getArtcFile();
 	if (artc_file_path.exists()) {
@@ -271,19 +316,21 @@ void artifacts::ArtifactCollection::flushDown() {
 		"\n"
 	);
 
-	std::ofstream file(artc_file_path.getPath());
-	file << std::to_string(blob_artifacts.size()) << ARTC_DELIM;
+	std::ostringstream content;
+	content << std::to_string(blob_artifacts.size()) << ARTC_DELIM;
 	for (const auto& [blob_name, blob]: blob_artifacts) {
 		const auto& data = blob_data[blob_name];
 		// Name
-		file << blob_name.strView().size() << ARTC_DELIM << blob_name.strView();
+		content << blob_name.strView().size() << ARTC_DELIM << blob_name.strView();
 		// Content
-		file << data->size() << ARTC_DELIM;
-		file.write(
+		content << data->size() << ARTC_DELIM;
+		content.write(
 			reinterpret_cast<const char*>(data->data()), base::safeIntConv<u32>(data->size())
 		);
 	}
-	file.close();
+	// Written to a temp file and renamed into place so a concurrent reader constructing an
+	// ArtifactCollection at this path never observes a half-written .artc blob.
+	writeFileAtomically(artc_file_path.getPath(), content.str());
 
 	for (auto&& [_, sub_collection]: sub_collections) sub_collection->flushDown();
 }
@@ -296,9 +343,26 @@ void artifacts::ArtifactCollection::flushNoLock() {
 	if (PARENT) {
 		PARENT.value()->flush();
 	} else {
+		if (!dirty) return;
 		flushDown();
 		if constexpr (CHECK_BUILD_ID) writeBuildIdFile();
+		dirty = false;
 	}
+}
+
+void artifacts::ArtifactCollection::markDirty() {
+	WithLock lock(*this);
+	markDirtyNoLock();
+}
+
+void artifacts::ArtifactCollection::markDirtyNoLock() {
+	// Non-root collections don't track their own dirty state (only the root's is consulted by
+	// flushNoLock(), which always delegates flushing up to the root); just propagate up. Uses
+	// the locking markDirty(), since the ancestor's lock is not held here.
+	if (PARENT)
+		PARENT.value()->markDirty();
+	else
+		dirty = true;
 }
 
 Ref<artifacts::ArtifactCollection> artifacts::ArtifactCollection::subCollectionNewNoLock(
@@ -383,6 +447,7 @@ artifacts::BlobArtifact artifacts::ArtifactCollection::blobArtifactNewNoLock(bas
 	CORE_ASSERT(!blob_artifacts.contains(artifact_name), "Duplicated blob artifact");
 	blob_artifacts.put(artifact_name, BlobArtifact{ .parent = this, .name = artifact_name });
 	blob_data.put(artifact_name, makeBox<Bytes>());
+	if (!is_loading) markDirtyNoLock();
 	return blobArtifactAtNoLock(artifact_name);
 }
 
@@ -421,6 +486,7 @@ void artifacts::ArtifactCollection::setBlobDataNoLock(
 ) {
 	CORE_ASSERT(blob.parent.get() == this, "Blob does not belong to this collection");
 	blob_data[blob.name] = makeBox<Bytes>(ptr, ptr + n_bytes);
+	if (!is_loading) markDirtyNoLock();
 }
 
 base::RawView artifacts::ArtifactCollection::getBlobDataViewNoLock(const BlobArtifact& blob) const {

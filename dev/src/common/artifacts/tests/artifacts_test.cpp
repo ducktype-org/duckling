@@ -17,6 +17,7 @@ public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(simpleTest);
 		TESTER_ADD_TEST(buildIdMismatchWipesArtifacts);
+		TESTER_ADD_TEST(flushIsNoOpWhenNothingWasWritten);
 	}
 
 private:
@@ -120,6 +121,39 @@ private:
 		std::stringstream ss;
 		ss << in.rdbuf();
 		ASSERT_TRUE(ss.str() == std::string(artifacts::BUILD_ID));
+	}
+
+	// Regression test for a race where a pure-reader process (e.g. a warm
+	// `--custom-std-artifacts-path` consumer) rewrote `.artc`/`.build_id` on every flush, even
+	// though it compiled nothing. Concurrent readers could then observe a half-written marker
+	// and wipe the shared directory out from under an in-progress compile (issue #3169).
+	void flushIsNoOpWhenNothingWasWritten() {
+		fs::File              fs_root_path  = fs::FileManager::createRandomTempDirectory();
+		std::filesystem::path root          = fs_root_path.getFilePath().getPath();
+		const auto            build_id_path = root / artifacts::ArtifactCollection::BUILD_ID_FILE;
+
+		const auto b0 = base::StrID("b0");
+
+		// Populate and flush once, so the next construction is a warm, valid-build-id load.
+		{
+			artifacts::ArtifactCollection collection(root);
+			auto                          blob0 = collection.blobArtifactNew(b0);
+			blob0.setData<decltype(VALUE)>(VALUE);
+			collection.flush();
+		}
+
+		const auto build_id_mtime_before = std::filesystem::last_write_time(build_id_path);
+
+		{
+			// Load the warm collection and only read from it: no new blob/data is written.
+			artifacts::ArtifactCollection collection(root);
+			ASSERT_TRUE(collection.blobArtifactAtOrNew(b0).getData<decltype(VALUE)>() == VALUE);
+
+			// A pure-reader flush() must not touch disk at all.
+			collection.flush();
+		}
+
+		ASSERT_TRUE(std::filesystem::last_write_time(build_id_path) == build_id_mtime_before);
 	}
 };
 
