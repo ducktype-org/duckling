@@ -23,6 +23,31 @@ concurrency:
 jobs:
   setup:
     runs-on: ubuntu-latest
+
+    # note: we can add "COLLABORATOR" to the author_association check if needed in the future.
+    if: >-
+      (
+        github.event_name == 'issues' && 
+        github.event.label.name == 'quacker'
+      ) || (
+        github.event_name == 'issue_comment' &&
+        github.event.issue.pull_request &&
+        github.event.comment.user.type != 'Bot' &&
+        contains(fromJSON('["OWNER","MEMBER"]'), github.event.comment.author_association) &&
+        contains(github.event.comment.body, '@quacker-bot')
+      ) || (
+        github.event_name == 'pull_request_review_comment' &&
+        github.event.comment.user.type != 'Bot' &&
+        contains(fromJSON('["OWNER","MEMBER"]'), github.event.comment.author_association) &&
+        contains(github.event.comment.body, '@quacker-bot')
+      ) || (
+        github.event_name == 'workflow_run' &&
+        github.event.workflow_run.conclusion == 'failure' &&
+        github.event.workflow_run.actor.type == 'Bot' &&
+        github.event.workflow_run.head_repository.full_name == github.repository &&
+        startsWith(github.event.workflow_run.head_branch, 'quacker-bot/')
+      )
+
     outputs:
       run: ${{ steps.d.outputs.run }}
       mode: ${{ steps.d.outputs.mode }}
