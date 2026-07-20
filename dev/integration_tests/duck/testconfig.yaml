@@ -47,8 +47,10 @@ SubDirs:
   - sync
   - init
   - build
+  - run
 
 # @TODO: #2920 This shouldn't need ` -> i64`.
 # NOTE: This needs to be quoted like this, so `echo` receives `'<string>'` as an argument.
 # (It must be in single quotes!)
-default-src: "'import core.builtins.*;\n\nfun main() -> i64 = {\n    return 0;\n}'"
+default-src: "'import core.builtins.*;\n\nfun main() -> i64 = {\n    return @{default-src-rc};\n}'"
+default-src-rc: 0

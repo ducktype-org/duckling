@@ -1,6 +1,5 @@
 #include "cli.hpp"
 #include "server.hpp"
-#include "vm_repl.hpp"
 
 #include <clah/clah.hpp>
 #include <clah/clah_class.hpp>
@@ -167,12 +166,6 @@ clah::Clah getVmClah() {
 	                       .setHandler([](const clah::ParsingResult&) -> int {
 							   vm::Supervisor::get();
 							   vm::debugger::debug_adapter::DebugAdapter::get().run();
-							   return 0;
-						   }))
-	    .addSubcommand(clah::Clah("repl", "Start the VM in REPL mode.")
-	                       .setHandler([](const clah::ParsingResult&) -> int {
-							   vm::Supervisor::get();
-							   DuckVMRepl::get().run();
 							   return 0;
 						   }));
 }

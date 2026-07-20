@@ -20,9 +20,9 @@ case_duck_build: "$DIT_TMP_DIR/duck_build"
 
 PreCase: "
   if [ '@{mode}' = 'vm' ]; then
-    cd @{folder} && @{duckc_path} compile_script @{Name}.ds --dvm-backend -a @{case_duck_build};
+    cd @{folder} && @{duckc_path} compile_script @{Name}.ds --dvm-backend -a @{case_duck_build} --custom-std-artifacts-path @{std_artifacts_dir};
   elif [ '@{mode}' = 'exe' ]; then
-    cd @{folder} && @{duckc_path} compile_script @{Name}.ds -O @{opt_level} -a @{case_duck_build};
+    cd @{folder} && @{duckc_path} compile_script @{Name}.ds -O @{opt_level} -a @{case_duck_build} --custom-std-artifacts-path @{std_artifacts_dir};
   fi"
 
 Run: "
@@ -31,7 +31,7 @@ Run: "
   elif [ '@{mode}' = 'exe' ]; then
     @{case_duck_build}/@{Name}.exe;
   else
-    @{duckc_path} run @{folder}/@{Name}.ds;
+    @{duckc_path} run @{folder}/@{Name}.ds --custom-std-artifacts-path @{std_artifacts_dir};
   fi"
 
 PostCase: "@{cleanup_tmp_env}"
