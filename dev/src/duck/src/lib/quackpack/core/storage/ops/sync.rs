@@ -102,6 +102,7 @@ pub fn sync(
         data.set_last_modification(now);
         data.set_freeze(new_freeze);
         data.set_last_known_location(pcx.package().root().to_path_buf());
+        data.set_ephemeral(venv_config.is_ephemeral()?);
         venv
     } else {
         let data = VenvData::new(

@@ -41,7 +41,7 @@ pub fn clean(options: CleanOptions) -> QuackResult<()> {
                 ctx.console().print(indent(venv.as_ref(), 2))?;
             }
             ctx.console().print(format!(
-                "Removed {} packages{}",
+                "Removed {} package{}",
                 removed_packages.len(),
                 if removed_packages.len() == 1 { "" } else { "s" }
             ))?;
