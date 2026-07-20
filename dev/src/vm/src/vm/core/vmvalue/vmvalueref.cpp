@@ -7,8 +7,7 @@
 vm::VMValueRef vm::interpreted_data_variant::Table::get(usize index) {
 	if (index >= size) throw std::out_of_range("Table index out of range");
 
-	vm::Pointer pointer
-		= begin.movedPointer(static_cast<i64>(index * static_cast<usize>(type->getSize())));
+	vm::Pointer pointer = begin.movedPointer(index * static_cast<usize>(type->getSize()));
 
 	return { *process.get(), type, pointer };
 }
@@ -77,7 +76,7 @@ base::Optional<vm::InterpretedDataVariant> vm::VMValueRef::readData() const {
 					.value  = VMValueRef(
                         *my_process.get(),
                         field_desc.type,
-                        pointed_data.movedPointer(static_cast<i64>(field_desc.offset.asInt()))
+                        pointed_data.movedPointer(static_cast<u64>(field_desc.offset.asInt()))
                     ) });
 			}
 
@@ -116,7 +115,7 @@ base::Optional<vm::InterpretedDataVariant> vm::VMValueRef::readData() const {
 			TypeCRef inner_type = variant_kind.alternatives.at(alternative_index);
 
 			auto view_block_ref = memory->getNestedViewBlock(
-				pointed_data.movedPointer(static_cast<i64>(variant_kind.type_tag_size)), inner_type
+				pointed_data.movedPointer(static_cast<u64>(variant_kind.type_tag_size)), inner_type
 			);
 
 			match_optional(view_block_ref.toOpt()) {
@@ -136,6 +135,11 @@ base::Optional<vm::InterpretedDataVariant> vm::VMValueRef::readData() const {
 		}
 
 		variant_case(vm::kind::Opaque, opaque_kind) {
+			return vm::interpreted_data_variant::Opaque{};
+		}
+
+		variant_case(vm::kind::CPointer, cpointer_kind) {
+			// A raw native address is opaque to the VM's value inspection.
 			return vm::interpreted_data_variant::Opaque{};
 		}
 	}
@@ -180,4 +184,20 @@ std::string vm::VMValueRef::str() const {
 		variant_case_novalue(interpreted_data_variant::Opaque) { return "<opaque>"; }
 	}
 	return "<unknown>";
+}
+
+bool vm::VMValueRef::isComplex() const {
+	variant_match(my_type->getKindVariant()) {
+		variant_case_novalue(std::monostate, kind::Primitive, kind::Function) { return false; }
+		variant_case(kind::Pointer, val) {
+			auto opt_data = readData().value();
+			variant_match(opt_data) {
+				variant_case(interpreted_data_variant::Pointer, val) {
+					return val.referenced.has_value();
+				}
+			}
+			return false;
+		}
+	}
+	return true;
 }

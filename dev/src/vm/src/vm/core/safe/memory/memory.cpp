@@ -285,6 +285,7 @@ namespace vm {
 		case Type::Kind::Primitive:
 		case Type::Kind::Function:
 		case Type::Kind::Opaque:
+		case Type::Kind::CPointer:
 		case Type::Kind::Variant:
 		case Type::Kind::Pointer:
 			break;
@@ -335,6 +336,7 @@ namespace vm {
 		case Type::Kind::Primitive:
 		case Type::Kind::Function:
 		case Type::Kind::Opaque:
+		case Type::Kind::CPointer:
 		case Type::Kind::DynamicTable:
 		case Type::Kind::FixedSizeTable:
 		case Type::Kind::Data:
@@ -358,6 +360,7 @@ namespace vm {
 		case Type::Kind::Primitive:
 		case Type::Kind::Function:
 		case Type::Kind::Opaque:
+		case Type::Kind::CPointer:
 		case Type::Kind::DynamicTable:
 		case Type::Kind::FixedSizeTable:
 		case Type::Kind::Data:

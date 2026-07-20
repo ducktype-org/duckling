@@ -1,9 +1,37 @@
-# The built-in library is compiled for the target the compiler itself runs on.
-# By default this is Clang's own default target (i.e. the host triple).
-# Cross-compiling the driver requires setting BUILTINS_TARGET to the target triple,
-# and providing Clang with a matching sysroot / libraries via BUILTINS_EXTRA_CLANG_FLAGS.
-set(BUILTINS_TARGET "" CACHE STRING "Target triple for the built-in library (empty = Clang default/host)")
-set(BUILTINS_EXTRA_CLANG_FLAGS "" CACHE STRING "Extra Clang flags used when compiling the built-in library")
+# The different targets supported by the compiler,
+# thus also the targets for which built-in libraries are built.
+# The builtins are compiled for the host target. Apple targets require the
+# macOS SDK and can only be built on macOS hosts, so the list is host-dependent.
+if(APPLE)
+    if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm64|aarch64")
+        set(BUILTIN_TARGETS arm64-apple-darwin)
+    else()
+        set(BUILTIN_TARGETS x86_64-apple-darwin)
+    endif()
+else()
+    set(BUILTIN_TARGETS
+            x86_64-linux-gnu
+
+            # This target requires further configuration so that clang
+            # can find the appropriate sysroot and libraries.
+            #        aarch64-linux-gnu
+    )
+endif()
+
+# On macOS, point clang at the active SDK so it can find the system headers
+# while cross-emitting bitcode for the apple-darwin target.
+set(BUILTINS_EXTRA_CLANG_FLAGS "")
+if(APPLE)
+    execute_process(
+            COMMAND xcrun --show-sdk-path
+            OUTPUT_VARIABLE MACOS_SDK_PATH
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+            ERROR_QUIET
+    )
+    if(MACOS_SDK_PATH)
+        list(APPEND BUILTINS_EXTRA_CLANG_FLAGS -isysroot ${MACOS_SDK_PATH})
+    endif()
+endif()
 
 # Before going further, ensure that there exists a Clang version on the system which
 # matches the LLVM version used by the compiler. This is important because the builtins
@@ -52,45 +80,44 @@ endif ()
 
 set(GENERATED_DIR "${CMAKE_BINARY_DIR}/generated")
 
-set(bc_file "${GENERATED_DIR}/builtins_native.bc")
-set(embedding_file "${GENERATED_DIR}/builtins_native.cpp")
-set(symbol_name builtins_native_bc)
+# For each target, add command to generate the LLVM bitcode
+# and convert it to an embedded header file.
+foreach (target IN LISTS BUILTIN_TARGETS)
+    # Define output file names
+    set(bc_file "${GENERATED_DIR}/builtins_${target}.bc")
+    set(embedding_file "${GENERATED_DIR}/builtins_${target}.cpp")
 
-set(BUILTINS_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src_private/driver_private/builtins")
+    set(BUILTINS_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src_private/driver_private/builtins")
 
-if (BUILTINS_TARGET)
-    set(clang_target_flag "--target=${BUILTINS_TARGET}")
-    message(STATUS "Built-in library target: ${BUILTINS_TARGET}")
-else ()
-    set(clang_target_flag "")
-    message(STATUS "Built-in library target: Clang default (host)")
-endif ()
+    # Add command to generate LLVM bitcode by compiling the built-ins source code via clang.
+    add_custom_command(
+            OUTPUT ${bc_file}
+            COMMAND ${CMAKE_COMMAND} -E make_directory ${GENERATED_DIR}
+            COMMAND ${CLANG_BIN}
+            --target=${target}
+            ${BUILTINS_EXTRA_CLANG_FLAGS}
+            -O2
+            -emit-llvm
+            -c ${BUILTINS_SOURCE_DIR}/builtins_source.cpp
+            -o ${bc_file}
+            DEPENDS ${BUILTINS_SOURCE_DIR}/builtins_source.cpp
+            COMMENT "Generating LLVM bitcode for target ${target}"
+    )
 
-# Generate LLVM bitcode by compiling the built-ins source code via clang.
-add_custom_command(
-        OUTPUT ${bc_file}
-        COMMAND ${CMAKE_COMMAND} -E make_directory ${GENERATED_DIR}
-        COMMAND ${CLANG_BIN}
-        ${clang_target_flag}
-        ${BUILTINS_EXTRA_CLANG_FLAGS}
-        -O2
-        -emit-llvm
-        -c ${BUILTINS_SOURCE_DIR}/builtins_source.cpp
-        -o ${bc_file}
-        DEPENDS ${BUILTINS_SOURCE_DIR}/builtins_source.cpp
-        COMMENT "Generating LLVM bitcode for the built-in library"
-        COMMAND_EXPAND_LISTS
-)
+    # The symbol name in the generated header file should not contain `-`. Replace `-` with `_`.
+    string(REPLACE "-" "_" target_sanitized ${target})
+    set(symbol_name builtins_${target_sanitized}_bc)
 
-# Convert the LLVM bitcode to an embedded source file using xxd.
-add_custom_command(
-        OUTPUT ${embedding_file}
-        COMMAND xxd -i -n ${symbol_name} ${bc_file} > ${embedding_file}
-        DEPENDS ${bc_file}
-        COMMENT "Converting LLVM bitcode to embedded source"
-)
+    # Add command to convert the LLVM bitcode to an embedded header file using xxd.
+    add_custom_command(
+            OUTPUT ${embedding_file}
+            COMMAND xxd -i -n ${symbol_name} ${bc_file} > ${embedding_file}
+            DEPENDS ${bc_file}
+            COMMENT "Converting LLVM bitcode to embedded header for ${target}"
+    )
 
-set(BUILTINS_EMBEDS ${embedding_file})
+    list(APPEND BUILTINS_EMBEDS ${embedding_file})
+endforeach ()
 
 add_custom_target(
         builtins_embeds ALL

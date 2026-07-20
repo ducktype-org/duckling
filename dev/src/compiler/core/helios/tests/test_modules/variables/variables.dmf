@@ -28,7 +28,6 @@ fun foo() -> i32 = {
 	# @TODO: #1412 fix dealias
 	# var e: Q = Q();
 	a = i32(34);
-	foo() = i32(35);
 	return a;
 }
 

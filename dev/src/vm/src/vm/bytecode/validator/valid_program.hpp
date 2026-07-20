@@ -1,5 +1,7 @@
 #pragma once
 
+#include "flag_context.hpp"
+
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/type_of_data.hpp>
 #include <vm/bytecode/validator/valid_function.hpp>
@@ -42,7 +44,8 @@ namespace vm::code {
 		 * @note If the newly injected code were to create an unvalid state,
 		 * an exception of ValidationError base will be thrown.
 		 */
-		ValidProgram tryInsertCode(const CodeCollection& collection) const;
+		ValidProgram tryInsertCode(const CodeCollection& collection, api::ExecutionConfig config)
+			const;
 
 		const valid_type::ValidTypeMap& types() const;
 
@@ -65,6 +68,7 @@ namespace vm::code {
 		ObjIdNameMap<FFIFunction>                   ffi_function_map;
 		ObjIdNameMap<GlobalData>                    globals_map;
 		TypeContext                                 type_context;
+		FlagContext                                 flag_context;
 
 		/**
 		 * @brief Shared objects declared with `ffi object`, loaded into the process and keyed by
@@ -89,7 +93,7 @@ namespace vm::code {
 		 * base is thrown. This means this object will contain invalid code and mustn't be used! If
 		 * you don't want to lose the state, place use `tryInsertCode`.
 		 */
-		void insertCode(const CodeCollection& collection);
+		void insertCode(const CodeCollection& collection, api::ExecutionConfig config);
 
 		/**
 		 * @brief Inserts types. May invalidate state.
@@ -109,7 +113,7 @@ namespace vm::code {
 		 * function must not contain any dead-code, but Duckling's compiler, as of 21.05.2025, may
 		 * produce dead code.
 		 */
-		void insertFunctions(const std::vector<Function>& new_functions);
+		void insertFunctions(const std::vector<Function>& new_functions, api::ExecutionConfig config);
 
 		/**
 		 * @brief Inserts an ExternalCFunction. May invalidate state.
@@ -120,9 +124,9 @@ namespace vm::code {
 		/**
 		 * @brief Inserts an FFIFunction. May invalidate state.
 		 * Cannot insert multiple FFIFunctions with the same name. Signature types must be
-		 * primitives of size 1, 2, 4 or 8, the builtin `cptr` type, or data structures whose
-		 * every field is such a primitive or `cptr`. Resolves each function's native symbol from
-		 * the loaded object files.
+		 * FFI-compliant (see `ValidType::isFFICompliant`); fixed-size tables are additionally
+		 * rejected at the top level, as C has no by-value arrays. Resolves each function's native
+		 * symbol from the loaded object files.
 		 */
 		void insertFFIFunctions(const std::vector<FFIFunction>& new_functions);
 

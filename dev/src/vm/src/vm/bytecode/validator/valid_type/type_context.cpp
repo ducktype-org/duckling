@@ -23,6 +23,11 @@ namespace {
 			variant_case(vm::code::PointerType, pointer) {
 				tp.definePointer(types.at(pointer.inner)->getID());
 			}
+			variant_case(vm::code::CPointerType, cpointer) {
+				tp.defineCPointer(cpointer.inner.map([&](const base::StrID& inner) {
+					return types.at(inner)->getID();
+				}));
+			}
 			variant_case(vm::code::FixedSizeTableType, fixed_size_table) {
 				tp.defineFixedSizeTable(
 					types.at(fixed_size_table.inner)->getID(), fixed_size_table.table_size
@@ -36,7 +41,7 @@ namespace {
 				field_definitions.reserve(data.fields.size());
 				for (const auto& field: data.fields)
 					field_definitions.emplace_back(field.name, types.at(field.type)->getID());
-				tp.defineData(field_definitions);
+				tp.defineData(field_definitions, data.packed);
 			}
 			variant_case(vm::code::VariantType, variant) {
 				std::vector<vm::code::valid_type::ValidTypeID> variant_types;

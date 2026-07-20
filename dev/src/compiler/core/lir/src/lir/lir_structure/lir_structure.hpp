@@ -33,10 +33,7 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 	/** Simple byte by byte assignment. */
 	Assign,
 	AddressOf, 
-	BoxAlloc,
-	// @TODO: #1894 This approach (for both `BoxFree` and `ListFree`) may be temporary and 
-	// depends on how we handle destructors in the future.
-	BoxFree,
+	// @TODO: #1894 Remove the `List*` when Lists are implemented in STD.
 	ListFree,
 
 	ListPush,
@@ -158,7 +155,7 @@ namespace compiler::lir {
 	 * @brief Function which call will be replaced
 	 * manually in the backend.
 	 */
-	enum class BuiltinFunctionKind { DvmCharAlloc, DvmCharRealloc, DvmCharFree };
+	enum class BuiltinFunctionKind { DvmCharAlloc, DvmCharRealloc, DvmCharFree, BoxAlloc, BoxFree };
 
 	base::Optional<BuiltinFunctionKind> getBuiltinKindFromHOUT(helios::BuiltinKind kind);
 

@@ -56,6 +56,14 @@ public:
 		TESTER_ADD_TEST(fixedSizeTableWrongType);
 		TESTER_ADD_TEST(inplaceCasts);
 
+		// Execution verification
+		TESTER_ADD_TEST(incorrectUsesIO);
+		TESTER_ADD_TEST(incorrectWritesToGlobal);
+		TESTER_ADD_TEST(callGraphPropagatesIO);
+		TESTER_ADD_TEST(crossBatchPropagatesIO);
+		TESTER_ADD_TEST(tailCallPropagatesIO);
+		TESTER_ADD_TEST(spawningThreadViolatesSingleThread);
+		TESTER_ADD_TEST(validProgramPassesConfig);
 		// Globals verification
 		TESTER_ADD_TEST(wrongGlobalInitializationMethod);
 		TESTER_ADD_TEST(wrongGlobalImmSize);
@@ -347,6 +355,106 @@ private:
 				vm::code::PointerTypeMismatchError::ERR_MSG,
 			}
 		);
+	}
+
+	void incorrectUsesIO() {
+		auto ec  = vm::api::ExecutionConfig{};
+		ec.no_io = true;
+		loadInvalidDbc(
+			"wrong/config/io.dbc",
+			{
+				vm::code::ExecutionConfigViolationError::ERR_MSG,
+				"no_io",
+			},
+			ec
+		);
+	}
+
+	void incorrectWritesToGlobal() {
+		auto ec      = vm::api::ExecutionConfig{};
+		ec.read_only = true;
+		loadInvalidDbc(
+			"wrong/config/read_only.dbc",
+			{
+				vm::code::ExecutionConfigViolationError::ERR_MSG,
+				"read_only",
+			},
+			ec
+		);
+	}
+
+	// A calls B, where B performs IO. Under no_io the effect must propagate along the call
+	// graph so the program is rejected.
+	void callGraphPropagatesIO() {
+		auto ec  = vm::api::ExecutionConfig{};
+		ec.no_io = true;
+		loadInvalidDbc(
+			"wrong/config/call_io.dbc",
+			{
+				vm::code::ExecutionConfigViolationError::ERR_MSG,
+				"no_io",
+			},
+			ec
+		);
+	}
+
+	// B (does IO) is loaded first as an "old" function; a later batch whose main calls B must
+	// inherit the IO effect and be rejected under no_io.
+	void crossBatchPropagatesIO() {
+		auto ec  = vm::api::ExecutionConfig{};
+		ec.no_io = true;
+		loadThenLoadInvalidDbc(
+			"wrong/config/io_lib.dbc",
+			"wrong/config/call_old_io.dbc",
+			{
+				vm::code::ExecutionConfigViolationError::ERR_MSG,
+				"no_io",
+			},
+			ec
+		);
+	}
+
+	// Like above, but the old IO function is reached only through a tail call — the effect must
+	// still propagate across the tail-call edge.
+	void tailCallPropagatesIO() {
+		auto ec  = vm::api::ExecutionConfig{};
+		ec.no_io = true;
+		loadThenLoadInvalidDbc(
+			"wrong/config/io_lib.dbc",
+			"wrong/config/tailcall_old_io.dbc",
+			{
+				vm::code::ExecutionConfigViolationError::ERR_MSG,
+				"no_io",
+			},
+			ec
+		);
+	}
+
+	void spawningThreadViolatesSingleThread() {
+		auto ec          = vm::api::ExecutionConfig{};
+		ec.single_thread = true;
+		loadInvalidDbc(
+			"wrong/config/spawn_thread.dbc",
+			{
+				vm::code::ExecutionConfigViolationError::ERR_MSG,
+				"single_thread",
+			},
+			ec
+		);
+	}
+
+	// A pure program must not trigger a false positive under any config.
+	void validProgramPassesConfig() {
+		auto no_io           = vm::api::ExecutionConfig{};
+		no_io.no_io          = true;
+		auto read_only       = vm::api::ExecutionConfig{};
+		read_only.read_only  = true;
+		auto single          = vm::api::ExecutionConfig{};
+		single.single_thread = true;
+
+		loadValidDbc("right/config/pure.dbc", no_io);
+		loadValidDbc("right/config/pure.dbc", read_only);
+		loadValidDbc("right/config/pure.dbc", single);
 	}
 
 	void wrongGlobalInitializationMethod() {

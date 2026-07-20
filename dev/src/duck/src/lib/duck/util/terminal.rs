@@ -3,7 +3,7 @@ use std::io::{Read, Write};
 use std::str::FromStr;
 
 use console::{Term, WithoutAnsi, colors_enabled, colors_enabled_stderr, style};
-use dialoguer::Input;
+use dialoguer::{Input, Password};
 
 use crate::duck::util::indent::indent;
 use crate::{QuackResult, QuackResultContext};
@@ -190,6 +190,14 @@ impl Terminal {
         Ok(Input::new()
             .with_prompt(prompt)
             .interact_text_on(&self.term)?)
+    }
+
+    /// Get a [`String`] input from the user as password.
+    /// This means that the inputted letters are invisible.
+    pub fn password_once(&self, prompt: impl Into<String>) -> QuackResult<String> {
+        Ok(Password::new()
+            .with_prompt(prompt)
+            .interact_on(&self.term)?)
     }
 
     /// Get a [`String`] input from the user, with a default value supplied.

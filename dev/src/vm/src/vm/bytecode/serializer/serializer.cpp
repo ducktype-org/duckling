@@ -148,6 +148,12 @@ namespace vm::code {
 				out << type.inner.strView();
 			}
 
+			void operator()(const CPointerType& type) const {
+				out << "type cpointer: ";
+				out << type.name.strView();
+				if (type.inner.has_value()) out << " " << type.inner->strView();
+			}
+
 			void operator()(const FixedSizeTableType& type) const {
 				out << "type fixed_size_table: ";
 				out << type.name.strView() << " ";
@@ -166,7 +172,10 @@ namespace vm::code {
 				out << type.name.strView() << " {\n";
 				for (auto field: type.fields)
 					out << "    " << field.name.strView() << ": " << field.type.strView() << ",\n";
-				out << "}\n";
+				out << "}";
+				if (type.packed) out << " packed";
+				if (type.assert_size.has_value()) out << " assert_size " << *type.assert_size;
+				out << "\n";
 			}
 
 			void operator()(const VariantType&) const {
