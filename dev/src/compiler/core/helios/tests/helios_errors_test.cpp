@@ -1304,7 +1304,7 @@ private:
 			R"(
 				expand 1;
 			)",
-			{ "i32", "const slice char" },
+			{ "str or String", "i32" },
 			1
 		);
 
@@ -1416,6 +1416,16 @@ private:
 				fun bar() = {
 					return foo();
 				}
+			)",
+			{ "cycle" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				const X = xWithAdded(10);
+				fun xWithAdded(v: i64) = X + v;
+				const Y = xWithAdded(10);
 			)",
 			{ "cycle" },
 			1

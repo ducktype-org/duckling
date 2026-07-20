@@ -1,19 +1,90 @@
 import core.builtins.*;
+import core.containers.*;
 
 
 import sub;
 
 const s = "fun foo() = 42;";
-const b = true;
+const use_first = true;
 
 namespace N {
-    expand if b then s else "fun foo(x: i64) = 0";
+    expand if use_first then s else "fun foo(x: i64) = 0";
 
     expand sub.s;
+}
+
+# `expand` driven by functions taking `str`/`bool` arguments and building the source with a
+# `String`. Exercises comp-time evaluation of aggregate CTVs passed as `expand` arguments.
+fun Pair(left_type: str, right_type: str) -> String = {
+    var result: String;
+    result.append("class Pair");
+    result.append(&left_type);
+    result.append(&right_type);
+    result.append(" {\n");
+    result.append("first: ");
+    result.append(&left_type);
+    result.append(";\n");
+    result.append("second: ");
+    result.append(&right_type);
+    result.append(";\n");
+    result.append("}\n");
+    return move result;
+}
+
+fun buildMinMax(arg_type: str, is_min: bool) = {
+    var result: String;
+
+    if (is_min) {
+        result.append("fun min(a: ");
+    } else {
+        result.append("fun max(a: ");
+    }
+
+    result.append(&arg_type);
+    result.append(", b: ");
+    result.append(&arg_type);
+    result.append(") -> ");
+    result.append(&arg_type);
+    result.append(" = {\n");
+
+    if (is_min) {
+        result.append("    if (a < b) {\n");
+    } else {
+        result.append("    if (a > b) {\n");
+    }
+
+    result.append("        return a;\n");
+    result.append("    }\n");
+    result.append("    return b;\n");
+    result.append("}\n");
+
+    return move result;
+}
+
+namespace utils {
+    expand buildMinMax("i64", true);
+    expand buildMinMax("i64", false);
+    expand buildMinMax("u64", true);
+    expand buildMinMax("u64", false);
+    expand buildMinMax("i32", true);
+    expand buildMinMax("i32", false);
+    expand buildMinMax("u32", true);
+    expand buildMinMax("u32", false);
+}
+
+namespace pairs {
+    expand Pair("str", "i64");
 }
 
 fun main() -> i64 = {
     builtin_output_i64(N.foo());
     builtin_output_i64(N.fromSub());
+
+    builtin_output_i64(utils.max(20, 30));
+    builtin_output_i64(utils.min(20, 30));
+
+    var p = pairs.Pairstri64("hello", 10);
+    builtin_output_i64(p.second);
+
     return 0;
 }

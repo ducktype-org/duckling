@@ -59,3 +59,11 @@ Tests:
         Output:
           String: "6\n"
         ExitCode: 0
+
+  strings_in_comp_time:
+    Cases:
+      dvm:
+        backend: dvm
+        Output:
+          String: "String const\nslice const\n"
+        ExitCode: 0
