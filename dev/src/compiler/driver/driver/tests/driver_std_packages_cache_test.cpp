@@ -23,18 +23,19 @@
 #include <fstream>
 using namespace compiler;
 
-class StdPackagesTest final: public tester::TestSuite {
+class StdPackagesCacheTest final: public tester::TestSuite {
 #undef TESTER_CLASS
-#define TESTER_CLASS StdPackagesTest
+#define TESTER_CLASS StdPackagesCacheTest
 
-	fs::FilePath artifacts_path = fs::FileManager::createRandomTempDirectory().getFilePath();
+	fs::FilePath artifacts_path     = fs::FileManager::createRandomTempDirectory().getFilePath();
+	fs::FilePath std_artifacts_path = fs::FileManager::createRandomTempDirectory().getFilePath();
 	driver::PackageCompilationManifest manifest{};
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		TESTER_ADD_TEST(verifyStdPackagesAndDependencies);
-		TESTER_ADD_TEST(verifyStdLinkingOptionsInConvertedTasks);
+		TESTER_ADD_TEST(verifyCustomArtifactsCollectionWiring);
 		TESTER_ADD_TEST(compileStdPackages);
+		TESTER_ADD_TEST(verifyStdLibTasksSkippedOnceArtifactsArePresent);
 	}
 
 protected:
@@ -42,7 +43,8 @@ protected:
 	 * @brief Global setup executed once before all tests.
 	 *
 	 * - Initializes global logger
-	 * - Initializes the compiler in package compilation mode
+	 * - Initializes the compiler in package compilation mode with a custom
+	 *   std artifacts cache path
 	 */
 	void beforeAll() override {
 		global_state::setters::setGlobalLogger(makeBox<dia_int::Logger>());
@@ -75,7 +77,9 @@ protected:
 				.debug_options         = {},
 				.incremental           = {},
 				.execution_options     = { .worker_count = 1 },
-				.stdlib_options = { .std_lib_type = driver::options_types::StdLibOptions::DefaultStd{} },
+				.stdlib_options
+				= { .std_lib_type = driver::options_types::StdLibOptions::DefaultStd{},
+				    .std_artifacts_path = std_artifacts_path },
 			}
 		);
 		assertTrue(init_result.status().isOk(), "Compiler initialization failed");
@@ -84,84 +88,38 @@ protected:
 	void afterAll() override {
 		compiler::driver::exit();
 		std::filesystem::remove_all(artifacts_path.getPath());
+		std::filesystem::remove_all(std_artifacts_path.getPath());
 	}
 
 private:
 	/**
-	 * @brief Verifies presence and dependency relationships of standard packages.
+	 * @brief Verifies that a custom std artifacts path (`stdlib_options.std_artifacts_path`)
+	 * both sets the global custom artifacts collection during initialization, and gets
+	 * propagated as the artifact collection root of the scheduled std lib compilation tasks.
 	 */
-	void verifyStdPackagesAndDependencies() {
-		const auto& global_packages = global_state::getPackages();
+	void verifyCustomArtifactsCollectionWiring() {
+		auto std_art_collection_opt = global_state::getStdArtifactsCollection();
+		ASSERT_HAS_VALUE(std_art_collection_opt);
 
-		// Check that standard library packages exist
-		for (const auto& std_pkg_config: driver::STD_PACKAGES_CONFIG) {
-			if (std::ranges::none_of(global_packages, [&](const auto& pkg) {
-					return pkg.getPackageID() == base::StrID(std_pkg_config.name);
-				})) {
-				assertTrue(
-					false,
-					base::strConcat("Standard library package not found: ", std_pkg_config.name)
-				);
-			}
-		}
+		auto tasks = driver::getRequiredStdLibCompilationTasks();
+		assertTrue(!tasks.empty(), "Expected std lib compilation tasks to be scheduled");
 
-		// Check that non-std packages have standard library dependencies
-		for (const auto& pkg: global_packages) {
-			const auto pkg_id = pkg.getPackageID().strView();
+		for (const auto& task: tasks) {
+			base::Optional<Ref<artifacts::ArtifactCollection>> custom_art_collection;
+			if (auto* dvm_target = std::get_if<driver::BuildTargetDVMLibrary>(&task.build_target))
+				custom_art_collection = dvm_target->custom_art_collection;
+			else if (auto* lib_target
+			         = std::get_if<driver::BuildTargetLLVMStaticLibrary>(&task.build_target))
+				custom_art_collection = lib_target->custom_art_collection;
+			else
+				assertTrue(false, "Unexpected build target type for a std lib compilation task");
 
-			// Skip checking dependencies of the std lib itself
-			bool is_std_lib
-				= std::ranges::any_of(driver::STD_PACKAGES_CONFIG, [&](const auto& std_pkg_config) {
-					  return pkg_id == std_pkg_config.name;
-				  });
-			if (is_std_lib) continue;
-
-			// Verify it depends on all std packages
-			for (const auto& std_pkg_config: driver::STD_PACKAGES_CONFIG) {
-				bool depends_on_std = false;
-				for (const auto& dep: pkg.getDependencies().illegalAccess()) {
-					if (dep.illegalAccess().getPackage().illegalAccess().getID()
-					    == base::StrID(std_pkg_config.name)) {
-						depends_on_std = true;
-						break;
-					}
-				}
-				assertTrue(depends_on_std, "Package is missing dependency on standard library");
-			}
-		}
-	}
-
-	/**
-	 * @brief Verifies that standard library linking options are correctly applied to tasks.
-	 */
-	void verifyStdLinkingOptionsInConvertedTasks() {
-		driver::options_types::StdLibOptions global_opts{
-			.std_lib_type = driver::options_types::StdLibOptions::DefaultStd{}
-		};
-
-		for (const auto& raw_task: manifest.tasks) {
-			auto task_opt = driver::convertRawTaskToTask(
-				raw_task, global_opts, compiler::driver::diagnostics::makeGlobalLoggerReporter()
+			ASSERT_HAS_VALUE(custom_art_collection);
+			assertTrue(
+				custom_art_collection->get() == std_art_collection_opt->get(),
+				"Task's artifact collection root does not match the custom std artifacts "
+				"collection"
 			);
-			ASSERT_HAS_VALUE(task_opt);
-			ASSERT_TRUE(task_opt->type == driver::TaskType::PackageCompilation);
-
-			auto task_data = std::get<driver::PackageCompilationTask>(task_opt->task_data);
-
-			if (auto* target_exe
-			    = std::get_if<driver::BuildTargetLLVMExecutable>(&task_data.build_target)) {
-				// We expect the correct stdlib linking options based on getStdLibLinkingArgs
-				auto lib_args = driver::getNativeStdLibLinkingArgs(global_opts);
-				ASSERT_HAS_VALUE(lib_args);
-
-				// Ensure the options contain the stdlib args
-				assertTrue(
-					target_exe->linking_options.stdlib_link_options
-						== driver::getNativeStdLibLinkingArgs(global_opts),
-					"Converted task linking options do not contain the standard library linking "
-					"arguments"
-				);
-			}
 		}
 	}
 
@@ -184,6 +142,20 @@ private:
 				)
 			);
 		}
+	}
+
+	/**
+	 * @brief Once all std lib artifacts have been compiled into the custom artifacts
+	 * directory, requesting the tasks again should find them already present and
+	 * skip recompilation entirely (empty task list).
+	 */
+	void verifyStdLibTasksSkippedOnceArtifactsArePresent() {
+		auto tasks = driver::getRequiredStdLibCompilationTasks();
+		assertTrue(
+			tasks.empty(),
+			"Expected no std lib compilation tasks once artifacts are already present in the "
+			"custom directory"
+		);
 	}
 };
 
