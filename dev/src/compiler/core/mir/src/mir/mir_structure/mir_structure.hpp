@@ -80,10 +80,10 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 
 
 	/**
-		@brief Operation on meta types for compile time function evaluation.
-		The specific meta operation is parametrized by `MetaParameters` (a `MetaKind`) stored in the
-		instruction's `extra_params`.
-	*/
+	 * @brief Operation on meta types for compile time function evaluation.
+	 * The specific meta operation is parametrized by `MetaParameters` (a `MetaKind`) stored in the
+	 * instruction's `extra_params`.
+	 */
 	MetaTypeOperation,
 
 	/** Cast is also parametrized by the source type and the target type */

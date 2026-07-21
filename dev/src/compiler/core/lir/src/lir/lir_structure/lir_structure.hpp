@@ -86,9 +86,9 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 	FloatNeq,
 
 	/**
-		Meta type operation. The specific operation is parametrized by `MetaParameters` (a
-		`MetaKind`) stored in the instruction's `extra_params`.
-	*/
+	 * Meta type operation. The specific operation is parametrized by `MetaParameters` (a
+	 * `MetaKind`) stored in the instruction's `extra_params`.
+	 */
 	MetaTypeOperation,
 
 	BooleanAnd,

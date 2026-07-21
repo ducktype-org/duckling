@@ -25,9 +25,14 @@ namespace compiler::mir {
 	 * Used by the builtin-operator lowering helpers, since meta operations lower to a single
 	 * `Operation::MetaTypeOperation` parametrized by `MetaParameters`.
 	 */
-	struct OperationWithParams final {
+	class OperationWithParams final {
+	public:
 		Operation       operation;
 		InstrParameters params = NoInstrParameters{};
+
+		OperationWithParams(Operation op, InstrParameters param = NoInstrParameters{}):
+			  operation(op),
+			  params(param) {}
 	};
 
 	/**
@@ -167,19 +172,19 @@ namespace compiler::mir {
 			const auto res_left      = lowered_left.getResult(function);
 
 			// Fill the hole with the binary operation.
-			const auto result_type        = expr.expression_type.getSymbolType();
-			const auto [operation, param] = builtinBinaryToOperation(expr.operation);
+			const auto result_type           = expr.expression_type.getSymbolType();
+			const auto operation_with_params = builtinBinaryToOperation(expr.operation);
 
 			noValueOutput(
 				lowered_left.begin,
 				target_construction_hole,
 				Instruction(
-					operation,
+					operation_with_params.operation,
 					{},
 					{ res_left, res_right },
 					{},
 					expr_scope,
-					param,
+					operation_with_params.params,
 					{ expr.getPosition() }
 				),
 				result_type
@@ -756,16 +761,18 @@ namespace compiler::mir {
 
 				return ExprLowerRes(
 					current,
-					ExprLowerRes::Finalizer{ .hole  = hole,
-				                             .instr = Instruction(
-												 Operation::MetaTypeOperation,
-												 {},
-												 element_types,
-												 {},
-												 expr_scope,
-												 MetaParameters{ MetaKind::CreateTuple }
-											 ),
-				                             .type = result_type }
+					ExprLowerRes::Finalizer{
+						.hole  = hole,
+						.instr = Instruction(
+							Operation::MetaTypeOperation,
+							{},
+							element_types,
+							{},
+							expr_scope,
+							MetaParameters{ MetaKind::CreateTuple }
+						),
+						.type = result_type,
+					}
 				);
 			} else if (const auto* paren_expr = dynamic_cast<const hc::ParenthesisExpr*>(&expr)) {
 				return lowerAndLiftToTypeRecursively(*paren_expr->inner, continuation);
