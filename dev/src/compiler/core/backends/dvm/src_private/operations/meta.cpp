@@ -158,6 +158,7 @@ namespace compiler::backend_vm::internal {
 			lower_ctx_call(base::StrID(comptime_func_names::ALIGN_OF));
 			break;
 		case lir::MetaKind::COUNT:
+		default:
 			CORE_PANIC("Unknown meta type operation: ", base::enumToStr(op.meta_kind));
 		}
 	}
