@@ -85,4 +85,38 @@ namespace compiler::mir::test_utils {
 			}
 		});
 	}
+
+	/**
+	 * @brief Helper that verifies a module compiles through MIR without errors.
+	 *
+	 * Mirrors checkForErrorOnCompileModule but asserts success instead of failure.
+	 * Used to verify that previously-failing scenarios (like #2307) now compile.
+	 */
+	inline void checkForNoErrorOnCompileModule(std::string_view module_content) {
+		frontend::ModuleID module_id
+			= frontend::createModuleTreeFromContents(module_content, "test_package");
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			auto hout_result = ctx.query<helios::QueryTopLevelEntities>(module_id);
+			CORE_ASSERT(
+				hout_result->hasValue(),
+				"Expected top-level entities query to succeed for module content."
+			);
+			auto logger = query::Context::dumpToOneLoggerAndClear();
+			CORE_ASSERT(!logger->hasErrors(), "Expected no errors to be logged by HELIOS.");
+
+			auto mir_result = mir::lowerToMIRUnit(ctx, &hout_result->valueOrPanic());
+			CORE_ASSERT(
+				mir_result.hasValue(),
+				"Expected MIR lowering to succeed, but it failed."
+			);
+			logger = query::Context::dumpToOneLoggerAndClear();
+			if (logger->hasErrors()) {
+				std::stringstream logged_messages;
+				logger->terminalPrint(logged_messages);
+				std::cerr << "Unexpected logged messages:\n" << logged_messages.str() << "\n";
+			}
+			CORE_ASSERT(!logger->hasErrors(), "Expected no errors to be logged by MIR.");
+		});
+	}
 }

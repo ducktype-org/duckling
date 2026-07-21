@@ -27,6 +27,7 @@ public:
 		TESTER_ADD_TEST(testErrorLogging);
 		TESTER_ADD_TEST(testMoveErrors);
 		TESTER_ADD_TEST(testUseBeforeInit);
+		TESTER_ADD_TEST(testGeneratedSymbolShadowingDoesNotError);
 	}
 
 private:
@@ -145,6 +146,25 @@ private:
                })",
 			{ "is used after it has been moved out of" },
 			1
+		);
+	}
+
+	/**
+	 * @brief Regression test for #2307: classes with fields named "__result" must compile.
+	 *
+	 * The compiler generates a `__result` local variable inside implicit constructors.
+	 * This must not collide with a user-defined field of the same name.
+	 * Before the fix, validateShadowing() flagged this as an illegal shadow and
+	 * compilation failed.
+	 */
+	void testGeneratedSymbolShadowingDoesNotError() {
+		// A class with "__result" as a field name — the most direct collision case.
+		compiler::mir::test_utils::checkForNoErrorOnCompileModule(
+			R"(class T { __result: i64; }
+               fun main() -> i64 = {
+                   var a: T = T(1);
+                   return 1;
+               })"
 		);
 	}
 };
