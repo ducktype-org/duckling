@@ -34,18 +34,44 @@ namespace compiler::mir {
 							auto shadowing_pos = get_pos(shadowing);
 							auto shadowed_pos  = get_pos(shadowed);
 
-							// If either variable is compiler-generated (no PST position),
-							// skip the shadowing check — generated symbols are internal
-							// implementation details and can't meaningfully shadow user code.
-							// Fixes #2307: classes with fields named "__result" or similar
-							// names that collide with generated constructor variables.
-							if (!shadowing_pos.has_value() || !shadowed_pos.has_value()) continue;
+							// #2307: Flip to false to test pre-fix behavior.
+							constexpr bool SKIP_GENERATED_SHADOWING = false;
 
-							auto msg = makeBox<VariableShadowingError>(*shadowing_pos);
-							msg->addAttachedMessage(
-								makeBox<ShadowedDeclarationNote>(*shadowed_pos)
-							);
-							ctx.logInt(std::move(msg));
+							if constexpr (SKIP_GENERATED_SHADOWING) {
+								// Post-fix: compiler-generated symbols have no PST.
+								// Skip them — they can't meaningfully shadow user code.
+								if (!shadowing_pos.has_value()
+								    || !shadowed_pos.has_value()) continue;
+
+								auto msg = makeBox<VariableShadowingError>(*shadowing_pos);
+								msg->addAttachedMessage(
+									makeBox<ShadowedDeclarationNote>(*shadowed_pos)
+								);
+								ctx.logInt(std::move(msg));
+							} else {
+								// Pre-fix: always report shadowing, even for generated symbols.
+								if (shadowing_pos && shadowed_pos) {
+									auto msg
+										= makeBox<VariableShadowingError>(*shadowing_pos);
+									msg->addAttachedMessage(
+										makeBox<ShadowedDeclarationNote>(*shadowed_pos)
+									);
+									ctx.logInt(std::move(msg));
+								} else {
+									ctx.logInt(makeBox<dia_int::PlaceholderError>(
+										"Variable declaration shadows a previous "
+										"declaration.",
+										base::strConcat(
+											"The exact code location is unavailable "
+											"because the "
+											"variable is compiler generated. ",
+											"The shadowing happened for the symbol `",
+											shadowing->getName(),
+											"`."
+										)
+									));
+								}
+							}
 							return base::BAD;
 						}
 					}
