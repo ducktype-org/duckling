@@ -6,7 +6,7 @@
 
 #include <cstdint>
 
-namespace abi::layout {
+namespace abi {
 
 	// NOLINTNEXTLINE(readability-identifier-naming) — "X86_64" is the canonical arch name.
 	enum class Arch : uint8_t { X86_64, AArch64 };
@@ -48,7 +48,7 @@ namespace abi::layout {
 		 * where its stored size (16) differs from `width / 8` — which is exactly
 		 * why the value is tabulated per target instead of derived from width.
 		 */
-		base::Map<u8, SizeAlign> float_layouts;
+		base::Map<u64, SizeAlign> float_layouts;
 
 		/**
 		 * @brief Returns the natural alignment in bytes for an integer of the
@@ -56,7 +56,7 @@ namespace abi::layout {
 		 * alignment equals the size.
 		 */
 		[[nodiscard]]
-		static Bytes naturalAlignmentForIntWidth(u8 width_bits);
+		static Bytes naturalAlignmentForIntWidth(u64 width_bits);
 	};
 
 	/**

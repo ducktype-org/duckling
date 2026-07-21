@@ -1,15 +1,14 @@
-use std::ffi::{OsStr, OsString};
+use std::ffi::OsString;
 use std::path::Path;
 
 use clap::ArgMatches;
 use tracing::debug;
 
 use crate::duck::driver::cli_ext::jobs_from_matches;
-use crate::quackpack::core::compile::duckc::ArtifactsDir;
 use crate::quackpack::core::compile::profiles::{DEFAULT_SCRIPT_PROFILE_NAME, Profile};
 use crate::quackpack::core::storage::venv_id::{ToVenvId, VenvId};
 use crate::quackpack::core::storage::{StorageSyncOptions, sync};
-use crate::quackpack::core::{AllowGlobalPackage, PackageContext, PackageLoader, run};
+use crate::quackpack::core::{AllowGlobalPackage, PackageContext, PackageLoader};
 use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail, qp_bail_internal};
 
 pub struct RunScriptOptions<'duck> {
@@ -126,18 +125,6 @@ pub fn run_script<'duck>(rs_options: RunScriptOptions<'duck>) -> QuackResult<()>
     )?;
     let compile_lock = lock.into_compile_lock();
     let profile = Profile::construct_profile(profile, package.package().manifest().profiles())?;
-    // let bcx = BuildContext {
-    //     pcx: &package,
-    //     root_identity,
-    //     freeze: venv.into(),
-    //     storage,
-    //     used_features: vec![],
-    //     profile,
-    //     script_path: Some(folder_path.join(script_name)),
-    // };
-    // let artifacts_dir = compile::compile(bcx, CompilationType::StandaloneScript)?;
-    // drop(compile_lock);
-    // execute_script(artifacts_dir, script_name, profile.dvm_bytecode, args)
 }
 
 /// Loads the appropriate venv of the script.
@@ -168,29 +155,5 @@ fn get_package<'duck>(
                 }
             }
         }
-    }
-}
-
-/// Run the created script binary.
-// @TODO: #2900 Unmock this.
-#[expect(dead_code)]
-fn execute_script(
-    artifacts_dir: ArtifactsDir,
-    script_name: &OsStr,
-    dvm_backend: bool,
-    args: Vec<OsString>,
-) -> QuackResult<()> {
-    let artifacts_dir = match artifacts_dir {
-        ArtifactsDir::TempDir(dir) => dir,
-        _ => qp_bail_internal!("script compilation did not produce a tempdir"),
-    };
-    if dvm_backend {
-        panic!("@TODO: #2443 Implement run")
-    } else {
-        let exe_name = Path::new(script_name).with_extension("exe");
-        let exe_path = artifacts_dir.path().join(exe_name);
-        let exit_status = run::run_exe(&exe_path, args)?;
-        drop(artifacts_dir);
-        std::process::exit(exit_status.code().unwrap_or(0))
     }
 }

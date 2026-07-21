@@ -30,8 +30,7 @@ use std::io;
 
 use crate::quackpack::core::storage::paths::Storage;
 use crate::quackpack::core::storage::venv_id::{ToVenvId, VenvId};
-use crate::util::file_locks::FileLockManager;
-use crate::util::file_locks::LockedFile;
+use crate::util::file_locks::{FileLockManager, LockedFile};
 #[cfg(windows)]
 use crate::util::path_ops_ext::PathOpsExt;
 use crate::{DuckContext, QuackResult, QuackResultContext};
