@@ -114,7 +114,8 @@ namespace compiler::lir {
 		          ->valueOrPanicMsg("Handling errors in MIR is not supported yet")
 		          .getType();
 
-		auto link_once    = helios::emissionPolicy(ctx, helios_id) == helios::EmissionPolicy::Replicated;
+		auto link_once
+			= helios::emissionPolicy(ctx, helios_id) == helios::EmissionPolicy::Replicated;
 		auto mangled_name = helios::mangler::getSimpleMangledName(ctx, helios_id);
 		base::Optional<BuiltinFunctionKind> builtin_kind_opt
 			= helios::isBuiltin(helios_id).flatMap(getBuiltinKindFromHOUT);
