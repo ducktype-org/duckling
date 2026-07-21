@@ -41,16 +41,16 @@ pub type ExecFn = fn(&DuckContext, &ArgMatches) -> QuackResult<()>;
 pub fn exec_for(name: &str) -> Option<ExecFn> {
     let f = match name {
         "build" => build::execute,
-        "run" => run::execute,
+        "clean-storage" => clean_storage::execute,
         #[cfg(feature = "shell-completion")]
         "generate" => generate::execute,
+        "info" => info::execute,
         "init" => init::execute,
+        "list" => list::execute,
+        "repl" => repl::execute,
+        "run" => run::execute,
         "run-script" => run_script::execute,
         "sync" => sync::execute,
-        "repl" => repl::execute,
-        "list" => list::execute,
-        "info" => info::execute,
-        "clean-storage" => clean_storage::execute,
         _ => return None,
     };
     Some(f)
