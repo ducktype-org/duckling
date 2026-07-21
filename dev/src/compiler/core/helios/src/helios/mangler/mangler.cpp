@@ -399,8 +399,8 @@ namespace compiler::helios::mangler {
 
 						CORE_ASSERT(
 							template_stmt_v->hasAdditionalRootData(),
-							"TemplateStmt has no additional root data, it is not baked, it should "
-							"not happen in mangling."
+							"TemplateStmt has no additional root data meaning it is not baked"
+							"It should not happen in mangling"
 						);
 						if (template_stmt_v->hasAdditionalRootData()) {
 							// We are inside baked template
