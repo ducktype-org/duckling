@@ -182,8 +182,10 @@ int main(int argc, const char** argv) {
 	init::InitObject _;
 	auto             clah = getVmClah();
 
-	if (const char* UNBUFFERED = std::getenv("UNBUFFERED")) {
-		if (std::string_view(UNBUFFERED) == "1") std::cout << std::unitbuf;
+	// it is at the beggining of the main function, so clang-tidy (v19.1.1) concern about thread
+	// safety is invalid NOLINTNEXTLINE(concurrency-mt-unsafe)
+	if (const char* unbuffered = std::getenv("UNBUFFERED")) {
+		if (std::string_view(unbuffered) == "1") std::cout << std::unitbuf;
 	}
 
 	try {
