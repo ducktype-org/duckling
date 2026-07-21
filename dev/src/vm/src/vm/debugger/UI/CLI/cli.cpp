@@ -104,6 +104,8 @@ namespace vm::debugger::cli {
 
 		bool running = true;
 
+		// @TODO #3179 Add vm run -d flag and/or debugger command for explicite mapping loading
+		// @TODO #3180 Add possibility for switching selected file in debugger CLI
 		clah::Clah cmds
 			= clah::Clah("debug", "Debugger CLI Command Parser")
 		          .addSubcommand(clah::Clah("exit", "exits the debugger")
