@@ -10,6 +10,17 @@ Tests:
     Description: can get a list of venvs
     Cases:
       basic:
-        Run: "@{expect_output} --out-regex \"@{stdout_regex}\" --err-regex \"@{stderr_regex}\" @{duck-exe} -C $DIT_TMP_DIR/foo list"
-        stderr_regex: ""
-        stdout_regex: 'bar:\n  last-location: $DIT_TMP_DIR/bar\n  last-access: @{date-regex}\n  last-modification: @{date-regex}\n  not ephemeral\n\nfoo:\n  last-location: $DIT_TMP_DIR/foo\n  last-access: @{date-regex}\n  last-modification: @{date-regex}\n  not ephemeral'
+        test-cmd: "@{expect_output} --out-regex \"@{stdout-regex}\" --err-regex \"@{stderr-regex}\" duck -C foo list"
+        stderr-regex: ""
+        stdout-regex: |+
+          bar:
+            last-location: $DIT_TMP_DIR/bar
+            last-access: @{date-regex}
+            last-modification: @{date-regex}
+            not ephemeral
+
+          foo:
+            last-location: $DIT_TMP_DIR/foo
+            last-access: @{date-regex}
+            last-modification: @{date-regex}
+            not ephemeral

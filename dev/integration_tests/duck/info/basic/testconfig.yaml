@@ -1,6 +1,6 @@
 PreCase: |+
   @{cd-tmp-dir}
-  @{duck-exe} init foo @{is_ephemeral}
+  @{duck-exe} init foo @{is-ephemeral}
   @{duck-exe} -C foo sync
 
 Tests:
@@ -8,12 +8,22 @@ Tests:
     Description: can get info about a venv of a project
     Cases:
       basic:
-        is_ephemeral: ""
-        Run: "@{expect_output} --out-regex \"@{stdout_regex}\" --err-regex \"@{stderr_regex}\" @{duck-exe} -C $DIT_TMP_DIR/foo info"
-        stderr_regex: ""
-        stdout_regex: 'foo:\n  last-location: $DIT_TMP_DIR/foo\n  last-access: @{date-regex}\n  last-modification: @{date-regex}\n  not ephemeral'
+        is-ephemeral: ""
+        test-cmd: "@{expect_output} --out-regex \"@{stdout-regex}\" --err-regex \"@{stderr-regex}\" duck -C foo info"
+        stderr-regex: ""
+        stdout-regex: |+
+          foo:
+            last-location: $DIT_TMP_DIR/foo
+            last-access: @{date-regex}
+            last-modification: @{date-regex}
+            not ephemeral
       ephemeral:
-        is_ephemeral: "--ephemeral"
-        Run: "@{expect_output} --out-regex \"@{stdout_regex}\" --err-regex \"@{stderr_regex}\" @{duck-exe} -C $DIT_TMP_DIR/foo info"
-        stderr_regex: ""
-        stdout_regex: 'foo:\n  last-location: $DIT_TMP_DIR/foo\n  last-access: @{date-regex}\n  last-modification: @{date-regex}\n  ephemeral'
+        is-ephemeral: "--ephemeral"
+        test-cmd: "@{expect_output} --out-regex \"@{stdout-regex}\" --err-regex \"@{stderr-regex}\" duck -C foo info"
+        stderr-regex: ""
+        stdout-regex: |+
+          foo:
+            last-location: $DIT_TMP_DIR/foo
+            last-access: @{date-regex}
+            last-modification: @{date-regex}
+            ephemeral

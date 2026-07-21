@@ -3,13 +3,13 @@ PreCase: |+
   @{cd-tmp-dir}
   @{duck-exe} init foo
   @{duck-exe} -C foo sync
-  sleep 3
+  sleep 2
   @{duck-exe} -C foo info
-  sleep 3
+  sleep 2
 
 Tests:
-  verify_timestamps:
+  verify-timestamps:
     Description: last_access and last_modification are set properly
     Cases:
-      verify_timestamps:
-        test-cmd: "duck -C foo info > output"
+      verify-timestamps:
+        test-cmd: "duck -C foo info > duck-info-output.txt"
