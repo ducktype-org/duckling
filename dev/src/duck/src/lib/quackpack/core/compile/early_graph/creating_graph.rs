@@ -111,7 +111,7 @@ fn parse_dependency(
     let storage_id = dep.to_package_id();
     let directory = match storage_id {
         PackageId::Local(ref local) => local.path().to_path_buf()?,
-        _ => storage.pkg_dir(&storage_id),
+        _ => storage.pkg_dir(storage_id),
     };
     let ctx =
         PackageLoader::find_at_exact_directory(&directory, ctx).with_context(

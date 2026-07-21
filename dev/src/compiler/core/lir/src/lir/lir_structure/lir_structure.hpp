@@ -2,6 +2,7 @@
 
 #include "lir_structure_fd.hpp"  // IWYU pragma: keep
 
+#include <abi/calling_conv/calling_conv.hpp>
 #include <ctv/ctv.hpp>
 #include <diagnostic_interactive/stable_position.hpp>
 #include <helios/attributes/builtins.hpp>
@@ -32,10 +33,7 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 	/** Simple byte by byte assignment. */
 	Assign,
 	AddressOf, 
-	BoxAlloc,
-	// @TODO: #1894 This approach (for both `BoxFree` and `ListFree`) may be temporary and 
-	// depends on how we handle destructors in the future.
-	BoxFree,
+	// @TODO: #1894 Remove the `List*` when Lists are implemented in STD.
 	ListFree,
 
 	ListPush,
@@ -142,11 +140,22 @@ namespace compiler::lir {
 	 */
 	using BlockRef = CRef<Block>;
 
+	struct LIRAbi final {
+		struct CAbi final {
+			abi::calling_conv::FunctionInfo function_info;
+		};
+
+		struct DefaultAbi final {};
+
+		using ValueType = std::variant<CAbi, DefaultAbi>;
+		ValueType value;
+	};
+
 	/**
 	 * @brief Function which call will be replaced
 	 * manually in the backend.
 	 */
-	enum class BuiltinFunctionKind { DvmCharAlloc, DvmCharRealloc, DvmCharFree };
+	enum class BuiltinFunctionKind { DvmCharAlloc, DvmCharRealloc, DvmCharFree, BoxAlloc, BoxFree };
 
 	base::Optional<BuiltinFunctionKind> getBuiltinKindFromHOUT(helios::BuiltinKind kind);
 
@@ -155,7 +164,7 @@ namespace compiler::lir {
 	 */
 	struct FunctionLiteral final {
 		base::StrID                                         mangled_name;
-		helios::SymbolABI                                   abi;
+		LIRAbi                                              abi;
 		bool                                                link_once;
 		std::shared_ptr<std::vector<CRef<tsl::TypeLayout>>> parameter_layouts;
 		CRef<tsl::TypeLayout>                               return_type_layout;
@@ -438,7 +447,7 @@ namespace compiler::lir {
 
 		LIRValue(BlockRef value): value(value) {}
 
-		LIRValue(FunctionLiteral value): value(value) {}
+		LIRValue(FunctionLiteral value): value(std::move(value)) {}
 
 		[[nodiscard]]
 		const ValueType& getVariant() const {
@@ -593,8 +602,8 @@ namespace compiler::lir {
 	 * @brief Function in LIR.
 	 */
 	struct Function final {
-		base::StrID       mangled_name;
-		helios::SymbolABI abi;
+		base::StrID mangled_name;
+		LIRAbi      abi;
 
 		/**
 		 * If true, this function can have repeated definitions

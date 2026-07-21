@@ -57,6 +57,13 @@ IMPORT_RE = re.compile(r"^(\s*import\s+)([A-Za-z_]\w*)(?=[\s\.;]|$)")
 MAIN_FUN_RE = re.compile(r"(\bfun\s+)main(\s*\()")
 
 
+def std_artifacts_path_args() -> list[str]:
+    std_artifacts_path = os.environ.get("DUCKC_STD_ARTIFACTS_PATH")
+    if not std_artifacts_path:
+        return []
+    return ["--custom-std-artifacts-path", std_artifacts_path]
+
+
 # Returns True when file is a generated temporary copy.
 def is_copy_file(path: Path) -> bool:
     return path.suffix == ".dmf" and GENERATED_COPY_STEM_RE.match(path.stem) is not None
@@ -274,6 +281,7 @@ def compile_packages_manifest(
         "-a",
         str(build_dir),
     ]
+    command.extend(std_artifacts_path_args())
 
     if compile_options.strip():
         command.extend(shlex.split(compile_options))
@@ -420,6 +428,7 @@ def compile_package(
         "-n",
         f"package_{module_name}",
     ]
+    command.extend(std_artifacts_path_args())
 
     if compile_options.strip():
         command.extend(shlex.split(compile_options))

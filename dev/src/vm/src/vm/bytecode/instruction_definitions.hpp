@@ -75,6 +75,9 @@ DEF_INSTR(setNull_pptr, (vm::opargs::PlacePtr, dst))
 // Copies an opaque value
 DEF_INSTR(mov_popq_popq, (vm::opargs::PlaceOpq, dst), (vm::opargs::PlaceOpq, src))
 
+// Copies a C pointer value; source and destination must have the identical cpointer type
+DEF_INSTR(mov_pcpt_pcpt, (vm::opargs::PlaceCptr, dst), (vm::opargs::PlaceCptr, src))
+
 
 // ========= SIGNED INTEGER ARITHMETIC OPERATIONS ========
 

@@ -77,15 +77,16 @@ private:
 			auto pid = initProcess();
 			ASSERT_TRUE(vm::api::loadCode(
 							pid,
-							{
-								.functions   = {},
-								.types       = {},
-								.global_data = {},
-								.external_c_functions
-								= { VM_INSTANCE_EXT_C_FUNC(add, simple::add, pid) },
-							}
-			)
-			                .has_value());
+							{ .functions   = {},
+			                  .types       = {},
+			                  .global_data = {},
+			                  .external_c_functions
+			                  = { VM_INSTANCE_EXT_C_FUNC(add, simple::add, pid) },
+			                  .ffi_functions = {},
+			                  .object_files  = {}
+
+			                }
+			).has_value());
 			ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { fs::File(path("extern_test.dbc")) }));
 			return pid;
 		};
@@ -107,7 +108,10 @@ private:
 						  VM_INSTANCE_EXT_C_FUNC(vecSpawn, cpp_vector::vecSpawn, pid),
 						  VM_INSTANCE_EXT_C_FUNC(vecPushBack, cpp_vector::vecPushBack, pid),
 						  VM_INSTANCE_EXT_C_FUNC(vecSize, cpp_vector::vecSize, pid),
-					  }, }
+					  },
+								.ffi_functions = {},
+								.object_files = {}
+					 }
 				).has_value()
 			);
 			ASSERT_TRUE(
@@ -132,7 +136,10 @@ private:
 			          .external_c_functions = {
 						  VM_INSTANCE_EXT_C_FUNC(vecPushBack, global_opaque::vecPushBack, pid),
 						  VM_INSTANCE_EXT_C_FUNC(vecSize, global_opaque::vecSize, pid),
-					  } }
+					  },
+								.ffi_functions = {},
+								.object_files = {}
+					 }
 				).has_value()
 			);
 			ASSERT_TRUE(vm::api::loadFiles(pid, { fs::File(path("global_opaque.dbc")) }).has_value()
@@ -174,7 +181,10 @@ private:
 			          .global_data          = {},
 			          .external_c_functions = {
 						  VM_INSTANCE_EXT_C_FUNC(void_tester, void_func::void_tester, pid),
-					  }, }
+					  },
+
+								.ffi_functions = {}, .object_files = {}
+					}
 				).has_value()
 			);
 			ASSERT_TRUE(vm::api::loadFiles(pid, { fs::File(path("void_func_test.dbc")) }).has_value()
@@ -196,7 +206,10 @@ private:
 			          .global_data          = {},
 			          .external_c_functions = {
 						  VM_INSTANCE_EXT_C_FUNC(void_no_args, void_func::void_no_args, pid),
-					  }, }
+					  },
+				
+								.ffi_functions = {}, .object_files = {}
+					}
 				).has_value()
 			);
 			ASSERT_HAS_VALUE(vm::api::loadFiles(pid, { fs::File(path("void_no_args.dbc")) }));
