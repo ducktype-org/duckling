@@ -146,7 +146,6 @@ namespace lang_def {
 			{ Keyword::Char, "char", KeywordFlags() },
 			{ Keyword::Bool, "bool", KeywordFlags() },
 			{ Keyword::Str, "str", KeywordFlags() },
-			{ Keyword::BigStr, "String", KeywordFlags() },
 			{ Keyword::Type, "type", KeywordFlags() },
 
 			{ Keyword::List, "List", KeywordFlags() },
@@ -197,6 +196,8 @@ namespace lang_def {
 			{ Keyword::BCFalse, "false", KeywordFlags() },
 			{ Keyword::BCIsConstant, "is_constant", KeywordFlags() },
 			{ Keyword::BCInitialValue, "initial_value", KeywordFlags() },
+			{ Keyword::BCPacked, "packed", KeywordFlags() },
+			{ Keyword::BCCPointer, "cpointer", KeywordFlags() },
 		});
 
 	// `- 1` because of `Keyword::NotAKeyword`

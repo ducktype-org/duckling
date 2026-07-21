@@ -86,6 +86,11 @@ namespace {
 				variant_case(valid_type::finalized::Opaque, opaque) {
 					type_collection->at(type.getName())->defineOpaque(opaque.size);
 				}
+				variant_case(valid_type::finalized::CPointer, cpointer) {
+					// @TODO: #3138 The fast interpreter has no FFI support; a C pointer is just
+					// an opaque 8-byte value there.
+					type_collection->at(type.getName())->defineOpaque(Bytes(8));
+				}
 				variant_default { CORE_PANIC("Unhandled type during type building"); }
 			}
 		}

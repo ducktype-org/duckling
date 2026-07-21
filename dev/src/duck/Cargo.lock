@@ -514,6 +514,7 @@ dependencies = [
  "dialoguer",
  "flate2",
  "git2",
+ "http",
  "httpmock",
  "indicatif",
  "itertools 0.14.0",

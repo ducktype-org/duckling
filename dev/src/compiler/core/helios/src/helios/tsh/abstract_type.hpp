@@ -120,7 +120,7 @@ namespace compiler::tsh {
 		 * @return true if the type has a trivial destructor, false otherwise.
 		 */
 		[[nodiscard]]
-		bool hasNoOpDestructor() const;
+		bool hasNoOpDestructor(query::Context& ctx) const;
 
 		/**
 		 * @brief Determines weather the type has a default constructor.

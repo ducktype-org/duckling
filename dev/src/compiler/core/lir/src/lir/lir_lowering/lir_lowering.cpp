@@ -15,13 +15,16 @@
 
 #include "../lir_structure/lir_structure.hpp"
 
+#include <abi/type_system/type.hpp>
 #include <ctv/numeric_value.hpp>
 #include <frontend/pst_parser/lang_parser_element.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/mangler/mangler.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
+#include <helios/symbols/symbol_abi.hpp>
 #include <helios/tsh/queries.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
+#include <tsl/c_abi_converter.hpp>
 #include <tsl/queries.hpp>
 #include <tsl/type_layout.hpp>
 
@@ -62,15 +65,55 @@ namespace compiler::lir {
 			            ->valueOrPanicMsg("layout query failed at LIR stage");
 	}
 
+	LIRAbi getLIRAbi(
+		query::Context&                           ctx,
+		helios::SymID                             sym,
+		CRef<tsl::TypeLayout>                     return_type,
+		const std::vector<CRef<tsl::TypeLayout>>& parameter_types
+	) {
+		auto sym_abi = ctx.query<helios::QuerySymbolABI>(sym)->valueOrPanicMsg(
+			"Handling errors in MIR is not supported yet"
+		);
+		if (v_matches(sym_abi, helios::DefaultAbi) or v_matches(sym_abi, helios::DVMAbi))
+			return { LIRAbi::DefaultAbi{} };
+
+		CORE_ASSERT(v_matches(sym_abi, helios::CAbi), "There are more than 3 abis.");
+		auto abi_type_or_panic = [&](CRef<tsl::TypeLayout> type) -> abi::types::AbiTypeCRef {
+			auto& result = ctx.query<tsl::QueryCAbiTypeOf>(type->getSourceType())
+			                   ->valueOrPanicMsg("Query failure.");
+			if (not result.has_value())
+				CORE_PANIC(base::strConcat(
+					"Function type is not compatible with CABI: `",
+					result.error(),
+					"` in symbol `",
+					helios::name(sym),
+					"`."
+				));
+			return &result.value();
+		};
+
+		auto return_abi_or_empty
+			= [&](CRef<tsl::TypeLayout> type) -> base::Optional<abi::types::AbiTypeCRef> {
+			if (v_matches(type->getVariant(), tsl::EmptyTypeLayout)) return {};  // void return
+			return abi_type_or_panic(type);
+		};
+
+		abi::calling_conv::FunctionType abi_fun_type{
+			.return_type = return_abi_or_empty(return_type),
+			.param_types = parameter_types | std::views::transform(abi_type_or_panic)
+			             | std::ranges::to<std::vector>(),
+		};
+		return { LIRAbi::CAbi{
+			.function_info
+			= abi::calling_conv::computeCallingConv(abi::hostTargetABI(), abi_fun_type) } };
+	}
+
 	FunctionLiteral getFunctionLiteralfromHELIOSID(query::Context& ctx, helios::SymID helios_id) {
 		tsh::FunctionAbstractType type
 			= ctx.query<helios::QueryTypeOfSymbol>(helios_id)
 		          ->valueOrPanicMsg("Handling errors in MIR is not supported yet")
 		          .getType();
 
-		auto symbol_abi = ctx.query<helios::QuerySymbolABI>(helios_id)->valueOrPanicMsg(
-			"Handling errors in MIR is not supported yet"
-		);
 		auto link_once    = helios::emissionPolicy(helios_id) == helios::EmissionPolicy::Replicated;
 		auto mangled_name = helios::mangler::getSimpleMangledName(ctx, helios_id);
 		base::Optional<BuiltinFunctionKind> builtin_kind_opt
@@ -87,10 +130,11 @@ namespace compiler::lir {
 						"layout query failed at LIR stage"
 					)
 				);
+		auto symbol_abi = getLIRAbi(ctx, helios_id, return_type, parameter_types);
 
 		return FunctionLiteral{
 			.mangled_name = mangled_name,
-			.abi          = symbol_abi,
+			.abi          = std::move(symbol_abi),
 			.link_once    = link_once,
 			.parameter_layouts
 			= std::make_shared<std::vector<CRef<tsl::TypeLayout>>>(std::move(parameter_types)),
@@ -114,8 +158,6 @@ namespace compiler::lir {
 			return Operation::Assign;
 		case mir::Operation::AddressOf:
 			return Operation::AddressOf;
-		case mir::Operation::BoxAlloc:
-			return Operation::BoxAlloc;
 		case mir::Operation::ListPush:
 			return Operation::ListPush;
 		case mir::Operation::ListPop:
@@ -391,7 +433,7 @@ namespace compiler::lir {
 					mir_to_lir_local.put(&mir_local, locals[local_index]);
 
 					// Only create lifetime flag if needed
-					if (!mir_local.type.hasNoOpDestructor()) {
+					if (!mir_local.type.hasNoOpDestructor(ctx)) {
 						auto lifetime_flag = LIRLocal::boolLocal(ctx);
 						locals.pushBack(lifetime_flag);
 						auto flag_index = locals.lastIndex();
@@ -592,7 +634,6 @@ namespace compiler::lir {
 					break;
 				}
 				case mir::Operation::AddressOf:
-				case mir::Operation::BoxAlloc:
 				case mir::Operation::IntegerAdd:
 				case mir::Operation::IntegerNeg:
 				case mir::Operation::IntegerSub:
@@ -676,16 +717,24 @@ namespace compiler::lir {
 					// Currently this approach generates a free on every DestructIf if it operates
 					// on a box type (even if the box was moved). This will cause double free's if
 					// the box was moved around between other box variables. In the future we should
-					// insert a proper destructor call here before the FreeBox.
+					// insert a proper destructor call here before the free.
 					if (type.getRefKind() == tsh::ReferenceKind::Box) {
 						auto lir_place = getLocation(to_destruct);
 
-						// FreeBox is discarded if it operates on no information (ex. Unit).
+						// The free is discarded if it operates on no information (ex. Unit).
 						if (lir_place.has_value()) {
+							// Emit a call to the `box_free(b: box T)` builtin, which will be
+							// lowered to deallocation by the backend.
+							const helios::SymID free_sym
+								= helios::boxFreeSymForType(ctx, type.getType());
+							std::vector<LIRValue> call_args;
+							call_args.emplace_back(getFunctionLiteralfromHELIOSID(ctx, free_sym));
+							call_args.emplace_back(lir_place.value());
+
 							curr_block->instructions.emplace_back(
-								Operation::BoxFree,
+								Operation::Call,
 								base::Optional<LIRPlace>{},
-								std::vector{ lir_place.value() },
+								std::move(call_args),
 								mir_instruction.metadata
 							);
 							break;
@@ -840,14 +889,14 @@ namespace compiler::lir {
 						);
 
 
-				auto abi = [&]() -> helios::SymbolABI {
+				auto abi = [&]() -> LIRAbi {
 					variant_match(key.function->helios_id) {
 						variant_case(mir::FunctionSymID, name) {
-							return ctx.query<helios::QuerySymbolABI>(name.id)->valueOrPanicMsg(
-								"Handling errors in MIR is not supported yet"
-							);
+							return getLIRAbi(ctx, name.id, return_type, parameter_types);
 						}
-						variant_case(mir::GlobalVariableCTOR, name) { return helios::DefaultAbi{}; }
+						variant_case(mir::GlobalVariableCTOR, name) {
+							return { LIRAbi::DefaultAbi{} };
+						}
 					}
 					CORE_UNREACHABLE();
 				}();
@@ -978,7 +1027,7 @@ namespace compiler::lir {
 		BlockRef entry_block_ref = blocks.last();
 
 		return Function{ .mangled_name       = mangled_name,
-			             .abi                = helios::DefaultAbi{},
+			             .abi                = { LIRAbi::DefaultAbi{} },
 			             .link_once          = false,
 			             .ignore_on_dvm      = false,
 			             .ignore_on_llvm     = false,

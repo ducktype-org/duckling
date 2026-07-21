@@ -7,6 +7,7 @@ use super::*;
 use crate::quackpack::core::Version;
 use crate::quackpack::core::fetcher::types;
 use crate::quackpack::schemas::registry;
+use crate::util::file_locks::FileLockManager;
 use crate::util::path_ops_ext::PathOpsExt;
 
 fn create_mock_server() -> (MockServer, DuckContext) {
@@ -160,7 +161,7 @@ fn single_metadata() {
     let client = DucknestClient::new(&ctx);
     let response = client
         .get_exact_metadata(&types::PackageWithUrl {
-            id: "foo".into(),
+            name: "foo".into(),
             version: Version::new(1, 2, 3),
             url: server.base_url().parse().unwrap(),
         })
@@ -172,7 +173,7 @@ fn single_metadata() {
     assert!(
         client
             .get_exact_metadata(&types::PackageWithUrl {
-                id: "foo".into(),
+                name: "foo".into(),
                 version: Version::new(1, 2, 4),
                 url: server.base_url().parse().unwrap(),
             })
@@ -193,20 +194,24 @@ fn multi_metadata() {
 #[test]
 fn download_blob() {
     let dir = tempdir().unwrap();
-    let path = dir.path().join("target");
     let (server, ctx) = create_mock_server();
+    let manager = FileLockManager::new(dir.path().to_path_buf());
+    let path = manager.open_exclusive("target", &ctx).unwrap();
     let client = DucknestClient::new(&ctx);
     client
         .fetch_blob(
             &types::PackageWithUrl {
-                id: "foo".into(),
+                name: "foo".into(),
                 version: Version::new(1, 2, 3),
                 url: server.base_url().parse().unwrap(),
             },
-            &path,
+            path,
         )
         .unwrap();
-    assert_eq!(path.read_to_string().unwrap(), "foo-1.2.3");
+    assert_eq!(
+        dir.path().join("target").read_to_string().unwrap(),
+        "foo-1.2.3"
+    );
 }
 
 #[test]
@@ -215,7 +220,7 @@ fn not_found_in_response() {
     let client = DucknestClient::new(&ctx);
     let err = client
         .get_exact_metadata(&types::PackageWithUrl {
-            id: "foo".into(),
+            name: "foo".into(),
             version: Version::new(2137, 6, 7),
             url: server.base_url().parse().unwrap(),
         })

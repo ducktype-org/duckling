@@ -11,10 +11,10 @@ use tracing::{debug, error};
 
 use crate::quackpack::core::fetcher::Fetcher;
 use crate::quackpack::core::fetcher::types::PackageWithUrl;
+use crate::quackpack::core::full_identity::{FullIdentity, FullKind, FullOrigin};
 use crate::quackpack::core::solver::git_access::GitAccess;
 use crate::quackpack::core::solver::solver_freeze::SolverFreeze;
 use crate::quackpack::core::solver::solver_mode::SolverMode;
-use crate::quackpack::core::solver::types_common::{ExpandedLocation, ExpandedPackage};
 use crate::quackpack::core::solver::{ShouldRunSolverEngine, SolverAnswer, SolverGathererData};
 use crate::quackpack::core::storage::freeze::VenvFreeze;
 use crate::quackpack::core::storage::git_access::StorageGitAccess;
@@ -26,10 +26,10 @@ use crate::quackpack::core::storage::venv_id::{ToVenvId, VenvId};
 use crate::quackpack::core::{
     AnyPackage, GitReference, Package, PackageContext, PackageLoader, storage,
 };
-use crate::quackpack::util::to_url::ToUrl;
+use crate::quackpack::util::with_version::WithVersion;
 use crate::util::error::MessageError;
 use crate::util::path_ops_ext::PathOpsExt;
-use crate::{QuackError, QuackResult, QuackResultContext, qp_bail, qp_bail_internal};
+use crate::{QuackError, QuackResult, QuackResultContext, qp_bail};
 
 const MAX_BLOB_RETRY_COUNT: i32 = 3;
 
@@ -85,15 +85,13 @@ pub fn sync(
         input_freeze,
         SolverMode::from(options),
     )?;
-    let pkgs: Vec<ExpandedPackage> = solver_answer
+    let pkgs: Vec<WithVersion<FullIdentity>> = solver_answer
         .new_freeze
         .package_freezes
         .keys()
         .copied()
         .collect();
-    let new_freeze = solver_answer
-        .new_freeze
-        .generate_storage_freeze(&solver_answer.pkgs_manifests)?;
+    let new_freeze = solver_answer.new_freeze.generate_storage_freeze()?;
 
     let _was_anything_installed =
         fetch_source_codes(&storage, &mut fetcher, &mut git_access, pkgs)?;
@@ -103,7 +101,7 @@ pub fn sync(
         let data = venv.data_mut();
         data.set_last_modification(now);
         data.set_freeze(new_freeze);
-        data.set_last_known_directory(pcx.package().root().to_path_buf());
+        data.set_last_known_location(pcx.package().root().to_path_buf());
         venv
     } else {
         let data = VenvData::new(
@@ -140,12 +138,12 @@ fn check_if_overwrites(
     id: VenvId,
 ) -> QuackResult<()> {
     let Some(venv) = venv else { return Ok(()) };
-    if pcx.package().root() == venv.data().last_known_directory()
-        || !venv.data().last_known_directory().exists()
+    if pcx.package().root() == venv.data().last_known_location()
+        || !venv.data().last_known_location().exists()
     {
         return Ok(());
     }
-    let dir = venv.data().last_known_directory();
+    let dir = venv.data().last_known_location();
     let package = PackageLoader::find_at_exact_directory(dir, pcx.ctx());
     let (replaces, context) = match package {
         Ok(package) => {
@@ -236,12 +234,9 @@ fn get_solver_answer(
     mode: SolverMode,
 ) -> QuackResult<SolverAnswer> {
     debug!(?mode);
-    let root_pkg = ExpandedPackage {
-        location: ExpandedLocation::Local {
-            absolute_path: pcx.package().root().to_url()?.into(),
-        },
-        version: None,
-    };
+    let root_origin = FullOrigin::for_local(pcx.package().root())?;
+    let root_identity = FullIdentity::new(pcx.package().name(), root_origin);
+    let root_pkg = WithVersion::new(root_identity, pcx.package().version());
     let solver_freeze = match input_freeze {
         Some(freeze) => SolverFreeze::try_from_venv_freeze(root_pkg, freeze)?,
         None => SolverFreeze::empty_with_root(root_pkg)?,
@@ -266,7 +261,7 @@ fn fetch_source_codes(
     storage: &Storage,
     fetcher: &mut Fetcher<'_>,
     git_access: &mut StorageGitAccess<'_>,
-    pkgs: Vec<ExpandedPackage>,
+    pkgs: Vec<WithVersion<FullIdentity>>,
 ) -> QuackResult<bool> {
     let mut was_anything_installed = false;
     let fetcher_lock = fetcher
@@ -287,44 +282,43 @@ fn fetch_source_code(
     storage: &Storage,
     fetcher: &mut Fetcher<'_>,
     git_access: &mut StorageGitAccess<'_>,
-    pkg: ExpandedPackage,
+    pkg: WithVersion<FullIdentity>,
 ) -> QuackResult<bool> {
     debug!(?pkg);
-    match pkg.location {
-        ExpandedLocation::Local { absolute_path: _ } => Ok(false),
-        ExpandedLocation::Git { url, commit } => {
-            let pkg_id = GitId::new(url, commit).into();
-            if storage.is_package_stored(&pkg_id) {
+    let identity = pkg.value();
+    let origin = identity.origin();
+    match origin.kind() {
+        FullKind::Local => Ok(false),
+        FullKind::Git { commit } => {
+            let pkg_id = GitId::new(origin.url(), commit).into();
+            if storage.is_package_stored(pkg_id) {
                 return Ok(false);
             }
-            if git_access.is_stored(url, &commit) {
-                storage.mark_as_stored(&pkg_id)?;
+            if git_access.is_stored(origin.url(), &commit) {
+                storage.mark_as_stored(pkg_id)?;
                 return Ok(true);
             }
             fetcher.clone_from_git_to_directory(
-                &url,
+                &origin.url(),
                 GitReference::Rev(commit),
-                &storage.pkg_dir(&pkg_id),
+                &storage.pkg_dir(pkg_id),
             )?;
-            storage.mark_as_stored(&pkg_id)?;
-            storage.pkg_dir(&pkg_id).try_fsync_dir()?;
+            storage.mark_as_stored(pkg_id)?;
+            storage.pkg_dir(pkg_id).try_fsync_dir()?;
             Ok(true)
         }
-        ExpandedLocation::Registry { url, real_name } => {
-            let Some(version) = pkg.version else {
-                qp_bail_internal!("Registry package without version");
-            };
-            let pkg_id = RegistryId::new(real_name, version, url).into();
-            if storage.is_package_stored(&pkg_id) {
+        FullKind::Registry => {
+            let pkg_id = RegistryId::new(identity.name(), pkg.version(), origin.url()).into();
+            if storage.is_package_stored(pkg_id) {
                 return Ok(false);
             }
             let mut successfully_fetched = false;
             let mut blob_path = PathBuf::new();
             for attempt in 1..=MAX_BLOB_RETRY_COUNT {
                 match fetcher.fetch_package_blob(&PackageWithUrl {
-                    id: real_name,
-                    version,
-                    url,
+                    name: identity.name(),
+                    version: pkg.version(),
+                    url: origin.url(),
                 }) {
                     Ok(path) => {
                         blob_path = path;
@@ -343,7 +337,7 @@ fn fetch_source_code(
             if !successfully_fetched {
                 qp_bail!("Failed to fetch a package");
             }
-            let pkg_dir = storage.pkg_dir(&pkg_id);
+            let pkg_dir = storage.pkg_dir(pkg_id);
             if pkg_dir.exists() {
                 pkg_dir.rm()?;
             }
@@ -351,7 +345,7 @@ fn fetch_source_code(
             let decompressed = GzDecoder::new(file);
             let mut archive = Archive::new(decompressed);
             archive.unpack(pkg_dir.clone())?;
-            storage.mark_as_stored(&pkg_id)?;
+            storage.mark_as_stored(pkg_id)?;
             pkg_dir.try_fsync_dir()?;
             Ok(true)
         }

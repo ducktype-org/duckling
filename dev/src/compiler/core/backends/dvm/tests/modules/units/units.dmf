@@ -1,4 +1,5 @@
 import core.builtins.*;
+import core.runtime;
 
 # Simple self-contained test for units as values and types.
 
@@ -7,7 +8,7 @@ let b: unitType = ();
 const unitType: type = ();
 
 fun foo(u: ()) -> () = {
-    builtin_output_i64(1i64);
+    runtime.dvm.builtin_output_i64(1i64);
     return u;
 }
 

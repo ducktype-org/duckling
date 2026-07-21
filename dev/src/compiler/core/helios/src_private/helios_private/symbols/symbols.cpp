@@ -26,6 +26,7 @@
 #include <helios_private/symbols/generated_symbol_data.hpp>
 #include <helios_private/symbols/pst_symbol_data.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
+#include <mir/mir_lowering/mir_queries.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
@@ -41,13 +42,12 @@
 
 namespace compiler::helios {
 	bool implementsQueryCodeOfFun(SymID id) {
-		// Builtins have FunctionDeclaration kind, but can implement code of fun.
-		if (kind(id) != SymbolKind::Function && kind(id) != SymbolKind::Method
-		    && kind(id) != SymbolKind::FunctionDeclaration)
-			return false;
+		if (not isFunctionLike(kind(id))) return false;
 
 		variant_match(getSymRef(id)->other) {
-			variant_case_novalue(PstImplementedSemantics) { return true; }
+			variant_case_novalue(PstImplementedSemantics) {
+				return kind(id) != SymbolKind::FunctionDeclaration;
+			}
 			variant_case(BuiltinSemantics, data) {
 				// Only if implemented in HOUT, then it can be called with code of fun.
 				return getBuiltinOrigins(data.builtin).contains(BuiltinOrigin::HOUT);
@@ -69,7 +69,9 @@ namespace compiler::helios {
 				         ? EmissionPolicy::Replicated
 				         : EmissionPolicy::OwnerOnly;
 			}
-			variant_case_novalue(defgen::BuiltinOperator, defgen::ScriptMainWrapper) {
+			variant_case_novalue(
+				defgen::BuiltinOperator, defgen::BoxBuiltin, defgen::ScriptMainWrapper
+			) {
 				return EmissionPolicy::OwnerOnly;
 			}
 			variant_case_novalue(
@@ -186,7 +188,13 @@ namespace compiler::helios {
 	}
 
 	base::Optional<BuiltinKind> isBuiltin(SymID id) {
-		return getSymRef(id)->getDataOpt<BuiltinSemantics>().map(&BuiltinSemantics::builtin);
+		if (const auto builtin = getSymRef(id)->getDataOpt<BuiltinSemantics>())
+			return builtin.value()->builtin;
+		// Box alloc/free functions are backend-implemented builtins too.
+		if (const auto box = getSymRef(id)->getDataOpt<defgen::BoxBuiltin>())
+			return box.value()->kind == defgen::BoxBuiltin::Kind::Alloc ? BuiltinKind::BoxAlloc
+			                                                            : BuiltinKind::BoxFree;
+		return {};
 	}
 
 	SymbolKind kind(SymID id) { return getSymRef(id)->common.kind; }
@@ -1073,76 +1081,75 @@ namespace compiler::helios {
 		QUERY_IMPLEMENTATION_BOILERPLATE(QueryGeneratedSymbol);
 	}
 
-	struct IMPLEMENT_QUERY(QueryDirectFunctionCalls, query::QResult<std::vector<SymID>>) {
+	struct IMPLEMENT_QUERY(QueryDirectUsedSymbols, query::QResult<UsedSymbols>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			CORE_ASSERT(
-				isFunctionLike(kind(key)),
-				"Query function dependencies called on non-function symbol"
+				isFunctionLike(kind(key)) || kind(key) == SymbolKind::Const
+					|| kind(key) == SymbolKind::Variable,
+				"Invalid call, this function can only be called with functions and globals."
 			);
 
-			if (kind(key) == SymbolKind::FunctionDeclaration) {
-				// For function declarations we check if a function declaration is a backend
-				// dependent symbol.
-				if (hasAttribute<attributes::BackendDependent>(key)) {
-					// If yes then we append all the results from all implementations.
-					return getBackendDependentImplementations(ctx, key);
-				} else {
-					return {};
-				}
-			}
+			mir::MIRUsedSymbols mir_used_symbols;
+			if (implementsQueryCodeOfFun(key))
+				mir_used_symbols = mir::getMIRUsedSymbolsByFunction(ctx, key);
+			else if (hasAttribute<attributes::BackendDependent>(key))
+				mir_used_symbols.used_functions = getBackendDependentImplementations(ctx, key);
+			else if (kind(key) == SymbolKind::Const || kind(key) == SymbolKind::Variable)
+				mir_used_symbols = mir::getMIRUsedSymbolsByGlobal(ctx, key);
 
-			if (not implementsQueryCodeOfFun(key)) return {};
-
-			const auto& fun_hout_result = ctx.query<QueryCodeOfFun>(key)->valueOrThrow();
-			return code::collectCalledSymbols(fun_hout_result);
+			return UsedSymbols{
+				.used_functions = std::move(mir_used_symbols.used_functions),
+				.used_globals   = std::move(mir_used_symbols.used_globals),
+			};
 		}
 
 		QUERY_AUTO_CACHE_CREF
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDirectFunctionCalls);
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDirectUsedSymbols);
 
-	struct IMPLEMENT_QUERY(QueryTransitiveFunctionCalls, query::QResult<std::vector<SymID>>) {
+	struct IMPLEMENT_QUERY(QueryTransitiveUsedSymbols, query::QResult<UsedSymbols>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			CORE_ASSERT(
-				kind(key) == SymbolKind::Function || kind(key) == SymbolKind::FunctionDeclaration,
-				"Query transitive function dependencies called on non-function symbol"
-			);
-
 			std::vector<SymID>        worklist;
-			std::unordered_set<SymID> visited_functions;
-			std::vector<SymID>        all_dependencies;
+			std::unordered_set<SymID> visited_symbols;
+			std::vector<SymID>        all_functions;
+			std::vector<SymID>        all_globals;
 
-			worklist.push_back(key);  // Insert root function SymID.
-			visited_functions.insert(key);
+			worklist.push_back(key);  // Insert root function/global symID
+			visited_symbols.insert(key);
 
 			while (!worklist.empty()) {
-				SymID current_func = worklist.back();
+				SymID current_sym = worklist.back();
 				worklist.pop_back();
 
-				all_dependencies.push_back(current_func);
+				const auto& direct_used_symbols
+					= ctx.query<QueryDirectUsedSymbols>(current_sym)->valueOrThrow();
 
-				Ref direct_dependencies
-					= &ctx.query<QueryDirectFunctionCalls>(current_func)->valueOrThrow();
+				for (const SymID& dependency: direct_used_symbols.used_functions) {
+					if (visited_symbols.insert(dependency).second) {
+						all_functions.push_back(dependency);
+						worklist.push_back(dependency);
+					}
+				}
 
-				for (const SymID& dependency: *direct_dependencies) {
-					if (!visited_functions.contains(dependency)) {
-						visited_functions.insert(dependency);
+				for (const SymID& dependency: direct_used_symbols.used_globals) {
+					if (visited_symbols.insert(dependency).second) {
+						all_globals.push_back(dependency);
 						worklist.push_back(dependency);
 					}
 				}
 			}
 
-			base::filterVectorInPlace(all_dependencies, [](auto sym) {
-				return kind(sym) != SymbolKind::FunctionDeclaration;
-			});
-			return all_dependencies;
+			return UsedSymbols{
+				.used_functions = std::move(all_functions),
+				.used_globals   = std::move(all_globals),
+			};
 		}
 
 		QUERY_AUTO_CACHE_CREF
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTransitiveFunctionCalls);
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTransitiveUsedSymbols);
 
 	std::vector<SymID> getAllHeliosSymbols() {
 		// this implementation is fragile, adjust if needed
