@@ -119,7 +119,7 @@ namespace compiler::helios::templates {
 				auto const_symbol
 					= ctx.query<defgen::QueryGeneratedSymbol>(defgen::KeyFor_QueryGeneratedSymbol{
 						.name                  = param.name,
-						.generated_symbol_data = defgen::GeneratedConstant{ ctv, scope },
+						.generated_symbol_data = defgen::GeneratedConstant{ std::move(ctv), scope },
 					});
 
 				symbols.push_back(const_symbol);

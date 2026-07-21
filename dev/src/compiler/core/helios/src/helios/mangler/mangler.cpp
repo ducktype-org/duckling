@@ -397,11 +397,7 @@ namespace compiler::helios::mangler {
 						                                    ->unwrap()
 						                                    .strView()));
 
-						CORE_ASSERT(
-							template_stmt_v->hasAdditionalRootData(),
-							"TemplateStmt has no additional root data meaning it is not baked"
-							"It should not happen in mangling"
-						);
+						
 						if (template_stmt_v->hasAdditionalRootData()) {
 							// We are inside baked template
 
@@ -410,7 +406,7 @@ namespace compiler::helios::mangler {
 								variant_case(
 									pst::AdditionalRootData::BakedTemplateParent, template_parent
 								) {
-									auto template_bake_data_any
+									const auto& template_bake_data_any
 										= template_parent.template_bake_data;
 									auto template_bake_data
 										= base::anyCast<templates::TemplateBakePSTLinkedData>(
@@ -434,6 +430,12 @@ namespace compiler::helios::mangler {
 									);
 								}
 							}
+						}
+						else {
+							CORE_PANIC(
+								"TemplateStmt has no additional root data meaning it is not baked"
+								"It should not happen in mangling"
+							);
 						}
 					}
 
