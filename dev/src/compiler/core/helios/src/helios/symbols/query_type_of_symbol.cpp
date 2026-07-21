@@ -143,9 +143,9 @@ namespace compiler::helios {
 				// @TODO: #3177 this now always uses QueryTypeTemplateType,
 				// we should probably introduce different kind of types for non-type templtes.
 
-				auto symbol = ctx.query<QuerySymbolOfSTMT>({ stmt }).valueOrThrow();
+				auto symbol  = ctx.query<QuerySymbolOfSTMT>({ stmt }).valueOrThrow();
 				auto ab_type = ctx.query<tsh::QueryTypeTemplateType>({ .source = symbol });
-				setTypeOfSymbolByAbstractType(ab_type); 
+				setTypeOfSymbolByAbstractType(ab_type);
 			}
 
 			void visitIdentifierWrapper(pst::Access<pst::IdentifierWrapper> ident) final {
