@@ -1,4 +1,5 @@
 SubDirs:
   - basic
+  - advanced
 
 # @TODO: #2798 Write advanced integration tests for debugger CLI

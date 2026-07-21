@@ -182,6 +182,10 @@ int main(int argc, const char** argv) {
 	init::InitObject _;
 	auto             clah = getVmClah();
 
+	if (const char* UNBUFFERED = std::getenv("UNBUFFERED")) {
+		if (std::string_view(UNBUFFERED) == "1") std::cout << std::unitbuf;
+	}
+
 	try {
 		return clah.execute(base::safeIntConv<usize>(argc), argv);
 	} catch (const base::Exception& e) {

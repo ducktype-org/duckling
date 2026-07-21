@@ -1,0 +1,8 @@
+simple.dbc
+> Debugger has started
+> +\n
+> +\n
+< run
+> Running
+> ExecutionCompleted (return value = 0)
+DONE
