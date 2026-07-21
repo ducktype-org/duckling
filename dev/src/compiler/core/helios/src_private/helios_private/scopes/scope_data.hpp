@@ -87,5 +87,4 @@ namespace compiler::helios {
 
 		static auto idOf(Ref<ScopeData> ref) { return ScopeID(ref); }
 	};
-
 }

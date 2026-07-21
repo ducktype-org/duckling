@@ -131,6 +131,10 @@ namespace compiler::helios::templates {
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
 			// Most template heavy lifting happens here, and in usage of pst root data.
 
+			// The static analyzer cannot model the ownership of the `SharedBox` holding
+			// `postponed_data` (raw pointer + custom deleter inside an atomic), so it reports a
+			// false-positive leak when the box is moved into the root data tree below.
+			// NOLINTBEGIN(clang-analyzer-cplusplus.NewDeleteLeaks)
 			CORE_ASSERT(
 				kind(key.template_sym_id) == SymbolKind::Template, "SymID is not a Template"
 			);
@@ -219,6 +223,7 @@ namespace compiler::helios::templates {
 				.baked_template_pst    = std::move(baked_pst),
 			};
 		}
+		// NOLINTEND(clang-analyzer-cplusplus.NewDeleteLeaks)
 
 		QUERY_AUTO_CACHE_CONSTRUCT_BY_LAMBDA([](CRef<PResult> result) -> QResult {
 			if (result->hasFailed()) return query::Failed();
@@ -227,5 +232,4 @@ namespace compiler::helios::templates {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryBakeTemplateSymID);
-
 }
