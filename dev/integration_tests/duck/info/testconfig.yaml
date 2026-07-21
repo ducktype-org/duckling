@@ -1,0 +1,6 @@
+date-regex: '\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}'
+
+SubDirs:
+- access_and_modification
+- basic
+- overwritten

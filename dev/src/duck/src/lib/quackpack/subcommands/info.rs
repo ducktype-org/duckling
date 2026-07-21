@@ -1,7 +1,8 @@
 use crate::quackpack::core::PackageContext;
 use crate::quackpack::core::storage::venv_id::ToVenvId;
 use crate::quackpack::core::storage::{display_venv_info, venv_info};
-use crate::{QuackResult, QuackResultContext, qp_bail, qp_err};
+use crate::util::error::{HintMessage, MessageError};
+use crate::{QuackResult, QuackResultContext, qp_err};
 
 /// Logic for executing the `info` subcommand.
 pub fn info(pcx: PackageContext) -> QuackResult<()> {
@@ -11,11 +12,12 @@ pub fn info(pcx: PackageContext) -> QuackResult<()> {
     let Some((mut venv, previous_access)) = venv_info(&storage_localization, venv_id, ctx)
         .context("when getting information about the venv")?
     else {
-        let err = qp_err!(
+        let err = qp_err!(HintMessage::new("make sure that the package is synchronized"));
+        let err = err.context(MessageError::new(format!(
             "did not find a venv for the package at `{}`",
             pcx.package().root().display()
-        );
-        qp_bail!(err.add_hint("make sure that the package is synchronized"));
+        )));
+        return Err(err);
     };
     // This info operation counts as access to the venv, modyfying the last_access to now.
     // To display a meaningful value of the last_access, we substitute the last_access field

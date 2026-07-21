@@ -1,0 +1,15 @@
+PostCase: python3 check.py && @{cleanup_tmp_env}
+PreCase: |+
+  @{cd-tmp-dir}
+  @{duck-exe} init foo
+  @{duck-exe} -C foo sync
+  sleep 3
+  @{duck-exe} -C foo info
+  sleep 3
+
+Tests:
+  verify_timestamps:
+    Description: last_access and last_modification are set properly
+    Cases:
+      verify_timestamps:
+        test-cmd: "duck -C foo info > output"

@@ -1,0 +1,16 @@
+PreCase: |+
+  @{cd-tmp-dir}
+  @{duck-exe} init foo
+  @{duck-exe} -C foo sync
+  mkdir bar
+  @{duck-exe} -C bar init foo
+  @{duck-exe} -C bar/foo sync --overwrite
+
+Tests:
+  basic:
+    Description: can get info about a venv of a project
+    Cases:
+      basic:
+        Run: "@{expect_output} --out-regex \"@{stdout_regex}\" --err-regex \"@{stderr_regex}\" @{duck-exe} -C $DIT_TMP_DIR/foo info"
+        stderr_regex: ""
+        stdout_regex: 'foo:\n  last-location: $DIT_TMP_DIR/bar/foo\n  last-access: @{date-regex}\n  last-modification: @{date-regex}\n  not ephemeral'

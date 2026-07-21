@@ -45,6 +45,7 @@ Run: 'export PATH="@{duck-exe-dir}:$PATH" && @{cd-tmp-dir} && @{before-cmd} && @
 SubDirs:
   - cli
   - sync
+  - info
   - init
   - build
   - run
