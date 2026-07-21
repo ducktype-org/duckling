@@ -1530,6 +1530,22 @@ private:
 			{ "non-template" },
 			1
 		);
+
+		// ============================ Bad template usage ============================
+
+		checkForErrorOnCompileModule(
+			R"(
+				template(a: i64)
+				namespace Number { }
+
+				fun main() -> i64 = {
+					return Number;  # bare template use
+				}
+
+			)",
+			{ "cannot be converted to type `i64`" },
+			1
+		);
 	}
 
 	void testPointerCastErrors() {
