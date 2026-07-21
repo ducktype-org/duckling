@@ -759,41 +759,39 @@ namespace compiler::helios::mangler {
 			}
 		}
 
-		static std::string mangleValue(query::Context&, compiler::numeric_value::NumericValue num) {
+		template<typename Float>
+		static auto float_to_hex(Float value) {
 			static constexpr auto HEX_DIGITS = "0123456789abcdef"sv;
-			const auto&           value      = num.getStorage();
-			// int8_t, i16, i32, i64, uint8_t, u16, u32, u64, f32, f64
 
-			if (value.index() <= 3) {
+			auto bytes = std::bit_cast<std::array<unsigned char, sizeof(Float)>>(value);
+			if constexpr (std::endian::native == std::endian::big) std::ranges::reverse(bytes);
+
+			std::string hex_str;
+			hex_str.reserve(bytes.size() * 2);
+
+			for (const auto byte: bytes) {
+				hex_str += HEX_DIGITS[byte >> 4];
+				hex_str += HEX_DIGITS[byte & 0x0F];
+			}
+
+			return hex_str;
+		}
+
+		static std::string mangleValue(query::Context&, compiler::numeric_value::NumericValue num) {
+			const auto& value = num.getStorage();
+
+			if (v_matches(value, int8_t, i16, i32, i64)) {
 				const i64 int_value
 					= std::visit([&](auto&& arg) -> i64 { return static_cast<i64>(arg); }, value);
 				return base::strConcat((int_value < 0 ? "n" : ""), std::abs(int_value), "_");
-			} else if (value.index() <= 7) {
+			} else if (v_matches(value, uint8_t, u16, u32, u64)) {
 				const u64 uint_value
 					= std::visit([&](auto&& arg) -> u64 { return static_cast<u64>(arg); }, value);
 				return base::strConcat(uint_value, "_");
-			} else if (value.index() == 8) {
-				const f32 float_value = std::get<f32>(value);
-				auto bytes = std::bit_cast<std::array<unsigned char, sizeof(f32)>>(float_value);
-				if (std::endian::native == std::endian::big) std::ranges::reverse(bytes);
-				std::string hex_str;
-				hex_str.reserve(bytes.size() * 2);
-				for (const auto byte: bytes) {
-					hex_str += HEX_DIGITS[byte >> 4];
-					hex_str += HEX_DIGITS[byte & 0x0F];
-				}
-				return hex_str;
-			} else if (value.index() == 9) {
-				const f64 double_value = std::get<f64>(value);
-				auto bytes = std::bit_cast<std::array<unsigned char, sizeof(f64)>>(double_value);
-				if (std::endian::native == std::endian::big) std::ranges::reverse(bytes);
-				std::string hex_str;
-				hex_str.reserve(bytes.size() * 2);
-				for (const auto byte: bytes) {
-					hex_str += HEX_DIGITS[byte >> 4];
-					hex_str += HEX_DIGITS[byte & 0x0F];
-				}
-				return hex_str;
+			} else if (v_matches(value, f32)) {
+				return float_to_hex<f32>(std::get<f32>(value));
+			} else if (v_matches(value, f64)) {
+				return float_to_hex<f32>(std::get<f64>(value));
 			} else {
 				CORE_PANIC("Unknown type in mangleValue()");
 			}
