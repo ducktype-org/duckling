@@ -47,7 +47,7 @@ pub fn clean_storage(options: CleanStorageOptions) -> QuackResult<()> {
             ))?;
             for venv in removed_venvs {
                 ctx.console()
-                    .print(indent(&format!("venv with id {}", venv), 2))?;
+                    .print(indent(&format!("venv with id `{}`", venv), 2))?;
             }
             ctx.console().print(format!(
                 "Removed {} package{}",
@@ -56,7 +56,7 @@ pub fn clean_storage(options: CleanStorageOptions) -> QuackResult<()> {
             ))?;
             for pkg_path in removed_packages {
                 ctx.console()
-                    .print(indent(&format!("package at {}", pkg_path.display()), 2))?;
+                    .print(indent(&format!("package at `{}`", pkg_path.display()), 2))?;
             }
             Ok(())
         }

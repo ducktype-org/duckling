@@ -50,7 +50,7 @@ pub fn exec_for(name: &str) -> Option<ExecFn> {
         "repl" => repl::execute,
         "list" => list::execute,
         "info" => info::execute,
-        "clean" => clean_storage::execute,
+        "clean-storage" => clean_storage::execute,
         _ => return None,
     };
     Some(f)

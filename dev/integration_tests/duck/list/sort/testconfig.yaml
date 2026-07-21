@@ -1,0 +1,27 @@
+# foo.last_access < bar.last_access and foo.last_modification > bar.last_modification
+PreCase: |+
+  @{cd-tmp-dir}
+  @{duck-exe} init foo
+  @{duck-exe} init bar
+  @{duck-exe} -C bar sync
+  @{duck-exe} -C foo sync
+  @{duck-exe} -C foo info
+  @{duck-exe} -C bar info
+
+Tests:
+  basic:
+    Description: properly sorts the displayed venvs
+    Cases:
+      previous_access:
+        Run: "@{expect_output} --out-regex \"@{stdout_regex}\" --err-regex \"@{stderr_regex}\" @{duck-exe} -C $DIT_TMP_DIR/foo list --sort-by previous-access"
+        stderr_regex: ""
+        stdout_regex: 'foo:\n  last-location: $DIT_TMP_DIR/foo\n  last-access: @{date-regex}\n  last-modification: @{date-regex}\n  not ephemeral\n\nbar:\n  last-location: $DIT_TMP_DIR/bar\n  last-access: @{date-regex}\n  last-modification: @{date-regex}\n  not ephemeral'
+      last_modification:
+        Run: "@{expect_output} --out-regex \"@{stdout_regex}\" --err-regex \"@{stderr_regex}\" @{duck-exe} -C $DIT_TMP_DIR/foo list --sort-by last-modification"
+        stderr_regex: ""
+        stdout_regex: 'bar:\n  last-location: $DIT_TMP_DIR/bar\n  last-access: @{date-regex}\n  last-modification: @{date-regex}\n  not ephemeral\n\nfoo:\n  last-location: $DIT_TMP_DIR/foo\n  last-access: @{date-regex}\n  last-modification: @{date-regex}\n  not ephemeral'
+      reverse:
+        Run: "@{expect_output} --out-regex \"@{stdout_regex}\" --err-regex \"@{stderr_regex}\" @{duck-exe} -C $DIT_TMP_DIR/foo list --sort-reverse"
+        stderr_regex: ""
+        stdout_regex: 'foo:\n  last-location: $DIT_TMP_DIR/foo\n  last-access: @{date-regex}\n  last-modification: @{date-regex}\n  not ephemeral\n\nbar:\n  last-location: $DIT_TMP_DIR/bar\n  last-access: @{date-regex}\n  last-modification: @{date-regex}\n  not ephemeral'
+      
