@@ -1,11 +1,11 @@
 duck-cfg: 'storage: {temporary_lifetime: 1}'
 
 PreCase: |+
-  echo @{duck-cfg} > $DUCK_HOME/config.yaml
   @{cd-tmp-dir}
   @{duck-exe} init foo --ephemeral
   @{duck-exe} -C foo sync
   sleep 2
+  echo @{duck-cfg} > $DUCK_HOME/config.yaml
 
 Tests:
   basic:
