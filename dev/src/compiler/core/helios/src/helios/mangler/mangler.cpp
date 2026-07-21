@@ -397,7 +397,7 @@ namespace compiler::helios::mangler {
 						                                    ->unwrap()
 						                                    .strView()));
 
-						
+
 						if (template_stmt_v->hasAdditionalRootData()) {
 							// We are inside baked template
 
@@ -430,8 +430,7 @@ namespace compiler::helios::mangler {
 									);
 								}
 							}
-						}
-						else {
+						} else {
 							CORE_PANIC(
 								"TemplateStmt has no additional root data meaning it is not baked"
 								"It should not happen in mangling"

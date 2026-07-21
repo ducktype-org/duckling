@@ -21,12 +21,12 @@ namespace compiler::helios {
 				}
 				variant_case(pst::AdditionalRootData::ModuleParent, module_parent) {
 					const auto& module_id_any = module_parent.module_id;
-					auto module_id     = base::anyCast<frontend::ModuleID>(module_id_any);
+					auto        module_id     = base::anyCast<frontend::ModuleID>(module_id_any);
 					return PSTParentResult{ module_id };
 				}
 				variant_case(pst::AdditionalRootData::BakedTemplateParent, template_parent) {
 					const auto& template_bake_data_any = template_parent.template_bake_data;
-					auto template_bake_data
+					auto        template_bake_data
 						= base::anyCast<templates::TemplateBakePSTLinkedData>(template_bake_data_any
 					    );
 					return PSTParentResult{ template_bake_data.pst_parent_element };
