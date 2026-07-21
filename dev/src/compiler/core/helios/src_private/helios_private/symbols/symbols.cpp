@@ -73,7 +73,7 @@ namespace compiler::helios {
 				         : EmissionPolicy::OwnerOnly;
 			}
 			variant_case_novalue(
-				defgen::BuiltinOperator, defgen::BoxBuiltin, defgen::ScriptMainWrapper
+				defgen::BuiltinOperator, defgen::BuiltinTemplatedSymbol, defgen::ScriptMainWrapper
 			) {
 				return EmissionPolicy::OwnerOnly;
 			}
@@ -193,10 +193,18 @@ namespace compiler::helios {
 	base::Optional<BuiltinKind> isBuiltin(SymID id) {
 		if (const auto builtin = getSymRef(id)->getDataOpt<BuiltinSemantics>())
 			return builtin.value()->builtin;
-		// Box alloc/free functions are backend-implemented builtins too.
-		if (const auto box = getSymRef(id)->getDataOpt<defgen::BoxBuiltin>())
-			return box.value()->kind == defgen::BoxBuiltin::Kind::Alloc ? BuiltinKind::BoxAlloc
-			                                                            : BuiltinKind::BoxFree;
+		// Box alloc/free and list free functions are backend-implemented builtins too.
+		if (const auto templated = getSymRef(id)->getDataOpt<defgen::BuiltinTemplatedSymbol>()) {
+			switch (templated.value()->kind) {
+			case defgen::BuiltinTemplatedSymbol::Kind::BoxAlloc:
+				return BuiltinKind::BoxAlloc;
+			case defgen::BuiltinTemplatedSymbol::Kind::BoxFree:
+				return BuiltinKind::BoxFree;
+			case defgen::BuiltinTemplatedSymbol::Kind::ListFree:
+				return BuiltinKind::ListFree;
+			}
+			CORE_UNREACHABLE();
+		}
 		return {};
 	}
 

@@ -43,12 +43,13 @@ namespace compiler::helios {
 		DvmCharRealloc,
 		DvmCharFree,
 		/**
-		 * Box allocation / deallocation. Unlike the other builtins these are not selected by the
-		 * `@builtin("...")` attribute. They are only called by the compiler in `box T` constructors
-		 * and destructors.
+		 * Box allocation / deallocation and dynamic-array (list) freeing. Unlike the other builtins
+		 * these are not selected by the `@builtin("...")` attribute. They are only called by the
+		 * compiler in `box T`/`[T]` constructors and destructors.
 		 */
 		BoxAlloc,
 		BoxFree,
+		ListFree,
 	};
 
 	/**
@@ -94,6 +95,14 @@ namespace compiler::helios {
 	 * The returned symbol is a declaration only, it's implemented in both backends.
 	 */
 	SymID boxFreeSymForType(query::Context& ctx, tsh::AbstractType pointee_type);
+
+	/**
+	 * @brief Symbol of the compiler-generated `list_free(l: ref [T])` builtin for a given element
+	 * type.
+	 *
+	 * The returned symbol is a declaration only, it's implemented in both backends.
+	 */
+	SymID listFreeSymForType(query::Context& ctx, tsh::AbstractType element_type);
 
 	/**
 	 * @brief Build a HOUT expression that constructs a `box T` holding `inner`.

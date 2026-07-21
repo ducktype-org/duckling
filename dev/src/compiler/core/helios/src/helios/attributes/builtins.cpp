@@ -51,6 +51,8 @@ namespace compiler::helios {
 			return base::StrID("box_alloc");
 		case BuiltinKind::BoxFree:
 			return base::StrID("box_free");
+		case BuiltinKind::ListFree:
+			return base::StrID("list_free");
 		}
 		CORE_UNREACHABLE();
 	}
@@ -236,6 +238,7 @@ namespace compiler::helios {
 			return BuiltinOrigin::DVMBackend;
 		case BuiltinKind::BoxAlloc:
 		case BuiltinKind::BoxFree:
+		case BuiltinKind::ListFree:
 			return BuiltinOrigin::DVMBackend | BuiltinOrigin::NativeBackend;
 		}
 
@@ -244,17 +247,31 @@ namespace compiler::helios {
 
 	SymID boxAllocSymForType(query::Context& ctx, tsh::AbstractType pointee_type) {
 		return ctx.query<defgen::QueryGeneratedSymbol>({
-			.name                  = base::StrID("box_alloc"),
-			.generated_symbol_data = defgen::BoxBuiltin{ .pointee_type = pointee_type,
-		                                                 .kind = defgen::BoxBuiltin::Kind::Alloc },
+			.name = base::StrID("box_alloc"),
+			.generated_symbol_data
+			= defgen::BuiltinTemplatedSymbol{ .type = pointee_type,
+		                                      .kind
+		                                      = defgen::BuiltinTemplatedSymbol::Kind::BoxAlloc },
 		});
 	}
 
 	SymID boxFreeSymForType(query::Context& ctx, tsh::AbstractType pointee_type) {
 		return ctx.query<defgen::QueryGeneratedSymbol>({
-			.name                  = base::StrID("box_free"),
-			.generated_symbol_data = defgen::BoxBuiltin{ .pointee_type = pointee_type,
-		                                                 .kind = defgen::BoxBuiltin::Kind::Free },
+			.name = base::StrID("box_free"),
+			.generated_symbol_data
+			= defgen::BuiltinTemplatedSymbol{ .type = pointee_type,
+		                                      .kind
+		                                      = defgen::BuiltinTemplatedSymbol::Kind::BoxFree },
+		});
+	}
+
+	SymID listFreeSymForType(query::Context& ctx, tsh::AbstractType element_type) {
+		return ctx.query<defgen::QueryGeneratedSymbol>({
+			.name = base::StrID("list_free"),
+			.generated_symbol_data
+			= defgen::BuiltinTemplatedSymbol{ .type = element_type,
+		                                      .kind
+		                                      = defgen::BuiltinTemplatedSymbol::Kind::ListFree },
 		});
 	}
 

@@ -707,18 +707,21 @@ private:
 					found_zero_init = true;
 					break;
 				case Operation::Call: {
-					auto name = instr.arguments.at(0).get<FunctionLiteral>().mangled_name.strView();
+					const auto& fn_lit = instr.arguments.at(0).get<FunctionLiteral>();
+					auto        name   = fn_lit.mangled_name.strView();
 					if (name.contains("push"))
 						found_push_with_params = true;
 					else if (name.contains("pop"))
 						found_pop_with_params = true;
 					else if (name.contains("length"))
 						found_len = true;
+					// `list_free` is a backend-implemented builtin (its mangled name is opaque), so
+					// detect it via the builtin kind rather than the name.
+					if (fn_lit.builtin_kind_opt.has_value()
+					    && fn_lit.builtin_kind_opt.value() == BuiltinFunctionKind::ListFree)
+						found_free = true;
 					break;
 				}
-				case Operation::ListFree:
-					found_free = true;
-					break;
 				default:
 					break;
 				}

@@ -80,20 +80,23 @@ namespace compiler::helios::defgen {
 	};
 
 	/**
-	 * Represents a compiler-generated box allocation/deallocation builtin, for a specific pointee
-	 * type.
+	 * Represents a compiler-generated builtin function templated on a single type argument, for a
+	 * specific `box`/`List` element type. The concrete builtin is distinguished by `kind`.
 	 *
 	 * These are declaration-only functions. Implementation is provided by the backends.
 	 */
-	struct BoxBuiltin final {
+	struct BuiltinTemplatedSymbol final {
 		enum class Kind {
-			Alloc,  //< `box_alloc(value: T) -> box T` - allocates sizeof(`T`), move `value` into it
-			        // and return the owning `box`.
-			Free,   //< `box_free(b: box T)` - release the storage owned by the box.
+			BoxAlloc,  //< `box_alloc(value: T) -> box T` - allocates sizeof(`T`), move `value` into
+			           // it and return the owning `box`.
+			BoxFree,   //< `box_free(b: box T)` - release the storage owned by the box.
+			ListFree,  //< `list_free(l: ref [T])` - release the storage owned by the dynamic array.
 		};
 
-		tsh::AbstractType pointee_type;  // The `T` in `box T`.
-		BoxBuiltin::Kind  kind;
+		// The type argument the builtin is templated on: the `T` in `box T` for
+		// `BoxAlloc`/`BoxFree`, or the element type in `[T]` for `ListFree`.
+		tsh::AbstractType            type;
+		BuiltinTemplatedSymbol::Kind kind;
 
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const;
@@ -255,7 +258,7 @@ namespace compiler::helios::defgen {
 	};
 
 #define GENERATED_SYMBOL_SEMANTICS_LIST                                                           \
-	defgen::Constructor, defgen::Method, defgen::BuiltinOperator, defgen::BoxBuiltin,             \
+	defgen::Constructor, defgen::Method, defgen::BuiltinOperator, defgen::BuiltinTemplatedSymbol, \
 		defgen::Parameter, defgen::SelfParameter, defgen::Field,                                  \
 		defgen::GeneratedFunctionVariable, defgen::ControlFlowLocal,                              \
 		defgen::ReplExpressionWrapper, defgen::ReplInstructionWrapper, defgen::ScriptMainWrapper, \

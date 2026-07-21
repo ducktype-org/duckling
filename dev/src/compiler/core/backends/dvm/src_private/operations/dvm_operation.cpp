@@ -354,8 +354,7 @@ namespace compiler::backend_vm::internal {
 			return NoOperation{};
 		}
 		case ListPush:
-		case ListPop:
-		case ListFree: {
+		case ListPop: {
 			ctx.program_context.getActiveContext().value()->logInt(
 				makeBox<dia_int::NotYetImplementedCodeError>(
 					"Lists are not supported in DVM code generation yet."

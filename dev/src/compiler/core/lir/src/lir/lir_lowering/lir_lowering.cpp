@@ -692,7 +692,9 @@ namespace compiler::lir {
 				}
 				case mir::Operation::DestructIf:
 				case mir::Operation::Destruct: {
-					const auto& to_destruct = mir_instruction.arguments.at(0).get<mir::MIRPlace>();
+					// The MIR destruct instruction carries `{ MIRFunctionLiteral{destructor}, place
+					// }`; the value to destroy is the second argument.
+					const auto& to_destruct = mir_instruction.arguments.at(1).get<mir::MIRPlace>();
 					const auto& type        = to_destruct.type;
 
 					// @TODO: #2825 The whole DestructIf implementation is a stub. Implement it once
@@ -703,11 +705,23 @@ namespace compiler::lir {
 						auto lir_place = getLocation(to_destruct);
 
 						if (lir_place.has_value()) {
+							// Emit a call to the `list_free(l: ref [T])` builtin, which will be
+							// lowered to deallocation by the backend.
+							const auto element_type = type.getType()
+							                              .as<tsh::DynamicArrayAbstractType>()
+							                              .getElementType()
+							                              .getType();
+							const helios::SymID free_sym
+								= helios::listFreeSymForType(ctx, element_type);
+							std::vector<LIRValue> call_args;
+							call_args.emplace_back(getFunctionLiteralfromHELIOSID(ctx, free_sym));
+							call_args.emplace_back(lir_place.value());
+
 							curr_block->instructions.emplace_back(
-								Operation::ListFree,
+								Operation::Call,
 								base::Optional<LIRPlace>{},
-								std::vector{ lir_place.value() },
-								InstructionMetadata{}
+								std::move(call_args),
+								mir_instruction.metadata
 							);
 							break;
 						}
