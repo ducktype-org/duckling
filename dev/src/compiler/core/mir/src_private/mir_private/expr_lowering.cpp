@@ -23,9 +23,9 @@ namespace compiler::mir {
 	/**
 	 * @brief A resolved MIR operation together with the `extra_params` it needs.
 	 * Used by the builtin-operator lowering helpers, since meta operations lower to a single
-	 * `Operation::Meta` parametrized by `MetaParameters`.
+	 * `Operation::MetaTypeOperation` parametrized by `MetaParameters`.
 	 */
-	struct OperationWithParams {
+	struct OperationWithParams final {
 		Operation       operation;
 		InstrParameters params = NoInstrParameters{};
 	};
@@ -309,7 +309,7 @@ namespace compiler::mir {
 				current,
 				hole,
 				Instruction(
-					Operation::Meta,
+					Operation::MetaTypeOperation,
 					{},
 					subtype_values,
 					{},
@@ -758,7 +758,7 @@ namespace compiler::mir {
 					current,
 					ExprLowerRes::Finalizer{ .hole  = hole,
 				                             .instr = Instruction(
-												 Operation::Meta,
+												 Operation::MetaTypeOperation,
 												 {},
 												 element_types,
 												 {},
@@ -837,9 +837,9 @@ namespace compiler::mir {
 				return { Operation::FloatNeq };
 
 			case MetaEq:
-				return { Operation::Meta, MetaParameters{ MetaKind::Eq } };
+				return { Operation::MetaTypeOperation, MetaParameters{ MetaKind::Eq } };
 			case MetaNeq:
-				return { Operation::Meta, MetaParameters{ MetaKind::Neq } };
+				return { Operation::MetaTypeOperation, MetaParameters{ MetaKind::Neq } };
 
 			case BooleanAnd:
 				return { Operation::BooleanAnd };
@@ -860,23 +860,23 @@ namespace compiler::mir {
 			case BooleanNot:
 				return { Operation::BooleanNot };
 			case Box:
-				return { Operation::Meta, MetaParameters{ MetaKind::CreateBox } };
+				return { Operation::MetaTypeOperation, MetaParameters{ MetaKind::CreateBox } };
 			case Ref:
-				return { Operation::Meta, MetaParameters{ MetaKind::CreateRef } };
+				return { Operation::MetaTypeOperation, MetaParameters{ MetaKind::CreateRef } };
 			case Const:
-				return { Operation::Meta, MetaParameters{ MetaKind::CreateConst } };
+				return { Operation::MetaTypeOperation, MetaParameters{ MetaKind::CreateConst } };
 			case Ptr:
-				return { Operation::Meta, MetaParameters{ MetaKind::CreatePtr } };
+				return { Operation::MetaTypeOperation, MetaParameters{ MetaKind::CreatePtr } };
 			case ManyPtr:
-				return { Operation::Meta, MetaParameters{ MetaKind::CreateManyPtr } };
+				return { Operation::MetaTypeOperation, MetaParameters{ MetaKind::CreateManyPtr } };
 			case CPtr:
-				return { Operation::Meta, MetaParameters{ MetaKind::CreateCPtr } };
+				return { Operation::MetaTypeOperation, MetaParameters{ MetaKind::CreateCPtr } };
 			case Slice:
-				return { Operation::Meta, MetaParameters{ MetaKind::CreateSlice } };
+				return { Operation::MetaTypeOperation, MetaParameters{ MetaKind::CreateSlice } };
 			case SizeOf:
-				return { Operation::Meta, MetaParameters{ MetaKind::SizeOf } };
+				return { Operation::MetaTypeOperation, MetaParameters{ MetaKind::SizeOf } };
 			case AlignOf:
-				return { Operation::Meta, MetaParameters{ MetaKind::AlignOf } };
+				return { Operation::MetaTypeOperation, MetaParameters{ MetaKind::AlignOf } };
 			default:
 				CORE_UNREACHABLE();
 			}

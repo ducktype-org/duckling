@@ -276,7 +276,7 @@ namespace compiler::lir {
 			}
 			output << output_value.str() << ' ';
 			std::string op_name{ base::enumToStr(instruction.operation) };
-			if (instruction.operation == Operation::Meta)
+			if (instruction.operation == Operation::MetaTypeOperation)
 				if (const auto* meta_params = std::get_if<MetaParameters>(&instruction.extra_params))
 					op_name += ":" + std::string{ base::enumToStr(meta_params->kind) };
 			output << std::left << std::setw(15);

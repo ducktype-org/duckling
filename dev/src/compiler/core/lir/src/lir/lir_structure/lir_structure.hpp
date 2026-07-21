@@ -88,7 +88,7 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 		Meta type operation. The specific operation is parametrized by `MetaParameters` (a
 		`MetaKind`) stored in the instruction's `extra_params`.
 	*/
-	Meta,
+	MetaTypeOperation,
 
 	BooleanAnd,
 	BooleanOr,
@@ -110,7 +110,7 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 )
 
 /**
- *   @brief The specific kind of a `Operation::Meta` instruction.
+ *   @brief The specific kind of a `Operation::MetaTypeOperation` instruction.
  *   Stored in the instruction's `extra_params` as `MetaParameters`. Mirrors `mir::MetaKind`.
  */
 MAKE_STRINGIFYABLE_ENUM(compiler::lir, u32, MetaKind,
@@ -522,8 +522,8 @@ namespace compiler::lir {
 	};
 
 	/**
-	 * @brief Additional parameters for a `Operation::Meta` instruction, selecting which meta
-	 * operation it is.
+	 * @brief Additional parameters for a `Operation::MetaTypeOperation` instruction, selecting
+	 * which meta operation it is.
 	 */
 	struct MetaParameters final {
 		MetaKind kind;

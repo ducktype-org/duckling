@@ -186,8 +186,8 @@ namespace compiler::lir {
 			return Operation::FloatNeq;
 
 		/// Meta type operations ///
-		case mir::Operation::Meta:
-			return Operation::Meta;
+		case mir::Operation::MetaTypeOperation:
+			return Operation::MetaTypeOperation;
 
 		/// Logic ///
 		case mir::Operation::BooleanAnd:
@@ -236,6 +236,8 @@ namespace compiler::lir {
 			return lir::MetaKind::SizeOf;
 		case AlignOf:
 			return lir::MetaKind::AlignOf;
+		case COUNT:
+			CORE_PANIC("Unknown meta type operation: ", base::enumToStr(kind));
 		}
 		CORE_UNREACHABLE();
 	}
@@ -640,7 +642,7 @@ namespace compiler::lir {
 				case mir::Operation::FloatEq:
 				case mir::Operation::FloatNeq:
 
-				case mir::Operation::Meta:
+				case mir::Operation::MetaTypeOperation:
 
 				case mir::Operation::BooleanAnd:
 				case mir::Operation::BooleanOr:

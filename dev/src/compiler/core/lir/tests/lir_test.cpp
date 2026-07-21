@@ -752,24 +752,25 @@ private:
 				return std::get<compiler::lir::MetaParameters>(instr.extra_params).kind;
 			};
 
-#define CHECK_META_FUNCTION(func_name, kind, arg_size)                   \
-	auto fn = module.lirFunc(func_name);                                 \
-	for (const auto& local: fn->local_list) assert_is_meta_local(local); \
-	const auto& block = fn->block_order[0];                              \
-	const auto& instr = block->instructions[0];                          \
-	ASSERT_TRUE(instr.operation == Meta);                                \
-	ASSERT_TRUE(meta_kind(instr) == kind);                               \
-	ASSERT_EQUAL(instr.arguments.size(), arg_size);
+			auto check_meta_function = [&](const char* func_name, MK kind, usize arg_size) {
+				auto fn = module.lirFunc(func_name);
+				for (const auto& local: fn->local_list) assert_is_meta_local(local);
+				const auto& block = fn->block_order[0];
+				const auto& instr = block->instructions[0];
+				ASSERT_TRUE(instr.operation == MetaTypeOperation);
+				ASSERT_TRUE(meta_kind(instr) == kind);
+				ASSERT_EQUAL(instr.arguments.size(), arg_size);
+			};
 
-			{ CHECK_META_FUNCTION("createBox", MK::CreateBox, 1); }
-			{ CHECK_META_FUNCTION("createRef", MK::CreateRef, 1); }
-			{ CHECK_META_FUNCTION("createConst", MK::CreateConst, 1); }
-			{ CHECK_META_FUNCTION("createPtr", MK::CreatePtr, 1); }
-			{ CHECK_META_FUNCTION("createCPtr", MK::CreateCPtr, 1); }
-			{ CHECK_META_FUNCTION("createManyPtr", MK::CreateManyPtr, 1); }
-			{ CHECK_META_FUNCTION("createSlice", MK::CreateSlice, 1); }
-			{ CHECK_META_FUNCTION("createVariant", MK::CreateVariant, 4); }
-			{ CHECK_META_FUNCTION("createTuple", MK::CreateTuple, 4); }
+			check_meta_function("createBox", MK::CreateBox, 1);
+			check_meta_function("createRef", MK::CreateRef, 1);
+			check_meta_function("createConst", MK::CreateConst, 1);
+			check_meta_function("createPtr", MK::CreatePtr, 1);
+			check_meta_function("createCPtr", MK::CreateCPtr, 1);
+			check_meta_function("createManyPtr", MK::CreateManyPtr, 1);
+			check_meta_function("createSlice", MK::CreateSlice, 1);
+			check_meta_function("createVariant", MK::CreateVariant, 4);
+			check_meta_function("createTuple", MK::CreateTuple, 4);
 
 			{
 				auto mega_type = module.lirFunc("megaType");
@@ -779,9 +780,10 @@ private:
 				int  create_tuple_count   = 0;
 				bool call_found           = false;
 				for (const auto& instr: mega_type->block_order[0]->instructions)
-					if (instr.operation == Meta && meta_kind(instr) == MK::CreateTuple)
+					if (instr.operation == MetaTypeOperation && meta_kind(instr) == MK::CreateTuple)
 						create_tuple_count++;
-					else if (instr.operation == Meta && meta_kind(instr) == MK::CreateVariant)
+					else if (instr.operation == MetaTypeOperation
+					         && meta_kind(instr) == MK::CreateVariant)
 						create_variant_count++;
 					else if (instr.operation == Call)
 						call_found = true;

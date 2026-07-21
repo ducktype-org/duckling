@@ -146,7 +146,7 @@ namespace compiler::mir {
 		os << " ";
 
 		std::string op_name{ base::enumToStr(operation) };
-		if (operation == Operation::Meta)
+		if (operation == Operation::MetaTypeOperation)
 			if (const auto* meta_params = std::get_if<MetaParameters>(&extra_params))
 				op_name += ":" + std::string{ base::enumToStr(meta_params->kind) };
 		os << std::left << std::setw(15);

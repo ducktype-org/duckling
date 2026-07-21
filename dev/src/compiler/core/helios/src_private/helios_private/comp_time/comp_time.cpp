@@ -32,6 +32,7 @@
 
 #include <cmath>
 #include <concepts>
+#include <optional>
 #include <ranges>
 #include <type_traits>
 #include <unordered_set>
@@ -110,39 +111,44 @@ namespace compiler::helios {
 				result = CompileTimeValue{ expr.value_type };
 			}
 
-			void visitCallExpr(const code::CallExpr& expr) final {
-				// Short path for the `size_of` / `alignment_of` builtins: evaluate the (single) type
-				// argument and read its layout directly, instead of falling back to VM evaluation.
+			/**
+			 * @brief Short path for the `size_of` / `alignment_of` builtins: evaluate the (single)
+			 * type argument and read its layout directly, instead of falling back to VM evaluation.
+			 * @return The evaluated result (or a `Failed` error) when the call matched a short-path
+			 * builtin, or `std::nullopt` when the call should fall back to VM evaluation.
+			 */
+			std::optional<TreeEvalResult> tryShortPathCall(const code::CallExpr& expr) {
 				const auto callee_sym = getIdentifierExprSymID(expr.callee.ref());
-				if (callee_sym.has_value()) {
-					const auto builtin = isBuiltin(callee_sym.value());
-					if (builtin.has_value()
-					    && (builtin.value() == BuiltinKind::SizeOf
-					        || builtin.value() == BuiltinKind::AlignmentOf)) {
-						CORE_ASSERT(
-							expr.arguments.size() == 1,
-							"size_of / alignment_of expect exactly one argument"
-						);
+				if (!callee_sym.has_value()) return std::nullopt;
 
-						auto arg_res = evalHoutExpr(ctx, expr.arguments.at(0).ref());
-						if (arg_res.hasFailed()) {
-							result = query::Failed();
-							return;
-						}
+				const auto builtin = isBuiltin(callee_sym.value());
+				if (!builtin.has_value()
+				    || (builtin.value() != BuiltinKind::SizeOf
+				        && builtin.value() != BuiltinKind::AlignmentOf))
+					return std::nullopt;
 
-						const auto  type = arg_res.valueOrThrow().get<tsh::SymbolType<>>().value();
-						const auto& layout
-							= ctx.query<tsl::QuerySymbolTypeLayout>(type)->valueOrThrow();
+				CORE_ASSERT(
+					expr.arguments.size() == 1, "size_of / alignment_of expect exactly one argument"
+				);
 
-						const i64 value = (builtin.value() == BuiltinKind::SizeOf)
-						                    ? base::safeIntConv<i64>(
-												  base::bits2bytesRoundUp(layout.getSize()).asInt()
-											  )
-						                    : base::safeIntConv<i64>(layout.getAlignment().asInt());
+				auto arg_res = evalHoutExpr(ctx, expr.arguments.at(0).ref());
+				if (arg_res.hasFailed()) return TreeEvalResult{ query::Failed() };
 
-						result = CompileTimeValue{ NumericValue{ value } };
-						return;
-					}
+				const auto  type   = arg_res.valueOrThrow().get<tsh::SymbolType<>>().value();
+				const auto& layout = ctx.query<tsl::QuerySymbolTypeLayout>(type)->valueOrThrow();
+
+				const i64 value
+					= (builtin.value() == BuiltinKind::SizeOf)
+				        ? base::safeIntConv<i64>(base::bits2bytesRoundUp(layout.getSize()).asInt())
+				        : base::safeIntConv<i64>(layout.getAlignment().asInt());
+
+				return TreeEvalResult{ CompileTimeValue{ NumericValue{ value } } };
+			}
+
+			void visitCallExpr(const code::CallExpr& expr) final {
+				if (auto short_path = tryShortPathCall(expr)) {
+					result = std::move(*short_path);
+					return;
 				}
 
 				result = CouldNotShortPath{};

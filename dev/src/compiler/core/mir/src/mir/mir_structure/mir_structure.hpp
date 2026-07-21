@@ -84,7 +84,7 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 		The specific meta operation is parametrized by `MetaParameters` (a `MetaKind`) stored in the
 		instruction's `extra_params`.
 	*/
-	Meta,
+	MetaTypeOperation,
 
 	/** Cast is also parametrized by the source type and the target type */
 	Cast,
@@ -112,7 +112,7 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 )
 
 /**
-    @brief The specific kind of a `Operation::Meta` instruction.
+    @brief The specific kind of a `Operation::MetaTypeOperation` instruction.
     Stored in the instruction's `extra_params` as `MetaParameters`. Each kind maps to a compile-time
     type operation lowered by the DVM backend to extern-C `comptime_*` calls.
 */
@@ -654,8 +654,8 @@ namespace compiler::mir {
 	};
 
 	/**
-	 * @brief Additional parameters for a `Operation::Meta` instruction, selecting which meta
-	 * operation it is.
+	 * @brief Additional parameters for a `Operation::MetaTypeOperation` instruction, selecting
+	 * which meta operation it is.
 	 */
 	struct MetaParameters final {
 		MetaKind kind;
