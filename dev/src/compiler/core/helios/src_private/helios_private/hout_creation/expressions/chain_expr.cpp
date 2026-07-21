@@ -133,7 +133,7 @@ namespace compiler::helios::code {
 	}
 
 	/**
-	 * This this temporary helper used before #3095 and before #3112
+	 * This is temporary helper used before #3095 and before #3112
 	 *
 	 * @TODO: #3095 remove or adjust it, move the relevant code to the handling of the new :{} PST
 	 * node.
