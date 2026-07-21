@@ -14,8 +14,13 @@ pub mod ops;
 pub mod package_id;
 pub mod paths;
 pub mod venv;
+use std::fs::DirEntry;
+
 pub use ops::*;
 pub mod venv_id;
+
+/// Type of an iterator over contents of a directory.
+pub type DirContentsIterator = Box<dyn Iterator<Item = Result<DirEntry, std::io::Error>>>;
 
 #[cfg(test)]
 mod tests;

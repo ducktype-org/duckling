@@ -56,7 +56,7 @@ pub fn sync(
         .storage_path()?
         .map(Path::to_path_buf)
         .unwrap_or_else(|| pcx.ctx().default_storage_root().into_not_locked_path());
-    let storage = Storage::new(storage_localization)?;
+    let storage = Storage::new(storage_localization);
     let mut fetcher = Fetcher::new(pcx.ctx())?;
     let mut git_access = StorageGitAccess::new(&storage);
     let expose_freezefile = venv_config.is_freezefile_exposed()?;

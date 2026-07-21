@@ -88,7 +88,7 @@ fn setup_mock_venv(
     data_mutator: impl FnOnce(&mut VenvData),
     ctx: &DuckContext,
 ) {
-    let storage = Storage::new(root).unwrap();
+    let storage = Storage::new(root);
     let mut basic_freeze = VenvFreeze::new(
         RootPackage::new(name.into(), Version::new(1, 0, 0), vec![], vec![]),
         vec![],

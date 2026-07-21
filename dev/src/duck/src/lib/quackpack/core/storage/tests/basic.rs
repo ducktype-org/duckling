@@ -261,7 +261,7 @@ fn assert_can_load_after_save(venv: &Venv, storage: &Storage, ctx: &DuckContext)
 fn save_trims_files() {
     let (ctx, _home, _root) = setup_mock_storage();
     let id = "root1".to_venv_id();
-    let storage = Storage::new(ctx.default_storage_root().into_not_locked_path()).unwrap();
+    let storage = Storage::new(ctx.default_storage_root().into_not_locked_path());
     let mut venv = Venv::fix_and_load(&storage, id, &ctx)
         .expect("an error occurred")
         .expect("failed to load venv");

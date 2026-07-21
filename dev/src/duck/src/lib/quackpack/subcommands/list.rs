@@ -64,7 +64,7 @@ pub fn list(opts: ListOptions<'_>) -> QuackResult<()> {
         reverse_order,
         storage,
     } = opts;
-    let storage = Storage::new(storage)?;
+    let storage = Storage::new(storage);
     let venvs_list: Vec<(Venv, SystemTime)> = list_venvs(storage.root(), ctx)
         .context("when listing the venvs")?
         .into_values()
