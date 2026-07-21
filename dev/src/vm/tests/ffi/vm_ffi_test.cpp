@@ -35,8 +35,6 @@ public:
 		TESTER_ADD_TEST(cptrRawReadWrite);
 		TESTER_ADD_TEST(cptrStructField);
 		TESTER_ADD_TEST(cptrCopyIntoStructField);
-		TESTER_ADD_TEST(cptrCopySizeTooLargeFails);
-		TESTER_ADD_TEST(cptrReadSizeTooLargeFails);
 		TESTER_ADD_TEST(cptrNullTypedLoadFails);
 		TESTER_ADD_TEST(cptrNullRawReadFails);
 		TESTER_ADD_TEST(cptrNullCompare);
@@ -50,6 +48,10 @@ public:
 		TESTER_ADD_TEST(cptrStorePackedPointeeFails);
 		TESTER_ADD_TEST(cptrReadIntoPointerPointeeFails);
 		TESTER_ADD_TEST(cptrWriteFromPointerPointeeFails);
+		TESTER_ADD_TEST(cptrArrayReadWriteRoundTrip);
+		TESTER_ADD_TEST(cptrArrayCountTooLargeFails);
+		TESTER_ADD_TEST(cptrArrayNonTablePointeeFails);
+		TESTER_ADD_TEST(cptrArrayPointerElementFails);
 		TESTER_ADD_TEST(cptrAddOffsetAcrossTypesFails);
 		TESTER_ADD_TEST(cptrCopyBuiltinsRemoved);
 		TESTER_ADD_TEST(floatArgsAndReturn);
@@ -193,13 +195,11 @@ private:
 				  "    mov_p64_imm v, 555;\n"
 				  "    init_pany_type vp, ptr_i64;\n"
 				  "    ref_pptr_pany vp, v;\n"
-				  "    init_pany_type sz, i64;\n"
-				  "    mov_p64_imm sz, 8;\n"
-				  "    cptrWrite_pcpt_pptr_p64 buf, vp, sz;\n"
+				  "    cptrWrite_pcpt_pptr buf, vp;\n"
 				  "    init_pany_type out, i64;\n"
 				  "    init_pany_type op, ptr_i64;\n"
 				  "    ref_pptr_pany op, out;\n"
-				  "    cptrRead_pptr_pcpt_p64 op, buf, sz;\n"
+				  "    cptrRead_pptr_pcpt op, buf;\n"
 				  "    output_p64 out;\n"
 				  "    init_pany_type buf_f, cptr;\n"
 				  "    mov_pcpt_pcpt buf_f, buf;\n"
@@ -247,8 +247,8 @@ private:
 		);
 	}
 
-	// A mid-block pointer (here: a struct field) is a valid copy destination as long as the
-	// explicit byte count fits within the block.
+	// A mid-block pointer (here: a struct field) is a valid copy destination; the copy is
+	// bounded by the field's own type.
 	void cptrCopyIntoStructField() {
 		runProgram(
 			"copy_into_field",
@@ -268,9 +268,7 @@ private:
 				  "    init_pany_type s, Pair;\n"
 				  "    init_pany_type bp, ptr_i64;\n"
 				  "    structLea_pptr_pste_field bp, s, Pair.b;\n"
-				  "    init_pany_type sz, i64;\n"
-				  "    mov_p64_imm sz, 8;\n"
-				  "    cptrRead_pptr_pcpt_p64 bp, buf, sz;\n"
+				  "    cptrRead_pptr_pcpt bp, buf;\n"
 				  "    init_pany_type out, i64;\n"
 				  "    structLoad_pany_pste_field out, s, Pair.b;\n"
 				  "    output_p64 out;\n"
@@ -280,61 +278,6 @@ private:
 				  "    ret;\n"
 				  "}\n",
 			"4242"
-		);
-	}
-
-	// A byte count reaching past the end of the pointed-to block must raise a runtime
-	// exception. The pointer targets the last field of the struct, so 16 bytes overflow it.
-	void cptrCopySizeTooLargeFails() {
-		auto pid = initProcess();
-		auto file = writeTempDbc(
-			"copy_too_large",
-			ffiObjectHeader()
-				+ "type data: Pair { a: i64, b: i64 }\n"
-				  "ffi function ffi_alloc8 { } -> { cptr };\n"
-				  "function main { i64, ptr_argv } -> { i64 } {\n"
-				  "    init_pany_type buf, cptr;\n"
-				  "    call_ffifunc ffi_alloc8;\n"
-				  "    init_pany_type s, Pair;\n"
-				  "    init_pany_type bp, ptr_i64;\n"
-				  "    structLea_pptr_pste_field bp, s, Pair.b;\n"
-				  "    init_pany_type sz, i64;\n"
-				  "    mov_p64_imm sz, 16;\n"
-				  "    cptrWrite_pcpt_pptr_p64 buf, bp, sz;\n"
-				  "    ret;\n"
-				  "}\n"
-		);
-		auto load = vm::api::loadFiles(pid, { file });
-		if (!load.has_value()) fail(nlohmann::json(load.error()).dump());
-		assertExecutionPanickedWith(
-			runTestOnVmGetResult(pid), "copy region exceeds the pointed-to block"
-		);
-	}
-
-	// The read-direction mirror of cptrCopySizeTooLargeFails.
-	void cptrReadSizeTooLargeFails() {
-		auto pid = initProcess();
-		auto file = writeTempDbc(
-			"read_too_large",
-			ffiObjectHeader()
-				+ "type data: Pair { a: i64, b: i64 }\n"
-				  "ffi function ffi_alloc8 { } -> { cptr };\n"
-				  "function main { i64, ptr_argv } -> { i64 } {\n"
-				  "    init_pany_type buf, cptr;\n"
-				  "    call_ffifunc ffi_alloc8;\n"
-				  "    init_pany_type s, Pair;\n"
-				  "    init_pany_type bp, ptr_i64;\n"
-				  "    structLea_pptr_pste_field bp, s, Pair.b;\n"
-				  "    init_pany_type sz, i64;\n"
-				  "    mov_p64_imm sz, 16;\n"
-				  "    cptrRead_pptr_pcpt_p64 bp, buf, sz;\n"
-				  "    ret;\n"
-				  "}\n"
-		);
-		auto load = vm::api::loadFiles(pid, { file });
-		if (!load.has_value()) fail(nlohmann::json(load.error()).dump());
-		assertExecutionPanickedWith(
-			runTestOnVmGetResult(pid), "cptrRead: copy region exceeds the pointed-to block"
 		);
 	}
 
@@ -366,9 +309,7 @@ private:
 			"    init_pany_type out, i64;\n"
 			"    init_pany_type op, ptr_i64;\n"
 			"    ref_pptr_pany op, out;\n"
-			"    init_pany_type sz, i64;\n"
-			"    mov_p64_imm sz, 8;\n"
-			"    cptrRead_pptr_pcpt_p64 op, c, sz;\n"
+			"    cptrRead_pptr_pcpt op, c;\n"
 			"    ret;\n"
 			"}\n"
 		);
@@ -1265,9 +1206,7 @@ private:
 			"function main { i64, ptr_argv } -> { i64 } {\n"
 			"    init_pany_type c, cptr;\n"
 			"    init_pany_type hp, HolderPtr;\n"
-			"    init_pany_type sz, i64;\n"
-			"    mov_p64_imm sz, 16;\n"
-			"    cptrRead_pptr_pcpt_p64 hp, c, sz;\n"
+			"    cptrRead_pptr_pcpt hp, c;\n"
 			"    ret;\n"
 			"}\n",
 			{ "trivially copyable" }
@@ -1283,9 +1222,125 @@ private:
 			"function main { i64, ptr_argv } -> { i64 } {\n"
 			"    init_pany_type c, cptr;\n"
 			"    init_pany_type hp, HolderPtr;\n"
-			"    init_pany_type sz, i64;\n"
-			"    mov_p64_imm sz, 16;\n"
-			"    cptrWrite_pcpt_pptr_p64 c, hp, sz;\n"
+			"    cptrWrite_pcpt_pptr c, hp;\n"
+			"    ret;\n"
+			"}\n",
+			{ "trivially copyable" }
+		);
+	}
+
+	// A dynamic table round trip through native memory: write two elements out with
+	// cptrWriteArray, read them back into a second table with cptrReadArray.
+	void cptrArrayReadWriteRoundTrip() {
+		runProgram(
+			"cptr_array_roundtrip",
+			ffiObjectHeader()
+				+ "type dynamic_table: dyn_i64 i64\n"
+				  "type pointer: pdyn dyn_i64\n"
+				  "ffi function ffi_alloc { i64 } -> { cptr };\n"
+				  "ffi function ffi_free { cptr } -> { };\n"
+				  "function main { i64, ptr_argv } -> { i64 } {\n"
+				  "    init_pany_type src, pdyn;\n"
+				  "    init_pany_type n, i64;\n"
+				  "    mov_p64_imm n, 2;\n"
+				  "    dynTableReAlloc_pptr_type_p64 src, dyn_i64, n;\n"
+				  "    init_pany_type v, i64;\n"
+				  "    init_pany_type idx, i64;\n"
+				  "    mov_p64_imm v, 40;\n"
+				  "    mov_p64_imm idx, 0;\n"
+				  "    dynTableStore_pptr_pany_p64 src, v, idx;\n"
+				  "    mov_p64_imm v, 2;\n"
+				  "    mov_p64_imm idx, 1;\n"
+				  "    dynTableStore_pptr_pany_p64 src, v, idx;\n"
+				  "    init_pany_type buf, cptr;\n"
+				  "    init_pany_type bytes, i64;\n"
+				  "    mov_p64_imm bytes, 16;\n"
+				  "    call_ffifunc ffi_alloc;\n"
+				  "    cptrWriteArray_pcpt_pptr_p64 buf, src, n;\n"
+				  "    init_pany_type dst, pdyn;\n"
+				  "    dynTableReAlloc_pptr_type_p64 dst, dyn_i64, n;\n"
+				  "    cptrReadArray_pptr_pcpt_p64 dst, buf, n;\n"
+				  "    init_pany_type x0, i64;\n"
+				  "    mov_p64_imm idx, 0;\n"
+				  "    dynTableLoad_pany_pptr_p64 x0, dst, idx;\n"
+				  "    init_pany_type x1, i64;\n"
+				  "    mov_p64_imm idx, 1;\n"
+				  "    dynTableLoad_pany_pptr_p64 x1, dst, idx;\n"
+				  "    add_p64_p64 x0, x1;\n"
+				  "    output_p64 x0;\n"
+				  "    init_pany_type buf_f, cptr;\n"
+				  "    mov_pcpt_pcpt buf_f, buf;\n"
+				  "    call_ffifunc ffi_free;\n"
+				  "    free_pptr src;\n"
+				  "    free_pptr dst;\n"
+				  "    ret;\n"
+				  "}\n",
+			"42"
+		);
+	}
+
+	// An element count larger than the table's current size must raise a runtime exception
+	// instead of copying past the table.
+	void cptrArrayCountTooLargeFails() {
+		auto pid = initProcess();
+		auto file = writeTempDbc(
+			"cptr_array_too_large",
+			ffiObjectHeader()
+				+ "type dynamic_table: dyn_i64 i64\n"
+				  "type pointer: pdyn dyn_i64\n"
+				  "ffi function ffi_alloc { i64 } -> { cptr };\n"
+				  "function main { i64, ptr_argv } -> { i64 } {\n"
+				  "    init_pany_type src, pdyn;\n"
+				  "    init_pany_type n, i64;\n"
+				  "    mov_p64_imm n, 2;\n"
+				  "    dynTableReAlloc_pptr_type_p64 src, dyn_i64, n;\n"
+				  "    init_pany_type buf, cptr;\n"
+				  "    init_pany_type bytes, i64;\n"
+				  "    mov_p64_imm bytes, 24;\n"
+				  "    call_ffifunc ffi_alloc;\n"
+				  "    init_pany_type n2, i64;\n"
+				  "    mov_p64_imm n2, 3;\n"
+				  "    cptrWriteArray_pcpt_pptr_p64 buf, src, n2;\n"
+				  "    ret;\n"
+				  "}\n"
+		);
+		auto load = vm::api::loadFiles(pid, { file });
+		if (!load.has_value()) fail(nlohmann::json(load.error()).dump());
+		assertExecutionPanickedWith(
+			runTestOnVmGetResult(pid), "cptrWriteArray: element count exceeds the table size"
+		);
+	}
+
+	// The array copies only work on a pointer to a dynamic table.
+	void cptrArrayNonTablePointeeFails() {
+		expectLoadError(
+			"array_non_table_pointee",
+			"function main { i64, ptr_argv } -> { i64 } {\n"
+			"    init_pany_type c, cptr;\n"
+			"    init_pany_type v, i64;\n"
+			"    init_pany_type vp, ptr_i64;\n"
+			"    ref_pptr_pany vp, v;\n"
+			"    init_pany_type n, i64;\n"
+			"    mov_p64_imm n, 1;\n"
+			"    cptrReadArray_pptr_pcpt_p64 vp, c, n;\n"
+			"    ret;\n"
+			"}\n",
+			{ "must point to a dynamic table" }
+		);
+	}
+
+	// A table of VM pointers must not cross the native boundary.
+	void cptrArrayPointerElementFails() {
+		expectLoadError(
+			"array_pointer_element",
+			"type dynamic_table: dyn_ptr ptr_i64\n"
+			"type pointer: pdynp dyn_ptr\n"
+			"function main { i64, ptr_argv } -> { i64 } {\n"
+			"    init_pany_type c, cptr;\n"
+			"    init_pany_type t, pdynp;\n"
+			"    init_pany_type n, i64;\n"
+			"    mov_p64_imm n, 1;\n"
+			"    cptrWriteArray_pcpt_pptr_p64 c, t, n;\n"
 			"    ret;\n"
 			"}\n",
 			{ "trivially copyable" }

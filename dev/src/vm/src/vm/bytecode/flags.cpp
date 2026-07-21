@@ -546,16 +546,26 @@ namespace vm::code {
 				rd(i.dst_ptr);
 				rd(i.src);
 			}
-			instr_case(ins::Op_cptrRead_pptr_pcpt_p64, i) {
+			instr_case(ins::Op_cptrRead_pptr_pcpt, i) {
 				rd(i.dst_ptr);
 				rd(i.src_ptr);
-				rd(i.size);
 				deref_write();
 			}
-			instr_case(ins::Op_cptrWrite_pcpt_pptr_p64, i) {
+			instr_case(ins::Op_cptrWrite_pcpt_pptr, i) {
 				rd(i.dst_ptr);
 				rd(i.src_ptr);
-				rd(i.size);
+				deref_read();
+			}
+			instr_case(ins::Op_cptrReadArray_pptr_pcpt_p64, i) {
+				rd(i.dst_ptr);
+				rd(i.src_ptr);
+				rd(i.element_count);
+				deref_write();
+			}
+			instr_case(ins::Op_cptrWriteArray_pcpt_pptr_p64, i) {
+				rd(i.dst_ptr);
+				rd(i.src_ptr);
+				rd(i.element_count);
 				deref_read();
 			}
 			instr_case(ins::Op_cptrCast_pcpt_pcpt, i) {

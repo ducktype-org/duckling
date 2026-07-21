@@ -676,16 +676,32 @@ DEF_MICRO_INSTR(cptrLoad_bany_p64, vm::low::opargs::PlaceBlockAny, vm::low::opar
 DEF_MICRO_INSTR(cptrStore_p64_bany, vm::low::opargs::Place64, vm::low::opargs::PlaceBlockAny)
 /**
  * @brief Copies raw bytes from the native memory addressed by the cpointer to the VM memory
- * under the pointer; the VM side is bounds-checked. Requires a `ext_p64` next (the byte count).
+ * under the pointer; the VM side is bounds-checked. Requires an `ext_imm` next (the byte
+ * count, fixed at lowering time from the pointer's pointee type).
  * @note Unoptimizable by JIT, listed in dev/scripts/py/jit/jitable_interface.py.
  */
 DEF_MICRO_INSTR(cptrRead_pptr_p64, vm::low::opargs::PlacePtr, vm::low::opargs::Place64)
 /**
  * @brief Copies raw bytes from the VM memory under the pointer to the native memory addressed
- * by the cpointer; the VM side is bounds-checked. Requires a `ext_p64` next (the byte count).
+ * by the cpointer; the VM side is bounds-checked. Requires an `ext_imm` next (the byte count,
+ * fixed at lowering time from the pointer's pointee type).
  * @note Unoptimizable by JIT, listed in dev/scripts/py/jit/jitable_interface.py.
  */
 DEF_MICRO_INSTR(cptrWrite_p64_pptr, vm::low::opargs::Place64, vm::low::opargs::PlacePtr)
+/**
+ * @brief Copies elements from the native memory addressed by the cpointer into the dynamic
+ * table under the pointer; the element count is checked against the table size. Requires an
+ * `ext_p64_type` next (the element count and the element type).
+ * @note Unoptimizable by JIT, listed in dev/scripts/py/jit/jitable_interface.py.
+ */
+DEF_MICRO_INSTR(cptrReadArray_pptr_p64, vm::low::opargs::PlacePtr, vm::low::opargs::Place64)
+/**
+ * @brief Copies elements from the dynamic table under the pointer to the native memory
+ * addressed by the cpointer; the element count is checked against the table size. Requires an
+ * `ext_p64_type` next (the element count and the element type).
+ * @note Unoptimizable by JIT, listed in dev/scripts/py/jit/jitable_interface.py.
+ */
+DEF_MICRO_INSTR(cptrWriteArray_p64_pptr, vm::low::opargs::Place64, vm::low::opargs::PlacePtr)
 /**
  * @brief Byte-wise cpointer arithmetic: dst = src + offset. Requires a `ext_p64` next (the
  * byte offset).

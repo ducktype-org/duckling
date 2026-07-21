@@ -31,6 +31,8 @@ def nonjitable(func_name: str) -> bool:
         "cptrStore_p64_bany",
         "cptrRead_pptr_p64",
         "cptrWrite_p64_pptr",
+        "cptrReadArray_pptr_p64",
+        "cptrWriteArray_p64_pptr",
         "cptrAddOffset_p64_p64"
     ]
 

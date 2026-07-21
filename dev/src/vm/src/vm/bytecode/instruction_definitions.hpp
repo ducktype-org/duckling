@@ -558,8 +558,8 @@ DEF_INSTR(strOutput_pptr, (vm::opargs::PlacePtr, string_ptr))
 // ========= CPOINTER OPERATIONS ========
 // Operations on raw C pointers (native addresses obtained via FFI). The native side of these
 // copies is unchecked by design - the program is trusted for the native address. On the VM side
-// the typed variants are pinned to the pointee type by the validator, and the raw copies are
-// bounds-checked at runtime.
+// every copy is bounded by the pointed-to type: the value copies by the pointee's size, and the
+// array copies by the dynamic table's element count (checked at runtime).
 
 /**
  * @brief Copies `sizeof(pointee)` bytes from the native memory addressed by `src_ptr` into
@@ -576,27 +576,43 @@ DEF_INSTR(cptrLoad_pany_pcpt, (vm::opargs::PlaceAny, dst), (vm::opargs::PlaceCpt
 DEF_INSTR(cptrStore_pcpt_pany, (vm::opargs::PlaceCptr, dst_ptr), (vm::opargs::PlaceAny, src))
 
 /**
- * @brief Copies `size` raw bytes from the native memory addressed by `src_ptr` to the VM
- * memory pointed to by `dst_ptr`. Works with any cpointer; `dst_ptr`'s pointee must be
- * trivially copyable, and the VM side is bounds-checked at runtime.
+ * @brief Copies `sizeof(dst_ptr's pointee)` raw bytes from the native memory addressed by
+ * `src_ptr` to the VM memory pointed to by `dst_ptr`. Works with any cpointer; the byte count
+ * is fixed by the VM pointer's pointee type, which must be trivially copyable, so the copy can
+ * never run past the pointed-to value into neighboring VM data.
+ */
+DEF_INSTR(cptrRead_pptr_pcpt, (vm::opargs::PlacePtr, dst_ptr), (vm::opargs::PlaceCptr, src_ptr))
+
+/**
+ * @brief Copies `sizeof(src_ptr's pointee)` raw bytes from the VM memory pointed to by
+ * `src_ptr` to the native memory addressed by `dst_ptr`. Works with any cpointer; the byte
+ * count is fixed by the VM pointer's pointee type, which must be trivially copyable.
+ */
+DEF_INSTR(cptrWrite_pcpt_pptr, (vm::opargs::PlaceCptr, dst_ptr), (vm::opargs::PlacePtr, src_ptr))
+
+/**
+ * @brief Copies `element_count` elements from the native memory addressed by `src_ptr` into
+ * the dynamic table pointed to by `dst_ptr`. The table's element type must be trivially
+ * copyable; `element_count` is checked against the table's element count at runtime, so the
+ * copy can never run past the table.
  */
 DEF_INSTR(
-	cptrRead_pptr_pcpt_p64,
+	cptrReadArray_pptr_pcpt_p64,
 	(vm::opargs::PlacePtr, dst_ptr),
 	(vm::opargs::PlaceCptr, src_ptr),
-	(vm::opargs::Place64, size)
+	(vm::opargs::Place64, element_count)
 )
 
 /**
- * @brief Copies `size` raw bytes from the VM memory pointed to by `src_ptr` to the native
- * memory addressed by `dst_ptr`. Works with any cpointer; `src_ptr`'s pointee must be
- * trivially copyable, and the VM side is bounds-checked at runtime.
+ * @brief Copies `element_count` elements from the dynamic table pointed to by `src_ptr` to
+ * the native memory addressed by `dst_ptr`. The table's element type must be trivially
+ * copyable; `element_count` is checked against the table's element count at runtime.
  */
 DEF_INSTR(
-	cptrWrite_pcpt_pptr_p64,
+	cptrWriteArray_pcpt_pptr_p64,
 	(vm::opargs::PlaceCptr, dst_ptr),
 	(vm::opargs::PlacePtr, src_ptr),
-	(vm::opargs::Place64, size)
+	(vm::opargs::Place64, element_count)
 )
 
 /**

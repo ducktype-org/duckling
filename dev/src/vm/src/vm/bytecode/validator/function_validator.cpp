@@ -710,19 +710,41 @@ class FunctionValidator {
 				if (getPlaceType(instr.src, current_stack)->getID() != *cpointer->inner)
 					throw CPtrPointeeMismatchError(instr);
 			}
-			// The raw byte copies work through any cpointer (the VM side is bounds-checked at
-			// runtime), but the VM-side pointee must be trivially copyable, so raw native bytes
+			// The raw byte copies work through any cpointer; the byte count is the VM pointer's
+			// pointee size, and the pointee must be trivially copyable, so raw native bytes
 			// never overwrite (or leak) VM-managed data.
-			instr_case(Op_cptrRead_pptr_pcpt_p64, instr) {
+			instr_case(Op_cptrRead_pptr_pcpt, instr) {
 				const auto pointer = getPlaceType(instr.dst_ptr, current_stack)
 				                         ->getKindAs<valid_type::finalized::Pointer>();
 				if (!types_ctx.at(pointer->inner)->isTriviallyCopyable())
 					throw CPtrRawCopyPointeeError(instr);
 			}
-			instr_case(Op_cptrWrite_pcpt_pptr_p64, instr) {
+			instr_case(Op_cptrWrite_pcpt_pptr, instr) {
 				const auto pointer = getPlaceType(instr.src_ptr, current_stack)
 				                         ->getKindAs<valid_type::finalized::Pointer>();
 				if (!types_ctx.at(pointer->inner)->isTriviallyCopyable())
+					throw CPtrRawCopyPointeeError(instr);
+			}
+			// The array copies work on a dynamic table with a trivially copyable element type;
+			// the element count is checked against the table's size at runtime.
+			instr_case(Op_cptrReadArray_pptr_pcpt_p64, instr) {
+				const auto pointer = getPlaceType(instr.dst_ptr, current_stack)
+				                         ->getKindAs<valid_type::finalized::Pointer>();
+				const auto table
+					= expectPointerType<valid_type::finalized::DynamicTable, CPtrArrayCopyPointeeError>(
+						pointer, types_ctx, instr
+					);
+				if (!types_ctx.at(table->inner)->isTriviallyCopyable())
+					throw CPtrRawCopyPointeeError(instr);
+			}
+			instr_case(Op_cptrWriteArray_pcpt_pptr_p64, instr) {
+				const auto pointer = getPlaceType(instr.src_ptr, current_stack)
+				                         ->getKindAs<valid_type::finalized::Pointer>();
+				const auto table
+					= expectPointerType<valid_type::finalized::DynamicTable, CPtrArrayCopyPointeeError>(
+						pointer, types_ctx, instr
+					);
+				if (!types_ctx.at(table->inner)->isTriviallyCopyable())
 					throw CPtrRawCopyPointeeError(instr);
 			}
 			// A cast converts any cpointer to any other - the generic argument validation

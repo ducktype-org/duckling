@@ -946,7 +946,7 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(cptrRead_pptr_p64)(FUNCTION_ARGS) {
 		{
-			const auto size = READ_FROM_PLACE_ARG(u64, instr[1].arg0);
+			const auto size = instr[1].arg0;
 			const auto dst  = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
 			const auto src  = READ_FROM_PLACE_ARG(u64, instr->arg1);
 			assertCptrNotNull(src);
@@ -960,7 +960,7 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(cptrWrite_p64_pptr)(FUNCTION_ARGS) {
 		{
-			const auto size = READ_FROM_PLACE_ARG(u64, instr[1].arg0);
+			const auto size = instr[1].arg0;
 			const auto dst  = READ_FROM_PLACE_ARG(u64, instr->arg0);
 			const auto src  = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
 			assertCptrNotNull(dst);
@@ -968,6 +968,69 @@ namespace vm {
 			assertCptrCopyWithinBlock(src, size, view.size(), "cptrWrite");
 			// NOLINTNEXTLINE(performance-no-int-to-ptr): a cpointer is a raw native address.
 			std::memcpy(reinterpret_cast<void*>(dst), view.getBegin() + src.getOffset(), size);
+		}
+		FUNCTION_CONT(2);
+	}
+
+	/**
+	 * @brief The element count of a C pointer array copy must not exceed the table's element
+	 * count (a dynamic table's block holds exactly its elements). Division instead of
+	 * `count * elem_size` keeps a huge count from wrapping past the check.
+	 */
+	inline void assertCptrArrayWithinTable(
+		const Pointer& ptr, u64 count, u64 elem_size, usize block_size, const char* instr_name
+	) {
+		const usize available = ptr.getOffset() > block_size ? 0 : block_size - ptr.getOffset();
+		if (elem_size == 0 || count > available / elem_size)
+			throw vm::exceptions::VMRuntimeException(
+				base::strConcat(instr_name, ": element count exceeds the table size")
+			);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(cptrReadArray_pptr_p64)(FUNCTION_ARGS) {
+		{
+			const auto count     = READ_FROM_PLACE_ARG(u64, instr[1].arg0);
+			const auto elem_type = READ_FROM_DIRECT_ARG(TypeCRef, instr[1].arg1);
+			const auto dst       = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
+			const auto src       = READ_FROM_PLACE_ARG(u64, instr->arg1);
+			// A zero count is a no-op; an empty dynamic table is a null pointer, so this also
+			// keeps a zero-element copy on an empty table valid.
+			if (count != 0) {
+				assertCptrNotNull(src);
+				if (dst.isNull()) throw vm::exceptions::VMNullPointerAccessException();
+				const u64 elem_size = elem_type->getSize().asInt();
+				auto      view      = thread.process_memory.getBlockViewUnsafe(dst.getBlock());
+				assertCptrArrayWithinTable(dst, count, elem_size, view.size(), "cptrReadArray");
+				std::memcpy(
+					view.getBegin() + dst.getOffset(),
+					// NOLINTNEXTLINE(performance-no-int-to-ptr): a raw native address
+					reinterpret_cast<const void*>(src),
+					count * elem_size
+				);
+			}
+		}
+		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(cptrWriteArray_p64_pptr)(FUNCTION_ARGS) {
+		{
+			const auto count     = READ_FROM_PLACE_ARG(u64, instr[1].arg0);
+			const auto elem_type = READ_FROM_DIRECT_ARG(TypeCRef, instr[1].arg1);
+			const auto dst       = READ_FROM_PLACE_ARG(u64, instr->arg0);
+			const auto src       = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
+			if (count != 0) {
+				assertCptrNotNull(dst);
+				if (src.isNull()) throw vm::exceptions::VMNullPointerAccessException();
+				const u64 elem_size = elem_type->getSize().asInt();
+				auto      view      = thread.process_memory.getBlockViewUnsafe(src.getBlock());
+				assertCptrArrayWithinTable(src, count, elem_size, view.size(), "cptrWriteArray");
+				std::memcpy(
+					// NOLINTNEXTLINE(performance-no-int-to-ptr): a raw native address
+					reinterpret_cast<void*>(dst),
+					view.getBegin() + src.getOffset(),
+					count * elem_size
+				);
+			}
 		}
 		FUNCTION_CONT(2);
 	}

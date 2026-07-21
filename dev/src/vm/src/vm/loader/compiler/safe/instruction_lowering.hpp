@@ -248,13 +248,40 @@ namespace vm::loader::compiler::safe::detail {
 				addLow<Op_cptrStore_p64_bany>(i.dst_ptr, i.src);
 				addLow<Op_ext_imm>(vm::opargs::Immediate{ pointee->getSize().asInt() });
 			}
-			instr_case(high::Op_cptrRead_pptr_pcpt_p64, i) {
+			instr_case(high::Op_cptrRead_pptr_pcpt, i) {
+				// The byte count is the VM pointer's pointee size, resolved at lowering time.
+				auto pointee = getPlaceType(i.dst_ptr)
+				                   ->get<vm::kind::Pointer>()
+				                   .expect("cptrRead destination must be a VM pointer")
+				                   ->inner_type;
 				addLow<Op_cptrRead_pptr_p64>(i.dst_ptr, i.src_ptr);
-				addLow<Op_ext_p64>(i.size);
+				addLow<Op_ext_imm>(vm::opargs::Immediate{ pointee->getSize().asInt() });
 			}
-			instr_case(high::Op_cptrWrite_pcpt_pptr_p64, i) {
+			instr_case(high::Op_cptrWrite_pcpt_pptr, i) {
+				auto pointee = getPlaceType(i.src_ptr)
+				                   ->get<vm::kind::Pointer>()
+				                   .expect("cptrWrite source must be a VM pointer")
+				                   ->inner_type;
 				addLow<Op_cptrWrite_p64_pptr>(i.dst_ptr, i.src_ptr);
-				addLow<Op_ext_p64>(i.size);
+				addLow<Op_ext_imm>(vm::opargs::Immediate{ pointee->getSize().asInt() });
+			}
+			instr_case(high::Op_cptrReadArray_pptr_pcpt_p64, i) {
+				// Pointer -> DynamicTable -> element type; the element count stays a runtime
+				// value, so it travels as a place next to the element type.
+				addLow<Op_cptrReadArray_pptr_p64>(i.dst_ptr, i.src_ptr);
+				addLow<Op_ext_p64_type>(
+					i.element_count,
+					opargs::Type{
+						(*(*getPlaceType(i.dst_ptr)->getInnerType())->getInnerType())->getName() }
+				);
+			}
+			instr_case(high::Op_cptrWriteArray_pcpt_pptr_p64, i) {
+				addLow<Op_cptrWriteArray_p64_pptr>(i.dst_ptr, i.src_ptr);
+				addLow<Op_ext_p64_type>(
+					i.element_count,
+					opargs::Type{
+						(*(*getPlaceType(i.src_ptr)->getInnerType())->getInnerType())->getName() }
+				);
 			}
 			instr_case(high::Op_cptrCast_pcpt_pcpt, i) {
 				// A reinterpreting cast is a plain 8-byte move.
