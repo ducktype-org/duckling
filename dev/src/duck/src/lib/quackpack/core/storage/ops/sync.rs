@@ -101,7 +101,7 @@ pub fn sync(
         let data = venv.data_mut();
         data.set_last_modification(now);
         data.set_freeze(new_freeze);
-        data.set_last_known_directory(pcx.package().root().to_path_buf());
+        data.set_last_known_location(pcx.package().root().to_path_buf());
         venv
     } else {
         let data = VenvData::new(
@@ -138,12 +138,12 @@ fn check_if_overwrites(
     id: VenvId,
 ) -> QuackResult<()> {
     let Some(venv) = venv else { return Ok(()) };
-    if pcx.package().root() == venv.data().last_known_directory()
-        || !venv.data().last_known_directory().exists()
+    if pcx.package().root() == venv.data().last_known_location()
+        || !venv.data().last_known_location().exists()
     {
         return Ok(());
     }
-    let dir = venv.data().last_known_directory();
+    let dir = venv.data().last_known_location();
     let package = PackageLoader::find_at_exact_directory(dir, pcx.ctx());
     let (replaces, context) = match package {
         Ok(package) => {

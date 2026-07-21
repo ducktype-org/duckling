@@ -310,6 +310,8 @@ namespace compiler::helios {
 			auto methods = class_type.getInterface(ctx)->getMethodsView();
 
 			for (const auto& method: methods) {
+				auto method_sym = method.getSymbol();
+
 				// @TODO: #1956 remove this if when ZST refs are supported
 				// we fail here, because otherwise we try to lower a self pointer to a ZST type and
 				// llvm panics. This check is put inside the for, to only check it if the methods
@@ -324,8 +326,9 @@ namespace compiler::helios {
 					));
 					return base::BAD;
 				}
+				// We only here add the methods that are owner only.
+				if (emissionPolicy(method_sym) != EmissionPolicy::OwnerOnly) continue;
 
-				auto method_sym = method.getSymbol();
 				out_function_code_tasks.push_back(ctx.schedule<QueryCodeOfFun>(method_sym));
 			}
 			return base::OK;

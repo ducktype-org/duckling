@@ -2,6 +2,7 @@
 
 #include "lir_structure_fd.hpp"  // IWYU pragma: keep
 
+#include <abi/calling_conv/calling_conv.hpp>
 #include <ctv/ctv.hpp>
 #include <diagnostic_interactive/stable_position.hpp>
 #include <helios/attributes/builtins.hpp>
@@ -156,6 +157,17 @@ namespace compiler::lir {
 	 */
 	using BlockRef = CRef<Block>;
 
+	struct LIRAbi final {
+		struct CAbi final {
+			abi::calling_conv::FunctionInfo function_info;
+		};
+
+		struct DefaultAbi final {};
+
+		using ValueType = std::variant<CAbi, DefaultAbi>;
+		ValueType value;
+	};
+
 	/**
 	 * @brief Function which call will be replaced
 	 * manually in the backend.
@@ -169,7 +181,7 @@ namespace compiler::lir {
 	 */
 	struct FunctionLiteral final {
 		base::StrID                                         mangled_name;
-		helios::SymbolABI                                   abi;
+		LIRAbi                                              abi;
 		bool                                                link_once;
 		std::shared_ptr<std::vector<CRef<tsl::TypeLayout>>> parameter_layouts;
 		CRef<tsl::TypeLayout>                               return_type_layout;
@@ -452,7 +464,7 @@ namespace compiler::lir {
 
 		LIRValue(BlockRef value): value(value) {}
 
-		LIRValue(FunctionLiteral value): value(value) {}
+		LIRValue(FunctionLiteral value): value(std::move(value)) {}
 
 		[[nodiscard]]
 		const ValueType& getVariant() const {
@@ -615,8 +627,8 @@ namespace compiler::lir {
 	 * @brief Function in LIR.
 	 */
 	struct Function final {
-		base::StrID       mangled_name;
-		helios::SymbolABI abi;
+		base::StrID mangled_name;
+		LIRAbi      abi;
 
 		/**
 		 * If true, this function can have repeated definitions

@@ -1,7 +1,10 @@
+import core.builtins.*;
+import core.containers.*;
+
 fun main() = {
     let b = "b".toString();
-    let ab = 'a' +: b;
-    let bcd = b :+ 'c' :+ 'd';
+    let ab = 'a' +: (&b);
+    let bcd = (&b) :+ 'c' :+ 'd';
 
     let hello = "Hello, ";
     let world = "world!\n";
