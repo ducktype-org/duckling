@@ -43,13 +43,17 @@ namespace compiler::helios {
 		DvmCharRealloc,
 		DvmCharFree,
 		/**
-		 * Box allocation / deallocation and dynamic-array (list) freeing. Unlike the other builtins
-		 * these are not selected by the `@builtin("...")` attribute. They are only called by the
-		 * compiler in `box T`/`[T]` constructors and destructors.
+		 * Box allocation / deallocation, dynamic-array (list) freeing and the box destructor.
+		 * Unlike the other builtins these are not selected by the `@builtin("...")` attribute. They
+		 * are only called by the compiler in `box T`/`[T]` constructors and destructors.
+		 *
+		 * `BoxAlloc`/`BoxFree`/`ListFree` are implemented by the backends; `BoxDestructor` is
+		 * implemented in HOUT (it destroys the pointee, then calls `box_free`).
 		 */
 		BoxAlloc,
 		BoxFree,
 		ListFree,
+		BoxDestructor,
 	};
 
 	/**
@@ -95,6 +99,16 @@ namespace compiler::helios {
 	 * The returned symbol is a declaration only, it's implemented in both backends.
 	 */
 	SymID boxFreeSymForType(query::Context& ctx, tsh::AbstractType pointee_type);
+
+
+	/**
+	 * @brief Symbol of the compiler-generated `box_destructor(b: box T)` builtin for a given
+	 * pointee type.
+	 *
+	 * Unlike `box_free`, this is implemented in HOUT: it destroys the pointee first, then frees the
+	 * box storage via `box_free`. It is the destructor used for `box T` values.
+	 */
+	SymID boxDestructorSymForType(query::Context& ctx, tsh::AbstractType pointee_type);
 
 	/**
 	 * @brief Symbol of the compiler-generated `list_free(l: ref [T])` builtin for a given element

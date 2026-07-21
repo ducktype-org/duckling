@@ -115,8 +115,13 @@ namespace compiler::helios {
 	) {
 		SymbolKind kind{};
 		variant_match(generated_data) {
-			variant_case_novalue(defgen::BuiltinOperator, defgen::BuiltinTemplatedSymbol) {
+			variant_case_novalue(defgen::BuiltinOperator) {
 				kind = SymbolKind::FunctionDeclaration;
+			}
+			variant_case(defgen::BuiltinTemplatedSymbol, templated) {
+				kind = templated.kind == defgen::BuiltinTemplatedSymbol::Kind::BoxDestructor
+				         ? SymbolKind::Function
+				         : SymbolKind::FunctionDeclaration;
 			}
 			variant_case_novalue(
 				defgen::Constructor,

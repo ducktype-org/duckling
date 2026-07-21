@@ -72,10 +72,15 @@ namespace compiler::helios {
 				         ? EmissionPolicy::Replicated
 				         : EmissionPolicy::OwnerOnly;
 			}
-			variant_case_novalue(
-				defgen::BuiltinOperator, defgen::BuiltinTemplatedSymbol, defgen::ScriptMainWrapper
-			) {
+			variant_case_novalue(defgen::BuiltinOperator, defgen::ScriptMainWrapper) {
 				return EmissionPolicy::OwnerOnly;
+			}
+			variant_case(defgen::BuiltinTemplatedSymbol, templated) {
+				// `box_destructor` has a HOUT body that must be replicated into every module that
+				// uses it; the backend-implemented ones are emitted by their owner only.
+				return templated.kind == defgen::BuiltinTemplatedSymbol::Kind::BoxDestructor
+				         ? EmissionPolicy::Replicated
+				         : EmissionPolicy::OwnerOnly;
 			}
 			variant_case_novalue(
 				defgen::Constructor,
@@ -193,7 +198,8 @@ namespace compiler::helios {
 	base::Optional<BuiltinKind> isBuiltin(SymID id) {
 		if (const auto builtin = getSymRef(id)->getDataOpt<BuiltinSemantics>())
 			return builtin.value()->builtin;
-		// Box alloc/free and list free functions are backend-implemented builtins too.
+		// The templated builtins are all builtins: box alloc/free and list free are
+		// backend-implemented, box_destructor is HOUT-implemented.
 		if (const auto templated = getSymRef(id)->getDataOpt<defgen::BuiltinTemplatedSymbol>()) {
 			switch (templated.value()->kind) {
 			case defgen::BuiltinTemplatedSymbol::Kind::BoxAlloc:
@@ -202,6 +208,8 @@ namespace compiler::helios {
 				return BuiltinKind::BoxFree;
 			case defgen::BuiltinTemplatedSymbol::Kind::ListFree:
 				return BuiltinKind::ListFree;
+			case defgen::BuiltinTemplatedSymbol::Kind::BoxDestructor:
+				return BuiltinKind::BoxDestructor;
 			}
 			CORE_UNREACHABLE();
 		}

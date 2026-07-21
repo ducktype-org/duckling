@@ -1,5 +1,6 @@
 #include "default_destructors.hpp"
 
+#include "helios/attributes/builtins.hpp"
 #include "helios/tsh/symbol_type.hpp"
 
 #include <helios/hout/elements/expr.hpp>
@@ -26,7 +27,7 @@ namespace compiler::helios::defgen {
 
 	base::Optional<SymID> destructSymForSymbolType(query::Context& ctx, tsh::SymbolType<> type) {
 		if (type.getRefKind() == tsh::ReferenceKind::Box)
-			return boxFreeSymForType(ctx, type.getType());
+			return boxDestructorSymForType(ctx, type.getType());
 		if (type.getRefKind() == tsh::ReferenceKind::Ref) return {};
 		return destructSymForType(ctx, type.getType());
 	}
@@ -45,8 +46,8 @@ namespace compiler::helios::defgen {
 		 * @brief Append the statements that destroy the `location` value.
 		 *
 		 * - Trivially-destructible values do nothing.
-		 * - A `box T` destroys its pointee and performs a call to a builtin `boxFree` to free the
-		 * heap memory.
+		 * - A `box T` is destroyed by calling its `box_destructor` builtin (which destroys the
+		 *   pointee and then frees the heap storage).
 		 * - Non-trivially-destructible class, static-array, tuple and dynamic-array members are
 		 *   destroyed by calling their own destructor with a reference to `location`.
 		 */
@@ -57,28 +58,22 @@ namespace compiler::helios::defgen {
 
 			if (type.isTriviallyDestructible(ctx)) return;
 
-			// A `box T` owns its pointee and its heap storage. First destroy the pointee, then free
-			// the memory.
+			// A `box T` owns its pointee and its heap storage. Its `box_destructor` builtin destroys
+			// the pointee and then frees the memory, so we just call it with the box by value.
 			if (type.getRefKind() == tsh::ReferenceKind::Box) {
 				const auto pointee_type = type.getType();
 
-				appendDestruction(
-					ctx,
-					body,
-					makeBox<code::DerefExpr>(ctx, code::generatedOrigin(), location->clone())
-				);
-
-				std::vector<Box<code::Expr>> free_args;
-				free_args.emplace_back(std::move(location));
+				std::vector<Box<code::Expr>> args;
+				args.emplace_back(std::move(location));
 				body.emplace_back(makeBox<code::ExprStmt>(
 					code::generatedOrigin(),
 					makeBox<code::CallExpr>(
 						ctx,
 						code::generatedOrigin(),
 						makeBox<code::IdentifierExpr>(
-							ctx, code::generatedOrigin(), boxFreeSymForType(ctx, pointee_type)
+							ctx, code::generatedOrigin(), boxDestructorSymForType(ctx, pointee_type)
 						),
-						std::move(free_args)
+						std::move(args)
 					)
 				));
 				return;
@@ -376,4 +371,48 @@ namespace compiler::helios::defgen {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDefaultDestructor);
+
+	HOUTFunction buildBoxDestructor(query::Context& ctx, const tsh::AbstractType pointee_type) {
+		const SymID box_dtor_sym = boxDestructorSymForType(ctx, pointee_type);
+		const auto& dtor_decl    = ctx.query<QueryDeclOfFun>(box_dtor_sym)->valueOrThrow();
+		const SymID self_symbol  = dtor_decl.parameters.at(0).helios_symbol;
+
+		std::vector<Box<code::Stmt>> body;
+
+		// Destroy the pointee: `appendDestruction(*self)`.
+		appendDestruction(
+			ctx,
+			body,
+			makeBox<code::DerefExpr>(
+				ctx,
+				code::generatedOrigin(),
+				makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), self_symbol)
+			)
+		);
+
+		// Free the box storage: `box_free(self)`.
+		std::vector<Box<code::Expr>> free_args;
+		free_args.emplace_back(
+			makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), self_symbol)
+		);
+		body.emplace_back(makeBox<code::ExprStmt>(
+			code::generatedOrigin(),
+			makeBox<code::CallExpr>(
+				ctx,
+				code::generatedOrigin(),
+				makeBox<code::IdentifierExpr>(
+					ctx, code::generatedOrigin(), boxFreeSymForType(ctx, pointee_type)
+				),
+				std::move(free_args)
+			)
+		));
+
+		return HOUTFunction(
+			code::generatedOrigin(),
+			&dtor_decl,
+			std::make_shared<const code::CodeBlock>(code::CodeBlock{
+				.statements = std::move(body),
+			})
+		);
+	}
 }

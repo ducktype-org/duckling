@@ -1,11 +1,12 @@
 #pragma once
 
+#include "helios/tsh/symbol_type.hpp"
+
 #include <helios/hout/hout.hpp>
 #include <helios/tsh/types.hpp>
 
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_result.hpp>
-#include "helios/tsh/symbol_type.hpp"
 
 namespace compiler::helios::defgen {
 	/**
@@ -43,4 +44,14 @@ namespace compiler::helios::defgen {
 	DECLARE_QUERY(
 		QueryDefaultDestructor, tsh::AbstractType, CRef<query::QResult<HOUTFunction>>, ({})
 	);
+
+	/**
+	 * @brief Build the compiler-generated HOUT representation of the `box T` destructor.
+	 *
+	 * Takes a `box T self` parameter and returns unit. Destroys the pointee (via its own
+	 * destructor) and then frees the box storage with the `box_free` builtin.
+	 *
+	 * @param pointee_type The pointee type `T`.
+	 */
+	HOUTFunction buildBoxDestructor(query::Context& ctx, tsh::AbstractType pointee_type);
 }
