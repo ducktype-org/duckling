@@ -272,7 +272,7 @@ namespace compiler::tsl {
 				query::throwFailed();
 			}
 
-			std::vector<abi::type_system::AbiTypePtr> abi_fields;
+			std::vector<abi::types::AbiTypePtr> abi_fields;
 			abi_fields.reserve(field_elements.size());
 			bool any_failed = false;
 
@@ -291,7 +291,7 @@ namespace compiler::tsl {
 					));
 					continue;
 				}
-				abi_fields.emplace_back(base::CRef<abi::type_system::AbiType>(&conversion.value()));
+				abi_fields.emplace_back(base::CRef<abi::types::AbiType>(&conversion.value()));
 			}
 
 			if (any_failed) query::throwFailed();

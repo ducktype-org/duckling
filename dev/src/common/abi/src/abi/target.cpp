@@ -1,12 +1,12 @@
-#include <abi/layout/target.hpp>
+#include <abi/target.hpp>
 
 #include <base/except/exceptions.hpp>
 
 #include <utility>
 
-namespace abi::layout {
+namespace abi {
 
-	Bytes DataLayout::naturalAlignmentForIntWidth(u8 width_bits) {
+	Bytes DataLayout::naturalAlignmentForIntWidth(u64 width_bits) {
 		switch (usize(width_bits)) {
 		case 8:
 			return Bytes(1);
@@ -26,12 +26,12 @@ namespace abi::layout {
 		 * @brief The IEEE binary floating-point formats available on every
 		 * supported target: width (bits) to stored size and alignment.
 		 */
-		base::Map<u8, SizeAlign> ieeeFloatLayouts() {
-			base::Map<u8, SizeAlign> floats;
-			floats.put(u8(16), SizeAlign{ .size = Bytes(2), .alignment = Bytes(2) });
-			floats.put(u8(32), SizeAlign{ .size = Bytes(4), .alignment = Bytes(4) });
-			floats.put(u8(64), SizeAlign{ .size = Bytes(8), .alignment = Bytes(8) });
-			floats.put(u8(128), SizeAlign{ .size = Bytes(16), .alignment = Bytes(16) });
+		base::Map<u64, SizeAlign> ieeeFloatLayouts() {
+			base::Map<u64, SizeAlign> floats;
+			floats.put(16, SizeAlign{ .size = Bytes(2), .alignment = Bytes(2) });
+			floats.put(32, SizeAlign{ .size = Bytes(4), .alignment = Bytes(4) });
+			floats.put(64, SizeAlign{ .size = Bytes(8), .alignment = Bytes(8) });
+			floats.put(128, SizeAlign{ .size = Bytes(16), .alignment = Bytes(16) });
 			return floats;
 		}
 	}
@@ -39,9 +39,9 @@ namespace abi::layout {
 	// NOLINTNEXTLINE(readability-identifier-naming) — "x86_64" is the canonical arch name.
 	const TargetABI& x86_64Linux() {
 		static const TargetABI abi = [] {
-			base::Map<u8, SizeAlign> floats = ieeeFloatLayouts();
+			base::Map<u64, SizeAlign> floats = ieeeFloatLayouts();
 			// x87 80-bit `long double`: 10 bytes of data padded to 16.
-			floats.put(u8(80), SizeAlign{ .size = Bytes(16), .alignment = Bytes(16) });
+			floats.put(80, SizeAlign{ .size = Bytes(16), .alignment = Bytes(16) });
 			return TargetABI{
 				.triple      = TargetTriple{ .arch = Arch::X86_64 },
 				.data_layout = DataLayout{
