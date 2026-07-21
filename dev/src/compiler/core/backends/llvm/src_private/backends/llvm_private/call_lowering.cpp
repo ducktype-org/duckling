@@ -7,6 +7,8 @@
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/misc/int_conv.hpp>
 
+#include <optional>
+
 namespace compiler::backend_llvm {
 
 	namespace {
@@ -24,7 +26,17 @@ namespace compiler::backend_llvm {
 		struct LoweredCAbiSignature {
 			llvm::FunctionType*                          type;
 			std::vector<std::pair<u32, llvm::Attribute>> attributes;
+			// Attributes applied to the return value (e.g. signext/zeroext for sub-word ints).
+			std::vector<llvm::Attribute> return_attributes;
 		};
+
+		std::optional<llvm::Attribute::AttrKind> extAttrKind(
+			const abi::calling_conv::ArgInfo::ByValue& data
+		) {
+			if (data.sign_ext) return llvm::Attribute::SExt;
+			if (data.zero_ext) return llvm::Attribute::ZExt;
+			return std::nullopt;
+		}
 
 		LoweredCAbiSignature lowerCAbiSignature(
 			const Ref<llvm::Module>                   module,
@@ -37,6 +49,7 @@ namespace compiler::backend_llvm {
 
 			std::vector<llvm::Type*>                     llvm_parameters;
 			std::vector<std::pair<u32, llvm::Attribute>> attributes;
+			std::vector<llvm::Attribute>                 return_attributes;
 
 			// This is because the original type can have aliased structure name like
 			// "%MyStructure", where ABI type is a structure type literal like "{i32, i32}" and in
@@ -54,7 +67,7 @@ namespace compiler::backend_llvm {
 
 			if (return_cc && return_cc->passed_as_param) {
 				CORE_ASSERT(
-					std::holds_alternative<cc::ArgInfo::ByPointer>(return_cc->info.kind),
+					return_cc->info.getKind<cc::ArgInfo::ByPointer>().has_value(),
 					"When passing as param expected calling conv info is ByPointer"
 				);
 				// The result is returned indirectly: prepend a hidden `sret` pointer parameter and
@@ -70,6 +83,8 @@ namespace compiler::backend_llvm {
 				variant_match(return_cc->info.kind) {
 					variant_case(cc::ArgInfo::ByValue, data) {
 						return_type = by_value_type(data, return_layout, return_cc->original_type);
+						if (auto ext = extAttrKind(data))
+							return_attributes.push_back(llvm::Attribute::get(ctx, *ext));
 					}
 					variant_case(cc::ArgInfo::ByPointer, data) {
 						return_type = llvm::PointerType::getUnqual(ctx);
@@ -83,6 +98,10 @@ namespace compiler::backend_llvm {
 				const auto& param = function_info.param_info.at(i);
 				variant_match(param.info.kind) {
 					variant_case(cc::ArgInfo::ByValue, data) {
+						if (auto ext = extAttrKind(data))
+							attributes.emplace_back(
+								u32(llvm_parameters.size()), llvm::Attribute::get(ctx, *ext)
+							);
 						llvm_parameters.push_back(
 							by_value_type(data, parameter_layouts.at(i), param.original_type)
 						);
@@ -102,8 +121,9 @@ namespace compiler::backend_llvm {
 			}
 
 			return LoweredCAbiSignature{
-				.type       = llvm::FunctionType::get(return_type, llvm_parameters, false),
-				.attributes = std::move(attributes)
+				.type              = llvm::FunctionType::get(return_type, llvm_parameters, false),
+				.attributes        = std::move(attributes),
+				.return_attributes = std::move(return_attributes)
 			};
 		}
 	}
@@ -145,6 +165,7 @@ namespace compiler::backend_llvm {
 		if (const auto func = module->getFunction(mangled_name.strView())) return func;
 
 		std::vector<std::pair<u32, llvm::Attribute>> attributes;
+		std::vector<llvm::Attribute>                 return_attributes;
 
 		llvm::FunctionType* fun_type = nullptr;
 		if (auto c_abi = std::get_if<lir::LIRAbi::CAbi>(&function_literal.abi.value)) {
@@ -154,8 +175,9 @@ namespace compiler::backend_llvm {
 				*function_literal.parameter_layouts,
 				function_literal.return_type_layout
 			);
-			fun_type   = lowered.type;
-			attributes = std::move(lowered.attributes);
+			fun_type          = lowered.type;
+			attributes        = std::move(lowered.attributes);
+			return_attributes = std::move(lowered.return_attributes);
 		} else {
 			fun_type = getFunType(
 				module,
@@ -173,6 +195,7 @@ namespace compiler::backend_llvm {
 				function->setLinkage(llvm::GlobalValue::LinkOnceODRLinkage);
 
 			for (const auto& [idx, attr]: attributes) function->addParamAttr(idx, attr);
+			for (const auto& attr: return_attributes) function->addRetAttr(attr);
 		}
 
 		return callee;

@@ -140,12 +140,12 @@ namespace compiler::lir {
 	 */
 	using BlockRef = CRef<Block>;
 
-	struct LIRAbi {
-		struct CAbi {
+	struct LIRAbi final {
+		struct CAbi final {
 			abi::calling_conv::FunctionInfo function_info;
 		};
 
-		struct DefaultAbi {};
+		struct DefaultAbi final {};
 
 		using ValueType = std::variant<CAbi, DefaultAbi>;
 		ValueType value;

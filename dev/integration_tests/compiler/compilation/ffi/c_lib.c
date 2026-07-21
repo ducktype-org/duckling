@@ -70,4 +70,7 @@ Big make_big(int64_t k) {
 	return s;
 }
 
+int32_t add_shorts(int16_t a, int16_t b) { return (int32_t) a + (int32_t) b; }
+int32_t add_bytes(int8_t a, int8_t b) { return (int32_t) a + (int32_t) b; }
+
 //NOLINTEND

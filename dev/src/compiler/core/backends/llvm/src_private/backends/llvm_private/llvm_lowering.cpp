@@ -961,7 +961,7 @@ namespace compiler::backend_llvm {
 
 			if (return_info_opt && return_info_opt->passed_as_param) {
 				CORE_ASSERT(
-					v_matches(return_info_opt->info.kind, cc::ArgInfo::ByPointer),
+					return_info_opt->info.getKind<cc::ArgInfo::ByPointer>().has_value(),
 					"When passing as param expected calling conv info is ByPointer"
 				);
 				// The callee writes the result through a hidden pointer parameter. Allocate a slot
@@ -983,6 +983,15 @@ namespace compiler::backend_llvm {
 				variant_match(abi_info.info.kind) {
 					variant_case(cc::ArgInfo::ByValue, data) {
 						llvm::Type* coerce_type = abiTypeToLLVMType(ctx, data.coerce_to_type);
+
+						if (data.sign_ext)
+							attributes.emplace_back(
+								u32(args.size()), llvm::Attribute::get(ctx, llvm::Attribute::SExt)
+							);
+						if (data.zero_ext)
+							attributes.emplace_back(
+								u32(args.size()), llvm::Attribute::get(ctx, llvm::Attribute::ZExt)
+							);
 
 						if (coerce_type == original_type) {
 							// No coercion needed – pass the value directly.
@@ -1033,6 +1042,15 @@ namespace compiler::backend_llvm {
 			} else if (return_info_opt) {
 				variant_match(return_info_opt->info.kind) {
 					variant_case(cc::ArgInfo::ByValue, data) {
+						if (data.sign_ext)
+							call_instruction->addRetAttr(
+								llvm::Attribute::get(ctx, llvm::Attribute::SExt)
+							);
+						if (data.zero_ext)
+							call_instruction->addRetAttr(
+								llvm::Attribute::get(ctx, llvm::Attribute::ZExt)
+							);
+
 						llvm::Type* coerce_type = abiTypeToLLVMType(ctx, data.coerce_to_type);
 						if (coerce_type == return_original_type) {
 							result_value = call_instruction;
@@ -1057,9 +1075,9 @@ namespace compiler::backend_llvm {
 		 * @brief Lowers a `Call` instruction to an `llvm::CallInst`.
 		 *
 		 * Loads the argument values, resolves the callee prototype, performs the C ABI argument
-		 * marshalling (currently: strings passed by pointer with `byval`) and emits the call with
-		 * its matching call-site attributes. This is the place to add further ABI call-site
-		 * attributes. Storing the result (if any) is left to the caller.
+		 * marshalling and emits the call with
+		 * its matching call-site attributes or replaces call with a builtin.
+		 * Storing the result (if any) is left to the caller.
 		 *
 		 * @param lir_instruction The `Call` instruction (first argument is the callee).
 		 * @param builder The IRBuilder positioned at the call site.

@@ -91,6 +91,24 @@ namespace abi::calling_conv {
 			if (bytes <= Bytes(4)) return Bytes(4);
 			return Bytes(8);
 		}
+
+		/**
+		 * @brief Build a scalar `ByValue` for the x86-64 System V ABI, setting the sign/zero
+		 * extension flag when required.
+		 */
+		ArgInfo scalarByValueSysV(const types::AbiType& scalar) {
+			bool sign_ext = false;
+			bool zero_ext = false;
+			variant_match(scalar.value) {
+				variant_case(types::BoolType, v) { zero_ext = true; }
+				variant_case(types::CharType, v) { sign_ext = true; }
+				variant_case(types::IntType, v) {
+					if (v.width_bits < 32) (v.is_signed ? sign_ext : zero_ext) = true;
+				}
+				variant_default {}
+			}
+			return ArgInfo::byValue(types::cloneAbiType(scalar), sign_ext, zero_ext);
+		}
 	}
 
 	/**
@@ -194,7 +212,7 @@ namespace abi::calling_conv {
 					types::BoolType,
 					types::PointerType
 				))
-				return ARG_ENTRY(ArgInfo::byValue(types::cloneAbiType(*original_type)));
+				return ARG_ENTRY(scalarByValueSysV(*original_type));
 
 			if (size_align.size <= Bytes(16)) {
 				layout::ComputedLayout expanded_layout;
@@ -286,7 +304,7 @@ namespace abi::calling_conv {
 				return RETURN_ENTRY(ArgInfo::byValue(types::cloneAbiType(*original_type)), false);
 
 
-			[[maybe_unused]] layout::ComputedLayout computed_layout;
+			layout::ComputedLayout computed_layout;
 			auto flattened_types = flattenType(myTargetABI(), *original_type, computed_layout);
 			if (isHomogeneous(flattened_types))
 				return RETURN_ENTRY(homogeneous_arg_info(std::move(flattened_types)), false);
