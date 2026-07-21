@@ -21,11 +21,10 @@
 //!         ├── <package id>
 //!         └── ...
 
-use std::iter;
 use std::path::{Path, PathBuf};
 
 use super::package_id::PackageId;
-use crate::quackpack::core::storage::DirContentsIterator;
+use crate::quackpack::core::storage::DirContents;
 use crate::quackpack::core::storage::venv_id::VenvId;
 use crate::util::file_locks::{FileLockManager, LockedFile};
 use crate::util::path_ops_ext::PathOpsExt;
@@ -130,30 +129,30 @@ impl Storage {
     /// The yielded packages need not be correct (may be missing checksum).
     /// It is not guaranteed that during iteration, the yielded paths
     /// still exist and there are no guarantees on paths that appeared during an iteration.
-    pub fn iter_pkgs(&self) -> QuackResult<DirContentsIterator> {
-        create_dir_iterator(self.packages_root_dir())
+    pub fn iter_pkgs(&self) -> QuackResult<DirContents> {
+        create_dir_iterator(&self.packages_root_dir())
     }
 
     /// Returns an iterator over all venvs in the storage.
     /// The yielded venvs need not be correct (may have invalid data).
     /// It is not guaranteed that during iteration, the yielded paths
     /// still exist and there are no guarantees on paths that appeared during an iteration.
-    pub fn iter_venvs(&self) -> QuackResult<DirContentsIterator> {
-        create_dir_iterator(self.venvs_root_dir())
+    pub fn iter_venvs(&self) -> QuackResult<DirContents> {
+        create_dir_iterator(&self.venvs_root_dir())
     }
 
     /// Returns an iterator over all sync locks in the storage.
     /// It is not guaranteed that during iteration, the yielded paths
     /// still exist and there are no guarantees on paths that appeared during an iteration.
-    pub fn iter_sync_locks(&self) -> QuackResult<DirContentsIterator> {
-        create_dir_iterator(self.sync_locks_path())
+    pub fn iter_sync_locks(&self) -> QuackResult<DirContents> {
+        create_dir_iterator(&self.sync_locks_path())
     }
 
     /// Returns an iterator over all data locks in the storage.
     /// It is not guaranteed that during iteration, the yielded paths
     /// still exist and there are no guarantees on paths that appeared during an iteration.
-    pub fn iter_data_locks(&self) -> QuackResult<DirContentsIterator> {
-        create_dir_iterator(self.data_locks_path())
+    pub fn iter_data_locks(&self) -> QuackResult<DirContents> {
+        create_dir_iterator(&self.data_locks_path())
     }
 
     /// Check if package `id` is stored in storage.
@@ -178,11 +177,11 @@ impl Storage {
 
 /// Returns iterator over files in a directory.
 /// If the directory does not exist, returns an empty iterator.
-fn create_dir_iterator(path: PathBuf) -> QuackResult<DirContentsIterator> {
+fn create_dir_iterator(path: &Path) -> QuackResult<DirContents> {
     match path.read_dir() {
-        Ok(it) => Ok(Box::new(it.into_iter())),
+        Ok(read_dir) => Ok(DirContents::NonEmpty(read_dir)),
         Err(e) => match e.kind() {
-            std::io::ErrorKind::NotFound => Ok(Box::new(iter::empty())),
+            std::io::ErrorKind::NotFound => Ok(DirContents::Empty),
             _ => Err(e.into()),
         },
     }

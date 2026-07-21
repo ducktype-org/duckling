@@ -27,7 +27,7 @@
 
 use std::io;
 
-use crate::quackpack::core::storage::DirContentsIterator;
+use crate::quackpack::core::storage::DirContents;
 use crate::quackpack::core::storage::paths::Storage;
 use crate::quackpack::core::storage::venv_id::{ToVenvId, VenvId};
 use crate::util::file_locks::{FileLockManager, LockedFile};
@@ -116,7 +116,7 @@ pub fn cleanup_locks(storage: &Storage) -> QuackResult<()> {
 /// Removes all venv locks from the given iterator.
 fn cleanup_locks_impl(
     storage: &Storage,
-    dir_iterator: DirContentsIterator,
+    dir_iterator: DirContents,
     root: FileLockManager,
 ) -> QuackResult<()> {
     for lockfile in dir_iterator {
