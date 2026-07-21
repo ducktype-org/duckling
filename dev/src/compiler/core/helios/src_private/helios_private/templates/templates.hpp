@@ -23,7 +23,7 @@ namespace compiler::helios::templates {
 	 * @brief Key for baking a template symbol ID.
 	 * @note Everything related to handling named parameters, template overloading, default template
 	 * arguments, implicit coercions of arguments, etc. should be handled by the caller using this
-	 * key. Queries using this key assumes perfect match of template arguments to template
+	 * key. Queries using this key assume perfect match of template arguments to template
 	 * parameters.
 	 */
 	struct TemplateBakeKey final {
@@ -48,7 +48,7 @@ namespace compiler::helios::templates {
 	 * This will be passed to PST root as additional root data in type-opaque way, so other helios
 	 * code can retrieve it when needed.
 	 *
-	 * @TODO: #3071 link this to the proper custom root element, liked pst::BakedTemplateRoot or
+	 * @TODO: #3071 link this to the proper custom root element, like pst::BakedTemplateRoot or
 	 * something like that.
 	 */
 	struct TemplateBakePSTLinkedData final {
@@ -73,7 +73,7 @@ namespace compiler::helios::templates {
 		/**
 		 * @TODO: #3099 Implementation of this is a bit hacky, as it is set by the bake template
 		 * query after the PST is baked and used in other queries already. This could be changed if
-		 * template_arguments_symbols / creation of the baked SymID didn't required a scope to be
+		 * template_arguments_symbols / creation of the baked SymID didn't require a scope to be
 		 * created.
 		 *
 		 * @note: We use raw pointer + custom deleter in this SharedBox to delete the PostponedData,
@@ -86,7 +86,7 @@ namespace compiler::helios::templates {
 	 * @brief Query to bake a template symbol ID.
 	 * @important: Implementation of this query is very fragile for now.
 	 * It will likely be changed in the future, parts of it might be moved elsewhere, and in general
-	 * should be use with care for now.
+	 * should be used with care for now.
 	 *
 	 * @TODO: #3112 some of the logic from this query should probably be moved to a different place.
 	 * Feel free to do it.

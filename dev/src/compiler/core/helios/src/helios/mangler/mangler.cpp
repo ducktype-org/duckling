@@ -56,8 +56,8 @@ namespace compiler::helios::mangler {
 					ctv::CompileTimeValue::UnitCTV
 				) {
 					// @TODO: #2607 This is questionable, note that this only
-					// work, because queryUnstablePerfectHash is actually stable for these types
-					// (at least at the moment of witting it)
+					// works, because queryUnstablePerfectHash is actually stable for these types
+					// (at least at the moment of writting it)
 					return ctv.queryUnstablePerfectHash().toStringHex();
 				}
 				variant_case(ctv::CompileTimeValue::TupleCTV, tuple) {
@@ -352,7 +352,7 @@ namespace compiler::helios::mangler {
 				// This function can be only called for symbols
 				// that have clear PST-path mangling.
 				// This means that all PstImplementedSemantics work, and few
-				// additional cases that are handled bellow.
+				// additional cases that are handled below.
 				auto ancestor_opt = [&]() {
 					variant_match(getSymRef(symbol_id)->other) {
 						variant_case_novalue(PstImplementedSemantics) {

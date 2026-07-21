@@ -48,7 +48,7 @@
 namespace compiler::helios::code {
 
 	/**
-	 * This this temporary helper used before #3095.
+	 * This is temporary helper used before #3095.
 	 * It is written in a way that it can be used with minimal boilerplate with the current chain
 	 * chain expression processing code (as both chain expression processing and this function are
 	 * soon to be refactored)
@@ -133,7 +133,7 @@ namespace compiler::helios::code {
 	}
 
 	/**
-	 * This this temporary helper used before #3095 and before #3112
+	 * This is temporary helper used before #3095 and before #3112
 	 *
 	 * @TODO: #3095 remove or adjust it, move the relevant code to the handling of the new :{} PST
 	 * node.

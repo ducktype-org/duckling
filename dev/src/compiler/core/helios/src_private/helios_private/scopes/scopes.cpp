@@ -598,7 +598,7 @@ namespace compiler::helios {
 				std::vector<SymID> out;
 
 				if (not template_stmt->hasAdditionalRootData()) {
-					// This is not a baked template, so it does define any symbols in its scope.
+					// This is not a baked template, so it does not define any symbols in its scope.
 					output(out);
 					return;
 				}
