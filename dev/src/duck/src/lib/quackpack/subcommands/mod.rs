@@ -1,6 +1,6 @@
 //! Main execution logic of duck-quackpack subcommands.
 pub mod build;
-pub mod clean;
+pub mod clean_storage;
 pub mod info;
 pub mod init;
 pub mod list;

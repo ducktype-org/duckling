@@ -61,12 +61,16 @@ pub fn display_venv_info(ctx: &DuckContext, venv: Venv) -> QuackResult<()> {
   last-location: {}
   last-access: {}
   last-modification: {}
-  is-ephemeral: {}
+  {}ephemeral
 ",
         venv.id(),
         venv.data().last_known_location().display(),
         last_access_string,
         last_modification_string,
-        venv.data().is_ephemeral()
+        if venv.data().is_ephemeral() {
+            ""
+        } else {
+            "not "
+        },
     ))
 }

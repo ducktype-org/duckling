@@ -5,7 +5,7 @@ use crate::quackpack::core::storage::venv_id::ToVenvId;
 use crate::quackpack::core::storage::{display_venv_info, venv_info};
 use crate::{QuackResult, QuackResultContext, qp_bail, qp_err};
 
-/// Display information about the current package's venv.
+/// Logic for executing the `info` subcommand.
 pub fn info(pcx: PackageContext) -> QuackResult<()> {
     let ctx = pcx.ctx();
     let storage_localization = pcx

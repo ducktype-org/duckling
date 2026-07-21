@@ -1,38 +1,41 @@
 use std::path::PathBuf;
 
 use crate::duck::util::indent::indent;
-use crate::quackpack::core::storage::{CleanOutput, clean_storage, delete_venv};
+use crate::quackpack::core::storage::venv_id::VenvId;
+use crate::quackpack::core::storage::{self, CleanOutput, delete_venv};
 use crate::util::IsPlural;
-use crate::{DuckContext, QuackResult, QuackResultContext, StrId};
+use crate::{DuckContext, QuackResult, QuackResultContext};
 
-/// Options for the clean operation.
+/// Options for the clean-storage operation.
 #[derive(Debug, Clone)]
-pub struct CleanOptions<'duck> {
+pub struct CleanStorageOptions<'duck> {
     pub ctx: &'duck DuckContext,
     /// Venv to delete
-    pub mode: CleanMode,
+    pub mode: CleanStorageMode,
     /// Path to the storage from which we want to list the venvs.
     pub storage: PathBuf,
 }
 
-/// Modes of the clean operation.
+/// Modes of the clean-storage operation.
 #[derive(Debug, Clone, Copy)]
-pub enum CleanMode {
+pub enum CleanStorageMode {
     /// Clean the whole storage from ephemeral venvs and unused packages.
     CleanStorage,
     /// Remove single venv from the storage.
-    RemoveVenv(StrId),
+    RemoveVenv(VenvId),
 }
 
-pub fn clean(options: CleanOptions) -> QuackResult<()> {
-    let CleanOptions { ctx, mode, storage } = options;
+/// Logic for executing the `clean-storage` subcommand.
+pub fn clean_storage(options: CleanStorageOptions) -> QuackResult<()> {
+    let CleanStorageOptions { ctx, mode, storage } = options;
     match mode {
-        CleanMode::RemoveVenv(venv_name) => delete_venv(ctx, &storage, venv_name),
-        CleanMode::CleanStorage => {
+        CleanStorageMode::RemoveVenv(venv_name) => delete_venv(ctx, &storage, venv_name),
+        CleanStorageMode::CleanStorage => {
             let CleanOutput {
                 removed_venvs,
                 removed_packages,
-            } = clean_storage(ctx, &storage).context("when trying to clean the storage")?;
+            } = storage::clean_storage(ctx, &storage)
+                .context("when trying to clean the storage")?;
             ctx.console().print(format!(
                 "Removed {} venv{}",
                 removed_venvs.len(),

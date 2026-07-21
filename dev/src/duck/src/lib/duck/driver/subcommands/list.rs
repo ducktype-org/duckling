@@ -12,15 +12,7 @@ pub fn get_parser() -> Command {
         .about("List all the virtual environments")
         .arg(
             optional("sort-by", "Properties to sort the output by")
-                .value_parser([
-                    "name",
-                    "previous_access",
-                    "previous-access",
-                    "access",
-                    "last_modification",
-                    "last-modification",
-                    "modification",
-                ])
+                .value_parser(["name", "previous-access", "last-modification"])
                 .default_value("name"),
         )
         .arg(flag("sort-reverse", "Display output in reverse order"))
@@ -38,8 +30,8 @@ pub fn execute(ctx: &DuckContext, matches: &ArgMatches) -> QuackResult<()> {
         .unwrap_or(ctx.duck_home().storage().into_not_locked_path());
     let output_ordering = match matches.get_one::<String>("sort-by").unwrap().as_str() {
         "name" => VenvOrderings::Name,
-        "previous_access" | "previous-access" | "access" => VenvOrderings::Access,
-        "last_modification" | "last-modification" | "modification" => VenvOrderings::Modification,
+        "previous-access" => VenvOrderings::Access,
+        "last-modification" => VenvOrderings::Modification,
         _ => panic!("guarded by the parser"),
     };
     let reverse_order = matches.get_flag("sort-reverse");
