@@ -110,35 +110,22 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 )
 
 /**
-    @brief The specific kind of a `Operation::Meta` instruction.
-    Stored in the instruction's `extra_params` as `MetaParameters`. Mirrors `mir::MetaKind`.
-*/
+ *   @brief The specific kind of a `Operation::Meta` instruction.
+ *   Stored in the instruction's `extra_params` as `MetaParameters`. Mirrors `mir::MetaKind`.
+ */
 MAKE_STRINGIFYABLE_ENUM(compiler::lir, u32, MetaKind,
-	/** Create a boxed reference type from a type. Single argument. */
 	CreateBox,
-	/** Create a (non-owning) reference type from a type. Single argument. */
 	CreateRef,
-	/** Create an immutable (const) type from a type. Single argument. */
 	CreateConst,
-	/** Create a pointer type from a type. Single argument. */
 	CreatePtr,
-	/** Create a many-pointer type from a type. Single argument. */
 	CreateManyPtr,
-	/** Create a const-pointer type from a type. Single argument. */
 	CreateCPtr,
-	/** Create a slice type from a type. Single argument. */
 	CreateSlice,
-	/** Create a tuple type. N arguments, the element types. */
 	CreateTuple,
-	/** Create a variant type. N arguments, the subtypes. */
 	CreateVariant,
-	/** Compare two types for equality. Two arguments. */
 	Eq,
-	/** Compare two types for inequality. Two arguments. */
 	Neq,
-	/** Byte size of a type, as i64. Single argument. */
 	SizeOf,
-	/** Byte alignment of a type, as i64. Single argument. */
 	AlignOf
 )
 
