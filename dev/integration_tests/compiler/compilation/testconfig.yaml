@@ -4,6 +4,7 @@
 # so cases can run concurrently and never dirty the source tree.
 Env:
     DIT_TMP_DIR: "@{new_tmp_dir}"
+    DUCKC_STD_ARTIFACTS_PATH: "echo @{std_artifacts_dir}"
 
 case_build: "$DIT_TMP_DIR/build"
 
@@ -26,6 +27,7 @@ stderr_regex: ""
 
 compile_dvm_options: ""
 compile_llvm_options: ""
+std_artifacts_path_flag: "--custom-std-artifacts-path @{std_artifacts_dir}"
 # Runs an extra deterministic compile check before normal compile_package.
 # You can override this to "false" in any subtree/test when duplication-based checks fail
 # for test-specific reasons (for example repeated globals or intentionally conflicting symbols).
@@ -42,12 +44,11 @@ module_to_compile: "@{Name}"
 compile_dvm_backend_deterministically_cmd: "if [ '@{enable_conc_deterministic_tests}' = 'true' ]; then python3 @{compile_determinism_script} --duckc-path @{duckc_path} --module-name @{module_to_compile} --duckc-worker-count @{duckc_worker_count} --compile-options='@{compile_dvm_options}' --backend dvm; else true; fi"
 compile_llvm_backend_deterministically_cmd: "if [ '@{enable_conc_deterministic_tests}' = 'true' ]; then python3 @{compile_determinism_script} --duckc-path @{duckc_path} --module-name @{module_to_compile} --duckc-worker-count @{duckc_worker_count} --compile-options='@{compile_llvm_options}' --backend llvm; else true; fi"
 
-compile_dvm_backend_cmd:  "@{compile_dvm_backend_deterministically_cmd} && @{duckc_path} compile_package duck_modules/@{module_to_compile} -w @{duckc_worker_count} -a @{case_build} -n package_@{module_to_compile} @{compile_dvm_options} --dvm-backend"
-compile_llvm_backend_cmd: "@{compile_llvm_backend_deterministically_cmd} && @{duckc_path} compile_package duck_modules/@{module_to_compile} -w @{duckc_worker_count} -a @{case_build} -n package_@{module_to_compile} @{compile_llvm_options}"
+compile_dvm_backend_cmd:  "@{duckc_path} compile_package duck_modules/@{module_to_compile} -w @{duckc_worker_count} -a @{case_build} -n package_@{module_to_compile} @{std_artifacts_path_flag} @{compile_dvm_options} --dvm-backend && @{compile_dvm_backend_deterministically_cmd}"
+compile_llvm_backend_cmd: "@{duckc_path} compile_package duck_modules/@{module_to_compile} -w @{duckc_worker_count} -a @{case_build} -n package_@{module_to_compile} @{std_artifacts_path_flag} @{compile_llvm_options} && @{compile_llvm_backend_deterministically_cmd}"
 
-# "compile only" commands used by the all backend (determinism checks run separately before these).
-compile_dvm_only_cmd: "@{duckc_path} compile_package duck_modules/@{module_to_compile} -w @{duckc_worker_count} -a @{case_build} -n package_@{module_to_compile} @{compile_dvm_options} --dvm-backend"
-compile_llvm_only_cmd: "@{duckc_path} compile_package duck_modules/@{module_to_compile} -w @{duckc_worker_count} -a @{case_build} -n package_@{module_to_compile} @{compile_llvm_options}"
+compile_dvm_only_cmd: "@{duckc_path} compile_package duck_modules/@{module_to_compile} -w @{duckc_worker_count} -a @{case_build} -n package_@{module_to_compile} @{std_artifacts_path_flag} @{compile_dvm_options} --dvm-backend"
+compile_llvm_only_cmd: "@{duckc_path} compile_package duck_modules/@{module_to_compile} -w @{duckc_worker_count} -a @{case_build} -n package_@{module_to_compile} @{std_artifacts_path_flag} @{compile_llvm_options}"
 
 compiled_to_llvm: "@{case_build}/package_llvm.exe"
 compiled_to_dvm: "@{case_build}/package_dvm.dbc"
@@ -60,8 +61,8 @@ PreCase: "mkdir -p @{case_build};
   case '@{backend}' in
     dvm)       @{compile_dvm_backend_cmd}                                                                                ;;
     llvm)      @{compile_llvm_backend_cmd}                                                                               ;;
-    all)       @{compile_dvm_backend_deterministically_cmd} && @{compile_llvm_backend_deterministically_cmd} &&
-               @{compile_dvm_only_cmd} && @{compile_llvm_only_cmd}                                                      ;;
+    all)       @{compile_dvm_only_cmd} && @{compile_llvm_only_cmd} &&
+               @{compile_dvm_backend_deterministically_cmd} && @{compile_llvm_backend_deterministically_cmd}           ;;
     nobackend) echo 'Backend undefined'; exit 1                                                                          ;;
     *)         echo 'Unknown backend';   exit 1                                                                          ;;
   esac;"
@@ -113,6 +114,7 @@ SubDirs:
   - constants
   - classes
   - extern_c
+  - ffi
   - static_arrays
   - dynamic_arrays
   - optimisations

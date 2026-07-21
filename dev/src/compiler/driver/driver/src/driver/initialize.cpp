@@ -102,6 +102,31 @@ namespace compiler::driver {
 				else
 					had_failure = true;
 			}
+
+			if_opt_some(stdlib_options.std_artifacts_path, path) {
+				if (not path.exists()) {
+					if (path.isPhysical() || path.isRelative()) {
+						auto file = fs::FileManager::createPhysicalFolder(path.absolute());
+						CORE_ASSERT(
+							file.exists(), "Failed to create artifacts folder: " + path.string()
+						);
+					} else if (path.isTemporary()) {
+						auto file = fs::FileManager::createTempFolder(path);
+						CORE_ASSERT(
+							file.exists(), "Failed to create artifacts folder: " + path.string()
+						);
+					} else {
+						throw base::LogicError(
+							"Artifacts path must be either physical or temporary, but got: "
+							+ path.string()
+						);
+					}
+				}
+				global_state::setters::setCustomStdArtifactsCollection(
+					makeBox<artifacts::ArtifactCollection>(path)
+				);
+			}
+
 			return had_failure ? base::BAD : base::OK;
 		}
 
