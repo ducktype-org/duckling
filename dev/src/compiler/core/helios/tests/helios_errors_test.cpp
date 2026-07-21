@@ -1514,6 +1514,22 @@ private:
 			{ "not found" },
 			1
 		);
+
+		// ============================ Non template bake ============================
+
+		checkForErrorOnCompileModule(
+			R"(
+				const a = 1;
+
+				fun main() -> i64 = {
+					a:{1};
+					return 0;
+				}
+
+			)",
+			{ "non-template" },
+			1
+		);
 	}
 
 	void testPointerCastErrors() {
