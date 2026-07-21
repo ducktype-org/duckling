@@ -16,7 +16,7 @@ pub struct ListOptions<'duck> {
     /// Whether to reverse the order specified above.
     pub reverse_order: bool,
     /// Path to the storage from which we want to list the venvs.
-    pub storage: PathBuf,
+    pub storage_path: PathBuf,
 }
 
 /// Enum for possible orderings of venvs.
@@ -63,9 +63,9 @@ pub fn list(opts: ListOptions<'_>) -> QuackResult<()> {
         ctx,
         output_ordering,
         reverse_order,
-        storage,
+        storage_path,
     } = opts;
-    let storage = Storage::new(storage);
+    let storage = Storage::new(storage_path);
     let venvs_list: Vec<(Venv, SystemTime)> = list_venvs(storage.root(), ctx)
         .context("when listing the venvs")?
         .into_values()

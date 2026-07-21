@@ -2,7 +2,7 @@
 //! This includes: creating a venv, resolving dependencies, downloading them.
 use std::fs::File;
 use std::io;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::time::SystemTime;
 
 use flate2::read::GzDecoder;
@@ -52,11 +52,7 @@ pub fn sync(
 ) -> QuackResult<(TrySyncLock, Venv, Storage)> {
     debug!(root = %pcx.package().root().display(), ?options);
     let venv_config = pcx.venv_config();
-    let storage_localization = venv_config
-        .storage_path()?
-        .map(Path::to_path_buf)
-        .unwrap_or_else(|| pcx.ctx().default_storage_root().into_not_locked_path());
-    let storage = Storage::new(storage_localization);
+    let storage = Storage::new(pcx.storage_path()?);
     let mut fetcher = Fetcher::new(pcx.ctx())?;
     let mut git_access = StorageGitAccess::new(&storage);
     let expose_freezefile = venv_config.is_freezefile_exposed()?;

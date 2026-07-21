@@ -13,7 +13,7 @@ pub struct CleanStorageOptions<'duck> {
     /// Venv to delete
     pub mode: CleanStorageMode,
     /// Path to the storage from which we want to list the venvs.
-    pub storage: PathBuf,
+    pub storage_path: PathBuf,
 }
 
 /// Modes of the clean-storage operation.
@@ -27,14 +27,18 @@ pub enum CleanStorageMode {
 
 /// Logic for executing the `clean-storage` subcommand.
 pub fn clean_storage(options: CleanStorageOptions) -> QuackResult<()> {
-    let CleanStorageOptions { ctx, mode, storage } = options;
+    let CleanStorageOptions {
+        ctx,
+        mode,
+        storage_path,
+    } = options;
     match mode {
-        CleanStorageMode::RemoveVenv(venv_name) => delete_venv(ctx, &storage, venv_name),
+        CleanStorageMode::RemoveVenv(venv_name) => delete_venv(ctx, &storage_path, venv_name),
         CleanStorageMode::CleanStorage => {
             let CleanOutput {
                 removed_venvs,
                 removed_packages,
-            } = storage::clean_storage(ctx, &storage)
+            } = storage::clean_storage(ctx, &storage_path)
                 .context("when trying to clean the storage")?;
             ctx.console().print(format!(
                 "Removed {} venv{}",
