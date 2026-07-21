@@ -16,6 +16,7 @@ use crate::quackpack::core::version::CompatibilityCheck;
 use crate::quackpack::core::{FeatureName, Manifest, Source, Version};
 use crate::quackpack::util::str_id::QpJoin;
 use crate::quackpack::util::with_version::WithVersion;
+use crate::util::IsPlural;
 use crate::util::error::MessageError;
 use crate::util::extend::QpExtend;
 use crate::{QuackError, QuackResult, QuackResultContext, qp_bail_internal, qp_err, qp_internal};
@@ -585,13 +586,9 @@ impl GathererState {
         if !nonexistent_features.is_empty() {
             let package = pkg.value().descriptive_name();
             let missing_features = nonexistent_features.join(", ");
-            let plural = if nonexistent_features.len() == 1 {
-                ""
-            } else {
-                "s"
-            };
             return Ok(GathererComputation::only_error(qp_err!(
-                "package {package} does not have feature{plural} `{missing_features}`"
+                "package {package} does not have feature{} `{missing_features}`",
+                nonexistent_features.s_if_plural(),
             )));
         }
         let manifest = &pkg_data.manifest;

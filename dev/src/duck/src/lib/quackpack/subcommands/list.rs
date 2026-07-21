@@ -5,6 +5,7 @@ use std::time::SystemTime;
 use crate::quackpack::core::storage::paths::Storage;
 use crate::quackpack::core::storage::venv::Venv;
 use crate::quackpack::core::storage::{display_venv_info, list_venvs};
+use crate::util::IsPlural;
 use crate::{DuckContext, QuackResult, QuackResultContext};
 
 /// Options for the list operation.
@@ -87,7 +88,7 @@ pub fn list(opts: ListOptions<'_>) -> QuackResult<()> {
     ctx.console().print(format!(
         "Found {} venv{}",
         venvs_list.len(),
-        if venvs_list.len() == 1 { "" } else { "s" }
+        venvs_list.s_if_plural(),
     ))?;
 
     for venv in venvs_list {

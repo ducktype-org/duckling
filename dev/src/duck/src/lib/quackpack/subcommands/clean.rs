@@ -2,6 +2,7 @@ use std::path::PathBuf;
 
 use crate::duck::util::indent::indent;
 use crate::quackpack::core::storage::{CleanOutput, clean_storage, delete_venv};
+use crate::util::IsPlural;
 use crate::{DuckContext, QuackResult, QuackResultContext, StrId};
 
 /// Options for the clean operation.
@@ -35,19 +36,20 @@ pub fn clean(options: CleanOptions) -> QuackResult<()> {
             ctx.console().print(format!(
                 "Removed {} venv{}",
                 removed_venvs.len(),
-                if removed_venvs.len() == 1 { "" } else { "s" }
+                removed_venvs.s_if_plural(),
             ))?;
             for venv in removed_venvs {
-                ctx.console().print(indent(venv.as_ref(), 2))?;
+                ctx.console()
+                    .print(indent(&format!("venv with id {}", venv), 2))?;
             }
             ctx.console().print(format!(
                 "Removed {} package{}",
                 removed_packages.len(),
-                if removed_packages.len() == 1 { "" } else { "s" }
+                removed_packages.s_if_plural(),
             ))?;
-            for pkg in removed_packages {
+            for pkg_path in removed_packages {
                 ctx.console()
-                    .print(indent(&format!("{}", pkg.display()), 2))?;
+                    .print(indent(&format!("package at {}", pkg_path.display()), 2))?;
             }
             Ok(())
         }
