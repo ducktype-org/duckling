@@ -587,7 +587,6 @@ namespace compiler::helios {
 				// This also inserts the baked template symbols into this scope.
 
 				// @TODO: #3071 this is a hack, fix it!
-				// Scope of "template →(...)← {}"
 				// Here two different cases are handled:
 				// * for pre-bake PST template this defined no symbols, this is a scope in which the
 				// expressions from template "signature" are compiled
