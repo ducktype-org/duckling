@@ -18,6 +18,7 @@
 #include <helios_private/symbols/symbol_data.hpp>
 
 #include <query_framework/standard_query/query_impl.hpp>
+#include "helios_private/hout_creation/definition_generation/default_destructors.hpp"
 
 #include <utility>
 
@@ -496,4 +497,10 @@ namespace compiler::helios {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTypeOfSymbol);
+
+	base::Optional<SymID> getTypeDestructor(query::Context& ctx, tsh::SymbolType<> symbol_type) {
+		if (symbol_type.isTriviallyDestructible(ctx)) return {};
+		
+		return defgen::destructSymForSymbolType(ctx, symbol_type);
+	}
 }

@@ -5,12 +5,20 @@
 
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_result.hpp>
+#include "helios/tsh/symbol_type.hpp"
 
 namespace compiler::helios::defgen {
 	/**
-	 * @brief Get the symbol of the compiler-generated destructor for a given type.
+	 * @brief Get the symbol of the compiler-generated destructor for a given abstract type.
 	 */
 	SymID destructSymForType(query::Context& ctx, tsh::AbstractType type);
+
+
+	/**
+	 * @brief Get the symbol of the compiler-generated destructor for a given symbol type.
+	 * Returns empty value when the type is a reference type.
+	 */
+	base::Optional<SymID> destructSymForSymbolType(query::Context& ctx, tsh::SymbolType<> type);
 
 	/**
 	 * @brief Whether the given symbol is a user-defined destructor.

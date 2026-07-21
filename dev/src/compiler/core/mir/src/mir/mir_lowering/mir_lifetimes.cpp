@@ -1,6 +1,8 @@
 #include "mir_lifetimes.hpp"
 
 #include "../mir_structure/mir_structure.hpp"
+#include "helios/symbols/query_type_of_symbol.hpp"
+#include "helios/symbols/symbol_id.hpp"
 
 namespace compiler::mir {
 
@@ -60,7 +62,9 @@ namespace compiler::mir {
 		return getEndingScopes(end, begin) | std::views::reverse | std::ranges::to<std::vector>();
 	}
 
-	void AddDestructorsPass::run(query::Context&, Function& function, const LifetimePassArgs& args) {
+	void AddDestructorsPass::run(
+		query::Context& ctx, Function& function, const LifetimePassArgs& args
+	) {
 		// Idea of implementation:
 		// For each block we iterate over instructions and add destructors after each instruction
 		// (often 0 of them), based on scopes that ends there.
@@ -105,6 +109,10 @@ namespace compiler::mir {
 			if (local_liveness.value()->kind == LivenessStatus::Moved)
 				return;                          // When moved we also do not create destructor
 
+			auto destruct_sym_opt = helios::getTypeDestructor(ctx, local->type);
+			if_opt_none(destruct_sym_opt) return;
+			auto destructor_symbol = destruct_sym_opt.value();
+
 			Operation op = local_liveness.value()->kind == LivenessStatus::Alive
 			                 ? Operation::Destruct
 			                 : Operation::DestructIf;
@@ -112,7 +120,7 @@ namespace compiler::mir {
 			out_instructions.push_back(Instruction{
 				op,
 				{},
-				{ local },
+				{ MIRFunctionLiteral{ destructor_symbol }, local },
 				{
 					OperationFlag{ .flag = OperationFlag::Flag::Destruct, .local = local },
 				},

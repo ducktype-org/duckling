@@ -1,5 +1,7 @@
 #include "default_destructors.hpp"
 
+#include "helios/tsh/symbol_type.hpp"
+
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/queries/function_queries.hpp>
@@ -20,6 +22,13 @@ namespace compiler::helios::defgen {
 			.generated_symbol_data
 			= Method{ .owner_type = type, .kind = Method::Kind::DefaultDestructor },
 		});
+	}
+
+	base::Optional<SymID> destructSymForSymbolType(query::Context& ctx, tsh::SymbolType<> type) {
+		if (type.getRefKind() == tsh::ReferenceKind::Box)
+			return boxFreeSymForType(ctx, type.getType());
+		if (type.getRefKind() == tsh::ReferenceKind::Ref) return {};
+		return destructSymForType(ctx, type.getType());
 	}
 
 	bool isUserDefinedDestructor(query::Context&, const SymID sym) {
@@ -46,7 +55,7 @@ namespace compiler::helios::defgen {
 		) {
 			const tsh::SymbolType<> type = location->expression_type.getSymbolType();
 
-			if (type.hasNoOpDestructor(ctx)) return;
+			if (type.isTriviallyDestructible(ctx)) return;
 
 			// A `box T` owns its pointee and its heap storage. First destroy the pointee, then free
 			// the memory.
@@ -217,7 +226,7 @@ namespace compiler::helios::defgen {
 			const usize size = array_type.getSize();
 
 			// Nothing to destroy for empty or trivially-destructible arrays.
-			if (size == 0 || array_type.getElementType().hasNoOpDestructor(ctx)) return body;
+			if (size == 0 || array_type.getElementType().isTriviallyDestructible(ctx)) return body;
 
 			// var __i: u64 = 0;
 			const SymID i_sym = buildLoopCounter(ctx, body, dtor_sym);
@@ -271,7 +280,7 @@ namespace compiler::helios::defgen {
 			std::vector<Box<code::Stmt>> body;
 
 			// Destroy each element only if the element type is not trivially destructible.
-			if (array_type.getElementType().hasNoOpDestructor(ctx)) return body;
+			if (array_type.getElementType().isTriviallyDestructible(ctx)) return body;
 
 			// var __i: u64 = 0;
 			const SymID i_sym = buildLoopCounter(ctx, body, dtor_sym);

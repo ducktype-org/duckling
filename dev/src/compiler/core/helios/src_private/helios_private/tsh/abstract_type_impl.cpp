@@ -287,7 +287,7 @@ namespace compiler::tsh {
 
 	bool VariantAbstractTypeImpl::hasNoOpDestructor(query::Context& ctx) const {
 		for (const auto& type: underlying_types)
-			if (!type.hasNoOpDestructor(ctx)) return false;
+			if (!type.isTriviallyDestructible(ctx)) return false;
 		return true;
 	}
 
