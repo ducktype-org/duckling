@@ -1,4 +1,5 @@
 //! Loading packages from the disk.
+use std::fmt::Display;
 use std::io;
 use std::marker::PhantomData;
 use std::path::Path;
@@ -38,6 +39,25 @@ impl AllowGlobalPackage {
 // Disallow creating PackageLoader instances.
 /// A loader of packages from the disk.
 pub struct PackageLoader(PhantomData<()>);
+
+#[derive(Debug)]
+/// Error signifying that PackageLoader did not find a package.
+pub struct PackageNotFound {
+    start_path_display: String,
+    end_path_display: String,
+}
+
+impl PackageNotFound {
+    /// Create a new [`PackageNotFound`], describing failure to find a package between `start` and `end`.
+    fn new(start: &Path, end: &Path) -> Self {
+        Self {
+            start_path_display: start.display().to_string(),
+            end_path_display: end.display().to_string(),
+        }
+    }
+}
+
+impl std::error::Error for PackageNotFound {}
 
 impl PackageLoader {
     pub const MANIFEST_NAME: &str = "quackconfig.yaml";
@@ -85,11 +105,7 @@ impl PackageLoader {
         if allow_global_package.allows() {
             PackageLoader::global_package(ctx)
         } else {
-            qp_bail!(
-                "no manifest has been found from the `{}` to the `{}`",
-                start.display(),
-                current.display(),
-            )
+            qp_bail!(PackageNotFound::new(&start, current))
         }
     }
 
@@ -136,6 +152,16 @@ impl PackageLoader {
         let dir = venv.data().last_known_location();
         Self::find_at_exact_directory(dir, ctx)
             .with_context(|| format!("Lost track of the venv {venv_id}"))
+    }
+}
+
+impl Display for PackageNotFound {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "no manifest has been found from the `{}` to the `{}`",
+            self.start_path_display, self.end_path_display
+        )
     }
 }
 

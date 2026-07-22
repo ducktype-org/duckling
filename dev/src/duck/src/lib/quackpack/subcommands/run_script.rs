@@ -7,7 +7,7 @@ use tracing::debug;
 use crate::duck::driver::cli_ext::jobs_from_matches;
 use crate::quackpack::core::compile::profiles::{DEFAULT_SCRIPT_PROFILE_NAME, Profile};
 use crate::quackpack::core::storage::{StorageSyncOptions, sync};
-use crate::quackpack::core::{AllowGlobalPackage, PackageContext, PackageLoader};
+use crate::quackpack::core::{AllowGlobalPackage, PackageContext, PackageLoader, PackageNotFound};
 use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail, qp_bail_internal};
 
 pub struct RunScriptOptions<'duck> {
@@ -132,6 +132,13 @@ fn get_package<'duck>(
     // If this is `Ok(_)` then the script lies inside a package.
     let possible_package =
         PackageLoader::find_from_directory(folder_path, ctx, AllowGlobalPackage::No);
+    // If possible_package is `Err` but it does steem from `PackageNotFound` then return the error.
+    // After this, possible_package is `Err` if and only if script does not belong to a package.
+    if let Err(ref err) = possible_package
+        && !err.has_in_chain::<PackageNotFound>()
+    {
+        return possible_package;
+    }
     match (possible_frontmatter, possible_package, global) {
         // Scripts with frontmatters cannot be inside packages nor be run with `global` flag.
         (Some(_), Ok(_), _) => qp_bail!("scripts inside packages cannot have frontmatters"),
