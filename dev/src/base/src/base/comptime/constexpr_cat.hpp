@@ -81,3 +81,12 @@ namespace base {
  * @brief Returns an std::array<char> concatenation with inferred length.
  */
 #define CONSTEXPR_CAT(...) base::cat<base::impl::sizeSum(__VA_ARGS__)>(__VA_ARGS__)
+
+/**
+ * @brief Like CONSTEXPR_CAT but appends a trailing '\\0'.
+ *
+ * Produces a null-terminated std::array suitable for .data() C-string usage.
+ * Use when the result will be consumed as a C-string rather than via
+ * string_view(arr.data(), arr.size()).
+ */
+#define CONSTEXPR_CAT_CSTR(...) CONSTEXPR_CAT(__VA_ARGS__, '\0')

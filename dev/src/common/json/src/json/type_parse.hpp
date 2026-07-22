@@ -26,30 +26,30 @@ namespace js::impl {
 	};
 }
 
-#define JSON_REGISTER_TYPE(T)                                 \
-	template<>                                                \
-	struct TypeParseTraits<T> {                               \
-		static constexpr auto NAME = CONSTEXPR_CAT(#T, '\0'); \
+#define JSON_REGISTER_TYPE(T)                                \
+	template<>                                               \
+	struct TypeParseTraits<T> {                              \
+		static constexpr auto NAME = CONSTEXPR_CAT_CSTR(#T); \
 	};
 
-#define JSON_REGISTER_TYPE_WITH_NAME(T, CUSTOM_NAME)                   \
-	template<>                                                         \
-	struct TypeParseTraits<T> {                                        \
-		static constexpr auto NAME = CONSTEXPR_CAT(CUSTOM_NAME, '\0'); \
+#define JSON_REGISTER_TYPE_WITH_NAME(T, CUSTOM_NAME)                  \
+	template<>                                                        \
+	struct TypeParseTraits<T> {                                       \
+		static constexpr auto NAME = CONSTEXPR_CAT_CSTR(CUSTOM_NAME); \
 	};
 
-#define JSON_REGISTER_TEMPLATE_WITH_NAME(T, CUSTOM_NAME)                        \
-	template<class X>                                                           \
-	struct TypeParseTraits<T<X>> {                                              \
-		static constexpr auto NAME                                              \
-			= CONSTEXPR_CAT(CUSTOM_NAME, "<", TypeParseTraits<X>::NAME, ">\0"); \
+#define JSON_REGISTER_TEMPLATE_WITH_NAME(T, CUSTOM_NAME)                           \
+	template<class X>                                                              \
+	struct TypeParseTraits<T<X>> {                                                 \
+		static constexpr auto NAME                                                 \
+			= CONSTEXPR_CAT_CSTR(CUSTOM_NAME, "<", TypeParseTraits<X>::NAME, ">"); \
 	};
 
-#define JSON_REGISTER_TEMPLATE_VARIADIC_WITH_NAME(T, CUSTOM_NAME)                        \
-	template<class... Args>                                                              \
-	struct TypeParseTraits<T<Args...>> {                                                 \
-		static constexpr auto NAME                                                       \
-			= CONSTEXPR_CAT(CUSTOM_NAME, "<", js::impl::MakeList<Args...>::name, ">\0"); \
+#define JSON_REGISTER_TEMPLATE_VARIADIC_WITH_NAME(T, CUSTOM_NAME)                           \
+	template<class... Args>                                                                 \
+	struct TypeParseTraits<T<Args...>> {                                                    \
+		static constexpr auto NAME                                                          \
+			= CONSTEXPR_CAT_CSTR(CUSTOM_NAME, "<", js::impl::MakeList<Args...>::name, ">"); \
 	};
 
 JSON_REGISTER_TYPE_WITH_NAME(std::string, "string");
