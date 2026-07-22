@@ -1,6 +1,7 @@
 #include "mangler.hpp"
 
 #include <concurrent/base/collections/hash_map.hpp>
+#include <ctv/ctv.hpp>
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/element_kind.hpp>
@@ -571,7 +572,79 @@ namespace compiler::helios::mangler {
 			return "$" + metadata.value();
 		}
 
+		template<typename Float>
+		static auto float_to_hex(Float value) {
+			static constexpr auto HEX_DIGITS = "0123456789abcdef"sv;
+
+			auto bytes = std::bit_cast<std::array<unsigned char, sizeof(Float)>>(value);
+			if constexpr (std::endian::native == std::endian::big) std::ranges::reverse(bytes);
+
+			std::string hex_str;
+			hex_str.reserve(bytes.size() * 2);
+
+			for (const auto byte: bytes) {
+				hex_str += HEX_DIGITS[byte >> 4];
+				hex_str += HEX_DIGITS[byte & 0x0F];
+			}
+
+			return hex_str;
+		}
+
+		static std::string mangleValue(query::Context&, compiler::numeric_value::NumericValue num) {
+			const auto& value = num.getStorage();
+
+			if (v_matches(value, int8_t, i16, i32, i64)) {
+				const i64 int_value
+					= std::visit([&](auto&& arg) -> i64 { return static_cast<i64>(arg); }, value);
+				return base::strConcat((int_value < 0 ? "n" : ""), std::abs(int_value), "_");
+			} else if (v_matches(value, uint8_t, u16, u32, u64)) {
+				const u64 uint_value
+					= std::visit([&](auto&& arg) -> u64 { return static_cast<u64>(arg); }, value);
+				return base::strConcat(uint_value, "_");
+			} else if (v_matches(value, f32)) {
+				return float_to_hex<f32>(std::get<f32>(value));
+			} else if (v_matches(value, f64)) {
+				return float_to_hex<f64>(std::get<f64>(value));
+			} else {
+				CORE_PANIC("Unknown type in mangleValue()");
+			}
+		}
+
 	}  // namespace internal
+
+	std::string mangleCTV(query::Context& ctx, const compiler::ctv::CompileTimeValue& value) {
+		variant_match(value.getStorage()) {
+			variant_case(bool, b) { return base::strConcat("b", (b ? "1" : "0")); }
+			variant_case(compiler::numeric_value::NumericValue, num) {
+				return base::strConcat(
+					ctx.query<QueryMangledType>(num.getTypeOfStoredValue(ctx))
+						.get()
+						->valueOrThrow()
+						.strView(),
+					internal::mangleValue(ctx, num)
+				);  // adds '_' to ints
+			}
+			variant_case(char, c) { return base::strConcat("c", static_cast<u32>(c), "_"); }
+			variant_case(base::StrID, str) {
+				const auto view = str.strView();
+				for (char c: view)
+					if (not(c == '_' or internal::BASE_62_DIGITS.contains(c)))
+						CORE_PANIC("Not allowed character in CTV string in mangle(CTV)"
+						);  // @future: punnycode
+				return base::strConcat("s", view.size(), "_", view);
+			}
+			variant_case(compiler::ctv::CompileTimeValue::UnitCTV, unit) { return "u"; }
+			variant_case(compiler::ctv::CompileTimeValue::TupleCTV, tuple) {
+				std::string ret = "T";
+				for (auto&& elem: tuple.getElements()) ret += mangleCTV(ctx, elem);
+				return ret += "E";
+			}
+			variant_case(tsh::SymbolType<>, sym) {
+				return "t" + ctx.query<QueryMangledType>({ sym })->valueOrThrow().str();
+			}
+			variant_default { CORE_PANIC("Unknown CTV type in mangle(CTV)"); }
+		}
+	}
 
 	struct IMPLEMENT_QUERY(QueryMangledSymbol, base::StrID) {
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
@@ -746,84 +819,6 @@ namespace compiler::helios::mangler {
 		}
 
 		static std::string mangle(query::Context&, tsh::MetaAbstractType) { return "t"; }
-
-		static std::string mangle(query::Context& ctx, compiler::numeric_value::NumericValue num) {
-			if (num.isIntegral()) {
-				return mangle(
-					ctx, num.getTypeOfStoredValue(ctx).getType().as<tsh::IntegralAbstractType>()
-				);
-			} else {
-				return mangle(
-					ctx, num.getTypeOfStoredValue(ctx).getType().as<tsh::FloatAbstractType>()
-				);
-			}
-		}
-
-		template<typename Float>
-		static auto float_to_hex(Float value) {
-			static constexpr auto HEX_DIGITS = "0123456789abcdef"sv;
-
-			auto bytes = std::bit_cast<std::array<unsigned char, sizeof(Float)>>(value);
-			if constexpr (std::endian::native == std::endian::big) std::ranges::reverse(bytes);
-
-			std::string hex_str;
-			hex_str.reserve(bytes.size() * 2);
-
-			for (const auto byte: bytes) {
-				hex_str += HEX_DIGITS[byte >> 4];
-				hex_str += HEX_DIGITS[byte & 0x0F];
-			}
-
-			return hex_str;
-		}
-
-		static std::string mangleValue(query::Context&, compiler::numeric_value::NumericValue num) {
-			const auto& value = num.getStorage();
-
-			if (v_matches(value, int8_t, i16, i32, i64)) {
-				const i64 int_value
-					= std::visit([&](auto&& arg) -> i64 { return static_cast<i64>(arg); }, value);
-				return base::strConcat((int_value < 0 ? "n" : ""), std::abs(int_value), "_");
-			} else if (v_matches(value, uint8_t, u16, u32, u64)) {
-				const u64 uint_value
-					= std::visit([&](auto&& arg) -> u64 { return static_cast<u64>(arg); }, value);
-				return base::strConcat(uint_value, "_");
-			} else if (v_matches(value, f32)) {
-				return float_to_hex<f32>(std::get<f32>(value));
-			} else if (v_matches(value, f64)) {
-				return float_to_hex<f32>(std::get<f64>(value));
-			} else {
-				CORE_PANIC("Unknown type in mangleValue()");
-			}
-		}
-
-		static std::string mangle(query::Context& ctx, compiler::ctv::CompileTimeValue value) {
-			variant_match(value.getStorage()) {
-				variant_case(bool, b) { return base::strConcat("b", (b ? "1" : "0")); }
-				variant_case(compiler::numeric_value::NumericValue, num) {
-					return mangle(ctx, num) + mangleValue(ctx, num);  // adds '_' to ints
-				}
-				variant_case(char, c) { return base::strConcat("c", static_cast<u32>(c), "_"); }
-				variant_case(base::StrID, str) {
-					const auto view = str.strView();
-					for (char c: view)
-						if (not(c == '_' or internal::BASE_62_DIGITS.contains(c)))
-							CORE_PANIC("Not allowed character in CTV string in mangle(CTV)"
-							);  // @future: punnycode
-					return base::strConcat("s", view.size(), "_", view);
-				}
-				variant_case(compiler::ctv::CompileTimeValue::UnitCTV, unit) { return "u"; }
-				variant_case(compiler::ctv::CompileTimeValue::TupleCTV, tuple) {
-					std::string ret = "T";
-					for (auto&& elem: tuple.getElements()) ret += mangle(ctx, elem);
-					return ret += "E";
-				}
-				variant_case(tsh::SymbolType<>, sym) {
-					return "t" + ctx.query<QueryMangledType>({ sym })->valueOrThrow().str();
-				}
-				variant_default { CORE_PANIC("Unknown CTV type in mangle(CTV)"); }
-			}
-		}
 
 		static query::QResult<std::string> mangle(query::Context& ctx, tsh::AbstractType type) {
 			using enum tsh::Kind;
