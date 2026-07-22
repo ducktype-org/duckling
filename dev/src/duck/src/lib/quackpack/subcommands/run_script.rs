@@ -6,7 +6,6 @@ use tracing::debug;
 
 use crate::duck::driver::cli_ext::jobs_from_matches;
 use crate::quackpack::core::compile::profiles::{DEFAULT_SCRIPT_PROFILE_NAME, Profile};
-use crate::quackpack::core::storage::venv_id::{ToVenvId, VenvId};
 use crate::quackpack::core::storage::{StorageSyncOptions, sync};
 use crate::quackpack::core::{AllowGlobalPackage, PackageContext, PackageLoader};
 use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail, qp_bail_internal};
@@ -16,8 +15,6 @@ pub struct RunScriptOptions<'duck> {
     pub ctx: &'duck DuckContext,
     /// Path the script to run.
     pub path: &'duck Path,
-    /// Optional name of the venv to run the script in.
-    pub venv_id: Option<VenvId>,
     /// Force the script to be run in the global venv.
     pub global: bool,
     /// Profile to run the script in.
@@ -41,7 +38,6 @@ impl<'duck> RunScriptOptions<'duck> {
         path: &'duck Path,
         matches: &ArgMatches,
     ) -> QuackResult<Self> {
-        let venv_id = matches.get_one::<String>("venv").map(ToVenvId::to_venv_id);
         let profile = matches
             .get_one::<String>("profile")
             .map(String::as_str)
@@ -55,7 +51,6 @@ impl<'duck> RunScriptOptions<'duck> {
         Ok(Self {
             ctx,
             path,
-            venv_id,
             global: matches.get_flag("global"),
             profile,
             overwrite: matches.get_flag("overwrite"),
@@ -78,7 +73,6 @@ impl<'duck> RunScriptOptions<'duck> {
         Ok(Self {
             ctx,
             path,
-            venv_id: None,
             global: false,
             profile,
             overwrite: false,
@@ -98,7 +92,6 @@ pub fn run_script<'duck>(rs_options: RunScriptOptions<'duck>) -> QuackResult<()>
     let RunScriptOptions {
         ctx,
         path,
-        venv_id,
         global,
         profile,
         overwrite,
@@ -113,7 +106,7 @@ pub fn run_script<'duck>(rs_options: RunScriptOptions<'duck>) -> QuackResult<()>
     let folder_path = path
         .parent()
         .context_internal("we assured that the path points to a file")?;
-    let package = get_package(ctx, path, folder_path, global, venv_id)?;
+    let package = get_package(ctx, path, folder_path, global)?;
     let root_identity = package.package().as_a_local_identity()?;
     let (lock, venv, storage) = sync(
         &package,
@@ -133,27 +126,23 @@ fn get_package<'duck>(
     path: &Path,
     folder_path: &Path,
     global: bool,
-    venv_id: Option<VenvId>,
 ) -> QuackResult<PackageContext<'duck>> {
-    if let Some(package) = PackageContext::try_new_from_frontmatter(path.to_path_buf(), ctx)? {
-        if venv_id.is_some() {
-            qp_bail!("script with a frontmatter cannot be run with `venv` argument specified")
-        } else {
-            Ok(package)
+    let possible_frontmatter = PackageContext::try_new_from_frontmatter(path.to_path_buf(), ctx)?;
+    let possible_package =
+        PackageLoader::find_from_directory(folder_path, ctx, AllowGlobalPackage::No);
+    match (possible_frontmatter, possible_package, global) {
+        // Scripts with frontmatters cannot be inside packages nor be run with `global` flag.
+        (Some(_), Ok(_), _) => qp_bail!("scripts inside packages cannot have frontmatters"),
+        (Some(_), _, true) => {
+            qp_bail!("script with a frontmatter cannot be run with `global` flag")
         }
-    } else {
-        match venv_id {
-            Some(venv_id) => {
-                debug_assert!(!global, "should be guarded by the parser");
-                PackageLoader::find_venv_by_name(ctx, venv_id)
-            }
-            None => {
-                if global {
-                    PackageLoader::global_package(ctx)
-                } else {
-                    PackageLoader::find_from_directory(folder_path, ctx, AllowGlobalPackage::Yes)
-                }
-            }
-        }
+        (Some(frontmatter), Err(_), false) => Ok(frontmatter),
+
+        // `global` forces the script to be run in the global venv, even if it is inside a package.
+        (None, _, true) => PackageLoader::global_package(ctx),
+        // If script does not belong to a package, default to global venv.
+        (None, Err(_), false) => PackageLoader::global_package(ctx),
+
+        (None, Ok(pcx), false) => Ok(pcx),
     }
 }
