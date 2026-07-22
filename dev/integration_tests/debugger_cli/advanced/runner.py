@@ -58,7 +58,8 @@ if __name__ == "__main__":
         sys.stderr.write("ERROR: Build directory path was not provided as an argument!\n")
         sys.exit(1)
 
-    files = input().split(' ')
+    line = input()
+    debugger_args = line.split(' ') if line else []
 
     build_dir = sys.argv[1]
     vm_binary_path = os.path.join(build_dir, "bin", "VM")
@@ -67,7 +68,7 @@ if __name__ == "__main__":
     vm_process_env['UNBUFFERED'] = '1'
 
     vm_process = subprocess.Popen(
-        [vm_binary_path, "run", "-d", *files],
+        [vm_binary_path, "run", "-d", *debugger_args],
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         text=True,
