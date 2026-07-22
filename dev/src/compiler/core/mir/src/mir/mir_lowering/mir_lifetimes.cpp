@@ -306,6 +306,87 @@ namespace compiler::mir {
 		function.block_order = std::move(new_blocks_order);
 	}
 
+	namespace {
+		/**
+		 * @brief If @p instr overwrites a live, non-trivially-destructible place that it does not
+		 * initialize, build the `Destruct` of the old value to run before it. Otherwise returns none.
+		 */
+		base::Optional<Instruction> assignmentDestructorFor(
+			query::Context&                     ctx,
+			const Instruction&                  instr,
+			const LocalLivenessMap&             liveness,
+			const base::HashMap<LocalID, bool>& zero_initialized
+		) {
+			// The instruction must write to a place.
+			if_opt_none(instr.output) return {};
+			const MIRPlace& target = instr.output.value();
+
+			for (const auto& flag: instr.flags)
+				if (flag.flag == OperationFlag::Flag::Construct) return {};
+
+			if (not target.isLocal()) return {};
+			const MIRLocalRef base           = target.getBase<MIRLocalRef>();
+			auto              local_liveness = liveness.atMaybe(base->id);
+			if (local_liveness.empty()) return {};  // uninitialized
+			if (local_liveness.value()->kind != LivenessStatus::Alive) return {};
+
+			if (zero_initialized.contains(base->id)) return {};
+
+			// The place's type must have a non-trivial destructor.
+			auto destruct_sym_opt = helios::getTypeDestructor(ctx, target.type);
+			if_opt_none(destruct_sym_opt) return {};
+
+			return Instruction{
+				Operation::Destruct,
+				{},
+				{ MIRFunctionLiteral{ destruct_sym_opt.value() }, target },
+				{},
+				instr.scope,
+			};
+		}
+	}
+
+	void AddAssignmentDestructorsPass::run(
+		query::Context& ctx, Function& function, const LifetimePassArgs& args
+	) {
+		for (auto& block_id: function.block_order) {
+			auto& block = function.blocks[block_id];
+
+			// Replay liveness through the block, starting from its entry state. Unreachable blocks
+			// have no computed liveness, so default to empty (matching AddDestructorsPass).
+			LocalLivenessMap liveness_info;
+			if (auto found = args.liveness.block_in_liveness.atMaybe(block_id))
+				liveness_info = *found.value();
+
+			// Locals filled in by a `ZeroInitialize` in this block: their fields are being
+			// initialized (not overwritten), so assignments into them must not destroy the old value.
+			base::HashMap<LocalID, bool> zero_initialized;
+
+			std::vector<Instruction> new_instructions;
+			new_instructions.reserve(block.instructions.size());
+
+			for (const auto& instr: block.instructions) {
+				// The destructor of the overwritten value runs before the assignment, and is
+				// checked against the liveness state *before* the instruction executes.
+				if (auto old_value_dtor
+				    = assignmentDestructorFor(ctx, instr, liveness_info, zero_initialized))
+					new_instructions.push_back(std::move(old_value_dtor.value()));
+
+				new_instructions.push_back(instr);
+				updateLivenessMapByInstr(liveness_info, instr);
+
+				// Track whole-local `ZeroInitialize`s so later field stores are treated as
+				// initialization.
+				if (instr.operation == Operation::ZeroInitialize && instr.output.has_value()
+				    && instr.output.value().isLocal()
+				    && instr.output.value().projection_chain.empty())
+					zero_initialized.put(instr.output.value().getBase<MIRLocalRef>()->id, true);
+			}
+
+			block.instructions = std::move(new_instructions);
+		}
+	}
+
 	template<OperationFlag::Flag scope_flag, bool reverse_local_order>
 	void addScopeFlagForScopes(
 		Instruction&                 instr,
@@ -452,7 +533,12 @@ namespace compiler::mir {
 		// The order here does matter. AddDestructorsPass{} performs a transformation on the CFG
 		// which adds an important invariant that all successors of a block have the same ending
 		// scopes. This assumption is then used when adding ScopeFlags.
+		//
+		// AddAssignmentDestructorsPass runs before AddDestructorsPass: it only inserts instructions
+		// within existing blocks (no CFG changes), and its flagless `Destruct`s do not affect the
+		// liveness replay the later passes perform.
 		InvalidUseCheck{}.run(ctx, function, args);
+		AddAssignmentDestructorsPass{}.run(ctx, function, args);
 		AddDestructorsPass{}.run(ctx, function, args);
 		AddScopeFlagsPass{}.run(ctx, function, args);
 
