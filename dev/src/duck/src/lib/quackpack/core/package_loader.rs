@@ -2,7 +2,7 @@
 use std::fmt::Display;
 use std::io;
 use std::marker::PhantomData;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use tracing::{debug, trace};
 
@@ -43,16 +43,16 @@ pub struct PackageLoader(PhantomData<()>);
 #[derive(Debug)]
 /// Error signifying that PackageLoader did not find a package.
 pub struct PackageNotFound {
-    start_path_display: String,
-    end_path_display: String,
+    start_path: PathBuf,
+    end_path: PathBuf,
 }
 
 impl PackageNotFound {
     /// Create a new [`PackageNotFound`], describing failure to find a package between `start` and `end`.
     fn new(start: &Path, end: &Path) -> Self {
         Self {
-            start_path_display: start.display().to_string(),
-            end_path_display: end.display().to_string(),
+            start_path: start.to_path_buf(),
+            end_path: end.to_path_buf(),
         }
     }
 }
@@ -160,7 +160,8 @@ impl Display for PackageNotFound {
         write!(
             f,
             "no manifest has been found from the `{}` to the `{}`",
-            self.start_path_display, self.end_path_display
+            self.start_path.display(),
+            self.end_path.display()
         )
     }
 }
