@@ -58,6 +58,18 @@ impl FullIdentity {
             }
         }
     }
+
+    pub fn is_local(&self) -> bool {
+        self.origin().is_local()
+    }
+
+    pub fn is_git(&self) -> bool {
+        self.origin().is_git()
+    }
+
+    pub fn is_registry(&self) -> bool {
+        self.origin().is_registry()
+    }
 }
 
 impl From<FullIdentity> for Identity {
@@ -118,6 +130,18 @@ impl FullOrigin {
     /// Convert this [`FullOrigin`] into a [`Origin`].
     pub fn as_origin(&self) -> Origin {
         Origin::new(self.url, self.kind.as_kind())
+    }
+
+    pub fn is_local(&self) -> bool {
+        matches!(self.kind(), FullKind::Local)
+    }
+
+    pub fn is_git(&self) -> bool {
+        matches!(self.kind(), FullKind::Git { commit: _ })
+    }
+
+    pub fn is_registry(&self) -> bool {
+        matches!(self.kind(), FullKind::Registry)
     }
 }
 

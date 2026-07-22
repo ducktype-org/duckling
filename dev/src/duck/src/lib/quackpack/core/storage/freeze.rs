@@ -3,10 +3,10 @@
 use serde::{Deserialize, Serialize};
 
 use crate::StrId;
-use crate::quackpack::core::full_identity::{FullIdentity, FullKind};
+use crate::quackpack::core::full_identity::FullIdentity;
 use crate::quackpack::core::identity::Identity;
-use crate::quackpack::core::storage::package_id::{GitId, LocalId, PackageId, RegistryId};
 use crate::quackpack::core::{FeatureName, Version};
+use crate::quackpack::util::with_version::WithVersion;
 
 #[derive(Debug, Deserialize, Serialize, Default, Clone, PartialEq, Eq, Hash)]
 /// General storage/venv freezefile.
@@ -215,19 +215,12 @@ impl FreezePackage {
     }
 
     /// Cast self to the [`PackageId`].
-    pub fn to_package_id(&self) -> PackageId {
-        let url = self.identity().origin().url();
-        match self.identity().origin().kind() {
-            FullKind::Registry => {
-                PackageId::Registry(RegistryId::new(self.name(), self.version(), url))
-            }
-            FullKind::Git { commit } => PackageId::Git(GitId::new(url, commit)),
-            FullKind::Local => PackageId::Local(LocalId::new(url)),
-        }
+    pub fn to_package_id(&self) -> WithVersion<FullIdentity> {
+        WithVersion::new(*self.identity(), self.version())
     }
 }
 
-impl From<FreezePackage> for PackageId {
+impl From<FreezePackage> for WithVersion<FullIdentity> {
     fn from(value: FreezePackage) -> Self {
         value.to_package_id()
     }

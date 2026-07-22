@@ -19,7 +19,6 @@ use crate::quackpack::core::solver::{ShouldRunSolverEngine, SolverAnswer, Solver
 use crate::quackpack::core::storage::freeze::VenvFreeze;
 use crate::quackpack::core::storage::git_access::StorageGitAccess;
 use crate::quackpack::core::storage::locks::TrySyncLock;
-use crate::quackpack::core::storage::package_id::{GitId, RegistryId};
 use crate::quackpack::core::storage::paths::Storage;
 use crate::quackpack::core::storage::venv::{Venv, VenvData};
 use crate::quackpack::core::storage::venv_id::{ToVenvId, VenvId};
@@ -256,6 +255,7 @@ fn get_solver_answer(
 /// Helper for [`sync`].
 /// Fetches source codes of packages which have been decided to be part of the freeze,
 /// but their source codes have not yet been fetched.
+/// Returns whether any of the packages were installed during this sync operation.
 #[tracing::instrument(skip_all)]
 fn fetch_source_codes(
     storage: &Storage,
@@ -287,29 +287,28 @@ fn fetch_source_code(
     debug!(?pkg);
     let identity = pkg.value();
     let origin = identity.origin();
+    let url = origin.url();
     match origin.kind() {
         FullKind::Local => Ok(false),
         FullKind::Git { commit } => {
-            let pkg_id = GitId::new(origin.url(), commit).into();
-            if storage.is_package_stored(pkg_id) {
+            if storage.is_stored_git(url, &commit) {
                 return Ok(false);
             }
-            if git_access.is_stored(origin.url(), &commit) {
-                storage.mark_as_stored(pkg_id)?;
+            if git_access.is_stored(url, &commit) {
+                storage.mark_as_stored(pkg)?;
                 return Ok(true);
             }
             fetcher.clone_from_git_to_directory(
                 &origin.url(),
                 GitReference::Rev(commit),
-                &storage.pkg_dir(pkg_id),
+                &storage.git_dir(url, &commit),
             )?;
-            storage.mark_as_stored(pkg_id)?;
-            storage.pkg_dir(pkg_id).try_fsync_dir()?;
+            storage.mark_as_stored(pkg)?;
+            storage.git_dir(url, &commit).try_fsync_dir()?;
             Ok(true)
         }
         FullKind::Registry => {
-            let pkg_id = RegistryId::new(identity.name(), pkg.version(), origin.url()).into();
-            if storage.is_package_stored(pkg_id) {
+            if storage.is_package_stored(pkg) {
                 return Ok(false);
             }
             let mut successfully_fetched = false;
@@ -337,7 +336,7 @@ fn fetch_source_code(
             if !successfully_fetched {
                 qp_bail!("Failed to fetch a package");
             }
-            let pkg_dir = storage.pkg_dir(pkg_id);
+            let pkg_dir = storage.pkg_dir(pkg);
             if pkg_dir.exists() {
                 pkg_dir.rm()?;
             }
@@ -345,7 +344,7 @@ fn fetch_source_code(
             let decompressed = GzDecoder::new(file);
             let mut archive = Archive::new(decompressed);
             archive.unpack(pkg_dir.clone())?;
-            storage.mark_as_stored(pkg_id)?;
+            storage.mark_as_stored(pkg)?;
             pkg_dir.try_fsync_dir()?;
             Ok(true)
         }

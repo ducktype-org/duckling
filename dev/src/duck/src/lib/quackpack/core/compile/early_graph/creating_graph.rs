@@ -5,8 +5,8 @@ use tracing::debug;
 use super::*;
 use crate::quackpack::core::compile::BuildContext;
 use crate::quackpack::core::compile::compiler_package::PackageType;
+use crate::quackpack::core::full_identity::FullKind;
 use crate::quackpack::core::storage::freeze::{FreezePackage, VenvFreeze};
-use crate::quackpack::core::storage::package_id::PackageId;
 use crate::quackpack::core::storage::paths::Storage;
 use crate::quackpack::core::{Manifest, PackageLoader};
 use crate::quackpack::util::to_path_buf::ToPathBuf;
@@ -108,31 +108,32 @@ fn parse_dependency(
     pkg_type: PackageType,
 ) -> QuackResult<CompilerPackage> {
     debug!(?dep, type = %pkg_type, "parsing dep");
-    let storage_id = dep.to_package_id();
-    let directory = match storage_id {
-        PackageId::Local(ref local) => local.path().to_path_buf()?,
-        _ => storage.pkg_dir(storage_id),
+    let pkg_id = dep.to_package_id();
+    let id = pkg_id.value();
+    let directory = match id.origin().kind() {
+        FullKind::Local => id.origin().url().to_path_buf()?,
+        _ => storage.pkg_dir(pkg_id),
     };
-    let ctx =
-        PackageLoader::find_at_exact_directory(&directory, ctx).with_context(
-            || match storage_id {
-                PackageId::Registry(ref registry_id) => format!(
-                    "downloaded malformed dependency `{}` from `{}`",
-                    dep.as_identity(),
-                    registry_id.url()
-                ),
-                PackageId::Git(ref git_id) => format!(
-                    "cloned malformed dependency `{}` from `{}`",
-                    dep.as_identity(),
-                    git_id.url()
-                ),
-                PackageId::Local(..) => format!(
-                    "malformed local dependency `{}` at `{}`",
-                    dep.as_identity(),
-                    directory.display(),
-                ),
-            },
-        )?;
+    let ctx = PackageLoader::find_at_exact_directory(&directory, ctx).with_context(|| match id
+        .origin()
+        .kind()
+    {
+        FullKind::Registry => format!(
+            "downloaded malformed dependency `{}` from `{}`",
+            dep.as_identity(),
+            id.origin().url()
+        ),
+        FullKind::Git { commit: _ } => format!(
+            "cloned malformed dependency `{}` from `{}`",
+            dep.as_identity(),
+            id.origin().url()
+        ),
+        FullKind::Local => format!(
+            "malformed local dependency `{}` at `{}`",
+            dep.as_identity(),
+            directory.display(),
+        ),
+    })?;
     let package = ctx.into_package();
     Ok(CompilerPackage::new(package, pkg_type))
 }
@@ -170,7 +171,7 @@ impl EarlyGraph {
             let package = parse_dependency(dep, &bcx.storage, bcx.pcx.ctx(), pkg_type)?;
             let manifest = package.package().manifest();
             if manifest.name() != dep.name() || manifest.version() != dep.version() {
-                return Err(error_for_metadata_mismtach(manifest, dep));
+                return Err(error_for_metadata_mismtach(manifest, dep)?);
             }
             let overwritten_entry = packages.insert(dep.as_identity(), package).is_some();
             if overwritten_entry {
@@ -188,28 +189,33 @@ impl EarlyGraph {
 }
 
 /// Get the error message emitted when parsed package has different version (or name), than in the freeze.
-fn error_for_metadata_mismtach(manifest: &Manifest, dep: &FreezePackage) -> QuackError {
+fn error_for_metadata_mismtach(
+    manifest: &Manifest,
+    dep: &FreezePackage,
+) -> QuackResult<QuackError> {
     let display_expected = format!("{} {}", dep.name(), dep.version());
     let display_found = format!("{} {}", manifest.name(), manifest.version());
-    match dep.to_package_id() {
-        PackageId::Registry(registry_id) => qp_err!(
+    let dep_pkg_id = dep.to_package_id();
+    let dep_id = dep_pkg_id.value();
+    match dep_id.origin().kind() {
+        FullKind::Registry => Ok(qp_err!(
             "downloaded malformed dependency from `{}`: got name `{}`, expected `{}`",
-            registry_id.url(),
+            dep_id.origin().url(),
             display_found,
             display_expected
-        ),
-        PackageId::Git(git_id) => qp_err!(
+        )),
+        FullKind::Git { commit: _ } => Ok(qp_err!(
             "cloned malformed dependency from `{}`: got name `{}`, expected `{}`",
-            git_id.url(),
+            dep_id.origin().url(),
             display_found,
             display_expected
-        ),
-        PackageId::Local(id) => qp_err!(
+        )),
+        FullKind::Local => Ok(qp_err!(
             "malformed local dependency at `{}`: got name `{}`, expected `{}`",
-            id.path(),
+            dep_id.origin().url().to_path_buf()?.display(),
             display_found,
             display_expected
-        ),
+        )),
     }
 }
 
