@@ -573,7 +573,7 @@ namespace compiler::helios::mangler {
 		}
 
 		template<typename Float>
-		static auto float_to_hex(Float value) {
+		static auto floatToHex(Float value) {
 			static constexpr auto HEX_DIGITS = "0123456789abcdef"sv;
 
 			auto bytes = std::bit_cast<std::array<unsigned char, sizeof(Float)>>(value);
@@ -602,9 +602,9 @@ namespace compiler::helios::mangler {
 					= std::visit([&](auto&& arg) -> u64 { return static_cast<u64>(arg); }, value);
 				return base::strConcat(uint_value, "_");
 			} else if (v_matches(value, f32)) {
-				return float_to_hex<f32>(std::get<f32>(value));
+				return floatToHex<f32>(std::get<f32>(value));
 			} else if (v_matches(value, f64)) {
-				return float_to_hex<f64>(std::get<f64>(value));
+				return floatToHex<f64>(std::get<f64>(value));
 			} else {
 				CORE_PANIC("Unknown type in mangleValue()");
 			}
