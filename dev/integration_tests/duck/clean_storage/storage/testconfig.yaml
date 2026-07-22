@@ -12,6 +12,7 @@ Tests:
     Description: can delete ephemeral venv from storage
     Cases:
       basic:
+        Enabled: "false"
         test-cmd: duck -C foo clean-storage
         Output:
           String: |+

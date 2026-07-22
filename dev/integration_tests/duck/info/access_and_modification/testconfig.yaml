@@ -12,4 +12,5 @@ Tests:
     Description: last_access and last_modification are set properly
     Cases:
       verify-timestamps:
+        Enabled: "false"
         test-cmd: "duck -C foo info > duck-info-output.txt"

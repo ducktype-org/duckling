@@ -23,8 +23,8 @@
 
 use std::path::{Path, PathBuf};
 
-use crate::quackpack::core::storage::DirContents;
 use crate::quackpack::core::full_identity::FullKind;
+use crate::quackpack::core::storage::DirContents;
 use crate::quackpack::core::storage::venv_id::VenvId;
 use crate::quackpack::core::{PackageId, Version, storage_name_for_git, storage_name_for_registry};
 use crate::quackpack::util::interned_url::InternedUrl;

@@ -9,15 +9,17 @@ use crate::{DuckContext, QuackResult, QuackResultContext};
 /// Creates parser for the `list` subcommand.
 pub fn get_parser() -> Command {
     subcommand("list")
-        .about("List all the virtual environments")
-        .long_about("Lists all the virtual environments in the storage to which the current package belongs")
+        .about("Lists all the virtual environments in the storage")
         .arg(
             optional("sort-by", "Properties to sort the output by")
                 .value_parser(["name", "previous-access", "last-modification"])
                 .default_value("name"),
         )
         .arg(flag("sort-reverse", "Display output in reverse order"))
-        .arg(flag("global-storage", "Display all the venvs in the global storage"))
+        .arg(flag(
+            "global-storage",
+            "Display all the venvs in the global storage",
+        ))
 }
 
 /// Logic for executing the `list` subcommand.
