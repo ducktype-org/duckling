@@ -10,6 +10,7 @@ struct PoolItem {
 	bool alive = true;
 
 	PoolItem() = default;
+
 	explicit PoolItem(u64 id, i32 value): id(id), value(value) {}
 };
 
@@ -111,16 +112,16 @@ private:
 	void iteratorSkipsFreeSlotsTest() {
 		base::StableObjectPool<PoolItem, u64, true, true> pool;
 
-		pool.add(1);   // id=0
-		pool.add(2);   // id=1
-		pool.add(3);   // id=2
-		pool.add(4);   // id=3
+		pool.add(1);     // id=0
+		pool.add(2);     // id=1
+		pool.add(3);     // id=2
+		pool.add(4);     // id=3
 
 		pool.remove(1);  // remove id=1
 		pool.remove(2);  // remove id=2
 
 		// Iterator should only yield valid objects (ids 0 and 3).
-		i32 sum = 0;
+		i32 sum   = 0;
 		u64 count = 0;
 		for (auto& item: pool) {
 			sum += item.value;
@@ -135,9 +136,7 @@ private:
 		base::StableObjectPool<PoolItem, u64, true, true> pool;
 
 		u64 count = 0;
-		for ([[maybe_unused]] auto& item: pool) {
-			count++;
-		}
+		for ([[maybe_unused]] auto& item: pool) count++;
 		ASSERT_EQUAL(count, 0ULL);
 	}
 
