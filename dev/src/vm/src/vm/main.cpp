@@ -145,10 +145,18 @@ clah::Clah getVmClah() {
 						auto result
 							= source_files.size() ? cli.load(source_files[0]) : cli.loadDefault();
 						if (!result) {
+							std::string error_string;
+							variant_match(result.error()) {
+								variant_case(vm::api::ApiError, error) {
+									error_string = vm::api::errorToString(error);
+								}
+								variant_case(std::string, error) { error_string = error; }
+							}
+
 							printer::StreamPrinter::print({
 								{ "[ERROR] ", printer::Color::Red },
 								{ "Loading file failed with message:\n", printer::Color::Default },
-								{ vm::api::errorToString(result.error()), printer::Color::Default },
+								{ error_string, printer::Color::Default },
 								{ "\nAborting\n", printer::Color::Default },
 							});
 
