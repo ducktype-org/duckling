@@ -47,7 +47,6 @@ namespace compiler::helios::defgen {
 			// - One declaration, one assignment per field, one return.
 			body.reserve(1 + fields.size() + 1);
 
-			// @TODO: #2307 Classes with a field named `__result`.
 			// - Declare result variable.
 			const auto result_symbol_type = ctor_decl.return_type;
 			const SymID result_symbol      = ctx.query<QueryGeneratedSymbol>({

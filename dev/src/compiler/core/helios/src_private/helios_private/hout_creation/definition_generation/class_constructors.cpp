@@ -45,7 +45,6 @@ namespace compiler::helios::defgen {
 
 			// - Declare result variable.
 			const auto result_symbol_type = ctor_decl.return_type;
-			// @TODO: #2307 Classes with a field named `__result` don't work.
 			const SymID result_symbol = ctx.query<QueryGeneratedSymbol>({
 				.name                  = base::StrID("__result"),
 				.generated_symbol_data = Variable{ ctor_symbol, 0, result_symbol_type },

@@ -86,7 +86,6 @@ namespace compiler::helios::defgen {
 			std::vector<Box<code::Stmt>> body;
 			body.reserve(1 + fields.size() + 1);
 
-			// @TODO: #2307 Classes with a field named `__result`.
 			// var __result: T = <zero>;
 			const SymID result_symbol = ctx.query<QueryGeneratedSymbol>({
 				.name                  = base::StrID("__result"),
