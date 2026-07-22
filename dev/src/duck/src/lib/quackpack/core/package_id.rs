@@ -34,6 +34,7 @@ impl PackageId {
         self.origin().kind()
     }
 
+    #[track_caller]
     /// Get storage name of a package.
     pub fn storage_name(&self) -> String {
         match self.kind() {

@@ -132,14 +132,17 @@ impl FullOrigin {
         Origin::new(self.url, self.kind.as_kind())
     }
 
+    /// Check if this is a local identity.
     pub fn is_local(&self) -> bool {
         matches!(self.kind(), FullKind::Local)
     }
 
+    /// Check if this is a git identity.
     pub fn is_git(&self) -> bool {
         matches!(self.kind(), FullKind::Git { commit: _ })
     }
 
+    /// Check if this is a registry identity.
     pub fn is_registry(&self) -> bool {
         matches!(self.kind(), FullKind::Registry)
     }

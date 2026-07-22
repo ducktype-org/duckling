@@ -77,6 +77,7 @@ impl Storage {
         FileLockManager::new(self.root.clone()).join(LOCKS_DIRECTORY_NAME)
     }
 
+    #[track_caller]
     /// Get the root directory for storing a package.
     pub fn pkg_dir(&self, pkg_id: PackageId) -> PathBuf {
         match pkg_id.kind() {
