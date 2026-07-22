@@ -2381,6 +2381,10 @@ private:
 		using namespace compiler::ctv;
 		using compiler::numeric_value::NumericValue;
 
+		auto [_, root_scope] = getModule(fs::File(path("test_modules/mangling")));
+		auto symbol_1        = getSymbolTypeOf("Mspc.Ooo.Cnst", root_scope);
+		auto symbol_2        = getSymbolTypeOf("Mspc.Ooo.r", root_scope);
+
 		std::string result;
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto unit      = CompileTimeValue::UnitCTV{};
@@ -2396,11 +2400,10 @@ private:
 			auto u64_1234  = NumericValue{ u64{ 1'234 } };
 			auto str       = CompileTimeValue{ base::StrID{ "strABC" } };
 			auto tuple = CompileTimeValue::TupleCTV{ std::vector<CompileTimeValue>{ true, false } };
-			// auto symbol =
 
 			std::vector<CompileTimeValue> ctvs = {
-				false,   true,      f_1,      d_1, i8_n7, u8_7, i16_n42, u16_42, i32_n137,
-				u32_137, i64_n1234, u64_1234, 'B', '^',   str,  unit,    tuple,
+				false,     true,     f_1, d_1, i8_n7, u8_7, i16_n42, u16_42,   i32_n137, u32_137,
+				i64_n1234, u64_1234, 'B', '^', str,   unit, tuple,   symbol_1, symbol_2,
 			};
 
 			for (auto&& it: ctvs) result += compiler::helios::mangler::mangleCTV(ctx, it) + ' ';
@@ -2409,7 +2412,7 @@ private:
 
 		std::string expected
 			= "b0 b1 f0000803f d000000000000f03f ibn7_ jb7_ iwn42_ jw42_ idn137_ jd137_ iqn1234_ "
-			  "jq1234_ c66_ c94_ s6_strABC u Tb1b0E ";
+			  "jq1234_ c66_ c94_ s6_strABC u Tb1b0E tNid tR_Q_CM8manglingN4Mspc3Ooo3ClsE ";
 
 		ASSERT_EQUAL(result, expected);
 	}
