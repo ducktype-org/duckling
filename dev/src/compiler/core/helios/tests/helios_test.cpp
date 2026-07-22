@@ -1,3 +1,4 @@
+#include <ctv/ctv.hpp>
 #include <diagnostic_interactive/logger.hpp>
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
@@ -95,6 +96,7 @@ public:
 		TESTER_ADD_TEST(testMangler);
 		TESTER_ADD_TEST(testManglerSpecialMembers);
 		TESTER_ADD_TEST(testManglerOperators);
+		TESTER_ADD_TEST(testManglerCTV);
 		TESTER_ADD_TEST(testGlobalVariableExpressions);
 		TESTER_ADD_TEST(testTypeOfConstAndVar);
 		TESTER_ADD_TEST(testDebugPrint);
@@ -2374,6 +2376,43 @@ private:
 		// Suffix has no declaration syntax yet (see testOperatoriness) -- nothing to mangle here
 		// until fixity keywords exist. Once they do, add e.g.:
 		// ASSERT_EQUAL("...", mangle(.../* a suffix-declared operator */).str());
+	}
+
+	void testManglerCTV() {
+		using namespace compiler::ctv;
+		using compiler::numeric_value::NumericValue;
+
+		std::string result;
+		query::utils::withContextDo([&](query::Context& ctx) {
+			auto unit      = CompileTimeValue::UnitCTV{};
+			auto f_1       = NumericValue{ f32{ 1.0f } };
+			auto d_1       = NumericValue{ f64{ 1.0 } };
+			auto i8_n7     = NumericValue{ int8_t{ -7 } };
+			auto u8_7      = NumericValue{ uint8_t{ 7 } };
+			auto i16_n42   = NumericValue{ i16{ -42 } };
+			auto u16_42    = NumericValue{ u16{ 42 } };
+			auto i32_n137  = NumericValue{ i32{ -137 } };
+			auto u32_137   = NumericValue{ u32{ 137 } };
+			auto i64_n1234 = NumericValue{ i64{ -1'234 } };
+			auto u64_1234  = NumericValue{ u64{ 1'234 } };
+			auto str       = CompileTimeValue{ base::StrID{ "strABC" } };
+			auto tuple = CompileTimeValue::TupleCTV{ std::vector<CompileTimeValue>{ true, false } };
+			// auto symbol =
+
+			std::vector<CompileTimeValue> ctvs = {
+				false,   true,      f_1,      d_1, i8_n7, u8_7, i16_n42, u16_42, i32_n137,
+				u32_137, i64_n1234, u64_1234, 'B', '^',   str,  unit,    tuple,
+			};
+
+			for (auto&& it: ctvs) result += compiler::helios::mangler::mangleCTV(ctx, it) + ' ';
+			return result;
+		});
+
+		std::string expected
+			= "b0 b1 f0000803f d000000000000f03f ibn7_ jb7_ iwn42_ jw42_ idn137_ jd137_ iqn1234_ "
+			  "jq1234_ c66_ c94_ s6_strABC u Tb1b0E ";
+
+		ASSERT_EQUAL(result, expected);
 	}
 
 	void testGlobalVariableExpressions() {
