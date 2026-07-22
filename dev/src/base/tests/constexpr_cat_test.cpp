@@ -43,17 +43,17 @@ public:
 	 */
 	void testNullTerminatorBehavior() {
 		// Without explicit '\\0': NO null terminator.
-		constexpr std::array no_null = CONSTEXPR_CAT("Paused");
-		ASSERT_EQUAL(no_null.size(), 6ULL);
-		ASSERT_EQUAL(no_null[5], 'd');  // Last char is 'd', not '\0'.
+		constexpr std::array NO_NULL = CONSTEXPR_CAT("Paused");
+		ASSERT_EQUAL(NO_NULL.size(), 6ULL);
+		ASSERT_EQUAL(NO_NULL[5], 'd');
 
 		// With explicit '\\0': null-terminated, safe for .data() C-string.
-		constexpr std::array with_null = CONSTEXPR_CAT("Paused", '\0');
-		ASSERT_EQUAL(with_null.size(), 7ULL);
-		ASSERT_EQUAL(with_null[6], '\0');
+		constexpr std::array WITH_NULL = CONSTEXPR_CAT("Paused", '\0');
+		ASSERT_EQUAL(WITH_NULL.size(), 7ULL);
+		ASSERT_EQUAL(WITH_NULL[6], '\0');
 
 		// C-string comparison confirms null-terminated output.
-		std::string_view as_cstr(with_null.data());
+		std::string_view as_cstr(WITH_NULL.data());
 		ASSERT_EQUAL(as_cstr, "Paused");
 	}
 
@@ -63,22 +63,22 @@ public:
 	 */
 	void testConstexprCatCstr() {
 		// Single argument.
-		constexpr std::array a = CONSTEXPR_CAT_CSTR("Paused");
-		ASSERT_EQUAL(a.size(), 7ULL);
-		ASSERT_EQUAL(a[6], '\0');
-		ASSERT_EQUAL(std::string_view(a.data()), "Paused");
+		constexpr std::array SINGLE_ARG = CONSTEXPR_CAT_CSTR("Paused");
+		ASSERT_EQUAL(SINGLE_ARG.size(), 7ULL);
+		ASSERT_EQUAL(SINGLE_ARG[6], '\0');
+		ASSERT_EQUAL(std::string_view(SINGLE_ARG.data()), "Paused");
 
 		// Multiple arguments.
-		constexpr std::array b = CONSTEXPR_CAT_CSTR("Hello", ", ", "world");
-		ASSERT_EQUAL(b.size(), 13ULL);
-		ASSERT_EQUAL(b[12], '\0');
-		ASSERT_EQUAL(std::string_view(b.data()), "Hello, world");
+		constexpr std::array MULTI_ARG = CONSTEXPR_CAT_CSTR("Hello", ", ", "world");
+		ASSERT_EQUAL(MULTI_ARG.size(), 13ULL);
+		ASSERT_EQUAL(MULTI_ARG[12], '\0');
+		ASSERT_EQUAL(std::string_view(MULTI_ARG.data()), "Hello, world");
 
 		// Works with char arguments.
-		constexpr std::array c = CONSTEXPR_CAT_CSTR("a", 'b', "c");
-		ASSERT_EQUAL(c.size(), 4ULL);
-		ASSERT_EQUAL(c[3], '\0');
-		ASSERT_EQUAL(std::string_view(c.data()), "abc");
+		constexpr std::array WITH_CHAR = CONSTEXPR_CAT_CSTR("a", 'b', "c");
+		ASSERT_EQUAL(WITH_CHAR.size(), 4ULL);
+		ASSERT_EQUAL(WITH_CHAR[3], '\0');
+		ASSERT_EQUAL(std::string_view(WITH_CHAR.data()), "abc");
 	}
 
 	~ConstexprCatTest() override = default;
