@@ -158,19 +158,26 @@ private:
 	 * compilation failed.
 	 */
 	void testGeneratedSymbolShadowingDoesNotError() {
-		// #2307: Class with field named "__result" must compile.
-		// The implicit constructor creates a parameter named after each field AND
-		// a generated "__result" return variable. When the constructor is MIR-lowered,
-		// these two locals with the same name collide in validateShadowing.
-		//
-		// Using a global variable with an initializer forces the constructor through
-		// the full MIR lowering pipeline, triggering the collision.
+		// #2307: Classes with fields resembling generated symbol names must compile.
 		compiler::mir::test_utils::checkForNoErrorOnCompileModule(
 			R"(class T { __result: i64; other: i64; }
                var g: T = T(1, 2);
-               fun main() -> i64 = {
-                   return g.__result;
-               })"
+               fun main() -> i64 = { return g.__result; })"
+		);
+		compiler::mir::test_utils::checkForNoErrorOnCompileModule(
+			R"(class T { _result: i64; other: i64; }
+               var g: T = T(1, 2);
+               fun main() -> i64 = { return g._result; })"
+		);
+		compiler::mir::test_utils::checkForNoErrorOnCompileModule(
+			R"(class T { ___result: i64; other: i64; }
+               var g: T = T(1, 2);
+               fun main() -> i64 = { return g.___result; })"
+		);
+		compiler::mir::test_utils::checkForNoErrorOnCompileModule(
+			R"(class T { result: i64; other: i64; }
+               var g: T = T(1, 2);
+               fun main() -> i64 = { return g.result; })"
 		);
 	}
 };

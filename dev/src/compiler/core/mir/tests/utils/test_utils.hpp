@@ -106,10 +106,7 @@ namespace compiler::mir::test_utils {
 			CORE_ASSERT(!logger->hasErrors(), "Expected no errors to be logged by HELIOS.");
 
 			auto mir_result = mir::lowerToMIRUnit(ctx, &hout_result->valueOrPanic());
-			CORE_ASSERT(
-				mir_result.hasValue(),
-				"Expected MIR lowering to succeed, but it failed."
-			);
+			CORE_ASSERT(mir_result.hasValue(), "Expected MIR lowering to succeed, but it failed.");
 			logger = query::Context::dumpToOneLoggerAndClear();
 			if (logger->hasErrors()) {
 				std::stringstream logged_messages;
