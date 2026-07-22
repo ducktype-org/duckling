@@ -517,8 +517,8 @@ private:
 		std::vector<CRef<compiler::helios::HOUTUnit>> units
 			= query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>({ module_id })
 		          .valueOrPanic();
-		(void) units;  // @note: #973 when QueryModuleHOUTRecursively returns QResult, add assertion
-		               // that it is successful
+		std::ignore = units;  // @note: #973 when QueryModuleHOUTRecursively returns QResult, add
+		                      // assertion that it is successful
 	}
 
 	void testClassInteractions() {
@@ -557,8 +557,8 @@ private:
 		std::vector<CRef<compiler::helios::HOUTUnit>> units
 			= query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>({ module_id })
 		          .valueOrPanic();
-		(void) units;  // @note: #973 when QueryModuleHOUTRecursively returns QResult, add assertion
-		               // that it is successful
+		std::ignore = units;  // @note: #973 when QueryModuleHOUTRecursively returns QResult, add
+		                      // assertion that it is successful
 	}
 
 	/**
@@ -648,7 +648,7 @@ private:
 			// Check that the module lowers to HOUT without throwing.
 			const auto& hout
 				= ctx.query<compiler::helios::QueryModuleHOUT>(module_id)->valueOrThrow();
-			(void) hout;
+			std::ignore = hout;
 		});
 	}
 
@@ -1037,7 +1037,7 @@ private:
 	void testImport() {
 		auto [module, _] = getModule(fs::File(path("test_modules/import_tests")));
 
-		(void) query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>(module);
+		std::ignore = query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>(module);
 
 		const auto& hout
 			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
@@ -1242,7 +1242,7 @@ private:
 			// auto& var = get_var_ref(2);
 			// ASSERT_EQUAL(compiler::helios::name(var.helios_symbol), "c");
 			// ASSERT_EQUAL(var.type, st(i32_or_f32));
-			(void) i32_or_f32;  // < remove
+			std::ignore = i32_or_f32;  // < remove
 		}
 
 		{
@@ -2177,8 +2177,8 @@ private:
 		std::vector<CRef<compiler::helios::HOUTUnit>> units
 			= query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>({ module })
 		          .valueOrPanic();
-		(void) units;  // @note: #973 when QueryModuleHOUTRecursively returns QResult, add assertion
-		               // that it is successful
+		std::ignore = units;  // @note: #973 when QueryModuleHOUTRecursively returns QResult, add
+		                      // assertion that it is successful
 	}
 
 	void testMangler() {
@@ -2330,8 +2330,7 @@ private:
 	}
 
 	void testManglerOperators() {
-		auto [module, root_scope] = getModule(fs::File(path("test_modules/mangling_operators")));
-		(void) module;
+		auto [_, root_scope] = getModule(fs::File(path("test_modules/mangling_operators")));
 
 		auto mangle = [&](compiler::helios::SymID sym) {
 			return query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
@@ -3725,9 +3724,8 @@ private:
 	}
 
 	void testMethodOperatorResolution() {
-		auto [module, root_scope] = getModule(fs::File(path("test_modules/method_operators")));
+		auto [_, root_scope] = getModule(fs::File(path("test_modules/method_operators")));
 		using namespace compiler::helios::code;
-		(void) module;
 
 		auto foo_class = getChain("Foo", root_scope).back();
 		auto foo_class_info
