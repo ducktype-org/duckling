@@ -127,7 +127,9 @@ fn get_package<'duck>(
     folder_path: &Path,
     global: bool,
 ) -> QuackResult<PackageContext<'duck>> {
+    // If this is `Some(_)` then the script has a frontmatter.
     let possible_frontmatter = PackageContext::try_new_from_frontmatter(path.to_path_buf(), ctx)?;
+    // If this is `Ok(_)` then the script lies inside a package.
     let possible_package =
         PackageLoader::find_from_directory(folder_path, ctx, AllowGlobalPackage::No);
     match (possible_frontmatter, possible_package, global) {
