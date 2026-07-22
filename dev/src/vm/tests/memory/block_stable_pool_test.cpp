@@ -14,7 +14,7 @@
  * If this file compiles, the Block type satisfies all StableObjectPool
  * requirements (constructible with (u64, BlockData), move-assignable).
  */
-inline constexpr bool blockCompatibleWithStableObjectPool
+inline constexpr bool BLOCK_COMPATIBLE_WITH_STABLE_OBJECT_POOL
 	= sizeof(base::StableObjectPool<vm::Block, u64, true, true>) > 0;
 
-int main() { return blockCompatibleWithStableObjectPool ? 0 : 1; }
+int main() { return BLOCK_COMPATIBLE_WITH_STABLE_OBJECT_POOL ? 0 : 1; }

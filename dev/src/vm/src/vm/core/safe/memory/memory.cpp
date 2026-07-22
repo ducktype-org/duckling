@@ -14,7 +14,7 @@ namespace vm {
 
 	Ref<Block> Memory::createBlock(BlockData data) {
 		std::memset(data.view.getBegin(), 0, data.view.size());
-		auto id = blocks_pool.add(std::move(data));
+		auto id = blocks_pool.add(data);
 		return blocks_pool.get(id);
 	}
 

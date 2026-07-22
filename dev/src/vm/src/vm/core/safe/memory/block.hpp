@@ -55,7 +55,7 @@ namespace vm {
 	public:
 		Block(BlockID id, BlockData data): id(id), data(data) {}
 
-		Block(u64 id, BlockData data): Block(BlockID(id), std::move(data)) {}
+		Block(u64 id, BlockData data): Block(BlockID(id), data) {}
 	};
 }
 
