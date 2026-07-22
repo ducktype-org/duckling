@@ -109,3 +109,15 @@ fun intentionally_complex_collatz_nth(start: i64, n: i64) -> i64 = {
 }
 
 const COLLATZ: i64 = intentionally_complex_collatz_nth(6, 8); # COLLATZ == 1
+
+@builtin("size_of")
+fundecl sizeOf(v: type) -> i64;
+
+@builtin("alignment_of")
+fundecl alignOf(v: type) -> i64;
+
+fun sizeAndAlign(t: type) -> i64 = {
+	return sizeOf(t) + alignOf(t);
+}
+# Exercises the meta builtins through a VM comp-time call: size_of(i64) + alignment_of(i64).
+const SIZE_AND_ALIGN_I64: i64 = sizeAndAlign(i64); # 8 + 8 = 16
