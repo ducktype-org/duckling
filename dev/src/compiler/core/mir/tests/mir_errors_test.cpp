@@ -150,15 +150,11 @@ private:
 	}
 
 	/**
-	 * @brief Regression test for #2307: classes with fields named "__result" must compile.
-	 *
-	 * The compiler generates a `__result` local variable inside implicit constructors.
-	 * This must not collide with a user-defined field of the same name.
-	 * Before the fix, validateShadowing() flagged this as an illegal shadow and
-	 * compilation failed.
+	 * @brief Regression test: classes with fields resembling generated symbol
+	 *        names (__result, _result, etc.) must compile without shadowing errors.
 	 */
 	void testGeneratedSymbolShadowingDoesNotError() {
-		// #2307: Classes with fields resembling generated symbol names must compile.
+		// Classes with fields resembling generated symbol names must compile.
 		compiler::mir::test_utils::checkForNoErrorOnCompileModule(
 			R"(class T { __result: i64; other: i64; }
                var g: T = T(1, 2);

@@ -90,7 +90,7 @@ namespace compiler::mir::test_utils {
 	 * @brief Helper that verifies a module compiles through MIR without errors.
 	 *
 	 * Mirrors checkForErrorOnCompileModule but asserts success instead of failure.
-	 * Used to verify that previously-failing scenarios (like #2307) now compile.
+	 * Used to verify that previously-failing scenarios now compile.
 	 */
 	inline void checkForNoErrorOnCompileModule(std::string_view module_content) {
 		frontend::ModuleID module_id
