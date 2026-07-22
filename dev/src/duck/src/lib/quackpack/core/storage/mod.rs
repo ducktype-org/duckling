@@ -11,7 +11,6 @@ pub mod freeze;
 pub mod git_access;
 pub mod locks;
 pub mod ops;
-pub mod package_id;
 pub mod paths;
 pub mod venv;
 pub use ops::*;
