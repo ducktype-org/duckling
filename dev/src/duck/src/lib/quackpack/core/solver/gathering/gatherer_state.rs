@@ -13,7 +13,7 @@ use crate::quackpack::core::solver::gathering::fetch_types::{
     RequestIdentifier,
 };
 use crate::quackpack::core::version::CompatibilityCheck;
-use crate::quackpack::core::{FeatureName, Manifest, Source, Version};
+use crate::quackpack::core::{FeatureName, Manifest, PackageId, Source, Version};
 use crate::quackpack::util::str_id::QpJoin;
 use crate::quackpack::util::with_version::WithVersion;
 use crate::util::IsPlural;
@@ -125,7 +125,7 @@ pub struct GathererState {
     /// Tracks the state of all the pending or finished pinned fetches.
     pinned_fetches: HashMap<WithVersion<RequestIdentifier>, QueryState>,
 
-    pkgs_data: HashMap<WithVersion<FullIdentity>, PackageData>,
+    pkgs_data: HashMap<PackageId, PackageData>,
     versions_for_identity: HashMap<FullIdentity, HashSet<Version>>,
     source_to_origin_resolver: HashMap<Source, FullOrigin>,
 }
@@ -301,7 +301,7 @@ impl GathererState {
 
         // If received response declares a different version, the request failed.
         if pinned_success.origin_version != pinned_success.answer_package.version()
-            || pinned_success.origin_id.name != pinned_success.answer_package.value().name()
+            || pinned_success.origin_id.name != pinned_success.answer_package.name()
         {
             return Ok(self
                 .fail_incoherent_success_pinned(
@@ -320,7 +320,7 @@ impl GathererState {
 
         self.source_to_origin_resolver.insert(
             pinned_success.origin_id.source,
-            pinned_success.answer_package.value().origin(),
+            pinned_success.answer_package.origin(),
         );
         self.insert_manifests([(
             pinned_success.answer_package,
@@ -367,7 +367,7 @@ impl GathererState {
         let answer_identities: HashSet<FullIdentity> = not_pinned_response
             .fetched_manifests
             .keys()
-            .map(|pkg| *pkg.value())
+            .map(|pkg| pkg.identity())
             .collect();
         if answer_identities.len() == 1
             && let Some(answer_identity) = answer_identities.into_iter().next()
@@ -457,11 +457,11 @@ impl GathererState {
     /// Inserts manifests gotten in a fetch response into the GathererState.
     fn insert_manifests(
         &mut self,
-        manifests: impl IntoIterator<Item = (WithVersion<FullIdentity>, Box<Manifest>)>,
+        manifests: impl IntoIterator<Item = (PackageId, Box<Manifest>)>,
     ) {
         for (pkg, manifest) in manifests.into_iter() {
             self.versions_for_identity
-                .entry(*pkg.value())
+                .entry(pkg.identity())
                 .or_default()
                 .insert(pkg.version());
             self.pkgs_data.entry(pkg).or_insert_with(|| PackageData {
@@ -501,7 +501,7 @@ impl GathererState {
                         return Ok(result);
                     }
                     result.extend(self.update_features(
-                        WithVersion::new(answer_identity, pinned_request.version),
+                        PackageId::new(answer_identity, pinned_request.version),
                         pinned_request.features,
                     )?);
                 }
@@ -547,7 +547,7 @@ impl GathererState {
             {
                 any_matched = true;
                 result.extend(self.update_features(
-                    WithVersion::new(answer_identity, version),
+                    PackageId::new(answer_identity, version),
                     requested_features.clone(),
                 )?);
             }
@@ -568,7 +568,7 @@ impl GathererState {
     /// If any new feature has been added, returns requests for package's dependencies.
     fn update_features(
         &mut self,
-        pkg: WithVersion<FullIdentity>,
+        pkg: PackageId,
         mut requested_features: HashSet<FeatureName>,
     ) -> GathererResult<Vec<ManifestsRequest>> {
         let Some(pkg_data) = self.pkgs_data.get_mut(&pkg) else {
@@ -584,7 +584,7 @@ impl GathererState {
             requested_features.remove(feature);
         }
         if !nonexistent_features.is_empty() {
-            let package = pkg.value().descriptive_name();
+            let package = pkg.identity().descriptive_name();
             let missing_features = nonexistent_features.join(", ");
             return Ok(GathererComputation::only_error(qp_err!(
                 "package {package} does not have feature{} `{missing_features}`",
@@ -611,9 +611,9 @@ impl GathererState {
 #[derive(Debug)]
 pub struct GatheredInfo {
     /// The gathered manifests of the packages referenced in requests.
-    pub gathered_manifests: HashMap<WithVersion<FullIdentity>, Box<Manifest>>,
+    pub gathered_manifests: HashMap<PackageId, Box<Manifest>>,
     /// The intersection of the manifest defined features and features referenced in the requests.
-    pub possible_features: HashMap<WithVersion<FullIdentity>, HashSet<FeatureName>>,
+    pub possible_features: HashMap<PackageId, HashSet<FeatureName>>,
     /// The set of the possible versions of the packages with a given identity.
     pub versions_for_identity: HashMap<FullIdentity, HashSet<Version>>,
     /// The translation from [`Source`] to [`FullIdentity`].
@@ -636,7 +636,7 @@ impl TryFrom<GathererState> for GatheredInfo {
             }
         }
         for pkg in unnecessary_pkgs {
-            let Some(versions) = value.versions_for_identity.get_mut(pkg.value()) else {
+            let Some(versions) = value.versions_for_identity.get_mut(&pkg.identity()) else {
                 qp_bail_internal!(
                     "unnecessary package's identity not present in the versions for identity map"
                 );

@@ -23,13 +23,12 @@ use crate::quackpack::core::solver::gathering::gatherer_state::{
 use crate::quackpack::core::solver::git_access::GitAccess;
 use crate::quackpack::core::solver::solver_mode::SolverMode;
 use crate::quackpack::core::{
-    FeatureName, GitReference, Manifest, PackageLoader, Source, SourceKind,
+    FeatureName, GitReference, Manifest, PackageId, PackageLoader, Source, SourceKind,
 };
 use crate::quackpack::schemas::registry;
 use crate::quackpack::util::interned_url::InternedUrl;
 use crate::quackpack::util::to_path_buf::ToPathBuf;
 use crate::quackpack::util::to_url::ToUrl;
-use crate::quackpack::util::with_version::WithVersion;
 use crate::{QuackError, QuackResult, QuackResultContext, StrId, qp_bail_internal};
 
 /// A struct for fetching manifests for all the packages potentially used in the dependency resolution.
@@ -146,7 +145,7 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
                     source: root_source,
                 },
                 fetched_manifests: HashMap::from([(
-                    WithVersion::new(
+                    PackageId::new(
                         FullIdentity::new(
                             root_name,
                             FullOrigin::for_local(&root_path)
@@ -226,7 +225,7 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
                 FetchSuccess::Pinned(PinnedSuccess {
                     origin_id: request.id,
                     origin_version: request.version,
-                    answer_package: WithVersion::new(answer_identity, manifest.version()),
+                    answer_package: PackageId::new(answer_identity, manifest.version()),
                     fetched_manifest: Box::new(manifest),
                 }),
             )),
@@ -271,7 +270,7 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
             match manifest {
                 Ok(manifest) => {
                     fetch_response.fetched_manifests.insert(
-                        WithVersion::new(answer_identity, manifest.version()),
+                        PackageId::new(answer_identity, manifest.version()),
                         Box::new(manifest),
                     );
                 }
@@ -338,7 +337,7 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
             debug!("failed to store a new git: {e}");
             return GathererComputation(fetch_failure(), vec![e]);
         }
-        let answer_pkg = WithVersion::new(answer_identity, cloned_pkg.package.manifest().version());
+        let answer_pkg = PackageId::new(answer_identity, cloned_pkg.package.manifest().version());
         GathererComputation::only_success(FetchResponse::Success(FetchSuccess::NotPinned(
             NotPinnedSuccess {
                 origin_id: request.id,
@@ -373,7 +372,7 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
             if let FetchResponse::Success(FetchSuccess::NotPinned(success)) = stored_git_manifest.0
                 && let Some(manifest) = success.fetched_manifests.into_values().next()
             {
-                let pkg = WithVersion::new(answer_identity, manifest.version());
+                let pkg = PackageId::new(answer_identity, manifest.version());
                 return Ok(Some(NotPinnedSuccess {
                     origin_id: request.id,
                     fetched_manifests: [(pkg, manifest)].into(),
@@ -408,7 +407,7 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
                     NotPinnedSuccess {
                         origin_id: request.id,
                         fetched_manifests: HashMap::from([(
-                            WithVersion::new(answer_identity, pcx.package().version()),
+                            PackageId::new(answer_identity, pcx.package().version()),
                             Box::new(pcx.package().manifest().clone()),
                         )]),
                     },
