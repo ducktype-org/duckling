@@ -109,31 +109,30 @@ fn parse_dependency(
 ) -> QuackResult<CompilerPackage> {
     debug!(?dep, type = %pkg_type, "parsing dep");
     let pkg_id = dep.to_package_id();
-    let id = pkg_id.value();
-    let directory = match id.origin().kind() {
-        FullKind::Local => id.origin().url().to_path_buf()?,
+    let directory = match pkg_id.kind() {
+        FullKind::Local => pkg_id.url().to_path_buf()?,
         _ => storage.pkg_dir(pkg_id),
     };
-    let ctx = PackageLoader::find_at_exact_directory(&directory, ctx).with_context(|| match id
-        .origin()
-        .kind()
-    {
-        FullKind::Registry => format!(
-            "downloaded malformed dependency `{}` from `{}`",
-            dep.as_identity(),
-            id.origin().url()
-        ),
-        FullKind::Git { commit: _ } => format!(
-            "cloned malformed dependency `{}` from `{}`",
-            dep.as_identity(),
-            id.origin().url()
-        ),
-        FullKind::Local => format!(
-            "malformed local dependency `{}` at `{}`",
-            dep.as_identity(),
-            directory.display(),
-        ),
-    })?;
+    let ctx =
+        PackageLoader::find_at_exact_directory(&directory, ctx).with_context(|| {
+            match pkg_id.kind() {
+                FullKind::Registry => format!(
+                    "downloaded malformed dependency `{}` from `{}`",
+                    dep.as_identity(),
+                    pkg_id.url()
+                ),
+                FullKind::Git { commit: _ } => format!(
+                    "cloned malformed dependency `{}` from `{}`",
+                    dep.as_identity(),
+                    pkg_id.url()
+                ),
+                FullKind::Local => format!(
+                    "malformed local dependency `{}` at `{}`",
+                    dep.as_identity(),
+                    directory.display(),
+                ),
+            }
+        })?;
     let package = ctx.into_package();
     Ok(CompilerPackage::new(package, pkg_type))
 }
@@ -196,23 +195,22 @@ fn error_for_metadata_mismtach(
     let display_expected = format!("{} {}", dep.name(), dep.version());
     let display_found = format!("{} {}", manifest.name(), manifest.version());
     let dep_pkg_id = dep.to_package_id();
-    let dep_id = dep_pkg_id.value();
-    match dep_id.origin().kind() {
+    match dep_pkg_id.kind() {
         FullKind::Registry => Ok(qp_err!(
             "downloaded malformed dependency from `{}`: got name `{}`, expected `{}`",
-            dep_id.origin().url(),
+            dep_pkg_id.url(),
             display_found,
             display_expected
         )),
         FullKind::Git { commit: _ } => Ok(qp_err!(
             "cloned malformed dependency from `{}`: got name `{}`, expected `{}`",
-            dep_id.origin().url(),
+            dep_pkg_id.url(),
             display_found,
             display_expected
         )),
         FullKind::Local => Ok(qp_err!(
             "malformed local dependency at `{}`: got name `{}`, expected `{}`",
-            dep_id.origin().url().to_path_buf()?.display(),
+            dep_pkg_id.url().to_path_buf()?.display(),
             display_found,
             display_expected
         )),
