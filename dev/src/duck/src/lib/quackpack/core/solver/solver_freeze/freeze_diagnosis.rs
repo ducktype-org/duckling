@@ -223,7 +223,7 @@ impl SolverFreeze {
         let mut reversed_graph: HashMap<WithVersion<FullIdentity>, Vec<WithVersion<FullIdentity>>> =
             HashMap::new();
         for (pkg, freeze) in self.package_freezes.iter() {
-            for (_, realization) in freeze.dependencies_realization.iter() {
+            for realization in freeze.dependencies_realization.values() {
                 reversed_graph.entry(*realization).or_default().push(*pkg);
             }
         }
