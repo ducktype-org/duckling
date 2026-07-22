@@ -40,9 +40,7 @@ namespace compiler::mir {
 							if (!shadowing_pos.has_value() || !shadowed_pos.has_value()) continue;
 
 							auto msg = makeBox<VariableShadowingError>(*shadowing_pos);
-							msg->addAttachedMessage(
-								makeBox<ShadowedDeclarationNote>(*shadowed_pos)
-							);
+							msg->addAttachedMessage(makeBox<ShadowedDeclarationNote>(*shadowed_pos));
 							ctx.logInt(std::move(msg));
 							return base::BAD;
 						}
