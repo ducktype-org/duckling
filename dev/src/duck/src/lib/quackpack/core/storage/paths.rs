@@ -24,11 +24,10 @@
 use std::fs::ReadDir;
 use std::path::{Path, PathBuf};
 
-use crate::quackpack::core::full_identity::{FullIdentity, FullKind};
+use crate::quackpack::core::full_identity::FullKind;
 use crate::quackpack::core::storage::venv_id::VenvId;
-use crate::quackpack::core::{Version, storage_name_for_git, storage_name_for_registry};
+use crate::quackpack::core::{PackageId, Version, storage_name_for_git, storage_name_for_registry};
 use crate::quackpack::util::interned_url::InternedUrl;
-use crate::quackpack::util::with_version::WithVersion;
 use crate::util::file_locks::{FileLockManager, LockedFile};
 use crate::util::path_ops_ext::PathOpsExt;
 use crate::{DuckContext, QuackResult, qp_bail_internal};
@@ -79,13 +78,10 @@ impl Storage {
     }
 
     /// Get the root directory for storing a package.
-    pub fn pkg_dir(&self, pkg_id: WithVersion<FullIdentity>) -> PathBuf {
-        let id = pkg_id.value();
-        match id.origin().kind() {
-            FullKind::Git { commit } => self.git_dir(id.origin().url(), commit.as_str()),
-            FullKind::Registry => {
-                self.registry_dir(id.name().as_str(), pkg_id.version(), id.origin().url())
-            }
+    pub fn pkg_dir(&self, pkg_id: PackageId) -> PathBuf {
+        match pkg_id.kind() {
+            FullKind::Git { commit } => self.git_dir(pkg_id.url(), &commit),
+            FullKind::Registry => self.registry_dir(&pkg_id.name(), pkg_id.version(), pkg_id.url()),
             FullKind::Local => unreachable!("local packages should not be stored in storage"),
         }
     }
@@ -178,12 +174,11 @@ impl Storage {
     }
 
     /// Check if package is stored in storage.
-    pub fn is_package_stored(&self, pkg_id: WithVersion<FullIdentity>) -> bool {
-        let id = pkg_id.value();
-        match id.origin().kind() {
-            FullKind::Git { commit } => self.is_stored_git(id.origin().url(), commit.as_str()),
+    pub fn is_package_stored(&self, pkg_id: PackageId) -> bool {
+        match pkg_id.kind() {
+            FullKind::Git { commit } => self.is_stored_git(pkg_id.url(), &commit),
             FullKind::Registry => {
-                self.is_stored_registry(id.name().as_str(), pkg_id.version(), id.origin().url())
+                self.is_stored_registry(&pkg_id.name(), pkg_id.version(), pkg_id.url())
             }
             FullKind::Local => false,
         }
@@ -202,12 +197,11 @@ impl Storage {
     }
 
     /// Mark package as fully stored in storage.
-    pub fn mark_as_stored(&self, pkg_id: WithVersion<FullIdentity>) -> QuackResult<()> {
-        let id = pkg_id.value();
-        match id.origin().kind() {
-            FullKind::Git { commit } => self.mark_git_stored(id.origin().url(), commit.as_str()),
+    pub fn mark_as_stored(&self, pkg_id: PackageId) -> QuackResult<()> {
+        match pkg_id.kind() {
+            FullKind::Git { commit } => self.mark_git_stored(pkg_id.url(), &commit),
             FullKind::Registry => {
-                self.mark_registry_stored(id.name().as_str(), pkg_id.version(), id.origin().url())
+                self.mark_registry_stored(&pkg_id.name(), pkg_id.version(), pkg_id.url())
             }
             FullKind::Local => qp_bail_internal!("attempting to store a local package"),
         }

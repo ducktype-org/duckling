@@ -5,8 +5,7 @@ use serde::{Deserialize, Serialize};
 use crate::StrId;
 use crate::quackpack::core::full_identity::FullIdentity;
 use crate::quackpack::core::identity::Identity;
-use crate::quackpack::core::{FeatureName, Version};
-use crate::quackpack::util::with_version::WithVersion;
+use crate::quackpack::core::{FeatureName, PackageId, Version};
 
 #[derive(Debug, Deserialize, Serialize, Default, Clone, PartialEq, Eq, Hash)]
 /// General storage/venv freezefile.
@@ -215,12 +214,12 @@ impl FreezePackage {
     }
 
     /// Cast self to the [`PackageId`].
-    pub fn to_package_id(&self) -> WithVersion<FullIdentity> {
-        WithVersion::new(*self.identity(), self.version())
+    pub fn to_package_id(&self) -> PackageId {
+        PackageId::new(*self.identity(), self.version())
     }
 }
 
-impl From<FreezePackage> for WithVersion<FullIdentity> {
+impl From<FreezePackage> for PackageId {
     fn from(value: FreezePackage) -> Self {
         value.to_package_id()
     }

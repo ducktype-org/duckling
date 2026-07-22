@@ -23,9 +23,8 @@ use crate::quackpack::core::storage::paths::Storage;
 use crate::quackpack::core::storage::venv::{Venv, VenvData};
 use crate::quackpack::core::storage::venv_id::{ToVenvId, VenvId};
 use crate::quackpack::core::{
-    AnyPackage, GitReference, Package, PackageContext, PackageLoader, storage,
+    AnyPackage, GitReference, Package, PackageContext, PackageId, PackageLoader, storage,
 };
-use crate::quackpack::util::with_version::WithVersion;
 use crate::util::error::MessageError;
 use crate::util::path_ops_ext::PathOpsExt;
 use crate::{QuackError, QuackResult, QuackResultContext, qp_bail};
@@ -84,7 +83,7 @@ pub fn sync(
         input_freeze,
         SolverMode::from(options),
     )?;
-    let pkgs: Vec<WithVersion<FullIdentity>> = solver_answer
+    let pkgs: Vec<PackageId> = solver_answer
         .new_freeze
         .package_freezes
         .keys()
@@ -235,7 +234,7 @@ fn get_solver_answer(
     debug!(?mode);
     let root_origin = FullOrigin::for_local(pcx.package().root())?;
     let root_identity = FullIdentity::new(pcx.package().name(), root_origin);
-    let root_pkg = WithVersion::new(root_identity, pcx.package().version());
+    let root_pkg = PackageId::new(root_identity, pcx.package().version());
     let solver_freeze = match input_freeze {
         Some(freeze) => SolverFreeze::try_from_venv_freeze(root_pkg, freeze)?,
         None => SolverFreeze::empty_with_root(root_pkg)?,
@@ -261,7 +260,7 @@ fn fetch_source_codes(
     storage: &Storage,
     fetcher: &mut Fetcher<'_>,
     git_access: &mut StorageGitAccess<'_>,
-    pkgs: Vec<WithVersion<FullIdentity>>,
+    pkgs: Vec<PackageId>,
 ) -> QuackResult<bool> {
     let mut was_anything_installed = false;
     let fetcher_lock = fetcher
@@ -282,13 +281,11 @@ fn fetch_source_code(
     storage: &Storage,
     fetcher: &mut Fetcher<'_>,
     git_access: &mut StorageGitAccess<'_>,
-    pkg: WithVersion<FullIdentity>,
+    pkg: PackageId,
 ) -> QuackResult<bool> {
     debug!(?pkg);
-    let identity = pkg.value();
-    let origin = identity.origin();
-    let url = origin.url();
-    match origin.kind() {
+    let url = pkg.url();
+    match pkg.kind() {
         FullKind::Local => Ok(false),
         FullKind::Git { commit } => {
             if storage.is_stored_git(url, &commit) {
@@ -299,7 +296,7 @@ fn fetch_source_code(
                 return Ok(true);
             }
             fetcher.clone_from_git_to_directory(
-                &origin.url(),
+                &url,
                 GitReference::Rev(commit),
                 &storage.git_dir(url, &commit),
             )?;
@@ -315,9 +312,9 @@ fn fetch_source_code(
             let mut blob_path = PathBuf::new();
             for attempt in 1..=MAX_BLOB_RETRY_COUNT {
                 match fetcher.fetch_package_blob(&PackageWithUrl {
-                    name: identity.name(),
+                    name: pkg.name(),
                     version: pkg.version(),
-                    url: origin.url(),
+                    url,
                 }) {
                     Ok(path) => {
                         blob_path = path;
