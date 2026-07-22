@@ -2,13 +2,12 @@ use std::collections::HashMap;
 
 use crate::StrId;
 use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
-use crate::quackpack::core::{Dependency, Source};
-use crate::quackpack::util::with_version::WithVersion;
+use crate::quackpack::core::{Dependency, PackageId, Source};
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 /// A struct describing a dependency of a package on some identity.
 pub struct DependencyEdge {
-    pub parent: WithVersion<FullIdentity>,
+    pub parent: PackageId,
     pub dep_identity: FullIdentity,
     pub manifest_child_name: StrId,
 }
@@ -17,7 +16,7 @@ impl DependencyEdge {
     /// Given a package and a manifest entry describing its dependency,
     /// creates a [`DependencyEdge`].
     pub fn from_manifest_and_parent(
-        parent: WithVersion<FullIdentity>,
+        parent: PackageId,
         manifest_dependency: &Dependency,
         source_to_origin_resolver: &HashMap<Source, FullOrigin>,
     ) -> Option<Self> {
