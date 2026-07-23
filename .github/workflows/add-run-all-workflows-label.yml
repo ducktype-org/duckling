@@ -9,9 +9,18 @@ jobs:
     if: github.event.review.state == 'approved' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
+      - name: Mint app token
+        id: app
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1  # v3.2.0
+        with:
+          app-id: ${{ secrets.QUACKER_APP_ID }}
+          private-key: ${{ secrets.QUACKER_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+          permission-pull-requests: write
       - name: Add "Run All Workflows" label if missing
         env:
-          GH_TOKEN: ${{ secrets.QUACKER_PAT }}
+          GH_TOKEN: ${{ steps.app.outputs.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           REPO: ${{ github.repository }}
           LABEL: "Run All Workflows"
