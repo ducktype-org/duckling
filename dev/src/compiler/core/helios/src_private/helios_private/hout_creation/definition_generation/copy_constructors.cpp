@@ -11,6 +11,7 @@
 #include <helios/tsh/queries/types.hpp>
 #include <helios_private/hout_creation/definition_generation/copy_constructors.hpp>
 #include <helios_private/hout_creation/definition_generation/length_methods.hpp>
+#include <helios_private/hout_creation/shorthands/shorthands.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
@@ -20,6 +21,8 @@
 #include <ranges>
 
 namespace compiler::helios::defgen {
+	using namespace code::shorthands;
+
 	bool isUserDefinedCopyConstructor(query::Context& ctx, const SymID sym) {
 		if (kind(sym) != SymbolKind::Constructor) return false;
 		const auto maybe_pst = maybeSymbolPst(sym);
@@ -52,24 +55,6 @@ namespace compiler::helios::defgen {
 	}
 
 	namespace {
-		/**
-		 * @brief Build `(*source).<member>` - a dereference of the `source` parameter followed by a
-		 * field access.
-		 * @TODO: #2776 Move this somewhere
-		 */
-		Box<code::Expr> derefSourceField(query::Context& ctx, SymID source_symbol, SymID field) {
-			return makeBox<code::AccessExpr>(
-				ctx,
-				code::generatedOrigin(),
-				makeBox<code::DerefExpr>(
-					ctx,
-					code::generatedOrigin(),
-					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), source_symbol)
-				),
-				field
-			);
-		}
-
 		// Builds the copy-constructor body for a class or tuple.
 		std::vector<Box<code::Stmt>> buildAggregateCopyBody(
 			query::Context&          ctx,
@@ -86,6 +71,8 @@ namespace compiler::helios::defgen {
 			std::vector<Box<code::Stmt>> body;
 			body.reserve(1 + fields.size() + 1);
 
+			const Shorthand s{ ctx };
+
 			// @TODO: #2307 Classes with a field named `__result`.
 			// var __result: T = <zero>;
 			const SymID result_symbol = ctx.query<QueryGeneratedSymbol>({
@@ -94,35 +81,20 @@ namespace compiler::helios::defgen {
 			                                       .variable_index  = 0,
 			                                       .type            = result_symbol_type },
 			});
-			body.emplace_back(makeBox<code::VariableStmt>(
-				code::generatedOrigin(),
-				makeBox<code::DefaultValueExpr>(
-					ctx, code::generatedOrigin(), result_symbol_type.getType()
-				),
-				result_symbol_type,
-				result_symbol
+			body.emplace_back(s.var(
+				result_symbol, result_symbol_type, s.defaultValue(result_symbol_type.getType())
 			));
 
 			// __result.field = <copy of (*source).field>;
 			for (const auto& field: fields) {
 				auto field_copy
-					= makeCopyExpr(ctx, derefSourceField(ctx, source_symbol, field.getSymbol()));
-				body.emplace_back(makeBox<code::AssignmentStmt>(
-					code::generatedOrigin(),
-					makeBox<code::AccessExpr>(
-						ctx,
-						code::generatedOrigin(),
-						makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), result_symbol),
-						field.getSymbol()
-					),
-					std::move(field_copy)
+					= s.copy(s.access(s.deref(s.ident(source_symbol)), field.getSymbol()));
+				body.emplace_back(s.assign(
+					s.access(s.ident(result_symbol), field.getSymbol()), std::move(field_copy)
 				));
 			}
 
-			body.emplace_back(makeBox<code::ReturnStmt>(
-				code::generatedOrigin(),
-				makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), result_symbol)
-			));
+			body.emplace_back(s.ret(s.ident(result_symbol)));
 
 			return body;
 		}
@@ -140,6 +112,8 @@ namespace compiler::helios::defgen {
 
 			std::vector<Box<code::Stmt>> body;
 
+			const Shorthand s{ ctx };
+
 			// var __result: T[N] = <zero>;
 			const SymID res_sym = ctx.query<QueryGeneratedSymbol>({
 				.name                  = base::StrID("__result"),
@@ -147,17 +121,14 @@ namespace compiler::helios::defgen {
 			                                       .variable_index  = 0,
 			                                       .type            = result_symbol_type },
 			});
-			body.emplace_back(makeBox<code::VariableStmt>(
-				code::generatedOrigin(),
-				makeBox<code::DefaultValueExpr>(
-					ctx, code::generatedOrigin(), result_symbol_type.getType()
-				),
-				result_symbol_type,
-				res_sym
-			));
+			body.emplace_back(
+				s.var(res_sym, result_symbol_type, s.defaultValue(result_symbol_type.getType()))
+			);
 
 			// Generate the copy loop only if the static array is not empty.
 			if (size > 0) {
+				using enum code::BuiltinBinary;
+
 				const auto u64_abs_type
 					= tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned);
 				const auto u64_type = tsh::SymbolType<>{ u64_abs_type,
@@ -172,76 +143,30 @@ namespace compiler::helios::defgen {
                 });
 				auto        zero_val = numeric_value::NumericValue::createOfType(u64_abs_type)
 				                    .expect("u64 creation failed");
-				body.emplace_back(makeBox<code::VariableStmt>(
-					code::generatedOrigin(),
-					makeBox<code::LiteralNumericExpr>(ctx, code::generatedOrigin(), zero_val),
-					u64_type,
-					i_sym
-				));
+				body.emplace_back(s.var(i_sym, u64_type, s.litNum(zero_val)));
 
-				// while (__i < size) {
-				// 		__result[__i] = <copy of (*source)[__i]>;
-				// 		__i = __i + 1;
-				// }
 				auto size_val = numeric_value::NumericValue::createOfType(u64_abs_type, size)
 				                    .expect("u64 creation failed");
-				auto condition = makeBox<code::BinaryOperatorExpr>(
-					ctx,
-					code::generatedOrigin(),
-					code::BuiltinBinary::IntegerLt,
-					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), i_sym),
-					makeBox<code::LiteralNumericExpr>(ctx, code::generatedOrigin(), size_val)
-				);
-
-				code::CodeBlock loop_body{};
-
-				// __result[__i] = <copy of (*source)[__i]>;
-				auto source_element = makeBox<code::IndexExpr>(
-					ctx,
-					code::generatedOrigin(),
-					makeBox<code::DerefExpr>(
-						ctx,
-						code::generatedOrigin(),
-						makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), source_symbol)
-					),
-					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), i_sym)
-				);
-				loop_body.statements.emplace_back(makeBox<code::AssignmentStmt>(
-					code::generatedOrigin(),
-					makeBox<code::IndexExpr>(
-						ctx,
-						code::generatedOrigin(),
-						makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), res_sym),
-						makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), i_sym)
-					),
-					makeCopyExpr(ctx, std::move(source_element))
-				));
-
-				// __i = __i + 1;
 				auto one_val = numeric_value::NumericValue::createOfType(u64_abs_type, 1)
 				                   .expect("u64 creation failed");
-				loop_body.statements.emplace_back(makeBox<code::AssignmentStmt>(
-					code::generatedOrigin(),
-					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), i_sym),
-					makeBox<code::BinaryOperatorExpr>(
-						ctx,
-						code::generatedOrigin(),
-						code::BuiltinBinary::IntegerAdd,
-						makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), i_sym),
-						makeBox<code::LiteralNumericExpr>(ctx, code::generatedOrigin(), one_val)
-					)
-				));
 
-				body.emplace_back(makeBox<code::WhileStmt>(
-					code::generatedOrigin(), std::move(condition), std::move(loop_body)
+				// while (__i < size) { __result[__i] = <copy of (*source)[__i]>; __i = __i + 1; }
+				body.emplace_back(s.whileStmt(
+					s.binOp(s.ident(i_sym), IntegerLt, s.litNum(size_val)),
+					{
+						s.assign(
+							s.index(s.ident(res_sym), s.ident(i_sym)),
+							s.copy(s.index(s.deref(s.ident(source_symbol)), s.ident(i_sym)))
+						),
+						s.assign(
+							s.ident(i_sym), s.binOp(s.ident(i_sym), IntegerAdd, s.litNum(one_val))
+						),
+					}
 				));
 			}
 
 			// return __result;
-			body.emplace_back(makeBox<code::ReturnStmt>(
-				code::generatedOrigin(),
-				makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), res_sym)
-			));
+			body.emplace_back(s.ret(s.ident(res_sym)));
 
 			return body;
 		}
@@ -257,6 +182,8 @@ namespace compiler::helios::defgen {
 
 			std::vector<Box<code::Stmt>> body;
 
+			const Shorthand s{ ctx };
+
 			// var __result: List[T] = <zero>;
 			const SymID res_sym = ctx.query<QueryGeneratedSymbol>({
 				.name                  = base::StrID("__result"),
@@ -264,14 +191,11 @@ namespace compiler::helios::defgen {
 			                                       .variable_index  = 0,
 			                                       .type            = result_symbol_type },
 			});
-			body.emplace_back(makeBox<code::VariableStmt>(
-				code::generatedOrigin(),
-				makeBox<code::DefaultValueExpr>(
-					ctx, code::generatedOrigin(), result_symbol_type.getType()
-				),
-				result_symbol_type,
-				res_sym
-			));
+			body.emplace_back(
+				s.var(res_sym, result_symbol_type, s.defaultValue(result_symbol_type.getType()))
+			);
+
+			using enum code::BuiltinBinary;
 
 			const auto u64_abs_type
 				= tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned);
@@ -287,86 +211,30 @@ namespace compiler::helios::defgen {
             });
 			auto        zero_val = numeric_value::NumericValue::createOfType(u64_abs_type)
 			                    .expect("u64 creation failed");
-			body.emplace_back(makeBox<code::VariableStmt>(
-				code::generatedOrigin(),
-				makeBox<code::LiteralNumericExpr>(ctx, code::generatedOrigin(), zero_val),
-				u64_type,
-				i_sym
-			));
+			body.emplace_back(s.var(i_sym, u64_type, s.litNum(zero_val)));
 
-
-			// while (__i < source.length()) {
-			// 		__result += <copy of (*source)[__i]>;
-			// 		__i = __i + 1;
-			// }
-			SymID length_method_sym = defgen::lengthMethodForType(ctx, array_type);
-
-			std::vector<Box<code::Expr>> length_args;
-			length_args.emplace_back(
-				makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), source_symbol)
-			);
-
-			Box<code::Expr> len_expr = makeBox<code::CallExpr>(
-				ctx,
-				code::generatedOrigin(),
-				makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), length_method_sym),
-				std::move(length_args)
-			);
-
-			auto condition = makeBox<code::BinaryOperatorExpr>(
-				ctx,
-				code::generatedOrigin(),
-				code::BuiltinBinary::IntegerLt,
-				makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), i_sym),
-				std::move(len_expr)
-			);
-
-			code::CodeBlock loop_body{};
-
-			// __result += <copy of (*source)[__i]>;
-			auto source_element = makeBox<code::IndexExpr>(
-				ctx,
-				code::generatedOrigin(),
-				makeBox<code::DerefExpr>(
-					ctx,
-					code::generatedOrigin(),
-					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), source_symbol)
-				),
-				makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), i_sym)
-			);
-			loop_body.statements.emplace_back(makeBox<code::ExprStmt>(
-				code::generatedOrigin(),
-				makeBox<code::ListPushExpr>(
-					code::generatedOrigin(),
-					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), res_sym),
-					makeCopyExpr(ctx, std::move(source_element))
-				)
-			));
-
-			// __i = __i + 1;
-			auto one_val = numeric_value::NumericValue::createOfType(u64_abs_type, 1)
+			const SymID length_method_sym = defgen::lengthMethodForType(ctx, array_type);
+			auto        one_val = numeric_value::NumericValue::createOfType(u64_abs_type, 1)
 			                   .expect("u64 creation failed");
-			loop_body.statements.emplace_back(makeBox<code::AssignmentStmt>(
-				code::generatedOrigin(),
-				makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), i_sym),
-				makeBox<code::BinaryOperatorExpr>(
-					ctx,
-					code::generatedOrigin(),
-					code::BuiltinBinary::IntegerAdd,
-					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), i_sym),
-					makeBox<code::LiteralNumericExpr>(ctx, code::generatedOrigin(), one_val)
-				)
-			));
 
-			body.emplace_back(makeBox<code::WhileStmt>(
-				code::generatedOrigin(), std::move(condition), std::move(loop_body)
+			// while (__i < source.length()) { __result += <copy of (*source)[__i]>; __i = __i + 1; }
+			body.emplace_back(s.whileStmt(
+				s.binOp(
+					s.ident(i_sym),
+					IntegerLt,
+					s.call(s.ident(length_method_sym), s.ident(source_symbol))
+				),
+				{
+					s.expr(s.listPush(
+						s.ident(res_sym),
+						s.copy(s.index(s.deref(s.ident(source_symbol)), s.ident(i_sym)))
+					)),
+					s.assign(s.ident(i_sym), s.binOp(s.ident(i_sym), IntegerAdd, s.litNum(one_val))),
+				}
 			));
 
 			// return __result;
-			body.emplace_back(makeBox<code::ReturnStmt>(
-				code::generatedOrigin(),
-				makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), res_sym)
-			));
+			body.emplace_back(s.ret(s.ident(res_sym)));
 
 			return body;
 		}
@@ -428,44 +296,4 @@ namespace compiler::helios::defgen {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDefaultCopyConstructor);
-
-	Box<code::Expr> makeCopyExpr(query::Context& ctx, Box<code::Expr> source) {
-		const tsh::SymbolType<> type = source->expression_type.getSymbolType();
-
-		if (type.isTriviallyCopyable(ctx)) return source;
-
-		// A `box T` is deep-copied. Allocate a new box holding a copy of the pointee
-		// `box(<copy of *source>)`. For a trivially-copyable pointee this collapses to
-		// `box(*source)`.
-		if (type.getRefKind() == tsh::ReferenceKind::Box) {
-			// Produce a copy of the underlying type.
-			auto pointee_copy = makeCopyExpr(
-				ctx, makeBox<code::DerefExpr>(ctx, code::generatedOrigin(), std::move(source))
-			);
-
-			// Now wrap it in a heap allocation.
-			return makeBoxAllocCall(ctx, code::generatedOrigin(), std::move(pointee_copy));
-		}
-
-		// Now we have a direct value which should be copied.
-		const auto abstract_type = type.getType();
-		CORE_ASSERT(
-			abstract_type.getKind() == tsh::Kind::Class
-				or abstract_type.getKind() == tsh::Kind::StaticArray
-				or abstract_type.getKind() == tsh::Kind::Tuple
-				or abstract_type.getKind() == tsh::Kind::DynamicArray,
-			"Tried to generate a copy constructor for a type which shouldn't need it"
-		);
-
-		const SymID                  copy_sym = copyConstructorSymForType(ctx, abstract_type);
-		std::vector<Box<code::Expr>> args;
-		args.emplace_back(makeBox<code::RefOfExpr>(ctx, code::generatedOrigin(), std::move(source)));
-
-		return makeBox<code::CallExpr>(
-			ctx,
-			code::generatedOrigin(),
-			makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), copy_sym),
-			std::move(args)
-		);
-	}
 }
