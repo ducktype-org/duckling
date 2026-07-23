@@ -89,8 +89,9 @@ namespace compiler::helios::templates {
 	) {
 		// Here we delete both raw pointer allocated with new and the atomic wrapper around it.
 		auto data_ptr = ptr->load(std::memory_order_acquire);
-		if (data_ptr) delete data_ptr.toOpt()->get();
-		delete ptr;
+		if (data_ptr)
+			delete data_ptr.toOpt()->get();  // NOLINT(clang-analyzer-cplusplus.NewDeleteLeaks)
+		delete ptr;                          // NOLINT(clang-analyzer-cplusplus.NewDeleteLeaks)
 	}
 
 	struct IMPLEMENT_QUERY(QueryBakeTemplateSymID, query::QResult<TemplateBakeStorage>) {
@@ -131,10 +132,7 @@ namespace compiler::helios::templates {
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
 			// Most template heavy lifting happens here, and in usage of pst root data.
 
-			// The static analyzer cannot model the ownership of the `SharedBox` holding
-			// `postponed_data` (raw pointer + custom deleter inside an atomic), so it reports a
-			// false-positive leak when the box is moved into the root data tree below.
-			// NOLINTBEGIN(clang-analyzer-cplusplus.NewDeleteLeaks)
+
 			CORE_ASSERT(
 				kind(key.template_sym_id) == SymbolKind::Template, "SymID is not a Template"
 			);
@@ -188,7 +186,7 @@ namespace compiler::helios::templates {
 						= getPSTElementParent(ctx, template_statement).getAsLangElement(),
 						.postponed_data = makeSharedBox<
 							std::atomic<MRef<TemplateBakePSTLinkedData::PostponedData>>,
-							TemplateBakePSTLinkedData::PostponedDataDeleter>(nullptr) } } });
+							TemplateBakePSTLinkedData::PostponedDataDeleter>(nullptr), }, }, });
 
 			auto args = bakeTemplateArgumentsSymbols(
 				ctx, signature, ctx.query<QueryPrimaryCodeScopeFor>({ baked_root }), key
@@ -222,6 +220,11 @@ namespace compiler::helios::templates {
 				.baked_template_sym_id = baked_sym_id,
 				.baked_template_pst    = std::move(baked_pst),
 			};
+
+
+			// Clang tidy fails to model SharedBox here, its almost certainly a false positive,
+			// ignoring lines in SharedBox does not work, but ignoring this line works.
+			// NOLINTBEGIN(clang-analyzer-cplusplus.NewDeleteLeaks)
 		}
 		// NOLINTEND(clang-analyzer-cplusplus.NewDeleteLeaks)
 

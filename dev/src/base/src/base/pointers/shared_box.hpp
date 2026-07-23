@@ -132,7 +132,7 @@ namespace base {
 		 * @brief: Helper function to put the SharedBox into a null state.
 		 */
 		void nullify() noexcept {
-			data_ptr = nullptr;
+			data_ptr = nullptr;  // NOLINT(clang-analyzer-cplusplus.NewDeleteLeaks)
 			ctrl_ptr = nullptr;  // NOLINT(clang-analyzer-cplusplus.NewDeleteLeaks)
 		}
 
@@ -152,7 +152,9 @@ namespace base {
 		 */
 		template<class Deleter>
 		static SharedBox fromPointerWithCustomDeleter(T* ptr, Deleter deleter) noexcept {
-			return SharedBox(ptr, new internal::ControlBlock<T, Deleter>(std::move(deleter)));
+			return SharedBox(
+				ptr, new internal::ControlBlock<T, Deleter>(std::move(deleter))
+			);  // NOLINT(clang-analyzer-cplusplus.NewDeleteLeaks)
 		}
 
 		/**
@@ -199,7 +201,9 @@ namespace base {
 		template<class Deleter>
 		explicit SharedBox(Box<T, Deleter>&& other) noexcept:
 			  data_ptr{ std::move(other).ptr },
-			  ctrl_ptr{ new internal::ControlBlock<T, Deleter>(std::move(other).deleter) } {
+			  ctrl_ptr{ new internal::ControlBlock<T, Deleter>(std::move(other).deleter) }
+		// NOLINT(clang-analyzer-cplusplus.NewDeleteLeaks)
+		{
 			other.ptr = nullptr;
 			assertNotNull();
 		}
@@ -365,6 +369,7 @@ namespace base {
 		);
 		return SharedBox<T>::fromPointerWithCustomDeleter(
 			new T(std::forward<Args>(args)...), Deleter{}
+			// NOLINT(clang-analyzer-cplusplus.NewDeleteLeaks)
 		);
 	}
 
