@@ -373,7 +373,7 @@ namespace base {
 
 	// Deduction guide for constructing a MBox from a Box:
 	template<class U, class UDeleter>
-	MBox(Box<U, UDeleter>&&) noexcept -> MBox<U, UDeleter>;
+	MBox(Box<U, UDeleter>&&) -> MBox<U, UDeleter>;
 
 	/**
 	 * @brief Constructs a Box by forwarding the arguments to T constructor
