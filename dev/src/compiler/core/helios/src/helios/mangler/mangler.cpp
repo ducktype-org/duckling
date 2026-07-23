@@ -608,7 +608,7 @@ namespace compiler::helios::mangler {
 				}
 				variant_case(f32, f) { return floatToHex(f); }
 				variant_case(f64, d) { return floatToHex(d); }
-				variant_default() { CORE_PANIC("Unknown type in mangleValue()"); }
+				variant_default { CORE_PANIC("Unknown type in mangleValue()"); }
 			}
 		}
 
