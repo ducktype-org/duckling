@@ -6,7 +6,6 @@
 #include <helios/symbols/symbol_kind.hpp>
 #include <helios_private/hout_creation/definition_generation/default_constructors.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
-#include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
 #include <query_framework/standard_query/query_cache_macros.hpp>
@@ -26,7 +25,6 @@ namespace compiler::helios {
 			                                                  : HOUTGlobalDataType::Variable;
 
 			const auto symbol_type = ctx.query<QueryTypeOfSymbol>(symbol)->valueOrThrow();
-			// const auto& sym_ref = getSymRef(symbol);
 
 			auto maybe_pst_decl = maybeSymbolPst(symbol);
 			auto origin         = [&]() -> code::ElementOrigin {
@@ -49,8 +47,6 @@ namespace compiler::helios {
 						"in QueryHOUTGlobalData"
 					);
 
-					auto pst_decl = maybe_pst_decl.value().unlock(ctx);
-
 					auto var_decl = stmt(ctx, symbol)->dynamicCast<pst::Variable>().value();
 
 					auto get_initial_value = [&]() -> BoxOrCRef<code::Expr> {
@@ -62,7 +58,7 @@ namespace compiler::helios {
 						}
 
 						return defgen::getDefaultInitializerExpr(
-								   ctx, symbol_type, pst_decl->getStablePosition()
+								   ctx, symbol_type, var_decl->getStablePosition()
 						)
 						    .valueOrThrow();
 					};
