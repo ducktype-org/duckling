@@ -534,6 +534,9 @@ private:
 	void metaFunctionsTest() {
 		auto [module, scope] = getModule(fs::File(path("modules/meta_functions")));
 
+		auto size_of_sym  = getChain("sizeOf", scope).back();
+		auto align_of_sym = getChain("alignOf", scope).back();
+
 		withContextDo([&](query::Context& ctx) {
 			auto& unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
 			auto& functions = unit.functions;
@@ -545,61 +548,55 @@ private:
 			};
 
 			using enum compiler::mir::Operation;
+			using MK = compiler::mir::MetaKind;
+
+			// Meta operations are a single `Meta` op parametrized by a `MetaKind` in `extra_params`.
+			auto meta_kind = [](const auto& instr) {
+				return std::get<compiler::mir::MetaParameters>(instr.extra_params).kind;
+			};
+
+			auto check_meta_function
+				= [&](CRef<compiler::helios::HOUTFunction> fun, MK kind, usize arg_size) {
+					  auto& mir_fun
+						  = ctx.query<compiler::mir::LowerToMIRFunction>({ fun })->valueOrThrow();
+					  const auto& block = mir_fun.blocks[mir_fun.block_order[0]];
+					  const auto& instr = block.instructions[0];
+					  ASSERT_TRUE(instr.operation == MetaTypeOperation);
+					  ASSERT_TRUE(meta_kind(instr) == kind);
+					  ASSERT_EQUAL(instr.arguments.size(), arg_size);
+					  ASSERT_TRUE(instr.arguments[0].isLocal());
+				  };
+
+			{
+				CRef fun
+					= &ctx.query<compiler::helios::QueryCodeOfFun>(size_of_sym)->valueOrThrow();
+				check_meta_function(fun, MK::SizeOf, 1);
+			}
+			{
+				CRef fun
+					= &ctx.query<compiler::helios::QueryCodeOfFun>(align_of_sym)->valueOrThrow();
+				check_meta_function(fun, MK::AlignOf, 1);
+			}
 
 			for (CRef<compiler::helios::HOUTFunction> fun: functions) {
 				if (fun->declaration->original_name.str() == "createBox") {
-					auto& mir_fun
-						= ctx.query<compiler::mir::LowerToMIRFunction>({ fun })->valueOrThrow();
-
-					const auto& block = mir_fun.blocks[mir_fun.block_order[0]];
-					const auto& instr = block.instructions[0];
-					ASSERT_TRUE(instr.operation == MetaCreateBox);
-					ASSERT_EQUAL(instr.arguments.size(), 1);
-					ASSERT_TRUE(instr.arguments[0].isLocal());
-					for (const auto& local: mir_fun.local_list) ASSERT_EQUAL(local.type, meta_type);
-
+					check_meta_function(fun, MK::CreateBox, 1);
 				} else if (fun->declaration->original_name.str() == "createRef") {
-					auto& mir_fun
-						= ctx.query<compiler::mir::LowerToMIRFunction>({ fun })->valueOrThrow();
-
-					const auto& block = mir_fun.blocks[mir_fun.block_order[0]];
-					const auto& instr = block.instructions[0];
-					ASSERT_TRUE(instr.operation == MetaCreateRef);
-					ASSERT_EQUAL(instr.arguments.size(), 1);
-					ASSERT_TRUE(instr.arguments[0].isLocal());
-					for (const auto& local: mir_fun.local_list) ASSERT_EQUAL(local.type, meta_type);
+					check_meta_function(fun, MK::CreateRef, 1);
+				} else if (fun->declaration->original_name.str() == "createPtr") {
+					check_meta_function(fun, MK::CreatePtr, 1);
+				} else if (fun->declaration->original_name.str() == "createCPtr") {
+					check_meta_function(fun, MK::CreateCPtr, 1);
+				} else if (fun->declaration->original_name.str() == "createManyPtr") {
+					check_meta_function(fun, MK::CreateManyPtr, 1);
+				} else if (fun->declaration->original_name.str() == "createSlice") {
+					check_meta_function(fun, MK::CreateSlice, 1);
 				} else if (fun->declaration->original_name.str() == "createConst") {
-					auto& mir_fun
-						= ctx.query<compiler::mir::LowerToMIRFunction>({ fun })->valueOrThrow();
-
-					const auto& block = mir_fun.blocks[mir_fun.block_order[0]];
-					const auto& instr = block.instructions[0];
-					ASSERT_TRUE(instr.operation == MetaCreateConst);
-					ASSERT_EQUAL(instr.arguments.size(), 1);
-					ASSERT_TRUE(instr.arguments[0].isLocal());
-					for (const auto& local: mir_fun.local_list) ASSERT_EQUAL(local.type, meta_type);
+					check_meta_function(fun, MK::CreateConst, 1);
 				} else if (fun->declaration->original_name.str() == "createVariant") {
-					auto& mir_fun
-						= ctx.query<compiler::mir::LowerToMIRFunction>({ fun })->valueOrThrow();
-
-					const auto& block = mir_fun.blocks[mir_fun.block_order[0]];
-					const auto& instr = block.instructions[0];
-					ASSERT_TRUE(instr.operation == MetaCreateVariant);
-					ASSERT_EQUAL(instr.arguments.size(), 4);
-					ASSERT_TRUE(instr.arguments[0].isLocal());
-					ASSERT_EQUAL(mir_fun.local_list[0]->type, meta_type);
-					for (const auto& local: mir_fun.local_list) ASSERT_EQUAL(local.type, meta_type);
+					check_meta_function(fun, MK::CreateVariant, 4);
 				} else if (fun->declaration->original_name.str() == "createTuple") {
-					auto& mir_fun
-						= ctx.query<compiler::mir::LowerToMIRFunction>({ fun })->valueOrThrow();
-
-					const auto& block = mir_fun.blocks[mir_fun.block_order[0]];
-					const auto& instr = block.instructions[0];
-					ASSERT_TRUE(instr.operation == MetaCreateTuple);
-					ASSERT_EQUAL(instr.arguments.size(), 4);
-					ASSERT_TRUE(instr.arguments[0].isLocal());
-					ASSERT_EQUAL(mir_fun.local_list[0]->type, meta_type);
-					for (const auto& local: mir_fun.local_list) ASSERT_EQUAL(local.type, meta_type);
+					check_meta_function(fun, MK::CreateTuple, 4);
 				} else if (fun->declaration->original_name.str() == "megaType") {
 					auto& mir_fun
 						= ctx.query<compiler::mir::LowerToMIRFunction>({ fun })->valueOrThrow();
@@ -612,7 +609,8 @@ private:
 					bool create_tuple_5_arg_found = false;
 					bool call_found               = false;
 					for (const auto& instr: block.instructions) {
-						if (instr.operation == MetaCreateTuple) {
+						if (instr.operation == MetaTypeOperation
+						    && meta_kind(instr) == MK::CreateTuple) {
 							if (instr.arguments.size() == 5) {
 								// When a big tuple instruction is found, it should be preceeded
 								// with two inner tuple create instructions and one inner variant
@@ -622,7 +620,8 @@ private:
 								create_tuple_5_arg_found = true;
 							}
 							create_tuple_count++;
-						} else if (instr.operation == MetaCreateVariant) {
+						} else if (instr.operation == MetaTypeOperation
+						           && meta_kind(instr) == MK::CreateVariant) {
 							// If variant is created, two preceding tuple creating instructions
 							// should exist.
 							ASSERT_TRUE(create_tuple_count == 2);

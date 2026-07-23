@@ -156,6 +156,7 @@ namespace compiler::helios {
 	}
 
 	base::Optional<ScopeID> SymbolData::getScope() const {
+		// @TODO: #3099 a lot of scopes could be removed from generated symbols.
 		variant_match(other) {
 			variant_case(PstImplementedSemantics, pst_data) { return pst_data.scope; }
 			variant_case(BuiltinSemantics, data) { return data.scope; }

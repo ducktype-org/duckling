@@ -18,6 +18,7 @@
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
+#include <helios_private/symbols/symbols.hpp>
 
 #include <query_framework/standard_query/query_impl.hpp>
 
@@ -41,11 +42,7 @@ namespace compiler::helios {
 			void setTypeOfSymbolByAbstractType(const tsh::AbstractType& type) {
 				if (symbol_type_qresult.hasValue())
 					CORE_PANIC("Attempted to set type of symbol in visitor a second time.");
-				symbol_type_qresult = tsh::SymbolType{
-					type,
-					tsh::ReferenceKind::Direct,
-					tsh::Mutability::Mutable,
-				};
+				symbol_type_qresult = tsh::SymbolType<>::withDefaults(type);
 			}
 
 			void setSymbolTypeByTypeExpr(
@@ -142,6 +139,15 @@ namespace compiler::helios {
 				setSymbolTypeByTypeExpr(
 					param->getType().unlock(ctx)->getExpr().unlock(ctx), tsh::Mutability::Mutable
 				);
+			}
+
+			void visitTemplateStmt(pst::Access<pst::TemplateStmt> stmt) final {
+				// @TODO: #3177 this now always uses QueryTypeTemplateType,
+				// we should probably introduce different kind of types for non-type templtes.
+
+				auto symbol  = ctx.query<QuerySymbolOfSTMT>({ stmt }).valueOrThrow();
+				auto ab_type = ctx.query<tsh::QueryTypeTemplateType>({ .source = symbol });
+				setTypeOfSymbolByAbstractType(ab_type);
 			}
 
 			void visitIdentifierWrapper(pst::Access<pst::IdentifierWrapper> ident) final {

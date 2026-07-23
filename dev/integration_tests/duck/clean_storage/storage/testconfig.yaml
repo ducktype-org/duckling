@@ -1,0 +1,21 @@
+duck-cfg: 'storage: {temporary_lifetime: 1}'
+
+PreCase: |+
+  @{cd-tmp-dir}
+  @{duck-exe} init foo --ephemeral
+  @{duck-exe} -C foo sync
+  sleep 2
+  echo @{duck-cfg} > $DUCK_HOME/config.yaml
+
+Tests:
+  basic:
+    Description: can delete ephemeral venv from storage
+    Cases:
+      basic:
+        test-cmd: duck -C foo clean-storage
+        Output:
+          String: |+
+            info: successfully cleaned the storage
+            Removed 1 venv
+              venv with id \`foo\`
+            Removed 0 packages

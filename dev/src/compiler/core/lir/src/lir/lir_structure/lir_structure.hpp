@@ -83,14 +83,11 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 	FloatEq,
 	FloatNeq,
 
-	/** Meta type operations. */
-	MetaCreateBox,
-	MetaCreateRef,
-	MetaCreateConst,
-	MetaCreateTuple, // N arguments, types to create the tuple type from
-	MetaCreateVariant, // N arguments, types to create the variant type from
-	MetaEq,
-	MetaNeq,
+	/**
+	 * Meta type operation. The specific operation is parametrized by `MetaParameters` (a
+	 * `MetaKind`) stored in the instruction's `extra_params`.
+	 */
+	MetaTypeOperation,
 
 	BooleanAnd,
 	BooleanOr,
@@ -109,6 +106,26 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 	// Nop can be useful when lowering the instruction flags and MIR instr translates
 	// to zero instructions in LIR, but we want to have the flags in correct place.
 	Nop
+)
+
+/**
+ *   @brief The specific kind of a `Operation::MetaTypeOperation` instruction.
+ *   Stored in the instruction's `extra_params` as `MetaParameters`. Mirrors `mir::MetaKind`.
+ */
+MAKE_STRINGIFYABLE_ENUM(compiler::lir, u32, MetaKind,
+	CreateBox,
+	CreateRef,
+	CreateConst,
+	CreatePtr,
+	CreateManyPtr,
+	CreateCPtr,
+	CreateSlice,
+	CreateTuple,
+	CreateVariant,
+	Eq,
+	Neq,
+	SizeOf,
+	AlignOf
 )
 
 /// A helper tag that indicates that a value has some special meaning
@@ -522,10 +539,18 @@ namespace compiler::lir {
 	};
 
 	/**
+	 * @brief Additional parameters for a `Operation::MetaTypeOperation` instruction, selecting
+	 * which meta operation it is.
+	 */
+	struct MetaParameters final {
+		MetaKind kind;
+	};
+
+	/**
 	 * @brief Additional parameters for LIR instructions that depend on the operation type.
 	 */
 	using InstrParameters
-		= std::variant<NoInstrParameters, CastParameters, ListOperationParameters>;
+		= std::variant<NoInstrParameters, CastParameters, ListOperationParameters, MetaParameters>;
 
 	struct InstructionMetadata {
 		base::Optional<dia_int::StablePosition> position;

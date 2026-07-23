@@ -63,9 +63,26 @@ namespace compiler::helios {
 		CORE_UNREACHABLE();
 	}
 
-	EmissionPolicy emissionPolicy(SymID id) {
+	EmissionPolicy emissionPolicy(query::Context& ctx, SymID id) {
 		variant_match(getSymRef(id)->other) {
-			variant_case_novalue(PstImplementedSemantics) { return EmissionPolicy::OwnerOnly; }
+			variant_case(PstImplementedSemantics, pst_data) {
+				// This is a very simple, and very suboptimal heuristic for now, we can improve it
+				// later if needed.
+				// @TODO: #2996 change it to a better implementation.
+				// Symbol should just know this!
+				auto pst_element_ancestor
+					= getPSTElementParent(ctx, pst_data.getElement().unlock(ctx));
+				while (pst_element_ancestor.isLangElement()) {
+					auto element = pst_element_ancestor.getAsLangElement().unlock(ctx);
+					if (element->getElementKind() == pst::ElementKind::TemplateStmt) {
+						// Symbols from within templates, are (probably) replicated
+						return EmissionPolicy::Replicated;
+					}
+					pst_element_ancestor = getPSTElementParent(ctx, element);
+				}
+
+				return EmissionPolicy::OwnerOnly;
+			}
 			variant_case(BuiltinSemantics, data) {
 				// Only if HOUT implements the builtin we want to replicate it.
 				return getBuiltinOrigins(data.builtin).contains(BuiltinOrigin::HOUT)
@@ -91,7 +108,8 @@ namespace compiler::helios {
 				defgen::GeneratedFunctionVariable,
 				defgen::ControlFlowLocal,
 				defgen::ReplExpressionWrapper,
-				defgen::ReplInstructionWrapper
+				defgen::ReplInstructionWrapper,
+				defgen::GeneratedConstant
 			) {
 				return EmissionPolicy::Replicated;
 			}
@@ -342,7 +360,7 @@ namespace compiler::helios {
 	 * @param stmt
 	 * @return Ref<SymbolData>
 	 */
-	SymbolData makeSymbolFromStatement(
+	query::QResult<SymbolData> makeSymbolFromStatement(
 		query::Context& ctx, ScopeID scope, pst::Access<pst::Stmt> stmt
 	) {
 		// @TODO: change this function to visitor to avoid dynamic_casts
@@ -638,6 +656,33 @@ namespace compiler::helios {
 				pst_data
 			);
 		}
+		case pst::StmtKind::TemplateStmt: {
+			auto template_decl   = stmt.dynamicCast<pst::TemplateStmt>().value();
+			auto inner_statement = template_decl->getInnerStatement().unlock(ctx);
+
+			auto inner_statement_kind = inner_statement->getStmtKind();
+			if (inner_statement_kind != pst::StmtKind::Fun
+			    && inner_statement_kind != pst::StmtKind::FunDecl
+			    && inner_statement_kind != pst::StmtKind::Class
+			    && inner_statement_kind != pst::StmtKind::Namespace
+			    && inner_statement_kind != pst::StmtKind::Const) {
+				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					"Templates are only supported for functions, classes, namespaces and consts",
+					template_decl->getStablePosition()
+				));
+				return query::Failed();
+			}
+
+			return SymbolData::makePSTSymbolData(
+				{
+					.name = template_decl->getDeclSymbolIdentifier()->unlock(ctx)->unwrap(),
+					.kind = SymbolKind::Template,
+					.is_ignored_by_lookup = is_ignored_by_lookup,
+					.attributes           = std::move(attributes),
+				},
+				pst_data
+			);
+		}
 		default:
 			break;
 		}
@@ -717,7 +762,7 @@ namespace compiler::helios {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			auto scope = getPSTElementParentScope(ctx, key.element);
 			if (auto stmt = key.element.unlock(ctx).dynamicCast<pst::Stmt>())
-				return PResult{ makeSymbolFromStatement(ctx, scope, stmt.value()) };
+				return PResult{ makeSymbolFromStatement(ctx, scope, stmt.value()).valueOrThrow() };
 			else
 				return PResult{ makeSymbolFromPSTElement(scope, key.element.unlock(ctx), ctx) };
 		}
@@ -775,7 +820,9 @@ namespace compiler::helios {
 
 			// @note: here case for variables will be calling TS
 			default:
-				throw base::NotYetImplemented("Lookup in symbol...");
+				throw base::NotYetImplemented(
+					base::strConcat("Lookup in symbol: ", key.symbol.ref->common.name)
+				);
 			}
 		}
 
@@ -959,25 +1006,35 @@ namespace compiler::helios {
 			CORE_ASSERT(kind(key) == SymbolKind::Const, "SymID is not a Const");
 
 			// Get the const's data
-			const auto pst = getSymRef(key)
-			                     ->maybePstElement()
-			                     .value()
-			                     .unlock(ctx)
-			                     .dynamicCast<pst::Const>()
-			                     .value();
-			const auto type = ctx.query<QueryTypeOfSymbol>(key)->valueOrThrow();
 
-			// Get the coerced HOUT expression
-			const auto hout_qresult = getHoutOfExprWithExpectedType(
-				ctx, pst->getValue().value().unlock(ctx)->getExpr(), type
-			);
-			if (hout_qresult.hasFailed()) return query::Failed();
+			variant_match(getSymRef(key)->other) {
+				variant_case(defgen::GeneratedConstant, const_data) { return const_data.value; }
 
-			// Evaluate the HOUT expression at compile-time
-			auto ctv
-				= ctx.query<QueryEvaluateHOUTExpression>({ hout_qresult.valueOrThrow().ref() });
-			if (ctv.hasFailed()) return query::Failed();
-			return ctv.valueOrThrow();
+				variant_case(PstImplementedSemantics, pst_data) {
+					const auto pst
+						= pst_data.getElement().unlock(ctx).dynamicCast<pst::Const>().value();
+					const auto type = ctx.query<QueryTypeOfSymbol>(key)->valueOrThrow();
+
+					// Get the coerced HOUT expression
+					const auto hout_qresult = getHoutOfExprWithExpectedType(
+						ctx, pst->getValue().value().unlock(ctx)->getExpr(), type
+					);
+					if (hout_qresult.hasFailed()) return query::Failed();
+
+					// Evaluate the HOUT expression at compile-time
+					auto ctv = ctx.query<QueryEvaluateHOUTExpression>(
+						{ hout_qresult.valueOrThrow().ref() }
+					);
+					if (ctv.hasFailed()) return query::Failed();
+					return ctv.valueOrThrow();
+				}
+
+				variant_default {
+					CORE_PANIC("Unexpected SymbolData::other type in QueryConstValueOf");
+				}
+			}
+
+			CORE_UNREACHABLE();
 		}
 
 		QUERY_AUTO_CACHE_COPY
@@ -1072,7 +1129,7 @@ namespace compiler::helios {
 		}
 
 		struct IMPLEMENT_QUERY(QueryGeneratedSymbol, SymbolData) {
-			static auto provide(Context&, QKey key) -> PResult {
+			static auto provide(Context&, const QKey& key) -> PResult {
 				return SymbolData::makeGeneratedSymbolData(key.name, key.generated_symbol_data);
 			}
 

@@ -18,12 +18,7 @@
 namespace {
 	using namespace compiler;
 
-	bool isMetaTypeOperation(lir::Operation op) {
-		return op == lir::Operation::MetaCreateBox || op == lir::Operation::MetaCreateRef
-		    || op == lir::Operation::MetaCreateConst || op == lir::Operation::MetaCreateTuple
-		    || op == lir::Operation::MetaCreateVariant || op == lir::Operation::MetaEq
-		    || op == lir::Operation::MetaNeq;
-	}
+	bool isMetaTypeOperation(lir::Operation op) { return op == lir::Operation::MetaTypeOperation; }
 
 	vm::code::builders::OpKind lirOperationToDVMOpKind(const lir::Operation& op) {
 		using enum lir::Operation;
@@ -149,12 +144,15 @@ namespace compiler::backend_vm::internal {
 			return {};
 		};
 
-		if (isMetaTypeOperation(operation))
+		if (isMetaTypeOperation(operation)) {
+			const auto* meta_params = std::get_if<lir::MetaParameters>(&instr.extra_params);
+			CORE_ASSERT(meta_params, "Meta operation without MetaParameters");
 			return MetaOperation{
-				.meta_op = operation,
-				.args    = lower_all_args(),
-				.dest    = lower_opt_dest(),
+				.meta_kind = meta_params->kind,
+				.args      = lower_all_args(),
+				.dest      = lower_opt_dest(),
 			};
+		}
 
 
 		switch (operation) {

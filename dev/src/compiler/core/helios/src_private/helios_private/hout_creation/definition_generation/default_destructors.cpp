@@ -9,6 +9,7 @@
 #include <helios/symbols/query_type_symbol_data.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios_private/hout_creation/definition_generation/length_methods.hpp>
+#include <helios_private/hout_creation/shorthands/shorthands.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
@@ -17,6 +18,8 @@
 #include <ranges>
 
 namespace compiler::helios::defgen {
+	using namespace code::shorthands;
+
 	SymID destructSymForType(query::Context& ctx, const tsh::AbstractType type) {
 		return ctx.query<QueryGeneratedSymbol>({
 			.name = base::StrID("__destruct"),
@@ -58,23 +61,17 @@ namespace compiler::helios::defgen {
 
 			if (type.isTriviallyDestructible(ctx)) return;
 
+			const Shorthand s{ ctx };
+
 			// A `box T` owns its pointee and its heap storage. Its `box_destructor` builtin destroys
 			// the pointee and then frees the memory, so we just call it with the box by value.
 			if (type.getRefKind() == tsh::ReferenceKind::Box) {
 				const auto pointee_type = type.getType();
 
-				std::vector<Box<code::Expr>> args;
-				args.emplace_back(std::move(location));
-				body.emplace_back(makeBox<code::ExprStmt>(
-					code::generatedOrigin(),
-					makeBox<code::CallExpr>(
-						ctx,
-						code::generatedOrigin(),
-						makeBox<code::IdentifierExpr>(
-							ctx, code::generatedOrigin(), boxDestructorSymForType(ctx, pointee_type)
-						),
-						std::move(args)
-					)
+				appendDestruction(ctx, body, s.deref(location->clone()));
+
+				body.emplace_back(s.expr(
+					s.call(s.ident(boxDestructorSymForType(ctx, pointee_type)), std::move(location))
 				));
 				return;
 			}
@@ -91,21 +88,8 @@ namespace compiler::helios::defgen {
 				"Tried to generate a destructor call for a type which shouldn't need one"
 			);
 
-			const SymID                  dtor_sym = destructSymForType(ctx, abstract_type);
-			std::vector<Box<code::Expr>> args;
-			args.emplace_back(
-				makeBox<code::RefOfExpr>(ctx, code::generatedOrigin(), std::move(location))
-			);
-
-			body.emplace_back(makeBox<code::ExprStmt>(
-				code::generatedOrigin(),
-				makeBox<code::CallExpr>(
-					ctx,
-					code::generatedOrigin(),
-					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), dtor_sym),
-					std::move(args)
-				)
-			));
+			const SymID dtor_sym = destructSymForType(ctx, abstract_type);
+			body.emplace_back(s.expr(s.call(s.ident(dtor_sym), s.refOf(std::move(location)))));
 		}
 
 		/**
@@ -113,16 +97,8 @@ namespace compiler::helios::defgen {
 		 * field access.
 		 */
 		Box<code::Expr> derefSelfField(query::Context& ctx, SymID self_symbol, SymID field) {
-			return makeBox<code::AccessExpr>(
-				ctx,
-				code::generatedOrigin(),
-				makeBox<code::DerefExpr>(
-					ctx,
-					code::generatedOrigin(),
-					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), self_symbol)
-				),
-				field
-			);
+			const Shorthand s{ ctx };
+			return s.access(s.deref(s.ident(self_symbol)), field);
 		}
 
 		/**
@@ -134,24 +110,14 @@ namespace compiler::helios::defgen {
 		) {
 			std::vector<Box<code::Stmt>> body;
 
+			const Shorthand s{ ctx };
+
 			// For a class that declares its own destructor, run the user code before destroying the
 			// members.
 			if (owner_type.getKind() == tsh::Kind::Class) {
 				if (const auto user
 				    = userDestructorOf(ctx, owner_type.as<tsh::ClassAbstractType>().getSymbol())) {
-					std::vector<Box<code::Expr>> args;
-					args.emplace_back(
-						makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), self_symbol)
-					);
-					body.emplace_back(makeBox<code::ExprStmt>(
-						code::generatedOrigin(),
-						makeBox<code::CallExpr>(
-							ctx,
-							code::generatedOrigin(),
-							makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), user.value()),
-							std::move(args)
-						)
-					));
+					body.emplace_back(s.expr(s.call(s.ident(user.value()), s.ident(self_symbol))));
 				}
 			}
 
@@ -182,12 +148,9 @@ namespace compiler::helios::defgen {
             });
 			auto        zero_val = numeric_value::NumericValue::createOfType(u64_abs_type)
 			                    .expect("u64 creation failed");
-			body.emplace_back(makeBox<code::VariableStmt>(
-				code::generatedOrigin(),
-				makeBox<code::LiteralNumericExpr>(ctx, code::generatedOrigin(), zero_val),
-				u64_type,
-				i_sym
-			));
+
+			const Shorthand s{ ctx };
+			body.emplace_back(s.var(i_sym, u64_type, s.litNum(zero_val)));
 			return i_sym;
 		}
 
@@ -197,16 +160,10 @@ namespace compiler::helios::defgen {
 				= tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned);
 			auto one_val = numeric_value::NumericValue::createOfType(u64_abs_type, 1)
 			                   .expect("u64 creation failed");
-			return makeBox<code::AssignmentStmt>(
-				code::generatedOrigin(),
-				makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), i_sym),
-				makeBox<code::BinaryOperatorExpr>(
-					ctx,
-					code::generatedOrigin(),
-					code::BuiltinBinary::IntegerAdd,
-					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), i_sym),
-					makeBox<code::LiteralNumericExpr>(ctx, code::generatedOrigin(), one_val)
-				)
+			const Shorthand s{ ctx };
+			return s.assign(
+				s.ident(i_sym),
+				s.binOp(s.ident(i_sym), code::BuiltinBinary::IntegerAdd, s.litNum(one_val))
 			);
 		}
 
@@ -234,34 +191,18 @@ namespace compiler::helios::defgen {
 				= tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned);
 			auto size_val = numeric_value::NumericValue::createOfType(u64_abs_type, size)
 			                    .expect("u64 creation failed");
-			auto condition = makeBox<code::BinaryOperatorExpr>(
-				ctx,
-				code::generatedOrigin(),
-				code::BuiltinBinary::IntegerLt,
-				makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), i_sym),
-				makeBox<code::LiteralNumericExpr>(ctx, code::generatedOrigin(), size_val)
-			);
 
-			code::CodeBlock loop_body{};
+			const Shorthand s{ ctx };
+			auto            condition
+				= s.binOp(s.ident(i_sym), code::BuiltinBinary::IntegerLt, s.litNum(size_val));
+
+			std::vector<Box<code::Stmt>> loop_body;
 			appendDestruction(
-				ctx,
-				loop_body.statements,
-				makeBox<code::IndexExpr>(
-					ctx,
-					code::generatedOrigin(),
-					makeBox<code::DerefExpr>(
-						ctx,
-						code::generatedOrigin(),
-						makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), self_symbol)
-					),
-					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), i_sym)
-				)
+				ctx, loop_body, s.index(s.deref(s.ident(self_symbol)), s.ident(i_sym))
 			);
-			loop_body.statements.emplace_back(buildLoopIncrement(ctx, i_sym));
+			loop_body.emplace_back(buildLoopIncrement(ctx, i_sym));
 
-			body.emplace_back(makeBox<code::WhileStmt>(
-				code::generatedOrigin(), std::move(condition), std::move(loop_body)
-			));
+			body.emplace_back(s.whileStmt(std::move(condition), std::move(loop_body)));
 
 			return body;
 		}
@@ -286,45 +227,20 @@ namespace compiler::helios::defgen {
 			// }
 			const SymID length_method_sym = defgen::lengthMethodForType(ctx, array_type);
 
-			std::vector<Box<code::Expr>> length_args;
-			length_args.emplace_back(
-				makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), self_symbol)
-			);
-			Box<code::Expr> len_expr = makeBox<code::CallExpr>(
-				ctx,
-				code::generatedOrigin(),
-				makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), length_method_sym),
-				std::move(length_args)
-			);
+			const Shorthand s{ ctx };
 
-			auto condition = makeBox<code::BinaryOperatorExpr>(
-				ctx,
-				code::generatedOrigin(),
-				code::BuiltinBinary::IntegerLt,
-				makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), i_sym),
-				std::move(len_expr)
-			);
+			// while (__i < self.length()) { (*self)[__i].__destruct(...); __i = __i + 1; }
+			Box<code::Expr> len_expr = s.call(s.ident(length_method_sym), s.ident(self_symbol));
+			auto            condition
+				= s.binOp(s.ident(i_sym), code::BuiltinBinary::IntegerLt, std::move(len_expr));
 
-			code::CodeBlock loop_body{};
+			std::vector<Box<code::Stmt>> loop_body;
 			appendDestruction(
-				ctx,
-				loop_body.statements,
-				makeBox<code::IndexExpr>(
-					ctx,
-					code::generatedOrigin(),
-					makeBox<code::DerefExpr>(
-						ctx,
-						code::generatedOrigin(),
-						makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), self_symbol)
-					),
-					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), i_sym)
-				)
+				ctx, loop_body, s.index(s.deref(s.ident(self_symbol)), s.ident(i_sym))
 			);
-			loop_body.statements.emplace_back(buildLoopIncrement(ctx, i_sym));
+			loop_body.emplace_back(buildLoopIncrement(ctx, i_sym));
 
-			body.emplace_back(makeBox<code::WhileStmt>(
-				code::generatedOrigin(), std::move(condition), std::move(loop_body)
-			));
+			body.emplace_back(s.whileStmt(std::move(condition), std::move(loop_body)));
 
 			return body;
 		}

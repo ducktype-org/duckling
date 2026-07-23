@@ -748,46 +748,32 @@ private:
 				= [&](const lir::LIRLocal& local) { ASSERT_EQUAL(*local.layout, *meta_layout); };
 
 			using enum compiler::lir::Operation;
+			using MK = compiler::lir::MetaKind;
 
-			{
-				auto create_box = module.lirFunc("createBox");
-				ASSERT_TRUE(create_box->validateParameters().isOk());
-				for (const auto& local: create_box->local_list) assert_is_meta_local(local);
-				const auto& block = create_box->block_order[0];
-				ASSERT_TRUE(block->instructions[0].operation == MetaCreateBox);
-			}
+			// Meta operations are a single `Meta` op parametrized by a `MetaKind` in `extra_params`.
+			auto meta_kind = [](const auto& instr) {
+				return std::get<compiler::lir::MetaParameters>(instr.extra_params).kind;
+			};
 
-			{
-				auto create_ref = module.lirFunc("createRef");
-				ASSERT_TRUE(create_ref->validateParameters().isOk());
-				for (const auto& local: create_ref->local_list) assert_is_meta_local(local);
-				const auto& block = create_ref->block_order[0];
-				ASSERT_TRUE(block->instructions[0].operation == MetaCreateRef);
-			}
+			auto check_meta_function = [&](const char* func_name, MK kind, usize arg_size) {
+				auto fn = module.lirFunc(func_name);
+				for (const auto& local: fn->local_list) assert_is_meta_local(local);
+				const auto& block = fn->block_order[0];
+				const auto& instr = block->instructions[0];
+				ASSERT_TRUE(instr.operation == MetaTypeOperation);
+				ASSERT_TRUE(meta_kind(instr) == kind);
+				ASSERT_EQUAL(instr.arguments.size(), arg_size);
+			};
 
-			{
-				auto create_ref = module.lirFunc("createConst");
-				ASSERT_TRUE(create_ref->validateParameters().isOk());
-				for (const auto& local: create_ref->local_list) assert_is_meta_local(local);
-				const auto& block = create_ref->block_order[0];
-				ASSERT_TRUE(block->instructions[0].operation == MetaCreateConst);
-			}
-
-			{
-				auto create_variant = module.lirFunc("createVariant");
-				for (const auto& local: create_variant->local_list) assert_is_meta_local(local);
-				const auto& block = create_variant->block_order[0];
-				ASSERT_TRUE(block->instructions[0].operation == MetaCreateVariant);
-				ASSERT_EQUAL(block->instructions[0].arguments.size(), 4);
-			}
-
-			{
-				auto create_tuple = module.lirFunc("createTuple");
-				for (const auto& local: create_tuple->local_list) assert_is_meta_local(local);
-				const auto& block = create_tuple->block_order[0];
-				ASSERT_TRUE(block->instructions[0].operation == MetaCreateTuple);
-				ASSERT_EQUAL(block->instructions[0].arguments.size(), 4);
-			}
+			check_meta_function("createBox", MK::CreateBox, 1);
+			check_meta_function("createRef", MK::CreateRef, 1);
+			check_meta_function("createConst", MK::CreateConst, 1);
+			check_meta_function("createPtr", MK::CreatePtr, 1);
+			check_meta_function("createCPtr", MK::CreateCPtr, 1);
+			check_meta_function("createManyPtr", MK::CreateManyPtr, 1);
+			check_meta_function("createSlice", MK::CreateSlice, 1);
+			check_meta_function("createVariant", MK::CreateVariant, 4);
+			check_meta_function("createTuple", MK::CreateTuple, 4);
 
 			{
 				auto mega_type = module.lirFunc("megaType");
@@ -797,9 +783,10 @@ private:
 				int  create_tuple_count   = 0;
 				bool call_found           = false;
 				for (const auto& instr: mega_type->block_order[0]->instructions)
-					if (instr.operation == MetaCreateTuple)
+					if (instr.operation == MetaTypeOperation && meta_kind(instr) == MK::CreateTuple)
 						create_tuple_count++;
-					else if (instr.operation == MetaCreateVariant)
+					else if (instr.operation == MetaTypeOperation
+					         && meta_kind(instr) == MK::CreateVariant)
 						create_variant_count++;
 					else if (instr.operation == Call)
 						call_found = true;
