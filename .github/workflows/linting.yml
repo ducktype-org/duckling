@@ -16,6 +16,24 @@ env:
   TIDY_VERSION: 19
 
 jobs:
+  # GitHub silently stops creating runs for a workflow whose file does not
+  # parse, so this check must live outside tests.yml to report its breakage.
+  # Runs on drafts too - broken workflows should surface as early as possible.
+  workflows-lint:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install click and PyYAML
+        run: sudo pip install click pyyaml --break-system-packages --no-input
+
+      - name: Validate workflow YAML
+        run: |
+         cd dev
+         python3 toolbox.py workflows-lint
+        shell: bash
+
   determine-runners:
     if: github.event.pull_request.draft == false
     uses: ./.github/workflows/determine-runners.yml
