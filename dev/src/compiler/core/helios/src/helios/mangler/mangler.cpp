@@ -704,12 +704,6 @@ namespace compiler::helios::mangler {
 			case 128:
 				ret += "x";
 				break;
-			case 256:
-				ret += "y";
-				break;
-			case 512:
-				ret += "z";
-				break;
 			default:
 				ret = (is_signed ? "k" : "l") + std::to_string(size) + "_";
 			}
@@ -729,8 +723,6 @@ namespace compiler::helios::mangler {
 				return "e";
 			case 128:
 				return "q";
-			case 256:
-				return "o";
 			default:
 				// @future: "b" for brain float
 				CORE_PANIC("Unknown floating-point type in mangle(FloatAbstractType)");
