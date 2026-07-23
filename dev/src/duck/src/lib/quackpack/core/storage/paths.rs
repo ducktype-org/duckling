@@ -21,10 +21,10 @@
 //!         ├── <package id>
 //!         └── ...
 
-use std::fs::ReadDir;
 use std::path::{Path, PathBuf};
 
 use crate::quackpack::core::full_identity::FullKind;
+use crate::quackpack::core::storage::DirContents;
 use crate::quackpack::core::storage::venv_id::VenvId;
 use crate::quackpack::core::{PackageId, Version, storage_name_for_git, storage_name_for_registry};
 use crate::quackpack::util::interned_url::InternedUrl;
@@ -148,7 +148,7 @@ impl Storage {
     /// The yielded packages need not be correct (may be missing checksum).
     /// It is not guaranteed that during iteration, the yielded paths
     /// still exist and there are no guarantees on paths that appeared during an iteration.
-    pub fn iter_pkgs(&self) -> QuackResult<ReadDir> {
+    pub fn iter_pkgs(&self) -> QuackResult<DirContents> {
         create_dir_iterator(&self.packages_root_dir())
     }
 
@@ -156,21 +156,21 @@ impl Storage {
     /// The yielded venvs need not be correct (may have invalid data).
     /// It is not guaranteed that during iteration, the yielded paths
     /// still exist and there are no guarantees on paths that appeared during an iteration.
-    pub fn iter_venvs(&self) -> QuackResult<ReadDir> {
+    pub fn iter_venvs(&self) -> QuackResult<DirContents> {
         create_dir_iterator(&self.venvs_root_dir())
     }
 
     /// Returns an iterator over all sync locks in the storage.
     /// It is not guaranteed that during iteration, the yielded paths
     /// still exist and there are no guarantees on paths that appeared during an iteration.
-    pub fn iter_sync_locks(&self) -> QuackResult<ReadDir> {
+    pub fn iter_sync_locks(&self) -> QuackResult<DirContents> {
         create_dir_iterator(&self.sync_locks_path())
     }
 
     /// Returns an iterator over all data locks in the storage.
     /// It is not guaranteed that during iteration, the yielded paths
     /// still exist and there are no guarantees on paths that appeared during an iteration.
-    pub fn iter_data_locks(&self) -> QuackResult<ReadDir> {
+    pub fn iter_data_locks(&self) -> QuackResult<DirContents> {
         create_dir_iterator(&self.data_locks_path())
     }
 
@@ -228,6 +228,14 @@ impl Storage {
     }
 }
 
-fn create_dir_iterator(path: &Path) -> QuackResult<ReadDir> {
-    path.read_dir().map_err(Into::into)
+/// Returns iterator over files in a directory.
+/// If the directory does not exist, returns an empty iterator.
+fn create_dir_iterator(path: &Path) -> QuackResult<DirContents> {
+    match path.read_dir() {
+        Ok(read_dir) => Ok(DirContents::NonEmpty(read_dir)),
+        Err(e) => match e.kind() {
+            std::io::ErrorKind::NotFound => Ok(DirContents::Empty),
+            _ => Err(e.into()),
+        },
+    }
 }
