@@ -6,6 +6,8 @@
 #include <frontend/pst_parser/lang_parser_element.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 
+#include "base/collections/dynamic_bitset.hpp"
+
 #include <logger/logger.hpp>
 #include <query_framework/query_errors.hpp>
 
@@ -60,9 +62,7 @@ namespace compiler::mir {
 	 * This is valid as it means that the destructor will be inserted on blocks with the initialized
 	 * values, but at this point we don't have destructors inserted.
 	 */
-	base::Optional<MoveState> joinStatus(
-		base::Optional<MoveState> a, base::Optional<MoveState> b
-	) {
+	base::Optional<MoveState> joinStatus(base::Optional<MoveState> a, base::Optional<MoveState> b) {
 		// Missing on one of the incoming paths -> treated as uninitialized in the merge.
 		if (not a.has_value() || not b.has_value()) return {};
 
@@ -301,9 +301,12 @@ namespace compiler::mir {
 				if (uninitialized) {
 					if_opt_some(local->helios_id, sym_id) {
 						if_opt_some(helios::maybeSymbolPst(sym_id), pst_elem) {
-							msg->addAttachedMessage(makeBox<dia_int::PlaceholderNote>(
-								"Variable declared here.", pst_elem.unlock(ctx)->getStablePosition()
-							));
+							msg->addAttachedMessage(
+								makeBox<dia_int::PlaceholderNote>(
+									"Variable declared here.",
+									pst_elem.unlock(ctx)->getStablePosition()
+								)
+							);
 						}
 					}
 				}
@@ -324,9 +327,11 @@ namespace compiler::mir {
 				);
 				if_opt_some(local->helios_id, sym_id) {
 					if_opt_some(helios::maybeSymbolPst(sym_id), pst_elem) {
-						msg->addAttachedMessage(makeBox<dia_int::PlaceholderNote>(
-							"Variable declared here.", pst_elem.unlock(ctx)->getStablePosition()
-						));
+						msg->addAttachedMessage(
+							makeBox<dia_int::PlaceholderNote>(
+								"Variable declared here.", pst_elem.unlock(ctx)->getStablePosition()
+							)
+						);
 					}
 				}
 				ctx.logInt(std::move(msg));
@@ -372,5 +377,50 @@ namespace compiler::mir {
 				out << "\n";
 			}
 		}
+	}
+
+	// =========================== LIVENESS ANALYSIS ===========================
+
+	struct BlockUseDef {
+		base::DynamicBitset use;
+		base::DynamicBitset def;
+	};
+
+	struct BlockLiveness {
+		base::DynamicBitset live_in;
+		base::DynamicBitset live_out;
+	};
+
+	base::HashMap<BlockID, BlockLiveness> calculateLivenessMap(
+		const Function& fun, const LifetimePassArgs& pass_args
+	) {
+		base::HashMap<BlockID, BlockLiveness> result;
+		base::HashMap<BlockID, BlockUseDef>   blocks_info;
+
+		auto max_local_id = std::ranges::max_element(
+								fun.local_list, std::ranges::greater{}, [](const MIRLocal& local) {
+									return local.id.asInt();
+								}
+		)->id.asInt();
+		auto get_local_bitset
+			= [&] -> base::DynamicBitset { return base::DynamicBitset(max_local_id); };
+
+		for (auto block_id: fun.block_order) {
+			auto         block = fun.blocks.at(block_id);
+			BlockUseDef& block_info
+				= blocks_info
+			          .put(
+						  block_id,
+						  BlockUseDef{ .use = get_local_bitset(), .def = get_local_bitset() }
+					  )
+			          .first->second;
+			for (auto& instr: block->instructions)
+				for (auto& flag: instr.flags) {
+			}}
+	}
+
+	void AddMoves::run(query::Context&, Function&, const LifetimePassArgs&) {
+		// calculateLivenessMap
+		// go through the globcks from outside and add move when instruction is using a tempoarary
 	}
 }

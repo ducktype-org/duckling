@@ -37,6 +37,14 @@ namespace compiler::mir {
 	};
 
 	/**
+	 * @brief Add "MOVE" flags when copied from temporaries in instructions
+	 * and the value is last-used.
+	 */
+	class AddMoves final : public LifetimePass {
+		void run(query::Context&, Function&, const LifetimePassArgs&) final;
+	};
+
+	/**
 	 * @brief Use after move and use uninitialized.
 	 */
 	class InvalidUseCheck final: public LifetimePass {
