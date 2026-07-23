@@ -48,10 +48,7 @@ namespace vm {
 		/// set. Otherwise, it is not.
 		std::unordered_set<BlockID> initialized_globals{};
 
-		// Block storage with automatic recycling via StableObjectPool (issue #2221).
-		// Replaces the previous manual free_ids deque with built-in FIFO recycling.
-		// Block(u64, BlockData) overload enables PASS_ID_TO_CONSTRUCTOR=true.
-		base::StableObjectPool<Block, u64, true, true> blocks_pool;
+		base::StableObjectPool<Block, BlockID, true, true> blocks_pool;
 
 		[[nodiscard]]
 		Ref<Block> createBlock(BlockData data);

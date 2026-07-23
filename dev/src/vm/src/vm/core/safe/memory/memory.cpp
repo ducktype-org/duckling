@@ -20,15 +20,16 @@ namespace vm {
 
 	void Memory::deleteBlock(Ref<Block> block) {
 		if (!block->deallocated) throw exceptions::VMFoundMemoryLeakException();
-		blocks_pool.remove(block->id.asInt());
+		blocks_pool.remove(block->id);
 	}
 
 	Ref<Block> Memory::getBlock(BlockID id) {
-		auto opt = blocks_pool.maybeGet(id.asInt());
-		if (!opt.has_value()) throw exceptions::VMOutOfBlockBoundsException();
-		// Note: StableObjectPool handles the "use after free" check internally —
-		// maybeGet returns empty for removed (deallocated) blocks.
-		return opt.value();
+		if (auto maybe_block = blocks_pool.maybeGet(id)) {
+			Ref<vm::Block> block_ref = *maybe_block;
+			if (block_ref->deallocated) throw exceptions::VMUseAfterFreeException();
+			return block_ref;
+		}
+		throw exceptions::VMOutOfBlockBoundsException();
 	}
 
 	auto Memory::initializeFrameStack() -> Ref<ThreadStack> {

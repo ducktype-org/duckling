@@ -5,9 +5,8 @@
 
 // A simple test type that tracks its ID for PASS_ID_TO_CONSTRUCTOR testing.
 struct PoolItem {
-	u64  id    = 0;
-	i32  value = 0;
-	bool alive = true;
+	u64 id    = 0;
+	i32 value = 0;
 
 	PoolItem() = default;
 

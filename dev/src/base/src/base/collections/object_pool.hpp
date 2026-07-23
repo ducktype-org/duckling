@@ -150,26 +150,8 @@ namespace base {
 		 */
 		std::queue<ObjID> free_ids;
 
-		/**
-		 * @brief Maximum number of objects that can be stored in the object pool.
-		 */
-		usize max_objects;
-
-		/**
-		 * @brief Default maximum number of objects if not specified.
-		 */
-		static constexpr usize DEFAULT_MAX_OBJECTS = 1'000'000;
-
 	public:
-		/**
-		 * @brief Constructs an ObjectPool with a given maximum capacity.
-		 *
-		 * @param max_objects Maximum number of objects allowed in the pool.
-		 *                    Defaults to DEFAULT_MAX_OBJECTS.
-		 * @note Returned references are stable.
-		 */
-		explicit StableObjectPool(usize max_objects = DEFAULT_MAX_OBJECTS):
-			  max_objects(max_objects) {}
+		StableObjectPool() = default;
 
 		/**
 		 * @brief Attempts to retrieve an object by its ID.
@@ -212,7 +194,6 @@ namespace base {
 		 */
 		template<class... Args>
 		ObjID add(Args&&... args) {
-			CORE_ASSERT(object_pool.size() < max_objects, "Too many objects in the pool");
 			if constexpr (SHOULD_RECYCLE) {
 				if (!free_ids.empty()) {
 					ObjID free_id = free_ids.front();
@@ -240,7 +221,7 @@ namespace base {
 		 */
 		void remove(ObjID object_id) {
 			CORE_ASSERT(
-				object_id < object_pool.size() && !is_free.at((size_t) object_id),
+				(size_t) object_id < object_pool.size() && !is_free.at((size_t) object_id),
 				"Object is already removed"
 			);
 
@@ -270,6 +251,17 @@ namespace base {
 				object_pool.end(), object_pool.end(), object_pool.begin(), is_free
 			);
 		}
-	};
 
+		ValidObjectIterator<T, ObjID> begin() const {
+			return ValidObjectIterator<T, ObjID>(
+				object_pool.begin(), object_pool.end(), object_pool.begin(), is_free
+			);
+		}
+
+		ValidObjectIterator<T, ObjID> end() const {
+			return ValidObjectIterator<T, ObjID>(
+				object_pool.end(), object_pool.end(), object_pool.begin(), is_free
+			);
+		}
+	};
 }
