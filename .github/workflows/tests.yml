@@ -420,6 +420,16 @@ jobs:
 
     timeout-minutes: 2
 
+    if: >-
+      (github.event_name == 'push' && github.event.pull_request.draft == false) ||
+      github.event_name == 'workflow_dispatch'
+      ||
+      (
+        github.event.pull_request.draft == false &&
+        github.event_name == 'pull_request' &&
+        (github.event.action != 'labeled' || github.event.label.name == 'Override Coverage Check')
+      )
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
