@@ -77,7 +77,6 @@ namespace query {
 		 */
 		[[nodiscard]]
 		constexpr bool hasValue() const {
-			if (storage.valueless_by_exception()) CORE_PANIC("valueless QResult");
 			return std::holds_alternative<Value>(storage);
 		}
 
