@@ -45,8 +45,6 @@ namespace vm {
 		Ref<SafeVMProcess> my_process;  /// The process for which the SafeVMValue exists.
 		Ref<Memory>        memory;
 
-		Pointer pointer;
-
 	public:
 		SafeVMValue(const SafeVMValue&)            = delete;
 		SafeVMValue(SafeVMValue&&)                 = default;
@@ -87,6 +85,10 @@ namespace vm {
 		/// Safe VM runtime type metadata of the stored value.
 		TypeCRef type;
 
+	private:
+		Pointer pointer;
+
+	public:
 		[[nodiscard]] byte* getBytes() override;
 
 		[[nodiscard]] const byte* getBytes() const override;
