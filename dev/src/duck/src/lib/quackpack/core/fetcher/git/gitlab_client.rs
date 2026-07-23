@@ -34,7 +34,7 @@ pub struct GitlabClient<'duck> {
     client: HttpClient<'duck>,
 }
 
-#[allow(dead_code)] 
+#[allow(dead_code)]
 impl<'duck> GitlabClient<'duck> {
     /// Create a new [`GitlabClient`] instance.
     pub fn new(ctx: &'duck DuckContext) -> Self {
@@ -106,7 +106,7 @@ impl PseudoGitClient for GitlabClient<'_> {
         let manifest_schema = parse_schema(&deserialized_manifest)?;
         let manifest = manifest::parse(
             &manifest_schema,
-            &PathBuf::new(),
+            &PathBuf::new(), // Dummy path.
             ParseMode::Package,
             self.ctx(),
         )?;
@@ -114,7 +114,7 @@ impl PseudoGitClient for GitlabClient<'_> {
     }
 }
 
-#[allow(dead_code)] 
+#[allow(dead_code)]
 /// Deserialize the response for requests `.../branches/<branch>` and `.../tags/<tag>` and get the `commit.id` field.
 fn get_commit_from_response(response: Response) -> QuackResult<StrId> {
     let data: Value = response.deserialize_json()?;
@@ -129,7 +129,7 @@ fn get_commit_from_response(response: Response) -> QuackResult<StrId> {
     Ok(commit_hash)
 }
 
-#[allow(dead_code)] 
+#[allow(dead_code)]
 /// Deserialize the response for request to the url of the repository and get the `default_branch` field.
 fn get_default_branch_from_response(response: Response) -> QuackResult<StrId> {
     let data: Value = response.deserialize_json()?;
