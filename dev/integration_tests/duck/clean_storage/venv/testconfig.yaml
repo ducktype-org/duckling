@@ -1,0 +1,13 @@
+PreCase: |+
+  @{cd-tmp-dir}
+  @{duck-exe} init foo
+  @{duck-exe} -C foo sync
+
+Tests:
+  basic:
+    Description: can delete single venv from storage
+    Cases:
+      basic:
+        test-cmd: duck -C foo clean-storage --venv foo
+        Output:
+          String: 'info: successfully removed venv \`foo\`\n'
