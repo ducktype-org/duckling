@@ -169,7 +169,7 @@ namespace compiler::helios {
 
 				for (auto used_fun: used_symbols.used_functions) {
 					if (added_symbols.contains(used_fun)) continue;
-					if (emissionPolicy(used_fun) != EmissionPolicy::Replicated) continue;
+					if (emissionPolicy(ctx, used_fun) != EmissionPolicy::Replicated) continue;
 
 					added_symbols.insert(used_fun);
 					if (implementsQueryCodeOfFun(used_fun))
@@ -180,7 +180,7 @@ namespace compiler::helios {
 				}
 				for (auto used_global: used_symbols.used_globals) {
 					if (added_symbols.contains(used_global)) continue;
-					if (emissionPolicy(used_global) != EmissionPolicy::Replicated) continue;
+					if (emissionPolicy(ctx, used_global) != EmissionPolicy::Replicated) continue;
 
 					added_symbols.insert(used_global);
 					out_unit.glob_data.emplace_back(
@@ -327,7 +327,7 @@ namespace compiler::helios {
 					return base::BAD;
 				}
 				// We only here add the methods that are owner only.
-				if (emissionPolicy(method_sym) != EmissionPolicy::OwnerOnly) continue;
+				if (emissionPolicy(ctx, method_sym) != EmissionPolicy::OwnerOnly) continue;
 
 				out_function_code_tasks.push_back(ctx.schedule<QueryCodeOfFun>(method_sym));
 			}

@@ -185,6 +185,29 @@ namespace pst {
 		}
 
 		/**
+		 * @TODO: #3110 this constructor is totally hacked, change it.
+		 * We should somehow be able to share token_source between the original and cloned PST.
+		 *
+		 * Also: add clone dummy parameter here, to make it more explicit.
+		 */
+		explicit PST(
+			Box<Element>                cloned_element,
+			Box<tokenizer::TokenSource> token_source,
+			hashing::ComponentHash      hash_ctx = {}
+		):
+			  file(std::move(token_source)),
+			  element(AccessInternalAnonymous<Element>(std::move(cloned_element))),
+			  hash_ctx_info(std::move(hash_ctx)) {
+			// @TODO: #3110 This does not clone imports.
+			// But also: maybe we should remove imports vector from PST,
+			// we don't use it in the end anyway.
+
+			calcElementPathHash();
+			calcHashes();
+			putInPSTHashHashMap();
+		}
+
+		/**
 		 * @brief Performs the element path calculation for all of the elements of the tree.
 		 */
 		void calcElementPathHash() {
@@ -296,6 +319,19 @@ namespace pst {
 			// we call it again after signing, because signing changes the hash:
 			out.putInPSTHashHashMap();
 			return out;
+		}
+
+		/**
+		 * @brief Create a PST from a cloned element.
+		 * @TODO: #3110 this constructor is totally hacked, change it.
+		 * We should somehow be able to share token_source between the original and cloned PST.
+		 */
+		static PST fromClone(
+			Box<Element>                cloned_element,
+			Box<tokenizer::TokenSource> token_source,
+			hashing::ComponentHash      hash_ctx
+		) {
+			return PST(std::move(cloned_element), std::move(token_source), std::move(hash_ctx));
 		}
 
 		[[nodiscard]]
