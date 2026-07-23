@@ -305,6 +305,8 @@ namespace compiler::helios::comptime_ops {
 			.types                = {},
 			.global_data          = { context_global },
 			.external_c_functions = getComptimeTypeExternOperations(pid),
+			.ffi_functions        = {},
+			.object_files         = {},
 		};
 	}
 }
