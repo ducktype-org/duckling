@@ -591,22 +591,22 @@ namespace compiler::helios::mangler {
 		}
 
 		static std::string mangleValue(query::Context&, compiler::numeric_value::NumericValue num) {
-			const auto& value = num.getStorage();
-
-			if (v_matches(value, int8_t, i16, i32, i64)) {
-				const i64 int_value
-					= std::visit([&](auto&& arg) -> i64 { return static_cast<i64>(arg); }, value);
-				return base::strConcat((int_value < 0 ? "n" : ""), std::abs(int_value), "_");
-			} else if (v_matches(value, uint8_t, u16, u32, u64)) {
-				const u64 uint_value
-					= std::visit([&](auto&& arg) -> u64 { return static_cast<u64>(arg); }, value);
-				return base::strConcat(uint_value, "_");
-			} else if (v_matches(value, f32)) {
-				return floatToHex<f32>(std::get<f32>(value));
-			} else if (v_matches(value, f64)) {
-				return floatToHex<f64>(std::get<f64>(value));
-			} else {
-				CORE_PANIC("Unknown type in mangleValue()");
+			variant_match(num.getStorage()) {
+				variant_case_novalue(int8_t, i16, i32, i64) {
+					const i64 int_value = std::visit(
+						[&](auto&& arg) -> i64 { return static_cast<i64>(arg); }, value
+					);
+					return base::strConcat((int_value < 0 ? "n" : ""), std::abs(int_value), "_");
+				}
+				variant_case_novalue(uint8_t, u16, u32, u64) {
+					const u64 uint_value = std::visit(
+						[&](auto&& arg) -> u64 { return static_cast<u64>(arg); }, value
+					);
+					return base::strConcat(uint_value, "_");
+				}
+				variant_case(f32, f) { return floatToHex(f); }
+				variant_case(f64, d) { return floatToHex(d); }
+				variant_default() { CORE_PANIC("Unknown type in mangleValue()"); }
 			}
 		}
 
