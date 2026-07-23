@@ -18,6 +18,11 @@ impl<'duck> HttpClient<'duck> {
         Self { ctx }
     }
 
+    /// Get the underlying [`DuckContext`].
+    pub fn ctx(&self) -> &DuckContext {
+        self.ctx
+    }
+
     /// Create a common [`Easy2`] handler.
     fn create_easy<H: Handler>(&self, handler: H, request: &Request) -> QuackResult<Easy2<H>> {
         let mut easy = Easy2::new(handler);

@@ -112,11 +112,11 @@ impl<'duck> DucknestClient<'duck> {
     }
 }
 
-fn create_get_request(url: &Url) -> QuackResult<Request> {
+pub fn create_get_request(url: &Url) -> QuackResult<Request> {
     create_http_request(url, http::Method::GET, vec![])
 }
 
-fn create_http_request(url: &Url, method: http::Method, body: Vec<u8>) -> QuackResult<Request> {
+pub fn create_http_request(url: &Url, method: http::Method, body: Vec<u8>) -> QuackResult<Request> {
     debug!(%method, %url, "making an `{method}` request for `{url}`");
     http::Request::builder()
         .uri(url.as_str())
