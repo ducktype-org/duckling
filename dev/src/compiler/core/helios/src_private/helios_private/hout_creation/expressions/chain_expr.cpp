@@ -525,9 +525,9 @@ namespace compiler::helios::code {
 		/**
 		 * Call on the namespace, for example Namespace()
 		 */
-		auto processPSTExpr(SymID namespace_like_symbol, pst::Access<pst::expr::Call> call_expr)
-			-> query::QResult<ChainState> {
-			(void) namespace_like_symbol;
+		auto processPSTExpr(
+			[[maybe_unused]] SymID namespace_like_symbol, pst::Access<pst::expr::Call> call_expr
+		) -> query::QResult<ChainState> {
 			query_ctx.logInt(makeBox<dia_int::PlaceholderError>(
 				base::strConcat("Namespace is not callable"), call_expr->getStablePosition()
 			));

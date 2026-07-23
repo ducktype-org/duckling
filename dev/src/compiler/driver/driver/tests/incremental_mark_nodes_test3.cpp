@@ -95,9 +95,9 @@ private:
 		);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			(void) ctx.query<driver::CompileModule>({ .module_id        = module,
-			                                          .backend_type     = driver::BackendType::LLVM,
-			                                          .build_debug_info = false });
+			ctx.query<driver::CompileModule>({ .module_id        = module,
+			                                   .backend_type     = driver::BackendType::LLVM,
+			                                   .build_debug_info = false });
 		});
 
 		// Build a NodeID for the CompileModule query with the exact key we used
