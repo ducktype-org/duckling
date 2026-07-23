@@ -247,11 +247,7 @@ namespace compiler::helios::defgen {
 
 				auto u64_abs_type
 					= tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned);
-				auto u64_type = tsh::SymbolType<>{
-					u64_abs_type,
-					tsh::ReferenceKind::Direct,
-					tsh::Mutability::Mutable,
-				};
+				auto u64_type = tsh::SymbolType<>::withDefaults(u64_abs_type);
 				// var i: i64 = 0;
 				const SymID i_sym
 					= ctx.query<QueryGeneratedSymbol>({ .name                  = base::StrID("__i"),

@@ -411,6 +411,28 @@ namespace compiler::helios::code::shorthands {
 			return makeBox<VariableStmt>(generatedOrigin(), std::move(init), type, symbol);
 		}
 
+		/** @brief A variable declaration without type `var/let symbol = init;`. */
+		[[nodiscard]]
+		static Box<VariableStmt> var(SymID symbol, Box<Expr> init) {
+			return makeBox<VariableStmt>(
+				generatedOrigin(),
+				std::move(init),
+				tsh::SymbolType<>::withDefaults(init->expression_type.getType()),
+				symbol
+			);
+		}
+
+		/**
+		 * @brief A variable declaration without init `var/let symbol: type;`.
+		 * @note Unlike the other `var` methods, this one isn't static, as it requires ctx.
+		 */
+		[[nodiscard]]
+		Box<VariableStmt> var(SymID symbol, tsh::SymbolType<> type) const {
+			return makeBox<VariableStmt>(
+				generatedOrigin(), defaultValue(type.getType()), type, symbol
+			);
+		}
+
 		/** @brief An assignment `location = value;`. */
 		[[nodiscard]]
 		static Box<AssignmentStmt> assign(Box<Expr> location, Box<Expr> value) {

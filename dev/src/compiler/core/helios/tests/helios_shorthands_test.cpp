@@ -62,6 +62,7 @@ public:
 	/** Leaf builders produce the expected nodes and derive types from `ctx`. */
 	void testLiterals() {
 		query::utils::withContextDo([&](query::Context& ctx) {
+			using numeric_value::NumericValue;
 			const Shorthand s{ ctx };
 
 			ASSERT_EQUAL(dprint(s.litUnit()), std::string("()"));
@@ -69,6 +70,7 @@ public:
 			ASSERT_EQUAL(dprint(s.litBool(false)), std::string("false"));
 			ASSERT_EQUAL(dprint(s.litChar('x')), std::string("'x'"));
 			ASSERT_EQUAL(dprint(s.litNum(40)), std::string("40"));
+			ASSERT_EQUAL(dprint(s.litNum(f64(-3.14))), NumericValue(f64(-3.14)).toString());
 
 			// A bare integer literal is minimized to i32 (its type came from `ctx`).
 			const auto forty = s.litNum(40);
@@ -129,8 +131,8 @@ public:
 			ASSERT_EQUAL(nested->expression_type.getType().getKind(), tsh::Kind::Integral);
 
 			// A ternary takes the type of its `then` branch.
-			const auto tern = s.ternary(s.litBool(true), s.litNum(1), s.litNum(2));
-			ASSERT_EQUAL(dprint(tern), std::string("if true then 1 else 2"));
+			const auto tern = s.ternary(s.litBool(true), s.litNum(1), s.litChar('a'));
+			ASSERT_EQUAL(dprint(tern), std::string("if true then 1 else 'a'"));
 			ASSERT_EQUAL(tern->expression_type.getType().getKind(), tsh::Kind::Integral);
 
 			// A s.sequence yields its last expression's value and type.
@@ -333,7 +335,7 @@ public:
 			ASSERT_EQUAL(
 				compiler::helios::getIdentifierExprSymID(access_expr->base.ref()).value(), point_var
 			);
-			ASSERT_TRUE(access_expr->field == x_field);
+			ASSERT_EQUAL(access_expr->field, x_field);
 			// The access's type is the field's type (`i64`).
 			ASSERT_EQUAL(field_access->expression_type.getType().getKind(), tsh::Kind::Integral);
 		});
@@ -345,7 +347,7 @@ public:
 	 * `var` needs a real symbol and a type, so a module is loaded to supply them.
 	 */
 	void testStatements() {
-		const auto [module, scope] = getModule(fs::File(path("test_modules/dummy")));
+		const auto [module, scope] = getModule(fs::File(path("test_modules/shorthands/dummy")));
 		const auto dummy_symbol    = getChain("dummy", scope).back();
 
 		query::utils::withContextDo([&](query::Context& ctx) {
@@ -353,12 +355,31 @@ public:
 
 			const auto i64_type
 				= tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed);
-			const auto i64_sym_type = s.litNum(0, i64_type)->expression_type.getSymbolType();
+			const auto i64_sym_type = tsh::SymbolType<>::withDefaults(i64_type);
 
 			// Simple statements wrap their expression operand.
 			const auto decl = s.var(dummy_symbol, i64_sym_type, s.litNum(0, i64_type));
-			ASSERT_TRUE(decl->initial_value.isBox());
-			ASSERT_TRUE(decl->helios_symbol == dummy_symbol);
+			ASSERT_TRUE(
+				dynamic_cast<LiteralNumericExpr*>(decl->initial_value.getBox().get()) != nullptr
+			);
+			ASSERT_EQUAL(decl->type, i64_sym_type);
+			ASSERT_EQUAL(decl->helios_symbol, dummy_symbol);
+
+			const auto decl_no_type = s.var(dummy_symbol, s.litNum(0, i64_type));
+			ASSERT_TRUE(
+				dynamic_cast<LiteralNumericExpr*>(decl_no_type->initial_value.getBox().get())
+				!= nullptr
+			);
+			ASSERT_EQUAL(decl_no_type->type, i64_sym_type);
+			ASSERT_EQUAL(decl_no_type->helios_symbol, dummy_symbol);
+
+			const auto decl_no_value = s.var(dummy_symbol, i64_sym_type);
+			ASSERT_TRUE(
+				dynamic_cast<DefaultValueExpr*>(decl_no_value->initial_value.getBox().get())
+				!= nullptr
+			);
+			ASSERT_EQUAL(decl_no_value->type, i64_sym_type);
+			ASSERT_EQUAL(decl_no_value->helios_symbol, dummy_symbol);
 
 			const auto assignment = s.assign(s.ident(dummy_symbol), s.litNum(1, i64_type));
 			ASSERT_TRUE(assignment->location_expr.isBox());
@@ -534,7 +555,7 @@ public:
 	 * that starts generated/positionless ends up non-generated and carrying a source position.
 	 */
 	void testWithOrigin() {
-		const auto [module, scope] = getModule(fs::File(path("test_modules/dummy")));
+		const auto [module, scope] = getModule(fs::File(path("test_modules/shorthands/dummy")));
 		const auto dummy_symbol    = getChain("dummy", scope).back();
 
 		query::utils::withContextDo([&](query::Context& ctx) {
