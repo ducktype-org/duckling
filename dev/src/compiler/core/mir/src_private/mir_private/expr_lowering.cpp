@@ -589,7 +589,7 @@ namespace compiler::mir {
 
 		void visitMoveExpr(const hc::MoveExpr& expr) override {
 			// `move x` yields the value of `x` and marks the source local as moved-out, so any
-			// later use is flagged by the liveness/use-after-move analysis. The `Move` flag has to
+			// later use is flagged by the move state/use-after-move analysis. The `Move` flag has to
 			// sit on an instruction that reads the local, so we copy it into a fresh temporary and
 			// attach the flag there.
 			auto hole          = continuation->addHole();

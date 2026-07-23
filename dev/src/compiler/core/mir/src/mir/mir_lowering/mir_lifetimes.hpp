@@ -21,7 +21,7 @@ namespace compiler::mir {
 
 	struct LifetimePassArgs {
 		LocalsByScopeMap                             locals_by_scope;
-		LivenessData                                 liveness;
+		MoveStateData                                 move_states;
 		base::HashMap<BlockID, std::vector<BlockID>> block_predecessors;
 	};
 
@@ -46,7 +46,7 @@ namespace compiler::mir {
 
 	/**
 	 * @brief Perform a pass of MIR, that adds destructor calls
-	 * based on instruction lifetime-scopes and liveness information.
+	 * based on instruction lifetime-scopes and move-state information.
 	 */
 	class AddDestructorsPass final: public LifetimePass {
 	public:

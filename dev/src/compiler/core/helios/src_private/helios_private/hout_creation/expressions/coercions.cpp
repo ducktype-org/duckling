@@ -187,11 +187,6 @@ namespace compiler::helios {
 		CORE_ASSERT(isValidFor(from.ref()), "Invalid expression for this coercion.");
 
 		auto current_expr = handleReferenceKindCoercion(ctx, std::move(from), to);
-		if (passingMethod(ctx, current_expr->expression_type) == PassingMethod::ImplicitMove)
-			current_expr = makeBox<code::MoveExpr>(
-				ctx, current_expr->origin.generatedFrom(), std::move(current_expr)
-			);
-
 		auto source_symbol_type = current_expr->expression_type.getSymbolType();
 
 		auto source_type = source_symbol_type.getType();

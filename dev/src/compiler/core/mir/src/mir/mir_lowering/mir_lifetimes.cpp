@@ -100,20 +100,20 @@ namespace compiler::mir {
 		auto add_destructor_to_instr_vec = [&](ScopeRef                  instr_scope,
 		                                       MIRLocalRef               local,
 		                                       std::vector<Instruction>& out_instructions,
-		                                       const LocalLivenessMap&   liveness) {
+		                                       const LocalMoveStateMap&   move_states) {
 			if (local->lifetime_flags.contains(LifetimeFlag::NoDestructor)) return;
 
-			// Liveness analysis
-			auto local_liveness = liveness.atMaybe(local->id);
-			if (local_liveness.empty()) return;  // Empty means that the local is uninitialized
-			if (local_liveness.value()->kind == LivenessStatus::Moved)
+			// Move-state analysis
+			auto local_move_state = move_states.atMaybe(local->id);
+			if (local_move_state.empty()) return;  // Empty means that the local is uninitialized
+			if (local_move_state.value()->status == MoveStatus::Moved)
 				return;                          // When moved we also do not create destructor
 
 			auto destruct_sym_opt = helios::getTypeDestructor(ctx, local->type);
 			if_opt_none(destruct_sym_opt) return;
 			auto destructor_symbol = destruct_sym_opt.value();
 
-			Operation op = local_liveness.value()->kind == LivenessStatus::Alive
+			Operation op = local_move_state.value()->status == MoveStatus::Alive
 			                 ? Operation::Destruct
 			                 : Operation::DestructIf;
 
@@ -130,13 +130,13 @@ namespace compiler::mir {
 
 		auto add_destructors_to_instr_vec = [&](const auto&               ending_scopes,
 		                                        std::vector<Instruction>& out_instructions,
-		                                        const LocalLivenessMap&   liveness) {
+		                                        const LocalMoveStateMap&   move_states) {
 			for (const auto& scope: ending_scopes) {
 				if (not locals_by_scope.contains(scope)) continue;
 				auto& locals = locals_by_scope.at(scope);
 				// Add destructors in reverse order.
 				for (auto& local: locals | std::views::reverse)
-					add_destructor_to_instr_vec(scope, local, out_instructions, liveness);
+					add_destructor_to_instr_vec(scope, local, out_instructions, move_states);
 			}
 		};
 
@@ -148,12 +148,12 @@ namespace compiler::mir {
 			// each block is considered independently
 			auto& block = function.blocks[block_id];
 
-			// Liveness is only computed for blocks reachable from the entry. Unreachable blocks are
+			// Move-state is only computed for blocks reachable from the entry. Unreachable blocks are
 			// still present here (they get pruned later by eliminateUnreachable), so default to an
 			// empty map for them instead of crashing.
-			LocalLivenessMap liveness_info;
-			if (auto found = args.liveness.block_in_liveness.atMaybe(block_id))
-				liveness_info = *found.value();
+			LocalMoveStateMap move_state_info;
+			if (auto found = args.move_states.block_in_move_state.atMaybe(block_id))
+				move_state_info = *found.value();
 
 			std::vector<Instruction> new_instructions;
 			new_instructions.reserve(block.instructions.size());
@@ -166,11 +166,11 @@ namespace compiler::mir {
 				                           : block.terminator;
 
 				new_instructions.push_back(instr);
-				updateLivenessMapByInstr(liveness_info, instr);
+				updateMoveStateMapByInstr(move_state_info, instr);
 
 				auto ending_scopes = getEndingScopes(instr.scope, next_instr.scope);
 
-				add_destructors_to_instr_vec(ending_scopes, new_instructions, liveness_info);
+				add_destructors_to_instr_vec(ending_scopes, new_instructions, move_state_info);
 			}
 
 			// We handle terminator in special way, because its successors are a set, not a single
@@ -182,7 +182,7 @@ namespace compiler::mir {
 				// the function ends
 				auto ending_scopes
 					= getEndingScopes(terminator.scope, function.lifetime_scope_tree.root);
-				add_destructors_to_instr_vec(ending_scopes, new_instructions, liveness_info);
+				add_destructors_to_instr_vec(ending_scopes, new_instructions, move_state_info);
 			} else {
 				// Here we handle situations where a branch may cause two different sets of
 				// destructors being performed. For example breaking from a loop etc.
@@ -227,7 +227,7 @@ namespace compiler::mir {
 					// and insert them directly to the current block.
 					if (boundary_crossed) {
 						add_destructors_to_instr_vec(
-							first_path_ending_scopes.value(), new_instructions, liveness_info
+							first_path_ending_scopes.value(), new_instructions, move_state_info
 						);
 					}
 				} else {
@@ -251,7 +251,7 @@ namespace compiler::mir {
 
 						// Add all needed destructors.
 						add_destructors_to_instr_vec(
-							succ_ending_scopes, new_block_instructions, liveness_info
+							succ_ending_scopes, new_block_instructions, move_state_info
 						);
 
 						auto new_terminator_scope = [&]() {
@@ -314,7 +314,7 @@ namespace compiler::mir {
 		base::Optional<Instruction> assignmentDestructorFor(
 			query::Context&                     ctx,
 			const Instruction&                  instr,
-			const LocalLivenessMap&             liveness,
+			const LocalMoveStateMap&             move_states,
 			const base::HashMap<LocalID, bool>& zero_initialized
 		) {
 			// The instruction must write to a place.
@@ -326,9 +326,9 @@ namespace compiler::mir {
 
 			if (not target.isLocal()) return {};
 			const MIRLocalRef base           = target.getBase<MIRLocalRef>();
-			auto              local_liveness = liveness.atMaybe(base->id);
-			if (local_liveness.empty()) return {};  // uninitialized
-			if (local_liveness.value()->kind != LivenessStatus::Alive) return {};
+			auto              local_move_state = move_states.atMaybe(base->id);
+			if (local_move_state.empty()) return {};  // uninitialized
+			if (local_move_state.value()->status != MoveStatus::Alive) return {};
 
 			if (zero_initialized.contains(base->id)) return {};
 
@@ -352,11 +352,11 @@ namespace compiler::mir {
 		for (auto& block_id: function.block_order) {
 			auto& block = function.blocks[block_id];
 
-			// Replay liveness through the block, starting from its entry state. Unreachable blocks
-			// have no computed liveness, so default to empty (matching AddDestructorsPass).
-			LocalLivenessMap liveness_info;
-			if (auto found = args.liveness.block_in_liveness.atMaybe(block_id))
-				liveness_info = *found.value();
+			// Replay move-state through the block, starting from its entry state. Unreachable blocks
+			// have no computed move_states, so default to empty (matching AddDestructorsPass).
+			LocalMoveStateMap move_state_info;
+			if (auto found = args.move_states.block_in_move_state.atMaybe(block_id))
+				move_state_info = *found.value();
 
 			// Locals filled in by a `ZeroInitialize` in this block: their fields are being
 			// initialized (not overwritten), so assignments into them must not destroy the old value.
@@ -367,13 +367,13 @@ namespace compiler::mir {
 
 			for (const auto& instr: block.instructions) {
 				// The destructor of the overwritten value runs before the assignment, and is
-				// checked against the liveness state *before* the instruction executes.
+				// checked against the move state *before* the instruction executes.
 				if (auto old_value_dtor
-				    = assignmentDestructorFor(ctx, instr, liveness_info, zero_initialized))
+				    = assignmentDestructorFor(ctx, instr, move_state_info, zero_initialized))
 					new_instructions.push_back(std::move(old_value_dtor.value()));
 
 				new_instructions.push_back(instr);
-				updateLivenessMapByInstr(liveness_info, instr);
+				updateMoveStateMapByInstr(move_state_info, instr);
 
 				// Track whole-local `ZeroInitialize`s so later field stores are treated as
 				// initialization.
@@ -522,7 +522,7 @@ namespace compiler::mir {
 			for (auto succ: getTerminatorSuccessors(function.blocks.at(block_id)->terminator))
 				args.block_predecessors.put(succ).first->second.push_back(block_id);
 
-		args.liveness = calculateGlobalInLivenessMap(function, args.block_predecessors);
+		args.move_states = calculateGlobalInMoveStateMap(function, args.block_predecessors);
 
 		return args;
 	}
@@ -536,7 +536,7 @@ namespace compiler::mir {
 		//
 		// AddAssignmentDestructorsPass runs before AddDestructorsPass: it only inserts instructions
 		// within existing blocks (no CFG changes), and its flagless `Destruct`s do not affect the
-		// liveness replay the later passes perform.
+		// move-state replay the later passes perform.
 		InvalidUseCheck{}.run(ctx, function, args);
 		AddAssignmentDestructorsPass{}.run(ctx, function, args);
 		AddDestructorsPass{}.run(ctx, function, args);

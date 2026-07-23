@@ -598,7 +598,7 @@ namespace compiler::mir {
 	 *
 	 * Emitted when an assignment stores a value into a whole local (no projections), as opposed to
 	 * a declaration. Like @ref flagConstruct it marks the local as alive from this point on for
-	 * liveness analysis.
+	 * move-state analysis.
 	 */
 	constexpr OperationFlag flagReinit(MIRLocalRef local) {
 		return { .flag = OperationFlag::Flag::Reinit, .local = local };
