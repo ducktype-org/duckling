@@ -143,7 +143,7 @@ mod test {
     #[test]
     fn base_api_url() {
         let repo_url = "https://github.com/foo/xd".to_url().unwrap().into();
-        let api_url = "https://api.github.com/repos/foo/xd".to_url().unwrap();
+        let api_url = "https://api.github.com/repos/foo/xd/".to_url().unwrap();
         assert_eq!(api_url, GithubClient::get_api_url(repo_url).unwrap())
     }
 }
