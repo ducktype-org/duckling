@@ -16,7 +16,7 @@ namespace pst {
 			  PST<Element>(std::move(hash_ctx)) {
 			assignRoot(std::move(el));
 
-			finishGenerated();
+			PST<Element>::finishGeneratedPST();
 		}
 
 	public:
