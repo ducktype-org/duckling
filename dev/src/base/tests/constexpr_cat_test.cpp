@@ -34,8 +34,8 @@ public:
 	}
 
 	/**
-	 * @brief Regression test for #2258: CONSTEXPR_CAT output used as C-string
-	 *        requires explicit null termination.
+	 * @brief CONSTEXPR_CAT output used as C-string
+	 * 		requires explicit null termination.
 	 *
 	 * CONSTEXPR_CAT strips the trailing \\0 from string literals. Arrays
 	 * produced without an explicit '\\0' argument are NOT safe for .data()
