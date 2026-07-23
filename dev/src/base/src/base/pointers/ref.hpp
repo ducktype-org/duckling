@@ -16,7 +16,7 @@ namespace base {
 	template<class T>
 	class Ref final {
 	private:
-		T* ptr;
+		T* ptr = nullptr;
 
 		template<class U>
 		friend class Ref;
@@ -36,7 +36,7 @@ namespace base {
 
 		Ref(std::nullptr_t) = delete;
 
-		// @TODO: I would be preferred to assertNotNull during copy, but then the type is not
+		// @TODO: It would be preferred to assertNotNull during copy, but then the type is not
 		// trivially copyable.
 
 		// Copy:
@@ -212,7 +212,7 @@ namespace base {
 
 	// Deduction guide for constructing a MRef from a Ref:
 	template<class U>
-	MRef(const Ref<U>&) noexcept -> MRef<U>;
+	MRef(const Ref<U>&) -> MRef<U>;
 
 	template<class T>
 	using CRef = Ref<const T>;
