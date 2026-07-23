@@ -1,7 +1,8 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::StrId;
+use crate::quackpack::core::solver::gathering::error_suppression::GathererComputation;
 use crate::quackpack::core::{FeatureName, Manifest, PackageId, Source, Version};
+use crate::{QuackResult, StrId, qp_bail_internal};
 
 /// Type representing a request to get manifests for a single/multiple packages.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -80,4 +81,36 @@ pub struct PinnedFailure {
 #[derive(Debug)]
 pub struct NotPinnedFailure {
     pub origin_id: RequestIdentifier,
+}
+
+/// Type representing what action to perform for a given request.
+#[derive(Debug)]
+pub enum RequestAction {
+    /// A fetch for such request was never made, so the fetch should be performed.
+    Fetch,
+    /// No need for a fetch, but further requests result from this one.
+    More { requests: Vec<ManifestsRequest> },
+}
+
+impl RequestAction {
+    pub fn unwrap_requests(self) -> QuackResult<Vec<ManifestsRequest>> {
+        match self {
+            RequestAction::Fetch => {
+                qp_bail_internal!("called for manifests requests on a fetch request")
+            }
+            RequestAction::More { requests } => Ok(requests),
+        }
+    }
+}
+
+impl Default for RequestAction {
+    fn default() -> Self {
+        Self::More { requests: vec![] }
+    }
+}
+
+impl From<GathererComputation<Vec<ManifestsRequest>>> for GathererComputation<RequestAction> {
+    fn from(value: GathererComputation<Vec<ManifestsRequest>>) -> Self {
+        GathererComputation(RequestAction::More { requests: value.0 }, value.1)
+    }
 }

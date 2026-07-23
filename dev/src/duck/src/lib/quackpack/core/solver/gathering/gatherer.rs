@@ -14,12 +14,10 @@ use crate::quackpack::core::solver::gathering::error_suppression::{
 };
 use crate::quackpack::core::solver::gathering::fetch_types::{
     FetchFailure, FetchResponse, FetchSuccess, ManifestsRequest, NotPinnedFailure,
-    NotPinnedRequest, NotPinnedSuccess, PinnedFailure, PinnedRequest, PinnedSuccess,
+    NotPinnedRequest, NotPinnedSuccess, PinnedFailure, PinnedRequest, PinnedSuccess, RequestAction,
     RequestIdentifier,
 };
-use crate::quackpack::core::solver::gathering::gatherer_state::{
-    GatheredInfo, GathererState, RequestAction,
-};
+use crate::quackpack::core::solver::gathering::gatherer_state::{GatheredInfo, GathererState};
 use crate::quackpack::core::solver::git_access::GitAccess;
 use crate::quackpack::core::solver::solver_mode::SolverMode;
 use crate::quackpack::core::{
