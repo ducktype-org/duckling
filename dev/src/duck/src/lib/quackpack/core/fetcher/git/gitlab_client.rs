@@ -115,7 +115,7 @@ impl PseudoGitClient for GitlabClient<'_> {
 }
 
 #[allow(dead_code)]
-/// Deserialize the response for requests `.../branches/<branch>` and `.../tags/<tag>` and get the `commit.id` field.
+/// Deserialize the response for requests `.../repository/branches/<branch>` and `.../repository/tags/<tag>` and get the `commit.id` field.
 fn get_commit_from_response(response: Response) -> QuackResult<StrId> {
     let data: Value = response.deserialize_json()?;
     let commit_hash = data

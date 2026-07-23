@@ -80,7 +80,8 @@ fn http_headers_to_curl_list(headers: &header::HeaderMap) -> Result<easy::List, 
         };
     }
     fallback_append_header!(header::PRAGMA, defaults::PRAGMA_HEADER_WITH_VALUE);
-    fallback_append_header!(header::EXPECT, defaults::EXPECT_HEADER_WITH_VALUE);
+    // If appended this makes github's API unhappy :(
+    // fallback_append_header!(header::EXPECT, defaults::EXPECT_HEADER_WITH_VALUE);
     Ok(list)
 }
 
