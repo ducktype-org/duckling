@@ -591,7 +591,9 @@ namespace compiler::helios::mangler {
 		}
 
 		static std::string mangleValue(query::Context&, compiler::numeric_value::NumericValue num) {
-			variant_match(num.getStorage()) {
+			const auto& value = num.getStorage();
+
+			variant_match(value) {
 				variant_case_novalue(int8_t, i16, i32, i64) {
 					const i64 int_value = std::visit(
 						[&](auto&& arg) -> i64 { return static_cast<i64>(arg); }, value
