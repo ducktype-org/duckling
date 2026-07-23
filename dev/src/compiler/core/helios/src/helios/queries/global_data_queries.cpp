@@ -6,8 +6,8 @@
 #include <helios/symbols/symbol_kind.hpp>
 #include <helios_private/hout_creation/definition_generation/default_constructors.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
-#include <helios_private/symbols/symbols.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
+#include <helios_private/symbols/symbols.hpp>
 
 #include <query_framework/standard_query/query_cache_macros.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
@@ -28,25 +28,25 @@ namespace compiler::helios {
 			const auto symbol_type = ctx.query<QueryTypeOfSymbol>(symbol)->valueOrThrow();
 			// const auto& sym_ref = getSymRef(symbol);
 
-			auto       maybe_pst_decl    = maybeSymbolPst(symbol);
-			auto       origin      = [&]() -> code::ElementOrigin {
-				if (maybe_pst_decl.has_value()) {
-					auto pst_decl = maybe_pst_decl.value().unlock(ctx);
-					return code::pstOrigin(pst_decl);
-				} else {
-					// Note: we could generate better origin upon const creation and use it here,
-					// if we ever need to.
-					return code::generatedOrigin();
-				}
+			auto maybe_pst_decl = maybeSymbolPst(symbol);
+			auto origin         = [&]() -> code::ElementOrigin {
+                if (maybe_pst_decl.has_value()) {
+                    auto pst_decl = maybe_pst_decl.value().unlock(ctx);
+                    return code::pstOrigin(pst_decl);
+                } else {
+                    // Note: we could generate better origin upon const creation and use it here,
+                    // if we ever need to.
+                    return code::generatedOrigin();
+                }
 			}();
-			
+
 			auto value = [&]() -> std::variant<HOUTGlobalConst, HOUTGlobalVariable> {
 				switch (data_type) {
 				case HOUTGlobalDataType::Variable: {
-
 					CORE_ASSERT(
 						maybe_pst_decl.has_value(),
-						"Global variable symbol without PST Implemented Semantics is not handled in QueryHOUTGlobalData"
+						"Global variable symbol without PST Implemented Semantics is not handled "
+					    "in QueryHOUTGlobalData"
 					);
 
 					auto pst_decl = maybe_pst_decl.value().unlock(ctx);
