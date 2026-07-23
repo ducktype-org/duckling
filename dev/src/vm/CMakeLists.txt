@@ -31,7 +31,7 @@ set(exec_sources
 # as they depend on each other.
 
 set(vm_internal_deps
-    Base Clah Events Filesystem TPC Init Logger Diagnostic
+    Base Clah Events Filesystem TPC Init Logger Diagnostic DebugInfo
 )
 
 set(vm_external_deps

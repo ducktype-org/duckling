@@ -114,6 +114,7 @@ SubDirs:
   - constants
   - classes
   - extern_c
+  - ffi
   - static_arrays
   - dynamic_arrays
   - optimisations

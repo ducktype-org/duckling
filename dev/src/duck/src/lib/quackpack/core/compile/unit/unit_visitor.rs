@@ -1,8 +1,7 @@
 //! A [`UnitVisitor`], a visitor for [`Unit`]s of compilation.
 
-use crate::QuackResult;
-
 use super::Unit;
+use crate::QuackResult;
 
 /// A visitor of [`Unit`]s.
 ///
