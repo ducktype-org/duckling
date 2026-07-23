@@ -209,7 +209,7 @@ namespace compiler::tsh {
 		 * @return true if the symbol has a trivial destructor, false otherwise.
 		 */
 		[[nodiscard]]
-		bool hasNoOpDestructor() const {
+		bool hasNoOpDestructor(query::Context& ctx) const {
 			if (reference_kind == ReferenceKind::Ref) {
 				// Ref types have trivial destructors, because it do not own its contents.
 				return true;
@@ -219,9 +219,7 @@ namespace compiler::tsh {
 				// memory.
 				return false;
 			}
-			if (abstract_type.hasNoOpDestructor()) return true;
-			// @TODO #1271: add more cases where destructor is trivial
-			// NOTE: abstract_type check should probably be the last one as it may be expensive
+			if (abstract_type.hasNoOpDestructor(ctx)) return true;
 			return false;
 		}
 

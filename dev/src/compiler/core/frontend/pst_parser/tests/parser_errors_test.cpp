@@ -179,6 +179,16 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::FunDecl, true>  simple_fundecl2{ "fundecl foo()" };
 	Example<pst::FunDecl, false> bad_fundecl1{ "fundecl foo(a)" };
 
+	Example<pst::Fun, true>      operator_function1{ "fun +*(a: i64, b: i64) -> i64 = {}" };
+	Example<pst::FunDecl, true>  operator_fundecl{ "fundecl +*(a: i64, b: i64) -> i64" };
+	Example<pst::Class, true>    operator_method{ "class Foo { fun +*(a: u64) -> Foo = {} }" };
+	Example<pst::Fun, false>     assignment_operator_function1{ "fun +*=(a: i64) = {}" };
+	Example<pst::Fun, false>     bare_assign_operator_function{ "fun =(a: i64) = {}" };
+	Example<pst::Fun, false>     comparison_operator_function1{ "fun <(a: i64) = {}" };
+	Example<pst::Fun, false>     special_operator_function1{ "fun ->(a: i64) = {}" };
+	Example<pst::Fun, false>     special_operator_function2{ "fun .?(a: i64) = {}" };
+	Example<pst::FunDecl, false> reserved_operator_fundecl{ "fundecl ==(a: i64) -> i64" };
+
 	Example<pst::Pattern, true> simple_pattern1{ "pattern IsEven(x: i32) = {}" };
 	Example<pst::Pattern, true> simple_pattern2{
 		"pattern Point(p: Point) -> (i32, i32) = {return (p.x, p.y);}"
@@ -494,6 +504,12 @@ class PSTErrorTests: public tester::TestSuite {
 			ss, dia::SourcePosition::fakePosition()
 		);
 		testDiagnosticMessage<pst::NoExternArgumentError>(ss, dia::SourcePosition::fakePosition());
+		testDiagnosticMessage<pst::ReservedOperatorFunNameError>(
+			ss, dia::SourcePosition::fakePosition(), std::string("==")
+		);
+		testDiagnosticMessage<pst::AssignmentOperatorFunNameError>(
+			ss, dia::SourcePosition::fakePosition(), std::string("+*=")
+		);
 
 		testDiagnosticMessage<
 			pst::OpeningBracketMissingError<pst::internal::NameGetters::inheritanceList>>(

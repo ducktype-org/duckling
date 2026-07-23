@@ -1,8 +1,8 @@
 #pragma once
 
-#include <base/collections/optional.hpp>
-
+#include <vm/core/vmvalue/vmvalueref.hpp>
 #include <vm/debugger/debugger.hpp>
+#include <vm/debugger/UI/debug_adapter/protocol.hpp>
 
 #include <nlohmann/json.hpp>
 
@@ -36,6 +36,7 @@ namespace vm::debugger::debug_adapter {
 		std::string            input_buffer;
 		int                    next_seq = 1;
 		std::mutex             output_mutex;
+		std::mutex             variables_mutex;
 
 		// Maps source file paths to a set of active line numbers where breakpoints are requested.
 		std::map<std::string, std::set<size_t>> active_breakpoints;
@@ -49,12 +50,51 @@ namespace vm::debugger::debug_adapter {
 		// response must be sent last, after 'configurationDone' is processed.
 		base::Optional<nlohmann::json> deferred_launch_req;
 
+		u64 total_frames = 0;
+
+		struct VarInfo {
+			VMValueRef var;
+			// reference to childs, 0 if not necessary
+			u64 var_ref{};
+		};
+
+		using VariablesReferenceState
+			= std::variant<u64, VMValueRef, std::map<std::string, VarInfo>>;
+		// vector of variables references
+		std::vector<VariablesReferenceState> variables;
+
+		struct SourcePositionInfo {
+			std::string file_path;
+			u64         start_line   = 0;
+			u64         start_column = 0;
+			u64         end_line     = 0;
+			u64         end_column   = 0;
+		};
+
+		std::expected<SourcePositionInfo, std::string> getSourcePositionInfo();
+
+		/**
+		 * @brief Retrieves the variables map and function identifier for a specific stack frame.
+		 * @note **Thread Safety:** Must be called only by functions holding `variables_mutex`.
+		 */
+		std::expected<std::pair<std::map<std::string, DebugAdapter::VarInfo>, base::StrID>, std::string>
+			varRefFromStackFrameData(api::ThreadID thread_id, u64 frame_id);
+		/**
+		 * @brief Parses a VM value reference into a map of its internal variables/fields.
+		 * @note **Thread Safety:** Must be called only by functions holding `variables_mutex`.
+		 */
+		std::expected<std::map<std::string, VarInfo>, std::string> varRefFromVMValueRef(
+			VMValueRef& value
+		);
+
 		// DAP I/O
 		void send(const nlohmann::json& msg);
 		void sendResponse(
 			const nlohmann::json& request, bool success, const nlohmann::json& body = {}
 		);
+		void sendErrorResponse(const nlohmann::json& request, const std::string& err_msg);
 		void sendEvent(const std::string& event, const nlohmann::json& body = {});
+		void sendEvent(const dap::Event& event);
 
 		// Handlers
 		void handleRequest(const nlohmann::json& req);
@@ -63,6 +103,9 @@ namespace vm::debugger::debug_adapter {
 		void handleConfigurationDone(const nlohmann::json& req);
 		void handleLaunch(const nlohmann::json& req);
 		void handleThreads(const nlohmann::json& req);
+		void handleStackTrace(const nlohmann::json& req);
+		void handleScopes(const nlohmann::json& req);
+		void handleVariables(const nlohmann::json& req);
 		void handleDisconnect(const nlohmann::json& req);
 		void handlePause(const nlohmann::json& req);
 		void handleContinue(const nlohmann::json& req);

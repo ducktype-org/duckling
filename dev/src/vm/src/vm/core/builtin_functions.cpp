@@ -18,6 +18,8 @@
 #include <vm/core/vmvalue/vmvalue.hpp>
 
 #include <chrono>
+#include <cstdio>
+#include <cstdlib>
 #include <cstring>
 
 namespace vm::builtins {
@@ -84,6 +86,29 @@ namespace vm::builtins {
 				std::index_sequence_for<FunArgs...>{}
 			);
 		}
+
+		/**
+		 * @brief Formats `value` with `format` directly into the char table under `ptr`,
+		 * whose total capacity is `buffer_cap` bytes. Writes at most `buffer_cap - 1`
+		 * characters followed by a terminating NUL, as `std::snprintf` does. Returns the
+		 * number of characters written (excluding the NUL), or `0` when the representation
+		 * plus its NUL does not fit.
+		 *
+		 * The span is bounds-checked, so a caller lying about the capacity throws instead of
+		 * corrupting the heap. On a non-fit the buffer may hold a truncated result, so
+		 * callers must ignore it when `0` is returned.
+		 */
+		template<typename T>
+		u64 writeFormatted(Pointer ptr, u64 buffer_cap, const char* format, T value) {
+			auto        destination = Memory::getPointerData(ptr, buffer_cap);
+			auto* const buffer      = reinterpret_cast<char*>(destination.getBegin());
+			const int   written     = std::snprintf(buffer, buffer_cap, format, value);  // NOLINT
+			CORE_ASSERT(written > 0, "Formatting a number into a string failed");
+
+			const auto length = base::safeIntConv<u64>(written);
+			if (length >= buffer_cap) return 0;
+			return length;
+		}
 	}
 
 	// ============================== BUILTIN IMPLEMENTATIONS ==============================
@@ -97,6 +122,13 @@ namespace vm::builtins {
 		auto return_value = thread.safe_process.getIO().getInput<i64>(thread);
 		thread.setProcessStatus(api::Running{});
 		return return_value;
+	}
+
+	i32 FunctionHandlers::builtinInputChar(SafeVMThread& thread) {
+		thread.setProcessStatus(api::Sleeping{});
+		const int c = thread.safe_process.getIO().getRawChar(thread);
+		thread.setProcessStatus(api::Running{});
+		return static_cast<i32>(c);
 	}
 
 	i64 FunctionHandlers::builtinOutputI64(SafeVMThread& thread, i64 arg) {
@@ -128,6 +160,24 @@ namespace vm::builtins {
 		thread.safe_process.getIO().writeOutput(str_data.substr(0, str_data.size() - 1) + "\n");
 	}
 
+	u64 FunctionHandlers::builtinFloatToString(
+		SafeVMThread& /*thread*/, f64 value, Pointer ptr, u64 buffer_cap
+	) {
+		return writeFormatted(ptr, buffer_cap, "%g", double(value));
+	}
+
+	u64 FunctionHandlers::builtinU64ToString(
+		SafeVMThread& /*thread*/, u64 value, Pointer ptr, u64 buffer_cap
+	) {
+		return writeFormatted(ptr, buffer_cap, "%lu", value);
+	}
+
+	u64 FunctionHandlers::builtinI64ToString(
+		SafeVMThread& /*thread*/, i64 value, Pointer ptr, u64 buffer_cap
+	) {
+		return writeFormatted(ptr, buffer_cap, "%ld", value);
+	}
+
 	i64 FunctionHandlers::builtinStoi(SafeVMThread& thread, Pointer ptr) {
 		auto block      = ptr.getBlock();
 		auto block_id   = thread.process_memory.requestBlockID(block);
@@ -135,6 +185,17 @@ namespace vm::builtins {
 
 		auto str_data = block_data.stdString();
 		return std::stoll(str_data);
+	}
+
+	f64 FunctionHandlers::builtinStrtod(SafeVMThread& thread, Pointer ptr) {
+		auto block      = ptr.getBlock();
+		auto block_id   = thread.process_memory.requestBlockID(block);
+		auto block_data = thread.process_memory.requestBlockData(block_id);
+
+		// The block spans the whole allocated buffer, which may be larger than the string content.
+		// The content is NUL-terminated, so hand the raw pointer to `strtod` directly: it stops at
+		// the NUL and never reads the trailing (possibly uninitialized) bytes.
+		return std::strtod(reinterpret_cast<const char*>(block_data.getBegin()), nullptr);
 	}
 
 	i64 FunctionHandlers::builtinStartThread(SafeVMThread& thread) {
@@ -203,6 +264,14 @@ namespace vm::builtins {
 	}
 
 	void FunctionHandlers::builtinDestroyMutex(SafeVMThread& thread, u64 mutex_id) {
+		auto mutex = thread.safe_process.getSynchronizationPrimitives().getMutex(mutex_id);
+		// Destroying a still-held mutex is a program error. try_lock() never blocks and fails iff
+		// the mutex is currently locked (by this or any thread), so use it to detect and report
+		// the misuse instead of silently destroying a locked mutex (which also aborts at teardown
+		// on macOS). On the success path the mutex was free and we now own it, so release it.
+		if (!mutex->try_lock()) throw vm::exceptions::VMDestroyLockedMutexException{};
+		mutex->unlock();
+
 		if_opt_some(thread.safe_process.getDeadlockDetector(), d) d.clearMutexState(mutex_id);
 		thread.safe_process.getSynchronizationPrimitives().removeMutex(mutex_id);
 	}
@@ -318,11 +387,16 @@ namespace vm::builtins {
 				CASE_FUNC,
 				Abort,
 				InputI64,
+				InputChar,
 				OutputI64,
 				OutputI32,
 				OutputChar,
 				OutputString,
+				FloatToString,
+				U64ToString,
+				I64ToString,
 				Stoi,
+				Strtod,
 				StartThread,
 				JoinThread,
 				CreateMutex,
@@ -350,9 +424,8 @@ namespace vm::builtins {
 			const std::vector<CRef<code::valid_type::ValidType>>& arg_types
 		) {
 			if (arg_types.size() != 3) return "expected exactly three arguments";
-			if (!(arg_types[0]->isKind<code::valid_type::finalized::Opaque>()
-			      && arg_types[0]->getName() == base::StrID("cptr")))
-				return "first argument must be a `cptr`";
+			if (!arg_types[0]->isKind<code::valid_type::finalized::CPointer>())
+				return "first argument must be a C pointer";
 			if (!arg_types[1]->isKind<code::valid_type::finalized::Pointer>())
 				return "second argument must be a pointer";
 			auto size_type = arg_types[2]->maybeGetKindAs<code::valid_type::finalized::Primitive>();
@@ -372,6 +445,11 @@ namespace vm::builtins {
 				BuiltinFunctionID::InputI64,
 				{ base::StrID("builtin_input_i64"),
 			      code::FuncSignature({ base::StrID("i64") }, {}) },
+			},
+			{
+				BuiltinFunctionID::InputChar,
+				{ base::StrID("builtin_input_char"),
+			      code::FuncSignature({ base::StrID("i32") }, {}) },
 			},
 			{
 				BuiltinFunctionID::OutputI64,
@@ -399,6 +477,41 @@ namespace vm::builtins {
 					base::StrID("builtin_stoi_pptr"),
 					code::FuncSignature({ base::StrID("i64") }, { base::StrID("ptr_string") }),
 				},
+			},
+			// `manyptr char` lowers to a pointer to a dynamic table of `i8`; the parsed value is
+			// an `f64`.
+			{
+				BuiltinFunctionID::Strtod,
+				{
+					base::StrID("strtod"),
+					code::FuncSignature({ base::StrID("f64") }, { base::StrID("ptr_dyntable_i8") }),
+				},
+			},
+			// `manyptr char` lowers to a pointer to a dynamic table of `i8`, and both `u64`
+			// and the returned length lower to `i64`.
+			{
+				BuiltinFunctionID::FloatToString,
+				{ base::StrID("float_to_string"),
+			      code::FuncSignature(
+					  { base::StrID("i64") },
+					  { base::StrID("f64"), base::StrID("ptr_dyntable_i8"), base::StrID("i64") }
+				  ) },
+			},
+			{
+				BuiltinFunctionID::U64ToString,
+				{ base::StrID("u64_to_string"),
+			      code::FuncSignature(
+					  { base::StrID("i64") },
+					  { base::StrID("i64"), base::StrID("ptr_dyntable_i8"), base::StrID("i64") }
+				  ) },
+			},
+			{
+				BuiltinFunctionID::I64ToString,
+				{ base::StrID("i64_to_string"),
+			      code::FuncSignature(
+					  { base::StrID("i64") },
+					  { base::StrID("i64"), base::StrID("ptr_dyntable_i8"), base::StrID("i64") }
+				  ) },
 			},
 			{
 				BuiltinFunctionID::StartThread,

@@ -7,42 +7,56 @@
 #include <variant>
 #include <vector>
 
-namespace abi::type_system {
+namespace abi::types {
 
 	/**
 	 * @brief A C-compatible integer type, parameterised by its bit width and
 	 * signedness. Width must be one of 8, 16, 32 or 64.
 	 */
 	struct IntType final {
-		u8   width_bits;
+		u64  width_bits;
 		bool is_signed;
+
+		// Signedness does not affect the ABI representation (an i64 and a u64 occupy the same
+		// register/memory bits), so two integer types of equal width compare equal regardless of
+		// `is_signed`. This lets a no-op coercion (e.g. a struct field's signed i64 coerced to an
+		// unsigned i64 register eightbyte) be recognised as leaving the representation unchanged.
+		bool operator==(const IntType& other) const { return width_bits == other.width_bits; }
 	};
 
 	/**
 	 * @brief A C-compatible floating-point type, parameterised by its bit width.
 	 */
 	struct FloatType final {
-		u8 width_bits;
+		u64 width_bits;
+
+		bool operator==(const FloatType&) const = default;
 	};
 
 	/**
 	 * @brief The C `_Bool` type: a well-defined 1-byte ABI type. Carries no
 	 * payload because its size and alignment are fixed.
 	 */
-	struct BoolType final {};
+	struct BoolType final {
+		bool operator==(const BoolType&) const = default;
+	};
 
 	/**
 	 * @brief The C `char` type: a 1-byte integer. Carries no payload; its
 	 * signedness is implementation-defined in C but does not affect layout.
 	 */
-	struct CharType final {};
+	struct CharType final {
+		bool operator==(const CharType&) const = default;
+	};
 
 	/**
 	 * @brief A C-compatible pointer. Size and alignment of a pointer is fully
 	 * determined by the target, so this variant intentionally carries no
 	 * payload: `int*`, `void*` and `MyStruct*` all share the same layout.
 	 */
-	struct PointerType final {};
+	struct PointerType final {
+		bool operator==(const PointerType&) const = default;
+	};
 
 	struct AbiType;
 
@@ -51,7 +65,8 @@ namespace abi::type_system {
 	 * borrows it (a `CRef`). Borrowing lets a converted type reference a
 	 * cached `QueryCAbiTypeOf` result for a sub-type without cloning it.
 	 */
-	using AbiTypePtr = base::BoxOrCRef<AbiType>;
+	using AbiTypePtr  = base::BoxOrCRef<AbiType>;
+	using AbiTypeCRef = base::CRef<AbiType>;
 
 	/**
 	 * @brief A fixed-size C array. `count` must be strictly positive;
@@ -60,6 +75,18 @@ namespace abi::type_system {
 	struct ArrayType final {
 		AbiTypePtr element;
 		usize      count;
+
+		ArrayType(AbiTypePtr element, usize count);
+
+		// `element` is an owning Box, so a copy must deep-clone it (a shallow
+		// copy is deleted by BoxOrCRef). Moves stay cheap.
+		ArrayType(const ArrayType& other);
+		ArrayType(ArrayType&&) noexcept = default;
+		ArrayType& operator=(const ArrayType& other);
+		ArrayType& operator=(ArrayType&&) noexcept = default;
+		~ArrayType()                               = default;
+
+		bool operator==(const ArrayType& other) const;
 	};
 
 	/**
@@ -69,6 +96,18 @@ namespace abi::type_system {
 	 */
 	struct StructType final {
 		std::vector<AbiTypePtr> fields;
+
+		explicit StructType(std::vector<AbiTypePtr> fields);
+
+		// Fields are owning Boxes, so a copy must deep-clone each one (a shallow
+		// copy is deleted by BoxOrCRef). Moves stay cheap.
+		StructType(const StructType& other);
+		StructType(StructType&&) noexcept = default;
+		StructType& operator=(const StructType& other);
+		StructType& operator=(StructType&&) noexcept = default;
+		~StructType()                                = default;
+
+		bool operator==(const StructType& other) const;
 	};
 
 	/**
@@ -78,16 +117,18 @@ namespace abi::type_system {
 	struct AbiType final {
 		std::variant<IntType, FloatType, BoolType, CharType, PointerType, ArrayType, StructType>
 			value;
+
+		bool operator==(const AbiType&) const = default;
 	};
 
 	/** @brief Wraps an AbiType value in an owning box. */
 	AbiTypePtr makeBoxAbiType(AbiType type);
 
 	/** @brief Builds an AbiType from an IntType. */
-	AbiType intType(u8 width_bits, bool is_signed);
+	AbiType intType(u64 width_bits, bool is_signed);
 
 	/** @brief Builds an AbiType from a FloatType. */
-	AbiType floatType(u8 width_bits);
+	AbiType floatType(u64 width_bits);
 
 	/** @brief Builds a C `_Bool` AbiType. */
 	AbiType boolType();

@@ -169,7 +169,7 @@ private:
 	 * @brief Compiles all standard library packages and verifies output artifacts.
 	 */
 	void compileStdPackages() {
-		auto tasks = driver::getLoadedStdLibCompilationTasks();
+		auto tasks = driver::getRequiredStdLibCompilationTasks();
 
 		// Run standard library compilation
 		ASSERT_TRUE(driver::compilePackages(tasks).isOk());

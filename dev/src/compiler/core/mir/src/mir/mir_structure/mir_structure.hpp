@@ -41,13 +41,6 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 	ListPop,
 
 	/**
-		FreeBox doesn't exist in MIR. It will get created from DestructIf in LIR
-		@TODO: #1894 This approach may be temporary and depends on how we handle
-		destructors in the future. Remove the comment if the approach changes.
-	 */
-	BoxAlloc,
-
-	/**
 		@brief Placeholder.
 		@todo  Some decisions here to be made about operations like that.
 	*//**
@@ -86,14 +79,12 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 	BooleanNot,
 
 
-	/** Operations on meta types for compile time function evaluation */
-	MetaCreateBox,
-	MetaCreateRef,
-	MetaCreateConst,
-	MetaCreateTuple, // N arguments, types to create the tuple type from
-	MetaCreateVariant, // N arguments, types to create the variant type from
-	MetaEq,
-	MetaNeq,
+	/**
+	 * @brief Operation on meta types for compile time function evaluation.
+	 * The specific meta operation is parametrized by `MetaParameters` (a `MetaKind`) stored in the
+	 * instruction's `extra_params`.
+	 */
+	MetaTypeOperation,
 
 	/** Cast is also parametrized by the source type and the target type */
 	Cast,
@@ -118,6 +109,27 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 		@note  It is always implicitly added at the end of a function.
 	*/
 	FunctionEnd
+)
+
+/**
+    @brief The specific kind of a `Operation::MetaTypeOperation` instruction.
+    Stored in the instruction's `extra_params` as `MetaParameters`. Each kind maps to a compile-time
+    type operation lowered by the DVM backend to extern-C `comptime_*` calls.
+*/
+MAKE_STRINGIFYABLE_ENUM(compiler::mir, u32, MetaKind,
+	CreateBox,
+	CreateRef,
+	CreateConst,
+	CreatePtr,
+	CreateManyPtr,
+	CreateCPtr,
+	CreateSlice,
+	CreateTuple,
+	CreateVariant,
+	Eq,
+	Neq,
+	SizeOf,
+	AlignOf
 )
 
 namespace compiler::mir {
@@ -642,11 +654,19 @@ namespace compiler::mir {
 	};
 
 	/**
+	 * @brief Additional parameters for a `Operation::MetaTypeOperation` instruction, selecting
+	 * which meta operation it is.
+	 */
+	struct MetaParameters final {
+		MetaKind kind;
+	};
+
+	/**
 	 * @brief Additional parameters for MIR instructions that depend on the operation type.
 	 * For example, cast instruction needs to know
 	 * from which type to which type it is casting.
 	 */
-	using InstrParameters = std::variant<NoInstrParameters, CastParameters>;
+	using InstrParameters = std::variant<NoInstrParameters, CastParameters, MetaParameters>;
 
 	/**
 	 * @brief Single instruction of MIR code.
@@ -882,7 +902,7 @@ namespace compiler::mir {
 	 */
 	struct MIRUnit final {
 		std::vector<CRef<mir::Function>> mir_functions;
-		std::vector<MIRGlobalData>       mir_globals;
+		std::vector<CRef<MIRGlobalData>> mir_globals;
 
 		void debugPrint(query::Context& ctx, std::ostream& out) const;
 	};

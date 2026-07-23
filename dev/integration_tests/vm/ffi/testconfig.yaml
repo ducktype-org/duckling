@@ -4,15 +4,21 @@
 # Deliberately empty, the parent node already compiles the VM.
 PreNode: ""
 
+# Bare soname of the system math library, resolved by the platform's dynamic loader
+# (libm.so.6 on Linux, libm.dylib on macOS).
+Env:
+    math_lib: '[ "@{is_macos}" = true ] && echo libm.dylib || echo libm.so.6'
+
 Tests:
   ffi-system-lib:
     Cases:
       cli-option:
-        Run: "@{dvm_path} run cos.dbc --ffi-lib libm.so.6"
+        Run: "@{dvm_path} run cos.dbc --ffi-lib $math_lib"
         Output:
           String: "1\n"
+      # The soname is baked into the bytecode, so use the fixture for the running platform.
       bare-soname-in-bytecode:
-        Run: "@{dvm_path} run cos_ffi_object.dbc"
+        Run: '@{dvm_path} run $([ "@{is_macos}" = true ] && echo cos_ffi_object_macos.dbc || echo cos_ffi_object.dbc)'
         Output:
           String: "1\n"
       # The quoted grep pattern must be a single word, DIT splits the command naively.

@@ -4,6 +4,7 @@
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/module_tree/source_file.hpp>
+#include <frontend/packages/packages.hpp>
 #include <frontend/pst_parser/pst_query/pst_access_side_input.hpp>
 #include <frontend/pst_parser/test_utils/pst_test_utils.hpp>
 #include <global_state/packages.hpp>
@@ -38,22 +39,25 @@ namespace compiler::driver {
 		// The key is the hash of the parent module, because that's what QueryModuleChildSideInput
 		// depends on, and we want to quickly find all lookups related to a module when we process
 		// it during input collection.
-		using LookupsMap
+		using ModulesLookupsMap
 			= base::StableHashMap<hashing::ComponentHash::HashType, std::vector<LookupValue>>;
 
 		/**
-		 * @brief Create a lookups map from the provided module lookup metadata.
+		 * @brief Create a lookups map from module lookup metadata.
 		 * This map will be used during input collection to find all lookups related to a module and
 		 * check if they are still valid.
-		 * @param module_lookups Vector of MetadataInfo for module lookups, containing the metadata
-		 * for all QueryModuleChildSideInput queries.
-		 * @return LookupsMap mapping parent module hash to list of child lookups.
+		 * @param from_previous_metadata If true, read metadata_ModuleLookup from the previous
+		 * compilation's nodes; otherwise from the current graph's nodes.
+		 * @return ModulesLookupsMap mapping parent module hash to list of child lookups.
 		 */
-		LookupsMap createLookupMap(
-			const std::vector<query::external::MetadataInfo<frontend::metadata_ModuleLookup>>&
-				module_lookups
-		) {
-			LookupsMap lookups_map;
+		ModulesLookupsMap createModulesLookupMap(bool from_previous_metadata) {
+			auto module_lookups
+				= from_previous_metadata
+			        ? query::external::getMetadataFromAllPrevNodes<frontend::metadata_ModuleLookup>()
+			        : query::external::getMetadataFromAllCurrentNodes<frontend::metadata_ModuleLookup>(
+					  );
+
+			ModulesLookupsMap lookups_map;
 
 			for (const auto& lookup: module_lookups) {
 				// Skip entries that don't belong to QueryModuleChildSideInput
@@ -101,7 +105,7 @@ namespace compiler::driver {
 	 * 	 are still valid in the current module tree.
 	 */
 	static void collectFromModule(
-		const LookupsMap&                                  lookups_map,
+		const ModulesLookupsMap&                           lookups_map,
 		compiler::frontend::ModuleID                       module_id,
 		base::Ref<std::vector<query::external::InputData>> out
 	) {
@@ -158,9 +162,29 @@ namespace compiler::driver {
 
 	namespace {
 		std::vector<query::external::InputData> collectInputDataFromGlobalPackagesImpl(
-			const LookupsMap& lookups_map
+			bool from_previous_metadata
 		) {
 			std::vector<query::external::InputData> out;
+
+			frontend::packages::collectPackageInputData(
+				global_state::getPackages(), from_previous_metadata, out
+			);
+
+
+			// Collect all metadata_ModuleLookup to recreate ModuleChildSideInput nodes.
+			// If a child that was looked up is in the same state as in the previous compilation
+			// (i.e., the parent module still has the same child with the same name),
+			// then the ModuleChildSideInput node can be marked as unchanged.
+			// Similarly, if the module still doesn't have such a child, the node can be marked as
+			// unchanged too. Therefore, we need to check all such lookups and create inputs for
+			// them if still valid.
+
+			// This map could technically be created only for "not found" lookups because if a child
+			// exists, we can just add the corresponding input by looking at the current ModuleTree.
+			// However, in practice it's easier to check all lookups. This should not be a
+			// performance issue because the number of lookups is expected to be low, but this can
+			// be changed if needed.
+			ModulesLookupsMap lookups_map = createModulesLookupMap(from_previous_metadata);
 
 			for (const auto& package: global_state::getPackages())
 				collectFromModule(
@@ -179,32 +203,12 @@ namespace compiler::driver {
 			"in driver initialization."
 		);
 
-		// Collect all metadata_ModuleLookup to recreate ModuleChildSideInput nodes.
-		// If a child that was looked up is in the same state as in the previous compilation
-		// (i.e., the parent module still has the same child with the same name),
-		// then the ModuleChildSideInput node can be marked as unchanged.
-		// Similarly, if the module still doesn't have such a child, the node can be marked as
-		// unchanged too. Therefore, we need to check all such lookups and create inputs for them if
-		// still valid.
 
-		// This map could technically be created only for "not found" lookups because if a child
-		// exists, we can just add the corresponding input by looking at the current ModuleTree.
-		// However, in practice it's easier to check all lookups. This should not be a performance
-		// issue because the number of lookups is expected to be low, but this can be changed if
-		// needed.
-		LookupsMap lookups_map = createLookupMap(
-			query::external::getMetadataFromAllPrevNodes<frontend::metadata_ModuleLookup>()
-		);
-
-		return collectInputDataFromGlobalPackagesImpl(lookups_map);
+		return collectInputDataFromGlobalPackagesImpl(true);
 	}
 
 	std::vector<query::external::InputData> collectInputDataFromGlobalPackagesFromCurrentMetadata() {
-		LookupsMap lookups_map = createLookupMap(
-			query::external::getMetadataFromAllCurrentNodes<frontend::metadata_ModuleLookup>()
-		);
-
-		return collectInputDataFromGlobalPackagesImpl(lookups_map);
+		return collectInputDataFromGlobalPackagesImpl(false);
 	}
 
 }  // namespace compiler::driver
