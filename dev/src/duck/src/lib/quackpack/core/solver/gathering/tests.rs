@@ -11,12 +11,11 @@ use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
 use crate::quackpack::core::solver::gathering::gatherer::Gatherer;
 use crate::quackpack::core::solver::git_access::GitAccess;
 use crate::quackpack::core::solver::solver_mode::SolverMode;
-use crate::quackpack::core::{Source, Version, parse_manifest};
+use crate::quackpack::core::{PackageId, Source, Version, parse_manifest};
 use crate::quackpack::schemas::OneEntryMap;
 use crate::quackpack::schemas::registry::{self, DependencyCondition, DependencyFeature};
 use crate::quackpack::util::interned_url::InternedUrl;
 use crate::quackpack::util::to_url::ToUrl;
-use crate::quackpack::util::with_version::WithVersion;
 use crate::util::path_ops_ext::PathOpsExt;
 use crate::util::test_utils::setup_test;
 
@@ -551,11 +550,11 @@ dependencies:
         ])
     );
     let packages = HashSet::from([
-        WithVersion::new(identity_root, root_version),
-        WithVersion::new(identity_foo, Version::new(1, 0, 0)),
-        WithVersion::new(identity_foo, Version::new(2, 0, 0)),
-        WithVersion::new(identity_bar, Version::new(3, 0, 0)),
-        WithVersion::new(identity_bar, Version::new(4, 1, 1)),
+        PackageId::new(identity_root, root_version),
+        PackageId::new(identity_foo, Version::new(1, 0, 0)),
+        PackageId::new(identity_foo, Version::new(2, 0, 0)),
+        PackageId::new(identity_bar, Version::new(3, 0, 0)),
+        PackageId::new(identity_bar, Version::new(4, 1, 1)),
     ]);
     assert_eq!(
         packages,
@@ -563,7 +562,7 @@ dependencies:
             .gathered_manifests
             .keys()
             .copied()
-            .collect::<HashSet<WithVersion<FullIdentity>>>()
+            .collect::<HashSet<PackageId>>()
     );
     assert_eq!(
         packages,
@@ -571,7 +570,7 @@ dependencies:
             .possible_features
             .keys()
             .copied()
-            .collect::<HashSet<WithVersion<FullIdentity>>>()
+            .collect::<HashSet<PackageId>>()
     );
     for (_, features) in gathered_info.possible_features {
         assert!(features.is_empty());
@@ -704,15 +703,15 @@ features:
         gathered_info.possible_features,
         HashMap::from([
             (
-                WithVersion::new(identity_root, root_version),
+                PackageId::new(identity_root, root_version),
                 ["my_feature".into()].into()
             ),
             (
-                WithVersion::new(identity_xd, Version::new(1, 0, 0)),
+                PackageId::new(identity_xd, Version::new(1, 0, 0)),
                 ["dx".into()].into()
             ),
             (
-                WithVersion::new(identity_dx, Version::new(2, 0, 0)),
+                PackageId::new(identity_dx, Version::new(2, 0, 0)),
                 ["root".into()].into()
             ),
         ])
@@ -790,23 +789,14 @@ dependencies:
     assert_eq!(
         gathered_info.possible_features,
         HashMap::from([
-            (WithVersion::new(identity_root, root_version), [].into()),
+            (PackageId::new(identity_root, root_version), [].into()),
             (
-                WithVersion::new(identity_a, Version::new(1, 0, 0)),
+                PackageId::new(identity_a, Version::new(1, 0, 0)),
                 ["f".into()].into()
             ),
-            (
-                WithVersion::new(identity_a, Version::new(2, 0, 0)),
-                [].into()
-            ),
-            (
-                WithVersion::new(identity_b, Version::new(1, 0, 0)),
-                [].into()
-            ),
-            (
-                WithVersion::new(identity_c, Version::new(1, 0, 0)),
-                [].into()
-            ),
+            (PackageId::new(identity_a, Version::new(2, 0, 0)), [].into()),
+            (PackageId::new(identity_b, Version::new(1, 0, 0)), [].into()),
+            (PackageId::new(identity_c, Version::new(1, 0, 0)), [].into()),
         ])
     )
 }
@@ -865,13 +855,13 @@ dependencies:
     assert_eq!(
         gathered_info.possible_features,
         HashMap::from([
-            (WithVersion::new(identity_root, root_version), [].into()),
+            (PackageId::new(identity_root, root_version), [].into()),
             (
-                WithVersion::new(identity_u, Version::new(1, 0, 0)),
+                PackageId::new(identity_u, Version::new(1, 0, 0)),
                 ["v".into()].into()
             ),
             (
-                WithVersion::new(identity_v, Version::new(1, 0, 0)),
+                PackageId::new(identity_v, Version::new(1, 0, 0)),
                 ["u".into()].into()
             ),
         ])
@@ -932,15 +922,12 @@ dependencies:
     assert_eq!(
         gathered_info.possible_features,
         HashMap::from([
-            (WithVersion::new(identity_root, root_version), [].into()),
+            (PackageId::new(identity_root, root_version), [].into()),
             (
-                WithVersion::new(identity_n, Version::new(1, 0, 0)),
+                PackageId::new(identity_n, Version::new(1, 0, 0)),
                 ["expandable".into(), "expanded".into()].into()
             ),
-            (
-                WithVersion::new(identity_m, Version::new(1, 0, 0)),
-                [].into()
-            ),
+            (PackageId::new(identity_m, Version::new(1, 0, 0)), [].into()),
         ])
     )
 }
