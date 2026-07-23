@@ -497,7 +497,7 @@ clah::Clah getClahForMain() {
 						= global_state::getPackages().front().getRootModule().illegalAccess().getID(
 						);
 
-					(void) query::entryPoint<driver::CompileModule>({ root, backend_type, false });
+					query::entryPoint<driver::CompileModule>({ root, backend_type, false });
 
 
 					compiler::driver::exit();
