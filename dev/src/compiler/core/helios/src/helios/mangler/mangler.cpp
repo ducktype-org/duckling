@@ -315,110 +315,106 @@ namespace compiler::helios::mangler {
 		std::string symbolName(query::Context& ctx, SymID symbol_id) {
 			auto scope_id = scope(symbol_id);
 
-			if (scopeDepth(scope_id) == 1) {
-				return "G" + unscopedName(ctx, symbol_id);
-			} else {
-				std::vector<std::string> path_parts;
+			// global symbol
+			if (scopeDepth(scope_id) == 1) return "G" + unscopedName(ctx, symbol_id);
 
-				// This function can be only called for symbols
-				// that have clear PST-path mangling.
-				// This means that all PstImplementedSemantics work, and few
-				// additional cases that are handled below.
-				auto ancestor_opt = [&]() {
-					variant_match(getSymRef(symbol_id)->other) {
-						variant_case_novalue(PstImplementedSemantics) {
-							auto ancestor = maybeSymbolPst(symbol_id).value().unlock(ctx);
-							return getPSTElementParent(ctx, ancestor);
-						}
-						variant_case(defgen::GeneratedConstant, const_data) {
-							// @TODO: #2587 adjust code here
+			std::vector<std::string> path_parts;
 
-							auto scope = const_data.scope;
-							auto ancestor
-								= ScopeAccess_Functor::get(scope)->relatedPSTElement().value();
-							return PSTParentResult{ ancestor };
-						}
+			// This function can only be called for symbols
+			// that have clear PST-path mangling.
+			// This means that all PstImplementedSemantics work, and few
+			// additional cases that are handled below.
+			auto ancestor_opt = [&]() {
+				variant_match(getSymRef(symbol_id)->other) {
+					variant_case_novalue(PstImplementedSemantics) {
+						auto ancestor = maybeSymbolPst(symbol_id).value().unlock(ctx);
+						return getPSTElementParent(ctx, ancestor);
 					}
-					CORE_UNREACHABLE();
-				}();
+					variant_case(defgen::GeneratedConstant, const_data) {
+						// @TODO: #2587 adjust code here
+
+						auto scope = const_data.scope;
+						auto ancestor
+							= ScopeAccess_Functor::get(scope)->relatedPSTElement().value();
+						return PSTParentResult{ ancestor };
+					}
+				}
+				CORE_UNREACHABLE();
+			}();
+
+			while (ancestor_opt.isLangElement()) {
+				auto ancestor = ancestor_opt.getAsLangElement().unlock(ctx);
+
+				if (ancestor->getElementKind() == pst::ElementKind::Namespace) {
+					auto namespace_v = ancestor.dynamicCast<pst::Namespace>().value();
+					path_parts.push_back(
+						identifier(namespace_v->getName().unlock(ctx)->unwrap().strView())
+					);
+				} else if (ancestor->getElementKind() == pst::ElementKind::Class) {
+					auto class_v = ancestor.dynamicCast<pst::Class>().value();
+					path_parts.push_back(
+						identifier(class_v->getName().unlock(ctx)->unwrap().strView())
+					);
+				} else if (ancestor->getElementKind() == pst::ElementKind::TemplateStmt) {
+					// @TODO: #2607 will likely have to change.
+
+					auto template_stmt_v = ancestor.dynamicCast<pst::TemplateStmt>().value();
+
+					path_parts.push_back(identifier(template_stmt_v->getInnerStatement()
+					                                    .unlock(ctx)
+					                                    ->getDeclSymbolIdentifier()
+					                                    ->unlock(ctx)
+					                                    ->unwrap()
+					                                    .strView()));
 
 
-				while (ancestor_opt.isLangElement()) {
-					auto ancestor = ancestor_opt.getAsLangElement().unlock(ctx);
+					if (template_stmt_v->hasAdditionalRootData()) {
+						// We are inside baked template
 
-					if (ancestor->getElementKind() == pst::ElementKind::Namespace) {
-						auto namespace_v = ancestor.dynamicCast<pst::Namespace>().value();
-						path_parts.push_back(
-							identifier(namespace_v->getName().unlock(ctx)->unwrap().strView())
-						);
-					} else if (ancestor->getElementKind() == pst::ElementKind::Class) {
-						auto class_v = ancestor.dynamicCast<pst::Class>().value();
-						path_parts.push_back(
-							identifier(class_v->getName().unlock(ctx)->unwrap().strView())
-						);
-					} else if (ancestor->getElementKind() == pst::ElementKind::TemplateStmt) {
-						// @TODO: #2607 will likely have to change.
-
-						auto template_stmt_v = ancestor.dynamicCast<pst::TemplateStmt>().value();
-
-						path_parts.push_back(identifier(template_stmt_v->getInnerStatement()
-						                                    .unlock(ctx)
-						                                    ->getDeclSymbolIdentifier()
-						                                    ->unlock(ctx)
-						                                    ->unwrap()
-						                                    .strView()));
-
-
-						if (template_stmt_v->hasAdditionalRootData()) {
-							// We are inside baked template
-
-							auto root_data = template_stmt_v->getAdditionalRootData();
-							variant_match(root_data.pst_parent) {
-								variant_case(
-									pst::AdditionalRootData::BakedTemplateParent, template_parent
-								) {
-									const auto& template_bake_data_any
-										= template_parent.template_bake_data;
-									auto template_bake_data
-										= base::anyCast<templates::TemplateBakePSTLinkedData>(
-											template_bake_data_any
-										);
-									for (const auto& bake_argument:
-									     template_bake_data.postponed_data
-									         ->load(std::memory_order_acquire)
-									         ->template_arguments_symbols) {
-										// @TODO: #2607 This is a mock
-										auto value
-											= ctx.query<helios::QueryConstValueOf>(bake_argument)
-										          .valueOrThrow();
-										path_parts.push_back(identifier(mangleCTV(ctx, value)));
-									}
-								}
-								variant_default {
-									CORE_PANIC(
-										"TemplateStmt has no PST parent, this should not happen "
-										"here."
+						auto root_data = template_stmt_v->getAdditionalRootData();
+						variant_match(root_data.pst_parent) {
+							variant_case(
+								pst::AdditionalRootData::BakedTemplateParent, template_parent
+							) {
+								const auto& template_bake_data_any
+									= template_parent.template_bake_data;
+								auto template_bake_data
+									= base::anyCast<templates::TemplateBakePSTLinkedData>(
+										template_bake_data_any
 									);
+								for (const auto& bake_argument: template_bake_data.postponed_data
+								                                    ->load(std::memory_order_acquire)
+								                                    ->template_arguments_symbols) {
+									// @TODO: #2607 This is a mock
+									auto value = ctx.query<helios::QueryConstValueOf>(bake_argument)
+									                 .valueOrThrow();
+									path_parts.push_back(identifier(mangleCTV(ctx, value)));
 								}
 							}
-						} else {
-							CORE_PANIC(
-								"TemplateStmt has no additional root data meaning it is not baked"
-								"It should not happen in mangling"
-							);
+							variant_default {
+								CORE_PANIC(
+									"TemplateStmt has no PST parent, this should not happen "
+									"here."
+								);
+							}
 						}
+					} else {
+						CORE_PANIC(
+							"TemplateStmt has no additional root data meaning it is not baked"
+							"It should not happen in mangling"
+						);
 					}
-
-					ancestor_opt = getPSTElementParent(ctx, ancestor);
 				}
 
-				std::string ret = "N";
-				for (auto&& it = path_parts.rbegin(); it != path_parts.rend(); ++it) ret += *it;
-
-				ret += unscopedName(ctx, symbol_id);
-
-				return ret + "E";
+				ancestor_opt = getPSTElementParent(ctx, ancestor);
 			}
+
+			std::string ret = "N";
+			for (auto&& it = path_parts.rbegin(); it != path_parts.rend(); ++it) ret += *it;
+
+			ret += unscopedName(ctx, symbol_id);
+
+			return ret + "E";
 		}
 
 		/**
