@@ -17,6 +17,8 @@
 #include <helios/tsh/type_interface.hpp>
 #include <helios/utils/get_expr_symid.hpp>
 #include <helios_private/hout_creation/definition_generation/default_constructors.hpp>
+#include <helios_private/lookup/lookup_result.hpp>
+#include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/generated_symbol_data.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
@@ -39,6 +41,7 @@ class HeliosWithStdTest final: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+		TESTER_ADD_TEST(testImplicitPrelude);
 		TESTER_ADD_TEST(testBuiltinDefinitionInModuleHOUT);
 		TESTER_ADD_TEST(testStrings);
 		TESTER_ADD_TEST(testStringClassProperties);
@@ -297,6 +300,23 @@ private:
 	// A `@builtin(...)` fundecl (here `char_ptr_from_slice` from core.builtins) has no body in
 	// source; the compiler synthesizes its implementation (getBuiltinImpl). This checks that the
 	// synthesized definition is actually emitted into the module HOUT when the builtin is used.
+	// The implicit prelude brings `core.builtins` symbols into scope of every non-stdlib module
+	// without an explicit import. The `builtins` fixture has no import statements at all, yet an
+	// unqualified `builtin_output_i64` must resolve — that resolution is the prelude at work. If
+	// the implicit prelude regresses, this lookup returns empty (and the fixture stops compiling).
+	void testImplicitPrelude() {
+		auto module_id = compiler::driver::test_utils::getModuleIdFromPath("builtins");
+		auto scope     = getModuleScope(module_id);
+
+		auto result = query::entryPoint<compiler::helios::QueryLookupInScopeAndParents>(
+			{ scope, base::StrID("builtin_output_i64"), true }
+		);
+		assertFalse(
+			result->valueOrThrow().isEmpty(),
+			"builtin_output_i64 should resolve via the implicit prelude with no explicit import"
+		);
+	}
+
 	void testBuiltinDefinitionInModuleHOUT() {
 		auto module_id = compiler::driver::test_utils::getModuleIdFromPath("builtins");
 

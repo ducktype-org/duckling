@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 # Test C FFI with a builtin function
 
 extern("C") fundecl abs(x: i32) -> i32;

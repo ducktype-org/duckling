@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 fun main() -> i64 = {
     # Test let declarations with explicit types
     let a: i64 = 10;

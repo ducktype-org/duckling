@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 fun f() = {
     return 12;
 }

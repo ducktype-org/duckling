@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 # Test char escape sequences
 # Focus: escape characters per docs: \n, \t, \r, \\, \', \"
 

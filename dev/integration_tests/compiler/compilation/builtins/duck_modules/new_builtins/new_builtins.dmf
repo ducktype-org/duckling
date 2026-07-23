@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 fun main() -> i64 = {
     var p = dvm_char_alloc(8u64);
     p[0] = 'H';

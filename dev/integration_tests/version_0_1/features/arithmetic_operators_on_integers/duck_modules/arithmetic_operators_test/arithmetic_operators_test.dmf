@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 # Test arithmetic operators on integers
 # Per docs: +, -, *, /, %, and unary -
 

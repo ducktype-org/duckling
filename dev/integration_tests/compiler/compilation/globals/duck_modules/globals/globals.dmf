@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 var g1 = 1;
 var g2 = 2;
 var g3 = 3;

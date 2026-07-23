@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 # Test usages of builtins.
 fun main() = {
     let x: i64 = builtin_input_i64();

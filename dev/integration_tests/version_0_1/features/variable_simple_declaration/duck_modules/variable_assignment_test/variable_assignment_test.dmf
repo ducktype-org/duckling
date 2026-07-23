@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 fun main() -> u64 = {
     var a: i64;
     var b = 0;

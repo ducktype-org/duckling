@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 const Person: type = (str, str, i64); # name, surname, age
 
 fun makePerson(name: str, surname: str, age: i64) -> Person = {

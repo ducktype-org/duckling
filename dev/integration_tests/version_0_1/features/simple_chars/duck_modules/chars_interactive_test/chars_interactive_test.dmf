@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 # Basic character arithmetic tests
 
 fun test_char_comparisons() = {

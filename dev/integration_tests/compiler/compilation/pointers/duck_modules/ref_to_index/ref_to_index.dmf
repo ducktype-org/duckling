@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 extern("C") fundecl malloc(size: i64) -> manyptr i32;
 extern("C") fundecl free(p: manyptr i32);
 

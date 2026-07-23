@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 extern("C") {
     class A {
         x: i8 = i8(0);

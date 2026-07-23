@@ -1,0 +1,7 @@
+# No imports! `print` (a std function) and `builtin_output_i64` (a linked builtin) are
+# provided by the implicit prelude, so this module compiles and runs with the default std.
+fun main() -> i64 = {
+    print("prelude\n");
+    builtin_output_i64(7);
+    return 0;
+}

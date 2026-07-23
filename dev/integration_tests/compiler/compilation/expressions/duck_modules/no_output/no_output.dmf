@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 fun foo() -> i64 = 123;
 
 i64 | i32;

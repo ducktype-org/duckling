@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 #{
 # For cases when code lir emits a=b+c instructions.
 #}

@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 @backend_dependent
 fundecl printValue();
 

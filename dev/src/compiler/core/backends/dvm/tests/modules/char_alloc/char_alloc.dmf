@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 # Exercises the DVM-backend char builtins whose implementations are synthesized by the compiler
 # (see the DVM `BuiltinCallOperation` lowering): `dvm_char_alloc`, `dvm_char_realloc` and
 # `dvm_char_free`.

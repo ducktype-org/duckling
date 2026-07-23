@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 # Checks whether numerics in if statements coerce to bool expressions correctly.
 fun main() -> i64 = {
     if (0) {

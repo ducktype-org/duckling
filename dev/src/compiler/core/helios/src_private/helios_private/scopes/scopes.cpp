@@ -3,6 +3,7 @@
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
+#include <frontend/packages/access.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/all_class_elements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
@@ -634,6 +635,73 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySymbolsInScope);
 
+	namespace {
+		/**
+		 * @brief A module implicitly imported (as if by `import <package>.<path>.*;`) into every
+		 * module that is not part of the standard library. Re-exports are not supported yet, so the
+		 * prelude is emulated by importing the original source modules directly rather than through
+		 * a dedicated `prelude` module.
+		 */
+		struct PreludeImport final {
+			std::string              package;
+			std::vector<std::string> path;
+		};
+
+		/**
+		 * @brief The default import surface. Single source of truth: extend this list to make more
+		 * symbols available without an explicit import.
+		 */
+		const std::vector<PreludeImport>& preludeImports() {
+			static const std::vector<PreludeImport> imports{
+				{ .package = "core", .path = { "builtins" } },
+			};
+			return imports;
+		}
+
+		/**
+		 * @brief True when @p module_id belongs to the standard library itself. Such modules keep
+		 * their explicit imports and must not receive the implicit prelude — this also breaks the
+		 * self-import cycle that `core.builtins` importing itself would otherwise create.
+		 */
+		bool isStandardLibraryModule(query::Context& ctx, frontend::ModuleID module_id) {
+			auto package_id = frontend::getModuleRef(module_id)->getPackage().unlock(ctx).getID();
+			return package_id == base::StrID("core") or package_id == base::StrID("std");
+		}
+
+		/**
+		 * @brief Looks up @p name as if every non-stdlib module wrote `import <module>.*;` for each
+		 * configured prelude module, merging the matches into a single result. Returns an empty
+		 * result (never fails) when the standard library is absent (e.g. `--no-std`, or a custom
+		 * std that lacks the module) or when @p module_id is itself a standard-library module. Uses
+		 * `HInterface::ofScope(...)` (a single-scope lookup, not the scope-and-parents variant) so
+		 * it never re-enters the prelude injection below.
+		 */
+		query::QResult<LookupResult> lookupImplicitPrelude(
+			query::Context& ctx, frontend::ModuleID module_id, base::StrID name, bool with_wildcards
+		) {
+			LookupResult result{ .leaves = {}, .children = {} };
+			if (isStandardLibraryModule(ctx, module_id)) return result;
+
+			for (const auto& prelude_import: preludeImports()) {
+				std::vector<base::StrID> path_ids;
+				path_ids.reserve(prelude_import.path.size());
+				for (const auto& component: prelude_import.path) path_ids.emplace_back(component);
+
+				auto module_opt = frontend::getModuleByAbsolutePath(
+					ctx, base::StrID(prelude_import.package), path_ids
+				);
+				if (not module_opt.has_value()) continue;
+
+				auto prelude_scope   = queryRootScopeOfMainModuleFile(ctx, module_opt.value());
+				auto prelude_qresult = HInterface::ofScope(prelude_scope)
+				                           .lookup(ctx, name, { .with_wildcards = with_wildcards });
+				UNPACK_QRESULT_CREF(CRef<LookupResult> prelude_result = &, prelude_qresult);
+				result.merge(*prelude_result);
+			}
+			return result;
+		}
+	}
+
 	struct IMPLEMENT_QUERY(QueryLookupInScope, query::QResult<LookupResult>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			Ref symbol_list = &ctx.query<QuerySymbolsInScope>(key.scope)->valueOrThrow();
@@ -691,8 +759,20 @@ namespace compiler::helios {
 
 				return parent_result;
 			} else {
-				// At root scope - check if this is a REPL module with a parent
-				auto       current_module_id = key.scope.ref->parent_module;
+				// At root scope.
+				auto current_module_id = key.scope.ref->parent_module;
+
+				// Bring the default prelude modules into scope, as if every module wrote
+				// `import <module>.*;`. A no-op under --no-std or inside the standard library.
+				{
+					UNPACK_QRESULT(
+						LookupResult prelude_result =,
+						lookupImplicitPrelude(ctx, current_module_id, key.name, key.with_wildcards)
+					);
+					result.merge(std::move(prelude_result));
+				}
+
+				// Also check whether this is a REPL module with a parent.
 				const bool is_repl_module
 					= ctx.query<frontend::QueryIsReplModule>(current_module_id);
 				auto repl_parent_opt

@@ -1,5 +1,3 @@
-import core.builtins.*;
-
 # Test constant declarations at module level
 const CONST_I64: i64 = 100;
 const CONST_I32: i32 = 50i32;
