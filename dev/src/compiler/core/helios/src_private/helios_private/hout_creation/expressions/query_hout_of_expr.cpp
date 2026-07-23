@@ -24,6 +24,7 @@
 #include <helios_private/hout_creation/definition_generation/to_string_methods.hpp>
 #include <helios_private/hout_creation/expressions/builtin_operators.hpp>
 #include <helios_private/hout_creation/expressions/chain_expr.hpp>
+#include <helios_private/hout_creation/shorthands/shorthands.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
@@ -42,6 +43,8 @@
 namespace compiler::helios::code {
 
 	namespace {
+		using namespace shorthands;
+
 		/**
 		 * @brief This error message is used when there is a string literal with escape sequences
 		 * that failed to parse.
@@ -204,38 +207,16 @@ namespace compiler::helios::code {
 				}
 			}
 
-			/**
-			 * Prepares a HOUT Expr for a method call, e.g. by automatically taking a reference, as
-			 * required by `self`.
-			 * @note The algorithm is a bit more complicated and depends on whether the type is
-			 * simple or complex, as methods on simple types take copies instead, and then
-			 * references to simple types need to be dereffed.
-			 * @param expr The expression on which a method is called.
-			 * @return The modified (reffed or dereffed) expression.
-			 */
-			[[nodiscard]]
-			Box<Expr> prepareForMethodCall(Box<Expr> expr) const {
-				if (not expr->expression_type.getType().isSimple()
-				    and expr->expression_type.getSymbolType().getRefKind()
-				            != tsh::ReferenceKind::Ref) {
-					return makeBox<RefOfExpr>(ctx, expr->origin.generatedFrom(), std::move(expr));
-				}
-				if (expr->expression_type.getType().isSimple()
-				    and expr->expression_type.getSymbolType().getRefKind()
-				            != tsh::ReferenceKind::Direct) {
-					return makeBox<DerefExpr>(ctx, expr->origin.generatedFrom(), std::move(expr));
-				}
-				return expr;
-			}
-
 			void visitExprFormatStrValue(pst::Access<pst::expr::ExprFormatStrValue> stmt) override {
 				// Build the formatted string as `""` accumulated through a chain of by-value append
 				//  `String("").append(part0).append(..)...append(partn).toString()`
 				const auto append_sym = defgen::stringAppendMethodSym(ctx, false);
 
+				const Shorthand s{ ctx };
+
 				// Construct the expression, initially an empty String.
-				MBox<Expr> result_expr = defgen::getStringFromLiteralExpr(ctx, base::StrID(""));
-				bool       failed      = false;
+				Box<Expr> result_expr = s.litStrObj(base::StrID(""));
+				bool      failed      = false;
 
 				// - For each sub element
 				for (auto sub_locked: stmt->getSubElements()) {
@@ -249,9 +230,7 @@ namespace compiler::helios::code {
 						const auto unescape_result = base::unescapeString(escaped_string);
 						match_optional(unescape_result) {
 							opt_some(result) {
-								next_string = defgen::getStringFromLiteralExpr(
-									ctx, base::StrID(result.value)
-								);
+								next_string = s.litStrObj(base::StrID(result.value));
 							}
 							opt_err(error) {
 								ctx.logInt(makeBox<UnknownEscapeSequenceError>(
@@ -274,39 +253,34 @@ namespace compiler::helios::code {
 						const auto to_string_sym = defgen::toStringSymForType(ctx, sub_expr_type);
 
 						// - - Correct for passing by copy or reference depending on type
-						sub_expr_hout = prepareForMethodCall(std::move(sub_expr_hout));
+						sub_expr_hout = s.prepToPassSelf(std::move(sub_expr_hout));
 
-						// - - Create HOUT Expr
-						std::vector<Box<Expr>> arguments;
-						arguments.emplace_back(std::move(sub_expr_hout));
-						next_string = makeBox<CallExpr>(
-							ctx,
+						// - - Create HOUT Expr. Both the call and its builtin `toString` callee
+						// reference carry the substitution's (generated) origin.
+						next_string = withOrigin(
 							pstOrigin(sub).generatedFrom(),
-							makeBox<IdentifierExpr>(
-								ctx, pstOrigin(sub).generatedFrom(), to_string_sym
-							),
-							std::move(arguments)
+							s.call(
+								withOrigin(pstOrigin(sub).generatedFrom(), s.ident(to_string_sym)),
+								std::move(sub_expr_hout)
+							)
 						);
 					} else {
 						CORE_UNREACHABLE();
 					}
 
-					if (not next_string) {
+					if (failed or not next_string) {
 						failed = true;
 						continue;
 					}
 
-					std::vector<Box<Expr>> arguments;
-					arguments.emplace_back(
-						prepareForMethodCall(std::move(result_expr).toOptBox().value())
-					);
-					arguments.emplace_back(std::move(next_string).toOptBox().value());
-
-					result_expr = makeBox<CallExpr>(
-						ctx,
+					// - Append the next string to the result.
+					result_expr = withOrigin(
 						pstOrigin(sub).generatedFrom(),
-						makeBox<IdentifierExpr>(ctx, pstOrigin(sub).generatedFrom(), append_sym),
-						std::move(arguments)
+						s.call(
+							withOrigin(pstOrigin(sub).generatedFrom(), s.ident(append_sym)),
+							s.prepToPassSelf(std::move(result_expr)),
+							std::move(next_string).toOptBox().value()
+						)
 					);
 				}
 
@@ -317,20 +291,15 @@ namespace compiler::helios::code {
 				// via `toString()`.
 				const auto string_to_string_sym
 					= defgen::toStringSymForType(ctx, tsh::getStringType(ctx));
-				std::vector<Box<Expr>> to_string_args;
-				to_string_args.emplace_back(
-					prepareForMethodCall(std::move(result_expr).toOptBox().value())
-				);
-				result_expr = makeBox<CallExpr>(
-					ctx,
+				result_expr = withOrigin(
 					pstOrigin(stmt).generatedFrom(),
-					makeBox<IdentifierExpr>(
-						ctx, pstOrigin(stmt).generatedFrom(), string_to_string_sym
-					),
-					std::move(to_string_args)
+					s.call(
+						withOrigin(pstOrigin(stmt).generatedFrom(), s.ident(string_to_string_sym)),
+						std::move(result_expr)
+					)
 				);
 
-				node = std::move(result_expr).toOptBox().value();
+				node = std::move(result_expr);
 			}
 
 			static bool isNumericType(const tsh::AbstractType type) {
@@ -366,7 +335,6 @@ namespace compiler::helios::code {
 						|| operatoriness == HOUTFunctionDeclaration::Operatoriness::Suffix,
 					"resolveUnaryOperator should only filter for prefix or suffix operators"
 				);
-
 				// Unary operator resolution happens in two steps:
 				// 1. If the argument is numeric (integral or float) and the operator is a built-in
 				//    numeric operator, we perform any needed coercion and emit a UnaryOperatorExpr.
@@ -416,7 +384,7 @@ namespace compiler::helios::code {
 					auto method_candidates = method_lookup_result->valueOrThrow().leaves;
 					filterFunctionsByOperatoriness(ctx, method_candidates, operatoriness);
 					if (!method_candidates.empty()) {
-						auto self_expr = prepareForMethodCall(std::move(inner));
+						auto self_expr = Shorthand{ ctx }.prepToPassSelf(std::move(inner));
 						return processUnaryOperatorCall(
 								   ctx,
 								   method_candidates,
@@ -523,7 +491,7 @@ namespace compiler::helios::code {
 						));
 						return;
 					}
-					node = defgen::makeCopyExpr(ctx, std::move(inner));
+					node = Shorthand{ ctx }.copy(std::move(inner));
 					return;
 				}
 
@@ -552,6 +520,7 @@ namespace compiler::helios::code {
 			) const {
 				const auto lhs_type = lhs->expression_type.getSymbolType();
 				const auto rhs_type = rhs->expression_type.getSymbolType();
+				Shorthand  s{ ctx };
 
 				// Binary operator resolution now happens in two steps:
 				// 1. If the arguments are both numeric (integral or float) and the operator is a
@@ -605,7 +574,7 @@ namespace compiler::helios::code {
 						ctx, method_candidates, HOUTFunctionDeclaration::Operatoriness::Infix
 					);
 					if (!method_candidates.empty()) {
-						auto self_expr = prepareForMethodCall(std::move(lhs));
+						auto self_expr = s.prepToPassSelf(std::move(lhs));
 						return processBinaryOperatorCall(
 								   ctx,
 								   method_candidates,
