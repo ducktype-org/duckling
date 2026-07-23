@@ -102,6 +102,22 @@ namespace base {
 	#define CORE_ASSERT(cond, what, ...) [[assume(cond)]]
 #endif
 
+/**
+ * @brief Asserts that execution is inside a unit test binary.
+ *
+ * In test binaries (compiled with DUCKLING_IS_TEST_BUILD) this is a no-op.
+ * In Dev builds outside tests, this throws a panic.
+ * In Release builds, this is a compiler hint that the code is unreachable.
+ */
+#if defined(DUCKLING_IS_TEST_BUILD)
+	#define ASSERT_IN_UNIT_TEST()
+#elif defined(BUILD_TYPE_DEV)
+	#define ASSERT_IN_UNIT_TEST() \
+		DETAIL_THROW_PANIC("    Code expected to run only in unit test context")
+#else
+	#define ASSERT_IN_UNIT_TEST() [[assume(false)]]
+#endif
+
 #if defined(BUILD_TYPE_DEV)
 	/**
      * @brief base::Panic based throw that allows catching for testing purposes
