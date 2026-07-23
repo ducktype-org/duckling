@@ -27,7 +27,8 @@ private:
 	void timeMeasurementTest() {
 		timer::TimeMeasurement tm;
 		tm.startMeasurement();
-		for (volatile int i = 0; i < 10'000; (i = i + 1, (void) 0));  // just burn some time
+		for (int i = 0; i < 10'000; ++i)
+			std::atomic_signal_fence(std::memory_order_seq_cst);  // just burn some time
 		tm.endMeasurement();
 
 		auto duration = tm.duration();
@@ -119,7 +120,8 @@ private:
 
 		{
 			timer::AddToTime add_to_time(&total_duration);
-			for (volatile int i = 0; i < 10'000; (i = i + 1, (void) 0));  // just burn some time
+			for (int i = 0; i < 10'000; ++i)
+				std::atomic_signal_fence(std::memory_order_seq_cst);  // just burn some time
 		}
 
 		assertTrue(total_duration.count() > 0, "AddToTime should add some positive amount of time");
