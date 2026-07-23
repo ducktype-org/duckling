@@ -25,6 +25,8 @@ make_tmp_env: "@{tmp_env_tool} make @{tmp_env_files}"
 at_tmp_env: "@{tmp_env_tool} exec --"
 cleanup_tmp_env: "@{tmp_env_tool} clean"
 
+std_artifacts_dir: "/tmp/dit/std_artifacts"
+
 # If JIT is enabled then set timeout to 10s
 timeout_jit: 10
 # If you want to override timeout is it preferred that you set this variable

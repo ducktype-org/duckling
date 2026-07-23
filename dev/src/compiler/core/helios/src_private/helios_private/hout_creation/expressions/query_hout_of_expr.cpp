@@ -15,6 +15,7 @@
 #include <frontend/pst_parser/pst_expr_visitor.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/queries/function_queries.hpp>
+#include <helios/symbols/lang_primitives.hpp>
 #include <helios/tsh/queries.hpp>
 #include <helios/tsh/symbol_type.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
@@ -207,13 +208,15 @@ namespace compiler::helios::code {
 			}
 
 			void visitExprFormatStrValue(pst::Access<pst::expr::ExprFormatStrValue> stmt) override {
-				auto concat_sym = defgen::concatSym(ctx);
+				// Build the formatted string as `""` accumulated through a chain of by-value append
+				//  `String("").append(part0).append(..)...append(partn).toString()`
+				const auto append_sym = defgen::stringAppendMethodSym(ctx, false);
 
 				const Shorthand s{ ctx };
 
-				// Construct the expression, initially empty.
-				MBox<Expr> result_expr = s.litStr(base::StrID(""));
-				bool       failed      = false;
+				// Construct the expression, initially an empty String.
+				Box<Expr> result_expr = s.litStr(base::StrID(""));
+				bool      failed      = false;
 
 				// - For each sub element
 				for (auto sub_locked: stmt->getSubElements()) {
@@ -263,17 +266,17 @@ namespace compiler::helios::code {
 						CORE_UNREACHABLE();
 					}
 
-					if (not next_string) {
+					if (failed or not next_string) {
 						failed = true;
 						continue;
 					}
 
-					// - Concatenate the result with the next string.
+					// - Append the next string to the result.
 					result_expr = withOrigin(
 						pstOrigin(sub).generatedFrom(),
 						s.call(
-							withOrigin(pstOrigin(sub).generatedFrom(), s.ident(concat_sym)),
-							std::move(result_expr).toOptBox().value(),
+							withOrigin(pstOrigin(sub).generatedFrom(), s.ident(append_sym)),
+							s.prepToPassSelf(std::move(result_expr)),
 							std::move(next_string).toOptBox().value()
 						)
 					);
@@ -282,7 +285,19 @@ namespace compiler::helios::code {
 				// If any sub-expression failed to be processed, fail the entire visit.
 				if (failed) return;
 
-				node = std::move(result_expr).toOptBox().value();
+				// The `append` chain yields a `ref String`; convert it to an owned `String` value
+				// via `toString()`.
+				const auto string_to_string_sym
+					= defgen::toStringSymForType(ctx, tsh::getStringType(ctx));
+				result_expr = withOrigin(
+					pstOrigin(stmt).generatedFrom(),
+					s.call(
+						withOrigin(pstOrigin(stmt).generatedFrom(), s.ident(string_to_string_sym)),
+						std::move(result_expr)
+					)
+				);
+
+				node = std::move(result_expr);
 			}
 
 			static bool isNumericType(const tsh::AbstractType type) {
@@ -678,6 +693,13 @@ namespace compiler::helios::code {
 						.same_pointee_type = true,
 					},
 					{
+						.from_ref_kind     = ReferenceKind::Ref,
+						.from_kind         = {},
+						.to_ref_kind       = ReferenceKind::Direct,
+						.to_kind           = tsh::Kind::CPointer,
+						.same_pointee_type = false,
+					},
+					{
 						.from_ref_kind     = ReferenceKind::Box,
 						.from_kind         = {},
 						.to_ref_kind       = ReferenceKind::Direct,
@@ -751,7 +773,8 @@ namespace compiler::helios::code {
 					}
 				}
 				// Temporarily allow casts from CPointer to Pointer and ManyPointer, with a warning.
-				if (found_match && from.getType().getKind() == tsh::Kind::CPointer) {
+				if (found_match && from.getRefKind() == ReferenceKind::Direct
+				    && from.getType().getKind() == tsh::Kind::CPointer) {
 					ctx.logInt(makeBox<dia_int::PlaceholderWarning>(
 						"Casts from CPointer will be disabled in the future and only work on "
 						"native targets.",
@@ -814,10 +837,6 @@ namespace compiler::helios::code {
 				case pst::Keyword::Str:
 					node
 						= makeBox<LiteralTypeExpr>(ctx, pstOrigin(stmt), tsh::getCharSliceType(ctx));
-					break;
-
-				case pst::Keyword::BigStr:
-					node = makeBox<LiteralTypeExpr>(ctx, pstOrigin(stmt), tsh::getStringType());
 					break;
 
 				case pst::Keyword::Type:

@@ -31,6 +31,8 @@ namespace compiler::helios {
 				{ "dvm_char_alloc", BuiltinKind::DvmCharAlloc },
 				{ "dvm_char_realloc", BuiltinKind::DvmCharRealloc },
 				{ "dvm_char_free", BuiltinKind::DvmCharFree },
+				{ "size_of", BuiltinKind::SizeOf },
+				{ "alignment_of", BuiltinKind::AlignmentOf },
 			};
 			return mapping;
 		}
@@ -48,6 +50,10 @@ namespace compiler::helios {
 			return base::StrID("dvm_char_realloc");
 		case BuiltinKind::DvmCharFree:
 			return base::StrID("dvm_char_free");
+		case BuiltinKind::SizeOf:
+			return base::StrID("size_of");
+		case BuiltinKind::AlignmentOf:
+			return base::StrID("alignment_of");
 		case BuiltinKind::BoxAlloc:
 			return base::StrID("box_alloc");
 		case BuiltinKind::BoxFree:
@@ -178,6 +184,36 @@ namespace compiler::helios {
 				std::make_shared<const code::CodeBlock>(std::move(body))
 			);
 		}
+		case BuiltinKind::SizeOf:
+		case BuiltinKind::AlignmentOf: {
+			// `size_of(v: meta) -> i64` / `alignment_of(v: meta) -> i64` simply return the
+			// corresponding unary meta operator applied to the parameter. The operator is lowered
+			// through MIR/LIR to a `Meta` instruction and evaluated at compile time.
+			auto&      decl = ctx.query<QueryDeclOfFun>(symbol)->valueOrThrow();
+			const auto op   = (type == BuiltinKind::SizeOf) ? code::BuiltinUnary::SizeOf
+			                                                : code::BuiltinUnary::AlignOf;
+
+			std::vector<Box<code::Stmt>> body{};
+			body.emplace_back(makeBox<code::ReturnStmt>(
+				code::generatedOrigin(),
+				makeBox<code::UnaryOperatorExpr>(
+					ctx,
+					code::generatedOrigin(),
+					op,
+					makeBox<code::IdentifierExpr>(
+						ctx, code::generatedOrigin(), decl.parameters.at(0).helios_symbol
+					)
+				)
+			));
+
+			return HOUTFunction(
+				code::generatedOrigin(),
+				&decl,
+				std::make_shared<const code::CodeBlock>(code::CodeBlock{
+					.statements = std::move(body),
+				})
+			);
+		}
 		default: {
 			CORE_PANIC(
 				base::strConcat("Builtin `", builtinKindToStr(type), "` is not implemented in HOUT")
@@ -199,6 +235,9 @@ namespace compiler::helios {
 			return BuiltinOrigin::DVMBackend;
 		case BuiltinKind::DvmCharFree:
 			return BuiltinOrigin::DVMBackend;
+		case BuiltinKind::SizeOf:
+		case BuiltinKind::AlignmentOf:
+			return BuiltinOrigin::HOUT;
 		case BuiltinKind::BoxAlloc:
 		case BuiltinKind::BoxFree:
 			return BuiltinOrigin::DVMBackend | BuiltinOrigin::NativeBackend;

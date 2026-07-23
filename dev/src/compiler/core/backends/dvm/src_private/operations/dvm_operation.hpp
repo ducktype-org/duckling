@@ -120,8 +120,8 @@ namespace compiler::backend_vm::internal {
 	 * These operations don't map directly to DVM opcodes but are lowered
 	 * to a series of extern C function calls.
 	 */
-	struct MetaOperation {
-		lir::Operation           meta_op;
+	struct MetaOperation final {
+		lir::MetaKind            meta_kind;
 		std::deque<DVMValue>     args;
 		base::Optional<DVMPlace> dest;
 	};

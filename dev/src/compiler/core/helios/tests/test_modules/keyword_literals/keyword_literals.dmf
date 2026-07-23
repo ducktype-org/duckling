@@ -32,6 +32,4 @@ fun foo() = {
     if (false) { }
     if (true) { }
     while (false) { }
-
-    var v_str: String = "";
 }

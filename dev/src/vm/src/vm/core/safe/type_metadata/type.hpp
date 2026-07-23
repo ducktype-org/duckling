@@ -25,6 +25,7 @@ namespace vm {
 			None,
 			Primitive,
 			Pointer,
+			CPointer,
 			FixedSizeTable,
 			DynamicTable,
 			Data,
@@ -48,6 +49,7 @@ namespace vm {
 			std::monostate,
 			kind::Primitive,
 			kind::Pointer,
+			kind::CPointer,
 			kind::FixedSizeTable,
 			kind::DynamicTable,
 			kind::Data,
@@ -83,6 +85,11 @@ namespace vm {
 		// Type definition:
 		void definePrimitive(TypeSize size);
 		void definePointer(TypeCRef inner);
+		/**
+		 * @brief Defines a C pointer: a raw 8-byte native address. An absent inner means an
+		 * unknown pointee (C's `void*`).
+		 */
+		void defineCPointer(base::Optional<TypeCRef> inner);
 		void defineFixedSizeTable(TypeRef inner, u64 table_size);
 		void defineDynamicTable(TypeRef inner);
 		/**

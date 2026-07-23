@@ -640,6 +640,10 @@ namespace compiler::helios::code {
 			// For most of the unary operators the result is the same as their argument type:
 			// (Int -> Int, Bool -> Bool, Meta -> Meta, etc.)
 			return argument_type;
+		case BuiltinUnary::SizeOf:
+		case BuiltinUnary::AlignOf:
+			// `size_of`/`align_of` map a meta type to an `i64` byte count.
+			return tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed);
 		default:
 			CORE_UNREACHABLE();
 		}
@@ -708,6 +712,14 @@ namespace compiler::helios::code {
 			break;
 		case BuiltinUnary::Slice:
 			out << "slice ";
+			expr->debugPrint(out);
+			break;
+		case BuiltinUnary::SizeOf:
+			out << "size_of ";
+			expr->debugPrint(out);
+			break;
+		case BuiltinUnary::AlignOf:
+			out << "align_of ";
 			expr->debugPrint(out);
 			break;
 		default:

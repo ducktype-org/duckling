@@ -299,7 +299,7 @@ namespace compiler::helios {
 						switch (method.kind) {
 						case defgen::Method::Kind::ToString:
 							return { { immmut_self },
-								     tsh::SymbolType<>::withDefaults(tsh::getStringType()) };
+								     tsh::SymbolType<>::withDefaults(tsh::getStringType(ctx)) };
 						case defgen::Method::Kind::LengthMethod:
 							return { { immmut_self },
 								     tsh::SymbolType<>::withDefaults(tsh::getIntegralType(

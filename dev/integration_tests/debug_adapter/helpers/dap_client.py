@@ -78,6 +78,15 @@ class DAPTestClient:
     def send_evaluate(self, number) -> int:
         return self.send_request("evaluate", {"expression": f"{number}", "context": "repl"})
 
+    def send_stack_trace(self, thread_id: int = 0, start_frame: int = 0, levels: int = 0) -> int:
+        return self.send_request("stackTrace", {"threadId": thread_id, "startFrame": start_frame, "levels": levels})
+
+    def send_scopes(self, frame_id: int) -> int:
+        return self.send_request("scopes", {"frameId": frame_id})
+
+    def send_variables(self, var_ref: int) -> int:
+        return self.send_request("variables", {"variablesReference": var_ref})
+
     def read_message(self) -> dict or None:
         content_length = 0
         stdout = self.process.stdout

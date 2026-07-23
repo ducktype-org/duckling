@@ -1,18 +1,25 @@
 #include "to_string_methods.hpp"
 
+#include <diagnostic_interactive/placeholder.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/queries/function_queries.hpp>
+#include <helios/symbols/lang_primitives.hpp>
+#include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/tsh/abstract_type.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/symbol_type.hpp>
+#include <helios/tsh/type_interface.hpp>
 #include <helios/tsh/types.hpp>
 #include <helios_private/hout_creation/expressions/coercions.hpp>
 #include <helios_private/hout_creation/shorthands/shorthands.hpp>
 #include <helios_private/lookup/interface.hpp>
+#include <helios_private/lookup/lookup_result.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
+
+#include <base/except/exceptions.hpp>
 
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_result.hpp>
@@ -27,48 +34,56 @@ namespace compiler::helios::defgen {
 	 * @brief Get the symbol of the `toString` method for a given type.
 	 */
 	SymID toStringSymForType(query::Context& ctx, const tsh::AbstractType type) {
+		for (auto& elem: type.getInterface(ctx)->getElementsWithName(base::StrID("toString")))
+			if (elem.specialKind() == tsh::InterfaceElement::SpecialKind::ToString)
+				return elem.getSymbol();
+		CORE_PANIC("Every symbol should have toString.");
+	}
+
+	SymID generatedToStringSymForType(query::Context& ctx, const tsh::AbstractType type) {
 		return ctx.query<QueryGeneratedSymbol>({
 			.name                  = base::StrID("toString"),
 			.generated_symbol_data = Method{ .owner_type = type, .kind = Method::Kind::ToString },
 		});
 	}
 
-	namespace {
-		inline const auto STRING_TYPE = tsh::SymbolType<>::withDefaults(tsh::getStringType());
+#define STRING_TYPE tsh::SymbolType<>::withDefaults(tsh::getStringType(ctx))
+#define LANG_PRIMITIVE(primitive) \
+	ctx.query<QueryLanguagePrimitiveSymID>({ primitive })->valueOrThrow()
 
-		/**
-		 * @brief Get the symbol of the `builtin_stringify_X` function for given type X.
-		 */
-		SymID stringifySym(
-			query::Context& ctx, const tsh::SymbolType<>& type, const std::string& name
-		) {
-			return ctx.query<QueryGeneratedSymbol>({
-				.name                  = base::StrID(name),
-				.generated_symbol_data = BuiltinOperator{
-					.operator_type = ctx.query<tsh::QueryFunctionType>({
-						{ type },
-						STRING_TYPE,
-					}),
-					.operatoriness = HOUTFunctionDeclaration::Operatoriness::None,
-				},
-			});
+	SymID stringAppendMethodSym(query::Context& ctx, const bool arg_by_reference) {
+		// Look up the `append` method on the `String` class. `append` is overloaded on a `String`
+		// argument, so we select either the by-reference (`append(other: ref String)`) or the
+		// by-value (`append(other: String)`) overload depending on `arg_by_reference`.
+		auto       string_abstract_type = tsh::getStringType(ctx);
+		const auto expected_arg_type
+			= tsh::SymbolType<>::withDefaults(string_abstract_type)
+		          .withReferenceKind(
+					  arg_by_reference ? tsh::ReferenceKind::Ref : tsh::ReferenceKind::Direct
+				  );
+		const auto& lookup_result = HInterface::ofTypeInstance(string_abstract_type)
+		                                .lookup(ctx, base::StrID("append"))
+		                                ->valueOrThrow();
+
+
+		for (const SymID candidate: lookup_result.leaves) {
+			const auto fn_type = ctx.query<QueryTypeOfSymbol>(candidate)
+			                         ->valueOrThrow()
+			                         .getType()
+			                         .as<tsh::FunctionAbstractType>();
+			const auto& params = fn_type.getParameterTypes();
+			if (params.size() == 2 && params.at(1) == expected_arg_type) return candidate;
 		}
-	}
-
-	/**
-	 * @brief Get the symbol of string concatenation.
-	 */
-	SymID concatSym(query::Context& ctx) {
-		return ctx.query<QueryGeneratedSymbol>({
-			.name                  = base::StrID("builtin_string_concatenated"),
-			.generated_symbol_data = BuiltinOperator{
-				.operator_type = ctx.query<tsh::QueryFunctionType>({
-					{ STRING_TYPE, STRING_TYPE },
-					STRING_TYPE,
-				}),
-				.operatoriness = HOUTFunctionDeclaration::Operatoriness::None,
-			},
-		});
+		ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+			base::strConcat(
+				"The String class language primitive doesn't have the `append(",
+				arg_by_reference ? "ref " : "",
+				"String)` method."
+			),
+			"This method is required for the compiler to work."
+		));
+		query::throwFailed();
+		CORE_UNREACHABLE();
 	}
 
 	struct IMPLEMENT_QUERY(QueryToStringMethod, query::QResult<HOUTFunction>) {
@@ -78,8 +93,7 @@ namespace compiler::helios::defgen {
 			std::vector<Box<code::Stmt>>&  body
 		) {
 			const auto self_param  = to_string_decl.parameters.at(0).helios_symbol;
-			const auto bool_type   = to_string_decl.parameters.at(0).type;
-			const auto builtin_sym = stringifySym(ctx, bool_type, "builtin_stringify_bool");
+			const auto builtin_sym = LANG_PRIMITIVE(LanguagePrimitive::StringifyBool);
 
 			const Shorthand s{ ctx };
 			body.emplace_back(s.ret(s.call(s.ident(builtin_sym), s.ident(self_param))));
@@ -95,15 +109,15 @@ namespace compiler::helios::defgen {
 			const bool is_signed
 				= source_int_type.getType().as<tsh::IntegralAbstractType>().getSignedness()
 			   == tsh::IntegralAbstractType::Signedness::Signed;
-			const auto target_builtin_name
-				= is_signed ? "builtin_stringify_i64" : "builtin_stringify_u64";
 			const auto target_int_type = tsh::SymbolType<>::withDefaults(tsh::getIntegralType(
 				ctx,
 				64,
 				is_signed ? tsh::IntegralAbstractType::Signedness::Signed
 						  : tsh::IntegralAbstractType::Signedness::Unsigned
 			));
-			const auto builtin_sym     = stringifySym(ctx, target_int_type, target_builtin_name);
+			const auto builtin_sym     = LANG_PRIMITIVE(
+                is_signed ? LanguagePrimitive::StringifyI64 : LanguagePrimitive::StringifyU64
+			);
 
 			const Shorthand s{ ctx };
 			body.emplace_back(
@@ -119,7 +133,7 @@ namespace compiler::helios::defgen {
 			const auto self_param = to_string_decl.parameters.at(0).helios_symbol;
 			const auto target_float_type
 				= tsh::SymbolType<>::withDefaults(tsh::getFloatType(ctx, 64));
-			const auto builtin_sym = stringifySym(ctx, target_float_type, "builtin_stringify_f64");
+			const auto builtin_sym = LANG_PRIMITIVE(LanguagePrimitive::StringifyF64);
 
 			const Shorthand s{ ctx };
 			body.emplace_back(s.ret(
@@ -132,9 +146,8 @@ namespace compiler::helios::defgen {
 			const HOUTFunctionDeclaration& to_string_decl,
 			std::vector<Box<code::Stmt>>&  body
 		) {
-			const auto self_param       = to_string_decl.parameters.at(0).helios_symbol;
-			const auto source_char_type = to_string_decl.parameters.at(0).type;
-			const auto builtin_sym = stringifySym(ctx, source_char_type, "builtin_stringify_char");
+			const auto self_param  = to_string_decl.parameters.at(0).helios_symbol;
+			const auto builtin_sym = LANG_PRIMITIVE(LanguagePrimitive::StringifyChar);
 
 			const Shorthand s{ ctx };
 			body.emplace_back(s.ret(s.call(s.ident(builtin_sym), s.ident(self_param))));
@@ -161,11 +174,7 @@ namespace compiler::helios::defgen {
 			auto  slice_element_type = slice_type.getElementType();
 			if (slice_element_type.getType() == tsh::getCharType()
 			    and slice_element_type.getRefKind() == tsh::ReferenceKind::Direct) {
-				const SymID callee_sym = stringifySym(
-					ctx,
-					tsh::SymbolType<>::withDefaults(tsh::getCharSliceType(ctx)),
-					"builtin_stringify_str"
-				);
+				const SymID callee_sym = LANG_PRIMITIVE(LanguagePrimitive::StringifyStr);
 
 				const Shorthand s{ ctx };
 				body.emplace_back(
@@ -195,7 +204,7 @@ namespace compiler::helios::defgen {
 			const CRef<tsh::TypeInterface> type_interface
 		) {
 			const Shorthand s{ ctx };
-			const auto      concat_sym = concatSym(ctx);
+			const auto      append_sym = stringAppendMethodSym(ctx, true);
 			// Create a reusable expression of the de-reffed self (self is passed by reference)
 			auto reusable_self_expr
 				= s.reusable(s.deref(s.ident(to_string_decl.parameters.at(0).helios_symbol)));
@@ -209,6 +218,15 @@ namespace compiler::helios::defgen {
 			                                   .type            = STRING_TYPE } }
 			);
 			body.emplace_back(s.var(result_sym, STRING_TYPE, s.litStrObj(base::StrID(prefix))));
+
+			// `result.append(<other>)` — mutates `result` in place instead of building a new
+			// concatenated String. `append(other: ref String)` takes both `self` and `other` by
+			// reference, so the arguments are passed as references.
+			const auto append_result_stmt = [&](Box<code::Expr> other) -> Box<code::Stmt> {
+				return s.expr(s.call(
+					s.ident(append_sym), s.refOf(s.ident(result_sym)), s.refOf(std::move(other))
+				));
+			};
 
 			// Main body: append the fields
 			const std::vector<tsh::InterfaceElement> fields
@@ -229,19 +247,19 @@ namespace compiler::helios::defgen {
 				auto stringified_field
 					= s.call(s.ident(field_to_string_sym), std::move(accessed_field));
 
-				// Concatenate the stringified field, then the separator / closing parenthesis.
-				body.emplace_back(s.assign(
-					s.ident(result_sym),
-					s.call(s.ident(concat_sym), s.ident(result_sym), std::move(stringified_field))
-				));
-				body.emplace_back(s.assign(
-					s.ident(result_sym),
-					s.call(
-						s.ident(concat_sym),
-						s.ident(result_sym),
-						s.litStrObj(base::StrID(idx < num_fields - 1 ? "," : ")"))
-					)
-				));
+				// Append the stringified field.
+				body.emplace_back(s.expr(s.call(
+					s.ident(append_sym),
+					s.refOf(s.ident(result_sym)),
+					s.refOf(std::move(stringified_field))
+				)));
+
+				// Append the separator or closing parenthesis.
+				body.emplace_back(s.expr(s.call(
+					s.ident(append_sym),
+					s.refOf(s.ident(result_sym)),
+					s.refOf(s.litStrObj(base::StrID(idx < num_fields - 1 ? "," : ")")))
+				)));
 			}
 
 			// Finally, return
