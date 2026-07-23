@@ -269,6 +269,18 @@ namespace compiler::mir {
 			);
 		}
 
+		void visitCreateAggregateExpr(const hc::CreateAggregateExpr&) override {
+			// NOTE: lowering to per-field construct-flagged stores into the destination place is the
+			// next step. No HOUT emission produces this node yet, so this path is unreachable.
+			CORE_PANIC("CreateAggregateExpr MIR lowering not yet implemented");
+		}
+
+		void visitCreateArrayExpr(const hc::CreateArrayExpr&) override {
+			// NOTE: lowering to per-element construct-flagged stores into the destination place is
+			// the next step. No HOUT emission produces this node yet, so this path is unreachable.
+			CORE_PANIC("CreateArrayExpr MIR lowering not yet implemented");
+		}
+
 		void visitVariantTypeConstructorExpr(const hc::VariantTypeConstructorExpr& expr) override {
 			auto result_type = expr.expression_type.getSymbolType();
 			CORE_ASSERT(

@@ -52,6 +52,8 @@ namespace compiler::helios::code {
 	EXPR_VISITOR(RefOfExpr)
 	EXPR_VISITOR(DerefExpr)
 	EXPR_VISITOR(DefaultValueExpr)
+	EXPR_VISITOR(CreateAggregateExpr)
+	EXPR_VISITOR(CreateArrayExpr)
 	EXPR_VISITOR(CastExpr)
 	EXPR_VISITOR(LiftToTypeExpr)
 	EXPR_VISITOR(ListPushExpr)
@@ -1082,6 +1084,100 @@ namespace compiler::helios::code {
 
 	Box<Expr> DefaultValueExpr::clone() const {
 		return makeBox<DefaultValueExpr>(expression_type, origin, type);
+	}
+
+	CreateAggregateExpr::CreateAggregateExpr(
+		query::Context&,
+		ElementOrigin          origin,
+		tsh::AbstractType      type,
+		std::vector<Box<Expr>> values
+	):
+		  Expr(
+			  tsh::ExpressionType<>(
+				  tsh::SymbolType<>{
+					  type,
+					  tsh::ReferenceKind::Direct,
+					  tsh::Mutability::Mutable,
+				  },
+				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
+			  ),
+			  origin
+		  ),
+		  type(type),
+		  values(std::move(values)) {}
+
+	CreateAggregateExpr::CreateAggregateExpr(
+		tsh::ExpressionType<>  expression_type,
+		ElementOrigin          origin,
+		tsh::AbstractType      type,
+		std::vector<Box<Expr>> values
+	):
+		  Expr(expression_type, origin),
+		  type(type),
+		  values(std::move(values)) {}
+
+	void CreateAggregateExpr::debugPrint(std::ostream& out) const {
+		out << "create_aggregate(" << expression_type.getSymbolType().toString() << ") {";
+		for (bool add_comma = false; auto&& v: values) {
+			if (add_comma) out << ", ";
+			v->debugPrint(out);
+			add_comma = true;
+		}
+		out << "}";
+	}
+
+	Box<Expr> CreateAggregateExpr::clone() const {
+		std::vector<base::Box<Expr>> cloned;
+		cloned.reserve(values.size());
+		for (const auto& v: values) cloned.push_back(v->clone());
+		return makeBox<CreateAggregateExpr>(expression_type, origin, type, std::move(cloned));
+	}
+
+	CreateArrayExpr::CreateArrayExpr(
+		query::Context&        ctx,
+		ElementOrigin          origin,
+		tsh::SymbolType<>      element_type,
+		std::vector<Box<Expr>> values
+	):
+		  Expr(
+			  tsh::ExpressionType<>(
+				  tsh::SymbolType<>{
+					  ctx.query<tsh::QueryStaticArrayType>({ element_type, values.size() }),
+					  tsh::ReferenceKind::Direct,
+					  tsh::Mutability::Mutable,
+				  },
+				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
+			  ),
+			  origin
+		  ),
+		  element_type(element_type),
+		  values(std::move(values)) {}
+
+	CreateArrayExpr::CreateArrayExpr(
+		tsh::ExpressionType<>  expression_type,
+		ElementOrigin          origin,
+		tsh::SymbolType<>      element_type,
+		std::vector<Box<Expr>> values
+	):
+		  Expr(expression_type, origin),
+		  element_type(element_type),
+		  values(std::move(values)) {}
+
+	void CreateArrayExpr::debugPrint(std::ostream& out) const {
+		out << "create_array(" << element_type.toString() << ") [";
+		for (bool add_comma = false; auto&& v: values) {
+			if (add_comma) out << ", ";
+			v->debugPrint(out);
+			add_comma = true;
+		}
+		out << "]";
+	}
+
+	Box<Expr> CreateArrayExpr::clone() const {
+		std::vector<base::Box<Expr>> cloned;
+		cloned.reserve(values.size());
+		for (const auto& v: values) cloned.push_back(v->clone());
+		return makeBox<CreateArrayExpr>(expression_type, origin, element_type, std::move(cloned));
 	}
 
 	LiftToTypeExpr::LiftToTypeExpr(query::Context&, ElementOrigin origin, Box<Expr> value_expr):

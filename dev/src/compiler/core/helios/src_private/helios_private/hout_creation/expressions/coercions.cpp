@@ -186,7 +186,12 @@ namespace compiler::helios {
 	Box<code::Expr> Coercion::coerce(query::Context& ctx, Box<code::Expr> from) const {
 		CORE_ASSERT(isValidFor(from.ref()), "Invalid expression for this coercion.");
 
-		auto current_expr       = handleReferenceKindCoercion(ctx, std::move(from), to);
+		auto current_expr = handleReferenceKindCoercion(ctx, std::move(from), to);
+		if (passingMethod(ctx, current_expr->expression_type) == PassingMethod::ImplicitMove)
+			current_expr = makeBox<code::MoveExpr>(
+				ctx, current_expr->origin.generatedFrom(), std::move(current_expr)
+			);
+
 		auto source_symbol_type = current_expr->expression_type.getSymbolType();
 
 		auto source_type = source_symbol_type.getType();
@@ -195,14 +200,13 @@ namespace compiler::helios {
 		                      or source_type.getKind() == tsh::Kind::Float;
 		bool is_target_numeric = to.getType().getKind() == tsh::Kind::Integral
 		                      or to.getType().getKind() == tsh::Kind::Float;
-		bool is_source_bool = source_type.getKind() == tsh::Kind::Bool;
-		bool is_target_bool = to.getType().getKind() == tsh::Kind::Bool;
+		bool is_source_bool    = source_type.getKind() == tsh::Kind::Bool;
+		bool is_target_bool    = to.getType().getKind() == tsh::Kind::Bool;
 
 		if (source_type == to.getType()) {
 			// No coercion
 			return current_expr;
-		} else if ((is_source_numeric and is_target_numeric)
-		           or (is_source_bool and is_target_numeric)) {
+		} else if ((is_source_numeric and is_target_numeric) or (is_source_bool and is_target_numeric)) {
 			// Numeric type promotion
 			return makeBox<code::CastExpr>(
 				ctx, current_expr->origin.generatedFrom(), std::move(current_expr), to
@@ -217,22 +221,25 @@ namespace compiler::helios {
 				makeBox<code::LiteralNumericExpr>(
 					ctx,
 					code::generatedOrigin(),
-					numeric_value::NumericValue::createOfType(current_expr->expression_type.getType(
-															  ))
-						.expect("Failed to create a NumericLiteral with 0 value. This should never "
-			                    "happen.")
+					numeric_value::NumericValue::createOfType(current_expr->expression_type.getType())
+						.expect(
+							"Failed to create a NumericLiteral with 0 value. This should never "
+							"happen."
+						)
 				)
 			);
 			return comparison;
-		} else if ((source_type.getKind() == tsh::Kind::Unit
-		            or source_type.getKind() == tsh::Kind::Tuple)
-		           and to.getType().getKind() == tsh::Kind::Meta) {
+		} else if (
+			(source_type.getKind() == tsh::Kind::Unit or source_type.getKind() == tsh::Kind::Tuple)
+			and to.getType().getKind() == tsh::Kind::Meta
+		) {
 			// Lift value to type
 			return makeBox<code::LiftToTypeExpr>(
 				ctx, current_expr->origin.generatedFrom(), std::move(current_expr)
 			);
-		} else if (source_type.getKind() == tsh::Kind::Tuple
-		           and to.getType().getKind() == tsh::Kind::Tuple) {
+		} else if (
+			source_type.getKind() == tsh::Kind::Tuple and to.getType().getKind() == tsh::Kind::Tuple
+		) {
 			return handleTupleCoercion(ctx, std::move(current_expr), to);
 		} else {
 			CORE_PANIC("Coercion should always be valid at this point.");
