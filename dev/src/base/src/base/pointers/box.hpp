@@ -32,8 +32,8 @@ namespace base {
 			"redefinition."
 		);
 
-		T*                            ptr;
-		[[no_unique_address]] Deleter deleter;
+		T*                            ptr = nullptr;
+		[[no_unique_address]] Deleter deleter{};
 
 		template<class U, class UDeleter>
 		friend class Box;
@@ -186,7 +186,7 @@ namespace base {
 		);
 
 		T*                            ptr = nullptr;
-		[[no_unique_address]] Deleter deleter;
+		[[no_unique_address]] Deleter deleter{};
 
 		template<class U, class UDeleter>
 		friend class MBox;
