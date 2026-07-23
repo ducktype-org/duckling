@@ -170,7 +170,7 @@ namespace vm {
 		 * no leaks, etc.
 		 * @return True if memory was used correctly, false otherwise.
 		 */
-		bool validateMemoryState();
+		bool validateMemoryState() const;
 
 		/**
 		 * @brief Frees all the global data

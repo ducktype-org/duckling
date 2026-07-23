@@ -367,7 +367,7 @@ namespace vm {
 		}
 	}
 
-	bool Memory::validateMemoryState() {
+	bool Memory::validateMemoryState() const {
 #define TEST_HERE(test)                                              \
 	if (test) {                                                      \
 		std::cerr << #test ", BlockID=" << block.id.asInt() << "\n"; \
