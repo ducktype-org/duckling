@@ -12,6 +12,8 @@
 #include <string>
 
 namespace compiler::ctv {
+	const CompileTimeValue::Storage& CompileTimeValue::getStorage() const { return value; }
+
 	base::Bit256 CompileTimeValue::queryUnstablePerfectHash() const {
 		hashing::SHA256 hasher;
 		hashing::addToHash(hasher, value.index());

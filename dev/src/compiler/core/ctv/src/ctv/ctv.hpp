@@ -62,9 +62,7 @@ namespace compiler::ctv {
 		 * @return A constant reference to the CTV value storage.
 		 */
 		[[nodiscard]]
-		const Storage& getStorage() const {
-			return value;
-		}
+		const Storage& getStorage() const;
 
 		/**
 		 * @brief Transforms the value stored in the CTV to a string representation. Used for debug
