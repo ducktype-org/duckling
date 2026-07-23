@@ -219,15 +219,6 @@ namespace compiler::helios::defgen {
 			);
 			body.emplace_back(s.var(result_sym, STRING_TYPE, s.litStrObj(base::StrID(prefix))));
 
-			// `result.append(<other>)` — mutates `result` in place instead of building a new
-			// concatenated String. `append(other: ref String)` takes both `self` and `other` by
-			// reference, so the arguments are passed as references.
-			const auto append_result_stmt = [&](Box<code::Expr> other) -> Box<code::Stmt> {
-				return s.expr(s.call(
-					s.ident(append_sym), s.refOf(s.ident(result_sym)), s.refOf(std::move(other))
-				));
-			};
-
 			// Main body: append the fields
 			const std::vector<tsh::InterfaceElement> fields
 				= type_interface->getFieldsView() | std::ranges::to<std::vector>();

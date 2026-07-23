@@ -3,6 +3,7 @@
  * @brief Tests for the HOUT construction shorthands (@ref shorthands.hpp).
  */
 
+#include <driver/test_utils.hpp>
 #include <frontend/pst_parser/lang_parser_element.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
@@ -59,6 +60,19 @@ public:
 		TESTER_ADD_TEST(testWithOrigin);
 	}
 
+	void beforeAll() override {
+		fs::FilePath artifacts_path = fs::FileManager::createRandomTempDirectory().getFilePath();
+		std::vector<compiler::driver::test_utils::PackagePathAndName> packages{
+			{ fs::FilePath(path("test_modules/function_calls")), "function_calls" },
+			{ fs::FilePath(path("test_modules/shorthands/access")), "access" },
+			{ fs::FilePath(path("test_modules/shorthands/copy")), "copy" },
+			{ fs::FilePath(path("test_modules/shorthands/dummy")), "dummy" }
+		};
+		auto init_result
+			= compiler::driver::test_utils::initializeCompilerForTests(packages, artifacts_path);
+		assertTrue(init_result.status().isOk(), "Compiler initialization failed");
+	}
+
 	/** Leaf builders produce the expected nodes and derive types from `ctx`. */
 	void testLiterals() {
 		query::utils::withContextDo([&](query::Context& ctx) {
@@ -84,7 +98,7 @@ public:
 
 			// Unlike `litStr` (a char slice), this evaluates to a `String`.
 			const auto str_obj = s.litStrObj(base::StrID("hi"));
-			ASSERT_EQUAL(str_obj->expression_type.getType().getKind(), tsh::Kind::String);
+			ASSERT_EQUAL(str_obj->expression_type.getType().getKind(), tsh::Kind::Class);
 
 			// - It is a call `builtin_stringify_str(<char slice "hi">)`.
 			const auto* call_expr = dynamic_cast<const CallExpr*>(str_obj.get());

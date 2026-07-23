@@ -181,7 +181,7 @@ namespace compiler::helios::code::shorthands {
 				.generated_symbol_data = defgen::BuiltinOperator{
 					.operator_type = ctx->query<tsh::QueryFunctionType>({
 						{ tsh::SymbolType<>::withDefaults(tsh::getCharSliceType(*ctx)) },
-						tsh::SymbolType<>::withDefaults(tsh::getStringType()) ,
+						tsh::SymbolType<>::withDefaults(tsh::getStringType(*ctx)) ,
 					}),
 					.operatoriness = HOUTFunctionDeclaration::Operatoriness::None,
 				},
