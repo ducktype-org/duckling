@@ -122,7 +122,8 @@ namespace base {
 			u64 n_owners_before = ctrl_ptr->n_owners.fetch_sub(1, std::memory_order_acq_rel);
 
 			if (n_owners_before == 1) {
-				// NOLINTBEGIN(clang-analyzer-cplusplus.NewDelete, clang-analyzer-cplusplus.NewDeleteLeaks)
+				// NOLINTBEGIN(clang-analyzer-cplusplus.NewDelete,
+				// clang-analyzer-cplusplus.NewDeleteLeaks)
 				ctrl_ptr->del(data_ptr);
 				delete ctrl_ptr;
 				// NOLINTEND(clang-analyzer-cplusplus.NewDelete, clang-analyzer-cplusplus.NewDeleteLeaks)
@@ -157,9 +158,7 @@ namespace base {
 		template<class Deleter>
 		static SharedBox fromPointerWithCustomDeleter(T* ptr, Deleter deleter) noexcept {
 			// NOLINTBEGIN(clang-analyzer-cplusplus.NewDelete, clang-analyzer-cplusplus.NewDeleteLeaks)
-			return SharedBox(
-				ptr, new internal::ControlBlock<T, Deleter>(std::move(deleter))
-			);
+			return SharedBox(ptr, new internal::ControlBlock<T, Deleter>(std::move(deleter)));
 			// NOLINTEND(clang-analyzer-cplusplus.NewDelete, clang-analyzer-cplusplus.NewDeleteLeaks)
 		}
 
@@ -208,11 +207,11 @@ namespace base {
 		template<class Deleter>
 		explicit SharedBox(Box<T, Deleter>&& other) noexcept:
 			  data_ptr{ std::move(other).ptr },
-			  ctrl_ptr{ new internal::ControlBlock<T, Deleter>(std::move(other).deleter) }
-		{
+			  ctrl_ptr{ new internal::ControlBlock<T, Deleter>(std::move(other).deleter) } {
 			other.ptr = nullptr;
 			assertNotNull();
 		}
+
 		// NOLINTEND(clang-analyzer-cplusplus.NewDelete, clang-analyzer-cplusplus.NewDeleteLeaks)
 
 		/**
