@@ -360,13 +360,9 @@ namespace compiler::helios::mangler {
 
 					auto template_stmt_v = ancestor.dynamicCast<pst::TemplateStmt>().value();
 
-					path_parts.push_back(identifier(template_stmt_v->getInnerStatement()
-					                                    .unlock(ctx)
-					                                    ->getDeclSymbolIdentifier()
-					                                    ->unlock(ctx)
-					                                    ->unwrap()
-					                                    .strView()));
-
+					path_parts.push_back(identifier(
+						template_stmt_v->getDeclSymbolIdentifier()->unlock(ctx)->unwrap().strView()
+					));
 
 					if (template_stmt_v->hasAdditionalRootData()) {
 						// We are inside baked template
