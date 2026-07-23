@@ -13,16 +13,6 @@ namespace compiler::helios::defgen {
 	SymID copyConstructorSymForType(query::Context& ctx, tsh::AbstractType type);
 
 	/**
-	 * @brief Build a HOUT expression producing a copy of `source`.
-	 *
-	 * Used by the `copy` operator and by generated copy constructors.
-	 * - Trivially-copyable sources are byte-copied.
-	 * - `box T` is deep-copied
-	 * - other non-trivial types are copied via their copy constructor.
-	 */
-	Box<code::Expr> makeCopyExpr(query::Context& ctx, Box<code::Expr> source);
-
-	/**
 	 * @brief Whether the given symbol is a user-defined copy constructor.
 	 */
 	bool isUserDefinedCopyConstructor(query::Context& ctx, SymID sym);
