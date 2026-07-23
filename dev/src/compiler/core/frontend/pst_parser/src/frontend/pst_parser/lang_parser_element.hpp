@@ -60,11 +60,21 @@ namespace pst {
 			std::any module_id;
 		};
 
+		struct BakedTemplateParent final {
+			std::any template_bake_data;
+		};
+
 		/**
 		 * @brief Source of PST.
 		 * @note This is used mostly for determining the parent helios-scope of PST root elements.
 		 */
-		std::variant<MacroExpansionParent, ModuleParent> pst_parent;
+		std::variant<MacroExpansionParent, ModuleParent, BakedTemplateParent> pst_parent;
+
+		template<class T>
+		[[nodiscard]]
+		const T& getAs() const {
+			return std::get<T>(pst_parent);
+		}
 	};
 
 	/**
@@ -233,7 +243,7 @@ namespace pst {
 
 		[[nodiscard]]
 		HashType getHash() const {
-			CORE_ASSERT(hash.has_value(), "Hash not calculated for this" + elementType());
+			CORE_ASSERT(hash.has_value(), "Hash not calculated for this: " + elementType());
 			return hash.value();
 		}
 
@@ -304,6 +314,18 @@ namespace pst {
 		const AdditionalRootData& getAdditionalRootData() const {
 			CORE_ASSERT(additional_root_data.has_value(), "Element has no additional root data");
 			return additional_root_data.value();
+		}
+
+		/**
+		 * @brief Returns whether the element has additional root data.
+		 * @TODO: #2996 Remove this in favor of some kind of having more proper
+		 * knowledge of PST origin (bake/expand/user/etc).
+		 * This is currently used to hack-in the check for whether a template is baked or not, which
+		 * is not a good solution.
+		 */
+		[[nodiscard]]
+		bool hasAdditionalRootData() const {
+			return additional_root_data.has_value();
 		}
 
 	protected:
