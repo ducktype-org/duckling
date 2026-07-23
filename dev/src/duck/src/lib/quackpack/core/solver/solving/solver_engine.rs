@@ -9,20 +9,19 @@ use crate::quackpack::core::solver::gathering::gatherer_state::GatheredInfo;
 use crate::quackpack::core::solver::solver_freeze::SolverFreeze;
 use crate::quackpack::core::solver::solving::solver_model::{FoundSolution, SolverModel};
 use crate::quackpack::core::solver::util::get_possible_realizations;
-use crate::quackpack::core::{Dependency, FeatureName, Manifest, Source, Version};
-use crate::quackpack::util::with_version::WithVersion;
+use crate::quackpack::core::{Dependency, FeatureName, Manifest, PackageId, Source, Version};
 use crate::{QuackResult, QuackResultContext, StrId};
 
 /// Struct with all the necessary information for the solver to be run.
 #[derive(Debug)]
 pub struct SolverInput {
-    pub gathered_manifests: HashMap<WithVersion<FullIdentity>, Box<Manifest>>,
-    pub all_possible_features: HashMap<WithVersion<FullIdentity>, HashSet<FeatureName>>,
+    pub gathered_manifests: HashMap<PackageId, Box<Manifest>>,
+    pub all_possible_features: HashMap<PackageId, HashSet<FeatureName>>,
     pub versions_for_identity: HashMap<FullIdentity, HashSet<Version>>,
     pub source_to_origin_resolver: HashMap<Source, FullOrigin>,
 
-    pub preexisting_packages: HashSet<WithVersion<FullIdentity>>,
-    pub preexisting_features: HashMap<WithVersion<FullIdentity>, HashSet<FeatureName>>,
+    pub preexisting_packages: HashSet<PackageId>,
+    pub preexisting_features: HashMap<PackageId, HashSet<FeatureName>>,
     pub preexisting_dependencies: HashMap<DependencyEdge, Version>,
 }
 
@@ -32,7 +31,7 @@ impl SolverInput {
     #[tracing::instrument(skip_all)]
     pub fn from_freeze_and_gathered_info(
         prev_freeze: &SolverFreeze,
-        prev_freeze_manifests: HashMap<WithVersion<FullIdentity>, Box<Manifest>>,
+        prev_freeze_manifests: HashMap<PackageId, Box<Manifest>>,
         gathered_info: GatheredInfo,
     ) -> Self {
         let mut gathered_manifests = gathered_info.gathered_manifests;
@@ -53,12 +52,12 @@ impl SolverInput {
                 .or_default()
                 .extend(freeze.features.iter().copied());
             versions_for_identity
-                .entry(*pkg.value())
+                .entry(pkg.identity())
                 .or_default()
                 .insert(pkg.version());
             source_to_origin_resolver.insert(
-                Source::canonical_source_for_origin(pkg.value().origin()),
-                pkg.value().origin(),
+                Source::canonical_source_for_origin(pkg.origin()),
+                pkg.origin(),
             );
             preexisting_packages.insert(*pkg);
             preexisting_features.insert(*pkg, freeze.features.clone());
@@ -66,7 +65,7 @@ impl SolverInput {
                 preexisting_dependencies.insert(
                     DependencyEdge {
                         parent: *pkg,
-                        dep_identity: *realization.value(),
+                        dep_identity: realization.identity(),
                         manifest_child_name: *dep_name,
                     },
                     realization.version(),
@@ -98,7 +97,7 @@ impl<'a> SolverEngine<'a> {
     #[tracing::instrument(skip_all)]
     pub fn run_engine(
         input: SolverInput,
-        main_pkg: &(WithVersion<FullIdentity>, HashSet<FeatureName>),
+        main_pkg: &(PackageId, HashSet<FeatureName>),
     ) -> QuackResult<FoundSolution> {
         let engine = SolverEngine::new(&input);
         engine.run(main_pkg)
@@ -113,10 +112,7 @@ impl<'a> SolverEngine<'a> {
     }
 
     /// Runs the engine, building the underlying solver model, solving it and returning the output.
-    fn run(
-        mut self,
-        main_pkg: &(WithVersion<FullIdentity>, HashSet<FeatureName>),
-    ) -> QuackResult<FoundSolution> {
+    fn run(mut self, main_pkg: &(PackageId, HashSet<FeatureName>)) -> QuackResult<FoundSolution> {
         self.create_package_variables();
         let empty_hash_set: HashSet<FeatureName> = HashSet::new();
         for (package, manifest) in self.input.gathered_manifests.iter() {
@@ -161,7 +157,7 @@ impl<'a> SolverEngine<'a> {
     /// Creates the necessary constraints for a single dependency.
     fn construct_for_single_dependency(
         &mut self,
-        parent: WithVersion<FullIdentity>,
+        parent: PackageId,
         manifest_dependency: &Dependency,
     ) -> QuackResult<()> {
         let Some(edge) = DependencyEdge::from_manifest_and_parent(
@@ -179,7 +175,7 @@ impl<'a> SolverEngine<'a> {
         let Some(realization_ver) = self.input.preexisting_dependencies.get(&edge) else {
             return self.add_constraints_for_edge(edge, manifest_dependency);
         };
-        let realisation = WithVersion::new(edge.dep_identity, *realization_ver);
+        let realisation = PackageId::new(edge.dep_identity, *realization_ver);
 
         // Each feature of the parent may force some additional features of the child,
         // not present in the previous freeze.
@@ -253,7 +249,7 @@ impl<'a> SolverEngine<'a> {
         &mut self,
         edge: DependencyEdge,
         manifest_dependency: &Dependency,
-        possible_realizations: &[WithVersion<FullIdentity>],
+        possible_realizations: &[PackageId],
     ) -> QuackResult<()> {
         for realization in possible_realizations {
             self.model
@@ -309,7 +305,7 @@ impl<'a> SolverEngine<'a> {
 
     fn forbid_forcing_features(
         &mut self,
-        parent: WithVersion<FullIdentity>,
+        parent: PackageId,
         manifest_dependency: &Dependency,
     ) -> QuackResult<()> {
         let is_dep_forced_default = manifest_dependency.is_enabled_for(vec![]);
@@ -424,8 +420,8 @@ metadata:
         let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
         let identity_a = FullIdentity::new("a".into(), registry_origin);
         let identity_b = FullIdentity::new("b".into(), registry_origin);
-        let pkg_a = WithVersion::new(identity_a, Version::new(1, 0, 0));
-        let pkg_b = WithVersion::new(identity_b, Version::new(2, 0, 0));
+        let pkg_a = PackageId::new(identity_a, Version::new(1, 0, 0));
+        let pkg_b = PackageId::new(identity_b, Version::new(2, 0, 0));
         let gathered_manifests = HashMap::from([
             (pkg_a, Box::new(manifest_a.manifest().clone())),
             (pkg_b, Box::new(manifest_b.manifest().clone())),
@@ -502,8 +498,8 @@ dependencies:
         let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
         let identity_a = FullIdentity::new("a".into(), registry_origin);
         let identity_b = FullIdentity::new("b".into(), registry_origin);
-        let pkg_a = WithVersion::new(identity_a, Version::new(1, 0, 0));
-        let pkg_b = WithVersion::new(identity_b, Version::new(2, 0, 0));
+        let pkg_a = PackageId::new(identity_a, Version::new(1, 0, 0));
+        let pkg_b = PackageId::new(identity_b, Version::new(2, 0, 0));
         let gathered_manifests = HashMap::from([
             (pkg_a, Box::new(manifest_a.manifest().clone())),
             (pkg_b, Box::new(manifest_b.manifest().clone())),
@@ -591,8 +587,8 @@ features:
         let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
         let identity_a = FullIdentity::new("a".into(), registry_origin);
         let identity_b = FullIdentity::new("b".into(), registry_origin);
-        let pkg_a = WithVersion::new(identity_a, Version::new(1, 0, 0));
-        let pkg_b = WithVersion::new(identity_b, Version::new(2, 0, 0));
+        let pkg_a = PackageId::new(identity_a, Version::new(1, 0, 0));
+        let pkg_b = PackageId::new(identity_b, Version::new(2, 0, 0));
         let gathered_manifests = HashMap::from([
             (pkg_a, Box::new(manifest_a.manifest().clone())),
             (pkg_b, Box::new(manifest_b.manifest().clone())),
@@ -667,8 +663,8 @@ features:
         let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
         let identity_a = FullIdentity::new("a".into(), registry_origin);
         let identity_b = FullIdentity::new("b".into(), registry_origin);
-        let pkg_a = WithVersion::new(identity_a, Version::new(1, 0, 0));
-        let pkg_b = WithVersion::new(identity_b, Version::new(2, 0, 0));
+        let pkg_a = PackageId::new(identity_a, Version::new(1, 0, 0));
+        let pkg_b = PackageId::new(identity_b, Version::new(2, 0, 0));
         let gathered_manifests = HashMap::from([
             (pkg_a, Box::new(manifest_a.manifest().clone())),
             (pkg_b, Box::new(manifest_b.manifest().clone())),
@@ -760,9 +756,9 @@ features:
         let identity_a = FullIdentity::new("a".into(), registry_origin);
         let identity_b = FullIdentity::new("b".into(), registry_origin);
         let identity_c = FullIdentity::new("c".into(), registry_origin);
-        let pkg_a = WithVersion::new(identity_a, Version::new(1, 0, 0));
-        let pkg_b = WithVersion::new(identity_b, Version::new(2, 0, 0));
-        let pkg_c = WithVersion::new(identity_c, Version::new(3, 0, 0));
+        let pkg_a = PackageId::new(identity_a, Version::new(1, 0, 0));
+        let pkg_b = PackageId::new(identity_b, Version::new(2, 0, 0));
+        let pkg_c = PackageId::new(identity_c, Version::new(3, 0, 0));
         let gathered_manifests = HashMap::from([
             (pkg_a, Box::new(manifest_a.manifest().clone())),
             (pkg_b, Box::new(manifest_b.manifest().clone())),
@@ -846,8 +842,8 @@ features:
         let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
         let identity_a = FullIdentity::new("a".into(), registry_origin);
         let identity_b = FullIdentity::new("b".into(), registry_origin);
-        let pkg_a = WithVersion::new(identity_a, Version::new(1, 0, 0));
-        let pkg_b = WithVersion::new(identity_b, Version::new(2, 0, 0));
+        let pkg_a = PackageId::new(identity_a, Version::new(1, 0, 0));
+        let pkg_b = PackageId::new(identity_b, Version::new(2, 0, 0));
         let gathered_manifests = HashMap::from([
             (pkg_a, Box::new(manifest_a.manifest().clone())),
             (pkg_b, Box::new(manifest_b.manifest().clone())),
