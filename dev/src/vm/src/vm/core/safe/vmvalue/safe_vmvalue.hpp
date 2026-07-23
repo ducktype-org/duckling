@@ -20,10 +20,11 @@ namespace vm {
 	 * They can't be transferred in between different processes.
 	 *
 	 * @note There are two ways to create a SafeVMValue:
-	 * 1) with `IVMProcess::createVMValue()` - the value is owned by the process (kept alive in its
-	 * list of owned values) and its data is freed automatically when the process is deinitialized.
-	 * 2) with `IVMProcess::createOwnedVMValue()` - ownership is transferred to the caller, who is
-	 * responsible for freeing the data by calling `freeData()` (the destructor does not free it).
+	 * 1) with `SafeVMProcess::createVMValue()` - the value is owned by the process (kept alive in
+	 * its list of owned values) and its data is freed automatically when the process is
+	 * deinitialized. 2) with `SafeVMProcess::createOwnedVMValue()` - ownership is transferred to
+	 * the caller, who is responsible for freeing the data by calling `freeData()` (the destructor
+	 * does not free it).
 	 */
 	class SafeVMValue final: public IVMValue {
 	private:
@@ -44,6 +45,8 @@ namespace vm {
 		Ref<SafeVMProcess> my_process;  /// The process for which the SafeVMValue exists.
 		Ref<Memory>        memory;
 
+		Pointer pointer;
+
 	public:
 		SafeVMValue(const SafeVMValue&)            = delete;
 		SafeVMValue(SafeVMValue&&)                 = default;
@@ -55,7 +58,7 @@ namespace vm {
 		/**
 		 * @brief Frees the data of the SafeVMValue (deinitializes the blocks in the memory module).
 		 * This function has to be called manually when using values created with the
-		 * `IVMProcess::createOwnedVMValue()` function (process-owned values are freed for you).
+		 * `SafeVMProcess::createOwnedVMValue()` function (process-owned values are freed for you).
 		 *
 		 * @note At first glance, one could wonder why do you have to manually call freeData()
 		 * instead of putting the free'ing logic into the destructor. The answer is - freeing blocks
@@ -84,10 +87,6 @@ namespace vm {
 		/// Safe VM runtime type metadata of the stored value.
 		TypeCRef type;
 
-	private:
-		Pointer pointer;
-
-	public:
 		[[nodiscard]] byte* getBytes() override;
 
 		[[nodiscard]] const byte* getBytes() const override;

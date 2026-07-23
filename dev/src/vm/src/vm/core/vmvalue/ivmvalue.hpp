@@ -28,7 +28,7 @@ namespace vm {
 		/**
 		 * @brief Frees the data of the value (deinitializes the blocks in the memory module).
 		 * This function has to be called when using values created with the
-		 * `VMProcess::createOwnedVMValue()` function.
+		 * `IVMProcess::createOwnedVMValue()` function.
 		 */
 		virtual void freeData() = 0;
 
