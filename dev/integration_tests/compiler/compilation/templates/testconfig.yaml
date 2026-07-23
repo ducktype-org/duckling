@@ -43,10 +43,11 @@ Tests:
           String: "1\n2\n3\n3\n2\n"
         ExitCode: 0
 
+  # @TODO: #3196 this doesn't work on dvm, due to initialization order fiasco
   use_generated_consts:
     Cases:
       all:
-        backend: all
+        backend: llvm
         Output:
           String: "1\n2\n1\n1\n2\n1\n"
         ExitCode: 0

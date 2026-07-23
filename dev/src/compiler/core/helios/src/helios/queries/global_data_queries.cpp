@@ -46,7 +46,7 @@ namespace compiler::helios {
 					CORE_ASSERT(
 						maybe_pst_decl.has_value(),
 						"Global variable symbol without PST Implemented Semantics is not handled "
-					    "in QueryHOUTGlobalData"
+						"in QueryHOUTGlobalData"
 					);
 
 					auto pst_decl = maybe_pst_decl.value().unlock(ctx);
