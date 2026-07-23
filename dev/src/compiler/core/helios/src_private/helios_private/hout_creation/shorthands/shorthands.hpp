@@ -20,6 +20,7 @@
 #include <ctv/numeric_value.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/hout/origin.hpp>
+#include <helios/symbols/lang_primitives.hpp>
 #include <helios/symbols/symbol_id.hpp>
 #include <helios/tsh/abstract_type.hpp>
 #include <helios/tsh/queries/types.hpp>
@@ -176,16 +177,9 @@ namespace compiler::helios::code::shorthands {
 		/** @brief A string literal, as String. */
 		[[nodiscard]]
 		Box<Expr> litStrObj(base::StrID value) const {
-			SymID callee_sym = ctx->query<defgen::QueryGeneratedSymbol>({
-				.name                  = base::StrID("builtin_stringify_str"),
-				.generated_symbol_data = defgen::BuiltinOperator{
-					.operator_type = ctx->query<tsh::QueryFunctionType>({
-						{ tsh::SymbolType<>::withDefaults(tsh::getCharSliceType(*ctx)) },
-						tsh::SymbolType<>::withDefaults(tsh::getStringType(*ctx)) ,
-					}),
-					.operatoriness = HOUTFunctionDeclaration::Operatoriness::None,
-				},
-			});
+			const SymID callee_sym
+				= ctx->query<QueryLanguagePrimitiveSymID>({ LanguagePrimitive::StringifyStr })
+			          ->valueOrThrow();
 			return call(ident(callee_sym), litStr(value));
 		}
 
