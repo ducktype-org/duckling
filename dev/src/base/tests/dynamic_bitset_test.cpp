@@ -79,14 +79,14 @@ public:
 		DynamicBitset b(16);
 		assertTrue(a == b, "two empty same-size bitsets are equal");
 		a.set(7);
-		assertTrue(not (a == b), "differ after a set");
+		assertTrue(not(a == b), "differ after a set");
 		b.set(7);
 		assertTrue(a == b, "equal again after same bit set");
 
 		// Different capacity is never equal, even when both are empty.
 		DynamicBitset small(8);
 		DynamicBitset big(9);
-		assertTrue(not (small == big), "different capacity bitsets are not equal");
+		assertTrue(not(small == big), "different capacity bitsets are not equal");
 	}
 
 	void forEachSetTest() {

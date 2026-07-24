@@ -109,7 +109,7 @@ namespace compiler::tsh {
 			auto components = ctx.query<helios::QueryTupleTypeData>(key.value->toAbstractType())
 			                      ->valueOrThrow()
 			                      .members;
-			u32  declaration_order = 0;
+			u32 declaration_order = 0;
 			for (const auto& component: components) {
 				elements.emplace_back(
 					component,

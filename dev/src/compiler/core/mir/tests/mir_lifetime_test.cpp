@@ -236,8 +236,8 @@ private:
 
 	void reinitAfterMoveTest() {
 		// Reinitialization by assignment. A bare-local store (e.g. `b = 99`) carries a `Reinit`
-		// flag that revives the local for move state, so reading it after a prior move-out is valid.
-		// Each `getMIRFunctionByName` below panics if lowering fails, so the mere fact these
+		// flag that revives the local for move state, so reading it after a prior move-out is
+		// valid. Each `getMIRFunctionByName` below panics if lowering fails, so the mere fact these
 		// `reinit*` functions lower is the regression guard against the false use-after-move.
 		using compiler::mir::Operation;
 		auto [module, scope] = getModule(fs::File(path("modules/move_validation")));

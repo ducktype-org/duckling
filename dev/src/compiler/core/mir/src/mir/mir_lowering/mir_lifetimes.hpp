@@ -21,7 +21,7 @@ namespace compiler::mir {
 
 	struct LifetimePassArgs {
 		LocalsByScopeMap                             locals_by_scope;
-		MoveStateData                                 move_states;
+		MoveStateData                                move_states;
 		base::HashMap<BlockID, std::vector<BlockID>> block_predecessors;
 	};
 
@@ -40,7 +40,7 @@ namespace compiler::mir {
 	 * @brief Add "MOVE" flags when copied from temporaries in instructions
 	 * and the value is last-used.
 	 */
-	class AddMoves final : public LifetimePass {
+	class AddMoves final: public LifetimePass {
 	public:
 		void run(query::Context&, Function&, const LifetimePassArgs&) final;
 	};

@@ -118,17 +118,15 @@ namespace compiler::mir {
 			                 ? Operation::Destruct
 			                 : Operation::DestructIf;
 
-			out_instructions.push_back(
-				Instruction{
-					op,
-					{},
-					{ MIRFunctionLiteral{ destructor_symbol }, local },
-					{
-						OperationFlag{ .flag = OperationFlag::Flag::Destruct, .local = local },
-					},
-					instr_scope,
-				}
-			);
+			out_instructions.push_back(Instruction{
+				op,
+				{},
+				{ MIRFunctionLiteral{ destructor_symbol }, local },
+				{
+					OperationFlag{ .flag = OperationFlag::Flag::Destruct, .local = local },
+				},
+				instr_scope,
+			});
 		};
 
 		auto add_destructors_to_instr_vec = [&](const auto&               ending_scopes,
@@ -249,9 +247,8 @@ namespace compiler::mir {
 
 						// Enter the block and preserve the caller scope to have a clear place where
 						// scope changes.
-						new_block_instructions.push_back(
-							Instruction{ Operation::Nop, {}, {}, {}, terminator.scope }
-						);
+						new_block_instructions.push_back(Instruction{
+							Operation::Nop, {}, {}, {}, terminator.scope });
 
 						// Add all needed destructors.
 						add_destructors_to_instr_vec(
@@ -393,10 +390,10 @@ namespace compiler::mir {
 
 			auto& locals = locals_by_scope.at(scope);
 			auto  proj   = [&]() -> decltype(auto) {
-				if constexpr (reverse_local_order)
-					return std::views::reverse;
-				else
-					return std::views::all;
+                if constexpr (reverse_local_order)
+                    return std::views::reverse;
+                else
+                    return std::views::all;
 			}();
 
 			for (auto& local: locals | proj) {

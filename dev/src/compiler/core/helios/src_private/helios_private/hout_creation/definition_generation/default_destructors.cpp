@@ -308,9 +308,9 @@ namespace compiler::helios::defgen {
 
 		// Free the box storage: `box_free(move self)`. `self` is moved so the automatic destructor
 		// insertion does not re-destruct the box here — that would recurse into this destructor.
-		body.emplace_back(
-			s.expr(s.call(s.ident(boxFreeSymForType(ctx, pointee_type)), s.move(s.ident(self_symbol))))
-		);
+		body.emplace_back(s.expr(
+			s.call(s.ident(boxFreeSymForType(ctx, pointee_type)), s.move(s.ident(self_symbol)))
+		));
 
 		return HOUTFunction(
 			code::generatedOrigin(),

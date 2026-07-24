@@ -304,12 +304,9 @@ namespace compiler::mir {
 				if (uninitialized) {
 					if_opt_some(local->helios_id, sym_id) {
 						if_opt_some(helios::maybeSymbolPst(sym_id), pst_elem) {
-							msg->addAttachedMessage(
-								makeBox<dia_int::PlaceholderNote>(
-									"Variable declared here.",
-									pst_elem.unlock(ctx)->getStablePosition()
-								)
-							);
+							msg->addAttachedMessage(makeBox<dia_int::PlaceholderNote>(
+								"Variable declared here.", pst_elem.unlock(ctx)->getStablePosition()
+							));
 						}
 					}
 				}
@@ -330,11 +327,9 @@ namespace compiler::mir {
 				);
 				if_opt_some(local->helios_id, sym_id) {
 					if_opt_some(helios::maybeSymbolPst(sym_id), pst_elem) {
-						msg->addAttachedMessage(
-							makeBox<dia_int::PlaceholderNote>(
-								"Variable declared here.", pst_elem.unlock(ctx)->getStablePosition()
-							)
-						);
+						msg->addAttachedMessage(makeBox<dia_int::PlaceholderNote>(
+							"Variable declared here.", pst_elem.unlock(ctx)->getStablePosition()
+						));
 					}
 				}
 				ctx.logInt(std::move(msg));

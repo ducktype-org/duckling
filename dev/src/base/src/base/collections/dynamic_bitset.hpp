@@ -21,9 +21,9 @@ namespace base {
 	/**
 	 * @brief A set of bits with a fixed capacity, backed by an array of 64-bit words.
 	 *
-	 * Bit @p i is stored in bit `i % 64` of word `i / 64`. Bits at indices `>= capacity` (the unused
-	 * high bits of the last word) are kept zero at all times, so `operator==` and the word-parallel
-	 * set operations can work word-by-word without masking on every call.
+	 * Bit @p i is stored in bit `i % 64` of word `i / 64`. Bits at indices `>= capacity` (the
+	 * unused high bits of the last word) are kept zero at all times, so `operator==` and the
+	 * word-parallel set operations can work word-by-word without masking on every call.
 	 */
 	class DynamicBitset final {
 		std::vector<u64> words;
@@ -37,8 +37,8 @@ namespace base {
 
 	public:
 		/**
-		 * @brief Constructs an empty bitset (no capacity). Present so the type can be default-stored
-		 * in maps; assign a sized bitset before use.
+		 * @brief Constructs an empty bitset (no capacity). Present so the type can be
+		 * default-stored in maps; assign a sized bitset before use.
 		 */
 		DynamicBitset() = default;
 

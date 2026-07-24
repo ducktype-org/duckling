@@ -8,8 +8,8 @@
 #include <helios/queries/function_queries.hpp>
 #include <helios/symbols/query_type_symbol_data.hpp>
 #include <helios/tsh/types.hpp>
-#include <helios_private/hout_creation/shorthands/shorthands.hpp>
 #include <helios_private/hout_creation/definition_generation/default_destructors.hpp>
+#include <helios_private/hout_creation/shorthands/shorthands.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 

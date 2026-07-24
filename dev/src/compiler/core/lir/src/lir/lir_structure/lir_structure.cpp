@@ -45,7 +45,9 @@ namespace compiler::lir {
 		return LIRLocal{ CRef<tsl::TypeLayout>(&bool_layout) };
 	}
 
-	LIRLocal LIRLocal::anonymousLocal(const CRef<tsl::TypeLayout> layout) { return LIRLocal{ layout }; }
+	LIRLocal LIRLocal::anonymousLocal(const CRef<tsl::TypeLayout> layout) {
+		return LIRLocal{ layout };
+	}
 
 	LIRGlobal LIRGlobal::fromMIR(query::Context& ctx, mir::MIRGlobal mir_global) {
 		auto type_layout

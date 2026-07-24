@@ -291,9 +291,10 @@ namespace compiler::mir {
 
 			variant_match(left_val.getVariant()) {
 				variant_case(MIRPlace, place) {
-					// Reinitialize the whole local: marks it alive again for move state (e.g. after a
-					// move-out). Only for a bare local target — a projected store (`x.p = ...`,
-					// `aa[i] = ...`) writes a sub-place and does not change the whole-local move state.
+					// Reinitialize the whole local: marks it alive again for move state (e.g. after
+					// a move-out). Only for a bare local target — a projected store (`x.p = ...`,
+					// `aa[i] = ...`) writes a sub-place and does not change the whole-local move
+					// state.
 					std::vector<OperationFlag> flags;
 					if (place.isLocal() && place.projection_chain.empty())
 						flags.push_back(flagReinit(place.getBase<MIRLocalRef>()));

@@ -46,9 +46,7 @@ namespace compiler::helios::defgen {
 			std::vector<Box<code::Expr>> field_values;
 			field_values.reserve(num_fields);
 			for (usize i = 0; i < num_fields; i++)
-				field_values.emplace_back(
-					s.move(s.ident(ctor_decl.parameters.at(i).helios_symbol))
-				);
+				field_values.emplace_back(s.move(s.ident(ctor_decl.parameters.at(i).helios_symbol)));
 
 			std::vector<Box<code::Stmt>> body{};
 			body.emplace_back(

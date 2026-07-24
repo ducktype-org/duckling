@@ -83,15 +83,13 @@ namespace compiler::lir {
 			auto& result = ctx.query<tsl::QueryCAbiTypeOf>(type->getSourceType())
 			                   ->valueOrPanicMsg("Query failure.");
 			if (not result.has_value())
-				CORE_PANIC(
-					base::strConcat(
-						"Function type is not compatible with CABI: `",
-						result.error(),
-						"` in symbol `",
-						helios::name(sym),
-						"`."
-					)
-				);
+				CORE_PANIC(base::strConcat(
+					"Function type is not compatible with CABI: `",
+					result.error(),
+					"` in symbol `",
+					helios::name(sym),
+					"`."
+				));
 			return &result.value();
 		};
 
@@ -246,11 +244,9 @@ namespace compiler::lir {
 			return Operation::BooleanNot;
 		// @TODO: add more cases
 		default:
-			CORE_PANIC(
-				base::strConcat(
-					"Operation without direct counterpart", base::enumToStr(mir_operation)
-				)
-			);
+			CORE_PANIC(base::strConcat(
+				"Operation without direct counterpart", base::enumToStr(mir_operation)
+			));
 		}
 	}
 
@@ -509,8 +505,7 @@ namespace compiler::lir {
 			 * @param locs The MIR location.
 			 * @return The LIR locations, possibly with some discarded.
 			 */
-			[[nodiscard]] std::vector<LIRValue> getLocations(
-				const std::vector<mir::MIRValue>& locs
+			[[nodiscard]] std::vector<LIRValue> getLocations(const std::vector<mir::MIRValue>& locs
 			) const {
 				std::vector<LIRValue> result;
 				result.reserve(locs.size());
@@ -540,7 +535,8 @@ namespace compiler::lir {
 
 					[[maybe_unused]]
 					//< temporary for linter
-					auto lir_local = getLocal(local);
+					auto lir_local
+						= getLocal(local);
 
 					switch (flag) {
 						using enum mir::OperationFlag::Flag;
@@ -737,10 +733,11 @@ namespace compiler::lir {
 					if (type.getRefKind() == tsh::ReferenceKind::Direct
 					    && not type.getType().isSimple()) {
 						// Layout of `ref T` for the address temporary.
-						auto ref_type = type.withReferenceKind(tsh::ReferenceKind::Ref);
+						auto ref_type   = type.withReferenceKind(tsh::ReferenceKind::Ref);
 						auto ref_layout = CRef<tsl::TypeLayout>(
-							&ctx.query<tsl::QuerySymbolTypeLayout>(ref_type)
-								 ->valueOrPanicMsg("layout query failed at LIR stage")
+							&ctx.query<tsl::QuerySymbolTypeLayout>(ref_type)->valueOrPanicMsg(
+								"layout query failed at LIR stage"
+							)
 						);
 
 						locals.pushBack(LIRLocal::anonymousLocal(ref_layout));
@@ -753,9 +750,8 @@ namespace compiler::lir {
 							std::vector<LIRValue>{ args.at(1) },
 							mir_instruction.metadata
 						);
-						address_instr.scope_flags.push_back(
-							ScopeFlag{ .flag=ScopeFlag::Flag::ScopeStart, .local=addr_local }
-						);
+						address_instr.scope_flags.push_back(ScopeFlag{
+							.flag = ScopeFlag::Flag::ScopeStart, .local = addr_local });
 
 						// destructor(addr)
 						auto& call_instr = curr_block->instructions.emplace_back(
@@ -764,9 +760,8 @@ namespace compiler::lir {
 							std::vector<LIRValue>{ args.at(0), LIRValue{ addr_place } },
 							mir_instruction.metadata
 						);
-						call_instr.scope_flags.push_back(
-							ScopeFlag{ .flag=ScopeFlag::Flag::ScopeEnd, .local=addr_local }
-						);
+						call_instr.scope_flags.push_back(ScopeFlag{
+							.flag = ScopeFlag::Flag::ScopeEnd, .local = addr_local });
 					} else {
 						// Already a direct/box — call the destructor on it directly.
 						curr_block->instructions.emplace_back(
@@ -812,13 +807,11 @@ namespace compiler::lir {
 					break;
 				}
 				default:
-					throw base::NotYetImplemented(
-						base::strConcat(
-							"instruction ",
-							base::enumToStr(mir_instruction.operation),
-							" in LowerToLIRFunction"
-						)
-					);
+					throw base::NotYetImplemented(base::strConcat(
+						"instruction ",
+						base::enumToStr(mir_instruction.operation),
+						" in LowerToLIRFunction"
+					));
 				}
 				usize after_instruction_count = curr_block->instructions.size();
 				auto  flags                   = lowerFlags(mir_instruction);
@@ -1047,12 +1040,8 @@ namespace compiler::lir {
 		entry_block.terminator = Instruction{ Operation::ReturnVoid, {}, {}, {} };
 
 		for (const auto& function: functions) {
-			entry_block.instructions.push_back(
-				Instruction{ Operation::Call,
-			                 {},
-			                 { LIRValue{ FunctionLiteral::fromFunction(*function) } },
-			                 {} }
-			);
+			entry_block.instructions.push_back(Instruction{
+				Operation::Call, {}, { LIRValue{ FunctionLiteral::fromFunction(*function) } }, {} });
 		}
 
 		base::StableVector<Block> blocks;

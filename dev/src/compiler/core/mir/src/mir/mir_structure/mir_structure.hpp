@@ -885,9 +885,7 @@ namespace compiler::mir {
 		[[nodiscard]]
 		base::OkBad validateBlockIDs() const;
 
-		[[nodiscard]] BlockID lastBlock() const {
-			return BlockID(0);
-		}
+		[[nodiscard]] BlockID lastBlock() const { return BlockID(0); }
 	};
 
 	/**

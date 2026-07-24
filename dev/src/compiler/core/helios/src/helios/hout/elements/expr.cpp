@@ -1099,10 +1099,7 @@ namespace compiler::helios::code {
 	}
 
 	CreateAggregateExpr::CreateAggregateExpr(
-		query::Context&,
-		ElementOrigin          origin,
-		tsh::AbstractType      type,
-		std::vector<Box<Expr>> values
+		query::Context&, ElementOrigin origin, tsh::AbstractType type, std::vector<Box<Expr>> values
 	):
 		  Expr(
 			  tsh::ExpressionType<>(

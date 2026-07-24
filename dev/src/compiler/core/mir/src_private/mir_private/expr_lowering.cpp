@@ -130,13 +130,11 @@ namespace compiler::mir {
 				valueOutput(
 					continuation,
 					MIRValue{
-						MIRGlobal(
-							{
-								expr.symbol,
-								expr.expression_type.getSymbolType(),
-								global_kind,
-							}
-						),
+						MIRGlobal({
+							expr.symbol,
+							expr.expression_type.getSymbolType(),
+							global_kind,
+						}),
 					}
 				);
 			}
@@ -214,8 +212,7 @@ namespace compiler::mir {
 			);
 		}
 
-		void visitTernaryOperatorExpr(
-			const helios::code::TernaryOperatorExpr& ternary_expr
+		void visitTernaryOperatorExpr(const helios::code::TernaryOperatorExpr& ternary_expr
 		) override {
 			// Get info about the target.
 			const auto result_type     = ternary_expr.expression_type.getSymbolType();
@@ -250,19 +247,15 @@ namespace compiler::mir {
 			auto lowered_condition = lowerSubExpr(*ternary_expr.condition, condition_block);
 
 
-			condition_block->setTerminator(
-				{
-					Operation::Branch,
-					{},
-					{ lowered_condition.getResult(function),
-			          then_block->getID(),
-			          else_block->getID() },
-					{},
-					expr_scope,
-					{},
-					{ ternary_expr.getPosition() },
-				}
-			);
+			condition_block->setTerminator({
+				Operation::Branch,
+				{},
+				{ lowered_condition.getResult(function), then_block->getID(), else_block->getID() },
+				{},
+				expr_scope,
+				{},
+				{ ternary_expr.getPosition() },
+			});
 
 			// Return (always value).
 			valueOutput(lowered_condition.begin, target_location);
@@ -487,10 +480,8 @@ namespace compiler::mir {
 			auto bounds_check_fail_block = function.newBlock();
 			auto bounds_check_cond_block = function.newBlock();
 			auto entry_block             = function.newBlock();
-			entry_block->setTerminator(
-				Instruction{
-					Operation::Jump, {}, { bounds_check_cond_block->getID() }, {}, expr_scope }
-			);
+			entry_block->setTerminator(Instruction{
+				Operation::Jump, {}, { bounds_check_cond_block->getID() }, {}, expr_scope });
 
 			auto lowered_index = lowerSubExpr(*expr.index, entry_block);
 			auto index_val     = lowered_index.getResult(function);
@@ -532,9 +523,8 @@ namespace compiler::mir {
 			auto last_comparison_block = function.newBlock();
 
 			// After the last comparison, continue regardless of the result.
-			last_comparison_block->setTerminator(
-				Instruction{ Operation::Jump, {}, { continuation->getID() }, {}, expr_scope }
-			);
+			last_comparison_block->setTerminator(Instruction{
+				Operation::Jump, {}, { continuation->getID() }, {}, expr_scope });
 
 			// The result of evaluating the expression (result of the last evaluated sub-expression).
 			auto boolean_output
@@ -551,25 +541,21 @@ namespace compiler::mir {
 				// if the result is true, and to the continuation if the results is false.
 				auto comparison_block = function.newBlock();
 				if (next_block->getID() == continuation->getID()) {
-					comparison_block->setTerminator(
-						Instruction{
-							Operation::Jump,
-							{},
-							{ continuation->getID() },
-							{},
-							expr_scope,
-						}
-					);
+					comparison_block->setTerminator(Instruction{
+						Operation::Jump,
+						{},
+						{ continuation->getID() },
+						{},
+						expr_scope,
+					});
 				} else {
-					comparison_block->setTerminator(
-						Instruction{
-							Operation::Branch,
-							{},
-							{ boolean_output, next_block->getID(), continuation->getID() },
-							{},
-							expr_scope,
-						}
-					);
+					comparison_block->setTerminator(Instruction{
+						Operation::Branch,
+						{},
+						{ boolean_output, next_block->getID(), continuation->getID() },
+						{},
+						expr_scope,
+					});
 				}
 				auto comparison_hole = comparison_block->addHole();
 
@@ -579,18 +565,16 @@ namespace compiler::mir {
 
 				// Finally, fill in the comparison instruction.
 				// Remember to set construction flag for boolean_output only for the first comparison.
-				comparison_hole.fill(
-					Instruction{
-						Operation::Assign,
-						{ boolean_output },
-						{ comp_res },
-						comps_left == 0 ? std::vector{ flagConstruct(boolean_output) }
-										: std::vector<OperationFlag>{},
-						expr_scope,
-						{},
-						{ comp->getPosition() },
-					}
-				);
+				comparison_hole.fill(Instruction{
+					Operation::Assign,
+					{ boolean_output },
+					{ comp_res },
+					comps_left == 0 ? std::vector{ flagConstruct(boolean_output) }
+									: std::vector<OperationFlag>{},
+					expr_scope,
+					{},
+					{ comp->getPosition() },
+				});
 				next_block = comp_cont;
 			}
 
@@ -686,12 +670,9 @@ namespace compiler::mir {
 			// Moving anything that is not a plain local place (e.g. a temporary) has no source to
 			// mark, so just forward the value unchanged.
 			if (not inner_val.isLocal() or inner_val.get<mir::MIRPlace>().hasProjections()) {
-				function.getContext().logInt(
-					makeBox<dia_int::NotYetImplementedCodeError>(
-						"Moving from a non-local place is not supported yet.",
-						expr.inner->getPosition()
-					)
-				);
+				function.getContext().logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					"Moving from a non-local place is not supported yet.", expr.inner->getPosition()
+				));
 				query::throwFailed();
 				return;
 			}
@@ -857,9 +838,8 @@ namespace compiler::mir {
 				);
 			} else if (const auto* paren_expr = dynamic_cast<const hc::ParenthesisExpr*>(&expr)) {
 				return lowerAndLiftToTypeRecursively(*paren_expr->inner, continuation);
-			} else if (
-				const auto* reusable_expr = dynamic_cast<const helios::code::ReusableExpr*>(&expr)
-			) {
+			} else if (const auto* reusable_expr
+			           = dynamic_cast<const helios::code::ReusableExpr*>(&expr)) {
 				return lowerAndLiftToTypeRecursively(*reusable_expr->inner, continuation);
 			}
 
@@ -1047,9 +1027,8 @@ namespace compiler::mir {
 	) {
 		variant_match(value) {
 			variant_case(MIRValue, val) {
-				hole.fill(
-					Instruction{ Operation::Assign, target, { val }, flags, scope, {}, metadata }
-				);
+				hole.fill(Instruction{
+					Operation::Assign, target, { val }, flags, scope, {}, metadata });
 			}
 			variant_case(Finalizer, res_data) {
 				CORE_ASSERT(scope == res_data.instr.scope, "Scope mismatch!");
