@@ -261,7 +261,8 @@ namespace compiler::mir {
 		// never present in the status maps and must not be flagged as "uninitialized".
 		auto is_tracked = [&](MIRLocalRef local) {
 			return local->scope.has_value() && local->scope.value() != fun.no_lifetime_scope
-			    && not local->lifetime_flags.contains(LifetimeFlag::NoUseAfterFreeValidation);
+			    && not local->lifetime_flags.contains(LifetimeFlag::NoUseAfterFreeValidation)
+			    && not local->lifetime_flags.contains(LifetimeFlag::NoUseBeforeInitValidation);
 		};
 
 		const auto& block_in = args.liveness.block_in_liveness;

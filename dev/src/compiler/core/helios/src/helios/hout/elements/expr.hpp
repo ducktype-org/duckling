@@ -778,6 +778,77 @@ namespace compiler::helios::code {
 	};
 
 	/**
+	 * @brief Constructs an aggregate (struct/class) value field-by-field, in place.
+	 *
+	 * Unlike a constructor `CallExpr`, this does not first zero-initialize the destination into a
+	 * valid value and then overwrite each field. It lowers to one construct-flagged store per field
+	 * into uninitialized storage, so there is no init-vs-overwrite ambiguity (and no dead zeroing of
+	 * fields that are immediately assigned). @p values holds one expression per field, in
+	 * declaration order.
+	 */
+	struct CreateAggregateExpr final: public Expr {
+		tsh::AbstractType            type;
+		std::vector<base::Box<Expr>> values;
+
+		CreateAggregateExpr(
+			query::Context&              ctx,
+			ElementOrigin                origin,
+			tsh::AbstractType            type,
+			std::vector<base::Box<Expr>> values
+		);
+
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
+
+	private:
+		FRIEND_MAKEBOX
+
+		CreateAggregateExpr(
+			tsh::ExpressionType<>        expression_type,
+			ElementOrigin                origin,
+			tsh::AbstractType            type,
+			std::vector<base::Box<Expr>> values
+		);
+	};
+
+	/**
+	 * @brief Constructs a fixed-size static array value element-by-element, in place.
+	 *
+	 * The array length is `values.size()`, known at compile time. Lowers to one construct-flagged
+	 * store per element into uninitialized storage, following the same model as
+	 * @ref CreateAggregateExpr. This is only for statically-sized arrays; dynamic lists use
+	 * `ListPushExpr` / `ListPopExpr`.
+	 */
+	struct CreateArrayExpr final: public Expr {
+		tsh::SymbolType<>            element_type;
+		std::vector<base::Box<Expr>> values;
+
+		CreateArrayExpr(
+			query::Context&              ctx,
+			ElementOrigin                origin,
+			tsh::SymbolType<>            element_type,
+			std::vector<base::Box<Expr>> values
+		);
+
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
+
+	private:
+		FRIEND_MAKEBOX
+
+		CreateArrayExpr(
+			tsh::ExpressionType<>        expression_type,
+			ElementOrigin                origin,
+			tsh::SymbolType<>            element_type,
+			std::vector<base::Box<Expr>> values
+		);
+	};
+
+	/**
 	 * @brief Represents a compile-time cast of a value to a type.
 	 *
 	 * This is meant to be added by coercions when a value of type `type` is expected,

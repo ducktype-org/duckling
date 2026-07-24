@@ -5,6 +5,7 @@
 #include <helios/hout/visitors.hpp>
 #include <helios/symbols/query_type_symbol_data.hpp>
 #include <helios/tsh/queries/types.hpp>
+#include <helios/tsh/type_interface.hpp>
 #include <helios/utils/get_expr_symid.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 #include <mir_private/utils/bounds_check.hpp>
@@ -287,6 +288,67 @@ namespace compiler::mir {
 				call,
 				Instruction{ Operation::Call, {}, args, {}, expr_scope, {}, { expr.getPosition() } },
 				expr.expression_type.getSymbolType()
+			);
+		}
+
+		template<class ProjectionFor>
+		void lowerInPlaceConstruction(
+			const tsh::SymbolType<>&                dest_type,
+			const std::vector<base::Box<hc::Expr>>& values,
+			ProjectionFor                           projection_for,
+			base::Optional<dia_int::StablePosition> position
+		) {
+			// We create a tmp, but we don't check use before init, as the value is never inited.
+			auto dest = function.addTmp(dest_type, expr_scope);
+			dest->lifetime_flags |= LifetimeFlag::NoUseBeforeInitValidation;
+			auto current = continuation;
+
+			for (usize i = values.size(); i-- > 0;) {
+				auto element_place = projection_for(MIRPlace(dest), i);
+				auto store_hole    = current->addHole();
+				auto value_result  = lowerSubExpr(*values[i], current);
+				value_result.storeResultInGivenPlace(
+					element_place, store_hole, { flagConstruct(dest) }, expr_scope, { position }
+				);
+				current = value_result.begin;
+			}
+
+			valueOutput(current, MIRValue{ dest });
+		}
+
+		void visitCreateAggregateExpr(const hc::CreateAggregateExpr& expr) override {
+			auto& ctx = function.getContext();
+
+			// Field symbols of the aggregate, in declaration order — one per value.
+			auto                       interface = expr.type.getInterface(ctx);
+			std::vector<helios::SymID> field_symbols;
+			for (const auto& field: interface->getFieldsView())
+				field_symbols.push_back(field.getSymbol());
+			CORE_ASSERT(
+				field_symbols.size() == expr.values.size(),
+				"CreateAggregateExpr value count must match the aggregate's field count."
+			);
+
+			lowerInPlaceConstruction(
+				expr.expression_type.getSymbolType(),
+				expr.values,
+				[&](const MIRPlace& base, usize i) -> MIRPlace {
+					return base.withField(ctx, field_symbols[i]);
+				},
+				expr.getPosition()
+			);
+		}
+
+		void visitCreateArrayExpr(const hc::CreateArrayExpr& expr) override {
+			lowerInPlaceConstruction(
+				expr.expression_type.getSymbolType(),
+				expr.values,
+				[](const MIRPlace& base, usize i) {
+					auto index = MIRValue{ MIRConstant{
+						ctv::CompileTimeValue{ ctv::NumericValue{ static_cast<i64>(i) } } } };
+					return base.withIndex(index);
+				},
+				expr.getPosition()
 			);
 		}
 
@@ -598,9 +660,9 @@ namespace compiler::mir {
 
 		void visitMoveExpr(const hc::MoveExpr& expr) override {
 			// `move x` yields the value of `x` and marks the source local as moved-out, so any
-			// later use is flagged by the liveness/use-after-move analysis. The `Move` flag has to
-			// sit on an instruction that reads the local, so we copy it into a fresh temporary and
-			// attach the flag there.
+			// later use is flagged by the move state/use-after-move analysis. The `Move` flag has
+			// to sit on an instruction that reads the local, so we copy it into a fresh temporary
+			// and attach the flag there.
 			auto hole          = continuation->addHole();
 			auto lowered_inner = lowerSubExpr(*expr.inner, continuation);
 			auto inner_val     = lowered_inner.getResult(function);

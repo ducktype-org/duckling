@@ -168,7 +168,13 @@ MAKE_FLAG_TYPE(compiler::mir, LifetimeFlag, LifetimeFlags,
 	
 	/// Mark this local as a condition temporary, which can be used by the pipeline to handle it differently.
 	/// Not used.
-	ConditionTmpValue
+	ConditionTmpValue,
+
+	/// Do not run the use-before-initialization check for this local. Used for locals that are
+	/// initialized field-by-field (e.g. the destination of an in-place aggregate construction):
+	/// each projected field store reads the local's address before the whole local is marked
+	/// constructed, which would otherwise be flagged as a use-before-init.
+	NoUseBeforeInitValidation
 )
 
 namespace compiler::mir {
@@ -299,6 +305,11 @@ namespace compiler::mir {
 		[[nodiscard]]
 		bool carriesInformation(query::Context& ctx) const {
 			return type.getType().carriesInformation(ctx);
+		}
+
+		[[nodiscard]]
+		bool isTemporary() const {
+			return helios_id.empty();
 		}
 	};
 
@@ -617,7 +628,7 @@ namespace compiler::mir {
 	 *
 	 * Emitted when an assignment stores a value into a whole local (no projections), as opposed to
 	 * a declaration. Like @ref flagConstruct it marks the local as alive from this point on for
-	 * liveness analysis.
+	 * move-state analysis.
 	 */
 	constexpr OperationFlag flagReinit(MIRLocalRef local) {
 		return { .flag = OperationFlag::Flag::Reinit, .local = local };
@@ -873,6 +884,8 @@ namespace compiler::mir {
 		 */
 		[[nodiscard]]
 		base::OkBad validateBlockIDs() const;
+
+		[[nodiscard]] BlockID lastBlock() const { return BlockID(0); }
 	};
 
 	/**
