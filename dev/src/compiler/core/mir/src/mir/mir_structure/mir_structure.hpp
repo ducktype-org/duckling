@@ -300,6 +300,11 @@ namespace compiler::mir {
 		bool carriesInformation(query::Context& ctx) const {
 			return type.getType().carriesInformation(ctx);
 		}
+
+		[[nodiscard]]
+		bool isTemporary() const {
+			return helios_id.empty();
+		}
 	};
 
 	/**
@@ -873,6 +878,10 @@ namespace compiler::mir {
 		 */
 		[[nodiscard]]
 		base::OkBad validateBlockIDs() const;
+
+		[[nodiscard]] BlockID lastBlock() const {
+			return BlockID(0);
+		}
 	};
 
 	/**

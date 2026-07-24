@@ -1,5 +1,6 @@
 #include "mir_liveness.hpp"
 
+#include "mir/mir_structure/mir_local_ref.hpp"
 #include "mir_lifetimes.hpp"
 
 #include <diagnostic_interactive/placeholder.hpp>
@@ -13,6 +14,7 @@
 
 #include <algorithm>
 #include <ostream>
+#include <ranges>
 
 namespace compiler::mir {
 	/**
@@ -397,30 +399,109 @@ namespace compiler::mir {
 		base::HashMap<BlockID, BlockLiveness> result;
 		base::HashMap<BlockID, BlockUseDef>   blocks_info;
 
-		auto max_local_id = std::ranges::max_element(
-								fun.local_list, std::ranges::greater{}, [](const MIRLocal& local) {
-									return local.id.asInt();
-								}
-		)->id.asInt();
+		// Bitsets are indexed by LocalID, so their capacity must be one past the largest id.
+		usize capacity = 0;
+		for (const auto& local: fun.local_list) capacity = std::max(capacity, local.id.asInt() + 1);
 		auto get_local_bitset
-			= [&] -> base::DynamicBitset { return base::DynamicBitset(max_local_id); };
+			= [&] -> base::DynamicBitset { return base::DynamicBitset(capacity); };
 
 		for (auto block_id: fun.block_order) {
-			auto         block = fun.blocks.at(block_id);
-			BlockUseDef& block_info
-				= blocks_info
-			          .put(
-						  block_id,
-						  BlockUseDef{ .use = get_local_bitset(), .def = get_local_bitset() }
-					  )
-			          .first->second;
-			for (auto& instr: block->instructions)
-				for (auto& flag: instr.flags) {
-			}}
+			blocks_info.put(
+				block_id, BlockUseDef{ .use = get_local_bitset(), .def = get_local_bitset() }
+			);
+			result.put(
+				block_id,
+				BlockLiveness{ .live_in = get_local_bitset(), .live_out = get_local_bitset() }
+			);
+		}
+
+		for (auto block_id: fun.block_order) {
+			auto         block      = fun.blocks.at(block_id);
+			BlockUseDef& block_info = blocks_info.at(block_id);
+			for (auto& instr: block->instructions) {
+				for (auto& flag: instr.flags)
+					if (flag.flag == OperationFlag::Flag::Construct)
+						block_info.def.set(flag.local->id.asInt());
+
+				for (MIRLocalRef local: instructionReads(instr))
+					block_info.use.set(local->id.asInt());
+			}
+			for (MIRLocalRef local: instructionReads(block->terminator))
+				block_info.use.set(local->id.asInt());
+		}
+
+
+		Worklist worklist{ std::ranges::max_element(fun.block_order)->asInt() + 1 };
+
+		// We push all of the blocks, becase we want order from the end,
+		// but some blocks at the end may not be reachable at all.
+		for (auto block_id: fun.block_order | std::views::reverse) worklist.push(block_id);
+
+		while (not worklist.empty()) {
+			auto  block_id    = worklist.pop();
+			auto& live_in_out = result.at(block_id);
+			auto& block_info  = blocks_info.at(block_id);
+			auto  successors  = getTerminatorSuccessors(fun.blocks.at(block_id)->terminator);
+
+			// Calculate new live_out of the block: the union of successors' live_in.
+			live_in_out.live_out.clearAll();
+			for (auto succ: successors) live_in_out.live_out |= result.at(succ).live_in;
+
+			// new live_in = (live_out ∪ use) \ def. The def is subtracted *after* use is added, on
+			// purpose: a local that is both used and defined in this block has its def set only via a
+			// `Construct` flag (first initialization), and a valid program can never read a local
+			// before constructing it in the same block. So such a local is always defined-before-used
+			// and subtracting def here correctly drops it — its use is satisfied locally, not
+			// upward-exposed to predecessors.
+			base::DynamicBitset new_live_in = live_in_out.live_out;
+			new_live_in |= block_info.use;
+			new_live_in.subtract(block_info.def);
+
+			// Only propagate to predecessors when live_in actually changed. Without this convergence
+			// check the fixpoint never terminates on a cyclic CFG (a loop), since each block keeps
+			// re-pushing its predecessors forever.
+			if (new_live_in == live_in_out.live_in) continue;
+			live_in_out.live_in = std::move(new_live_in);
+
+			if (auto preds = pass_args.block_predecessors.atMaybe(block_id))
+				for (auto pred: *preds.value()) worklist.push(pred);
+		}
+
+		return result;
 	}
 
-	void AddMoves::run(query::Context&, Function&, const LifetimePassArgs&) {
-		// calculateLivenessMap
-		// go through the globcks from outside and add move when instruction is using a tempoarary
+	void updateLivenessByInstr(const Instruction& instr, base::DynamicBitset& liveness) {
+		for (auto& flag: instr.flags)
+			if (flag.flag == OperationFlag::Flag::Construct) liveness.reset(flag.local->id.asInt());
+
+		for (MIRLocalRef local: instructionReads(instr)) liveness.set(local->id.asInt());
+	}
+
+	void AddMoves::run(query::Context&, Function& fun, const LifetimePassArgs& pass_args) {
+		auto liveness_map = calculateLivenessMap(fun, pass_args);
+		for (auto block_id: fun.block_order) {
+			auto                block = fun.blocks.at(block_id);
+			base::DynamicBitset live  = liveness_map.at(block_id).live_out;
+			updateLivenessByInstr(block->terminator, live);
+
+			for (auto& instr: block->instructions | std::views::reverse) {
+				// Go through locals used and if the local is not alive after this instruction, then
+				// we add move flag
+				for (auto local_ref: instructionReads(instr))
+					if (local_ref->isTemporary() && not live.test(local_ref->id.asInt())) {
+						instr.flags.push_back(flagMove(local_ref));
+						CORE_DEV_LOG(
+							Compiler,
+							"Adding automatic move for MIR temporary ",
+							local_ref->id.asInt(),
+							" in function ",
+							fun.name,
+							"\n"
+						);
+					}
+
+				updateLivenessByInstr(instr, live);
+			}
+		}
 	}
 }

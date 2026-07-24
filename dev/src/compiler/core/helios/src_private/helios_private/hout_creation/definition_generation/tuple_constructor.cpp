@@ -41,29 +41,20 @@ namespace compiler::helios::defgen {
 			using namespace code::shorthands;
 			const Shorthand s{ ctx };
 
+			// Build the tuple value directly from its parameters, one per field in declaration
+			// order, and return it. Each parameter owns its value and is consumed here, so it is
+			// moved into the aggregate rather than copied.
+			std::vector<Box<code::Expr>> field_values;
+			field_values.reserve(num_fields);
+			for (usize i = 0; i < num_fields; i++)
+				field_values.emplace_back(
+					s.moveOf(s.ident(ctor_decl.parameters.at(i).helios_symbol))
+				);
+
 			std::vector<Box<code::Stmt>> body{};
-
-			// - One declaration, one assignment per field, one return.
-			body.reserve(1 + num_fields + 1);
-
-			// - Declare result variable.
-			const auto  result_symbol_type = ctor_decl.return_type;
-			const SymID result_symbol      = ctx.query<QueryGeneratedSymbol>({
-					 .name                  = base::StrID("__result"),
-					 .generated_symbol_data = Variable{ ctor_symbol, 0, result_symbol_type },
-            });
-			body.emplace_back(s.var(
-				result_symbol, result_symbol_type, s.defaultValue(result_symbol_type.getType())
-			));
-
-			// - Assign each field from the corresponding parameter.
-			for (usize i = 0; i < num_fields; i++) {
-				body.emplace_back(s.assign(
-					s.access(s.ident(result_symbol), fields.at(i).getSymbol()),
-					s.ident(ctor_decl.parameters.at(i).helios_symbol)
-				));
-			}
-			body.emplace_back(s.ret(s.ident(result_symbol)));
+			body.emplace_back(
+				s.ret(s.createAggregate(ctor_decl.return_type.getType(), std::move(field_values)))
+			);
 
 			// Finally, create the HOUTFunction object.
 			return HOUTFunction(

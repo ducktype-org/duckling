@@ -41,6 +41,7 @@ namespace compiler::mir {
 	 * and the value is last-used.
 	 */
 	class AddMoves final : public LifetimePass {
+	public:
 		void run(query::Context&, Function&, const LifetimePassArgs&) final;
 	};
 

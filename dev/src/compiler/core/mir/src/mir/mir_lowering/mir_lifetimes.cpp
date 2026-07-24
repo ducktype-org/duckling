@@ -3,6 +3,7 @@
 #include "../mir_structure/mir_structure.hpp"
 #include "helios/symbols/query_type_of_symbol.hpp"
 #include "helios/symbols/symbol_id.hpp"
+#include "mir/mir_lowering/mir_liveness.hpp"
 
 namespace compiler::mir {
 
@@ -100,14 +101,14 @@ namespace compiler::mir {
 		auto add_destructor_to_instr_vec = [&](ScopeRef                  instr_scope,
 		                                       MIRLocalRef               local,
 		                                       std::vector<Instruction>& out_instructions,
-		                                       const LocalMoveStateMap&   move_states) {
+		                                       const LocalMoveStateMap&  move_states) {
 			if (local->lifetime_flags.contains(LifetimeFlag::NoDestructor)) return;
 
 			// Move-state analysis
 			auto local_move_state = move_states.atMaybe(local->id);
 			if (local_move_state.empty()) return;  // Empty means that the local is uninitialized
 			if (local_move_state.value()->status == MoveStatus::Moved)
-				return;                          // When moved we also do not create destructor
+				return;                            // When moved we also do not create destructor
 
 			auto destruct_sym_opt = helios::getTypeDestructor(ctx, local->type);
 			if_opt_none(destruct_sym_opt) return;
@@ -117,20 +118,22 @@ namespace compiler::mir {
 			                 ? Operation::Destruct
 			                 : Operation::DestructIf;
 
-			out_instructions.push_back(Instruction{
-				op,
-				{},
-				{ MIRFunctionLiteral{ destructor_symbol }, local },
-				{
-					OperationFlag{ .flag = OperationFlag::Flag::Destruct, .local = local },
-				},
-				instr_scope,
-			});
+			out_instructions.push_back(
+				Instruction{
+					op,
+					{},
+					{ MIRFunctionLiteral{ destructor_symbol }, local },
+					{
+						OperationFlag{ .flag = OperationFlag::Flag::Destruct, .local = local },
+					},
+					instr_scope,
+				}
+			);
 		};
 
 		auto add_destructors_to_instr_vec = [&](const auto&               ending_scopes,
 		                                        std::vector<Instruction>& out_instructions,
-		                                        const LocalMoveStateMap&   move_states) {
+		                                        const LocalMoveStateMap&  move_states) {
 			for (const auto& scope: ending_scopes) {
 				if (not locals_by_scope.contains(scope)) continue;
 				auto& locals = locals_by_scope.at(scope);
@@ -148,9 +151,9 @@ namespace compiler::mir {
 			// each block is considered independently
 			auto& block = function.blocks[block_id];
 
-			// Move-state is only computed for blocks reachable from the entry. Unreachable blocks are
-			// still present here (they get pruned later by eliminateUnreachable), so default to an
-			// empty map for them instead of crashing.
+			// Move-state is only computed for blocks reachable from the entry. Unreachable blocks
+			// are still present here (they get pruned later by eliminateUnreachable), so default to
+			// an empty map for them instead of crashing.
 			LocalMoveStateMap move_state_info;
 			if (auto found = args.move_states.block_in_move_state.atMaybe(block_id))
 				move_state_info = *found.value();
@@ -246,8 +249,9 @@ namespace compiler::mir {
 
 						// Enter the block and preserve the caller scope to have a clear place where
 						// scope changes.
-						new_block_instructions.push_back(Instruction{
-							Operation::Nop, {}, {}, {}, terminator.scope });
+						new_block_instructions.push_back(
+							Instruction{ Operation::Nop, {}, {}, {}, terminator.scope }
+						);
 
 						// Add all needed destructors.
 						add_destructors_to_instr_vec(
@@ -312,32 +316,35 @@ namespace compiler::mir {
 		 * initialize, build the `Destruct` of the old value to run before it. Otherwise returns none.
 		 */
 		base::Optional<Instruction> assignmentDestructorFor(
-			query::Context&                     ctx,
-			const Instruction&                  instr,
-			const LocalMoveStateMap&             move_states,
-			const base::HashMap<LocalID, bool>& zero_initialized
+			query::Context& ctx, const Instruction& instr, const LocalMoveStateMap& move_states
 		) {
 			// The instruction must write to a place.
 			if_opt_none(instr.output) return {};
 			const MIRPlace& target = instr.output.value();
 
-			for (const auto& flag: instr.flags)
-				if (flag.flag == OperationFlag::Flag::Construct) return {};
-
 			if (not target.isLocal()) return {};
-			const MIRLocalRef base           = target.getBase<MIRLocalRef>();
+			const MIRLocalRef base             = target.getBase<MIRLocalRef>();
+
+			for (const auto& flag: instr.flags) {
+				if (flag.flag == OperationFlag::Flag::Construct) return {};
+				// If we move this value in this instruction, and at the same time we override it, 
+				// we don't have to call destructor `a = call f(c, b, move a)`
+				if (flag.flag == OperationFlag::Flag::Move && flag.local->id == base->id) return {};
+			}
+
 			auto              local_move_state = move_states.atMaybe(base->id);
-			if (local_move_state.empty()) return {};  // uninitialized
-			if (local_move_state.value()->status != MoveStatus::Alive) return {};
-
-			if (zero_initialized.contains(base->id)) return {};
-
+			if (local_move_state && local_move_state.value()->status == MoveStatus::Moved) return {};
+			
 			// The place's type must have a non-trivial destructor.
 			auto destruct_sym_opt = helios::getTypeDestructor(ctx, target.type);
 			if_opt_none(destruct_sym_opt) return {};
-
+			
+			Operation op = Operation::Destruct;
+			if (local_move_state && local_move_state.value()->status == MoveStatus::MaybeMoved)
+				op = Operation::DestructIf;
+			
 			return Instruction{
-				Operation::Destruct,
+				op,
 				{},
 				{ MIRFunctionLiteral{ destruct_sym_opt.value() }, target },
 				{},
@@ -349,38 +356,26 @@ namespace compiler::mir {
 	void AddAssignmentDestructorsPass::run(
 		query::Context& ctx, Function& function, const LifetimePassArgs& args
 	) {
-		for (auto& block_id: function.block_order) {
-			auto& block = function.blocks[block_id];
+		for (auto block_id: function.block_order) {
+			auto& block = *function.blocks.at(block_id);
 
 			// Replay move-state through the block, starting from its entry state. Unreachable blocks
-			// have no computed move_states, so default to empty (matching AddDestructorsPass).
+			// have no computed move-state, so default to empty (matching AddDestructorsPass).
 			LocalMoveStateMap move_state_info;
 			if (auto found = args.move_states.block_in_move_state.atMaybe(block_id))
 				move_state_info = *found.value();
-
-			// Locals filled in by a `ZeroInitialize` in this block: their fields are being
-			// initialized (not overwritten), so assignments into them must not destroy the old value.
-			base::HashMap<LocalID, bool> zero_initialized;
 
 			std::vector<Instruction> new_instructions;
 			new_instructions.reserve(block.instructions.size());
 
 			for (const auto& instr: block.instructions) {
-				// The destructor of the overwritten value runs before the assignment, and is
-				// checked against the move state *before* the instruction executes.
-				if (auto old_value_dtor
-				    = assignmentDestructorFor(ctx, instr, move_state_info, zero_initialized))
+				// The destructor of the overwritten value runs before the assignment, and is checked
+				// against the move-state *before* the instruction executes.
+				if (auto old_value_dtor = assignmentDestructorFor(ctx, instr, move_state_info))
 					new_instructions.push_back(std::move(old_value_dtor.value()));
 
 				new_instructions.push_back(instr);
 				updateMoveStateMapByInstr(move_state_info, instr);
-
-				// Track whole-local `ZeroInitialize`s so later field stores are treated as
-				// initialization.
-				if (instr.operation == Operation::ZeroInitialize && instr.output.has_value()
-				    && instr.output.value().isLocal()
-				    && instr.output.value().projection_chain.empty())
-					zero_initialized.put(instr.output.value().getBase<MIRLocalRef>()->id, true);
 			}
 
 			block.instructions = std::move(new_instructions);
@@ -398,10 +393,10 @@ namespace compiler::mir {
 
 			auto& locals = locals_by_scope.at(scope);
 			auto  proj   = [&]() -> decltype(auto) {
-                if constexpr (reverse_local_order)
-                    return std::views::reverse;
-                else
-                    return std::views::all;
+				if constexpr (reverse_local_order)
+					return std::views::reverse;
+				else
+					return std::views::all;
 			}();
 
 			for (auto& local: locals | proj) {
@@ -518,11 +513,11 @@ namespace compiler::mir {
 
 
 		// Predecessor lists.
+		for (auto block_id: function.block_order) args.block_predecessors.put(block_id);
+
 		for (auto block_id: function.block_order)
 			for (auto succ: getTerminatorSuccessors(function.blocks.at(block_id)->terminator))
 				args.block_predecessors.put(succ).first->second.push_back(block_id);
-
-		args.move_states = calculateGlobalInMoveStateMap(function, args.block_predecessors);
 
 		return args;
 	}
@@ -530,13 +525,13 @@ namespace compiler::mir {
 	Function runAllLifetimePasses(query::Context& ctx, Function function) {
 		auto args = constructLifetimePassArgs(function);
 
+		AddMoves{}.run(ctx, function, args);
+		args.move_states = calculateGlobalInMoveStateMap(function, args.block_predecessors);
+
+
 		// The order here does matter. AddDestructorsPass{} performs a transformation on the CFG
 		// which adds an important invariant that all successors of a block have the same ending
 		// scopes. This assumption is then used when adding ScopeFlags.
-		//
-		// AddAssignmentDestructorsPass runs before AddDestructorsPass: it only inserts instructions
-		// within existing blocks (no CFG changes), and its flagless `Destruct`s do not affect the
-		// move-state replay the later passes perform.
 		InvalidUseCheck{}.run(ctx, function, args);
 		AddAssignmentDestructorsPass{}.run(ctx, function, args);
 		AddDestructorsPass{}.run(ctx, function, args);

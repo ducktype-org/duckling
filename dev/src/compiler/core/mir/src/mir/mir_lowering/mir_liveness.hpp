@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <vector>
+#include "base/collections/dynamic_bitset.hpp"
 
 namespace compiler::mir {
 	/**
@@ -77,4 +78,8 @@ namespace compiler::mir {
 	 * new state for the variable is moved.
 	 */
 	void updateMoveStateMapByInstr(LocalMoveStateMap& map, const Instruction& instr);
+
+	// =========================== LIVENESS ANALYSIS ===========================
+	
+	void updateLivenessByInstr(const Instruction& instr, base::DynamicBitset& liveness);
 }

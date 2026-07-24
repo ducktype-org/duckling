@@ -5,6 +5,7 @@
 #include <helios/hout/visitors.hpp>
 #include <helios/symbols/query_type_symbol_data.hpp>
 #include <helios/tsh/queries/types.hpp>
+#include <helios/tsh/type_interface.hpp>
 #include <helios/utils/get_expr_symid.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 #include <mir_private/utils/bounds_check.hpp>
@@ -129,11 +130,13 @@ namespace compiler::mir {
 				valueOutput(
 					continuation,
 					MIRValue{
-						MIRGlobal({
-							expr.symbol,
-							expr.expression_type.getSymbolType(),
-							global_kind,
-						}),
+						MIRGlobal(
+							{
+								expr.symbol,
+								expr.expression_type.getSymbolType(),
+								global_kind,
+							}
+						),
 					}
 				);
 			}
@@ -211,7 +214,8 @@ namespace compiler::mir {
 			);
 		}
 
-		void visitTernaryOperatorExpr(const helios::code::TernaryOperatorExpr& ternary_expr
+		void visitTernaryOperatorExpr(
+			const helios::code::TernaryOperatorExpr& ternary_expr
 		) override {
 			// Get info about the target.
 			const auto result_type     = ternary_expr.expression_type.getSymbolType();
@@ -246,15 +250,19 @@ namespace compiler::mir {
 			auto lowered_condition = lowerSubExpr(*ternary_expr.condition, condition_block);
 
 
-			condition_block->setTerminator({
-				Operation::Branch,
-				{},
-				{ lowered_condition.getResult(function), then_block->getID(), else_block->getID() },
-				{},
-				expr_scope,
-				{},
-				{ ternary_expr.getPosition() },
-			});
+			condition_block->setTerminator(
+				{
+					Operation::Branch,
+					{},
+					{ lowered_condition.getResult(function),
+			          then_block->getID(),
+			          else_block->getID() },
+					{},
+					expr_scope,
+					{},
+					{ ternary_expr.getPosition() },
+				}
+			);
 
 			// Return (always value).
 			valueOutput(lowered_condition.begin, target_location);
@@ -290,16 +298,66 @@ namespace compiler::mir {
 			);
 		}
 
-		void visitCreateAggregateExpr(const hc::CreateAggregateExpr&) override {
-			// NOTE: lowering to per-field construct-flagged stores into the destination place is the
-			// next step. No HOUT emission produces this node yet, so this path is unreachable.
-			CORE_PANIC("CreateAggregateExpr MIR lowering not yet implemented");
+		template<class ProjectionFor>
+		void lowerInPlaceConstruction(
+			const tsh::SymbolType<>&                dest_type,
+			const std::vector<base::Box<hc::Expr>>& values,
+			ProjectionFor                           projection_for,
+			base::Optional<dia_int::StablePosition> position
+		) {
+			// The destination is a compiler temporary fully consumed by its single use, so it lives
+			// in the no-lifetime scope: ownership of its contents transfers to wherever the result
+			// is stored, and it needs no destructor of its own.
+			auto dest    = function.addTmp(dest_type, function.getNoLifetimeScope());
+			auto current = continuation;
+
+			for (usize i = values.size(); i-- > 0;) {
+				auto element_place = projection_for(MIRPlace(dest), i);
+				auto store_hole    = current->addHole();
+				auto value_result  = lowerSubExpr(*values[i], current);
+				value_result.storeResultInGivenPlace(
+					element_place, store_hole, { flagConstruct(dest) }, expr_scope, { position }
+				);
+				current = value_result.begin;
+			}
+
+			valueOutput(current, MIRValue{ dest });
 		}
 
-		void visitCreateArrayExpr(const hc::CreateArrayExpr&) override {
-			// NOTE: lowering to per-element construct-flagged stores into the destination place is
-			// the next step. No HOUT emission produces this node yet, so this path is unreachable.
-			CORE_PANIC("CreateArrayExpr MIR lowering not yet implemented");
+		void visitCreateAggregateExpr(const hc::CreateAggregateExpr& expr) override {
+			auto& ctx = function.getContext();
+
+			// Field symbols of the aggregate, in declaration order — one per value.
+			auto                       interface = expr.type.getInterface(ctx);
+			std::vector<helios::SymID> field_symbols;
+			for (const auto& field: interface->getFieldsView())
+				field_symbols.push_back(field.getSymbol());
+			CORE_ASSERT(
+				field_symbols.size() == expr.values.size(),
+				"CreateAggregateExpr value count must match the aggregate's field count."
+			);
+
+			lowerInPlaceConstruction(
+				expr.expression_type.getSymbolType(),
+				expr.values,
+				[&](const MIRPlace& base, usize i) -> MIRPlace {
+					return base.withField(ctx, field_symbols[i]);
+				},
+				expr.getPosition()
+			);
+		}
+
+		void visitCreateArrayExpr(const hc::CreateArrayExpr& expr) override {
+			lowerInPlaceConstruction(
+				expr.expression_type.getSymbolType(),
+				expr.values,
+				[](const MIRPlace& base, usize i) {
+					auto index = MIRValue{ MIRConstant{
+						ctv::CompileTimeValue{ ctv::NumericValue{ static_cast<i64>(i) } } } };
+					return base.withIndex(index);
+				},
+				expr.getPosition()
+			);
 		}
 
 		void visitVariantTypeConstructorExpr(const hc::VariantTypeConstructorExpr& expr) override {
@@ -430,8 +488,10 @@ namespace compiler::mir {
 			auto bounds_check_fail_block = function.newBlock();
 			auto bounds_check_cond_block = function.newBlock();
 			auto entry_block             = function.newBlock();
-			entry_block->setTerminator(Instruction{
-				Operation::Jump, {}, { bounds_check_cond_block->getID() }, {}, expr_scope });
+			entry_block->setTerminator(
+				Instruction{
+					Operation::Jump, {}, { bounds_check_cond_block->getID() }, {}, expr_scope }
+			);
 
 			auto lowered_index = lowerSubExpr(*expr.index, entry_block);
 			auto index_val     = lowered_index.getResult(function);
@@ -473,8 +533,9 @@ namespace compiler::mir {
 			auto last_comparison_block = function.newBlock();
 
 			// After the last comparison, continue regardless of the result.
-			last_comparison_block->setTerminator(Instruction{
-				Operation::Jump, {}, { continuation->getID() }, {}, expr_scope });
+			last_comparison_block->setTerminator(
+				Instruction{ Operation::Jump, {}, { continuation->getID() }, {}, expr_scope }
+			);
 
 			// The result of evaluating the expression (result of the last evaluated sub-expression).
 			auto boolean_output
@@ -491,21 +552,25 @@ namespace compiler::mir {
 				// if the result is true, and to the continuation if the results is false.
 				auto comparison_block = function.newBlock();
 				if (next_block->getID() == continuation->getID()) {
-					comparison_block->setTerminator(Instruction{
-						Operation::Jump,
-						{},
-						{ continuation->getID() },
-						{},
-						expr_scope,
-					});
+					comparison_block->setTerminator(
+						Instruction{
+							Operation::Jump,
+							{},
+							{ continuation->getID() },
+							{},
+							expr_scope,
+						}
+					);
 				} else {
-					comparison_block->setTerminator(Instruction{
-						Operation::Branch,
-						{},
-						{ boolean_output, next_block->getID(), continuation->getID() },
-						{},
-						expr_scope,
-					});
+					comparison_block->setTerminator(
+						Instruction{
+							Operation::Branch,
+							{},
+							{ boolean_output, next_block->getID(), continuation->getID() },
+							{},
+							expr_scope,
+						}
+					);
 				}
 				auto comparison_hole = comparison_block->addHole();
 
@@ -515,16 +580,18 @@ namespace compiler::mir {
 
 				// Finally, fill in the comparison instruction.
 				// Remember to set construction flag for boolean_output only for the first comparison.
-				comparison_hole.fill(Instruction{
-					Operation::Assign,
-					{ boolean_output },
-					{ comp_res },
-					comps_left == 0 ? std::vector{ flagConstruct(boolean_output) }
-									: std::vector<OperationFlag>{},
-					expr_scope,
-					{},
-					{ comp->getPosition() },
-				});
+				comparison_hole.fill(
+					Instruction{
+						Operation::Assign,
+						{ boolean_output },
+						{ comp_res },
+						comps_left == 0 ? std::vector{ flagConstruct(boolean_output) }
+										: std::vector<OperationFlag>{},
+						expr_scope,
+						{},
+						{ comp->getPosition() },
+					}
+				);
 				next_block = comp_cont;
 			}
 
@@ -610,9 +677,9 @@ namespace compiler::mir {
 
 		void visitMoveExpr(const hc::MoveExpr& expr) override {
 			// `move x` yields the value of `x` and marks the source local as moved-out, so any
-			// later use is flagged by the move state/use-after-move analysis. The `Move` flag has to
-			// sit on an instruction that reads the local, so we copy it into a fresh temporary and
-			// attach the flag there.
+			// later use is flagged by the move state/use-after-move analysis. The `Move` flag has
+			// to sit on an instruction that reads the local, so we copy it into a fresh temporary
+			// and attach the flag there.
 			auto hole          = continuation->addHole();
 			auto lowered_inner = lowerSubExpr(*expr.inner, continuation);
 			auto inner_val     = lowered_inner.getResult(function);
@@ -620,9 +687,12 @@ namespace compiler::mir {
 			// Moving anything that is not a plain local place (e.g. a temporary) has no source to
 			// mark, so just forward the value unchanged.
 			if (not inner_val.isLocal() or inner_val.get<mir::MIRPlace>().hasProjections()) {
-				function.getContext().logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-					"Moving from a non-local place is not supported yet.", expr.inner->getPosition()
-				));
+				function.getContext().logInt(
+					makeBox<dia_int::NotYetImplementedCodeError>(
+						"Moving from a non-local place is not supported yet.",
+						expr.inner->getPosition()
+					)
+				);
 				query::throwFailed();
 				return;
 			}
@@ -788,8 +858,9 @@ namespace compiler::mir {
 				);
 			} else if (const auto* paren_expr = dynamic_cast<const hc::ParenthesisExpr*>(&expr)) {
 				return lowerAndLiftToTypeRecursively(*paren_expr->inner, continuation);
-			} else if (const auto* reusable_expr
-			           = dynamic_cast<const helios::code::ReusableExpr*>(&expr)) {
+			} else if (
+				const auto* reusable_expr = dynamic_cast<const helios::code::ReusableExpr*>(&expr)
+			) {
 				return lowerAndLiftToTypeRecursively(*reusable_expr->inner, continuation);
 			}
 
@@ -977,8 +1048,9 @@ namespace compiler::mir {
 	) {
 		variant_match(value) {
 			variant_case(MIRValue, val) {
-				hole.fill(Instruction{
-					Operation::Assign, target, { val }, flags, scope, {}, metadata });
+				hole.fill(
+					Instruction{ Operation::Assign, target, { val }, flags, scope, {}, metadata }
+				);
 			}
 			variant_case(Finalizer, res_data) {
 				CORE_ASSERT(scope == res_data.instr.scope, "Scope mismatch!");
