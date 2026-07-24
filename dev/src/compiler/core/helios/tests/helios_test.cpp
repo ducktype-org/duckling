@@ -517,7 +517,8 @@ private:
 
 		// @note: #973 when QueryModuleHOUTRecursively returns QResult, add assertion
 		// that it is successful
-		std::vector<CRef<compiler::helios::HOUTUnit>> _
+		[[maybe_unused]]
+		std::vector<CRef<compiler::helios::HOUTUnit>> units
 			= query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>({ module_id })
 		          .valueOrPanic();
 	}
@@ -557,7 +558,8 @@ private:
 
 		// @note: #973 when QueryModuleHOUTRecursively returns QResult, add assertion
 		// that it is successful
-		std::vector<CRef<compiler::helios::HOUTUnit>> _
+		[[maybe_unused]]
+		std::vector<CRef<compiler::helios::HOUTUnit>> units
 			= query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>({ module_id })
 		          .valueOrPanic();
 	}
@@ -647,7 +649,8 @@ private:
 			ASSERT_TRUE(empty_result->isEmpty());
 
 			// Check that the module lowers to HOUT without throwing.
-			const auto& _ = ctx.query<compiler::helios::QueryModuleHOUT>(module_id)->valueOrThrow();
+			[[maybe_unused]] const auto& hout
+				= ctx.query<compiler::helios::QueryModuleHOUT>(module_id)->valueOrThrow();
 		});
 	}
 
@@ -2175,7 +2178,8 @@ private:
 
 		// @note: #973 when QueryModuleHOUTRecursively returns QResult, add assertion
 		// that it is successful
-		std::vector<CRef<compiler::helios::HOUTUnit>> _
+		[[maybe_unused]]
+		std::vector<CRef<compiler::helios::HOUTUnit>> units
 			= query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>({ module })
 		          .valueOrPanic();
 	}
