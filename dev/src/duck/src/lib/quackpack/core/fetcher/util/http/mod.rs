@@ -71,17 +71,7 @@ fn http_headers_to_curl_list(headers: &header::HeaderMap) -> Result<easy::List, 
             list.append(&format!("{header};"))?;
         }
     }
-    // It's a macro instead of a lambda, because of mutable borrows of `list`.
-    macro_rules! fallback_append_header {
-        ($name:expr, $value:expr) => {
-            if !headers.contains_key($name) {
-                list.append($value)?;
-            }
-        };
-    }
-    fallback_append_header!(header::PRAGMA, defaults::PRAGMA_HEADER_WITH_VALUE);
-    // If appended this makes github's API unhappy :(
-    // fallback_append_header!(header::EXPECT, defaults::EXPECT_HEADER_WITH_VALUE);
+
     Ok(list)
 }
 

@@ -1,13 +1,15 @@
-use std::path::PathBuf;
+#![expect(dead_code)]
+use std::path::Path;
 
-use http::HeaderValue;
+use http::{HeaderValue, header};
 use serde_json::Value;
+use tracing::debug;
+use url::Url;
 
-use crate::quackpack::core::fetcher::ducknest::create_get_request;
 use crate::quackpack::core::fetcher::git::pseudo_git_client::PseudoGitClient;
 use crate::quackpack::core::fetcher::http::HttpClient;
-use crate::quackpack::core::fetcher::util::http::Response;
 use crate::quackpack::core::fetcher::util::http::traits_extensions::ResponseExt;
+use crate::quackpack::core::fetcher::util::http::{Request, Response, defaults};
 use crate::quackpack::core::{
     GitReference, Manifest, PackageLoader, ParseMode, manifest, parse_schema,
 };
@@ -15,13 +17,11 @@ use crate::quackpack::util::interned_url::InternedUrl;
 use crate::quackpack::util::to_url::ToUrl;
 use crate::{DuckContext, QuackResult, QuackResultContext, StrId};
 
-#[allow(dead_code)]
 /// Client for performing requests to Github repositories.
 pub struct GithubClient<'duck> {
     client: HttpClient<'duck>,
 }
 
-#[allow(dead_code)]
 impl<'duck> GithubClient<'duck> {
     /// Create a new [`GithubClient`] instance.
     pub fn new(ctx: &'duck DuckContext) -> Self {
@@ -34,45 +34,44 @@ impl<'duck> GithubClient<'duck> {
     pub fn ctx(&self) -> &DuckContext {
         self.client.ctx()
     }
-
-    /// Get the base url for Github's API for the specific repository.
-    pub fn get_api_url(url: InternedUrl) -> Option<InternedUrl> {
-        let scheme = url.scheme();
-        let domain = url.domain()?;
-        // Check that this is a github repo.
-        if !domain.contains("github") {
-            return None;
-        }
-        let path = url.path();
-        let Ok(new_url) = format!("{scheme}://api.{domain}/repos{path}/").to_url() else {
-            return None;
-        };
-        Some(new_url.into())
-    }
 }
 
 impl PseudoGitClient for GithubClient<'_> {
-    fn get_commit_hash(&self, url: InternedUrl, reference: GitReference) -> QuackResult<StrId> {
+    fn get_api_url(repo_url: InternedUrl) -> Option<InternedUrl> {
+        let scheme = repo_url.scheme();
+        let domain = repo_url.domain()?;
+        // Check that this is a github repo.
+        if !domain.starts_with("github") {
+            return None;
+        }
+        let path = repo_url.path();
+        let Ok(api_url) = format!("{scheme}://api.{domain}/repos{path}/").to_url() else {
+            return None;
+        };
+        Some(api_url.into())
+    }
+
+    fn get_commit_hash(&self, api_url: InternedUrl, reference: GitReference) -> QuackResult<StrId> {
         match reference {
             GitReference::Default => {
-                let mut tmp_url = url.as_url().clone();
-                let path = url.path();
+                let mut tmp_url = api_url.as_url().clone();
+                let path = api_url.path();
                 let new_path = path.trim_end_matches('/');
                 tmp_url.set_path(new_path);
                 let request = create_get_request(&tmp_url)?;
                 let response = self.client.request(request)?;
                 let default_branch = get_default_branch_from_response(response)?;
-                self.get_commit_hash(url, GitReference::Branch(default_branch))
+                self.get_commit_hash(api_url, GitReference::Branch(default_branch))
             }
             GitReference::Tag(tag) => {
-                let url = url.join("git/ref/tags/")?.join(&tag)?;
+                let url = api_url.join("git/ref/tags/")?.join(&tag)?;
                 let request = create_get_request(&url)?;
                 let response = self.client.request(request)?;
                 let commit_hash = get_commit_from_response(response)?;
                 Ok(commit_hash)
             }
             GitReference::Branch(branch) => {
-                let url = url.join("git/ref/heads/")?.join(&branch)?;
+                let url = api_url.join("git/ref/heads/")?.join(&branch)?;
                 let request = create_get_request(&url)?;
                 let response = self.client.request(request)?;
                 let commit_hash = get_commit_from_response(response)?;
@@ -82,15 +81,12 @@ impl PseudoGitClient for GithubClient<'_> {
         }
     }
 
-    fn download_manifest(&self, url: InternedUrl, commit: StrId) -> QuackResult<Manifest> {
-        let url = url.join(&format!(
-            "contents/{}?ref={}",
-            PackageLoader::MANIFEST_NAME,
-            commit
-        ))?;
+    fn download_manifest(&self, api_url: InternedUrl, commit: StrId) -> QuackResult<Manifest> {
+        let mut url = api_url.join(&format!("contents/{}", PackageLoader::MANIFEST_NAME,))?;
+        url.set_query(Some(&format!("ref={}", commit)));
         let mut request = create_get_request(&url)?;
         request.headers_mut().insert(
-            "Accept",
+            header::ACCEPT,
             HeaderValue::from_static("application/vnd.github.raw"),
         );
         let response = self.client.request(request)?;
@@ -98,7 +94,7 @@ impl PseudoGitClient for GithubClient<'_> {
         let manifest_schema = parse_schema(&deserialized_manifest)?;
         let manifest = manifest::parse(
             &manifest_schema,
-            &PathBuf::new(), // Dummy path.
+            Path::new(""), // Dummy path.
             ParseMode::Package,
             self.ctx(),
         )?;
@@ -106,7 +102,6 @@ impl PseudoGitClient for GithubClient<'_> {
     }
 }
 
-#[allow(dead_code)]
 /// Deserialize the response for requests `.../branches/<branch>` and `.../tags/<tag>` and get the `commit.id` field.
 fn get_commit_from_response(response: Response) -> QuackResult<StrId> {
     let data: Value = response.deserialize_json()?;
@@ -121,7 +116,6 @@ fn get_commit_from_response(response: Response) -> QuackResult<StrId> {
     Ok(commit_hash)
 }
 
-#[allow(dead_code)]
 /// Deserialize the response for request to the url of the repository and get the `default_branch` field.
 fn get_default_branch_from_response(response: Response) -> QuackResult<StrId> {
     let data: Value = response.deserialize_json()?;
@@ -135,9 +129,28 @@ fn get_default_branch_from_response(response: Response) -> QuackResult<StrId> {
     Ok(default_branch)
 }
 
+fn create_get_request(url: &Url) -> QuackResult<Request> {
+    let mut request = create_http_request(url, http::Method::GET, vec![])?;
+    request
+        .headers_mut()
+        .entry(header::PRAGMA)
+        .or_insert(HeaderValue::from_static(defaults::PRAGMA_HEADER_WITH_VALUE));
+    Ok(request)
+}
+
+fn create_http_request(url: &Url, method: http::Method, body: Vec<u8>) -> QuackResult<Request> {
+    debug!(%method, %url, "making an `{method}` request for `{url}`");
+    http::Request::builder()
+        .uri(url.as_str())
+        .method(method)
+        .body(body)
+        .context_internal("failed to build an HTTP request")
+}
+
 #[cfg(test)]
 mod test {
     use crate::quackpack::core::fetcher::git::github_client::GithubClient;
+    use crate::quackpack::core::fetcher::git::pseudo_git_client::PseudoGitClient;
     use crate::quackpack::util::to_url::ToUrl;
 
     #[test]
