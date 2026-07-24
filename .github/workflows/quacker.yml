@@ -142,6 +142,9 @@ jobs:
       A1: ${{ needs.setup.outputs.a1 }}
       A2: ${{ needs.setup.outputs.a2 }}
       COMMENT_BODY: ${{ github.event.comment.body }}
+      # Let ci/run.sh pull in the review thread when the mention came from an inline review comment.
+      QUACKER_EVENT_NAME: ${{ github.event_name }}
+      QUACKER_COMMENT_ID: ${{ github.event.comment.id }}
     steps:
       - name: Mint app token
         id: app
