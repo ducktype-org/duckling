@@ -33,7 +33,7 @@ namespace compiler::helios {
                     return code::pstOrigin(pst_decl);
                 } else {
                     // Note: we could generate better origin upon const creation and use it here,
-                    // if we ever need to.
+                    // if we ever needed to
                     return code::generatedOrigin();
                 }
 			}();
