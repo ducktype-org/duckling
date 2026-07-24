@@ -138,7 +138,7 @@ namespace base {
 		 * @brief Calls @p fn with the index of each set bit, in ascending order.
 		 */
 		template<class Fn>
-		void forEachSet(Fn&& fn) const {
+		void forEachSet(Fn fn) const {
 			for (usize wi = 0; wi < words.size(); wi++) {
 				u64 w = words[wi];
 				while (w != 0) {

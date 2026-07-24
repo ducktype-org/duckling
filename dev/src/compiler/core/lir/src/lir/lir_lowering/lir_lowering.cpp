@@ -14,7 +14,6 @@
 #include "lir_lowering.hpp"
 
 #include "../lir_structure/lir_structure.hpp"
-#include "helios/tsh/symbol_type.hpp"
 
 #include <abi/type_system/type.hpp>
 #include <ctv/numeric_value.hpp>
@@ -24,6 +23,7 @@
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_abi.hpp>
 #include <helios/tsh/queries.hpp>
+#include <helios/tsh/symbol_type.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 #include <tsl/c_abi_converter.hpp>
 #include <tsl/queries.hpp>

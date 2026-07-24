@@ -1,8 +1,7 @@
 #pragma once
 
-#include "helios/tsh/symbol_type.hpp"
-
 #include <helios/hout/hout.hpp>
+#include <helios/tsh/symbol_type.hpp>
 #include <helios/tsh/types.hpp>
 
 #include <query_framework/query_int.hpp>

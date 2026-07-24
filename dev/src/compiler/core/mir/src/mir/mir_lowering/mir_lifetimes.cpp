@@ -1,9 +1,10 @@
 #include "mir_lifetimes.hpp"
 
 #include "../mir_structure/mir_structure.hpp"
-#include "helios/symbols/query_type_of_symbol.hpp"
-#include "helios/symbols/symbol_id.hpp"
-#include "mir/mir_lowering/mir_liveness.hpp"
+
+#include <helios/symbols/query_type_of_symbol.hpp>
+#include <helios/symbols/symbol_id.hpp>
+#include <mir/mir_lowering/mir_liveness.hpp>
 
 namespace compiler::mir {
 
