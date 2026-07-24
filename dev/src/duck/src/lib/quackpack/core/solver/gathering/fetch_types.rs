@@ -1,6 +1,5 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::quackpack::core::solver::gathering::error_suppression::GathererComputation;
 use crate::quackpack::core::{FeatureName, Manifest, PackageId, Source, Version};
 use crate::{QuackResult, StrId, qp_bail_internal};
 
@@ -32,6 +31,34 @@ pub struct PinnedRequest {
 pub struct RequestIdentifier {
     pub name: StrId,
     pub source: Source,
+}
+
+impl ManifestsRequest {
+    pub fn new_pinned(
+        source: Source,
+        name: StrId,
+        version: Version,
+        features: HashSet<FeatureName>,
+    ) -> Self {
+        Self::Pinned(PinnedRequest {
+            id: RequestIdentifier { name, source },
+            version,
+            features,
+        })
+    }
+
+    pub fn new_not_pinned(
+        source: Source,
+        name: StrId,
+        versions: Option<Vec<Version>>,
+        features: HashSet<FeatureName>,
+    ) -> Self {
+        Self::NotPinned(NotPinnedRequest {
+            id: RequestIdentifier { name, source },
+            versions,
+            features,
+        })
+    }
 }
 
 /// Type representing non-error results of a fetch.
@@ -109,8 +136,8 @@ impl Default for RequestAction {
     }
 }
 
-impl From<GathererComputation<Vec<ManifestsRequest>>> for GathererComputation<RequestAction> {
-    fn from(value: GathererComputation<Vec<ManifestsRequest>>) -> Self {
-        GathererComputation(RequestAction::More { requests: value.0 }, value.1)
+impl From<Vec<ManifestsRequest>> for RequestAction {
+    fn from(value: Vec<ManifestsRequest>) -> Self {
+        RequestAction::More { requests: value }
     }
 }
