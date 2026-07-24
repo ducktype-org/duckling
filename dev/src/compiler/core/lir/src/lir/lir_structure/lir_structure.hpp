@@ -172,7 +172,14 @@ namespace compiler::lir {
 	 * @brief Function which call will be replaced
 	 * manually in the backend.
 	 */
-	enum class BuiltinFunctionKind { DvmCharAlloc, DvmCharRealloc, DvmCharFree, BoxAlloc, BoxFree };
+	enum class BuiltinFunctionKind {
+		DvmCharAlloc,
+		DvmCharRealloc,
+		DvmCharFree,
+		BoxAlloc,
+		BoxFree,
+		ListFree
+	};
 
 	base::Optional<BuiltinFunctionKind> getBuiltinKindFromHOUT(helios::BuiltinKind kind);
 

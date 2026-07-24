@@ -1,6 +1,7 @@
 #pragma once
 
 #include <helios/hout/hout.hpp>
+#include <helios/tsh/symbol_type.hpp>
 #include <helios/tsh/types.hpp>
 
 #include <query_framework/query_int.hpp>
@@ -8,9 +9,16 @@
 
 namespace compiler::helios::defgen {
 	/**
-	 * @brief Get the symbol of the compiler-generated destructor for a given type.
+	 * @brief Get the symbol of the compiler-generated destructor for a given abstract type.
 	 */
 	SymID destructSymForType(query::Context& ctx, tsh::AbstractType type);
+
+
+	/**
+	 * @brief Get the symbol of the compiler-generated destructor for a given symbol type.
+	 * Returns empty value when the type is a reference type.
+	 */
+	base::Optional<SymID> destructSymForSymbolType(query::Context& ctx, tsh::SymbolType<> type);
 
 	/**
 	 * @brief Whether the given symbol is a user-defined destructor.
@@ -35,4 +43,14 @@ namespace compiler::helios::defgen {
 	DECLARE_QUERY(
 		QueryDefaultDestructor, tsh::AbstractType, CRef<query::QResult<HOUTFunction>>, ({})
 	);
+
+	/**
+	 * @brief Build the compiler-generated HOUT representation of the `box T` destructor.
+	 *
+	 * Takes a `box T self` parameter and returns unit. Destroys the pointee (via its own
+	 * destructor) and then frees the box storage with the `box_free` builtin.
+	 *
+	 * @param pointee_type The pointee type `T`.
+	 */
+	HOUTFunction buildBoxDestructor(query::Context& ctx, tsh::AbstractType pointee_type);
 }

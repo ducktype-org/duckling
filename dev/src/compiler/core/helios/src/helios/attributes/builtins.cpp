@@ -8,6 +8,7 @@
 #include <helios/queries/function_queries.hpp>
 #include <helios/symbols/query_type_symbol_data.hpp>
 #include <helios/tsh/types.hpp>
+#include <helios_private/hout_creation/definition_generation/default_destructors.hpp>
 #include <helios_private/hout_creation/shorthands/shorthands.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
@@ -58,6 +59,10 @@ namespace compiler::helios {
 			return base::StrID("box_alloc");
 		case BuiltinKind::BoxFree:
 			return base::StrID("box_free");
+		case BuiltinKind::ListFree:
+			return base::StrID("list_free");
+		case BuiltinKind::BoxDestructor:
+			return base::StrID("box_destructor");
 		}
 		CORE_UNREACHABLE();
 	}
@@ -214,6 +219,13 @@ namespace compiler::helios {
 				})
 			);
 		}
+		case BuiltinKind::BoxDestructor: {
+			// `box_destructor(b: box T)` destroys the pointee, then frees the box storage. The
+			// pointee type `T` is the pointee of the `box T` parameter.
+			auto&      decl         = ctx.query<QueryDeclOfFun>(symbol)->valueOrThrow();
+			const auto pointee_type = decl.parameters.at(0).type.getType();
+			return defgen::buildBoxDestructor(ctx, pointee_type);
+		}
 		default: {
 			CORE_PANIC(
 				base::strConcat("Builtin `", builtinKindToStr(type), "` is not implemented in HOUT")
@@ -240,7 +252,10 @@ namespace compiler::helios {
 			return BuiltinOrigin::HOUT;
 		case BuiltinKind::BoxAlloc:
 		case BuiltinKind::BoxFree:
+		case BuiltinKind::ListFree:
 			return BuiltinOrigin::DVMBackend | BuiltinOrigin::NativeBackend;
+		case BuiltinKind::BoxDestructor:
+			return BuiltinOrigin::HOUT;
 		}
 
 		CORE_UNREACHABLE();
@@ -248,17 +263,41 @@ namespace compiler::helios {
 
 	SymID boxAllocSymForType(query::Context& ctx, tsh::AbstractType pointee_type) {
 		return ctx.query<defgen::QueryGeneratedSymbol>({
-			.name                  = base::StrID("box_alloc"),
-			.generated_symbol_data = defgen::BoxBuiltin{ .pointee_type = pointee_type,
-		                                                 .kind = defgen::BoxBuiltin::Kind::Alloc },
+			.name = base::StrID("box_alloc"),
+			.generated_symbol_data
+			= defgen::BuiltinTemplatedSymbol{ .type = pointee_type,
+		                                      .kind
+		                                      = defgen::BuiltinTemplatedSymbol::Kind::BoxAlloc },
 		});
 	}
 
 	SymID boxFreeSymForType(query::Context& ctx, tsh::AbstractType pointee_type) {
 		return ctx.query<defgen::QueryGeneratedSymbol>({
-			.name                  = base::StrID("box_free"),
-			.generated_symbol_data = defgen::BoxBuiltin{ .pointee_type = pointee_type,
-		                                                 .kind = defgen::BoxBuiltin::Kind::Free },
+			.name = base::StrID("box_free"),
+			.generated_symbol_data
+			= defgen::BuiltinTemplatedSymbol{ .type = pointee_type,
+		                                      .kind
+		                                      = defgen::BuiltinTemplatedSymbol::Kind::BoxFree },
+		});
+	}
+
+	SymID listFreeSymForType(query::Context& ctx, tsh::AbstractType element_type) {
+		return ctx.query<defgen::QueryGeneratedSymbol>({
+			.name = base::StrID("list_free"),
+			.generated_symbol_data
+			= defgen::BuiltinTemplatedSymbol{ .type = element_type,
+		                                      .kind
+		                                      = defgen::BuiltinTemplatedSymbol::Kind::ListFree },
+		});
+	}
+
+	SymID boxDestructorSymForType(query::Context& ctx, tsh::AbstractType pointee_type) {
+		return ctx.query<defgen::QueryGeneratedSymbol>({
+			.name = base::StrID("box_destructor"),
+			.generated_symbol_data
+			= defgen::BuiltinTemplatedSymbol{ .type = pointee_type,
+		                                      .kind
+		                                      = defgen::BuiltinTemplatedSymbol::Kind::BoxDestructor },
 		});
 	}
 

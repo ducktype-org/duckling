@@ -510,9 +510,9 @@ private:
 		auto my_float = module.houtGlobal("my_float");
 
 		withContextDo([&](query::Context& ctx) {
-			ASSERT_TRUE(my_int->type.hasNoOpDestructor(ctx));
-			ASSERT_TRUE(my_bool->type.hasNoOpDestructor(ctx));
-			ASSERT_TRUE(my_float->type.hasNoOpDestructor(ctx));
+			ASSERT_TRUE(my_int->type.isTriviallyDestructible(ctx));
+			ASSERT_TRUE(my_bool->type.isTriviallyDestructible(ctx));
+			ASSERT_TRUE(my_float->type.isTriviallyDestructible(ctx));
 		});
 	}
 

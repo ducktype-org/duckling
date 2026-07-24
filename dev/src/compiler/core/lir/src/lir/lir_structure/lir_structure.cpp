@@ -433,6 +433,8 @@ namespace compiler::lir {
 			return BuiltinFunctionKind::BoxAlloc;
 		case helios::BuiltinKind::BoxFree:
 			return BuiltinFunctionKind::BoxFree;
+		case helios::BuiltinKind::ListFree:
+			return BuiltinFunctionKind::ListFree;
 		default:
 			return {};
 		}

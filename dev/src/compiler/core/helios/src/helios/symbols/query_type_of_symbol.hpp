@@ -17,4 +17,10 @@ namespace compiler::helios {
 	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(QueryTypeOfSymbol, SymID, CRef<QuerySymbolType_Result>, ({}))
+
+	/**
+	 * @brief Return the destructor symbol for the type, if it is non-trivial.
+	 * If it is trivial, return empty optional.
+	 */
+	base::Optional<helios::SymID> getTypeDestructor(query::Context&, tsh::SymbolType<>);
 }
