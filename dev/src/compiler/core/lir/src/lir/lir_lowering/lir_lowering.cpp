@@ -744,22 +744,28 @@ namespace compiler::lir {
 						);
 
 						locals.pushBack(LIRLocal::anonymousLocal(ref_layout));
-						LIRPlace addr_place{ locals[locals.lastIndex()], {} };
+						auto     addr_local = locals[locals.lastIndex()];
+						LIRPlace addr_place{ addr_local, {} };
 
-						// addr = &place
-						curr_block->instructions.emplace_back(
+						auto& address_instr = curr_block->instructions.emplace_back(
 							Operation::AddressOf,
 							addr_place,
 							std::vector<LIRValue>{ args.at(1) },
 							mir_instruction.metadata
 						);
+						address_instr.scope_flags.push_back(
+							ScopeFlag{ .flag=ScopeFlag::Flag::ScopeStart, .local=addr_local }
+						);
 
 						// destructor(addr)
-						curr_block->instructions.emplace_back(
+						auto& call_instr = curr_block->instructions.emplace_back(
 							Operation::Call,
 							base::Optional<LIRPlace>{},
 							std::vector<LIRValue>{ args.at(0), LIRValue{ addr_place } },
 							mir_instruction.metadata
+						);
+						call_instr.scope_flags.push_back(
+							ScopeFlag{ .flag=ScopeFlag::Flag::ScopeEnd, .local=addr_local }
 						);
 					} else {
 						// Already a direct/box — call the destructor on it directly.
