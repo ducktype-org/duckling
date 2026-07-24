@@ -7,6 +7,7 @@ use crate::quackpack::core::solver::gathering::gatherer::Gatherer;
 use crate::quackpack::core::solver::git_access::GitAccess;
 use crate::quackpack::core::solver::solver_freeze::{SolverFreeze, SolverPackageFreeze};
 use crate::quackpack::core::{Dependency, FeatureName, Manifest, PackageId};
+use crate::util::error::ErrorsLogger;
 use crate::{QuackResult, QuackResultContext};
 
 impl SolverFreeze {
@@ -17,19 +18,20 @@ impl SolverFreeze {
         gatherer: &mut Gatherer<'_, '_, '_, Access>,
     ) -> QuackResult<HashMap<PackageId, Box<Manifest>>> {
         let mut tasks = vec![];
+        let mut errors = ErrorsLogger::default();
         for pkg in self.package_freezes.keys() {
             if *pkg == self.main_pkg {
                 continue;
             }
             if let Ok(request) = pkg.create_manifest_request() {
-                tasks.push(gatherer.fetch(request));
+                tasks.push(gatherer.fetch(request, &mut errors));
             }
         }
         let results = tasks;
         let mut manifests = HashMap::new();
         for fetch_response in results {
             let fetch_response = fetch_response?;
-            if let FetchResponse::Success(success_response) = fetch_response.0 {
+            if let FetchResponse::Success(success_response) = fetch_response {
                 match success_response {
                     FetchSuccess::Pinned(pinned_success) => {
                         manifests.insert(

@@ -12,8 +12,6 @@ Tests:
     Description: can delete ephemeral venv from storage
     Cases:
       basic:
-        # @TODO: #3189 Reenable this test
-        Enabled: "false"
         test-cmd: duck -C foo clean-storage
         Output:
           String: |+
