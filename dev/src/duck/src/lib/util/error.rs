@@ -530,18 +530,26 @@ impl ErrorExt for dyn Error + Send + Sync + 'static {
 pub struct ErrorsLogger(Vec<QuackError>);
 
 impl ErrorsLogger {
+    /// Create a new [`ErrorsLogger`].
     pub fn new(errors: Vec<QuackError>) -> Self {
         Self(errors)
     }
 
+    /// Check if an [`ErrorsLogger`] logged any errors.
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
 
+    /// Add an error to the [`ErrorsLogger`].
     pub fn log(&mut self, error: QuackError) {
         self.0.push(error);
     }
 
+    /// Get the first error of the [`ErrorsLogger`].
+    ///
+    /// Panics
+    /// ------
+    /// Panics when there are no errors logged.
     pub fn unwrap_first(self) -> QuackError {
         self.0.into_iter().next().unwrap()
     }

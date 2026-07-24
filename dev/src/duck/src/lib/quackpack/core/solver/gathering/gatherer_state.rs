@@ -535,6 +535,9 @@ impl GathererState {
 
     /// For each request referencing a given fetch, updates requested features of the fetched packages,
     /// returning resulting new requests.
+    ///
+    /// Logs an error for pinned request which did not find a matching version.
+    /// This might happen if the pinned request was made when a not pinned request was pending.
     fn complete_requests(
         &mut self,
         requests: Vec<ManifestsRequest>,

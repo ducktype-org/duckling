@@ -7,9 +7,8 @@ use crate::quackpack::core::fetcher::Fetcher;
 use crate::quackpack::core::fetcher::types::{FetcherResponse, PackageWithUrl};
 use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
 use crate::quackpack::core::solver::gathering::fetch_types::{
-    FetchFailure, FetchResponse, FetchSuccess, ManifestsRequest, NotPinnedFailure,
-    NotPinnedRequest, NotPinnedSuccess, PinnedFailure, PinnedRequest, PinnedSuccess, RequestAction,
-    RequestIdentifier,
+    FetchResponse, FetchSuccess, ManifestsRequest, NotPinnedRequest, NotPinnedSuccess,
+    PinnedRequest, PinnedSuccess, RequestAction, RequestIdentifier,
 };
 use crate::quackpack::core::solver::gathering::gatherer_state::{GatheredInfo, GathererState};
 use crate::quackpack::core::solver::git_access::GitAccess;
@@ -86,7 +85,7 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
                     ))?;
                 }
             } else {
-                return Err(errors.into_iter().next().unwrap());
+                return Err(errors.unwrap_first());
             }
         }
         state.try_into()
@@ -190,12 +189,6 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
         errors: &mut ErrorsLogger,
     ) -> QuackResult<FetchResponse> {
         debug!("fetching registry (pinned)");
-        let fetch_failure = || {
-            FetchResponse::Failed(FetchFailure::Pinned(PinnedFailure {
-                origin_id: request.id,
-                origin_version: request.version,
-            }))
-        };
         if !matches!(request.id.source.kind(), SourceKind::Registry) {
             qp_bail_internal!("tried to make pinned registry fetch for a non-registry source");
         };
@@ -207,14 +200,14 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
         let fetcher_response = self.fetcher.get_package_metadata(&pkg_to_fetch);
         let Ok(fetcher_response) = fetcher_response else {
             errors.log(fetcher_response.unwrap_err());
-            return Ok(fetch_failure());
+            return Ok(FetchResponse::failed_pinned(request.id, request.version));
         };
         let answer_identity = FullIdentity::new(
             request.id.name,
             FullOrigin::for_registry(request.id.source.url()),
         );
         let FetcherResponse::Some(registry_manifest) = fetcher_response else {
-            return Ok(fetch_failure());
+            return Ok(FetchResponse::failed_pinned(request.id, request.version));
         };
         match <registry::Manifest as TryInto<Manifest>>::try_into(registry_manifest) {
             Ok(manifest) => Ok(FetchResponse::Success(FetchSuccess::Pinned(
@@ -228,7 +221,7 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
             Err(e) => {
                 debug!("failed to fetch: {e}");
                 errors.log(e);
-                Ok(fetch_failure())
+                Ok(FetchResponse::failed_pinned(request.id, request.version))
             }
         }
     }
@@ -243,18 +236,13 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
         errors: &mut ErrorsLogger,
     ) -> FetchResponse {
         debug!("fetching registry (not pinned)");
-        let fetch_failure = || {
-            FetchResponse::Failed(FetchFailure::NotPinned(NotPinnedFailure {
-                origin_id: request.id,
-            }))
-        };
         let fetcher_response = self.fetcher.get_package_all_metadata(url, real_name);
         let Ok(fetcher_response) = fetcher_response else {
             errors.log(fetcher_response.unwrap_err());
-            return fetch_failure();
+            return FetchResponse::failed_not_pinned(request.id);
         };
         let FetcherResponse::Some(fetcher_response) = fetcher_response else {
-            return fetch_failure();
+            return FetchResponse::failed_not_pinned(request.id);
         };
         let answer_identity = FullIdentity::new(real_name, FullOrigin::for_registry(url));
         let mut fetch_response = NotPinnedSuccess {
@@ -289,30 +277,26 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
         errors: &mut ErrorsLogger,
     ) -> FetchResponse {
         debug!("fetching git");
-        let fetch_failure = || {
-            FetchResponse::Failed(FetchFailure::NotPinned(NotPinnedFailure {
-                origin_id: request.id,
-            }))
-        };
+        // We create a temporary logger to check if `try_get_cached_git` produced any errors.
         let mut tmp_logger = ErrorsLogger::default();
         let cached_git = self.try_get_cached_git(request, url, reference, &mut tmp_logger);
         if !tmp_logger.is_empty() {
             let err = tmp_logger.unwrap_first();
             errors.log(err.context(MessageError::new("when trying to get cached git")));
-            return fetch_failure();
+            return FetchResponse::failed_not_pinned(request.id);
         }
         if let Some(success) = cached_git {
             debug!("git request was cached");
             return FetchResponse::Success(FetchSuccess::NotPinned(success));
         }
         if self.fetcher.ctx().is_offline() {
-            return fetch_failure();
+            return FetchResponse::failed_not_pinned(request.id);
         }
 
         let fetcher_response = self.fetcher.clone_from_git(&url, reference);
         let Ok((cloned_pkg, path_where_cloned)) = fetcher_response else {
             errors.log(fetcher_response.unwrap_err());
-            return fetch_failure();
+            return FetchResponse::failed_not_pinned(request.id);
         };
         let answer_identity = FullIdentity::new(
             request.id.name,
@@ -325,7 +309,7 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
         {
             debug!("failed to store a new git: {e}");
             errors.log(e);
-            return fetch_failure();
+            return FetchResponse::failed_not_pinned(request.id);
         }
         let answer_pkg = PackageId::new(answer_identity, cloned_pkg.package.manifest().version());
         FetchResponse::Success(FetchSuccess::NotPinned(NotPinnedSuccess {
@@ -337,6 +321,9 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
         }))
     }
 
+    /// Helper for [`Gatherer::fetch_git`].
+    /// Searches for cached git satisfying the given request and loads the found package with [`PackageLoader`].
+    /// If it cannot find a cached git, returns [`None`].
     fn try_get_cached_git(
         &self,
         request: &NotPinnedRequest,
@@ -362,6 +349,8 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
                 versions: None,
                 features: [].into(),
             };
+            // We create a dummy logger, because we do not care about errors of `fetch_local`,
+            // if it returns a `FetchResponse::Success` then there were no errors anyway.
             let mut dummy_logger = ErrorsLogger::default();
             let stored_git_manifest =
                 self.fetch_local(&storage_local_request, &path, &mut dummy_logger);
@@ -386,20 +375,14 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
         path: &Path,
         errors: &mut ErrorsLogger,
     ) -> FetchResponse {
-        debug!("fetching local");
-        let fetch_failure = || {
-            FetchResponse::Failed(FetchFailure::NotPinned(NotPinnedFailure {
-                origin_id: request.id,
-            }))
-        };
         let pcx = PackageLoader::find_at_exact_directory(path, self.fetcher.ctx());
         let Ok(pcx) = pcx else {
             errors.log(pcx.unwrap_err());
-            return fetch_failure();
+            return FetchResponse::failed_not_pinned(request.id);
         };
         let root = pcx.package().root();
         let Ok(answer_origin) = FullOrigin::for_local(root) else {
-            return fetch_failure();
+            return FetchResponse::failed_not_pinned(request.id);
         };
         let answer_identity = FullIdentity::new(request.id.name, answer_origin);
         FetchResponse::Success(FetchSuccess::NotPinned(NotPinnedSuccess {

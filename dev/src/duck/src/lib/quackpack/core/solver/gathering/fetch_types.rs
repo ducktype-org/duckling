@@ -34,6 +34,7 @@ pub struct RequestIdentifier {
 }
 
 impl ManifestsRequest {
+    /// Create a new pinned [`ManifestsRequest`].
     pub fn new_pinned(
         source: Source,
         name: StrId,
@@ -47,6 +48,7 @@ impl ManifestsRequest {
         })
     }
 
+    /// Create a new not pinned [`ManifestsRequest`].
     pub fn new_not_pinned(
         source: Source,
         name: StrId,
@@ -65,6 +67,21 @@ impl ManifestsRequest {
 pub enum FetchResponse {
     Success(FetchSuccess),
     Failed(FetchFailure),
+}
+
+impl FetchResponse {
+    /// Create a new pinned [`FetchResponse::Failed`].
+    pub fn failed_pinned(id: RequestIdentifier, version: Version) -> Self {
+        Self::Failed(FetchFailure::Pinned(PinnedFailure {
+            origin_id: id,
+            origin_version: version,
+        }))
+    }
+
+    /// Create a new not pinned [`FetchResponse::Failed`].
+    pub fn failed_not_pinned(id: RequestIdentifier) -> Self {
+        Self::Failed(FetchFailure::NotPinned(NotPinnedFailure { origin_id: id }))
+    }
 }
 
 /// Type representing the result of a successful fetch.
@@ -120,6 +137,7 @@ pub enum RequestAction {
 }
 
 impl RequestAction {
+    /// Get the requests or bail internally if in [`Self::Fetch`] version.
     pub fn unwrap_requests(self) -> QuackResult<Vec<ManifestsRequest>> {
         match self {
             RequestAction::Fetch => {
