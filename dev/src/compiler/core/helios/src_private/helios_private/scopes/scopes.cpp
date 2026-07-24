@@ -22,6 +22,7 @@
 #include <helios_private/pst_layer/stmts_from_aggregate.hpp>
 #include <helios_private/scopes/scope_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
+#include <helios_private/templates/templates.hpp>
 
 #include <base/collections/maps.hpp>
 #include <base/collections/stable_container.hpp>
@@ -37,11 +38,6 @@
 
 namespace compiler::helios {
 
-	struct ScopeAccess_Functor final {
-		static auto get(ScopeID id) { return id.ref; }
-
-		static auto idOf(Ref<ScopeData> ref) { return ScopeID(ref); }
-	};
 
 	auto getScopeRef(ScopeID id) { return ScopeAccess_Functor::get(id); }
 
@@ -181,11 +177,23 @@ namespace compiler::helios {
 
 		case pst::ElementKind::Param:
 		case pst::ElementKind::ParamList:
+		case pst::ElementKind::TemplateList:
 			return ElementScopeKind::Transparent;
 
 		case pst::ElementKind::Expand:
 			// This is a bit of a special case, we treat it as transparent, since it is
 			// basically just a wrapper around the expanded element.
+			return ElementScopeKind::Transparent;
+
+		case pst::ElementKind::TemplateStmt:
+			// This defines a non-empty scope only for for baked PST nodes,
+			// @TODO: #3071 probably change it to transparent,
+			// since this element should not be present in baked PSTs (or will be a trivial node).
+			return ElementScopeKind::Standard;
+
+		case pst::ElementKind::TemplateDecl:
+			// This is a weird case, this is used to lookup on expressions inside template
+			// declaration before baking.
 			return ElementScopeKind::Transparent;
 
 		case pst::ElementKind::FormatSubExpression:
@@ -360,7 +368,21 @@ namespace compiler::helios {
 					out->scopes.emplace_back(ctx.query<QueryPrimaryCodeScopeFor>(element));
 			};
 
-			auto for_all_ok = pstForAll(ctx, root_unlocked.value(), grab_scopes_function);
+			// @TODO: #3080 cutoff changes semantics of this query, consider making it internal
+			// somehow. Note that more custom logic might be needed in the future (to optimize it,
+			// to compile lambdas, etc.)
+
+			auto cutoff_function = [](pst::Access<pst::LangElement> element) {
+				if (element->getElementKind() == pst::ElementKind::TemplateStmt) {
+					// we want to skip template bodies, since
+					// they don't compile directly
+					return true;
+				}
+				return false;
+			};
+
+			auto for_all_ok
+				= pstForAll(ctx, root_unlocked.value(), grab_scopes_function, cutoff_function);
 			if (for_all_ok.status().isBad()) {
 				// if the pstForAll failed, we mark the whole query as failed, but we still return
 				// the scopes that we managed to obtain.
@@ -559,6 +581,51 @@ namespace compiler::helios {
 			void visitExprStmt(pst::Access<pst::ExprStmt>) override {
 				output(std::vector<SymID>{});
 			}
+
+			void visitTemplateStmt(pst::Access<pst::TemplateStmt> template_stmt) override {
+				// Scope of "template →(...)← {}"
+				// This also inserts the baked template symbols into this scope.
+
+				// @TODO: #3071 this is a hack, fix it!
+				// Here two different cases are handled:
+				// * for pre-bake PST template this defined no symbols, this is a scope in which the
+				// expressions from template "signature" are compiled
+				// * for baked PST template this defines generated symbols for the template
+				// arguments, which are used in the template body.
+
+
+				std::vector<SymID> out;
+
+				if (not template_stmt->hasAdditionalRootData()) {
+					// This is not a baked template, so it does not define any symbols in its scope.
+					output(out);
+					return;
+				}
+
+				const auto& additional_data = template_stmt->getAdditionalRootData();
+
+				variant_match(additional_data.pst_parent) {
+					variant_case(pst::AdditionalRootData::BakedTemplateParent, template_parent) {
+						auto proper_data = base::anyCast<templates::TemplateBakePSTLinkedData>(
+							template_parent.template_bake_data
+						);
+						auto postponed_data
+							= proper_data.postponed_data->load(std::memory_order_acquire);
+
+						for (const auto& param: postponed_data->template_arguments_symbols)
+							out.emplace_back(param);
+						out.emplace_back(postponed_data->baked_symbol);
+					}
+					variant_default {
+						CORE_PANIC(
+							"Template declaration without BakedTemplateParent, this should not "
+							"happen here."
+						);
+					}
+				}
+
+				output(out);
+			}
 		};
 
 		/**
@@ -576,6 +643,8 @@ namespace compiler::helios {
 				return filterSymbolsFromStmtList(ctx, getStmtsFromStmtAggregate(ctx, base_element));
 			} else if (base_element->isStatement()) {
 				// note: if this check fail, it might be that we are missing some cases
+				// @TODO: #3071 maybe modify this assertion or add a new else-if branch for template
+				// statements
 				CORE_ASSERT(
 					getScopeKind(ctx, base_element) == ElementScopeKind::Standard,
 					"Bad element in QuerySymbolsInScope"
@@ -600,6 +669,12 @@ namespace compiler::helios {
 			// Sanity check that the output symbols have correct scope.
 			if (output.hasValue()) {
 				for (auto sym: output.valueOrPanic()) {
+					// @TODO: #3099 generated symbols scopes are needed
+					// mostly here and potentially for mangling.
+					// Just removing this assertion for them is not a way to go, since this assertion
+					// ensures that scopes info is consistent. We could however add some kind of
+					// "QueryAdditionalScopelessSymbolsInScope". Tho this will not be trivial.
+
 					CORE_ASSERT(
 						scope(sym) == key,
 						base::strConcat(

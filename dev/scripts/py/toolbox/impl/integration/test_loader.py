@@ -18,7 +18,7 @@ from .keys import *
 """
 Builtin keys allowed inside a Test.
 """
-TEST_ALLOWED_KEYS = {*GENERAL_VARIABLES, NAME, DESCRIPTION, CASES, PARENT}
+TEST_ALLOWED_KEYS = {*GENERAL_VARIABLES, NAME, DESCRIPTION, CASES, PARENT, NO_PARALLEL}
 
 
 """
@@ -115,6 +115,7 @@ def _make_test(config: dict, test_name) -> Test:
             cases=[_make_case(test_dict, case) for case in test_dict[CASES]],
             clean=config_find_and_eval(test_dict, CLEAN),
             fail_fast=config_find_value(test_dict, FAIL_FAST, default=False),
+            no_parallel=config_find_value(test_dict, NO_PARALLEL, default=False),
         )
     except (VariableNotFound, ExpressionFillError) as e:
         exit_with_error(
