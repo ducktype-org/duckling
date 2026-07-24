@@ -19,7 +19,6 @@ from click import command, option
     "--exclude-files",
     multiple=True,
     type=str,
-    default=["todo_validate.py", "todo_counter.py", "CLAUDE.md"],
     help="Files to exclude from checking (e.g., --exclude-files todo_validate.py). "
     "ALL file paths that end with any given value will be excluded."
     "Note that by default [todo_validate.py, todo_counter.py] patterns are excluded.",

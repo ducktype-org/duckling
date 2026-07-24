@@ -28,6 +28,14 @@ namespace compiler::helios::test_utils {
 		return { module, base::anyCast<ScopeID>(main_file_root_scope) };
 	}
 
+	ScopeID getModuleScope(frontend::ModuleID module) {
+		auto main_file_root_scope = query::utils::withContextCompute([&](query::Context& ctx) {
+			return queryRootScopeOfMainModuleFile(ctx, module);
+		});
+
+		return base::anyCast<ScopeID>(main_file_root_scope);
+	}
+
 	SymbolList getChain(const std::string_view chain, ScopeID scope) {
 		auto       symbols = base::strSplit(chain, ".");
 		SymbolList result;

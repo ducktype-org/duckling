@@ -117,11 +117,9 @@ namespace compiler::helios {
 					ctx, location_expr->origin.generatedFrom(), location_expr->clone()
 				);
 
-			auto location_value_category
-				= location_expr->expression_type.getValueCategory().getCategory();
-			if (location_value_category == tsh::PrimaryCategory::Literal) {
+			if (not location_expr->expression_type.getValueCategory().canBeAssignedTo()) {
 				ctx.logInt(makeBox<dia_int::PlaceholderError>(
-					"Left side of assignment is a literal",
+					"Left side of assignment must be addressable location",
 					var.unlock(ctx)->getStablePosition(),
 					"",
 					"here"
@@ -407,6 +405,14 @@ namespace compiler::helios {
 		query::Context&                         ctx,
 		pst::AccessLocked<pst::CodeBlockOrStmt> container,
 		tsh::SymbolType<>                       return_type
+	) {
+		return std::make_shared<const code::CodeBlock>(processBlock(ctx, container, return_type));
+	}
+
+	std::shared_ptr<const code::CodeBlock> compileCodeOfCodeBlock(
+		query::Context&                   ctx,
+		pst::AccessLocked<pst::CodeBlock> container,
+		tsh::SymbolType<>                 return_type
 	) {
 		return std::make_shared<const code::CodeBlock>(processBlock(ctx, container, return_type));
 	}

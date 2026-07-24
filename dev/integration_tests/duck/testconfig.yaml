@@ -43,12 +43,20 @@ PreNode: |
 Run: 'export PATH="@{duck-exe-dir}:$PATH" && @{cd-tmp-dir} && @{before-cmd} && @{test-cmd}'
 
 SubDirs:
+  - clean_storage
   - cli
   - sync
+  - info
   - init
+  - list
   - build
+  - run
 
 # @TODO: #2920 This shouldn't need ` -> i64`.
 # NOTE: This needs to be quoted like this, so `echo` receives `'<string>'` as an argument.
 # (It must be in single quotes!)
-default-src: "'import core.builtins.*;\n\nfun main() -> i64 = {\n    return 0;\n}'"
+default-src: "'import core.builtins.*;\n\nfun main() -> i64 = {\n    return @{default-src-rc};\n}'"
+default-src-rc: 0
+
+# Regex for dates in YYYY-MM-DD HH:MM:SS format
+date-regex: '\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}'

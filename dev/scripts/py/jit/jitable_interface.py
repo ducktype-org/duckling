@@ -25,6 +25,7 @@ def nonjitable(func_name: str) -> bool:
     unjitable_opfuncs = [
         "jitEntrypoint",
         "call_builtinfunc",
+        "call_ffifunc",
         "breakpoint"
     ]
 

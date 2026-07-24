@@ -75,6 +75,9 @@ DEF_INSTR(setNull_pptr, (vm::opargs::PlacePtr, dst))
 // Copies an opaque value
 DEF_INSTR(mov_popq_popq, (vm::opargs::PlaceOpq, dst), (vm::opargs::PlaceOpq, src))
 
+// Copies a C pointer value; source and destination must have the identical cpointer type
+DEF_INSTR(mov_pcpt_pcpt, (vm::opargs::PlaceCptr, dst), (vm::opargs::PlaceCptr, src))
+
 
 // ========= SIGNED INTEGER ARITHMETIC OPERATIONS ========
 
@@ -365,6 +368,7 @@ DEF_INSTR(jmpIfNot_label, (vm::opargs::Label, label))
 DEF_INSTR(call_func, (vm::opargs::FunctionName, function))
 DEF_INSTR(call_builtinfunc, (vm::opargs::BuiltinFunctionName, function))
 DEF_INSTR(call_cfunc, (vm::opargs::ExtCFunctionName, function))
+DEF_INSTR(call_ffifunc, (vm::opargs::FFIFunctionName, function))
 
 DEF_INSTR(set_threadctx, (vm::opargs::FunctionName, function))
 

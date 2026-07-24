@@ -64,6 +64,7 @@ namespace vm::loader::compiler::safe {
 		) override;
 		void compileNewExtCFunctions(const std::vector<code::ExternalCFunction>& new_functions
 		) override;
+		void compileNewFFIFunctions(const std::vector<code::FFIFunction>& new_functions) override;
 
 	private:
 		/**

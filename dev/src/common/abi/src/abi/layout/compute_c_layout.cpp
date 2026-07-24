@@ -23,18 +23,18 @@ namespace abi::layout {
 		}
 	}
 
-	SizeAlign sizeAlignOf(const TargetABI& target, const type_system::AbiType& t) {
+	SizeAlign sizeAlignOf(const TargetABI& target, const types::AbiType& t) {
 		SizeAlign out{ .size = Bytes(0), .alignment = Bytes(1) };
 
 		variant_match(t.value) {
-			variant_case(type_system::IntType, i) {
+			variant_case(types::IntType, i) {
 				CORE_ASSERT(
 					usize(i.width_bits) % 8 == 0, "integer width must be a multiple of 8 bits"
 				);
 				out.size      = Bytes(usize(i.width_bits) / 8);
 				out.alignment = DataLayout::naturalAlignmentForIntWidth(i.width_bits);
 			}
-			variant_case(type_system::FloatType, f) {
+			variant_case(types::FloatType, f) {
 				// Size and alignment come from the target's float table.
 				// missing entry here is a bug rather than a user error.
 				// This should be checked when converting types to ABI types
@@ -48,21 +48,21 @@ namespace abi::layout {
 				out.size      = found.value().size;
 				out.alignment = found.value().alignment;
 			}
-			variant_case_novalue(type_system::BoolType) {
+			variant_case_novalue(types::BoolType) {
 				// C `_Bool`: a 1-byte ABI type on every supported target.
 				out.size      = Bytes(1);
 				out.alignment = Bytes(1);
 			}
-			variant_case_novalue(type_system::CharType) {
+			variant_case_novalue(types::CharType) {
 				// C `char`: a 1-byte integer; signedness does not affect layout.
 				out.size      = Bytes(1);
 				out.alignment = Bytes(1);
 			}
-			variant_case_novalue(type_system::PointerType) {
+			variant_case_novalue(types::PointerType) {
 				out.size      = target.data_layout.pointer_size;
 				out.alignment = target.data_layout.pointer_alignment;
 			}
-			variant_case(type_system::ArrayType, a) {
+			variant_case(types::ArrayType, a) {
 				CORE_ASSERT(
 					a.count > 0, "zero-length arrays are not legal in C ABI; filter on caller side"
 				);
@@ -70,7 +70,7 @@ namespace abi::layout {
 				out.size          = element.size * a.count;
 				out.alignment     = element.alignment;
 			}
-			variant_case(type_system::StructType, s) {
+			variant_case(types::StructType, s) {
 				CORE_ASSERT(
 					!s.fields.empty(), "empty structs are not legal in C ABI; filter on caller side"
 				);
@@ -86,7 +86,7 @@ namespace abi::layout {
 	}
 
 	ComputedLayout computeCLayout(
-		const TargetABI& target, const std::vector<type_system::AbiTypePtr>& fields
+		const TargetABI& target, const std::vector<types::AbiTypePtr>& fields
 	) {
 		CORE_ASSERT(!fields.empty(), "empty structs are not legal in C ABI; filter on caller side");
 

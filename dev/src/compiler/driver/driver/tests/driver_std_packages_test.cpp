@@ -151,13 +151,13 @@ private:
 			if (auto* target_exe
 			    = std::get_if<driver::BuildTargetLLVMExecutable>(&task_data.build_target)) {
 				// We expect the correct stdlib linking options based on getStdLibLinkingArgs
-				auto lib_args = driver::getStdLibLinkingArgs(global_opts);
+				auto lib_args = driver::getNativeStdLibLinkingArgs(global_opts);
 				ASSERT_HAS_VALUE(lib_args);
 
 				// Ensure the options contain the stdlib args
 				assertTrue(
 					target_exe->linking_options.stdlib_link_options
-						== driver::getStdLibLinkingArgs(global_opts),
+						== driver::getNativeStdLibLinkingArgs(global_opts),
 					"Converted task linking options do not contain the standard library linking "
 					"arguments"
 				);
@@ -169,7 +169,7 @@ private:
 	 * @brief Compiles all standard library packages and verifies output artifacts.
 	 */
 	void compileStdPackages() {
-		auto tasks = driver::getStandardLibraryCompilationTasks();
+		auto tasks = driver::getRequiredStdLibCompilationTasks();
 
 		// Run standard library compilation
 		ASSERT_TRUE(driver::compilePackages(tasks).isOk());

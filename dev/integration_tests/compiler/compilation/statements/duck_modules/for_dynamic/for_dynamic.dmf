@@ -45,13 +45,7 @@ fun main() -> i64 = {
     }
 
     printSeparator(); 
-    for (x in dyn_ref_arr) {
-        builtin_output_i64(x);  # 21, 21, 21, 21
-        dyn_ref_arr.pop(3u64);       # This works by accident, since our lists don't shrink.
-    }
-
-    printSeparator(); 
-    builtin_output_i64(i64(dyn_ref_arr.length())); # 0
+    builtin_output_i64(i64(dyn_ref_arr.length())); # 4
 
     printSeparator(); 
     builtin_output_i64(look(&dyn_arr, 1)); # 1
@@ -67,17 +61,21 @@ fun main() -> i64 = {
     }
     
     # ===== Nested fors =====
-    
-    # @TODO: #2000 This should work but we don't have copies. Enable once implemented.
+
+    # @TODO: #2825 Nested `for` over copies of `List[List[i64]]` deep-copies correctly, but 
+    # the copied lists double-free at scope end because destructor insertion is
+    # still a stub.
     # var dyn_matrix: List[List[i64]];
     # var dyn_a: List[i64]; var dyn_b: List[i64];
     # dyn_a.push(1); dyn_b.push(1);
-    # dyn_matrix.push(dyn_a); dyn_matrix.push(dyn_b);
-    # for (row in dyn_matrix) {
-    #     for (col in row) {
+    # dyn_matrix.push(move dyn_a); dyn_matrix.push(move dyn_b);
+    #
+    # for (row in copy dyn_matrix) {
+    #     for (col in copy row) {
     #         builtin_output_i64(col);
     #     }
     # }
+
     # This doesn't work since `[]` doesn't return a ref, so currently this feature is just not supported.
     # for (x: ref i32 in dyn_arr) {
     #     builtin_output_i64(x);

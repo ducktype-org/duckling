@@ -87,6 +87,16 @@ namespace vm {
 		kind      = kind::Pointer{ inner };
 	}
 
+	void Type::defineCPointer(base::Optional<TypeCRef> inner) {
+		CORE_ASSERT(state == State::Declared, "Bad type define");
+		state = State::Defined;
+
+		// A raw native address, not a fat VM pointer - always 8 bytes.
+		size      = TypeSize(Bytes(8));
+		kind_type = Kind::CPointer;
+		kind      = kind::CPointer{ .inner_type = inner };
+	}
+
 	void Type::defineFixedSizeTable(TypeRef inner, u64 element_count) {
 		CORE_ASSERT(state == State::Declared, "Bad type define");
 		state = State::Defined;
@@ -105,18 +115,19 @@ namespace vm {
 	}
 
 	void Type::defineData(
-		const std::vector<std::pair<base::StrID, TypeRef>>& fields_definitions,
-		base::Optional<InheritanceMetadata>                 inheritance_metadata
+		const std::vector<std::tuple<base::StrID, TypeRef, Offset>>& fields_definitions,
+		const TypeSize                                               data_size,
+		base::Optional<InheritanceMetadata>                          inheritance_metadata
 	) {
 		CORE_ASSERT(state == State::Declared, "Bad type define");
 		state = State::Defined;
 
 		kind_type = Kind::Data;
+		size      = data_size;
 		auto data = kind::Data{};
-		for (auto [sub_name, sub_type]: fields_definitions) {
+		for (auto [sub_name, sub_type, sub_offset]: fields_definitions) {
 			data.field_name_map.put(sub_name, data.fields.size());
-			// offset is set during finalization
-			data.fields.emplace_back(kind::FieldDesc{ .offset = Offset(0), .type = sub_type });
+			data.fields.emplace_back(kind::FieldDesc{ .offset = sub_offset, .type = sub_type });
 		}
 		data.inheritance_metadata = std::move(inheritance_metadata);
 		kind                      = data;
@@ -169,14 +180,7 @@ namespace vm {
 					= fixed_size_table.inner_type->getSize() * fixed_size_table.element_count;
 			}
 			variant_case(kind::Data, data) {
-				// calculate offset and size
-				Offset offset(0);
-				for (auto& field: data.fields) {
-					field.offset = offset;
-					field.type->finalize();
-					offset += field.type->getSize();
-				}
-				this->size = offset;
+				for (auto& field: data.fields) field.type->finalize();
 				if_opt_some(data.inheritance_metadata, imd) { inheritsFromImpl(imd); }
 				isInstantiableImpl(data);
 			}
@@ -346,6 +350,7 @@ namespace vm {
 			variant_case(kind::Variant, variant) { return false; }
 			variant_case(kind::Function, function) { return false; }
 			variant_case(kind::Pointer, pointer) { return false; }
+			variant_case(kind::CPointer, cpointer) { return true; }
 			variant_case(kind::Opaque, opaque) { return true; }
 			variant_case(kind::Primitive, primitive) { return true; }
 			variant_default { CORE_PANIC("This should never happen"); }

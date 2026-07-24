@@ -206,7 +206,7 @@ impl ManifestCache {
                 let json = serde_json::to_string(&manifest)
                     .context_internal("failed to serialize registry schema to JSON")?;
                 let package = types::PackageWithUrl {
-                    id: manifest.metadata.name.into(),
+                    name: manifest.metadata.name.into(),
                     version: manifest.metadata.version,
                     url: registry_url,
                 };
@@ -285,7 +285,7 @@ impl ConnectionExt for rusqlite::Connection {
                 url = Columns::Url.name(),
             ),
             rusqlite::named_params![
-                ":package_name": package.id.as_str(),
+                ":package_name": package.name.as_str(),
                 ":package_version": package.version.to_string(),
                 ":package_url": package.url.as_str(),
             ],
@@ -331,7 +331,7 @@ impl ConnectionExt for rusqlite::Connection {
         ))?;
         stmt.query_map(
             rusqlite::named_params![
-                ":package_name": package.id.as_str(),
+                ":package_name": package.name.as_str(),
                 ":package_url": package.url.as_str(),
             ],
             |row| row.get(0),
@@ -355,7 +355,7 @@ impl ConnectionExt for rusqlite::Connection {
                 manifest_json_column = Columns::ManifestJson.name(),
             ),
             rusqlite::named_params![
-                ":package_name": package.id.as_str(),
+                ":package_name": package.name.as_str(),
                 ":package_version": package.version.to_string(),
                 ":package_url": package.url.as_str(),
                 ":package_manifest": manifest_json,
@@ -380,7 +380,7 @@ impl ConnectionExt for rusqlite::Connection {
         ))?;
         for (package, manifest) in multi_manifests {
             stmt.execute(rusqlite::named_params![
-                ":package_name": package.id.as_str(),
+                ":package_name": package.name.as_str(),
                 ":package_version": package.version.to_string(),
                 ":package_url": package.url.as_str(),
                 ":package_manifest": manifest,

@@ -382,7 +382,9 @@ namespace compiler::helios::code {
 		CPtr,
 		Slice,
 		Box,
-		Const
+		Const,
+		SizeOf,
+		AlignOf
 	};
 
 	/**
@@ -718,27 +720,6 @@ namespace compiler::helios::code {
 		FRIEND_MAKEBOX
 
 		MoveExpr(tsh::ExpressionType<> expression_type, ElementOrigin origin, Box<Expr> inner);
-	};
-
-	/**
-	 * @brief Represents a box creation expression.
-	 *
-	 * Currently, box types are not created explicitly, so this node gets created each time we
-	 * encounter a `Direct` to `Box` coercion.
-	 */
-	struct BoxOfExpr final: public Expr {
-		Box<Expr> inner;
-
-		BoxOfExpr(query::Context& ctx, ElementOrigin origin, Box<Expr> inner);
-		void debugPrint(std::ostream& out) const final;
-		void acceptVisitor(HoutExprVisitor&) const final;
-
-		[[nodiscard]] Box<Expr> clone() const final;
-
-	private:
-		FRIEND_MAKEBOX
-
-		BoxOfExpr(tsh::ExpressionType<> expression_type, ElementOrigin origin, Box<Expr> inner);
 	};
 
 	/**

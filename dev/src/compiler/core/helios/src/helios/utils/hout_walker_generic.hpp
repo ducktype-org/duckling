@@ -179,11 +179,6 @@ namespace compiler::helios::code {
 			for (const auto& expression: e.expressions) walk(*expression);
 		}
 
-		void visitBoxOfExpr(const BoxOfExpr& e) override {
-			handler(e);
-			walk(*e.inner);
-		}
-
 		void visitRefOfExpr(const RefOfExpr& e) override {
 			handler(e);
 			walk(*e.inner);

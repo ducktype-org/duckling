@@ -13,6 +13,7 @@ use crate::quackpack::core::{
 use crate::quackpack::schemas::manifest::{
     Manifest as ManifestSchema, OptLevel as SchemaOptLevel, Profile as ProfileSchema,
 };
+use crate::util::IsPlural;
 use crate::util::hash::sha256_string;
 use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail, qp_err};
 
@@ -37,10 +38,9 @@ pub(crate) fn parse(
         ParseMode::FrontMatterScript => {
             let illegal_fields = schema.fields_disallowed_in_expanded_frontmatter();
             if !illegal_fields.is_empty() {
-                let plural = if illegal_fields.len() > 1 { "s" } else { "" };
                 let mut err = qp_err!(
                     "illegal field{} `{}` in the frontmatter at {}",
-                    plural,
+                    illegal_fields.s_if_plural(),
                     illegal_fields.join("`, `"),
                     root.display()
                 );

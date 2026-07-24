@@ -25,12 +25,28 @@ namespace compiler::helios {
 			                                                  : HOUTGlobalDataType::Variable;
 
 			const auto symbol_type = ctx.query<QueryTypeOfSymbol>(symbol)->valueOrThrow();
-			auto       pst_decl    = stmt(ctx, symbol).value();
-			auto       origin      = code::pstOrigin(pst_decl);
+
+			auto maybe_pst_decl = maybeSymbolPst(symbol);
+			auto origin         = [&]() -> code::ElementOrigin {
+                if (maybe_pst_decl.has_value()) {
+                    auto pst_decl = maybe_pst_decl.value().unlock(ctx);
+                    return code::pstOrigin(pst_decl);
+                } else {
+                    // Note: we could generate better origin upon const creation and use it here,
+                    // if we ever needed to
+                    return code::generatedOrigin();
+                }
+			}();
 
 			auto value = [&]() -> std::variant<HOUTGlobalConst, HOUTGlobalVariable> {
 				switch (data_type) {
 				case HOUTGlobalDataType::Variable: {
+					CORE_ASSERT(
+						maybe_pst_decl.has_value(),
+						"Global variable symbol without PST Implemented Semantics is not handled "
+						"in QueryHOUTGlobalData"
+					);
+
 					auto var_decl = stmt(ctx, symbol)->dynamicCast<pst::Variable>().value();
 
 					auto get_initial_value = [&]() -> BoxOrCRef<code::Expr> {
@@ -42,7 +58,7 @@ namespace compiler::helios {
 						}
 
 						return defgen::getDefaultInitializerExpr(
-								   ctx, symbol_type, pst_decl->getStablePosition()
+								   ctx, symbol_type, var_decl->getStablePosition()
 						)
 						    .valueOrThrow();
 					};
