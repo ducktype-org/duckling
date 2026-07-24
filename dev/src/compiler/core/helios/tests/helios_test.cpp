@@ -3693,11 +3693,11 @@ private:
 		auto hout_module
 			= query::entryPoint<compiler::helios::QueryModuleHOUT>(module_id)->valueOrPanic();
 
-		// Just `foo` function:
-		ASSERT_EQUAL(hout_module.functions.size(), 1);
+		// Just `foo` function.
+		ASSERT_EQUAL_PRINT(hout_module.functions.size(), 1);
 
-		// 4 constants + 2 constants per baked template instantiation:
-		ASSERT_EQUAL(hout_module.glob_data.size(), 4 + 2 * 4);
+		// 4 constants + 1 weak const (Number:{1}.inner) added to the module, because it is used by `foo`.
+		ASSERT_EQUAL_PRINT(hout_module.glob_data.size(), 4 + 1);
 	}
 
 	void testOperatoriness() {
