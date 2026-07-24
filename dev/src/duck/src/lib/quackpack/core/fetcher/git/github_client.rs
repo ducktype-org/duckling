@@ -52,6 +52,8 @@ impl<'duck> GithubClient<'duck> {
 
 impl PseudoGitClient for GithubClient<'_> {
     fn get_api_url(repo_url: InternedUrl) -> Option<InternedUrl> {
+        let user = repo_url.username();
+        let port = repo_url.port();
         let scheme = repo_url.scheme();
         let domain = repo_url.domain()?;
         // Check that this is a github repo.
@@ -59,9 +61,11 @@ impl PseudoGitClient for GithubClient<'_> {
             return None;
         }
         let path = repo_url.path();
-        let api_url = format!("{scheme}://api.{domain}/repos{path}/")
+        let mut api_url = format!("{scheme}://api.{domain}/repos{path}/")
             .to_url()
             .ok()?;
+        api_url.set_username(user).ok()?;
+        api_url.set_port(port).ok()?;
         Some(api_url.into())
     }
 

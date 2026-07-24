@@ -65,6 +65,8 @@ impl<'duck> GitlabClient<'duck> {
 
 impl PseudoGitClient for GitlabClient<'_> {
     fn get_api_url(repo_url: InternedUrl) -> Option<InternedUrl> {
+        let user = repo_url.username();
+        let port = repo_url.port();
         let scheme = repo_url.scheme();
         let domain = repo_url.domain()?;
         // Check that this is a gitlab repo.
@@ -74,9 +76,11 @@ impl PseudoGitClient for GitlabClient<'_> {
         // `path()` adds `/` in the beginning.
         let path: String = repo_url.path().chars().skip(1).collect();
         let path_encoded = utf8_percent_encode(&path, PATH_ENCODE_SET);
-        let api_url = format!("{scheme}://{domain}/api/v4/projects/{path_encoded}/")
+        let mut api_url = format!("{scheme}://{domain}/api/v4/projects/{path_encoded}/")
             .to_url()
             .ok()?;
+        api_url.set_username(user).ok()?;
+        api_url.set_port(port).ok()?;
         Some(api_url.into())
     }
 
