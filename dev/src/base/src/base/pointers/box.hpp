@@ -32,6 +32,8 @@ namespace base {
 			"redefinition."
 		);
 
+		// note: it shouldn't be possible to get uninitialized members
+		// the defaults help analyzers avoid false-positive warnings
 		T*                            ptr = nullptr;
 		[[no_unique_address]] Deleter deleter{};
 
@@ -185,6 +187,8 @@ namespace base {
 			"redefinition."
 		);
 
+		// note: it shouldn't be possible to get uninitialized members
+		// the defaults help analyzers avoid false-positive warnings
 		T*                            ptr = nullptr;
 		[[no_unique_address]] Deleter deleter{};
 

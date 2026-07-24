@@ -16,6 +16,8 @@ namespace base {
 	template<class T>
 	class Ref final {
 	private:
+		// note: it shouldn't be possible to get an uninitialized Ref
+		// the default helps analyzers avoid false-positive warnings
 		T* ptr = nullptr;
 
 		template<class U>
