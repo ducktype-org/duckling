@@ -68,6 +68,17 @@ namespace compiler::tsh {
 				declaration_order++;
 			}
 
+			if_opt_some(class_data.destructor, destructor) {
+				elements.push_back(InterfaceElement(
+					destructor,
+					key.value->toAbstractType(),
+					declaration_order,
+					InterfaceElement::InterfaceElementKind::Method,
+					{}
+				));
+				declaration_order++;
+			}
+
 			for (const compiler::helios::SymID ctor_sym: class_data.constructors) {
 				// For now we just handle copy constructors.
 				if (!compiler::helios::defgen::isUserDefinedCopyConstructor(ctx, ctor_sym))
@@ -98,7 +109,7 @@ namespace compiler::tsh {
 			auto components = ctx.query<helios::QueryTupleTypeData>(key.value->toAbstractType())
 			                      ->valueOrThrow()
 			                      .members;
-			u32 declaration_order = 0;
+			u32  declaration_order = 0;
 			for (const auto& component: components) {
 				elements.emplace_back(
 					component,

@@ -14,6 +14,7 @@
 #include "lir_lowering.hpp"
 
 #include "../lir_structure/lir_structure.hpp"
+#include "helios/tsh/symbol_type.hpp"
 
 #include <abi/type_system/type.hpp>
 #include <ctv/numeric_value.hpp>
@@ -82,13 +83,15 @@ namespace compiler::lir {
 			auto& result = ctx.query<tsl::QueryCAbiTypeOf>(type->getSourceType())
 			                   ->valueOrPanicMsg("Query failure.");
 			if (not result.has_value())
-				CORE_PANIC(base::strConcat(
-					"Function type is not compatible with CABI: `",
-					result.error(),
-					"` in symbol `",
-					helios::name(sym),
-					"`."
-				));
+				CORE_PANIC(
+					base::strConcat(
+						"Function type is not compatible with CABI: `",
+						result.error(),
+						"` in symbol `",
+						helios::name(sym),
+						"`."
+					)
+				);
 			return &result.value();
 		};
 
@@ -243,9 +246,11 @@ namespace compiler::lir {
 			return Operation::BooleanNot;
 		// @TODO: add more cases
 		default:
-			CORE_PANIC(base::strConcat(
-				"Operation without direct counterpart", base::enumToStr(mir_operation)
-			));
+			CORE_PANIC(
+				base::strConcat(
+					"Operation without direct counterpart", base::enumToStr(mir_operation)
+				)
+			);
 		}
 	}
 
@@ -504,7 +509,8 @@ namespace compiler::lir {
 			 * @param locs The MIR location.
 			 * @return The LIR locations, possibly with some discarded.
 			 */
-			[[nodiscard]] std::vector<LIRValue> getLocations(const std::vector<mir::MIRValue>& locs
+			[[nodiscard]] std::vector<LIRValue> getLocations(
+				const std::vector<mir::MIRValue>& locs
 			) const {
 				std::vector<LIRValue> result;
 				result.reserve(locs.size());
@@ -534,8 +540,7 @@ namespace compiler::lir {
 
 					[[maybe_unused]]
 					//< temporary for linter
-					auto lir_local
-						= getLocal(local);
+					auto lir_local = getLocal(local);
 
 					switch (flag) {
 						using enum mir::OperationFlag::Flag;
@@ -721,76 +726,50 @@ namespace compiler::lir {
 				}
 				case mir::Operation::DestructIf:
 				case mir::Operation::Destruct: {
-					// The MIR destruct instruction carries `{ MIRFunctionLiteral{destructor}, place
-					// }`; the value to destroy is the second argument.
+					auto args = getLocations(mir_instruction.arguments);
+					CORE_ASSERT(
+						args.size() == 2, "Destruct expects a destructor literal and a place."
+					);
+
 					const auto& to_destruct = mir_instruction.arguments.at(1).get<mir::MIRPlace>();
 					const auto& type        = to_destruct.type;
 
-					// @TODO: #2825 The whole DestructIf implementation is a stub. Implement it once
-					// we know how to call destructors.
-
 					if (type.getRefKind() == tsh::ReferenceKind::Direct
-					    && type.getType().getKind() == tsh::Kind::DynamicArray) {
-						auto lir_place = getLocation(to_destruct);
+					    && not type.getType().isSimple()) {
+						// Layout of `ref T` for the address temporary.
+						auto ref_type = type.withReferenceKind(tsh::ReferenceKind::Ref);
+						auto ref_layout = CRef<tsl::TypeLayout>(
+							&ctx.query<tsl::QuerySymbolTypeLayout>(ref_type)
+								 ->valueOrPanicMsg("layout query failed at LIR stage")
+						);
 
-						if (lir_place.has_value()) {
-							// Emit a call to the `list_free(l: ref [T])` builtin, which will be
-							// lowered to deallocation by the backend.
-							const auto element_type = type.getType()
-							                              .as<tsh::DynamicArrayAbstractType>()
-							                              .getElementType()
-							                              .getType();
-							const helios::SymID free_sym
-								= helios::listFreeSymForType(ctx, element_type);
-							std::vector<LIRValue> call_args;
-							call_args.emplace_back(getFunctionLiteralfromHELIOSID(ctx, free_sym));
-							call_args.emplace_back(lir_place.value());
+						locals.pushBack(LIRLocal::anonymousLocal(ref_layout));
+						LIRPlace addr_place{ locals[locals.lastIndex()], {} };
 
-							curr_block->instructions.emplace_back(
-								Operation::Call,
-								base::Optional<LIRPlace>{},
-								std::move(call_args),
-								mir_instruction.metadata
-							);
-							break;
-						}
+						// addr = &place
+						curr_block->instructions.emplace_back(
+							Operation::AddressOf,
+							addr_place,
+							std::vector<LIRValue>{ args.at(1) },
+							mir_instruction.metadata
+						);
+
+						// destructor(addr)
+						curr_block->instructions.emplace_back(
+							Operation::Call,
+							base::Optional<LIRPlace>{},
+							std::vector<LIRValue>{ args.at(0), LIRValue{ addr_place } },
+							mir_instruction.metadata
+						);
+					} else {
+						// Already a direct/box — call the destructor on it directly.
+						curr_block->instructions.emplace_back(
+							Operation::Call,
+							base::Optional<LIRPlace>{},
+							std::move(args),
+							mir_instruction.metadata
+						);
 					}
-
-					// @TODO: #1894 This is a stub just to test the overall box free'ing logic.
-					// Currently this approach generates a free on every DestructIf if it operates
-					// on a box type (even if the box was moved). This will cause double free's if
-					// the box was moved around between other box variables. In the future we should
-					// insert a proper destructor call here before the free.
-					if (type.getRefKind() == tsh::ReferenceKind::Box) {
-						auto lir_place = getLocation(to_destruct);
-
-						// The free is discarded if it operates on no information (ex. Unit).
-						if (lir_place.has_value()) {
-							// Emit a call to the `box_free(b: box T)` builtin, which will be
-							// lowered to deallocation by the backend.
-							const helios::SymID free_sym
-								= helios::boxFreeSymForType(ctx, type.getType());
-							std::vector<LIRValue> call_args;
-							call_args.emplace_back(getFunctionLiteralfromHELIOSID(ctx, free_sym));
-							call_args.emplace_back(lir_place.value());
-
-							curr_block->instructions.emplace_back(
-								Operation::Call,
-								base::Optional<LIRPlace>{},
-								std::move(call_args),
-								mir_instruction.metadata
-							);
-							break;
-						}
-					}
-
-					CORE_DEV_LOG(
-						Compiler,
-						"DestructIf not implemented for types with non-trivial "
-						"destructors, skipping",
-						"\n"
-					);
-
 					break;
 				}
 				case mir::Operation::Call: {
@@ -827,11 +806,13 @@ namespace compiler::lir {
 					break;
 				}
 				default:
-					throw base::NotYetImplemented(base::strConcat(
-						"instruction ",
-						base::enumToStr(mir_instruction.operation),
-						" in LowerToLIRFunction"
-					));
+					throw base::NotYetImplemented(
+						base::strConcat(
+							"instruction ",
+							base::enumToStr(mir_instruction.operation),
+							" in LowerToLIRFunction"
+						)
+					);
 				}
 				usize after_instruction_count = curr_block->instructions.size();
 				auto  flags                   = lowerFlags(mir_instruction);
@@ -1060,8 +1041,12 @@ namespace compiler::lir {
 		entry_block.terminator = Instruction{ Operation::ReturnVoid, {}, {}, {} };
 
 		for (const auto& function: functions) {
-			entry_block.instructions.push_back(Instruction{
-				Operation::Call, {}, { LIRValue{ FunctionLiteral::fromFunction(*function) } }, {} });
+			entry_block.instructions.push_back(
+				Instruction{ Operation::Call,
+			                 {},
+			                 { LIRValue{ FunctionLiteral::fromFunction(*function) } },
+			                 {} }
+			);
 		}
 
 		base::StableVector<Block> blocks;

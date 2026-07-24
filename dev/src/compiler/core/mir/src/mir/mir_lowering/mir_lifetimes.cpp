@@ -323,32 +323,29 @@ namespace compiler::mir {
 			const MIRPlace& target = instr.output.value();
 
 			if (not target.isLocal()) return {};
-			const MIRLocalRef base             = target.getBase<MIRLocalRef>();
+			const MIRLocalRef base = target.getBase<MIRLocalRef>();
 
 			for (const auto& flag: instr.flags) {
 				if (flag.flag == OperationFlag::Flag::Construct) return {};
-				// If we move this value in this instruction, and at the same time we override it, 
+				// If we move this value in this instruction, and at the same time we override it,
 				// we don't have to call destructor `a = call f(c, b, move a)`
 				if (flag.flag == OperationFlag::Flag::Move && flag.local->id == base->id) return {};
 			}
 
-			auto              local_move_state = move_states.atMaybe(base->id);
-			if (local_move_state && local_move_state.value()->status == MoveStatus::Moved) return {};
-			
+			auto local_move_state = move_states.atMaybe(base->id);
+			if (local_move_state && local_move_state.value()->status == MoveStatus::Moved)
+				return {};
+
 			// The place's type must have a non-trivial destructor.
 			auto destruct_sym_opt = helios::getTypeDestructor(ctx, target.type);
 			if_opt_none(destruct_sym_opt) return {};
-			
+
 			Operation op = Operation::Destruct;
 			if (local_move_state && local_move_state.value()->status == MoveStatus::MaybeMoved)
 				op = Operation::DestructIf;
-			
+
 			return Instruction{
-				op,
-				{},
-				{ MIRFunctionLiteral{ destruct_sym_opt.value() }, target },
-				{},
-				instr.scope,
+				op, {}, { MIRFunctionLiteral{ destruct_sym_opt.value() }, target }, {}, instr.scope,
 			};
 		}
 	}
@@ -369,10 +366,11 @@ namespace compiler::mir {
 			new_instructions.reserve(block.instructions.size());
 
 			for (const auto& instr: block.instructions) {
-				// The destructor of the overwritten value runs before the assignment, and is checked
-				// against the move-state *before* the instruction executes.
-				if (auto old_value_dtor = assignmentDestructorFor(ctx, instr, move_state_info))
-					new_instructions.push_back(std::move(old_value_dtor.value()));
+				// The destructor of the overwritten value runs before the assignment, and is
+				// checked against the move-state *before* the instruction executes.
+				if_opt_some(assignmentDestructorFor(ctx, instr, move_state_info), dtor_instr) {
+					new_instructions.push_back(std::move(dtor_instr));
+				}
 
 				new_instructions.push_back(instr);
 				updateMoveStateMapByInstr(move_state_info, instr);

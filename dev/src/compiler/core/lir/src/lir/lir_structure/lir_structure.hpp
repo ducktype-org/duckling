@@ -283,6 +283,12 @@ namespace compiler::lir {
 		 * @return LIRLocal
 		 */
 		static LIRLocal boolLocal(query::Context& ctx);
+
+		/**
+		 * @brief Creates a unique anonymous local (no helios_id) of the given layout.
+		 * @note Used by LIR lowering when it must materialise a fresh temporary.
+		 */
+		static LIRLocal anonymousLocal(CRef<tsl::TypeLayout> layout);
 	};
 
 	enum class LIRGlobalType { Variable, Constant };
