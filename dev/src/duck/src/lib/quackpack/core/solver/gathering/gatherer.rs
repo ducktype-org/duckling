@@ -1,25 +1,16 @@
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
-use tempfile::TempDir;
 use tracing::debug;
 
 use crate::quackpack::core::fetcher::Fetcher;
-use crate::quackpack::core::fetcher::types::{
-    FetcherResponse, GitCloneResponse, MultiMetadata, PackageWithUrl,
-};
+use crate::quackpack::core::fetcher::types::{FetcherResponse, PackageWithUrl};
 use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
-use crate::quackpack::core::solver::gathering::error_suppression::{
-    GathererComputation, GathererResult,
-};
 use crate::quackpack::core::solver::gathering::fetch_types::{
-    FetchFailure, FetchResponse, FetchSuccess, ManifestsRequest, NotPinnedFailure,
-    NotPinnedRequest, NotPinnedSuccess, PinnedFailure, PinnedRequest, PinnedSuccess,
-    RequestIdentifier,
+    FetchResponse, FetchSuccess, ManifestsRequest, NotPinnedRequest, NotPinnedSuccess,
+    PinnedRequest, PinnedSuccess, RequestAction, RequestIdentifier,
 };
-use crate::quackpack::core::solver::gathering::gatherer_state::{
-    GatheredInfo, GathererState, RequestAction,
-};
+use crate::quackpack::core::solver::gathering::gatherer_state::{GatheredInfo, GathererState};
 use crate::quackpack::core::solver::git_access::GitAccess;
 use crate::quackpack::core::solver::solver_mode::SolverMode;
 use crate::quackpack::core::{
@@ -29,7 +20,8 @@ use crate::quackpack::schemas::registry;
 use crate::quackpack::util::interned_url::InternedUrl;
 use crate::quackpack::util::to_path_buf::ToPathBuf;
 use crate::quackpack::util::to_url::ToUrl;
-use crate::{QuackError, QuackResult, QuackResultContext, StrId, qp_bail_internal};
+use crate::util::error::{ErrorsLogger, MessageError};
+use crate::{QuackResult, QuackResultContext, StrId, qp_bail_internal};
 
 /// A struct for fetching manifests for all the packages potentially used in the dependency resolution.
 pub struct Gatherer<'duck, 'fetcher, 'access, Access: GitAccess> {
@@ -58,19 +50,20 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
         mode: SolverMode,
     ) -> QuackResult<GatheredInfo> {
         let mut state = GathererState::default();
-        let root_fetch_result =
-            self.fetch_root(root_path, root_manifest, root_features, &mut state)?;
+        let mut errors = ErrorsLogger::default();
+        let root_fetch_result = self.fetch_root(
+            root_path,
+            root_manifest,
+            root_features,
+            &mut state,
+            &mut errors,
+        )?;
 
-        let mut errors = vec![];
         let mut fetches = vec![];
-        let mut requests = state
-            .handle_fetch_response(root_fetch_result)?
-            .dump_errors(&mut errors);
+        let mut requests = state.handle_fetch_response(root_fetch_result, &mut errors)?;
         while !fetches.is_empty() || !requests.is_empty() {
             if let Some(request) = requests.pop() {
-                let action = state
-                    .get_request_action(request.clone())?
-                    .dump_errors(&mut errors);
+                let action = state.get_request_action(request.clone(), &mut errors)?;
                 match action {
                     RequestAction::Fetch => fetches.push(request),
                     RequestAction::More {
@@ -80,13 +73,8 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
             }
             if !fetches.is_empty() {
                 let request = fetches.remove(0);
-                let fetch_result = self.fetch(request)?;
-                let response = fetch_result.dump_errors(&mut errors);
-                requests.extend(
-                    state
-                        .handle_fetch_response(response)?
-                        .dump_errors(&mut errors),
-                );
+                let response = self.fetch(request, &mut errors)?;
+                requests.extend(state.handle_fetch_response(response, &mut errors)?);
             }
         }
         if !errors.is_empty() {
@@ -97,7 +85,7 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
                     ))?;
                 }
             } else {
-                return Err(errors.into_iter().next().unwrap());
+                return Err(errors.unwrap_first());
             }
         }
         state.try_into()
@@ -114,6 +102,7 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
         root_manifest: Manifest,
         root_features: HashSet<FeatureName>,
         state: &mut GathererState,
+        errors: &mut ErrorsLogger,
     ) -> QuackResult<FetchResponse> {
         let root_name = root_manifest.name();
         let root_version = root_manifest.version();
@@ -133,11 +122,7 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
             features: root_features,
         };
         // The action is always RequestActionFetch, so ignore returned value.
-        let action = state.get_request_action(ManifestsRequest::NotPinned(root_request))?;
-        if let Some(e) = action.1.into_iter().next() {
-            return Err(e)
-                .context_internal("Request action for the first request should never have errors");
-        }
+        let _ = state.get_request_action(ManifestsRequest::NotPinned(root_request), errors)?;
         Ok(FetchResponse::Success(FetchSuccess::NotPinned(
             NotPinnedSuccess {
                 origin_id: RequestIdentifier {
@@ -161,10 +146,16 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
 
     /// Helper for [`Gatherer::explore()`], performs a fetch.
     #[tracing::instrument(skip_all)]
-    pub fn fetch(&mut self, request: ManifestsRequest) -> GathererResult<FetchResponse> {
+    pub fn fetch(
+        &mut self,
+        request: ManifestsRequest,
+        errors: &mut ErrorsLogger,
+    ) -> QuackResult<FetchResponse> {
         debug!(?request);
         match request {
-            ManifestsRequest::Pinned(pinned_request) => self.fetch_registry_pinned(pinned_request),
+            ManifestsRequest::Pinned(pinned_request) => {
+                self.fetch_registry_pinned(pinned_request, errors)
+            }
             ManifestsRequest::NotPinned(not_pinned_request) => {
                 match not_pinned_request.id.source.kind() {
                     SourceKind::Registry => {
@@ -173,16 +164,17 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
                             &not_pinned_request,
                             url,
                             not_pinned_request.id.name,
+                            errors,
                         ))
                     }
                     SourceKind::Git(git_ref) => {
                         let url = not_pinned_request.id.source.url();
-                        Ok(self.fetch_git(&not_pinned_request, url, *git_ref))
+                        Ok(self.fetch_git(&not_pinned_request, url, *git_ref, errors))
                     }
                     SourceKind::Local => {
                         let path_url = not_pinned_request.id.source.url();
                         let path = path_url.to_path_buf()?;
-                        Ok(self.fetch_local(&not_pinned_request, &path))
+                        Ok(self.fetch_local(&not_pinned_request, &path, errors))
                     }
                 }
             }
@@ -191,14 +183,12 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
 
     /// Helper for [`Gatherer::explore()`], performs a pinned registry fetch
     /// (registry fetch with a specified version).
-    fn fetch_registry_pinned(&mut self, request: PinnedRequest) -> GathererResult<FetchResponse> {
+    fn fetch_registry_pinned(
+        &mut self,
+        request: PinnedRequest,
+        errors: &mut ErrorsLogger,
+    ) -> QuackResult<FetchResponse> {
         debug!("fetching registry (pinned)");
-        let fetch_failure = || {
-            FetchResponse::Failed(FetchFailure::Pinned(PinnedFailure {
-                origin_id: request.id,
-                origin_version: request.version,
-            }))
-        };
         if !matches!(request.id.source.kind(), SourceKind::Registry) {
             qp_bail_internal!("tried to make pinned registry fetch for a non-registry source");
         };
@@ -207,34 +197,35 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
             version: request.version,
             url: request.id.source.url(),
         };
-        let fetcher_response: GathererComputation<Option<FetcherResponse<registry::Manifest>>> =
-            self.fetcher.get_package_metadata(&pkg_to_fetch).into();
-        let Some(fetcher_response) = fetcher_response.0 else {
-            return Ok(GathererComputation(fetch_failure(), fetcher_response.1));
+        let fetcher_response = match self.fetcher.get_package_metadata(&pkg_to_fetch) {
+            Ok(response) => response,
+            Err(e) => {
+                errors.log(e);
+                return Ok(FetchResponse::failed_pinned(request.id, request.version));
+            }
         };
         let answer_identity = FullIdentity::new(
             request.id.name,
             FullOrigin::for_registry(request.id.source.url()),
         );
         let FetcherResponse::Some(registry_manifest) = fetcher_response else {
-            return Ok(GathererComputation::only_success(fetch_failure()));
+            return Ok(FetchResponse::failed_pinned(request.id, request.version));
         };
-        let manifest: QuackResult<Manifest> = registry_manifest.try_into();
-        let computation = match manifest {
-            Ok(manifest) => GathererComputation::only_success(FetchResponse::Success(
-                FetchSuccess::Pinned(PinnedSuccess {
+        match <registry::Manifest as TryInto<Manifest>>::try_into(registry_manifest) {
+            Ok(manifest) => Ok(FetchResponse::Success(FetchSuccess::Pinned(
+                PinnedSuccess {
                     origin_id: request.id,
                     origin_version: request.version,
                     answer_package: PackageId::new(answer_identity, manifest.version()),
                     fetched_manifest: Box::new(manifest),
-                }),
-            )),
+                },
+            ))),
             Err(e) => {
                 debug!("failed to fetch: {e}");
-                GathererComputation(fetch_failure(), vec![e])
+                errors.log(e);
+                Ok(FetchResponse::failed_pinned(request.id, request.version))
             }
-        };
-        Ok(computation)
+        }
     }
 
     /// Helper for [`Gatherer::explore()`], performs a not pinned registry fetch
@@ -244,27 +235,24 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
         request: &NotPinnedRequest,
         url: InternedUrl,
         real_name: StrId,
-    ) -> GathererComputation<FetchResponse> {
+        errors: &mut ErrorsLogger,
+    ) -> FetchResponse {
         debug!("fetching registry (not pinned)");
-        let fetch_failure = || {
-            FetchResponse::Failed(FetchFailure::NotPinned(NotPinnedFailure {
-                origin_id: request.id,
-            }))
-        };
-        let fetcher_response: GathererComputation<Option<FetcherResponse<MultiMetadata>>> =
-            self.fetcher.get_package_all_metadata(url, real_name).into();
-        let Some(fetcher_response) = fetcher_response.0 else {
-            return GathererComputation(fetch_failure(), fetcher_response.1);
+        let fetcher_response = match self.fetcher.get_package_all_metadata(url, real_name) {
+            Ok(response) => response,
+            Err(e) => {
+                errors.log(e);
+                return FetchResponse::failed_not_pinned(request.id);
+            }
         };
         let FetcherResponse::Some(fetcher_response) = fetcher_response else {
-            return GathererComputation::only_success(fetch_failure());
+            return FetchResponse::failed_not_pinned(request.id);
         };
         let answer_identity = FullIdentity::new(real_name, FullOrigin::for_registry(url));
         let mut fetch_response = NotPinnedSuccess {
             origin_id: request.id,
             fetched_manifests: HashMap::new(),
         };
-        let mut errors = vec![];
         for manifest in fetcher_response.packages_metadata {
             let manifest: QuackResult<Manifest> = manifest.try_into();
             match manifest {
@@ -276,14 +264,11 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
                 }
                 Err(e) => {
                     debug!("failed to fetch: {e}");
-                    errors.push(e);
+                    errors.log(e);
                 }
             }
         }
-        GathererComputation(
-            FetchResponse::Success(FetchSuccess::NotPinned(fetch_response)),
-            errors,
-        )
+        FetchResponse::Success(FetchSuccess::NotPinned(fetch_response))
     }
 
     /// Helper for [`Gatherer::explore()`], performs a git fetch
@@ -293,37 +278,31 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
         request: &NotPinnedRequest,
         url: InternedUrl,
         reference: GitReference,
-    ) -> GathererComputation<FetchResponse> {
+        errors: &mut ErrorsLogger,
+    ) -> FetchResponse {
         debug!("fetching git");
-        let fetch_failure = || {
-            FetchResponse::Failed(FetchFailure::NotPinned(NotPinnedFailure {
-                origin_id: request.id,
-            }))
-        };
-        match self.try_get_cached_git(request, url, reference) {
-            Ok(Some(success)) => {
-                debug!("git request was cached");
-                return GathererComputation::only_success(FetchResponse::Success(
-                    FetchSuccess::NotPinned(success),
-                ));
-            }
-            Ok(None) => {}
-            Err(e) => {
-                let mut result = GathererComputation::only_success(fetch_failure());
-                result.1.push(QuackError::message(format!(
-                    "failed to get cached git: {e}"
-                )));
-                return result;
-            }
+        // We create a temporary logger to check if `try_get_cached_git` produced any errors.
+        let mut tmp_logger = ErrorsLogger::default();
+        let cached_git = self.try_get_cached_git(request, url, reference, &mut tmp_logger);
+        if !tmp_logger.is_empty() {
+            let err = tmp_logger.unwrap_first();
+            errors.log(err.context(MessageError::new("when trying to get cached git")));
+            return FetchResponse::failed_not_pinned(request.id);
+        }
+        if let Some(success) = cached_git {
+            debug!("git request was cached");
+            return FetchResponse::Success(FetchSuccess::NotPinned(success));
         }
         if self.fetcher.ctx().is_offline() {
-            return GathererComputation::only_success(fetch_failure());
+            return FetchResponse::failed_not_pinned(request.id);
         }
 
-        let fetcher_response: GathererComputation<Option<(GitCloneResponse, TempDir)>> =
-            self.fetcher.clone_from_git(&url, reference).into();
-        let Some((cloned_pkg, path_where_cloned)) = fetcher_response.0 else {
-            return GathererComputation(fetch_failure(), fetcher_response.1);
+        let (cloned_pkg, path_where_cloned) = match self.fetcher.clone_from_git(&url, reference) {
+            Ok(response) => response,
+            Err(e) => {
+                errors.log(e);
+                return FetchResponse::failed_not_pinned(request.id);
+            }
         };
         let answer_identity = FullIdentity::new(
             request.id.name,
@@ -335,51 +314,65 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
                     .store(url, &cloned_pkg.commit_hash, path_where_cloned.path())
         {
             debug!("failed to store a new git: {e}");
-            return GathererComputation(fetch_failure(), vec![e]);
+            errors.log(e);
+            return FetchResponse::failed_not_pinned(request.id);
         }
         let answer_pkg = PackageId::new(answer_identity, cloned_pkg.package.manifest().version());
-        GathererComputation::only_success(FetchResponse::Success(FetchSuccess::NotPinned(
-            NotPinnedSuccess {
-                origin_id: request.id,
-                fetched_manifests: HashMap::from([(
-                    answer_pkg,
-                    Box::new(cloned_pkg.package.manifest().clone()),
-                )]),
-            },
-        )))
+        FetchResponse::Success(FetchSuccess::NotPinned(NotPinnedSuccess {
+            origin_id: request.id,
+            fetched_manifests: HashMap::from([(
+                answer_pkg,
+                Box::new(cloned_pkg.package.manifest().clone()),
+            )]),
+        }))
     }
 
+    /// Helper for [`Gatherer::fetch_git`].
+    /// Searches for cached git satisfying the given request and loads the found package with [`PackageLoader`].
+    /// If it cannot find a cached git, returns [`None`].
     fn try_get_cached_git(
         &self,
         request: &NotPinnedRequest,
         url: InternedUrl,
         reference: GitReference,
-    ) -> QuackResult<Option<NotPinnedSuccess>> {
+        errors: &mut ErrorsLogger,
+    ) -> Option<NotPinnedSuccess> {
         if let GitReference::Rev(commit) = reference
             && let Some(path) = self.git_access.path_if_stored(url, &commit)
         {
             let answer_identity =
                 FullIdentity::new(request.id.name, FullOrigin::for_git(url, commit));
+            let source = match Source::for_local(&path) {
+                Ok(source) => source,
+                Err(e) => {
+                    errors.log(e);
+                    return None;
+                }
+            };
             let storage_local_request = NotPinnedRequest {
                 id: RequestIdentifier {
                     name: request.id.name,
-                    source: Source::for_local(&path)?,
+                    source,
                 },
                 versions: None,
                 features: [].into(),
             };
-            let stored_git_manifest = self.fetch_local(&storage_local_request, &path);
-            if let FetchResponse::Success(FetchSuccess::NotPinned(success)) = stored_git_manifest.0
+            // We create a dummy logger, because we do not care about errors of `fetch_local`,
+            // if it returns a `FetchResponse::Success` then there were no errors anyway.
+            let mut dummy_logger = ErrorsLogger::default();
+            let stored_git_manifest =
+                self.fetch_local(&storage_local_request, &path, &mut dummy_logger);
+            if let FetchResponse::Success(FetchSuccess::NotPinned(success)) = stored_git_manifest
                 && let Some(manifest) = success.fetched_manifests.into_values().next()
             {
                 let pkg = PackageId::new(answer_identity, manifest.version());
-                return Ok(Some(NotPinnedSuccess {
+                return Some(NotPinnedSuccess {
                     origin_id: request.id,
                     fetched_manifests: [(pkg, manifest)].into(),
-                }));
+                });
             }
         }
-        Ok(None)
+        None
     }
 
     /// Helper for [`Gatherer::explore()`], performs a local fetch
@@ -388,38 +381,27 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
         &self,
         request: &NotPinnedRequest,
         path: &Path,
-    ) -> GathererComputation<FetchResponse> {
-        debug!("fetching local");
-        let fetch_failure = || {
-            FetchResponse::Failed(FetchFailure::NotPinned(NotPinnedFailure {
-                origin_id: request.id,
-            }))
-        };
-        let pcx = PackageLoader::find_at_exact_directory(path, self.fetcher.ctx());
-        match pcx {
-            Ok(pcx) => {
-                let root = pcx.package().root();
-                let Ok(answer_origin) = FullOrigin::for_local(root) else {
-                    return GathererComputation::only_success(fetch_failure());
-                };
-                let answer_identity = FullIdentity::new(request.id.name, answer_origin);
-                GathererComputation::only_success(FetchResponse::Success(FetchSuccess::NotPinned(
-                    NotPinnedSuccess {
-                        origin_id: request.id,
-                        fetched_manifests: HashMap::from([(
-                            PackageId::new(answer_identity, pcx.package().version()),
-                            Box::new(pcx.package().manifest().clone()),
-                        )]),
-                    },
-                )))
-            }
+        errors: &mut ErrorsLogger,
+    ) -> FetchResponse {
+        let pcx = match PackageLoader::find_at_exact_directory(path, self.fetcher.ctx()) {
+            Ok(pcx) => pcx,
             Err(e) => {
-                debug!("failed to parse a package: {e}");
-                let mut result = GathererComputation::only_success(fetch_failure());
-                result.1.push(e);
-                result
+                errors.log(e);
+                return FetchResponse::failed_not_pinned(request.id);
             }
-        }
+        };
+        let root = pcx.package().root();
+        let Ok(answer_origin) = FullOrigin::for_local(root) else {
+            return FetchResponse::failed_not_pinned(request.id);
+        };
+        let answer_identity = FullIdentity::new(request.id.name, answer_origin);
+        FetchResponse::Success(FetchSuccess::NotPinned(NotPinnedSuccess {
+            origin_id: request.id,
+            fetched_manifests: HashMap::from([(
+                PackageId::new(answer_identity, pcx.package().version()),
+                Box::new(pcx.package().manifest().clone()),
+            )]),
+        }))
     }
 }
 
