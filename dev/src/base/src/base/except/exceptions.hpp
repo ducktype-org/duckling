@@ -106,8 +106,7 @@ namespace base {
  * @brief Panics if execution flow reaches this statement outside of a unit test. Can be used to mark e.g. helper functions designed purely for testing.
  *
  * In test binaries (compiled with DUCKLING_TEST_BUILD) this is a no-op.
- * In Dev builds outside tests, this throws a panic.
- * In Release builds, this is a compiler hint that the code is unreachable.
+ * Elsewhere throws a panic.
  */
 #if defined(DUCKLING_TEST_BUILD)
 	#define PANIC_IF_NOT_TEST() do {} while(0)
