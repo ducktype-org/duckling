@@ -1,4 +1,5 @@
 //! Module for using Github's API instead of blindly cloning the full repository.
+//! The whole documentation can be found here: `https://docs.github.com/en/rest`.
 //!
 //! Github's API:
 //! -------------
@@ -67,6 +68,7 @@ impl PseudoGitClient for GithubClient<'_> {
     fn get_commit_hash(&self, api_url: InternedUrl, reference: GitReference) -> QuackResult<StrId> {
         match reference {
             GitReference::Default => {
+                // Docs: `https://docs.github.com/en/rest/repos/repos?apiVersion=2026-03-10#get-a-repository`.
                 let mut tmp_url = api_url.as_url().clone();
                 let path = api_url.path();
                 let new_path = path.trim_end_matches('/');
@@ -77,6 +79,7 @@ impl PseudoGitClient for GithubClient<'_> {
                 self.get_commit_hash(api_url, GitReference::Branch(default_branch))
             }
             GitReference::Tag(tag) => {
+                // Docs: `https://docs.github.com/en/rest/git/tags?apiVersion=2026-03-10#get-a-tag.
                 let url = api_url.join("git/ref/tags/")?.join(&tag)?;
                 let request = create_get_request(&url)?;
                 let response = self.client.request(request)?;
@@ -84,6 +87,7 @@ impl PseudoGitClient for GithubClient<'_> {
                 Ok(commit_hash)
             }
             GitReference::Branch(branch) => {
+                // Docs: `https://docs.github.com/en/rest/branches/branches?apiVersion=2026-03-10#get-a-branch`.
                 let url = api_url.join("git/ref/heads/")?.join(&branch)?;
                 let request = create_get_request(&url)?;
                 let response = self.client.request(request)?;
@@ -95,6 +99,7 @@ impl PseudoGitClient for GithubClient<'_> {
     }
 
     fn download_manifest(&self, api_url: InternedUrl, commit: StrId) -> QuackResult<Manifest> {
+        // Docs: `https://docs.github.com/en/rest/repos/contents?apiVersion=2026-03-10#get-repository-content`.
         let mut url = api_url.join(&format!("contents/{}", PackageLoader::MANIFEST_NAME,))?;
         url.set_query(Some(&format!("ref={}", commit)));
         let mut request = create_get_request(&url)?;
@@ -115,24 +120,30 @@ impl PseudoGitClient for GithubClient<'_> {
     }
 }
 
+/// Type representing the interesting part of the response to `.../branches/<branch>` and `.../tags/<tag>` requests.
+/// Based on `https://docs.github.com/en/rest/branches/branches?apiVersion=2026-03-10#get-a-branch` and
+/// `https://docs.github.com/en/rest/git/tags?apiVersion=2026-03-10#get-a-tag`.
 #[derive(Deserialize)]
 struct CommitResponse {
     pub object: CommitResponseSha,
 }
 
+/// Helper for [`CommitResponse`].
 #[derive(Deserialize)]
 struct CommitResponseSha {
     pub sha: String,
 }
 
-/// Deserialize the response for requests `.../branches/<branch>` and `.../tags/<tag>` and get the `commit.id` field.
+/// Deserialize the response for requests `.../branches/<branch>` and `.../tags/<tag>` and get the `object.sha` field.
 fn get_commit_from_response(response: Response) -> QuackResult<StrId> {
     let data: CommitResponse = response
         .deserialize_json()
-        .context("failed to deserialize response")?;
+        .context("failed to deserialize response to CommitResponse")?;
     Ok(data.object.sha.into())
 }
 
+/// Type representing the interesting part of the response to get repo request.
+/// Based on `https://docs.github.com/en/rest/repos/repos?apiVersion=2026-03-10#get-a-repository`.
 #[derive(Deserialize)]
 struct DefaultBranchResponse {
     default_branch: String,
@@ -142,7 +153,7 @@ struct DefaultBranchResponse {
 fn get_default_branch_from_response(response: Response) -> QuackResult<StrId> {
     let data: DefaultBranchResponse = response
         .deserialize_json()
-        .context("failed to deserialize response")?;
+        .context("failed to deserialize response to DefaultBranchResponse")?;
     Ok(data.default_branch.into())
 }
 
