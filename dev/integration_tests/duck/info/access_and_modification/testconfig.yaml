@@ -12,6 +12,4 @@ Tests:
     Description: last_access and last_modification are set properly
     Cases:
       verify-timestamps:
-        # @TODO: #3189 Reenable this test
-        Enabled: "false"
         test-cmd: "duck -C foo info > duck-info-output.txt"
