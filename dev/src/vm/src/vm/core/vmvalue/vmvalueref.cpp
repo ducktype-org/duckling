@@ -13,7 +13,7 @@ vm::VMValueRef vm::interpreted_data_variant::Table::get(usize index) {
 }
 
 [[nodiscard]] base::ModRawView vm::interpreted_data_variant::Table::asBytesView() const {
-	return process->getMemory().getPointerData(begin, 0);
+	return process->getMemory().getRemainingPointerData(begin);
 }
 
 base::Optional<vm::InterpretedDataVariant> vm::VMValueRef::readData() const {
