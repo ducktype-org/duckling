@@ -15,7 +15,7 @@
 				_Pragma("GCC diagnostic ignored \"-Wconversion\"")                          \
 					_Pragma("GCC diagnostic ignored \"-Wdeprecated-declarations\"")
 #elif defined(_MSC_VER)
-	#error "LLVM_INCLUDE_BEGIN does not support MSVS yet"
+	#error "LLVM_INCLUDE_BEGIN does not support MSVC yet"
 #endif
 
 #define LLVM_INCLUDE_END() _Pragma("GCC diagnostic pop")
