@@ -107,13 +107,13 @@ private:
 		auto root_deps = prev->getNodeDeps(root_node);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			(void) ctx.query<driver::CompileModule>({ .module_id        = module,
-			                                          .backend_type     = driver::BackendType::LLVM,
-			                                          .build_debug_info = false });
+			ctx.query<driver::CompileModule>({ .module_id        = module,
+			                                   .backend_type     = driver::BackendType::LLVM,
+			                                   .build_debug_info = false });
 
 			// Trigger metadata merge by calling the same queries
-			(void) ctx.query<MetadataPersistenceTestQuery>({ 42 });
-			(void) ctx.query<MetadataPersistenceTestQuery>({ 100 });
+			ctx.query<MetadataPersistenceTestQuery>({ 42 });
+			ctx.query<MetadataPersistenceTestQuery>({ 100 });
 		});
 
 		// ========== Verify metadata persisted from previous compilation ==========

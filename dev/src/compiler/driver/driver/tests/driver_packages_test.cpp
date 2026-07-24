@@ -227,7 +227,7 @@ private:
 		ASSERT_NO_VALUE(missing);
 
 		assertThrows<base::Panic>(
-			[&]() { (void) global_state::getPackageRef(base::StrID("definitely_missing")); },
+			[&]() { std::ignore = global_state::getPackageRef(base::StrID("definitely_missing")); },
 			"Expected panic for missing package"
 		);
 
