@@ -4,11 +4,6 @@
 
 #include <filesystem/file.hpp>
 
-// We need to:
-// * REPL stays repl
-// * we introduce script modules and module modules nodes in frontend
-// * we have endpoints for script compilation and module compilation -- script magic in hidden in implementation, and shared with repl
-// * yay
 
 namespace compiler::repl {
 	/**
