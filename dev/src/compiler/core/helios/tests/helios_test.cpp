@@ -3696,7 +3696,8 @@ private:
 		// Just `foo` function.
 		ASSERT_EQUAL_PRINT(hout_module.functions.size(), 1);
 
-		// 4 constants + 1 weak const (Number:{1}.inner) added to the module, because it is used by `foo`.
+		// 4 constants + 1 weak const (Number:{1}.inner) added to the module, because it is used by
+		// `foo`.
 		ASSERT_EQUAL_PRINT(hout_module.glob_data.size(), 4 + 1);
 	}
 
