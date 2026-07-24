@@ -197,10 +197,12 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
             version: request.version,
             url: request.id.source.url(),
         };
-        let fetcher_response = self.fetcher.get_package_metadata(&pkg_to_fetch);
-        let Ok(fetcher_response) = fetcher_response else {
-            errors.log(fetcher_response.unwrap_err());
-            return Ok(FetchResponse::failed_pinned(request.id, request.version));
+        let fetcher_response = match self.fetcher.get_package_metadata(&pkg_to_fetch) {
+            Ok(response) => response,
+            Err(e) => {
+                errors.log(e);
+                return Ok(FetchResponse::failed_pinned(request.id, request.version));
+            }
         };
         let answer_identity = FullIdentity::new(
             request.id.name,
@@ -236,10 +238,12 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
         errors: &mut ErrorsLogger,
     ) -> FetchResponse {
         debug!("fetching registry (not pinned)");
-        let fetcher_response = self.fetcher.get_package_all_metadata(url, real_name);
-        let Ok(fetcher_response) = fetcher_response else {
-            errors.log(fetcher_response.unwrap_err());
-            return FetchResponse::failed_not_pinned(request.id);
+        let fetcher_response = match self.fetcher.get_package_all_metadata(url, real_name) {
+            Ok(response) => response,
+            Err(e) => {
+                errors.log(e);
+                return FetchResponse::failed_not_pinned(request.id);
+            }
         };
         let FetcherResponse::Some(fetcher_response) = fetcher_response else {
             return FetchResponse::failed_not_pinned(request.id);
@@ -293,10 +297,12 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
             return FetchResponse::failed_not_pinned(request.id);
         }
 
-        let fetcher_response = self.fetcher.clone_from_git(&url, reference);
-        let Ok((cloned_pkg, path_where_cloned)) = fetcher_response else {
-            errors.log(fetcher_response.unwrap_err());
-            return FetchResponse::failed_not_pinned(request.id);
+        let (cloned_pkg, path_where_cloned) = match self.fetcher.clone_from_git(&url, reference) {
+            Ok(response) => response,
+            Err(e) => {
+                errors.log(e);
+                return FetchResponse::failed_not_pinned(request.id);
+            }
         };
         let answer_identity = FullIdentity::new(
             request.id.name,
@@ -336,10 +342,12 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
         {
             let answer_identity =
                 FullIdentity::new(request.id.name, FullOrigin::for_git(url, commit));
-            let source = Source::for_local(&path);
-            let Ok(source) = source else {
-                errors.log(source.unwrap_err());
-                return None;
+            let source = match Source::for_local(&path) {
+                Ok(source) => source,
+                Err(e) => {
+                    errors.log(e);
+                    return None;
+                }
             };
             let storage_local_request = NotPinnedRequest {
                 id: RequestIdentifier {
@@ -375,10 +383,12 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
         path: &Path,
         errors: &mut ErrorsLogger,
     ) -> FetchResponse {
-        let pcx = PackageLoader::find_at_exact_directory(path, self.fetcher.ctx());
-        let Ok(pcx) = pcx else {
-            errors.log(pcx.unwrap_err());
-            return FetchResponse::failed_not_pinned(request.id);
+        let pcx = match PackageLoader::find_at_exact_directory(path, self.fetcher.ctx()) {
+            Ok(pcx) => pcx,
+            Err(e) => {
+                errors.log(e);
+                return FetchResponse::failed_not_pinned(request.id);
+            }
         };
         let root = pcx.package().root();
         let Ok(answer_origin) = FullOrigin::for_local(root) else {
