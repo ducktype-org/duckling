@@ -36,7 +36,7 @@ namespace base {
 
 		Ref(std::nullptr_t) = delete;
 
-		// @TODO: It would be preferred to assertNotNull during copy, but then the type is not
+		// It would be preferred to assertNotNull during copy, but then the type is not
 		// trivially copyable.
 
 		// Copy:
