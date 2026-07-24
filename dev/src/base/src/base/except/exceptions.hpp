@@ -76,6 +76,10 @@ namespace base {
 		[[nodiscard]]
 		const char* what() const noexcept override;
 	};
+
+	namespace internal {
+		constinit inline bool is_unit_test = false;
+	}
 }
 
 /**
@@ -103,20 +107,13 @@ namespace base {
 #endif
 
 /**
- * @brief Panics if execution flow reaches this statement outside of a unit test. Can be used to
- * mark e.g. helper functions designed purely for testing.
+ * @brief Panics if execution flow reaches this statement outside of a unit test.
+ * Can be used to mark e.g. helper functions designed purely for testing.
  *
- * In test binaries (compiled with DUCKLING_TEST_BUILD) this is a no-op.
- * Elsewhere throws a panic.
+ * In test binaries this is a no-op, elsewhere throws a panic.
  */
-#ifdef DUCKLING_TEST_BUILD
-	#define PANIC_IF_NOT_TEST() \
-		do {                    \
-		} while (0)
-#else
-	#define PANIC_IF_NOT_TEST() \
-		DETAIL_THROW_PANIC("    Code expected to run only in unit test context")
-#endif
+#define PANIC_IF_NOT_TEST() \
+	CORE_ASSERT(not base::internal::is_unit_test, "Not unit test binary")
 
 #if defined(BUILD_TYPE_DEV)
 	/**
