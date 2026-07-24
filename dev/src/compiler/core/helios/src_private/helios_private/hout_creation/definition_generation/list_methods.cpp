@@ -2,12 +2,15 @@
 
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/queries/function_queries.hpp>
+#include <helios_private/hout_creation/shorthands/shorthands.hpp>
 #include <helios_private/symbols/generated_symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
 #include <query_framework/standard_query/query_impl.hpp>
 
 namespace compiler::helios::defgen {
+	using namespace code::shorthands;
+
 	SymID pushMethodForType(query::Context& ctx, tsh::AbstractType type) {
 		return ctx.query<QueryGeneratedSymbol>(
 			{ .name                  = base::StrID("push"),
@@ -22,16 +25,6 @@ namespace compiler::helios::defgen {
 		);
 	}
 
-	namespace {
-		Box<code::Expr> buildDereffedSelf(query::Context& ctx, SymID self_symbol) {
-			return makeBox<code::DerefExpr>(
-				ctx,
-				code::generatedOrigin(),
-				makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), self_symbol)
-			);
-		}
-	}
-
 	struct IMPLEMENT_QUERY(QueryPushMethod, query::QResult<HOUTFunction>) {
 		static auto provide(query::Context& ctx, const QKey& key) -> PResult {
 			auto& decl = ctx.query<QueryDeclOfFun>(pushMethodForType(ctx, key))->valueOrThrow();
@@ -39,22 +32,17 @@ namespace compiler::helios::defgen {
 			const SymID self_symbol    = decl.parameters.at(0).helios_symbol;
 			const SymID element_symbol = decl.parameters.at(1).helios_symbol;
 
-			std::vector<Box<code::Stmt>> body{};
-			body.emplace_back(makeBox<code::ExprStmt>(
-				code::generatedOrigin(),
-				makeBox<code::ListPushExpr>(
-					code::generatedOrigin(),
-					buildDereffedSelf(ctx, self_symbol),
-					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), element_symbol)
-				)
-			));
+			const Shorthand s{ ctx };
+
+			auto body
+				= StmtPack{ s.expr(s.listPush(s.deref(s.ident(self_symbol)), s.ident(element_symbol))
+				            ) }
+			          .toCodeBlock();
 
 			return HOUTFunction(
 				code::generatedOrigin(),
 				&decl,
-				std::make_shared<const code::CodeBlock>(code::CodeBlock{
-					.statements = std::move(body),
-				})
+				std::make_shared<const code::CodeBlock>(std::move(body))
 			);
 		}
 
@@ -70,22 +58,16 @@ namespace compiler::helios::defgen {
 			const SymID self_symbol  = decl.parameters.at(0).helios_symbol;
 			const SymID count_symbol = decl.parameters.at(1).helios_symbol;
 
-			std::vector<Box<code::Stmt>> body{};
-			body.emplace_back(makeBox<code::ExprStmt>(
-				code::generatedOrigin(),
-				makeBox<code::ListPopExpr>(
-					code::generatedOrigin(),
-					buildDereffedSelf(ctx, self_symbol),
-					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), count_symbol)
-				)
-			));
+			const Shorthand s{ ctx };
+
+			auto body
+				= StmtPack{ s.expr(s.listPop(s.deref(s.ident(self_symbol)), s.ident(count_symbol))) }
+			          .toCodeBlock();
 
 			return HOUTFunction(
 				code::generatedOrigin(),
 				&decl,
-				std::make_shared<const code::CodeBlock>(code::CodeBlock{
-					.statements = std::move(body),
-				})
+				std::make_shared<const code::CodeBlock>(std::move(body))
 			);
 		}
 

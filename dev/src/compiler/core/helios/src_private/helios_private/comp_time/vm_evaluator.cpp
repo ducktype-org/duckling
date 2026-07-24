@@ -136,7 +136,7 @@ namespace {
 
 		lir::Function func{
 			.mangled_name       = func_name,
-			.abi                = helios::DefaultAbi{},
+			.abi                = { lir::LIRAbi::DefaultAbi{} },
 			.link_once          = false,
 			.ignore_on_dvm      = false,
 			.ignore_on_llvm     = true,

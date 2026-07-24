@@ -40,6 +40,7 @@ public:
 
 		TESTER_ADD_TEST(testErrorLoggingExpandStatements);
 		TESTER_ADD_TEST(testErrorLoggingCyclicErrors);
+		TESTER_ADD_TEST(testErrorLoggingTemplates);
 		TESTER_ADD_TEST(testPointerCastErrors);
 		TESTER_ADD_TEST(testBackendDependentAttributeErrors);
 
@@ -1022,6 +1023,31 @@ private:
 				{ "Cannot implicitly copy a value of non-trivially-copyable type `List[i32]`" },
 				1
 			);
+
+			checkForErrorOnCompileModule(
+				R"(
+				template(a: i64 = 2)
+				namespace N { }
+
+				fun main() -> i64 = {
+					N:{};
+					return 0;
+				}
+
+			)",
+				{ "Feature not implemented", "Default values" },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				R"(
+				template(a: i64 = 2)
+				var b = a;
+
+			)",
+				{ "Feature not implemented" },
+				1
+			);
 		}
 
 		// ============================ Other errors ============================
@@ -1428,6 +1454,106 @@ private:
 				const Y = xWithAdded(10);
 			)",
 			{ "cycle" },
+			1
+		);
+	}
+
+	void testErrorLoggingTemplates() {
+		// @TODO: #3042 adjust the tests here
+
+		// ============================ Errors inside template ============================
+
+		checkForErrorOnCompileModule(
+			R"(
+				template(a: i64)
+				fun foo() = {
+					return a + b;
+				}
+
+				fun main() = {
+					foo:{1}();
+				}
+			)",
+			{ "Symbol 'b' not found in lookup" },
+			1
+		);
+
+		// ============================ Errors inside arguments ============================
+
+		checkForErrorOnCompileModule(
+			R"(
+				template(a: i64)
+				namespace N { }
+
+				fun main() -> i64 = {
+					N:{1, 2, 3};
+					return 0;
+				}
+
+			)",
+			{ "argument count", "parameter count" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				template(a: i64)
+				namespace N { }
+
+				fun main() -> i64 = {
+					N:{i64};
+					return 0;
+				}
+
+			)",
+			{ "cannot be converted to type" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				template(a: i64)
+				namespace N { }
+
+				fun main() -> i64 = {
+					N:{a};
+					return 0;
+				}
+
+			)",
+			{ "not found" },
+			1
+		);
+
+		// ============================ Non template bake ============================
+
+		checkForErrorOnCompileModule(
+			R"(
+				const a = 1;
+
+				fun main() -> i64 = {
+					a:{1};
+					return 0;
+				}
+
+			)",
+			{ "non-template" },
+			1
+		);
+
+		// ============================ Bad template usage ============================
+
+		checkForErrorOnCompileModule(
+			R"(
+				template(a: i64)
+				namespace Number { }
+
+				fun main() -> i64 = {
+					return Number;  # bare template use
+				}
+
+			)",
+			{ "cannot be converted to type `i64`" },
 			1
 		);
 	}
