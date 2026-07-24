@@ -103,19 +103,17 @@ namespace base {
 #endif
 
 /**
- * @brief Asserts that execution is inside a unit test binary.
+ * @brief Panics if execution flow reaches this statement outside of a unit test. Can be used to mark e.g. helper functions designed purely for testing.
  *
- * In test binaries (compiled with DUCKLING_IS_TEST_BUILD) this is a no-op.
+ * In test binaries (compiled with DUCKLING_TEST_BUILD) this is a no-op.
  * In Dev builds outside tests, this throws a panic.
  * In Release builds, this is a compiler hint that the code is unreachable.
  */
-#if defined(DUCKLING_IS_TEST_BUILD)
-	#define ASSERT_IN_UNIT_TEST()
-#elif defined(BUILD_TYPE_DEV)
-	#define ASSERT_IN_UNIT_TEST() \
-		DETAIL_THROW_PANIC("    Code expected to run only in unit test context")
+#if defined(DUCKLING_TEST_BUILD)
+	#define PANIC_IF_NOT_TEST() do {} while(0)
 #else
-	#define ASSERT_IN_UNIT_TEST() [[assume(false)]]
+	#define PANIC_IF_NOT_TEST() \
+		DETAIL_THROW_PANIC("    Code expected to run only in unit test context")
 #endif
 
 #if defined(BUILD_TYPE_DEV)

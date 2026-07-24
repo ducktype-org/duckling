@@ -69,7 +69,7 @@ function(duck_add_test_custom test_pack test_name test_source)
 	add_executable(${test_name} ${CMAKE_CURRENT_LIST_DIR}/${test_source})
 	target_link_libraries(${test_name} Tester ${duck_add_test_custom_USES})
 	target_include_directories(${test_name} PUBLIC ${duck_add_test_custom_INCLUDE})
-	target_compile_definitions(${test_name} PRIVATE DUCKLING_IS_TEST_BUILD)
+	target_compile_definitions(${test_name} PRIVATE DUCKLING_TEST_BUILD)
 
 	# Some symbols that are necessary for the JIT to work have to be looked up in the executor process's
 	# dynamic symbol table, and this flag makes all symbols exported to the dynamic symbol table.
