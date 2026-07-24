@@ -19,6 +19,7 @@ pub mod duckc;
 pub mod early_graph;
 pub mod executor;
 pub mod profiles;
+pub mod shared_artifacts_layout;
 pub mod unit;
 
 use self::early_graph::creating_graph::create_early_graph_from_bcx;
