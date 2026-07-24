@@ -168,7 +168,13 @@ MAKE_FLAG_TYPE(compiler::mir, LifetimeFlag, LifetimeFlags,
 	
 	/// Mark this local as a condition temporary, which can be used by the pipeline to handle it differently.
 	/// Not used.
-	ConditionTmpValue
+	ConditionTmpValue,
+
+	/// Do not run the use-before-initialization check for this local. Used for locals that are
+	/// initialized field-by-field (e.g. the destination of an in-place aggregate construction):
+	/// each projected field store reads the local's address before the whole local is marked
+	/// constructed, which would otherwise be flagged as a use-before-init.
+	NoUseBeforeInitValidation
 )
 
 namespace compiler::mir {

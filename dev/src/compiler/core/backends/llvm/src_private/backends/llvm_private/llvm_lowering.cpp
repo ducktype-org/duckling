@@ -1121,8 +1121,11 @@ namespace compiler::backend_llvm {
 					builder.CreateCall(free_func, { ptr_to_free });
 					return nullptr;
 				} else if (builtin_kind == lir::BuiltinFunctionKind::ListFree) {
+					// The argument is a `ref [T]` — its value is already the pointer to the list
+					// struct, which is exactly what `builtin_list_free` expects. Use `loadLIRValue`
+					// (not `loadLIRValueToPointer`, which would pass the address of the argument slot).
 					llvm::Value* list_ptr
-						= loadLIRValueToPointer(lir_instruction.arguments.at(1), builder);
+						= loadLIRValue(lir_instruction.arguments.at(1), builder);
 					auto free_func = loadBuiltin(
 						"builtin_list_free", builder.getVoidTy(), { builder.getPtrTy() }
 					);

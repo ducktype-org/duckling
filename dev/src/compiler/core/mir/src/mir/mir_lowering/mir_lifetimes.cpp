@@ -325,6 +325,8 @@ namespace compiler::mir {
 			if (not target.isLocal()) return {};
 			const MIRLocalRef base = target.getBase<MIRLocalRef>();
 
+			if (base->lifetime_flags.contains(LifetimeFlag::NoDestructor)) return {};
+
 			for (const auto& flag: instr.flags) {
 				if (flag.flag == OperationFlag::Flag::Construct) return {};
 				// If we move this value in this instruction, and at the same time we override it,

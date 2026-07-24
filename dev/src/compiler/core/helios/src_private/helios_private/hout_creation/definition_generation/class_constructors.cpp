@@ -19,7 +19,6 @@ namespace compiler::helios::defgen {
 			auto class_interface = class_type.getInterface(ctx);
 
 			using defgen::Constructor;
-			using Variable = GeneratedFunctionVariable;
 			using std::ranges::to;
 			using std::views::transform;
 
@@ -46,7 +45,7 @@ namespace compiler::helios::defgen {
 			field_values.reserve(num_fields);
 			for (usize i = 0; i < num_fields; i++)
 				field_values.emplace_back(
-					s.moveOf(s.ident(ctor_decl.parameters.at(i).helios_symbol))
+					s.move(s.ident(ctor_decl.parameters.at(i).helios_symbol))
 				);
 
 			std::vector<Box<code::Stmt>> body{};

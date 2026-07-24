@@ -357,9 +357,9 @@ namespace compiler::helios::code::shorthands {
 			return makeBox<RefOfExpr>(*ctx, generatedOrigin(), std::move(inner));
 		}
 
-		/** @brief An explicit move `move inner`. Named `moveOf` to avoid clashing with `std::move`. */
+		/** @brief An explicit move `move inner`. Named `move` to avoid clashing with `std::move`. */
 		[[nodiscard]]
-		Box<MoveExpr> moveOf(Box<Expr> inner) const {
+		Box<MoveExpr> move(Box<Expr> inner) const {
 			return makeBox<MoveExpr>(*ctx, generatedOrigin(), std::move(inner));
 		}
 

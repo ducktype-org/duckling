@@ -16,7 +16,6 @@ namespace compiler::helios::defgen {
 			auto tuple_interface = tuple_type.getInterface(ctx);
 			// Preamble, get some basic data.
 			using defgen::Constructor;
-			using Variable = GeneratedFunctionVariable;
 			using std::ranges::to;
 			using std::views::transform;
 
@@ -48,7 +47,7 @@ namespace compiler::helios::defgen {
 			field_values.reserve(num_fields);
 			for (usize i = 0; i < num_fields; i++)
 				field_values.emplace_back(
-					s.moveOf(s.ident(ctor_decl.parameters.at(i).helios_symbol))
+					s.move(s.ident(ctor_decl.parameters.at(i).helios_symbol))
 				);
 
 			std::vector<Box<code::Stmt>> body{};

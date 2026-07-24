@@ -215,32 +215,38 @@ namespace compiler::helios::defgen {
 		) {
 			std::vector<Box<code::Stmt>> body;
 
-			// Destroy each element only if the element type is not trivially destructible.
-			if (array_type.getElementType().isTriviallyDestructible(ctx)) return body;
-
-			// var __i: u64 = 0;
-			const SymID i_sym = buildLoopCounter(ctx, body, dtor_sym);
-
-			// while (__i < self.length()) {
-			// 		(*self)[__i].__destruct(...);
-			// 		__i = __i + 1;
-			// }
-			const SymID length_method_sym = defgen::lengthMethodForType(ctx, array_type);
-
 			const Shorthand s{ ctx };
 
+			// Destroy each element only if the element type is not trivially destructible.
 			// while (__i < self.length()) { (*self)[__i].__destruct(...); __i = __i + 1; }
-			Box<code::Expr> len_expr = s.call(s.ident(length_method_sym), s.ident(self_symbol));
-			auto            condition
-				= s.binOp(s.ident(i_sym), code::BuiltinBinary::IntegerLt, std::move(len_expr));
+			if (not array_type.getElementType().isTriviallyDestructible(ctx)) {
+				// var __i: u64 = 0;
+				const SymID i_sym             = buildLoopCounter(ctx, body, dtor_sym);
+				const SymID length_method_sym = defgen::lengthMethodForType(ctx, array_type);
 
-			std::vector<Box<code::Stmt>> loop_body;
-			appendDestruction(
-				ctx, loop_body, s.index(s.deref(s.ident(self_symbol)), s.ident(i_sym))
-			);
-			loop_body.emplace_back(buildLoopIncrement(ctx, i_sym));
+				Box<code::Expr> len_expr = s.call(s.ident(length_method_sym), s.ident(self_symbol));
+				auto            condition
+					= s.binOp(s.ident(i_sym), code::BuiltinBinary::IntegerLt, std::move(len_expr));
 
-			body.emplace_back(s.whileStmt(std::move(condition), std::move(loop_body)));
+				std::vector<Box<code::Stmt>> loop_body;
+				appendDestruction(
+					ctx, loop_body, s.index(s.deref(s.ident(self_symbol)), s.ident(i_sym))
+				);
+				loop_body.emplace_back(buildLoopIncrement(ctx, i_sym));
+
+				body.emplace_back(s.whileStmt(std::move(condition), std::move(loop_body)));
+			}
+
+			// Release the backing buffer regardless of element triviality: `list_free(self)`.
+			// Pass `refOf(deref(self))` (not `self` directly): `self` is already a `ref [T]`, and
+			// passing it straight to the `ref [T]` parameter would take the address of the `self`
+			// slot (a ref-to-ref). Dereferencing then re-referencing yields the list's own address.
+			// `self` is consumed here (the backing buffer is released), so it is moved into
+			// `list_free`, mirroring how the box destructor hands `self` to `box_free`.
+			body.emplace_back(s.expr(s.call(
+				s.ident(listFreeSymForType(ctx, array_type.getElementType().getType())),
+				s.move(s.ident(self_symbol))
+			)));
 
 			return body;
 		}
@@ -293,35 +299,18 @@ namespace compiler::helios::defgen {
 		const auto& dtor_decl    = ctx.query<QueryDeclOfFun>(box_dtor_sym)->valueOrThrow();
 		const SymID self_symbol  = dtor_decl.parameters.at(0).helios_symbol;
 
+		const Shorthand s{ ctx };
+
 		std::vector<Box<code::Stmt>> body;
 
 		// Destroy the pointee: `appendDestruction(*self)`.
-		appendDestruction(
-			ctx,
-			body,
-			makeBox<code::DerefExpr>(
-				ctx,
-				code::generatedOrigin(),
-				makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), self_symbol)
-			)
-		);
+		appendDestruction(ctx, body, s.deref(s.ident(self_symbol)));
 
-		// Free the box storage: `box_free(self)`.
-		std::vector<Box<code::Expr>> free_args;
-		free_args.emplace_back(
-			makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), self_symbol)
+		// Free the box storage: `box_free(move self)`. `self` is moved so the automatic destructor
+		// insertion does not re-destruct the box here — that would recurse into this destructor.
+		body.emplace_back(
+			s.expr(s.call(s.ident(boxFreeSymForType(ctx, pointee_type)), s.move(s.ident(self_symbol))))
 		);
-		body.emplace_back(makeBox<code::ExprStmt>(
-			code::generatedOrigin(),
-			makeBox<code::CallExpr>(
-				ctx,
-				code::generatedOrigin(),
-				makeBox<code::IdentifierExpr>(
-					ctx, code::generatedOrigin(), boxFreeSymForType(ctx, pointee_type)
-				),
-				std::move(free_args)
-			)
-		));
 
 		return HOUTFunction(
 			code::generatedOrigin(),

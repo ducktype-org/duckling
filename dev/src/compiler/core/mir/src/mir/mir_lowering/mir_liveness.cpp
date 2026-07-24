@@ -263,7 +263,8 @@ namespace compiler::mir {
 		// never present in the status maps and must not be flagged as "uninitialized".
 		auto is_tracked = [&](MIRLocalRef local) {
 			return local->scope.has_value() && local->scope.value() != fun.no_lifetime_scope
-			    && not local->lifetime_flags.contains(LifetimeFlag::NoUseAfterFreeValidation);
+			    && not local->lifetime_flags.contains(LifetimeFlag::NoUseAfterFreeValidation)
+			    && not local->lifetime_flags.contains(LifetimeFlag::NoUseBeforeInitValidation);
 		};
 
 		const auto& block_in = args.move_states.block_in_move_state;
@@ -448,18 +449,18 @@ namespace compiler::mir {
 			for (auto succ: successors) live_in_out.live_out |= result.at(succ).live_in;
 
 			// new live_in = (live_out ∪ use) \ def. The def is subtracted *after* use is added, on
-			// purpose: a local that is both used and defined in this block has its def set only via a
-			// `Construct` flag (first initialization), and a valid program can never read a local
-			// before constructing it in the same block. So such a local is always defined-before-used
-			// and subtracting def here correctly drops it — its use is satisfied locally, not
-			// upward-exposed to predecessors.
+			// purpose: a local that is both used and defined in this block has its def set only via
+			// a `Construct` flag (first initialization), and a valid program can never read a local
+			// before constructing it in the same block. So such a local is always
+			// defined-before-used and subtracting def here correctly drops it — its use is
+			// satisfied locally, not upward-exposed to predecessors.
 			base::DynamicBitset new_live_in = live_in_out.live_out;
 			new_live_in |= block_info.use;
 			new_live_in.subtract(block_info.def);
 
-			// Only propagate to predecessors when live_in actually changed. Without this convergence
-			// check the fixpoint never terminates on a cyclic CFG (a loop), since each block keeps
-			// re-pushing its predecessors forever.
+			// Only propagate to predecessors when live_in actually changed. Without this
+			// convergence check the fixpoint never terminates on a cyclic CFG (a loop), since each
+			// block keeps re-pushing its predecessors forever.
 			if (new_live_in == live_in_out.live_in) continue;
 			live_in_out.live_in = std::move(new_live_in);
 

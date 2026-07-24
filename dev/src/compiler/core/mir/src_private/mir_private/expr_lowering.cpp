@@ -305,10 +305,9 @@ namespace compiler::mir {
 			ProjectionFor                           projection_for,
 			base::Optional<dia_int::StablePosition> position
 		) {
-			// The destination is a compiler temporary fully consumed by its single use, so it lives
-			// in the no-lifetime scope: ownership of its contents transfers to wherever the result
-			// is stored, and it needs no destructor of its own.
-			auto dest    = function.addTmp(dest_type, function.getNoLifetimeScope());
+			// We create a tmp, but we don't check use before init, as the value is never inited.
+			auto dest = function.addTmp(dest_type, expr_scope);
+			dest->lifetime_flags |= LifetimeFlag::NoUseBeforeInitValidation;
 			auto current = continuation;
 
 			for (usize i = values.size(); i-- > 0;) {
