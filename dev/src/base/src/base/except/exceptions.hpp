@@ -103,13 +103,16 @@ namespace base {
 #endif
 
 /**
- * @brief Panics if execution flow reaches this statement outside of a unit test. Can be used to mark e.g. helper functions designed purely for testing.
+ * @brief Panics if execution flow reaches this statement outside of a unit test. Can be used to
+ * mark e.g. helper functions designed purely for testing.
  *
  * In test binaries (compiled with DUCKLING_TEST_BUILD) this is a no-op.
  * Elsewhere throws a panic.
  */
-#if defined(DUCKLING_TEST_BUILD)
-	#define PANIC_IF_NOT_TEST() do {} while(0)
+#ifdef DUCKLING_TEST_BUILD
+	#define PANIC_IF_NOT_TEST() \
+		do {                    \
+		} while (0)
 #else
 	#define PANIC_IF_NOT_TEST() \
 		DETAIL_THROW_PANIC("    Code expected to run only in unit test context")
