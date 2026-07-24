@@ -3637,7 +3637,7 @@ private:
 	}
 
 	void testTemplates() {
-		auto [_, root_scope] = getModule(fs::File(path("test_modules/templates")));
+		auto [module_id, root_scope] = getModule(fs::File(path("test_modules/templates")));
 
 		// `Number:{1i64}.inner` and `Number:{2i64}.inner` each bake a distinct instantiation of
 		// the `Number` template namespace and evaluate the resulting constant.
@@ -3687,6 +3687,17 @@ private:
 			ASSERT_EQUAL(kind(baked_one), compiler::helios::SymbolKind::Namespace);
 			ASSERT_EQUAL(kind(baked_two), compiler::helios::SymbolKind::Namespace);
 		});
+
+		// Here we test that the HOUT for the module is generated and contains the baked template
+		// instantiations. Adjust this as needed, if strategy for template codegen location changes.
+		auto hout_module
+			= query::entryPoint<compiler::helios::QueryModuleHOUT>(module_id)->valueOrPanic();
+
+		// Just `foo` function:
+		ASSERT_EQUAL(hout_module.functions.size(), 1);
+
+		// 4 constants + 2 constants per baked template instantiation:
+		ASSERT_EQUAL(hout_module.glob_data.size(), 4 + 2 * 4);
 	}
 
 	void testOperatoriness() {
