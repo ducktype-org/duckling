@@ -1,8 +1,21 @@
+//! Module for using Github's API instead of blindly cloning the full repository.
+//!
+//! Github's API:
+//! -------------
+//! Assume we have a repository `foo` authored by `author`.
+//! The dependency on such repository is described by a url `https://github.com/author/foo`.
+//! Then the base URL for getting information about this repository is `https://api.github.com/repos/author/foo`.
+//! Let us call this `base_api_url`.
+//!
+//! We perform 3 types of queries.
+//! 1. Get the name of the default branch: `base_api_url`.
+//! 2. Get the commit hash for a given git reference: `base_api_url/git/ref/tags/<tag>` and `base_api_url/git/ref/heads/<branch_name>`.
+//! 3. Download the manifest (for a given commit): `base_api_url/contents/<manifest_path>?ref=<commit_hash>`.
 #![expect(dead_code)]
 use std::path::Path;
 
 use http::{HeaderValue, header};
-use serde_json::Value;
+use serde::Deserialize;
 use tracing::debug;
 use url::Url;
 
@@ -45,9 +58,9 @@ impl PseudoGitClient for GithubClient<'_> {
             return None;
         }
         let path = repo_url.path();
-        let Ok(api_url) = format!("{scheme}://api.{domain}/repos{path}/").to_url() else {
-            return None;
-        };
+        let api_url = format!("{scheme}://api.{domain}/repos{path}/")
+            .to_url()
+            .ok()?;
         Some(api_url.into())
     }
 
@@ -102,31 +115,35 @@ impl PseudoGitClient for GithubClient<'_> {
     }
 }
 
+#[derive(Deserialize)]
+struct CommitResponse {
+    pub object: CommitResponseSha,
+}
+
+#[derive(Deserialize)]
+struct CommitResponseSha {
+    pub sha: String,
+}
+
 /// Deserialize the response for requests `.../branches/<branch>` and `.../tags/<tag>` and get the `commit.id` field.
 fn get_commit_from_response(response: Response) -> QuackResult<StrId> {
-    let data: Value = response.deserialize_json()?;
-    let commit_hash = data
-        .get("object")
-        .and_then(|v| v.get("sha"))
-        .context("failed to find the commit hash in the response")?;
-    let commit_hash = commit_hash
-        .as_str()
-        .context("failed to interpret the commit hash as string")?
-        .into();
-    Ok(commit_hash)
+    let data: CommitResponse = response
+        .deserialize_json()
+        .context("failed to deserialize response")?;
+    Ok(data.object.sha.into())
+}
+
+#[derive(Deserialize)]
+struct DefaultBranchResponse {
+    default_branch: String,
 }
 
 /// Deserialize the response for request to the url of the repository and get the `default_branch` field.
 fn get_default_branch_from_response(response: Response) -> QuackResult<StrId> {
-    let data: Value = response.deserialize_json()?;
-    let default_branch = data
-        .get("default_branch")
-        .context("failed to find the default branch in the response")?;
-    let default_branch = default_branch
-        .as_str()
-        .context("failed to interpret the default branch as string")?
-        .into();
-    Ok(default_branch)
+    let data: DefaultBranchResponse = response
+        .deserialize_json()
+        .context("failed to deserialize response")?;
+    Ok(data.default_branch.into())
 }
 
 fn create_get_request(url: &Url) -> QuackResult<Request> {

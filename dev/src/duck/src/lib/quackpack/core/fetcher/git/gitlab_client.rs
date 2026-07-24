@@ -1,9 +1,22 @@
+//! Module for using Gitlab's API instead of blindly cloning the full repository.
+//!
+//! Gitlab's API:
+//! -------------
+//! Assume we have a repository `foo` authored by `author`.
+//! The dependency on such repository is described by a url `https://gitlab.com/author/foo`.
+//! Then the base URL for getting information about this repository is `https://gitlab.com/api/v4/projects/author%2Ffoo`.
+//! Let us call this `base_api_url`.
+//!
+//! We perform 3 types of queries.
+//! 1. Get the name of the default branch: `base_api_url`.
+//! 2. Get the commit hash for a given git reference: `base_api_url/repository/tags/<tag>` and `base_api_url/repository/heads/<branch_name>`.
+//! 3. Download the manifest (for a given commit): `base_api_url/repository/files/<manifest_path>/raw?ref=<commit_hash>`.
 #![expect(dead_code)]
 use std::path::Path;
 
 use http::{HeaderValue, header};
 use percent_encoding::{AsciiSet, CONTROLS, utf8_percent_encode};
-use serde_json::Value;
+use serde::Deserialize;
 use tracing::debug;
 use url::Url;
 
@@ -62,10 +75,9 @@ impl PseudoGitClient for GitlabClient<'_> {
         // `path()` adds `/` in the beginning.
         let path: String = repo_url.path().chars().skip(1).collect();
         let path_encoded = utf8_percent_encode(&path, PATH_ENCODE_SET);
-        let Ok(api_url) = format!("{scheme}://{domain}/api/v4/projects/{path_encoded}/").to_url()
-        else {
-            return None;
-        };
+        let api_url = format!("{scheme}://{domain}/api/v4/projects/{path_encoded}/")
+            .to_url()
+            .ok()?;
         Some(api_url.into())
     }
 
@@ -115,31 +127,35 @@ impl PseudoGitClient for GitlabClient<'_> {
     }
 }
 
-/// Deserialize the response for requests `.../repository/branches/<branch>` and `.../repository/tags/<tag>` and get the `commit.id` field.
+#[derive(Deserialize)]
+struct CommitResponse {
+    pub commit: CommitResponseId,
+}
+
+#[derive(Deserialize)]
+struct CommitResponseId {
+    pub id: String,
+}
+
+/// Deserialize the response for requests `.../branches/<branch>` and `.../tags/<tag>` and get the `commit.id` field.
 fn get_commit_from_response(response: Response) -> QuackResult<StrId> {
-    let data: Value = response.deserialize_json()?;
-    let commit_hash = data
-        .get("commit")
-        .and_then(|v| v.get("id"))
-        .context("failed to find the commit hash in the response")?;
-    let commit_hash = commit_hash
-        .as_str()
-        .context("failed to interpret the commit hash as string")?
-        .into();
-    Ok(commit_hash)
+    let data: CommitResponse = response
+        .deserialize_json()
+        .context("failed to deserialize response")?;
+    Ok(data.commit.id.into())
+}
+
+#[derive(Deserialize)]
+struct DefaultBranchResponse {
+    default_branch: String,
 }
 
 /// Deserialize the response for request to the url of the repository and get the `default_branch` field.
 fn get_default_branch_from_response(response: Response) -> QuackResult<StrId> {
-    let data: Value = response.deserialize_json()?;
-    let default_branch = data
-        .get("default_branch")
-        .context("failed to find the default branch in the response")?;
-    let default_branch = default_branch
-        .as_str()
-        .context("failed to interpret the default branch as string")?
-        .into();
-    Ok(default_branch)
+    let data: DefaultBranchResponse = response
+        .deserialize_json()
+        .context("failed to deserialize response")?;
+    Ok(data.default_branch.into())
 }
 
 fn create_get_request(url: &Url) -> QuackResult<Request> {
