@@ -215,7 +215,6 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
         };
         let manifest: QuackResult<Manifest> = (registry_manifest, self.fetcher.ctx()).try_into();
         match manifest
-            .and_then(Manifest::bail_if_local_dep)
             .and_then(|manifest| manifest.bail_if_incoherent_with_request_pinned(&request))
         {
             Ok(manifest) => Ok(FetchResponse::Success(FetchSuccess::Pinned(
@@ -263,7 +262,6 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
         for manifest in fetcher_response.packages_metadata {
             let manifest: QuackResult<Manifest> = (manifest, self.fetcher.ctx()).try_into();
             match manifest
-                .and_then(Manifest::bail_if_local_dep)
                 .and_then(|manifest| manifest.bail_if_incoherent_with_request_not_pinned(request))
             {
                 Ok(manifest) => {
@@ -322,8 +320,7 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
         };
         let manifest = match cloned_pkg
             .package
-            .manifest()
-            .clone()
+            .into_manifest()
             .bail_if_incoherent_with_request_not_pinned(request)
         {
             Ok(manifest) => manifest,
@@ -415,10 +412,13 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
                 return FetchResponse::failed_not_pinned(request.id);
             }
         };
+        let root = pcx.package().root();
+        let Ok(answer_origin) = FullOrigin::for_local(root) else {
+            return FetchResponse::failed_not_pinned(request.id);
+        };
         let manifest = match pcx
-            .package()
-            .manifest()
-            .clone()
+            .into_package()
+            .into_manifest()
             .bail_if_incoherent_with_request_not_pinned(request)
         {
             Ok(manifest) => manifest,
@@ -426,10 +426,6 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
                 errors.log(e);
                 return FetchResponse::failed_not_pinned(request.id);
             }
-        };
-        let root = pcx.package().root();
-        let Ok(answer_origin) = FullOrigin::for_local(root) else {
-            return FetchResponse::failed_not_pinned(request.id);
         };
         let answer_identity = FullIdentity::new(request.id.name, answer_origin);
         FetchResponse::Success(FetchSuccess::NotPinned(NotPinnedSuccess {

@@ -22,7 +22,7 @@ pub use venv_config::*;
 use crate::duck::util::duck_home::DuckHome;
 use crate::quackpack::core::Version;
 use crate::quackpack::schemas::registry;
-use crate::{DuckContext, QuackError, QuackResult, StrId, qp_bail};
+use crate::{DuckContext, QuackError, StrId};
 
 #[derive(Clone, Debug)]
 /// Machine friendly abstraction over a manifest.
@@ -113,18 +113,6 @@ impl Manifest {
             .all_dependencies()
             .iter()
             .any(|dep| dep.source().is_local())
-    }
-
-    /// Bail if there are any local dependencies.
-    pub fn bail_if_local_dep(self) -> QuackResult<Self> {
-        if self.has_local_deps() {
-            qp_bail!(
-                "manifest of {} version {} contains a local dependency",
-                self.name(),
-                self.version()
-            );
-        }
-        Ok(self)
     }
 
     /// Get the venv configuration.
