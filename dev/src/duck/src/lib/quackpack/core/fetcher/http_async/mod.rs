@@ -229,6 +229,12 @@ impl Worker {
     }
 
     /// Drive [`Multi`] and process completed requests.
+    ///
+    /// It's worth reading <https://docs.rs/curl/latest/curl/multi/struct.Multi.html> and
+    /// <https://curl.se/libcurl/c/libcurl-multi.html> to understand, how to use multi interface.
+    ///
+    /// Also an example usage of multi might be useful:
+    /// <https://github.com/alexcrichton/curl-rust/blob/main/examples/multi-dl.rs>.
     fn handle_completed_connections(&mut self) -> ShouldCheckForClosedChannel {
         const DEFAULT_DELAY: Duration = Duration::from_millis(100);
         // Firstly, try to poll pending requests.
@@ -240,6 +246,8 @@ impl Worker {
                     trace!("got `is_call_perform`");
                     return ShouldCheckForClosedChannel::No;
                 }
+                // An error means that we should remove all pending connections:
+                // https://curl.se/libcurl/c/curl_multi_perform.html.
                 error!("failed to perform");
                 self.fail_all_connections(&err);
                 return ShouldCheckForClosedChannel::No;
@@ -251,7 +259,7 @@ impl Worker {
             let Some((handle, sender)) = self.connections.remove(&token) else {
                 return;
             };
-            let handler_result = msg.result_for2(&handle).expect("we only have one multi");
+            let handler_result = msg.result_for2(&handle).expect("token mismatch");
             let handler = self.multi.remove2(handle).expect("we have only one multi");
             let response = response_from_handler(handler);
             let response = handler_result.map(|_| response).map_err(Into::into);
@@ -266,7 +274,14 @@ impl Worker {
                 .ok()
                 .flatten()
                 .unwrap_or(DEFAULT_DELAY);
-            if let Err(e) = self.multi.wait(&mut [], delay) {
+            // If delay is zero, we shouldn't wait and proceed to perform:
+            // https://docs.rs/curl/latest/curl/multi/struct.Multi.html#method.get_timeout.
+            if !delay.is_zero()
+            // The slice contains __extra__ file descriptors to be polled. Internal cURL mutli
+            // descriptors are included automatically:
+            // https://curl.se/libcurl/c/curl_multi_wait.html.
+                && let Err(e) = self.multi.wait(&mut [], delay)
+            {
                 error!("failed to wait");
                 self.fail_all_connections(&e);
             }
@@ -294,7 +309,7 @@ impl Worker {
         }
     }
 
-    /// We've got an error when driving a [`Multi`]. Close all opened
+    /// We've got an error when driving a [`Multi`]. Close all opened connections with the given error.
     fn fail_all_connections(&mut self, error: &curl::MultiError) {
         error!("stopping all pending HTTP connections because got error: {error}");
         // NOTE: Handles are detached/removed when dropped.
