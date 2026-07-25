@@ -114,7 +114,6 @@ namespace lang_def {
 		Char,
 		Bool,
 		Str,
-		BigStr,
 		Type,  // ...
 
 		// @TODO: do we need all of them?
@@ -168,6 +167,9 @@ namespace lang_def {
 
 		// BC:
 		BCFunction,
+		BCFfi,
+		BCObject,
+		BCAssertSize,
 		BCType,
 		BCPrimitive,
 		BCPointer,
@@ -193,6 +195,8 @@ namespace lang_def {
 		BCIsConstant,
 		BCInitialValue,
 		BCFrameSpecifier,
+		BCPacked,
+		BCCPointer,
 		COUNT,
 	};
 

@@ -292,6 +292,13 @@ namespace artifacts {
 
 		const base::Optional<Ref<ArtifactCollection>> PARENT;
 
+
+		/**
+		 * True if the build_id was not present or was invalid
+		 * and we need to create or override it, false if it was valid.
+		 */
+		bool flush_build_id = true;
+
 		/**
 		 * @brief Implementation that writes the blob data on the disk and propagates down the
 		 * ArtifactCollection tree.

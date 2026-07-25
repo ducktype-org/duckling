@@ -1,6 +1,5 @@
 //! [`Executor`] takes a [`UnitGraph`] and compiles it, according to its strategy.
 
-use std::collections::HashSet;
 use std::fmt::{self, Debug};
 use std::io::Write;
 use std::path::PathBuf;
@@ -25,6 +24,7 @@ use super::profiles::Profile;
 use super::unit::Unit;
 use super::unit::graph::UnitGraph;
 use crate::quackpack::core::compile::unit::ArtifactsType;
+use crate::quackpack::core::compile::unit::unit_visitor::UnitVisitor;
 use crate::util::file_locks::LockedFile;
 use crate::{QuackResult, QuackResultContext, qp_bail};
 
@@ -57,33 +57,28 @@ impl BuildContext<'_, '_> {
 /// Dependencies appearing in cycles are also included.
 ///
 /// Each dependency is present exactly once.
-///
-/// Right now, order of the vector is indeterministic.
-/// (To be precise, it's a normal DFS order).
 pub(crate) fn collect_packages(
     unit: &Unit,
     graph: &UnitGraph,
-) -> Vec<multipackage_schema::Package> {
-    let mut result = vec![];
-    let mut visited = HashSet::new();
-    fn dfs(
-        current: &Unit,
-        graph: &UnitGraph,
-        result: &mut Vec<multipackage_schema::Package>,
-        visited: &mut HashSet<Unit>,
-    ) {
-        if visited.contains(current) {
-            return;
-        }
-        visited.insert(current.clone());
-        result.push(current.multipackage_schema_package(graph));
-        for dep_id in current.deps_sorted_by_unit_id() {
-            let dep = graph.unit_for(*dep_id);
-            dfs(dep, graph, result, visited);
+) -> QuackResult<Vec<multipackage_schema::Package>> {
+    struct PackageVisitor<'graph> {
+        graph: &'graph UnitGraph,
+        packages: Vec<multipackage_schema::Package>,
+    }
+
+    impl UnitVisitor for PackageVisitor<'_> {
+        fn visit(&mut self, unit: &Unit) -> QuackResult<()> {
+            self.packages
+                .push(unit.multipackage_schema_package(self.graph)?);
+            Ok(())
         }
     }
-    dfs(unit, graph, &mut result, &mut visited);
-    result
+    let mut visitor = PackageVisitor {
+        graph,
+        packages: vec![],
+    };
+    unit.accept(&mut visitor, graph)?;
+    Ok(visitor.packages)
 }
 
 /// Get linker options appropriate for the given `unit`.
@@ -96,10 +91,10 @@ pub(crate) fn get_linker_options(
     unit: &Unit,
     graph: &UnitGraph,
     layout: &ProfileLayout,
-) -> Option<multipackage_schema::LinkerOptions> {
-    let outputs = get_deps_outputs(unit, graph, layout);
+) -> QuackResult<Option<multipackage_schema::LinkerOptions>> {
+    let outputs = get_deps_outputs(unit, graph, layout)?;
     if outputs.is_empty() {
-        return None;
+        return Ok(None);
     }
     let string = outputs
         .into_iter()
@@ -114,9 +109,11 @@ pub(crate) fn get_linker_options(
         .join(" ");
     debug!("raw linker args are `{string}`");
     if string.is_empty() {
-        return None;
+        return Ok(None);
     }
-    Some(multipackage_schema::LinkerOptions::RawLinkerArgs(string))
+    Ok(Some(multipackage_schema::LinkerOptions::RawLinkerArgs(
+        string,
+    )))
 }
 
 /// Collect _all_ (including `.a`!) outputs of dependencies (direct and transitive) of this `unit`.
@@ -124,29 +121,31 @@ pub(crate) fn get_deps_outputs(
     unit: &Unit,
     graph: &UnitGraph,
     layout: &ProfileLayout,
-) -> Vec<(Unit, PathBuf)> {
-    let mut result = vec![];
-    let mut visited = HashSet::new();
-    // Note that this DFS is different than the one above: we skip the root.
-    fn dfs(
-        current: &Unit,
-        graph: &UnitGraph,
-        layout: &ProfileLayout,
-        result: &mut Vec<(Unit, PathBuf)>,
-        visited: &mut HashSet<Unit>,
-    ) {
-        for dep_id in current.deps_sorted_by_unit_id() {
-            let dep = graph.unit_for(*dep_id);
-            if visited.contains(dep) {
-                continue;
+) -> QuackResult<Vec<(Unit, PathBuf)>> {
+    struct UnitOutputVisitor<'a> {
+        graph: &'a UnitGraph,
+        layout: &'a ProfileLayout,
+        root: &'a Unit,
+        outputs: Vec<(Unit, PathBuf)>,
+    }
+
+    impl UnitVisitor for UnitOutputVisitor<'_> {
+        fn visit(&mut self, unit: &Unit) -> QuackResult<()> {
+            if self.root != unit {
+                self.outputs
+                    .push((unit.clone(), unit_output(unit, self.graph, self.layout)))
             }
-            visited.insert(dep.clone());
-            result.push((dep.clone(), unit_output(dep, graph, layout)));
-            dfs(dep, graph, layout, result, visited);
+            Ok(())
         }
     }
-    dfs(unit, graph, layout, &mut result, &mut visited);
-    result
+    let mut visitor = UnitOutputVisitor {
+        graph,
+        layout,
+        root: unit,
+        outputs: vec![],
+    };
+    unit.accept(&mut visitor, graph)?;
+    Ok(visitor.outputs)
 }
 
 /// Get a path to the output artifact of this `unit`.
@@ -199,7 +198,8 @@ pub(crate) fn finished_builder_for_layout_and_profile(
         .set_artifacts_dir(&layout.compiler_artifacts())
         .set_c_std(profile.c_std)
         .set_opt_level(profile.opt_level)
-        .set_incremental(profile.incremental);
+        .set_incremental(profile.incremental)
+        .set_workers_count(bcx.jobs);
     builder
 }
 
@@ -227,7 +227,7 @@ pub(crate) fn compile_single_unit_with_schema(
     bcx: &BuildContext<'_, '_>,
     schema: multipackage_schema::MultiPackage,
 ) -> QuackResult<()> {
-    let name = unit.root_package().package().manifest().name();
+    let name = unit.root_package().package().name();
     let status = (|| {
         let unit_layout = layout.for_dependency(&unit.unique_name());
         let builder = finished_builder_for_layout_and_profile(bcx, &unit_layout, &bcx.profile);
@@ -255,7 +255,7 @@ pub(crate) fn compile_single_unit_with_tasks(
     bcx: &BuildContext<'_, '_>,
     tasks: Vec<multipackage_schema::Task>,
 ) -> QuackResult<()> {
-    let packages = collect_packages(unit, graph);
+    let packages = collect_packages(unit, graph)?;
     let schema = multipackage_schema::MultiPackage { packages, tasks };
     compile_single_unit_with_schema(unit, layout, bcx, schema)
 }

@@ -10,11 +10,10 @@ use crate::quackpack::core::fetcher::Fetcher;
 use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
 use crate::quackpack::core::identity::{Identity, Origin};
 use crate::quackpack::core::storage::freeze::{FreezePackage, RootPackage, VenvFreeze};
-use crate::quackpack::core::storage::package_id::{PackageId, RegistryId};
 use crate::quackpack::core::storage::paths::Storage;
 use crate::quackpack::core::storage::venv::{Venv, VenvData};
 use crate::quackpack::core::storage::venv_id::ToVenvId;
-use crate::quackpack::core::{PackageContext, PackageLoader, Version};
+use crate::quackpack::core::{PackageContext, PackageLoader, Version, storage_name_for_registry};
 use crate::quackpack::subcommands::init;
 use crate::quackpack::subcommands::init::InitOptions;
 use crate::quackpack::util::to_url::ToUrl;
@@ -67,13 +66,12 @@ fn setup_mock_storage() -> (DuckContext, TempDir, PathBuf) {
 fn setup_mock_packages(root: &Path) {
     let names = ["foo", "bar", "baz"];
     for name in names {
-        let name = PackageId::Registry(RegistryId::new(
-            name.into(),
-            Version::new(1, 0, 0),
-            Fetcher::DEFAULT_REGISTRY_URL.parse().unwrap(),
-        ));
         root.join("pkg")
-            .join(name.storage_name())
+            .join(storage_name_for_registry(
+                name,
+                Version::new(1, 0, 0),
+                Fetcher::DEFAULT_REGISTRY_URL.to_url().unwrap().into(),
+            ))
             .join("src")
             .join("main.duck")
             .touch()

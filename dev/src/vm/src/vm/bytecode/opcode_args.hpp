@@ -61,13 +61,18 @@ namespace vm::opargs {
 	DEFINE_PLACE(FSTable, "pfst");
 
 	/**
+	 * @brief Represents place of a C pointer (a raw 8-byte native address).
+	 */
+	DEFINE_PLACE(Cptr, "pcpt");
+
+	/**
 	 * @brief Represents place variant argument.
 	 */
 	DEFINE_PLACE(Vnt, "pvnt");
 
 #define VM_OPARG_PLACE_TYPES                                                                   \
 	Place8, Place16, Place32, Place64, PlaceAny, PlacePtr, PlaceVnt, PlaceOpq, PlaceStructure, \
-		PlaceFSTable
+		PlaceFSTable, PlaceCptr
 
 	/**
 	 * @brief Represents type name argument.
@@ -154,6 +159,23 @@ namespace vm::opargs {
 		}
 	};
 
+	/**
+	 * @brief Represents FFI function name argument.
+	 */
+	struct FFIFunctionName final: code::ElementBase {
+		static constexpr std::string_view OP_SHORT = "ffifunc";
+
+		FFIFunctionName() = default;
+
+		FFIFunctionName(const base::StrID function_name): function_name(function_name) {}
+
+		base::StrID function_name = base::StrID("");
+
+		constexpr bool operator==(const FFIFunctionName& other) const noexcept {
+			return function_name == other.function_name;
+		}
+	};
+
 	struct MethodName final: code::ElementBase {
 		static constexpr std::string_view OP_SHORT = "method";
 
@@ -196,11 +218,13 @@ namespace vm::opargs {
 		FunctionName,
 		BuiltinFunctionName,
 		ExtCFunctionName,
+		FFIFunctionName,
 		MethodName,
 		Label>;
-	using OpCodeArgCRef      = base::CRefifyParams<OpCodeArg>;
-	using OpCodePlaceArg     = std::variant<VM_OPARG_PLACE_TYPES>;
-	using OpCodeFunctionArg  = std::variant<FunctionName, BuiltinFunctionName, ExtCFunctionName>;
+	using OpCodeArgCRef  = base::CRefifyParams<OpCodeArg>;
+	using OpCodePlaceArg = std::variant<VM_OPARG_PLACE_TYPES>;
+	using OpCodeFunctionArg
+		= std::variant<FunctionName, BuiltinFunctionName, ExtCFunctionName, FFIFunctionName>;
 	using OpCodePrimitiveArg = std::variant<Place8, Place16, Place32, Place64>;
 
 	template<typename T>

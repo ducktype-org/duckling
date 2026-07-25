@@ -139,6 +139,10 @@ namespace vm {
 			variant_case(api::request::ExecRuntimeExprFromFile, request) {
 				return evalRuntimeExpr(request.thread_id, request.file);
 			}
+			variant_case(api::request::SetExecutionConfig, request) {
+				return setExecutionConfig(request.config);
+			}
+
 			variant_default { return api::Response(api::response::Empty()); }
 		}
 

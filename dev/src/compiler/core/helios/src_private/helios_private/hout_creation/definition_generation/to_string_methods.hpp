@@ -13,17 +13,21 @@ namespace compiler::helios::defgen {
 	SymID toStringSymForType(query::Context& ctx, tsh::AbstractType type);
 
 	/**
-	 * @brief Get the "concatenate" Strings function symbol.
+	 * @brief Get the symbol of the generated toString method for a type.
+	 * Note that this symbol should not be used if the user implemented it's own type.
 	 */
-	SymID concatSym(query::Context& ctx);
+	SymID generatedToStringSymForType(query::Context& ctx, tsh::AbstractType type);
 
 	/**
-	 * @brief Internal utility function to get a String HOUT expression
-	 * from a string literal value.
+	 * @brief Utility function to get the append String method symbol on String class.
+	 *
+	 * `String` overloads `append` for both a by-reference and a by-value `String` argument.
 	 * @param ctx The query context.
-	 * @param value The string literal value.
+	 * @param arg_by_reference When true, selects the `append(other: ref String)` overload;
+	 * when false, selects the `append(other: String)` overload (which consumes its argument).
+	 * @return SymID
 	 */
-	Box<code::Expr> getStringFromLiteralExpr(query::Context& ctx, base::StrID value);
+	SymID stringAppendMethodSym(query::Context& ctx, bool arg_by_reference);
 
 	/**
 	 * @brief Get the compiler-generated HOUT representation of the toString method for a type.

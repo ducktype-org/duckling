@@ -2,6 +2,7 @@
 
 #include <diagnostic_interactive/core/diagnostic_arguments.hpp>
 #include <diagnostic_interactive/message.hpp>
+#include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expr_holders.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/all_expr.hpp>
 #include <frontend/pst_parser/elements/hierarchy/lists/nested_import_list.hpp>
@@ -203,7 +204,7 @@ namespace compiler::helios::code {
 							arg_pos, data.name.str(), std::move(function_name)
 						);
 					}
-					variant_case(TypeMismatch, data) {
+					variant_case(ArgumentCoercionFailure, data) {
 						dia_int::StablePosition pos = [&] {
 							if_opt_some(
 								arguments_origin[data.argument_index].getStablePosition(), pos
@@ -213,13 +214,19 @@ namespace compiler::helios::code {
 							return whole_call_origin.getStablePosition().value();
 						}();
 
-						base::Optional<Box<InteractiveFunction>> function_name
-							= get_interactive_function(data.function);
-						return makeBox<ArgumentIncompatibleTypeError>(
-							pos,
-							makeBox<InteractiveType>(ctx, data.expected_type),
-							makeBox<InteractiveType>(ctx, data.given_type),
-							std::move(function_name)
+						if (data.reason == helios::InvalidCoercionReason::IncompatibleTypes) {
+							base::Optional<Box<InteractiveFunction>> function_name
+								= get_interactive_function(data.function);
+							return makeBox<ArgumentIncompatibleTypeError>(
+								pos,
+								makeBox<InteractiveType>(ctx, data.expected_type),
+								makeBox<InteractiveType>(ctx, data.given_type),
+								std::move(function_name)
+							);
+						}
+
+						return helios::makeDefaultCoercionErrorMessage(
+							ctx, data.reason, data.given_type, data.expected_type, pos
 						);
 					}
 					variant_case(MissingCallArgument, data) {
@@ -246,35 +253,6 @@ namespace compiler::helios::code {
 						return makeBox<NamedArgumentProvidedByPositionalError>(
 							arg_pos, std::move(function_name)
 						);
-					}
-					variant_case(TypeNotTriviallyCopyable, data) {
-						auto source_pos
-							= arguments_origin[data.argument_index].getStablePosition().value();
-						if (data.given_type.getRefKind() != tsh::ReferenceKind::Direct
-						    && data.expected_type.getRefKind() == tsh::ReferenceKind::Direct) {
-							return makeBox<dia_int::NotYetImplementedCodeError>(
-								base::strConcat(
-									"Copy constructor for non-trivially-copyable type `",
-									data.given_type.withReferenceKind(tsh::ReferenceKind::Direct)
-										.toString(),
-									"`. This was caused by the need of dereferencing a value of "
-									"type: "
-									"`",
-									data.given_type.toString(),
-									"`."
-								),
-								source_pos
-							);
-						} else {
-							return makeBox<dia_int::NotYetImplementedCodeError>(
-								base::strConcat(
-									"Copy constructor for non-trivially-copyable type `",
-									data.given_type.toString(),
-									"`."
-								),
-								source_pos
-							);
-						}
 					}
 				}
 			}

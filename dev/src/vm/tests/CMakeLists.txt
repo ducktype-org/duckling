@@ -50,6 +50,9 @@ function(duck_add_vm_tests suffix)
                 USES ${libvm} Tester ${vmtester})
         duck_disable_tc_when_not_opt("debugger_infinite_test" ${test_set})
 
+        duck_add_test_custom(vm ${test_set}_mapper_test debugger/mapper_tests.cpp
+                USES ${libvm} Tester ${vmtester})
+
         duck_add_test_custom(vm ${test_set}_LowVMProgramCopy_test debugger/LowVMProgramCopy_tests.cpp
                 USES ${libvm} Tester ${vmtester})
 
@@ -114,3 +117,5 @@ duck_add_test_custom(vm vm_bc_verification loader/verification/bc_verification.c
 duck_add_test_custom(vm vm_bc_building loader/assembly/bc_building.cpp USES LibVM_sc Tester VmTester_sc)
 duck_add_test_custom(vm vm_bc_parsing loader/assembly/bc_parsing.cpp USES LibVM_sc Tester VmTester_sc)
 duck_add_test_custom(vm vm_bc_serializer loader/serializer/bc_serializer.cpp USES LibVM_sc Tester VmTester_sc)
+
+add_subdirectory(ffi)

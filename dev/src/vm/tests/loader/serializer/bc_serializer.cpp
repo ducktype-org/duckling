@@ -39,12 +39,18 @@ private:
 		// Type 1: primitive i64 (8 bytes)
 		code.types.emplace_back(PrimitiveType(base::StrID("i32"), Bytes{ 4 }));
 		// Type 2: data Point { x: i64, y: i64 }
-		code.types.emplace_back(DataType(
+		auto point = DataType(
 			base::StrID("Point"),
 			{ Field(base::StrID("x"), base::StrID("i32")),
 		      Field(base::StrID("y"), base::StrID("i32")) }
-		));
+		);
+		point.packed      = true;
+		point.assert_size = 8;
+		code.types.emplace_back(std::move(point));
 		code.types.emplace_back(FixedSizeTableType(base::StrID("points"), base::StrID("Point"), 3));
+		// C pointers: one typed, one with an unknown pointee (no inner).
+		code.types.emplace_back(CPointerType(base::StrID("point_ptr"), base::StrID("Point")));
+		code.types.emplace_back(CPointerType(base::StrID("raw_ptr"), {}));
 
 		// Global data: constant answer i64 with initial_value 42
 		GlobalData global;
@@ -115,6 +121,23 @@ private:
 		const auto& data = std::get<DataType>(parsed.types[1]);
 		assertEqual(data.name, base::StrID("Point"), "Data type name should be Point");
 		assertEqual(data.fields.size(), static_cast<usize>(2), "Data type should have 2 fields");
+		assertTrue(data.packed, "Data type should stay packed after round-trip");
+		assertTrue(
+			data.assert_size == base::Optional<usize>(8),
+			"Data type should keep assert_size after round-trip"
+		);
+
+		const auto& typed_cptr = std::get<CPointerType>(parsed.types[3]);
+		assertEqual(typed_cptr.name, base::StrID("point_ptr"), "C pointer name should survive");
+		assertTrue(
+			typed_cptr.inner == base::Optional<base::StrID>(base::StrID("Point")),
+			"C pointer inner should survive round-trip"
+		);
+		const auto& void_cptr = std::get<CPointerType>(parsed.types[4]);
+		assertEqual(void_cptr.name, base::StrID("raw_ptr"), "C pointer name should survive");
+		assertTrue(
+			!void_cptr.inner.has_value(), "An absent C pointer inner should survive round-trip"
+		);
 
 		// Check global data
 		assertEqual(
@@ -155,7 +178,14 @@ type data: Point {
     is_ok: i8,
 }
 
+type data: PackedPoint {
+    x: i32,
+    y: i32,
+} packed assert_size 8
+
 type fixed_size_table: point_arr Point 2
+type cpointer: point_ptr Point
+type cpointer: raw_ptr
 
 global_data answers point_arr {
     is_constant: true,

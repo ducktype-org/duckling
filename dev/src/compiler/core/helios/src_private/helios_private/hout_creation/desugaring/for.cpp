@@ -60,13 +60,11 @@ namespace compiler::helios::desugaring {
 			auto iterable_hout_res = ctx.query<QueryHoutOfExpr>({ iterable_pst->getExpr() });
 			if (iterable_hout_res->hasFailed()) return {};
 
-			Box<code::Expr>      iterable_hout = iterable_hout_res->valueOrThrow()->clone();
-			tsh::SymbolType<>    iterable_type = iterable_hout->expression_type.getSymbolType();
-			tsh::Kind            kind          = iterable_type.getType().getKind();
-			tsh::PrimaryCategory value_category
-				= iterable_hout->expression_type.getValueCategory().getCategory();
-			bool iterable_is_r_value = value_category == tsh::PrimaryCategory::Literal
-			                        || value_category == tsh::PrimaryCategory::Temporary;
+			Box<code::Expr>   iterable_hout = iterable_hout_res->valueOrThrow()->clone();
+			tsh::SymbolType<> iterable_type = iterable_hout->expression_type.getSymbolType();
+			tsh::Kind         kind          = iterable_type.getType().getKind();
+			bool              iterable_is_r_value
+				= not iterable_hout->expression_type.getValueCategory().canBeAssignedTo();
 
 			if (kind != tsh::Kind::DynamicArray && kind != tsh::Kind::StaticArray) {
 				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
@@ -178,17 +176,20 @@ namespace compiler::helios::desugaring {
                 std::move(raw_element),
                 iter_type,
                 iter_pst_pos,
-                [&](query::Context& error_ctx) {
-                    error_ctx.logInt(makeBox<dia_int::PlaceholderError>(
-                        base::strConcat(
-                            "Cannot coerce collection element type '",
-                            element_sym_type.toString(),
-                            "' to iterator type '",
-                            iter_type.toString(),
-                            "'."
-                        ),
-                        iter_pst_pos
-                    ));
+                CoercionErrorOverrides{
+						.incompatible_types =
+                        [&](query::Context& error_ctx) {
+                            error_ctx.logInt(makeBox<dia_int::PlaceholderError>(
+                                base::strConcat(
+                                    "Cannot coerce collection element type '",
+                                    element_sym_type.toString(),
+                                    "' to iterator type '",
+                                    iter_type.toString(),
+                                    "'."
+                                ),
+                                iter_pst_pos
+                            ));
+                        },
                 }
             );
 			if (!element_expr.has_value()) return {};
@@ -239,11 +240,11 @@ namespace compiler::helios::desugaring {
 			return ctx.query<defgen::QueryGeneratedSymbol>({
 				.name = name,
 				.generated_symbol_data
-				= defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::ControlFlowLocal{
+				= defgen::ControlFlowLocal{
 					.owning_scope = for_scope,
 					.role         = role,
 					.type         = type,
-				} },
+				},
 			});
 		};
 

@@ -3,8 +3,13 @@
 #include <events/emitter.hpp>
 
 #include <vm/api/vm.hpp>
+#include <vm/debugger/mapper.hpp>
 
 namespace vm::debugger {
+	struct CodePosition: public api::response::CodePosition {
+		base::Optional<dia::SourcePosition> mapped_position;
+	};
+
 	/**
 	 * @class Debugger
 	 * @brief Core for the VM debugger that manages debugging sessions.
@@ -20,6 +25,7 @@ namespace vm::debugger {
 	private:
 		PID                 pid;
 		ProgramRunArguments main_args;
+		Mapper              mapper;
 
 		events::Listener<api::ProcStatus> updater;
 		events::Listener<std::string>     vm_output;
@@ -40,6 +46,8 @@ namespace vm::debugger {
 		 * @brief Emits the output from the VM when VM outputs
 		 */
 		events::Emitter<std::string> on_output;
+
+		CodePosition mapCodePosition(const api::response::CodePosition& pos);
 
 	public:
 		Debugger();
@@ -84,6 +92,8 @@ namespace vm::debugger {
 		 */
 		std::expected<void, api::ApiError> loadFiles(const std::vector<fs::File>& files);
 
+		std::expected<void, std::variant<api::ApiError, std::string>> loadDefault();
+
 		void setProgramArguments(const ProgramRunArguments& args);
 
 		/**
@@ -101,7 +111,7 @@ namespace vm::debugger {
 		/**
 		 * @brief Pauses the VM
 		 */
-		std::expected<api::response::CodePosition, api::ApiError> pause();
+		std::expected<CodePosition, api::ApiError> pause();
 
 		/**
 		 * @brief Resumes the VM
@@ -118,7 +128,7 @@ namespace vm::debugger {
 		/**
 		 * @brief Returns current position
 		 */
-		std::expected<api::response::CodePosition, api::ApiError> getCurrentPosition();
+		std::expected<CodePosition, api::ApiError> getCurrentPosition();
 
 		/**
 		 * @brief Sets breakpoint
@@ -145,11 +155,19 @@ namespace vm::debugger {
 		/**
 		 * @brief Execute one FatByteCode step in the VM
 		 */
-		std::expected<void, api::ApiError> step();
+		std::expected<CodePosition, api::ApiError> step();
+
+		/**
+		 * @brief Execute multiple FatByteCode steps in the VM until next position in source file is
+		 * reached (or just steps if there is no mapping avaliable)
+		 */
+		std::expected<CodePosition, api::ApiError> mappedStep();
 
 		/**
 		 * @brief Send input to the VM
 		 */
 		std::expected<void, api::ApiError> sendInput(const std::string& msg);
+
+		const Mapper& getMapper();
 	};
 }

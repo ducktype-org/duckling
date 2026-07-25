@@ -13,9 +13,8 @@ class FirstClassEver {
     }
 
     private {
-        FirstClassEver.copy(other: FirstClassEver) = {
-            a = other.a;
-            b = other.b;
+        FirstClassEver.copy(other: const ref FirstClassEver) = {
+            return FirstClassEver(other.a, other.b);
         }
     }
 
@@ -25,7 +24,7 @@ class FirstClassEver {
 class SecondClass extends FirstClassEver {}
 
 let first_class_ever: FirstClassEver = FirstClassEver(1, f32(2.0));
-let first_class_ever_copy = first_class_ever;
+let first_class_ever_copy = copy first_class_ever;
 
 class ClassWithMember {
     member: FirstClassEver = FirstClassEver(3, 4.0);

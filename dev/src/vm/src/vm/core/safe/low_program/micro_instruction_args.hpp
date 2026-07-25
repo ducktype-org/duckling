@@ -62,8 +62,10 @@ namespace vm::low::opargs {
 	DEFINE_MICRO_ARG_TYPE(Place16, "p16", vm::opargs::Place16);
 	/** @brief Stores byte offset of 32-bit local on the frame local stack or the global buffer. */
 	DEFINE_MICRO_ARG_TYPE(Place32, "p32", vm::opargs::Place32);
-	/** @brief Stores byte offset of 64-bit local on the frame local stack or the global buffer. */
-	DEFINE_MICRO_ARG_TYPE(Place64, "p64", vm::opargs::Place64);
+	/** @brief Stores byte offset of 64-bit local on the frame local stack or the global buffer.
+	 * Also the target of C pointer places: a cpointer is a plain 8-byte value, so its moves
+	 * lower to 64-bit micro operations. */
+	DEFINE_MICRO_ARG_TYPE(Place64, "p64", vm::opargs::Place64, vm::opargs::PlaceCptr);
 	/** @brief Stores byte offset of local Pointer value on the frame local stack or the global
 	 * buffer. */
 	DEFINE_MICRO_ARG_TYPE(PlacePtr, "pptr", vm::opargs::PlacePtr);
@@ -104,6 +106,8 @@ namespace vm::low::opargs {
 	DEFINE_MICRO_ARG_TYPE(BuiltinFunctionID, "builtinfunc", vm::opargs::BuiltinFunctionName);
 	/** @brief Stores extern C function pointer in LowVMProgram extern C functions map. */
 	DEFINE_MICRO_ARG_TYPE(ExtCFunction, "cfunc", vm::opargs::ExtCFunctionName);
+	/** @brief Stores FFI function pointer in LowVMProgram FFI functions map. */
+	DEFINE_MICRO_ARG_TYPE(FFIFunction, "ffifunc", vm::opargs::FFIFunctionName);
 	/** @brief Stores lowered method identifier used for virtual dispatch lookup. */
 	DEFINE_MICRO_ARG_TYPE(MethodName, "method", vm::opargs::MethodName);
 	/** @brief Stores relative instruction jump offset after label linking. */
@@ -121,6 +125,7 @@ namespace vm::low::opargs {
 		FunctionID,
 		BuiltinFunctionID,
 		ExtCFunction,
+		FFIFunction,
 		MethodName,
 		Label>;
 	using InstructionArgCRef = base::CRefifyParams<InstructionArg>;

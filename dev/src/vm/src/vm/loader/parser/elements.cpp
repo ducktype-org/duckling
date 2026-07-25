@@ -377,6 +377,7 @@ namespace vm::loader::parser {
 			FunctionName,
 			BuiltinFunctionName,
 			ExtCFunctionName,
+			FFIFunctionName,
 			MethodName,
 			Label,
 		)
@@ -635,35 +636,46 @@ namespace vm::loader::parser {
 		return out;
 	}
 
+	namespace {
+		base::Optional<std::vector<tpc::Identifier>> parseTypeList(F8ParserState& state) {
+			if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
+				state.logInt(makeBox<dia_int::PlaceholderError>(
+					"Expected `{` after here.", state.getPosition(-1)
+				));
+				return {};
+			}
+
+			std::vector<tpc::Identifier> result;
+			state.goDown();
+			while (state.notEmpty()) {
+				tpc::Identifier field_type;
+				state.parse().one(&field_type);
+				result.emplace_back(field_type);
+
+				if (state.empty()) break;
+				if (state[0].is(lang_def::Special::Comma)) {
+					state.parse().one(lang_def::Special::Comma);
+				} else {
+					state.logInt(makeBox<dia_int::PlaceholderError>(
+						"Expected comma or `}` after here.", state.getPosition()
+					));
+					state.tokens().skip();
+				}
+			}
+			state.goUpAndSkip();
+			return result;
+		}
+	}
+
 	MBox<Func> Func::parse(F8ParserState& state) {
 		auto out = makeBox<Func>(state.getPosition());
 
 		state.parse().all(lang_def::Keyword::BCFunction, &out->name);
 
-		if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
-			state.logInt(makeBox<dia_int::PlaceholderError>(
-				"Expected `{` after here.", state.getPosition(-1)
-			));
-			return nullptr;
+		match_optional(parseTypeList(state)) {
+			opt_some(params) out->parameters = std::move(params);
+			opt_none return nullptr;
 		}
-
-		state.goDown();
-		while (state.notEmpty()) {
-			tpc::Identifier field_type;
-			state.parse().one(&field_type);
-			out->parameters.emplace_back(field_type);
-
-			if (state.empty()) break;
-			if (state[0].is(lang_def::Special::Comma)) {
-				state.parse().one(lang_def::Special::Comma);
-			} else {
-				state.logInt(makeBox<dia_int::PlaceholderError>(
-					"Expected comma or `}` after here.", state.getPosition()
-				));
-				state.tokens().skip();
-			}
-		}
-		state.goUpAndSkip();
 
 		if (state[0].is(lang_def::NamedOperator::SingleArrow)) {
 			state.parse().one(lang_def::NamedOperator::SingleArrow);
@@ -674,30 +686,10 @@ namespace vm::loader::parser {
 			return nullptr;
 		}
 
-		if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
-			state.logInt(makeBox<dia_int::PlaceholderError>(
-				"Expected `{` after here `->`.", state.getPosition(-1)
-			));
-			return nullptr;
+		match_optional(parseTypeList(state)) {
+			opt_some(res_types) out->result_types = std::move(res_types);
+			opt_none return nullptr;
 		}
-
-		state.goDown();
-		while (state.notEmpty()) {
-			tpc::Identifier field_type;
-			state.parse().one(&field_type);
-			out->result_types.emplace_back(field_type);
-
-			if (state.empty()) break;
-			if (state[0].is(lang_def::Special::Comma)) {
-				state.parse().one(lang_def::Special::Comma);
-			} else {
-				state.logInt(makeBox<dia_int::PlaceholderError>(
-					"Expected comma or `}` after here.", state.getPosition()
-				));
-				state.tokens().skip();
-			}
-		}
-		state.goUpAndSkip();
 
 		if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
 			state.logInt(makeBox<dia_int::PlaceholderError>(
@@ -709,6 +701,64 @@ namespace vm::loader::parser {
 		state.goDown();
 		state.parse().one(&out->code);
 		state.goUpAndSkip();
+
+		return out;
+	}
+
+	MBox<FFIFunc> FFIFunc::parse(F8ParserState& state) {
+		auto out = makeBox<FFIFunc>(state.getPosition());
+
+		state.parse().all(lang_def::Keyword::BCFfi, lang_def::Keyword::BCFunction, &out->name);
+
+		match_optional(parseTypeList(state)) {
+			opt_some(params) out->parameters = std::move(params);
+			opt_none return nullptr;
+		}
+
+		if (state[0].is(lang_def::NamedOperator::SingleArrow)) {
+			state.parse().one(lang_def::NamedOperator::SingleArrow);
+		} else {
+			state.logInt(makeBox<dia_int::PlaceholderError>(
+				"Expected `->` after function parameters.", state.getPosition(-1)
+			));
+			return nullptr;
+		}
+
+		match_optional(parseTypeList(state)) {
+			opt_some(res_types) out->result_types = std::move(res_types);
+			opt_none return nullptr;
+		}
+
+		if (!state.tryEat(lang_def::Special::Semicolon)) {
+			state.logInt(makeBox<dia_int::PlaceholderError>(
+				"Expected `;` after FFI function declaration.", state.getPosition(-1)
+			));
+			return nullptr;
+		}
+
+		return out;
+	}
+
+	MBox<FFIObject> FFIObject::parse(F8ParserState& state) {
+		auto out = makeBox<FFIObject>(state.getPosition());
+
+		state.parse().all(lang_def::Keyword::BCFfi, lang_def::Keyword::BCObject);
+
+		if (!state[0].isString()) {
+			state.logInt(makeBox<dia_int::PlaceholderError>(
+				"Expected a string literal with an object file path after `ffi object`.",
+				state.getPosition()
+			));
+			return nullptr;
+		}
+		out->path = state.tokens().next().getValue();
+
+		if (!state.tryEat(lang_def::Special::Semicolon)) {
+			state.logInt(makeBox<dia_int::PlaceholderError>(
+				"Expected `;` after `ffi object` declaration.", state.getPosition(-1)
+			));
+			return nullptr;
+		}
 
 		return out;
 	}
@@ -788,6 +838,24 @@ namespace vm::loader::parser {
 			}
 			break;
 		}
+		case lang_def::Keyword::BCCPointer: {
+			// The pointee is optional: `type cpointer: Name [Inner]`. No inner means a pointer
+			// to an unknown pointee (C's `void*`).
+			base::Optional<base::StrID> inner;
+			if (state.notEmpty() && state[0].isIdentifier())
+				inner = state.tokens().next().getValue();
+			if (state.notEmpty() && (state[0].isNumLiteralGroup() || state[0].isString())) {
+				state.logInt(makeBox<dia_int::PlaceholderError>(
+					"Expected an identifier (pointee type) or end of declaration.",
+					state.getPosition()
+				));
+				state.tokens().skip();
+			}
+			auto tp         = CPointerType{ name, inner };
+			tp.bytecode_pos = out->position;
+			out->datatype   = tp;
+			break;
+		}
 		case lang_def::Keyword::BCFixedSizeTable: {
 			auto type_name = state.tokens().next();
 			if (!type_name.isIdentifier()) {
@@ -824,7 +892,26 @@ namespace vm::loader::parser {
 			break;
 		}
 		case lang_def::Keyword::BCData: {
-			auto tp         = DataType{ name, parseFields(state) };
+			auto tp = DataType{ name, parseFields(state) };
+			// Trailing modifiers, accepted in any order: `packed`, `assert_size N`.
+			while (state.notEmpty()) {
+				if (state[0].is(lang_def::Keyword::BCPacked)) {
+					state.tokens().next();
+					tp.packed = true;
+				} else if (state[0].is(lang_def::Keyword::BCAssertSize)) {
+					state.tokens().next();
+					auto size_token = state.tokens().next();
+					if (!size_token.isNumLiteralGroup()) {
+						state.logInt(makeBox<dia_int::PlaceholderError>(
+							"Expected a numeric literal after `assert_size`.", state.getPosition()
+						));
+					} else {
+						tp.assert_size = static_cast<usize>(strIDToNum(size_token.getValue()));
+					}
+				} else {
+					break;
+				}
+			}
 			tp.bytecode_pos = out->position;
 			out->datatype   = std::move(tp);
 			break;
@@ -1099,6 +1186,14 @@ namespace vm::loader::parser {
 			} else if (state[0].is(lang_def::Keyword::BCFunction)) {
 				auto func = Func::parse(state).toOptBox();
 				if (func) out->functions.emplace_back(std::move(*func));
+			} else if (state[0].is(lang_def::Keyword::BCFfi)) {
+				if (state[1].is(lang_def::Keyword::BCObject)) {
+					auto ffi_object = FFIObject::parse(state).toOptBox();
+					if (ffi_object) out->ffi_objects.emplace_back(std::move(*ffi_object));
+				} else {
+					auto ffi_func = FFIFunc::parse(state).toOptBox();
+					if (ffi_func) out->ffi_functions.emplace_back(std::move(*ffi_func));
+				}
 			} else {
 				state.logInt(
 					makeBox<dia_int::PlaceholderError>("Unexpected keyword.", state.getPosition())
@@ -1193,6 +1288,29 @@ namespace vm::loader::parser {
 		out << "}\n";
 	}
 
+	void FFIFunc::dprint(std::ostream& out) const {
+		out << "ffi function ";
+		out << name.value.strView() << " { ";
+		bool first = true;
+		for (const auto& param: parameters) {
+			if (!first) out << ", ";
+			out << param.value.strView();
+			first = false;
+		}
+		out << " } -> { ";
+		first = true;
+		for (const auto& param: result_types) {
+			if (!first) out << ", ";
+			out << param.value.strView();
+			first = false;
+		}
+		out << " }";
+	}
+
+	void FFIObject::dprint(std::ostream& out) const {
+		out << "ffi object \"" << path.strView() << "\"";
+	}
+
 	void ParsedFile::dprint(std::ostream& out) const {
 		for (auto& type: types) {
 			type->dprint(out);
@@ -1201,6 +1319,16 @@ namespace vm::loader::parser {
 
 		for (auto& global: global_data) {
 			global->dprint(out);
+			out << "\n";
+		}
+
+		for (auto& ffi_object: ffi_objects) {
+			ffi_object->dprint(out);
+			out << "\n";
+		}
+
+		for (auto& ffi_func: ffi_functions) {
+			ffi_func->dprint(out);
 			out << "\n";
 		}
 

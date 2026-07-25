@@ -73,3 +73,23 @@ Tests:
         Output:
           String: "100\n500\n10\n20\n"
         ExitCode: 0
+  array_out_of_bounds:
+    Cases:
+      llvm:
+        backend: llvm
+        ExitCode: 134
+      dvm:
+        backend: dvm
+        stderr_regex: "VMThread has panicked: Program panicked"
+        Output:
+          String: "Program panicked!\n"
+  array_negative_index:
+    Cases:
+      llvm:
+        backend: llvm
+        ExitCode: 134
+      dvm:
+        backend: dvm
+        stderr_regex: "VMThread has panicked: Program panicked"
+        Output:
+          String: "Program panicked!\n"

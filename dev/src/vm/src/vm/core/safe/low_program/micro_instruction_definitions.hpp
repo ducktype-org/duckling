@@ -407,6 +407,7 @@ DEF_MICRO_INSTR(jitEntrypoint)
  */
 DEF_MICRO_INSTR(call_builtinfunc, vm::low::opargs::BuiltinFunctionID)
 DEF_MICRO_INSTR(call_cfunc, vm::low::opargs::ExtCFunction)
+DEF_MICRO_INSTR(call_ffifunc, vm::low::opargs::FFIFunction)
 
 DEF_MICRO_INSTR(set_threadctx, vm::low::opargs::FunctionID)
 

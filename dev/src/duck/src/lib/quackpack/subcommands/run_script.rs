@@ -1,14 +1,13 @@
-use std::ffi::{OsStr, OsString};
+use std::ffi::OsString;
 use std::path::Path;
 
 use clap::ArgMatches;
 use tracing::debug;
 
-use crate::quackpack::core::compile::duckc::ArtifactsDir;
+use crate::duck::driver::cli_ext::jobs_from_matches;
 use crate::quackpack::core::compile::profiles::{DEFAULT_SCRIPT_PROFILE_NAME, Profile};
-use crate::quackpack::core::storage::venv_id::{ToVenvId, VenvId};
 use crate::quackpack::core::storage::{StorageSyncOptions, sync};
-use crate::quackpack::core::{AllowGlobalPackage, PackageContext, PackageLoader, run};
+use crate::quackpack::core::{AllowGlobalPackage, PackageContext, PackageLoader, PackageNotFound};
 use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail, qp_bail_internal};
 
 pub struct RunScriptOptions<'duck> {
@@ -16,8 +15,6 @@ pub struct RunScriptOptions<'duck> {
     pub ctx: &'duck DuckContext,
     /// Path the script to run.
     pub path: &'duck Path,
-    /// Optional name of the venv to run the script in.
-    pub venv_id: Option<VenvId>,
     /// Force the script to be run in the global venv.
     pub global: bool,
     /// Profile to run the script in.
@@ -30,6 +27,8 @@ pub struct RunScriptOptions<'duck> {
     pub strict_errors: bool,
     /// Arguments to the script.
     pub args: Vec<OsString>,
+    /// Number of threads to use.
+    pub jobs: usize,
 }
 
 impl<'duck> RunScriptOptions<'duck> {
@@ -39,7 +38,6 @@ impl<'duck> RunScriptOptions<'duck> {
         path: &'duck Path,
         matches: &ArgMatches,
     ) -> QuackResult<Self> {
-        let venv_id = matches.get_one::<String>("venv").map(ToVenvId::to_venv_id);
         let profile = matches
             .get_one::<String>("profile")
             .map(String::as_str)
@@ -53,13 +51,13 @@ impl<'duck> RunScriptOptions<'duck> {
         Ok(Self {
             ctx,
             path,
-            venv_id,
             global: matches.get_flag("global"),
             profile,
             overwrite: matches.get_flag("overwrite"),
             frozen: matches.get_flag("frozen"),
             strict_errors: matches.get_flag("external-errors"),
             args,
+            jobs: jobs_from_matches(matches),
         })
     }
 
@@ -75,13 +73,13 @@ impl<'duck> RunScriptOptions<'duck> {
         Ok(Self {
             ctx,
             path,
-            venv_id: None,
             global: false,
             profile,
             overwrite: false,
             frozen: false,
             strict_errors: false,
             args,
+            jobs: 1,
         })
     }
 }
@@ -94,13 +92,13 @@ pub fn run_script<'duck>(rs_options: RunScriptOptions<'duck>) -> QuackResult<()>
     let RunScriptOptions {
         ctx,
         path,
-        venv_id,
         global,
         profile,
         overwrite,
         frozen,
         strict_errors,
         args,
+        jobs: _,
     } = rs_options;
     let script_name = path
         .file_name()
@@ -108,7 +106,7 @@ pub fn run_script<'duck>(rs_options: RunScriptOptions<'duck>) -> QuackResult<()>
     let folder_path = path
         .parent()
         .context_internal("we assured that the path points to a file")?;
-    let package = get_package(ctx, path, folder_path, global, venv_id)?;
+    let package = get_package(ctx, path, folder_path, global)?;
     let root_identity = package.package().as_a_local_identity()?;
     let (lock, venv, storage) = sync(
         &package,
@@ -120,18 +118,6 @@ pub fn run_script<'duck>(rs_options: RunScriptOptions<'duck>) -> QuackResult<()>
     )?;
     let compile_lock = lock.into_compile_lock();
     let profile = Profile::construct_profile(profile, package.package().manifest().profiles())?;
-    // let bcx = BuildContext {
-    //     pcx: &package,
-    //     root_identity,
-    //     freeze: venv.into(),
-    //     storage,
-    //     used_features: vec![],
-    //     profile,
-    //     script_path: Some(folder_path.join(script_name)),
-    // };
-    // let artifacts_dir = compile::compile(bcx, CompilationType::StandaloneScript)?;
-    // drop(compile_lock);
-    // execute_script(artifacts_dir, script_name, profile.dvm_bytecode, args)
 }
 
 /// Loads the appropriate venv of the script.
@@ -140,51 +126,32 @@ fn get_package<'duck>(
     path: &Path,
     folder_path: &Path,
     global: bool,
-    venv_id: Option<VenvId>,
 ) -> QuackResult<PackageContext<'duck>> {
-    if let Some(package) = PackageContext::try_new_from_frontmatter(path.to_path_buf(), ctx)? {
-        if venv_id.is_some() {
-            qp_bail!("script with a frontmatter cannot be run with `venv` argument specified")
-        } else {
-            Ok(package)
-        }
-    } else {
-        match venv_id {
-            Some(venv_id) => {
-                debug_assert!(!global, "should be guarded by the parser");
-                PackageLoader::find_venv_by_name(ctx, venv_id)
-            }
-            None => {
-                if global {
-                    PackageLoader::global_package(ctx)
-                } else {
-                    PackageLoader::find_from_directory(folder_path, ctx, AllowGlobalPackage::Yes)
-                }
-            }
-        }
+    // If this is `Some(_)` then the script has a frontmatter.
+    let possible_frontmatter = PackageContext::try_new_from_frontmatter(path.to_path_buf(), ctx)?;
+    // If this is `Ok(_)` then the script lies inside a package.
+    let possible_package =
+        PackageLoader::find_from_directory(folder_path, ctx, AllowGlobalPackage::No);
+    // If possible_package is `Err` but it does steem from `PackageNotFound` then return the error.
+    // After this, possible_package is `Err` if and only if script does not belong to a package.
+    if let Err(ref err) = possible_package
+        && !err.has_in_chain::<PackageNotFound>()
+    {
+        return possible_package;
     }
-}
+    match (possible_frontmatter, possible_package, global) {
+        // Scripts with frontmatters cannot be inside packages nor be run with `global` flag.
+        (Some(_), Ok(_), _) => qp_bail!("scripts inside packages cannot have frontmatters"),
+        (Some(_), _, true) => {
+            qp_bail!("script with a frontmatter cannot be run with `global` flag")
+        }
+        (Some(frontmatter), Err(_), false) => Ok(frontmatter),
 
-/// Run the created script binary.
-// @TODO: #2900 Unmock this.
-#[expect(dead_code)]
-fn execute_script(
-    artifacts_dir: ArtifactsDir,
-    script_name: &OsStr,
-    dvm_backend: bool,
-    args: Vec<OsString>,
-) -> QuackResult<()> {
-    let artifacts_dir = match artifacts_dir {
-        ArtifactsDir::TempDir(dir) => dir,
-        _ => qp_bail_internal!("script compilation did not produce a tempdir"),
-    };
-    if dvm_backend {
-        panic!("@TODO: #2443 Implement run")
-    } else {
-        let exe_name = Path::new(script_name).with_extension("exe");
-        let exe_path = artifacts_dir.path().join(exe_name);
-        let exit_status = run::run_exe(&exe_path, args)?;
-        drop(artifacts_dir);
-        std::process::exit(exit_status.code().unwrap_or(0))
+        // `global` forces the script to be run in the global venv, even if it is inside a package.
+        (None, _, true) => PackageLoader::global_package(ctx),
+        // If script does not belong to a package, default to global venv.
+        (None, Err(_), false) => PackageLoader::global_package(ctx),
+
+        (None, Ok(pcx), false) => Ok(pcx),
     }
 }

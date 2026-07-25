@@ -86,6 +86,14 @@ namespace compiler::helios {
 				));
 				return query::Failed();
 			}
+		} else if (first_arg == base::StrID("DVM")) {
+			if (args.size() == 1)  // `extern("DVM")` case
+				return DVMAbi{};
+			ctx.logInt(makeBox<dia_int::PlaceholderError>(
+				"Too many arguments for DVM ABI in extern()",
+				extern_args.unlock(ctx)->getStablePosition()
+			));
+			return query::Failed();
 		} else {
 			ctx.logInt(makeBox<dia_int::PlaceholderError>(
 				"Unsupported ABI specified in extern()", extern_args.unlock(ctx)->getStablePosition()
@@ -100,13 +108,8 @@ namespace compiler::helios {
 
 			// Builtin functions are implemented in C/C++ and use the C ABI.
 			variant_match(sym_ref->other) {
-				variant_case(defgen::GeneratedSymbolData, gen_data) {
-					variant_match(gen_data.data) {
-						variant_case_novalue(defgen::GeneratedSymbolData::BuiltinOperator) {
-							return CAbi{};
-						}
-					}
-				}
+				variant_case_novalue(defgen::BuiltinOperator) { return CAbi{}; }
+				variant_default {}
 			}
 
 			// @TODO: #895 fix it when we add script based package targets
