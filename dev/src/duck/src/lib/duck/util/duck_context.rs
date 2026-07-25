@@ -132,7 +132,7 @@ impl Default for DuckContext {
         Self {
             console,
             error_console,
-            duck_cfg: Default::default(),
+            duck_cfg: DuckCfg::new(&duck_home).unwrap(),
             env,
             cwd: current_dir().unwrap(),
             duck_home,

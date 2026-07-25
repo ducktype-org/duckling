@@ -27,10 +27,7 @@ Tests:
         ExitCode: 1
         Err:
           Run: |+
-            echo "error: when trying to check the maximum typos fixing distance
+            echo "error: when parsing the configuration at \`$DUCK_HOME/config.yaml\`
             
               Caused by:
-                the key \`security.typos.max-distance\` expects a positive integer, not a string
-            
-              Caused by:
-                when parsing the configuration at \`$DUCK_HOME/config.yaml\`"
+                invalid type: string \"ala\", expected u64"
