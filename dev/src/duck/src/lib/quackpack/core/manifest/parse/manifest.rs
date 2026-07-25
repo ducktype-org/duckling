@@ -199,8 +199,8 @@ fn parse_venv(
     let Some(input) = input else {
         return Ok(VenvConfig::default_for_package(ctx));
     };
-    let guard = scope.push("storage".into());
-    let storage_root = if let Some(ref storage) = input.storage {
+    let guard = scope.push("storage-path".into());
+    let storage_root = if let Some(ref storage) = input.storage_path {
         resolve_path_maybe_relative_to_dir(storage, root, ctx)
             .with_context(|| guard.make_context_string())?
     } else {

@@ -307,7 +307,7 @@ impl<'de> de::Deserialize<'de> for OptLevel {
 /// A venv's configuration.
 #[serde(rename_all = "kebab-case")]
 pub struct VenvConfig {
-    pub storage: Option<PathBuf>,
+    pub storage_path: Option<PathBuf>,
     pub ephemeral: Option<bool>,
     pub expose_freezefile: Option<bool>,
 }

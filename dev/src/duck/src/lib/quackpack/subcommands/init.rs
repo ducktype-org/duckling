@@ -41,18 +41,18 @@ struct VenvConfigBuilder {
 
 impl Display for VenvConfigBuilder {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "venv:")?;
+        write!(f, "venv:\n")?;
 
         macro_rules! write_field {
             ($name:expr, $field:expr) => {{
                 if let Some(field) = $field {
-                    write!(f, "  {}: {}", $name, field)?;
+                    write!(f, "  {}: {}\n", $name, field)?;
                 }
             }};
         }
         write_field!("expose-freezefile", self.expose_freezefile);
         write_field!("ephemeral", self.ephemeral);
-        write_field!("storage", self.storage.as_ref().map(|x| x.display()));
+        write_field!("storage-path", self.storage.as_ref().map(|x| x.display()));
         Ok(())
     }
 }
