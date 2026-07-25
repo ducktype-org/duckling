@@ -132,7 +132,11 @@ impl TryFrom<(registry::Manifest, &DuckContext)> for Manifest {
             description,
         } = metadata;
         let authors = authors.into_iter().collect();
-        let metadata = PackageMetadata::new(authors, Some(license), Some(description));
+        let metadata = PackageMetadata {
+            authors,
+            license: Some(license),
+            description: Some(description),
+        };
         Ok(Manifest::new(
             name.into(),
             version,
@@ -160,9 +164,9 @@ impl TryFrom<Manifest> for registry::Manifest {
             profiles,
             venv: _,
         } = value;
-        let license = metadata.license().map(Into::into).unwrap_or_default();
-        let description = metadata.description().map(Into::into).unwrap_or_default();
-        let authors = metadata.into_authors().into_iter().collect();
+        let license = metadata.license.unwrap_or_default();
+        let description = metadata.description.unwrap_or_default();
+        let authors = metadata.authors.into_iter().collect();
         let metadata = registry::Metadata {
             version,
             authors,

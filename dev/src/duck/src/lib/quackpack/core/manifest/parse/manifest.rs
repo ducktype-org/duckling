@@ -95,11 +95,11 @@ pub(crate) fn parse(
                 .as_ref()
                 .map(|vec| vec.iter().map(<&String>::into).collect())
                 .unwrap_or_default();
-            let package_metadata = PackageMetadata::new(
+            let package_metadata = PackageMetadata {
                 authors,
-                metadata.license.as_ref().map(<&String>::into),
-                metadata.description.as_ref().map(<&String>::into),
-            );
+                license: metadata.license.as_ref().map(<&String>::into),
+                description: metadata.description.as_ref().map(<&String>::into),
+            };
 
             Ok(Manifest::new(
                 name.into(),
