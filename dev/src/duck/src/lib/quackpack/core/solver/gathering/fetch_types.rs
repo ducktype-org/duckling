@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::StrId;
 use crate::quackpack::core::{FeatureName, Manifest, PackageId, Source, Version};
+use crate::{QuackResult, StrId, qp_bail_internal};
 
 /// Type representing a request to get manifests for a single/multiple packages.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -33,10 +33,55 @@ pub struct RequestIdentifier {
     pub source: Source,
 }
 
+impl ManifestsRequest {
+    /// Create a new pinned [`ManifestsRequest`].
+    pub fn new_pinned(
+        source: Source,
+        name: StrId,
+        version: Version,
+        features: HashSet<FeatureName>,
+    ) -> Self {
+        Self::Pinned(PinnedRequest {
+            id: RequestIdentifier { name, source },
+            version,
+            features,
+        })
+    }
+
+    /// Create a new not pinned [`ManifestsRequest`].
+    pub fn new_not_pinned(
+        source: Source,
+        name: StrId,
+        versions: Option<Vec<Version>>,
+        features: HashSet<FeatureName>,
+    ) -> Self {
+        Self::NotPinned(NotPinnedRequest {
+            id: RequestIdentifier { name, source },
+            versions,
+            features,
+        })
+    }
+}
+
 /// Type representing non-error results of a fetch.
 pub enum FetchResponse {
     Success(FetchSuccess),
     Failed(FetchFailure),
+}
+
+impl FetchResponse {
+    /// Create a new pinned [`FetchResponse::Failed`].
+    pub fn failed_pinned(id: RequestIdentifier, version: Version) -> Self {
+        Self::Failed(FetchFailure::Pinned(PinnedFailure {
+            origin_id: id,
+            origin_version: version,
+        }))
+    }
+
+    /// Create a new not pinned [`FetchResponse::Failed`].
+    pub fn failed_not_pinned(id: RequestIdentifier) -> Self {
+        Self::Failed(FetchFailure::NotPinned(NotPinnedFailure { origin_id: id }))
+    }
 }
 
 /// Type representing the result of a successful fetch.
@@ -80,4 +125,37 @@ pub struct PinnedFailure {
 #[derive(Debug)]
 pub struct NotPinnedFailure {
     pub origin_id: RequestIdentifier,
+}
+
+/// Type representing what action to perform for a given request.
+#[derive(Debug)]
+pub enum RequestAction {
+    /// A fetch for such request was never made, so the fetch should be performed.
+    Fetch,
+    /// No need for a fetch, but further requests result from this one.
+    More { requests: Vec<ManifestsRequest> },
+}
+
+impl RequestAction {
+    /// Get the requests or bail internally if in [`Self::Fetch`] version.
+    pub fn unwrap_requests(self) -> QuackResult<Vec<ManifestsRequest>> {
+        match self {
+            RequestAction::Fetch => {
+                qp_bail_internal!("called for manifests requests on a fetch request")
+            }
+            RequestAction::More { requests } => Ok(requests),
+        }
+    }
+}
+
+impl Default for RequestAction {
+    fn default() -> Self {
+        Self::More { requests: vec![] }
+    }
+}
+
+impl From<Vec<ManifestsRequest>> for RequestAction {
+    fn from(value: Vec<ManifestsRequest>) -> Self {
+        RequestAction::More { requests: value }
+    }
 }

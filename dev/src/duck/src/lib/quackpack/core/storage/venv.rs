@@ -336,15 +336,39 @@ impl Venv {
                     venv_id
                 )
             })?;
+        Self::fix_and_load_with_lock_held(storage, venv_id).map(|r| r.map(|(venv, _)| venv))
+    }
+
+    /// Convert the state of a virtual environment into canonical form and return its state.
+    /// Since loading the venv overrides the last_access value,
+    /// this function returns the previous last_access value as well as the loaded venv.
+    ///
+    /// If neither the main nor backup file is valid, the environment directory is removed.
+    #[tracing::instrument(skip_all)]
+    pub fn fix_and_load_with_last_access(
+        storage: &Storage,
+        venv_id: VenvId,
+        ctx: &DuckContext,
+    ) -> QuackResult<Option<(Self, SystemTime)>> {
+        trace!(id = %venv_id, "loading venv");
+        let _lock = storage
+            .data_locks()
+            .open_exclusive(venv_id, ctx)
+            .with_context(|| {
+                format!(
+                    "failed to acquire an exclusive data lock for venv `{}`",
+                    venv_id
+                )
+            })?;
         Self::fix_and_load_with_lock_held(storage, venv_id)
     }
 
-    /// Helper for [`fix_and_load`](Self::fix_and_load).
+    /// Helper for [`fix_and_load`](Self::fix_and_load) and [`fix_and_load_with_last_access`](Self::fix_and_load_with_last_access).
     #[tracing::instrument(skip(storage))]
     fn fix_and_load_with_lock_held(
         storage: &Storage,
         venv_id: VenvId,
-    ) -> QuackResult<Option<Self>> {
+    ) -> QuackResult<Option<(Self, SystemTime)>> {
         // NOTE: when external entity changes the storage disregarding the rules, we have
         // toctou here and an exception might be thrown later. We ignore that to keep sanity.
         if !storage.venv_dir(venv_id).is_dir() {
@@ -374,7 +398,7 @@ impl Venv {
                     debug!("failed to update last access time: {e} ({e:?})");
                     this.data_mut().set_last_access(previous_now);
                 }
-                return Ok(Some(this));
+                return Ok(Some((this, previous_now)));
             }
         }
 
@@ -401,7 +425,7 @@ impl Venv {
                     debug!("failed to update last access time: {e} ({e:?})");
                     this.data_mut().set_last_access(previous_now);
                 }
-                return Ok(Some(this));
+                return Ok(Some((this, previous_now)));
             }
         }
         // both files are not valid, so the venv does not exist,

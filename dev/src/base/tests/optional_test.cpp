@@ -110,26 +110,20 @@ public:
 
 		Optional<int> opt2;
 		match_optional(opt2) {
-			opt_some(val) {
-				(void) val;  // So that the compiler doesn't yell at us for not using the value.
-				assertTrue(false, "No value, in opt2, shouldn't enter this case");
-			}
+			opt_some(_) { assertTrue(false, "No value, in opt2, shouldn't enter this case"); }
 			opt_none assertTrue(opt2.empty(), "Entered opt_none with a value!");
 		}
 
 		visited                   = false;
 		if_opt_none(opt2) visited = true;
 		assertTrue(visited, "Macro if_opt_none does not work");
-		if_opt_some(opt2, value) {
-			(void) value;
-			assertTrue(false, "No value, in opt2, shouldn't enter this case");
-		}
+		if_opt_some(opt2, _) { assertTrue(false, "No value, in opt2, shouldn't enter this case"); }
 	}
 
 	void throwTest() {
 		Optional<int> opt;
 		assertThrows<std::exception>(
-			[&]() { (void) opt.value(); }, "Optional does not throw on no value access!"
+			[&]() { std::ignore = opt.value(); }, "Optional does not throw on no value access!"
 		);
 	}
 
@@ -385,13 +379,13 @@ public:
 
 	void testExpect() {
 		try {
-			(void) Optional<base::Ref<float>>().expect<int>(21);
+			std::ignore = Optional<base::Ref<float>>().expect<int>(21);
 			fail("No throw");
 		} catch (int er) { ASSERT_EQUAL(er, 21); }
 
 		base::Optional<float> empty;
 		try {
-			(void) empty.expect<int>(42);
+			std::ignore = empty.expect<int>(42);
 			fail("No throw");
 		} catch (int er) { ASSERT_EQUAL(er, 42); }
 	}

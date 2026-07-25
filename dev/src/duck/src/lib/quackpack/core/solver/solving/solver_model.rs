@@ -361,12 +361,8 @@ impl<'a> SolverModel<'a, ProblemCreated> {
     /// constructs the output and returns it.
     #[tracing::instrument(skip_all)]
     pub fn solve(self) -> QuackResult<FoundSolution> {
-        let solution = self
-            .model
-            .minimize()
-            .solve()
-            .best_sol()
-            .context("Failed to find a solution")?;
+        let solve = self.model.minimize().solve();
+        let solution = solve.best_sol().context("Failed to find a solution")?;
         debug!(?solution);
         let new_packages = new_packages(self.package_vars, self.preexisting_packages, &solution);
         let new_features = new_features(

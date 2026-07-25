@@ -7,7 +7,7 @@
 
 namespace compiler::helios::code {
 
-	class ElementOrigin {
+	class ElementOrigin final {
 		/**
 		 * @brief The source position of the origin, if it is available.
 		 *
