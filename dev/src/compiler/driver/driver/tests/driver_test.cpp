@@ -563,7 +563,7 @@ private:
 		);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			(void) ctx.query<driver::CompileModule>({ module, driver::BackendType::LLVM, false });
+			ctx.query<driver::CompileModule>({ module, driver::BackendType::LLVM, false });
 		});
 
 		// Serialize current graph

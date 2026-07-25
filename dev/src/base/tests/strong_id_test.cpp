@@ -36,9 +36,9 @@ public:
 		ASSERT_EQUAL(u64(id1), 1);
 		assertTrue(id1.isGood(), "ID is not good.");
 
-		(void) B::next();
-		(void) B::next();
-		(void) B::next();
+		std::ignore = B::next();
+		std::ignore = B::next();
+		std::ignore = B::next();
 
 		ASSERT_EQUAL(id0.asInt(), 0);
 		ASSERT_EQUAL(u64(id0), 0);

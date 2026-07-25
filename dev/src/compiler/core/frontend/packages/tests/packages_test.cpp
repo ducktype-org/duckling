@@ -163,10 +163,10 @@ private:
 		auto pkg_hash = hasher.finalize();
 
 		KeyOf_PackageSideInput pkg_key{ pkg_hash };
-		(void) pkg_key.queryStablePerfectHash();
+		std::ignore = pkg_key.queryStablePerfectHash();
 
 		auto count_key = KeyOf_PackageDependencyCountSideInput::computeHash(base::StrID("pkg"), 3u);
-		(void) count_key.queryStablePerfectHash();
+		std::ignore    = count_key.queryStablePerfectHash();
 
 		KeyOf_PackageDependencyAliasSideInput alias_key{
 			.package_hash      = pkg_hash,
@@ -174,7 +174,7 @@ private:
 			.found             = true,
 			.target_package_id = base::StrID("dep"),
 		};
-		(void) alias_key.queryStablePerfectHash();
+		std::ignore = alias_key.queryStablePerfectHash();
 
 		auto bytes   = alias_key.serialize();
 		auto decoded = KeyOf_PackageDependencyAliasSideInput::deserialize(bytes);
