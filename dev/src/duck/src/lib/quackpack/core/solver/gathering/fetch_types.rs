@@ -1,9 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::StrId;
-use crate::quackpack::core::full_identity::FullIdentity;
-use crate::quackpack::core::{FeatureName, Manifest, Source, Version};
-use crate::quackpack::util::with_version::WithVersion;
+use crate::quackpack::core::{FeatureName, Manifest, PackageId, Source, Version};
 
 /// Type representing a request to get manifests for a single/multiple packages.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -53,7 +51,7 @@ pub enum FetchSuccess {
 pub struct PinnedSuccess {
     pub origin_id: RequestIdentifier,
     pub origin_version: Version,
-    pub answer_package: WithVersion<FullIdentity>,
+    pub answer_package: PackageId,
     pub fetched_manifest: Box<Manifest>,
 }
 
@@ -61,7 +59,7 @@ pub struct PinnedSuccess {
 #[derive(Debug)]
 pub struct NotPinnedSuccess {
     pub origin_id: RequestIdentifier,
-    pub fetched_manifests: HashMap<WithVersion<FullIdentity>, Box<Manifest>>,
+    pub fetched_manifests: HashMap<PackageId, Box<Manifest>>,
 }
 
 /// Type representing a failed fetch.
