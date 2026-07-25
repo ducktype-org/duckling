@@ -190,23 +190,27 @@ fn parse_profile(input: &ProfileSchema) -> QuackResult<Profile> {
     })
 }
 
+/// Parse a `venv:` field.
 fn parse_venv(
     input: Option<&VenvConfigSchema>,
     root: &Path,
     ctx: &DuckContext,
     mut scope: ScopeGuard<'_>,
 ) -> QuackResult<VenvConfig> {
+    let default_config = VenvConfig::default_for_package(ctx);
     let Some(input) = input else {
-        return Ok(VenvConfig::default_for_package(ctx));
+        return Ok(default_config);
     };
     let guard = scope.push("storage-path".into());
     let storage_root = if let Some(ref storage) = input.storage_path {
         resolve_path_maybe_relative_to_dir(storage, root, ctx)
             .with_context(|| guard.make_context_string())?
     } else {
-        ctx.default_storage_root().into_not_locked_path()
+        default_config.storage_path().to_path_buf()
     };
-    let expose_freezefile = input.expose_freezefile.unwrap_or(true);
-    let ephemeral = input.ephemeral.unwrap_or(false);
+    let expose_freezefile = input
+        .expose_freezefile
+        .unwrap_or(default_config.expose_freezefile());
+    let ephemeral = input.ephemeral.unwrap_or(default_config.ephemeral());
     Ok(VenvConfig::new(storage_root, expose_freezefile, ephemeral))
 }

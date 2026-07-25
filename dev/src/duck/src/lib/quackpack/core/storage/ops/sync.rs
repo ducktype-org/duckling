@@ -49,7 +49,7 @@ pub fn sync(
     options: StorageSyncOptions,
 ) -> QuackResult<(TrySyncLock, Venv, Storage)> {
     debug!(root = %pcx.package().root().display(), ?options);
-    let venv_config = pcx.package().manifest().venv();
+    let venv_config = pcx.package().venv();
     let storage = Storage::new(venv_config.storage_path());
     let mut fetcher = Fetcher::new(pcx.ctx())?;
     let mut git_access = StorageGitAccess::new(&storage);

@@ -97,7 +97,7 @@ pub(crate) fn parse(
             check_no_git(source, &mut scope)?;
             check_no_registry(source, &mut scope)?;
             debug!("manifest path is `{}`", root.display());
-            let dir_root = resolve_path_maybe_relative_to_dir(&root, package_root, ctx)?;
+            let dir_root = resolve_path_maybe_relative_to_dir(root, package_root, ctx)?;
             Source::for_local(&dir_root)?
         }
         (None, None, Some(manifest_git_url)) => {

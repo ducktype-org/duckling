@@ -5,6 +5,9 @@ use std::path::{Path, PathBuf};
 use crate::DuckContext;
 
 #[derive(Clone, Debug)]
+/// A custom (or default :p) venv configuration.
+/// Defaults are inserted if the user doesn't provide custom values, and they can be inspected in
+/// `default_for_*` methods.
 pub struct VenvConfig {
     storage_path: PathBuf,
     expose_freezefile: bool,
@@ -36,7 +39,7 @@ impl VenvConfig {
         self.ephemeral
     }
 
-    /// Create a default configuration for the package.
+    /// Create a default configuration for a package.
     pub fn default_for_package(ctx: &DuckContext) -> Self {
         let storage = ctx.default_storage_root().into_not_locked_path();
         Self::new(
@@ -44,7 +47,7 @@ impl VenvConfig {
         )
     }
 
-    /// Create a default configuration for the script.
+    /// Create a default configuration for a script.
     pub fn default_for_script(ctx: &DuckContext) -> Self {
         let storage = ctx.default_storage_root().into_not_locked_path();
         Self::new(

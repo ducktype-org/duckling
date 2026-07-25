@@ -33,6 +33,7 @@ pub struct InitOptions<'duck, 'a> {
 }
 
 #[derive(Default)]
+/// A helper for building a partial [`VenvConfig`](crate::quackpack::core::manifest::VenvConfig).
 struct VenvConfigBuilder {
     expose_freezefile: Option<bool>,
     ephemeral: Option<bool>,
@@ -41,12 +42,12 @@ struct VenvConfigBuilder {
 
 impl Display for VenvConfigBuilder {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "venv:\n")?;
+        writeln!(f, "venv:")?;
 
         macro_rules! write_field {
             ($name:expr, $field:expr) => {{
                 if let Some(field) = $field {
-                    write!(f, "  {}: {}\n", $name, field)?;
+                    writeln!(f, "  {}: {}", $name, field)?;
                 }
             }};
         }

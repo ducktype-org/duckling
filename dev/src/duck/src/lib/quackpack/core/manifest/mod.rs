@@ -39,6 +39,7 @@ pub struct Manifest {
 
 impl Manifest {
     /// Create a new [`Manifest`].
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         name: StrId,
         version: Version,

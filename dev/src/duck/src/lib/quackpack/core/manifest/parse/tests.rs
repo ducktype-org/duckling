@@ -1463,7 +1463,7 @@ metadata:
   version: '0.10'
 
 venv:
-  storage: storage
+  storage-path: storage
   expose-freezefile: false
   ephemeral: true
 "#,
@@ -1488,7 +1488,7 @@ metadata:
   version: '0.10'
 
 venv:
-  storage: /storage
+  storage-path: /storage
 "#,
     );
     let ctx = DuckContext::default();
@@ -1506,7 +1506,7 @@ metadata:
   version: '0.10'
 
 venv:
-  storage: ~/storage
+  storage-path: ~/storage
 "#,
     );
     let ctx = DuckContext::default();

@@ -1,5 +1,5 @@
 //! A context of a package  parsed from the disk.
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use crate::duck::util::duck_home::DuckHome;
 use crate::quackpack::core::package_loader::PackageLoader;
@@ -87,5 +87,10 @@ impl<'duck> PackageContext<'duck> {
     /// Is this the global package.
     pub fn is_global(&self) -> bool {
         self.package.is_global()
+    }
+
+    /// Get the path to the storage.
+    pub fn storage_path(&self) -> &Path {
+        self.package().venv().storage_path()
     }
 }
