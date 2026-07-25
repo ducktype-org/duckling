@@ -1,12 +1,13 @@
 //! Initialize a new project.
-use std::fs::File;
+use std::fmt::Display;
+use std::fs::{File, OpenOptions};
 use std::io::{ErrorKind, Write};
 use std::path::{Path, PathBuf};
 
 use git2::Repository;
 
 use crate::duck::util::terminal::Terminal;
-use crate::quackpack::core::{PackageLoader, VenvConfig, Version};
+use crate::quackpack::core::{PackageLoader, Version};
 use crate::util::path_ops_ext::{MkdirOptions, PathOpsExt};
 use crate::{DuckContext, QuackError, QuackResult, QuackResultContext, qp_bail, qp_err};
 
@@ -29,6 +30,32 @@ pub struct InitOptions<'duck, 'a> {
     pub git: bool,
     /// Use prompts to customize the manifest.
     pub full: bool,
+}
+
+#[derive(Default)]
+/// A helper for building a partial [`VenvConfig`](crate::quackpack::core::manifest::VenvConfig).
+struct VenvConfigBuilder {
+    expose_freezefile: Option<bool>,
+    ephemeral: Option<bool>,
+    storage: Option<PathBuf>,
+}
+
+impl Display for VenvConfigBuilder {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "venv:")?;
+
+        macro_rules! write_field {
+            ($name:expr, $field:expr) => {{
+                if let Some(field) = $field {
+                    writeln!(f, "  {}: {}", $name, field)?;
+                }
+            }};
+        }
+        write_field!("expose-freezefile", self.expose_freezefile);
+        write_field!("ephemeral", self.ephemeral);
+        write_field!("storage-path", self.storage.as_ref().map(|x| x.display()));
+        Ok(())
+    }
 }
 
 const DEFAULT_SOURCE_FILENAME: &str = "src.dmf";
@@ -57,8 +84,7 @@ pub fn init(opts: InitOptions<'_, '_>) -> QuackResult<()> {
             .into_owned(),
     };
     create_manifest_file(opts.ctx, &opts.at, &name, opts.full)?;
-    create_venv_config_file(
-        opts.ctx,
+    append_venv_config_to_manifest(
         &opts.at,
         opts.expose_freezefile,
         opts.ephemeral,
@@ -156,36 +182,25 @@ fn bail_on_overriding_project(ctx: &DuckContext, root: &Path) -> QuackError {
 }
 
 /// Create a file with the venv config of the project (if necessary).
-fn create_venv_config_file(
-    ctx: &DuckContext,
+fn append_venv_config_to_manifest(
     root_path: &Path,
     expose_freezefile: bool,
     ephemeral: bool,
     local_storage: bool,
 ) -> QuackResult<()> {
-    let venv_cfg_file = root_path.join(PackageLoader::VENV_CONFIG_NAME);
-    let Some(venv_cfg) = generate_venv_config(expose_freezefile, ephemeral, local_storage)
-        .context_internal("failed to generate a VenvConfig")?
-    else {
+    let manifest_file = root_path.join(PackageLoader::MANIFEST_NAME);
+    let Some(venv_cfg) = generate_venv_config(expose_freezefile, ephemeral, local_storage) else {
         return Ok(());
     };
-    if let Some(parent) = venv_cfg_file.parent() {
+    if let Some(parent) = manifest_file.parent() {
         parent.mkdir(MkdirOptions::WithParents)?;
     }
-    let mut venv_cfg_file = match File::create_new(venv_cfg_file) {
-        Err(err) => {
-            if matches!(err.kind(), ErrorKind::AlreadyExists) {
-                ctx.console().warning(format!("init run with non-default venv configuration flags, but venv configuration file already exists at `{}`", root_path.display()))?;
-                return Ok(());
-            } else {
-                return Err(err).context("failed to create the venv configuration file");
-            }
-        }
-        Ok(venv_cfg_file) => venv_cfg_file,
-    };
-    venv_cfg_file
-        .write_all(venv_cfg.to_string().as_bytes())
-        .context("failed to write to a venv configuration file")?;
+    let mut file = OpenOptions::new()
+        .append(true)
+        .open(manifest_file)
+        .context("failed to open `quackconfig.yaml` for appending")?;
+    file.write_all(venv_cfg.to_string().as_bytes())
+        .context("failed to append a venv configuration into `quackconfig.yaml`")?;
     Ok(())
 }
 
@@ -195,22 +210,22 @@ fn generate_venv_config(
     expose_freezefile: bool,
     ephemeral: bool,
     local_storage: bool,
-) -> QuackResult<Option<VenvConfig>> {
-    let mut venv_cfg = VenvConfig::default();
+) -> Option<VenvConfigBuilder> {
+    let mut venv_cfg = VenvConfigBuilder::default();
     if expose_freezefile {
-        venv_cfg.set_freezefile_exposed(true)?;
+        venv_cfg.expose_freezefile = Some(true);
     }
     if ephemeral {
-        venv_cfg.set_ephemeral(true)?;
+        venv_cfg.ephemeral = Some(true);
     }
     if local_storage {
-        venv_cfg.set_storage_path(Path::new("storage"))?;
+        venv_cfg.storage = Some(PathBuf::from("storage"));
     }
     let would_create_not_default_venv_config = expose_freezefile || ephemeral || local_storage;
     if would_create_not_default_venv_config {
-        Ok(Some(venv_cfg))
+        Some(venv_cfg)
     } else {
-        Ok(None)
+        None
     }
 }
 

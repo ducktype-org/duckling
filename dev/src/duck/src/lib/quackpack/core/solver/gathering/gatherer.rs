@@ -16,7 +16,6 @@ use crate::quackpack::core::solver::solver_mode::SolverMode;
 use crate::quackpack::core::{
     FeatureName, GitReference, Manifest, PackageId, PackageLoader, Source, SourceKind,
 };
-use crate::quackpack::schemas::registry;
 use crate::quackpack::util::interned_url::InternedUrl;
 use crate::quackpack::util::to_path_buf::ToPathBuf;
 use crate::quackpack::util::to_url::ToUrl;
@@ -211,7 +210,8 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
         let FetcherResponse::Some(registry_manifest) = fetcher_response else {
             return Ok(FetchResponse::failed_pinned(request.id, request.version));
         };
-        match <registry::Manifest as TryInto<Manifest>>::try_into(registry_manifest) {
+        let manifest: QuackResult<Manifest> = (registry_manifest, self.fetcher.ctx()).try_into();
+        match manifest {
             Ok(manifest) => Ok(FetchResponse::Success(FetchSuccess::Pinned(
                 PinnedSuccess {
                     origin_id: request.id,
@@ -254,7 +254,7 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
             fetched_manifests: HashMap::new(),
         };
         for manifest in fetcher_response.packages_metadata {
-            let manifest: QuackResult<Manifest> = manifest.try_into();
+            let manifest: QuackResult<Manifest> = (manifest, self.fetcher.ctx()).try_into();
             match manifest {
                 Ok(manifest) => {
                     fetch_response.fetched_manifests.insert(
