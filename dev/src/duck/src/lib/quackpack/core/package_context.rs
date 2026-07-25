@@ -1,9 +1,8 @@
 //! A context of a package  parsed from the disk.
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use crate::duck::util::duck_home::DuckHome;
 use crate::quackpack::core::package_loader::PackageLoader;
-use crate::quackpack::core::venv_config::VenvConfig;
 use crate::quackpack::core::{self, AnyPackage};
 use crate::{DuckContext, QuackResult, qp_bail, qp_bail_internal};
 
@@ -11,7 +10,6 @@ use crate::{DuckContext, QuackResult, qp_bail, qp_bail_internal};
 /// A context of a package  parsed from the disk.
 pub struct PackageContext<'duck> {
     package: AnyPackage,
-    venv_config: VenvConfig,
     ctx: &'duck DuckContext,
 }
 
@@ -20,11 +18,8 @@ impl<'duck> PackageContext<'duck> {
     #[tracing::instrument(skip_all)]
     pub fn new(project_root: PathBuf, ctx: &'duck DuckContext) -> QuackResult<Self> {
         let package = core::parse_manifest(&project_root.join(PackageLoader::MANIFEST_NAME), ctx)?;
-        let venv_config_path = project_root.join(PackageLoader::VENV_CONFIG_NAME);
-        let venv_config = VenvConfig::new(venv_config_path)?;
         Ok(Self {
             package: AnyPackage::Package(package),
-            venv_config,
             ctx,
         })
     }
@@ -51,10 +46,8 @@ impl<'duck> PackageContext<'duck> {
         let Some(frontmatter) = core::try_parse_frontmatter(path.clone(), ctx)? else {
             return Ok(None);
         };
-        let venv_config = VenvConfig::for_frontmatter()?;
         Ok(Some(Self {
             package: AnyPackage::Frontmatter(frontmatter),
-            venv_config,
             ctx,
         }))
     }
@@ -70,10 +63,8 @@ impl<'duck> PackageContext<'duck> {
                 "tried to construct a frontmatter package context for something that is not a frontmatter"
             )
         };
-        let venv_config = VenvConfig::for_frontmatter()?;
         Ok(Some(Self {
             package: AnyPackage::Frontmatter(frontmatter),
-            venv_config,
             ctx,
         }))
     }
@@ -88,11 +79,6 @@ impl<'duck> PackageContext<'duck> {
         self.package
     }
 
-    /// Get [`VenvConfig`] of this [`PackageContext`]
-    pub fn venv_config(&self) -> &VenvConfig {
-        &self.venv_config
-    }
-
     /// Get [`DuckContext`] used to create this [`PackageContext`]
     pub fn ctx(&self) -> &DuckContext {
         self.ctx
@@ -101,15 +87,5 @@ impl<'duck> PackageContext<'duck> {
     /// Is this the global package.
     pub fn is_global(&self) -> bool {
         self.package.is_global()
-    }
-
-    /// Get the path to the storage of this package.
-    pub fn storage_path(&self) -> QuackResult<PathBuf> {
-        let venv_config = self.venv_config();
-        let storage_localization = venv_config
-            .storage_path()?
-            .map(Path::to_path_buf)
-            .unwrap_or_else(|| self.ctx().default_storage_root().into_not_locked_path());
-        Ok(storage_localization)
     }
 }

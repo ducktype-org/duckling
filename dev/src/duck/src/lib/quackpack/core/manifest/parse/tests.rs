@@ -67,6 +67,12 @@ metadata:
     assert!(summary.dependencies().all_dependencies().is_empty());
     assert!(summary.dev_dependencies().all_dependencies().is_empty());
     assert!(summary.features().all_features().is_empty());
+    assert!(!summary.venv().ephemeral());
+    assert!(summary.venv().expose_freezefile());
+    assert_eq!(
+        summary.venv().storage_path(),
+        ctx.default_storage_root().not_locked_path()
+    );
 }
 
 #[test]
@@ -497,7 +503,7 @@ dependencies:
     #[cfg(not(windows))]
     {
         let path = a3.source().url().to_path_buf().unwrap();
-        assert_eq!(path, PathBuf::from(format!("/xd")));
+        assert_eq!(path, PathBuf::from("/xd"));
     }
     assert!(a3.alias().is_none());
 
@@ -1446,4 +1452,67 @@ dependencies:
             ]
         )
     );
+}
+
+#[test]
+fn custom_venv_with_relative_path() {
+    let (dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: xd
+  version: '0.10'
+
+venv:
+  storage: storage
+  expose-freezefile: false
+  ephemeral: true
+"#,
+    );
+    let ctx = DuckContext::default();
+    let manifest = parse_manifest(&manifest_path, &ctx).unwrap();
+    let summary = manifest.manifest();
+    assert!(summary.venv().ephemeral());
+    assert!(!summary.venv().expose_freezefile());
+    assert_eq!(
+        summary.venv().storage_path(),
+        dir.path().join("storage").resolve().unwrap(),
+    );
+}
+
+#[test]
+fn custom_venv_with_absolute_path() {
+    let (_dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: xd
+  version: '0.10'
+
+venv:
+  storage: /storage
+"#,
+    );
+    let ctx = DuckContext::default();
+    let manifest = parse_manifest(&manifest_path, &ctx).unwrap();
+    let summary = manifest.manifest();
+    assert_eq!(summary.venv().storage_path(), PathBuf::from("/storage"),);
+}
+
+#[test]
+fn custom_venv_with_home_path() {
+    let (_dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: xd
+  version: '0.10'
+
+venv:
+  storage: ~/storage
+"#,
+    );
+    let ctx = DuckContext::default();
+    let manifest = parse_manifest(&manifest_path, &ctx).unwrap();
+    let summary = manifest.manifest();
+
+    let home_dir = home_dir().unwrap();
+    assert_eq!(summary.venv().storage_path(), home_dir.join("storage"));
 }

@@ -4,13 +4,16 @@ use std::path::Path;
 
 use tracing::debug;
 
+use super::source::resolve_path_maybe_relative_to_dir;
 use super::{Scope, dependency};
+use crate::quackpack::core::manifest::VenvConfig;
 use crate::quackpack::core::{
     Features, Manifest, OptLevel, PackageMetadata, ParseMode, Profile, Profiles, ScopeGuard,
     Version,
 };
 use crate::quackpack::schemas::manifest::{
     Manifest as ManifestSchema, OptLevel as SchemaOptLevel, Profile as ProfileSchema,
+    VenvConfig as VenvConfigSchema,
 };
 use crate::util::IsPlural;
 use crate::util::hash::sha256_string;
@@ -63,6 +66,7 @@ pub(crate) fn parse(
                 dependencies,
                 dev_dependencies,
                 profiles,
+                VenvConfig::default_for_script(ctx),
             );
             Ok(manifest)
         }
@@ -84,6 +88,8 @@ pub(crate) fn parse(
             let guard = scope.push("features".into());
             let features = parse_features(schema.features.as_ref())
                 .with_context(move || guard.make_context_string())?;
+            let guard = scope.push("venv".into());
+            let venv = parse_venv(schema.venv.as_ref(), root, ctx, guard)?;
             let authors = metadata
                 .authors
                 .as_ref()
@@ -103,6 +109,7 @@ pub(crate) fn parse(
                 dependencies,
                 dev_dependencies,
                 profiles,
+                venv,
             ))
         }
     }
@@ -181,4 +188,25 @@ fn parse_profile(input: &ProfileSchema) -> QuackResult<Profile> {
         c_std,
         inherits,
     })
+}
+
+fn parse_venv(
+    input: Option<&VenvConfigSchema>,
+    root: &Path,
+    ctx: &DuckContext,
+    mut scope: ScopeGuard<'_>,
+) -> QuackResult<VenvConfig> {
+    let Some(input) = input else {
+        return Ok(VenvConfig::default_for_package(ctx));
+    };
+    let guard = scope.push("storage".into());
+    let storage_root = if let Some(ref storage) = input.storage {
+        resolve_path_maybe_relative_to_dir(storage, root, ctx)
+            .with_context(|| guard.make_context_string())?
+    } else {
+        ctx.default_storage_root().into_not_locked_path()
+    };
+    let expose_freezefile = input.expose_freezefile.unwrap_or(true);
+    let ephemeral = input.ephemeral.unwrap_or(false);
+    Ok(VenvConfig::new(storage_root, expose_freezefile, ephemeral))
 }
