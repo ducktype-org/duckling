@@ -54,36 +54,31 @@ namespace vm::loader::compiler {
 
 	void IVMCompiler::recompile() {
 		using namespace std::views;
-		using namespace code;
-		using std::vector;
 		using std::ranges::to;
-		using valid_function::ValidFunction;
-		using valid_type::ValidType;
 
 		ProgramSize sizes = getCurrentProgramSize();
 
 		auto new_types = high_program.getTypeContext().getCurrentTypes() | drop(sizes.type_count)
-		               | to<vector<ValidType>>();
+		               | to<std::vector>();
 		compileNewTypes(new_types);
 
-		auto new_c_functions = high_program.extCFunctions() | drop(sizes.ext_c_function_count)
-		                     | to<vector<ExternalCFunction>>();
+		auto new_c_functions
+			= high_program.extCFunctions() | drop(sizes.ext_c_function_count) | to<std::vector>();
 		compileNewExtCFunctions(new_c_functions);
 
-		auto new_ffi_functions = high_program.ffiFunctions()
-		                       | std::views::drop(sizes.ffi_function_count)
-		                       | std::ranges::to<std::vector<code::FFIFunction>>();
+		auto new_ffi_functions
+			= high_program.ffiFunctions() | drop(sizes.ffi_function_count) | to<std::vector>();
 		compileNewFFIFunctions(new_ffi_functions);
 
-		auto new_globals
-			= high_program.globals() | drop(sizes.global_count) | to<vector<GlobalData>>();
+		auto new_globals = high_program.globals() | drop(sizes.global_count) | to<std::vector>();
 
 		compileNewGlobals(new_globals);
 
 		auto to_cref = []<typename T>(const T& arg) -> CRef<T> { return &arg; };
 
 		auto new_functions = high_program.functions() | drop(sizes.function_count)
-		                   | transform(to_cref) | to<vector<CRef<ValidFunction>>>();
+		                   | transform(to_cref) | to<std::vector>();
+
 		compileNewFunctions(new_functions);
 	}
 }

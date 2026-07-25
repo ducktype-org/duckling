@@ -47,6 +47,8 @@ vm::code::valid_function::ValidFunction vm::code::ValidProgram::validateExpr(
 		globals_map,
 		function_signatures,
 		ext_c_function_map,
+		flag_context,
+		ffi_function_map,
 		expr,
 		thread
 	);

@@ -1885,13 +1885,15 @@ public:
 		const ObjIdNameMap<GlobalData>&                  globals,
 		const base::HashMap<base::StrID, FuncSignature>& signatures,
 		const ObjIdNameMap<ExternalCFunction>&           ext_c_signatures,
-		const Function&                                  function,
-		base::Optional<CRef<SafeVMThread>>               thread = std::nullopt
+		const ObjIdNameMap<FFIFunction>&                 ffi_signatures,
+		base::Optional<CRef<SafeVMThread>>               thread,
+		const Function&                                  function
 	):
 		  types_ctx(types_ctx),
 		  globals(globals),
 		  signatures(signatures),
 		  ext_c_signatures(ext_c_signatures),
+		  ffi_signatures(ffi_signatures),
 		  function(function),
 		  thread(thread) {}
 
@@ -1916,8 +1918,8 @@ vm::code::valid_function::ValidFunction vm::code::detail::validateAndExtractReac
 	const ObjIdNameMap<ExternalCFunction>&           ext_c_signatures,
 	const FlagContext&                               flag_context,
 	const ObjIdNameMap<FFIFunction>&                 ffi_signatures,
-	base::Optional<CRef<SafeVMThread>>               thread,
-	const Function&                                  function
+	const Function&                                  function,
+	base::Optional<CRef<SafeVMThread>>               thread
 ) {
 	FunctionValidator validator(types, globals_map, signatures, ext_c_signatures, ffi_signatures, thread, function);
 

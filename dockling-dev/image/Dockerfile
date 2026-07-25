@@ -37,6 +37,7 @@ RUN apt-get update -y && \
     # Build tools
     cmake \
     ninja-build \
+    ccache \
     # LLVM
     llvm-19 \
     llvm-19-dev \
@@ -100,8 +101,7 @@ ARG UID=1000
 ARG GID=1000
 ARG DEFAULT_USER=ubuntu
 
-RUN groupmod -g ${GID} ubuntu && \
-    usermod -u ${UID} -g ${GID} ubuntu
+RUN usermod -u ${UID} -g ${GID} ubuntu
 
 RUN if [ "$DEFAULT_USER" = "root" ]; then \
         rm -rf /root/.ssh && ln -s /home/ubuntu/.ssh /root/.ssh; \

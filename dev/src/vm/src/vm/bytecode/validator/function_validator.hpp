@@ -17,9 +17,9 @@ namespace vm::code::detail {
 		const ObjIdNameMap<GlobalData>&                  globals_map,
 		const base::HashMap<base::StrID, FuncSignature>& signatures,
 		const ObjIdNameMap<ExternalCFunction>&           ext_c_functions,
-		base::Optional<CRef<SafeVMThread>>               thread = std::nullopt,
 		const FlagContext&                               flag_context,
 		const ObjIdNameMap<FFIFunction>&                 ffi_functions,
-		const Function&                                  function
+		const Function&                                  function,
+		base::Optional<CRef<SafeVMThread>>               thread = std::nullopt
 	);
 }
