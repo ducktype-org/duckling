@@ -243,11 +243,11 @@ namespace vm {
 		const Frame& getStackFrame(u64 frame_index) const;
 
 		[[nodiscard]]
-		base::Optional<vm::loader::ValidFuncPosition> getCurrentHighPosition(u64 frame_index
-		) const;
+		base::Optional<vm::loader::ValidFuncPosition> getCurrentHighPosition(u64 frame_index) const;
 
 		[[nodiscard]]
-		base::Optional<CRef<code::valid_function::ValidFunction>> getFatBytecodeFunction(u64 frame_idx) const;
+		base::Optional<CRef<code::valid_function::ValidFunction>> getFatBytecodeFunction(u64 frame_idx
+		) const;
 
 		bool loadAndExecRuntimeExpr(code::valid_function::ValidFunction&& expr);
 

@@ -222,7 +222,7 @@ std::expected<base::Optional<dia::SourcePosition>, vm::loader::MappingException>
 	const auto& maybe_high_function = getHighProgram()->functions().atMaybe(position.function_name);
 	if (maybe_high_function.empty()) return std::unexpected(MappingException::NoFunction);
 
-	return maybe_high_function.value()->body.at(position.instruction_index).visit([](auto&& instr) {
+	return (*maybe_high_function.value())->body.at(position.instruction_index).visit([](auto&& instr) {
 		return instr.bytecode_pos;
 	});
 }
@@ -230,7 +230,8 @@ std::expected<base::Optional<dia::SourcePosition>, vm::loader::MappingException>
 base::Optional<FatBytecodePosition> vm::loader::Loader::mapFileLineToCodeCollectionPosition(
 	const fs::File& file, usize line
 ) const {
-	for (const auto& function: getHighProgram()->functions()) {
+	for (const auto& function_box: getHighProgram()->functions()) {
+		const auto& function = *function_box;
 		// ensure function has position data and is in requested file
 		if (!function.bytecode_pos) continue;
 		if (function.bytecode_pos->getSource()->getFile() != file) continue;

@@ -308,7 +308,8 @@ namespace vm::jit {
 			llvm::Linker::linkModules(
 				*module, std::move(used_opfuns_module), llvm::Linker::Flags::LinkOnlyNeeded
 			);
-			for (auto& f: module->functions()) {
+			for (auto& f_ptr: module->functions()) {
+				auto& f = *f_ptr;
 				if (!f.isDeclaration() && &f != user_func_wrapper) {
 					// Set cloned opfuns' linkage to AvailableExternally to avoid double compilation
 					// and symbol conflicts.

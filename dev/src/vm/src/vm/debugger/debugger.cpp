@@ -243,5 +243,6 @@ namespace vm::debugger {
 			})
 		    .and_then([&] { return api::executeRuntimeExprFromFile(pid, thread_id, file); });
 	}
+
 	const Mapper& Debugger::getMapper() { return mapper; }
 }

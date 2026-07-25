@@ -1921,7 +1921,9 @@ vm::code::valid_function::ValidFunction vm::code::detail::validateAndExtractReac
 	const Function&                                  function,
 	base::Optional<CRef<SafeVMThread>>               thread
 ) {
-	FunctionValidator validator(types, globals_map, signatures, ext_c_signatures, ffi_signatures, thread, function);
+	FunctionValidator validator(
+		types, globals_map, signatures, ext_c_signatures, ffi_signatures, thread, function
+	);
 
 
 	valid_function::ValidFunction new_function;

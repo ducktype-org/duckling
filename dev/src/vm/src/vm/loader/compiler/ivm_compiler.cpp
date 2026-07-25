@@ -74,7 +74,8 @@ namespace vm::loader::compiler {
 
 		compileNewGlobals(new_globals);
 
-		auto to_cref = []<typename T>(const T& arg) -> CRef<T> { return &arg; };
+		auto to_cref
+			= []<typename T>(const SharedBox<T>& shared_box) -> CRef<T> { return &(*shared_box); };
 
 		auto new_functions = high_program.functions() | drop(sizes.function_count)
 		                   | transform(to_cref) | to<std::vector>();

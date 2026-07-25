@@ -408,9 +408,10 @@ namespace vm {
 					auto func_opt
 						= loader.getHighProgram()->functions().atMaybe(high_pos.function_name);
 					CORE_ASSERT(func_opt, "We mapped low position to high, high-func should exist");
-					auto  func_ref    = *func_opt;
-					auto  stack_state = func_ref->stack_states.at(high_pos.instruction_index);
-					auto& ls_db       = func_ref->local_stack;
+					auto  func_shared_box = **func_opt;
+					auto  func_ref        = func_shared_box.ref();
+					auto  stack_state     = func_ref->stack_states.at(high_pos.instruction_index);
+					auto& ls_db           = func_ref->local_stack;
 
 					using namespace std::views;
 					for (auto&& [block_idx, frame_var]: zip(iota(0u), frame_vars)) {
@@ -559,8 +560,8 @@ namespace vm {
 		if (valid_expr.has_value()) {
 			auto success = thread_ref->loadAndExecRuntimeExpr(std::move(valid_expr).value());
 			if (!success)
-				return std::unexpected(api::ApiError{
-					api::OtherError{ "Couldn't execute the expression - likely resume() has somehow failed" } });
+				return std::unexpected(api::ApiError{ api::OtherError{
+					"Couldn't execute the expression - likely resume() has somehow failed" } });
 			return api::Response(api::response::Empty());
 		} else {
 			std::stringstream ss;

@@ -44,7 +44,7 @@ void externalizeAllGlobalValues(llvm::Module& module) {
 
 	for (auto& ifunc: module.ifuncs()) externalizeGlobalValue(ifunc);
 
-	for (auto& f: module.functions()) externalizeGlobalValue(f);
+	for (auto& f_ptr: module.functions()) externalizeGlobalValue(*f_ptr);
 }
 
 void cloneAndRegisterModule(

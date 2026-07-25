@@ -47,7 +47,8 @@ std::string extractFunctionName(const std::string& full) {
 std::unordered_map<vm::low::MicroOpcode, std::string> createOpcodeNameMap(llvm::Module& module) {
 	std::unordered_map<vm::low::MicroOpcode, std::string> lfunc_name_map;
 
-	for (auto& f: module.functions()) {
+	for (auto& f_box: module.functions()) {
+		auto& f = *f_box;
 		if (!f.isDeclaration()) {
 			auto func_name = f.getName().str();
 			auto demangled = llvm::demangle(func_name);

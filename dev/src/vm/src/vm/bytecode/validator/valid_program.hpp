@@ -45,9 +45,8 @@ namespace vm::code {
 		 * @note If the newly injected code were to create an unvalid state,
 		 * an exception of ValidationError base will be thrown.
 		 */
-		ValidProgram tryInsertCode(
-			const CodeCollection& collection, api::ExecutionConfig config
-		) const;
+		ValidProgram tryInsertCode(const CodeCollection& collection, api::ExecutionConfig config)
+			const;
 
 		const valid_type::ValidTypeMap& types() const;
 
@@ -55,7 +54,7 @@ namespace vm::code {
 
 		const ObjIdNameMap<GlobalData>& globals() const;
 
-		const ObjIdNameMap<valid_function::ValidFunction>& functions() const;
+		const vm::ObjIdNameMap<SharedBox<vm::code::valid_function::ValidFunction>>& functions() const;
 
 		const ObjIdNameMap<ExternalCFunction>& extCFunctions() const;
 
@@ -65,15 +64,16 @@ namespace vm::code {
 
 		const ObjIdNameMap<FFIFunction>& ffiFunctions() const;
 
-		const std::vector<std::pair<std::string, std::shared_ptr<native::DynamicLibrary>>>& objectFiles() const;
+		const std::vector<std::pair<std::string, std::shared_ptr<native::DynamicLibrary>>>& objectFiles(
+		) const;
 
 	private:
-		ObjIdNameMap<valid_function::ValidFunction> function_map;
-		ObjIdNameMap<ExternalCFunction>             ext_c_function_map;
-		ObjIdNameMap<FFIFunction>                   ffi_function_map;
-		ObjIdNameMap<GlobalData>                    globals_map;
-		TypeContext                                 type_context;
-		FlagContext                                 flag_context;
+		ObjIdNameMap<SharedBox<valid_function::ValidFunction>> function_map;
+		ObjIdNameMap<ExternalCFunction>                        ext_c_function_map;
+		ObjIdNameMap<FFIFunction>                              ffi_function_map;
+		ObjIdNameMap<GlobalData>                               globals_map;
+		TypeContext                                            type_context;
+		FlagContext                                            flag_context;
 
 		/**
 		 * @brief Shared objects declared with `ffi object`, loaded into the process and keyed by
