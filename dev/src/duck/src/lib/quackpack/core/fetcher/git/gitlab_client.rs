@@ -69,6 +69,10 @@ impl PseudoGitClient for GitlabClient<'_> {
         let port = repo_url.port();
         let scheme = repo_url.scheme();
         let domain = repo_url.domain()?;
+        // Check that scheme is `http` or `https`.
+        if !(scheme == "http") && !(scheme == "https") {
+            return None;
+        }
         // Check that this is a gitlab repo.
         if !domain.starts_with("gitlab") {
             return None;

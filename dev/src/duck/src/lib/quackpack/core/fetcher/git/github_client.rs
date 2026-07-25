@@ -56,6 +56,10 @@ impl PseudoGitClient for GithubClient<'_> {
         let port = repo_url.port();
         let scheme = repo_url.scheme();
         let domain = repo_url.domain()?;
+        // Check that scheme is `http` or `https`.
+        if !(scheme == "http") && !(scheme == "https") {
+            return None;
+        }
         // Check that this is a github repo.
         if !domain.starts_with("github") {
             return None;
@@ -73,6 +77,8 @@ impl PseudoGitClient for GithubClient<'_> {
         match reference {
             GitReference::Default => {
                 // Docs: `https://docs.github.com/en/rest/repos/repos?apiVersion=2026-03-10#get-a-repository`.
+                // `api_url` has trailing slash, so that `Url::join` works.
+                // But Github does not support requests for that url, so here we trim the trailing slash.
                 let mut tmp_url = api_url.as_url().clone();
                 let path = api_url.path();
                 let new_path = path.trim_end_matches('/');
