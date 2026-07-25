@@ -28,7 +28,7 @@ pub fn execute(ctx: &DuckContext, matches: &ArgMatches) -> QuackResult<()> {
         let pcx = PackageLoader::find_from_cwd(ctx, AllowGlobalPackage::No).with_context(|| {
             HintMessage::new("to clean the global storage use `global-storage` flag")
         })?;
-        pcx.storage_path()?
+        pcx.storage_path().to_path_buf()
     };
     let clean_mode = match matches.get_one::<String>("venv") {
         None => CleanStorageMode::CleanStorage,

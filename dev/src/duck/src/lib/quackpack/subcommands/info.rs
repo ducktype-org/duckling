@@ -7,9 +7,9 @@ use crate::{QuackResult, QuackResultContext, qp_err};
 /// Logic for executing the `info` subcommand.
 pub fn info(pcx: PackageContext) -> QuackResult<()> {
     let ctx = pcx.ctx();
-    let storage_localization = pcx.storage_path()?;
+    let storage_localization = pcx.storage_path();
     let venv_id = pcx.to_venv_id();
-    let Some((mut venv, previous_access)) = venv_info(&storage_localization, venv_id, ctx)
+    let Some((mut venv, previous_access)) = venv_info(storage_localization, venv_id, ctx)
         .context("when getting information about the venv")?
     else {
         let err = qp_err!(HintMessage::new(
