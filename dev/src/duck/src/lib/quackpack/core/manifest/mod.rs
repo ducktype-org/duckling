@@ -20,7 +20,7 @@ pub use source::*;
 use crate::duck::util::duck_home::DuckHome;
 use crate::quackpack::core::Version;
 use crate::quackpack::schemas::registry;
-use crate::{QuackError, StrId};
+use crate::{QuackError, QuackResult, StrId, qp_bail};
 
 #[derive(Clone, Debug)]
 /// Machine friendly abstraction over a manifest.
@@ -99,6 +99,26 @@ impl Manifest {
     /// Check if this is the manifest of the global venv.
     pub fn is_global(&self) -> bool {
         self.name == DuckHome::GLOBAL_PACKAGE_NAME
+    }
+
+    /// Check if there are any local dependencies.
+    pub fn has_local_deps(&self) -> bool {
+        self.dependencies()
+            .all_dependencies()
+            .iter()
+            .any(|dep| dep.source().is_local())
+    }
+
+    /// Bail if there are any local dependencies.
+    pub fn bail_if_local_dep(self) -> QuackResult<Self> {
+        if self.has_local_deps() {
+            qp_bail!(
+                "manifest of {} version {} contains a local dependency",
+                self.name(),
+                self.version()
+            );
+        }
+        Ok(self)
     }
 }
 

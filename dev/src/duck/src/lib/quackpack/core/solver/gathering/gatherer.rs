@@ -21,7 +21,7 @@ use crate::quackpack::util::interned_url::InternedUrl;
 use crate::quackpack::util::to_path_buf::ToPathBuf;
 use crate::quackpack::util::to_url::ToUrl;
 use crate::util::error::{ErrorsLogger, MessageError};
-use crate::{QuackResult, QuackResultContext, StrId, qp_bail_internal};
+use crate::{QuackResult, QuackResultContext, StrId, qp_bail, qp_bail_internal};
 
 /// A struct for fetching manifests for all the packages potentially used in the dependency resolution.
 pub struct Gatherer<'duck, 'fetcher, 'access, Access: GitAccess> {
@@ -145,6 +145,9 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
     }
 
     /// Helper for [`Gatherer::explore()`], performs a fetch.
+    /// 
+    /// After performing the fetch we check that the resulting manifests satisfy the requests.
+    /// For registry fetches we also check that repository dependencies do not have local dependencies.
     #[tracing::instrument(skip_all)]
     pub fn fetch(
         &mut self,
@@ -211,7 +214,10 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
         let FetcherResponse::Some(registry_manifest) = fetcher_response else {
             return Ok(FetchResponse::failed_pinned(request.id, request.version));
         };
-        match <registry::Manifest as TryInto<Manifest>>::try_into(registry_manifest) {
+        match <registry::Manifest as TryInto<Manifest>>::try_into(registry_manifest)
+            .and_then(Manifest::bail_if_local_dep)
+            .and_then(|manifest| manifest.bail_if_incoherent_with_request_pinned(&request))
+        {
             Ok(manifest) => Ok(FetchResponse::Success(FetchSuccess::Pinned(
                 PinnedSuccess {
                     origin_id: request.id,
@@ -255,7 +261,10 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
         };
         for manifest in fetcher_response.packages_metadata {
             let manifest: QuackResult<Manifest> = manifest.try_into();
-            match manifest {
+            match manifest
+                .and_then(Manifest::bail_if_local_dep)
+                .and_then(|manifest| manifest.bail_if_incoherent_with_request_not_pinned(request))
+            {
                 Ok(manifest) => {
                     fetch_response.fetched_manifests.insert(
                         PackageId::new(answer_identity, manifest.version()),
@@ -263,6 +272,7 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
                     );
                 }
                 Err(e) => {
+                    // We log errors and filter only good manifests.
                     debug!("failed to fetch: {e}");
                     errors.log(e);
                 }
@@ -304,6 +314,18 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
                 return FetchResponse::failed_not_pinned(request.id);
             }
         };
+        let manifest = match cloned_pkg
+            .package
+            .manifest()
+            .clone()
+            .bail_if_incoherent_with_request_not_pinned(request)
+        {
+            Ok(manifest) => manifest,
+            Err(e) => {
+                errors.log(e);
+                return FetchResponse::failed_not_pinned(request.id);
+            }
+        };
         let answer_identity = FullIdentity::new(
             request.id.name,
             FullOrigin::for_git(url, cloned_pkg.commit_hash),
@@ -317,13 +339,10 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
             errors.log(e);
             return FetchResponse::failed_not_pinned(request.id);
         }
-        let answer_pkg = PackageId::new(answer_identity, cloned_pkg.package.manifest().version());
+        let answer_pkg = PackageId::new(answer_identity, manifest.version());
         FetchResponse::Success(FetchSuccess::NotPinned(NotPinnedSuccess {
             origin_id: request.id,
-            fetched_manifests: HashMap::from([(
-                answer_pkg,
-                Box::new(cloned_pkg.package.manifest().clone()),
-            )]),
+            fetched_manifests: HashMap::from([(answer_pkg, Box::new(manifest))]),
         }))
     }
 
@@ -390,6 +409,18 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
                 return FetchResponse::failed_not_pinned(request.id);
             }
         };
+        let manifest = match pcx
+            .package()
+            .manifest()
+            .clone()
+            .bail_if_incoherent_with_request_not_pinned(request)
+        {
+            Ok(manifest) => manifest,
+            Err(e) => {
+                errors.log(e);
+                return FetchResponse::failed_not_pinned(request.id);
+            }
+        };
         let root = pcx.package().root();
         let Ok(answer_origin) = FullOrigin::for_local(root) else {
             return FetchResponse::failed_not_pinned(request.id);
@@ -398,10 +429,45 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
         FetchResponse::Success(FetchSuccess::NotPinned(NotPinnedSuccess {
             origin_id: request.id,
             fetched_manifests: HashMap::from([(
-                PackageId::new(answer_identity, pcx.package().version()),
-                Box::new(pcx.package().manifest().clone()),
+                PackageId::new(answer_identity, manifest.version()),
+                Box::new(manifest),
             )]),
         }))
+    }
+}
+
+impl Manifest {
+    /// Check that the manifest's name agrees with the request.
+    fn bail_if_incoherent_with_request_not_pinned(
+        self,
+        request: &NotPinnedRequest,
+    ) -> QuackResult<Self> {
+        if self.name() != request.id.name {
+            qp_bail!(
+                "request for all versions of {} returned package with different name",
+                request.id.name
+            )
+        }
+        Ok(self)
+    }
+
+    /// Check that the manifest's name and version agree with the request.
+    fn bail_if_incoherent_with_request_pinned(self, request: &PinnedRequest) -> QuackResult<Self> {
+        if self.name() != request.id.name {
+            qp_bail!(
+                "request for {} version {} returned package with different name",
+                request.id.name,
+                request.version
+            )
+        }
+        if self.version() != request.version {
+            qp_bail!(
+                "request for {} version {} returned package with different version",
+                request.id.name,
+                request.version
+            )
+        }
+        Ok(self)
     }
 }
 

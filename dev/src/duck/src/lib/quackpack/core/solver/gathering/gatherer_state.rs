@@ -13,7 +13,7 @@ use crate::quackpack::core::{FeatureName, Manifest, PackageId, Source, Version};
 use crate::quackpack::util::str_id::QpJoin;
 use crate::quackpack::util::with_version::WithVersion;
 use crate::util::IsPlural;
-use crate::util::error::{ErrorsLogger, MessageError};
+use crate::util::error::ErrorsLogger;
 use crate::util::extend::QpExtend;
 use crate::{QuackError, QuackResult, QuackResultContext, qp_bail_internal, qp_err};
 
@@ -377,7 +377,6 @@ impl GathererState {
     }
 
     /// Handles a successful response to a pinned fetch.
-    /// Checks that the found package's version and name agree with the requested ones.
     fn handle_success_pinned(
         &mut self,
         pinned_success: PinnedSuccess,
@@ -393,24 +392,6 @@ impl GathererState {
         let requests = requests.clone();
         *state = QueryState::Done;
 
-        // If received response declares a different version or name, the request failed.
-        if pinned_success.origin_version != pinned_success.answer_package.version()
-            || pinned_success.origin_id.name != pinned_success.answer_package.name()
-        {
-            *state = QueryState::Failed;
-            let err =
-                qp_err!("fetched manifest's version differs from required").context(MessageError(
-                    format!(
-                        "while handling response for the fetch of a package {} in version {}",
-                        request_pkg.value().name,
-                        request_pkg.version()
-                    )
-                    .into(),
-                ));
-            errors.log(err);
-            return Ok(vec![]);
-        }
-
         self.source_to_origin_resolver.insert(
             pinned_success.origin_id.source,
             pinned_success.answer_package.origin(),
@@ -423,9 +404,7 @@ impl GathererState {
     }
 
     /// Handles a successful response to a a not pinned fetch.
-    /// Checks that:
-    ///  * all the returned packages have common identity,
-    ///  * the identitie's name agrees with the requested name.
+    /// If the response is empty (contains no manifests), logs an error.
     fn handle_success_not_pinned(
         &mut self,
         not_pinned_response: NotPinnedSuccess,
@@ -443,32 +422,21 @@ impl GathererState {
         let requests = requests.clone();
         *state = QueryState::Done;
 
-        let answer_identities: HashSet<FullIdentity> = not_pinned_response
+        let Some(answer_identity) = not_pinned_response
             .fetched_manifests
             .keys()
-            .map(|pkg| pkg.identity())
-            .collect();
-        if answer_identities.len() == 1
-            && let Some(answer_identity) = answer_identities.into_iter().next()
-            && answer_identity.name() == not_pinned_response.origin_id.name
-        {
-            self.source_to_origin_resolver.insert(
-                not_pinned_response.origin_id.source,
-                answer_identity.origin(),
-            );
-            self.insert_manifests(not_pinned_response.fetched_manifests);
-            self.complete_requests(requests, errors)
-        } else {
-            let err = qp_err!("invalid fetch response").context(MessageError(
-                format!(
-                    "while handling response for the fetch of {:?}",
-                    not_pinned_response.origin_id
-                )
-                .into(),
-            ));
+            .next()
+            .map(|pkg| pkg.identity()) else {
+            let err = qp_err!("no package satisfying request for {} found", not_pinned_response.origin_id.name);
             errors.log(err);
-            Ok(vec![])
-        }
+            return Ok(vec![]);
+        };
+        self.source_to_origin_resolver.insert(
+            not_pinned_response.origin_id.source,
+            answer_identity.origin(),
+        );
+        self.insert_manifests(not_pinned_response.fetched_manifests);
+        self.complete_requests(requests, errors)
     }
 
     /// After a failed fetch, updates the state and decides what further requests to make.
