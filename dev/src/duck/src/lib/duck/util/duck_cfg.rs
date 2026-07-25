@@ -40,7 +40,7 @@ impl DuckCfg {
     pub fn max_fix_dist(&self) -> QuackResult<u64> {
         Ok(self
             .inner
-            .get_u64("security.typos.max_distance")
+            .get_u64("security.typos.max-distance")
             .context("when trying to check the maximum typos fixing distance")?
             .unwrap_or(DEFAULT_MAXIMAL_AUTOFIX_DISTANCE))
     }
@@ -69,7 +69,7 @@ impl DuckCfg {
     pub fn storage_tmp_lifetime(&self) -> QuackResult<Duration> {
         let config_seconds = self
             .inner
-            .get_u64("storage.temporary_lifetime")
+            .get_u64("storage.temporary-lifetime")
             .context("when trying to get the storage temporary lifetime")?;
         let Some(secs) = config_seconds else {
             return Ok(DEFAULT_STORAGE_LIFETIME);
@@ -87,7 +87,7 @@ mod test_utils {
     impl DuckCfg {
         pub fn set_max_fix_dist(&mut self, new_val: i64) {
             self.inner
-                .set_i64("security.typos.max_distance", new_val)
+                .set_i64("security.typos.max-distance", new_val)
                 .expect("test");
         }
 
