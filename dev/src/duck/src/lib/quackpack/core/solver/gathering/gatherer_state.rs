@@ -404,7 +404,6 @@ impl GathererState {
     }
 
     /// Handles a successful response to a a not pinned fetch.
-    /// If the response is empty (contains no manifests), logs an error.
     fn handle_success_not_pinned(
         &mut self,
         not_pinned_response: NotPinnedSuccess,
@@ -426,10 +425,9 @@ impl GathererState {
             .fetched_manifests
             .keys()
             .next()
-            .map(|pkg| pkg.identity()) else {
-            let err = qp_err!("no package satisfying request for {} found", not_pinned_response.origin_id.name);
-            errors.log(err);
-            return Ok(vec![]);
+            .map(|pkg| pkg.identity())
+        else {
+            qp_bail_internal!("successful not pinned fetch result despite no manifests");
         };
         self.source_to_origin_resolver.insert(
             not_pinned_response.origin_id.source,

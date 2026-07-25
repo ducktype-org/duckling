@@ -21,7 +21,7 @@ use crate::quackpack::util::interned_url::InternedUrl;
 use crate::quackpack::util::to_path_buf::ToPathBuf;
 use crate::quackpack::util::to_url::ToUrl;
 use crate::util::error::{ErrorsLogger, MessageError};
-use crate::{QuackResult, QuackResultContext, StrId, qp_bail, qp_bail_internal};
+use crate::{QuackResult, QuackResultContext, StrId, qp_bail, qp_bail_internal, qp_err};
 
 /// A struct for fetching manifests for all the packages potentially used in the dependency resolution.
 pub struct Gatherer<'duck, 'fetcher, 'access, Access: GitAccess> {
@@ -145,7 +145,7 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
     }
 
     /// Helper for [`Gatherer::explore()`], performs a fetch.
-    /// 
+    ///
     /// After performing the fetch we check that the resulting manifests satisfy the requests.
     /// For registry fetches we also check that repository dependencies do not have local dependencies.
     #[tracing::instrument(skip_all)]
@@ -236,6 +236,7 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
 
     /// Helper for [`Gatherer::explore()`], performs a not pinned registry fetch
     /// (registry fetch of all the versions of some package).
+    /// If the response is would be empty (would contain no manifests), logs an error.
     fn fetch_registry_not_pinned(
         &mut self,
         request: &NotPinnedRequest,
@@ -277,6 +278,11 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
                     errors.log(e);
                 }
             }
+        }
+        if fetch_response.fetched_manifests.is_empty() {
+            let err = qp_err!("no packages found satisfying the request for {real_name}");
+            errors.log(err);
+            return FetchResponse::failed_not_pinned(request.id);
         }
         FetchResponse::Success(FetchSuccess::NotPinned(fetch_response))
     }
