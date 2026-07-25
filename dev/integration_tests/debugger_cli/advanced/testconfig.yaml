@@ -6,5 +6,3 @@ Tests:
       simple:
         Input:
           File: "simple.test"
-        # Output:
-        #   String: "__TEST_SUCC__\n"

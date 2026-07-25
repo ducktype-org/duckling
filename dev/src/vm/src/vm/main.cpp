@@ -182,9 +182,8 @@ int main(int argc, const char** argv) {
 	init::InitObject _;
 	auto             clah = getVmClah();
 
-	// it is at the beggining of the main function, so clang-tidy (v19.1.1) concern about thread
-	// safety is invalid NOLINTNEXTLINE(concurrency-mt-unsafe)
-	if (const char* unbuffered = std::getenv("UNBUFFERED")) {
+	// NOLINTNEXTLINE(concurrency-mt-unsafe) - runs before any thread is spawned
+	if (const char* unbuffered = std::getenv("DUCK_VM_UNBUFFERED")) {
 		if (std::string_view(unbuffered) == "1") std::cout << std::unitbuf;
 	}
 
