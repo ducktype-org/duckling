@@ -235,7 +235,7 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
 
     /// Helper for [`Gatherer::explore()`], performs a not pinned registry fetch
     /// (registry fetch of all the versions of some package).
-    /// If the response is would be empty (would contain no manifests), logs an error.
+    /// If the response would be empty (would contain no manifests), logs an error.
     fn fetch_registry_not_pinned(
         &mut self,
         request: &NotPinnedRequest,
