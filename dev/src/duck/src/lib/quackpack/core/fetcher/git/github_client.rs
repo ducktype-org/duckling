@@ -61,7 +61,9 @@ impl PseudoGitClient for GithubClient<'_> {
             return None;
         }
         // Check that this is a github repo.
-        if !domain.starts_with("github") {
+        // Github offers enterprise self-hosted repos, but for them the API base url is created differently.
+        // We can add support for those in the future.
+        if domain != "github.com" {
             return None;
         }
         let path = repo_url.path();
