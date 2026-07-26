@@ -277,10 +277,6 @@ namespace compiler::helios {
 					CORE_UNREACHABLE();
 				}
 				variant_case_novalue(defgen::BuiltinTemplatedSymbol) {
-					// Templated builtins are lowered like any other builtin, via getBuiltinImpl.
-					// Only the HOUT-implemented ones (box_destructor) reach here; the
-					// backend-implemented ones are declaration-only, so implementsQueryCodeOfFun is
-					// false for them.
 					const auto builtin_kind = isBuiltin(key);
 					CORE_ASSERT(
 						builtin_kind.has_value(),
