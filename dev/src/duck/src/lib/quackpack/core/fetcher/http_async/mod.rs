@@ -95,9 +95,9 @@ impl<'duck> AsyncHttpClient<'duck> {
         };
         self.sender
             .as_ref()
-            .expect("always Some()")
+            .expect("always Some")
             .send(request)
-            .expect("receiver is closed after sender");
+            .expect("receiver is closed after sender; maybe helper thread panicked?");
         let response = receiver
             .await
             .expect("we don't cancel futures")
@@ -118,7 +118,9 @@ impl<'duck> AsyncHttpClient<'duck> {
 impl Drop for AsyncHttpClient<'_> {
     fn drop(&mut self) {
         drop(self.sender.take().unwrap());
-        let _ = self.worker.take().unwrap().join();
+        if self.worker.take().unwrap().join().is_err() {
+            error!("helper thread panicked");
+        }
     }
 }
 
@@ -235,6 +237,7 @@ impl Worker {
     ///
     /// Also an example usage of multi might be useful:
     /// <https://github.com/alexcrichton/curl-rust/blob/main/examples/multi-dl.rs>.
+    #[track_caller]
     fn handle_completed_connections(&mut self) -> ShouldCheckForClosedChannel {
         const DEFAULT_DELAY: Duration = Duration::from_millis(100);
         // Firstly, try to poll pending requests.
