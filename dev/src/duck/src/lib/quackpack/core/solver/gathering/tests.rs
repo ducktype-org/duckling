@@ -521,13 +521,13 @@ dependencies:
     ));
     let root_name = "root".into();
     let root_version = Version::new(0, 1, 0);
-    let root_manifest = parse_manifest(&root_path, &ctx).unwrap();
+    let root_manifest = parse_manifest(&root_path, &ctx).unwrap().into_manifest();
     let mut git_access = MockGitAccess();
     let mut gatherer = Gatherer::new(&mut fetcher, &mut git_access);
     let gathered_info = gatherer
         .explore(
             root_path.clone(),
-            root_manifest.manifest().clone(),
+            root_manifest,
             HashSet::new(),
             SolverMode::default(),
         )
@@ -621,13 +621,13 @@ dependencies:
     ));
     let root_name = "root".into();
     let root_version = Version::new(0, 1, 0);
-    let root_manifest = parse_manifest(&root_path, &ctx).unwrap();
+    let root_manifest = parse_manifest(&root_path, &ctx).unwrap().into_manifest();
     let mut git_access = MockGitAccess();
     let mut gatherer = Gatherer::new(&mut fetcher, &mut git_access);
     let gathered_info = gatherer
         .explore(
             root_path.clone(),
-            root_manifest.manifest().clone(),
+            root_manifest,
             HashSet::new(),
             SolverMode::default(),
         )
@@ -685,13 +685,13 @@ features:
     ));
     let root_name = "root".into();
     let root_version = Version::new(0, 1, 0);
-    let root_manifest = parse_manifest(&root_path, &ctx).unwrap();
+    let root_manifest = parse_manifest(&root_path, &ctx).unwrap().into_manifest();
     let mut git_access = MockGitAccess();
     let mut gatherer = Gatherer::new(&mut fetcher, &mut git_access);
     let gathered_info = gatherer
         .explore(
             root_path.clone(),
-            root_manifest.manifest().clone(),
+            root_manifest,
             ["my_feature".into()].into(),
             SolverMode::default(),
         )
@@ -759,13 +759,13 @@ dependencies:
     ));
     let root_name = "root".into();
     let root_version = Version::new(0, 1, 0);
-    let root_manifest = parse_manifest(&root_path, &ctx).unwrap();
+    let root_manifest = parse_manifest(&root_path, &ctx).unwrap().into_manifest();
     let mut git_access = MockGitAccess();
     let mut gatherer = Gatherer::new(&mut fetcher, &mut git_access);
     let gathered_info = gatherer
         .explore(
             root_path.clone(),
-            root_manifest.manifest().clone(),
+            root_manifest,
             [].into(),
             SolverMode::default(),
         )
@@ -830,13 +830,13 @@ dependencies:
     ));
     let root_name = "root".into();
     let root_version = Version::new(0, 1, 0);
-    let root_manifest = parse_manifest(&root_path, &ctx).unwrap();
+    let root_manifest = parse_manifest(&root_path, &ctx).unwrap().into_manifest();
     let mut git_access = MockGitAccess();
     let mut gatherer = Gatherer::new(&mut fetcher, &mut git_access);
     let gathered_info = gatherer
         .explore(
             root_path.clone(),
-            root_manifest.manifest().clone(),
+            root_manifest,
             [].into(),
             SolverMode::default(),
         )
@@ -897,13 +897,13 @@ dependencies:
     ));
     let root_name = "root".into();
     let root_version = Version::new(0, 1, 0);
-    let root_manifest = parse_manifest(&root_path, &ctx).unwrap();
+    let root_manifest = parse_manifest(&root_path, &ctx).unwrap().into_manifest();
     let mut git_access = MockGitAccess();
     let mut gatherer = Gatherer::new(&mut fetcher, &mut git_access);
     let gathered_info = gatherer
         .explore(
             root_path.clone(),
-            root_manifest.manifest().clone(),
+            root_manifest,
             [].into(),
             SolverMode::default(),
         )
