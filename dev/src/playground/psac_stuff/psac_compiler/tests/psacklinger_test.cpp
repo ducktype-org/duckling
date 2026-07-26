@@ -85,11 +85,13 @@ class PsacklingerTest: public tester::TestSuite {
 		ASSERT_EQUAL_PRINT(u64(21), runExecutable(executable));
 	}
 
-	/// Changing a const in an imported file recompiles everything (coarse globals hash).
+	/// Changing a const in an imported file should recompile its reader alone, leaving
+	/// the non-reader `other` cached.
 	void incrementalImportedConstChange() {
 		fs::File           root = psack_corpus::makeProgramDir({
             { "root.dmf",
 		                "import conf.*;\n"
+		                          "fun other() -> i64 = { return 3; }\n"
 		                          "fun main() -> i64 = { return X + 1; }\n" },
             { "conf.dmf", "const X: i64 = 5;\n" },
         });
@@ -108,6 +110,7 @@ class PsacklingerTest: public tester::TestSuite {
 			conf_path, "const X: i64 = 8;\n", /*allow_overwrite=*/true
 		);
 		pg::CompileStats incremental = compiler.update(root);
+		ASSERT_EQUAL_PRINT(usize(2), incremental.total_functions);
 		ASSERT_EQUAL_PRINT(usize(1), incremental.recompiled_functions);
 		ASSERT_EQUAL_PRINT(u64(9), runExecutable(executable));
 	}
@@ -144,16 +147,19 @@ class PsacklingerTest: public tester::TestSuite {
 		ASSERT_EQUAL_PRINT(u64(21), runExecutable(executable));
 	}
 
-	/// Changing a global constant recompiles every function (coarse globals dependency).
+	/// Changing a global constant should recompile exactly its two readers, leaving the
+	/// unrelated `other` cached.
 	void incrementalGlobalsChange() {
 		const std::string v1 = R"(
 			const X: i64 = 5;
 			fun helper() -> i64 = { return X; }
+			fun other() -> i64 = { return 3; }
 			fun main() -> i64 = { return helper() + X; }
 		)";
 		const std::string v2 = R"(
 			const X: i64 = 7;
 			fun helper() -> i64 = { return X; }
+			fun other() -> i64 = { return 3; }
 			fun main() -> i64 = { return helper() + X; }
 		)";
 
@@ -168,12 +174,14 @@ class PsacklingerTest: public tester::TestSuite {
 
 		pg::CompileStats incremental
 			= compiler.update(fs::FileManager::createRandomVirtualFile(v2));
+		ASSERT_EQUAL_PRINT(usize(3), incremental.total_functions);
 		ASSERT_EQUAL_PRINT(usize(2), incremental.recompiled_functions);
 		ASSERT_EQUAL_PRINT(u64(14), runExecutable(executable));
 	}
 
-	/// Changing a global variable initializer re-emits the globals object and (via the
-	/// coarse globals hash) recompiles every function.
+	/// Changing a global variable initializer re-emits the globals object and relinks,
+	/// but should recompile no functions: readers depend only on the variable's
+	/// identity and type.
 	void incrementalGlobalVarChange() {
 		const std::string v1 = R"(
 			var g: i64 = 5;
@@ -195,16 +203,192 @@ class PsacklingerTest: public tester::TestSuite {
 
 		pg::CompileStats incremental
 			= compiler.update(fs::FileManager::createRandomVirtualFile(v2));
-		ASSERT_EQUAL_PRINT(usize(1), incremental.recompiled_functions);
+		ASSERT_EQUAL_PRINT(usize(0), incremental.recompiled_functions);
 		ASSERT_EQUAL_PRINT(u64(9), runExecutable(executable));
 	}
 
-	/// Adding a function changes the function set, which falls back to a full rebuild.
+	/// Changing a constant should recompile exactly its readers.
+	void incrementalConstOnlyReadersRecompile() {
+		const std::string v1 = R"(
+			const X: i64 = 5;
+			fun reader() -> i64 = { return X; }
+			fun other() -> i64 = { return 7; }
+			fun main() -> i64 = { return reader() + other(); }
+		)";
+		const std::string v2 = R"(
+			const X: i64 = 8;
+			fun reader() -> i64 = { return X; }
+			fun other() -> i64 = { return 7; }
+			fun main() -> i64 = { return reader() + other(); }
+		)";
+
+		fs::File out_dir    = fs::FileManager::createRandomTempDirectory();
+		fs::File executable = out_dir.createSubFile("", "incr_const_readers.out");
+
+		pg::Compiler compiler(pg::CompileOptions{ .output_path = executable.getFilePath().string() }
+		);
+
+		compiler.compile(fs::FileManager::createRandomVirtualFile(v1));
+		ASSERT_EQUAL_PRINT(u64(12), runExecutable(executable));
+
+		pg::CompileStats incremental
+			= compiler.update(fs::FileManager::createRandomVirtualFile(v2));
+		ASSERT_EQUAL_PRINT(usize(3), incremental.total_functions);
+		ASSERT_EQUAL_PRINT(usize(1), incremental.recompiled_functions);
+		ASSERT_EQUAL_PRINT(u64(15), runExecutable(executable));
+	}
+
+	/// Renaming a parameter changes only that function's own text: its signature
+	/// (types only) is untouched, so callers should stay cached.
+	void incrementalParamRenameOnlySelf() {
+		const std::string v1 = R"(
+			fun f(a: i64) -> i64 = { return a; }
+			fun g() -> i64 = { return f(4); }
+			fun main() -> i64 = { return g(); }
+		)";
+		const std::string v2 = R"(
+			fun f(b: i64) -> i64 = { return b; }
+			fun g() -> i64 = { return f(4); }
+			fun main() -> i64 = { return g(); }
+		)";
+
+		fs::File out_dir    = fs::FileManager::createRandomTempDirectory();
+		fs::File executable = out_dir.createSubFile("", "incr_param_rename.out");
+
+		pg::Compiler compiler(pg::CompileOptions{ .output_path = executable.getFilePath().string() }
+		);
+
+		compiler.compile(fs::FileManager::createRandomVirtualFile(v1));
+		ASSERT_EQUAL_PRINT(u64(4), runExecutable(executable));
+
+		pg::CompileStats incremental
+			= compiler.update(fs::FileManager::createRandomVirtualFile(v2));
+		ASSERT_EQUAL_PRINT(usize(3), incremental.total_functions);
+		ASSERT_EQUAL_PRINT(usize(1), incremental.recompiled_functions);
+		ASSERT_EQUAL_PRINT(u64(4), runExecutable(executable));
+	}
+
+	/// Adding a class field should recompile only the functions that use the class.
+	void incrementalClassFieldOnlyUsersRecompile() {
+		const std::string v1 = R"(
+			class Point {
+				var x: i64;
+			}
+			fun reader() -> i64 = {
+				var p: Point;
+				p.x = 3;
+				return p.x;
+			}
+			fun other() -> i64 = { return 7; }
+			fun main() -> i64 = { return reader() + other(); }
+		)";
+		const std::string v2 = R"(
+			class Point {
+				var x: i64;
+				var y: i64;
+			}
+			fun reader() -> i64 = {
+				var p: Point;
+				p.x = 3;
+				return p.x;
+			}
+			fun other() -> i64 = { return 7; }
+			fun main() -> i64 = { return reader() + other(); }
+		)";
+
+		fs::File out_dir    = fs::FileManager::createRandomTempDirectory();
+		fs::File executable = out_dir.createSubFile("", "incr_class_field.out");
+
+		pg::Compiler compiler(pg::CompileOptions{ .output_path = executable.getFilePath().string() }
+		);
+
+		compiler.compile(fs::FileManager::createRandomVirtualFile(v1));
+		ASSERT_EQUAL_PRINT(u64(10), runExecutable(executable));
+
+		pg::CompileStats incremental
+			= compiler.update(fs::FileManager::createRandomVirtualFile(v2));
+		ASSERT_EQUAL_PRINT(usize(3), incremental.total_functions);
+		ASSERT_EQUAL_PRINT(usize(1), incremental.recompiled_functions);
+		ASSERT_EQUAL_PRINT(u64(10), runExecutable(executable));
+	}
+
+	/// Removing a function nothing depends on should relink without recompiling the
+	/// unchanged survivors.
+	void incrementalFunctionRemoved() {
+		const std::string v1 = R"(
+			fun extra() -> i64 = { return 41; }
+			fun helper() -> i64 = { return 10; }
+			fun main() -> i64 = { return helper(); }
+		)";
+		const std::string v2 = R"(
+			fun helper() -> i64 = { return 10; }
+			fun main() -> i64 = { return helper(); }
+		)";
+
+		fs::File out_dir    = fs::FileManager::createRandomTempDirectory();
+		fs::File executable = out_dir.createSubFile("", "incr_removed.out");
+
+		pg::Compiler compiler(pg::CompileOptions{ .output_path = executable.getFilePath().string() }
+		);
+
+		compiler.compile(fs::FileManager::createRandomVirtualFile(v1));
+		ASSERT_EQUAL_PRINT(u64(10), runExecutable(executable));
+
+		pg::CompileStats shrunk = compiler.update(fs::FileManager::createRandomVirtualFile(v2));
+		ASSERT_EQUAL_PRINT(usize(2), shrunk.total_functions);
+		ASSERT_EQUAL_PRINT(usize(0), shrunk.recompiled_functions);
+		ASSERT_EQUAL_PRINT(u64(10), runExecutable(executable));
+	}
+
+	/// Calling a function that does not exist fails; adding it should invalidate the
+	/// caller's cached failure and nothing else — resolving a name depends on its
+	/// absence too, and `other` never touches it.
+	void incrementalMissingFunctionThenAdded() {
+		const std::string v1 = R"(
+			fun other() -> i64 = { return 1; }
+			fun main() -> i64 = { return 5; }
+		)";
+		const std::string v2 = R"(
+			fun other() -> i64 = { return 1; }
+			fun main() -> i64 = { return gmissing(1); }
+		)";
+		const std::string v3 = R"(
+			fun other() -> i64 = { return 1; }
+			fun gmissing(p: i64) -> i64 = { return p + 5; }
+			fun main() -> i64 = { return gmissing(1); }
+		)";
+
+		fs::File out_dir    = fs::FileManager::createRandomTempDirectory();
+		fs::File executable = out_dir.createSubFile("", "incr_missing_fn.out");
+
+		pg::Compiler compiler(pg::CompileOptions{ .output_path = executable.getFilePath().string() }
+		);
+
+		compiler.compile(fs::FileManager::createRandomVirtualFile(v1));
+		ASSERT_EQUAL_PRINT(u64(5), runExecutable(executable));
+
+		try {
+			compiler.update(fs::FileManager::createRandomVirtualFile(v2));
+			ASSERT_TRUE(false);
+		} catch (const std::runtime_error& e) {
+			ASSERT_TRUE(std::string(e.what()).contains("gmissing"));
+		}
+
+		pg::CompileStats added = compiler.update(fs::FileManager::createRandomVirtualFile(v3));
+		ASSERT_EQUAL_PRINT(usize(3), added.total_functions);
+		ASSERT_EQUAL_PRINT(usize(2), added.recompiled_functions);
+		ASSERT_EQUAL_PRINT(u64(6), runExecutable(executable));
+	}
+
+	/// Adding a function the caller starts calling should recompile exactly those two:
+	/// the new function and the changed caller, leaving `other` cached.
 	void incrementalFunctionSetChange() {
 		const std::string v1 = R"(
+			fun other() -> i64 = { return 3; }
 			fun main() -> i64 = { return 1; }
 		)";
 		const std::string v2 = R"(
+			fun other() -> i64 = { return 3; }
 			fun extra() -> i64 = { return 41; }
 			fun main() -> i64 = { return extra() + 1; }
 		)";
@@ -219,7 +403,7 @@ class PsacklingerTest: public tester::TestSuite {
 		ASSERT_EQUAL_PRINT(u64(1), runExecutable(executable));
 
 		pg::CompileStats rebuilt = compiler.update(fs::FileManager::createRandomVirtualFile(v2));
-		ASSERT_EQUAL_PRINT(usize(2), rebuilt.total_functions);
+		ASSERT_EQUAL_PRINT(usize(3), rebuilt.total_functions);
 		ASSERT_EQUAL_PRINT(usize(2), rebuilt.recompiled_functions);
 		ASSERT_EQUAL_PRINT(u64(42), runExecutable(executable));
 	}
@@ -283,6 +467,31 @@ public:
 		addTest(
 			static_cast<TestType>(&PsacklingerTest::incrementalFunctionSetChange),
 			"IncrementalFunctionSetChange",
+			false
+		);
+		addTest(
+			static_cast<TestType>(&PsacklingerTest::incrementalConstOnlyReadersRecompile),
+			"IncrementalConstOnlyReadersRecompile",
+			false
+		);
+		addTest(
+			static_cast<TestType>(&PsacklingerTest::incrementalParamRenameOnlySelf),
+			"IncrementalParamRenameOnlySelf",
+			false
+		);
+		addTest(
+			static_cast<TestType>(&PsacklingerTest::incrementalClassFieldOnlyUsersRecompile),
+			"IncrementalClassFieldOnlyUsersRecompile",
+			false
+		);
+		addTest(
+			static_cast<TestType>(&PsacklingerTest::incrementalFunctionRemoved),
+			"IncrementalFunctionRemoved",
+			false
+		);
+		addTest(
+			static_cast<TestType>(&PsacklingerTest::incrementalMissingFunctionThenAdded),
+			"IncrementalMissingFunctionThenAdded",
 			false
 		);
 		addTest(

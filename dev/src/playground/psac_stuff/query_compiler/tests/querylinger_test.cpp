@@ -93,17 +93,19 @@ class QuerylingerTest: public tester::TestSuite {
 		ASSERT_EQUAL_PRINT(u64(21), runExecutable(executable));
 	}
 
-	/// Changing a global constant recompiles both functions — both of them read it,
-	/// so the per-constant dependency reaches each one.
+	/// Changing a global constant recompiles exactly its two readers, leaving the
+	/// unrelated `other` cached.
 	void incrementalGlobalsChange() {
 		const std::string v1 = R"(
 			const X: i64 = 5;
 			fun helper() -> i64 = { return X; }
+			fun other() -> i64 = { return 3; }
 			fun main() -> i64 = { return helper() + X; }
 		)";
 		const std::string v2 = R"(
 			const X: i64 = 7;
 			fun helper() -> i64 = { return X; }
+			fun other() -> i64 = { return 3; }
 			fun main() -> i64 = { return helper() + X; }
 		)";
 
@@ -118,6 +120,7 @@ class QuerylingerTest: public tester::TestSuite {
 
 		ql::CompileStats incremental
 			= compiler.update(fs::FileManager::createRandomVirtualFile(v2));
+		ASSERT_EQUAL_PRINT(usize(3), incremental.total_functions);
 		ASSERT_EQUAL_PRINT(usize(2), incremental.recompiled_functions);
 		ASSERT_EQUAL_PRINT(u64(14), runExecutable(executable));
 	}
@@ -257,12 +260,15 @@ class QuerylingerTest: public tester::TestSuite {
 	}
 
 	/// Adding a function creates a new query node without psacklinger's full-rebuild
-	/// fallback: only the new function and the changed main are compiled.
+	/// fallback: only the new function and the changed main are compiled, and the
+	/// unrelated `other` stays cached.
 	void incrementalFunctionAdded() {
 		const std::string v1 = R"(
+			fun other() -> i64 = { return 3; }
 			fun main() -> i64 = { return 1; }
 		)";
 		const std::string v2 = R"(
+			fun other() -> i64 = { return 3; }
 			fun extra() -> i64 = { return 41; }
 			fun main() -> i64 = { return extra() + 1; }
 		)";
@@ -277,7 +283,7 @@ class QuerylingerTest: public tester::TestSuite {
 		ASSERT_EQUAL_PRINT(u64(1), runExecutable(executable));
 
 		ql::CompileStats grown = compiler.update(fs::FileManager::createRandomVirtualFile(v2));
-		ASSERT_EQUAL_PRINT(usize(2), grown.total_functions);
+		ASSERT_EQUAL_PRINT(usize(3), grown.total_functions);
 		ASSERT_EQUAL_PRINT(usize(2), grown.recompiled_functions);
 		ASSERT_EQUAL_PRINT(u64(42), runExecutable(executable));
 	}
@@ -343,6 +349,46 @@ class QuerylingerTest: public tester::TestSuite {
 		ASSERT_EQUAL_PRINT(u64(15), runExecutable(executable));
 	}
 
+	/// Calling a function that does not exist fails; adding it should invalidate the
+	/// caller's cached failure and nothing else — resolving a name depends on its
+	/// absence too, and `other` never touches it.
+	void incrementalMissingFunctionThenAdded() {
+		const std::string v1 = R"(
+			fun other() -> i64 = { return 1; }
+			fun main() -> i64 = { return 5; }
+		)";
+		const std::string v2 = R"(
+			fun other() -> i64 = { return 1; }
+			fun main() -> i64 = { return gmissing(1); }
+		)";
+		const std::string v3 = R"(
+			fun other() -> i64 = { return 1; }
+			fun gmissing(p: i64) -> i64 = { return p + 5; }
+			fun main() -> i64 = { return gmissing(1); }
+		)";
+
+		fs::File out_dir    = fs::FileManager::createRandomTempDirectory();
+		fs::File executable = out_dir.createSubFile("", "incr_missing_fn.out");
+
+		ql::Compiler compiler(ql::CompileOptions{ .output_path = executable.getFilePath().string() }
+		);
+
+		compiler.compile(fs::FileManager::createRandomVirtualFile(v1));
+		ASSERT_EQUAL_PRINT(u64(5), runExecutable(executable));
+
+		try {
+			compiler.update(fs::FileManager::createRandomVirtualFile(v2));
+			ASSERT_TRUE(false);
+		} catch (const std::runtime_error& e) {
+			ASSERT_TRUE(std::string(e.what()).contains("gmissing"));
+		}
+
+		ql::CompileStats added = compiler.update(fs::FileManager::createRandomVirtualFile(v3));
+		ASSERT_EQUAL_PRINT(usize(3), added.total_functions);
+		ASSERT_EQUAL_PRINT(usize(2), added.recompiled_functions);
+		ASSERT_EQUAL_PRINT(u64(6), runExecutable(executable));
+	}
+
 	/// Changing one function body in an imported file recompiles exactly that
 	/// function.
 	void incrementalImportedBodyChange() {
@@ -375,12 +421,13 @@ class QuerylingerTest: public tester::TestSuite {
 		ASSERT_EQUAL_PRINT(u64(21), runExecutable(executable));
 	}
 
-	/// Changing a const in an imported file recompiles its reader (the only
-	/// function here, so 1/1).
+	/// Changing a const in an imported file recompiles its reader alone, leaving the
+	/// non-reader `other` cached.
 	void incrementalImportedConstChange() {
 		fs::File           root = psack_corpus::makeProgramDir({
             { "root.dmf",
 		                "import conf.*;\n"
+		                          "fun other() -> i64 = { return 3; }\n"
 		                          "fun main() -> i64 = { return X + 1; }\n" },
             { "conf.dmf", "const X: i64 = 5;\n" },
         });
@@ -399,6 +446,7 @@ class QuerylingerTest: public tester::TestSuite {
 			conf_path, "const X: i64 = 8;\n", /*allow_overwrite=*/true
 		);
 		ql::CompileStats incremental = compiler.update(root);
+		ASSERT_EQUAL_PRINT(usize(2), incremental.total_functions);
 		ASSERT_EQUAL_PRINT(usize(1), incremental.recompiled_functions);
 		ASSERT_EQUAL_PRINT(u64(9), runExecutable(executable));
 	}
@@ -458,6 +506,11 @@ public:
 		addTest(
 			static_cast<TestType>(&QuerylingerTest::incrementalConstOnlyReadersRecompile),
 			"IncrementalConstOnlyReadersRecompile",
+			false
+		);
+		addTest(
+			static_cast<TestType>(&QuerylingerTest::incrementalMissingFunctionThenAdded),
+			"IncrementalMissingFunctionThenAdded",
 			false
 		);
 		addTest(
