@@ -1932,7 +1932,8 @@ vm::code::valid_function::ValidFunction vm::code::detail::validateAndExtractReac
 		= validator.validateAndExtractReachableCode();
 	new_function.bytecode_pos = function.bytecode_pos;
 	new_function.signature    = function.signature;
-	new_function.flags        = flag_context.getFlagsForFunction(function.name.str);
+	new_function.flags
+		= thread ? InstructionFlag{} : flag_context.getFlagsForFunction(function.name.str);
 
 	return new_function;
 }
