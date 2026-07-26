@@ -90,7 +90,7 @@ private:
 
 		ASSERT_HAS_VALUE(result);
 		ASSERT_TRUE(logger().good());
-		(void) result->verify(diagnostics::makeGlobalLoggerReporter());
+		std::ignore = result->verify(diagnostics::makeGlobalLoggerReporter());
 		ASSERT_EQUAL(result->packages.size(), 2u);
 		ASSERT_EQUAL(result->tasks.size(), 1u);
 		ASSERT_EQUAL(result->packages[0].package_id.str(), std::string("mylib"));
@@ -189,7 +189,7 @@ private:
 
 		ASSERT_HAS_VALUE(result);
 		ASSERT_TRUE(!logger().hasErrors());
-		(void) result->verify(diagnostics::makeGlobalLoggerReporter());
+		std::ignore = result->verify(diagnostics::makeGlobalLoggerReporter());
 		ASSERT_TRUE(hasWarning());
 	}
 

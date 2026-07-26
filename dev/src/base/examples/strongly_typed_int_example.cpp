@@ -16,7 +16,7 @@ int main() {
 	// weight *= weight; // error
 
 	int raw_value = int(weight);  // ok, explicit
-	(void) raw_value;             // Read for the cpp-linter
-	raw_value = int(value);       // ok, explicit
+	std::ignore   = raw_value;    // Read for the cpp-linter
+	raw_value     = int(value);   // ok, explicit
 	std::cout << raw_value << '\n';
 }

@@ -29,6 +29,8 @@ pub struct Manifest {
     /// `import:` root field.
     /// Only used by frontmatters.
     pub import: Option<PathBuf>,
+    /// `venv:` root field.
+    pub venv: Option<VenvConfig>,
 }
 
 impl Manifest {
@@ -52,6 +54,9 @@ impl Manifest {
         }
         if self.import.is_some() {
             result.push("import");
+        }
+        if self.venv.is_some() {
+            result.push("venv");
         }
         result
     }
@@ -199,7 +204,7 @@ pub struct DetailedSource {
     /// This dependency is actually an alias; download package pointed by `name`.
     pub name: Option<String>,
     /// Path to the local dependency.
-    pub path: Option<String>,
+    pub path: Option<PathBuf>,
     /// Url for the git dependency.
     pub git_url: Option<String>,
     /// Git's tag.
@@ -296,6 +301,15 @@ impl<'de> de::Deserialize<'de> for OptLevel {
             .string(|s| Ok(OptLevel::String(s.to_string())))
             .deserialize(deserializer)
     }
+}
+
+#[derive(Clone, Debug, Deserialize)]
+/// A venv's configuration.
+#[serde(rename_all = "kebab-case")]
+pub struct VenvConfig {
+    pub storage_path: Option<PathBuf>,
+    pub ephemeral: Option<bool>,
+    pub expose_freezefile: Option<bool>,
 }
 
 #[cfg(test)]
