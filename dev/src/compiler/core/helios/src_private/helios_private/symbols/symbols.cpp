@@ -1211,6 +1211,8 @@ namespace compiler::helios {
 	std::vector<SymID> getAllHeliosSymbols() {
 		// this implementation is fragile, adjust if needed
 
+		PANIC_IF_NOT_TEST();
+
 		CORE_ASSERT(
 			!query::Context::areWeInsideQuery(), "getAllHeliosSymbols called from within query!"
 		);

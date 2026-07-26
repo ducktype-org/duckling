@@ -851,6 +851,8 @@ namespace compiler::helios {
 	std::vector<ScopeID> getAllHeliosScopes() {
 		// this implementation is fragile, adjust if needed.
 
+		PANIC_IF_NOT_TEST();
+
 		CORE_ASSERT(
 			!query::Context::areWeInsideQuery(), "getAllHeliosScopes called from within query!"
 		);
