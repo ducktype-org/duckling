@@ -324,18 +324,27 @@ namespace compiler::frontend {
 		};
 
 		struct ModuleScriptData final {
+			// a dummy module script will be created for each script and for repl 
+
 			// We don't store the SourceFile for script modules (?)
 			base::Optional<fs::File> m_script_file;
+
+			// child module: SyntheticScriptReplChainModule?
 		};
 
-		struct ReplData final {
+		// yay, this makes sense:
+		struct SyntheticScriptReplChainModule final {
+			// This has paren<->child mapping
+			// dynamic extension will be done by the modifier, and the parent will be set to the previous module in the chain
+			// This is a special case, we need dynamic extend only for REPL like execution
+
 			// base::Optional<ModuleID> m_repl_module_parent;
 			// This will be a special case, we need dynamic extend
 			// unify with script, maybe repl is just a ModuleScriptData with magic bool allow_extend = true?
 		};
 
 
-		std::variant<ModuleModuleData, ModuleScriptData, ReplData> m_module_type_data;
+		std::variant<ModuleModuleData, ModuleScriptData, SyntheticScriptReplChainModule> m_module_type_data;
 
 
 
