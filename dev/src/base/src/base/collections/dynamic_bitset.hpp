@@ -105,7 +105,7 @@ namespace base {
 		 * @brief In-place set difference: removes from this every bit set in @p other (this AND-NOT
 		 * other). Both must have the same capacity.
 		 */
-		DynamicBitset& subtract(const DynamicBitset& other) {
+		DynamicBitset& operator-=(const DynamicBitset& other) {
 			CORE_ASSERT(bit_count == other.bit_count, "DynamicBitset difference size mismatch");
 			for (usize i = 0; i < words.size(); i++) words[i] &= ~other.words[i];
 			return *this;
@@ -138,7 +138,7 @@ namespace base {
 		 * @brief Calls @p fn with the index of each set bit, in ascending order.
 		 */
 		template<class Fn>
-		void forEachSet(Fn fn) const {
+		void forEachSet(const Fn& fn) const {
 			for (usize wi = 0; wi < words.size(); wi++) {
 				u64 w = words[wi];
 				while (w != 0) {

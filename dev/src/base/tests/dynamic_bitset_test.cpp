@@ -66,7 +66,7 @@ public:
 		assertTrue(setBits(inter) == Indices{ 3 }, "intersection should be {3}");
 
 		DynamicBitset diff = a;
-		diff.subtract(b);
+		diff -= b;
 		assertTrue(setBits(diff) == Indices{ 1, 2 }, "difference should be {1,2}");
 
 		// Operands are unchanged by the copies above.
