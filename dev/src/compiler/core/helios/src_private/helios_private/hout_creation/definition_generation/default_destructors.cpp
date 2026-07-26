@@ -236,12 +236,6 @@ namespace compiler::helios::defgen {
 				body.emplace_back(s.whileStmt(std::move(condition), std::move(loop_body)));
 			}
 
-			// Release the backing buffer regardless of element triviality: `list_free(self)`.
-			// Pass `refOf(deref(self))` (not `self` directly): `self` is already a `ref [T]`, and
-			// passing it straight to the `ref [T]` parameter would take the address of the `self`
-			// slot (a ref-to-ref). Dereferencing then re-referencing yields the list's own address.
-			// `self` is consumed here (the backing buffer is released), so it is moved into
-			// `list_free`, mirroring how the box destructor hands `self` to `box_free`.
 			body.emplace_back(s.expr(s.call(
 				s.ident(listFreeSymForType(ctx, array_type.getElementType().getType())),
 				s.move(s.ident(self_symbol))
@@ -305,8 +299,6 @@ namespace compiler::helios::defgen {
 		// Destroy the pointee: `appendDestruction(*self)`.
 		appendDestruction(ctx, body, s.deref(s.ident(self_symbol)));
 
-		// Free the box storage: `box_free(move self)`. `self` is moved so the automatic destructor
-		// insertion does not re-destruct the box here — that would recurse into this destructor.
 		body.emplace_back(s.expr(
 			s.call(s.ident(boxFreeSymForType(ctx, pointee_type)), s.move(s.ident(self_symbol)))
 		));
