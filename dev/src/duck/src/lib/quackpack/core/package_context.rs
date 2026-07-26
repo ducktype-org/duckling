@@ -47,7 +47,7 @@ impl<'duck> PackageContext<'duck> {
             return Ok(None);
         };
         Ok(Some(Self {
-            package: AnyPackage::Frontmatter(frontmatter),
+            package: AnyPackage::Script(frontmatter),
             ctx,
         }))
     }
@@ -64,7 +64,7 @@ impl<'duck> PackageContext<'duck> {
             )
         };
         Ok(Some(Self {
-            package: AnyPackage::Frontmatter(frontmatter),
+            package: AnyPackage::Script(frontmatter),
             ctx,
         }))
     }

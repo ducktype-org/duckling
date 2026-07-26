@@ -347,7 +347,7 @@ fn fetch_source_code(
 
 fn make_success_message(pcx: &PackageContext<'_>, id: VenvId) -> QuackResult<()> {
     match pcx.package() {
-        AnyPackage::Frontmatter(frontmatter) => pcx.ctx().console().info(format!(
+        AnyPackage::Script(frontmatter) => pcx.ctx().console().info(format!(
             "successfully synchronized the venv of the script with a frontmatter at `{}`",
             frontmatter.script_file().display()
         )),

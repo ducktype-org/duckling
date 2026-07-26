@@ -3,10 +3,9 @@ use std::ffi::{OsStr, OsString};
 use std::fmt;
 use std::path::{Path, PathBuf};
 
-use super::VenvConfig;
-use crate::quackpack::core::compile::artifacts_layout::ArtifactsLayout;
-use crate::quackpack::core::identity::{Identity, Origin};
-use crate::quackpack::core::{Dependencies, Manifest, Profiles, Version};
+use super::compile::artifacts_layout::ArtifactsLayout;
+use super::identity::{Identity, Origin};
+use super::{Dependencies, Manifest, Profiles, VenvConfig, Version};
 use crate::quackpack::schemas::manifest::Manifest as ManifestSchema;
 use crate::{QuackResult, QuackResultContext, StrId};
 
@@ -14,7 +13,7 @@ use crate::{QuackResult, QuackResultContext, StrId};
 /// Entities which can be treated as a package (have their own venvs).
 pub enum AnyPackage {
     Package(Package),
-    Frontmatter(FrontMatterScript),
+    Script(FrontMatterScript),
 }
 
 impl AnyPackage {
@@ -22,7 +21,7 @@ impl AnyPackage {
     pub fn manifest(&self) -> &Manifest {
         match self {
             Self::Package(package) => package.manifest(),
-            Self::Frontmatter(frontmatter) => frontmatter.manifest(),
+            Self::Script(frontmatter) => frontmatter.manifest(),
         }
     }
 
@@ -30,7 +29,7 @@ impl AnyPackage {
     pub fn root(&self) -> &Path {
         match self {
             Self::Package(package) => package.root_directory(),
-            Self::Frontmatter(frontmatter) => frontmatter.script_file(),
+            Self::Script(frontmatter) => frontmatter.script_file(),
         }
     }
 
@@ -38,7 +37,7 @@ impl AnyPackage {
     pub fn src(&self) -> Option<&Path> {
         match self {
             Self::Package(package) => package.source_directory(),
-            Self::Frontmatter(_) => None,
+            Self::Script(_) => None,
         }
     }
 
@@ -46,7 +45,7 @@ impl AnyPackage {
     pub fn is_global(&self) -> bool {
         match self {
             Self::Package(package) => package.is_global(),
-            Self::Frontmatter(_) => false,
+            Self::Script(_) => false,
         }
     }
 
@@ -54,7 +53,7 @@ impl AnyPackage {
     pub fn artifacts_dir(&self) -> &ArtifactsLayout {
         match self {
             Self::Package(package) => package.artifacts_directory(),
-            Self::Frontmatter(frontmatter_script) => frontmatter_script.artifacts_directory(),
+            Self::Script(frontmatter_script) => frontmatter_script.artifacts_directory(),
         }
     }
 
@@ -62,7 +61,7 @@ impl AnyPackage {
     pub fn as_a_local_identity(&self) -> QuackResult<Identity> {
         match self {
             Self::Package(package) => package.as_a_local_identity(),
-            Self::Frontmatter(frontmatter) => frontmatter.as_a_local_identity(),
+            Self::Script(frontmatter) => frontmatter.as_a_local_identity(),
         }
     }
 
@@ -70,15 +69,15 @@ impl AnyPackage {
     pub fn try_get_package(&self) -> Option<&Package> {
         match self {
             Self::Package(package) => Some(package),
-            Self::Frontmatter(_) => None,
+            Self::Script(_) => None,
         }
     }
 
     /// Try to cast `&self` into `&FrontMatterScript`.
-    pub fn try_get_frontmatter(&self) -> Option<&FrontMatterScript> {
+    pub fn try_get_script(&self) -> Option<&FrontMatterScript> {
         match self {
             Self::Package(_) => None,
-            Self::Frontmatter(frontmatter) => Some(frontmatter),
+            Self::Script(frontmatter) => Some(frontmatter),
         }
     }
 
@@ -86,19 +85,19 @@ impl AnyPackage {
     pub fn get_package(&self) -> &Package {
         match self {
             Self::Package(package) => package,
-            Self::Frontmatter(_) => {
+            Self::Script(_) => {
                 panic!("tried to cast `AnyPackage` with a frontmatter to a package")
             }
         }
     }
 
     /// Cast `&self` into `&FrontMatterScript` and panic on mismatch.
-    pub fn get_frontmatter(&self) -> &FrontMatterScript {
+    pub fn get_script(&self) -> &FrontMatterScript {
         match self {
             Self::Package(_) => {
                 panic!("tried to cast `AnyPackage` with a package to a frontmatter")
             }
-            Self::Frontmatter(frontmatter) => frontmatter,
+            Self::Script(frontmatter) => frontmatter,
         }
     }
 
@@ -106,15 +105,15 @@ impl AnyPackage {
     pub fn try_into_package(self) -> Option<Package> {
         match self {
             Self::Package(package) => Some(package),
-            Self::Frontmatter(_) => None,
+            Self::Script(_) => None,
         }
     }
 
     /// Try to extract [`FrontMatterScript`] from `self`.
-    pub fn try_into_frontmatter(self) -> Option<FrontMatterScript> {
+    pub fn try_into_script(self) -> Option<FrontMatterScript> {
         match self {
             Self::Package(_) => None,
-            Self::Frontmatter(frontmatter) => Some(frontmatter),
+            Self::Script(frontmatter) => Some(frontmatter),
         }
     }
 
@@ -122,19 +121,19 @@ impl AnyPackage {
     pub fn unwrap_package(self) -> Package {
         match self {
             Self::Package(package) => package,
-            Self::Frontmatter(_) => {
+            Self::Script(_) => {
                 panic!("tried to cast `AnyPackage` with a frontmatter to a package")
             }
         }
     }
 
     /// Extract [`FrontMatterScript`] from `self` and panic on mismatch.
-    pub fn unwrap_frontmatter(self) -> FrontMatterScript {
+    pub fn unwrap_script(self) -> FrontMatterScript {
         match self {
             Self::Package(_) => {
                 panic!("tried to cast `AnyPackage` with a package to a frontmatter")
             }
-            Self::Frontmatter(frontmatter) => frontmatter,
+            Self::Script(frontmatter) => frontmatter,
         }
     }
 
@@ -143,9 +142,9 @@ impl AnyPackage {
         matches!(self, AnyPackage::Package(..))
     }
 
-    /// Check if this package is a script's frontmatter.
-    pub fn is_frontmatter(&self) -> bool {
-        matches!(self, AnyPackage::Frontmatter(..))
+    /// Check if this package is a script.
+    pub fn is_script(&self) -> bool {
+        matches!(self, AnyPackage::Script(..))
     }
 
     pub fn name(&self) -> StrId {

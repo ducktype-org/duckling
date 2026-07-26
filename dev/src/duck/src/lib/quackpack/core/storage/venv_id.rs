@@ -126,7 +126,7 @@ impl ToVenvId for AnyPackage {
     fn to_venv_id(&self) -> VenvId {
         match self {
             Self::Package(package) => package.to_venv_id(),
-            Self::Frontmatter(front_matter_script) => front_matter_script.to_venv_id(),
+            Self::Script(front_matter_script) => front_matter_script.to_venv_id(),
         }
     }
 }
