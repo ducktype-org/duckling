@@ -216,7 +216,7 @@ namespace tester {
 	int main(int argc, const char* const* argv) {                              \
 		init::InitObject _;                                                    \
 		base::internal::is_unit_test = true;                                   \
-		auto             config = tester::getTestConfig(test_path);            \
+		auto config                  = tester::getTestConfig(test_path);       \
                                                                                \
 		TESTER_CLASS test(std::move(config));                                  \
                                                                                \

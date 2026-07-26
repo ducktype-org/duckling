@@ -160,5 +160,4 @@ namespace base {
  *
  * In test binaries this is a no-op, elsewhere throws a panic.
  */
-#define PANIC_IF_NOT_TEST() \
-	CORE_ASSERT(base::internal::is_unit_test, "Not unit test binary")
+#define PANIC_IF_NOT_TEST() CORE_ASSERT(base::internal::is_unit_test, "Not unit test binary")
