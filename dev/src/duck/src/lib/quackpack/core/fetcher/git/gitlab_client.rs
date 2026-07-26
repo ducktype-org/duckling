@@ -1,4 +1,5 @@
 //! Module for using Gitlab's API instead of blindly cloning the full repository.
+//! The whole documentation can be found here: <https://docs.gitlab.com/api/api_resources/>.
 //!
 //! Gitlab's API:
 //! -------------
@@ -70,7 +71,7 @@ impl PseudoGitClient for GitlabClient<'_> {
         let scheme = repo_url.scheme();
         let domain = repo_url.domain()?;
         // Check that scheme is `http` or `https`.
-        if !(scheme == "http") && !(scheme == "https") {
+        if scheme != "http" && scheme != "https" {
             return None;
         }
         // Check that this is a gitlab repo.
@@ -91,14 +92,14 @@ impl PseudoGitClient for GitlabClient<'_> {
     fn get_commit_hash(&self, api_url: InternedUrl, reference: GitReference) -> QuackResult<StrId> {
         match reference {
             GitReference::Default => {
-                // Docs: `https://docs.gitlab.com/api/projects/#retrieve-a-project`.
+                // Docs: <https://docs.gitlab.com/api/projects/#retrieve-a-project>.
                 let request = create_get_request(&api_url)?;
                 let response = self.client.request(request)?;
                 let default_branch = get_default_branch_from_response(response)?;
                 self.get_commit_hash(api_url, GitReference::Branch(default_branch))
             }
             GitReference::Tag(tag) => {
-                // Docs: `https://docs.gitlab.com/api/tags/#retrieve-a-single-repository-tag`.
+                // Docs: <https://docs.gitlab.com/api/tags/#retrieve-a-single-repository-tag>.
                 let url = api_url.join("repository/tags/")?.join(&tag)?;
                 let request = create_get_request(&url)?;
                 let response = self.client.request(request)?;
@@ -106,7 +107,7 @@ impl PseudoGitClient for GitlabClient<'_> {
                 Ok(commit_hash)
             }
             GitReference::Branch(branch) => {
-                // Docs: `https://docs.gitlab.com/api/branches/#retrieve-a-repository-branch`.
+                // Docs: <https://docs.gitlab.com/api/branches/#retrieve-a-repository-branch>.
                 let url = api_url.join("repository/branches/")?.join(&branch)?;
                 let request = create_get_request(&url)?;
                 let response = self.client.request(request)?;
@@ -118,7 +119,7 @@ impl PseudoGitClient for GitlabClient<'_> {
     }
 
     fn download_manifest(&self, url: InternedUrl, commit: StrId) -> QuackResult<Manifest> {
-        // Docs: `https://docs.gitlab.com/api/repository_files/#retrieve-a-raw-file-from-a-repository`.
+        // Docs: <https://docs.gitlab.com/api/repository_files/#retrieve-a-raw-file-from-a-repository>.
         let mut url = url.join(&format!(
             "repository/files/{}/raw",
             PackageLoader::MANIFEST_NAME
@@ -140,8 +141,8 @@ impl PseudoGitClient for GitlabClient<'_> {
 
 #[derive(Deserialize)]
 /// Type representing the interesting part of the response to `/repository/branches/<branch>` and `/repository/tags/<tag>` requests.
-/// Based on `https://docs.gitlab.com/api/branches/#retrieve-a-repository-branch` and
-/// `https://docs.gitlab.com/api/tags/#retrieve-a-single-repository-tag`.
+/// Based on <https://docs.gitlab.com/api/branches/#retrieve-a-repository-branch> and
+/// <https://docs.gitlab.com/api/tags/#retrieve-a-single-repository-tag>.
 struct CommitResponse {
     pub commit: CommitResponseId,
 }
@@ -162,7 +163,7 @@ fn get_commit_from_response(response: Response) -> QuackResult<StrId> {
 
 #[derive(Deserialize)]
 /// Type representing the interesting part of the response to get repo request.
-/// Based on `https://docs.gitlab.com/api/projects/#retrieve-a-project`.
+/// Based on <https://docs.gitlab.com/api/projects/#retrieve-a-project>.
 struct DefaultBranchResponse {
     default_branch: String,
 }
