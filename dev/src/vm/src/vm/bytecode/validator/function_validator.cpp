@@ -1682,6 +1682,7 @@ class FunctionValidator {
 	}
 
 	LocalStackDb traverseControlFlowGraph() {
+		bool                is_expr = thread.has_value();
 		LocalStackDbBuilder builder(types_ctx);
 
 		auto start_state = LocalStackDbBuilder::EMPTY;
@@ -1819,7 +1820,12 @@ class FunctionValidator {
 			}
 		}
 
-		return builder.finalize();
+		Bytes bytes_offset = is_expr ? (*thread)->getCurrentStackBytesSize() : Bytes{ 0 };
+		u64   block_offset = is_expr ? (*thread)->getCurrentStackBlockSize() : 0;
+
+		auto tp_size = valid_type::TypeSize(bytes_offset, bytes_offset);
+
+		return builder.finalize(tp_size, block_offset);
 	}
 
 	template<OpCode... ops>

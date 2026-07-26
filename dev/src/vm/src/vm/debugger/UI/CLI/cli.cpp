@@ -42,7 +42,9 @@ namespace {
 				}
 			}
 			variant_case(vm::api::ExprExecutionCompleted, expr_completed) {
-				os << "Thread " << std::to_string(expr_completed.thread_id) << " has finished evaluating expression " << std::to_string(expr_completed.expr_id);
+				os << "Thread " << std::to_string(expr_completed.thread_id)
+				   << " has finished evaluating expression "
+				   << std::to_string(expr_completed.expr_id);
 			}
 		}
 	}

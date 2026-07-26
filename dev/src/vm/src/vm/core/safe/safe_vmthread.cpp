@@ -530,7 +530,7 @@ namespace vm {
 			process_memory.freeBlockData(block);
 			process_memory.decreaseBlockRefcount(block);
 		}
-		*orig_frame_ptr = orig_frame_cpy;
+		*orig_frame_ptr                  = orig_frame_cpy;
 		runtime_data.frame_stack_current = orig_frame_ptr;
 
 		return exit_value_storage.value();
@@ -712,6 +712,17 @@ namespace vm {
 		return u64(runtime_data.frame_stack_current - runtime_data.frame_stack_base) + 1;
 	}
 
+	Bytes SafeVMThread::getCurrentStackBytesSize() const {
+		Frame*     frame     = runtime_data.frame_stack_current;
+		std::byte* stack_top = frame->local_stack + frame->local_stack_head;
+		return Bytes{ u64(stack_top - runtime_data.local_stack_base) };
+	}
+
+	u64 SafeVMThread::getCurrentStackBlockSize() const {
+		Frame* frame = runtime_data.frame_stack_current;
+		return u64(frame->local_block_ref_stack_end - runtime_data.block_ref_stack_base);
+	}
+
 	const Frame& SafeVMThread::getStackFrame(u64 frame_index) const {
 		return runtime_data.frame_stack_base[frame_index];
 	}
@@ -721,7 +732,9 @@ namespace vm {
 		runtime_data.global_block_ref_buffer_base = global_buffer_pointers.blocks_buffer_base;
 	}
 
-	base::Optional<std::vector<Ref<VmValue>>> SafeVMThread::loadAndExecRuntimeExpr(code::valid_function::ValidFunction&& high_expr) {
+	base::Optional<std::vector<Ref<VmValue>>> SafeVMThread::loadAndExecRuntimeExpr(
+		code::valid_function::ValidFunction&& high_expr
+	) {
 		CORE_ASSERT(
 			v_matches(getStatus(), api::Paused),
 			"To load and evaluate expr we need the thread to be paused"
@@ -734,10 +747,18 @@ namespace vm {
 		auto  instr       = frame->instr;
 		auto  local_stack = frame->local_stack;
 		auto& called_expr = runtime_expr_low.back();
+
+		u64 orig_stack_size = getCurrentStackBytesSize().asInt();
+
 		for (auto type: called_expr.result_types)
 			OpFuns::performInit(instr, local_stack, frame, *this, type);
 		OpFuns::performFunctionCall(instr, local_stack, frame, *this, called_expr);
 		OpFuns::save_execution_state(instr, local_stack, frame, *this);
+
+		// we modify the frame so that the base is the global base of the stacks
+		frame->local_stack                = runtime_data.local_stack_base;
+		frame->local_block_ref_stack_base = runtime_data.block_ref_stack_base;
+		frame->local_stack_head += orig_stack_size;
 
 		// updating the previous frame, because result variables
 		// will not be returned to the caller
@@ -746,7 +767,7 @@ namespace vm {
 
 		bool resumed = resume();
 		if (!resumed) return std::nullopt;
-		
+
 		bool completed_execution = waitForExprEvaluation();
 		if (!completed_execution) return std::nullopt;
 

@@ -54,20 +54,14 @@ namespace vm::loader::compiler::safe {
 		DEFINE_LOWER_ARGUMENT_IMPL_FOR_FAMILY(
 			low::opargs::PlaceDataArgumentType,
 
-			if (opcode_arg.frame.has_value()) {
-				auto& frame_idx = *opcode_arg.frame;
-				CORE_ASSERT(stack_ctx.thread_evaluating_expr.has_value(), "there should be a thread evaluating this expr");
+			if_opt_some (opcode_arg.frame, frame_idx) {
 				auto& thread = **stack_ctx.thread_evaluating_expr;
 
 				auto relative_offset = getIntTypeSize(*thread.getCurrentHighPosition(frame_idx)->getByteOffset(opcode_arg.var_name));
-				
-				usize stack_size = thread.getNumberOfCurrentStackFrames();
-
 				auto prev_frame_base = thread.getStackFrame(frame_idx).local_stack;
-				auto top_frame = thread.getStackFrame(stack_size - 1);
-				auto current_end = top_frame.local_stack + top_frame.local_stack_head;
+				auto stack_base = thread.getRuntimeData().local_stack_base;
 				
-				usize frame_offset = usize(prev_frame_base - current_end);
+				usize frame_offset = usize(prev_frame_base - stack_base);
 
 				return (frame_offset + relative_offset) & (~(1ULL << 63));
 			}
@@ -81,24 +75,19 @@ namespace vm::loader::compiler::safe {
 		DEFINE_LOWER_ARGUMENT_IMPL_FOR_FAMILY(
 			low::opargs::PlaceBlockArgumentType,
 
-			if (opcode_arg.frame.has_value()) {
-				auto& frame_idx = *opcode_arg.frame;
-				CORE_ASSERT(stack_ctx.thread_evaluating_expr.has_value(), "there is a thread evaluating this expr");
+			if_opt_some (opcode_arg.frame, frame_idx) {
 				auto& thread = **stack_ctx.thread_evaluating_expr;
 
-				auto relative_offset = *thread.getCurrentHighPosition(frame_idx)->getIdx(opcode_arg.var_name);
-				
-				usize stack_size = thread.getNumberOfCurrentStackFrames();
-
+				auto relative_offset = *thread.getCurrentHighPosition(frame_idx)->getBlockIdx(opcode_arg.var_name);
 				auto prev_frame_base = thread.getStackFrame(frame_idx).local_block_ref_stack_base;
-				auto current_end = thread.getStackFrame(stack_size - 1).local_block_ref_stack_end;
+				auto stack_base = thread.getRuntimeData().block_ref_stack_base;
 				
-				usize frame_offset = usize(prev_frame_base - current_end);
+				usize frame_offset = usize(prev_frame_base - stack_base);
 
 				return (frame_offset + relative_offset) & (~(1ULL << 63));
 			}
 
-			if(auto maybe_val = stack_ctx.function.local_stack.getIdx(stack_state_id, opcode_arg.var_name)) {
+			if(auto maybe_val = stack_ctx.function.local_stack.getBlockIdx(stack_state_id, opcode_arg.var_name)) {
 				return *maybe_val;
 			}
 			return compiler.low_program.getGlobals().at(opcode_arg.var_name)->global_block_idx | (1ULL << 63);

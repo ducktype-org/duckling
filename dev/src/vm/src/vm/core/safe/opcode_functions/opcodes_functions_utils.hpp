@@ -27,14 +27,9 @@ inline static std::byte* getBytePtrFromPlaceArg(
 	bool is_global = (arg >> 63) != 0;
 
 	// Mask out the highest bit to get the offset.
-	u64        offset = arg & ~(1ULL << 63);
-	std::byte* base   = global_buffer;
-	if (!is_global) {
-		base          = local_stack;
-		auto sign_bit = offset & (1ULL << 62);
-		offset |= (sign_bit << 1);
-	}
+	u64 offset = arg & ~(1ULL << 63);
 	// The compiler will turn this ternary into a fast, branchless `cmov`.
+	std::byte* base = is_global ? global_buffer : local_stack;
 	return base + offset;
 }
 

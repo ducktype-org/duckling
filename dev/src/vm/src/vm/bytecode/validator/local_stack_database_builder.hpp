@@ -154,6 +154,9 @@ order order	 * @note this information takes into account primitive-casting opera
 		 * @returns a database which will anwer all the questions offline
 		 * @note this function should be called exactly once, at the end of lifetime for the database
 		 */
-		LocalStackDb finalize();
+		LocalStackDb finalize(
+			valid_type::TypeSize root_byte_offset  = valid_type::TypeSize{ Bytes{ 0 }, Bytes{ 0 } },
+			u64                  root_block_offset = 0
+		);
 	};
 }

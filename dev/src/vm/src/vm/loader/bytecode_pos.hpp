@@ -37,6 +37,11 @@ namespace vm::loader {
 		}
 
 		[[nodiscard]]
+		base::Optional<usize> getBlockIdx(base::StrID name) const {
+			return valid_function->local_stack.getBlockIdx(state, name);
+		}
+
+		[[nodiscard]]
 		base::Optional<base::StrID> getTypeName(base::StrID name) const {
 			return valid_function->local_stack.getTypeName(state, name);
 		}

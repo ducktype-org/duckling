@@ -560,8 +560,9 @@ namespace vm {
 		if (valid_expr.has_value()) {
 			auto returned_value = thread_ref->loadAndExecRuntimeExpr(std::move(valid_expr).value());
 			if (!returned_value)
-				return std::unexpected(api::ApiError{ api::OtherError{
-					"Couldn't execute the expression - either failed to resume or got an unexpected status during evaluation!" } });
+				return std::unexpected(api::ApiError{
+					api::OtherError{ "Couldn't execute the expression - either failed to resume or "
+				                     "got an unexpected status during evaluation!" } });
 			return api::Response(vm::api::ExitValue(*returned_value));
 		} else {
 			std::stringstream ss;

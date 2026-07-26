@@ -43,6 +43,7 @@ namespace vm::code {
 			NameStackID          prev = 0;
 			valid_type::TypeSize size_in_bytes{};
 			usize                size_in_blocks{};
+			usize                depth = 0;
 			valid_type::TypeSize size_of_last{};
 			base::StrID          name_of_last = base::StrID{ "" };
 		};
@@ -76,6 +77,8 @@ namespace vm::code {
 		 * @note returns nullopt, when stack at current state doesn't contain variable with such name
 		 */
 		base::Optional<usize> getIdx(StackStateID state, base::StrID name) const;
+
+		base::Optional<usize> getBlockIdx(StackStateID state, base::StrID name) const;
 
 		/**
 		 * @returns name of the type of the variable with particular name at given state of the stack

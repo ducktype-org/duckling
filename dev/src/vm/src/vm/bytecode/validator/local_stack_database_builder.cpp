@@ -133,7 +133,9 @@ base::Optional<base::StrID> ls_db_bld::getName(StackStateID state, usize idx) co
 	return var_names.at(varname_stack_id, idx);
 }
 
-vm::code::LocalStackDb ls_db_bld::finalize() {
+vm::code::LocalStackDb ls_db_bld::finalize(
+	valid_type::TypeSize root_byte_offset, u64 root_block_offset
+) {
 	usize order = 0;
 
 	base::HashMap<base::StrID, NameMap> name_to_namestack_id{};
@@ -160,8 +162,9 @@ vm::code::LocalStackDb ls_db_bld::finalize() {
 			namestack_entries.at(next_node) = NameStackEntry{
 				.lifetime       = next_lifetime,
 				.prev           = node_id,
-				.size_in_bytes  = tree[next_node].byte_depth,
-				.size_in_blocks = tree[next_node].size,
+				.size_in_bytes  = tree[next_node].byte_depth + root_byte_offset,
+				.size_in_blocks = tree[next_node].size + root_block_offset,
+				.depth          = tree[next_node].size,
 				.size_of_last   = tree[next_node].byte_depth - tree[node_id].byte_depth,
 				.name_of_last   = child.name,
 			};
@@ -181,7 +184,9 @@ vm::code::LocalStackDb ls_db_bld::finalize() {
 	auto root_lifetime = dfs(dfs, 0, names);
 
 	namestack_entries.at(0) = NameStackEntry{
-		.lifetime = root_lifetime,
+		.lifetime       = root_lifetime,
+		.size_in_bytes  = root_byte_offset,
+		.size_in_blocks = root_block_offset,
 	};
 
 

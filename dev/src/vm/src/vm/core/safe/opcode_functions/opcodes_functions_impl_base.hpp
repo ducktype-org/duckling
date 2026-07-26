@@ -623,23 +623,26 @@ namespace vm {
 				"We must be evaluating the latest expression when executing `ret_from_expr`"
 			);
 
+			CORE_ASSERT(
+				frame > thread.runtime_data.frame_stack_base,
+				"The expression must have another frame underneath intself"
+			);
+
 			auto* callee_frame = frame;
 			u64   ret_count    = frame->current_function->result_types.size();
 			frame--;
+			auto* caller_block_ref_stack_end = frame->local_block_ref_stack_end;
 
 			std::vector<Ref<VmValue>> exit_value = {};
 
-			while (callee_frame->local_block_ref_stack_end
-			       > callee_frame->local_block_ref_stack_base) {
-				auto block         = Ref(callee_frame->local_block_ref_stack_end[-1]);
-				u64  block_ref_idx = u64(
-                    callee_frame->local_block_ref_stack_end - 1
-                    - callee_frame->local_block_ref_stack_base
-                );
+			while (callee_frame->local_block_ref_stack_end > caller_block_ref_stack_end) {
+				auto block = Ref(callee_frame->local_block_ref_stack_end[-1]);
+				u64  block_ref_relative_idx
+					= u64(callee_frame->local_block_ref_stack_end - 1 - caller_block_ref_stack_end);
 
-				if (block_ref_idx < ret_count) {
+				if (block_ref_relative_idx < ret_count) {
 					exit_value.emplace_back(thread.safe_process.createVmValue(
-						expr.result_types[block_ref_idx], Pointer(block, 0)
+						expr.result_types[block_ref_relative_idx], Pointer(block, 0)
 					));
 				}
 

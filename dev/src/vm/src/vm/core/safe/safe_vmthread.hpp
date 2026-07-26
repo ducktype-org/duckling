@@ -241,6 +241,10 @@ namespace vm {
 
 		[[nodiscard]] u64 getNumberOfCurrentStackFrames() const override;
 
+		[[nodiscard]] Bytes getCurrentStackBytesSize() const;
+
+		[[nodiscard]] u64 getCurrentStackBlockSize() const;
+
 		[[nodiscard]]
 		const Frame& getStackFrame(u64 frame_index) const;
 
@@ -251,7 +255,11 @@ namespace vm {
 		base::Optional<CRef<code::valid_function::ValidFunction>> getFatBytecodeFunction(u64 frame_idx
 		) const;
 
-		base::Optional<std::vector<Ref<VmValue>>> loadAndExecRuntimeExpr(code::valid_function::ValidFunction&& expr);
+		base::Optional<std::vector<Ref<VmValue>>> loadAndExecRuntimeExpr(
+			code::valid_function::ValidFunction&& expr
+		);
+
+		RuntimeData getRuntimeData() const { return runtime_data; }
 
 		/**
 		 * @brief Update the pointers to the global data buffer and global blocks buffer.

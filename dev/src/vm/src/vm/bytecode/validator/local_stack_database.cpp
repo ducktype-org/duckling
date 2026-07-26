@@ -77,6 +77,14 @@ bool ls_db::contains(StackStateID state, base::StrID name) const {
 
 base::Optional<usize> ls_db::getIdx(StackStateID state, base::StrID name) const {
 	match_optional(getNameEntryByName(state, name)) {
+		opt_some(entry) { return entry.depth - 1; }
+		opt_none { return std::nullopt; }
+	}
+	CORE_UNREACHABLE();
+}
+
+base::Optional<usize> ls_db::getBlockIdx(StackStateID state, base::StrID name) const {
+	match_optional(getNameEntryByName(state, name)) {
 		opt_some(entry) { return entry.size_in_blocks - 1; }
 		opt_none { return std::nullopt; }
 	}
@@ -101,7 +109,7 @@ base::Optional<base::StrID> ls_db::getTypeName(StackStateID state, usize idx) co
 
 usize ls_db::size(StackStateID state) const {
 	auto name_state_id = validateState(state).first;
-	return namestack_entries.at(name_state_id).size_in_blocks;
+	return namestack_entries.at(name_state_id).depth;
 }
 
 base::Optional<base::StrID> ls_db::getName(StackStateID state, usize idx) const {
@@ -165,7 +173,7 @@ ls_db::LocalStackDb(
 	usize max_depth = 0;
 
 	for (const auto& [id, curr_entry]: enumerate(entries) | drop(1)) {
-		max_depth = std::max(max_depth, curr_entry.size_in_blocks);
+		max_depth = std::max(max_depth, curr_entry.depth);
 
 		auto prev_entry_id = curr_entry.prev;
 		CORE_ASSERT(prev_entry_id < id, "Previous state must have been created before current");
@@ -200,7 +208,8 @@ ls_db::LocalStackDb(
 		CORE_ASSERT(prev_byte_size_2 < byte_size_2, "variables have non-zero size");
 
 		CORE_ASSERT(
-			prev_entry.size_in_blocks + 1 == curr_entry.size_in_blocks,
+			prev_entry.size_in_blocks + 1 == curr_entry.size_in_blocks
+				&& prev_entry.depth + 1 == curr_entry.depth,
 			"current entry has one block more the previous"
 		);
 	}
@@ -237,8 +246,8 @@ ls_db::LocalStackDb(
 
 	nodes_at_depth.resize(max_depth, {});
 	for (auto [id, entry]: enumerate(entries) | drop(1)) {
-		CORE_ASSERT(entry.size_in_blocks > 0, "stack is non-empty for each variable");
-		nodes_at_depth.at(entry.size_in_blocks - 1).emplace(entry.lifetime, NameStackID(id));
+		CORE_ASSERT(entry.depth > 0, "stack is non-empty for each variable");
+		nodes_at_depth.at(entry.depth - 1).emplace(entry.lifetime, NameStackID(id));
 	}
 
 	for (auto& layer: nodes_at_depth) {
