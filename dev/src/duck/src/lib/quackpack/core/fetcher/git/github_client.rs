@@ -172,7 +172,7 @@ fn create_get_request(url: &Url) -> QuackResult<Request> {
     request
         .headers_mut()
         .entry(header::PRAGMA)
-        .or_insert(HeaderValue::from_static(defaults::PRAGMA_HEADER_WITH_VALUE));
+        .or_insert(defaults::NO_VALUE);
     Ok(request)
 }
 

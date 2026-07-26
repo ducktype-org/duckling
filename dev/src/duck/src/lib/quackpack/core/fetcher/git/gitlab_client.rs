@@ -14,7 +14,7 @@
 #![expect(dead_code)]
 use std::path::Path;
 
-use http::{HeaderValue, header};
+use http::header;
 use percent_encoding::{AsciiSet, CONTROLS, utf8_percent_encode};
 use serde::Deserialize;
 use tracing::debug;
@@ -180,7 +180,7 @@ fn create_get_request(url: &Url) -> QuackResult<Request> {
     request
         .headers_mut()
         .entry(header::PRAGMA)
-        .or_insert(HeaderValue::from_static(defaults::PRAGMA_HEADER_WITH_VALUE));
+        .or_insert(defaults::NO_VALUE);
     Ok(request)
 }
 
