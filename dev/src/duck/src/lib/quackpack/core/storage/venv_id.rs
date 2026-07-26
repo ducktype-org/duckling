@@ -6,7 +6,8 @@ use std::sync::Arc;
 
 use crate::StrId;
 use crate::duck::util::duck_home::DuckHome;
-use crate::quackpack::core::{AnyPackage, FrontMatterScript, Manifest, Package, PackageContext};
+use crate::quackpack::core::script::Script;
+use crate::quackpack::core::{AnyPackage, Manifest, Package, PackageContext};
 use crate::util::hash::sha256_string;
 
 /// A unique venv's identifier.
@@ -126,7 +127,7 @@ impl ToVenvId for AnyPackage {
     fn to_venv_id(&self) -> VenvId {
         match self {
             Self::Package(package) => package.to_venv_id(),
-            Self::Script(front_matter_script) => front_matter_script.to_venv_id(),
+            Self::Script(script) => script.to_venv_id(),
         }
     }
 }
@@ -137,9 +138,9 @@ impl ToVenvId for Package {
     }
 }
 
-impl ToVenvId for FrontMatterScript {
+impl ToVenvId for Script {
     fn to_venv_id(&self) -> VenvId {
-        let hash = sha256_string(self.script_file().as_os_str().as_encoded_bytes());
+        let hash = sha256_string(self.script_path().as_os_str().as_encoded_bytes());
         let id = format!("{}-{hash}", self.manifest().name());
         VenvId::Script {
             script_name: self.manifest().name(),

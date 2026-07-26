@@ -37,7 +37,7 @@ pub(crate) fn parse(
     let guard = scope.push("profiles".into());
     let profiles = parse_profiles(schema.profiles.as_ref(), guard)?;
     match mode {
-        ParseMode::FrontMatterScript => {
+        ParseMode::FrontMatter => {
             let illegal_fields = schema.fields_disallowed_in_expanded_frontmatter();
             if !illegal_fields.is_empty() {
                 let mut err = qp_err!(
