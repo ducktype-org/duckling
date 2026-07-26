@@ -26,8 +26,9 @@ namespace vm::api {
 	};
 
 	struct ExprExecutionCompleted {
-		std::vector<Ref<VmValue>> exit_value;
-		NLOHMANN_DEFINE_TYPE_INTRUSIVE(ExprExecutionCompleted, exit_value);
+		u64 thread_id;
+		u64 expr_id;
+		NLOHMANN_DEFINE_TYPE_INTRUSIVE(ExprExecutionCompleted, thread_id, expr_id);
 	};
 
 	struct ExecutionStopped {};

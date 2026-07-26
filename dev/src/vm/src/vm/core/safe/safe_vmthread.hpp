@@ -92,6 +92,8 @@ namespace vm {
 		std::deque<code::valid_function::ValidFunction> runtime_expr_high;
 		std::deque<low::LowFuncData>                    runtime_expr_low;
 
+		std::deque<std::vector<Ref<VmValue>>> runtime_ret_value_storage;
+
 		RuntimeData runtime_data;
 
 		/**
@@ -249,7 +251,7 @@ namespace vm {
 		base::Optional<CRef<code::valid_function::ValidFunction>> getFatBytecodeFunction(u64 frame_idx
 		) const;
 
-		bool loadAndExecRuntimeExpr(code::valid_function::ValidFunction&& expr);
+		base::Optional<std::vector<Ref<VmValue>>> loadAndExecRuntimeExpr(code::valid_function::ValidFunction&& expr);
 
 		/**
 		 * @brief Update the pointers to the global data buffer and global blocks buffer.

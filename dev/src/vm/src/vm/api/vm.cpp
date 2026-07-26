@@ -90,7 +90,7 @@ namespace vm::api {
 		    .transform(ignoreResponse);
 	}
 
-	std::expected<void, ApiError> executeRuntimeExprFromFile(
+	std::expected<ExitValue, ApiError> executeRuntimeExprFromFile(
 		PID pid, ThreadID thread_id, fs::File file
 	) {
 		return Supervisor::get()
@@ -98,7 +98,7 @@ namespace vm::api {
 				pid,
 				request::ExecRuntimeExprFromFile{ .thread_id = thread_id, .file = std::move(file) }
 			))
-		    .transform(ignoreResponse);
+		    .and_then(mapOrWrongResponse<ExitValue>);
 	}
 
 	std::expected<void, ApiError> run(PID pid, const std::vector<std::string>& args) {

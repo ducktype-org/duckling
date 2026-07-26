@@ -650,7 +650,12 @@ namespace vm {
 			instr       = frame->instr;
 			local_stack = frame->local_stack;
 
-			thread.respondExecutionRequest(api::ExprExecutionCompleted{ exit_value });
+			thread.runtime_ret_value_storage.push_back(exit_value);
+
+			thread.respondExecutionRequest(api::ExprExecutionCompleted{
+				.thread_id = thread.getThreadID().asInt(),
+				.expr_id   = thread.runtime_expr_low.size(),
+			});
 
 			thread.runtime_expr_low.pop_back();
 			thread.runtime_expr_high.pop_back();

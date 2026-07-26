@@ -25,8 +25,6 @@ namespace {
 	void printProcStatus(printer::PrinterOStream& os, const vm::api::ProcStatus& status) {
 		os.add(printer::PrinterContent(typeToString(status)));
 
-		base::Optional<vm::api::ExitValue> maybe_result = std::nullopt;
-
 		variant_match(status) {
 			variant_case(vm::api::ExecutionCompleted, completed) {
 				const auto& exit_value = completed.exit_value;
@@ -44,15 +42,7 @@ namespace {
 				}
 			}
 			variant_case(vm::api::ExprExecutionCompleted, expr_completed) {
-				for (auto val: expr_completed.exit_value) {
-					if_opt_some(val->readData(), data) {
-						variant_match(data) {
-							variant_case(vm::interpreted_data_variant::Primitive, primitive) {
-								os << " (return value = " << std::to_string(primitive.value) << ")";
-							}
-						}
-					}
-				}
+				os << "Thread " << std::to_string(expr_completed.thread_id) << " has finished evaluating expression " << std::to_string(expr_completed.expr_id);
 			}
 		}
 	}

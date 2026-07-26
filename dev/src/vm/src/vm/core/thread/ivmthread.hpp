@@ -172,6 +172,8 @@ namespace vm {
 
 		virtual bool waitForRunningResponse();
 
+		virtual bool waitForExprEvaluation();
+
 		/**
 		 * @brief Responds to an execution request by sending a response to the VMProcess.
 		 *

@@ -241,7 +241,37 @@ namespace vm::debugger {
 					}
 				}
 			})
-		    .and_then([&] { return api::executeRuntimeExprFromFile(pid, thread_id, file); });
+		    .and_then([&] { return api::executeRuntimeExprFromFile(pid, thread_id, file); })
+			.and_then([&] (auto&& expr_completed_vnt) -> std::expected<void, api::ApiError> {
+				CORE_ASSERT(v_matches(expr_completed_vnt, std::vector<Ref<VmValue>>), "we receive vector values not single int");
+				auto& ret_vals = v_get(expr_completed_vnt, std::vector<Ref<VmValue>>);
+
+				std::cout << "{ ";
+				bool first = true;
+				for (auto val: ret_vals) {
+					if (!first) {
+						std::cout << ", ";
+					}
+					first = false;
+					auto mb_data = val->readData();
+					if_opt_none(mb_data) {
+						std::cout << "[unreadable]";
+					}
+					auto& data = *mb_data;
+					
+					variant_match(data) {
+						variant_case(vm::interpreted_data_variant::Primitive, primitive) {
+							std::cout << " (primitive value : " << std::to_string(primitive.value) << ")";
+						}
+						variant_default {
+							std::cout << " (unsupported type : ?)";
+						}
+					}
+				
+				}
+				std::cout << " }\n";
+				return {};
+			} );
 	}
 
 	const Mapper& Debugger::getMapper() { return mapper; }

@@ -720,7 +720,7 @@ namespace vm {
 		runtime_data.global_block_ref_buffer_base = global_buffer_pointers.blocks_buffer_base;
 	}
 
-	bool SafeVMThread::loadAndExecRuntimeExpr(code::valid_function::ValidFunction&& high_expr) {
+	base::Optional<std::vector<Ref<VmValue>>> SafeVMThread::loadAndExecRuntimeExpr(code::valid_function::ValidFunction&& high_expr) {
 		CORE_ASSERT(
 			v_matches(getStatus(), api::Paused),
 			"To load and evaluate expr we need the thread to be paused"
@@ -743,7 +743,15 @@ namespace vm {
 		prev_frame->local_block_ref_stack_end -= called_expr.result_types.size();
 		prev_frame->local_stack_head -= called_expr.ret_size;
 
-		auto response = resume();
+		bool resumed = resume();
+		if (!resumed) return std::nullopt;
+		
+		bool completed_execution = waitForExprEvaluation();
+		if (!completed_execution) return std::nullopt;
+
+		auto response = runtime_ret_value_storage.front();
+		runtime_ret_value_storage.pop_front();
+
 		return response;
 	}
 

@@ -259,7 +259,7 @@ namespace vm::api {
 		PID pid, ThreadID thread_id, const code::Function& function
 	);
 
-	std::expected<void, ApiError> executeRuntimeExprFromFile(
+	std::expected<ExitValue, ApiError> executeRuntimeExprFromFile(
 		PID pid, ThreadID thread_id, fs::File file
 	);
 }

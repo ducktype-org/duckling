@@ -60,6 +60,10 @@ namespace vm {
 		return std::holds_alternative<api::Running>(execution_response_queue.pop());
 	}
 
+	bool IVMThread::waitForExprEvaluation() {
+		return std::holds_alternative<api::ExprExecutionCompleted>(execution_response_queue.pop());
+	}
+
 	void IVMThread::respondExecutionRequest(const api::ProcStatus& response) {
 		setProcessStatus(response);
 		execution_response_queue.push(response);
