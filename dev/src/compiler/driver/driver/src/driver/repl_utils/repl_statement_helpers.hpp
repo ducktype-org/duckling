@@ -98,12 +98,21 @@ namespace compiler::repl {
 	);
 
 	/**
-	 * @brief Create an ephemeral REPL/script-style statement module with optional parent linkage.
+	 * @brief Create a synthetic REPL/script-style statement module with optional parent linkage.
 	 *
 	 * This is the shared module-construction primitive used for top-level sequential
 	 * statement execution semantics in REPL and script compilation.
 	 *
 	 * @warning Do NOT call this function from inside query computations.
+	 *
+	 * PR: note rename to createSyntheticChainedStatementModule, see #2588
+
+	  * Inside REPL session, this module is temporary, however in scripts it's stored inside
+	 * ScriptData alongside other statement modules.
+	 *
+	 * When anchored into a package, it also preserves `packageID` across the chain so module lookup
+	 * stays in a single package namespace.
+	 
 	 */
 	base::Ref<frontend::ModuleTree> createEphemeralChainedStatementModule(
 		std::string_view                          input,

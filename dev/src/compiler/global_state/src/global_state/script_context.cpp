@@ -2,7 +2,10 @@
 
 #include <base/except/exceptions.hpp>
 
+// PR TODO: remove this file and related stuff! 
+
 namespace global_state {
+
 	namespace {
 		base::Optional<ScriptContext> script_context;
 	}

@@ -25,9 +25,15 @@ namespace compiler::frontend::packages {
 namespace compiler::frontend {
 	/**
 	 * If a file's extension is equal to this constant, then it is assumed
-	 * it is a single file module.
+	 * it is a module file.
 	 */
-	constexpr std::string_view LANG_MODULE_FILE = ".dmf";
+	constexpr std::string_view LANG_MODULE_FILE = ".dm"; // PR TODO .dmf !!!!!! (move to other PR)
+	
+	/**
+	 * If a file's extension is equal to this constant, then it is assumed
+	 * it is a script file.
+	 */
+	constexpr std::string_view LANG_SCRIPT_FILE = ".ds";
 
 	// Regexes to reject files/directories starting with '.' or '$'
 	const std::regex DEFAULT_REJECT_FILE_REGEX      = std::regex(R"((\$.*|\..*))");
@@ -250,29 +256,36 @@ namespace compiler::frontend {
 		 */
 		static void checkDanglingReference(const base::Ref<ModuleTree>& candidate);
 
+
+		/* * * * * * * * * * * * * * *\
+		|  Universal data members:   *|
+		\* * * * * * * * * * * * * * */
+
 		/**
 		 * This is essentially a self pointer, it is necessary to get the ModuleID from the const ModuleTree
 		 */
 		base::Optional<ModuleID> m_id;
-
+		
 		base::StrID m_name;
-
+		
 		base::Optional<base::Ref<ModuleTree>> m_parent;
-
-		base::Optional<base::Ref<SourceFile>>             m_main_source_file;
+		
 		base::HashMap<base::StrID, base::Ref<ModuleTree>> m_submodules;
+
 		
 		/**
 		 * Other files in the module (not SourceFiles) currently nothing is
 		 * happening with them. Do not use this in query unless AccessLocked is
 		 * implemented for this
 		 */
-		base::HashMap<base::StrID, std::vector<fs::File>> m_other_files; 
+		base::HashMap<base::StrID, std::vector<fs::File>> m_other_files;
+
 
 		/**
 		 * Key to support removal from static storage
 		 */
 		base::Optional<usize> m_storage_handle;
+
 
 		/**
 		 * ComponentHash of the module's logical path: eg
@@ -285,6 +298,7 @@ namespace compiler::frontend {
 		 * The actual hash for the Module used in SideInput
 		 */
 		base::Optional<hashing::ComponentHash::HashType> m_hash;
+
 
 		/**
 		 * @brief Synchronizes lazy module hash/path-hash recomputation for this module.
@@ -299,6 +313,36 @@ namespace compiler::frontend {
 		 */
 		base::StrID m_package_id;
 
+
+		/* * * * * * * * * * * * * * * * * * * *\
+		|  Module type specific data members:   |
+		\* * * * * * * * * * * * * * * * * * * */
+
+		// this is the simple case, that already works
+		struct ModuleModuleData final {
+			base::Optional<SourceFile> m_main_source_file;
+		};
+
+		struct ModuleScriptData final {
+			// We don't store the SourceFile for script modules (?)
+			base::Optional<fs::File> m_script_file;
+		};
+
+		struct ReplData final {
+			// base::Optional<ModuleID> m_repl_module_parent;
+			// This will be a special case, we need dynamic extend
+			// unify with script, maybe repl is just a ModuleScriptData with magic bool allow_extend = true?
+		};
+
+
+		std::variant<ModuleModuleData, ModuleScriptData, ReplData> m_module_type_data;
+
+
+
+
+
+
+		// PR TODO
 		/**
 		 * REPL-specific data.
 		 * Optional - only set for modules created in REPL sessions.
@@ -397,7 +441,7 @@ namespace compiler::frontend {
 		 * Sets REPL-specific module data.
 		 * @param repl_data The ReplData struct.
 		 */
-		void setReplModule(const ReplData& repl_data);
+		void setReplModule(const ReplData& repl_data); // HMMMMMMM
 
 		/**
 		 * Builds the module tree from a single file (single-file module).

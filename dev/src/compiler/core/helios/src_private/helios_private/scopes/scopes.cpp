@@ -766,6 +766,8 @@ namespace compiler::helios {
 
 				return parent_result;
 			} else {
+				// HMM: here we could iterate instead on some kind of repl-chain, to separate this from the module tree structure maybe?
+
 				// At root scope - check if this is a REPL module with a parent
 				auto       current_module_id = key.scope.ref->parent_module;
 				const bool is_repl_module

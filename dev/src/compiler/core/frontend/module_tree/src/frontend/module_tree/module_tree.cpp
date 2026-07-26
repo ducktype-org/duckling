@@ -877,6 +877,7 @@ namespace compiler::frontend {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryIsReplModule);
 
+	// PR: this will change
 	/***************************
 	 * QueryReplModuleParent *
 	 ***************************/
