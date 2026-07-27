@@ -43,10 +43,12 @@ namespace compiler::helios {
 
 			auto get_ctv_string_content
 				= [](ctv::CompileTimeValue& ctv) -> base::Optional<base::StrID> {
-				v_if_matches(ctv.getStorage(), ctv::CompileTimeValue::CharSliceValue, val)
-					return val->value;
-				v_if_matches(ctv.getStorage(), ctv::CompileTimeValue::StringClassValue, val)
-					return val->value;
+				v_if_matches(
+					ctv.getStorage(), ctv::CompileTimeValue::CharSliceValue, val
+				) return val->value;
+				v_if_matches(
+					ctv.getStorage(), ctv::CompileTimeValue::StringClassValue, val
+				) return val->value;
 				return {};
 			};
 			if (auto exapnd_str_opt = get_ctv_string_content(expand_ctv)) {

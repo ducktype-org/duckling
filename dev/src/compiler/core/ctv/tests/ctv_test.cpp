@@ -58,7 +58,8 @@ private:
 			unique_values.emplace_back(' ');
 
 			unique_values.emplace_back(CompileTimeValue::UnitCTV{});
-			unique_values.emplace_back(CompileTimeValue::CharSliceValue{ base::StrID("test_string_1") });
+			unique_values.emplace_back(CompileTimeValue::CharSliceValue{
+				base::StrID("test_string_1") });
 			unique_values.emplace_back(CompileTimeValue::CharSliceValue{ base::StrID("a") });
 			unique_values.emplace_back(CompileTimeValue::CharSliceValue{ base::StrID("b") });
 			unique_values.emplace_back(CompileTimeValue::CharSliceValue{ base::StrID("d") });

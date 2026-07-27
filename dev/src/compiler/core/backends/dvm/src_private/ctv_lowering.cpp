@@ -98,9 +98,8 @@ namespace compiler::backend_vm::internal {
 				);
 			}
 			variant_case(ctv::CompileTimeValue::CharSliceValue, str) {
-				auto ctor = lowerStringLiteral(
-					pctx, global_name, inserted_global_place, str.value, false
-				);
+				auto ctor
+					= lowerStringLiteral(pctx, global_name, inserted_global_place, str.value, false);
 				global_data.ctor_name = ctor.ctor.name;
 				pctx.extra_bytecode_functions.push_back(std::move(ctor.ctor));
 			}
