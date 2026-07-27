@@ -9,6 +9,7 @@ use tracing::{error, trace};
 
 use super::Duckc;
 use crate::quackpack::core::Package;
+use crate::quackpack::core::compile::artifacts_layout::ArtifactsLayout;
 use crate::quackpack::core::compile::profiles::OptLevel;
 use crate::util::command_ext::CommandExt;
 use crate::{QuackResult, QuackResultContext};

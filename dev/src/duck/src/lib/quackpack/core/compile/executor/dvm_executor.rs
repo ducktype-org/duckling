@@ -5,7 +5,7 @@ use tracing::instrument;
 use super::{Executor, ExecutorOutput, compile_single_unit_with_tasks, unit_output};
 use crate::QuackResult;
 use crate::quackpack::core::compile::BuildContext;
-use crate::quackpack::core::compile::artifacts_layout::ProfileLayout;
+use crate::quackpack::core::compile::artifacts_layout::{ArtifactsLayout, ProfileLayout};
 use crate::quackpack::core::compile::duckc::multipackage_schema;
 use crate::quackpack::core::compile::unit::graph::UnitGraph;
 use crate::quackpack::core::compile::unit::{ArtifactsType, Unit};
@@ -40,7 +40,7 @@ fn compile(graph: UnitGraph, bcx: &BuildContext<'_, '_>) -> QuackResult<Executor
         .artifacts_directory();
     let profile_layout = artifacts_layout.for_profile(bcx.profile);
     compile_unit(root, &graph, &profile_layout, bcx)?;
-    let output = unit_output(root, &graph, &profile_layout);
+    let output = unit_output(root, &graph, &profile_layout)?;
     Ok(ExecutorOutput {
         root: (root.clone(), output),
     })
@@ -51,10 +51,10 @@ fn compile(graph: UnitGraph, bcx: &BuildContext<'_, '_>) -> QuackResult<Executor
 fn compile_unit(
     unit: &Unit,
     graph: &UnitGraph,
-    layout: &ProfileLayout,
+    layout: &impl ProfileLayout,
     bcx: &BuildContext<'_, '_>,
 ) -> QuackResult<()> {
-    let task = create_task(unit, graph, layout);
+    let task = create_task(unit, graph, layout)?;
     compile_single_unit_with_tasks(unit, graph, layout, bcx, vec![task])
 }
 
@@ -63,8 +63,8 @@ fn compile_unit(
 fn create_task(
     unit: &Unit,
     graph: &UnitGraph,
-    layout: &ProfileLayout,
-) -> multipackage_schema::Task {
+    layout: &impl ProfileLayout,
+) -> QuackResult<multipackage_schema::Task> {
     assert!(
         graph.is_root(unit),
         "`DvmExecutor` should create task only for the root `Unit`"
@@ -73,14 +73,14 @@ fn create_task(
         // QuackPack only emits DVM executables; `DvmLib` is produced solely by the
         // C++ std library path, so it is intentionally unreachable here.
         ArtifactsType::Dvm => multipackage_schema::PackageCompilationStrategy::DvmExe {
-            output_file: unit_output(unit, graph, layout),
+            output_file: unit_output(unit, graph, layout)?,
         },
         task => unreachable!(
             "should create only DVM task for the root (attempted to create for `{task:?}`)"
         ),
     };
-    multipackage_schema::Task {
+    Ok(multipackage_schema::Task {
         package_id: unit.unique_name().into(),
         strategy,
-    }
+    })
 }

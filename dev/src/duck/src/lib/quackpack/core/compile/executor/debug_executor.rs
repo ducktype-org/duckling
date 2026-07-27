@@ -7,7 +7,9 @@ use super::{
 };
 use crate::QuackResult;
 use crate::quackpack::core::compile::BuildContext;
-use crate::quackpack::core::compile::artifacts_layout::ProfileLayout;
+use crate::quackpack::core::compile::artifacts_layout::{
+    ArtifactsLayout, DependencyLayout, ProfileLayout,
+};
 use crate::quackpack::core::compile::duckc::multipackage_schema;
 use crate::quackpack::core::compile::unit::graph::UnitGraph;
 use crate::quackpack::core::compile::unit::{ArtifactsType, Unit};
@@ -46,7 +48,7 @@ fn compile(graph: UnitGraph, bcx: &BuildContext<'_, '_>) -> QuackResult<Executor
     for unit in graph.units_sorted_by_id().iter().rev() {
         compile_unit(unit, &graph, &profile_layout, bcx)?;
     }
-    let output = unit_output(root, &graph, &profile_layout);
+    let output = unit_output(root, &graph, &profile_layout)?;
     Ok(ExecutorOutput {
         root: (root.clone(), output),
     })
@@ -57,7 +59,7 @@ fn compile(graph: UnitGraph, bcx: &BuildContext<'_, '_>) -> QuackResult<Executor
 fn compile_unit(
     unit: &Unit,
     graph: &UnitGraph,
-    layout: &ProfileLayout,
+    layout: &impl ProfileLayout,
     bcx: &BuildContext<'_, '_>,
 ) -> QuackResult<()> {
     let task = create_task(unit, graph, layout)?;
@@ -69,7 +71,7 @@ fn compile_unit(
 fn create_task(
     unit: &Unit,
     graph: &UnitGraph,
-    layout: &ProfileLayout,
+    layout: &impl ProfileLayout,
 ) -> QuackResult<multipackage_schema::Task> {
     let strategy = match unit.artifacts_type() {
         ArtifactsType::Binary => {
@@ -78,12 +80,12 @@ fn create_task(
                 "only root should be compiled to binary"
             );
             multipackage_schema::PackageCompilationStrategy::Binary {
-                output_file: unit_output(unit, graph, layout),
+                output_file: unit_output(unit, graph, layout)?,
                 linking_options: get_linker_options(unit, graph, layout)?,
             }
         }
         ArtifactsType::IsADependencyArtifact => {
-            let layout = layout.for_dependency(unit, graph);
+            let layout = layout.for_dependency(unit, graph)?;
             multipackage_schema::PackageCompilationStrategy::Lib {
                 output_file: layout.root_directory().join(unit.output_file_name()),
                 archive_options: None,

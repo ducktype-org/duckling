@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 
 use super::VenvConfig;
 use crate::quackpack::core::compile::artifacts_layout::ArtifactsLayout;
+use crate::quackpack::core::compile::artifacts_layout::standard::StandardArtifactsLayout;
 use crate::quackpack::core::identity::{Identity, Origin};
 use crate::quackpack::core::{Dependencies, Manifest, Profiles, Version};
 use crate::quackpack::schemas::manifest::Manifest as ManifestSchema;
@@ -51,7 +52,7 @@ impl AnyPackage {
     }
 
     /// Get the artifacts layout.
-    pub fn artifacts_dir(&self) -> &ArtifactsLayout {
+    pub fn artifacts_dir(&self) -> &StandardArtifactsLayout {
         match self {
             Self::Package(package) => package.artifacts_directory(),
             Self::Frontmatter(frontmatter_script) => frontmatter_script.artifacts_directory(),
@@ -175,7 +176,7 @@ pub struct Package {
     /// Path to the manifest of the package.
     manifest_path: PathBuf,
     /// Where the build artifacts should be located.
-    artifacts_dir: ArtifactsLayout,
+    artifacts_dir: StandardArtifactsLayout,
     /// Path to the source code folder of the package.
     possible_source_dir: PathBuf,
 }
@@ -189,7 +190,7 @@ impl Package {
         root: PathBuf,
         manifest_path: PathBuf,
     ) -> Self {
-        let artifacts_dir = ArtifactsLayout::new(root.join(".duck_build"));
+        let artifacts_dir = StandardArtifactsLayout::new(root.join(".duck_build"));
         let source_directory = root.join("src");
         Self {
             original_content,
@@ -238,7 +239,7 @@ impl Package {
     }
 
     /// Get the path to the artifacts directory.
-    pub fn artifacts_directory(&self) -> &ArtifactsLayout {
+    pub fn artifacts_directory(&self) -> &StandardArtifactsLayout {
         &self.artifacts_dir
     }
 
@@ -280,7 +281,7 @@ pub struct FrontMatterScript {
     /// Manifest constructed from the frontmatter.
     manifest: Manifest,
     /// Where the build artifacts should be located.
-    artifacts_dir: ArtifactsLayout,
+    artifacts_dir: StandardArtifactsLayout,
 }
 
 impl FrontMatterScript {
@@ -297,7 +298,7 @@ impl FrontMatterScript {
             .file_stem()
             .context_internal("script path without file stem")?;
         let artifacts_dir =
-            ArtifactsLayout::new(script_folder.join(".duck_build").join(script_name));
+            StandardArtifactsLayout::new(script_folder.join(".duck_build").join(script_name));
         Ok(Self {
             path: path.clone(),
             script_folder: script_folder.to_path_buf(),
@@ -329,7 +330,7 @@ impl FrontMatterScript {
     }
 
     /// Get the path to the artifacts directory.
-    pub fn artifacts_directory(&self) -> &ArtifactsLayout {
+    pub fn artifacts_directory(&self) -> &StandardArtifactsLayout {
         &self.artifacts_dir
     }
 

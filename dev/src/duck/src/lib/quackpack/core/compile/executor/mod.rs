@@ -91,7 +91,7 @@ pub(crate) fn collect_packages(
 pub(crate) fn get_linker_options(
     unit: &Unit,
     graph: &UnitGraph,
-    layout: &ProfileLayout,
+    layout: &impl ProfileLayout,
 ) -> QuackResult<Option<multipackage_schema::LinkerOptions>> {
     let outputs = get_deps_outputs(unit, graph, layout)?;
     if outputs.is_empty() {
@@ -118,23 +118,23 @@ pub(crate) fn get_linker_options(
 }
 
 /// Collect _all_ (including `.a`!) outputs of dependencies (direct and transitive) of this `unit`.
-pub(crate) fn get_deps_outputs(
+pub(crate) fn get_deps_outputs<T: ProfileLayout>(
     unit: &Unit,
     graph: &UnitGraph,
-    layout: &ProfileLayout,
+    layout: &T,
 ) -> QuackResult<Vec<(Unit, PathBuf)>> {
-    struct UnitOutputVisitor<'a> {
+    struct UnitOutputVisitor<'a, U: ProfileLayout> {
         graph: &'a UnitGraph,
-        layout: &'a ProfileLayout,
+        layout: &'a U,
         root: &'a Unit,
         outputs: Vec<(Unit, PathBuf)>,
     }
 
-    impl UnitVisitor for UnitOutputVisitor<'_> {
+    impl<U: ProfileLayout> UnitVisitor for UnitOutputVisitor<'_, U> {
         fn visit(&mut self, unit: &Unit) -> QuackResult<()> {
             if self.root != unit {
                 self.outputs
-                    .push((unit.clone(), unit_output(unit, self.graph, self.layout)))
+                    .push((unit.clone(), unit_output(unit, self.graph, self.layout)?))
             }
             Ok(())
         }
@@ -150,15 +150,19 @@ pub(crate) fn get_deps_outputs(
 }
 
 /// Get a path to the output artifact of this `unit`.
-pub(crate) fn unit_output(unit: &Unit, graph: &UnitGraph, layout: &ProfileLayout) -> PathBuf {
+pub(crate) fn unit_output(
+    unit: &Unit,
+    graph: &UnitGraph,
+    layout: &impl ProfileLayout,
+) -> QuackResult<PathBuf> {
     let out = if graph.is_root(unit) {
         layout.root_directory().join(unit.output_file_name())
     } else {
-        let layout = layout.for_dependency(unit, graph);
+        let layout = layout.for_dependency(unit, graph)?;
         layout.root_directory().join(unit.output_file_name())
     };
     debug!(unit = ?unit, out = %out.display(), "generating output");
-    out
+    Ok(out)
 }
 
 /// Write a manifest into a file.
@@ -189,7 +193,7 @@ pub(crate) fn write_schema(
 /// Create a basic and reusable [`process_builder::DuckcProcessBuilder`].
 pub(crate) fn finished_builder_for_layout_and_profile(
     bcx: &BuildContext<'_, '_>,
-    layout: &DependencyLayout,
+    layout: &impl DependencyLayout,
     profile: &Profile,
 ) -> process_builder::DuckcProcessBuilder {
     let mut builder = Duckc::new(bcx.pcx.ctx()).process_builder();
@@ -225,13 +229,13 @@ pub(crate) fn compile_and_print(
 pub(crate) fn compile_single_unit_with_schema(
     unit: &Unit,
     graph: &UnitGraph,
-    layout: &ProfileLayout,
+    layout: &impl ProfileLayout,
     bcx: &BuildContext<'_, '_>,
     schema: multipackage_schema::MultiPackage,
 ) -> QuackResult<()> {
     let name = unit.root_package().package().name();
     let status = (|| {
-        let unit_layout = layout.for_dependency(unit, graph);
+        let unit_layout = layout.for_dependency(unit, graph)?;
         let builder = finished_builder_for_layout_and_profile(bcx, &unit_layout, &bcx.profile);
         let _lock = unit_layout.acquire_lock(bcx.pcx.ctx())?;
         let locked_manifest_file = unit_layout
@@ -253,7 +257,7 @@ pub(crate) fn compile_single_unit_with_schema(
 pub(crate) fn compile_single_unit_with_tasks(
     unit: &Unit,
     graph: &UnitGraph,
-    layout: &ProfileLayout,
+    layout: &impl ProfileLayout,
     bcx: &BuildContext<'_, '_>,
     tasks: Vec<multipackage_schema::Task>,
 ) -> QuackResult<()> {
