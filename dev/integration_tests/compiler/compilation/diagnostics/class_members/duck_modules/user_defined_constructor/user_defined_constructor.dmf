@@ -1,0 +1,13 @@
+# A misspelled destructor (`destruct` instead of `destroy`) parses as a named constructor.
+# User-defined constructors are not compiled yet, so this must report a diagnostic instead of
+# panicking (see #3206).
+class Counter {
+    x: i64 = 0;
+    Counter.destruct() = {
+        return;
+    }
+}
+
+fun main() -> i64 = {
+    return 0;
+}
