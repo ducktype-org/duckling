@@ -30,7 +30,7 @@ pub fn execute(ctx: &DuckContext, matches: &ArgMatches) -> QuackResult<()> {
         let pcx = PackageLoader::find_from_cwd(ctx, AllowGlobalPackage::No).with_context(|| {
             HintMessage::new("to display the venvs in the global storage use `global-storage` flag")
         })?;
-        pcx.storage_path()?
+        pcx.storage_path().to_path_buf()
     };
     let output_ordering = match matches.get_one::<String>("sort-by").unwrap().as_str() {
         "name" => VenvOrderings::Name,

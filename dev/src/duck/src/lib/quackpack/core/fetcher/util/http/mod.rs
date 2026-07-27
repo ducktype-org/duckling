@@ -2,6 +2,7 @@ use curl::easy::{self, Easy2};
 use http::header;
 use tracing::{debug, error};
 
+use self::handlers::Collector;
 use crate::{DuckContext, QuackResult, qp_bail};
 
 pub mod defaults;
@@ -48,6 +49,8 @@ pub fn configure_easy2<H>(
     handler.http_headers(headers)?;
     handler.url(&request.uri().to_string())?;
     set_http_method_on_curl(handler, request.method())?;
+    set_http_version_on_curl(handler, request.version())?;
+    handler.pipewait(true)?;
     Ok(())
 }
 
@@ -91,8 +94,25 @@ fn set_http_method_on_curl<H>(
     Ok(())
 }
 
+/// Set an HTTP version on the given handler.
+fn set_http_version_on_curl<H>(
+    handler: &mut Easy2<H>,
+    version: http::Version,
+) -> Result<(), curl::Error> {
+    match version {
+        http::Version::HTTP_09 => handler.http_09_allowed(true)?,
+        http::Version::HTTP_10 => handler.http_version(curl::easy::HttpVersion::V10)?,
+        http::Version::HTTP_11 => handler.http_version(curl::easy::HttpVersion::V11)?,
+        http::Version::HTTP_2 => handler.http_version(curl::easy::HttpVersion::V2)?,
+        http::Version::HTTP_3 => handler.http_version(curl::easy::HttpVersion::V3)?,
+        _ => error!("unknown HTTP version: `{version:?}`, ignoring..."),
+    };
+    Ok(())
+}
+
 /// Helper for checking HTTP status codes.
-pub fn check_http_status_code(code: u32, path: &http::Uri) -> QuackResult<()> {
+pub fn check_http_status_code(response: &Response, path: &http::Uri) -> QuackResult<()> {
+    let code = response.status().as_u16();
     debug!("got HTTP code {code}");
     let description = match code {
         100..200 => "informational",
@@ -126,4 +146,16 @@ pub fn try_parse_header_value(data: &[u8]) -> Option<(&str, &str)> {
     let (header, value) = data.split_once(':')?;
     let value = value.trim();
     Some((header, value))
+}
+
+/// Extract a [`Response`] from a [`Easy2<Collector>`] handle.
+pub fn response_from_handler(handler: Easy2<Collector>) -> Response {
+    let mut response = handler.get_ref().response().clone();
+    if let Ok(status) = handler.response_code()
+        && status != 0
+        && let Ok(status) = http::StatusCode::from_u16(status as u16)
+    {
+        *response.status_mut() = status;
+    }
+    response
 }
