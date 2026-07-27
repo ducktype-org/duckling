@@ -47,6 +47,7 @@ namespace query::internal {
 		static auto                       internal_query(const QKey&) -> QResult;                  \
 		static auto                       internal_load(::query::QueryStableHash hash) -> QResult; \
 		static auto                       internal_erase(::query::QueryStableHash) -> bool;        \
+		static auto                       internal_disk_erase(::query::QueryStableHash) -> bool;   \
 		static ::query::internal::QueryID id;                                                      \
 		friend struct ::query::Context;                                                            \
 		friend struct ::query::internal::EntryPointHelper;                                         \
@@ -67,15 +68,16 @@ namespace query::internal {
  * This way there are no issues with commas in macro arguments.
  * Lack of parentheses should produce compilation errors.
  */
-#define DECLARE_QUERY(query_type, key, value, tags)          \
-	DECLARE_QUERY_AUX(                                       \
-		query_type,                                          \
-		key,                                                 \
-		value,                                               \
-		::query::internal::QueryData(                        \
-			::query::internal::QueryKind::Normal,            \
-			#query_type,                                     \
-			::query::internal::QueryTags EXPAND tags,        \
-			{ .erase_function = query_type::internal_erase } \
-		)                                                    \
+#define DECLARE_QUERY(query_type, key, value, tags)                    \
+	DECLARE_QUERY_AUX(                                                 \
+		query_type,                                                    \
+		key,                                                           \
+		value,                                                         \
+		::query::internal::QueryData(                                  \
+			::query::internal::QueryKind::Normal,                      \
+			#query_type,                                               \
+			::query::internal::QueryTags EXPAND tags,                  \
+			{ .erase_function      = query_type::internal_erase,       \
+	          .disk_erase_function = query_type::internal_disk_erase } \
+		)                                                              \
 	)

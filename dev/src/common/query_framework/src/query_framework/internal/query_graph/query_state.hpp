@@ -231,6 +231,18 @@ namespace query::internal {
 		\***************************/
 
 		/**
+		 * @brief Deletes on-disk cache artifacts of previous-graph nodes that were not merged into
+		 * the current graph.
+		 * @note Nodes merged during incremental compilation are erased from the previous graph, so
+		 * whatever disk-cacheable nodes remain in it were never reused (e.g. their query hash
+		 * changed). They are absent from the serialized graph, so their disk cache would be orphaned
+		 * — this removes it. A node whose hash is still present in the current graph is kept.
+		 * @note Must be called at the end of compilation, when no queries are executing.
+		 * @return The number of on-disk artifacts removed.
+		 */
+		usize cleanupOrphanedDiskCaches();
+
+		/**
 		 * @brief Builds a reduced adjacency list without mutating the original graph.
 		 * @note The returned ReducedGraphData should generally be passed directly to
 		 * QueryGraph::serializeReducedGraph without further mutation. This function already

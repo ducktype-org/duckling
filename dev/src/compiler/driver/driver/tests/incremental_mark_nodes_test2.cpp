@@ -86,7 +86,7 @@ private:
 		// Probably because of linker optimizations the INTERNAL_QUERY_IMPLEMENTATION_BOILERPLATE
 		// won't initialise without actually running a query
 
-		// Compile the module again to trigger loadFromDisc and use the previous graph
+		// Compile the module again to trigger loadFromDisk and use the previous graph
 		auto module = frontend::createModuleTree(
 			fs::File(path("modules/incremental/org_functions/functions_1")),
 			base::StrID("mark_nodes_test_package")

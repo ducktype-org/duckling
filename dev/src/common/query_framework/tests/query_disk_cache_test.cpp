@@ -45,9 +45,9 @@ DECLARE_QUERY(
 	KeyOf_Disk,
 	u64,
 	({ .used_hashes             = query::UsedHashes::StableHash,
-	   .can_be_loaded_from_disk = true,
-	   .preserve_in_graph       = true,
-	   .uses_qresult            = false })
+       .can_be_loaded_from_disk = true,
+       .preserve_in_graph       = true,
+       .uses_qresult            = false })
 );
 
 // A regular (non-disk) query, used to check that its disk-erase hook is a safe no-op.
@@ -63,12 +63,12 @@ struct IMPLEMENT_QUERY(DiskQuery, u64) {
 		return key.v;
 	}
 
-	static auto loadFromDisc(const QKey& key) -> base::Optional<PResult> {
+	static auto loadFromDisk(const QKey& key) -> base::Optional<PResult> {
 		if (fake_disk.contains(key.queryStablePerfectHash())) return PResult{ key.v };
 		return {};
 	}
 
-	static auto deleteFromDisc(query::QueryStableHash hash) -> bool {
+	static auto deleteFromDisk(query::QueryStableHash hash) -> bool {
 		return fake_disk.erase(hash) > 0;
 	}
 
@@ -101,7 +101,7 @@ public:
 
 private:
 	/**
-	 * @brief The disk-erase hook is wired for disk-cached queries and a no-op otherwise.
+	 * @brief The disk-erase hook is wired for disk-cached queries and panics if wrongly invoked.
 	 */
 	void testDiskEraseWiring() {
 		ImplementationOf_DiskQuery::fake_disk.clear();
@@ -113,9 +113,13 @@ private:
 		ASSERT_TRUE(DiskQuery::QUERY_DATA.cache_data.disk_erase_function(hash));
 		ASSERT_TRUE(not ImplementationOf_DiskQuery::fake_disk.contains(hash));
 
-		// PlainQuery is not cached on disk: its disk-erase hook must be a safe no-op.
+		// PlainQuery is not cached on disk. Its hook is never reached in real use (callers guard on
+		// can_be_loaded_from_disk), so invoking it directly must panic rather than silently no-op.
 		ASSERT_TRUE(not PlainQuery::QUERY_DATA.tags.can_be_loaded_from_disk);
-		ASSERT_TRUE(not PlainQuery::QUERY_DATA.cache_data.disk_erase_function(hash));
+		assertThrows<base::Panic>(
+			[&] { PlainQuery::QUERY_DATA.cache_data.disk_erase_function(hash); },
+			"PlainQuery disk-erase hook should panic when invoked"
+		);
 	}
 
 	/**

@@ -69,7 +69,8 @@ namespace query::external {
 	 * If previous_inputs_opt is provided, the function will only invalidate inputs after
 	 * subtracting previous_inputs_opt - new_inputs. The query invalidation involves removing them
 	 * from the graph, erasing their cache entries, erasing their diagnostics and all the state that
-	 * needs to be erased when a query is invalidated.
+	 * needs to be erased when a query is invalidated. For queries cached on disk, their on-disk
+	 * artifacts are also deleted.
 	 *
 	 * @note This is for incremental LS.
 	 * @note This function waits for all workers to become free, i.e. until all query execution
@@ -97,6 +98,14 @@ namespace query::external {
 	 * @brief Optimize and serialize the current query graph for persistence on disk.
 	 */
 	[[nodiscard]] std::vector<byte> optAndSerializeQueryGraph();
+
+	/**
+	 * @brief Delete on-disk caches of previous-graph nodes that were not carried into the current
+	 * graph (e.g. because their query hash changed): they will be dropped from the serialized
+	 * graph, so their disk cache would otherwise be orphaned forever.
+	 * @return The number of on-disk artifacts removed.
+	 */
+	usize deleteOrphanedDiskCaches();
 
 	/**
 	 * @brief Set the previous compilation metadata from serialized bytes.

@@ -37,22 +37,23 @@ namespace query::internal {
  * @note Query side-inputs have to be called by hand, when given data is read.
  * Special care should be taken to always do it, to prevent non registered input being used.
  */
-#define DECLARE_QUERY_SIDE_INPUT(query_type, key)                         \
-	DECLARE_QUERY_AUX(                                                    \
-		query_type,                                                       \
-		key,                                                              \
-		::query::internal::SideInputMockValue,                            \
-		::query::internal::QueryData(                                     \
-			::query::internal::QueryKind::SideInput,                      \
-			#query_type,                                                  \
-			::query::internal::QueryTags{                                 \
-				.used_hashes             = query::UsedHashes::StableHash, \
-				.can_be_loaded_from_disk = false,                         \
-				.preserve_in_graph       = true,                          \
-				.uses_qresult            = false,                         \
-			},                                                            \
-			{                                                             \
-				.erase_function = query_type::internal_erase,             \
-			}                                                             \
-		)                                                                 \
+#define DECLARE_QUERY_SIDE_INPUT(query_type, key)                            \
+	DECLARE_QUERY_AUX(                                                       \
+		query_type,                                                          \
+		key,                                                                 \
+		::query::internal::SideInputMockValue,                               \
+		::query::internal::QueryData(                                        \
+			::query::internal::QueryKind::SideInput,                         \
+			#query_type,                                                     \
+			::query::internal::QueryTags{                                    \
+				.used_hashes             = query::UsedHashes::StableHash,    \
+				.can_be_loaded_from_disk = false,                            \
+				.preserve_in_graph       = true,                             \
+				.uses_qresult            = false,                            \
+			},                                                               \
+			{                                                                \
+				.erase_function      = query_type::internal_erase,           \
+				.disk_erase_function = ::query::internal::panicUnwiredErase, \
+			}                                                                \
+		)                                                                    \
 	)
