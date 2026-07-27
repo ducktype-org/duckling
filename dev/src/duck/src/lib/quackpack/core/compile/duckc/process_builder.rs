@@ -9,7 +9,6 @@ use tracing::{error, trace};
 
 use super::Duckc;
 use crate::quackpack::core::Package;
-use crate::quackpack::core::compile::artifacts_layout::ArtifactsLayout;
 use crate::quackpack::core::compile::profiles::OptLevel;
 use crate::util::command_ext::CommandExt;
 use crate::{QuackResult, QuackResultContext};
@@ -101,7 +100,7 @@ impl DuckcProcessBuilder {
     /// Set artifacts directory of the currently compiling package.
     pub fn set_package_artifacts_dir(&mut self, package: &Package) -> &mut Self {
         let dir = package.artifacts_directory();
-        self.set_artifacts_dir(dir.root_directory())
+        self.set_artifacts_dir(dir)
     }
 
     /// Set artifacts directory of the currently compiling package.

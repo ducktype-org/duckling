@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 
 use super::VenvConfig;
 use crate::quackpack::core::compile::artifacts_layout::ArtifactsLayout;
+use crate::quackpack::core::compile::artifacts_layout::shared::SharedArtifactsLayout;
 use crate::quackpack::core::compile::artifacts_layout::standard::StandardArtifactsLayout;
 use crate::quackpack::core::identity::{Identity, Origin};
 use crate::quackpack::core::{Dependencies, Manifest, Profiles, Version};
@@ -52,10 +53,26 @@ impl AnyPackage {
     }
 
     /// Get the artifacts layout.
-    pub fn artifacts_dir(&self) -> &StandardArtifactsLayout {
+    pub fn artifacts_directory(&self) -> &Path {
         match self {
             Self::Package(package) => package.artifacts_directory(),
             Self::Frontmatter(frontmatter_script) => frontmatter_script.artifacts_directory(),
+        }
+    }
+
+    /// Get the artifacts layout.
+    pub fn artifacts_layout(&self) -> &StandardArtifactsLayout {
+        match self {
+            Self::Package(package) => package.artifacts_layout(),
+            Self::Frontmatter(frontmatter_script) => frontmatter_script.artifacts_layout(),
+        }
+    }
+
+    /// Get the artifacts layout.
+    pub fn shared_artifacts_layout(&self) -> &SharedArtifactsLayout {
+        match self {
+            Self::Package(package) => package.shared_artifacts_layout(),
+            Self::Frontmatter(frontmatter_script) => frontmatter_script.shared_artifacts_layout(),
         }
     }
 
@@ -176,7 +193,9 @@ pub struct Package {
     /// Path to the manifest of the package.
     manifest_path: PathBuf,
     /// Where the build artifacts should be located.
-    artifacts_dir: StandardArtifactsLayout,
+    artifacts_dir: PathBuf,
+    artifacts_layout: StandardArtifactsLayout,
+    shared_artifacts_layout: SharedArtifactsLayout,
     /// Path to the source code folder of the package.
     possible_source_dir: PathBuf,
 }
@@ -190,7 +209,7 @@ impl Package {
         root: PathBuf,
         manifest_path: PathBuf,
     ) -> Self {
-        let artifacts_dir = StandardArtifactsLayout::new(root.join(".duck_build"));
+        let artifacts_dir = root.join(".duck_build");
         let source_directory = root.join("src");
         Self {
             original_content,
@@ -198,7 +217,9 @@ impl Package {
             manifest,
             root,
             manifest_path,
-            artifacts_dir,
+            artifacts_dir: artifacts_dir.clone(),
+            artifacts_layout: StandardArtifactsLayout::new(artifacts_dir.clone()),
+            shared_artifacts_layout: SharedArtifactsLayout::new(artifacts_dir),
             possible_source_dir: source_directory,
         }
     }
@@ -239,8 +260,17 @@ impl Package {
     }
 
     /// Get the path to the artifacts directory.
-    pub fn artifacts_directory(&self) -> &StandardArtifactsLayout {
+    pub fn artifacts_directory(&self) -> &Path {
         &self.artifacts_dir
+    }
+
+    pub fn artifacts_layout(&self) -> &StandardArtifactsLayout {
+        &self.artifacts_layout
+    }
+
+    /// Get the path to the artifacts directory but in the shared mode.
+    pub fn shared_artifacts_layout(&self) -> &SharedArtifactsLayout {
+        &self.shared_artifacts_layout
     }
 
     /// Convert this package to an [`Identity`].
@@ -262,7 +292,7 @@ impl fmt::Debug for Package {
             .field("manifest", &self.manifest)
             .field("root", &self.root)
             .field("manifest_path", &self.manifest_path)
-            .field("artifacts_dir", &self.artifacts_dir.root_directory())
+            .field("artifacts_dir", &self.artifacts_dir)
             .field("possible_source_dir", &self.possible_source_dir)
             .finish_non_exhaustive()
     }
@@ -281,7 +311,9 @@ pub struct FrontMatterScript {
     /// Manifest constructed from the frontmatter.
     manifest: Manifest,
     /// Where the build artifacts should be located.
-    artifacts_dir: StandardArtifactsLayout,
+    artifacts_dir: PathBuf,
+    artifacts_layout: StandardArtifactsLayout,
+    shared_artifacts_layout: SharedArtifactsLayout,
 }
 
 impl FrontMatterScript {
@@ -297,15 +329,16 @@ impl FrontMatterScript {
         let script_name = path
             .file_stem()
             .context_internal("script path without file stem")?;
-        let artifacts_dir =
-            StandardArtifactsLayout::new(script_folder.join(".duck_build").join(script_name));
+        let artifacts_dir = script_folder.join(".duck_build").join(script_name);
         Ok(Self {
             path: path.clone(),
             script_folder: script_folder.to_path_buf(),
             script_name: script_name.to_os_string(),
             original_schema,
             manifest,
-            artifacts_dir,
+            artifacts_dir: artifacts_dir.clone(),
+            artifacts_layout: StandardArtifactsLayout::new(artifacts_dir.clone()),
+            shared_artifacts_layout: SharedArtifactsLayout::new(artifacts_dir),
         })
     }
 
@@ -330,8 +363,16 @@ impl FrontMatterScript {
     }
 
     /// Get the path to the artifacts directory.
-    pub fn artifacts_directory(&self) -> &StandardArtifactsLayout {
+    pub fn artifacts_directory(&self) -> &Path {
         &self.artifacts_dir
+    }
+
+    pub fn artifacts_layout(&self) -> &StandardArtifactsLayout {
+        &self.artifacts_layout
+    }
+
+    pub fn shared_artifacts_layout(&self) -> &SharedArtifactsLayout {
+        &self.shared_artifacts_layout
     }
 
     /// Get the manifest constructed from the script's frontmatter.

@@ -54,6 +54,7 @@ fn hash_subgraph_and_profile(
     Ok(sha256_string(to_hash))
 }
 
+#[derive(Debug, Clone)]
 pub struct SharedArtifactsLayout {
     root: FileLockManager,
 }
@@ -89,6 +90,7 @@ impl ArtifactsLayout for SharedArtifactsLayout {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct SharedProfileLayout {
     root: FileLockManager,
     profile: Profile,
@@ -113,8 +115,7 @@ impl ProfileLayout for SharedProfileLayout {
             let hash = hash_subgraph_and_profile(unit, graph, self.profile)?;
             unit.root_package()
                 .package()
-                .artifacts_dir()
-                .root_directory()
+                .artifacts_directory()
                 .join(hash)
         };
         Ok(SharedDependencyLayout {
@@ -123,6 +124,7 @@ impl ProfileLayout for SharedProfileLayout {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct SharedDependencyLayout {
     root: FileLockManager,
 }
