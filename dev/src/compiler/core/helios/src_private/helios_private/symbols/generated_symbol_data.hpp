@@ -90,13 +90,11 @@ namespace compiler::helios::defgen {
 	 */
 	struct BuiltinTemplatedSymbol final {
 		enum class Kind {
-			BoxAlloc,       //< `box_alloc(value: T) -> box T` - allocates sizeof(`T`), move `value`
-			                // into it and return the owning `box`.
-			BoxFree,        //< `box_free(b: box T)` - release the storage owned by the box.
-			ListFree,       //< `list_free(l: ref List[T])` - release the storage owned by the dynamic
-			                // array.
-			BoxDestructor,  //< `box_destructor(b: box T)` - destroy the pointee, then free the box
-			                // storage. Unlike the others this one is implemented in HOUT.
+			BoxAlloc,  //< `box_alloc(value: T) -> box T` - allocates memory for the Box.
+			BoxFree,   //< `box_free(b: box T)` - release the storage owned by the box.
+			ListFree,  //< `list_free(l: ref List[T])` - release the storage owned by the dynamic
+			           // array.
+			BoxDestructor,  //< `box_destructor(b: box T)` - destroys the pointee, then calls BoxFree.
 		};
 
 		// The type argument the builtin is templated on: the `T` in `box T` for

@@ -10,13 +10,15 @@
 namespace compiler::helios::defgen {
 	/**
 	 * @brief Get the symbol of the compiler-generated destructor for a given abstract type.
+	 * This function always returns SymID, even if the requested type is trivially destructible,
+	 * in which case the SymID might be non-usable.
 	 */
 	SymID destructSymForType(query::Context& ctx, tsh::AbstractType type);
 
 
 	/**
 	 * @brief Get the symbol of the proper destructor for a given symbol type (not the optional user one).
-	 * Returns empty value when the type is a reference type.
+	 * Returns empty value when the type doesn't have a destructor (trivial destructor).
 	 */
 	base::Optional<SymID> destructSymForSymbolType(query::Context& ctx, tsh::SymbolType<> type);
 

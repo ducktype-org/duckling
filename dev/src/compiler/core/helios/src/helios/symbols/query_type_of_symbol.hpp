@@ -21,6 +21,7 @@ namespace compiler::helios {
 	/**
 	 * @brief Return the destructor symbol for the type, if it is non-trivial.
 	 * If it is trivial, return empty optional.
+	 * @note This a public API the HELIOS code.
 	 */
 	base::Optional<helios::SymID> getTypeDestructor(query::Context&, tsh::SymbolType<>);
 }

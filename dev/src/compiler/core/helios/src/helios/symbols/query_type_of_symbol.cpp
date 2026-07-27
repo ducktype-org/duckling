@@ -516,8 +516,6 @@ tsh::Mutability::Mutable, };
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTypeOfSymbol);
 
 	base::Optional<SymID> getTypeDestructor(query::Context& ctx, tsh::SymbolType<> symbol_type) {
-		if (symbol_type.isTriviallyDestructible(ctx)) return {};
-
 		return defgen::destructSymForSymbolType(ctx, symbol_type);
 	}
 }

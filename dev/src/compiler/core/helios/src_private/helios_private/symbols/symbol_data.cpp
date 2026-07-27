@@ -119,6 +119,7 @@ namespace compiler::helios {
 				kind = SymbolKind::FunctionDeclaration;
 			}
 			variant_case(defgen::BuiltinTemplatedSymbol, templated) {
+				// BoxDestructor is the only builtin that is implemented in HOUT.
 				kind = templated.kind == defgen::BuiltinTemplatedSymbol::Kind::BoxDestructor
 				         ? SymbolKind::Function
 				         : SymbolKind::FunctionDeclaration;
