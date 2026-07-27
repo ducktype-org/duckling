@@ -150,7 +150,7 @@ namespace compiler::helios {
 
 			using Variable = defgen::GeneratedFunctionVariable;
 
-			// var __result: slice char = <default>;
+			// var __result: slice T = <default>;
 			const SymID result_symbol = ctx.query<defgen::QueryGeneratedSymbol>({
 				.name                  = base::StrID("__result"),
 				.generated_symbol_data = Variable{ .function_symbol = symbol,
@@ -159,7 +159,7 @@ namespace compiler::helios {
 			});
 
 			auto body = StmtPack{
-				// var __result: slice char = <default>;
+				// var __result: slice T = <default>;
 				s.var(
 					result_symbol, result_sym_type, s.defaultValue(result_sym_type.getType())
 				),

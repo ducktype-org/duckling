@@ -623,12 +623,12 @@ namespace compiler::helios::code {
 			UNPACK_QRESULT_MOVE(const auto& sym_list =, lookup_result);
 			auto mock_symbol = sym_list.back();
 
-			auto maybe_template_bake = transformTemplateBake(query_ctx, mock_symbol, ident);
-			if (maybe_template_bake.hasFailed()) return query::Failed();
-			if (maybe_template_bake.valueOrPanic().has_value()) {
-				return processNamespaceOrValue(
-					maybe_template_bake.valueOrPanic().value(), pstOrigin(ident), ident
-				);
+			UNPACK_QRESULT(
+				auto maybe_template_bake =, transformTemplateBake(query_ctx, mock_symbol, ident)
+			);
+
+			if_opt_some(maybe_template_bake, template_bake) {
+				return processNamespaceOrValue(template_bake, pstOrigin(ident), ident);
 			}
 
 			return processNamespaceOrValue(sym_list.back(), pstOrigin(ident), ident);
@@ -896,8 +896,21 @@ namespace compiler::helios::code {
 					= HInterface::ofSymbol(namespace_like_symbol)
 				          .lookup(query_ctx, expr_access->getName().unlock(query_ctx)->unwrap());
 				UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup_qresult);
+
+				std::vector<SymID> call_candidates;
+
+				UNPACK_QRESULT(
+					auto maybe_bake =,
+					transformTemplateBakeLookupResult(query_ctx, lookup_result, expr_access)
+				);
+
+				if (maybe_bake.has_value())
+					call_candidates.push_back(maybe_bake.value());
+				else
+					call_candidates = lookup_result->leaves;
+
 				// @TODO: #1412 fix dealias
-				auto callees_q_result = getCallableCandidates(lookup_result->leaves);
+				auto callees_q_result = getCallableCandidates(call_candidates);
 				UNPACK_QRESULT_MOVE(const auto& callees =, callees_q_result);
 
 				auto expr_result

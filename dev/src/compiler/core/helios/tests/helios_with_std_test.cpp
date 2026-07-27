@@ -40,6 +40,7 @@ class HeliosWithStdTest final: public tester::TestSuite {
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(testBuiltinDefinitionInModuleHOUT);
+		TESTER_ADD_TEST(testTemplatedBuiltinDefinitionsInModuleHOUT);
 		TESTER_ADD_TEST(testStrings);
 		TESTER_ADD_TEST(testStringClassProperties);
 		TESTER_ADD_TEST(testDefaultInitializers);
@@ -313,6 +314,53 @@ private:
 			found_ptr_from_slice,
 			"ptr_from_slice builtin definition should be emitted into the module HOUT"
 		);
+	}
+
+	// The `@builtin(...)` fundecls in core.builtins are templated, so their synthesized
+	// implementations are emitted once per element type they are baked for. The `builtins` module
+	// runs the alloc -> slice_from_ptr_len -> ptr_from_slice -> free chain for `str` and `i32`
+	// (and uses `ptr_from_slice:{char}` on a string literal).
+	void testTemplatedBuiltinDefinitionsInModuleHOUT() {
+		auto module_id = compiler::driver::test_utils::getModuleIdFromPath("builtins");
+
+		auto houts = query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>(module_id)
+		                 .valueOrPanic();
+
+		// Element types of the slices the baked builtins operate on, per builtin name.
+		std::map<base::StrID, std::vector<compiler::tsh::AbstractType>> baked_element_types;
+
+		for (const auto& hout: houts)
+			for (const auto& fun: hout->functions) {
+				const auto name        = fun->declaration->original_name;
+				const bool takes_slice = name == base::StrID("ptr_from_slice");
+				if (!takes_slice && name != base::StrID("slice_from_ptr_len")) continue;
+
+				// `ptr_from_slice` takes the slice, `slice_from_ptr_len` returns it.
+				const auto slice_st   = takes_slice ? fun->declaration->parameters.at(0).type
+				                                    : fun->declaration->return_type;
+				const auto slice_type = slice_st.getType().as<compiler::tsh::SliceAbstractType>();
+				baked_element_types[name].push_back(slice_type.getElementType().getType());
+			}
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			const compiler::tsh::AbstractType str_type = compiler::tsh::getCharSliceType(ctx);
+			const auto                        i32_type = compiler::tsh::getIntegralType(
+                ctx, 32, compiler::tsh::IntegralAbstractType::Signedness::Signed
+            );
+
+			for (const auto* name: { "ptr_from_slice", "slice_from_ptr_len" }) {
+				const auto& element_types = baked_element_types[base::StrID(name)];
+
+				assertTrue(
+					std::ranges::find(element_types, str_type) != element_types.end(),
+					base::strConcat(name, " should be baked for `str`")
+				);
+				assertTrue(
+					std::ranges::find(element_types, i32_type) != element_types.end(),
+					base::strConcat(name, " should be baked for `i32`")
+				);
+			}
+		});
 	}
 
 	// `String` is now an ordinary standard-library class (no longer a special compiler type), so

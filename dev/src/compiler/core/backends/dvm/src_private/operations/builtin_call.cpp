@@ -12,9 +12,7 @@ namespace compiler::backend_vm::internal {
 		 */
 		base::StrID extractPointeeTypeName(const vm::code::TypeOfData& ptr_type) {
 			const auto* pointer = std::get_if<vm::code::PointerType>(&ptr_type);
-			CORE_ASSERT(
-				pointer != nullptr, "DVM char builtin expects a `manyptr` (pointer) operand"
-			);
+			CORE_ASSERT(pointer != nullptr, "DVM builtin expects a `manyptr` (pointer) operand");
 			return pointer->inner;
 		}
 	}
@@ -46,7 +44,7 @@ namespace compiler::backend_vm::internal {
 			break;
 		}
 		case lir::BuiltinFunctionKind::DvmFree: {
-			// `dvm_free(p: manyptr char)`. Frees the dynamic table under `p`.
+			// `dvm_free(p: manyptr T)`. Frees the dynamic table under `p`.
 			CORE_ASSERT(op.args.size() == 1, "dvm_free expects 1 argument (ptr)");
 
 			auto table_ptr = ctx->forceToPlace(op.args.front(), "free_ptr");

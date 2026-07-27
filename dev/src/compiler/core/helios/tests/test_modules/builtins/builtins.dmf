@@ -1,12 +1,43 @@
 import core.builtins.*;
 
+# alloc -> slice_from_ptr_len -> ptr_from_slice -> free, baked for `str` (i.e. slices of slices).
+fun strChain() -> i64 = {
+    var p = dvm_alloc:{str}(2u64);
+    p[0]  = "ab";
+    p[1]  = "cde";
+
+    let s: slice str = slice_from_ptr_len:{str}(p, 2u64);
+    let q            = ptr_from_slice:{str}(s);
+    let len          = q[1].length();
+
+    dvm_free:{str}(p);
+    return i64(len);
+}
+
+# The same chain baked for `i32`, so the builtins are instantiated for more than one element type.
+fun intChain() -> i32 = {
+    var p = dvm_alloc:{i32}(2u64);
+    p[0]  = 7i32;
+    p[1]  = 9i32;
+
+    let s = slice_from_ptr_len:{i32}(p, 2u64);
+    let q = ptr_from_slice:{i32}(s);
+    let v = q[0] + q[1];
+
+    dvm_free:{i32}(p);
+    return v;
+}
+
 # Test usages of builtins.
 fun main() = {
     let x: i64 = builtin_input_i64();
     builtin_output_i64(x + 1);
 
-    let p = ptr_from_slice("abc");
+    let p = ptr_from_slice:{char}("abc");
     builtin_output_char(p[0]);
+
+    builtin_output_i64(strChain());
+    builtin_output_i64(i64(intChain()));
 
     return 0;
 }
