@@ -17,7 +17,7 @@ class xxx extends aaa implements bbb, cccc {
 	public {
 		alias sqrt=std.math.sqrt;
 
-		xxx.create(c:i64): aaa(c) = {
+		xxx.create(c:i64) = {
 			x = c;
 		} 
 
