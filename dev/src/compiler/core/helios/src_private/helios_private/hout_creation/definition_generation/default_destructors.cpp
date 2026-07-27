@@ -141,12 +141,12 @@ namespace compiler::helios::defgen {
 			const auto u64_type = tsh::SymbolType<>::withDefaults(u64_abs_type);
 
 			const SymID i_sym    = ctx.query<QueryGeneratedSymbol>({
-				.name = base::StrID("__i"),
-				.generated_symbol_data
-				= Variable{ .function_symbol = dtor_sym, .variable_index = 0, .type = u64_type },
-			});
+				   .name = base::StrID("__i"),
+				   .generated_symbol_data
+                = Variable{ .function_symbol = dtor_sym, .variable_index = 0, .type = u64_type },
+            });
 			auto        zero_val = numeric_value::NumericValue::createOfType(u64_abs_type)
-			                           .expect("u64 creation failed");
+			                    .expect("u64 creation failed");
 
 			const Shorthand s{ ctx };
 			body.emplace_back(s.var(i_sym, u64_type, s.litNum(zero_val)));
@@ -157,8 +157,8 @@ namespace compiler::helios::defgen {
 		Box<code::Stmt> buildLoopIncrement(query::Context& ctx, SymID i_sym) {
 			const auto u64_abs_type
 				= tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned);
-			auto            one_val = numeric_value::NumericValue::createOfType(u64_abs_type, 1)
-			                              .expect("u64 creation failed");
+			auto one_val = numeric_value::NumericValue::createOfType(u64_abs_type, 1)
+			                   .expect("u64 creation failed");
 			const Shorthand s{ ctx };
 			return s.assign(
 				s.ident(i_sym),
