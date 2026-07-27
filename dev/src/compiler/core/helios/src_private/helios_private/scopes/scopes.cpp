@@ -555,8 +555,7 @@ namespace compiler::helios {
 				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 					"User-defined constructors are not yet supported",
 					ctor->getStablePosition(),
-					"`T(...)` and `T.name(...)` declare a constructor. Note that the destructor "
-					"is spelled `T.destroy()`."
+					"`T(...)` and `T.name(...)` declare a constructor.\n"
 				));
 			}
 
