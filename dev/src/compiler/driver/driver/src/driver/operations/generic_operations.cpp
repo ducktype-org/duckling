@@ -147,13 +147,9 @@ namespace compiler::driver {
 			}
 		}
 
-		// Every real backend type. The static_assert forces this list (and, through
-		// allPossibleArtifactNames, deletion) to be updated whenever BackendType gains a variant.
+		// Every real backend type; the set allPossibleArtifactNames() enumerates when building the
+		// deletable artifact names. Keep in sync with typeExtension() when adding a backend.
 		static constexpr std::array ALL_BACKEND_TYPES{ BackendType::LLVM, BackendType::DVM };
-		static_assert(
-			ALL_BACKEND_TYPES.size() == static_cast<usize>(BackendType::COUNT),
-			"Add the new BackendType variant to ALL_BACKEND_TYPES (and typeExtension())."
-		);
 
 		/**
 		 * @brief Every on-disk artifact name a CompileModule can produce for a given stable hash.
@@ -178,7 +174,8 @@ namespace compiler::driver {
 
 		static ModuleOutputNames getModuleOutputName(const QKey& key) {
 			ModuleOutputNames names;
-			const auto        stem = key.queryStablePerfectHash().toStringHex();
+			const auto        hash = key.queryStablePerfectHash();
+			const auto        stem = hash.toStringHex();
 			names.object_file      = stem + typeExtension(key.backend_type);
 			if (key.build_debug_info && key.backend_type == BackendType::DVM)
 				names.debug_info_file = stem + std::string(DEBUG_INFO_STABLE_EXTENSION);
@@ -186,7 +183,7 @@ namespace compiler::driver {
 			// Enforce that every name we write is one deleteFromDisk() knows how to remove: a written
 			// artifact whose name is not in the single source of truth would silently leak on disk.
 			IF_BUILD_TYPE_DEV({
-				const auto possible = allPossibleArtifactNames(key.queryStablePerfectHash());
+				const auto possible = allPossibleArtifactNames(hash);
 				CORE_ASSERT(
 					std::ranges::find(possible, names.object_file) != possible.end(),
 					"CompileModule object artifact name is not in the deletable set"

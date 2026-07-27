@@ -106,6 +106,24 @@ private:
 		// Capture dependencies before the graph is merged (merge now consumes prev graph entries)
 		auto root_deps = prev->getNodeDeps(root_node);
 
+		// The previous compilation compiled two modules (functions_1 + submodule), so two .o files
+		// are on disk. This compilation only demands functions_1's CompileModule, so submodule's is
+		// an orphan and saveArtifacts() (via driver::exit() below) must reclaim its .o from disk.
+		auto count_object_files = [&] {
+			const auto query_dir
+				= artifacts_path.getPath() / "query"
+			    / ("query" + std::to_string(driver::CompileModule::getID().asInt()));
+			u64 count = 0;
+			if (std::filesystem::exists(query_dir))
+				for (const auto& entry: std::filesystem::directory_iterator(query_dir))
+					if (entry.path().extension() == ".o") ++count;
+			return count;
+		};
+		const u64 objects_before = count_object_files();
+		ASSERT_TRUE(
+			objects_before >= 2
+		);  // functions_1 + undemanded submodule from previous compile
+
 		query::utils::withContextDo([&](query::Context& ctx) {
 			ctx.query<driver::CompileModule>({ .module_id        = module,
 			                                   .backend_type     = driver::BackendType::LLVM,
@@ -177,6 +195,11 @@ private:
 
 		// Save artifacts (writes previous graph blob to artifacts)
 		driver::exit();
+
+		// submodule's CompileModule was not demanded this run, so its orphaned .o must have been
+		// reclaimed from disk during saveArtifacts().
+		const u64 objects_after = count_object_files();
+		ASSERT_TRUE(objects_after == objects_before - 1);
 	}
 };
 

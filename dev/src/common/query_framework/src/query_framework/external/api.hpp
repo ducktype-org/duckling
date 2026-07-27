@@ -100,12 +100,12 @@ namespace query::external {
 	[[nodiscard]] std::vector<byte> optAndSerializeQueryGraph();
 
 	/**
-	 * @brief Delete on-disk caches of previous-graph nodes that were not carried into the current
+	 * @brief Delete on-disk caches of previous-graph nodes that were not merged into the current
 	 * graph (e.g. because their query hash changed): they will be dropped from the serialized
 	 * graph, so their disk cache would otherwise be orphaned forever.
-	 * @return The number of on-disk artifacts removed.
+	 * @return The number of orphaned query caches removed.
 	 */
-	usize deleteOrphanedDiskCaches();
+	u64 deleteOrphanedDiskCaches();
 
 	/**
 	 * @brief Set the previous compilation metadata from serialized bytes.

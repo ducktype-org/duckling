@@ -47,7 +47,7 @@ namespace query::external {
 		return ::query::internal::QueryGraph::serializeReducedGraph(std::move(reduced_graph));
 	}
 
-	usize deleteOrphanedDiskCaches() {
+	u64 deleteOrphanedDiskCaches() {
 		auto state = ::query::internal::ContextAccess::getState();
 		return state->cleanupOrphanedDiskCaches();
 	}

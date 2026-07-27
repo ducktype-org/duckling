@@ -24,7 +24,7 @@ namespace compiler::driver {
 
 			// Reclaim on-disk caches orphaned by this compilation (nodes dropped from the graph,
 			// e.g. because their query hash changed) before the graph blob is written and flushed.
-			const usize deleted_disk_caches = query::external::deleteOrphanedDiskCaches();
+			const u64 deleted_disk_caches = query::external::deleteOrphanedDiskCaches();
 			CORE_DEV_LOG(
 				Artifacts, "Removed ", deleted_disk_caches, " orphaned on-disk query cache(s)\n"
 			);

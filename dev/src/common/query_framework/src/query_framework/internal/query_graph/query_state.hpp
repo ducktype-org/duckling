@@ -238,9 +238,9 @@ namespace query::internal {
 		 * changed). They are absent from the serialized graph, so their disk cache would be orphaned
 		 * — this removes it. A node whose hash is still present in the current graph is kept.
 		 * @note Must be called at the end of compilation, when no queries are executing.
-		 * @return The number of on-disk artifacts removed.
+		 * @return The number of orphaned query caches removed.
 		 */
-		usize cleanupOrphanedDiskCaches();
+		u64 cleanupOrphanedDiskCaches();
 
 		/**
 		 * @brief Builds a reduced adjacency list without mutating the original graph.

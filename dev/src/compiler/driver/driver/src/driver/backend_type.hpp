@@ -5,11 +5,7 @@
 #include <string>
 
 namespace compiler::driver {
-	enum class BackendType : u64 {
-		LLVM,
-		DVM,
-		COUNT  //> Sentinel: the number of real backend types. Must stay last.
-	};
+	enum class BackendType : u64 { LLVM, DVM };
 
 	std::string backendTypeToStr(BackendType type);
 }

@@ -1,6 +1,5 @@
 #pragma once
 
-#include <base/except/exceptions.hpp>
 #include <base/types/ok_bad.hpp>
 
 #include <query_framework/utils/query_hash.hpp>
@@ -84,10 +83,7 @@ namespace query {
 		/**
 		 * @brief Default erase hook that panics when invoked.
 		 */
-		[[noreturn]]
-		inline bool panicUnwiredErase(QueryStableHash) {
-			CORE_PANIC("Query erase function was not wired for this query; this is a bug.");
-		}
+		bool panicUnwiredErase(QueryStableHash);
 
 		/**
 		 * @brief Struct holding all the data related to query caching, like erase function pointer.
