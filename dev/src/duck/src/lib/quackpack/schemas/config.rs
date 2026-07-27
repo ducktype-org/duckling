@@ -30,7 +30,7 @@ pub struct SecurityTyposConfig {
 #[serde(rename_all = "kebab-case")]
 /// A struct for the `registry:` config map.
 pub struct RegistryConfig {
-    /// If specified, this overrides a default registry URL.
+    /// If specified, this overrides the default registry URL.
     pub url: Option<Url>,
 }
 
