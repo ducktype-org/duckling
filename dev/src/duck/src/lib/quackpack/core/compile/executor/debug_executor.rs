@@ -37,18 +37,24 @@ fn compile(graph: UnitGraph, bcx: &BuildContext<'_, '_>) -> QuackResult<Executor
         ArtifactsType::Binary,
         "debug executor supports only compiling to the binary"
     );
-    let artifacts_layout = graph
-        .root_unit()
-        .root_package()
-        .package()
-        .get_package()
-        .artifacts_layout();
-    let profile_layout = artifacts_layout.for_profile(bcx.profile);
-    // Units are sorted by ID, and the root has an ID 0, so in reverse we'll compile the root last.
-    for unit in graph.units_sorted_by_id().iter().rev() {
-        compile_unit(unit, &graph, &profile_layout, bcx)?;
-    }
-    let output = unit_output(root, &graph, &profile_layout)?;
+    let package = graph.root_unit().root_package().package().get_package();
+    let output = if bcx.shared {
+        let artifacts_layout = package.artifacts_layout();
+        let profile_layout = artifacts_layout.for_profile(bcx.profile);
+        // Units are sorted by ID, and the root has an ID 0, so in reverse we'll compile the root last.
+        for unit in graph.units_sorted_by_id().iter().rev() {
+            compile_unit(unit, &graph, &profile_layout, bcx)?;
+        }
+        unit_output(root, &graph, &profile_layout)?
+    } else {
+        let artifacts_layout = package.shared_artifacts_layout();
+        let profile_layout = artifacts_layout.for_profile(bcx.profile);
+        // Units are sorted by ID, and the root has an ID 0, so in reverse we'll compile the root last.
+        for unit in graph.units_sorted_by_id().iter().rev() {
+            compile_unit(unit, &graph, &profile_layout, bcx)?;
+        }
+        unit_output(root, &graph, &profile_layout)?
+    };
     Ok(ExecutorOutput {
         root: (root.clone(), output),
     })
