@@ -18,14 +18,14 @@ namespace N {
 fun Pair(left_type: str, right_type: str) -> String = {
     var result: String;
     result.append("class Pair");
-    result.append(&left_type);
-    result.append(&right_type);
+    result.append(left_type);
+    result.append(right_type);
     result.append(" {\n");
     result.append("first: ");
-    result.append(&left_type);
+    result.append(left_type);
     result.append(";\n");
     result.append("second: ");
-    result.append(&right_type);
+    result.append(right_type);
     result.append(";\n");
     result.append("}\n");
     return move result;
@@ -40,11 +40,11 @@ fun buildMinMax(arg_type: str, is_min: bool) = {
         result.append("fun max(a: ");
     }
 
-    result.append(&arg_type);
+    result.append(arg_type);
     result.append(", b: ");
-    result.append(&arg_type);
+    result.append(arg_type);
     result.append(") -> ");
-    result.append(&arg_type);
+    result.append(arg_type);
     result.append(" = {\n");
 
     if (is_min) {
