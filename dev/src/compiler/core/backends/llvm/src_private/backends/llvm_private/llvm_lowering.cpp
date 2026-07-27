@@ -1121,7 +1121,7 @@ namespace compiler::backend_llvm {
 					builder.CreateCall(free_func, { ptr_to_free });
 					return nullptr;
 				} else if (builtin_kind == lir::BuiltinFunctionKind::ListFree) {
-					llvm::Value* list_ptr  = loadLIRValue(lir_instruction.arguments.at(1), builder);
+					Ref<llvm::Value> list_ptr  = loadLIRValue(lir_instruction.arguments.at(1), builder);
 					auto         free_func = loadBuiltin(
                         "builtin_list_free", builder.getVoidTy(), { builder.getPtrTy() }
                     );

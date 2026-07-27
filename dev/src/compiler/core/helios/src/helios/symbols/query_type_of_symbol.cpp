@@ -363,8 +363,8 @@ namespace compiler::helios {
 					// `box_alloc(value: T) -> box T`, `box_free(b: box T) -> ()` and
 					// `list_free(l: ref [T]) -> ()`.
 					const auto box_type = tsh::SymbolType<>{ builtin.type,
-						                                     tsh::ReferenceKind::Box,
-						                                     tsh::Mutability::Mutable };
+tsh::ReferenceKind::Box,
+tsh::Mutability::Mutable, };
 
 					auto [arg_types, return_type]
 						= [&]() -> std::pair<std::vector<tsh::SymbolType<>>, tsh::SymbolType<>> {
@@ -381,9 +381,9 @@ namespace compiler::helios {
 							);
 							const auto ref_array = tsh::SymbolType<>{ array_type,
 								                                      tsh::ReferenceKind::Ref,
-								                                      tsh::Mutability::Mutable };
+								                                      tsh::Mutability::Mutable, };
 							return { { ref_array },
-								     tsh::SymbolType<>::withDefaults(tsh::getUnitType()) };
+								     tsh::SymbolType<>::withDefaults(tsh::getUnitType()), };
 						}
 						}
 						CORE_UNREACHABLE();

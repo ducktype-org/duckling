@@ -115,7 +115,7 @@ namespace compiler::helios {
 	SymID boxDestructorSymForType(query::Context& ctx, tsh::AbstractType pointee_type);
 
 	/**
-	 * @brief Symbol of the compiler-generated `list_free(l: ref [T])` builtin for a given element
+	 * @brief Symbol of the compiler-generated `list_free(l: ref List[T])` builtin for a given element
 	 * type.
 	 *
 	 * The returned symbol is a declaration only, it's implemented in both backends.

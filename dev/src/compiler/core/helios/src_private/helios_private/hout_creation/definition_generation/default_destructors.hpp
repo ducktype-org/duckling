@@ -15,7 +15,7 @@ namespace compiler::helios::defgen {
 
 
 	/**
-	 * @brief Get the symbol of the compiler-generated destructor for a given symbol type.
+	 * @brief Get the symbol of the proper destructor for a given symbol type (not the optional user one).
 	 * Returns empty value when the type is a reference type.
 	 */
 	base::Optional<SymID> destructSymForSymbolType(query::Context& ctx, tsh::SymbolType<> type);
@@ -47,7 +47,7 @@ namespace compiler::helios::defgen {
 	/**
 	 * @brief Build the compiler-generated HOUT representation of the `box T` destructor.
 	 *
-	 * Takes a `box T self` parameter and returns unit. Destroys the pointee (via its own
+	 * Takes a `self: box T` parameter and returns unit. Destroys the pointee (via its own
 	 * destructor) and then frees the box storage with the `box_free` builtin.
 	 *
 	 * @param pointee_type The pointee type `T`.
