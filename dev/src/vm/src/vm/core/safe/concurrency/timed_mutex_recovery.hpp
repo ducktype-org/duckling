@@ -24,7 +24,7 @@ namespace vm {
 		// Best-effort: run under try/catch so a stray failure never escapes the destructor this
 		// is called from; the worst case is the original assertion firing, no worse than a no-op.
 		try {
-			(void) mutex.try_lock();
+			std::ignore = mutex.try_lock();
 			mutex.unlock();
 		} catch (...) {
 			// Nothing safe to do at teardown; leave the mutex as-is.

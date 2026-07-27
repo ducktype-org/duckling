@@ -8,6 +8,7 @@
 #include "thread_stack.hpp"
 
 #include <base/collections/maps.hpp>
+#include <base/collections/object_pool.hpp>
 #include <base/misc/raw_view.hpp>
 #include <base/pointers/ref.hpp>
 #include <base/types/ints.hpp>
@@ -15,8 +16,6 @@
 #include <vm/bytecode/constant_value_fd.hpp>
 #include <vm/core/safe/exceptions.hpp>
 #include <vm/core/safe/type_metadata/definitions.hpp>
-
-#include <deque>
 
 namespace vm {
 	/**
@@ -49,14 +48,7 @@ namespace vm {
 		/// set. Otherwise, it is not.
 		std::unordered_set<BlockID> initialized_globals{};
 
-		// Here we use a simple recycling mechanism for blocks to avoid unnecessary allocations.
-		// After the block is destroyed and the reference count drops to zero, instead of freeing
-		// the memory, we mark the block as unused and add its ID to the free_ids list. Then when we
-		// need to allocate a new block, we first check if there are any free IDs available. Blocks
-		// are stored in a deque, so we can have pointers to them without worrying about
-		// reallocation.
-		std::deque<Block>   blocks   = {};
-		std::deque<BlockID> free_ids = {};
+		base::StableObjectPool<Block, BlockID, true, true> blocks_pool;
 
 		[[nodiscard]]
 		Ref<Block> createBlock(BlockData data);

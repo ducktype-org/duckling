@@ -517,11 +517,12 @@ private:
 			class_with_member_abstract_type
 		);
 
+		// @note: #973 when QueryModuleHOUTRecursively returns QResult, add assertion
+		// that it is successful
+		[[maybe_unused]]
 		std::vector<CRef<compiler::helios::HOUTUnit>> units
 			= query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>({ module_id })
 		          .valueOrPanic();
-		(void) units;  // @note: #973 when QueryModuleHOUTRecursively returns QResult, add assertion
-		               // that it is successful
 	}
 
 	void testClassInteractions() {
@@ -557,11 +558,12 @@ private:
 		auto expected_type = st(getIntegralTypeNoContext(64, Signed));
 		ASSERT_EQUAL(c_member_a_type, expected_type);
 
+		// @note: #973 when QueryModuleHOUTRecursively returns QResult, add assertion
+		// that it is successful
+		[[maybe_unused]]
 		std::vector<CRef<compiler::helios::HOUTUnit>> units
 			= query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>({ module_id })
 		          .valueOrPanic();
-		(void) units;  // @note: #973 when QueryModuleHOUTRecursively returns QResult, add assertion
-		               // that it is successful
 	}
 
 	/**
@@ -649,9 +651,8 @@ private:
 			ASSERT_TRUE(empty_result->isEmpty());
 
 			// Check that the module lowers to HOUT without throwing.
-			const auto& hout
+			[[maybe_unused]] const auto& hout
 				= ctx.query<compiler::helios::QueryModuleHOUT>(module_id)->valueOrThrow();
-			(void) hout;
 		});
 	}
 
@@ -1040,7 +1041,7 @@ private:
 	void testImport() {
 		auto [module, _] = getModule(fs::File(path("test_modules/import_tests")));
 
-		(void) query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>(module);
+		std::ignore = query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>(module);
 
 		const auto& hout
 			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
@@ -1245,7 +1246,7 @@ private:
 			// auto& var = get_var_ref(2);
 			// ASSERT_EQUAL(compiler::helios::name(var.helios_symbol), "c");
 			// ASSERT_EQUAL(var.type, st(i32_or_f32));
-			(void) i32_or_f32;  // < remove
+			std::ignore = i32_or_f32;  // < remove
 		}
 
 		{
@@ -2177,11 +2178,12 @@ private:
 			);
 		}
 
+		// @note: #973 when QueryModuleHOUTRecursively returns QResult, add assertion
+		// that it is successful
+		[[maybe_unused]]
 		std::vector<CRef<compiler::helios::HOUTUnit>> units
 			= query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>({ module })
 		          .valueOrPanic();
-		(void) units;  // @note: #973 when QueryModuleHOUTRecursively returns QResult, add assertion
-		               // that it is successful
 	}
 
 	void testMangler() {
@@ -2333,8 +2335,7 @@ private:
 	}
 
 	void testManglerOperators() {
-		auto [module, root_scope] = getModule(fs::File(path("test_modules/mangling_operators")));
-		(void) module;
+		auto [_, root_scope] = getModule(fs::File(path("test_modules/mangling_operators")));
 
 		auto mangle = [&](compiler::helios::SymID sym) {
 			return query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
@@ -3761,9 +3762,8 @@ private:
 	}
 
 	void testMethodOperatorResolution() {
-		auto [module, root_scope] = getModule(fs::File(path("test_modules/method_operators")));
+		auto [_, root_scope] = getModule(fs::File(path("test_modules/method_operators")));
 		using namespace compiler::helios::code;
-		(void) module;
 
 		auto foo_class = getChain("Foo", root_scope).back();
 		auto foo_class_info
