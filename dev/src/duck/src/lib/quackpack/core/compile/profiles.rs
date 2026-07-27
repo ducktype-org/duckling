@@ -247,8 +247,11 @@ impl Profile {
         })
     }
 
-    pub fn serialize_value(&self) -> String {
-        format!("{}-{}-{}-{}", self.opt_level, self.incremental, self.c_std, self.dvm_bytecode)
+    pub fn serialize_raw(&self) -> String {
+        format!(
+            "{}-{}-{}-{}",
+            self.opt_level, self.incremental, self.c_std, self.dvm_bytecode
+        )
     }
 }
 
