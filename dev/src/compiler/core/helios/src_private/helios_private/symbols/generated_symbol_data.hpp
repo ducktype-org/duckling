@@ -1,7 +1,5 @@
 #pragma once
 
-#include "helios/tsh/abstract_type.hpp"
-
 #include <ctv/ctv.hpp>
 #include <helios/attributes/builtins.hpp>
 #include <helios/hout/hout.hpp>  // @TODO: #404 try to relax it, it's just for Operatoriness, we could move it elsewhere
