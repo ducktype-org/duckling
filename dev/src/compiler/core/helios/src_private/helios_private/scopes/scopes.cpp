@@ -669,7 +669,7 @@ namespace compiler::helios {
 				SymbolGrabVisitor symbol_grab(ctx, key);
 				auto              as_stmt = base_element.dynamicCast<pst::Stmt>().value();
 				as_stmt->acceptVisitor(symbol_grab);
-				// A visitor that reported the statement as not-yet-implemented produces no output.
+
 				if (symbol_grab.out.empty()) return query::Failed();
 				return std::move(symbol_grab.out.value());
 			} else if (base_element->getElementKind() == pst::ElementKind::ExprHolder) {
