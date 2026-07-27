@@ -297,13 +297,9 @@ private:
 		});
 	}
 
-	// A `@builtin(...)` fundecl (here `char_ptr_from_slice` from core.builtins) has no body in
-	// source; the compiler synthesizes its implementation (getBuiltinImpl). This checks that the
-	// synthesized definition is actually emitted into the module HOUT when the builtin is used.
 	// The implicit prelude brings `core.builtins` symbols into scope of every non-stdlib module
-	// without an explicit import. The `builtins` fixture has no import statements at all, yet an
-	// unqualified `builtin_output_i64` must resolve — that resolution is the prelude at work. If
-	// the implicit prelude regresses, this lookup returns empty (and the fixture stops compiling).
+	// without an explicit import. The `builtins` module has no import statements at all, yet an
+	// unqualified `builtin_output_i64` must resolve — that resolution is the prelude at work.
 	void testImplicitPrelude() {
 		auto module_id = compiler::driver::test_utils::getModuleIdFromPath("builtins");
 		auto scope     = getModuleScope(module_id);
@@ -317,6 +313,9 @@ private:
 		);
 	}
 
+	// A `@builtin(...)` fundecl (here `char_ptr_from_slice` from core.builtins) has no body in
+	// source; the compiler synthesizes its implementation (getBuiltinImpl). This checks that the
+	// synthesized definition is actually emitted into the module HOUT when the builtin is used.
 	void testBuiltinDefinitionInModuleHOUT() {
 		auto module_id = compiler::driver::test_utils::getModuleIdFromPath("builtins");
 

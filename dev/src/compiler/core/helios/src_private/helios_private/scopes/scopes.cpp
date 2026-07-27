@@ -723,8 +723,7 @@ namespace compiler::helios {
 		};
 
 		/**
-		 * @brief The default import surface. Single source of truth: extend this list to make more
-		 * symbols available without an explicit import.
+		 * @brief Get the list of modules to import by default (as part of the prelude).
 		 */
 		const std::vector<PreludeImport>& preludeImports() {
 			static const std::vector<PreludeImport> imports{
@@ -740,16 +739,14 @@ namespace compiler::helios {
 		 */
 		bool isStandardLibraryModule(query::Context& ctx, frontend::ModuleID module_id) {
 			auto package_id = frontend::getModuleRef(module_id)->getPackage().unlock(ctx).getID();
-			return package_id == base::StrID("core") or package_id == base::StrID("std");
+			return package_id == base::StrID("core");
 		}
 
 		/**
 		 * @brief Looks up @p name as if every non-stdlib module wrote `import <module>.*;` for each
 		 * configured prelude module, merging the matches into a single result. Returns an empty
 		 * result (never fails) when the standard library is absent (e.g. `--no-std`, or a custom
-		 * std that lacks the module) or when @p module_id is itself a standard-library module. Uses
-		 * `HInterface::ofScope(...)` (a single-scope lookup, not the scope-and-parents variant) so
-		 * it never re-enters the prelude injection below.
+		 * std that lacks the module) or when @p module_id is itself a standard-library module.
 		 */
 		query::QResult<LookupResult> lookupImplicitPrelude(
 			query::Context& ctx, frontend::ModuleID module_id, base::StrID name, bool with_wildcards
