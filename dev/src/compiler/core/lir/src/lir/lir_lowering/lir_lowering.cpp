@@ -23,6 +23,7 @@
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/symbol_abi.hpp>
 #include <helios/tsh/queries.hpp>
+#include <helios/tsh/symbol_type.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 #include <tsl/c_abi_converter.hpp>
 #include <tsl/queries.hpp>
@@ -721,81 +722,53 @@ namespace compiler::lir {
 				}
 				case mir::Operation::DestructIf:
 				case mir::Operation::Destruct: {
-					const auto& to_destruct = mir_instruction.arguments.at(0).get<mir::MIRPlace>();
+					// @TODO: #1894 The destructor is called on every `DestructIf` (even if the
+					// value was moved). This will cause double free's if the value was moved
+					// around between other variables.
+					auto args = getLocations(mir_instruction.arguments);
+
+					// The destruction is discarded if the place carries no information (ex. Unit),
+					// in which case only the destructor literal is left.
+					if (args.size() < 2) break;
+
+					const auto& to_destruct = mir_instruction.arguments.at(1).get<mir::MIRPlace>();
 					const auto& type        = to_destruct.type;
 
-					// @TODO: #2825 Destruct the remaining non-trivially-destructible types. It
-					// requires the standard library to stop destroying its values by hand, as it
-					// would double free them otherwise.
-
-					// A dynamic array is destructed by its destructor, which takes `self: ref [T]`,
-					// so the address of the destructed place is materialized first. The destructor
-					// releases the backing buffer with the `list_free` builtin.
 					if (type.getRefKind() == tsh::ReferenceKind::Direct
-					    && type.getType().getKind() == tsh::Kind::DynamicArray) {
-						auto lir_place = getLocation(to_destruct);
+					    && not type.getType().isSimple()) {
+						// The destructor takes `self: ref T`, so the address of the destructed
+						// place is materialized first.
+						locals.pushBack(LIRLocal::refLocal(ctx, type));
+						auto     addr_local = locals[locals.lastIndex()];
+						LIRPlace addr_place{ addr_local, {} };
 
-						if (lir_place.has_value()) {
-							locals.pushBack(LIRLocal::refLocal(ctx, type));
-							const LIRPlace place_ref{ locals[locals.lastIndex()], {} };
+						auto& address_instr = curr_block->instructions.emplace_back(
+							Operation::AddressOf,
+							addr_place,
+							std::vector<LIRValue>{ args.at(1) },
+							mir_instruction.metadata
+						);
+						address_instr.scope_flags.push_back(ScopeFlag{
+							.flag = ScopeFlag::Flag::ScopeStart, .local = addr_local });
 
-							curr_block->instructions.emplace_back(
-								Operation::AddressOf,
-								place_ref,
-								std::vector{ lir_place.value() },
-								InstructionMetadata{}
-							);
-
-							const helios::SymID dtor_sym
-								= helios::getTypeDestructor(ctx, type).value();
-							std::vector<LIRValue> call_args;
-							call_args.emplace_back(getFunctionLiteralfromHELIOSID(ctx, dtor_sym));
-							call_args.emplace_back(place_ref);
-
-							curr_block->instructions.emplace_back(
-								Operation::Call,
-								base::Optional<LIRPlace>{},
-								std::move(call_args),
-								mir_instruction.metadata
-							);
-							break;
-						}
+						// destructor(addr)
+						auto& call_instr = curr_block->instructions.emplace_back(
+							Operation::Call,
+							base::Optional<LIRPlace>{},
+							std::vector<LIRValue>{ args.at(0), LIRValue{ addr_place } },
+							mir_instruction.metadata
+						);
+						call_instr.scope_flags.push_back(ScopeFlag{
+							.flag = ScopeFlag::Flag::ScopeEnd, .local = addr_local });
+					} else {
+						// Already a direct/box — call the destructor on it directly.
+						curr_block->instructions.emplace_back(
+							Operation::Call,
+							base::Optional<LIRPlace>{},
+							std::move(args),
+							mir_instruction.metadata
+						);
 					}
-
-					// @TODO: #1894 The destructor is called on every DestructIf operating on a box
-					// type (even if the box was moved). This will cause double free's if the box
-					// was moved around between other box variables.
-					if (type.getRefKind() == tsh::ReferenceKind::Box) {
-						auto lir_place = getLocation(to_destruct);
-
-						// The destruction is discarded if it operates on no information (ex. Unit).
-						if (lir_place.has_value()) {
-							// The box destructor destroys the pointee and releases the storage with
-							// the `box_free` builtin. It takes the box itself, which already is a
-							// pointer to the destructed value.
-							const helios::SymID dtor_sym
-								= helios::getTypeDestructor(ctx, type).value();
-							std::vector<LIRValue> call_args;
-							call_args.emplace_back(getFunctionLiteralfromHELIOSID(ctx, dtor_sym));
-							call_args.emplace_back(lir_place.value());
-
-							curr_block->instructions.emplace_back(
-								Operation::Call,
-								base::Optional<LIRPlace>{},
-								std::move(call_args),
-								mir_instruction.metadata
-							);
-							break;
-						}
-					}
-
-					CORE_DEV_LOG(
-						Compiler,
-						"DestructIf not implemented for types with non-trivial "
-						"destructors, skipping",
-						"\n"
-					);
-
 					break;
 				}
 				case mir::Operation::Call: {
