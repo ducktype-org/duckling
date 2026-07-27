@@ -20,6 +20,7 @@ pub mod cache;
 pub mod ducknest;
 pub mod git;
 pub mod http;
+pub mod http_async;
 pub mod types;
 pub mod util;
 
