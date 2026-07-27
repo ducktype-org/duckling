@@ -25,7 +25,7 @@ namespace compiler::ctv {
 				VISIT(val.getStorage(), inner_value, hashing::addToHash(hasher, inner_value););
 			}
 			variant_case(char, c) { hashing::addToHash(hasher, c); }
-			variant_case(base::StrID, val) { hashing::addToHash(hasher, val); }
+			variant_case(CharSliceValue, val) { hashing::addToHash(hasher, val.value); }
 			variant_case_novalue(UnitCTV) {
 				// nothing to add to hash
 			}
@@ -48,7 +48,9 @@ namespace compiler::ctv {
 			variant_case(bool, val) { return val ? "true" : "false"; }
 			variant_case(NumericValue, val) { return val.toString(); }
 			variant_case(char, c) { return "'" + base::escapeString(std::string{ c }) + "'"; }
-			variant_case(base::StrID, val) { return "\"" + base::escapeString(val.str()) + "\""; }
+			variant_case(CharSliceValue, val) {
+				return "\"" + base::escapeString(val.value.str()) + "\"";
+			}
 			variant_case_novalue(UnitCTV) { return "()"; }
 			variant_case(TupleCTV, tuple) {
 				std::stringstream ss;
@@ -83,7 +85,7 @@ namespace compiler::ctv {
 					tsh::Mutability::Mutable,
 				};
 			}
-			variant_case_novalue(base::StrID) {
+			variant_case_novalue(CharSliceValue) {
 				return tsh::SymbolType<>{
 					tsh::getCharSliceType(ctx),
 					tsh::ReferenceKind::Direct,

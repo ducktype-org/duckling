@@ -357,12 +357,13 @@ private:
 		auto root_scope = getModuleScope(module);
 
 		// `const a = getString();` should materialize a `String` CTV holding the source string.
-		auto a_value = getConstValueAs<compiler::ctv::StringClassValue>("a", root_scope);
+		auto a_value = getConstValueAs<compiler::ctv::CompileTimeValue::StringClassValue>("a", root_scope);
 		ASSERT_EQUAL(base::StrID("fun fromString() -> i64 = 1;"), a_value.value);
 
 		// `const b = getCharSlice();` should materialize a char-slice CTV (stored as a `StrID`).
-		auto b_value = getConstValueAs<base::StrID>("b", root_scope);
-		ASSERT_EQUAL(base::StrID("fun fromSlice() -> i64 = 2;"), b_value);
+		auto b_value
+			= getConstValueAs<compiler::ctv::CompileTimeValue::CharSliceValue>("b", root_scope);
+		ASSERT_EQUAL(base::StrID("fun fromSlice() -> i64 = 2;"), b_value.value);
 
 		// The `expand`s above should have injected `fromString`/`fromSlice` into `expanded`.
 		ASSERT_TRUE(!getChain("expanded.fromString", root_scope).empty());

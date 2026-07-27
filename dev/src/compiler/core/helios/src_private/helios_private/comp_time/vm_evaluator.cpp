@@ -262,7 +262,7 @@ namespace {
 				(*maybe_vm_value)->writeBytes<const compiler::tsh::SymbolType<>*>(&type);
 				return maybe_vm_value;
 			}
-			variant_case(base::StrID, _) {
+			variant_case(compiler::ctv::CompileTimeValue::CharSliceValue, _) {
 				return getCtvFromBackendLowering(
 					ctx,
 					comptime_dvm,
@@ -270,7 +270,7 @@ namespace {
 					compiler::tsh::SymbolType<>::withDefaults(tsh::getCharSliceType(ctx))
 				);
 			}
-			variant_case(compiler::ctv::StringClassValue, _) {
+			variant_case(compiler::ctv::CompileTimeValue::StringClassValue, _) {
 				if (!tsh::isStringTypePresent(ctx))
 					return std::unexpected(VmEvaluationError(
 						VmEvaluationError::Kind::ArgConversionFailed,
@@ -395,7 +395,8 @@ namespace {
 			auto char_slice_type = tsh::SymbolType<>::withDefaults(tsh::getCharSliceType(ctx));
 			if (vm_value->type->getName()
 			    == ctx.query<mangler::QueryMangledType>(char_slice_type)->valueOrThrow())
-				return CompileTimeValue{ base::StrID(charBackedVmValueToCtv(vm_value)) };
+				return CompileTimeValue{ CompileTimeValue::CharSliceValue{
+					base::StrID(charBackedVmValueToCtv(vm_value)) } };
 			return error_value;
 		}
 		case compiler::tsh::Kind::Class: {
@@ -403,7 +404,7 @@ namespace {
 				auto string_type = tsh::SymbolType<>::withDefaults(tsh::getStringType(ctx));
 				if (vm_value->type->getName()
 				    == ctx.query<mangler::QueryMangledType>(string_type)->valueOrThrow())
-					return CompileTimeValue{ StringClassValue{
+					return CompileTimeValue{ CompileTimeValue::StringClassValue{
 						base::StrID(charBackedVmValueToCtv(vm_value)) } };
 			}
 			return error_value;

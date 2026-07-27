@@ -97,13 +97,14 @@ namespace compiler::backend_vm::internal {
 					type_val_u64, std::get<vm::code::OpaqueType>(type).size
 				);
 			}
-			variant_case(base::StrID, str) {
-				auto ctor
-					= lowerStringLiteral(pctx, global_name, inserted_global_place, str, false);
+			variant_case(ctv::CompileTimeValue::CharSliceValue, str) {
+				auto ctor = lowerStringLiteral(
+					pctx, global_name, inserted_global_place, str.value, false
+				);
 				global_data.ctor_name = ctor.ctor.name;
 				pctx.extra_bytecode_functions.push_back(std::move(ctor.ctor));
 			}
-			variant_case(ctv::StringClassValue, value) {
+			variant_case(ctv::CompileTimeValue::StringClassValue, value) {
 				auto ctor = lowerStringLiteral(
 					pctx, global_name, inserted_global_place, value.value, true
 				);

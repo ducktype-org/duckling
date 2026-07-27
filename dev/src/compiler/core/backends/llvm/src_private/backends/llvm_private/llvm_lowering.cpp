@@ -124,10 +124,10 @@ namespace {
 			variant_case(char, c) {
 				return llvm::ConstantInt::get(llvm_type.get(), u64((unsigned char) c));
 			}
-			variant_case(base::StrID, str) {
+			variant_case(compiler::ctv::CompileTimeValue::CharSliceValue, char_slice) {
 				// First, create a global constant for the string data
 				const auto string_constant = llvm::ConstantDataArray::getString(
-					llvm_type->getContext(), str.strView(), /*AddNull=*/false
+					llvm_type->getContext(), char_slice.value.strView(), /*AddNull=*/false
 				);
 				const auto string_global = new llvm::GlobalVariable(
 					*llvm_module,
@@ -138,7 +138,7 @@ namespace {
 				);
 
 				// Prepare the char slice struct
-				const u64                          length = str.strView().size();
+				const u64                          length = char_slice.value.strView().size();
 				const std::vector<llvm::Constant*> fields{
 					string_global,
 					// length is length

@@ -13,16 +13,20 @@
 namespace compiler::ctv {
 	using numeric_value::NumericValue;
 
-	struct StringClassValue {
-		base::StrID value;
-	};
-
 	/**
 	 * @brief Represents a value known at compile time.
 	 */
 	class CompileTimeValue final {
 	public:
 		struct UnitCTV {};
+
+		struct CharSliceValue {
+			base::StrID value;
+		};
+
+		struct StringClassValue {
+			base::StrID value;
+		};
 
 		struct TupleCTV {
 			explicit TupleCTV(std::vector<CompileTimeValue> elements):
@@ -51,7 +55,7 @@ namespace compiler::ctv {
 			bool,
 			NumericValue,
 			char,
-			base::StrID,
+			CharSliceValue,
 			StringClassValue,
 			UnitCTV,
 			TupleCTV,
