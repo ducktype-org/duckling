@@ -123,7 +123,7 @@ private:
 	}
 
 	/**
-	 * @brief Invalidating a disk-cached query removes its on-disk artifact (issue #2351 case 1).
+	 * @brief Invalidating a disk-cached query removes its on-disk artifact.
 	 */
 	void testInvalidationDeletesDiskCache() {
 		ImplementationOf_DiskQuery::fake_disk.clear();
