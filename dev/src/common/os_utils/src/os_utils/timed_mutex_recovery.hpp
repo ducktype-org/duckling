@@ -2,7 +2,7 @@
 
 #include <mutex>
 
-namespace vm {
+namespace os_utils {
 	/**
 	 * @brief Clears an abandoned lock on a std::timed_mutex before it is destroyed.
 	 *
