@@ -551,7 +551,7 @@ namespace compiler::helios {
 				// Scope of "T →()← = {}" / "T.name →()← = {}". User-defined constructors are
 				// parsed but nothing compiles them yet, so report it instead of falling through
 				// to the panicky visitor default. Leaving `out` unset fails the query.
-				// @TODO: #3206 grab the parameter symbols here once constructors are supported.
+				// @TODO: #1290 grab the parameter symbols here once constructors are supported.
 				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 					"User-defined constructors are not yet supported",
 					ctor->getStablePosition(),
