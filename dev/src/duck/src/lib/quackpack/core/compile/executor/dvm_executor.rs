@@ -33,14 +33,18 @@ fn compile(graph: UnitGraph, bcx: &BuildContext<'_, '_>) -> QuackResult<Executor
         ArtifactsType::Dvm,
         "dvm executor should only compile DVM packages"
     );
-    let artifacts_layout = root
-        .root_package()
-        .package()
-        .get_package()
-        .artifacts_layout();
-    let profile_layout = artifacts_layout.for_profile(bcx.profile);
-    compile_unit(root, &graph, &profile_layout, bcx)?;
-    let output = unit_output(root, &graph, &profile_layout)?;
+    let package = root.root_package().package().get_package();
+    let output = if bcx.shared {
+        let artifacts_layout = package.shared_artifacts_layout();
+        let profile_layout = artifacts_layout.for_profile(bcx.profile);
+        compile_unit(root, &graph, &profile_layout, bcx)?;
+        unit_output(root, &graph, &profile_layout)?
+    } else {
+        let artifacts_layout = package.artifacts_layout();
+        let profile_layout = artifacts_layout.for_profile(bcx.profile);
+        compile_unit(root, &graph, &profile_layout, bcx)?;
+        unit_output(root, &graph, &profile_layout)?
+    };
     Ok(ExecutorOutput {
         root: (root.clone(), output),
     })

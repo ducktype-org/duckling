@@ -39,7 +39,7 @@ fn compile(graph: UnitGraph, bcx: &BuildContext<'_, '_>) -> QuackResult<Executor
     );
     let package = graph.root_unit().root_package().package().get_package();
     let output = if bcx.shared {
-        let artifacts_layout = package.artifacts_layout();
+        let artifacts_layout = package.shared_artifacts_layout();
         let profile_layout = artifacts_layout.for_profile(bcx.profile);
         // Units are sorted by ID, and the root has an ID 0, so in reverse we'll compile the root last.
         for unit in graph.units_sorted_by_id().iter().rev() {
@@ -47,7 +47,7 @@ fn compile(graph: UnitGraph, bcx: &BuildContext<'_, '_>) -> QuackResult<Executor
         }
         unit_output(root, &graph, &profile_layout)?
     } else {
-        let artifacts_layout = package.shared_artifacts_layout();
+        let artifacts_layout = package.artifacts_layout();
         let profile_layout = artifacts_layout.for_profile(bcx.profile);
         // Units are sorted by ID, and the root has an ID 0, so in reverse we'll compile the root last.
         for unit in graph.units_sorted_by_id().iter().rev() {
