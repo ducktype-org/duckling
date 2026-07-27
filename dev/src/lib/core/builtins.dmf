@@ -5,20 +5,20 @@
 import core.containers;
 import core.io;
 
-@builtin("char_ptr_from_slice")
-fundecl char_ptr_from_slice(s: slice char) -> manyptr char;
+@builtin("ptr_from_slice")
+fundecl ptr_from_slice(s: slice char) -> manyptr char;
 
-@builtin("char_slice_from_ptr_len")
-fundecl char_slice_from_ptr_len(p: manyptr char, l: u64) -> slice char;
+@builtin("slice_from_ptr_len")
+fundecl slice_from_ptr_len(p: manyptr char, l: u64) -> slice char;
 
-@builtin("dvm_char_alloc")
-fundecl dvm_char_alloc(size: u64) -> manyptr char;
+@builtin("dvm_alloc")
+fundecl dvm_alloc(size: u64) -> manyptr char;
 
-@builtin("dvm_char_realloc")
-fundecl dvm_char_realloc(p: manyptr char, size: u64);
+@builtin("dvm_realloc")
+fundecl dvm_realloc(p: manyptr char, size: u64);
 
-@builtin("dvm_char_free")
-fundecl dvm_char_free(p: manyptr char);
+@builtin("dvm_free")
+fundecl dvm_free(p: manyptr char);
 
 @builtin("alignment_of")
 fundecl alignment_of(v: type) -> i64;

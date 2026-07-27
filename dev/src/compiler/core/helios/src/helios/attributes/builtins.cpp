@@ -27,11 +27,11 @@ namespace compiler::helios {
 		 */
 		const base::HashMap<std::string_view, BuiltinKind>& builtinNameMapping() {
 			static const base::HashMap<std::string_view, BuiltinKind> mapping = {
-				{ "char_ptr_from_slice", BuiltinKind::CharPtrFromSlice },
-				{ "char_slice_from_ptr_len", BuiltinKind::CharSliceFromPtrLen },
-				{ "dvm_char_alloc", BuiltinKind::DvmCharAlloc },
-				{ "dvm_char_realloc", BuiltinKind::DvmCharRealloc },
-				{ "dvm_char_free", BuiltinKind::DvmCharFree },
+				{ "ptr_from_slice", BuiltinKind::PtrFromSlice },
+				{ "slice_from_ptr_len", BuiltinKind::SliceFromPtrLen },
+				{ "dvm_alloc", BuiltinKind::DvmAlloc },
+				{ "dvm_realloc", BuiltinKind::DvmRealloc },
+				{ "dvm_free", BuiltinKind::DvmFree },
 				{ "size_of", BuiltinKind::SizeOf },
 				{ "alignment_of", BuiltinKind::AlignmentOf },
 			};
@@ -41,16 +41,16 @@ namespace compiler::helios {
 
 	base::StrID builtinKindToStr(BuiltinKind type) {
 		switch (type) {
-		case BuiltinKind::CharPtrFromSlice:
-			return base::StrID("char_ptr_from_slice");
-		case BuiltinKind::CharSliceFromPtrLen:
-			return base::StrID("char_slice_from_ptr_len");
-		case BuiltinKind::DvmCharAlloc:
-			return base::StrID("dvm_char_alloc");
-		case BuiltinKind::DvmCharRealloc:
-			return base::StrID("dvm_char_realloc");
-		case BuiltinKind::DvmCharFree:
-			return base::StrID("dvm_char_free");
+		case BuiltinKind::PtrFromSlice:
+			return base::StrID("ptr_from_slice");
+		case BuiltinKind::SliceFromPtrLen:
+			return base::StrID("slice_from_ptr_len");
+		case BuiltinKind::DvmAlloc:
+			return base::StrID("dvm_alloc");
+		case BuiltinKind::DvmRealloc:
+			return base::StrID("dvm_realloc");
+		case BuiltinKind::DvmFree:
+			return base::StrID("dvm_free");
 		case BuiltinKind::SizeOf:
 			return base::StrID("size_of");
 		case BuiltinKind::AlignmentOf:
@@ -126,9 +126,7 @@ namespace compiler::helios {
 		const Shorthand s{ ctx };
 
 		switch (type) {
-		case BuiltinKind::CharPtrFromSlice: {
-			// `char_ptr_from_slice(slice T s) -> manyptr T` simply returns the slice's data pointer
-			// field. This mirrors the `length` method, only reading a different field (`ptr` vs `len`).
+		case BuiltinKind::PtrFromSlice: {
 			auto& decl         = ctx.query<QueryDeclOfFun>(symbol)->valueOrThrow();
 			auto  slice_type   = decl.parameters.at(0).type.getType().as<tsh::SliceAbstractType>();
 			auto  slice_fields = ctx.query<QuerySliceTypeData>(slice_type);
@@ -144,11 +142,7 @@ namespace compiler::helios {
 				std::make_shared<const code::CodeBlock>(std::move(body)),
 			};
 		}
-		case BuiltinKind::CharSliceFromPtrLen: {
-			// `char_slice_from_ptr_len(p: ptr char, l: u64) -> slice char` builds a slice value
-			// out of a data pointer and a length. This mirrors the implicit class constructor:
-			// declare a default-initialized result, assign each field from a parameter, then
-			// return it.
+		case BuiltinKind::SliceFromPtrLen: {
 			auto&      decl            = ctx.query<QueryDeclOfFun>(symbol)->valueOrThrow();
 			const auto result_sym_type = decl.return_type;
 			auto       slice_type      = result_sym_type.getType().as<tsh::SliceAbstractType>();
@@ -237,15 +231,15 @@ namespace compiler::helios {
 
 	BuiltinOrigins getBuiltinOrigins(BuiltinKind type) {
 		switch (type) {
-		case BuiltinKind::CharPtrFromSlice:
+		case BuiltinKind::PtrFromSlice:
 			return BuiltinOrigin::HOUT;
-		case BuiltinKind::CharSliceFromPtrLen:
+		case BuiltinKind::SliceFromPtrLen:
 			return BuiltinOrigin::HOUT;
-		case BuiltinKind::DvmCharAlloc:
+		case BuiltinKind::DvmAlloc:
 			return BuiltinOrigin::DVMBackend;
-		case BuiltinKind::DvmCharRealloc:
+		case BuiltinKind::DvmRealloc:
 			return BuiltinOrigin::DVMBackend;
-		case BuiltinKind::DvmCharFree:
+		case BuiltinKind::DvmFree:
 			return BuiltinOrigin::DVMBackend;
 		case BuiltinKind::SizeOf:
 		case BuiltinKind::AlignmentOf:

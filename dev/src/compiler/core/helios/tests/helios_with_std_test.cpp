@@ -294,7 +294,7 @@ private:
 		});
 	}
 
-	// A `@builtin(...)` fundecl (here `char_ptr_from_slice` from core.builtins) has no body in
+	// A `@builtin(...)` fundecl (here `ptr_from_slice` from core.builtins) has no body in
 	// source; the compiler synthesizes its implementation (getBuiltinImpl). This checks that the
 	// synthesized definition is actually emitted into the module HOUT when the builtin is used.
 	void testBuiltinDefinitionInModuleHOUT() {
@@ -303,15 +303,15 @@ private:
 		auto houts = query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>(module_id)
 		                 .valueOrPanic();
 
-		bool found_char_ptr_from_slice = false;
+		bool found_ptr_from_slice = false;
 		for (const auto& hout: houts)
 			for (const auto& fun: hout->functions)
-				if (fun->declaration->original_name == base::StrID("char_ptr_from_slice"))
-					found_char_ptr_from_slice = true;
+				if (fun->declaration->original_name == base::StrID("ptr_from_slice"))
+					found_ptr_from_slice = true;
 
 		assertTrue(
-			found_char_ptr_from_slice,
-			"char_ptr_from_slice builtin definition should be emitted into the module HOUT"
+			found_ptr_from_slice,
+			"ptr_from_slice builtin definition should be emitted into the module HOUT"
 		);
 	}
 

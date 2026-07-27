@@ -1,20 +1,20 @@
 import core.builtins.*;
 
 # Exercises the DVM-backend char builtins whose implementations are synthesized by the compiler
-# (see the DVM `BuiltinCallOperation` lowering): `dvm_char_alloc`, `dvm_char_realloc` and
-# `dvm_char_free`.
+# (see the DVM `BuiltinCallOperation` lowering): `dvm_alloc`, `dvm_realloc` and
+# `dvm_free`.
 fun main() -> i64 = {
     # Allocate a dynamic char table with 8 elements.
-    var p = dvm_char_alloc(8u64);
+    var p = dvm_alloc(8u64);
     p[0] = 'A';
     let a = p[0];
 
     # Grow the table and use the newly available space to prove the reallocation happened.
-    dvm_char_realloc(p, 16u64);
+    dvm_realloc(p, 16u64);
     p[10] = 'B';
     let b = p[10];
 
-    dvm_char_free(p);
+    dvm_free(p);
 
     # The written chars must survive the round-trip through the allocated / reallocated table.
     if (a == 'A' and b == 'B') return 42i64;

@@ -171,9 +171,9 @@ namespace compiler::lir {
 	 * manually in the backend.
 	 */
 	enum class BuiltinFunctionKind {
-		DvmCharAlloc,
-		DvmCharRealloc,
-		DvmCharFree,
+		DvmAlloc,
+		DvmRealloc,
+		DvmFree,
 		BoxAlloc,
 		BoxFree,
 		ListFree

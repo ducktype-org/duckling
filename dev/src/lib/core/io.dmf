@@ -169,7 +169,7 @@ fun readF64() -> f64 = {
     }
     buffer.append('\0');
 
-    let value = strtod(builtins.char_ptr_from_slice(buffer.asSlice()));
+    let value = strtod(builtins.ptr_from_slice(buffer.asSlice()));
     buffer.dispose();
     return value;
 }
