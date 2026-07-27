@@ -22,7 +22,7 @@ namespace js::impl {
 	template<class Arg1, class Arg2, class... Args>
 	struct MakeList<Arg1, Arg2, Args...> {
 		static constexpr auto NAME
-			= CONSTEXPR_CAT(TypeParseTraits<Arg1>::NAME, ", ", MakeList<Arg2, Args...>::name);
+			= CONSTEXPR_CAT(TypeParseTraits<Arg1>::NAME, ", ", MakeList<Arg2, Args...>::NAME);
 	};
 }
 
@@ -38,18 +38,18 @@ namespace js::impl {
 		static constexpr std::array NAME = std::to_array(CUSTOM_NAME); \
 	};
 
-#define JSON_REGISTER_TEMPLATE_WITH_NAME(T, CUSTOM_NAME)                           \
-	template<class X>                                                              \
-	struct TypeParseTraits<T<X>> {                                                 \
-		static constexpr std::array NAME                                           \
-			= CONSTEXPR_CAT_CSTR(CUSTOM_NAME, "<", TypeParseTraits<X>::NAME, ">"); \
+#define JSON_REGISTER_TEMPLATE_WITH_NAME(T, CUSTOM_NAME)                            \
+	template<class X>                                                               \
+	struct TypeParseTraits<T<X>> {                                                  \
+		static constexpr std::array NAME                                            \
+			= CONSTEXPR_CAT(CUSTOM_NAME, "<", TypeParseTraits<X>::NAME, ">", '\0'); \
 	};
 
-#define JSON_REGISTER_TEMPLATE_VARIADIC_WITH_NAME(T, CUSTOM_NAME)                           \
-	template<class... Args>                                                                 \
-	struct TypeParseTraits<T<Args...>> {                                                    \
-		static constexpr auto NAME                                                          \
-			= CONSTEXPR_CAT_CSTR(CUSTOM_NAME, "<", js::impl::MakeList<Args...>::name, ">"); \
+#define JSON_REGISTER_TEMPLATE_VARIADIC_WITH_NAME(T, CUSTOM_NAME)                            \
+	template<class... Args>                                                                  \
+	struct TypeParseTraits<T<Args...>> {                                                     \
+		static constexpr auto NAME                                                           \
+			= CONSTEXPR_CAT(CUSTOM_NAME, "<", js::impl::MakeList<Args...>::NAME, ">", '\0'); \
 	};
 
 JSON_REGISTER_TYPE_WITH_NAME(std::string, "string");

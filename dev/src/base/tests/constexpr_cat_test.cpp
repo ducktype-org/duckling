@@ -14,23 +14,20 @@ public:
 	}
 
 	void testConstexprCat() {
-		constexpr std::array res1 = CONSTEXPR_CAT("aBd", "Inny string");
-		std::string_view     view = { res1.data(), res1.size() };
+		constexpr std::array RES1 = CONSTEXPR_CAT("A", "B");
+		std::string_view     view = { RES1.data(), RES1.size() };
 
-		ASSERT_EQUAL(view, "aBdInny string");
+		ASSERT_EQUAL_PRINT(view, "AB");
 
-		constexpr std::array res2 = CONSTEXPR_CAT('x', "aBd", "Inny string", "", 'u', "aaa");
-		view                      = { res2.data(), res2.size() };
+		constexpr std::array RES2 = CONSTEXPR_CAT('A', "B", "C", "", 'd', "eee");
+		view                      = { RES2.data(), RES2.size() };
 
-		ASSERT_EQUAL(view, "xaBdInny stringuaaa");
+		ASSERT_EQUAL_PRINT(view, "ABCdeee");
 
-		constexpr std::array res3 = CONSTEXPR_CAT(res1, res2, 'x');
-		view                      = { res3.data(), res3.size() };
+		constexpr std::array RES3 = CONSTEXPR_CAT(RES1, RES2, 'x');
+		view                      = { RES3.data(), RES3.size() };
 
-		assertTrue(
-			view == "aBdInny stringxaBdInny stringuaaax",
-			"CONSTEXPR_CAT returned answer other than expected"
-		);
+		ASSERT_EQUAL_PRINT(view, "ABABCdeeex");
 	}
 
 	/**
