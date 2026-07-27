@@ -287,7 +287,7 @@ namespace compiler::tsh {
 
 	bool VariantAbstractTypeImpl::hasNoOpDestructor(query::Context& ctx) const {
 		for (const auto& type: underlying_types)
-			if (!type.hasNoOpDestructor(ctx)) return false;
+			if (!type.isTriviallyDestructible(ctx)) return false;
 		return true;
 	}
 
@@ -565,7 +565,7 @@ namespace compiler::tsh {
 		auto fields = getDeclaredInterface(ctx)->getFieldsView();
 		// Otherwise the destructor is a no-op only if every field is trivially destructible.
 		return std::ranges::all_of(fields, [&](const auto& field) {
-			return field.getType(ctx).hasNoOpDestructor(ctx);
+			return field.getType(ctx).isTriviallyDestructible(ctx);
 		});
 	}
 
@@ -614,7 +614,7 @@ namespace compiler::tsh {
 
 	bool TupleAbstractTypeImpl::hasNoOpDestructor(query::Context& ctx) const {
 		return std::ranges::all_of(components, [&](const auto& component) {
-			return component.hasNoOpDestructor(ctx);
+			return component.isTriviallyDestructible(ctx);
 		});
 	}
 
