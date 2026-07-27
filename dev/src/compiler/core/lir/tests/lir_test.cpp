@@ -698,7 +698,7 @@ private:
 		bool found_push_with_params = false;
 		bool found_pop_with_params  = false;
 		bool found_len              = false;
-		bool found_free             = false;
+		bool found_destructor       = false;
 
 		for (const auto& block: lir_func->block_order) {
 			for (const auto& instr: block->instructions) {
@@ -714,11 +714,12 @@ private:
 						found_pop_with_params = true;
 					else if (name.contains("length"))
 						found_len = true;
+					// `Hdd` is the mangling of the compiler-generated destructor, which releases
+					// the list storage.
+					else if (name.contains("Hdd"))
+						found_destructor = true;
 					break;
 				}
-				case Operation::ListFree:
-					found_free = true;
-					break;
 				default:
 					break;
 				}
@@ -729,7 +730,7 @@ private:
 		ASSERT_TRUE(found_push_with_params);
 		ASSERT_TRUE(found_pop_with_params);
 		ASSERT_TRUE(found_len);
-		ASSERT_TRUE(found_free);
+		ASSERT_TRUE(found_destructor);
 	}
 
 	void metaFunctionsTest() {

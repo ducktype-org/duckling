@@ -45,6 +45,15 @@ namespace compiler::lir {
 		return LIRLocal{ CRef<tsl::TypeLayout>(&bool_layout) };
 	}
 
+	LIRLocal LIRLocal::refLocal(query::Context& ctx, const tsh::SymbolType<> pointee_type) {
+		const auto ref_type   = pointee_type.withReferenceKind(tsh::ReferenceKind::Ref);
+		auto&      ref_layout = ctx.query<tsl::QuerySymbolTypeLayout>(ref_type)->valueOrPanicMsg(
+            "layout query failed at LIR stage"
+        );
+
+		return LIRLocal{ CRef<tsl::TypeLayout>(&ref_layout) };
+	}
+
 	LIRGlobal LIRGlobal::fromMIR(query::Context& ctx, mir::MIRGlobal mir_global) {
 		auto type_layout
 			= CRef<tsl::TypeLayout>(&ctx.query<tsl::QuerySymbolTypeLayout>(mir_global.type)
