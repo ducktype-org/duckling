@@ -49,11 +49,11 @@ pub fn sync(
     options: StorageSyncOptions,
 ) -> QuackResult<(TrySyncLock, Venv, Storage)> {
     debug!(root = %pcx.package().root().display(), ?options);
-    let venv_config = pcx.venv_config();
-    let storage = Storage::new(pcx.storage_path()?);
+    let venv_config = pcx.package().venv();
+    let storage = Storage::new(venv_config.storage_path());
     let mut fetcher = Fetcher::new(pcx.ctx())?;
     let mut git_access = StorageGitAccess::new(&storage);
-    let expose_freezefile = venv_config.is_freezefile_exposed()?;
+    let expose_freezefile = venv_config.expose_freezefile();
     let user_exposed_freeze = load_external_freezefile(pcx, expose_freezefile)?;
     let id = pcx.to_venv_id();
 
@@ -96,12 +96,12 @@ pub fn sync(
         data.set_last_modification(now);
         data.set_freeze(new_freeze);
         data.set_last_known_location(pcx.package().root().to_path_buf());
-        data.set_ephemeral(venv_config.is_ephemeral()?);
+        data.set_ephemeral(venv_config.ephemeral());
         venv
     } else {
         let data = VenvData::new(
             new_freeze,
-            venv_config.is_ephemeral()?,
+            venv_config.ephemeral(),
             pcx.package().root().to_path_buf(),
             now,
             now,
