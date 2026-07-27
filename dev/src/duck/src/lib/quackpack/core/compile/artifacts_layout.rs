@@ -16,6 +16,9 @@
 
 use std::path::{Path, PathBuf};
 
+use crate::quackpack::core::compile::profiles::Profile;
+use crate::quackpack::core::compile::unit::Unit;
+use crate::quackpack::core::compile::unit::graph::UnitGraph;
 use crate::util::file_locks::{FileLockManager, LockedFile};
 use crate::{DuckContext, QuackResult};
 
@@ -46,9 +49,9 @@ impl ArtifactsLayout {
     }
 
     /// Get the layout for a specific profile name.
-    pub fn for_profile(&self, name: &str) -> ProfileLayout {
+    pub fn for_profile(&self, profile: Profile) -> ProfileLayout {
         ProfileLayout {
-            root: self.root.join(name),
+            root: self.root.join(profile.name),
         }
     }
 
@@ -76,9 +79,9 @@ impl ProfileLayout {
     }
 
     /// Get the layout for a specific dependency.
-    pub fn for_dependency(&self, name: &str) -> DependencyLayout {
+    pub fn for_dependency(&self, unit: &Unit, _graph: &UnitGraph) -> DependencyLayout {
         DependencyLayout {
-            root: self.root.join(name),
+            root: self.root.join(unit.unique_name()),
         }
     }
 }

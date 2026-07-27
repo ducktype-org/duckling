@@ -154,7 +154,7 @@ pub(crate) fn unit_output(unit: &Unit, graph: &UnitGraph, layout: &ProfileLayout
     let out = if graph.is_root(unit) {
         layout.root_directory().join(unit.output_file_name())
     } else {
-        let layout = layout.for_dependency(&unit.unique_name());
+        let layout = layout.for_dependency(unit, graph);
         layout.root_directory().join(unit.output_file_name())
     };
     debug!(unit = ?unit, out = %out.display(), "generating output");
@@ -224,13 +224,14 @@ pub(crate) fn compile_and_print(
 /// Compile a single [`Unit`] with its finished schema.
 pub(crate) fn compile_single_unit_with_schema(
     unit: &Unit,
+    graph: &UnitGraph,
     layout: &ProfileLayout,
     bcx: &BuildContext<'_, '_>,
     schema: multipackage_schema::MultiPackage,
 ) -> QuackResult<()> {
     let name = unit.root_package().package().name();
     let status = (|| {
-        let unit_layout = layout.for_dependency(&unit.unique_name());
+        let unit_layout = layout.for_dependency(unit, graph);
         let builder = finished_builder_for_layout_and_profile(bcx, &unit_layout, &bcx.profile);
         let _lock = unit_layout.acquire_lock(bcx.pcx.ctx())?;
         let locked_manifest_file = unit_layout
@@ -258,5 +259,5 @@ pub(crate) fn compile_single_unit_with_tasks(
 ) -> QuackResult<()> {
     let packages = collect_packages(unit, graph)?;
     let schema = multipackage_schema::MultiPackage { packages, tasks };
-    compile_single_unit_with_schema(unit, layout, bcx, schema)
+    compile_single_unit_with_schema(unit, graph, layout, bcx, schema)
 }

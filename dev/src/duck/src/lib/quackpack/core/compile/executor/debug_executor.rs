@@ -41,7 +41,7 @@ fn compile(graph: UnitGraph, bcx: &BuildContext<'_, '_>) -> QuackResult<Executor
         .package()
         .get_package()
         .artifacts_directory();
-    let profile_layout = artifacts_layout.for_profile(&bcx.profile.name);
+    let profile_layout = artifacts_layout.for_profile(bcx.profile);
     // Units are sorted by ID, and the root has an ID 0, so in reverse we'll compile the root last.
     for unit in graph.units_sorted_by_id().iter().rev() {
         compile_unit(unit, &graph, &profile_layout, bcx)?;
@@ -83,7 +83,7 @@ fn create_task(
             }
         }
         ArtifactsType::IsADependencyArtifact => {
-            let layout = layout.for_dependency(&unit.unique_name());
+            let layout = layout.for_dependency(unit, graph);
             multipackage_schema::PackageCompilationStrategy::Lib {
                 output_file: layout.root_directory().join(unit.output_file_name()),
                 archive_options: None,
