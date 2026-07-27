@@ -10,32 +10,41 @@ use url::Url;
 use crate::{QuackError, QuackResultContext, qp_bail};
 
 #[derive(Debug, Clone, Deserialize, Default)]
+/// A struct for the `security:` config map.
 #[serde(rename_all = "kebab-case")]
 pub struct SecurityConfig {
     pub typos: Option<SecurityTyposConfig>,
 }
 
 #[derive(Debug, Clone, Deserialize, Default)]
+/// A struct for the `security: typos:` config map.
 #[serde(rename_all = "kebab-case")]
 pub struct SecurityTyposConfig {
+    /// Radius of Levenshtein distance in which we try to fix typos.
     pub max_distance: Option<u64>,
+    /// Whether fixing typos if allowed. `None` has the same behaviour as `Some(false)`.
     pub enabled: Option<bool>,
 }
 
 #[derive(Debug, Clone, Deserialize, Default)]
 #[serde(rename_all = "kebab-case")]
+/// A struct for the `registry:` config map.
 pub struct RegistryConfig {
+    /// If specified, this overrides a default registry URL.
     pub url: Option<Url>,
 }
 
 #[derive(Debug, Clone, Deserialize, Default)]
 #[serde(rename_all = "kebab-case")]
+/// A struct for the `storage:` config map.
 pub struct StorageConfig {
+    /// Maximal allowed lifetime of temporary venvs.
     pub temporary_lifetime: Option<HumanDeserializableDuration>,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 /// Duration deserialized from format `<count> <unit>`.
+/// Allowed units are: "second", "minute", "hour", "day", "week", and their plural forms.
 pub struct HumanDeserializableDuration(pub Duration);
 
 impl Deref for HumanDeserializableDuration {
@@ -106,7 +115,7 @@ mod tests {
         parse(s).unwrap_err().to_string()
     }
 
-    fn duration(s: &str) -> std::time::Duration {
+    fn duration(s: &str) -> Duration {
         parse(s).unwrap().0
     }
 
