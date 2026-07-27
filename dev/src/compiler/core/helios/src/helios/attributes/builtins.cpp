@@ -8,6 +8,7 @@
 #include <helios/queries/function_queries.hpp>
 #include <helios/symbols/query_type_symbol_data.hpp>
 #include <helios/tsh/types.hpp>
+#include <helios_private/hout_creation/shorthands/shorthands.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
@@ -30,6 +31,8 @@ namespace compiler::helios {
 				{ "dvm_char_alloc", BuiltinKind::DvmCharAlloc },
 				{ "dvm_char_realloc", BuiltinKind::DvmCharRealloc },
 				{ "dvm_char_free", BuiltinKind::DvmCharFree },
+				{ "size_of", BuiltinKind::SizeOf },
+				{ "alignment_of", BuiltinKind::AlignmentOf },
 			};
 			return mapping;
 		}
@@ -47,6 +50,10 @@ namespace compiler::helios {
 			return base::StrID("dvm_char_realloc");
 		case BuiltinKind::DvmCharFree:
 			return base::StrID("dvm_char_free");
+		case BuiltinKind::SizeOf:
+			return base::StrID("size_of");
+		case BuiltinKind::AlignmentOf:
+			return base::StrID("alignment_of");
 		case BuiltinKind::BoxAlloc:
 			return base::StrID("box_alloc");
 		case BuiltinKind::BoxFree:
@@ -110,34 +117,27 @@ namespace compiler::helios {
 	}
 
 	HOUTFunction getBuiltinImpl(query::Context& ctx, SymID symbol, BuiltinKind type) {
+		using namespace code::shorthands;
+		const Shorthand s{ ctx };
+
 		switch (type) {
 		case BuiltinKind::CharPtrFromSlice: {
 			// `char_ptr_from_slice(slice T s) -> manyptr T` simply returns the slice's data pointer
-			// field. This mirrors the `length` method, only reading a different field (`ptr` vs
-			// `len`).
+			// field. This mirrors the `length` method, only reading a different field (`ptr` vs `len`).
 			auto& decl         = ctx.query<QueryDeclOfFun>(symbol)->valueOrThrow();
 			auto  slice_type   = decl.parameters.at(0).type.getType().as<tsh::SliceAbstractType>();
 			auto  slice_fields = ctx.query<QuerySliceTypeData>(slice_type);
 
-			std::vector<Box<code::Stmt>> body{};
-			body.emplace_back(makeBox<code::ReturnStmt>(
-				code::generatedOrigin(),
-				makeBox<code::AccessExpr>(
-					ctx,
-					code::generatedOrigin(),
-					makeBox<code::IdentifierExpr>(
-						ctx, code::generatedOrigin(), decl.parameters.at(0).helios_symbol
-					),
-					slice_fields->ptr
-				)
-			));
-			return HOUTFunction(
+			auto body
+				= StmtPack{ s.ret(s.access(
+								s.ident(decl.parameters.at(0).helios_symbol), slice_fields->ptr
+							)) }
+			          .toCodeBlock();
+			return {
 				code::generatedOrigin(),
 				&decl,
-				std::make_shared<const code::CodeBlock>(code::CodeBlock{
-					.statements = std::move(body),
-				})
-			);
+				std::make_shared<const code::CodeBlock>(std::move(body)),
+			};
 		}
 		case BuiltinKind::CharSliceFromPtrLen: {
 			// `char_slice_from_ptr_len(p: ptr char, l: u64) -> slice char` builds a slice value
@@ -159,50 +159,51 @@ namespace compiler::helios {
 			                                       .type            = result_sym_type },
 			});
 
+			auto body = StmtPack{
+				// var __result: slice char = <default>;
+				s.var(
+					result_symbol, result_sym_type, s.defaultValue(result_sym_type.getType())
+				),
+				// __result.ptr = p;
+				s.assign(
+					s.access(s.ident(result_symbol), slice_fields->ptr),
+					s.ident(decl.parameters.at(0).helios_symbol)
+				),
+				// __result.len = l;
+				s.assign(
+					s.access(s.ident(result_symbol), slice_fields->len),
+					s.ident(decl.parameters.at(1).helios_symbol)
+				),
+				// return __result;
+				s.ret(s.ident(result_symbol)),
+			}.toCodeBlock();
+
+			return HOUTFunction(
+				code::generatedOrigin(),
+				&decl,
+				std::make_shared<const code::CodeBlock>(std::move(body))
+			);
+		}
+		case BuiltinKind::SizeOf:
+		case BuiltinKind::AlignmentOf: {
+			// `size_of(v: meta) -> i64` / `alignment_of(v: meta) -> i64` simply return the
+			// corresponding unary meta operator applied to the parameter. The operator is lowered
+			// through MIR/LIR to a `Meta` instruction and evaluated at compile time.
+			auto&      decl = ctx.query<QueryDeclOfFun>(symbol)->valueOrThrow();
+			const auto op   = (type == BuiltinKind::SizeOf) ? code::BuiltinUnary::SizeOf
+			                                                : code::BuiltinUnary::AlignOf;
+
 			std::vector<Box<code::Stmt>> body{};
-			// - One declaration, one assignment per field, one return.
-			body.reserve(4);
-			body.emplace_back(makeBox<code::VariableStmt>(
-				code::generatedOrigin(),
-				makeBox<code::DefaultValueExpr>(
-					ctx, code::generatedOrigin(), result_sym_type.getType()
-				),
-				result_sym_type,
-				result_symbol
-			));
-
-			// __result.ptr = p;
-			body.emplace_back(makeBox<code::AssignmentStmt>(
-				code::generatedOrigin(),
-				makeBox<code::AccessExpr>(
-					ctx,
-					code::generatedOrigin(),
-					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), result_symbol),
-					slice_fields->ptr
-				),
-				makeBox<code::IdentifierExpr>(
-					ctx, code::generatedOrigin(), decl.parameters.at(0).helios_symbol
-				)
-			));
-
-			// __result.len = l;
-			body.emplace_back(makeBox<code::AssignmentStmt>(
-				code::generatedOrigin(),
-				makeBox<code::AccessExpr>(
-					ctx,
-					code::generatedOrigin(),
-					makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), result_symbol),
-					slice_fields->len
-				),
-				makeBox<code::IdentifierExpr>(
-					ctx, code::generatedOrigin(), decl.parameters.at(1).helios_symbol
-				)
-			));
-
-			// return __result;
 			body.emplace_back(makeBox<code::ReturnStmt>(
 				code::generatedOrigin(),
-				makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), result_symbol)
+				makeBox<code::UnaryOperatorExpr>(
+					ctx,
+					code::generatedOrigin(),
+					op,
+					makeBox<code::IdentifierExpr>(
+						ctx, code::generatedOrigin(), decl.parameters.at(0).helios_symbol
+					)
+				)
 			));
 
 			return HOUTFunction(
@@ -234,6 +235,9 @@ namespace compiler::helios {
 			return BuiltinOrigin::DVMBackend;
 		case BuiltinKind::DvmCharFree:
 			return BuiltinOrigin::DVMBackend;
+		case BuiltinKind::SizeOf:
+		case BuiltinKind::AlignmentOf:
+			return BuiltinOrigin::HOUT;
 		case BuiltinKind::BoxAlloc:
 		case BuiltinKind::BoxFree:
 			return BuiltinOrigin::DVMBackend | BuiltinOrigin::NativeBackend;
@@ -261,15 +265,13 @@ namespace compiler::helios {
 	Box<code::Expr> makeBoxAllocCall(
 		query::Context& ctx, code::ElementOrigin origin, Box<code::Expr> inner
 	) {
-		const auto pointee_type = inner->expression_type.getSymbolType().getType();
+		using namespace code::shorthands;
+		const Shorthand s{ ctx };
+		const auto      pointee_type = inner->expression_type.getSymbolType().getType();
 
-		std::vector<Box<code::Expr>> args;
-		args.emplace_back(std::move(inner));
-		return makeBox<code::CallExpr>(
-			ctx,
-			origin,
-			makeBox<code::IdentifierExpr>(ctx, origin, boxAllocSymForType(ctx, pointee_type)),
-			std::move(args)
-		);
+		// This helper preserves the caller-supplied `origin` rather than the builders' default
+		// `generatedOrigin()`, so both the callee identifier and the call itself carry it.
+		auto callee = withOrigin(origin, s.ident(boxAllocSymForType(ctx, pointee_type)));
+		return withOrigin(origin, s.call(std::move(callee), std::move(inner)));
 	}
 }

@@ -114,7 +114,8 @@ namespace compiler::lir {
 		          ->valueOrPanicMsg("Handling errors in MIR is not supported yet")
 		          .getType();
 
-		auto link_once    = helios::emissionPolicy(helios_id) == helios::EmissionPolicy::Replicated;
+		auto link_once
+			= helios::emissionPolicy(ctx, helios_id) == helios::EmissionPolicy::Replicated;
 		auto mangled_name = helios::mangler::getSimpleMangledName(ctx, helios_id);
 		base::Optional<BuiltinFunctionKind> builtin_kind_opt
 			= helios::isBuiltin(helios_id).flatMap(getBuiltinKindFromHOUT);
@@ -230,20 +231,8 @@ namespace compiler::lir {
 			return Operation::FloatNeq;
 
 		/// Meta type operations ///
-		case mir::Operation::MetaCreateBox:
-			return Operation::MetaCreateBox;
-		case mir::Operation::MetaCreateRef:
-			return Operation::MetaCreateRef;
-		case mir::Operation::MetaCreateConst:
-			return Operation::MetaCreateConst;
-		case mir::Operation::MetaCreateTuple:
-			return Operation::MetaCreateTuple;
-		case mir::Operation::MetaCreateVariant:
-			return Operation::MetaCreateVariant;
-		case mir::Operation::MetaEq:
-			return Operation::MetaEq;
-		case mir::Operation::MetaNeq:
-			return Operation::MetaNeq;
+		case mir::Operation::MetaTypeOperation:
+			return Operation::MetaTypeOperation;
 
 		/// Logic ///
 		case mir::Operation::BooleanAnd:
@@ -258,6 +247,44 @@ namespace compiler::lir {
 				"Operation without direct counterpart", base::enumToStr(mir_operation)
 			));
 		}
+	}
+
+	/**
+	 * @brief Maps a MIR meta kind to its LIR counterpart (1:1).
+	 */
+	MetaKind mir2lirMetaKind(mir::MetaKind kind) {
+		using enum mir::MetaKind;
+		switch (kind) {
+		case CreateBox:
+			return lir::MetaKind::CreateBox;
+		case CreateRef:
+			return lir::MetaKind::CreateRef;
+		case CreateConst:
+			return lir::MetaKind::CreateConst;
+		case CreatePtr:
+			return lir::MetaKind::CreatePtr;
+		case CreateManyPtr:
+			return lir::MetaKind::CreateManyPtr;
+		case CreateCPtr:
+			return lir::MetaKind::CreateCPtr;
+		case CreateSlice:
+			return lir::MetaKind::CreateSlice;
+		case CreateTuple:
+			return lir::MetaKind::CreateTuple;
+		case CreateVariant:
+			return lir::MetaKind::CreateVariant;
+		case Eq:
+			return lir::MetaKind::Eq;
+		case Neq:
+			return lir::MetaKind::Neq;
+		case SizeOf:
+			return lir::MetaKind::SizeOf;
+		case AlignOf:
+			return lir::MetaKind::AlignOf;
+		case COUNT:
+			CORE_PANIC("Unknown meta type operation: ", base::enumToStr(kind));
+		}
+		CORE_UNREACHABLE();
 	}
 
 	struct IMPLEMENT_QUERY(LowerToLIRFunction, Function) {
@@ -660,13 +687,7 @@ namespace compiler::lir {
 				case mir::Operation::FloatEq:
 				case mir::Operation::FloatNeq:
 
-				case mir::Operation::MetaCreateBox:
-				case mir::Operation::MetaCreateRef:
-				case mir::Operation::MetaCreateConst:
-				case mir::Operation::MetaCreateTuple:
-				case mir::Operation::MetaCreateVariant:
-				case mir::Operation::MetaEq:
-				case mir::Operation::MetaNeq:
+				case mir::Operation::MetaTypeOperation:
 
 				case mir::Operation::BooleanAnd:
 				case mir::Operation::BooleanOr:
@@ -682,11 +703,19 @@ namespace compiler::lir {
 					// should have been handled by HELIoS.
 					// @TODO: Refine this check.
 					const auto use_signed_version = isArgSigned(mir_instruction.arguments.at(0));
+
+					// Meta operations carry their specific kind in `extra_params`; forward it.
+					InstrParameters extra_params = NoInstrParameters{};
+					if (const auto* meta_params
+					    = std::get_if<mir::MetaParameters>(&mir_instruction.extra_params))
+						extra_params = MetaParameters{ mir2lirMetaKind(meta_params->kind) };
+
 					curr_block->instructions.emplace_back(
 						mir2lirOperation(mir_instruction.operation, use_signed_version),
 						output,
 						std::move(args),
-						mir_instruction.metadata
+						mir_instruction.metadata,
+						extra_params
 					);
 					break;
 				}
@@ -904,7 +933,7 @@ namespace compiler::lir {
 				auto [link_once, ignore_on_dvm, ignore_on_llvm] = [&]() {
 					variant_match(key.function->helios_id) {
 						variant_case(mir::FunctionSymID, sym) {
-							bool link_once_val = helios::emissionPolicy(sym.id)
+							bool link_once_val = helios::emissionPolicy(ctx, sym.id)
 							                  == helios::EmissionPolicy::Replicated;
 							bool ignore_on_dvm_val
 								= helios::hasAttribute<helios::attributes::NativeOnlyImpl>(sym.id);

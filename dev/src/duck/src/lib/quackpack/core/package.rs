@@ -3,6 +3,7 @@ use std::ffi::{OsStr, OsString};
 use std::fmt;
 use std::path::{Path, PathBuf};
 
+use super::VenvConfig;
 use crate::quackpack::core::compile::artifacts_layout::ArtifactsLayout;
 use crate::quackpack::core::identity::{Identity, Origin};
 use crate::quackpack::core::{Dependencies, Manifest, Profiles, Version};
@@ -153,6 +154,10 @@ impl AnyPackage {
 
     pub fn version(&self) -> Version {
         self.manifest().version()
+    }
+
+    pub fn venv(&self) -> &VenvConfig {
+        self.manifest().venv()
     }
 }
 

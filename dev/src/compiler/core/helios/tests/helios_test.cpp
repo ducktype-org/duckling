@@ -36,6 +36,7 @@
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
+#include <helios_private/templates/templates.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
@@ -109,6 +110,7 @@ public:
 		TESTER_ADD_TEST(testHoutElementsOrigin);
 		TESTER_ADD_TEST(testAliases);
 		TESTER_ADD_TEST(testBackendDependentCompTime);
+		TESTER_ADD_TEST(testTemplates);
 		TESTER_ADD_TEST(testOperatoriness);
 		TESTER_ADD_TEST(testMethodOperatorResolution);
 
@@ -228,6 +230,9 @@ private:
 		ASSERT_EQUAL(58, getConstValueAs<i64>("COMPLEX_VM_CALL", root_scope));
 		ASSERT_EQUAL(37, getConstValueAs<i64>("COMPLEX_VM_CALL_2", root_scope));
 		ASSERT_EQUAL(1, getConstValueAs<i64>("COLLATZ", root_scope));
+
+		// Meta builtins (size_of / alignment_of) called through a VM comp-time function call.
+		ASSERT_EQUAL(16, getConstValueAs<i64>("SIZE_AND_ALIGN_I64", root_scope));
 	}
 
 	void testMetaCompTime() {
@@ -512,11 +517,12 @@ private:
 			class_with_member_abstract_type
 		);
 
+		// @note: #973 when QueryModuleHOUTRecursively returns QResult, add assertion
+		// that it is successful
+		[[maybe_unused]]
 		std::vector<CRef<compiler::helios::HOUTUnit>> units
 			= query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>({ module_id })
 		          .valueOrPanic();
-		(void) units;  // @note: #973 when QueryModuleHOUTRecursively returns QResult, add assertion
-		               // that it is successful
 	}
 
 	void testClassInteractions() {
@@ -552,11 +558,12 @@ private:
 		auto expected_type = st(getIntegralTypeNoContext(64, Signed));
 		ASSERT_EQUAL(c_member_a_type, expected_type);
 
+		// @note: #973 when QueryModuleHOUTRecursively returns QResult, add assertion
+		// that it is successful
+		[[maybe_unused]]
 		std::vector<CRef<compiler::helios::HOUTUnit>> units
 			= query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>({ module_id })
 		          .valueOrPanic();
-		(void) units;  // @note: #973 when QueryModuleHOUTRecursively returns QResult, add assertion
-		               // that it is successful
 	}
 
 	/**
@@ -644,9 +651,8 @@ private:
 			ASSERT_TRUE(empty_result->isEmpty());
 
 			// Check that the module lowers to HOUT without throwing.
-			const auto& hout
+			[[maybe_unused]] const auto& hout
 				= ctx.query<compiler::helios::QueryModuleHOUT>(module_id)->valueOrThrow();
-			(void) hout;
 		});
 	}
 
@@ -1035,7 +1041,7 @@ private:
 	void testImport() {
 		auto [module, _] = getModule(fs::File(path("test_modules/import_tests")));
 
-		(void) query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>(module);
+		std::ignore = query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>(module);
 
 		const auto& hout
 			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
@@ -1240,7 +1246,7 @@ private:
 			// auto& var = get_var_ref(2);
 			// ASSERT_EQUAL(compiler::helios::name(var.helios_symbol), "c");
 			// ASSERT_EQUAL(var.type, st(i32_or_f32));
-			(void) i32_or_f32;  // < remove
+			std::ignore = i32_or_f32;  // < remove
 		}
 
 		{
@@ -2172,11 +2178,12 @@ private:
 			);
 		}
 
+		// @note: #973 when QueryModuleHOUTRecursively returns QResult, add assertion
+		// that it is successful
+		[[maybe_unused]]
 		std::vector<CRef<compiler::helios::HOUTUnit>> units
 			= query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>({ module })
 		          .valueOrPanic();
-		(void) units;  // @note: #973 when QueryModuleHOUTRecursively returns QResult, add assertion
-		               // that it is successful
 	}
 
 	void testMangler() {
@@ -2328,8 +2335,7 @@ private:
 	}
 
 	void testManglerOperators() {
-		auto [module, root_scope] = getModule(fs::File(path("test_modules/mangling_operators")));
-		(void) module;
+		auto [_, root_scope] = getModule(fs::File(path("test_modules/mangling_operators")));
 
 		auto mangle = [&](compiler::helios::SymID sym) {
 			return query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
@@ -3432,7 +3438,12 @@ private:
 					= ctx.query<compiler::helios::QueryConstValueOf>(sym_id).valueOrThrow();
 				const auto actual_type
 					= symbol_value.getTypeOfStoredValue(ctx).withMutability(Immutable);
-				assertEqual(actual_type, expected_type, message);
+				assertEqual(
+					actual_type,
+					expected_type,
+					message + " Expected: " + expected_type.toString()
+						+ ", Actual: " + actual_type.toString()
+				);
 			};
 
 			const auto meta_st     = stConst(compiler::tsh::getMetaType());
@@ -3626,6 +3637,71 @@ private:
 		ASSERT_EQUAL(10, getConstValueAs<i32>("VALUE", root_scope));
 	}
 
+	void testTemplates() {
+		auto [module_id, root_scope] = getModule(fs::File(path("test_modules/templates")));
+
+		// `Number:{1i64}.inner` and `Number:{2i64}.inner` each bake a distinct instantiation of
+		// the `Number` template namespace and evaluate the resulting constant.
+		ASSERT_EQUAL(1, getConstValueAs<i64>("one", root_scope));
+		ASSERT_EQUAL(2, getConstValueAs<i64>("two", root_scope));
+		ASSERT_EQUAL(3, getConstValueAs<i64>("three_1", root_scope));
+		ASSERT_EQUAL(3, getConstValueAs<i64>("three_2", root_scope));
+
+		const auto number_template = getChain("Number", root_scope).back();
+		ASSERT_EQUAL(kind(number_template), compiler::helios::SymbolKind::Template);
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			namespace templates = compiler::helios::templates;
+
+			// The declared signature of `template(a: i64)` should carry a single parameter `a`,
+			// baked to an immutable `i64` constant.
+			auto number_signature
+				= templates::getTemplateDeclarationSignature(ctx, number_template).valueOrPanic();
+
+			ASSERT_EQUAL(number_signature.parameters.size(), 1u);
+			ASSERT_EQUAL_PRINT(number_signature.parameters.at(0).name, base::StrID("a"));
+			ASSERT_EQUAL(
+				number_signature.parameters.at(0).type,
+				stConst(compiler::tsh::getIntegralType(ctx, 64, Signed))
+			);
+
+			// Baking the same template symbol with equal arguments must return
+			// the exact same symbol, while different arguments must produce distinct symbols.
+
+			const auto bake = [&](i64 value) {
+				const templates::TemplateBakeKey key{
+					.template_sym_id = number_template,
+					.template_arguments
+					= { compiler::ctv::CompileTimeValue(compiler::numeric_value::NumericValue(value)
+					) },
+				};
+				return ctx.query<templates::QueryBakeTemplateSymID>(key).valueOrThrow();
+			};
+
+			const auto baked_one       = bake(1);
+			const auto baked_one_again = bake(1);
+			const auto baked_two       = bake(2);
+
+			ASSERT_EQUAL(baked_one, baked_one_again);
+			ASSERT_TRUE(baked_one != baked_two);
+
+			ASSERT_EQUAL(kind(baked_one), compiler::helios::SymbolKind::Namespace);
+			ASSERT_EQUAL(kind(baked_two), compiler::helios::SymbolKind::Namespace);
+		});
+
+		// Here we test that the HOUT for the module is generated and contains the baked template
+		// instantiations. Adjust this as needed, if strategy for template codegen location changes.
+		auto hout_module
+			= query::entryPoint<compiler::helios::QueryModuleHOUT>(module_id)->valueOrPanic();
+
+		// Just `foo` function.
+		ASSERT_EQUAL_PRINT(hout_module.functions.size(), 1);
+
+		// 4 constants + 1 weak const (Number:{1}.inner) added to the module, because it is used by
+		// `foo`.
+		ASSERT_EQUAL_PRINT(hout_module.glob_data.size(), 4 + 1);
+	}
+
 	void testOperatoriness() {
 		auto [_, root_scope] = getModule(fs::File(path("test_modules/operatoriness")));
 		using Operatoriness  = compiler::helios::HOUTFunctionDeclaration::Operatoriness;
@@ -3686,9 +3762,8 @@ private:
 	}
 
 	void testMethodOperatorResolution() {
-		auto [module, root_scope] = getModule(fs::File(path("test_modules/method_operators")));
+		auto [_, root_scope] = getModule(fs::File(path("test_modules/method_operators")));
 		using namespace compiler::helios::code;
-		(void) module;
 
 		auto foo_class = getChain("Foo", root_scope).back();
 		auto foo_class_info
@@ -3770,6 +3845,7 @@ private:
 		for (auto symbol: all_symbols) {
 			auto maybe_scope = compiler::helios::maybeScope(symbol);
 			if (maybe_scope.empty()) continue;
+
 			auto scope = maybe_scope.value();
 			Ref  symbols_in_scope
 				= &query::entryPoint<compiler::helios::QuerySymbolsInScope>(scope)->valueOrPanic();
@@ -3781,7 +3857,11 @@ private:
 					break;
 				}
 			}
-			assertTrue(found, "Symbol was not fount in its scope");
+			assertTrue(
+				found,
+				std::string("Symbol was not found in its scope: ")
+					+ compiler::helios::name(symbol).str()
+			);
 		}
 	}
 };

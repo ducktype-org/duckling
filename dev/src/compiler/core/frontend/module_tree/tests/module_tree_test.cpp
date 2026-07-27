@@ -520,7 +520,7 @@ private:
 		);
 
 		IF_BUILD_TYPE_DEV(assertThrows<base::Panic>(
-							  [&]() { (void) GetModuleID_Functor::get(child_id); },
+							  [&]() { std::ignore = GetModuleID_Functor::get(child_id); },
 							  "Dangling ModuleTree should panic after removeModule"
 		);)
 
@@ -572,11 +572,11 @@ private:
 		ASSERT_TRUE(root->getSubmodules().illegalAccess().empty());
 
 		IF_BUILD_TYPE_DEV(assertThrows<base::Panic>(
-							  [&]() { (void) GetModuleID_Functor::get(child_id); },
+							  [&]() { std::ignore = GetModuleID_Functor::get(child_id); },
 							  "Dangling ModuleTree should panic after removeModuleRecursive"
 		);
 		                  assertThrows<base::Panic>(
-							  [&]() { (void) GetModuleID_Functor::get(grand_child_id); },
+							  [&]() { std::ignore = GetModuleID_Functor::get(grand_child_id); },
 							  "Recursive removal should also invalidate grandchildren"
 						  );)
 
@@ -651,11 +651,11 @@ private:
 	}
 
 	void testModuleLoop() {
-		auto root = fs::FileManager::createRandomVirtualDirectory();
-		auto md1  = root.createSubDirectory("md1");
-		(void) md1.createSubFile("main1", "md1.dmf");
-		auto md2 = root.createSubDirectory("md2");
-		(void) md2.createSubFile("main2", "md2.dmf");
+		auto root   = fs::FileManager::createRandomVirtualDirectory();
+		auto md1    = root.createSubDirectory("md1");
+		std::ignore = md1.createSubFile("main1", "md1.dmf");
+		auto md2    = root.createSubDirectory("md2");
+		std::ignore = md2.createSubFile("main2", "md2.dmf");
 
 		auto mt1 = ModuleTreeBuilder::create(md1, base::StrID("md1_package_id"));
 		auto mt2 = ModuleTreeBuilder::create(md2, base::StrID("md1_package_id"));
@@ -672,14 +672,14 @@ private:
 		// Create virtual directory with main module and two submodules
 		auto random = fs::FileManager::createRandomVirtualDirectory();
 		auto root   = random.createSubDirectory("root");
-		(void) root.createSubFile("root", "root.dmf");
+		std::ignore = root.createSubFile("root", "root.dmf");
 
-		auto sd1 = root.createSubDirectory("sub1");
-		(void) sd1.createSubFile("sub1 main", "sub1.dmf");
-		auto sd2 = root.createSubDirectory("sub2");
-		(void) sd2.createSubFile("sub2 main", "sub2.dmf");
+		auto sd1    = root.createSubDirectory("sub1");
+		std::ignore = sd1.createSubFile("sub1 main", "sub1.dmf");
+		auto sd2    = root.createSubDirectory("sub2");
+		std::ignore = sd2.createSubFile("sub2 main", "sub2.dmf");
 
-		(void) sd1.createSubFile("subsub main", "subsub.dmf");
+		std::ignore = sd1.createSubFile("subsub main", "subsub.dmf");
 
 		// Build two module trees from the same virtual directory and compare component hashes
 		auto mt1 = ModuleTreeBuilder::create(root, base::StrID("root_package_id11e3"));
