@@ -1,0 +1,29 @@
+PreCase: |+
+  @{cd-tmp-dir}
+  @{duck-exe} init foo @{is-ephemeral}
+  @{duck-exe} -C foo sync
+
+Tests:
+  basic:
+    Description: can get info about a venv of a project
+    Cases:
+      basic:
+        is-ephemeral: ""
+        test-cmd: "@{expect_output} --out-regex \"@{stdout-regex}\" --err-regex \"@{stderr-regex}\" duck -C foo info"
+        stderr-regex: ""
+        stdout-regex: |+
+          foo:
+            last-location: $DIT_TMP_DIR/foo
+            last-access: @{date-regex}
+            last-modification: @{date-regex}
+            not ephemeral
+      ephemeral:
+        is-ephemeral: "--ephemeral"
+        test-cmd: "@{expect_output} --out-regex \"@{stdout-regex}\" --err-regex \"@{stderr-regex}\" duck -C foo info"
+        stderr-regex: ""
+        stdout-regex: |+
+          foo:
+            last-location: $DIT_TMP_DIR/foo
+            last-access: @{date-regex}
+            last-modification: @{date-regex}
+            ephemeral

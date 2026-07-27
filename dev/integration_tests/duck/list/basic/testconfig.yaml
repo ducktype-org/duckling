@@ -1,0 +1,26 @@
+PreCase: |+
+  @{cd-tmp-dir}
+  @{duck-exe} init foo
+  @{duck-exe} init bar
+  @{duck-exe} -C foo sync
+  @{duck-exe} -C bar sync
+
+Tests:
+  basic:
+    Description: can get a list of venvs
+    Cases:
+      basic:
+        test-cmd: "@{expect_output} --out-regex \"@{stdout-regex}\" --err-regex \"@{stderr-regex}\" duck -C foo list"
+        stderr-regex: ""
+        stdout-regex: |+
+          bar:
+            last-location: $DIT_TMP_DIR/bar
+            last-access: @{date-regex}
+            last-modification: @{date-regex}
+            not ephemeral
+
+          foo:
+            last-location: $DIT_TMP_DIR/foo
+            last-access: @{date-regex}
+            last-modification: @{date-regex}
+            not ephemeral

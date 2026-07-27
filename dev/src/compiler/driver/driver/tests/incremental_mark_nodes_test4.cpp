@@ -119,7 +119,7 @@ private:
 		);
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			(void) ctx.query<driver::CompileModule>(key);
+			ctx.query<driver::CompileModule>(key);
 		});
 
 		query::internal::NodeID root_node{

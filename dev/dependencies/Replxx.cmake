@@ -41,7 +41,9 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL
 	target_compile_options(replxx PRIVATE
 		-Wno-conversion -Wno-shadow
 		-Wno-implicit-fallthrough
-		-Wno-error=conversion -Wno-error=implicit-fallthrough
+		-Wno-error=conversion 
+		-Wno-error=shadow
+		-Wno-error=implicit-fallthrough
 	)
 else()
 	message(FATAL_ERROR "Error: UNKNOWN COMPILER")

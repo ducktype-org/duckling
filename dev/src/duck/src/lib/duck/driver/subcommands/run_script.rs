@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 use clap::builder::ValueParser;
 use clap::{Arg, ArgMatches, Command, value_parser};
 
-use crate::duck::driver::cli_ext::{CommandExt, flag, optional, subcommand};
+use crate::duck::driver::cli_ext::{CommandExt, flag, subcommand};
 use crate::quackpack::subcommands::run_script::{RunScriptOptions, run_script};
 use crate::util::error::MessageError;
 use crate::{DuckContext, QuackError, QuackResult, qp_bail};
@@ -18,7 +18,6 @@ pub fn get_parser() -> Command {
         .add_profile()
         .add_release()
         .add_jobs()
-        .arg(optional("venv", "Select the venv to run the script in").conflicts_with("global"))
         .arg(flag("frozen", "Don't update the freezefile"))
         .arg(
             flag(
