@@ -1065,6 +1065,23 @@ namespace compiler::helios {
 			return {};
 		}
 
+		/**
+		 * @brief Get the enclosing statement whose specifiers also apply to `el`, if any.
+		 *
+		 * Both specifier blocks (`extern("C") { ... }`) and namespaces are transparent for
+		 * specifiers, so a declaration nested in either of them inherits the specifiers of the
+		 * enclosing statement.
+		 */
+		static base::Optional<pst::Access<pst::LangElement>> getSpecifierAncestor(
+			query::Context& ctx, pst::Access<pst::LangElement> el
+		) {
+			if (auto specifier_block = getAncestor(
+					ctx, el, pst::ElementKind::CodeBlock, pst::ElementKind::SpecifierBlock
+				))
+				return specifier_block;
+			return getAncestor(ctx, el, pst::ElementKind::CodeBlock, pst::ElementKind::Namespace);
+		}
+
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			std::vector<pst::AccessLocked<pst::StmtSpecifier>> specifiers;
 			if (!std::holds_alternative<PstImplementedSemantics>(getSymRef(key)->other)) {
@@ -1075,6 +1092,9 @@ namespace compiler::helios {
 			auto pst_element = getSymRef(key)->maybePstElement().value().unlock(ctx);
 
 			// SpecifierBlock only has a "CodeBlock" child, which can has "Stmt" children.
+			// A Namespace also only has a "CodeBlock" child, and is walked through as well, so
+			// that `extern("C") { namespace n { ... } }` gives its symbols the C ABI just like
+			// `namespace n { extern("C") { ... } }` does.
 			//
 			// The Class situation is a bit more complicated
 			// @TODO: #1535 Fix/figure out class handling
@@ -1089,13 +1109,10 @@ namespace compiler::helios {
 						std::make_move_iterator(to_add.end())
 					);
 				}
-				if (auto result_stmt = getAncestor(
-						ctx, pst_element, pst::ElementKind::CodeBlock, pst::ElementKind::SpecifierBlock
-					)) {
+				if (auto result_stmt = getSpecifierAncestor(ctx, pst_element))
 					pst_element = *std::move(result_stmt);
-				} else {
+				else
 					break;
-				}
 			}
 
 			return specifiers;

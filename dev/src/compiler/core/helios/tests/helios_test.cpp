@@ -2621,6 +2621,14 @@ private:
 		auto c_block_function        = getChain("cBlockFunction", root_scope).back();
 		auto c_block_public_function = getChain("cBlockPublicFunction", root_scope).back();
 
+		// Test symbols nested in a namespace, in both nesting orders (issue #3069)
+		auto c_nested_in_namespace
+			= getChain("c_block_namespace.cNestedInNamespace", root_scope).back();
+		auto c_reverse_nested = getChain("reverse_namespace.cReverseNested", root_scope).back();
+		auto c_prefix_nested  = getChain("c_prefix_namespace.cPrefixNested", root_scope).back();
+		auto plain_namespace_function
+			= getChain("plain_namespace.plainNamespaceFunction", root_scope).back();
+
 		// Test struct
 		auto regular_struct = getChain("RegularStruct", root_scope).back();
 
@@ -2711,6 +2719,24 @@ private:
 				ASSERT_TRUE(has_specifier(ctx, *specifiers, pst::Keyword::Extern));
 				ASSERT_TRUE(has_specifier(ctx, *specifiers, pst::Keyword::Public));
 				test_c_abi_with_library(ctx, c_block_public_function, {});
+			}
+
+			// Test namespaces nested in an extern("C") block and vice versa (issue #3069):
+			// the extern specifier propagates through namespaces in both nesting orders
+			{
+				for (auto symbol: { c_nested_in_namespace, c_reverse_nested, c_prefix_nested }) {
+					auto specifiers = ctx.query<compiler::helios::QuerySpecifiersOfSymbol>(symbol);
+					ASSERT_TRUE(has_specifier(ctx, *specifiers, pst::Keyword::Extern));
+					test_c_abi_with_library(ctx, symbol, {});
+				}
+			}
+
+			{
+				// Test function in a plain namespace - should keep the default ABI
+				auto specifiers
+					= ctx.query<compiler::helios::QuerySpecifiersOfSymbol>(plain_namespace_function);
+				ASSERT_TRUE(specifiers->empty());
+				test_default_abi(ctx, plain_namespace_function);
 			}
 
 			// Test invalid ABI function - should fail
