@@ -26,22 +26,22 @@ namespace js::impl {
 	};
 }
 
-#define JSON_REGISTER_TYPE(T)                                \
-	template<>                                               \
-	struct TypeParseTraits<T> {                              \
-		static constexpr auto NAME = CONSTEXPR_CAT_CSTR(#T); \
+#define JSON_REGISTER_TYPE(T)                                 \
+	template<>                                                \
+	struct TypeParseTraits<T> {                               \
+		static constexpr std::array NAME = std::to_array(#T); \
 	};
 
-#define JSON_REGISTER_TYPE_WITH_NAME(T, CUSTOM_NAME)                  \
-	template<>                                                        \
-	struct TypeParseTraits<T> {                                       \
-		static constexpr auto NAME = CONSTEXPR_CAT_CSTR(CUSTOM_NAME); \
+#define JSON_REGISTER_TYPE_WITH_NAME(T, CUSTOM_NAME)                   \
+	template<>                                                         \
+	struct TypeParseTraits<T> {                                        \
+		static constexpr std::array NAME = std::to_array(CUSTOM_NAME); \
 	};
 
 #define JSON_REGISTER_TEMPLATE_WITH_NAME(T, CUSTOM_NAME)                           \
 	template<class X>                                                              \
 	struct TypeParseTraits<T<X>> {                                                 \
-		static constexpr auto NAME                                                 \
+		static constexpr std::array NAME                                           \
 			= CONSTEXPR_CAT_CSTR(CUSTOM_NAME, "<", TypeParseTraits<X>::NAME, ">"); \
 	};
 
