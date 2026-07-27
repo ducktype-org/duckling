@@ -2,7 +2,6 @@
 pub mod interned_url;
 pub mod is_local_file;
 pub mod paths;
-pub mod qp_context;
 pub mod str_id;
 pub mod to_path_buf;
 pub mod to_url;
