@@ -348,18 +348,9 @@ class PSTErrorTests: public tester::TestSuite {
 	ClassStmtExample<pst::Constructor, false> bad_constructor2{ "name.(x: i32, y: i32) -> i32 = {}",
 		                                                        "name" };
 
-	// Constructors no longer accept a c++-like initialization list.
-	ClassStmtExample<pst::Constructor, false> init_list_constructor{
-		"name.init(x: i32, y: i32): z(x, y) = {}", "name"
-	};
+	ClassStmtExample<pst::CopyConstructor, true> simple_copy_ctor{ "name.copy() = {}", "name" };
 
-	ClassStmtExample<pst::CopyConstructor, true>  simple_copy_ctor{ "name.copy() = {}", "name" };
-	ClassStmtExample<pst::CopyConstructor, false> init_list_copy_ctor{ "name.copy(): z(1) = {}",
-		                                                               "name" };
-
-	ClassStmtExample<pst::MoveConstructor, true>  simple_move_ctor{ "name.move() = {}", "name" };
-	ClassStmtExample<pst::MoveConstructor, false> init_list_move_ctor{ "name.move(): z(1) = {}",
-		                                                               "name" };
+	ClassStmtExample<pst::MoveConstructor, true> simple_move_ctor{ "name.move() = {}", "name" };
 
 	ClassStmtExample<pst::Destructor, true>  simple_destructor{ "name.destroy() = {}", "name" };
 	ClassStmtExample<pst::Destructor, false> non_empty_destructor{ "name.destroy(x: i32) = {}",
