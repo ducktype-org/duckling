@@ -22,50 +22,23 @@ namespace compiler::helios {
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
 			auto expand = key.element.unlock(ctx);
 
-			// `expand` accepts either a `str` (char slice) or a `String`, so we can't use
-			// `getHoutOfExprWithExpectedType` (single expected type). Build the HOUT directly and
-			// try both coercions.
-			auto expand_expr       = expand->getValue().unlock(ctx)->getExpr();
-			auto expr_hout_qresult = ctx.query<QueryHoutOfExpr>({ expand_expr });
-			if (expr_hout_qresult->hasFailed()) return query::Failed();
-			CRef<code::Expr> expr_hout = expr_hout_qresult->valueOrThrow().ref();
+			// `expand` accepts either a `str` (char slice) or a `String`, so the expression is
+			// coerced to the first of these types that matches.
+			auto expand_expr = expand->getValue().unlock(ctx)->getExpr();
 
-			auto str_coercion = canCoerce(
-				ctx,
-				expr_hout->expression_type,
+			std::vector<tsh::SymbolType<>> accepted_types{
 				tsh::SymbolType<>::withDefaultsConst(tsh::getCharSliceType(ctx))
-			);
-			if (str_coercion.hasFailed()) return query::Failed();
-			const auto& str_result = str_coercion.valueOrThrow();
+			};
+			if (tsh::isStringTypePresent(ctx))
+				accepted_types.push_back(tsh::SymbolType<>::withDefaultsConst(tsh::getStringType(ctx
+				)));
 
-			const bool      string_present  = tsh::isStringTypePresent(ctx);
-			CoercionQResult string_coercion = [&]() -> CoercionQResult {
-				if (!string_present) return query::Failed();
-				return canCoerce(
-					ctx,
-					expr_hout->expression_type,
-					tsh::SymbolType<>::withDefaultsConst(tsh::getStringType(ctx))
-				);
-			}();
-			if (string_present && string_coercion.hasFailed()) return query::Failed();
+			auto expand_hout_qresult
+				= getHoutOfExprWithExpectedTypes(ctx, { expand_expr }, accepted_types);
+			if (expand_hout_qresult.hasFailed()) return query::Failed();
+			auto expand_hout = std::move(expand_hout_qresult).valueOrThrow();
 
-			const bool string_valid = string_present && string_coercion.valueOrThrow().isValid();
-			if (str_result.isInvalid() && !string_valid) {
-				ctx.logInt(makeBox<dia_int::PlaceholderError>(
-					base::strConcat(
-						"expand argument has to be either str or String, but got ",
-						expr_hout->expression_type.getSymbolType().toString()
-					),
-					expand_expr.unlock(ctx)->getStablePosition()
-				));
-				return query::Failed();
-			}
-
-			const auto& coercion    = str_result.isValid()
-			                            ? str_result.getCoercion()
-			                            : string_coercion.valueOrThrow().getCoercion();
-			auto        expand_hout = coercion.coerceFromRef(ctx, expr_hout);
-			auto        expand_ctv
+			auto expand_ctv
 				= ctx.query<QueryEvaluateHOUTExpression>({ expand_hout.ref() }).valueOrThrow();
 
 			auto get_ctv_string_content

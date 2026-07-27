@@ -1330,7 +1330,7 @@ private:
 			R"(
 				expand 1;
 			)",
-			{ "str or String", "i32" },
+			{ "i32", "cannot be converted to any of the accepted types", "slice char", "String" },
 			1
 		);
 
