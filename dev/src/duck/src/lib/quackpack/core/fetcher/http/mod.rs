@@ -3,7 +3,9 @@
 use curl::easy::{Easy2, Handler};
 
 use super::util::http::handlers::Collector;
-use super::util::http::{Request, Response, check_http_status_code, configure_easy2};
+use super::util::http::{
+    Request, Response, check_http_status_code, configure_easy2, response_from_handler,
+};
 use crate::{DuckContext, QuackResult, QuackResultContext};
 
 #[derive(Debug, Clone)]
@@ -35,8 +37,8 @@ impl<'duck> HttpClient<'duck> {
         }
         easy.perform()
             .context("failed to perform an HTTP request")?;
-        let code = easy.response_code()?;
-        check_http_status_code(code, &parts.uri)?;
-        Ok(easy.get_ref().response().clone())
+        let response = response_from_handler(easy);
+        check_http_status_code(&response, &parts.uri)?;
+        Ok(response)
     }
 }
