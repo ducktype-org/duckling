@@ -16,8 +16,28 @@ on:
     workflows: [tests, linter, rust]    # failed CI on a bot branch triggers a self-fix
     types: [completed]
 
+# Only runs that will DO work get a shared (serialized) group keyed by their target; everything
+# that will just skip gets a unique run_id group so it can never cancel a real @quacker-bot run.
+# - `quacker` label AND @quacker-bot issue-comment on issue N -> both `quacker-issue-N` (they share
+#   the quacker-bot/issue-N branch, so they must serialize).
+# - @quacker-bot on a PR (issue-comment on a PR, or a review comment) -> `quacker-mention-<PR#>`.
+# - anything else (non-mention comments, non-quacker labels, workflow_run) -> unique run_id.
 concurrency:
-  group: quacker-${{ github.event.issue.number || github.event.pull_request.number || github.event.workflow_run.id || github.run_id }}
+  group: >-
+    ${{
+      github.event_name == 'issues' && github.event.label.name == 'quacker'
+        && format('quacker-issue-{0}', github.event.issue.number)
+      || github.event_name == 'issue_comment' && !github.event.issue.pull_request
+        && contains(github.event.comment.body, '@quacker-bot')
+        && format('quacker-issue-{0}', github.event.issue.number)
+      || github.event_name == 'issue_comment' && github.event.issue.pull_request
+        && contains(github.event.comment.body, '@quacker-bot')
+        && format('quacker-mention-{0}', github.event.issue.number)
+      || github.event_name == 'pull_request_review_comment'
+        && contains(github.event.comment.body, '@quacker-bot')
+        && format('quacker-mention-{0}', github.event.pull_request.number)
+      || github.run_id
+    }}
   cancel-in-progress: false
 
 jobs:
@@ -31,7 +51,6 @@ jobs:
         github.event.label.name == 'quacker'
       ) || (
         github.event_name == 'issue_comment' &&
-        github.event.issue.pull_request &&
         github.event.comment.user.type != 'Bot' &&
         (github.event.comment.author_association == 'OWNER' || github.event.comment.author_association == 'MEMBER') &&
         contains(github.event.comment.body, '@quacker-bot')
@@ -99,12 +118,14 @@ jobs:
               [ "$LABEL" = "quacker" ] && is_core_dev "$SENDER" && { run=true; mode=task; a1="$ISSUE_NUM"; } ;;
             issue_comment)
               # Only core-dev members may invoke the bot via @quacker-bot — it runs with the App
-              # token's write access and can push commits to the branch. Bot comments are skipped
-              # (including quacker's own) so the bot can't trigger itself.
-              if [ -n "$IS_PR" ] && [ "$COMMENT_USER_TYPE" != "Bot" ] && \
+              # token's write access and can push commits. Bot comments are skipped (including
+              # quacker's own) so the bot can't trigger itself. On a PR -> `comment` mode (works on
+              # the PR branch); on an issue -> `issue-comment` mode (works on quacker-bot/issue-N).
+              if [ "$COMMENT_USER_TYPE" != "Bot" ] && \
                  printf '%s' "$COMMENT_BODY" | grep -qF '@quacker-bot' && \
                  is_core_dev "$COMMENT_USER"; then
-                run=true; mode=comment; a1="$ISSUE_NUM"
+                if [ -n "$IS_PR" ]; then run=true; mode=comment;       a1="$ISSUE_NUM"
+                else                     run=true; mode=issue-comment; a1="$ISSUE_NUM"; fi
               fi ;;
             pull_request_review_comment)
               # Inline/review-comment mention of @quacker-bot — same core-dev gate as above.
