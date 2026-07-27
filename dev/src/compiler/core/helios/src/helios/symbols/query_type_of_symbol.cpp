@@ -374,7 +374,7 @@ namespace compiler::helios {
 						case defgen::BuiltinTemplatedSymbol::Kind::BoxAlloc:
 							return { { tsh::SymbolType<>::withDefaults(builtin.type) }, box_type };
 						case defgen::BuiltinTemplatedSymbol::Kind::BoxDestructor:
-							// @TODO 2825: change this back to Box
+							// @TODO: #2825 change this back to Box
 							return { { box_type.withReferenceKind(tsh::ReferenceKind::Ref) },
 								     tsh::SymbolType<>::withDefaults(tsh::getUnitType()) };
 						case defgen::BuiltinTemplatedSymbol::Kind::BoxFree:

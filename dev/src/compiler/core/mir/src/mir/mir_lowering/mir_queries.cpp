@@ -430,7 +430,7 @@ namespace compiler::mir {
 			for (const auto& argument: instruction.arguments)
 				collectUsedSymbolsFromValue(argument, out, seen_functions, seen_globals);
 
-			// @TODO #2825: Remove this once we add destruct symbols in destruct/destruct if
+			// @TODO: #2825 Remove this once we add destruct symbols in destruct/destruct if
 			if (instruction.operation == Operation::Destruct
 			    || instruction.operation == Operation::DestructIf) {
 				const auto& to_destruct   = instruction.arguments.at(0).get<MIRPlace>();
