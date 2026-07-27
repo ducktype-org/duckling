@@ -50,7 +50,8 @@ namespace {
 	public:
 		/**
 		 * @brief Creates a VM comp time instance, loads all of the needed code for compile time
-		 * evaluations and initializes the global context pointer needed for meta type compile time
+		 * evaluations and initializes the global query context pointer needed for meta type compile
+		 * time
 		 * evaluations.
 		 */
 		CompTimeDVM(query::Context& ctx): code_builder(ctx, true) {
@@ -106,7 +107,7 @@ namespace {
 	 * returning the VMValue with the ctv. The DVM backend may generate new globals in the
 	 * process.
 	 */
-	std::expected<Box<vm::VmValue>, VmEvaluationError> getCtvFromBackendLowering(
+	std::expected<Box<vm::VmValue>, VmEvaluationError> vmValueFromCtvBackendLowering(
 		query::Context&                    ctx,
 		CompTimeDVM&                       comptime_dvm,
 		const CompileTimeValue&            ctv,
@@ -123,7 +124,7 @@ namespace {
 		entry_block.terminator = lir::Instruction{
 			lir::Operation::ReturnValue,
 			{},
-			{ lir::LIRValue{ lir::LIRConstant{ ctv, layout_ref } } },
+			{ lir::LIRValue{ lir::LIRConstant{ .value = ctv, .layout = layout_ref } } },
 			{},
 		};
 
@@ -263,7 +264,7 @@ namespace {
 				return maybe_vm_value;
 			}
 			variant_case(compiler::ctv::CompileTimeValue::CharSliceValue, _) {
-				return getCtvFromBackendLowering(
+				return vmValueFromCtvBackendLowering(
 					ctx,
 					comptime_dvm,
 					ctv,
@@ -276,7 +277,7 @@ namespace {
 						VmEvaluationError::Kind::ArgConversionFailed,
 						"String class type is not available in this compilation."
 					));
-				return getCtvFromBackendLowering(
+				return vmValueFromCtvBackendLowering(
 					ctx,
 					comptime_dvm,
 					ctv,
@@ -318,14 +319,16 @@ namespace {
 		query::Context& ctx, const compiler::tsh::SymbolType<>& type, Ref<vm::VmValue> vm_value
 	) {
 		const auto kind        = type.getType().getKind();
-		auto       error_value = std::unexpected(VmEvaluationError(
-            VmEvaluationError::Kind::ReturnConversionFailed,
-            base::strConcat(
-                "VMValue to CTV conversion for type: ",
-                base::enumToStr(kind),
-                " is not implemented yet."
-            )
-        ));
+		auto       error_value = [&] {
+            return std::unexpected(VmEvaluationError(
+                VmEvaluationError::Kind::ReturnConversionFailed,
+                base::strConcat(
+                    "VMValue to CTV conversion for type: ",
+                    base::enumToStr(kind),
+                    " is not implemented yet."
+                )
+            ));
+		};
 		switch (kind) {
 		case compiler::tsh::Kind::Integral: {
 			compiler::tsh::IntegralAbstractType int_type(type.getType());
@@ -397,7 +400,7 @@ namespace {
 			    == ctx.query<mangler::QueryMangledType>(char_slice_type)->valueOrThrow())
 				return CompileTimeValue{ CompileTimeValue::CharSliceValue{
 					base::StrID(charBackedVmValueToCtv(vm_value)) } };
-			return error_value;
+			return error_value();
 		}
 		case compiler::tsh::Kind::Class: {
 			if (tsh::isStringTypePresent(ctx)) {
@@ -407,10 +410,10 @@ namespace {
 					return CompileTimeValue{ CompileTimeValue::StringClassValue{
 						base::StrID(charBackedVmValueToCtv(vm_value)) } };
 			}
-			return error_value;
+			return error_value();
 		}
 		default: {
-			return error_value;
+			return error_value();
 		}
 		}
 	}

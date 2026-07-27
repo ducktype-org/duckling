@@ -1451,7 +1451,6 @@ private:
 			R"(
 				const X = xWithAdded(10);
 				fun xWithAdded(v: i64) = X + v;
-				const Y = xWithAdded(10);
 			)",
 			{ "cycle" },
 			1

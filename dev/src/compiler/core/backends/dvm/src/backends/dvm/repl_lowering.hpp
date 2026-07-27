@@ -16,8 +16,10 @@
 namespace compiler::backend_vm {
 	/**
 	 * @brief A stateful collection of code lowered into VM bytecode dedicated for REPL/scripts
-	 * compilation use. It exposes an interface for incremental DVM code emission, allowing REPL
-	 * statements to be compiled and loaded one at a time.
+	 * compilation and compile-time evaluation use. It exposes an interface for incremental DVM code
+	 * emission, allowing REPL statements, and the functions evaluated at compile time, to be
+	 * compiled and loaded one at a time. Raw bytecode (i.e. code not coming from LIR, like the
+	 * extern C functions operating on meta types) can be loaded into the same module as well.
 	 *
 	 * @note Underneath it uses ProgramLoweringContext snapshot API that was added specifically for
 	 * this use case, and DVMCodeBuilder lowering API.
@@ -37,6 +39,10 @@ namespace compiler::backend_vm {
 	 */
 	class ReplDVMCodeBuilder final {
 	public:
+		/**
+		 * @param is_comp_time_lowering Whether the lowered code is going to be run by the
+		 * compile-time DVM instance instead of being emitted as a part of the compiled program.
+		 */
 		explicit ReplDVMCodeBuilder(query::Context& query_ctx, bool is_comp_time_lowering);
 		~ReplDVMCodeBuilder();
 

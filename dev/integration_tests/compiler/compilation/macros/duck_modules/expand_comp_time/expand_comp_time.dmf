@@ -84,6 +84,7 @@ fun main() -> i64 = {
     builtin_output_i64(utils.min(20, 30));
 
     var p = pairs.Pairstri64("hello", 10);
+    builtin_output_str(p.first);
     builtin_output_i64(p.second);
 
     return 0;

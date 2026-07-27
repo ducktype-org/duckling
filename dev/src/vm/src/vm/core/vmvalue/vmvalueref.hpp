@@ -111,7 +111,10 @@ namespace vm {
 			const usize size;
 			VMValueRef  get(usize index);
 
-
+			/**
+			 * @brief Returns the raw bytes of the table, from its beginning to the end of the
+			 * memory block it lives in.
+			 */
 			[[nodiscard]] base::ModRawView asBytesView() const;
 
 		private:

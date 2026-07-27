@@ -51,8 +51,8 @@ namespace compiler::helios {
 				) return val->value;
 				return {};
 			};
-			if (auto exapnd_str_opt = get_ctv_string_content(expand_ctv)) {
-				auto expand_str = exapnd_str_opt.value();
+			if (auto expand_str_opt = get_ctv_string_content(expand_ctv)) {
+				auto expand_str = expand_str_opt.value();
 				auto pst        = pst::PST<pst::Stmt>::fromExpand(
                     expand->getStablePosition(),
                     // @TODO: #2471 change to strView, once it is fixed

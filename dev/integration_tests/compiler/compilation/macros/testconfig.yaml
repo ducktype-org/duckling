@@ -52,12 +52,12 @@ Tests:
       llvm:
         backend: llvm
         Output:
-          String: "42\n1\n30\n20\n10\n"
+          String: "42\n1\n30\n20\nhello10\n"
         ExitCode: 0
       dvm:
         backend: dvm
         Output:
-          String: "42\n1\n30\n20\n10\n"
+          String: "42\n1\n30\n20\nhello10\n"
         ExitCode: 0
 
 
