@@ -182,6 +182,11 @@ int main(int argc, const char** argv) {
 	init::InitObject _;
 	auto             clah = getVmClah();
 
+	// NOLINTNEXTLINE(concurrency-mt-unsafe) - runs before any thread is spawned
+	if (const char* unbuffered = std::getenv("DUCK_VM_UNBUFFERED")) {
+		if (std::string_view(unbuffered) == "1") std::cout << std::unitbuf;
+	}
+
 	try {
 		return clah.execute(base::safeIntConv<usize>(argc), argv);
 	} catch (const base::Exception& e) {
