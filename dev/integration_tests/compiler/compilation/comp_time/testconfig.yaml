@@ -67,3 +67,8 @@ Tests:
         Output:
           String: "String const\nslice const\n"
         ExitCode: 0
+      llvm:
+        backend: llvm
+        Output:
+          String: "String const\nslice const\n"
+        ExitCode: 0
