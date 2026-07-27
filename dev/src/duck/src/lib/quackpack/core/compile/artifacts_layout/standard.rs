@@ -26,39 +26,32 @@ use crate::util::file_locks::{FileLockManager, LockedFile};
 use crate::{DuckContext, QuackResult};
 
 #[derive(Clone, Debug)]
-/// Layout of the artifacts directory. See the [module](super::artifacts_layout) documentation.
+/// Standard layout of the artifacts directory. See the [module](super::standard_artifacts_layout) documentation.
 pub struct StandardArtifactsLayout {
     root: FileLockManager,
 }
 
 impl ArtifactsLayout for StandardArtifactsLayout {
-    const GLOBAL_LOCK_NAME: &str = ".duck_lock";
-
-    /// Create a new [`ArtifactsLayout`].
     fn new(root: PathBuf) -> Self {
         Self {
             root: FileLockManager::new(root),
         }
     }
 
-    /// Get a root directory [`Path`] for this layout.
     fn root_directory(&self) -> &Path {
         self.root.not_locked_path()
     }
 
-    /// Acquire the global artifacts lock.
     fn acquire_global_lock(&self, ctx: &DuckContext) -> QuackResult<LockedFile> {
         self.root.open_exclusive(Self::GLOBAL_LOCK_NAME, ctx)
     }
 
-    /// Get the layout for a specific profile name.
     fn for_profile(&self, profile: Profile) -> impl ProfileLayout {
         StandardProfileLayout {
             root: self.root.join(profile.name),
         }
     }
 
-    /// Get the [`FileLockManager`] for this layout.
     fn file_lock_manager(&self) -> &FileLockManager {
         &self.root
     }
@@ -71,17 +64,14 @@ pub struct StandardProfileLayout {
 }
 
 impl ProfileLayout for StandardProfileLayout {
-    /// Get the [`FileLockManager`] for this layout.
     fn file_lock_manager(&self) -> &FileLockManager {
         &self.root
     }
 
-    /// Get the root directory [`Path`] for this layout.
     fn root_directory(&self) -> &Path {
         self.root.not_locked_path()
     }
 
-    /// Get the layout for a specific dependency.
     fn for_dependency(
         &self,
         unit: &Unit,
@@ -100,32 +90,26 @@ pub struct StandardDependencyLayout {
 }
 
 impl DependencyLayout for StandardDependencyLayout {
-    /// Get the [`FileLockManager`] for this layout.
     fn file_lock_manager(&self) -> &FileLockManager {
         &self.root
     }
 
-    /// Get the root directory [`Path`] for this layout.
     fn root_directory(&self) -> &Path {
         self.root.not_locked_path()
     }
 
-    /// Acquire a lock for this dependency's artifacts.
     fn acquire_lock(&self, ctx: &DuckContext) -> QuackResult<LockedFile> {
         self.root.open_exclusive(Self::LOCK_NAME, ctx)
     }
 
-    /// Get the path for compiler artifacts.
     fn compiler_artifacts(&self) -> PathBuf {
         self.root_directory().join("artifacts")
     }
 
-    /// Acquire a lock for the JSON of dependencies of this dependency.
     fn dependency_json(&self, ctx: &DuckContext) -> QuackResult<LockedFile> {
         self.root.open_exclusive(Self::JSON_NAME, ctx)
     }
 
-    /// Get the [`PathBuf`] where dependencies JSON should be stored.
     fn dependency_json_path(&self) -> PathBuf {
         self.root_directory().join(Self::JSON_NAME)
     }

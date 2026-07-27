@@ -55,6 +55,10 @@ fn hash_subgraph_and_profile(
 }
 
 #[derive(Debug, Clone)]
+/// Shared layout of the artifacts directory.
+/// This means that we do not compile everythink in the root unit's build directory,
+/// but instead every dependency is compiled in its own build directory.
+/// See the [module](super::shared_artifacts_layout) documentation.
 pub struct SharedArtifactsLayout {
     root: FileLockManager,
 }
@@ -66,17 +70,14 @@ impl ArtifactsLayout for SharedArtifactsLayout {
         }
     }
 
-    /// Get a root directory [`Path`] for this layout.
     fn root_directory(&self) -> &Path {
         self.root.not_locked_path()
     }
 
-    /// Acquire the global artifacts lock.
     fn acquire_global_lock(&self, ctx: &DuckContext) -> QuackResult<LockedFile> {
         self.root.open_exclusive(Self::GLOBAL_LOCK_NAME, ctx)
     }
 
-    /// Get the layout for a specific profile name.
     fn for_profile(&self, profile: Profile) -> impl ProfileLayout {
         SharedProfileLayout {
             root: self.root.join(profile.name),
@@ -84,30 +85,27 @@ impl ArtifactsLayout for SharedArtifactsLayout {
         }
     }
 
-    /// Get the [`FileLockManager`] for this layout.
     fn file_lock_manager(&self) -> &FileLockManager {
         &self.root
     }
 }
 
 #[derive(Debug, Clone)]
+/// A struct responsible for a shared layout of a specific profile.
 pub struct SharedProfileLayout {
     root: FileLockManager,
     profile: Profile,
 }
 
 impl ProfileLayout for SharedProfileLayout {
-    /// Get the [`FileLockManager`] for this layout.
     fn file_lock_manager(&self) -> &FileLockManager {
         &self.root
     }
 
-    /// Get the root directory [`Path`] for this layout.
     fn root_directory(&self) -> &Path {
         self.root.not_locked_path()
     }
 
-    /// Get the layout for a specific dependency.
     fn for_dependency(&self, unit: &Unit, graph: &UnitGraph) -> QuackResult<impl DependencyLayout> {
         let path = if graph.is_root(unit) {
             self.root_directory().join(unit.unique_name())
@@ -125,6 +123,7 @@ impl ProfileLayout for SharedProfileLayout {
 }
 
 #[derive(Debug, Clone)]
+/// A struct responsible for a shared layout of a specific dependency.
 pub struct SharedDependencyLayout {
     root: FileLockManager,
 }
@@ -133,32 +132,26 @@ impl DependencyLayout for SharedDependencyLayout {
     const LOCK_NAME: &str = ".duck_lock";
     const JSON_NAME: &str = "deps.json";
 
-    /// Get the [`FileLockManager`] for this layout.
     fn file_lock_manager(&self) -> &FileLockManager {
         &self.root
     }
 
-    /// Get the root directory [`Path`] for this layout.
     fn root_directory(&self) -> &Path {
         self.root.not_locked_path()
     }
 
-    /// Acquire a lock for this dependency's artifacts.
     fn acquire_lock(&self, ctx: &DuckContext) -> QuackResult<LockedFile> {
         self.root.open_exclusive(Self::LOCK_NAME, ctx)
     }
 
-    /// Get the path for compiler artifacts.
     fn compiler_artifacts(&self) -> PathBuf {
         self.root_directory().join("artifacts")
     }
 
-    /// Acquire a lock for the JSON of dependencies of this dependency.
     fn dependency_json(&self, ctx: &DuckContext) -> QuackResult<LockedFile> {
         self.root.open_exclusive(Self::JSON_NAME, ctx)
     }
 
-    /// Get the [`PathBuf`] where dependencies JSON should be stored.
     fn dependency_json_path(&self) -> PathBuf {
         self.root_directory().join(Self::JSON_NAME)
     }

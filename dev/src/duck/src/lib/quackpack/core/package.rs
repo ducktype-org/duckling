@@ -52,7 +52,7 @@ impl AnyPackage {
         }
     }
 
-    /// Get the artifacts layout.
+    /// Get the path to the artifacts directory.
     pub fn artifacts_directory(&self) -> &Path {
         match self {
             Self::Package(package) => package.artifacts_directory(),
@@ -68,7 +68,7 @@ impl AnyPackage {
         }
     }
 
-    /// Get the artifacts layout.
+    /// Get the shared artifacts layout.
     pub fn shared_artifacts_layout(&self) -> &SharedArtifactsLayout {
         match self {
             Self::Package(package) => package.shared_artifacts_layout(),
@@ -264,11 +264,12 @@ impl Package {
         &self.artifacts_dir
     }
 
+    /// Get the artifacts layout.
     pub fn artifacts_layout(&self) -> &StandardArtifactsLayout {
         &self.artifacts_layout
     }
 
-    /// Get the path to the artifacts directory but in the shared mode.
+    /// Get the shared artifacts layout.
     pub fn shared_artifacts_layout(&self) -> &SharedArtifactsLayout {
         &self.shared_artifacts_layout
     }
@@ -367,10 +368,12 @@ impl FrontMatterScript {
         &self.artifacts_dir
     }
 
+    /// Get the artifacts layout.
     pub fn artifacts_layout(&self) -> &StandardArtifactsLayout {
         &self.artifacts_layout
     }
 
+    /// Get the shared artifacts layout.
     pub fn shared_artifacts_layout(&self) -> &SharedArtifactsLayout {
         &self.shared_artifacts_layout
     }
