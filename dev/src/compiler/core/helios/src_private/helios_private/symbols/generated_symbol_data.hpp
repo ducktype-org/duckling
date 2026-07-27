@@ -1,8 +1,9 @@
 #pragma once
 
-#include <helios/attributes/builtins.hpp>
+#include "helios/tsh/abstract_type.hpp"
 
 #include <ctv/ctv.hpp>
+#include <helios/attributes/builtins.hpp>
 #include <helios/hout/hout.hpp>  // @TODO: #404 try to relax it, it's just for Operatoriness, we could move it elsewhere
 #include <helios/scope_id.hpp>
 #include <helios/symbols/symbol_id.hpp>
@@ -88,7 +89,8 @@ namespace compiler::helios::defgen {
 	 * These are declaration-only functions. Implementation is provided by the backends.
 	 * @note This is not related with language template implementation.
 	 */
-	struct BuiltinTemplatedSymbol final {
+	class BuiltinTemplatedSymbol final {
+	public:
 		enum class Kind {
 			BoxAlloc,  //< `box_alloc(value: T) -> box T` - allocates memory for the Box.
 			BoxFree,   //< `box_free(b: box T)` - release the storage owned by the box.
@@ -116,6 +118,10 @@ namespace compiler::helios::defgen {
 				CORE_PANIC("Unhandled builtin case");
 			}
 		}
+
+		explicit BuiltinTemplatedSymbol(tsh::AbstractType type, BuiltinTemplatedSymbol::Kind kind):
+			  type(type),
+			  kind(kind) {}
 
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const;

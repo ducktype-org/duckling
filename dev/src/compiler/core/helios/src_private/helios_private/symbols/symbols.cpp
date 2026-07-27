@@ -213,21 +213,9 @@ namespace compiler::helios {
 	base::Optional<BuiltinKind> isBuiltin(SymID id) {
 		if (const auto builtin = getSymRef(id)->getDataOpt<BuiltinSemantics>())
 			return builtin.value()->builtin;
-		// The templated builtins are all builtins: box alloc/free and list free are
-		// backend-implemented, box_destructor is HOUT-implemented.
-		if (const auto templated = getSymRef(id)->getDataOpt<defgen::BuiltinTemplatedSymbol>()) {
-			switch (templated.value()->kind) {
-			case defgen::BuiltinTemplatedSymbol::Kind::BoxAlloc:
-				return BuiltinKind::BoxAlloc;
-			case defgen::BuiltinTemplatedSymbol::Kind::BoxFree:
-				return BuiltinKind::BoxFree;
-			case defgen::BuiltinTemplatedSymbol::Kind::ListFree:
-				return BuiltinKind::ListFree;
-			case defgen::BuiltinTemplatedSymbol::Kind::BoxDestructor:
-				return BuiltinKind::BoxDestructor;
-			}
-			CORE_UNREACHABLE();
-		}
+
+		if (const auto templated = getSymRef(id)->getDataOpt<defgen::BuiltinTemplatedSymbol>())
+			return templated.value()->getBuiltinKind();
 		return {};
 	}
 
