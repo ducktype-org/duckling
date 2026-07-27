@@ -1163,6 +1163,13 @@ namespace compiler::backend_llvm {
                     );
 					builder.CreateCall(free_func, { ptr_to_free });
 					return nullptr;
+				} else if (builtin_kind == lir::BuiltinFunctionKind::ListFree) {
+					llvm::Value* list_ptr  = loadLIRValue(lir_instruction.arguments.at(1), builder);
+					auto         free_func = loadBuiltin(
+                        "builtin_list_free", builder.getVoidTy(), { builder.getPtrTy() }
+                    );
+					builder.CreateCall(free_func, { list_ptr });
+					return nullptr;
 				}
 			}
 
@@ -1250,8 +1257,7 @@ namespace compiler::backend_llvm {
 				break;
 			}
 			case ListPush:
-			case ListPop:
-			case ListFree: {
+			case ListPop: {
 				llvm::Value* list_ptr
 					= loadLIRValueToPointer(lir_instruction.arguments.at(0), builder);
 
@@ -1289,14 +1295,6 @@ namespace compiler::backend_llvm {
 					);
 
 					builder.CreateCall(pop_func, { list_ptr, count_val, get_elem_size() });
-					break;
-				}
-				case ListFree: {
-					auto free_func = loadBuiltin(
-						"builtin_list_free", builder.getVoidTy(), { builder.getPtrTy() }
-					);
-
-					builder.CreateCall(free_func, { list_ptr });
 					break;
 				}
 				default:
