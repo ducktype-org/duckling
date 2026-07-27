@@ -263,7 +263,7 @@ namespace compiler::helios {
 
 	SymID boxAllocSymForType(query::Context& ctx, tsh::AbstractType pointee_type) {
 		return ctx.query<defgen::QueryGeneratedSymbol>({
-			.name = base::StrID("box_alloc"),
+			.name = builtinKindToStr(BuiltinKind::BoxAlloc),
 			.generated_symbol_data
 			= defgen::BuiltinTemplatedSymbol{ .type = pointee_type,
 		                                      .kind
@@ -273,7 +273,7 @@ namespace compiler::helios {
 
 	SymID boxFreeSymForType(query::Context& ctx, tsh::AbstractType pointee_type) {
 		return ctx.query<defgen::QueryGeneratedSymbol>({
-			.name = base::StrID("box_free"),
+			.name = builtinKindToStr(BuiltinKind::BoxFree),
 			.generated_symbol_data
 			= defgen::BuiltinTemplatedSymbol{ .type = pointee_type,
 		                                      .kind
@@ -283,7 +283,7 @@ namespace compiler::helios {
 
 	SymID listFreeSymForType(query::Context& ctx, tsh::AbstractType element_type) {
 		return ctx.query<defgen::QueryGeneratedSymbol>({
-			.name = base::StrID("list_free"),
+			.name = builtinKindToStr(BuiltinKind::ListFree),
 			.generated_symbol_data
 			= defgen::BuiltinTemplatedSymbol{ .type = element_type,
 		                                      .kind
@@ -293,7 +293,7 @@ namespace compiler::helios {
 
 	SymID boxDestructorSymForType(query::Context& ctx, tsh::AbstractType pointee_type) {
 		return ctx.query<defgen::QueryGeneratedSymbol>({
-			.name = base::StrID("box_destructor"),
+			.name = builtinKindToStr(BuiltinKind::BoxDestructor),
 			.generated_symbol_data
 			= defgen::BuiltinTemplatedSymbol{ .type = pointee_type,
 		                                      .kind

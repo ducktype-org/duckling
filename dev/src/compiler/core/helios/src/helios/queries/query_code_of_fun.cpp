@@ -180,7 +180,8 @@ namespace compiler::helios {
 				if (!is_reference || !is_matching_class) {
 					ctx.logInt(makeBox<dia_int::PlaceholderError>(
 						base::strConcat(
-							"A copy constructor's parameter must be a reference to its own class `",
+							"A copy constructor's parameter must be a reference to its own "
+							"class `",
 							name(class_type.getSymbol()),
 							"`."
 						),
@@ -276,13 +277,8 @@ namespace compiler::helios {
 					}
 					CORE_UNREACHABLE();
 				}
-				variant_case_novalue(defgen::BuiltinTemplatedSymbol) {
-					const auto builtin_kind = isBuiltin(key);
-					CORE_ASSERT(
-						builtin_kind.has_value(),
-						"QueryCodeOfFun called on a declaration-only templated builtin"
-					);
-					return getBuiltinImpl(ctx, key, builtin_kind.value());
+				variant_case(defgen::BuiltinTemplatedSymbol, symbol_data) {
+					return getBuiltinImpl(ctx, key, symbol_data.getBuiltinKind());
 				}
 				variant_default {
 					CORE_PANIC(base::strConcat(

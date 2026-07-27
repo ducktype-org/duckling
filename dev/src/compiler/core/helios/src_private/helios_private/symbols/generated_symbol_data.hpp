@@ -1,5 +1,7 @@
 #pragma once
 
+#include "helios/attributes/builtins.hpp"
+
 #include <ctv/ctv.hpp>
 #include <helios/hout/hout.hpp>  // @TODO: #404 try to relax it, it's just for Operatoriness, we could move it elsewhere
 #include <helios/scope_id.hpp>
@@ -84,6 +86,7 @@ namespace compiler::helios::defgen {
 	 * specific `box`/`List` element type. The concrete builtin is distinguished by `kind`.
 	 *
 	 * These are declaration-only functions. Implementation is provided by the backends.
+	 * @note This is not related with language template implementation.
 	 */
 	struct BuiltinTemplatedSymbol final {
 		enum class Kind {
@@ -100,6 +103,21 @@ namespace compiler::helios::defgen {
 		// `BoxAlloc`/`BoxFree`, or the element type in `List[T]` for `ListFree`.
 		tsh::AbstractType            type;
 		BuiltinTemplatedSymbol::Kind kind;
+
+		[[nodiscard]] BuiltinKind getBuiltinKind() const {
+			switch (kind) {
+			case Kind::BoxAlloc:
+				return BuiltinKind::BoxAlloc;
+			case Kind::BoxFree:
+				return BuiltinKind::BoxFree;
+			case Kind::ListFree:
+				return BuiltinKind::ListFree;
+			case Kind::BoxDestructor:
+				return BuiltinKind::BoxDestructor;
+			default:
+				CORE_PANIC("Unhandled builtin case");
+			}
+		}
 
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const;
