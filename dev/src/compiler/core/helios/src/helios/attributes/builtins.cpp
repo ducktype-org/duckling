@@ -265,9 +265,8 @@ namespace compiler::helios {
 		return ctx.query<defgen::QueryGeneratedSymbol>({
 			.name = builtinKindToStr(BuiltinKind::BoxAlloc),
 			.generated_symbol_data
-			= defgen::BuiltinTemplatedSymbol{ .type = pointee_type,
-		                                      .kind
-		                                      = defgen::BuiltinTemplatedSymbol::Kind::BoxAlloc },
+			= defgen::BuiltinTemplatedSymbol{ pointee_type,
+		                                      defgen::BuiltinTemplatedSymbol::Kind::BoxAlloc },
 		});
 	}
 
@@ -275,9 +274,8 @@ namespace compiler::helios {
 		return ctx.query<defgen::QueryGeneratedSymbol>({
 			.name = builtinKindToStr(BuiltinKind::BoxFree),
 			.generated_symbol_data
-			= defgen::BuiltinTemplatedSymbol{ .type = pointee_type,
-		                                      .kind
-		                                      = defgen::BuiltinTemplatedSymbol::Kind::BoxFree },
+			= defgen::BuiltinTemplatedSymbol{ pointee_type,
+		                                      defgen::BuiltinTemplatedSymbol::Kind::BoxFree },
 		});
 	}
 
@@ -285,9 +283,8 @@ namespace compiler::helios {
 		return ctx.query<defgen::QueryGeneratedSymbol>({
 			.name = builtinKindToStr(BuiltinKind::ListFree),
 			.generated_symbol_data
-			= defgen::BuiltinTemplatedSymbol{ .type = element_type,
-		                                      .kind
-		                                      = defgen::BuiltinTemplatedSymbol::Kind::ListFree },
+			= defgen::BuiltinTemplatedSymbol{ element_type,
+		                                      defgen::BuiltinTemplatedSymbol::Kind::ListFree },
 		});
 	}
 
@@ -295,9 +292,8 @@ namespace compiler::helios {
 		return ctx.query<defgen::QueryGeneratedSymbol>({
 			.name = builtinKindToStr(BuiltinKind::BoxDestructor),
 			.generated_symbol_data
-			= defgen::BuiltinTemplatedSymbol{ .type = pointee_type,
-		                                      .kind
-		                                      = defgen::BuiltinTemplatedSymbol::Kind::BoxDestructor },
+			= defgen::BuiltinTemplatedSymbol{ pointee_type,
+		                                      defgen::BuiltinTemplatedSymbol::Kind::BoxDestructor },
 		});
 	}
 
