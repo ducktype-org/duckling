@@ -123,11 +123,13 @@ namespace compiler::backend_vm::internal {
 		base::StrID             content,
 		bool                    is_string_class
 	) {
-		// A char slice is a class `{ _0: ptr-to-dynamic-table, _1: i64 length }`. We derive
-		// every type we need from the slice's `_0` field, so the static byte array, the
-		// dynamic-table pointer and the `fstToDynTable` cast all agree on the element type.
-		const auto& slice_data    = std::get<vm::code::DataType>(inserted_global_place.getType());
-		base::StrID ptr_type_name = slice_data.fields.at(0).type;
+		// Both char-backed types start with a pointer to the characters followed by their length:
+		// a char slice is `{ _0: ptr-to-dynamic-table, _1: i64 length }` and a `String` is
+		// `{ pointer, len, cap, offset }`. We derive every type we need from the first field, so
+		// the static byte array, the dynamic-table pointer and the `fstToDynTable` cast all agree
+		// on the element type.
+		const auto& struct_data   = std::get<vm::code::DataType>(inserted_global_place.getType());
+		base::StrID ptr_type_name = struct_data.fields.at(0).type;
 		const auto& dyn_ptr_type  = pctx.type_storage.dvm_types.at(ptr_type_name);
 
 		// ================ Part 1: insert fixed-size table with string bytes =================
@@ -175,17 +177,20 @@ namespace compiler::backend_vm::internal {
 		);
 
 		if (not is_string_class) {
+			// `str` is `{ pointer, len }`.
 			constructStructureFromValues(
 				ctor_ctx,
 				inserted_global_place,
-				slice_data,
+				struct_data,
 				{ DVMValue{ dyn_ptr }, DVMValue{ DVMImmediate::u64(length) } }
 			);
 		} else {
+			// `String` is `{ pointer, len, cap, offset }`. The buffer is a static global exactly
+			// as long as its content, so the capacity is the length and the offset is zero.
 			constructStructureFromValues(
 				ctor_ctx,
 				inserted_global_place,
-				slice_data,
+				struct_data,
 				{ DVMValue{ dyn_ptr },
 			      DVMValue{ DVMImmediate::u64(length) },
 			      DVMValue{ DVMImmediate::u64(length) },

@@ -14,6 +14,7 @@
 
 #include <base/collections/stable_container.hpp>
 #include <base/except/exceptions.hpp>
+#include <base/extend_cpp/defer.hpp>
 
 #include <vm/api/vm.hpp>
 #include <vm/bytecode/validator/errors.hpp>
@@ -78,7 +79,10 @@ namespace {
 		std::expected<void, VmEvaluationError> loadCode(
 			query::Context& ctx, const lir::LIRUnit& lir_code
 		) {
+			// The builder outlives every query, so the context must not stay set past this call.
 			code_builder.setContext(ctx);
+			defer(code_builder.invalidateContext());
+
 			auto new_code = code_builder.insertLIRUnitAndCollectNewlyLoweredCode(lir_code);
 			if (!vm::api::loadCode(*pid, new_code)) {
 				return std::unexpected(VmEvaluationError(

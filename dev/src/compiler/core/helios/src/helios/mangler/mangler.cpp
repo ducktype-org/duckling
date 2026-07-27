@@ -53,6 +53,7 @@ namespace compiler::helios::mangler {
 					numeric_value::NumericValue,
 					char,
 					ctv::CompileTimeValue::CharSliceValue,
+					ctv::CompileTimeValue::StringClassValue,
 					ctv::CompileTimeValue::UnitCTV
 				) {
 					// @TODO: #2607 This is questionable, note that this only

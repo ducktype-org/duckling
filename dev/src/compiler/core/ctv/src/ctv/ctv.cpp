@@ -26,6 +26,7 @@ namespace compiler::ctv {
 			}
 			variant_case(char, c) { hashing::addToHash(hasher, c); }
 			variant_case(CharSliceValue, val) { hashing::addToHash(hasher, val.value); }
+			variant_case(StringClassValue, val) { hashing::addToHash(hasher, val.value); }
 			variant_case_novalue(UnitCTV) {
 				// nothing to add to hash
 			}
@@ -50,6 +51,9 @@ namespace compiler::ctv {
 			variant_case(char, c) { return "'" + base::escapeString(std::string{ c }) + "'"; }
 			variant_case(CharSliceValue, val) {
 				return "\"" + base::escapeString(val.value.str()) + "\"";
+			}
+			variant_case(StringClassValue, val) {
+				return "\"" + base::escapeString(val.value.str()) + "\".toString()";
 			}
 			variant_case_novalue(UnitCTV) { return "()"; }
 			variant_case(TupleCTV, tuple) {
@@ -88,6 +92,17 @@ namespace compiler::ctv {
 			variant_case_novalue(CharSliceValue) {
 				return tsh::SymbolType<>{
 					tsh::getCharSliceType(ctx),
+					tsh::ReferenceKind::Direct,
+					tsh::Mutability::Immutable,
+				};
+			}
+			variant_case_novalue(StringClassValue) {
+				CORE_ASSERT(
+					tsh::isStringTypePresent(ctx),
+					"A String CTV cannot exist without the String type."
+				);
+				return tsh::SymbolType<>{
+					tsh::getStringType(ctx),
 					tsh::ReferenceKind::Direct,
 					tsh::Mutability::Immutable,
 				};

@@ -62,8 +62,9 @@ namespace compiler::backend_vm::internal {
 		};
 
 		/**
-		 * @brief Small helper that lowers a string literal into a static global
-		 * and returns the constructor that assembles the slice pointing to it.
+		 * @brief Small helper that lowers a string literal into a static global and returns the
+		 * constructor that assembles the char slice (or, when `is_string_class` is set, the
+		 * `String`) pointing to it.
 		 * The constructor should be used as the string literal global `ctor`.
 		 */
 		static CtorLoweringResult lowerStringLiteral(
