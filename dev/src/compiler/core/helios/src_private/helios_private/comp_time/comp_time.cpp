@@ -350,7 +350,8 @@ namespace compiler::helios {
 									auto maybe_rhs_val = rhs.template get<LhsNumT>();
 									if (!maybe_rhs_val.has_value()) {
 										CORE_PANIC(base::strConcat(
-											"Operands on binary expression evaluated at compile "
+											"Operands on binary expression evaluated at "
+											"compile "
 											"time are of different type. This should be "
 											"prevented by casts.\nLeft side is:",
 											lhs.getTypeOfStoredValue(ctx).getType().toString(),
@@ -954,6 +955,41 @@ namespace compiler::helios {
 		}
 
 		/**
+		 * @brief Checks that the signature of the function we are about to evaluate is supported
+		 * by comp-time evaluation.
+		 *
+		 * A parameter that is not trivially copyable owns memory, and a mutable one may have that
+		 * memory rewritten by the callee. The comp-time DVM cannot transfer such memory back to
+		 * the compiler, so these signatures are rejected.
+		 *
+		 * @TODO: #2990 Support memory owning parameters in comp-time evaluation.
+		 *
+		 * @throws A query failure (after logging an error) on the first unsupported parameter.
+		 */
+		static void validateSignatureSupported(query::Context& ctx, SymID function_sym_id) {
+			auto& declaration = ctx.query<QueryDeclOfFun>(function_sym_id)->valueOrThrow();
+
+			for (const auto& parameter: declaration.parameters) {
+				if (parameter.type.getMutability() == tsh::Mutability::Immutable) continue;
+				if (parameter.type.isTriviallyCopyable(ctx)) continue;
+
+				ctx.logInt(makeBox<dia_int::PlaceholderError>(
+					base::strConcat(
+						"Call to `",
+						declaration.original_name,
+						"` cannot be evaluated at compile time, because its parameter `",
+						parameter.name,
+						"` of type `",
+						parameter.type.toString(),
+						"` is mutable and not trivially copyable."
+					),
+					parameter.origin.getStablePosition()
+				));
+				query::throwFailed();
+			}
+		}
+
+		/**
 		 * @brief Evaluates a HOUT call expression using DVM Eval.
 		 * @return The calculated result represented by CompileTimeValue or a Failed error.
 		 */
@@ -965,6 +1001,8 @@ namespace compiler::helios {
 			if (!callee_ident) return query::Failed();
 
 			const SymID function_sym_id = callee_ident->symbol;
+
+			validateSignatureSupported(ctx, function_sym_id);
 
 			auto args_result = evaluateArguments(ctx, call_expr->arguments);
 			if (args_result.hasFailed()) return query::Failed();

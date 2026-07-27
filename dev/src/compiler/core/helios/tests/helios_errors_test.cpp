@@ -581,6 +581,23 @@ private:
 				{ "cannot be evaluated at compile-time", "const y = x" },
 				1
 			);
+
+			checkForErrorOnCompileModule(
+				R"(
+				class S {
+					x: i64;
+					S.copy(other: const ref S) = {
+						return S(10);
+					}
+				}
+				
+				fun takeS(x: S) = 10;
+
+				const ctvS = takeS(S(1));
+			)",
+				{ "cannot be evaluated at compile time" },
+				1
+			);
 		}
 
 		// ========================== Default initialization errors ==========================
