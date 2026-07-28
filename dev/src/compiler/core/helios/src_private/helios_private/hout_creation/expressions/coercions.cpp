@@ -12,6 +12,7 @@
 #include <helios_private/symbols/symbols.hpp>
 
 #include <base/except/exceptions.hpp>
+#include <base/str/str_utils.hpp>
 
 #include <query_framework/context/context.hpp>
 
@@ -22,39 +23,29 @@ namespace compiler::helios {
 		Box<code::Expr> handleReferenceKindCoercion(
 			query::Context& ctx, Box<code::Expr> expr, const tsh::SymbolType<>& to
 		) {
+			using rk       = tsh::ReferenceKind;
 			auto origin    = expr->origin.generatedFrom();
 			auto from_kind = expr->expression_type.getSymbolType().getRefKind();
 			auto to_kind   = to.getRefKind();
 
+			const bool is_pointer_like = from_kind == rk::Ref or from_kind == rk::Box;
+
+			// Coercions to the the same reference kind are always allowed.
 			if (from_kind == to_kind) return std::move(expr);
-
-			if (from_kind == tsh::ReferenceKind::Direct) {
-				// --- From Direct ---
-				if (to_kind == tsh::ReferenceKind::Ref)
-					// Should be explicit: var x: ref T = &T;
-					CORE_PANIC("Illegal Direct -> Ref coercion, should be caught earlier");
-				else if (to_kind == tsh::ReferenceKind::Box)
-					// Should be explicit: var x: box T = new T();
-					CORE_PANIC("Illegal Direct -> Box coercion, should be caught earlier");
-			} else if (from_kind == tsh::ReferenceKind::Ref) {
-				// --- From Reference ---
-				if (to_kind == tsh::ReferenceKind::Direct) {
-					// var x: T = ref_T; -> Dereference the rhs.
-					return makeBox<code::DerefExpr>(ctx, origin, std::move(expr));
-				} else if (to_kind == tsh::ReferenceKind::Box)
-					// Should be explicit: var x: box T = new ref_T;
-					CORE_PANIC("Illegal Ref -> Box coercion, should be caught earlier");
-			} else if (from_kind == tsh::ReferenceKind::Box) {
-				// --- From Box ---
-				if (to_kind == tsh::ReferenceKind::Direct)
-					// var x: T = box_T; -> Dereference the rhs.
-					return makeBox<code::DerefExpr>(ctx, origin, std::move(expr));
-				else if (to_kind == tsh::ReferenceKind::Ref)
-					// Should be explicit: var x: ref T = &box_T;
-					CORE_PANIC("Illegal Box -> Ref coercion, should be caught earlier");
+			// We also accept implicit auto deref from `ref` and `box`.
+			else if (is_pointer_like && to_kind == rk::Direct) {
+				// var x: T = ref_T;
+				// var x: T = box_T;
+				return makeBox<code::DerefExpr>(ctx, origin, std::move(expr));
 			}
-
-			return std::move(expr);
+			// All the others shoule be explicit via `new` or `&`.
+			CORE_PANIC(base::strConcat(
+				"Illegal coercion, from: '",
+				expr->expression_type.getSymbolType().toString(),
+				"' to '",
+				to.toString(),
+				"' should be caught earlier"
+			));
 		}
 
 		// Performs element by element coercion.
@@ -149,8 +140,8 @@ namespace compiler::helios {
 		 * abilities of its type.
 		 */
 		PassingMethod passingMethod(query::Context& ctx, const tsh::ExpressionType<>& value) {
-			const auto type    = value.getType();
-			const bool trivial = type.isTriviallyCopyable(ctx);
+			const auto symbol_type = value.getSymbolType();
+			const bool trivial     = symbol_type.isTriviallyCopyable(ctx);
 
 			switch (value.getValueCategory().getCategory()) {
 			case tsh::PrimaryCategory::Temporary:
@@ -161,8 +152,8 @@ namespace compiler::helios {
 			case tsh::PrimaryCategory::Global:
 			case tsh::PrimaryCategory::Dereferenced:
 				if (trivial) return PassingMethod::ByteCopy;
-				return type.isCopyable(ctx) ? PassingMethod::ExplicitCopyOrMove
-				                            : PassingMethod::NotCopyable;
+				return symbol_type.isCopyable(ctx) ? PassingMethod::ExplicitCopyOrMove
+				                                   : PassingMethod::NotCopyable;
 			}
 			CORE_UNREACHABLE();
 		}
@@ -323,18 +314,14 @@ namespace compiler::helios {
 			);
 		case InvalidCoercionReason::TypeNotCopyable:
 			return makeBox<dia_int::PlaceholderError>(
-				base::strConcat(
-					"Type `",
-					source_symbol_type.withReferenceKind(tsh::ReferenceKind::Direct).toString(),
-					"` cannot be copied."
-				),
+				base::strConcat("Type `", source_symbol_type.toString(), "` cannot be copied."),
 				source_position
 			);
 		case InvalidCoercionReason::RequiresExplicitCopyMove:
 			return makeBox<dia_int::PlaceholderError>(
 				base::strConcat(
 					"Cannot implicitly copy a value of non-trivially-copyable type `",
-					source_symbol_type.withReferenceKind(tsh::ReferenceKind::Direct).toString(),
+					source_symbol_type.toString(),
 					"`. Use `copy` to copy it or `move` to move it."
 				),
 				source_position
