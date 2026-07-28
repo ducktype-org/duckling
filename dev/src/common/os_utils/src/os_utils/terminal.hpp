@@ -18,8 +18,8 @@ namespace os_utils {
 	/**
 	 * @brief RawTerminalMode
 	 *
-	 * Changes the operating mode of the terminal. Uses RAII to ensure terminal settings are untouched
-	 * upon exiting repl.
+	 * Changes the operating mode of the terminal. Uses RAII to ensure terminal settings are
+	 * untouched upon exiting repl.
 	 */
 	class RawTerminalMode {
 	public:
