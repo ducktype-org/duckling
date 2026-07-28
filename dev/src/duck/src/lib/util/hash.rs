@@ -4,18 +4,16 @@ use sha2::{Digest, Sha256};
 
 /// Calculate SHA-256 hash and return it as an array of bytes.
 pub fn sha256_bytes<H: AsRef<[u8]>>(data: H) -> [u8; 32] {
-    let mut sha256 = Sha256::new();
-    sha256.update(data);
-    let hash = sha256.finalize();
-    let mut result = [0; 32];
-    result.copy_from_slice(&hash);
-    result
+    let mut hasher = Sha256Hasher::new(None);
+    hasher.update(data);
+    hasher.into_bytes()
 }
 
 /// Helper for [`sha256_bytes`], but returns a hex encoded string.
 pub fn sha256_string<H: AsRef<[u8]>>(data: H) -> String {
-    let hash = sha256_bytes(data);
-    super::hex::encode(hash)
+    let mut hasher = Sha256Hasher::new(None);
+    hasher.update(data);
+    hasher.into_string()
 }
 
 /// Struct for hashing long series of words.
@@ -28,7 +26,9 @@ pub struct Sha256Hasher {
 
 impl Sha256Hasher {
     /// Create a new [`Sha256Hasher`].
-    pub fn new(separator: &'static str) -> Self {
+    /// Separator equal to `None` is equivalent with `Some("")`.
+    pub fn new(separator: Option<&'static str>) -> Self {
+        let separator = separator.unwrap_or("");
         Self {
             current_sha256: Sha256::new(),
             separator,

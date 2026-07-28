@@ -32,10 +32,10 @@ use crate::QuackResult;
 use crate::quackpack::core::compile::artifacts_layout::{
     ArtifactsLayout, DependencyLayout, ProfileLayout,
 };
-use crate::quackpack::core::compile::executor::collect_packages;
 use crate::quackpack::core::compile::profiles::Profile;
 use crate::quackpack::core::compile::unit::Unit;
 use crate::quackpack::core::compile::unit::graph::UnitGraph;
+use crate::quackpack::core::compile::unit::unit_visitor::UnitVisitor;
 use crate::util::file_locks::FileLockManager;
 use crate::util::hash::Sha256Hasher;
 
@@ -45,10 +45,24 @@ fn hash_subgraph_and_profile(
     graph: &UnitGraph,
     profile: Profile,
 ) -> QuackResult<String> {
-    let mut hasher = Sha256Hasher::new("-");
-    for package in collect_packages(unit, graph)? {
-        hasher.update(serde_json::to_string(&package)?);
+    struct SubgraphHasher<'graph> {
+        graph: &'graph UnitGraph,
+        hasher: Sha256Hasher,
     }
+
+    impl UnitVisitor for SubgraphHasher<'_> {
+        fn visit(&mut self, unit: &Unit) -> QuackResult<()> {
+            let package = unit.multipackage_schema_package(self.graph)?;
+            self.hasher.update(serde_json::to_string(&package)?);
+            Ok(())
+        }
+    }
+    let mut hasher = SubgraphHasher {
+        graph,
+        hasher: Sha256Hasher::new(Some("-")),
+    };
+    unit.accept(&mut hasher, graph)?;
+    let mut hasher = hasher.hasher;
     hasher.update(profile.serialize_raw());
     Ok(hasher.into_string())
 }
@@ -101,7 +115,7 @@ impl ProfileLayout for SharedProfileLayout {
             unit.root_package()
                 .package()
                 .artifacts_directory()
-                .join(hash)
+                .join(format!("shared-{hash}"))
         };
         Ok(SharedDependencyLayout {
             root: FileLockManager::new(path),
