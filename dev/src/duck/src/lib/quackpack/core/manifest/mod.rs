@@ -107,6 +107,14 @@ impl Manifest {
         self.name == DuckHome::GLOBAL_PACKAGE_NAME
     }
 
+    /// Check if there are any local dependencies.
+    pub fn has_local_deps(&self) -> bool {
+        self.dependencies()
+            .all_dependencies()
+            .iter()
+            .any(|dep| dep.source().is_local())
+    }
+
     /// Get the venv configuration.
     pub fn venv(&self) -> &VenvConfig {
         &self.venv
