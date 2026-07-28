@@ -3,6 +3,7 @@
 #include <driver/test_utils.hpp>
 #include <frontend/module_tree/module_id.hpp>
 #include <frontend/module_tree/module_tree.hpp>
+#include <helios/errors/inherited_type_with_specifiers.hpp>
 #include <helios/queries/queries.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <helios/tsh/queries/types.hpp>
@@ -43,6 +44,7 @@ public:
 		TESTER_ADD_TEST(testErrorLoggingTemplates);
 		TESTER_ADD_TEST(testPointerCastErrors);
 		TESTER_ADD_TEST(testBackendDependentAttributeErrors);
+		TESTER_ADD_TEST(testInheritanceSpecifierErrors);
 
 
 		TESTER_ADD_TEST(testErrorBadExpr);
@@ -1795,6 +1797,16 @@ private:
 			testDiagnosticMessage<ImmutableVariableNoInitError>(
 				ss, dia_int::StablePosition::fakePosition()
 			);
+
+			// InheritedTypeWithSpecifiersError
+			testDiagnosticMessage<InheritedTypeWithSpecifiersError>(
+				ss,
+				ctx,
+				dia_int::StablePosition::fakePosition(),
+				"MyClass",
+				InheritanceKind::ExtendedClass,
+				st.withReferenceKind(tsh::ReferenceKind::Ref)
+			);
 		});
 	}
 
@@ -1827,6 +1839,55 @@ private:
             )",
 			{ "Symbol 'a' is already defined.", "Previous declaration here." },
 			1
+		);
+	}
+
+	/**
+	 * The extended class and the implemented interfaces are plain types, so a specifier
+	 * attached to any of them has to be reported instead of being silently dropped.
+	 */
+	void testInheritanceSpecifierErrors() {
+		// `ref` on the extended class.
+		checkForErrorOnCompileModule(
+			R"(
+                class Base { x: i64 = 0; }
+                class Derived extends ref Base {}
+            )",
+			{ "Type `ref Class Base` cannot be used as the extended class of class `Derived`: "
+		      "specifiers (`ref`) are not allowed here." },
+			1
+		);
+
+		// `const` on the extended class.
+		checkForErrorOnCompileModule(
+			R"(
+                class Base { x: i64 = 0; }
+                class Derived extends const Base {}
+            )",
+			{ "cannot be used as the extended class of class `Derived`", "(`const`)" },
+			1
+		);
+
+		// `box` on an implemented interface.
+		checkForErrorOnCompileModule(
+			R"(
+                class Base { x: i64 = 0; }
+                class Interface {}
+                class Derived extends Base implements box Interface {}
+            )",
+			{ "cannot be used as the implemented interface of class `Derived`", "(`box`)" },
+			1
+		);
+
+		// Both the extended class and an implemented interface are rejected.
+		checkForErrorOnCompileModule(
+			R"(
+                class Base { x: i64 = 0; }
+                class Interface {}
+                class Derived extends ref Base implements const Interface {}
+            )",
+			{ "extended class of class `Derived`", "implemented interface of class `Derived`" },
+			2
 		);
 	}
 

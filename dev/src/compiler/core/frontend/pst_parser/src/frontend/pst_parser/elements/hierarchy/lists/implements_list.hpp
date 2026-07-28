@@ -13,7 +13,9 @@ namespace pst {
 		CLONE_SUBELEMENTS();
 
 	public:
-		explicit ImplementsList(const LangParserState& state): List(state) {}
+		explicit ImplementsList(const LangParserState& state): List(state) {
+			this->element_kind = ElementKind::InheritanceList;
+		}
 
 		static MBox<ImplementsList> parse(LangParserState& state);
 

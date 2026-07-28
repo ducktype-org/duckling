@@ -43,6 +43,14 @@ namespace compiler::helios {
 		 * @brief Class's implemented interfaces.
 		 */
 		std::vector<tsh::AbstractType> implements;
+		/**
+		 * @brief Whether the inheritance clause of the class was rejected, with the error
+		 * already reported.
+		 *
+		 * The specifiers of an invalid inherited type are dropped, so that the rest of the class
+		 * can still be analysed; this flag makes the module compilation fail nonetheless.
+		 */
+		bool invalid_inheritance = false;
 	};
 
 	using QueryClassSymbolData_Result = query::QResult<ClassSymbolData>;

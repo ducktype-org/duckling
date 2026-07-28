@@ -10,6 +10,7 @@
 #include <helios/symbols/attributes.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
+#include <helios/symbols/query_type_symbol_data.hpp>
 #include <helios/symbols/symbol_id.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/symbol_type.hpp>
@@ -306,6 +307,10 @@ namespace compiler::helios {
 			                            .getType()
 			                            .as<tsh::ClassAbstractType>();
 
+			// The inheritance clause was rejected and the error already reported, so the module
+			// must not compile. The class itself is still usable, hence the plain failure here.
+			if (ctx.query<QueryClassSymbolData>(class_sym)->valueOrThrow().invalid_inheritance)
+				return base::BAD;
 
 			auto methods = class_type.getInterface(ctx)->getMethodsView();
 

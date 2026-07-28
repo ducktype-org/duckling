@@ -16,3 +16,4 @@ Run: "
   
 SubDirs:
   - initialization
+  - inheritance

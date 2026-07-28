@@ -1,0 +1,13 @@
+# The implemented interfaces are plain types, so `const` must be rejected here.
+
+class Base {
+    x: i64 = 0;
+}
+
+class Interface { }
+
+class Derived extends Base implements const Interface { }
+
+fun main() -> i64 = {
+    return 0i64;
+}

@@ -81,6 +81,7 @@ namespace pst {
 		// others:
 		Param,
 		ParamList,
+		InheritanceList,
 		FlowPatternList,
 		DottedName,
 		CallArgument,
