@@ -21,6 +21,7 @@ use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail, qp_err
 
 /// Parse [`Manifest`] from given [`ManifestSchema`].
 #[tracing::instrument(skip_all)]
+#[track_caller]
 pub(crate) fn parse(
     schema: &ManifestSchema,
     root: &Path,
@@ -52,6 +53,8 @@ pub(crate) fn parse(
                 qp_bail!(err);
             }
 
+            // NOTE: `script.rs::FrontMatter::name` relies on the fact that script name ==
+            // manifest.name.
             let name = StrId::from(root.file_stem().unwrap());
 
             ValidPackageName::new(name.as_str()).with_context(|| {

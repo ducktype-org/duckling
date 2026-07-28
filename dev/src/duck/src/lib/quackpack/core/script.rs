@@ -1,15 +1,15 @@
 //! Different versions of scripts.
 
-use std::ffi::{OsStr, OsString};
 use std::fmt;
 use std::path::{Path, PathBuf};
 
 use super::compile::artifacts_layout::ArtifactsLayout;
 use super::identity::{Identity, Origin};
+use super::valid_package_name::ValidPackageName;
 use super::{Dependencies, Manifest, Package, Profiles, capture_frontmatter};
 use crate::quackpack::schemas::manifest::Manifest as ManifestSchema;
 use crate::util::path_ops_ext::PathOpsExt;
-use crate::{QuackResult, QuackResultContext};
+use crate::{QuackResult, QuackResultContext, StrId};
 
 #[derive(Clone, Debug)]
 /// A generic script.
@@ -187,15 +187,25 @@ impl Script {
 pub struct PackageScript {
     package: Package,
     script_path: PathBuf,
+    script_name: StrId,
 }
 
 impl PackageScript {
     /// Create a new [`PackageScript`].
-    pub fn new(package: Package, script_path: PathBuf) -> Self {
-        Self {
+    #[track_caller]
+    pub fn new(package: Package, script_path: PathBuf) -> QuackResult<Self> {
+        let script_name = StrId::from(script_path.file_stem().unwrap());
+        ValidPackageName::new(script_name.as_str()).with_context(|| {
+            format!(
+                "script at `{}` has an invalid script name (file stem)",
+                script_path.display()
+            )
+        })?;
+        Ok(Self {
             package,
             script_path,
-        }
+            script_name,
+        })
     }
 
     /// Get the underlying [`Package`].
@@ -247,6 +257,11 @@ impl PackageScript {
     /// Transform into the underlying manifest.
     pub fn into_manifest(self) -> Manifest {
         self.into_package().into_manifest()
+    }
+
+    /// Get the script name.
+    pub fn script_name(&self) -> StrId {
+        self.script_name
     }
 }
 
@@ -317,8 +332,6 @@ pub struct FrontMatter {
     path: PathBuf,
     /// The folder the script is located in.
     script_folder: PathBuf,
-    /// Name of the script (a.k.a. file stem).
-    script_name: OsString,
     /// Original schema of the frontmatter.
     original_schema: ManifestSchema,
     /// Manifest constructed from the frontmatter.
@@ -337,15 +350,13 @@ impl FrontMatter {
         let script_folder = path
             .parent()
             .context_internal("script path without parent")?;
-        let script_name = path
-            .file_stem()
-            .context_internal("script path without file stem")?;
+        // NOTE: `parse/manifest.rs` for frontmatters sets script name as a `metadata.name`.
+        let script_name = manifest.name();
         let artifacts_dir =
             ArtifactsLayout::new(script_folder.join(".duck_build").join(script_name));
         Ok(Self {
             path: path.clone(),
             script_folder: script_folder.to_path_buf(),
-            script_name: script_name.to_os_string(),
             original_schema,
             manifest,
             artifacts_dir,
@@ -363,8 +374,9 @@ impl FrontMatter {
     }
 
     /// Get the name of the script.
-    pub fn script_name(&self) -> &OsStr {
-        &self.script_name
+    pub fn script_name(&self) -> StrId {
+        // NOTE: `parse/manifest.rs` for frontmatters sets script name as a `metadata.name`.
+        self.manifest().name()
     }
 
     /// Get the schema of the script's frontmatter.
