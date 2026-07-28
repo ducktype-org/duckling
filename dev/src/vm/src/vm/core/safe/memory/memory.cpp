@@ -284,6 +284,9 @@ namespace vm {
 			break;
 		case Type::Kind::DynamicTable:
 		case Type::Kind::FixedSizeTable: {
+			// @TODO: #3225 this walk is one level deep - the callback is invoked on the element
+			// itself, so pointers nested inside an aggregate element (e.g. a table of slices) are
+			// never visited and their refcounts are neither increased nor decreased.
 			const auto inner_type = type->getInnerType().value();
 			const auto inner_size = inner_type->getSize().asInt();
 			for (usize begin = 0; begin < data.size(); begin += inner_size)
