@@ -355,7 +355,7 @@ namespace compiler::helios::mangler {
 				// additional cases that are handled below.
 				auto ancestor_opt = [&]() {
 					variant_match(getSymRef(symbol_id)->other) {
-						variant_case_novalue(PstImplementedSemantics) {
+						variant_case_novalue(PstImplementedSemantics, BuiltinSemantics) {
 							auto ancestor = maybeSymbolPst(symbol_id).value().unlock(ctx);
 							return getPSTElementParent(ctx, ancestor);
 						}

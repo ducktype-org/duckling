@@ -37,11 +37,11 @@ namespace compiler::helios {
 	 * Can't use the STRINGIFIYABLE enum because camel case vs snake case.
 	 */
 	enum class BuiltinKind {
-		CharPtrFromSlice,
-		CharSliceFromPtrLen,
-		DvmCharAlloc,
-		DvmCharRealloc,
-		DvmCharFree,
+		PtrFromSlice,
+		SliceFromPtrLen,
+		DvmAlloc,
+		DvmRealloc,
+		DvmFree,
 		/** `size_of(v: meta) -> i64`: byte size of a type. Implemented in HOUT as a `SizeOf` op. */
 		SizeOf,
 		/** `alignment_of(v: meta) -> i64`: byte alignment of a type. HOUT `AlignOf` op. */
