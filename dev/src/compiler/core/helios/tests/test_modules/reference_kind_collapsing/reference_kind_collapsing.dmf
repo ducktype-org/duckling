@@ -6,5 +6,5 @@ fun foo() -> () = {
     var ref_ref_a: ref i32 = &ref_a;
     var ref_box_a: ref i32 = &box_a;
     var box_ref_a: box i32 = new ref_a;
-    var box_box_a: box i32 = box_a;
+    var box_box_a: box i32 = move box_a;
 }

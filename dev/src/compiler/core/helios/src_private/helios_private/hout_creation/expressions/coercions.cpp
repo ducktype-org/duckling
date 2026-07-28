@@ -103,24 +103,38 @@ namespace compiler::helios {
 		}
 
 		/**
-		 * @brief The value a copying coercion actually copies.
+		 * @brief Whether the reference-kind coercion reads the copied value out of a `ref`/`box`,
+		 * in which case what gets copied is the dereferenced value, not the reference itself.
+		 */
+		bool readsThroughReference(tsh::ReferenceKind from_kind, tsh::ReferenceKind to_kind) {
+			return (from_kind == tsh::ReferenceKind::Ref
+			        && (to_kind == tsh::ReferenceKind::Direct || to_kind == tsh::ReferenceKind::Box))
+			    || (from_kind == tsh::ReferenceKind::Box && to_kind == tsh::ReferenceKind::Direct);
+		}
+
+		/**
+		 * @brief The type of the value a copying coercion actually copies.
 		 *
-		 * When the reference-kind coercion reads a value out of a `ref`/`box`, the value that gets
-		 * copied is the dereferenced one, not the reference itself.
+		 * A `var a: box T = box_T` copies the box itself, reading a `box T` into a `T` copies the
+		 * pointee.
+		 */
+		tsh::SymbolType<> copiedValueType(
+			const tsh::SymbolType<>& from, const tsh::SymbolType<>& to
+		) {
+			if (!readsThroughReference(from.getRefKind(), to.getRefKind())) return from;
+			return from.getPointeeSymbolType();
+		}
+
+		/**
+		 * @brief The value a copying coercion actually copies.
 		 */
 		tsh::ExpressionType<> valueBeingCopied(
 			const tsh::ExpressionType<>& from, const tsh::SymbolType<>& to
 		) {
-			const tsh::ReferenceKind from_kind = from.getSymbolType().getRefKind();
-			const tsh::ReferenceKind to_kind   = to.getRefKind();
+			const tsh::SymbolType<> from_type = from.getSymbolType();
 
-			const bool reads_through_reference
-				= (from_kind == tsh::ReferenceKind::Ref
-			       && (to_kind == tsh::ReferenceKind::Direct || to_kind == tsh::ReferenceKind::Box))
-			   || (from_kind == tsh::ReferenceKind::Box && to_kind == tsh::ReferenceKind::Direct);
-
-			if (!reads_through_reference) return from;
-			return { from.getSymbolType().getPointeeSymbolType(),
+			if (!readsThroughReference(from_type.getRefKind(), to.getRefKind())) return from;
+			return { from_type.getPointeeSymbolType(),
 				     tsh::ValueCategory(tsh::PrimaryCategory::Dereferenced) };
 		}
 
@@ -314,14 +328,18 @@ namespace compiler::helios {
 			);
 		case InvalidCoercionReason::TypeNotCopyable:
 			return makeBox<dia_int::PlaceholderError>(
-				base::strConcat("Type `", source_symbol_type.toString(), "` cannot be copied."),
+				base::strConcat(
+					"Type `",
+					copiedValueType(source_symbol_type, expected_type).toString(),
+					"` cannot be copied."
+				),
 				source_position
 			);
 		case InvalidCoercionReason::RequiresExplicitCopyMove:
 			return makeBox<dia_int::PlaceholderError>(
 				base::strConcat(
 					"Cannot implicitly copy a value of non-trivially-copyable type `",
-					source_symbol_type.toString(),
+					copiedValueType(source_symbol_type, expected_type).toString(),
 					"`. Use `copy` to copy it or `move` to move it."
 				),
 				source_position

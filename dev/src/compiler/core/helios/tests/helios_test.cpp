@@ -1605,12 +1605,14 @@ private:
 			auto* deref = dynamic_cast<const DerefExpr*>(boxed_value);
 			ASSERT_TRUE(deref != nullptr);
 		}
-		// var box_box_a: box i32 = box_a; (Box -> Box)
+		// var box_box_a: box i32 = move box_a; (Box -> Box)
 		{
 			const auto& var_stmt = get_var_stmt(6);
 			ASSERT_EQUAL(var_stmt.type, box_i32);
-			// This is just a move, should be a noop
-			auto* ident = dynamic_cast<const IdentifierExpr*>(var_stmt.initial_value.get());
+			// `box = box` needs an explicit `move`.
+			auto* move_expr = dynamic_cast<const MoveExpr*>(var_stmt.initial_value.get());
+			ASSERT_TRUE(move_expr != nullptr);
+			auto* ident = dynamic_cast<const IdentifierExpr*>(move_expr->inner.get());
 			ASSERT_TRUE(ident != nullptr);
 		}
 	}
