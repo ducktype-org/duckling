@@ -28,8 +28,6 @@
 
 use std::path::{Path, PathBuf};
 
-use itertools::Itertools;
-
 use crate::quackpack::core::compile::artifacts_layout::{
     ArtifactsLayout, DependencyLayout, ProfileLayout,
 };
@@ -38,7 +36,7 @@ use crate::quackpack::core::compile::profiles::Profile;
 use crate::quackpack::core::compile::unit::Unit;
 use crate::quackpack::core::compile::unit::graph::UnitGraph;
 use crate::util::file_locks::{FileLockManager, LockedFile};
-use crate::util::hash::sha256_string;
+use crate::util::hash::Sha256Hasher;
 use crate::{DuckContext, QuackResult};
 
 fn hash_subgraph_and_profile(
@@ -46,12 +44,12 @@ fn hash_subgraph_and_profile(
     graph: &UnitGraph,
     profile: Profile,
 ) -> QuackResult<String> {
-    let subgraph_string = collect_packages(unit, graph)?
-        .iter()
-        .map(|pkg| pkg.id)
-        .join(",");
-    let to_hash = format!("{subgraph_string}-{}", profile.serialize_raw());
-    Ok(sha256_string(to_hash))
+    let mut hasher = Sha256Hasher::new("-");
+    for package in collect_packages(unit, graph)? {
+        hasher.update(package.id.as_bytes());
+    }
+    hasher.update(profile.serialize_raw());
+    Ok(hasher.into_string())
 }
 
 #[derive(Debug, Clone)]
