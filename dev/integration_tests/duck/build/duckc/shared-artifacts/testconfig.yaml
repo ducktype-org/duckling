@@ -1,0 +1,81 @@
+# The layout is:
+# - tmp3 depends on tmp4,
+# - tmp1 and tmp2 depend on tmp3.
+
+src_tmp4: |+
+  import core.builtins.*;
+
+  fun xdd() -> i64 = {
+    return 0;
+  }
+
+src_tmp3: |+
+  import core.builtins.*;
+  import tmp4.*;
+
+  fun xd() -> i64 = {
+    return xdd();
+  }
+
+src_tmp3_new: |+
+  import core.builtins.*;
+
+  fun xd() -> i64 = {
+    return 0;
+  }
+
+src_tmp12: |+
+  import core.builtins.*;
+  import tmp3.*;
+
+  fun main() -> i64 = {
+    return xd();
+  }
+
+tmp3_deps: |+
+  dependencies:
+    tmp4:
+      source:
+        path: ../tmp4
+
+tmp12_deps: |+
+  dependencies:
+    tmp3:
+      source:
+        path: ../tmp3
+
+PreCase: |+
+  @{cd-tmp-dir}
+  @{duck-exe} init tmp1
+  @{duck-exe} init tmp2
+  @{duck-exe} init tmp3
+  @{duck-exe} init tmp4
+  echo "@{src_tmp12}" > tmp1/src/src.dmf
+  echo "@{src_tmp12}" > tmp2/src/src.dmf
+  echo "@{src_tmp3}" > tmp3/src/src.dmf
+  echo "@{src_tmp4}" > tmp4/src/src.dmf
+  echo "@{tmp12_deps}" >> tmp1/quackconfig.yaml
+  echo "@{tmp12_deps}" >> tmp2/quackconfig.yaml
+PostCase: python3 check.py @{expected-subfolders}
+
+Tests:
+  shared-artifacts:
+    Description: correctly utilises sharing artifacts mechanism
+    Cases:
+      same-subgraphs:
+        # This should produce only one subfolder in build folder of tmp3.
+        expected-subfolders: 1
+        test-cmd: |+
+          echo "@{tmp3_deps}" >> tmp3/quackconfig.yaml &&
+          duck -C tmp1 build --shared-artifacts &&
+          duck -C tmp2 build --shared-artifacts
+      different-subgraphs:
+        # This should produce two subfolders in build folder of tmp3.
+        expected-subfolders: 2
+        test-cmd: |+
+          echo "@{src_tmp3_new}" > tmp3/src/src.dmf &&
+          duck -C tmp1 build --shared-artifacts &&
+          echo "@{tmp3_deps}" >> tmp3/quackconfig.yaml &&
+          echo "@{src_tmp3}" > tmp3/src/src.dmf &&
+          duck -C tmp1 build --shared-artifacts
+        

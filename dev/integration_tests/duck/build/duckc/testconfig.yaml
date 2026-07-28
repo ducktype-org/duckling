@@ -15,4 +15,5 @@ SubDirs:
   - errors
   - features
   - local-cycle
+  - shared-artifacts
   - workers-count
