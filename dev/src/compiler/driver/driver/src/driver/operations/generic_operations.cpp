@@ -7,6 +7,7 @@
 
 #include <debug_info/debug_info_io.hpp>
 #include <driver/debug_info/debug_info.hpp>
+#include <driver/dvm_symbol_annotator.hpp>
 #include <driver/module_flags/module_flags.hpp>
 #include <driver/options.hpp>
 #include <driver/repl_utils/repl_dvm_helpers.hpp>
@@ -227,7 +228,13 @@ namespace compiler::driver {
 
 				auto dvm_module_data = compileLIRModuleToDVM(&lir_data, ctx, key.build_debug_info);
 
-				serialize_to_artifact(code_output, dvm_module_data.code, vm::code::serializeCode);
+				serialize_to_artifact(
+					code_output,
+					dvm_module_data.code,
+					[](const vm::code::CodeCollection& code, std::ostream& out) {
+						vm::code::serializeCode(code, out, demangledSymbolAnnotator());
+					}
+				);
 
 				if (key.build_debug_info) {
 					dvm_module_data.debug_info.value().module_path
@@ -538,7 +545,9 @@ namespace compiler::driver {
 					return;
 				}
 
-				vm::code::serializeCode(dvm_module.code, module_output_file);
+				vm::code::serializeCode(
+					dvm_module.code, module_output_file, demangledSymbolAnnotator()
+				);
 				module_output_file.close();
 
 				auto& script_context = global_state::getScriptContext();

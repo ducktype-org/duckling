@@ -1,6 +1,7 @@
 #include "dbc_linking.hpp"
 
 #include <debug_info/debug_info_io.hpp>
+#include <driver/dvm_symbol_annotator.hpp>
 #include <global_state/artifacts_location.hpp>
 #include <global_state/global_logger.hpp>
 #include <global_state/packages.hpp>
@@ -66,7 +67,7 @@ namespace compiler::driver {
 
 		std::ofstream out(output_file.file.getFilePath().getPath(), std::ios::binary);
 		if (!out.is_open()) CORE_PANIC("Failed to open DVM package output file for writing");
-		vm::code::serializeCode(merged_code, out);
+		vm::code::serializeCode(merged_code, out, demangledSymbolAnnotator());
 
 		// Merge per-module debug info files into a single package debug info file.
 		if (!debug_info_artifacts.empty()) {

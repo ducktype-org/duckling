@@ -55,6 +55,20 @@ namespace vm::code {
 		out << '#' << ' ' << comment_content;
 	}
 
+	/**
+	 * @brief Writes the annotation of `symbol_name` (if any) as a comment line of its own, so that
+	 * it precedes the declaration the caller is about to serialize.
+	 */
+	void displaySymbolAnnotation(
+		const SymbolAnnotator& annotate, const base::StrID symbol_name, std::ostream& out
+	) {
+		if (!annotate) return;
+		const std::string annotation = annotate(symbol_name);
+		if (annotation.empty()) return;
+		displayComment(annotation, out);
+		out << '\n';
+	}
+
 	void displayInstruction(Instruction instruction, std::ostream& out) {
 		instr_match(instruction) {
 			instr_case(instructions::Comment, comment) {
@@ -75,9 +89,10 @@ namespace vm::code {
 	}
 
 	class FunctionSerializer final {
-		std::ostream&   out;
-		const Function& function;
-		i64             current_indentation = 0;
+		std::ostream&          out;
+		const Function&        function;
+		const SymbolAnnotator& annotate;
+		i64                    current_indentation = 0;
 
 		void withIdentDisplayLine(const std::function<void(std::ostream&)>& display) const {
 			out << std::string(base::safeIntConv<size_t>(current_indentation), ' ');
@@ -101,11 +116,15 @@ namespace vm::code {
 		}
 
 	public:
-		FunctionSerializer(std::ostream& out, const Function& function):
+		FunctionSerializer(
+			std::ostream& out, const Function& function, const SymbolAnnotator& annotate
+		):
 			  out(out),
-			  function(function) {}
+			  function(function),
+			  annotate(annotate) {}
 
 		void display() {
+			displaySymbolAnnotation(annotate, function.name.str, out);
 			out << "function " << function.name.str.strView() << " { ";
 			bool first = true;
 			for (const auto& param: function.signature.parameters) {
@@ -296,15 +315,20 @@ namespace vm::code {
 	}
 
 	class GlobalDataSerializer final {
-		std::ostream&     out;
-		const GlobalData& global_data;
+		std::ostream&          out;
+		const GlobalData&      global_data;
+		const SymbolAnnotator& annotate;
 
 	public:
-		GlobalDataSerializer(std::ostream& out, const GlobalData& global_data):
+		GlobalDataSerializer(
+			std::ostream& out, const GlobalData& global_data, const SymbolAnnotator& annotate
+		):
 			  out(out),
-			  global_data(global_data) {}
+			  global_data(global_data),
+			  annotate(annotate) {}
 
 		void display() {
+			displaySymbolAnnotation(annotate, global_data.name.str, out);
 			out << lang_def::keywordToStr(lang_def::Keyword::BCGlobalData).strView() << ' ';
 			out << global_data.name.str.strView() << " " << global_data.type.str.strView() << " {";
 			bool has_content   = false;
@@ -339,30 +363,37 @@ namespace vm::code {
 		}
 	};
 
-	void serializeFunction(const Function& function, std::ostream& out) {
-		FunctionSerializer serializer(out, function);
+	void serializeFunction(
+		const Function& function, std::ostream& out, const SymbolAnnotator& annotate
+	) {
+		FunctionSerializer serializer(out, function, annotate);
 		serializer.display();
 		out << '\n';
 	}
 
-	void serializeType(const TypeOfData& type, std::ostream& out) {
+	void serializeType(const TypeOfData& type, std::ostream& out, const SymbolAnnotator& annotate) {
+		displaySymbolAnnotation(annotate, typeName(type), out);
 		TypeSerializer serializer(out, type);
 		serializer.display();
 		out << '\n';
 	}
 
-	void serializeGlobal(const GlobalData& global_data, std::ostream& out) {
-		GlobalDataSerializer serializer(out, global_data);
+	void serializeGlobal(
+		const GlobalData& global_data, std::ostream& out, const SymbolAnnotator& annotate
+	) {
+		GlobalDataSerializer serializer(out, global_data, annotate);
 		serializer.display();
 		out << '\n';
 	}
 
-	void serializeCode(const CodeCollection& code, std::ostream& out) {
-		for (const auto& type: code.types) serializeType(type, out);
+	void serializeCode(
+		const CodeCollection& code, std::ostream& out, const SymbolAnnotator& annotate
+	) {
+		for (const auto& type: code.types) serializeType(type, out, annotate);
 		out << '\n';
-		for (const auto& global_data: code.global_data) serializeGlobal(global_data, out);
+		for (const auto& global_data: code.global_data) serializeGlobal(global_data, out, annotate);
 		out << '\n';
-		for (const auto& func: code.functions) serializeFunction(func, out);
+		for (const auto& func: code.functions) serializeFunction(func, out, annotate);
 		out << '\n';
 	}
 
