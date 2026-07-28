@@ -9,7 +9,7 @@ constexpr u64 OP_COUNT = 1'000'000;
 
 
 // Random u64 generator:
-std::mt19937_64 rng(int(std::random_device{}()));
+thread_local std::mt19937_64 rng(int(std::random_device{}()));
 u64 getU64() {
     return rng();
 }
@@ -27,10 +27,20 @@ int main( ) {
 
     std::vector<std::jthread> threads;
 
+    std::vector<query::internal::NodeID> node_id_pool;
+    for (u64 i = 0; i < OP_COUNT; ++i) {
+        node_id_pool.push_back(getRandomNodeID());
+    }
+
+    auto get_from_pool = [&node_id_pool]() -> query::internal::NodeID {
+        u64 i = getU64() % node_id_pool.size();
+        return node_id_pool.at(i);;
+    };
+
     for (u64 i = 0; i < THREAD_COUNT; ++i) {
-        threads.emplace_back([i]() {
+        threads.emplace_back([i, &node_id_pool, &get_from_pool]() {
             for (u64 j = 0; j < OP_COUNT; ++j) {
-                auto node_id = getRandomNodeID();
+                auto node_id = get_from_pool();
 
 
                 auto node_id_id = query::internal::NodeIDID(node_id);
