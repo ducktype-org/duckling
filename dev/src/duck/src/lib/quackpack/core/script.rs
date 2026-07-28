@@ -1,4 +1,4 @@
-//! A different versions of a script.
+//! Different versions of scripts.
 
 use std::ffi::{OsStr, OsString};
 use std::fmt;
@@ -14,7 +14,7 @@ use crate::{QuackResult, QuackResultContext};
 #[derive(Clone, Debug)]
 /// A generic script.
 ///
-/// Can either be a standalone (and in that case has a frontmatter), or associated with a package.
+/// Can be either standalone (and in that case has a frontmatter), or associated with a package.
 pub enum Script {
     Standalone(StandaloneScript),
     Associated(PackageScript),

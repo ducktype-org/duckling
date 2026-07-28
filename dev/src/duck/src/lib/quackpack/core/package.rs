@@ -53,7 +53,7 @@ impl AnyPackage {
     pub fn artifacts_dir(&self) -> &ArtifactsLayout {
         match self {
             Self::Package(package) => package.artifacts_directory(),
-            Self::Script(frontmatter_script) => frontmatter_script.artifacts_directory(),
+            Self::Script(script) => script.artifacts_directory(),
         }
     }
 
@@ -73,7 +73,7 @@ impl AnyPackage {
         }
     }
 
-    /// Try to cast `&self` into `&FrontMatterScript`.
+    /// Try to cast `&self` into `&Script`.
     pub fn try_get_script(&self) -> Option<&Script> {
         match self {
             Self::Package(_) => None,
@@ -92,7 +92,7 @@ impl AnyPackage {
         }
     }
 
-    /// Cast `&self` into `&FrontMatterScript` and panic on mismatch.
+    /// Cast `&self` into `&Script` and panic on mismatch.
     #[track_caller]
     pub fn get_script(&self) -> &Script {
         match self {
@@ -111,7 +111,7 @@ impl AnyPackage {
         }
     }
 
-    /// Try to extract [`FrontMatterScript`] from `self`.
+    /// Try to extract [`Script`] from `self`.
     pub fn try_into_script(self) -> Option<Script> {
         match self {
             Self::Package(_) => None,
@@ -130,7 +130,7 @@ impl AnyPackage {
         }
     }
 
-    /// Extract [`FrontMatterScript`] from `self` and panic on mismatch.
+    /// Extract [`Script`] from `self` and panic on mismatch.
     #[track_caller]
     pub fn unwrap_script(self) -> Script {
         match self {
@@ -275,7 +275,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn assert_send_sync_package_and_frontmatter() {
+    fn assert_send_sync_package_and_script() {
         fn assert_send<T: Send>() {}
         fn assert_sync<T: Sync>() {}
         assert_send::<Package>();

@@ -156,17 +156,26 @@ impl PackageLoader {
     }
 
     /// Loads the appropriate venv of the script.
+    #[track_caller]
     pub fn load_script<'duck>(
         ctx: &'duck DuckContext,
         script_path: &Path,
         script_folder: &Path,
         global: bool,
     ) -> QuackResult<PackageContext<'duck>> {
+        let associated_script = |package| {
+            let script = PackageScript::new(package, script_path.to_path_buf());
+            PackageContext::new_script(script.into(), ctx)
+        };
+        let global_package = PackageLoader::global_package(ctx)
+            .context_internal("failed to load the global package")?
+            .into_package()
+            .unwrap_package();
         let has_frontmatter = Script::has_frontmatter(script_path)?;
         // If this is `Ok(_)` then the script lies inside a package.
         let possible_package =
             PackageLoader::find_from_directory(script_folder, ctx, AllowGlobalPackage::No);
-        // If possible_package is `Err` but it does steem from `PackageNotFound` then return the error.
+        // If possible_package is `Err` and it does not steem from `PackageNotFound` then return the error.
         // After this, possible_package is `Err` if and only if script does not belong to a package.
         if let Err(ref err) = possible_package
             && !err.has_in_chain::<PackageNotFound>()
@@ -181,14 +190,14 @@ impl PackageLoader {
             }
             (true, Err(_), false) => PackageContext::new_standalone_script(script_path, ctx),
             // `global` forces the script to be run in the global venv, even if it is inside a package.
-            (false, _, true) => PackageLoader::global_package(ctx),
-            // If script does not belong to a package, treat it as a standalone script.
-            (false, Err(_), false) => PackageContext::new_standalone_script(script_path, ctx),
-            // Script under a package
+            (false, _, true) => Ok(associated_script(global_package)),
+            // If script does not belong to a package, nor any special option has been specified,
+            // treat it as a script under the global package (the default of defaults).
+            (false, Err(_), false) => Ok(associated_script(global_package)),
+            // Script under a package.
             (false, Ok(pcx), false) => {
                 let package = pcx.into_package().unwrap_package();
-                let script = PackageScript::new(package, script_path.to_path_buf());
-                Ok(PackageContext::new_script(script.into(), ctx))
+                Ok(associated_script(package))
             }
         }
     }

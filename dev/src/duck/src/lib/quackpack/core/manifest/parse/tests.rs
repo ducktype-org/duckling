@@ -1448,7 +1448,7 @@ dependencies:
             [
                 "remove all the fields besides `dependencies`, `dev-dependencies` and `profiles`",
                 &format!(
-                    "illegal fields `metadata`, `features` in the frontmatter at {}",
+                    "illegal fields `metadata`, `features` in the frontmatter at `{}`",
                     frontmatter_path.display()
                 ),
             ]

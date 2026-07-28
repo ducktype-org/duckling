@@ -116,7 +116,7 @@ pub fn sync(
         freeze_name(
             pcx.package()
                 .try_get_package()
-                .context_internal("expose_freezefile set on frontmatter pseudo package")?,
+                .context_internal("`expose-freezefile` set on a script")?,
         )
         .write(json)?;
     }
@@ -207,7 +207,7 @@ fn load_external_freezefile(
     let freeze_path = freeze_name(
         pcx.package()
             .try_get_package()
-            .context_internal("expose_freezefile set on frontmatter pseudo package")?,
+            .context_internal("`expose-freezefile` set on a script")?,
     );
     if !freeze_path.is_file() {
         return Ok(None);

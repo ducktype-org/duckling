@@ -41,7 +41,7 @@ pub(crate) fn parse(
             let illegal_fields = schema.fields_disallowed_in_expanded_frontmatter();
             if !illegal_fields.is_empty() {
                 let mut err = qp_err!(
-                    "illegal field{} `{}` in the frontmatter at {}",
+                    "illegal field{} `{}` in the frontmatter at `{}`",
                     illegal_fields.s_if_plural(),
                     illegal_fields.join("`, `"),
                     root.display()
