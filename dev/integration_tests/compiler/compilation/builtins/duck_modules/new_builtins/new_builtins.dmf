@@ -1,7 +1,7 @@
 import core.builtins.*;
 
 fun main() -> i64 = {
-    var p = dvm_char_alloc(8u64);
+    var p = dvm_alloc:{char}(8u64);
     p[0] = 'H';
     p[1] = 'E';
     p[2] = 'L';
@@ -9,12 +9,12 @@ fun main() -> i64 = {
     p[4] = 'O';
     let a = p[0];
 
-    dvm_char_realloc(p, 16u64);
+    dvm_realloc:{char}(p, 16u64);
     p[5] = '\n';
 
-    let s = char_slice_from_ptr_len(p, 6 as u64);
+    let s = slice_from_ptr_len:{char}(p, 6 as u64);
     builtin_output_str(s);
 
-    dvm_char_free(p);
+    dvm_free:{char}(p);
     return 0i64;
 }
