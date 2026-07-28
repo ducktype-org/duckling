@@ -1,6 +1,6 @@
 #pragma once
 
-#include <vm/core/vmvalue/vmvalueref.hpp>
+#include <vm/core/vmvalue/ivmvalueref.hpp>
 #include <vm/debugger/debugger.hpp>
 #include <vm/debugger/UI/debug_adapter/protocol.hpp>
 
@@ -53,13 +53,13 @@ namespace vm::debugger::debug_adapter {
 		u64 total_frames = 0;
 
 		struct VarInfo {
-			VMValueRef var;
+			SharedBox<IVMValueRef> var;
 			// reference to childs, 0 if not necessary
 			u64 var_ref{};
 		};
 
 		using VariablesReferenceState
-			= std::variant<u64, VMValueRef, std::map<std::string, VarInfo>>;
+			= std::variant<u64, SharedBox<IVMValueRef>, std::map<std::string, VarInfo>>;
 		// vector of variables references
 		std::vector<VariablesReferenceState> variables;
 
@@ -84,7 +84,7 @@ namespace vm::debugger::debug_adapter {
 		 * @note **Thread Safety:** Must be called only by functions holding `variables_mutex`.
 		 */
 		std::expected<std::map<std::string, VarInfo>, std::string> varRefFromVMValueRef(
-			VMValueRef& value
+			SharedBox<IVMValueRef>& value
 		);
 
 		// DAP I/O
