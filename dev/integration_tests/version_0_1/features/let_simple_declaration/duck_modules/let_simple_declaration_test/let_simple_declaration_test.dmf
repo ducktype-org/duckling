@@ -13,7 +13,7 @@ fun main() -> i64 = {
 
     # Output let values
     builtin_output_i64(a);              # 10
-    builtin_output_i64(b as i64);       # 20
+    builtin_output_i64(b);              # 20
     builtin_output_i64(d);              # 30
     builtin_output_i64(e);              # 40
 

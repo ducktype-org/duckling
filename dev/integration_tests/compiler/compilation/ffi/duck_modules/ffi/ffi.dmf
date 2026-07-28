@@ -38,11 +38,11 @@ fun main() -> i64 = {
     builtin_output_i64(take_big(Big(100i64, 200i64, 300i64)));         # 600
 
     let s = make_small(1i64);
-    builtin_output_i64(s.x as i64);                                    # 1
-    builtin_output_i64(s.y as i64);                                    # 2
+    builtin_output_i64(s.x);                                           # 1
+    builtin_output_i64(s.y);                                           # 2
 
     let m = make_mid(5i64);
-    builtin_output_i64(m.inner.i as i64);                              # 5
+    builtin_output_i64(m.inner.i);                                     # 5
     builtin_output_i64(m.inner.f as i64);                              # 10
     builtin_output_i64(m.g as i64);                                    # 15
 

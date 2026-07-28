@@ -49,13 +49,13 @@ fun main() -> i64 = {
     builtin_output_i64(10 % 3 + 1);      # 2
 
     # Test with different integer types
-    var x: i32 = 5 as i32;
-    var y: i32 = 3 as i32;
-    builtin_output_i64((x + y) as i64);  # 8
-    builtin_output_i64((x - y) as i64);  # 2
-    builtin_output_i64((x * y) as i64);  # 15
-    builtin_output_i64((x / y) as i64);  # 1
-    builtin_output_i64((x % y) as i64);  # 2
+    var x: i32 = 5;
+    var y: i32 = 3;
+    builtin_output_i64(x + y);           # 8
+    builtin_output_i64(x - y);           # 2
+    builtin_output_i64(x * y);           # 15
+    builtin_output_i64(x / y);           # 1
+    builtin_output_i64(x % y);           # 2
 
     # Test with unsigned
     var u1: u64 = 100u64;
