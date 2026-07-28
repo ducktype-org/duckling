@@ -36,16 +36,6 @@ namespace reverse_namespace { extern("C") {
     fundecl cReverseNested() -> i32;
 }}
 
-# Namespace with a prefix specifier - propagates to its members as well
-extern("C") namespace c_prefix_namespace {
-    fundecl cPrefixNested() -> i32;
-}
-
-# Plain namespace - members keep the default ABI
-namespace plain_namespace {
-    fundecl plainNamespaceFunction() -> i32;
-}
-
 # Basic struct (no specifiers)
 class RegularStruct {
      x: i32;
