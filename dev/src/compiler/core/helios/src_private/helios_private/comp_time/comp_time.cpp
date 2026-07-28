@@ -9,6 +9,7 @@
 #include <helios/hout/visitors.hpp>
 #include <helios/mangler/mangler.hpp>
 #include <helios/queries/function_queries.hpp>
+#include <helios/queries/global_data_queries.hpp>
 #include <helios/queries/queries.hpp>
 #include <helios/symbols/lang_primitives.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
@@ -104,7 +105,7 @@ namespace compiler::helios {
 			}
 
 			void visitLiteralStringExpr(const code::LiteralStringExpr& expr) final {
-				result = CompileTimeValue{ expr.value };
+				result = CompileTimeValue{ CompileTimeValue::CharSliceValue{ expr.value } };
 			}
 
 			void visitLiteralTypeExpr(const code::LiteralTypeExpr& expr) final {
@@ -349,7 +350,8 @@ namespace compiler::helios {
 									auto maybe_rhs_val = rhs.template get<LhsNumT>();
 									if (!maybe_rhs_val.has_value()) {
 										CORE_PANIC(base::strConcat(
-											"Operands on binary expression evaluated at compile "
+											"Operands on binary expression evaluated at "
+											"compile "
 											"time are of different type. This should be "
 											"prevented by casts.\nLeft side is:",
 											lhs.getTypeOfStoredValue(ctx).getType().toString(),
@@ -777,10 +779,6 @@ namespace compiler::helios {
 					result = ctv::CompileTimeValue(false);
 					break;
 				}
-				case tsh::Kind::String: {
-					result = ctv::CompileTimeValue(base::StrID(""));
-					break;
-				}
 				default:
 					ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
 						base::strConcat(
@@ -890,9 +888,8 @@ namespace compiler::helios {
 		) {
 			// Collect all function dependencies for this function. All functions needed in
 			// order to evaluate this one.
-			auto& all_dependencies = ctx.query<QueryTransitiveUsedSymbols>(function_sym_id)
-			                             ->valueOrThrow()
-			                             .used_functions;
+			auto& all_dependencies
+				= ctx.query<QueryTransitiveUsedSymbols>(function_sym_id)->valueOrThrow();
 
 			auto mangled_name_function_to_call
 				= ctx.query<mangler::QueryMangledSymbol>({ .symbol_key = function_sym_id });
@@ -904,10 +901,23 @@ namespace compiler::helios {
 				hout_unit.functions.emplace_back(
 					&ctx.query<QueryCodeOfFun>(function_sym_id)->valueOrThrow()
 				);
-			for (const SymID& func_id: all_dependencies) {
+			for (const SymID& func_id: all_dependencies.used_functions) {
 				if (not implementsQueryCodeOfFun(func_id)) continue;
 				auto& hout_func = ctx.query<QueryCodeOfFun>(func_id)->valueOrThrow();
 				hout_unit.functions.emplace_back(&hout_func);
+				CORE_DEV_LOG(
+					Compiler,
+					"Lowered function `",
+					hout_func.declaration->original_name,
+					"` for comp-time."
+				);
+			}
+			for (const SymID& glob_id: all_dependencies.used_globals) {
+				auto& hout_glob = ctx.query<QueryHOUTGlobalData>(glob_id)->valueOrThrow();
+				hout_unit.glob_data.emplace_back(&hout_glob);
+				CORE_DEV_LOG(
+					Compiler, "Lowered global `", hout_glob.original_name, "` for comp-time."
+				);
 			}
 			auto lir_unit
 				= lir::lowerToLIRUnit(ctx, mir::lowerToMIRUnit(ctx, &hout_unit).valueOrThrow());
@@ -919,10 +929,6 @@ namespace compiler::helios {
 			CORE_ASSERT(
 				lir_unit.lir_functions.size() == hout_unit.functions.size(),
 				"Number of lir functions should be the same as number of lowered dependencies."
-			);
-			CORE_ASSERT(
-				lir_unit.lir_globals.empty(),
-				"LIR global variables are not supported in compile time evaluation."
 			);
 
 			return LIRBuildResult{
@@ -949,6 +955,41 @@ namespace compiler::helios {
 		}
 
 		/**
+		 * @brief Checks that the signature of the function we are about to evaluate is supported
+		 * by comp-time evaluation.
+		 *
+		 * A parameter that is not trivially copyable owns memory, and a mutable one may have that
+		 * memory rewritten by the callee. The comp-time DVM cannot transfer such memory back to
+		 * the compiler, so these signatures are rejected.
+		 *
+		 * @TODO: #2990 Support memory owning parameters in comp-time evaluation.
+		 *
+		 * @throws A query failure (after logging an error) on the first unsupported parameter.
+		 */
+		static void validateSignatureSupported(query::Context& ctx, SymID function_sym_id) {
+			auto& declaration = ctx.query<QueryDeclOfFun>(function_sym_id)->valueOrThrow();
+
+			for (const auto& parameter: declaration.parameters) {
+				if (parameter.type.getMutability() == tsh::Mutability::Immutable) continue;
+				if (parameter.type.isTriviallyCopyable(ctx)) continue;
+
+				ctx.logInt(makeBox<dia_int::PlaceholderError>(
+					base::strConcat(
+						"Call to `",
+						declaration.original_name,
+						"` cannot be evaluated at compile time, because its parameter `",
+						parameter.name,
+						"` of type `",
+						parameter.type.toString(),
+						"` is mutable and not trivially copyable."
+					),
+					parameter.origin.getStablePosition()
+				));
+				query::throwFailed();
+			}
+		}
+
+		/**
 		 * @brief Evaluates a HOUT call expression using DVM Eval.
 		 * @return The calculated result represented by CompileTimeValue or a Failed error.
 		 */
@@ -960,6 +1001,8 @@ namespace compiler::helios {
 			if (!callee_ident) return query::Failed();
 
 			const SymID function_sym_id = callee_ident->symbol;
+
+			validateSignatureSupported(ctx, function_sym_id);
 
 			auto args_result = evaluateArguments(ctx, call_expr->arguments);
 			if (args_result.hasFailed()) return query::Failed();
