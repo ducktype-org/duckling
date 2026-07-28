@@ -76,6 +76,10 @@ namespace base {
 		[[nodiscard]]
 		const char* what() const noexcept override;
 	};
+
+	namespace internal {
+		constinit inline bool is_unit_test = false;
+	}
 }
 
 /**
@@ -148,3 +152,12 @@ namespace base {
 		}                                                                         \
 		if (CAT(core_assert_noexcept_was_panic_, __LINE__)) { std::terminate(); } \
 	}
+
+
+/**
+ * @brief Panics if execution flow reaches this statement outside of a unit test.
+ * Can be used to mark e.g. helper functions designed purely for testing.
+ *
+ * In test binaries this is a no-op, elsewhere throws a panic.
+ */
+#define PANIC_IF_NOT_TEST() CORE_ASSERT(base::internal::is_unit_test, "Not unit test binary")

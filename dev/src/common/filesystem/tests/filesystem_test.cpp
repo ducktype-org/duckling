@@ -56,7 +56,7 @@ private:
 		// Test FilePath::canonical() on virtual path (should throw)
 		try {
 			fs::FilePath vpath("vfs:/some_virtual_path");
-			(void) vpath.canonical();
+			std::ignore = vpath.canonical();
 			assertTrue(false, "canonical() on virtual path should throw");
 		} catch (const base::Panic&) {
 			// Expected
@@ -220,7 +220,7 @@ private:
 
 		// Test creating a file with duplicate name (should throw)
 		try {
-			(void) virtual_dir.createSubFile("Duplicate content", "testFile.txt");
+			std::ignore = virtual_dir.createSubFile("Duplicate content", "testFile.txt");
 			assertTrue(false, "Creating a file with duplicate name should throw");
 		} catch (const base::Panic&) {
 			// Expected behavior
@@ -370,21 +370,21 @@ private:
 
 		// Test error cases for path conversions
 		try {
-			(void) fs::FilePath("vfs:/invalid").toVirtualPath();
+			std::ignore = fs::FilePath("vfs:/invalid").toVirtualPath();
 			assertTrue(false, "Should fail to convert virtual path to virtual path");
 		} catch (const base::Panic&) {
 			// Expected behavior
 		}
 
 		try {
-			(void) temp_folder_path.toVirtualPath();
+			std::ignore = temp_folder_path.toVirtualPath();
 			assertTrue(false, "Should fail to convert temp path to virtual path");
 		} catch (const base::Panic&) {
 			// Expected behavior
 		}
 
 		try {
-			(void) simple_physical_path.toPhysicalPath();
+			std::ignore = simple_physical_path.toPhysicalPath();
 			assertTrue(false, "Should fail to convert non-virtual path from virtual path");
 		} catch (const base::Panic&) {
 			// Expected behavior
@@ -394,9 +394,9 @@ private:
 
 		// Test createFileIn with duplicate name in virtual directory
 		auto test_virtual_dir = fs::FileManager::createRandomVirtualDirectory();
-		(void) test_virtual_dir.createSubFile("content", "duplicate.txt");
+		std::ignore           = test_virtual_dir.createSubFile("content", "duplicate.txt");
 		try {
-			(void) test_virtual_dir.createSubFile("content", "duplicate.txt");
+			std::ignore = test_virtual_dir.createSubFile("content", "duplicate.txt");
 			assertTrue(false, "Should fail to create duplicate file in virtual directory");
 		} catch (const base::Panic&) {
 			// Expected: CORE_PANIC("File already exists in virtual directory: ...")
@@ -404,27 +404,27 @@ private:
 
 		// Test createFileIn with duplicate name in physical directory
 		auto test_temp_dir = fs::FileManager::createRandomTempDirectory();
-		(void) test_temp_dir.createSubFile("content", "duplicate.txt");
+		std::ignore        = test_temp_dir.createSubFile("content", "duplicate.txt");
 		try {
-			(void) test_temp_dir.createSubFile("content", "duplicate.txt");
+			std::ignore = test_temp_dir.createSubFile("content", "duplicate.txt");
 			assertTrue(false, "Should fail to create duplicate file in physical directory");
 		} catch (const base::Panic&) {
 			// Expected: CORE_PANIC("File already exists in directory: ...")
 		}
 
 		// Test createDirectoryIn with duplicate name in virtual directory
-		(void) test_virtual_dir.createSubDirectory("duplicate_dir");
+		std::ignore = test_virtual_dir.createSubDirectory("duplicate_dir");
 		try {
-			(void) test_virtual_dir.createSubDirectory("duplicate_dir");
+			std::ignore = test_virtual_dir.createSubDirectory("duplicate_dir");
 			assertTrue(false, "Should fail to create duplicate directory in virtual directory");
 		} catch (const base::Panic&) {
 			// Expected: CORE_PANIC("Directory already exists in virtual directory: ...")
 		}
 
 		// Test createDirectoryIn with duplicate name in physical directory
-		(void) test_temp_dir.createSubDirectory("duplicate_dir");
+		std::ignore = test_temp_dir.createSubDirectory("duplicate_dir");
 		try {
-			(void) test_temp_dir.createSubDirectory("duplicate_dir");
+			std::ignore = test_temp_dir.createSubDirectory("duplicate_dir");
 			assertTrue(false, "Should fail to create duplicate directory in physical directory");
 		} catch (const base::Panic&) {
 			// Expected: CORE_PANIC("Directory already exists: ...")

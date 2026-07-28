@@ -45,6 +45,15 @@ namespace compiler::lir {
 		return LIRLocal{ CRef<tsl::TypeLayout>(&bool_layout) };
 	}
 
+	LIRLocal LIRLocal::refLocal(query::Context& ctx, const tsh::SymbolType<> pointee_type) {
+		const auto ref_type   = pointee_type.withReferenceKind(tsh::ReferenceKind::Ref);
+		auto&      ref_layout = ctx.query<tsl::QuerySymbolTypeLayout>(ref_type)->valueOrPanicMsg(
+            "layout query failed at LIR stage"
+        );
+
+		return LIRLocal{ CRef<tsl::TypeLayout>(&ref_layout) };
+	}
+
 	LIRGlobal LIRGlobal::fromMIR(query::Context& ctx, mir::MIRGlobal mir_global) {
 		auto type_layout
 			= CRef<tsl::TypeLayout>(&ctx.query<tsl::QuerySymbolTypeLayout>(mir_global.type)
@@ -275,8 +284,12 @@ namespace compiler::lir {
 				output_value << " :=";
 			}
 			output << output_value.str() << ' ';
+			std::string op_name{ base::enumToStr(instruction.operation) };
+			if (instruction.operation == Operation::MetaTypeOperation)
+				if (const auto* meta_params = std::get_if<MetaParameters>(&instruction.extra_params))
+					op_name += ":" + std::string{ base::enumToStr(meta_params->kind) };
 			output << std::left << std::setw(15);
-			output << base::enumToStr(instruction.operation) << "  ";
+			output << op_name << "  ";
 			if (!instruction.output.has_value()) output << std::left << std::setw(12);
 
 			std::string_view sep = "";
@@ -429,6 +442,8 @@ namespace compiler::lir {
 			return BuiltinFunctionKind::BoxAlloc;
 		case helios::BuiltinKind::BoxFree:
 			return BuiltinFunctionKind::BoxFree;
+		case helios::BuiltinKind::ListFree:
+			return BuiltinFunctionKind::ListFree;
 		default:
 			return {};
 		}

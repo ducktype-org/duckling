@@ -20,6 +20,12 @@ fundecl dvm_char_realloc(p: manyptr char, size: u64);
 @builtin("dvm_char_free")
 fundecl dvm_char_free(p: manyptr char);
 
+@builtin("alignment_of")
+fundecl alignment_of(v: type) -> i64;
+
+@builtin("size_of")
+fundecl size_of(v: type) -> i64;
+
 
 
 #{

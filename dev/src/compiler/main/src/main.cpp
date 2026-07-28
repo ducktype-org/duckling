@@ -497,7 +497,7 @@ clah::Clah getClahForMain() {
 						= global_state::getPackages().front().getRootModule().illegalAccess().getID(
 						);
 
-					(void) query::entryPoint<driver::CompileModule>({ root, backend_type, false });
+					query::entryPoint<driver::CompileModule>({ root, backend_type, false });
 
 
 					compiler::driver::exit();
@@ -765,7 +765,7 @@ clah::Clah getClahForMain() {
 						return 1;
 					}
 
-					(void) manifest->verify(report);
+					std::ignore         = manifest->verify(report);
 					auto stdlib_options = getStdLibOptionsFromClah(options);
 					auto init_result = compiler::driver::initializeTheCompiler(
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
@@ -1080,17 +1080,19 @@ clah::Clah getClahForMain() {
 					return 0;
 				})
 		)
-	    .addSubcommand(clah::Clah("dummy", "Dummy command (cli testing command).")
-	                       .setHandler([](const clah::ParsingResult& options) -> int {
-							   (void) compiler::driver::initializeTheCompiler(
-								   compiler::driver::CompilerModeOfOperationAndOptions::BareMode{
-									   .debug_options
-									   = debug_options::getDebugOptionsFromClah(options),
-								   }
-							   )
-								   .status();
-							   return 0;
-						   }));
+	    .addSubcommand(
+			clah::Clah("dummy", "Dummy command (cli testing command).")
+				.setHandler([](const clah::ParsingResult& options) -> int {
+					std::ignore
+						= compiler::driver::initializeTheCompiler(
+							  compiler::driver::CompilerModeOfOperationAndOptions::BareMode{
+								  .debug_options = debug_options::getDebugOptionsFromClah(options),
+							  }
+						)
+		                      .status();
+					return 0;
+				})
+		);
 }
 
 int main(int argc, const char* argv[]) {

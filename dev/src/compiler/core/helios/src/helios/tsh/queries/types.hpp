@@ -327,6 +327,8 @@ namespace compiler::tsh {
 	/**
 	 * @brief Query to get the TypeTemplate.
 	 *
+	 * @TODO: #3177 revisit this query
+	 *
 	 * \query_thread_safe_if_cache
 	 */
 	DECLARE_QUERY(

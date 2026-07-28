@@ -80,16 +80,16 @@ private:
 		auto submodule_id = sub_module_locked.value().illegalAccess().getID();
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			(void) ctx.query<driver::CompileModule>({ .module_id        = module,
-			                                          .backend_type     = driver::BackendType::LLVM,
-			                                          .build_debug_info = false });
-			(void) ctx.query<driver::CompileModule>({ .module_id        = submodule_id,
-			                                          .backend_type     = driver::BackendType::LLVM,
-			                                          .build_debug_info = false });
+			ctx.query<driver::CompileModule>({ .module_id        = module,
+			                                   .backend_type     = driver::BackendType::LLVM,
+			                                   .build_debug_info = false });
+			ctx.query<driver::CompileModule>({ .module_id        = submodule_id,
+			                                   .backend_type     = driver::BackendType::LLVM,
+			                                   .build_debug_info = false });
 
 			// Add metadata for persistence test
-			(void) ctx.query<MetadataPersistenceTestQuery>({ 42 });
-			(void) ctx.query<MetadataPersistenceTestQuery>({ 100 });
+			ctx.query<MetadataPersistenceTestQuery>({ 42 });
+			ctx.query<MetadataPersistenceTestQuery>({ 100 });
 		});
 
 		// Save artifacts (writes previous graph blob to artifacts)

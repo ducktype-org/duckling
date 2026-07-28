@@ -1,6 +1,5 @@
 #pragma once
 
-#include "../lists/initializer_list.hpp"
 #include "../lists/parameter_list.hpp"
 #include "class_special.hpp"
 #include "preamble.hpp"
@@ -15,7 +14,6 @@ namespace pst {
 
 	protected:
 		NAMED_CHILD(params, ParamList);
-		NAMED_CHILD(inits, InitList);
 		NAMED_CHILD(body, CodeBlockOrStmt);
 
 	public:

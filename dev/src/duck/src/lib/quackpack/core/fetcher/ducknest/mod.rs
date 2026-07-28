@@ -121,6 +121,7 @@ fn create_http_request(url: &Url, method: http::Method, body: Vec<u8>) -> QuackR
     http::Request::builder()
         .uri(url.as_str())
         .method(method)
+        .version(http::Version::HTTP_11)
         .body(body)
         .context_internal("failed to build an HTTP request")
 }

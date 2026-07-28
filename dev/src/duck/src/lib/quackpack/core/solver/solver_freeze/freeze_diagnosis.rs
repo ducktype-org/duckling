@@ -2,13 +2,12 @@ use std::collections::{HashMap, HashSet};
 
 use tracing::debug;
 
-use crate::quackpack::core::full_identity::FullIdentity;
 use crate::quackpack::core::solver::gathering::fetch_types::{FetchResponse, FetchSuccess};
 use crate::quackpack::core::solver::gathering::gatherer::Gatherer;
 use crate::quackpack::core::solver::git_access::GitAccess;
 use crate::quackpack::core::solver::solver_freeze::{SolverFreeze, SolverPackageFreeze};
-use crate::quackpack::core::{Dependency, FeatureName, Manifest};
-use crate::quackpack::util::with_version::WithVersion;
+use crate::quackpack::core::{Dependency, FeatureName, Manifest, PackageId};
+use crate::util::error::ErrorsLogger;
 use crate::{QuackResult, QuackResultContext};
 
 impl SolverFreeze {
@@ -17,21 +16,22 @@ impl SolverFreeze {
     pub fn get_prev_freeze_manifests<Access: GitAccess>(
         &self,
         gatherer: &mut Gatherer<'_, '_, '_, Access>,
-    ) -> QuackResult<HashMap<WithVersion<FullIdentity>, Box<Manifest>>> {
+    ) -> QuackResult<HashMap<PackageId, Box<Manifest>>> {
         let mut tasks = vec![];
+        let mut errors = ErrorsLogger::default();
         for pkg in self.package_freezes.keys() {
             if *pkg == self.main_pkg {
                 continue;
             }
             if let Ok(request) = pkg.create_manifest_request() {
-                tasks.push(gatherer.fetch(request));
+                tasks.push(gatherer.fetch(request, &mut errors));
             }
         }
         let results = tasks;
         let mut manifests = HashMap::new();
         for fetch_response in results {
             let fetch_response = fetch_response?;
-            if let FetchResponse::Success(success_response) = fetch_response.0 {
+            if let FetchResponse::Success(success_response) = fetch_response {
                 match success_response {
                     FetchSuccess::Pinned(pinned_success) => {
                         manifests.insert(
@@ -59,7 +59,7 @@ impl SolverFreeze {
     #[tracing::instrument(skip_all)]
     pub fn find_maximal_correct_dep_solution(
         mut self,
-        manifests: &HashMap<WithVersion<FullIdentity>, Box<Manifest>>,
+        manifests: &HashMap<PackageId, Box<Manifest>>,
     ) -> QuackResult<(Self, bool)> {
         self.retain_not_flawed_pkgs(manifests)?;
         self.substitute_root_pkg(manifests)
@@ -70,7 +70,7 @@ impl SolverFreeze {
     /// and all the packages which have dependencies transitively satisfied.
     fn retain_not_flawed_pkgs(
         &mut self,
-        manifests: &HashMap<WithVersion<FullIdentity>, Box<Manifest>>,
+        manifests: &HashMap<PackageId, Box<Manifest>>,
     ) -> QuackResult<()> {
         let mut still_satisfied_pkgs = self.still_satisfied_pkgs(manifests)?;
         let reversed_graph = self.reversed_dependency_graph();
@@ -100,8 +100,8 @@ impl SolverFreeze {
     ///     * all manifest dependencies are satisfied by appropriate freeze-written realizations.
     fn still_satisfied_pkgs(
         &self,
-        manifests: &HashMap<WithVersion<FullIdentity>, Box<Manifest>>,
-    ) -> QuackResult<HashSet<WithVersion<FullIdentity>>> {
+        manifests: &HashMap<PackageId, Box<Manifest>>,
+    ) -> QuackResult<HashSet<PackageId>> {
         let mut still_satisfied_pkgs = HashSet::new();
         for (pkg, freeze) in self.package_freezes.iter() {
             let Some(manifest) = Self::get_and_check_manifest(*pkg, manifests, &freeze.features)
@@ -141,12 +141,12 @@ impl SolverFreeze {
     ///     * freeze-present features are expansion-closed,
     ///     * freeze-present version equals manifest version.
     fn get_and_check_manifest<'a>(
-        pkg: WithVersion<FullIdentity>,
-        manifests: &'a HashMap<WithVersion<FullIdentity>, Box<Manifest>>,
+        pkg: PackageId,
+        manifests: &'a HashMap<PackageId, Box<Manifest>>,
         features: &HashSet<FeatureName>,
     ) -> Option<&'a Manifest> {
         let manifest = manifests.get(&pkg)?;
-        if manifest.name() != pkg.value().name() {
+        if manifest.name() != pkg.name() {
             return None;
         }
         if features
@@ -198,10 +198,10 @@ impl SolverFreeze {
     /// Expands the notion of a flawed package in a dfs-like manner, by applying a rule that
     /// if for some package and its dependency, the realization is flawed, the package is as well.
     fn flawed_pkgs_dfs(
-        cur_pkg: WithVersion<FullIdentity>,
-        graph: &HashMap<WithVersion<FullIdentity>, Vec<WithVersion<FullIdentity>>>,
-        visited: &mut HashSet<WithVersion<FullIdentity>>,
-        still_satisfied_pkgs: &mut HashSet<WithVersion<FullIdentity>>,
+        cur_pkg: PackageId,
+        graph: &HashMap<PackageId, Vec<PackageId>>,
+        visited: &mut HashSet<PackageId>,
+        still_satisfied_pkgs: &mut HashSet<PackageId>,
     ) {
         visited.insert(cur_pkg);
         still_satisfied_pkgs.remove(&cur_pkg);
@@ -217,13 +217,10 @@ impl SolverFreeze {
 
     /// Helper for [`Self::retain_not_flawed_pkgs`].
     /// Generates the graph used by [`Self::flawed_pkgs_dfs`].
-    fn reversed_dependency_graph(
-        &self,
-    ) -> HashMap<WithVersion<FullIdentity>, Vec<WithVersion<FullIdentity>>> {
-        let mut reversed_graph: HashMap<WithVersion<FullIdentity>, Vec<WithVersion<FullIdentity>>> =
-            HashMap::new();
+    fn reversed_dependency_graph(&self) -> HashMap<PackageId, Vec<PackageId>> {
+        let mut reversed_graph: HashMap<PackageId, Vec<PackageId>> = HashMap::new();
         for (pkg, freeze) in self.package_freezes.iter() {
-            for (_, realization) in freeze.dependencies_realization.iter() {
+            for realization in freeze.dependencies_realization.values() {
                 reversed_graph.entry(*realization).or_default().push(*pkg);
             }
         }
@@ -235,7 +232,7 @@ impl SolverFreeze {
     /// Keeps only still satisfied realizations from the old root's package freeze.
     fn substitute_root_pkg(
         mut self,
-        manifests: &HashMap<WithVersion<FullIdentity>, Box<Manifest>>,
+        manifests: &HashMap<PackageId, Box<Manifest>>,
     ) -> QuackResult<(Self, bool)> {
         let main_pkg_freeze = self
             .package_freezes
@@ -290,9 +287,8 @@ mod test {
 
     use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
     use crate::quackpack::core::solver::solver_freeze::{SolverFreeze, SolverPackageFreeze};
-    use crate::quackpack::core::{FeatureName, Version, parse_manifest};
+    use crate::quackpack::core::{FeatureName, PackageId, Version, parse_manifest};
     use crate::quackpack::util::to_url::ToUrl;
-    use crate::quackpack::util::with_version::WithVersion;
     use crate::util::path_ops_ext::PathOpsExt;
     use crate::{DuckContext, StrId};
 
@@ -340,11 +336,11 @@ features:
         let registry_origin = FullOrigin::for_registry("http://localhost:9001".to_url().unwrap());
         let identity_a = FullIdentity::new("a".into(), registry_origin);
         let identity_b = FullIdentity::new("b".into(), registry_origin);
-        let pkg_a = WithVersion::new(identity_a, Version::new(1, 0, 0));
-        let pkg_b = WithVersion::new(identity_b, Version::new(2, 0, 0));
+        let pkg_a = PackageId::new(identity_a, Version::new(1, 0, 0));
+        let pkg_b = PackageId::new(identity_b, Version::new(2, 0, 0));
         let manifests = HashMap::from([
-            (pkg_a, Box::new(manifest_a.manifest().clone())),
-            (pkg_b, Box::new(manifest_b.manifest().clone())),
+            (pkg_a, Box::new(manifest_a.into_manifest())),
+            (pkg_b, Box::new(manifest_b.into_manifest())),
         ]);
         let prev_a_freeze = SolverPackageFreeze {
             dependencies_realization: HashMap::from([(StrId::new("b"), pkg_b)]),
@@ -397,11 +393,11 @@ metadata:
         let registry_origin = FullOrigin::for_registry("http://localhost:9001".to_url().unwrap());
         let identity_a = FullIdentity::new("a".into(), registry_origin);
         let identity_b = FullIdentity::new("b".into(), registry_origin);
-        let pkg_a = WithVersion::new(identity_a, Version::new(1, 0, 0));
-        let pkg_b = WithVersion::new(identity_b, Version::new(2, 0, 0));
+        let pkg_a = PackageId::new(identity_a, Version::new(1, 0, 0));
+        let pkg_b = PackageId::new(identity_b, Version::new(2, 0, 0));
         let manifests = HashMap::from([
-            (pkg_a, Box::new(manifest_a.manifest().clone())),
-            (pkg_b, Box::new(manifest_b.manifest().clone())),
+            (pkg_a, Box::new(manifest_a.into_manifest())),
+            (pkg_b, Box::new(manifest_b.into_manifest())),
         ]);
         let prev_a_freeze = SolverPackageFreeze {
             dependencies_realization: HashMap::from([(StrId::new("b"), pkg_b)]),
@@ -464,13 +460,13 @@ metadata:
         let identity_a = FullIdentity::new("a".into(), registry_origin);
         let identity_b = FullIdentity::new("b".into(), registry_origin);
         let identity_c = FullIdentity::new("c".into(), registry_origin);
-        let pkg_a = WithVersion::new(identity_a, Version::new(1, 0, 0));
-        let pkg_b = WithVersion::new(identity_b, Version::new(2, 0, 0));
-        let pkg_c = WithVersion::new(identity_c, Version::new(3, 0, 0));
+        let pkg_a = PackageId::new(identity_a, Version::new(1, 0, 0));
+        let pkg_b = PackageId::new(identity_b, Version::new(2, 0, 0));
+        let pkg_c = PackageId::new(identity_c, Version::new(3, 0, 0));
         let manifests = HashMap::from([
-            (pkg_a, Box::new(manifest_a.manifest().clone())),
-            (pkg_b, Box::new(manifest_b.manifest().clone())),
-            (pkg_c, Box::new(manifest_c.manifest().clone())),
+            (pkg_a, Box::new(manifest_a.into_manifest())),
+            (pkg_b, Box::new(manifest_b.into_manifest())),
+            (pkg_c, Box::new(manifest_c.into_manifest())),
         ]);
         let prev_a_freeze = SolverPackageFreeze {
             dependencies_realization: HashMap::from([(StrId::new("b"), pkg_b)]),
@@ -551,15 +547,15 @@ metadata:
         let identity_b = FullIdentity::new("b".into(), registry_origin);
         let identity_c = FullIdentity::new("c".into(), registry_origin);
         let identity_d = FullIdentity::new("d".into(), registry_origin);
-        let pkg_a = WithVersion::new(identity_a, Version::new(1, 0, 0));
-        let pkg_b = WithVersion::new(identity_b, Version::new(2, 0, 0));
-        let pkg_c = WithVersion::new(identity_c, Version::new(3, 0, 0));
-        let pkg_d = WithVersion::new(identity_d, Version::new(4, 0, 0));
+        let pkg_a = PackageId::new(identity_a, Version::new(1, 0, 0));
+        let pkg_b = PackageId::new(identity_b, Version::new(2, 0, 0));
+        let pkg_c = PackageId::new(identity_c, Version::new(3, 0, 0));
+        let pkg_d = PackageId::new(identity_d, Version::new(4, 0, 0));
         let manifests = HashMap::from([
-            (pkg_a, Box::new(manifest_a.manifest().clone())),
-            (pkg_b, Box::new(manifest_b.manifest().clone())),
-            (pkg_c, Box::new(manifest_c.manifest().clone())),
-            (pkg_d, Box::new(manifest_d.manifest().clone())),
+            (pkg_a, Box::new(manifest_a.into_manifest())),
+            (pkg_b, Box::new(manifest_b.into_manifest())),
+            (pkg_c, Box::new(manifest_c.into_manifest())),
+            (pkg_d, Box::new(manifest_d.into_manifest())),
         ]);
         let prev_a_freeze = SolverPackageFreeze {
             dependencies_realization: HashMap::from([(StrId::new("b"), pkg_b)]),
@@ -619,11 +615,11 @@ features:
         let registry_origin = FullOrigin::for_registry("http://localhost:9001".to_url().unwrap());
         let identity_a = FullIdentity::new("a".into(), registry_origin);
         let identity_b = FullIdentity::new("b".into(), registry_origin);
-        let pkg_a = WithVersion::new(identity_a, Version::new(1, 0, 0));
-        let pkg_b = WithVersion::new(identity_b, Version::new(2, 0, 0));
+        let pkg_a = PackageId::new(identity_a, Version::new(1, 0, 0));
+        let pkg_b = PackageId::new(identity_b, Version::new(2, 0, 0));
         let manifests = HashMap::from([
-            (pkg_a, Box::new(manifest_a.manifest().clone())),
-            (pkg_b, Box::new(manifest_b.manifest().clone())),
+            (pkg_a, Box::new(manifest_a.into_manifest())),
+            (pkg_b, Box::new(manifest_b.into_manifest())),
         ]);
         let prev_a_freeze = SolverPackageFreeze {
             dependencies_realization: [].into(),

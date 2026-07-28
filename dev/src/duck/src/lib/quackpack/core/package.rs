@@ -3,6 +3,7 @@ use std::ffi::{OsStr, OsString};
 use std::fmt;
 use std::path::{Path, PathBuf};
 
+use super::VenvConfig;
 use crate::quackpack::core::compile::artifacts_layout::ArtifactsLayout;
 use crate::quackpack::core::identity::{Identity, Origin};
 use crate::quackpack::core::{Dependencies, Manifest, Profiles, Version};
@@ -22,6 +23,14 @@ impl AnyPackage {
         match self {
             Self::Package(package) => package.manifest(),
             Self::Frontmatter(frontmatter) => frontmatter.manifest(),
+        }
+    }
+
+    /// Transform into the underlying manifest.
+    pub fn into_manifest(self) -> Manifest {
+        match self {
+            Self::Package(package) => package.into_manifest(),
+            Self::Frontmatter(frontmatter) => frontmatter.into_manifest(),
         }
     }
 
@@ -154,6 +163,10 @@ impl AnyPackage {
     pub fn version(&self) -> Version {
         self.manifest().version()
     }
+
+    pub fn venv(&self) -> &VenvConfig {
+        self.manifest().venv()
+    }
 }
 
 #[derive(Clone)]
@@ -210,6 +223,11 @@ impl Package {
     /// Get the high-level abstraction over the manifest.
     pub fn manifest(&self) -> &Manifest {
         &self.manifest
+    }
+
+    /// Transform into the underlying manifest.
+    pub fn into_manifest(self) -> Manifest {
+        self.manifest
     }
 
     /// Get the root directory of the package.
@@ -331,6 +349,11 @@ impl FrontMatterScript {
     /// Get the manifest constructed from the script's frontmatter.
     pub fn manifest(&self) -> &Manifest {
         &self.manifest
+    }
+
+    /// Transform into the manifest constructed from the script's frontmatter.
+    pub fn into_manifest(self) -> Manifest {
+        self.manifest
     }
 
     /// Get the dependencies specified in the frontmatter.
