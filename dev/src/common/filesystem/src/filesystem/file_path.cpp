@@ -1,5 +1,6 @@
 #include "file_path.hpp"
 
+#include <filepath_utils/file_uri.hpp>
 #include <filesystem_private/vfs.hpp>
 
 #include <base/except/exceptions.hpp>
@@ -126,11 +127,7 @@ namespace fs {
 	}
 
 	std::string FilePath::uri() const {
-		std::string p = path.generic_string();
-#ifdef _WIN32
-		if (!p.empty() && p[1] == ':') return "file:///" + p;
-#endif
-		return "file://" + p;
+		return filepath_utils::formatFileUri(path.generic_string());
 	}
 
 	FilePath FilePath::getDefaultTempDirectoryPath() {
