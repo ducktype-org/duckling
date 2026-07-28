@@ -106,4 +106,14 @@ namespace compiler::tsh {
 		CRef<query::QResult<TypeInterface>>,
 		({})
 	)
+
+	/**
+	 * TSH-private query to get the interface of a slice.
+	 *
+	 * To access the interface of a slice from outside the TSH module, use
+	 * `AbstractType::getInterface`
+	 *
+	 * \query_thread_safe_if_cache
+	 */
+	DECLARE_QUERY(QueryInterfaceOfSlice, SliceAbstractType, CRef<query::QResult<TypeInterface>>, ({}))
 }

@@ -1,15 +1,26 @@
 #include "vm_evaluator.hpp"
 
 #include <backends/dvm/dvm_backend.hpp>
+#include <backends/dvm/repl_lowering.hpp>
+#include <ctv/ctv.hpp>
+#include <helios/mangler/mangler.hpp>
+#include <helios/symbols/symbol_abi.hpp>
+#include <helios/tsh/queries/types.hpp>
+#include <helios/tsh/symbol_type.hpp>
 #include <helios/tsh/types.hpp>
 #include <helios_private/comp_time/comptime_type_operations.hpp>
+#include <lir/lir_structure/lir_structure.hpp>
+#include <tsl/queries.hpp>
 
+#include <base/collections/stable_container.hpp>
 #include <base/except/exceptions.hpp>
+#include <base/extend_cpp/defer.hpp>
 
 #include <vm/api/vm.hpp>
 #include <vm/bytecode/validator/errors.hpp>
 #include <vm/bytecode/validator/valid_program.hpp>
 #include <vm/core/vmvalue/vmvalue.hpp>
+#include <vm/core/vmvalue/vmvalueref.hpp>
 
 #include <expected>
 #include <mutex>
@@ -17,17 +28,193 @@
 namespace {
 	using namespace compiler::helios;
 	using namespace compiler::ctv;
+	using namespace compiler;
+
+	/**
+	 * @brief A class representing a compile time DVM instance. Spawns a VMProcess when
+	 * constructed and loads all the needed context for compile time evaluations into the process.
+	 * This includes initializing the global query context pointer, injecting all extern C functions
+	 * operating on meta types.
+	 *
+	 * Handles the deduplication of the code being loaded into the VM.
+	 * Kills the VMProcess when compilation ends.
+	 */
+	class CompTimeDVM {
+		base::Optional<vm::PID> pid{};
+
+		/**
+		 * Code builder, uses repl for incremental loading - it automatically handles
+		 * deduplication and only lowers new elements.
+		 */
+		backend_vm::ReplDVMCodeBuilder code_builder;
+
+	public:
+		/**
+		 * @brief Creates a VM comp time instance, loads all of the needed code for compile time
+		 * evaluations and initializes the global query context pointer needed for meta type compile
+		 * time
+		 * evaluations.
+		 */
+		CompTimeDVM(query::Context& ctx): code_builder(ctx, true) {
+			if (auto res = vm::api::spawn()) {
+				pid = res->pid;
+				if (!initializeCompTimeOps()) pid.reset();
+			}
+		}
+
+		CompTimeDVM(const CompTimeDVM&)            = delete;
+		CompTimeDVM& operator=(const CompTimeDVM&) = delete;
+
+		// @TODO: #1222 Kill the CompTime VM process in the destructor once we get rid of the
+		// deadlock.
+		~CompTimeDVM() = default;
+
+		[[nodiscard]] base::Optional<vm::PID> getPID() const { return pid; }
+
+		[[nodiscard]] bool isAlive() const { return pid.has_value(); }
+
+		/**
+		 * @brief Loads the bytecode into the VM. Skips duplicated symbols.
+		 */
+		std::expected<void, VmEvaluationError> loadCode(
+			query::Context& ctx, const lir::LIRUnit& lir_code
+		) {
+			// The builder outlives every query, so the context must not stay set past this call.
+			code_builder.setContext(ctx);
+			defer(code_builder.invalidateContext());
+
+			auto new_code = code_builder.insertLIRUnitAndCollectNewlyLoweredCode(lir_code);
+			if (!vm::api::loadCode(*pid, new_code)) {
+				return std::unexpected(VmEvaluationError(
+					VmEvaluationError::Kind::CodeLoadFailed, "Failed to load code into VM."
+				));
+			}
+			return {};
+		}
+
+	private:
+		bool initializeCompTimeOps() {
+			auto code = comptime_ops::getComptimeTypeOperations(*pid);
+			code_builder.insertRawBytecodeDefinitions(code);
+			if (vm::api::loadCode(*pid, code)) return true;
+			return false;
+		}
+	};
+
+	/**
+	 * @brief Materializes an aggregate CTV (e.g. a char-slice or String) as an owned VmValue by
+	 * letting the DVM backend lower it.
+	 *
+	 * We synthesize a function like `fun anon() -> T = {return ctv;}`
+	 * in LIR and hand it to the incremental code builder. Lowering the `return` of a `LIRConstant`
+	 * runs the exact same `CTVLowering` path used for regular code, which emits the the DVM code
+	 * returning the VMValue with the ctv. The DVM backend may generate new globals in the
+	 * process.
+	 */
+	std::expected<Box<vm::VmValue>, VmEvaluationError> vmValueFromCtvBackendLowering(
+		query::Context&                    ctx,
+		CompTimeDVM&                       comptime_dvm,
+		const CompileTimeValue&            ctv,
+		const compiler::tsh::SymbolType<>& value_type
+	) {
+		static std::atomic<u64> anon_counter{ 0 };
+
+		vm::PID     pid        = *comptime_dvm.getPID();
+		const auto& layout     = ctx.query<tsl::QuerySymbolTypeLayout>(value_type)->valueOrThrow();
+		auto        layout_ref = CRef<tsl::TypeLayout>(&layout);
+
+		// Build `fun anon() -> value_type = return {ctv};`.
+		lir::Block entry_block;
+		entry_block.terminator = lir::Instruction{
+			lir::Operation::ReturnValue,
+			{},
+			{ lir::LIRValue{ lir::LIRConstant{ .value = ctv, .layout = layout_ref } } },
+			{},
+		};
+
+		base::StableVector<lir::Block> blocks;
+		blocks.emplaceBack(std::move(entry_block));
+		lir::BlockRef entry_block_ref = blocks.last();
+
+		base::StrID func_name
+			= base::StrID(base::strConcat("comptime_ctv_arg_", anon_counter.fetch_add(1)));
+
+		lir::Function func{
+			.mangled_name       = func_name,
+			.abi                = { lir::LIRAbi::DefaultAbi{} },
+			.link_once          = false,
+			.ignore_on_dvm      = false,
+			.ignore_on_llvm     = true,
+			.parameter_layouts  = {},
+			.return_type_layout = layout_ref,
+			.blocks             = std::move(blocks),
+			.local_list         = {},
+			.block_order        = { entry_block_ref },
+			.metadata           = { .position = {}, .source_code_name = {} },
+		};
+
+		lir::LIRUnit unit;
+		unit.lir_functions.emplace_back(&func);
+
+		if (auto res = comptime_dvm.loadCode(ctx, unit); !res) return std::unexpected(res.error());
+
+		auto maybe_exit_value = vm::api::runFunctionAwait(pid, func_name.str());
+		if (!maybe_exit_value.has_value())
+			return std::unexpected(VmEvaluationError(
+				VmEvaluationError::Kind::FunctionRunFailed,
+				base::strConcat(
+					"Failed to run a function '",
+					func_name,
+					"' on VM. Reason: `",
+					errorToString(maybe_exit_value.error()),
+					"`."
+				)
+			));
+
+		Ref<vm::VmValue> returned = [&]() -> Ref<vm::VmValue> {
+			variant_match(maybe_exit_value.value()) {
+				variant_case(std::vector<Ref<vm::VmValue>>, values) {
+					CORE_ASSERT(values.size() == 1, "Expected a single materialized CTV value.");
+					return values.at(0);
+				}
+				variant_default {
+					CORE_PANIC("Unexpected non-vector return value when materializing a CTV.");
+				}
+			}
+			CORE_UNREACHABLE();
+		}();
+
+		auto owned_response = vm::api::getVmValue(pid, returned->getType()->getName().str());
+		if (!owned_response.has_value())
+			return std::unexpected(VmEvaluationError(
+				VmEvaluationError::Kind::ArgConversionFailed,
+				base::strConcat(
+					"Failed to allocate an owned VM value for '",
+					returned->getType()->getName(),
+					"'."
+				)
+			));
+		auto owned = std::move(owned_response->vm_value);
+
+		CORE_ASSERT(
+			owned->type->getSize() == returned->type->getSize(),
+			"Mismatched sizes when copying a materialized CTV value."
+		);
+		owned->importData(returned->pointer);
+
+		return owned;
+	}
 
 	/**
 	 * @brief Converts a given `ctv` to VmValue.
 	 * @return The converted VmValue or a VmEvaluationError if the conversion failed.
 	 */
 	std::expected<Box<vm::VmValue>, VmEvaluationError> ctvToVmValue(
-		vm::PID pid, const CompileTimeValue& ctv
+		query::Context& ctx, CompTimeDVM& comptime_dvm, const CompileTimeValue& ctv
 	) {
 		auto get_vm_value
 			= [&](base::StrID type_name) -> std::expected<Box<vm::VmValue>, VmEvaluationError> {
-			auto vm_value_response = vm::api::getVmValue(pid, type_name.str());
+			auto vm_value_response = vm::api::getVmValue(*comptime_dvm.getPID(), type_name.str());
 			if (!vm_value_response.has_value())
 				return std::unexpected(VmEvaluationError(
 					VmEvaluationError::Kind::ArgConversionFailed,
@@ -80,6 +267,27 @@ namespace {
 				(*maybe_vm_value)->writeBytes<const compiler::tsh::SymbolType<>*>(&type);
 				return maybe_vm_value;
 			}
+			variant_case(compiler::ctv::CompileTimeValue::CharSliceValue, _) {
+				return vmValueFromCtvBackendLowering(
+					ctx,
+					comptime_dvm,
+					ctv,
+					compiler::tsh::SymbolType<>::withDefaults(tsh::getCharSliceType(ctx))
+				);
+			}
+			variant_case(compiler::ctv::CompileTimeValue::StringClassValue, _) {
+				if (!tsh::isStringTypePresent(ctx))
+					return std::unexpected(VmEvaluationError(
+						VmEvaluationError::Kind::ArgConversionFailed,
+						"String class type is not available in this compilation."
+					));
+				return vmValueFromCtvBackendLowering(
+					ctx,
+					comptime_dvm,
+					ctv,
+					compiler::tsh::SymbolType<>::withDefaults(tsh::getStringType(ctx))
+				);
+			}
 			variant_default {
 				throw base::NotYetImplemented(
 					"Conversion from ctv to VmValue for this type is not implemented yet"
@@ -93,13 +301,38 @@ namespace {
 	}
 
 	/**
+	 * @brief Reads the pointer+length pair backing a char-slice/String VmValue into a CTV string.
+	 * @note Assumes `vm_value`'s type was already confirmed to be the char-slice or String type.
+	 */
+	base::RawView charBackedVmValueToCtv(Ref<vm::VmValue> vm_value) {
+		using namespace vm::interpreted_data_variant;
+		auto vm_value_ref = vm_value->asRef();
+		auto data         = vm_value_ref.readData<Data>().value();
+		auto pointer      = data.fields.at(0).value.readData<Pointer>().value();
+		auto length       = data.fields.at(1).value.readData<Primitive>().value();
+		auto content      = pointer.referenced->readData<Table>().value().asBytesView();
+		CORE_ASSERT(content.size() >= length.value, "Invalid char slice comp-time data.");
+		return { content.getBegin(), length.value };
+	}
+
+	/**
 	 * @brief Converts a given `vm_value` to CTV representing a specified `type`.
 	 * @return The converted value or a VmEvaluationError if the conversion failed.
 	 */
 	std::expected<CompileTimeValue, VmEvaluationError> vmValueToCtv(
-		const compiler::tsh::SymbolType<>& type, Ref<vm::VmValue> vm_value
+		query::Context& ctx, const compiler::tsh::SymbolType<>& type, Ref<vm::VmValue> vm_value
 	) {
-		const auto kind = type.getType().getKind();
+		const auto kind        = type.getType().getKind();
+		auto       error_value = [&] {
+            return std::unexpected(VmEvaluationError(
+                VmEvaluationError::Kind::ReturnConversionFailed,
+                base::strConcat(
+                    "VMValue to CTV conversion for type: ",
+                    base::enumToStr(kind),
+                    " is not implemented yet."
+                )
+            ));
+		};
 		switch (kind) {
 		case compiler::tsh::Kind::Integral: {
 			compiler::tsh::IntegralAbstractType int_type(type.getType());
@@ -165,144 +398,39 @@ namespace {
 			auto* meta_ptr = vm_value->readBytes<compiler::tsh::SymbolType<>*>();
 			return CompileTimeValue{ *meta_ptr };
 		}
+		case compiler::tsh::Kind::Slice: {
+			auto char_slice_type = tsh::SymbolType<>::withDefaults(tsh::getCharSliceType(ctx));
+			if (vm_value->type->getName()
+			    == ctx.query<mangler::QueryMangledType>(char_slice_type)->valueOrThrow())
+				return CompileTimeValue{ CompileTimeValue::CharSliceValue{
+					base::StrID(charBackedVmValueToCtv(vm_value)) } };
+			return error_value();
+		}
+		case compiler::tsh::Kind::Class: {
+			if (tsh::isStringTypePresent(ctx)) {
+				auto string_type = tsh::SymbolType<>::withDefaults(tsh::getStringType(ctx));
+				if (vm_value->type->getName()
+				    == ctx.query<mangler::QueryMangledType>(string_type)->valueOrThrow())
+					return CompileTimeValue{ CompileTimeValue::StringClassValue{
+						base::StrID(charBackedVmValueToCtv(vm_value)) } };
+			}
+			return error_value();
+		}
 		default: {
-			return std::unexpected(VmEvaluationError(
-				VmEvaluationError::Kind::ReturnConversionFailed,
-				base::strConcat(
-					"VMValue to CTV conversion for type: ",
-					base::enumToStr(kind),
-					" is not implemented yet."
-				)
-			));
+			return error_value();
 		}
 		}
-	}
-
-	/**
-	 * @brief A class representing a compile time DVM instance. Spawns a VMProcess when
-	 * constructed and loads all the needed context for compile time evaluations into the process.
-	 * This includes initializing the global query context pointer, injecting all extern C functions
-	 * operating on meta types.
-	 *
-	 * Handles the deduplication of the code being loaded into the VM.
-	 * Kills the VMProcess when compilation ends.
-	 */
-	class CompTimeDVM {
-		base::Optional<vm::PID> pid{};
-		/**
-		 * @brief Code already loaded into this VMs process.
-		 * @note This set operates on mangled names, thus theres no need to distinguish between
-		 * functions, types, globals, etc.
-		 */
-		std::unordered_set<base::StrID> loaded_symbols;
-
-	public:
-		/**
-		 * @brief Creates a VM comp time instance, loads all of the needed code for compile time
-		 * evaluations and initializes the global context pointer needed for meta type compile time
-		 * evaluations.
-		 */
-		CompTimeDVM() {
-			if (auto res = vm::api::spawn()) {
-				pid = res->pid;
-				if (!initializeCompTimeOps()) pid.reset();
-			}
-		}
-
-		CompTimeDVM(const CompTimeDVM&)            = delete;
-		CompTimeDVM& operator=(const CompTimeDVM&) = delete;
-
-		~CompTimeDVM() {
-			if (pid.has_value()) (void) vm::api::kill(*pid);
-		}
-
-		[[nodiscard]] base::Optional<vm::PID> getPID() const { return pid; }
-
-		[[nodiscard]] bool isAlive() const { return pid.has_value(); }
-
-		/**
-		 * @brief Loads the bytecode into the VM. Skips duplicated symbols.
-		 */
-		std::expected<void, VmEvaluationError> loadCode(const vm::code::CodeCollection& code) {
-			auto new_code = filterOutLoaded(code);
-			if (!vm::api::loadCode(*pid, new_code)) {
-				return std::unexpected(VmEvaluationError(
-					VmEvaluationError::Kind::CodeLoadFailed, "Failed to load code into VM."
-				));
-			}
-			markAsLoaded(new_code);
-			return {};
-		}
-
-	private:
-		bool initializeCompTimeOps() {
-			auto code = comptime_ops::getComptimeTypeOperations(*pid);
-			if (vm::api::loadCode(*pid, code)) {
-				markAsLoaded(code);
-				return true;
-			}
-			return false;
-		}
-
-		void markAsLoaded(vm::code::CodeCollection& loaded) {
-			for (const auto& f: loaded.functions) loaded_symbols.insert(f.name);
-			for (const auto& t: loaded.types) loaded_symbols.insert(vm::code::typeName(t));
-			for (const auto& g: loaded.global_data) loaded_symbols.insert(g.name);
-			for (const auto& e: loaded.external_c_functions) loaded_symbols.insert(e.name);
-		}
-
-		vm::code::CodeCollection filterOutLoaded(const vm::code::CodeCollection& code) {
-			vm::code::CodeCollection filtered;
-			auto                     by_name = [](const auto& item) -> base::StrID {
-                using T = std::decay_t<decltype(item)>;
-                if constexpr (std::is_same_v<T, vm::code::TypeOfData>)
-                    return vm::code::typeName(item);
-                else
-                    return item.name;
-			};
-
-			auto insert_if_new = [&](const auto& source, auto& destination, auto name_getter) {
-				for (const auto& item: source)
-					if (!loaded_symbols.contains(name_getter(item))) destination.push_back(item);
-			};
-
-			insert_if_new(code.functions, filtered.functions, by_name);
-			insert_if_new(code.types, filtered.types, by_name);
-			insert_if_new(code.global_data, filtered.global_data, by_name);
-			insert_if_new(code.external_c_functions, filtered.external_c_functions, by_name);
-			return filtered;
-		}
-	};
-
-	std::expected<void, VmEvaluationError> loadLIRUnit(
-		CompTimeDVM& comptime_dvm, const compiler::lir::LIRUnit& lir_unit, query::Context& query_ctx
-	) {
-		static std::atomic<int> module_counter{};
-
-		// @TODO: #2971 So comp-time and repl are both loading the code incrementally into VM, but
-		// they are using different methods... Maybe use the repl incremental context here?
-		auto backend_module_name
-			= base::StrID(base::strConcat("module_", module_counter.fetch_add(1)));
-		compiler::backend_vm::DVMCodeBuilder m(query_ctx, backend_module_name, false, true);
-
-		// Insert comptime context into the module, for the module to pass the validation. This code
-		// although loaded here multiple times will be deduplicated by `CompTimeDVM::loadCode()`
-		auto comptime_code = comptime_ops::getComptimeTypeOperations(*comptime_dvm.getPID());
-		m.insertRawBytecodeDefinitions(comptime_code);
-		m.insertLIRUnit(lir_unit);
-
-		auto bytecode = m.build();
-
-		return comptime_dvm.loadCode(bytecode);
 	}
 
 	std::expected<std::vector<Box<vm::VmValue>>, VmEvaluationError> prepareArguments(
-		CompTimeDVM& comptime_dvm, const std::vector<compiler::ctv::CompileTimeValue>& args
+		query::Context&                                     ctx,
+		CompTimeDVM&                                        comptime_dvm,
+		const std::vector<compiler::ctv::CompileTimeValue>& args
 	) {
 		std::vector<Box<vm::VmValue>> owned_arguments;
 		owned_arguments.reserve(args.size());
 		for (const auto& ctv_arg: args) {
-			auto res = ctvToVmValue(*comptime_dvm.getPID(), ctv_arg);
+			auto res = ctvToVmValue(ctx, comptime_dvm, ctv_arg);
 			if (!res) return std::unexpected(res.error());
 			owned_arguments.push_back(std::move(*res));
 		}
@@ -334,6 +462,7 @@ namespace {
 	}
 
 	std::expected<compiler::ctv::CompileTimeValue, VmEvaluationError> runAndGetResult(
+		query::Context&                      ctx,
 		CompTimeDVM&                         comptime_dvm,
 		const std::string&                   func_name,
 		const std::vector<Box<vm::VmValue>>& owned_args,
@@ -350,7 +479,13 @@ namespace {
 		if (!maybe_exit_value.has_value())
 			return std::unexpected(VmEvaluationError(
 				VmEvaluationError::Kind::FunctionRunFailed,
-				"Failed to run a function '" + func_name + "' on VM."
+				base::strConcat(
+					"Failed to run a function '",
+					func_name,
+					"' on VM. Reason: `",
+					errorToString(maybe_exit_value.error()),
+					"`."
+				)
 			));
 
 		// Free the owned arguments.
@@ -362,7 +497,7 @@ namespace {
 					values.size() == 1, "Compiler support for multiple values not implemented"
 				);
 				auto exit_value = values.at(0);
-				return vmValueToCtv(return_type, exit_value);
+				return vmValueToCtv(ctx, return_type, exit_value);
 			}
 			variant_default { CORE_PANIC("Unexpected non-vector return value from VM"); }
 		}
@@ -384,22 +519,23 @@ namespace compiler::helios {
 		// @note: comptime_dvm is initialized (spawns the DVM compile-time evaluation process and
 		// initializes it) once upon the first call to executeInVm and its lifetime extends for the
 		// duration of the program. When deinitialized, it kills the spawned process.
-		static CompTimeDVM comptime_dvm;
+		static CompTimeDVM comptime_dvm(ctx);
+
 		if (!comptime_dvm.isAlive())
 			return std::unexpected(VmEvaluationError(
 				VmEvaluationError::Kind::VmInitializationFailed,
 				"Failed to initialize the comptime DVM process."
 			));
 
-		if (auto res = loadLIRUnit(comptime_dvm, lir_unit, ctx); !res)
+		if (auto res = comptime_dvm.loadCode(ctx, lir_unit); !res)
 			return std::unexpected(res.error());
 
 		if (auto res = setQueryContext(comptime_dvm, ctx); !res)
 			return std::unexpected(res.error());
 
-		auto owned_args = prepareArguments(comptime_dvm, args);
+		auto owned_args = prepareArguments(ctx, comptime_dvm, args);
 		if (!owned_args) return std::unexpected(owned_args.error());
 
-		return runAndGetResult(comptime_dvm, func_name, *owned_args, return_type);
+		return runAndGetResult(ctx, comptime_dvm, func_name, *owned_args, return_type);
 	}
 }

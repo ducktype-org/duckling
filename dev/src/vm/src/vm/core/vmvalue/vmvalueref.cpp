@@ -12,6 +12,10 @@ vm::VMValueRef vm::interpreted_data_variant::Table::get(usize index) {
 	return { *process.get(), type, pointer };
 }
 
+[[nodiscard]] base::ModRawView vm::interpreted_data_variant::Table::asBytesView() const {
+	return process->getMemory().getRemainingPointerData(begin);
+}
+
 base::Optional<vm::InterpretedDataVariant> vm::VMValueRef::readData() const {
 	variant_match(my_type->getKindVariant()) {
 		variant_case_novalue(vm::kind::Primitive) {

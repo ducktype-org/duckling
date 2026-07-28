@@ -45,17 +45,17 @@ fun main() -> i64 = {
     builtin_output_i64(five_2);
     builtin_output_i64(five_3);
     builtin_output_i64(FIB_10);
-    builtin_output_i64(i64(FIB_ON_I32_10));
+    builtin_output_i64(FIB_ON_I32_10 as i64);
 
     if (not boolean) { builtin_output_i64(123123); }
 
     builtin_output_i64(takeUnit(unit));
     builtin_output_i64(takeUnit(unitIdentity(unit)));
 
-    builtin_output_i64(i64(AREA_F32)); # 314
-    builtin_output_i64(i64(U16_OVERFLOW)); # 0
-    builtin_output_i64(i64(U8_OVERFLOW)); # 0
-    builtin_output_i64(i64(I16_CALC)); # -100
+    builtin_output_i64(AREA_F32 as i64); # 314
+    builtin_output_i64(U16_OVERFLOW as i64); # 0
+    builtin_output_i64(U8_OVERFLOW as i64); # 0
+    builtin_output_i64(I16_CALC as i64); # -100
 
     return 0i64;
 }

@@ -596,6 +596,23 @@ private:
 				{ "cannot be evaluated at compile-time", "const y = x" },
 				1
 			);
+
+			checkForErrorOnCompileModule(
+				R"(
+				class S {
+					x: i64;
+					S.copy(other: const ref S) = {
+						return S(10);
+					}
+				}
+				
+				fun takeS(x: S) = 10;
+
+				const ctvS = takeS(S(1));
+			)",
+				{ "cannot be evaluated at compile time" },
+				1
+			);
 		}
 
 		// ========================== Default initialization errors ==========================
@@ -1345,7 +1362,7 @@ private:
 			R"(
 				expand 1;
 			)",
-			{ "i32", "const slice char" },
+			{ "i32", "cannot be converted to any of the accepted types", "slice char", "String" },
 			1
 		);
 
@@ -1457,6 +1474,15 @@ private:
 				fun bar() = {
 					return foo();
 				}
+			)",
+			{ "cycle" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				const X = xWithAdded(10);
+				fun xWithAdded(v: i64) = X + v;
 			)",
 			{ "cycle" },
 			1

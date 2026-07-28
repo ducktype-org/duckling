@@ -82,7 +82,6 @@ namespace compiler::helios::defgen {
 					or abstract_type.getKind() == tsh::Kind::StaticArray
 					or abstract_type.getKind() == tsh::Kind::Tuple
 					or abstract_type.getKind() == tsh::Kind::DynamicArray
-					or abstract_type.getKind() == tsh::Kind::String
 					or abstract_type.getKind() == tsh::Kind::Variant,
 				"Tried to generate a destructor call for a type which shouldn't need one"
 			);

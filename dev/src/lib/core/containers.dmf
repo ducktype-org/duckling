@@ -10,7 +10,7 @@ namespace allocation {
 
     @dvm_only_impl
     fun alloc(len: u64) -> manyptr char = {
-        return builtins.dvm_char_alloc(len);
+        return builtins.dvm_alloc:{char}(len);
     }
 
     @native_only_impl
@@ -23,7 +23,7 @@ namespace allocation {
 
     @dvm_only_impl
     fun free(p: manyptr char) -> () = {
-        builtins.dvm_char_free(p);
+        builtins.dvm_free:{char}(p);
     }
 
     @native_only_impl
@@ -35,12 +35,12 @@ namespace allocation {
     fundecl realloc(p: manyptr char, new_size: u64) -> manyptr char;
 
     #{
-        `dvm_char_realloc` resizes the dynamic table in place and reseats the
+        `dvm_realloc` resizes the dynamic table in place and reseats the
         handle held by `p`, so the parameter itself is the reallocated buffer.
     #}
     @dvm_only_impl
     fun realloc(p: manyptr char, new_size: u64) -> manyptr char = {
-        builtins.dvm_char_realloc(p, new_size);
+        builtins.dvm_realloc:{char}(p, new_size);
         return p;
     }
 
@@ -75,7 +75,7 @@ class String {
 
     fun append(c: char) -> ref String = {
         reserve(len + 1u64);
-        pointer[i64(len)] = c;
+        pointer[len as i64] = c;
         len               = len + 1u64;
         return self;
     }
@@ -100,7 +100,7 @@ class String {
     fun append(other: str) -> ref String = {
         let other_len = other.length();
         reserve(len + other_len);
-        copyCharsAt(builtins.char_ptr_from_slice(other), pointer, len, other_len);
+        copyCharsAt(builtins.ptr_from_slice:{char}(other), pointer, len, other_len);
         len = len + other_len;
         return self;
     }
@@ -109,7 +109,7 @@ class String {
         reserve(len + 1u64);
 
         # Shift right back to front, so moved characters are never clobbered.
-        var i = i64(len);
+        var i = len as i64;
         while (i > 0i64) {
             pointer[i] = pointer[i - 1i64];
             i          = i - 1i64;
@@ -139,11 +139,11 @@ class String {
     fun length() -> u64 = len;
     
     fun asSlice() -> str = {
-        return builtins.char_slice_from_ptr_len(pointer, len);
+        return builtins.slice_from_ptr_len:{char}(pointer, len);
     }
 
     fun at(i: i64) -> ref char = {
-        if (i < 0i64 or i >= i64(len)) panicking.panic();
+        if (i < 0i64 or i >= len as i64) panicking.panic();
         return &pointer[i];
     }
 
@@ -170,9 +170,9 @@ fun stringReserve(cap: u64) -> String = {
 }
 
 fun copyCharsAt(source: manyptr char, dest: manyptr char, dest_offset: u64, count: u64) -> () = {
-    let offset = i64(dest_offset);
+    let offset = dest_offset as i64;
     var i      = 0i64;
-    while (i < i64(count)) {
+    while (i < count as i64) {
         dest[offset + i] = source[i];
         i                = i + 1i64;
     }
@@ -231,7 +231,7 @@ fun :+(s: ref String, c: char) -> String = {
 fun stringifyStr(x: str) -> String = {
     let size   = x.length();
     var result = stringReserve(size);
-    copyChars(builtins.char_ptr_from_slice(x), result.pointer, size);
+    copyChars(builtins.ptr_from_slice:{char}(x), result.pointer, size);
     result.len = size;
     return move result;
 }
