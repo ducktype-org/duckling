@@ -4,6 +4,7 @@ from ..impl.integration.tester import (
 )
 from .helpers import (
     build_dir,
+    get_cpu_count,
     verbose,
 )
 from click import command, option
@@ -48,11 +49,42 @@ from click import command, option
     help="Enable or disable concurrent deterministic compilation checks for all tests.",
 )
 @option(
+    "-j",
+    "--jobs",
+    type=int,
+    default=get_cpu_count(),
+    help="Maximal number of concurrently running test cases. 1 means sequential execution.",
+)
+@option(
     "-t",
     "--filter",
     type=str,
     default="",
-    help="Run tests under the specified path prefix (e.g., 'tests/C++' or 'tests/C++/Case1').",
+    help="Run only the test cases whose 'node/.../test/case' path matches the given "
+    "regex (searched anywhere in the path). Plain strings work as fuzzy filters: "
+    "a path prefix, an inner directory name or a test name.",
+)
+@option(
+    "--deterministic-output",
+    is_flag=True,
+    default=False,
+    help="With -j > 1, print test outputs in the definition (tree) order instead of "
+    "the completion order.",
+)
+@option(
+    "--core-dumps",
+    is_flag=True,
+    default=False,
+    help="Keep core dumps enabled for test commands. By default every command runs "
+    "with `ulimit -c 0`, so a crashing test exits without waiting for the system "
+    "core-dump handler.",
+)
+@option(
+    "--timeout-scale",
+    type=float,
+    default=1.0,
+    help="Multiply every resolved TimeOut by this factor, e.g. on slow or heavily "
+    "loaded machines.",
 )
 @option(
     "--custom-values",

@@ -104,7 +104,6 @@ Categories (from `src/common/logger/src/logger/logger.hpp`): `Lexer`, `Printer`,
 ```bash
 ./bin/VM run          # CLI mode
 ./bin/VM server       # HTTP server
-./bin/VM repl         # REPL
 ./bin/VM debug_adapter
 ./bin/VM -d ...       # enable DVM debug logs
 ```

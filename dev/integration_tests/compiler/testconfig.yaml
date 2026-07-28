@@ -1,4 +1,5 @@
-PreNode: "@{compile_duckc} && @{compile_dvm}"
+# Toolchain is built by the root PreNode.
+PreNode: ""
 
 SubDirs:
   - cli

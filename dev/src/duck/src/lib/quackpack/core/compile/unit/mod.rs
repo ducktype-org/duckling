@@ -11,6 +11,7 @@ use super::duckc::multipackage_schema;
 use crate::quackpack::core::compile::compiler_package::CompilerPackage;
 use crate::quackpack::core::identity::Identity;
 use crate::util::hash::sha256_string;
+use crate::{QuackResult, QuackResultContext};
 
 pub mod graph;
 pub mod unit_visitor;
@@ -137,7 +138,10 @@ impl Unit {
     }
 
     /// Get a single [`multipackage_schema::Package`] for this [`Unit`].
-    pub fn multipackage_schema_package(&self, graph: &UnitGraph) -> multipackage_schema::Package {
+    pub fn multipackage_schema_package(
+        &self,
+        graph: &UnitGraph,
+    ) -> QuackResult<multipackage_schema::Package> {
         let package = self.root_package().package();
         let name = package.name();
         let version = package.version();
@@ -176,20 +180,29 @@ impl Unit {
             }
             result
         };
-        multipackage_schema::Package {
+        Ok(multipackage_schema::Package {
             id: self.unique_name().into(),
             import_name: name,
             version,
             features,
-            path_to_the_src_directory: package.src().to_path_buf(),
+            path_to_the_src_directory: package
+                .src()
+                .context_internal(
+                    "asked for src directory of the global package or a script with frontmatter",
+                )?
+                .to_path_buf(),
             dependencies,
-        }
+        })
     }
 
     /// Accept a [`UnitVisitor`].
     ///
     /// This method should only drive the visitor through dependencies of this [`Unit`].
-    pub fn accept<V: UnitVisitor + ?Sized>(&self, visitor: &mut V, graph: &UnitGraph) {
+    pub fn accept<V: UnitVisitor + ?Sized>(
+        &self,
+        visitor: &mut V,
+        graph: &UnitGraph,
+    ) -> QuackResult<()> {
         let mut stack = VecDeque::from([self.unit_id()]);
         let mut visited = HashSet::new();
         while let Some(id) = stack.pop_front() {
@@ -198,9 +211,10 @@ impl Unit {
             }
             visited.insert(id);
             let unit = graph.unit_for(id);
-            visitor.visit(unit);
+            visitor.visit(unit)?;
             stack.extend(unit.deps_sorted_by_unit_id());
         }
+        Ok(())
     }
 }
 
