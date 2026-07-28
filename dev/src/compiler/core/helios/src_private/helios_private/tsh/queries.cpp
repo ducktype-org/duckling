@@ -225,7 +225,7 @@ namespace compiler::tsh {
 			for (const compiler::helios::SymID field_sym: { fields->ptr, fields->len }) {
 				elements.emplace_back(
 					field_sym,
-					ctx.query<helios::QueryTypeOfSymbol>(field_sym)->valueOrThrow().getType(),
+					key,
 					declaration_order,
 					InterfaceElement::InterfaceElementKind::Field,
 					ClassMemberVisibility::Private
@@ -236,7 +236,7 @@ namespace compiler::tsh {
 			const auto length_sym = helios::defgen::lengthMethodForType(ctx, key);
 			elements.emplace_back(
 				length_sym,
-				ctx.query<helios::QueryTypeOfSymbol>(length_sym)->valueOrThrow().getType(),
+				key,
 				declaration_order,
 				InterfaceElement::InterfaceElementKind::Method,
 				ClassMemberVisibility::Public

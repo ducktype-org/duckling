@@ -38,7 +38,7 @@ public:
 		TESTER_ADD_TEST(initsDeinitsTest);
 		TESTER_ADD_TEST(pointersTest);
 		TESTER_ADD_TEST(backendDependentTest);
-		TESTER_ADD_TEST(charAllocTest);
+		TESTER_ADD_TEST(allocTest);
 	}
 
 protected:
@@ -65,7 +65,7 @@ protected:
 			{ fs::FilePath(path("modules/inits_deinits/")), "inits_deinits" },
 			{ fs::FilePath(path("modules/pointers/")), "pointers" },
 			{ fs::FilePath(path("modules/backend_dependent/")), "backend_dependent" },
-			{ fs::FilePath(path("modules/char_alloc/")), "char_alloc" },
+			{ fs::FilePath(path("modules/alloc/")), "alloc" },
 		};
 		auto init_result
 			= compiler::driver::test_utils::initializeCompilerForTests(packages, artifacts_path);
@@ -210,10 +210,7 @@ private:
 	// `getValue` (returning 10), not the `@native_only_impl` one (returning 20).
 	void backendDependentTest() { runTest("backend_dependent", {}, {}, {}, 10); }
 
-	// Allocating, reallocating and freeing a dynamic char table exercises the DVM-backend
-	// `dvm_alloc`/`dvm_realloc`/`dvm_free` builtins lowered to `dynTableReAlloc`
-	// and `free`. Returns 42 when the written chars survive the round-trip.
-	void charAllocTest() { runMultimoduleTest("char_alloc", ALL_CORE_MODULES, {}, {}, {}, 42); }
+	void allocTest() { runMultimoduleTest("alloc", ALL_CORE_MODULES, {}, "16\n131\n", {}, 42); }
 };
 
 

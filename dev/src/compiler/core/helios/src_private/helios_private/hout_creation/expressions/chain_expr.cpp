@@ -462,6 +462,34 @@ namespace compiler::helios::code {
 			CORE_UNREACHABLE();
 		}
 
+		/**
+		 * @brief Bakes the callee if it carries a template specifier, then resolves the result
+		 * into callable candidates.
+		 *
+		 * @param lookup_result The result of the lookup for the callee.
+		 * @param element_with_template_specifier The PST element naming the callee.
+		 * @return Candidates after baking and resolution of functions vs call operators.
+		 *
+		 * @TODO: #3095 fold into the handling of the new :{} PST node.
+		 */
+		template<typename T>
+		[[nodiscard]]
+		query::QResult<std::vector<SymID>> getCallableCandidatesWithBake(
+			CRef<LookupResult> lookup_result, pst::Access<T> element_with_template_specifier
+		) const {
+			UNPACK_QRESULT(
+				auto maybe_bake =,
+				transformTemplateBakeLookupResult(
+					query_ctx, lookup_result, element_with_template_specifier
+				)
+			);
+
+			// @TODO: #1412 fix dealias
+			if (maybe_bake.has_value())
+				return getCallableCandidates(std::vector{ maybe_bake.value() });
+			return getCallableCandidates(lookup_result->leaves);
+		}
+
 		// =============================== MAIN PROCESSING FUNCTIONS ===============================
 
 		/**
@@ -482,22 +510,9 @@ namespace compiler::helios::code {
 					= h_interface.lookup(query_ctx, ident->getName().unlock(query_ctx)->unwrap());
 				UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup_qresult);
 
-				std::vector<SymID> call_candidates;
-
-				auto maybe_bake
-					= transformTemplateBakeLookupResult(query_ctx, lookup_result, ident);
-				if (maybe_bake.hasFailed()) return query::Failed();
-
-				if (maybe_bake.valueOrPanic().has_value()) {
-					auto resulting_sym_id = maybe_bake.valueOrPanic().value();
-					call_candidates.push_back(resulting_sym_id);
-				} else {
-					call_candidates = lookup_result->leaves;
-				}
-
-				// @TODO: #1412 fix dealias
-				const auto callees_q_result = getCallableCandidates(call_candidates);
-				UNPACK_QRESULT_MOVE(const auto& callees =, callees_q_result);
+				UNPACK_QRESULT(
+					const auto& callees =, getCallableCandidatesWithBake(lookup_result, ident)
+				);
 
 				auto res = processFunctionOrMethodNoSelfCall(query_ctx, callees, ident, call_expr);
 				UNPACK_QRESULT_MOVE(base::Box<Expr> expr =, res);
@@ -897,21 +912,9 @@ namespace compiler::helios::code {
 				          .lookup(query_ctx, expr_access->getName().unlock(query_ctx)->unwrap());
 				UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup_qresult);
 
-				std::vector<SymID> call_candidates;
-
 				UNPACK_QRESULT(
-					auto maybe_bake =,
-					transformTemplateBakeLookupResult(query_ctx, lookup_result, expr_access)
+					const auto& callees =, getCallableCandidatesWithBake(lookup_result, expr_access)
 				);
-
-				if (maybe_bake.has_value())
-					call_candidates.push_back(maybe_bake.value());
-				else
-					call_candidates = lookup_result->leaves;
-
-				// @TODO: #1412 fix dealias
-				auto callees_q_result = getCallableCandidates(call_candidates);
-				UNPACK_QRESULT_MOVE(const auto& callees =, callees_q_result);
 
 				auto expr_result
 					= processFunctionOrMethodNoSelfCall(query_ctx, callees, expr_access, call_expr);
