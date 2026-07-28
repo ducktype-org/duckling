@@ -12,9 +12,9 @@ use crate::quackpack::core::{GitReference, PackageLoader};
 use crate::quackpack::util::is_local_file::IsLocalFile;
 use crate::{DuckContext, QuackResult, QuackResultContext};
 
+mod fast_path;
 mod github_client;
 mod gitlab_client;
-mod pseudo_git_client;
 #[cfg(test)]
 mod tests;
 
