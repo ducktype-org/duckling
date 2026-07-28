@@ -2621,6 +2621,11 @@ private:
 		auto c_block_function        = getChain("cBlockFunction", root_scope).back();
 		auto c_block_public_function = getChain("cBlockPublicFunction", root_scope).back();
 
+		// Test symbols nested in a namespace, in both nesting orders
+		auto c_nested_in_namespace
+			= getChain("c_block_namespace.cNestedInNamespace", root_scope).back();
+		auto c_reverse_nested = getChain("reverse_namespace.cReverseNested", root_scope).back();
+
 		// Test struct
 		auto regular_struct = getChain("RegularStruct", root_scope).back();
 
@@ -2711,6 +2716,16 @@ private:
 				ASSERT_TRUE(has_specifier(ctx, *specifiers, pst::Keyword::Extern));
 				ASSERT_TRUE(has_specifier(ctx, *specifiers, pst::Keyword::Public));
 				test_c_abi_with_library(ctx, c_block_public_function, {});
+			}
+
+			// Test namespaces nested in an extern("C") block and vice versa: the extern
+			// specifier propagates through namespaces in both nesting orders
+			{
+				for (auto symbol: { c_nested_in_namespace, c_reverse_nested }) {
+					auto specifiers = ctx.query<compiler::helios::QuerySpecifiersOfSymbol>(symbol);
+					ASSERT_TRUE(has_specifier(ctx, *specifiers, pst::Keyword::Extern));
+					test_c_abi_with_library(ctx, symbol, {});
+				}
 			}
 
 			// Test invalid ABI function - should fail
