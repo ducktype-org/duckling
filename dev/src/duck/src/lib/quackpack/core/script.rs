@@ -172,6 +172,14 @@ impl Script {
         let contents = path.read_to_string()?;
         capture_frontmatter(&contents).map(|maybe_frontmatter| maybe_frontmatter.is_some())
     }
+
+    /// Transform into the underlying manifest.
+    pub fn into_manifest(self) -> Manifest {
+        match self {
+            Self::Standalone(standalone_script) => standalone_script.into_manifest(),
+            Self::Associated(package_script) => package_script.into_manifest(),
+        }
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -230,6 +238,16 @@ impl PackageScript {
     pub fn as_a_local_identity(&self) -> QuackResult<Identity> {
         self.package().as_a_local_identity()
     }
+
+    /// Transform into the underlying [`Package`].
+    pub fn into_package(self) -> Package {
+        self.package
+    }
+
+    /// Transform into the underlying manifest.
+    pub fn into_manifest(self) -> Manifest {
+        self.into_package().into_manifest()
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -279,6 +297,16 @@ impl StandaloneScript {
     pub fn as_a_local_identity(&self) -> QuackResult<Identity> {
         let origin = Origin::for_local(self.frontmatter().script_file())?;
         Ok(Identity::new(self.manifest().name(), origin))
+    }
+
+    /// Transform into the underlying manifest.
+    pub fn into_manifest(self) -> Manifest {
+        self.into_frontmatter().into_manifest()
+    }
+
+    /// Transform into the underlying frontmatter.
+    pub fn into_frontmatter(self) -> FrontMatter {
+        self.frontmatter
     }
 }
 
@@ -374,6 +402,11 @@ impl FrontMatter {
     pub fn as_a_local_identity(&self) -> QuackResult<Identity> {
         let origin = Origin::for_local(self.script_file())?;
         Ok(Identity::new(self.manifest().name(), origin))
+    }
+
+    /// Transform into the underlying manifest.
+    pub fn into_manifest(self) -> Manifest {
+        self.manifest
     }
 }
 

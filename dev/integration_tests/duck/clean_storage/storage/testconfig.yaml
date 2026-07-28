@@ -1,4 +1,4 @@
-duck-cfg: 'storage: {temporary_lifetime: 1}'
+duck-cfg: 'storage: {temporary-lifetime: 1 second}'
 
 PreCase: |+
   @{cd-tmp-dir}

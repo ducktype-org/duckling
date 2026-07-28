@@ -25,6 +25,14 @@ impl AnyPackage {
         }
     }
 
+    /// Transform into the underlying manifest.
+    pub fn into_manifest(self) -> Manifest {
+        match self {
+            Self::Package(package) => package.into_manifest(),
+            Self::Script(script) => script.into_manifest(),
+        }
+    }
+
     /// Get the root directory of the package / path of the script.
     pub fn root(&self) -> &Path {
         match self {
@@ -219,6 +227,11 @@ impl Package {
     /// Get the high-level abstraction over the manifest.
     pub fn manifest(&self) -> &Manifest {
         &self.manifest
+    }
+
+    /// Transform into the underlying manifest.
+    pub fn into_manifest(self) -> Manifest {
+        self.manifest
     }
 
     /// Get the root directory of the package.

@@ -3112,6 +3112,24 @@ private:
 				return method != nullptr && method->kind == kind;
 			};
 
+			// Returns the callee symbol of a statement of the form `f(...);`, if any.
+			auto call_callee = [&](const Stmt* stmt) -> base::Optional<SymID> {
+				auto expr_stmt = dynamic_cast<const ExprStmt*>(stmt);
+				if (expr_stmt == nullptr) return {};
+				auto call = dynamic_cast<const CallExpr*>(expr_stmt->expr.get());
+				if (call == nullptr) return {};
+				return getIdentifierExprSymID(call->callee.ref());
+			};
+
+			auto is_templated_builtin_call
+				= [&](const Stmt* stmt, BuiltinTemplatedSymbol::Kind kind) -> bool {
+				auto callee = call_callee(stmt);
+				if (!callee.has_value()) return false;
+				const auto* templated
+					= std::get_if<BuiltinTemplatedSymbol>(&getSymRef(callee.value())->other);
+				return templated != nullptr && templated->kind == kind;
+			};
+
 			// A trivially-destructible class has an empty destructor and a no-op destructor.
 			{
 				const auto  type = get_class_type(trivial_sym);
@@ -3131,8 +3149,9 @@ private:
 				ASSERT_TRUE(type.hasNoOpDestructor(ctx));
 			}
 
-			// A class owning a `box i32` frees the box with a `box_free` builtin call. The pointee
-			// is trivial, so there is no pointee destruction, only the free.
+			// A class owning a `box i32` destroys the box by calling its `box_destructor`. That
+			// builtin's own body frees the storage with `box_free`; the pointee is trivial, so
+			// there is no pointee destruction, only the free.
 			{
 				const auto type = get_class_type(has_box_sym);
 				ASSERT_TRUE(!type.hasNoOpDestructor(ctx));
@@ -3140,7 +3159,19 @@ private:
 				const auto& dtor  = ctx.query<QueryDefaultDestructor>(type)->valueOrThrow();
 				const auto& stmts = dtor.body->statements;
 				ASSERT_EQUAL_PRINT(1, stmts.size());
-				ASSERT_TRUE(is_builtin_call(stmts.at(0).get(), BuiltinKind::BoxFree));
+				ASSERT_TRUE(is_templated_builtin_call(
+					stmts.at(0).get(), BuiltinTemplatedSymbol::Kind::BoxDestructor
+				));
+
+				// The box_destructor's own body only frees the (trivial) box storage.
+				const auto box_dtor_sym = call_callee(stmts.at(0).get());
+				ASSERT_HAS_VALUE(box_dtor_sym);
+				const auto& box_dtor
+					= ctx.query<QueryCodeOfFun>(box_dtor_sym.value())->valueOrThrow();
+				ASSERT_EQUAL_PRINT(1, box_dtor.body->statements.size());
+				ASSERT_TRUE(
+					is_builtin_call(box_dtor.body->statements.at(0).get(), BuiltinKind::BoxFree)
+				);
 			}
 
 			// A class holding a non-trivially-destructible member destroys it via that member's own
@@ -3190,8 +3221,10 @@ private:
 				ASSERT_TRUE(user_call != nullptr);
 				ASSERT_EQUAL(user_dtor, getIdentifierExprSymID(user_call->callee.ref()).value());
 
-				// [1] `second` (box i32) freed
-				ASSERT_TRUE(is_builtin_call(stmts.at(1).get(), BuiltinKind::BoxFree));
+				// [1] `second` (box i32) destroyed via its box_destructor
+				ASSERT_TRUE(is_templated_builtin_call(
+					stmts.at(1).get(), BuiltinTemplatedSymbol::Kind::BoxDestructor
+				));
 				// [2] `first` (HasBox) destroyed
 				ASSERT_TRUE(is_method_call(stmts.at(2).get(), Method::Kind::DefaultDestructor));
 			}
@@ -3222,13 +3255,17 @@ private:
 				ASSERT_TRUE(dtor.body->statements.empty());
 			}
 
-			// List of a non-trivial element - a destruction loop over the elements.
+			// List of a non-trivial element - a destruction loop over the elements, then the
+			// backing buffer is released with a `list_free` builtin call.
 			{
 				const auto  list_type = field_abstract_type("class_list");
 				const auto& dtor  = ctx.query<QueryDefaultDestructor>(list_type)->valueOrThrow();
 				const auto& stmts = dtor.body->statements;
-				ASSERT_EQUAL_PRINT(2, stmts.size());
+				ASSERT_EQUAL_PRINT(3, stmts.size());
 				ASSERT_TRUE(dynamic_cast<const WhileStmt*>(stmts.at(1).get()) != nullptr);
+				ASSERT_TRUE(is_templated_builtin_call(
+					stmts.at(2).get(), BuiltinTemplatedSymbol::Kind::ListFree
+				));
 			}
 
 			// Tuple with a non-trivial element - destroys that element via its destructor.
