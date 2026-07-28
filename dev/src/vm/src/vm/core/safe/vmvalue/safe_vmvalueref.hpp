@@ -64,5 +64,8 @@ namespace vm {
 		SafeTableElementAccess(SafeVMProcess& process, TypeCRef element_type, Pointer begin);
 
 		[[nodiscard]] SharedBox<IVMValueRef> get(usize index) const override;
+
+		/** @copydoc ITableElementAccess::asBytesView */
+		[[nodiscard]] base::ModRawView asBytesView() const override;
 	};
 }

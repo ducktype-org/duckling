@@ -49,6 +49,12 @@ namespace vm {
 		/** @brief Interprets the value's data as a structured, human-inspectable variant. */
 		[[nodiscard]] virtual base::Optional<InterpretedDataVariant> readData() const = 0;
 
+		/**
+		 * @brief Copies the data of `source` into this value.
+		 * @note `source` has to belong to the same VM implementation and process as this value.
+		 */
+		virtual void importDataFrom(const IVMValue& source) = 0;
+
 		/** @brief Returns the PID of the process this value belongs to. */
 		[[nodiscard]] virtual PID getPID() const = 0;
 
@@ -64,6 +70,21 @@ namespace vm {
 		 * dump.
 		 */
 		virtual void dprint(std::ostream& out, const std::string& indent = "") const = 0;
+
+		/**
+		 * @brief Interprets the value's data and returns it as `T`.
+		 * @return The interpreted data, or an empty optional when it could not be interpreted or is
+		 * not a `T`.
+		 */
+		template<class T>
+		requires(base::IS_VARIANT_MEMBER_V<T, InterpretedDataVariant>)
+		[[nodiscard]] base::Optional<T> readData() const {
+			auto data = readData();
+			if (data.empty()) return {};
+			if (auto* value = std::get_if<T>(&data.value())) return *value;
+
+			return {};
+		}
 
 		/**
 		 * @brief Interprets the value's raw byte buffer as an object of type T.

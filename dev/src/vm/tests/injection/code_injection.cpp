@@ -57,6 +57,10 @@ private:
 			return {};
 		}
 
+		void importDataFrom(const IVMValue&) override {
+			CORE_PANIC("ForeignVMValue cannot import data");
+		}
+
 		[[nodiscard]] vm::PID getPID() const override { return pid; }
 
 		[[nodiscard]] byte* getBytes() override { return data.data(); }

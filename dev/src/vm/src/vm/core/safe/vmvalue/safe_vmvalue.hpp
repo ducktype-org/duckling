@@ -70,6 +70,9 @@ namespace vm {
 		/** @brief Fills the value's data with the bytes pointed to by `src`. */
 		void importData(Pointer src);
 
+		/** @copydoc IVMValue::importDataFrom */
+		void importDataFrom(const IVMValue& source) override;
+
 		[[nodiscard]] SafeVMValueRef asRef() const;
 
 		[[nodiscard]] base::CRef<code::valid_type::ValidType> getType() const override;

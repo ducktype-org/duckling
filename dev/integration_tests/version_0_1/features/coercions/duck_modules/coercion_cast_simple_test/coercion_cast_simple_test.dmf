@@ -12,8 +12,8 @@ fun main() -> i64 = {
 
     # Explicit coercion: signed to unsigned
     var signed: i64 = -10;
-    var unsigned: u64 = u64(signed);
-    if (i64(unsigned) >= 0i64) { # Expect a negative value
+    var unsigned: u64 = signed as u64;
+    if (unsigned as i64 >= 0i64) { # Expect a negative value
         builtin_output_i64(3);  # Should not execute
     }
 

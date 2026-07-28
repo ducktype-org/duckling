@@ -2,6 +2,8 @@
 
 #include <base/collections/maps.hpp>
 #include <base/collections/optional.hpp>
+#include <base/comptime/type_traits.hpp>
+#include <base/misc/raw_view.hpp>
 #include <base/pointers/shared_box.hpp>
 #include <base/types/bits_and_bytes.hpp>
 #include <base/types/ints.hpp>
@@ -63,6 +65,15 @@ namespace vm {
 		 * structure, a non-null pointer, a table or a variant) rather than being a single scalar.
 		 */
 		[[nodiscard]] virtual bool isComplex() const = 0;
+
+		/**
+		 * @brief Interprets the referenced data and returns it as `T`.
+		 * @return The interpreted data, or an empty optional when it could not be interpreted or is
+		 * not a `T`.
+		 */
+		template<class T>
+		requires(base::IS_VARIANT_MEMBER_V<T, InterpretedDataVariant>)
+		[[nodiscard]] base::Optional<T> readData() const;
 	};
 
 	/**
@@ -75,6 +86,12 @@ namespace vm {
 
 		/** @brief Creates a reference to the table element at `index`. */
 		[[nodiscard]] virtual SharedBox<IVMValueRef> get(usize index) const = 0;
+
+		/**
+		 * @brief Returns the raw bytes of the table, from its beginning to the end of the memory
+		 * block it lives in.
+		 */
+		[[nodiscard]] virtual base::ModRawView asBytesView() const = 0;
 	};
 
 	namespace interpreted_data_variant {
@@ -99,6 +116,12 @@ namespace vm {
 				if (index >= size) throw std::out_of_range("Table index out of range");
 				return elements->get(index);
 			}
+
+			/**
+			 * @brief Returns the raw bytes of the table, from its beginning to the end of the
+			 * memory block it lives in.
+			 */
+			[[nodiscard]] base::ModRawView asBytesView() const { return elements->asBytesView(); }
 		};
 
 		struct Data final {
@@ -119,5 +142,15 @@ namespace vm {
 		struct Function final {};
 
 		struct Opaque final {};
+	}
+
+	template<class T>
+	requires(base::IS_VARIANT_MEMBER_V<T, InterpretedDataVariant>)
+	base::Optional<T> IVMValueRef::readData() const {
+		auto data = readData();
+		if (data.empty()) return {};
+		if (auto* value = std::get_if<T>(&data.value())) return *value;
+
+		return {};
 	}
 }

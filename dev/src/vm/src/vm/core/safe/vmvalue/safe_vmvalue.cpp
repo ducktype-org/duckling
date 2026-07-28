@@ -51,6 +51,15 @@ void vm::SafeVMValue::exportData(Pointer dst) const { memory->copyPointedData(ds
 
 void vm::SafeVMValue::importData(Pointer src) { memory->copyPointedData(pointer, src, type); }
 
+void vm::SafeVMValue::importDataFrom(const IVMValue& source) {
+	const auto* safe_source = dynamic_cast<const SafeVMValue*>(&source);
+	CORE_ASSERT(safe_source != nullptr, "Importing data from a value of another VM implementation!");
+	CORE_ASSERT(
+		safe_source->getPID() == getPID(), "Importing data from a value of another VM process!"
+	);
+	importData(safe_source->pointer);
+}
+
 vm::SafeVMValueRef vm::SafeVMValue::asRef() const { return { *my_process.get(), type, pointer }; }
 
 void vm::SafeVMValue::freeData() {

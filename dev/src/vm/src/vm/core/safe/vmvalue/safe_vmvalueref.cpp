@@ -24,6 +24,10 @@ SharedBox<vm::IVMValueRef> vm::SafeTableElementAccess::get(usize index) const {
 	return SafeVMValueRef::makeShared(*my_process.get(), element_type, pointer);
 }
 
+base::ModRawView vm::SafeTableElementAccess::asBytesView() const {
+	return my_process->getMemory().getRemainingPointerData(begin);
+}
+
 namespace vm {
 	namespace {
 		/** @brief Builds an interpreted table backed by lazy element access to safe VM memory. */

@@ -12,7 +12,7 @@ class ClassWithMember {
     }
 }
 
-var c          = ClassWithMember(FirstClass(5, f32(6.0)));
+var c          = ClassWithMember(FirstClass(5, 6.0 as f32));
 var c_member   = c.member;
 
 var c_member_a = c.getMemberA();
