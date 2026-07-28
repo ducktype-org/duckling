@@ -73,6 +73,11 @@ namespace query::internal {
 		explicit constexpr operator usize() const {
 			return static_cast<usize>(val);
 		}
+
+
+		static constexpr QueryID createUnregisteredForTests(u64 val) {
+			return QueryID{val};
+		}
 	};
 
 	/**

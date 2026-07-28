@@ -34,3 +34,6 @@ duck_add_test(common concurrent_metadata_storage tests/concurrent_metadata_stora
 duck_add_test(common query_invalidation tests/query_invalidation_test.cpp USES QueryFramework)
 duck_add_test(common task_pool tests/task_pool_test.cpp USES QueryFramework)
 duck_add_test(common cycle_detection_race tests/cycle_detection_race_test.cpp USES QueryFramework)
+
+
+add_example(node_idid_test src/query_framework/node_id_comp/test.cpp USES QueryFramework Base)
