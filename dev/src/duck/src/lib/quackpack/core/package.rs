@@ -57,7 +57,8 @@ impl AnyPackage {
         }
     }
 
-    /// Check if this is the global package.
+    /// Convert this package to an [`Identity`].
+    /// This will always (try to) return an [`Identity`] with [`Origin::for_local`] origin.
     pub fn as_a_local_identity(&self) -> QuackResult<Identity> {
         match self {
             Self::Package(package) => package.as_a_local_identity(),
