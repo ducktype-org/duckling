@@ -55,7 +55,7 @@ fn hash_subgraph_and_profile(
 
 #[derive(Debug, Clone)]
 /// Shared layout of the artifacts directory.
-/// This means that we do not compile everythink in the root unit's build directory,
+/// This means that we do not compile everything in the root unit's build directory,
 /// but instead every dependency is compiled in its own build directory.
 /// See the [module](super::shared_artifacts_layout) documentation.
 pub struct SharedArtifactsLayout {

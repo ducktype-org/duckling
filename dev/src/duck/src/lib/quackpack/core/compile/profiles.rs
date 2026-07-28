@@ -247,6 +247,7 @@ impl Profile {
         })
     }
 
+    /// Get a [`String`] describing the value (everythin except `name`) of this profile.
     pub fn serialize_raw(&self) -> String {
         format!(
             "{}-{}-{}-{}",

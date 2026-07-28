@@ -7,7 +7,6 @@ use std::process::ExitStatus;
 
 pub mod debug_executor;
 pub mod dvm_executor;
-//pub mod shared_artifacts_executor;
 
 #[cfg(test)]
 mod tests;
