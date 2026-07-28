@@ -14,6 +14,7 @@
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/type_interface.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
+#include <helios_private/hout_creation/definition_generation/default_destructors.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
@@ -358,21 +359,41 @@ namespace compiler::helios {
 						tsh::Mutability::Immutable,
 					};
 				}
-				variant_case(defgen::BoxBuiltin, box) {
-					// `box_alloc(value: T) -> box T` and `box_free(b: box T) -> ()`.
-					const auto box_type = tsh::SymbolType<>{ box.pointee_type,
-						                                     tsh::ReferenceKind::Box,
-						                                     tsh::Mutability::Mutable };
+				variant_case(defgen::BuiltinTemplatedSymbol, builtin) {
+					// `box_alloc(value: T) -> box T`, `box_free(b: box T) -> ()` and
+					// `list_free(l: ref [T]) -> ()`.
+					const auto box_type = tsh::SymbolType<>{
+						builtin.type,
+						tsh::ReferenceKind::Box,
+						tsh::Mutability::Mutable,
+					};
 
 					auto [arg_types, return_type]
 						= [&]() -> std::pair<std::vector<tsh::SymbolType<>>, tsh::SymbolType<>> {
-						switch (box.kind) {
-						case defgen::BoxBuiltin::Kind::Alloc:
-							return { { tsh::SymbolType<>::withDefaults(box.pointee_type) },
-								     box_type };
-						case defgen::BoxBuiltin::Kind::Free:
+						switch (builtin.kind) {
+						case defgen::BuiltinTemplatedSymbol::Kind::BoxAlloc:
+							return { { tsh::SymbolType<>::withDefaults(builtin.type) }, box_type };
+						case defgen::BuiltinTemplatedSymbol::Kind::BoxDestructor:
+							// @TODO: #2825 change this back to Box
+							return { { box_type.withReferenceKind(tsh::ReferenceKind::Ref) },
+								     tsh::SymbolType<>::withDefaults(tsh::getUnitType()) };
+						case defgen::BuiltinTemplatedSymbol::Kind::BoxFree:
 							return { { box_type },
 								     tsh::SymbolType<>::withDefaults(tsh::getUnitType()) };
+						case defgen::BuiltinTemplatedSymbol::Kind::ListFree: {
+							const auto array_type = ctx.query<tsh::QueryDynamicArrayType>(
+								{ tsh::SymbolType<>::withDefaults(builtin.type) }
+							);
+							const auto ref_array = tsh::SymbolType<>{
+								array_type,
+								tsh::ReferenceKind::Ref,
+								tsh::Mutability::Mutable,
+							};
+							return {
+								{ ref_array },
+								tsh::SymbolType<>::withDefaults(tsh::getUnitType()),
+							};
+						}
 						}
 						CORE_UNREACHABLE();
 					}();
@@ -502,4 +523,8 @@ namespace compiler::helios {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTypeOfSymbol);
+
+	base::Optional<SymID> getTypeDestructor(query::Context& ctx, tsh::SymbolType<> symbol_type) {
+		return defgen::destructSymForSymbolType(ctx, symbol_type);
+	}
 }

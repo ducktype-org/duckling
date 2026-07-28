@@ -247,7 +247,7 @@ public:
 		});
 	}
 
-	/** `cast`, `refOf`, `deref` and `moveOf` reshape an operand's type as expected. */
+	/** `cast`, `refOf`, `deref` and `move` reshape an operand's type as expected. */
 	void testConversionExprs() {
 		query::utils::withContextDo([&](query::Context& ctx) {
 			const Shorthand s{ ctx };
@@ -279,7 +279,7 @@ public:
 			ASSERT_EQUAL(derefed->expression_type.getType().getKind(), tsh::Kind::Integral);
 
 			// `move x` preserves the operand type as a temporary.
-			const auto moved = s.moveOf(s.litNum(5));
+			const auto moved = s.move(s.litNum(5));
 			ASSERT_EQUAL(dprint(moved), std::string("move(5)"));
 			ASSERT_EQUAL(moved->expression_type.getType().getKind(), tsh::Kind::Integral);
 			ASSERT_EQUAL(
