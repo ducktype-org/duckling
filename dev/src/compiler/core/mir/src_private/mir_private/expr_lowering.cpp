@@ -784,6 +784,24 @@ namespace compiler::mir {
 				return lowerAndLiftToTypeRecursively(*reusable_expr->inner, continuation);
 			}
 
+			// Any other expression of unit type (a tuple element, a call, ...) is still lowered
+			// because it may have side effects, but the unit type has a single value, so what it
+			// lifts to is always the unit type itself.
+			if (expr.expression_type.getType().getKind() == tsh::Kind::Unit) {
+				auto lowered = lowerSubExpr(expr, continuation);
+				// Materialise the result so the lowered instructions stay well formed, then drop
+				// it - only its type is of interest here.
+				[[maybe_unused]] const auto unit_value = lowered.getResult(function);
+
+				tsh::SymbolType<> unit_sym_type{
+					tsh::getUnitType(),
+					tsh::ReferenceKind::Direct,
+					tsh::Mutability::Mutable,
+				};
+
+				return ExprLowerRes(lowered.begin, MIRValue{ MIRConstant{ unit_sym_type } });
+			}
+
 			return lowerSubExpr(expr, continuation);
 		}
 
