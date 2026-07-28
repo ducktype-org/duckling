@@ -5,11 +5,12 @@ use std::path::PathBuf;
 use tempfile::{TempDir, tempdir};
 
 use super::parse_manifest;
-use crate::quackpack::core::manifest::parse::frontmatter::try_parse_frontmatter;
-use crate::quackpack::core::{GitReference, OptLevel, Profile, Version};
+use crate::quackpack::core::manifest::parse::frontmatter::parse_frontmatter;
+use crate::quackpack::core::script::Script;
+use crate::quackpack::core::{GitReference, OptLevel, Profile, Version, capture_frontmatter};
 use crate::quackpack::util::to_path_buf::ToPathBuf;
 use crate::util::path_ops_ext::PathOpsExt;
-use crate::{DuckContext, QpContext, StrId};
+use crate::{DuckContext, StrId};
 
 fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {
     let dir = tempdir().unwrap();
@@ -67,6 +68,12 @@ metadata:
     assert!(summary.dependencies().all_dependencies().is_empty());
     assert!(summary.dev_dependencies().all_dependencies().is_empty());
     assert!(summary.features().all_features().is_empty());
+    assert!(!summary.venv().ephemeral());
+    assert!(summary.venv().expose_freezefile());
+    assert_eq!(
+        summary.venv().storage_path(),
+        ctx.default_storage_root().not_locked_path()
+    );
 }
 
 #[test]
@@ -497,13 +504,13 @@ dependencies:
     #[cfg(not(windows))]
     {
         let path = a3.source().url().to_path_buf().unwrap();
-        assert_eq!(path, PathBuf::from(format!("/xd")));
+        assert_eq!(path, PathBuf::from("/xd"));
     }
     assert!(a3.alias().is_none());
 
     let b = summary.dependencies().get_by_name(StrId::new("b")).unwrap();
     assert!(b.source().is_registry());
-    let default_registry = ctx.registry_url().unwrap();
+    let default_registry = ctx.duck_cfg().registry_url().unwrap();
     assert_eq!(b.source().url(), default_registry);
     assert_eq!(b.versions().len(), 1);
     assert_eq!(b.versions()[0].to_string(), "0.1.0");
@@ -1281,9 +1288,7 @@ dependencies:
 "#,
     );
     let ctx = DuckContext::default();
-    let frontmatter = try_parse_frontmatter(frontmatter_path, &ctx)
-        .unwrap()
-        .unwrap();
+    let frontmatter = parse_frontmatter(&frontmatter_path, &ctx).unwrap();
     assert!(frontmatter.dependencies().has_by_name(StrId::new("a")));
     assert_eq!(frontmatter.dependencies().all_dependencies().len(), 1);
     assert_eq!(frontmatter.dev_dependencies().all_dependencies().len(), 0);
@@ -1301,7 +1306,7 @@ dependencies:
 "#,
     );
     let ctx = DuckContext::default();
-    let err = try_parse_frontmatter(frontmatter_path.clone(), &ctx).unwrap_err();
+    let err = parse_frontmatter(&frontmatter_path, &ctx).unwrap_err();
     assert_eq!(
         err.to_string(),
         make_errors_message_frontmatter(
@@ -1344,7 +1349,7 @@ dependencies:
         )
         .unwrap();
     let ctx = DuckContext::default();
-    let frontmatter = try_parse_frontmatter(importing, &ctx).unwrap().unwrap();
+    let frontmatter = parse_frontmatter(&importing, &ctx).unwrap();
     assert!(frontmatter.dependencies().has_by_name(StrId::new("a")));
     assert_eq!(frontmatter.dependencies().all_dependencies().len(), 1);
     assert_eq!(frontmatter.dev_dependencies().all_dependencies().len(), 0);
@@ -1359,7 +1364,7 @@ import: y
 "#,
     );
     let ctx = DuckContext::default();
-    let err = try_parse_frontmatter(frontmatter_path.clone(), &ctx).unwrap_err();
+    let err = parse_frontmatter(&frontmatter_path, &ctx).unwrap_err();
     let no_file_err = std::io::Error::from_raw_os_error(libc::ENOENT);
     assert_eq!(
         err.to_string(),
@@ -1383,18 +1388,21 @@ fn frontmatter_after_code_not_read() {
     let dir = TempDir::new().unwrap();
     let script = dir.path().join("x");
     script.touch().unwrap();
-    script
-        .write(
-            r#" 
+    let contents = r#" 
 let a = 5
 <frontmatter>
 import: y
 </frontmatter>
-        "#,
-        )
-        .unwrap();
+        "#;
+    script.write(contents).unwrap();
     let ctx = DuckContext::default();
-    assert!(try_parse_frontmatter(script, &ctx).unwrap().is_none());
+    // Check that we don't find a frontmatter...
+    assert!(!Script::has_frontmatter(&script).unwrap());
+    assert!(capture_frontmatter(contents).unwrap().is_none());
+    // ...but parsing returns a default.
+    let frontmatter = parse_frontmatter(&script, &ctx).unwrap();
+    assert!(frontmatter.dependencies().all_dependencies().is_empty());
+    assert!(frontmatter.dev_dependencies().all_dependencies().is_empty());
 }
 
 #[test]
@@ -1412,7 +1420,7 @@ import: y
         )
         .unwrap();
     let ctx = DuckContext::default();
-    let err = try_parse_frontmatter(script, &ctx).unwrap_err();
+    let err = parse_frontmatter(&script, &ctx).unwrap_err();
     assert_eq!(
         err.to_string(),
         make_errors_message_frontmatter(&dir, ["frontmatter begins but does not end"])
@@ -1432,7 +1440,7 @@ dependencies:
 "#,
     );
     let ctx = DuckContext::default();
-    let err = try_parse_frontmatter(frontmatter_path.clone(), &ctx).unwrap_err();
+    let err = parse_frontmatter(&frontmatter_path, &ctx).unwrap_err();
     assert_eq!(
         err.to_string(),
         make_errors_message_frontmatter(
@@ -1440,10 +1448,80 @@ dependencies:
             [
                 "remove all the fields besides `dependencies`, `dev-dependencies` and `profiles`",
                 &format!(
-                    "illegal fields `metadata`, `features` in the frontmatter at {}",
+                    "illegal fields `metadata`, `features` in the frontmatter at `{}`",
                     frontmatter_path.display()
                 ),
             ]
         )
     );
+}
+
+#[test]
+fn custom_venv_with_relative_path() {
+    let (dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: xd
+  version: '0.10'
+
+venv:
+  storage-path: storage
+  expose-freezefile: false
+  ephemeral: true
+"#,
+    );
+    let ctx = DuckContext::default();
+    let manifest = parse_manifest(&manifest_path, &ctx).unwrap();
+    let summary = manifest.manifest();
+    assert!(summary.venv().ephemeral());
+    assert!(!summary.venv().expose_freezefile());
+    assert_eq!(
+        summary.venv().storage_path(),
+        dir.path().join("storage").resolve().unwrap(),
+    );
+}
+
+#[test]
+fn custom_venv_with_absolute_path() {
+    let (_dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: xd
+  version: '0.10'
+
+venv:
+  storage-path: /storage
+"#,
+    );
+    let ctx = DuckContext::default();
+    let manifest = parse_manifest(&manifest_path, &ctx).unwrap();
+    let summary = manifest.manifest();
+    assert_eq!(summary.venv().storage_path(), PathBuf::from("/storage"),);
+}
+
+#[test]
+fn custom_venv_with_home_path() {
+    let (_dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: xd
+  version: '0.10'
+
+venv:
+  storage-path: ~/storage
+"#,
+    );
+    let ctx = DuckContext::default();
+    let manifest = parse_manifest(&manifest_path, &ctx).unwrap();
+    let summary = manifest.manifest();
+
+    let home_dir = home_dir().unwrap();
+    assert_eq!(summary.venv().storage_path(), home_dir.join("storage"));
+}
+
+#[test]
+fn empty_frontmatter_works() {
+    let (_dir, frontmatter_path) = prepare_frontmatter("");
+    let ctx = DuckContext::default();
+    let _ = parse_frontmatter(&frontmatter_path, &ctx).unwrap();
 }

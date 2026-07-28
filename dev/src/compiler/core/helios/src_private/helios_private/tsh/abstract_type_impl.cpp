@@ -287,7 +287,7 @@ namespace compiler::tsh {
 
 	bool VariantAbstractTypeImpl::hasNoOpDestructor(query::Context& ctx) const {
 		for (const auto& type: underlying_types)
-			if (!type.hasNoOpDestructor(ctx)) return false;
+			if (!type.isTriviallyDestructible(ctx)) return false;
 		return true;
 	}
 
@@ -360,40 +360,8 @@ namespace compiler::tsh {
 	}
 
 	CRef<TypeInterface> SliceAbstractTypeImpl::getDeclaredInterface(query::Context& ctx) const {
-		auto compute_interface = [&]() -> TypeInterface {
-			std::vector<InterfaceElement> elements;
-			elements.reserve(3);
-
-			auto components = ctx.query<helios::QuerySliceTypeData>(toAbstractType());
-			elements.emplace_back(
-				components->ptr,
-				ctx.query<helios::QueryTypeOfSymbol>(components->ptr)->valueOrThrow().getType(),
-				0,
-				InterfaceElement::InterfaceElementKind::Field,
-				ClassMemberVisibility::Private
-			);
-			elements.emplace_back(
-				components->len,
-				ctx.query<helios::QueryTypeOfSymbol>(components->len)->valueOrThrow().getType(),
-				1,
-				InterfaceElement::InterfaceElementKind::Field,
-				ClassMemberVisibility::Private
-			);
-
-			auto length_sym = helios::defgen::lengthMethodForType(ctx, toAbstractType());
-			elements.emplace_back(
-				length_sym,
-				ctx.query<helios::QueryTypeOfSymbol>(length_sym)->valueOrThrow().getType(),
-				2,
-				InterfaceElement::InterfaceElementKind::Method,
-				ClassMemberVisibility::Public
-			);
-
-			auto interface = TypeInterface(elements);
-			return interface;
-		};
-		static const TypeInterface cached_interface = compute_interface();
-		return &cached_interface;
+		const auto type = toAbstractType().as<SliceAbstractType>();
+		return &ctx.query<QueryInterfaceOfSlice>(type)->valueOrThrow();
 	}
 
 	CRef<TypeInterface> DynamicArrayAbstractTypeImpl::getDeclaredInterface(query::Context& ctx
@@ -565,7 +533,7 @@ namespace compiler::tsh {
 		auto fields = getDeclaredInterface(ctx)->getFieldsView();
 		// Otherwise the destructor is a no-op only if every field is trivially destructible.
 		return std::ranges::all_of(fields, [&](const auto& field) {
-			return field.getType(ctx).hasNoOpDestructor(ctx);
+			return field.getType(ctx).isTriviallyDestructible(ctx);
 		});
 	}
 
@@ -614,7 +582,7 @@ namespace compiler::tsh {
 
 	bool TupleAbstractTypeImpl::hasNoOpDestructor(query::Context& ctx) const {
 		return std::ranges::all_of(components, [&](const auto& component) {
-			return component.hasNoOpDestructor(ctx);
+			return component.isTriviallyDestructible(ctx);
 		});
 	}
 

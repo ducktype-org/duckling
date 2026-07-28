@@ -32,10 +32,8 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 
 	/** Simple byte by byte assignment. */
 	Assign,
-	AddressOf, 
+	AddressOf,
 	// @TODO: #1894 Remove the `List*` when Lists are implemented in STD.
-	ListFree,
-
 	ListPush,
 	ListPop,
 
@@ -172,7 +170,7 @@ namespace compiler::lir {
 	 * @brief Function which call will be replaced
 	 * manually in the backend.
 	 */
-	enum class BuiltinFunctionKind { DvmCharAlloc, DvmCharRealloc, DvmCharFree, BoxAlloc, BoxFree };
+	enum class BuiltinFunctionKind { DvmAlloc, DvmRealloc, DvmFree, BoxAlloc, BoxFree, ListFree };
 
 	base::Optional<BuiltinFunctionKind> getBuiltinKindFromHOUT(helios::BuiltinKind kind);
 
@@ -278,6 +276,17 @@ namespace compiler::lir {
 		 * @return LIRLocal
 		 */
 		static LIRLocal boolLocal(query::Context& ctx);
+
+		/**
+		 * @brief Creates unique local holding a reference to @p pointee_type, and without
+		 * helios_id.
+		 * @note It's used to materialize addresses of places passed to functions taking
+		 * references.
+		 * @param ctx
+		 * @param pointee_type Type of the referenced value.
+		 * @return LIRLocal
+		 */
+		static LIRLocal refLocal(query::Context& ctx, tsh::SymbolType<> pointee_type);
 	};
 
 	enum class LIRGlobalType { Variable, Constant };

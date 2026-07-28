@@ -396,23 +396,13 @@ namespace vm::code {
 			}
 
 			// ===== Labels & jumps =====
-			instr_case(ins::Op_label, i) { (void) i; }
-			instr_case(ins::Op_jmp_label, i) {
-				(void) i;
-				flags |= ControlFlowModifying;
-			}
-			instr_case(ins::Op_jmpIf_label, i) {
-				(void) i;
-				flags |= ControlFlowModifying;
-			}
-			instr_case(ins::Op_jmpIfNot_label, i) {
-				(void) i;
-				flags |= ControlFlowModifying;
-			}
+			instr_case(ins::Op_label, i) {}
+			instr_case(ins::Op_jmp_label, i) { flags |= ControlFlowModifying; }
+			instr_case(ins::Op_jmpIf_label, i) { flags |= ControlFlowModifying; }
+			instr_case(ins::Op_jmpIfNot_label, i) { flags |= ControlFlowModifying; }
 
 			// ===== Calls =====
 			instr_case(ins::Op_call_func, i) {
-				(void) i;
 				flags |= Call | InstructionFlag(ControlFlowModifying);
 			}
 			instr_case(ins::Op_call_builtinfunc, i) {
@@ -432,7 +422,6 @@ namespace vm::code {
 				       | InstructionFlag(MayBlock) | InstructionFlag(ReleaseGIL);
 			}
 			instr_case(ins::Op_call_ffifunc, i) {
-				(void) i;
 				// An FFI call dispatches through libffi into a shared object: like an external C
 				// call it is opaque, may do IO, runs outside the VM, and can block.
 				flags |= CallExternal | InstructionFlag(ControlFlowModifying)
@@ -440,22 +429,17 @@ namespace vm::code {
 				       | InstructionFlag(MayBlock) | InstructionFlag(ReleaseGIL);
 			}
 			instr_case(ins::Op_set_threadctx, i) {
-				(void) i;
 				flags
 					|= Call | InstructionFlag(Multithread) | InstructionFlag(ControlFlowModifying);
 			}
 			instr_case(ins::Op_ret_tailcall_func, i) {
-				(void) i;
 				flags |= Call | InstructionFlag(ControlFlowModifying);
 			}
-			instr_case(ins::Op_ret, i) {
-				(void) i;
-				flags |= ControlFlowModifying;
-			}
+			instr_case(ins::Op_ret, i) { flags |= ControlFlowModifying; }
 
 			// ===== Stack lifecycle =====
 			instr_case(ins::Op_init_pany_type, i) { wr(i.var); }
-			instr_case(ins::Op_deinit, i) { (void) i; }
+			instr_case(ins::Op_deinit, i) {}
 
 			// ===== IO =====
 			instr_case(ins::Op_input_p64, i) {
@@ -501,8 +485,6 @@ namespace vm::code {
 				deref_read();
 			}
 			instr_case(ins::Op_virtual_call_pptr_method, i) {
-				(void) i;
-
 				// Known limitation: a virtual call is opaque, so we conservatively raise every
 				// flag. As a result no execution config (no_io / read_only / single_thread) can
 				// admit code that performs a dynamic dispatch. Lifting this needs per-callsite
@@ -702,13 +684,10 @@ namespace vm::code {
 			FLAGS_W_R(fpext_p64_p32)
 
 			// ===== Misc =====
-			instr_case(ins::Op_nop, i) { (void) i; }
-			instr_case(ins::Op_exit, i) {
-				(void) i;
-				flags |= ControlFlowModifying;
-			}
-			instr_case(ins::Op_initFromVMValue, i) { (void) i; }
-			instr_case(ins::Comment, i) { (void) i; }
+			instr_case(ins::Op_nop, i) {}
+			instr_case(ins::Op_exit, i) { flags |= ControlFlowModifying; }
+			instr_case(ins::Op_initFromVmValue, i) {}
+			instr_case(ins::Comment, i) {}
 			instr_default { CORE_PANIC("Unhandled instruction: ", internal_value.name()); }
 		}
 		POP_DIAGNOSTIC

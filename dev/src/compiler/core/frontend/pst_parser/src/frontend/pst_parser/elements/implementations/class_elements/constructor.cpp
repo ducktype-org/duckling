@@ -5,7 +5,7 @@
 #include "preamble.hpp"
 
 namespace pst {
-	CLONE_SUB_ELEMENTS_DEF(Constructor, ident, params, inits, body);
+	CLONE_SUB_ELEMENTS_DEF(Constructor, ident, params, body);
 
 	MBox<Constructor> Constructor::parse(LangParserState& state) {
 		auto out = makeBox<Constructor>(state);
@@ -22,7 +22,6 @@ namespace pst {
 		}
 
 		PARSE().one(&out->params);
-		if (PARSE().tryEat(NamedOperator::Colon)) PARSE().one(&out->inits);
 
 		PST_NEW_CONTEXT({
 			state.setContextBlockOrdering(BlockOrderType::Ordered);
@@ -39,8 +38,6 @@ namespace pst {
 		out << "\"" << getInternalSymbolName().value().str() << "\"";
 		out << ",\"params\":";
 		nullAwareDprint(params, out);
-		out << ",\"inits\":";
-		nullAwareDprint(inits, out);
 		out << ",\"body\":";
 		nullAwareDprint(body, out);
 		out << "}";

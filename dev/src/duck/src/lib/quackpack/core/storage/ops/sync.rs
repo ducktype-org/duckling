@@ -12,6 +12,7 @@ use tracing::{debug, error};
 use crate::quackpack::core::fetcher::Fetcher;
 use crate::quackpack::core::fetcher::types::PackageWithUrl;
 use crate::quackpack::core::full_identity::{FullIdentity, FullKind, FullOrigin};
+use crate::quackpack::core::script::Script;
 use crate::quackpack::core::solver::git_access::GitAccess;
 use crate::quackpack::core::solver::solver_freeze::SolverFreeze;
 use crate::quackpack::core::solver::solver_mode::SolverMode;
@@ -49,11 +50,11 @@ pub fn sync(
     options: StorageSyncOptions,
 ) -> QuackResult<(TrySyncLock, Venv, Storage)> {
     debug!(root = %pcx.package().root().display(), ?options);
-    let venv_config = pcx.venv_config();
-    let storage = Storage::new(pcx.storage_path()?);
+    let venv_config = pcx.package().venv();
+    let storage = Storage::new(venv_config.storage_path());
     let mut fetcher = Fetcher::new(pcx.ctx())?;
     let mut git_access = StorageGitAccess::new(&storage);
-    let expose_freezefile = venv_config.is_freezefile_exposed()?;
+    let expose_freezefile = venv_config.expose_freezefile();
     let user_exposed_freeze = load_external_freezefile(pcx, expose_freezefile)?;
     let id = pcx.to_venv_id();
 
@@ -96,12 +97,12 @@ pub fn sync(
         data.set_last_modification(now);
         data.set_freeze(new_freeze);
         data.set_last_known_location(pcx.package().root().to_path_buf());
-        data.set_ephemeral(venv_config.is_ephemeral()?);
+        data.set_ephemeral(venv_config.ephemeral());
         venv
     } else {
         let data = VenvData::new(
             new_freeze,
-            venv_config.is_ephemeral()?,
+            venv_config.ephemeral(),
             pcx.package().root().to_path_buf(),
             now,
             now,
@@ -115,7 +116,7 @@ pub fn sync(
         freeze_name(
             pcx.package()
                 .try_get_package()
-                .context_internal("expose_freezefile set on frontmatter pseudo package")?,
+                .context_internal("`expose-freezefile` set on a script")?,
         )
         .write(json)?;
     }
@@ -206,7 +207,7 @@ fn load_external_freezefile(
     let freeze_path = freeze_name(
         pcx.package()
             .try_get_package()
-            .context_internal("expose_freezefile set on frontmatter pseudo package")?,
+            .context_internal("`expose-freezefile` set on a script")?,
     );
     if !freeze_path.is_file() {
         return Ok(None);
@@ -347,11 +348,11 @@ fn fetch_source_code(
 
 fn make_success_message(pcx: &PackageContext<'_>, id: VenvId) -> QuackResult<()> {
     match pcx.package() {
-        AnyPackage::Frontmatter(frontmatter) => pcx.ctx().console().info(format!(
+        AnyPackage::Script(Script::Standalone(script)) => pcx.ctx().console().info(format!(
             "successfully synchronized the venv of the script with a frontmatter at `{}`",
-            frontmatter.script_file().display()
+            script.frontmatter().script_file().display()
         )),
-        AnyPackage::Package(_) => pcx
+        AnyPackage::Package(_) | AnyPackage::Script(Script::Associated(_)) => pcx
             .ctx()
             .console()
             .info(format!("successfully synchronized venv `{id}`")),

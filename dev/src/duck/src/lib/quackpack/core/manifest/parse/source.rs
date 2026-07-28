@@ -15,7 +15,7 @@ use crate::quackpack::schemas::manifest::{
 use crate::quackpack::util::to_url::ToUrl;
 use crate::util::error::MessageError;
 use crate::util::path_ops_ext::PathOpsExt;
-use crate::{DuckContext, QpContext, QuackError, QuackResult, QuackResultContext, qp_bail, qp_err};
+use crate::{DuckContext, QuackError, QuackResult, QuackResultContext, qp_bail, qp_err};
 
 /// Parse given [`DependencySchema`] into [`Source`].
 ///
@@ -31,7 +31,7 @@ pub(crate) fn parse(
     let Some(ref source) = schema.source else {
         debug!("missing the source, falling back to the default registry...?");
         if schema.version.is_some() {
-            let url = ctx.registry_url()?;
+            let url = ctx.duck_cfg().registry_url()?;
             return Ok(Source::for_registry(url));
         }
         scope.disarm_and_pop();
@@ -72,7 +72,7 @@ pub(crate) fn parse(
             check_no_registry(source, &mut scope)?;
             if schema.version.is_some() {
                 debug!("...but has a version, assuming registry source");
-                let url = ctx.registry_url()?;
+                let url = ctx.duck_cfg().registry_url()?;
                 Source::for_registry(url)
             } else {
                 scope.pop();
@@ -96,8 +96,8 @@ pub(crate) fn parse(
             debug!("found a local path source");
             check_no_git(source, &mut scope)?;
             check_no_registry(source, &mut scope)?;
-            debug!("manifest path is `{root}`");
-            let dir_root = resolve_local_dep_root(root, package_root, ctx)?;
+            debug!("manifest path is `{}`", root.display());
+            let dir_root = resolve_path_maybe_relative_to_dir(root, package_root, ctx)?;
             Source::for_local(&dir_root)?
         }
         (None, None, Some(manifest_git_url)) => {
@@ -252,9 +252,9 @@ fn resolve_git_reference(source: &DetailedSource, scope: &Scope) -> QuackResult<
 /// Resolve absolute path to the local dependency with entry `manifest_root`.
 ///
 /// This functions returns a tuple `(absolute_path, was_expanded_path_relative)`.
-fn resolve_local_dep_root(
-    manifest_root: &str,
-    package_root: &Path,
+pub(super) fn resolve_path_maybe_relative_to_dir(
+    path: &Path,
+    root: &Path,
     ctx: &DuckContext,
 ) -> QuackResult<PathBuf> {
     let home = ctx.user_home();
@@ -264,14 +264,11 @@ fn resolve_local_dep_root(
             home.display(),
         )
     };
-    let expanded = Path::new(manifest_root).expand_user_with(home)?;
+    let expanded = path.expand_user_with(home)?;
     if expanded.is_absolute() {
         Ok(expanded.to_path_buf())
     } else {
-        Ok(package_root
-            .join(expanded)
-            .expand_user_with(home)?
-            .resolve()?)
+        Ok(root.join(expanded).expand_user_with(home)?.resolve()?)
     }
 }
 
@@ -288,7 +285,8 @@ fn parse_git_url(
     };
     // We are building error messages from the bottom to the top.
     // If an original URL points to a file, mention it to the user. Also, ignore any errors.
-    if let Ok(path) = resolve_local_dep_root(manifest_git_url, package_root, ctx)
+    if let Ok(path) =
+        resolve_path_maybe_relative_to_dir(Path::new(manifest_git_url), package_root, ctx)
         && path.exists()
     {
         err = err.add_hint(format!(

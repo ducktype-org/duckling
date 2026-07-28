@@ -180,7 +180,8 @@ namespace compiler::helios {
 				if (!is_reference || !is_matching_class) {
 					ctx.logInt(makeBox<dia_int::PlaceholderError>(
 						base::strConcat(
-							"A copy constructor's parameter must be a reference to its own class `",
+							"A copy constructor's parameter must be a reference to its own "
+							"class `",
 							name(class_type.getSymbol()),
 							"`."
 						),
@@ -275,6 +276,9 @@ namespace compiler::helios {
 						return ctx.query<defgen::QueryPopMethod>(method.owner_type)->valueOrThrow();
 					}
 					CORE_UNREACHABLE();
+				}
+				variant_case(defgen::BuiltinTemplatedSymbol, symbol_data) {
+					return getBuiltinImpl(ctx, key, symbol_data.getBuiltinKind());
 				}
 				variant_default {
 					CORE_PANIC(base::strConcat(

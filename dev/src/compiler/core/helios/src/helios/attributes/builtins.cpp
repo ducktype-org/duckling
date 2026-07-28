@@ -8,6 +8,7 @@
 #include <helios/queries/function_queries.hpp>
 #include <helios/symbols/query_type_symbol_data.hpp>
 #include <helios/tsh/types.hpp>
+#include <helios_private/hout_creation/definition_generation/default_destructors.hpp>
 #include <helios_private/hout_creation/shorthands/shorthands.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
@@ -26,11 +27,11 @@ namespace compiler::helios {
 		 */
 		const base::HashMap<std::string_view, BuiltinKind>& builtinNameMapping() {
 			static const base::HashMap<std::string_view, BuiltinKind> mapping = {
-				{ "char_ptr_from_slice", BuiltinKind::CharPtrFromSlice },
-				{ "char_slice_from_ptr_len", BuiltinKind::CharSliceFromPtrLen },
-				{ "dvm_char_alloc", BuiltinKind::DvmCharAlloc },
-				{ "dvm_char_realloc", BuiltinKind::DvmCharRealloc },
-				{ "dvm_char_free", BuiltinKind::DvmCharFree },
+				{ "ptr_from_slice", BuiltinKind::PtrFromSlice },
+				{ "slice_from_ptr_len", BuiltinKind::SliceFromPtrLen },
+				{ "dvm_alloc", BuiltinKind::DvmAlloc },
+				{ "dvm_realloc", BuiltinKind::DvmRealloc },
+				{ "dvm_free", BuiltinKind::DvmFree },
 				{ "size_of", BuiltinKind::SizeOf },
 				{ "alignment_of", BuiltinKind::AlignmentOf },
 			};
@@ -40,16 +41,16 @@ namespace compiler::helios {
 
 	base::StrID builtinKindToStr(BuiltinKind type) {
 		switch (type) {
-		case BuiltinKind::CharPtrFromSlice:
-			return base::StrID("char_ptr_from_slice");
-		case BuiltinKind::CharSliceFromPtrLen:
-			return base::StrID("char_slice_from_ptr_len");
-		case BuiltinKind::DvmCharAlloc:
-			return base::StrID("dvm_char_alloc");
-		case BuiltinKind::DvmCharRealloc:
-			return base::StrID("dvm_char_realloc");
-		case BuiltinKind::DvmCharFree:
-			return base::StrID("dvm_char_free");
+		case BuiltinKind::PtrFromSlice:
+			return base::StrID("ptr_from_slice");
+		case BuiltinKind::SliceFromPtrLen:
+			return base::StrID("slice_from_ptr_len");
+		case BuiltinKind::DvmAlloc:
+			return base::StrID("dvm_alloc");
+		case BuiltinKind::DvmRealloc:
+			return base::StrID("dvm_realloc");
+		case BuiltinKind::DvmFree:
+			return base::StrID("dvm_free");
 		case BuiltinKind::SizeOf:
 			return base::StrID("size_of");
 		case BuiltinKind::AlignmentOf:
@@ -58,6 +59,10 @@ namespace compiler::helios {
 			return base::StrID("box_alloc");
 		case BuiltinKind::BoxFree:
 			return base::StrID("box_free");
+		case BuiltinKind::ListFree:
+			return base::StrID("list_free");
+		case BuiltinKind::BoxDestructor:
+			return base::StrID("box_destructor");
 		}
 		CORE_UNREACHABLE();
 	}
@@ -121,9 +126,7 @@ namespace compiler::helios {
 		const Shorthand s{ ctx };
 
 		switch (type) {
-		case BuiltinKind::CharPtrFromSlice: {
-			// `char_ptr_from_slice(slice T s) -> manyptr T` simply returns the slice's data pointer
-			// field. This mirrors the `length` method, only reading a different field (`ptr` vs `len`).
+		case BuiltinKind::PtrFromSlice: {
 			auto& decl         = ctx.query<QueryDeclOfFun>(symbol)->valueOrThrow();
 			auto  slice_type   = decl.parameters.at(0).type.getType().as<tsh::SliceAbstractType>();
 			auto  slice_fields = ctx.query<QuerySliceTypeData>(slice_type);
@@ -139,11 +142,7 @@ namespace compiler::helios {
 				std::make_shared<const code::CodeBlock>(std::move(body)),
 			};
 		}
-		case BuiltinKind::CharSliceFromPtrLen: {
-			// `char_slice_from_ptr_len(p: ptr char, l: u64) -> slice char` builds a slice value
-			// out of a data pointer and a length. This mirrors the implicit class constructor:
-			// declare a default-initialized result, assign each field from a parameter, then
-			// return it.
+		case BuiltinKind::SliceFromPtrLen: {
 			auto&      decl            = ctx.query<QueryDeclOfFun>(symbol)->valueOrThrow();
 			const auto result_sym_type = decl.return_type;
 			auto       slice_type      = result_sym_type.getType().as<tsh::SliceAbstractType>();
@@ -151,7 +150,7 @@ namespace compiler::helios {
 
 			using Variable = defgen::GeneratedFunctionVariable;
 
-			// var __result: slice char = <default>;
+			// var __result: slice T = <default>;
 			const SymID result_symbol = ctx.query<defgen::QueryGeneratedSymbol>({
 				.name                  = base::StrID("__result"),
 				.generated_symbol_data = Variable{ .function_symbol = symbol,
@@ -160,7 +159,7 @@ namespace compiler::helios {
 			});
 
 			auto body = StmtPack{
-				// var __result: slice char = <default>;
+				// var __result: slice T = <default>;
 				s.var(
 					result_symbol, result_sym_type, s.defaultValue(result_sym_type.getType())
 				),
@@ -214,6 +213,13 @@ namespace compiler::helios {
 				})
 			);
 		}
+		case BuiltinKind::BoxDestructor: {
+			// `box_destructor(b: box T)` destroys the pointee, then frees the box storage. The
+			// pointee type `T` is the pointee of the `box T` parameter.
+			auto&      decl         = ctx.query<QueryDeclOfFun>(symbol)->valueOrThrow();
+			const auto pointee_type = decl.parameters.at(0).type.getType();
+			return defgen::buildBoxDestructor(ctx, pointee_type);
+		}
 		default: {
 			CORE_PANIC(
 				base::strConcat("Builtin `", builtinKindToStr(type), "` is not implemented in HOUT")
@@ -225,22 +231,25 @@ namespace compiler::helios {
 
 	BuiltinOrigins getBuiltinOrigins(BuiltinKind type) {
 		switch (type) {
-		case BuiltinKind::CharPtrFromSlice:
+		case BuiltinKind::PtrFromSlice:
 			return BuiltinOrigin::HOUT;
-		case BuiltinKind::CharSliceFromPtrLen:
+		case BuiltinKind::SliceFromPtrLen:
 			return BuiltinOrigin::HOUT;
-		case BuiltinKind::DvmCharAlloc:
+		case BuiltinKind::DvmAlloc:
 			return BuiltinOrigin::DVMBackend;
-		case BuiltinKind::DvmCharRealloc:
+		case BuiltinKind::DvmRealloc:
 			return BuiltinOrigin::DVMBackend;
-		case BuiltinKind::DvmCharFree:
+		case BuiltinKind::DvmFree:
 			return BuiltinOrigin::DVMBackend;
 		case BuiltinKind::SizeOf:
 		case BuiltinKind::AlignmentOf:
 			return BuiltinOrigin::HOUT;
 		case BuiltinKind::BoxAlloc:
 		case BuiltinKind::BoxFree:
+		case BuiltinKind::ListFree:
 			return BuiltinOrigin::DVMBackend | BuiltinOrigin::NativeBackend;
+		case BuiltinKind::BoxDestructor:
+			return BuiltinOrigin::HOUT;
 		}
 
 		CORE_UNREACHABLE();
@@ -248,17 +257,37 @@ namespace compiler::helios {
 
 	SymID boxAllocSymForType(query::Context& ctx, tsh::AbstractType pointee_type) {
 		return ctx.query<defgen::QueryGeneratedSymbol>({
-			.name                  = base::StrID("box_alloc"),
-			.generated_symbol_data = defgen::BoxBuiltin{ .pointee_type = pointee_type,
-		                                                 .kind = defgen::BoxBuiltin::Kind::Alloc },
+			.name = builtinKindToStr(BuiltinKind::BoxAlloc),
+			.generated_symbol_data
+			= defgen::BuiltinTemplatedSymbol{ pointee_type,
+		                                      defgen::BuiltinTemplatedSymbol::Kind::BoxAlloc },
 		});
 	}
 
 	SymID boxFreeSymForType(query::Context& ctx, tsh::AbstractType pointee_type) {
 		return ctx.query<defgen::QueryGeneratedSymbol>({
-			.name                  = base::StrID("box_free"),
-			.generated_symbol_data = defgen::BoxBuiltin{ .pointee_type = pointee_type,
-		                                                 .kind = defgen::BoxBuiltin::Kind::Free },
+			.name = builtinKindToStr(BuiltinKind::BoxFree),
+			.generated_symbol_data
+			= defgen::BuiltinTemplatedSymbol{ pointee_type,
+		                                      defgen::BuiltinTemplatedSymbol::Kind::BoxFree },
+		});
+	}
+
+	SymID listFreeSymForType(query::Context& ctx, tsh::AbstractType element_type) {
+		return ctx.query<defgen::QueryGeneratedSymbol>({
+			.name = builtinKindToStr(BuiltinKind::ListFree),
+			.generated_symbol_data
+			= defgen::BuiltinTemplatedSymbol{ element_type,
+		                                      defgen::BuiltinTemplatedSymbol::Kind::ListFree },
+		});
+	}
+
+	SymID boxDestructorSymForType(query::Context& ctx, tsh::AbstractType pointee_type) {
+		return ctx.query<defgen::QueryGeneratedSymbol>({
+			.name = builtinKindToStr(BuiltinKind::BoxDestructor),
+			.generated_symbol_data
+			= defgen::BuiltinTemplatedSymbol{ pointee_type,
+		                                      defgen::BuiltinTemplatedSymbol::Kind::BoxDestructor },
 		});
 	}
 

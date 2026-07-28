@@ -1,6 +1,7 @@
 #pragma once
 
 #include <ctv/ctv.hpp>
+#include <helios/attributes/builtins.hpp>
 #include <helios/hout/hout.hpp>  // @TODO: #404 try to relax it, it's just for Operatoriness, we could move it elsewhere
 #include <helios/scope_id.hpp>
 #include <helios/symbols/symbol_id.hpp>
@@ -80,20 +81,45 @@ namespace compiler::helios::defgen {
 	};
 
 	/**
-	 * Represents a compiler-generated box allocation/deallocation builtin, for a specific pointee
-	 * type.
+	 * Represents a compiler-generated builtin function templated on a single type argument, for a
+	 * specific `box`/`List` element type. The concrete builtin is distinguished by `kind`.
 	 *
 	 * These are declaration-only functions. Implementation is provided by the backends.
+	 * @note This is not related with language template implementation.
 	 */
-	struct BoxBuiltin final {
+	class BuiltinTemplatedSymbol final {
+	public:
 		enum class Kind {
-			Alloc,  //< `box_alloc(value: T) -> box T` - allocates sizeof(`T`), move `value` into it
-			        // and return the owning `box`.
-			Free,   //< `box_free(b: box T)` - release the storage owned by the box.
+			BoxAlloc,  //< `box_alloc(value: T) -> box T` - allocates memory for the Box.
+			BoxFree,   //< `box_free(b: box T)` - release the storage owned by the box.
+			ListFree,  //< `list_free(l: ref List[T])` - release the storage owned by the dynamic
+			           // array.
+			BoxDestructor,  //< `box_destructor(b: box T)` - destroys the pointee, then calls BoxFree.
 		};
 
-		tsh::AbstractType pointee_type;  // The `T` in `box T`.
-		BoxBuiltin::Kind  kind;
+		// The type argument the builtin is templated on: the `T` in `box T` for
+		// `BoxAlloc`/`BoxFree`, or the element type in `List[T]` for `ListFree`.
+		tsh::AbstractType            type;
+		BuiltinTemplatedSymbol::Kind kind;
+
+		[[nodiscard]] BuiltinKind getBuiltinKind() const {
+			switch (kind) {
+			case Kind::BoxAlloc:
+				return BuiltinKind::BoxAlloc;
+			case Kind::BoxFree:
+				return BuiltinKind::BoxFree;
+			case Kind::ListFree:
+				return BuiltinKind::ListFree;
+			case Kind::BoxDestructor:
+				return BuiltinKind::BoxDestructor;
+			default:
+				CORE_PANIC("Unhandled builtin case");
+			}
+		}
+
+		explicit BuiltinTemplatedSymbol(tsh::AbstractType type, BuiltinTemplatedSymbol::Kind kind):
+			  type(type),
+			  kind(kind) {}
 
 		[[nodiscard]]
 		base::Bit256 queryUnstablePerfectHash() const;
@@ -255,7 +281,7 @@ namespace compiler::helios::defgen {
 	};
 
 #define GENERATED_SYMBOL_SEMANTICS_LIST                                                           \
-	defgen::Constructor, defgen::Method, defgen::BuiltinOperator, defgen::BoxBuiltin,             \
+	defgen::Constructor, defgen::Method, defgen::BuiltinOperator, defgen::BuiltinTemplatedSymbol, \
 		defgen::Parameter, defgen::SelfParameter, defgen::Field,                                  \
 		defgen::GeneratedFunctionVariable, defgen::ControlFlowLocal,                              \
 		defgen::ReplExpressionWrapper, defgen::ReplInstructionWrapper, defgen::ScriptMainWrapper, \
