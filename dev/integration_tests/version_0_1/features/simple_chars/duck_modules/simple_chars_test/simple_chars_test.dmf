@@ -5,18 +5,18 @@ fun main() -> i64 = {
     var ch: char = 'A';
 
     # Test char to integer conversion
-    var ascii: i64 = i64(ch);
+    var ascii: i64 = ch as i64;
     builtin_output_i64(ascii);        # 65 (ASCII for 'A')
 
     # Test different char values
     ch = 'Z';
-    builtin_output_i64(i64(ch));      # 90 (ASCII for 'Z')
+    builtin_output_i64(ch as i64);      # 90 (ASCII for 'Z')
 
     ch = '0';
-    builtin_output_i64(i64(ch));      # 48 (ASCII for '0')
+    builtin_output_i64(ch as i64);      # 48 (ASCII for '0')
 
     ch = '9';
-    builtin_output_i64(i64(ch));      # 57 (ASCII for '9')
+    builtin_output_i64(ch as i64);      # 57 (ASCII for '9')
 
     # Test char comparison
     var a: char = 'a';

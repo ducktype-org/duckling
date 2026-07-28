@@ -17,7 +17,7 @@ fun foo(x: i64) -> i64 = {
 }
 
 fun foo(x: f64) -> i64 = {
-    return 100 + i64(x);
+    return 100 + x as i64;
 }
 
 fun foo(x: bool) -> i64 = {

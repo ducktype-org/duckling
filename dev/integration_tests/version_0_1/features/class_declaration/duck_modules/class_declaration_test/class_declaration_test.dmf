@@ -8,8 +8,8 @@ class Point {
 
 # Test class with mixed types
 class Rectangle {
-    width: i32 = i32(0);
-    height: i32 = i32(0);
+    width: i32 = 0 as i32;
+    height: i32 = 0 as i32;
     area: i64 = 0;
 }
 
@@ -47,15 +47,15 @@ fun main() -> i64 = {
     builtin_output_i64(p4.y);              # 10
 
     # Test Rectangle class
-    var rect = Rectangle(i32(3), i32(4), 12);
-    builtin_output_i64(i64(rect.width));   # 3
-    builtin_output_i64(i64(rect.height));  # 4
-    builtin_output_i64(rect.area);         # 12
+    var rect = Rectangle(3 as i32, 4 as i32, 12);
+    builtin_output_i64(rect.width as i64);  # 3
+    builtin_output_i64(rect.height as i64); # 4
+    builtin_output_i64(rect.area);          # 12
 
     # Test nested class
     var boxx = Box();
-    builtin_output_i64(boxx.top_left.x);    # 0
-    builtin_output_i64(boxx.bottom_right.x);# 10
+    builtin_output_i64(boxx.top_left.x);     # 0
+    builtin_output_i64(boxx.bottom_right.x); # 10
 
     return 0;
 }

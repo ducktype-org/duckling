@@ -306,6 +306,15 @@ namespace compiler::helios::code {
 				return type.getKind() == tsh::Kind::Integral or type.getKind() == tsh::Kind::Float;
 			}
 
+			/**
+			 * @brief Checks whether the type is a primitive scalar which may take part in an
+			 * explicit `as` conversion (integers, floats, `char`, `bool` and `byte`).
+			 */
+			static bool isScalarCastableType(const tsh::AbstractType type) {
+				return isNumericType(type) or type.getKind() == tsh::Kind::Char
+				    or type.getKind() == tsh::Kind::Bool or type.getKind() == tsh::Kind::Byte;
+			}
+
 			static bool isNumericOperator(const lexer::Operator op) {
 				// Only operators which allow their arguments to undergo numeric promotion.
 				static const std::set<std::string> numeric_ops
@@ -663,8 +672,9 @@ namespace compiler::helios::code {
 				using tsh::Mutability;
 				using tsh::ReferenceKind;
 
-				// For now we allow casts between numeric types
-				if (isNumericType(from.getType()) && isNumericType(to.getType())
+				// For now we allow casts between primitive scalar types: integers, floats, `char`,
+				// `bool` and `byte`. These replace the old call-style casts (`i64(x)`, `char(x)`).
+				if (isScalarCastableType(from.getType()) && isScalarCastableType(to.getType())
 				    && from.getRefKind() == ReferenceKind::Direct
 				    && to.getRefKind() == ReferenceKind::Direct)
 					return;
