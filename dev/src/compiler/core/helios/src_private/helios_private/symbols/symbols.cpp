@@ -1093,10 +1093,10 @@ namespace compiler::helios {
 						ctx, pst_element, pst::ElementKind::CodeBlock, pst::ElementKind::SpecifierBlock
 					))
 					pst_element = *std::move(result_stmt);
-				if (auto result_stmt = getAncestor(
-						ctx, pst_element, pst::ElementKind::CodeBlock, pst::ElementKind::Namespace
-					))
-					pst_element = *std::move(result_stmt);
+				else if (auto second_result_stmt = getAncestor(
+							 ctx, pst_element, pst::ElementKind::CodeBlock, pst::ElementKind::Namespace
+						 ))
+					pst_element = *std::move(second_result_stmt);
 				else
 					break;
 			}
