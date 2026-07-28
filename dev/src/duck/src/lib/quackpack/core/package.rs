@@ -26,6 +26,14 @@ impl AnyPackage {
         }
     }
 
+    /// Transform into the underlying manifest.
+    pub fn into_manifest(self) -> Manifest {
+        match self {
+            Self::Package(package) => package.into_manifest(),
+            Self::Frontmatter(frontmatter) => frontmatter.into_manifest(),
+        }
+    }
+
     /// Get the root directory of the package / path of the script.
     pub fn root(&self) -> &Path {
         match self {
@@ -217,6 +225,11 @@ impl Package {
         &self.manifest
     }
 
+    /// Transform into the underlying manifest.
+    pub fn into_manifest(self) -> Manifest {
+        self.manifest
+    }
+
     /// Get the root directory of the package.
     pub fn root_directory(&self) -> &Path {
         &self.root
@@ -336,6 +349,11 @@ impl FrontMatterScript {
     /// Get the manifest constructed from the script's frontmatter.
     pub fn manifest(&self) -> &Manifest {
         &self.manifest
+    }
+
+    /// Transform into the manifest constructed from the script's frontmatter.
+    pub fn into_manifest(self) -> Manifest {
+        self.manifest
     }
 
     /// Get the dependencies specified in the frontmatter.

@@ -1,15 +1,25 @@
+use std::sync::OnceLock;
 use std::time::Duration;
 
 use tracing::debug;
+use url::Url;
 
 use crate::duck::driver::cli_args_preprocessing::aliases_expansion::{Alias, Aliases};
 use crate::duck::util::duck_home::DuckHome;
+use crate::quackpack::core::fetcher;
+use crate::quackpack::schemas::config::{RegistryConfig, SecurityConfig, StorageConfig};
+use crate::quackpack::util::to_url::ToUrl;
+use crate::util::once_lock_ext::OnceLockExt;
 use crate::util::yaml_config::YamlConfig;
 use crate::{QuackResult, QuackResultContext};
 
 #[derive(Debug, Default)]
 pub struct DuckCfg {
     inner: YamlConfig,
+    // Fast config accessors.
+    security: OnceLock<SecurityConfig>,
+    registry: OnceLock<RegistryConfig>,
+    storage: OnceLock<StorageConfig>,
 }
 
 // !TODO: Use `from_hours(24)`, after bumping rust's version in CI to 1.91.0.
@@ -24,24 +34,49 @@ impl DuckCfg {
     pub fn new(home: &DuckHome) -> QuackResult<DuckCfg> {
         let inner = YamlConfig::new(home.user_config().to_path_buf())?;
         debug!("parsed the user config `{inner:?}`");
-        Ok(Self { inner })
+        Ok(Self {
+            inner,
+            security: OnceLock::new(),
+            registry: OnceLock::new(),
+            storage: OnceLock::new(),
+        })
+    }
+
+    /// Get the `security:` configuration table.
+    pub fn security(&self) -> QuackResult<&SecurityConfig> {
+        self.security
+            .try_init_with(|| self.inner.deserialize_optional_or_default("security"))
+    }
+
+    /// Get the `registry:` configuration table.
+    pub fn registry(&self) -> QuackResult<&RegistryConfig> {
+        self.registry
+            .try_init_with(|| self.inner.deserialize_optional_or_default("registry"))
+    }
+
+    /// Get the `storage:` configuration table.
+    pub fn storage(&self) -> QuackResult<&StorageConfig> {
+        self.storage
+            .try_init_with(|| self.inner.deserialize_optional_or_default("storage"))
     }
 
     /// Whether we should autofix unknown subcommands.
     pub fn fixes_enabled(&self) -> QuackResult<bool> {
         Ok(self
-            .inner
-            .get_bool("security.typos.enabled")
-            .context("when trying to determine whether typos fixing is enabled")?
+            .security()?
+            .typos
+            .as_ref()
+            .and_then(|typos| typos.enabled)
             .unwrap_or(false))
     }
 
     /// Maximal distance for autofixing unknown subcommands.
     pub fn max_fix_dist(&self) -> QuackResult<u64> {
         Ok(self
-            .inner
-            .get_u64("security.typos.max_distance")
-            .context("when trying to check the maximum typos fixing distance")?
+            .security()?
+            .typos
+            .as_ref()
+            .and_then(|typos| typos.max_distance)
             .unwrap_or(DEFAULT_MAXIMAL_AUTOFIX_DISTANCE))
     }
 
@@ -67,14 +102,20 @@ impl DuckCfg {
 
     /// Get the lifetime of temporary storage venvs.
     pub fn storage_tmp_lifetime(&self) -> QuackResult<Duration> {
-        let config_seconds = self
-            .inner
-            .get_u64("storage.temporary_lifetime")
-            .context("when trying to get the storage temporary lifetime")?;
-        let Some(secs) = config_seconds else {
-            return Ok(DEFAULT_STORAGE_LIFETIME);
-        };
-        Ok(Duration::from_secs(secs))
+        Ok(self
+            .storage()?
+            .temporary_lifetime
+            .map(|duration| duration.0)
+            .unwrap_or(DEFAULT_STORAGE_LIFETIME))
+    }
+
+    /// Get the default registry url.
+    pub fn registry_url(&self) -> QuackResult<Url> {
+        let url = self.registry()?.url.clone();
+        match url {
+            Some(url) => Ok(url),
+            None => fetcher::Fetcher::DEFAULT_REGISTRY_URL.to_url(),
+        }
     }
 }
 
@@ -85,18 +126,6 @@ mod test_utils {
     use super::DuckCfg;
 
     impl DuckCfg {
-        pub fn set_max_fix_dist(&mut self, new_val: i64) {
-            self.inner
-                .set_i64("security.typos.max_distance", new_val)
-                .expect("test");
-        }
-
-        pub fn set_fixes_enabled(&mut self, new_val: bool) {
-            self.inner
-                .set_bool("security.typos.enabled", new_val)
-                .expect("test");
-        }
-
         pub fn set_aliases(&mut self, new_val: HashMap<String, String>) {
             let val: serde_yaml_ng::Mapping = new_val
                 .into_iter()
