@@ -1132,6 +1132,43 @@ namespace compiler::helios {
 		return query::Failed();
 	}
 
+	query::QResult<BoxOrCRef<code::Expr>> getHoutOfExprWithExpectedTypes(
+		query::Context&                                  ctx,
+		const pst::GenericPSTQueryKey<pst::ExprElement>& pst_expr,
+		const std::vector<tsh::SymbolType<>>&            expected_types
+	) {
+		CORE_ASSERT(!expected_types.empty(), "At least one expected type has to be provided.");
+		if (expected_types.size() == 1)
+			return getHoutOfExprWithExpectedType(ctx, pst_expr, expected_types.front());
+
+		auto expr_hout_qresult = ctx.query<QueryHoutOfExpr>({ pst_expr.element });
+
+		UNPACK_QRESULT_CREF_TO_BOX(CRef<code::Expr> expr_hout =, expr_hout_qresult);
+
+		std::vector<InvalidCoercionReason> failure_reasons;
+		failure_reasons.reserve(expected_types.size());
+
+		for (const tsh::SymbolType<>& expected_type: expected_types) {
+			const auto coercion_qresult = canCoerce(ctx, expr_hout->expression_type, expected_type);
+			if (coercion_qresult.hasFailed()) return query::Failed();
+
+			const auto& coercion_result = coercion_qresult.valueOrThrow();
+			if (coercion_result.isValid())
+				return coercion_result.getCoercion().coerceFromRef(ctx, expr_hout);
+
+			failure_reasons.push_back(coercion_result.getInvalidReason());
+		}
+
+		logNoMatchingExpectedTypeFailure(
+			ctx,
+			expr_hout->expression_type.getSymbolType(),
+			expected_types,
+			failure_reasons,
+			pst_expr.element.unlock(ctx)->getStablePosition()
+		);
+		return query::Failed();
+	}
+
 	query::QResult<Box<code::Expr>> code::subExprFromPSTWithType(
 		query::Context&                     ctx,
 		pst::AccessLocked<pst::ExprElement> element,

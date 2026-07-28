@@ -183,6 +183,25 @@ namespace compiler::helios {
 		addArgument<dia_int::InteractiveArgument>("expected_type", std::move(expected_type));
 	}
 
+	NoMatchingExpectedTypeError::NoMatchingExpectedTypeError(
+		dia_int::StablePosition source_position, Box<InteractiveType> actual_type
+	):
+		  MessageWithCodeFragmentAndCause(source_position) {
+		addArgument<dia_int::InteractiveArgument>("given_type", std::move(actual_type));
+	}
+
+	void NoMatchingExpectedTypeError::addExploreAcceptedType(
+		std::string accepted_type, Box<dia_int::MessageBase> coercion_error
+	) {
+		auto id = dia_int::MessageBase::getUniqueID();
+		this->addLinkedMessage(id, std::move(coercion_error));
+
+		std::vector<Box<dia_int::Argument>> args;
+		args.emplace_back(makeBox<dia_int::TextArgument>("accepted_type", std::move(accepted_type)));
+		args.emplace_back(makeBox<dia_int::TextArgument>("message_id", id));
+		this->addExploreLink("accepted_type", std::move(args));
+	}
+
 	Box<code::Expr> Coercion::coerce(query::Context& ctx, Box<code::Expr> from) const {
 		CORE_ASSERT(isValidFor(from.ref()), "Invalid expression for this coercion.");
 
@@ -312,7 +331,7 @@ namespace compiler::helios {
 		return {};
 	}
 
-	Box<dia_int::MessageBase> makeDefaultCoercionErrorMessage(
+	Box<dia_int::MessageBase> getCoercionError(
 		query::Context&          ctx,
 		InvalidCoercionReason    reason,
 		const tsh::SymbolType<>& source_symbol_type,
@@ -376,8 +395,36 @@ namespace compiler::helios {
 			(*override)(ctx);
 			return;
 		}
-		ctx.logInt(makeDefaultCoercionErrorMessage(
-			ctx, reason, source_symbol_type, expected_type, source_position
-		));
+		ctx.logInt(getCoercionError(ctx, reason, source_symbol_type, expected_type, source_position)
+		);
+	}
+
+	void logNoMatchingExpectedTypeFailure(
+		query::Context&                           ctx,
+		const tsh::SymbolType<>&                  source_symbol_type,
+		const std::vector<tsh::SymbolType<>>&     expected_types,
+		const std::vector<InvalidCoercionReason>& failure_reasons,
+		dia_int::StablePosition                   source_position
+	) {
+		CORE_ASSERT(
+			expected_types.size() == failure_reasons.size(),
+			"Every expected type needs its own coercion failure reason."
+		);
+
+		auto error = makeBox<NoMatchingExpectedTypeError>(
+			source_position, makeBox<InteractiveType>(ctx, source_symbol_type)
+		);
+
+		// Every accepted type was tried, so each of them gets an explore link pointing to the error
+		// explaining why the coercion to it failed.
+		for (usize i = 0; i < expected_types.size(); i++)
+			error->addExploreAcceptedType(
+				expected_types[i].toString(),
+				getCoercionError(
+					ctx, failure_reasons[i], source_symbol_type, expected_types[i], source_position
+				)
+			);
+
+		ctx.logInt(std::move(error));
 	}
 }

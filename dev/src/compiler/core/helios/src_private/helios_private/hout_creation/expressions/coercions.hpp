@@ -12,6 +12,8 @@
 #include <query_framework/query_result.hpp>
 
 #include <cstdint>
+#include <string>
+#include <vector>
 
 /**
  * @brief The specific reason a coercion cannot be performed.
@@ -42,6 +44,32 @@ namespace compiler::helios {
 			dia_int::StablePosition source_position,
 			Box<InteractiveType>    actual_type,
 			Box<InteractiveType>    expected_type
+		);
+	};
+
+	/**
+	 * @brief Error logged when an expression cannot be coerced to any of the several accepted
+	 * types. The error of every attempted coercion is attached to this message.
+	 */
+	class NoMatchingExpectedTypeError final: public dia_int::MessageWithCodeFragmentAndCause {
+		dia_int::Metadata getMetadata() const final {
+			return { .template_type = "message",
+				     .type          = "error",
+				     .family        = "type_check",
+				     .name          = "no_matching_expected_type" };
+		}
+
+	public:
+		NoMatchingExpectedTypeError(
+			dia_int::StablePosition source_position, Box<InteractiveType> actual_type
+		);
+
+		/**
+		 * @brief Adds an explore link for a single accepted type, pointing to the error of the
+		 * coercion that was attempted to this type.
+		 */
+		void addExploreAcceptedType(
+			std::string accepted_type, Box<dia_int::MessageBase> coercion_error
 		);
 	};
 
@@ -217,7 +245,7 @@ namespace compiler::helios {
 	 * @brief Builds the default diagnostic message describing why a coercion failed, based on the
 	 * `reason`.
 	 */
-	[[nodiscard]] Box<dia_int::MessageBase> makeDefaultCoercionErrorMessage(
+	[[nodiscard]] Box<dia_int::MessageBase> getCoercionError(
 		query::Context&          ctx,
 		InvalidCoercionReason    reason,
 		const tsh::SymbolType<>& source_symbol_type,
@@ -236,5 +264,19 @@ namespace compiler::helios {
 		const tsh::SymbolType<>& expected_type,
 		dia_int::StablePosition  source_position,
 		CoercionErrorOverrides   error_overrides = {}
+	);
+
+	/**
+	 * @brief Logs the failure of coercing `source_symbol_type` to any of the `expected_types`.
+	 * The error of every attempted coercion is attached to the logged message.
+	 * @param failure_reasons Reason of the failure for every type of `expected_types`, in the same
+	 * order. Must have the same size as `expected_types`.
+	 */
+	void logNoMatchingExpectedTypeFailure(
+		query::Context&                           ctx,
+		const tsh::SymbolType<>&                  source_symbol_type,
+		const std::vector<tsh::SymbolType<>>&     expected_types,
+		const std::vector<InvalidCoercionReason>& failure_reasons,
+		dia_int::StablePosition                   source_position
 	);
 }

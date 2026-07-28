@@ -1,6 +1,7 @@
 #pragma once
 
 #include <base/collections/optional.hpp>
+#include <base/misc/raw_view.hpp>
 
 #include <vm/api/data/process_info.hpp>
 #include <vm/bytecode/validator/valid_type/valid_type.hpp>
@@ -83,6 +84,10 @@ namespace vm {
 			auto view = memory->getPointerData(pointed_data, sizeof(T));
 			return vm::safeReadPointerBytes<T>(view.getBegin());
 		}
+
+		template<class T>
+		requires(base::IS_VARIANT_MEMBER_V<T, InterpretedDataVariant>)
+		base::Optional<T> readData() const;
 	};
 
 	namespace interpreted_data_variant {
@@ -106,6 +111,12 @@ namespace vm {
 			const usize size;
 			VMValueRef  get(usize index);
 
+			/**
+			 * @brief Returns the raw bytes of the table, from its beginning to the end of the
+			 * memory block it lives in.
+			 */
+			[[nodiscard]] base::ModRawView asBytesView() const;
+
 		private:
 			Table(base::Ref<SafeVMProcess> process, vm::Pointer begin, TypeCRef type, usize size);
 		};
@@ -128,5 +139,15 @@ namespace vm {
 		struct Function final {};
 
 		struct Opaque final {};
+	}
+
+	template<class T>
+	requires(base::IS_VARIANT_MEMBER_V<T, InterpretedDataVariant>)
+	base::Optional<T> VMValueRef::readData() const {
+		auto data = readData();
+		if (data.empty()) return {};
+		if (auto* value = std::get_if<T>(&data.value())) return *value;
+
+		return {};
 	}
 }

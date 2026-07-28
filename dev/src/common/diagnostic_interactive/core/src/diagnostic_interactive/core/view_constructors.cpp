@@ -205,8 +205,8 @@ namespace dia_int {
 			}
 			if (not msg.explore_links.empty()) {
 				std::string explore_links = "Explore more:\n";
-				for (auto& [id, pm]: msg.explore_links) {
-					auto test = constructTextView(pm.content.ref());
+				for (auto& edge: msg.explore_links) {
+					auto test = constructTextView(edge.content.ref());
 					explore_links += "* " + test + "\n";
 				}
 				view_msg.sections.emplace_back(TextSection{ explore_links });
