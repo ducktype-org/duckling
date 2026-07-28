@@ -187,9 +187,7 @@ impl Unit {
             features,
             path_to_the_src_directory: package
                 .src()
-                .context_internal(
-                    "asked for src directory of the global package or a script with frontmatter",
-                )?
+                .context_internal("asked for src directory of the global package or a script")?
                 .to_path_buf(),
             dependencies,
         })

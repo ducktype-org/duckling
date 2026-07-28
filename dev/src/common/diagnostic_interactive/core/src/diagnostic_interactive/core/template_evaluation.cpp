@@ -562,7 +562,7 @@ namespace dia_int {
 			description = base::MBox<state::Component>(std::move(desc));
 		}
 
-		base::HashMap<std::string, state::ExploreEdge> evaluated_explore_links;
+		std::vector<state::ExploreEdge> evaluated_explore_links;
 		for (const auto& edge_input: message.explore_links) {
 			if (not message_template.explore_links.contains(edge_input.name)) {
 				throw TemplateEvaluationException(
@@ -578,7 +578,8 @@ namespace dia_int {
 
 			auto content
 				= EvaluateTemplateFileVisitor::evaluate(edge_ctx, edge_template.content.ref());
-			evaluated_explore_links.put(edge_input.name, state::ExploreEdge{ std::move(content) });
+			evaluated_explore_links.emplace_back(state::ExploreEdge{
+				.name = edge_input.name, .content = std::move(content) });
 		}
 
 		state::Message result(

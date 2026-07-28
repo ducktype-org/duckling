@@ -5,6 +5,8 @@ use tracing::instrument;
 use super::{Executor, ExecutorOutput, compile_single_unit_with_tasks, unit_output};
 use crate::QuackResult;
 use crate::quackpack::core::compile::BuildContext;
+use crate::quackpack::core::compile::artifacts_layout::shared::SharedArtifactsLayout;
+use crate::quackpack::core::compile::artifacts_layout::standard::StandardArtifactsLayout;
 use crate::quackpack::core::compile::artifacts_layout::{ArtifactsLayout, ProfileLayout};
 use crate::quackpack::core::compile::duckc::multipackage_schema;
 use crate::quackpack::core::compile::unit::graph::UnitGraph;
@@ -35,12 +37,12 @@ fn compile(graph: UnitGraph, bcx: &BuildContext<'_, '_>) -> QuackResult<Executor
     );
     let package = root.root_package().package().get_package();
     let output = if bcx.shared {
-        let artifacts_layout = package.shared_artifacts_layout();
+        let artifacts_layout = package.artifacts_layout::<SharedArtifactsLayout>();
         let profile_layout = artifacts_layout.for_profile(bcx.profile);
         compile_unit(root, &graph, &profile_layout, bcx)?;
         unit_output(root, &graph, &profile_layout)?
     } else {
-        let artifacts_layout = package.artifacts_layout();
+        let artifacts_layout = package.artifacts_layout::<StandardArtifactsLayout>();
         let profile_layout = artifacts_layout.for_profile(bcx.profile);
         compile_unit(root, &graph, &profile_layout, bcx)?;
         unit_output(root, &graph, &profile_layout)?

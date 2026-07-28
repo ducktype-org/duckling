@@ -1533,7 +1533,7 @@ class FunctionValidator {
 				if (src_table->inner != dst_table->inner)
 					throw DynamicTableTypeMismatchError(instr);
 			}
-			instr_case_novalue(Op_nop, Op_exit, Op_initFromVmValue) {}
+			instr_case_novalue(Op_nop, Op_exit, Op_initFromVMValue) {}
 		}
 		POP_DIAGNOSTIC
 	}

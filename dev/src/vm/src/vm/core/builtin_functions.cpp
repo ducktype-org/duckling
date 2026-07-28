@@ -15,7 +15,6 @@
 #include <vm/core/safe/safe_vmthread.hpp>
 #include <vm/core/safe/type_metadata/definitions.hpp>
 #include <vm/core/thread/kill_process_exception.hpp>
-#include <vm/core/vmvalue/vmvalue.hpp>
 
 #include <chrono>
 #include <cstdio>
@@ -26,8 +25,8 @@ namespace vm::builtins {
 
 	namespace {
 		template<class Ret, class... FunArgs, std::size_t... Is>
-		base::Optional<Box<VmValue>>
-			callUnpackArgsImpl(Ret (*function)(SafeVMThread&, FunArgs...), const std::vector<TypeCRef>& vm_return_types, IVMProcess& process, SafeVMThread& thread, const std::vector<Box<VmValue>>& args, std::index_sequence<Is...>) {
+		base::Optional<Box<SafeVMValue>>
+			callUnpackArgsImpl(Ret (*function)(SafeVMThread&, FunArgs...), const std::vector<TypeCRef>& vm_return_types, SafeVMProcess& process, SafeVMThread& thread, const std::vector<Box<SafeVMValue>>& args, std::index_sequence<Is...>) {
 			if constexpr (std::is_void_v<Ret>) {
 				function(thread, args[Is]->template readBytes<FunArgs>()...);
 				return {};
@@ -41,7 +40,7 @@ namespace vm::builtins {
 					"Type sizes do not match"
 				);
 
-				auto vm_value = process.createOwnedVmValue(vm_return_types.at(0));
+				auto vm_value = process.createOwnedVMValue(vm_return_types.at(0));
 
 				vm_value->writeBytes<Ret>(value);
 				return vm_value;
@@ -66,12 +65,12 @@ namespace vm::builtins {
 		 * be expensive we could go back to that approach.
 		 */
 		template<class Ret, class... FunArgs>
-		base::Optional<Box<VmValue>> callUnpackArgs(
+		base::Optional<Box<SafeVMValue>> callUnpackArgs(
 			Ret (*function)(SafeVMThread&, FunArgs...),
-			const std::vector<TypeCRef>&     vm_return_types,
-			IVMProcess&                      process,
-			SafeVMThread&                    thread,
-			const std::vector<Box<VmValue>>& args
+			const std::vector<TypeCRef>&         vm_return_types,
+			SafeVMProcess&                       process,
+			SafeVMThread&                        thread,
+			const std::vector<Box<SafeVMValue>>& args
 		) {
 			CORE_ASSERT(
 				sizeof...(FunArgs) == args.size(),
@@ -368,12 +367,12 @@ namespace vm::builtins {
 		std::memcpy(reinterpret_cast<void*>(dst), view.getBegin() + src.getOffset(), size);
 	}
 
-	base::Optional<Box<VmValue>> callBuiltinFunction(
-		BuiltinFunctionID                id,
-		const std::vector<TypeCRef>&     result_types,
-		IVMProcess&                      process,
-		SafeVMThread&                    thread,
-		const std::vector<Box<VmValue>>& arguments
+	base::Optional<Box<SafeVMValue>> callBuiltinFunction(
+		BuiltinFunctionID                    id,
+		const std::vector<TypeCRef>&         result_types,
+		SafeVMProcess&                       process,
+		SafeVMThread&                        thread,
+		const std::vector<Box<SafeVMValue>>& arguments
 	) {
 		switch (id) {
 #define CASE_FUNC(ID_NAME)                                                               \

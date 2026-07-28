@@ -23,6 +23,7 @@
 #include <vm/core/safe/safe_vmprocess.hpp>
 #include <vm/core/safe/type_metadata/definitions.hpp>
 #include <vm/core/safe/type_metadata/type.hpp>
+#include <vm/core/safe/vmvalue/safe_vmvalue.hpp>
 #include <vm/core/thread/kill_process_exception.hpp>
 #include <vm/module_flags/module_flags.hpp>
 #include <vm/utils/interpret.hpp>
@@ -173,7 +174,20 @@ namespace vm {
 				);
 			}
 
-			if (arg_value->type != arg_type) {
+			// Downcast once at the API boundary, so the initFromVMValue opcode can rely on the
+			// embedded pointer being a SafeVMValue without any runtime checks.
+			const auto* safe_value = dynamic_cast<const SafeVMValue*>(&*arg_value);
+			if (safe_value == nullptr) {
+				throw exceptions::VMRuntimeException(base::strConcat(
+					"VMValue for argument ",
+					i,
+					" is invalid: it does not belong to the safe VM implementation"
+				));
+			}
+
+			// Safe TypeIDs are asserted (in the type builder) to be numerically equal to
+			// ValidTypeIDs, so the interface-level type ID can be compared with the safe one.
+			if (arg_value->getTypeID() != code::valid_type::ValidTypeID(arg_type->getID().asInt())) {
 				throw exceptions::VMRuntimeException(base::strConcat(
 					"Type mismatch for argument ",
 					i,
@@ -182,16 +196,16 @@ namespace vm {
 					"': expected ",
 					arg_type->getName().str(),
 					", got ",
-					arg_value->type->getName().str()
+					arg_value->getType()->getName().str()
 				));
 			}
 
 			start_function.bc.push_back(
-				MAKE_BYTECODE_INSTRUCTION(initFromVmValue, std::bit_cast<u64>(arg_value.get()), 0)
+				MAKE_BYTECODE_INSTRUCTION(initFromVMValue, std::bit_cast<u64>(safe_value), 0)
 			);
 			start_function.local_stack_size += arg_type->getSize().asInt();
-			start_function.parameters.push_back(arg_value->type);
-			start_function.arg_size += arg_value->type->getSize().asInt();
+			start_function.parameters.push_back(arg_type);
+			start_function.arg_size += arg_type->getSize().asInt();
 		}
 
 
@@ -478,7 +492,7 @@ namespace vm {
 	#pragma GCC pop_options
 #endif
 
-	std::vector<Ref<VmValue>> SafeVMThread::executeFunction(
+	std::vector<Ref<SafeVMValue>> SafeVMThread::executeFunction(
 		const low::LowFuncData& start_function, const low::LowFuncData& func
 	) {
 		ScopedGilGuard gil_guard(*this);
@@ -512,9 +526,9 @@ namespace vm {
 			"result."
 		);
 
-		exit_value_storage = { std::vector<Ref<VmValue>>{} };
+		exit_value_storage = { std::vector<Ref<SafeVMValue>>{} };
 		for (u64 idx = 0; idx < func.result_types.size(); idx++) {
-			exit_value_storage.value().emplace_back(safe_process.createVmValue(
+			exit_value_storage.value().emplace_back(safe_process.createVMValue(
 				func.result_types[idx],
 				Pointer(frame->local_block_ref_stack_base[orig_block_stack_size + idx], 0)
 			));
@@ -605,7 +619,8 @@ namespace vm {
 			if (api::isStatusTerminal(current_status))
 				respondExecutionRequest(current_status);
 			else
-				respondExecutionRequest(api::ExecutionCompleted{ exit_value });
+				respondExecutionRequest(api::ExecutionCompleted{
+					std::vector<Ref<IVMValue>>(exit_value.begin(), exit_value.end()) });
 		} catch (const KillProcessException& e) { handleKillProcessException(e); }
 	}
 

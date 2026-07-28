@@ -29,7 +29,6 @@ MAKE_STRINGIFYABLE_ENUM(compiler::tsh, u32, Kind
 	ManyPointer,
 	CPointer,
 	Slice,
-	String,
 	Function,
 	DynamicArray,
 	StaticArray,

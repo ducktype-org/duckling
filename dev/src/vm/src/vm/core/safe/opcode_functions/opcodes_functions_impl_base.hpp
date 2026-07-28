@@ -47,7 +47,8 @@
 #include <vm/core/safe/opcode_functions/opcodes_functions.hpp>
 #include <vm/core/safe/safe_vmprocess.hpp>
 #include <vm/core/safe/safe_vmthread.hpp>
-#include <vm/core/vmvalue/vmvalue.hpp>
+#include <vm/core/safe/vmvalue/safe_vmvalue.hpp>
+#include <vm/core/vmvalue/ivmvalue.hpp>
 #include <vm/utils/interpret.hpp>
 
 #include <cmath>
@@ -364,18 +365,18 @@ namespace vm {
 			auto function_signature = builtins::getBuiltinFunctionSignature(builtin_id);
 			auto arg_count          = function_signature->parameters.size();
 
-			std::vector<Box<VmValue>> args;
-			auto                      block_ref_stack_count
+			std::vector<Box<SafeVMValue>> args;
+			auto                          block_ref_stack_count
 				= usize(frame->local_block_ref_stack_end - frame->local_block_ref_stack_base);
 			u64 first_arg_idx = block_ref_stack_count - arg_count;
 
-			// Create VmValue objects from local arguments. The argument's actual block type is
+			// Create VMValue objects from local arguments. The argument's actual block type is
 			// used (verification guarantees it matches what the builtin expects); this also
 			// supports builtins with polymorphic parameters, e.g. the `cptr` copy builtins.
 			for (u64 i = 0; i < arg_count; i++) {
 				auto     block     = Ref(frame->local_block_ref_stack_base[first_arg_idx + i]);
 				TypeCRef real_type = Memory::getBlockType(block);
-				args.push_back(thread.safe_process.createOwnedVmValue(real_type, Pointer(block, 0)));
+				args.push_back(thread.safe_process.createOwnedVMValue(real_type, Pointer(block, 0)));
 			}
 
 			std::vector<TypeCRef> result_types = {};
@@ -387,7 +388,7 @@ namespace vm {
 				);
 			}
 
-			base::Optional<Box<VmValue>> return_value = builtins::callBuiltinFunction(
+			base::Optional<Box<SafeVMValue>> return_value = builtins::callBuiltinFunction(
 				builtin_id, result_types, thread.safe_process, thread, args
 			);
 
@@ -1268,11 +1269,11 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(initFromVmValue)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(initFromVMValue)(FUNCTION_ARGS) {
 		{
-			const VmValue& vm_value = *std::bit_cast<const VmValue*>(instr->arg0);
-			performInit(instr, local_stack, frame, thread, vm_value.type);
-			vm_value.exportData({ Ref(frame->local_block_ref_stack_end[-1]), 0 });
+			const auto& safe_vm_value = *std::bit_cast<const SafeVMValue*>(instr->arg0);
+			performInit(instr, local_stack, frame, thread, safe_vm_value.type);
+			safe_vm_value.exportData({ Ref(frame->local_block_ref_stack_end[-1]), 0 });
 		}
 		FUNCTION_CONT(1);
 	}

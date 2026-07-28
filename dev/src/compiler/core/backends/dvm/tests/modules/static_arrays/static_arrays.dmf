@@ -17,7 +17,7 @@ fun simple_array_test() -> i32 = {
     matrix_3d[1][1][1] = 3.25;
     matrix_3d[1][1][1] = matrix_3d[1][1][1] + 0.75;
     let val_3d = matrix_3d[1][1][1];
-    runtime.dvm.builtin_output_i64(i64(val_3d));  # 4
+    runtime.dvm.builtin_output_i64(val_3d as i64);  # 4
 
     return arr[0];
 }
