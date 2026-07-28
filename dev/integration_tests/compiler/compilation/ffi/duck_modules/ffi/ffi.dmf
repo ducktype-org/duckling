@@ -27,8 +27,12 @@ extern("C") {
     fundecl make_big(seed: i64) -> Big;
 
     # Sub-word integer args -> x86-64: passed sign-extended to 32 bits by the caller.
-    fundecl add_shorts(a: i16, b: i16) -> i32;
-    fundecl add_bytes(a: i8, b: i8) -> i32;
+    # Declared in a namespace nested inside the extern("C") block: the C ABI (and therefore the
+    # unmangled symbol name) has to propagate through the namespace, otherwise linking fails.
+    namespace narrow_ints {
+        fundecl add_shorts(a: i16, b: i16) -> i32;
+        fundecl add_bytes(a: i8, b: i8) -> i32;
+    }
 }
 
 fun main() -> i64 = {
@@ -59,11 +63,11 @@ fun main() -> i64 = {
 
     # 0x0000ABCD: positive as i32, but -21555 once truncated to i16 (clean-zero upper bits).
     let raw_s: i32 = 43981i32;
-    builtin_output_i64(add_shorts(raw_s as i16, 1i16));             # -21554
+    builtin_output_i64(narrow_ints::add_shorts(raw_s as i16, 1i16));  # -21554
 
     # 0x000000C8: -56 as i8; without signext the clang callee reads 200 and prints 201.
     let raw_b: i32 = 200i32;
-    builtin_output_i64(add_bytes(raw_b as i8, 1i8));                # -55
+    builtin_output_i64(narrow_ints::add_bytes(raw_b as i8, 1i8));     # -55
 
     return 0i64;
 }
