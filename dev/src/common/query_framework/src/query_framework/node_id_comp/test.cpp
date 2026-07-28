@@ -4,8 +4,9 @@
 #include <thread>
 #include <vector>
 
-constexpr u64 THREAD_COUNT = 4;
-constexpr u64 OP_COUNT = 1'000'000;
+constexpr u64 THREAD_COUNT = 1;
+constexpr u64 OP_COUNT = 10'000'000;
+constexpr u64 POOL_SIZE = 10;
 
 
 // Random u64 generator:
@@ -28,7 +29,7 @@ int main( ) {
     std::vector<std::jthread> threads;
 
     std::vector<query::internal::NodeID> node_id_pool;
-    for (u64 i = 0; i < OP_COUNT; ++i) {
+    for (u64 i = 0; i < POOL_SIZE; ++i) {
         node_id_pool.push_back(getRandomNodeID());
     }
 
@@ -41,7 +42,6 @@ int main( ) {
         threads.emplace_back([i, &node_id_pool, &get_from_pool]() {
             for (u64 j = 0; j < OP_COUNT; ++j) {
                 auto node_id = get_from_pool();
-
 
                 auto node_id_id = query::internal::NodeIDID(node_id);
                 auto node_id_back = node_id_id.getID();
