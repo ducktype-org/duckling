@@ -1,0 +1,21 @@
+
+namespace Name {
+    template(tmpl_param: i64, T: type)
+    fun foo(param: i64) -> f32 {
+        return tmpl_param + param;
+    }
+
+    class Cls {}
+
+    template(f: f32)
+    class Tcls {}
+}
+
+fun hoo(j: i64) -> i64 {
+    return j;
+}
+
+template(i: i64)
+fun goo(j: i64) -> i64 {
+    return i + j;
+}

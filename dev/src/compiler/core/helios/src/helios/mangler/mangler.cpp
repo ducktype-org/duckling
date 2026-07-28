@@ -360,10 +360,6 @@ namespace compiler::helios::mangler {
 
 					auto template_stmt_v = ancestor.dynamicCast<pst::TemplateStmt>().value();
 
-					path_parts.push_back(identifier(
-						template_stmt_v->getDeclSymbolIdentifier()->unlock(ctx)->unwrap().strView()
-					));
-
 					if (template_stmt_v->hasAdditionalRootData()) {
 						// We are inside baked template
 
@@ -378,14 +374,18 @@ namespace compiler::helios::mangler {
 									= base::anyCast<templates::TemplateBakePSTLinkedData>(
 										template_bake_data_any
 									);
-								for (const auto& bake_argument: template_bake_data.postponed_data
-								                                    ->load(std::memory_order_acquire)
-								                                    ->template_arguments_symbols) {
-									// @TODO: #2607 This is a mock
+
+								path_parts.push_back("E");
+								for (const auto& bake_argument:
+								     template_bake_data.postponed_data
+								             ->load(std::memory_order_acquire)
+								             ->template_arguments_symbols
+								         | std::views::reverse) {
 									auto value = ctx.query<helios::QueryConstValueOf>(bake_argument)
 									                 .valueOrThrow();
-									path_parts.push_back(identifier(mangleCTV(ctx, value)));
+									path_parts.push_back(mangleCTV(ctx, value));
 								}
+								path_parts.push_back("I");
 							}
 							variant_default {
 								CORE_PANIC(
