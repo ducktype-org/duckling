@@ -462,6 +462,34 @@ namespace compiler::helios::code {
 			CORE_UNREACHABLE();
 		}
 
+		/**
+		 * @brief Bakes the callee if it carries a template specifier, then resolves the result
+		 * into callable candidates.
+		 *
+		 * @param lookup_result The result of the lookup for the callee.
+		 * @param element_with_template_specifier The PST element naming the callee.
+		 * @return Candidates after baking and resolution of functions vs call operators.
+		 *
+		 * @TODO: #3095 fold into the handling of the new :{} PST node.
+		 */
+		template<typename T>
+		[[nodiscard]]
+		query::QResult<std::vector<SymID>> getCallableCandidatesWithBake(
+			CRef<LookupResult> lookup_result, pst::Access<T> element_with_template_specifier
+		) const {
+			UNPACK_QRESULT(
+				auto maybe_bake =,
+				transformTemplateBakeLookupResult(
+					query_ctx, lookup_result, element_with_template_specifier
+				)
+			);
+
+			// @TODO: #1412 fix dealias
+			if (maybe_bake.has_value())
+				return getCallableCandidates(std::vector{ maybe_bake.value() });
+			return getCallableCandidates(lookup_result->leaves);
+		}
+
 		// =============================== MAIN PROCESSING FUNCTIONS ===============================
 
 		/**
@@ -482,22 +510,9 @@ namespace compiler::helios::code {
 					= h_interface.lookup(query_ctx, ident->getName().unlock(query_ctx)->unwrap());
 				UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup_qresult);
 
-				std::vector<SymID> call_candidates;
-
-				auto maybe_bake
-					= transformTemplateBakeLookupResult(query_ctx, lookup_result, ident);
-				if (maybe_bake.hasFailed()) return query::Failed();
-
-				if (maybe_bake.valueOrPanic().has_value()) {
-					auto resulting_sym_id = maybe_bake.valueOrPanic().value();
-					call_candidates.push_back(resulting_sym_id);
-				} else {
-					call_candidates = lookup_result->leaves;
-				}
-
-				// @TODO: #1412 fix dealias
-				const auto callees_q_result = getCallableCandidates(call_candidates);
-				UNPACK_QRESULT_MOVE(const auto& callees =, callees_q_result);
+				UNPACK_QRESULT(
+					const auto& callees =, getCallableCandidatesWithBake(lookup_result, ident)
+				);
 
 				auto res = processFunctionOrMethodNoSelfCall(query_ctx, callees, ident, call_expr);
 				UNPACK_QRESULT_MOVE(base::Box<Expr> expr =, res);
@@ -543,9 +558,11 @@ namespace compiler::helios::code {
 		 * This function has no previous state argument so it is called as a first element in the
 		 * chain.
 		 * It is when we have keyword literal followed by a call expression. This currently includes:
-		 * - `i64(42)` - used for explicit type casts.
 		 * - `i64[42]` - used for static array type creation.
 		 * - `List[i64]` - for dynamic array type creation.
+		 *
+		 * Note that `i64(42)` is no longer a type cast - the `as` operator (`42 as i64`) is the
+		 * only supported explicit conversion syntax.
 		 */
 		auto processPSTExpr(
 			pst::Access<pst::expr::KeywordLiteral> keyword, pst::Access<pst::expr::Call> call_expr
@@ -556,29 +573,13 @@ namespace compiler::helios::code {
 
 			switch (call_expr->getType()) {
 			case lexer::Token::Round: {
-				if (auto literal_type_expr = dynamic_cast<const LiteralTypeExpr*>(hout_expr.get())) {
-					auto args = call_expr->getArgs().unlock(query_ctx);
-					if (args->size() != 1) {
-						query_ctx.logInt(makeBox<dia_int::PlaceholderError>(
-							"Type cast must have exactly one argument.",
-							call_expr->getStablePosition()
-						));
-						return query::Failed();
-					}
-
-					auto arg_access      = (*args->begin()).unlock(query_ctx);
-					auto arg_expr_result = subExprFromPST(
-						query_ctx, arg_access->getArg().unlock(query_ctx)->getExpr()
-					);
-					UNPACK_QRESULT_MOVE(auto arg_expr =, arg_expr_result);
-
-					auto cast_expr = makeBox<CastExpr>(
-						query_ctx,
-						multiplePstOriginOrdered({ keyword, call_expr }),
-						std::move(arg_expr),
-						literal_type_expr->value_type
-					);
-					return ChainState::ofExpr(std::move(cast_expr));
+				if (dynamic_cast<const LiteralTypeExpr*>(hout_expr.get()) != nullptr) {
+					query_ctx.logInt(makeBox<dia_int::PlaceholderError>(
+						"A type cannot be called. Explicit conversions use the `as` operator.",
+						call_expr->getStablePosition(),
+						"Write `value as Type` instead of `Type(value)`."
+					));
+					return query::Failed();
 				}
 
 				query_ctx.logInt(makeBox<dia_int::PlaceholderError>(
@@ -623,12 +624,12 @@ namespace compiler::helios::code {
 			UNPACK_QRESULT_MOVE(const auto& sym_list =, lookup_result);
 			auto mock_symbol = sym_list.back();
 
-			auto maybe_template_bake = transformTemplateBake(query_ctx, mock_symbol, ident);
-			if (maybe_template_bake.hasFailed()) return query::Failed();
-			if (maybe_template_bake.valueOrPanic().has_value()) {
-				return processNamespaceOrValue(
-					maybe_template_bake.valueOrPanic().value(), pstOrigin(ident), ident
-				);
+			UNPACK_QRESULT(
+				auto maybe_template_bake =, transformTemplateBake(query_ctx, mock_symbol, ident)
+			);
+
+			if_opt_some(maybe_template_bake, template_bake) {
+				return processNamespaceOrValue(template_bake, pstOrigin(ident), ident);
 			}
 
 			return processNamespaceOrValue(sym_list.back(), pstOrigin(ident), ident);
@@ -693,9 +694,9 @@ namespace compiler::helios::code {
 		/**
 		 * Call on the namespace, for example Namespace()
 		 */
-		auto processPSTExpr(SymID namespace_like_symbol, pst::Access<pst::expr::Call> call_expr)
-			-> query::QResult<ChainState> {
-			(void) namespace_like_symbol;
+		auto processPSTExpr(
+			[[maybe_unused]] SymID namespace_like_symbol, pst::Access<pst::expr::Call> call_expr
+		) -> query::QResult<ChainState> {
 			query_ctx.logInt(makeBox<dia_int::PlaceholderError>(
 				base::strConcat("Namespace is not callable"), call_expr->getStablePosition()
 			));
@@ -896,9 +897,10 @@ namespace compiler::helios::code {
 					= HInterface::ofSymbol(namespace_like_symbol)
 				          .lookup(query_ctx, expr_access->getName().unlock(query_ctx)->unwrap());
 				UNPACK_QRESULT_CREF(CRef<LookupResult> lookup_result = &, lookup_qresult);
-				// @TODO: #1412 fix dealias
-				auto callees_q_result = getCallableCandidates(lookup_result->leaves);
-				UNPACK_QRESULT_MOVE(const auto& callees =, callees_q_result);
+
+				UNPACK_QRESULT(
+					const auto& callees =, getCallableCandidatesWithBake(lookup_result, expr_access)
+				);
 
 				auto expr_result
 					= processFunctionOrMethodNoSelfCall(query_ctx, callees, expr_access, call_expr);

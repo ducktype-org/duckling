@@ -24,6 +24,18 @@ extern("C") {
     public fundecl cBlockPublicFunction() -> i32;
 }
 
+# Namespace nested inside an extern("C") block - the ABI has to propagate through it
+extern("C") {
+    namespace c_block_namespace {
+        fundecl cNestedInNamespace() -> i32;
+    }
+}
+
+# The reverse nesting, which has to keep working
+namespace reverse_namespace { extern("C") {
+    fundecl cReverseNested() -> i32;
+}}
+
 # Basic struct (no specifiers)
 class RegularStruct {
      x: i32;

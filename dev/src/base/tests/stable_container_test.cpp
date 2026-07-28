@@ -54,15 +54,15 @@ private:
 		for (int i = 0; i < 100; i++) vector.pushBack(i);
 
 		// we check that it doesn't throw:
-		(void) vector[102];
+		std::ignore = vector[102];
 
 		assertThrows<std::exception>(
-			[&]() { (void) vector[103]; }, "Out of range access didn't throw"
+			[&]() { std::ignore = vector[103]; }, "Out of range access didn't throw"
 		);
 
 
 		assertThrows<std::exception>(
-			[&]() { (void) vector[104]; }, "Out of range access didn't throw"
+			[&]() { std::ignore = vector[104]; }, "Out of range access didn't throw"
 		);
 
 		assertTrue(vector.size() == 103, "bad list size");

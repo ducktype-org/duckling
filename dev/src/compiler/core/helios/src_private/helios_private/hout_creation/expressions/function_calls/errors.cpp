@@ -225,7 +225,7 @@ namespace compiler::helios::code {
 							);
 						}
 
-						return helios::makeDefaultCoercionErrorMessage(
+						return helios::getCoercionError(
 							ctx, data.reason, data.given_type, data.expected_type, pos
 						);
 					}

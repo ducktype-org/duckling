@@ -9,6 +9,7 @@ pub mod extract;
 pub mod file_locks;
 pub mod hash;
 pub mod hex;
+pub mod once_lock_ext;
 pub mod path_ops_ext;
 pub mod set_once;
 pub mod yaml_config;

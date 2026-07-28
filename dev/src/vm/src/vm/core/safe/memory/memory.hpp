@@ -312,6 +312,19 @@ namespace vm {
 			return { pointer.block->data.view.getBegin() + pointer.offset, size_bytes };
 		}
 
+		/** @brief Returns the block data from `pointer.offset` to the end of the block. */
+		[[nodiscard]]
+		static constexpr
+			__attribute__((always_inline)) auto getRemainingPointerData(Pointer pointer)
+				-> base::ModRawView {
+			if (pointer.block == nullptr) throw exceptions::VMNullPointerAccessException();
+			if (pointer.block->deallocated) throw exceptions::VMUseAfterFreeException();
+			if (pointer.offset > pointer.block->data.view.size())
+				throw exceptions::VMOutOfBlockBoundsException();
+			return { pointer.block->data.view.getBegin() + pointer.offset,
+				     pointer.block->data.view.size() - pointer.offset };
+		}
+
 		/**
 		 * @brief Copies data pointed-to by `src` to `dst`.
 		 * @note Assumes that the size of `type` is known at compile time and (implicitly)

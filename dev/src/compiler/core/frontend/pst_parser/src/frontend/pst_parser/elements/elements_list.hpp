@@ -9,7 +9,6 @@ namespace pst {
 	class ImplementsList;
 	class TemplateList;
 	class AtrArgList;
-	class InitList;
 	class CallList;
 	class FlowPatternList;
 	class NestedImportList;

@@ -33,7 +33,7 @@ fun main() -> i64 = {
     builtin_output_i64(if tup2._1.b or tup2._2.b then 1 else 0); # 0
 
 
-    # @TODO: #2483 When strings are handled in DVM, remove this test and enable `statements/default_initialization` for DVM.
+    # @TODO: #3163 When lists are handled in DVM, remove this test and enable `statements/default_initialization` for DVM.
 
     return 0;
 }

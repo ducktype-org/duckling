@@ -306,6 +306,15 @@ namespace compiler::helios::code {
 				return type.getKind() == tsh::Kind::Integral or type.getKind() == tsh::Kind::Float;
 			}
 
+			/**
+			 * @brief Checks whether the type is a primitive scalar which may take part in an
+			 * explicit `as` conversion (integers, floats, `char`, `bool` and `byte`).
+			 */
+			static bool isScalarCastableType(const tsh::AbstractType type) {
+				return isNumericType(type) or type.getKind() == tsh::Kind::Char
+				    or type.getKind() == tsh::Kind::Bool or type.getKind() == tsh::Kind::Byte;
+			}
+
 			static bool isNumericOperator(const lexer::Operator op) {
 				// Only operators which allow their arguments to undergo numeric promotion.
 				static const std::set<std::string> numeric_ops
@@ -663,8 +672,9 @@ namespace compiler::helios::code {
 				using tsh::Mutability;
 				using tsh::ReferenceKind;
 
-				// For now we allow casts between numeric types
-				if (isNumericType(from.getType()) && isNumericType(to.getType())
+				// For now we allow casts between primitive scalar types: integers, floats, `char`,
+				// `bool` and `byte`. These replace the old call-style casts (`i64(x)`, `char(x)`).
+				if (isScalarCastableType(from.getType()) && isScalarCastableType(to.getType())
 				    && from.getRefKind() == ReferenceKind::Direct
 				    && to.getRefKind() == ReferenceKind::Direct)
 					return;
@@ -1118,6 +1128,43 @@ namespace compiler::helios {
 			expected_type,
 			source_position,
 			std::move(error_overrides)
+		);
+		return query::Failed();
+	}
+
+	query::QResult<BoxOrCRef<code::Expr>> getHoutOfExprWithExpectedTypes(
+		query::Context&                                  ctx,
+		const pst::GenericPSTQueryKey<pst::ExprElement>& pst_expr,
+		const std::vector<tsh::SymbolType<>>&            expected_types
+	) {
+		CORE_ASSERT(!expected_types.empty(), "At least one expected type has to be provided.");
+		if (expected_types.size() == 1)
+			return getHoutOfExprWithExpectedType(ctx, pst_expr, expected_types.front());
+
+		auto expr_hout_qresult = ctx.query<QueryHoutOfExpr>({ pst_expr.element });
+
+		UNPACK_QRESULT_CREF_TO_BOX(CRef<code::Expr> expr_hout =, expr_hout_qresult);
+
+		std::vector<InvalidCoercionReason> failure_reasons;
+		failure_reasons.reserve(expected_types.size());
+
+		for (const tsh::SymbolType<>& expected_type: expected_types) {
+			const auto coercion_qresult = canCoerce(ctx, expr_hout->expression_type, expected_type);
+			if (coercion_qresult.hasFailed()) return query::Failed();
+
+			const auto& coercion_result = coercion_qresult.valueOrThrow();
+			if (coercion_result.isValid())
+				return coercion_result.getCoercion().coerceFromRef(ctx, expr_hout);
+
+			failure_reasons.push_back(coercion_result.getInvalidReason());
+		}
+
+		logNoMatchingExpectedTypeFailure(
+			ctx,
+			expr_hout->expression_type.getSymbolType(),
+			expected_types,
+			failure_reasons,
+			pst_expr.element.unlock(ctx)->getStablePosition()
 		);
 		return query::Failed();
 	}

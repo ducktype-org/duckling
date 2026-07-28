@@ -79,6 +79,9 @@ namespace vm {
 		getMainVMThread().runNoSpawn(func_name, run_arguments);
 		variant_match(getStatus()) {
 			variant_case(api::ExecutionCompleted, completed) { return completed.exit_value; }
+			variant_case(api::ExecutionPanicked, panicked) {
+				return std::unexpected(api::StateError(panicked.error_message));
+			}
 			variant_default return std::unexpected(api::StateError(
 				hasExecutionStarted(getStatus()) ? "Execution did not complete"
 												 : "Execution did not start"

@@ -208,7 +208,7 @@ namespace compiler::repl {
 			[&](query::Context& ctx) {
 				// Reuse the persistent statement-lowering context so functions loaded here are
 			    // recorded as already-lowered and are not re-emitted for later statements.
-				if (!m_lowering_context.has_value()) m_lowering_context.emplace(ctx);
+				if (!m_lowering_context.has_value()) m_lowering_context.emplace(ctx, false);
 				m_lowering_context->setContext(ctx);
 				defer(m_lowering_context->invalidateContext());
 
@@ -698,7 +698,7 @@ namespace compiler::repl {
 			"Unexpected error: ",
 			[&](query::Context& ctx) {
 				// Initialize context on first use or update it for this scope
-				if (!m_lowering_context.has_value()) m_lowering_context.emplace(ctx);
+				if (!m_lowering_context.has_value()) m_lowering_context.emplace(ctx, false);
 				m_lowering_context->setContext(ctx);  // Update context for this scope
 
 				// Defer: invalidate when exiting this scope, even on early return
@@ -783,7 +783,7 @@ namespace compiler::repl {
 			"Unexpected error: ",
 			[&](query::Context& ctx) {
 				// Initialize context on first use or update it for this scope
-				if (!m_lowering_context.has_value()) m_lowering_context.emplace(ctx);
+				if (!m_lowering_context.has_value()) m_lowering_context.emplace(ctx, false);
 				m_lowering_context->setContext(ctx);  // Update context for this scope
 
 				// Defer: invalidate when exiting this scope, even on early return
@@ -831,7 +831,7 @@ namespace compiler::repl {
 			"Unexpected error: ",
 			[&](query::Context& ctx) {
 				// Initialize context on first use or update it for this scope
-				if (!m_lowering_context.has_value()) m_lowering_context.emplace(ctx);
+				if (!m_lowering_context.has_value()) m_lowering_context.emplace(ctx, false);
 				m_lowering_context->setContext(ctx);  // Update context for this scope
 
 				// Defer: invalidate when exiting this scope, even on early return
