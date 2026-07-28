@@ -92,6 +92,7 @@ public:
 		TESTER_ADD_TEST(testDynamicArrays);
 		TESTER_ADD_TEST(testFunctionReturnTypeDeduction);
 		TESTER_ADD_TEST(testFunctionReturnTypeCheckAndCoercion);
+		TESTER_ADD_TEST(testTupleCoercion);
 		TESTER_ADD_TEST(testMethodCalls);
 		TESTER_ADD_TEST(testMangler);
 		TESTER_ADD_TEST(testManglerSpecialMembers);
@@ -2117,6 +2118,118 @@ private:
 			    );
 			assertTrue(cast_expr != nullptr, "Cast expression expected.");
 		}
+	}
+
+	/**
+	 * @brief Checks that tuples are coerced element by element, and that tuple literals are coerced
+	 * in place.
+	 *
+	 * A tuple written as a literal keeps the shape of its element expressions, so the coercion is
+	 * applied directly to them and the resulting `TupleExpr` holds no `ReusableExpr`. That matters
+	 * for elements lifted to a `type`: lifting only works on the original expression, not on a
+	 * field read out of a materialised tuple. A tuple that is already a value has to be
+	 * materialised, so its elements are read back out of a `ReusableExpr` instead.
+	 */
+	void testTupleCoercion() {
+		auto [module, scope] = getModule(fs::File(path("test_modules/tuple_coercion")));
+		auto& hout
+			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+
+		// Returns the coerced tuple of the function's `return` statement.
+		auto returned_tuple = [&](const auto& function) {
+			auto  ret_stmt = function->body->statements.back().ref();
+			auto* ret_stmt_casted
+				= dynamic_cast<const compiler::helios::code::ReturnStmt*>(&*ret_stmt);
+			assertTrue(ret_stmt_casted != nullptr, "Return statement expected.");
+
+			ASSERT_EQUAL(
+				function->declaration->return_type.getType(),
+				ret_stmt_casted->value->expression_type.getType()
+			);
+
+			auto* tuple_expr = dynamic_cast<const compiler::helios::code::TupleExpr*>(
+				ret_stmt_casted->value.get()
+			);
+			assertTrue(tuple_expr != nullptr, "Tuple expression expected.");
+			return tuple_expr;
+		};
+
+		// Whether any element of the tuple was read out of a materialised source tuple.
+		auto uses_reusable_source = [](const auto* tuple_expr) {
+			for (const auto& element: tuple_expr->elements) {
+				const compiler::helios::code::Expr* current = &*element;
+				while (auto* cast = dynamic_cast<const compiler::helios::code::CastExpr*>(current))
+					current = cast->source_expr.get();
+
+				if (dynamic_cast<const compiler::helios::code::AccessExpr*>(current) != nullptr)
+					return true;
+			}
+			return false;
+		};
+
+		bool literal_checked       = false;
+		bool parenthesised_checked = false;
+		bool lift_checked          = false;
+		bool bool_checked          = false;
+		bool materialised_checked  = false;
+
+		for (auto& function: hout.functions) {
+			const auto name = function->declaration->original_name;
+
+			if (name == base::StrID("literal") || name == base::StrID("parenthesised")) {
+				auto* tuple_expr = returned_tuple(function);
+				ASSERT_EQUAL(tuple_expr->elements.size(), 2u);
+
+				int casts_found = 0;
+				for (const auto& element: tuple_expr->elements)
+					if (dynamic_cast<const compiler::helios::code::CastExpr*>(&*element) != nullptr)
+						casts_found++;
+				assertEqual(1, casts_found, "Only the widened element should be cast.");
+
+				assertTrue(
+					!uses_reusable_source(tuple_expr),
+					"A tuple literal should be coerced in place, without being materialised."
+				);
+
+				(name == base::StrID("literal") ? literal_checked : parenthesised_checked) = true;
+			} else if (name == base::StrID("lift_literal")) {
+				auto* tuple_expr = returned_tuple(function);
+				ASSERT_EQUAL(tuple_expr->elements.size(), 2u);
+
+				auto* lift = dynamic_cast<const compiler::helios::code::LiftToTypeExpr*>(
+					&*tuple_expr->elements[0]
+				);
+				assertTrue(lift != nullptr, "The unit element should be lifted to a type.");
+
+				lift_checked = true;
+			} else if (name == base::StrID("to_bool")) {
+				auto* tuple_expr = returned_tuple(function);
+				ASSERT_EQUAL(tuple_expr->elements.size(), 2u);
+
+				auto* zero_check = dynamic_cast<const compiler::helios::code::BinaryOperatorExpr*>(
+					&*tuple_expr->elements[0]
+				);
+				assertTrue(zero_check != nullptr, "The bool element should be a zero-check.");
+
+				bool_checked = true;
+			} else if (name == base::StrID("materialised")) {
+				auto* tuple_expr = returned_tuple(function);
+				ASSERT_EQUAL(tuple_expr->elements.size(), 2u);
+
+				assertTrue(
+					uses_reusable_source(tuple_expr),
+					"A tuple value should be materialised and its elements read back out of it."
+				);
+
+				materialised_checked = true;
+			}
+		}
+
+		assertTrue(literal_checked, "Function `literal` was not found.");
+		assertTrue(parenthesised_checked, "Function `parenthesised` was not found.");
+		assertTrue(lift_checked, "Function `lift_literal` was not found.");
+		assertTrue(bool_checked, "Function `to_bool` was not found.");
+		assertTrue(materialised_checked, "Function `materialised` was not found.");
 	}
 
 	void testMethodCalls() {
