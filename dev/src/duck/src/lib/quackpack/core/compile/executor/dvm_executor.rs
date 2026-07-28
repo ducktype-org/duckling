@@ -1,9 +1,12 @@
 //! An implementation of [`Executor`], which creates a single task per package.
 
+use std::path::PathBuf;
+
 use tracing::instrument;
 
 use super::{Executor, ExecutorOutput, compile_single_unit_with_tasks, unit_output};
 use crate::QuackResult;
+use crate::quackpack::core::Package;
 use crate::quackpack::core::compile::BuildContext;
 use crate::quackpack::core::compile::artifacts_layout::shared::SharedArtifactsLayout;
 use crate::quackpack::core::compile::artifacts_layout::standard::StandardArtifactsLayout;
@@ -37,19 +40,26 @@ fn compile(graph: UnitGraph, bcx: &BuildContext<'_, '_>) -> QuackResult<Executor
     );
     let package = root.root_package().package().get_package();
     let output = if bcx.shared {
-        let artifacts_layout = package.artifacts_layout::<SharedArtifactsLayout>();
-        let profile_layout = artifacts_layout.for_profile(bcx.profile);
-        compile_unit(root, &graph, &profile_layout, bcx)?;
-        unit_output(root, &graph, &profile_layout)?
+        compile_inner::<SharedArtifactsLayout>(root, package, &graph, bcx)?
     } else {
-        let artifacts_layout = package.artifacts_layout::<StandardArtifactsLayout>();
-        let profile_layout = artifacts_layout.for_profile(bcx.profile);
-        compile_unit(root, &graph, &profile_layout, bcx)?;
-        unit_output(root, &graph, &profile_layout)?
+        compile_inner::<StandardArtifactsLayout>(root, package, &graph, bcx)?
     };
     Ok(ExecutorOutput {
         root: (root.clone(), output),
     })
+}
+
+/// Helper for [`compile`].
+fn compile_inner<T: ArtifactsLayout>(
+    root_unit: &Unit,
+    root_package: &Package,
+    graph: &UnitGraph,
+    bcx: &BuildContext<'_, '_>,
+) -> QuackResult<PathBuf> {
+    let artifacts_layout = root_package.artifacts_layout::<T>();
+    let profile_layout = artifacts_layout.for_profile(bcx.profile);
+    compile_unit(root_unit, graph, &profile_layout, bcx)?;
+    unit_output(root_unit, graph, &profile_layout)
 }
 
 #[instrument(skip_all)]

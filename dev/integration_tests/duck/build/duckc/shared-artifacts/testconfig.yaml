@@ -1,61 +1,61 @@
 # The layout is:
-# - tmp3 depends on tmp4,
-# - tmp1 and tmp2 depend on tmp3.
+# - tmp1 depends on tmp2,
+# - root1 and root2 depend on tmp1.
 
-src_tmp4: |+
+src_tmp2: |+
   import core.builtins.*;
 
   fun xdd() -> i64 = {
     return 0;
   }
 
-src_tmp3: |+
+src_tmp1: |+
   import core.builtins.*;
-  import tmp4.*;
+  import tmp2.*;
 
   fun xd() -> i64 = {
     return xdd();
   }
 
-src_tmp3_new: |+
+src_tmp1_new: |+
   import core.builtins.*;
 
   fun xd() -> i64 = {
     return 0;
   }
 
-src_tmp12: |+
+src_root: |+
   import core.builtins.*;
-  import tmp3.*;
+  import tmp1.*;
 
   fun main() -> i64 = {
     return xd();
   }
 
-tmp3_deps: |+
+tmp1_deps: |+
   dependencies:
-    tmp4:
+    tmp2:
       source:
-        path: ../tmp4
+        path: ../tmp2
 
-tmp12_deps: |+
+root_deps: |+
   dependencies:
-    tmp3:
+    tmp1:
       source:
-        path: ../tmp3
+        path: ../tmp1
 
 PreCase: |+
   @{cd-tmp-dir}
+  @{duck-exe} init root1
+  @{duck-exe} init root2
   @{duck-exe} init tmp1
   @{duck-exe} init tmp2
-  @{duck-exe} init tmp3
-  @{duck-exe} init tmp4
-  echo "@{src_tmp12}" > tmp1/src/src.dmf
-  echo "@{src_tmp12}" > tmp2/src/src.dmf
-  echo "@{src_tmp3}" > tmp3/src/src.dmf
-  echo "@{src_tmp4}" > tmp4/src/src.dmf
-  echo "@{tmp12_deps}" >> tmp1/quackconfig.yaml
-  echo "@{tmp12_deps}" >> tmp2/quackconfig.yaml
+  echo "@{src_root}" > root1/src/src.dmf
+  echo "@{src_root}" > root2/src/src.dmf
+  echo "@{src_tmp1}" > tmp1/src/src.dmf
+  echo "@{src_tmp2}" > tmp2/src/src.dmf
+  echo "@{root_deps}" >> root1/quackconfig.yaml
+  echo "@{root_deps}" >> root2/quackconfig.yaml
 PostCase: python3 check.py @{expected-subfolders}
 
 Tests:
@@ -63,19 +63,22 @@ Tests:
     Description: correctly utilises sharing artifacts mechanism
     Cases:
       same-subgraphs:
-        # This should produce only one subfolder in build folder of tmp3.
+        # This should produce only one subfolder in build folder of tmp1.
+        # Compilations of `root1` and `root2` should reuse the same subfolder in the build folder of `tmp1`.
         expected-subfolders: 1
         test-cmd: |+
-          echo "@{tmp3_deps}" >> tmp3/quackconfig.yaml &&
-          duck -C tmp1 build --shared-artifacts &&
-          duck -C tmp2 build --shared-artifacts
+          echo "@{tmp1_deps}" >> tmp1/quackconfig.yaml &&
+          duck -C root1 build --shared-artifacts &&
+          duck -C root2 build --shared-artifacts
       different-subgraphs:
-        # This should produce two subfolders in build folder of tmp3.
+        # This should produce two subfolders in build folder of tmp1.
+        # We change the dependency subgraph of `tmp1`.
+        # Thus the first and second compilation should have different subfolders.
         expected-subfolders: 2
         test-cmd: |+
-          echo "@{src_tmp3_new}" > tmp3/src/src.dmf &&
-          duck -C tmp1 build --shared-artifacts &&
-          echo "@{tmp3_deps}" >> tmp3/quackconfig.yaml &&
-          echo "@{src_tmp3}" > tmp3/src/src.dmf &&
-          duck -C tmp1 build --shared-artifacts
+          echo "@{src_tmp1_new}" > tmp1/src/src.dmf &&
+          duck -C root1 build --shared-artifacts &&
+          echo "@{tmp1_deps}" >> tmp1/quackconfig.yaml &&
+          echo "@{src_tmp1}" > tmp1/src/src.dmf &&
+          duck -C root1 build --shared-artifacts
         

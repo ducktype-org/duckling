@@ -14,16 +14,16 @@
 //! │   └── *useful artifacts of the root package* # artifacts like main executable, main binary, compiled scripts, etc
 //! └── .duck_lock # Global artifacts lock
 
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
+use crate::QuackResult;
 use crate::quackpack::core::compile::artifacts_layout::{
     ArtifactsLayout, DependencyLayout, ProfileLayout,
 };
 use crate::quackpack::core::compile::profiles::Profile;
 use crate::quackpack::core::compile::unit::Unit;
 use crate::quackpack::core::compile::unit::graph::UnitGraph;
-use crate::util::file_locks::{FileLockManager, LockedFile};
-use crate::{DuckContext, QuackResult};
+use crate::util::file_locks::FileLockManager;
 
 #[derive(Clone, Debug)]
 /// Standard layout of the artifacts directory. See the [module](super::standard_artifacts_layout) documentation.
@@ -36,14 +36,6 @@ impl ArtifactsLayout for StandardArtifactsLayout {
         Self {
             root: FileLockManager::new(root),
         }
-    }
-
-    fn root_directory(&self) -> &Path {
-        self.root.not_locked_path()
-    }
-
-    fn acquire_global_lock(&self, ctx: &DuckContext) -> QuackResult<LockedFile> {
-        self.root.open_exclusive(Self::GLOBAL_LOCK_NAME, ctx)
     }
 
     fn for_profile(&self, profile: Profile) -> impl ProfileLayout {
@@ -68,10 +60,6 @@ impl ProfileLayout for StandardProfileLayout {
         &self.root
     }
 
-    fn root_directory(&self) -> &Path {
-        self.root.not_locked_path()
-    }
-
     fn for_dependency(
         &self,
         unit: &Unit,
@@ -92,25 +80,5 @@ pub struct StandardDependencyLayout {
 impl DependencyLayout for StandardDependencyLayout {
     fn file_lock_manager(&self) -> &FileLockManager {
         &self.root
-    }
-
-    fn root_directory(&self) -> &Path {
-        self.root.not_locked_path()
-    }
-
-    fn acquire_lock(&self, ctx: &DuckContext) -> QuackResult<LockedFile> {
-        self.root.open_exclusive(Self::LOCK_NAME, ctx)
-    }
-
-    fn compiler_artifacts(&self) -> PathBuf {
-        self.root_directory().join("artifacts")
-    }
-
-    fn dependency_json(&self, ctx: &DuckContext) -> QuackResult<LockedFile> {
-        self.root.open_exclusive(Self::JSON_NAME, ctx)
-    }
-
-    fn dependency_json_path(&self) -> PathBuf {
-        self.root_directory().join(Self::JSON_NAME)
     }
 }
