@@ -231,6 +231,18 @@ namespace query::internal {
 		\***************************/
 
 		/**
+		 * @brief Deletes on-disk cache artifacts of previous-graph nodes that were not merged into
+		 * the current graph.
+		 * @note Nodes merged during incremental compilation are erased from the previous graph, so
+		 * whatever disk-cacheable nodes remain in it were never reused (e.g. their query hash
+		 * changed). They are absent from the serialized graph, so their disk cache would be orphaned
+		 * — this removes it. A node whose hash is still present in the current graph is kept.
+		 * @note Must be called at the end of compilation, when no queries are executing.
+		 * @return The number of orphaned query caches removed.
+		 */
+		u64 cleanupOrphanedDiskCaches();
+
+		/**
 		 * @brief Builds a reduced adjacency list without mutating the original graph.
 		 * @note The returned ReducedGraphData should generally be passed directly to
 		 * QueryGraph::serializeReducedGraph without further mutation. This function already
@@ -378,11 +390,13 @@ namespace query::internal {
 		template<typename MetadataT, typename... Args>
 		requires std::derived_from<MetadataT, BaseMetadata>
 		bool addMetadataIfNotExistsInternal(NodeID node_id, Args&&... args) {
-			// Check that the query has preserve_in_graph = true
+			// Metadata may only be attached to nodes that are preserved across compilations,
+			// because that is what lets it survive into the next graph. We do not require stable
+			// hashing here: a preserved node with an unstable hash still keeps its metadata locally,
+			// and it is the merge step that decides whether the metadata can be carried over safely.
 			CORE_ASSERT(
 				node_id.q_id.getData().tags.preserve_in_graph,
-				"Cannot add metadata to query without preserve_in_graph = true. "
-				"Query: "
+				"Cannot add metadata to query without preserve_in_graph = true. Query: "
 					+ std::string(node_id.q_id.getData().name)
 			);
 			return metadata_storage.addMetadataIfNotExists<MetadataT>(

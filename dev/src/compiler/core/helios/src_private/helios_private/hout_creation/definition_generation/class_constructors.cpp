@@ -2,8 +2,8 @@
 
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/queries/function_queries.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/tsh/queries/types.hpp>
+#include <helios_private/hout_creation/shorthands/shorthands.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
@@ -18,8 +18,8 @@ namespace compiler::helios::defgen {
 			// Preamble, get some basic data.
 			auto class_interface = class_type.getInterface(ctx);
 
-			using ImplicitConstructor = GeneratedSymbolData::ImplicitConstructor;
-			using Variable            = GeneratedSymbolData::GeneratedFunctionVariable;
+			using defgen::Constructor;
+			using Variable = GeneratedFunctionVariable;
 			using std::ranges::to;
 			using std::views::transform;
 
@@ -31,13 +31,17 @@ namespace compiler::helios::defgen {
 
 			// Prepare the ctor symbol and declaration.
 			const SymID ctor_symbol = ctx.query<QueryGeneratedSymbol>({
-				.name                  = name(class_type.getSymbol()),
-				.generated_symbol_data = GeneratedSymbolData{ ImplicitConstructor{ class_type } },
+				.name = name(class_type.getSymbol()),
+				.generated_symbol_data
+				= Constructor{ .type = class_type, .kind = Constructor::Kind::Implicit },
 			});
 
 			const auto& ctor_decl = ctx.query<QueryDeclOfFun>(ctor_symbol)->valueOrThrow();
 
 			// Prepare the body of the constructor.
+			using namespace code::shorthands;
+			const Shorthand s{ ctx };
+
 			std::vector<Box<code::Stmt>> body{};
 
 			// - One declaration, one assignment per field, one return.
@@ -47,39 +51,22 @@ namespace compiler::helios::defgen {
 			const auto result_symbol_type = ctor_decl.return_type;
 			// @TODO: #2307 Classes with a field named `__result` don't work.
 			const SymID result_symbol = ctx.query<QueryGeneratedSymbol>({
-				.name = base::StrID("__result"),
-				.generated_symbol_data
-				= GeneratedSymbolData{ Variable{ ctor_symbol, 0, result_symbol_type } },
+				.name                  = base::StrID("__result"),
+				.generated_symbol_data = Variable{ ctor_symbol, 0, result_symbol_type },
 			});
-			body.emplace_back(makeBox<code::VariableStmt>(code::VariableStmt(
-				code::generatedOrigin(),
-				makeBox<code::DefaultValueExpr>(
-					ctx, code::generatedOrigin(), result_symbol_type.getType()
-				),
-				result_symbol_type,
-				result_symbol
-			)));
+			body.emplace_back(s.var(
+				result_symbol, result_symbol_type, s.defaultValue(result_symbol_type.getType())
+			));
 
 			// - Assign each field from the corresponding parameter.
 			for (usize i = 0; i < num_fields; i++) {
-				body.emplace_back(makeBox<code::AssignmentStmt>(
-					code::generatedOrigin(),
-					makeBox<code::AccessExpr>(
-						ctx,
-						code::generatedOrigin(),
-						makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), result_symbol),
-						fields.at(i).getSymbol()
-					),
-					makeBox<code::IdentifierExpr>(
-						ctx, code::generatedOrigin(), ctor_decl.parameters.at(i).helios_symbol
-					)
+				body.emplace_back(s.assign(
+					s.access(s.ident(result_symbol), fields.at(i).getSymbol()),
+					s.ident(ctor_decl.parameters.at(i).helios_symbol)
 				));
 			}
 
-			body.emplace_back(makeBox<code::ReturnStmt>(
-				code::generatedOrigin(),
-				makeBox<code::IdentifierExpr>(ctx, code::generatedOrigin(), result_symbol)
-			));
+			body.emplace_back(s.ret(s.ident(result_symbol)));
 
 			// Finally, create the HOUTFunction object.
 			return HOUTFunction(

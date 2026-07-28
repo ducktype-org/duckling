@@ -383,7 +383,8 @@ namespace compiler::helios::code {
 		Slice,
 		Box,
 		Const,
-		Len,  // @TODO: #1970 Probably remove that in the future.
+		SizeOf,
+		AlignOf
 	};
 
 	/**
@@ -700,15 +701,16 @@ namespace compiler::helios::code {
 	};
 
 	/**
-	 * @brief Represents a box creation expression.
+	 * @brief Represents an explicit move expression (`move x`).
 	 *
-	 * Currently, box types are not created explicitly, so this node gets created each time we
-	 * encounter a `Direct` to `Box` coercion.
+	 * It takes a place of type T and produces a value of the same type, but as a temporary,
+	 * signalling that ownership of the operand is transferred out of it. The source local is
+	 * marked as moved during MIR lowering, so using it afterwards is a use-after-move.
 	 */
-	struct BoxOfExpr final: public Expr {
+	struct MoveExpr final: public Expr {
 		Box<Expr> inner;
 
-		BoxOfExpr(query::Context& ctx, ElementOrigin origin, Box<Expr> inner);
+		MoveExpr(query::Context& ctx, ElementOrigin origin, Box<Expr> inner);
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
 
@@ -717,7 +719,7 @@ namespace compiler::helios::code {
 	private:
 		FRIEND_MAKEBOX
 
-		BoxOfExpr(tsh::ExpressionType<> expression_type, ElementOrigin origin, Box<Expr> inner);
+		MoveExpr(tsh::ExpressionType<> expression_type, ElementOrigin origin, Box<Expr> inner);
 	};
 
 	/**

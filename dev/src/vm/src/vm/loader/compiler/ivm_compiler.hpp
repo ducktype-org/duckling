@@ -11,6 +11,7 @@ namespace vm::loader::compiler {
 	namespace detail {
 		/**
 		 * @brief A structure holding the intermediate state for the compilation of a single function.
+		 * @TODO: #2898 This structure's name is outdated
 		 */
 		struct FunctionStackContext {
 			FunctionStackContext(const code::valid_function::ValidFunction& func): function(func) {}
@@ -29,10 +30,11 @@ namespace vm::loader::compiler {
 	 * Used to determine the size of various internal data structures for incremental compilation.
 	 */
 	struct ProgramSize {
-		usize function_count;
-		usize global_count;
-		usize type_count;
-		usize ext_c_function_count;
+		usize function_count       = 0;
+		usize global_count         = 0;
+		usize type_count           = 0;
+		usize ext_c_function_count = 0;
+		usize ffi_function_count   = 0;
 	};
 
 	/**
@@ -103,6 +105,14 @@ namespace vm::loader::compiler {
 		 */
 		virtual void compileNewExtCFunctions(const std::vector<code::ExternalCFunction>& new_functions
 		) = 0;
+
+		/**
+		 * @brief Compiles newly added FFIFunctions. Compilers without FFI support may keep the
+		 * default no-op implementation.
+		 */
+		virtual void compileNewFFIFunctions(
+			[[maybe_unused]] const std::vector<code::FFIFunction>& new_functions
+		) {}
 
 		/**
 		 * @brief Retrieves the current size of the compiled program, in terms of its various

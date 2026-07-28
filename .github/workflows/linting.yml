@@ -16,6 +16,24 @@ env:
   TIDY_VERSION: 19
 
 jobs:
+  # GitHub silently stops creating runs for a workflow whose file does not
+  # parse, so this check must live outside tests.yml to report its breakage.
+  # Runs on drafts too - broken workflows should surface as early as possible.
+  workflows-lint:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install click and PyYAML
+        run: sudo pip install click pyyaml --break-system-packages --no-input
+
+      - name: Validate workflow YAML
+        run: |
+         cd dev
+         python3 toolbox.py workflows-lint
+        shell: bash
+
   determine-runners:
     if: github.event.pull_request.draft == false
     uses: ./.github/workflows/determine-runners.yml
@@ -41,7 +59,7 @@ jobs:
       - uses: actions/checkout@v6
 
       - name: Install gvc, LLVM and nlohmann_json
-        run: sudo apt -y install libgraphviz-dev llvm-19 ${{ env.CLANG_COMPILER }} llvm-19-dev nlohmann-json3-dev ${{ env.CXX_COMPILER }} ${{ env.CC_COMPILER }}
+        run: sudo apt -y install libgraphviz-dev llvm-19 ${{ env.CLANG_COMPILER }} llvm-19-dev nlohmann-json3-dev pkg-config libffi-dev ${{ env.CXX_COMPILER }} ${{ env.CC_COMPILER }}
         # @TODO: Remove nlohmann-json3-dev dependency from here. It was added, because linter
         # didn't see nlohmann_json library for some reason. It should be removed, because it is
         # already added through CMake and version from package manager and in our configuration may differ.

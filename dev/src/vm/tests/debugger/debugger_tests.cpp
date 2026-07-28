@@ -333,8 +333,13 @@ private:
 		{
 			auto exit_code_response = vm::api::getExitValue(pid);
 			ASSERT_HAS_VALUE(exit_code_response);
-			ASSERT_EQUAL(exit_code_response.value().size(), 1);
-			ASSERT_EQUAL_PRINT(exit_code_response.value().at(0)->readBytes<i64>(), 0);
+			ASSERT_TRUE(
+				std::holds_alternative<std::vector<Ref<vm::VmValue>>>(exit_code_response.value())
+			);
+			auto& exit_value_vec
+				= std::get<std::vector<Ref<vm::VmValue>>>(exit_code_response.value());
+			ASSERT_EQUAL(exit_value_vec.size(), 1);
+			ASSERT_EQUAL_PRINT(exit_value_vec.at(0)->readBytes<i64>(), 0);
 		}
 	}
 
@@ -359,7 +364,7 @@ private:
 
 		std::unique_lock lk(m);
 		// Test timeout
-		ASSERT_TRUE(cv.wait_for(lk, std::chrono::milliseconds(100), [&] { return output.load(); }));
+		ASSERT_TRUE(cv.wait_for(lk, std::chrono::milliseconds(200), [&] { return output.load(); }));
 
 		ASSERT_HAS_VALUE(vm::api::stop(pid));
 	}

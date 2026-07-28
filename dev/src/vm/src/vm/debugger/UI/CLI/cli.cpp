@@ -24,12 +24,15 @@ namespace {
 
 	void printProcStatus(printer::PrinterOStream& os, const vm::api::ProcStatus& status) {
 		os.add(printer::PrinterContent(typeToString(status)));
-		if (std::holds_alternative<vm::api::ExecutionCompleted>(status)) {
-			for (auto val: std::get<vm::api::ExecutionCompleted>(status).exit_value) {
-				if_opt_some(val->readData(), data) {
-					variant_match(data) {
-						variant_case(vm::interpreted_data_variant::Primitive, primitive) {
-							os << " (return value = " << std::to_string(primitive.value) << ")";
+		if (v_matches(status, vm::api::ExecutionCompleted)) {
+			const auto& exit_value = std::get<vm::api::ExecutionCompleted>(status).exit_value;
+			if (v_matches(exit_value, std::vector<Ref<vm::VmValue>>)) {
+				for (auto val: std::get<std::vector<Ref<vm::VmValue>>>(exit_value)) {
+					if_opt_some(val->readData(), data) {
+						variant_match(data) {
+							variant_case(vm::interpreted_data_variant::Primitive, primitive) {
+								os << " (return value = " << std::to_string(primitive.value) << ")";
+							}
 						}
 					}
 				}
@@ -48,44 +51,48 @@ namespace vm::debugger::cli {
 			  printProcStatus(out, status);
 			  printNL(out.getContents());
 		  }),
-		  error_listener([&](const std::string& err) { printNL("Error: ", err); }) {
+		  error_listener([&](const std::string& err) { printError(err); }),
+		  output_listener([&](const std::string& str) {
+			  print({ { str, printer::Color::BrightCyan } });
+		  }) {
 		debugger.attachOnStatusChangedListener(status_change_listener);
 		debugger.attachOnErrorListener(error_listener);
+		debugger.attachOnOutputListener(output_listener);
 	}
 
 	std::expected<void, api::ApiError> CLIDebugger::load(const fs::File& file) {
-		auto response = debugger.loadFile(file);
+		auto response = debugger.loadFiles({ file });
 		if (!response) return std::unexpected(response.error());
 
 		selected_file = file;
 		return {};
 	}
 
-	std::expected<void, api::ApiError> CLIDebugger::loadDefault() {
-		fs::FilePath fp = "duck_build/package_dvm.dbc";
-		if (!fp.exists())
-			return std::unexpected(api::OtherError{
-				"No compiled program in the current directory." });
-		return load(fp);
+	std::expected<void, std::variant<api::ApiError, std::string>> CLIDebugger::loadDefault() {
+		auto response = debugger.loadDefault();
+		if (!response) return std::unexpected(response.error());
+
+		if_opt_some(debugger.getMapper().mainFile(), main_filepath) selected_file
+			= fs::File(main_filepath);
+
+		return {};
 	}
 
-	void CLIDebugger::setDefaultArgs(const ProgramRunArguments& args) {
-		debugger.setDefaultArgs(args);
+	void CLIDebugger::setProgramArguments(const ProgramRunArguments& args) {
+		debugger.setProgramArguments(args);
 	}
 
 	int CLIDebugger::run() {
 		if (!load_result) {
-			printNL("Failed to load file");
+			printError("Failed to load file");
 
 			variant_match(load_result.error()) {
-				variant_case(api::LoadProgramError, load_error) {
-					printNL("Error: ", load_error.why);
-				}
+				variant_case(api::LoadProgramError, load_error) { printError(load_error.why); }
 				variant_default {
 					std::visit(
 						[&](auto&& arg) {
 							using T = std::decay_t<decltype(arg)>;
-							printNL("Error: ", TypeParseTraits<T>::NAME.data());
+							printError(TypeParseTraits<T>::NAME.data());
 						},
 						load_result.error()
 					);
@@ -97,6 +104,8 @@ namespace vm::debugger::cli {
 
 		bool running = true;
 
+		// @TODO: #3179 Add vm run -d flag and/or debugger command for explicite mapping loading
+		// @TODO: #3180 Add possibility for switching selected file in debugger CLI
 		clah::Clah cmds
 			= clah::Clah("debug", "Debugger CLI Command Parser")
 		          .addSubcommand(clah::Clah("exit", "exits the debugger")
@@ -107,19 +116,19 @@ namespace vm::debugger::cli {
 		          .addSubcommand(clah::Clah("run", "runs main function")
 		                             .setHandler([&](const clah::ParsingResult&) -> int {
 										 auto response = debugger.runMain();
-										 if (!response) printNL("Run failed!");
+										 if (!response) printError("Run failed!");
 										 return 0;
 									 }))
 		          .addSubcommand(clah::Clah("pause", "pauses running VM")
 		                             .setHandler([&](const clah::ParsingResult&) -> int {
 										 auto response = debugger.pause();
-										 if (!response) printNL("Pause failed!");
+										 if (!response) printError("Pause failed!");
 										 return 0;
 									 }))
 		          .addSubcommand(clah::Clah("continue", "resumes VM execution")
 		                             .setHandler([&](const clah::ParsingResult&) -> int {
 										 auto response = debugger.resume();
-										 if (!response) printNL("Continue failed!");
+										 if (!response) printError("Continue failed!");
 										 return 0;
 									 }))
 		          .addSubcommand(clah::Clah("status", "writes current VM status")
@@ -131,27 +140,26 @@ namespace vm::debugger::cli {
 		          .addSubcommand(clah::Clah("position", "writes current position")
 		                             .setHandler([&](const clah::ParsingResult&) -> int {
 										 auto response = debugger.getCurrentPosition();
-										 if (response) {
-											 auto pos = response.value();
-											 printNL(
-												 "Function `",
-												 pos.function_name.strView(),
-												 "` instruction ",
-												 pos.instr_number
-											 );
-											 if_opt_some(pos.source_position, sp) {
-												 printer::PrinterOStream out;
-												 dia::printHighlightedPositions(out, { sp }, 1);
-												 print(out.getContents());
-											 }
-										 } else {
-											 printNL("Faild to obtain position!");
-										 }
+										 if (response)
+											 printCodePosition(*response);
+										 else
+											 printNL("Failed to obtain position!");
 										 return 0;
 									 }))
 		          .addSubcommand(clah::Clah("step", "executes one step")
 		                             .setHandler([&](const clah::ParsingResult&) -> int {
-										 debugger.step();
+										 auto response = (selected_file
+			                                              && debugger.getMapper().containsFile(
+															  selected_file->getFilePath()
+														  ))
+			                                               ? debugger.mappedStep()
+			                                               : debugger.step();
+
+										 if (response)
+											 printCodePosition(*response);
+										 else
+											 printNL("Failed to obtain position!");
+
 										 return 0;
 									 }))
 		          .addSubcommand(
@@ -165,7 +173,7 @@ namespace vm::debugger::cli {
 							  auto line   = base::safeIntConv<usize>(options.getPositional<i64>(1));
 
 							  if (!selected_file) {
-								  printNL("No selected file");
+								  printError("No selected file");
 								  return 0;
 							  }
 
@@ -183,7 +191,7 @@ namespace vm::debugger::cli {
 									  (enable ? "set." : "unset.")
 								  );
 							  } else {
-								  printNL("Modyfing breakpoint failed!");
+								  printError("Modyfing breakpoint failed!");
 							  }
 
 							  return 0;
@@ -202,6 +210,22 @@ namespace vm::debugger::cli {
 		return 0;
 	}
 
+	void CLIDebugger::printCodePosition(const CodePosition& position) {
+		printNL(
+			"Function `", position.function_name.strView(), "` instruction ", position.instr_number
+		);
+		if_opt_some(position.source_position, sp) {
+			printer::PrinterOStream out;
+			dia::printHighlightedPositions(out, { sp }, 1);
+			print(out.getContents());
+		}
+		if_opt_some(position.mapped_position, sp) {
+			printer::PrinterOStream out;
+			dia::printHighlightedPositions(out, { sp }, 1);
+			print(out.getContents());
+		}
+	}
+
 	void CLIDebugger::print(const printer::PrinterContentsSeq& content) {
 		std::lock_guard lk(output_mutex);
 		printer::StreamPrinter::print(content, std::cout);
@@ -209,6 +233,15 @@ namespace vm::debugger::cli {
 
 	void CLIDebugger::printNL(const printer::PrinterContentsSeq& content) {
 		std::lock_guard lk(output_mutex);
+		printer::StreamPrinter::print(content, std::cout);
+		printer::StreamPrinter::newline(1, std::cout);
+	}
+
+	void CLIDebugger::printError(const printer::PrinterContentsSeq& content) {
+		std::lock_guard lk(output_mutex);
+		printer::StreamPrinter::print(
+			{ { "[Debug error]: ", printer::Color::BrightRed } }, std::cout
+		);
 		printer::StreamPrinter::print(content, std::cout);
 		printer::StreamPrinter::newline(1, std::cout);
 	}

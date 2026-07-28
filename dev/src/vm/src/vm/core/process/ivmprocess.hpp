@@ -86,6 +86,8 @@ namespace vm {
 		 */
 		u64 process_state_change_counter{ 0 };
 
+		api::ExecutionConfig execution_config;
+
 		/**
 		 * @brief Emits after the process status has changed.
 		 */
@@ -254,6 +256,10 @@ namespace vm {
 
 		virtual void waitForBreakpoint() = 0;
 
+		virtual std::expected<api::Response, api::ApiError> setExecutionConfig(
+			const api::ExecutionConfig& config
+		) = 0;
+
 		/**
 		 * @brief Gets type metadata for a given type name. Type must be defined in the loaded
 		 * program.
@@ -314,12 +320,19 @@ namespace vm {
 		) = 0;
 
 	public:
+		IVMProcess(const IVMProcess&)            = delete;
+		IVMProcess(IVMProcess&&)                 = delete;
+		IVMProcess& operator=(const IVMProcess&) = delete;
+		IVMProcess& operator=(IVMProcess&&)      = delete;
+
 		ProcIO& getIO();
 
 		/**
 		 * @brief Entry point to perform requests on the process.
 		 */
-		std::expected<api::Response, api::ApiError> doRequest(const api::RequestVariant& request);
+		virtual std::expected<api::Response, api::ApiError> doRequest(
+			const api::RequestVariant& request
+		);
 
 		/**
 		 * @brief Get the PID of the process.

@@ -3,6 +3,7 @@
 #include "../../hierarchy/class_elements/constructor.hpp"
 #include "../../hierarchy/class_elements/copy_constructor.hpp"
 #include "../../hierarchy/class_elements/destructor.hpp"
+#include "../../hierarchy/class_elements/move_constructor.hpp"
 #include "../../hierarchy/not_statements/code_block.hpp"  // IWYU pragma: keep
 #include "preamble.hpp"
 
@@ -12,6 +13,7 @@ namespace pst {
 
 		if (state[2].is(Keyword::Destroy)) return Destructor::parse(state);
 		if (state[2].is(Keyword::Copy)) return CopyConstructor::parse(state);
+		if (state[2].is(Keyword::Move)) return MoveConstructor::parse(state);
 
 		return Constructor::parse(state);
 	}

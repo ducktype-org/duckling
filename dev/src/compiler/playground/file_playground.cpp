@@ -17,5 +17,6 @@ int main(int argc, char** argv) {
 
 	auto out = file.getContent();
 	std::cout << out.view().size() << "\n";
-	for (usize i = 0; i < out.view().size(); i++) std::cout << (uint) out.view()[i] << "\n";
+	for (usize i = 0; i < out.view().size(); i++)
+		std::cout << static_cast<unsigned>(out.view()[i]) << "\n";
 }

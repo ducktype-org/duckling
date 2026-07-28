@@ -3,7 +3,22 @@
 #include <lang_definitions/key_spec_op.hpp>
 #include <string_id/string_id.hpp>
 
+#include <string_view>
+
 namespace lexer {
+	/**
+	 * @brief Checks whether `name` is entirely composed of operator characters (per the same
+	 * `operator_start`/`operator_continue` character classes the lexer itself uses), as opposed to
+	 * e.g. a plain identifier.
+	 *
+	 * @note Unlike `Operator::asNamed()`/`strAsOperator`, this recognizes *any* legal operator
+	 * shape, not just the fixed set of named operators — it's the only way to tell a custom
+	 * operator name (like `+*`) apart from a plain identifier once only the raw string is
+	 * available (no token/lexer state).
+	 */
+	[[nodiscard]]
+	bool isOperatorSymbolString(std::string_view name);
+
 	/**
 	 * @brief Simple wrapper for an operator.
 	 */
@@ -49,6 +64,11 @@ namespace lexer {
 		[[nodiscard]]
 		lang_def::NamedOperator asNamed() const {
 			return lang_def::strAsOperator(value);
+		}
+
+		[[nodiscard]]
+		lang_def::Keyword asKeyword() const {
+			return lang_def::strAsKeyword(value);
 		}
 
 		/**

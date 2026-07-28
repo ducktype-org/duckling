@@ -13,7 +13,6 @@
 #include <frontend/pst_parser/elements/hierarchy/statements/using.hpp>
 #include <frontend/pst_parser/lang_parser_element.hpp>
 #include <frontend/pst_parser/pst_visitor.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios_private/hout_creation/desugaring/for.hpp>
 #include <helios_private/lookup/interface.hpp>
@@ -23,6 +22,7 @@
 #include <helios_private/pst_layer/stmts_from_aggregate.hpp>
 #include <helios_private/scopes/scope_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
+#include <helios_private/templates/templates.hpp>
 
 #include <base/collections/maps.hpp>
 #include <base/collections/stable_container.hpp>
@@ -38,11 +38,6 @@
 
 namespace compiler::helios {
 
-	struct ScopeAccess_Functor final {
-		static auto get(ScopeID id) { return id.ref; }
-
-		static auto idOf(Ref<ScopeData> ref) { return ScopeID(ref); }
-	};
 
 	auto getScopeRef(ScopeID id) { return ScopeAccess_Functor::get(id); }
 
@@ -134,7 +129,6 @@ namespace compiler::helios {
 		case pst::ElementKind::Block:  //< note that Block != CodeBlock
 		case pst::ElementKind::ClassField:
 		case pst::ElementKind::CallArgument:
-		case pst::ElementKind::FunDecl:
 		case pst::ElementKind::Attribute:
 			// this is transparent, since we don't need this scope:
 			return ElementScopeKind::Transparent;
@@ -148,6 +142,7 @@ namespace compiler::helios {
 		case pst::ElementKind::While:
 		case pst::ElementKind::For:
 		case pst::ElementKind::Fun:
+		case pst::ElementKind::FunDecl:
 		case pst::ElementKind::ClassMethod:
 		case pst::ElementKind::ClassSpecial:
 			return ElementScopeKind::Standard;
@@ -166,6 +161,7 @@ namespace compiler::helios {
 		case pst::ElementKind::ExprElement:
 		case pst::ElementKind::RoundGroupExpr:
 		case pst::ElementKind::CallList:
+		case pst::ElementKind::AtrArgList:
 			return ElementScopeKind::Transparent;
 
 		case pst::ElementKind::ExprHolder: {
@@ -181,11 +177,23 @@ namespace compiler::helios {
 
 		case pst::ElementKind::Param:
 		case pst::ElementKind::ParamList:
+		case pst::ElementKind::TemplateList:
 			return ElementScopeKind::Transparent;
 
 		case pst::ElementKind::Expand:
 			// This is a bit of a special case, we treat it as transparent, since it is
 			// basically just a wrapper around the expanded element.
+			return ElementScopeKind::Transparent;
+
+		case pst::ElementKind::TemplateStmt:
+			// This defines a non-empty scope only for for baked PST nodes,
+			// @TODO: #3071 probably change it to transparent,
+			// since this element should not be present in baked PSTs (or will be a trivial node).
+			return ElementScopeKind::Standard;
+
+		case pst::ElementKind::TemplateDecl:
+			// This is a weird case, this is used to lookup on expressions inside template
+			// declaration before baking.
 			return ElementScopeKind::Transparent;
 
 		case pst::ElementKind::FormatSubExpression:
@@ -360,7 +368,21 @@ namespace compiler::helios {
 					out->scopes.emplace_back(ctx.query<QueryPrimaryCodeScopeFor>(element));
 			};
 
-			auto for_all_ok = pstForAll(ctx, root_unlocked.value(), grab_scopes_function);
+			// @TODO: #3080 cutoff changes semantics of this query, consider making it internal
+			// somehow. Note that more custom logic might be needed in the future (to optimize it,
+			// to compile lambdas, etc.)
+
+			auto cutoff_function = [](pst::Access<pst::LangElement> element) {
+				if (element->getElementKind() == pst::ElementKind::TemplateStmt) {
+					// we want to skip template bodies, since
+					// they don't compile directly
+					return true;
+				}
+				return false;
+			};
+
+			auto for_all_ok
+				= pstForAll(ctx, root_unlocked.value(), grab_scopes_function, cutoff_function);
 			if (for_all_ok.status().isBad()) {
 				// if the pstForAll failed, we mark the whole query as failed, but we still return
 				// the scopes that we managed to obtain.
@@ -456,6 +478,9 @@ namespace compiler::helios {
 
 		/**
 		 * @brief Gets symbols for scopes of various statements.
+		 *
+		 * A visit that reports the statement as erroneous / not-yet-implemented leaves `out`
+		 * unset, which the caller turns into a query failure.
 		 */
 		struct SymbolGrabVisitor final: pst::PstVisitorPanicky {
 			SymbolGrabVisitor(Context& ctx, const QKey& key): ctx(ctx), key(key) {}
@@ -482,6 +507,13 @@ namespace compiler::helios {
 				output(std::move(out));
 			}
 
+			void visitFunDecl(pst::Access<pst::FunDecl> fun_decl) override {
+				std::vector<SymID> out;
+				for (auto param: *fun_decl->getParams().unlock(ctx))
+					out.emplace_back(ctx.query<QuerySymbolOfSTMT>(param).valueOrThrow());
+				output(std::move(out));
+			}
+
 			void visitMethod(pst::Access<pst::Method> meth) override {
 				// Scope of "fun →()← {}"
 
@@ -492,21 +524,43 @@ namespace compiler::helios {
 				out.emplace_back(ctx.query<defgen::QueryGeneratedSymbol>({
 					.name = base::StrID("self"),
 					.generated_symbol_data
-					= defgen::GeneratedSymbolData{ defgen::GeneratedSymbolData::SelfParameter{
-						.method_symbol = ctx.query<QuerySymbolOfSTMT>(meth).valueOrThrow(),
-						.scope         = key } },
+					= defgen::SelfParameter{ .method_symbol
+				                             = ctx.query<QuerySymbolOfSTMT>(meth).valueOrThrow(),
+				                             .scope = key },
 				}));
 
 				output(std::move(out));
 			}
 
-			void visitDestructor(pst::Access<pst::Destructor>) override {
-				output(std::vector<SymID>{});
+			void visitDestructor(pst::Access<pst::Destructor> dtor) override {
+				// Scope of "T.destroy →()← = {}". A destructor has no parameters, only an
+				// implicit `self`.
+				std::vector<SymID> out;
+				out.emplace_back(ctx.query<defgen::QueryGeneratedSymbol>({
+					.name = base::StrID("self"),
+					.generated_symbol_data
+					= defgen::SelfParameter{ .method_symbol
+				                             = ctx.query<QuerySymbolOfSTMT>(dtor).valueOrThrow(),
+				                             .scope = key },
+				}));
+
+				output(std::move(out));
+			}
+
+			void visitConstructor(pst::Access<pst::Constructor> ctor) override {
+				// Scope of "T →()← = {}" / "T.name →()← = {}". User-defined constructors are
+				// parsed but nothing compiles them yet, so report it instead of falling through
+				// to the panicky visitor default. Leaving `out` unset fails the query.
+				// @TODO: #1290 grab the parameter symbols here once constructors are supported.
+				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					"User-defined constructors are not yet supported",
+					ctor->getStablePosition(),
+					"`T(...)` and `T.name(...)` declare a constructor.\n"
+				));
 			}
 
 			void visitCopyConstructor(pst::Access<pst::CopyConstructor> cctor) override {
-				// Scope of "fun →()← {}"
-
+				// Scope of "T.copy →(other)← = {}".
 				std::vector<SymID> out;
 				for (auto params: *cctor->getParams().unlock(ctx))
 					out.emplace_back(ctx.query<QuerySymbolOfSTMT>(params).valueOrThrow());
@@ -542,6 +596,51 @@ namespace compiler::helios {
 			void visitExprStmt(pst::Access<pst::ExprStmt>) override {
 				output(std::vector<SymID>{});
 			}
+
+			void visitTemplateStmt(pst::Access<pst::TemplateStmt> template_stmt) override {
+				// Scope of "template →(...)← {}"
+				// This also inserts the baked template symbols into this scope.
+
+				// @TODO: #3071 this is a hack, fix it!
+				// Here two different cases are handled:
+				// * for pre-bake PST template this defined no symbols, this is a scope in which the
+				// expressions from template "signature" are compiled
+				// * for baked PST template this defines generated symbols for the template
+				// arguments, which are used in the template body.
+
+
+				std::vector<SymID> out;
+
+				if (not template_stmt->hasAdditionalRootData()) {
+					// This is not a baked template, so it does not define any symbols in its scope.
+					output(out);
+					return;
+				}
+
+				const auto& additional_data = template_stmt->getAdditionalRootData();
+
+				variant_match(additional_data.pst_parent) {
+					variant_case(pst::AdditionalRootData::BakedTemplateParent, template_parent) {
+						auto proper_data = base::anyCast<templates::TemplateBakePSTLinkedData>(
+							template_parent.template_bake_data
+						);
+						auto postponed_data
+							= proper_data.postponed_data->load(std::memory_order_acquire);
+
+						for (const auto& param: postponed_data->template_arguments_symbols)
+							out.emplace_back(param);
+						out.emplace_back(postponed_data->baked_symbol);
+					}
+					variant_default {
+						CORE_PANIC(
+							"Template declaration without BakedTemplateParent, this should not "
+							"happen here."
+						);
+					}
+				}
+
+				output(out);
+			}
 		};
 
 		/**
@@ -559,6 +658,8 @@ namespace compiler::helios {
 				return filterSymbolsFromStmtList(ctx, getStmtsFromStmtAggregate(ctx, base_element));
 			} else if (base_element->isStatement()) {
 				// note: if this check fail, it might be that we are missing some cases
+				// @TODO: #3071 maybe modify this assertion or add a new else-if branch for template
+				// statements
 				CORE_ASSERT(
 					getScopeKind(ctx, base_element) == ElementScopeKind::Standard,
 					"Bad element in QuerySymbolsInScope"
@@ -567,6 +668,8 @@ namespace compiler::helios {
 				SymbolGrabVisitor symbol_grab(ctx, key);
 				auto              as_stmt = base_element.dynamicCast<pst::Stmt>().value();
 				as_stmt->acceptVisitor(symbol_grab);
+
+				if (symbol_grab.out.empty()) return query::Failed();
 				return std::move(symbol_grab.out.value());
 			} else if (base_element->getElementKind() == pst::ElementKind::ExprHolder) {
 				return std::vector<SymID>{};
@@ -583,6 +686,12 @@ namespace compiler::helios {
 			// Sanity check that the output symbols have correct scope.
 			if (output.hasValue()) {
 				for (auto sym: output.valueOrPanic()) {
+					// @TODO: #3099 generated symbols scopes are needed
+					// mostly here and potentially for mangling.
+					// Just removing this assertion for them is not a way to go, since this assertion
+					// ensures that scopes info is consistent. We could however add some kind of
+					// "QueryAdditionalScopelessSymbolsInScope". Tho this will not be trivial.
+
 					CORE_ASSERT(
 						scope(sym) == key,
 						base::strConcat(
@@ -758,6 +867,8 @@ namespace compiler::helios {
 
 	std::vector<ScopeID> getAllHeliosScopes() {
 		// this implementation is fragile, adjust if needed.
+
+		PANIC_IF_NOT_TEST();
 
 		CORE_ASSERT(
 			!query::Context::areWeInsideQuery(), "getAllHeliosScopes called from within query!"

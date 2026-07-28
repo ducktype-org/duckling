@@ -7,16 +7,21 @@
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/queries/function_queries.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
+#include <helios/symbols/query_class_of_member.hpp>
+#include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/symbol_kind.hpp>
 #include <helios/tsh/deductions.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/type_interface.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
+#include <helios_private/hout_creation/definition_generation/default_destructors.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
+#include <helios_private/symbols/symbols.hpp>
 
 #include <query_framework/standard_query/query_impl.hpp>
+
+#include <utility>
 
 namespace compiler::helios {
 
@@ -36,11 +41,7 @@ namespace compiler::helios {
 			void setTypeOfSymbolByAbstractType(const tsh::AbstractType& type) {
 				if (symbol_type_qresult.hasValue())
 					CORE_PANIC("Attempted to set type of symbol in visitor a second time.");
-				symbol_type_qresult = tsh::SymbolType{
-					type,
-					tsh::ReferenceKind::Direct,
-					tsh::Mutability::Mutable,
-				};
+				symbol_type_qresult = tsh::SymbolType<>::withDefaults(type);
 			}
 
 			void setSymbolTypeByTypeExpr(
@@ -139,6 +140,15 @@ namespace compiler::helios {
 				);
 			}
 
+			void visitTemplateStmt(pst::Access<pst::TemplateStmt> stmt) final {
+				// @TODO: #3177 this now always uses QueryTypeTemplateType,
+				// we should probably introduce different kind of types for non-type templtes.
+
+				auto symbol  = ctx.query<QuerySymbolOfSTMT>({ stmt }).valueOrThrow();
+				auto ab_type = ctx.query<tsh::QueryTypeTemplateType>({ .source = symbol });
+				setTypeOfSymbolByAbstractType(ab_type);
+			}
+
 			void visitIdentifierWrapper(pst::Access<pst::IdentifierWrapper> ident) final {
 				// @TODO: #2782 Remove this function.
 				auto parent_opt = ident->getParent();
@@ -224,7 +234,8 @@ namespace compiler::helios {
 			for (auto& param: declaration.parameters) param_types.emplace_back(param.type);
 
 			return tsh::SymbolType{
-				ctx.query<tsh::QueryFunctionType>({ param_types, declaration.return_type }),
+				ctx.query<tsh::QueryFunctionType>({ .parameter_types = param_types,
+				                                    .result_type     = declaration.return_type }),
 				tsh::ReferenceKind::Direct,
 				tsh::Mutability::Mutable,
 			};
@@ -234,20 +245,274 @@ namespace compiler::helios {
 			auto symbol_ref = getSymRef(key);
 
 			variant_match(symbol_ref->other) {
-				variant_case(PstSymbolData, pst_data) {
+				variant_case_novalue(PstImplementedSemantics, BuiltinSemantics) {
 					// @note: function are handled in a special way, using QueryDeclOfFun.
-					if (kind(key) == SymbolKind::Function
-					    or kind(key) == SymbolKind::FunctionDeclaration
-					    or kind(key) == SymbolKind::Method)
-						return handleFunction(ctx, key);
+					if (isFunctionLike(kind(key))) return handleFunction(ctx, key);
 
 					PstVisitor_GetTypeOf visitor(ctx);
-					pst_data.getElement().unlock(ctx)->acceptVisitor(visitor);
+					maybeSymbolPst(key)->unlock(ctx)->acceptVisitor(visitor);
 
 					return visitor.symbol_type_qresult;
 				}
-				variant_case(defgen::GeneratedSymbolData, generated_data) {
-					return generated_data.getType(ctx);
+				variant_case(defgen::Constructor, ctor) {
+					const auto target_type = ctor.type;
+
+					// @TODO: #1328 Properly handle value categories in class constructors.
+					// The implicit constructor takes a parameter per field, the default constructor
+					// takes none, and the copy constructor takes a single `const ref T` source.
+					std::vector<tsh::SymbolType<>> param_types;
+					switch (ctor.kind) {
+					case defgen::Constructor::Kind::Implicit: {
+						auto fields = target_type.getInterface(ctx)->getFieldsView();
+						for (const auto& field: fields) param_types.push_back(field.getType(ctx));
+						break;
+					}
+					case defgen::Constructor::Kind::Default:
+						break;
+					case defgen::Constructor::Kind::Copy:
+						param_types.emplace_back(
+							target_type, tsh::ReferenceKind::Ref, tsh::Mutability::Immutable
+						);
+						break;
+					}
+
+					const auto return_type = tsh::SymbolType<>::withDefaults(target_type);
+
+					const auto ctor_abstract_type = ctx.query<tsh::QueryFunctionType>({
+						.parameter_types = std::move(param_types),
+						.result_type     = return_type,
+					});
+
+					return tsh::SymbolType<>{
+						ctor_abstract_type,
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Immutable,
+					};
+				}
+				variant_case(defgen::Method, method) {
+					// Mutable self type.
+					const auto mut_self = tsh::SymbolType<>{ method.owner_type,
+						                                     method.owner_type.isSimple()
+						                                         ? tsh::ReferenceKind::Direct
+						                                         : tsh::ReferenceKind::Ref,
+						                                     tsh::Mutability::Mutable };
+					// Immutable self type
+					const auto immmut_self = mut_self.withMutability(tsh::Mutability::Immutable);
+
+
+					// The self parameter and return type depend on the concrete method kind.
+					auto [arg_types, return_type]
+						= [&]() -> std::pair<std::vector<tsh::SymbolType<>>, tsh::SymbolType<>> {
+						switch (method.kind) {
+						case defgen::Method::Kind::ToString:
+							return { { immmut_self },
+								     tsh::SymbolType<>::withDefaults(tsh::getStringType(ctx)) };
+						case defgen::Method::Kind::LengthMethod:
+							return { { immmut_self },
+								     tsh::SymbolType<>::withDefaults(tsh::getIntegralType(
+										 ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned
+									 )) };
+						case defgen::Method::Kind::DefaultDestructor:
+							return { { mut_self },
+								     tsh::SymbolType<>{ tsh::getUnitType(),
+								                        tsh::ReferenceKind::Direct,
+								                        tsh::Mutability::Immutable } };
+						case defgen::Method::Kind::Push: {
+							// `(ref mut T self, Element element) -> ()`.
+							const auto element_type
+								= method.owner_type.as<tsh::DynamicArrayAbstractType>()
+							          .getElementType();
+							return { { mut_self, element_type },
+								     tsh::SymbolType<>{ tsh::getUnitType(),
+								                        tsh::ReferenceKind::Direct,
+								                        tsh::Mutability::Immutable } };
+						}
+						case defgen::Method::Kind::Pop: {
+							// `(ref mut T self, u64 count) -> ()`.
+							const auto count_type
+								= tsh::SymbolType<>::withDefaults(tsh::getIntegralType(
+									ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned
+								));
+							return { { mut_self, count_type },
+								     tsh::SymbolType<>{ tsh::getUnitType(),
+								                        tsh::ReferenceKind::Direct,
+								                        tsh::Mutability::Immutable } };
+						}
+						}
+						CORE_UNREACHABLE();
+					}();
+
+					const auto method_abstract_type = ctx.query<tsh::QueryFunctionType>(
+						{ .parameter_types = std::move(arg_types), .result_type = return_type }
+					);
+
+					return tsh::SymbolType<>{
+						method_abstract_type,
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Immutable,
+					};
+				}
+				variant_case(defgen::BuiltinOperator, op) {
+					return tsh::SymbolType<>{
+						op.operator_type,
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Immutable,
+					};
+				}
+				variant_case(defgen::BuiltinTemplatedSymbol, builtin) {
+					// `box_alloc(value: T) -> box T`, `box_free(b: box T) -> ()` and
+					// `list_free(l: ref [T]) -> ()`.
+					const auto box_type = tsh::SymbolType<>{
+						builtin.type,
+						tsh::ReferenceKind::Box,
+						tsh::Mutability::Mutable,
+					};
+
+					auto [arg_types, return_type]
+						= [&]() -> std::pair<std::vector<tsh::SymbolType<>>, tsh::SymbolType<>> {
+						switch (builtin.kind) {
+						case defgen::BuiltinTemplatedSymbol::Kind::BoxAlloc:
+							return { { tsh::SymbolType<>::withDefaults(builtin.type) }, box_type };
+						case defgen::BuiltinTemplatedSymbol::Kind::BoxDestructor:
+							// @TODO: #2825 change this back to Box
+							return { { box_type.withReferenceKind(tsh::ReferenceKind::Ref) },
+								     tsh::SymbolType<>::withDefaults(tsh::getUnitType()) };
+						case defgen::BuiltinTemplatedSymbol::Kind::BoxFree:
+							return { { box_type },
+								     tsh::SymbolType<>::withDefaults(tsh::getUnitType()) };
+						case defgen::BuiltinTemplatedSymbol::Kind::ListFree: {
+							const auto array_type = ctx.query<tsh::QueryDynamicArrayType>(
+								{ tsh::SymbolType<>::withDefaults(builtin.type) }
+							);
+							const auto ref_array = tsh::SymbolType<>{
+								array_type,
+								tsh::ReferenceKind::Ref,
+								tsh::Mutability::Mutable,
+							};
+							return {
+								{ ref_array },
+								tsh::SymbolType<>::withDefaults(tsh::getUnitType()),
+							};
+						}
+						}
+						CORE_UNREACHABLE();
+					}();
+
+					const auto fn_type = ctx.query<tsh::QueryFunctionType>(
+						{ .parameter_types = std::move(arg_types), .result_type = return_type }
+					);
+					return tsh::SymbolType<>::withDefaults(fn_type);
+				}
+				variant_case(defgen::GeneratedConstant, gen_const) {
+					return gen_const.value.getTypeOfStoredValue(ctx);
+				}
+				variant_case(defgen::Parameter, param) {
+					const auto function_type
+						= ctx.query<QueryTypeOfSymbol>({ param.function_symbol })
+					          ->valueOrThrow()
+					          .getType()
+					          .as<tsh::FunctionAbstractType>();
+					auto param_symbol_type
+						= function_type.getParameterTypes().at(param.parameter_index);
+					return param_symbol_type;
+				}
+				variant_case(defgen::SelfParameter, param) {
+					const auto class_type
+						= ctx.query<QueryClassOfMember>(param.method_symbol)->valueOrThrow();
+					auto param_symbol_type = tsh::SymbolType{
+						class_type,
+						tsh::ReferenceKind::Ref,
+						tsh::Mutability::Mutable,
+					};
+					return param_symbol_type;
+				}
+				variant_case(defgen::Field, field) {
+					// @TODO: #2515 Implement other cases
+					switch (field.parent_type.getKind()) {
+					case tsh::Kind::Tuple:
+						return field.parent_type.as<tsh::TupleAbstractType>().getComponents().at(
+							field.index
+						);
+					case tsh::Kind::Slice: {
+						if (field.index == 0) {
+							auto element_type
+								= field.parent_type.as<tsh::SliceAbstractType>().getElementType();
+							auto many_pointer_type
+								= ctx.query<tsh::QueryManyPointerType>({ element_type });
+							return tsh::SymbolType<>::withDefaults(many_pointer_type);
+						}
+						if (field.index == 1) {
+							return tsh::SymbolType<>::withDefaults(tsh::getIntegralType(
+								ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned
+							));
+						}
+						CORE_PANIC("Slice only has fields 0 (element) and 1 (length)");
+					}
+					case tsh::Kind::DynamicArray: {
+						switch (field.index) {
+						case 0: {
+							auto element_type
+								= field.parent_type.as<tsh::DynamicArrayAbstractType>()
+							          .getElementType();
+							auto many_pointer_type
+								= ctx.query<tsh::QueryManyPointerType>({ element_type });
+							return tsh::SymbolType<>::withDefaults(many_pointer_type);
+						}
+						case 1:
+						case 2:
+						case 3:
+							return tsh::SymbolType<>::withDefaults(tsh::getIntegralType(
+								ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned
+							));
+						default:
+							CORE_PANIC(
+								"Dynamic Array only has fields 0 (ptr), 1 (length), 2 "
+								"(off_start_reserved), 3 (off_end_reserved)"
+							);
+						}
+					}
+					default:
+						CORE_UNREACHABLE();
+					}
+				}
+				variant_case(defgen::GeneratedFunctionVariable, var) { return var.type; }
+				variant_case(defgen::ControlFlowLocal, local) { return local.type; }
+				variant_case(defgen::ReplExpressionWrapper, repl) {
+					const auto function_abstract_type = ctx.query<tsh::QueryFunctionType>({
+						.parameter_types = {},
+						.result_type     = repl.return_type,
+					});
+					return tsh::SymbolType<>{
+						function_abstract_type,
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Immutable,
+					};
+				}
+				variant_case_novalue(defgen::ReplInstructionWrapper) {
+					// Unit (not Void) is the correct return type for procedures.
+					// Per the language spec: "void ... cannot be returned from a function".
+					const auto void_type = tsh::SymbolType<>::withDefaults(tsh::getUnitType());
+					const auto function_abstract_type
+						= ctx.query<tsh::QueryFunctionType>({ .parameter_types = {},
+					                                          .result_type     = void_type });
+					return tsh::SymbolType<>{
+						function_abstract_type,
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Immutable,
+					};
+				}
+				variant_case_novalue(defgen::ScriptMainWrapper) {
+					const auto return_type = tsh::SymbolType<>::withDefaults(
+						tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Signed)
+					);
+					const auto function_abstract_type
+						= ctx.query<tsh::QueryFunctionType>({ .parameter_types = {},
+					                                          .result_type     = return_type });
+					return tsh::SymbolType<>{
+						function_abstract_type,
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Immutable,
+					};
 				}
 				variant_default { CORE_PANIC("Unknown symbol data type"); }
 			}
@@ -258,4 +523,8 @@ namespace compiler::helios {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTypeOfSymbol);
+
+	base::Optional<SymID> getTypeDestructor(query::Context& ctx, tsh::SymbolType<> symbol_type) {
+		return defgen::destructSymForSymbolType(ctx, symbol_type);
+	}
 }

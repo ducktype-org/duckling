@@ -1,13 +1,12 @@
 #pragma once
 
-#include "../lists/initializer_list.hpp"
 #include "../lists/parameter_list.hpp"
 #include "class_special.hpp"
 #include "preamble.hpp"
 
 namespace pst {
 	/**
-	 * @brief Class constructor element.
+	 * @brief Class copy constructor element.
 	 */
 	class CopyConstructor final: public ClassSpecial {
 		SIMPLE_FINAL_ELEMENT_CLASS_PREAMBLE(CopyConstructor, ClassSpecial);
@@ -15,7 +14,6 @@ namespace pst {
 
 	protected:
 		NAMED_CHILD(params, ParamList);
-		NAMED_CHILD(inits, InitList);
 		NAMED_CHILD(body, CodeBlockOrStmt);
 
 	public:

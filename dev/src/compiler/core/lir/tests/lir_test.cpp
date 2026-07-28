@@ -5,9 +5,9 @@
  */
 
 
+#include <driver/test_utils.hpp>
 #include <helios/mangler/mangler.hpp>
 #include <helios/queries/queries.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
@@ -19,6 +19,7 @@
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/extend_cpp/vector_utils.hpp>
 
+#include <filesystem/file.hpp>
 #include <query_framework/context/context.hpp>
 #include <query_framework/entry/query_entry_point.hpp>
 #include <query_framework/entry/with_context_do.hpp>
@@ -49,6 +50,15 @@ public:
 		TESTER_ADD_TEST(dynamicArrayTest);
 		TESTER_ADD_TEST(metaFunctionsTest);
 		TESTER_ADD_TEST(simpleConstant);
+	}
+
+protected:
+	void beforeAll() override {
+		// Initialize the compiler for the STD to load.
+		fs::FilePath artifacts_path = fs::FileManager::createRandomTempDirectory().getFilePath();
+		auto         init_result
+			= compiler::driver::test_utils::initializeCompilerForTests({}, artifacts_path);
+		assertTrue(init_result.status().isOk(), "Compiler initialization failed");
 	}
 
 private:
@@ -114,14 +124,6 @@ private:
 
 		withContextDo([&](query::Context& ctx) {
 			helios::HOUTUnit unit = ctx.query<helios::QueryModuleHOUT>(module)->valueOrPanic();
-
-			// We filter out toString methods here for test purposes
-			// @TODO: #2694 remove this filtering
-			// #2483 -- deal with this if needed
-			base::filterVectorInPlace(unit.functions, [](const CRef<helios::HOUTFunction>& func) {
-				return func->declaration->original_name != base::StrID("toString")
-				   and func->declaration->original_name != base::StrID("length");
-			});
 
 			auto mir_unit = mir::lowerToMIRUnit(ctx, &unit);
 			assertTrue(mir_unit.hasValue(), "MIR lowering failed!");
@@ -503,14 +505,15 @@ private:
 		ASSERT_EQUAL(3, module.globals.size());
 		ASSERT_EQUAL(3, module.lir_unit.lir_globals.size());
 
-		auto my_int = module.houtGlobal("my_int");
-		ASSERT_TRUE(my_int->type.hasNoOpDestructor());
-
-		auto my_bool = module.houtGlobal("my_bool");
-		ASSERT_TRUE(my_bool->type.hasNoOpDestructor());
-
+		auto my_int   = module.houtGlobal("my_int");
+		auto my_bool  = module.houtGlobal("my_bool");
 		auto my_float = module.houtGlobal("my_float");
-		ASSERT_TRUE(my_float->type.hasNoOpDestructor());
+
+		withContextDo([&](query::Context& ctx) {
+			ASSERT_TRUE(my_int->type.isTriviallyDestructible(ctx));
+			ASSERT_TRUE(my_bool->type.isTriviallyDestructible(ctx));
+			ASSERT_TRUE(my_float->type.isTriviallyDestructible(ctx));
+		});
 	}
 
 	void simpleConstant() {
@@ -695,7 +698,7 @@ private:
 		bool found_push_with_params = false;
 		bool found_pop_with_params  = false;
 		bool found_len              = false;
-		bool found_free             = false;
+		bool found_destructor       = false;
 
 		for (const auto& block: lir_func->block_order) {
 			for (const auto& instr: block->instructions) {
@@ -703,26 +706,20 @@ private:
 				case Operation::ZeroInitialize:
 					found_zero_init = true;
 					break;
-				case Operation::ListPush: {
-					ASSERT_TRUE(std::holds_alternative<ListOperationParameters>(instr.extra_params));
-					auto& params = std::get<ListOperationParameters>(instr.extra_params);
-					ASSERT_EQUAL(params.element_layout->getSize(), Bits(64));
-					found_push_with_params = true;
+				case Operation::Call: {
+					auto name = instr.arguments.at(0).get<FunctionLiteral>().mangled_name.strView();
+					if (name.contains("push"))
+						found_push_with_params = true;
+					else if (name.contains("pop"))
+						found_pop_with_params = true;
+					else if (name.contains("length"))
+						found_len = true;
+					// `Hdd` is the mangling of the compiler-generated destructor, which releases
+					// the list storage.
+					else if (name.contains("Hdd"))
+						found_destructor = true;
 					break;
 				}
-				case Operation::ListPop: {
-					ASSERT_TRUE(std::holds_alternative<ListOperationParameters>(instr.extra_params));
-					auto& params = std::get<ListOperationParameters>(instr.extra_params);
-					ASSERT_EQUAL(params.element_layout->getSize(), Bits(64));
-					found_pop_with_params = true;
-					break;
-				}
-				case Operation::ListLen:
-					found_len = true;
-					break;
-				case Operation::ListFree:
-					found_free = true;
-					break;
 				default:
 					break;
 				}
@@ -733,61 +730,48 @@ private:
 		ASSERT_TRUE(found_push_with_params);
 		ASSERT_TRUE(found_pop_with_params);
 		ASSERT_TRUE(found_len);
-		ASSERT_TRUE(found_free);
+		ASSERT_TRUE(found_destructor);
 	}
 
 	void metaFunctionsTest() {
 		auto module = getLIROfModule(path("modules/meta_functions"));
 
 		withContextDo([&](query::Context& ctx) {
-			auto                  meta_type_entity = tsh::getMetaType();
-			CRef<tsl::TypeLayout> meta_layout
-				= ctx.query<tsl::QueryAbstractTypeLayout>(meta_type_entity);
+			auto meta_type_entity = tsh::getMetaType();
+			auto meta_layout      = CRef<tsl::TypeLayout>(
+                &ctx.query<tsl::QueryAbstractTypeLayout>(meta_type_entity)->valueOrThrow()
+            );
 
 			auto assert_is_meta_local
 				= [&](const lir::LIRLocal& local) { ASSERT_EQUAL(*local.layout, *meta_layout); };
 
 			using enum compiler::lir::Operation;
+			using MK = compiler::lir::MetaKind;
 
-			{
-				auto create_box = module.lirFunc("createBox");
-				ASSERT_TRUE(create_box->validateParameters().isOk());
-				for (const auto& local: create_box->local_list) assert_is_meta_local(local);
-				const auto& block = create_box->block_order[0];
-				ASSERT_TRUE(block->instructions[0].operation == MetaCreateBox);
-			}
+			// Meta operations are a single `Meta` op parametrized by a `MetaKind` in `extra_params`.
+			auto meta_kind = [](const auto& instr) {
+				return std::get<compiler::lir::MetaParameters>(instr.extra_params).kind;
+			};
 
-			{
-				auto create_ref = module.lirFunc("createRef");
-				ASSERT_TRUE(create_ref->validateParameters().isOk());
-				for (const auto& local: create_ref->local_list) assert_is_meta_local(local);
-				const auto& block = create_ref->block_order[0];
-				ASSERT_TRUE(block->instructions[0].operation == MetaCreateRef);
-			}
+			auto check_meta_function = [&](const char* func_name, MK kind, usize arg_size) {
+				auto fn = module.lirFunc(func_name);
+				for (const auto& local: fn->local_list) assert_is_meta_local(local);
+				const auto& block = fn->block_order[0];
+				const auto& instr = block->instructions[0];
+				ASSERT_TRUE(instr.operation == MetaTypeOperation);
+				ASSERT_TRUE(meta_kind(instr) == kind);
+				ASSERT_EQUAL(instr.arguments.size(), arg_size);
+			};
 
-			{
-				auto create_ref = module.lirFunc("createConst");
-				ASSERT_TRUE(create_ref->validateParameters().isOk());
-				for (const auto& local: create_ref->local_list) assert_is_meta_local(local);
-				const auto& block = create_ref->block_order[0];
-				ASSERT_TRUE(block->instructions[0].operation == MetaCreateConst);
-			}
-
-			{
-				auto create_variant = module.lirFunc("createVariant");
-				for (const auto& local: create_variant->local_list) assert_is_meta_local(local);
-				const auto& block = create_variant->block_order[0];
-				ASSERT_TRUE(block->instructions[0].operation == MetaCreateVariant);
-				ASSERT_EQUAL(block->instructions[0].arguments.size(), 4);
-			}
-
-			{
-				auto create_tuple = module.lirFunc("createTuple");
-				for (const auto& local: create_tuple->local_list) assert_is_meta_local(local);
-				const auto& block = create_tuple->block_order[0];
-				ASSERT_TRUE(block->instructions[0].operation == MetaCreateTuple);
-				ASSERT_EQUAL(block->instructions[0].arguments.size(), 4);
-			}
+			check_meta_function("createBox", MK::CreateBox, 1);
+			check_meta_function("createRef", MK::CreateRef, 1);
+			check_meta_function("createConst", MK::CreateConst, 1);
+			check_meta_function("createPtr", MK::CreatePtr, 1);
+			check_meta_function("createCPtr", MK::CreateCPtr, 1);
+			check_meta_function("createManyPtr", MK::CreateManyPtr, 1);
+			check_meta_function("createSlice", MK::CreateSlice, 1);
+			check_meta_function("createVariant", MK::CreateVariant, 4);
+			check_meta_function("createTuple", MK::CreateTuple, 4);
 
 			{
 				auto mega_type = module.lirFunc("megaType");
@@ -797,9 +781,10 @@ private:
 				int  create_tuple_count   = 0;
 				bool call_found           = false;
 				for (const auto& instr: mega_type->block_order[0]->instructions)
-					if (instr.operation == MetaCreateTuple)
+					if (instr.operation == MetaTypeOperation && meta_kind(instr) == MK::CreateTuple)
 						create_tuple_count++;
-					else if (instr.operation == MetaCreateVariant)
+					else if (instr.operation == MetaTypeOperation
+					         && meta_kind(instr) == MK::CreateVariant)
 						create_variant_count++;
 					else if (instr.operation == Call)
 						call_found = true;
@@ -819,11 +804,19 @@ private:
 			bool found_result_f32 = false;
 			bool found_some_i16   = false;
 
-			auto bool_layout = ctx.query<tsl::QueryAbstractTypeLayout>(tsh::getBoolType());
-			auto f32_layout  = ctx.query<tsl::QueryAbstractTypeLayout>(getFloatType(ctx, 32));
-			auto i16_layout  = ctx.query<tsl::QueryAbstractTypeLayout>(
-                getIntegralType(ctx, 16, compiler::tsh::IntegralAbstractType::Signedness::Signed)
-            );
+			auto bool_layout = CRef<tsl::TypeLayout>(
+				&ctx.query<tsl::QueryAbstractTypeLayout>(tsh::getBoolType())->valueOrThrow()
+			);
+			auto f32_layout = CRef<tsl::TypeLayout>(
+				&ctx.query<tsl::QueryAbstractTypeLayout>(getFloatType(ctx, 32))->valueOrThrow()
+			);
+			auto i16_layout = CRef<tsl::TypeLayout>(
+				&ctx
+					 .query<tsl::QueryAbstractTypeLayout>(getIntegralType(
+						 ctx, 16, compiler::tsh::IntegralAbstractType::Signedness::Signed
+					 ))
+					 ->valueOrThrow()
+			);
 
 			for (const auto& local: proc_data_lir->local_list) {
 				if (!local.helios_id.has_value()) continue;

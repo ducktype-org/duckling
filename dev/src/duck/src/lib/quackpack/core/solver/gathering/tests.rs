@@ -7,13 +7,11 @@ use tempfile::{TempDir, tempdir};
 
 use crate::DuckContext;
 use crate::quackpack::core::fetcher::{Fetcher, types};
+use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
 use crate::quackpack::core::solver::gathering::gatherer::Gatherer;
 use crate::quackpack::core::solver::git_access::GitAccess;
 use crate::quackpack::core::solver::solver_mode::SolverMode;
-use crate::quackpack::core::solver::types_common::{
-    ExpandedLocation, ExpandedPackage, InternedLocation, Location,
-};
-use crate::quackpack::core::{Version, parse_manifest};
+use crate::quackpack::core::{PackageId, Source, Version, parse_manifest};
 use crate::quackpack::schemas::OneEntryMap;
 use crate::quackpack::schemas::registry::{self, DependencyCondition, DependencyFeature};
 use crate::quackpack::util::interned_url::InternedUrl;
@@ -321,7 +319,7 @@ fn create_mock_server() -> MockServer {
             version: Version::new(1, 0, 0),
             authors: vec!["Carly Shillingford".into()],
             license: "MIT".into(),
-            name: "a".into(),
+            name: "u".into(),
             description: "".into(),
         },
         dependencies: vec![u_v_dep],
@@ -335,7 +333,7 @@ fn create_mock_server() -> MockServer {
             version: Version::new(1, 0, 0),
             authors: vec!["Carly Shillingford".into()],
             license: "MIT".into(),
-            name: "a".into(),
+            name: "v".into(),
             description: "".into(),
         },
         dependencies: vec![v_u_dep],
@@ -366,7 +364,7 @@ fn create_mock_server() -> MockServer {
             version: Version::new(1, 0, 0),
             authors: vec!["Carly Shillingford".into()],
             license: "MIT".into(),
-            name: "a".into(),
+            name: "n".into(),
             description: "".into(),
         },
         dependencies: vec![n_m_dep],
@@ -384,7 +382,7 @@ fn create_mock_server() -> MockServer {
             version: Version::new(1, 0, 0),
             authors: vec!["Carly Shillingford".into()],
             license: "MIT".into(),
-            name: "a".into(),
+            name: "m".into(),
             description: "".into(),
         },
         dependencies: vec![],
@@ -500,12 +498,12 @@ fn create_mock_server() -> MockServer {
 #[test]
 /// Not pinned registry dependencies test.
 /// Synopsis:
-/// * root depends on foo 1.0.0 or 2.0.0,
-/// * foo 1.0.0 depends on bar 3.0.0 or 4.0.0
+/// * root depends on foo 1 or 2,
+/// * foo 1 depends on bar 3 or 4
 fn not_pinned_registry() {
     let (ctx, _root) = setup_duck_ctx();
     let server = create_mock_server();
-    let url = server.base_url().to_url().unwrap().into();
+    let url: InternedUrl = server.base_url().to_url().unwrap().into();
     let mut fetcher = Fetcher::new(&ctx).unwrap();
     let (_dir, root_path) = prepare_manifest(&format!(
         r#"
@@ -521,64 +519,42 @@ dependencies:
 "#,
         &url
     ));
-    let root_url = root_path.to_url().unwrap().into();
-    let root_manifest = parse_manifest(&root_path, &ctx).unwrap();
+    let root_name = "root".into();
+    let root_version = Version::new(0, 1, 0);
+    let root_manifest = parse_manifest(&root_path, &ctx).unwrap().into_manifest();
     let mut git_access = MockGitAccess();
     let mut gatherer = Gatherer::new(&mut fetcher, &mut git_access);
     let gathered_info = gatherer
         .explore(
             root_path.clone(),
-            root_manifest.manifest().clone(),
+            root_manifest,
             HashSet::new(),
             SolverMode::default(),
         )
         .unwrap();
-    let loc_root = ExpandedLocation::Local {
-        absolute_path: root_url,
-    };
-    let loc_foo = ExpandedLocation::Registry {
-        url,
-        real_name: "foo".into(),
-    };
-    let loc_bar = ExpandedLocation::Registry {
-        url,
-        real_name: "bar".into(),
-    };
+    let identity_root = FullIdentity::new(root_name, FullOrigin::for_local(&root_path).unwrap());
+    let identity_foo = FullIdentity::new("foo".into(), FullOrigin::for_registry(url));
+    let identity_bar = FullIdentity::new("bar".into(), FullOrigin::for_registry(url));
     assert_eq!(
-        gathered_info.versions_for_location,
+        gathered_info.versions_for_identity,
         HashMap::from([
-            (loc_root, HashSet::from([None])),
+            (identity_root, HashSet::from([root_version])),
             (
-                loc_foo,
-                HashSet::from([Some(Version::new(1, 0, 0)), Some(Version::new(2, 0, 0))])
+                identity_foo,
+                HashSet::from([Version::new(1, 0, 0), Version::new(2, 0, 0)])
             ),
             (
-                loc_bar,
-                HashSet::from([Some(Version::new(3, 0, 0)), Some(Version::new(4, 1, 1))])
+                identity_bar,
+                HashSet::from([Version::new(3, 0, 0), Version::new(4, 1, 1)])
             ),
         ])
     );
     let packages = HashSet::from([
-        ExpandedPackage {
-            location: loc_root,
-            version: None,
-        },
-        ExpandedPackage {
-            location: loc_foo,
-            version: Some(Version::new(1, 0, 0)),
-        },
-        ExpandedPackage {
-            location: loc_foo,
-            version: Some(Version::new(2, 0, 0)),
-        },
-        ExpandedPackage {
-            location: loc_bar,
-            version: Some(Version::new(3, 0, 0)),
-        },
-        ExpandedPackage {
-            location: loc_bar,
-            version: Some(Version::new(4, 1, 1)),
-        },
+        PackageId::new(identity_root, root_version),
+        PackageId::new(identity_foo, Version::new(1, 0, 0)),
+        PackageId::new(identity_foo, Version::new(2, 0, 0)),
+        PackageId::new(identity_bar, Version::new(3, 0, 0)),
+        PackageId::new(identity_bar, Version::new(4, 1, 1)),
     ]);
     assert_eq!(
         packages,
@@ -586,7 +562,7 @@ dependencies:
             .gathered_manifests
             .keys()
             .copied()
-            .collect::<HashSet<ExpandedPackage>>()
+            .collect::<HashSet<PackageId>>()
     );
     assert_eq!(
         packages,
@@ -594,32 +570,19 @@ dependencies:
             .possible_features
             .keys()
             .copied()
-            .collect::<HashSet<ExpandedPackage>>()
+            .collect::<HashSet<PackageId>>()
     );
     for (_, features) in gathered_info.possible_features {
         assert!(features.is_empty());
     }
     assert_eq!(
-        gathered_info.location_resolver,
+        gathered_info.source_to_origin_resolver,
         HashMap::from([
             (
-                InternedLocation::new(Location::Local { path: root_url }),
-                loc_root
+                Source::for_local(&root_path).unwrap(),
+                identity_root.origin()
             ),
-            (
-                InternedLocation::new(Location::Registry {
-                    url,
-                    real_name: "foo".into()
-                }),
-                loc_foo
-            ),
-            (
-                InternedLocation::new(Location::Registry {
-                    url,
-                    real_name: "bar".into()
-                }),
-                loc_bar
-            ),
+            (Source::for_registry(url), identity_foo.origin())
         ])
     )
 }
@@ -634,7 +597,7 @@ fn pinned_registry() {
     let (ctx, _root) = setup_duck_ctx();
     let server = create_mock_server();
 
-    let url = server.base_url().to_url().unwrap().into();
+    let url: InternedUrl = server.base_url().to_url().unwrap().into();
     let mut fetcher = Fetcher::new(&ctx).unwrap();
     let (_dir, root_path) = prepare_manifest(&format!(
         r#"
@@ -656,35 +619,28 @@ dependencies:
 "#,
         &url, &url,
     ));
-    let root_url = root_path.to_url().unwrap().into();
-    let root_manifest = parse_manifest(&root_path, &ctx).unwrap();
+    let root_name = "root".into();
+    let root_version = Version::new(0, 1, 0);
+    let root_manifest = parse_manifest(&root_path, &ctx).unwrap().into_manifest();
     let mut git_access = MockGitAccess();
     let mut gatherer = Gatherer::new(&mut fetcher, &mut git_access);
     let gathered_info = gatherer
         .explore(
             root_path.clone(),
-            root_manifest.manifest().clone(),
+            root_manifest,
             HashSet::new(),
             SolverMode::default(),
         )
         .unwrap();
-    let loc_root = ExpandedLocation::Local {
-        absolute_path: root_url,
-    };
-    let loc_xd = ExpandedLocation::Registry {
-        url,
-        real_name: "xd".into(),
-    };
-    let loc_dx = ExpandedLocation::Registry {
-        url,
-        real_name: "dx".into(),
-    };
+    let identity_root = FullIdentity::new(root_name, FullOrigin::for_local(&root_path).unwrap());
+    let identity_xd = FullIdentity::new("xd".into(), FullOrigin::for_registry(url));
+    let identity_dx = FullIdentity::new("dx".into(), FullOrigin::for_registry(url));
     assert_eq!(
-        gathered_info.versions_for_location,
+        gathered_info.versions_for_identity,
         HashMap::from([
-            (loc_root, HashSet::from([None])),
-            (loc_xd, HashSet::from([Some(Version::new(1, 0, 0))])),
-            (loc_dx, HashSet::from([Some(Version::new(2, 0, 0))])),
+            (identity_root, HashSet::from([root_version])),
+            (identity_xd, HashSet::from([Version::new(1, 0, 0)])),
+            (identity_dx, HashSet::from([Version::new(2, 0, 0)])),
         ])
     );
 }
@@ -699,7 +655,7 @@ fn features() {
     let (ctx, _root) = setup_duck_ctx();
     let server = create_mock_server();
 
-    let url = server.base_url().to_url().unwrap().into();
+    let url: InternedUrl = server.base_url().to_url().unwrap().into();
     let mut fetcher = Fetcher::new(&ctx).unwrap();
     let (_dir, root_path) = prepare_manifest(&format!(
         r#"
@@ -727,51 +683,35 @@ features:
 "#,
         &url, &url,
     ));
-    let root_url = root_path.to_url().unwrap().into();
-    let root_manifest = parse_manifest(&root_path, &ctx).unwrap();
+    let root_name = "root".into();
+    let root_version = Version::new(0, 1, 0);
+    let root_manifest = parse_manifest(&root_path, &ctx).unwrap().into_manifest();
     let mut git_access = MockGitAccess();
     let mut gatherer = Gatherer::new(&mut fetcher, &mut git_access);
     let gathered_info = gatherer
         .explore(
             root_path.clone(),
-            root_manifest.manifest().clone(),
+            root_manifest,
             ["my_feature".into()].into(),
             SolverMode::default(),
         )
         .unwrap();
-    let loc_root = ExpandedLocation::Local {
-        absolute_path: root_url,
-    };
-    let loc_xd = ExpandedLocation::Registry {
-        url,
-        real_name: "xd".into(),
-    };
-    let loc_dx = ExpandedLocation::Registry {
-        url,
-        real_name: "dx".into(),
-    };
+    let identity_root = FullIdentity::new(root_name, FullOrigin::for_local(&root_path).unwrap());
+    let identity_xd = FullIdentity::new("xd".into(), FullOrigin::for_registry(url));
+    let identity_dx = FullIdentity::new("dx".into(), FullOrigin::for_registry(url));
     assert_eq!(
         gathered_info.possible_features,
         HashMap::from([
             (
-                ExpandedPackage {
-                    location: loc_root,
-                    version: None,
-                },
+                PackageId::new(identity_root, root_version),
                 ["my_feature".into()].into()
             ),
             (
-                ExpandedPackage {
-                    location: loc_xd,
-                    version: Some(Version::new(1, 0, 0)),
-                },
+                PackageId::new(identity_xd, Version::new(1, 0, 0)),
                 ["dx".into()].into()
             ),
             (
-                ExpandedPackage {
-                    location: loc_dx,
-                    version: Some(Version::new(2, 0, 0)),
-                },
+                PackageId::new(identity_dx, Version::new(2, 0, 0)),
                 ["root".into()].into()
             ),
         ])
@@ -797,7 +737,7 @@ fn pinned_request_while_pending_not_pinned() {
     let (ctx, _root) = setup_duck_ctx();
     let server = create_mock_server();
 
-    let url = server.base_url().to_url().unwrap().into();
+    let url: InternedUrl = server.base_url().to_url().unwrap().into();
     let mut fetcher = Fetcher::new(&ctx).unwrap();
     let (_dir, root_path) = prepare_manifest(&format!(
         r#"
@@ -817,83 +757,46 @@ dependencies:
 "#,
         &url, &url,
     ));
-    let root_url = root_path.to_url().unwrap().into();
-    let root_manifest = parse_manifest(&root_path, &ctx).unwrap();
+    let root_name = "root".into();
+    let root_version = Version::new(0, 1, 0);
+    let root_manifest = parse_manifest(&root_path, &ctx).unwrap().into_manifest();
     let mut git_access = MockGitAccess();
     let mut gatherer = Gatherer::new(&mut fetcher, &mut git_access);
     let gathered_info = gatherer
         .explore(
             root_path.clone(),
-            root_manifest.manifest().clone(),
+            root_manifest,
             [].into(),
             SolverMode::default(),
         )
         .unwrap();
-    let loc_root = ExpandedLocation::Local {
-        absolute_path: root_url,
-    };
-    let loc_a = ExpandedLocation::Registry {
-        url,
-        real_name: "a".into(),
-    };
-    let loc_b = ExpandedLocation::Registry {
-        url,
-        real_name: "b".into(),
-    };
-    let loc_c = ExpandedLocation::Registry {
-        url,
-        real_name: "c".into(),
-    };
+    let identity_root = FullIdentity::new(root_name, FullOrigin::for_local(&root_path).unwrap());
+    let identity_a = FullIdentity::new("a".into(), FullOrigin::for_registry(url));
+    let identity_b = FullIdentity::new("b".into(), FullOrigin::for_registry(url));
+    let identity_c = FullIdentity::new("c".into(), FullOrigin::for_registry(url));
     assert_eq!(
-        gathered_info.versions_for_location,
+        gathered_info.versions_for_identity,
         HashMap::from([
-            (loc_root, [None].into()),
+            (identity_root, [root_version].into()),
             (
-                loc_a,
-                [Some(Version::new(1, 0, 0)), Some(Version::new(2, 0, 0))].into()
+                identity_a,
+                [Version::new(1, 0, 0), Version::new(2, 0, 0)].into()
             ),
-            (loc_b, [Some(Version::new(1, 0, 0))].into()),
-            (loc_c, [Some(Version::new(1, 0, 0))].into()),
+            (identity_b, [Version::new(1, 0, 0)].into()),
+            (identity_c, [Version::new(1, 0, 0)].into()),
         ])
     );
     assert_eq!(
         gathered_info.possible_features,
         HashMap::from([
+            (PackageId::new(identity_root, root_version), [].into()),
             (
-                ExpandedPackage {
-                    location: loc_root,
-                    version: None,
-                },
-                [].into()
-            ),
-            (
-                ExpandedPackage {
-                    location: loc_a,
-                    version: Some(1.into()),
-                },
+                PackageId::new(identity_a, Version::new(1, 0, 0)),
                 ["f".into()].into()
             ),
-            (
-                ExpandedPackage {
-                    location: loc_a,
-                    version: Some(2.into()),
-                },
-                [].into()
-            ),
-            (
-                ExpandedPackage {
-                    location: loc_b,
-                    version: Some(1.into()),
-                },
-                [].into()
-            ),
-            (
-                ExpandedPackage {
-                    location: loc_c,
-                    version: Some(1.into()),
-                },
-                [].into()
-            ),
+            (PackageId::new(identity_a, Version::new(2, 0, 0)), [].into()),
+            (PackageId::new(identity_b, Version::new(1, 0, 0)), [].into()),
+            (PackageId::new(identity_c, Version::new(1, 0, 0)), [].into()),
         ])
     )
 }
@@ -908,7 +811,7 @@ fn cycle() {
     let (ctx, _root) = setup_duck_ctx();
     let server = create_mock_server();
 
-    let url = server.base_url().to_url().unwrap().into();
+    let url: InternedUrl = server.base_url().to_url().unwrap().into();
     let mut fetcher = Fetcher::new(&ctx).unwrap();
     let (_dir, root_path) = prepare_manifest(&format!(
         r#"
@@ -925,59 +828,40 @@ dependencies:
 "#,
         &url
     ));
-    let root_url = root_path.to_url().unwrap().into();
-    let root_manifest = parse_manifest(&root_path, &ctx).unwrap();
+    let root_name = "root".into();
+    let root_version = Version::new(0, 1, 0);
+    let root_manifest = parse_manifest(&root_path, &ctx).unwrap().into_manifest();
     let mut git_access = MockGitAccess();
     let mut gatherer = Gatherer::new(&mut fetcher, &mut git_access);
     let gathered_info = gatherer
         .explore(
             root_path.clone(),
-            root_manifest.manifest().clone(),
+            root_manifest,
             [].into(),
             SolverMode::default(),
         )
         .unwrap();
-    let loc_root = ExpandedLocation::Local {
-        absolute_path: root_url,
-    };
-    let loc_u = ExpandedLocation::Registry {
-        url,
-        real_name: "u".into(),
-    };
-    let loc_v = ExpandedLocation::Registry {
-        url,
-        real_name: "v".into(),
-    };
+    let identity_root = FullIdentity::new(root_name, FullOrigin::for_local(&root_path).unwrap());
+    let identity_u = FullIdentity::new("u".into(), FullOrigin::for_registry(url));
+    let identity_v = FullIdentity::new("v".into(), FullOrigin::for_registry(url));
     assert_eq!(
-        gathered_info.versions_for_location,
+        gathered_info.versions_for_identity,
         HashMap::from([
-            (loc_root, [None].into()),
-            (loc_u, [Some(Version::new(1, 0, 0))].into()),
-            (loc_v, [Some(Version::new(1, 0, 0))].into()),
+            (identity_root, [root_version].into()),
+            (identity_u, [Version::new(1, 0, 0)].into()),
+            (identity_v, [Version::new(1, 0, 0)].into()),
         ])
     );
     assert_eq!(
         gathered_info.possible_features,
         HashMap::from([
+            (PackageId::new(identity_root, root_version), [].into()),
             (
-                ExpandedPackage {
-                    location: loc_root,
-                    version: None,
-                },
-                [].into()
-            ),
-            (
-                ExpandedPackage {
-                    location: loc_u,
-                    version: Some(1.into()),
-                },
+                PackageId::new(identity_u, Version::new(1, 0, 0)),
                 ["v".into()].into()
             ),
             (
-                ExpandedPackage {
-                    location: loc_v,
-                    version: Some(1.into()),
-                },
+                PackageId::new(identity_v, Version::new(1, 0, 0)),
                 ["u".into()].into()
             ),
         ])
@@ -993,7 +877,7 @@ fn features_expansion() {
     let (ctx, _root) = setup_duck_ctx();
     let server = create_mock_server();
 
-    let url = server.base_url().to_url().unwrap().into();
+    let url: InternedUrl = server.base_url().to_url().unwrap().into();
     let mut fetcher = Fetcher::new(&ctx).unwrap();
     let (_dir, root_path) = prepare_manifest(&format!(
         r#"
@@ -1011,61 +895,39 @@ dependencies:
 "#,
         &url
     ));
-    let root_url = root_path.to_url().unwrap().into();
-    let root_manifest = parse_manifest(&root_path, &ctx).unwrap();
+    let root_name = "root".into();
+    let root_version = Version::new(0, 1, 0);
+    let root_manifest = parse_manifest(&root_path, &ctx).unwrap().into_manifest();
     let mut git_access = MockGitAccess();
     let mut gatherer = Gatherer::new(&mut fetcher, &mut git_access);
     let gathered_info = gatherer
         .explore(
             root_path.clone(),
-            root_manifest.manifest().clone(),
+            root_manifest,
             [].into(),
             SolverMode::default(),
         )
         .unwrap();
-    let loc_root = ExpandedLocation::Local {
-        absolute_path: root_url,
-    };
-    let loc_n = ExpandedLocation::Registry {
-        url,
-        real_name: "n".into(),
-    };
-    let loc_m = ExpandedLocation::Registry {
-        url,
-        real_name: "m".into(),
-    };
+    let identity_root = FullIdentity::new(root_name, FullOrigin::for_local(&root_path).unwrap());
+    let identity_n = FullIdentity::new("n".into(), FullOrigin::for_registry(url));
+    let identity_m = FullIdentity::new("m".into(), FullOrigin::for_registry(url));
     assert_eq!(
-        gathered_info.versions_for_location,
+        gathered_info.versions_for_identity,
         HashMap::from([
-            (loc_root, [None].into()),
-            (loc_n, [Some(Version::new(1, 0, 0))].into()),
-            (loc_m, [Some(Version::new(1, 0, 0))].into()),
+            (identity_root, [root_version].into()),
+            (identity_n, [Version::new(1, 0, 0)].into()),
+            (identity_m, [Version::new(1, 0, 0)].into()),
         ])
     );
     assert_eq!(
         gathered_info.possible_features,
         HashMap::from([
+            (PackageId::new(identity_root, root_version), [].into()),
             (
-                ExpandedPackage {
-                    location: loc_root,
-                    version: None,
-                },
-                [].into()
-            ),
-            (
-                ExpandedPackage {
-                    location: loc_n,
-                    version: Some(1.into()),
-                },
+                PackageId::new(identity_n, Version::new(1, 0, 0)),
                 ["expandable".into(), "expanded".into()].into()
             ),
-            (
-                ExpandedPackage {
-                    location: loc_m,
-                    version: Some(1.into()),
-                },
-                [].into()
-            ),
+            (PackageId::new(identity_m, Version::new(1, 0, 0)), [].into()),
         ])
     )
 }

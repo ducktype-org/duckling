@@ -77,6 +77,15 @@ namespace compiler::backend_vm::internal {
 	};
 
 	/**
+	 * @brief Represents a call DVM operation.
+	 */
+	struct BuiltinCallOperation final {
+		lir::BuiltinFunctionKind kind;
+		std::deque<DVMValue>     args;
+		base::Optional<DVMPlace> dest;
+	};
+
+	/**
 	 * @brief Represents a simple move operation.
 	 */
 	struct MoveOperation {
@@ -106,22 +115,13 @@ namespace compiler::backend_vm::internal {
 		base::Optional<DVMPlace> dest;
 	};
 
-	struct BoxAllocOperation {
-		DVMValue                 src;
-		base::Optional<DVMPlace> dest;
-	};
-
-	struct BoxFreeOperation {
-		DVMValue src;
-	};
-
 	/**
 	 * @brief Represents a meta-type operations that require special handling.
 	 * These operations don't map directly to DVM opcodes but are lowered
 	 * to a series of extern C function calls.
 	 */
-	struct MetaOperation {
-		lir::Operation           meta_op;
+	struct MetaOperation final {
+		lir::MetaKind            meta_kind;
 		std::deque<DVMValue>     args;
 		base::Optional<DVMPlace> dest;
 	};
@@ -179,9 +179,8 @@ namespace compiler::backend_vm::internal {
 		MoveOperation,
 		ComparisonOperation,
 		CallOperation,
+		BuiltinCallOperation,
 		AddressOfOperation,
-		BoxAllocOperation,
-		BoxFreeOperation,
 		CastOperation,
 		MetaOperation,
 		JumpOperation,

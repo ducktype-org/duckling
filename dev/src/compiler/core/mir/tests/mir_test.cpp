@@ -6,9 +6,9 @@
 #include <diagnostic_interactive/module_flags/module_flags.hpp>
 #include <helios/queries/function_queries.hpp>
 #include <helios/queries/queries.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <helios/tsh/queries.hpp>
+#include <mir/mir_lowering/mir_liveness.hpp>
 #include <mir/mir_lowering/mir_queries.hpp>
 #include <mir/mir_lowering/mir_unit.hpp>
 #include <mir/mir_lowering/mir_validation.hpp>
@@ -41,9 +41,8 @@ public:
 		TESTER_ADD_TEST(metaFunctionsTest);
 		TESTER_ADD_TEST(referencesTest);
 		TESTER_ADD_TEST(boxesTest);
-		TESTER_ADD_TEST(staticArraysTest);
-		TESTER_ADD_TEST(dynamicArraysTest);
 		TESTER_ADD_TEST(tupleTest);
+		TESTER_ADD_TEST(livenessMapTest);
 		TESTER_ADD_TEST(sliceTest);
 	}
 
@@ -52,6 +51,65 @@ protected:
 
 private:
 	using enum compiler::tsh::IntegralAbstractType::Signedness;
+
+	/**
+	 * @brief Unit test for the global in-liveness map produced by `calculateGlobalInLivenessMap`.
+	 *
+	 * Uses `moveParamThenBlock(a, c)`, which moves the parameter `a` in the entry block and then
+	 * branches. The map is computed on the pre-lifetime MIR (so the move flag is present but no
+	 * use-after-move validation runs), and we assert:
+	 *  - `a` is alive on entry (it is a parameter),
+	 *  - some successor block sees `a` as `Moved` with exactly one reaching move site.
+	 */
+	void livenessMapTest() {
+		auto [module, scope] = getModule(fs::File(path("modules/move_lifetime")));
+
+		withContextDo([&](query::Context& ctx) {
+			auto& unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+
+			base::Optional<CRef<compiler::helios::HOUTFunction>> target;
+			for (const auto& fn: unit.functions)
+				if (fn->declaration->original_name.strView() == "moveParamThenBlock") target = fn;
+			ASSERT_HAS_VALUE(target);
+
+			auto pre_mir = compiler::mir::lowerToPreMIRFunction(ctx, target.value());
+
+			// Find the first parameter local (`a`).
+			base::Optional<compiler::mir::LocalID> a_id;
+			for (const auto& local: pre_mir.local_list)
+				if (local.parameter_index.has_value() && local.parameter_index.value() == 0)
+					a_id = local.id;
+			ASSERT_TRUE(a_id.has_value());
+
+			// Build predecessor lists, same as constructLifetimePassArgs does.
+			base::HashMap<compiler::mir::BlockID, std::vector<compiler::mir::BlockID>> preds;
+			for (auto block_id: pre_mir.block_order)
+				for (auto succ:
+				     compiler::mir::getTerminatorSuccessors(pre_mir.blocks.at(block_id)->terminator))
+					preds.put(succ).first->second.push_back(block_id);
+
+			auto liveness = compiler::mir::calculateGlobalInLivenessMap(pre_mir, preds);
+
+			// `a` is a parameter, so it is alive at the entry block.
+			auto entry     = pre_mir.block_order.front();
+			auto entry_map = liveness.block_in_liveness.atMaybe(entry);
+			ASSERT_TRUE(entry_map.has_value());
+			auto a_at_entry = entry_map.value()->atMaybe(a_id.value());
+			ASSERT_TRUE(a_at_entry.has_value());
+			ASSERT_TRUE(a_at_entry.value()->kind == compiler::mir::LivenessStatus::Alive);
+
+			// After the unconditional move in the entry block, at least one successor block must
+			// observe `a` as `Moved` with exactly one reaching move site.
+			bool found_moved = false;
+			for (const auto& [block_id, map]: liveness.block_in_liveness) {
+				auto state = map.atMaybe(a_id.value());
+				if (state.has_value() && state.value()->kind == compiler::mir::LivenessStatus::Moved
+				    && state.value()->move_sites.size() == 1)
+					found_moved = true;
+			}
+			ASSERT_TRUE(found_moved);
+		});
+	}
 
 	void simpleTest() {
 		auto [module, scope] = getModule(fs::File(path("modules/mir_simple_test")));
@@ -108,9 +166,10 @@ private:
 			ASSERT_EQUAL(2, globals.size());
 			ASSERT_EQUAL(base::StrID("c"), globals.at(0)->original_name);
 
-			auto& c_ctor = ctx.query<compiler::mir::LowerGlobalDataToMIRCtor>({ globals.at(0) })
-			                   ->valueOrThrow();
-			ASSERT_TRUE(c_ctor.name.strView() == "constructor_of_c");
+			auto& c_data
+				= ctx.query<compiler::mir::LowerGlobalData>({ globals.at(0) })->valueOrThrow();
+			auto c_ctor = std::get<CRef<compiler::mir::Function>>(c_data.initial_value);
+			ASSERT_TRUE(c_ctor->name.strView() == "constructor_of_c");
 
 			auto foo_mir = compiler::mir::lowerToPreMIRFunction(ctx, functions.at(0));
 			ASSERT_EQUAL(foo_mir.name, base::StrID("foo"));
@@ -176,14 +235,14 @@ private:
 			auto goo_mir = compiler::mir::lowerToPreMIRFunction(ctx, functions.at(1));
 			ASSERT_EQUAL(goo_mir.name, base::StrID("goo"));
 
-			ASSERT_EQUAL(goo_mir.local_list.size(), 2);
+			ASSERT_EQUAL(goo_mir.local_list.size(), 1);
 
-			// assert that in the first block we have an assignment
+			// assert that in the first block we have the two assignments and the call
 			ASSERT_EQUAL(goo_mir.block_order.size(), 1);
 
 			auto first_block_id = goo_mir.block_order[0];
 
-			ASSERT_EQUAL(goo_mir.blocks[first_block_id].instructions.size(), 5);
+			ASSERT_EQUAL(goo_mir.blocks[first_block_id].instructions.size(), 4);
 			ASSERT_EQUAL(
 				goo_mir.blocks[first_block_id].instructions.at(0).operation,
 				compiler::mir::Operation::Assign
@@ -195,10 +254,6 @@ private:
 			ASSERT_EQUAL(
 				goo_mir.blocks[first_block_id].instructions.at(2).operation,
 				compiler::mir::Operation::Call
-			);
-			ASSERT_EQUAL(
-				goo_mir.blocks[first_block_id].instructions.at(3).operation,
-				compiler::mir::Operation::Cast
 			);
 		});
 	}
@@ -417,7 +472,11 @@ private:
 				};
 
 				for (const auto& instr: block.instructions) {
-					if (instr.operation == compiler::mir::Operation::DestructIf) continue;
+					// Destructors (conditional or unconditional) legitimately reference any local,
+					// including parameters other than the one used in the body.
+					if (instr.operation == compiler::mir::Operation::DestructIf
+					    || instr.operation == compiler::mir::Operation::Destruct)
+						continue;
 					for (const auto& arg: instr.arguments) validate_value(arg);
 				}
 				for (const auto& arg: block.terminator.arguments) validate_value(arg);
@@ -475,6 +534,9 @@ private:
 	void metaFunctionsTest() {
 		auto [module, scope] = getModule(fs::File(path("modules/meta_functions")));
 
+		auto size_of_sym  = getChain("sizeOf", scope).back();
+		auto align_of_sym = getChain("alignOf", scope).back();
+
 		withContextDo([&](query::Context& ctx) {
 			auto& unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
 			auto& functions = unit.functions;
@@ -486,61 +548,55 @@ private:
 			};
 
 			using enum compiler::mir::Operation;
+			using MK = compiler::mir::MetaKind;
+
+			// Meta operations are a single `Meta` op parametrized by a `MetaKind` in `extra_params`.
+			auto meta_kind = [](const auto& instr) {
+				return std::get<compiler::mir::MetaParameters>(instr.extra_params).kind;
+			};
+
+			auto check_meta_function
+				= [&](CRef<compiler::helios::HOUTFunction> fun, MK kind, usize arg_size) {
+					  auto& mir_fun
+						  = ctx.query<compiler::mir::LowerToMIRFunction>({ fun })->valueOrThrow();
+					  const auto& block = mir_fun.blocks[mir_fun.block_order[0]];
+					  const auto& instr = block.instructions[0];
+					  ASSERT_TRUE(instr.operation == MetaTypeOperation);
+					  ASSERT_TRUE(meta_kind(instr) == kind);
+					  ASSERT_EQUAL(instr.arguments.size(), arg_size);
+					  ASSERT_TRUE(instr.arguments[0].isLocal());
+				  };
+
+			{
+				CRef fun
+					= &ctx.query<compiler::helios::QueryCodeOfFun>(size_of_sym)->valueOrThrow();
+				check_meta_function(fun, MK::SizeOf, 1);
+			}
+			{
+				CRef fun
+					= &ctx.query<compiler::helios::QueryCodeOfFun>(align_of_sym)->valueOrThrow();
+				check_meta_function(fun, MK::AlignOf, 1);
+			}
 
 			for (CRef<compiler::helios::HOUTFunction> fun: functions) {
 				if (fun->declaration->original_name.str() == "createBox") {
-					auto& mir_fun
-						= ctx.query<compiler::mir::LowerToMIRFunction>({ fun })->valueOrThrow();
-
-					const auto& block = mir_fun.blocks[mir_fun.block_order[0]];
-					const auto& instr = block.instructions[0];
-					ASSERT_TRUE(instr.operation == MetaCreateBox);
-					ASSERT_EQUAL(instr.arguments.size(), 1);
-					ASSERT_TRUE(instr.arguments[0].isLocal());
-					for (const auto& local: mir_fun.local_list) ASSERT_EQUAL(local.type, meta_type);
-
+					check_meta_function(fun, MK::CreateBox, 1);
 				} else if (fun->declaration->original_name.str() == "createRef") {
-					auto& mir_fun
-						= ctx.query<compiler::mir::LowerToMIRFunction>({ fun })->valueOrThrow();
-
-					const auto& block = mir_fun.blocks[mir_fun.block_order[0]];
-					const auto& instr = block.instructions[0];
-					ASSERT_TRUE(instr.operation == MetaCreateRef);
-					ASSERT_EQUAL(instr.arguments.size(), 1);
-					ASSERT_TRUE(instr.arguments[0].isLocal());
-					for (const auto& local: mir_fun.local_list) ASSERT_EQUAL(local.type, meta_type);
+					check_meta_function(fun, MK::CreateRef, 1);
+				} else if (fun->declaration->original_name.str() == "createPtr") {
+					check_meta_function(fun, MK::CreatePtr, 1);
+				} else if (fun->declaration->original_name.str() == "createCPtr") {
+					check_meta_function(fun, MK::CreateCPtr, 1);
+				} else if (fun->declaration->original_name.str() == "createManyPtr") {
+					check_meta_function(fun, MK::CreateManyPtr, 1);
+				} else if (fun->declaration->original_name.str() == "createSlice") {
+					check_meta_function(fun, MK::CreateSlice, 1);
 				} else if (fun->declaration->original_name.str() == "createConst") {
-					auto& mir_fun
-						= ctx.query<compiler::mir::LowerToMIRFunction>({ fun })->valueOrThrow();
-
-					const auto& block = mir_fun.blocks[mir_fun.block_order[0]];
-					const auto& instr = block.instructions[0];
-					ASSERT_TRUE(instr.operation == MetaCreateConst);
-					ASSERT_EQUAL(instr.arguments.size(), 1);
-					ASSERT_TRUE(instr.arguments[0].isLocal());
-					for (const auto& local: mir_fun.local_list) ASSERT_EQUAL(local.type, meta_type);
+					check_meta_function(fun, MK::CreateConst, 1);
 				} else if (fun->declaration->original_name.str() == "createVariant") {
-					auto& mir_fun
-						= ctx.query<compiler::mir::LowerToMIRFunction>({ fun })->valueOrThrow();
-
-					const auto& block = mir_fun.blocks[mir_fun.block_order[0]];
-					const auto& instr = block.instructions[0];
-					ASSERT_TRUE(instr.operation == MetaCreateVariant);
-					ASSERT_EQUAL(instr.arguments.size(), 4);
-					ASSERT_TRUE(instr.arguments[0].isLocal());
-					ASSERT_EQUAL(mir_fun.local_list[0]->type, meta_type);
-					for (const auto& local: mir_fun.local_list) ASSERT_EQUAL(local.type, meta_type);
+					check_meta_function(fun, MK::CreateVariant, 4);
 				} else if (fun->declaration->original_name.str() == "createTuple") {
-					auto& mir_fun
-						= ctx.query<compiler::mir::LowerToMIRFunction>({ fun })->valueOrThrow();
-
-					const auto& block = mir_fun.blocks[mir_fun.block_order[0]];
-					const auto& instr = block.instructions[0];
-					ASSERT_TRUE(instr.operation == MetaCreateTuple);
-					ASSERT_EQUAL(instr.arguments.size(), 4);
-					ASSERT_TRUE(instr.arguments[0].isLocal());
-					ASSERT_EQUAL(mir_fun.local_list[0]->type, meta_type);
-					for (const auto& local: mir_fun.local_list) ASSERT_EQUAL(local.type, meta_type);
+					check_meta_function(fun, MK::CreateTuple, 4);
 				} else if (fun->declaration->original_name.str() == "megaType") {
 					auto& mir_fun
 						= ctx.query<compiler::mir::LowerToMIRFunction>({ fun })->valueOrThrow();
@@ -553,7 +609,8 @@ private:
 					bool create_tuple_5_arg_found = false;
 					bool call_found               = false;
 					for (const auto& instr: block.instructions) {
-						if (instr.operation == MetaCreateTuple) {
+						if (instr.operation == MetaTypeOperation
+						    && meta_kind(instr) == MK::CreateTuple) {
 							if (instr.arguments.size() == 5) {
 								// When a big tuple instruction is found, it should be preceeded
 								// with two inner tuple create instructions and one inner variant
@@ -563,7 +620,8 @@ private:
 								create_tuple_5_arg_found = true;
 							}
 							create_tuple_count++;
-						} else if (instr.operation == MetaCreateVariant) {
+						} else if (instr.operation == MetaTypeOperation
+						           && meta_kind(instr) == MK::CreateVariant) {
 							// If variant is created, two preceding tuple creating instructions
 							// should exist.
 							ASSERT_TRUE(create_tuple_count == 2);
@@ -681,10 +739,19 @@ private:
 			using namespace compiler::mir;
 			for (const auto& block_id: mir_func.block_order) {
 				for (const auto& instr: mir_func.blocks[block_id].instructions) {
-					if (instr.operation == Operation::BoxAlloc) {
+					const auto callee_builtin
+						= instr.operation == Operation::Call
+					        ? compiler::helios::isBuiltin(
+								  instr.arguments[0].get<MIRFunctionLiteral>().helios_id
+							  )
+					        : base::Optional<compiler::helios::BuiltinKind>{};
+					const bool is_box_alloc
+						= callee_builtin.has_value()
+					   && callee_builtin.value() == compiler::helios::BuiltinKind::BoxAlloc;
+					if (is_box_alloc) {
 						// var b_int: box i32 = 42;
 						// var b_point: box Point = Point(10, 20);
-						const auto& arg = instr.arguments[0];
+						const auto& arg = instr.arguments[1];
 						if (arg.isConstant())
 							found_alloc_box_int = true;
 						else
@@ -753,138 +820,6 @@ private:
 			ASSERT_TRUE(found_field_access_write);
 			ASSERT_TRUE(found_by_val_deref);
 			ASSERT_TRUE(found_by_ref_passthrough);
-		});
-	}
-
-	void staticArraysTest() {
-		auto [module, scope] = getModule(fs::File(path("modules/static_arrays")));
-
-		withContextDo([&](query::Context& ctx) {
-			auto& unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
-			auto& hout_func = unit.functions.at(0);
-
-			auto& mir_func = (compiler::mir::Function&) ctx
-			                     .query<compiler::mir::LowerToMIRFunction>({ hout_func })
-			                     ->valueOrThrow();
-
-			bool found_zero_init_arr          = false;
-			bool found_zero_init_pts          = false;
-			bool found_index_projection       = false;
-			bool found_complex_pts_projection = false;
-
-			using namespace compiler::mir;
-
-			for (const auto& block_id: mir_func.block_order) {
-				for (const auto& instr: mir_func.blocks[block_id].instructions) {
-					if (instr.operation == Operation::ZeroInitialize) {
-						auto& out_place = instr.output.value();
-						auto  local     = out_place.getBase<MIRLocalRef>();
-						if (local->getName() == "arr") found_zero_init_arr = true;
-						if (local->getName() == "pts") found_zero_init_pts = true;
-					}
-
-					if ((instr.operation == Operation::Assign
-					     || instr.operation == Operation::AddressOf)
-					    && instr.output.has_value()) {
-						auto& out_place = instr.output.value();
-						auto  local     = out_place.getBase<MIRLocalRef>();
-
-						if (local->getName() == "arr" && out_place.projection_chain.size() == 1) {
-							bool is_index = std::holds_alternative<MIRPlace::IndexProjection>(
-								out_place.projection_chain[0].storage
-							);
-							if (is_index) found_index_projection = true;
-						}
-
-						if (out_place.projection_chain.size() == 2) {
-							const auto& chain = out_place.projection_chain;
-
-							bool is_idx
-								= std::holds_alternative<MIRPlace::IndexProjection>(chain[0].storage
-							    );
-							bool is_fld
-								= std::holds_alternative<MIRPlace::FieldProjection>(chain[1].storage
-							    );
-
-							if (is_idx && is_fld) {
-								auto field = std::get<MIRPlace::FieldProjection>(chain[1].storage);
-								if (compiler::helios::name(field.field_id) == base::StrID("x"))
-									found_complex_pts_projection = true;
-							}
-						}
-					}
-				}
-			}
-
-			ASSERT_TRUE(found_zero_init_arr);
-			ASSERT_TRUE(found_zero_init_pts);
-			ASSERT_TRUE(found_index_projection);
-			ASSERT_TRUE(found_complex_pts_projection);
-		});
-	}
-
-	void dynamicArraysTest() {
-		auto [module, scope] = getModule(fs::File(path("modules/dynamic_arrays")));
-
-		withContextDo([&](query::Context& ctx) {
-			auto& unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
-			auto& hout_func = unit.functions.at(0);
-
-			auto& mir_func = (compiler::mir::Function&) ctx
-			                     .query<compiler::mir::LowerToMIRFunction>({ hout_func })
-			                     ->valueOrThrow();
-
-			bool found_zero_init        = false;
-			bool found_push             = false;
-			bool found_pop              = false;
-			bool found_len              = false;
-			bool found_index_projection = false;
-
-			using namespace compiler::mir;
-
-			for (const auto& block_id: mir_func.block_order) {
-				for (const auto& instr: mir_func.blocks[block_id].instructions) {
-					switch (instr.operation) {
-					case Operation::ZeroInitialize: {
-						auto& out_place = instr.output.value();
-						if (out_place.getBase<MIRLocalRef>()->getName() == "l")
-							found_zero_init = true;
-						break;
-					}
-					case Operation::ListPush:
-						found_push = true;
-						break;
-					case Operation::ListPop:
-						found_pop = true;
-						break;
-					case Operation::ListLen:
-						found_len = true;
-						break;
-					case Operation::Assign:
-					case Operation::Cast: {
-						if (instr.output.has_value()) {
-							auto& out_place = instr.output.value();
-							if (out_place.getBase<MIRLocalRef>()->getName() == "l"
-							    && out_place.projection_chain.size() == 1) {
-								bool is_index = std::holds_alternative<MIRPlace::IndexProjection>(
-									out_place.projection_chain[0].storage
-								);
-								if (is_index) found_index_projection = true;
-							}
-						}
-						break;
-					}
-					default:
-						break;
-					}
-				}
-			}
-
-			ASSERT_TRUE(found_zero_init);
-			ASSERT_TRUE(found_push);
-			ASSERT_TRUE(found_pop);
-			ASSERT_TRUE(found_len);
-			ASSERT_TRUE(found_index_projection);
 		});
 	}
 

@@ -3,27 +3,26 @@ use std::iter::once;
 
 use russcip::ProblemCreated;
 
+use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
+use crate::quackpack::core::solver::dependency_edge::DependencyEdge;
 use crate::quackpack::core::solver::gathering::gatherer_state::GatheredInfo;
 use crate::quackpack::core::solver::solver_freeze::SolverFreeze;
 use crate::quackpack::core::solver::solving::solver_model::{FoundSolution, SolverModel};
-use crate::quackpack::core::solver::types_common::{
-    DependencyEdge, ExpandedLocation, ExpandedPackage, InternedLocation, Location,
-};
 use crate::quackpack::core::solver::util::get_possible_realizations;
-use crate::quackpack::core::{Dependency, FeatureName, Manifest, Version};
+use crate::quackpack::core::{Dependency, FeatureName, Manifest, PackageId, Source, Version};
 use crate::{QuackResult, QuackResultContext, StrId};
 
 /// Struct with all the necessary information for the solver to be run.
 #[derive(Debug)]
 pub struct SolverInput {
-    pub gathered_manifests: HashMap<ExpandedPackage, Box<Manifest>>,
-    pub all_possible_features: HashMap<ExpandedPackage, HashSet<FeatureName>>,
-    pub versions_for_location: HashMap<ExpandedLocation, HashSet<Option<Version>>>,
-    pub location_resolver: HashMap<InternedLocation, ExpandedLocation>,
+    pub gathered_manifests: HashMap<PackageId, Box<Manifest>>,
+    pub all_possible_features: HashMap<PackageId, HashSet<FeatureName>>,
+    pub versions_for_identity: HashMap<FullIdentity, HashSet<Version>>,
+    pub source_to_origin_resolver: HashMap<Source, FullOrigin>,
 
-    pub preexisting_packages: HashSet<ExpandedPackage>,
-    pub preexisting_features: HashMap<ExpandedPackage, HashSet<FeatureName>>,
-    pub preexisting_dependencies: HashMap<DependencyEdge, Option<Version>>,
+    pub preexisting_packages: HashSet<PackageId>,
+    pub preexisting_features: HashMap<PackageId, HashSet<FeatureName>>,
+    pub preexisting_dependencies: HashMap<DependencyEdge, Version>,
 }
 
 impl SolverInput {
@@ -32,7 +31,7 @@ impl SolverInput {
     #[tracing::instrument(skip_all)]
     pub fn from_freeze_and_gathered_info(
         prev_freeze: &SolverFreeze,
-        prev_freeze_manifests: HashMap<ExpandedPackage, Box<Manifest>>,
+        prev_freeze_manifests: HashMap<PackageId, Box<Manifest>>,
         gathered_info: GatheredInfo,
     ) -> Self {
         let mut gathered_manifests = gathered_info.gathered_manifests;
@@ -42,8 +41,8 @@ impl SolverInput {
             }
         }
         let mut all_possible_features = gathered_info.possible_features;
-        let mut versions_for_location = gathered_info.versions_for_location;
-        let mut location_resolver = gathered_info.location_resolver;
+        let mut versions_for_identity = gathered_info.versions_for_identity;
+        let mut source_to_origin_resolver = gathered_info.source_to_origin_resolver;
         let mut preexisting_packages = HashSet::new();
         let mut preexisting_features = HashMap::new();
         let mut preexisting_dependencies = HashMap::new();
@@ -52,13 +51,13 @@ impl SolverInput {
                 .entry(*pkg)
                 .or_default()
                 .extend(freeze.features.iter().copied());
-            versions_for_location
-                .entry(pkg.location)
+            versions_for_identity
+                .entry(pkg.identity())
                 .or_default()
-                .insert(pkg.version);
-            location_resolver.insert(
-                InternedLocation::new(Location::canonical_unexpansion(pkg.location())),
-                pkg.location,
+                .insert(pkg.version());
+            source_to_origin_resolver.insert(
+                Source::canonical_source_for_origin(pkg.origin()),
+                pkg.origin(),
             );
             preexisting_packages.insert(*pkg);
             preexisting_features.insert(*pkg, freeze.features.clone());
@@ -66,18 +65,18 @@ impl SolverInput {
                 preexisting_dependencies.insert(
                     DependencyEdge {
                         parent: *pkg,
-                        dependency_loc: realization.location,
+                        dep_identity: realization.identity(),
                         manifest_child_name: *dep_name,
                     },
-                    realization.version,
+                    realization.version(),
                 );
             }
         }
         Self {
             gathered_manifests,
             all_possible_features,
-            versions_for_location,
-            location_resolver,
+            versions_for_identity,
+            source_to_origin_resolver,
             preexisting_packages,
             preexisting_features,
             preexisting_dependencies,
@@ -98,7 +97,7 @@ impl<'a> SolverEngine<'a> {
     #[tracing::instrument(skip_all)]
     pub fn run_engine(
         input: SolverInput,
-        main_pkg: &(ExpandedPackage, HashSet<FeatureName>),
+        main_pkg: &(PackageId, HashSet<FeatureName>),
     ) -> QuackResult<FoundSolution> {
         let engine = SolverEngine::new(&input);
         engine.run(main_pkg)
@@ -113,10 +112,7 @@ impl<'a> SolverEngine<'a> {
     }
 
     /// Runs the engine, building the underlying solver model, solving it and returning the output.
-    fn run(
-        mut self,
-        main_pkg: &(ExpandedPackage, HashSet<FeatureName>),
-    ) -> QuackResult<FoundSolution> {
+    fn run(mut self, main_pkg: &(PackageId, HashSet<FeatureName>)) -> QuackResult<FoundSolution> {
         self.create_package_variables();
         let empty_hash_set: HashSet<FeatureName> = HashSet::new();
         for (package, manifest) in self.input.gathered_manifests.iter() {
@@ -127,15 +123,15 @@ impl<'a> SolverEngine<'a> {
                 .unwrap_or(&empty_hash_set);
             for dependency in manifest.dependencies().all_dependencies() {
                 if dependency.is_enabled_for(possible_features.iter().cloned()) {
-                    self.construct_for_single_dependency(package, dependency)?;
+                    self.construct_for_single_dependency(*package, dependency)?;
                 }
             }
         }
 
-        self.model.require_package(&main_pkg.0)?;
+        self.model.require_package(main_pkg.0)?;
         for feature in main_pkg.1.iter() {
             self.model
-                .require_package_with_feature(&main_pkg.0, feature)?;
+                .require_package_with_feature(main_pkg.0, *feature)?;
         }
         self.force_features_expansion()?;
         self.model.solve()
@@ -161,24 +157,25 @@ impl<'a> SolverEngine<'a> {
     /// Creates the necessary constraints for a single dependency.
     fn construct_for_single_dependency(
         &mut self,
-        parent: &ExpandedPackage,
+        parent: PackageId,
         manifest_dependency: &Dependency,
     ) -> QuackResult<()> {
-        let edge = DependencyEdge::from_manifest_and_parent(
-            *parent,
+        let Some(edge) = DependencyEdge::from_manifest_and_parent(
+            parent,
             manifest_dependency,
-            &self.input.location_resolver,
-        )
-        .context_internal("Failed to expand a location")?;
+            &self.input.source_to_origin_resolver,
+        ) else {
+            // We could not translate the manifest entry into an identity of the dependency,
+            // so there are no possible realizations and we must forbid the parent package/its features
+            // forcing the dependency.
+            return self.forbid_forcing_features(parent, manifest_dependency);
+        };
 
         // If this edge was not resolved in the previous freeze, we fallback to adding all constraints.
         let Some(realization_ver) = self.input.preexisting_dependencies.get(&edge) else {
-            return self.add_constraints_for_edge(&edge, manifest_dependency);
+            return self.add_constraints_for_edge(edge, manifest_dependency);
         };
-        let realisation = ExpandedPackage {
-            location: edge.dependency_loc,
-            version: *realization_ver,
-        };
+        let realisation = PackageId::new(edge.dep_identity, *realization_ver);
 
         // Each feature of the parent may force some additional features of the child,
         // not present in the previous freeze.
@@ -192,12 +189,12 @@ impl<'a> SolverEngine<'a> {
         for parent_feature in self
             .input
             .all_possible_features
-            .get(parent)
+            .get(&parent)
             .iter()
             .cloned()
             .flatten()
         {
-            if let Some(parent_preexisting) = self.input.preexisting_features.get(parent)
+            if let Some(parent_preexisting) = self.input.preexisting_features.get(&parent)
                 && parent_preexisting.contains(parent_feature)
             {
                 // Parent feature belonged to the previous freeze, so whatever it forced, has been already taken care of.
@@ -210,26 +207,26 @@ impl<'a> SolverEngine<'a> {
             {
                 // (*) Previously chosen realisation of the dependency does not support some of the forced flags,
                 // so we have to treat the dependency normally and add all the constraints.
-                return self.add_constraints_for_edge(&edge, manifest_dependency);
+                return self.add_constraints_for_edge(edge, manifest_dependency);
             } else {
                 forcing.push((*parent_feature, forced));
             }
         }
         // If (*) never happened, we just add conditions that parent feature forces some new realisation features.
         self.model
-            .require_satisfying_dep_feature_for_preexisting(parent, &realisation, forcing)
+            .require_satisfying_dep_feature_for_preexisting(parent, realisation, forcing)
     }
 
     /// Creates all standard constraints for a dependency edge.
     fn add_constraints_for_edge(
         &mut self,
-        edge: &DependencyEdge,
+        edge: DependencyEdge,
         manifest_dependency: &Dependency,
     ) -> QuackResult<()> {
         let possible_realizations = get_possible_realizations(
             manifest_dependency,
-            &self.input.versions_for_location,
-            &self.input.location_resolver,
+            &self.input.versions_for_identity,
+            &self.input.source_to_origin_resolver,
         )?;
 
         self.create_dependency_version_realization_conditions(
@@ -250,13 +247,13 @@ impl<'a> SolverEngine<'a> {
     /// Creates version realization constraints and necessary variables for a single dependency.
     fn create_dependency_version_realization_conditions(
         &mut self,
-        edge: &DependencyEdge,
+        edge: DependencyEdge,
         manifest_dependency: &Dependency,
-        possible_realizations: &[ExpandedPackage],
+        possible_realizations: &[PackageId],
     ) -> QuackResult<()> {
         for realization in possible_realizations {
             self.model
-                .add_dependency_version_realisation_var(edge.clone(), realization.version);
+                .add_dependency_version_realisation_var(edge, realization.version());
         }
 
         let is_dep_forced_default = manifest_dependency.is_enabled_for(vec![]);
@@ -265,7 +262,7 @@ impl<'a> SolverEngine<'a> {
         } else {
             for dep_forcing_feature in manifest_dependency.enabling_features() {
                 self.model
-                    .require_satisfying_dep_version(edge, Some(dep_forcing_feature))?;
+                    .require_satisfying_dep_version(edge, Some(*dep_forcing_feature))?;
             }
         }
         Ok(())
@@ -274,7 +271,7 @@ impl<'a> SolverEngine<'a> {
     /// Creates feature realization constraints and necessary variables for a single dependency.
     fn create_dependency_feature_realization_conditions(
         &mut self,
-        edge: &DependencyEdge,
+        edge: DependencyEdge,
         manifest_dependency: &Dependency,
     ) -> QuackResult<()> {
         let parent_features = parent_features_to_consider(self.input, edge);
@@ -286,7 +283,7 @@ impl<'a> SolverEngine<'a> {
                 None => &enabled_always,
                 Some(feature) => {
                     tmp_hash_set =
-                        HashSet::from_iter(manifest_dependency.enabled_features(vec![*feature]))
+                        HashSet::from_iter(manifest_dependency.enabled_features(vec![feature]))
                             .difference(&enabled_always)
                             .cloned()
                             .collect();
@@ -298,10 +295,27 @@ impl<'a> SolverEngine<'a> {
             }
             for feature in forced.iter() {
                 self.model
-                    .add_dependency_feature_realisation_var(edge.clone(), *feature);
+                    .add_dependency_feature_realisation_var(edge, *feature);
             }
             self.model
                 .require_satisfying_dep_feature(edge, parent_feature, forced)?;
+        }
+        Ok(())
+    }
+
+    fn forbid_forcing_features(
+        &mut self,
+        parent: PackageId,
+        manifest_dependency: &Dependency,
+    ) -> QuackResult<()> {
+        let is_dep_forced_default = manifest_dependency.is_enabled_for(vec![]);
+        if is_dep_forced_default {
+            self.model.forbid_package(parent)?;
+        } else {
+            for dep_forcing_feature in manifest_dependency.enabling_features() {
+                self.model
+                    .forbid_package_with_feature(parent, *dep_forcing_feature)?;
+            }
         }
         Ok(())
     }
@@ -342,15 +356,16 @@ impl<'a> SolverEngine<'a> {
 /// which features of the child are forced by which features of the parent.
 /// The [`None`] signifies the lack of any parent features,
 /// so that features of the child forced by default can be considered.
-fn parent_features_to_consider<'a>(
-    input: &'a SolverInput,
-    edge: &DependencyEdge,
-) -> impl Iterator<Item = Option<&'a StrId>> {
+fn parent_features_to_consider(
+    input: &SolverInput,
+    edge: DependencyEdge,
+) -> impl Iterator<Item = Option<StrId>> {
     input
         .all_possible_features
         .get(&edge.parent)
         .into_iter()
         .flatten()
+        .copied()
         .map(Some)
         .chain(once(None))
 }
@@ -364,7 +379,6 @@ mod test {
     use super::*;
     use crate::DuckContext;
     use crate::quackpack::core::parse_manifest;
-    use crate::quackpack::core::solver::types_common::{ExpandedLocation, Location};
     use crate::quackpack::util::to_url::ToUrl;
     use crate::util::path_ops_ext::PathOpsExt;
 
@@ -399,68 +413,48 @@ metadata:
 "#,
         );
         let ctx = DuckContext::default();
-        let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
-        let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
-        let location_a = InternedLocation::new(Location::Registry {
-            url: "http://localhost:9001".to_url().unwrap().into(),
-            real_name: StrId::from("a"),
-        });
-        let location_b = InternedLocation::new(Location::Registry {
-            url: "http://localhost:9001".to_url().unwrap().into(),
-            real_name: StrId::from("b"),
-        });
-        let exp_location_a = ExpandedLocation::Registry {
-            url: "http://localhost:9001".to_url().unwrap().into(),
-            real_name: StrId::from("a"),
-        };
-        let exp_location_b = ExpandedLocation::Registry {
-            url: "http://localhost:9001".to_url().unwrap().into(),
-            real_name: StrId::from("b"),
-        };
-        let exp_pkg_a = ExpandedPackage {
-            location: exp_location_a,
-            version: Some(Version::new(1, 0, 0)),
-        };
-        let exp_pkg_b = ExpandedPackage {
-            location: exp_location_b,
-            version: Some(Version::new(2, 0, 0)),
-        };
-        let gathered_manifests = HashMap::from([
-            (exp_pkg_a, Box::new(manifest_a.manifest().clone())),
-            (exp_pkg_b, Box::new(manifest_b.manifest().clone())),
-        ]);
+        let registry_url = "http://localhost:9001".to_url().unwrap();
+        let registry_origin = FullOrigin::for_registry(registry_url.clone());
+        let registry_source = Source::for_registry(registry_url);
+        let manifest_a = parse_manifest(&path_a, &ctx).unwrap().into_manifest();
+        let manifest_b = parse_manifest(&path_b, &ctx).unwrap().into_manifest();
+        let identity_a = FullIdentity::new("a".into(), registry_origin);
+        let identity_b = FullIdentity::new("b".into(), registry_origin);
+        let pkg_a = PackageId::new(identity_a, Version::new(1, 0, 0));
+        let pkg_b = PackageId::new(identity_b, Version::new(2, 0, 0));
+        let gathered_manifests =
+            HashMap::from([(pkg_a, Box::new(manifest_a)), (pkg_b, Box::new(manifest_b))]);
         let all_possible_features =
-            HashMap::from([(exp_pkg_a, HashSet::new()), (exp_pkg_b, HashSet::new())]);
-        let versions_for_location = HashMap::from([
-            (exp_location_a, HashSet::from([Some(Version::new(1, 0, 0))])),
-            (exp_location_b, HashSet::from([Some(Version::new(2, 0, 0))])),
+            HashMap::from([(pkg_a, HashSet::new()), (pkg_b, HashSet::new())]);
+        let versions_for_identity = HashMap::from([
+            (identity_a, HashSet::from([Version::new(1, 0, 0)])),
+            (identity_b, HashSet::from([Version::new(2, 0, 0)])),
         ]);
-        let location_resolver =
-            HashMap::from([(location_a, exp_location_a), (location_b, exp_location_b)]);
+        let source_to_origin_resolver = HashMap::from([(registry_source, registry_origin)]);
 
         let input = SolverInput {
             gathered_manifests,
             all_possible_features,
-            versions_for_location,
-            location_resolver,
+            versions_for_identity,
+            source_to_origin_resolver,
             preexisting_packages: HashSet::new(),
             preexisting_features: HashMap::new(),
             preexisting_dependencies: HashMap::new(),
         };
 
-        let main_pkg = (exp_pkg_a, HashSet::new());
+        let main_pkg = (pkg_a, HashSet::new());
         let output = SolverEngine::run_engine(input, &main_pkg).unwrap();
-        assert_eq!(output.new_packages, HashSet::from([exp_pkg_a, exp_pkg_b]));
+        assert_eq!(output.new_packages, HashSet::from([pkg_a, pkg_b]));
         assert!(output.new_features.is_empty());
         assert_eq!(
             output.new_edges,
             HashMap::from([(
                 DependencyEdge {
-                    parent: exp_pkg_a,
-                    dependency_loc: exp_location_b,
+                    parent: pkg_a,
+                    dep_identity: identity_b,
                     manifest_child_name: StrId::new("b"),
                 },
-                Some(Version::new(2, 0, 0))
+                Version::new(2, 0, 0)
             )])
         );
     }
@@ -495,82 +489,61 @@ dependencies:
 "#,
         );
         let ctx = DuckContext::default();
-        let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
-        let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
-        let location_a = InternedLocation::new(Location::Registry {
-            url: "http://localhost:9001".to_url().unwrap().into(),
-            real_name: StrId::from("a"),
-        });
-        let location_b = InternedLocation::new(Location::Registry {
-            url: "http://localhost:9001".to_url().unwrap().into(),
-            real_name: StrId::from("b"),
-        });
-        let exp_location_a = ExpandedLocation::Registry {
-            url: "http://localhost:9001".to_url().unwrap().into(),
-            real_name: StrId::from("a"),
-        };
-        let exp_location_b = ExpandedLocation::Registry {
-            url: "http://localhost:9001".to_url().unwrap().into(),
-            real_name: StrId::from("b"),
-        };
-        let exp_pkg_a = ExpandedPackage {
-            location: exp_location_a,
-            version: Some(Version::new(1, 0, 0)),
-        };
-        let exp_pkg_b = ExpandedPackage {
-            location: exp_location_b,
-            version: Some(Version::new(2, 0, 0)),
-        };
-        let gathered_manifests = HashMap::from([
-            (exp_pkg_a, Box::new(manifest_a.manifest().clone())),
-            (exp_pkg_b, Box::new(manifest_b.manifest().clone())),
-        ]);
+        let registry_url = "http://localhost:9001".to_url().unwrap();
+        let registry_origin = FullOrigin::for_registry(registry_url.clone());
+        let registry_source = Source::for_registry(registry_url);
+        let manifest_a = parse_manifest(&path_a, &ctx).unwrap().into_manifest();
+        let manifest_b = parse_manifest(&path_b, &ctx).unwrap().into_manifest();
+        let identity_a = FullIdentity::new("a".into(), registry_origin);
+        let identity_b = FullIdentity::new("b".into(), registry_origin);
+        let pkg_a = PackageId::new(identity_a, Version::new(1, 0, 0));
+        let pkg_b = PackageId::new(identity_b, Version::new(2, 0, 0));
+        let gathered_manifests =
+            HashMap::from([(pkg_a, Box::new(manifest_a)), (pkg_b, Box::new(manifest_b))]);
         let all_possible_features = HashMap::from([
-            (exp_pkg_a, HashSet::from([FeatureName::new("xd")])),
-            (exp_pkg_b, HashSet::new()),
+            (pkg_a, HashSet::from([FeatureName::new("xd")])),
+            (pkg_b, HashSet::new()),
         ]);
-        let versions_for_location = HashMap::from([
-            (exp_location_a, HashSet::from([Some(Version::new(1, 0, 0))])),
-            (exp_location_b, HashSet::from([Some(Version::new(2, 0, 0))])),
+        let versions_for_identity = HashMap::from([
+            (identity_a, HashSet::from([Version::new(1, 0, 0)])),
+            (identity_b, HashSet::from([Version::new(2, 0, 0)])),
         ]);
-        let location_resolver =
-            HashMap::from([(location_a, exp_location_a), (location_b, exp_location_b)]);
-
+        let source_to_origin_resolver = HashMap::from([(registry_source, registry_origin)]);
         let input = SolverInput {
             gathered_manifests,
             all_possible_features,
-            versions_for_location,
-            location_resolver,
+            versions_for_identity,
+            source_to_origin_resolver,
             preexisting_packages: HashSet::new(),
             preexisting_features: HashMap::new(),
             preexisting_dependencies: HashMap::new(),
         };
 
-        let main_pkg = (exp_pkg_a, HashSet::new());
+        let main_pkg = (pkg_a, HashSet::new());
         let output = SolverEngine::run_engine(input, &main_pkg).unwrap();
-        assert_eq!(output.new_packages, HashSet::from([exp_pkg_a, exp_pkg_b]));
+        assert_eq!(output.new_packages, HashSet::from([pkg_a, pkg_b]));
         assert_eq!(
             output.new_features,
-            HashMap::from([(exp_pkg_a, HashSet::from([FeatureName::new("xd")]))])
+            HashMap::from([(pkg_a, HashSet::from([FeatureName::new("xd")]))])
         );
         assert_eq!(
             output.new_edges,
             HashMap::from([
                 (
                     DependencyEdge {
-                        parent: exp_pkg_a,
-                        dependency_loc: exp_location_b,
+                        parent: pkg_a,
+                        dep_identity: identity_b,
                         manifest_child_name: StrId::new("b"),
                     },
-                    Some(Version::new(2, 0, 0))
+                    Version::new(2, 0, 0)
                 ),
                 (
                     DependencyEdge {
-                        parent: exp_pkg_b,
-                        dependency_loc: exp_location_a,
+                        parent: pkg_b,
+                        dep_identity: identity_a,
                         manifest_child_name: StrId::new("a"),
                     },
-                    Some(Version::new(1, 0, 0))
+                    Version::new(1, 0, 0)
                 ),
             ])
         );
@@ -603,70 +576,50 @@ features:
 "#,
         );
         let ctx = DuckContext::default();
-        let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
-        let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
-        let location_a = InternedLocation::new(Location::Registry {
-            url: "http://localhost:9001".to_url().unwrap().into(),
-            real_name: StrId::from("a"),
-        });
-        let location_b = InternedLocation::new(Location::Registry {
-            url: "http://localhost:9001".to_url().unwrap().into(),
-            real_name: StrId::from("b"),
-        });
-        let exp_location_a = ExpandedLocation::Registry {
-            url: "http://localhost:9001".to_url().unwrap().into(),
-            real_name: StrId::from("a"),
-        };
-        let exp_location_b = ExpandedLocation::Registry {
-            url: "http://localhost:9001".to_url().unwrap().into(),
-            real_name: StrId::from("b"),
-        };
-        let exp_pkg_a = ExpandedPackage {
-            location: exp_location_a,
-            version: Some(Version::new(1, 0, 0)),
-        };
-        let exp_pkg_b = ExpandedPackage {
-            location: exp_location_b,
-            version: Some(Version::new(2, 0, 0)),
-        };
-        let gathered_manifests = HashMap::from([
-            (exp_pkg_a, Box::new(manifest_a.manifest().clone())),
-            (exp_pkg_b, Box::new(manifest_b.manifest().clone())),
-        ]);
+        let registry_url = "http://localhost:9001".to_url().unwrap();
+        let registry_origin = FullOrigin::for_registry(registry_url.clone());
+        let registry_source = Source::for_registry(registry_url);
+        let manifest_a = parse_manifest(&path_a, &ctx).unwrap().into_manifest();
+        let manifest_b = parse_manifest(&path_b, &ctx).unwrap().into_manifest();
+        let identity_a = FullIdentity::new("a".into(), registry_origin);
+        let identity_b = FullIdentity::new("b".into(), registry_origin);
+        let pkg_a = PackageId::new(identity_a, Version::new(1, 0, 0));
+        let pkg_b = PackageId::new(identity_b, Version::new(2, 0, 0));
+        let gathered_manifests =
+            HashMap::from([(pkg_a, Box::new(manifest_a)), (pkg_b, Box::new(manifest_b))]);
         let all_possible_features = HashMap::from([
-            (exp_pkg_a, HashSet::new()),
+            (pkg_a, HashSet::new()),
             (
-                exp_pkg_b,
+                pkg_b,
                 HashSet::from([FeatureName::new("xd"), FeatureName::new("xdd")]),
             ),
         ]);
-        let versions_for_location = HashMap::from([
-            (exp_location_a, HashSet::from([Some(Version::new(1, 0, 0))])),
-            (exp_location_b, HashSet::from([Some(Version::new(2, 0, 0))])),
+        let versions_for_identity = HashMap::from([
+            (identity_a, HashSet::from([Version::new(1, 0, 0)])),
+            (identity_b, HashSet::from([Version::new(2, 0, 0)])),
         ]);
-        let location_resolver =
-            HashMap::from([(location_a, exp_location_a), (location_b, exp_location_b)]);
+        let source_to_origin_resolver = HashMap::from([(registry_source, registry_origin)]);
 
-        let preexisting_packages = HashSet::from([exp_pkg_b]);
+        let preexisting_packages = HashSet::from([pkg_b]);
         let preexisting_features =
-            HashMap::from([(exp_pkg_b, HashSet::from([FeatureName::new("xdd")]))]);
+            HashMap::from([(pkg_b, HashSet::from([FeatureName::new("xdd")]))]);
 
         let input = SolverInput {
             gathered_manifests,
             all_possible_features,
-            versions_for_location,
-            location_resolver,
+            versions_for_identity,
+            source_to_origin_resolver,
             preexisting_packages,
             preexisting_features,
             preexisting_dependencies: HashMap::new(),
         };
 
-        let main_pkg = (exp_pkg_a, HashSet::new());
+        let main_pkg = (pkg_a, HashSet::new());
         let output = SolverEngine::run_engine(input, &main_pkg).unwrap();
-        assert_eq!(output.new_packages, HashSet::from([exp_pkg_a]));
+        assert_eq!(output.new_packages, HashSet::from([pkg_a]));
         assert_eq!(
             output.new_features,
-            HashMap::from([(exp_pkg_b, HashSet::from([FeatureName::new("xd")]))])
+            HashMap::from([(pkg_b, HashSet::from([FeatureName::new("xd")]))])
         )
     }
 
@@ -697,68 +650,48 @@ features:
 "#,
         );
         let ctx = DuckContext::default();
-        let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
-        let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
-        let location_a = InternedLocation::new(Location::Registry {
-            url: "http://localhost:9001".to_url().unwrap().into(),
-            real_name: StrId::from("a"),
-        });
-        let location_b = InternedLocation::new(Location::Registry {
-            url: "http://localhost:9001".to_url().unwrap().into(),
-            real_name: StrId::from("b"),
-        });
-        let exp_location_a = ExpandedLocation::Registry {
-            url: "http://localhost:9001".to_url().unwrap().into(),
-            real_name: StrId::from("a"),
-        };
-        let exp_location_b = ExpandedLocation::Registry {
-            url: "http://localhost:9001".to_url().unwrap().into(),
-            real_name: StrId::from("b"),
-        };
-        let exp_pkg_a = ExpandedPackage {
-            location: exp_location_a,
-            version: Some(Version::new(1, 0, 0)),
-        };
-        let exp_pkg_b = ExpandedPackage {
-            location: exp_location_b,
-            version: Some(Version::new(2, 0, 0)),
-        };
-        let gathered_manifests = HashMap::from([
-            (exp_pkg_a, Box::new(manifest_a.manifest().clone())),
-            (exp_pkg_b, Box::new(manifest_b.manifest().clone())),
-        ]);
+        let registry_url = "http://localhost:9001".to_url().unwrap();
+        let registry_origin = FullOrigin::for_registry(registry_url.clone());
+        let registry_source = Source::for_registry(registry_url);
+        let manifest_a = parse_manifest(&path_a, &ctx).unwrap().into_manifest();
+        let manifest_b = parse_manifest(&path_b, &ctx).unwrap().into_manifest();
+        let identity_a = FullIdentity::new("a".into(), registry_origin);
+        let identity_b = FullIdentity::new("b".into(), registry_origin);
+        let pkg_a = PackageId::new(identity_a, Version::new(1, 0, 0));
+        let pkg_b = PackageId::new(identity_b, Version::new(2, 0, 0));
+        let gathered_manifests =
+            HashMap::from([(pkg_a, Box::new(manifest_a)), (pkg_b, Box::new(manifest_b))]);
         let all_possible_features = HashMap::from([
-            (exp_pkg_a, HashSet::new()),
+            (pkg_a, HashSet::new()),
             (
-                exp_pkg_b,
+                pkg_b,
                 HashSet::from([FeatureName::new("xd"), FeatureName::new("xdd")]),
             ),
         ]);
-        let versions_for_location = HashMap::from([
-            (exp_location_a, HashSet::from([Some(Version::new(1, 0, 0))])),
-            (exp_location_b, HashSet::from([Some(Version::new(2, 0, 0))])),
+        let versions_for_identity = HashMap::from([
+            (identity_a, HashSet::from([Version::new(1, 0, 0)])),
+            (identity_b, HashSet::from([Version::new(2, 0, 0)])),
         ]);
-        let location_resolver =
-            HashMap::from([(location_a, exp_location_a), (location_b, exp_location_b)]);
+        let source_to_origin_resolver = HashMap::from([(registry_source, registry_origin)]);
 
-        let preexisting_packages = HashSet::from([exp_pkg_b]);
+        let preexisting_packages = HashSet::from([pkg_b]);
 
         let input = SolverInput {
             gathered_manifests,
             all_possible_features,
-            versions_for_location,
-            location_resolver,
+            versions_for_identity,
+            source_to_origin_resolver,
             preexisting_packages,
             preexisting_features: HashMap::new(),
             preexisting_dependencies: HashMap::new(),
         };
 
-        let main_pkg = (exp_pkg_a, HashSet::new());
+        let main_pkg = (pkg_a, HashSet::new());
         let output = SolverEngine::run_engine(input, &main_pkg).unwrap();
-        assert_eq!(output.new_packages, HashSet::from([exp_pkg_a]));
+        assert_eq!(output.new_packages, HashSet::from([pkg_a]));
         assert_eq!(
             output.new_features,
-            HashMap::from([(exp_pkg_b, HashSet::from([FeatureName::new("xd")]))])
+            HashMap::from([(pkg_b, HashSet::from([FeatureName::new("xd")]))])
         )
     }
 
@@ -806,94 +739,63 @@ features:
 "#,
         );
         let ctx = DuckContext::default();
-        let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
-        let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
-        let manifest_c = parse_manifest(&path_c, &ctx).unwrap();
-        let location_a = InternedLocation::new(Location::Registry {
-            url: "http://localhost:9001".to_url().unwrap().into(),
-            real_name: StrId::from("a"),
-        });
-        let location_b = InternedLocation::new(Location::Registry {
-            url: "http://localhost:9001".to_url().unwrap().into(),
-            real_name: StrId::from("b"),
-        });
-        let location_c = InternedLocation::new(Location::Registry {
-            url: "http://localhost:9001".to_url().unwrap().into(),
-            real_name: StrId::from("c"),
-        });
-        let exp_location_a = ExpandedLocation::Registry {
-            url: "http://localhost:9001".to_url().unwrap().into(),
-            real_name: StrId::from("a"),
-        };
-        let exp_location_b = ExpandedLocation::Registry {
-            url: "http://localhost:9001".to_url().unwrap().into(),
-            real_name: StrId::from("b"),
-        };
-        let exp_location_c = ExpandedLocation::Registry {
-            url: "http://localhost:9001".to_url().unwrap().into(),
-            real_name: StrId::from("c"),
-        };
-        let exp_pkg_a = ExpandedPackage {
-            location: exp_location_a,
-            version: Some(Version::new(1, 0, 0)),
-        };
-        let exp_pkg_b = ExpandedPackage {
-            location: exp_location_b,
-            version: Some(Version::new(2, 0, 0)),
-        };
-        let exp_pkg_c = ExpandedPackage {
-            location: exp_location_c,
-            version: Some(Version::new(3, 0, 0)),
-        };
+        let registry_url = "http://localhost:9001".to_url().unwrap();
+        let registry_origin = FullOrigin::for_registry(registry_url.clone());
+        let registry_source = Source::for_registry(registry_url);
+        let manifest_a = parse_manifest(&path_a, &ctx).unwrap().into_manifest();
+        let manifest_b = parse_manifest(&path_b, &ctx).unwrap().into_manifest();
+        let manifest_c = parse_manifest(&path_c, &ctx).unwrap().into_manifest();
+        let identity_a = FullIdentity::new("a".into(), registry_origin);
+        let identity_b = FullIdentity::new("b".into(), registry_origin);
+        let identity_c = FullIdentity::new("c".into(), registry_origin);
+        let pkg_a = PackageId::new(identity_a, Version::new(1, 0, 0));
+        let pkg_b = PackageId::new(identity_b, Version::new(2, 0, 0));
+        let pkg_c = PackageId::new(identity_c, Version::new(3, 0, 0));
         let gathered_manifests = HashMap::from([
-            (exp_pkg_a, Box::new(manifest_a.manifest().clone())),
-            (exp_pkg_b, Box::new(manifest_b.manifest().clone())),
-            (exp_pkg_c, Box::new(manifest_c.manifest().clone())),
+            (pkg_a, Box::new(manifest_a)),
+            (pkg_b, Box::new(manifest_b)),
+            (pkg_c, Box::new(manifest_c)),
         ]);
         let all_possible_features = HashMap::from([
-            (exp_pkg_a, HashSet::new()),
-            (exp_pkg_b, HashSet::from([FeatureName::new("xd")])),
-            (exp_pkg_c, HashSet::from([FeatureName::new("xdd")])),
+            (pkg_a, HashSet::new()),
+            (pkg_b, HashSet::from([FeatureName::new("xd")])),
+            (pkg_c, HashSet::from([FeatureName::new("xdd")])),
         ]);
-        let versions_for_location = HashMap::from([
-            (exp_location_a, HashSet::from([Some(Version::new(1, 0, 0))])),
-            (exp_location_b, HashSet::from([Some(Version::new(2, 0, 0))])),
-            (exp_location_c, HashSet::from([Some(Version::new(3, 0, 0))])),
+        let versions_for_identity = HashMap::from([
+            (identity_a, HashSet::from([Version::new(1, 0, 0)])),
+            (identity_b, HashSet::from([Version::new(2, 0, 0)])),
+            (identity_c, HashSet::from([Version::new(3, 0, 0)])),
         ]);
-        let location_resolver = HashMap::from([
-            (location_a, exp_location_a),
-            (location_b, exp_location_b),
-            (location_c, exp_location_c),
-        ]);
+        let source_to_origin_resolver = HashMap::from([(registry_source, registry_origin)]);
 
-        let preexisting_packages = HashSet::from([exp_pkg_b, exp_pkg_c]);
+        let preexisting_packages = HashSet::from([pkg_b, pkg_c]);
         let preexisting_dependencies = HashMap::from([(
             DependencyEdge {
-                parent: exp_pkg_b,
-                dependency_loc: exp_location_c,
+                parent: pkg_b,
+                dep_identity: identity_c,
                 manifest_child_name: StrId::new("c"),
             },
-            Some(Version::new(3, 0, 0)),
+            Version::new(3, 0, 0),
         )]);
 
         let input = SolverInput {
             gathered_manifests,
             all_possible_features,
-            versions_for_location,
-            location_resolver,
+            versions_for_identity,
+            source_to_origin_resolver,
             preexisting_packages,
             preexisting_features: HashMap::new(),
             preexisting_dependencies,
         };
 
-        let main_pkg = (exp_pkg_a, HashSet::new());
+        let main_pkg = (pkg_a, HashSet::new());
         let output = SolverEngine::run_engine(input, &main_pkg).unwrap();
-        assert_eq!(output.new_packages, HashSet::from([exp_pkg_a]));
+        assert_eq!(output.new_packages, HashSet::from([pkg_a]));
         assert_eq!(
             output.new_features,
             HashMap::from([
-                (exp_pkg_b, HashSet::from([FeatureName::new("xd")])),
-                (exp_pkg_c, HashSet::from([FeatureName::new("xdd")]))
+                (pkg_b, HashSet::from([FeatureName::new("xd")])),
+                (pkg_c, HashSet::from([FeatureName::new("xdd")]))
             ])
         )
     }
@@ -925,73 +827,53 @@ features:
 "#,
         );
         let ctx = DuckContext::default();
-        let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
-        let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
-        let location_a = InternedLocation::new(Location::Registry {
-            url: "http://localhost:9001".to_url().unwrap().into(),
-            real_name: StrId::from("a"),
-        });
-        let location_b = InternedLocation::new(Location::Registry {
-            url: "http://localhost:9001".to_url().unwrap().into(),
-            real_name: StrId::from("b"),
-        });
-        let exp_location_a = ExpandedLocation::Registry {
-            url: "http://localhost:9001".to_url().unwrap().into(),
-            real_name: StrId::from("a"),
-        };
-        let exp_location_b = ExpandedLocation::Registry {
-            url: "http://localhost:9001".to_url().unwrap().into(),
-            real_name: StrId::from("b"),
-        };
-        let exp_pkg_a = ExpandedPackage {
-            location: exp_location_a,
-            version: Some(Version::new(1, 0, 0)),
-        };
-        let exp_pkg_b = ExpandedPackage {
-            location: exp_location_b,
-            version: Some(Version::new(2, 0, 0)),
-        };
-        let gathered_manifests = HashMap::from([
-            (exp_pkg_a, Box::new(manifest_a.manifest().clone())),
-            (exp_pkg_b, Box::new(manifest_b.manifest().clone())),
-        ]);
+        let registry_url = "http://localhost:9001".to_url().unwrap();
+        let registry_origin = FullOrigin::for_registry(registry_url.clone());
+        let registry_source = Source::for_registry(registry_url);
+        let manifest_a = parse_manifest(&path_a, &ctx).unwrap().into_manifest();
+        let manifest_b = parse_manifest(&path_b, &ctx).unwrap().into_manifest();
+        let identity_a = FullIdentity::new("a".into(), registry_origin);
+        let identity_b = FullIdentity::new("b".into(), registry_origin);
+        let pkg_a = PackageId::new(identity_a, Version::new(1, 0, 0));
+        let pkg_b = PackageId::new(identity_b, Version::new(2, 0, 0));
+        let gathered_manifests =
+            HashMap::from([(pkg_a, Box::new(manifest_a)), (pkg_b, Box::new(manifest_b))]);
         let all_possible_features = HashMap::from([
-            (exp_pkg_a, HashSet::new()),
-            (exp_pkg_b, ["f".into(), "g".into()].into()),
+            (pkg_a, HashSet::new()),
+            (pkg_b, ["f".into(), "g".into()].into()),
         ]);
-        let versions_for_location = HashMap::from([
-            (exp_location_a, HashSet::from([Some(Version::new(1, 0, 0))])),
-            (exp_location_b, HashSet::from([Some(Version::new(2, 0, 0))])),
+        let versions_for_identity = HashMap::from([
+            (identity_a, HashSet::from([Version::new(1, 0, 0)])),
+            (identity_b, HashSet::from([Version::new(2, 0, 0)])),
         ]);
-        let location_resolver =
-            HashMap::from([(location_a, exp_location_a), (location_b, exp_location_b)]);
+        let source_to_origin_resolver = HashMap::from([(registry_source, registry_origin)]);
 
         let input = SolverInput {
             gathered_manifests,
             all_possible_features,
-            versions_for_location,
-            location_resolver,
+            versions_for_identity,
+            source_to_origin_resolver,
             preexisting_packages: HashSet::new(),
             preexisting_features: HashMap::new(),
             preexisting_dependencies: HashMap::new(),
         };
 
-        let main_pkg = (exp_pkg_a, HashSet::new());
+        let main_pkg = (pkg_a, HashSet::new());
         let output = SolverEngine::run_engine(input, &main_pkg).unwrap();
-        assert_eq!(output.new_packages, HashSet::from([exp_pkg_a, exp_pkg_b]));
+        assert_eq!(output.new_packages, HashSet::from([pkg_a, pkg_b]));
         assert_eq!(
             output.new_features,
-            [(exp_pkg_b, ["f".into(), "g".into()].into()),].into()
+            [(pkg_b, ["f".into(), "g".into()].into()),].into()
         );
         assert_eq!(
             output.new_edges,
             HashMap::from([(
                 DependencyEdge {
-                    parent: exp_pkg_a,
-                    dependency_loc: exp_location_b,
+                    parent: pkg_a,
+                    dep_identity: identity_b,
                     manifest_child_name: StrId::new("b"),
                 },
-                Some(Version::new(2, 0, 0))
+                Version::new(2, 0, 0)
             )])
         );
     }

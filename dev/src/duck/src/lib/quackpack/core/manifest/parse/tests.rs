@@ -9,7 +9,7 @@ use crate::quackpack::core::manifest::parse::frontmatter::try_parse_frontmatter;
 use crate::quackpack::core::{GitReference, OptLevel, Profile, Version};
 use crate::quackpack::util::to_path_buf::ToPathBuf;
 use crate::util::path_ops_ext::PathOpsExt;
-use crate::{DuckContext, QpContext, StrId};
+use crate::{DuckContext, StrId};
 
 fn prepare_manifest(contents: &str) -> (TempDir, PathBuf) {
     let dir = tempdir().unwrap();
@@ -33,8 +33,8 @@ fn prepare_frontmatter(contents: &str) -> (TempDir, PathBuf) {
 
 fn make_errors_message<const N: usize>(root: &TempDir, errors: [&str; N]) -> String {
     let mut vec = [format!(
-        "when trying to parse the user manifest at `{}/x`",
-        root.path().display()
+        "when trying to parse the user manifest at `{}`",
+        root.path().join("x").display()
     )]
     .to_vec();
     vec.extend(errors.iter().map(|&x| String::from(x)));
@@ -43,8 +43,8 @@ fn make_errors_message<const N: usize>(root: &TempDir, errors: [&str; N]) -> Str
 
 fn make_errors_message_frontmatter<const N: usize>(root: &TempDir, errors: [&str; N]) -> String {
     let mut vec = [format!(
-        "when trying to parse the frontmatter of the script at `{}/x`",
-        root.path().display()
+        "when trying to parse the frontmatter of the script at `{}`",
+        root.path().join("x").display(),
     )]
     .to_vec();
     vec.extend(errors.iter().map(|&x| String::from(x)));
@@ -67,6 +67,12 @@ metadata:
     assert!(summary.dependencies().all_dependencies().is_empty());
     assert!(summary.dev_dependencies().all_dependencies().is_empty());
     assert!(summary.features().all_features().is_empty());
+    assert!(!summary.venv().ephemeral());
+    assert!(summary.venv().expose_freezefile());
+    assert_eq!(
+        summary.venv().storage_path(),
+        ctx.default_storage_root().not_locked_path()
+    );
 }
 
 #[test]
@@ -422,6 +428,17 @@ dependencies:
     let a = summary.dependencies().get_by_name(StrId::new("a")).unwrap();
     assert!(a.source().is_local());
     let path = a.source().url().to_path_buf().unwrap();
+    #[cfg(windows)]
+    assert_eq!(
+        PathBuf::from(format!("\\\\?\\{}", path.display())),
+        manifest_path
+            .parent()
+            .unwrap()
+            .resolve()
+            .unwrap()
+            .join("xd")
+    );
+    #[cfg(not(windows))]
     assert_eq!(
         path,
         manifest_path
@@ -442,6 +459,19 @@ dependencies:
     assert!(a1.source().is_local());
 
     let path = a1.source().url().to_path_buf().unwrap();
+    #[cfg(windows)]
+    assert_eq!(
+        PathBuf::from(format!("\\\\?\\{}", path.display())),
+        manifest_path
+            .parent()
+            .unwrap()
+            .parent()
+            .unwrap()
+            .resolve()
+            .unwrap()
+            .join("xd")
+    );
+    #[cfg(not(windows))]
     assert_eq!(
         path,
         manifest_path
@@ -470,13 +500,16 @@ dependencies:
         .get_by_name(StrId::new("a3"))
         .unwrap();
     assert!(a3.source().is_local());
-    let path = a3.source().url().to_path_buf().unwrap();
-    assert_eq!(path, PathBuf::from("/xd"));
+    #[cfg(not(windows))]
+    {
+        let path = a3.source().url().to_path_buf().unwrap();
+        assert_eq!(path, PathBuf::from("/xd"));
+    }
     assert!(a3.alias().is_none());
 
     let b = summary.dependencies().get_by_name(StrId::new("b")).unwrap();
     assert!(b.source().is_registry());
-    let default_registry = ctx.registry_url().unwrap();
+    let default_registry = ctx.duck_cfg().registry_url().unwrap();
     assert_eq!(b.source().url(), default_registry);
     assert_eq!(b.versions().len(), 1);
     assert_eq!(b.versions()[0].to_string(), "0.1.0");
@@ -826,6 +859,8 @@ dependencies:
 }
 
 #[test]
+#[cfg(not(windows))]
+// @TODO: #3135 Fix to_url() calls on paths on windows
 fn git_url_points_to_local_dir() {
     let root_dir = TempDir::new().unwrap();
     let (dir, manifest_path) = prepare_manifest(&format!(
@@ -849,7 +884,6 @@ dependencies:
         make_errors_message(
             &dir,
             [
-                &format!("`{}` is not a valid URL", root_dir.path().display()),
                 "git dependency points to a file on the disk",
                 &format!(
                     "either change it to a local dependency or change the URL to `file://{}`",
@@ -1418,4 +1452,67 @@ dependencies:
             ]
         )
     );
+}
+
+#[test]
+fn custom_venv_with_relative_path() {
+    let (dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: xd
+  version: '0.10'
+
+venv:
+  storage-path: storage
+  expose-freezefile: false
+  ephemeral: true
+"#,
+    );
+    let ctx = DuckContext::default();
+    let manifest = parse_manifest(&manifest_path, &ctx).unwrap();
+    let summary = manifest.manifest();
+    assert!(summary.venv().ephemeral());
+    assert!(!summary.venv().expose_freezefile());
+    assert_eq!(
+        summary.venv().storage_path(),
+        dir.path().join("storage").resolve().unwrap(),
+    );
+}
+
+#[test]
+fn custom_venv_with_absolute_path() {
+    let (_dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: xd
+  version: '0.10'
+
+venv:
+  storage-path: /storage
+"#,
+    );
+    let ctx = DuckContext::default();
+    let manifest = parse_manifest(&manifest_path, &ctx).unwrap();
+    let summary = manifest.manifest();
+    assert_eq!(summary.venv().storage_path(), PathBuf::from("/storage"),);
+}
+
+#[test]
+fn custom_venv_with_home_path() {
+    let (_dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: xd
+  version: '0.10'
+
+venv:
+  storage-path: ~/storage
+"#,
+    );
+    let ctx = DuckContext::default();
+    let manifest = parse_manifest(&manifest_path, &ctx).unwrap();
+    let summary = manifest.manifest();
+
+    let home_dir = home_dir().unwrap();
+    assert_eq!(summary.venv().storage_path(), home_dir.join("storage"));
 }

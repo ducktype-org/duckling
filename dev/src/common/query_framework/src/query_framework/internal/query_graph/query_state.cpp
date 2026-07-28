@@ -14,6 +14,7 @@
 #include <base/types/ints.hpp>
 
 #include <logger/logger.hpp>
+#include <query_framework/context/context.hpp>
 #include <query_framework/internal/query_data/query_data.hpp>
 #include <query_framework/internal/query_data/query_id.hpp>
 #include <query_framework/internal/query_graph/node_id.hpp>
@@ -332,12 +333,11 @@ namespace query::internal {
 		if (auto existing = old_to_new.atMaybe(node.q_id); existing.has_value())
 			return { **existing, node.hash };
 
-
 		QueryData dummy_query_data(
 			QueryKind::Dummy,
 			"Dummy from previous graph created during deserialization",
 			{},
-			{ .erase_function = dummyEraseFunction }
+			{ .erase_function = dummyEraseFunction, .disk_erase_function = panicUnwiredErase }
 		);
 		QueryID new_qid = registerQuery(dummy_query_data);
 		old_to_new.put(node.q_id, new_qid);
@@ -420,20 +420,72 @@ namespace query::internal {
 			prev_graph.node_deps->erase(node);
 
 			auto key_value_pair = query_graph.node_deps->maybePut(node, std::move(prev_deps));
+			// If the node is an input query, it may already exist in the current graph (added via
+			// addSideInputNode). This is because addSideInputNode does not try to merge the input
+			// node from the previous graph, but just adds it to the current graph if it does not
+			// exist yet. The same applies to queries with preserve_in_graph = true but with
+			// can_be_loaded_from_disk == false: they need to be recomputed, but might contain
+			// metadata that needs to be loaded from disk. This exception is limited to
+			// stable-hashed nodes: a preserved node without stable hashing is remapped to a unique
+			// dummy id, so it can never already be present in the current graph.
 			CORE_ASSERT(
-				key_value_pair != nullptr, "Node should not exist in current graph during merge"
+				key_value_pair != nullptr || node.q_id.getData().isInputQuery()
+					|| (node.q_id.getData().tags.preserve_in_graph
+			            and !node.q_id.getData().tags.can_be_loaded_from_disk
+			            and node.q_id.getData().usesStableHashing()),
+				"Node should not exist in current graph during merge"
 			);
-			auto current_deps_holder = key_value_pair->value.getHolder();
 
 			// Merge metadata for nodes with preserve_in_graph = true
 			if (node.q_id.getData().tags.preserve_in_graph && previous->metadata.has_value()) {
 				auto extracted_opt = previous->metadata->extract(node);
-				if (extracted_opt.has_value())
-					metadata_storage.emplace(std::move(extracted_opt).value());
+				if (extracted_opt.has_value()) {
+					// The metadata might already exist in the current graph (the node may have been
+					// recomputed in this compilation), so we use maybeEmplace to avoid overwriting
+					// it. A query with the same key always produces the same effect, including the
+					// same metadata, so keeping either copy is equivalent and there is nothing to
+					// merge here.
+					metadata_storage.maybeEmplace(std::move(extracted_opt).value());
+				}
 			}
+
+			// The key-value pair may be null for any node that is already present in the current
+			// graph (for example an input query or a preserve_in_graph query added concurrently on
+			// another worker). In that case there is nothing more to merge for this node.
+			if (key_value_pair == nullptr) continue;
+
+			// Inputs have no dependencies, so we skip them:
+			if (node.q_id.getData().isInputQuery()) continue;
+
+			auto current_deps_holder = key_value_pair->value.getHolder();
 
 			for (const auto& child: *current_deps_holder) stack.push_back(Frame{ .node = child });
 		}
+	}
+
+	u64 QueryState::cleanupOrphanedDiskCaches() {
+		// This mutates on-disk state at shutdown and must not race with query execution.
+		CORE_ASSERT(
+			!Context::isAnyQueryCurrentlyRunning(),
+			"cleanupOrphanedDiskCaches must not run while a query is executing"
+		);
+
+		// If there is no previous compilation, nothing could have been orphaned.
+		if (!previous.has_value()) return 0;
+
+		// Nodes merged into the current graph were erased from the previous graph during merging.
+		// Whatever disk-cacheable nodes remain here were not merged, so they will be dropped from
+		// the serialized graph and their on-disk artifacts would leak. Delete those artifacts,
+		// unless a node with the same identity is still live in the current graph (its file is
+		// still valid — e.g. it was recomputed with an unchanged hash).
+		u64 deleted = 0;
+		for (const auto& [node, _]: *previous->graph.node_deps) {
+			if (!node.q_id.getData().tags.can_be_loaded_from_disk) continue;
+			if (query_graph.node_deps->contains(node)) continue;
+			bool was_deleted = node.q_id.getData().cache_data.disk_erase_function(node.hash.val);
+			deleted += was_deleted;
+		}
+		return deleted;
 	}
 
 	QueryGraph::ReducedGraphData QueryState::reduceOptimizeGraph(const QueryGraph& graph) const {

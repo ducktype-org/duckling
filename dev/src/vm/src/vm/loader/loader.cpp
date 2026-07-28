@@ -20,6 +20,7 @@
 #include <vm/bytecode/validator/valid_program.hpp>
 #include <vm/loader/logger.hpp>
 
+#include <algorithm>
 #include <vector>
 
 using namespace vm::loader;
@@ -34,6 +35,17 @@ namespace {
 			= vm::code::builders::makeInstructionFromArgs(opcode.opcode_name, opcode.args);
 		instruction.visit([&](auto&& i) { i.bytecode_pos = opcode.position; });
 		return instruction;
+	}
+
+	// Shared between regular and FFI function declarations.
+	vm::code::FuncSignature makeSignature(
+		const std::vector<tpc::Identifier>& parameters,
+		const std::vector<tpc::Identifier>& result_types
+	) {
+		vm::code::FuncSignature signature;
+		for (const auto& param: parameters) signature.parameters.emplace_back(param);
+		for (const auto& reslt: result_types) signature.result_types.emplace_back(reslt);
+		return signature;
 	}
 }
 
@@ -66,46 +78,44 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::parseFiles(
 				for (const auto& func: parsed_file.functions) {
 					code::Function function;
 					function.bytecode_pos = func->position;
-
-					code::Identifier func_name;
-					func_name.str          = func->name.value;
-					func_name.bytecode_pos = func->name.position;
-					function.name          = func_name;
-
-					for (const auto& param: func->parameters) {
-						code::Identifier param_id;
-						param_id.str          = param.value;
-						param_id.bytecode_pos = param.position;
-						function.signature.parameters.emplace_back(param_id);
-					}
-
-					for (const auto& reslt: func->result_types) {
-						code::Identifier result_type_id;
-						result_type_id.str          = reslt.value;
-						result_type_id.bytecode_pos = reslt.position;
-						function.signature.result_types.emplace_back(result_type_id);
-					}
+					function.name         = code::Identifier(func->name);
+					function.signature    = makeSignature(func->parameters, func->result_types);
 
 					for (const auto& instr: func->code->opcodes)
 						function.body.push_back(translateInstruction(*instr));
 
 					new_code.functions.emplace_back(function);
 				}
-			}
-			base::deduplicateBy(new_code.functions, [](const code::Function& func) {
-				return func.name.str.strView();
-			});
-			base::deduplicateBy(
-				new_code.external_c_functions,
-				[](const code::ExternalCFunction& func) { return func.name.str.strView(); }
-			);
-			base::deduplicateBy(new_code.global_data, [](const vm::code::GlobalData& g) {
-				return g.name.str.strView();
-			});
-			base::deduplicateBy(new_code.types, [](const vm::code::TypeOfData& f) {
-				return typeName(f);
-			});
 
+				for (const auto& ffi_func: parsed_file.ffi_functions) {
+					code::FFIFunction function;
+					function.bytecode_pos = ffi_func->position;
+					function.name         = code::Identifier(ffi_func->name);
+					function.signature
+						= makeSignature(ffi_func->parameters, ffi_func->result_types);
+					new_code.ffi_functions.emplace_back(function);
+				}
+
+				for (const auto& ffi_object: parsed_file.ffi_objects) {
+					fs::FilePath path{ ffi_object->path.strView() };
+					// A name without a directory component (e.g. "libm.so.6") is passed through
+					// to dlopen, which searches the system library paths.
+					if (!path.getPath().has_parent_path()) {
+						new_code.object_files.emplace_back(path.string());
+						continue;
+					}
+					if (!path.getPath().is_absolute())
+						path = parsed_file.source_file.getFilePath().parentPath() / path;
+					if (!path.exists()) {
+						LoaderLogger log;
+						log.logSimple(base::strConcat(
+							"Failed to load `ffi object` file: ", path.string(), ": file not found."
+						));
+						return std::unexpected(std::move(log));
+					}
+					new_code.object_files.emplace_back(path.string());
+				}
+			}
 			return new_code;
 		}
 	}
@@ -113,11 +123,13 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::parseFiles(
 	CORE_UNREACHABLE();
 }
 
-std::expected<void, LoaderLogger> Loader::loadAndValidate(const code::CodeCollection& code_collection
+std::expected<void, LoaderLogger> Loader::loadAndValidate(
+	const code::CodeCollection& code_collection, api::ExecutionConfig config
 ) {
 	// Skip if no new code was added.
 	if (code_collection.functions.empty() && code_collection.types.empty()
-	    && code_collection.global_data.empty() && code_collection.external_c_functions.empty()) {
+	    && code_collection.global_data.empty() && code_collection.external_c_functions.empty()
+	    && code_collection.ffi_functions.empty() && code_collection.object_files.empty()) {
 		return {};
 	}
 
@@ -126,7 +138,7 @@ std::expected<void, LoaderLogger> Loader::loadAndValidate(const code::CodeCollec
 		// @note: This function creates a copy of the current program state and tries inserting new
 		// code into it. If it fails, an exception is thrown and `validated_high_program` in the
 		// loader stays unchanged.
-		validated_high_program = validated_high_program.tryInsertCode(code_collection);
+		validated_high_program = validated_high_program.tryInsertCode(code_collection, config);
 
 		return {};
 	} catch (code::StackStructureMismatchError& e) {
@@ -152,6 +164,14 @@ std::expected<void, LoaderLogger> Loader::loadAndValidate(const code::CodeCollec
 			},
 			"Function with this name already exists."
 		);
+	} catch (code::DuplicatedFFIFunctionError& e) {
+		log.logMap(
+			e.new_element,
+			[&](auto& err) {
+				log.addNote(err, e.previous_element, "Previous FFI function declaration here.");
+			},
+			"FFI function with this name already exists."
+		);
 	} catch (code::DuplicatedGlobalDataError& e) {
 		log.logMap(
 			e.new_element,
@@ -175,9 +195,11 @@ std::expected<void, LoaderLogger> Loader::loadAndValidate(const code::CodeCollec
 	return std::unexpected(std::move(log));
 }
 
-std::expected<void, LoaderLogger> Loader::loadAndValidate(const std::vector<fs::File>& file_paths) {
+std::expected<void, LoaderLogger> Loader::loadAndValidate(
+	const std::vector<fs::File>& file_paths, api::ExecutionConfig config
+) {
 	auto opt_code_collection = parseFiles(file_paths);
-	if (opt_code_collection.has_value()) return loadAndValidate(*opt_code_collection);
+	if (opt_code_collection.has_value()) return loadAndValidate(*opt_code_collection, config);
 	return std::unexpected(std::move(opt_code_collection).error());
 }
 

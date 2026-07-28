@@ -57,7 +57,18 @@ def check_venv_metadata(file: Path) -> None:
         sys.exit(1)
 
 
+def project_root(name: str) -> Path:
+    """Root of the project fixture the test operates on. Tests that run
+    inside a tmp env (build/, init/) copy or create their projects under
+    $DIT_TMP_DIR; the fallback is the test's own directory."""
+    if tmp_dir := os.environ.get("DIT_TMP_DIR"):
+        return Path(tmp_dir).resolve() / name
+    return Path.cwd() / name
+
+
 def default_duck_home() -> Path:
+    if duck_home := os.environ.get("DUCK_HOME"):
+        return Path(duck_home)
     return Path.cwd() / "duck_home"
 
 
@@ -73,7 +84,7 @@ def get_venv_freeze(file: Path) -> dict[str, Any]:
 
 def check_venv_last_location(*, file: Path, expected: Path) -> None:
     data = get_venv_data(file)
-    location = Path(data["last_known_directory"])
+    location = Path(data["last_known_location"])
     if expected != location:
         print(f"expected last location to be {expected}, but instead is {location}")
         sys.exit(1)

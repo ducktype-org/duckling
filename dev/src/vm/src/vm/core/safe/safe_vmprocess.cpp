@@ -38,8 +38,12 @@ namespace vm {
 		std::unique_lock                          lock(rw_global);
 		std::expected<void, loader::LoaderLogger> code_result = [&] {
 			variant_match(source) {
-				variant_case(std::vector<fs::File>, files) { return loader.loadAndValidate(files); }
-				variant_case(code::CodeCollection, code) { return loader.loadAndValidate(code); }
+				variant_case(std::vector<fs::File>, files) {
+					return loader.loadAndValidate(files, execution_config);
+				}
+				variant_case(code::CodeCollection, code) {
+					return loader.loadAndValidate(code, execution_config);
+				}
 			}
 			CORE_UNREACHABLE();
 		}();
@@ -356,6 +360,14 @@ namespace vm {
 		(void) waitForProcessState([](const ProcessState& s) {
 			return v_matches(s, ps::Paused) || ps::isTerminal(s);
 		});
+	}
+
+	std::expected<api::Response, api::ApiError> SafeVMProcess::setExecutionConfig(
+		const api::ExecutionConfig& config
+	) {
+		std::unique_lock lock(rw_global);
+		this->execution_config = config;
+		return api::Response(api::response::Empty());
 	}
 
 	std::expected<api::Response, api::ApiError> SafeVMProcess::getNumberOfCurrentStackFrames(

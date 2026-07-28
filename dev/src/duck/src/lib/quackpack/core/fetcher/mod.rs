@@ -14,14 +14,15 @@ use crate::quackpack::core::fetcher::types::{FetcherResponse, PackageWithUrl};
 use crate::quackpack::schemas::registry;
 use crate::quackpack::util::interned_url::InternedUrl;
 use crate::util::file_locks::FileLockManager;
-use crate::util::path_ops_ext::{MkdirOptions, PathOpsExt};
-use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail_internal};
+use crate::{DuckContext, QuackResult, QuackResultContext, StrId};
 
 pub mod cache;
 pub mod ducknest;
 pub mod git;
 pub mod http;
+pub mod http_async;
 pub mod types;
+pub mod util;
 
 #[cfg(test)]
 mod tests;
@@ -31,8 +32,7 @@ mod tests;
 pub struct Fetcher<'duck> {
     ctx: &'duck DuckContext,
     ducknest_client: ducknest::DucknestClient<'duck>,
-    #[allow(unused)] // @TODO: #1737 Remove this
-    git_client: git::GitClient,
+    git_client: git::GitClient<'duck>,
     cache: cache::ManifestCache,
     download_cache_path: FileLockManager,
     #[allow(unused)] // @TODO: #1905 Remove this
@@ -66,7 +66,7 @@ impl<'duck> Fetcher<'duck> {
         );
         let ducknest_client = ducknest::DucknestClient::new(ctx);
         let cache = cache::ManifestCache::new(cache::CacheLocation::Path(metadata_path.as_path()))?;
-        let git_client = git::GitClient {};
+        let git_client = git::GitClient::new(ctx);
         Ok(Self {
             ctx,
             ducknest_client,
@@ -99,7 +99,7 @@ impl<'duck> Fetcher<'duck> {
             .with_context(|| {
                 format!(
                     "while getting a metadata of `{}` version `{}`",
-                    package.id, package.version
+                    package.name, package.version
                 )
             })?;
         self.cache
@@ -122,7 +122,7 @@ impl<'duck> Fetcher<'duck> {
     ) -> QuackResult<FetcherResponse<types::MultiMetadata>> {
         if self.ctx.is_offline() {
             let package = PackageWithUrl {
-                id: package_name,
+                name: package_name,
                 version: 1.into(),
                 url,
             };
@@ -145,7 +145,7 @@ impl<'duck> Fetcher<'duck> {
     pub fn fetch_package_blob(&self, package: &types::PackageWithUrl) -> QuackResult<PathBuf> {
         let destination = self
             .download_cache_path
-            .join(package.id)
+            .join(package.name)
             .join(package.version.to_string());
 
         let blob_path = destination
@@ -157,17 +157,14 @@ impl<'duck> Fetcher<'duck> {
             return Ok(blob_path);
         }
 
-        if let Some(parent) = blob_path.parent() {
-            parent.mkdir(MkdirOptions::WithParents)?;
-        } else {
-            qp_bail_internal!("path without a parent")
-        }
+        let blob = destination.open_exclusive(Self::DEFAULT_BLOB_FILENAME, self.ctx)?;
+
         self.ducknest_client
-            .fetch_blob(package, &blob_path)
+            .fetch_blob(package, blob)
             .with_context(|| {
                 format!(
                     "while downloading a source of `{}` version `{}`",
-                    package.id, package.version
+                    package.name, package.version
                 )
             })?;
         Ok(blob_path)
@@ -181,7 +178,9 @@ impl<'duck> Fetcher<'duck> {
         reference: GitReference,
         destination_directory: &std::path::Path,
     ) -> QuackResult<types::GitCloneResponse> {
-        git::GitClient::clone_blocking(url, reference, destination_directory, self.ctx)
+        self.git_client
+            .clone_blocking(url, reference, destination_directory)
+            .with_context(|| format!("failed to clone the repository at `{url}`"))
     }
 
     /// Same as [`clone_from_git_to_directory`](Self::clone_from_git_to_directory), but a target directory is a temporary

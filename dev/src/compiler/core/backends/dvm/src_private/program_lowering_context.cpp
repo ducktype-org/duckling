@@ -479,22 +479,9 @@ vm::code::CodeCollection ProgramLoweringContext::produceCodeCollection() {
 			return lhs.name.str.strView() < rhs.name.str.strView();
 		}
 	);
-	collection.global_data
-		= std::ranges::to<std::vector>(global_name_to_dvm_data | std::views::values);
-	// Note, that this not only makes the output deterministic,
-	// but also ensures that globals are ordered as they are declared in the source code
-	// This is because they are sorted by mangled names base::StrID ids
-	// This ids are incrementally generated during lirLowering, so the order of declaration is
-	// preserved. This is true as long as the LIR globals are generated in the same order as the
-	// source globals, which is currently the case. This is desirable behavior because we want to
-	// generate globals in the order they appear in the file to prevent order initialization fiasco.
-	// @TODO: #1431 Think about this and make it better if needed
-	std::ranges::sort(
-		collection.global_data,
-		[](const vm::code::GlobalData& lhs, const vm::code::GlobalData& rhs) {
-			return lhs.name.str.getInnerID() < rhs.name.str.getInnerID();
-		}
-	);
+	collection.global_data.reserve(lowered_global_order.size());
+	for (const auto& global_name: lowered_global_order)
+		collection.global_data.push_back(global_name_to_dvm_data.at(global_name));
 
 	// Sorting types by their string identification to ensure deterministic output
 	collection.types = std::ranges::to<std::vector>(type_storage.dvm_types | std::views::values);

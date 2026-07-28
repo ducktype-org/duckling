@@ -1,6 +1,7 @@
 # This has to be static due to cyclic dependencies in helios->mir->lir->dvm for comp time, and helios<->TS cyclic dependency.
 add_library(HELIOS STATIC
 	src_private/helios_private/attributes/backend_dependent.cpp
+	src/helios/attributes/builtins.cpp
 	src_private/helios_private/hout/hout.cpp
 	src_private/helios_private/symbols/symbol_data.cpp
 	src_private/helios_private/symbols/symbols.cpp
@@ -26,8 +27,10 @@ add_library(HELIOS STATIC
 	src_private/helios_private/hout_creation/definition_generation/class_constructors.cpp
 	src_private/helios_private/hout_creation/definition_generation/tuple_constructor.cpp
 	src_private/helios_private/hout_creation/definition_generation/default_constructors.cpp
+	src_private/helios_private/hout_creation/definition_generation/copy_constructors.cpp
 	src_private/helios_private/hout_creation/definition_generation/default_destructors.cpp
 	src_private/helios_private/hout_creation/definition_generation/length_methods.cpp
+	src_private/helios_private/hout_creation/definition_generation/list_methods.cpp
 	src_private/helios_private/hout_creation/definition_generation/to_string_methods.cpp
 	src_private/helios_private/hout_creation/desugaring/for.cpp
 	src_private/helios_private/hout_creation/hout_stmt_compilation.cpp
@@ -35,7 +38,10 @@ add_library(HELIOS STATIC
 	src_private/helios_private/errors/duplicated_definition.cpp
 	src_private/helios_private/tsh/abstract_type_impl.cpp
 	src_private/helios_private/tsh/queries.cpp
+	src_private/helios_private/templates/templates.cpp
 
+	src/helios/errors/extern_c_class_empty.cpp
+	src/helios/errors/field_not_c_compatible.cpp
 	src/helios/queries/queries.cpp
 	src/helios/queries/query_code_of_fun.cpp
 	src/helios/queries/query_decl_of_fun.cpp
@@ -56,6 +62,7 @@ add_library(HELIOS STATIC
 	src/helios/symbols/symbol_abi.cpp
 	src/helios/symbols/symbol_id.cpp
 	src/helios/utils/get_expr_symid.cpp
+	src/helios/utils/hout_walkers.cpp
 	src/helios/utils/symbol_list.cpp
 	src/helios/repl_utils/repl_queries.cpp
 	src/helios/repl_utils/script_helpers.cpp
@@ -78,13 +85,21 @@ duck_add_test(compiler helios tests/helios_test.cpp
 	USES Base PstParser HELIOS
 	INCLUDE "${CMAKE_CURRENT_LIST_DIR}/src_private")
 
+duck_add_test(compiler helios_with_std tests/helios_with_std_test.cpp
+	USES Base PstParser HELIOS Driver
+	INCLUDE "${CMAKE_CURRENT_LIST_DIR}/src_private")
+
 
 duck_add_test(compiler helios_errors tests/helios_errors_test.cpp
-	USES Base PstParser HELIOS
+	USES Base PstParser HELIOS Driver
 	INCLUDE "${CMAKE_CURRENT_LIST_DIR}/src_private")
 
 duck_add_test(compiler helios_stmt_compilation tests/helios_stmt_compilation_test.cpp
 	USES Base PstParser HELIOS
+	INCLUDE "${CMAKE_CURRENT_LIST_DIR}/src_private")
+
+duck_add_test(compiler helios_shorthands tests/helios_shorthands_test.cpp
+	USES Base PstParser HELIOS Driver
 	INCLUDE "${CMAKE_CURRENT_LIST_DIR}/src_private")
 
 duck_add_test(compiler helios_repl_instruction_wrapper tests/helios_repl_instruction_wrapper_test.cpp

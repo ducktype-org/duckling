@@ -187,7 +187,7 @@ fn all_metadata_adds_to_cache() {
     assert_eq!(response.packages_metadata.len(), 2);
     let FetcherResponse::Some(fetched_from_cache) = fetcher
         .get_package_metadata(&types::PackageWithUrl {
-            id: "foo".into(),
+            name: "foo".into(),
             version: Version::new(1, 2, 5),
             url: server.base_url().parse().unwrap(),
         })
@@ -206,7 +206,7 @@ fn without_cache_fetch_fails() {
     let fetcher = Fetcher::new(&ctx).unwrap();
     let err = fetcher
         .get_package_metadata(&types::PackageWithUrl {
-            id: "foo".into(),
+            name: "foo".into(),
             version: Version::new(1, 2, 5),
             url: server.base_url().parse().unwrap(),
         })
@@ -219,4 +219,55 @@ HTTP status client error (404) for url `{}/packages/foo/1.2.5`",
             server.base_url(),
         )
     );
+}
+
+fn create_sample_metadata() -> registry::Manifest {
+    const JSON: &str = r#"{
+    "metadata": {
+        "authors": ["Me"],
+        "version": "1.2.3",
+        "name": "quackpack",
+        "license": "GPS",
+        "description": ""
+    },
+    "dependencies": [
+        {
+            "name": "pkg1",
+            "version": ["2.3.4"],
+            "source": {
+                "inner": {
+                    "type": "registry",
+                    "registry-url": "xd"
+                }
+            },
+            "features": [],
+            "pinned": false,
+            "conditions": {
+                "package-features": []
+            }
+        }
+    ],
+    "dev-dependencies": [],
+    "features": {},
+    "profiles": {
+      "dev": {
+        "opt-level": "zero"
+      },
+      "foo": {
+        "opt-level": "s"
+      }
+    }
+}
+    "#;
+    serde_json::from_str(JSON).expect("statically known json")
+}
+
+#[test]
+fn deserialize_tests() {
+    let manifest = create_sample_metadata();
+    let foo_profile = &manifest.profiles["foo"];
+    assert_eq!(foo_profile.opt_level, Some(registry::OptLevel::S));
+
+    let dev_profile = &manifest.profiles["dev"];
+    assert_eq!(dev_profile.opt_level, Some(registry::OptLevel::Zero));
 }

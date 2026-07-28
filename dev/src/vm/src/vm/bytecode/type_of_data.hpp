@@ -43,6 +43,26 @@ namespace vm::code {
 	};
 
 	/**
+	 * @brief Represents a raw C pointer crossing the FFI boundary. Unlike `PointerType`, it is a
+	 * plain native address (no block reference). An absent `inner` means a pointer to an unknown
+	 * pointee (C's `void*`); the builtin `cptr` is a `CPointerType` with no inner.
+	 */
+	struct CPointerType final: ElementBase {
+		CPointerType() = default;
+
+		CPointerType(const base::StrID name, const base::Optional<base::StrID> inner):
+			  name(name),
+			  inner(inner) {}
+
+		base::StrID                 name;
+		base::Optional<base::StrID> inner;
+
+		bool operator==(const CPointerType& other) const {
+			return name == other.name && inner == other.inner;
+		}
+	};
+
+	/**
 	 * @brief Represents a fixed-size array of elements of the same type.
 	 */
 	struct FixedSizeTableType final: ElementBase {
@@ -108,8 +128,15 @@ namespace vm::code {
 		base::StrID        name;
 		std::vector<Field> fields;
 
+		/// Whether fields are laid out without alignment padding (the `packed` modifier).
+		bool packed = false;
+
+		/// Optional expected byte size (assuming 8-byte pointers), pinned via `assert_size`.
+		base::Optional<usize> assert_size;
+
 		bool operator==(const DataType& other) const {
-			return name == other.name && fields == other.fields;
+			return name == other.name && fields == other.fields && packed == other.packed
+			    && assert_size == other.assert_size;
 		}
 	};
 
@@ -245,6 +272,7 @@ namespace vm::code {
 	using TypeOfData = std::variant<
 		PrimitiveType,
 		PointerType,
+		CPointerType,
 		FixedSizeTableType,
 		DynamicTableType,
 		DataType,

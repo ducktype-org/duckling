@@ -42,11 +42,10 @@ fn compile(graph: UnitGraph, bcx: &BuildContext<'_, '_>) -> QuackResult<Executor
         .get_package()
         .artifacts_directory();
     let profile_layout = artifacts_layout.for_profile(&bcx.profile.name);
-    // We explicitly compile `root` at the end.
-    for unit in graph.any_units_order().filter(|dep| !graph.is_root(dep)) {
+    // Units are sorted by ID, and the root has an ID 0, so in reverse we'll compile the root last.
+    for unit in graph.units_sorted_by_id().iter().rev() {
         compile_unit(unit, &graph, &profile_layout, bcx)?;
     }
-    compile_unit(root, &graph, &profile_layout, bcx)?;
     let output = unit_output(root, &graph, &profile_layout);
     Ok(ExecutorOutput {
         root: (root.clone(), output),
@@ -61,7 +60,7 @@ fn compile_unit(
     layout: &ProfileLayout,
     bcx: &BuildContext<'_, '_>,
 ) -> QuackResult<()> {
-    let task = create_task(unit, graph, layout);
+    let task = create_task(unit, graph, layout)?;
     compile_single_unit_with_tasks(unit, graph, layout, bcx, vec![task])
 }
 
@@ -71,7 +70,7 @@ fn create_task(
     unit: &Unit,
     graph: &UnitGraph,
     layout: &ProfileLayout,
-) -> multipackage_schema::Task {
+) -> QuackResult<multipackage_schema::Task> {
     let strategy = match unit.artifacts_type() {
         ArtifactsType::Binary => {
             assert!(
@@ -80,7 +79,7 @@ fn create_task(
             );
             multipackage_schema::PackageCompilationStrategy::Binary {
                 output_file: unit_output(unit, graph, layout),
-                linking_options: get_linker_options(unit, graph, layout),
+                linking_options: get_linker_options(unit, graph, layout)?,
             }
         }
         ArtifactsType::IsADependencyArtifact => {
@@ -93,8 +92,8 @@ fn create_task(
         ArtifactsType::Dvm => unreachable!("DVM tasks should be handled by the `DvmExecutor`"),
         ArtifactsType::Library => unreachable!("library tasks are unsupported"),
     };
-    multipackage_schema::Task {
+    Ok(multipackage_schema::Task {
         package_id: unit.unique_name().into(),
         strategy,
-    }
+    })
 }

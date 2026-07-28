@@ -1,0 +1,185 @@
+#{
+    Standard input/output written in Duckling.
+
+    Character I/O goes through `readCharCode` / `writeChar`, which are backend dependent: native
+    targets use libc `getchar` / `putchar` from `core.clib`, the DVM uses its char builtins.
+    Everything else is built on top: writers rely on `toString()` and `writeChar`, readers on
+    `readCharCode` (end of input is a negative code). Integers are parsed by hand, floats via
+    `strtod`.
+#}
+import core.builtins;
+import core.clib;
+import core.containers;
+
+namespace dvm {
+    extern("DVM") {
+        fundecl builtin_input_char() -> i32;
+        fundecl builtin_output_char(c: char) -> i64;
+        fundecl strtod(p: manyptr char) -> f64;
+    }
+}
+
+# --------------------------------------------------------- char primitives ---
+
+#{
+    Reads one byte of input as its character code, or a negative value (`EOF`) at end of input,
+    matching libc `getchar`. Callers that scan for a delimiter MUST stop on a negative result,
+    otherwise they spin forever at end of input.
+#}
+@backend_dependent
+fundecl readCharCode() -> i32;
+
+@native_only_impl
+fun readCharCode() -> i32 = {
+    return clib.getchar();
+}
+
+@dvm_only_impl
+fun readCharCode() -> i32 = {
+    return dvm.builtin_input_char();
+}
+
+#{
+    Reads one character. At end of input the code is negative; the resulting `char` is then not
+    meaningful, so use `readCharCode` directly when end of input must be detected.
+#}
+fun readChar() -> char = char(readCharCode());
+
+@backend_dependent
+fundecl writeChar(c: char) -> u64;
+
+@native_only_impl
+fun writeChar(c: char) -> u64 = {
+    return clib.putchar(i32(c)) as u64;
+}
+
+@dvm_only_impl
+fun writeChar(c: char) -> u64 = {
+    return dvm.builtin_output_char(c) as u64;
+}
+
+#{
+    Parses the leading floating-point number out of the NUL-terminated buffer `p`.
+    Native forwards to libc `strtod` (on a `cptr`), the DVM to its `strtod` builtin (on a
+    `manyptr`).
+#}
+@backend_dependent
+fundecl strtod(p: manyptr char) -> f64;
+
+@native_only_impl
+fun strtod(p: manyptr char) -> f64 = {
+    # `strtod` needs a writable end pointer; we point it at a throwaway local and ignore it.
+    var endptr: cptr char = p as cptr char;
+    return clib.strtod(p as cptr char, &endptr as cptr cptr char);
+}
+
+@dvm_only_impl
+fun strtod(p: manyptr char) -> f64 = {
+    return dvm.strtod(p);
+}
+
+# ------------------------------------------------------------------- writers ---
+
+#{
+    Writes every character of `s` through `writeChar`.
+#}
+fun writeStr(s: str) -> u64 = {
+    var i = 0u64;
+    while (i < s.length()) {
+        writeChar(s[i as i64]);
+        i = i + 1u64;
+    }
+    return i;
+}
+
+fun writeString(v: ref containers.String) -> u64 = {
+    return writeStr(v.asSlice());
+}
+
+fun writeI64(x: i64) -> u64 = {
+    var s = x.toString();
+    let result = writeString(&s);
+    writeChar('\n');
+    s.dispose();
+    return result + 1u64;
+}
+
+fun writeU64(x: u64) -> u64 = {
+    var s = x.toString();
+    let result = writeString(&s);
+    writeChar('\n');
+    s.dispose();
+    return result + 1u64;
+}
+
+fun writeF64(x: f64) -> u64 = {
+    var s = x.toString();
+    let result = writeString(&s);
+    writeChar('\n');
+    s.dispose();
+    return result + 1u64;
+}
+
+# ------------------------------------------------------------------- readers ---
+
+#{
+    Consumes leading blanks (space, tab, newline) and returns the first non-blank character.
+#}
+fun skipBlanks() -> char = {
+    var c = readChar();
+    while (c == ' ' or c == '\t' or c == '\n') c = readChar();
+    return c;
+}
+
+fun readI64() -> i64 = {
+    var c        = skipBlanks();
+    var negative = false;
+    if (c == '-') {
+        negative = true;
+        c        = readChar();
+    }
+
+    var value = 0i64;
+    while (c >= '0' and c <= '9') {
+        value = value * 10i64 + (i64(c) - i64('0'));
+        c     = readChar();
+    }
+
+    if (negative) return 0i64 - value;
+    return value;
+}
+
+fun readU64() -> u64 = {
+    var c     = skipBlanks();
+    var value = 0u64;
+    while (c >= '0' and c <= '9') {
+        value = value * 10u64 + u64(i64(c) - i64('0'));
+        c     = readChar();
+    }
+    return value;
+}
+
+fun readF64() -> f64 = {
+    var buffer: containers.String;
+    var c = readCharCode();
+    while (c == i32(' ') or c == i32('\t') or c == i32('\n')) c = readCharCode();
+    while (c >= 0 and c != i32(' ') and c != i32('\t') and c != i32('\n')) {
+        buffer.append(char(c));
+        c = readCharCode();
+    }
+    buffer.append('\0');
+
+    let value = strtod(builtins.char_ptr_from_slice(buffer.asSlice()));
+    buffer.dispose();
+    return value;
+}
+
+fun readString() -> containers.String = {
+    var result: containers.String;
+    var c = readCharCode();
+    while (c >= 0 and c != i32('\n')) {
+        result.append(char(c));
+        c = readCharCode();
+    }
+    return move result;
+}

@@ -2,6 +2,8 @@
 
 #include <frontend/pst_parser/elements/hierarchy/actions/all_actions.hpp>
 #include <frontend/pst_parser/elements/hierarchy/actions/return.hpp>
+#include <frontend/pst_parser/elements/hierarchy/class_elements/copy_constructor.hpp>
+#include <frontend/pst_parser/elements/hierarchy/class_elements/destructor.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/method.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
@@ -10,23 +12,26 @@
 #include <frontend/pst_parser/pst_visitor.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/hout/hout.hpp>
+#include <helios/symbols/query_class_of_member.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/tsh/symbol_type.hpp>
 #include <helios/tsh/type_interface.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/errors/dia_interactive_elements.hpp>
 #include <helios_private/errors/errors.hpp>
 #include <helios_private/hout_creation/definition_generation/class_constructors.hpp>
+#include <helios_private/hout_creation/definition_generation/copy_constructors.hpp>
 #include <helios_private/hout_creation/definition_generation/default_constructors.hpp>
 #include <helios_private/hout_creation/definition_generation/default_destructors.hpp>
 #include <helios_private/hout_creation/definition_generation/length_methods.hpp>
+#include <helios_private/hout_creation/definition_generation/list_methods.hpp>
 #include <helios_private/hout_creation/definition_generation/to_string_methods.hpp>
 #include <helios_private/hout_creation/definition_generation/tuple_constructor.hpp>
 #include <helios_private/hout_creation/expressions/query_hout_of_expr.hpp>
 #include <helios_private/hout_creation/hout_stmt_compilation.hpp>
 #include <helios_private/pst_layer/stmts_from_aggregate.hpp>
 #include <helios_private/scopes/scopes.hpp>
+#include <helios_private/symbols/pst_symbol_data.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
@@ -123,79 +128,164 @@ namespace compiler::helios {
 
 				this->out.emplace(HOUTFunction(code::pstOrigin(stmt), &decl, output_body));
 			}
+
+			void visitCopyConstructor(pst::Access<pst::CopyConstructor> stmt) final {
+				// declaration:
+				auto& decl = ctx.query<QueryDeclOfFun>(original_symbol)->valueOrThrow();
+				validateConstructorSource(stmt, decl);
+
+				// body:
+				auto output_body = processBody(decl, stmt->getBody());
+				this->out.emplace(HOUTFunction(code::pstOrigin(stmt), &decl, output_body));
+			}
+
+			void visitDestructor(pst::Access<pst::Destructor> stmt) final {
+				// declaration:
+				auto& decl = ctx.query<QueryDeclOfFun>(original_symbol)->valueOrThrow();
+
+				// body: a destructor body is always a code block
+				auto output_body = compileCodeOfCodeBlock(ctx, stmt->getBody(), decl.return_type);
+				this->out.emplace(HOUTFunction(code::pstOrigin(stmt), &decl, output_body));
+			}
+
+			// Validates a user-defined copy constructor's source parameter. The copy
+			// constructor must declare exactly one parameter, which must be a constant reference
+			// to its own class.
+			template<class ConstructorElement>
+			void validateConstructorSource(
+				pst::Access<ConstructorElement> stmt, const HOUTFunctionDeclaration& decl
+			) {
+				const auto class_type
+					= ctx.query<QueryClassOfMember>(original_symbol)->valueOrThrow();
+
+				const auto params_source = stmt->getParams().unlock(ctx)->getStablePosition();
+
+				if (decl.parameters.size() != 1) {
+					ctx.logInt(makeBox<dia_int::PlaceholderError>(
+						"A copy constructor must declare exactly one parameter: a reference to "
+						"the object being copied.",
+						params_source
+					));
+					query::throwFailed();
+				}
+
+				const auto other_type   = decl.parameters.at(0).type;
+				const bool is_reference = other_type.getRefKind() == tsh::ReferenceKind::Ref;
+				const bool is_matching_class
+					= other_type.getType().getKind() == tsh::Kind::Class
+				   && other_type.getType().as<tsh::ClassAbstractType>().getSymbol()
+				          == class_type.getSymbol();
+				// @TODO: #2104 Require the reference to be `const` once `const ref T` actually
+				// resolves to an immutable reference.
+				if (!is_reference || !is_matching_class) {
+					ctx.logInt(makeBox<dia_int::PlaceholderError>(
+						base::strConcat(
+							"A copy constructor's parameter must be a reference to its own "
+							"class `",
+							name(class_type.getSymbol()),
+							"`."
+						),
+						params_source
+					));
+					query::throwFailed();
+				}
+			}
 		};
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			const auto& sym_ref = getSymRef(key);
-			// Non-generated symbol data.
-			if (sym_ref->getPSTDataOpt().has_value()) {
-				CORE_ASSERT(
-					kind(key) == SymbolKind::Function or kind(key) == SymbolKind::Method,
-					"Function creation called on non-function and non-method symbol"
-				);
-				HOUTFunctionMaker func_maker(ctx, key);
-				stmt(ctx, key).value()->acceptVisitor(func_maker);
-
-				return func_maker.out.value();
-			}
-
 
 			// Generated symbol data.
 			variant_match(sym_ref->other) {
-				variant_case(defgen::GeneratedSymbolData, gsd_data) {
-					variant_match(gsd_data.data) {
-						variant_case(defgen::GeneratedSymbolData::ImplicitConstructor, ctor) {
-							const auto& type = ctor.target_type;
-							if (type.getKind() == tsh::Kind::Class) {
-								const auto& class_type = type.as<tsh::ClassAbstractType>();
-								return ctx.query<defgen::QueryImplicitClassConstructor>(class_type)
-								    ->valueOrThrow();
-							} else if (type.getKind() == tsh::Kind::Tuple) {
-								const auto& tuple_type = type.as<tsh::TupleAbstractType>();
-								return ctx.query<defgen::QueryTuplePackConstructor>(tuple_type)
-								    ->valueOrThrow();
-							} else {
-								CORE_UNREACHABLE();
-							}
-						}
-						variant_case(defgen::GeneratedSymbolData::DefaultClassConstructor, ctor) {
-							const auto& type = ctx.query<QueryTypeFromDefinition>(ctor.class_symbol)
-							                       ->valueOrThrow()
-							                       .getType()
-							                       .as<tsh::ClassAbstractType>();
-							return ctx.query<defgen::QueryDefaultClassConstructor>(type)
-							    ->valueOrThrow();
-						}
-						variant_case(defgen::GeneratedSymbolData::DefaultDestructor, dtor) {
-							return ctx.query<defgen::QueryDefaultDestructor>(dtor.owner_type)
-							    ->valueOrThrow();
-						}
-						variant_case(
-							defgen::GeneratedSymbolData::DefaultStaticArrayConstructor, ctor
-						) {
+				variant_case(PstImplementedSemantics, data) {
+					CORE_ASSERT(
+						isFunctionLike(kind(key)),
+						"Function creation called on non-function, non-method and non-constructor "
+						"symbol"
+					);
+					HOUTFunctionMaker func_maker(ctx, key);
+					stmt(ctx, key).value()->acceptVisitor(func_maker);
+
+					return func_maker.out.value();
+				}
+				variant_case(BuiltinSemantics, data) {
+					return getBuiltinImpl(ctx, key, data.builtin);
+				}
+				variant_case(defgen::Constructor, ctor) {
+					switch (ctor.kind) {
+					case defgen::Constructor::Kind::Implicit:
+						switch (ctor.type.getKind()) {
+						case tsh::Kind::Class:
 							return ctx
-							    .query<defgen::QueryDefaultStaticArrayConstructor>(ctor.array_type)
+							    .query<defgen::QueryImplicitClassConstructor>(
+									ctor.type.as<tsh::ClassAbstractType>()
+								)
 							    ->valueOrThrow();
-						}
-						variant_case(defgen::GeneratedSymbolData::ToStringMethod, to_string) {
-							return ctx.query<defgen::QueryToStringMethod>(to_string.owner_type)
+						case tsh::Kind::Tuple:
+							return ctx
+							    .query<defgen::QueryTuplePackConstructor>(
+									ctor.type.as<tsh::TupleAbstractType>()
+								)
 							    ->valueOrThrow();
+						default:
+							CORE_PANIC("Unhandled implicit constructor type.");
 						}
-						variant_case(defgen::GeneratedSymbolData::LengthMethod, length_method) {
-							return ctx.query<defgen::QueryLengthMethod>(length_method.owner_type)
+					case defgen::Constructor::Kind::Default:
+						switch (ctor.type.getKind()) {
+						case tsh::Kind::Class:
+							return ctx
+							    .query<defgen::QueryDefaultClassConstructor>(
+									ctor.type.as<tsh::ClassAbstractType>()
+								)
 							    ->valueOrThrow();
+						case tsh::Kind::StaticArray:
+							return ctx
+							    .query<defgen::QueryDefaultStaticArrayConstructor>(
+									ctor.type.as<tsh::StaticArrayAbstractType>()
+								)
+							    ->valueOrThrow();
+						case tsh::Kind::Tuple:
+							return ctx
+							    .query<defgen::QueryDefaultTupleConstructor>(
+									ctor.type.as<tsh::TupleAbstractType>()
+								)
+							    ->valueOrThrow();
+						default:
+							CORE_PANIC("Unhandled default constructor type.");
 						}
-						variant_default {
-							CORE_PANIC(base::strConcat(
-								"QueryTypeOfSymbol: Generated symbol '",
-								prettyDebugPrint(key, ctx),
-								"' not supported"
-							));
-						}
+					case defgen::Constructor::Kind::Copy:
+						return ctx.query<defgen::QueryDefaultCopyConstructor>(ctor.type)
+						    ->valueOrThrow();
 					}
+					CORE_UNREACHABLE();
+				}
+				variant_case(defgen::Method, method) {
+					switch (method.kind) {
+					case defgen::Method::Kind::DefaultDestructor:
+						return ctx.query<defgen::QueryDefaultDestructor>(method.owner_type)
+						    ->valueOrThrow();
+					case defgen::Method::Kind::ToString:
+						return ctx.query<defgen::QueryToStringMethod>(method.owner_type)
+						    ->valueOrThrow();
+					case defgen::Method::Kind::LengthMethod:
+						return ctx.query<defgen::QueryLengthMethod>(method.owner_type)
+						    ->valueOrThrow();
+					case defgen::Method::Kind::Push:
+						return ctx.query<defgen::QueryPushMethod>(method.owner_type)->valueOrThrow();
+					case defgen::Method::Kind::Pop:
+						return ctx.query<defgen::QueryPopMethod>(method.owner_type)->valueOrThrow();
+					}
+					CORE_UNREACHABLE();
+				}
+				variant_case(defgen::BuiltinTemplatedSymbol, symbol_data) {
+					return getBuiltinImpl(ctx, key, symbol_data.getBuiltinKind());
 				}
 				variant_default {
-					CORE_PANIC("QueryCodeOfFun: Symbol is neither PST nor Generated");
+					CORE_PANIC(base::strConcat(
+						"QueryCodeOfFun: symbol '",
+						prettyDebugPrint(key, ctx),
+						"' is neither a PST nor a supported generated function"
+					));
 				}
 			}
 		}

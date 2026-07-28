@@ -1,0 +1,66 @@
+namespace native {
+    extern("C") {
+        #{
+            Number formatting. Each one writes the decimal representation of `value` into the
+            buffer `p`, whose total capacity is `buffer_cap` bytes, followed by a terminating
+            NUL. Returns how many characters it wrote (excluding the NUL), or `0` when the
+            representation plus its NUL does not fit into `buffer_cap` bytes.
+        #}
+        fundecl float_to_string(value: f64, p: cptr char, buffer_cap: u64) -> u64;
+        fundecl u64_to_string(value: u64, p: cptr char, buffer_cap: u64) -> u64;
+        fundecl i64_to_string(value: i64, p: cptr char, buffer_cap: u64) -> u64;
+    }
+}
+
+namespace dvm {
+    extern("DVM") {
+        fundecl float_to_string(value: f64, p: manyptr char, buffer_cap: u64) -> u64;
+        fundecl u64_to_string(value: u64, p: manyptr char, buffer_cap: u64) -> u64;
+        fundecl i64_to_string(value: i64, p: manyptr char, buffer_cap: u64) -> u64;
+
+        #{
+            Test utils. Do not use outside of the tests.
+        #}
+        fundecl builtin_output_i64(x: i64) -> i64;
+        fundecl builtin_input_i64() -> i64;
+    }
+}
+
+@backend_dependent
+fundecl float_to_string(value: f64, p: manyptr char, buffer_cap: u64) -> u64;
+
+@native_only_impl
+fun float_to_string(value: f64, p: manyptr char, buffer_cap: u64) -> u64 = {
+    return native.float_to_string(value, p as cptr char, buffer_cap);
+}
+
+@dvm_only_impl
+fun float_to_string(value: f64, p: manyptr char, buffer_cap: u64) -> u64 = {
+    return dvm.float_to_string(value, p, buffer_cap);
+}
+
+@backend_dependent
+fundecl u64_to_string(value: u64, p: manyptr char, buffer_cap: u64) -> u64;
+
+@native_only_impl
+fun u64_to_string(value: u64, p: manyptr char, buffer_cap: u64) -> u64 = {
+    return native.u64_to_string(value, p as cptr char, buffer_cap);
+}
+
+@dvm_only_impl
+fun u64_to_string(value: u64, p: manyptr char, buffer_cap: u64) -> u64 = {
+    return dvm.u64_to_string(value, p, buffer_cap);
+}
+
+@backend_dependent
+fundecl i64_to_string(value: i64, p: manyptr char, buffer_cap: u64) -> u64;
+
+@native_only_impl
+fun i64_to_string(value: i64, p: manyptr char, buffer_cap: u64) -> u64 = {
+    return native.i64_to_string(value, p as cptr char, buffer_cap);
+}
+
+@dvm_only_impl
+fun i64_to_string(value: i64, p: manyptr char, buffer_cap: u64) -> u64 = {
+    return dvm.i64_to_string(value, p, buffer_cap);
+}

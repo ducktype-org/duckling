@@ -8,6 +8,7 @@
 
 #include <base/extend_cpp/stringifyable_enum.hpp>
 
+#include <artifacts/artifacts.hpp>
 #include <filesystem/file_path.hpp>
 #include <string_id/string_id.hpp>
 
@@ -49,6 +50,15 @@ namespace compiler::driver {
 		 * @brief The output file path name for the compiled DVM package.
 		 */
 		base::StrID output_file_name = base::StrID("package_dvm.dbc");
+
+		/**
+		 * @brief If a value is present, use this artifact collection
+		 * instead of the default.
+		 * @note This only affects the compiled package output, not any
+		 * other query artifacts (if present).
+		 * @TODO: #3158 Solving this would remove the need for this option.
+		 */
+		base::Optional<Ref<artifacts::ArtifactCollection>> custom_art_collection = {};
 	};
 
 	struct BuildTargetDVMExecutable final {
@@ -91,6 +101,15 @@ namespace compiler::driver {
 		 * @brief Archiving options for the static library.
 		 */
 		archiver::ArchivingOptions archiving_options;
+
+		/**
+		 * @brief If a value is present, use this artifact collection
+		 * instead of the default.
+		 * @note This only affects the compiled package output, not any
+		 * other query artifacts (if present).
+		 * @TODO: #3158 Solving this would remove the need for this option.
+		 */
+		base::Optional<Ref<artifacts::ArtifactCollection>> custom_art_collection = {};
 	};
 
 	/**
@@ -159,8 +178,8 @@ namespace compiler::driver {
 	 * @brief Construct linker options for a given task, based on the task's build target and the
 	 * standard library options.
 	 */
-	linker::LinkingOptions constructLinkerOptions(
-		const linker::LinkingOptions&       local_options,
-		const options_types::StdLibOptions& stdlib_options
+	linker::LinkingOptions constructNativeLinkerOptions(
+		const options_types::LinkingOptions& linking_options,
+		const options_types::StdLibOptions&  stdlib_options
 	);
 }

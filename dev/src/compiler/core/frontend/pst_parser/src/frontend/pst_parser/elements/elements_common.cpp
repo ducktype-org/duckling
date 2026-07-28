@@ -29,10 +29,6 @@ namespace pst::internal {
 		    || st[fwd].is(lang_def::NamedOperator::Assign) || st[fwd].is(lang_def::Special::Comma);
 	}
 
-	bool Conditions::isAssign(const TokenStream& st, i64 fwd) {
-		return st[fwd].is(lang_def::NamedOperator::Assign);
-	}
-
 	bool Conditions::isBlockGroup(const TokenStream& st, i64 fwd) {
 		return st[fwd].isBracketGroup(lexer::Token::Curly)
 		    && not st[fwd - 1].is(lang_def::NamedOperator::Colon);

@@ -1,13 +1,13 @@
 #include "expr_lowering.hpp"
 
+#include <diagnostic_interactive/placeholder.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/symbols/query_type_symbol_data.hpp>
-#include <helios/symbols/symbol_id_utils.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/utils/get_expr_symid.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
-#include <mir_private/utils/slices.hpp>
+#include <mir_private/utils/bounds_check.hpp>
 
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
@@ -19,6 +19,21 @@
 #include <variant>
 
 namespace compiler::mir {
+
+	/**
+	 * @brief A resolved MIR operation together with the `extra_params` it needs.
+	 * Used by the builtin-operator lowering helpers, since meta operations lower to a single
+	 * `Operation::MetaTypeOperation` parametrized by `MetaParameters`.
+	 */
+	class OperationWithParams final {
+	public:
+		Operation       operation;
+		InstrParameters params = NoInstrParameters{};
+
+		OperationWithParams(Operation op, InstrParameters param = NoInstrParameters{}):
+			  operation(op),
+			  params(param) {}
+	};
 
 	/**
 	 * @brief Visitor that implements actual logic of lowering expression.
@@ -157,14 +172,20 @@ namespace compiler::mir {
 			const auto res_left      = lowered_left.getResult(function);
 
 			// Fill the hole with the binary operation.
-			const auto      result_type = expr.expression_type.getSymbolType();
-			const Operation operation   = builtinBinaryToOperation(expr.operation);
+			const auto result_type           = expr.expression_type.getSymbolType();
+			const auto operation_with_params = builtinBinaryToOperation(expr.operation);
 
 			noValueOutput(
 				lowered_left.begin,
 				target_construction_hole,
 				Instruction(
-					operation, {}, { res_left, res_right }, {}, expr_scope, {}, { expr.getPosition() }
+					operation_with_params.operation,
+					{},
+					{ res_left, res_right },
+					{},
+					expr_scope,
+					operation_with_params.params,
+					{ expr.getPosition() }
 				),
 				result_type
 			);
@@ -178,13 +199,13 @@ namespace compiler::mir {
 
 			const auto result_type = expr.expression_type.getSymbolType();
 
-			const Operation operation = builtinUnaryToOperation(expr.operation);
+			const auto [operation, param] = builtinUnaryToOperation(expr.operation);
 
 			noValueOutput(
 				lowered.begin,
 				target_construction_hole,
 				Instruction(
-					operation, {}, { res_lowered }, {}, expr_scope, {}, { expr.getPosition() }
+					operation, {}, { res_lowered }, {}, expr_scope, param, { expr.getPosition() }
 				),
 				result_type
 			);
@@ -293,12 +314,12 @@ namespace compiler::mir {
 				current,
 				hole,
 				Instruction(
-					Operation::MetaCreateVariant,
+					Operation::MetaTypeOperation,
 					{},
 					subtype_values,
 					{},
 					expr_scope,
-					{},
+					MetaParameters{ MetaKind::CreateVariant },
 					{ expr.getPosition() }
 				),
 				result_type
@@ -323,60 +344,105 @@ namespace compiler::mir {
 		}
 
 		void visitIndexExpr(const hc::IndexExpr& expr) override {
-			if (expr.base->expression_type.getSymbolType().getType().getKind() == tsh::Kind::Meta) {
+			const auto base_type = expr.base->expression_type.getSymbolType().getType();
+			const auto base_kind = base_type.getKind();
+
+			if (base_kind == tsh::Kind::Meta) {
 				// @TODO: #1918 Implement that.
 				throw base::NotYetImplemented("Lowering of IndexExpr operating on Meta");
-			} else if (expr.base->expression_type.getSymbolType().getType().getKind()
-			           == tsh::Kind::Slice) {
-				auto bounds_check_fail_block = function.newBlock();
-				auto bounds_check_cond_block = function.newBlock();
-				auto entry_block             = function.newBlock();
-				entry_block->setTerminator(Instruction{
-					Operation::Jump, {}, { bounds_check_cond_block->getID() }, {}, expr_scope });
+			}
 
-				auto lowered_index = lowerSubExpr(*expr.index, entry_block);
-				auto index_val     = lowered_index.getResult(function);
-
-				auto lowered_base = lowerSubExpr(*expr.base, lowered_index.begin);
-				auto base_val     = lowered_base.getResult(function);
-
-				// We perform bound checking
-				auto slice_data = function.getContext().query<helios::QuerySliceTypeData>(
-					expr.base->expression_type.getSymbolType().getType()
-				);
-				sliceBoundsCheck(
-					{ .condition_block = bounds_check_cond_block,
-				      .fail_block      = bounds_check_fail_block,
-				      .ok_block        = continuation,
-				      .function        = function,
-				      .scope           = expr_scope },
-					*slice_data,
-					index_val,
-					base_val,
-					expr.getPosition()
-				);
-
-				variant_match(std::move(base_val.getVariant())) {
-					variant_case(MIRPlace, place) {
-						auto result = place.withField(function.getContext(), slice_data->ptr)
-						                  .withIndex(index_val);
-						valueOutput(lowered_base.begin, result);
-					}
-					variant_default { CORE_PANIC("Index base must be a MIRPlace"); }
+			// Slices and dynamic arrays store their data behind a `ptr` field, so indexing them is
+			// `Field(ptr) -> Index`. Static arrays and many-pointers index directly.
+			auto element_place = [&](const MIRPlace& place, const MIRValue& index_val) -> MIRPlace {
+				auto& ctx = function.getContext();
+				switch (base_kind) {
+				case tsh::Kind::Slice: {
+					auto slice_data = ctx.query<helios::QuerySliceTypeData>(base_type);
+					return place.withField(ctx, slice_data->ptr).withIndex(index_val);
 				}
+				case tsh::Kind::DynamicArray: {
+					auto dyn_data = ctx.query<helios::QueryDynamicArrayTypeData>(base_type);
+					return place.withField(ctx, dyn_data->ptr).withIndex(index_val);
+				}
+				case tsh::Kind::StaticArray:
+				case tsh::Kind::ManyPointer:
+					return place.withIndex(index_val);
+				default:
+					CORE_PANIC("IndexExpr base must be an indexable type");
+				}
+			};
 
-			} else {
+			// Many-pointers have no length, so they cannot be bounds-checked and are lowered
+			// directly.
+			if (base_kind == tsh::Kind::ManyPointer) {
 				auto lowered_index = lowerSubExpr(*expr.index, continuation);
 				auto index_val     = lowered_index.getResult(function);
 
 				auto lowered_base = lowerSubExpr(*expr.base, lowered_index.begin);
 				auto base_val     = lowered_base.getResult(function);
+
 				variant_match(std::move(base_val.getVariant())) {
 					variant_case(MIRPlace, place) {
-						valueOutput(lowered_base.begin, place.withIndex(index_val));
+						valueOutput(lowered_base.begin, element_place(place, index_val));
 					}
 					variant_default { CORE_PANIC("Index base must be a MIRPlace"); }
 				}
+				return;
+			}
+
+			// The length of the indexed array - slices and dynamic arrays read their `len` field,
+			// static arrays use their compile-time size.
+			auto array_length = [&](const MIRPlace& place) -> MIRValue {
+				auto& ctx = function.getContext();
+				switch (base_kind) {
+				case tsh::Kind::Slice: {
+					auto slice_data = ctx.query<helios::QuerySliceTypeData>(base_type);
+					return place.withField(ctx, slice_data->len);
+				}
+				case tsh::Kind::DynamicArray: {
+					auto dyn_data = ctx.query<helios::QueryDynamicArrayTypeData>(base_type);
+					return place.withField(ctx, dyn_data->len);
+				}
+				case tsh::Kind::StaticArray: {
+					const auto size = base_type.as<tsh::StaticArrayAbstractType>().getSize();
+					return MIRValue{ MIRConstant{
+						ctv::CompileTimeValue{ ctv::NumericValue{ static_cast<i64>(size) } } } };
+				}
+				default:
+					CORE_PANIC("Bounds check requires a sized array type");
+				}
+			};
+
+			// Now, before the index projection, perform the bounds check.
+			auto bounds_check_fail_block = function.newBlock();
+			auto bounds_check_cond_block = function.newBlock();
+			auto entry_block             = function.newBlock();
+			entry_block->setTerminator(Instruction{
+				Operation::Jump, {}, { bounds_check_cond_block->getID() }, {}, expr_scope });
+
+			auto lowered_index = lowerSubExpr(*expr.index, entry_block);
+			auto index_val     = lowered_index.getResult(function);
+
+			auto lowered_base = lowerSubExpr(*expr.base, lowered_index.begin);
+			auto base_val     = lowered_base.getResult(function);
+
+			variant_match(std::move(base_val.getVariant())) {
+				variant_case(MIRPlace, place) {
+					boundsCheck(
+						{ .condition_block = bounds_check_cond_block,
+					      .fail_block      = bounds_check_fail_block,
+					      .ok_block        = continuation,
+					      .function        = function,
+					      .scope           = expr_scope },
+						index_val,
+						array_length(place),
+						expr.getPosition()
+					);
+
+					valueOutput(lowered_base.begin, element_place(place, index_val));
+				}
+				variant_default { CORE_PANIC("Index base must be a MIRPlace"); }
 			}
 		}
 
@@ -475,9 +541,6 @@ namespace compiler::mir {
 				sub_continuation = arg_lowered.begin;
 			}
 
-			// @TODO: #505 here in the future we (probably) will have to handle
-			// move operations related to the passing of the arguments to the function
-
 			return noValueOutput(
 				sub_continuation,
 				call,
@@ -533,6 +596,43 @@ namespace compiler::mir {
 			);
 		}
 
+		void visitMoveExpr(const hc::MoveExpr& expr) override {
+			// `move x` yields the value of `x` and marks the source local as moved-out, so any
+			// later use is flagged by the liveness/use-after-move analysis. The `Move` flag has to
+			// sit on an instruction that reads the local, so we copy it into a fresh temporary and
+			// attach the flag there.
+			auto hole          = continuation->addHole();
+			auto lowered_inner = lowerSubExpr(*expr.inner, continuation);
+			auto inner_val     = lowered_inner.getResult(function);
+
+			// Moving anything that is not a plain local place (e.g. a temporary) has no source to
+			// mark, so just forward the value unchanged.
+			if (not inner_val.isLocal() or inner_val.get<mir::MIRPlace>().hasProjections()) {
+				function.getContext().logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					"Moving from a non-local place is not supported yet.", expr.inner->getPosition()
+				));
+				query::throwFailed();
+				return;
+			}
+
+			const auto moved_local = inner_val.get<MIRPlace>().getBase<MIRLocalRef>();
+
+			noValueOutput(
+				lowered_inner.begin,
+				hole,
+				Instruction(
+					Operation::Assign,
+					{},
+					{ inner_val },
+					{ OperationFlag{ .flag = OperationFlag::Flag::Move, .local = moved_local } },
+					expr_scope,
+					{},
+					{ expr.getPosition() }
+				),
+				expr.expression_type.getSymbolType()
+			);
+		}
+
 		void visitRefOfExpr(const hc::RefOfExpr& expr) override {
 			const auto& inner_type = expr.inner->expression_type.getSymbolType();
 
@@ -560,28 +660,6 @@ namespace compiler::mir {
 				// If a reference of box or ref is taken, no `AddressOf` instruction is inserted.
 				output(lowerSubExpr(*expr.inner, continuation));
 			}
-		}
-
-		void visitBoxOfExpr(const hc::BoxOfExpr& expr) override {
-			CORE_ASSERT(
-				expr.inner->expression_type.getSymbolType().getRefKind()
-					== tsh::ReferenceKind::Direct,
-				"BoxOfExpr on a non direct type"
-			);
-
-			auto       hole          = continuation->addHole();
-			auto       lowered_inner = lowerSubExpr(*expr.inner, continuation);
-			const auto res_inner     = lowered_inner.getResult(function);
-			const auto result_type   = expr.expression_type.getSymbolType();
-
-			noValueOutput(
-				lowered_inner.begin,
-				hole,
-				Instruction(
-					Operation::BoxAlloc, {}, { res_inner }, {}, expr_scope, {}, { expr.getPosition() }
-				),
-				result_type
-			);
 		}
 
 		void visitDerefExpr(const hc::DerefExpr& expr) override {
@@ -684,10 +762,17 @@ namespace compiler::mir {
 				return ExprLowerRes(
 					current,
 					ExprLowerRes::Finalizer{
-						.hole = hole,
-						.instr
-						= Instruction(Operation::MetaCreateTuple, {}, element_types, {}, expr_scope),
-						.type = result_type }
+						.hole  = hole,
+						.instr = Instruction(
+							Operation::MetaTypeOperation,
+							{},
+							element_types,
+							{},
+							expr_scope,
+							MetaParameters{ MetaKind::CreateTuple }
+						),
+						.type = result_type,
+					}
 				);
 			} else if (const auto* paren_expr = dynamic_cast<const hc::ParenthesisExpr*>(&expr)) {
 				return lowerAndLiftToTypeRecursively(*paren_expr->inner, continuation);
@@ -699,96 +784,106 @@ namespace compiler::mir {
 			return lowerSubExpr(expr, continuation);
 		}
 
-		static Operation builtinBinaryToOperation(const hc::BuiltinBinary builtin) {
+		static OperationWithParams builtinBinaryToOperation(const hc::BuiltinBinary builtin) {
 			using enum hc::BuiltinBinary;
 			switch (builtin) {
 			/// Integer arithmetic ///
 			case IntegerAdd:
-				return Operation::IntegerAdd;
+				return { Operation::IntegerAdd };
 			case IntegerSub:
-				return Operation::IntegerSub;
+				return { Operation::IntegerSub };
 			case IntegerMul:
-				return Operation::IntegerMul;
+				return { Operation::IntegerMul };
 			case IntegerDiv:
-				return Operation::IntegerDiv;
+				return { Operation::IntegerDiv };
 			case IntegerMod:
-				return Operation::IntegerMod;
+				return { Operation::IntegerMod };
 			case IntegerPow:
 				// @TODO: #1610 Implement exponentiation as a function call.
 				throw base::NotYetImplemented("Exponentiation on variables");
 
 			/// Integer comparisons ///
 			case IntegerLt:
-				return Operation::IntegerLt;
+				return { Operation::IntegerLt };
 			case IntegerGt:
-				return Operation::IntegerGt;
+				return { Operation::IntegerGt };
 			case IntegerLteq:
-				return Operation::IntegerLteq;
+				return { Operation::IntegerLteq };
 			case IntegerGteq:
-				return Operation::IntegerGteq;
+				return { Operation::IntegerGteq };
 			case IntegerEq:
-				return Operation::IntegerEq;
+				return { Operation::IntegerEq };
 			case IntegerNeq:
-				return Operation::IntegerNeq;
+				return { Operation::IntegerNeq };
 
 			/// Floating point arithmetic d///
 			case FloatAdd:
-				return Operation::FloatAdd;
+				return { Operation::FloatAdd };
 			case FloatSub:
-				return Operation::FloatSub;
+				return { Operation::FloatSub };
 			case FloatMul:
-				return Operation::FloatMul;
+				return { Operation::FloatMul };
 			case FloatDiv:
-				return Operation::FloatDiv;
+				return { Operation::FloatDiv };
 			case FloatPow:
 				// @TODO: #1610 Implement exponentiation as a function call.
 				throw base::NotYetImplemented("Exponentiation on variables");
 
 			/// Floating point comparisons ///
 			case FloatLt:
-				return Operation::FloatLt;
+				return { Operation::FloatLt };
 			case FloatGt:
-				return Operation::FloatGt;
+				return { Operation::FloatGt };
 			case FloatLteq:
-				return Operation::FloatLteq;
+				return { Operation::FloatLteq };
 			case FloatGteq:
-				return Operation::FloatGteq;
+				return { Operation::FloatGteq };
 			case FloatEq:
-				return Operation::FloatEq;
+				return { Operation::FloatEq };
 			case FloatNeq:
-				return Operation::FloatNeq;
+				return { Operation::FloatNeq };
 
 			case MetaEq:
-				return Operation::MetaEq;
+				return { Operation::MetaTypeOperation, MetaParameters{ MetaKind::Eq } };
 			case MetaNeq:
-				return Operation::MetaNeq;
+				return { Operation::MetaTypeOperation, MetaParameters{ MetaKind::Neq } };
 
 			case BooleanAnd:
-				return Operation::BooleanAnd;
+				return { Operation::BooleanAnd };
 			case BooleanOr:
-				return Operation::BooleanOr;
+				return { Operation::BooleanOr };
 			default:
 				CORE_UNREACHABLE();
 			}
 		}
 
-		static Operation builtinUnaryToOperation(const hc::BuiltinUnary builtin) {
+		static OperationWithParams builtinUnaryToOperation(const hc::BuiltinUnary builtin) {
 			using enum hc::BuiltinUnary;
 			switch (builtin) {
 			case IntegerNegation:
-				return Operation::IntegerNeg;
+				return { Operation::IntegerNeg };
 			case FloatNegation:
-				return Operation::FloatNeg;
+				return { Operation::FloatNeg };
 			case BooleanNot:
-				return Operation::BooleanNot;
+				return { Operation::BooleanNot };
 			case Box:
-				return Operation::MetaCreateBox;
+				return { Operation::MetaTypeOperation, MetaParameters{ MetaKind::CreateBox } };
 			case Ref:
-				return Operation::MetaCreateRef;
+				return { Operation::MetaTypeOperation, MetaParameters{ MetaKind::CreateRef } };
 			case Const:
-				return Operation::MetaCreateConst;
-			case Len:
-				return Operation::ListLen;
+				return { Operation::MetaTypeOperation, MetaParameters{ MetaKind::CreateConst } };
+			case Ptr:
+				return { Operation::MetaTypeOperation, MetaParameters{ MetaKind::CreatePtr } };
+			case ManyPtr:
+				return { Operation::MetaTypeOperation, MetaParameters{ MetaKind::CreateManyPtr } };
+			case CPtr:
+				return { Operation::MetaTypeOperation, MetaParameters{ MetaKind::CreateCPtr } };
+			case Slice:
+				return { Operation::MetaTypeOperation, MetaParameters{ MetaKind::CreateSlice } };
+			case SizeOf:
+				return { Operation::MetaTypeOperation, MetaParameters{ MetaKind::SizeOf } };
+			case AlignOf:
+				return { Operation::MetaTypeOperation, MetaParameters{ MetaKind::AlignOf } };
 			default:
 				CORE_UNREACHABLE();
 			}
