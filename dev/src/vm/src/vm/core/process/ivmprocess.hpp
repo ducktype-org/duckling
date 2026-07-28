@@ -58,6 +58,12 @@ namespace vm {
 		mutable std::mutex                  threads_states_mutex;
 
 		/**
+		 * @brief Serializes "compute the new aggregate, then publish it" in `onThreadStateChanged`
+		 * and `applyCommand`.
+		 */
+		std::mutex status_emit_mutex;
+
+		/**
 		 * @brief CV for waiting for a change of the subthread states. Used by `waitForProcessState`.
 		 */
 		mutable std::condition_variable threads_states_changed;

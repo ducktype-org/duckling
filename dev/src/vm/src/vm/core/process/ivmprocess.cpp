@@ -37,6 +37,10 @@ namespace vm {
 		ps::ProcessState prev, next;
 		bool             kill_all_threads = false;
 
+		// Held across the aggregate update and the emit below, so that the published status
+		// sequence keeps the order the transitions were computed in.
+		std::unique_lock emit_order_lock(status_emit_mutex);
+
 		{
 			std::lock_guard lock(threads_states_mutex);
 			prev = last_process_state;
@@ -65,6 +69,9 @@ namespace vm {
 			on_status_changed.emitEvent(status);
 			if (ps::isTerminal(next)) onTerminalStatus(status);
 		}
+		// `requestStopAllThreads` takes the VMThreads `execution_request_mutex`, so
+		// `status_emit_mutex` must be released first.
+		emit_order_lock.unlock();
 
 		if (kill_all_threads) requestStopAllThreads();
 	}
@@ -73,6 +80,10 @@ namespace vm {
 		bool             send_stop_to_all_threads = false;
 		ps::ProcessState prev_state;
 		ps::ProcessState new_state;
+
+		// Held across the aggregate update and the emit below, so that the published status
+		// sequence keeps the order the transitions were computed in.
+		std::unique_lock emit_order_lock(status_emit_mutex);
 
 		{
 			std::lock_guard lock(threads_states_mutex);
@@ -131,6 +142,11 @@ namespace vm {
 				on_status_changed.emitEvent(status);
 				if (ps::isTerminal(new_state)) onTerminalStatus(status);
 			}
+
+			// `requestStopAllThreads` takes the VMThreads `execution_request_mutex`, so
+			// `status_emit_mutex` must be released first.
+			emit_order_lock.unlock();
+
 			requestStopAllThreads();
 		}
 

@@ -245,7 +245,7 @@ namespace vm {
 	 * @details Assumes that the instruction in the frame is to be executed before AND after running
 	 * this function.
 	 */
-	void IVMThread::runDebuggerLoop(std::unique_lock<std::mutex>& lock) {
+	void IVMThread::runDebuggerLoop(std::unique_lock<std::recursive_mutex>& lock) {
 		while (true) {
 			// Loop invariant: the instruction in the frame is to be executed
 			pause_cv.wait(lock, [this] { return execution_request != ExecutionRequest::Pause; });
@@ -253,14 +253,14 @@ namespace vm {
 			switch (execution_request) {
 			case ExecutionRequest::Resume: {
 				execution_request = ExecutionRequest::NoRequest;
-				fireEvent(lock, te::Resume{});
+				fireEvent(te::Resume{});
 				return;
 			}
 			case ExecutionRequest::Stop: {
 				throw KillProcessException{};
 			}
 			case ExecutionRequest::ExecuteOneStep: {
-				fireEvent(lock, te::Resume{});
+				fireEvent(te::Resume{});
 
 				executeOneStep();
 				// A Stop posted while the step ran must win. Overwriting it with Pause would lose
@@ -268,7 +268,7 @@ namespace vm {
 				// `execution_request != Pause` forever causing a deadlock.
 				if (execution_request == ExecutionRequest::Stop) throw KillProcessException{};
 				execution_request = ExecutionRequest::Pause;
-				fireEvent(lock, te::Pause{});
+				fireEvent(te::Pause{});
 				break;
 			}
 			default:

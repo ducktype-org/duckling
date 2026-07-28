@@ -1,7 +1,6 @@
 #pragma once
 
 #include <base/collections/optional.hpp>
-#include <base/extend_cpp/scoped_unlock.hpp>
 #include <base/types/ints.hpp>
 
 #include <vm/api/data/api_error.hpp>
@@ -251,7 +250,7 @@ namespace vm {
 		 *
 		 * @param lock
 		 */
-		void runDebuggerLoop(std::unique_lock<std::mutex>& lock);
+		void runDebuggerLoop(std::unique_lock<std::recursive_mutex>& lock);
 
 		/**
 		 * @brief Function to be called when the VMThread hits a breakpoint.
