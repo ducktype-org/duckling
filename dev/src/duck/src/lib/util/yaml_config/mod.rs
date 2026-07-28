@@ -369,6 +369,15 @@ impl YamlConfig {
     ) -> QuackResult<Option<T>> {
         self.deserialize::<Option<T>>(key)
     }
+
+    /// Deserialize an optional value at the dotted key, or return the default.
+    pub fn deserialize_optional_or_default<'de, T: Deserialize<'de> + Default>(
+        &'de self,
+        key: &str,
+    ) -> QuackResult<T> {
+        self.deserialize::<Option<T>>(key)
+            .map(|value| value.unwrap_or_default())
+    }
 }
 
 impl fmt::Display for YamlConfig {
