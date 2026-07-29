@@ -14,17 +14,18 @@ pub struct GithubClient<'duck> {
     repo_api_url: InternedUrl,
 }
 
-impl<'duck> GitFastPathExt<'duck> for GithubClient<'duck> {
-    type ApiClient = GithubApiClient<'duck>;
-
-    fn new(client: &'duck GithubApiClient, repo_url: InternedUrl) -> Option<Self> {
+impl<'duck> GithubClient<'duck> {
+    /// Create new [`GithubClient`].
+    pub fn new(client: &'duck GithubApiClient, repo_url: InternedUrl) -> Option<Self> {
         let repo_api_url = GithubApiClient::get_api_url(&repo_url)?;
         Some(Self {
             client,
             repo_api_url: repo_api_url.into(),
         })
     }
+}
 
+impl<'duck> GitFastPathExt for GithubClient<'duck> {
     fn get_commit_hash(&self, reference: GitReference) -> QuackResult<StrId> {
         match reference {
             GitReference::Default => self.client.retrieve_a_commit(&self.repo_api_url, None),
