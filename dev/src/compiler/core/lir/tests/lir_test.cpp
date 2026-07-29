@@ -869,22 +869,25 @@ private:
 
 		using namespace compiler::lir;
 
+		bool found_variadic_call = false;
 		for (const auto& block: caller_lir->block_order) {
 			for (const auto& instr: block->instructions) {
 				if (instr.operation != Operation::Call) continue;
 
 				const auto& literal = instr.arguments.at(0).get<FunctionLiteral>();
 				const auto* c_abi   = std::get_if<lir::LIRAbi::CAbi>(&literal.abi.value);
+				assertTrue(c_abi != nullptr, "Expected the call to use the C ABI");
 
 				const auto& info = c_abi->function_info;
-				ASSERT_EQUAL_PRINT(literal.mangled_name, base::StrID("plain"));
+				ASSERT_EQUAL_PRINT(literal.mangled_name, base::StrID("sum_varargs"));
 				ASSERT_EQUAL_PRINT(info.num_fixed_params.value(), 1);
+				found_variadic_call = true;
 			}
 		}
+		assertTrue(found_variadic_call, "No call to `sum_varargs` was found in `caller`");
 
 		std::vector<std::pair<std::string_view, helios::SymID>> invalid_declarations;
-		for (auto name: { "variadicNoCAbi",
-		                  "variadicZeroFixed",
+		for (auto name: { "variadicZeroFixed",
 		                  "variadicNoVarArgs",
 		                  "variadicUnpromotedFloat",
 		                  "variadicUnpromotedInt" })

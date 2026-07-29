@@ -4,17 +4,17 @@ extern("C") {
     # Invalid declarations.
 
     # C requires at least one named parameter before the `...`.
-    @cffi_variadic_after(0) extern("C") fundecl variadicZeroFixed(a: i64) -> i64;
+    @cffi_variadic_after(0) fundecl variadicZeroFixed(a: i64) -> i64;
 
     # Nothing past the split, so no variadic argument is described.
-    @cffi_variadic_after(1) extern("C") fundecl variadicNoVarArgs(a: i64) -> i64;
+    @cffi_variadic_after(1) fundecl variadicNoVarArgs(a: i64) -> i64;
 
     # Variadic parameters must already be default-argument-promoted: the callee reads them with
     # `va_arg`, which would read an 8-byte double / a 4-byte int here.
-    @cffi_variadic_after(1)  fundecl variadicUnpromotedFloat(a: i64, b: f32) -> i64;
-    @cffi_variadic_after(1)  fundecl variadicUnpromotedInt(a: i64, b: u16) -> i64;
-        
+    @cffi_variadic_after(1) fundecl variadicUnpromotedFloat(a: i64, b: f32) -> i64;
+    @cffi_variadic_after(1) fundecl variadicUnpromotedInt(a: i64, b: u16) -> i64;
 }
+
 fun caller() -> i64 = {
     return sum_varargs(2i64, 5i64, 1.5);
 }

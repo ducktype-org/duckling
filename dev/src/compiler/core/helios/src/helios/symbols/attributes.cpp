@@ -70,14 +70,17 @@ namespace compiler::helios {
 			auto holder      = holders.front().unlock(ctx);
 			auto elem        = code::subExprFromPST(ctx, holder->getExpr()).valueOrThrow();
 			auto numeric_opt = dynamic_cast<code::LiteralNumericExpr*>(elem.get());
-			if (not numeric_opt or numeric_opt->value.coerceTo<i64>()
-			    or numeric_opt->value.coerceTo<i64>() < 0) {
+
+			base::Optional<i64> value{};
+			if (numeric_opt != nullptr) value = numeric_opt->value.coerceTo<i64>();
+
+			if (not value.has_value() or value.value() < 0) {
 				ctx.logInt(makeBox<dia_int::PlaceholderError>(
 					std::string(error_msg), arg_list->getStablePosition()
 				));
 				query::throwFailed();
 			}
-			return base::safeIntConv<u64>(numeric_opt->value.coerceTo<i64>().value());
+			return base::safeIntConv<u64>(value.value());
 		}
 	}
 

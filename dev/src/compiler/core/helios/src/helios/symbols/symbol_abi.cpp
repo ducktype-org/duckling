@@ -27,6 +27,8 @@
 #include <query_framework/query_result.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
 
+#include <span>
+
 namespace compiler::helios {
 
 
@@ -100,9 +102,10 @@ namespace compiler::helios {
 		query::QResult<u64> validateVariadicAfter(
 			query::Context& ctx, const HOUTFunctionDeclaration& decl, u64 fixed_params
 		) {
-			if (decl.parameters.size() == 0) {
+			if (fixed_params == 0) {
 				ctx.logInt(makeBox<dia_int::PlaceholderError>(
-					"Variadic function declaration should have at least one parameter.", decl.origin
+					"Variadic function declaration should have at least one fixed parameter.",
+					decl.origin
 				));
 				return query::Failed();
 			}
@@ -116,7 +119,8 @@ namespace compiler::helios {
 			}
 
 			// Ignoring reference kind, it will be checked later, reference types in CFFI are invalid.
-			for (auto& param: decl.parameters) {
+			// Only the variadic parameters are subject to the default argument promotions.
+			for (auto& param: std::span(decl.parameters).subspan(fixed_params)) {
 				auto param_result = validateVariadicArgType(ctx, param.type.getType());
 				if (not param_result.has_value()) {
 					ctx.logInt(makeBox<dia_int::PlaceholderError>(
@@ -194,8 +198,11 @@ namespace compiler::helios {
 
 
 				if_opt_some(getAttribute<attributes::CFFIVariadicAfter>(sym), variadic) {
-					validateVariadicAfter(ctx, declaration, variadic->fixed_params);
-					result.variadic_after = variadic->fixed_params;
+					UNPACK_QRESULT(
+						auto fixed_params =,
+						validateVariadicAfter(ctx, declaration, variadic->fixed_params)
+					);
+					result.variadic_after = fixed_params;
 				}
 			}
 
