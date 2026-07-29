@@ -33,6 +33,21 @@ extern("C") {
         fundecl add_shorts(a: i16, b: i16) -> i32;
         fundecl add_bytes(a: i8, b: i8) -> i32;
     }
+
+    # Variadic C functions. `@cffi_variadic_after(n)` says the first `n` parameters are the
+    # fixed ones; the rest describe one concrete `...` argument list, so each call shape gets
+    # its own declaration. All of them are declared with the same unmangled name and lower to
+    # the same `i64 (i64, ...)` LLVM type, so they share one declaration in the module.
+    # Variadic parameters must already be default-argument-promoted (no f32, no sub-i32 ints).
+    namespace variadic {
+        @cffi_variadic_after(1) fundecl sum_varargs(count: i64, a: i64) -> i64;
+        @cffi_variadic_after(1) fundecl sum_varargs(count: i64, a: i64, b: i64) -> i64;
+        @cffi_variadic_after(1) fundecl sum_varargs(count: i64, a: i64, b: i64, c: i64) -> i64;
+
+        @cffi_variadic_after(1) fundecl sum_varargs_mixed(count: i64, a: i64, b: f64) -> i64;
+
+        @cffi_variadic_after(1) fundecl sum_varargs_struct(count: i64, a: Small, b: Small) -> i64;
+    }
 }
 
 fun main() -> i64 = {
@@ -68,6 +83,17 @@ fun main() -> i64 = {
     # 0x000000C8: -56 as i8; without signext the clang callee reads 200 and prints 201.
     let raw_b: i32 = 200i32;
     builtin_output_i64(narrow_ints::add_bytes(raw_b as i8, 1i8));     # -55
+
+    # Variadic calls: the three `sum_varargs` overloads all resolve to the same C symbol.
+    builtin_output_i64(variadic::sum_varargs(1i64, 5i64));                      # 5
+    builtin_output_i64(variadic::sum_varargs(2i64, 5i64, 6i64));               # 11
+    builtin_output_i64(variadic::sum_varargs(3i64, 5i64, 6i64, 7i64));         # 18
+
+    # One INTEGER and one SSE variadic argument, so `al` must be set on x86-64.
+    builtin_output_i64(variadic::sum_varargs_mixed(1i64, 4i64, 2.5));          # 6
+
+    # Structs passed by value through `...`.
+    builtin_output_i64(variadic::sum_varargs_struct(2i64, Small(1, 2), Small(3, 4)));  # 10
 
     return 0i64;
 }

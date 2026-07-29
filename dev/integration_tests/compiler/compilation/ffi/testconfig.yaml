@@ -19,5 +19,5 @@ Tests:
     Cases:
       all:
         Output:
-          String: "7\n12\n100\n600\n1\n2\n5\n10\n15\n7\n14\n21\n28\n7\n14\n21\n-21554\n-55\n"
+          String: "7\n12\n100\n600\n1\n2\n5\n10\n15\n7\n14\n21\n28\n7\n14\n21\n-21554\n-55\n5\n11\n18\n6\n10\n"
         ExitCode: 0
