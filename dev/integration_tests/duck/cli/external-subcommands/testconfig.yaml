@@ -6,7 +6,7 @@ PreCase: |+
   mkdir -p bin
   echo "security:
     typos:
-      max_distance: 1
+      max-distance: 1
       enabled: true
 
   aliases:

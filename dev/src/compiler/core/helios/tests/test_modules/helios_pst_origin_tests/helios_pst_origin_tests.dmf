@@ -18,7 +18,7 @@ namespace NS1 {
 
 var var1: i64 = (NS1).NS2.A;
 var var2: i64 = ((NS1).NS2).A;
-var var3: u32 = u32(((NS1).NS2).A);
+var var3: u32 = (((NS1).NS2).A) as u32;
 var var4: i64 = ((NS1).NS2).A + 2;
 var var5: i64 = NS1.a.b.x;
 var var6: i64 = NS1.box_a.b.x;  

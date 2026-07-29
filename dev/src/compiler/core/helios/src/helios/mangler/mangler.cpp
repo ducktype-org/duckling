@@ -52,7 +52,8 @@ namespace compiler::helios::mangler {
 					bool,
 					numeric_value::NumericValue,
 					char,
-					base::StrID,
+					ctv::CompileTimeValue::CharSliceValue,
+					ctv::CompileTimeValue::StringClassValue,
 					ctv::CompileTimeValue::UnitCTV
 				) {
 					// @TODO: #2607 This is questionable, note that this only
@@ -355,7 +356,7 @@ namespace compiler::helios::mangler {
 				// additional cases that are handled below.
 				auto ancestor_opt = [&]() {
 					variant_match(getSymRef(symbol_id)->other) {
-						variant_case_novalue(PstImplementedSemantics) {
+						variant_case_novalue(PstImplementedSemantics, BuiltinSemantics) {
 							auto ancestor = maybeSymbolPst(symbol_id).value().unlock(ctx);
 							return getPSTElementParent(ctx, ancestor);
 						}
@@ -550,15 +551,19 @@ namespace compiler::helios::mangler {
 						}
 						CORE_UNREACHABLE();
 					}
-					variant_case(defgen::BoxBuiltin, box) {
+					variant_case(defgen::BuiltinTemplatedSymbol, builtin) {
 						// We do not have a reliable "path to type" in these cases (esp. for simple
 						// types such as i32), so we omit it. Any ambiguities are solved by the
 						// function type anyway.
-						switch (box.kind) {
-						case defgen::BoxBuiltin::Kind::Alloc:
+						switch (builtin.kind) {
+						case defgen::BuiltinTemplatedSymbol::Kind::BoxAlloc:
 							return "Hba" + func(ctx, symbol_id) + "E";
-						case defgen::BoxBuiltin::Kind::Free:
+						case defgen::BuiltinTemplatedSymbol::Kind::BoxFree:
 							return "Hbf" + func(ctx, symbol_id) + "E";
+						case defgen::BuiltinTemplatedSymbol::Kind::ListFree:
+							return "Hlf" + func(ctx, symbol_id) + "E";
+						case defgen::BuiltinTemplatedSymbol::Kind::BoxDestructor:
+							return "Hbd" + func(ctx, symbol_id) + "E";
 						}
 						CORE_UNREACHABLE();
 					}

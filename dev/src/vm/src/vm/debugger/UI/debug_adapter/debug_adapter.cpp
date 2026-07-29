@@ -8,7 +8,7 @@
 #include <vm/api/data/api_error.hpp>
 #include <vm/api/data/status.hpp>
 #include <vm/api/data/thread_id.hpp>
-#include <vm/core/vmvalue/vmvalue.hpp>
+#include <vm/core/vmvalue/ivmvalue.hpp>
 #include <vm/debugger/UI/debug_adapter/protocol.hpp>
 
 #include <iostream>
@@ -41,12 +41,12 @@ namespace vm::debugger::debug_adapter {
 
 					  // status.exit_value
 					  CORE_ASSERT(
-						  std::holds_alternative<std::vector<Ref<vm::VmValue>>>(status.exit_value),
+						  std::holds_alternative<std::vector<Ref<vm::IVMValue>>>(status.exit_value),
 						  "Wrong variant member"
 					  );
 					  const auto& exit_value
-						  = std::get<std::vector<Ref<vm::VmValue>>>(status.exit_value);
-					  for (CRef<VmValue> val: exit_value) {
+						  = std::get<std::vector<Ref<vm::IVMValue>>>(status.exit_value);
+					  for (CRef<IVMValue> val: exit_value) {
 						  std::string rendered_value     = "";
 						  bool        has_rendered_value = false;
 
@@ -414,10 +414,10 @@ namespace vm::debugger::debug_adapter {
 		auto frame_result = debugger.getStackFrameData(thread_id, frame_id);
 		if (!frame_result.has_value()) return std::unexpected("Failed to get frame variables");
 
-		auto&                          data = frame_result.value();
-		std::map<std::string, VarInfo> children_map;
-		std::vector<VMValueRef>        complex_children_to_register;
-		u64                            next_ref = variables.size() + 1;
+		auto&                               data = frame_result.value();
+		std::map<std::string, VarInfo>      children_map;
+		std::vector<SharedBox<IVMValueRef>> complex_children_to_register;
+		u64                                 next_ref = variables.size() + 1;
 
 
 		for (const auto& var: data.frame_vars) {
@@ -425,7 +425,7 @@ namespace vm::debugger::debug_adapter {
 			if_opt_some(var.name, n) name_str = n.str();
 			VarInfo info{ .var = var.value, .var_ref = 0 };
 
-			if (var.value.isComplex()) {
+			if (var.value->isComplex()) {
 				complex_children_to_register.push_back(var.value);
 
 				info.var_ref = next_ref;
@@ -444,22 +444,22 @@ namespace vm::debugger::debug_adapter {
 	}
 
 	std::expected<std::map<std::string, DebugAdapter::VarInfo>, std::string> DebugAdapter::varRefFromVMValueRef(
-		VMValueRef& value
+		SharedBox<IVMValueRef>& value
 	) {
-		auto opt_data = value.readData();
+		auto opt_data = value->readData();
 		if (!opt_data) return std::unexpected("Failed to read data");
 
 
 		namespace idv = interpreted_data_variant;
 		std::map<std::string, VarInfo> children_map;
 
-		std::vector<VMValueRef> complex_children_to_register;
-		u64                     next_ref = variables.size() + 1;
+		std::vector<SharedBox<IVMValueRef>> complex_children_to_register;
+		u64                                 next_ref = variables.size() + 1;
 
-		auto process_child = [&](const std::string& name, VMValueRef child) {
+		auto process_child = [&](const std::string& name, const SharedBox<IVMValueRef>& child) {
 			VarInfo info{ .var = child, .var_ref = 0 };
 
-			if (child.isComplex()) {
+			if (child->isComplex()) {
 				complex_children_to_register.push_back(child);
 				info.var_ref = next_ref;
 				next_ref++;
@@ -585,7 +585,7 @@ namespace vm::debugger::debug_adapter {
 
 					variables[var_ref - 1] = var_ref_frame.value().first;
 				}
-				variant_case(VMValueRef, value) {
+				variant_case(SharedBox<IVMValueRef>, value) {
 					auto var_ref_value = varRefFromVMValueRef(value);
 					if (!var_ref_value.has_value()) {
 						sendErrorResponse(req, var_ref_value.error());
@@ -601,8 +601,8 @@ namespace vm::debugger::debug_adapter {
 			for (const auto& [key, var_info]: variables_map) {
 				nlohmann::json variable_item
 					= { { "name", key },
-					    { "value", var_info.var.str() },
-					    { "type", var_info.var.getType()->getName().str() },
+					    { "value", var_info.var->str() },
+					    { "type", var_info.var->getType()->getName().str() },
 					    { "variablesReference", var_info.var_ref } };
 				variables_json.push_back(variable_item);
 			}

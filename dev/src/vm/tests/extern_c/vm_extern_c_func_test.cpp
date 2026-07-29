@@ -150,7 +150,7 @@ private:
 		vm::PID pid = get_ext_func_program();
 
 		// Prepare the initializing argument.
-		auto vm_value_response = vm::api::getVmValue(pid, "opaque_ptr");
+		auto vm_value_response = vm::api::getVMValue(pid, "opaque_ptr");
 		ASSERT_HAS_VALUE(vm_value_response);
 		auto  vm_value   = std::move(vm_value_response->vm_value);
 		auto* vector_ptr = &global_opaque::vec;

@@ -595,7 +595,7 @@ namespace compiler::helios {
 					}
 					variant_case_novalue(
 						defgen::Method,
-						defgen::BoxBuiltin,
+						defgen::BuiltinTemplatedSymbol,
 						defgen::ReplExpressionWrapper,
 						defgen::ReplInstructionWrapper,
 						defgen::ScriptMainWrapper

@@ -2,6 +2,7 @@
 
 #include <json/diagnostics.hpp>
 #include <json/extract.hpp>
+#include <json/type_parse.hpp>
 
 #include <array>
 #include <string_view>

@@ -298,8 +298,8 @@ const vm::code::Function& ProgramLoweringContext::lowerAndKeepLirFunction(
 ) {
 	CORE_ASSERT(not lir_function->ignore_on_dvm, "Lowering a function that should not be lowered.");
 
-	if (auto maybe_name = lir_function_to_name.atMaybe(lir_function))
-		return dvm_functions_by_name.at(**maybe_name);
+	if (auto maybe_function = dvm_functions_by_name.atMaybe(lir_function->mangled_name))
+		return **maybe_function;
 
 	base::Optional<debug_info::FunctionBuilder> function_di_builder_opt;
 	if_opt_some(debug_info_builder, builder) {
@@ -334,7 +334,6 @@ const vm::code::Function& ProgramLoweringContext::lowerAndKeepLirFunction(
 	auto       dvm_function  = std::move(func_ctx).finish();
 	const auto function_name = dvm_function.name.str;
 	dvm_functions_by_name.put(function_name, std::move(dvm_function));
-	lir_function_to_name.put(lir_function, function_name);
 	const auto& desired_function = dvm_functions_by_name.at(function_name);
 	lowered_function_order.push_back(function_name);
 

@@ -215,7 +215,7 @@ impl VenvData {
     }
 
     /// Get the last known location of this venv.
-    /// This is either root of the package for packages or path to the script for scripts with frontmatters.
+    /// This is either root of the package for packages or path to the script for scripts.
     pub fn last_known_location(&self) -> &Path {
         &self.last_known_location
     }
