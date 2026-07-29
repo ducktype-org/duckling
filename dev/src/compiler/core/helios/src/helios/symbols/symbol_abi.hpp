@@ -23,6 +23,12 @@ namespace compiler::helios {
 		 * linked from. e.x. `extern("C" "mylib")`
 		 */
 		base::Optional<base::StrID> library;
+
+		/**
+		 * @brief Number of fixed parameters of a variadic C function.
+		 * Empty if a function is not variadic.
+		 */
+		base::Optional<u64> variadic_after;
 	};
 
 	struct DefaultAbi final {};

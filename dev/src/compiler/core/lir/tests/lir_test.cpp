@@ -8,6 +8,7 @@
 #include <driver/test_utils.hpp>
 #include <helios/mangler/mangler.hpp>
 #include <helios/queries/queries.hpp>
+#include <helios/symbols/symbol_abi.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
@@ -50,6 +51,7 @@ public:
 		TESTER_ADD_TEST(dynamicArrayTest);
 		TESTER_ADD_TEST(metaFunctionsTest);
 		TESTER_ADD_TEST(simpleConstant);
+		TESTER_ADD_TEST(cVariadicAbiTest);
 	}
 
 protected:
@@ -855,6 +857,45 @@ private:
 			assertTrue(found_ugt, "LIR instruction 'IntegerUGt' was not found");
 			assertTrue(found_fadd, "LIR instruction 'FloatAdd' was not found");
 			assertTrue(found_sub, "LIR instruction 'IntegerSub' was not found");
+		});
+	}
+
+	/**
+	 * @brief Tests `@cffi_variadic_after(n)` on `extern("C")` declarations.
+	 */
+	void cVariadicAbiTest() {
+		auto module     = getLIROfModule(path("modules/c_variadic"));
+		auto caller_lir = module.lirFunc("caller");
+
+		using namespace compiler::lir;
+
+		for (const auto& block: caller_lir->block_order) {
+			for (const auto& instr: block->instructions) {
+				if (instr.operation != Operation::Call) continue;
+
+				const auto& literal = instr.arguments.at(0).get<FunctionLiteral>();
+				const auto* c_abi   = std::get_if<lir::LIRAbi::CAbi>(&literal.abi.value);
+
+				const auto& info = c_abi->function_info;
+				ASSERT_EQUAL_PRINT(literal.mangled_name, base::StrID("plain"));
+				ASSERT_EQUAL_PRINT(info.num_fixed_params.value(), 1);
+			}
+		}
+
+		std::vector<std::pair<std::string_view, helios::SymID>> invalid_declarations;
+		for (auto name: { "variadicNoCAbi",
+		                  "variadicZeroFixed",
+		                  "variadicNoVarArgs",
+		                  "variadicUnpromotedFloat",
+		                  "variadicUnpromotedInt" })
+			invalid_declarations.emplace_back(name, getChain(name, module.scope).back());
+
+		withContextDo([&](query::Context& ctx) {
+			for (const auto& [name, symbol]: invalid_declarations)
+				assertTrue(
+					ctx.query<helios::QuerySymbolABI>(symbol)->hasFailed(),
+					base::strConcat("Expected the ABI query to fail for `", name, "`")
+				);
 		});
 	}
 };

@@ -84,6 +84,8 @@ namespace compiler::helios::code {
 		friend ElementOrigin elementOriginOrdered(
 			const ElementOrigin& left, const ElementOrigin& right
 		);
+
+		operator base::Optional<dia_int::StablePosition>() const { return getStablePosition(); }
 	};
 
 	/**
