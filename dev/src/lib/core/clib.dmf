@@ -5,7 +5,7 @@
 extern("C") {
     fundecl malloc(size: u64) -> cptr u8;
     fundecl realloc(p: cptr u8, new_size: u64) -> cptr u8;
-    fundecl free(p: cptr u8);
+    fundecl free(p: cptr u8);;
 
     fundecl getchar() -> i32;
     fundecl putchar(c: i32) -> i32;

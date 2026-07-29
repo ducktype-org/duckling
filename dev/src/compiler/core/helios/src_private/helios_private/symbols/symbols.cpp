@@ -1,5 +1,7 @@
 #include "symbols.hpp"
 
+#include "diagnostic_interactive/placeholder.hpp"
+
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/class_elements/all_class_elements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
@@ -805,6 +807,11 @@ namespace compiler::helios {
 			}
 
 			// @note: here case for variables will be calling TS
+			case SymbolKind::Template:
+				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					"Lookup in template requires an explicit template parameter."
+				));
+				return query::Failed();
 			default:
 				throw base::NotYetImplemented(
 					base::strConcat("Lookup in symbol: ", key.symbol.ref->common.name)
