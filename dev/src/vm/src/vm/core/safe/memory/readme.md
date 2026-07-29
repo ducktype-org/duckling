@@ -26,7 +26,7 @@ handle that provides safe, managed access to data.
 
 A `Block` is the fundamental unit of memory ownership. It is not the raw data itself, but rather a 
 metadata-rich "handle" that describes a region of memory. Every piece of data allocated on the heap, 
-on the stack, or even within a [`VmValue`](../../thread/vmvalue.hpp) is managed by a corresponding `Block`.
+on the stack, or even within a [`VMValue`](../../thread/vmvalue.hpp) is managed by a corresponding `Block`.
 
 *   **Core Attributes:** Each `Block` contains:
     *   **Type Information:** A reference to the [`Type`](../type_metadata/type.hpp) of the data it manages.

@@ -227,6 +227,8 @@ namespace dia_int::state {
 
 	class ExploreEdge final {
 	public:
+		/// The name of the edge class this edge belongs to. Several edges can share it.
+		std::string    name;
 		Box<Component> content;
 	};
 
@@ -236,14 +238,15 @@ namespace dia_int::state {
 		Box<Component>                                  header;
 		MBox<Component>                                 description;
 		base::HashMap<PointerMessageID, PointerMessage> pointer_messages;
-		base::HashMap<std::string, ExploreEdge>         explore_links;
+		/// Kept as a list, because a single edge class can have any number of edges.
+		std::vector<ExploreEdge> explore_links;
 
 		Message(
 			template_file::Metadata                         metadata,
 			Box<Component>                                  header,
 			MBox<Component>                                 description,
 			base::HashMap<PointerMessageID, PointerMessage> pointer_messages,
-			base::HashMap<std::string, ExploreEdge>         explore_links
+			std::vector<ExploreEdge>                        explore_links
 		);
 
 		/**

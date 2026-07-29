@@ -16,7 +16,7 @@ mod frontmatter;
 mod manifest;
 mod source;
 
-pub use frontmatter::try_parse_frontmatter;
+pub use frontmatter::{capture_frontmatter, parse_frontmatter};
 pub(crate) use manifest::parse;
 
 #[cfg(test)]
@@ -45,7 +45,7 @@ pub fn parse_manifest(path: &Path, ctx: &DuckContext) -> QuackResult<Package> {
 /// Used to perform appropriate checks on presence/absence of certain fields.
 pub enum ParseMode {
     Package,
-    FrontMatterScript,
+    FrontMatter,
 }
 
 #[derive(Debug)]

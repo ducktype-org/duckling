@@ -5,8 +5,9 @@ use std::path::PathBuf;
 use tempfile::{TempDir, tempdir};
 
 use super::parse_manifest;
-use crate::quackpack::core::manifest::parse::frontmatter::try_parse_frontmatter;
-use crate::quackpack::core::{GitReference, OptLevel, Profile, Version};
+use crate::quackpack::core::manifest::parse::frontmatter::parse_frontmatter;
+use crate::quackpack::core::script::Script;
+use crate::quackpack::core::{GitReference, OptLevel, Profile, Version, capture_frontmatter};
 use crate::quackpack::util::to_path_buf::ToPathBuf;
 use crate::util::path_ops_ext::PathOpsExt;
 use crate::{DuckContext, StrId};
@@ -1287,9 +1288,7 @@ dependencies:
 "#,
     );
     let ctx = DuckContext::default();
-    let frontmatter = try_parse_frontmatter(frontmatter_path, &ctx)
-        .unwrap()
-        .unwrap();
+    let frontmatter = parse_frontmatter(&frontmatter_path, &ctx).unwrap();
     assert!(frontmatter.dependencies().has_by_name(StrId::new("a")));
     assert_eq!(frontmatter.dependencies().all_dependencies().len(), 1);
     assert_eq!(frontmatter.dev_dependencies().all_dependencies().len(), 0);
@@ -1307,7 +1306,7 @@ dependencies:
 "#,
     );
     let ctx = DuckContext::default();
-    let err = try_parse_frontmatter(frontmatter_path.clone(), &ctx).unwrap_err();
+    let err = parse_frontmatter(&frontmatter_path, &ctx).unwrap_err();
     assert_eq!(
         err.to_string(),
         make_errors_message_frontmatter(
@@ -1350,7 +1349,7 @@ dependencies:
         )
         .unwrap();
     let ctx = DuckContext::default();
-    let frontmatter = try_parse_frontmatter(importing, &ctx).unwrap().unwrap();
+    let frontmatter = parse_frontmatter(&importing, &ctx).unwrap();
     assert!(frontmatter.dependencies().has_by_name(StrId::new("a")));
     assert_eq!(frontmatter.dependencies().all_dependencies().len(), 1);
     assert_eq!(frontmatter.dev_dependencies().all_dependencies().len(), 0);
@@ -1365,7 +1364,7 @@ import: y
 "#,
     );
     let ctx = DuckContext::default();
-    let err = try_parse_frontmatter(frontmatter_path.clone(), &ctx).unwrap_err();
+    let err = parse_frontmatter(&frontmatter_path, &ctx).unwrap_err();
     let no_file_err = std::io::Error::from_raw_os_error(libc::ENOENT);
     assert_eq!(
         err.to_string(),
@@ -1389,18 +1388,21 @@ fn frontmatter_after_code_not_read() {
     let dir = TempDir::new().unwrap();
     let script = dir.path().join("x");
     script.touch().unwrap();
-    script
-        .write(
-            r#" 
+    let contents = r#" 
 let a = 5
 <frontmatter>
 import: y
 </frontmatter>
-        "#,
-        )
-        .unwrap();
+        "#;
+    script.write(contents).unwrap();
     let ctx = DuckContext::default();
-    assert!(try_parse_frontmatter(script, &ctx).unwrap().is_none());
+    // Check that we don't find a frontmatter...
+    assert!(!Script::has_frontmatter(&script).unwrap());
+    assert!(capture_frontmatter(contents).unwrap().is_none());
+    // ...but parsing returns a default.
+    let frontmatter = parse_frontmatter(&script, &ctx).unwrap();
+    assert!(frontmatter.dependencies().all_dependencies().is_empty());
+    assert!(frontmatter.dev_dependencies().all_dependencies().is_empty());
 }
 
 #[test]
@@ -1418,7 +1420,7 @@ import: y
         )
         .unwrap();
     let ctx = DuckContext::default();
-    let err = try_parse_frontmatter(script, &ctx).unwrap_err();
+    let err = parse_frontmatter(&script, &ctx).unwrap_err();
     assert_eq!(
         err.to_string(),
         make_errors_message_frontmatter(&dir, ["frontmatter begins but does not end"])
@@ -1438,7 +1440,7 @@ dependencies:
 "#,
     );
     let ctx = DuckContext::default();
-    let err = try_parse_frontmatter(frontmatter_path.clone(), &ctx).unwrap_err();
+    let err = parse_frontmatter(&frontmatter_path, &ctx).unwrap_err();
     assert_eq!(
         err.to_string(),
         make_errors_message_frontmatter(
@@ -1446,7 +1448,7 @@ dependencies:
             [
                 "remove all the fields besides `dependencies`, `dev-dependencies` and `profiles`",
                 &format!(
-                    "illegal fields `metadata`, `features` in the frontmatter at {}",
+                    "illegal fields `metadata`, `features` in the frontmatter at `{}`",
                     frontmatter_path.display()
                 ),
             ]
@@ -1515,4 +1517,219 @@ venv:
 
     let home_dir = home_dir().unwrap();
     assert_eq!(summary.venv().storage_path(), home_dir.join("storage"));
+}
+
+#[test]
+fn empty_frontmatter_works() {
+    let (_dir, frontmatter_path) = prepare_frontmatter("");
+    let ctx = DuckContext::default();
+    let _ = parse_frontmatter(&frontmatter_path, &ctx).unwrap();
+}
+
+#[test]
+fn empty_package_name() {
+    let (dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: ''
+  version: '1'
+"#,
+    );
+    let ctx = DuckContext::default();
+    let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        make_errors_message(
+            &dir,
+            [
+                "when parsing the field `metadata.name`",
+                "package has an invalid name",
+                "package name is empty",
+            ]
+        )
+    );
+}
+
+#[test]
+fn package_name_starts_with_a_dash() {
+    let (dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: '-a'
+  version: '1'
+"#,
+    );
+    let ctx = DuckContext::default();
+    let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        make_errors_message(
+            &dir,
+            [
+                "when parsing the field `metadata.name`",
+                "package has an invalid name",
+                "package name `-a` starts with an illegal character `-`",
+            ]
+        )
+    );
+}
+
+#[test]
+fn package_name_starts_with_an_illegal_char() {
+    let (dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: '!a'
+  version: '1'
+"#,
+    );
+    let ctx = DuckContext::default();
+    let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        make_errors_message(
+            &dir,
+            [
+                "when parsing the field `metadata.name`",
+                "package has an invalid name",
+                "package name `!a` starts with an illegal character `!`",
+            ]
+        )
+    );
+}
+
+#[test]
+fn package_name_contains_an_illegal_char() {
+    let (dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: 'an~'
+  version: '1'
+"#,
+    );
+    let ctx = DuckContext::default();
+    let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        make_errors_message(
+            &dir,
+            [
+                "when parsing the field `metadata.name`",
+                "package has an invalid name",
+                "package name `an~` contains an illegal character `~`",
+            ]
+        )
+    );
+}
+
+#[test]
+fn empty_dependency_name() {
+    let (dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: foo
+  version: '1'
+
+dependencies:
+  '':
+    version: '1'
+"#,
+    );
+    let ctx = DuckContext::default();
+    let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        make_errors_message(
+            &dir,
+            [
+                "when parsing the field `dependencies.`",
+                "dependency `` has an invalid name",
+                "package name is empty",
+            ]
+        )
+    );
+}
+
+#[test]
+fn dependency_name_starts_with_a_dash() {
+    let (dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: foo
+  version: '1'
+
+dependencies:
+  '-a':
+    version: '1'
+"#,
+    );
+    let ctx = DuckContext::default();
+    let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        make_errors_message(
+            &dir,
+            [
+                "when parsing the field `dependencies.-a`",
+                "dependency `-a` has an invalid name",
+                "package name `-a` starts with an illegal character `-`",
+            ]
+        )
+    );
+}
+
+#[test]
+fn dependency_name_starts_with_an_illegal_char() {
+    let (dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: foo
+  version: '1'
+
+dependencies:
+  '!a':
+    version: '1'
+"#,
+    );
+    let ctx = DuckContext::default();
+    let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        make_errors_message(
+            &dir,
+            [
+                "when parsing the field `dependencies.!a`",
+                "dependency `!a` has an invalid name",
+                "package name `!a` starts with an illegal character `!`",
+            ]
+        )
+    );
+}
+
+#[test]
+fn dependency_name_contains_an_illegal_char() {
+    let (dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: foo
+  version: '1'
+
+dependencies:
+  'an~':
+    version: '1'
+"#,
+    );
+    let ctx = DuckContext::default();
+    let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        make_errors_message(
+            &dir,
+            [
+                "when parsing the field `dependencies.an~`",
+                "dependency `an~` has an invalid name",
+                "package name `an~` contains an illegal character `~`",
+            ]
+        )
+    );
 }

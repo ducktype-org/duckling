@@ -8,6 +8,7 @@ use tracing::{debug, trace};
 
 use crate::duck::util::duck_home::DuckHome;
 use crate::quackpack::core::PackageContext;
+use crate::quackpack::core::script::{PackageScript, Script};
 use crate::quackpack::core::storage::paths::Storage;
 use crate::quackpack::core::storage::venv::Venv;
 use crate::quackpack::core::storage::venv_id::VenvId;
@@ -152,6 +153,53 @@ impl PackageLoader {
         let dir = venv.data().last_known_location();
         Self::find_at_exact_directory(dir, ctx)
             .with_context(|| format!("Lost track of the venv {venv_id}"))
+    }
+
+    /// Loads the appropriate venv of the script.
+    #[track_caller]
+    pub fn load_script<'duck>(
+        ctx: &'duck DuckContext,
+        script_path: &Path,
+        script_folder: &Path,
+        global: bool,
+    ) -> QuackResult<PackageContext<'duck>> {
+        let associated_script = |package| {
+            let script = PackageScript::new(package, script_path.to_path_buf())?;
+            Ok(PackageContext::new_script(script.into(), ctx))
+        };
+        let global_package = PackageLoader::global_package(ctx)
+            .context_internal("failed to load the global package")?
+            .into_package()
+            .unwrap_package();
+        let has_frontmatter = Script::has_frontmatter(script_path)?;
+        // If this is `Ok(_)` then the script lies inside a package.
+        let possible_package =
+            PackageLoader::find_from_directory(script_folder, ctx, AllowGlobalPackage::No);
+        // If possible_package is `Err` and it does not steem from `PackageNotFound` then return the error.
+        // After this, possible_package is `Err` if and only if script does not belong to a package.
+        if let Err(ref err) = possible_package
+            && !err.has_in_chain::<PackageNotFound>()
+        {
+            return possible_package;
+        }
+        match (has_frontmatter, possible_package, global) {
+            // Scripts with frontmatters cannot be inside packages nor be run with `global` flag.
+            (true, Ok(_), _) => qp_bail!("scripts inside packages cannot have frontmatters"),
+            (true, _, true) => {
+                qp_bail!("script with a frontmatter cannot be run with `global` flag")
+            }
+            (true, Err(_), false) => PackageContext::new_standalone_script(script_path, ctx),
+            // `global` forces the script to be run in the global venv, even if it is inside a package.
+            (false, _, true) => associated_script(global_package),
+            // If script does not belong to a package, nor any special option has been specified,
+            // treat it as a script under the global package (the default of defaults).
+            (false, Err(_), false) => associated_script(global_package),
+            // Script under a package.
+            (false, Ok(pcx), false) => {
+                let package = pcx.into_package().unwrap_package();
+                associated_script(package)
+            }
+        }
     }
 }
 

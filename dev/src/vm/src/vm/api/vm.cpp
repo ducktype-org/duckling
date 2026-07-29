@@ -157,10 +157,10 @@ namespace vm::api {
 		    .and_then(mapOrWrongResponse<response::Type>);
 	}
 
-	std::expected<response::VmValue, ApiError> getVmValue(PID pid, const std::string& type_name) {
+	std::expected<response::VMValue, ApiError> getVMValue(PID pid, const std::string& type_name) {
 		return Supervisor::get()
-		    .doRequest(SupervisorRequest(pid, request::VmValue{ type_name }))
-		    .and_then(mapOrWrongResponseMove<response::VmValue>);
+		    .doRequest(SupervisorRequest(pid, request::VMValue{ type_name }))
+		    .and_then(mapOrWrongResponseMove<response::VMValue>);
 	}
 
 	std::expected<response::NumberOfCurrentStackFrames, ApiError> debuggerGetNumberOfStackFrames(

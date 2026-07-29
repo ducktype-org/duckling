@@ -23,7 +23,7 @@ fun builtin_output_i64(x: i64) -> i64 = {
 
 @native_only_impl
 fun builtin_output_i64(x: i64) -> i64 = {
-    clib.putchar(i32('x'));
-    clib.putchar(i32('\n'));
+    clib.putchar('x' as i32);
+    clib.putchar('\n' as i32);
     return 2;
 }

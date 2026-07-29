@@ -47,6 +47,11 @@ namespace query::external {
 		return ::query::internal::QueryGraph::serializeReducedGraph(std::move(reduced_graph));
 	}
 
+	u64 deleteOrphanedDiskCaches() {
+		auto state = ::query::internal::ContextAccess::getState();
+		return state->cleanupOrphanedDiskCaches();
+	}
+
 	void setPreviousMetadataFromRawBytes(std::span<const std::byte> metadata_raw_bytes) {
 		auto state    = ::query::internal::ContextAccess::getState();
 		auto metadata = ::query::internal::MetadataStorage::deserialize(metadata_raw_bytes);
@@ -113,6 +118,10 @@ namespace query::external {
 		for (const auto& node: nodes_to_invalidate.dependents_recursive) {
 			if (not node.q_id.getData().isInputQuery()) {
 				internal::ContextAccess::getState()->getTaskPool()->invalidateTask(node);
+				// Disk-cached queries also leave an on-disk artifact; remove it too so invalidated
+				// results are not silently reloaded from disk in a later compilation.
+				if (node.q_id.getData().tags.can_be_loaded_from_disk)
+					node.q_id.getData().cache_data.disk_erase_function(node.hash.val);
 				node.q_id.getData().cache_data.erase_function(node.hash.val);
 			}
 
