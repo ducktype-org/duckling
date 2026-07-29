@@ -97,7 +97,7 @@ ENV PATH=/root/.cargo/bin:/usr/lib/llvm-19/bin:$PATH
 ENV HOME=/home/ubuntu
 
 ARG UID=1000
-ARG GID=1000
+ARG GID
 ARG DEFAULT_USER=ubuntu
 
 # `groupmod` can fail with exit code 4 when the provided GID is already in use in the container.
