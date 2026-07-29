@@ -28,6 +28,17 @@ fun intChain() -> i32 = {
     return v;
 }
 
+# The single-object overloads of `dvm_alloc` / `dvm_free`, which work on `ptr T` instead of
+# `manyptr T` and share their duckling names with the array overloads above.
+fun singleChain() -> i64 = {
+    var p = dvm_alloc:{i64}();
+    *p = 5i64;
+    let v = *p;
+
+    dvm_free:{i64}(p);
+    return v;
+}
+
 # Test usages of builtins.
 fun main() = {
     let x: i64 = builtin_input_i64();
@@ -38,6 +49,7 @@ fun main() = {
 
     builtin_output_i64(strChain());
     builtin_output_i64(intChain() as i64);
+    builtin_output_i64(singleChain());
 
     return 0;
 }

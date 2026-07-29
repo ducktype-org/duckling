@@ -210,7 +210,9 @@ private:
 	// `getValue` (returning 10), not the `@native_only_impl` one (returning 20).
 	void backendDependentTest() { runTest("backend_dependent", {}, {}, {}, 10); }
 
-	void allocTest() { runMultimoduleTest("alloc", ALL_CORE_MODULES, {}, "16\n131\n", {}, 42); }
+	void allocTest() {
+		runMultimoduleTest("alloc", ALL_CORE_MODULES, {}, "16\n131\n145\n", {}, 42);
+	}
 };
 
 

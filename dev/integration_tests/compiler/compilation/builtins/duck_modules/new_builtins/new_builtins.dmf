@@ -16,5 +16,12 @@ fun main() -> i64 = {
     builtin_output_str(s);
 
     dvm_free:{char}(p);
+
+    # Single-object allocation: same duckling name, `ptr T` overload instead of `manyptr T`.
+    var single = dvm_alloc:{char}();
+    *single = a;
+    builtin_output_char(*single);
+    dvm_free:{char}(single);
+
     return 0i64;
 }

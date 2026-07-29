@@ -3,6 +3,7 @@ import core.builtins.*;
 # Exercises the DVM-backend allocation and slice builtins whose implementations are synthesized by
 # the compiler (see the DVM `BuiltinCallOperation` lowering): `dvm_alloc`, `dvm_realloc`, `dvm_free`,
 # `slice_from_ptr_len` and `ptr_from_slice`, baked for more than one element type.
+# Both the array overloads (`manyptr T`) and the single-object overloads (`ptr T`) are covered.
 # Element types that hold a pointer (e.g. `str`) are not covered here yet, see #3225.
 fun charChain() -> i64 = {
     # Allocate a dynamic char table with 8 elements.
@@ -51,8 +52,25 @@ fun i64ReallocChain() -> i64 = {
     return first + last + len;
 }
 
+# Single-object allocation: `dvm_alloc:{T}()` returns a `ptr T` (no element count), freed with the
+# `ptr T` overload of `dvm_free`. It shares its duckling name with the array overloads above.
+fun singleObjectChain() -> i64 = {
+    var p = dvm_alloc:{i64}();
+    *p = 55i64;
+    let value = *p;
+    dvm_free:{i64}(p);
+
+    var c = dvm_alloc:{char}();
+    *c = 'Z';
+    let letter = *c;
+    dvm_free:{char}(c);
+
+    return value + (letter as i64);
+}
+
 fun main() -> i64 = {
     builtin_output_i64(i32Chain() as i64);
     builtin_output_i64(i64ReallocChain());
+    builtin_output_i64(singleObjectChain());
     return charChain();
 }
