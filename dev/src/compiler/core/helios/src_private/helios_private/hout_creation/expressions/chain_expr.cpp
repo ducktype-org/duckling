@@ -133,22 +133,19 @@ namespace compiler::helios::code {
 	}
 
 	/**
-	 * @brief Pick the template symbols a bake applies to out of a lookup result.
-	 *
-	 * A name may resolve to several template declarations forming an overload set (for example
-	 * `dvm_alloc:{T}()` and `dvm_alloc:{T}(size)`). All of them are returned so that each can be
-	 * baked and the regular call overload resolution can pick the matching one.
+	 * This is temporary helper used before #3095 and before #3112
 	 *
 	 * @TODO: #3095 remove or adjust it, move the relevant code to the handling of the new :{} PST
 	 * node.
 	 */
 	template<typename T>
-	query::QResult<std::vector<SymID>> templateSymbolsToBake(
+	query::QResult<base::Optional<SymID>> transformTemplateBakeLookupResult(
 		query::Context&    query_ctx,
 		CRef<LookupResult> lookup_result,
 		pst::Access<T>     element_with_template_specifier
-	) {
-		if (lookup_result->leaves.size() > 1) return lookup_result->leaves;
+	) requires requires(T t) { t.getTemplateSpecifier(); } {
+		if (not element_with_template_specifier->getTemplateSpecifier().has_value())
+			return base::Optional<SymID>{};  // no template specifier, no bake
 
 		auto as_single = lookup_result->getAsSingle();
 
@@ -162,7 +159,10 @@ namespace compiler::helios::code {
 
 				// @TODO: #1412 fix dealias, this discards all aliases and takes the last symbol in
 				// the list
-				return std::vector<SymID>{ symbol_list.list.back() };
+				auto template_sym_id = symbol_list.list.back();
+				return transformTemplateBake(
+					query_ctx, template_sym_id, element_with_template_specifier
+				);
 			}
 
 			variant_case(errors::Ambiguity, _) {
@@ -185,43 +185,6 @@ namespace compiler::helios::code {
 		}
 
 		CORE_UNREACHABLE();
-	}
-
-	/**
-	 * This is temporary helper used before #3095 and before #3112
-	 *
-	 * @TODO: #3095 remove or adjust it, move the relevant code to the handling of the new :{} PST
-	 * node.
-	 *
-	 * @return The baked symbols (one per template declaration the name resolves to), or an empty
-	 * optional when the element carries no template specifier.
-	 */
-	template<typename T>
-	query::QResult<base::Optional<std::vector<SymID>>> transformTemplateBakeLookupResult(
-		query::Context&    query_ctx,
-		CRef<LookupResult> lookup_result,
-		pst::Access<T>     element_with_template_specifier
-	) requires requires(T t) { t.getTemplateSpecifier(); } {
-		if (not element_with_template_specifier->getTemplateSpecifier().has_value())
-			return base::Optional<std::vector<SymID>>{};  // no template specifier, no bake
-
-		UNPACK_QRESULT_MOVE(
-			auto templates =,
-			templateSymbolsToBake(query_ctx, lookup_result, element_with_template_specifier)
-		);
-
-		std::vector<SymID> baked_symbols;
-		baked_symbols.reserve(templates.size());
-		for (const auto template_sym_id: templates) {
-			UNPACK_QRESULT(
-				auto baked =,
-				transformTemplateBake(query_ctx, template_sym_id, element_with_template_specifier)
-			);
-			// The empty case means "no template specifier", which is already excluded above.
-			baked_symbols.push_back(baked.value());
-		}
-
-		return base::Optional<std::vector<SymID>>{ std::move(baked_symbols) };
 	}
 
 	/**
@@ -522,7 +485,8 @@ namespace compiler::helios::code {
 			);
 
 			// @TODO: #1412 fix dealias
-			if (maybe_bake.has_value()) return getCallableCandidates(maybe_bake.value());
+			if (maybe_bake.has_value())
+				return getCallableCandidates(std::vector{ maybe_bake.value() });
 			return getCallableCandidates(lookup_result->leaves);
 		}
 

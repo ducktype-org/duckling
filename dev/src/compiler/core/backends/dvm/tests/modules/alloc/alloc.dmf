@@ -1,22 +1,23 @@
 import core.builtins.*;
 
 # Exercises the DVM-backend allocation and slice builtins whose implementations are synthesized by
-# the compiler (see the DVM `BuiltinCallOperation` lowering): `dvm_alloc`, `dvm_realloc`, `dvm_free`,
-# `slice_from_ptr_len` and `ptr_from_slice`, baked for more than one element type.
-# Both the array overloads (`manyptr T`) and the single-object overloads (`ptr T`) are covered.
+# the compiler (see the DVM `BuiltinCallOperation` lowering): `dvm_alloc_arr`, `dvm_realloc_arr`,
+# `dvm_free_arr`, `dvm_alloc`, `dvm_free`, `slice_from_ptr_len` and `ptr_from_slice`, baked for more
+# than one element type. Both the array builtins (`manyptr T`) and the single-object ones (`ptr T`)
+# are covered.
 # Element types that hold a pointer (e.g. `str`) are not covered here yet, see #3225.
 fun charChain() -> i64 = {
     # Allocate a dynamic char table with 8 elements.
-    var p = dvm_alloc:{char}(8u64);
+    var p = dvm_alloc_arr:{char}(8u64);
     p[0] = 'A';
     let a = p[0];
 
     # Grow the table and use the newly available space to prove the reallocation happened.
-    dvm_realloc:{char}(p, 16u64);
+    dvm_realloc_arr:{char}(p, 16u64);
     p[10] = 'B';
     let b = p[10];
 
-    dvm_free:{char}(p);
+    dvm_free_arr:{char}(p);
 
     # The written chars must survive the round-trip through the allocated / reallocated table.
     if (a == 'A' and b == 'B') return 42i64;
@@ -24,7 +25,7 @@ fun charChain() -> i64 = {
 }
 
 fun i32Chain() -> i32 = {
-    var p = dvm_alloc:{i32}(2u64);
+    var p = dvm_alloc_arr:{i32}(2u64);
     p[0] = 7i32;
     p[1] = 9i32;
 
@@ -32,28 +33,28 @@ fun i32Chain() -> i32 = {
     let q = ptr_from_slice:{i32}(s);
     let sum = q[0] + q[1];
 
-    dvm_free:{i32}(p);
+    dvm_free_arr:{i32}(p);
     return sum;
 }
 
 fun i64ReallocChain() -> i64 = {
-    var p = dvm_alloc:{i64}(2u64);
+    var p = dvm_alloc_arr:{i64}(2u64);
     p[0] = 100i64;
     let first = p[0];
 
-    dvm_realloc:{i64}(p, 8u64);
+    dvm_realloc_arr:{i64}(p, 8u64);
     p[7] = 23i64;
     let last = p[7];
 
     let s = slice_from_ptr_len:{i64}(p, 8u64);
     let len = s.length() as i64;
 
-    dvm_free:{i64}(p);
+    dvm_free_arr:{i64}(p);
     return first + last + len;
 }
 
-# Single-object allocation: `dvm_alloc:{T}()` returns a `ptr T` (no element count), freed with the
-# `ptr T` overload of `dvm_free`. It shares its duckling name with the array overloads above.
+# Single-object allocation: `dvm_alloc:{T}()` returns a `ptr T` (no element count) and is freed with
+# `dvm_free:{T}`, separate names from the `_arr` builtins above.
 fun singleObjectChain() -> i64 = {
     var p = dvm_alloc:{i64}();
     *p = 55i64;
