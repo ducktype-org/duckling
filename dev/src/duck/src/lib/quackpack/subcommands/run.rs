@@ -15,6 +15,8 @@ pub struct RunOptions<'duck> {
     pub used_features: Vec<FeatureName>,
     /// Selected build profile.
     pub profile: StrId,
+    /// Whether to compile all dependencies into single folder (`false`) or compile each one where its code is located (`true`).
+    pub shared: bool,
     /// Artefact from [`StorageSyncOptions`].
     pub overwrite: bool,
     /// Artefact from [`StorageSyncOptions`].
@@ -33,6 +35,7 @@ impl<'a> From<RunOptions<'a>> for (BuildOptions<'a>, Vec<OsString>) {
             pcx: val.pcx,
             used_features: val.used_features,
             profile: val.profile,
+            shared: val.shared,
             overwrite: val.overwrite,
             frozen: val.frozen,
             strict_errors: val.strict_errors,
