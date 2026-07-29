@@ -1,9 +1,15 @@
-#![expect(dead_code)]
-use crate::quackpack::core::fetcher::git::github_client::{GithubApiClient, GithubClient};
-use crate::quackpack::core::fetcher::git::gitlab_client::{GitlabApiClient, GitlabClient};
+use crate::quackpack::core::fetcher::git::fast_path::github_api_client::GithubApiClient;
+use crate::quackpack::core::fetcher::git::fast_path::github_client::GithubClient;
+use crate::quackpack::core::fetcher::git::fast_path::gitlab_api_client::GitlabApiClient;
+use crate::quackpack::core::fetcher::git::fast_path::gitlab_client::GitlabClient;
 use crate::quackpack::core::{GitReference, Manifest};
 use crate::quackpack::util::interned_url::InternedUrl;
 use crate::{QuackResult, StrId};
+
+mod github_api_client;
+mod github_client;
+mod gitlab_api_client;
+mod gitlab_client;
 
 /// Trait for comunicating with git repository servers which provide special APIs,
 /// allowing us to postpone/completely omit clones.
