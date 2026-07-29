@@ -136,7 +136,7 @@ fn setup_mock_venvs(root: &Path, ctx: &DuckContext) {
         },
         |data| {
             data.set_ephemeral(true);
-            data.set_last_modification(SystemTime::now() - Duration::from_secs(2 * 24 * 60 * 60));
+            data.set_last_synchronization(SystemTime::now() - Duration::from_secs(2 * 24 * 60 * 60));
         },
         ctx,
     );
@@ -157,7 +157,7 @@ fn setup_mock_venvs(root: &Path, ctx: &DuckContext) {
             freeze.dependencies_mut().push(package);
         },
         |data| {
-            data.set_last_modification(SystemTime::now() - Duration::from_secs(2 * 24 * 60 * 60));
+            data.set_last_synchronization(SystemTime::now() - Duration::from_secs(2 * 24 * 60 * 60));
         },
         ctx,
     );
