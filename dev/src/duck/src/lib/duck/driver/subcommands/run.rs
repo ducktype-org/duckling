@@ -45,6 +45,10 @@ pub fn get_parser() -> Command {
                 .num_args(0..)
                 .value_parser(value_parser!(OsString)),
         )
+        .arg(flag(
+            "shared-artifacts",
+            "Compile dependencies where their code is located",
+        ))
 }
 
 /// Logic for executing the `run` subcommand.
@@ -62,6 +66,7 @@ pub fn execute(ctx: &DuckContext, matches: &ArgMatches) -> QuackResult<()> {
         pcx,
         used_features: features,
         profile,
+        shared: matches.get_flag("shared-artifacts"),
         overwrite: matches.get_flag("overwrite"),
         frozen: matches.get_flag("frozen"),
         strict_errors: matches.get_flag("external-errors"),
