@@ -42,10 +42,20 @@ impl Script {
     }
 
     /// Get the path to the artifacts directory.
-    pub fn artifacts_directory(&self) -> &ArtifactsLayout {
+    pub fn artifacts_directory(&self) -> &Path {
         match self {
-            Self::Standalone(standalone_script) => standalone_script.artifacts_directory(),
+            Self::Standalone(standalone_script) => {
+                standalone_script.frontmatter().artifacts_directory()
+            }
             Self::Associated(package_script) => package_script.artifacts_directory(),
+        }
+    }
+
+    /// Get the artifacts layout.
+    pub fn artifacts_layout<T: ArtifactsLayout>(&self) -> T {
+        match self {
+            Self::Standalone(standalone_script) => standalone_script.artifacts_layout(),
+            Self::Associated(package_script) => package_script.artifacts_layout(),
         }
     }
 
@@ -219,8 +229,13 @@ impl PackageScript {
     }
 
     /// Get the path to the artifacts directory.
-    pub fn artifacts_directory(&self) -> &ArtifactsLayout {
+    pub fn artifacts_directory(&self) -> &Path {
         self.package().artifacts_directory()
+    }
+
+    /// Get the artifacts layout.
+    pub fn artifacts_layout<T: ArtifactsLayout>(&self) -> T {
+        self.package().artifacts_layout()
     }
 
     /// Get the package's manifest.
@@ -283,8 +298,8 @@ impl StandaloneScript {
     }
 
     /// Get the path to the artifacts directory.
-    pub fn artifacts_directory(&self) -> &ArtifactsLayout {
-        self.frontmatter().artifacts_directory()
+    pub fn artifacts_layout<T: ArtifactsLayout>(&self) -> T {
+        self.frontmatter().artifacts_layout()
     }
 
     /// Get the manifest constructed from the script's frontmatter.
@@ -337,7 +352,7 @@ pub struct FrontMatter {
     /// Manifest constructed from the frontmatter.
     manifest: Manifest,
     /// Where the build artifacts should be located.
-    artifacts_dir: ArtifactsLayout,
+    artifacts_dir: PathBuf,
 }
 
 impl FrontMatter {
@@ -352,8 +367,7 @@ impl FrontMatter {
             .context_internal("script path without parent")?;
         // NOTE: `parse/manifest.rs` for frontmatters sets script name as a `metadata.name`.
         let script_name = manifest.name();
-        let artifacts_dir =
-            ArtifactsLayout::new(script_folder.join(".duck_build").join(script_name));
+        let artifacts_dir = script_folder.join(".duck_build").join(script_name);
         Ok(Self {
             path: path.clone(),
             script_folder: script_folder.to_path_buf(),
@@ -385,8 +399,13 @@ impl FrontMatter {
     }
 
     /// Get the path to the artifacts directory.
-    pub fn artifacts_directory(&self) -> &ArtifactsLayout {
+    pub fn artifacts_directory(&self) -> &Path {
         &self.artifacts_dir
+    }
+
+    /// Get the artifacts layout.
+    pub fn artifacts_layout<T: ArtifactsLayout>(&self) -> T {
+        T::new(self.artifacts_dir.clone())
     }
 
     /// Get the manifest constructed from the script's frontmatter.
