@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 
 use super::compile::artifacts_layout::ArtifactsLayout;
 use super::identity::{Identity, Origin};
-use super::valid_package_name::ValidPackageName;
+use super::valid_package_name::validate_package_name;
 use super::{Dependencies, Manifest, Package, Profiles, capture_frontmatter};
 use crate::quackpack::schemas::manifest::Manifest as ManifestSchema;
 use crate::util::path_ops_ext::PathOpsExt;
@@ -195,7 +195,7 @@ impl PackageScript {
     #[track_caller]
     pub fn new(package: Package, script_path: PathBuf) -> QuackResult<Self> {
         let script_name = StrId::from(script_path.file_stem().unwrap());
-        ValidPackageName::new(script_name.as_str()).with_context(|| {
+        validate_package_name(&script_name).with_context(|| {
             format!(
                 "script at `{}` has an invalid script name (file stem)",
                 script_path.display()

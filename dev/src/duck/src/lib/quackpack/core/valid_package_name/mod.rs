@@ -1,24 +1,6 @@
-//! Represents a valid package name.
+//! Utilities for validating a package name.
 
 use thiserror::Error;
-
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
-pub struct ValidPackageName<'a> {
-    name: &'a str,
-}
-
-impl<'a> ValidPackageName<'a> {
-    /// Create a new, valid [`ValidPackageName`].
-    pub fn new(name: &'a str) -> Result<Self, PackageNameError> {
-        validate_package_name(name)?;
-        Ok(Self { name })
-    }
-
-    /// Get the inner `name`.
-    pub fn name(&self) -> &str {
-        self.name
-    }
-}
 
 #[derive(Debug, Error, Clone, Eq, PartialEq)]
 pub enum PackageNameError {
@@ -31,7 +13,7 @@ pub enum PackageNameError {
 }
 
 /// Validate a package name `name`.
-fn validate_package_name(name: &str) -> Result<(), PackageNameError> {
+pub fn validate_package_name(name: &str) -> Result<(), PackageNameError> {
     let Some(first) = name.chars().next() else {
         return Err(PackageNameError::Empty);
     };
@@ -94,7 +76,7 @@ mod tests {
             "b3-aWagagkahgjka-_",
         ];
         for name in valid_package_names {
-            let _ = ValidPackageName::new(name).unwrap();
+            validate_package_name(name).unwrap();
         }
     }
 
@@ -139,7 +121,7 @@ mod tests {
             ),
         ];
         for (name, err) in test_errors {
-            assert_eq!(err, ValidPackageName::new(name).unwrap_err());
+            assert_eq!(err, validate_package_name(name).unwrap_err());
         }
     }
 }

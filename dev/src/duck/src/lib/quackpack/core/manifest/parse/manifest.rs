@@ -7,7 +7,7 @@ use tracing::debug;
 use super::source::resolve_path_maybe_relative_to_dir;
 use super::{Scope, dependency};
 use crate::quackpack::core::manifest::VenvConfig;
-use crate::quackpack::core::valid_package_name::ValidPackageName;
+use crate::quackpack::core::valid_package_name::validate_package_name;
 use crate::quackpack::core::{
     Features, Manifest, OptLevel, PackageMetadata, ParseMode, Profile, Profiles, ScopeGuard,
     Version,
@@ -57,7 +57,7 @@ pub(crate) fn parse(
             // manifest.name.
             let name = StrId::from(root.file_stem().unwrap());
 
-            ValidPackageName::new(name.as_str()).with_context(|| {
+            validate_package_name(&name).with_context(|| {
                 format!(
                     "script at `{}` has an invalid script name (file stem)",
                     root.display()
@@ -96,7 +96,7 @@ pub(crate) fn parse(
                 let mut guard1 = scope.push("metadata".to_string());
                 let guard2 = guard1.push("name".to_string());
 
-                let _ = ValidPackageName::new(name.as_str())
+                validate_package_name(name)
                     .context("package has an invalid name")
                     .with_context(|| guard2.make_context_string())?;
             }

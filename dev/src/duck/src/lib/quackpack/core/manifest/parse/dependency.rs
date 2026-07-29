@@ -4,7 +4,7 @@ use std::path::Path;
 use tracing::{debug, trace};
 
 use super::{ScopeGuard, source};
-use crate::quackpack::core::valid_package_name::ValidPackageName;
+use crate::quackpack::core::valid_package_name::validate_package_name;
 use crate::quackpack::core::{Conditions, Dependencies, Dependency, DependencyFeature};
 use crate::quackpack::schemas::OneEntryMap;
 use crate::quackpack::schemas::manifest::{
@@ -49,7 +49,7 @@ fn parse_single_dependency(
     mut scope: ScopeGuard<'_>,
 ) -> QuackResult<Dependency> {
     trace!(?schema, "parsing a dependency");
-    ValidPackageName::new(manifest_name.as_str())
+    validate_package_name(&manifest_name)
         .with_context(|| format!("dependency `{manifest_name}` has an invalid name"))
         .with_context(|| scope.make_context_string())?;
     let guard = scope.push("source".into());
