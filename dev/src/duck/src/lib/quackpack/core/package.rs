@@ -217,7 +217,7 @@ impl Package {
             manifest,
             root,
             manifest_path,
-            artifacts_dir: artifacts_dir.clone(),
+            artifacts_dir,
             possible_source_dir: source_directory,
         }
     }

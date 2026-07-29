@@ -21,14 +21,12 @@ pub struct Sha256Hasher {
     /// Hash of the currently seen words.
     current_sha256: Sha256,
     /// Additional string hashed after every update.
-    separator: &'static str,
+    separator: Option<&'static str>,
 }
 
 impl Sha256Hasher {
     /// Create a new [`Sha256Hasher`].
-    /// Separator equal to `None` is equivalent with `Some("")`.
     pub fn new(separator: Option<&'static str>) -> Self {
-        let separator = separator.unwrap_or("");
         Self {
             current_sha256: Sha256::new(),
             separator,
@@ -38,7 +36,9 @@ impl Sha256Hasher {
     /// Update the current hash by one word.
     pub fn update<H: AsRef<[u8]>>(&mut self, data: H) {
         self.current_sha256.update(data);
-        self.current_sha256.update(self.separator);
+        if let Some(separator) = self.separator {
+            self.current_sha256.update(separator);
+        }
     }
 
     /// Finalize hashing and return result as an array of bytes.
