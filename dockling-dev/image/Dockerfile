@@ -100,10 +100,10 @@ ARG UID=1000
 ARG GID=1000
 ARG DEFAULT_USER=ubuntu
 
-# `groupmod` can fail with exit code 4 when the provided gid is already in use in the container.
+# `groupmod` can fail with exit code 4 when the provided GID is already in use in the container.
 # Our only concern is that the GID of created files match the GID of the user outside the container,
 # so we can use the already existing group with this GID instead of ubuntu group.
-# This is the case for macOS users whose gid is usually 20 (`staff`).
+# This is the case for macOS users whose GID is usually 20 (`staff`).
 RUN echo gid ${GID} uid ${UID} expr ${GID:-${UID}}       && \
     ( groupmod -g ${GID:-${UID}} ubuntu || [ $? == 4 ] ) && \
     usermod -u ${UID} -g ${GID:-${UID}} ubuntu
