@@ -1,3 +1,6 @@
+//! Module for git fast path.
+//! This means using outside knowledge about some git servers to perform necessary operation
+//! without performing costly repository clones.
 use crate::quackpack::core::fetcher::git::fast_path::github_api_client::GithubApiClient;
 use crate::quackpack::core::fetcher::git::fast_path::github_client::GithubClient;
 use crate::quackpack::core::fetcher::git::fast_path::gitlab_api_client::GitlabApiClient;
@@ -33,23 +36,21 @@ pub trait GitFastPathExt<'duck>: Sized {
     fn download_manifest(&self, commit: StrId) -> QuackResult<Manifest>;
 }
 
+/// Main entry point to the git fast path.
+/// Used to create [`GitlabClient`] and [`GithubClient`] instances tailored to specific repositories.
 pub struct GitFastPathClient<'duck> {
     gitlab: GitlabApiClient<'duck>,
     github: GithubApiClient<'duck>,
 }
 
 impl GitFastPathClient<'_> {
-    pub fn try_get_github_client<'a>(
-        &'a self,
-        repo_url: InternedUrl,
-    ) -> Option<impl GitFastPathExt<'a>> {
+    /// Create [`GithubClient`] for the repository.
+    pub fn try_get_github_client<'a>(&'a self, repo_url: InternedUrl) -> Option<GithubClient<'a>> {
         GithubClient::new(&self.github, repo_url)
     }
 
-    pub fn try_get_gitlab_client<'a>(
-        &'a self,
-        repo_url: InternedUrl,
-    ) -> Option<impl GitFastPathExt<'a>> {
+    /// Create [`GitlabClient`] for the repository.
+    pub fn try_get_gitlab_client<'a>(&'a self, repo_url: InternedUrl) -> Option<GitlabClient<'a>> {
         GitlabClient::new(&self.gitlab, repo_url)
     }
 }
