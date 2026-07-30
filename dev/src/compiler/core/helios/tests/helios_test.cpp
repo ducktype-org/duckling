@@ -2413,8 +2413,8 @@ private:
 			auto u64_1234  = NumericValue{ u64{ 1'234 } };
 			auto str1
 				= CompileTimeValue{ CompileTimeValue::CharSliceValue{ base::StrID{ "strABC" } } };
-			auto str2
-				= CompileTimeValue{ CompileTimeValue::StringClassValue{ base::StrID{ "strCBA" } } };
+			auto str2  = CompileTimeValue{ CompileTimeValue::StringClassValue{
+                base::StrID{ "strCBA ()<>[]{} -_=+'\"/\\,." } } };
 			auto tuple = CompileTimeValue::TupleCTV{ std::vector<CompileTimeValue>{ true, false } };
 
 			std::vector<CompileTimeValue> ctvs = {
@@ -2426,9 +2426,12 @@ private:
 			return result;
 		});
 
+		std::cerr << result << '\n';
+
 		std::string expected
 			= "b0 b1 f0000803f d000000000000f03f ibn7_ jb7_ iwn42_ jw42_ idn137_ jd137_ iqn1234_ "
-			  "jq1234_ c66_ c94_ r6_strABC s6_strCBA u Tb1b0E tNid "
+			  "jq1234_ c66_ c94_ r6_737472414243 "
+			  "s26_7374724342412028293c3e5b5d7b7d202d5f3d2b27222f5c2c2e u Tb1b0E tNid "
 			  "tR_Q_CM8manglingN4Mspc3Ooo3ClsE ";
 
 		ASSERT_EQUAL(result, expected);
