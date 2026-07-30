@@ -10,8 +10,9 @@ Subcommands:
                         into the temporary directory, mirroring their
                         relative paths, and sweep stale directories
                         left over from past runs
-    exec -- CMD...   -- run CMD inside the temporary directory
+    exec -- CMD...   -- run CMD (bash syntax) inside the temporary directory
     clean            -- remove the temporary directory
+    sweep            -- only sweep stale directories of past runs
 """
 import os
 import shutil
@@ -36,7 +37,7 @@ def tmp_dir() -> Path:
     value = os.environ.get("DIT_TMP_DIR", "")
     if not value:
         fail("DIT_TMP_DIR is not set; define it with the `Env` config key")
-    path = Path(value)
+    path = Path(value).resolve()
     is_under_valid_dir = any(root in path.parents for root in ALLOWED_TMP_ROOTS)
     if not is_under_valid_dir:
         valid_roots_string = " or ".join(str(x) for x in ALLOWED_TMP_ROOTS)
@@ -85,6 +86,8 @@ def cmd_exec(argv: list[str]):
     if not path.is_dir():
         fail(f"{path} does not exist; run `make` first")
     os.chdir(path)
+    # The arguments are joined into one bash command line and re-parsed
+    # by bash: `exec` forwards shell syntax, it does not exec an argv.
     os.execvp("/bin/bash", ["/bin/bash", "-c", " ".join(argv)])
 
 
@@ -105,6 +108,8 @@ def main():
             cmd_exec(args)
         case "clean":
             cmd_clean()
+        case "sweep":
+            sweep_stale()
         case unknown:
             fail(f"unknown subcommand: {unknown}")
 

@@ -72,8 +72,11 @@ Tests:
         Output:
           String: "Hello from VM!\nl\n15\nHello from Duckling!\n"
         ExitCode: 0
+  # The llvm cases abort (SIGABRT). DIT disables core dumps, so the abort
+  # exits promptly; these still run exclusively out of caution.
   slices_out_of_bounds:
     enable_conc_deterministic_tests: "false"
+    NoParallel: true
     Cases:
       llvm:
         backend: llvm
@@ -85,6 +88,7 @@ Tests:
           String: "Program panicked!\n"
   slices_negative_index:
     enable_conc_deterministic_tests: "false"
+    NoParallel: true
     Cases:
       llvm:
         backend: llvm
@@ -92,4 +96,3 @@ Tests:
       dvm:
         backend: dvm
         ExitCode: 1
-

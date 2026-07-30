@@ -44,7 +44,6 @@ namespace pst::internal {
 		static bool isCurlyGroup(const TokenStream& state, i64 fwd);
 		static bool isAssignOrSemicolon(const TokenStream& st, i64 fwd);
 		static bool isAssignOrCommaOrEnd(const TokenStream& st, i64 fwd);
-		static bool isAssign(const TokenStream& st, i64 fwd);
 
 		/**
 		 * @brief This is to differentiate blocks from template specification
@@ -79,8 +78,6 @@ namespace pst::internal {
 		static std::string inheritanceList() { return "inheritance"; }
 
 		static std::string attributeArgList() { return "attribute argument"; }
-
-		static std::string classInitList() { return "initialization"; }
 
 		static std::string callList() { return "call"; }
 

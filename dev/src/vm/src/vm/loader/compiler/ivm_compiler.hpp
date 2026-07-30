@@ -110,9 +110,9 @@ namespace vm::loader::compiler {
 		 * @brief Compiles newly added FFIFunctions. Compilers without FFI support may keep the
 		 * default no-op implementation.
 		 */
-		virtual void compileNewFFIFunctions(const std::vector<code::FFIFunction>& new_functions) {
-			(void) new_functions;
-		}
+		virtual void compileNewFFIFunctions(
+			[[maybe_unused]] const std::vector<code::FFIFunction>& new_functions
+		) {}
 
 		/**
 		 * @brief Retrieves the current size of the compiled program, in terms of its various

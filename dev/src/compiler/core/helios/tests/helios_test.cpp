@@ -520,11 +520,12 @@ private:
 			class_with_member_abstract_type
 		);
 
+		// @note: #973 when QueryModuleHOUTRecursively returns QResult, add assertion
+		// that it is successful
+		[[maybe_unused]]
 		std::vector<CRef<compiler::helios::HOUTUnit>> units
 			= query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>({ module_id })
 		          .valueOrPanic();
-		(void) units;  // @note: #973 when QueryModuleHOUTRecursively returns QResult, add assertion
-		               // that it is successful
 	}
 
 	void testClassInteractions() {
@@ -560,11 +561,12 @@ private:
 		auto expected_type = st(getIntegralTypeNoContext(64, Signed));
 		ASSERT_EQUAL(c_member_a_type, expected_type);
 
+		// @note: #973 when QueryModuleHOUTRecursively returns QResult, add assertion
+		// that it is successful
+		[[maybe_unused]]
 		std::vector<CRef<compiler::helios::HOUTUnit>> units
 			= query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>({ module_id })
 		          .valueOrPanic();
-		(void) units;  // @note: #973 when QueryModuleHOUTRecursively returns QResult, add assertion
-		               // that it is successful
 	}
 
 	/**
@@ -652,9 +654,8 @@ private:
 			ASSERT_TRUE(empty_result->isEmpty());
 
 			// Check that the module lowers to HOUT without throwing.
-			const auto& hout
+			[[maybe_unused]] const auto& hout
 				= ctx.query<compiler::helios::QueryModuleHOUT>(module_id)->valueOrThrow();
-			(void) hout;
 		});
 	}
 
@@ -739,6 +740,11 @@ private:
 		ASSERT_EQUAL(6, getConstValueAs<i32>("M2", root_scope));
 		ASSERT_EQUAL(7, getConstValueAs<i64>("O1", root_scope));
 		ASSERT_EQUAL(7, getConstValueAs<i64>("O2", root_scope));
+
+		// Lazily evaluated operands: the division by zero in the skipped part of the
+		// expression must not be evaluated, otherwise these evaluations would fail.
+		ASSERT_EQUAL(false, getConstValueAs<bool>("P1", root_scope));
+		ASSERT_EQUAL(7, getConstValueAs<i32>("P2", root_scope));
 	}
 
 	/**
@@ -1043,7 +1049,7 @@ private:
 	void testImport() {
 		auto [module, _] = getModule(fs::File(path("test_modules/import_tests")));
 
-		(void) query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>(module);
+		std::ignore = query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>(module);
 
 		const auto& hout
 			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
@@ -1248,7 +1254,7 @@ private:
 			// auto& var = get_var_ref(2);
 			// ASSERT_EQUAL(compiler::helios::name(var.helios_symbol), "c");
 			// ASSERT_EQUAL(var.type, st(i32_or_f32));
-			(void) i32_or_f32;  // < remove
+			std::ignore = i32_or_f32;  // < remove
 		}
 
 		{
@@ -2180,11 +2186,12 @@ private:
 			);
 		}
 
+		// @note: #973 when QueryModuleHOUTRecursively returns QResult, add assertion
+		// that it is successful
+		[[maybe_unused]]
 		std::vector<CRef<compiler::helios::HOUTUnit>> units
 			= query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>({ module })
 		          .valueOrPanic();
-		(void) units;  // @note: #973 when QueryModuleHOUTRecursively returns QResult, add assertion
-		               // that it is successful
 	}
 
 	void testMangler() {
@@ -2336,8 +2343,7 @@ private:
 	}
 
 	void testManglerOperators() {
-		auto [module, root_scope] = getModule(fs::File(path("test_modules/mangling_operators")));
-		(void) module;
+		auto [_, root_scope] = getModule(fs::File(path("test_modules/mangling_operators")));
 
 		auto mangle = [&](compiler::helios::SymID sym) {
 			return query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
@@ -2745,6 +2751,11 @@ private:
 		auto c_block_function        = getChain("cBlockFunction", root_scope).back();
 		auto c_block_public_function = getChain("cBlockPublicFunction", root_scope).back();
 
+		// Test symbols nested in a namespace, in both nesting orders
+		auto c_nested_in_namespace
+			= getChain("c_block_namespace.cNestedInNamespace", root_scope).back();
+		auto c_reverse_nested = getChain("reverse_namespace.cReverseNested", root_scope).back();
+
 		// Test struct
 		auto regular_struct = getChain("RegularStruct", root_scope).back();
 
@@ -2835,6 +2846,16 @@ private:
 				ASSERT_TRUE(has_specifier(ctx, *specifiers, pst::Keyword::Extern));
 				ASSERT_TRUE(has_specifier(ctx, *specifiers, pst::Keyword::Public));
 				test_c_abi_with_library(ctx, c_block_public_function, {});
+			}
+
+			// Test namespaces nested in an extern("C") block and vice versa: the extern
+			// specifier propagates through namespaces in both nesting orders
+			{
+				for (auto symbol: { c_nested_in_namespace, c_reverse_nested }) {
+					auto specifiers = ctx.query<compiler::helios::QuerySpecifiersOfSymbol>(symbol);
+					ASSERT_TRUE(has_specifier(ctx, *specifiers, pst::Keyword::Extern));
+					test_c_abi_with_library(ctx, symbol, {});
+				}
 			}
 
 			// Test invalid ABI function - should fail
@@ -3236,6 +3257,24 @@ private:
 				return method != nullptr && method->kind == kind;
 			};
 
+			// Returns the callee symbol of a statement of the form `f(...);`, if any.
+			auto call_callee = [&](const Stmt* stmt) -> base::Optional<SymID> {
+				auto expr_stmt = dynamic_cast<const ExprStmt*>(stmt);
+				if (expr_stmt == nullptr) return {};
+				auto call = dynamic_cast<const CallExpr*>(expr_stmt->expr.get());
+				if (call == nullptr) return {};
+				return getIdentifierExprSymID(call->callee.ref());
+			};
+
+			auto is_templated_builtin_call
+				= [&](const Stmt* stmt, BuiltinTemplatedSymbol::Kind kind) -> bool {
+				auto callee = call_callee(stmt);
+				if (!callee.has_value()) return false;
+				const auto* templated
+					= std::get_if<BuiltinTemplatedSymbol>(&getSymRef(callee.value())->other);
+				return templated != nullptr && templated->kind == kind;
+			};
+
 			// A trivially-destructible class has an empty destructor and a no-op destructor.
 			{
 				const auto  type = get_class_type(trivial_sym);
@@ -3255,8 +3294,9 @@ private:
 				ASSERT_TRUE(type.hasNoOpDestructor(ctx));
 			}
 
-			// A class owning a `box i32` frees the box with a `box_free` builtin call. The pointee
-			// is trivial, so there is no pointee destruction, only the free.
+			// A class owning a `box i32` destroys the box by calling its `box_destructor`. That
+			// builtin's own body frees the storage with `box_free`; the pointee is trivial, so
+			// there is no pointee destruction, only the free.
 			{
 				const auto type = get_class_type(has_box_sym);
 				ASSERT_TRUE(!type.hasNoOpDestructor(ctx));
@@ -3264,7 +3304,19 @@ private:
 				const auto& dtor  = ctx.query<QueryDefaultDestructor>(type)->valueOrThrow();
 				const auto& stmts = dtor.body->statements;
 				ASSERT_EQUAL_PRINT(1, stmts.size());
-				ASSERT_TRUE(is_builtin_call(stmts.at(0).get(), BuiltinKind::BoxFree));
+				ASSERT_TRUE(is_templated_builtin_call(
+					stmts.at(0).get(), BuiltinTemplatedSymbol::Kind::BoxDestructor
+				));
+
+				// The box_destructor's own body only frees the (trivial) box storage.
+				const auto box_dtor_sym = call_callee(stmts.at(0).get());
+				ASSERT_HAS_VALUE(box_dtor_sym);
+				const auto& box_dtor
+					= ctx.query<QueryCodeOfFun>(box_dtor_sym.value())->valueOrThrow();
+				ASSERT_EQUAL_PRINT(1, box_dtor.body->statements.size());
+				ASSERT_TRUE(
+					is_builtin_call(box_dtor.body->statements.at(0).get(), BuiltinKind::BoxFree)
+				);
 			}
 
 			// A class holding a non-trivially-destructible member destroys it via that member's own
@@ -3314,8 +3366,10 @@ private:
 				ASSERT_TRUE(user_call != nullptr);
 				ASSERT_EQUAL(user_dtor, getIdentifierExprSymID(user_call->callee.ref()).value());
 
-				// [1] `second` (box i32) freed
-				ASSERT_TRUE(is_builtin_call(stmts.at(1).get(), BuiltinKind::BoxFree));
+				// [1] `second` (box i32) destroyed via its box_destructor
+				ASSERT_TRUE(is_templated_builtin_call(
+					stmts.at(1).get(), BuiltinTemplatedSymbol::Kind::BoxDestructor
+				));
 				// [2] `first` (HasBox) destroyed
 				ASSERT_TRUE(is_method_call(stmts.at(2).get(), Method::Kind::DefaultDestructor));
 			}
@@ -3346,13 +3400,17 @@ private:
 				ASSERT_TRUE(dtor.body->statements.empty());
 			}
 
-			// List of a non-trivial element - a destruction loop over the elements.
+			// List of a non-trivial element - a destruction loop over the elements, then the
+			// backing buffer is released with a `list_free` builtin call.
 			{
 				const auto  list_type = field_abstract_type("class_list");
 				const auto& dtor  = ctx.query<QueryDefaultDestructor>(list_type)->valueOrThrow();
 				const auto& stmts = dtor.body->statements;
-				ASSERT_EQUAL_PRINT(2, stmts.size());
+				ASSERT_EQUAL_PRINT(3, stmts.size());
 				ASSERT_TRUE(dynamic_cast<const WhileStmt*>(stmts.at(1).get()) != nullptr);
+				ASSERT_TRUE(is_templated_builtin_call(
+					stmts.at(2).get(), BuiltinTemplatedSymbol::Kind::ListFree
+				));
 			}
 
 			// Tuple with a non-trivial element - destroys that element via its destructor.
@@ -3762,7 +3820,7 @@ private:
 	}
 
 	void testTemplates() {
-		auto [_, root_scope] = getModule(fs::File(path("test_modules/templates")));
+		auto [module_id, root_scope] = getModule(fs::File(path("test_modules/templates")));
 
 		// `Number:{1i64}.inner` and `Number:{2i64}.inner` each bake a distinct instantiation of
 		// the `Number` template namespace and evaluate the resulting constant.
@@ -3812,6 +3870,18 @@ private:
 			ASSERT_EQUAL(kind(baked_one), compiler::helios::SymbolKind::Namespace);
 			ASSERT_EQUAL(kind(baked_two), compiler::helios::SymbolKind::Namespace);
 		});
+
+		// Here we test that the HOUT for the module is generated and contains the baked template
+		// instantiations. Adjust this as needed, if strategy for template codegen location changes.
+		auto hout_module
+			= query::entryPoint<compiler::helios::QueryModuleHOUT>(module_id)->valueOrPanic();
+
+		// Just `foo` function.
+		ASSERT_EQUAL_PRINT(hout_module.functions.size(), 1);
+
+		// 4 constants + 1 weak const (Number:{1}.inner) added to the module, because it is used by
+		// `foo`.
+		ASSERT_EQUAL_PRINT(hout_module.glob_data.size(), 4 + 1);
 	}
 
 	void testOperatoriness() {
@@ -3874,9 +3944,8 @@ private:
 	}
 
 	void testMethodOperatorResolution() {
-		auto [module, root_scope] = getModule(fs::File(path("test_modules/method_operators")));
+		auto [_, root_scope] = getModule(fs::File(path("test_modules/method_operators")));
 		using namespace compiler::helios::code;
-		(void) module;
 
 		auto foo_class = getChain("Foo", root_scope).back();
 		auto foo_class_info

@@ -250,7 +250,7 @@ private:
 	void rejectsZeroLengthArrayTest() {
 		assertThrows<base::Panic>(
 			[]() {
-				(void) al::computeCLayout(
+				al::computeCLayout(
 					abi::x86_64Linux(),
 					fieldsOf(at::arrayType(at::makeBoxAbiType(at::intType(32, true)), 0))
 				);
@@ -261,14 +261,14 @@ private:
 
 	void rejectsEmptyStructTest() {
 		assertThrows<base::Panic>(
-			[]() { (void) al::computeCLayout(abi::x86_64Linux(), fieldsOf(at::structType({}))); },
+			[]() { al::computeCLayout(abi::x86_64Linux(), fieldsOf(at::structType({}))); },
 			"empty nested struct should panic"
 		);
 	}
 
 	void rejectsEmptyFieldListTest() {
 		assertThrows<base::Panic>(
-			[]() { (void) al::computeCLayout(abi::x86_64Linux(), {}); },
+			[]() { al::computeCLayout(abi::x86_64Linux(), {}); },
 			"empty top-level field list should panic"
 		);
 	}

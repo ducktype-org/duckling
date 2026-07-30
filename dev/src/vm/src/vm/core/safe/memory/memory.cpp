@@ -14,29 +14,22 @@ namespace vm {
 
 	Ref<Block> Memory::createBlock(BlockData data) {
 		std::memset(data.view.getBegin(), 0, data.view.size());
-
-		if (free_ids.empty()) {
-			auto id = BlockID(blocks.size());
-			blocks.emplace_back(id, data);
-			return &blocks.back();
-		} else {
-			BlockID id = free_ids.back();
-			free_ids.pop_back();
-			blocks[usize(id)] = Block(id, data);
-			return &blocks[static_cast<u64>(id)];
-		}
+		auto id = blocks_pool.add(data);
+		return blocks_pool.get(id);
 	}
 
 	void Memory::deleteBlock(Ref<Block> block) {
 		if (!block->deallocated) throw exceptions::VMFoundMemoryLeakException();
-		free_ids.push_back(block->id);
+		blocks_pool.remove(block->id);
 	}
 
 	Ref<Block> Memory::getBlock(BlockID id) {
-		const auto block_index = static_cast<usize>(id);
-		if (block_index >= blocks.size()) throw exceptions::VMOutOfBlockBoundsException();
-		if (blocks[block_index].deallocated) throw exceptions::VMUseAfterFreeException();
-		return &blocks[block_index];
+		if (auto maybe_block = blocks_pool.maybeGet(id)) {
+			Ref<vm::Block> block_ref = *maybe_block;
+			if (block_ref->deallocated) throw exceptions::VMUseAfterFreeException();
+			return block_ref;
+		}
+		throw exceptions::VMOutOfBlockBoundsException();
 	}
 
 	auto Memory::initializeFrameStack() -> Ref<ThreadStack> {
@@ -291,6 +284,9 @@ namespace vm {
 			break;
 		case Type::Kind::DynamicTable:
 		case Type::Kind::FixedSizeTable: {
+			// @TODO: #3225 this walk is one level deep - the callback is invoked on the element
+			// itself, so pointers nested inside an aggregate element (e.g. a table of slices) are
+			// never visited and their refcounts are neither increased nor decreased.
 			const auto inner_type = type->getInnerType().value();
 			const auto inner_size = inner_type->getSize().asInt();
 			for (usize begin = 0; begin < data.size(); begin += inner_size)
@@ -380,7 +376,7 @@ namespace vm {
 		std::cerr << #test ", BlockID=" << block.id.asInt() << "\n"; \
 		return false;                                                \
 	}
-		for (const auto& block: blocks) {
+		for (const auto& block: blocks_pool) {
 			TEST_HERE(block.refcount != 0)
 			TEST_HERE(!block.deallocated)
 		}

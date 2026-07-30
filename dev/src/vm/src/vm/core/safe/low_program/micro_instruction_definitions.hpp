@@ -688,10 +688,10 @@ DEF_MICRO_INSTR(stepGil)
 /**
  * @brief This is a very internal instruction, that should not be used in regular bytecode.
  * It is a helper for start functions.
- * @arg0 - pointer to a VmValue.
+ * @arg0 - pointer to a VMValue.
  * @arg1 - n/a.
  */
-DEF_MICRO_INSTR(initFromVmValue)
+DEF_MICRO_INSTR(initFromVMValue)
 
 #ifdef DEFAULT_HANDLE_MICRO_INSTR
 #undef DEFAULT_HANDLE_MICRO_INSTR
