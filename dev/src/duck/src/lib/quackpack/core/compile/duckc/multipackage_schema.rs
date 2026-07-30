@@ -30,7 +30,7 @@ pub struct Package {
     #[serde(rename = "name")]
     /// Import name of the package (used when resolving imports in source code).
     /// Must be unique within the manifest.
-    pub import_name: StrId,
+    pub import_name: String,
     /// Version of the package we're currently compiling.
     pub version: Version,
     /// Enabled features for this package.
@@ -50,7 +50,7 @@ pub struct Dependency {
     pub id: StrId,
     #[serde(skip_serializing_if = "Option::is_none")]
     /// How should this dependency be named when resolving imports. Defaults to the target package's `name`.
-    pub alias: Option<StrId>,
+    pub alias: Option<String>,
 }
 
 // `compiler/driver/driver/src/driver/task/task.cpp` deserializes `RawTask` as `RawPackageCompilationTask`.
