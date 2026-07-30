@@ -73,9 +73,10 @@ namespace compiler::helios {
 			// A class inherits from a plain type, so specifiers (`ref`, `box`, `const`, ...) on
 			// the extended class or on an implemented interface are an error.
 			const auto check_no_specifiers
-				= [&](const tsh::SymbolType<>&                  inherited,
-			          const pst::AccessLocked<pst::ExprElement> expr,
-			          const InheritanceKind                     inheritance_kind) -> base::OkBad {
+				= [&](const tsh::SymbolType<>&                                inherited,
+			          const pst::AccessLocked<pst::ExprElement>               expr,
+			          const InheritedTypeWithSpecifiersError::InheritanceKind inheritance_kind
+			      ) -> base::OkBad {
 				if (inherited.isPlainAbstractType()) return base::OK;
 				ctx.logInt(makeBox<InheritedTypeWithSpecifiersError>(
 					ctx,
@@ -91,8 +92,9 @@ namespace compiler::helios {
 				UNPACK_QRESULT(auto ctv =, getTypeCTVFromPST(ctx, base));
 				const auto base_type = *ctv.get<tsh::SymbolType<>>();
 
-				auto specifiers
-					= check_no_specifiers(base_type, base, InheritanceKind::ExtendedClass);
+				auto specifiers = check_no_specifiers(
+					base_type, base, InheritedTypeWithSpecifiersError::InheritanceKind::ExtendedClass
+				);
 				if (specifiers.isBad()) return query::Failed();
 
 				class_info.base = base_type.getType();
@@ -105,7 +107,9 @@ namespace compiler::helios {
 					UNPACK_QRESULT(auto ctv =, getTypeCTVFromPST(ctx, interface_expr));
 					const auto interface_type = ctv.get<tsh::SymbolType<>>().value();
 					auto       specifiers     = check_no_specifiers(
-                        interface_type, interface_expr, InheritanceKind::ImplementedInterface
+                        interface_type,
+                        interface_expr,
+                        InheritedTypeWithSpecifiersError::InheritanceKind::ImplementedInterface
                     );
 					if (specifiers.isBad()) return query::Failed();
 					class_info.implements.push_back(interface_type.getType());

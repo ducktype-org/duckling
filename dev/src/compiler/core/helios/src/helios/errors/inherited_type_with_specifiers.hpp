@@ -11,13 +11,6 @@
 
 namespace compiler::helios {
 
-	/**
-	 * @brief Tells whether an inherited type is the extended class or an implemented interface.
-	 */
-	enum class InheritanceKind {
-		ExtendedClass,
-		ImplementedInterface,
-	};
 
 	/**
 	 * @brief Error reported when the extended class or an implemented interface of a class
@@ -37,6 +30,14 @@ namespace compiler::helios {
 		}
 
 	public:
+		/**
+		 * @brief Tells whether an inherited type is the extended class or an implemented interface.
+		 */
+		enum class InheritanceKind {
+			ExtendedClass,
+			ImplementedInterface,
+		};
+
 		InheritedTypeWithSpecifiersError(
 			query::Context&         ctx,
 			dia_int::StablePosition source_position,

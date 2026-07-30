@@ -1910,7 +1910,7 @@ private:
 				ctx,
 				dia_int::StablePosition::fakePosition(),
 				"MyClass",
-				InheritanceKind::ExtendedClass,
+				InheritedTypeWithSpecifiersError::InheritanceKind::ExtendedClass,
 				st.withReferenceKind(tsh::ReferenceKind::Ref)
 			);
 		});
