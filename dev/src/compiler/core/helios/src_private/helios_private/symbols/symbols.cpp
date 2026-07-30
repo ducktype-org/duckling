@@ -814,6 +814,11 @@ namespace compiler::helios {
 			}
 
 			// @note: here case for variables will be calling TS
+			case SymbolKind::Template:
+				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					"Lookup in template requires an explicit template parameter."
+				));
+				return query::Failed();
 			default:
 				throw base::NotYetImplemented(
 					base::strConcat("Lookup in symbol: ", key.symbol.ref->common.name)

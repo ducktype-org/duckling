@@ -164,6 +164,11 @@ def check_not_git_root(root: Path):
     assert_eq(is_git_root(root), False)
 
 
+def check_num_subfolders(root: Path, n: int):
+    count = sum(1 for item in root.iterdir() if item.is_dir())
+    assert_eq(count, n)
+
+
 def artifacts_dir_for_root(root: Path) -> Path:
     return root / ".duck_build"
 

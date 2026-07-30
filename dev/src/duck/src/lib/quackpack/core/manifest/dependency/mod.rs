@@ -1,6 +1,7 @@
 //! Managing a single dependency abstraction.
+use crate::quackpack::core::valid_package_name::validate_package_name;
 use crate::quackpack::core::{FeatureName, Source, Version};
-use crate::{QuackError, QuackResult, StrId, qp_bail};
+use crate::{QuackError, QuackResult, QuackResultContext, StrId, qp_bail};
 
 mod conditions;
 mod dependencies;
@@ -164,6 +165,8 @@ impl TryFrom<registry::Dependency> for Dependency {
             conditions,
             alias,
         } = value;
+        validate_package_name(&name)
+            .context("registry responded with a dependency with an invalid name")?;
         let alias = alias.map(StrId::from);
         let name = name.into();
         if alias == Some(name) {
