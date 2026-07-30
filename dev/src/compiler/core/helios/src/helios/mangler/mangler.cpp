@@ -313,10 +313,7 @@ namespace compiler::helios::mangler {
 		 * @note See mangling-scheme.md for details
 		 */
 		std::string symbolName(query::Context& ctx, SymID symbol_id) {
-			auto scope_id = scope(symbol_id);
-
-			// global symbol
-			if (scopeDepth(scope_id) == 1) return "G" + unscopedName(ctx, symbol_id);
+			if (scopeDepth(scope(symbol_id)) == 1) return "G" + unscopedName(ctx, symbol_id);
 
 			std::vector<std::string> path_parts;
 
@@ -342,6 +339,7 @@ namespace compiler::helios::mangler {
 				CORE_UNREACHABLE();
 			}();
 
+			bool is_global = true;
 			while (ancestor_opt.isLangElement()) {
 				auto ancestor = ancestor_opt.getAsLangElement().unlock(ctx);
 
@@ -350,14 +348,14 @@ namespace compiler::helios::mangler {
 					path_parts.push_back(
 						identifier(namespace_v->getName().unlock(ctx)->unwrap().strView())
 					);
+					is_global = false;
 				} else if (ancestor->getElementKind() == pst::ElementKind::Class) {
 					auto class_v = ancestor.dynamicCast<pst::Class>().value();
 					path_parts.push_back(
 						identifier(class_v->getName().unlock(ctx)->unwrap().strView())
 					);
+					is_global = false;
 				} else if (ancestor->getElementKind() == pst::ElementKind::TemplateStmt) {
-					// @TODO: #2607 will likely have to change.
-
 					auto template_stmt_v = ancestor.dynamicCast<pst::TemplateStmt>().value();
 
 					if (template_stmt_v->hasAdditionalRootData()) {
@@ -405,12 +403,11 @@ namespace compiler::helios::mangler {
 				ancestor_opt = getPSTElementParent(ctx, ancestor);
 			}
 
-			std::string ret = "N";
+			std::string ret = is_global ? "G" : "N";
 			for (auto&& it = path_parts.rbegin(); it != path_parts.rend(); ++it) ret += *it;
+			ret += unscopedName(ctx, symbol_id) + (is_global ? "" : "E");
 
-			ret += unscopedName(ctx, symbol_id);
-
-			return ret + "E";
+			return ret;
 		}
 
 		/**

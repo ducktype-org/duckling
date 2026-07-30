@@ -62,65 +62,65 @@ class HeliosTests: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		// TESTER_ADD_TEST(testImport);
-		// TESTER_ADD_TEST(testEdgeEvals);
-		// TESTER_ADD_TEST(testConstants);
-		// TESTER_ADD_TEST(testMetaCompTime);
-		// TESTER_ADD_TEST(testNumericLiterals);
-		// TESTER_ADD_TEST(testClassSymbolData);
-		// TESTER_ADD_TEST(testClassInteractions);
-		// TESTER_ADD_TEST(testTypeInstanceInterface);
-		// TESTER_ADD_TEST(testTupleInterface);
-		// TESTER_ADD_TEST(testHoutVariables);
-		// TESTER_ADD_TEST(testReferences);
-		// TESTER_ADD_TEST(testBoxes);
-		// TESTER_ADD_TEST(testReferenceKindCollapsing);
-		// TESTER_ADD_TEST(testExprTree);
-		// TESTER_ADD_TEST(testExprClone);
-		// TESTER_ADD_TEST(testSimpleHOUT);
-		// TESTER_ADD_TEST(testSingleFileModuleHOUT);
-		// TESTER_ADD_TEST(testModuleHOUT);
-		// TESTER_ADD_TEST(testDependencyHOUT);
-		// TESTER_ADD_TEST(testHoutVisitor);
-		// TESTER_ADD_TEST(testTypeOf);
-		// TESTER_ADD_TEST(testKeywordLiterals);
-		// TESTER_ADD_TEST(testFunctionParameters);
-		// TESTER_ADD_TEST(testExprScopes);
-		// TESTER_ADD_TEST(testFunctionCallExpr);
-		// TESTER_ADD_TEST(testHoutWalkers);
-		// TESTER_ADD_TEST(testFunctions);
-		// TESTER_ADD_TEST(testStaticArrays);
-		// TESTER_ADD_TEST(testDynamicArrays);
-		// TESTER_ADD_TEST(testFunctionReturnTypeDeduction);
-		// TESTER_ADD_TEST(testFunctionReturnTypeCheckAndCoercion);
-		// TESTER_ADD_TEST(testMethodCalls);
-		// TESTER_ADD_TEST(testMangler);
-		// TESTER_ADD_TEST(testManglerSpecialMembers);
-		// TESTER_ADD_TEST(testManglerOperators);
-		// TESTER_ADD_TEST(testManglerCTV);
+		TESTER_ADD_TEST(testImport);
+		TESTER_ADD_TEST(testEdgeEvals);
+		TESTER_ADD_TEST(testConstants);
+		TESTER_ADD_TEST(testMetaCompTime);
+		TESTER_ADD_TEST(testNumericLiterals);
+		TESTER_ADD_TEST(testClassSymbolData);
+		TESTER_ADD_TEST(testClassInteractions);
+		TESTER_ADD_TEST(testTypeInstanceInterface);
+		TESTER_ADD_TEST(testTupleInterface);
+		TESTER_ADD_TEST(testHoutVariables);
+		TESTER_ADD_TEST(testReferences);
+		TESTER_ADD_TEST(testBoxes);
+		TESTER_ADD_TEST(testReferenceKindCollapsing);
+		TESTER_ADD_TEST(testExprTree);
+		TESTER_ADD_TEST(testExprClone);
+		TESTER_ADD_TEST(testSimpleHOUT);
+		TESTER_ADD_TEST(testSingleFileModuleHOUT);
+		TESTER_ADD_TEST(testModuleHOUT);
+		TESTER_ADD_TEST(testDependencyHOUT);
+		TESTER_ADD_TEST(testHoutVisitor);
+		TESTER_ADD_TEST(testTypeOf);
+		TESTER_ADD_TEST(testKeywordLiterals);
+		TESTER_ADD_TEST(testFunctionParameters);
+		TESTER_ADD_TEST(testExprScopes);
+		TESTER_ADD_TEST(testFunctionCallExpr);
+		TESTER_ADD_TEST(testHoutWalkers);
+		TESTER_ADD_TEST(testFunctions);
+		TESTER_ADD_TEST(testStaticArrays);
+		TESTER_ADD_TEST(testDynamicArrays);
+		TESTER_ADD_TEST(testFunctionReturnTypeDeduction);
+		TESTER_ADD_TEST(testFunctionReturnTypeCheckAndCoercion);
+		TESTER_ADD_TEST(testMethodCalls);
+		TESTER_ADD_TEST(testMangler);
+		TESTER_ADD_TEST(testManglerSpecialMembers);
+		TESTER_ADD_TEST(testManglerOperators);
+		TESTER_ADD_TEST(testManglerCTV);
 		TESTER_ADD_TEST(testManglingOfTemplates);
-		// TESTER_ADD_TEST(testGlobalVariableExpressions);
-		// TESTER_ADD_TEST(testTypeOfConstAndVar);
-		// TESTER_ADD_TEST(testDebugPrint);
-		// TESTER_ADD_TEST(testStmtSpecifiers);
-		// TESTER_ADD_TEST(testOverloadResolution);
-		// TESTER_ADD_TEST(testCopyConstructors);
-		// TESTER_ADD_TEST(testCopyMoveOperators);
-		// TESTER_ADD_TEST(testDestructors);
-		// TESTER_ADD_TEST(testCastsHout);
-		// TESTER_ADD_TEST(testPointers);
-		// TESTER_ADD_TEST(testTypeLifting);
-		// TESTER_ADD_TEST(testHoutElementsOrigin);
-		// TESTER_ADD_TEST(testAliases);
-		// TESTER_ADD_TEST(testBackendDependentCompTime);
-		// TESTER_ADD_TEST(testTemplates);
-		// TESTER_ADD_TEST(testOperatoriness);
-		// TESTER_ADD_TEST(testMethodOperatorResolution);
+		TESTER_ADD_TEST(testGlobalVariableExpressions);
+		TESTER_ADD_TEST(testTypeOfConstAndVar);
+		TESTER_ADD_TEST(testDebugPrint);
+		TESTER_ADD_TEST(testStmtSpecifiers);
+		TESTER_ADD_TEST(testOverloadResolution);
+		TESTER_ADD_TEST(testCopyConstructors);
+		TESTER_ADD_TEST(testCopyMoveOperators);
+		TESTER_ADD_TEST(testDestructors);
+		TESTER_ADD_TEST(testCastsHout);
+		TESTER_ADD_TEST(testPointers);
+		TESTER_ADD_TEST(testTypeLifting);
+		TESTER_ADD_TEST(testHoutElementsOrigin);
+		TESTER_ADD_TEST(testAliases);
+		TESTER_ADD_TEST(testBackendDependentCompTime);
+		TESTER_ADD_TEST(testTemplates);
+		TESTER_ADD_TEST(testOperatoriness);
+		TESTER_ADD_TEST(testMethodOperatorResolution);
 
 		// this is at the end
 		// so we test all the scopes created in helios tests:
-		// TESTER_ADD_TEST(testScopeParentsAndDepth);
-		// TESTER_ADD_TEST(testScopeSymbolsConsistency);
+		TESTER_ADD_TEST(testScopeParentsAndDepth);
+		TESTER_ADD_TEST(testScopeSymbolsConsistency);
 	}
 
 private:
@@ -2433,16 +2433,18 @@ private:
 		const auto tmpl_tcls = getChain("Name.Tcls", root_scope).back();
 		const auto hoo       = getChain("hoo", root_scope).back();
 		const auto tmpl_goo  = getChain("goo", root_scope).back();
+		const auto glob_cls  = getChain("GlobCls", root_scope).back();
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			namespace tmpl = compiler::helios::templates;
 
-			auto        val42    = compiler::numeric_value::NumericValue{ i64{ 42 } };
-			auto        val_f    = compiler::numeric_value::NumericValue{ f32{ 1.0f } };
-			const auto& i64_type = st(compiler::tsh::getIntegralType(
-				ctx, 64, compiler::tsh::IntegralAbstractType::Signedness::Signed
-			));
-			const auto& cls_type = st(ctx.query<compiler::tsh::QueryClassType>(cls));
+			auto        val42         = compiler::numeric_value::NumericValue{ i64{ 42 } };
+			auto        val_f         = compiler::numeric_value::NumericValue{ f32{ 1.0f } };
+			const auto& i64_type      = st(compiler::tsh::getIntegralType(
+                ctx, 64, compiler::tsh::IntegralAbstractType::Signedness::Signed
+            ));
+			const auto& cls_type      = st(ctx.query<compiler::tsh::QueryClassType>(cls));
+			const auto& glob_cls_type = st(ctx.query<compiler::tsh::QueryClassType>(glob_cls));
 
 			const auto bake = [&](const auto& tmpl, const auto&... t_params) {
 				tmpl::TemplateBakeKey key{ .template_sym_id    = tmpl,
@@ -2450,45 +2452,57 @@ private:
 				return ctx.query<tmpl::QueryBakeTemplateSymID>(key).valueOrThrow();
 			};
 
+			std::cerr << std::left;
+
 			auto baked_foo_1 = bake(tmpl_foo, val42, i64_type);
 			auto name_foo_1
 				= ctx.query<compiler::helios::mangler::QueryMangledSymbol>({ baked_foo_1 }).strView();
-			std::cerr << name_foo_1 << '\n';
+			std::cerr << std::setw(16) << "name_foo_1:" << name_foo_1 << '\n';
 
 			auto baked_foo_2 = bake(tmpl_foo, val42, cls_type);
 			auto name_foo_2
 				= ctx.query<compiler::helios::mangler::QueryMangledSymbol>({ baked_foo_2 }).strView();
-			std::cerr << name_foo_2 << '\n';
+			std::cerr << std::setw(16) << "name_foo_2:" << name_foo_2 << '\n';
 
 			auto baked_tcls      = bake(tmpl_tcls, val_f);
 			auto baked_tcls_type = st(ctx.query<compiler::tsh::QueryClassType>(baked_tcls));
 			auto baked_foo_3     = bake(tmpl_foo, val42, baked_tcls_type);
 			auto name_foo_3
 				= ctx.query<compiler::helios::mangler::QueryMangledSymbol>({ baked_foo_3 }).strView();
-			std::cerr << name_foo_3 << '\n';
+			std::cerr << std::setw(16) << "name_foo_3:" << name_foo_3 << '\n';
+
+			auto baked_foo_4 = bake(tmpl_foo, val42, glob_cls_type);
+			auto name_foo_4
+				= ctx.query<compiler::helios::mangler::QueryMangledSymbol>({ baked_foo_4 }).strView();
+			std::cerr << std::setw(16) << "name_foo_4:" << name_foo_4 << '\n';
 
 			auto name_hoo
 				= ctx.query<compiler::helios::mangler::QueryMangledSymbol>({ hoo }).strView();
-			std::cerr << name_hoo << '\n';
+			std::cerr << std::setw(16) << "name_hoo:" << name_hoo << '\n';
 
 			auto baked_goo = bake(tmpl_goo, val42);
 			auto name_goo
 				= ctx.query<compiler::helios::mangler::QueryMangledSymbol>({ baked_goo }).strView();
-			std::cerr << name_goo << '\n';
+			std::cerr << std::setw(16) << "name_goo:" << name_goo << '\n';
 
-			const auto e1 = "_Q_M17template_manglingN4NameIiq42_tiqE3fooEFfiqE5paramE"sv;
-			const auto e2
-				= "_Q_M17template_manglingN4NameIiq42_t_Q_CM17template_manglingN4Name3ClsEE3fooEFfiqE5paramE"sv;
-			const auto e3
-				= "_Q_M17template_manglingN4NameIiq42_t_Q_CM17template_manglingN4NameIf0000803fE4TclsEE3fooEFfiqE5paramE"sv;
-			const auto e4 = "_Q_M17template_manglingG3hooFiqiqE1jE"sv;
-			const auto e5 = "_Q_M17template_manglingNIiq42_E3gooEFiqiqE1jE"sv;
+			std::cerr << std::right;
 
-			ASSERT_EQUAL(e1, name_foo_1);
-			ASSERT_EQUAL(e2, name_foo_2);
-			ASSERT_EQUAL(e3, name_foo_3);
-			ASSERT_EQUAL(e4, name_hoo);
-			ASSERT_EQUAL(e5, name_goo);
+			const auto efoo1 = "_Q_M17template_manglingN4NameIiq42_tiqE3fooEFiqiqE5paramE"sv;
+			const auto efoo2
+				= "_Q_M17template_manglingN4NameIiq42_t_Q_CM17template_manglingN4Name3ClsEE3fooEF_Q_CM17template_manglingN4Name3ClsEiqE5paramE"sv;
+			const auto efoo3
+				= "_Q_M17template_manglingN4NameIiq42_t_Q_CM17template_manglingN4NameIf0000803fE4TclsEE3fooEF_Q_CM17template_manglingN4NameIf0000803fE4TclsEiqE5paramE"sv;
+			const auto efoo4
+				= "_Q_M17template_manglingN4NameIiq42_t_Q_CM17template_manglingG7GlobClsE3fooEF_Q_CM17template_manglingG7GlobClsiqE5paramE"sv;
+			const auto ehoo = "_Q_M17template_manglingG3hooFiqiqE1jE"sv;
+			const auto egoo = "_Q_M17template_manglingGIiq42_E3gooFiqiqE1jE"sv;
+
+			ASSERT_EQUAL(efoo1, name_foo_1);
+			ASSERT_EQUAL(efoo2, name_foo_2);
+			ASSERT_EQUAL(efoo3, name_foo_3);
+			ASSERT_EQUAL(efoo4, name_foo_4);
+			ASSERT_EQUAL(ehoo, name_hoo);
+			ASSERT_EQUAL(egoo, name_goo);
 		});
 	}
 
