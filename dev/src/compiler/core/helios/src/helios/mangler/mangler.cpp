@@ -681,16 +681,16 @@ namespace compiler::helios::mangler {
 		}
 
 		std::string mangleString(std::string_view sv) {
-			std::stringstream ret;
-			ret << std::setfill('0') << sv.size() << '_';
-			for (char c: sv)
-				if (BASE_62_DIGITS.contains(c))
-					ret << c;
-				else
-					ret << std::setw(3) << static_cast<u32>(c);
+			static constexpr auto HEX_DIGITS = "0123456789abcdef"sv;
+			std::string           hex_str;
+			hex_str.reserve(sv.size() * 2);
 
-			std::cerr << "ret: " << ret.str() << '\n';
-			return ret.str();
+			for (const unsigned char byte: sv) {
+				hex_str += HEX_DIGITS[byte >> 4];
+				hex_str += HEX_DIGITS[byte & 0x0F];
+			}
+
+			return base::strConcat(sv.size(), '_', hex_str);
 		}
 
 	}  // namespace internal
