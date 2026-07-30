@@ -1094,7 +1094,8 @@ namespace compiler::helios::code {
 				// Filter candidates for which the self argument is different than the found one
 				auto self_type = self_expr->expression_type;
 
-				auto methods = self_type.getType().getInterface(ctx)->valueOrThrow().getMethodsView();
+				auto methods
+					= self_type.getType().getInterface(ctx)->valueOrThrow().getMethodsView();
 
 				std::vector<SymID> filtered_candidates;
 				for (const auto& method: methods)

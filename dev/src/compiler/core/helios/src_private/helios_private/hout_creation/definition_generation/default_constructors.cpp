@@ -25,7 +25,7 @@ namespace compiler::helios::defgen {
 		static PResult provide(Context& ctx, const QKey class_type) {
 			// Preamble, get some basic data.
 			const SymID class_symbol    = class_type.getSymbol();
-			Ref        class_interface = &class_type.getInterface(ctx)->valueOrThrow();
+			Ref         class_interface = &class_type.getInterface(ctx)->valueOrThrow();
 
 			using std::ranges::to;
 			using std::views::transform;

@@ -120,7 +120,8 @@ namespace compiler::helios::defgen {
 			}
 
 			const std::vector<tsh::InterfaceElement> fields
-				= owner_type.getInterface(ctx)->valueOrThrow().getFieldsView() | std::ranges::to<std::vector>();
+				= owner_type.getInterface(ctx)->valueOrThrow().getFieldsView()
+			    | std::ranges::to<std::vector>();
 
 			// (*self).field.__destruct(...) for each non-trivial field, in reverse.
 			for (const auto& field: std::views::reverse(fields))

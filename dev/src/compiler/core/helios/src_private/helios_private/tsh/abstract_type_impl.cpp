@@ -93,7 +93,7 @@ namespace compiler::tsh {
 	/**
 	 * Internal query for caching type interfaces.
 	 */
-	DECLARE_QUERY(QueryTypeInterface, AbstractType, CRef<query::QResult<TypeInterface>>, ({ }));
+	DECLARE_QUERY(QueryTypeInterface, AbstractType, CRef<query::QResult<TypeInterface>>, ({}));
 
 	CRef<query::QResult<TypeInterface>> AbstractTypeImpl::getInterface(query::Context& ctx) const {
 		return ctx.query<QueryTypeInterface>(AbstractType(this));

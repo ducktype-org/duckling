@@ -412,7 +412,7 @@ namespace compiler::helios {
 
 			// Get type data
 			const auto target_type = ctor_data.type;
-			Ref       interface   = &target_type.getInterface(ctx)->valueOrThrow();
+			Ref        interface   = &target_type.getInterface(ctx)->valueOrThrow();
 
 			const std::vector<tsh::InterfaceElement> fields
 				= interface->getFieldsView() | to<std::vector>();

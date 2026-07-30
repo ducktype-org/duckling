@@ -546,7 +546,9 @@ namespace compiler::tsl {
 			const tsh::DynamicArrayAbstractType dynamic_array_type, query::Context& ctx
 		):
 			  type(dynamic_array_type),
-			  field_elements(getFieldsOfInterface(&dynamic_array_type.getInterface(ctx)->valueOrThrow())),
+			  field_elements(
+				  getFieldsOfInterface(&dynamic_array_type.getInterface(ctx)->valueOrThrow())
+			  ),
 			  field_layouts(getLayoutVector(getElementTypes(field_elements, ctx), ctx)),
 			  field_offsets(alignOffsetsForLayoutVector(field_layouts)),
 			  layout_idx_to_field_idx(offsetsToPermutation(field_offsets)),

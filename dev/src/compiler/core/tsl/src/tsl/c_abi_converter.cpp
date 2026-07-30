@@ -79,7 +79,8 @@ namespace compiler::tsl {
 					// Convert the fields to their C-ABI types and return them as a
 					// struct, borrowing each field's cached conversion (no clone).
 					std::vector<ats::AbiTypePtr> fields;
-					for (const auto& element: class_type.getInterface(ctx)->valueOrThrow().getElements()) {
+					for (const auto& element:
+					     class_type.getInterface(ctx)->valueOrThrow().getElements()) {
 						if (!element.isField()) continue;
 						const auto& conversion
 							= ctx.query<QueryCAbiTypeOf>(element.getType(ctx))->valueOrThrow();

@@ -404,8 +404,9 @@ private:
 		const SymID my_class_symbol = getChain("MyClass", root_scope).back();
 
 		withContextDo([&](query::Context& ctx) -> void {
-			const ClassAbstractType my_class_type      = ctx.query<QueryClassType>(my_class_symbol);
-			CRef<TypeInterface>     my_class_interface = &my_class_type.getInterface(ctx)->valueOrPanic();
+			const ClassAbstractType my_class_type = ctx.query<QueryClassType>(my_class_symbol);
+			CRef<TypeInterface>     my_class_interface
+				= &my_class_type.getInterface(ctx)->valueOrPanic();
 
 			const SymID a_field_symbol = [&] {
 				const auto& matching = my_class_interface->getElementsWithName(base::StrID("a"));
