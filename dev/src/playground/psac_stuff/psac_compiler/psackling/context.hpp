@@ -39,6 +39,7 @@ namespace pg {
 	private:
 		std::vector<ns::NamespaceID>                  namespace_stack;
 		base::HashMap<tp::TypeID, tp::TypeInfo>       types;
+		base::HashMap<base::StrID, tp::TypeID>        array_types;
 		base::HashMap<ns::NamespaceID, ns::Namespace> namespaces;
 		base::HashMap<sym::SymbolID, sym::Symbol>     symbols;
 
@@ -158,6 +159,29 @@ namespace pg {
 					.name = name, .id = id, .parent_namespace = currNs().id, .symbols = {} }
 			);
 			insertSymbol(name, sym::NamespaceSymbol{ .namespace_id = id }, namespace_type_id);
+			return id;
+		}
+
+		/// Interned array type of `element` with `size` elements (0 = VLA). Array types
+		/// live in the root namespace and get no symbol — `i64[10]` is not an
+		/// identifier; keying on the element TypeID keeps same-named element types in
+		/// different namespaces apart.
+		tp::TypeID arrayTypeOf(tp::TypeID element, u64 size) {
+			const base::StrID key(
+				"$arr:" + std::to_string(u64(element)) + ":" + std::to_string(size)
+			);
+			if (array_types.contains(key)) return array_types[key];
+
+			const std::string suffix = size == 0 ? "[]" : "[" + std::to_string(size) + "]";
+			tp::TypeID        id     = tp::TypeID::next();
+			types.insertOrAssign(
+				id,
+				tp::TypeInfo{ .name         = base::StrID(getTypeInfo(element).name.str() + suffix),
+			                  .kind         = tp::Array{ .element = element, .size = size },
+			                  .id           = id,
+			                  .namespace_id = root_ns_id }
+			);
+			array_types.insertOrAssign(key, id);
 			return id;
 		}
 

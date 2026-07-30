@@ -75,29 +75,43 @@ namespace pg {
 	}
 
 	void FunctionPass::visitVariable(pst::Access<pst::Variable> stmt) {
-		tp::TypeID type_id = ctx.i64_type_id;
+		const base::StrID name = stmt->getName().illegalAccess().value()->unwrap();
+
+		ResolvedType resolved{ .type_id = ctx.i64_type_id };
 		if (stmt->getType().has_value()) {
-			const pst::ExprElement& type_expr
-				= *stmt->getType()->illegalAccess().value()->getExpr().illegalAccess().value();
-			base::StrID type_name = extractTypeName(type_expr);
-			if (type_name == base::StrID()) {
-				throw std::runtime_error(
-					"Variable '" + stmt->getName().illegalAccess().value()->unwrap().str()
-					+ "' has a type expression of kind '" + type_expr.elementType()
-					+ "' which is not a bare identifier (not yet supported)"
-				);
-			}
-			type_id = ctx.lookupTypeInScopeAndParents(ctx.currNs().id, type_name);
+			resolved = resolveTypeExpr(
+				ctx,
+				*stmt->getType()->illegalAccess().value()->getExpr().illegalAccess().value(),
+				"Variable '" + name.str() + "'",
+				/*allow_vla=*/true
+			);
 		}
+		const tp::TypeID type_id = resolved.type_id;
+		const bool is_array      = std::holds_alternative<tp::Array>(ctx.getTypeInfo(type_id).kind);
+		if (is_array && stmt->getValue().has_value())
+			throw std::runtime_error(
+				"Variable '" + name.str() + "': arrays cannot have an initializer"
+			);
 
-		sym::SymbolID sym_id = ctx.insertSymbol(
-			stmt->getName().illegalAccess().value()->unwrap(), sym::VariableSymbol{}, type_id
-		);
+		sym::SymbolID sym_id = ctx.insertSymbol(name, sym::VariableSymbol{}, type_id);
 
-		llvm::Type*       llvm_ty = lowering.lowerType(type_id, ctx);
-		llvm::AllocaInst* slot    = builder_stack.back().CreateAlloca(
-            llvm_ty, nullptr, stmt->getName().illegalAccess().value()->unwrap().strView()
-        );
+		llvm::AllocaInst* slot = nullptr;
+		if (resolved.vla_count != nullptr) {
+			// VLA: alloca of `count` elements; the element type is static, the count is
+			// a runtime i64 expression evaluated at the declaration.
+			const auto&  array = std::get<tp::Array>(ctx.getTypeInfo(type_id).kind);
+			ExprLowering count_lowering(ctx, lowering, builder_stack.back(), locals);
+			LoweredExpr  count = count_lowering.lower(*resolved.vla_count);
+			if (count.type_id != ctx.i64_type_id)
+				throw std::runtime_error(
+					"Variable '" + name.str() + "': array size must be of type i64"
+				);
+			llvm::Type* elem_ty = lowering.lowerType(array.element, ctx);
+			slot = builder_stack.back().CreateAlloca(elem_ty, count.value, name.strView());
+		} else {
+			llvm::Type* llvm_ty = lowering.lowerType(type_id, ctx);
+			slot = builder_stack.back().CreateAlloca(llvm_ty, nullptr, name.strView());
+		}
 		locals.insertOrAssign(sym_id, slot);
 
 		// Optional initializer: var x: T = <expr>;

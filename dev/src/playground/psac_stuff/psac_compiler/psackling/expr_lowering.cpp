@@ -75,14 +75,20 @@ namespace pg {
 	LoweredExpr ExprLowering::symbolRefToExpr(sym::SymbolID sym_id, base::StrID name) {
 		sym::Symbol& symbol = ctx.getSymbol(sym_id);
 
+		// Arrays are never loaded as whole values (a VLA has no static LLVM type at
+		// all); the expression stays address-only and is consumed by `[...]` links.
+		const bool is_array
+			= std::holds_alternative<tp::Array>(ctx.getTypeInfo(symbol.type_id).kind);
+
 		if (std::holds_alternative<sym::VariableSymbol>(symbol.kind)) {
 			if (!locals.contains(sym_id)) {
 				CORE_PANIC(
 					"Variable '" + name.str() + "' has no associated stack slot (locals map miss)"
 				);
 			}
-			llvm::AllocaInst* slot    = locals[sym_id];
-			llvm::Type*       llvm_ty = lowering.lowerType(symbol.type_id, ctx);
+			llvm::AllocaInst* slot = locals[sym_id];
+			if (is_array) return LoweredExpr{ .type_id = symbol.type_id, .address = slot };
+			llvm::Type* llvm_ty = lowering.lowerType(symbol.type_id, ctx);
 			return LoweredExpr{
 				.value   = builder.CreateLoad(llvm_ty, slot, name.strView()),
 				.type_id = symbol.type_id,
@@ -91,8 +97,9 @@ namespace pg {
 		}
 
 		if (std::holds_alternative<sym::GlobalVariableSymbol>(symbol.kind)) {
-			llvm::GlobalVariable* global  = lowering.getOrCreateGlobal(sym_id, ctx);
-			llvm::Type*           llvm_ty = lowering.lowerType(symbol.type_id, ctx);
+			llvm::GlobalVariable* global = lowering.getOrCreateGlobal(sym_id, ctx);
+			if (is_array) return LoweredExpr{ .type_id = symbol.type_id, .address = global };
+			llvm::Type* llvm_ty = lowering.lowerType(symbol.type_id, ctx);
 			return LoweredExpr{
 				.value   = builder.CreateLoad(llvm_ty, global, name.strView()),
 				.type_id = symbol.type_id,
@@ -294,7 +301,44 @@ namespace pg {
 		result = lower(*round->getInner().illegalAccess().value());
 	}
 
+	LoweredExpr ExprLowering::emitIndex(const LoweredExpr& base, pst::Access<pst::expr::Call> call) {
+		if (base.address == nullptr)
+			throw std::runtime_error("Subscript on a non-l-value expression");
+		const tp::TypeInfo& base_type = ctx.getTypeInfo(base.type_id);
+		if (!std::holds_alternative<tp::Array>(base_type.kind))
+			throw std::runtime_error("Subscript on non-array type '" + base_type.name.str() + "'");
+		const auto& array = std::get<tp::Array>(base_type.kind);
+
+		auto args = call->getArgs().illegalAccess().value();
+		if (args->size() != 1) throw std::runtime_error("Subscript takes exactly one index");
+		pst::Access<pst::CallArgument> arg = (*args->begin()).illegalAccess().value();
+		if (arg->isNamedArg())
+			throw std::runtime_error("Subscript index cannot be a named argument");
+
+		LoweredExpr index
+			= lower(*arg->getArg().illegalAccess().value()->getExpr().illegalAccess().value());
+		if (index.type_id != ctx.i64_type_id)
+			throw std::runtime_error("Subscript index must be of type i64");
+
+		// GEP by element type off the first element: correct for fixed arrays
+		// ([N x T] allocas and globals) and the only option for VLAs. No bounds
+		// checking — C semantics.
+		llvm::Type*  elem_ty  = lowering.lowerType(array.element, ctx);
+		llvm::Value* elem_ptr = builder.CreateGEP(elem_ty, base.address, index.value, "arridx");
+
+		// An element that is itself an array stays address-only, ready for the next
+		// `[...]` link; scalar and struct elements load like any other l-value.
+		if (std::holds_alternative<tp::Array>(ctx.getTypeInfo(array.element).kind))
+			return LoweredExpr{ .type_id = array.element, .address = elem_ptr };
+		return LoweredExpr{
+			.value   = builder.CreateLoad(elem_ty, elem_ptr, "arrelem"),
+			.type_id = array.element,
+			.address = elem_ptr,
+		};
+	}
+
 	LoweredExpr ExprLowering::emitCall(const LoweredExpr& callee, pst::Access<pst::expr::Call> call) {
+		if (call->getType() == lexer::Token::BracketType::Square) return emitIndex(callee, call);
 		if (call->getType() != lexer::Token::BracketType::Round)
 			throw std::runtime_error("Subscript expressions are not yet supported");
 
@@ -380,6 +424,8 @@ namespace pg {
 		LoweredExpr lhs = lower(*assignment->getVariables().illegalAccess().value());
 		if (lhs.address == nullptr)
 			throw std::runtime_error("Left-hand side of '" + op.str() + "' is not an l-value");
+		if (std::holds_alternative<tp::Array>(ctx.getTypeInfo(lhs.type_id).kind))
+			throw std::runtime_error("Arrays cannot be assigned as a whole");
 
 		LoweredExpr rhs = lower(*assignment->getValue().illegalAccess().value());
 
@@ -491,11 +537,16 @@ namespace pg {
 			}
 			const u32 field_index = std::get<sym::FieldSymbol>(field_sym.kind).index;
 
-			// GEP into the struct, then load the field's value.
+			// GEP into the struct, then load the field's value. Array-typed fields
+			// stay address-only, consumed by a following `[...]` link.
 			llvm::Type*  struct_llvm_ty = lowering.lowerType(current.type_id, ctx);
 			llvm::Value* field_ptr      = builder.CreateStructGEP(
                 struct_llvm_ty, current.address, field_index, field_name.strView()
             );
+			if (std::holds_alternative<tp::Array>(ctx.getTypeInfo(field_sym.type_id).kind)) {
+				current = LoweredExpr{ .type_id = field_sym.type_id, .address = field_ptr };
+				continue;
+			}
 			llvm::Type*  field_llvm_ty = lowering.lowerType(field_sym.type_id, ctx);
 			llvm::Value* field_value
 				= builder.CreateLoad(field_llvm_ty, field_ptr, field_name.strView());

@@ -62,6 +62,18 @@ llvm::Type* pg::LlvmLoweringContext::lowerType(tp::TypeID type_id, Context& ctx)
 			});
 			return types[type_id];
 		}
+		variant_case(tp::Array, array) {
+			CORE_ASSERT(
+				!array.isVla(),
+				"VLA type has no static LLVM type; its alloca is sized at the declaration: "
+					+ type_info.name.str()
+			);
+			llvm::Type* elem_ty = lowerType(array.element, ctx);
+			llvm_module.inCtxDo([&](llvm::LLVMContext&, llvm::Module&) {
+				types.insertOrAssign(type_id, llvm::ArrayType::get(elem_ty, array.size));
+			});
+			return types[type_id];
+		}
 		variant_case(tp::Structure, structure) {
 			ctx.notifyClassTypeUse(type_info);
 			llvm::StructType* struct_type = nullptr;

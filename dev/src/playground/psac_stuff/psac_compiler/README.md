@@ -9,7 +9,10 @@ recompiles **only the functions that changed**.
 
 Supported language subset: functions (calls, recursion, forward references, void),
 `i64`/`bool`/`char` (char literals with C-style escapes), classes with fields and
-default constructors (`Point()`), `if`/`while`, compile-time `const`s, global
+default constructors (`Point()`), C-style arrays (`i64[10]`, multidimensional
+`i64[3][4]`, C99-style VLAs `i64[n]` for locals; usable as locals, globals and
+class fields — no pass/return by value or whole-array assignment, like C),
+`if`/`while`, compile-time `const`s, global
 variables with runtime initializers, namespaces (accessed with `.`),
 arithmetic/comparison/logical operators, compound assignments and the
 `builtin_output_i64`/`builtin_output_char` runtime builtins. Enough to compile the

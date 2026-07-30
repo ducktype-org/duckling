@@ -61,7 +61,10 @@ namespace pg {
 		LoweredExpr symbolRefToExpr(sym::SymbolID sym_id, base::StrID name);
 
 		/// Emits a call to `callee` (which must be a function symbol reference).
-		LoweredExpr          emitCall(const LoweredExpr& callee, pst::Access<pst::expr::Call> call);
+		LoweredExpr emitCall(const LoweredExpr& callee, pst::Access<pst::expr::Call> call);
+
+		/// Emits an array subscript `base[index]` (a square-bracket chain link).
+		LoweredExpr          emitIndex(const LoweredExpr& base, pst::Access<pst::expr::Call> call);
 		Context&             ctx;
 		LlvmLoweringContext& lowering;
 		llvm::IRBuilder<>&   builder;

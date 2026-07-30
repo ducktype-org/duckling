@@ -42,13 +42,35 @@ namespace pg::tp {
 		TypeID points_to;
 	};
 
+	/// C-style array type `T[N]`. Fixed-size arrays lower to llvm [N x T]; a size of
+	/// 0 marks a VLA (runtime-sized, locals only), which has no static LLVM type —
+	/// its alloca is sized at the declaration site.
+	struct Array {
+		TypeID element;
+		u64    size;
+
+		[[nodiscard]]
+		bool isVla() const {
+			return size == 0;
+		}
+	};
+
 	struct Function {
 		std::vector<TypeID> param_types;
 		TypeID              return_type;
 	};
 
-	using TypeKind
-		= std::variant<Integral, Boolean, Character, Incomplete, Structure, Pointer, Function, Void, Namespace>;
+	using TypeKind = std::variant<
+		Integral,
+		Boolean,
+		Character,
+		Incomplete,
+		Structure,
+		Pointer,
+		Array,
+		Function,
+		Void,
+		Namespace>;
 
 	struct TypeInfo {
 		base::StrID     name;

@@ -997,6 +997,187 @@ namespace psack_corpus {
 				}
 			)",
 			  1 },
+			// C-style arrays: fixed-size `T[N]`, indexing, VLAs, arrays in classes
+			// and globals.
+			{ "ArrayIndexAssign",
+			  R"(
+				fun main() -> i64 = {
+					var a: i64[10];
+					a[2] = 5;
+					return a[2];
+				}
+			)",
+			  5 },
+			{ "ArraySumLoop",
+			  R"(
+				fun main() -> i64 = {
+					var a: i64[10];
+					var i: i64 = 0;
+					while (i < 10) {
+						a[i] = i;
+						i += 1;
+					}
+					var sum: i64 = 0;
+					i = 0;
+					while (i < 10) {
+						sum += a[i];
+						i += 1;
+					}
+					return sum;
+				}
+			)",
+			  45 },
+			{ "Array2D",
+			  R"(
+				fun main() -> i64 = {
+					var m: i64[3][4];
+					var i: i64 = 0;
+					var j: i64 = 0;
+					while (i < 3) {
+						j = 0;
+						while (j < 4) {
+							m[i][j] = i * 4 + j;
+							j += 1;
+						}
+						i += 1;
+					}
+					var sum: i64 = 0;
+					i = 0;
+					while (i < 3) {
+						j = 0;
+						while (j < 4) {
+							sum += m[i][j];
+							j += 1;
+						}
+						i += 1;
+					}
+					return sum;
+				}
+			)",
+			  66 },
+			{ "ArrayConstSize",
+			  R"(
+				const N: i64 = 6;
+				fun main() -> i64 = {
+					var a: i64[N];
+					var i: i64 = 0;
+					while (i < N) {
+						a[i] = i + 1;
+						i += 1;
+					}
+					return a[0] + a[5];
+				}
+			)",
+			  7 },
+			{ "ArrayVla",
+			  R"(
+				fun sumUpTo(n: i64) -> i64 = {
+					var a: i64[n];
+					var i: i64 = 0;
+					while (i < n) {
+						a[i] = i;
+						i += 1;
+					}
+					var sum: i64 = 0;
+					i = 0;
+					while (i < n) {
+						sum += a[i];
+						i += 1;
+					}
+					return sum;
+				}
+				fun main() -> i64 = {
+					return sumUpTo(5);
+				}
+			)",
+			  10 },
+			{ "ArrayVlaMultiDim",
+			  R"(
+				fun fill(n: i64) -> i64 = {
+					var a: i64[n][3];
+					var i: i64 = 0;
+					var j: i64 = 0;
+					while (i < n) {
+						j = 0;
+						while (j < 3) {
+							a[i][j] = i * 3 + j;
+							j += 1;
+						}
+						i += 1;
+					}
+					var sum: i64 = 0;
+					i = 0;
+					while (i < n) {
+						j = 0;
+						while (j < 3) {
+							sum += a[i][j];
+							j += 1;
+						}
+						i += 1;
+					}
+					return sum;
+				}
+				fun main() -> i64 = {
+					return fill(2);
+				}
+			)",
+			  15 },
+			{ "GlobalArray",
+			  R"(
+				var g: i64[4];
+				fun bump(idx: i64, v: i64) = {
+					g[idx] = v;
+				}
+				fun main() -> i64 = {
+					bump(0, 30);
+					bump(3, 12);
+					return g[0] + g[3];
+				}
+			)",
+			  42 },
+			{ "ArrayOfClass",
+			  R"(
+				class Point {
+					x: i64;
+					y: i64;
+				}
+				fun main() -> i64 = {
+					var pts: Point[3];
+					pts[1].x = 7;
+					pts[2].y = 4;
+					return pts[1].x + pts[2].y;
+				}
+			)",
+			  11 },
+			{ "ClassArrayField",
+			  R"(
+				class Buf {
+					data: i64[4];
+					len: i64;
+				}
+				fun main() -> i64 = {
+					var b: Buf;
+					b.data[2] = 9;
+					b.len = 3;
+					return b.data[2] + b.len;
+				}
+			)",
+			  12 },
+			{ "CharArray",
+			  R"(
+				fun main() -> i64 = {
+					var s: char[3];
+					s[0] = 'H';
+					s[1] = 'i';
+					if (s[0] == 'H') {
+						if (s[1] == 'i') {
+							return 3;
+						}
+					}
+					return 0;
+				}
+			)",
+			  3 },
 		};
 		return cases;
 	}
@@ -1107,6 +1288,62 @@ namespace psack_corpus {
 			      "}\n" } },
 			  0,
 			  "operand pairs" },
+			// Arrays follow C rules: no pass/return by value, no whole-array
+			// assignment, sizes positive, non-local sizes compile-time constant.
+			{ "ArrayParamFails",
+			  { { "root.dmf",
+			      "fun f(a: i64[3]) -> i64 = { return a[0]; }\n"
+			      "fun main() -> i64 = { return 0; }\n" } },
+			  0,
+			  "not supported as parameter or return types" },
+			{ "ArrayReturnFails",
+			  { { "root.dmf",
+			      "fun f() -> i64[3] = { return 0; }\n"
+			      "fun main() -> i64 = { return 0; }\n" } },
+			  0,
+			  "not supported as parameter or return types" },
+			{ "ArrayZeroSizeFails",
+			  { { "root.dmf",
+			      "fun main() -> i64 = {\n"
+			      "    var a: i64[0];\n"
+			      "    return 0;\n"
+			      "}\n" } },
+			  0,
+			  "must be positive" },
+			{ "ArrayGlobalRuntimeSizeFails",
+			  { { "root.dmf",
+			      "var size: i64 = 4;\n"
+			      "var g: i64[size];\n"
+			      "fun main() -> i64 = { return 0; }\n" } },
+			  0,
+			  "compile-time constant" },
+			{ "ArrayVlaInnerDimFails",
+			  { { "root.dmf",
+			      "fun f(n: i64) -> i64 = {\n"
+			      "    var a: i64[3][n];\n"
+			      "    return 0;\n"
+			      "}\n"
+			      "fun main() -> i64 = { return f(2); }\n" } },
+			  0,
+			  "compile-time constant" },
+			{ "ArrayWholeAssignFails",
+			  { { "root.dmf",
+			      "fun main() -> i64 = {\n"
+			      "    var a: i64[3];\n"
+			      "    var b: i64[3];\n"
+			      "    a = b;\n"
+			      "    return 0;\n"
+			      "}\n" } },
+			  0,
+			  "cannot be assigned as a whole" },
+			{ "SubscriptNonArrayFails",
+			  { { "root.dmf",
+			      "fun main() -> i64 = {\n"
+			      "    var x: i64 = 1;\n"
+			      "    return x[0];\n"
+			      "}\n" } },
+			  0,
+			  "Subscript on non-array type" },
 		};
 		return cases;
 	}

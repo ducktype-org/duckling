@@ -344,6 +344,14 @@ namespace pg {
 		std::string qualifiedTypeName(const Context& ctx, tp::TypeID type_id) {
 			const tp::TypeInfo& info = ctx.getTypeInfo(type_id);
 
+			// Array types live in the root namespace and their display name is built
+			// from the element's unqualified name — qualify through the element instead.
+			if (const auto* array = std::get_if<tp::Array>(&info.kind)) {
+				const std::string suffix
+					= array->isVla() ? "[]" : "[" + std::to_string(array->size) + "]";
+				return qualifiedTypeName(ctx, array->element) + suffix;
+			}
+
 			std::string          name = info.name.str();
 			const ns::Namespace* ns   = &ctx.getNamespace(info.namespace_id);
 			while (ns->parent_namespace.has_value()) {

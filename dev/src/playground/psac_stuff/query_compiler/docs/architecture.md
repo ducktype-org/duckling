@@ -1,9 +1,9 @@
 # Querylinger architecture
 
 Querylinger is an incremental compiler for the Psackling language subset (i64 /
-bool / char, classes with fields, namespaces, compile-time constants, global
-variables, multifile imports) whose incremental engine is the production query
-framework (`src/common/query_framework`). It exists to answer one question:
+bool / char, classes with fields, C-style fixed-size arrays and VLAs, namespaces,
+compile-time constants, global variables, multifile imports) whose incremental
+engine is the production query framework (`src/common/query_framework`). It exists to answer one question:
 
 > How does a query-graph engine compare against PSAC (self-adjusting
 > computation) and against the production compiler, when everything else is

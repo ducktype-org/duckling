@@ -237,6 +237,46 @@ class PsacklingerTest: public tester::TestSuite {
 		ASSERT_EQUAL_PRINT(u64(15), runExecutable(executable));
 	}
 
+	/// A const used only as an array size is a dependency like any other const
+	/// read: changing it recompiles exactly the function declaring the array.
+	void incrementalArraySizeConstChange() {
+		const std::string v1 = R"(
+			const N: i64 = 4;
+			fun user() -> i64 = {
+				var a: i64[N];
+				a[N - 1] = 9;
+				return a[N - 1] + N;
+			}
+			fun other() -> i64 = { return 7; }
+			fun main() -> i64 = { return user() + other(); }
+		)";
+		const std::string v2 = R"(
+			const N: i64 = 6;
+			fun user() -> i64 = {
+				var a: i64[N];
+				a[N - 1] = 9;
+				return a[N - 1] + N;
+			}
+			fun other() -> i64 = { return 7; }
+			fun main() -> i64 = { return user() + other(); }
+		)";
+
+		fs::File out_dir    = fs::FileManager::createRandomTempDirectory();
+		fs::File executable = out_dir.createSubFile("", "incr_array_size.out");
+
+		pg::Compiler compiler(pg::CompileOptions{ .output_path = executable.getFilePath().string() }
+		);
+
+		compiler.compile(fs::FileManager::createRandomVirtualFile(v1));
+		ASSERT_EQUAL_PRINT(u64(20), runExecutable(executable));
+
+		pg::CompileStats incremental
+			= compiler.update(fs::FileManager::createRandomVirtualFile(v2));
+		ASSERT_EQUAL_PRINT(usize(3), incremental.total_functions);
+		ASSERT_EQUAL_PRINT(usize(1), incremental.recompiled_functions);
+		ASSERT_EQUAL_PRINT(u64(22), runExecutable(executable));
+	}
+
 	/// Renaming a parameter changes only that function's own text: its signature
 	/// (types only) is untouched, so callers should stay cached.
 	void incrementalParamRenameOnlySelf() {
@@ -734,6 +774,11 @@ public:
 		addTest(
 			static_cast<TestType>(&PsacklingerTest::incrementalConstOnlyReadersRecompile),
 			"IncrementalConstOnlyReadersRecompile",
+			false
+		);
+		addTest(
+			static_cast<TestType>(&PsacklingerTest::incrementalArraySizeConstChange),
+			"IncrementalArraySizeConstChange",
 			false
 		);
 		addTest(

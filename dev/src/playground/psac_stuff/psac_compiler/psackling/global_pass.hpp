@@ -61,17 +61,21 @@ namespace pg {
 			);
 		}
 
-		/// Resolves a type expression (bare identifier or type keyword) to a TypeID,
-		/// looked up from the current scope outwards.
-		tp::TypeID resolveTypeExpr(const pst::ExprElement& type_expr, const std::string& what) {
-			const base::StrID type_name = extractTypeName(type_expr);
-			if (type_name == base::StrID()) {
+		/// Resolves a type expression (bare identifier, type keyword or fixed-size
+		/// array) to a TypeID, looked up from the current scope outwards.
+		tp::TypeID resolveType(const pst::ExprElement& type_expr, const std::string& what) {
+			return pg::resolveTypeExpr(ctx, type_expr, what).type_id;
+		}
+
+		/// Like resolveType, but rejects array types — used for parameter and return
+		/// types, where C-style arrays are not supported (no decay-to-pointer here).
+		tp::TypeID resolveNonArrayType(const pst::ExprElement& type_expr, const std::string& what) {
+			const tp::TypeID type_id = resolveType(type_expr, what);
+			if (std::holds_alternative<tp::Array>(ctx.getTypeInfo(type_id).kind))
 				throw std::runtime_error(
-					what + ": type expression of kind '" + type_expr.elementType()
-					+ "' is not a bare identifier (not yet supported)"
+					what + ": array types are not supported as parameter or return types"
 				);
-			}
-			return ctx.lookupTypeInScopeAndParents(ctx.currNs().id, type_name);
+			return type_id;
 		}
 
 		void visitFun(pst::Access<pst::Fun> stmt) override {
@@ -83,7 +87,7 @@ namespace pg {
 			auto func_ns_id = ctx.pushNamespace(base::StrID("$fn_" + name.str()));
 			for (pst::AccessLocked<pst::Param> param: *stmt->getParams().illegalAccess().value()) {
 				auto       param_accessed = param.illegalAccess().value();
-				tp::TypeID param_type_id  = resolveTypeExpr(
+				tp::TypeID param_type_id  = resolveNonArrayType(
                     *param_accessed->getType().illegalAccess().value()->getExpr().illegalAccess().value(
                     ),
                     "Parameter '" + param_accessed->getName().illegalAccess().value()->unwrap().str()
@@ -101,7 +105,7 @@ namespace pg {
 
 			tp::TypeID return_type_id = ctx.void_type_id;
 			if (stmt->getRet().has_value()) {
-				return_type_id = resolveTypeExpr(
+				return_type_id = resolveNonArrayType(
 					*stmt->getRet()->illegalAccess().value()->getExpr().illegalAccess().value(),
 					"Return type of function '" + name.str() + "'"
 				);
@@ -130,7 +134,7 @@ namespace pg {
 			// into a synthetic constructor that runs before main, in declaration order.
 			tp::TypeID type_id = ctx.i64_type_id;
 			if (stmt->getType().has_value()) {
-				type_id = resolveTypeExpr(
+				type_id = resolveType(
 					*stmt->getType()->illegalAccess().value()->getExpr().illegalAccess().value(),
 					"Global variable '" + name.str() + "'"
 				);
@@ -176,20 +180,11 @@ namespace pg {
 						+ "' must declare an explicit type"
 					);
 				}
-				const pst::ExprElement& type_expr
-					= *field->getType().illegalAccess().value()->getExpr().illegalAccess().value();
-				const base::StrID type_name = extractTypeName(type_expr);
-				if (type_name == base::StrID()) {
-					throw std::runtime_error(
-						"Class field '" + name.str() + "." + field_name.str()
-						+ "': type expression of kind '" + type_expr.elementType()
-						+ "' is not a bare identifier (not yet supported)"
-					);
-				}
-
 				// Field type must have been previously declared.
-				tp::TypeID field_type_id
-					= ctx.lookupTypeInScopeAndParents(ctx.currNs().id, type_name);
+				tp::TypeID field_type_id = resolveType(
+					*field->getType().illegalAccess().value()->getExpr().illegalAccess().value(),
+					"Class field '" + name.str() + "." + field_name.str() + "'"
+				);
 
 				sym::SymbolID field_sym_id = ctx.insertSymbol(
 					field_name, sym::FieldSymbol{ .index = index }, field_type_id
