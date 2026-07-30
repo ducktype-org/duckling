@@ -2,11 +2,6 @@
 
 #include "symbol_abi.hpp"
 
-#include "helios/hout/elements/stmt.hpp"
-#include "helios/queries/function_queries.hpp"
-#include "helios/symbols/symbol_kind.hpp"
-#include "tsl/c_abi_converter.hpp"
-
 #include <diagnostic_interactive/placeholder.hpp>
 #include <frontend/pst_parser/access.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/string_value.hpp>
@@ -16,10 +11,14 @@
 #include <frontend/pst_parser/elements/hierarchy/statements/specifier_block.hpp>
 #include <frontend/pst_parser/lang_parser_element.hpp>
 #include <frontend/pst_parser/pst_visitor.hpp>
+#include <helios/hout/elements/stmt.hpp>
+#include <helios/queries/function_queries.hpp>
 #include <helios/symbols/attributes.hpp>
+#include <helios/symbols/symbol_kind.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
+#include <tsl/c_abi_converter.hpp>
 
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
