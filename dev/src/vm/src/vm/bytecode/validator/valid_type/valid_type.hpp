@@ -83,7 +83,6 @@ namespace vm::code::valid_type {
 		 */
 		void finalize(ValidTypeMap& types);
 
-
 		/**********************/
 		/* General operations */
 		/**********************/
@@ -143,7 +142,11 @@ namespace vm::code::valid_type {
 		bool operator==(const ValidTypeID& other_id) const;
 
 		/**
-		 * @brief For more information read docs of `is_trivially_copyable`.
+		 * @brief Whether this type is trivially copyable/POD(plain old data). This is true for
+		 * types that can be copied with a simple memory copy, like primitives, opaques and
+		 * fixed-size tables of trivially copyable types.
+		 * This also means, that if a type requires maintaining block structure in the "Safe"
+		 * mode, it is not trivially copyable.
 		 */
 		[[nodiscard]] bool isTriviallyCopyable() const;
 
@@ -152,6 +155,7 @@ namespace vm::code::valid_type {
 		 * of size 1, 2, 4 or 8 (`f32`/`f64` must have their exact C sizes), C pointers,
 		 * fixed-size tables of FFI-compliant types, and non-packed plain data structures (no
 		 * classes or interfaces) whose every field is FFI-compliant.
+		 * @note FFICompliant != TriviallyCopyable
 		 */
 		[[nodiscard]] bool isFFICompliant() const;
 
@@ -177,11 +181,7 @@ namespace vm::code::valid_type {
 		bool is_instantiable = true;
 
 		/**
-		 * @brief Whether this type is trivially copyable/POD(plain old data). This is true for
-		 * types that can be copied with a simple memory copy, like primitives, opaques and
-		 * fixed-size tables of trivially copyable types.
-		 * This also means, that if a type requires maintaining block structure in the "Safe"
-		 * mode, it is not trivially copyable.
+		 * @brief For more information read docs of `isTriviallyCopyable`.
 		 */
 		bool is_trivially_copyable = true;
 

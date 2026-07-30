@@ -591,31 +591,6 @@ DEF_INSTR(cptrRead_pptr_pcpt, (vm::opargs::PlacePtr, dst_ptr), (vm::opargs::Plac
 DEF_INSTR(cptrWrite_pcpt_pptr, (vm::opargs::PlaceCptr, dst_ptr), (vm::opargs::PlacePtr, src_ptr))
 
 /**
- * @brief Copies `element_count` elements from the native memory addressed by `src_ptr` into
- * the dynamic table pointed to by `dst_ptr`. The table's element type must be trivially
- * copyable; `element_count` is checked against the table's element count at runtime, so the
- * copy can never run past the table.
- */
-DEF_INSTR(
-	cptrReadArray_pptr_pcpt_p64,
-	(vm::opargs::PlacePtr, dst_ptr),
-	(vm::opargs::PlaceCptr, src_ptr),
-	(vm::opargs::Place64, element_count)
-)
-
-/**
- * @brief Copies `element_count` elements from the dynamic table pointed to by `src_ptr` to
- * the native memory addressed by `dst_ptr`. The table's element type must be trivially
- * copyable; `element_count` is checked against the table's element count at runtime.
- */
-DEF_INSTR(
-	cptrWriteArray_pcpt_pptr_p64,
-	(vm::opargs::PlaceCptr, dst_ptr),
-	(vm::opargs::PlacePtr, src_ptr),
-	(vm::opargs::Place64, element_count)
-)
-
-/**
  * @brief Reinterprets a cpointer as another cpointer type (the analogue of a C cast). Any
  * cpointer type converts to any other; the copy itself is a plain 8-byte move.
  */
@@ -625,6 +600,7 @@ DEF_INSTR(cptrCast_pcpt_pcpt, (vm::opargs::PlaceCptr, dst), (vm::opargs::PlaceCp
  * @brief Sets `dst` to `src + offset` (byte-wise pointer arithmetic). Both places must have
  * the identical cpointer type.
  */
+// @TODO: Perhaps add a dynamic check for the cast???
 DEF_INSTR(
 	cptrAddOffset_pcpt_pcpt_p64,
 	(vm::opargs::PlaceCptr, dst),
