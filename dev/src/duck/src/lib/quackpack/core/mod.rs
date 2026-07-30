@@ -12,6 +12,7 @@ pub mod run;
 pub mod script;
 pub mod solver;
 pub mod storage;
+pub mod valid_package_name;
 mod version;
 
 pub use manifest::*;

@@ -3,50 +3,52 @@ import core.panicking as panicking;
 import core.runtime as runtime;
 import core.clib as clib;
 
+template(T: type)
 namespace allocation {
+    const LLVM_ELEM_SIZE = builtins.size_of(T) as u64;
 
     @backend_dependent
-    fundecl alloc(len: u64) -> manyptr char;
+    fundecl alloc(len: u64) -> manyptr T;
 
     @dvm_only_impl
-    fun alloc(len: u64) -> manyptr char = {
-        return builtins.dvm_alloc_arr:{char}(len);
+    fun alloc(len: u64) -> manyptr T = {
+        return builtins.dvm_alloc_arr:{T}(len);
     }
 
     @native_only_impl
-    fun alloc(len: u64) -> manyptr char = {
-        return clib.malloc(len) as manyptr char;
+    fun alloc(len: u64) -> manyptr T = {
+        return clib.malloc(len * LLVM_ELEM_SIZE) as manyptr T;
     }
 
     @backend_dependent
-    fundecl free(p: manyptr char) -> ();
+    fundecl free(p: manyptr T) -> ();
 
     @dvm_only_impl
-    fun free(p: manyptr char) -> () = {
-        builtins.dvm_free_arr:{char}(p);
+    fun free(p: manyptr T) -> () = {
+        builtins.dvm_free_arr:{T}(p);
     }
 
     @native_only_impl
-    fun free(p: manyptr char) -> () = {
+    fun free(p: manyptr T) -> () = {
         clib.free(p as cptr u8);
     }
 
     @backend_dependent
-    fundecl realloc(p: manyptr char, new_size: u64) -> manyptr char;
+    fundecl realloc(p: manyptr T, new_size: u64) -> manyptr T;
 
     #{
         `dvm_realloc_arr` resizes the dynamic table in place and reseats the
         handle held by `p`, so the parameter itself is the reallocated buffer.
     #}
     @dvm_only_impl
-    fun realloc(p: manyptr char, new_size: u64) -> manyptr char = {
-        builtins.dvm_realloc_arr:{char}(p, new_size);
+    fun realloc(p: manyptr T, new_size: u64) -> manyptr T = {
+        builtins.dvm_realloc_arr:{T}(p, new_size * LLVM_ELEM_SIZE);
         return p;
     }
 
     @native_only_impl
-    fun realloc(p: manyptr char, new_size: u64) -> manyptr char = {
-        return clib.realloc(p as cptr u8, new_size) as manyptr char;
+    fun realloc(p: manyptr T, new_size: u64) -> manyptr T = {
+        return clib.realloc(p as cptr u8, new_size * LLVM_ELEM_SIZE) as manyptr T;
     }
 }
 
@@ -67,8 +69,8 @@ class String {
             if (new_cap == 0u64) new_cap = 1u64;
             while (new_cap < required) new_cap = new_cap * 2u64;
 
-            if (cap == 0u64) pointer = allocation.alloc(new_cap);
-            else pointer = allocation.realloc(pointer, new_cap);
+            if (cap == 0u64) pointer = allocation:{char}.alloc(new_cap);
+            else pointer = allocation:{char}.realloc(pointer, new_cap);
             cap = new_cap;
         }
     }
@@ -131,7 +133,7 @@ class String {
         Releases the buffer. The string is left empty and reusable.
     #}
     fun dispose() -> () = {
-        if (cap > 0u64) allocation.free(pointer);
+        if (cap > 0u64) allocation:{char}.free(pointer);
         len = 0u64;
         cap = 0u64;
     }
@@ -159,7 +161,7 @@ class String {
     }
 
     String.destroy() = {
-        allocation.free(pointer);   
+        allocation:{char}.free(pointer);   
     }
 }
 
@@ -273,3 +275,68 @@ fun stringifyF64(x: f64) -> String = {
     return move result;
 }
 
+#{
+    Growable array of `T`. Capacity doubles on growth, so a sequence of
+    `push`es is amortized O(1).
+#}
+template(T: type)
+class DuckList {
+    pointer: manyptr T;
+    len: u64;
+    cap: u64;
+
+    #{
+        Makes sure at least `required` elements fit into the buffer.
+    #}
+    fun reserve(required: u64) -> () = {
+        if (required > cap) {
+            var new_cap = cap;
+            if (new_cap == 0u64) new_cap = 1u64;
+            while (new_cap < required) new_cap = new_cap * 2u64;
+
+            if (cap == 0u64) pointer = allocation:{T}.alloc(new_cap);
+            else pointer = allocation:{T}.realloc(pointer, new_cap);
+            cap = new_cap;
+        }
+    }
+
+    fun push(value: T) -> () = {
+        reserve(len + 1u64);
+        pointer[len as i64] = value;
+        len                 = len + 1u64;
+    }
+
+    fun pop() -> T = {
+        if (len == 0u64) panicking.panic();
+        len = len - 1u64;
+        return pointer[len as i64];
+    }
+
+    fun at(i: i64) -> ref T = {
+        if (i < 0i64 or i >= len as i64) panicking.panic();
+        return &pointer[i];
+    }
+
+    fun length() -> u64 = len;
+
+    #{
+        Drops the contents but keeps the buffer, so it can be refilled without
+        allocating again.
+    #}
+    fun clear() -> () = {
+        len = 0u64;
+    }
+
+    #{
+        Releases the buffer. The list is left empty and reusable.
+    #}
+    fun dispose() -> () = {
+        if (cap > 0u64) allocation:{T}.free(pointer);
+        len = 0u64;
+        cap = 0u64;
+    }
+
+    DuckList.destroy() = {
+        allocation:{T}.free(pointer);
+    }
+}
