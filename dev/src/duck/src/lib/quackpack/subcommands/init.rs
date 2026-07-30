@@ -7,6 +7,9 @@ use std::path::{Path, PathBuf};
 use git2::Repository;
 
 use crate::duck::util::terminal::Terminal;
+use crate::quackpack::core::valid_package_name::{
+    is_duckling_keyword, is_duckling_std_name, validate_package_name,
+};
 use crate::quackpack::core::{PackageLoader, Version};
 use crate::util::path_ops_ext::{MkdirOptions, PathOpsExt};
 use crate::{DuckContext, QuackError, QuackResult, QuackResultContext, qp_bail, qp_err};
@@ -83,6 +86,11 @@ pub fn init(opts: InitOptions<'_, '_>) -> QuackResult<()> {
             .to_string_lossy()
             .into_owned(),
     };
+    validate_new_package_name(
+        opts.ctx,
+        &name,
+        /* inferred */ opts.explicit_name.is_none(),
+    )?;
     create_manifest_file(opts.ctx, &opts.at, &name, opts.full)?;
     append_venv_config_to_manifest(
         &opts.at,
@@ -101,6 +109,30 @@ pub fn init(opts: InitOptions<'_, '_>) -> QuackResult<()> {
         name,
         opts.at.display()
     ))?;
+    Ok(())
+}
+
+/// Validate a name of the new package.
+///
+/// _Weird_ names (std/keywords) are warnings instead of errors.
+fn validate_new_package_name(ctx: &DuckContext, name: &str, inferred: bool) -> QuackResult<()> {
+    validate_package_name(name).with_context(|| {
+        if inferred {
+            format!("cannot create a project with an invalid inferred name `{name}`")
+        } else {
+            format!("cannot create a project with an invalid explicit name `{name}`")
+        }
+    })?;
+    if is_duckling_std_name(name) {
+        ctx.console().warning(format!(
+            "initializing a project with name `{name}` can have weird effects, as it's one of the packages from the Duckling standard library"
+        ))?;
+    }
+    if is_duckling_keyword(name) {
+        ctx.console().warning(format!(
+            "initializing a project with name `{name}` can have weird effects, as it's a Duckling keyword"
+        ))?;
+    }
     Ok(())
 }
 
