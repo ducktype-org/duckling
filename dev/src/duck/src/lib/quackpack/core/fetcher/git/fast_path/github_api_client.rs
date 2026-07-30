@@ -80,8 +80,9 @@ impl<'duck> GithubApiClient<'duck> {
     ) -> QuackResult<StrId> {
         let mut url = repo_api_url.join("commits")?;
         if let Some(reference) = reference {
-            url.set_query(Some(&format!("sha={reference}")));
+            url.query_pairs_mut().append_pair("sha", &reference);
         }
+        url.query_pairs_mut().append_pair("per_page", "1");
         let response = self.request(&url)?;
         get_commit_from_response(response)
     }
@@ -97,8 +98,7 @@ impl<'duck> GithubApiClient<'duck> {
     ) -> QuackResult<String> {
         let mut url = repo_api_url.join("contents/")?.join(path_to_file)?;
         url.query_pairs_mut()
-            .append_pair("ref", &commit)
-            .append_pair("per_page", "1");
+            .append_pair("ref", &commit);
         let response = self.request(&url)?;
         Ok(String::from_utf8(response.into_body())?)
     }
@@ -165,6 +165,13 @@ mod test {
     #[test]
     fn base_api_url() {
         let repo_url = "https://github.com/foo/xd".to_url().unwrap();
+        let api_url = "https://api.github.com/repos/foo/xd/".to_url().unwrap();
+        assert_eq!(api_url, GithubApiClient::get_api_url(&repo_url).unwrap())
+    }
+
+    #[test]
+    fn remove_dot_git() {
+        let repo_url = "https://github.com/foo/xd.git".to_url().unwrap();
         let api_url = "https://api.github.com/repos/foo/xd/".to_url().unwrap();
         assert_eq!(api_url, GithubApiClient::get_api_url(&repo_url).unwrap())
     }

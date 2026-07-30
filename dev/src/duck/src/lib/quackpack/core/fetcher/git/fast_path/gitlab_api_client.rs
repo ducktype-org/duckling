@@ -186,4 +186,13 @@ mod test {
             .unwrap();
         assert_eq!(api_url, GitlabApiClient::get_api_url(&repo_url).unwrap())
     }
+
+    #[test]
+    fn remove_dot_git() {
+        let repo_url = "https://gitlab.com/foo/xd.git".to_url().unwrap();
+        let api_url = "https://gitlab.com/api/v4/projects/foo%2Fxd/"
+            .to_url()
+            .unwrap();
+        assert_eq!(api_url, GitlabApiClient::get_api_url(&repo_url).unwrap())
+    }
 }
