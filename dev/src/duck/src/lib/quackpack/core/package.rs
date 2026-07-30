@@ -179,6 +179,17 @@ impl AnyPackage {
         }
     }
 
+    /// Get the normalised name of this [`AnyPackage`].
+    ///
+    /// For [`Package`] it returns the normalised name from the manifest, however for scripts it
+    /// returns a normalised script name (file stem of the script's path).
+    pub fn normalised_name(&self) -> String {
+        match self {
+            Self::Package(package) => package.normalised_name(),
+            Self::Script(script) => script.normalised_script_name(),
+        }
+    }
+
     /// Get the version of this [`AnyPackage`].
     ///
     /// For [`Package`] returns the version from the manifest, however for scripts it forwards to
@@ -239,6 +250,11 @@ impl Package {
     /// Get the name of this [`Package`].
     pub fn name(&self) -> StrId {
         self.manifest.name()
+    }
+
+    /// Get the normalised name of this [`Package`].
+    pub fn normalised_name(&self) -> String {
+        self.manifest.normalised_name()
     }
 
     /// Get the version of this [`Package`].

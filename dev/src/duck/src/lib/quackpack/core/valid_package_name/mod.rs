@@ -34,6 +34,12 @@ pub fn validate_package_name(name: &str) -> Result<(), PackageNameError> {
     Ok(())
 }
 
+/// Normalise previously validated package name.
+pub fn normalise_package_name(name: &str) -> String {
+    // Right now only `-` is not a valid package name, replace it for `_`.
+    name.replace('-', "_")
+}
+
 /// Check if a given char is a valid package name character.
 /// Allowed values are:
 /// - lowercase ASCII letters,

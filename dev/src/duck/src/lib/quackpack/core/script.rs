@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 
 use super::compile::artifacts_layout::ArtifactsLayout;
 use super::identity::{Identity, Origin};
-use super::valid_package_name::validate_package_name;
+use super::valid_package_name::{normalise_package_name, validate_package_name};
 use super::{Dependencies, Manifest, Package, Profiles, Version, capture_frontmatter};
 use crate::quackpack::schemas::manifest::Manifest as ManifestSchema;
 use crate::util::path_ops_ext::PathOpsExt;
@@ -46,6 +46,14 @@ impl Script {
         match self {
             Self::Standalone(standalone_script) => standalone_script.script_name(),
             Self::Associated(package_script) => package_script.script_name(),
+        }
+    }
+
+    /// Get the normalised script name.
+    pub fn normalised_script_name(&self) -> String {
+        match self {
+            Self::Standalone(standalone_script) => standalone_script.normalised_script_name(),
+            Self::Associated(package_script) => package_script.normalised_script_name(),
         }
     }
 
@@ -298,6 +306,11 @@ impl PackageScript {
         self.script_name
     }
 
+    /// Get the normalised script name.
+    pub fn normalised_script_name(&self) -> String {
+        normalise_package_name(&self.script_name)
+    }
+
     /// Get the package name.
     pub fn package_name(&self) -> StrId {
         self.package.name()
@@ -324,6 +337,11 @@ impl StandaloneScript {
     /// Get the script name.
     pub fn script_name(&self) -> StrId {
         self.frontmatter.script_name()
+    }
+
+    /// Get the normalised script name.
+    pub fn normalised_script_name(&self) -> String {
+        self.frontmatter.normalised_script_name()
     }
 
     /// Get the script version.
@@ -430,6 +448,12 @@ impl FrontMatter {
     pub fn script_name(&self) -> StrId {
         // NOTE: `parse/manifest.rs` for frontmatters sets script name as a `metadata.name`.
         self.manifest().name()
+    }
+
+    /// Get the normalised name of the script.
+    pub fn normalised_script_name(&self) -> String {
+        // NOTE: `parse/manifest.rs` for frontmatters sets script name as a `metadata.name`.
+        self.manifest().normalised_name()
     }
 
     /// Get the version of the script.
