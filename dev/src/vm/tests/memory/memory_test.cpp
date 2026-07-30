@@ -14,6 +14,7 @@ public:
 		TESTER_ADD_TEST(globalLeakTest);
 		TESTER_ADD_TEST(noDoubleDestructorCalls);
 		TESTER_ADD_TEST(nestedLeaks);
+		TESTER_ADD_TEST(nestedPtrInTableLeak);
 	}
 
 private:
@@ -39,6 +40,17 @@ private:
 			runTestOnVmGetResult("nested_leaks.dbc", "", ""),
 			vm::exceptions::VMFoundMemoryLeakException::ERR_MSG
 		);
+	}
+
+	// #3225: a pointer nested inside a struct inside a table is not visited by
+	// the destructor walk (iterateOverDataAndExecute is one level deep).
+	// After the fix the nested pointer is found and properly released.
+	void nestedPtrInTableLeak() {
+		const auto result = runTestOnVmGetResult("nested_ptr_in_table.dbc", "", "");
+		ASSERT_HAS_VALUE(result.run_result);
+		const auto validation_result = vm::api::deinitAndValidate(result.pid);
+		ASSERT_HAS_VALUE(validation_result);
+		ASSERT_TRUE(validation_result.value() == true);
 	}
 };
 
