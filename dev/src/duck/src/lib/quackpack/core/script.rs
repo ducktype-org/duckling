@@ -5,8 +5,8 @@ use std::path::{Path, PathBuf};
 
 use super::compile::artifacts_layout::ArtifactsLayout;
 use super::identity::{Identity, Origin};
-use super::valid_package_name::validate_package_name;
-use super::{Dependencies, Manifest, Package, Profiles, capture_frontmatter};
+use super::valid_package_name::{normalise_package_name, validate_package_name};
+use super::{Dependencies, Manifest, Package, Profiles, Version, capture_frontmatter};
 use crate::quackpack::schemas::manifest::Manifest as ManifestSchema;
 use crate::util::path_ops_ext::PathOpsExt;
 use crate::{QuackResult, QuackResultContext, StrId};
@@ -38,6 +38,33 @@ impl Script {
         match self {
             Self::Standalone(standalone_script) => standalone_script.frontmatter().script_file(),
             Self::Associated(package_script) => package_script.script_path(),
+        }
+    }
+
+    /// Get the script name.
+    pub fn script_name(&self) -> StrId {
+        match self {
+            Self::Standalone(standalone_script) => standalone_script.script_name(),
+            Self::Associated(package_script) => package_script.script_name(),
+        }
+    }
+
+    /// Get the normalised script name.
+    pub fn normalised_script_name(&self) -> String {
+        match self {
+            Self::Standalone(standalone_script) => standalone_script.normalised_script_name(),
+            Self::Associated(package_script) => package_script.normalised_script_name(),
+        }
+    }
+
+    /// Get the script version.
+    ///
+    /// For standalone scripts the return value is irrelevant, but for associated scripts we return
+    /// a version of the package.
+    pub fn version(&self) -> Version {
+        match self {
+            Self::Standalone(standalone_script) => standalone_script.version(),
+            Self::Associated(package_script) => package_script.package_version(),
         }
     }
 
@@ -278,6 +305,21 @@ impl PackageScript {
     pub fn script_name(&self) -> StrId {
         self.script_name
     }
+
+    /// Get the normalised script name.
+    pub fn normalised_script_name(&self) -> String {
+        normalise_package_name(&self.script_name)
+    }
+
+    /// Get the package name.
+    pub fn package_name(&self) -> StrId {
+        self.package.name()
+    }
+
+    /// Get the package version
+    pub fn package_version(&self) -> Version {
+        self.package.version()
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -290,6 +332,21 @@ impl StandaloneScript {
     /// Create a new [`StandaloneScript`].
     pub fn new(frontmatter: FrontMatter) -> Self {
         Self { frontmatter }
+    }
+
+    /// Get the script name.
+    pub fn script_name(&self) -> StrId {
+        self.frontmatter.script_name()
+    }
+
+    /// Get the normalised script name.
+    pub fn normalised_script_name(&self) -> String {
+        self.frontmatter.normalised_script_name()
+    }
+
+    /// Get the script version.
+    pub fn version(&self) -> Version {
+        self.frontmatter.version()
     }
 
     /// Get the [`FrontMatter`] of this script.
@@ -391,6 +448,17 @@ impl FrontMatter {
     pub fn script_name(&self) -> StrId {
         // NOTE: `parse/manifest.rs` for frontmatters sets script name as a `metadata.name`.
         self.manifest().name()
+    }
+
+    /// Get the normalised name of the script.
+    pub fn normalised_script_name(&self) -> String {
+        // NOTE: `parse/manifest.rs` for frontmatters sets script name as a `metadata.name`.
+        self.manifest().normalised_name()
+    }
+
+    /// Get the version of the script.
+    pub fn version(&self) -> Version {
+        self.manifest().version()
     }
 
     /// Get the schema of the script's frontmatter.
