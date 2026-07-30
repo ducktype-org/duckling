@@ -39,6 +39,7 @@ public:
 		TESTER_ADD_TEST(pointersTest);
 		TESTER_ADD_TEST(backendDependentTest);
 		TESTER_ADD_TEST(allocTest);
+		TESTER_ADD_TEST(castsTest);
 	}
 
 protected:
@@ -66,6 +67,7 @@ protected:
 			{ fs::FilePath(path("modules/pointers/")), "pointers" },
 			{ fs::FilePath(path("modules/backend_dependent/")), "backend_dependent" },
 			{ fs::FilePath(path("modules/alloc/")), "alloc" },
+			{ fs::FilePath(path("modules/casts/")), "casts" },
 		};
 		auto init_result
 			= compiler::driver::test_utils::initializeCompilerForTests(packages, artifacts_path);
@@ -212,6 +214,15 @@ private:
 
 	void allocTest() {
 		runMultimoduleTest("alloc", ALL_CORE_MODULES, {}, "16\n131\n145\n", {}, 42);
+	}
+
+	// The casts that the DVM does not lower as a plain width conversion: numeric -> bool is a
+	// non-zero test (a `trunc` into the 1-bit bool would be a no-op), and `manyptr T as ptr T`
+	// takes the address of the first element of the dynamic table behind the many-pointer.
+	void castsTest() {
+		runMultimoduleTest(
+			"casts", ALL_CORE_MODULES, {}, "1\n0\n1\n1\n0\n1\n1\n0\n11\n44\n22\n-7\n9\n9\n", {}, 0
+		);
 	}
 };
 

@@ -25,6 +25,31 @@ fun widen_implicit() -> i64 = {
     return 0i64;
 }
 
+# A `bool` is an `i1`, so an explicit numeric -> bool cast must be a "is it non-zero" test and not
+# a truncation, which would only keep the lowest bit (`64 as bool` would be `false`).
+fun int_to_bool_explicit() -> i64 = {
+    var big: i64 = 64;
+    var flag: bool = big as bool;
+    return 0i64;
+}
+
+# The float source is compared with the UNordered predicate, matching the DVM's `fcmpNeq`, so a
+# NaN is `true`.
+fun float_to_bool_explicit() -> i64 = {
+    var half: f64 = 0.5;
+    var flag: bool = half as bool;
+    var small: f32 = 0.5f32;
+    var flag32: bool = small as bool;
+    return 0i64;
+}
+
+fun float_narrow_widen() -> i64 = {
+    var wide: f64 = 9.0;
+    var narrow: f32 = wide as f32;
+    var back: f64 = narrow as f64;
+    return 0i64;
+}
+
 fun bool_implicit() -> i64 = {
     var a: i64 = 10;
     var b: bool = a;

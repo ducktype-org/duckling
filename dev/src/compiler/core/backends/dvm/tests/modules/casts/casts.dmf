@@ -1,0 +1,92 @@
+import core.builtins.*;
+
+# Exercises the DVM lowering of the `as` casts that are NOT a plain width conversion
+# (`backends/dvm/.../operations/cast.cpp`).
+
+class Flags {
+    var raw: bool;
+    var value: i64;
+}
+
+# A `bool` is 1 bit wide, so the generic `trunc` lowering is a no-op between an i64 and a bool and
+# would leave 64 in the bool. A numeric -> bool cast must be a "is it non-zero" test instead.
+fun intToBool() -> i64 = {
+    var big: i64 = 64;
+    builtin_output_i64((big as bool) as i64);       # 1
+    var zero: i64 = 0;
+    builtin_output_i64((zero as bool) as i64);      # 0
+    var narrow: i32 = (-3) as i32;
+    builtin_output_i64((narrow as bool) as i64);    # 1
+    return 0i64;
+}
+
+# The float source uses the float comparison instead; a saturating float -> int cast would turn
+# 0.5 into 0 and report `false`.
+fun floatToBool() -> i64 = {
+    var half: f64 = 0.5;
+    builtin_output_i64((half as bool) as i64);      # 1
+    var fzero: f64 = 0.0;
+    builtin_output_i64((fzero as bool) as i64);     # 0
+    var fneg: f64 = -1.5;
+    builtin_output_i64((fneg as bool) as i64);      # 1
+    return 0i64;
+}
+
+# The destination of the cast is a class field here, i.e. an indirect place, which takes the
+# other branch of the lowering than the local-destination cases above.
+fun boolIntoField() -> i64 = {
+    var flags: Flags = Flags(false, 0i64);
+    flags.raw = 7i64 as bool;
+    builtin_output_i64(flags.raw as i64);           # 1
+    flags.raw = 0.0 as bool;
+    builtin_output_i64(flags.raw as i64);           # 0
+    return 0i64;
+}
+
+# A `manyptr T` is lowered to a pointer to a dynamic table of `T`, so narrowing it to a `ptr T`
+# must take the address of the table's first element.
+fun manyPointerToPointer() -> i64 = {
+    var many = dvm_alloc_arr:{i64}(3u64);
+    many[0] = 11i64;
+    many[1] = 22i64;
+    many[2] = 33i64;
+
+    var first: ptr i64 = many as ptr i64;
+    builtin_output_i64(*first);                     # 11
+
+    # Writing through the narrowed pointer is visible through the many-pointer.
+    *first = 44i64;
+    builtin_output_i64(many[0]);                    # 44
+    # The other elements are untouched.
+    builtin_output_i64(many[1]);                    # 22
+
+    dvm_free_arr:{i64}(many);
+    return 0i64;
+}
+
+# The plain width conversions, which pick their opcode from the two layouts: signed and unsigned
+# int -> float, float -> float in both directions, and float -> int.
+fun numericWidths() -> i64 = {
+    var signed_source: i64 = -7i64;
+    var signed_float: f64 = signed_source as f64;
+    builtin_output_i64(signed_float as i64);        # -7
+
+    var unsigned_source: u32 = 9u32;
+    var unsigned_float: f64 = unsigned_source as f64;
+    builtin_output_i64(unsigned_float as i64);      # 9
+
+    # f64 -> f32 truncates, f32 -> f64 extends; 9.0 survives both exactly.
+    var narrowed: f32 = unsigned_float as f32;
+    var widened: f64 = narrowed as f64;
+    builtin_output_i64(widened as i64);             # 9
+    return 0i64;
+}
+
+fun main() -> i64 = {
+    intToBool();
+    floatToBool();
+    boolIntoField();
+    manyPointerToPointer();
+    numericWidths();
+    return 0i64;
+}
