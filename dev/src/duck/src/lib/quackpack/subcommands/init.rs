@@ -113,6 +113,8 @@ pub fn init(opts: InitOptions<'_, '_>) -> QuackResult<()> {
 }
 
 /// Validate a name of the new package.
+///
+/// _Weird_ names (std/keywords) are warnings instead of errors.
 fn validate_new_package_name(ctx: &DuckContext, name: &str, inferred: bool) -> QuackResult<()> {
     validate_package_name(name).with_context(|| {
         if inferred {
@@ -126,7 +128,6 @@ fn validate_new_package_name(ctx: &DuckContext, name: &str, inferred: bool) -> Q
             "initializing a project with name `{name}` can have weird effects, as it's one of the packages from the Duckling standard library"
         ))?;
     }
-
     if is_duckling_keyword(name) {
         ctx.console().warning(format!(
             "initializing a project with name `{name}` can have weird effects, as it's a Duckling keyword"
