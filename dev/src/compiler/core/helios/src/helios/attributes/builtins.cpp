@@ -29,8 +29,10 @@ namespace compiler::helios {
 			static const base::HashMap<std::string_view, BuiltinKind> mapping = {
 				{ "ptr_from_slice", BuiltinKind::PtrFromSlice },
 				{ "slice_from_ptr_len", BuiltinKind::SliceFromPtrLen },
+				{ "dvm_alloc_arr", BuiltinKind::DvmAllocArr },
+				{ "dvm_realloc_arr", BuiltinKind::DvmReallocArr },
+				{ "dvm_free_arr", BuiltinKind::DvmFreeArr },
 				{ "dvm_alloc", BuiltinKind::DvmAlloc },
-				{ "dvm_realloc", BuiltinKind::DvmRealloc },
 				{ "dvm_free", BuiltinKind::DvmFree },
 				{ "size_of", BuiltinKind::SizeOf },
 				{ "alignment_of", BuiltinKind::AlignmentOf },
@@ -45,10 +47,14 @@ namespace compiler::helios {
 			return base::StrID("ptr_from_slice");
 		case BuiltinKind::SliceFromPtrLen:
 			return base::StrID("slice_from_ptr_len");
+		case BuiltinKind::DvmAllocArr:
+			return base::StrID("dvm_alloc_arr");
+		case BuiltinKind::DvmReallocArr:
+			return base::StrID("dvm_realloc_arr");
+		case BuiltinKind::DvmFreeArr:
+			return base::StrID("dvm_free_arr");
 		case BuiltinKind::DvmAlloc:
 			return base::StrID("dvm_alloc");
-		case BuiltinKind::DvmRealloc:
-			return base::StrID("dvm_realloc");
 		case BuiltinKind::DvmFree:
 			return base::StrID("dvm_free");
 		case BuiltinKind::SizeOf:
@@ -235,10 +241,10 @@ namespace compiler::helios {
 			return BuiltinOrigin::HOUT;
 		case BuiltinKind::SliceFromPtrLen:
 			return BuiltinOrigin::HOUT;
+		case BuiltinKind::DvmAllocArr:
+		case BuiltinKind::DvmReallocArr:
+		case BuiltinKind::DvmFreeArr:
 		case BuiltinKind::DvmAlloc:
-			return BuiltinOrigin::DVMBackend;
-		case BuiltinKind::DvmRealloc:
-			return BuiltinOrigin::DVMBackend;
 		case BuiltinKind::DvmFree:
 			return BuiltinOrigin::DVMBackend;
 		case BuiltinKind::SizeOf:
