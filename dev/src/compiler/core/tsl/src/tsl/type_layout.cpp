@@ -502,7 +502,7 @@ namespace compiler::tsl {
 		requires std::derived_from<T, tsh::AbstractType>
 		ClassTypeLayoutConstructionHelper(const T class_type, query::Context& ctx):
 			  type(class_type),
-			  field_elements(getFieldsOfInterface(class_type.getInterface(ctx))),
+			  field_elements(getFieldsOfInterface(&class_type.getInterface(ctx)->valueOrThrow())),
 			  field_layouts(getLayoutVector(getElementTypes(field_elements, ctx), ctx)),
 			  total_size(0),
 			  max_alignment(1) {
@@ -522,7 +522,7 @@ namespace compiler::tsl {
 			const tsh::TupleAbstractType tuple_type, query::Context& ctx
 		):
 			  type(tuple_type),
-			  field_elements(getFieldsOfInterface(tuple_type.getInterface(ctx))),
+			  field_elements(getFieldsOfInterface(&tuple_type.getInterface(ctx)->valueOrThrow())),
 			  field_layouts(getLayoutVector(tuple_type.getComponents(), ctx)),
 			  field_offsets(alignOffsetsForLayoutVector(field_layouts)),
 			  layout_idx_to_field_idx(offsetsToPermutation(field_offsets)),
@@ -534,7 +534,7 @@ namespace compiler::tsl {
 			const tsh::SliceAbstractType slice_type, query::Context& ctx
 		):
 			  type(slice_type),
-			  field_elements(getFieldsOfInterface(slice_type.getInterface(ctx))),
+			  field_elements(getFieldsOfInterface(&slice_type.getInterface(ctx)->valueOrThrow())),
 			  field_layouts(getLayoutVector(getElementTypes(field_elements, ctx), ctx)),
 			  field_offsets(alignOffsetsForLayoutVector(field_layouts)),
 			  layout_idx_to_field_idx(offsetsToPermutation(field_offsets)),
@@ -546,7 +546,7 @@ namespace compiler::tsl {
 			const tsh::DynamicArrayAbstractType dynamic_array_type, query::Context& ctx
 		):
 			  type(dynamic_array_type),
-			  field_elements(getFieldsOfInterface(dynamic_array_type.getInterface(ctx))),
+			  field_elements(getFieldsOfInterface(&dynamic_array_type.getInterface(ctx)->valueOrThrow())),
 			  field_layouts(getLayoutVector(getElementTypes(field_elements, ctx), ctx)),
 			  field_offsets(alignOffsetsForLayoutVector(field_layouts)),
 			  layout_idx_to_field_idx(offsetsToPermutation(field_offsets)),

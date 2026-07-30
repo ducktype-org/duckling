@@ -1021,7 +1021,7 @@ namespace compiler::helios::code {
 			auto self_expr = makeBox<IdentifierExpr>(ctx, generatedOrigin(), sym_list.back());
 			auto self_type = self_expr->expression_type.getSymbolType().getType();
 
-			auto fields = self_type.getInterface(query_ctx)->getFieldsView();
+			auto fields = self_type.getInterface(query_ctx)->valueOrThrow().getFieldsView();
 			if (std::ranges::find(fields, field_symbol, &tsh::InterfaceElement::getSymbol)
 			    == fields.end()) {
 				ctx.logInt(makeBox<dia_int::PlaceholderError>(
@@ -1094,7 +1094,7 @@ namespace compiler::helios::code {
 				// Filter candidates for which the self argument is different than the found one
 				auto self_type = self_expr->expression_type;
 
-				auto methods = self_type.getType().getInterface(ctx)->getMethodsView();
+				auto methods = self_type.getType().getInterface(ctx)->valueOrThrow().getMethodsView();
 
 				std::vector<SymID> filtered_candidates;
 				for (const auto& method: methods)

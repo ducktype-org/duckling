@@ -66,7 +66,7 @@ namespace compiler::helios::defgen {
 			using Variable = GeneratedFunctionVariable;
 
 			const std::vector<tsh::InterfaceElement> fields
-				= owner_type.getInterface(ctx)->getFieldsView() | std::ranges::to<std::vector>();
+				= owner_type.getInterface(ctx)->valueOrThrow().getFieldsView() | std::ranges::to<std::vector>();
 
 			std::vector<Box<code::Stmt>> body;
 			body.reserve(1 + fields.size() + 1);

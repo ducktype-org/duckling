@@ -47,7 +47,7 @@ namespace compiler::helios {
 			// @TODO: #1412 #1531 this a mock that works for now, make it better
 
 			auto        interface = key.type.getInterface(ctx);
-			const auto& elements  = interface->getElementsWithName(key.name);
+			const auto& elements  = interface->valueOrThrow().getElementsWithName(key.name);
 
 			LookupResult result;
 			for (const auto& element: elements) result.leaves.emplace_back(element.getSymbol());

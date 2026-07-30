@@ -16,7 +16,7 @@ namespace compiler::helios::defgen {
 	struct IMPLEMENT_QUERY(QueryImplicitClassConstructor, query::QResult<HOUTFunction>) {
 		static PResult provide(Context& ctx, const QKey class_type) {
 			// Preamble, get some basic data.
-			auto class_interface = class_type.getInterface(ctx);
+			Ref class_interface = &class_type.getInterface(ctx)->valueOrThrow();
 
 			using defgen::Constructor;
 			using Variable = GeneratedFunctionVariable;

@@ -263,7 +263,7 @@ namespace compiler::helios {
 					std::vector<tsh::SymbolType<>> param_types;
 					switch (ctor.kind) {
 					case defgen::Constructor::Kind::Implicit: {
-						auto fields = target_type.getInterface(ctx)->getFieldsView();
+						auto fields = target_type.getInterface(ctx)->valueOrThrow().getFieldsView();
 						for (const auto& field: fields) param_types.push_back(field.getType(ctx));
 						break;
 					}
