@@ -1,6 +1,6 @@
 use curl::easy::{self, Easy2};
 use http::header;
-use tracing::{debug, error};
+use tracing::{debug, error, warn};
 
 use self::handlers::Collector;
 use crate::{DuckContext, QuackResult, qp_bail, try_curl};
@@ -134,6 +134,7 @@ fn set_http_version_on_curl<H>(
     handler: &mut Easy2<H>,
     version: http::Version,
 ) -> Result<(), curl::Error> {
+    let curl_v = curl::Version::get();
     match version {
         http::Version::HTTP_09 => {
             try_curl!(handler.http_09_allowed(true), "failed to enable HTTP/0.9")
@@ -146,14 +147,33 @@ fn set_http_version_on_curl<H>(
             handler.http_version(curl::easy::HttpVersion::V11),
             "failed to enable HTTP/1.1"
         ),
-        http::Version::HTTP_2 => try_curl!(
-            handler.http_version(curl::easy::HttpVersion::V2),
-            "failed to enable HTTP/2"
-        ),
-        http::Version::HTTP_3 => try_curl!(
-            handler.http_version(curl::easy::HttpVersion::V3),
-            "failed to enable HTTP/3"
-        ),
+        // NOTE: cURL in CI is built without HTTP/2 nor HTTP/3.
+        http::Version::HTTP_2 => {
+            if curl_v.feature_http2() {
+                try_curl!(
+                    handler.http_version(curl::easy::HttpVersion::V2),
+                    "failed to enable HTTP/2"
+                )
+            } else {
+                warn!(
+                    target = "curl",
+                    "built without HTTP/2 support, but tried to use it; ignoring"
+                )
+            }
+        }
+        http::Version::HTTP_3 => {
+            if curl_v.feature_http3() {
+                try_curl!(
+                    handler.http_version(curl::easy::HttpVersion::V3),
+                    "failed to enable HTTP/3"
+                )
+            } else {
+                warn!(
+                    target = "curl",
+                    "built without HTTP/3 support, but tried to use it; ignoring"
+                )
+            }
+        }
         _ => error!(
             target = "curl",
             "unknown HTTP version: `{version:?}`, ignoring..."
