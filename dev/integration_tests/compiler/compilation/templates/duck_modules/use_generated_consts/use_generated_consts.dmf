@@ -5,8 +5,8 @@ namespace N {
     var b = a;
 }
 
-template(a: i64)
-fun get() = a;
+template(c: i64)
+fun get() = c;
 
 fun main() -> i64 = {
     builtin_output_i64(N:{1}.b);

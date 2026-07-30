@@ -681,11 +681,16 @@ namespace compiler::helios::mangler {
 		}
 
 		std::string mangleString(std::string_view sv) {
+			std::stringstream ret;
+			ret << std::setfill('0') << sv.size() << '_';
 			for (char c: sv)
-				if (not(c == '_' or internal::BASE_62_DIGITS.contains(c)))
-					CORE_PANIC("Not allowed character in CTV string in mangle(CTV)"
-					);  // @future: punnycode
-			return base::strConcat(sv.size(), "_", sv);
+				if (BASE_62_DIGITS.contains(c))
+					ret << c;
+				else
+					ret << std::setw(3) << static_cast<u32>(c);
+
+			std::cerr << "ret: " << ret.str() << '\n';
+			return ret.str();
 		}
 
 	}  // namespace internal
@@ -704,7 +709,7 @@ namespace compiler::helios::mangler {
 			}
 			variant_case(char, c) { return base::strConcat("c", static_cast<u32>(c), "_"); }
 			variant_case(compiler::ctv::CompileTimeValue::CharSliceValue, cs) {
-				return base::strConcat("l", internal::mangleString(cs.value.strView()));
+				return base::strConcat("r", internal::mangleString(cs.value.strView()));
 			}
 			variant_case(compiler::ctv::CompileTimeValue::StringClassValue, sc) {
 				return base::strConcat("s", internal::mangleString(sc.value.strView()));

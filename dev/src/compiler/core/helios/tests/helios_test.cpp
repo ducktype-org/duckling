@@ -2428,7 +2428,7 @@ private:
 
 		std::string expected
 			= "b0 b1 f0000803f d000000000000f03f ibn7_ jb7_ iwn42_ jw42_ idn137_ jd137_ iqn1234_ "
-			  "jq1234_ c66_ c94_ l6_strABC s6_strCBA u Tb1b0E tNid "
+			  "jq1234_ c66_ c94_ r6_strABC s6_strCBA u Tb1b0E tNid "
 			  "tR_Q_CM8manglingN4Mspc3Ooo3ClsE ";
 
 		ASSERT_EQUAL(result, expected);
