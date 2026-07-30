@@ -49,11 +49,11 @@ impl<'duck> GitFastPathExt for GitlabClient<'duck> {
     }
 
     fn download_manifest(&self, commit: StrId) -> QuackResult<Manifest> {
-        let manifest_path = format!("{}/", PackageLoader::MANIFEST_NAME);
-        let response =
-            self.client
-                .download_file_from_commit(&self.repo_api_url, &manifest_path, commit)?;
-        let deserialized_manifest = String::from_utf8(response.into_body())?;
+        let deserialized_manifest = self.client.download_file_from_commit(
+            &self.repo_api_url,
+            PackageLoader::MANIFEST_NAME,
+            commit,
+        )?;
         let manifest_schema = parse_schema(&deserialized_manifest)?;
         let manifest = manifest::parse(
             &manifest_schema,

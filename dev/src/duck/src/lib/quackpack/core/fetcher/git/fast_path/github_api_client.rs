@@ -55,7 +55,13 @@ impl<'duck> GithubApiClient<'duck> {
             return None;
         }
         let path = repo_url.path();
-        let mut repo_api_url = format!("{scheme}://api.{domain}/repos{path}/")
+        // Remove any `.git` in the end of the path.
+        let path_trimmed = if let Some(path) = path.strip_suffix(".git") {
+            path
+        } else {
+            path
+        };
+        let mut repo_api_url = format!("{scheme}://api.{domain}/repos{path_trimmed}/")
             .to_url()
             .ok()?;
         repo_api_url.set_username(user).ok()?;
@@ -90,7 +96,9 @@ impl<'duck> GithubApiClient<'duck> {
         commit: StrId,
     ) -> QuackResult<String> {
         let mut url = repo_api_url.join("contents/")?.join(path_to_file)?;
-        url.set_query(Some(&format!("ref={commit}")));
+        url.query_pairs_mut()
+            .append_pair("ref", &commit)
+            .append_pair("per_page", "1");
         let response = self.request(&url)?;
         Ok(String::from_utf8(response.into_body())?)
     }

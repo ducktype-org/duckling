@@ -67,7 +67,13 @@ impl<'duck> GitlabApiClient<'duck> {
         }
         // `path()` adds `/` in the beginning.
         let path: String = repo_url.path().chars().skip(1).collect();
-        let path_encoded = utf8_percent_encode(&path, PATH_ENCODE_SET);
+        // Remove any `.git` in the end of the path.
+        let path_trimmed = if let Some(path) = path.strip_suffix(".git") {
+            path
+        } else {
+            &path
+        };
+        let path_encoded = utf8_percent_encode(path_trimmed, PATH_ENCODE_SET);
         let mut repo_api_url = format!("{scheme}://{domain}/api/v4/projects/{path_encoded}/")
             .to_url()
             .ok()?;
@@ -100,13 +106,15 @@ impl<'duck> GitlabApiClient<'duck> {
         repo_api_url: &Url,
         path_to_file: &str,
         commit: StrId,
-    ) -> QuackResult<Response> {
+    ) -> QuackResult<String> {
+        let path_encoded = utf8_percent_encode(path_to_file, PATH_ENCODE_SET);
         let mut url = repo_api_url
             .join("repository/files/")?
-            .join(path_to_file)?
-            .join("raw/")?;
+            .join(&path_encoded.to_string())?
+            .join("/raw")?;
         url.set_query(Some(&format!("ref={}", commit)));
-        self.request(&url)
+        let response = self.request(&url)?;
+        Ok(String::from_utf8(response.into_body())?)
     }
 
     /// Create a `GET` request for the specified `url`.
