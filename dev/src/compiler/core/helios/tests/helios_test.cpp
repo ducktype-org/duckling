@@ -796,7 +796,8 @@ private:
 			          ->valueOrThrow()
 			          .getType()
 			          .getInterface(ctx)
-			          ->getElementsWithName(base::StrID("a"))
+			          ->valueOrPanic()
+			          .getElementsWithName(base::StrID("a"))
 			          .back()
 			          .getSymbol();
 			std::vector<base::Box<Expr>> call_args;
@@ -2980,7 +2981,8 @@ private:
 
 			auto field_abstract_type = [&](std::string_view field_name) {
 				return final_boss_type.getInterface(ctx)
-				    ->getElementsWithName(base::StrID(field_name))
+				    ->valueOrPanic()
+				    .getElementsWithName(base::StrID(field_name))
 				    .back()
 				    .getType(ctx)
 				    .getType();
@@ -3252,7 +3254,8 @@ private:
 			auto field_abstract_type = [&](std::string_view field_name) {
 				return get_class_type(boss_sym)
 				    .getInterface(ctx)
-				    ->getElementsWithName(base::StrID(field_name))
+				    ->valueOrPanic()
+				    .getElementsWithName(base::StrID(field_name))
 				    .back()
 				    .getType(ctx)
 				    .getType();
