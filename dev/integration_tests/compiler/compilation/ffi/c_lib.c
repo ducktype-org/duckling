@@ -75,20 +75,6 @@ int32_t add_shorts(int16_t a, int16_t b) { return (int32_t) a + (int32_t) b; }
 int32_t add_bytes(int8_t a, int8_t b) { return (int32_t) a + (int32_t) b; }
 
 // --- Variadic functions. ---
-//
-// `count` is the only fixed parameter; everything after it arrives through `...` and is read
-// with `va_arg`, so the caller must declare a variadic prototype. On x86-64 that also means
-// `al` has to carry the number of vector registers used, which only happens if the call site
-// uses a varargs function type.
-
-int64_t sum_varargs(int64_t count, ...) {
-	va_list  ap;
-	int64_t  total = 0;
-	va_start(ap, count);
-	for (int64_t i = 0; i < count; i++) total += va_arg(ap, int64_t);
-	va_end(ap);
-	return total;
-}
 
 // Mixes integer and SSE variadic arguments: without a correct `al` the callee's register save
 // area is not spilled and the doubles read back as garbage.

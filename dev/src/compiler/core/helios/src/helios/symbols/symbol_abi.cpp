@@ -194,6 +194,7 @@ namespace compiler::helios {
 
 			if (isFunctionLike(kind(sym))) {
 				UNPACK_QRESULT_CREF(auto& declaration =, ctx.query<QueryDeclOfFun>(sym));
+				// We perform a check here, because unit types are removed from LIR.
 				UNPACK_QRESULT(auto _ =, checkCABIParamTypes(ctx, declaration));
 
 
