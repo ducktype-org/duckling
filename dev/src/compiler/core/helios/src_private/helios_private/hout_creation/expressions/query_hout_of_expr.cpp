@@ -732,6 +732,15 @@ namespace compiler::helios::code {
 						.to_kind           = Kind::CPointer,
 						.same_pointee_type = false,
 					},
+					// A `manyptr T` points at the first element of a contiguous run of `T`s, so it
+					// can be narrowed to a `ptr T` addressing just that first element.
+					{
+						.from_ref_kind     = ReferenceKind::Direct,
+						.from_kind         = Kind::ManyPointer,
+						.to_ref_kind       = ReferenceKind::Direct,
+						.to_kind           = Kind::Pointer,
+						.same_pointee_type = true,
+					},
 					// From CPointer to Pointer is temporary
 					{
 						.from_ref_kind     = ReferenceKind::Direct,
