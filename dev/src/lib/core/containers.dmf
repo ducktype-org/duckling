@@ -42,7 +42,7 @@ namespace allocation {
     #}
     @dvm_only_impl
     fun realloc(p: manyptr T, new_size: u64) -> manyptr T = {
-        builtins.dvm_realloc_arr:{T}(p, new_size * LLVM_ELEM_SIZE);
+        builtins.dvm_realloc_arr:{T}(p, new_size);
         return p;
     }
 
