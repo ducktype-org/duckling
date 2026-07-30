@@ -680,6 +680,14 @@ namespace compiler::helios::mangler {
 			}
 		}
 
+		std::string mangleString(std::string_view sv) {
+			for (char c: sv)
+				if (not(c == '_' or internal::BASE_62_DIGITS.contains(c)))
+					CORE_PANIC("Not allowed character in CTV string in mangle(CTV)"
+					);  // @future: punnycode
+			return base::strConcat(sv.size(), "_", sv);
+		}
+
 	}  // namespace internal
 
 	std::string mangleCTV(query::Context& ctx, const compiler::ctv::CompileTimeValue& value) {
@@ -695,13 +703,11 @@ namespace compiler::helios::mangler {
 				);  // adds '_' to ints
 			}
 			variant_case(char, c) { return base::strConcat("c", static_cast<u32>(c), "_"); }
-			variant_case(base::StrID, str) {
-				const auto view = str.strView();
-				for (char c: view)
-					if (not(c == '_' or internal::BASE_62_DIGITS.contains(c)))
-						CORE_PANIC("Not allowed character in CTV string in mangle(CTV)"
-						);  // @future: punnycode
-				return base::strConcat("s", view.size(), "_", view);
+			variant_case(compiler::ctv::CompileTimeValue::CharSliceValue, cs) {
+				return base::strConcat("l", internal::mangleString(cs.value.strView()));
+			}
+			variant_case(compiler::ctv::CompileTimeValue::StringClassValue, sc) {
+				return base::strConcat("s", internal::mangleString(sc.value.strView()));
 			}
 			variant_case(compiler::ctv::CompileTimeValue::UnitCTV, unit) { return "u"; }
 			variant_case(compiler::ctv::CompileTimeValue::TupleCTV, tuple) {
