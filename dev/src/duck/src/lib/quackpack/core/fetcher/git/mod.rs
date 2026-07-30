@@ -12,6 +12,7 @@ use crate::quackpack::core::{GitReference, PackageLoader};
 use crate::quackpack::util::is_local_file::IsLocalFile;
 use crate::{DuckContext, QuackResult, QuackResultContext};
 
+pub mod fast_path;
 #[cfg(test)]
 mod tests;
 
