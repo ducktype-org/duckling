@@ -49,9 +49,26 @@ fn parse_single_dependency(
     mut scope: ScopeGuard<'_>,
 ) -> QuackResult<Dependency> {
     trace!(?schema, "parsing a dependency");
-    validate_package_name(&manifest_name)
-        .with_context(|| format!("dependency `{manifest_name}` has an invalid name"))
+    let name = parse_name(schema).unwrap_or(manifest_name);
+    let alias = if name == manifest_name {
+        None
+    } else {
+        Some(manifest_name)
+    };
+    validate_package_name(&name)
+        .with_context(|| {
+            if alias.is_none() {
+                format!("dependency `{manifest_name}` has an invalid name")
+            } else {
+                format!("aliased dependency `{manifest_name}` points to a package `{name}` with an invalid name")
+            }
+        })
         .with_context(|| scope.make_context_string())?;
+    if let Some(alias) = alias {
+        validate_package_name(&alias)
+            .with_context(|| format!("dependency `{name}` has an invalid alias name `{alias}`"))
+            .with_context(|| scope.make_context_string())?;
+    }
     let guard = scope.push("source".into());
     let source = source::parse(schema, package_root, ctx, guard)?;
 
@@ -72,21 +89,8 @@ fn parse_single_dependency(
         .as_ref()
         .map(|conditions| parse_conditions(conditions, guard))
         .transpose()?;
-    let explicit_name_in_manifest = if name == manifest_name {
-        None
-    } else {
-        Some(manifest_name)
-    };
-    Dependency::new(
-        name,
-        versions,
-        source,
-        features,
-        pinned,
-        conditions,
-        explicit_name_in_manifest,
-    )
-    .with_context(|| scope.make_context_string())
+    Dependency::new(name, versions, source, features, pinned, conditions, alias)
+        .with_context(|| scope.make_context_string())
 }
 
 /// Parse dependency's features

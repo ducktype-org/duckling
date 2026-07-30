@@ -17,6 +17,7 @@ mod manifest;
 mod source;
 
 pub use frontmatter::{capture_frontmatter, parse_frontmatter};
+pub(crate) use manifest::parse;
 
 #[cfg(test)]
 mod tests;
@@ -147,7 +148,7 @@ fn parse_inner(path: &Path, ctx: &DuckContext) -> QuackResult<Package> {
 
 /// Turn YAML string into the [`ManifestSchema`].
 /// This function also collects unused items in the [`ManifestSchema`].
-fn parse_schema(yaml_content: &str) -> QuackResult<ManifestSchema> {
+pub fn parse_schema(yaml_content: &str) -> QuackResult<ManifestSchema> {
     let deserializer = serde_yaml_ng::Deserializer::from_str(yaml_content);
     let schema = ManifestSchema::deserialize(deserializer)?;
     Ok(schema)
