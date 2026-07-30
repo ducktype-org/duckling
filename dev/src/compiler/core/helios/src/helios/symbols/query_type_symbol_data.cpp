@@ -88,14 +88,18 @@ namespace compiler::helios {
 				return base::BAD;
 			};
 
+			// Every offending inherited type is reported before failing, so that a class whose
+			// extended class *and* interfaces carry specifiers yields one error per type.
+			auto inheritance_status = base::OK;
+
 			if_opt_some(class_data_parser.base_class, base) {
 				UNPACK_QRESULT(auto ctv =, getTypeCTVFromPST(ctx, base));
 				const auto base_type = *ctv.get<tsh::SymbolType<>>();
 
-				auto specifiers = check_no_specifiers(
+				const auto specifiers = check_no_specifiers(
 					base_type, base, InheritedTypeWithSpecifiersError::InheritanceKind::ExtendedClass
 				);
-				if (specifiers.isBad()) return query::Failed();
+				if (specifiers.isBad()) inheritance_status = base::BAD;
 
 				class_info.base = base_type.getType();
 				class_info.implements.push_back(base_type.getType());
@@ -106,15 +110,17 @@ namespace compiler::helios {
 					const auto interface_expr = interface.unlock(ctx)->getExpr();
 					UNPACK_QRESULT(auto ctv =, getTypeCTVFromPST(ctx, interface_expr));
 					const auto interface_type = ctv.get<tsh::SymbolType<>>().value();
-					auto       specifiers     = check_no_specifiers(
+					const auto specifiers     = check_no_specifiers(
                         interface_type,
                         interface_expr,
                         InheritedTypeWithSpecifiersError::InheritanceKind::ImplementedInterface
                     );
-					if (specifiers.isBad()) return query::Failed();
+					if (specifiers.isBad()) inheritance_status = base::BAD;
 					class_info.implements.push_back(interface_type.getType());
 				}
 			}
+
+			if (inheritance_status.isBad()) return query::Failed();
 
 			return class_info;
 		}
