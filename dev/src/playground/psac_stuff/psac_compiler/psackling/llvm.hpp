@@ -36,6 +36,9 @@ namespace pg {
 
 		void verify() const;
 
+		/// Runs codegen and returns the object file bytes (no filesystem access).
+		std::string emitObjectBytes();
+
 		void emitObjectFile(const std::filesystem::path& output_path);
 
 	private:

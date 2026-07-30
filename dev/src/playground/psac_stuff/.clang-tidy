@@ -1,5 +1,7 @@
 # The PSAC/parlay custom allocators (vendored psac-src, prebuilt LLVM headers)
 # confuse the clang static analyzer's NewDelete checker; the findings land in
 # vendored headers where NOLINT is not an option.
+# modernize-use-designated-initializers is off for the literal test-corpus tables
+# (hundreds of short aggregate entries where field names would only add noise).
 InheritParentConfig: true
-Checks: '-clang-analyzer-cplusplus.NewDelete'
+Checks: '-clang-analyzer-cplusplus.NewDelete,-modernize-use-designated-initializers'

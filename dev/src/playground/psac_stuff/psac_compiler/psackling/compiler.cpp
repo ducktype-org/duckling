@@ -37,20 +37,24 @@ namespace {
 		const pg::Context*                        base_ctx,
 		const std::vector<pg::FunctionWorkItem>*  items,
 		const std::vector<std::filesystem::path>* object_paths,
-		std::vector<psac::Mod<u64>>*              fn_mods,
-		psac::Mod<u64>*                           globals_mod,
+		std::vector<psac::Mod<base::Bit256>>*     fn_mods,
+		psac::Mod<base::Bit256>*                  globals_mod,
 		std::vector<std::string>*                 errors,
 		std::atomic<usize>*                       recompile_count
 	) {
 		psac_parallel_for(u64 i, u64{ 0 }, u64{ items->size() }, 1, {
-			psac_read((u64 fn_hash, u64 globals_hash), (&(*fn_mods)[i], globals_mod), {
-				(void) fn_hash;
-				(void) globals_hash;
-				recompile_count->fetch_add(1, std::memory_order_relaxed);
-				try {
-					pg::compileOneFunction(*base_ctx, (*items)[i], (*object_paths)[i]);
-				} catch (const std::exception& e) { (*errors)[i] = e.what(); }
-			});
+			psac_read(
+				(base::Bit256 fn_hash, base::Bit256 globals_hash),
+				(&(*fn_mods)[i], globals_mod),
+				{
+					(void) fn_hash;
+					(void) globals_hash;
+					recompile_count->fetch_add(1, std::memory_order_relaxed);
+					try {
+						pg::compileOneFunction(*base_ctx, (*items)[i], (*object_paths)[i]);
+					} catch (const std::exception& e) { (*errors)[i] = e.what(); }
+				}
+			);
 		});
 	}
 }
@@ -63,10 +67,10 @@ namespace pg {
 		std::vector<LoadedModule>     modules;
 		Context                       ctx;
 		std::vector<FunctionWorkItem> items;
-		std::vector<u64>              fn_hashes;
+		std::vector<base::Bit256>     fn_hashes;
 		std::vector<std::string>      link_names;
 		std::vector<GlobalInitItem>   global_inits;
-		u64                           globals_hash = 0;
+		base::Bit256                  globals_hash;
 
 		std::vector<std::filesystem::path> object_paths;
 		std::filesystem::path              globals_object_path;
@@ -74,11 +78,11 @@ namespace pg {
 		// PSAC inputs/outputs. The read closures capture raw pointers to all of these,
 		// so they live here (stable addresses) and are only replaced after the
 		// computation that references them is destroyed.
-		std::vector<psac::Mod<u64>>      fn_mods;
-		psac::Mod<u64>                   globals_mod;
-		std::vector<std::string>         errors;
-		std::atomic<usize>               recompile_count{ 0 };
-		std::optional<psac::Computation> computation;
+		std::vector<psac::Mod<base::Bit256>> fn_mods;
+		psac::Mod<base::Bit256>              globals_mod;
+		std::vector<std::string>             errors;
+		std::atomic<usize>                   recompile_count{ 0 };
+		std::optional<psac::Computation>     computation;
 	};
 
 	Compiler::Compiler(CompileOptions options): state(std::make_unique<State>()) {
@@ -138,7 +142,7 @@ namespace pg {
 			emitGlobalsObject(s.ctx, s.global_inits, s.globals_object_path);
 		}
 
-		s.fn_mods = std::vector<psac::Mod<u64>>(n);
+		s.fn_mods = std::vector<psac::Mod<base::Bit256>>(n);
 		for (usize i = 0; i < n; ++i) psac_write(&s.fn_mods[i], s.fn_hashes[i]);
 		psac_write(&s.globals_mod, s.globals_hash);
 

@@ -13,26 +13,25 @@
 /// two compilers are proven to implement identical language behavior.
 namespace psack_corpus {
 	struct SingleFileCase {
-		const char* name;
-		const char* code;
-		u64         expected_exit_code;
+		const char* name               = nullptr;
+		const char* code               = nullptr;
+		u64         expected_exit_code = 0;
 	};
 
 	struct ProgramFile {
-		const char* relative_path;
-		const char* code;
+		const char* relative_path = nullptr;
+		const char* code          = nullptr;
 	};
 
 	/// A multi-file program (the first file is the root) or an error case: when
 	/// `error_substring` is non-null, compilation must throw a std::runtime_error
 	/// whose message contains it.
 	struct MultiFileCase {
-		const char*              name;
+		const char*              name = nullptr;
 		std::vector<ProgramFile> files;
-		u64                      expected_exit_code;
-		const char*              error_substring;
+		u64                      expected_exit_code = 0;
+		const char*              error_substring    = nullptr;
 	};
-
 
 	/// Creates a fresh virtual directory with the given program files. Relative paths
 	/// may contain '/' — intermediate folders are created. Returns the first file
@@ -1001,6 +1000,7 @@ namespace psack_corpus {
 		};
 		return cases;
 	}
+
 	inline const std::vector<MultiFileCase>& multiFileCases() {
 		static const std::vector<MultiFileCase> cases = {
 			{ "ImportAliasCall",

@@ -7,6 +7,8 @@
 #include <string_view>
 
 namespace ql {
+	inline constexpr std::string_view QUERYLINGER_VERSION = "Querylinger version -0.05";
+
 	struct CompileOptions {
 		std::string output_path = "querylinged.out";
 
@@ -33,6 +35,9 @@ namespace ql {
 	 */
 	class Compiler final {
 	public:
+		/// Private session state; defined in session.cpp only.
+		struct State;
+
 		explicit Compiler(CompileOptions options);
 		~Compiler();
 
@@ -51,8 +56,6 @@ namespace ql {
 		CompileStats update(const fs::File& file);
 
 	private:
-		struct State;
-
 		CompileStats runBackendAndLink(bool allow_skip_link);
 
 		std::unique_ptr<State> state;

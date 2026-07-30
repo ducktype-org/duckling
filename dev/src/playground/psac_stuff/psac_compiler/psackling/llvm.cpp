@@ -33,10 +33,9 @@ void pg::LlvmProgramModule::verify() const {
 		CORE_PANIC("Generated LLVM module failed verification: " + verify_output);
 }
 
-void pg::LlvmProgramModule::emitObjectFile(const std::filesystem::path& output_path) {
-	std::error_code      error_code;
-	llvm::raw_fd_ostream output_stream(output_path.native(), error_code, llvm::sys::fs::OF_None);
-	if (error_code) CORE_PANIC("LLVM error: unable to create file: " + error_code.message());
+std::string pg::LlvmProgramModule::emitObjectBytes() {
+	llvm::SmallVector<char, 0> buffer;
+	llvm::raw_svector_ostream  output_stream(buffer);
 
 	llvm::legacy::PassManager pass;
 	if (target_machine->addPassesToEmitFile(
@@ -46,6 +45,16 @@ void pg::LlvmProgramModule::emitObjectFile(const std::filesystem::path& output_p
 	}
 
 	pass.run(*module);
+	return { buffer.data(), buffer.size() };
+}
+
+void pg::LlvmProgramModule::emitObjectFile(const std::filesystem::path& output_path) {
+	const std::string bytes = emitObjectBytes();
+
+	std::error_code      error_code;
+	llvm::raw_fd_ostream output_stream(output_path.native(), error_code, llvm::sys::fs::OF_None);
+	if (error_code) CORE_PANIC("LLVM error: unable to create file: " + error_code.message());
+	output_stream.write(bytes.data(), bytes.size());
 	output_stream.flush();
 }
 

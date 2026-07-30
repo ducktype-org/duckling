@@ -15,10 +15,12 @@ LLVM_INCLUDE_END()
 #include <frontend/pst_parser/pst.hpp>
 #include <frontend/pst_parser/pst_visitor.hpp>
 
+#include <hashing/hash.hpp>
 #include <logger/logger.hpp>
 #include <system_command/system_command.hpp>
 
 #include <cstdlib>
+#include <fstream>
 #include <sstream>
 
 namespace {
@@ -48,20 +50,22 @@ namespace {
 		}
 	}
 
-	/// Content hash of a PST element: hash of its recursive debug print with source
-	/// positions stripped, so it is stable under reformatting/moving and across
-	/// files — exactly what the incremental diff needs. Template because dprint is
-	/// public only on the concrete element types.
+	/// Content hash of a PST element: SHA-256 of its recursive debug print with
+	/// source positions stripped, so it is stable under reformatting/moving and
+	/// across files — exactly what the incremental diff needs. Template because
+	/// dprint is public only on the concrete element types.
 	template<typename Element>
-	u64 contentHash(const Element& element) {
+	base::Bit256 contentHash(const Element& element) {
 		std::ostringstream out;
 		element.dprint(out);
-		return std::hash<std::string>{}(stripPositions(std::move(out).str()));
+		return hashing::justHash<hashing::SHA256>(stripPositions(std::move(out).str()));
 	}
 
-	u64 combineHash(u64 seed, u64 value) {
-		// FNV-style mix; quality is plenty for change detection.
-		return (seed ^ value) * 1'099'511'628'211ULL;
+	void writeFileBytes(const std::filesystem::path& path, const std::string& bytes) {
+		std::ofstream out(path, std::ios::binary | std::ios::trunc);
+		if (!out) CORE_PANIC("Unable to create file: " + path.string());
+		out.write(bytes.data(), std::streamsize(bytes.size()));
+		if (!out) CORE_PANIC("Failed to write file: " + path.string());
 	}
 
 	/**
@@ -73,7 +77,7 @@ namespace {
 		FunctionCollector(pg::Context& ctx): ctx(ctx) {}
 
 		std::vector<pg::FunctionWorkItem> items;
-		std::vector<u64>                  fn_hashes;
+		std::vector<base::Bit256>         fn_hashes;
 		std::vector<std::string>          link_names;
 		std::vector<pg::GlobalInitItem>   global_inits;
 		std::vector<pg::SymbolInputInfo>  const_inputs;
@@ -89,9 +93,8 @@ namespace {
 			items.push_back(pg::FunctionWorkItem{ .stmt = stmt, .enclosing_ns = ctx.currNs().id });
 			fn_hashes.push_back(contentHash(*stmt));
 			link_names.push_back(std::get<pg::sym::FunctionSymbol>(fun_sym.kind).link_name.str());
-			sig_inputs.push_back(pg::SymbolInputInfo{ .name_hash = pg::functionNameHash(fun_sym),
-			                                          .value_hash
-			                                          = pg::functionSigHash(ctx, fun_sym) });
+			sig_inputs.push_back(pg::SymbolInputInfo{ .input_hash
+			                                          = pg::functionSigInputHash(ctx, fun_sym) });
 		}
 
 		void visitNamespace(pst::Access<pst::Namespace> stmt) override {
@@ -116,18 +119,16 @@ namespace {
 			const pg::sym::Symbol& symbol
 				= ctx.getSymbol(ctx.lookupInScopeAndParents(ctx.currNs().id, name));
 			const pg::tp::TypeInfo& type_info = ctx.getTypeInfo(symbol.type_id);
-			class_inputs.push_back(pg::SymbolInputInfo{ .name_hash = pg::classNameHash(type_info),
-			                                            .value_hash
-			                                            = pg::classLayoutHash(ctx, type_info) });
+			class_inputs.push_back(pg::SymbolInputInfo{
+				.input_hash = pg::classLayoutInputHash(ctx, type_info) });
 		}
 
 		void visitConst(pst::Access<pst::Const> stmt) override {
 			const base::StrID      name = stmt->getName().illegalAccess().value()->unwrap();
 			const pg::sym::Symbol& symbol
 				= ctx.getSymbol(ctx.lookupInScopeAndParents(ctx.currNs().id, name));
-			const_inputs.push_back(pg::SymbolInputInfo{ .name_hash = pg::constNameHash(symbol),
-			                                            .value_hash
-			                                            = pg::constValueHash(ctx, symbol) });
+			const_inputs.push_back(pg::SymbolInputInfo{ .input_hash
+			                                            = pg::constInputHash(ctx, symbol) });
 		}
 
 		void visitVariable(pst::Access<pst::Variable> stmt) override {
@@ -139,8 +140,7 @@ namespace {
 			const pg::sym::Symbol& symbol
 				= ctx.getSymbol(ctx.lookupInScopeAndParents(ctx.currNs().id, name));
 			global_var_inputs.push_back(pg::SymbolInputInfo{
-				.name_hash  = pg::globalVarNameHash(symbol),
-				.value_hash = pg::globalVarTypeHash(ctx, symbol) });
+				.input_hash = pg::globalVarInputHash(ctx, symbol) });
 		}
 
 	private:
@@ -159,52 +159,36 @@ namespace {
 		/// backend keeps only this coarse; everything below is accumulated separately
 		/// (folded back into the full hash for the PSAC backend, tracked per symbol
 		/// by the query backend).
-		u64 hash = 14'695'981'039'346'656'037ULL;
+		hashing::StatefulHash<hashing::SHA256> structural;
 
-		u64 consts_hash  = 14'695'981'039'346'656'037ULL;
-		u64 sigs_hash    = 14'695'981'039'346'656'037ULL;
-		u64 classes_hash = 14'695'981'039'346'656'037ULL;
-		u64 vars_hash    = 14'695'981'039'346'656'037ULL;
+		hashing::StatefulHash<hashing::SHA256> consts;
+		hashing::StatefulHash<hashing::SHA256> sigs;
+		hashing::StatefulHash<hashing::SHA256> classes;
+		hashing::StatefulHash<hashing::SHA256> vars;
 
-		void visitClass(pst::Access<pst::Class> stmt) override {
-			classes_hash = combineHash(classes_hash, contentHash(*stmt));
-		}
+		void visitClass(pst::Access<pst::Class> stmt) override { classes(contentHash(*stmt)); }
 
-		void visitConst(pst::Access<pst::Const> stmt) override {
-			consts_hash = combineHash(consts_hash, contentHash(*stmt));
-		}
+		void visitConst(pst::Access<pst::Const> stmt) override { consts(contentHash(*stmt)); }
 
-		void visitVariable(pst::Access<pst::Variable> stmt) override {
-			vars_hash = combineHash(vars_hash, contentHash(*stmt));
-		}
+		void visitVariable(pst::Access<pst::Variable> stmt) override { vars(contentHash(*stmt)); }
 
 		void visitFun(pst::Access<pst::Fun> stmt) override {
 			// Signature only: name, parameters, return type. The body is covered by the
 			// function's own Mod.
-			sigs_hash = combineHash(
-				sigs_hash,
-				std::hash<std::string>{}(stmt->getName().illegalAccess().value()->unwrap().str())
-			);
-			sigs_hash
-				= combineHash(sigs_hash, contentHash(*stmt->getParams().illegalAccess().value()));
+			sigs(stmt->getName().illegalAccess().value()->unwrap().str());
+			sigs(contentHash(*stmt->getParams().illegalAccess().value()));
 			if (stmt->getRet().has_value())
-				sigs_hash
-					= combineHash(sigs_hash, contentHash(*stmt->getRet()->illegalAccess().value()));
+				sigs(contentHash(*stmt->getRet()->illegalAccess().value()));
 		}
 
 		void visitNamespace(pst::Access<pst::Namespace> stmt) override {
-			hash = combineHash(
-				hash,
-				std::hash<std::string>{}(stmt->getName().illegalAccess().value()->unwrap().str())
-			);
+			structural(stmt->getName().illegalAccess().value()->unwrap().str());
 			for (pst::AccessLocked<pst::LangElement> child: *stmt->getBody().illegalAccess().value())
 				child.illegalAccess().value()->acceptVisitor(*this);
 		}
 
 		// Rewiring an import can change what every use-site resolves to.
-		void visitImport(pst::Access<pst::Import> stmt) override {
-			hash = combineHash(hash, contentHash(*stmt));
-		}
+		void visitImport(pst::Access<pst::Import> stmt) override { structural(contentHash(*stmt)); }
 	};
 
 	/**
@@ -309,88 +293,70 @@ namespace pg {
 				// Module identity participates: moving a definition between files
 				// changes link names even when content hashes stay equal.
 				for (base::StrID component: module.module_path)
-					globals_hasher.hash = combineHash(
-						globals_hasher.hash, std::hash<std::string>{}(component.str())
-					);
+					globals_hasher.structural(component.str());
 				for_each_top_level(module, globals_hasher);
 			}
-			program.globals_hash_no_consts = globals_hasher.hash;
-			program.global_defs_hash       = globals_hasher.vars_hash;
+			program.globals_hash_no_consts = globals_hasher.structural.finalize();
+			program.global_defs_hash       = globals_hasher.vars.finalize();
 
 			// The PSAC backend keeps the whole-world hash: fold every category back in.
-			u64 full_hash        = globals_hasher.hash;
-			full_hash            = combineHash(full_hash, globals_hasher.consts_hash);
-			full_hash            = combineHash(full_hash, globals_hasher.sigs_hash);
-			full_hash            = combineHash(full_hash, globals_hasher.classes_hash);
-			full_hash            = combineHash(full_hash, globals_hasher.vars_hash);
-			program.globals_hash = full_hash;
+			program.globals_hash = hashing::justHash<hashing::SHA256>(
+				program.globals_hash_no_consts,
+				globals_hasher.consts.finalize(),
+				globals_hasher.sigs.finalize(),
+				globals_hasher.classes.finalize(),
+				globals_hasher.vars.finalize()
+			);
 		}
 
 		return program;
 	}
 
-	u64 constNameHash(const sym::Symbol& symbol) {
-		return std::hash<std::string>{}(
-			std::get<sym::ConstantSymbol>(symbol.kind).qualified_name.str()
+	// Each input hash is prefixed with a kind tag so equal material of different
+	// symbol kinds can never produce the same hash.
+	base::Bit256 constInputHash(const Context& ctx, const sym::Symbol& symbol) {
+		const auto& constant = std::get<sym::ConstantSymbol>(symbol.kind);
+		return hashing::justHash<hashing::SHA256>(
+			std::string_view("const"),
+			constant.qualified_name.str(),
+			constant.bits,
+			ctx.getTypeInfo(symbol.type_id).name.str()
 		);
 	}
 
-	u64 constValueHash(Context& ctx, const sym::Symbol& symbol) {
-		const u64 type_hash = std::hash<std::string>{}(ctx.getTypeInfo(symbol.type_id).name.str());
-		return combineHash(std::get<sym::ConstantSymbol>(symbol.kind).bits, type_hash);
-	}
-
-	u64 functionNameHash(const sym::Symbol& symbol) {
-		return std::hash<std::string>{}(std::get<sym::FunctionSymbol>(symbol.kind).link_name.str());
-	}
-
-	u64 functionSigHash(Context& ctx, const sym::Symbol& symbol) {
+	base::Bit256 functionSigInputHash(const Context& ctx, const sym::Symbol& symbol) {
 		const auto& fn_type = std::get<tp::Function>(ctx.getTypeInfo(symbol.type_id).kind);
 
-		u64 hash = functionNameHash(symbol);
-		for (tp::TypeID param_type_id: fn_type.param_types) {
-			hash = combineHash(
-				hash, std::hash<std::string>{}(ctx.getTypeInfo(param_type_id).name.str())
-			);
-		}
-		hash = combineHash(
-			hash, std::hash<std::string>{}(ctx.getTypeInfo(fn_type.return_type).name.str())
-		);
-		return hash;
+		hashing::StatefulHash<hashing::SHA256> hash;
+		hash(std::string_view("sig"), std::get<sym::FunctionSymbol>(symbol.kind).link_name.str());
+		for (tp::TypeID param_type_id: fn_type.param_types)
+			hash(ctx.getTypeInfo(param_type_id).name.str());
+		hash(ctx.getTypeInfo(fn_type.return_type).name.str());
+		return hash.finalize();
 	}
 
-	u64 globalVarNameHash(const sym::Symbol& symbol) {
-		return std::hash<std::string>{}(
-			std::get<sym::GlobalVariableSymbol>(symbol.kind).link_name.str()
+	base::Bit256 globalVarInputHash(const Context& ctx, const sym::Symbol& symbol) {
+		return hashing::justHash<hashing::SHA256>(
+			std::string_view("gvar"),
+			std::get<sym::GlobalVariableSymbol>(symbol.kind).link_name.str(),
+			ctx.getTypeInfo(symbol.type_id).name.str()
 		);
 	}
 
-	u64 globalVarTypeHash(Context& ctx, const sym::Symbol& symbol) {
-		return std::hash<std::string>{}(ctx.getTypeInfo(symbol.type_id).name.str());
-	}
-
-	u64 classNameHash(const tp::TypeInfo& type_info) {
-		return std::hash<std::string>{}(std::get<tp::Structure>(type_info.kind).qualified_name.str()
+	base::Bit256 classLayoutInputHash(const Context& ctx, const tp::TypeInfo& type_info) {
+		hashing::StatefulHash<hashing::SHA256> hash;
+		hash(
+			std::string_view("class"), std::get<tp::Structure>(type_info.kind).qualified_name.str()
 		);
-	}
-
-	u64 classLayoutHash(Context& ctx, const tp::TypeInfo& type_info) {
-		u64 hash = 14'695'981'039'346'656'037ULL;
 		for (sym::SymbolID field_sym_id: std::get<tp::Structure>(type_info.kind).field_symbols) {
 			const sym::Symbol& field_sym = ctx.getSymbol(field_sym_id);
-			hash = combineHash(hash, std::hash<std::string>{}(field_sym.name.str()));
-			hash = combineHash(
-				hash, std::hash<std::string>{}(ctx.getTypeInfo(field_sym.type_id).name.str())
-			);
+			hash(field_sym.name.str(), ctx.getTypeInfo(field_sym.type_id).name.str());
 		}
-		return hash;
+		return hash.finalize();
 	}
 
-	void compileOneFunction(
-		const Context&               base_ctx,
-		const FunctionWorkItem&      item,
-		const std::filesystem::path& object_path,
-		SymbolUseObserver*           observer
+	std::string compileOneFunctionToBytes(
+		const Context& base_ctx, const FunctionWorkItem& item, SymbolUseObserver* observer
 	) {
 		Context ctx             = base_ctx;
 		ctx.symbol_use_observer = observer;
@@ -402,13 +368,21 @@ namespace pg {
 		pass.visitFun(item.stmt);
 
 		module.verify();
-		module.emitObjectFile(object_path);
+		return module.emitObjectBytes();
 	}
 
-	void emitGlobalsObject(
+	void compileOneFunction(
+		const Context&               base_ctx,
+		const FunctionWorkItem&      item,
+		const std::filesystem::path& object_path,
+		SymbolUseObserver*           observer
+	) {
+		writeFileBytes(object_path, compileOneFunctionToBytes(base_ctx, item, observer));
+	}
+
+	std::string emitGlobalsObjectBytes(
 		const Context&                     base_ctx,
 		const std::vector<GlobalInitItem>& global_inits,
-		const std::filesystem::path&       object_path,
 		SymbolUseObserver*                 observer
 	) {
 		Context ctx             = base_ctx;
@@ -469,7 +443,16 @@ namespace pg {
 		}
 
 		module.verify();
-		module.emitObjectFile(object_path);
+		return module.emitObjectBytes();
+	}
+
+	void emitGlobalsObject(
+		const Context&                     base_ctx,
+		const std::vector<GlobalInitItem>& global_inits,
+		const std::filesystem::path&       object_path,
+		SymbolUseObserver*                 observer
+	) {
+		writeFileBytes(object_path, emitGlobalsObjectBytes(base_ctx, global_inits, observer));
 	}
 
 	void linkObjects(

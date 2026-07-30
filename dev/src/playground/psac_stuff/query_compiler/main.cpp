@@ -1,5 +1,4 @@
 #include <concurrent/module_flags/worker_count.hpp>
-#include <querylinger/queries/version.hpp>
 #include <querylinger/session.hpp>
 
 #include <clah/clah.hpp>

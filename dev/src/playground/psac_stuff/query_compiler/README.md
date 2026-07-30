@@ -57,13 +57,16 @@ Consequences, all covered by tests (`tests/querylinger_test.cpp`):
 - function added/removed → no full-rebuild fallback; removed objects just leave
   the link line
 
-Content hashes are dprint-based with source positions stripped
-(`stripPositions` in `psackling/pipeline.cpp`), so edits don't invalidate
-functions merely shifted by them.
+Content hashes are SHA-256 (`base::Bit256`, via the `hashing` module) over
+dprint output with source positions stripped (`stripPositions` in
+`psackling/pipeline.cpp`), so edits don't invalidate functions merely shifted
+by them, and the hash doubles as the collision-safe 256-bit node identity.
 
-Sessions are separated by an epoch in every query key: the process-global query
-graph can host many sequential `ql::Compiler` sessions (the test suite creates
-hundreds) without node collisions.
+The emission queries are pure: they return object bytes, and the session writes
+the changed ones to disk and links. The process-global query graph hosts many
+sequential `ql::Compiler` sessions (the test suite creates hundreds) — each
+session starts by invalidating all leftover input nodes, so it never shares
+nodes with an unrelated program; only one session may be active at a time.
 
 ## Testing
 

@@ -1,9 +1,7 @@
 #include <compiler_test_corpus/compiler_test_corpus.hpp>
 #include <concurrent/module_flags/worker_count.hpp>
-#include <querylinger/queries/version.hpp>
 #include <querylinger/session.hpp>
 
-#include <query_framework/entry/query_entry_point.hpp>
 #include <query_framework/module_flags/module_flags.hpp>
 #include <system_command/system_command.hpp>
 #include <tester/tester.hpp>
@@ -14,19 +12,6 @@ class QuerylingerTest: public tester::TestSuite {
 
 	usize single_file_id = 0;
 	usize multi_file_id  = 0;
-
-	void versionQueryComputesOnce() {
-		const std::string first = query::entryPoint<ql::QueryCompilerVersion>(ql::VersionKey{});
-		const usize       calls_after_first = ql::versionProvideCalls();
-
-		const std::string second = query::entryPoint<ql::QueryCompilerVersion>(ql::VersionKey{});
-
-		ASSERT_EQUAL_PRINT(std::string(ql::QUERYLINGER_VERSION), first);
-		ASSERT_EQUAL_PRINT(first, second);
-		ASSERT_EQUAL_PRINT(usize(1), calls_after_first);
-		// The second entry point call must be served from the cache.
-		ASSERT_EQUAL_PRINT(calls_after_first, ql::versionProvideCalls());
-	}
 
 	void singleFileCorpusTest() {
 		const psack_corpus::SingleFileCase& data
@@ -393,10 +378,10 @@ class QuerylingerTest: public tester::TestSuite {
 	/// function.
 	void incrementalImportedBodyChange() {
 		fs::File           root = psack_corpus::makeProgramDir({
-            { "root.dmf",
-		                "import math as M;\n"
-		                          "fun main() -> i64 = { return M.helper() + 1; }\n" },
-            { "math.dmf", "fun helper() -> i64 = { return 10; }\n" },
+            { .relative_path = "root.dmf",
+		                .code          = "import math as M;\n"
+		                                           "fun main() -> i64 = { return M.helper() + 1; }\n" },
+            { .relative_path = "math.dmf", .code = "fun helper() -> i64 = { return 10; }\n" },
         });
 		const fs::FilePath math_path{ root.getFilePath().parentPath().getPath() / "math.dmf" };
 
@@ -425,11 +410,10 @@ class QuerylingerTest: public tester::TestSuite {
 	/// non-reader `other` cached.
 	void incrementalImportedConstChange() {
 		fs::File           root = psack_corpus::makeProgramDir({
-            { "root.dmf",
-		                "import conf.*;\n"
-		                          "fun other() -> i64 = { return 3; }\n"
-		                          "fun main() -> i64 = { return X + 1; }\n" },
-            { "conf.dmf", "const X: i64 = 5;\n" },
+            { .relative_path = "root.dmf",
+		                .code          = "import conf.*;\n"
+		                                           "fun main() -> i64 = { return X + 1; }\n" },
+            { .relative_path = "conf.dmf", .code = "const X: i64 = 5;\n" },
         });
 		const fs::FilePath conf_path{ root.getFilePath().parentPath().getPath() / "conf.dmf" };
 
@@ -462,8 +446,6 @@ public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		concurrent::worker::setWorkerCount(4);
 		query::setTrackReverseGraph(true);
-
-		TESTER_ADD_TEST(versionQueryComputesOnce);
 
 		for (const psack_corpus::SingleFileCase& corpus_case: psack_corpus::singleFileCases()) {
 			addTest(

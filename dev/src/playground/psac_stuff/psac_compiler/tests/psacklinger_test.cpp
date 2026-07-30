@@ -59,8 +59,8 @@ class PsacklingerTest: public tester::TestSuite {
 			  "fun main() -> i64 = { return M.helper() + 1; }\n";
 
 		fs::File           root = psack_corpus::makeProgramDir({
-            { "root.dmf", root_code.c_str() },
-            { "math.dmf", "fun helper() -> i64 = { return 10; }\n" },
+            { .relative_path = "root.dmf", .code = root_code.c_str() },
+            { .relative_path = "math.dmf", .code = "fun helper() -> i64 = { return 10; }\n" },
         });
 		const fs::FilePath math_path{ root.getFilePath().parentPath().getPath() / "math.dmf" };
 
@@ -89,11 +89,10 @@ class PsacklingerTest: public tester::TestSuite {
 	/// the non-reader `other` cached.
 	void incrementalImportedConstChange() {
 		fs::File           root = psack_corpus::makeProgramDir({
-            { "root.dmf",
-		                "import conf.*;\n"
-		                          "fun other() -> i64 = { return 3; }\n"
-		                          "fun main() -> i64 = { return X + 1; }\n" },
-            { "conf.dmf", "const X: i64 = 5;\n" },
+            { .relative_path = "root.dmf",
+		                .code          = "import conf.*;\n"
+		                                           "fun main() -> i64 = { return X + 1; }\n" },
+            { .relative_path = "conf.dmf", .code = "const X: i64 = 5;\n" },
         });
 		const fs::FilePath conf_path{ root.getFilePath().parentPath().getPath() / "conf.dmf" };
 

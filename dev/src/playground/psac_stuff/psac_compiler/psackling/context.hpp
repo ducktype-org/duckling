@@ -273,9 +273,15 @@ namespace pg {
 
 		tp::TypeInfo& getTypeInfo(tp::TypeID id) { return types[id]; }
 
+		const tp::TypeInfo& getTypeInfo(tp::TypeID id) const { return types[id]; }
+
 		ns::Namespace& getNamespace(ns::NamespaceID id) { return namespaces[id]; }
 
+		const ns::Namespace& getNamespace(ns::NamespaceID id) const { return namespaces[id]; }
+
 		sym::Symbol& getSymbol(sym::SymbolID id) { return symbols[id]; }
+
+		const sym::Symbol& getSymbol(sym::SymbolID id) const { return symbols[id]; }
 
 		void notifyConstantUse(const sym::Symbol& symbol) {
 			if (symbol_use_observer != nullptr) symbol_use_observer->onConstantUse(symbol);

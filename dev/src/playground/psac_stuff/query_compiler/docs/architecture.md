@@ -39,12 +39,15 @@ recompile*.
                              │ runs on query workers
                              ▼
              ┌─────────────────────────────────────────────────────────┐
-             │  QueryFunctionObject (×N)         QueryGlobalsObject    │
-             │  pg::compileOneFunction           pg::emitGlobalsObject │
-             │  private Context copy             private Context copy  │
-             │  private LLVMContext/Module       private LLVMContext   │
-             │  → <out>.fn_<hash>.o              → <out>.globals.o     │
-             └─────────────────────────────────────────────────────────┘
+             │  QueryFunctionObject (×N)      QueryGlobalsObject       │
+             │  compileOneFunctionToBytes     emitGlobalsObjectBytes   │
+             │  private Context copy          private Context copy     │
+             │  private LLVMContext/Module    private LLVMContext      │
+             │  → object bytes (pure)         → object bytes (pure)    │
+             └───────────────┬─────────────────────────────────────────┘
+                             │ ObjectResult (bytes)
+                             ▼
+               session writes changed objects to disk, links
 ```
 
 The front end is deliberately *not* incremental and *not* query-based — it
@@ -78,13 +81,16 @@ graph TD
 - **`QueryFunctionObject`** (`querylinger/queries/codegen.cpp`) — keyed by the
   function's link name (namespace-qualified, so identity survives body edits and
   reordering). The provider registers its side-input dependencies, then runs the
-  shared lowering and writes `<output>.fn_<link-hash>.o`. Compilation errors are
-  returned as data (`ObjectResult::error`), never thrown across the task pool;
-  the session rethrows after awaiting.
-- **`QueryGlobalsObject`** — emits the object file that defines all global
+  shared lowering and returns the object file **bytes** — providers are pure and
+  never touch the filesystem; the session writes changed bytes to
+  `<output>.fn_<link-hash>.o` after awaiting. Compilation errors are returned as
+  data (`ObjectResult::error`), never thrown across the task pool; the session
+  rethrows after awaiting.
+- **`QueryGlobalsObject`** — produces the object bytes defining all global
   variables (zero-initialized), the runtime builtins, and a synthetic
   `llvm.global_ctors` constructor running the initializer expressions in
-  declaration order.
+  declaration order. Its key is empty: its identity is carried entirely by its
+  input dependencies.
 
 ### Side inputs: dependencies discovered at the use site
 
@@ -92,6 +98,13 @@ A side input (`DECLARE_QUERY_SIDE_INPUT`) is a leaf node whose *key hash is the
 input value*. Querying it records a dependency edge; when the value changes
 between compiles, the old node vanishes from the input set and everything that
 depended on it is invalidated.
+
+All input keys share one shape (`HashInputKey`): a single SHA-256 hash
+(`base::Bit256`, via the `hashing` module — the same algorithm the production
+compiler uses for its stable query hashes) folding the symbol's identity and
+value together. The hash *is* the 256-bit stable node identity, so collisions
+are cryptographically negligible; the input categories are told apart by their
+`QueryID`, which is part of the node identity alongside the hash.
 
 The interesting part is *where* the dependencies get registered. The shared
 lowering has an observer hook (`pg::SymbolUseObserver` in
@@ -114,7 +127,7 @@ dependencies when a query unlocks PST data, one semantic level higher.
 
 Two hash-design details make the granularity useful:
 
-- **Signature hashes cover types, not names** (`pg::functionSigHash`): renaming
+- **Signature hashes cover types, not names** (`pg::functionSigInputHash`): renaming
   a parameter changes only that function's body hash; callers stay cached.
   Changing a return type invalidates the (unchanged) callers, which recompile
   and correctly report the new type error.
@@ -135,11 +148,18 @@ edit.
 ## Session lifecycle and invalidation
 
 `ql::Compiler` (in `querylinger/session.{hpp,cpp}`) owns a `SessionState`:
-the analyzed program (PSTs must outlive the work items pointing into them), the
-link-name→work-item index, object paths, and the previous compile's `InputData`
-set. Providers reach it through a process-global `activeSession()` pointer —
-the moral equivalent of psacklinger's PSAC closures capturing `State*`, and
-only mutated on the main thread while no queries run.
+the analyzed program (PSTs must outlive the work items pointing into them) and
+the link-name→work-item index. Providers reach it as a **const** reference
+through `activeSession()` — the framework's standard pattern for external data
+(the compiler's PST storage guarded by `PSTAccessSideInput` works the same
+way), the moral equivalent of psacklinger's PSAC closures capturing `State*`.
+It is installed/replaced only on the main thread while no queries run, and
+every piece of it a provider reads is covered by a side-input dependency that
+provider registers — that invariant is what makes reading external state sound.
+The only mutable members are the per-compile recompile counters (atomics,
+session-scoped). Object paths, options and the previous compile's `InputData`
+set live outside `SessionState`, in the `Compiler`'s private state — providers
+never see them.
 
 `update()` is four steps:
 
@@ -151,22 +171,25 @@ only mutated on the main thread while no queries run.
    for idle workers, diffs `previous − new`, walks the reverse dependency graph
    and erases exactly the dependent nodes, their caches and diagnostics. This
    is `psac_write` + the dirty half of `psac_propagate`.
-4. Re-schedule *all* emission queries and await. Cached nodes return instantly;
-   only invalidated or new nodes execute. Atomic provider counters report the
-   recompile counts; if nothing ran and the function set is unchanged, the
-   relink is skipped.
+4. Re-schedule *all* emission queries and await the object bytes. Cached nodes
+   return instantly; only invalidated or new nodes execute. The session-scoped
+   counters report the recompile counts; the session writes only the objects
+   whose bytes changed (tracked by content hash), and if nothing ran and the
+   function set is unchanged, the relink is skipped too.
 
 Function set changes need no special casing (psacklinger falls back to a full
 rebuild): an added function is just a new query node, a removed one drops out
 of the schedule and the link line, and survivors stay cached unless something
 they depend on changed.
 
-**Epochs.** The query graph is process-global, but a session's providers read
-session-local state, and different programs can share node identities (every
-program has `main`). Every key therefore carries a session epoch (a global
-counter, bumped per `ql::Compiler`), partitioning the graph between sequential
-sessions — the test suite runs hundreds in one process. Stale nodes from dead
-sessions are unreachable garbage; only one session may be active at a time.
+**Sequential sessions.** The query graph is process-global, but only one
+session may be active at a time (asserted), and different programs can share
+node identities (every program has `main`). A `ql::Compiler` therefore starts
+by invalidating every input node left in the graph
+(`query::external::invalidateQueries({})`), which transitively drops all
+dependents of a previous session — each session runs on a clean graph instead
+of sharing nodes with an unrelated program. The test suite runs hundreds of
+sessions in one process this way.
 
 ## Threading
 

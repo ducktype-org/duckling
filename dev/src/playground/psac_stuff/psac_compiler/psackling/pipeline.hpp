@@ -11,6 +11,8 @@
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
 
+#include <base/types/bit256.hpp>
+
 #include <chrono>
 #include <filesystem>
 #include <string>
@@ -31,44 +33,32 @@ namespace pg {
 		ns::NamespaceID            enclosing_ns;
 	};
 
-	/// Identity and value of one top-level symbol (constant, function signature,
-	/// class layout or global variable), for per-symbol dependency tracking in the
-	/// query-based backend.
+	/// One top-level symbol (constant, function signature, class layout or global
+	/// variable) as a single SHA-256 input hash covering both its identity and its
+	/// value, for per-symbol dependency tracking in the query-based backend.
 	struct SymbolInputInfo {
-		u64 name_hash;
-		u64 value_hash;
+		base::Bit256 input_hash;
 	};
 
-	/// Stable identity hash of a constant: hash of its namespace-qualified name.
-	u64 constNameHash(const sym::Symbol& symbol);
+	/// Input hash of a constant: namespace-qualified name, value bits and type name,
+	/// so both value and type changes are detected.
+	base::Bit256 constInputHash(const Context& ctx, const sym::Symbol& symbol);
 
-	/// Value hash of a constant: raw bits mixed with the type name, so both value
-	/// and type changes are detected.
-	u64 constValueHash(Context& ctx, const sym::Symbol& symbol);
+	/// Input hash of a function signature: link name plus parameter and return type
+	/// names. Deliberately excludes parameter names and the body, so only changes
+	/// callers can observe invalidate them.
+	base::Bit256 functionSigInputHash(const Context& ctx, const sym::Symbol& symbol);
 
-	/// Stable identity hash of a function: hash of its link name.
-	u64 functionNameHash(const sym::Symbol& symbol);
+	/// Input hash of a global variable: link name and type — what readers depend on.
+	/// The initializer is covered by the globals-definitions hash instead (only the
+	/// globals object cares about it).
+	base::Bit256 globalVarInputHash(const Context& ctx, const sym::Symbol& symbol);
 
-	/// Signature hash of a function: link name plus parameter and return type names.
-	/// Deliberately excludes parameter names and the body, so only changes callers
-	/// can observe invalidate them.
-	u64 functionSigHash(Context& ctx, const sym::Symbol& symbol);
-
-	/// Stable identity hash of a global variable: hash of its link name.
-	u64 globalVarNameHash(const sym::Symbol& symbol);
-
-	/// Type hash of a global variable — what readers depend on. The initializer is
-	/// covered by the globals-definitions hash instead (only the globals object
-	/// cares about it).
-	u64 globalVarTypeHash(Context& ctx, const sym::Symbol& symbol);
-
-	/// Stable identity hash of a class: hash of its namespace-qualified name.
-	u64 classNameHash(const tp::TypeInfo& type_info);
-
-	/// Layout hash of a class: field names and field type names in declaration
-	/// order. Nested layout changes are caught through the nested classes' own
-	/// inputs (lowering a struct recursively visits its field types).
-	u64 classLayoutHash(Context& ctx, const tp::TypeInfo& type_info);
+	/// Input hash of a class layout: qualified name plus field names and field type
+	/// names in declaration order. Nested layout changes are caught through the
+	/// nested classes' own inputs (lowering a struct recursively visits its field
+	/// types).
+	base::Bit256 classLayoutInputHash(const Context& ctx, const tp::TypeInfo& type_info);
 
 	/// Everything the front end produces for one program: parsed modules in
 	/// dependency post-order, populated symbol tables, and the per-function work
@@ -79,23 +69,23 @@ namespace pg {
 		std::vector<LoadedModule>     modules;
 		Context                       ctx;
 		std::vector<FunctionWorkItem> items;
-		std::vector<u64>              fn_hashes;
+		std::vector<base::Bit256>     fn_hashes;
 		std::vector<std::string>      link_names;
 		std::vector<GlobalInitItem>   global_inits;
 
 		/// Coarse hash over everything a function may depend on besides its body:
 		/// classes, constants, globals, imports, namespace structure and function
 		/// signatures. The PSAC backend's whole-world dependency.
-		u64 globals_hash = 0;
+		base::Bit256 globals_hash;
 
 		/// Only the structural part (imports, namespace names, module identity) —
 		/// the query backend's coarse remainder; everything else it tracks through
 		/// the per-symbol inputs below.
-		u64 globals_hash_no_consts = 0;
+		base::Bit256 globals_hash_no_consts;
 
 		/// Full content hash of all global variable declarations (initializers
 		/// included) in declaration order; the globals-object emission depends on it.
-		u64 global_defs_hash = 0;
+		base::Bit256 global_defs_hash;
 
 		/// Per-symbol inputs of the program (identity + value hashes).
 		std::vector<SymbolInputInfo> const_inputs;
@@ -109,16 +99,26 @@ namespace pg {
 	AnalyzedProgram analyzeProgram(const fs::File& file);
 
 	/**
-	 * @brief Lowers a single function into its own LLVM module and emits an object file.
+	 * @brief Lowers a single function into its own LLVM module and returns the object
+	 * file bytes.
 	 *
 	 * Safe to run on a worker thread: takes a private copy of the symbol tables (local
 	 * declarations mutate them) and a private LLVMContext (LLVM contexts are not
 	 * thread-safe). Cross-function calls become declarations resolved by the linker
 	 * through the functions' link names.
 	 *
+	 * Deliberately free of side effects (no filesystem writes) so the query-based
+	 * backend can use it as a pure query provider; the caller decides where the
+	 * bytes go.
+	 *
 	 * The observer (if any) is installed on the private Context copy and notified
 	 * about symbol uses during lowering.
 	 */
+	std::string compileOneFunctionToBytes(
+		const Context& base_ctx, const FunctionWorkItem& item, SymbolUseObserver* observer = nullptr
+	);
+
+	/// compileOneFunctionToBytes + write to `object_path` (the PSAC backend's shape).
 	void compileOneFunction(
 		const Context&               base_ctx,
 		const FunctionWorkItem&      item,
@@ -127,10 +127,18 @@ namespace pg {
 	);
 
 	/**
-	 * @brief Emits the object file that defines all global variables (zero-initialized)
-	 * and the builtin runtime functions. Initializer expressions are lowered in
-	 * declaration order into a synthetic constructor registered in llvm.global_ctors.
+	 * @brief Builds the object file that defines all global variables (zero-initialized)
+	 * and the builtin runtime functions and returns its bytes. Initializer expressions
+	 * are lowered in declaration order into a synthetic constructor registered in
+	 * llvm.global_ctors. Side-effect free, like compileOneFunctionToBytes.
 	 */
+	std::string emitGlobalsObjectBytes(
+		const Context&                     base_ctx,
+		const std::vector<GlobalInitItem>& global_inits,
+		SymbolUseObserver*                 observer = nullptr
+	);
+
+	/// emitGlobalsObjectBytes + write to `object_path` (the PSAC backend's shape).
 	void emitGlobalsObject(
 		const Context&                     base_ctx,
 		const std::vector<GlobalInitItem>& global_inits,
