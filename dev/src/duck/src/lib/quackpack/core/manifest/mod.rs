@@ -19,7 +19,7 @@ pub use profiles::*;
 pub use source::*;
 pub use venv_config::*;
 
-use super::valid_package_name::validate_package_name;
+use super::valid_package_name::{normalise_package_name, validate_package_name};
 use crate::duck::util::duck_home::DuckHome;
 use crate::quackpack::core::Version;
 use crate::quackpack::schemas::registry;
@@ -66,6 +66,11 @@ impl Manifest {
     /// Get the package name.
     pub fn name(&self) -> StrId {
         self.name
+    }
+
+    /// Get the normalised package name.
+    pub fn normalised_name(&self) -> String {
+        normalise_package_name(&self.name())
     }
 
     /// Get the package version.

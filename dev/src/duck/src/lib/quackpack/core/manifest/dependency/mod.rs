@@ -1,5 +1,5 @@
 //! Managing a single dependency abstraction.
-use crate::quackpack::core::valid_package_name::validate_package_name;
+use crate::quackpack::core::valid_package_name::{normalise_package_name, validate_package_name};
 use crate::quackpack::core::{FeatureName, Source, Version};
 use crate::{QuackError, QuackResult, QuackResultContext, StrId, qp_bail};
 
@@ -134,6 +134,12 @@ impl Dependency {
         self.alias
     }
 
+    /// Get the normalised aliased name of this package.
+    /// If none, then this package has not been aliased.
+    pub fn normalised_alias(&self) -> Option<String> {
+        self.alias.map(|alias| normalise_package_name(&alias))
+    }
+
     /// Get versions of this package.
     pub fn versions(&self) -> &[Version] {
         &self.versions
@@ -167,6 +173,12 @@ impl TryFrom<registry::Dependency> for Dependency {
         } = value;
         validate_package_name(&name)
             .context("registry responded with a dependency with an invalid name")?;
+
+        if let Some(ref alias) = alias {
+            validate_package_name(alias)
+                .context("registry responded with a dependency with an invalid alias")?;
+        }
+
         let alias = alias.map(StrId::from);
         let name = name.into();
         if alias == Some(name) {
