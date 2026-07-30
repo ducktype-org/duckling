@@ -118,8 +118,8 @@ namespace compiler::helios {
 				return query::Failed();
 			}
 
-			// Ignoring reference kind, it will be checked later, reference types in CFFI are invalid.
-			// Only the variadic parameters are subject to the default argument promotions.
+			// Ignoring reference kind, it will be checked later, reference types in CFFI are
+			// invalid. Only the variadic parameters are subject to the default argument promotions.
 			for (auto& param: std::span(decl.parameters).subspan(fixed_params)) {
 				auto param_result = validateVariadicArgType(ctx, param.type.getType());
 				if (not param_result.has_value()) {
