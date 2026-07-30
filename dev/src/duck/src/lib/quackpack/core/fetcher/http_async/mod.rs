@@ -157,7 +157,9 @@ impl Worker {
     /// Create a new [`Worker`] instance.
     fn new(receiver: sync_mpsc::Receiver<IncomingConnectionRequest>) -> Self {
         let mut multi = Multi::new();
-        if let Err(e) = multi.pipelining(false, true) {
+        if let Err(e) = multi.pipelining(
+            /* http/1.1 pipelining */ false, /* multiplexing */ true,
+        ) {
             error!("failed to set pipelining on multi: {e}");
         }
         Self {

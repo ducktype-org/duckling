@@ -6,6 +6,8 @@ use std::path::PathBuf;
 use std::time::SystemTime;
 
 use flate2::read::GzDecoder;
+use futures::executor::block_on;
+use futures::future::join_all;
 use tar::Archive;
 use tracing::{debug, error};
 
@@ -52,8 +54,8 @@ pub fn sync(
     debug!(root = %pcx.package().root().display(), ?options);
     let venv_config = pcx.package().venv();
     let storage = Storage::new(venv_config.storage_path());
-    let mut fetcher = Fetcher::new(pcx.ctx())?;
-    let mut git_access = StorageGitAccess::new(&storage);
+    let fetcher = Fetcher::new(pcx.ctx())?;
+    let git_access = StorageGitAccess::new(&storage);
     let expose_freezefile = venv_config.expose_freezefile();
     let user_exposed_freeze = load_external_freezefile(pcx, expose_freezefile)?;
     let id = pcx.to_venv_id();
@@ -75,8 +77,8 @@ pub fn sync(
 
     let solver_answer = get_solver_answer(
         pcx,
-        &mut fetcher,
-        &mut git_access,
+        &fetcher,
+        &git_access,
         input_freeze,
         SolverMode::from(options),
     )?;
@@ -88,8 +90,7 @@ pub fn sync(
         .collect();
     let new_freeze = solver_answer.new_freeze.generate_storage_freeze()?;
 
-    let _was_anything_installed =
-        fetch_source_codes(&storage, &mut fetcher, &mut git_access, pkgs)?;
+    let _was_anything_installed = fetch_source_codes(&storage, &fetcher, &git_access, pkgs)?;
 
     let now = SystemTime::now();
     let venv = if let Some(mut venv) = venv {
@@ -224,8 +225,8 @@ fn load_external_freezefile(
 #[tracing::instrument(skip_all)]
 fn get_solver_answer(
     pcx: &PackageContext<'_>,
-    fetcher: &mut Fetcher<'_>,
-    git_access: &mut StorageGitAccess<'_>,
+    fetcher: &Fetcher<'_>,
+    git_access: &StorageGitAccess<'_>,
     input_freeze: Option<&VenvFreeze>,
     mode: SolverMode,
 ) -> QuackResult<SolverAnswer> {
@@ -240,7 +241,7 @@ fn get_solver_answer(
     let solver = SolverGathererData::new(pcx, solver_freeze, mode)
         .context("failed to start gathering packages")?;
     let fetcher_lock = pcx.ctx().duck_home().open_fetcher_lockfile(pcx.ctx())?;
-    let should_run_engine = solver.prepare_solving(fetcher, git_access)?;
+    let should_run_engine = block_on(solver.prepare_solving(fetcher, git_access))?;
     drop(fetcher_lock);
     debug!("will run solver engine: {should_run_engine}");
     match should_run_engine {
@@ -256,29 +257,30 @@ fn get_solver_answer(
 #[tracing::instrument(skip_all)]
 fn fetch_source_codes(
     storage: &Storage,
-    fetcher: &mut Fetcher<'_>,
-    git_access: &mut StorageGitAccess<'_>,
+    fetcher: &Fetcher<'_>,
+    git_access: &StorageGitAccess<'_>,
     pkgs: Vec<PackageId>,
 ) -> QuackResult<bool> {
-    let mut was_anything_installed = false;
     let fetcher_lock = fetcher
         .ctx()
         .duck_home()
         .open_fetcher_lockfile(fetcher.ctx())?;
-    for pkg in pkgs {
-        was_anything_installed |= fetch_source_code(storage, fetcher, git_access, pkg)?;
-    }
+    let fetches = pkgs
+        .into_iter()
+        .map(|pkg| fetch_source_code(storage, fetcher, git_access, pkg));
+    let fetches = block_on(join_all(fetches));
     drop(fetcher_lock);
-    Ok(was_anything_installed)
+    let fetches = fetches.into_iter().collect::<Result<Vec<_>, _>>()?;
+    Ok(fetches.iter().any(|b| *b))
 }
 
 /// Helper for [`fetch_source_codes`].
 /// Fetches the source code of a package if it is not yet stored in the storage.
 #[tracing::instrument(skip_all)]
-fn fetch_source_code(
+async fn fetch_source_code(
     storage: &Storage,
-    fetcher: &mut Fetcher<'_>,
-    git_access: &mut StorageGitAccess<'_>,
+    fetcher: &Fetcher<'_>,
+    git_access: &StorageGitAccess<'_>,
     pkg: PackageId,
 ) -> QuackResult<bool> {
     debug!(?pkg);
@@ -306,31 +308,7 @@ fn fetch_source_code(
             if storage.is_package_stored(pkg) {
                 return Ok(false);
             }
-            let mut successfully_fetched = false;
-            let mut blob_path = PathBuf::new();
-            for attempt in 1..=MAX_BLOB_RETRY_COUNT {
-                match fetcher.fetch_package_blob(&PackageWithUrl {
-                    name: pkg.name(),
-                    version: pkg.version(),
-                    url,
-                }) {
-                    Ok(path) => {
-                        blob_path = path;
-                        successfully_fetched = true;
-                        break;
-                    }
-                    Err(e) => {
-                        if attempt != MAX_BLOB_RETRY_COUNT {
-                            debug!(?pkg, "retrying fetch...");
-                        } else {
-                            debug!(?pkg, "failed to fetch: {e}");
-                        }
-                    }
-                }
-            }
-            if !successfully_fetched {
-                qp_bail!("Failed to fetch a package");
-            }
+            let blob_path = fetch_package_from_ducknest_with_retries(fetcher, &pkg).await?;
             let pkg_dir = storage.pkg_dir(pkg);
             if pkg_dir.exists() {
                 pkg_dir.rm()?;
@@ -344,6 +322,44 @@ fn fetch_source_code(
             Ok(true)
         }
     }
+}
+
+async fn fetch_package_from_ducknest_with_retries(
+    fetcher: &Fetcher<'_>,
+    pkg: &PackageId,
+) -> QuackResult<PathBuf> {
+    for attempt in 1..=MAX_BLOB_RETRY_COUNT {
+        match try_to_fetch_package_from_ducknest(
+            fetcher,
+            &PackageWithUrl {
+                name: pkg.name(),
+                version: pkg.version(),
+                url: pkg.url(),
+            },
+        )
+        .await
+        {
+            Ok(path) => {
+                return Ok(path);
+            }
+            Err(e) => {
+                if attempt != MAX_BLOB_RETRY_COUNT {
+                    debug!(?pkg, "retrying fetch...");
+                } else {
+                    debug!(?pkg, "failed to fetch: {e}");
+                }
+            }
+        }
+    }
+
+    qp_bail!("failed to fetch a package {} {}", pkg.name(), pkg.version())
+}
+
+async fn try_to_fetch_package_from_ducknest(
+    fetcher: &Fetcher<'_>,
+    what: &PackageWithUrl,
+) -> QuackResult<PathBuf> {
+    fetcher.fetch_package_blob(what).await
 }
 
 fn make_success_message(pcx: &PackageContext<'_>, id: VenvId) -> QuackResult<()> {

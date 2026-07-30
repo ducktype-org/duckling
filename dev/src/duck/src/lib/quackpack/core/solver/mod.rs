@@ -106,12 +106,12 @@ impl<'duck, 'ctx> SolverGathererData<'duck, 'ctx> {
     /// Determines if all the transitive dependencies of the root package are satisfied.
     /// If not, prepares the [`SolverEngineData`] for running the engine by constructing [`SolverInput`].
     #[tracing::instrument(skip_all)]
-    pub fn prepare_solving<Access: GitAccess>(
+    pub async fn prepare_solving<Access: GitAccess>(
         self,
-        fetcher: &mut Fetcher<'_>,
-        git_access: &mut Access,
+        fetcher: &Fetcher<'_>,
+        git_access: &Access,
     ) -> QuackResult<ShouldRunSolverEngine> {
-        let mut gatherer = Gatherer::new(fetcher, git_access);
+        let gatherer = Gatherer::new(fetcher, git_access);
 
         let root_manifest = self.root_pcx.package().manifest().clone();
         let root_features = root_manifest
@@ -122,7 +122,8 @@ impl<'duck, 'ctx> SolverGathererData<'duck, 'ctx> {
             .collect();
         let mut prev_freeze_manifests = self
             .current_freeze
-            .get_prev_freeze_manifests(&mut gatherer)?;
+            .get_prev_freeze_manifests(&gatherer)
+            .await?;
         prev_freeze_manifests.insert(self.root_pkg, Box::new(root_manifest.clone()));
         let (maximal_valid_freeze, is_root_satisfied) = self
             .current_freeze
@@ -144,13 +145,14 @@ impl<'duck, 'ctx> SolverGathererData<'duck, 'ctx> {
 
         let root_path = self.root_pcx.package().root().into();
         let gathered_info = Self::run_solver_gatherer(
-            &mut gatherer,
+            &gatherer,
             root_manifest,
             root_path,
             root_features,
             &maximal_valid_freeze,
             self.mode,
-        )?;
+        )
+        .await?;
         debug!("gathered {gathered_info:?}");
         let solver_input = SolverInput::from_freeze_and_gathered_info(
             &maximal_valid_freeze,
@@ -168,8 +170,8 @@ impl<'duck, 'ctx> SolverGathererData<'duck, 'ctx> {
     /// Helper for [`Self::prepare_solving`].
     /// Runs the [`Gatherer`], to fetch all potentially necessary manifests.
     #[tracing::instrument(skip_all)]
-    fn run_solver_gatherer<Access: GitAccess>(
-        gatherer: &mut Gatherer<'_, '_, '_, Access>,
+    async fn run_solver_gatherer<Access: GitAccess>(
+        gatherer: &Gatherer<'_, '_, Access>,
         root_manifest: Manifest,
         root_path: PathBuf,
         root_features: HashSet<FeatureName>,
@@ -178,7 +180,9 @@ impl<'duck, 'ctx> SolverGathererData<'duck, 'ctx> {
     ) -> QuackResult<GatheredInfo> {
         let root_manifest_for_gathering =
             Self::prepare_root_manifest_for_gathering(root_manifest, freeze)?;
-        gatherer.explore(root_path, root_manifest_for_gathering, root_features, mode)
+        gatherer
+            .explore(root_path, root_manifest_for_gathering, root_features, mode)
+            .await
     }
 
     /// Helper for [`Self::run_solver_gatherer`].
