@@ -2,9 +2,9 @@
 
 | compiler | scenario | min (ms) | mean (ms) | recompiled |
 |:---|:---|---:|---:|:---|
-| psacklinger | noop | 98.9 | 101.2 | recompiled 0/352 functions |
-| psacklinger | body | 144.5 | 152.8 | recompiled 1/352 functions |
-| psacklinger | gvar | 208.7 | 222.8 | recompiled 352/352 functions |
-| querylinger | noop | 98.0 | 101.6 | recompiled 0/352 functions |
-| querylinger | body | 141.8 | 149.6 | recompiled 1/352 functions |
-| querylinger | gvar | 145.5 | 153.1 | recompiled 0/352 functions |
+| psacklinger | noop | 105.5 | 109.0 | recompiled 0/352 functions |
+| psacklinger | body | 146.0 | 149.8 | recompiled 1/352 functions |
+| psacklinger | gvar | 146.4 | 155.9 | recompiled 0/352 functions |
+| querylinger | noop | 111.5 | 118.4 | recompiled 0/352 functions |
+| querylinger | body | 155.1 | 160.1 | recompiled 1/352 functions |
+| querylinger | gvar | 157.9 | 163.7 | recompiled 0/352 functions |

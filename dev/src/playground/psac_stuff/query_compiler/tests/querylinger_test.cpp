@@ -374,6 +374,269 @@ class QuerylingerTest: public tester::TestSuite {
 		ASSERT_EQUAL_PRINT(u64(6), runExecutable(executable));
 	}
 
+	/// Removing a constant makes its reader fail; re-adding it recovers exactly the
+	/// reader, leaving the untouched functions cached.
+	void incrementalConstRemovedThenReadded() {
+		const std::string v1 = R"(
+			const X: i64 = 5;
+			fun reader() -> i64 = { return X; }
+			fun other() -> i64 = { return 7; }
+			fun main() -> i64 = { return reader() + other(); }
+		)";
+		const std::string v2 = R"(
+			fun reader() -> i64 = { return X; }
+			fun other() -> i64 = { return 7; }
+			fun main() -> i64 = { return reader() + other(); }
+		)";
+
+		fs::File out_dir    = fs::FileManager::createRandomTempDirectory();
+		fs::File executable = out_dir.createSubFile("", "incr_const_removed.out");
+
+		ql::Compiler compiler(ql::CompileOptions{ .output_path = executable.getFilePath().string() }
+		);
+
+		compiler.compile(fs::FileManager::createRandomVirtualFile(v1));
+		ASSERT_EQUAL_PRINT(u64(12), runExecutable(executable));
+
+		try {
+			compiler.update(fs::FileManager::createRandomVirtualFile(v2));
+			ASSERT_TRUE(false);
+		} catch (const std::runtime_error& e) { ASSERT_TRUE(std::string(e.what()).contains("X")); }
+
+		ql::CompileStats restored = compiler.update(fs::FileManager::createRandomVirtualFile(v1));
+		ASSERT_EQUAL_PRINT(usize(3), restored.total_functions);
+		ASSERT_EQUAL_PRINT(usize(1), restored.recompiled_functions);
+		ASSERT_EQUAL_PRINT(u64(12), runExecutable(executable));
+	}
+
+	/// The same failing source twice: the second update rethrows the cached failure
+	/// without recompiling; fixing the source afterwards recovers.
+	void incrementalRepeatedFailureIsCached() {
+		const std::string v1 = R"(
+			fun other() -> i64 = { return 1; }
+			fun main() -> i64 = { return 5; }
+		)";
+		const std::string v2 = R"(
+			fun other() -> i64 = { return 1; }
+			fun main() -> i64 = { return gmissing(1); }
+		)";
+		const std::string v3 = R"(
+			fun other() -> i64 = { return 1; }
+			fun gmissing(p: i64) -> i64 = { return p + 5; }
+			fun main() -> i64 = { return gmissing(1); }
+		)";
+
+		fs::File out_dir    = fs::FileManager::createRandomTempDirectory();
+		fs::File executable = out_dir.createSubFile("", "incr_repeat_fail.out");
+
+		ql::Compiler compiler(ql::CompileOptions{ .output_path = executable.getFilePath().string() }
+		);
+
+		compiler.compile(fs::FileManager::createRandomVirtualFile(v1));
+		ASSERT_EQUAL_PRINT(u64(5), runExecutable(executable));
+
+		for (usize attempt = 0; attempt < 2; ++attempt) {
+			try {
+				compiler.update(fs::FileManager::createRandomVirtualFile(v2));
+				ASSERT_TRUE(false);
+			} catch (const std::runtime_error& e) {
+				ASSERT_TRUE(std::string(e.what()).contains("gmissing"));
+			}
+		}
+
+		ql::CompileStats fixed = compiler.update(fs::FileManager::createRandomVirtualFile(v3));
+		ASSERT_EQUAL_PRINT(usize(3), fixed.total_functions);
+		ASSERT_EQUAL_PRINT(usize(2), fixed.recompiled_functions);
+		ASSERT_EQUAL_PRINT(u64(6), runExecutable(executable));
+	}
+
+	/// Changing a return type breaks the caller; reverting recovers exactly the
+	/// function and its failed caller.
+	void incrementalSignatureRevert() {
+		const std::string v1 = R"(
+			fun f() -> i64 = { return 1; }
+			fun g() -> i64 = { return f() + 1; }
+			fun other() -> i64 = { return 7; }
+			fun main() -> i64 = { return g() + other(); }
+		)";
+		const std::string v2 = R"(
+			fun f() -> bool = { return true; }
+			fun g() -> i64 = { return f() + 1; }
+			fun other() -> i64 = { return 7; }
+			fun main() -> i64 = { return g() + other(); }
+		)";
+
+		fs::File out_dir    = fs::FileManager::createRandomTempDirectory();
+		fs::File executable = out_dir.createSubFile("", "incr_sig_revert.out");
+
+		ql::Compiler compiler(ql::CompileOptions{ .output_path = executable.getFilePath().string() }
+		);
+
+		compiler.compile(fs::FileManager::createRandomVirtualFile(v1));
+		ASSERT_EQUAL_PRINT(u64(9), runExecutable(executable));
+
+		try {
+			compiler.update(fs::FileManager::createRandomVirtualFile(v2));
+			ASSERT_TRUE(false);
+		} catch (const std::runtime_error& e) {
+			ASSERT_TRUE(std::string(e.what()).contains("operand"));
+		}
+
+		ql::CompileStats restored = compiler.update(fs::FileManager::createRandomVirtualFile(v1));
+		ASSERT_EQUAL_PRINT(usize(4), restored.total_functions);
+		ASSERT_EQUAL_PRINT(usize(2), restored.recompiled_functions);
+		ASSERT_EQUAL_PRINT(u64(9), runExecutable(executable));
+	}
+
+	/// Removing a class used by one function fails that function; re-adding the
+	/// class recovers it alone.
+	void incrementalClassRemovedThenReadded() {
+		const std::string v1 = R"(
+			class Point {
+				var x: i64;
+			}
+			fun reader() -> i64 = {
+				var p: Point;
+				p.x = 3;
+				return p.x;
+			}
+			fun other() -> i64 = { return 7; }
+			fun main() -> i64 = { return reader() + other(); }
+		)";
+		const std::string v2 = R"(
+			fun reader() -> i64 = {
+				var p: Point;
+				p.x = 3;
+				return p.x;
+			}
+			fun other() -> i64 = { return 7; }
+			fun main() -> i64 = { return reader() + other(); }
+		)";
+
+		fs::File out_dir    = fs::FileManager::createRandomTempDirectory();
+		fs::File executable = out_dir.createSubFile("", "incr_class_removed.out");
+
+		ql::Compiler compiler(ql::CompileOptions{ .output_path = executable.getFilePath().string() }
+		);
+
+		compiler.compile(fs::FileManager::createRandomVirtualFile(v1));
+		ASSERT_EQUAL_PRINT(u64(10), runExecutable(executable));
+
+		try {
+			compiler.update(fs::FileManager::createRandomVirtualFile(v2));
+			ASSERT_TRUE(false);
+		} catch (const std::runtime_error& e) {
+			ASSERT_TRUE(std::string(e.what()).contains("Point"));
+		}
+
+		ql::CompileStats restored = compiler.update(fs::FileManager::createRandomVirtualFile(v1));
+		ASSERT_EQUAL_PRINT(usize(3), restored.total_functions);
+		ASSERT_EQUAL_PRINT(usize(1), restored.recompiled_functions);
+		ASSERT_EQUAL_PRINT(u64(10), runExecutable(executable));
+	}
+
+	/// Renaming a function breaks its caller; renaming back recompiles the function
+	/// and the caller, leaving the unrelated function cached.
+	void incrementalFunctionRenameAndBack() {
+		const std::string v1 = R"(
+			fun helper() -> i64 = { return 10; }
+			fun other() -> i64 = { return 1; }
+			fun main() -> i64 = { return helper(); }
+		)";
+		const std::string v2 = R"(
+			fun helper2() -> i64 = { return 10; }
+			fun other() -> i64 = { return 1; }
+			fun main() -> i64 = { return helper(); }
+		)";
+
+		fs::File out_dir    = fs::FileManager::createRandomTempDirectory();
+		fs::File executable = out_dir.createSubFile("", "incr_rename.out");
+
+		ql::Compiler compiler(ql::CompileOptions{ .output_path = executable.getFilePath().string() }
+		);
+
+		compiler.compile(fs::FileManager::createRandomVirtualFile(v1));
+		ASSERT_EQUAL_PRINT(u64(10), runExecutable(executable));
+
+		try {
+			compiler.update(fs::FileManager::createRandomVirtualFile(v2));
+			ASSERT_TRUE(false);
+		} catch (const std::runtime_error& e) {
+			ASSERT_TRUE(std::string(e.what()).contains("helper"));
+		}
+
+		ql::CompileStats restored = compiler.update(fs::FileManager::createRandomVirtualFile(v1));
+		ASSERT_EQUAL_PRINT(usize(3), restored.total_functions);
+		ASSERT_EQUAL_PRINT(usize(2), restored.recompiled_functions);
+		ASSERT_EQUAL_PRINT(u64(10), runExecutable(executable));
+	}
+
+	/// A multi-step editing session: per-symbol dependencies stay precise across a
+	/// chain of body, constant and initializer edits.
+	void incrementalMultiStepSession() {
+		const std::string s1 = R"(
+			const A: i64 = 1;
+			const B: i64 = 2;
+			var g: i64 = 3;
+			fun fa() -> i64 = { return A; }
+			fun fb() -> i64 = { return B; }
+			fun fg() -> i64 = { return g; }
+			fun main() -> i64 = { return fa() + fb() + fg(); }
+		)";
+		const std::string s2 = R"(
+			const A: i64 = 10;
+			const B: i64 = 2;
+			var g: i64 = 3;
+			fun fa() -> i64 = { return A; }
+			fun fb() -> i64 = { return B; }
+			fun fg() -> i64 = { return g; }
+			fun main() -> i64 = { return fa() + fb() + fg(); }
+		)";
+		const std::string s3 = R"(
+			const A: i64 = 10;
+			const B: i64 = 2;
+			var g: i64 = 30;
+			fun fa() -> i64 = { return A; }
+			fun fb() -> i64 = { return B; }
+			fun fg() -> i64 = { return g; }
+			fun main() -> i64 = { return fa() + fb() + fg(); }
+		)";
+		const std::string s4 = R"(
+			const A: i64 = 10;
+			const B: i64 = 2;
+			var g: i64 = 30;
+			fun fa() -> i64 = { return A; }
+			fun fb() -> i64 = { return B + 1; }
+			fun fg() -> i64 = { return g; }
+			fun main() -> i64 = { return fa() + fb() + fg(); }
+		)";
+
+		fs::File out_dir    = fs::FileManager::createRandomTempDirectory();
+		fs::File executable = out_dir.createSubFile("", "incr_multi_step.out");
+
+		ql::Compiler compiler(ql::CompileOptions{ .output_path = executable.getFilePath().string() }
+		);
+
+		compiler.compile(fs::FileManager::createRandomVirtualFile(s1));
+		ASSERT_EQUAL_PRINT(u64(6), runExecutable(executable));
+
+		ql::CompileStats step2 = compiler.update(fs::FileManager::createRandomVirtualFile(s2));
+		ASSERT_EQUAL_PRINT(usize(1), step2.recompiled_functions);
+		ASSERT_EQUAL_PRINT(u64(15), runExecutable(executable));
+
+		ql::CompileStats step3 = compiler.update(fs::FileManager::createRandomVirtualFile(s3));
+		ASSERT_EQUAL_PRINT(usize(0), step3.recompiled_functions);
+		ASSERT_EQUAL_PRINT(u64(42), runExecutable(executable));
+
+		ql::CompileStats step4 = compiler.update(fs::FileManager::createRandomVirtualFile(s4));
+		ASSERT_EQUAL_PRINT(usize(1), step4.recompiled_functions);
+		ASSERT_EQUAL_PRINT(u64(43), runExecutable(executable));
+
+		ql::CompileStats step5 = compiler.update(fs::FileManager::createRandomVirtualFile(s4));
+		ASSERT_EQUAL_PRINT(usize(0), step5.recompiled_functions);
+		ASSERT_EQUAL_PRINT(u64(43), runExecutable(executable));
+	}
+
 	/// Changing one function body in an imported file recompiles exactly that
 	/// function.
 	void incrementalImportedBodyChange() {
@@ -508,6 +771,36 @@ public:
 		addTest(
 			static_cast<TestType>(&QuerylingerTest::incrementalClassFieldOnlyUsersRecompile),
 			"IncrementalClassFieldOnlyUsersRecompile",
+			false
+		);
+		addTest(
+			static_cast<TestType>(&QuerylingerTest::incrementalConstRemovedThenReadded),
+			"IncrementalConstRemovedThenReadded",
+			false
+		);
+		addTest(
+			static_cast<TestType>(&QuerylingerTest::incrementalRepeatedFailureIsCached),
+			"IncrementalRepeatedFailureIsCached",
+			false
+		);
+		addTest(
+			static_cast<TestType>(&QuerylingerTest::incrementalSignatureRevert),
+			"IncrementalSignatureRevert",
+			false
+		);
+		addTest(
+			static_cast<TestType>(&QuerylingerTest::incrementalClassRemovedThenReadded),
+			"IncrementalClassRemovedThenReadded",
+			false
+		);
+		addTest(
+			static_cast<TestType>(&QuerylingerTest::incrementalFunctionRenameAndBack),
+			"IncrementalFunctionRenameAndBack",
+			false
+		);
+		addTest(
+			static_cast<TestType>(&QuerylingerTest::incrementalMultiStepSession),
+			"IncrementalMultiStepSession",
 			false
 		);
 		addTest(

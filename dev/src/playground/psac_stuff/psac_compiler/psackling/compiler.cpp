@@ -18,6 +18,7 @@
 #include <optional>
 #include <set>
 #include <thread>
+#include <unordered_set>
 
 namespace {
 	/// parlay's scheduler is created during static initialization (a global
@@ -121,13 +122,20 @@ namespace pg {
 		/// program are pre-created on the main thread during install; the lazy path
 		/// exists for builtins, which lowering uses but the collector never sees
 		/// (their value is constant, so it is written once here and never again).
-		HashMod* getOrCreateSymbolMod(const std::string& key, const base::Bit256& value_if_new) {
+		/// The value is computed through a callback so the hot existing-mod path
+		/// never pays for a SHA-256.
+		template<typename HashFn>
+		HashMod* getOrCreateSymbolMod(const std::string& key, const HashFn& hash_if_new) {
 			const std::lock_guard<std::mutex> lock(symbol_mods_mutex);
 
 			auto [it, inserted] = symbol_mods.try_emplace(key, nullptr);
 			if (inserted) {
 				it->second = std::make_unique<HashMod>();
-				psac_write(it->second.get(), value_if_new);
+				// Writing here is safe only because the Mod cannot have readers yet
+				// (the pointer has not escaped the lock). Never add a write on the
+				// existing-mod path: notify_readers iterates the reader set, which is
+				// not safe against concurrent add_reader from other workers.
+				psac_write(it->second.get(), hash_if_new());
 			}
 			return it->second.get();
 		}
@@ -150,31 +158,45 @@ namespace pg {
 				  program_ctx(program_ctx) {}
 
 			void onConstantUse(const sym::Symbol& symbol) override {
-				record(constInputKey(symbol), constInputHash(program_ctx, symbol));
+				if (!seen_symbols.insert(symbol.id).second) return;
+				record(constInputKey(symbol), [&] { return constInputHash(program_ctx, symbol); });
 			}
 
 			void onFunctionUse(const sym::Symbol& symbol) override {
-				record(functionSigInputKey(symbol), functionSigInputHash(program_ctx, symbol));
+				if (!seen_symbols.insert(symbol.id).second) return;
+				record(functionSigInputKey(symbol), [&] {
+					return functionSigInputHash(program_ctx, symbol);
+				});
 			}
 
 			void onGlobalVariableUse(const sym::Symbol& symbol) override {
-				record(globalVarInputKey(symbol), globalVarInputHash(program_ctx, symbol));
+				if (!seen_symbols.insert(symbol.id).second) return;
+				record(globalVarInputKey(symbol), [&] {
+					return globalVarInputHash(program_ctx, symbol);
+				});
 			}
 
 			void onClassTypeUse(const tp::TypeInfo& type_info) override {
-				record(classLayoutInputKey(type_info), classLayoutInputHash(program_ctx, type_info));
+				if (!seen_classes.insert(type_info.id).second) return;
+				record(classLayoutInputKey(type_info), [&] {
+					return classLayoutInputHash(program_ctx, type_info);
+				});
 			}
 
 		private:
-			void record(const std::string& key, const base::Bit256& hash) {
-				psac::ModBase* mod = state.getOrCreateSymbolMod(key, hash);
-				if (seen.insert(mod).second) scope_mods.push_back(mod);
+			template<typename HashFn>
+			void record(const std::string& key, const HashFn& hash_if_new) {
+				scope_mods.push_back(state.getOrCreateSymbolMod(key, hash_if_new));
 			}
 
 			std::vector<psac::ModBase*>& scope_mods;
 			Compiler::State&             state;
 			const Context&               program_ctx;
-			std::set<psac::ModBase*>     seen;
+
+			// Repeated uses of the same symbol within one function are the common
+			// case; the memo keeps them free of key building, locking and hashing.
+			std::unordered_set<sym::SymbolID> seen_symbols;
+			std::unordered_set<tp::TypeID>    seen_classes;
 		};
 
 		/// The per-function PSAC computation: one dynamic-read scope that depends on
@@ -303,7 +325,7 @@ namespace pg {
 				}
 			}
 
-			if (count > 0) linkProgram(s);
+			if (full || count > 0) linkProgram(s);
 
 			s.seq_compiled_once     = true;
 			s.seq_prev_fn_hashes    = s.fn_hashes;
@@ -345,7 +367,10 @@ namespace pg {
 		auto                  write_inputs = [&](const std::vector<SymbolInputInfo>& inputs) {
             for (const SymbolInputInfo& input: inputs) {
                 current_keys.insert(input.key);
-                psac_write(s.getOrCreateSymbolMod(input.key, input.input_hash), input.input_hash);
+                psac_write(
+                    s.getOrCreateSymbolMod(input.key, [&] { return input.input_hash; }),
+                    input.input_hash
+                );
             }
 		};
 		write_inputs(s.const_inputs);

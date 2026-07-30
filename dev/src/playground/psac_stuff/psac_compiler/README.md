@@ -203,44 +203,57 @@ Everything is cold: duckc's incremental cache and artifacts are wiped before
 every timed run. `THREADS`, `RUNS`, `WARMUP` are env-tunable; results land next
 to the script as `results_compiler_<name>.{json,md}`.
 
-Release builds, ~8000-line generated samples (`benchmark/data/input`), 5 runs:
+Release builds, ~8000-line generated samples (`benchmark/data/input`), 5 runs,
+per-symbol engines on both sides:
 
 | threads | duck1: duckc -w | duck1: psack -j | duck1: query -j | duck2: duckc -w | duck2: psack -j | duck2: query -j |
 |---:|---:|---:|---:|---:|---:|---:|
-| 1 | 704 ms | 597 ms | 568 ms | 1395 ms | 481 ms | 459 ms |
-| 2 | 685 ms | 413 ms | 387 ms | 1375 ms | 398 ms | 366 ms |
-| 4 | 629 ms | 320 ms | 292 ms | 1358 ms | 356 ms | 313 ms |
-| 8 | 597 ms | 292 ms | 253 ms | 1322 ms | 346 ms | 308 ms |
-| 16 | 631 ms | 276 ms | **236 ms** | 1385 ms | 355 ms | **281 ms** |
+| 1 | 764 ms | 589 ms | 545 ms | 1164 ms | 459 ms | 437 ms |
+| 2 | 706 ms | 417 ms | 369 ms | 1159 ms | 379 ms | 360 ms |
+| 4 | 618 ms | 333 ms | 294 ms | 1116 ms | 345 ms | 315 ms |
+| 8 | 585 ms | 295 ms | 254 ms | 1057 ms | 334 ms | 297 ms |
+| 16 | 569 ms | 284 ms | **239 ms** | 1074 ms | 335 ms | **302 ms** |
 
 Readings:
 
-- Both playground compilers beat duckc at every width (~2.5× on duck1, ~4.4× on
+- Both playground compilers beat duckc at every width (~2.4× on duck1, ~3.6× on
   duck2 at -j8) — per-function fan-out vs duckc's serial task chain on a single
   big module.
-- querylinger edges out psacklinger at every width (~10–20%): the query
-  framework's task pool costs no more than PSAC's Mod reads at this granularity,
-  and nothing from parlay links into the querylinger binary, so its busy-spin
-  scheduler can't touch the serial front end at all.
+- querylinger edges out psacklinger at every width (~5–20%): the query
+  framework's task pool costs no more than PSAC's per-function computations at
+  this granularity, and nothing from parlay links into the querylinger binary,
+  so its busy-spin scheduler can't touch the serial front end at all.
+- The per-symbol engine rework (one computation per function, dynamic-read
+  scopes, per-symbol Mods) left psacklinger's cold numbers within a few percent
+  of the old coarse engine.
 - Build type matters enormously: the same benchmark on Debug builds reads
   several times slower — only relative trends survive, absolute Debug numbers
   don't.
+- Why duckc barely scales with `-w` (`--print-statistics`, duck1): PST
+  construction — parse plus per-element SHA-256 stable hashing — is ~232 ms and
+  fully serial, about half of the `-w8` wall time; the parallel query phase
+  sits mostly in the name-resolution chain (`QueryLookupInScopeAndParents`,
+  `QueryScopesInModule`, `QueryPrimaryCodeScopeFor`). Parallelizing PST
+  stable-hash computation is the biggest single lever (the psacklinger
+  `PSTHashing::Skip` experiment showed 202 ms → 67 ms when hashing is removed
+  entirely).
 
 Warm incremental updates (`bench_incremental.py`, interactive mode, -j8,
-single-line edits; see `results_incremental_<name>.md`). The table below predates
-the per-symbol Mod engine — psacklinger's coarse globals Mod used to force a full
-recompile on any non-body change; both engines now track per-symbol dependencies
-(numbers to be re-measured):
+single-line edits; see `results_incremental_<name>.md`), both engines on
+per-symbol dependencies:
 
-| scenario | psacklinger (old coarse engine) | querylinger |
+| scenario | psacklinger | querylinger |
 |:---|:---|:---|
-| no-op | ~100 ms, 0/352 | ~100 ms, 0/352 |
-| one body edit | ~150 ms, 1/352 | ~150 ms, 1/352 |
-| global var initializer | ~220 ms, **352/352** | ~150 ms, **0/352** |
+| no-op | ~105 ms, 0/352 | ~115 ms, 0/352 |
+| one body edit | ~151 ms, 1/352 | ~163 ms, 1/352 |
+| global var initializer | ~152 ms, **0/352** | ~160 ms, **0/352** |
 
-The ~100 ms floor is the shared non-incremental front end (full re-parse +
-re-analyze). At equal dependency granularity the engines are indistinguishable
-(see `../query_compiler/docs/architecture.md`).
+(The old coarse psacklinger engine recompiled **352/352** on the global-var
+row at ~220 ms; the per-symbol Mods eliminated that.) The ~100 ms floor is the
+shared non-incremental front end (full re-parse + re-analyze). At equal
+dependency granularity the engines are indistinguishable — psacklinger is now
+marginally ahead warm, querylinger cold (see
+`../query_compiler/docs/architecture.md`).
 
 Phase breakdown (`PSACKLINGER_TIMING=1`, duck1 at `-j8`, release): parse 67 ms,
 GlobalPass 1 ms, collect+hash 22 ms, globals object 2 ms, function lowering
@@ -276,6 +289,9 @@ edit recompiles exactly one function and an unchanged source recompiles zero.
   casts, mirroring the real compiler's distinct char type.
 - Import/namespace rewiring stays coarse (the structural Mod): it can change what
   any name resolves to, so everything recompiles.
+- The per-symbol Mod table and tombstoned entries grow monotonically over a
+  long interactive session (mirrors querylinger's written-objects note); object
+  files of renamed functions also accumulate on disk.
 - Integer division is unguarded (`sdiv`), matching the real compiler's LLVM
   backend: division by zero is a SIGFPE, where the DVM backend panics gracefully.
 - Templates (`template{...}`) are not implemented — the Duckling frontend has no
