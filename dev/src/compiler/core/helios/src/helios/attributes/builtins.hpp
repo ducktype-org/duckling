@@ -37,18 +37,34 @@ namespace compiler::helios {
 	 * Can't use the STRINGIFIYABLE enum because camel case vs snake case.
 	 */
 	enum class BuiltinKind {
-		CharPtrFromSlice,
-		CharSliceFromPtrLen,
-		DvmCharAlloc,
-		DvmCharRealloc,
-		DvmCharFree,
+		PtrFromSlice,
+		SliceFromPtrLen,
+		/** `dvm_alloc_arr(size: u64) -> manyptr T`: allocate a dynamic table of `size` elements. */
+		DvmAllocArr,
+		/** `dvm_realloc_arr(p: manyptr T, size: u64)`: resize the dynamic table under `p`. */
+		DvmReallocArr,
+		/** `dvm_free_arr(p: manyptr T)`: free the dynamic table under `p`. */
+		DvmFreeArr,
+		/** `dvm_alloc() -> ptr T`: allocate storage for a single `T`. */
+		DvmAlloc,
+		/** `dvm_free(p: ptr T)`: free the storage of a single `T`. */
+		DvmFree,
+		/** `size_of(v: meta) -> i64`: byte size of a type. Implemented in HOUT as a `SizeOf` op. */
+		SizeOf,
+		/** `alignment_of(v: meta) -> i64`: byte alignment of a type. HOUT `AlignOf` op. */
+		AlignmentOf,
 		/**
-		 * Box allocation / deallocation. Unlike the other builtins these are not selected by the
-		 * `@builtin("...")` attribute. They are only called by the compiler in `box T` constructors
-		 * and destructors.
+		 * Box allocation / deallocation, dynamic-array (list) freeing and the box destructor.
+		 * Unlike the other builtins these are not selected by the `@builtin("...")` attribute. They
+		 * are only called by the compiler in `box T`/`[T]` constructors and destructors.
+		 *
+		 * `BoxAlloc`/`BoxFree`/`ListFree` are implemented by the backends; `BoxDestructor` is
+		 * implemented in HOUT (it destroys the pointee, then calls `box_free`).
 		 */
 		BoxAlloc,
 		BoxFree,
+		ListFree,
+		BoxDestructor,
 	};
 
 	/**
@@ -94,6 +110,24 @@ namespace compiler::helios {
 	 * The returned symbol is a declaration only, it's implemented in both backends.
 	 */
 	SymID boxFreeSymForType(query::Context& ctx, tsh::AbstractType pointee_type);
+
+
+	/**
+	 * @brief Symbol of the compiler-generated `box_destructor(b: box T)` builtin for a given
+	 * pointee type.
+	 *
+	 * Unlike `box_free`, this is implemented in HOUT: it destroys the pointee first, then frees the
+	 * box storage via `box_free`. It is the destructor used for `box T` values.
+	 */
+	SymID boxDestructorSymForType(query::Context& ctx, tsh::AbstractType pointee_type);
+
+	/**
+	 * @brief Symbol of the compiler-generated `list_free(l: ref List[T])` builtin for a given
+	 * element type.
+	 *
+	 * The returned symbol is a declaration only, it's implemented in both backends.
+	 */
+	SymID listFreeSymForType(query::Context& ctx, tsh::AbstractType element_type);
 
 	/**
 	 * @brief Build a HOUT expression that constructs a `box T` holding `inner`.

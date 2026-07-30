@@ -525,6 +525,52 @@ impl ErrorExt for dyn Error + Send + Sync + 'static {
     }
 }
 
+/// Structure for gathering errors.
+/// Should be used in situations when encountering many errors should not end the execution of the program.
+pub struct ErrorsLogger(Vec<QuackError>);
+
+impl ErrorsLogger {
+    /// Create a new [`ErrorsLogger`].
+    pub fn new(errors: Vec<QuackError>) -> Self {
+        Self(errors)
+    }
+
+    /// Check if an [`ErrorsLogger`] logged any errors.
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    /// Add an error to the [`ErrorsLogger`].
+    pub fn log(&mut self, error: QuackError) {
+        self.0.push(error);
+    }
+
+    /// Get the first error of the [`ErrorsLogger`].
+    ///
+    /// Panics
+    /// ------
+    /// Panics when there are no errors logged.
+    pub fn unwrap_first(self) -> QuackError {
+        self.0.into_iter().next().unwrap()
+    }
+}
+
+impl Default for ErrorsLogger {
+    fn default() -> Self {
+        Self::new(vec![])
+    }
+}
+
+impl IntoIterator for ErrorsLogger {
+    type Item = QuackError;
+
+    type IntoIter = std::vec::IntoIter<QuackError>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

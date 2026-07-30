@@ -13,9 +13,20 @@ MAKE_STRINGIFYABLE_ENUM(compiler::helios, u32, LanguagePrimitive,
 	FloatPow
 	
 	// String
+	String,
+	StringifyStr,
+	StringifyChar,
+	StringifyBool,
+	StringifyI64,
+	StringifyU64,
+	StringifyF64
 	// List
 	// PanicOutOfBounds
 )
+
+namespace query {
+	struct Context;
+}
 
 namespace compiler::helios {
 	struct QueryLanguagePrimitiveSymID_key {
@@ -41,4 +52,11 @@ namespace compiler::helios {
 		CRef<query::QResult<SymID>>,
 		({})
 	);
+
+	/**
+	 * @brief Checks whether a language primitive resolves to at least one symbol.
+	 * Unlike QueryLanguagePrimitiveSymID this never logs an error: a missing primitive
+	 * (e.g. a no-std build without `core.containers`) simply returns false.
+	 */
+	bool isLanguagePrimitivePresent(query::Context& ctx, LanguagePrimitive primitive);
 }

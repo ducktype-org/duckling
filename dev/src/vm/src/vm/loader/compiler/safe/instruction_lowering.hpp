@@ -226,6 +226,10 @@ namespace vm::loader::compiler::safe::detail {
 				addLow<Op_mov_popq_popq>(i.dst, i.src);
 				addLow<Op_ext_imm>(vm::opargs::Immediate{ type_size });
 			}
+			instr_case(high::Op_mov_pcpt_pcpt, i) {
+				// A C pointer is a plain 8-byte value in every mode.
+				addLow<Op_mov_p64_p64>(i.dst, i.src);
+			}
 			instr_case(high::Op_mov_pste_pste, i) { addLow<Op_mov_bste_bste>(i.dst, i.src); }
 			instr_case(high::Op_mov_pfst_pfst, i) { addLow<Op_mov_bfst_bfst>(i.dst, i.src); }
 			instr_case(high::Op_add_p64_p64, i) { addLow<Op_add_p64_p64>(i.dst, i.src); }
@@ -639,7 +643,7 @@ namespace vm::loader::compiler::safe::detail {
 			instr_case(high::Op_fpext_p64_p32, i) { addLow<Op_fpext_p64_p32>(i.dst, i.src); }
 			instr_case(high::Op_nop, i) { addLow<Op_nop>(); }
 			instr_case(high::Op_exit, i) { addLow<Op_exit>(); }
-			instr_case(high::Op_initFromVmValue, i) { addLow<Op_initFromVmValue>(); }
+			instr_case(high::Op_initFromVMValue, i) { addLow<Op_initFromVMValue>(); }
 			instr_case(high::Comment, i) {
 				// Do nothing
 			}

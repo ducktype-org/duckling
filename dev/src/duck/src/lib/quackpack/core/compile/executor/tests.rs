@@ -24,6 +24,7 @@ fn collects_packages() {
         storage: Storage::new(ctx.default_storage_root().into_not_locked_path()),
         used_features: vec!["full".into()],
         profile,
+        shared: false,
         jobs: 1,
     };
     let graph = create_early_graph_from_bcx(&bcx).unwrap();
@@ -55,6 +56,7 @@ fn collects_packages_cycle() {
         storage: Storage::new(ctx.default_storage_root().into_not_locked_path()),
         used_features: vec!["cycle".into()],
         profile,
+        shared: false,
         jobs: 1,
     };
     let graph = create_early_graph_from_bcx(&bcx).unwrap();
@@ -72,6 +74,7 @@ fn collects_packages_cycle() {
 
 fn assert_packages_names(unit: &Unit, graph: &UnitGraph, expected: &[&str]) {
     let mut names = collect_packages(unit, graph)
+        .unwrap()
         .into_iter()
         .map(|package| package.import_name.as_str())
         .collect::<Vec<_>>();

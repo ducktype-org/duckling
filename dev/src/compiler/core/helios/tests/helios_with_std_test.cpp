@@ -5,8 +5,10 @@
  * helios_test.cpp which builds standalone module trees without a std.
  */
 
+#include <ctv/ctv.hpp>
 #include <driver/test_utils.hpp>
 #include <helios/hout/elements.hpp>
+#include <helios/hout/elements/stmt.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/queries/queries.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
@@ -28,6 +30,8 @@
 #include <string_id/string_id.hpp>
 #include <tester/tester.hpp>
 
+#include <any>
+
 using namespace compiler::helios::test_utils;
 
 class HeliosWithStdTest final: public tester::TestSuite {
@@ -37,14 +41,20 @@ class HeliosWithStdTest final: public tester::TestSuite {
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(testBuiltinDefinitionInModuleHOUT);
+		TESTER_ADD_TEST(testTemplatedBuiltinDefinitionsInModuleHOUT);
+		TESTER_ADD_TEST(testStrings);
+		TESTER_ADD_TEST(testStringClassProperties);
 		TESTER_ADD_TEST(testDefaultInitializers);
+		TESTER_ADD_TEST(testCompTimeStrings);
 	}
 
 protected:
 	void beforeAll() override {
 		fs::FilePath artifacts_path = fs::FileManager::createRandomTempDirectory().getFilePath();
 		std::vector<compiler::driver::test_utils::PackagePathAndName> packages{
-			{ fs::FilePath(path("test_modules/builtins")), "builtins" }
+			{ fs::FilePath(path("test_modules/builtins")), "builtins" },
+			{ fs::FilePath(path("test_modules/strings")), "strings" },
+			{ fs::FilePath(path("test_modules/comp_time_strings")), "comp_time_strings" }
 		};
 		auto init_result
 			= compiler::driver::test_utils::initializeCompilerForTests(packages, artifacts_path);
@@ -52,7 +62,30 @@ protected:
 	}
 
 private:
+	using enum compiler::tsh::IntegralAbstractType::Signedness;
 	using enum compiler::tsh::Mutability;
+
+	/**
+	 * WithContextCompute helper wrapper to avoid boilerplate.
+	 */
+	auto getIntegralTypeNoContext(
+		u64 size, compiler::tsh::IntegralAbstractType::Signedness signedness
+	) {
+		return std::any_cast<compiler::tsh::IntegralAbstractType>(
+			query::utils::withContextCompute([&](query::Context& ctx) {
+				return compiler::tsh::getIntegralType(ctx, size, signedness);
+			})
+		);
+	}
+
+	/**
+	 * WithContextCompute helper wrapper to avoid boilerplate.
+	 */
+	auto getStringTypeNoContext() {
+		return std::any_cast<compiler::tsh::ClassAbstractType>(query::utils::withContextCompute(
+			[&](query::Context& ctx) { return compiler::tsh::getStringType(ctx); }
+		));
+	}
 
 	/**
 	 * Shorthand to create a mutable symbol type from an abstract type.
@@ -61,13 +94,22 @@ private:
 		return compiler::tsh::SymbolType{
 			abstract_type,
 			compiler::tsh::ReferenceKind::Direct,
-			Mutable,
+			compiler::tsh::Mutability::Mutable,
 		};
 	}
 
-	// Lowers default constructors to MIR; MIR lowering of static-array indexing inserts a
-	// bounds-check call to the `Panic` language primitive from the std `core.panicking` module,
-	// so this test needs the standard library available.
+	static compiler::tsh::SymbolType<> stConst(const compiler::tsh::AbstractType abstract_type) {
+		return st(abstract_type).withMutability(compiler::tsh::Mutability::Immutable);
+	}
+
+	auto getSliceTypeNoContext(compiler::tsh::SymbolType<> element_type) {
+		return std::any_cast<compiler::tsh::SliceAbstractType>(
+			query::utils::withContextCompute([&](query::Context& ctx) {
+				return ctx.query<compiler::tsh::QuerySliceType>(element_type);
+			})
+		);
+	}
+
 	void testDefaultInitializers() {
 		using namespace compiler::helios;
 		using namespace compiler::helios::code;
@@ -175,12 +217,13 @@ private:
 				auto deps
 					= ctx.query<QueryTransitiveUsedSymbols>(ctor_sym)->valueOrThrow().used_functions;
 
-				// Ctor(ArrayHolder) (the root, excluded) -> Ctor(WithInit[5]) -> Ctor(WithInit),
-				// plus the bounds-check chain emitted by the static-array init loop (`panic`,
-				// `builtin_output_str`, `length`) and its own transitive callees (`abort` from
-				// `panic`, `builtin_output_char` from `builtin_output_str`), which the MIR-level
-				// used-symbol collection sees.
-				ASSERT_EQUAL_PRINT(7, deps.size());
+				// Ctor(ArrayHolder) (the root, excluded) -> Ctor(WithInit[5]) (`__init_array`) ->
+				// Ctor(WithInit), plus the bounds-check chain emitted by the static-array init loop
+				// (`panic`, `builtin_output_str`, `length`) and its own transitive callees: `abort`
+				// from `panic`, and the string-printing chain of `builtin_output_str`
+				// (`writeStr` -> `writeChar` overloads -> `putchar`) together with
+				// `builtin_output_char`, which the MIR-level used-symbol collection sees.
+				ASSERT_EQUAL_PRINT(12, deps.size());
 
 				bool found_array_ctor = false;
 				for (auto d: deps) {
@@ -255,7 +298,7 @@ private:
 		});
 	}
 
-	// A `@builtin(...)` fundecl (here `char_ptr_from_slice` from core.builtins) has no body in
+	// A `@builtin(...)` fundecl (here `ptr_from_slice` from core.builtins) has no body in
 	// source; the compiler synthesizes its implementation (getBuiltinImpl). This checks that the
 	// synthesized definition is actually emitted into the module HOUT when the builtin is used.
 	void testBuiltinDefinitionInModuleHOUT() {
@@ -264,16 +307,196 @@ private:
 		auto houts = query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>(module_id)
 		                 .valueOrPanic();
 
-		bool found_char_ptr_from_slice = false;
+		bool found_ptr_from_slice = false;
 		for (const auto& hout: houts)
 			for (const auto& fun: hout->functions)
-				if (fun->declaration->original_name == base::StrID("char_ptr_from_slice"))
-					found_char_ptr_from_slice = true;
+				if (fun->declaration->original_name == base::StrID("ptr_from_slice"))
+					found_ptr_from_slice = true;
 
 		assertTrue(
-			found_char_ptr_from_slice,
-			"char_ptr_from_slice builtin definition should be emitted into the module HOUT"
+			found_ptr_from_slice,
+			"ptr_from_slice builtin definition should be emitted into the module HOUT"
 		);
+	}
+
+	// The `@builtin(...)` fundecls in core.builtins are templated, so their synthesized
+	// implementations are emitted once per element type they are baked for. The `builtins` module
+	// runs the alloc -> slice_from_ptr_len -> ptr_from_slice -> free chain for `str` and `i32`
+	// (and uses `ptr_from_slice:{char}` on a string literal).
+	void testTemplatedBuiltinDefinitionsInModuleHOUT() {
+		auto module_id = compiler::driver::test_utils::getModuleIdFromPath("builtins");
+
+		auto houts = query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>(module_id)
+		                 .valueOrPanic();
+
+		// Element types of the slices the baked builtins operate on, per builtin name.
+		std::map<base::StrID, std::vector<compiler::tsh::AbstractType>> baked_element_types;
+
+		for (const auto& hout: houts)
+			for (const auto& fun: hout->functions) {
+				const auto name        = fun->declaration->original_name;
+				const bool takes_slice = name == base::StrID("ptr_from_slice");
+				if (!takes_slice && name != base::StrID("slice_from_ptr_len")) continue;
+
+				// `ptr_from_slice` takes the slice, `slice_from_ptr_len` returns it.
+				const auto slice_st   = takes_slice ? fun->declaration->parameters.at(0).type
+				                                    : fun->declaration->return_type;
+				const auto slice_type = slice_st.getType().as<compiler::tsh::SliceAbstractType>();
+				baked_element_types[name].push_back(slice_type.getElementType().getType());
+			}
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			const compiler::tsh::AbstractType str_type = compiler::tsh::getCharSliceType(ctx);
+			const auto                        i32_type = compiler::tsh::getIntegralType(
+                ctx, 32, compiler::tsh::IntegralAbstractType::Signedness::Signed
+            );
+
+			for (const auto* name: { "ptr_from_slice", "slice_from_ptr_len" }) {
+				const auto& element_types = baked_element_types[base::StrID(name)];
+
+				assertTrue(
+					std::ranges::find(element_types, str_type) != element_types.end(),
+					base::strConcat(name, " should be baked for `str`")
+				);
+				assertTrue(
+					std::ranges::find(element_types, i32_type) != element_types.end(),
+					base::strConcat(name, " should be baked for `i32`")
+				);
+			}
+		});
+	}
+
+	// `String` is now an ordinary standard-library class (no longer a special compiler type), so
+	// its type properties are only observable with the std available. This checks the properties
+	// the old (removed) `tsh` `simpleString` test used to assert against the compiler builtin.
+	void testStringClassProperties() {
+		const auto string_type = getStringTypeNoContext();
+
+		assertTrue(
+			string_type.getKind() == compiler::tsh::Kind::Class,
+			"String should now be an ordinary class type."
+		);
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			assertFalse(
+				string_type.hasNoOpDestructor(ctx),
+				"String should not have a no-op destructor: it defines one to free its buffer."
+			);
+
+			const auto string_st = st(string_type);
+
+			assertTrue(
+				string_st.isDefaultConstructible(ctx), "String should be default constructible."
+			);
+			assertTrue(
+				string_st.isTriviallyZeroInitializable(ctx),
+				"String should be trivially zero-initializable (the empty string is all-zero)."
+			);
+			assertTrue(string_st.isCopyable(ctx), "String should be copyable.");
+			assertFalse(
+				string_st.isTriviallyCopyable(ctx),
+				"String should not be trivially copyable: it has a user-defined `copy`."
+			);
+		});
+	}
+
+	void testCompTimeStrings() {
+		auto module     = compiler::driver::test_utils::getModuleIdFromPath("comp_time_strings");
+		auto root_scope = getModuleScope(module);
+
+		// `const a = getString();` should materialize a `String` CTV holding the source string.
+		auto a_value
+			= getConstValueAs<compiler::ctv::CompileTimeValue::StringClassValue>("a", root_scope);
+		ASSERT_EQUAL(base::StrID("fun fromString() -> i64 = 1;"), a_value.value);
+
+		// `const b = getCharSlice();` should materialize a char-slice CTV (stored as a `StrID`).
+		auto b_value
+			= getConstValueAs<compiler::ctv::CompileTimeValue::CharSliceValue>("b", root_scope);
+		ASSERT_EQUAL(base::StrID("fun fromSlice() -> i64 = 2;"), b_value.value);
+
+		// The `expand`s above should have injected `fromString`/`fromSlice` into `expanded`.
+		ASSERT_TRUE(!getChain("expanded.fromString", root_scope).empty());
+		ASSERT_TRUE(!getChain("expanded.fromSlice", root_scope).empty());
+	}
+
+	void testStrings() {
+		auto  module = compiler::driver::test_utils::getModuleIdFromPath("strings");
+		auto  scope  = getModuleScope(module);
+		auto& hout
+			= query::entryPoint<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
+		auto& function   = hout.functions.at(0);
+		auto  fun_sym    = getChain("main", scope).back();
+		auto& statements = function->body->statements;
+		using namespace compiler::helios::code;
+
+		{
+			// let ab = 'a' +: (&b);
+			const auto& prepended_stmt = dynamic_cast<const VariableStmt&>(*statements.at(1));
+			const auto  prepended_expr
+				= dynamic_cast<const CallExpr*>(prepended_stmt.initial_value.get());
+			const auto prepended_callee
+				= dynamic_cast<IdentifierExpr*>(prepended_expr->callee.get());
+			assertEqual(
+				compiler::helios::name(prepended_callee->symbol),
+				base::StrID("+:"),
+				"The prepended expression should call the `+:` operator"
+			);
+		}
+
+		{
+			// let bcd = (&b) :+ 'c' :+ 'd';
+			const auto& appended_stmt = dynamic_cast<const VariableStmt&>(*statements.at(2));
+			const auto  appended_expr
+				= dynamic_cast<const CallExpr*>(appended_stmt.initial_value.get());
+			const auto appended_callee = dynamic_cast<IdentifierExpr*>(appended_expr->callee.get());
+			assertEqual(
+				compiler::helios::name(appended_callee->symbol),
+				base::StrID(":+"),
+				"The appended expression should call the `:+` operator"
+			);
+		}
+
+		{
+			const auto& concatenated_stmt = dynamic_cast<const VariableStmt&>(*statements.at(5));
+			const auto  concatenated_expr
+				= dynamic_cast<const CallExpr*>(concatenated_stmt.initial_value.get());
+			const auto concatenated_callee
+				= dynamic_cast<IdentifierExpr*>(concatenated_expr->callee.get());
+			assertEqual(
+				compiler::helios::name(concatenated_callee->symbol),
+				base::StrID("++"),
+				"The concatenated expression should call the `++` operator"
+			);
+		}
+
+		{
+			// let x = 1;
+			// let y = 2;
+			// let format = f"Did you know that {x} plus {y} equals ({x + y})?";
+			const auto& format_stmt = dynamic_cast<const VariableStmt&>(*statements.at(8));
+			const auto format_expr = dynamic_cast<const CallExpr*>(format_stmt.initial_value.get());
+			const auto format_callee = dynamic_cast<IdentifierExpr*>(format_expr->callee.get());
+			assertEqual(
+				compiler::helios::name(format_callee->symbol),
+				base::StrID("toString"),
+				"The format string expression should call toString"
+			);
+		}
+
+		{
+			const auto char_type       = compiler::tsh::getCharType();
+			const auto str_type        = getStringTypeNoContext();
+			const auto u64_type        = getIntegralTypeNoContext(64, Unsigned);
+			const auto char_slice_type = getSliceTypeNoContext(st(char_type));
+
+			auto fun_body_scope = getFunctionBodyScope(fun_sym);
+
+			// Vars
+			ASSERT_EQUAL(char_slice_type, getTypeOf("should_char_slice", fun_body_scope));
+			ASSERT_EQUAL(char_type, getTypeOf("should_char", fun_body_scope));
+			ASSERT_EQUAL(u64_type, getTypeOf("should_u64", fun_body_scope));
+			ASSERT_EQUAL(str_type, getTypeOf("should_string", fun_body_scope));
+		}
 	}
 };
 

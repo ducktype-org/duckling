@@ -174,7 +174,7 @@ namespace dia_int::state {
 		Box<Component>                                  header,
 		MBox<Component>                                 description,
 		base::HashMap<PointerMessageID, PointerMessage> pointer_messages,
-		base::HashMap<std::string, ExploreEdge>         explore_links
+		std::vector<ExploreEdge>                        explore_links
 	):
 		  metadata(std::move(metadata)),
 		  header(std::move(header)),
@@ -201,8 +201,8 @@ namespace dia_int::state {
 		}
 		if (!explore_links.empty()) {
 			out << "Explore Links:\n";
-			for (const auto& [name, edge]: explore_links) {
-				out << "  Link '" << name << "': ";
+			for (const auto& edge: explore_links) {
+				out << "  Link '" << edge.name << "': ";
 				edge.content->debugPrint(out, 2);
 			}
 		}
@@ -264,9 +264,8 @@ namespace dia_int::state {
 		// 2. Description
 		if (description) description->acceptVisitor(collector);
 
-		// 3. Explore links (iterate in insertion order if HashMap preserves it,
-		//    otherwise order is unspecified but we still collect them)
-		for (const auto& [name, edge]: explore_links) edge.content->acceptVisitor(collector);
+		// 3. Explore links, in the order they were added by the compiler
+		for (const auto& edge: explore_links) edge.content->acceptVisitor(collector);
 
 		return result;
 	}

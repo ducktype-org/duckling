@@ -1,3 +1,6 @@
+# The toolchain is built by the root PreNode; do not inherit it here.
+PreNode: ""
+
 # Integration tests for scripts in Duckling.
 
 # As described in PR #2352, scripts can be run in three ways: directly with duckc, compiled to DVM bytecode and executed on the DVM (vm mode) or compiled
@@ -14,12 +17,17 @@ Env:
     DIT_TMP_DIR: "@{new_tmp_dir}"
 
 case_duck_build: "$DIT_TMP_DIR/duck_build"
+# Private copy of the shared warm std artifacts (see the root testconfig).
+# duckc rewrites the artifacts directory on exit (#3169), so concurrent cases
+# must not point at the shared one.
+case_std_artifacts: "$DIT_TMP_DIR/std_artifacts"
 
 PreCase: "
+  cp -r @{std_artifacts_dir} @{case_std_artifacts} 2>/dev/null || true;
   if [ '@{mode}' = 'vm' ]; then
-    cd @{folder} && @{duckc_path} compile_script @{Name}.ds --dvm-backend -a @{case_duck_build};
+    cd @{folder} && @{duckc_path} compile_script @{Name}.ds --dvm-backend -a @{case_duck_build} --custom-std-artifacts-path @{case_std_artifacts};
   elif [ '@{mode}' = 'exe' ]; then
-    cd @{folder} && @{duckc_path} compile_script @{Name}.ds -O @{opt_level} -a @{case_duck_build};
+    cd @{folder} && @{duckc_path} compile_script @{Name}.ds -O @{opt_level} -a @{case_duck_build} --custom-std-artifacts-path @{case_std_artifacts};
   fi"
 
 Run: "
@@ -28,7 +36,7 @@ Run: "
   elif [ '@{mode}' = 'exe' ]; then
     @{case_duck_build}/@{Name}.exe;
   else
-    @{duckc_path} run @{folder}/@{Name}.ds;
+    @{duckc_path} run @{folder}/@{Name}.ds --custom-std-artifacts-path @{case_std_artifacts};
   fi"
 
 PostCase: "@{cleanup_tmp_env}"

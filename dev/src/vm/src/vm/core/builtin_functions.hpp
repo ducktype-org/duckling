@@ -31,7 +31,11 @@
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/validator/valid_type/valid_type.hpp>
 #include <vm/core/safe/safe_vmthread.hpp>
-#include <vm/core/vmvalue/vmvalue.hpp>
+
+namespace vm {
+	class SafeVMValue;
+	class SafeVMProcess;
+}
 
 namespace vm::builtins {
 
@@ -50,6 +54,7 @@ namespace vm::builtins {
 	enum class BuiltinFunctionID : usize {
 		Abort,
 		InputI64,
+		InputChar,
 		OutputI64,
 		OutputI32,
 		OutputChar,
@@ -58,6 +63,7 @@ namespace vm::builtins {
 		U64ToString,
 		I64ToString,
 		Stoi,
+		Strtod,
 		StartThread,
 		JoinThread,
 		CreateMutex,
@@ -129,6 +135,13 @@ namespace vm::builtins {
 	public:
 		static void builtinAbort(SafeVMThread& process);
 		static i64  builtinInputI64(SafeVMThread& process);
+
+		/**
+		 * @brief Reads a single raw byte from input (no whitespace skipping), returning it as an
+		 * `i32`, or `-1` at end of input (matching libc `getchar`). Backs `core.io.readCharCode`
+		 * on the DVM.
+		 */
+		static i32  builtinInputChar(SafeVMThread& process);
 		static i64  builtinOutputI64(SafeVMThread& process, i64 arg);
 		static i64  builtinOutputI32(SafeVMThread& process, i32 arg);
 		static i64  builtinOutputChar(SafeVMThread& process, i8 arg);
@@ -149,7 +162,14 @@ namespace vm::builtins {
 		static u64 builtinU64ToString(SafeVMThread& process, u64 value, Pointer ptr, u64 buffer_cap);
 		static u64 builtinI64ToString(SafeVMThread& process, i64 value, Pointer ptr, u64 buffer_cap);
 
-		static i64  builtinStoi(SafeVMThread& process, Pointer ptr);
+		static i64 builtinStoi(SafeVMThread& process, Pointer ptr);
+
+		/**
+		 * @brief Parses the leading floating-point number out of the NUL-terminated char table
+		 * under `ptr`. Backs `core.io.strtod` on the DVM; the native backend uses libc `strtod`
+		 * directly (see `core.clib`).
+		 */
+		static f64  builtinStrtod(SafeVMThread& process, Pointer ptr);
 		static i64  builtinStartThread(SafeVMThread& process);
 		static i64  builtinJoinThread(SafeVMThread& process, u64 thread_id);
 		static u64  builtinCreateMutex(SafeVMThread& process);
@@ -184,12 +204,12 @@ namespace vm::builtins {
 	/**
 	 * @brief Calls a builtin function with the given ID and arguments.
 	 */
-	base::Optional<Box<VmValue>> callBuiltinFunction(
-		BuiltinFunctionID                id,
-		const std::vector<TypeCRef>&     result_types,
-		IVMProcess&                      process,
-		SafeVMThread&                    thread,
-		const std::vector<Box<VmValue>>& arguments
+	base::Optional<Box<SafeVMValue>> callBuiltinFunction(
+		BuiltinFunctionID                    id,
+		const std::vector<TypeCRef>&         result_types,
+		SafeVMProcess&                       process,
+		SafeVMThread&                        thread,
+		const std::vector<Box<SafeVMValue>>& arguments
 	);
 
 	/**

@@ -1,5 +1,6 @@
 
 #include <diagnostic_interactive/stable_position.hpp>
+#include <driver/test_utils.hpp>
 #include <frontend/module_tree/module_id.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <helios/queries/queries.hpp>
@@ -39,12 +40,22 @@ public:
 
 		TESTER_ADD_TEST(testErrorLoggingExpandStatements);
 		TESTER_ADD_TEST(testErrorLoggingCyclicErrors);
+		TESTER_ADD_TEST(testErrorLoggingTemplates);
 		TESTER_ADD_TEST(testPointerCastErrors);
 		TESTER_ADD_TEST(testBackendDependentAttributeErrors);
+		TESTER_ADD_TEST(testCompTimeEvaluationErrors);
 
 
 		TESTER_ADD_TEST(testErrorBadExpr);
 		TESTER_ADD_TEST(testDiagnosticErrorsCorrectness);
+	}
+
+protected:
+	void beforeAll() override {
+		fs::FilePath artifacts_path = fs::FileManager::createRandomTempDirectory().getFilePath();
+		auto         init_result
+			= compiler::driver::test_utils::initializeCompilerForTests({}, artifacts_path);
+		assertTrue(init_result.status().isOk(), "Compiler initialization failed");
 	}
 
 private:
@@ -301,7 +312,7 @@ private:
 					return obj.method("abc");
 				}
 			)",
-				{ " Call failed due to ambiguous overload resolution." },
+				{ "Call failed due to ambiguous overload resolution." },
 				1
 			);
 
@@ -404,6 +415,21 @@ private:
 			)",
 				{ "A copy constructor must declare exactly one parameter: a reference to the "
 			      "object being copied." },
+				1
+			);
+
+
+			checkForErrorOnCompileModule(
+				R"(
+				class MyClass {
+					x:i64 = 0;
+
+					MyClass.abc(a: i64) = {
+						return MyClass(1);
+					}
+				}
+			)",
+				{ "User-defined constructors are not yet supported" },
 				1
 			);
 		}
@@ -569,6 +595,23 @@ private:
 				}
 			)",
 				{ "cannot be evaluated at compile-time", "const y = x" },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				R"(
+				class S {
+					x: i64;
+					S.copy(other: const ref S) = {
+						return S(10);
+					}
+				}
+				
+				fun takeS(x: S) = 10;
+
+				const ctvS = takeS(S(1));
+			)",
+				{ "cannot be evaluated at compile time" },
 				1
 			);
 		}
@@ -1013,6 +1056,31 @@ private:
 				{ "Cannot implicitly copy a value of non-trivially-copyable type `List[i32]`" },
 				1
 			);
+
+			checkForErrorOnCompileModule(
+				R"(
+				template(a: i64 = 2)
+				namespace N { }
+
+				fun main() -> i64 = {
+					N:{};
+					return 0;
+				}
+
+			)",
+				{ "Feature not implemented", "Default values" },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				R"(
+				template(a: i64 = 2)
+				var b = a;
+
+			)",
+				{ "Feature not implemented" },
+				1
+			);
 		}
 
 		// ============================ Other errors ============================
@@ -1295,7 +1363,7 @@ private:
 			R"(
 				expand 1;
 			)",
-			{ "i32", "const slice char" },
+			{ "i32", "cannot be converted to any of the accepted types", "slice char", "String" },
 			1
 		);
 
@@ -1411,6 +1479,115 @@ private:
 			{ "cycle" },
 			1
 		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				const X = xWithAdded(10);
+				fun xWithAdded(v: i64) = X + v;
+			)",
+			{ "cycle" },
+			1
+		);
+	}
+
+	void testErrorLoggingTemplates() {
+		// @TODO: #3042 adjust the tests here
+
+		// ============================ Errors inside template ============================
+
+		checkForErrorOnCompileModule(
+			R"(
+				template(a: i64)
+				fun foo() = {
+					return a + b;
+				}
+
+				fun main() = {
+					foo:{1}();
+				}
+			)",
+			{ "Symbol 'b' not found in lookup" },
+			1
+		);
+
+		// ============================ Errors inside arguments ============================
+
+		checkForErrorOnCompileModule(
+			R"(
+				template(a: i64)
+				namespace N { }
+
+				fun main() -> i64 = {
+					N:{1, 2, 3};
+					return 0;
+				}
+
+			)",
+			{ "argument count", "parameter count" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				template(a: i64)
+				namespace N { }
+
+				fun main() -> i64 = {
+					N:{i64};
+					return 0;
+				}
+
+			)",
+			{ "cannot be converted to type" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				template(a: i64)
+				namespace N { }
+
+				fun main() -> i64 = {
+					N:{a};
+					return 0;
+				}
+
+			)",
+			{ "not found" },
+			1
+		);
+
+		// ============================ Non template bake ============================
+
+		checkForErrorOnCompileModule(
+			R"(
+				const a = 1;
+
+				fun main() -> i64 = {
+					a:{1};
+					return 0;
+				}
+
+			)",
+			{ "non-template" },
+			1
+		);
+
+		// ============================ Bad template usage ============================
+
+		checkForErrorOnCompileModule(
+			R"(
+				template(a: i64)
+				namespace Number { }
+
+				fun main() -> i64 = {
+					return Number;  # bare template use
+				}
+
+			)",
+			{ "cannot be converted to type `i64`" },
+			1
+		);
 	}
 
 	void testPointerCastErrors() {
@@ -1504,6 +1681,104 @@ private:
 		);
 	}
 
+	/**
+	 * Test error reporting for expressions that are well-typed (so they pass HOUT creation)
+	 * but fail later, during the compile-time evaluation itself.
+	 */
+	void testCompTimeEvaluationErrors() {
+		const std::string_view div_by_zero
+			= "Division by zero in compile-time expression evaluation.";
+		const std::string_view mod_by_zero
+			= "Modulo by zero in compile-time expression evaluation.";
+
+		// ======================= Failing arithmetic in tree eval =======================
+		{
+			checkForErrorOnCompileModule(R"(const A: i64 = 1 / 0;)", { div_by_zero }, 1);
+			checkForErrorOnCompileModule(R"(const A: i64 = 1 % 0;)", { mod_by_zero }, 1);
+			checkForErrorOnCompileModule(R"(const A: f64 = 1.0 % 0.0;)", { mod_by_zero }, 1);
+			checkForErrorOnCompileModule(R"(const A: i64 = -(1 / 0);)", { div_by_zero }, 1);
+		}
+
+		// ======================= Failure propagation through sub-expressions =======================
+		{
+			// Parenthesis expression.
+			checkForErrorOnCompileModule(R"(const A: i64 = (1 / 0);)", { div_by_zero }, 1);
+
+			// Tuple element.
+			checkForErrorOnCompileModule(R"(const A = (1 / 0, 2);)", { div_by_zero }, 1);
+
+			// Cast source expression.
+			checkForErrorOnCompileModule(R"(const A = (1 / 0) as f64;)", { div_by_zero }, 1);
+
+			// Static array size.
+			checkForErrorOnCompileModule(R"(const A = i64[1 / 0];)", { div_by_zero }, 1);
+
+			// Taken ternary branch (the untaken one is never evaluated).
+			checkForErrorOnCompileModule(
+				R"(const A: i64 = if true then 1 / 0 else 2;)", { div_by_zero }, 1
+			);
+		}
+
+		// ======================= Failing comparison chains =======================
+		{
+			// The chain is well-typed, so it fails during evaluation and not on HOUT creation.
+			// Chains are evaluated lazily, so the failure has to be in a comparison that is
+			// actually reached.
+			checkForErrorOnCompileModule(R"(const A: bool = 1 < 2 / 0 < 3;)", { div_by_zero }, 1);
+
+			checkForErrorOnCompileModule(
+				R"(const A: bool = if 1 < 2 / 0 < 3 then true else false;)", { div_by_zero }, 1
+			);
+
+			// A chain over a value that is only known at runtime.
+			checkForErrorOnCompileModule(
+				R"(
+				fun main() -> i64 = {
+					var x = 1;
+					const c: bool = 0 < x < 3;
+					return 0;
+				}
+			)",
+				{ "Expression cannot be evaluated at compile-time." },
+				1
+			);
+		}
+
+		// ======================= Not-yet-implemented evaluations =======================
+		{
+			// Indexing a non-meta, non-type-template base.
+			checkForErrorOnCompileModule(
+				R"(
+				const S = "abc";
+				const A = S[0];
+			)",
+				{ "Feature not implemented",
+			      "Evaluating index expressions with non-meta and non-type-template base at "
+			      "compile time." },
+				1
+			);
+
+			// Access expressions.
+			checkForErrorOnCompileModule(
+				R"(const A: i64 = (1, 5)._2;)",
+				{ "Feature not implemented", "Evaluating access expressions at compile time." },
+				1
+			);
+
+			// A call that has to go through the DVM, but fails while being evaluated there.
+			checkForErrorOnCompileModule(
+				R"(
+				fun f(x: i64) -> i64 = x / 0;
+				const A: i64 = f(10);
+			)",
+				{ "Feature not implemented",
+			      "Compile time evaluation of this function call failed or returned unsupported "
+			      "result." },
+				1
+			);
+		}
+	}
+
 	void testErrorBadExpr() {
 		using namespace compiler::helios;
 
@@ -1512,7 +1787,7 @@ private:
 
 
 		// Stuff in this fails on the HOUT creation level instead of during the evaluation.
-		// @TODO: #1287 write a test that checks failing compile-time evaluation of comparison chain.
+		// `CHAIN_EVAL_FAILURE` below covers the failing compile-time evaluation of a chain.
 
 		ASSERT_TRUE(query::entryPoint<QueryConstValueOf>(
 						test_utils::getChain("InvalidExpr", root_scope).back()
@@ -1534,7 +1809,6 @@ private:
 		}
 
 		// This fails on the HOUT creation level instead of during the evaluation.
-		// @TODO: #1287 write a test that checks failing compile-time evaluation of comparison chain.
 		try {
 			test_utils::getConstValueAs<bool>("InvalidCompMiddle", root_scope);
 			CORE_PANIC("Should throw.");
@@ -1558,6 +1832,15 @@ private:
 
 		try {
 			test_utils::getConstValueAs<bool>("CHAIN_MIXED_TYPES_TRUE", root_scope);
+			CORE_PANIC("Should throw.");
+		} catch (query::internal::QueryFailedException& err) {
+			// Since this branch was chosen, everything worked well.
+		}
+
+		// Unlike the chains above, this one is well-typed, so it only fails during the
+		// compile-time evaluation of the chain itself.
+		try {
+			test_utils::getConstValueAs<bool>("CHAIN_EVAL_FAILURE", root_scope);
 			CORE_PANIC("Should throw.");
 		} catch (query::internal::QueryFailedException& err) {
 			// Since this branch was chosen, everything worked well.

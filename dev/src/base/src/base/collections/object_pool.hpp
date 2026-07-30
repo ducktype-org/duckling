@@ -21,14 +21,14 @@ namespace base {
 	 * @tparam T Type of objects stored in the pool.
 	 * @tparam ObjID Type used for object identifiers.
 	 */
-	template<class T, class ObjID>
+	template<class T, class ObjID, class It>
 	class ValidObjectIterator {
 	private:
-		typename std::deque<T>::iterator current;
-		typename std::deque<T>::iterator end;
-		typename std::deque<T>::iterator begin;
-		const std::deque<bool>&          is_free;
-		usize                            index{ 0ULL };
+		It                      current;
+		It                      end;
+		It                      begin;
+		const std::deque<bool>& is_free;
+		usize                   index{ 0ULL };
 
 		/**
 		 * @brief Advances iterator to the next valid (non-free) object.
@@ -56,12 +56,7 @@ namespace base {
 		 * @param begin Iterator pointing to beginning of object pool.
 		 * @param is_free Pointer to deque tracking which objects are free.
 		 */
-		ValidObjectIterator(
-			typename std::deque<T>::iterator current,
-			typename std::deque<T>::iterator end,
-			typename std::deque<T>::iterator begin,
-			const std::deque<bool>&          is_free
-		):
+		ValidObjectIterator(It current, It end, It begin, const std::deque<bool>& is_free):
 			  current(current),
 			  end(end),
 			  begin(begin),
@@ -150,26 +145,8 @@ namespace base {
 		 */
 		std::queue<ObjID> free_ids;
 
-		/**
-		 * @brief Maximum number of objects that can be stored in the object pool.
-		 */
-		usize max_objects;
-
-		/**
-		 * @brief Default maximum number of objects if not specified.
-		 */
-		static constexpr usize DEFAULT_MAX_OBJECTS = 1'000'000;
-
 	public:
-		/**
-		 * @brief Constructs an ObjectPool with a given maximum capacity.
-		 *
-		 * @param max_objects Maximum number of objects allowed in the pool.
-		 *                    Defaults to DEFAULT_MAX_OBJECTS.
-		 * @note Returned references are stable.
-		 */
-		explicit StableObjectPool(usize max_objects = DEFAULT_MAX_OBJECTS):
-			  max_objects(max_objects) {}
+		StableObjectPool() = default;
 
 		/**
 		 * @brief Attempts to retrieve an object by its ID.
@@ -212,7 +189,6 @@ namespace base {
 		 */
 		template<class... Args>
 		ObjID add(Args&&... args) {
-			CORE_ASSERT(object_pool.size() < max_objects, "Too many objects in the pool");
 			if constexpr (SHOULD_RECYCLE) {
 				if (!free_ids.empty()) {
 					ObjID free_id = free_ids.front();
@@ -240,7 +216,7 @@ namespace base {
 		 */
 		void remove(ObjID object_id) {
 			CORE_ASSERT(
-				object_id < object_pool.size() && !is_free.at((size_t) object_id),
+				(size_t) object_id < object_pool.size() && !is_free.at((size_t) object_id),
 				"Object is already removed"
 			);
 
@@ -254,10 +230,8 @@ namespace base {
 		 * @return ValidObjectIterator pointing to the first non-free object,
 		 *         or end() if no valid objects exist.
 		 */
-		ValidObjectIterator<T, ObjID> begin() {
-			return ValidObjectIterator<T, ObjID>(
-				object_pool.begin(), object_pool.end(), object_pool.begin(), is_free
-			);
+		ValidObjectIterator<T, ObjID, typename std::deque<T>::iterator> begin() {
+			return { object_pool.begin(), object_pool.end(), object_pool.begin(), is_free };
 		}
 
 		/**
@@ -265,11 +239,16 @@ namespace base {
 		 *
 		 * @return ValidObjectIterator pointing past the last object in the pool.
 		 */
-		ValidObjectIterator<T, ObjID> end() {
-			return ValidObjectIterator<T, ObjID>(
-				object_pool.end(), object_pool.end(), object_pool.begin(), is_free
-			);
+		ValidObjectIterator<T, ObjID, typename std::deque<T>::iterator> end() {
+			return { object_pool.end(), object_pool.end(), object_pool.begin(), is_free };
+		}
+
+		ValidObjectIterator<const T, ObjID, typename std::deque<T>::const_iterator> begin() const {
+			return { object_pool.begin(), object_pool.end(), object_pool.begin(), is_free };
+		}
+
+		ValidObjectIterator<const T, ObjID, typename std::deque<T>::const_iterator> end() const {
+			return { object_pool.end(), object_pool.end(), object_pool.begin(), is_free };
 		}
 	};
-
 }

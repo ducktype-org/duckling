@@ -2,7 +2,7 @@ import core.builtins.*;
 
 extern("C") {
     class A {
-        x: i8 = i8(0);
+        x: i8 = 0 as i8;
         y: i64 = 0i64;
     }
 
@@ -40,27 +40,27 @@ extern("C") class DoubleNested {
 }
 
 fun main() -> i64 = {
-    var a = A(i8(3), 17i64);
-    var b = B(i32(11), i32(22));
+    var a = A(3 as i8, 17i64);
+    var b = B(11 as i32, 22 as i32);
 
-    var f = Flags(true, 'Z', i32(42), false, i32(7));
+    var f = Flags(true, 'Z', 42 as i32, false, 7 as i32);
 
-    var m = Mixed(i32(7), 1.5f64, i32(9), 2.5f32, i32(11));
+    var m = Mixed(7 as i32, 1.5f64, 9 as i32, 2.5f32, 11 as i32);
 
     var nest = Nested(a, b, f, m);
     var double_nest = DoubleNested(nest);
 
-    builtin_output_i64(i64(double_nest.n.a.x));
+    builtin_output_i64(double_nest.n.a.x as i64);
     builtin_output_i64(double_nest.n.a.y);
-    builtin_output_i64(i64(double_nest.n.b.first));
-    builtin_output_i64(i64(double_nest.n.b.second));
+    builtin_output_i64(double_nest.n.b.first as i64);
+    builtin_output_i64(double_nest.n.b.second as i64);
 
-    builtin_output_i64(i64(double_nest.n.f.c));
-    builtin_output_i64(i64(double_nest.n.f.e));
+    builtin_output_i64(double_nest.n.f.c as i64);
+    builtin_output_i64(double_nest.n.f.e as i64);
 
-    builtin_output_i64(i64(double_nest.n.m.a));
-    builtin_output_i64(i64(double_nest.n.m.c));
-    builtin_output_i64(i64(double_nest.n.m.e));
+    builtin_output_i64(double_nest.n.m.a as i64);
+    builtin_output_i64(double_nest.n.m.c as i64);
+    builtin_output_i64(double_nest.n.m.e as i64);
 
     return 0i64;
 }

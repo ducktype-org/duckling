@@ -1,7 +1,17 @@
 disable-bracketed-paste: "--disable-bracketed-paste"
-PreNode: "@{compile_duckc}"
+# Toolchain is built by the root PreNode.
+PreNode: ""
 
-Run: "@{duckc_path} repl @{disable-bracketed-paste}"
+# Private copy of the shared warm std artifacts (see the root testconfig).
+# duckc rewrites the artifacts directory on exit (#3169), so concurrent cases
+# must not point at the shared one.
+Env:
+    DIT_TMP_DIR: "@{new_tmp_dir}"
+case_std_artifacts: "$DIT_TMP_DIR/std_artifacts"
+PreCase: "cp -r @{std_artifacts_dir} @{case_std_artifacts} 2>/dev/null || true"
+PostCase: "@{cleanup_tmp_env}"
+
+Run: "@{duckc_path} repl @{disable-bracketed-paste} --custom-std-artifacts-path @{case_std_artifacts}"
 
 prompt: "duckling> "
 welcome_message: "Duckling REPL\nType /help for available commands, /exit to quit.\nPress Enter to submit. Press Alt+Enter for new line.\n"

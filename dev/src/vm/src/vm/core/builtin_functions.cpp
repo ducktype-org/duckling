@@ -15,18 +15,18 @@
 #include <vm/core/safe/safe_vmthread.hpp>
 #include <vm/core/safe/type_metadata/definitions.hpp>
 #include <vm/core/thread/kill_process_exception.hpp>
-#include <vm/core/vmvalue/vmvalue.hpp>
 
 #include <chrono>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 
 namespace vm::builtins {
 
 	namespace {
 		template<class Ret, class... FunArgs, std::size_t... Is>
-		base::Optional<Box<VmValue>>
-			callUnpackArgsImpl(Ret (*function)(SafeVMThread&, FunArgs...), const std::vector<TypeCRef>& vm_return_types, IVMProcess& process, SafeVMThread& thread, const std::vector<Box<VmValue>>& args, std::index_sequence<Is...>) {
+		base::Optional<Box<SafeVMValue>>
+			callUnpackArgsImpl(Ret (*function)(SafeVMThread&, FunArgs...), const std::vector<TypeCRef>& vm_return_types, SafeVMProcess& process, SafeVMThread& thread, const std::vector<Box<SafeVMValue>>& args, std::index_sequence<Is...>) {
 			if constexpr (std::is_void_v<Ret>) {
 				function(thread, args[Is]->template readBytes<FunArgs>()...);
 				return {};
@@ -40,7 +40,7 @@ namespace vm::builtins {
 					"Type sizes do not match"
 				);
 
-				auto vm_value = process.createOwnedVmValue(vm_return_types.at(0));
+				auto vm_value = process.createOwnedVMValue(vm_return_types.at(0));
 
 				vm_value->writeBytes<Ret>(value);
 				return vm_value;
@@ -65,12 +65,12 @@ namespace vm::builtins {
 		 * be expensive we could go back to that approach.
 		 */
 		template<class Ret, class... FunArgs>
-		base::Optional<Box<VmValue>> callUnpackArgs(
+		base::Optional<Box<SafeVMValue>> callUnpackArgs(
 			Ret (*function)(SafeVMThread&, FunArgs...),
-			const std::vector<TypeCRef>&     vm_return_types,
-			IVMProcess&                      process,
-			SafeVMThread&                    thread,
-			const std::vector<Box<VmValue>>& args
+			const std::vector<TypeCRef>&         vm_return_types,
+			SafeVMProcess&                       process,
+			SafeVMThread&                        thread,
+			const std::vector<Box<SafeVMValue>>& args
 		) {
 			CORE_ASSERT(
 				sizeof...(FunArgs) == args.size(),
@@ -121,6 +121,13 @@ namespace vm::builtins {
 		auto return_value = thread.safe_process.getIO().getInput<i64>(thread);
 		thread.setProcessStatus(api::Running{});
 		return return_value;
+	}
+
+	i32 FunctionHandlers::builtinInputChar(SafeVMThread& thread) {
+		thread.setProcessStatus(api::Sleeping{});
+		const int c = thread.safe_process.getIO().getRawChar(thread);
+		thread.setProcessStatus(api::Running{});
+		return static_cast<i32>(c);
 	}
 
 	i64 FunctionHandlers::builtinOutputI64(SafeVMThread& thread, i64 arg) {
@@ -177,6 +184,17 @@ namespace vm::builtins {
 
 		auto str_data = block_data.stdString();
 		return std::stoll(str_data);
+	}
+
+	f64 FunctionHandlers::builtinStrtod(SafeVMThread& thread, Pointer ptr) {
+		auto block      = ptr.getBlock();
+		auto block_id   = thread.process_memory.requestBlockID(block);
+		auto block_data = thread.process_memory.requestBlockData(block_id);
+
+		// The block spans the whole allocated buffer, which may be larger than the string content.
+		// The content is NUL-terminated, so hand the raw pointer to `strtod` directly: it stops at
+		// the NUL and never reads the trailing (possibly uninitialized) bytes.
+		return std::strtod(reinterpret_cast<const char*>(block_data.getBegin()), nullptr);
 	}
 
 	i64 FunctionHandlers::builtinStartThread(SafeVMThread& thread) {
@@ -349,12 +367,12 @@ namespace vm::builtins {
 		std::memcpy(reinterpret_cast<void*>(dst), view.getBegin() + src.getOffset(), size);
 	}
 
-	base::Optional<Box<VmValue>> callBuiltinFunction(
-		BuiltinFunctionID                id,
-		const std::vector<TypeCRef>&     result_types,
-		IVMProcess&                      process,
-		SafeVMThread&                    thread,
-		const std::vector<Box<VmValue>>& arguments
+	base::Optional<Box<SafeVMValue>> callBuiltinFunction(
+		BuiltinFunctionID                    id,
+		const std::vector<TypeCRef>&         result_types,
+		SafeVMProcess&                       process,
+		SafeVMThread&                        thread,
+		const std::vector<Box<SafeVMValue>>& arguments
 	) {
 		switch (id) {
 #define CASE_FUNC(ID_NAME)                                                               \
@@ -368,6 +386,7 @@ namespace vm::builtins {
 				CASE_FUNC,
 				Abort,
 				InputI64,
+				InputChar,
 				OutputI64,
 				OutputI32,
 				OutputChar,
@@ -376,6 +395,7 @@ namespace vm::builtins {
 				U64ToString,
 				I64ToString,
 				Stoi,
+				Strtod,
 				StartThread,
 				JoinThread,
 				CreateMutex,
@@ -403,9 +423,8 @@ namespace vm::builtins {
 			const std::vector<CRef<code::valid_type::ValidType>>& arg_types
 		) {
 			if (arg_types.size() != 3) return "expected exactly three arguments";
-			if (!(arg_types[0]->isKind<code::valid_type::finalized::Opaque>()
-			      && arg_types[0]->getName() == base::StrID("cptr")))
-				return "first argument must be a `cptr`";
+			if (!arg_types[0]->isKind<code::valid_type::finalized::CPointer>())
+				return "first argument must be a C pointer";
 			if (!arg_types[1]->isKind<code::valid_type::finalized::Pointer>())
 				return "second argument must be a pointer";
 			auto size_type = arg_types[2]->maybeGetKindAs<code::valid_type::finalized::Primitive>();
@@ -425,6 +444,11 @@ namespace vm::builtins {
 				BuiltinFunctionID::InputI64,
 				{ base::StrID("builtin_input_i64"),
 			      code::FuncSignature({ base::StrID("i64") }, {}) },
+			},
+			{
+				BuiltinFunctionID::InputChar,
+				{ base::StrID("builtin_input_char"),
+			      code::FuncSignature({ base::StrID("i32") }, {}) },
 			},
 			{
 				BuiltinFunctionID::OutputI64,
@@ -451,6 +475,15 @@ namespace vm::builtins {
 				{
 					base::StrID("builtin_stoi_pptr"),
 					code::FuncSignature({ base::StrID("i64") }, { base::StrID("ptr_string") }),
+				},
+			},
+			// `manyptr char` lowers to a pointer to a dynamic table of `i8`; the parsed value is
+			// an `f64`.
+			{
+				BuiltinFunctionID::Strtod,
+				{
+					base::StrID("strtod"),
+					code::FuncSignature({ base::StrID("f64") }, { base::StrID("ptr_dyntable_i8") }),
 				},
 			},
 			// `manyptr char` lowers to a pointer to a dynamic table of `i8`, and both `u64`

@@ -1,5 +1,6 @@
 #include "builtin_operators.hpp"
 
+#include <helios/symbols/lang_primitives.hpp>
 #include <helios/symbols/symbol_kind.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/types.hpp>
@@ -193,33 +194,6 @@ namespace compiler::helios::code {
 				};
 				result_ops.put(builtin.symbol, builtin);
 			};
-			// - Helper function to register a builtin operation that results in a function call.
-			const auto builtin_call = [&ctx, &result_ops](
-										  const base::StrID                            name,
-										  const std::vector<tsh::SymbolType<>>&        param_types,
-										  const tsh::SymbolType<>                      return_type,
-										  const base::StrID                            builtin_name,
-										  const HOUTFunctionDeclaration::Operatoriness operatoriness
-									  ) -> void {
-				const auto gen_data = defgen::BuiltinOperator{
-					.operator_type = ctx.query<tsh::QueryFunctionType>({
-						.parameter_types = param_types,
-						.result_type     = return_type,
-					}),
-					.operatoriness = operatoriness,
-				};
-				auto builtin = RegularBuiltinOperator{
-					.symbol = ctx.query<defgen::QueryGeneratedSymbol>({
-						.name                  = name,
-						.generated_symbol_data = gen_data,
-					}),
-					.op
-					= RegularBuiltinOperator::FunctionCall{ ctx.query<defgen::QueryGeneratedSymbol>(
-						{ .name = builtin_name, .generated_symbol_data = gen_data }
-					) },
-				};
-				result_ops.put(builtin.symbol, builtin);
-			};
 
 			/// Boolean operations ///
 			builtin_op(keywordToStr(lang_def::Keyword::Not), { bool_t }, bool_t, BooleanNot, Prefix);
@@ -271,34 +245,6 @@ namespace compiler::helios::code {
 			builtin_op(base::StrID("-"), { char_t, char_t }, u8_t, IntegerSub, Infix);
 			builtin_op(base::StrID("+"), { u8_t, char_t }, char_t, IntegerAdd, Infix);
 			builtin_op(base::StrID("+"), { char_t, u8_t }, char_t, IntegerAdd, Infix);
-
-			/// String operators ///
-			const auto str_t = tsh::SymbolType<>{
-				tsh::getStringType(),
-				tsh::ReferenceKind::Direct,
-				tsh::Mutability::Immutable,
-			};
-			builtin_call(
-				base::StrID("+:"),
-				{ char_t, str_t },
-				str_t,
-				base::StrID("builtin_string_prepended"),
-				Infix
-			);
-			builtin_call(
-				base::StrID(":+"),
-				{ str_t, char_t },
-				str_t,
-				base::StrID("builtin_string_appended"),
-				Infix
-			);
-			builtin_call(
-				base::StrID("++"),
-				{ str_t, str_t },
-				str_t,
-				base::StrID("builtin_string_concatenated"),
-				Infix
-			);
 
 			// Return
 			return result_ops;

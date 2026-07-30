@@ -1,17 +1,17 @@
 //! A context of a package  parsed from the disk.
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
+use super::script::Script;
 use crate::duck::util::duck_home::DuckHome;
 use crate::quackpack::core::package_loader::PackageLoader;
-use crate::quackpack::core::venv_config::VenvConfig;
+use crate::quackpack::core::script::StandaloneScript;
 use crate::quackpack::core::{self, AnyPackage};
-use crate::{DuckContext, QuackResult, qp_bail, qp_bail_internal};
+use crate::{DuckContext, QuackResult, qp_bail};
 
 #[derive(Debug)]
 /// A context of a package  parsed from the disk.
 pub struct PackageContext<'duck> {
     package: AnyPackage,
-    venv_config: VenvConfig,
     ctx: &'duck DuckContext,
 }
 
@@ -20,11 +20,8 @@ impl<'duck> PackageContext<'duck> {
     #[tracing::instrument(skip_all)]
     pub fn new(project_root: PathBuf, ctx: &'duck DuckContext) -> QuackResult<Self> {
         let package = core::parse_manifest(&project_root.join(PackageLoader::MANIFEST_NAME), ctx)?;
-        let venv_config_path = project_root.join(PackageLoader::VENV_CONFIG_NAME);
-        let venv_config = VenvConfig::new(venv_config_path)?;
         Ok(Self {
             package: AnyPackage::Package(package),
-            venv_config,
             ctx,
         })
     }
@@ -41,41 +38,20 @@ impl<'duck> PackageContext<'duck> {
         Ok(pcx)
     }
 
-    /// Try create new [`PackageContext`] from a script with a frontmatter at `path`.
-    /// If the script does not contain a frontmatter, returns `Ok(None)`.
+    /// Create a new [`PackageContext`] for a standalone script.
     #[tracing::instrument(skip_all)]
-    pub fn try_new_from_frontmatter(
-        path: PathBuf,
-        ctx: &'duck DuckContext,
-    ) -> QuackResult<Option<Self>> {
-        let Some(frontmatter) = core::try_parse_frontmatter(path.clone(), ctx)? else {
-            return Ok(None);
-        };
-        let venv_config = VenvConfig::for_frontmatter()?;
-        Ok(Some(Self {
-            package: AnyPackage::Frontmatter(frontmatter),
-            venv_config,
-            ctx,
-        }))
+    pub fn new_standalone_script(path: &Path, ctx: &'duck DuckContext) -> QuackResult<Self> {
+        let frontmatter = core::parse_frontmatter(path, ctx)?;
+        let script = StandaloneScript::new(frontmatter);
+        Ok(Self::new_script(script.into(), ctx))
     }
 
-    /// As [`Self::try_new_from_frontmatter`], but bails internally when there is no frontmatter at `path`.
-    #[tracing::instrument(skip_all)]
-    pub fn new_from_frontmatter(
-        path: PathBuf,
-        ctx: &'duck DuckContext,
-    ) -> QuackResult<Option<Self>> {
-        let Some(frontmatter) = core::try_parse_frontmatter(path.clone(), ctx)? else {
-            qp_bail_internal!(
-                "tried to construct a frontmatter package context for something that is not a frontmatter"
-            )
-        };
-        let venv_config = VenvConfig::for_frontmatter()?;
-        Ok(Some(Self {
-            package: AnyPackage::Frontmatter(frontmatter),
-            venv_config,
+    /// Create a new [`PackageContext`] for a script.
+    pub fn new_script(script: Script, ctx: &'duck DuckContext) -> Self {
+        Self {
+            package: AnyPackage::Script(script),
             ctx,
-        }))
+        }
     }
 
     /// Get underlying [`AnyPackage`] as a reference.
@@ -88,11 +64,6 @@ impl<'duck> PackageContext<'duck> {
         self.package
     }
 
-    /// Get [`VenvConfig`] of this [`PackageContext`]
-    pub fn venv_config(&self) -> &VenvConfig {
-        &self.venv_config
-    }
-
     /// Get [`DuckContext`] used to create this [`PackageContext`]
     pub fn ctx(&self) -> &DuckContext {
         self.ctx
@@ -101,5 +72,10 @@ impl<'duck> PackageContext<'duck> {
     /// Is this the global package.
     pub fn is_global(&self) -> bool {
         self.package.is_global()
+    }
+
+    /// Get the path to the storage.
+    pub fn storage_path(&self) -> &Path {
+        self.package().venv().storage_path()
     }
 }

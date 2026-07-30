@@ -2,7 +2,7 @@
 //! This includes: creating a venv, resolving dependencies, downloading them.
 use std::fs::File;
 use std::io;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::time::SystemTime;
 
 use flate2::read::GzDecoder;
@@ -12,6 +12,7 @@ use tracing::{debug, error};
 use crate::quackpack::core::fetcher::Fetcher;
 use crate::quackpack::core::fetcher::types::PackageWithUrl;
 use crate::quackpack::core::full_identity::{FullIdentity, FullKind, FullOrigin};
+use crate::quackpack::core::script::Script;
 use crate::quackpack::core::solver::git_access::GitAccess;
 use crate::quackpack::core::solver::solver_freeze::SolverFreeze;
 use crate::quackpack::core::solver::solver_mode::SolverMode;
@@ -19,14 +20,12 @@ use crate::quackpack::core::solver::{ShouldRunSolverEngine, SolverAnswer, Solver
 use crate::quackpack::core::storage::freeze::VenvFreeze;
 use crate::quackpack::core::storage::git_access::StorageGitAccess;
 use crate::quackpack::core::storage::locks::TrySyncLock;
-use crate::quackpack::core::storage::package_id::{GitId, RegistryId};
 use crate::quackpack::core::storage::paths::Storage;
 use crate::quackpack::core::storage::venv::{Venv, VenvData};
 use crate::quackpack::core::storage::venv_id::{ToVenvId, VenvId};
 use crate::quackpack::core::{
-    AnyPackage, GitReference, Package, PackageContext, PackageLoader, storage,
+    AnyPackage, GitReference, Package, PackageContext, PackageId, PackageLoader, storage,
 };
-use crate::quackpack::util::with_version::WithVersion;
 use crate::util::error::MessageError;
 use crate::util::path_ops_ext::PathOpsExt;
 use crate::{QuackError, QuackResult, QuackResultContext, qp_bail};
@@ -51,15 +50,11 @@ pub fn sync(
     options: StorageSyncOptions,
 ) -> QuackResult<(TrySyncLock, Venv, Storage)> {
     debug!(root = %pcx.package().root().display(), ?options);
-    let venv_config = pcx.venv_config();
-    let storage_localization = venv_config
-        .storage_path()?
-        .map(Path::to_path_buf)
-        .unwrap_or_else(|| pcx.ctx().default_storage_root().into_not_locked_path());
-    let storage = Storage::new(storage_localization);
+    let venv_config = pcx.package().venv();
+    let storage = Storage::new(venv_config.storage_path());
     let mut fetcher = Fetcher::new(pcx.ctx())?;
     let mut git_access = StorageGitAccess::new(&storage);
-    let expose_freezefile = venv_config.is_freezefile_exposed()?;
+    let expose_freezefile = venv_config.expose_freezefile();
     let user_exposed_freeze = load_external_freezefile(pcx, expose_freezefile)?;
     let id = pcx.to_venv_id();
 
@@ -85,7 +80,7 @@ pub fn sync(
         input_freeze,
         SolverMode::from(options),
     )?;
-    let pkgs: Vec<WithVersion<FullIdentity>> = solver_answer
+    let pkgs: Vec<PackageId> = solver_answer
         .new_freeze
         .package_freezes
         .keys()
@@ -101,12 +96,13 @@ pub fn sync(
         let data = venv.data_mut();
         data.set_last_modification(now);
         data.set_freeze(new_freeze);
-        data.set_last_known_directory(pcx.package().root().to_path_buf());
+        data.set_last_known_location(pcx.package().root().to_path_buf());
+        data.set_ephemeral(venv_config.ephemeral());
         venv
     } else {
         let data = VenvData::new(
             new_freeze,
-            venv_config.is_ephemeral()?,
+            venv_config.ephemeral(),
             pcx.package().root().to_path_buf(),
             now,
             now,
@@ -120,7 +116,7 @@ pub fn sync(
         freeze_name(
             pcx.package()
                 .try_get_package()
-                .context_internal("expose_freezefile set on frontmatter pseudo package")?,
+                .context_internal("`expose-freezefile` set on a script")?,
         )
         .write(json)?;
     }
@@ -138,12 +134,12 @@ fn check_if_overwrites(
     id: VenvId,
 ) -> QuackResult<()> {
     let Some(venv) = venv else { return Ok(()) };
-    if pcx.package().root() == venv.data().last_known_directory()
-        || !venv.data().last_known_directory().exists()
+    if pcx.package().root() == venv.data().last_known_location()
+        || !venv.data().last_known_location().exists()
     {
         return Ok(());
     }
-    let dir = venv.data().last_known_directory();
+    let dir = venv.data().last_known_location();
     let package = PackageLoader::find_at_exact_directory(dir, pcx.ctx());
     let (replaces, context) = match package {
         Ok(package) => {
@@ -211,7 +207,7 @@ fn load_external_freezefile(
     let freeze_path = freeze_name(
         pcx.package()
             .try_get_package()
-            .context_internal("expose_freezefile set on frontmatter pseudo package")?,
+            .context_internal("`expose-freezefile` set on a script")?,
     );
     if !freeze_path.is_file() {
         return Ok(None);
@@ -236,7 +232,7 @@ fn get_solver_answer(
     debug!(?mode);
     let root_origin = FullOrigin::for_local(pcx.package().root())?;
     let root_identity = FullIdentity::new(pcx.package().name(), root_origin);
-    let root_pkg = WithVersion::new(root_identity, pcx.package().version());
+    let root_pkg = PackageId::new(root_identity, pcx.package().version());
     let solver_freeze = match input_freeze {
         Some(freeze) => SolverFreeze::try_from_venv_freeze(root_pkg, freeze)?,
         None => SolverFreeze::empty_with_root(root_pkg)?,
@@ -256,12 +252,13 @@ fn get_solver_answer(
 /// Helper for [`sync`].
 /// Fetches source codes of packages which have been decided to be part of the freeze,
 /// but their source codes have not yet been fetched.
+/// Returns whether any of the packages were installed during this sync operation.
 #[tracing::instrument(skip_all)]
 fn fetch_source_codes(
     storage: &Storage,
     fetcher: &mut Fetcher<'_>,
     git_access: &mut StorageGitAccess<'_>,
-    pkgs: Vec<WithVersion<FullIdentity>>,
+    pkgs: Vec<PackageId>,
 ) -> QuackResult<bool> {
     let mut was_anything_installed = false;
     let fetcher_lock = fetcher
@@ -282,43 +279,40 @@ fn fetch_source_code(
     storage: &Storage,
     fetcher: &mut Fetcher<'_>,
     git_access: &mut StorageGitAccess<'_>,
-    pkg: WithVersion<FullIdentity>,
+    pkg: PackageId,
 ) -> QuackResult<bool> {
     debug!(?pkg);
-    let identity = pkg.value();
-    let origin = identity.origin();
-    match origin.kind() {
+    let url = pkg.url();
+    match pkg.kind() {
         FullKind::Local => Ok(false),
         FullKind::Git { commit } => {
-            let pkg_id = GitId::new(origin.url(), commit).into();
-            if storage.is_package_stored(pkg_id) {
+            if storage.is_stored_git(url, &commit) {
                 return Ok(false);
             }
-            if git_access.is_stored(origin.url(), &commit) {
-                storage.mark_as_stored(pkg_id)?;
+            if git_access.is_stored(url, &commit) {
+                storage.mark_as_stored(pkg)?;
                 return Ok(true);
             }
             fetcher.clone_from_git_to_directory(
-                &origin.url(),
+                &url,
                 GitReference::Rev(commit),
-                &storage.pkg_dir(pkg_id),
+                &storage.git_dir(url, &commit),
             )?;
-            storage.mark_as_stored(pkg_id)?;
-            storage.pkg_dir(pkg_id).try_fsync_dir()?;
+            storage.mark_as_stored(pkg)?;
+            storage.git_dir(url, &commit).try_fsync_dir()?;
             Ok(true)
         }
         FullKind::Registry => {
-            let pkg_id = RegistryId::new(identity.name(), pkg.version(), origin.url()).into();
-            if storage.is_package_stored(pkg_id) {
+            if storage.is_package_stored(pkg) {
                 return Ok(false);
             }
             let mut successfully_fetched = false;
             let mut blob_path = PathBuf::new();
             for attempt in 1..=MAX_BLOB_RETRY_COUNT {
                 match fetcher.fetch_package_blob(&PackageWithUrl {
-                    name: identity.name(),
+                    name: pkg.name(),
                     version: pkg.version(),
-                    url: origin.url(),
+                    url,
                 }) {
                     Ok(path) => {
                         blob_path = path;
@@ -337,7 +331,7 @@ fn fetch_source_code(
             if !successfully_fetched {
                 qp_bail!("Failed to fetch a package");
             }
-            let pkg_dir = storage.pkg_dir(pkg_id);
+            let pkg_dir = storage.pkg_dir(pkg);
             if pkg_dir.exists() {
                 pkg_dir.rm()?;
             }
@@ -345,7 +339,7 @@ fn fetch_source_code(
             let decompressed = GzDecoder::new(file);
             let mut archive = Archive::new(decompressed);
             archive.unpack(pkg_dir.clone())?;
-            storage.mark_as_stored(pkg_id)?;
+            storage.mark_as_stored(pkg)?;
             pkg_dir.try_fsync_dir()?;
             Ok(true)
         }
@@ -354,11 +348,11 @@ fn fetch_source_code(
 
 fn make_success_message(pcx: &PackageContext<'_>, id: VenvId) -> QuackResult<()> {
     match pcx.package() {
-        AnyPackage::Frontmatter(frontmatter) => pcx.ctx().console().info(format!(
+        AnyPackage::Script(Script::Standalone(script)) => pcx.ctx().console().info(format!(
             "successfully synchronized the venv of the script with a frontmatter at `{}`",
-            frontmatter.script_file().display()
+            script.frontmatter().script_file().display()
         )),
-        AnyPackage::Package(_) => pcx
+        AnyPackage::Package(_) | AnyPackage::Script(Script::Associated(_)) => pcx
             .ctx()
             .console()
             .info(format!("successfully synchronized venv `{id}`")),
