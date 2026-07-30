@@ -34,9 +34,11 @@ pub fn validate_package_name(name: &str) -> Result<(), PackageNameError> {
     Ok(())
 }
 
-/// Normalise previously validated package name.
+/// Normalise previously validated package name into a duckling identifier.
 pub fn normalise_package_name(name: &str) -> String {
-    // Right now only `-` is not a valid package name, replace it for `_`.
+    // To become a valid duckling identifier, we need to convert all illegal identifier characters
+    // present in a package name into valid ones. Because the only one is a dash (`-`), we replace
+    // it with an underscore (`_`).
     name.replace('-', "_")
 }
 
