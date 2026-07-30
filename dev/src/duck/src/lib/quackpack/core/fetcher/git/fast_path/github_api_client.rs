@@ -97,8 +97,7 @@ impl<'duck> GithubApiClient<'duck> {
         commit: StrId,
     ) -> QuackResult<String> {
         let mut url = repo_api_url.join("contents/")?.join(path_to_file)?;
-        url.query_pairs_mut()
-            .append_pair("ref", &commit);
+        url.query_pairs_mut().append_pair("ref", &commit);
         let response = self.request(&url)?;
         Ok(String::from_utf8(response.into_body())?)
     }
