@@ -14,7 +14,7 @@ namespace pst {
 
 	public:
 		explicit ImplementsList(const LangParserState& state): List(state) {
-			this->element_kind = ElementKind::InheritanceList;
+			this->element_kind = ElementKind::ImplementsList;
 		}
 
 		static MBox<ImplementsList> parse(LangParserState& state);

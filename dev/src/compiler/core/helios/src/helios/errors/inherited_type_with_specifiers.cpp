@@ -5,6 +5,11 @@
 
 namespace compiler::helios {
 
+	/**
+	 * @brief Collects the specifiers (`ref`, `box`, `const`, ...) carried by a symbol type.
+	 * @param symbol_type The symbol type to inspect.
+	 * @return The specifier keywords present on the type, empty if it carries none.
+	 */
 	std::vector<std::string> collectTypeSpecifiers(const tsh::SymbolType<>& symbol_type) {
 		std::vector<std::string> specifiers;
 

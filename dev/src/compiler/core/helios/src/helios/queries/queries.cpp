@@ -302,15 +302,11 @@ namespace compiler::helios {
 				"Invalid argument exception: expected class symbol"
 			);
 
-			const auto class_type = ctx.query<QueryTypeFromDefinition>(class_sym)
-			                            ->valueOrThrow()
-			                            .getType()
-			                            .as<tsh::ClassAbstractType>();
+			const auto class_type_qr = ctx.query<QueryTypeFromDefinition>(class_sym);
+			if (class_type_qr->hasFailed()) return base::BAD;
 
-			// The inheritance clause was rejected and the error already reported, so the module
-			// must not compile. The class itself is still usable, hence the plain failure here.
-			if (ctx.query<QueryClassSymbolData>(class_sym)->valueOrThrow().invalid_inheritance)
-				return base::BAD;
+			const auto class_type
+				= class_type_qr->valueOrPanic().getType().as<tsh::ClassAbstractType>();
 
 			auto methods = class_type.getInterface(ctx)->getMethodsView();
 
