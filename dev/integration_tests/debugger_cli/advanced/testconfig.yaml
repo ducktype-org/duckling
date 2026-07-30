@@ -1,0 +1,8 @@
+Tests:
+  debugger_cli_advanced:
+    Run: "python3 runner.py @{build_dir}"
+    TimeOut: 2
+    Cases:
+      simple:
+        Input:
+          File: "simple.test"

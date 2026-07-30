@@ -18,12 +18,7 @@
 namespace {
 	using namespace compiler;
 
-	bool isMetaTypeOperation(lir::Operation op) {
-		return op == lir::Operation::MetaCreateBox || op == lir::Operation::MetaCreateRef
-		    || op == lir::Operation::MetaCreateConst || op == lir::Operation::MetaCreateTuple
-		    || op == lir::Operation::MetaCreateVariant || op == lir::Operation::MetaEq
-		    || op == lir::Operation::MetaNeq;
-	}
+	bool isMetaTypeOperation(lir::Operation op) { return op == lir::Operation::MetaTypeOperation; }
 
 	vm::code::builders::OpKind lirOperationToDVMOpKind(const lir::Operation& op) {
 		using enum lir::Operation;
@@ -149,12 +144,15 @@ namespace compiler::backend_vm::internal {
 			return {};
 		};
 
-		if (isMetaTypeOperation(operation))
+		if (isMetaTypeOperation(operation)) {
+			const auto* meta_params = std::get_if<lir::MetaParameters>(&instr.extra_params);
+			CORE_ASSERT(meta_params, "Meta operation without MetaParameters");
 			return MetaOperation{
-				.meta_op = operation,
-				.args    = lower_all_args(),
-				.dest    = lower_opt_dest(),
+				.meta_kind = meta_params->kind,
+				.args      = lower_all_args(),
+				.dest      = lower_opt_dest(),
 			};
+		}
 
 
 		switch (operation) {
@@ -349,34 +347,12 @@ namespace compiler::backend_vm::internal {
 				.scope_flags = instr.scope_flags,
 			};
 		}
-		case BoxAlloc: {
-			CORE_ASSERT(
-				instr.arguments.size() == 1,
-				"BoxAlloc operation expects 1 argument, got: ",
-				instr.arguments.size()
-			);
-			return BoxAllocOperation{
-				.src  = lower_arg(instr.arguments[0]),
-				.dest = lower_opt_dest(),
-			};
-		}
-		case BoxFree: {
-			CORE_ASSERT(
-				instr.arguments.size() == 1,
-				"BoxFree operation expects 1 argument, got: ",
-				instr.arguments.size()
-			);
-			return BoxFreeOperation{
-				.src = lower_arg(instr.arguments[0]),
-			};
-		}
 		case Nop: {
 			// No instruction to generate, just skip.
 			return NoOperation{};
 		}
 		case ListPush:
-		case ListPop:
-		case ListFree: {
+		case ListPop: {
 			ctx.program_context.getActiveContext().value()->logInt(
 				makeBox<dia_int::NotYetImplementedCodeError>(
 					"Lists are not supported in DVM code generation yet."

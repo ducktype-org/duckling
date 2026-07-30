@@ -75,6 +75,9 @@ DEF_INSTR(setNull_pptr, (vm::opargs::PlacePtr, dst))
 // Copies an opaque value
 DEF_INSTR(mov_popq_popq, (vm::opargs::PlaceOpq, dst), (vm::opargs::PlaceOpq, src))
 
+// Copies a C pointer value; source and destination must have the identical cpointer type
+DEF_INSTR(mov_pcpt_pcpt, (vm::opargs::PlaceCptr, dst), (vm::opargs::PlaceCptr, src))
+
 
 // ========= SIGNED INTEGER ARITHMETIC OPERATIONS ========
 
@@ -650,10 +653,10 @@ DEF_INSTR(exit)
 /**
  * @brief This is a very internal instruction, that should not be used in regular bytecode.
  * It is a helper for start functions.
- * @arg0 - pointer to a VmValue.
+ * @arg0 - pointer to a VMValue.
  * @arg1 - n/a.
  */
-DEF_INSTR(initFromVmValue)
+DEF_INSTR(initFromVMValue)
 
 #ifdef DEFAULT_HANDLE_INSTR
 #undef DEFAULT_HANDLE_INSTR

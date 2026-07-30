@@ -1,13 +1,20 @@
 //! An implementation of [`Executor`], which creates a single task per package.
 
+use std::path::PathBuf;
+
 use tracing::instrument;
 
 use super::{
     Executor, ExecutorOutput, compile_single_unit_with_tasks, get_linker_options, unit_output,
 };
 use crate::QuackResult;
+use crate::quackpack::core::Package;
 use crate::quackpack::core::compile::BuildContext;
-use crate::quackpack::core::compile::artifacts_layout::ProfileLayout;
+use crate::quackpack::core::compile::artifacts_layout::shared::SharedArtifactsLayout;
+use crate::quackpack::core::compile::artifacts_layout::standard::StandardArtifactsLayout;
+use crate::quackpack::core::compile::artifacts_layout::{
+    ArtifactsLayout, DependencyLayout, ProfileLayout,
+};
 use crate::quackpack::core::compile::duckc::multipackage_schema;
 use crate::quackpack::core::compile::unit::graph::UnitGraph;
 use crate::quackpack::core::compile::unit::{ArtifactsType, Unit};
@@ -35,21 +42,32 @@ fn compile(graph: UnitGraph, bcx: &BuildContext<'_, '_>) -> QuackResult<Executor
         ArtifactsType::Binary,
         "debug executor supports only compiling to the binary"
     );
-    let artifacts_layout = graph
-        .root_unit()
-        .root_package()
-        .package()
-        .get_package()
-        .artifacts_directory();
-    let profile_layout = artifacts_layout.for_profile(&bcx.profile.name);
-    // Units are sorted by ID, and the root has an ID 0, so in reverse we'll compile the root last.
-    for unit in graph.units_sorted_by_id().iter().rev() {
-        compile_unit(unit, &graph, &profile_layout, bcx)?;
-    }
-    let output = unit_output(root, &graph, &profile_layout);
+    let package = graph.root_unit().root_package().package().get_package();
+    let output = if bcx.shared {
+        compile_inner::<SharedArtifactsLayout>(root, package, &graph, bcx)?
+    } else {
+        compile_inner::<StandardArtifactsLayout>(root, package, &graph, bcx)?
+    };
     Ok(ExecutorOutput {
         root: (root.clone(), output),
     })
+}
+
+/// Helper for [`compile`].
+#[instrument(skip_all)]
+fn compile_inner<T: ArtifactsLayout>(
+    root_unit: &Unit,
+    root_package: &Package,
+    graph: &UnitGraph,
+    bcx: &BuildContext<'_, '_>,
+) -> QuackResult<PathBuf> {
+    let artifacts_layout = root_package.artifacts_layout::<T>();
+    let profile_layout = artifacts_layout.for_profile(bcx.profile);
+    // Units are sorted by ID, and the root has an ID 0, so in reverse we'll compile the root last.
+    for unit in graph.units_sorted_by_id().iter().rev() {
+        compile_unit(unit, graph, &profile_layout, bcx)?;
+    }
+    unit_output(root_unit, graph, &profile_layout)
 }
 
 #[instrument(skip_all)]
@@ -57,10 +75,10 @@ fn compile(graph: UnitGraph, bcx: &BuildContext<'_, '_>) -> QuackResult<Executor
 fn compile_unit(
     unit: &Unit,
     graph: &UnitGraph,
-    layout: &ProfileLayout,
+    layout: &impl ProfileLayout,
     bcx: &BuildContext<'_, '_>,
 ) -> QuackResult<()> {
-    let task = create_task(unit, graph, layout);
+    let task = create_task(unit, graph, layout)?;
     compile_single_unit_with_tasks(unit, graph, layout, bcx, vec![task])
 }
 
@@ -69,8 +87,8 @@ fn compile_unit(
 fn create_task(
     unit: &Unit,
     graph: &UnitGraph,
-    layout: &ProfileLayout,
-) -> multipackage_schema::Task {
+    layout: &impl ProfileLayout,
+) -> QuackResult<multipackage_schema::Task> {
     let strategy = match unit.artifacts_type() {
         ArtifactsType::Binary => {
             assert!(
@@ -78,12 +96,12 @@ fn create_task(
                 "only root should be compiled to binary"
             );
             multipackage_schema::PackageCompilationStrategy::Binary {
-                output_file: unit_output(unit, graph, layout),
-                linking_options: get_linker_options(unit, graph, layout),
+                output_file: unit_output(unit, graph, layout)?,
+                linking_options: get_linker_options(unit, graph, layout)?,
             }
         }
         ArtifactsType::IsADependencyArtifact => {
-            let layout = layout.for_dependency(&unit.unique_name());
+            let layout = layout.for_dependency(unit, graph)?;
             multipackage_schema::PackageCompilationStrategy::Lib {
                 output_file: layout.root_directory().join(unit.output_file_name()),
                 archive_options: None,
@@ -92,8 +110,8 @@ fn create_task(
         ArtifactsType::Dvm => unreachable!("DVM tasks should be handled by the `DvmExecutor`"),
         ArtifactsType::Library => unreachable!("library tasks are unsupported"),
     };
-    multipackage_schema::Task {
+    Ok(multipackage_schema::Task {
         package_id: unit.unique_name().into(),
         strategy,
-    }
+    })
 }

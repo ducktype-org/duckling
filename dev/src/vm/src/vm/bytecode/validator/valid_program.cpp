@@ -30,11 +30,12 @@ vm::code::CodeCollection vm::code::ValidProgram::produceValidCodeCollection() co
 		     .object_files = std::ranges::to<std::vector>(object_files | std::views::keys) };
 }
 
-vm::code::ValidProgram vm::code::ValidProgram::tryInsertCode(const code::CodeCollection& collection
+vm::code::ValidProgram vm::code::ValidProgram::tryInsertCode(
+	const code::CodeCollection& collection, api::ExecutionConfig config
 ) const {
 	// @TODO: #1306 We could get rid of copying of the whole program.
 	ValidProgram copy = *this;
-	copy.insertCode(collection);
+	copy.insertCode(collection, config);
 	return copy;
 }
 
@@ -53,14 +54,16 @@ const vm::ObjIdNameMap<vm::code::valid_function::ValidFunction>& vm::code::Valid
 	return function_map;
 }
 
-void vm::code::ValidProgram::insertCode(const CodeCollection& collection) {
+void vm::code::ValidProgram::insertCode(
+	const CodeCollection& collection, api::ExecutionConfig config
+) {
 	for (const auto& func: collection.functions) function_signatures.put(func.name, func.signature);
 	insertTypes(collection.types);
 	insertGlobals(collection.global_data);
 	insertExternalCFunctions(collection.external_c_functions);
 	insertObjectFiles(collection.object_files);
 	insertFFIFunctions(collection.ffi_functions);
-	insertFunctions(collection.functions);
+	insertFunctions(collection.functions, config);
 }
 
 void vm::code::ValidProgram::insertTypes(const std::vector<TypeOfData>& new_types) {
@@ -106,9 +109,11 @@ void vm::code::ValidProgram::insertGlobals(const std::vector<GlobalData>& new_gl
 	}
 }
 
-void vm::code::ValidProgram::insertFunctions(const std::vector<Function>& new_functions) {
+void vm::code::ValidProgram::insertFunctions(
+	const std::vector<Function>& new_functions, api::ExecutionConfig config
+) {
 	if (new_functions.empty()) return;
-
+	flag_context.insertAndValidate(new_functions, globals_map, ext_c_function_map, config);
 	for (const auto& func: new_functions) {
 		if (function_map.contains(func.name))
 			throw DuplicatedFunctionError(func, function_map.at(func.name)->toNormal());
@@ -118,6 +123,7 @@ void vm::code::ValidProgram::insertFunctions(const std::vector<Function>& new_fu
 			globals_map,
 			function_signatures,
 			ext_c_function_map,
+			flag_context,
 			ffi_function_map,
 			func
 		);
@@ -162,72 +168,66 @@ void vm::code::ValidProgram::insertExternalCFunctions(
 void vm::code::ValidProgram::insertFFIFunctions(const std::vector<FFIFunction>& new_functions) {
 	if (new_functions.empty()) return;
 
-	auto is_cptr = [](const valid_type::ValidType& tp) {
-		return tp.isKind<valid_type::finalized::Opaque>() && tp.getName() == base::StrID("cptr");
-	};
-	auto is_ffi_primitive = [](const valid_type::ValidType& tp) {
-		if (auto primitive = tp.maybeGetKindAs<valid_type::finalized::Primitive>()) {
-			auto size = usize(primitive.value()->size);
-			// `f32`/`f64` map to C `float`/`double` in `buildFFIType`; any other size under
-			// these names would be silently misclassified, so reject it here.
-			if (tp.getName() == base::StrID("f32")) return size == 4;
-			if (tp.getName() == base::StrID("f64")) return size == 8;
-			return size == 1 || size == 2 || size == 4 || size == 8;
-		}
-		return false;
-	};
 	auto validate_ffi_type = [&](const Identifier& type_name) {
 		const auto& types = type_context.getCurrentTypes();
 
 		auto tp = types.atMaybe(type_name);
 		if (!tp) throw UnknownTypeError(opargs::Type(type_name));
 
-		if (is_ffi_primitive(*tp.value()) || is_cptr(*tp.value())) return;
+		// C has no by-value arrays: a fixed-size table can only cross the FFI boundary as a
+		// structure field.
+		if (tp.value()->isKind<valid_type::finalized::FixedSizeTable>())
+			throw FFITableByValueError(*tp.value());
+
+		if (!tp.value()->isFFICompliant()) {
+			// A dedicated message for the packed case (see the compliance computation in
+			// `ValidType::finalize` for the rationale).
+			if (auto structure = tp.value()->maybeGetKindAs<valid_type::finalized::Structure>();
+			    structure.has_value() && structure.value()->packed)
+				throw FFIPackedTypeError(*tp.value());
+			throw FFIUnsupportedTypeError(*tp.value());
+		}
 
 		if (auto structure = tp.value()->maybeGetKindAs<valid_type::finalized::Structure>()) {
-			// Classes and interfaces are not C-compatible, only plain data structures whose
-			// every field is a primitive or a `cptr`.
-			if (structure.value()->inheritance_metadata.has_value())
+			// Building the descriptor materializes one `ffi_type*` per element, nested structure
+			// descriptors included, so the total is capped before anything is built.
+			if (ffi_detail::totalFFIDescriptorElementCount(*tp.value(), types)
+			    > ffi_detail::MAX_FLATTENED_FFI_ELEMENTS)
 				throw FFIUnsupportedTypeError(*tp.value());
-			// libffi can only describe the C ABI layout, so a packed structure with dropped
-			// padding is uncallable, and one whose fields happen to be naturally aligned is
-			// identical to its non-packed version - rejecting all packed structures loses nothing
-			// and keeps FFI compliance independent of field order.
-			if (structure.value()->packed) throw FFIPackedTypeError(*tp.value());
-			for (const auto& field: structure.value()->fields) {
-				const auto& field_type = *types.at(field.type);
-				if (!is_ffi_primitive(field_type) && !is_cptr(field_type))
-					throw FFIUnsupportedTypeError(*tp.value());
-			}
+
+			// Fixed-size table fields are flattened in the libffi descriptor, so a field can
+			// span several elements; each VM field is compared against its first one. The sum
+			// cannot overflow: it is bounded by the capped total above.
+			usize element_count = 0;
+			for (const auto& field: structure.value()->fields)
+				element_count += ffi_detail::flattenedFFIElementCount(*types.at(field.type), types);
 
 			// Verify the VM layout of the structure matches the C ABI layout libffi will use.
-			// Non-packed structures follow the C layout rules, so this is a defensive check.
+			// FFI-compliant structures follow the C layout rules, so this is a defensive check.
 			ffi_detail::FFITypeStorage storage;
 			ffi_type* struct_type = ffi_detail::buildFFIType(*tp.value(), types, storage);
 
-			std::vector<size_t> c_offsets(structure.value()->fields.size());
-			// Kept out of CORE_ASSERT: its condition is not evaluated in release builds.
-			[[maybe_unused]] ffi_status offsets_status
+			std::vector<size_t> c_offsets(element_count);
+			ffi_status          offsets_status
 				= ffi_get_struct_offsets(FFI_DEFAULT_ABI, struct_type, c_offsets.data());
-			CORE_ASSERT(offsets_status == FFI_OK, "ffi_get_struct_offsets failed");
+			if (offsets_status != FFI_OK) throw FFIStructLayoutMismatchError(*tp.value());
 
-			// The pointer size never enters here (fields are restricted to primitives and
-			// `cptr` above); `Bytes(8)` only keeps this consistent with the `assert_size`
-			// check in `insertTypes`.
+			// The pointer size never enters here (FFI-compliant fields have pointer-independent
+			// sizes); `Bytes(8)` only keeps this consistent with the `assert_size` check in
+			// `insertTypes`.
 			auto to_bytes = [](const valid_type::TypeSize& size) {
 				return usize(size.assumePointerSize(Bytes(8)));
 			};
 			if (to_bytes(tp.value()->getSize()) != struct_type->size)
 				throw FFIStructLayoutMismatchError(*tp.value());
-			for (const auto& [field, c_offset]:
-			     std::views::zip(structure.value()->fields, c_offsets))
-				if (to_bytes(field.offset) != c_offset)
+			usize flattened_index = 0;
+			for (const auto& field: structure.value()->fields) {
+				if (to_bytes(field.offset) != c_offsets[flattened_index])
 					throw FFIStructLayoutMismatchError(*tp.value());
-
-			return;
+				flattened_index
+					+= ffi_detail::flattenedFFIElementCount(*types.at(field.type), types);
+			}
 		}
-
-		throw FFIUnsupportedTypeError(*tp.value());
 	};
 
 	auto resolve_symbol = [&](const FFIFunction& func) -> void (*)() {

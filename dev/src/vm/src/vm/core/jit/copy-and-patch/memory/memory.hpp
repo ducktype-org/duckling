@@ -2,7 +2,8 @@
 
 #include <base/types/ints.hpp>
 
-#include <cstddef>
+#include <expected>
+#include <string>
 
 namespace vm::jit::cnp {
 
@@ -11,13 +12,13 @@ namespace vm::jit::cnp {
 		JitFuncMemory(const JitFuncMemory&)            = delete;
 		JitFuncMemory& operator=(const JitFuncMemory&) = delete;
 
-		JitFuncMemory(JitFuncMemory&&)            = default;
-		JitFuncMemory& operator=(JitFuncMemory&&) = default;
+		JitFuncMemory(JitFuncMemory&&) noexcept;
+		JitFuncMemory& operator=(JitFuncMemory&&) noexcept;
 
-		static JitFuncMemory allocate(usize size);
+		static std::expected<JitFuncMemory, std::string> allocate(usize size);
 		~JitFuncMemory() noexcept;
 
-		void markExecutable();
+		std::expected<void, std::string> markExecutable();
 
 		/**
 		 * @brief Access the memory as if it was a function pointer. This is not compliant with the

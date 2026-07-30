@@ -73,6 +73,7 @@
 #include <base/preproc/for_each.hpp>
 
 #include <vm/api/vm.hpp>
+#include <vm/core/safe/type_metadata/type.hpp>
 #include <vm/utils/interpret.hpp>
 
 namespace vm::detail {

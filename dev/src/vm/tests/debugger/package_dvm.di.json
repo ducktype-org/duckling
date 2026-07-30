@@ -1,0 +1,423 @@
+{
+    "functions": {
+        "_Q_M6simpleG11addAndPrintFi64i64i64E1a1bE": {
+            "function_name": "addAndPrint",
+            "instr_offsets_to_metadata": [
+                [
+                    2,
+                    {
+                        "position": {
+                            "type": "FilePosition",
+                            "value": {
+                                "end_column": 20,
+                                "end_line": 6,
+                                "file_path": "simple.dmf",
+                                "start_column": 5,
+                                "start_line": 6
+                            }
+                        }
+                    }
+                ],
+                [
+                    5,
+                    {
+                        "position": {
+                            "type": "FilePosition",
+                            "value": {
+                                "end_column": 27,
+                                "end_line": 7,
+                                "file_path": "simple.dmf",
+                                "start_column": 5,
+                                "start_line": 7
+                            }
+                        }
+                    }
+                ],
+                [
+                    14,
+                    {
+                        "position": {
+                            "type": "FilePosition",
+                            "value": {
+                                "end_column": 15,
+                                "end_line": 8,
+                                "file_path": "simple.dmf",
+                                "start_column": 5,
+                                "start_line": 8
+                            }
+                        }
+                    }
+                ]
+            ],
+            "instr_offsets_to_variable_init": [
+                [
+                    1,
+                    {
+                        "name": "out",
+                        "position": {
+                            "type": "FilePosition",
+                            "value": {
+                                "end_column": 20,
+                                "end_line": 6,
+                                "file_path": "simple.dmf",
+                                "start_column": 5,
+                                "start_line": 6
+                            }
+                        }
+                    }
+                ]
+            ],
+            "parameter_indexes_to_metadata": [
+                [
+                    0,
+                    {
+                        "name": "a",
+                        "position": {
+                            "type": "FilePosition",
+                            "value": {
+                                "end_column": 22,
+                                "end_line": 5,
+                                "file_path": "simple.dmf",
+                                "start_column": 17,
+                                "start_line": 5
+                            }
+                        }
+                    }
+                ],
+                [
+                    1,
+                    {
+                        "name": "b",
+                        "position": {
+                            "type": "FilePosition",
+                            "value": {
+                                "end_column": 30,
+                                "end_line": 5,
+                                "file_path": "simple.dmf",
+                                "start_column": 25,
+                                "start_line": 5
+                            }
+                        }
+                    }
+                ]
+            ],
+            "position": {
+                "type": "FilePosition",
+                "value": {
+                    "end_column": 1,
+                    "end_line": 9,
+                    "file_path": "simple.dmf",
+                    "start_column": 1,
+                    "start_line": 5
+                }
+            }
+        },
+        "_Q_M6simpleG3addFi64i64i64E1a1bE": {
+            "function_name": "add",
+            "instr_offsets_to_metadata": [
+                [
+                    4,
+                    {
+                        "position": {
+                            "type": "FilePosition",
+                            "value": {
+                                "end_column": 17,
+                                "end_line": 2,
+                                "file_path": "simple.dmf",
+                                "start_column": 5,
+                                "start_line": 2
+                            }
+                        }
+                    }
+                ]
+            ],
+            "instr_offsets_to_variable_init": [],
+            "parameter_indexes_to_metadata": [
+                [
+                    0,
+                    {
+                        "name": "a",
+                        "position": {
+                            "type": "FilePosition",
+                            "value": {
+                                "end_column": 14,
+                                "end_line": 1,
+                                "file_path": "simple.dmf",
+                                "start_column": 9,
+                                "start_line": 1
+                            }
+                        }
+                    }
+                ],
+                [
+                    1,
+                    {
+                        "name": "b",
+                        "position": {
+                            "type": "FilePosition",
+                            "value": {
+                                "end_column": 22,
+                                "end_line": 1,
+                                "file_path": "simple.dmf",
+                                "start_column": 17,
+                                "start_line": 1
+                            }
+                        }
+                    }
+                ]
+            ],
+            "position": {
+                "type": "FilePosition",
+                "value": {
+                    "end_column": 1,
+                    "end_line": 3,
+                    "file_path": "simple.dmf",
+                    "start_column": 1,
+                    "start_line": 1
+                }
+            }
+        },
+        "_Q_M6simpleG6noArgsFi64EE": {
+            "function_name": "noArgs",
+            "instr_offsets_to_metadata": [
+                [
+                    6,
+                    {
+                        "position": {
+                            "type": "FilePosition",
+                            "value": {
+                                "end_column": 13,
+                                "end_line": 12,
+                                "file_path": "simple.dmf",
+                                "start_column": 5,
+                                "start_line": 12
+                            }
+                        }
+                    }
+                ]
+            ],
+            "instr_offsets_to_variable_init": [],
+            "parameter_indexes_to_metadata": [],
+            "position": {
+                "type": "FilePosition",
+                "value": {
+                    "end_column": 1,
+                    "end_line": 13,
+                    "file_path": "simple.dmf",
+                    "start_column": 1,
+                    "start_line": 11
+                }
+            }
+        },
+        "main": {
+            "function_name": "main",
+            "instr_offsets_to_metadata": [
+                [
+                    10,
+                    {
+                        "position": {
+                            "type": "FilePosition",
+                            "value": {
+                                "end_column": 22,
+                                "end_line": 16,
+                                "file_path": "simple.dmf",
+                                "start_column": 15,
+                                "start_line": 16
+                            }
+                        }
+                    }
+                ],
+                [
+                    14,
+                    {
+                        "position": {
+                            "type": "FilePosition",
+                            "value": {
+                                "end_column": 41,
+                                "end_line": 16,
+                                "file_path": "simple.dmf",
+                                "start_column": 41,
+                                "start_line": 16
+                            }
+                        }
+                    }
+                ],
+                [
+                    18,
+                    {
+                        "position": {
+                            "type": "FilePosition",
+                            "value": {
+                                "end_column": 38,
+                                "end_line": 16,
+                                "file_path": "simple.dmf",
+                                "start_column": 38,
+                                "start_line": 16
+                            }
+                        }
+                    }
+                ],
+                [
+                    22,
+                    {
+                        "position": {
+                            "type": "FilePosition",
+                            "value": {
+                                "end_column": 42,
+                                "end_line": 16,
+                                "file_path": "simple.dmf",
+                                "start_column": 26,
+                                "start_line": 16
+                            }
+                        }
+                    }
+                ],
+                [
+                    30,
+                    {
+                        "position": {
+                            "type": "FilePosition",
+                            "value": {
+                                "end_column": 42,
+                                "end_line": 16,
+                                "file_path": "simple.dmf",
+                                "start_column": 15,
+                                "start_line": 16
+                            }
+                        }
+                    }
+                ],
+                [
+                    32,
+                    {
+                        "position": {
+                            "type": "FilePosition",
+                            "value": {
+                                "end_column": 53,
+                                "end_line": 16,
+                                "file_path": "simple.dmf",
+                                "start_column": 53,
+                                "start_line": 16
+                            }
+                        }
+                    }
+                ],
+                [
+                    36,
+                    {
+                        "position": {
+                            "type": "FilePosition",
+                            "value": {
+                                "end_column": 50,
+                                "end_line": 16,
+                                "file_path": "simple.dmf",
+                                "start_column": 50,
+                                "start_line": 16
+                            }
+                        }
+                    }
+                ],
+                [
+                    40,
+                    {
+                        "position": {
+                            "type": "FilePosition",
+                            "value": {
+                                "end_column": 54,
+                                "end_line": 16,
+                                "file_path": "simple.dmf",
+                                "start_column": 46,
+                                "start_line": 16
+                            }
+                        }
+                    }
+                ],
+                [
+                    48,
+                    {
+                        "position": {
+                            "type": "FilePosition",
+                            "value": {
+                                "end_column": 55,
+                                "end_line": 16,
+                                "file_path": "simple.dmf",
+                                "start_column": 5,
+                                "start_line": 16
+                            }
+                        }
+                    }
+                ],
+                [
+                    59,
+                    {
+                        "position": {
+                            "type": "FilePosition",
+                            "value": {
+                                "end_column": 27,
+                                "end_line": 17,
+                                "file_path": "simple.dmf",
+                                "start_column": 5,
+                                "start_line": 17
+                            }
+                        }
+                    }
+                ],
+                [
+                    71,
+                    {
+                        "position": {
+                            "type": "FilePosition",
+                            "value": {
+                                "end_column": 13,
+                                "end_line": 18,
+                                "file_path": "simple.dmf",
+                                "start_column": 5,
+                                "start_line": 18
+                            }
+                        }
+                    }
+                ]
+            ],
+            "instr_offsets_to_variable_init": [
+                [
+                    1,
+                    {
+                        "name": "sum",
+                        "position": {
+                            "type": "FilePosition",
+                            "value": {
+                                "end_column": 55,
+                                "end_line": 16,
+                                "file_path": "simple.dmf",
+                                "start_column": 5,
+                                "start_line": 16
+                            }
+                        }
+                    }
+                ]
+            ],
+            "parameter_indexes_to_metadata": [],
+            "position": {
+                "type": "FilePosition",
+                "value": {
+                    "end_column": 1,
+                    "end_line": 19,
+                    "file_path": "simple.dmf",
+                    "start_column": 1,
+                    "start_line": 15
+                }
+            }
+        }
+    },
+    "module_path": "/duckling/examples/duckmap/duck_build/package_dvm.dbc",
+    "source_positions_type": "LineColumn",
+    "target": "DBC",
+    "types": {
+        "i32": {
+            "name": "i32"
+        },
+        "i64": {
+            "name": "i64"
+        }
+    }
+}

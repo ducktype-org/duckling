@@ -163,10 +163,21 @@ auto getClahStdLibOptions() {
 			.addLongName("no-std")
 			.addShortDesc("Do not use the standard library.")
 			.build(),
-		clah::ParamBuilder::ofValue(clah::FilePathParser::make("std path"))
+		clah::ParamBuilder::ofValue(clah::FilePathParser::make("path"))
 			.addLongName("custom-std-path")
 			.addShortDesc("Path to a custom standard library.")
 			.optional()
+			.build(),
+		clah::ParamBuilder::ofValue(clah::FilePathParser::make("path"))
+			.addLongName("custom-std-artifacts-path")
+			.addShortDesc("Path to the standard library artifacts.")
+			.addLongDesc("Uses existing compiled standard library artifacts.\n"
+		                 "If the compiled binaries are available in the provided directory,\n"
+		                 "standard library compilation is skipped.\n"
+		                 "This can produce errors if the standard library\n"
+		                 "source code changed after the artifacts in the provided directory\n"
+		                 "were compiled.\n"
+		                 "Use with caution.\n")
 			.build(),
 	};
 }
@@ -188,6 +199,10 @@ compiler::driver::options_types::StdLibOptions getStdLibOptionsFromClah(
 		std_lib_options.std_lib_type = StdLibOptions::CustomStd{ .std_path = *custom_std_path };
 	else
 		std_lib_options.std_lib_type = StdLibOptions::DefaultStd{};
+
+	if (auto custom_std_art_path
+	    = parsing_result.getValue<fs::FilePath>("custom-std-artifacts-path"))
+		std_lib_options.std_artifacts_path = custom_std_art_path.value();
 
 	return std_lib_options;
 }
@@ -482,7 +497,7 @@ clah::Clah getClahForMain() {
 						= global_state::getPackages().front().getRootModule().illegalAccess().getID(
 						);
 
-					(void) query::entryPoint<driver::CompileModule>({ root, backend_type, false });
+					query::entryPoint<driver::CompileModule>({ root, backend_type, false });
 
 
 					compiler::driver::exit();
@@ -609,7 +624,7 @@ clah::Clah getClahForMain() {
 					// For now we always compile the standard library on demand,
 		            // note that it will be always cached.
 					auto std_compilation_result = compiler::driver::compilePackages(
-						compiler::driver::getLoadedStdLibCompilationTasks()
+						compiler::driver::getRequiredStdLibCompilationTasks()
 					);
 					if (std_compilation_result.isBad()) {
 						compiler::driver::exit();
@@ -750,7 +765,7 @@ clah::Clah getClahForMain() {
 						return 1;
 					}
 
-					(void) manifest->verify(report);
+					std::ignore         = manifest->verify(report);
 					auto stdlib_options = getStdLibOptionsFromClah(options);
 					auto init_result = compiler::driver::initializeTheCompiler(
 						compiler::driver::CompilerModeOfOperationAndOptions::PackageCompilationMode{
@@ -775,7 +790,7 @@ clah::Clah getClahForMain() {
 					}
 
 					auto std_compilation_result = compiler::driver::compilePackages(
-						compiler::driver::getLoadedStdLibCompilationTasks()
+						compiler::driver::getRequiredStdLibCompilationTasks()
 					);
 					if (std_compilation_result.isBad()) {
 						compiler::driver::exit();
@@ -882,7 +897,7 @@ clah::Clah getClahForMain() {
 					}
 
 					auto std_compilation_result = compiler::driver::compilePackages(
-						compiler::driver::getLoadedStdLibCompilationTasks()
+						compiler::driver::getRequiredStdLibCompilationTasks()
 					);
 					if (std_compilation_result.isBad()) {
 						compiler::driver::exit();
@@ -950,7 +965,7 @@ clah::Clah getClahForMain() {
 								   logger::enable_user_logs = false;
 								   defer(logger::enable_user_logs = prev_user_logs);
 								   auto std_compilation_result = compiler::driver::compilePackages(
-									   compiler::driver::getLoadedStdLibCompilationTasks()
+									   compiler::driver::getRequiredStdLibCompilationTasks()
 								   );
 								   if (std_compilation_result.isBad()) {
 									   compiler::driver::exit();
@@ -1065,17 +1080,19 @@ clah::Clah getClahForMain() {
 					return 0;
 				})
 		)
-	    .addSubcommand(clah::Clah("dummy", "Dummy command (cli testing command).")
-	                       .setHandler([](const clah::ParsingResult& options) -> int {
-							   (void) compiler::driver::initializeTheCompiler(
-								   compiler::driver::CompilerModeOfOperationAndOptions::BareMode{
-									   .debug_options
-									   = debug_options::getDebugOptionsFromClah(options),
-								   }
-							   )
-								   .status();
-							   return 0;
-						   }));
+	    .addSubcommand(
+			clah::Clah("dummy", "Dummy command (cli testing command).")
+				.setHandler([](const clah::ParsingResult& options) -> int {
+					std::ignore
+						= compiler::driver::initializeTheCompiler(
+							  compiler::driver::CompilerModeOfOperationAndOptions::BareMode{
+								  .debug_options = debug_options::getDebugOptionsFromClah(options),
+							  }
+						)
+		                      .status();
+					return 0;
+				})
+		);
 }
 
 int main(int argc, const char* argv[]) {

@@ -4,6 +4,7 @@
 
 #include <filesystem/file.hpp>
 
+#include <vm/api/data/execution_config.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/validator/valid_program.hpp>
 
@@ -47,12 +48,15 @@ namespace vm::loader {
 		/**
 		 * @brief Injects new code from given file paths to the current program state.
 		 */
-		std::expected<void, LoaderLogger> loadAndValidate(const std::vector<fs::File>& file_path);
+		std::expected<void, LoaderLogger> loadAndValidate(
+			const std::vector<fs::File>& file_path, api::ExecutionConfig config
+		);
 
 		/**
 		 * @brief Injects new code from a given high-level code representation.
 		 */
-		std::expected<void, LoaderLogger> loadAndValidate(const code::CodeCollection& code_collection
+		std::expected<void, LoaderLogger> loadAndValidate(
+			const code::CodeCollection& code_collection, api::ExecutionConfig config
 		);
 
 		CRef<code::ValidProgram> getHighProgram() const;

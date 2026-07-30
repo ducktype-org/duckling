@@ -37,6 +37,12 @@ namespace vm::code::valid_type {
 
 		void definePointer(ValidTypeID inner);
 
+		/**
+		 * @brief Defines a C pointer: a raw 8-byte native address. An absent inner means an
+		 * unknown pointee (C's `void*`).
+		 */
+		void defineCPointer(const base::Optional<ValidTypeID>& inner);
+
 		void defineFixedSizeTable(ValidTypeID inner, usize element_count);
 
 		void defineDynamicTable(ValidTypeID inner);
@@ -141,6 +147,14 @@ namespace vm::code::valid_type {
 		 */
 		[[nodiscard]] bool isTriviallyCopyable() const;
 
+		/**
+		 * @brief Whether this type can cross the FFI boundary. FFI-compliant types are: primitives
+		 * of size 1, 2, 4 or 8 (`f32`/`f64` must have their exact C sizes), C pointers,
+		 * fixed-size tables of FFI-compliant types, and non-packed plain data structures (no
+		 * classes or interfaces) whose every field is FFI-compliant.
+		 */
+		[[nodiscard]] bool isFFICompliant() const;
+
 	private:
 		/**
 		 * @brief Helper function for finalize. Sets is_instantiable.
@@ -170,6 +184,11 @@ namespace vm::code::valid_type {
 		 * mode, it is not trivially copyable.
 		 */
 		bool is_trivially_copyable = true;
+
+		/**
+		 * @brief For more information read docs of `isFFICompliant`.
+		 */
+		bool is_ffi_compliant = false;
 
 		TypeSize size = TypeSize(Bytes(0), 0);
 

@@ -428,10 +428,6 @@ namespace lsp {
 			for (const auto& item: elem.expressions) item->acceptVisitor(*this);
 		}
 
-		void visitBoxOfExpr(const code::BoxOfExpr& elem) override {
-			elem.inner->acceptVisitor(*this);
-		}
-
 		void visitRefOfExpr(const code::RefOfExpr& elem) override {
 			elem.inner->acceptVisitor(*this);
 		}

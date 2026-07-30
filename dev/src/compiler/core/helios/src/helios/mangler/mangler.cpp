@@ -15,17 +15,23 @@
 #include <helios/symbols/symbol_id.hpp>
 #include <helios/tsh/types.hpp>
 #include <helios_private/pst_layer/pst_parent.hpp>
+#include <helios_private/scopes/scope_data.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
+#include <helios_private/symbols/symbols.hpp>
+#include <helios_private/templates/templates.hpp>
 
+#include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <hashing/hash.hpp>
 #include <logger/logger.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
+#include <unicode_classification/classifications.hpp>
 
 #include <algorithm>
+#include <sstream>
 #include <string_view>
 
 /**
@@ -34,6 +40,38 @@
  * That file provides a detailed description and motivation for some design choices made here
  */
 namespace compiler::helios::mangler {
+
+	namespace {
+		/**
+		 * @brief Mangles a compile-time value.
+		 * @TODO: #2607 This is a temporary, mock solution
+		 */
+		std::string mangleCTV(query::Context& ctx, const ctv::CompileTimeValue& ctv) {
+			variant_match(ctv.getStorage()) {
+				variant_case_novalue(
+					bool,
+					numeric_value::NumericValue,
+					char,
+					ctv::CompileTimeValue::CharSliceValue,
+					ctv::CompileTimeValue::StringClassValue,
+					ctv::CompileTimeValue::UnitCTV
+				) {
+					// @TODO: #2607 This is questionable, note that this only
+					// works, because queryUnstablePerfectHash is actually stable for these types
+					// (at least at the moment of writting it)
+					return ctv.queryUnstablePerfectHash().toStringHex();
+				}
+				variant_case(ctv::CompileTimeValue::TupleCTV, tuple) {
+					throw base::NotYetImplemented("Mangle CTV tuple is not implemented yet");
+				}
+				variant_case(tsh::SymbolType<>, symbol_type) {
+					return ctx.query<QueryMangledType>(symbol_type)->valueOrThrow().str();
+				}
+				variant_default { CORE_PANIC("Unhandled CTV type in mangleCTV"); }
+			}
+			CORE_UNREACHABLE();
+		}
+	}
 
 	void addToHash(hashing::hash_algorithm auto& h, const KeyOf_MangledSymbol& k) RELEASE_NOEXCEPT {
 		addToHash(h, k.symbol_key.index());
@@ -69,6 +107,7 @@ namespace compiler::helios::mangler {
 			if (auto abi = ctx.query<QuerySymbolABI>(sym_id); abi->hasValue()) {
 				variant_match(abi->valueOrThrow()) {
 					variant_case_novalue(CAbi) { return false; }
+					variant_case_novalue(DVMAbi) { return false; }
 					variant_case_novalue(DefaultAbi) { return true; }
 					variant_default { CORE_UNREACHABLE(); }
 				}
@@ -178,10 +217,121 @@ namespace compiler::helios::mangler {
 		}
 
 		/**
-		 * @brief Returns the bare name of the symbol prefixed with its size
+		 * @brief Returns the fixed 2-letter mnemonic tag for a single recognized operator
+		 * character, or an empty `Optional` if the codepoint isn't one of them.
+		 * @note: See mangling-scheme.md's `<fixed-operator-tag>` for details
+		 */
+		base::Optional<std::string_view> fixedOperatorTag(UChar32 codepoint) {
+			switch (codepoint) {
+			case U'!':
+				return std::string_view{ "nt" };
+			case U'%':
+				return std::string_view{ "rm" };
+			case U'&':
+				return std::string_view{ "an" };
+			case U'*':
+				return std::string_view{ "ml" };
+			case U'+':
+				return std::string_view{ "pl" };
+			case U'-':
+				return std::string_view{ "mi" };
+			case U'.':
+				return std::string_view{ "pd" };
+			case U'/':
+				return std::string_view{ "dv" };
+			case U':':
+				return std::string_view{ "co" };
+			case U'<':
+				return std::string_view{ "lt" };
+			case U'=':
+				return std::string_view{ "eq" };
+			case U'>':
+				return std::string_view{ "gt" };
+			case U'?':
+				return std::string_view{ "qm" };
+			case U'\\':
+				return std::string_view{ "bs" };
+			case U'^':
+				return std::string_view{ "eo" };
+			case U'`':
+				return std::string_view{ "bt" };
+			case U'|':
+				return std::string_view{ "or" };
+			case U'~':
+				return std::string_view{ "ti" };
+			default:
+				return {};
+			}
+		}
+
+		/**
+		 * @brief Transliterates an operator name character-by-character: each recognized operator
+		 * character becomes its fixed 2-letter tag, and any other codepoint is escaped as
+		 * `"x" <hex-codepoint> "_"`.
+		 * @note: See mangling-scheme.md's `<translit-unit>` for details
+		 */
+		std::string transliterateOperatorName(std::string_view raw_name) {
+			const icu::UnicodeString unicode_name = icu::UnicodeString::fromUTF8(
+				icu::StringPiece(raw_name.data(), static_cast<i32>(raw_name.size()))
+			);
+			const i32 length = unicode_name.length();
+
+			std::stringstream ret;
+			i32               index = 0;
+			while (index < length) {
+				const UChar32                          codepoint = unicode_name.char32At(index);
+				const base::Optional<std::string_view> tag       = fixedOperatorTag(codepoint);
+				if (tag.has_value())
+					ret << tag.value();
+				else
+					ret << "x" << std::hex << static_cast<u32>(codepoint) << std::dec << "_";
+				index = unicode_name.moveIndex32(index, 1);
+			}
+			return ret.str();
+		}
+
+		/**
+		 * @brief Returns the mangled `<operator-name>` for an operator function/method.
+		 * @note: See mangling-scheme.md's `<operator-name>` for details.
+		 */
+		std::string operatorNameEncoding(const HOUTFunctionDeclaration& fun_decl) {
+			using Operatoriness = HOUTFunctionDeclaration::Operatoriness;
+
+			const char operatoriness_tag = [&] {
+				switch (fun_decl.operatoriness) {
+				case Operatoriness::Infix:
+					return 'i';
+				case Operatoriness::Prefix:
+					return 'p';
+				case Operatoriness::Suffix:
+					return 's';
+				case Operatoriness::None:
+					break;
+				}
+				CORE_UNREACHABLE();
+			}();
+
+			const std::string translit
+				= transliterateOperatorName(fun_decl.original_name.strView());
+
+			std::stringstream ret;
+			ret << "O" << operatoriness_tag << translit.size() << translit;
+
+			return ret.str();
+		}
+
+		/**
+		 * @brief Returns the bare name of the symbol prefixed with its size, or the mangled
+		 * `<operator-name>` if the symbol is an operator function/method.
 		 * @note: See mangling-scheme.md for details
 		 */
-		std::string unscopedName(SymID symbol_id) {
+		std::string unscopedName(query::Context& ctx, SymID symbol_id) {
+			if (isFunctionLike(kind(symbol_id))) {
+				const auto& fun_decl
+					= ctx.query<compiler::helios::QueryDeclOfFun>(symbol_id).get()->valueOrPanic();
+				if (fun_decl.operatoriness != HOUTFunctionDeclaration::Operatoriness::None)
+					return operatorNameEncoding(fun_decl);
+			}
 			return identifier(compiler::helios::name(symbol_id).strView());
 		}
 
@@ -196,15 +346,35 @@ namespace compiler::helios::mangler {
 			auto scope_id = scope(symbol_id);
 
 			if (scopeDepth(scope_id) == 1) {
-				return "G" + unscopedName(symbol_id);
+				return "G" + unscopedName(ctx, symbol_id);
 			} else {
 				std::vector<std::string> path_parts;
 
-				auto ancestor     = maybeSymbolPst(symbol_id).value().unlock(ctx);
-				auto ancestor_opt = getPSTElementParent(ctx, ancestor);
+				// This function can be only called for symbols
+				// that have clear PST-path mangling.
+				// This means that all PstImplementedSemantics work, and few
+				// additional cases that are handled below.
+				auto ancestor_opt = [&]() {
+					variant_match(getSymRef(symbol_id)->other) {
+						variant_case_novalue(PstImplementedSemantics, BuiltinSemantics) {
+							auto ancestor = maybeSymbolPst(symbol_id).value().unlock(ctx);
+							return getPSTElementParent(ctx, ancestor);
+						}
+						variant_case(defgen::GeneratedConstant, const_data) {
+							// @TODO: #2587 adjust code here
+
+							auto scope = const_data.scope;
+							auto ancestor
+								= ScopeAccess_Functor::get(scope)->relatedPSTElement().value();
+							return PSTParentResult{ ancestor };
+						}
+					}
+					CORE_UNREACHABLE();
+				}();
+
 
 				while (ancestor_opt.isLangElement()) {
-					ancestor = ancestor_opt.getAsLangElement().unlock(ctx);
+					auto ancestor = ancestor_opt.getAsLangElement().unlock(ctx);
 
 					if (ancestor->getElementKind() == pst::ElementKind::Namespace) {
 						auto namespace_v = ancestor.dynamicCast<pst::Namespace>().value();
@@ -216,6 +386,57 @@ namespace compiler::helios::mangler {
 						path_parts.push_back(
 							identifier(class_v->getName().unlock(ctx)->unwrap().strView())
 						);
+					} else if (ancestor->getElementKind() == pst::ElementKind::TemplateStmt) {
+						// @TODO: #2607 will likely have to change.
+
+						auto template_stmt_v = ancestor.dynamicCast<pst::TemplateStmt>().value();
+
+						path_parts.push_back(identifier(template_stmt_v->getInnerStatement()
+						                                    .unlock(ctx)
+						                                    ->getDeclSymbolIdentifier()
+						                                    ->unlock(ctx)
+						                                    ->unwrap()
+						                                    .strView()));
+
+
+						if (template_stmt_v->hasAdditionalRootData()) {
+							// We are inside baked template
+
+							auto root_data = template_stmt_v->getAdditionalRootData();
+							variant_match(root_data.pst_parent) {
+								variant_case(
+									pst::AdditionalRootData::BakedTemplateParent, template_parent
+								) {
+									const auto& template_bake_data_any
+										= template_parent.template_bake_data;
+									auto template_bake_data
+										= base::anyCast<templates::TemplateBakePSTLinkedData>(
+											template_bake_data_any
+										);
+									for (const auto& bake_argument:
+									     template_bake_data.postponed_data
+									         ->load(std::memory_order_acquire)
+									         ->template_arguments_symbols) {
+										// @TODO: #2607 This is a mock
+										auto value
+											= ctx.query<helios::QueryConstValueOf>(bake_argument)
+										          .valueOrThrow();
+										path_parts.push_back(identifier(mangleCTV(ctx, value)));
+									}
+								}
+								variant_default {
+									CORE_PANIC(
+										"TemplateStmt has no PST parent, this should not happen "
+										"here."
+									);
+								}
+							}
+						} else {
+							CORE_PANIC(
+								"TemplateStmt has no additional root data meaning it is not baked"
+								"It should not happen in mangling"
+							);
+						}
 					}
 
 					ancestor_opt = getPSTElementParent(ctx, ancestor);
@@ -224,7 +445,7 @@ namespace compiler::helios::mangler {
 				std::string ret = "N";
 				for (auto&& it = path_parts.rbegin(); it != path_parts.rend(); ++it) ret += *it;
 
-				ret += unscopedName(symbol_id);
+				ret += unscopedName(ctx, symbol_id);
 
 				return ret + "E";
 			}
@@ -281,6 +502,7 @@ namespace compiler::helios::mangler {
 			case SymbolKind::Function:
 			case SymbolKind::Method:
 			case SymbolKind::Constructor:
+			case SymbolKind::Destructor:
 			case SymbolKind::FunctionDeclaration: {
 				variant_match(getSymRef(symbol_id)->other) {
 					variant_case_novalue(PstImplementedSemantics, BuiltinSemantics) {
@@ -326,6 +548,22 @@ namespace compiler::helios::mangler {
 							return "Hpush" + func(ctx, symbol_id) + "E";
 						case defgen::Method::Kind::Pop:
 							return "Hpop" + func(ctx, symbol_id) + "E";
+						}
+						CORE_UNREACHABLE();
+					}
+					variant_case(defgen::BuiltinTemplatedSymbol, builtin) {
+						// We do not have a reliable "path to type" in these cases (esp. for simple
+						// types such as i32), so we omit it. Any ambiguities are solved by the
+						// function type anyway.
+						switch (builtin.kind) {
+						case defgen::BuiltinTemplatedSymbol::Kind::BoxAlloc:
+							return "Hba" + func(ctx, symbol_id) + "E";
+						case defgen::BuiltinTemplatedSymbol::Kind::BoxFree:
+							return "Hbf" + func(ctx, symbol_id) + "E";
+						case defgen::BuiltinTemplatedSymbol::Kind::ListFree:
+							return "Hlf" + func(ctx, symbol_id) + "E";
+						case defgen::BuiltinTemplatedSymbol::Kind::BoxDestructor:
+							return "Hbd" + func(ctx, symbol_id) + "E";
 						}
 						CORE_UNREACHABLE();
 					}
@@ -524,8 +762,6 @@ namespace compiler::helios::mangler {
 			);
 		}
 
-		static std::string mangle(query::Context&, tsh::StringAbstractType) { return "s"; }
-
 		static std::string mangle(query::Context& ctx, tsh::FunctionAbstractType type) {
 			std::stringstream res;
 			res << "F"
@@ -608,8 +844,6 @@ namespace compiler::helios::mangler {
 				return mangle(ctx, type.as<tsh::CPointerAbstractType>());
 			case Slice:
 				return mangle(ctx, type.as<tsh::SliceAbstractType>());
-			case String:
-				return mangle(ctx, type.as<tsh::StringAbstractType>());
 			case Function:
 				return mangle(ctx, type.as<tsh::FunctionAbstractType>());
 			case DynamicArray:

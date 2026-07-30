@@ -35,6 +35,12 @@ namespace compiler::helios {
 			);
 		}
 
+		base::Bit256 BuiltinTemplatedSymbol::queryUnstablePerfectHash() const {
+			return hashing::justHash<hashing::SHA256>(
+				type.queryUnstablePerfectHash(), static_cast<u64>(kind)
+			);
+		}
+
 		base::Bit256 Parameter::queryUnstablePerfectHash() const {
 			return { function_symbol.queryUnstablePerfectHash(), parameter_index };
 		}
@@ -112,6 +118,12 @@ namespace compiler::helios {
 			variant_case_novalue(defgen::BuiltinOperator) {
 				kind = SymbolKind::FunctionDeclaration;
 			}
+			variant_case(defgen::BuiltinTemplatedSymbol, templated) {
+				// BoxDestructor is the only builtin that is implemented in HOUT.
+				kind = templated.kind == defgen::BuiltinTemplatedSymbol::Kind::BoxDestructor
+				         ? SymbolKind::Function
+				         : SymbolKind::FunctionDeclaration;
+			}
 			variant_case_novalue(
 				defgen::Constructor,
 				defgen::Method,
@@ -145,6 +157,7 @@ namespace compiler::helios {
 	}
 
 	base::Optional<ScopeID> SymbolData::getScope() const {
+		// @TODO: #3099 a lot of scopes could be removed from generated symbols.
 		variant_match(other) {
 			variant_case(PstImplementedSemantics, pst_data) { return pst_data.scope; }
 			variant_case(BuiltinSemantics, data) { return data.scope; }

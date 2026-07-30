@@ -14,6 +14,13 @@ namespace {
 	const std::string SO_PATH = FFI_TEST_LIB_PATH;
 
 	std::string ffiObjectHeader() { return "ffi object \"" + SO_PATH + "\";\n"; }
+
+	// Bare soname of the system math library, resolved via the platform's dynamic loader search.
+#ifdef __APPLE__
+	const std::string SYSTEM_MATH_LIB = "libm.dylib";
+#else
+	const std::string SYSTEM_MATH_LIB = "libm.so.6";
+#endif
 }
 
 class VmFfiTest: public VmTestSuite {
@@ -25,7 +32,6 @@ public:
 		TESTER_ADD_TEST(addPrimitives);
 		TESTER_ADD_TEST(voidAndStateReadback);
 		TESTER_ADD_TEST(smallIntReturnWidening);
-		TESTER_ADD_TEST(cptrRoundTripThroughC);
 		TESTER_ADD_TEST(cptrCopyBuiltins);
 		TESTER_ADD_TEST(cptrStructField);
 		TESTER_ADD_TEST(cptrCopyIntoStructField);
@@ -43,9 +49,21 @@ public:
 		TESTER_ADD_TEST(unsupportedTypeFails);
 		TESTER_ADD_TEST(multipleResultsFails);
 		TESTER_ADD_TEST(alignedStructByValue);
+		TESTER_ADD_TEST(structWithNestedTablesByValue);
+		TESTER_ADD_TEST(structWithTableOfStructsByValue);
+		TESTER_ADD_TEST(structWithFloatTableByValue);
+		TESTER_ADD_TEST(structWithTableReturnedFromC);
+		TESTER_ADD_TEST(nestedStructByValue);
+		TESTER_ADD_TEST(tableByValueFails);
+		TESTER_ADD_TEST(nonCompliantStructsFail);
+		TESTER_ADD_TEST(structWithPackedFieldFails);
 		TESTER_ADD_TEST(packedStructInFfiFails);
 		TESTER_ADD_TEST(packedStructWithMatchingLayoutStillFails);
 		TESTER_ADD_TEST(packedStructSize);
+		TESTER_ADD_TEST(typedCPointerStructFieldThroughC);
+		TESTER_ADD_TEST(forwardDeclaredPointee);
+		TESTER_ADD_TEST(cpointerToUnknownTypeFails);
+		TESTER_ADD_TEST(movPcptStrictnessFails);
 		TESTER_ADD_TEST(duplicateFfiFunctionFails);
 		TESTER_ADD_TEST(assertSizeMatches);
 		TESTER_ADD_TEST(assertSizeMismatchFails);
@@ -145,36 +163,6 @@ private:
 		);
 	}
 
-	void cptrRoundTripThroughC() {
-		runProgram(
-			"cptr_c",
-			ffiObjectHeader()
-				+ "ffi function ffi_alloc8 { } -> { cptr };\n"
-				  "ffi function ffi_fill8 { cptr, i64 } -> { };\n"
-				  "ffi function ffi_read8 { cptr } -> { i64 };\n"
-				  "ffi function ffi_free8 { cptr } -> { };\n"
-				  "function main { i64, ptr_argv } -> { i64 } {\n"
-				  "    init_pany_type buf, cptr;\n"
-				  "    call_ffifunc ffi_alloc8;\n"
-				  "    init_pany_type buf2, cptr;\n"
-				  "    mov_popq_popq buf2, buf;\n"
-				  "    init_pany_type v, i64;\n"
-				  "    mov_p64_imm v, 777;\n"
-				  "    call_ffifunc ffi_fill8;\n"
-				  "    init_pany_type res, i64;\n"
-				  "    init_pany_type buf3, cptr;\n"
-				  "    mov_popq_popq buf3, buf;\n"
-				  "    call_ffifunc ffi_read8;\n"
-				  "    output_p64 res;\n"
-				  "    init_pany_type buf4, cptr;\n"
-				  "    mov_popq_popq buf4, buf;\n"
-				  "    call_ffifunc ffi_free8;\n"
-				  "    ret;\n"
-				  "}\n",
-			"777"
-		);
-	}
-
 	void cptrCopyBuiltins() {
 		runProgram(
 			"cptr_copy",
@@ -189,7 +177,7 @@ private:
 				  "    init_pany_type vp, ptr_i64;\n"
 				  "    ref_pptr_pany vp, v;\n"
 				  "    init_pany_type buf_w, cptr;\n"
-				  "    mov_popq_popq buf_w, buf;\n"
+				  "    mov_pcpt_pcpt buf_w, buf;\n"
 				  "    init_pany_type vp2, ptr_i64;\n"
 				  "    mov_pptr_pptr vp2, vp;\n"
 				  "    init_pany_type sz_w, i64;\n"
@@ -199,7 +187,7 @@ private:
 				  "    init_pany_type op, ptr_i64;\n"
 				  "    ref_pptr_pany op, out;\n"
 				  "    init_pany_type buf_r, cptr;\n"
-				  "    mov_popq_popq buf_r, buf;\n"
+				  "    mov_pcpt_pcpt buf_r, buf;\n"
 				  "    init_pany_type op2, ptr_i64;\n"
 				  "    mov_pptr_pptr op2, op;\n"
 				  "    init_pany_type sz_r, i64;\n"
@@ -207,7 +195,7 @@ private:
 				  "    call_builtinfunc builtin_cptr_read_pptr;\n"
 				  "    output_p64 out;\n"
 				  "    init_pany_type buf_f, cptr;\n"
-				  "    mov_popq_popq buf_f, buf;\n"
+				  "    mov_pcpt_pcpt buf_f, buf;\n"
 				  "    call_ffifunc ffi_free8;\n"
 				  "    ret;\n"
 				  "}\n",
@@ -229,12 +217,12 @@ private:
 				  "    init_pany_type buf, cptr;\n"
 				  "    call_ffifunc ffi_alloc8;\n"
 				  "    init_pany_type buf2, cptr;\n"
-				  "    mov_popq_popq buf2, buf;\n"
+				  "    mov_pcpt_pcpt buf2, buf;\n"
 				  "    init_pany_type v, i64;\n"
 				  "    mov_p64_imm v, 30;\n"
 				  "    call_ffifunc ffi_fill8;\n"
 				  "    init_pany_type bufc, cptr;\n"
-				  "    mov_popq_popq bufc, buf;\n"
+				  "    mov_pcpt_pcpt bufc, buf;\n"
 				  "    init_pany_type v2, i64;\n"
 				  "    mov_p64_imm v2, 12;\n"
 				  "    init_pany_type res, i64;\n"
@@ -244,7 +232,7 @@ private:
 				  "    call_ffifunc ffi_cpair_sum;\n"
 				  "    output_p64 res;\n"
 				  "    init_pany_type buf_f, cptr;\n"
-				  "    mov_popq_popq buf_f, buf;\n"
+				  "    mov_pcpt_pcpt buf_f, buf;\n"
 				  "    call_ffifunc ffi_free8;\n"
 				  "    ret;\n"
 				  "}\n",
@@ -266,7 +254,7 @@ private:
 				  "    init_pany_type buf, cptr;\n"
 				  "    call_ffifunc ffi_alloc8;\n"
 				  "    init_pany_type buf2, cptr;\n"
-				  "    mov_popq_popq buf2, buf;\n"
+				  "    mov_pcpt_pcpt buf2, buf;\n"
 				  "    init_pany_type v, i64;\n"
 				  "    mov_p64_imm v, 4242;\n"
 				  "    call_ffifunc ffi_fill8;\n"
@@ -274,7 +262,7 @@ private:
 				  "    init_pany_type bp, ptr_i64;\n"
 				  "    structLea_pptr_pste_field bp, s, Pair.b;\n"
 				  "    init_pany_type buf_r, cptr;\n"
-				  "    mov_popq_popq buf_r, buf;\n"
+				  "    mov_pcpt_pcpt buf_r, buf;\n"
 				  "    init_pany_type bp2, ptr_i64;\n"
 				  "    mov_pptr_pptr bp2, bp;\n"
 				  "    init_pany_type sz, i64;\n"
@@ -284,7 +272,7 @@ private:
 				  "    structLoad_pany_pste_field out, s, Pair.b;\n"
 				  "    output_p64 out;\n"
 				  "    init_pany_type buf_f, cptr;\n"
-				  "    mov_popq_popq buf_f, buf;\n"
+				  "    mov_pcpt_pcpt buf_f, buf;\n"
 				  "    call_ffifunc ffi_free8;\n"
 				  "    ret;\n"
 				  "}\n",
@@ -308,7 +296,7 @@ private:
 				  "    init_pany_type bp, ptr_i64;\n"
 				  "    structLea_pptr_pste_field bp, s, Pair.b;\n"
 				  "    init_pany_type buf_w, cptr;\n"
-				  "    mov_popq_popq buf_w, buf;\n"
+				  "    mov_pcpt_pcpt buf_w, buf;\n"
 				  "    init_pany_type bp2, ptr_i64;\n"
 				  "    mov_pptr_pptr bp2, bp;\n"
 				  "    init_pany_type sz, i64;\n"
@@ -443,7 +431,7 @@ private:
 		auto pid = initProcess();
 
 		vm::code::CodeCollection libs;
-		libs.object_files.emplace_back("libm.so.6");
+		libs.object_files.emplace_back(SYSTEM_MATH_LIB);
 		ASSERT_HAS_VALUE(vm::api::loadCode(pid, libs));
 
 		auto file = writeTempDbc(
@@ -472,7 +460,7 @@ private:
 	void bareSonameInBytecode() {
 		runProgram(
 			"system_lib_bytecode",
-			"ffi object \"libm.so.6\";\n"
+			"ffi object \"" + SYSTEM_MATH_LIB + "\";\n"
 			"type primitive: f64 8\n"
 			"ffi function cos { f64 } -> { f64 };\n"
 			"function main { i64, ptr_argv } -> { i64 } {\n"
@@ -557,6 +545,269 @@ private:
 		);
 	}
 
+	// A fixed-size table field is flattened in the libffi descriptor (its element type repeated
+	// once per element, recursively for a table of tables); the VM layout of `i32[2][2]` matches
+	// C's `int32_t[4]`, so the struct passes as the C layout of an array member.
+	void structWithNestedTablesByValue() {
+		runProgram(
+			"struct_with_nested_tables",
+			ffiObjectHeader()
+				+ "type fixed_size_table: arr2 i32 2\n"
+				  "type fixed_size_table: arr2x2 arr2 2\n"
+				  "type data: WithArr { v: arr2x2, tail: i64 } assert_size 24\n"
+				  "ffi function ffi_arr_sum { WithArr } -> { i64 };\n"
+				  "function main { i64, ptr_argv } -> { i64 } {\n"
+				  "    init_pany_type x, i32;\n"
+				  "    init_pany_type i, i64;\n"
+				  "    init_pany_type t, i64;\n"
+				  "    init_pany_type row, arr2;\n"
+				  "    init_pany_type m, arr2x2;\n"
+				  "    init_pany_type res, i64;\n"
+				  "    init_pany_type w, WithArr;\n"
+				  "    mov_p32_imm x, 1;\n"
+				  "    mov_p64_imm i, 0;\n"
+				  "    fixedSizeTableStore_pfst_pany_p64 row, x, i;\n"
+				  "    mov_p32_imm x, 2;\n"
+				  "    mov_p64_imm i, 1;\n"
+				  "    fixedSizeTableStore_pfst_pany_p64 row, x, i;\n"
+				  "    mov_p64_imm i, 0;\n"
+				  "    fixedSizeTableStore_pfst_pany_p64 m, row, i;\n"
+				  "    mov_p32_imm x, 3;\n"
+				  "    mov_p64_imm i, 0;\n"
+				  "    fixedSizeTableStore_pfst_pany_p64 row, x, i;\n"
+				  "    mov_p32_imm x, 4;\n"
+				  "    mov_p64_imm i, 1;\n"
+				  "    fixedSizeTableStore_pfst_pany_p64 row, x, i;\n"
+				  "    mov_p64_imm i, 1;\n"
+				  "    fixedSizeTableStore_pfst_pany_p64 m, row, i;\n"
+				  "    structStore_pste_pany_field w, m, WithArr.v;\n"
+				  "    mov_p64_imm t, 32;\n"
+				  "    structStore_pste_pany_field w, t, WithArr.tail;\n"
+				  "    call_ffifunc ffi_arr_sum;\n"
+				  "    output_p64 res;\n"
+				  "    ret;\n"
+				  "}\n",
+			"42"
+		);
+	}
+
+	// A fixed-size table of structs flattens to the struct type repeated per element, matching
+	// the C layout of an array-of-structs member.
+	void structWithTableOfStructsByValue() {
+		runProgram(
+			"struct_with_table_of_structs",
+			ffiObjectHeader()
+				+ "type data: Inner { x: i32, y: i32 } assert_size 8\n"
+				  "type fixed_size_table: inner2 Inner 2\n"
+				  "type data: PtTab { pts: inner2, tail: i64 } assert_size 24\n"
+				  "ffi function ffi_pt_sum { PtTab } -> { i64 };\n"
+				  "function main { i64, ptr_argv } -> { i64 } {\n"
+				  "    init_pany_type v, i32;\n"
+				  "    init_pany_type p, Inner;\n"
+				  "    init_pany_type i, i64;\n"
+				  "    init_pany_type ps, inner2;\n"
+				  "    init_pany_type t, i64;\n"
+				  "    init_pany_type res, i64;\n"
+				  "    init_pany_type s, PtTab;\n"
+				  "    mov_p32_imm v, 5;\n"
+				  "    structStore_pste_pany_field p, v, Inner.x;\n"
+				  "    mov_p32_imm v, 7;\n"
+				  "    structStore_pste_pany_field p, v, Inner.y;\n"
+				  "    mov_p64_imm i, 0;\n"
+				  "    fixedSizeTableStore_pfst_pany_p64 ps, p, i;\n"
+				  "    mov_p32_imm v, 9;\n"
+				  "    structStore_pste_pany_field p, v, Inner.x;\n"
+				  "    mov_p32_imm v, 11;\n"
+				  "    structStore_pste_pany_field p, v, Inner.y;\n"
+				  "    mov_p64_imm i, 1;\n"
+				  "    fixedSizeTableStore_pfst_pany_p64 ps, p, i;\n"
+				  "    structStore_pste_pany_field s, ps, PtTab.pts;\n"
+				  "    mov_p64_imm t, 10;\n"
+				  "    structStore_pste_pany_field s, t, PtTab.tail;\n"
+				  "    call_ffifunc ffi_pt_sum;\n"
+				  "    output_p64 res;\n"
+				  "    ret;\n"
+				  "}\n",
+			"42"
+		);
+	}
+
+	// A struct holding a table of `f32` is an all-SSE aggregate on SysV; the flattened elements
+	// must map to `float`, not integers, for the correct classification.
+	void structWithFloatTableByValue() {
+		runProgram(
+			"struct_with_float_table",
+			ffiObjectHeader()
+				+ "type primitive: f32 4\n"
+				  "type fixed_size_table: farr4 f32 4\n"
+				  "type data: FQuad { v: farr4 } assert_size 16\n"
+				  "ffi function ffi_fquad_sum { FQuad } -> { f32 };\n"
+				  "function main { i64, ptr_argv } -> { i64 } {\n"
+				  "    init_pany_type x, f32;\n"
+				  "    init_pany_type i, i64;\n"
+				  "    init_pany_type a, farr4;\n"
+				  "    init_pany_type res, f32;\n"
+				  "    init_pany_type q, FQuad;\n"
+				  "    mov_p32_imm x, 10.5f32;\n"
+				  "    mov_p64_imm i, 0;\n"
+				  "    fixedSizeTableStore_pfst_pany_p64 a, x, i;\n"
+				  "    mov_p32_imm x, 10.25f32;\n"
+				  "    mov_p64_imm i, 1;\n"
+				  "    fixedSizeTableStore_pfst_pany_p64 a, x, i;\n"
+				  "    mov_p32_imm x, 10.75f32;\n"
+				  "    mov_p64_imm i, 2;\n"
+				  "    fixedSizeTableStore_pfst_pany_p64 a, x, i;\n"
+				  "    mov_p32_imm x, 10.5f32;\n"
+				  "    mov_p64_imm i, 3;\n"
+				  "    fixedSizeTableStore_pfst_pany_p64 a, x, i;\n"
+				  "    structStore_pste_pany_field q, a, FQuad.v;\n"
+				  "    call_ffifunc ffi_fquad_sum;\n"
+				  "    init_pany_type r, i64;\n"
+				  "    init_pany_type ires, i32;\n"
+				  "    fptosi_p32_p32 ires, res;\n"
+				  "    call_builtinfunc builtin_output_i32;\n"
+				  "    ret;\n"
+				  "}\n",
+			"42\n"
+		);
+	}
+
+	// A struct with a table field returned from C by value (the return path goes through a
+	// hidden pointer for a 24-byte aggregate, unlike the argument path).
+	void structWithTableReturnedFromC() {
+		runProgram(
+			"struct_with_table_returned",
+			ffiObjectHeader()
+				+ "type fixed_size_table: arr4 i32 4\n"
+				  "type data: WithArr { v: arr4, tail: i64 } assert_size 24\n"
+				  "ffi function ffi_arr_make { i32 } -> { WithArr };\n"
+				  "function main { i64, ptr_argv } -> { i64 } {\n"
+				  "    init_pany_type res, WithArr;\n"
+				  "    init_pany_type base, i32;\n"
+				  "    mov_p32_imm base, 6;\n"
+				  "    call_ffifunc ffi_arr_make;\n"
+				  "    init_pany_type a4, arr4;\n"
+				  "    structLoad_pany_pste_field a4, res, WithArr.v;\n"
+				  "    init_pany_type sum, i32;\n"
+				  "    init_pany_type x, i32;\n"
+				  "    init_pany_type i, i64;\n"
+				  "    mov_p32_imm sum, 0;\n"
+				  "    mov_p64_imm i, 0;\n"
+				  "    fixedSizeTableLoad_pany_pfst_p64 x, a4, i;\n"
+				  "    add_p32_p32 sum, x;\n"
+				  "    mov_p64_imm i, 1;\n"
+				  "    fixedSizeTableLoad_pany_pfst_p64 x, a4, i;\n"
+				  "    add_p32_p32 sum, x;\n"
+				  "    mov_p64_imm i, 2;\n"
+				  "    fixedSizeTableLoad_pany_pfst_p64 x, a4, i;\n"
+				  "    add_p32_p32 sum, x;\n"
+				  "    mov_p64_imm i, 3;\n"
+				  "    fixedSizeTableLoad_pany_pfst_p64 x, a4, i;\n"
+				  "    add_p32_p32 sum, x;\n"
+				  "    init_pany_type tail, i64;\n"
+				  "    structLoad_pany_pste_field tail, res, WithArr.tail;\n"
+				  "    init_pany_type total, i64;\n"
+				  "    sext_p64_p32 total, sum;\n"
+				  "    add_p64_p64 total, tail;\n"
+				  "    output_p64 total;\n"
+				  "    ret;\n"
+				  "}\n",
+			"42"
+		);
+	}
+
+	// A plain struct nested in another plain struct is FFI-compliant (compliance is recursive).
+	void nestedStructByValue() {
+		runProgram(
+			"nested_struct",
+			ffiObjectHeader()
+				+ "type data: Inner { x: i32, y: i32 } assert_size 8\n"
+				  "type data: Outer { first: Inner, z: i64 } assert_size 16\n"
+				  "ffi function ffi_nested_sum { Outer } -> { i64 };\n"
+				  "function main { i64, ptr_argv } -> { i64 } {\n"
+				  "    init_pany_type v, i32;\n"
+				  "    init_pany_type z, i64;\n"
+				  "    init_pany_type first, Inner;\n"
+				  "    init_pany_type res, i64;\n"
+				  "    init_pany_type o, Outer;\n"
+				  "    mov_p32_imm v, 20;\n"
+				  "    structStore_pste_pany_field first, v, Inner.x;\n"
+				  "    mov_p32_imm v, 15;\n"
+				  "    structStore_pste_pany_field first, v, Inner.y;\n"
+				  "    structStore_pste_pany_field o, first, Outer.first;\n"
+				  "    mov_p64_imm z, 7;\n"
+				  "    structStore_pste_pany_field o, z, Outer.z;\n"
+				  "    call_ffifunc ffi_nested_sum;\n"
+				  "    output_p64 res;\n"
+				  "    ret;\n"
+				  "}\n",
+			"42"
+		);
+	}
+
+	// C has no by-value arrays, so a fixed-size table is only allowed as a structure field.
+	void tableByValueFails() {
+		expectLoadError(
+			"table_by_value",
+			ffiObjectHeader()
+				+ "type fixed_size_table: arr4 i32 4\n"
+				  "ffi function ffi_add { arr4 } -> { i64 };\n",
+			{ "by-value arrays", "fixed-size table" }
+		);
+	}
+
+	// Structures whose libffi descriptor would be degenerate are not FFI-compliant: a
+	// zero-length table flattens to no elements, a field-less struct has size 0 (rejected by
+	// libffi), and an oversized flattened element count must fail before it is materialized —
+	// also when the elements hide inside nested structure descriptors.
+	void nonCompliantStructsFail() {
+		expectLoadError(
+			"zero_length_table_struct",
+			ffiObjectHeader()
+				+ "type fixed_size_table: arr0 i32 0\n"
+				  "type data: WithEmpty { v: arr0 }\n"
+				  "ffi function ffi_add { WithEmpty } -> { i64 };\n",
+			{ "WithEmpty", "cannot be used in an FFI function signature" }
+		);
+		expectLoadError(
+			"empty_struct",
+			ffiObjectHeader()
+				+ "type data: Empty { }\n"
+				  "ffi function ffi_add { Empty } -> { i64 };\n",
+			{ "Empty", "cannot be used in an FFI function signature" }
+		);
+		expectLoadError(
+			"huge_table_struct",
+			ffiObjectHeader()
+				+ "type fixed_size_table: huge i32 100000000\n"
+				  "type data: WithHuge { v: huge }\n"
+				  "ffi function ffi_add { WithHuge } -> { i64 };\n",
+			{ "WithHuge", "cannot be used in an FFI function signature" }
+		);
+		// Each nested struct is under the cap on its own; their sum is not.
+		expectLoadError(
+			"nested_struct_cap_bypass",
+			ffiObjectHeader()
+				+ "type fixed_size_table: big i32 40000\n"
+				  "type data: Inner { v: big }\n"
+				  "type data: Outer { a: Inner, b: Inner }\n"
+				  "ffi function ffi_add { Outer } -> { i64 };\n",
+			{ "Outer", "cannot be used in an FFI function signature" }
+		);
+	}
+
+	// A packed struct is not FFI-compliant, so neither is any struct containing one.
+	void structWithPackedFieldFails() {
+		expectLoadError(
+			"packed_field_struct",
+			ffiObjectHeader()
+				+ "type data: PackedInner { a: i8, b: i64 } packed\n"
+				  "type data: Holder { p: PackedInner, v: i64 }\n"
+				  "ffi function ffi_add { Holder } -> { i64 };\n",
+			{ "cannot be used in an FFI function signature", "Holder" }
+		);
+	}
+
 	// libffi can only describe the C ABI layout, so packed structs are rejected in FFI
 	// signatures.
 	void packedStructInFfiFails() {
@@ -617,6 +868,126 @@ private:
 			"assert_ptr",
 			"type data: Holder { p: ptr_i64 } assert_size 8\n",
 			{ "depends on the pointer width" }
+		);
+	}
+
+	// A typed cpointer crosses the FFI boundary like the builtin `cptr` (the pointee type only
+	// exists on the VM side), both as a bare argument/result and as a by-value struct field; C
+	// writes through the pointer.
+	void typedCPointerStructFieldThroughC() {
+		runProgram(
+			"typed_cpointer_struct",
+			ffiObjectHeader()
+				+ "type cpointer: I64Ptr i64\n"
+				  "type data: Tagged { p: I64Ptr, tag: i64 } assert_size 16\n"
+				  "ffi function ffi_alloc8 { } -> { I64Ptr };\n"
+				  "ffi function ffi_tagged_store { Tagged } -> { };\n"
+				  "ffi function ffi_read8 { I64Ptr } -> { i64 };\n"
+				  "ffi function ffi_free8 { I64Ptr } -> { };\n"
+				  "function main { i64, ptr_argv } -> { i64 } {\n"
+				  "    init_pany_type buf, I64Ptr;\n"
+				  "    call_ffifunc ffi_alloc8;\n"
+				  "    init_pany_type bufc, I64Ptr;\n"
+				  "    mov_pcpt_pcpt bufc, buf;\n"
+				  "    init_pany_type tag, i64;\n"
+				  "    mov_p64_imm tag, 42;\n"
+				  "    init_pany_type t, Tagged;\n"
+				  "    structStore_pste_pany_field t, bufc, Tagged.p;\n"
+				  "    structStore_pste_pany_field t, tag, Tagged.tag;\n"
+				  "    call_ffifunc ffi_tagged_store;\n"
+				  "    init_pany_type res, i64;\n"
+				  "    init_pany_type buf2, I64Ptr;\n"
+				  "    mov_pcpt_pcpt buf2, buf;\n"
+				  "    call_ffifunc ffi_read8;\n"
+				  "    output_p64 res;\n"
+				  "    init_pany_type buf3, I64Ptr;\n"
+				  "    mov_pcpt_pcpt buf3, buf;\n"
+				  "    call_ffifunc ffi_free8;\n"
+				  "    ret;\n"
+				  "}\n",
+			"42"
+		);
+	}
+
+	// A cpointer never recurses into its pointee, covering the C handle idiom (e.g. `FILE*`:
+	// the pointee is an opaque type that is never inspected) and the linked-list idiom (a
+	// structure containing a cpointer to itself, declared before the structure).
+	void forwardDeclaredPointee() {
+		runProgram(
+			"forward_declared_pointee",
+			ffiObjectHeader()
+				+ "type opaque: Handle 8\n"
+				  "type cpointer: HandlePtr Handle\n"
+				  "type cpointer: NodePtr Node\n"
+				  "type data: Node { next: NodePtr, v: i64 } assert_size 16\n"
+				  "ffi function ffi_alloc8 { } -> { HandlePtr };\n"
+				  "ffi function ffi_free8 { HandlePtr } -> { };\n"
+				  "function main { i64, ptr_argv } -> { i64 } {\n"
+				  "    init_pany_type h, HandlePtr;\n"
+				  "    call_ffifunc ffi_alloc8;\n"
+				  "    init_pany_type h2, HandlePtr;\n"
+				  "    mov_pcpt_pcpt h2, h;\n"
+				  "    call_ffifunc ffi_free8;\n"
+				  "    init_pany_type ok, i64;\n"
+				  "    mov_p64_imm ok, 1;\n"
+				  "    output_p64 ok;\n"
+				  "    ret;\n"
+				  "}\n",
+			"1"
+		);
+	}
+
+	void cpointerToUnknownTypeFails() {
+		expectLoadError(
+			"cpointer_unknown_inner",
+			"type cpointer: BadPtr NoSuchType\n",
+			{ "subtype is not defined", "NoSuchType" }
+		);
+	}
+
+	// `mov_pcpt_pcpt` requires identical types on both sides: no implicit pointee change, no
+	// mixing the builtin `cptr` (unknown pointee) with a typed cpointer, distinct names stay
+	// distinct even with the same pointee, and non-cpointer operands are rejected outright.
+	void movPcptStrictnessFails() {
+		auto expect_mov_error = [&](const std::string& name,
+		                            const std::string& types,
+		                            const std::string& a_type,
+		                            const std::string& b_type,
+		                            std::string_view   keyword) {
+			expectLoadError(
+				name,
+				types + "function main { i64, ptr_argv } -> { i64 } {\n"
+				      + "    init_pany_type a, " + a_type + ";\n"
+				      + "    init_pany_type b, " + b_type + ";\n"
+				      + "    mov_pcpt_pcpt a, b;\n"
+				        "    ret;\n"
+				        "}\n",
+				{ keyword }
+			);
+		};
+		expect_mov_error(
+			"mov_pcpt_across_types",
+			"type cpointer: APtr i64\ntype cpointer: BPtr i32\n",
+			"APtr",
+			"BPtr",
+			"C pointer type does not match"
+		);
+		expect_mov_error(
+			"mov_pcpt_cptr_to_typed",
+			"type cpointer: APtr i64\n",
+			"APtr",
+			"cptr",
+			"C pointer type does not match"
+		);
+		expect_mov_error(
+			"mov_pcpt_same_pointee",
+			"type cpointer: APtr i64\ntype cpointer: BPtr i64\n",
+			"APtr",
+			"BPtr",
+			"C pointer type does not match"
+		);
+		expect_mov_error(
+			"mov_pcpt_non_cpointer", "", "i64", "i64", "Invalid instruction argument type"
 		);
 	}
 
