@@ -87,7 +87,7 @@ namespace compiler::helios::code {
 		return {};
 	}
 
-	base::Optional<std::tuple<BuiltinBinary, Coercion, Coercion>> findNumericBinaryBuiltin(
+	base::Optional<std::tuple<BuiltinOperation, Coercion, Coercion>> findNumericBinaryBuiltin(
 		query::Context& ctx, lexer::Operator op, CRef<Expr> lhs, CRef<Expr> rhs
 	) {
 		auto common_type_res = findCommonTypeWithCoercion(ctx, lhs, rhs);
@@ -97,7 +97,7 @@ namespace compiler::helios::code {
 
 		auto operation_kind = common_type.getType().getKind();
 
-		const static base::Map<std::pair<lexer::Operator, tsh::Kind>, BuiltinBinary> numeric_operators
+		const static base::Map<std::pair<lexer::Operator, tsh::Kind>, BuiltinOperation> numeric_operators
 			= {
 				  /// Integer arithmetic ///
 				  { { base::StrID("+"), tsh::Kind::Integral }, BuiltinBinary::IntegerAdd },
@@ -105,11 +105,11 @@ namespace compiler::helios::code {
 				  { { base::StrID("*"), tsh::Kind::Integral }, BuiltinBinary::IntegerMul },
 				  { { base::StrID("/"), tsh::Kind::Integral }, BuiltinBinary::IntegerDiv },
 				  { { base::StrID("%"), tsh::Kind::Integral }, BuiltinBinary::IntegerMod },
-				  { { base::StrID("**"), tsh::Kind::Integral }, BuiltinBinary::IntegerPow },
-				  { { base::StrID("+="), tsh::Kind::Integral }, BuiltinBinary::IntegerEqAdd },
-				  { { base::StrID("-="), tsh::Kind::Integral }, BuiltinBinary::IntegerEqSub },
-				  { { base::StrID("*="), tsh::Kind::Integral }, BuiltinBinary::IntegerEqMul },
-				  { { base::StrID("/="), tsh::Kind::Integral }, BuiltinBinary::IntegerEqDiv },
+				  { { base::StrID("**"), tsh::Kind::Integral }, LanguagePrimitive::IntegerPow },
+				//   { { base::StrID("+="), tsh::Kind::Integral }, BuiltinBinary::IntegerEqAdd },
+				//   { { base::StrID("-="), tsh::Kind::Integral }, BuiltinBinary::IntegerEqSub },
+				//   { { base::StrID("*="), tsh::Kind::Integral }, BuiltinBinary::IntegerEqMul },
+				//   { { base::StrID("/="), tsh::Kind::Integral }, BuiltinBinary::IntegerEqDiv },
 
 				  /// Integer comparisons ///
 				  { { base::StrID("<"), tsh::Kind::Integral }, BuiltinBinary::IntegerLt },
@@ -125,11 +125,11 @@ namespace compiler::helios::code {
 				  { { base::StrID("*"), tsh::Kind::Float }, BuiltinBinary::FloatMul },
 				  { { base::StrID("/"), tsh::Kind::Float }, BuiltinBinary::FloatDiv },
 				  { { base::StrID("%"), tsh::Kind::Float }, BuiltinBinary::FloatMod },
-				  { { base::StrID("**"), tsh::Kind::Float }, BuiltinBinary::FloatPow },
-				  { { base::StrID("+="), tsh::Kind::Float }, BuiltinBinary::FloatEqAdd },
-				  { { base::StrID("-="), tsh::Kind::Float }, BuiltinBinary::FloatEqSub },
-				  { { base::StrID("*="), tsh::Kind::Float }, BuiltinBinary::FloatEqMul },
-				  { { base::StrID("/="), tsh::Kind::Float }, BuiltinBinary::FloatEqDiv },
+				  { { base::StrID("**"), tsh::Kind::Float }, LanguagePrimitive::FloatPow },
+				//   { { base::StrID("+="), tsh::Kind::Float }, BuiltinBinary::FloatEqAdd },
+				//   { { base::StrID("-="), tsh::Kind::Float }, BuiltinBinary::FloatEqSub },
+				//   { { base::StrID("*="), tsh::Kind::Float }, BuiltinBinary::FloatEqMul },
+				//   { { base::StrID("/="), tsh::Kind::Float }, BuiltinBinary::FloatEqDiv },
 
 				  /// Floating point comparisons ///
 				  { { base::StrID("<"), tsh::Kind::Float }, BuiltinBinary::FloatLt },

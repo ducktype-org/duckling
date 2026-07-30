@@ -27,6 +27,7 @@
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
+#include "base/extend_cpp/variant_match.hpp"
 #include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/vector_utils.hpp>
@@ -553,9 +554,24 @@ namespace compiler::helios::code {
 						auto [operation, lhs_coercion, rhs_coercion] = numeric_builtin;
 						auto coerced_lhs = lhs_coercion.coerce(ctx, std::move(lhs));
 						auto coerced_rhs = rhs_coercion.coerce(ctx, std::move(rhs));
-						return makeBox<BinaryOperatorExpr>(
-							ctx, new_origin, operation, std::move(coerced_lhs), std::move(coerced_rhs)
-						);
+						variant_match(operation) {
+							variant_case(BuiltinBinary, op) {
+								return makeBox<BinaryOperatorExpr>(
+									ctx, new_origin, op, std::move(coerced_lhs), std::move(coerced_rhs)
+								);
+							}
+							variant_case(LanguagePrimitive, op) {
+								auto callee = makeBox<IdentifierExpr>(ctx, new_origin, op);
+								auto args = std::vector<Box<Expr>>{std::move(coerced_lhs), std::move(coerced_rhs)};
+								return makeBox<CallExpr>(
+									ctx, new_origin, callee, args
+								);
+							}
+							variant_case(Box<Expr>, op) {
+								return op;
+							}
+						}
+						CORE_UNREACHABLE();
 					}
 				}
 

@@ -13,6 +13,7 @@
 #include <lexer/token_common.hpp>
 #include <query_framework/query_int.hpp>
 #include <query_framework/utils/simple_keys.hpp>
+#include "helios/symbols/lang_primitives.hpp"
 
 namespace compiler::helios::code {
 	/**
@@ -25,13 +26,15 @@ namespace compiler::helios::code {
 		query::Context& ctx, lexer::Operator op, CRef<Expr> expr
 	);
 
+	using BuiltinOperation = std::variant<BuiltinBinary, compiler::helios::LanguagePrimitive, Box<compiler::helios::code::Expr>>;
+
 	/**
 	 * @brief Finds a numeric builtin binary operator between two expressions and for a given name.
 	 * If types don't match directly, checks whether one can implicitly coerce to another.
 	 * @return Returns the operation along with coercions to apply to operands in format
 	 * (builtin_operation, left_coercion, right_coercion)
 	 */
-	base::Optional<std::tuple<BuiltinBinary, Coercion, Coercion>> findNumericBinaryBuiltin(
+	base::Optional<std::tuple<BuiltinOperation, Coercion, Coercion>> findNumericBinaryBuiltin(
 		query::Context& ctx, lexer::Operator op, CRef<Expr> lhs, CRef<Expr> rhs
 	);
 

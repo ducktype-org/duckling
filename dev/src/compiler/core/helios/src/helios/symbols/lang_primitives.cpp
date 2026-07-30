@@ -60,6 +60,16 @@ namespace compiler::helios {
 					ctx, LanguagePrimitive::Panic, "core", { "panicking" }, "panic"
 				);
 			}
+			case LanguagePrimitive::IntegerPow: {
+				return lookupPrimitive(
+					ctx, LanguagePrimitive::IntegerPow, "std", { "math"}, "pow"
+				);
+			}
+			case LanguagePrimitive::FloatPow: {
+				return lookupPrimitive(
+					ctx, LanguagePrimitive::FloatPow, "std", { "math"}, "pow"
+				);
+			}
 			default:
 				CORE_PANIC("Unknown language primitive: ", key.primitive);
 			}
