@@ -1,18 +1,46 @@
-#include "vmvalueref.hpp"
+#include "safe_vmvalueref.hpp"
 
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <vm/core/safe/safe_vmprocess.hpp>
 
-vm::VMValueRef vm::interpreted_data_variant::Table::get(usize index) {
-	if (index >= size) throw std::out_of_range("Table index out of range");
-
-	vm::Pointer pointer = begin.movedPointer(index * static_cast<usize>(type->getSize()));
-
-	return { *process.get(), type, pointer };
+SharedBox<vm::IVMValueRef> vm::SafeVMValueRef::makeShared(
+	SafeVMProcess& process, TypeCRef type, Pointer pointed_data
+) {
+	// Build a concrete `SharedBox<SafeVMValueRef>` (its control block deletes as `SafeVMValueRef`)
+	// and let it convert to the interface-typed box on return.
+	return makeSharedBox<SafeVMValueRef>(process, type, pointed_data);
 }
 
-base::Optional<vm::InterpretedDataVariant> vm::VMValueRef::readData() const {
+vm::SafeTableElementAccess::SafeTableElementAccess(
+	SafeVMProcess& process, TypeCRef element_type, Pointer begin
+):
+	  my_process(&process),
+	  element_type(element_type),
+	  begin(begin) {}
+
+SharedBox<vm::IVMValueRef> vm::SafeTableElementAccess::get(usize index) const {
+	vm::Pointer pointer = begin.movedPointer(index * static_cast<usize>(element_type->getSize()));
+	return SafeVMValueRef::makeShared(*my_process.get(), element_type, pointer);
+}
+
+base::ModRawView vm::SafeTableElementAccess::asBytesView() const {
+	return my_process->getMemory().getRemainingPointerData(begin);
+}
+
+namespace vm {
+	namespace {
+		/** @brief Builds an interpreted table backed by lazy element access to safe VM memory. */
+		interpreted_data_variant::Table makeInterpretedTable(
+			SafeVMProcess& process, TypeCRef element_type, Pointer begin, usize size
+		) {
+			return { .elements = makeSharedBox<SafeTableElementAccess>(process, element_type, begin),
+				     .size = size };
+		}
+	}
+}
+
+base::Optional<vm::InterpretedDataVariant> vm::SafeVMValueRef::readData() const {
 	variant_match(my_type->getKindVariant()) {
 		variant_case_novalue(vm::kind::Primitive) {
 			const auto type_name = my_type->getName();
@@ -38,7 +66,7 @@ base::Optional<vm::InterpretedDataVariant> vm::VMValueRef::readData() const {
 			if (!pointer) return vm::interpreted_data_variant::Pointer{ std::nullopt };
 
 			return vm::interpreted_data_variant::Pointer{
-				VMValueRef(*my_process.get(), ptr_type, pointer),
+				makeShared(*my_process.get(), ptr_type, pointer)
 			};
 		}
 
@@ -49,8 +77,8 @@ base::Optional<vm::InterpretedDataVariant> vm::VMValueRef::readData() const {
 			usize tbl_size
 				= block_data.size() / static_cast<usize>(dyntable_kind.inner_type->getSize());
 
-			return vm::interpreted_data_variant::Table(
-				my_process, pointed_data, dyntable_kind.inner_type, tbl_size
+			return makeInterpretedTable(
+				*my_process.get(), dyntable_kind.inner_type, pointed_data, tbl_size
 			);
 		}
 
@@ -61,8 +89,8 @@ base::Optional<vm::InterpretedDataVariant> vm::VMValueRef::readData() const {
 			usize tbl_size
 				= block_data.size() / static_cast<usize>(fixtable_kind.inner_type->getSize());
 
-			return vm::interpreted_data_variant::Table(
-				my_process, pointed_data, fixtable_kind.inner_type, tbl_size
+			return makeInterpretedTable(
+				*my_process.get(), fixtable_kind.inner_type, pointed_data, tbl_size
 			);
 		}
 
@@ -73,7 +101,7 @@ base::Optional<vm::InterpretedDataVariant> vm::VMValueRef::readData() const {
 			for (const auto& field_desc: data_kind.fields) {
 				fields.push_back(vm::interpreted_data_variant::Data::FieldDesc{
 					.offset = field_desc.offset,
-					.value  = VMValueRef(
+					.value  = makeShared(
                         *my_process.get(),
                         field_desc.type,
                         pointed_data.movedPointer(static_cast<u64>(field_desc.offset.asInt()))
@@ -123,7 +151,7 @@ base::Optional<vm::InterpretedDataVariant> vm::VMValueRef::readData() const {
 					return vm::interpreted_data_variant::Variant{
 						.type_tag = alternative_index,
 						.referenced
-						= VMValueRef(*my_process.get(), inner_type, Pointer(view_block, 0)),
+						= makeShared(*my_process.get(), inner_type, Pointer(view_block, 0)),
 					};
 				}
 				opt_none { return std::nullopt; }
@@ -147,27 +175,19 @@ base::Optional<vm::InterpretedDataVariant> vm::VMValueRef::readData() const {
 	CORE_UNREACHABLE();
 }
 
-vm::interpreted_data_variant::Table::Table(
-	base::Ref<SafeVMProcess> process, vm::Pointer begin, TypeCRef type, usize size
-):
-	  process(process),
-	  begin(begin),
-	  type(type),
-	  size(size) {}
-
-vm::VMValueRef::VMValueRef(SafeVMProcess& process, TypeCRef type, Pointer pointed_data):
+vm::SafeVMValueRef::SafeVMValueRef(SafeVMProcess& process, TypeCRef type, Pointer pointed_data):
 	  my_process(&process),
 	  memory(&process.getMemory()),
 	  my_type(type),
 	  pointed_data(pointed_data) {}
 
-base::CRef<vm::code::valid_type::ValidType> vm::VMValueRef::getType() const {
-	auto type_id = static_cast<code::valid_type::ValidTypeID>(my_type->getID().asInt());
-	auto types   = my_process->loader.getHighProgram()->types();
+base::CRef<vm::code::valid_type::ValidType> vm::SafeVMValueRef::getType() const {
+	auto        type_id = static_cast<code::valid_type::ValidTypeID>(my_type->getID().asInt());
+	const auto& types   = my_process->loader.getHighProgram()->types();
 	return types.at(type_id);
 }
 
-std::string vm::VMValueRef::str() const {
+std::string vm::SafeVMValueRef::str() const {
 	auto var = readData();
 	if (!var.has_value()) return "<none>";
 
@@ -186,7 +206,7 @@ std::string vm::VMValueRef::str() const {
 	return "<unknown>";
 }
 
-bool vm::VMValueRef::isComplex() const {
+bool vm::SafeVMValueRef::isComplex() const {
 	variant_match(my_type->getKindVariant()) {
 		variant_case_novalue(std::monostate, kind::Primitive, kind::Function) { return false; }
 		variant_case(kind::Pointer, val) {

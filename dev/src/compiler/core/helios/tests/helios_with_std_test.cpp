@@ -5,6 +5,7 @@
  * helios_test.cpp which builds standalone module trees without a std.
  */
 
+#include <ctv/ctv.hpp>
 #include <driver/test_utils.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/hout/elements/stmt.hpp>
@@ -44,6 +45,7 @@ public:
 		TESTER_ADD_TEST(testStrings);
 		TESTER_ADD_TEST(testStringClassProperties);
 		TESTER_ADD_TEST(testDefaultInitializers);
+		TESTER_ADD_TEST(testCompTimeStrings);
 	}
 
 protected:
@@ -51,7 +53,8 @@ protected:
 		fs::FilePath artifacts_path = fs::FileManager::createRandomTempDirectory().getFilePath();
 		std::vector<compiler::driver::test_utils::PackagePathAndName> packages{
 			{ fs::FilePath(path("test_modules/builtins")), "builtins" },
-			{ fs::FilePath(path("test_modules/strings")), "strings" }
+			{ fs::FilePath(path("test_modules/strings")), "strings" },
+			{ fs::FilePath(path("test_modules/comp_time_strings")), "comp_time_strings" }
 		};
 		auto init_result
 			= compiler::driver::test_utils::initializeCompilerForTests(packages, artifacts_path);
@@ -395,6 +398,25 @@ private:
 				"String should not be trivially copyable: it has a user-defined `copy`."
 			);
 		});
+	}
+
+	void testCompTimeStrings() {
+		auto module     = compiler::driver::test_utils::getModuleIdFromPath("comp_time_strings");
+		auto root_scope = getModuleScope(module);
+
+		// `const a = getString();` should materialize a `String` CTV holding the source string.
+		auto a_value
+			= getConstValueAs<compiler::ctv::CompileTimeValue::StringClassValue>("a", root_scope);
+		ASSERT_EQUAL(base::StrID("fun fromString() -> i64 = 1;"), a_value.value);
+
+		// `const b = getCharSlice();` should materialize a char-slice CTV (stored as a `StrID`).
+		auto b_value
+			= getConstValueAs<compiler::ctv::CompileTimeValue::CharSliceValue>("b", root_scope);
+		ASSERT_EQUAL(base::StrID("fun fromSlice() -> i64 = 2;"), b_value.value);
+
+		// The `expand`s above should have injected `fromString`/`fromSlice` into `expanded`.
+		ASSERT_TRUE(!getChain("expanded.fromString", root_scope).empty());
+		ASSERT_TRUE(!getChain("expanded.fromSlice", root_scope).empty());
 	}
 
 	void testStrings() {

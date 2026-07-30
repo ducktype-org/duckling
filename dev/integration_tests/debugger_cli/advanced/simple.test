@@ -7,7 +7,7 @@ simple.dbc
 > "+\n"
 
 # Now the debugger is running, so let's run our main function
-timeout 0.005  # we expect status to be reported fast...
+timeout 0.1  # we expect status to be reported fast...
 < "run\n"
 > "Running"
 timeout 0.5  # ..and wanna give the program some time to finish

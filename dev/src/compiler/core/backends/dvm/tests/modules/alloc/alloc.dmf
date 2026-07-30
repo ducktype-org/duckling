@@ -45,14 +45,14 @@ fun i64ReallocChain() -> i64 = {
     let last = p[7];
 
     let s = slice_from_ptr_len:{i64}(p, 8u64);
-    let len = i64(s.length());
+    let len = s.length() as i64;
 
     dvm_free:{i64}(p);
     return first + last + len;
 }
 
 fun main() -> i64 = {
-    builtin_output_i64(i64(i32Chain()));
+    builtin_output_i64(i32Chain() as i64);
     builtin_output_i64(i64ReallocChain());
     return charChain();
 }

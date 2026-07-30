@@ -11,7 +11,7 @@ fun strChain() -> i64 = {
     let len          = q[1].length();
 
     dvm_free:{str}(p);
-    return i64(len);
+    return len as i64;
 }
 
 # The same chain baked for `i32`, so the builtins are instantiated for more than one element type.
@@ -37,7 +37,7 @@ fun main() = {
     builtin_output_char(p[0]);
 
     builtin_output_i64(strChain());
-    builtin_output_i64(i64(intChain()));
+    builtin_output_i64(intChain() as i64);
 
     return 0;
 }

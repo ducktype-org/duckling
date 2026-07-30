@@ -57,11 +57,19 @@ impl AnyPackage {
         }
     }
 
-    /// Get the artifacts layout.
-    pub fn artifacts_dir(&self) -> &ArtifactsLayout {
+    /// Get the path to the artifacts directory.
+    pub fn artifacts_directory(&self) -> &Path {
         match self {
             Self::Package(package) => package.artifacts_directory(),
             Self::Script(script) => script.artifacts_directory(),
+        }
+    }
+
+    /// Get the artifacts layout.
+    pub fn artifacts_layout<T: ArtifactsLayout>(&self) -> T {
+        match self {
+            Self::Package(package) => package.artifacts_layout(),
+            Self::Script(script) => script.artifacts_layout(),
         }
     }
 
@@ -187,7 +195,7 @@ pub struct Package {
     /// Path to the manifest of the package.
     manifest_path: PathBuf,
     /// Where the build artifacts should be located.
-    artifacts_dir: ArtifactsLayout,
+    artifacts_dir: PathBuf,
     /// Path to the source code folder of the package.
     possible_source_dir: PathBuf,
 }
@@ -201,7 +209,7 @@ impl Package {
         root: PathBuf,
         manifest_path: PathBuf,
     ) -> Self {
-        let artifacts_dir = ArtifactsLayout::new(root.join(".duck_build"));
+        let artifacts_dir = root.join(".duck_build");
         let source_directory = root.join("src");
         Self {
             original_content,
@@ -255,8 +263,13 @@ impl Package {
     }
 
     /// Get the path to the artifacts directory.
-    pub fn artifacts_directory(&self) -> &ArtifactsLayout {
+    pub fn artifacts_directory(&self) -> &Path {
         &self.artifacts_dir
+    }
+
+    /// Get the the artifacts layout.
+    pub fn artifacts_layout<T: ArtifactsLayout>(&self) -> T {
+        T::new(self.artifacts_dir.clone())
     }
 
     /// Convert this package to an [`Identity`].
@@ -278,7 +291,7 @@ impl fmt::Debug for Package {
             .field("manifest", &self.manifest)
             .field("root", &self.root)
             .field("manifest_path", &self.manifest_path)
-            .field("artifacts_dir", &self.artifacts_dir.root_directory())
+            .field("artifacts_dir", &self.artifacts_dir)
             .field("possible_source_dir", &self.possible_source_dir)
             .finish_non_exhaustive()
     }

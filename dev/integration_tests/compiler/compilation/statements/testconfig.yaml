@@ -26,7 +26,7 @@ Tests:
     # @TODO: #2448 Investigate why deterministic compilation check fails for this test (mangling issue)
     enable_conc_deterministic_tests: "false"
     Cases:
-      # @TODO: #2483 When strings are handled in DVM, add a DVM case here
+      # @TODO: #3163 When lists are handled in DVM, add a DVM case here
       # and remove `expressions/zero_init` in favour of this test.
       llvm:
         backend: llvm
