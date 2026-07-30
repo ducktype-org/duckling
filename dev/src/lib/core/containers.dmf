@@ -12,7 +12,7 @@ namespace allocation {
 
     @dvm_only_impl
     fun alloc(len: u64) -> manyptr T = {
-        return builtins.dvm_alloc:{T}(len);
+        return builtins.dvm_alloc_arr:{T}(len);
     }
 
     @native_only_impl
@@ -25,7 +25,7 @@ namespace allocation {
 
     @dvm_only_impl
     fun free(p: manyptr T) -> () = {
-        builtins.dvm_free:{T}(p);
+        builtins.dvm_free_arr:{T}(p);
     }
 
     @native_only_impl
@@ -37,12 +37,12 @@ namespace allocation {
     fundecl realloc(p: manyptr T, new_size: u64) -> manyptr T;
 
     #{
-        `dvm_realloc` resizes the dynamic table in place and reseats the
+        `dvm_realloc_arr` resizes the dynamic table in place and reseats the
         handle held by `p`, so the parameter itself is the reallocated buffer.
     #}
     @dvm_only_impl
     fun realloc(p: manyptr T, new_size: u64) -> manyptr T = {
-        builtins.dvm_realloc:{T}(p, new_size * LLVM_ELEM_SIZE);
+        builtins.dvm_realloc_arr:{T}(p, new_size);
         return p;
     }
 
