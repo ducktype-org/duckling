@@ -35,7 +35,7 @@ use super::util::http::handlers::Collector;
 use super::util::http::{
     Request, Response, check_http_status_code, configure_easy2, response_from_handler,
 };
-use crate::{DuckContext, QuackResult, QuackResultContext};
+use crate::{DuckContext, QuackResult, QuackResultContext, try_curl};
 
 struct IncomingConnectionRequest {
     handler: Easy2<Collector>,
@@ -110,7 +110,7 @@ impl<'duck> AsyncHttpClient<'duck> {
     /// Create a common [`Easy2`] handler.
     fn create_easy<H: Handler>(&self, handler: H, request: &Request) -> QuackResult<Easy2<H>> {
         let mut easy = Easy2::new(handler);
-        configure_easy2(&mut easy, self.ctx, request)?;
+        configure_easy2(&mut easy, self.ctx, request).context("failed to configure curl handle")?;
         Ok(easy)
     }
 }
@@ -160,7 +160,7 @@ impl Worker {
         if let Err(e) = multi.pipelining(
             /* http/1.1 pipelining */ false, /* multiplexing */ true,
         ) {
-            error!("failed to set pipelining on multi: {e}");
+            error!(target = "curl", "failed to set pipelining on multi: {e}");
         }
         Self {
             receiver,
@@ -211,7 +211,10 @@ impl Worker {
                 self.connections.insert(token, (handle, sender));
             }
             Err(err) => {
-                error!("failed to register a new Easy2Handle: {err}");
+                error!(
+                    target = "curl",
+                    "failed to register a new Easy2Handle: {err}"
+                );
                 let _ = sender.send(CompletedRequest { response: Err(err) });
             }
         };
@@ -228,7 +231,7 @@ impl Worker {
             .context("failed to add a handle to a multi")?;
         let token = self.next_token;
         self.next_token += 1;
-        handle.set_token(token)?;
+        try_curl!(handle.set_token(token), "failed to set token to `{token}`");
         Ok((token, handle))
     }
 
@@ -248,12 +251,12 @@ impl Worker {
             Err(err) => {
                 // We should call `perform` again.
                 if err.is_call_perform() {
-                    trace!("got `is_call_perform`");
+                    trace!(target = "curl", "got `is_call_perform`");
                     return ShouldCheckForClosedChannel::No;
                 }
                 // An error means that we should remove all pending connections:
                 // https://curl.se/libcurl/c/curl_multi_perform.html.
-                error!("failed to perform");
+                error!(target = "curl", "failed to perform");
                 self.fail_all_connections(&err);
                 return ShouldCheckForClosedChannel::No;
             }
@@ -287,7 +290,7 @@ impl Worker {
             // https://curl.se/libcurl/c/curl_multi_wait.html.
                 && let Err(e) = self.multi.wait(&mut [], delay)
             {
-                error!("failed to wait");
+                error!(target = "curl", "failed to wait: {e}");
                 self.fail_all_connections(&e);
             }
             return ShouldCheckForClosedChannel::No;
@@ -316,7 +319,10 @@ impl Worker {
 
     /// We've got an error when driving a [`Multi`]. Close all opened connections with the given error.
     fn fail_all_connections(&mut self, error: &curl::MultiError) {
-        error!("stopping all pending HTTP connections because got error: {error}");
+        error!(
+            target = "curl",
+            "stopping all pending HTTP connections because got error: {error}"
+        );
         // NOTE: Handles are detached/removed when dropped.
         for (_, (_, sender)) in self.connections.drain() {
             let _ = sender.send(CompletedRequest {

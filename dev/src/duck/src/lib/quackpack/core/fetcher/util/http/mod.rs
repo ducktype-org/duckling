@@ -3,7 +3,7 @@ use http::header;
 use tracing::{debug, error};
 
 use self::handlers::Collector;
-use crate::{DuckContext, QuackResult, qp_bail};
+use crate::{DuckContext, QuackResult, qp_bail, try_curl};
 
 pub mod defaults;
 pub mod handlers;
@@ -28,29 +28,54 @@ pub fn configure_easy2<H>(
             .and_then(|value| value.to_str().ok())
             .unwrap_or(fallback)
     };
-    handler.useragent(get_header_with_fallback(
-        header::USER_AGENT,
-        defaults::DUCK_USER_AGENT,
-    ))?;
+    try_curl!(
+        handler.useragent(get_header_with_fallback(
+            header::USER_AGENT,
+            defaults::DUCK_USER_AGENT,
+        )),
+        "failed to set user-agent"
+    );
     // Accept all encodings.
-    handler.accept_encoding(get_header_with_fallback(header::ACCEPT_ENCODING, ""))?;
+    try_curl!(
+        handler.accept_encoding(get_header_with_fallback(header::ACCEPT_ENCODING, "")),
+        "failed to set accepted encodings"
+    );
     if let Some(value) = request.headers().get(header::MAX_FORWARDS)
         && let Ok(value) = value.to_str()
         && let Ok(num) = value.parse()
     {
-        handler.max_redirections(num)?;
+        try_curl!(
+            handler.max_redirections(num),
+            "failed to set max-redirections to {num}",
+        );
     } else {
-        handler.max_redirections(defaults::MAX_REDIRECTS as u32)?;
+        try_curl!(
+            handler.max_redirections(defaults::MAX_REDIRECTS),
+            "failed to set default max-redirections"
+        );
     }
-    handler.connect_timeout(defaults::CONNECT_TIMEOUT)?;
-    handler.timeout(defaults::REQUEST_TIMEOUT)?;
-    handler.follow_location(true)?;
+    try_curl!(
+        handler.connect_timeout(defaults::CONNECT_TIMEOUT),
+        "failed to set connection timeout"
+    );
+    try_curl!(
+        handler.timeout(defaults::REQUEST_TIMEOUT),
+        "failed to set timeout"
+    );
+    try_curl!(
+        handler.follow_location(true),
+        "failed to enable following redirects"
+    );
     let headers = http_headers_to_curl_list(request.headers())?;
-    handler.http_headers(headers)?;
-    handler.url(&request.uri().to_string())?;
+    try_curl!(handler.http_headers(headers), "failed to set HTTP headers");
+    try_curl!(
+        handler.url(&request.uri().to_string()),
+        "failed to set url to `{}`",
+        request.uri()
+    );
     set_http_method_on_curl(handler, request.method())?;
     set_http_version_on_curl(handler, request.version())?;
-    handler.pipewait(true)?;
+    try_curl!(handler.pipewait(true), "failed to set pipewait");
     Ok(())
 }
 
@@ -69,9 +94,15 @@ fn http_headers_to_curl_list(headers: &header::HeaderMap) -> Result<easy::List, 
             }
         };
         if !value.trim().is_empty() {
-            list.append(&format!("{header}: {value}"))?;
+            try_curl!(
+                list.append(&format!("{header}: {value}")),
+                "failed to append header`{header}: {value}`"
+            );
         } else {
-            list.append(&format!("{header};"))?;
+            try_curl!(
+                list.append(&format!("{header};")),
+                "failed to append header `{header};`"
+            );
         }
     }
 
@@ -86,10 +117,14 @@ fn set_http_method_on_curl<H>(
     method: &http::Method,
 ) -> Result<(), curl::Error> {
     match *method {
-        http::Method::GET => handler.get(true)?,
-        http::Method::POST => handler.post(true)?,
-        http::Method::PUT => handler.put(true)?,
-        _ => handler.custom_request(method.as_str())?,
+        http::Method::GET => try_curl!(handler.get(true), "failed to set GET request"),
+        http::Method::POST => try_curl!(handler.post(true), "failed to set POST request"),
+        http::Method::PUT => try_curl!(handler.put(true), "failed to set PUT request"),
+        _ => try_curl!(
+            handler.custom_request(method.as_str()),
+            "failed to set custom request `{}`",
+            method.as_str()
+        ),
     };
     Ok(())
 }
@@ -100,12 +135,29 @@ fn set_http_version_on_curl<H>(
     version: http::Version,
 ) -> Result<(), curl::Error> {
     match version {
-        http::Version::HTTP_09 => handler.http_09_allowed(true)?,
-        http::Version::HTTP_10 => handler.http_version(curl::easy::HttpVersion::V10)?,
-        http::Version::HTTP_11 => handler.http_version(curl::easy::HttpVersion::V11)?,
-        http::Version::HTTP_2 => handler.http_version(curl::easy::HttpVersion::V2)?,
-        http::Version::HTTP_3 => handler.http_version(curl::easy::HttpVersion::V3)?,
-        _ => error!("unknown HTTP version: `{version:?}`, ignoring..."),
+        http::Version::HTTP_09 => {
+            try_curl!(handler.http_09_allowed(true), "failed to enable HTTP/0.9")
+        }
+        http::Version::HTTP_10 => try_curl!(
+            handler.http_version(curl::easy::HttpVersion::V10),
+            "failed to enable HTTP/1"
+        ),
+        http::Version::HTTP_11 => try_curl!(
+            handler.http_version(curl::easy::HttpVersion::V11),
+            "failed to enable HTTP/1.1"
+        ),
+        http::Version::HTTP_2 => try_curl!(
+            handler.http_version(curl::easy::HttpVersion::V2),
+            "failed to enable HTTP/2"
+        ),
+        http::Version::HTTP_3 => try_curl!(
+            handler.http_version(curl::easy::HttpVersion::V3),
+            "failed to enable HTTP/3"
+        ),
+        _ => error!(
+            target = "curl",
+            "unknown HTTP version: `{version:?}`, ignoring..."
+        ),
     };
     Ok(())
 }
@@ -158,4 +210,17 @@ pub fn response_from_handler(handler: Easy2<Collector>) -> Response {
         *response.status_mut() = status;
     }
     response
+}
+
+#[macro_export]
+macro_rules! try_curl {
+    ($expr:expr, $($ctx:tt)+) => {{
+        match $expr {
+            Ok(value) => value,
+            Err(err) => {
+                ::tracing::error!(target = "curl", error = ?err, $($ctx)+);
+                return Err(err.into());
+            }
+        }
+    }};
 }
