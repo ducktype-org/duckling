@@ -246,6 +246,14 @@ impl Profile {
             c_std: determine_c_std(profile_name, manifest_profiles)?,
         })
     }
+
+    /// Get a [`String`] describing the value (everything except `name`) of this profile.
+    pub fn serialize_raw(&self) -> String {
+        format!(
+            "{}-{}-{}-{}",
+            self.opt_level, self.incremental, self.c_std, self.dvm_bytecode
+        )
+    }
 }
 
 impl Display for OptLevel {

@@ -19,8 +19,7 @@
 #include <vm/api/vm.hpp>
 #include <vm/bytecode/validator/errors.hpp>
 #include <vm/bytecode/validator/valid_program.hpp>
-#include <vm/core/vmvalue/vmvalue.hpp>
-#include <vm/core/vmvalue/vmvalueref.hpp>
+#include <vm/core/vmvalue/ivmvalue.hpp>
 
 #include <expected>
 #include <mutex>
@@ -102,7 +101,7 @@ namespace {
 	};
 
 	/**
-	 * @brief Materializes an aggregate CTV (e.g. a char-slice or String) as an owned VmValue by
+	 * @brief Materializes an aggregate CTV (e.g. a char-slice or String) as an owned VMValue by
 	 * letting the DVM backend lower it.
 	 *
 	 * We synthesize a function like `fun anon() -> T = {return ctv;}`
@@ -111,7 +110,7 @@ namespace {
 	 * returning the VMValue with the ctv. The DVM backend may generate new globals in the
 	 * process.
 	 */
-	std::expected<Box<vm::VmValue>, VmEvaluationError> vmValueFromCtvBackendLowering(
+	std::expected<Box<vm::IVMValue>, VmEvaluationError> vmValueFromCtvBackendLowering(
 		query::Context&                    ctx,
 		CompTimeDVM&                       comptime_dvm,
 		const CompileTimeValue&            ctv,
@@ -171,9 +170,9 @@ namespace {
 				)
 			));
 
-		Ref<vm::VmValue> returned = [&]() -> Ref<vm::VmValue> {
+		Ref<vm::IVMValue> returned = [&]() -> Ref<vm::IVMValue> {
 			variant_match(maybe_exit_value.value()) {
-				variant_case(std::vector<Ref<vm::VmValue>>, values) {
+				variant_case(std::vector<Ref<vm::IVMValue>>, values) {
 					CORE_ASSERT(values.size() == 1, "Expected a single materialized CTV value.");
 					return values.at(0);
 				}
@@ -184,7 +183,7 @@ namespace {
 			CORE_UNREACHABLE();
 		}();
 
-		auto owned_response = vm::api::getVmValue(pid, returned->getType()->getName().str());
+		auto owned_response = vm::api::getVMValue(pid, returned->getType()->getName().str());
 		if (!owned_response.has_value())
 			return std::unexpected(VmEvaluationError(
 				VmEvaluationError::Kind::ArgConversionFailed,
@@ -197,24 +196,24 @@ namespace {
 		auto owned = std::move(owned_response->vm_value);
 
 		CORE_ASSERT(
-			owned->type->getSize() == returned->type->getSize(),
+			owned->getDataSize() == returned->getDataSize(),
 			"Mismatched sizes when copying a materialized CTV value."
 		);
-		owned->importData(returned->pointer);
+		owned->importDataFrom(*returned);
 
 		return owned;
 	}
 
 	/**
-	 * @brief Converts a given `ctv` to VmValue.
-	 * @return The converted VmValue or a VmEvaluationError if the conversion failed.
+	 * @brief Converts a given `ctv` to VMValue.
+	 * @return The converted VMValue or a VmEvaluationError if the conversion failed.
 	 */
-	std::expected<Box<vm::VmValue>, VmEvaluationError> ctvToVmValue(
+	std::expected<Box<vm::IVMValue>, VmEvaluationError> ctvToVMValue(
 		query::Context& ctx, CompTimeDVM& comptime_dvm, const CompileTimeValue& ctv
 	) {
 		auto get_vm_value
-			= [&](base::StrID type_name) -> std::expected<Box<vm::VmValue>, VmEvaluationError> {
-			auto vm_value_response = vm::api::getVmValue(*comptime_dvm.getPID(), type_name.str());
+			= [&](base::StrID type_name) -> std::expected<Box<vm::IVMValue>, VmEvaluationError> {
+			auto vm_value_response = vm::api::getVMValue(*comptime_dvm.getPID(), type_name.str());
 			if (!vm_value_response.has_value())
 				return std::unexpected(VmEvaluationError(
 					VmEvaluationError::Kind::ArgConversionFailed,
@@ -226,10 +225,10 @@ namespace {
 		variant_match(ctv.getStorage()) {
 			variant_case(NumericValue, val) {
 				return std::visit(
-					[&](auto&& num_val) -> std::expected<Box<vm::VmValue>, VmEvaluationError> {
+					[&](auto&& num_val) -> std::expected<Box<vm::IVMValue>, VmEvaluationError> {
 						using NumT = std::decay_t<decltype(num_val)>;
 
-						// @TODO: #899 Once CTV will be VmValue based (contain the VMValue and
+						// @TODO: #899 Once CTV will be VMValue based (contain the VMValue and
 					    // compiler::tsh::SymbolType) we should perform this conversion based on the
 					    // `SymbolType` not C++ type sizes.
 						base::StrID dvm_type_name;
@@ -243,7 +242,7 @@ namespace {
 							dvm_type_name = base::StrID("i64");
 						else {
 							throw base::NotYetImplemented(
-								"Conversion from CTV to VmValue for bigger numeric sizes"
+								"Conversion from CTV to VMValue for bigger numeric sizes"
 							);
 						}
 
@@ -290,27 +289,26 @@ namespace {
 			}
 			variant_default {
 				throw base::NotYetImplemented(
-					"Conversion from ctv to VmValue for this type is not implemented yet"
+					"Conversion from ctv to VMValue for this type is not implemented yet"
 				);
 			}
 		}
 		return std::unexpected(VmEvaluationError(
 			VmEvaluationError::Kind::ArgConversionFailed,
-			"Unknown error during CompileTimeValue to VmValue conversion"
+			"Unknown error during CompileTimeValue to VMValue conversion"
 		));
 	}
 
 	/**
-	 * @brief Reads the pointer+length pair backing a char-slice/String VmValue into a CTV string.
+	 * @brief Reads the pointer+length pair backing a char-slice/String VMValue into a CTV string.
 	 * @note Assumes `vm_value`'s type was already confirmed to be the char-slice or String type.
 	 */
-	base::RawView charBackedVmValueToCtv(Ref<vm::VmValue> vm_value) {
+	base::RawView charBackedVMValueToCtv(Ref<vm::IVMValue> vm_value) {
 		using namespace vm::interpreted_data_variant;
-		auto vm_value_ref = vm_value->asRef();
-		auto data         = vm_value_ref.readData<Data>().value();
-		auto pointer      = data.fields.at(0).value.readData<Pointer>().value();
-		auto length       = data.fields.at(1).value.readData<Primitive>().value();
-		auto content      = pointer.referenced->readData<Table>().value().asBytesView();
+		auto data    = vm_value->readData<Data>().value();
+		auto pointer = data.fields.at(0).value->readData<Pointer>().value();
+		auto length  = data.fields.at(1).value->readData<Primitive>().value();
+		auto content = (*pointer.referenced)->readData<Table>().value().asBytesView();
 		CORE_ASSERT(content.size() >= length.value, "Invalid char slice comp-time data.");
 		return { content.getBegin(), length.value };
 	}
@@ -320,7 +318,7 @@ namespace {
 	 * @return The converted value or a VmEvaluationError if the conversion failed.
 	 */
 	std::expected<CompileTimeValue, VmEvaluationError> vmValueToCtv(
-		query::Context& ctx, const compiler::tsh::SymbolType<>& type, Ref<vm::VmValue> vm_value
+		query::Context& ctx, const compiler::tsh::SymbolType<>& type, Ref<vm::IVMValue> vm_value
 	) {
 		const auto kind        = type.getType().getKind();
 		auto       error_value = [&] {
@@ -337,7 +335,7 @@ namespace {
 		case compiler::tsh::Kind::Integral: {
 			compiler::tsh::IntegralAbstractType int_type(type.getType());
 			auto                                bit_size     = int_type.getSize();
-			base::StrID                         vm_type_name = vm_value->type->getName();
+			base::StrID                         vm_type_name = vm_value->getType()->getName();
 
 			if (int_type.getSignedness()
 			    == compiler::tsh::IntegralAbstractType::Signedness::Signed) {
@@ -364,7 +362,7 @@ namespace {
 		case compiler::tsh::Kind::Float: {
 			compiler::tsh::FloatAbstractType float_type(type.getType());
 			auto                             bit_size     = float_type.getSize();
-			base::StrID                      vm_type_name = vm_value->type->getName();
+			base::StrID                      vm_type_name = vm_value->getType()->getName();
 
 			if (bit_size <= Bits{ 32 } && vm_type_name == "i32")
 				return CompileTimeValue{ NumericValue{ vm_value->readBytes<f32>() } };
@@ -379,40 +377,40 @@ namespace {
 		}
 
 		case compiler::tsh::Kind::Bool: {
-			if (vm_value->type->getName() != base::StrID("byte")
-			    && vm_value->type->getName() != base::StrID("i8"))
+			if (vm_value->getType()->getName() != base::StrID("byte")
+			    && vm_value->getType()->getName() != base::StrID("i8"))
 				return std::unexpected(VmEvaluationError(
 					VmEvaluationError::Kind::ReturnConversionFailed,
 					"Expected byte (bool) VM value but received type: "
-						+ vm_value->type->getName().str()
+						+ vm_value->getType()->getName().str()
 				));
 			return CompileTimeValue{ vm_value->readBytes<bool>() };
 		}
 		case compiler::tsh::Kind::Meta: {
-			if (vm_value->type->getName() != base::StrID("opaque_ptr"))
+			if (vm_value->getType()->getName() != base::StrID("opaque_ptr"))
 				return std::unexpected(VmEvaluationError(
 					VmEvaluationError::Kind::ReturnConversionFailed,
 					"Expected opaque pointer VM value but received type: "
-						+ vm_value->type->getName().str()
+						+ vm_value->getType()->getName().str()
 				));
 			auto* meta_ptr = vm_value->readBytes<compiler::tsh::SymbolType<>*>();
 			return CompileTimeValue{ *meta_ptr };
 		}
 		case compiler::tsh::Kind::Slice: {
 			auto char_slice_type = tsh::SymbolType<>::withDefaults(tsh::getCharSliceType(ctx));
-			if (vm_value->type->getName()
+			if (vm_value->getType()->getName()
 			    == ctx.query<mangler::QueryMangledType>(char_slice_type)->valueOrThrow())
 				return CompileTimeValue{ CompileTimeValue::CharSliceValue{
-					base::StrID(charBackedVmValueToCtv(vm_value)) } };
+					base::StrID(charBackedVMValueToCtv(vm_value)) } };
 			return error_value();
 		}
 		case compiler::tsh::Kind::Class: {
 			if (tsh::isStringTypePresent(ctx)) {
 				auto string_type = tsh::SymbolType<>::withDefaults(tsh::getStringType(ctx));
-				if (vm_value->type->getName()
+				if (vm_value->getType()->getName()
 				    == ctx.query<mangler::QueryMangledType>(string_type)->valueOrThrow())
 					return CompileTimeValue{ CompileTimeValue::StringClassValue{
-						base::StrID(charBackedVmValueToCtv(vm_value)) } };
+						base::StrID(charBackedVMValueToCtv(vm_value)) } };
 			}
 			return error_value();
 		}
@@ -422,15 +420,15 @@ namespace {
 		}
 	}
 
-	std::expected<std::vector<Box<vm::VmValue>>, VmEvaluationError> prepareArguments(
+	std::expected<std::vector<Box<vm::IVMValue>>, VmEvaluationError> prepareArguments(
 		query::Context&                                     ctx,
 		CompTimeDVM&                                        comptime_dvm,
 		const std::vector<compiler::ctv::CompileTimeValue>& args
 	) {
-		std::vector<Box<vm::VmValue>> owned_arguments;
+		std::vector<Box<vm::IVMValue>> owned_arguments;
 		owned_arguments.reserve(args.size());
 		for (const auto& ctv_arg: args) {
-			auto res = ctvToVmValue(ctx, comptime_dvm, ctv_arg);
+			auto res = ctvToVMValue(ctx, comptime_dvm, ctv_arg);
 			if (!res) return std::unexpected(res.error());
 			owned_arguments.push_back(std::move(*res));
 		}
@@ -442,7 +440,7 @@ namespace {
 	) {
 		vm::PID pid = *comptime_dvm.getPID();
 		// Pass the query context into DVM.
-		auto response = vm::api::getVmValue(pid, "opaque_ptr");
+		auto response = vm::api::getVMValue(pid, "opaque_ptr");
 		if (!response.has_value())
 			return std::unexpected(VmEvaluationError(
 				VmEvaluationError::Kind::ArgConversionFailed,
@@ -462,11 +460,11 @@ namespace {
 	}
 
 	std::expected<compiler::ctv::CompileTimeValue, VmEvaluationError> runAndGetResult(
-		query::Context&                      ctx,
-		CompTimeDVM&                         comptime_dvm,
-		const std::string&                   func_name,
-		const std::vector<Box<vm::VmValue>>& owned_args,
-		const compiler::tsh::SymbolType<>    return_type
+		query::Context&                       ctx,
+		CompTimeDVM&                          comptime_dvm,
+		const std::string&                    func_name,
+		const std::vector<Box<vm::IVMValue>>& owned_args,
+		const compiler::tsh::SymbolType<>     return_type
 	) {
 		vm::PID pid = *comptime_dvm.getPID();
 
@@ -492,7 +490,7 @@ namespace {
 		for (const auto& arg: owned_args) arg->freeData();
 
 		variant_match(maybe_exit_value.value()) {
-			variant_case(std::vector<Ref<vm::VmValue>>, values) {
+			variant_case(std::vector<Ref<vm::IVMValue>>, values) {
 				CORE_ASSERT(
 					values.size() == 1, "Compiler support for multiple values not implemented"
 				);

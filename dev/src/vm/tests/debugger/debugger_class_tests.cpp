@@ -69,15 +69,15 @@ private:
 				variant_match(status) {
 					variant_case(vm::api::ExecutionCompleted, completed) {
 						auto exit_value_variant = completed.exit_value;
-						ASSERT_TRUE(std::holds_alternative<std::vector<Ref<vm::VmValue>>>(
+						ASSERT_TRUE(std::holds_alternative<std::vector<Ref<vm::IVMValue>>>(
 							exit_value_variant
 						));
 						auto exit_value
-							= std::get<std::vector<Ref<vm::VmValue>>>(exit_value_variant);
+							= std::get<std::vector<Ref<vm::IVMValue>>>(exit_value_variant);
 
 						ASSERT_TRUE(ret_val_counter < expected_values.size());
 						ASSERT_EQUAL_PRINT(1, exit_value.size());
-						ASSERT_EQUAL_PRINT("i64", exit_value[0]->type->getName());
+						ASSERT_EQUAL_PRINT("i64", exit_value[0]->getType()->getName());
 						ASSERT_EQUAL_PRINT(
 							expected_values[ret_val_counter], exit_value[0]->readBytes<i64>()
 						);
@@ -251,15 +251,15 @@ private:
 				variant_match(status) {
 					variant_case(vm::api::ExecutionCompleted, completed) {
 						auto exit_value_variant = completed.exit_value;
-						ASSERT_TRUE(std::holds_alternative<std::vector<Ref<vm::VmValue>>>(
+						ASSERT_TRUE(std::holds_alternative<std::vector<Ref<vm::IVMValue>>>(
 							exit_value_variant
 						));
 						auto exit_value
-							= std::get<std::vector<Ref<vm::VmValue>>>(exit_value_variant);
+							= std::get<std::vector<Ref<vm::IVMValue>>>(exit_value_variant);
 
 						ASSERT_TRUE(ret_val_counter < expected_values.size());
 						ASSERT_EQUAL_PRINT(1, exit_value.size());
-						ASSERT_EQUAL_PRINT("i64", exit_value[0]->type->getName());
+						ASSERT_EQUAL_PRINT("i64", exit_value[0]->getType()->getName());
 						ASSERT_EQUAL_PRINT(
 							expected_values[ret_val_counter], exit_value[0]->readBytes<i64>()
 						);
@@ -378,16 +378,15 @@ private:
 		ASSERT_EQUAL(2, response);
 		auto info = debugger.getStackFrameData(main_thread_id, 1).value();
 		ASSERT_EQUAL(9, info.frame_vars.size());
-		ASSERT_EQUAL_PRINT("0", info.frame_vars[0].value.str());          // ret0
-		ASSERT_EQUAL_PRINT("0", info.frame_vars[1].value.str());          // arg0
-		ASSERT_EQUAL_PRINT("null", info.frame_vars[2].value.str());       // arg1
-		ASSERT_EQUAL_PRINT("<pointer>", info.frame_vars[3].value.str());  // struct_pointer
-		ASSERT_EQUAL_PRINT("<pointer>", info.frame_vars[4].value.str());  // dyntable_pointer
-		ASSERT_EQUAL_PRINT(
-			"<pointer>", info.frame_vars[5].value.str()
-		);  // fixtable_pointer		ASSERT_EQUAL_PRINT("<pointer>", info.frame_vars[6].value.str());
-		ASSERT_EQUAL_PRINT("<pointer>", info.frame_vars[7].value.str());  // variant_pointer
-		ASSERT_EQUAL_PRINT("42", info.frame_vars[8].value.str());         // new_variant_data_value
+		ASSERT_EQUAL_PRINT("0", info.frame_vars[0].value->str());          // ret0
+		ASSERT_EQUAL_PRINT("0", info.frame_vars[1].value->str());          // arg0
+		ASSERT_EQUAL_PRINT("null", info.frame_vars[2].value->str());       // arg1
+		ASSERT_EQUAL_PRINT("<pointer>", info.frame_vars[3].value->str());  // struct_pointer
+		ASSERT_EQUAL_PRINT("<pointer>", info.frame_vars[4].value->str());  // dyntable_pointer
+		ASSERT_EQUAL_PRINT("<pointer>", info.frame_vars[5].value->str());  // fixtable_pointer
+		ASSERT_EQUAL_PRINT("<pointer>", info.frame_vars[6].value->str());  // variant_pointer
+		ASSERT_EQUAL_PRINT("<pointer>", info.frame_vars[7].value->str());  // variant_data_pointer
+		ASSERT_EQUAL_PRINT("42", info.frame_vars[8].value->str());         // new_variant_data_value
 
 		// Step test
 		ASSERT_HAS_VALUE(debugger.step());
@@ -425,7 +424,7 @@ private:
 
 		auto  status         = debugger.getStatus();
 		auto  completed_info = std::get<vm::api::ExecutionCompleted>(status);
-		auto& exit_value     = std::get<std::vector<Ref<vm::VmValue>>>(completed_info.exit_value);
+		auto& exit_value     = std::get<std::vector<Ref<vm::IVMValue>>>(completed_info.exit_value);
 		auto  optional_data  = exit_value[0]->readData();
 
 		ASSERT_HAS_VALUE(optional_data);

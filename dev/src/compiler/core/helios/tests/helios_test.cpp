@@ -737,6 +737,11 @@ private:
 		ASSERT_EQUAL(6, getConstValueAs<i32>("M2", root_scope));
 		ASSERT_EQUAL(7, getConstValueAs<i64>("O1", root_scope));
 		ASSERT_EQUAL(7, getConstValueAs<i64>("O2", root_scope));
+
+		// Lazily evaluated operands: the division by zero in the skipped part of the
+		// expression must not be evaluated, otherwise these evaluations would fail.
+		ASSERT_EQUAL(false, getConstValueAs<bool>("P1", root_scope));
+		ASSERT_EQUAL(7, getConstValueAs<i32>("P2", root_scope));
 	}
 
 	/**

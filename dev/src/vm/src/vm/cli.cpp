@@ -53,13 +53,13 @@ int cli(
 	          .transform([&](vm::api::ExitValue vm_values) {
 				  variant_match(vm_values) {
 					  variant_case(i64, exit_code) { return exit_code; }
-					  variant_case(std::vector<Ref<vm::VmValue>>, values) {
+					  variant_case(std::vector<Ref<vm::IVMValue>>, values) {
 						  CORE_ASSERT(
 							  values.size() == 1, "Program returned more than one return value"
 						  );
 						  auto& vm_value = values.at(0);
 						  CORE_ASSERT(
-							  vm_value->type->getName() == base::StrID("i64"),
+							  vm_value->getType()->getName() == base::StrID("i64"),
 							  "DVM program returned and exit value different than i64"
 						  );
 						  return vm_value->readBytes<i64>();
