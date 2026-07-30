@@ -26,16 +26,13 @@ namespace compiler::helios::code {
 		query::Context& ctx, lexer::Operator op, CRef<Expr> expr
 	);
 
-	using BuiltinOperation = std::variant<BuiltinBinary, compiler::helios::LanguagePrimitive, Box<compiler::helios::code::Expr>>;
-
 	/**
 	 * @brief Finds a numeric builtin binary operator between two expressions and for a given name.
 	 * If types don't match directly, checks whether one can implicitly coerce to another.
-	 * @return Returns the operation along with coercions to apply to operands in format
-	 * (builtin_operation, left_coercion, right_coercion)
+	 * @return Returns the operation with proper coercions applied to operands
 	 */
-	base::Optional<std::tuple<BuiltinOperation, Coercion, Coercion>> findNumericBinaryBuiltin(
-		query::Context& ctx, lexer::Operator op, CRef<Expr> lhs, CRef<Expr> rhs
+	base::Optional<Box<Expr>> resolveNumericBinaryBuiltin(
+		query::Context& ctx, lexer::Operator op, Box<Expr> lhs, Box<Expr> rhs
 	);
 
 	/**

@@ -545,31 +545,10 @@ namespace compiler::helios::code {
 				if (isNumericType(lhs_type.getType()) && isNumericType(rhs_type.getType())
 				    && isNumericOperator(op->unwrap())) {
 					auto numeric_builtin_opt
-						= findNumericBinaryBuiltin(ctx, op->unwrap(), lhs.ref(), rhs.ref());
-					auto new_origin = elementOriginOrdered(lhs->origin, rhs->origin);
-
+						= resolveNumericBinaryBuiltin(ctx, op->unwrap(), std::move(lhs), std::move(rhs));
+					
 					if_opt_some(numeric_builtin_opt, numeric_builtin) {
-						auto [operation, lhs_coercion, rhs_coercion] = numeric_builtin;
-						auto coerced_lhs = lhs_coercion.coerce(ctx, std::move(lhs));
-						auto coerced_rhs = rhs_coercion.coerce(ctx, std::move(rhs));
-						variant_match(operation) {
-							variant_case(BuiltinBinary, op) {
-								return makeBox<BinaryOperatorExpr>(
-									ctx, new_origin, op, std::move(coerced_lhs), std::move(coerced_rhs)
-								);
-							}
-							variant_case(LanguagePrimitive, op) {
-								auto callee = makeBox<IdentifierExpr>(ctx, new_origin, op);
-								auto args = std::vector<Box<Expr>>{std::move(coerced_lhs), std::move(coerced_rhs)};
-								return makeBox<CallExpr>(
-									ctx, new_origin, callee, args
-								);
-							}
-							variant_case(Box<Expr>, op) {
-								return op;
-							}
-						}
-						CORE_UNREACHABLE();
+						return std::move(numeric_builtin);
 					}
 				}
 

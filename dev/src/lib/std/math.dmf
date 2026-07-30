@@ -299,6 +299,20 @@ namespace libm_forward {
     }}
 }
 
+namespace impl {
+    #{
+        These are the functions not provided by the C standard library.
+    #}
+
+    fun powi(x: i32, y:i32) -> i32 = {
+        return 0;
+    }
+
+    fun powl(x: i64, y:i64) -> i64 = {
+        return 0;
+    }
+}
+
 namespace constants {
 #{
     Mathematical constants.

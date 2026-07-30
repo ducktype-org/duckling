@@ -6,14 +6,18 @@
 #include <helios/tsh/types.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
+#include <helios_private/hout_creation/shorthands/shorthands.hpp>
 
 #include <base/collections/maps.hpp>
 
 #include <lang_definitions/key_spec_op.hpp>
 #include <query_framework/standard_query/query_impl.hpp>
+#include "helios/tsh/abstract_type.hpp"
+#include "helios/tsh/symbol_type.hpp"
 
 #include <tuple>
 #include <utility>
+#include <vector>
 
 namespace {
 	using namespace compiler;
@@ -61,6 +65,37 @@ namespace {
 		// Invalid coercion.
 		return {};
 	}
+
+	/*
+	 * @brief A helper for language primitives.
+	 * Primitives work on specific types (ex `i64`), but the partial result might operate in terms of `Integer`, `Float`, etc.
+	 */
+	enum class PartialLangPrimitive {
+		IntegerPow,
+		FloatPow,
+	};
+
+	base::Optional<LanguagePrimitive> getLanguagePrimitive(query::Context& ctx, PartialLangPrimitive wrap, tsh::AbstractType specific_type) {
+		using tsh::IntegralAbstractType::Signedness::Signed, tsh::IntegralAbstractType::Signedness::Unsigned;
+		auto i32 = tsh::getIntegralType(ctx, 32,Signed);
+		auto i64 = tsh::getIntegralType(ctx, 64,Signed);
+		auto u32 = tsh::getIntegralType(ctx, 32,Unsigned);
+		auto u64 = tsh::getIntegralType(ctx, 32,Unsigned);
+
+		auto f32 = tsh::getFloatType(ctx, 32);
+		auto f64 = tsh::getFloatType(ctx, 64);
+		
+		 base::Map<std::pair<PartialLangPrimitive, tsh::AbstractType>, LanguagePrimitive> lang_primitive_map = {
+			// { { PartialLangPrimitive::IntegerPow, tsh::i32 }, LanguagePrimitive:: },
+			{ { PartialLangPrimitive::FloatPow, f32 }, LanguagePrimitive::PowF32 },
+			{ { PartialLangPrimitive::FloatPow, f64 }, LanguagePrimitive::PowF64 },
+		};
+
+		if (lang_primitive_map.contains({ wrap, specific_type })) {
+			return lang_primitive_map.at({ wrap, specific_type });
+		}
+		return {};
+	}
 }
 
 namespace compiler::helios::code {
@@ -88,10 +123,14 @@ namespace compiler::helios::code {
 		return {};
 	}
 
-	base::Optional<std::tuple<BuiltinOperation, Coercion, Coercion>> findNumericBinaryBuiltin(
-		query::Context& ctx, lexer::Operator op, CRef<Expr> lhs, CRef<Expr> rhs
+	base::Optional<Box<Expr>> resolveNumericBinaryBuiltin(
+		query::Context& ctx, lexer::Operator op, Box<Expr> lhs, Box<Expr> rhs
 	) {
-		auto common_type_res = findCommonTypeWithCoercion(ctx, lhs, rhs);
+		using BuiltinOperation = std::variant<BuiltinBinary, PartialLangPrimitive>;
+		// using namespace compiler::helios::code::shorthands;
+		// Shorthand s{ctx};
+
+		auto common_type_res = findCommonTypeWithCoercion(ctx, lhs.ref(), rhs.ref());
 		if (!common_type_res.has_value()) return {};
 
 		auto& [common_type, lhs_coercion, rhs_coercion] = common_type_res.value();
@@ -106,11 +145,11 @@ namespace compiler::helios::code {
 				  { { base::StrID("*"), tsh::Kind::Integral }, BuiltinBinary::IntegerMul },
 				  { { base::StrID("/"), tsh::Kind::Integral }, BuiltinBinary::IntegerDiv },
 				  { { base::StrID("%"), tsh::Kind::Integral }, BuiltinBinary::IntegerMod },
-				  { { base::StrID("**"), tsh::Kind::Integral }, LanguagePrimitive::IntegerPow },
-				//   { { base::StrID("+="), tsh::Kind::Integral }, BuiltinBinary::IntegerEqAdd },
-				//   { { base::StrID("-="), tsh::Kind::Integral }, BuiltinBinary::IntegerEqSub },
-				//   { { base::StrID("*="), tsh::Kind::Integral }, BuiltinBinary::IntegerEqMul },
-				//   { { base::StrID("/="), tsh::Kind::Integral }, BuiltinBinary::IntegerEqDiv },
+				//   { { base::StrID("**"), tsh::Kind::Integral }, },
+				//   { { base::StrID("+="), tsh::Kind::Integral }, },
+				//   { { base::StrID("-="), tsh::Kind::Integral }, },
+				//   { { base::StrID("*="), tsh::Kind::Integral }, },
+				//   { { base::StrID("/="), tsh::Kind::Integral }, },
 
 				  /// Integer comparisons ///
 				  { { base::StrID("<"), tsh::Kind::Integral }, BuiltinBinary::IntegerLt },
@@ -126,7 +165,7 @@ namespace compiler::helios::code {
 				  { { base::StrID("*"), tsh::Kind::Float }, BuiltinBinary::FloatMul },
 				  { { base::StrID("/"), tsh::Kind::Float }, BuiltinBinary::FloatDiv },
 				  { { base::StrID("%"), tsh::Kind::Float }, BuiltinBinary::FloatMod },
-				  { { base::StrID("**"), tsh::Kind::Float }, LanguagePrimitive::FloatPow },
+				  { { base::StrID("**"), tsh::Kind::Float }, PartialLangPrimitive::FloatPow },
 				//   { { base::StrID("+="), tsh::Kind::Float }, BuiltinBinary::FloatEqAdd },
 				//   { { base::StrID("-="), tsh::Kind::Float }, BuiltinBinary::FloatEqSub },
 				//   { { base::StrID("*="), tsh::Kind::Float }, BuiltinBinary::FloatEqMul },
@@ -141,13 +180,29 @@ namespace compiler::helios::code {
 				  { { base::StrID("!="), tsh::Kind::Float }, BuiltinBinary::FloatNeq },
 			  };
 
-		if (numeric_operators.contains({ op, operation_kind }))
-			return std::make_tuple(
-				numeric_operators.at({ op, operation_kind }),
-				std::move(lhs_coercion),
-				std::move(rhs_coercion)
-			);
+		if (numeric_operators.contains({ op, operation_kind })) {
+			auto new_origin = elementOriginOrdered(lhs->origin, rhs->origin);
+			auto operation = numeric_operators.at({ op, operation_kind });
 
+			auto coerced_lhs = lhs_coercion.coerce(ctx, std::move(lhs));
+			auto coerced_rhs = rhs_coercion.coerce(ctx, std::move(rhs));
+			
+			variant_match(operation) {
+				variant_case(BuiltinBinary, op) {
+					return makeBox<BinaryOperatorExpr>(
+						ctx, new_origin, op, std::move(coerced_lhs), std::move(coerced_rhs)
+					);
+				}
+				variant_case(PartialLangPrimitive, op) {
+					auto lang_primitive = getLanguagePrimitive(ctx, op, common_type.getType());
+					auto callee = makeBox<IdentifierExpr>(ctx, new_origin, op);
+					auto args = std::vector<Box<Expr>>{std::move(coerced_lhs), std::move(coerced_rhs)};
+					return makeBox<CallExpr>(
+						ctx, new_origin, callee, args
+					);
+				}
+			}
+		}
 		return {};
 	}
 
