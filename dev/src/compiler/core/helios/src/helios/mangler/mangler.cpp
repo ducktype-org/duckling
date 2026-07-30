@@ -374,7 +374,7 @@ namespace compiler::helios::mangler {
 										template_bake_data_any
 									);
 
-								path_parts.push_back("E");
+								path_parts.emplace_back("E");
 								for (const auto& bake_argument:
 								     template_bake_data.postponed_data
 								             ->load(std::memory_order_acquire)
@@ -384,7 +384,7 @@ namespace compiler::helios::mangler {
 									                 .valueOrThrow();
 									path_parts.push_back(mangleCTV(ctx, value));
 								}
-								path_parts.push_back("I");
+								path_parts.emplace_back("I");
 							}
 							variant_default {
 								CORE_PANIC(
