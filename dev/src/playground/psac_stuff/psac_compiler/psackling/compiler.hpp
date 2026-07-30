@@ -27,18 +27,24 @@ namespace pg {
 	};
 
 	/**
-	 * @brief Compiler session that keeps the PSAC computation alive between compiles,
+	 * @brief Compiler session that keeps the PSAC computations alive between compiles,
 	 * so feeding it new source recompiles only the functions whose content (or the
-	 * global declarations they depend on) actually changed.
+	 * global declarations they actually used) changed.
 	 *
 	 * Mirrors the real compiler's incremental design in miniature: there, queries
 	 * depend on per-PST-element stable hashes collected as side inputs and are
 	 * invalidated when those hashes change; here, every function's compilation is a
-	 * PSAC read of (function content hash, globals hash) Mods, and psac_propagate
-	 * re-runs exactly the reads whose Mods were rewritten.
+	 * PSAC dynamic-scope read of its body-content Mod plus one Mod per global symbol
+	 * (constant, signature, class layout, global variable) the lowering touched —
+	 * discovered at the use site through pg::SymbolUseObserver — and psac_propagate
+	 * re-runs exactly the reads whose Mods were rewritten. Each function is its own
+	 * Computation, so adding or removing functions never forces a full rebuild.
 	 */
 	class Compiler final {
 	public:
+		/// Private session state; defined in compiler.cpp only.
+		struct State;
+
 		explicit Compiler(CompileOptions options);
 		~Compiler();
 
@@ -48,21 +54,16 @@ namespace pg {
 		Compiler& operator=(Compiler&&)      = delete;
 
 		/// Full compilation of the program rooted at `file` (imported files are loaded
-		/// transitively). Also used as the fallback when the set of functions changed.
+		/// transitively).
 		CompileStats compile(const fs::File& file);
 
 		/// Incremental recompilation with new source for the same program: re-reads the
-		/// root file and its imports, diffs the per-function hashes, rewrites the
-		/// changed Mods and propagates.
+		/// root file and its imports, rewrites the Mods whose hashes changed and
+		/// propagates.
 		CompileStats update(const fs::File& file);
 
 	private:
-		struct State;
-
-		CompileStats    compileAnalyzed(AnalyzedProgram program);
-		AnalyzedProgram analyze(const fs::File& file);
-		void            throwOnErrors() const;
-		void            link() const;
+		CompileStats compileAnalyzed(AnalyzedProgram program);
 
 		std::unique_ptr<State> state;
 	};

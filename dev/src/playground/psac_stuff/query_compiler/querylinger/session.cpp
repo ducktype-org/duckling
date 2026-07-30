@@ -117,6 +117,7 @@ namespace ql {
 
 			add(std::in_place_type<GlobalDefsInput>, program.global_defs_hash);
 			add(std::in_place_type<GlobalsInput>, program.globals_hash_no_consts);
+			add(std::in_place_type<WorldInput>, program.globals_hash);
 			return inputs;
 		}
 	}

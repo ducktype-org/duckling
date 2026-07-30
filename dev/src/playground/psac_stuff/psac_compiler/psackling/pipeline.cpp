@@ -61,6 +61,13 @@ namespace {
 		return hashing::justHash<hashing::SHA256>(stripPositions(std::move(out).str()));
 	}
 
+	/// Hash a variable-length string field with a length prefix, so adjacent
+	/// fields can never alias across their boundary ("ab","c" vs "a","bc").
+	void addField(hashing::StatefulHash<hashing::SHA256>& hash, std::string_view field) {
+		hash(field.size());
+		hash(field);
+	}
+
 	void writeFileBytes(const std::filesystem::path& path, const std::string& bytes) {
 		std::ofstream out(path, std::ios::binary | std::ios::trunc);
 		if (!out) CORE_PANIC("Unable to create file: " + path.string());
@@ -93,7 +100,8 @@ namespace {
 			items.push_back(pg::FunctionWorkItem{ .stmt = stmt, .enclosing_ns = ctx.currNs().id });
 			fn_hashes.push_back(contentHash(*stmt));
 			link_names.push_back(std::get<pg::sym::FunctionSymbol>(fun_sym.kind).link_name.str());
-			sig_inputs.push_back(pg::SymbolInputInfo{ .input_hash
+			sig_inputs.push_back(pg::SymbolInputInfo{ .key = pg::functionSigInputKey(fun_sym),
+			                                          .input_hash
 			                                          = pg::functionSigInputHash(ctx, fun_sym) });
 		}
 
@@ -120,6 +128,7 @@ namespace {
 				= ctx.getSymbol(ctx.lookupInScopeAndParents(ctx.currNs().id, name));
 			const pg::tp::TypeInfo& type_info = ctx.getTypeInfo(symbol.type_id);
 			class_inputs.push_back(pg::SymbolInputInfo{
+				.key        = pg::classLayoutInputKey(type_info),
 				.input_hash = pg::classLayoutInputHash(ctx, type_info) });
 		}
 
@@ -127,8 +136,8 @@ namespace {
 			const base::StrID      name = stmt->getName().illegalAccess().value()->unwrap();
 			const pg::sym::Symbol& symbol
 				= ctx.getSymbol(ctx.lookupInScopeAndParents(ctx.currNs().id, name));
-			const_inputs.push_back(pg::SymbolInputInfo{ .input_hash
-			                                            = pg::constInputHash(ctx, symbol) });
+			const_inputs.push_back(pg::SymbolInputInfo{
+				.key = pg::constInputKey(symbol), .input_hash = pg::constInputHash(ctx, symbol) });
 		}
 
 		void visitVariable(pst::Access<pst::Variable> stmt) override {
@@ -140,6 +149,7 @@ namespace {
 			const pg::sym::Symbol& symbol
 				= ctx.getSymbol(ctx.lookupInScopeAndParents(ctx.currNs().id, name));
 			global_var_inputs.push_back(pg::SymbolInputInfo{
+				.key        = pg::globalVarInputKey(symbol),
 				.input_hash = pg::globalVarInputHash(ctx, symbol) });
 		}
 
@@ -175,14 +185,14 @@ namespace {
 		void visitFun(pst::Access<pst::Fun> stmt) override {
 			// Signature only: name, parameters, return type. The body is covered by the
 			// function's own Mod.
-			sigs(stmt->getName().illegalAccess().value()->unwrap().str());
+			addField(sigs, stmt->getName().illegalAccess().value()->unwrap().str());
 			sigs(contentHash(*stmt->getParams().illegalAccess().value()));
 			if (stmt->getRet().has_value())
 				sigs(contentHash(*stmt->getRet()->illegalAccess().value()));
 		}
 
 		void visitNamespace(pst::Access<pst::Namespace> stmt) override {
-			structural(stmt->getName().illegalAccess().value()->unwrap().str());
+			addField(structural, stmt->getName().illegalAccess().value()->unwrap().str());
 			for (pst::AccessLocked<pst::LangElement> child: *stmt->getBody().illegalAccess().value())
 				child.illegalAccess().value()->acceptVisitor(*this);
 		}
@@ -293,7 +303,7 @@ namespace pg {
 				// Module identity participates: moving a definition between files
 				// changes link names even when content hashes stay equal.
 				for (base::StrID component: module.module_path)
-					globals_hasher.structural(component.str());
+					addField(globals_hasher.structural, component.str());
 				for_each_top_level(module, globals_hasher);
 			}
 			program.globals_hash_no_consts = globals_hasher.structural.finalize();
@@ -312,45 +322,80 @@ namespace pg {
 		return program;
 	}
 
+	std::string constInputKey(const sym::Symbol& symbol) {
+		return "const:" + std::get<sym::ConstantSymbol>(symbol.kind).qualified_name.str();
+	}
+
+	std::string functionSigInputKey(const sym::Symbol& symbol) {
+		return "sig:" + std::get<sym::FunctionSymbol>(symbol.kind).link_name.str();
+	}
+
+	std::string globalVarInputKey(const sym::Symbol& symbol) {
+		return "gvar:" + std::get<sym::GlobalVariableSymbol>(symbol.kind).link_name.str();
+	}
+
+	std::string classLayoutInputKey(const tp::TypeInfo& type_info) {
+		return "class:" + std::get<tp::Structure>(type_info.kind).qualified_name.str();
+	}
+
+	namespace {
+		/// Namespace-qualified name of a type — TypeInfo::name alone is unqualified,
+		/// so same-named types in different namespaces would alias in the hashes.
+		std::string qualifiedTypeName(const Context& ctx, tp::TypeID type_id) {
+			const tp::TypeInfo& info = ctx.getTypeInfo(type_id);
+
+			std::string          name = info.name.str();
+			const ns::Namespace* ns   = &ctx.getNamespace(info.namespace_id);
+			while (ns->parent_namespace.has_value()) {
+				name.insert(0, ".");
+				name.insert(0, ns->name.str());
+				ns = &ctx.getNamespace(*ns->parent_namespace);
+			}
+			return name;
+		}
+	}
+
 	// Each input hash is prefixed with a kind tag so equal material of different
 	// symbol kinds can never produce the same hash.
 	base::Bit256 constInputHash(const Context& ctx, const sym::Symbol& symbol) {
 		const auto& constant = std::get<sym::ConstantSymbol>(symbol.kind);
-		return hashing::justHash<hashing::SHA256>(
-			std::string_view("const"),
-			constant.qualified_name.str(),
-			constant.bits,
-			ctx.getTypeInfo(symbol.type_id).name.str()
-		);
+
+		hashing::StatefulHash<hashing::SHA256> hash;
+		addField(hash, "const");
+		addField(hash, constant.qualified_name.str());
+		hash(constant.bits);
+		addField(hash, qualifiedTypeName(ctx, symbol.type_id));
+		return hash.finalize();
 	}
 
 	base::Bit256 functionSigInputHash(const Context& ctx, const sym::Symbol& symbol) {
 		const auto& fn_type = std::get<tp::Function>(ctx.getTypeInfo(symbol.type_id).kind);
 
 		hashing::StatefulHash<hashing::SHA256> hash;
-		hash(std::string_view("sig"), std::get<sym::FunctionSymbol>(symbol.kind).link_name.str());
+		addField(hash, "sig");
+		addField(hash, std::get<sym::FunctionSymbol>(symbol.kind).link_name.str());
 		for (tp::TypeID param_type_id: fn_type.param_types)
-			hash(ctx.getTypeInfo(param_type_id).name.str());
-		hash(ctx.getTypeInfo(fn_type.return_type).name.str());
+			addField(hash, qualifiedTypeName(ctx, param_type_id));
+		addField(hash, qualifiedTypeName(ctx, fn_type.return_type));
 		return hash.finalize();
 	}
 
 	base::Bit256 globalVarInputHash(const Context& ctx, const sym::Symbol& symbol) {
-		return hashing::justHash<hashing::SHA256>(
-			std::string_view("gvar"),
-			std::get<sym::GlobalVariableSymbol>(symbol.kind).link_name.str(),
-			ctx.getTypeInfo(symbol.type_id).name.str()
-		);
+		hashing::StatefulHash<hashing::SHA256> hash;
+		addField(hash, "gvar");
+		addField(hash, std::get<sym::GlobalVariableSymbol>(symbol.kind).link_name.str());
+		addField(hash, qualifiedTypeName(ctx, symbol.type_id));
+		return hash.finalize();
 	}
 
 	base::Bit256 classLayoutInputHash(const Context& ctx, const tp::TypeInfo& type_info) {
 		hashing::StatefulHash<hashing::SHA256> hash;
-		hash(
-			std::string_view("class"), std::get<tp::Structure>(type_info.kind).qualified_name.str()
-		);
+		addField(hash, "class");
+		addField(hash, std::get<tp::Structure>(type_info.kind).qualified_name.str());
 		for (sym::SymbolID field_sym_id: std::get<tp::Structure>(type_info.kind).field_symbols) {
 			const sym::Symbol& field_sym = ctx.getSymbol(field_sym_id);
-			hash(field_sym.name.str(), ctx.getTypeInfo(field_sym.type_id).name.str());
+			addField(hash, field_sym.name.str());
+			addField(hash, qualifiedTypeName(ctx, field_sym.type_id));
 		}
 		return hash.finalize();
 	}

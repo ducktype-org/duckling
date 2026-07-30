@@ -59,4 +59,11 @@ namespace ql {
 	/// Coarse structural side input: imports, namespace names and module identity.
 	/// Everything else is tracked through the per-symbol inputs above.
 	DECLARE_QUERY_SIDE_INPUT(GlobalsInput, HashInputKey);
+
+	/// Whole-world content hash (structure + all symbol values). Registered only by
+	/// emission queries that FAILED: a failed lowering aborts before its true
+	/// dependency set is discovered (e.g. the missing function it called), so the
+	/// cached failure must be retried whenever anything on the global surface
+	/// changes — the coarse but sound stand-in for negative dependencies.
+	DECLARE_QUERY_SIDE_INPUT(WorldInput, HashInputKey);
 }

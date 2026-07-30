@@ -30,10 +30,9 @@ backend is query-based:
 
 ### Dependency granularity
 
-Where psacklinger's whole non-body world is two PSAC Mods (per-function body hash
-+ one coarse globals hash), querylinger splits the globals Mod into per-symbol
-side inputs, registered *at the use site* during lowering through the
-`pg::SymbolUseObserver` hook:
+Querylinger tracks per-symbol side inputs, registered *at the use site* during
+lowering through the `pg::SymbolUseObserver` hook (psacklinger mirrors the same
+granularity with per-symbol PSAC Mods):
 
 | input | keyed by | registered when |
 |:---|:---|:---|
@@ -44,18 +43,20 @@ side inputs, registered *at the use site* during lowering through the
 | `GlobalVarInput` | link name + type name | `getOrCreateGlobal` |
 | `GlobalDefsInput` | content hash of all var declarations | globals-object emission |
 | `GlobalsInput` | imports + namespaces + module identity | every emission (coarse remainder) |
+| `WorldInput` | whole-world content hash | an emission FAILS (negative deps) |
 
 Consequences, all covered by tests (`tests/querylinger_test.cpp`):
 
-- const edit → only its readers recompile (psacklinger: everything)
+- const edit → only its readers recompile
 - global var initializer edit → zero recompiles, globals object + relink only
-  (psacklinger: everything)
 - parameter rename → only that function (signature inputs hash types, not names)
 - return type change → the function and its (unchanged) callers, which then
   correctly report the type error
 - class field added → only functions using the class
 - function added/removed → no full-rebuild fallback; removed objects just leave
   the link line
+- calling a missing function fails, and adding the function later retries
+  exactly the failed caller (via `WorldInput`)
 
 Content hashes are SHA-256 (`base::Bit256`, via the `hashing` module) over
 dprint output with source positions stripped (`stripPositions` in

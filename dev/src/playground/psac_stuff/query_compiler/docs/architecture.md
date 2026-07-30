@@ -74,6 +74,8 @@ graph TD
     GDefs["GlobalDefsInput<br/>(all var decls incl. initializers)"] --> GlobObj
     Sig --> GlobObj
     Const --> GlobObj
+    World["WorldInput<br/>(whole-world hash, failures only)"] -.-> FnObj
+    World -.-> GlobObj
     FnObj["QueryFunctionObject × N<br/>one object file per function"]
     GlobObj["QueryGlobalsObject<br/>globals + builtins object file"]
 ```
@@ -177,10 +179,17 @@ never see them.
    whose bytes changed (tracked by content hash), and if nothing ran and the
    function set is unchanged, the relink is skipped too.
 
-Function set changes need no special casing (psacklinger falls back to a full
-rebuild): an added function is just a new query node, a removed one drops out
-of the schedule and the link line, and survivors stay cached unless something
-they depend on changed.
+Function set changes need no special casing: an added function is just a new
+query node, a removed one drops out of the schedule and the link line, and
+survivors stay cached unless something they depend on changed. (Psacklinger now
+matches this with one PSAC computation per function.)
+
+**Failures and negative dependencies.** A provider that throws during lowering
+never reached its true dependency set — the missing function it called has no
+`SigInput` to depend on. Such providers register the `WorldInput` side input
+(the whole-world content hash) instead, so the cached failure is retried on any
+global-surface change, including the missing symbol finally appearing. Coarse,
+but sound — and successful compiles never pay for it.
 
 **Sequential sessions.** The query graph is process-global, but only one
 session may be active at a time (asserted), and different programs can share
@@ -208,22 +217,25 @@ sessions in one process this way.
 
 ## What this measures, against what
 
+Both engines now track the same per-symbol dependency granularity (psacklinger
+grew per-symbol Mods and per-function computations to match), so the comparison
+is pure engine overhead at equal work:
+
 | scenario | psacklinger (PSAC) | querylinger (query graph) |
 |:---|:---|:---|
-| cold compile, `-j N` | parallel per-function Mod reads | parallel per-function queries |
+| cold compile, `-j N` | parallel per-function computations | parallel per-function queries |
 | no-op update | 0 recompiles, no relink | 0 recompiles, no relink |
 | body edit | 1 function | 1 function |
-| const edit | **all** functions | readers only |
-| global var initializer | **all** functions | 0 functions, globals object + relink |
-| param rename | **all** functions | 1 function |
-| class field added | **all** functions | users of the class |
-| function added/removed | full rebuild | new node / dropped node |
+| const edit | readers only | readers only |
+| global var initializer | 0 functions, globals object + relink | 0 functions, globals object + relink |
+| param rename | 1 function | 1 function |
+| class field added | users of the class | users of the class |
+| function added/removed | computation created/destroyed | new node / dropped node |
+| failed compile, cause fixed | retried via whole-world Mod | retried via `WorldInput` |
 
-The first three rows measure pure engine overhead at equal work; the rest
-measure what finer dependency tracking buys. `duckc` provides the production
-baseline with its own (much richer) query pipeline. Numbers live in
-`psac_compiler/results_compiler_<name>.md` (cold, hyperfine) and
-`psac_compiler/results_incremental_<name>.md` (warm updates).
+`duckc` provides the production baseline with its own (much richer) query
+pipeline. Numbers live in `psac_compiler/results_compiler_<name>.md` (cold,
+hyperfine) and `psac_compiler/results_incremental_<name>.md` (warm updates).
 
 ## Known limitations
 
@@ -231,10 +243,9 @@ baseline with its own (much richer) query pipeline. Numbers live in
   dominates warm-update latency (~100 ms). Making parse/analysis incremental is
   exactly what the production compiler's PST side inputs do, and stays out of
   scope here to keep the psacklinger comparison clean.
-- Negative dependencies are not tracked: a function that *failed* to resolve a
-  name does not get invalidated when the name later appears — but failed
-  compiles throw before the session stores a previous input set for that state,
-  so the next compile is effectively full.
+- Negative dependencies are tracked only coarsely: a failed compile depends on
+  the whole-world `WorldInput`, so it is retried on *any* global-surface change,
+  not just the one that could fix it.
 - `GlobalsInput` keeps import/namespace changes whole-program coarse.
 - Object files accumulate on disk across function renames (stale
   `.fn_<hash>.o` are never linked, but not deleted either).

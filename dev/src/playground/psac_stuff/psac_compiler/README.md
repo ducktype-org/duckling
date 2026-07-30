@@ -27,9 +27,11 @@ arithmetic/comparison/logical operators, compound assignments and the
 3. **FunctionCollector** walks the PST and turns every function definition into a
    *work item*: the `pst::Fun` node, its enclosing namespace, a content hash, and
    its namespace-qualified link name.
-4. **PSAC computation** (`psackling/compiler.cpp`, `compileFunctionsPsac`) compiles
-   every work item as an independent parallel task. Each task emits its own object
-   file `<output>.fnN.o`.
+4. **PSAC computations** (`psackling/compiler.cpp`, `compileUnitPsac`) compile
+   every work item as an independent parallel task — one self-adjusting
+   computation per function. Each task emits its own object file
+   `<output>.fn_<link-hash>.o` (named by link-name hash, so the file identity
+   survives reordering).
 5. A dedicated `<output>.globals.o` defines all global variables
    (zero-initialized) plus the runtime builtins; global initializer expressions —
    which may call functions and read other globals — are lowered in declaration
@@ -40,30 +42,42 @@ arithmetic/comparison/logical operators, compound assignments and the
 
 ## How PSAC is used
 
-The whole back-end is one self-adjusting computation:
+Every function is its own self-adjusting computation, built around a dynamic-read
+scope:
 
 ```cpp
-psac_function(compileFunctionsPsac, /* pointers to shared state */) {
-    psac_parallel_for(u64 i, 0, n, /*granularity=*/1, {
-        psac_read((u64 fn_hash, u64 globals_hash), (&fn_mods[i], globals_mod), {
-            compileOneFunction(*base_ctx, items[i], object_paths[i]);
-        });
+psac_function(compileUnitPsac, State* s, FunctionUnit* unit, std::string link_name) {
+    psac_dynamic_context({
+        _psac_context_mods.push_back(&unit->body_mod);
+        _psac_context_mods.push_back(&s->structural_mod);
+        DynamicDepRecorder recorder(_psac_context_mods, *s, s->ctx);
+        compileOneFunction(s->ctx, item, unit->object_path, &recorder);  // + error handling
     });
 }
 ```
 
-- Every function gets a **`psac::Mod<u64>` holding its content hash**; one extra
-  Mod holds the **globals hash** (classes, consts, global variables, and the
-  *signatures* of all functions).
-- Each function's compilation is a **`psac_read` of exactly those two Mods**. The
-  read body is the dependency declaration: "this object file is a function of
-  these two values".
-- `psac_run` executes the computation once — that is the parallel full build. The
-  returned `psac::Computation` (the dynamic dependency graph) is **kept alive** in
-  `pg::Compiler`.
-- On an update, the driver rewrites only the Mods whose hashes changed and calls
-  `psac_propagate`, which re-executes exactly the dirty reads — again in parallel
-  if several functions changed.
+- Every function gets a **`psac::Mod<Bit256>` holding its body-content hash**, and
+  every global symbol (constant, function signature, class layout, global
+  variable) gets its own Mod holding its value hash — the PSAC analog of
+  querylinger's per-symbol side inputs. One structural Mod covers imports,
+  namespace names and module identity.
+- Each function's compilation is a **PSAC dynamic-read scope** over its body Mod,
+  the structural Mod, and — registered at the use site through
+  `pg::SymbolUseObserver` while lowering runs — the Mods of exactly the symbols
+  it used. The scope's subscription set is re-derived on every re-run, so
+  dependencies stay precise as the code evolves.
+- A **failed** compilation instead subscribes to the whole-world Mod: its true
+  dependency set was never discovered (e.g. the missing function it called), so
+  it is retried whenever anything on the global surface changes — negative
+  dependencies, coarse but sound.
+- `psac_run` per function executes the cold build (all functions in a
+  `parlay::parallel_for`); the returned `psac::Computation`s are **kept alive** in
+  `pg::Compiler`. Because each function owns its computation, adding or removing
+  functions just adds or destroys computations — no full rebuild.
+- On an update, the driver rewrites only the Mods whose hashes changed
+  (`Mod::write` self-diffs) and propagates every computation; clean ones are
+  no-ops, dirty ones re-run in parallel. A symbol that vanished gets a tombstone
+  value, so its readers re-run and report the missing symbol.
 
 Content hashes are derived from each PST element's recursive debug print, which
 contains the full structure, names and values but **no source positions or file
@@ -125,22 +139,27 @@ moves those definitions after `SPNode` and is applied automatically by
 
 `pg::Compiler` keeps the computation alive between compiles:
 
-- `compile(file)` — full build (`psac_run`).
-- `update(file)` — parse + re-analyze the new source, then **diff the hashes**:
+- `compile(file)`/`update(file)` — both diff-driven: parse + re-analyze the new
+  source, rewrite the Mods whose hashes changed, reconcile the function set, and
+  propagate:
   - body changed → that function's Mod is rewritten → propagation recompiles
     exactly that function;
-  - const/class/global/signature changed → the globals Mod is rewritten → every
-    function recompiles (the coarse half of dependency tracking; the real compiler
-    tracks fine-grained query inputs instead);
-  - function added/removed/renamed → the computation shape no longer matches →
-    automatic full rebuild;
+  - const/class/global-var/signature changed → that symbol's Mod is rewritten →
+    exactly its users recompile (parameter renames touch nothing: signature
+    hashes cover types, not names);
+  - global variable *initializer* changed → only the globals object is re-emitted
+    and relinked; readers depend on the variable's identity and type alone;
+  - function added/removed/renamed → a computation is created or destroyed; the
+    survivors stay cached;
+  - a previously failed function is retried when the global surface changes (its
+    failure subscribed to the whole-world Mod);
   - nothing changed → nothing recompiled, no relink.
 
 This mirrors the production compiler's incremental design in miniature: there,
 queries depend on per-PST-element stable hashes collected as side inputs
 (`driver/incremental_utils/`), and the query framework invalidates whatever
 depended on a changed hash. Here, "query" = one function's compilation, and the
-"side inputs" are the two Mods it reads.
+"side inputs" are the Mods its dynamic-read scope subscribed to.
 
 ## Usage
 
@@ -208,19 +227,20 @@ Readings:
   don't.
 
 Warm incremental updates (`bench_incremental.py`, interactive mode, -j8,
-single-line edits; see `results_incremental_<name>.md`):
+single-line edits; see `results_incremental_<name>.md`). The table below predates
+the per-symbol Mod engine — psacklinger's coarse globals Mod used to force a full
+recompile on any non-body change; both engines now track per-symbol dependencies
+(numbers to be re-measured):
 
-| scenario | psacklinger | querylinger |
+| scenario | psacklinger (old coarse engine) | querylinger |
 |:---|:---|:---|
 | no-op | ~100 ms, 0/352 | ~100 ms, 0/352 |
 | one body edit | ~150 ms, 1/352 | ~150 ms, 1/352 |
 | global var initializer | ~220 ms, **352/352** | ~150 ms, **0/352** |
 
 The ~100 ms floor is the shared non-incremental front end (full re-parse +
-re-analyze). At equal dependency granularity the engines are indistinguishable;
-querylinger's per-symbol side inputs win exactly where psacklinger's coarse
-globals Mod forces a full recompile (constants, signatures, class layouts,
-global variables — see `../query_compiler/docs/architecture.md`).
+re-analyze). At equal dependency granularity the engines are indistinguishable
+(see `../query_compiler/docs/architecture.md`).
 
 Phase breakdown (`PSACKLINGER_TIMING=1`, duck1 at `-j8`, release): parse 67 ms,
 GlobalPass 1 ms, collect+hash 22 ms, globals object 2 ms, function lowering
@@ -254,7 +274,8 @@ edit recompiles exactly one function and an unchanged source recompiles zero.
   constructors take no arguments (zero-initialization only).
 - `char` compares (unsigned byte order) but has no arithmetic and no `char`↔`i64`
   casts, mirroring the real compiler's distinct char type.
-- Globals dependency is coarse (one hash for everything non-body).
+- Import/namespace rewiring stays coarse (the structural Mod): it can change what
+  any name resolves to, so everything recompiles.
 - Integer division is unguarded (`sdiv`), matching the real compiler's LLVM
   backend: division by zero is a SIGFPE, where the DVM backend panics gracefully.
 - Templates (`template{...}`) are not implemented — the Duckling frontend has no

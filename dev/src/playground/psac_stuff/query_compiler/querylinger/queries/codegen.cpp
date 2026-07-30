@@ -63,6 +63,9 @@ namespace ql {
 										 session.program.ctx, session.program.items[index], &recorder
 									 ) };
 			} catch (const std::exception& e) {
+				// The failed lowering never reached its real dependencies (e.g. the
+				// missing callee), so retry on any global-surface change instead.
+				ctx.query<WorldInput>({ .hash = session.program.globals_hash });
 				return ObjectResult{ .error = e.what(), .object_bytes = {} };
 			}
 		}
@@ -87,6 +90,7 @@ namespace ql {
 										 session.program.ctx, session.program.global_inits, &recorder
 									 ) };
 			} catch (const std::exception& e) {
+				ctx.query<WorldInput>({ .hash = session.program.globals_hash });
 				return ObjectResult{ .error = e.what(), .object_bytes = {} };
 			}
 		}

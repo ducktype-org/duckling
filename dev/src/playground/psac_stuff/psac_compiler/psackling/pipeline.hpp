@@ -34,11 +34,21 @@ namespace pg {
 	};
 
 	/// One top-level symbol (constant, function signature, class layout or global
-	/// variable) as a single SHA-256 input hash covering both its identity and its
-	/// value, for per-symbol dependency tracking in the query-based backend.
+	/// variable) for per-symbol dependency tracking in the incremental backends.
+	/// `key` is the symbol's stable identity (kind-prefixed qualified/link name) —
+	/// what the PSAC backend keys its per-symbol Mods by; `input_hash` is a SHA-256
+	/// over identity AND value — what the query backend uses as the input node.
 	struct SymbolInputInfo {
+		std::string  key;
 		base::Bit256 input_hash;
 	};
+
+	/// Stable identity keys of the per-symbol inputs (kind-prefixed, so equal names
+	/// of different symbol kinds can never collide).
+	std::string constInputKey(const sym::Symbol& symbol);
+	std::string functionSigInputKey(const sym::Symbol& symbol);
+	std::string globalVarInputKey(const sym::Symbol& symbol);
+	std::string classLayoutInputKey(const tp::TypeInfo& type_info);
 
 	/// Input hash of a constant: namespace-qualified name, value bits and type name,
 	/// so both value and type changes are detected.
