@@ -685,7 +685,8 @@ namespace compiler::helios::mangler {
 			std::string           hex_str;
 			hex_str.reserve(sv.size() * 2);
 
-			for (const unsigned char byte: sv) {
+			for (const char c: sv) {
+				const auto byte = static_cast<unsigned char>(c);
 				hex_str += HEX_DIGITS[byte >> 4];
 				hex_str += HEX_DIGITS[byte & 0x0F];
 			}
