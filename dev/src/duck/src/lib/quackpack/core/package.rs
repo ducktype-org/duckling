@@ -168,12 +168,37 @@ impl AnyPackage {
         matches!(self, AnyPackage::Script(..))
     }
 
+    /// Get the name of this [`AnyPackage`].
+    ///
+    /// For [`Package`] it returns name from the manifest, however for scripts it returns a script
+    /// name (file stem of the script's path).
     pub fn name(&self) -> StrId {
-        self.manifest().name()
+        match self {
+            Self::Package(package) => package.name(),
+            Self::Script(script) => script.script_name(),
+        }
     }
 
+    /// Get the normalised name of this [`AnyPackage`].
+    ///
+    /// For [`Package`] it returns the normalised name from the manifest, however for scripts it
+    /// returns a normalised script name (file stem of the script's path).
+    pub fn normalised_name(&self) -> String {
+        match self {
+            Self::Package(package) => package.normalised_name(),
+            Self::Script(script) => script.normalised_script_name(),
+        }
+    }
+
+    /// Get the version of this [`AnyPackage`].
+    ///
+    /// For [`Package`] returns the version from the manifest, however for scripts it forwards to
+    /// [`Script::version`].
     pub fn version(&self) -> Version {
-        self.manifest().version()
+        match self {
+            Self::Package(package) => package.version(),
+            Self::Script(script) => script.version(),
+        }
     }
 
     pub fn venv(&self) -> &VenvConfig {
@@ -220,6 +245,21 @@ impl Package {
             artifacts_dir,
             possible_source_dir: source_directory,
         }
+    }
+
+    /// Get the name of this [`Package`].
+    pub fn name(&self) -> StrId {
+        self.manifest.name()
+    }
+
+    /// Get the normalised name of this [`Package`].
+    pub fn normalised_name(&self) -> String {
+        self.manifest.normalised_name()
+    }
+
+    /// Get the version of this [`Package`].
+    pub fn version(&self) -> Version {
+        self.manifest.version()
     }
 
     /// Get the original manifest file content.

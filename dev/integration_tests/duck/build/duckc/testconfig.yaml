@@ -10,6 +10,7 @@ SubDirs:
   - basic
   - basic-deps
   - basic-deps-and-conds
+  - basic-deps-but-with-normalisation
   - diamond
   - dvm-deps
   - errors

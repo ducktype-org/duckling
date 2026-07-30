@@ -3,6 +3,7 @@ use std::io::Write;
 use std::path::Path;
 
 use endpoints::UrlExt;
+use http::{HeaderValue, header};
 use tracing::debug;
 use url::Url;
 
@@ -10,6 +11,7 @@ use super::http::HttpClient;
 use super::types;
 use super::util::http::Request;
 use super::util::http::traits_extensions::ResponseExt;
+use crate::quackpack::core::fetcher::util::http::defaults;
 use crate::quackpack::schemas::registry;
 use crate::util::file_locks::LockedFile;
 use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail_internal};
@@ -113,7 +115,16 @@ impl<'duck> DucknestClient<'duck> {
 }
 
 fn create_get_request(url: &Url) -> QuackResult<Request> {
-    create_http_request(url, http::Method::GET, vec![])
+    let mut request = create_http_request(url, http::Method::GET, vec![])?;
+    request
+        .headers_mut()
+        .entry(header::PRAGMA)
+        .or_insert(HeaderValue::from_static(defaults::PRAGMA_HEADER_WITH_VALUE));
+    request
+        .headers_mut()
+        .entry(header::EXPECT)
+        .or_insert(HeaderValue::from_static(defaults::EXPECT_HEADER_WITH_VALUE));
+    Ok(request)
 }
 
 fn create_http_request(url: &Url, method: http::Method, body: Vec<u8>) -> QuackResult<Request> {

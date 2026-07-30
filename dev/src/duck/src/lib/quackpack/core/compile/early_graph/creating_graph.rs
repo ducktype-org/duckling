@@ -8,7 +8,7 @@ use crate::quackpack::core::compile::compiler_package::PackageType;
 use crate::quackpack::core::full_identity::FullKind;
 use crate::quackpack::core::storage::freeze::{FreezePackage, VenvFreeze};
 use crate::quackpack::core::storage::paths::Storage;
-use crate::quackpack::core::{Manifest, PackageLoader};
+use crate::quackpack::core::{AnyPackage, PackageLoader};
 use crate::quackpack::util::to_path_buf::ToPathBuf;
 use crate::{DuckContext, QuackResultContext, qp_bail, qp_bail_internal, qp_err};
 
@@ -167,12 +167,14 @@ impl EarlyGraph {
             } else {
                 PackageType::TransitiveDependency
             };
-            let package = parse_dependency(dep, &bcx.storage, bcx.pcx.ctx(), pkg_type)?;
-            let manifest = package.package().manifest();
-            if manifest.name() != dep.name() || manifest.version() != dep.version() {
-                return Err(error_for_metadata_mismtach(manifest, dep)?);
+            let compiler_package = parse_dependency(dep, &bcx.storage, bcx.pcx.ctx(), pkg_type)?;
+            let package = compiler_package.package();
+            if package.name() != dep.name() || package.version() != dep.version() {
+                return Err(error_for_metadata_mismtach(package, dep)?);
             }
-            let overwritten_entry = packages.insert(dep.as_identity(), package).is_some();
+            let overwritten_entry = packages
+                .insert(dep.as_identity(), compiler_package)
+                .is_some();
             if overwritten_entry {
                 qp_bail!(
                     "malformed freezefile: duplicated dependency `{}`",
@@ -189,11 +191,11 @@ impl EarlyGraph {
 
 /// Get the error message emitted when parsed package has different version (or name), than in the freeze.
 fn error_for_metadata_mismtach(
-    manifest: &Manifest,
+    package: &AnyPackage,
     dep: &FreezePackage,
 ) -> QuackResult<QuackError> {
     let display_expected = format!("{} {}", dep.name(), dep.version());
-    let display_found = format!("{} {}", manifest.name(), manifest.version());
+    let display_found = format!("{} {}", package.name(), package.version());
     let dep_pkg_id = dep.to_package_id();
     match dep_pkg_id.kind() {
         FullKind::Registry => Ok(qp_err!(
