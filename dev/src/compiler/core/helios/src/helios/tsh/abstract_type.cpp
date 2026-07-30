@@ -14,7 +14,7 @@ namespace compiler::tsh {
 	}
 
 	[[nodiscard]]
-	CRef<TypeInterface> AbstractType::getInterface(query::Context& ctx) const {
+	CRef<query::QResult<TypeInterface>> AbstractType::getInterface(query::Context& ctx) const {
 		return pimpl->getInterface(ctx);
 	}
 

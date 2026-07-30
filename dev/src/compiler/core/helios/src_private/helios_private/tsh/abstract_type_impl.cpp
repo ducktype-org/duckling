@@ -93,9 +93,9 @@ namespace compiler::tsh {
 	/**
 	 * Internal query for caching type interfaces.
 	 */
-	DECLARE_QUERY(QueryTypeInterface, AbstractType, CRef<TypeInterface>, ({ .uses_qresult = false }));
+	DECLARE_QUERY(QueryTypeInterface, AbstractType, CRef<query::QResult<TypeInterface>>, ({ }));
 
-	CRef<TypeInterface> AbstractTypeImpl::getInterface(query::Context& ctx) const {
+	CRef<query::QResult<TypeInterface>> AbstractTypeImpl::getInterface(query::Context& ctx) const {
 		return ctx.query<QueryTypeInterface>(AbstractType(this));
 	}
 
@@ -118,7 +118,7 @@ namespace compiler::tsh {
 		}
 	}
 
-	struct IMPLEMENT_QUERY(QueryTypeInterface, TypeInterface) {
+	struct IMPLEMENT_QUERY(QueryTypeInterface, query::QResult<TypeInterface>) {
 		/**
 		 * Combines the default interface with the declared one (by the user).
 		 * It doesn't add the elements with special kind already existing.

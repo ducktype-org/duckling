@@ -52,7 +52,7 @@ namespace compiler::tsh {
 		 * @note Uses an internal query for caching.
 		 */
 		[[nodiscard]]
-		CRef<TypeInterface> getInterface(query::Context& ctx) const;
+		CRef<query::QResult<TypeInterface>> getInterface(query::Context& ctx) const;
 
 		/**
 		 * @brief Check if the type is a simple type, which correlates heavily with the type being
