@@ -34,11 +34,6 @@ extern("C") {
         fundecl add_bytes(a: i8, b: i8) -> i32;
     }
 
-    # Variadic C functions. `@cffi_variadic_after(n)` says the first `n` parameters are the
-    # fixed ones; the rest describe one concrete `...` argument list, so each call shape gets
-    # its own declaration. All of them are declared with the same unmangled name and lower to
-    # the same `i64 (i64, ...)` LLVM type, so they share one declaration in the module.
-    # Variadic parameters must already be default-argument-promoted (no f32, no sub-i32 ints).
     namespace variadic {
         @cffi_variadic_after(1) fundecl sum_varargs_mixed(count: i64, a: i64, b: f64) -> i64;
 
