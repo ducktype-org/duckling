@@ -2,6 +2,100 @@
 
 use thiserror::Error;
 
+/// __Sorted__ list of std Duckling packages.
+const DUCKLING_STD_PACKAGES: &[&str] = &["core", "std"];
+
+/// __Sorted__ list of builtin Duckling keywords.
+const DUCKLING_KEYWORDS: &[&str] = &[
+    "Array",
+    "Dict",
+    "List",
+    "Set",
+    "alias",
+    "and",
+    "assert",
+    "block",
+    "bool",
+    "box",
+    "break",
+    "case",
+    "catch",
+    "char",
+    "compile_assert",
+    "const",
+    "continue",
+    "copy",
+    "cptr",
+    "debug",
+    "defer",
+    "destroy",
+    "else",
+    "extern",
+    "f128",
+    "f16",
+    "f32",
+    "f64",
+    "f80",
+    "false",
+    "for",
+    "fun",
+    "fundecl",
+    "hides",
+    "i128",
+    "i16",
+    "i32",
+    "i64",
+    "i8",
+    "if",
+    "implements",
+    "import",
+    "in",
+    "lamba",
+    "lambda",
+    "let",
+    "loop",
+    "manyptr",
+    "match",
+    "move",
+    "namespace",
+    "none",
+    "not",
+    "or",
+    "pattern",
+    "private",
+    "protected",
+    "ptr",
+    "public",
+    "redo",
+    "ref",
+    "refof",
+    "restart",
+    "return",
+    "self",
+    "sizeof",
+    "slice",
+    "static",
+    "str",
+    "switch",
+    "template",
+    "test",
+    "then",
+    "throw",
+    "try",
+    "true",
+    "type",
+    "u128",
+    "u16",
+    "u32",
+    "u64",
+    "u8",
+    "using",
+    "var",
+    "while",
+    "with",
+    "xor",
+];
+
 #[derive(Debug, Error, Clone, Eq, PartialEq)]
 pub enum PackageNameError {
     #[error("package name is empty")]
@@ -40,6 +134,16 @@ pub fn normalise_package_name(name: &str) -> String {
     // present in a package name into valid ones. Because the only one is a dash (`-`), we replace
     // it with an underscore (`_`).
     name.replace('-', "_")
+}
+
+/// Check if a name is a Duckling std package name.
+pub fn is_duckling_std_name(name: &str) -> bool {
+    DUCKLING_STD_PACKAGES.contains(&name)
+}
+
+/// Check if a name is a Duckling keyword.
+pub fn is_duckling_keyword(name: &str) -> bool {
+    DUCKLING_KEYWORDS.contains(&name)
 }
 
 /// Check if a given char is a valid package name character.
