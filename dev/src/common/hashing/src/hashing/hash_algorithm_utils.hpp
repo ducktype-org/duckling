@@ -121,11 +121,16 @@ namespace hashing {
 		 * Checks if a range can be hashed as a contiguous sequence of memory
 		 * (i.e. its elements are in a contiguous memory block, have unique object representations
 		 * and size is known)
+		 *
+		 * @note ranges of raw pointers are excluded on purpose - hashing them as bytes would
+		 * silently hash the addresses, which has to be requested explicitly with the ByAddress
+		 * proxy instead
 		 */
 		template<typename HashAlgorithm, typename R>
 		concept can_hash_range_as_bytes
 			= hash_algorithm<HashAlgorithm> && std::ranges::contiguous_range<R>
 		   && std::has_unique_object_representations_v<std::ranges::range_value_t<R>>
+		   && (not std::is_pointer_v<std::ranges::range_value_t<R>>)
 		   && requires(const R& r) { std::ranges::size(r); };
 
 		/**

@@ -130,6 +130,29 @@ you can add a new condition there. All you have to do is to choose an appropriat
 and specific enough condition so that it won't interfere with other types.
 
 
+Hashing pointers - `ByAddress`
+==============================
+
+Raw pointers are **not** hashable on their own: hashing an address is almost never what one wants,
+since addresses are not stable between runs and say nothing about the pointee
+(e.g. a `const char*` would hash to something completely unrelated to the string it points to).
+Trying to hash one is a compile error telling you to pick an intent.
+
+If you do mean the address - i.e. the *identity* of the pointee - wrap it in the
+`ByAddress` proxy from [by_address.hpp](src/hashing/by_address.hpp):
+
+~~~~~cpp
+justHash(ptr);                 // ill-formed
+justHash(*ptr);                // hashes the pointee
+justHash(ByAddress{ ptr });    // hashes the address
+~~~~~
+
+The same applies to pointers nested inside other objects: a `hashDecompose()` that ties a raw
+pointer member, or a contiguous range of pointers, is rejected as well. Watch out for implicit
+array-to-pointer decay - `std::tuple{ 42, "hello" }` deduces a `const char*` member,
+so use `std::string_view{ "hello" }` (or `std::string`) when you want the characters hashed.
+
+
 Obtaining hashes
 ================
 
