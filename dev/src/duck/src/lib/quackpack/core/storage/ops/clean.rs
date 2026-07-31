@@ -2,8 +2,9 @@
 use std::collections::HashSet;
 use std::fs::DirEntry;
 use std::path::{Path, PathBuf};
-use std::time::{Duration, SystemTime};
+use std::time::Duration;
 
+use chrono::{DateTime, Utc};
 use storage::paths::Storage;
 use storage::{locks, paths};
 use tracing::debug;
@@ -58,7 +59,7 @@ pub fn clean_storage(ctx: &DuckContext, storage_root: &Path) -> QuackResult<Clea
     let mut removed_venvs = vec![];
     let _lock = locks::CleanLock::new(&storage, ctx).context("failed to acquire a clean lock")?;
     let mut all_deps = HashSet::new();
-    let now = SystemTime::now();
+    let now = Utc::now();
     let venvs = {
         let venvs = storage.iter_venvs()?;
         venvs.into_iter().collect::<Result<Vec<_>, _>>()?
@@ -105,7 +106,7 @@ fn clean_venv_from_storage(
     dir: DirEntry,
     storage: &Storage,
     temporary_lifetime: Duration,
-    now: SystemTime,
+    now: DateTime<Utc>,
     removed_venvs: &mut Vec<VenvId>,
     all_deps: &mut HashSet<String>,
     ctx: &DuckContext,

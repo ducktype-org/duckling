@@ -1,9 +1,8 @@
 //! Querying a storage's data.
 use std::collections::HashMap;
 use std::path::Path;
-use std::time::SystemTime;
 
-use chrono::DateTime;
+use chrono::{DateTime, Utc};
 use storage::paths;
 
 use crate::quackpack::core::storage;
@@ -19,7 +18,7 @@ use crate::{DuckContext, QuackResult};
 pub fn list_venvs(
     storage_root: &Path,
     ctx: &DuckContext,
-) -> QuackResult<HashMap<VenvId, (Venv, SystemTime)>> {
+) -> QuackResult<HashMap<VenvId, (Venv, DateTime<Utc>)>> {
     let storage = paths::Storage::new(storage_root);
     let mut metadata = HashMap::new();
     let venvs = storage.iter_venvs()?.collect::<Result<Vec<_>, _>>()?;
@@ -41,7 +40,7 @@ pub fn venv_info(
     storage_root: &Path,
     id: impl ToVenvId,
     ctx: &DuckContext,
-) -> QuackResult<Option<(Venv, SystemTime)>> {
+) -> QuackResult<Option<(Venv, DateTime<Utc>)>> {
     let storage = paths::Storage::new(storage_root);
     let id = id.to_venv_id();
     let data = Venv::fix_and_load_with_last_access(&storage, id, ctx)?;
