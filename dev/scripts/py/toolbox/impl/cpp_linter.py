@@ -13,6 +13,7 @@ from .helpers import (
     bash_command_get_output,
     exit_with_error,
     get_input,
+    log_good,
     log_info,
     log_new_line,
     log_warning,
@@ -86,6 +87,11 @@ def cpp_linter_impl(
         if apply:
             bash_command(f"./scripts/formatting/format_repo_cpp.sh {clang_format_path}")
             clang_format_failed = False
+
+    if clang_tidy_path and not clang_tidy_failed:
+        log_good("clang-tidy found no issues in the checked files")
+    if clang_format_path and not clang_format_failed:
+        log_good("clang-format: all checked files are properly formatted")
 
     return clang_tidy_failed, clang_format_failed
 

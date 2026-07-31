@@ -153,6 +153,15 @@ def log_info(msg: str, file=sys.stdout) -> None:
     click_log("INFO", msg, fg="yellow", file=file)
 
 
+def log_good(msg: str, file=sys.stdout) -> None:
+    """
+    Reports a success. Use it instead of `log_info` whenever the message
+    tells the user that something has *passed* - `log_info` is reserved for
+    neutral, informational output.
+    """
+    click_log("GOOD", msg, fg="green", file=file)
+
+
 def log_bash(msg: str, file=sys.stdout) -> None:
     click_log("BASH", msg, fg="bright_cyan", file=file)
 
