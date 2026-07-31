@@ -7,6 +7,7 @@ from collections.abc import Iterator
 from typing import Callable
 from .helpers import (
     BashCommandError,
+    log_good,
     log_info,
     log_warning,
     bash_command_get_output,
@@ -237,7 +238,7 @@ def todo_validate_impl(
         log_info("Example: // @TODO: #0123 Implement this feature")
         log_info("The issue number must reference an open GitHub issue.")
     else:
-        log_info(
+        log_good(
             "All TODO/FIXME comments are properly formatted with valid issue numbers"
         )
 
