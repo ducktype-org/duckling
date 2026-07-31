@@ -105,6 +105,7 @@ impl fmt::Display for CorruptedVenvError {
 impl std::error::Error for CorruptedVenvError {}
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq, Hash)]
+#[serde(rename_all = "kebab-case")]
 /// State of virtual environment in the storage. Stores the freeze for the given
 /// virtual environment, copy of manifest's metadata, and additional info
 /// required for storage functioning: last location and access info.
