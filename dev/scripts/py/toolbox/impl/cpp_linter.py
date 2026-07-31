@@ -98,7 +98,7 @@ def cpp_linter_impl(
     if clang_tidy_path and not clang_tidy_failed:
         log_good(f"clang-tidy found no issues in the {checked_count} checked file(s)")
     if clang_format_path and not clang_format_failed:
-        log_good(f"clang-format: all {checked_count} checked file(s) are properly formatted")
+        log_good(f"clang-format found no issues in the {checked_count} checked file(s)")
 
     return clang_tidy_failed, clang_format_failed
 
