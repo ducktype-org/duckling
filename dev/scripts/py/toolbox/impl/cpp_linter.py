@@ -88,10 +88,17 @@ def cpp_linter_impl(
             bash_command(f"./scripts/formatting/format_repo_cpp.sh {clang_format_path}")
             clang_format_failed = False
 
+    # `run_linter_on` skips everything that is not a C++ source, so a diff without any
+    # would otherwise report a pass over zero files.
+    checked_count = sum(1 for f in file_diffs if is_cpp_source(f))
+    if not checked_count:
+        log_info("No C++ files to lint. Nothing to check.")
+        return clang_tidy_failed, clang_format_failed
+
     if clang_tidy_path and not clang_tidy_failed:
-        log_good("clang-tidy found no issues in the checked files")
+        log_good(f"clang-tidy found no issues in the {checked_count} checked file(s)")
     if clang_format_path and not clang_format_failed:
-        log_good("clang-format: all checked files are properly formatted")
+        log_good(f"clang-format: all {checked_count} checked file(s) are properly formatted")
 
     return clang_tidy_failed, clang_format_failed
 
@@ -252,6 +259,14 @@ def clang_format_on(
     return False
 
 
+def is_cpp_source(file: str) -> bool:
+    """
+    Whether the linters have anything to say about `file`. Everything else is
+    skipped by `run_linter_on`.
+    """
+    return file.endswith(".hpp") or file.endswith(".cpp")
+
+
 def run_linter_on(
     clang_tidy_path: str | None,
     clang_format_path: str | None,
@@ -262,7 +277,7 @@ def run_linter_on(
     clang_format_failed = False
     clang_tidy_failed = False
     logs = ""
-    if file.endswith(".hpp") or file.endswith(".cpp"):
+    if is_cpp_source(file):
         log_file = tempfile.TemporaryFile("w+")
         log_info(f"Linting: {file}", file=log_file)
 
