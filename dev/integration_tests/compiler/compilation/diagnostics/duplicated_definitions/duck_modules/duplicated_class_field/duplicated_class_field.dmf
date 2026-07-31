@@ -1,0 +1,12 @@
+# A field declared twice in the same class must be rejected (#3264).
+
+class T {
+    x: i64 = 0;
+    y: i64 = 0;
+    y: i64 = 0;
+}
+
+fun main() -> i64 = {
+    var t = T();
+    return 0;
+}

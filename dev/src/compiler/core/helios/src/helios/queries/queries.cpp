@@ -10,6 +10,7 @@
 #include <helios/symbols/attributes.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
+#include <helios/symbols/query_type_symbol_data.hpp>
 #include <helios/symbols/symbol_id.hpp>
 #include <helios/tsh/queries/types.hpp>
 #include <helios/tsh/symbol_type.hpp>
@@ -124,6 +125,7 @@ namespace compiler::helios {
 			}
 
 			if (duplicatesCheck(ctx, out, class_symbols).isBad()) is_failed = true;
+			if (duplicatedFieldsCheck(ctx, class_symbols).isBad()) is_failed = true;
 			if (collectReplicatedSymbols(ctx, out).isBad()) is_failed = true;
 
 
@@ -218,7 +220,31 @@ namespace compiler::helios {
 				return false;
 			}
 
-			auto [entry, inserted] = seen_declarations.try_emplace(mangled_name, stable_pos);
+			return reportIfNameTaken(
+				ctx, seen_declarations, mangled_name, original_name, stable_pos
+			);
+		}
+
+		/**
+		 * @brief Reports a duplicated definition diagnostic if @p key_name was already registered
+		 * in @p seen_declarations, and registers it otherwise.
+		 *
+		 * @param seen_declarations Names seen so far, mapped to the source position of the first
+		 * definition that used them.
+		 * @param key_name Name the definition is registered under (mangled for module level
+		 * symbols, the plain name for class fields).
+		 * @param original_name Name of the definition as written in the source code.
+		 * @param stable_pos Source position of the definition.
+		 * @return `true` if an earlier definition already used @p key_name.
+		 */
+		static bool reportIfNameTaken(
+			query::Context&                                           ctx,
+			std::unordered_map<base::StrID, dia_int::StablePosition>& seen_declarations,
+			base::StrID                                               key_name,
+			base::StrID                                               original_name,
+			dia_int::StablePosition                                   stable_pos
+		) {
+			auto [entry, inserted] = seen_declarations.try_emplace(key_name, stable_pos);
 			if (inserted) return false;
 
 			auto error
@@ -232,6 +258,45 @@ namespace compiler::helios {
 			ctx.logInt(std::move(error));
 
 			return true;
+		}
+
+		/**
+		 * @brief Reports fields declared more than once inside the same class.
+		 *
+		 * Fields of a class share a single namespace and, unlike methods, cannot be overloaded,
+		 * so the check is done on their plain names, class by class.
+		 *
+		 * @param class_symbols Class symbols of the unit.
+		 * @return `base::BAD` if at least one class declares the same field name twice. The caller
+		 * is responsible for failing the query gracefully; this must not throw, as
+		 * `QueryModuleHOUT` does not catch query-failure exceptions thrown from `provide`.
+		 */
+		static base::OkBad duplicatedFieldsCheck(
+			query::Context& ctx, const std::vector<SymID>& class_symbols
+		) {
+			bool found_duplicate = false;
+
+			for (SymID class_sym: class_symbols) {
+				Ref class_data = ctx.query<QueryClassSymbolData>(class_sym);
+				// A class we could not resolve is already diagnosed elsewhere.
+				if (class_data->hasFailed()) continue;
+
+				std::unordered_map<base::StrID, dia_int::StablePosition> seen_fields;
+
+				for (SymID field_sym: class_data->valueOrPanic().members) {
+					if_opt_some(maybeSymbolPst(field_sym), pst) {
+						if (reportIfNameTaken(
+								ctx,
+								seen_fields,
+								name(field_sym),
+								name(field_sym),
+								pst.unlock(ctx)->getStablePosition()
+							))
+							found_duplicate = true;
+					}
+				}
+			}
+			return found_duplicate ? base::BAD : base::OK;
 		}
 
 		/**

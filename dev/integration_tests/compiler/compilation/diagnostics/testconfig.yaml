@@ -16,3 +16,4 @@ Run: "
   
 SubDirs:
   - initialization
+  - duplicated_definitions
