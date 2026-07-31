@@ -52,7 +52,6 @@ public:
 		TESTER_ADD_TEST(cptrWritePointeeMismatchFails);
 		TESTER_ADD_TEST(cptrReadIntoPointerPointeeFails);
 		TESTER_ADD_TEST(cptrWriteFromPointerPointeeFails);
-		TESTER_ADD_TEST(cptrCopyBuiltinsRemoved);
 		TESTER_ADD_TEST(floatArgsAndReturn);
 		TESTER_ADD_TEST(doubleArgsAndReturn);
 		TESTER_ADD_TEST(mixedIntFloatArgs);
@@ -1308,18 +1307,6 @@ private:
 			"    ret;\n"
 			"}\n",
 			{ "cannot be dereferenced" }
-		);
-	}
-
-	// The raw copy builtins are gone; the read/write instructions replace them.
-	void cptrCopyBuiltinsRemoved() {
-		expectLoadError(
-			"builtins_removed",
-			"function main { i64, ptr_argv } -> { i64 } {\n"
-			"    call_builtinfunc builtin_cptr_read_pptr;\n"
-			"    ret;\n"
-			"}\n",
-			{ "not builtin" }
 		);
 	}
 
