@@ -7,13 +7,13 @@
 #include <helios/tsh/queries/types.hpp>
 #include <helios/utils/get_expr_symid.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
+#include <mir_private/stmt_lowering.hpp>
 #include <mir_private/utils/bounds_check.hpp>
 
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <query_framework/standard_query/query_impl.hpp>
-#include <mir_private/stmt_lowering.hpp>
 
 #include <algorithm>
 #include <ranges>
@@ -698,7 +698,9 @@ namespace compiler::mir {
 
 		void visitBlockExpr(const hc::BlockExpr& expr) override {
 			auto lowered_block = lowerStmt(*expr.block, continuation, function, expr_scope);
-			valueOutput(lowered_block.begin, MIRValue{ MIRConstant{ ctv::CompileTimeValue::UnitCTV() } });
+			valueOutput(
+				lowered_block.begin, MIRValue{ MIRConstant{ ctv::CompileTimeValue::UnitCTV() } }
+			);
 		}
 
 		void visitListPushExpr(const hc::ListPushExpr& expr) override {

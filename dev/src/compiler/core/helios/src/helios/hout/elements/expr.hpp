@@ -1,6 +1,7 @@
 #pragma once
 
 #include <ctv/numeric_value.hpp>
+#include <helios/hout/elements/stmt.hpp>
 #include <helios/hout/origin.hpp>
 #include <helios/symbols/symbol_id.hpp>
 #include <helios/tsh/expression_type.hpp>
@@ -10,7 +11,6 @@
 #include <base/types/ints.hpp>
 
 #include <token_parser_core/common_elements.hpp>
-#include <helios/hout/elements/stmt.hpp>
 
 #include <vector>
 
@@ -809,10 +809,7 @@ namespace compiler::helios::code {
 		// TODO: consider changing this to a CodeBlock Stmt
 		Box<BlockStmt> block;
 
-		BlockExpr(
-			query::Context& ctx, ElementOrigin origin,
-			Box<BlockStmt> block
-		);
+		BlockExpr(query::Context& ctx, ElementOrigin origin, Box<BlockStmt> block);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
@@ -822,11 +819,7 @@ namespace compiler::helios::code {
 	private:
 		FRIEND_MAKEBOX
 
-		BlockExpr(
-			tsh::ExpressionType<>        expression_type,
-			ElementOrigin                origin,
-			Box<BlockStmt>               block
-		);
+		BlockExpr(tsh::ExpressionType<> expression_type, ElementOrigin origin, Box<BlockStmt> block);
 	};
 
 	/**
