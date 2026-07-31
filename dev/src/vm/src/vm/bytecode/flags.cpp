@@ -517,9 +517,6 @@ namespace vm::code {
 			}
 
 			// ===== C pointers =====
-			// Native-memory accesses through a cpointer contribute no global flags: the native
-			// side is outside the VM's global model, and the VM side goes through a pointer
-			// operand (see the `deref_write` no-op above).
 			instr_case(ins::Op_load_pany_pcptr, i) {
 				wr(i.dst);
 				rd(i.src_ptr);

@@ -589,10 +589,12 @@ DEF_INSTR(movCast_pcptr_pcptr, (vm::opargs::PlaceCPtr, dst), (vm::opargs::PlaceC
 /// Sets the flag if the C pointer is null (the native address 0). Works with any cpointer type.
 DEF_INSTR(cmpNull_pcptr, (vm::opargs::PlaceCPtr, ptr))
 
-/// Performs `dst += offset`.
+/// Performs `dst += offset`, where `offset` is in **bytes** (not pointee elements, unlike C pointer
+/// arithmetic).`
 DEF_INSTR(add_pcptr_p64, (vm::opargs::PlaceCPtr, dst), (vm::opargs::Place64, offset))
 
-/// Performs `dst += offset`.
+/// Performs `dst += offset`, where `offset` is in **bytes** (not pointee elements, unlike C pointer
+/// arithmetic).`
 DEF_INSTR(add_pcptr_imm, (vm::opargs::PlaceCPtr, dst), (vm::opargs::Immediate, offset))
 
 // ========= TYPE OPERATIONS ========
