@@ -91,6 +91,63 @@ namespace {
 		);
 	}
 
+	/// Number of fields of the `String` class: pointer, length, capacity and offset.
+	constexpr unsigned STRING_FIELD_COUNT = 4;
+	/// Number of fields of a char slice: pointer and length.
+	constexpr unsigned CHAR_SLICE_FIELD_COUNT = 2;
+
+	/**
+	 * @brief Converts a char backed CTV (a char slice or a `String`) into its corresponding
+	 * llvm::Constant representation.
+	 *
+	 * Both are structs starting with a pointer to the characters and their length, so they share
+	 * the private constant global holding the bytes. `String` additionally stores the capacity,
+	 * which equals the length because the buffer is exactly as long as its content, and the
+	 * offset, which is zero.
+	 *
+	 * @param content The characters of the value.
+	 * @param is_string_class True for a `String`, false for a char slice.
+	 * @param llvm_type The expected type.
+	 * @param llvm_module The LLVM module into which the character global should be injected.
+	 * @return The created llvm::Constant*.
+	 */
+	llvm::Constant* charBackedCtvToLLVMConstant(
+		const base::StrID content,
+		const bool        is_string_class,
+		Ref<llvm::Type>   llvm_type,
+		Ref<llvm::Module> llvm_module
+	) {
+		const auto string_constant = llvm::ConstantDataArray::getString(
+			llvm_type->getContext(), content.strView(), /*AddNull=*/false
+		);
+		const auto string_global = new llvm::GlobalVariable(
+			*llvm_module,
+			string_constant->getType(),
+			/*isConstant=*/true,
+			llvm::GlobalValue::PrivateLinkage,
+			string_constant
+		);
+
+		const auto struct_type = llvm::cast<llvm::StructType>(llvm_type.get());
+		CORE_ASSERT(
+			struct_type->getNumElements()
+				== (is_string_class ? STRING_FIELD_COUNT : CHAR_SLICE_FIELD_COUNT),
+			"LLVM lowering: unexpected layout of a char backed compile time value."
+		);
+
+		const u64 length = content.strView().size();
+		auto      field  = [&](const unsigned index, const u64 value) {
+            return llvm::ConstantInt::get(struct_type->getElementType(index), value);
+		};
+
+		std::vector<llvm::Constant*> fields{ string_global, field(1, length) };
+		if (is_string_class) {
+			fields.push_back(field(2, length));
+			fields.push_back(field(3, 0));
+		}
+		return llvm::ConstantStruct::get(struct_type, fields);
+	}
+
 	/**
 	 * @brief Converts a CTV into its corresponding llvm::Constant representation.
 	 * @param ctv The CTV to convert.
@@ -124,29 +181,15 @@ namespace {
 			variant_case(char, c) {
 				return llvm::ConstantInt::get(llvm_type.get(), u64((unsigned char) c));
 			}
-			variant_case(base::StrID, str) {
-				// First, create a global constant for the string data
-				const auto string_constant = llvm::ConstantDataArray::getString(
-					llvm_type->getContext(), str.strView(), /*AddNull=*/false
+			variant_case(compiler::ctv::CompileTimeValue::CharSliceValue, char_slice) {
+				return charBackedCtvToLLVMConstant(
+					char_slice.value, /*is_string_class=*/false, llvm_type, llvm_module
 				);
-				const auto string_global = new llvm::GlobalVariable(
-					*llvm_module,
-					string_constant->getType(),
-					/*isConstant=*/true,
-					llvm::GlobalValue::PrivateLinkage,
-					string_constant
+			}
+			variant_case(compiler::ctv::CompileTimeValue::StringClassValue, string_value) {
+				return charBackedCtvToLLVMConstant(
+					string_value.value, /*is_string_class=*/true, llvm_type, llvm_module
 				);
-
-				// Prepare the char slice struct
-				const u64                          length = str.strView().size();
-				const std::vector<llvm::Constant*> fields{
-					string_global,
-					// length is length
-					llvm::ConstantInt::get(llvm_module->getContext(), llvm::APInt(64, length))
-				};
-				const auto struct_type     = llvm::cast<llvm::StructType>(llvm_type.get());
-				const auto struct_constant = llvm::ConstantStruct::get(struct_type, fields);
-				return struct_constant;
 			}
 			variant_case(compiler::ctv::CompileTimeValue::TupleCTV, tuple) {
 				// @TODO: #2506 Implement this

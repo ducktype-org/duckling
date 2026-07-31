@@ -112,7 +112,7 @@ pub struct VenvData {
     freeze: freeze::VenvFreeze,
     is_ephemeral: bool,
     last_known_location: PathBuf,
-    last_modification: SystemTime,
+    last_synchronization: SystemTime,
     last_access: SystemTime,
 }
 
@@ -122,14 +122,14 @@ impl VenvData {
         freeze: freeze::VenvFreeze,
         is_ephemeral: bool,
         last_known_location: PathBuf,
-        last_modification: SystemTime,
+        last_synchronization: SystemTime,
         last_access: SystemTime,
     ) -> Self {
         Self {
             freeze,
             is_ephemeral,
             last_known_location,
-            last_modification,
+            last_synchronization,
             last_access,
         }
     }
@@ -215,7 +215,7 @@ impl VenvData {
     }
 
     /// Get the last known location of this venv.
-    /// This is either root of the package for packages or path to the script for scripts with frontmatters.
+    /// This is either root of the package for packages or path to the script for scripts.
     pub fn last_known_location(&self) -> &Path {
         &self.last_known_location
     }
@@ -241,13 +241,13 @@ impl VenvData {
     }
 
     /// Get the last modification time of this venv.
-    pub fn last_modification(&self) -> SystemTime {
-        self.last_modification
+    pub fn last_synchronization(&self) -> SystemTime {
+        self.last_synchronization
     }
 
     /// Set the last modification time of this venv.
-    pub fn set_last_modification(&mut self, last_modification: SystemTime) {
-        self.last_modification = last_modification;
+    pub fn set_last_synchronization(&mut self, last_synchronization: SystemTime) {
+        self.last_synchronization = last_synchronization;
     }
 
     /// Update the last access and save this data to the disk.

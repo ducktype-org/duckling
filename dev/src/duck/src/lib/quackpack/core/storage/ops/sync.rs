@@ -12,6 +12,7 @@ use tracing::{debug, error};
 use crate::quackpack::core::fetcher::Fetcher;
 use crate::quackpack::core::fetcher::types::PackageWithUrl;
 use crate::quackpack::core::full_identity::{FullIdentity, FullKind, FullOrigin};
+use crate::quackpack::core::script::Script;
 use crate::quackpack::core::solver::git_access::GitAccess;
 use crate::quackpack::core::solver::solver_freeze::SolverFreeze;
 use crate::quackpack::core::solver::solver_mode::SolverMode;
@@ -93,7 +94,7 @@ pub fn sync(
     let now = SystemTime::now();
     let venv = if let Some(mut venv) = venv {
         let data = venv.data_mut();
-        data.set_last_modification(now);
+        data.set_last_synchronization(now);
         data.set_freeze(new_freeze);
         data.set_last_known_location(pcx.package().root().to_path_buf());
         data.set_ephemeral(venv_config.ephemeral());
@@ -115,7 +116,7 @@ pub fn sync(
         freeze_name(
             pcx.package()
                 .try_get_package()
-                .context_internal("expose_freezefile set on frontmatter pseudo package")?,
+                .context_internal("`expose-freezefile` set on a script")?,
         )
         .write(json)?;
     }
@@ -206,7 +207,7 @@ fn load_external_freezefile(
     let freeze_path = freeze_name(
         pcx.package()
             .try_get_package()
-            .context_internal("expose_freezefile set on frontmatter pseudo package")?,
+            .context_internal("`expose-freezefile` set on a script")?,
     );
     if !freeze_path.is_file() {
         return Ok(None);
@@ -347,11 +348,11 @@ fn fetch_source_code(
 
 fn make_success_message(pcx: &PackageContext<'_>, id: VenvId) -> QuackResult<()> {
     match pcx.package() {
-        AnyPackage::Frontmatter(frontmatter) => pcx.ctx().console().info(format!(
+        AnyPackage::Script(Script::Standalone(script)) => pcx.ctx().console().info(format!(
             "successfully synchronized the venv of the script with a frontmatter at `{}`",
-            frontmatter.script_file().display()
+            script.frontmatter().script_file().display()
         )),
-        AnyPackage::Package(_) => pcx
+        AnyPackage::Package(_) | AnyPackage::Script(Script::Associated(_)) => pcx
             .ctx()
             .console()
             .info(format!("successfully synchronized venv `{id}`")),

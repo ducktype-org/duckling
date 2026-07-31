@@ -125,22 +125,22 @@ fn clean_venv_from_storage(
     };
     let mut requires_save = false;
     let data = venv.data_mut();
-    // last_modification can exceed current_time only if there was a system time change.
-    // If ephemeral venv's previous last_modification is far in the future, we may never
+    // last_synchronization can exceed current_time only if there was a system time change.
+    // If ephemeral venv's previous last_synchronization is far in the future, we may never
     // clean it. Choosing to truncate the last_access to the present time may instead
     // cause premature cleanups (when measured in real time), but that should
     // not be problem for ephemeral venv.
-    if data.last_modification() > now {
-        data.set_last_modification(now);
+    if data.last_synchronization() > now {
+        data.set_last_synchronization(now);
         requires_save = true;
         debug!("venv `{venv_id}` requires_save, because it's too old");
     }
     debug!(
         "venv's `{venv_id}` (ephemeral: {}) last modification is `{:?}`, now is `{now:?}`",
         data.is_ephemeral(),
-        data.last_modification()
+        data.last_synchronization()
     );
-    let is_too_old = data.last_modification() + temporary_lifetime < now;
+    let is_too_old = data.last_synchronization() + temporary_lifetime < now;
     let should_remove_venv = data.is_ephemeral() && is_too_old;
     debug!("venv `{venv_id}` is too old: {is_too_old}");
     if should_remove_venv {

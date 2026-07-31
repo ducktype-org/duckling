@@ -260,7 +260,11 @@ impl<'duck, 'fetcher, 'access, Access: GitAccess> Gatherer<'duck, 'fetcher, 'acc
             fetched_manifests: HashMap::new(),
         };
         for manifest in fetcher_response.packages_metadata {
-            let manifest: QuackResult<Manifest> = (manifest, self.fetcher.ctx()).try_into();
+            let version = manifest.metadata.version;
+            let manifest: QuackResult<Manifest> = (manifest, self.fetcher.ctx()).try_into()
+                .with_context(|| {
+                    format!("registry `{url}` has responded with an invalid JSON for the package multimetadata of `{real_name}` version `{version}")
+                });
             match manifest
                 .and_then(|manifest| manifest.bail_if_incoherent_with_request_not_pinned(request))
             {

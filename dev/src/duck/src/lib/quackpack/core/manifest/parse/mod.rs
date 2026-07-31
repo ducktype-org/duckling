@@ -16,7 +16,8 @@ mod frontmatter;
 mod manifest;
 mod source;
 
-pub use frontmatter::try_parse_frontmatter;
+pub use frontmatter::{capture_frontmatter, parse_frontmatter};
+pub(crate) use manifest::parse;
 
 #[cfg(test)]
 mod tests;
@@ -44,7 +45,7 @@ pub fn parse_manifest(path: &Path, ctx: &DuckContext) -> QuackResult<Package> {
 /// Used to perform appropriate checks on presence/absence of certain fields.
 pub enum ParseMode {
     Package,
-    FrontMatterScript,
+    FrontMatter,
 }
 
 #[derive(Debug)]
@@ -147,7 +148,7 @@ fn parse_inner(path: &Path, ctx: &DuckContext) -> QuackResult<Package> {
 
 /// Turn YAML string into the [`ManifestSchema`].
 /// This function also collects unused items in the [`ManifestSchema`].
-fn parse_schema(yaml_content: &str) -> QuackResult<ManifestSchema> {
+pub fn parse_schema(yaml_content: &str) -> QuackResult<ManifestSchema> {
     let deserializer = serde_yaml_ng::Deserializer::from_str(yaml_content);
     let schema = ManifestSchema::deserialize(deserializer)?;
     Ok(schema)

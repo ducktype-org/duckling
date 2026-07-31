@@ -7,7 +7,7 @@ Tests:
         backend: dvm
         ExitCode: 0
         Output:
-          String: "HELLO\n"
+          String: "HELLO\nH"
   numeric_io:
     Cases: 
       llvm:

@@ -4,6 +4,7 @@
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/function.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/variable.hpp>
+#include <frontend/pst_parser/elements/hierarchy/expressions/binary_operator.hpp>
 #include <frontend/pst_parser/elements/hierarchy/lists/call_list.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/specifier_block.hpp>
@@ -32,6 +33,7 @@
 #include <helios_private/hout_creation/definition_generation/copy_constructors.hpp>
 #include <helios_private/hout_creation/definition_generation/default_constructors.hpp>
 #include <helios_private/hout_creation/definition_generation/default_destructors.hpp>
+#include <helios_private/hout_creation/expressions/casts.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
@@ -105,6 +107,7 @@ public:
 		TESTER_ADD_TEST(testCopyMoveOperators);
 		TESTER_ADD_TEST(testDestructors);
 		TESTER_ADD_TEST(testCastsHout);
+		TESTER_ADD_TEST(testCastAs);
 		TESTER_ADD_TEST(testPointers);
 		TESTER_ADD_TEST(testTypeLifting);
 		TESTER_ADD_TEST(testHoutElementsOrigin);
@@ -737,6 +740,11 @@ private:
 		ASSERT_EQUAL(6, getConstValueAs<i32>("M2", root_scope));
 		ASSERT_EQUAL(7, getConstValueAs<i64>("O1", root_scope));
 		ASSERT_EQUAL(7, getConstValueAs<i64>("O2", root_scope));
+
+		// Lazily evaluated operands: the division by zero in the skipped part of the
+		// expression must not be evaluated, otherwise these evaluations would fail.
+		ASSERT_EQUAL(false, getConstValueAs<bool>("P1", root_scope));
+		ASSERT_EQUAL(7, getConstValueAs<i32>("P2", root_scope));
 	}
 
 	/**
@@ -2622,6 +2630,11 @@ private:
 		auto c_block_function        = getChain("cBlockFunction", root_scope).back();
 		auto c_block_public_function = getChain("cBlockPublicFunction", root_scope).back();
 
+		// Test symbols nested in a namespace, in both nesting orders
+		auto c_nested_in_namespace
+			= getChain("c_block_namespace.cNestedInNamespace", root_scope).back();
+		auto c_reverse_nested = getChain("reverse_namespace.cReverseNested", root_scope).back();
+
 		// Test struct
 		auto regular_struct = getChain("RegularStruct", root_scope).back();
 
@@ -2712,6 +2725,16 @@ private:
 				ASSERT_TRUE(has_specifier(ctx, *specifiers, pst::Keyword::Extern));
 				ASSERT_TRUE(has_specifier(ctx, *specifiers, pst::Keyword::Public));
 				test_c_abi_with_library(ctx, c_block_public_function, {});
+			}
+
+			// Test namespaces nested in an extern("C") block and vice versa: the extern
+			// specifier propagates through namespaces in both nesting orders
+			{
+				for (auto symbol: { c_nested_in_namespace, c_reverse_nested }) {
+					auto specifiers = ctx.query<compiler::helios::QuerySpecifiersOfSymbol>(symbol);
+					ASSERT_TRUE(has_specifier(ctx, *specifiers, pst::Keyword::Extern));
+					test_c_abi_with_library(ctx, symbol, {});
+				}
 			}
 
 			// Test invalid ABI function - should fail
@@ -3334,6 +3357,78 @@ private:
 				= dynamic_cast<const compiler::helios::code::BinaryOperatorExpr*>(expr_ptr.get());
 			ASSERT_TRUE(cast_ptr != nullptr);
 		}
+	}
+
+	/**
+	 * Unit tests of `castAs` (the whole `as` operator handling) called directly on synthesized
+	 * HOUT expressions, without going through the PST -> HOUT pipeline. A cast that the implicit
+	 * coercion covers must reuse the coercion result (a comparison for the `-> bool` case), while
+	 * the remaining scalar conversions become a `CastExpr`.
+	 */
+	void testCastAs() {
+		using namespace compiler::helios::code;
+		using compiler::tsh::AbstractType;
+		auto [module_id, _] = getModule(fs::File(path("test_modules/casts")));
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			auto pst
+				= getFilePST(ctx, ctx.query<compiler::frontend::QueryMainSourceFile>(module_id));
+			// Any binary operator node of the module does: `castAs` only reads the origin and the
+			// position for the diagnostics out of it.
+			auto as_stmt
+				= pst::viewAllSubTreeElementsFilter<pst::expr::BinaryOperator>(pst->getRootElement())
+			          .at(0)
+			          .unlock(ctx);
+
+			const auto i32_t  = compiler::tsh::getIntegralType(ctx, 32, Signed);
+			const auto i64_t  = compiler::tsh::getIntegralType(ctx, 64, Signed);
+			const auto f64_t  = compiler::tsh::getFloatType(ctx, 64);
+			const auto bool_t = compiler::tsh::getBoolType();
+
+			auto literal = [&](const AbstractType type) -> Box<Expr> {
+				if (type.getKind() == compiler::tsh::Kind::Bool)
+					return makeBox<LiteralBoolExpr>(ctx, generatedOrigin(), true);
+				return makeBox<LiteralNumericExpr>(
+					ctx,
+					generatedOrigin(),
+					compiler::numeric_value::NumericValue::createOfType(type, 1).expect(
+						"Failed to create the source literal of the cast"
+					)
+				);
+			};
+			auto cast = [&](const AbstractType from, const AbstractType to) {
+				return castAs(ctx, literal(from), st(to), as_stmt);
+			};
+			// Asserts that the cast produced a `CastExpr` onto `to`.
+			auto assert_cast_to = [&](const AbstractType from, const AbstractType to) {
+				auto result   = cast(from, to);
+				auto cast_ptr = dynamic_cast<const CastExpr*>(result.get());
+				ASSERT_TRUE(cast_ptr != nullptr);
+				ASSERT_EQUAL(to, cast_ptr->target_type.getType());
+			};
+
+			// Implicit widening, explicit narrowing and both directions between int and float are
+			// all plain conversions.
+			assert_cast_to(i32_t, i64_t);
+			assert_cast_to(i64_t, i32_t);
+			assert_cast_to(i64_t, f64_t);
+			assert_cast_to(f64_t, i32_t);
+
+			// `bool` is one bit wide, so a numeric source must not be truncated into it. The
+			// coercion turns it into a `!= 0` comparison instead of a `CastExpr`.
+			auto to_bool = cast(i64_t, bool_t);
+			auto cmp_ptr = dynamic_cast<const BinaryOperatorExpr*>(to_bool.get());
+			ASSERT_TRUE(cmp_ptr != nullptr);
+			ASSERT_EQUAL(BuiltinBinary::IntegerNeq, cmp_ptr->operation);
+			ASSERT_EQUAL(bool_t, to_bool->expression_type.getType());
+
+			// The other direction is a normal widening of the 0/1 value.
+			assert_cast_to(bool_t, i64_t);
+
+			// A cast to the source's own type is a no-op: the value is returned untouched.
+			auto same = cast(i64_t, i64_t);
+			ASSERT_TRUE(dynamic_cast<const LiteralNumericExpr*>(same.get()) != nullptr);
+		});
 	}
 
 	void testPointers() {

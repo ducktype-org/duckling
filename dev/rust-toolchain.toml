@@ -1,0 +1,18 @@
+# Duckling specific version and overrides, to make it the easiest for new developers to start contributing.
+# This file exists to make it easy to match local version with CI.
+# For details see: https://rust-lang.github.io/rustup/overrides.html, and https://rust-lang.github.io/rustup/overrides.html#the-toolchain-file.
+[toolchain]
+# Our used rust version. Must match the one in CI.
+channel = "1.90.0"
+profile = "default"
+# Common components helpful in programming. Some might not be needed in CI, though.
+components = [
+    "cargo",
+    "clippy",
+    "rust-analyzer",
+    "rust-docs",
+    "rust-src",
+    "rust-std",
+    "rustc",
+    "rustfmt"
+]
