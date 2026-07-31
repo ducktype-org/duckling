@@ -1,6 +1,6 @@
 #include "memory.hpp"
 
-#if __unix__
+#if defined(__unix__) || defined(__APPLE__)
 	#include <sys/mman.h>
 	#include <unistd.h>
 #else
