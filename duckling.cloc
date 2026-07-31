@@ -1,0 +1,35 @@
+# cloc language definitions for Duckling.
+#
+# Teaches cloc about the languages living in this repository so that Duckling
+# sources are counted as code instead of being skipped as unknown files.
+#
+# Usage (from the repository root):
+#
+#     cloc --read-lang-def=duckling.cloc --vcs=git .
+#
+# `--vcs=git` restricts the count to files tracked by git, which keeps build
+# directories, fetched dependencies and other generated output out of the
+# report.
+#
+# Duckling and its textual bytecode share the same tokenizer, hence the same
+# comment syntax: `#` starts a line comment and `#{ ... #}` delimits a block
+# comment (block comments do not nest).
+
+Duckling
+    filter remove_between_general #{ #}
+    filter remove_matches ^\s*#
+    filter remove_inline #.*$
+    extension dl
+    extension dmf
+    extension ds
+    extension duck
+    extension duckling
+    extension rift
+    3rd_gen_scale 1.00
+
+Duckling Bytecode
+    filter remove_between_general #{ #}
+    filter remove_matches ^\s*#
+    filter remove_inline #.*$
+    extension dbc
+    3rd_gen_scale 0.25
