@@ -79,7 +79,7 @@ public:
 		TESTER_ADD_TEST(typedCPointerStructFieldThroughC);
 		TESTER_ADD_TEST(forwardDeclaredPointee);
 		TESTER_ADD_TEST(cpointerToUnknownTypeFails);
-		TESTER_ADD_TEST(movPcptStrictnessFails);
+		TESTER_ADD_TEST(movPCptrStrictnessFails);
 		TESTER_ADD_TEST(duplicateFfiFunctionFails);
 		TESTER_ADD_TEST(assertSizeMatches);
 		TESTER_ADD_TEST(assertSizeMismatchFails);
@@ -987,7 +987,7 @@ private:
 	// `mov_pcptr_pcptr` requires identical types on both sides: no implicit pointee change, no
 	// mixing the builtin `cptr` (unknown pointee) with a typed cpointer, distinct names stay
 	// distinct even with the same pointee, and non-cpointer operands are rejected outright.
-	void movPcptStrictnessFails() {
+	void movPCptrStrictnessFails() {
 		auto expect_mov_error = [&](const std::string& name,
 		                            const std::string& types,
 		                            const std::string& a_type,

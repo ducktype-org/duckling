@@ -231,31 +231,21 @@ namespace vm::loader::compiler::safe::detail {
 				addLow<Op_mov_p64_p64>(i.dst, i.src);
 			}
 			instr_case(high::Op_load_pany_pcptr, i) {
-				TypeCRef pointee
-					= *getPlaceType(i.src_ptr)->get<vm::kind::CPointer>().value()->inner_type;
 				addLow<Op_cptrLoad_bany_p64>(i.dst, i.src_ptr);
-				addLow<Op_ext_imm>(vm::opargs::Immediate{ pointee->getSize().asInt() });
 			}
 			instr_case(high::Op_store_pcptr_pany, i) {
-				TypeCRef pointee
-					= *getPlaceType(i.dst_ptr)->get<vm::kind::CPointer>().value()->inner_type;
 				addLow<Op_cptrStore_p64_bany>(i.dst_ptr, i.src);
-				addLow<Op_ext_imm>(vm::opargs::Immediate{ pointee->getSize().asInt() });
 			}
 			instr_case(high::Op_read_pptr_pcptr, i) {
 				// The byte count is the VM pointer's pointee size, resolved at lowering time.
-				auto pointee = getPlaceType(i.dst_ptr)
-				                   ->get<vm::kind::Pointer>()
-				                   .expect("cptrRead destination must be a VM pointer")
-				                   ->inner_type;
+				TypeCRef pointee
+					= getPlaceType(i.dst_ptr)->get<vm::kind::Pointer>().value()->inner_type;
 				addLow<Op_cptrRead_pptr_p64>(i.dst_ptr, i.src_ptr);
 				addLow<Op_ext_imm>(vm::opargs::Immediate{ pointee->getSize().asInt() });
 			}
 			instr_case(high::Op_write_pcptr_pptr, i) {
-				auto pointee = getPlaceType(i.src_ptr)
-				                   ->get<vm::kind::Pointer>()
-				                   .expect("cptrWrite source must be a VM pointer")
-				                   ->inner_type;
+				TypeCRef pointee
+					= getPlaceType(i.src_ptr)->get<vm::kind::Pointer>().value()->inner_type;
 				addLow<Op_cptrWrite_p64_pptr>(i.dst_ptr, i.src_ptr);
 				addLow<Op_ext_imm>(vm::opargs::Immediate{ pointee->getSize().asInt() });
 			}

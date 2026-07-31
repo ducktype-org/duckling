@@ -577,15 +577,15 @@ namespace vm {
 
 			while (callee_frame->local_block_ref_stack_end
 			       > callee_frame->local_block_ref_stack_base) {
-				auto block           = Ref(callee_frame->local_block_ref_stack_end[-1]);
-				u64  block_ref_count = u64(
+				auto block       = Ref(callee_frame->local_block_ref_stack_end[-1]);
+				u64  block_count = u64(
                     callee_frame->local_block_ref_stack_end
                     - callee_frame->local_block_ref_stack_base
                 );
 
 				// We're returning from a non-void function, so the last `ret_count` blocks on the
 				// stack are the return values. They are being used by the caller so we don't free them.
-				if (block_ref_count > ret_count) {
+				if (block_count > ret_count) {
 					thread.process_memory.freeBlockData(block);
 					thread.process_memory.decreaseBlockRefcount(block);
 				}
@@ -904,23 +904,28 @@ namespace vm {
 			// This access is the only way to do this, because we need to move raw bytes.
 			// Also, ffi types are by definition trivially copyable, so a simply memcpy
 			// is fine.
+			// It is safe, because the block is guaranteed to exist - it is a variable's block.
 			auto       view = thread.process_memory.getBlockViewUnsafe(dst_block);
 			const auto src  = READ_FROM_PLACE_ARG(void*, instr->arg1);
 			assertCPtrNotNull(src);
 			std::memcpy(view.getBegin(), src, view.size());
 		}
-		FUNCTION_CONT(2);
+		FUNCTION_CONT(1);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(cptrStore_p64_bany)(FUNCTION_ARGS) {
 		{
 			const auto dst       = READ_FROM_PLACE_ARG(void*, instr->arg0);
 			auto       src_block = READ_BLOCK_REF_FROM_ARG(instr->arg1);
-			auto       view      = thread.process_memory.getBlockViewUnsafe(src_block);
+			// This access is the only way to do this, because we need to move raw bytes.
+			// Also, ffi types are by definition trivially copyable, so a simply memcpy
+			// is fine.
+			// It is safe, because the block is guaranteed to exist - it is a variable's block.
+			auto view = thread.process_memory.getBlockViewUnsafe(src_block);
 			assertCPtrNotNull(dst);
 			std::memcpy(dst, view.getBegin(), view.size());
 		}
-		FUNCTION_CONT(2);
+		FUNCTION_CONT(1);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(cptrRead_pptr_p64)(FUNCTION_ARGS) {
@@ -929,8 +934,8 @@ namespace vm {
 			const auto dst  = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
 			const auto src  = READ_FROM_PLACE_ARG(void*, instr->arg1);
 			assertCPtrNotNull(src);
-			auto view = thread.process_memory.getBlockViewUnsafe(dst.getBlock());
-			std::memcpy(view.getBegin() + dst.getOffset(), reinterpret_cast<const void*>(src), size);
+			auto view = Memory::getPointerData(dst, size);
+			std::memcpy(view.getBegin(), src, size);
 		}
 		FUNCTION_CONT(2);
 	}
@@ -941,8 +946,8 @@ namespace vm {
 			const auto dst  = READ_FROM_PLACE_ARG(void*, instr->arg0);
 			const auto src  = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
 			assertCPtrNotNull(dst);
-			auto view = thread.process_memory.getBlockViewUnsafe(src.getBlock());
-			std::memcpy(reinterpret_cast<void*>(dst), view.getBegin() + src.getOffset(), size);
+			auto view = Memory::getPointerData(src, size);
+			std::memcpy(dst, view.getBegin(), size);
 		}
 		FUNCTION_CONT(2);
 	}

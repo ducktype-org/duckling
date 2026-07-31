@@ -88,7 +88,7 @@ namespace vm::code {
 		};
 		// dst that is read and then written (arith/cmov/cast in-place)
 		auto rdwr = [&](const auto& place) {
-			if (is_global(place.var_name)) flags |= InstructionFlag(GlobalRead) | GlobalWrite;
+			if (is_global(place.var_name)) flags |= GlobalRead | GlobalWrite;
 		};
 
 		// Dereferencing a pointer contributes no global read/write flags for now.
@@ -543,10 +543,10 @@ namespace vm::code {
 				rd(i.src);
 			}
 			instr_case(ins::Op_add_pcptr_p64, i) {
-				wr(i.dst);
+				rdwr(i.dst);
 				rd(i.offset);
 			}
-			instr_case(ins::Op_add_pcptr_imm, i) { wr(i.dst); }
+			instr_case(ins::Op_add_pcptr_imm, i) { rdwr(i.dst); }
 
 			// ===== Structs =====
 			// Lea = pure address arithmetic, no memory access through src_data_ptr
