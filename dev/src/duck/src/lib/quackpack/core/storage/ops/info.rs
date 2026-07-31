@@ -52,8 +52,9 @@ pub fn venv_info(
 pub fn display_venv_info(ctx: &DuckContext, venv: Venv) -> QuackResult<()> {
     let last_access_date: DateTime<chrono::Local> = venv.data().last_access().into();
     let last_access_string = last_access_date.format("%Y-%m-%d %H:%M:%S").to_string();
-    let last_modification_date: DateTime<chrono::Local> = venv.data().last_modification().into();
-    let last_modification_string = last_modification_date
+    let last_synchronization_date: DateTime<chrono::Local> =
+        venv.data().last_synchronization().into();
+    let last_synchronization_string = last_synchronization_date
         .format("%Y-%m-%d %H:%M:%S")
         .to_string();
     ctx.console().print(format!(
@@ -66,7 +67,7 @@ pub fn display_venv_info(ctx: &DuckContext, venv: Venv) -> QuackResult<()> {
         venv.id(),
         venv.data().last_known_location().display(),
         last_access_string,
-        last_modification_string,
+        last_synchronization_string,
         if venv.data().is_ephemeral() {
             ""
         } else {

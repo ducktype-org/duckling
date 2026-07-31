@@ -49,11 +49,11 @@ impl Venv {
         self.data().last_access().cmp(&other.data().last_access())
     }
 
-    /// Compare venvs by last_modification ascendingly.
+    /// Compare venvs by last_synchronization ascendingly.
     fn compare_modification(&self, other: &Self) -> Ordering {
         self.data()
-            .last_modification()
-            .cmp(&other.data().last_modification())
+            .last_synchronization()
+            .cmp(&other.data().last_synchronization())
     }
 }
 
