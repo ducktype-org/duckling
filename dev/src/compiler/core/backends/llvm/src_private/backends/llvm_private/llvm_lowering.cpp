@@ -818,11 +818,6 @@ namespace compiler::backend_llvm {
 				return false;
 			};
 
-			// A `bool` is an `i1`, so truncating into it would only keep the lowest bit
-			// (`256 as bool` would be `false`). Casting a numeric value to `bool` is a
-			// "is it non-zero" test instead, matching the implicit numeric-to-bool coercion.
-			const bool target_is_bool = target_type.getType().getKind() == tsh::Kind::Bool;
-
 			variant_match(source_layout->getVariant()) {
 				variant_case_novalue(tsl::IntegralTypeLayout) {
 					// signedness comes from the symbol-level type information
@@ -830,11 +825,6 @@ namespace compiler::backend_llvm {
 
 					variant_match(target_layout->getVariant()) {
 						variant_case_novalue(tsl::IntegralTypeLayout) {
-							// ================== Int -> Bool ==================
-							if (target_is_bool)
-								return builder.CreateICmpNE(
-									argument, llvm::ConstantInt::get(argument->getType(), 0)
-								);
 							// ================== Int -> Int ==================
 							return builder.CreateIntCast(argument, llvm_dst_ty, src_signed);
 						}
@@ -872,14 +862,6 @@ namespace compiler::backend_llvm {
 								return argument;
 						}
 						variant_case_novalue(tsl::IntegralTypeLayout) {
-							// ================== Float -> Bool ==================
-							// Unordered, so a NaN is `true` — this matches the DVM's `fcmpNeq`,
-							// which compares with the C++ `!=`.
-							if (target_is_bool)
-								return builder.CreateFCmpUNE(
-									argument, llvm::ConstantFP::get(argument->getType(), 0.0)
-								);
-
 							// ================== Float -> Int ==================
 
 
