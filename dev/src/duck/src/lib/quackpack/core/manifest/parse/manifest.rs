@@ -7,6 +7,7 @@ use tracing::debug;
 use super::source::resolve_path_maybe_relative_to_dir;
 use super::{Scope, dependency};
 use crate::quackpack::core::manifest::VenvConfig;
+use crate::quackpack::core::valid_package_name::validate_package_name;
 use crate::quackpack::core::{
     Features, Manifest, OptLevel, PackageMetadata, ParseMode, Profile, Profiles, ScopeGuard,
     Version,
@@ -16,11 +17,11 @@ use crate::quackpack::schemas::manifest::{
     VenvConfig as VenvConfigSchema,
 };
 use crate::util::IsPlural;
-use crate::util::hash::sha256_string;
 use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail, qp_err};
 
 /// Parse [`Manifest`] from given [`ManifestSchema`].
 #[tracing::instrument(skip_all)]
+#[track_caller]
 pub(crate) fn parse(
     schema: &ManifestSchema,
     root: &Path,
@@ -52,11 +53,17 @@ pub(crate) fn parse(
                 qp_bail!(err);
             }
 
-            let name = StrId::from(format!(
-                "{} {}",
-                root.file_name().unwrap().display(),
-                sha256_string(root.as_os_str().as_encoded_bytes())
-            ));
+            // NOTE: `script.rs::FrontMatter::name` relies on the fact that script name ==
+            // manifest.name.
+            let name = StrId::from(root.file_stem().unwrap());
+
+            validate_package_name(&name).with_context(|| {
+                format!(
+                    "script at `{}` has an invalid script name (file stem)",
+                    root.display()
+                )
+            })?;
+
             let version = Version::default();
             let manifest = Manifest::new(
                 name,
@@ -85,6 +92,14 @@ pub(crate) fn parse(
             };
             debug!("package name is `{name}`, version is `{version}`");
 
+            {
+                let mut guard1 = scope.push("metadata".to_string());
+                let guard2 = guard1.push("name".to_string());
+
+                validate_package_name(name)
+                    .context("package has an invalid name")
+                    .with_context(|| guard2.make_context_string())?;
+            }
             let guard = scope.push("features".into());
             let features = parse_features(schema.features.as_ref())
                 .with_context(move || guard.make_context_string())?;

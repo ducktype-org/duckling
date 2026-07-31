@@ -236,8 +236,7 @@ namespace compiler::backend_vm::internal {
 		// Counter used to make synthetic static-data global names (string literals) unique.
 		usize static_data_global_counter{ 0 };
 
-		base::Map<CRef<lir::Function>, base::StrID> lir_function_to_name;
-		base::Map<base::StrID, vm::code::Function>  dvm_functions_by_name;
+		base::Map<base::StrID, vm::code::Function> dvm_functions_by_name;
 
 		// Extern function name to definition.
 		base::Map<base::StrID, vm::code::ExternalCFunction> extern_c_functions;

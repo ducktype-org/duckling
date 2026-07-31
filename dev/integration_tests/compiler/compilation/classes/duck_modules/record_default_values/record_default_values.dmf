@@ -16,7 +16,7 @@ var countdown: i64 = 0;
 
 fun getRecordClass() -> RecordClass = {
     builtin_output_i64(countdown);
-    countdown = countdown - i64(1);
+    countdown = countdown - 1 as i64;
     return RecordClass();
 }
 
@@ -34,13 +34,13 @@ fun main() -> i64 = {
     builtin_output_i64(big1.y.b); # 2
     builtin_output_i64(big1.z); # 13
 
-    var big2 = BiggerRecordClass(z = 23, x = i32(21));
+    var big2 = BiggerRecordClass(z = 23, x = 21 as i32);
     builtin_output_i64(big2.x); # 21
     builtin_output_i64(big2.y.a); # 1
     builtin_output_i64(big2.y.b); # 2
     builtin_output_i64(big2.z); # 23
 
-    var big3 = BiggerRecordClass(y = RecordClass(b = i16(32)));
+    var big3 = BiggerRecordClass(y = RecordClass(b = 32 as i16));
     builtin_output_i64(big3.x); # 11
     builtin_output_i64(big3.y.a); # 1
     builtin_output_i64(big3.y.b); # 32

@@ -9,7 +9,7 @@ PreCase: |+
 
 Tests:
   verify-timestamps:
-    Description: last_access and last_modification are set properly
+    Description: last_access and last_synchronization are set properly
     Cases:
       verify-timestamps:
         test-cmd: "duck -C foo info > duck-info-output.txt"

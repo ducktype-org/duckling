@@ -558,8 +558,10 @@ pointer_messages:
 		ASSERT_EQUAL("no conversion found from string to i32", pm.content);
 
 		// Verify explore edges
-		ASSERT_EQUAL(true, diagnostic.messages[0].explore_links.contains("see_candidate"));
-		auto& edge = diagnostic.messages[0].explore_links.at("see_candidate");
+		const auto& explore_links = diagnostic.messages[0].explore_links;
+		ASSERT_EQUAL(1, explore_links.size());
+		ASSERT_EQUAL("see_candidate", explore_links[0].name);
+		auto& edge = explore_links[0];
 		// Verify content of the edge
 		auto result_edge = constructTextView(edge.content.ref());
 		ASSERT_EQUAL("See candidate my_func(i32, i32, i32)", result_edge);

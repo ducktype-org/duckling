@@ -39,8 +39,15 @@ namespace compiler::helios {
 	enum class BuiltinKind {
 		PtrFromSlice,
 		SliceFromPtrLen,
+		/** `dvm_alloc_arr(size: u64) -> manyptr T`: allocate a dynamic table of `size` elements. */
+		DvmAllocArr,
+		/** `dvm_realloc_arr(p: manyptr T, size: u64)`: resize the dynamic table under `p`. */
+		DvmReallocArr,
+		/** `dvm_free_arr(p: manyptr T)`: free the dynamic table under `p`. */
+		DvmFreeArr,
+		/** `dvm_alloc() -> ptr T`: allocate storage for a single `T`. */
 		DvmAlloc,
-		DvmRealloc,
+		/** `dvm_free(p: ptr T)`: free the storage of a single `T`. */
 		DvmFree,
 		/** `size_of(v: meta) -> i64`: byte size of a type. Implemented in HOUT as a `SizeOf` op. */
 		SizeOf,

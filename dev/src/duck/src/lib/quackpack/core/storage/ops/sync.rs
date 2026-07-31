@@ -94,7 +94,7 @@ pub fn sync(
     let now = SystemTime::now();
     let venv = if let Some(mut venv) = venv {
         let data = venv.data_mut();
-        data.set_last_modification(now);
+        data.set_last_synchronization(now);
         data.set_freeze(new_freeze);
         data.set_last_known_location(pcx.package().root().to_path_buf());
         data.set_ephemeral(venv_config.ephemeral());

@@ -12,6 +12,7 @@ use crate::quackpack::core::{GitReference, PackageLoader};
 use crate::quackpack::util::is_local_file::IsLocalFile;
 use crate::{DuckContext, QuackResult, QuackResultContext};
 
+pub mod fast_path;
 #[cfg(test)]
 mod tests;
 
@@ -32,6 +33,7 @@ impl<'duck> GitClient<'duck> {
 
     /// Clone a repository pointed by `source` into `destination`, and parse a package it contains.
     #[tracing::instrument(skip(self, url) fields(url = url.as_str()))]
+    #[track_caller]
     pub fn clone_blocking(
         &self,
         url: &Url,

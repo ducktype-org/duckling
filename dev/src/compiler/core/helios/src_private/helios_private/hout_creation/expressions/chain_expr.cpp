@@ -558,9 +558,11 @@ namespace compiler::helios::code {
 		 * This function has no previous state argument so it is called as a first element in the
 		 * chain.
 		 * It is when we have keyword literal followed by a call expression. This currently includes:
-		 * - `i64(42)` - used for explicit type casts.
 		 * - `i64[42]` - used for static array type creation.
 		 * - `List[i64]` - for dynamic array type creation.
+		 *
+		 * Note that `i64(42)` is no longer a type cast - the `as` operator (`42 as i64`) is the
+		 * only supported explicit conversion syntax.
 		 */
 		auto processPSTExpr(
 			pst::Access<pst::expr::KeywordLiteral> keyword, pst::Access<pst::expr::Call> call_expr
@@ -571,29 +573,13 @@ namespace compiler::helios::code {
 
 			switch (call_expr->getType()) {
 			case lexer::Token::Round: {
-				if (auto literal_type_expr = dynamic_cast<const LiteralTypeExpr*>(hout_expr.get())) {
-					auto args = call_expr->getArgs().unlock(query_ctx);
-					if (args->size() != 1) {
-						query_ctx.logInt(makeBox<dia_int::PlaceholderError>(
-							"Type cast must have exactly one argument.",
-							call_expr->getStablePosition()
-						));
-						return query::Failed();
-					}
-
-					auto arg_access      = (*args->begin()).unlock(query_ctx);
-					auto arg_expr_result = subExprFromPST(
-						query_ctx, arg_access->getArg().unlock(query_ctx)->getExpr()
-					);
-					UNPACK_QRESULT_MOVE(auto arg_expr =, arg_expr_result);
-
-					auto cast_expr = makeBox<CastExpr>(
-						query_ctx,
-						multiplePstOriginOrdered({ keyword, call_expr }),
-						std::move(arg_expr),
-						literal_type_expr->value_type
-					);
-					return ChainState::ofExpr(std::move(cast_expr));
+				if (dynamic_cast<const LiteralTypeExpr*>(hout_expr.get()) != nullptr) {
+					query_ctx.logInt(makeBox<dia_int::PlaceholderError>(
+						"A type cannot be called. Explicit conversions use the `as` operator.",
+						call_expr->getStablePosition(),
+						"Write `value as Type` instead of `Type(value)`."
+					));
+					return query::Failed();
 				}
 
 				query_ctx.logInt(makeBox<dia_int::PlaceholderError>(

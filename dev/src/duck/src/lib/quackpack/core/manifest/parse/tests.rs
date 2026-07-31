@@ -1525,3 +1525,301 @@ fn empty_frontmatter_works() {
     let ctx = DuckContext::default();
     let _ = parse_frontmatter(&frontmatter_path, &ctx).unwrap();
 }
+
+#[test]
+fn empty_package_name() {
+    let (dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: ''
+  version: '1'
+"#,
+    );
+    let ctx = DuckContext::default();
+    let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        make_errors_message(
+            &dir,
+            [
+                "when parsing the field `metadata.name`",
+                "package has an invalid name",
+                "package name is empty",
+            ]
+        )
+    );
+}
+
+#[test]
+fn package_name_starts_with_a_dash() {
+    let (dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: '-a'
+  version: '1'
+"#,
+    );
+    let ctx = DuckContext::default();
+    let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        make_errors_message(
+            &dir,
+            [
+                "when parsing the field `metadata.name`",
+                "package has an invalid name",
+                "package name `-a` starts with an illegal character `-`",
+            ]
+        )
+    );
+}
+
+#[test]
+fn package_name_starts_with_an_illegal_char() {
+    let (dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: '!a'
+  version: '1'
+"#,
+    );
+    let ctx = DuckContext::default();
+    let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        make_errors_message(
+            &dir,
+            [
+                "when parsing the field `metadata.name`",
+                "package has an invalid name",
+                "package name `!a` starts with an illegal character `!`",
+            ]
+        )
+    );
+}
+
+#[test]
+fn package_name_contains_an_illegal_char() {
+    let (dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: 'an~'
+  version: '1'
+"#,
+    );
+    let ctx = DuckContext::default();
+    let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        make_errors_message(
+            &dir,
+            [
+                "when parsing the field `metadata.name`",
+                "package has an invalid name",
+                "package name `an~` contains an illegal character `~`",
+            ]
+        )
+    );
+}
+
+#[test]
+fn empty_dependency_name() {
+    let (dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: foo
+  version: '1'
+
+dependencies:
+  '':
+    version: '1'
+"#,
+    );
+    let ctx = DuckContext::default();
+    let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        make_errors_message(
+            &dir,
+            [
+                "when parsing the field `dependencies.`",
+                "dependency `` has an invalid name",
+                "package name is empty",
+            ]
+        )
+    );
+}
+
+#[test]
+fn dependency_name_starts_with_a_dash() {
+    let (dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: foo
+  version: '1'
+
+dependencies:
+  '-a':
+    version: '1'
+"#,
+    );
+    let ctx = DuckContext::default();
+    let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        make_errors_message(
+            &dir,
+            [
+                "when parsing the field `dependencies.-a`",
+                "dependency `-a` has an invalid name",
+                "package name `-a` starts with an illegal character `-`",
+            ]
+        )
+    );
+}
+
+#[test]
+fn dependency_name_starts_with_an_illegal_char() {
+    let (dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: foo
+  version: '1'
+
+dependencies:
+  '!a':
+    version: '1'
+"#,
+    );
+    let ctx = DuckContext::default();
+    let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        make_errors_message(
+            &dir,
+            [
+                "when parsing the field `dependencies.!a`",
+                "dependency `!a` has an invalid name",
+                "package name `!a` starts with an illegal character `!`",
+            ]
+        )
+    );
+}
+
+#[test]
+fn dependency_name_contains_an_illegal_char() {
+    let (dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: foo
+  version: '1'
+
+dependencies:
+  'an~':
+    version: '1'
+"#,
+    );
+    let ctx = DuckContext::default();
+    let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        make_errors_message(
+            &dir,
+            [
+                "when parsing the field `dependencies.an~`",
+                "dependency `an~` has an invalid name",
+                "package name `an~` contains an illegal character `~`",
+            ]
+        )
+    );
+}
+
+#[test]
+fn dependency_name_contains_an_illegal_char_and_so_does_alias() {
+    let (dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: foo
+  version: '1'
+
+dependencies:
+  'an~':
+    version: '1'
+    source:
+      name: '!foo'
+"#,
+    );
+    let ctx = DuckContext::default();
+    let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        make_errors_message(
+            &dir,
+            [
+                "when parsing the field `dependencies.an~`",
+                "aliased dependency `an~` points to a package `!foo` with an invalid name",
+                "package name `!foo` starts with an illegal character `!`",
+            ]
+        )
+    );
+}
+
+#[test]
+fn dependency_name_contains_an_illegal_alias_name() {
+    let (dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: foo
+  version: '1'
+
+dependencies:
+  an:
+    version: '1'
+    source:
+      name: '!foo'
+"#,
+    );
+    let ctx = DuckContext::default();
+    let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        make_errors_message(
+            &dir,
+            [
+                "when parsing the field `dependencies.an`",
+                "aliased dependency `an` points to a package `!foo` with an invalid name",
+                "package name `!foo` starts with an illegal character `!`",
+            ]
+        )
+    );
+}
+
+#[test]
+fn dependency_name_contains_an_illegal_char_and_but_not_alias() {
+    let (dir, manifest_path) = prepare_manifest(
+        r#"
+metadata:
+  name: foo
+  version: '1'
+
+dependencies:
+  'an~':
+    version: '1'
+    source:
+      name: foo
+"#,
+    );
+    let ctx = DuckContext::default();
+    let err = parse_manifest(&manifest_path, &ctx).unwrap_err();
+    assert_eq!(
+        err.to_string(),
+        make_errors_message(
+            &dir,
+            [
+                "when parsing the field `dependencies.an~`",
+                "dependency `foo` has an invalid alias name `an~`",
+                "package name `an~` contains an illegal character `~`",
+            ]
+        )
+    );
+}
