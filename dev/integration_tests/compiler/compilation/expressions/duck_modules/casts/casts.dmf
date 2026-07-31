@@ -50,10 +50,15 @@ fun main() -> i64 = {
     var w64b: i64 = w32;             # implicit widen
     builtin_output_i64(w64b);        # 9
 
+    # 8) An explicit `as` to / from `bool` goes through the same coercion as the implicit one:
+    # a numeric source is a "is it non-zero" test, so 64 becomes `true`, not a truncated bit.
     var bool_i64: i64 = 64;
-    var bool_val: bool = bool_i64;
-    var bool_i64b: i64 = bool_val;
+    var bool_val: bool = bool_i64 as bool;
+    var bool_i64b: i64 = bool_val as i64;
     builtin_output_i64(bool_i64b);   # 1
+
+    var bool_zero: bool = 0i64 as bool;
+    builtin_output_i64(bool_zero as i64);   # 0
 
     return 0i64;
 }
