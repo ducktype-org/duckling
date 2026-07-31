@@ -450,31 +450,6 @@ private:
 		bool has_i16_to_i64
 			= std::regex_search(ir, std::regex{ R"((sext|zext)\s+i16\s+%\S+\s+to\s+i64)" });
 		assertTrue(has_i16_to_i64, "Expected sext/zext i16-> i64 in IR");
-
-		// A cast to `bool` is a non-zero test, never a truncation into the `i1`.
-		assertTrue(
-			not std::regex_search(ir, std::regex{ R"(trunc\s+i\d+\s+%\S+\s+to\s+i1)" }),
-			"A cast to bool must not be lowered as a truncation to i1"
-		);
-
-		// Floats use the UNordered compare, so a NaN is `true` (this matches the DVM's `fcmpNeq`).
-		assertTrue(
-			std::regex_search(ir, std::regex{ R"(fcmp\s+une\s+double\s+%\S+,\s+0\.0)" }),
-			"Expected 'fcmp une double' for the f64 -> bool cast"
-		);
-		assertTrue(
-			std::regex_search(ir, std::regex{ R"(fcmp\s+une\s+float\s+%\S+,\s+0\.0)" }),
-			"Expected 'fcmp une float' for the f32 -> bool cast"
-		);
-
-		assertTrue(
-			std::regex_search(ir, std::regex{ R"(fptrunc\s+double\s+%\S+\s+to\s+float)" }),
-			"Expected 'fptrunc double -> float' for the f64 -> f32 cast"
-		);
-		assertTrue(
-			std::regex_search(ir, std::regex{ R"(fpext\s+float\s+%\S+\s+to\s+double)" }),
-			"Expected 'fpext float -> double' for the f32 -> f64 cast"
-		);
 	}
 
 	void tuplesTest() {

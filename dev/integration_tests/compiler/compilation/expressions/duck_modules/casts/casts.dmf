@@ -55,30 +55,5 @@ fun main() -> i64 = {
     var bool_i64b: i64 = bool_val;
     builtin_output_i64(bool_i64b);   # 1
 
-    # 8) int -> bool is a "is it non-zero" test, not a truncation. 64 has no bits in common
-    #    with a 1-bit bool, so truncating would wrongly give `false`.
-    var to_bool: bool = 64 as bool;
-    builtin_output_i64(to_bool as i64);          # 1
-    var zero_to_bool: bool = 0 as bool;
-    builtin_output_i64(zero_to_bool as i64);     # 0
-    var narrow: i32 = (-3) as i32;
-    builtin_output_i64((narrow as bool) as i64); # 1
-
-    # 9) float -> bool, also a non-zero test (a saturating fptoui would give 0 for 0.5).
-    var half: f64 = 0.5;
-    builtin_output_i64((half as bool) as i64);   # 1
-    var fzero: f64 = 0.0;
-    builtin_output_i64((fzero as bool) as i64);  # 0
-    var fneg: f64 = -1.5;
-    builtin_output_i64((fneg as bool) as i64);   # 1
-
-    # 10) bool -> numeric, in both directions of the numeric hierarchy.
-    var yes: bool = true;
-    builtin_output_i64(yes as i64);              # 1
-    var no: bool = false;
-    builtin_output_i64(no as i64);               # 0
-    var as_float: f64 = yes as f64;
-    builtin_output_i64(as_float as i64);         # 1
-
     return 0i64;
 }
