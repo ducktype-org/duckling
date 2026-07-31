@@ -1,4 +1,4 @@
-# A field declared twice in the same class must be rejected (#3264).
+# A field declared twice in the same class must be rejected.
 
 class T {
     x: i64 = 0;
