@@ -1,6 +1,8 @@
-#include "diagnostic_interactive/stable_position.hpp"
-#include "helios/hout/elements/expr.hpp"
-#include "helios/tsh/symbol_type.hpp"
+#pragma once
+
+#include <diagnostic_interactive/stable_position.hpp>
+#include <helios/hout/elements/expr.hpp>
+#include <helios/tsh/symbol_type.hpp>
 
 namespace compiler::helios::code {
 	/**

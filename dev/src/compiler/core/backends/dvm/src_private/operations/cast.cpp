@@ -1,18 +1,19 @@
 #include "../function_lowering_context.hpp"
 #include "../program_lowering_context.hpp"
 #include "instruction_lowerer.hpp"
-#include "tsl/type_layout.hpp"
 
-#include "vm/bytecode/builders/instruction_builder.hpp"
-#include "vm/bytecode/opcode_args.hpp"
+#include <tsl/type_layout.hpp>
+
+#include <vm/bytecode/builders/instruction_builder.hpp>
+#include <vm/bytecode/opcode_args.hpp>
 
 namespace compiler::backend_vm::internal {
 	namespace {
 
 		vm::code::builders::OpKind getOpKindFromLIRLayouts(
-			Ref<FunctionLoweringContext>       ctx,
-			const lir::CastParameters&         cast_params,
-			std::vector<vm::opargs::OpCodeArg> out_arguments
+			Ref<FunctionLoweringContext>        ctx,
+			const lir::CastParameters&          cast_params,
+			std::vector<vm::opargs::OpCodeArg>& out_arguments
 		) {
 			const auto  target_layout = cast_params.target_layout;
 			const auto  source_layout = cast_params.source_layout;

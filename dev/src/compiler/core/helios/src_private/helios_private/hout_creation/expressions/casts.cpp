@@ -1,12 +1,11 @@
 #include "casts.hpp"
 
-#include "diagnostic_interactive/stable_position.hpp"
-#include "helios_private/hout_creation/expressions/coercions.hpp"
-
+#include <diagnostic_interactive/stable_position.hpp>
 #include <frontend/pst_parser/elements/hierarchy/expressions/binary_operator.hpp>
 #include <frontend/pst_parser/elements/includes/basic.hpp>
+#include <helios_private/hout_creation/expressions/coercions.hpp>
 
-#include "base/except/exceptions.hpp"
+#include <base/except/exceptions.hpp>
 
 namespace compiler::helios::code {
 
@@ -142,8 +141,8 @@ namespace compiler::helios::code {
 
 		bool found_match = false;
 		for (auto& pattern: valid_pointer_casts) {
-			auto equals = [](auto value) {
-				return [v = std::move(value)](auto other) { return other == v; };
+			auto equals = [](auto expected) {
+				return [v = std::move(expected)](auto other) { return other == v; };
 			};
 			bool from_ref_match
 				= pattern.from_ref_kind.map(equals(from.getRefKind())).copyValueOr(true);
