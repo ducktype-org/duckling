@@ -136,13 +136,14 @@ private:
 
 	void runFailTest(
 		const std::string&                 module_path,
-		const std::string&                 fail_msg = "",
-		const base::Optional<std::string>& input    = {},
-		const base::Optional<std::string>& output   = {},
-		const std::vector<std::string>&    args     = {}
+		const std::string&                 fail_msg             = "",
+		const base::Optional<std::string>& input                = {},
+		const base::Optional<std::string>& output               = {},
+		const std::vector<std::string>&    args                 = {},
+		const std::vector<std::string>&    module_paths_to_load = {}
 	) {
 		using namespace compiler;
-		auto code = getModuleFromPath(module_path);
+		auto code = getModuleFromPath(module_path, module_paths_to_load);
 		// for (auto& type: code.types) vm::code::serializeType(type, std::cerr);
 		// for (auto& func: code.functions) vm::code::serializeFunction(func, std::cerr);
 		auto result = runTestOnVmGetResult(code, input, output, args);
@@ -202,7 +203,11 @@ private:
 
 	void unitsTest() { runTest("units", {}, {}, {}, 0); }
 
-	void pointersTest() { runFailTest("pointers", "Accessing null pointer", {}, {}, {}); }
+	// The pointer casts (including the `manyptr T` -> `ptr T` narrowing) run first and print their
+	// results; the module then dereferences a null many-pointer, which must fail the process.
+	void pointersTest() {
+		runFailTest("pointers", "Accessing null pointer", {}, "11\n44\n22\n", {}, ALL_CORE_MODULES);
+	}
 
 	void initsDeinitsTest() { runTest("inits_deinits", {}, { "100\n" }, {}, 0); }
 
