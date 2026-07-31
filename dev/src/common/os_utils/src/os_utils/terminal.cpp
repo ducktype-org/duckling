@@ -1,9 +1,9 @@
 #include "terminal.hpp"
 
+#include <iostream>
+
 #ifndef _WIN32
 	#include <unistd.h>
-
-	#include <iostream>
 
 namespace os_utils {
 
@@ -44,8 +44,6 @@ namespace os_utils {
 
 #else
 	#include <io.h>
-
-	#include <iostream>
 
 namespace os_utils {
 
