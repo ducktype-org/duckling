@@ -512,15 +512,6 @@ namespace vm::code {
 	DEFINE_INSTRUCTION_ERROR(
 		CPtrPointeeMismatchError, "The value type does not match the C pointer's pointee type."
 	);
-	DEFINE_INSTRUCTION_ERROR(
-		CPtrRawCopyPointeeError,
-		"The pointee of the VM-side pointer of a raw C pointer copy must be trivially copyable "
-		"(it cannot contain VM pointers, dynamic tables or functions)."
-	);
-	DEFINE_INSTRUCTION_ERROR(
-		CPtrArrayCopyPointeeError,
-		"The VM-side pointer of a C pointer array copy must point to a dynamic table."
-	);
 	DEFINE_INSTRUCTION_ERROR(FieldTypeMismatchError, "Field type does not match the expected type.");
 	DEFINE_INSTRUCTION_ERROR(
 		InvalidVirtualCallError, "Provided method does not exists for a given argument."

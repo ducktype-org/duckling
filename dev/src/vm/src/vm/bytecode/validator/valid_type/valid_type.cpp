@@ -95,9 +95,8 @@ void valid_type::ValidType::defineData(
 			std::vector<defined::DefinedField> fields;
 			fields.reserve(fields_definitions.size());
 			for (const auto& field_def: fields_definitions)
-				fields.emplace_back(
-					defined::DefinedField{ .name = field_def.first, .type = field_def.second }
-				);
+				fields.emplace_back(defined::DefinedField{ .name = field_def.first,
+				                                           .type = field_def.second });
 			state
 				= Defined{ .kind = defined::DefinedStructure{ .field_definitions          = fields,
 				                                              .packed                     = packed,
@@ -119,9 +118,8 @@ void valid_type::ValidType::defineClass(
 		variant_case_novalue(ValidType::Declared) {
 			auto structure = defined::DefinedStructure();
 			for (const auto& field_def: fields_definitions)
-				structure.field_definitions.emplace_back(
-					defined::DefinedField{ .name = field_def.first, .type = field_def.second }
-				);
+				structure.field_definitions.emplace_back(defined::DefinedField{
+					.name = field_def.first, .type = field_def.second });
 
 			base::HashMap<base::StrID, ValidTypeID> new_virtual_methods_map;
 			for (const auto& method: new_virtual_methods)
@@ -248,9 +246,9 @@ valid_type::finalized::Structure valid_type::ValidType::finalizeStructureData(
 						.extends     = kind.extends,
 						.is_abstract = kind.is_abstract,
 					};
-				} else if constexpr (
-					std::is_same_v<T, defined::InheritanceDefinitionData::InterfaceKind>
-				) {
+				} else if constexpr (std::is_same_v<
+										 T,
+										 defined::InheritanceDefinitionData::InterfaceKind>) {
 					return finalized::InheritanceMetadata::InterfaceKind{};
 				}
 			},
@@ -274,8 +272,8 @@ valid_type::finalized::Structure valid_type::ValidType::finalizeStructureData(
 						);
 						const auto  super_structure = superclass->getKindAs<finalized::Structure>();
 						const auto& super_imd       = super_structure->inheritance_metadata.expect(
-							"Superclass must have inheritance metadata"
-						);
+                            "Superclass must have inheritance metadata"
+                        );
 
 						// Fields. Superclass fields are inserted before subclass fields.
 						for (const auto& field:
@@ -315,8 +313,8 @@ valid_type::finalized::Structure valid_type::ValidType::finalizeStructureData(
 			CORE_ASSERT(interface->isKind<finalized::Structure>(), "Interface must be a structure");
 			const auto& interface_structure = interface->getKindAs<finalized::Structure>();
 			const auto& interface_imd       = interface_structure->inheritance_metadata.expect(
-				"Interface must have inheritance metadata"
-			);
+                "Interface must have inheritance metadata"
+            );
 
 			// Super types
 			imd.super_types.insert(
@@ -428,9 +426,9 @@ void valid_type::ValidType::finalize(ValidTypeMap& types) {
 			this->size                  = valid_type::TypeSize::pointer();
 			this->alignment             = valid_type::TypeSize::pointer();
 			this->is_trivially_copyable = false;
-			state = Finalized{ .kind = finalized::Function{
-								   .parameters   = std::move(function.parameters),
-								   .result_types = std::move(function.result_types) } };
+			state                       = Finalized{ .kind = finalized::Function{
+														 .parameters   = std::move(function.parameters),
+														 .result_types = std::move(function.result_types) } };
 		}
 		variant_case(defined::DefinedVariant, variant) {
 			CORE_ASSERT(
@@ -455,12 +453,12 @@ void valid_type::ValidType::finalize(ValidTypeMap& types) {
 			}
 			this->size = valid_type::TypeSize(type_tag_size, 0) + data_segment_size;
 			this->is_trivially_copyable = false;
-			state = Finalized{ .kind = finalized::Variant{
-								   .type_tag_size        = type_tag_size,
-								   .alternatives_ordered = variant.alternatives,
-								   .alternatives_set
-								   = variant.alternatives | std::ranges::to<std::unordered_set>(),
-							   } };
+			state                       = Finalized{ .kind = finalized::Variant{
+														 .type_tag_size        = type_tag_size,
+														 .alternatives_ordered = variant.alternatives,
+														 .alternatives_set
+                                   = variant.alternatives | std::ranges::to<std::unordered_set>(),
+                               } };
 		}
 		variant_case(defined::DefinedStructure, structure) {
 			auto new_structure = finalizeStructureData(types, structure);

@@ -897,49 +897,27 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	/**
-	 * @brief The VM side of a raw C pointer copy must stay within the pointed-to block.
-	 */
-	inline void assertCptrCopyWithinBlock(
-		const Pointer& ptr, u64 size, usize block_size, const char* instr_name
-	) {
-		if (ptr.getOffset() > block_size || size > block_size - ptr.getOffset())
-			throw vm::exceptions::VMRuntimeException(
-				base::strConcat(instr_name, ": copy region exceeds the pointed-to block")
-			);
-	}
-
-	/**
-	 * @brief A null cpointer (e.g. a default-initialized local) must not be dereferenced.
-	 */
-	inline void assertCptrNotNull(u64 cptr) {
-		if (cptr == 0) throw vm::exceptions::VMNullPointerAccessException();
-	}
-
 	RETURN_TYPE OpFuns::OPCODE_NAME(cptrLoad_bany_p64)(FUNCTION_ARGS) {
 		{
-			const auto size      = instr[1].arg0;
-			auto       dst_block = READ_BLOCK_REF_FROM_ARG(instr->arg0);
-			auto       view      = thread.process_memory.getBlockViewUnsafe(dst_block);
-			const auto src       = READ_FROM_PLACE_ARG(u64, instr->arg1);
-			assertCptrNotNull(src);
-			// The verifier pins the destination to the pointee type, so the byte count always
-			// fits the block.
-			// NOLINTNEXTLINE(performance-no-int-to-ptr): a cpointer is a raw native address.
-			std::memcpy(view.getBegin(), reinterpret_cast<const void*>(src), size);
+			auto dst_block = READ_BLOCK_REF_FROM_ARG(instr->arg0);
+			// This access is the only way to do this, because we need to move raw bytes.
+			// Also, ffi types are by definition trivially copyable, so a simply memcpy
+			// is fine.
+			auto       view = thread.process_memory.getBlockViewUnsafe(dst_block);
+			const auto src  = READ_FROM_PLACE_ARG(void*, instr->arg1);
+			assertCPtrNotNull(src);
+			std::memcpy(view.getBegin(), src, view.size());
 		}
 		FUNCTION_CONT(2);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(cptrStore_p64_bany)(FUNCTION_ARGS) {
 		{
-			const auto size      = instr[1].arg0;
-			const auto dst       = READ_FROM_PLACE_ARG(u64, instr->arg0);
+			const auto dst       = READ_FROM_PLACE_ARG(void*, instr->arg0);
 			auto       src_block = READ_BLOCK_REF_FROM_ARG(instr->arg1);
 			auto       view      = thread.process_memory.getBlockViewUnsafe(src_block);
-			assertCptrNotNull(dst);
-			// NOLINTNEXTLINE(performance-no-int-to-ptr): a cpointer is a raw native address.
-			std::memcpy(reinterpret_cast<void*>(dst), view.getBegin(), size);
+			assertCPtrNotNull(dst);
+			std::memcpy(dst, view.getBegin(), view.size());
 		}
 		FUNCTION_CONT(2);
 	}
@@ -948,11 +926,9 @@ namespace vm {
 		{
 			const auto size = instr[1].arg0;
 			const auto dst  = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
-			const auto src  = READ_FROM_PLACE_ARG(u64, instr->arg1);
-			assertCptrNotNull(src);
+			const auto src  = READ_FROM_PLACE_ARG(void*, instr->arg1);
+			assertCPtrNotNull(src);
 			auto view = thread.process_memory.getBlockViewUnsafe(dst.getBlock());
-			assertCptrCopyWithinBlock(dst, size, view.size(), "cptrRead");
-			// NOLINTNEXTLINE(performance-no-int-to-ptr): a cpointer is a raw native address.
 			std::memcpy(view.getBegin() + dst.getOffset(), reinterpret_cast<const void*>(src), size);
 		}
 		FUNCTION_CONT(2);
@@ -961,84 +937,11 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(cptrWrite_p64_pptr)(FUNCTION_ARGS) {
 		{
 			const auto size = instr[1].arg0;
-			const auto dst  = READ_FROM_PLACE_ARG(u64, instr->arg0);
+			const auto dst  = READ_FROM_PLACE_ARG(void*, instr->arg0);
 			const auto src  = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
-			assertCptrNotNull(dst);
+			assertCPtrNotNull(dst);
 			auto view = thread.process_memory.getBlockViewUnsafe(src.getBlock());
-			assertCptrCopyWithinBlock(src, size, view.size(), "cptrWrite");
-			// NOLINTNEXTLINE(performance-no-int-to-ptr): a cpointer is a raw native address.
 			std::memcpy(reinterpret_cast<void*>(dst), view.getBegin() + src.getOffset(), size);
-		}
-		FUNCTION_CONT(2);
-	}
-
-	/**
-	 * @brief The element count of a C pointer array copy must not exceed the table's element
-	 * count (a dynamic table's block holds exactly its elements). Division instead of
-	 * `count * elem_size` keeps a huge count from wrapping past the check.
-	 */
-	inline void assertCptrArrayWithinTable(
-		const Pointer& ptr, u64 count, u64 elem_size, usize block_size, const char* instr_name
-	) {
-		const usize available = ptr.getOffset() > block_size ? 0 : block_size - ptr.getOffset();
-		if (elem_size == 0 || count > available / elem_size)
-			throw vm::exceptions::VMRuntimeException(
-				base::strConcat(instr_name, ": element count exceeds the table size")
-			);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(cptrReadArray_pptr_p64)(FUNCTION_ARGS) {
-		{
-			const auto count     = READ_FROM_PLACE_ARG(u64, instr[1].arg0);
-			const auto elem_type = READ_FROM_DIRECT_ARG(TypeCRef, instr[1].arg1);
-			const auto dst       = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
-			const auto src       = READ_FROM_PLACE_ARG(u64, instr->arg1);
-			// A zero count is a no-op; an empty dynamic table is a null pointer, so this also
-			// keeps a zero-element copy on an empty table valid.
-			if (count != 0) {
-				assertCptrNotNull(src);
-				if (dst.isNull()) throw vm::exceptions::VMNullPointerAccessException();
-				const u64 elem_size = elem_type->getSize().asInt();
-				auto      view      = thread.process_memory.getBlockViewUnsafe(dst.getBlock());
-				assertCptrArrayWithinTable(dst, count, elem_size, view.size(), "cptrReadArray");
-				std::memcpy(
-					view.getBegin() + dst.getOffset(),
-					// NOLINTNEXTLINE(performance-no-int-to-ptr): a raw native address
-					reinterpret_cast<const void*>(src),
-					count * elem_size
-				);
-			}
-		}
-		FUNCTION_CONT(2);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(cptrWriteArray_p64_pptr)(FUNCTION_ARGS) {
-		{
-			const auto count     = READ_FROM_PLACE_ARG(u64, instr[1].arg0);
-			const auto elem_type = READ_FROM_DIRECT_ARG(TypeCRef, instr[1].arg1);
-			const auto dst       = READ_FROM_PLACE_ARG(u64, instr->arg0);
-			const auto src       = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
-			if (count != 0) {
-				assertCptrNotNull(dst);
-				if (src.isNull()) throw vm::exceptions::VMNullPointerAccessException();
-				const u64 elem_size = elem_type->getSize().asInt();
-				auto      view      = thread.process_memory.getBlockViewUnsafe(src.getBlock());
-				assertCptrArrayWithinTable(src, count, elem_size, view.size(), "cptrWriteArray");
-				std::memcpy(
-					// NOLINTNEXTLINE(performance-no-int-to-ptr): a raw native address
-					reinterpret_cast<void*>(dst),
-					view.getBegin() + src.getOffset(),
-					count * elem_size
-				);
-			}
-		}
-		FUNCTION_CONT(2);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(cptrAddOffset_p64_p64)(FUNCTION_ARGS) {
-		{
-			const auto offset = READ_FROM_PLACE_ARG(u64, instr[1].arg0);
-			WRITE_TO_PLACE_ARG(u64, instr->arg0, READ_FROM_PLACE_ARG(u64, instr->arg1) + offset);
 		}
 		FUNCTION_CONT(2);
 	}

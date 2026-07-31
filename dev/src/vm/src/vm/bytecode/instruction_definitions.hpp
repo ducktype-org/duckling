@@ -75,9 +75,6 @@ DEF_INSTR(setNull_pptr, (vm::opargs::PlacePtr, dst))
 // Copies an opaque value
 DEF_INSTR(mov_popq_popq, (vm::opargs::PlaceOpq, dst), (vm::opargs::PlaceOpq, src))
 
-// Copies a C pointer value; source and destination must have the identical cpointer type
-DEF_INSTR(mov_pcpt_pcpt, (vm::opargs::PlaceCptr, dst), (vm::opargs::PlaceCptr, src))
-
 
 // ========= SIGNED INTEGER ARITHMETIC OPERATIONS ========
 
@@ -416,15 +413,14 @@ DEF_INSTR(alloc_pptr_type, (vm::opargs::PlacePtr, ptr), (vm::opargs::Type, type)
 DEF_INSTR(free_pptr, (vm::opargs::PlacePtr, ptr))
 
 
-// stores local data at pointer
+// stores variable at pointer
 DEF_INSTR(store_pptr_pany, (vm::opargs::PlacePtr, dst_ptr), (vm::opargs::PlaceAny, src))
-// dereferences pointer and stores into local
+// dereferences pointer and stores into a variable
 DEF_INSTR(load_pany_pptr, (vm::opargs::PlaceAny, dst), (vm::opargs::PlacePtr, src_ptr))
 
-// stores reference to local object of any type T in pointer<T>
+// stores a pointer to a variable of any type
 DEF_INSTR(ref_pptr_pany, (vm::opargs::PlacePtr, dst_ptr), (vm::opargs::PlaceAny, src))
-// stores reference to global object of any type T in pointer<T>
-// stores reference to global variant object in pointer<Variant>
+// stores a pointer to a variant variable
 DEF_INSTR(ref_pptr_pvnt, (vm::opargs::PlacePtr, dst_ptr), (vm::opargs::PlaceVnt, src))
 
 // ========= STRUCTURE OPERATIONS ========
@@ -557,59 +553,47 @@ DEF_INSTR(strOutput_pptr, (vm::opargs::PlacePtr, string_ptr))
 
 // ========= CPOINTER OPERATIONS ========
 // Operations on raw C pointers (native addresses obtained via FFI). The native side of these
-// copies is unchecked by design - the program is trusted for the native address. On the VM side
-// every copy is bounded by the pointed-to type: the value copies by the pointee's size, and the
-// array copies by the dynamic table's element count (checked at runtime).
+// copies is unchecked by design - the program is trusted for the native address.
 
 /**
  * @brief Copies `sizeof(pointee)` bytes from the native memory addressed by `src_ptr` into
- * `dst`. The source cpointer must have an FFI-compliant pointee, and `dst` must be of exactly
- * the pointee type.
+ * `dst`.
  */
-DEF_INSTR(cptrLoad_pany_pcpt, (vm::opargs::PlaceAny, dst), (vm::opargs::PlaceCptr, src_ptr))
+DEF_INSTR(load_pany_pcptr, (vm::opargs::PlaceAny, dst), (vm::opargs::PlaceCPtr, src_ptr))
 
 /**
  * @brief Copies `sizeof(pointee)` bytes from `src` to the native memory addressed by
- * `dst_ptr`. The destination cpointer must have an FFI-compliant pointee, and `src` must be of
- * exactly the pointee type.
+ * `dst_ptr`.
  */
-DEF_INSTR(cptrStore_pcpt_pany, (vm::opargs::PlaceCptr, dst_ptr), (vm::opargs::PlaceAny, src))
+DEF_INSTR(store_pcptr_pany, (vm::opargs::PlaceCPtr, dst_ptr), (vm::opargs::PlaceAny, src))
 
 /**
- * @brief Copies `sizeof(dst_ptr's pointee)` raw bytes from the native memory addressed by
- * `src_ptr` to the VM memory pointed to by `dst_ptr`. Works with any cpointer; the byte count
- * is fixed by the VM pointer's pointee type, which must be trivially copyable, so the copy can
- * never run past the pointed-to value into neighboring VM data.
+ * @brief Copies `sizeof(dst_ptr's pointee)` bytes from the native memory addressed by
+ * `src_ptr` to the VM memory pointed to by `dst_ptr`.
  */
-DEF_INSTR(cptrRead_pptr_pcpt, (vm::opargs::PlacePtr, dst_ptr), (vm::opargs::PlaceCptr, src_ptr))
+DEF_INSTR(read_pptr_pcptr, (vm::opargs::PlacePtr, dst_ptr), (vm::opargs::PlaceCPtr, src_ptr))
 
 /**
  * @brief Copies `sizeof(src_ptr's pointee)` raw bytes from the VM memory pointed to by
- * `src_ptr` to the native memory addressed by `dst_ptr`. Works with any cpointer; the byte
- * count is fixed by the VM pointer's pointee type, which must be trivially copyable.
+ * `src_ptr` to the native memory addressed by `dst_ptr`.
  */
-DEF_INSTR(cptrWrite_pcpt_pptr, (vm::opargs::PlaceCptr, dst_ptr), (vm::opargs::PlacePtr, src_ptr))
+DEF_INSTR(write_pcptr_pptr, (vm::opargs::PlaceCPtr, dst_ptr), (vm::opargs::PlacePtr, src_ptr))
 
-/**
- * @brief Reinterprets a cpointer as another cpointer type (the analogue of a C cast). Any
- * cpointer type converts to any other; the copy itself is a plain 8-byte move.
- */
-DEF_INSTR(cptrCast_pcpt_pcpt, (vm::opargs::PlaceCptr, dst), (vm::opargs::PlaceCptr, src))
 
-/**
- * @brief Sets `dst` to `src + offset` (byte-wise pointer arithmetic). Both places must have
- * the identical cpointer type.
- */
-// @TODO: Perhaps add a dynamic check for the cast???
-DEF_INSTR(
-	cptrAddOffset_pcpt_pcpt_p64,
-	(vm::opargs::PlaceCptr, dst),
-	(vm::opargs::PlaceCptr, src),
-	(vm::opargs::Place64, offset)
-)
+/// Copies a C pointer value; source and destination must have the identical cpointer type
+DEF_INSTR(mov_pcptr_pcptr, (vm::opargs::PlaceCPtr, dst), (vm::opargs::PlaceCPtr, src))
 
-// Sets the flag if the C pointer is null (the native address 0). Works with any cpointer type.
-DEF_INSTR(cmpNull_pcpt, (vm::opargs::PlaceCptr, ptr))
+/// Reinterprets any cpointer type to any other cpointer type (the analogue of a C cast).
+DEF_INSTR(movCast_pcptr_pcptr, (vm::opargs::PlaceCPtr, dst), (vm::opargs::PlaceCPtr, src))
+
+/// Sets the flag if the C pointer is null (the native address 0). Works with any cpointer type.
+DEF_INSTR(cmpNull_pcptr, (vm::opargs::PlaceCPtr, ptr))
+
+/// Performs `dst += offset`.
+DEF_INSTR(add_pcptr_p64, (vm::opargs::PlaceCPtr, dst), (vm::opargs::Place64, offset))
+
+/// Performs `dst += offset`.
+DEF_INSTR(add_pcptr_imm, (vm::opargs::PlaceCPtr, dst), (vm::opargs::Immediate, offset))
 
 // ========= TYPE OPERATIONS ========
 // Casts a primitive type in-place. This does nothing at runtime, but is needed

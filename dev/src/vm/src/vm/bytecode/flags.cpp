@@ -147,7 +147,7 @@ namespace vm::code {
 			FLAGS_W_R(mov_p32_p32)
 			FLAGS_W_R(mov_p64_p64)
 			FLAGS_W_R(mov_pptr_pptr)
-			FLAGS_W_R(mov_pcpt_pcpt)
+			FLAGS_W_R(mov_pcptr_pcptr)
 			FLAGS_W_R(mov_pste_pste)
 			FLAGS_W_R(mov_pfst_pfst)
 			FLAGS_W_R(mov_popq_popq)
@@ -370,7 +370,7 @@ namespace vm::code {
 			FLAGS_CMP_IMM(fcmpLt_p32_imm)
 			FLAGS_CMP(fcmpLe_p32_p32)
 			FLAGS_CMP_IMM(fcmpLe_p32_imm) instr_case(ins::Op_cmpNull_pptr, i) { rd(i.ptr); }
-			instr_case(ins::Op_cmpNull_pcpt, i) { rd(i.ptr); }
+			instr_case(ins::Op_cmpNull_pcptr, i) { rd(i.ptr); }
 
 			// ===== Variants =====
 			instr_case(ins::Op_variantSetInner_pvnt_type, i) { rdwr(i.variant); }
@@ -520,45 +520,33 @@ namespace vm::code {
 			// Native-memory accesses through a cpointer contribute no global flags: the native
 			// side is outside the VM's global model, and the VM side goes through a pointer
 			// operand (see the `deref_write` no-op above).
-			instr_case(ins::Op_cptrLoad_pany_pcpt, i) {
+			instr_case(ins::Op_load_pany_pcptr, i) {
 				wr(i.dst);
 				rd(i.src_ptr);
 			}
-			instr_case(ins::Op_cptrStore_pcpt_pany, i) {
+			instr_case(ins::Op_store_pcptr_pany, i) {
 				rd(i.dst_ptr);
 				rd(i.src);
 			}
-			instr_case(ins::Op_cptrRead_pptr_pcpt, i) {
+			instr_case(ins::Op_read_pptr_pcptr, i) {
 				rd(i.dst_ptr);
 				rd(i.src_ptr);
 				deref_write();
 			}
-			instr_case(ins::Op_cptrWrite_pcpt_pptr, i) {
+			instr_case(ins::Op_write_pcptr_pptr, i) {
 				rd(i.dst_ptr);
 				rd(i.src_ptr);
 				deref_read();
 			}
-			instr_case(ins::Op_cptrReadArray_pptr_pcpt_p64, i) {
-				rd(i.dst_ptr);
-				rd(i.src_ptr);
-				rd(i.element_count);
-				deref_write();
-			}
-			instr_case(ins::Op_cptrWriteArray_pcpt_pptr_p64, i) {
-				rd(i.dst_ptr);
-				rd(i.src_ptr);
-				rd(i.element_count);
-				deref_read();
-			}
-			instr_case(ins::Op_cptrCast_pcpt_pcpt, i) {
+			instr_case(ins::Op_movCast_pcptr_pcptr, i) {
 				wr(i.dst);
 				rd(i.src);
 			}
-			instr_case(ins::Op_cptrAddOffset_pcpt_pcpt_p64, i) {
+			instr_case(ins::Op_add_pcptr_p64, i) {
 				wr(i.dst);
-				rd(i.src);
 				rd(i.offset);
 			}
+			instr_case(ins::Op_add_pcptr_imm, i) { wr(i.dst); }
 
 			// ===== Structs =====
 			// Lea = pure address arithmetic, no memory access through src_data_ptr

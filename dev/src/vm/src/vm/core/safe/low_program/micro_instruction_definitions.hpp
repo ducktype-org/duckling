@@ -406,6 +406,7 @@ DEF_MICRO_INSTR(jitEntrypoint)
  * @note Unoptimizable by JIT, listed in dev/scripts/py/jit/jitable_interface.py.
  */
 DEF_MICRO_INSTR(call_builtinfunc, vm::low::opargs::BuiltinFunctionID)
+
 DEF_MICRO_INSTR(call_cfunc, vm::low::opargs::ExtCFunction)
 DEF_MICRO_INSTR(call_ffifunc, vm::low::opargs::FFIFunction)
 
@@ -660,54 +661,15 @@ DEF_MICRO_INSTR(fpext_p64_p32, vm::low::opargs::Place64, vm::low::opargs::Place3
 
 // ========= CPOINTER OPERATIONS ========
 // Copies through raw C pointers (native addresses). The cpointer operand is a plain 8-byte
-// value, so it lives in a 64-bit offset place.
+// value, a Place64.
 
-/**
- * @brief Copies bytes from the native memory addressed by the cpointer into the local block.
- * Requires a `ext_imm` next (the byte count, resolved from the pointee at lowering time).
- * @note Unoptimizable by JIT, listed in dev/scripts/py/jit/jitable_interface.py.
- */
 DEF_MICRO_INSTR(cptrLoad_bany_p64, vm::low::opargs::PlaceBlockAny, vm::low::opargs::Place64)
-/**
- * @brief Copies bytes from the local block to the native memory addressed by the cpointer.
- * Requires a `ext_imm` next (the byte count, resolved from the pointee at lowering time).
- * @note Unoptimizable by JIT, listed in dev/scripts/py/jit/jitable_interface.py.
- */
 DEF_MICRO_INSTR(cptrStore_p64_bany, vm::low::opargs::Place64, vm::low::opargs::PlaceBlockAny)
-/**
- * @brief Copies raw bytes from the native memory addressed by the cpointer to the VM memory
- * under the pointer; the VM side is bounds-checked. Requires an `ext_imm` next (the byte
- * count, fixed at lowering time from the pointer's pointee type).
- * @note Unoptimizable by JIT, listed in dev/scripts/py/jit/jitable_interface.py.
- */
+
+// Requires `ext_imm`
 DEF_MICRO_INSTR(cptrRead_pptr_p64, vm::low::opargs::PlacePtr, vm::low::opargs::Place64)
-/**
- * @brief Copies raw bytes from the VM memory under the pointer to the native memory addressed
- * by the cpointer; the VM side is bounds-checked. Requires an `ext_imm` next (the byte count,
- * fixed at lowering time from the pointer's pointee type).
- * @note Unoptimizable by JIT, listed in dev/scripts/py/jit/jitable_interface.py.
- */
+// Requires `ext_imm`
 DEF_MICRO_INSTR(cptrWrite_p64_pptr, vm::low::opargs::Place64, vm::low::opargs::PlacePtr)
-/**
- * @brief Copies elements from the native memory addressed by the cpointer into the dynamic
- * table under the pointer; the element count is checked against the table size. Requires an
- * `ext_p64_type` next (the element count and the element type).
- * @note Unoptimizable by JIT, listed in dev/scripts/py/jit/jitable_interface.py.
- */
-DEF_MICRO_INSTR(cptrReadArray_pptr_p64, vm::low::opargs::PlacePtr, vm::low::opargs::Place64)
-/**
- * @brief Copies elements from the dynamic table under the pointer to the native memory
- * addressed by the cpointer; the element count is checked against the table size. Requires an
- * `ext_p64_type` next (the element count and the element type).
- * @note Unoptimizable by JIT, listed in dev/scripts/py/jit/jitable_interface.py.
- */
-DEF_MICRO_INSTR(cptrWriteArray_p64_pptr, vm::low::opargs::Place64, vm::low::opargs::PlacePtr)
-/**
- * @brief Byte-wise cpointer arithmetic: dst = src + offset. Requires a `ext_p64` next (the
- * byte offset).
- * @note Unoptimizable by JIT, listed in dev/scripts/py/jit/jitable_interface.py.
- */
-DEF_MICRO_INSTR(cptrAddOffset_p64_p64, vm::low::opargs::Place64, vm::low::opargs::Place64)
 
 // ========= EXT DEFINITIONS ========
 

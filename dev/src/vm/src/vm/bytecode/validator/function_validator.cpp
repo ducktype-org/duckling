@@ -83,7 +83,7 @@ namespace {
 		if (field.type != expected_field_type) throw ErrorT(std::forward<Args>(error_args)...);
 	}
 
-	template<class ErrorT = CPtrNotDereferenceableError, class... Args>
+	template<class... Args>
 	const valid_type::ValidTypeID& derefCPtrType(
 		CRef<valid_type::finalized::CPointer> cptr,
 		const valid_type::ValidTypeMap&       types_ctx,
@@ -430,9 +430,8 @@ class FunctionValidator {
 	}
 
 	template<typename PlaceT>
-	CRef<valid_type::ValidType> getPlaceType(
-		const PlaceT& place, const LocalStack& current_stack
-	) const {
+	CRef<valid_type::ValidType> getPlaceType(const PlaceT& place, const LocalStack& current_stack)
+		const {
 		bool is_local = current_stack.contains(place.var_name);
 		return is_local ? current_stack.at(place.var_name)
 		                : types_ctx.at(globals.at(place.var_name)->type);
@@ -489,7 +488,7 @@ class FunctionValidator {
 					if (!type->isKind<valid_type::finalized::Opaque>())
 						throw InvalidArgumentTypeError(*place);
 				}
-				variant_case(CRef<opargs::PlaceCptr>, place) {
+				variant_case(CRef<opargs::PlaceCPtr>, place) {
 					CRef<valid_type::ValidType> type
 						= validateAndGetPlaceType(*place, current_stack);
 					if (!type->isKind<valid_type::finalized::CPointer>())
@@ -697,56 +696,47 @@ class FunctionValidator {
 
 			instr_case_novalue(Op_mov_popq_popq) {}
 
-			instr_case(Op_mov_pcpt_pcpt, instr) {
+			instr_case(Op_mov_pcptr_pcptr, instr) {
 				if (getPlaceType(instr.src, current_stack)->getID()
 				    != getPlaceType(instr.dst, current_stack)->getID())
 					throw CPointerTypeMismatchError(instr);
 			}
 
-			instr_case(Op_cptrLoad_pany_pcpt, instr) {
+			instr_case(Op_load_pany_pcptr, instr) {
 				const auto cpointer = getPlaceType(instr.src_ptr, current_stack)
 				                          ->getKindAs<valid_type::finalized::CPointer>();
-				const auto inner    = derefCPtrType(cpointer, types_ctx, instr);
+				const auto inner = derefCPtrType(cpointer, types_ctx, instr);
 				if (getPlaceType(instr.dst, current_stack)->getID() != inner)
 					throw CPtrPointeeMismatchError(instr);
 			}
-			instr_case(Op_cptrStore_pcpt_pany, instr) {
+			instr_case(Op_store_pcptr_pany, instr) {
 				const auto cpointer = getPlaceType(instr.dst_ptr, current_stack)
 				                          ->getKindAs<valid_type::finalized::CPointer>();
-				const auto inner    = derefCPtrType(cpointer, types_ctx, instr);
+				const auto inner = derefCPtrType(cpointer, types_ctx, instr);
 				if (getPlaceType(instr.src, current_stack)->getID() != inner)
 					throw CPtrPointeeMismatchError(instr);
 			}
-			// The raw byte copies work through any cpointer; the byte count is the VM pointer's
-			// pointee size, and the pointee must be trivially copyable, so raw native bytes
-			// never overwrite (or leak) VM-managed data.
-			instr_case(Op_cptrRead_pptr_pcpt, instr) {
-				const auto ptr     = getPlaceType(instr.dst_ptr, current_stack)
-				                         ->getKindAs<valid_type::finalized::Pointer>();
-				const auto inner   = ptr->inner;
-				const auto cptr    = getPlaceType(instr.src_ptr, current_stack)
-				                         ->getKindAs<valid_type::finalized::Pointer>();
+			instr_case(Op_read_pptr_pcptr, instr) {
+				const auto ptr = getPlaceType(instr.dst_ptr, current_stack)
+				                     ->getKindAs<valid_type::finalized::Pointer>();
+				const auto inner = ptr->inner;
+				const auto cptr  = getPlaceType(instr.src_ptr, current_stack)
+				                      ->getKindAs<valid_type::finalized::CPointer>();
 				const auto c_inner = derefCPtrType(cptr, types_ctx, instr);
 				if (inner != c_inner) throw CPtrPointeeMismatchError(instr);
 			}
-			instr_case(Op_cptrWrite_pcpt_pptr, instr) {
-				const auto ptr     = getPlaceType(instr.dst_ptr, current_stack)
-				                         ->getKindAs<valid_type::finalized::Pointer>();
-				const auto inner   = ptr->inner;
-				const auto cptr    = getPlaceType(instr.src_ptr, current_stack)
-				                         ->getKindAs<valid_type::finalized::Pointer>();
+			instr_case(Op_write_pcptr_pptr, instr) {
+				const auto ptr = getPlaceType(instr.src_ptr, current_stack)
+				                     ->getKindAs<valid_type::finalized::Pointer>();
+				const auto inner = ptr->inner;
+				const auto cptr  = getPlaceType(instr.dst_ptr, current_stack)
+				                      ->getKindAs<valid_type::finalized::CPointer>();
 				const auto c_inner = derefCPtrType(cptr, types_ctx, instr);
 				if (inner != c_inner) throw CPtrPointeeMismatchError(instr);
 			}
-			// A cast converts any cpointer to any other.
-			instr_case_novalue(Op_cptrCast_pcpt_pcpt) {}
-			instr_case(Op_cptrAddOffset_pcpt_pcpt_p64, instr) {
-				if (getPlaceType(instr.src, current_stack)->getID()
-				    != getPlaceType(instr.dst, current_stack)->getID())
-					throw CPointerTypeMismatchError(instr);
-			}
-			// A null check works through any cpointer type.
-			instr_case_novalue(Op_cmpNull_pcpt) {}
+			instr_case_novalue(
+				Op_movCast_pcptr_pcptr, Op_add_pcptr_p64, Op_add_pcptr_imm, Op_cmpNull_pcptr
+			) {}
 
 			instr_case(Op_mov_pste_pste, instr) {
 				validatePlacePrimitiveArgumentsSameType(instruction, current_stack);
@@ -1261,7 +1251,7 @@ class FunctionValidator {
 				                              ->getKindAs<valid_type::finalized::Variant>();
 				const auto pointer_type = getPlaceType(instr.dst_ptr, current_stack)
 				                              ->getKindAs<valid_type::finalized::Pointer>();
-				auto       wanted_type  = types_ctx.at(pointer_type->inner);
+				auto wanted_type = types_ctx.at(pointer_type->inner);
 				if (!variant_type->alternatives_set.contains(wanted_type->getID()))
 					throw VariantTypeMismatchError(instr);
 
@@ -1283,12 +1273,12 @@ class FunctionValidator {
 			instr_case(Op_variantGetInner_pptr_pptr_type, instr) {
 				const auto pointer_type = getPlaceType(instr.dst_ptr, current_stack)
 				                              ->getKindAs<valid_type::finalized::Pointer>();
-				auto       wanted_type  = types_ctx.at(pointer_type->inner);
+				auto wanted_type = types_ctx.at(pointer_type->inner);
 
 
 				const auto variant_pointer = getPlaceType(instr.variant_ptr, current_stack)
 				                                 ->getKindAs<valid_type::finalized::Pointer>();
-				const auto variant_type    = expectPointerType<valid_type::finalized::Variant>(
+				const auto variant_type = expectPointerType<valid_type::finalized::Variant>(
 					variant_pointer, types_ctx, instr
 				);
 
@@ -1303,8 +1293,8 @@ class FunctionValidator {
 			instr_case_novalue(Op_set_threadctx) {}
 			instr_case(Op_virtual_call_pptr_method, instr) {
 				// For a method call to be valid it has to be present in the interface.
-				const auto  pointer_type       = getPlaceType(instr.object_ptr, current_stack)
-				                                     ->getKindAs<valid_type::finalized::Pointer>();
+				const auto pointer_type = getPlaceType(instr.object_ptr, current_stack)
+				                              ->getKindAs<valid_type::finalized::Pointer>();
 				const auto& inner_pointer_type = types_ctx.at(pointer_type->inner);
 				const auto  obj_type
 					= inner_pointer_type->maybeGetKindAs<valid_type::finalized::Structure>()
@@ -1326,7 +1316,7 @@ class FunctionValidator {
 			instr_case(Op_resetVTable_pptr, instr) {
 				const auto pointer_type = getPlaceType(instr.object_ptr, current_stack)
 				                              ->getKindAs<valid_type::finalized::Pointer>();
-				const auto structure    = expectPointerType<valid_type::finalized::Structure>(
+				const auto structure = expectPointerType<valid_type::finalized::Structure>(
 					pointer_type, types_ctx, instr
 				);
 				if (!structure->inheritance_metadata) throw NotAClassTypeError(instr);
@@ -1357,10 +1347,10 @@ class FunctionValidator {
 					throw PointerTypeMismatchError(instr);
 			}
 			instr_case(Op_ref_pptr_pvnt, instr) {
-				const auto  pointer_type = getPlaceType(instr.dst_ptr, current_stack)
-				                               ->getKindAs<valid_type::finalized::Pointer>();
-				const auto& global_entry = globals.at(instr.src.var_name);
-				CRef<valid_type::ValidType> global_type = types_ctx.at(global_entry->type);
+				const auto pointer_type = getPlaceType(instr.dst_ptr, current_stack)
+				                              ->getKindAs<valid_type::finalized::Pointer>();
+				const auto&                 global_entry = globals.at(instr.src.var_name);
+				CRef<valid_type::ValidType> global_type  = types_ctx.at(global_entry->type);
 				if (pointer_type->inner != global_type->getID())
 					throw PointerTypeMismatchError(instr);
 			}
@@ -1370,7 +1360,7 @@ class FunctionValidator {
 
 				const auto ztruct_pointer = getPlaceType(instr.src_data_ptr, current_stack)
 				                                ->getKindAs<valid_type::finalized::Pointer>();
-				const auto ztruct         = expectPointerType<valid_type::finalized::Structure>(
+				const auto ztruct = expectPointerType<valid_type::finalized::Structure>(
 					ztruct_pointer, types_ctx, instr
 				);
 
@@ -1387,7 +1377,7 @@ class FunctionValidator {
 
 				const auto ztruct_pointer = getPlaceType(instr.src_data_ptr, current_stack)
 				                                ->getKindAs<valid_type::finalized::Pointer>();
-				const auto ztruct         = expectPointerType<valid_type::finalized::Structure>(
+				const auto ztruct = expectPointerType<valid_type::finalized::Structure>(
 					ztruct_pointer, types_ctx, instr
 				);
 
@@ -1404,7 +1394,7 @@ class FunctionValidator {
 
 				const auto ztruct_pointer = getPlaceType(instr.dst_data_ptr, current_stack)
 				                                ->getKindAs<valid_type::finalized::Pointer>();
-				const auto ztruct         = expectPointerType<valid_type::finalized::Structure>(
+				const auto ztruct = expectPointerType<valid_type::finalized::Structure>(
 					ztruct_pointer, types_ctx, instr
 				);
 
@@ -1414,8 +1404,8 @@ class FunctionValidator {
 			}
 
 			instr_case(Op_structLea_pptr_pste_field, instr) {
-				auto dst        = getPlaceType(instr.dst_ptr, current_stack)
-				                      ->getKindAs<valid_type::finalized::Pointer>();
+				auto dst = getPlaceType(instr.dst_ptr, current_stack)
+				               ->getKindAs<valid_type::finalized::Pointer>();
 				auto src        = getPlaceType(instr.src_data_struct, current_stack);
 				auto src_struct = src->getKindAs<valid_type::finalized::Structure>();
 				validateStructFieldType(*src, *src_struct, instr.field, dst->inner, instr);
@@ -1450,7 +1440,7 @@ class FunctionValidator {
 
 				const auto table_pointer = getPlaceType(instr.src_table_ptr, current_stack)
 				                               ->getKindAs<valid_type::finalized::Pointer>();
-				const auto table_type    = expectPointerType<valid_type::finalized::FixedSizeTable>(
+				const auto table_type = expectPointerType<valid_type::finalized::FixedSizeTable>(
 					table_pointer, types_ctx, instr
 				);
 
@@ -1462,7 +1452,7 @@ class FunctionValidator {
 
 				const auto table_pointer = getPlaceType(instr.src_table_ptr, current_stack)
 				                               ->getKindAs<valid_type::finalized::Pointer>();
-				const auto table_type    = expectPointerType<valid_type::finalized::FixedSizeTable>(
+				const auto table_type = expectPointerType<valid_type::finalized::FixedSizeTable>(
 					table_pointer, types_ctx, instr
 				);
 
@@ -1474,7 +1464,7 @@ class FunctionValidator {
 
 				const auto table_pointer = getPlaceType(instr.dst_table_ptr, current_stack)
 				                               ->getKindAs<valid_type::finalized::Pointer>();
-				const auto table_type    = expectPointerType<valid_type::finalized::FixedSizeTable>(
+				const auto table_type = expectPointerType<valid_type::finalized::FixedSizeTable>(
 					table_pointer, types_ctx, instr
 				);
 
@@ -1484,8 +1474,8 @@ class FunctionValidator {
 			instr_case(Op_fixedSizeTableLea_pptr_pfst_p64, instr) {
 				const auto destination = getPlaceType(instr.dst_ptr, current_stack)
 				                             ->getKindAs<valid_type::finalized::Pointer>();
-				const auto table_type  = getPlaceType(instr.src_table, current_stack)
-				                             ->getKindAs<valid_type::finalized::FixedSizeTable>();
+				const auto table_type = getPlaceType(instr.src_table, current_stack)
+				                            ->getKindAs<valid_type::finalized::FixedSizeTable>();
 
 				if (destination->inner != table_type->inner)
 					throw FixedSizeTableTypeMismatchError(instr);
@@ -1493,7 +1483,7 @@ class FunctionValidator {
 			instr_case(Op_fixedSizeTableLoad_pany_pfst_p64, instr) {
 				const auto& destination = getPlaceType(instr.dst, current_stack);
 				const auto  table_type  = getPlaceType(instr.src_table, current_stack)
-				                              ->getKindAs<valid_type::finalized::FixedSizeTable>();
+				                            ->getKindAs<valid_type::finalized::FixedSizeTable>();
 
 				if (destination->getID() != table_type->inner)
 					throw FixedSizeTableTypeMismatchError(instr);
@@ -1501,7 +1491,7 @@ class FunctionValidator {
 			instr_case(Op_fixedSizeTableStore_pfst_pany_p64, instr) {
 				const auto& source     = getPlaceType(instr.src, current_stack);
 				const auto  table_type = getPlaceType(instr.dst_table, current_stack)
-				                             ->getKindAs<valid_type::finalized::FixedSizeTable>();
+				                            ->getKindAs<valid_type::finalized::FixedSizeTable>();
 
 				if (table_type->inner != source->getID())
 					throw FixedSizeTableTypeMismatchError(instr);
@@ -1512,7 +1502,7 @@ class FunctionValidator {
 
 				const auto table_pointer = getPlaceType(instr.src_table_ptr, current_stack)
 				                               ->getKindAs<valid_type::finalized::Pointer>();
-				const auto table_type    = expectPointerType<valid_type::finalized::DynamicTable>(
+				const auto table_type = expectPointerType<valid_type::finalized::DynamicTable>(
 					table_pointer, types_ctx, instr
 				);
 
@@ -1522,8 +1512,8 @@ class FunctionValidator {
 			instr_case(Op_dynTableLoad_pany_pptr_p64, instr) {
 				const auto& destination   = getPlaceType(instr.dst, current_stack);
 				const auto  table_pointer = getPlaceType(instr.src_table_ptr, current_stack)
-				                                ->getKindAs<valid_type::finalized::Pointer>();
-				const auto  table_type    = expectPointerType<valid_type::finalized::DynamicTable>(
+				                               ->getKindAs<valid_type::finalized::Pointer>();
+				const auto table_type = expectPointerType<valid_type::finalized::DynamicTable>(
 					table_pointer, types_ctx, instr
 				);
 				if (destination->getID() != table_type->inner)
@@ -1532,8 +1522,8 @@ class FunctionValidator {
 			instr_case(Op_dynTableStore_pptr_pany_p64, instr) {
 				const auto& source        = getPlaceType(instr.src, current_stack);
 				const auto  table_pointer = getPlaceType(instr.dst_table_ptr, current_stack)
-				                                ->getKindAs<valid_type::finalized::Pointer>();
-				const auto  table_type    = expectPointerType<valid_type::finalized::DynamicTable>(
+				                               ->getKindAs<valid_type::finalized::Pointer>();
+				const auto table_type = expectPointerType<valid_type::finalized::DynamicTable>(
 					table_pointer, types_ctx, instr
 				);
 
@@ -1555,20 +1545,20 @@ class FunctionValidator {
 			instr_case(Op_strOutput_pptr, instr) {
 				const auto table_pointer = getPlaceType(instr.string_ptr, current_stack)
 				                               ->getKindAs<valid_type::finalized::Pointer>();
-				const auto table_type    = expectPointerType<valid_type::finalized::DynamicTable>(
+				const auto table_type = expectPointerType<valid_type::finalized::DynamicTable>(
 					table_pointer, types_ctx, instr
 				);
 				if (types_ctx.at(table_type->inner)->getName() != "byte")
 					throw DynamicTableTypeMismatchError(instr);
 			}
 			instr_case(Op_fstToDynTable_pptr_pptr, instr) {
-				const auto src_ptr   = getPlaceType(instr.src_table_ptr, current_stack)
-				                           ->getKindAs<valid_type::finalized::Pointer>();
+				const auto src_ptr = getPlaceType(instr.src_table_ptr, current_stack)
+				                         ->getKindAs<valid_type::finalized::Pointer>();
 				const auto src_table = expectPointerType<valid_type::finalized::FixedSizeTable>(
 					src_ptr, types_ctx, instr
 				);
-				const auto dst_ptr   = getPlaceType(instr.dst_table_ptr, current_stack)
-				                           ->getKindAs<valid_type::finalized::Pointer>();
+				const auto dst_ptr = getPlaceType(instr.dst_table_ptr, current_stack)
+				                         ->getKindAs<valid_type::finalized::Pointer>();
 				const auto dst_table = expectPointerType<valid_type::finalized::DynamicTable>(
 					dst_ptr, types_ctx, instr
 				);
@@ -1590,10 +1580,7 @@ class FunctionValidator {
 	}
 
 	template<class Error, class Instr>
-	requires(
-		std::is_same_v<Instr, std::remove_cvref_t<Op_upcast_pptr_pptr>>
-		|| std::is_same_v<Instr, std::remove_cvref_t<Op_downcast_pptr_pptr>>
-	)
+	requires(std::is_same_v<Instr, std::remove_cvref_t<Op_upcast_pptr_pptr>> || std::is_same_v<Instr, std::remove_cvref_t<Op_downcast_pptr_pptr>>)
 	void validateClassCast(const Instr& instruction, const LocalStack& current_stack) const {
 		auto higher_ptr_tod = getPlaceType(instruction.dst, current_stack);
 		auto lower_ptr_tod  = getPlaceType(instruction.src, current_stack);
@@ -1834,8 +1821,8 @@ public:
 		  ffi_signatures(ffi_signatures),
 		  function(function) {}
 
-	std::tuple<std::vector<Instruction>, std::vector<StackStateID>, LocalStackDb>
-		validateAndExtractReachableCode() {
+	std::tuple<std::vector<Instruction>, std::vector<StackStateID>, LocalStackDb> validateAndExtractReachableCode(
+	) {
 		validateSignature();
 		preprocessLabels();
 		LocalStackDb db = traverseControlFlowGraph();
