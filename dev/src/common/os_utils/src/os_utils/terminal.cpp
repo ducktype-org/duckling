@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-#ifndef _WIN32
+#if defined(__unix__) || defined(__APPLE__)
 	#include <unistd.h>
 
 namespace os_utils {
@@ -42,7 +42,7 @@ namespace os_utils {
 	}
 }
 
-#else
+#elif defined(_WIN32)
 	#include <io.h>
 
 namespace os_utils {
@@ -131,4 +131,6 @@ namespace os_utils {
 	}
 }
 
+#else
+	#error "Unsupported system"
 #endif
