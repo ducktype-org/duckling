@@ -92,7 +92,7 @@ namespace compiler::backend_vm::internal {
 							if ((pointer_layout.getPointerKind() == SinglePointer
 							     || pointer_layout.getPointerKind() == ManyPointer)
 							    && target_pointer_layout.getPointerKind() == CPointer) {
-								// @TODO: #2745 add support for this cast
+								// @TODO: #3263 add support for this cast
 								CORE_PANIC("Casting to CPointer is not supported yet");
 							} else if (pointer_layout.getPointerKind() == ManyPointer
 							           && target_pointer_layout.getPointerKind() == SinglePointer) {
