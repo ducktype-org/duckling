@@ -320,21 +320,27 @@ namespace compiler::mir {
 			if_opt_none(instr.output) return {};
 			const MIRPlace& target = instr.output.value();
 
-			if (not target.isLocal()) return {};
-			const MIRLocalRef base = target.getBase<MIRLocalRef>();
+			base::Optional<CRef<MoveState>> local_move_state;
 
-			if (base->lifetime_flags.contains(LifetimeFlag::NoDestructor)) return {};
+			if (target.isLocal()) {
+				const MIRLocalRef base = target.getBase<MIRLocalRef>();
 
-			for (const auto& flag: instr.flags) {
-				if (flag.flag == OperationFlag::Flag::Construct) return {};
-				// If we move this value in this instruction, and at the same time we override it,
-				// we don't have to call destructor `a = call f(c, b, move a)`
-				if (flag.flag == OperationFlag::Flag::Move && flag.local->id == base->id) return {};
+				if (base->lifetime_flags.contains(LifetimeFlag::NoDestructor)) return {};
+
+				local_move_state = move_states.atMaybe(base->id);
+				// If variable is uninitialized or moved we don't insert destructor.
+				if (local_move_state.empty()
+				    || local_move_state.value()->status == MoveStatus::Moved)
+					return {};
+
+				for (const auto& flag: instr.flags) {
+					if (flag.flag == OperationFlag::Flag::Construct) return {};
+					// If we move this value in this instruction, and at the same time we override
+					// it, we don't have to call destructor `a = call f(c, b, move a)`
+					if (flag.flag == OperationFlag::Flag::Move && flag.local->id == base->id)
+						return {};
+				}
 			}
-
-			auto local_move_state = move_states.atMaybe(base->id);
-			if (local_move_state && local_move_state.value()->status == MoveStatus::Moved)
-				return {};
 
 			// The place's type must have a non-trivial destructor.
 			auto destruct_sym_opt = helios::getTypeDestructor(ctx, target.type);
