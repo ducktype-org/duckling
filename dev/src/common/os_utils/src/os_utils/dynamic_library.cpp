@@ -1,6 +1,5 @@
 #include "dynamic_library.hpp"
 
-#include <base/except/exceptions.hpp>
 #include <base/str/str_utils.hpp>
 
 #include <expected>
