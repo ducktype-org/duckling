@@ -182,13 +182,9 @@ namespace compiler::helios {
 		  MessageWithCodeFragment(given_position) {
 		addArgument<dia_int::InteractiveArgument>("given_type", std::move(actual_type));
 		addArgument<dia_int::InteractiveArgument>("expected_type", std::move(expected_type));
+		addPointerMessage("given", given_position);
 		if_opt_some(expected_position, expected_pos) {
 			addPointerMessage("expected", expected_pos);
-			addPointerMessage("given", given_position);
-		}
-		if_opt_none(expected_position) {
-			// If we don't have a value
-			addPointerMessage("expected", given_position);
 		}
 	}
 
