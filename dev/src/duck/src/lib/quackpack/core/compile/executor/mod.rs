@@ -107,7 +107,7 @@ pub(crate) fn get_linker_options(
         })
         .map(|output| output.display().to_string())
         .join(" ");
-    debug!("raw linker args are `{string}`");
+    debug!(args = ?string, "raw linker args");
     if string.is_empty() {
         return Ok(None);
     }

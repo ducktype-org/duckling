@@ -6,7 +6,7 @@ use std::time::{Duration, SystemTime};
 
 use storage::paths::Storage;
 use storage::{locks, paths};
-use tracing::debug;
+use tracing::{debug, error, info, warn};
 
 use crate::quackpack::core::storage;
 use crate::quackpack::core::storage::venv::Venv;
@@ -25,9 +25,9 @@ pub struct CleanOutput {
 
 /// Delete a virtual environment from storage.
 pub fn delete_venv(ctx: &DuckContext, storage_root: &Path, venv: impl ToVenvId) -> QuackResult<()> {
-    debug!("deleting venv `{}`", venv.to_venv_id());
     let storage = paths::Storage::new(storage_root);
     let venv_id = venv.to_venv_id();
+    debug!(id = %venv_id, "deleting venv");
 
     let _sync_lock = {
         // First context is for IO results, second for unpacking Option (None = would block).
@@ -45,6 +45,7 @@ pub fn delete_venv(ctx: &DuckContext, storage_root: &Path, venv: impl ToVenvId) 
     storage.venv_dir(venv_id).rmtree()?;
     storage.sync_locks_path().join(venv_id).rm()?;
     data_lock.path().rm()?;
+    info!(id = %venv_id, "deleted venv");
     ctx.console()
         .info(format!("successfully removed venv `{venv_id}`"))?;
     Ok(())
@@ -52,7 +53,7 @@ pub fn delete_venv(ctx: &DuckContext, storage_root: &Path, venv: impl ToVenvId) 
 
 /// Remove orphaned packages and expired temporary virtual environments from storage.
 pub fn clean_storage(ctx: &DuckContext, storage_root: &Path) -> QuackResult<CleanOutput> {
-    debug!("cleaning storage");
+    debug!(root = %storage_root.display(), "cleaning storage");
     let temporary_lifetime = ctx.duck_cfg().storage_tmp_lifetime()?;
     let storage = paths::Storage::new(storage_root);
     let mut removed_venvs = vec![];
@@ -63,7 +64,7 @@ pub fn clean_storage(ctx: &DuckContext, storage_root: &Path) -> QuackResult<Clea
         let venvs = storage.iter_venvs()?;
         venvs.into_iter().collect::<Result<Vec<_>, _>>()?
     };
-    debug!("iterating over all venvs: `{venvs:?}`");
+    debug!(?venvs, "removing venvs");
     for venv in venvs {
         clean_venv_from_storage(
             venv,
@@ -75,9 +76,11 @@ pub fn clean_storage(ctx: &DuckContext, storage_root: &Path) -> QuackResult<Clea
             ctx,
         )?;
     }
+    info!("removed venvs");
     locks::cleanup_locks(&storage)?;
-    debug!("all used dependencies are `{all_deps:?}");
+    debug!(?all_deps, "used dependencies");
     let all_pkgs = storage.iter_pkgs()?.collect::<Result<Vec<_>, _>>()?;
+    debug!(?all_pkgs, "all known packages");
     let packages_to_remove = all_pkgs
         .into_iter()
         .flat_map(|pkg| {
@@ -89,9 +92,11 @@ pub fn clean_storage(ctx: &DuckContext, storage_root: &Path) -> QuackResult<Clea
             }
         })
         .collect::<Vec<_>>();
+    debug!(?packages_to_remove, "cleaning packages");
     for pkg in packages_to_remove.iter() {
         pkg.rmtree()?;
     }
+    info!(?packages_to_remove, "cleaned packages");
     ctx.console().info("successfully cleaned the storage")?;
     Ok(CleanOutput {
         removed_venvs,
@@ -101,6 +106,7 @@ pub fn clean_storage(ctx: &DuckContext, storage_root: &Path) -> QuackResult<Clea
 
 /// Remove a single venv from a storage.
 /// A helper for [`clean_storage`].
+#[tracing::instrument(skip_all, fields(?temporary_lifetime))]
 fn clean_venv_from_storage(
     dir: DirEntry,
     storage: &Storage,
@@ -111,15 +117,18 @@ fn clean_venv_from_storage(
     ctx: &DuckContext,
 ) -> QuackResult<()> {
     let venv_id = dir.file_name().to_venv_id();
+    debug!(id = %venv_id, "removing venv");
     let venv = Venv::fix_and_load(storage, venv_id, ctx)?;
     let Some(mut venv) = venv else {
-        debug!("failed to fix and load venv `{venv_id}`, will clean the venv");
+        error!(id = %venv_id, "failed to fix and load venv");
+        warn!(id = %venv_id, "will clean regardless of what");
         dir.path().rmtree().with_context(|| {
             format!(
                 "while removing venv `{venv_id}` at `{}`",
                 dir.path().display()
             )
         })?;
+        info!(id = %venv_id, "removed venv");
         removed_venvs.push(venv_id);
         return Ok(());
     };
@@ -133,19 +142,22 @@ fn clean_venv_from_storage(
     if data.last_synchronization() > now {
         data.set_last_synchronization(now);
         requires_save = true;
-        debug!("venv `{venv_id}` requires_save, because it's too old");
+        debug!(id = %venv_id, "requires_save, because it's too old");
     }
-    debug!(
-        "venv's `{venv_id}` (ephemeral: {}) last modification is `{:?}`, now is `{now:?}`",
-        data.is_ephemeral(),
-        data.last_synchronization()
-    );
     let is_too_old = data.last_synchronization() + temporary_lifetime < now;
     let should_remove_venv = data.is_ephemeral() && is_too_old;
-    debug!("venv `{venv_id}` is too old: {is_too_old}");
+    debug!(
+        id = %venv_id,
+        ephemeral = %data.is_ephemeral(),
+        last_synchronization = ?data.last_synchronization(),
+        ?now,
+        %is_too_old,
+        %should_remove_venv,
+    );
     if should_remove_venv {
         debug!(
-            "removing venv `{venv_id}` from the shared storage, as it's too old and is ephemeral"
+        id = %venv_id,
+            "removing venv from the shared storage, as it's too old and is ephemeral"
         );
         dir.path().rmtree().with_context(|| {
             format!(
@@ -153,12 +165,14 @@ fn clean_venv_from_storage(
                 dir.path().display()
             )
         })?;
+        info!(id = %venv_id, "removed venv");
         removed_venvs.push(venv_id);
         return Ok(());
     }
     // We're done mutating data, let's make borrow checker happy.
     let data = venv.data();
     if requires_save {
+        debug!(id = %venv_id, "saving venv");
         venv.save_to(storage, ctx)?;
     }
     all_deps.extend(data.freeze().dependencies().iter().filter_map(|dep| {

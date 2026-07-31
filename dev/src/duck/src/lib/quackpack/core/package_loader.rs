@@ -4,7 +4,7 @@ use std::io;
 use std::marker::PhantomData;
 use std::path::{Path, PathBuf};
 
-use tracing::{debug, trace};
+use tracing::debug;
 
 use crate::duck::util::duck_home::DuckHome;
 use crate::quackpack::core::PackageContext;
@@ -96,9 +96,9 @@ impl PackageLoader {
         let mut current: &Path = start.as_ref();
         for potential_location in start.ancestors() {
             let path = potential_location.join(Self::MANIFEST_NAME);
-            trace!("checking the path `{}`", path.display());
+            debug!(path = %path.display(), "checking for the manifest");
             if path.is_file() {
-                debug!("found a package at `{}`", path.display());
+                debug!(found = %path.display(), "found a manifest");
                 return PackageContext::new_not_global(potential_location.to_path_buf(), ctx);
             }
             current = potential_location;

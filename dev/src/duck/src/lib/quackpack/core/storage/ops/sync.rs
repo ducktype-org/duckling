@@ -156,7 +156,7 @@ fn check_if_overwrites(
             (replaces, context)
         }
         Err(e) => {
-            error!(path = %dir.display(), "failed to load the package: {e} ({e:?})");
+            error!(path = %dir.display(), error = %e, "failed to load the package");
             if let Some(io_error) = e.downcast_ref_in_chain::<io::Error>() {
                 // Maybe we missed something, check, if package has been moved.
                 let replaces = ![io::ErrorKind::NotFound, io::ErrorKind::NotADirectory]
@@ -242,7 +242,7 @@ fn get_solver_answer(
     let fetcher_lock = pcx.ctx().duck_home().open_fetcher_lockfile(pcx.ctx())?;
     let should_run_engine = solver.prepare_solving(fetcher, git_access)?;
     drop(fetcher_lock);
-    debug!("will run solver engine: {should_run_engine}");
+    debug!(%should_run_engine);
     match should_run_engine {
         ShouldRunSolverEngine::No(answer) => Ok(answer),
         ShouldRunSolverEngine::Yes(solver) => solver.solve(),
@@ -323,7 +323,7 @@ fn fetch_source_code(
                         if attempt != MAX_BLOB_RETRY_COUNT {
                             debug!(?pkg, "retrying fetch...");
                         } else {
-                            debug!(?pkg, "failed to fetch: {e}");
+                            error!(?pkg, error = %e, "failed to fetch");
                         }
                     }
                 }

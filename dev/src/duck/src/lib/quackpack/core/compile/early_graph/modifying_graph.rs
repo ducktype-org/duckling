@@ -34,9 +34,10 @@ impl DependencyGraph {
                     })
                     .is_enabled_for(this.enabled_features().iter().copied());
                 debug!(
-                    "package `{k}` has features `{}` and dependency `{dep}` is {}",
-                    this.enabled_features().iter().join(" "),
-                    if is_enabled { "enabled" } else { "not enabled" }
+                    %k,
+                    features = ?this.enabled_features(),
+                    %dep,
+                    dep_enabled = %is_enabled,
                 );
                 if !is_enabled {
                     to_remove.insert(*dep);
@@ -58,10 +59,7 @@ impl EarlyGraph {
         let root_package = self.package_mut(&self.graph.root());
         let root_features =
             root_package.features_that_would_be_added(root_features.iter().copied())?;
-        debug!(
-            "starting features of root are: `{}`",
-            root_features.iter().join(" ")
-        );
+        debug!(?root_features, "starting to expand features");
         let mut added_features = HashMap::from([(self.graph.root, root_features)]);
         let mut stack = VecDeque::from([self.graph().root]);
 

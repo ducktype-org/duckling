@@ -56,7 +56,7 @@ use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
 use serde::{Deserialize, Serialize};
-use tracing::{debug, trace};
+use tracing::{debug, error, info, trace};
 
 use crate::quackpack::core::storage::freeze::{self, VenvFreeze};
 use crate::quackpack::core::storage::paths::Storage;
@@ -137,10 +137,10 @@ impl VenvData {
     /// Load [`VenvData`] from the given path.
     #[tracing::instrument]
     fn load(path: &Path) -> QuackResult<Self> {
-        debug!("loading venv data");
+        trace!("loading venv data");
         let content = path.read_to_string()?;
         let Some((data, found_checksum)) = content.rsplit_once("\n") else {
-            debug!("missing a newline");
+            error!("missing a newline");
             return Err(CorruptedVenvError {
                 reason: CorruptedVenvReason::MissingNewLine,
                 path: path.to_path_buf(),
@@ -149,9 +149,10 @@ impl VenvData {
         };
         let expected_checksum = hash::sha256_string(data);
         if expected_checksum != found_checksum {
-            debug!(
-                "invalid checksum (expected: `{}`, got: `{}`)",
-                expected_checksum, found_checksum,
+            error!(
+                %expected_checksum,
+                %found_checksum,
+                "invalid checksum",
             );
             return Err(CorruptedVenvError {
                 reason: CorruptedVenvReason::InvalidChecksum {
@@ -163,7 +164,7 @@ impl VenvData {
             .into());
         }
         serde_json::from_str(data).map_err(|e| {
-            debug!("json error `{e}`");
+            error!(error = %e, "json error");
             let err = QuackError::from(e);
             err.context(CorruptedVenvError {
                 reason: CorruptedVenvReason::Other,
@@ -344,13 +345,13 @@ impl Venv {
     /// this function returns the previous last_access value as well as the loaded venv.
     ///
     /// If neither the main nor backup file is valid, the environment directory is removed.
-    #[tracing::instrument(skip_all)]
+    #[tracing::instrument(skip_all, fields(id = %venv_id))]
     pub fn fix_and_load_with_last_access(
         storage: &Storage,
         venv_id: VenvId,
         ctx: &DuckContext,
     ) -> QuackResult<Option<(Self, SystemTime)>> {
-        trace!(id = %venv_id, "loading venv");
+        trace!("loading venv");
         let _lock = storage
             .data_locks()
             .open_exclusive(venv_id, ctx)
@@ -383,7 +384,7 @@ impl Venv {
                 Ok(data) => Some(data),
                 Err(e) => {
                     if let Some(err) = e.downcast_ref_in_chain::<CorruptedVenvError>() {
-                        debug!("corrupted: {err}");
+                        error!(error = %err, "corrupted");
                         None
                     } else {
                         return Err(e);
@@ -395,7 +396,8 @@ impl Venv {
                 let previous_now = this.data().last_access();
                 this.data_mut().set_last_access(SystemTime::now());
                 if let Err(e) = this.save_to_with_lock_held(storage) {
-                    debug!("failed to update last access time: {e} ({e:?})");
+                    error!(error = %e, "failed to update last atime");
+                    info!(?previous_now, "restoring previous atime");
                     this.data_mut().set_last_access(previous_now);
                 }
                 return Ok(Some((this, previous_now)));
@@ -409,7 +411,7 @@ impl Venv {
                 Ok(data) => Some(data),
                 Err(e) => {
                     if let Some(err) = e.downcast_ref_in_chain::<CorruptedVenvError>() {
-                        debug!("corrupted: {err}");
+                        error!(error = %err, "corrupted");
                         None
                     } else {
                         return Err(e);
@@ -422,7 +424,8 @@ impl Venv {
                 let previous_now = this.data().last_access();
                 this.data_mut().set_last_access(SystemTime::now());
                 if let Err(e) = this.save_to_with_lock_held(storage) {
-                    debug!("failed to update last access time: {e} ({e:?})");
+                    error!(error = %e, "failed to update last atime");
+                    info!(?previous_now, "restoring previous atime");
                     this.data_mut().set_last_access(previous_now);
                 }
                 return Ok(Some((this, previous_now)));
@@ -439,9 +442,9 @@ impl Venv {
     ///
     /// Assumes that the current `metadata` file is valid. This is typically ensured
     /// by calling [`fix_and_load`](Self::fix_and_load) before.
-    #[tracing::instrument(skip_all)]
+    #[tracing::instrument(skip_all, fields(id = %self.id))]
     pub fn save_to(&self, storage: &Storage, ctx: &DuckContext) -> QuackResult<()> {
-        trace!(id = %self.id, "saving venv");
+        trace!("saving venv");
         let _lock = storage
             .data_locks()
             .open_exclusive(self.id, ctx)

@@ -29,7 +29,7 @@ use std::time::Duration;
 use curl::easy::{Easy2, Handler};
 use curl::multi::{Easy2Handle, Multi};
 use futures::channel::oneshot as async_oneshot;
-use tracing::{error, info, trace};
+use tracing::{debug, error, info};
 
 use super::util::http::handlers::Collector;
 use super::util::http::{
@@ -158,7 +158,7 @@ impl Worker {
     fn new(receiver: sync_mpsc::Receiver<IncomingConnectionRequest>) -> Self {
         let mut multi = Multi::new();
         if let Err(e) = multi.pipelining(false, true) {
-            error!("failed to set pipelining on multi: {e}");
+            error!(error = %e, "failed to set pipelining on multi");
         }
         Self {
             receiver,
@@ -209,7 +209,7 @@ impl Worker {
                 self.connections.insert(token, (handle, sender));
             }
             Err(err) => {
-                error!("failed to register a new Easy2Handle: {err}");
+                error!(error = %err, "failed to register a new Easy2Handle");
                 let _ = sender.send(CompletedRequest { response: Err(err) });
             }
         };
@@ -246,7 +246,7 @@ impl Worker {
             Err(err) => {
                 // We should call `perform` again.
                 if err.is_call_perform() {
-                    trace!("got `is_call_perform`");
+                    debug!("got `is_call_perform`");
                     return ShouldCheckForClosedChannel::No;
                 }
                 // An error means that we should remove all pending connections:
@@ -270,7 +270,7 @@ impl Worker {
         });
         // There are still pending transfers. Wait a bit.
         if transfers_in_progress > 0 {
-            trace!("still has work to do");
+            debug!("still has work to do");
             let delay = self
                 .multi
                 .get_timeout()
@@ -300,7 +300,7 @@ impl Worker {
     fn check_for_closed_channel(&mut self) -> ControlFlow<()> {
         match self.receiver.recv() {
             Ok(request) => {
-                trace!("resumed work");
+                debug!("resumed work");
                 self.enqueue_incoming_connection(request);
                 ControlFlow::Continue(())
             }
@@ -314,7 +314,7 @@ impl Worker {
 
     /// We've got an error when driving a [`Multi`]. Close all opened connections with the given error.
     fn fail_all_connections(&mut self, error: &curl::MultiError) {
-        error!("stopping all pending HTTP connections because got error: {error}");
+        error!(%error, "stopping all pending HTTP connections");
         // NOTE: Handles are detached/removed when dropped.
         for (_, (_, sender)) in self.connections.drain() {
             let _ = sender.send(CompletedRequest {
