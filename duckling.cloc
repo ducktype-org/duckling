@@ -3,7 +3,11 @@
 # Teaches cloc about the languages living in this repository so that Duckling
 # sources are counted as code instead of being skipped as unknown files.
 #
-# Usage (from the repository root):
+# Usage (from `dev/`):
+#
+#     python3 toolbox.py cloc
+#
+# which is a wrapper over (from the repository root):
 #
 #     cloc --read-lang-def=duckling.cloc --vcs=git .
 #
