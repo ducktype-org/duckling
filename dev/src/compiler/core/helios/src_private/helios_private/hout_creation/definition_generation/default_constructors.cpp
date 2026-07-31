@@ -48,29 +48,11 @@ namespace compiler::helios::defgen {
 			// Prepare the body of the constructor.
 			const Shorthand s{ ctx };
 
-			std::vector<Box<code::Stmt>> body{};
-			// - One declaration, one assignment per field, one return.
-			body.reserve(1 + fields.size() + 1);
+			// One value per field, in declaration order: the field's own initializer when it has
+			// one, its type's default initializer otherwise.
+			std::vector<Box<code::Expr>> field_values;
+			field_values.reserve(fields.size());
 
-			// @TODO: #2307 Classes with a field named `__result`.
-			// - Declare result variable.
-			const auto result_symbol_type = ctor_decl.return_type;
-			const SymID result_symbol      = ctx.query<QueryGeneratedSymbol>({
-					 .name                  = base::StrID("__result"),
-					 .generated_symbol_data = GeneratedFunctionVariable{
-						 .function_symbol = ctor_symbol,
-						 .variable_index  = 0,
-						 .type            = result_symbol_type,
-                },
-            });
-
-			// By default all fields with no initial value are zeroed.
-			// var result: Class = <default_initializer>;
-			body.emplace_back(s.var(
-				result_symbol, result_symbol_type, s.defaultValue(result_symbol_type.getType())
-			));
-
-			// - Assign each field with the initializing expression or a default value expression.
 			for (const auto& field: fields) {
 				const auto field_pst_data = maybeSymbolPst(field.getSymbol())
 				                                .value()
@@ -79,38 +61,38 @@ namespace compiler::helios::defgen {
 				                                .value();
 				auto field_init_expr_opt = field_pst_data->getInit();
 
-				auto init_expr = [&]() -> BoxOrCRef<code::Expr> {
-					match_optional(field_init_expr_opt) {
-						opt_some(field_init) {
-							// If the field has an initializer value we use it.
-							const auto field_type = field.getType(ctx);
-							auto       expr
-								= getHoutOfExprWithExpectedType(
-									  ctx, field_init.unlock(ctx)->getExpr().unlock(ctx), field_type
-								)
-							          .valueOrThrow();
-							return expr;
-						}
-						opt_none {
-							// Otherwise initialize it with the default initializer expression.
-							return ctx.query<QueryDefaultInitializerExpr>(field.getType(ctx))
-							    ->valueOrThrow()
-							    .ref();
-						}
+				match_optional(field_init_expr_opt) {
+					opt_some(field_init) {
+						// If the field has an initializer value we use it. The HOUT of the
+						// initializer may be owned by a query cache, in which case it is cloned.
+						const auto field_type = field.getType(ctx);
+						auto       field_init_hout
+							= getHoutOfExprWithExpectedType(
+								  ctx, field_init.unlock(ctx)->getExpr().unlock(ctx), field_type
+							)
+						          .valueOrThrow();
+						field_values.emplace_back(
+							field_init_hout.isBox() ? std::move(field_init_hout.getBox())
+													: field_init_hout->clone()
+						);
 					}
-					CORE_UNREACHABLE();
-				}();
-
-				// `init_expr` is a BoxOrCRef (it may reference a cached default-initializer expr),
-				// so the assignment is built directly rather than via `s.assign`.
-				body.emplace_back(makeBox<code::AssignmentStmt>(
-					code::generatedOrigin(),
-					s.access(s.ident(result_symbol), field.getSymbol()),
-					std::move(init_expr)
-				));
+					opt_none {
+						// Otherwise initialize it with the default initializer expression. That
+						// expr is owned by its query cache, so it has to be cloned into the
+						// aggregate.
+						field_values.emplace_back(
+							ctx.query<QueryDefaultInitializerExpr>(field.getType(ctx))
+								->valueOrThrow()
+								->clone()
+						);
+					}
+				}
 			}
 
-			body.emplace_back(s.ret(s.ident(result_symbol)));
+			// The whole value is built in place by a single expression:
+			// `return create_aggregate(Class) { field_values... };`
+			std::vector<Box<code::Stmt>> body{};
+			body.emplace_back(s.ret(s.createAggregate(class_type, std::move(field_values))));
 
 			// Finally, create the HOUTFunction object.
 			return HOUTFunction(
@@ -152,42 +134,19 @@ namespace compiler::helios::defgen {
 			// Prepare the body of the constructor.
 			const Shorthand s{ ctx };
 
+			// One value per field, in declaration order. Tuple fields have no initializers, so
+			// every value is the field type's default initializer. Those exprs are owned by their
+			// query cache, so they have to be cloned into the aggregate.
+			std::vector<Box<code::Expr>> field_values;
+			field_values.reserve(fields.size());
+			for (const auto& field: fields)
+				field_values.emplace_back(ctx.query<QueryDefaultInitializerExpr>(field.getType(ctx))
+				                              ->valueOrThrow()
+				                              ->clone());
+
+			// `return create_aggregate(Tuple) { field_values... };`
 			std::vector<Box<code::Stmt>> body{};
-			// - One declaration, one assignment per field, one return.
-			body.reserve(1 + fields.size() + 1);
-
-			// - Declare result variable.
-			const auto result_symbol_type = ctor_decl.return_type;
-			const SymID result_symbol      = ctx.query<QueryGeneratedSymbol>({
-					 .name                  = base::StrID("__result"),
-					 .generated_symbol_data = GeneratedFunctionVariable{
-						 .function_symbol = ctor_symbol,
-						 .variable_index  = 0,
-						 .type            = result_symbol_type,
-                },
-            });
-
-			// All fields are zeroed.
-			body.emplace_back(s.var(
-				result_symbol, result_symbol_type, s.defaultValue(result_symbol_type.getType())
-			));
-
-			// - Assign each field with the initializing expression.
-			for (const auto& field: fields) {
-				auto init_expr = ctx.query<QueryDefaultInitializerExpr>(field.getType(ctx))
-				                     ->valueOrThrow()
-				                     .ref();
-
-				// `init_expr` is a BoxOrCRef referencing a cached expr, so build the assignment
-				// directly rather than via `s.assign`.
-				body.emplace_back(makeBox<code::AssignmentStmt>(
-					code::generatedOrigin(),
-					s.access(s.ident(result_symbol), field.getSymbol()),
-					init_expr
-				));
-			}
-
-			body.emplace_back(s.ret(s.ident(result_symbol)));
+			body.emplace_back(s.ret(s.createAggregate(tuple_type, std::move(field_values))));
 
 			// Finally, create the HOUTFunction object.
 			return HOUTFunction(
@@ -210,13 +169,8 @@ namespace compiler::helios::defgen {
 	struct IMPLEMENT_QUERY(QueryDefaultStaticArrayConstructor, query::QResult<HOUTFunction>) {
 		static PResult provide(Context& ctx, const QKey array_type) {
 			// Preamble, get some basic data.
-			const auto  element_type   = array_type.getElementType();
-			const usize size           = array_type.getSize();
-			const auto  array_sym_type = tsh::SymbolType<>{ array_type,
-				                                            tsh::ReferenceKind::Direct,
-				                                            tsh::Mutability::Mutable };
-
-			using Variable = GeneratedFunctionVariable;
+			const auto  element_type = array_type.getElementType();
+			const usize size         = array_type.getSize();
 
 			// Prepare the ctor symbol and declaration.
 			const SymID ctor_symbol = ctx.query<QueryGeneratedSymbol>({
@@ -231,62 +185,23 @@ namespace compiler::helios::defgen {
 
 			std::vector<Box<code::Stmt>> body{};
 
-			// var res: T[N];
-			const SymID res_sym
-				= ctx.query<QueryGeneratedSymbol>({ .name = base::StrID("__result"),
-			                                        .generated_symbol_data = Variable{
-														.function_symbol = ctor_symbol,
-														.variable_index  = 0,
-														.type            = array_sym_type,
-													} });
-			body.emplace_back(s.var(res_sym, array_sym_type, s.defaultValue(array_type)));
+			if (size == 0) {
+				// There is no element to construct, so there is nothing for an aggregate to build.
+				// `return zero_initialized T[0];`
+				body.emplace_back(s.ret(s.defaultValue(array_type)));
+			} else {
+				// One value per element: the element type's default initializer, repeated `size`
+				// times. That expr is owned by its query cache, so each copy has to be cloned.
+				const auto& element_init
+					= ctx.query<QueryDefaultInitializerExpr>(element_type)->valueOrThrow();
 
-			// Generate the loop only if the static array is not empty.
-			if (size > 0) {
-				using enum code::BuiltinBinary;
+				std::vector<Box<code::Expr>> element_values;
+				element_values.reserve(size);
+				for (usize i = 0; i < size; i++) element_values.emplace_back(element_init->clone());
 
-				auto u64_abs_type
-					= tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned);
-				auto u64_type = tsh::SymbolType<>::withDefaults(u64_abs_type);
-				// var i: i64 = 0;
-				const SymID i_sym
-					= ctx.query<QueryGeneratedSymbol>({ .name                  = base::StrID("__i"),
-				                                        .generated_symbol_data = Variable{
-															.function_symbol = ctor_symbol,
-															.variable_index  = 1,
-															.type            = u64_type,
-														} });
-				auto zero_val = numeric_value::NumericValue::createOfType(u64_abs_type)
-				                    .expect("u64 creation failed");
-				body.emplace_back(s.var(i_sym, u64_type, s.litNum(zero_val)));
-
-				auto size_val = numeric_value::NumericValue::createOfType(u64_abs_type, size)
-				                    .expect("u64 creation failed");
-				auto one_val = numeric_value::NumericValue::createOfType(u64_type.getType(), 1)
-				                   .expect("u64 creation failed");
-				auto element_init
-					= ctx.query<QueryDefaultInitializerExpr>(element_type)->valueOrThrow().ref();
-
-				// while (i < size) { res[i] = default_init(T); i = i + 1; }
-				// `element_init` is a BoxOrCRef referencing a cached expr, so its assignment is
-				// built directly rather than via `s.assign`.
-				body.emplace_back(s.whileStmt(
-					s.binOp(s.ident(i_sym), IntegerLt, s.litNum(size_val)),
-					{
-						makeBox<code::AssignmentStmt>(
-							code::generatedOrigin(),
-							s.index(s.ident(res_sym), s.ident(i_sym)),
-							element_init
-						),
-						s.assign(
-							s.ident(i_sym), s.binOp(s.ident(i_sym), IntegerAdd, s.litNum(one_val))
-						),
-					}
-				));
+				// `return create_aggregate(T[N]) [ element_values... ];`
+				body.emplace_back(s.ret(s.createAggregate(array_type, std::move(element_values))));
 			}
-
-			// return result
-			body.emplace_back(s.ret(s.ident(res_sym)));
 
 			// Finally, create the HOUTFunction object.
 			return HOUTFunction(

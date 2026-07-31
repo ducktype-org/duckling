@@ -155,9 +155,6 @@ MAKE_FLAG_TYPE(compiler::mir, LifetimeFlag, LifetimeFlags,
 	/// Used by the return value temporary, as it's destructor would have to be after the return.
 	NoDestructor,
 
-	/// Do not validate use-after-free for this local. Currently not used.
-	NoUseAfterFreeValidation,
-
 	/// We do not add the `ScopeStart` and `ScopeEnd` flags for this local.
 	/// Used for return value and parameters, as their scope is always valid in the function.
 	NoScopeFlags,
@@ -170,11 +167,9 @@ MAKE_FLAG_TYPE(compiler::mir, LifetimeFlag, LifetimeFlags,
 	/// Not used.
 	ConditionTmpValue,
 
-	/// Do not run the use-before-initialization check for this local. Used for locals that are
-	/// initialized field-by-field (e.g. the destination of an in-place aggregate construction):
-	/// each projected field store reads the local's address before the whole local is marked
-	/// constructed, which would otherwise be flagged as a use-before-init.
-	NoUseBeforeInitValidation
+	/// Do not run the use-before-initialization check 
+	// and use-after-free check for this local.
+	NoMoveStatusValidation
 )
 
 namespace compiler::mir {
@@ -885,7 +880,7 @@ namespace compiler::mir {
 		[[nodiscard]]
 		base::OkBad validateBlockIDs() const;
 
-		[[nodiscard]] BlockID lastBlock() const { return BlockID(0); }
+		[[nodiscard]] BlockID lastBlock() const { return block_order.back(); }
 	};
 
 	/**

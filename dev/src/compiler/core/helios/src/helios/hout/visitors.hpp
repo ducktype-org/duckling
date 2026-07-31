@@ -40,7 +40,6 @@ namespace compiler::helios::code {
 		DerefExpr,
 		DefaultValueExpr,
 		CreateAggregateExpr,
-		CreateArrayExpr,
 		CastExpr,
 		LiftToTypeExpr,
 		ListPushExpr,

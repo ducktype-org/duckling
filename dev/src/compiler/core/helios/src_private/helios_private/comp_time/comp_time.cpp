@@ -683,16 +683,12 @@ namespace compiler::helios {
 				result = CompileTimeValue{ CompileTimeValue::TupleCTV{ std::move(ctv_elements) } };
 			}
 
-			void visitCreateAggregateExpr(const code::CreateAggregateExpr&) final {
-				// NOTE: compile-time evaluation of aggregate construction is not wired yet. No HOUT
-				// emission produces this node, so this path is unreachable.
-				CORE_PANIC("CreateAggregateExpr compile-time evaluation not yet implemented");
-			}
-
-			void visitCreateArrayExpr(const code::CreateArrayExpr&) final {
-				// NOTE: compile-time evaluation of array construction is not wired yet. No HOUT
-				// emission produces this node, so this path is unreachable.
-				CORE_PANIC("CreateArrayExpr compile-time evaluation not yet implemented");
+			void visitCreateAggregateExpr(const code::CreateAggregateExpr& expr) final {
+				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					"Comp time aggregate lowering is not implemented.",
+					expr.origin.getStablePosition()
+				));
+				result = query::Failed();
 			}
 
 			void visitVariantTypeConstructorExpr(const code::VariantTypeConstructorExpr& expr

@@ -157,11 +157,6 @@ namespace compiler::helios::code {
 			for (const auto& value: e.values) walk(*value);
 		}
 
-		void visitCreateArrayExpr(const CreateArrayExpr& e) override {
-			handler(e);
-			for (const auto& value: e.values) walk(*value);
-		}
-
 		void visitVariantTypeConstructorExpr(const VariantTypeConstructorExpr& e) override {
 			handler(e);
 			for (const auto& subtype: e.subtypes) walk(*subtype);

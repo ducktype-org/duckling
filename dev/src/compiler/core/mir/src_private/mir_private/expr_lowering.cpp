@@ -300,15 +300,25 @@ namespace compiler::mir {
 		) {
 			// We create a tmp, but we don't check use before init, as the value is never inited.
 			auto dest = function.addTmp(dest_type, expr_scope);
-			dest->lifetime_flags |= LifetimeFlag::NoUseBeforeInitValidation;
+			dest->lifetime_flags |= LifetimeFlag::NoMoveStatusValidation;
 			auto current = continuation;
 
-			for (usize i = values.size(); i-- > 0;) {
+			// The chain is built back-to-front, so the first iteration lowers the store that runs
+			// last. Only that store constructs the destination — before it, the value is still
+			// partially uninitialized.
+			for (usize i: std::views::iota(usize{ 0 }, values.size()) | std::views::reverse) {
+				const bool is_last_store = i + 1 == values.size();
+
 				auto element_place = projection_for(MIRPlace(dest), i);
 				auto store_hole    = current->addHole();
 				auto value_result  = lowerSubExpr(*values[i], current);
 				value_result.storeResultInGivenPlace(
-					element_place, store_hole, { flagConstruct(dest) }, expr_scope, { position }
+					element_place,
+					store_hole,
+					is_last_store ? std::vector{ flagConstruct(dest) }
+								  : std::vector<OperationFlag>{},
+					expr_scope,
+					{ position }
 				);
 				current = value_result.begin;
 			}
@@ -318,6 +328,27 @@ namespace compiler::mir {
 
 		void visitCreateAggregateExpr(const hc::CreateAggregateExpr& expr) override {
 			auto& ctx = function.getContext();
+
+			// Static arrays project by index, every other aggregate projects by field.
+			if (expr.type.getKind() == tsh::Kind::StaticArray) {
+				const auto array_type = tsh::StaticArrayAbstractType(expr.type);
+				CORE_ASSERT(
+					array_type.getSize() == expr.values.size(),
+					"CreateAggregateExpr value count must match the static array's size."
+				);
+
+				lowerInPlaceConstruction(
+					expr.expression_type.getSymbolType(),
+					expr.values,
+					[](const MIRPlace& base, usize i) {
+						auto index = MIRValue{ MIRConstant{
+							ctv::CompileTimeValue{ ctv::NumericValue{ static_cast<i64>(i) } } } };
+						return base.withIndex(index);
+					},
+					expr.getPosition()
+				);
+				return;
+			}
 
 			// Field symbols of the aggregate, in declaration order — one per value.
 			auto                       interface = expr.type.getInterface(ctx);
@@ -334,19 +365,6 @@ namespace compiler::mir {
 				expr.values,
 				[&](const MIRPlace& base, usize i) -> MIRPlace {
 					return base.withField(ctx, field_symbols[i]);
-				},
-				expr.getPosition()
-			);
-		}
-
-		void visitCreateArrayExpr(const hc::CreateArrayExpr& expr) override {
-			lowerInPlaceConstruction(
-				expr.expression_type.getSymbolType(),
-				expr.values,
-				[](const MIRPlace& base, usize i) {
-					auto index = MIRValue{ MIRConstant{
-						ctv::CompileTimeValue{ ctv::NumericValue{ static_cast<i64>(i) } } } };
-					return base.withIndex(index);
 				},
 				expr.getPosition()
 			);

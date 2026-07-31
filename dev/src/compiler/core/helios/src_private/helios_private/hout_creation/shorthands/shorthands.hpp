@@ -273,24 +273,16 @@ namespace compiler::helios::code::shorthands {
 		HOUT_EXPR_PACK_OVERLOAD(variant, VariantTypeConstructorExpr, 2)
 
 		/**
-		 * @brief An aggregate value (struct/class/tuple) built field-by-field, in place.
-		 * @p values holds one expression per field, in declaration order.
+		 * @brief An aggregate value built element-by-element, in place.
+		 *
+		 * @p values holds one expression per element — fields in declaration order for
+		 * struct/class/tuple types, items in index order for static array types.
 		 */
 		[[nodiscard]]
 		Box<CreateAggregateExpr> createAggregate(
 			tsh::AbstractType type, std::vector<Box<Expr>> values
 		) const {
 			return makeBox<CreateAggregateExpr>(*ctx, generatedOrigin(), type, std::move(values));
-		}
-
-		/** @brief A fixed-size static array value built element-by-element, in place. */
-		[[nodiscard]]
-		Box<CreateArrayExpr> createArray(
-			tsh::SymbolType<> element_type, std::vector<Box<Expr>> values
-		) const {
-			return makeBox<CreateArrayExpr>(
-				*ctx, generatedOrigin(), element_type, std::move(values)
-			);
 		}
 
 		/** @brief A field access `base.field`. */

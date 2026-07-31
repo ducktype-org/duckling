@@ -778,13 +778,17 @@ namespace compiler::helios::code {
 	};
 
 	/**
-	 * @brief Constructs an aggregate (struct/class) value field-by-field, in place.
+	 * @brief Constructs an aggregate value element-by-element, in place.
+	 *
+	 * Covers both record-like aggregates (struct/class/tuple), where the elements are the fields in
+	 * declaration order, and statically-sized arrays, where the elements are the array items in
+	 * index order.
 	 *
 	 * Unlike a constructor `CallExpr`, this does not first zero-initialize the destination into a
-	 * valid value and then overwrite each field. It lowers to one construct-flagged store per field
-	 * into uninitialized storage, so there is no init-vs-overwrite ambiguity (and no dead zeroing of
-	 * fields that are immediately assigned). @p values holds one expression per field, in
-	 * declaration order.
+	 * valid value and then overwrite each element. It lowers to one plain store per element into
+	 * uninitialized storage, with only the last store flagged as constructing the destination.
+	 * @p values holds one expression per element and must match the element count of
+	 * @ref type.
 	 */
 	struct CreateAggregateExpr final: public Expr {
 		tsh::AbstractType            type;
@@ -809,41 +813,6 @@ namespace compiler::helios::code {
 			tsh::ExpressionType<>        expression_type,
 			ElementOrigin                origin,
 			tsh::AbstractType            type,
-			std::vector<base::Box<Expr>> values
-		);
-	};
-
-	/**
-	 * @brief Constructs a fixed-size static array value element-by-element, in place.
-	 *
-	 * The array length is `values.size()`, known at compile time. Lowers to one construct-flagged
-	 * store per element into uninitialized storage, following the same model as
-	 * @ref CreateAggregateExpr. This is only for statically-sized arrays; dynamic lists use
-	 * `ListPushExpr` / `ListPopExpr`.
-	 */
-	struct CreateArrayExpr final: public Expr {
-		tsh::SymbolType<>            element_type;
-		std::vector<base::Box<Expr>> values;
-
-		CreateArrayExpr(
-			query::Context&              ctx,
-			ElementOrigin                origin,
-			tsh::SymbolType<>            element_type,
-			std::vector<base::Box<Expr>> values
-		);
-
-		void debugPrint(std::ostream& out) const final;
-		void acceptVisitor(HoutExprVisitor&) const final;
-
-		[[nodiscard]] Box<Expr> clone() const final;
-
-	private:
-		FRIEND_MAKEBOX
-
-		CreateArrayExpr(
-			tsh::ExpressionType<>        expression_type,
-			ElementOrigin                origin,
-			tsh::SymbolType<>            element_type,
 			std::vector<base::Box<Expr>> values
 		);
 	};

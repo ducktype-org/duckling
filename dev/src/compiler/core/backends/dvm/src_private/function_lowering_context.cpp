@@ -308,7 +308,10 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 					return { pointer_layout.getPointee(), vm::code::builders::OpKind::dynTableLea };
 				}();
 
-				DVMValue index_val = lowerLirValue(*index.index);
+				// The table-LEA instructions only come in a `_p64` form, so the index has to be a
+				// place. A constant index (e.g. from an in-place aggregate construction) is
+				// materialized into a temporary first.
+				DVMPlace index_place = forceToPlace(lowerLirValue(*index.index), "index_tmp");
 
 				// Prepare VM types
 				const vm::code::TypeOfData& vm_element_type
@@ -320,7 +323,8 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 				DVMPlace element_ptr_tmp = pushTempLocal(ptr_to_element_type, "index_addr");
 
 				// Emit instruction (now unified)
-				pushInstruction({ op_kind, element_ptr_tmp, current_place, index_val.asArgument() });
+				pushInstruction({ op_kind, element_ptr_tmp, current_place, index_place.asArgument() }
+				);
 
 				current_place  = element_ptr_tmp.withAccessKind(DVMPlace::AccessKind::Pointer);
 				current_layout = element_layout;
