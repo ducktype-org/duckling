@@ -13,6 +13,7 @@
 #include <base/extend_cpp/variant_match.hpp>
 
 #include <query_framework/standard_query/query_impl.hpp>
+#include <mir_private/stmt_lowering.hpp>
 
 #include <algorithm>
 #include <ranges>
@@ -693,6 +694,11 @@ namespace compiler::mir {
 		void visitLiftToTypeExpr(const hc::LiftToTypeExpr& expr) override {
 			auto result = lowerAndLiftToTypeRecursively(*expr.value_expr, continuation);
 			valueOutput(result.begin, result.getResult(function));
+		}
+
+		void visitBlockExpr(const hc::BlockExpr& expr) override {
+			auto lowered_block = lowerStmt(*expr.block, continuation, function, expr_scope);
+			valueOutput(lowered_block.begin, MIRValue{ MIRConstant{ ctv::CompileTimeValue::UnitCTV() } });
 		}
 
 		void visitListPushExpr(const hc::ListPushExpr& expr) override {

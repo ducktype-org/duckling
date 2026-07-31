@@ -199,6 +199,11 @@ namespace compiler::helios::code {
 			walk(*e.value_expr);
 		}
 
+		void visitBlockExpr(const BlockExpr& e) override {
+			handler(e);
+			walk(*e.block);
+		}
+
 		void visitListPushExpr(const ListPushExpr& e) override {
 			handler(e);
 			walk(*e.list);

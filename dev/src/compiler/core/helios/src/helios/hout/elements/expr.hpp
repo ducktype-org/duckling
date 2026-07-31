@@ -10,6 +10,7 @@
 #include <base/types/ints.hpp>
 
 #include <token_parser_core/common_elements.hpp>
+#include <helios/hout/elements/stmt.hpp>
 
 #include <vector>
 
@@ -798,6 +799,33 @@ namespace compiler::helios::code {
 
 		LiftToTypeExpr(
 			tsh::ExpressionType<> expression_type, ElementOrigin origin, Box<Expr> value_expr
+		);
+	};
+
+	/**
+	 * @brief Represents a block of statemtnts that evaluates to a single value.
+	 */
+	struct BlockExpr final: public Expr {
+		// TODO: consider changing this to a CodeBlock Stmt
+		Box<BlockStmt> block;
+
+		BlockExpr(
+			query::Context& ctx, ElementOrigin origin,
+			Box<BlockStmt> block
+		);
+
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
+
+	private:
+		FRIEND_MAKEBOX
+
+		BlockExpr(
+			tsh::ExpressionType<>        expression_type,
+			ElementOrigin                origin,
+			Box<BlockStmt>               block
 		);
 	};
 
