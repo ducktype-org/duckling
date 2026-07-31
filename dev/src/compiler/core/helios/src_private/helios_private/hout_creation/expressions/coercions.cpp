@@ -96,7 +96,7 @@ namespace compiler::helios {
 					element_coercion.isValid(), "Coercion should always be valid at this point."
 				);
 
-				elements.emplace_back(element_coercion.getCoercion().coerce(ctx, element->clone()));
+				elements.emplace_back(element_coercion.coerce(ctx, element->clone()));
 			}
 
 			return makeBox<code::TupleExpr>(ctx, tuple->origin.generatedFrom(), std::move(elements));
@@ -174,20 +174,30 @@ namespace compiler::helios {
 	}
 
 	IncompatibleTypesError::IncompatibleTypesError(
-		dia_int::StablePosition source_position,
-		Box<InteractiveType>    actual_type,
-		Box<InteractiveType>    expected_type
+		dia_int::StablePosition                 given_position,
+		Box<InteractiveType>                    actual_type,
+		Box<InteractiveType>                    expected_type,
+		base::Optional<dia_int::StablePosition> expected_position
 	):
-		  MessageWithCodeFragmentAndCause(source_position) {
+		  MessageWithCodeFragment(given_position) {
 		addArgument<dia_int::InteractiveArgument>("given_type", std::move(actual_type));
 		addArgument<dia_int::InteractiveArgument>("expected_type", std::move(expected_type));
+		if_opt_some(expected_position, expected_pos) {
+			addPointerMessage("expected", expected_pos);
+			addPointerMessage("given", given_position);
+		}
+		if_opt_none(expected_position) {
+			// If we don't have a value
+			addPointerMessage("expected", given_position);
+		}
 	}
 
 	NoMatchingExpectedTypeError::NoMatchingExpectedTypeError(
-		dia_int::StablePosition source_position, Box<InteractiveType> actual_type
+		dia_int::StablePosition given_position, Box<InteractiveType> actual_type
 	):
-		  MessageWithCodeFragmentAndCause(source_position) {
+		  MessageWithCodeFragment(given_position) {
 		addArgument<dia_int::InteractiveArgument>("given_type", std::move(actual_type));
+		addPointerMessage("given", given_position);
 	}
 
 	void NoMatchingExpectedTypeError::addExploreAcceptedType(
@@ -258,7 +268,7 @@ namespace compiler::helios {
 		}
 	}
 
-	CoercionQResult canCoerce(
+	query::QResult<Coercion> canCoerce(
 		query::Context& ctx, const tsh::ExpressionType<>& from, const tsh::SymbolType<>& to
 	) {
 		const tsh::SymbolType<> from_type = from.getSymbolType();
@@ -266,26 +276,27 @@ namespace compiler::helios {
 		// First check that the type is even coercible to provide a invalid coercion error first.
 		const bool coercible
 			= ctx.query<tsh::QueryImplicitCoercibilityOnSymbolType>({ from_type, to });
-		if (!coercible) return InvalidCoercion{ InvalidCoercionReason::IncompatibleTypes };
+		if (!coercible)
+			return Coercion::invalid(from_type, to, InvalidCoercionReason::IncompatibleTypes);
 
 		// A coercion that only rebinds a reference never copies, so it is always fine.
 		if (not requiresValueCopy(from_type.getRefKind(), to.getRefKind()))
-			return Coercion(from_type, to);
+			return Coercion::valid(from_type, to);
 
 		// Otherwise a value has to be copied.
 		switch (passingMethod(ctx, valueBeingCopied(from, to))) {
 		case PassingMethod::ByteCopy:
 		case PassingMethod::ImplicitMove:
-			return Coercion(from_type, to);
+			return Coercion::valid(from_type, to);
 		case PassingMethod::ExplicitCopyOrMove:
-			return InvalidCoercion{ InvalidCoercionReason::RequiresExplicitCopyMove };
+			return Coercion::invalid(from_type, to, InvalidCoercionReason::RequiresExplicitCopyMove);
 		case PassingMethod::NotCopyable:
-			return InvalidCoercion{ InvalidCoercionReason::TypeNotCopyable };
+			return Coercion::invalid(from_type, to, InvalidCoercionReason::TypeNotCopyable);
 		}
 		CORE_UNREACHABLE();
 	}
 
-	CoercionQResult canCoerceToMeta(query::Context& ctx, const tsh::ExpressionType<>& from) {
+	query::QResult<Coercion> canCoerceToMeta(query::Context& ctx, const tsh::ExpressionType<>& from) {
 		return canCoerce(
 			ctx,
 			from,
@@ -306,50 +317,43 @@ namespace compiler::helios {
 	}
 
 	base::Optional<Box<code::Expr>> coerceFromBox(
-		query::Context&         ctx,
-		Box<code::Expr>         expr,
-		const tsh::SymbolType<> expected_type,
-		dia_int::StablePosition source_position,
-		CoercionErrorOverrides  error_overrides
+		query::Context&                         ctx,
+		Box<code::Expr>                         expr,
+		const tsh::SymbolType<>                 expected_type,
+		dia_int::StablePosition                 source_position,
+		base::Optional<dia_int::StablePosition> expected_position,
+		CoercionErrorOverrides                  error_overrides
 	) {
-		const tsh::SymbolType<> source_symbol_type = expr->expression_type.getSymbolType();
 		const auto coercion_qresult = canCoerce(ctx, expr->expression_type, expected_type);
 		if (coercion_qresult.hasFailed()) return {};
-
-		const CoercionResult& coercion_result = coercion_qresult.valueOrThrow();
-		if (coercion_result.isValid())
-			return coercion_result.getCoercion().coerce(ctx, std::move(expr));
+		const Coercion& coercion_result = coercion_qresult.valueOrPanic();
+		if (coercion_result.isValid()) return coercion_result.coerce(ctx, std::move(expr));
 
 		logCoercionFailure(
-			ctx,
-			coercion_result.getInvalidReason(),
-			source_symbol_type,
-			expected_type,
-			source_position,
-			std::move(error_overrides)
+			ctx, coercion_result, source_position, expected_position, std::move(error_overrides)
 		);
 		return {};
 	}
 
 	Box<dia_int::MessageBase> getCoercionError(
-		query::Context&          ctx,
-		InvalidCoercionReason    reason,
-		const tsh::SymbolType<>& source_symbol_type,
-		const tsh::SymbolType<>& expected_type,
-		dia_int::StablePosition  source_position
+		query::Context&                         ctx,
+		const Coercion&                         failed,
+		dia_int::StablePosition                 source_position,
+		base::Optional<dia_int::StablePosition> expected_position
 	) {
-		switch (reason) {
+		switch (failed.getInvalidReason()) {
 		case InvalidCoercionReason::IncompatibleTypes:
 			return makeBox<IncompatibleTypesError>(
 				source_position,
-				makeBox<InteractiveType>(ctx, source_symbol_type),
-				makeBox<InteractiveType>(ctx, expected_type)
+				makeBox<InteractiveType>(ctx, failed.validated_from),
+				makeBox<InteractiveType>(ctx, failed.to),
+				expected_position
 			);
 		case InvalidCoercionReason::TypeNotCopyable:
 			return makeBox<dia_int::PlaceholderError>(
 				base::strConcat(
 					"Type `",
-					source_symbol_type.withReferenceKind(tsh::ReferenceKind::Direct).toString(),
+					failed.validated_from.withReferenceKind(tsh::ReferenceKind::Direct).toString(),
 					"` cannot be copied."
 				),
 				source_position
@@ -358,7 +362,7 @@ namespace compiler::helios {
 			return makeBox<dia_int::PlaceholderError>(
 				base::strConcat(
 					"Cannot implicitly copy a value of non-trivially-copyable type `",
-					source_symbol_type.withReferenceKind(tsh::ReferenceKind::Direct).toString(),
+					failed.validated_from.withReferenceKind(tsh::ReferenceKind::Direct).toString(),
 					"`. Use `copy` to copy it or `move` to move it."
 				),
 				source_position
@@ -370,16 +374,15 @@ namespace compiler::helios {
 	}
 
 	void logCoercionFailure(
-		query::Context&          ctx,
-		InvalidCoercionReason    reason,
-		const tsh::SymbolType<>& source_symbol_type,
-		const tsh::SymbolType<>& expected_type,
-		dia_int::StablePosition  source_position,
-		CoercionErrorOverrides   error_overrides
+		query::Context&                         ctx,
+		const Coercion&                         failed,
+		dia_int::StablePosition                 source_position,
+		base::Optional<dia_int::StablePosition> expected_position,
+		CoercionErrorOverrides                  error_overrides
 	) {
 		// Use the caller's override if one is set, otherwise the default message.
 		const base::Optional<CoercionErrorOverrides::Logger>& override = [&]() -> const auto& {
-			switch (reason) {
+			switch (failed.getInvalidReason()) {
 			case InvalidCoercionReason::IncompatibleTypes:
 				return error_overrides.incompatible_types;
 			case InvalidCoercionReason::TypeNotCopyable:
@@ -395,34 +398,25 @@ namespace compiler::helios {
 			(*override)(ctx);
 			return;
 		}
-		ctx.logInt(getCoercionError(ctx, reason, source_symbol_type, expected_type, source_position)
-		);
+		ctx.logInt(getCoercionError(ctx, failed, source_position, expected_position));
 	}
 
 	void logNoMatchingExpectedTypeFailure(
-		query::Context&                           ctx,
-		const tsh::SymbolType<>&                  source_symbol_type,
-		const std::vector<tsh::SymbolType<>>&     expected_types,
-		const std::vector<InvalidCoercionReason>& failure_reasons,
-		dia_int::StablePosition                   source_position
+		query::Context&              ctx,
+		const std::vector<Coercion>& failed_coercions,
+		dia_int::StablePosition      source_position
 	) {
-		CORE_ASSERT(
-			expected_types.size() == failure_reasons.size(),
-			"Every expected type needs its own coercion failure reason."
-		);
+		CORE_ASSERT(not failed_coercions.empty(), "Called with empty failed coercions.");
 
 		auto error = makeBox<NoMatchingExpectedTypeError>(
-			source_position, makeBox<InteractiveType>(ctx, source_symbol_type)
+			source_position, makeBox<InteractiveType>(ctx, failed_coercions.at(0).validated_from)
 		);
 
 		// Every accepted type was tried, so each of them gets an explore link pointing to the error
 		// explaining why the coercion to it failed.
-		for (usize i = 0; i < expected_types.size(); i++)
+		for (auto& coercion: failed_coercions)
 			error->addExploreAcceptedType(
-				expected_types[i].toString(),
-				getCoercionError(
-					ctx, failure_reasons[i], source_symbol_type, expected_types[i], source_position
-				)
+				coercion.to.toString(), getCoercionError(ctx, coercion, source_position)
 			);
 
 		ctx.logInt(std::move(error));

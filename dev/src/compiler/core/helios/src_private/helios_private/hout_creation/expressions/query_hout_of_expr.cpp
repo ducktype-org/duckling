@@ -937,28 +937,22 @@ namespace compiler::helios {
 		query::Context&                                  ctx,
 		const pst::GenericPSTQueryKey<pst::ExprElement>& pst_expr,
 		const tsh::SymbolType<>                          expected_type,
+		base::Optional<dia_int::StablePosition>          expected_position,
 		CoercionErrorOverrides                           error_overrides
 	) {
 		auto expr_hout_qresult = ctx.query<QueryHoutOfExpr>({ pst_expr.element });
 
 		UNPACK_QRESULT_CREF_TO_BOX(CRef<code::Expr> expr_hout =, expr_hout_qresult);
 
-		const auto source_symbol_type = expr_hout->expression_type.getSymbolType();
-		const auto source_position    = pst_expr.element.unlock(ctx)->getStablePosition();
-		const auto coercion_qresult   = canCoerce(ctx, expr_hout->expression_type, expected_type);
-		if (coercion_qresult.hasFailed()) return query::Failed();
+		const auto source_position = pst_expr.element.unlock(ctx)->getStablePosition();
+		UNPACK_QRESULT(
+			auto coercion_result =, canCoerce(ctx, expr_hout->expression_type, expected_type)
+		);
 
-		const auto& coercion_result = coercion_qresult.valueOrThrow();
-		if (coercion_result.isValid())
-			return coercion_result.getCoercion().coerceFromRef(ctx, expr_hout);
+		if (coercion_result.isValid()) return coercion_result.coerceFromRef(ctx, expr_hout);
 
 		logCoercionFailure(
-			ctx,
-			coercion_result.getInvalidReason(),
-			source_symbol_type,
-			expected_type,
-			source_position,
-			std::move(error_overrides)
+			ctx, coercion_result, source_position, expected_position, std::move(error_overrides)
 		);
 		return query::Failed();
 	}
@@ -976,26 +970,21 @@ namespace compiler::helios {
 
 		UNPACK_QRESULT_CREF_TO_BOX(CRef<code::Expr> expr_hout =, expr_hout_qresult);
 
-		std::vector<InvalidCoercionReason> failure_reasons;
-		failure_reasons.reserve(expected_types.size());
+		std::vector<Coercion> failures;
+		failures.reserve(expected_types.size());
 
 		for (const tsh::SymbolType<>& expected_type: expected_types) {
 			const auto coercion_qresult = canCoerce(ctx, expr_hout->expression_type, expected_type);
 			if (coercion_qresult.hasFailed()) return query::Failed();
 
 			const auto& coercion_result = coercion_qresult.valueOrThrow();
-			if (coercion_result.isValid())
-				return coercion_result.getCoercion().coerceFromRef(ctx, expr_hout);
+			if (coercion_result.isValid()) return coercion_result.coerceFromRef(ctx, expr_hout);
 
-			failure_reasons.push_back(coercion_result.getInvalidReason());
+			failures.push_back(coercion_result);
 		}
 
 		logNoMatchingExpectedTypeFailure(
-			ctx,
-			expr_hout->expression_type.getSymbolType(),
-			expected_types,
-			failure_reasons,
-			pst_expr.element.unlock(ctx)->getStablePosition()
+			ctx, failures, pst_expr.element.unlock(ctx)->getStablePosition()
 		);
 		return query::Failed();
 	}
@@ -1011,7 +1000,7 @@ namespace compiler::helios {
 		const auto source_position = element.unlock(ctx)->getStablePosition();
 
 		auto maybe_coerced = coerceFromBox(
-			ctx, std::move(expr_hout), expected_type, source_position, std::move(error_overrides)
+			ctx, std::move(expr_hout), expected_type, source_position, {}, std::move(error_overrides)
 		);
 		if (maybe_coerced.has_value()) return std::move(maybe_coerced.value());
 		return query::Failed();

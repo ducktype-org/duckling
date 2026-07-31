@@ -30,11 +30,13 @@ description:
 
 
 pointer_messages:
-  cause:
+  given:
     priority: 1
     type: "error"
-    content:
-      - "here"
+    content: 
+      - "Given `"
+      - param: "given_type"
+      - '`'
 
 explore_links:
   accepted_type:
