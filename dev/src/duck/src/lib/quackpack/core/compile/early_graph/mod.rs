@@ -2,8 +2,6 @@
 
 use std::collections::{HashMap, HashSet};
 
-use itertools::Itertools;
-
 use crate::quackpack::core::compile::compiler_package::CompilerPackage;
 use crate::quackpack::core::compile::missing_depenendcy_in_graph_message;
 use crate::quackpack::core::identity::Identity;

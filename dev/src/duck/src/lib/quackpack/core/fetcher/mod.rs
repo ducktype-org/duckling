@@ -59,10 +59,9 @@ impl<'duck> Fetcher<'duck> {
         let download_cache_path = ctx.duck_home().downloads();
         download_cache_path.mkdir()?;
         debug!(
-            "metadata is at `{}`, artifacts are at `{}`, and downloads are at `{}`",
-            metadata_path.display(),
-            artifacts_cache_path.display(),
-            download_cache_path.display()
+            metadata = %metadata_path.display(),
+            artifacts = %artifacts_cache_path.display(),
+            downloads = %download_cache_path.display(),
         );
         let ducknest_client = ducknest::DucknestClient::new(ctx);
         let cache = cache::ManifestCache::new(cache::CacheLocation::Path(metadata_path.as_path()))?;

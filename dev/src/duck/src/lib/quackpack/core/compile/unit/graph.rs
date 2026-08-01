@@ -61,8 +61,7 @@ impl UnitGraph {
 #[instrument(skip_all)]
 pub fn lower_early_graph(graph: EarlyGraph, bcx: &BuildContext<'_, '_>) -> UnitGraph {
     let (identity_to_id, sorted_identities) = build_ids_map(&graph);
-    debug!(?identity_to_id);
-    debug!(?sorted_identities);
+    debug!(?identity_to_id, ?sorted_identities);
 
     let (packages, graph) = graph.into_inner();
     let mut packages = packages.into_inner();

@@ -26,7 +26,7 @@ use std::sync::LazyLock;
 
 use regex::{Captures, Regex};
 use serde::Deserialize;
-use tracing::debug;
+use tracing::{debug, trace};
 
 use crate::quackpack::core::ParseMode;
 use crate::quackpack::core::manifest::parse::manifest::parse;
@@ -44,7 +44,7 @@ pub static UNCLOSED_FRONTMATTER_REGEX: LazyLock<Regex> =
 ///
 /// Script doesn't have to have a frontmatter; in that case, a default will be returned.
 pub fn parse_frontmatter(path: &Path, ctx: &DuckContext) -> QuackResult<FrontMatter> {
-    debug!("starting parsing...");
+    trace!("starting parsing");
     parse_inner(path, ctx).with_context(|| {
         format!(
             "when trying to parse the frontmatter of the script at `{}`",
@@ -130,9 +130,9 @@ fn resolve_import_in_schema(
 ) -> QuackResult<ManifestSchema> {
     if let Some(ref import) = schema.import {
         debug!(
-            "script at `{}` imports frontmatter at `{}`",
-            script_path.display(),
-            import.display()
+            script = %script_path.display(),
+            import = %import.display(),
+            "imports a frontmatter",
         );
         if !schema.is_just_import_or_empty() {
             let mut err = qp_err!(

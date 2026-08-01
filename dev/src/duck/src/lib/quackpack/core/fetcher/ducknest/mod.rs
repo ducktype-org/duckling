@@ -4,7 +4,7 @@ use std::path::Path;
 
 use endpoints::UrlExt;
 use http::{HeaderValue, header};
-use tracing::debug;
+use tracing::{debug, info};
 use url::Url;
 
 use super::http::HttpClient;
@@ -41,12 +41,13 @@ impl<'duck> DucknestClient<'duck> {
         &self,
         package: &types::PackageWithUrl,
     ) -> QuackResult<registry::Manifest> {
-        debug!("fetching...");
+        debug!("fetching");
         let url = package.url.for_exact_metadata(&package.into())?;
         let request = create_get_request(&url)?;
 
         let response = self.client.request(request)?;
         let data = response.deserialize_json()?;
+        info!("fetched");
         Ok(data)
     }
 
@@ -57,13 +58,14 @@ impl<'duck> DucknestClient<'duck> {
         url: &Url,
         package: StrId,
     ) -> QuackResult<types::MultiMetadata> {
-        debug!("fetching...");
+        debug!("fetching");
         let url = url.for_multi_metadata(package.as_str())?;
 
         let request = create_get_request(&url)?;
 
         let response = self.client.request(request)?;
         let data = response.deserialize_json()?;
+        info!("fetched");
         Ok(data)
     }
 
@@ -75,7 +77,7 @@ impl<'duck> DucknestClient<'duck> {
         schema: &registry::Manifest,
         path: &Path,
     ) -> QuackResult<()> {
-        debug!("publishing...");
+        debug!("publishing");
         qp_bail_internal!("publishing is not yet implemented")
     }
 
@@ -86,30 +88,34 @@ impl<'duck> DucknestClient<'duck> {
         package: &types::PackageWithUrl,
         mut target: LockedFile,
     ) -> QuackResult<()> {
-        debug!("fetching...");
+        debug!("fetching");
         let url = package.url.for_blob(&package.into())?;
         let request = create_get_request(&url)?;
 
         let response = self.client.request(request)?;
 
+        info!("fetched");
+        debug!("saving response to file");
         target
             .write_all(response.body())
             .with_context(|| format!("failed to write to `{}`", target.path().display()))?;
         target
             .flush()
             .with_context(|| format!("failed to flush `{}`", target.path().display()))?;
+        info!("saved to file");
         Ok(())
     }
 
     /// Search the Ducknest instance for all packages that match the provided query.
     #[tracing::instrument(skip(self))]
     pub fn search(&self, url: &Url, query: &str) -> QuackResult<types::SearchResult> {
-        debug!("searching...");
+        debug!("searching");
         let url = url.for_search(query)?;
         let request = create_get_request(&url)?;
 
         let response = self.client.request(request)?;
         let data = response.deserialize_json()?;
+        info!("got search response");
         Ok(data)
     }
 }
@@ -128,7 +134,7 @@ fn create_get_request(url: &Url) -> QuackResult<Request> {
 }
 
 fn create_http_request(url: &Url, method: http::Method, body: Vec<u8>) -> QuackResult<Request> {
-    debug!(%method, %url, "making an `{method}` request for `{url}`");
+    debug!(%method, %url, ?body, "building a request");
     http::Request::builder()
         .uri(url.as_str())
         .method(method)
