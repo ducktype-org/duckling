@@ -43,6 +43,5 @@ pointer_messages:
     priority: 1
     type: "error"
     content: 
-      - "Expected `"
+      - "Expects `"
       - param: "expected_type"
-      - '` here'
