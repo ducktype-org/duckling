@@ -1,3 +1,4 @@
+use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 
 use tracing::debug;
@@ -13,21 +14,20 @@ use crate::{QuackResult, QuackResultContext};
 impl SolverFreeze {
     /// Fetches manifests of the packages mentioned in the freeze (but not the root package),
     /// to later check whether their dependencies are still satisfied inside the freeze.
-    pub fn get_prev_freeze_manifests<Access: GitAccess>(
+    pub async fn get_prev_freeze_manifests<Access: GitAccess>(
         &self,
-        gatherer: &mut Gatherer<'_, '_, '_, Access>,
+        gatherer: &Gatherer<'_, '_, Access>,
     ) -> QuackResult<HashMap<PackageId, Box<Manifest>>> {
-        let mut tasks = vec![];
-        let mut errors = ErrorsLogger::default();
+        let mut results = vec![];
+        let errors = RefCell::new(ErrorsLogger::default());
         for pkg in self.package_freezes.keys() {
             if *pkg == self.main_pkg {
                 continue;
             }
             if let Ok(request) = pkg.create_manifest_request() {
-                tasks.push(gatherer.fetch(request, &mut errors));
+                results.push(gatherer.fetch(request, &errors).await);
             }
         }
-        let results = tasks;
         let mut manifests = HashMap::new();
         for fetch_response in results {
             let fetch_response = fetch_response?;
