@@ -25,10 +25,11 @@ pub struct CleanOutput {
 }
 
 /// Delete a virtual environment from storage.
+#[tracing::instrument(skip_all, fields(root = %storage_root.display(), id = %venv.to_venv_id()))]
 pub fn delete_venv(ctx: &DuckContext, storage_root: &Path, venv: impl ToVenvId) -> QuackResult<()> {
     let storage = paths::Storage::new(storage_root);
     let venv_id = venv.to_venv_id();
-    debug!(id = %venv_id, "deleting venv");
+    debug!("deleting venv");
 
     let _sync_lock = {
         // First context is for IO results, second for unpacking Option (None = would block).
@@ -46,13 +47,14 @@ pub fn delete_venv(ctx: &DuckContext, storage_root: &Path, venv: impl ToVenvId) 
     storage.venv_dir(venv_id).rmtree()?;
     storage.sync_locks_path().join(venv_id).rm()?;
     data_lock.path().rm()?;
-    info!(id = %venv_id, "deleted venv");
+    info!("deleted venv");
     ctx.console()
         .info(format!("successfully removed venv `{venv_id}`"))?;
     Ok(())
 }
 
 /// Remove orphaned packages and expired temporary virtual environments from storage.
+#[tracing::instrument(skip_all, fields(root = %storage_root.display()))]
 pub fn clean_storage(ctx: &DuckContext, storage_root: &Path) -> QuackResult<CleanOutput> {
     debug!(root = %storage_root.display(), "cleaning storage");
     let temporary_lifetime = ctx.duck_cfg().storage_tmp_lifetime()?;
@@ -107,7 +109,7 @@ pub fn clean_storage(ctx: &DuckContext, storage_root: &Path) -> QuackResult<Clea
 
 /// Remove a single venv from a storage.
 /// A helper for [`clean_storage`].
-#[tracing::instrument(skip_all, fields(?temporary_lifetime))]
+#[tracing::instrument(skip_all, fields(?temporary_lifetime, %now, id = %dir.file_name().to_venv_id()))]
 fn clean_venv_from_storage(
     dir: DirEntry,
     storage: &Storage,
@@ -118,18 +120,18 @@ fn clean_venv_from_storage(
     ctx: &DuckContext,
 ) -> QuackResult<()> {
     let venv_id = dir.file_name().to_venv_id();
-    debug!(id = %venv_id, "removing venv");
+    debug!("removing venv");
     let venv = Venv::fix_and_load(storage, venv_id, ctx)?;
     let Some(mut venv) = venv else {
-        error!(id = %venv_id, "failed to fix and load venv");
-        warn!(id = %venv_id, "will clean regardless of what");
+        error!("failed to fix and load venv");
+        warn!("will clean regardless of what");
         dir.path().rmtree().with_context(|| {
             format!(
                 "while removing venv `{venv_id}` at `{}`",
                 dir.path().display()
             )
         })?;
-        info!(id = %venv_id, "removed venv");
+        info!("removed venv");
         removed_venvs.push(venv_id);
         return Ok(());
     };
@@ -143,37 +145,33 @@ fn clean_venv_from_storage(
     if data.last_synchronization() > now {
         data.set_last_synchronization(now);
         requires_save = true;
-        debug!(id = %venv_id, "requires_save, because it's too old");
+        debug!("requires_save, because it's too old");
     }
     let is_too_old = data.last_synchronization() + temporary_lifetime < now;
     let should_remove_venv = data.is_ephemeral() && is_too_old;
     debug!(
-        id = %venv_id,
         ephemeral = %data.is_ephemeral(),
-        last_synchronization = ?data.last_synchronization(),
-        ?now,
+        last_synchronization = %data.last_synchronization(),
+        %now,
         %is_too_old,
         %should_remove_venv,
     );
     if should_remove_venv {
-        debug!(
-        id = %venv_id,
-            "removing venv from the shared storage, as it's too old and is ephemeral"
-        );
+        debug!("removing venv from the shared storage, as it's too old and is ephemeral");
         dir.path().rmtree().with_context(|| {
             format!(
                 "while removing venv `{venv_id}` at `{}`",
                 dir.path().display()
             )
         })?;
-        info!(id = %venv_id, "removed venv");
+        info!("removed venv");
         removed_venvs.push(venv_id);
         return Ok(());
     }
     // We're done mutating data, let's make borrow checker happy.
     let data = venv.data();
     if requires_save {
-        debug!(id = %venv_id, "saving venv");
+        debug!("saving venv");
         venv.save_to(storage, ctx)?;
     }
     all_deps.extend(data.freeze().dependencies().iter().filter_map(|dep| {

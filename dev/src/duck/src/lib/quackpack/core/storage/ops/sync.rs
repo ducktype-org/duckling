@@ -128,6 +128,7 @@ pub fn sync(
 /// Checks if the venv for which the sync is run was previously synced from a different location,
 /// and there is a manifest in that location.
 /// This would override that manifest's venv.
+#[tracing::instrument(skip_all, fields(%id))]
 fn check_if_overwrites(
     pcx: &PackageContext<'_>,
     venv: Option<&Venv>,
@@ -274,7 +275,7 @@ fn fetch_source_codes(
 
 /// Helper for [`fetch_source_codes`].
 /// Fetches the source code of a package if it is not yet stored in the storage.
-#[tracing::instrument(skip_all)]
+#[tracing::instrument(skip_all, fields(?pkg))]
 fn fetch_source_code(
     storage: &Storage,
     fetcher: &mut Fetcher<'_>,
@@ -321,9 +322,9 @@ fn fetch_source_code(
                     }
                     Err(e) => {
                         if attempt != MAX_BLOB_RETRY_COUNT {
-                            debug!(?pkg, "retrying fetch...");
+                            debug!("retrying fetch...");
                         } else {
-                            error!(?pkg, error = %e, "failed to fetch");
+                            error!(error = %e, "failed to fetch");
                         }
                     }
                 }
