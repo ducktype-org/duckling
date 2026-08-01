@@ -240,7 +240,7 @@ macro_rules! try_curl {
         match $expr {
             Ok(value) => value,
             Err(err) => {
-                ::tracing::error!(target = "curl", error = ?err, $($ctx)+);
+                ::tracing::error!(target = "curl", error = %err, $($ctx)+);
                 return Err(err.into());
             }
         }

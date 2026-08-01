@@ -287,7 +287,7 @@ impl Worker {
             // https://curl.se/libcurl/c/curl_multi_wait.html.
                 && let Err(e) = self.multi.wait(&mut [], delay)
             {
-                error!(target = "curl", "failed to wait: {e}");
+                error!(target = "curl", error = %e, "failed to wait");
                 self.fail_all_connections(&e);
             }
             return ShouldCheckForClosedChannel::No;
