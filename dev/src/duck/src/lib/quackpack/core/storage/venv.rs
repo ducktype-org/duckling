@@ -53,8 +53,8 @@
 use std::fmt;
 use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::time::SystemTime;
 
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use tracing::{debug, trace};
 
@@ -105,6 +105,7 @@ impl fmt::Display for CorruptedVenvError {
 impl std::error::Error for CorruptedVenvError {}
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq, Hash)]
+#[serde(rename_all = "kebab-case")]
 /// State of virtual environment in the storage. Stores the freeze for the given
 /// virtual environment, copy of manifest's metadata, and additional info
 /// required for storage functioning: last location and access info.
@@ -112,8 +113,8 @@ pub struct VenvData {
     freeze: freeze::VenvFreeze,
     is_ephemeral: bool,
     last_known_location: PathBuf,
-    last_synchronization: SystemTime,
-    last_access: SystemTime,
+    last_synchronization: DateTime<Utc>,
+    last_access: DateTime<Utc>,
 }
 
 impl VenvData {
@@ -122,8 +123,8 @@ impl VenvData {
         freeze: freeze::VenvFreeze,
         is_ephemeral: bool,
         last_known_location: PathBuf,
-        last_synchronization: SystemTime,
-        last_access: SystemTime,
+        last_synchronization: DateTime<Utc>,
+        last_access: DateTime<Utc>,
     ) -> Self {
         Self {
             freeze,
@@ -231,29 +232,29 @@ impl VenvData {
     }
 
     /// Get the last access time of this venv.
-    pub fn last_access(&self) -> SystemTime {
+    pub fn last_access(&self) -> DateTime<Utc> {
         self.last_access
     }
 
     /// Set the last access time of this venv.
-    pub fn set_last_access(&mut self, last_access: SystemTime) {
+    pub fn set_last_access(&mut self, last_access: DateTime<Utc>) {
         self.last_access = last_access;
     }
 
     /// Get the last modification time of this venv.
-    pub fn last_synchronization(&self) -> SystemTime {
+    pub fn last_synchronization(&self) -> DateTime<Utc> {
         self.last_synchronization
     }
 
     /// Set the last modification time of this venv.
-    pub fn set_last_synchronization(&mut self, last_synchronization: SystemTime) {
+    pub fn set_last_synchronization(&mut self, last_synchronization: DateTime<Utc>) {
         self.last_synchronization = last_synchronization;
     }
 
     /// Update the last access and save this data to the disk.
     pub fn save_new_last_access(
         &mut self,
-        last_access: SystemTime,
+        last_access: DateTime<Utc>,
         path: &Path,
     ) -> QuackResult<()> {
         self.set_last_access(last_access);
@@ -349,7 +350,7 @@ impl Venv {
         storage: &Storage,
         venv_id: VenvId,
         ctx: &DuckContext,
-    ) -> QuackResult<Option<(Self, SystemTime)>> {
+    ) -> QuackResult<Option<(Self, DateTime<Utc>)>> {
         trace!(id = %venv_id, "loading venv");
         let _lock = storage
             .data_locks()
@@ -368,7 +369,7 @@ impl Venv {
     fn fix_and_load_with_lock_held(
         storage: &Storage,
         venv_id: VenvId,
-    ) -> QuackResult<Option<(Self, SystemTime)>> {
+    ) -> QuackResult<Option<(Self, DateTime<Utc>)>> {
         // NOTE: when external entity changes the storage disregarding the rules, we have
         // toctou here and an exception might be thrown later. We ignore that to keep sanity.
         if !storage.venv_dir(venv_id).is_dir() {
@@ -393,7 +394,7 @@ impl Venv {
             if let Some(venv) = data {
                 let mut this = Self::new(venv_id, venv);
                 let previous_now = this.data().last_access();
-                this.data_mut().set_last_access(SystemTime::now());
+                this.data_mut().set_last_access(Utc::now());
                 if let Err(e) = this.save_to_with_lock_held(storage) {
                     debug!("failed to update last access time: {e} ({e:?})");
                     this.data_mut().set_last_access(previous_now);
@@ -420,7 +421,7 @@ impl Venv {
                 backup_metadata.copy_to(metadata)?;
                 let mut this = Self::new(venv_id, venv);
                 let previous_now = this.data().last_access();
-                this.data_mut().set_last_access(SystemTime::now());
+                this.data_mut().set_last_access(Utc::now());
                 if let Err(e) = this.save_to_with_lock_held(storage) {
                     debug!("failed to update last access time: {e} ({e:?})");
                     this.data_mut().set_last_access(previous_now);

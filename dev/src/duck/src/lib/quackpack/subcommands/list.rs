@@ -1,6 +1,7 @@
 use std::cmp::Ordering;
 use std::path::PathBuf;
-use std::time::SystemTime;
+
+use chrono::{DateTime, Utc};
 
 use crate::quackpack::core::storage::paths::Storage;
 use crate::quackpack::core::storage::venv::Venv;
@@ -66,7 +67,7 @@ pub fn list(opts: ListOptions<'_>) -> QuackResult<()> {
         storage_path,
     } = opts;
     let storage = Storage::new(storage_path);
-    let venvs_list: Vec<(Venv, SystemTime)> = list_venvs(storage.root(), ctx)
+    let venvs_list: Vec<(Venv, DateTime<Utc>)> = list_venvs(storage.root(), ctx)
         .context("when listing the venvs")?
         .into_values()
         .collect();

@@ -3,8 +3,8 @@
 use std::fs::File;
 use std::io;
 use std::path::PathBuf;
-use std::time::SystemTime;
 
+use chrono::Utc;
 use flate2::read::GzDecoder;
 use tar::Archive;
 use tracing::{debug, error};
@@ -91,7 +91,7 @@ pub fn sync(
     let _was_anything_installed =
         fetch_source_codes(&storage, &mut fetcher, &mut git_access, pkgs)?;
 
-    let now = SystemTime::now();
+    let now = Utc::now();
     let venv = if let Some(mut venv) = venv {
         let data = venv.data_mut();
         data.set_last_synchronization(now);
