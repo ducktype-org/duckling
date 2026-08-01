@@ -371,8 +371,7 @@ namespace vm {
 			u64 first_arg_idx = block_ref_stack_count - arg_count;
 
 			// Create VMValue objects from local arguments. The argument's actual block type is
-			// used (verification guarantees it matches what the builtin expects); this also
-			// supports builtins with polymorphic parameters, e.g. the `cptr` copy builtins.
+			// used (verification guarantees it matches what the builtin expects).
 			for (u64 i = 0; i < arg_count; i++) {
 				auto     block     = Ref(frame->local_block_ref_stack_base[first_arg_idx + i]);
 				TypeCRef real_type = Memory::getBlockType(block);
@@ -578,15 +577,15 @@ namespace vm {
 
 			while (callee_frame->local_block_ref_stack_end
 			       > callee_frame->local_block_ref_stack_base) {
-				auto block           = Ref(callee_frame->local_block_ref_stack_end[-1]);
-				u64  block_ref_count = u64(
+				auto block       = Ref(callee_frame->local_block_ref_stack_end[-1]);
+				u64  block_count = u64(
                     callee_frame->local_block_ref_stack_end
                     - callee_frame->local_block_ref_stack_base
                 );
 
 				// We're returning from a non-void function, so the last `ret_count` blocks on the
 				// stack are the return values. They are being used by the caller so we don't free them.
-				if (block_ref_count > ret_count) {
+				if (block_count > ret_count) {
 					thread.process_memory.freeBlockData(block);
 					thread.process_memory.decreaseBlockRefcount(block);
 				}
@@ -897,6 +896,60 @@ namespace vm {
 			thread.process_memory.copyPointedData(dst_pointer, src_pointer, type);
 		}
 		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(cptrLoad_bany_p64)(FUNCTION_ARGS) {
+		{
+			auto dst_block = READ_BLOCK_REF_FROM_ARG(instr->arg0);
+			// This access is the only way to do this, because we need to move raw bytes.
+			// Also, ffi types are by definition trivially copyable, so a simply memcpy
+			// is fine.
+			// It is safe, because the block is guaranteed to exist - it is a variable's block.
+			auto       view = thread.process_memory.getBlockViewUnsafe(dst_block);
+			const auto src  = READ_FROM_PLACE_ARG(void*, instr->arg1);
+			assertCPtrNotNull(src);
+			std::memcpy(view.getBegin(), src, view.size());
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(cptrStore_p64_bany)(FUNCTION_ARGS) {
+		{
+			const auto dst       = READ_FROM_PLACE_ARG(void*, instr->arg0);
+			auto       src_block = READ_BLOCK_REF_FROM_ARG(instr->arg1);
+			// This access is the only way to do this, because we need to move raw bytes.
+			// Also, ffi types are by definition trivially copyable, so a simply memcpy
+			// is fine.
+			// It is safe, because the block is guaranteed to exist - it is a variable's block.
+			auto view = thread.process_memory.getBlockViewUnsafe(src_block);
+			assertCPtrNotNull(dst);
+			std::memcpy(dst, view.getBegin(), view.size());
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(cptrRead_pptr_p64)(FUNCTION_ARGS) {
+		{
+			const auto size = instr[1].arg0;
+			const auto dst  = READ_FROM_PLACE_ARG(Pointer, instr->arg0);
+			const auto src  = READ_FROM_PLACE_ARG(void*, instr->arg1);
+			assertCPtrNotNull(src);
+			auto view = Memory::getPointerData(dst, size);
+			std::memcpy(view.getBegin(), src, size);
+		}
+		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(cptrWrite_p64_pptr)(FUNCTION_ARGS) {
+		{
+			const auto size = instr[1].arg0;
+			const auto dst  = READ_FROM_PLACE_ARG(void*, instr->arg0);
+			const auto src  = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
+			assertCPtrNotNull(dst);
+			auto view = Memory::getPointerData(src, size);
+			std::memcpy(dst, view.getBegin(), size);
+		}
+		FUNCTION_CONT(2);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(structLea_pptr_pptr)(FUNCTION_ARGS) {

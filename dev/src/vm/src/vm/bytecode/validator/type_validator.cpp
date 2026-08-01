@@ -317,8 +317,10 @@ namespace {
 					throw UnknownSubtypeError(pointer, pointer.inner);
 			}
 			variant_case(CPointerType, cpointer) {
-				if (cpointer.inner.has_value() && !tod_types.contains(*cpointer.inner))
-					throw UnknownSubtypeError(cpointer, *cpointer.inner);
+				if (cpointer.inner.has_value()) {
+					if (!tod_types.contains(*cpointer.inner))
+						throw UnknownSubtypeError(cpointer, *cpointer.inner);
+				}
 			}
 			variant_case(FixedSizeTableType, fixed_table) {
 				if (!tod_types.contains(fixed_table.inner))
