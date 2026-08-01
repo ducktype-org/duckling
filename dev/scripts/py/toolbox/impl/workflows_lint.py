@@ -12,7 +12,7 @@ import yaml
 
 from .helpers import (
     click_log,
-    log_info,
+    log_good,
 )
 
 # impl/ -> toolbox/ -> py/ -> scripts/ -> dev/ -> repo root
@@ -45,5 +45,5 @@ def workflows_lint_impl() -> bool:
             ok = False
 
     if ok:
-        log_info(f"All {len(workflow_files)} workflow file(s) parsed successfully")
+        log_good(f"All {len(workflow_files)} workflow file(s) parsed successfully")
     return ok
