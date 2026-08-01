@@ -90,7 +90,7 @@ pub(crate) fn parse(
             let Some(ref name) = metadata.name else {
                 qp_bail!("missing the obligatory key `metadata.name`")
             };
-            debug!("package name is `{name}`, version is `{version}`");
+            debug!(package_name = %name, package_version = %version);
 
             {
                 let mut guard1 = scope.push("metadata".to_string());

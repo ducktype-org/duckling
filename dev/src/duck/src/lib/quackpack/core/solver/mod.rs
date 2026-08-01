@@ -31,7 +31,7 @@ use core::fmt;
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 
-use tracing::debug;
+use tracing::{debug, info};
 
 use crate::quackpack::core::fetcher::Fetcher;
 use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
@@ -153,7 +153,7 @@ impl<'duck, 'ctx> SolverGathererData<'duck, 'ctx> {
             self.mode,
         )
         .await?;
-        debug!("gathered {gathered_info:?}");
+        info!(?gathered_info, "finished gathering");
         let solver_input = SolverInput::from_freeze_and_gathered_info(
             &maximal_valid_freeze,
             prev_freeze_manifests,

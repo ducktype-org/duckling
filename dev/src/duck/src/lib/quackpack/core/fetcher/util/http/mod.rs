@@ -87,8 +87,10 @@ fn http_headers_to_curl_list(headers: &header::HeaderMap) -> Result<easy::List, 
             Ok(value) => value,
             Err(err) => {
                 error!(
-                    "while converting the value of the header `{header}` ({}) to the str: {err}",
-                    String::from_utf8_lossy(value.as_bytes())
+                    error = %err,
+                    %header,
+                    ?value,
+                    "failed to convert value to utf8"
                 );
                 continue;
             }
@@ -174,10 +176,7 @@ fn set_http_version_on_curl<H>(
                 )
             }
         }
-        _ => error!(
-            target = "curl",
-            "unknown HTTP version: `{version:?}`, ignoring..."
-        ),
+        _ => debug!(target = "curl", ?version, "unknown HTTP version"),
     };
     Ok(())
 }
@@ -185,7 +184,7 @@ fn set_http_version_on_curl<H>(
 /// Helper for checking HTTP status codes.
 pub fn check_http_status_code(response: &Response, path: &http::Uri) -> QuackResult<()> {
     let code = response.status().as_u16();
-    debug!("got HTTP code {code}");
+    debug!(%code, "got HTTP response");
     let description = match code {
         100..200 => "informational",
         200..300 => return Ok(()),
@@ -205,10 +204,7 @@ pub fn try_parse_header_value(data: &[u8]) -> Option<(&str, &str)> {
     let data = data
         .strip_suffix(HTTP_DELIMITER.as_bytes())
         .unwrap_or_else(|| {
-            error!(
-                "HTTP Header `{}` doesn't end in `\\r\\n",
-                String::from_utf8_lossy(data)
-            );
+            debug!(?data, "doesn't end in `\\r\\n`",);
             data
         });
     if data.is_empty() {

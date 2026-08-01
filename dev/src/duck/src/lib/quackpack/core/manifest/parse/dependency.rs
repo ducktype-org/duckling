@@ -1,7 +1,7 @@
 //! Parsing of the {dev-,}dependencies fields in a manifest.
 use std::path::Path;
 
-use tracing::{debug, trace};
+use tracing::debug;
 
 use super::{ScopeGuard, source};
 use crate::quackpack::core::valid_package_name::validate_package_name;
@@ -48,7 +48,7 @@ fn parse_single_dependency(
     ctx: &DuckContext,
     mut scope: ScopeGuard<'_>,
 ) -> QuackResult<Dependency> {
-    trace!(?schema, "parsing a dependency");
+    debug!(?schema, "parsing a dependency");
     let name = parse_name(schema).unwrap_or(manifest_name);
     let alias = if name == manifest_name {
         None
@@ -105,7 +105,7 @@ fn parse_features(
     debug!(?schema);
     let mut result = vec![];
     for feature in schema {
-        debug!("parsing {feature:?}");
+        debug!(?feature, "parsing feature");
         match feature {
             FeatureSchema::Simple(name) => {
                 result.push(DependencyFeature::new(name.into(), None));

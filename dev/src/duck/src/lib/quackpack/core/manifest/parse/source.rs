@@ -29,7 +29,7 @@ pub(crate) fn parse(
 ) -> QuackResult<Source> {
     debug!(?schema);
     let Some(ref source) = schema.source else {
-        debug!("missing the source, falling back to the default registry...?");
+        debug!("missing the source, falling back to the default registry");
         if schema.version.is_some() {
             let url = ctx.duck_cfg().registry_url()?;
             return Ok(Source::for_registry(url));
@@ -96,7 +96,7 @@ pub(crate) fn parse(
             debug!("found a local path source");
             check_no_git(source, &mut scope)?;
             check_no_registry(source, &mut scope)?;
-            debug!("manifest path is `{}`", root.display());
+            debug!(path_in_manifest = %root.display(), "path specified in the manifest");
             let dir_root = resolve_path_maybe_relative_to_dir(root, package_root, ctx)?;
             Source::for_local(&dir_root)?
         }

@@ -123,7 +123,7 @@ impl<'duck> GithubApiClient<'duck> {
 
     /// Helper for [`Self::request`].
     fn create_http_request(url: &Url, method: http::Method, body: Vec<u8>) -> QuackResult<Request> {
-        debug!(%method, %url, "making an `{method}` request for `{url}`");
+        debug!(%method, %url, ?body, "building a request");
         http::Request::builder()
             .uri(url.as_str())
             .method(method)

@@ -3,8 +3,8 @@
 use std::fs::File;
 use std::io;
 use std::path::PathBuf;
-use std::time::SystemTime;
 
+use chrono::Utc;
 use flate2::read::GzDecoder;
 use futures::executor::block_on;
 use futures::future::join_all;
@@ -92,10 +92,10 @@ pub fn sync(
 
     let _was_anything_installed = fetch_source_codes(&storage, &fetcher, &git_access, pkgs)?;
 
-    let now = SystemTime::now();
+    let now = Utc::now();
     let venv = if let Some(mut venv) = venv {
         let data = venv.data_mut();
-        data.set_last_modification(now);
+        data.set_last_synchronization(now);
         data.set_freeze(new_freeze);
         data.set_last_known_location(pcx.package().root().to_path_buf());
         data.set_ephemeral(venv_config.ephemeral());
@@ -129,6 +129,7 @@ pub fn sync(
 /// Checks if the venv for which the sync is run was previously synced from a different location,
 /// and there is a manifest in that location.
 /// This would override that manifest's venv.
+#[tracing::instrument(skip_all, fields(%id))]
 fn check_if_overwrites(
     pcx: &PackageContext<'_>,
     venv: Option<&Venv>,
@@ -157,7 +158,7 @@ fn check_if_overwrites(
             (replaces, context)
         }
         Err(e) => {
-            error!(path = %dir.display(), "failed to load the package: {e} ({e:?})");
+            error!(path = %dir.display(), error = %e, "failed to load the package");
             if let Some(io_error) = e.downcast_ref_in_chain::<io::Error>() {
                 // Maybe we missed something, check, if package has been moved.
                 let replaces = ![io::ErrorKind::NotFound, io::ErrorKind::NotADirectory]
@@ -243,7 +244,7 @@ fn get_solver_answer(
     let fetcher_lock = pcx.ctx().duck_home().open_fetcher_lockfile(pcx.ctx())?;
     let should_run_engine = block_on(solver.prepare_solving(fetcher, git_access))?;
     drop(fetcher_lock);
-    debug!("will run solver engine: {should_run_engine}");
+    debug!(%should_run_engine);
     match should_run_engine {
         ShouldRunSolverEngine::No(answer) => Ok(answer),
         ShouldRunSolverEngine::Yes(solver) => solver.solve(),
@@ -276,7 +277,7 @@ fn fetch_source_codes(
 
 /// Helper for [`fetch_source_codes`].
 /// Fetches the source code of a package if it is not yet stored in the storage.
-#[tracing::instrument(skip_all)]
+#[tracing::instrument(skip_all, fields(?pkg))]
 async fn fetch_source_code(
     storage: &Storage,
     fetcher: &Fetcher<'_>,
@@ -344,9 +345,9 @@ async fn fetch_package_from_ducknest_with_retries(
             }
             Err(e) => {
                 if attempt != MAX_BLOB_RETRY_COUNT {
-                    debug!(?pkg, "retrying fetch...");
+                    debug!("retrying fetch...");
                 } else {
-                    debug!(?pkg, "failed to fetch: {e}");
+                    error!(error = %e, "failed to fetch");
                 }
             }
         }

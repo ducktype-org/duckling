@@ -3,7 +3,7 @@ use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
 use futures::future::select_all;
-use tracing::debug;
+use tracing::{debug, error, trace};
 
 use crate::quackpack::core::fetcher::Fetcher;
 use crate::quackpack::core::fetcher::types::{FetcherResponse, PackageWithUrl};
@@ -195,7 +195,7 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
         request: PinnedRequest,
         errors: &RefCell<ErrorsLogger>,
     ) -> QuackResult<FetchResponse> {
-        debug!("fetching registry (pinned)");
+        trace!("fetching registry (pinned)");
         if !matches!(request.id.source.kind(), SourceKind::Registry) {
             qp_bail_internal!("tried to make pinned registry fetch for a non-registry source");
         };
@@ -231,7 +231,7 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
                 },
             ))),
             Err(e) => {
-                debug!("failed to fetch: {e}");
+                error!(error = %e, "failed to fetch");
                 errors.borrow_mut().log(e);
                 Ok(FetchResponse::failed_pinned(request.id, request.version))
             }
@@ -248,7 +248,7 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
         real_name: StrId,
         errors: &RefCell<ErrorsLogger>,
     ) -> FetchResponse {
-        debug!("fetching registry (not pinned)");
+        trace!("fetching registry (not pinned)");
         let fetcher_response = match self.fetcher.get_package_all_metadata(url, real_name).await {
             Ok(response) => response,
             Err(e) => {
@@ -281,7 +281,7 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
                 }
                 Err(e) => {
                     // We log errors and filter only good manifests.
-                    debug!("failed to fetch: {e}");
+                    error!(error = %e, "failed to fetch");
                     errors.borrow_mut().log(e);
                 }
             }
@@ -303,7 +303,7 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
         reference: GitReference,
         errors: &RefCell<ErrorsLogger>,
     ) -> FetchResponse {
-        debug!("fetching git");
+        trace!("fetching git");
         // We create a temporary logger to check if `try_get_cached_git` produced any errors.
         let mut tmp_logger = ErrorsLogger::default();
         let cached_git = self.try_get_cached_git(request, url, reference, &mut tmp_logger);
@@ -349,7 +349,7 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
                 self.git_access
                     .store(url, &cloned_pkg.commit_hash, path_where_cloned.path())
         {
-            debug!("failed to store a new git: {e}");
+            error!(error = %e, "failed to store a new git");
             errors.borrow_mut().log(e);
             return FetchResponse::failed_not_pinned(request.id);
         }

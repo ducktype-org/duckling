@@ -148,6 +148,11 @@ namespace vm::code::builders {
 			(pushArg(std::forward<Args>(args)), ...);
 		}
 
+		template<std::ranges::input_range R>
+		void pushArgs(R&& range) {  // NOLINT
+			for (auto&& arg: range) pushArg(std::forward<decltype(arg)>(arg));
+		}
+
 		[[nodiscard]] Instruction build() const;
 	};
 }
