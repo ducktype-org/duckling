@@ -1,5 +1,6 @@
 //! Synchronize a given venv.
 //! This includes: creating a venv, resolving dependencies, downloading them.
+use std::convert::identity;
 use std::fs::File;
 use std::io;
 use std::path::PathBuf;
@@ -30,9 +31,10 @@ use crate::quackpack::core::{
 };
 use crate::util::error::MessageError;
 use crate::util::path_ops_ext::PathOpsExt;
-use crate::{QuackError, QuackResult, QuackResultContext, qp_bail};
+use crate::{QuackError, QuackResult, QuackResultContext};
 
-const MAX_BLOB_RETRY_COUNT: i32 = 3;
+// We want at most 3 calls, therefore we retry 2 times.
+const MAX_BLOB_RETRY_COUNT: u32 = 2;
 
 #[derive(Debug, Clone, Copy)]
 /// Options passed to [`sync`].
@@ -272,7 +274,7 @@ fn fetch_source_codes(
     let fetches = block_on(join_all(fetches));
     drop(fetcher_lock);
     let fetches = fetches.into_iter().collect::<Result<Vec<_>, _>>()?;
-    Ok(fetches.iter().any(|b| *b))
+    Ok(fetches.into_iter().any(identity))
 }
 
 /// Helper for [`fetch_source_codes`].
@@ -284,7 +286,7 @@ async fn fetch_source_code(
     git_access: &StorageGitAccess<'_>,
     pkg: PackageId,
 ) -> QuackResult<bool> {
-    debug!(?pkg);
+    debug!("fetching package");
     let url = pkg.url();
     match pkg.kind() {
         FullKind::Local => Ok(false),
@@ -309,7 +311,14 @@ async fn fetch_source_code(
             if storage.is_package_stored(pkg) {
                 return Ok(false);
             }
-            let blob_path = fetch_package_from_ducknest_with_retries(fetcher, &pkg).await?;
+            let fetcher_package = PackageWithUrl {
+                name: pkg.name(),
+                version: pkg.version(),
+                url: pkg.url(),
+            };
+            let blob_path = fetcher
+                .fetch_package_blob_with_retries(&fetcher_package, MAX_BLOB_RETRY_COUNT)
+                .await?;
             let pkg_dir = storage.pkg_dir(pkg);
             if pkg_dir.exists() {
                 pkg_dir.rm()?;
@@ -323,44 +332,6 @@ async fn fetch_source_code(
             Ok(true)
         }
     }
-}
-
-async fn fetch_package_from_ducknest_with_retries(
-    fetcher: &Fetcher<'_>,
-    pkg: &PackageId,
-) -> QuackResult<PathBuf> {
-    for attempt in 1..=MAX_BLOB_RETRY_COUNT {
-        match try_to_fetch_package_from_ducknest(
-            fetcher,
-            &PackageWithUrl {
-                name: pkg.name(),
-                version: pkg.version(),
-                url: pkg.url(),
-            },
-        )
-        .await
-        {
-            Ok(path) => {
-                return Ok(path);
-            }
-            Err(e) => {
-                if attempt != MAX_BLOB_RETRY_COUNT {
-                    debug!("retrying fetch...");
-                } else {
-                    error!(error = %e, "failed to fetch");
-                }
-            }
-        }
-    }
-
-    qp_bail!("failed to fetch a package {} {}", pkg.name(), pkg.version())
-}
-
-async fn try_to_fetch_package_from_ducknest(
-    fetcher: &Fetcher<'_>,
-    what: &PackageWithUrl,
-) -> QuackResult<PathBuf> {
-    fetcher.fetch_package_blob(what).await
 }
 
 fn make_success_message(pcx: &PackageContext<'_>, id: VenvId) -> QuackResult<()> {

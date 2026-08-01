@@ -7,7 +7,7 @@ use std::cell::RefCell;
 use std::path::PathBuf;
 
 use tempfile::TempDir;
-use tracing::debug;
+use tracing::{debug, error, info};
 use url::Url;
 
 use crate::quackpack::core::GitReference;
@@ -15,7 +15,7 @@ use crate::quackpack::core::fetcher::types::{FetcherResponse, PackageWithUrl};
 use crate::quackpack::schemas::registry;
 use crate::quackpack::util::interned_url::InternedUrl;
 use crate::util::file_locks::FileLockManager;
-use crate::{DuckContext, QuackResult, QuackResultContext, StrId};
+use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail};
 
 pub mod cache;
 pub mod ducknest;
@@ -210,5 +210,32 @@ impl<'duck> Fetcher<'duck> {
     /// Get the [`DuckContext`] used to construct this [`Fetcher`] instance.
     pub fn ctx(&self) -> &DuckContext {
         self.ctx
+    }
+
+    #[tracing::instrument(skip_all, fields(%retries, calls = retries + 1))]
+    /// Fetch a package from ducknest with retries.
+    pub async fn fetch_package_blob_with_retries(
+        &self,
+        pkg: &PackageWithUrl,
+        retries: u32,
+    ) -> QuackResult<PathBuf> {
+        debug!("fetching with retries");
+        let calls = retries + 1;
+        for attempt in 1..=calls {
+            match self.fetch_package_blob(pkg).await {
+                Ok(path) => {
+                    info!(%attempt, "fetched");
+                    return Ok(path);
+                }
+                Err(e) => {
+                    error!(error = %e, "failed to fetch");
+                    if attempt != retries {
+                        debug!(%attempt, "retrying fetch");
+                    }
+                }
+            }
+        }
+
+        qp_bail!("failed to fetch a package {} {}", pkg.name, pkg.version)
     }
 }

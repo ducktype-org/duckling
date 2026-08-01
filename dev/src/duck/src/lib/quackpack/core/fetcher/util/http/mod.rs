@@ -46,7 +46,8 @@ pub fn configure_easy2<H>(
     {
         try_curl!(
             handler.max_redirections(num),
-            "failed to set max-redirections to {num}",
+            %num,
+            "failed to set max-redirections",
         );
     } else {
         try_curl!(
@@ -70,8 +71,8 @@ pub fn configure_easy2<H>(
     try_curl!(handler.http_headers(headers), "failed to set HTTP headers");
     try_curl!(
         handler.url(&request.uri().to_string()),
-        "failed to set url to `{}`",
-        request.uri()
+        url = %request.uri(),
+        "failed to set url",
     );
     set_http_method_on_curl(handler, request.method())?;
     set_http_version_on_curl(handler, request.version())?;
@@ -98,12 +99,15 @@ fn http_headers_to_curl_list(headers: &header::HeaderMap) -> Result<easy::List, 
         if !value.trim().is_empty() {
             try_curl!(
                 list.append(&format!("{header}: {value}")),
-                "failed to append header`{header}: {value}`"
+                %header,
+                %value,
+                "failed to append header",
             );
         } else {
             try_curl!(
                 list.append(&format!("{header};")),
-                "failed to append header `{header};`"
+                %header,
+                "failed to marked header as removed"
             );
         }
     }
@@ -124,8 +128,8 @@ fn set_http_method_on_curl<H>(
         http::Method::PUT => try_curl!(handler.put(true), "failed to set PUT request"),
         _ => try_curl!(
             handler.custom_request(method.as_str()),
-            "failed to set custom request `{}`",
-            method.as_str()
+            %method,
+            "failed to set custom request method",
         ),
     };
     Ok(())
@@ -229,6 +233,8 @@ pub fn response_from_handler(handler: Easy2<Collector>) -> Response {
 }
 
 #[macro_export]
+/// Macro which logs an error in case of an `Err`.
+/// Should be preferred over `?` when used on [`curl`] methods.
 macro_rules! try_curl {
     ($expr:expr, $($ctx:tt)+) => {{
         match $expr {
