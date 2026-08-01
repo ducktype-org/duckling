@@ -180,7 +180,7 @@ fn set_http_version_on_curl<H>(
                 )
             }
         }
-        _ => debug!(target = "curl", ?version, "unknown HTTP version"),
+        _ => warn!(target = "curl", ?version, "unknown HTTP version"),
     };
     Ok(())
 }
