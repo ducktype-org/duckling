@@ -1,6 +1,7 @@
 import core.builtins.*;
 
 extern("C") {
+    # In this file SSE register is floating-point register.
     # Small (8 bytes)  -> x86-64: single INTEGER reg, coerced to `{ i64 }`.
     class Small { x: i32 = 0; y: i32 = 0; }
 
@@ -76,7 +77,7 @@ fun main() -> i64 = {
     builtin_output_i64(narrow_ints::add_bytes(raw_b as i8, 1i8));     # -55
 
     # Variadic calls
-    # One INTEGER and one SSE variadic argument, so `al` must be set on x86-64.
+    # One INTEGER and one SSE variadic argument.
     builtin_output_i64(variadic::sum_varargs_mixed(1i64, 4i64, 2.5));          # 6
 
     # Structs passed by value through `...`.

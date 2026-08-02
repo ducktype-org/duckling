@@ -70,7 +70,7 @@ namespace compiler::helios {
 		 * declaration.
 		 * @return Empty value if valid, and the value that should be declared instead if invalid.
 		 */
-		std::expected<std::monostate, tsh::AbstractType> validateVariadicArgType(
+		std::expected<void, tsh::AbstractType> validateVariadicArgType(
 			query::Context& ctx, tsh::AbstractType type
 		) {
 			using enum tsh::IntegralAbstractType::Signedness;
@@ -98,7 +98,7 @@ namespace compiler::helios {
 		/**
 		 * @brief Validates variadic function declaration.
 		 */
-		query::QResult<u64> validateVariadicAfter(
+		query::QResult<u64> validateVariadicWithNFixed(
 			query::Context& ctx, const HOUTFunctionDeclaration& decl, u64 fixed_params
 		) {
 			if (fixed_params == 0) {
@@ -197,12 +197,12 @@ namespace compiler::helios {
 				UNPACK_QRESULT(auto _ =, checkCABIParamTypes(ctx, declaration));
 
 
-				if_opt_some(getAttribute<attributes::CFFIVariadicAfter>(sym), variadic) {
+				if_opt_some(getAttribute<attributes::CFFIVariadicFunction>(sym), variadic) {
 					UNPACK_QRESULT(
 						auto fixed_params =,
-						validateVariadicAfter(ctx, declaration, variadic->fixed_params)
+						validateVariadicWithNFixed(ctx, declaration, variadic->fixed_params)
 					);
-					result.variadic_after = fixed_params;
+					result.fixed_params = fixed_params;
 				}
 			}
 

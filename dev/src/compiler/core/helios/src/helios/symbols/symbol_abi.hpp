@@ -28,7 +28,7 @@ namespace compiler::helios {
 		 * @brief Number of fixed parameters of a variadic C function.
 		 * Empty if a function is not variadic.
 		 */
-		base::Optional<u64> variadic_after;
+		base::Optional<u64> fixed_params;
 	};
 
 	struct DefaultAbi final {};

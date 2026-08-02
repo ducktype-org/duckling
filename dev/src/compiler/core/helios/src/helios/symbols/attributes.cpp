@@ -97,7 +97,7 @@ namespace compiler::helios {
 			  } },
 			{ "cffi_variadic_after",
 			  [](query::Context& c, AttrArgs a) -> Attribute {
-				  return CFFIVariadicAfter{
+				  return CFFIVariadicFunction{
 					  .fixed_params
 					  = parseU64(c, a, "Attribute requires one, non-negative integer argument.")
 				  };
@@ -115,7 +115,9 @@ namespace compiler::helios {
 			variant_case_novalue(NativeOnlyImpl) { return base::StrID("native_only_impl"); }
 			variant_case_novalue(BackendDependent) { return base::StrID("backend_dependent"); }
 			variant_case_novalue(Builtin) { return base::StrID("builtin"); }
-			variant_case_novalue(CFFIVariadicAfter) { return base::StrID("cffi_variadic_after"); }
+			variant_case_novalue(CFFIVariadicFunction) {
+				return base::StrID("cffi_variadic_after");
+			}
 		}
 		CORE_UNREACHABLE();
 	}
@@ -125,7 +127,7 @@ namespace compiler::helios {
 			variant_case_novalue(NativeOnlyImpl, DVMOnlyImpl) { return kind == pst::StmtKind::Fun; }
 			variant_case_novalue(BackendDependent) { return kind == pst::StmtKind::FunDecl; }
 			variant_case_novalue(Builtin) { return kind == pst::StmtKind::FunDecl; }
-			variant_case_novalue(CFFIVariadicAfter) { return kind == pst::StmtKind::FunDecl; }
+			variant_case_novalue(CFFIVariadicFunction) { return kind == pst::StmtKind::FunDecl; }
 		}
 		CORE_UNREACHABLE();
 	}

@@ -1,4 +1,3 @@
-
 // NOLINTBEGIN
 #include <stdarg.h>
 #include <stdint.h>
@@ -76,8 +75,7 @@ int32_t add_bytes(int8_t a, int8_t b) { return (int32_t) a + (int32_t) b; }
 
 // --- Variadic functions. ---
 
-// Mixes integer and SSE variadic arguments: without a correct `al` the callee's register save
-// area is not spilled and the doubles read back as garbage.
+// Mixes integer and floating point variadic arguments.
 int64_t sum_varargs_mixed(int64_t count, ...) {
 	va_list ap;
 	double  total = 0.0;

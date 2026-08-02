@@ -104,7 +104,7 @@ namespace compiler::lir {
 			.return_type = return_abi_or_empty(return_type),
 			.param_types = parameter_types | std::views::transform(abi_type_or_panic)
 			             | std::ranges::to<std::vector>(),
-			.num_fixed_params = c_abi_info.variadic_after,
+			.num_fixed_params = c_abi_info.fixed_params,
 		};
 		return { LIRAbi::CAbi{
 			.function_info
