@@ -22,7 +22,7 @@
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
-#include "base/collections/maps.hpp"
+#include <base/collections/maps.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/extend_cpp/vector_utils.hpp>
