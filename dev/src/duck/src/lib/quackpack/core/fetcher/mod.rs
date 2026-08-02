@@ -214,7 +214,11 @@ impl<'duck> Fetcher<'duck> {
         &'duck self,
         url: InternedUrl,
     ) -> Option<Box<dyn git::fast_path::GitFastPathExt + 'duck>> {
-        self.git_fastpath_client.try_get_client(url)
+        if self.ctx().is_offline() {
+            None
+        } else {
+            self.git_fastpath_client.try_get_client(url)
+        }
     }
 
     /// Get the [`DuckContext`] used to construct this [`Fetcher`] instance.

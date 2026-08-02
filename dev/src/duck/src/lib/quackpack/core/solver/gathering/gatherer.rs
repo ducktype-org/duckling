@@ -306,17 +306,22 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
         trace!("fetching git");
         // We create a temporary logger to check if `try_get_cached_git` produced any errors.
         let mut tmp_logger = ErrorsLogger::default();
-        let cached_git = self.try_get_cached_git(request, url, reference, &mut tmp_logger);
+        if let Some(cached_git) = self.try_get_cached_git(request, url, reference, &mut tmp_logger)
+        {
+            debug!("git request was cached");
+            return FetchResponse::Success(FetchSuccess::NotPinned(cached_git));
+        }
+        if let Some(fast_path_git) = self.try_git_fastpath(request, url, reference, &mut tmp_logger)
+        {
+            debug!("git fast path worked");
+            return FetchResponse::Success(FetchSuccess::NotPinned(fast_path_git));
+        }
         if !tmp_logger.is_empty() {
             let err = tmp_logger.unwrap_first();
             errors
                 .borrow_mut()
                 .log(err.context(MessageError::new("when trying to get cached git")));
             return FetchResponse::failed_not_pinned(request.id);
-        }
-        if let Some(success) = cached_git {
-            debug!("git request was cached");
-            return FetchResponse::Success(FetchSuccess::NotPinned(success));
         }
         if self.fetcher.ctx().is_offline() {
             return FetchResponse::failed_not_pinned(request.id);
@@ -406,6 +411,36 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
             }
         }
         None
+    }
+
+    fn try_git_fastpath(
+        &self,
+        request: &NotPinnedRequest,
+        url: InternedUrl,
+        reference: GitReference,
+        errors: &mut ErrorsLogger,
+    ) -> Option<NotPinnedSuccess> {
+        let fast_path_client = self.fetcher.try_get_fastpath(url)?;
+        let commit = match fast_path_client.get_commit_hash(reference) {
+            Ok(commit) => commit,
+            Err(e) => {
+                errors.log(e);
+                return None;
+            }
+        };
+        let manifest = match fast_path_client.download_manifest(commit) {
+            Ok(manifest) => manifest,
+            Err(e) => {
+                errors.log(e);
+                return None;
+            }
+        };
+        let answer_identity = FullIdentity::new(request.id.name, FullOrigin::for_git(url, commit));
+        let pkg_id = PackageId::new(answer_identity, manifest.version());
+        Some(NotPinnedSuccess {
+            origin_id: request.id,
+            fetched_manifests: [(pkg_id, Box::new(manifest))].into(),
+        })
     }
 
     /// Helper for [`Gatherer::explore()`], performs a local fetch

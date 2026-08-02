@@ -6,7 +6,6 @@ use std::fmt::Display;
 use std::path::Path;
 
 use serde::{Deserialize, Serialize, de};
-use tracing::error;
 
 use crate::quackpack::core::fetcher::Fetcher;
 use crate::quackpack::core::identity::{Identity, Kind, Origin};
@@ -302,18 +301,10 @@ impl FullKind {
                 // Even for commits, `source_kind` may specify a shortened commit sha.
                 // Thus we first try to use git fast path and translate reference to commit.
                 if let Some(fast_path_client) = fetcher.try_get_fastpath(url) {
-                    match fast_path_client.get_commit_hash(reference) {
-                        Ok(reference_commit) => return Ok(*commit == reference_commit),
-                        Err(e) => {
-                            error!(error = %e, "failed to translate git reference with fast path");
-                            fetcher
-                                .ctx()
-                                .console()
-                                .warning("failed to translate git reference with fast path: {e}")?;
-                        }
-                    }
+                    let reference_commit = fast_path_client.get_commit_hash(reference)?;
+                    return Ok(*commit == reference_commit);
                 }
-                // If fast path was impossible or failed, we can only be sure if the reference is a commit,
+                // If fast path was impossible, we can only be sure if the reference is a commit,
                 // with the same hash as ours.
                 if let GitReference::Rev(required_commit) = reference
                     && *commit == required_commit
