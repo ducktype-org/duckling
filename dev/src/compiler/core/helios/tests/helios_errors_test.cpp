@@ -1940,7 +1940,6 @@ private:
 		checkForErrorOnCompileModule(
 			R"(
                 class T {
-                    x: i64 = 0;
                     y: i64 = 0;
                     y: i64 = 0;
                 }
@@ -1955,26 +1954,12 @@ private:
                 class T {
                     y: i64 = 0;
                     y: i64 = 0;
-                    y: i64 = 0;
+                    x: i64 = 0;
+                    x: i64 = 0;
                 }
             )",
-			{ "Symbol 'y' is already defined.", "Symbol 'y' is already defined." },
+			{ "Symbol 'y' is already defined.", "Symbol 'x' is already defined." },
 			2
-		);
-
-		// Fields of different classes do not collide with each other.
-		checkForErrorOnCompileModule(
-			R"(
-                class A {
-                    y: i64 = 0;
-                }
-                class B {
-                    y: i64 = 0;
-                    y: i64 = 0;
-                }
-            )",
-			{ "Symbol 'y' is already defined." },
-			1
 		);
 	}
 

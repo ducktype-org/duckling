@@ -22,6 +22,7 @@
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
+#include "base/collections/maps.hpp"
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/extend_cpp/vector_utils.hpp>
@@ -205,11 +206,11 @@ namespace compiler::helios {
 		 * @return `true` if `sym_id` duplicates an earlier definition.
 		 */
 		static bool reportIfDuplicate(
-			query::Context&                                           ctx,
-			std::unordered_map<base::StrID, dia_int::StablePosition>& seen_declarations,
-			SymID                                                     sym_id,
-			base::StrID                                               original_name,
-			dia_int::StablePosition                                   stable_pos
+			query::Context&                                      ctx,
+			base::HashMap<base::StrID, dia_int::StablePosition>& seen_declarations,
+			SymID                                                sym_id,
+			base::StrID                                          original_name,
+			dia_int::StablePosition                              stable_pos
 		) {
 			base::StrID mangled_name = compiler::helios::mangler::getSimpleMangledName(ctx, sym_id);
 			if (mangled_name.isBad()) return false;
@@ -238,11 +239,11 @@ namespace compiler::helios {
 		 * @return `true` if an earlier definition already used @p key_name.
 		 */
 		static bool reportIfNameTaken(
-			query::Context&                                           ctx,
-			std::unordered_map<base::StrID, dia_int::StablePosition>& seen_declarations,
-			base::StrID                                               key_name,
-			base::StrID                                               original_name,
-			dia_int::StablePosition                                   stable_pos
+			query::Context&                                      ctx,
+			base::HashMap<base::StrID, dia_int::StablePosition>& seen_declarations,
+			base::StrID                                          key_name,
+			base::StrID                                          original_name,
+			dia_int::StablePosition                              stable_pos
 		) {
 			auto [entry, inserted] = seen_declarations.try_emplace(key_name, stable_pos);
 			if (inserted) return false;
@@ -263,9 +264,6 @@ namespace compiler::helios {
 		/**
 		 * @brief Reports fields declared more than once inside the same class.
 		 *
-		 * Fields of a class share a single namespace and, unlike methods, cannot be overloaded,
-		 * so the check is done on their plain names, class by class.
-		 *
 		 * @param class_symbols Class symbols of the unit.
 		 * @return `base::BAD` if at least one class declares the same field name twice. The caller
 		 * is responsible for failing the query gracefully; this must not throw, as
@@ -281,7 +279,7 @@ namespace compiler::helios {
 				// A class we could not resolve is already diagnosed elsewhere.
 				if (class_data->hasFailed()) continue;
 
-				std::unordered_map<base::StrID, dia_int::StablePosition> seen_fields;
+				base::HashMap<base::StrID, dia_int::StablePosition> seen_fields;
 
 				for (SymID field_sym: class_data->valueOrPanic().members) {
 					if_opt_some(maybeSymbolPst(field_sym), pst) {
@@ -311,8 +309,8 @@ namespace compiler::helios {
 		static base::OkBad duplicatesCheck(
 			query::Context& ctx, const HOUTUnit& unit, const std::vector<SymID>& class_symbols
 		) {
-			std::unordered_map<base::StrID, dia_int::StablePosition> seen_declarations;
-			bool                                                     found_duplicate = false;
+			base::HashMap<base::StrID, dia_int::StablePosition> seen_declarations;
+			bool                                                found_duplicate = false;
 
 			for (const auto& func: unit.functions) {
 				if_opt_some(func->origin.getStablePosition(), stable_pos) {
