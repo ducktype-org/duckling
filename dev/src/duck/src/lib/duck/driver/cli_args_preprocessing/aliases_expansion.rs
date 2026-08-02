@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use clap::ArgMatches;
 use itertools::chain;
 use serde::{Deserialize, de};
-use tracing::debug;
+use tracing::{debug, trace};
 
 use crate::duck::driver::cli;
 use crate::duck::driver::cli_args_preprocessing::builtin::{
@@ -108,8 +108,11 @@ pub fn expand_aliases(
         }
         _ => {
             debug!(
-                "expanding aliases: default branch with `{:?}`",
-                (is_builtin, alias, is_external, builtin_alias)
+                %is_builtin,
+                ?alias,
+                %is_external,
+                ?builtin_alias,
+                "expanding aliases: default branch",
             );
             Ok(args)
         }
@@ -120,7 +123,9 @@ pub fn expand_aliases(
 ///
 /// `builtin` is __expanded__ builtin alias (for example, for alias `b` we expect `build` to be
 /// passed as `builtin`), and `args` are parsed [`ArgMatches`] __with the builtin subcommand__.
+#[tracing::instrument(skip_all)]
 fn expand_builtin_alias(builtin: &str, args: &ArgMatches) -> QuackResult<ArgMatches> {
+    debug!(%builtin);
     let builtin = OsString::from(builtin);
     Ok(cli().no_binary_name(true).try_get_matches_from(chain(
         [&builtin],
@@ -133,14 +138,15 @@ fn expand_builtin_alias(builtin: &str, args: &ArgMatches) -> QuackResult<ArgMatc
 /// `alias` is alias we're expanding, `alias_args` are [`ArgMatches`] for that `alias`, `alias_expansion`
 /// is expanded alias (taken from [`DuckContext`]), and `visited` is a vector of already expanded
 /// aliases (in order to detect cycles).
+#[tracing::instrument(skip_all, fields(%alias, ?alias_expansion))]
 fn expand_single_alias(
     alias: &str,
     alias_args: &ArgMatches,
     alias_expansion: &Alias,
     visited: &mut Vec<String>,
 ) -> QuackResult<ArgMatches> {
+    debug!(?visited);
     let new_cli_args = args_from_alias(alias_expansion, alias_args);
-    debug!("replaced the alias `{alias}` with `{alias_expansion:?}`");
     let parsed = parse_alias_args(new_cli_args)?;
     let Some(new_subcmd) = parsed.subcommand_name() else {
         qp_bail!("user-defined alias `{alias}` does not have a subcommand")
@@ -173,7 +179,9 @@ fn parse_alias_args(new_cli_args: impl Iterator<Item = OsString>) -> QuackResult
 }
 
 /// Check for an aliases cycle.
+#[tracing::instrument]
 fn check_alias_cycle(current: &str, next: &str, visited: &[String]) -> QuackResult<()> {
+    trace!("checking alias cycle");
     if visited.contains(&next.into()) {
         qp_bail!(
             "user-defined alias `{current}` cycles: {} -> {next}",

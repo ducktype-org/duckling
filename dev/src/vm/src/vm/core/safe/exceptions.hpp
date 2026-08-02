@@ -49,4 +49,5 @@ namespace vm::exceptions {
 	}
 
 	VM_RUNTIME_EXCEPTION_WITH_PARAM(VMResourceDoesNotExist, "Resource does not exist", std::string);
+	VM_RUNTIME_EXCEPTION_WITH_PARAM(VMFFIError, "FFI error", std::string);
 }

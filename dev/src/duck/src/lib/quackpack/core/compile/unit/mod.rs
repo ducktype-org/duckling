@@ -143,7 +143,7 @@ impl Unit {
         graph: &UnitGraph,
     ) -> QuackResult<multipackage_schema::Package> {
         let package = self.root_package().package();
-        let name = package.name();
+        let import_name = package.normalised_name();
         let version = package.version();
         let features = {
             let mut features = self
@@ -168,21 +168,21 @@ impl Unit {
                         panic!(
                             "unit=({},{}) has dep=({},{}), but it's not in the manifest?!",
                             self.unit_id(),
-                            name,
+                            import_name,
                             dep_id,
                             dep_name
                         )
                     });
                 result.push(multipackage_schema::Dependency {
                     id: unit_dep.unique_name().into(),
-                    alias: dep.alias(),
+                    alias: dep.normalised_alias(),
                 });
             }
             result
         };
         Ok(multipackage_schema::Package {
             id: self.unique_name().into(),
-            import_name: name,
+            import_name,
             version,
             features,
             path_to_the_src_directory: package

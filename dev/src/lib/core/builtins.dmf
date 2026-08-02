@@ -14,16 +14,24 @@ template(T: type)
 fundecl slice_from_ptr_len(p: manyptr T, l: u64) -> slice T;
 
 template(T: type)
-@builtin("dvm_alloc")
-fundecl dvm_alloc(size: u64) -> manyptr T;
+@builtin("dvm_alloc_arr")
+fundecl dvm_alloc_arr(size: u64) -> manyptr T;
 
 template(T: type)
-@builtin("dvm_realloc")
-fundecl dvm_realloc(p: manyptr T, size: u64);
+@builtin("dvm_realloc_arr")
+fundecl dvm_realloc_arr(p: manyptr T, size: u64);
+
+template(T: type)
+@builtin("dvm_free_arr")
+fundecl dvm_free_arr(p: manyptr T);
+
+template(T: type)
+@builtin("dvm_alloc")
+fundecl dvm_alloc() -> ptr T;
 
 template(T: type)
 @builtin("dvm_free")
-fundecl dvm_free(p: manyptr T);
+fundecl dvm_free(p: ptr T);
 
 @builtin("alignment_of")
 fundecl alignment_of(v: type) -> i64;
