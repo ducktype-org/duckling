@@ -3,7 +3,7 @@ import core.builtins.*;
 fun main() -> i64 = {
     var value = 0;
     var ref_value = &value;
-    var box_value : box i32 = value;
+    var box_value : box i32 = new value;
 
     var p1 = ref_value as ptr i32;
     var p2 = box_value as ptr i32;

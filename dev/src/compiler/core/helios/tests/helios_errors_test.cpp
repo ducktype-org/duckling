@@ -544,6 +544,29 @@ private:
 				{ "Type `i64` cannot be converted to type `u64`." },
 				1
 			);
+
+			checkForErrorOnCompileModule(
+				R"(
+				fun main() = {
+					var a: i32 = 42;
+					var b: box i32 = a; # `new` should be here
+				}
+			)",
+				{ "Type `i32` cannot be converted to type `box i32`." },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				R"(
+				fun main() = {
+					var a: i32 = 42;
+					var r: ref i32 = &a;
+					var b: box i32 = r; # `new` should be here
+				}
+			)",
+				{ "Type `ref i32` cannot be converted to type `box i32`." },
+				1
+			);
 		}
 
 		// ========================== Lexer errors ==========================
@@ -1250,7 +1273,7 @@ private:
 		checkForErrorOnCompileModule(
 			R"( fun main() -> i64 = {
 				var a: List[i32];
-				var b: box List[i32] = a;
+				var b: box List[i32] = new a;
 				return 0;
 			} )",
 			{ msg },
@@ -1617,7 +1640,7 @@ private:
 		checkForErrorOnCompileModule(
 			R"(
 				fun main() = {
-					var b: box i32 = 10;
+					var b: box i32 = new 10;
 					var m = b as manyptr i32;
 				}
 			)",
@@ -1662,7 +1685,7 @@ private:
 		checkForErrorOnCompileModule(
 			R"(
 				fun main() = {
-					var x: box i32 = 10;
+					var x: box i32 = new 10;
 					var p = x as ptr i64;
 				}
 			)",
@@ -1677,6 +1700,29 @@ private:
 				}
 			)",
 			{ "Tried to dereference a non-pointer type" },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() = {
+					var a: i32 = 1;
+					var r: ref i32 = &a;
+					var r2: ref i64 = r;
+				}
+			)",
+			{ "Type `ref i32` cannot be converted to type `ref i64`." },
+			1
+		);
+
+		checkForErrorOnCompileModule(
+			R"(
+				fun main() = {
+					var b: box i32 = new 1;
+					var b2: box i64 = b;
+				}
+			)",
+			{ "Type `box i32` cannot be converted to type `box i64`." },
 			1
 		);
 	}
