@@ -74,10 +74,13 @@ namespace hashing {
 
 	namespace internal {
 		/**
-		 * Checks if the type can be hashed by just hashing its representation
+		 * Checks if the type can be hashed by just hashing its representation.
+		 *
+		 * @note See HashByAddress for hashing pointers by their address. 
 		 */
 		template<typename T>
 		concept can_hash_by_representation = std::has_unique_object_representations_v<T>
+		                                  && (not std::is_pointer_v<T>)
 		                                  && (std::is_integral_v<T> || std::is_enum_v<T> ||
 
 		                                      // the const Monostate& here is needed, as this is
@@ -119,18 +122,13 @@ namespace hashing {
 
 		/**
 		 * Checks if a range can be hashed as a contiguous sequence of memory
-		 * (i.e. its elements are in a contiguous memory block, have unique object representations
-		 * and size is known)
-		 *
-		 * @note ranges of raw pointers are excluded on purpose - hashing them as bytes would
-		 * silently hash the addresses, which has to be requested explicitly with the HashByAddress
-		 * proxy instead
+		 * (i.e. its elements are in a contiguous memory block, individual elements meet can_hash_by_representation
+		 * and range size is known)
 		 */
 		template<typename HashAlgorithm, typename R>
 		concept can_hash_range_as_bytes
 			= hash_algorithm<HashAlgorithm> && std::ranges::contiguous_range<R>
 		   && can_hash_by_representation<std::ranges::range_value_t<R>>
-		   && (not std::is_pointer_v<std::ranges::range_value_t<R>>)
 		   && requires(const R& r) { std::ranges::size(r); };
 
 		/**

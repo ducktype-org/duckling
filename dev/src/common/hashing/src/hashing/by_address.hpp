@@ -44,6 +44,4 @@ namespace hashing {
 			internal::hashAsBytes(hash_alg, by_address.pointer);
 		}
 	};
-
-
-}  // namespace hashing
+}
