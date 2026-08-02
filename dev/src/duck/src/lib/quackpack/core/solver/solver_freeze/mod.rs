@@ -40,7 +40,7 @@ impl SolverFreeze {
     // @TODO: #2076 Fix issues with storage's freeze.
     #[tracing::instrument(skip_all)]
     pub fn try_from_venv_freeze(root: PackageId, value: &VenvFreeze) -> QuackResult<Self> {
-        debug!(root = ?root, freeze = ?value);
+        debug!(?root, freeze = ?value);
         let mut expanded_pkgs_by_name = HashMap::new();
         for pkg_freeze in value.dependencies() {
             let pkg = PackageId::new(*pkg_freeze.identity(), pkg_freeze.version());
