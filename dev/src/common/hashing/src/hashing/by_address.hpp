@@ -17,9 +17,7 @@ namespace hashing {
 	 * @tparam Ptr - Type of pointer to wrap. Must be a pointer type.
 	 */
 	template<class Ptr>
-	requires std::is_pointer_v<Ptr>
-	class HashByAddress final {
-
+	requires std::is_pointer_v<Ptr> class HashByAddress final {
 		Ptr pointer;
 
 	public:
@@ -40,7 +38,9 @@ namespace hashing {
 		 * @param hash_alg - hashing algorithm to use
 		 * @param by_address - proxy holding the address to hash
 		 */
-		friend constexpr void addToHash(hash_algorithm auto& hash_alg, const HashByAddress& by_address) {
+		friend constexpr void addToHash(
+			hash_algorithm auto& hash_alg, const HashByAddress& by_address
+		) {
 			internal::hashAsBytes(hash_alg, by_address.pointer);
 		}
 	};
