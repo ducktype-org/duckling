@@ -7,7 +7,7 @@ use http::{HeaderValue, header};
 use tracing::{debug, info};
 use url::Url;
 
-use super::http::HttpClient;
+use super::http_async::AsyncHttpClient;
 use super::types;
 use super::util::http::Request;
 use super::util::http::traits_extensions::ResponseExt;
@@ -21,23 +21,23 @@ mod endpoints;
 #[cfg(test)]
 mod tests;
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 /// General client communicating with a registry instance over HTTP.
 pub struct DucknestClient<'duck> {
-    client: HttpClient<'duck>,
+    client: AsyncHttpClient<'duck>,
 }
 
 impl<'duck> DucknestClient<'duck> {
     /// Construct a new [`DucknestClient`].
     pub fn new(ctx: &'duck DuckContext) -> Self {
         Self {
-            client: HttpClient::new(ctx),
+            client: AsyncHttpClient::new(ctx),
         }
     }
 
     /// Retrieve metadata for a specific package from a Ducknest instance.
     #[tracing::instrument(skip(self))]
-    pub fn get_exact_metadata(
+    pub async fn get_exact_metadata(
         &self,
         package: &types::PackageWithUrl,
     ) -> QuackResult<registry::Manifest> {
@@ -45,7 +45,7 @@ impl<'duck> DucknestClient<'duck> {
         let url = package.url.for_exact_metadata(&package.into())?;
         let request = create_get_request(&url)?;
 
-        let response = self.client.request(request)?;
+        let response = self.client.request(request).await?;
         let data = response.deserialize_json()?;
         info!("fetched");
         Ok(data)
@@ -53,7 +53,7 @@ impl<'duck> DucknestClient<'duck> {
 
     /// Retrieve all metadata for a specific package from a Ducknest instance.
     #[tracing::instrument(skip(self, url), fields(url = url.as_str()))]
-    pub fn get_multi_metadata(
+    pub async fn get_multi_metadata(
         &self,
         url: &Url,
         package: StrId,
@@ -63,7 +63,7 @@ impl<'duck> DucknestClient<'duck> {
 
         let request = create_get_request(&url)?;
 
-        let response = self.client.request(request)?;
+        let response = self.client.request(request).await?;
         let data = response.deserialize_json()?;
         info!("fetched");
         Ok(data)
@@ -83,7 +83,7 @@ impl<'duck> DucknestClient<'duck> {
 
     /// Download a package blob from a Ducknest instance and save it to a file.
     #[tracing::instrument(skip(self))]
-    pub fn fetch_blob(
+    pub async fn fetch_blob(
         &self,
         package: &types::PackageWithUrl,
         mut target: LockedFile,
@@ -92,7 +92,7 @@ impl<'duck> DucknestClient<'duck> {
         let url = package.url.for_blob(&package.into())?;
         let request = create_get_request(&url)?;
 
-        let response = self.client.request(request)?;
+        let response = self.client.request(request).await?;
 
         info!("fetched");
         debug!("saving response to file");
@@ -108,12 +108,12 @@ impl<'duck> DucknestClient<'duck> {
 
     /// Search the Ducknest instance for all packages that match the provided query.
     #[tracing::instrument(skip(self))]
-    pub fn search(&self, url: &Url, query: &str) -> QuackResult<types::SearchResult> {
+    pub async fn search(&self, url: &Url, query: &str) -> QuackResult<types::SearchResult> {
         debug!("searching");
         let url = url.for_search(query)?;
         let request = create_get_request(&url)?;
 
-        let response = self.client.request(request)?;
+        let response = self.client.request(request).await?;
         let data = response.deserialize_json()?;
         info!("got search response");
         Ok(data)
@@ -138,7 +138,7 @@ fn create_http_request(url: &Url, method: http::Method, body: Vec<u8>) -> QuackR
     http::Request::builder()
         .uri(url.as_str())
         .method(method)
-        .version(http::Version::HTTP_11)
+        .version(http::Version::HTTP_2)
         .body(body)
         .context_internal("failed to build an HTTP request")
 }
