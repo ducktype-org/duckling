@@ -148,5 +148,5 @@ int main() {
 	const type1        t1;
 	const type1* const ptr = &t1;
 	std::cout << "hash of the pointee: " << hashing::Hash{}(*ptr) << '\n'
-			  << "hash of the address: " << hashing::Hash{}(hashing::ByAddress{ ptr }) << '\n';
+			  << "hash of the address: " << hashing::Hash{}(hashing::HashByAddress{ ptr }) << '\n';
 }

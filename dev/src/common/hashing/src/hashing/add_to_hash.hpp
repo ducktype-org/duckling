@@ -55,12 +55,12 @@ namespace hashing {
 			internal::hashAsBytes(hash_alg, t_copy);
 		}
 		// Pointers are intentionally not hashable on their own - hashing an address is almost
-		// never what one wants, so the intent has to be spelled out with the ByAddress proxy
+		// never what one wants, so the intent has to be spelled out with the HashByAddress proxy
 		else if constexpr (std::is_pointer_v<T>) {
 			static_assert(
 				false,
 				"Raw pointers are not hashed implicitly. Hash the pointee ('*ptr'), or wrap the "
-				"pointer in 'hashing::ByAddress{ ptr }' to hash the address itself"
+				"pointer in 'hashing::HashByAddress{ ptr }' to hash the address itself"
 			);
 		}
 		// nullptr_t

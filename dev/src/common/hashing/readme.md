@@ -130,7 +130,7 @@ you can add a new condition there. All you have to do is to choose an appropriat
 and specific enough condition so that it won't interfere with other types.
 
 
-Hashing pointers - `ByAddress`
+Hashing pointers - `HashByAddress`
 ==============================
 
 Raw pointers are **not** hashable on their own: hashing an address is almost never what one wants,
@@ -139,12 +139,12 @@ since addresses are not stable between runs and say nothing about the pointee
 Trying to hash one is a compile error telling you to pick an intent.
 
 If you do mean the address - i.e. the *identity* of the pointee - wrap it in the
-`ByAddress` proxy from [by_address.hpp](src/hashing/by_address.hpp):
+`HashByAddress` proxy from [by_address.hpp](src/hashing/by_address.hpp):
 
 ~~~~~cpp
 justHash(ptr);                 // ill-formed
 justHash(*ptr);                // hashes the pointee
-justHash(ByAddress{ ptr });    // hashes the address
+justHash(HashByAddress{ ptr });    // hashes the address
 ~~~~~
 
 The same applies to pointers nested inside other objects: a `hashDecompose()` that ties a raw

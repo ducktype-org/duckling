@@ -216,20 +216,20 @@ private:
 		Hash<SHA256> hasher;
 
 		assertTrue(
-			hasher(ByAddress{ first }) == hasher(ByAddress{ first }),
+			hasher(HashByAddress{ first }) == hasher(HashByAddress{ first }),
 			"the same address should hash to the same value"
 		);
 		assertTrue(
-			hasher(ByAddress{ first }) != hasher(ByAddress{ second }),
+			hasher(HashByAddress{ first }) != hasher(HashByAddress{ second }),
 			"different addresses should hash to different values"
 		);
-		assertTrue(ByAddress{ first }.get() == first, "get() should return the wrapped pointer");
+		assertTrue(HashByAddress{ first }.get() == first, "get() should return the wrapped pointer");
 
 		// only the address matters - neither the pointee nor the pointer's constness does
 		const int* const also_second = second;
 		values.at(1)                 = 42;
 		assertTrue(
-			hasher(ByAddress{ second }) == hasher(ByAddress{ also_second }),
+			hasher(HashByAddress{ second }) == hasher(HashByAddress{ also_second }),
 			"the hash should depend only on the address"
 		);
 	}
