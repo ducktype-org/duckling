@@ -1981,6 +1981,32 @@ private:
 			{ "Symbol 'a' is already defined.", "Previous declaration here." },
 			1
 		);
+
+		// Duplicated class field.
+		checkForErrorOnCompileModule(
+			R"(
+                class T {
+                    y: i64 = 0;
+                    y: i64 = 0;
+                }
+            )",
+			{ "Symbol 'y' is already defined.", "Previous declaration here." },
+			1
+		);
+
+		// Every redefinition of a field is reported, not only the first one.
+		checkForErrorOnCompileModule(
+			R"(
+                class T {
+                    y: i64 = 0;
+                    y: i64 = 0;
+                    x: i64 = 0;
+                    x: i64 = 0;
+                }
+            )",
+			{ "Symbol 'y' is already defined.", "Symbol 'x' is already defined." },
+			2
+		);
 	}
 
 	void testBackendDependentAttributeErrors() {
