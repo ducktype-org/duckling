@@ -24,6 +24,7 @@ pub trait GitFastPathExt {
     fn download_manifest(&self, commit: StrId) -> QuackResult<Manifest>;
 }
 
+#[derive(Debug, Clone)]
 /// Main entry point to the git fast path.
 /// Used to create [`GitlabClient`] and [`GithubClient`] instances tailored to specific repositories.
 pub struct GitFastPathClient<'duck> {

@@ -37,6 +37,7 @@ const PATH_ENCODE_SET: &AsciiSet = &CONTROLS
     .add(b'}')
     .add(b'/');
 
+#[derive(Debug, Clone)]
 /// Client for performing requests to Gitlab repositories.
 pub struct GitlabApiClient<'duck> {
     client: HttpClient<'duck>,

@@ -24,6 +24,7 @@ use crate::quackpack::core::fetcher::util::http::{Request, Response, defaults};
 use crate::quackpack::util::to_url::ToUrl;
 use crate::{DuckContext, QuackResult, QuackResultContext, StrId};
 
+#[derive(Debug, Clone)]
 /// Client for performing requests to Github repositories.
 pub struct GithubApiClient<'duck> {
     client: HttpClient<'duck>,

@@ -6,7 +6,9 @@ use std::fmt::Display;
 use std::path::Path;
 
 use serde::{Deserialize, Serialize, de};
+use tracing::error;
 
+use crate::quackpack::core::fetcher::Fetcher;
 use crate::quackpack::core::identity::{Identity, Kind, Origin};
 use crate::quackpack::core::{GitReference, SourceKind};
 use crate::quackpack::util::interned_url::InternedUrl;
@@ -286,22 +288,43 @@ impl FullKind {
     }
 
     /// Checks that [`self`] satisfies the requirenments of some [`SourceKind`].
-    pub fn satisfies_source_kind(&self, source_kind: SourceKind) -> bool {
+    pub fn satisfies_source_kind(
+        &self,
+        source_kind: SourceKind,
+        fetcher: &Fetcher,
+        url: InternedUrl,
+    ) -> QuackResult<bool> {
         match (self, source_kind) {
-            (Self::Local, SourceKind::Local) => true,
+            (Self::Local, SourceKind::Local) => Ok(true),
             (Self::Git { commit }, SourceKind::Git(reference)) => {
                 // If the git dependency specifies tag, branch or nothing (default branch),
                 // some new commits may have appeared.
+                // Even for commits, `source_kind` may specify a shortened commit sha.
+                // Thus we first try to use git fast path and translate reference to commit.
+                if let Some(fast_path_client) = fetcher.try_get_fastpath(url) {
+                    match fast_path_client.get_commit_hash(reference) {
+                        Ok(reference_commit) => return Ok(*commit == reference_commit),
+                        Err(e) => {
+                            error!(error = %e, "failed to translate git reference with fast path");
+                            fetcher
+                                .ctx()
+                                .console()
+                                .warning("failed to translate git reference with fast path: {e}")?;
+                        }
+                    }
+                }
+                // If fast path was impossible or failed, we can only be sure if the reference is a commit,
+                // with the same hash as ours.
                 if let GitReference::Rev(required_commit) = reference
                     && *commit == required_commit
                 {
-                    true
+                    Ok(true)
                 } else {
-                    false
+                    Ok(false)
                 }
             }
-            (Self::Registry, SourceKind::Registry) => true,
-            _ => false,
+            (Self::Registry, SourceKind::Registry) => Ok(true),
+            _ => Ok(false),
         }
     }
 }
