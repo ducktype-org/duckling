@@ -176,7 +176,9 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
                     }
                     SourceKind::Git(git_ref) => {
                         let url = not_pinned_request.id.source.url();
-                        Ok(self.fetch_git(&not_pinned_request, url, *git_ref, errors))
+                        Ok(self
+                            .fetch_git(&not_pinned_request, url, *git_ref, errors)
+                            .await)
                     }
                     SourceKind::Local => {
                         let path_url = not_pinned_request.id.source.url();
@@ -296,7 +298,7 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
 
     /// Helper for [`Gatherer::explore()`], performs a git fetch
     /// (fetch from an external git repository).
-    fn fetch_git(
+    async fn fetch_git(
         &self,
         request: &NotPinnedRequest,
         url: InternedUrl,
@@ -311,7 +313,9 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
             debug!("git request was cached");
             return FetchResponse::Success(FetchSuccess::NotPinned(cached_git));
         }
-        if let Some(fast_path_git) = self.try_git_fastpath(request, url, reference, &mut tmp_logger)
+        if let Some(fast_path_git) = self
+            .try_git_fastpath(request, url, reference, &mut tmp_logger)
+            .await
         {
             debug!("git fast path worked");
             return FetchResponse::Success(FetchSuccess::NotPinned(fast_path_git));
@@ -413,7 +417,7 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
         None
     }
 
-    fn try_git_fastpath(
+    async fn try_git_fastpath(
         &self,
         request: &NotPinnedRequest,
         url: InternedUrl,
@@ -421,14 +425,14 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
         errors: &mut ErrorsLogger,
     ) -> Option<NotPinnedSuccess> {
         let fast_path_client = self.fetcher.try_get_fastpath(url)?;
-        let commit = match fast_path_client.get_commit_hash(reference) {
+        let commit = match fast_path_client.get_commit_hash(reference).await {
             Ok(commit) => commit,
             Err(e) => {
                 errors.log(e);
                 return None;
             }
         };
-        let manifest = match fast_path_client.download_manifest(commit) {
+        let manifest = match fast_path_client.download_manifest(commit).await {
             Ok(manifest) => manifest,
             Err(e) => {
                 errors.log(e);

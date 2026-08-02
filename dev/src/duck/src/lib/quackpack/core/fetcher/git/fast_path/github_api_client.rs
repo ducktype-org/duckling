@@ -18,23 +18,23 @@ use serde::Deserialize;
 use tracing::debug;
 use url::Url;
 
-use crate::quackpack::core::fetcher::http::HttpClient;
+use crate::quackpack::core::fetcher::http_async::AsyncHttpClient;
 use crate::quackpack::core::fetcher::util::http::traits_extensions::ResponseExt;
 use crate::quackpack::core::fetcher::util::http::{Request, Response, defaults};
 use crate::quackpack::util::to_url::ToUrl;
 use crate::{DuckContext, QuackResult, QuackResultContext, StrId};
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 /// Client for performing requests to Github repositories.
 pub struct GithubApiClient<'duck> {
-    client: HttpClient<'duck>,
+    client: AsyncHttpClient<'duck>,
 }
 
 impl<'duck> GithubApiClient<'duck> {
     /// Create a new [`GithubClient`] instance.
     pub fn new(ctx: &'duck DuckContext) -> Self {
         Self {
-            client: HttpClient::new(ctx),
+            client: AsyncHttpClient::new(ctx),
         }
     }
 
@@ -74,7 +74,7 @@ impl<'duck> GithubApiClient<'duck> {
     /// Get list of information about commits, starting from the default branch (if `reference` is [`None`])
     /// or the commit specified by branch, tag or 1-byte commit id.
     /// Used to get the full commit identifier.
-    pub fn retrieve_a_commit(
+    pub async fn retrieve_a_commit(
         &self,
         repo_api_url: &Url,
         reference: Option<StrId>,
@@ -84,14 +84,14 @@ impl<'duck> GithubApiClient<'duck> {
             url.query_pairs_mut().append_pair("sha", &reference);
         }
         url.query_pairs_mut().append_pair("per_page", "1");
-        let response = self.request(&url)?;
+        let response = self.request(&url).await?;
         get_commit_from_response(response)
     }
 
     /// Docs: <https://docs.github.com/en/rest/repos/contents?apiVersion=2026-03-10#get-repository-content>.
     /// Download a raw file from the repository at specific commit.
     /// Used to download the manifest.
-    pub fn download_file_from_commit(
+    pub async fn download_file_from_commit(
         &self,
         repo_api_url: &Url,
         path_to_file: &str,
@@ -99,12 +99,12 @@ impl<'duck> GithubApiClient<'duck> {
     ) -> QuackResult<String> {
         let mut url = repo_api_url.join("contents/")?.join(path_to_file)?;
         url.query_pairs_mut().append_pair("ref", &commit);
-        let response = self.request(&url)?;
+        let response = self.request(&url).await?;
         Ok(String::from_utf8(response.into_body())?)
     }
 
     /// Create a `GET` request for the specified `url`.
-    fn request(&self, url: &Url) -> QuackResult<Response> {
+    async fn request(&self, url: &Url) -> QuackResult<Response> {
         let mut request = Self::create_http_request(url, http::Method::GET, vec![])?;
         request
             .headers_mut()
@@ -119,7 +119,7 @@ impl<'duck> GithubApiClient<'duck> {
             header::ACCEPT,
             HeaderValue::from_static("application/vnd.github.raw"),
         );
-        self.client.request(request)
+        self.client.request(request).await
     }
 
     /// Helper for [`Self::request`].

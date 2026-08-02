@@ -91,10 +91,10 @@ impl PackageId {
     ///  * the packages origin satisfies the source requirements,
     ///  * version requirements are satisfied,
     ///  * package's name coincides with the required name.
-    pub fn still_satisfies_dep(
+    pub async fn still_satisfies_dep(
         &self,
         dependency: &Dependency,
-        fetcher: &Fetcher,
+        fetcher: &Fetcher<'_>,
     ) -> QuackResult<bool> {
         if !self.check_satisfaction_of_versions(dependency)? {
             return Ok(false);
@@ -105,6 +105,7 @@ impl PackageId {
         }
         self.kind()
             .satisfies_source_kind(*source.kind(), fetcher, self.url())
+            .await
     }
 
     /// Helper for [`Self::still_satisfies_dep`].

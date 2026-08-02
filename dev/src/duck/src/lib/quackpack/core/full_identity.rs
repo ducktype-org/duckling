@@ -287,10 +287,10 @@ impl FullKind {
     }
 
     /// Checks that [`self`] satisfies the requirenments of some [`SourceKind`].
-    pub fn satisfies_source_kind(
+    pub async fn satisfies_source_kind(
         &self,
         source_kind: SourceKind,
-        fetcher: &Fetcher,
+        fetcher: &Fetcher<'_>,
         url: InternedUrl,
     ) -> QuackResult<bool> {
         match (self, source_kind) {
@@ -301,7 +301,7 @@ impl FullKind {
                 // Even for commits, `source_kind` may specify a shortened commit sha.
                 // Thus we first try to use git fast path and translate reference to commit.
                 if let Some(fast_path_client) = fetcher.try_get_fastpath(url) {
-                    let reference_commit = fast_path_client.get_commit_hash(reference)?;
+                    let reference_commit = fast_path_client.get_commit_hash(reference).await?;
                     return Ok(*commit == reference_commit);
                 }
                 // If fast path was impossible, we can only be sure if the reference is a commit,

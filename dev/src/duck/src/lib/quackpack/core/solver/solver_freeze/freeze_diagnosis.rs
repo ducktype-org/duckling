@@ -58,24 +58,24 @@ impl SolverFreeze {
     ///
     /// Should be used as a preprocessing tool, before the freeze is passed through the solver.
     #[tracing::instrument(skip_all)]
-    pub fn find_maximal_correct_dep_solution(
+    pub async fn find_maximal_correct_dep_solution(
         mut self,
         manifests: &HashMap<PackageId, Box<Manifest>>,
-        fetcher: &Fetcher,
+        fetcher: &Fetcher<'_>,
     ) -> QuackResult<(Self, bool)> {
-        self.retain_not_flawed_pkgs(manifests, fetcher)?;
-        self.substitute_root_pkg(manifests, fetcher)
+        self.retain_not_flawed_pkgs(manifests, fetcher).await?;
+        self.substitute_root_pkg(manifests, fetcher).await
     }
 
     /// Helper for [`Self::find_maximal_correct_dep_solution`]
     /// Retains freezes of the old root package (it is later substituted anyway)
     /// and all the packages which have dependencies transitively satisfied.
-    fn retain_not_flawed_pkgs(
+    async fn retain_not_flawed_pkgs(
         &mut self,
         manifests: &HashMap<PackageId, Box<Manifest>>,
-        fetcher: &Fetcher,
+        fetcher: &Fetcher<'_>,
     ) -> QuackResult<()> {
-        let mut still_satisfied_pkgs = self.still_satisfied_pkgs(manifests, fetcher)?;
+        let mut still_satisfied_pkgs = self.still_satisfied_pkgs(manifests, fetcher).await?;
         let reversed_graph = self.reversed_dependency_graph();
         let mut visited = HashSet::new();
         for pkg in reversed_graph.keys() {
@@ -101,10 +101,10 @@ impl SolverFreeze {
     /// Finds which packages from the freeze are not immediately flawed:
     ///     * we were able to obtain their manifests and the manifests agrees with the package,
     ///     * all manifest dependencies are satisfied by appropriate freeze-written realizations.
-    fn still_satisfied_pkgs(
+    async fn still_satisfied_pkgs(
         &self,
         manifests: &HashMap<PackageId, Box<Manifest>>,
-        fetcher: &Fetcher,
+        fetcher: &Fetcher<'_>,
     ) -> QuackResult<HashSet<PackageId>> {
         let mut still_satisfied_pkgs = HashSet::new();
         for (pkg, freeze) in self.package_freezes.iter() {
@@ -129,7 +129,8 @@ impl SolverFreeze {
                     realization_freeze,
                     dep,
                     fetcher,
-                )?;
+                )
+                .await?;
             }
             if is_every_dep_satisfied {
                 still_satisfied_pkgs.insert(*pkg);
@@ -176,14 +177,14 @@ impl SolverFreeze {
 
     /// Helper for [`Self::still_satisfied_pkgs`].
     /// Checks if a particular dependency is satisfied.
-    fn check_if_dep_is_satisfied(
+    async fn check_if_dep_is_satisfied(
         freeze: &SolverPackageFreeze,
         realization: PackageId,
         realization_freeze: &SolverPackageFreeze,
         dep: &Dependency,
-        fetcher: &Fetcher,
+        fetcher: &Fetcher<'_>,
     ) -> QuackResult<bool> {
-        if !realization.still_satisfies_dep(dep, fetcher)? {
+        if !realization.still_satisfies_dep(dep, fetcher).await? {
             return Ok(false);
         }
         let forced_child_features =
@@ -232,10 +233,10 @@ impl SolverFreeze {
     /// Helper for [`Self::find_maximal_correct_dep_solution`].
     /// In the freeze, removes the old root and substitutes its package freeze as the new root's package freeze.
     /// Keeps only still satisfied realizations from the old root's package freeze.
-    fn substitute_root_pkg(
+    async fn substitute_root_pkg(
         mut self,
         manifests: &HashMap<PackageId, Box<Manifest>>,
-        fetcher: &Fetcher,
+        fetcher: &Fetcher<'_>,
     ) -> QuackResult<(Self, bool)> {
         let main_pkg_freeze = self
             .package_freezes
@@ -255,7 +256,8 @@ impl SolverFreeze {
                     realization_freeze,
                     dependency,
                     fetcher,
-                )?
+                )
+                .await?
             {
                 still_satisfied_root_deps.insert(*alias);
             }
@@ -292,6 +294,7 @@ mod test {
     use std::collections::{HashMap, HashSet};
     use std::path::PathBuf;
 
+    use futures::executor::block_on;
     use tempfile::{TempDir, tempdir};
 
     use crate::quackpack::core::fetcher::Fetcher;
@@ -365,10 +368,12 @@ features:
             package_freezes: HashMap::from([(pkg_a, prev_a_freeze), (pkg_b, prev_b_freeze)]),
             main_pkg: pkg_a,
         };
-        let (new_freeze, _) = prev_freeze
-            .clone()
-            .find_maximal_correct_dep_solution(&manifests, &fetcher)
-            .unwrap();
+        let (new_freeze, _) = block_on(
+            prev_freeze
+                .clone()
+                .find_maximal_correct_dep_solution(&manifests, &fetcher),
+        )
+        .unwrap();
         assert_eq!(new_freeze, prev_freeze);
     }
 
@@ -423,10 +428,12 @@ metadata:
             package_freezes: HashMap::from([(pkg_a, prev_a_freeze), (pkg_b, prev_b_freeze)]),
             main_pkg: pkg_a,
         };
-        let (new_freeze, _) = prev_freeze
-            .clone()
-            .find_maximal_correct_dep_solution(&manifests, &fetcher)
-            .unwrap();
+        let (new_freeze, _) = block_on(
+            prev_freeze
+                .clone()
+                .find_maximal_correct_dep_solution(&manifests, &fetcher),
+        )
+        .unwrap();
         let freeze_a = new_freeze.package_freezes.get(&pkg_a).unwrap();
         assert_eq!(new_freeze.package_freezes.len(), 1);
         assert!(freeze_a.dependencies_realization.is_empty());
@@ -498,9 +505,8 @@ metadata:
             ]),
             main_pkg: pkg_a,
         };
-        let (new_freeze, _) = prev_freeze
-            .find_maximal_correct_dep_solution(&manifests, &fetcher)
-            .unwrap();
+        let (new_freeze, _) =
+            block_on(prev_freeze.find_maximal_correct_dep_solution(&manifests, &fetcher)).unwrap();
         let freeze_a = new_freeze.package_freezes.get(&pkg_a).unwrap();
         let freeze_c = new_freeze.package_freezes.get(&pkg_c).unwrap();
         assert_eq!(new_freeze.package_freezes.len(), 2);
@@ -593,9 +599,8 @@ metadata:
             ]),
             main_pkg: pkg_a,
         };
-        let (new_freeze, _) = prev_freeze
-            .find_maximal_correct_dep_solution(&manifests, &fetcher)
-            .unwrap();
+        let (new_freeze, _) =
+            block_on(prev_freeze.find_maximal_correct_dep_solution(&manifests, &fetcher)).unwrap();
         let freeze_a = new_freeze.package_freezes.get(&pkg_a).unwrap();
         let freeze_d = new_freeze.package_freezes.get(&pkg_d).unwrap();
         assert_eq!(new_freeze.package_freezes.len(), 2);
@@ -651,10 +656,12 @@ features:
             ]),
             main_pkg: pkg_a,
         };
-        let (new_freeze, _) = prev_freeze
-            .clone()
-            .find_maximal_correct_dep_solution(&manifests, &fetcher)
-            .unwrap();
+        let (new_freeze, _) = block_on(
+            prev_freeze
+                .clone()
+                .find_maximal_correct_dep_solution(&manifests, &fetcher),
+        )
+        .unwrap();
         assert_eq!(
             new_freeze,
             SolverFreeze {

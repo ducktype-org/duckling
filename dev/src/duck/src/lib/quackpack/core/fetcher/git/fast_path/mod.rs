@@ -1,6 +1,8 @@
 //! Module for git fast path.
 //! This means using outside knowledge about some git servers to perform necessary operation
 //! without performing costly repository clones.
+use std::pin::Pin;
+
 use crate::quackpack::core::fetcher::git::fast_path::github_api_client::GithubApiClient;
 use crate::quackpack::core::fetcher::git::fast_path::github_client::GithubClient;
 use crate::quackpack::core::fetcher::git::fast_path::gitlab_api_client::GitlabApiClient;
@@ -18,13 +20,19 @@ mod gitlab_client;
 /// allowing us to postpone/completely omit clones.
 pub trait GitFastPathExt {
     /// Translate a git reference into a commit hash.
-    fn get_commit_hash(&self, reference: GitReference) -> QuackResult<StrId>;
+    fn get_commit_hash(
+        &self,
+        reference: GitReference,
+    ) -> Pin<Box<dyn Future<Output = QuackResult<StrId>> + '_>>;
 
     /// Download the manifest from a repository.
-    fn download_manifest(&self, commit: StrId) -> QuackResult<Manifest>;
+    fn download_manifest(
+        &self,
+        commit: StrId,
+    ) -> Pin<Box<dyn Future<Output = QuackResult<Manifest>> + '_>>;
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 /// Main entry point to the git fast path.
 /// Used to create [`GitlabClient`] and [`GithubClient`] instances tailored to specific repositories.
 pub struct GitFastPathClient<'duck> {
