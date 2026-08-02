@@ -76,20 +76,20 @@ namespace hashing {
 		/**
 		 * Checks if the type can be hashed by just hashing its representation.
 		 *
-		 * @note See HashByAddress for hashing pointers by their address. 
+		 * @note See HashByAddress for hashing pointers by their address.
 		 */
 		template<typename T>
-		concept can_hash_by_representation = std::has_unique_object_representations_v<T>
-		                                  && (not std::is_pointer_v<T>)
-		                                  && (std::is_integral_v<T> || std::is_enum_v<T> ||
+		concept can_hash_by_representation
+			= std::has_unique_object_representations_v<T> && (not std::is_pointer_v<T>)
+		   && (std::is_integral_v<T> || std::is_enum_v<T> ||
 
-		                                      // the const Monostate& here is needed, as this is
-		                                      // simply how it works with static constexpr members.
-		                                      requires {
-												  {
-													  T::HASHING_CAN_HASH_BY_REPRESENTATION
-												  } -> std::same_as<const base::Monostate&>;
-											  });
+		       // the const Monostate& here is needed, as this is
+		       // simply how it works with static constexpr members.
+		       requires {
+				   {
+					   T::HASHING_CAN_HASH_BY_REPRESENTATION
+				   } -> std::same_as<const base::Monostate&>;
+			   });
 
 		/**
 		 * Checks if the type is a tuple of references
@@ -122,8 +122,8 @@ namespace hashing {
 
 		/**
 		 * Checks if a range can be hashed as a contiguous sequence of memory
-		 * (i.e. its elements are in a contiguous memory block, individual elements meet can_hash_by_representation
-		 * and range size is known)
+		 * (i.e. its elements are in a contiguous memory block, individual elements meet
+		 * can_hash_by_representation and range size is known)
 		 */
 		template<typename HashAlgorithm, typename R>
 		concept can_hash_range_as_bytes
