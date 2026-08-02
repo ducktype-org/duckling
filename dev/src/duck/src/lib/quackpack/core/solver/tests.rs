@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
+use futures::executor::block_on;
 use httpmock::prelude::*;
 use tempfile::{TempDir, tempdir};
 
@@ -29,7 +30,7 @@ impl GitAccess for MockGitAccess {
     }
 
     fn store(
-        &mut self,
+        &self,
         _url: InternedUrl,
         _commit: &str,
         _source_path: &std::path::Path,
@@ -148,7 +149,7 @@ fn new_dependency() {
     let server = create_mock_server();
 
     let url: InternedUrl = server.base_url().to_url().unwrap().into();
-    let mut fetcher = Fetcher::new(&ctx).unwrap();
+    let fetcher = Fetcher::new(&ctx).unwrap();
     let (_dir, manifest_path) = prepare_manifest(&format!(
         r#"
 metadata:
@@ -204,9 +205,8 @@ dependencies:
     };
 
     let solver = SolverGathererData::new(&pcx, previous_freeze, SolverMode::default()).unwrap();
-    let ShouldRunSolverEngine::Yes(solver) = solver
-        .prepare_solving(&mut fetcher, &mut MockGitAccess())
-        .unwrap()
+    let ShouldRunSolverEngine::Yes(solver) =
+        block_on(solver.prepare_solving(&fetcher, &MockGitAccess())).unwrap()
     else {
         panic!()
     };
@@ -249,7 +249,7 @@ fn remove_unnecessary_dependency() {
     let server = create_mock_server();
 
     let url: InternedUrl = server.base_url().to_url().unwrap().into();
-    let mut fetcher = Fetcher::new(&ctx).unwrap();
+    let fetcher = Fetcher::new(&ctx).unwrap();
     let (_dir, manifest_path) = prepare_manifest(&format!(
         r#"
 metadata:
@@ -308,9 +308,8 @@ dependencies:
     };
 
     let solver = SolverGathererData::new(&pcx, previous_freeze, SolverMode::default()).unwrap();
-    let ShouldRunSolverEngine::No(answer) = solver
-        .prepare_solving(&mut fetcher, &mut MockGitAccess())
-        .unwrap()
+    let ShouldRunSolverEngine::No(answer) =
+        block_on(solver.prepare_solving(&fetcher, &MockGitAccess())).unwrap()
     else {
         panic!()
     };
@@ -350,7 +349,7 @@ fn no_longer_working_dependency() {
     let server = create_mock_server();
 
     let url: InternedUrl = server.base_url().to_url().unwrap().into();
-    let mut fetcher = Fetcher::new(&ctx).unwrap();
+    let fetcher = Fetcher::new(&ctx).unwrap();
     let (_dir, manifest_path) = prepare_manifest(&format!(
         r#"
 metadata:
@@ -405,9 +404,8 @@ dependencies:
         frozen: false,
     };
     let solver = SolverGathererData::new(&pcx, previous_freeze, mode).unwrap();
-    let ShouldRunSolverEngine::Yes(solver) = solver
-        .prepare_solving(&mut fetcher, &mut MockGitAccess())
-        .unwrap()
+    let ShouldRunSolverEngine::Yes(solver) =
+        block_on(solver.prepare_solving(&fetcher, &MockGitAccess())).unwrap()
     else {
         panic!()
     };

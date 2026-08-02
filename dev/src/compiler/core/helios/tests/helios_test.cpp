@@ -1181,12 +1181,12 @@ private:
 		auto              tree_vbox = getExprOfConst(sym_vbox);
 		std::stringstream out_vbox;
 		tree_vbox->debugPrint(out_vbox);
-		const auto f16_type    = getFloatTypeNoContext(16);
-		const auto f16box_type = st(f16_type)
+		const auto f32_type    = getFloatTypeNoContext(32);
+		const auto f32box_type = st(f32_type)
 		                             .withReferenceKind(compiler::tsh::ReferenceKind::Box)
 		                             .withMutability(Immutable);
 		const auto vbox_type = query::entryPoint<compiler::helios::QueryTypeOfSymbol>(sym_vbox);
-		ASSERT_EQUAL(f16box_type, vbox_type->valueOrThrow());
+		ASSERT_EQUAL(f32box_type, vbox_type->valueOrThrow());
 
 		auto              sym_vconst  = getChain("VCONST", root_scope).back();
 		auto              tree_vconst = getExprOfConst(sym_vconst);
@@ -1483,8 +1483,8 @@ private:
 			ASSERT_EQUAL(var_type.getType().getKind(), compiler::tsh::Kind::Integral);
 		}
 		{
-			// double_coerce(b_int);
-			// `box i32` -> `ref i32` -> `ref i64`
+			// take_int_ref(&b_int);
+			// `&` on `box i32` creates a `ref i32`
 			ASSERT_TRUE(body.statements.size() > 2);
 			auto* expr_stmt = dynamic_cast<const ExprStmt*>(body.statements[1].get());
 			ASSERT_TRUE(expr_stmt != nullptr);
@@ -1492,9 +1492,8 @@ private:
 			ASSERT_TRUE(call_expr != nullptr);
 
 			ASSERT_TRUE(call_expr->arguments.size() == 1);
-			auto* cast_expr = dynamic_cast<const CastExpr*>(call_expr->arguments[0].get());
-			ASSERT_TRUE(cast_expr != nullptr);
-			ASSERT_EQUAL(cast_expr->target_type.getRefKind(), compiler::tsh::ReferenceKind::Ref);
+			auto* ref_of = dynamic_cast<const RefOfExpr*>(call_expr->arguments[0].get());
+			ASSERT_TRUE(ref_of != nullptr);
 		}
 		{
 			// var x: i32 = b_point.x;
@@ -1614,12 +1613,14 @@ private:
 			auto* deref = dynamic_cast<const DerefExpr*>(boxed_value);
 			ASSERT_TRUE(deref != nullptr);
 		}
-		// var box_box_a: box i32 = box_a; (Box -> Box)
+		// var box_box_a: box i32 = move box_a; (Box -> Box)
 		{
 			const auto& var_stmt = get_var_stmt(6);
 			ASSERT_EQUAL(var_stmt.type, box_i32);
-			// This is just a move, should be a noop
-			auto* ident = dynamic_cast<const IdentifierExpr*>(var_stmt.initial_value.get());
+			// `box = box` needs an explicit `move`.
+			auto* move_expr = dynamic_cast<const MoveExpr*>(var_stmt.initial_value.get());
+			ASSERT_TRUE(move_expr != nullptr);
+			auto* ident = dynamic_cast<const IdentifierExpr*>(move_expr->inner.get());
 			ASSERT_TRUE(ident != nullptr);
 		}
 	}
