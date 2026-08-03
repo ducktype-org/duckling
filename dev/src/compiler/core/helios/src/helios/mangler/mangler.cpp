@@ -1,6 +1,7 @@
 #include "mangler.hpp"
 
 #include <concurrent/base/collections/hash_map.hpp>
+#include <ctv/ctv.hpp>
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/element_kind.hpp>
@@ -41,37 +42,7 @@
  */
 namespace compiler::helios::mangler {
 
-	namespace {
-		/**
-		 * @brief Mangles a compile-time value.
-		 * @TODO: #2607 This is a temporary, mock solution
-		 */
-		std::string mangleCTV(query::Context& ctx, const ctv::CompileTimeValue& ctv) {
-			variant_match(ctv.getStorage()) {
-				variant_case_novalue(
-					bool,
-					numeric_value::NumericValue,
-					char,
-					ctv::CompileTimeValue::CharSliceValue,
-					ctv::CompileTimeValue::StringClassValue,
-					ctv::CompileTimeValue::UnitCTV
-				) {
-					// @TODO: #2607 This is questionable, note that this only
-					// works, because queryUnstablePerfectHash is actually stable for these types
-					// (at least at the moment of writting it)
-					return ctv.queryUnstablePerfectHash().toStringHex();
-				}
-				variant_case(ctv::CompileTimeValue::TupleCTV, tuple) {
-					throw base::NotYetImplemented("Mangle CTV tuple is not implemented yet");
-				}
-				variant_case(tsh::SymbolType<>, symbol_type) {
-					return ctx.query<QueryMangledType>(symbol_type)->valueOrThrow().str();
-				}
-				variant_default { CORE_PANIC("Unhandled CTV type in mangleCTV"); }
-			}
-			CORE_UNREACHABLE();
-		}
-	}
+	using namespace std::literals::string_view_literals;
 
 	void addToHash(hashing::hash_algorithm auto& h, const KeyOf_MangledSymbol& k) RELEASE_NOEXCEPT {
 		addToHash(h, k.symbol_key.index());
@@ -93,6 +64,9 @@ namespace compiler::helios::mangler {
 	}
 
 	namespace internal {
+		static constexpr auto BASE_62_DIGITS
+			= "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"sv;
+
 		/**
 		 * @brief Check if the symbol should be mangled in the first place.
 		 * @note: See mangling-scheme.md for details
@@ -109,7 +83,7 @@ namespace compiler::helios::mangler {
 					variant_case_novalue(CAbi) { return false; }
 					variant_case_novalue(DVMAbi) { return false; }
 					variant_case_novalue(DefaultAbi) { return true; }
-					variant_default { CORE_UNREACHABLE(); }
+					variant_default { CORE_PANIC("Unknown ABI in shouldMangle()"); }
 				}
 			}
 
@@ -121,18 +95,14 @@ namespace compiler::helios::mangler {
 		 * @note: See mangling-scheme.md for details
 		 */
 		std::string compactNumber(u64 number) {
-			using namespace std::literals::string_view_literals;
-
 			if (number == 0) return "_";
 
-			static constexpr auto DIGITS
-				= "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"sv;
-			constexpr u64 BASE = DIGITS.size();
+			constexpr u64 BASE = BASE_62_DIGITS.size();
 
 			std::string ret;
 			--number;
 			do {
-				ret += DIGITS[number % BASE];
+				ret += BASE_62_DIGITS[number % BASE];
 				number /= BASE;
 			} while (number > 0);
 			std::ranges::reverse(ret);
@@ -343,112 +313,102 @@ namespace compiler::helios::mangler {
 		 * @note See mangling-scheme.md for details
 		 */
 		std::string symbolName(query::Context& ctx, SymID symbol_id) {
-			auto scope_id = scope(symbol_id);
+			if (scopeDepth(scope(symbol_id)) == 1) return "G" + unscopedName(ctx, symbol_id);
 
-			if (scopeDepth(scope_id) == 1) {
-				return "G" + unscopedName(ctx, symbol_id);
-			} else {
-				std::vector<std::string> path_parts;
+			std::vector<std::string> path_parts;
 
-				// This function can be only called for symbols
-				// that have clear PST-path mangling.
-				// This means that all PstImplementedSemantics work, and few
-				// additional cases that are handled below.
-				auto ancestor_opt = [&]() {
-					variant_match(getSymRef(symbol_id)->other) {
-						variant_case_novalue(PstImplementedSemantics, BuiltinSemantics) {
-							auto ancestor = maybeSymbolPst(symbol_id).value().unlock(ctx);
-							return getPSTElementParent(ctx, ancestor);
-						}
-						variant_case(defgen::GeneratedConstant, const_data) {
-							// @TODO: #2587 adjust code here
 
-							auto scope = const_data.scope;
-							auto ancestor
-								= ScopeAccess_Functor::get(scope)->relatedPSTElement().value();
-							return PSTParentResult{ ancestor };
-						}
+			// This function can be only called for symbols
+			// that have clear PST-path mangling.
+			// This means that all PstImplementedSemantics work, and few
+			// additional cases that are handled below.
+			auto ancestor_opt = [&]() {
+				variant_match(getSymRef(symbol_id)->other) {
+					variant_case_novalue(PstImplementedSemantics, BuiltinSemantics) {
+						auto ancestor = maybeSymbolPst(symbol_id).value().unlock(ctx);
+						return getPSTElementParent(ctx, ancestor);
 					}
-					CORE_UNREACHABLE();
-				}();
+					variant_case(defgen::GeneratedConstant, const_data) {
+						// @TODO: #2587 adjust code here
 
+						auto scope = const_data.scope;
+						auto ancestor
+							= ScopeAccess_Functor::get(scope)->relatedPSTElement().value();
+						return PSTParentResult{ ancestor };
+					}
+				}
+				CORE_UNREACHABLE();
+			}();
 
-				while (ancestor_opt.isLangElement()) {
-					auto ancestor = ancestor_opt.getAsLangElement().unlock(ctx);
+			bool is_global = true;
+			while (ancestor_opt.isLangElement()) {
+				auto ancestor = ancestor_opt.getAsLangElement().unlock(ctx);
 
-					if (ancestor->getElementKind() == pst::ElementKind::Namespace) {
-						auto namespace_v = ancestor.dynamicCast<pst::Namespace>().value();
-						path_parts.push_back(
-							identifier(namespace_v->getName().unlock(ctx)->unwrap().strView())
-						);
-					} else if (ancestor->getElementKind() == pst::ElementKind::Class) {
-						auto class_v = ancestor.dynamicCast<pst::Class>().value();
-						path_parts.push_back(
-							identifier(class_v->getName().unlock(ctx)->unwrap().strView())
-						);
-					} else if (ancestor->getElementKind() == pst::ElementKind::TemplateStmt) {
-						// @TODO: #2607 will likely have to change.
+				if (ancestor->getElementKind() == pst::ElementKind::Namespace) {
+					auto namespace_v = ancestor.dynamicCast<pst::Namespace>().value();
+					path_parts.push_back(
+						identifier(namespace_v->getName().unlock(ctx)->unwrap().strView())
+					);
+					is_global = false;
+				} else if (ancestor->getElementKind() == pst::ElementKind::Class) {
+					auto class_v = ancestor.dynamicCast<pst::Class>().value();
+					path_parts.push_back(
+						identifier(class_v->getName().unlock(ctx)->unwrap().strView())
+					);
+					is_global = false;
+				} else if (ancestor->getElementKind() == pst::ElementKind::TemplateStmt) {
+					auto template_stmt_v = ancestor.dynamicCast<pst::TemplateStmt>().value();
 
-						auto template_stmt_v = ancestor.dynamicCast<pst::TemplateStmt>().value();
+					if (template_stmt_v->hasAdditionalRootData()) {
+						// We are inside baked template
 
-						path_parts.push_back(identifier(template_stmt_v->getInnerStatement()
-						                                    .unlock(ctx)
-						                                    ->getDeclSymbolIdentifier()
-						                                    ->unlock(ctx)
-						                                    ->unwrap()
-						                                    .strView()));
-
-
-						if (template_stmt_v->hasAdditionalRootData()) {
-							// We are inside baked template
-
-							auto root_data = template_stmt_v->getAdditionalRootData();
-							variant_match(root_data.pst_parent) {
-								variant_case(
-									pst::AdditionalRootData::BakedTemplateParent, template_parent
-								) {
-									const auto& template_bake_data_any
-										= template_parent.template_bake_data;
-									auto template_bake_data
-										= base::anyCast<templates::TemplateBakePSTLinkedData>(
-											template_bake_data_any
-										);
-									for (const auto& bake_argument:
-									     template_bake_data.postponed_data
-									         ->load(std::memory_order_acquire)
-									         ->template_arguments_symbols) {
-										// @TODO: #2607 This is a mock
-										auto value
-											= ctx.query<helios::QueryConstValueOf>(bake_argument)
-										          .valueOrThrow();
-										path_parts.push_back(identifier(mangleCTV(ctx, value)));
-									}
-								}
-								variant_default {
-									CORE_PANIC(
-										"TemplateStmt has no PST parent, this should not happen "
-										"here."
+						auto root_data = template_stmt_v->getAdditionalRootData();
+						variant_match(root_data.pst_parent) {
+							variant_case(
+								pst::AdditionalRootData::BakedTemplateParent, template_parent
+							) {
+								const auto& template_bake_data_any
+									= template_parent.template_bake_data;
+								auto template_bake_data
+									= base::anyCast<templates::TemplateBakePSTLinkedData>(
+										template_bake_data_any
 									);
-								}
-							}
-						} else {
-							CORE_PANIC(
-								"TemplateStmt has no additional root data meaning it is not baked"
-								"It should not happen in mangling"
-							);
-						}
-					}
 
-					ancestor_opt = getPSTElementParent(ctx, ancestor);
+								path_parts.emplace_back("E");
+								for (const auto& bake_argument:
+								     template_bake_data.postponed_data
+								             ->load(std::memory_order_acquire)
+								             ->template_arguments_symbols
+								         | std::views::reverse) {
+									auto value = ctx.query<helios::QueryConstValueOf>(bake_argument)
+									                 .valueOrThrow();
+									path_parts.push_back(mangleCTV(ctx, value));
+								}
+								path_parts.emplace_back("I");
+							}
+							variant_default {
+								CORE_PANIC(
+									"TemplateStmt has no PST parent, this should not happen "
+									"here."
+								);
+							}
+						}
+					} else {
+						CORE_PANIC(
+							"TemplateStmt has no additional root data meaning it is not baked"
+							"It should not happen in mangling"
+						);
+					}
 				}
 
-				std::string ret = "N";
-				for (auto&& it = path_parts.rbegin(); it != path_parts.rend(); ++it) ret += *it;
-
-				ret += unscopedName(ctx, symbol_id);
-
-				return ret + "E";
+				ancestor_opt = getPSTElementParent(ctx, ancestor);
 			}
+
+			std::string ret = is_global ? "G" : "N";
+			for (auto&& it = path_parts.rbegin(); it != path_parts.rend(); ++it) ret += *it;
+			ret += unscopedName(ctx, symbol_id) + (is_global ? "" : "E");
+
+			return ret;
 		}
 
 		/**
@@ -497,7 +457,6 @@ namespace compiler::helios::mangler {
 			case SymbolKind::Field:
 			case SymbolKind::Const:
 				return path(ctx, symbol_id);
-				break;
 
 			case SymbolKind::Function:
 			case SymbolKind::Method:
@@ -584,7 +543,6 @@ namespace compiler::helios::mangler {
 				throw base::LogicError{
 					base::strConcat("Cannot mangle symbol of type: ", kind(symbol_id))
 				};
-				break;
 			}
 		}
 
@@ -669,7 +627,7 @@ namespace compiler::helios::mangler {
 				break;
 
 			default:
-				CORE_UNREACHABLE();
+				CORE_PANIC("Unknown ManglingSymbolKind in encoding()");
 			}
 		}
 
@@ -682,12 +640,96 @@ namespace compiler::helios::mangler {
 			return "$" + metadata.value();
 		}
 
+		template<typename Float>
+		static auto floatToHex(Float value) {
+			static constexpr auto HEX_DIGITS = "0123456789abcdef"sv;
+
+			auto bytes = std::bit_cast<std::array<unsigned char, sizeof(Float)>>(value);
+			if constexpr (std::endian::native == std::endian::big) std::ranges::reverse(bytes);
+
+			std::string hex_str;
+			hex_str.reserve(bytes.size() * 2);
+
+			for (const auto byte: bytes) {
+				hex_str += HEX_DIGITS[byte >> 4];
+				hex_str += HEX_DIGITS[byte & 0x0F];
+			}
+
+			return hex_str;
+		}
+
+		static std::string mangleValue(query::Context&, compiler::numeric_value::NumericValue num) {
+			const auto& value = num.getStorage();
+
+			variant_match(value) {
+				variant_case_novalue(int8_t, i16, i32, i64) {
+					const i64 int_value = std::visit(
+						[&](auto&& arg) -> i64 { return static_cast<i64>(arg); }, value
+					);
+					return base::strConcat((int_value < 0 ? "n" : ""), std::abs(int_value), "_");
+				}
+				variant_case_novalue(uint8_t, u16, u32, u64) {
+					const u64 uint_value = std::visit(
+						[&](auto&& arg) -> u64 { return static_cast<u64>(arg); }, value
+					);
+					return base::strConcat(uint_value, "_");
+				}
+				variant_case(f32, f) { return floatToHex(f); }
+				variant_case(f64, d) { return floatToHex(d); }
+				variant_default { CORE_PANIC("Unknown type in mangleValue()"); }
+			}
+		}
+
+		std::string mangleString(std::string_view sv) {
+			static constexpr auto HEX_DIGITS = "0123456789abcdef"sv;
+			std::string           hex_str;
+			hex_str.reserve(sv.size() * 2);
+
+			for (const char c: sv) {
+				const auto byte = static_cast<unsigned char>(c);
+				hex_str += HEX_DIGITS[byte >> 4];
+				hex_str += HEX_DIGITS[byte & 0x0F];
+			}
+
+			return base::strConcat(sv.size(), '_', hex_str);
+		}
+
 	}  // namespace internal
+
+	std::string mangleCTV(query::Context& ctx, const compiler::ctv::CompileTimeValue& value) {
+		variant_match(value.getStorage()) {
+			variant_case(bool, b) { return base::strConcat("b", (b ? "1" : "0")); }
+			variant_case(compiler::numeric_value::NumericValue, num) {
+				return base::strConcat(
+					ctx.query<QueryMangledType>(num.getTypeOfStoredValue(ctx))
+						.get()
+						->valueOrThrow()
+						.strView(),
+					internal::mangleValue(ctx, num)
+				);  // adds '_' to ints
+			}
+			variant_case(char, c) { return base::strConcat("c", static_cast<u32>(c), "_"); }
+			variant_case(compiler::ctv::CompileTimeValue::CharSliceValue, cs) {
+				return base::strConcat("r", internal::mangleString(cs.value.strView()));
+			}
+			variant_case(compiler::ctv::CompileTimeValue::StringClassValue, sc) {
+				return base::strConcat("s", internal::mangleString(sc.value.strView()));
+			}
+			variant_case(compiler::ctv::CompileTimeValue::UnitCTV, unit) { return "u"; }
+			variant_case(compiler::ctv::CompileTimeValue::TupleCTV, tuple) {
+				std::string ret = "T";
+				for (auto&& elem: tuple.getElements()) ret += mangleCTV(ctx, elem);
+				return ret += "E";
+			}
+			variant_case(tsh::SymbolType<>, sym) {
+				return "t" + ctx.query<QueryMangledType>({ sym })->valueOrThrow().str();
+			}
+			variant_default { CORE_PANIC("Unknown CTV type in mangle(CTV)"); }
+		}
+	}
 
 	struct IMPLEMENT_QUERY(QueryMangledSymbol, base::StrID) {
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
-			using namespace std::literals::string_view_literals;
-
 			if (not internal::shouldMangle(ctx, key)) return name(std::get<SymID>(key.symbol_key));
 
 			// note: global identifiers starting with underscore and a capital letter are
@@ -724,14 +766,49 @@ namespace compiler::helios::mangler {
 		static std::string mangle(query::Context&, tsh::CharAbstractType) { return "c"; }
 
 		static std::string mangle(query::Context&, tsh::IntegralAbstractType type) {
-			if (type.getSignedness() == tsh::IntegralAbstractType::Signedness::Signed)
-				return base::strConcat("i", type.getSize().asInt());
-			else
-				return base::strConcat("j", type.getSize().asInt());
+			const bool is_signed
+				= type.getSignedness() == tsh::IntegralAbstractType::Signedness::Signed;
+			const auto  size = type.getSize().asInt();
+			std::string ret  = (is_signed ? "i" : "j");
+			switch (size) {
+			case 8:
+				ret += "b";
+				break;
+			case 16:
+				ret += "w";
+				break;
+			case 32:
+				ret += "d";
+				break;
+			case 64:
+				ret += "q";
+				break;
+			case 128:
+				ret += "x";
+				break;
+			default:
+				ret = (is_signed ? "k" : "l") + std::to_string(size) + "_";
+			}
+			return ret;
 		}
 
 		static std::string mangle(query::Context&, tsh::FloatAbstractType type) {
-			return base::strConcat("f", type.getSize().asInt());
+			const auto size = type.getSize().asInt();
+			switch (size) {
+			case 16:
+				return "h";
+			case 32:
+				return "f";
+			case 64:
+				return "d";
+			case 80:
+				return "e";
+			case 128:
+				return "q";
+			default:
+				// @future: "b" for brain float
+				CORE_PANIC("Unknown floating-point type in mangle(FloatAbstractType)");
+			}
 		}
 
 		static std::string mangle(query::Context&, tsh::RawPointerAbstractType) { return "p"; }
