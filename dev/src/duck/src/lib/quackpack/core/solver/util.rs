@@ -104,10 +104,9 @@ impl PackageId {
     /// Helper for [`Self::still_satisfies_dep`].
     fn check_satisfaction_of_versions(&self, dependency: &Dependency) -> QuackResult<bool> {
         if dependency.is_pinned() {
-            let required_version = dependency
-                .versions()
-                .first()
-                .context_internal("pinned dependency without specified version")?;
+            let required_version = dependency.versions().first().with_context_internal(|| {
+                format!("pinned dependency without a specified version, {dependency:#?}")
+            })?;
             Ok(self.version() == *required_version)
         } else {
             Ok(dependency

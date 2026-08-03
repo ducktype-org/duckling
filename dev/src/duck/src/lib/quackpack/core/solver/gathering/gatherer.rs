@@ -111,9 +111,9 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
         if cfg!(debug_assertions) {
             assert_root_features_are_expanded(&root_manifest, &root_features);
         }
-        let root_url = root_path
-            .to_url()
-            .context_internal("failed to generate url from a path")?;
+        let root_url = root_path.to_url().with_context_internal(|| {
+            format!("failed to generate url from a path `{root_path:?}`")
+        })?;
         let root_source = Source::for_local_with_url(root_url);
         let root_request = NotPinnedRequest {
             id: RequestIdentifier {
@@ -135,8 +135,9 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
                     PackageId::new(
                         FullIdentity::new(
                             root_name,
-                            FullOrigin::for_local(&root_path)
-                                .context_internal("failed to translate root path into url")?,
+                            FullOrigin::for_local(&root_path).with_context_internal(|| {
+                                format!("failed to translate root path into url `{root_path:?}`")
+                            })?,
                         ),
                         root_version,
                     ),
@@ -197,7 +198,9 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
     ) -> QuackResult<FetchResponse> {
         trace!("fetching registry (pinned)");
         if !matches!(request.id.source.kind(), SourceKind::Registry) {
-            qp_bail_internal!("tried to make pinned registry fetch for a non-registry source");
+            qp_bail_internal!(
+                "tried to make pinned registry fetch for a non-registry source: {request:#?}"
+            );
         };
         let pkg_to_fetch = PackageWithUrl {
             name: request.id.name,

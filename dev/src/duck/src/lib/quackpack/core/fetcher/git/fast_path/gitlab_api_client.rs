@@ -132,9 +132,11 @@ impl<'duck> GitlabApiClient<'duck> {
         debug!(%method, %url, ?body, "building a request");
         http::Request::builder()
             .uri(url.as_str())
-            .method(method)
+            .method(&method)
             .body(body)
-            .context_internal("failed to build an HTTP request")
+            .with_context_internal(|| {
+                format!("failed to build an HTTP request: url: `{url}`, method: `{method:#?}`")
+            })
     }
 
     /// Get the underlying [`DuckContext`].
