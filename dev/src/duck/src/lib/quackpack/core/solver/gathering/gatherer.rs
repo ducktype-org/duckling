@@ -322,9 +322,9 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
         }
         if !tmp_logger.is_empty() {
             let err = tmp_logger.unwrap_first();
-            errors
-                .borrow_mut()
-                .log(err.context(MessageError::new("when trying to get cached git")));
+            errors.borrow_mut().log(err.context(MessageError::new(
+                "when trying to get cached git or during fastpath",
+            )));
             return FetchResponse::failed_not_pinned(request.id);
         }
         if self.fetcher.ctx().is_offline() {

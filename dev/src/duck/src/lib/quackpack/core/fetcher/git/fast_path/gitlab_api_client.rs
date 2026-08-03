@@ -113,10 +113,11 @@ impl<'duck> GitlabApiClient<'duck> {
         commit: StrId,
     ) -> QuackResult<String> {
         let path_encoded = utf8_percent_encode(path_to_file, PATH_ENCODE_SET);
+        let path_encoded = format!("{path_encoded}/");
         let mut url = repo_api_url
             .join("repository/files/")?
-            .join(&path_encoded.to_string())?
-            .join("/raw")?;
+            .join(&path_encoded)?
+            .join("raw")?;
         url.set_query(Some(&format!("ref={}", commit)));
         let response = self.request(&url).await?;
         Ok(String::from_utf8(response.into_body())?)
