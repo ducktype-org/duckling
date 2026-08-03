@@ -166,7 +166,7 @@ impl Unit {
                     .get_by_name(dep_name)
                     .unwrap_or_else(|| {
                         panic!(
-                            "unit=({},{}) has dep=({},{}), but it's not in the manifest?!",
+                            "unit=({},{}) has dep=({},{}), but it's not in the manifest?! `{self:?}` {graph:#?}",
                             self.unit_id(),
                             import_name,
                             dep_id,
