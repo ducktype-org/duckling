@@ -4,7 +4,7 @@ use std::path::Path;
 
 use itertools::Itertools;
 use serde::Deserialize;
-use tracing::debug;
+use tracing::trace;
 
 use crate::quackpack::core::Package;
 use crate::quackpack::schemas::manifest::Manifest as ManifestSchema;
@@ -32,7 +32,7 @@ mod tests;
 /// 3. Parse [`ManifestSchema`] into [`Manifest`].
 #[tracing::instrument(skip(ctx))]
 pub fn parse_manifest(path: &Path, ctx: &DuckContext) -> QuackResult<Package> {
-    debug!("starting parsing...");
+    trace!("starting parsing");
     parse_inner(path, ctx).with_context(|| {
         format!(
             "when trying to parse the user manifest at `{}`",

@@ -12,6 +12,7 @@
 #include <frontend/pst_parser/elements/hierarchy/not_statements/format_string_sub_elements/format_sub_expression.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/format_string_sub_elements/format_sub_string.hpp>
 #include <frontend/pst_parser/pst_expr_visitor.hpp>
+#include <helios/attributes/builtins.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/queries/function_queries.hpp>
 #include <helios/symbols/lang_primitives.hpp>
@@ -466,6 +467,23 @@ namespace compiler::helios::code {
 						return;
 					}
 					node = makeBox<MoveExpr>(ctx, pstOrigin(stmt), std::move(inner));
+					return;
+				}
+
+				// Box creation
+				if (op->unwrap() == lang_def::keywordToStr(lang_def::Keyword::New)) {
+					const auto origin = inner->origin.generatedFrom();
+					const auto direct_type
+						= inner->expression_type.getSymbolType().withReferenceKind(
+							tsh::ReferenceKind::Direct
+						);
+
+					auto value = coerceFromBox(
+						ctx, std::move(inner), direct_type, stmt->getStablePosition(), {}
+					);
+
+					if (value.has_value())
+						node = makeBoxAllocCall(ctx, origin, std::move(value.value()));
 					return;
 				}
 
