@@ -303,6 +303,16 @@ namespace compiler::mir {
 			dest->lifetime_flags |= LifetimeFlag::NoMoveStatusValidation;
 			auto current = continuation;
 
+			// An aggregate with no elements (e.g. a fieldless class) has no store that could
+			// construct it, so the destination is marked as constructed by a `Nop` instead.
+			if (values.empty()) {
+				continuation->addInstruction(Instruction(
+					Operation::Nop, {}, {}, { flagConstruct(dest) }, expr_scope, {}, { position }
+				));
+				valueOutput(continuation, MIRValue{ dest });
+				return;
+			}
+
 			// The chain is built back-to-front, so the first iteration lowers the store that runs
 			// last. Only that store constructs the destination — before it, the value is still
 			// partially uninitialized.
@@ -326,15 +336,132 @@ namespace compiler::mir {
 			valueOutput(current, MIRValue{ dest });
 		}
 
+		/**
+		 * @brief Lowers a static array construction that got a single value for all of its
+		 * elements as a loop storing that value into every element.
+		 *
+		 * The generated shape, where `dest` is the constructed array and `i` the counter:
+		 * ```
+		 * entry: i = 0                         -> jump cond
+		 * cond:  cond_tmp = i < size           -> branch cond_tmp ? body : continuation
+		 * body:  dest[i] = <value>; i = i + 1  -> jump cond
+		 * ```
+		 */
+		void lowerArrayFillLoop(
+			const tsh::SymbolType<>&                dest_type,
+			const hc::Expr&                         value,
+			usize                                   size,
+			base::Optional<dia_int::StablePosition> position
+		) {
+			auto& ctx = function.getContext();
+
+			// We create a tmp, but we don't check use before init, as the value is never inited.
+			auto dest = function.addTmp(dest_type, expr_scope);
+			dest->lifetime_flags |= LifetimeFlag::NoMoveStatusValidation;
+
+			// The counter only ever goes from zero up to the size of the array, so it is unsigned.
+			const auto counter_type
+				= tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned);
+			auto counter
+				= function.addTmp(tsh::SymbolType<>::withDefaults(counter_type), expr_scope);
+
+			auto counter_constant = [&](usize constant) {
+				return MIRValue{ MIRConstant{
+					ctv::CompileTimeValue{ ctv::NumericValue::createOfType(counter_type, constant)
+					                           .expect("u64 numeric value creation failed") } } };
+			};
+
+			auto cond_block = function.newBlock();
+			auto body_block = function.newBlock();
+
+			// The body is assembled in reverse execution order, so the increment goes in first.
+			body_block->setTerminator(
+				{ Operation::Jump, {}, { cond_block->getID() }, {}, expr_scope }
+			);
+			body_block->addInstruction(Instruction(
+				Operation::IntegerAdd,
+				MIRPlace(counter),
+				{ MIRValue(counter), counter_constant(1) },
+				{ flagReinit(counter) },
+				expr_scope,
+				{},
+				{ position }
+			));
+
+			// Temporaries of the value expression get their own scope, so that they are destructed
+			// at the end of every iteration instead of piling up over the whole loop.
+			auto body_scope   = function.newScope(expr_scope);
+			auto store_hole   = body_block->addHole();
+			auto value_result = lowerExpr(value, body_block, function, body_scope);
+			value_result.storeResultInGivenPlace(
+				MIRPlace(dest).withIndex(MIRValue(counter)), store_hole, {}, body_scope, { position }
+			);
+
+			auto condition = function.addConditionTmp(expr_scope);
+			cond_block->addInstruction(Instruction(
+				Operation::IntegerLt,
+				MIRPlace(condition),
+				{ MIRValue(counter), counter_constant(size) },
+				{ flagConstruct(condition) },
+				expr_scope,
+				{},
+				{ position }
+			));
+			cond_block->setTerminator(Instruction(
+				Operation::Branch,
+				{},
+				{ MIRValue(condition), value_result.begin->getID(), continuation->getID() },
+				{},
+				expr_scope,
+				{},
+				{ position }
+			));
+
+			// The array is only fully constructed once the loop is over, so the flag sits on the
+			// first instruction executed after it.
+			continuation->addInstruction(Instruction(
+				Operation::Nop, {}, {}, { flagConstruct(dest) }, expr_scope, {}, { position }
+			));
+
+			auto entry_block = function.newBlock();
+			entry_block->addInstruction(Instruction(
+				Operation::Assign,
+				MIRPlace(counter),
+				{ counter_constant(0) },
+				{ flagConstruct(counter) },
+				expr_scope,
+				{},
+				{ position }
+			));
+			entry_block->setTerminator(
+				{ Operation::Jump, {}, { cond_block->getID() }, {}, expr_scope }
+			);
+
+			valueOutput(entry_block, MIRValue{ dest });
+		}
+
 		void visitCreateAggregateExpr(const hc::CreateAggregateExpr& expr) override {
 			auto& ctx = function.getContext();
 
 			// Static arrays project by index, every other aggregate projects by field.
 			if (expr.type.getKind() == tsh::Kind::StaticArray) {
 				const auto array_type = tsh::StaticArrayAbstractType(expr.type);
+
+				// A single value for a multi-element array fills all of its elements.
+				if (array_type.getSize() > 1 and expr.values.size() == 1) {
+					lowerArrayFillLoop(
+						expr.expression_type.getSymbolType(),
+						*expr.values.front(),
+						array_type.getSize(),
+						expr.getPosition()
+					);
+					return;
+				}
+
 				CORE_ASSERT(
 					array_type.getSize() == expr.values.size(),
-					"CreateAggregateExpr value count must match the static array's size."
+					"CreateAggregateExpr value count must match the static array's size, unless it "
+					"is a single value filling the whole array."
 				);
 
 				lowerInPlaceConstruction(

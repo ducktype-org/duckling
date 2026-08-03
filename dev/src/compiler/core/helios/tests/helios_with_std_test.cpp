@@ -213,10 +213,6 @@ private:
 				auto deps
 					= ctx.query<QueryTransitiveUsedSymbols>(ctor_sym)->valueOrThrow().used_functions;
 
-				// Ctor(ArrayHolder) (the root, excluded) -> Ctor(WithInit[5]) (`__init_array`) ->
-				// Ctor(WithInit). `__init_array` builds the array with a single
-				// `CreateAggregateExpr` over compile-time indices, so no bounds-check chain
-				// (`panic`, `builtin_output_str`, and their transitive callees) is pulled in.
 				ASSERT_EQUAL_PRINT(2, deps.size());
 
 				bool found_array_ctor = false;

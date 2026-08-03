@@ -190,16 +190,12 @@ namespace compiler::helios::defgen {
 				// `return zero_initialized T[0];`
 				body.emplace_back(s.ret(s.defaultValue(array_type)));
 			} else {
-				// One value per element: the element type's default initializer, repeated `size`
-				// times. That expr is owned by its query cache, so each copy has to be cloned.
-				const auto& element_init
-					= ctx.query<QueryDefaultInitializerExpr>(element_type)->valueOrThrow();
-
 				std::vector<Box<code::Expr>> element_values;
-				element_values.reserve(size);
-				for (usize i = 0; i < size; i++) element_values.emplace_back(element_init->clone());
+				element_values.emplace_back(
+					ctx.query<QueryDefaultInitializerExpr>(element_type)->valueOrThrow()->clone()
+				);
 
-				// `return create_aggregate(T[N]) [ element_values... ];`
+				// `return create_aggregate(T[N]) [ element_init ];`
 				body.emplace_back(s.ret(s.createAggregate(array_type, std::move(element_values))));
 			}
 

@@ -782,13 +782,10 @@ namespace compiler::helios::code {
 	 *
 	 * Covers both record-like aggregates (struct/class/tuple), where the elements are the fields in
 	 * declaration order, and statically-sized arrays, where the elements are the array items in
-	 * index order.
+	 * index order, or a single value that fills all of the elements of the array.
 	 *
-	 * Unlike a constructor `CallExpr`, this does not first zero-initialize the destination into a
-	 * valid value and then overwrite each element. It lowers to one plain store per element into
-	 * uninitialized storage, with only the last store flagged as constructing the destination.
-	 * @p values holds one expression per element and must match the element count of
-	 * @ref type.
+	 * It stores the into uninitialized storage, with only the last store flagged as constructing
+	 * the destination, to avoid destructor insertion on assignment.
 	 */
 	struct CreateAggregateExpr final: public Expr {
 		tsh::AbstractType            type;
