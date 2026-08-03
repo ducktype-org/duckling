@@ -34,7 +34,8 @@ namespace vm::code {
 		case builtins::BuiltinFunctionID::I64ToString:
 			// Number-to-string conversions that write the result through a pointer operand.
 			// No console I/O and no threading; like every other pointer-deref write (see the
-			// CptrRead/CptrWrite note below) they are not classified as GlobalRead/GlobalWrite.
+			// `deref_write` no-op in getFlagsForInstruction) they are not classified as
+			// GlobalRead/GlobalWrite.
 			return {};
 		case builtins::BuiltinFunctionID::StartThread:
 			return FunctionFlag(Multithread) | ControlFlowModifying;
@@ -51,15 +52,6 @@ namespace vm::code {
 		case builtins::BuiltinFunctionID::LockMutex:
 		case builtins::BuiltinFunctionID::WaitCV:
 			return FunctionFlag(Multithread) | MayBlock | ReleaseGIL;
-		case builtins::BuiltinFunctionID::CptrRead:
-		case builtins::BuiltinFunctionID::CptrWrite:
-			// Raw memory copies between VM memory and C memory addressed by a `cptr`. They perform
-			// no console I/O and do not spawn threads. The VM side is accessed through a pointer
-			// operand, and like every other pointer-deref write in this module (see the
-			// `deref_write` no-op in getFlagsForInstruction) such accesses are not classified as
-			// GlobalRead/GlobalWrite: the analysis cannot tell whether the pointer aliases a
-			// global. So no config restriction applies here.
-			return {};
 		}
 		CORE_PANIC("Invalid builtin function ID");
 	}
@@ -96,7 +88,7 @@ namespace vm::code {
 		};
 		// dst that is read and then written (arith/cmov/cast in-place)
 		auto rdwr = [&](const auto& place) {
-			if (is_global(place.var_name)) flags |= InstructionFlag(GlobalRead) | GlobalWrite;
+			if (is_global(place.var_name)) flags |= GlobalRead | GlobalWrite;
 		};
 
 		// Dereferencing a pointer contributes no global read/write flags for now.
@@ -155,7 +147,7 @@ namespace vm::code {
 			FLAGS_W_R(mov_p32_p32)
 			FLAGS_W_R(mov_p64_p64)
 			FLAGS_W_R(mov_pptr_pptr)
-			FLAGS_W_R(mov_pcpt_pcpt)
+			FLAGS_W_R(mov_pcptr_pcptr)
 			FLAGS_W_R(mov_pste_pste)
 			FLAGS_W_R(mov_pfst_pfst)
 			FLAGS_W_R(mov_popq_popq)
@@ -378,6 +370,7 @@ namespace vm::code {
 			FLAGS_CMP_IMM(fcmpLt_p32_imm)
 			FLAGS_CMP(fcmpLe_p32_p32)
 			FLAGS_CMP_IMM(fcmpLe_p32_imm) instr_case(ins::Op_cmpNull_pptr, i) { rd(i.ptr); }
+			instr_case(ins::Op_cmpNull_pcptr, i) { rd(i.ptr); }
 
 			// ===== Variants =====
 			instr_case(ins::Op_variantSetInner_pvnt_type, i) { rdwr(i.variant); }
@@ -522,6 +515,35 @@ namespace vm::code {
 				wr(i.dst_ptr);
 				rd(i.src);
 			}
+
+			// ===== C pointers =====
+			instr_case(ins::Op_load_pany_pcptr, i) {
+				wr(i.dst);
+				rd(i.src_ptr);
+			}
+			instr_case(ins::Op_store_pcptr_pany, i) {
+				rd(i.dst_ptr);
+				rd(i.src);
+			}
+			instr_case(ins::Op_read_pptr_pcptr, i) {
+				rd(i.dst_ptr);
+				rd(i.src_ptr);
+				deref_write();
+			}
+			instr_case(ins::Op_write_pcptr_pptr, i) {
+				rd(i.dst_ptr);
+				rd(i.src_ptr);
+				deref_read();
+			}
+			instr_case(ins::Op_movCast_pcptr_pcptr, i) {
+				wr(i.dst);
+				rd(i.src);
+			}
+			instr_case(ins::Op_add_pcptr_p64, i) {
+				rdwr(i.dst);
+				rd(i.offset);
+			}
+			instr_case(ins::Op_add_pcptr_imm, i) { rdwr(i.dst); }
 
 			// ===== Structs =====
 			// Lea = pure address arithmetic, no memory access through src_data_ptr
@@ -686,7 +708,7 @@ namespace vm::code {
 			// ===== Misc =====
 			instr_case(ins::Op_nop, i) {}
 			instr_case(ins::Op_exit, i) { flags |= ControlFlowModifying; }
-			instr_case(ins::Op_initFromVmValue, i) {}
+			instr_case(ins::Op_initFromVMValue, i) {}
 			instr_case(ins::Comment, i) {}
 			instr_default { CORE_PANIC("Unhandled instruction: ", internal_value.name()); }
 		}

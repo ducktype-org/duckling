@@ -11,7 +11,7 @@ class Counter {
 }
 
 fun main() -> i64 = {
-    var bc: box Counter = Counter(1);
+    var bc: box Counter = new Counter(1);
     var bc2: box Counter = copy bc;     # +1
     builtin_output_i64(copies);         # 1
 

@@ -15,7 +15,7 @@ use crate::quackpack::schemas::manifest::{
 use crate::quackpack::util::to_url::ToUrl;
 use crate::util::error::MessageError;
 use crate::util::path_ops_ext::PathOpsExt;
-use crate::{DuckContext, QpContext, QuackError, QuackResult, QuackResultContext, qp_bail, qp_err};
+use crate::{DuckContext, QuackError, QuackResult, QuackResultContext, qp_bail, qp_err};
 
 /// Parse given [`DependencySchema`] into [`Source`].
 ///
@@ -29,9 +29,9 @@ pub(crate) fn parse(
 ) -> QuackResult<Source> {
     debug!(?schema);
     let Some(ref source) = schema.source else {
-        debug!("missing the source, falling back to the default registry...?");
+        debug!("missing the source, falling back to the default registry");
         if schema.version.is_some() {
-            let url = ctx.registry_url()?;
+            let url = ctx.duck_cfg().registry_url()?;
             return Ok(Source::for_registry(url));
         }
         scope.disarm_and_pop();
@@ -72,7 +72,7 @@ pub(crate) fn parse(
             check_no_registry(source, &mut scope)?;
             if schema.version.is_some() {
                 debug!("...but has a version, assuming registry source");
-                let url = ctx.registry_url()?;
+                let url = ctx.duck_cfg().registry_url()?;
                 Source::for_registry(url)
             } else {
                 scope.pop();
@@ -96,7 +96,7 @@ pub(crate) fn parse(
             debug!("found a local path source");
             check_no_git(source, &mut scope)?;
             check_no_registry(source, &mut scope)?;
-            debug!("manifest path is `{}`", root.display());
+            debug!(path_in_manifest = %root.display(), "path specified in the manifest");
             let dir_root = resolve_path_maybe_relative_to_dir(root, package_root, ctx)?;
             Source::for_local(&dir_root)?
         }

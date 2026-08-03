@@ -4,7 +4,7 @@
 //! - [`early_graph`][]: creating and modifying dependency graphs; notably, it checks for cycles,
 //!   expands features, and removes disabled dependencies,
 //! - [`duckc`][]: executing the compiler itself, it handles different compiler execution modes.
-use tracing::debug;
+use tracing::info;
 
 use crate::quackpack::core::compile::profiles::Profile;
 use crate::quackpack::core::identity::Identity;
@@ -45,15 +45,16 @@ pub struct BuildContext<'duck, 'ctx> {
     pub storage: Storage,
     pub used_features: Vec<FeatureName>,
     pub profile: Profile,
+    pub shared: bool,
     pub jobs: usize,
 }
 
 /// Compile project inside the [`BuildContext`].
 #[tracing::instrument(skip_all)]
 pub fn compile(bcx: BuildContext<'_, '_>) -> QuackResult<ExecutorOutput> {
-    debug!(bcx = ?bcx, "compiling");
+    info!(?bcx, "compiling");
     // @TODO: #2900 Unmock this.
-    if bcx.pcx.package().is_frontmatter() {
+    if bcx.pcx.package().is_script() {
         qp_bail_internal!("compiling scripts via Unit and manifest.json is not (yet) supported")
     }
     let graph = create_early_graph_from_bcx(&bcx)?;

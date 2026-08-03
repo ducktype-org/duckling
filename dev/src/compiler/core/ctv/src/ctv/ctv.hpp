@@ -20,6 +20,14 @@ namespace compiler::ctv {
 	public:
 		struct UnitCTV {};
 
+		struct CharSliceValue {
+			base::StrID value;
+		};
+
+		struct StringClassValue {
+			base::StrID value;
+		};
+
 		struct TupleCTV {
 			explicit TupleCTV(std::vector<CompileTimeValue> elements):
 				  elements(std::move(elements)) {
@@ -43,8 +51,15 @@ namespace compiler::ctv {
 		};
 
 	private:
-		using Storage
-			= std::variant<bool, NumericValue, char, base::StrID, UnitCTV, TupleCTV, tsh::SymbolType<>>;
+		using Storage = std::variant<
+			bool,
+			NumericValue,
+			char,
+			CharSliceValue,
+			StringClassValue,
+			UnitCTV,
+			TupleCTV,
+			tsh::SymbolType<>>;
 		Storage value;
 
 	public:

@@ -102,7 +102,10 @@ namespace compiler::mir {
 		}
 
 		void visitLiteralStringExpr(const hc::LiteralStringExpr& expr) override {
-			valueOutput(continuation, MIRValue{ MIRConstant{ expr.value } });
+			valueOutput(
+				continuation,
+				MIRValue{ MIRConstant{ ctv::CompileTimeValue::CharSliceValue{ expr.value } } }
+			);
 		}
 
 		void visitLiteralTypeExpr(const hc::LiteralTypeExpr& expr) override {

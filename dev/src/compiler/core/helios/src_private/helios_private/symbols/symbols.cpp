@@ -805,6 +805,11 @@ namespace compiler::helios {
 			}
 
 			// @note: here case for variables will be calling TS
+			case SymbolKind::Template:
+				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					"Lookup in template requires an explicit template parameter."
+				));
+				return query::Failed();
 			default:
 				throw base::NotYetImplemented(
 					base::strConcat("Lookup in symbol: ", key.symbol.ref->common.name)
@@ -1091,11 +1096,14 @@ namespace compiler::helios {
 				}
 				if (auto result_stmt = getAncestor(
 						ctx, pst_element, pst::ElementKind::CodeBlock, pst::ElementKind::SpecifierBlock
-					)) {
+					))
 					pst_element = *std::move(result_stmt);
-				} else {
+				else if (auto second_result_stmt = getAncestor(
+							 ctx, pst_element, pst::ElementKind::CodeBlock, pst::ElementKind::Namespace
+						 ))
+					pst_element = *std::move(second_result_stmt);
+				else
 					break;
-				}
 			}
 
 			return specifiers;

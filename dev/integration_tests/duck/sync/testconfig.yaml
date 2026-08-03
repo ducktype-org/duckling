@@ -12,3 +12,4 @@ SubDirs:
   - errors
   - exposed-freezefile
   - exposed-freezefile-and-deps
+  - legal-packages-names

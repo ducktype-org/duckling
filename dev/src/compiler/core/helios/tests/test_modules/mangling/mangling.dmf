@@ -18,18 +18,18 @@ namespace Mspc {
         }
         
         class Cls {
-            data: i32 = i32(0);
+            data: i32 = 0 as i32;
         }
     }
 
     const ABC: i64 = 4 + 4;
 
-    var XB: i64 = foooo(i32(10));
+    var XB: i64 = foooo(10 as i32);
 }
 
 namespace P {
     class MyClass {
-        a: i32 = i32(1);
+        a: i32 = 1 as i32;
     }
 
     fun barrr() -> i32 = {

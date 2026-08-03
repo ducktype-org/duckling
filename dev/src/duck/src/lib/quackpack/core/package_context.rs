@@ -1,10 +1,12 @@
 //! A context of a package  parsed from the disk.
 use std::path::{Path, PathBuf};
 
+use super::script::Script;
 use crate::duck::util::duck_home::DuckHome;
 use crate::quackpack::core::package_loader::PackageLoader;
+use crate::quackpack::core::script::StandaloneScript;
 use crate::quackpack::core::{self, AnyPackage};
-use crate::{DuckContext, QuackResult, qp_bail, qp_bail_internal};
+use crate::{DuckContext, QuackResult, qp_bail};
 
 #[derive(Debug)]
 /// A context of a package  parsed from the disk.
@@ -36,37 +38,20 @@ impl<'duck> PackageContext<'duck> {
         Ok(pcx)
     }
 
-    /// Try create new [`PackageContext`] from a script with a frontmatter at `path`.
-    /// If the script does not contain a frontmatter, returns `Ok(None)`.
+    /// Create a new [`PackageContext`] for a standalone script.
     #[tracing::instrument(skip_all)]
-    pub fn try_new_from_frontmatter(
-        path: PathBuf,
-        ctx: &'duck DuckContext,
-    ) -> QuackResult<Option<Self>> {
-        let Some(frontmatter) = core::try_parse_frontmatter(path.clone(), ctx)? else {
-            return Ok(None);
-        };
-        Ok(Some(Self {
-            package: AnyPackage::Frontmatter(frontmatter),
-            ctx,
-        }))
+    pub fn new_standalone_script(path: &Path, ctx: &'duck DuckContext) -> QuackResult<Self> {
+        let frontmatter = core::parse_frontmatter(path, ctx)?;
+        let script = StandaloneScript::new(frontmatter);
+        Ok(Self::new_script(script.into(), ctx))
     }
 
-    /// As [`Self::try_new_from_frontmatter`], but bails internally when there is no frontmatter at `path`.
-    #[tracing::instrument(skip_all)]
-    pub fn new_from_frontmatter(
-        path: PathBuf,
-        ctx: &'duck DuckContext,
-    ) -> QuackResult<Option<Self>> {
-        let Some(frontmatter) = core::try_parse_frontmatter(path.clone(), ctx)? else {
-            qp_bail_internal!(
-                "tried to construct a frontmatter package context for something that is not a frontmatter"
-            )
-        };
-        Ok(Some(Self {
-            package: AnyPackage::Frontmatter(frontmatter),
+    /// Create a new [`PackageContext`] for a script.
+    pub fn new_script(script: Script, ctx: &'duck DuckContext) -> Self {
+        Self {
+            package: AnyPackage::Script(script),
             ctx,
-        }))
+        }
     }
 
     /// Get underlying [`AnyPackage`] as a reference.

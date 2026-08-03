@@ -1,6 +1,7 @@
 use std::cmp::Ordering;
 use std::path::PathBuf;
-use std::time::SystemTime;
+
+use chrono::{DateTime, Utc};
 
 use crate::quackpack::core::storage::paths::Storage;
 use crate::quackpack::core::storage::venv::Venv;
@@ -49,11 +50,11 @@ impl Venv {
         self.data().last_access().cmp(&other.data().last_access())
     }
 
-    /// Compare venvs by last_modification ascendingly.
+    /// Compare venvs by last_synchronization ascendingly.
     fn compare_modification(&self, other: &Self) -> Ordering {
         self.data()
-            .last_modification()
-            .cmp(&other.data().last_modification())
+            .last_synchronization()
+            .cmp(&other.data().last_synchronization())
     }
 }
 
@@ -66,7 +67,7 @@ pub fn list(opts: ListOptions<'_>) -> QuackResult<()> {
         storage_path,
     } = opts;
     let storage = Storage::new(storage_path);
-    let venvs_list: Vec<(Venv, SystemTime)> = list_venvs(storage.root(), ctx)
+    let venvs_list: Vec<(Venv, DateTime<Utc>)> = list_venvs(storage.root(), ctx)
         .context("when listing the venvs")?
         .into_values()
         .collect();

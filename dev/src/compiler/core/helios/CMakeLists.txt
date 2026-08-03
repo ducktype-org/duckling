@@ -21,6 +21,7 @@ add_library(HELIOS STATIC
 	src_private/helios_private/hout_creation/expressions/builtin_operators.cpp
 	src_private/helios_private/hout_creation/expressions/numeric_literals.cpp
 	src_private/helios_private/hout_creation/expressions/coercions.cpp
+	src_private/helios_private/hout_creation/expressions/casts.cpp
 	src_private/helios_private/comp_time/comp_time.cpp
 	src_private/helios_private/comp_time/vm_evaluator.cpp
 	src_private/helios_private/comp_time/comptime_type_operations.cpp

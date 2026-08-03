@@ -9,6 +9,7 @@ use crate::quackpack::core::{FeatureName, PackageId, Version};
 
 #[derive(Debug, Deserialize, Serialize, Default, Clone, PartialEq, Eq, Hash)]
 /// General storage/venv freezefile.
+#[serde(rename_all = "kebab-case")]
 pub struct VenvFreeze {
     root: RootPackage,
     dependencies: Vec<FreezePackage>,
@@ -53,6 +54,7 @@ impl VenvFreeze {
 
 #[derive(Debug, Deserialize, Serialize, Default, Clone, PartialEq, Eq, Hash)]
 /// A root package of the freeze.
+#[serde(rename_all = "kebab-case")]
 pub struct RootPackage {
     name: StrId,
     version: Version,
@@ -129,6 +131,7 @@ impl RootPackage {
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Hash, Eq)]
 /// A non-root dependency in a freeze (transitive or direct).
+#[serde(rename_all = "kebab-case")]
 pub struct FreezePackage {
     version: Version,
     features: Vec<FeatureName>,

@@ -1,0 +1,178 @@
+cause: ''
+dep-name: ''
+package-name: 'foo'
+add-dep: 'false'
+alias-name: ''
+add-alias: 'false'
+test-cmd: duck sync
+root-error: |+
+  echo "error: when trying to parse the user manifest at \`${DIT_TMP_DIR}/quackconfig.yaml\`
+  
+    Caused by:
+      when parsing the field \`metadata.name\`
+  
+    Caused by:
+      package has an invalid name
+
+    Caused by:
+      @{cause}"
+dep-error: |+
+  echo "error: when trying to parse the user manifest at \`${DIT_TMP_DIR}/quackconfig.yaml\`
+  
+    Caused by:
+      when parsing the field \`dependencies.@{dep-name}\`
+  
+    Caused by:
+      dependency \`@{dep-name}\` has an invalid name
+
+    Caused by:
+      @{cause}"
+invalid-alias-error: |+
+  echo "error: when trying to parse the user manifest at \`${DIT_TMP_DIR}/quackconfig.yaml\`
+  
+    Caused by:
+      when parsing the field \`dependencies.@{dep-name}\`
+  
+    Caused by:
+      aliased dependency \`@{dep-name}\` points to a package \`@{alias-name}\` with an invalid name
+
+    Caused by:
+      @{cause}"
+valid-alias-error: |+
+  echo "error: when trying to parse the user manifest at \`${DIT_TMP_DIR}/quackconfig.yaml\`
+  
+    Caused by:
+      when parsing the field \`dependencies.@{dep-name}\`
+  
+    Caused by:
+      dependency \`@{alias-name}\` has an invalid alias name \`@{dep-name}\`
+
+    Caused by:
+      @{cause}"
+
+PreCase: |+
+  @{cd-tmp-dir}
+  echo "metadata:
+    name: '@{package-name}'
+    version: 1.0.0" > quackconfig.yaml
+
+  if [ '@{add-dep}' == 'true' ]; then
+    echo "dependencies:
+      '@{dep-name}':
+        version: 1.0.0" >> quackconfig.yaml
+  fi
+
+  if [ '@{add-alias}' == 'true' ]; then
+    echo "      source:
+          name: '@{alias-name}'" >> quackconfig.yaml
+  fi
+Tests:
+  package-names:
+    Description: Validates package's and dependencies' names
+    Cases:
+      empty-package-name:
+        package-name: ''
+        cause: package name is empty
+        ExitCode: 1
+        Err:
+          Run: "@{root-error}"
+      package-name-starts-with-a-dash:
+        cause: package name \`-a\` starts with an illegal character \`-\`
+        package-name: '-a'
+        ExitCode: 1
+        Err:
+          Run: "@{root-error}"
+      package-name-starts-with-an-illegal-character:
+        cause: package name \`£a\` starts with an illegal character \`£\`
+        package-name: '£a'
+        ExitCode: 1
+        Err:
+          Run: "@{root-error}"
+      package-name-contains-an-illegal-character:
+        cause: package name \`ab-£\` contains an illegal character \`£\`
+        package-name: 'ab-£'
+        ExitCode: 1
+        Err:
+          Run: "@{root-error}"
+      empty-dependency-name:
+        dep-name: ''
+        add-dep: 'true'
+        cause: package name is empty
+        ExitCode: 1
+        Err:
+          Run: "@{dep-error}"
+      dependency-name-starts-with-a-dash:
+        dep-name: '-a'
+        add-dep: 'true'
+        cause: package name \`-a\` starts with an illegal character \`-\`
+        ExitCode: 1
+        Err:
+          Run: "@{dep-error}"
+      dependency-name-starts-with-an-illegal-character:
+        dep-name: '£a'
+        add-dep: 'true'
+        cause: package name \`£a\` starts with an illegal character \`£\`
+        ExitCode: 1
+        Err:
+          Run: "@{dep-error}"
+      dependency-name-contains-an-illegal-character:
+        dep-name: 'ab-£'
+        add-dep: 'true'
+        cause: package name \`ab-£\` contains an illegal character \`£\`
+        ExitCode: 1
+        Err:
+          Run: "@{dep-error}"
+      alias-is-empty:
+        dep-name: 'ab'
+        add-dep: 'true'
+        add-alias: 'true'
+        alias-name: ''
+        cause: package name is empty
+        ExitCode: 1
+        Err:
+          Run: "@{invalid-alias-error}"
+      alias-starts-with-an-illegal-character:
+        dep-name: 'ab'
+        add-dep: 'true'
+        add-alias: 'true'
+        alias-name: '~a'
+        cause: package name \`~a\` starts with an illegal character \`~\`
+        ExitCode: 1
+        Err:
+          Run: "@{invalid-alias-error}"
+      alias-contains-an-illegal-character:
+        dep-name: 'ab'
+        add-dep: 'true'
+        add-alias: 'true'
+        alias-name: 'a~'
+        cause: package name \`a~\` contains an illegal character \`~\`
+        ExitCode: 1
+        Err:
+          Run: "@{invalid-alias-error}"
+      valid-alias-but-empty-dep-name:
+        dep-name: ''
+        add-dep: 'true'
+        add-alias: 'true'
+        alias-name: 'a'
+        cause: package name is empty
+        ExitCode: 1
+        Err:
+          Run: "@{valid-alias-error}"
+      valid-alias-but-dep-name-starts-with-an-illegal-character:
+        dep-name: '~a'
+        add-dep: 'true'
+        add-alias: 'true'
+        alias-name: 'a'
+        cause: package name \`~a\` starts with an illegal character \`~\`
+        ExitCode: 1
+        Err:
+          Run: "@{valid-alias-error}"
+      valid-alias-but-dep-name-contains-an-illegal-character:
+        dep-name: 'a~'
+        add-dep: 'true'
+        add-alias: 'true'
+        alias-name: 'a'
+        cause: package name \`a~\` contains an illegal character \`~\`
+        ExitCode: 1
+        Err:
+          Run: "@{valid-alias-error}"

@@ -12,6 +12,7 @@
 #include <helios_private/symbols/symbols.hpp>
 
 #include <base/except/exceptions.hpp>
+#include <base/str/str_utils.hpp>
 
 #include <query_framework/context/context.hpp>
 
@@ -22,44 +23,29 @@ namespace compiler::helios {
 		Box<code::Expr> handleReferenceKindCoercion(
 			query::Context& ctx, Box<code::Expr> expr, const tsh::SymbolType<>& to
 		) {
+			using rk       = tsh::ReferenceKind;
 			auto origin    = expr->origin.generatedFrom();
 			auto from_kind = expr->expression_type.getSymbolType().getRefKind();
 			auto to_kind   = to.getRefKind();
 
+			const bool is_pointer_like = from_kind == rk::Ref or from_kind == rk::Box;
+
+			// Coercions to the the same reference kind are always allowed.
 			if (from_kind == to_kind) return std::move(expr);
-
-			if (from_kind == tsh::ReferenceKind::Direct) {
-				// --- From Direct ---
-				if (to_kind == tsh::ReferenceKind::Ref)
-					// Should be explicit: var x: ref T = &T;
-					CORE_PANIC("Illegal Direct -> Ref coercion, should be caught earlier");
-				else if (to_kind == tsh::ReferenceKind::Box) {
-					// var x: box T = T(); -> Implicit box creation.
-					return makeBoxAllocCall(ctx, origin, std::move(expr));
-				}
-			} else if (from_kind == tsh::ReferenceKind::Ref) {
-				// --- From Reference ---
-				if (to_kind == tsh::ReferenceKind::Direct) {
-					// var x: T = ref_T; -> Dereference the rhs.
-					return makeBox<code::DerefExpr>(ctx, origin, std::move(expr));
-				} else if (to_kind == tsh::ReferenceKind::Box) {
-					// var x: box T = ref_T; -> Creating a box from a ref, requires to perform a
-					// copy of the inner ref value. Since we can't just take ownership from a
-					// reference, thus we first dereference the rhs.
-					auto dereferenced = makeBox<code::DerefExpr>(ctx, origin, std::move(expr));
-					return makeBoxAllocCall(ctx, origin, std::move(dereferenced));
-				}
-			} else if (from_kind == tsh::ReferenceKind::Box) {
-				// --- From Box ---
-				if (to_kind == tsh::ReferenceKind::Direct)
-					// var x: T = box_T; -> Dereference the rhs.
-					return makeBox<code::DerefExpr>(ctx, origin, std::move(expr));
-				else if (to_kind == tsh::ReferenceKind::Ref)
-					// Should be explicit: var x: ref T = &box_T;
-					CORE_PANIC("Illegal Box -> Ref coercion, should be caught earlier");
+			// We also accept implicit auto deref from `ref` and `box`.
+			else if (is_pointer_like && to_kind == rk::Direct) {
+				// var x: T = ref_T;
+				// var x: T = box_T;
+				return makeBox<code::DerefExpr>(ctx, origin, std::move(expr));
 			}
-
-			return std::move(expr);
+			// All the others shoule be explicit via `new` or `&`.
+			CORE_PANIC(base::strConcat(
+				"Illegal coercion, from: '",
+				expr->expression_type.getSymbolType().toString(),
+				"' to '",
+				to.toString(),
+				"' should be caught earlier"
+			));
 		}
 
 		// Performs element by element coercion.
@@ -117,24 +103,38 @@ namespace compiler::helios {
 		}
 
 		/**
-		 * @brief The value a copying coercion actually copies.
+		 * @brief Whether the reference-kind coercion reads the copied value out of a `ref`/`box`,
+		 * in which case what gets copied is the dereferenced value, not the reference itself.
+		 */
+		bool readsThroughReference(tsh::ReferenceKind from_kind, tsh::ReferenceKind to_kind) {
+			return (from_kind == tsh::ReferenceKind::Ref
+			        && (to_kind == tsh::ReferenceKind::Direct || to_kind == tsh::ReferenceKind::Box))
+			    || (from_kind == tsh::ReferenceKind::Box && to_kind == tsh::ReferenceKind::Direct);
+		}
+
+		/**
+		 * @brief The type of the value a copying coercion actually copies.
 		 *
-		 * When the reference-kind coercion reads a value out of a `ref`/`box`, the value that gets
-		 * copied is the dereferenced one, not the reference itself.
+		 * A `var a: box T = box_T` copies the box itself, reading a `box T` into a `T` copies the
+		 * pointee.
+		 */
+		tsh::SymbolType<> copiedValueType(
+			const tsh::SymbolType<>& from, const tsh::SymbolType<>& to
+		) {
+			if (!readsThroughReference(from.getRefKind(), to.getRefKind())) return from;
+			return from.getPointeeSymbolType();
+		}
+
+		/**
+		 * @brief The value a copying coercion actually copies.
 		 */
 		tsh::ExpressionType<> valueBeingCopied(
 			const tsh::ExpressionType<>& from, const tsh::SymbolType<>& to
 		) {
-			const tsh::ReferenceKind from_kind = from.getSymbolType().getRefKind();
-			const tsh::ReferenceKind to_kind   = to.getRefKind();
+			const tsh::SymbolType<> from_type = from.getSymbolType();
 
-			const bool reads_through_reference
-				= (from_kind == tsh::ReferenceKind::Ref
-			       && (to_kind == tsh::ReferenceKind::Direct || to_kind == tsh::ReferenceKind::Box))
-			   || (from_kind == tsh::ReferenceKind::Box && to_kind == tsh::ReferenceKind::Direct);
-
-			if (!reads_through_reference) return from;
-			return { from.getSymbolType().getPointeeSymbolType(),
+			if (!readsThroughReference(from_type.getRefKind(), to.getRefKind())) return from;
+			return { from_type.getPointeeSymbolType(),
 				     tsh::ValueCategory(tsh::PrimaryCategory::Dereferenced) };
 		}
 
@@ -154,8 +154,8 @@ namespace compiler::helios {
 		 * abilities of its type.
 		 */
 		PassingMethod passingMethod(query::Context& ctx, const tsh::ExpressionType<>& value) {
-			const auto type    = value.getType();
-			const bool trivial = type.isTriviallyCopyable(ctx);
+			const auto symbol_type = value.getSymbolType();
+			const bool trivial     = symbol_type.isTriviallyCopyable(ctx);
 
 			switch (value.getValueCategory().getCategory()) {
 			case tsh::PrimaryCategory::Temporary:
@@ -166,8 +166,8 @@ namespace compiler::helios {
 			case tsh::PrimaryCategory::Global:
 			case tsh::PrimaryCategory::Dereferenced:
 				if (trivial) return PassingMethod::ByteCopy;
-				return type.isCopyable(ctx) ? PassingMethod::ExplicitCopyOrMove
-				                            : PassingMethod::NotCopyable;
+				return symbol_type.isCopyable(ctx) ? PassingMethod::ExplicitCopyOrMove
+				                                   : PassingMethod::NotCopyable;
 			}
 			CORE_UNREACHABLE();
 		}
@@ -181,6 +181,25 @@ namespace compiler::helios {
 		  MessageWithCodeFragmentAndCause(source_position) {
 		addArgument<dia_int::InteractiveArgument>("given_type", std::move(actual_type));
 		addArgument<dia_int::InteractiveArgument>("expected_type", std::move(expected_type));
+	}
+
+	NoMatchingExpectedTypeError::NoMatchingExpectedTypeError(
+		dia_int::StablePosition source_position, Box<InteractiveType> actual_type
+	):
+		  MessageWithCodeFragmentAndCause(source_position) {
+		addArgument<dia_int::InteractiveArgument>("given_type", std::move(actual_type));
+	}
+
+	void NoMatchingExpectedTypeError::addExploreAcceptedType(
+		std::string accepted_type, Box<dia_int::MessageBase> coercion_error
+	) {
+		auto id = dia_int::MessageBase::getUniqueID();
+		this->addLinkedMessage(id, std::move(coercion_error));
+
+		std::vector<Box<dia_int::Argument>> args;
+		args.emplace_back(makeBox<dia_int::TextArgument>("accepted_type", std::move(accepted_type)));
+		args.emplace_back(makeBox<dia_int::TextArgument>("message_id", id));
+		this->addExploreLink("accepted_type", std::move(args));
 	}
 
 	Box<code::Expr> Coercion::coerce(query::Context& ctx, Box<code::Expr> from) const {
@@ -312,7 +331,7 @@ namespace compiler::helios {
 		return {};
 	}
 
-	Box<dia_int::MessageBase> makeDefaultCoercionErrorMessage(
+	Box<dia_int::MessageBase> getCoercionError(
 		query::Context&          ctx,
 		InvalidCoercionReason    reason,
 		const tsh::SymbolType<>& source_symbol_type,
@@ -330,7 +349,7 @@ namespace compiler::helios {
 			return makeBox<dia_int::PlaceholderError>(
 				base::strConcat(
 					"Type `",
-					source_symbol_type.withReferenceKind(tsh::ReferenceKind::Direct).toString(),
+					copiedValueType(source_symbol_type, expected_type).toString(),
 					"` cannot be copied."
 				),
 				source_position
@@ -339,7 +358,7 @@ namespace compiler::helios {
 			return makeBox<dia_int::PlaceholderError>(
 				base::strConcat(
 					"Cannot implicitly copy a value of non-trivially-copyable type `",
-					source_symbol_type.withReferenceKind(tsh::ReferenceKind::Direct).toString(),
+					copiedValueType(source_symbol_type, expected_type).toString(),
 					"`. Use `copy` to copy it or `move` to move it."
 				),
 				source_position
@@ -376,8 +395,36 @@ namespace compiler::helios {
 			(*override)(ctx);
 			return;
 		}
-		ctx.logInt(makeDefaultCoercionErrorMessage(
-			ctx, reason, source_symbol_type, expected_type, source_position
-		));
+		ctx.logInt(getCoercionError(ctx, reason, source_symbol_type, expected_type, source_position)
+		);
+	}
+
+	void logNoMatchingExpectedTypeFailure(
+		query::Context&                           ctx,
+		const tsh::SymbolType<>&                  source_symbol_type,
+		const std::vector<tsh::SymbolType<>>&     expected_types,
+		const std::vector<InvalidCoercionReason>& failure_reasons,
+		dia_int::StablePosition                   source_position
+	) {
+		CORE_ASSERT(
+			expected_types.size() == failure_reasons.size(),
+			"Every expected type needs its own coercion failure reason."
+		);
+
+		auto error = makeBox<NoMatchingExpectedTypeError>(
+			source_position, makeBox<InteractiveType>(ctx, source_symbol_type)
+		);
+
+		// Every accepted type was tried, so each of them gets an explore link pointing to the error
+		// explaining why the coercion to it failed.
+		for (usize i = 0; i < expected_types.size(); i++)
+			error->addExploreAcceptedType(
+				expected_types[i].toString(),
+				getCoercionError(
+					ctx, failure_reasons[i], source_symbol_type, expected_types[i], source_position
+				)
+			);
+
+		ctx.logInt(std::move(error));
 	}
 }

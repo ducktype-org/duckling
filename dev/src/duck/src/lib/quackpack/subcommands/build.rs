@@ -15,6 +15,8 @@ pub struct BuildOptions<'duck> {
     pub used_features: Vec<FeatureName>,
     /// Selected build profile.
     pub profile: StrId,
+    /// Whether to compile all dependencies into single folder (`false`) or compile each one where its code is located (`true`).
+    pub shared: bool,
     /// Artefact from [`StorageSyncOptions`].
     pub overwrite: bool,
     /// Artefact from [`StorageSyncOptions`].
@@ -31,6 +33,7 @@ pub fn compile(options: BuildOptions<'_>) -> QuackResult<ExecutorOutput> {
         pcx,
         used_features,
         profile,
+        shared,
         overwrite,
         frozen,
         strict_errors,
@@ -54,6 +57,7 @@ pub fn compile(options: BuildOptions<'_>) -> QuackResult<ExecutorOutput> {
         storage,
         used_features,
         profile,
+        shared,
         jobs,
     };
     compile::compile(bcx)

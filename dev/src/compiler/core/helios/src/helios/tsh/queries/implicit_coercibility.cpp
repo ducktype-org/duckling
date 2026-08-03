@@ -46,13 +46,20 @@ namespace compiler::tsh {
 			 * 			    | Direct | Ref | Box
 			 *	 	Direct 	|  Yes	 | Yes | Yes
 			 * TO 	Ref		|   No   | Yes | No
-			 *	 	Box		|  Yes   | Yes | Yes
+			 *	 	Box		|   No   | No  | Yes
 			 */
 			if (from_ref_kind == ReferenceKind::Direct && to_ref_kind == ReferenceKind::Ref)
 				return false;
 
 			if (from_ref_kind == ReferenceKind::Box && to_ref_kind == ReferenceKind::Ref)
 				return false;
+
+			if (to_ref_kind == ReferenceKind::Box && from_ref_kind != ReferenceKind::Box)
+				return false;
+
+			// For pointer-like symbol types (ex. ref/box) the element types must match exactly.
+			if (to_ref_kind != ReferenceKind::Direct)
+				return key.source.getType() == key.target.getType();
 
 			// @TODO: #584
 			return context.query<QueryImplicitCoercibilityOnAbstractType>({

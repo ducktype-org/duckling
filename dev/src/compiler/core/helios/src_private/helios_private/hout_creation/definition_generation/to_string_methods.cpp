@@ -153,17 +153,6 @@ namespace compiler::helios::defgen {
 			body.emplace_back(s.ret(s.call(s.ident(builtin_sym), s.ident(self_param))));
 		}
 
-		static void stringifyString(
-			Context&                       ctx,
-			const HOUTFunctionDeclaration& to_string_decl,
-			std::vector<Box<code::Stmt>>&  body
-		) {
-			const auto self_param = to_string_decl.parameters.at(0).helios_symbol;
-
-			const Shorthand s{ ctx };
-			body.emplace_back(s.ret(s.deref(s.ident(self_param))));
-		}
-
 		static void stringifySlice(
 			Context&                       ctx,
 			const HOUTFunctionDeclaration& to_string_decl,
@@ -305,10 +294,6 @@ namespace compiler::helios::defgen {
 			}
 			case tsh::Kind::Bool: {
 				stringifyBool(ctx, to_string_decl, body);
-				break;
-			}
-			case tsh::Kind::String: {
-				stringifyString(ctx, to_string_decl, body);
 				break;
 			}
 			case tsh::Kind::Slice: {

@@ -19,10 +19,11 @@ pub use profiles::*;
 pub use source::*;
 pub use venv_config::*;
 
+use super::valid_package_name::{normalise_package_name, validate_package_name};
 use crate::duck::util::duck_home::DuckHome;
 use crate::quackpack::core::Version;
 use crate::quackpack::schemas::registry;
-use crate::{DuckContext, QuackError, StrId};
+use crate::{DuckContext, QuackError, QuackResultContext, StrId};
 
 #[derive(Clone, Debug)]
 /// Machine friendly abstraction over a manifest.
@@ -67,6 +68,11 @@ impl Manifest {
         self.name
     }
 
+    /// Get the normalised package name.
+    pub fn normalised_name(&self) -> String {
+        normalise_package_name(&self.name())
+    }
+
     /// Get the package version.
     pub fn version(&self) -> Version {
         self.version
@@ -107,6 +113,14 @@ impl Manifest {
         self.name == DuckHome::GLOBAL_PACKAGE_NAME
     }
 
+    /// Check if there are any local dependencies.
+    pub fn has_local_deps(&self) -> bool {
+        self.dependencies()
+            .all_dependencies()
+            .iter()
+            .any(|dep| dep.source().is_local())
+    }
+
     /// Get the venv configuration.
     pub fn venv(&self) -> &VenvConfig {
         &self.venv
@@ -137,6 +151,8 @@ impl TryFrom<(registry::Manifest, &DuckContext)> for Manifest {
             license: Some(license),
             description: Some(description),
         };
+        validate_package_name(&name)
+            .context("registry responded with a package with an invalid name")?;
         Ok(Manifest::new(
             name.into(),
             version,
