@@ -1,6 +1,7 @@
 use std::backtrace::Backtrace;
 
-use tracing::debug;
+use chrono::Local;
+use tracing::info;
 
 use crate::duck::util::indent::indent;
 use crate::duck::util::terminal::Terminal;
@@ -37,7 +38,7 @@ pub fn setup_logger() {
         .with_filter(subscriber);
 
     registry().with(layer).init();
-    debug!("start = {:#?}", std::time::SystemTime::now());
+    info!(start = %Local::now());
 }
 
 /// Print returned [`QuackError`] to the appropriate [`Terminal`] and exit.

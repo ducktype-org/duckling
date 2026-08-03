@@ -5,7 +5,7 @@ use std::fmt;
 use std::path::Path;
 use std::process::{Command, ExitStatus};
 
-use tracing::{error, trace};
+use tracing::{debug, warn};
 
 use super::Duckc;
 use crate::quackpack::core::Package;
@@ -85,12 +85,12 @@ impl DuckcProcessBuilder {
     /// Set the number of workers to be used by duckc.
     pub fn set_workers_count(&mut self, workers: usize) -> &mut Self {
         if workers == 0 {
-            error!("attempted to set the worker count to 0, ignoring");
+            warn!("attempted to set the worker count to 0, ignoring");
             return self;
         }
 
         if workers == 1 {
-            trace!("attempted to set the worker count to 1, ignoring");
+            debug!("attempted to set the worker count to 1, ignoring");
             return self;
         }
         self.inner.arg("--workers").arg(workers.to_string());

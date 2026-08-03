@@ -381,6 +381,7 @@ void valid_type::ValidType::finalize(ValidTypeMap& types) {
 			this->size                  = valid_type::TypeSize::pointer();
 			this->alignment             = valid_type::TypeSize::pointer();
 			this->is_trivially_copyable = false;
+			this->is_ffi_compliant      = false;
 			state                       = Finalized{ .kind = finalized::Pointer{ pointer.inner } };
 		}
 		variant_case(defined::DefinedCPointer, cpointer) {

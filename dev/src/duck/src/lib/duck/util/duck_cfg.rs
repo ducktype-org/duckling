@@ -33,7 +33,7 @@ impl DuckCfg {
     /// Create a new [`DuckCfg`] using config file from the given [`DuckHome`].
     pub fn new(home: &DuckHome) -> QuackResult<DuckCfg> {
         let inner = YamlConfig::new(home.user_config().to_path_buf())?;
-        debug!("parsed the user config `{inner:?}`");
+        debug!(?inner, "parsed the user config");
         Ok(Self {
             inner,
             security: OnceLock::new(),
