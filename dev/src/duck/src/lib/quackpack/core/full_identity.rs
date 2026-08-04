@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize, de};
 
 use crate::quackpack::core::fetcher::Fetcher;
 use crate::quackpack::core::identity::{Identity, Kind, Origin};
-use crate::quackpack::core::{GitReference, SourceKind};
+use crate::quackpack::core::{GitReference, Source, SourceKind};
 use crate::quackpack::util::interned_url::InternedUrl;
 use crate::quackpack::util::is_local_file::IsLocalFile;
 use crate::quackpack::util::to_path_buf::ToPathBuf;
@@ -147,6 +147,69 @@ impl FullOrigin {
     pub fn is_registry(&self) -> bool {
         matches!(self.kind(), FullKind::Registry)
     }
+
+    /// Checks that [`self`] satisfies the requirenments of some [`Source`].
+    /// This returns [`OriginSatisfiesSource`],
+    /// which gives either a decisive answer or a conditional answer,
+    /// which requires more work to verify.
+    pub fn satisfies_source(&self, source: &Source) -> OriginSatisfiesSource {
+        if self.url() != source.url() {
+            return OriginSatisfiesSource::No;
+        }
+        match (self.kind(), source.kind()) {
+            (FullKind::Local, SourceKind::Local) => OriginSatisfiesSource::Yes,
+            (FullKind::Git { commit }, SourceKind::Git(reference)) => {
+                if let GitReference::Rev(required_commit) = reference
+                    && commit == *required_commit
+                {
+                    OriginSatisfiesSource::Yes
+                } else {
+                    OriginSatisfiesSource::IfGitReferencePointsToCommit {
+                        url: source.url(),
+                        commit,
+                        reference: *reference,
+                    }
+                }
+            }
+            (FullKind::Registry, SourceKind::Registry) => OriginSatisfiesSource::Yes,
+            _ => OriginSatisfiesSource::No,
+        }
+    }
+}
+
+/// Response to [`FullOrigin::satisfies_source`].
+/// The branch [`Self::IfGitReferencePointsToCommit`] signalizes that the origin satisfies source
+/// if and only if `reference` in the git repository at `url` points to `commit`.
+pub enum OriginSatisfiesSource {
+    Yes,
+    No,
+    IfGitReferencePointsToCommit {
+        url: InternedUrl,
+        commit: StrId,
+        reference: GitReference,
+    },
+}
+
+impl OriginSatisfiesSource {
+    /// Detemine the conditional answer given by [`Self::IfGitReferencePointsToCommit`].
+    /// This is done by performing network requests.
+    pub async fn finish_check(self, fetcher: &Fetcher<'_>) -> QuackResult<bool> {
+        match self {
+            Self::Yes => Ok(true),
+            Self::No => Ok(false),
+            Self::IfGitReferencePointsToCommit {
+                url,
+                commit,
+                reference,
+            } => {
+                let Some(fast_path_client) = fetcher.try_get_fastpath(url) else {
+                    return Ok(false);
+                };
+                let reference_commit = fast_path_client.get_commit_hash(reference).await?;
+                Ok(commit == reference_commit)
+            }
+        }
+    }
 }
 
 impl From<FullOrigin> for Origin {
@@ -283,39 +346,6 @@ impl FullKind {
             Self::Registry => Kind::Registry,
             Self::Git { .. } => Kind::Git,
             Self::Local => Kind::Local,
-        }
-    }
-
-    /// Checks that [`self`] satisfies the requirenments of some [`SourceKind`].
-    pub async fn satisfies_source_kind(
-        &self,
-        source_kind: SourceKind,
-        fetcher: &Fetcher<'_>,
-        url: InternedUrl,
-    ) -> QuackResult<bool> {
-        match (self, source_kind) {
-            (Self::Local, SourceKind::Local) => Ok(true),
-            (Self::Git { commit }, SourceKind::Git(reference)) => {
-                // If the git dependency specifies tag, branch or nothing (default branch),
-                // some new commits may have appeared.
-                // Even for commits, `source_kind` may specify a shortened commit sha.
-                // Thus we first try to use git fast path and translate reference to commit.
-                if let Some(fast_path_client) = fetcher.try_get_fastpath(url) {
-                    let reference_commit = fast_path_client.get_commit_hash(reference).await?;
-                    return Ok(*commit == reference_commit);
-                }
-                // If fast path was impossible, we can only be sure if the reference is a commit,
-                // with the same hash as ours.
-                if let GitReference::Rev(required_commit) = reference
-                    && *commit == required_commit
-                {
-                    Ok(true)
-                } else {
-                    Ok(false)
-                }
-            }
-            (Self::Registry, SourceKind::Registry) => Ok(true),
-            _ => Ok(false),
         }
     }
 }

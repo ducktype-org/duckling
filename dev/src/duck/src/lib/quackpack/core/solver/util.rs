@@ -103,8 +103,9 @@ impl PackageId {
         if self.url() != source.url() || self.name() != dependency.name() {
             return Ok(false);
         }
-        self.kind()
-            .satisfies_source_kind(*source.kind(), fetcher, source.url())
+        self.origin()
+            .satisfies_source(source)
+            .finish_check(fetcher)
             .await
     }
 
