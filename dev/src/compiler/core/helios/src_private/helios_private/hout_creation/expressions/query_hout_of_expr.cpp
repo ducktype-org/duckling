@@ -489,6 +489,17 @@ namespace compiler::helios::code {
 
 				// `copy x` produces an explicit copy of `x` via its copy constructor.
 				if (op->unwrap() == lang_def::keywordToStr(lang_def::Keyword::Copy)) {
+					const Shorthand s{ ctx };
+
+					// `copy` always creates a direct value.
+					// copy: T -> T
+					// copy: ref T -> T
+					// copy: box T -> T
+					if (inner_type.getRefKind() != tsh::ReferenceKind::Direct) {
+						inner      = s.deref(std::move(inner));
+						inner_type = inner->expression_type.getSymbolType();
+					}
+
 					if (inner_type.isTriviallyCopyable(ctx)) {
 						ctx.logInt(makeBox<dia_int::PlaceholderWarning>(
 							base::strConcat(
@@ -507,7 +518,7 @@ namespace compiler::helios::code {
 						));
 						return;
 					}
-					node = Shorthand{ ctx }.copy(std::move(inner));
+					node = s.copy(std::move(inner));
 					return;
 				}
 
