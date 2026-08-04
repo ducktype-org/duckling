@@ -3,9 +3,7 @@
 #include <concurrent/base/collections/hash_map.hpp>
 #include <ctv/ctv.hpp>
 #include <frontend/module_tree/functors.hpp>
-// #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
-#include <frontend/packages/access.hpp>
 #include <frontend/pst_parser/element_kind.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
@@ -135,6 +133,7 @@ namespace compiler::helios::mangler {
 		 * @note: See mangling-scheme.md for details
 		 */
 		void identifier(std::stringstream& ss, std::string_view name) {
+			// @todo: #3285 add backreferences
 			if (not findExtendedChar(name)) {
 				ss << name.size() << name;
 				return;
@@ -208,15 +207,14 @@ namespace compiler::helios::mangler {
 					"Name of a module contains an invalid character: ", quoteExtendedChar(c)
 				));
 
+			// @todo: #3285 add backreferences
 			return ret;
-			// @todo: (@taw3e8 add issue); backreference
 		}
 
 		std::string pathPrefix(special_symbol_keys::LIRModuleID mod_id) {
-			// "M" <module-name>
+			// @todo: #2643 - rething compiler-generated symbols
+			// @todo: #3285 add backreferences
 			return base::strConcat("M", mod_id.id);
-
-			// @future: add support for packages & scripts when they are implemented
 		}
 
 		/**
@@ -329,6 +327,7 @@ namespace compiler::helios::mangler {
 		 * @note: See mangling-scheme.md for details
 		 */
 		std::string unscopedName(query::Context& ctx, SymID symbol_id) {
+			// @todo: #3285 add backreferences
 			if (isFunctionLike(kind(symbol_id))) {
 				const auto& fun_decl
 					= ctx.query<compiler::helios::QueryDeclOfFun>(symbol_id).get()->valueOrPanic();
@@ -348,6 +347,7 @@ namespace compiler::helios::mangler {
 		std::string symbolName(query::Context& ctx, SymID symbol_id) {
 			if (scopeDepth(scope(symbol_id)) == 1) return "G" + unscopedName(ctx, symbol_id);
 
+			// @todo: #3285 add backreferences -- <name-prefix>
 			std::vector<std::string> path_parts;
 
 
@@ -451,6 +451,7 @@ namespace compiler::helios::mangler {
 		 */
 		std::string path(query::Context& ctx, SymID symbol_id) {
 			auto prefix = pathPrefix(ctx, symbol_id);
+			// @todo: #3285 add backreferences
 			return base::strConcat(std::move(prefix), symbolName(ctx, symbol_id));
 		}
 
@@ -730,6 +731,7 @@ namespace compiler::helios::mangler {
 	}  // namespace internal
 
 	std::string mangleCTV(query::Context& ctx, const compiler::ctv::CompileTimeValue& value) {
+		// @todo: #3285 add backreferences
 		variant_match(value.getStorage()) {
 			variant_case(bool, b) { return base::strConcat("b", (b ? "1" : "0")); }
 			variant_case(compiler::numeric_value::NumericValue, num) {
@@ -977,6 +979,7 @@ namespace compiler::helios::mangler {
 		}
 
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
+			// @todo: #3285 add backreferences
 			return base::StrID{ base::strConcat(
 				key.getUniqueness() == tsh::Uniqueness::Unique ? "M" : "",
 				key.getLeakage() == tsh::Leakage::Leaking ? "L" : "",
