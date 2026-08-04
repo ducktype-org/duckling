@@ -5,6 +5,7 @@
 #pragma once
 
 
+#include "vm/api/data/thread_id.hpp"
 #include <vm/api/api.hpp>
 #include <vm/api/data/execution_config.hpp>
 #include <vm/api/data/process_options.hpp>
@@ -98,8 +99,7 @@ namespace vm::api {
 	 * @return Nothing if the thread successfully stopped or an API error otherwise, in which case
 	 * the state is undefined.
 	 */
-	std::expected<void, ApiError> join(PID pid, ThreadID thread_id);
-	std::expected<void, ApiError> join(PID pid);
+	std::expected<void, ApiError> join(PID pid, ThreadID thread_id = ThreadID{ 0 });
 
 	/**
 	 * @brief Request the main execution thread of the given process to stop running, kill the
@@ -125,23 +125,29 @@ namespace vm::api {
 	 * @return Code position of the next instruction to execute after the program is paused or an
 	 * error in which case the state is undefined.
 	 */
-	std::expected<response::CodePosition, ApiError> pause(PID pid, ThreadID thread_id);
-	std::expected<response::CodePosition, ApiError> pause(PID pid);
+	std::expected<response::CodePosition, ApiError> pause(
+		PID pid, ThreadID thread_id = ThreadID{ 0 }
+	);
+
+	/**
+	 * @brief Try to pause of every active thread of the process. Threads that cannot be
+	 * paused (e.g. sleeping on IO) are skipped.
+	 */
+	std::expected<void, ApiError> pauseAll(PID pid);
 
 	/**
 	 * @brief Resume the execution of the program.
 	 * @return Nothing if the program successfully resumed or an API error otherwise, in which case
 	 * the state is undefined.
 	 */
-	std::expected<void, ApiError> resume(PID pid, ThreadID thread_id);
-	std::expected<void, ApiError> resume(PID pid);
+	std::expected<void, ApiError> resume(PID pid, ThreadID thread_id = ThreadID{ 0 });
 
 	/**
-	 * @brief Perform one instruction of the program and pause.
-	 * @return Nothing if the program successfully stepped and paused or an API error otherwise, in
+	 * @brief Perform one instruction of the given (paused) thread and pause again.
+	 * @return Nothing if the thread successfully stepped and paused or an API error otherwise, in
 	 * which case the state is undefined.
 	 */
-	std::expected<void, ApiError> step(PID pid);
+	std::expected<void, ApiError> step(PID pid, ThreadID thread_id = ThreadID{ 0 });
 
 	/**
 	 * @brief Force the main execution thread of the given process to stop running and kill the

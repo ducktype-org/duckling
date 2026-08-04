@@ -83,6 +83,11 @@ namespace vm {
 
 	api::ProcStatus IVMProcess::getStatus() { return toApiStatus(getProcessState()); }
 
+	std::expected<void, api::ApiError> IVMProcess::pauseAllVMThreads() {
+		for (const api::ThreadID tid: getAllActiveThreadIDs()) (void) pauseVMThread(tid);
+		return {};
+	}
+
 	ProcIO& IVMProcess::getIO() { return io; }
 
 	PID IVMProcess::getPID() const { return my_pid; }
@@ -134,6 +139,13 @@ namespace vm {
 				return getVMThreadCurrentPosition(pause_request.thread_id);
 			}
 
+			variant_case_novalue(api::request::PauseAll) {
+				// Per-thread operation. Its validity is decided by the target thread not the process.
+				auto response = pauseAllVMThreads();
+				if (!response) return std::unexpected(response.error());
+				return api::Response(api::response::Empty());
+			}
+
 			variant_case(api::request::Resume, resume_request) {
 				// Per-thread operation. Its validity is decided by the target thread not the process.
 				auto response = resumeVMThread(resume_request.thread_id);
@@ -141,13 +153,11 @@ namespace vm {
 				return api::Response(api::response::Empty());
 			}
 
-			variant_case_novalue(api::request::Step) {
-				// Per-thread operation. Its validity is decided by the target thread not the
-				// process.
-				// @TODO: #2967 For now steps the main thread. This should be done per-thread as well.
-				auto response = stepVMThread(api::MAIN_THREAD_ID);
+			variant_case(api::request::Step, step_request) {
+				// Per-thread operation. Its validity is decided by the target thread not the process.
+				auto response = stepVMThread(step_request.thread_id);
 				if (!response) return std::unexpected(response.error());
-				return getVMThreadCurrentPosition(api::MAIN_THREAD_ID);
+				return getVMThreadCurrentPosition(step_request.thread_id);
 			}
 
 			variant_case_novalue(api::request::DeinitAndValidate) {

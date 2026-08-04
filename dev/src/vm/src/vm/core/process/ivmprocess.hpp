@@ -102,6 +102,12 @@ namespace vm {
 		 */
 		[[nodiscard]] std::expected<void, api::ApiError> prepareRun();
 
+		/**
+		 * @brief Try to pause all active threads. Threads that cannot be paused (sleeping,
+		 * terminal) are skipped.
+		 */
+		[[nodiscard]] std::expected<void, api::ApiError> pauseAllVMThreads();
+
 	private:
 		/**
 		 * @brief Loads the program from a given source into the current loader program state,
