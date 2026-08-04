@@ -3,10 +3,13 @@
 #include <concurrent/base/collections/hash_map.hpp>
 #include <ctv/ctv.hpp>
 #include <frontend/module_tree/functors.hpp>
+// #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
+#include <frontend/packages/access.hpp>
 #include <frontend/pst_parser/element_kind.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
+#include <global_state/packages.hpp>
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/queries/function_queries.hpp>
@@ -110,28 +113,42 @@ namespace compiler::helios::mangler {
 			return ret;
 		}
 
+		constexpr base::Optional<base::Ref<const char>> findExtendedChar(std::string_view str) {
+			auto it = std::ranges::find_if_not(str, [](char c) -> bool {
+				return c == '_' || BASE_62_DIGITS.contains(c);
+			});
+
+			if (it != str.end())
+				return it;
+			else
+				return std::nullopt;
+		}
+
+		auto quoteExtendedChar(base::Optional<base::Ref<const char>> c) {
+			return base::strConcat('\'', *c->get(), "' (int: ", static_cast<int>(*c->get()), ")");
+		}
+
 		/**
 		 * @brief Returns bare identifier of the symbol prefixed with its size
-		 * If the name contains characters outside of the allowed set,
-		 * it will be prefixed with 'U' and punnycode-encoded.
+		 * If the name contains characters outside of the set allowed in symbols,
+		 * it will be prefixed with 'U' and punycode-encoded.
 		 * @note: See mangling-scheme.md for details
 		 */
 		void identifier(std::stringstream& ss, std::string_view name) {
-			// @future: use punnycode for unicode strings
-			if (/* hasCharsOnlyFromAllowedCharacterSet */ true) {
+			if (not findExtendedChar(name)) {
 				ss << name.size() << name;
 				return;
 			} else {
 				constexpr char   UNICODE_PREFIX = 'U';
-				std::string_view punny_string   = name;  // @future: convert to punnycode
-				ss << UNICODE_PREFIX << punny_string.size() << punny_string;
+				std::string_view puny_string    = name;  // @future: convert to punycode
+				ss << UNICODE_PREFIX << puny_string.size() << puny_string;
 			}
 		}
 
 		/**
 		 * @brief Returns bare identifier of the symbol prefixed with its size
-		 * If the name contains characters outside of the allowed set,
-		 * it will be prefixed with 'U' and punnycode-encoded.
+		 * If the name contains characters outside of the set allowed in symbols,
+		 * it will be prefixed with 'U' and punycode-encoded.
 		 * @note: See mangling-scheme.md for details
 		 */
 		std::string identifier(std::string_view name) {
@@ -145,42 +162,58 @@ namespace compiler::helios::mangler {
 		 * @note: See mangling-scheme.md for details
 		 */
 		std::string pathPrefix(query::Context& ctx, SymID symbol_id) {
-			// @future
-			// currently package_id is a random string
-			// package name should be added when we start using it
-			// auto package = curr->getPackageID().strView();
+			// @future: add scripts after #2762
+			std::stringstream ret_ss;
 
-			// "M" <module-name>+                                // standalone module
-			// @future: templated modules
-			if (/* standalone module */ true) {
-				auto enclosing_scope = scope(symbol_id);
+			// package/module prefix
+			const auto symbol_module = module(scope(symbol_id));
+			const auto package_id
+				= compiler::frontend::getModuleRef(symbol_module)->getPackage().unlock(ctx).getID();
+			if (const auto package_ref_opt = global_state::getPackageRefOpt(package_id)) {
+				/* we're in a package */
+				auto package_name = identifier(package_ref_opt.value()->getName().strView());
 
-				std::vector<std::string_view> modules;
-				auto                          curr = module(enclosing_scope);
-				modules.push_back(frontend::moduleName(curr).strView());
-
-				while (auto parent = ctx.query<frontend::QueryParentModule>(curr)) {
-					curr = parent.value();
-					modules.push_back(frontend::moduleName(curr).strView());
-				}
-
-				std::stringstream ret;
-				ret << "M";
-				for (auto& mod: modules | std::views::reverse) identifier(ret, mod);
-
-				return ret.str();
+				// @todo: punycode -- for now we allow '-' and just treat it as '_'
+				std::ranges::replace(package_name, '-', '_');
+				if (auto c = findExtendedChar(package_name))
+					CORE_PANIC(base::strConcat(
+						"Name of a package contains an invalid character: ", quoteExtendedChar(c)
+					));
+				ret_ss << 'P' << package_name;
+			} else {
+				/* standalone module */
+				ret_ss << 'M';
 			}
 
-			// @future: add support for packages & scripts when they are implemented
-			// "P" <package-name> <module-name>                  // module in a package
-			// "S" <script-name>                                 // standalone script
-			// "R" <package-name> <module-name> <script-name>    // script in a package
+			// <module-name>+
+			// @future: templated modules
+			{
+				std::vector<std::string_view> modules;
+				modules.push_back(frontend::moduleName(symbol_module).strView());
 
-			// @todo: backreference -- this will be added in the next PR
+				for (auto current_module = symbol_module;
+				     auto parent_module = ctx.query<frontend::QueryParentModule>(current_module);) {
+					current_module = parent_module.value();
+					modules.push_back(frontend::moduleName(current_module).strView());
+				}
+
+				for (auto mod: modules | std::views::reverse) identifier(ret_ss, mod);
+			}
+
+			auto ret = ret_ss.str();
+			// @todo: punycode -- for now we allow '-' and just treat it as '_'
+			std::ranges::replace(ret, '-', '_');
+			if (auto c = findExtendedChar(ret))
+				CORE_PANIC(base::strConcat(
+					"Name of a module contains an invalid character: ", quoteExtendedChar(c)
+				));
+
+			return ret;
+			// @todo: (@taw3e8 add issue); backreference
 		}
 
 		std::string pathPrefix(special_symbol_keys::LIRModuleID mod_id) {
-			// "M" <module-name>                                 // standalone module
+			// "M" <module-name>
 			return base::strConcat("M", mod_id.id);
 
 			// @future: add support for packages & scripts when they are implemented
