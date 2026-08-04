@@ -16,10 +16,8 @@ class VmDebuggerTest: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		// @TODO: #1222 Re-enable the tests after fixing the API.
-		// TESTER_ADD_TEST(getStatusWait);
-		// TESTER_ADD_TEST(continuePauseTest);
-
+		TESTER_ADD_TEST(getStatusWait);
+		TESTER_ADD_TEST(continuePauseTest);
 		TESTER_ADD_TEST(noRunTest);
 		TESTER_ADD_TEST(runAndGetStatus);
 		TESTER_ADD_TEST(getStatusBreakpoint);
@@ -129,7 +127,7 @@ private:
 
 	void getStatusWait() {
 		testTemplate(
-			"vm_api_tests.dbc",
+			"io_hang.dbc",
 			{},
 			{
 				altIndex(vm::api::Running),
@@ -235,12 +233,16 @@ private:
 		std::mutex              m;
 		std::condition_variable cv;
 
-		const std::vector<usize> expected_statuses = {
+		// A re-run of a terminal process first resets it, which is a real, emitted state
+		// change - so from the second run on the sequence starts with `NotStarted`.
+		std::vector<usize> expected_statuses = {
 			altIndex(vm::api::Running),
 			altIndex(vm::api::ExecutionCompleted),
 		};
 
 		const std::vector<int> expected_values = { 0, 0, 0 };
+
+		std::atomic<bool> all_expected_seen = false;
 
 		events::Listener<vm::api::ProcStatus> status_listener([&](const vm::api::ProcStatus& status
 		                                                      ) {
@@ -267,8 +269,11 @@ private:
 					}
 				}
 				status_counter++;
+				// `expected_statuses` is rewritten by the main thread between runs, so it may
+				// only be read under `m`.
+				all_expected_seen = status_counter == expected_statuses.size();
 			}
-			if (status_counter == expected_statuses.size()) cv.notify_one();
+			if (all_expected_seen) cv.notify_one();
 		});
 
 		events::Listener<std::string> error_listener([&](const std::string& err) { fail(err); });
@@ -279,10 +284,19 @@ private:
 		debugger.attachOnStatusChangedListener(status_listener);
 		debugger.attachOnErrorListener(error_listener);
 
-		int loop = 3;
+		int  loop      = 3;
+		bool first_run = true;
 
 		while (loop-- > 0) {
-			status_counter = 0;
+			{
+				std::lock_guard lk(m);
+				status_counter = 0;
+				if (!first_run)
+					expected_statuses = { altIndex(vm::api::NotStarted),
+						                  altIndex(vm::api::Running),
+						                  altIndex(vm::api::ExecutionCompleted) };
+				first_run = false;
+			}
 			ASSERT_HAS_VALUE(debugger.runMain());
 			std::unique_lock lk(m);
 			// Test timeout

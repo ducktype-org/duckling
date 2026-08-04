@@ -77,7 +77,9 @@ namespace vm::fast {
 			api::ThreadID thread_id, u64 frame_index
 		) override;
 
-		void notifyPausedVMThread(api::ThreadID thread_id) override;
+		void notifyVMThreadWaiters(api::ThreadID thread_id) override;
+
+		void requestStopAllThreads() noexcept override;
 
 		void waitForBreakpoint() override;
 

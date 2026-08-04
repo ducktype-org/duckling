@@ -87,13 +87,17 @@ namespace vm::fast {
 
 		FastVMThread& thread = getMainVMThread();
 		// thread.setThreadCtx(func_name);
-		thread.runNoSpawn(func_name, run_arguments);
+		auto _ = thread.runNoSpawn(func_name, run_arguments);
 		// thread.setThreadCtx("");
-		variant_match(getStatus()) {
-			variant_case(api::ExecutionCompleted, completed) { return completed.exit_value; }
+		const ProcessState state = getProcessState();
+		variant_match(state) {
+			variant_case(process_sm::process_state::Completed, completed) {
+				return completed.exit_value;
+			}
 			variant_default return std::unexpected(api::StateError(
-				hasExecutionStarted(getStatus()) ? "Execution did not complete"
-												 : "Execution did not start"
+				v_matches(state, process_sm::process_state::NotStarted)
+					? "Execution did not start"
+					: "Execution did not complete"
 			));
 		}
 		CORE_UNREACHABLE();
@@ -186,9 +190,9 @@ namespace vm::fast {
 		throw vm::VMNotImplemented("Method `getStackFrameData` is not implemented.");
 	}
 
-	void FastVMProcess::notifyPausedVMThread([[maybe_unused]] api::ThreadID thread_id) {
+	void FastVMProcess::notifyVMThreadWaiters([[maybe_unused]] api::ThreadID thread_id) {
 		auto opt_thread = getVMThreadByID(thread_id);
-		if (opt_thread) opt_thread.value()->notifyPaused();
+		if (opt_thread) opt_thread.value()->notifyWaiters();
 	}
 
 	void FastVMProcess::waitForBreakpoint() {
@@ -227,5 +231,9 @@ namespace vm::fast {
 	api::ThreadID FastVMProcess::getMainThreadID() {
 		std::scoped_lock lock(data_lock);
 		return getMainVMThread().getThreadID();
+	}
+
+	void FastVMProcess::requestStopAllThreads() noexcept {
+		for (auto& thread: vm_threads) thread.requestStop();
 	}
 }

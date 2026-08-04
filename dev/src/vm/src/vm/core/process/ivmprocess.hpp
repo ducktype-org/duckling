@@ -9,11 +9,14 @@
 #include <vm/api/data/api_error.hpp>
 #include <vm/api/data/request.hpp>
 #include <vm/api/data/status.hpp>
+#include <vm/api/data/thread_id.hpp>
 #include <vm/bytecode/validator/valid_type/valid_type_id.hpp>
 #include <vm/core/process/proc_io.hpp>
+#include <vm/core/process/process_state.hpp>
+#include <vm/core/process/state_table.hpp>
+#include <vm/core/thread/thread_state.hpp>
 
 #include <expected>
-#include <shared_mutex>
 #include <variant>
 
 namespace vm {
@@ -33,9 +36,13 @@ namespace vm {
 	 * creating and resetting the Execution Thread,
 	 * setting the status of the execution (pause, stop, run),
 	 * managing the input and output of the executing thread and some more.
-	 *
 	 */
 	class IVMProcess {
+	public:
+		using ProcessState = process_sm::process_state::ProcessState;
+		using ProcessEvent = process_sm::process_event::ProcessEvent;
+		using ThreadEvent  = thread_sm::thread_event::ThreadEvent;
+
 	protected:
 		PID                              my_pid;
 		ProcIO                           io;
@@ -43,9 +50,10 @@ namespace vm {
 		// See: https://en.cppreference.com/w/cpp/io/ios_base/Init
 		std::ios_base::Init cin_cout_init;
 
-		api::ProcStatus             status;
-		std::shared_mutex           rw_status;
-		std::condition_variable_any status_cv;
+		/**
+		 * @brief The single source of truth for all VMThread states of this process.
+		 */
+		ProcessStateTable state_table;
 
 		api::ExecutionConfig execution_config;
 
@@ -55,6 +63,37 @@ namespace vm {
 		events::Emitter<api::ProcStatus> on_status_changed;
 
 		IVMProcess(PID my_pid);
+
+		/**
+		 * @brief Returns a copy of the current calculated process state.
+		 */
+		[[nodiscard]] ProcessState getProcessState() const { return state_table.aggregate(); }
+
+		/**
+		 * @brief Blocks until the process state satisfies pred, then returns it. Can be called both
+		 * from VMProcess and VMThread.
+		 */
+		template<typename Pred>
+		[[nodiscard]] ProcessState waitForProcessState(Pred&& pred) const {
+			return state_table.wait([&](const ProcessStateTable::Snapshot& snapshot) {
+				return std::forward<Pred>(pred)(snapshot.processState());
+			});
+		}
+
+		/**
+		 * @brief Validates the current API request against the aggregate state.
+		 * @return Empty optional on success, ApiError if the request is invalid in the current state.
+		 */
+		[[nodiscard]] base::Optional<api::ApiError> validateRequest(const ProcessEvent& event) const;
+
+		/**
+		 * @brief Prepares a run (or a rerun). Called when the process is terminal, moves all
+		 * threads back to `NotStarted` and clears the stop-all-threads flag.
+		 * @return An empty optional when the process is ready to run - either because it was not
+		 * terminal or because the reset succeeded. An `ApiError` when the reset was refused (i.e.
+		 * thread is still active)
+		 */
+		[[nodiscard]] base::Optional<api::ApiError> prepareRun();
 
 	private:
 		/**
@@ -88,8 +127,7 @@ namespace vm {
 		virtual std::expected<api::Response, api::ApiError> join(api::ThreadID thread_id) = 0;
 
 		/**
-		 * @brief Stops the executing thread (by joining it).
-		 * After this method is called, the thread is removed.
+		 * @brief Stops the executing threads (by joining them).
 		 */
 		virtual std::expected<api::Response, api::ApiError> stop() = 0;
 
@@ -159,7 +197,7 @@ namespace vm {
 			api::ThreadID thread_id, u64 frame_index
 		) = 0;
 
-		virtual void notifyPausedVMThread(api::ThreadID thread_id) = 0;
+		virtual void notifyVMThreadWaiters(api::ThreadID thread_id) = 0;
 
 		virtual void waitForBreakpoint() = 0;
 
@@ -188,9 +226,14 @@ namespace vm {
 
 		/**
 		 * @brief Hook called after process status changes to a terminal one.
-		 * Called without holding `rw_status` lock.
+		 * Called by the state table's `onStateChangeCallback`.
 		 */
 		virtual void onTerminalStatus(const api::ProcStatus&) noexcept {}
+
+		/**
+		 * @brief Posts Stop to all threads. Non blocking.
+		 */
+		virtual void requestStopAllThreads() noexcept = 0;
 
 		/**
 		 * @brief Enables or disables breakpoint on a given instruction in a given function.
@@ -214,7 +257,19 @@ namespace vm {
 
 		ProcIO& getIO();
 
-		[[nodiscard]] bool isExecutionPanicked();
+		/**
+		 * @brief The state table holding all VMThread states of this process.
+		 */
+		[[nodiscard]] ProcessStateTable& getStateTable() { return state_table; }
+
+		[[nodiscard]] const ProcessStateTable& getStateTable() const { return state_table; }
+
+		/**
+		 * @brief Commits a thread state transition. Aborts on invalid transition, since it's a
+		 * fatal DVM error. Propagates a cascade kill to all threads when the event was a first
+		 * panic. Called by `IVMThread::commitEvent`.
+		 */
+		void commitThreadEvent(api::ThreadID tid, const ThreadEvent& event);
 
 		/**
 		 * @brief Entry point to perform requests on the process.
@@ -227,16 +282,6 @@ namespace vm {
 		 * @brief Get the PID of the process.
 		 */
 		[[nodiscard]] PID getPID() const;
-
-		void setStatus(const api::ProcStatus& new_status, api::ThreadID thread_id) noexcept;
-
-		/**
-		 * @brief Atomically set process status if it is not already terminal.
-		 * @return true if status was updated, false if status was already terminal.
-		 */
-		bool setStatusIfNotTerminal(
-			const api::ProcStatus& new_status, api::ThreadID thread_id
-		) noexcept;
 
 		/**
 		 * @brief Creates an empty VMValue of a given type and registers it in this VMProcess.

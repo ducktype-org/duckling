@@ -1,222 +1,275 @@
 #include "ivmthread.hpp"
 
+#include <base/except/exceptions.hpp>
+#include <base/extend_cpp/variant_match.hpp>
+
 #include <vm/core/process/ivmprocess.hpp>
+#include <vm/core/process/state_table.hpp>
 #include <vm/core/safe/exceptions.hpp>
 #include <vm/core/thread/kill_process_exception.hpp>
+#include <vm/core/thread/thread_state.hpp>
+
+#include <exception>
+#include <expected>
+#include <mutex>
 
 namespace vm {
+	namespace ts = thread_sm::thread_state;
+	namespace te = thread_sm::thread_event;
+
+	IVMThread::IVMThread(api::ThreadID thread_id, IVMProcess& my_process):
+		  my_process(my_process),
+		  thread_id(thread_id) {
+		// Every VMThread is part of its process's state aggregation.
+		getProcessStateTable().registerThread(thread_id);
+	}
+
+	ProcessStateTable& IVMThread::getProcessStateTable() { return my_process.getStateTable(); }
+
+	const ProcessStateTable& IVMThread::getProcessStateTable() const {
+		return my_process.getStateTable();
+	}
+
+	IVMThread::ThreadState IVMThread::getThreadState() const {
+		return getProcessStateTable().threadState(thread_id);
+	}
+
+	void IVMThread::commitEvent(const ThreadEvent& event) {
+		my_process.commitThreadEvent(thread_id, event);
+	}
+
 	std::expected<api::Response, api::ApiError> IVMThread::join() {
-		if (!exec_thread || !exec_thread->joinable())
+		{
+			std::lock_guard lock(exec_thread_mutex);
+			if (!exec_thread.has_value()) return std::unexpected(api::ApiError{ api::JoinError{} });
+		}
+
+		if (!ts::hasStarted(getThreadState()))
 			return std::unexpected(api::ApiError{ api::JoinError{} });
 
-		exec_thread->join();
-		exec_thread.reset();
-		setThreadStatus(api::NotStarted{});
+		// Wait for some terminal state.
+		const ThreadState terminal
+			= getProcessStateTable().waitForThreadState(thread_id, ts::isTerminal);
+		// Now join the OS thread.
+		joinExecutionThread();
 
-		auto execution_status = execution_response_queue.pop();
-		variant_match(execution_status) {
-			variant_case(api::ExecutionCompleted, completed) {
+		variant_match(terminal) {
+			variant_case_novalue(ts::Completed, ts::Stopped) {
 				return api::Response(api::response::Empty());
 			}
-			variant_case(api::ExecutionStopped, stopped) {
-				return api::Response(api::response::Empty());
-			}
-			variant_case(api::ExecutionPanicked, panicked) {
-				return std::unexpected(api::ApiError(
-					api::OtherError("Execution panicked with error: " + panicked.error_message)
-				));
+			variant_case(ts::Panicked, panicked) {
+				return std::unexpected(
+					api::ApiError(api::OtherError("Execution panicked with error: " + panicked.err))
+				);
 			}
 			variant_default {
-				return std::unexpected(api::ApiError(api::OtherError("Unexpected run status!")));
+				return std::unexpected(
+					api::ApiError(api::OtherError("Unexpected run status after join!"))
+				);
 			}
 		}
 		CORE_UNREACHABLE();
 	}
 
-	bool IVMThread::isPauseRequested() {
-		std::unique_lock lock(execution_request_mutex);
-		return execution_request == ExecutionRequest::Pause;
-	}
-
-	bool IVMThread::isTerminateRequested() {
-		{
-			std::unique_lock lock(execution_request_mutex);
-			if (execution_request == ExecutionRequest::Stop) return true;
-		}
-		return my_process.isExecutionPanicked();
-	}
-
-	bool IVMThread::waitForPausedResponse() {
-		return std::holds_alternative<api::Paused>(execution_response_queue.pop());
-	}
-
-	bool IVMThread::waitForStoppedResponse() {
-		auto response = execution_response_queue.pop();
-		return std::holds_alternative<api::ExecutionStopped>(response)
-		    || std::holds_alternative<api::ExecutionCompleted>(response)
-		    || std::holds_alternative<api::ExecutionPanicked>(response);
-	}
-
-	bool IVMThread::waitForRunningResponse() {
-		return std::holds_alternative<api::Running>(execution_response_queue.pop());
-	}
-
-	void IVMThread::respondExecutionRequest(const api::ProcStatus& response) {
-		setProcessStatus(response);
-		execution_response_queue.push(response);
-	}
-
-	void IVMThread::setProcessStatus(const api::ProcStatus& new_status) {
-		setThreadStatus(new_status);
-		my_process.setStatus(new_status, thread_id);
-	}
-
-	bool IVMThread::joinExecutionThread() {
-		if (!exec_thread || !exec_thread->joinable()) return false;
-
-		exec_thread->join();
+	void IVMThread::joinExecutionThread() {
+		std::lock_guard lock(exec_thread_mutex);
+		if (exec_thread && exec_thread->joinable()) exec_thread->join();
 		exec_thread.reset();
-		setThreadStatus(api::NotStarted{});
-		return true;
 	}
 
 	void IVMThread::safeRun(const std::string& func_name, const RunArguments& run_arguments) {
+		// `Spawn` was committed by the `prepareSpawnLocked`). From here on this exec thread is the
+		// only writer of this thread's state.
 		try {
+			if (isTerminateRequested()) throw KillProcessException{};
 			run(func_name, run_arguments);
+		} catch (const KillProcessException& e) {
+			commitEvent(te::Kill{});
 		} catch (const exceptions::VMRuntimeException& e) {
 			std::cerr << "VMThread has panicked: " << e.what() << "\n";
-			respondExecutionRequest(api::ExecutionPanicked{ e.what() });
+			commitEvent(te::Panic{ e.what() });
+		} catch (const std::exception& e) {
+			std::cerr << "VMThread has panicked with an unexpected error: " << e.what() << "\n";
+			commitEvent(te::Panic{ std::string{ "Unexpected non-DVM error: " } + e.what() });
 		}
+	}
+
+	bool IVMThread::prepareSpawnLocked() {
+		// There is already an exec thread attached to this VMThread.
+		if (exec_thread.has_value() && exec_thread->joinable()) return false;
+		if (ts::isActive(getThreadState())) return false;
+
+		// The thread is non-active. Clear any control requests from a previous run and
+		// claim the transition to Running. The exec thread is the only writer of state from here on.
+		signal.reset();
+		commitEvent(te::Spawn{});
+		return true;
 	}
 
 	bool IVMThread::spawnThreadAndRun(
 		const std::string& func_name, const RunArguments& run_arguments
 	) {
-		if (exec_thread)  // There is already a thread running.
+		std::lock_guard lock(exec_thread_mutex);
+		if (!prepareSpawnLocked()) return false;
+
+		try {
+			exec_thread = std::thread(&IVMThread::safeRun, this, func_name, run_arguments);
+		} catch (const std::system_error&) {
+			// OS thread creation failed - roll the claimed Running back to Stopped.
+			commitEvent(te::Kill{});
 			return false;
-
-		exec_thread = std::thread(&IVMThread::safeRun, this, func_name, run_arguments);
-		return waitForRunningResponse();
+		}
+		return true;
 	}
 
-	void IVMThread::runNoSpawn(const std::string& func_name, const RunArguments& run_arguments) {
-		// @TODO: #2040 Make this function check if anyone else is executing anything,
-		// or simplify the state checking, perhaps remove state from thread and move all the
-		// state to the process?
+	bool IVMThread::runNoSpawn(const std::string& func_name, const RunArguments& run_arguments) {
+		{
+			std::lock_guard lock(exec_thread_mutex);
+			if (!prepareSpawnLocked()) return false;
+		}
 		safeRun(func_name, run_arguments);
-		waitForRunningResponse();
+		return true;
 	}
 
-	bool IVMThread::pause() {
+	std::expected<void, std::string> IVMThread::pause() {
+		const ThreadState copy = getThreadState();
+		if (ts::isTerminal(copy)) return std::unexpected("Pausing a terminal thread");
+		if (v_matches(copy, ts::Sleeping)) return std::unexpected("Pausing a sleeping thread");
+		if (!ts::hasStarted(copy)) return std::unexpected("Pausing a thread that has not started");
+
+		if (!signal.post(ThreadSignal::Request::Pause))
+			return std::unexpected("Another control is active");
+
+		// Wait for the paused state or a terminal.
+		const ThreadState state
+			= getProcessStateTable().waitForThreadState(thread_id, [](const ts::ThreadState& s) {
+				  return v_matches(s, ts::Paused) || ts::isTerminal(s);
+			  });
+
+		if (v_matches(state, ts::Paused)) return {};
+		return std::unexpected("Thread terminated before pause.");
+	}
+
+	std::expected<void, std::string> IVMThread::resume() {
+		const ThreadState copy = getThreadState();
+		if (ts::isTerminal(copy)) return std::unexpected("Resuming a terminal thread");
+		if (!v_matches(copy, ts::Paused)) return std::unexpected("Resuming a non-paused thread");
+
+		const u64 version = getProcessStateTable().threadVersion(thread_id);
+		if (!signal.post(ThreadSignal::Request::Resume))
+			return std::unexpected("Another control request is active");
+
+		// Wait until this thread commits any fresh state.
+		(void) getProcessStateTable().waitForFreshThreadState(
+			thread_id, version, [](const ts::ThreadState&) { return true; }
+		);
+		return {};
+	}
+
+	std::expected<void, std::string> IVMThread::step() {
+		const ThreadState copy = getThreadState();
+		if (ts::isTerminal(copy)) return std::unexpected("Stepping a terminal thread");
+		if (!v_matches(copy, ts::Paused)) return std::unexpected("Stepping a non-paused thread");
+
+		// Version is needed to see the new Paused after a fast Paused -> Running -> Paused transition.
+		const u64 version = getProcessStateTable().threadVersion(thread_id);
+		if (!signal.post(ThreadSignal::Request::Step))
+			return std::unexpected("Another control request is in flight");
+
+		(void) getProcessStateTable().waitForFreshThreadState(
+			thread_id,
+			version,
+			[](const ts::ThreadState& s) { return v_matches(s, ts::Paused) || ts::isTerminal(s); }
+		);
+		return {};
+	}
+
+	void IVMThread::stop() {
+		if (ts::isTerminal(getThreadState())) return;
+
 		{
-			std::unique_lock lock(execution_request_mutex);
-
-			execution_request              = ExecutionRequest::Pause;
-			execution_request_pending_flag = true;
+			std::lock_guard lock(exec_thread_mutex);
+			// A thread that was never spawned has no exec thread to see the Stop request.
+			if (!exec_thread.has_value() && getProcessStateTable().tryClaimStopped(thread_id))
+				return;
 		}
 
-		return waitForPausedResponse();
+		// Otherwise the thread is (or was) executing. Post the Stop and wait for a terminal state.
+		(void) signal.post(ThreadSignal::Request::Stop);
+		(void) getProcessStateTable().waitForThreadState(thread_id, ts::isTerminal);
 	}
 
-	bool IVMThread::resume() {
-		{
-			std::unique_lock lock(execution_request_mutex);
-
-			execution_request = ExecutionRequest::Resume;
-		}
-		pause_cv.notify_all();
-
-		return waitForRunningResponse();
+	void IVMThread::requestStop() noexcept {
+		if (ts::isTerminal(getThreadState())) return;
+		(void) signal.post(ThreadSignal::Request::Stop);
 	}
 
-	bool IVMThread::step() {
-		{
-			std::unique_lock lock(execution_request_mutex);
-
-			execution_request = ExecutionRequest::ExecuteOneStep;
-			pause_cv.notify_all();
-		}
-		if (waitForRunningResponse()) {
-			if (waitForPausedResponse()) return true;
-		}
-		return false;
+	bool IVMThread::hasActiveThread() const {
+		std::lock_guard lock(exec_thread_mutex);
+		return exec_thread.has_value() && exec_thread->joinable();
 	}
-
-	bool IVMThread::stop() {
-		{
-			std::unique_lock lock(execution_request_mutex);
-
-			execution_request              = ExecutionRequest::Stop;
-			execution_request_pending_flag = true;
-		}
-		pause_cv.notify_all();
-
-		return waitForStoppedResponse();
-	}
-
-	bool IVMThread::hasActiveThread() const { return exec_thread && exec_thread->joinable(); }
 
 	/**
 	 * @details Assumes that the instruction in the frame is to be executed before AND after running
 	 * this function.
 	 */
 	void IVMThread::breakActiveExecution() {
-		std::unique_lock lock(execution_request_mutex);
-		switch (execution_request) {
-		case ExecutionRequest::Pause:
-			respondExecutionRequest(api::Paused{});
-			runDebuggerLoop(lock);
-			execution_request_pending_flag = false;
-			break;
+		const auto req = signal.consume();
+		if (!req.has_value()) return;  // The request raced away between the flag poll and here.
 
-		case ExecutionRequest::Stop:
+		switch (*req) {
+		case ThreadSignal::Request::Stop:
 			throw KillProcessException{};
-
-		default:
-			CORE_PANIC("Unexpected execution status");
+		case ThreadSignal::Request::Pause:
+			pausedLoop();
+			return;
+		case ThreadSignal::Request::Resume:
+		case ThreadSignal::Request::Step:
+			// A stale request that landed on a running thread. Skip it, so it cannot clutter the
+			// request slot.
+			return;
 		}
 	}
 
-	void IVMThread::notifyPaused() { pause_cv.notify_all(); }
-
 	/**
 	 * @details Assumes that the instruction in the frame is to be executed before AND after running
-	 * this function.
+	 * this function. Runs with no locks held. A breakpoint inside a `Step` execution cannot
+	 * re-enter.
 	 */
-	void IVMThread::runDebuggerLoop(std::unique_lock<std::mutex>& lock) {
-		while (true) {
-			// Loop invariant: the instruction in the frame is to be executed
-			pause_cv.wait(lock, [this] { return execution_request != ExecutionRequest::Pause; });
+	void IVMThread::pausedLoop() {
+		commitEvent(te::Pause{});
 
-			switch (execution_request) {
-			case ExecutionRequest::Resume: {
-				execution_request = ExecutionRequest::NoRequest;
-				respondExecutionRequest(api::Running{});
+		while (true) {
+			switch (signal.waitForRequest()) {
+			case ThreadSignal::Request::Resume: {
+				commitEvent(te::Resume{});
 				return;
 			}
-			case ExecutionRequest::Stop: {
+			case ThreadSignal::Request::Stop: {
 				throw KillProcessException{};
 			}
-			case ExecutionRequest::ExecuteOneStep: {
-				respondExecutionRequest(api::Running{});
-
+			case ThreadSignal::Request::Step: {
+				commitEvent(te::Resume{});
 				executeOneStep();
-
-				execution_request = ExecutionRequest::Pause;
-				respondExecutionRequest(api::Paused{});
+				// A Stop posted while the step ran must win over re-pausing.
+				if (isTerminateRequested()) throw KillProcessException{};
+				commitEvent(te::Pause{});
 				break;
 			}
-			default:
-				throw exceptions::VMResumedWithPausedStatusException();
+			case ThreadSignal::Request::Pause:
+				break;  // Already paused.
 			}
 		}
 	}
 
 	void IVMThread::handleBreakpoint() {
-		std::unique_lock lock(execution_request_mutex);
-		setProcessStatus(api::Paused{});
-		execution_request = ExecutionRequest::Pause;
-		runDebuggerLoop(lock);
+		if (isTerminateRequested()) throw KillProcessException{};
+		pausedLoop();
 	}
 
+	void IVMThread::notifyWaiters() { signal.notifyWaiters(); }
+
+	void IVMThread::reportAsSleeping() { commitEvent(te::EnterSleep{}); }
+
+	void IVMThread::reportAsRunning() { commitEvent(te::WakeUp{}); }
 }

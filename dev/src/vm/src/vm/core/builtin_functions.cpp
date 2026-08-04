@@ -117,16 +117,16 @@ namespace vm::builtins {
 	}
 
 	i64 FunctionHandlers::builtinInputI64(SafeVMThread& thread) {
-		thread.setProcessStatus(api::Sleeping{});
+		thread.reportAsSleeping();
 		auto return_value = thread.safe_process.getIO().getInput<i64>(thread);
-		thread.setProcessStatus(api::Running{});
+		thread.reportAsRunning();
 		return return_value;
 	}
 
 	i32 FunctionHandlers::builtinInputChar(SafeVMThread& thread) {
-		thread.setProcessStatus(api::Sleeping{});
+		thread.reportAsSleeping();
 		const int c = thread.safe_process.getIO().getRawChar(thread);
-		thread.setProcessStatus(api::Running{});
+		thread.reportAsRunning();
 		return static_cast<i32>(c);
 	}
 

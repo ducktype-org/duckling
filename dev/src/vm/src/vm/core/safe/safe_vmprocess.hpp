@@ -19,6 +19,7 @@
 #include <vm/loader/loader.hpp>
 
 #include <expected>
+#include <shared_mutex>
 #include <string>
 #include <variant>
 #include <vector>
@@ -67,6 +68,11 @@ namespace vm {
 		 */
 		std::vector<Box<SafeVMValue>> owned_vm_values;
 
+		/**
+		 * @brief Protects the thread pool which can be modified by `builtin_start_thread` and has
+		 * to be serialized with it.
+		 */
+		std::mutex threads_pool_mutex;
 		/**
 		 * @brief Pool of threads in this process.
 		 * @note Thread with ID 0 is the main thread, it is created together with the process.
@@ -123,7 +129,7 @@ namespace vm {
 			api::ThreadID thread_id, base::Optional<usize> frame_idx
 		) override;
 
-		void notifyPausedVMThread(api::ThreadID thread_id) override;
+		void notifyVMThreadWaiters(api::ThreadID thread_id) override;
 
 		void waitForBreakpoint() override;
 
@@ -149,7 +155,8 @@ namespace vm {
 
 		std::vector<api::ThreadID> getAllThreadIDs() override;
 
-		void onTerminalStatus(const api::ProcStatus& status) noexcept override;
+		void requestStopAllThreads() noexcept override;
+
 		std::expected<api::Response, api::ApiError> setBreakpoint(
 			base::StrID function_name, usize instruction_index, bool enable
 		) override;
@@ -177,7 +184,6 @@ namespace vm {
 
 		Memory& getMemory();
 
-		[[nodiscard]] api::ProcStatus getCurrentStatus() { return getStatus(); }
 
 		Ref<IVMValue> createVMValue(code::valid_type::ValidTypeID type_id) override;
 
