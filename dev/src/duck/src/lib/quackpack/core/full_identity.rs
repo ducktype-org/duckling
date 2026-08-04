@@ -193,6 +193,11 @@ pub enum OriginSatisfiesSource {
 impl OriginSatisfiesSource {
     /// Detemine the conditional answer given by [`Self::IfGitReferencePointsToCommit`].
     /// This is done by performing network requests.
+    ///
+    /// Errors:
+    /// -------
+    /// We swallow errors on git fast path as this is a general way of handling them in all of the codebase,
+    /// as it is well ... a fast path.
     pub async fn finish_check(self, fetcher: &Fetcher<'_>) -> QuackResult<bool> {
         match self {
             Self::Yes => Ok(true),
@@ -205,7 +210,13 @@ impl OriginSatisfiesSource {
                 let Some(fast_path_client) = fetcher.try_get_fastpath(url) else {
                     return Ok(false);
                 };
-                let reference_commit = fast_path_client.get_commit_hash(reference).await?;
+                let reference_commit = match fast_path_client.get_commit_hash(reference).await {
+                    Ok(commit) => commit,
+                    Err(e) => {
+                        fetcher.ctx().console().warning(e)?;
+                        return Ok(false);
+                    }
+                };
                 Ok(commit == reference_commit)
             }
         }

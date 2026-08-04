@@ -307,26 +307,34 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
     ) -> FetchResponse {
         trace!("fetching git");
         // We create a temporary logger to check if `try_get_cached_git` produced any errors.
-        let mut tmp_logger = ErrorsLogger::default();
-        if let Some(cached_git) = self.try_get_cached_git(request, url, reference, &mut tmp_logger)
+        let mut cache_logger = ErrorsLogger::default();
+        if let Some(cached_git) =
+            self.try_get_cached_git(request, url, reference, &mut cache_logger)
         {
             debug!("git request was cached");
             return FetchResponse::Success(FetchSuccess::NotPinned(cached_git));
         }
-        if let Some(fast_path_git) = self
-            .try_git_fastpath(request, url, reference, &mut tmp_logger)
-            .await
-        {
-            debug!("git fast path worked");
-            return FetchResponse::Success(FetchSuccess::NotPinned(fast_path_git));
-        }
-        if !tmp_logger.is_empty() {
-            let err = tmp_logger.unwrap_first();
+        if !cache_logger.is_empty() {
+            let err = cache_logger.unwrap_first();
             errors.borrow_mut().log(err.context(MessageError::new(
                 "when trying to get cached git or during fastpath",
             )));
             return FetchResponse::failed_not_pinned(request.id);
         }
+        match self.try_git_fastpath(request, url, reference).await {
+            Err(e) => {
+                // We swallow errors on git fast path as this is a general way of handling them in all of the codebase,
+                // as it is well ... a fast path.
+                if let Err(print_err) = self.fetcher.ctx().console().warning(e) {
+                    errors.borrow_mut().log(print_err);
+                }
+            }
+            Ok(Some(fast_path_git)) => {
+                debug!("git fast path worked");
+                return FetchResponse::Success(FetchSuccess::NotPinned(fast_path_git));
+            }
+            Ok(None) => {}
+        };
         if self.fetcher.ctx().is_offline() {
             return FetchResponse::failed_not_pinned(request.id);
         }
@@ -417,34 +425,24 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
         None
     }
 
+    /// Tries to use git fast path, to get the manifests without performing clone.
     async fn try_git_fastpath(
         &self,
         request: &NotPinnedRequest,
         url: InternedUrl,
         reference: GitReference,
-        errors: &mut ErrorsLogger,
-    ) -> Option<NotPinnedSuccess> {
-        let fast_path_client = self.fetcher.try_get_fastpath(url)?;
-        let commit = match fast_path_client.get_commit_hash(reference).await {
-            Ok(commit) => commit,
-            Err(e) => {
-                errors.log(e);
-                return None;
-            }
+    ) -> QuackResult<Option<NotPinnedSuccess>> {
+        let Some(fast_path_client) = self.fetcher.try_get_fastpath(url) else {
+            return Ok(None);
         };
-        let manifest = match fast_path_client.download_manifest(commit).await {
-            Ok(manifest) => manifest,
-            Err(e) => {
-                errors.log(e);
-                return None;
-            }
-        };
+        let commit = fast_path_client.get_commit_hash(reference).await?;
+        let manifest = fast_path_client.download_manifest(commit).await?;
         let answer_identity = FullIdentity::new(request.id.name, FullOrigin::for_git(url, commit));
         let pkg_id = PackageId::new(answer_identity, manifest.version());
-        Some(NotPinnedSuccess {
+        Ok(Some(NotPinnedSuccess {
             origin_id: request.id,
             fetched_manifests: [(pkg_id, Box::new(manifest))].into(),
-        })
+        }))
     }
 
     /// Helper for [`Gatherer::explore()`], performs a local fetch
