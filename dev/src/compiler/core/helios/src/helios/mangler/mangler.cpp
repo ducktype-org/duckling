@@ -138,8 +138,9 @@ namespace compiler::helios::mangler {
 				ss << name.size() << name;
 				return;
 			} else {
-				constexpr char   UNICODE_PREFIX = 'U';
-				std::string_view puny_string    = name;  // @future: convert to punycode
+				constexpr char UNICODE_PREFIX = 'U';
+				// @todo: #3286 convert to punycode
+				std::string_view puny_string = name;
 				ss << UNICODE_PREFIX << puny_string.size() << puny_string;
 			}
 		}
@@ -172,7 +173,7 @@ namespace compiler::helios::mangler {
 				/* we're in a package */
 				auto package_name = identifier(package_ref_opt.value()->getName().strView());
 
-				// @todo: punycode -- for now we allow '-' and just treat it as '_'
+				// @todo: #3286 for now we allow '-' and just treat it as '_'
 				std::ranges::replace(package_name, '-', '_');
 				if (auto c = findExtendedChar(package_name))
 					CORE_PANIC(base::strConcat(
@@ -200,7 +201,7 @@ namespace compiler::helios::mangler {
 			}
 
 			auto ret = ret_ss.str();
-			// @todo: punycode -- for now we allow '-' and just treat it as '_'
+			// @todo: #3286 for now we allow '-' and just treat it as '_'
 			std::ranges::replace(ret, '-', '_');
 			if (auto c = findExtendedChar(ret))
 				CORE_PANIC(base::strConcat(
@@ -212,7 +213,7 @@ namespace compiler::helios::mangler {
 		}
 
 		std::string pathPrefix(special_symbol_keys::LIRModuleID mod_id) {
-			// @todo: #2643 - rething compiler-generated symbols
+			// @todo: #2643 rething compiler-generated symbols
 			// @todo: #3285 add backreferences
 			return base::strConcat("M", mod_id.id);
 		}
@@ -841,7 +842,7 @@ namespace compiler::helios::mangler {
 			case 128:
 				return "q";
 			default:
-				// @future: "b" for brain float
+				// @future: brain float
 				CORE_PANIC("Unknown floating-point type in mangle(FloatAbstractType)");
 			}
 		}
