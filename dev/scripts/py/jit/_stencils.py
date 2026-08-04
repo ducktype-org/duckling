@@ -71,7 +71,7 @@ class Stencil:
     def remove_jump(self, binary):
         # This only checks `jmp rax`, but that is enough as most stencils end in exactly this way.
         # This is very dependant on the compilation method used, and I have my doubts that it is the best way, so I leave it be for now.
-        if  self.type == StencilType.INSTRUCTION and self.stencil_binary(binary).endswith((b"\xFF", b"\xE0")):
+        if  self.type == StencilType.INSTRUCTION and self.stencil_binary(binary).endswith(b"\xFF\xE0"):
             self.size = self.size - 2
             return True
         return False
