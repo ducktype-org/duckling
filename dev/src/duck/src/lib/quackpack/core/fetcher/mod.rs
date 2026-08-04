@@ -5,12 +5,14 @@
 //! [`GitClient`](git::GitClient).
 use std::cell::RefCell;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use tempfile::TempDir;
 use tracing::{debug, error, info};
 use url::Url;
 
 use crate::quackpack::core::GitReference;
+use crate::quackpack::core::fetcher::http_async::AsyncHttpClient;
 use crate::quackpack::core::fetcher::types::{FetcherResponse, PackageWithUrl};
 use crate::quackpack::schemas::registry;
 use crate::quackpack::util::interned_url::InternedUrl;
@@ -65,10 +67,11 @@ impl<'duck> Fetcher<'duck> {
             artifacts = %artifacts_cache_path.display(),
             downloads = %download_cache_path.display(),
         );
-        let ducknest_client = ducknest::DucknestClient::new(ctx);
+        let http_client = Arc::new(AsyncHttpClient::new(ctx));
+        let ducknest_client = ducknest::DucknestClient::new(http_client.clone());
         let cache = cache::ManifestCache::new(cache::CacheLocation::Path(metadata_path.as_path()))?;
         let git_client = git::GitClient::new(ctx);
-        let git_fastpath_client = git::fast_path::GitFastPathClient::new(ctx);
+        let git_fastpath_client = git::fast_path::GitFastPathClient::new(http_client);
         Ok(Self {
             ctx,
             ducknest_client,

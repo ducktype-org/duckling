@@ -13,6 +13,8 @@
 //! We perform 2 types of queries.
 //! 1. Get the commit hash for the default branch (`base_api_url/commits`) or for the commit specified by git referense (`base_api_url/commits?sha=<reference>`).
 //! 2. Download the manifest (for a given commit): `base_api_url/contents/<manifest_path>?ref=<commit_hash>`.use http::{HeaderName, HeaderValue, header};
+use std::sync::Arc;
+
 use http::{HeaderName, HeaderValue, header};
 use serde::Deserialize;
 use tracing::debug;
@@ -27,15 +29,13 @@ use crate::{DuckContext, QuackResult, QuackResultContext, StrId};
 #[derive(Debug)]
 /// Client for performing requests to Github repositories.
 pub struct GithubApiClient<'duck> {
-    client: AsyncHttpClient<'duck>,
+    client: Arc<AsyncHttpClient<'duck>>,
 }
 
 impl<'duck> GithubApiClient<'duck> {
     /// Create a new [`GithubClient`] instance.
-    pub fn new(ctx: &'duck DuckContext) -> Self {
-        Self {
-            client: AsyncHttpClient::new(ctx),
-        }
+    pub fn new(client: Arc<AsyncHttpClient<'duck>>) -> Self {
+        Self { client }
     }
 
     /// Get the base api for requests for this repository.

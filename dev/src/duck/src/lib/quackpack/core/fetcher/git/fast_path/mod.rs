@@ -2,14 +2,16 @@
 //! This means using outside knowledge about some git servers to perform necessary operation
 //! without performing costly repository clones.
 use std::pin::Pin;
+use std::sync::Arc;
 
 use crate::quackpack::core::fetcher::git::fast_path::github_api_client::GithubApiClient;
 use crate::quackpack::core::fetcher::git::fast_path::github_client::GithubClient;
 use crate::quackpack::core::fetcher::git::fast_path::gitlab_api_client::GitlabApiClient;
 use crate::quackpack::core::fetcher::git::fast_path::gitlab_client::GitlabClient;
+use crate::quackpack::core::fetcher::http_async::AsyncHttpClient;
 use crate::quackpack::core::{GitReference, Manifest};
 use crate::quackpack::util::interned_url::InternedUrl;
-use crate::{DuckContext, QuackResult, StrId};
+use crate::{QuackResult, StrId};
 
 mod github_api_client;
 mod github_client;
@@ -42,10 +44,10 @@ pub struct GitFastPathClient<'duck> {
 
 impl<'duck> GitFastPathClient<'duck> {
     /// Create new [`GitFastPathClient`].
-    pub fn new(ctx: &'duck DuckContext) -> Self {
+    pub fn new(client: Arc<AsyncHttpClient<'duck>>) -> Self {
         Self {
-            github: GithubApiClient::new(ctx),
-            gitlab: GitlabApiClient::new(ctx),
+            github: GithubApiClient::new(client.clone()),
+            gitlab: GitlabApiClient::new(client),
         }
     }
 

@@ -12,6 +12,8 @@
 //! 1. Get the name of the default branch: `base_api_url`.
 //! 2. Get the commit hash for a given git reference: `base_api_url/repository/tags/<tag>` and `base_api_url/repository/heads/<branch_name>`.
 //! 3. Download the manifest (for a given commit): `base_api_url/repository/files/<manifest_path>/raw?ref=<commit_hash>`.
+use std::sync::Arc;
+
 use http::header;
 use percent_encoding::{AsciiSet, CONTROLS, utf8_percent_encode};
 use serde::Deserialize;
@@ -40,15 +42,13 @@ const PATH_ENCODE_SET: &AsciiSet = &CONTROLS
 #[derive(Debug)]
 /// Client for performing requests to Gitlab repositories.
 pub struct GitlabApiClient<'duck> {
-    client: AsyncHttpClient<'duck>,
+    client: Arc<AsyncHttpClient<'duck>>,
 }
 
 impl<'duck> GitlabApiClient<'duck> {
     /// Creates a new [`GitlabApiClient`].
-    pub fn new(ctx: &'duck DuckContext) -> Self {
-        Self {
-            client: AsyncHttpClient::new(ctx),
-        }
+    pub fn new(client: Arc<AsyncHttpClient<'duck>>) -> Self {
+        Self { client }
     }
 
     /// Get the base api for requests for this repository.

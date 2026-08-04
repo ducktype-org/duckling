@@ -104,7 +104,7 @@ impl PackageId {
             return Ok(false);
         }
         self.kind()
-            .satisfies_source_kind(*source.kind(), fetcher, self.url())
+            .satisfies_source_kind(*source.kind(), fetcher, source.url())
             .await
     }
 

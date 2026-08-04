@@ -5,6 +5,7 @@ use httpmock::prelude::*;
 use tempfile::tempdir;
 
 use super::*;
+use crate::DuckContext;
 use crate::quackpack::core::Version;
 use crate::quackpack::core::fetcher::types;
 use crate::quackpack::schemas::registry;
@@ -159,7 +160,8 @@ fn create_mock_server() -> (MockServer, DuckContext) {
 #[test]
 fn single_metadata() {
     let (server, ctx) = create_mock_server();
-    let client = DucknestClient::new(&ctx);
+    let http_client = Arc::new(AsyncHttpClient::new(&ctx));
+    let client = DucknestClient::new(http_client);
     let response = block_on(client.get_exact_metadata(&types::PackageWithUrl {
         name: "foo".into(),
         version: Version::new(1, 2, 3),
@@ -183,7 +185,8 @@ fn single_metadata() {
 #[test]
 fn multi_metadata() {
     let (server, ctx) = create_mock_server();
-    let client = DucknestClient::new(&ctx);
+    let http_client = Arc::new(AsyncHttpClient::new(&ctx));
+    let client = DucknestClient::new(http_client);
     let response =
         block_on(client.get_multi_metadata(&(server.base_url().parse().unwrap()), "foo".into()))
             .unwrap();
@@ -196,7 +199,8 @@ fn download_blob() {
     let (server, ctx) = create_mock_server();
     let manager = FileLockManager::new(dir.path().to_path_buf());
     let path = manager.open_exclusive("target", &ctx).unwrap();
-    let client = DucknestClient::new(&ctx);
+    let http_client = Arc::new(AsyncHttpClient::new(&ctx));
+    let client = DucknestClient::new(http_client);
     block_on(client.fetch_blob(
         &types::PackageWithUrl {
             name: "foo".into(),
@@ -215,7 +219,8 @@ fn download_blob() {
 #[test]
 fn not_found_in_response() {
     let (server, ctx) = create_mock_server();
-    let client = DucknestClient::new(&ctx);
+    let http_client = Arc::new(AsyncHttpClient::new(&ctx));
+    let client = DucknestClient::new(http_client);
     let err = block_on(client.get_exact_metadata(&types::PackageWithUrl {
         name: "foo".into(),
         version: Version::new(2137, 6, 7),
