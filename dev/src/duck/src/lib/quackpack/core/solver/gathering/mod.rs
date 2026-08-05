@@ -34,7 +34,8 @@
 //! Since in the gathering process we might discover errors in another packages and not our,
 //! all the errors are collected during the gathering process and depending on the user,
 //! either printed as warnings or reported as errors.
-//! [`QuackResult`](crate::QuackResult) is generally only used for internal errors.
+//! [`QuackResult`](crate::QuackResult) is generally only used for internal errors / errors during printing
+//!  or other situations in which something went seriously wrong on the user side.
 pub mod fetch_types;
 pub mod gatherer;
 pub mod gatherer_state;

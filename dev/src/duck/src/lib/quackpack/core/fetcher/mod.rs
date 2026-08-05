@@ -214,9 +214,9 @@ impl<'duck> Fetcher<'duck> {
     }
 
     pub fn try_get_fastpath(
-        &'duck self,
+        &self,
         url: InternedUrl,
-    ) -> Option<Box<dyn git::fast_path::GitFastPathExt + 'duck>> {
+    ) -> Option<Box<dyn git::fast_path::GitFastPathExt + '_>> {
         if self.ctx().is_offline() {
             None
         } else {

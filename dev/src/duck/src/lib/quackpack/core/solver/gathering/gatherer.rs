@@ -176,9 +176,8 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
                     }
                     SourceKind::Git(git_ref) => {
                         let url = not_pinned_request.id.source.url();
-                        Ok(self
-                            .fetch_git(&not_pinned_request, url, *git_ref, errors)
-                            .await)
+                        self.fetch_git(&not_pinned_request, url, *git_ref, errors)
+                            .await
                     }
                     SourceKind::Local => {
                         let path_url = not_pinned_request.id.source.url();
@@ -304,7 +303,7 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
         url: InternedUrl,
         reference: GitReference,
         errors: &RefCell<ErrorsLogger>,
-    ) -> FetchResponse {
+    ) -> QuackResult<FetchResponse> {
         trace!("fetching git");
         // We create a temporary logger to check if `try_get_cached_git` produced any errors.
         let mut cache_logger = ErrorsLogger::default();
@@ -312,38 +311,38 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
             self.try_get_cached_git(request, url, reference, &mut cache_logger)
         {
             debug!("git request was cached");
-            return FetchResponse::Success(FetchSuccess::NotPinned(cached_git));
+            return Ok(FetchResponse::Success(FetchSuccess::NotPinned(cached_git)));
         }
         if !cache_logger.is_empty() {
             let err = cache_logger.unwrap_first();
             errors.borrow_mut().log(err.context(MessageError::new(
                 "when trying to get cached git or during fastpath",
             )));
-            return FetchResponse::failed_not_pinned(request.id);
+            return Ok(FetchResponse::failed_not_pinned(request.id));
         }
         match self.try_git_fastpath(request, url, reference).await {
             Err(e) => {
                 // We swallow errors on git fast path as this is a general way of handling them in all of the codebase,
                 // as it is well ... a fast path.
-                if let Err(print_err) = self.fetcher.ctx().console().warning(e) {
-                    errors.borrow_mut().log(print_err);
-                }
+                self.fetcher.ctx().console().warning(e)?;
             }
             Ok(Some(fast_path_git)) => {
                 debug!("git fast path worked");
-                return FetchResponse::Success(FetchSuccess::NotPinned(fast_path_git));
+                return Ok(FetchResponse::Success(FetchSuccess::NotPinned(
+                    fast_path_git,
+                )));
             }
             Ok(None) => {}
         };
         if self.fetcher.ctx().is_offline() {
-            return FetchResponse::failed_not_pinned(request.id);
+            return Ok(FetchResponse::failed_not_pinned(request.id));
         }
 
         let (cloned_pkg, path_where_cloned) = match self.fetcher.clone_from_git(&url, reference) {
             Ok(response) => response,
             Err(e) => {
                 errors.borrow_mut().log(e);
-                return FetchResponse::failed_not_pinned(request.id);
+                return Ok(FetchResponse::failed_not_pinned(request.id));
             }
         };
         let manifest = match cloned_pkg
@@ -354,7 +353,7 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
             Ok(manifest) => manifest,
             Err(e) => {
                 errors.borrow_mut().log(e);
-                return FetchResponse::failed_not_pinned(request.id);
+                return Ok(FetchResponse::failed_not_pinned(request.id));
             }
         };
         let answer_identity = FullIdentity::new(
@@ -368,13 +367,15 @@ impl<'duck, 'a, Access: GitAccess> Gatherer<'duck, 'a, Access> {
         {
             error!(error = %e, "failed to store a new git");
             errors.borrow_mut().log(e);
-            return FetchResponse::failed_not_pinned(request.id);
+            return Ok(FetchResponse::failed_not_pinned(request.id));
         }
         let answer_pkg = PackageId::new(answer_identity, manifest.version());
-        FetchResponse::Success(FetchSuccess::NotPinned(NotPinnedSuccess {
-            origin_id: request.id,
-            fetched_manifests: HashMap::from([(answer_pkg, Box::new(manifest))]),
-        }))
+        Ok(FetchResponse::Success(FetchSuccess::NotPinned(
+            NotPinnedSuccess {
+                origin_id: request.id,
+                fetched_manifests: HashMap::from([(answer_pkg, Box::new(manifest))]),
+            },
+        )))
     }
 
     /// Helper for [`Gatherer::fetch_git`].
