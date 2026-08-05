@@ -1,14 +1,16 @@
 //! [`Unit`] is supposed to be all information required to invoke a single instance of duckc.
 
 use std::collections::{HashSet, VecDeque};
+use std::convert::Infallible;
 use std::env::consts::{DLL_PREFIX, DLL_SUFFIX, EXE_SUFFIX};
 use std::hash::Hash;
+use std::ops::ControlFlow;
 use std::sync::Arc;
 
 use self::graph::UnitGraph;
-use self::unit_visitor::UnitVisitor;
+use self::unit_visitor::{TryUnitVisitor, UnitVisitor};
+use super::compiler_package::CompilerPackage;
 use super::duckc::multipackage_schema;
-use crate::quackpack::core::compile::compiler_package::CompilerPackage;
 use crate::quackpack::core::identity::Identity;
 use crate::util::hash::sha256_string;
 use crate::{QuackResult, QuackResultContext};
@@ -196,11 +198,46 @@ impl Unit {
     /// Accept a [`UnitVisitor`].
     ///
     /// This method should only drive the visitor through dependencies of this [`Unit`].
+    ///
+    /// If visitor returns `ControlFlow::Break(b)`, we short circuit to `Some(b)`.
+    ///
+    /// Otherwise (no breaks), we return `None`.
     pub fn accept<V: UnitVisitor + ?Sized>(
         &self,
         visitor: &mut V,
         graph: &UnitGraph,
-    ) -> QuackResult<()> {
+    ) -> Option<V::Break> {
+        struct VisitorAsTryVisitor<'a, U: ?Sized> {
+            visitor: &'a mut U,
+        }
+        impl<U: UnitVisitor + ?Sized> TryUnitVisitor for VisitorAsTryVisitor<'_, U> {
+            type Err = Infallible;
+
+            type Break = U::Break;
+
+            fn try_visit(&mut self, unit: &Unit) -> Result<ControlFlow<Self::Break>, Self::Err> {
+                Ok(self.visitor.visit(unit))
+            }
+        }
+        let result = self.try_accept(&mut VisitorAsTryVisitor { visitor }, graph);
+        let Ok(result) = result;
+        result
+    }
+
+    /// Accept a [`TryUnitVisitor`].
+    ///
+    /// This method should only drive the visitor through dependencies of this [`Unit`].
+    ///
+    /// If visitor returns an `Err(e)`, we short circuit to `Err(e)`
+    ///
+    /// If it returns `Ok(ControlFlow::Break(b))`, we short circuit to `Ok(Some(b))`.
+    ///
+    /// Otherwise (no errors + no breaks), we return `Ok(None)`.
+    pub fn try_accept<V: TryUnitVisitor + ?Sized>(
+        &self,
+        visitor: &mut V,
+        graph: &UnitGraph,
+    ) -> Result<Option<V::Break>, V::Err> {
         let mut stack = VecDeque::from([self.unit_id()]);
         let mut visited = HashSet::new();
         while let Some(id) = stack.pop_front() {
@@ -209,10 +246,12 @@ impl Unit {
             }
             visited.insert(id);
             let unit = graph.unit_for(id);
-            visitor.visit(unit)?;
+            if let ControlFlow::Break(b) = visitor.try_visit(unit)? {
+                return Ok(Some(b));
+            }
             stack.extend(unit.deps_sorted_by_unit_id());
         }
-        Ok(())
+        Ok(None)
     }
 }
 

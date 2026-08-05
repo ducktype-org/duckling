@@ -16,10 +16,8 @@
 
 use std::path::PathBuf;
 
+use super::{ArtifactsLayout, DependencyLayout, ProfileLayout};
 use crate::QuackResult;
-use crate::quackpack::core::compile::artifacts_layout::{
-    ArtifactsLayout, DependencyLayout, ProfileLayout,
-};
 use crate::quackpack::core::compile::profiles::Profile;
 use crate::quackpack::core::compile::unit::Unit;
 use crate::quackpack::core::compile::unit::graph::UnitGraph;

@@ -6,7 +6,7 @@
 //! - [`duckc`][]: executing the compiler itself, it handles different compiler execution modes.
 use tracing::info;
 
-use crate::quackpack::core::compile::profiles::Profile;
+use self::profiles::Profile;
 use crate::quackpack::core::identity::Identity;
 use crate::quackpack::core::storage::freeze::VenvFreeze;
 use crate::quackpack::core::storage::paths::Storage;

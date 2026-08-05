@@ -2,6 +2,7 @@
 
 use std::fmt::{self, Debug};
 use std::io::Write;
+use std::ops::ControlFlow;
 use std::path::PathBuf;
 use std::process::ExitStatus;
 
@@ -21,12 +22,11 @@ use super::artifacts_layout::{DependencyLayout, ProfileLayout};
 use super::duckc::process_builder::DuckcSubcommand;
 use super::duckc::{Duckc, multipackage_schema, process_builder};
 use super::profiles::Profile;
-use super::unit::Unit;
 use super::unit::graph::UnitGraph;
-use crate::quackpack::core::compile::unit::ArtifactsType;
-use crate::quackpack::core::compile::unit::unit_visitor::UnitVisitor;
+use super::unit::unit_visitor::TryUnitVisitor;
+use super::unit::{ArtifactsType, Unit};
 use crate::util::file_locks::LockedFile;
-use crate::{QuackResult, QuackResultContext, qp_bail};
+use crate::{QuackError, QuackResult, QuackResultContext, qp_bail};
 
 /// A generic duckc driver.
 pub trait Executor: Debug {
@@ -66,18 +66,22 @@ pub(crate) fn collect_packages(
         packages: Vec<multipackage_schema::Package>,
     }
 
-    impl UnitVisitor for PackageVisitor<'_> {
-        fn visit(&mut self, unit: &Unit) -> QuackResult<()> {
+    impl TryUnitVisitor for PackageVisitor<'_> {
+        type Err = QuackError;
+
+        type Break = ();
+
+        fn try_visit(&mut self, unit: &Unit) -> Result<ControlFlow<Self::Break>, Self::Err> {
             self.packages
                 .push(unit.multipackage_schema_package(self.graph)?);
-            Ok(())
+            Ok(ControlFlow::Continue(()))
         }
     }
     let mut visitor = PackageVisitor {
         graph,
         packages: vec![],
     };
-    unit.accept(&mut visitor, graph)?;
+    unit.try_accept(&mut visitor, graph)?;
     Ok(visitor.packages)
 }
 
@@ -129,13 +133,17 @@ pub(crate) fn get_deps_outputs<T: ProfileLayout>(
         outputs: Vec<(Unit, PathBuf)>,
     }
 
-    impl<U: ProfileLayout> UnitVisitor for UnitOutputVisitor<'_, U> {
-        fn visit(&mut self, unit: &Unit) -> QuackResult<()> {
+    impl<U: ProfileLayout> TryUnitVisitor for UnitOutputVisitor<'_, U> {
+        type Err = QuackError;
+
+        type Break = ();
+
+        fn try_visit(&mut self, unit: &Unit) -> Result<ControlFlow<Self::Break>, Self::Err> {
             if self.root != unit {
                 self.outputs
                     .push((unit.clone(), unit_output(unit, self.graph, self.layout)?))
             }
-            Ok(())
+            Ok(ControlFlow::Continue(()))
         }
     }
     let mut visitor = UnitOutputVisitor {
@@ -144,7 +152,7 @@ pub(crate) fn get_deps_outputs<T: ProfileLayout>(
         root: unit,
         outputs: vec![],
     };
-    unit.accept(&mut visitor, graph)?;
+    unit.try_accept(&mut visitor, graph)?;
     Ok(visitor.outputs)
 }
 
