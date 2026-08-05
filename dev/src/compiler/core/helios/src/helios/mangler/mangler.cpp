@@ -313,10 +313,8 @@ namespace compiler::helios::mangler {
 		 * @note See mangling-scheme.md for details
 		 */
 		std::string symbolName(query::Context& ctx, SymID symbol_id) {
+			// fast-path for global symbols that are not templates
 			if (scopeDepth(scope(symbol_id)) == 1) return "G" + unscopedName(ctx, symbol_id);
-
-			std::vector<std::string> path_parts;
-
 
 			// This function can be only called for symbols
 			// that have clear PST-path mangling.
@@ -340,29 +338,65 @@ namespace compiler::helios::mangler {
 				CORE_UNREACHABLE();
 			}();
 
-			bool is_global = true;
+			// it's not compiler-generated and it's ancestor is a template statement
+			const bool is_template = maybeSymbolPst(symbol_id).has_value()
+			                      && ancestor_opt.isLangElement()
+			                      && ancestor_opt.getAsLangElement().unlock(ctx)->getElementKind()
+			                             == pst::ElementKind::TemplateStmt;
+
+			std::vector<pst::Access<pst::LangElement>> ancestors;
+			bool                                       is_nested = false;
 			while (ancestor_opt.isLangElement()) {
 				auto ancestor = ancestor_opt.getAsLangElement().unlock(ctx);
+				switch (ancestor->getElementKind()) {
+					using enum pst::ElementKind;
+				case Namespace:
+				case Class:
+					is_nested = true;
+					[[fallthrough]];
+				case TemplateStmt:
+					ancestors.push_back(ancestor);
+				default:
+					break;
+				}
+				ancestor_opt = getPSTElementParent(ctx, ancestor);
+			}
 
-				if (ancestor->getElementKind() == pst::ElementKind::Namespace) {
-					auto namespace_v = ancestor.dynamicCast<pst::Namespace>().value();
-					path_parts.push_back(
-						identifier(namespace_v->getName().unlock(ctx)->unwrap().strView())
-					);
-					is_global = false;
-				} else if (ancestor->getElementKind() == pst::ElementKind::Class) {
-					auto class_v = ancestor.dynamicCast<pst::Class>().value();
-					path_parts.push_back(
-						identifier(class_v->getName().unlock(ctx)->unwrap().strView())
-					);
-					is_global = false;
-				} else if (ancestor->getElementKind() == pst::ElementKind::TemplateStmt) {
-					auto template_stmt_v = ancestor.dynamicCast<pst::TemplateStmt>().value();
+			std::string ret = (is_nested ? "N" : "G");
+			for (auto it = ancestors.rbegin(); it != ancestors.rend(); ++it) {
+				const auto ancestor = *it;
+				switch (ancestor->getElementKind()) {
+					using enum pst::ElementKind;
+				case Namespace: {
+					if (it == ancestors.rbegin()
+					    || (*std::prev(it))->getElementKind() != TemplateStmt) {
+						const auto namespace_v = ancestor.dynamicCast<pst::Namespace>().value();
+						ret += identifier(namespace_v->getName().unlock(ctx)->unwrap().strView());
+					}
+					break;
+				}
+				case Class: {
+					if (it == ancestors.rbegin()
+					    || (*std::prev(it))->getElementKind() != TemplateStmt) {
+						const auto class_v = ancestor.dynamicCast<pst::Class>().value();
+						ret += identifier(class_v->getName().unlock(ctx)->unwrap().strView());
+					}
+					break;
+				}
+				case TemplateStmt: {
+					const auto template_stmt_v = ancestor.dynamicCast<pst::TemplateStmt>().value();
+
+					ret += identifier(template_stmt_v->getInnerStatement()
+					                      .unlock(ctx)
+					                      ->getDeclSymbolIdentifier()
+					                      ->unlock(ctx)
+					                      ->unwrap()
+					                      .strView());
 
 					if (template_stmt_v->hasAdditionalRootData()) {
-						// We are inside baked template
+						// We are inside a baked template
 
-						auto root_data = template_stmt_v->getAdditionalRootData();
+						const auto root_data = template_stmt_v->getAdditionalRootData();
 						variant_match(root_data.pst_parent) {
 							variant_case(
 								pst::AdditionalRootData::BakedTemplateParent, template_parent
@@ -374,17 +408,15 @@ namespace compiler::helios::mangler {
 										template_bake_data_any
 									);
 
-								path_parts.emplace_back("E");
-								for (const auto& bake_argument:
-								     template_bake_data.postponed_data
-								             ->load(std::memory_order_acquire)
-								             ->template_arguments_symbols
-								         | std::views::reverse) {
+								ret += "I";
+								for (const auto& bake_argument: template_bake_data.postponed_data
+								                                    ->load(std::memory_order_acquire)
+								                                    ->template_arguments_symbols) {
 									auto value = ctx.query<helios::QueryConstValueOf>(bake_argument)
 									                 .valueOrThrow();
-									path_parts.push_back(mangleCTV(ctx, value));
+									ret += mangleCTV(ctx, value);
 								}
-								path_parts.emplace_back("I");
+								ret += "E";
 							}
 							variant_default {
 								CORE_PANIC(
@@ -399,14 +431,16 @@ namespace compiler::helios::mangler {
 							"It should not happen in mangling"
 						);
 					}
+					break;
 				}
-
-				ancestor_opt = getPSTElementParent(ctx, ancestor);
+				default:
+					CORE_UNREACHABLE();
+				}
 			}
 
-			std::string ret = is_global ? "G" : "N";
-			for (auto&& it = path_parts.rbegin(); it != path_parts.rend(); ++it) ret += *it;
-			ret += unscopedName(ctx, symbol_id) + (is_global ? "" : "E");
+			if (!is_template) ret += unscopedName(ctx, symbol_id);
+
+			if (is_nested) ret += "E";
 
 			return ret;
 		}

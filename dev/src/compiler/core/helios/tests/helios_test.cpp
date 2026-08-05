@@ -2504,15 +2504,15 @@ private:
 
 			std::cerr << std::right;
 
-			const auto efoo1 = "_Q_M17template_manglingN4NameIiq42_tiqE3fooEFiqiqE5paramE"sv;
+			const auto efoo1 = "_Q_M17template_manglingN4Name3fooIiq42_tiqEEFiqiqE5paramE"sv;
 			const auto efoo2
-				= "_Q_M17template_manglingN4NameIiq42_t_Q_CM17template_manglingN4Name3ClsEE3fooEF_Q_CM17template_manglingN4Name3ClsEiqE5paramE"sv;
+				= "_Q_M17template_manglingN4Name3fooIiq42_t_Q_CM17template_manglingN4Name3ClsEEEF_Q_CM17template_manglingN4Name3ClsEiqE5paramE"sv;
 			const auto efoo3
-				= "_Q_M17template_manglingN4NameIiq42_t_Q_CM17template_manglingN4NameIf0000803fE4TclsEE3fooEF_Q_CM17template_manglingN4NameIf0000803fE4TclsEiqE5paramE"sv;
+				= "_Q_M17template_manglingN4Name3fooIiq42_t_Q_CM17template_manglingN4Name4TclsIf0000803fEEEEF_Q_CM17template_manglingN4Name4TclsIf0000803fEEiqE5paramE"sv;
 			const auto efoo4
-				= "_Q_M17template_manglingN4NameIiq42_t_Q_CM17template_manglingG7GlobClsE3fooEF_Q_CM17template_manglingG7GlobClsiqE5paramE"sv;
+				= "_Q_M17template_manglingN4Name3fooIiq42_t_Q_CM17template_manglingG7GlobClsEEF_Q_CM17template_manglingG7GlobClsiqE5paramE"sv;
 			const auto ehoo = "_Q_M17template_manglingG3hooFiqiqE1jE"sv;
-			const auto egoo = "_Q_M17template_manglingGIiq42_E3gooFiqiqE1jE"sv;
+			const auto egoo = "_Q_M17template_manglingG3gooIiq42_EFiqiqE1jE"sv;
 
 			ASSERT_EQUAL(efoo1, name_foo_1);
 			ASSERT_EQUAL(efoo2, name_foo_2);
