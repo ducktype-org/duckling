@@ -2,6 +2,7 @@ use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::time::Duration;
 
+use futures::executor::block_on;
 use httpmock::prelude::*;
 use tempfile::{TempDir, tempdir};
 
@@ -30,7 +31,7 @@ impl GitAccess for MockGitAccess {
     }
 
     fn store(
-        &mut self,
+        &self,
         _url: InternedUrl,
         _commit: &str,
         _source_path: &std::path::Path,
@@ -504,7 +505,7 @@ fn not_pinned_registry() {
     let (ctx, _root) = setup_duck_ctx();
     let server = create_mock_server();
     let url: InternedUrl = server.base_url().to_url().unwrap().into();
-    let mut fetcher = Fetcher::new(&ctx).unwrap();
+    let fetcher = Fetcher::new(&ctx).unwrap();
     let (_dir, root_path) = prepare_manifest(&format!(
         r#"
 metadata:
@@ -522,16 +523,15 @@ dependencies:
     let root_name = "root".into();
     let root_version = Version::new(0, 1, 0);
     let root_manifest = parse_manifest(&root_path, &ctx).unwrap().into_manifest();
-    let mut git_access = MockGitAccess();
-    let mut gatherer = Gatherer::new(&mut fetcher, &mut git_access);
-    let gathered_info = gatherer
-        .explore(
-            root_path.clone(),
-            root_manifest,
-            HashSet::new(),
-            SolverMode::default(),
-        )
-        .unwrap();
+    let git_access = MockGitAccess();
+    let gatherer = Gatherer::new(&fetcher, &git_access);
+    let gathered_info = block_on(gatherer.explore(
+        root_path.clone(),
+        root_manifest,
+        HashSet::new(),
+        SolverMode::default(),
+    ))
+    .unwrap();
     let identity_root = FullIdentity::new(root_name, FullOrigin::for_local(&root_path).unwrap());
     let identity_foo = FullIdentity::new("foo".into(), FullOrigin::for_registry(url));
     let identity_bar = FullIdentity::new("bar".into(), FullOrigin::for_registry(url));
@@ -598,7 +598,7 @@ fn pinned_registry() {
     let server = create_mock_server();
 
     let url: InternedUrl = server.base_url().to_url().unwrap().into();
-    let mut fetcher = Fetcher::new(&ctx).unwrap();
+    let fetcher = Fetcher::new(&ctx).unwrap();
     let (_dir, root_path) = prepare_manifest(&format!(
         r#"
 metadata:
@@ -622,16 +622,15 @@ dependencies:
     let root_name = "root".into();
     let root_version = Version::new(0, 1, 0);
     let root_manifest = parse_manifest(&root_path, &ctx).unwrap().into_manifest();
-    let mut git_access = MockGitAccess();
-    let mut gatherer = Gatherer::new(&mut fetcher, &mut git_access);
-    let gathered_info = gatherer
-        .explore(
-            root_path.clone(),
-            root_manifest,
-            HashSet::new(),
-            SolverMode::default(),
-        )
-        .unwrap();
+    let git_access = MockGitAccess();
+    let gatherer = Gatherer::new(&fetcher, &git_access);
+    let gathered_info = block_on(gatherer.explore(
+        root_path.clone(),
+        root_manifest,
+        HashSet::new(),
+        SolverMode::default(),
+    ))
+    .unwrap();
     let identity_root = FullIdentity::new(root_name, FullOrigin::for_local(&root_path).unwrap());
     let identity_xd = FullIdentity::new("xd".into(), FullOrigin::for_registry(url));
     let identity_dx = FullIdentity::new("dx".into(), FullOrigin::for_registry(url));
@@ -656,7 +655,7 @@ fn features() {
     let server = create_mock_server();
 
     let url: InternedUrl = server.base_url().to_url().unwrap().into();
-    let mut fetcher = Fetcher::new(&ctx).unwrap();
+    let fetcher = Fetcher::new(&ctx).unwrap();
     let (_dir, root_path) = prepare_manifest(&format!(
         r#"
 metadata:
@@ -686,16 +685,15 @@ features:
     let root_name = "root".into();
     let root_version = Version::new(0, 1, 0);
     let root_manifest = parse_manifest(&root_path, &ctx).unwrap().into_manifest();
-    let mut git_access = MockGitAccess();
-    let mut gatherer = Gatherer::new(&mut fetcher, &mut git_access);
-    let gathered_info = gatherer
-        .explore(
-            root_path.clone(),
-            root_manifest,
-            ["my_feature".into()].into(),
-            SolverMode::default(),
-        )
-        .unwrap();
+    let git_access = MockGitAccess();
+    let gatherer = Gatherer::new(&fetcher, &git_access);
+    let gathered_info = block_on(gatherer.explore(
+        root_path.clone(),
+        root_manifest,
+        ["my_feature".into()].into(),
+        SolverMode::default(),
+    ))
+    .unwrap();
     let identity_root = FullIdentity::new(root_name, FullOrigin::for_local(&root_path).unwrap());
     let identity_xd = FullIdentity::new("xd".into(), FullOrigin::for_registry(url));
     let identity_dx = FullIdentity::new("dx".into(), FullOrigin::for_registry(url));
@@ -738,7 +736,7 @@ fn pinned_request_while_pending_not_pinned() {
     let server = create_mock_server();
 
     let url: InternedUrl = server.base_url().to_url().unwrap().into();
-    let mut fetcher = Fetcher::new(&ctx).unwrap();
+    let fetcher = Fetcher::new(&ctx).unwrap();
     let (_dir, root_path) = prepare_manifest(&format!(
         r#"
 metadata:
@@ -760,16 +758,15 @@ dependencies:
     let root_name = "root".into();
     let root_version = Version::new(0, 1, 0);
     let root_manifest = parse_manifest(&root_path, &ctx).unwrap().into_manifest();
-    let mut git_access = MockGitAccess();
-    let mut gatherer = Gatherer::new(&mut fetcher, &mut git_access);
-    let gathered_info = gatherer
-        .explore(
-            root_path.clone(),
-            root_manifest,
-            [].into(),
-            SolverMode::default(),
-        )
-        .unwrap();
+    let git_access = MockGitAccess();
+    let gatherer = Gatherer::new(&fetcher, &git_access);
+    let gathered_info = block_on(gatherer.explore(
+        root_path.clone(),
+        root_manifest,
+        [].into(),
+        SolverMode::default(),
+    ))
+    .unwrap();
     let identity_root = FullIdentity::new(root_name, FullOrigin::for_local(&root_path).unwrap());
     let identity_a = FullIdentity::new("a".into(), FullOrigin::for_registry(url));
     let identity_b = FullIdentity::new("b".into(), FullOrigin::for_registry(url));
@@ -812,7 +809,7 @@ fn cycle() {
     let server = create_mock_server();
 
     let url: InternedUrl = server.base_url().to_url().unwrap().into();
-    let mut fetcher = Fetcher::new(&ctx).unwrap();
+    let fetcher = Fetcher::new(&ctx).unwrap();
     let (_dir, root_path) = prepare_manifest(&format!(
         r#"
 metadata:
@@ -831,16 +828,15 @@ dependencies:
     let root_name = "root".into();
     let root_version = Version::new(0, 1, 0);
     let root_manifest = parse_manifest(&root_path, &ctx).unwrap().into_manifest();
-    let mut git_access = MockGitAccess();
-    let mut gatherer = Gatherer::new(&mut fetcher, &mut git_access);
-    let gathered_info = gatherer
-        .explore(
-            root_path.clone(),
-            root_manifest,
-            [].into(),
-            SolverMode::default(),
-        )
-        .unwrap();
+    let git_access = MockGitAccess();
+    let gatherer = Gatherer::new(&fetcher, &git_access);
+    let gathered_info = block_on(gatherer.explore(
+        root_path.clone(),
+        root_manifest,
+        [].into(),
+        SolverMode::default(),
+    ))
+    .unwrap();
     let identity_root = FullIdentity::new(root_name, FullOrigin::for_local(&root_path).unwrap());
     let identity_u = FullIdentity::new("u".into(), FullOrigin::for_registry(url));
     let identity_v = FullIdentity::new("v".into(), FullOrigin::for_registry(url));
@@ -878,7 +874,7 @@ fn features_expansion() {
     let server = create_mock_server();
 
     let url: InternedUrl = server.base_url().to_url().unwrap().into();
-    let mut fetcher = Fetcher::new(&ctx).unwrap();
+    let fetcher = Fetcher::new(&ctx).unwrap();
     let (_dir, root_path) = prepare_manifest(&format!(
         r#"
 metadata:
@@ -898,16 +894,15 @@ dependencies:
     let root_name = "root".into();
     let root_version = Version::new(0, 1, 0);
     let root_manifest = parse_manifest(&root_path, &ctx).unwrap().into_manifest();
-    let mut git_access = MockGitAccess();
-    let mut gatherer = Gatherer::new(&mut fetcher, &mut git_access);
-    let gathered_info = gatherer
-        .explore(
-            root_path.clone(),
-            root_manifest,
-            [].into(),
-            SolverMode::default(),
-        )
-        .unwrap();
+    let git_access = MockGitAccess();
+    let gatherer = Gatherer::new(&fetcher, &git_access);
+    let gathered_info = block_on(gatherer.explore(
+        root_path.clone(),
+        root_manifest,
+        [].into(),
+        SolverMode::default(),
+    ))
+    .unwrap();
     let identity_root = FullIdentity::new(root_name, FullOrigin::for_local(&root_path).unwrap());
     let identity_n = FullIdentity::new("n".into(), FullOrigin::for_registry(url));
     let identity_m = FullIdentity::new("m".into(), FullOrigin::for_registry(url));
