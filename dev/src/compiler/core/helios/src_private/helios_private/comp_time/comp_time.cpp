@@ -112,6 +112,11 @@ namespace compiler::helios {
 				result = CompileTimeValue{ expr.value_type };
 			}
 
+			void visitBlockExpr(const code::BlockExpr&) final {
+				// Blocks are not evaluated at compile time by this visitor.
+				result = CouldNotShortPath{};
+			}
+
 			/**
 			 * @brief Short path for the `size_of` / `alignment_of` builtins: evaluate the (single)
 			 * type argument and read its layout directly, instead of falling back to VM evaluation.

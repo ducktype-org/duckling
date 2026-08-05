@@ -368,13 +368,13 @@ namespace compiler::helios::code::shorthands {
 
 		/** @brief A block of statements evaluating to a unit. */
 		[[nodiscard]]
-		Box<BlockExpr> blockExpr(BlockStmt block) const {
+		Box<BlockExpr> blockExpr(CRef<BlockStmt> block) const {
 			return makeBox<BlockExpr>(*ctx, generatedOrigin(), block);
 		}
 
 		[[nodiscard]]
 		Box<BlockExpr> blockExpr(StmtPack body) {
-			return makeBox<BlockExpr>(*ctx, generatedOrigin(), block(std::move(body)));
+			return makeBox<BlockExpr>(*ctx, generatedOrigin(), block(std::move(body)).ref());
 		}
 
 		/************
