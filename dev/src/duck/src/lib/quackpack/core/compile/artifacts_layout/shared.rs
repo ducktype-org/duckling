@@ -79,18 +79,21 @@ pub struct SharedArtifactsLayout {
     root: FileLockManager,
 }
 
-impl ArtifactsLayout for SharedArtifactsLayout {
-    fn new(root: PathBuf) -> Self {
+impl SharedArtifactsLayout {
+    /// Create a new [`SharedArtifactsLayout`].
+    pub fn new(root: PathBuf) -> Self {
         Self {
             root: FileLockManager::new(root),
         }
     }
+}
 
-    fn for_profile(&self, profile: Profile) -> impl ProfileLayout {
-        SharedProfileLayout {
+impl ArtifactsLayout for SharedArtifactsLayout {
+    fn for_profile(&self, profile: Profile) -> Box<dyn ProfileLayout> {
+        Box::new(SharedProfileLayout {
             root: self.root.join(profile.name),
             profile,
-        }
+        })
     }
 
     fn file_lock_manager(&self) -> &FileLockManager {
@@ -110,7 +113,11 @@ impl ProfileLayout for SharedProfileLayout {
         &self.root
     }
 
-    fn for_dependency(&self, unit: &Unit, graph: &UnitGraph) -> QuackResult<impl DependencyLayout> {
+    fn for_dependency(
+        &self,
+        unit: &Unit,
+        graph: &UnitGraph,
+    ) -> QuackResult<Box<dyn DependencyLayout>> {
         let path = if graph.is_root(unit) {
             self.root_directory().join(unit.unique_name())
         } else {
@@ -120,9 +127,9 @@ impl ProfileLayout for SharedProfileLayout {
                 .artifacts_directory()
                 .join(format!("shared-{hash}"))
         };
-        Ok(SharedDependencyLayout {
+        Ok(Box::new(SharedDependencyLayout {
             root: FileLockManager::new(path),
-        })
+        }))
     }
 }
 

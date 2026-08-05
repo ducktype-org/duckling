@@ -10,12 +10,12 @@ pub mod shared;
 pub mod standard;
 
 pub trait ArtifactsLayout {
-    const GLOBAL_LOCK_NAME: &str = ".duck_lock";
+    fn global_lock_name(&self) -> &'static str {
+        ".duck_lock"
+    }
 
-    /// Create new [`ArtifactsLayout`].
-    fn new(root: PathBuf) -> Self;
     /// Get the layout for a specific profile.
-    fn for_profile(&self, profile: Profile) -> impl ProfileLayout;
+    fn for_profile(&self, profile: Profile) -> Box<dyn ProfileLayout>;
     /// Get the [`FileLockManager`] for this layout.
     fn file_lock_manager(&self) -> &FileLockManager;
 
@@ -27,7 +27,7 @@ pub trait ArtifactsLayout {
     /// Acquire the global artifacts lock.
     fn acquire_global_lock(&self, ctx: &DuckContext) -> QuackResult<LockedFile> {
         self.file_lock_manager()
-            .open_exclusive(Self::GLOBAL_LOCK_NAME, ctx)
+            .open_exclusive(self.global_lock_name(), ctx)
     }
 }
 
@@ -35,7 +35,11 @@ pub trait ProfileLayout {
     /// Get the [`FileLockManager`] for this layout.
     fn file_lock_manager(&self) -> &FileLockManager;
     /// Get the layout for a specific dependency.
-    fn for_dependency(&self, unit: &Unit, graph: &UnitGraph) -> QuackResult<impl DependencyLayout>;
+    fn for_dependency(
+        &self,
+        unit: &Unit,
+        graph: &UnitGraph,
+    ) -> QuackResult<Box<dyn DependencyLayout>>;
 
     /// Get the root directory [`Path`] for this layout.
     fn root_directory(&self) -> &Path {
@@ -44,8 +48,13 @@ pub trait ProfileLayout {
 }
 
 pub trait DependencyLayout {
-    const LOCK_NAME: &str = ".duck_lock";
-    const JSON_NAME: &str = "deps.json";
+    fn lock_name(&self) -> &'static str {
+        ".duck_lock"
+    }
+
+    fn json_name(&self) -> &'static str {
+        "deps.json"
+    }
 
     /// Get the [`FileLockManager`] for this layout.
     fn file_lock_manager(&self) -> &FileLockManager;
@@ -58,7 +67,7 @@ pub trait DependencyLayout {
     /// Acquire a lock for this dependency's artifacts.
     fn acquire_lock(&self, ctx: &DuckContext) -> QuackResult<LockedFile> {
         self.file_lock_manager()
-            .open_exclusive(Self::LOCK_NAME, ctx)
+            .open_exclusive(self.lock_name(), ctx)
     }
 
     /// Get the path for compiler artifacts.
@@ -68,12 +77,12 @@ pub trait DependencyLayout {
 
     /// Get the [`PathBuf`] where dependencies JSON should be stored.
     fn dependency_json_path(&self) -> PathBuf {
-        self.root_directory().join(Self::JSON_NAME)
+        self.root_directory().join(self.json_name())
     }
 
     /// Acquire a lock for the JSON of dependencies of this dependency.
     fn dependency_json(&self, ctx: &DuckContext) -> QuackResult<LockedFile> {
         self.file_lock_manager()
-            .open_exclusive(Self::JSON_NAME, ctx)
+            .open_exclusive(self.json_name(), ctx)
     }
 }

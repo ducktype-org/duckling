@@ -29,17 +29,20 @@ pub struct StandardArtifactsLayout {
     root: FileLockManager,
 }
 
-impl ArtifactsLayout for StandardArtifactsLayout {
-    fn new(root: PathBuf) -> Self {
+impl StandardArtifactsLayout {
+    /// Create a new [`StandardArtifactsLayout`].
+    pub fn new(root: PathBuf) -> Self {
         Self {
             root: FileLockManager::new(root),
         }
     }
+}
 
-    fn for_profile(&self, profile: Profile) -> impl ProfileLayout {
-        StandardProfileLayout {
+impl ArtifactsLayout for StandardArtifactsLayout {
+    fn for_profile(&self, profile: Profile) -> Box<dyn ProfileLayout> {
+        Box::new(StandardProfileLayout {
             root: self.root.join(profile.name),
-        }
+        })
     }
 
     fn file_lock_manager(&self) -> &FileLockManager {
@@ -62,10 +65,10 @@ impl ProfileLayout for StandardProfileLayout {
         &self,
         unit: &Unit,
         _graph: &UnitGraph,
-    ) -> QuackResult<impl DependencyLayout> {
-        Ok(StandardDependencyLayout {
+    ) -> QuackResult<Box<dyn DependencyLayout>> {
+        Ok(Box::new(StandardDependencyLayout {
             root: self.root.join(unit.unique_name()),
-        })
+        }))
     }
 }
 

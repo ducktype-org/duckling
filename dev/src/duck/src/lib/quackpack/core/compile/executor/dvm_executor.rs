@@ -1,16 +1,11 @@
 //! An implementation of [`Executor`], which creates a single task per package.
 
-use std::path::PathBuf;
-
 use tracing::instrument;
 
-use super::{Executor, ExecutorOutput, compile_single_unit_with_tasks, unit_output};
+use super::{Executor, unit_output};
 use crate::QuackResult;
-use crate::quackpack::core::Package;
 use crate::quackpack::core::compile::BuildContext;
-use crate::quackpack::core::compile::artifacts_layout::shared::SharedArtifactsLayout;
-use crate::quackpack::core::compile::artifacts_layout::standard::StandardArtifactsLayout;
-use crate::quackpack::core::compile::artifacts_layout::{ArtifactsLayout, ProfileLayout};
+use crate::quackpack::core::compile::artifacts_layout::ProfileLayout;
 use crate::quackpack::core::compile::duckc::multipackage_schema;
 use crate::quackpack::core::compile::unit::graph::UnitGraph;
 use crate::quackpack::core::compile::unit::{ArtifactsType, Unit};
@@ -19,59 +14,37 @@ use crate::quackpack::core::compile::unit::{ArtifactsType, Unit};
 pub struct DvmExecutor;
 
 impl Executor for DvmExecutor {
-    fn compile(&self, graph: UnitGraph, bcx: &BuildContext<'_, '_>) -> QuackResult<ExecutorOutput> {
-        compile(graph, bcx)
+    #[instrument(skip_all)]
+    #[track_caller]
+    fn pre_compilation(&self, graph: &UnitGraph, _bcx: &BuildContext<'_, '_>) {
+        let root = graph.root_unit();
+        assert_eq!(
+            root.artifacts_type(),
+            ArtifactsType::Dvm,
+            "dvm executor should only compile DVM packages"
+        );
     }
-}
 
-/// Compile the `graph` in debug-mode.
-///
-/// This means:
-/// 1. each `deps.json` has only one task,
-/// 2. we compile each [`Unit`] independently, and each gets different artifacts,
-/// 3. root is compiled last.
-#[instrument(skip_all)]
-fn compile(graph: UnitGraph, bcx: &BuildContext<'_, '_>) -> QuackResult<ExecutorOutput> {
-    let root = graph.root_unit();
-    assert_eq!(
-        root.artifacts_type(),
-        ArtifactsType::Dvm,
-        "dvm executor should only compile DVM packages"
-    );
-    let package = root.root_package().package().get_package();
-    let output = if bcx.shared {
-        compile_inner::<SharedArtifactsLayout>(root, package, &graph, bcx)?
-    } else {
-        compile_inner::<StandardArtifactsLayout>(root, package, &graph, bcx)?
-    };
-    Ok(ExecutorOutput {
-        root: (root.clone(), output),
-    })
-}
+    #[instrument(skip_all)]
+    fn create_tasks(
+        &self,
+        unit: &Unit,
+        graph: &UnitGraph,
+        layout: &dyn ProfileLayout,
+        _bcx: &BuildContext<'_, '_>,
+    ) -> QuackResult<Vec<multipackage_schema::Task>> {
+        let task = create_task(unit, graph, layout)?;
+        Ok(vec![task])
+    }
 
-/// Helper for [`compile`].
-fn compile_inner<T: ArtifactsLayout>(
-    root_unit: &Unit,
-    root_package: &Package,
-    graph: &UnitGraph,
-    bcx: &BuildContext<'_, '_>,
-) -> QuackResult<PathBuf> {
-    let artifacts_layout = root_package.artifacts_layout::<T>();
-    let profile_layout = artifacts_layout.for_profile(bcx.profile);
-    compile_unit(root_unit, graph, &profile_layout, bcx)?;
-    unit_output(root_unit, graph, &profile_layout)
-}
-
-#[instrument(skip_all)]
-/// Compile only a single [`Unit`], in a [`compile`] favour.
-fn compile_unit(
-    unit: &Unit,
-    graph: &UnitGraph,
-    layout: &impl ProfileLayout,
-    bcx: &BuildContext<'_, '_>,
-) -> QuackResult<()> {
-    let task = create_task(unit, graph, layout)?;
-    compile_single_unit_with_tasks(unit, graph, layout, bcx, vec![task])
+    #[instrument(skip_all)]
+    fn units_to_compile<'a>(
+        &self,
+        graph: &'a UnitGraph,
+        _bcx: &BuildContext<'_, '_>,
+    ) -> Vec<&'a Unit> {
+        vec![graph.root_unit()]
+    }
 }
 
 /// Create a task for a single [`Unit`].
@@ -79,7 +52,7 @@ fn compile_unit(
 fn create_task(
     unit: &Unit,
     graph: &UnitGraph,
-    layout: &impl ProfileLayout,
+    layout: &dyn ProfileLayout,
 ) -> QuackResult<multipackage_schema::Task> {
     assert!(
         graph.is_root(unit),
