@@ -3,8 +3,10 @@
 #include <os_utils/executable_path.hpp>
 #include <tester/tester.hpp>
 
-#include <cmath>
+#include <dlfcn.h>
+#include <fstream>
 #include <string>
+#include <vector>
 
 class OSUtilsTest: public tester::TestSuite {
 #undef TESTER_CLASS
@@ -17,6 +19,7 @@ public:
 		TESTER_ADD_TEST(markExecutableTest);
 		TESTER_ADD_TEST(openCloseLibraryTest);
 		TESTER_ADD_TEST(findSymbolTest);
+		TESTER_ADD_TEST(openLibraryFromMemoryTest);
 		TESTER_ADD_TEST(executablePathTest);
 	}
 
@@ -55,25 +58,69 @@ private:
 	}
 
 	void openCloseLibraryTest() {
-		auto lib = os_utils::openLibrary("libm.so.6");
-		assertTrue(lib.has_value(), "openLibrary should succeed");
+		auto lib = os_utils::openLibrary(nullptr);
+		assertTrue(lib.has_value(), "openLibrary(nullptr) should succeed on all POSIX systems");
 		os_utils::closeLibrary(*lib);
 	}
 
 	void findSymbolTest() {
-		auto lib = os_utils::openLibrary("libm.so.6");
-		assertTrue(lib.has_value(), "openLibrary should succeed");
+		auto lib = os_utils::openLibrary(nullptr);
+		assertTrue(lib.has_value(), "openLibrary(nullptr) should succeed");
 
-		auto sym = os_utils::findSymbol(*lib, "sin");
+		auto sym = os_utils::findSymbol(*lib, "strlen");
 		assertTrue(sym.has_value(), "findSymbol should succeed");
-		assertTrue(*sym != nullptr, "sin symbol should be found");
+		assertTrue(*sym != nullptr, "strlen symbol should be found");
 
-		// Verify the symbol is callable.
-		using SinFunc = double (*)(double);
-		auto sin_func  = reinterpret_cast<SinFunc>(*sym);
-		double result  = sin_func(0.0);
-		assertTrue(std::abs(result) < 0.0001, "sin(0) should be ~0");
+		// Verify the symbol is callable and correct.
+		using StrlenFunc = unsigned long (*)(const char*);
+		auto strlen_func = reinterpret_cast<StrlenFunc>(*sym);
+		ASSERT_EQUAL(5UL, strlen_func("hello"));
 
+		os_utils::closeLibrary(*lib);
+	}
+
+	void openLibraryFromMemoryTest() {
+		// 1. Use dladdr to find the absolute path to libc on THIS platform.
+		//    strlen is in libc, which is loaded into every process.
+		auto main_handle = os_utils::openLibrary(nullptr);
+		assertTrue(main_handle.has_value(), "main program handle should be valid");
+		auto strlen_addr = os_utils::findSymbol(*main_handle, "strlen");
+		assertTrue(strlen_addr.has_value(), "strlen must be locatable in main program");
+		os_utils::closeLibrary(*main_handle);
+
+		Dl_info info{};
+		int     ret = dladdr(*strlen_addr, &info);
+		assertTrue(ret != 0, "dladdr must succeed for strlen");
+		const char* libc_path = info.dli_fname;
+
+		// 2. Read the library file into memory.
+		std::ifstream file(libc_path, std::ios::binary | std::ios::ate);
+		assertTrue(file.is_open(), "must be able to open the detected libc");
+		auto file_size = static_cast<usize>(file.tellg());
+		file.seekg(0, std::ios::beg);
+		std::vector<byte> buffer(file_size);
+		file.read(
+			reinterpret_cast<char*>(buffer.data()), static_cast<std::streamsize>(file_size)
+		);
+		assertTrue(
+			static_cast<usize>(file.gcount()) == file_size, "must read entire libc file"
+		);
+
+		// 3. Load the library from memory — the function under test.
+		auto lib = os_utils::openLibraryFromMemory(buffer);
+		assertTrue(lib.has_value(), "openLibraryFromMemory should succeed");
+
+		// 4. Look up a symbol — verify dlsym works on memory-loaded libraries.
+		auto sym = os_utils::findSymbol(*lib, "strlen");
+		assertTrue(sym.has_value(), "strlen should be found in memory-loaded lib");
+		assertTrue(*sym != nullptr, "strlen symbol should not be null");
+
+		// 5. Call the symbol — verify the loaded code is actually executable.
+		using StrlenFunc = unsigned long (*)(const char*);
+		auto func        = reinterpret_cast<StrlenFunc>(*sym);
+		ASSERT_EQUAL(5UL, func("hello"));
+
+		// 6. Close — verify cleanup doesn't crash.
 		os_utils::closeLibrary(*lib);
 	}
 
