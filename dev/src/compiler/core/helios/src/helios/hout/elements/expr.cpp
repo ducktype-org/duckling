@@ -243,10 +243,64 @@ namespace compiler::helios::code {
 		return makeBox<IdentifierExpr>(expression_type, origin, symbol);
 	}
 
-	ReusableExpr::ReusableExpr(query::Context&, Box<Expr> inner, const bool first_use):
-		  Expr(inner->expression_type, inner->origin),
+	/**
+	 * @brief The expression type of a reusable expression.
+	 *
+	 * A reusable expression is evaluated once into storage that every use reads afterwards
+	 * This means an rvalue becomes an lvalue.
+	 * - a `Temporary` passes its ownership to the storage, so it becomes an owned lvalue and
+	 *   the storage is what gets destroyed at the end of the scope
+	 * - a `Local` is already an owned lvalue and stays one
+	 * - a `Global` or a `Dereferenced` place is not owned here, the storage only holds another
+	 *   view of it, so it stays non-owned and can never be moved out of
+	 * - a `Literal` owns nothing
+	 *
+	 * We can't just inherit the `inner` category for temporaries, as this means each read looks
+	 * like a read form a temporary (although it isn't really a temporary) and inserts implicit
+	 * moves. Additionally, field reads from such reusable expression are counter as partial moves
+	 * which are NYI.
+	 */
+	static tsh::ExpressionType<> reusableExpressionType(const Expr& inner) {
+		const tsh::ExpressionType<> inner_type = inner.expression_type;
+		if (inner_type.getValueCategory().getCategory() != tsh::PrimaryCategory::Temporary)
+			return inner_type;
+
+		return { inner_type.getSymbolType(), tsh::ValueCategory(tsh::PrimaryCategory::Local) };
+	}
+
+	ReusableExpr::ReusableExpr(query::Context& ctx, Box<Expr> inner, const bool first_use):
+		  Expr(reusableExpressionType(*inner), inner->origin),
 		  inner(std::move(inner)),
-		  first_use(first_use) {}
+		  first_use(first_use) {
+		const tsh::ExpressionType<> inner_type = this->inner->expression_type;
+
+		// MIR lowers a reusable expr by storing its inner value into a hidden local,
+		// and that store is a plain byte-copy. This hidden local gets a destructor inserted
+		// afterwards. The only cases where such byte-copy is legal (and won't cause a double free)
+		// is:
+		// - a trivially copyable value
+		// - a `Temporary` which is an owned rvalue, so the hidden local takes its ownership over
+		// and the temporary is destructed after use.
+		//
+		// Anything else is a place somebody already owns. Copying its bytes naively may cause a
+		// double free. In this case, read the place again instead of reusing it, or bind a
+		// reference to it and reuse that.
+		//
+		// @note: If you ever need to use reusable expr on an owned local, feel free to remove this
+		// `CORE_ASSERT`, but figure out how to change `ReusableExpr` so duplicate destructors don't
+		// get inserted.
+		CORE_ASSERT(
+			inner_type.getSymbolType().isTriviallyCopyable(ctx)
+				or inner_type.getValueCategory().getCategory() == tsh::PrimaryCategory::Temporary,
+			base::strConcat(
+				"A ReusableExpr over `",
+				inner_type.getSymbolType().toString(),
+				"` would be stored by copying its bytes, but the value is not trivially "
+				"copyable and not an owned rvalue, so the copy and the original would both be "
+				"destroyed. Which will cause a double destructor call."
+			)
+		);
+	}
 
 	void ReusableExpr::debugPrint(std::ostream& out) const {
 		if (first_use)
@@ -289,7 +343,7 @@ namespace compiler::helios::code {
 	}
 
 	ReusableExpr::ReusableExpr(const SharedBox<Expr>& inner, const bool first_use):
-		  Expr(inner->expression_type, inner->origin),
+		  Expr(reusableExpressionType(*inner), inner->origin),
 		  inner(inner),
 		  first_use(first_use) {}
 
@@ -1019,28 +1073,42 @@ namespace compiler::helios::code {
 		return makeBox<RefOfExpr>(expression_type, origin, inner->clone());
 	}
 
-	MoveExpr::MoveExpr(query::Context&, ElementOrigin origin, Box<Expr> inner):
+	MoveExpr::MoveExpr(query::Context&, ElementOrigin origin, Box<Expr> inner, const MoveKind kind):
 		  Expr(
 			  tsh::ExpressionType<>(
 				  inner->expression_type.getSymbolType(),
-				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
+				  // `move` forces the move semantic.
+				  tsh::ValueCategory(
+					  tsh::PrimaryCategory::Temporary,
+					  true,
+					  tsh::ValueSemanticsOptions::MOVE | tsh::ValueSemanticsOptions::COPY
+						  | tsh::ValueSemanticsOptions::USE | tsh::ValueSemanticsOptions::DESTROY,
+					  tsh::ValueSemanticsOptions::MOVE
+				  )
 			  ),
 			  origin
 		  ),
-		  inner(std::move(inner)) {}
+		  inner(std::move(inner)),
+		  kind(kind) {}
 
-	MoveExpr::MoveExpr(tsh::ExpressionType<> expression_type, ElementOrigin origin, Box<Expr> inner):
+	MoveExpr::MoveExpr(
+		tsh::ExpressionType<> expression_type,
+		ElementOrigin         origin,
+		Box<Expr>             inner,
+		const MoveKind        kind
+	):
 		  Expr(expression_type, origin),
-		  inner(std::move(inner)) {}
+		  inner(std::move(inner)),
+		  kind(kind) {}
 
 	void MoveExpr::debugPrint(std::ostream& out) const {
-		out << "move(";
+		out << (kind == MoveKind::Implicit ? "implicit_move(" : "move(");
 		inner->debugPrint(out);
 		out << ")";
 	}
 
 	Box<Expr> MoveExpr::clone() const {
-		return makeBox<MoveExpr>(expression_type, origin, inner->clone());
+		return makeBox<MoveExpr>(expression_type, origin, inner->clone(), kind);
 	}
 
 	DerefExpr::DerefExpr(query::Context&, ElementOrigin origin, Box<Expr> inner):

@@ -150,6 +150,9 @@ namespace compiler::tsh {
 		 * bytes. This is not true for types like Lists, Strings or aggregate types storing them.
 		 * For more information look in `symbol_type.hpp`
 		 *
+		 * @note A type without a no-op destructor is never trivially copyable, regardless of its
+		 * fields.
+		 *
 		 * @return True if the symbol is trivially copyable, false otherwise.
 		 */
 		bool isTriviallyCopyable(query::Context& ctx) const;

@@ -766,7 +766,20 @@ namespace compiler::helios {
 				result = CompileTimeValue{ maybe_new_numeric.value() };
 			}
 
-			void visitMoveExpr(const code::MoveExpr&) final { result = CouldNotShortPath{}; }
+			void visitMoveExpr(const code::MoveExpr& expr) final {
+				if (expr.kind != code::MoveExpr::MoveKind::Implicit) {
+					result = CouldNotShortPath{};
+					return;
+				}
+
+				// Implicit moves of temporaries are allowed.
+				auto sub_result = evalHoutExpr(ctx, expr.inner.ref());
+				if (sub_result.hasFailed()) {
+					result = query::Failed();
+					return;
+				}
+				result = sub_result.valueOrThrow();
+			}
 
 			void visitRefOfExpr(const code::RefOfExpr&) final { result = CouldNotShortPath{}; }
 

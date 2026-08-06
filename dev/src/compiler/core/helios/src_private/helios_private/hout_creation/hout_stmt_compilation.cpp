@@ -76,12 +76,39 @@ namespace compiler::helios {
 			this->out.emplace(makeBox<std::remove_reference_t<T>>(std::forward<T>(value)));
 		}
 
+		/**
+		 * @brief Warns that the `move` in `return move x` is redundant.
+		 */
+		void warnOnRedundantReturnMove(const pst::GenericPSTQueryKey<pst::ExprElement>& pst_expr) {
+			auto expr_hout_qresult = ctx.query<QueryHoutOfExpr>({ pst_expr.element });
+			if (expr_hout_qresult->hasFailed()) return;
+
+			const auto& expr_hout = expr_hout_qresult->valueOrThrow();
+			if (not expr_hout->expression_type.getValueCategory().mustMove()) return;
+
+			ctx.logInt(makeBox<dia_int::PlaceholderWarning>(
+				"A returned value is moved out of implicitly, `move` is not needed here.",
+				pst_expr.element.unlock(ctx)->getStablePosition()
+			));
+		}
+
 		void visitReturn(pst::Access<pst::Return> stmt) override {
 			if (auto val = stmt->getValue()) {
-				auto expr_coerced = getHoutOfExprWithExpectedType(
-										ctx, val.value().unlock(ctx)->getExpr(), return_type
-				)
-				                        .valueOrThrow();
+				const auto pst_expr = val.value().unlock(ctx)->getExpr();
+
+				warnOnRedundantReturnMove(pst_expr);
+
+
+				auto expr_coerced
+					= getHoutOfExprWithExpectedType(
+						  ctx,
+						  pst_expr,
+						  return_type,
+						  {},
+						  SourceLifetime::DiesWithUse  // The returned value effectively dies on the
+				                                       // return, thus we implicitly move it.
+					)
+				          .valueOrThrow();
 				output(code::ReturnStmt(code::pstOrigin(stmt), std::move(expr_coerced)));
 			} else {
 				output(code::VoidReturnStmt(code::pstOrigin(stmt)));

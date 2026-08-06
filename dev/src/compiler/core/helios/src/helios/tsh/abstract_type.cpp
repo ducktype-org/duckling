@@ -45,6 +45,20 @@ namespace compiler::tsh {
 
 	[[nodiscard]]
 	bool AbstractType::isTriviallyCopyable(query::Context& ctx) const {
+		// Assignments perform a destruction of the overwritten object before the write if the type
+		// is not trivially copyable. This means a even a "trivially copyable" class with a
+		// non-trivial destructor is not trivially copyable since the destructor has to run.
+		// Example:
+		// ```
+		// class T {
+		//  a: i32
+		//	T.destroy() = { ... }
+		// }
+		//
+		// var t: T = T(1);
+		// t = T(2); # T(1) has to be destructed here, even though it's fields are trivially copyable.
+		// ```
+		if (!pimpl->hasNoOpDestructor(ctx)) return false;
 		return pimpl->isTriviallyCopyable(ctx);
 	}
 

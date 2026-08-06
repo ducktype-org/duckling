@@ -116,6 +116,63 @@ namespace compiler::helios::code::shorthands {
 	public:
 		explicit Shorthand(query::Context& ctx): ctx(&ctx) {}
 
+		/**
+		 * @brief Prepares an expression to be consumed by a new owner. Every builder that hands a
+		 * value to a new owner should pass it through this method.
+		 *
+		 * - A trivially copyable value is byte copied
+		 * - A literal is not owned by anything, so there is nothing to transfer,
+		 * - An owned rvalue (a temporary) is moved implicitly.
+		 * - An expression that already transfers ownership is left alone.
+		 *
+		 * Anything else is a non-trivially-copyable lvalue. In this case we panic and require an
+		 * explicit `s.copy(...)`/`s.move(...)`.
+		 */
+		[[nodiscard]]
+		Box<Expr> consume(
+			Box<Expr> value, const SourceLifetime source_lifetime = SourceLifetime::OutlivesUse
+		) const {
+			const tsh::ExpressionType<> type     = value->expression_type;
+			const tsh::PrimaryCategory  category = type.getValueCategory().getCategory();
+
+			if (type.getSymbolType().isTriviallyCopyable(*ctx)) return value;
+			if (category == tsh::PrimaryCategory::Literal) return value;
+			// Don't produce a move of a move.
+			if (type.getValueCategory().mustMove()) return value;
+
+			// A temporary is an owned rvalue and is implicitly moved
+			// An owned local dies with the function when the value is returned.
+			// Both cause an implicit `move` insertion.
+			const bool insert_implicit_move = category == tsh::PrimaryCategory::Temporary
+			                               || (category == tsh::PrimaryCategory::Local
+			                                   && source_lifetime == SourceLifetime::DiesWithUse);
+
+			if (insert_implicit_move) {
+				auto origin = value->origin.generatedFrom();
+				return makeBox<MoveExpr>(
+					*ctx, origin, std::move(value), MoveExpr::MoveKind::Implicit
+				);
+			}
+
+			CORE_PANIC(base::strConcat(
+				"Generated HOUT passes a non-trivially-copyable value of type `",
+				type.getSymbolType().toString(),
+				"` without saying how. Wrap it in `s.copy(...)` to copy it or `s.move(...)` to "
+				"move it."
+			));
+		}
+
+	private:
+		/**
+		 * @brief Applies `consume(...)` to every expression in @p values.
+		 */
+		[[nodiscard]]
+		std::vector<Box<Expr>> consumeAll(std::vector<Box<Expr>> values) const {
+			for (auto& value: values) value = consume(std::move(value));
+			return values;
+		}
+
+	public:
 		Shorthand(const Shorthand&)            = delete;
 		Shorthand(Shorthand&&)                 = delete;
 		Shorthand& operator=(const Shorthand&) = delete;
@@ -256,10 +313,10 @@ namespace compiler::helios::code::shorthands {
 			);
 		}
 
-		/** @brief A tuple value `(elements, ...)`. */
+		/** @brief A tuple value `(elements, ...)`. The elements are consumed into the tuple. */
 		[[nodiscard]]
 		Box<TupleExpr> tuple(std::vector<Box<Expr>> elements) const {
-			return makeBox<TupleExpr>(*ctx, generatedOrigin(), std::move(elements));
+			return makeBox<TupleExpr>(*ctx, generatedOrigin(), consumeAll(std::move(elements)));
 		}
 
 		/** @brief A tuple value from a pack of elements. */
@@ -276,6 +333,10 @@ namespace compiler::helios::code::shorthands {
 
 		/**
 		 * @brief An aggregate value built element-by-element, in place.
+		 *
+		 * @p values holds one expression per element - fields in declaration order for
+		 * struct/class/tuple types, items in index order for static array types, or a single value
+		 * that fills every element of an array. The values are consumed into the aggregate.
 		 */
 		[[nodiscard]]
 		Box<CreateAggregateExpr> createAggregate(
@@ -288,7 +349,7 @@ namespace compiler::helios::code::shorthands {
 				body_block = base::makeSharedBox<CodeBlock>(std::move(body));
 
 			return makeBox<CreateAggregateExpr>(
-				*ctx, generatedOrigin(), type, std::move(values), std::move(body_block)
+				*ctx, generatedOrigin(), type, consumeAll(std::move(values)), std::move(body_block)
 			);
 		}
 
@@ -304,11 +365,13 @@ namespace compiler::helios::code::shorthands {
 			return makeBox<IndexExpr>(*ctx, generatedOrigin(), std::move(base), std::move(idx));
 		}
 
-		/** @brief A call `callee(arguments...)`. */
+		/**
+		 * @brief A call `callee(arguments...)`. The values are consumed into the call.
+		 */
 		[[nodiscard]]
 		Box<CallExpr> call(Box<Expr> callee, std::vector<Box<Expr>> arguments) const {
 			return makeBox<CallExpr>(
-				*ctx, generatedOrigin(), std::move(callee), std::move(arguments)
+				*ctx, generatedOrigin(), std::move(callee), consumeAll(std::move(arguments))
 			);
 		}
 
@@ -318,6 +381,23 @@ namespace compiler::helios::code::shorthands {
 		Box<CallExpr> call(Box<Expr> callee, Args&&... arguments) const {
 			return call(
 				std::move(callee), base::packToVector<Box<Expr>>(std::forward<Args>(arguments)...)
+			);
+		}
+
+		/**
+		 * @brief A call `callee(arguments...)` that passes its arguments exactly as given, without
+		 * running them through @ref consume.
+		 *
+		 * This is for the one generated call that takes a by-value argument without handing
+		 * its ownership to anybody: a destructor.
+		 */
+		[[nodiscard]]
+		Box<CallExpr> callDestroying(Box<Expr> callee, Box<Expr> destroyed_place) const {
+			return makeBox<CallExpr>(
+				*ctx,
+				generatedOrigin(),
+				std::move(callee),
+				base::packToVector<Box<Expr>>(std::move(destroyed_place))
 			);
 		}
 
@@ -390,15 +470,17 @@ namespace compiler::helios::code::shorthands {
 		 *   LIST   *
 		 ************/
 
-		// @note ListPushExpr / ListPopExpr are the two HOUT nodes whose constructors take no
-		// query::Context, so these builders do not read the stored context.
 
-		/** @brief A push `list += element`. */
+		/** @brief A push `list += element`. The element is consumed into the list. */
 		[[nodiscard]]
-		static Box<ListPushExpr> listPush(Box<Expr> list, Box<Expr> element) {
-			return makeBox<ListPushExpr>(generatedOrigin(), std::move(list), std::move(element));
+		Box<ListPushExpr> listPush(Box<Expr> list, Box<Expr> element) const {
+			return makeBox<ListPushExpr>(
+				generatedOrigin(), std::move(list), consume(std::move(element))
+			);
 		}
 
+		// @note ListPopExpr is the only HOUT node which doesn't need the query::Context, thus it's
+		// static. ListPushExpr still needs it to determine how to pass the value into the list.
 		/** @brief A pop of `count` elements from `list`. */
 		[[nodiscard]]
 		static Box<ListPopExpr> listPop(Box<Expr> list, Box<Expr> count) {
@@ -410,8 +492,8 @@ namespace compiler::helios::code::shorthands {
 		 ******************/
 
 		// @note Unlike expressions, Stmt constructors take no query::Context (they store, they
-		// don't type-check), so these builders never read the stored context — only *expression*
-		// builders do.
+		// don't type-check). The builders that pass a value to a new owner still need it, to run
+		// the value through `consume(...)`.
 
 		/** @brief A bare block statement `{ body }`. Accepts a braced list: `block({s1, s2})`. */
 		[[nodiscard]]
@@ -419,18 +501,18 @@ namespace compiler::helios::code::shorthands {
 			return makeBox<BlockStmt>(generatedOrigin(), std::move(body).toCodeBlock());
 		}
 
-		/** @brief A variable declaration `var/let symbol: type = init;`. */
+		/** @brief A variable declaration `var/let symbol: type = init;`. The init is consumed. */
 		[[nodiscard]]
-		static Box<VariableStmt> var(SymID symbol, tsh::SymbolType<> type, Box<Expr> init) {
-			return makeBox<VariableStmt>(generatedOrigin(), std::move(init), type, symbol);
+		Box<VariableStmt> var(SymID symbol, tsh::SymbolType<> type, Box<Expr> init) const {
+			return makeBox<VariableStmt>(generatedOrigin(), consume(std::move(init)), type, symbol);
 		}
 
 		/** @brief A variable declaration without type `var/let symbol = init;`. */
 		[[nodiscard]]
-		static Box<VariableStmt> var(SymID symbol, Box<Expr> init) {
+		Box<VariableStmt> var(SymID symbol, Box<Expr> init) const {
 			return makeBox<VariableStmt>(
 				generatedOrigin(),
-				std::move(init),
+				consume(std::move(init)),
 				tsh::SymbolType<>::withDefaults(init->expression_type.getType()),
 				symbol
 			);
@@ -447,16 +529,24 @@ namespace compiler::helios::code::shorthands {
 			);
 		}
 
-		/** @brief An assignment `location = value;`. */
+		/** @brief An assignment `location = value;`. The value is consumed into the location. */
 		[[nodiscard]]
-		static Box<AssignmentStmt> assign(Box<Expr> location, Box<Expr> value) {
-			return makeBox<AssignmentStmt>(generatedOrigin(), std::move(location), std::move(value));
+		Box<AssignmentStmt> assign(Box<Expr> location, Box<Expr> value) const {
+			return makeBox<AssignmentStmt>(
+				generatedOrigin(), std::move(location), consume(std::move(value))
+			);
 		}
 
-		/** @brief A `return value;`. */
+		/**
+		 * @brief A `return value;`. The value is consumed by the caller.
+		 *
+		 * A returned local dies with the function, so it is moved out of implicitly.
+		 */
 		[[nodiscard]]
-		static Box<ReturnStmt> ret(Box<Expr> value) {
-			return makeBox<ReturnStmt>(generatedOrigin(), std::move(value));
+		Box<ReturnStmt> ret(Box<Expr> value) const {
+			return makeBox<ReturnStmt>(
+				generatedOrigin(), consume(std::move(value), SourceLifetime::DiesWithUse)
+			);
 		}
 
 		/** @brief A `return;` (no value). */

@@ -12,3 +12,8 @@ fun usesOps() -> i32 = {
     var c: W = move a;
     return c.x;
 }
+
+fun returnsLocal() -> W = {
+    var w: W = W(2);
+    return w; # Should implicitly move.
+}

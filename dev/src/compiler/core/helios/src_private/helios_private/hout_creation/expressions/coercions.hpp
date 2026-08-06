@@ -29,7 +29,12 @@ MAKE_STRINGIFYABLE_ENUM(compiler::helios, uint8_t, InvalidCoercionReason,
 );
 
 namespace compiler::helios {
-
+	/**
+	 * @brief Whether the place a value is read from outlives the operation that reads it.
+	 * Currently `DiesWithUse` is only used in return statements and causes an implicit move to get
+	 * inserted.
+	 */
+	enum class SourceLifetime : std::uint8_t { OutlivesUse, DiesWithUse };
 
 	class IncompatibleTypesError: public dia_int::MessageWithCodeFragmentAndCause {
 		dia_int::Metadata getMetadata() const final {
@@ -117,6 +122,12 @@ namespace compiler::helios {
 		const tsh::SymbolType<> to;  // target type
 
 		/**
+		 * Whether this coercion moves the source value to the new owner implicitly. This has to be
+		 * wrapped by an implicit `MoveExpr`.
+		 */
+		const bool transfers_ownership;
+
+		/**
 		 * Check if the provided expression has the same type as the one validated.
 		 */
 		[[nodiscard]] bool isValidFor(CRef<code::Expr> expr) const noexcept {
@@ -124,22 +135,27 @@ namespace compiler::helios {
 		}
 
 		friend CoercionQResult canCoerce(
-			query::Context& ctx, const tsh::ExpressionType<>& from, const tsh::SymbolType<>& to
+			query::Context&              ctx,
+			const tsh::ExpressionType<>& from,
+			const tsh::SymbolType<>&     to,
+			SourceLifetime               source_lifetime
 		);
 
 		[[nodiscard]] bool isEmptyCoercion() const noexcept {
+			if (transfers_ownership) return false;
 			return validated_from == to
 			    || validated_from.withMutability(tsh::Mutability::Immutable) == to;
 		}
 
 		static Coercion emptyCoercion(tsh::SymbolType<> from_and_to) {
-			return { from_and_to, from_and_to };
+			return { from_and_to, from_and_to, false };
 		}
 
 	private:
-		Coercion(tsh::SymbolType<> validated_from, tsh::SymbolType<> to):
+		Coercion(tsh::SymbolType<> validated_from, tsh::SymbolType<> to, bool transfers_ownership):
 			  validated_from(validated_from),
-			  to(to) {}
+			  to(to),
+			  transfers_ownership(transfers_ownership) {}
 	};
 
 	/**
@@ -199,7 +215,10 @@ namespace compiler::helios {
 	 * a function performing the coercion if it is.
 	 */
 	CoercionQResult canCoerce(
-		query::Context& ctx, const tsh::ExpressionType<>& from, const tsh::SymbolType<>& to
+		query::Context&              ctx,
+		const tsh::ExpressionType<>& from,
+		const tsh::SymbolType<>&     to,
+		SourceLifetime               source_lifetime = SourceLifetime::OutlivesUse
 	);
 
 	/**

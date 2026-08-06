@@ -859,6 +859,7 @@ namespace compiler::mir {
 				),
 				expr.expression_type.getSymbolType()
 			);
+			out->ownership_handed_over = true;
 		}
 
 		void visitRefOfExpr(const hc::RefOfExpr& expr) override {
@@ -1174,6 +1175,8 @@ namespace compiler::mir {
 			variant_case(MIRValue, val) { return val; }
 			variant_case(Finalizer, res_data) {
 				auto result = function.addTmp(res_data.type, res_data.instr.scope);
+				// Don't destruct a temporary which is moved out.
+				if (ownership_handed_over) result->lifetime_flags |= LifetimeFlag::NoDestructor;
 				res_data.instr.output.emplace(result);
 				res_data.instr.flags.push_back(flagConstruct(result));
 				res_data.hole.fill(res_data.instr);

@@ -183,18 +183,27 @@ private:
 		};
 	}
 
+	static const compiler::helios::code::Expr* stripImplicitMove(
+		const compiler::helios::code::Expr* expr
+	) {
+		using namespace compiler::helios;
+		const auto* move = dynamic_cast<const code::MoveExpr*>(expr);
+		if (move == nullptr || move->kind != code::MoveExpr::MoveKind::Implicit) return expr;
+		return move->inner.get();
+	}
+
 	/**
 	 * Get the value boxed by the `boxAlloc` call or nullptr on error.
 	 */
 	const compiler::helios::code::Expr* boxAllocArg(const compiler::helios::code::Expr* expr) {
 		using namespace compiler::helios;
-		const auto* call = dynamic_cast<const code::CallExpr*>(expr);
+		const auto* call = dynamic_cast<const code::CallExpr*>(stripImplicitMove(expr));
 		if (call == nullptr) return nullptr;
 		const auto callee = getIdentifierExprSymID(call->callee.ref());
 		if (!callee.has_value()) return nullptr;
 		const auto builtin = isBuiltin(callee.value());
 		if (!builtin.has_value() || builtin.value() != BuiltinKind::BoxAlloc) return nullptr;
-		return call->arguments.at(0).get();
+		return stripImplicitMove(call->arguments.at(0).get());
 	}
 
 	void testConstants() {
@@ -1324,7 +1333,7 @@ private:
 				*function->body->statements.at(1)
 			);
 			auto make_ref_expr = dynamic_cast<const compiler::helios::code::RefOfExpr*>(
-				var_stmt.initial_value.get()
+				stripImplicitMove(var_stmt.initial_value.get())
 			);
 			ASSERT_TRUE(make_ref_expr != nullptr);
 		}
@@ -1344,7 +1353,7 @@ private:
 				*function->body->statements.at(3)
 			);
 			auto deref_expr = dynamic_cast<const compiler::helios::code::DerefExpr*>(
-				var_stmt.initial_value.get()
+				stripImplicitMove(var_stmt.initial_value.get())
 			);
 			ASSERT_TRUE(deref_expr != nullptr);
 		}
@@ -1357,7 +1366,7 @@ private:
 				ass_stmt.location_expr.get()
 			);
 			auto deref_rhs = dynamic_cast<const compiler::helios::code::DerefExpr*>(
-				ass_stmt.new_value_expr.get()
+				stripImplicitMove(ass_stmt.new_value_expr.get())
 			);
 			ASSERT_TRUE(deref_lhs != nullptr);
 			ASSERT_TRUE(deref_rhs != nullptr);
@@ -1372,7 +1381,7 @@ private:
 				ass_stmt.location_expr.get()
 			);
 			auto bin_expr = dynamic_cast<const compiler::helios::code::BinaryOperatorExpr*>(
-				ass_stmt.new_value_expr.get()
+				stripImplicitMove(ass_stmt.new_value_expr.get())
 			);
 			auto deref2_expr
 				= dynamic_cast<const compiler::helios::code::DerefExpr*>(bin_expr->lhs.get());
@@ -1398,7 +1407,7 @@ private:
 				*function->body->statements.at(8)
 			);
 			auto un_expr = dynamic_cast<const compiler::helios::code::UnaryOperatorExpr*>(
-				var_stmt.initial_value.get()
+				stripImplicitMove(var_stmt.initial_value.get())
 			);
 			ASSERT_TRUE(un_expr != nullptr);
 
@@ -1413,7 +1422,7 @@ private:
 				*function->body->statements.at(9)
 			);
 			auto bin_expr = dynamic_cast<const compiler::helios::code::BinaryOperatorExpr*>(
-				var_stmt.initial_value.get()
+				stripImplicitMove(var_stmt.initial_value.get())
 			);
 			ASSERT_TRUE(bin_expr != nullptr);
 
@@ -1432,7 +1441,7 @@ private:
 				*function->body->statements.at(12)
 			);
 			auto outer_deref = dynamic_cast<const compiler::helios::code::DerefExpr*>(
-				var_stmt.initial_value.get()
+				stripImplicitMove(var_stmt.initial_value.get())
 			);
 			ASSERT_TRUE(outer_deref != nullptr);
 			auto access_expr
@@ -1452,8 +1461,9 @@ private:
 			auto& ret_stmt = dynamic_cast<const compiler::helios::code::ReturnStmt&>(
 				*function->body->statements.at(13)
 			);
-			auto deref_expr
-				= dynamic_cast<const compiler::helios::code::DerefExpr*>(ret_stmt.value.get());
+			auto deref_expr = dynamic_cast<const compiler::helios::code::DerefExpr*>(
+				stripImplicitMove(ret_stmt.value.get())
+			);
 			ASSERT_TRUE(deref_expr != nullptr);
 		}
 	}
@@ -1472,7 +1482,7 @@ private:
 			auto* var_stmt = dynamic_cast<const VariableStmt*>(body.statements[0].get());
 			ASSERT_TRUE(var_stmt != nullptr);
 
-			auto* boxed_value = boxAllocArg(var_stmt->initial_value.get());
+			auto* boxed_value = boxAllocArg(stripImplicitMove(var_stmt->initial_value.get()));
 			ASSERT_TRUE(boxed_value != nullptr);
 
 			auto* literal_expr = dynamic_cast<const LiteralNumericExpr*>(boxed_value);
@@ -1501,7 +1511,8 @@ private:
 			auto* var_stmt = dynamic_cast<const VariableStmt*>(body.statements[4].get());
 			ASSERT_TRUE(var_stmt != nullptr);
 
-			auto* access_expr = dynamic_cast<const AccessExpr*>(var_stmt->initial_value.get());
+			auto* access_expr
+				= dynamic_cast<const AccessExpr*>(stripImplicitMove(var_stmt->initial_value.get()));
 			ASSERT_TRUE(access_expr != nullptr);
 			ASSERT_EQUAL(compiler::helios::name(access_expr->field), "x");
 
@@ -1559,7 +1570,8 @@ private:
 			auto* return_stmt = dynamic_cast<const ReturnStmt*>(body.statements.back().get());
 			ASSERT_TRUE(return_stmt != nullptr);
 
-			auto* deref_expr = dynamic_cast<const DerefExpr*>(return_stmt->value.get());
+			auto* deref_expr
+				= dynamic_cast<const DerefExpr*>(stripImplicitMove(return_stmt->value.get()));
 			ASSERT_TRUE(deref_expr != nullptr);
 
 			auto* ident_expr = dynamic_cast<const IdentifierExpr*>(deref_expr->inner.get());
@@ -1593,14 +1605,16 @@ private:
 			ASSERT_EQUAL(var_stmt.type, ref_i32);
 			// `&ref_a` should just copy the pointer, which is a simple assignment.
 			// The explicit `&` creates a RefOfExpr, and type system collapses the type.
-			auto* ref_of = dynamic_cast<const RefOfExpr*>(var_stmt.initial_value.get());
+			auto* ref_of
+				= dynamic_cast<const RefOfExpr*>(stripImplicitMove(var_stmt.initial_value.get()));
 			ASSERT_TRUE(ref_of != nullptr);
 		}
 		// var ref_box_a: ref i32 = &box_a; (Box -> Ref)
 		{
 			const auto& var_stmt = get_var_stmt(4);
 			ASSERT_EQUAL(var_stmt.type, ref_i32);
-			auto* ref_of = dynamic_cast<const RefOfExpr*>(var_stmt.initial_value.get());
+			auto* ref_of
+				= dynamic_cast<const RefOfExpr*>(stripImplicitMove(var_stmt.initial_value.get()));
 			ASSERT_TRUE(ref_of != nullptr);
 		}
 		// var box_ref_a: box i32 = ref_a; (Ref -> Box)
@@ -1608,7 +1622,7 @@ private:
 			const auto& var_stmt = get_var_stmt(5);
 			ASSERT_EQUAL(var_stmt.type, box_i32);
 			// This should create a copy. `box_alloc(DerefExpr(...))`
-			auto* boxed_value = boxAllocArg(var_stmt.initial_value.get());
+			auto* boxed_value = boxAllocArg(stripImplicitMove(var_stmt.initial_value.get()));
 			ASSERT_TRUE(boxed_value != nullptr);
 			auto* deref = dynamic_cast<const DerefExpr*>(boxed_value);
 			ASSERT_TRUE(deref != nullptr);
@@ -1618,7 +1632,8 @@ private:
 			const auto& var_stmt = get_var_stmt(6);
 			ASSERT_EQUAL(var_stmt.type, box_i32);
 			// `box = box` needs an explicit `move`.
-			auto* move_expr = dynamic_cast<const MoveExpr*>(var_stmt.initial_value.get());
+			auto* move_expr
+				= dynamic_cast<const MoveExpr*>(stripImplicitMove(var_stmt.initial_value.get()));
 			ASSERT_TRUE(move_expr != nullptr);
 			auto* ident = dynamic_cast<const IdentifierExpr*>(move_expr->inner.get());
 			ASSERT_TRUE(ident != nullptr);
@@ -1831,8 +1846,9 @@ private:
 			function->body->statements.at(0).ref().get()
 		);
 		ASSERT_TRUE(variable != nullptr);
-		auto call_expr
-			= dynamic_cast<const compiler::helios::code::CallExpr*>(variable->initial_value.get());
+		auto call_expr = dynamic_cast<const compiler::helios::code::CallExpr*>(
+			stripImplicitMove(variable->initial_value.get())
+		);
 		ASSERT_TRUE(call_expr != nullptr);
 		auto square_symbol = getChain("square", scope).back();
 		ASSERT_EQUAL(
@@ -1911,7 +1927,7 @@ private:
 				ASSERT_EQUAL(1, function->body->statements.size());
 				auto stmt        = function->body->statements.at(0).ref();
 				Ref  stmt_casted = dynamic_cast<const compiler::helios::code::ReturnStmt*>(&*stmt);
-				auto ret_expr    = stmt_casted->value.get();
+				auto ret_expr    = stripImplicitMove(stmt_casted->value.get());
 				auto ctv
 					= query::entryPoint<compiler::helios::QueryEvaluateHOUTExpression>({ ret_expr })
 				          .valueOrThrow();
@@ -2000,7 +2016,9 @@ private:
             );
 			ASSERT_EQUAL(dyn_array_type.getElementType().getType(), i64_type);
 
-			auto* default_val = dynamic_cast<const DefaultValueExpr*>(var_decl.initial_value.get());
+			auto* default_val = dynamic_cast<const DefaultValueExpr*>(
+				stripImplicitMove(var_decl.initial_value.get())
+			);
 			ASSERT_TRUE(default_val != nullptr);
 		}
 		{
@@ -2017,8 +2035,9 @@ private:
 		}
 		{
 			// let l_len = l.length();
-			auto& var_decl  = dynamic_cast<const VariableStmt&>(*statements.at(3));
-			auto* call_expr = dynamic_cast<const CallExpr*>(var_decl.initial_value.get());
+			auto& var_decl = dynamic_cast<const VariableStmt&>(*statements.at(3));
+			auto* call_expr
+				= dynamic_cast<const CallExpr*>(stripImplicitMove(var_decl.initial_value.get()));
 			ASSERT_TRUE(call_expr != nullptr);
 		}
 		{
@@ -2029,8 +2048,9 @@ private:
 		}
 		{
 			// let x = l[0];
-			auto& var_decl   = dynamic_cast<const VariableStmt&>(*statements.at(5));
-			auto* index_expr = dynamic_cast<const IndexExpr*>(var_decl.initial_value.get());
+			auto& var_decl = dynamic_cast<const VariableStmt&>(*statements.at(5));
+			auto* index_expr
+				= dynamic_cast<const IndexExpr*>(stripImplicitMove(var_decl.initial_value.get()));
 			ASSERT_TRUE(index_expr != nullptr);
 		}
 	}
@@ -2071,7 +2091,7 @@ private:
 				ASSERT_EQUAL(function->declaration->return_type.getType(), ret_type);
 
 				auto tuple_expr = dynamic_cast<const compiler::helios::code::TupleExpr*>(
-					ret_stmt_casted->value.get()
+					stripImplicitMove(ret_stmt_casted->value.get())
 				);
 				assertTrue(tuple_expr != nullptr, "Tuple expression expected.");
 
@@ -2106,7 +2126,7 @@ private:
 					ASSERT_EQUAL(function->declaration->return_type.getType(), ret_type);
 
 					auto cast_expr = dynamic_cast<const compiler::helios::code::CastExpr*>(
-						ret_stmt_casted->value.get()
+						stripImplicitMove(ret_stmt_casted->value.get())
 					);
 					assertTrue(cast_expr != nullptr, "Cast expression expected.");
 				}
@@ -2121,9 +2141,9 @@ private:
 			auto ret_type = ret_stmt_casted->value->expression_type.getType();
 			ASSERT_EQUAL(function->declaration->return_type.getType(), ret_type);
 
-			auto cast_expr
-				= dynamic_cast<const compiler::helios::code::CastExpr*>(ret_stmt_casted->value.get()
-			    );
+			auto cast_expr = dynamic_cast<const compiler::helios::code::CastExpr*>(
+				stripImplicitMove(ret_stmt_casted->value.get())
+			);
 			assertTrue(cast_expr != nullptr, "Cast expression expected.");
 		}
 	}
@@ -2823,14 +2843,15 @@ private:
 			auto returned_aggregate = [](const HOUTFunction& cctor) -> const CreateAggregateExpr& {
 				auto ret = dynamic_cast<const ReturnStmt*>(cctor.body->statements.back().get());
 				CORE_ASSERT(ret != nullptr, "The copy constructor's body must end with a return.");
-				auto aggregate = dynamic_cast<const CreateAggregateExpr*>(ret->value.get());
+				auto aggregate
+					= dynamic_cast<const CreateAggregateExpr*>(stripImplicitMove(ret->value.get()));
 				CORE_ASSERT(aggregate != nullptr, "The copy constructor must return an aggregate.");
 				return *aggregate;
 			};
 
 			// The symbol of the copy constructor invoked by a copy-ctor-call expression.
 			auto callee_of = [&](const Expr* expr) -> SymID {
-				auto call = dynamic_cast<const CallExpr*>(expr);
+				auto call = dynamic_cast<const CallExpr*>(stripImplicitMove(expr));
 				ASSERT_TRUE(call != nullptr);
 				return getIdentifierExprSymID(call->callee.ref()).value();
 			};
@@ -2860,8 +2881,12 @@ private:
 				ASSERT_EQUAL_PRINT(1, cctor.body->statements.size());
 				const auto& values = returned_aggregate(cctor).values;
 				ASSERT_EQUAL_PRINT(2, values.size());
-				ASSERT_TRUE(dynamic_cast<const AccessExpr*>(values.at(0).get()) != nullptr);
-				ASSERT_TRUE(dynamic_cast<const AccessExpr*>(values.at(1).get()) != nullptr);
+				ASSERT_TRUE(
+					dynamic_cast<const AccessExpr*>(stripImplicitMove(values.at(0).get())) != nullptr
+				);
+				ASSERT_TRUE(
+					dynamic_cast<const AccessExpr*>(stripImplicitMove(values.at(1).get())) != nullptr
+				);
 			}
 
 			// For a class holding a non-trivially-copyable field, the copy constructor copies the
@@ -2873,7 +2898,7 @@ private:
 
 				const auto& values = returned_aggregate(cctor).values;
 				ASSERT_EQUAL_PRINT(1, values.size());
-				assert_generated_copy(values.at(0).get());
+				assert_generated_copy(stripImplicitMove(values.at(0).get()));
 			}
 
 			// A tuple is copied element-by-element just like a class. Trivial elements are
@@ -2893,8 +2918,10 @@ private:
 				ASSERT_EQUAL_PRINT(2, values.size());
 
 				// First element is trivially copyable, the second one requires a copy ctor.
-				ASSERT_TRUE(dynamic_cast<const AccessExpr*>(values.at(0).get()) != nullptr);
-				assert_generated_copy(values.at(1).get());
+				ASSERT_TRUE(
+					dynamic_cast<const AccessExpr*>(stripImplicitMove(values.at(0).get())) != nullptr
+				);
+				assert_generated_copy(stripImplicitMove(values.at(1).get()));
 			}
 
 			auto dump_cctor = [&](std::string_view            label,
@@ -2974,7 +3001,7 @@ private:
 				const auto& cctor  = dump_cctor("HasBox", get_class_type(has_box_sym));
 				const auto& values = returned_aggregate(cctor).values;
 				ASSERT_EQUAL_PRINT(1, values.size());
-				auto boxed = boxAllocArg(values.at(0).get());
+				auto boxed = boxAllocArg(stripImplicitMove(values.at(0).get()));
 				ASSERT_TRUE(boxed != nullptr);
 				ASSERT_TRUE(dynamic_cast<const DerefExpr*>(boxed) != nullptr);
 			}
@@ -2984,7 +3011,7 @@ private:
 				const auto& cctor  = dump_cctor("HoldsNonTrivial", get_class_type(holds_sym));
 				const auto& values = returned_aggregate(cctor).values;
 				ASSERT_EQUAL_PRINT(1, values.size());
-				assert_generated_copy(values.at(0).get());
+				assert_generated_copy(stripImplicitMove(values.at(0).get()));
 			}
 
 			// Static array - one value copying the element the index variable points at, with the
@@ -3001,7 +3028,7 @@ private:
 
 				const auto& aggregate = returned_aggregate(cctor);
 				ASSERT_EQUAL_PRINT(1, aggregate.values.size());
-				assert_generated_copy(aggregate.values.at(0).get());
+				assert_generated_copy(stripImplicitMove(aggregate.values.at(0).get()));
 
 				ASSERT_TRUE(aggregate.per_element_body.has_value());
 				const auto& per_element = (*aggregate.per_element_body)->statements;
@@ -3015,8 +3042,10 @@ private:
 					= dump_cctor("(i32, HasBox)", field_abstract_type("nontrivial_tup"));
 				const auto& values = returned_aggregate(cctor).values;
 				ASSERT_EQUAL_PRINT(2, values.size());
-				ASSERT_TRUE(dynamic_cast<const AccessExpr*>(values.at(0).get()) != nullptr);
-				assert_generated_copy(values.at(1).get());
+				ASSERT_TRUE(
+					dynamic_cast<const AccessExpr*>(stripImplicitMove(values.at(0).get())) != nullptr
+				);
+				assert_generated_copy(stripImplicitMove(values.at(1).get()));
 			}
 
 			// List of a trivial element.
@@ -3040,7 +3069,7 @@ private:
 				ASSERT_TRUE(push_stmt != nullptr);
 				auto push = dynamic_cast<const ListPushExpr*>(push_stmt->expr.get());
 				ASSERT_TRUE(push != nullptr);
-				assert_generated_copy(push->element.get());
+				assert_generated_copy(stripImplicitMove(push->element.get()));
 			}
 		});
 	}
@@ -3069,12 +3098,32 @@ private:
 		// `copy a` lowers to a copy ctor call.
 		const auto* b_var = dynamic_cast<const VariableStmt*>(stmts.at(1).get());
 		ASSERT_TRUE(b_var != nullptr);
-		ASSERT_TRUE(dynamic_cast<const CallExpr*>(b_var->initial_value.get()) != nullptr);
+		ASSERT_TRUE(
+			dynamic_cast<const CallExpr*>(stripImplicitMove(b_var->initial_value.get())) != nullptr
+		);
 
 		// `move a` lowers to a MoveExpr.
 		const auto* c_var = dynamic_cast<const VariableStmt*>(stmts.at(2).get());
 		ASSERT_TRUE(c_var != nullptr);
-		ASSERT_TRUE(dynamic_cast<const MoveExpr*>(c_var->initial_value.get()) != nullptr);
+		const auto* c_move
+			= dynamic_cast<const MoveExpr*>(stripImplicitMove(c_var->initial_value.get()));
+		ASSERT_TRUE(c_move != nullptr);
+		ASSERT_EQUAL(MoveExpr::MoveKind::Explicit, c_move->kind);
+
+		// `return w` should move the owned local implicitly out without a `move` keyword
+		const HOUTFunction* returns_local = nullptr;
+		for (auto& f: hout.functions)
+			if (f->declaration->original_name == "returnsLocal") returns_local = &*f;
+		ASSERT_TRUE(returns_local != nullptr);
+
+		const auto& return_stmts = returns_local->body->statements;
+		const auto* ret_stmt     = dynamic_cast<const ReturnStmt*>(return_stmts.back().get());
+		ASSERT_TRUE(ret_stmt != nullptr);
+
+		const auto* implicit_move = dynamic_cast<const MoveExpr*>(ret_stmt->value.get());
+		ASSERT_TRUE(implicit_move != nullptr);
+		ASSERT_EQUAL(MoveExpr::MoveKind::Implicit, implicit_move->kind);
+		ASSERT_TRUE(dynamic_cast<const IdentifierExpr*>(implicit_move->inner.get()) != nullptr);
 	}
 
 	void testDestructors() {
@@ -3901,7 +3950,8 @@ private:
 			const auto* ret_stmt
 				= dynamic_cast<const ReturnStmt*>(fn_hout.body->statements.at(1).get());
 			ASSERT_TRUE(ret_stmt != nullptr);
-			const auto* call_expr = dynamic_cast<const CallExpr*>(ret_stmt->value.get());
+			const auto* call_expr
+				= dynamic_cast<const CallExpr*>(stripImplicitMove(ret_stmt->value.get()));
 			ASSERT_TRUE(call_expr != nullptr);
 			return *call_expr;
 		};
