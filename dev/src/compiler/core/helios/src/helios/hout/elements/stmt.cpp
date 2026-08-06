@@ -31,10 +31,13 @@ namespace compiler::helios::code {
 	}
 
 	Box<Parameter> Parameter::clone() const {
-		base::Optional<BoxOrCRef<Expr>> value = std::nullopt;
-		if (this->initial_value.has_value()) value = this->initial_value.value()->clone();
-
-		return makeBox<Parameter>(name, type, std::move(value), helios_symbol, origin);
+		return makeBox<Parameter>(
+			name,
+			type,
+			initial_value.map([](auto value) { return value->clone(); }),
+			helios_symbol,
+			origin
+		);
 	}
 
 	void ReturnStmt::debugPrint(std::ostream& out, usize indent) const {
