@@ -5,8 +5,8 @@ use std::process::Command;
 
 use clap::builder::OsStr;
 
-use crate::quackpack::core::compile::executor::ExecutorOutput;
 use crate::quackpack::core::compile::unit::ArtifactsType;
+use crate::quackpack::core::compile::unit_compiler::ExecutorOutput;
 use crate::util::command_ext::CommandExt;
 use crate::{QuackResult, QuackResultContext, qp_bail_internal};
 

@@ -6,8 +6,8 @@ use std::ops::ControlFlow;
 use std::path::PathBuf;
 use std::process::ExitStatus;
 
-pub mod debug_executor;
-pub mod dvm_executor;
+pub mod default_unit_compiler;
+pub mod dvm_unit_compiler;
 
 #[cfg(test)]
 mod tests;
@@ -15,8 +15,8 @@ mod tests;
 use itertools::Itertools;
 use tracing::{debug, instrument};
 
-use self::debug_executor::DebugExecutor;
-use self::dvm_executor::DvmExecutor;
+use self::default_unit_compiler::DefaultUnitCompiler;
+use self::dvm_unit_compiler::DvmUnitCompiler;
 use super::BuildContext;
 use super::artifacts_layout::shared::SharedArtifactsLayout;
 use super::artifacts_layout::standard::StandardArtifactsLayout;
@@ -31,7 +31,7 @@ use crate::util::file_locks::LockedFile;
 use crate::{QuackError, QuackResult, QuackResultContext, qp_bail};
 
 /// A generic duckc driver.
-pub trait Executor: Debug {
+pub trait UnitCompiler: Debug {
     /// Try to compile the given [`UnitGraph`].
     #[instrument(skip_all)]
     fn compile(&self, graph: UnitGraph, bcx: &BuildContext<'_, '_>) -> QuackResult<ExecutorOutput> {
@@ -115,13 +115,13 @@ pub struct ExecutorOutput {
 
 impl BuildContext<'_, '_> {
     /// Get an appropriate executor.
-    pub fn executor(&self) -> Box<dyn Executor> {
+    pub fn unit_compiler(&self) -> Box<dyn UnitCompiler> {
         if self.profile.dvm_bytecode {
-            debug!("returning DvmExecutor");
-            return Box::new(DvmExecutor);
+            debug!("returning DvmUnitCompiler");
+            return Box::new(DvmUnitCompiler);
         }
-        debug!("returning DebugExecutor");
-        Box::new(DebugExecutor)
+        debug!("returning DefaultUnitCompiler");
+        Box::new(DefaultUnitCompiler)
     }
 
     /// Get an appropriate layout implementation.
@@ -199,7 +199,7 @@ pub(crate) fn get_linker_options(
         })
         .map(|output| output.display().to_string())
         .join(" ");
-    debug!(args = ?string, "raw linker args");
+    debug!(args = %string, "raw linker args");
     if string.is_empty() {
         return Ok(None);
     }

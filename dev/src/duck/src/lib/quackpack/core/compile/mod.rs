@@ -6,7 +6,10 @@
 //! - [`duckc`][]: executing the compiler itself, it handles different compiler execution modes.
 use tracing::info;
 
+use self::early_graph::creating_graph::create_early_graph_from_bcx;
 use self::profiles::Profile;
+use self::unit::graph::lower_early_graph;
+use self::unit_compiler::ExecutorOutput;
 use crate::quackpack::core::identity::Identity;
 use crate::quackpack::core::storage::freeze::VenvFreeze;
 use crate::quackpack::core::storage::paths::Storage;
@@ -17,13 +20,9 @@ pub mod artifacts_layout;
 pub mod compiler_package;
 pub mod duckc;
 pub mod early_graph;
-pub mod executor;
 pub mod profiles;
 pub mod unit;
-
-use self::early_graph::creating_graph::create_early_graph_from_bcx;
-use self::executor::ExecutorOutput;
-use self::unit::graph::lower_early_graph;
+pub mod unit_compiler;
 
 /// A common message for panicking when a manifest is missing a dependency.
 pub fn missing_depenendcy_in_manifest_message(root_name: &str, dep: &str) -> String {
@@ -59,5 +58,5 @@ pub fn compile(bcx: BuildContext<'_, '_>) -> QuackResult<ExecutorOutput> {
     }
     let graph = create_early_graph_from_bcx(&bcx)?;
     let unit_graph = lower_early_graph(graph, &bcx);
-    bcx.executor().compile(unit_graph, &bcx)
+    bcx.unit_compiler().compile(unit_graph, &bcx)
 }

@@ -1,8 +1,9 @@
-//! An implementation of [`Executor`], which creates a single task per package.
+//! An implementation of [`UnitCompiler`], which invokes duckc only once, for a root package with
+//! `dvm` task.
 
 use tracing::instrument;
 
-use super::{Executor, get_linker_options, unit_output};
+use super::{UnitCompiler, unit_output};
 use crate::QuackResult;
 use crate::quackpack::core::compile::BuildContext;
 use crate::quackpack::core::compile::artifacts_layout::ProfileLayout;
@@ -11,17 +12,17 @@ use crate::quackpack::core::compile::unit::graph::UnitGraph;
 use crate::quackpack::core::compile::unit::{ArtifactsType, Unit};
 
 #[derive(Debug, Clone, Copy)]
-pub struct DebugExecutor;
+pub struct DvmUnitCompiler;
 
-impl Executor for DebugExecutor {
+impl UnitCompiler for DvmUnitCompiler {
     #[instrument(skip_all)]
     #[track_caller]
     fn pre_compilation(&self, graph: &UnitGraph, _bcx: &BuildContext<'_, '_>) {
         let root = graph.root_unit();
         assert_eq!(
             root.artifacts_type(),
-            ArtifactsType::Binary,
-            "debug executor supports only compiling to the binary"
+            ArtifactsType::Dvm,
+            "dvm executor should only compile DVM packages"
         );
     }
 
@@ -43,7 +44,7 @@ impl Executor for DebugExecutor {
         graph: &'a UnitGraph,
         _bcx: &BuildContext<'_, '_>,
     ) -> Vec<&'a Unit> {
-        graph.units_sorted_by_id().iter().rev().collect()
+        vec![graph.root_unit()]
     }
 }
 
@@ -54,26 +55,19 @@ fn create_task(
     graph: &UnitGraph,
     layout: &dyn ProfileLayout,
 ) -> QuackResult<multipackage_schema::Task> {
+    assert!(
+        graph.is_root(unit),
+        "`DvmExecutor` should create task only for the root `Unit`"
+    );
     let strategy = match unit.artifacts_type() {
-        ArtifactsType::Binary => {
-            assert!(
-                graph.is_root(unit),
-                "only root should be compiled to binary"
-            );
-            multipackage_schema::PackageCompilationStrategy::Binary {
-                output_file: unit_output(unit, graph, layout)?,
-                linking_options: get_linker_options(unit, graph, layout)?,
-            }
-        }
-        ArtifactsType::IsADependencyArtifact => {
-            let layout = layout.for_dependency(unit, graph)?;
-            multipackage_schema::PackageCompilationStrategy::Lib {
-                output_file: layout.root_directory().join(unit.output_file_name()),
-                archive_options: None,
-            }
-        }
-        ArtifactsType::Dvm => unreachable!("DVM tasks should be handled by the `DvmExecutor`"),
-        ArtifactsType::Library => unreachable!("library tasks are unsupported"),
+        // QuackPack only emits DVM executables; `DvmLib` is produced solely by the
+        // C++ std library path, so it is intentionally unreachable here.
+        ArtifactsType::Dvm => multipackage_schema::PackageCompilationStrategy::DvmExe {
+            output_file: unit_output(unit, graph, layout)?,
+        },
+        task => unreachable!(
+            "should create only DVM task for the root (attempted to create for `{task:?}`)"
+        ),
     };
     Ok(multipackage_schema::Task {
         package_id: unit.unique_name().into(),
