@@ -66,8 +66,8 @@ namespace compiler::helios {
 
 	namespace {
 		/**
-		 * @brief Whether a type is valid as variadic parameter type in  `@cffi_variadic_after`
-		 * declaration.
+		 * @brief Whether a type is valid as variadic parameter type in
+		 * `@cffi_variadic_fixed_params` declaration.
 		 * @return Empty value if valid, and the value that should be declared instead if invalid.
 		 */
 		std::expected<void, tsh::AbstractType> validateVariadicArgType(

@@ -19,7 +19,7 @@ Tests:
     Cases:
       all:
         Output:
-          String: |+
+          String: |
             7
             12
             100
@@ -40,5 +40,4 @@ Tests:
             -55
             6
             10
-
         ExitCode: 0

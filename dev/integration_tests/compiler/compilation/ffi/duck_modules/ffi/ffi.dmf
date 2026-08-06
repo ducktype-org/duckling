@@ -36,9 +36,9 @@ extern("C") {
     }
 
     namespace variadic {
-        @cffi_variadic_after(1) fundecl sum_varargs_mixed(count: i64, a: i64, b: f64) -> i64;
+        @cffi_variadic_fixed_params(1) fundecl sum_varargs_mixed(count: i64, a: i64, b: f64) -> i64;
 
-        @cffi_variadic_after(1) fundecl sum_varargs_struct(count: i64, a: Small, b: Small) -> i64;
+        @cffi_variadic_fixed_params(1) fundecl sum_varargs_struct(count: i64, a: Small, b: Small) -> i64;
     }
 }
 

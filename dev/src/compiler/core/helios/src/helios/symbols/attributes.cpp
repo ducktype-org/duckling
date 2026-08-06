@@ -44,7 +44,7 @@ namespace compiler::helios {
 		}
 
 		/**
-		 * @brief Parses the single unsigned-integer argument of `@cffi_variadic_after(<n>)`.
+		 * @brief Parses the single unsigned-integer argument of `@cffi_variadic_fixed_params(<n>)`.
 		 * On invalid arguments it logs a diagnostic and fails the current query.
 		 */
 		u64 parseU64(query::Context& ctx, AttrArgs args, std::string_view error_msg) {
@@ -95,7 +95,7 @@ namespace compiler::helios {
 			  [](query::Context& c, AttrArgs a) -> Attribute {
 				  return Builtin{ .builtin = parseBuiltinAttr(c, a) };
 			  } },
-			{ "cffi_variadic_after",
+			{ "cffi_variadic_fixed_params",
 			  [](query::Context& c, AttrArgs a) -> Attribute {
 				  return CFFIVariadicFunction{
 					  .fixed_params
@@ -116,7 +116,7 @@ namespace compiler::helios {
 			variant_case_novalue(BackendDependent) { return base::StrID("backend_dependent"); }
 			variant_case_novalue(Builtin) { return base::StrID("builtin"); }
 			variant_case_novalue(CFFIVariadicFunction) {
-				return base::StrID("cffi_variadic_after");
+				return base::StrID("cffi_variadic_fixed_params");
 			}
 		}
 		CORE_UNREACHABLE();

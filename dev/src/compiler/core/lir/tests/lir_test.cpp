@@ -861,7 +861,7 @@ private:
 	}
 
 	/**
-	 * @brief Tests `@cffi_variadic_after(n)` on `extern("C")` declarations.
+	 * @brief Tests `@cffi_variadic_fixed_params(n)` on `extern("C")` declarations.
 	 */
 	void cVariadicAbiTest() {
 		auto module     = getLIROfModule(path("modules/c_variadic"));

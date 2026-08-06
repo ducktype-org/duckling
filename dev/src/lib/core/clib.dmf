@@ -12,12 +12,12 @@ extern("C") {
 
     fundecl strtod(nptr: cptr char, endptr: cptr cptr char) -> f64;
 
-    @cffi_variadic_after(3)
+    @cffi_variadic_fixed_params(3)
     fundecl snprintf(s: cptr char, n: u64, format: cptr char, value: f64) -> i32;
 
-    @cffi_variadic_after(3)
+    @cffi_variadic_fixed_params(3)
     fundecl snprintf(s: cptr char, n: u64, format: cptr char, value: i64) -> i32;
 
-    @cffi_variadic_after(3)
+    @cffi_variadic_fixed_params(3)
     fundecl snprintf(s: cptr char, n: u64, format: cptr char, value: u64) -> i32;
 }
