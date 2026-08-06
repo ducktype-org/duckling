@@ -22,7 +22,7 @@ pub fn get_parser() -> Command {
 /// Logic for executing the `generate` subcommand.
 pub fn execute(ctx: &DuckContext, matches: &ArgMatches) -> QuackResult<()> {
     let Some(generator) = matches.get_one::<Shell>("generator").cloned() else {
-        qp_bail_internal!("no generator; this should be guarded by a parser")
+        qp_bail_internal!("no generator; this should be guarded by the parser")
     };
     print_completions(generator, cli(), ctx);
     Ok(())
