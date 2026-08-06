@@ -1,6 +1,7 @@
 #pragma once
 
 #include <ctv/numeric_value.hpp>
+#include <helios/hout/elements/stmt.hpp>
 #include <helios/hout/origin.hpp>
 #include <helios/symbols/symbol_id.hpp>
 #include <helios/tsh/expression_type.hpp>
@@ -17,6 +18,7 @@
 
 namespace compiler::helios::code {
 	class HoutExprVisitor;
+	struct Stmt;
 
 	/**
 	 * @brief A block of statements, defined together with the statements in `stmt.hpp`, which
@@ -850,6 +852,27 @@ namespace compiler::helios::code {
 		LiftToTypeExpr(
 			tsh::ExpressionType<> expression_type, ElementOrigin origin, Box<Expr> value_expr
 		);
+	};
+
+	/**
+	 * @brief Represents a block of statements that evaluates to a single value.
+	 */
+	struct BlockExpr final: public Expr {
+		// @TODO: #3292 Refactor once we figure out how a user should be able to use blocks in
+		// expressions.
+		Box<Stmt> block;
+
+		BlockExpr(query::Context& ctx, ElementOrigin origin, Box<Stmt> block);
+
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
+
+	private:
+		FRIEND_MAKEBOX
+
+		BlockExpr(tsh::ExpressionType<> expression_type, ElementOrigin origin, Box<Stmt> block);
 	};
 
 	/**
