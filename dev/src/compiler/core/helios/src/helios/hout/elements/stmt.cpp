@@ -32,17 +32,9 @@ namespace compiler::helios::code {
 
 	Box<Parameter> Parameter::clone() const {
 		base::Optional<BoxOrCRef<Expr>> value = std::nullopt;
-		if (this->initial_value.has_value()) {
-			value = this->initial_value.value()->clone();
-		}
-		
-		return makeBox<Parameter>(
-			name,
-			type,
-			std::move(value),
-			helios_symbol,
-			origin
-		);
+		if (this->initial_value.has_value()) value = this->initial_value.value()->clone();
+
+		return makeBox<Parameter>(name, type, std::move(value), helios_symbol, origin);
 	}
 
 	void ReturnStmt::debugPrint(std::ostream& out, usize indent) const {
@@ -52,22 +44,14 @@ namespace compiler::helios::code {
 		out << ";\n";
 	}
 
-	Box<Stmt> ReturnStmt::clone() const {
-		return makeBox<ReturnStmt>(
-			origin, value->clone()
-		);
-	}
+	Box<Stmt> ReturnStmt::clone() const { return makeBox<ReturnStmt>(origin, value->clone()); }
 
 	void VoidReturnStmt::debugPrint(std::ostream& out, usize indent) const {
 		addIndent(out, indent);
 		out << "void return;\n";
 	}
 
-	Box<Stmt> VoidReturnStmt::clone() const {
-		return makeBox<VoidReturnStmt>(
-			origin
-		);
-	}
+	Box<Stmt> VoidReturnStmt::clone() const { return makeBox<VoidReturnStmt>(origin); }
 
 	void ExprStmt::debugPrint(std::ostream& out, usize indent) const {
 		addIndent(out, indent);
@@ -76,11 +60,7 @@ namespace compiler::helios::code {
 		out << "\n";
 	}
 
-	Box<Stmt> ExprStmt::clone() const {
-		return makeBox<ExprStmt>(
-			origin, expr->clone()
-		);
-	}
+	Box<Stmt> ExprStmt::clone() const { return makeBox<ExprStmt>(origin, expr->clone()); }
 
 	void IfStmt::debugPrint(std::ostream& out, usize indent) const {
 		addIndent(out, indent);
@@ -97,10 +77,7 @@ namespace compiler::helios::code {
 
 	Box<Stmt> IfStmt::clone() const {
 		return makeBox<IfStmt>(
-			origin,
-			condition->clone(),
-			std::move(*then_body.clone()),
-			std::move(*else_body.clone())
+			origin, condition->clone(), std::move(*then_body.clone()), std::move(*else_body.clone())
 		);
 	}
 
@@ -115,11 +92,7 @@ namespace compiler::helios::code {
 	}
 
 	Box<Stmt> WhileStmt::clone() const {
-		return makeBox<WhileStmt>(
-			origin,
-			condition->clone(),
-			std::move(*body.clone())
-		);
+		return makeBox<WhileStmt>(origin, condition->clone(), std::move(*body.clone()));
 	}
 
 	void VariableStmt::debugPrint(std::ostream& out, usize indent) const {
@@ -138,9 +111,7 @@ namespace compiler::helios::code {
 	}
 
 	Box<Stmt> VariableStmt::clone() const {
-		return makeBox<VariableStmt>(
-			origin, initial_value->clone(), type, helios_symbol
-		);
+		return makeBox<VariableStmt>(origin, initial_value->clone(), type, helios_symbol);
 	}
 
 	void AssignmentStmt::debugPrint(std::ostream& out, usize indent) const {
@@ -152,9 +123,7 @@ namespace compiler::helios::code {
 	}
 
 	Box<Stmt> AssignmentStmt::clone() const {
-		return makeBox<AssignmentStmt>(
-			origin, location_expr->clone(), new_value_expr->clone()
-		);
+		return makeBox<AssignmentStmt>(origin, location_expr->clone(), new_value_expr->clone());
 	}
 
 	void BlockStmt::debugPrint(std::ostream& out, usize indent) const {
@@ -166,9 +135,6 @@ namespace compiler::helios::code {
 	}
 
 	Box<Stmt> BlockStmt::clone() const {
-		return makeBox<BlockStmt>(
-			origin,
-			std::move(*body.clone())
-		);
+		return makeBox<BlockStmt>(origin, std::move(*body.clone()));
 	}
 }
