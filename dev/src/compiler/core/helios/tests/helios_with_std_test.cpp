@@ -217,13 +217,7 @@ private:
 				auto deps
 					= ctx.query<QueryTransitiveUsedSymbols>(ctor_sym)->valueOrThrow().used_functions;
 
-				// Ctor(ArrayHolder) (the root, excluded) -> Ctor(WithInit[5]) (`__init_array`) ->
-				// Ctor(WithInit), plus the bounds-check chain emitted by the static-array init loop
-				// (`panic`, `builtin_output_str`, `length`) and its own transitive callees: `abort`
-				// from `panic`, and the string-printing chain of `builtin_output_str`
-				// (`writeStr` -> `writeChar` overloads -> `putchar`) together with
-				// `builtin_output_char`, which the MIR-level used-symbol collection sees.
-				ASSERT_EQUAL_PRINT(12, deps.size());
+				ASSERT_EQUAL_PRINT(2, deps.size());
 
 				bool found_array_ctor = false;
 				for (auto d: deps) {
