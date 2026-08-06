@@ -954,9 +954,8 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(cptrCast_p64_pptr)(FUNCTION_ARGS) {
 		{
-			const auto size = instr[1].arg0;
 			const auto src  = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
-			auto       view = Memory::getPointerData(src, size);
+			auto       view = Memory::getRemainingPointerData(src);
 			WRITE_TO_PLACE_ARG(void*, instr->arg0, static_cast<void*>(view.getBegin()));
 		}
 		FUNCTION_CONT(2);

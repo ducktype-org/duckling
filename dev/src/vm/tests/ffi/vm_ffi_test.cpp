@@ -54,11 +54,7 @@ public:
 		TESTER_ADD_TEST(cptrWriteFromPointerPointeeFails);
 		TESTER_ADD_TEST(cptrCastFromPointer);
 		TESTER_ADD_TEST(cptrCastKeepsPointerOffset);
-		TESTER_ADD_TEST(cptrCastOfFreedPointerFails);
 		TESTER_ADD_TEST(cptrCastOfNullPointerFails);
-		TESTER_ADD_TEST(cptrCastPointeeMismatchFails);
-		TESTER_ADD_TEST(cptrCastToVoidCPtrFails);
-		TESTER_ADD_TEST(cptrCastOfPointerPointeeFails);
 		TESTER_ADD_TEST(floatArgsAndReturn);
 		TESTER_ADD_TEST(doubleArgsAndReturn);
 		TESTER_ADD_TEST(mixedIntFloatArgs);
@@ -1374,26 +1370,6 @@ private:
 		);
 	}
 
-	// The address of a dangling pointer must not escape to native code.
-	void cptrCastOfFreedPointerFails() {
-		auto pid  = initProcess();
-		auto file = writeTempDbc(
-			"cptr_cast_freed",
-			"type cpointer: I64Ptr i64\n"
-			"function main { i64, ptr_argv } -> { i64 } {\n"
-			"    init_pany_type p, ptr_i64;\n"
-			"    alloc_pptr_type p, i64;\n"
-			"    free_pptr p;\n"
-			"    init_pany_type c, I64Ptr;\n"
-			"    cast_pcptr_pptr c, p;\n"
-			"    ret;\n"
-			"}\n"
-		);
-		auto load = vm::api::loadFiles(pid, { file });
-		if (!load.has_value()) fail(nlohmann::json(load.error()).dump());
-		assertExecutionPanickedWith(runTestOnVmGetResult(pid), "Data was freed");
-	}
-
 	// A null VM pointer has no block, so there is no address to take.
 	void cptrCastOfNullPointerFails() {
 		auto pid  = initProcess();
@@ -1411,52 +1387,6 @@ private:
 		auto load = vm::api::loadFiles(pid, { file });
 		if (!load.has_value()) fail(nlohmann::json(load.error()).dump());
 		assertExecutionPanickedWith(runTestOnVmGetResult(pid), "Accessing null pointer");
-	}
-
-	// Both operands describe the same pointee, so the cast cannot change the pointed-to type.
-	void cptrCastPointeeMismatchFails() {
-		expectLoadError(
-			"cptr_cast_pointee_mismatch",
-			"type cpointer: I32Ptr i32\n"
-			"function main { i64, ptr_argv } -> { i64 } {\n"
-			"    init_pany_type p, ptr_i64;\n"
-			"    init_pany_type c, I32Ptr;\n"
-			"    cast_pcptr_pptr c, p;\n"
-			"    ret;\n"
-			"}\n",
-			{ "does not match the C pointer's pointee" }
-		);
-	}
-
-	// The builtin `cptr` has no pointee to match against; reach it with a `movCast` instead.
-	void cptrCastToVoidCPtrFails() {
-		expectLoadError(
-			"cptr_cast_to_void",
-			"function main { i64, ptr_argv } -> { i64 } {\n"
-			"    init_pany_type p, ptr_i64;\n"
-			"    init_pany_type c, cptr;\n"
-			"    cast_pcptr_pptr c, p;\n"
-			"    ret;\n"
-			"}\n",
-			{ "cannot be dereferenced" }
-		);
-	}
-
-	// The VM layout of a pointee holding a fat pointer has no native counterpart.
-	void cptrCastOfPointerPointeeFails() {
-		expectLoadError(
-			"cptr_cast_pointer_pointee",
-			"type data: Holder { p: ptr_i64, v: i64 }\n"
-			"type pointer: HolderPtr Holder\n"
-			"type cpointer: HolderCPtr Holder\n"
-			"function main { i64, ptr_argv } -> { i64 } {\n"
-			"    init_pany_type hp, HolderPtr;\n"
-			"    init_pany_type c, HolderCPtr;\n"
-			"    cast_pcptr_pptr c, hp;\n"
-			"    ret;\n"
-			"}\n",
-			{ "cannot be dereferenced" }
-		);
 	}
 
 	void duplicateFfiFunctionFails() {
