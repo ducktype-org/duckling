@@ -858,6 +858,8 @@ namespace compiler::helios::code {
 	 * @brief Represents a block of statements that evaluates to a single value.
 	 */
 	struct BlockExpr final: public Expr {
+		// @TODO: #3292 Refactor once we figure out how a user should be able to use blocks in
+		// expressions.
 		Box<Stmt> block;
 
 		BlockExpr(query::Context& ctx, ElementOrigin origin, Box<Stmt> block);

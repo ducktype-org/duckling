@@ -113,7 +113,7 @@ namespace compiler::helios {
 			}
 
 			void visitBlockExpr(const code::BlockExpr&) final {
-				// Blocks are not evaluated at compile time by this visitor.
+				// @TODO: #3291 Blocks are not evaluated at compile time by this visitor.
 				result = CouldNotShortPath{};
 			}
 
