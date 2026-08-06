@@ -14,4 +14,14 @@ namespace compiler::driver {
 	 * or if a custom std artifacts directory already contains all the required packages.
 	 */
 	std::vector<PackageCompilationTask> getRequiredStdLibCompilationTasks();
+
+	/**
+	 * Check if the package is one of the STD_PACKAGES_CONFIG.
+	 */
+	bool isPackageSTL(const frontend::packages::RawPackageInfo& package_info);
+
+	/**
+	 * Check if the package ID is one of the STD_PACKAGES_CONFIG.
+	 */
+	bool isPackageSTL(base::StrID package_id);
 }

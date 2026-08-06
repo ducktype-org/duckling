@@ -87,16 +87,22 @@ namespace compiler::driver {
 			);
 		}
 
+		bool isPackageSTL(const base::StrID package_id) {
+			return std::ranges::any_of(STD_PACKAGES_CONFIG, [&](const auto& config) {
+				return base::StrID(config.name) == package_id;
+			});
+		}
+
+		bool isPackageSTL(const frontend::packages::RawPackageInfo& package_info) {
+			return isPackageSTL(package_info.package_id);
+		}
+
 		base::OkBad addDependenciesOnStandardLibraryForPackage(
 			compiler::frontend::packages::RawPackageInfo& package_info,
 			frontend::packages::DiagnosticReporter&       report
 		) {
 			// If the package is one of the STD_PACKAGES_CONFIG, we do nothing
-			if (std::ranges::any_of(STD_PACKAGES_CONFIG, [&](const auto& config) {
-					return base::StrID(config.name) == package_info.package_id;
-				})) {
-				return base::OK;
-			}
+			if (isPackageSTL(package_info)) return base::OK;
 
 			// Otherwise, we add dependencies on all standard library packages
 			for (auto& config: STD_PACKAGES_CONFIG) {

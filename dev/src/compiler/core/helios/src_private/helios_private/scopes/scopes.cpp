@@ -1,5 +1,6 @@
 #include "scopes.hpp"
 
+#include <driver/driver/standard_library/standard_library.hpp>
 #include <frontend/module_tree/functors.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
@@ -718,8 +719,8 @@ namespace compiler::helios {
 		 * a dedicated `prelude` module.
 		 */
 		struct PreludeImport final {
-			std::string              package;
-			std::vector<std::string> path;
+			base::StrID              package;
+			std::vector<base::StrID> path;
 		};
 
 		/**
@@ -727,7 +728,7 @@ namespace compiler::helios {
 		 */
 		const std::vector<PreludeImport>& preludeImports() {
 			static const std::vector<PreludeImport> imports{
-				{ .package = "core", .path = { "builtins" } },
+				{ .package = base::StrID("core"), .path = { base::StrID("builtins") } },
 			};
 			return imports;
 		}
@@ -739,7 +740,7 @@ namespace compiler::helios {
 		 */
 		bool isStandardLibraryModule(query::Context& ctx, frontend::ModuleID module_id) {
 			auto package_id = frontend::getModuleRef(module_id)->getPackage().unlock(ctx).getID();
-			return package_id == base::StrID("core");
+			return package_id == base::StrID("core") || driver::isPackageSTL(package_id);
 		}
 
 		/**
@@ -755,14 +756,10 @@ namespace compiler::helios {
 			if (isStandardLibraryModule(ctx, module_id)) return result;
 
 			for (const auto& prelude_import: preludeImports()) {
-				std::vector<base::StrID> path_ids;
-				path_ids.reserve(prelude_import.path.size());
-				for (const auto& component: prelude_import.path) path_ids.emplace_back(component);
-
 				auto module_opt = frontend::getModuleByAbsolutePath(
-					ctx, base::StrID(prelude_import.package), path_ids
+					ctx, prelude_import.package, prelude_import.path
 				);
-				if (not module_opt.has_value()) continue;
+				if (module_opt.empty()) continue;
 
 				auto prelude_scope   = queryRootScopeOfMainModuleFile(ctx, module_opt.value());
 				auto prelude_qresult = HInterface::ofScope(prelude_scope)
@@ -830,54 +827,49 @@ namespace compiler::helios {
 				parent_result.merge(std::move(result));
 
 				return parent_result;
-			} else {
-				// At root scope.
-				auto current_module_id = key.scope.ref->parent_module;
+			}
 
-				// Bring the default prelude modules into scope, as if every module wrote
-				// `import <module>.*;`. A no-op under --no-std or inside the standard library.
-				{
-					UNPACK_QRESULT(
-						LookupResult prelude_result =,
-						lookupImplicitPrelude(ctx, current_module_id, key.name, key.with_wildcards)
-					);
-					result.merge(std::move(prelude_result));
-				}
+			// At root scope.
+			auto current_module_id = key.scope.ref->parent_module;
 
-				// Also check whether this is a REPL module with a parent.
-				const bool is_repl_module
-					= ctx.query<frontend::QueryIsReplModule>(current_module_id);
-				auto repl_parent_opt
-					= ctx.query<frontend::QueryReplModuleParent>(current_module_id);
+			// Bring the default prelude modules into scope, as if every module wrote
+			// `import <module>.*;`. A no-op under --no-std or inside the standard library.
+			UNPACK_QRESULT(
+				LookupResult prelude_result =,
+				lookupImplicitPrelude(ctx, current_module_id, key.name, key.with_wildcards)
+			);
+			result.merge(std::move(prelude_result));
 
-				CORE_DEV_LOG(
-					REPL,
-					"At root scope, module #",
-					current_module_id.queryUnstablePerfectHash(),
-					", isRepl=",
-					is_repl_module,
-					", hasParent=",
-					repl_parent_opt.has_value(),
-					"\n"
+			// Also check whether this is a REPL module with a parent.
+			const bool is_repl_module = ctx.query<frontend::QueryIsReplModule>(current_module_id);
+			auto repl_parent_opt = ctx.query<frontend::QueryReplModuleParent>(current_module_id);
+
+			CORE_DEV_LOG(
+				REPL,
+				"At root scope, module #",
+				current_module_id.queryUnstablePerfectHash(),
+				", isRepl=",
+				is_repl_module,
+				", hasParent=",
+				repl_parent_opt.has_value(),
+				"\n"
+			);
+
+			if (is_repl_module && repl_parent_opt.has_value()) {
+				// Query the parent REPL module's TopLevel scope.
+				auto parent_module_id      = repl_parent_opt.value();
+				auto parent_toplevel_scope = queryRootScopeOfMainModuleFile(ctx, parent_module_id);
+
+				UNPACK_QRESULT_CREF(
+					LookupResult parent_result =,
+					ctx.query<QueryLookupInScopeAndParents>(
+						{ parent_toplevel_scope, key.name, key.with_wildcards }
+					)
 				);
 
-				if (is_repl_module && repl_parent_opt.has_value()) {
-					// Query the parent REPL module's TopLevel scope.
-					auto parent_module_id = repl_parent_opt.value();
-					auto parent_toplevel_scope
-						= queryRootScopeOfMainModuleFile(ctx, parent_module_id);
+				parent_result.merge(std::move(result));
 
-					UNPACK_QRESULT_CREF(
-						LookupResult parent_result =,
-						ctx.query<QueryLookupInScopeAndParents>(
-							{ parent_toplevel_scope, key.name, key.with_wildcards }
-						)
-					);
-
-					parent_result.merge(std::move(result));
-
-					return parent_result;
-				}
+				return parent_result;
 			}
 
 			return result;

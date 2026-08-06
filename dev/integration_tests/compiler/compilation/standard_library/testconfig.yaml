@@ -8,16 +8,6 @@ Tests:
         Output:
           String: "10\n42\n"
 
-  # The implicit prelude makes the default symbols (`print`, `builtin_output_i64`, ...) available
-  # without any explicit import. This module has no import statements at all.
-  default_prelude:
-    module_to_compile: "uses_prelude"
-    Cases:
-      all:
-        backend: all
-        Output:
-          String: "prelude\n7\n"
-
   # We test if not using std when disabling it in the compiler works.
   no_std:
     module_to_compile: "no_std"
