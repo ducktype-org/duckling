@@ -1,15 +1,15 @@
 //! Different versions of scripts.
 
-use std::ffi::{OsStr, OsString};
 use std::fmt;
 use std::path::{Path, PathBuf};
 
 use super::compile::artifacts_layout::ArtifactsLayout;
 use super::identity::{Identity, Origin};
-use super::{Dependencies, Manifest, Package, Profiles, capture_frontmatter};
+use super::valid_package_name::{normalise_package_name, validate_package_name};
+use super::{Dependencies, Manifest, Package, Profiles, Version, capture_frontmatter};
 use crate::quackpack::schemas::manifest::Manifest as ManifestSchema;
 use crate::util::path_ops_ext::PathOpsExt;
-use crate::{QuackResult, QuackResultContext};
+use crate::{QuackResult, QuackResultContext, StrId};
 
 #[derive(Clone, Debug)]
 /// A generic script.
@@ -41,11 +41,48 @@ impl Script {
         }
     }
 
-    /// Get the path to the artifacts directory.
-    pub fn artifacts_directory(&self) -> &ArtifactsLayout {
+    /// Get the script name.
+    pub fn script_name(&self) -> StrId {
         match self {
-            Self::Standalone(standalone_script) => standalone_script.artifacts_directory(),
+            Self::Standalone(standalone_script) => standalone_script.script_name(),
+            Self::Associated(package_script) => package_script.script_name(),
+        }
+    }
+
+    /// Get the normalised script name.
+    pub fn normalised_script_name(&self) -> String {
+        match self {
+            Self::Standalone(standalone_script) => standalone_script.normalised_script_name(),
+            Self::Associated(package_script) => package_script.normalised_script_name(),
+        }
+    }
+
+    /// Get the script version.
+    ///
+    /// For standalone scripts the return value is irrelevant, but for associated scripts we return
+    /// a version of the package.
+    pub fn version(&self) -> Version {
+        match self {
+            Self::Standalone(standalone_script) => standalone_script.version(),
+            Self::Associated(package_script) => package_script.package_version(),
+        }
+    }
+
+    /// Get the path to the artifacts directory.
+    pub fn artifacts_directory(&self) -> &Path {
+        match self {
+            Self::Standalone(standalone_script) => {
+                standalone_script.frontmatter().artifacts_directory()
+            }
             Self::Associated(package_script) => package_script.artifacts_directory(),
+        }
+    }
+
+    /// Get the artifacts layout.
+    pub fn artifacts_layout<T: ArtifactsLayout>(&self) -> T {
+        match self {
+            Self::Standalone(standalone_script) => standalone_script.artifacts_layout(),
+            Self::Associated(package_script) => package_script.artifacts_layout(),
         }
     }
 
@@ -187,15 +224,25 @@ impl Script {
 pub struct PackageScript {
     package: Package,
     script_path: PathBuf,
+    script_name: StrId,
 }
 
 impl PackageScript {
     /// Create a new [`PackageScript`].
-    pub fn new(package: Package, script_path: PathBuf) -> Self {
-        Self {
+    #[track_caller]
+    pub fn new(package: Package, script_path: PathBuf) -> QuackResult<Self> {
+        let script_name = StrId::from(script_path.file_stem().unwrap());
+        validate_package_name(&script_name).with_context(|| {
+            format!(
+                "script at `{}` has an invalid script name (file stem)",
+                script_path.display()
+            )
+        })?;
+        Ok(Self {
             package,
             script_path,
-        }
+            script_name,
+        })
     }
 
     /// Get the underlying [`Package`].
@@ -209,8 +256,13 @@ impl PackageScript {
     }
 
     /// Get the path to the artifacts directory.
-    pub fn artifacts_directory(&self) -> &ArtifactsLayout {
+    pub fn artifacts_directory(&self) -> &Path {
         self.package().artifacts_directory()
+    }
+
+    /// Get the artifacts layout.
+    pub fn artifacts_layout<T: ArtifactsLayout>(&self) -> T {
+        self.package().artifacts_layout()
     }
 
     /// Get the package's manifest.
@@ -248,6 +300,26 @@ impl PackageScript {
     pub fn into_manifest(self) -> Manifest {
         self.into_package().into_manifest()
     }
+
+    /// Get the script name.
+    pub fn script_name(&self) -> StrId {
+        self.script_name
+    }
+
+    /// Get the normalised script name.
+    pub fn normalised_script_name(&self) -> String {
+        normalise_package_name(&self.script_name)
+    }
+
+    /// Get the package name.
+    pub fn package_name(&self) -> StrId {
+        self.package.name()
+    }
+
+    /// Get the package version
+    pub fn package_version(&self) -> Version {
+        self.package.version()
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -262,14 +334,29 @@ impl StandaloneScript {
         Self { frontmatter }
     }
 
+    /// Get the script name.
+    pub fn script_name(&self) -> StrId {
+        self.frontmatter.script_name()
+    }
+
+    /// Get the normalised script name.
+    pub fn normalised_script_name(&self) -> String {
+        self.frontmatter.normalised_script_name()
+    }
+
+    /// Get the script version.
+    pub fn version(&self) -> Version {
+        self.frontmatter.version()
+    }
+
     /// Get the [`FrontMatter`] of this script.
     pub fn frontmatter(&self) -> &FrontMatter {
         &self.frontmatter
     }
 
     /// Get the path to the artifacts directory.
-    pub fn artifacts_directory(&self) -> &ArtifactsLayout {
-        self.frontmatter().artifacts_directory()
+    pub fn artifacts_layout<T: ArtifactsLayout>(&self) -> T {
+        self.frontmatter().artifacts_layout()
     }
 
     /// Get the manifest constructed from the script's frontmatter.
@@ -317,14 +404,12 @@ pub struct FrontMatter {
     path: PathBuf,
     /// The folder the script is located in.
     script_folder: PathBuf,
-    /// Name of the script (a.k.a. file stem).
-    script_name: OsString,
     /// Original schema of the frontmatter.
     original_schema: ManifestSchema,
     /// Manifest constructed from the frontmatter.
     manifest: Manifest,
     /// Where the build artifacts should be located.
-    artifacts_dir: ArtifactsLayout,
+    artifacts_dir: PathBuf,
 }
 
 impl FrontMatter {
@@ -337,15 +422,12 @@ impl FrontMatter {
         let script_folder = path
             .parent()
             .context_internal("script path without parent")?;
-        let script_name = path
-            .file_stem()
-            .context_internal("script path without file stem")?;
-        let artifacts_dir =
-            ArtifactsLayout::new(script_folder.join(".duck_build").join(script_name));
+        // NOTE: `parse/manifest.rs` for frontmatters sets script name as a `metadata.name`.
+        let script_name = manifest.name();
+        let artifacts_dir = script_folder.join(".duck_build").join(script_name);
         Ok(Self {
             path: path.clone(),
             script_folder: script_folder.to_path_buf(),
-            script_name: script_name.to_os_string(),
             original_schema,
             manifest,
             artifacts_dir,
@@ -363,8 +445,20 @@ impl FrontMatter {
     }
 
     /// Get the name of the script.
-    pub fn script_name(&self) -> &OsStr {
-        &self.script_name
+    pub fn script_name(&self) -> StrId {
+        // NOTE: `parse/manifest.rs` for frontmatters sets script name as a `metadata.name`.
+        self.manifest().name()
+    }
+
+    /// Get the normalised name of the script.
+    pub fn normalised_script_name(&self) -> String {
+        // NOTE: `parse/manifest.rs` for frontmatters sets script name as a `metadata.name`.
+        self.manifest().normalised_name()
+    }
+
+    /// Get the version of the script.
+    pub fn version(&self) -> Version {
+        self.manifest().version()
     }
 
     /// Get the schema of the script's frontmatter.
@@ -373,8 +467,13 @@ impl FrontMatter {
     }
 
     /// Get the path to the artifacts directory.
-    pub fn artifacts_directory(&self) -> &ArtifactsLayout {
+    pub fn artifacts_directory(&self) -> &Path {
         &self.artifacts_dir
+    }
+
+    /// Get the artifacts layout.
+    pub fn artifacts_layout<T: ArtifactsLayout>(&self) -> T {
+        T::new(self.artifacts_dir.clone())
     }
 
     /// Get the manifest constructed from the script's frontmatter.

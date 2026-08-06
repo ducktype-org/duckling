@@ -4,7 +4,7 @@ use std::path::Path;
 
 use itertools::Itertools;
 use serde::Deserialize;
-use tracing::debug;
+use tracing::trace;
 
 use crate::quackpack::core::Package;
 use crate::quackpack::schemas::manifest::Manifest as ManifestSchema;
@@ -17,6 +17,7 @@ mod manifest;
 mod source;
 
 pub use frontmatter::{capture_frontmatter, parse_frontmatter};
+pub(crate) use manifest::parse;
 
 #[cfg(test)]
 mod tests;
@@ -31,7 +32,7 @@ mod tests;
 /// 3. Parse [`ManifestSchema`] into [`Manifest`].
 #[tracing::instrument(skip(ctx))]
 pub fn parse_manifest(path: &Path, ctx: &DuckContext) -> QuackResult<Package> {
-    debug!("starting parsing...");
+    trace!("starting parsing");
     parse_inner(path, ctx).with_context(|| {
         format!(
             "when trying to parse the user manifest at `{}`",
@@ -147,7 +148,7 @@ fn parse_inner(path: &Path, ctx: &DuckContext) -> QuackResult<Package> {
 
 /// Turn YAML string into the [`ManifestSchema`].
 /// This function also collects unused items in the [`ManifestSchema`].
-fn parse_schema(yaml_content: &str) -> QuackResult<ManifestSchema> {
+pub fn parse_schema(yaml_content: &str) -> QuackResult<ManifestSchema> {
     let deserializer = serde_yaml_ng::Deserializer::from_str(yaml_content);
     let schema = ManifestSchema::deserialize(deserializer)?;
     Ok(schema)

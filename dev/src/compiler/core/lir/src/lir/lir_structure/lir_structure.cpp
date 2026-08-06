@@ -432,10 +432,14 @@ namespace compiler::lir {
 
 	base::Optional<BuiltinFunctionKind> getBuiltinKindFromHOUT(helios::BuiltinKind kind) {
 		switch (kind) {
+		case helios::BuiltinKind::DvmAllocArr:
+			return BuiltinFunctionKind::DvmAllocArr;
+		case helios::BuiltinKind::DvmReallocArr:
+			return BuiltinFunctionKind::DvmReallocArr;
+		case helios::BuiltinKind::DvmFreeArr:
+			return BuiltinFunctionKind::DvmFreeArr;
 		case helios::BuiltinKind::DvmAlloc:
 			return BuiltinFunctionKind::DvmAlloc;
-		case helios::BuiltinKind::DvmRealloc:
-			return BuiltinFunctionKind::DvmRealloc;
 		case helios::BuiltinKind::DvmFree:
 			return BuiltinFunctionKind::DvmFree;
 		case helios::BuiltinKind::BoxAlloc:

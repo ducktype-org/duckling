@@ -1,10 +1,10 @@
 fun foo() -> () = {
     var a = 123;
-    var box_a: box i32 = a;
+    var box_a: box i32 = new a;
     var ref_a: ref i32 = &a;
 
     var ref_ref_a: ref i32 = &ref_a;
     var ref_box_a: ref i32 = &box_a;
-    var box_ref_a: box i32 = ref_a;
-    var box_box_a: box i32 = box_a;
+    var box_ref_a: box i32 = new ref_a;
+    var box_box_a: box i32 = move box_a;
 }

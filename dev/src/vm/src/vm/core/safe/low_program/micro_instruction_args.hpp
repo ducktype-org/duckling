@@ -65,7 +65,7 @@ namespace vm::low::opargs {
 	/** @brief Stores byte offset of 64-bit local on the frame local stack or the global buffer.
 	 * Also the target of C pointer places: a cpointer is a plain 8-byte value, so its moves
 	 * lower to 64-bit micro operations. */
-	DEFINE_MICRO_ARG_TYPE(Place64, "p64", vm::opargs::Place64, vm::opargs::PlaceCptr);
+	DEFINE_MICRO_ARG_TYPE(Place64, "p64", vm::opargs::Place64, vm::opargs::PlaceCPtr);
 	/** @brief Stores byte offset of local Pointer value on the frame local stack or the global
 	 * buffer. */
 	DEFINE_MICRO_ARG_TYPE(PlacePtr, "pptr", vm::opargs::PlacePtr);

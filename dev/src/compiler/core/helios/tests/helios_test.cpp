@@ -4,6 +4,7 @@
 #include <frontend/module_tree/queries.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/function.hpp>
 #include <frontend/pst_parser/elements/hierarchy/declarations/variable.hpp>
+#include <frontend/pst_parser/elements/hierarchy/expressions/binary_operator.hpp>
 #include <frontend/pst_parser/elements/hierarchy/lists/call_list.hpp>
 #include <frontend/pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>
 #include <frontend/pst_parser/elements/hierarchy/statements/specifier_block.hpp>
@@ -32,6 +33,7 @@
 #include <helios_private/hout_creation/definition_generation/copy_constructors.hpp>
 #include <helios_private/hout_creation/definition_generation/default_constructors.hpp>
 #include <helios_private/hout_creation/definition_generation/default_destructors.hpp>
+#include <helios_private/hout_creation/expressions/casts.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
@@ -106,6 +108,7 @@ public:
 		TESTER_ADD_TEST(testCopyMoveOperators);
 		TESTER_ADD_TEST(testDestructors);
 		TESTER_ADD_TEST(testCastsHout);
+		TESTER_ADD_TEST(testCastAs);
 		TESTER_ADD_TEST(testPointers);
 		TESTER_ADD_TEST(testTypeLifting);
 		TESTER_ADD_TEST(testHoutElementsOrigin);
@@ -738,6 +741,11 @@ private:
 		ASSERT_EQUAL(6, getConstValueAs<i32>("M2", root_scope));
 		ASSERT_EQUAL(7, getConstValueAs<i64>("O1", root_scope));
 		ASSERT_EQUAL(7, getConstValueAs<i64>("O2", root_scope));
+
+		// Lazily evaluated operands: the division by zero in the skipped part of the
+		// expression must not be evaluated, otherwise these evaluations would fail.
+		ASSERT_EQUAL(false, getConstValueAs<bool>("P1", root_scope));
+		ASSERT_EQUAL(7, getConstValueAs<i32>("P2", root_scope));
 	}
 
 	/**
@@ -1174,12 +1182,12 @@ private:
 		auto              tree_vbox = getExprOfConst(sym_vbox);
 		std::stringstream out_vbox;
 		tree_vbox->debugPrint(out_vbox);
-		const auto f16_type    = getFloatTypeNoContext(16);
-		const auto f16box_type = st(f16_type)
+		const auto f32_type    = getFloatTypeNoContext(32);
+		const auto f32box_type = st(f32_type)
 		                             .withReferenceKind(compiler::tsh::ReferenceKind::Box)
 		                             .withMutability(Immutable);
 		const auto vbox_type = query::entryPoint<compiler::helios::QueryTypeOfSymbol>(sym_vbox);
-		ASSERT_EQUAL(f16box_type, vbox_type->valueOrThrow());
+		ASSERT_EQUAL(f32box_type, vbox_type->valueOrThrow());
 
 		auto              sym_vconst  = getChain("VCONST", root_scope).back();
 		auto              tree_vconst = getExprOfConst(sym_vconst);
@@ -1476,8 +1484,8 @@ private:
 			ASSERT_EQUAL(var_type.getType().getKind(), compiler::tsh::Kind::Integral);
 		}
 		{
-			// double_coerce(b_int);
-			// `box i32` -> `ref i32` -> `ref i64`
+			// take_int_ref(&b_int);
+			// `&` on `box i32` creates a `ref i32`
 			ASSERT_TRUE(body.statements.size() > 2);
 			auto* expr_stmt = dynamic_cast<const ExprStmt*>(body.statements[1].get());
 			ASSERT_TRUE(expr_stmt != nullptr);
@@ -1485,9 +1493,8 @@ private:
 			ASSERT_TRUE(call_expr != nullptr);
 
 			ASSERT_TRUE(call_expr->arguments.size() == 1);
-			auto* cast_expr = dynamic_cast<const CastExpr*>(call_expr->arguments[0].get());
-			ASSERT_TRUE(cast_expr != nullptr);
-			ASSERT_EQUAL(cast_expr->target_type.getRefKind(), compiler::tsh::ReferenceKind::Ref);
+			auto* ref_of = dynamic_cast<const RefOfExpr*>(call_expr->arguments[0].get());
+			ASSERT_TRUE(ref_of != nullptr);
 		}
 		{
 			// var x: i32 = b_point.x;
@@ -1607,12 +1614,14 @@ private:
 			auto* deref = dynamic_cast<const DerefExpr*>(boxed_value);
 			ASSERT_TRUE(deref != nullptr);
 		}
-		// var box_box_a: box i32 = box_a; (Box -> Box)
+		// var box_box_a: box i32 = move box_a; (Box -> Box)
 		{
 			const auto& var_stmt = get_var_stmt(6);
 			ASSERT_EQUAL(var_stmt.type, box_i32);
-			// This is just a move, should be a noop
-			auto* ident = dynamic_cast<const IdentifierExpr*>(var_stmt.initial_value.get());
+			// `box = box` needs an explicit `move`.
+			auto* move_expr = dynamic_cast<const MoveExpr*>(var_stmt.initial_value.get());
+			ASSERT_TRUE(move_expr != nullptr);
+			auto* ident = dynamic_cast<const IdentifierExpr*>(move_expr->inner.get());
 			ASSERT_TRUE(ident != nullptr);
 		}
 	}
@@ -2922,8 +2931,31 @@ private:
 				return ctx.query<QueryTypeFromDefinition>(sym_id)->valueOrThrow().getType();
 			};
 
+			// Classes, tuples and static arrays are copied by a single `create_aggregate` that the
+			// body returns, with one value per copied element.
+			auto returned_aggregate = [](const HOUTFunction& cctor) -> const CreateAggregateExpr& {
+				auto ret = dynamic_cast<const ReturnStmt*>(cctor.body->statements.back().get());
+				CORE_ASSERT(ret != nullptr, "The copy constructor's body must end with a return.");
+				auto aggregate = dynamic_cast<const CreateAggregateExpr*>(ret->value.get());
+				CORE_ASSERT(aggregate != nullptr, "The copy constructor must return an aggregate.");
+				return *aggregate;
+			};
+
+			// The symbol of the copy constructor invoked by a copy-ctor-call expression.
+			auto callee_of = [&](const Expr* expr) -> SymID {
+				auto call = dynamic_cast<const CallExpr*>(expr);
+				ASSERT_TRUE(call != nullptr);
+				return getIdentifierExprSymID(call->callee.ref()).value();
+			};
+
+			auto assert_generated_copy = [&](const Expr* expr) {
+				const auto* ctor = std::get_if<Constructor>(&getSymRef(callee_of(expr))->other);
+				ASSERT_TRUE(ctor != nullptr);
+				ASSERT_EQUAL(ctor->kind, Constructor::Kind::Copy);
+			};
+
 			// For a trivially-copyable class, the copy constructor copies each field with byte
-			// copy, so each assignment's right-hand side is a field access, not a copy-ctor call.
+			// copy, so each value of the aggregate is a field access, not a copy-ctor call.
 			{
 				auto        trivial_type = get_class_type(trivial_sym);
 				const auto& cctor
@@ -2937,20 +2969,12 @@ private:
 				ASSERT_EQUAL(trivial_type, param_type.getType());
 				ASSERT_EQUAL(trivial_type, cctor.declaration->return_type.getType());
 
-				// var __result;
-				// __result.a = (*source).a;
-				// __result.b = (*source).b;
-				// return.
-				const auto& stmts = cctor.body->statements;
-				ASSERT_EQUAL_PRINT(4, stmts.size());
-				ASSERT_TRUE(dynamic_cast<const VariableStmt*>(stmts.front().get()) != nullptr);
-				ASSERT_TRUE(dynamic_cast<const ReturnStmt*>(stmts.back().get()) != nullptr);
-
-				auto assign = dynamic_cast<const AssignmentStmt*>(stmts.at(1).get());
-				ASSERT_TRUE(assign != nullptr);
-				ASSERT_TRUE(
-					dynamic_cast<const AccessExpr*>(assign->new_value_expr.get()) != nullptr
-				);
+				// return create_aggregate(Trivial) { (*source).a, (*source).b };
+				ASSERT_EQUAL_PRINT(1, cctor.body->statements.size());
+				const auto& values = returned_aggregate(cctor).values;
+				ASSERT_EQUAL_PRINT(2, values.size());
+				ASSERT_TRUE(dynamic_cast<const AccessExpr*>(values.at(0).get()) != nullptr);
+				ASSERT_TRUE(dynamic_cast<const AccessExpr*>(values.at(1).get()) != nullptr);
 			}
 
 			// For a class holding a non-trivially-copyable field, the copy constructor copies the
@@ -2960,19 +2984,9 @@ private:
 				const auto& cctor
 					= ctx.query<QueryDefaultCopyConstructor>(holds_type)->valueOrThrow();
 
-				const auto& stmts = cctor.body->statements;
-				ASSERT_EQUAL_PRINT(3, stmts.size());
-
-				auto assign = dynamic_cast<const AssignmentStmt*>(stmts.at(1).get());
-				ASSERT_TRUE(assign != nullptr);
-
-				auto call = dynamic_cast<const CallExpr*>(assign->new_value_expr.get());
-				ASSERT_TRUE(call != nullptr);
-
-				auto        callee_sym  = getIdentifierExprSymID(call->callee.ref()).value();
-				const auto* callee_ctor = std::get_if<Constructor>(&getSymRef(callee_sym)->other);
-				ASSERT_TRUE(callee_ctor != nullptr);
-				ASSERT_EQUAL(callee_ctor->kind, Constructor::Kind::Copy);
+				const auto& values = returned_aggregate(cctor).values;
+				ASSERT_EQUAL_PRINT(1, values.size());
+				assert_generated_copy(values.at(0).get());
 			}
 
 			// A tuple is copied element-by-element just like a class. Trivial elements are
@@ -2988,25 +3002,12 @@ private:
 				const auto& cctor
 					= ctx.query<QueryDefaultCopyConstructor>(tuple_type)->valueOrThrow();
 
-				const auto& stmts = cctor.body->statements;
-				ASSERT_EQUAL_PRINT(4, stmts.size());
+				const auto& values = returned_aggregate(cctor).values;
+				ASSERT_EQUAL_PRINT(2, values.size());
 
-				// First element is trivially copyable.
-				auto assign0 = dynamic_cast<const AssignmentStmt*>(stmts.at(1).get());
-				ASSERT_TRUE(assign0 != nullptr);
-				ASSERT_TRUE(
-					dynamic_cast<const AccessExpr*>(assign0->new_value_expr.get()) != nullptr
-				);
-
-				// Second element requires a copy ctor.
-				auto assign1 = dynamic_cast<const AssignmentStmt*>(stmts.at(2).get());
-				ASSERT_TRUE(assign1 != nullptr);
-				auto call = dynamic_cast<const CallExpr*>(assign1->new_value_expr.get());
-				ASSERT_TRUE(call != nullptr);
-				auto        callee_sym  = getIdentifierExprSymID(call->callee.ref()).value();
-				const auto* callee_ctor = std::get_if<Constructor>(&getSymRef(callee_sym)->other);
-				ASSERT_TRUE(callee_ctor != nullptr);
-				ASSERT_EQUAL(callee_ctor->kind, Constructor::Kind::Copy);
+				// First element is trivially copyable, the second one requires a copy ctor.
+				ASSERT_TRUE(dynamic_cast<const AccessExpr*>(values.at(0).get()) != nullptr);
+				assert_generated_copy(values.at(1).get());
 			}
 
 			auto dump_cctor = [&](std::string_view            label,
@@ -3023,30 +3024,17 @@ private:
 			const auto  final_boss_type  = get_class_type(mega_sym);
 			const auto& final_boss_cctor = dump_cctor("FinalBoss", final_boss_type);
 
-			// The right-hand side of the assignment that copies field `field_name`.
+			// The value of the aggregate that copies field `field_name`. The values are in field
+			// declaration order, one per field.
 			auto rhs_of = [&](std::string_view field_name) -> const Expr* {
-				for (const auto& stmt: final_boss_cctor.body->statements) {
-					auto assign = dynamic_cast<const AssignmentStmt*>(stmt.get());
-					if (assign == nullptr) continue;
-					auto access = dynamic_cast<const AccessExpr*>(assign->location_expr.get());
-					if (access != nullptr
-					    && compiler::helios::name(access->field).strView() == field_name)
-						return assign->new_value_expr.get();
+				const auto& values = returned_aggregate(final_boss_cctor).values;
+				usize       index  = 0;
+				for (const auto& field: final_boss_type.getInterface(ctx)->getFieldsView()) {
+					if (compiler::helios::name(field.getSymbol()).strView() == field_name)
+						return values.at(index).get();
+					index++;
 				}
-				CORE_PANIC("no assignment found for field");
-			};
-
-			// The symbol of the copy constructor invoked by a copy-ctor-call expression.
-			auto callee_of = [&](const Expr* expr) -> SymID {
-				auto call = dynamic_cast<const CallExpr*>(expr);
-				ASSERT_TRUE(call != nullptr);
-				return getIdentifierExprSymID(call->callee.ref()).value();
-			};
-
-			auto assert_generated_copy = [&](const Expr* expr) {
-				const auto* ctor = std::get_if<Constructor>(&getSymRef(callee_of(expr))->other);
-				ASSERT_TRUE(ctor != nullptr);
-				ASSERT_EQUAL(ctor->kind, Constructor::Kind::Copy);
+				CORE_PANIC("no value found for field");
 			};
 
 			// Trivially-copyable fields are byte-copied. The RHS is should be a plain field access.
@@ -3096,49 +3084,52 @@ private:
 
 			// HasBox -> box_alloc(*source.boxed).
 			{
-				const auto& cctor = dump_cctor("HasBox", get_class_type(has_box_sym));
-				const auto& stmts = cctor.body->statements;
-				ASSERT_EQUAL_PRINT(3, stmts.size());
-				auto assign = dynamic_cast<const AssignmentStmt*>(stmts.at(1).get());
-				ASSERT_TRUE(assign != nullptr);
-				auto boxed = boxAllocArg(assign->new_value_expr.get());
+				const auto& cctor  = dump_cctor("HasBox", get_class_type(has_box_sym));
+				const auto& values = returned_aggregate(cctor).values;
+				ASSERT_EQUAL_PRINT(1, values.size());
+				auto boxed = boxAllocArg(values.at(0).get());
 				ASSERT_TRUE(boxed != nullptr);
 				ASSERT_TRUE(dynamic_cast<const DerefExpr*>(boxed) != nullptr);
 			}
 
 			// HoldsNonTrivial - copies its `HasBox` field with a copy-ctor call.
 			{
-				const auto& cctor = dump_cctor("HoldsNonTrivial", get_class_type(holds_sym));
-				const auto& stmts = cctor.body->statements;
-				ASSERT_EQUAL_PRINT(3, stmts.size());
-				auto assign = dynamic_cast<const AssignmentStmt*>(stmts.at(1).get());
-				ASSERT_TRUE(assign != nullptr);
-				assert_generated_copy(assign->new_value_expr.get());
+				const auto& cctor  = dump_cctor("HoldsNonTrivial", get_class_type(holds_sym));
+				const auto& values = returned_aggregate(cctor).values;
+				ASSERT_EQUAL_PRINT(1, values.size());
+				assert_generated_copy(values.at(0).get());
 			}
 
-			// Static array - a copy loop element by element.
+			// Static array - one value copying the element the index variable points at, with the
+			// per-element statements advancing that index.
 			{
 				const auto& cctor = dump_cctor("HasBox[3]", field_abstract_type("nontrivial_arr"));
 				const auto& stmts = cctor.body->statements;
-				// var __result; var __i = 0; while (__i < 3) {...}; return __result;
-				ASSERT_EQUAL_PRINT(4, stmts.size());
-				ASSERT_TRUE(dynamic_cast<const WhileStmt*>(stmts.at(2).get()) != nullptr);
+
+				// var __i = 0;
+				// return create_aggregate(HasBox[3]) [ (*source)[__i].__copy() ]
+				//     per_element { __i = __i + 1; };
+				ASSERT_EQUAL_PRINT(2, stmts.size());
+				ASSERT_TRUE(dynamic_cast<const VariableStmt*>(stmts.front().get()) != nullptr);
+
+				const auto& aggregate = returned_aggregate(cctor);
+				ASSERT_EQUAL_PRINT(1, aggregate.values.size());
+				assert_generated_copy(aggregate.values.at(0).get());
+
+				ASSERT_TRUE(aggregate.per_element_body.has_value());
+				const auto& per_element = (*aggregate.per_element_body)->statements;
+				ASSERT_EQUAL_PRINT(1, per_element.size());
+				ASSERT_TRUE(dynamic_cast<const AssignmentStmt*>(per_element.at(0).get()) != nullptr);
 			}
 
 			// Tuple with a non-trivial element - element 0 byte-copied, element 1 via a copy ctor.
 			{
 				const auto& cctor
 					= dump_cctor("(i32, HasBox)", field_abstract_type("nontrivial_tup"));
-				const auto& stmts = cctor.body->statements;
-				ASSERT_EQUAL_PRINT(4, stmts.size());
-				auto assign0 = dynamic_cast<const AssignmentStmt*>(stmts.at(1).get());
-				ASSERT_TRUE(assign0 != nullptr);
-				ASSERT_TRUE(
-					dynamic_cast<const AccessExpr*>(assign0->new_value_expr.get()) != nullptr
-				);
-				auto assign1 = dynamic_cast<const AssignmentStmt*>(stmts.at(2).get());
-				ASSERT_TRUE(assign1 != nullptr);
-				assert_generated_copy(assign1->new_value_expr.get());
+				const auto& values = returned_aggregate(cctor).values;
+				ASSERT_EQUAL_PRINT(2, values.size());
+				ASSERT_TRUE(dynamic_cast<const AccessExpr*>(values.at(0).get()) != nullptr);
+				assert_generated_copy(values.at(1).get());
 			}
 
 			// List of a trivial element.
@@ -3461,6 +3452,78 @@ private:
 				= dynamic_cast<const compiler::helios::code::BinaryOperatorExpr*>(expr_ptr.get());
 			ASSERT_TRUE(cast_ptr != nullptr);
 		}
+	}
+
+	/**
+	 * Unit tests of `castAs` (the whole `as` operator handling) called directly on synthesized
+	 * HOUT expressions, without going through the PST -> HOUT pipeline. A cast that the implicit
+	 * coercion covers must reuse the coercion result (a comparison for the `-> bool` case), while
+	 * the remaining scalar conversions become a `CastExpr`.
+	 */
+	void testCastAs() {
+		using namespace compiler::helios::code;
+		using compiler::tsh::AbstractType;
+		auto [module_id, _] = getModule(fs::File(path("test_modules/casts")));
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			auto pst
+				= getFilePST(ctx, ctx.query<compiler::frontend::QueryMainSourceFile>(module_id));
+			// Any binary operator node of the module does: `castAs` only reads the origin and the
+			// position for the diagnostics out of it.
+			auto as_stmt
+				= pst::viewAllSubTreeElementsFilter<pst::expr::BinaryOperator>(pst->getRootElement())
+			          .at(0)
+			          .unlock(ctx);
+
+			const auto i32_t  = compiler::tsh::getIntegralType(ctx, 32, Signed);
+			const auto i64_t  = compiler::tsh::getIntegralType(ctx, 64, Signed);
+			const auto f64_t  = compiler::tsh::getFloatType(ctx, 64);
+			const auto bool_t = compiler::tsh::getBoolType();
+
+			auto literal = [&](const AbstractType type) -> Box<Expr> {
+				if (type.getKind() == compiler::tsh::Kind::Bool)
+					return makeBox<LiteralBoolExpr>(ctx, generatedOrigin(), true);
+				return makeBox<LiteralNumericExpr>(
+					ctx,
+					generatedOrigin(),
+					compiler::numeric_value::NumericValue::createOfType(type, 1).expect(
+						"Failed to create the source literal of the cast"
+					)
+				);
+			};
+			auto cast = [&](const AbstractType from, const AbstractType to) {
+				return castAs(ctx, literal(from), st(to), as_stmt);
+			};
+			// Asserts that the cast produced a `CastExpr` onto `to`.
+			auto assert_cast_to = [&](const AbstractType from, const AbstractType to) {
+				auto result   = cast(from, to);
+				auto cast_ptr = dynamic_cast<const CastExpr*>(result.get());
+				ASSERT_TRUE(cast_ptr != nullptr);
+				ASSERT_EQUAL(to, cast_ptr->target_type.getType());
+			};
+
+			// Implicit widening, explicit narrowing and both directions between int and float are
+			// all plain conversions.
+			assert_cast_to(i32_t, i64_t);
+			assert_cast_to(i64_t, i32_t);
+			assert_cast_to(i64_t, f64_t);
+			assert_cast_to(f64_t, i32_t);
+
+			// `bool` is one bit wide, so a numeric source must not be truncated into it. The
+			// coercion turns it into a `!= 0` comparison instead of a `CastExpr`.
+			auto to_bool = cast(i64_t, bool_t);
+			auto cmp_ptr = dynamic_cast<const BinaryOperatorExpr*>(to_bool.get());
+			ASSERT_TRUE(cmp_ptr != nullptr);
+			ASSERT_EQUAL(BuiltinBinary::IntegerNeq, cmp_ptr->operation);
+			ASSERT_EQUAL(bool_t, to_bool->expression_type.getType());
+
+			// The other direction is a normal widening of the 0/1 value.
+			assert_cast_to(bool_t, i64_t);
+
+			// A cast to the source's own type is a no-op: the value is returned untouched.
+			auto same = cast(i64_t, i64_t);
+			ASSERT_TRUE(dynamic_cast<const LiteralNumericExpr*>(same.get()) != nullptr);
+		});
 	}
 
 	void testPointers() {

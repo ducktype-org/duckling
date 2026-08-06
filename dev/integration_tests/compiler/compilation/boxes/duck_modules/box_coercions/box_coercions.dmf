@@ -15,7 +15,7 @@ fun by_ref(p: ref Point) -> () = {
 }
 
 fun main() -> i64 = {
-    var b_point: box Point = Point(1, 2);
+    var b_point: box Point = new Point(1, 2);
 
     var res = by_value(b_point);
     builtin_output_i64(res);

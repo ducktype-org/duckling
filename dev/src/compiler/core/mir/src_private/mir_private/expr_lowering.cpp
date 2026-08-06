@@ -5,8 +5,10 @@
 #include <helios/hout/visitors.hpp>
 #include <helios/symbols/query_type_symbol_data.hpp>
 #include <helios/tsh/queries/types.hpp>
+#include <helios/tsh/type_interface.hpp>
 #include <helios/utils/get_expr_symid.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
+#include <mir_private/stmt_lowering.hpp>
 #include <mir_private/utils/bounds_check.hpp>
 
 #include <base/except/exceptions.hpp>
@@ -290,6 +292,229 @@ namespace compiler::mir {
 				call,
 				Instruction{ Operation::Call, {}, args, {}, expr_scope, {}, { expr.getPosition() } },
 				expr.expression_type.getSymbolType()
+			);
+		}
+
+		template<class ProjectionFor>
+		void lowerInPlaceConstruction(
+			const tsh::SymbolType<>&                dest_type,
+			const std::vector<base::Box<hc::Expr>>& values,
+			ProjectionFor                           projection_for,
+			base::Optional<dia_int::StablePosition> position
+		) {
+			// We create a tmp, but we don't check use before init, as the value is never inited.
+			auto dest = function.addTmp(dest_type, expr_scope);
+			dest->lifetime_flags |= LifetimeFlag::NoMoveStatusValidation;
+			auto current = continuation;
+
+			if (values.empty()) {
+				continuation->addInstruction(Instruction(
+					Operation::Nop, {}, {}, { flagConstruct(dest) }, expr_scope, {}, { position }
+				));
+				valueOutput(continuation, MIRValue{ dest });
+				return;
+			}
+
+			// The chain is built back-to-front, so the first iteration lowers the store that runs
+			// last. Only that store constructs the destination — before it, the value is still
+			// partially uninitialized.
+			for (usize i: std::views::iota(usize{ 0 }, values.size()) | std::views::reverse) {
+				const bool is_last_store = i + 1 == values.size();
+
+				auto element_place = projection_for(MIRPlace(dest), i);
+				auto store_hole    = current->addHole();
+				auto value_result  = lowerSubExpr(*values[i], current);
+				value_result.storeResultInGivenPlace(
+					element_place,
+					store_hole,
+					is_last_store ? std::vector{ flagConstruct(dest) }
+								  : std::vector<OperationFlag>{},
+					expr_scope,
+					{ position }
+				);
+				current = value_result.begin;
+			}
+
+			valueOutput(current, MIRValue{ dest });
+		}
+
+		/**
+		 * @brief Lowers a static array construction that got a single value for all of its
+		 * elements as a loop storing that value into every element.
+		 *
+		 * The generated shape, where `dest` is the constructed array and `i` the counter:
+		 * ```
+		 * entry: i = 0                                              -> jump cond
+		 * cond:  cond_tmp = i < size                                -> branch cond_tmp ? body :
+		 * continuation body:  dest[i] = <value>; <per_element_body>; i = i + 1   -> jump cond
+		 * ```
+		 */
+		void lowerArrayFillLoop(
+			const tsh::SymbolType<>&                               dest_type,
+			const hc::Expr&                                        value,
+			usize                                                  size,
+			const base::Optional<base::CSharedBox<hc::CodeBlock>>& per_element_body,
+			base::Optional<dia_int::StablePosition>                position
+		) {
+			auto& ctx = function.getContext();
+
+			// We create a tmp, but we don't check use before init, as the value is never inited.
+			auto dest = function.addTmp(dest_type, expr_scope);
+			dest->lifetime_flags |= LifetimeFlag::NoMoveStatusValidation;
+
+			// The counter only ever goes from zero up to the size of the array, so it is unsigned.
+			const auto counter_type
+				= tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned);
+			auto counter
+				= function.addTmp(tsh::SymbolType<>::withDefaults(counter_type), expr_scope);
+
+			auto counter_constant = [&](usize constant) {
+				return MIRValue{ MIRConstant{
+					ctv::CompileTimeValue{ ctv::NumericValue::createOfType(counter_type, constant)
+					                           .expect("u64 numeric value creation failed") } } };
+			};
+
+			auto cond_block = function.newBlock();
+			auto body_block = function.newBlock();
+
+			// The body is assembled in reverse execution order, so the increment goes in first.
+			body_block->setTerminator(
+				{ Operation::Jump, {}, { cond_block->getID() }, {}, expr_scope }
+			);
+			body_block->addInstruction(Instruction(
+				Operation::IntegerAdd,
+				MIRPlace(counter),
+				{ MIRValue(counter), counter_constant(1) },
+				{ flagReinit(counter) },
+				expr_scope,
+				{},
+				{ position }
+			));
+
+			// Temporaries of the value expression get their own scope, so that they are destructed
+			// at the end of every iteration instead of piling up over the whole loop.
+			auto body_scope = function.newScope(expr_scope);
+
+			auto store_continuation = body_block;
+			if_opt_some(per_element_body, body) {
+				store_continuation = lowerCodeBlock(*body, body_block, function, body_scope).begin;
+			}
+
+			auto store_hole   = store_continuation->addHole();
+			auto value_result = lowerExpr(value, store_continuation, function, body_scope);
+			value_result.storeResultInGivenPlace(
+				MIRPlace(dest).withIndex(MIRValue(counter)), store_hole, {}, body_scope, { position }
+			);
+
+			auto condition = function.addConditionTmp(expr_scope);
+			cond_block->addInstruction(Instruction(
+				Operation::IntegerLt,
+				MIRPlace(condition),
+				{ MIRValue(counter), counter_constant(size) },
+				{ flagConstruct(condition) },
+				expr_scope,
+				{},
+				{ position }
+			));
+			cond_block->setTerminator(Instruction(
+				Operation::Branch,
+				{},
+				{ MIRValue(condition), value_result.begin->getID(), continuation->getID() },
+				{},
+				expr_scope,
+				{},
+				{ position }
+			));
+
+			// The array is only fully constructed once the loop is over, so the flag sits on the
+			// first instruction executed after it.
+			continuation->addInstruction(Instruction(
+				Operation::Nop, {}, {}, { flagConstruct(dest) }, expr_scope, {}, { position }
+			));
+
+			auto entry_block = function.newBlock();
+			entry_block->addInstruction(Instruction(
+				Operation::Assign,
+				MIRPlace(counter),
+				{ counter_constant(0) },
+				{ flagConstruct(counter) },
+				expr_scope,
+				{},
+				{ position }
+			));
+			entry_block->setTerminator(
+				{ Operation::Jump, {}, { cond_block->getID() }, {}, expr_scope }
+			);
+
+			valueOutput(entry_block, MIRValue{ dest });
+		}
+
+		void visitCreateAggregateExpr(const hc::CreateAggregateExpr& expr) override {
+			auto& ctx = function.getContext();
+
+			const bool is_static_array = expr.type.getKind() == tsh::Kind::StaticArray;
+
+			// Static arrays project by index, every other aggregate projects by field.
+			if (is_static_array) {
+				auto array_type = expr.type.as<tsh::StaticArrayAbstractType>();
+
+				// A single value for a multi-element static array fills all of its elements.
+				if (expr.values.size() == 1 and array_type.getSize() > 1) {
+					lowerArrayFillLoop(
+						expr.expression_type.getSymbolType(),
+						*expr.values.front(),
+						array_type.getSize(),
+						expr.per_element_body,
+						expr.getPosition()
+					);
+					return;
+				}
+
+				CORE_ASSERT(
+					expr.per_element_body.empty(),
+					"A per-element body is only valid for a static array in a loop."
+				);
+				CORE_ASSERT(
+					array_type.getSize() == expr.values.size(),
+					"CreateAggregateExpr value count must match the static array's size, unless it "
+					"is a single value filling the whole array."
+				);
+
+				lowerInPlaceConstruction(
+					expr.expression_type.getSymbolType(),
+					expr.values,
+					[](const MIRPlace& base, usize i) {
+						auto index = MIRValue{ MIRConstant{
+							ctv::CompileTimeValue{ ctv::NumericValue{ static_cast<i64>(i) } } } };
+						return base.withIndex(index);
+					},
+					expr.getPosition()
+				);
+				return;
+			}
+
+			CORE_ASSERT(
+				expr.per_element_body.empty(),
+				"A per-element body is only valid for a static array in a loop."
+			);
+
+			// Field symbols of the aggregate, in declaration order — one per value.
+			auto                       interface = expr.type.getInterface(ctx);
+			std::vector<helios::SymID> field_symbols;
+			for (const auto& field: interface->getFieldsView())
+				field_symbols.push_back(field.getSymbol());
+			CORE_ASSERT(
+				field_symbols.size() == expr.values.size(),
+				"CreateAggregateExpr value count must match the aggregate's field count."
+			);
+
+			lowerInPlaceConstruction(
+				expr.expression_type.getSymbolType(),
+				expr.values,
+				[&](const MIRPlace& base, usize i) -> MIRPlace {
+					return base.withField(ctx, field_symbols[i]);
+				},
+				expr.getPosition()
 			);
 		}
 
@@ -601,9 +826,9 @@ namespace compiler::mir {
 
 		void visitMoveExpr(const hc::MoveExpr& expr) override {
 			// `move x` yields the value of `x` and marks the source local as moved-out, so any
-			// later use is flagged by the liveness/use-after-move analysis. The `Move` flag has to
-			// sit on an instruction that reads the local, so we copy it into a fresh temporary and
-			// attach the flag there.
+			// later use is flagged by the move state/use-after-move analysis. The `Move` flag has
+			// to sit on an instruction that reads the local, so we copy it into a fresh temporary
+			// and attach the flag there.
 			auto hole          = continuation->addHole();
 			auto lowered_inner = lowerSubExpr(*expr.inner, continuation);
 			auto inner_val     = lowered_inner.getResult(function);

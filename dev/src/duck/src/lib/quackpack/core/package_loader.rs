@@ -4,7 +4,7 @@ use std::io;
 use std::marker::PhantomData;
 use std::path::{Path, PathBuf};
 
-use tracing::{debug, trace};
+use tracing::debug;
 
 use crate::duck::util::duck_home::DuckHome;
 use crate::quackpack::core::PackageContext;
@@ -96,9 +96,9 @@ impl PackageLoader {
         let mut current: &Path = start.as_ref();
         for potential_location in start.ancestors() {
             let path = potential_location.join(Self::MANIFEST_NAME);
-            trace!("checking the path `{}`", path.display());
+            debug!(path = %path.display(), "checking for the manifest");
             if path.is_file() {
-                debug!("found a package at `{}`", path.display());
+                debug!(found = %path.display(), "found a manifest");
                 return PackageContext::new_not_global(potential_location.to_path_buf(), ctx);
             }
             current = potential_location;
@@ -164,8 +164,8 @@ impl PackageLoader {
         global: bool,
     ) -> QuackResult<PackageContext<'duck>> {
         let associated_script = |package| {
-            let script = PackageScript::new(package, script_path.to_path_buf());
-            PackageContext::new_script(script.into(), ctx)
+            let script = PackageScript::new(package, script_path.to_path_buf())?;
+            Ok(PackageContext::new_script(script.into(), ctx))
         };
         let global_package = PackageLoader::global_package(ctx)
             .context_internal("failed to load the global package")?
@@ -190,14 +190,14 @@ impl PackageLoader {
             }
             (true, Err(_), false) => PackageContext::new_standalone_script(script_path, ctx),
             // `global` forces the script to be run in the global venv, even if it is inside a package.
-            (false, _, true) => Ok(associated_script(global_package)),
+            (false, _, true) => associated_script(global_package),
             // If script does not belong to a package, nor any special option has been specified,
             // treat it as a script under the global package (the default of defaults).
-            (false, Err(_), false) => Ok(associated_script(global_package)),
+            (false, Err(_), false) => associated_script(global_package),
             // Script under a package.
             (false, Ok(pcx), false) => {
                 let package = pcx.into_package().unwrap_package();
-                Ok(associated_script(package))
+                associated_script(package)
             }
         }
     }
