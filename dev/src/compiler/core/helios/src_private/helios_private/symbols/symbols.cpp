@@ -243,6 +243,15 @@ namespace compiler::helios {
 #define MAKE_ATTR_INSTANCE(attr) template bool hasAttribute<attr>(SymID id);
 	FOR_EACH(MAKE_ATTR_INSTANCE, ATTRIBUTES_LIST)
 
+	template<typename Attribute>
+	base::Optional<CRef<Attribute>> getAttribute(SymID id) {
+		return getAttrInVector<Attribute>(getSymRef(id)->common.attributes);
+	}
+
+#define MAKE_GET_ATTR_INSTANCE(attr) \
+	template base::Optional<CRef<attr>> getAttribute<attr>(SymID id);
+	FOR_EACH(MAKE_GET_ATTR_INSTANCE, ATTRIBUTES_LIST)
+
 	std::string prettyDebugPrint(SymID sym, query::Context& ctx) {
 		// Short summary
 		// 1. Get the symbol's PST element
