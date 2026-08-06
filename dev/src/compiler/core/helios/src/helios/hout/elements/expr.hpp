@@ -16,7 +16,7 @@
 
 namespace compiler::helios::code {
 	class HoutExprVisitor;
-	struct BlockStmt;
+	struct Stmt;
 
 #define FRIEND_MAKEBOX                              \
 	template<class T, class Deleter, class... Args> \
@@ -807,9 +807,9 @@ namespace compiler::helios::code {
 	 * @brief Represents a block of statements that evaluates to a single value.
 	 */
 	struct BlockExpr final: public Expr {
-		CRef<BlockStmt> block;
+		Box<Stmt> block;
 
-		BlockExpr(query::Context& ctx, ElementOrigin origin, CRef<BlockStmt> block);
+		BlockExpr(query::Context& ctx, ElementOrigin origin, Box<Stmt> block);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
@@ -819,7 +819,7 @@ namespace compiler::helios::code {
 	private:
 		FRIEND_MAKEBOX
 
-		BlockExpr(tsh::ExpressionType<> expression_type, ElementOrigin origin, CRef<BlockStmt> block);
+		BlockExpr(tsh::ExpressionType<> expression_type, ElementOrigin origin, Box<Stmt> block);
 	};
 
 	/**

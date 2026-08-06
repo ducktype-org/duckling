@@ -1125,7 +1125,7 @@ namespace compiler::helios::code {
 		return makeBox<LiftToTypeExpr>(expression_type, origin, value_expr->clone());
 	}
 
-	BlockExpr::BlockExpr(query::Context&, ElementOrigin origin, CRef<BlockStmt> block):
+	BlockExpr::BlockExpr(query::Context&, ElementOrigin origin, Box<Stmt> block):
 		  Expr(
 			  tsh::ExpressionType(
 				  tsh::SymbolType<>::withDefaults(tsh::getUnitType()),
@@ -1133,13 +1133,13 @@ namespace compiler::helios::code {
 			  ),
 			  origin
 		  ),
-		  block(block) {}
+		  block(std::move(block)) {}
 
 	BlockExpr::BlockExpr(
-		tsh::ExpressionType<> expression_type, ElementOrigin origin, CRef<BlockStmt> block
+		tsh::ExpressionType<> expression_type, ElementOrigin origin, Box<Stmt> block
 	):
 		  Expr(expression_type, origin),
-		  block(block) {}
+		  block(std::move(block)) {}
 
 	void BlockExpr::debugPrint(std::ostream& out) const {
 		out << "block(";
@@ -1148,7 +1148,7 @@ namespace compiler::helios::code {
 	}
 
 	Box<Expr> BlockExpr::clone() const {
-		return makeBox<BlockExpr>(expression_type, origin, block);
+		return makeBox<BlockExpr>(expression_type, origin, block->clone());
 	}
 
 	ListPushExpr::ListPushExpr(ElementOrigin origin, Box<Expr> list, Box<Expr> element):
