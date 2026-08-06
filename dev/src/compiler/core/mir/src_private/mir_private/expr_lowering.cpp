@@ -307,8 +307,6 @@ namespace compiler::mir {
 			dest->lifetime_flags |= LifetimeFlag::NoMoveStatusValidation;
 			auto current = continuation;
 
-			// An aggregate with no elements (e.g. a fieldless class) has no store that could
-			// construct it, so the destination is marked as constructed by a `Nop` instead.
 			if (values.empty()) {
 				continuation->addInstruction(Instruction(
 					Operation::Nop, {}, {}, { flagConstruct(dest) }, expr_scope, {}, { position }
