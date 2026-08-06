@@ -95,6 +95,7 @@ namespace lang_def {
 			{ Keyword::Const, "const", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::Ref, "ref", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::Box, "box", KeywordFlagsOptions::IsGenPrefixOp },
+			{ Keyword::New, "new", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::Ptr, "ptr", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::CPtr, "cptr", KeywordFlagsOptions::IsGenPrefixOp },
 			{ Keyword::ManyPtr, "manyptr", KeywordFlagsOptions::IsGenPrefixOp },

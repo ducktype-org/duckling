@@ -28,7 +28,7 @@ impl GitAccess for StorageGitAccess<'_> {
         self.paths.is_stored_git(url, commit)
     }
 
-    fn store(&mut self, url: InternedUrl, commit: &str, source_path: &Path) -> QuackResult<()> {
+    fn store(&self, url: InternedUrl, commit: &str, source_path: &Path) -> QuackResult<()> {
         let dir = self.paths.git_dir(url, commit);
         if dir.exists() {
             dir.rmtree()?;

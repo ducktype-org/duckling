@@ -1,4 +1,4 @@
-# foo.last_access < bar.last_access and foo.last_modification > bar.last_modification
+# foo.last_access < bar.last_access and foo.last_synchronization > bar.last_synchronization
 PreCase: |+
   @{cd-tmp-dir}
   @{duck-exe} init foo

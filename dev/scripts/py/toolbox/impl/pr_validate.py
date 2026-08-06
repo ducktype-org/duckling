@@ -2,6 +2,7 @@ from ..impl.test import test_impl
 from .helpers import (
     bash_command,
     exit_with_error,
+    log_good,
 )
 from .duck_linter import duck_linter_impl
 from .cpp_linter import cpp_linter_impl
@@ -57,9 +58,12 @@ def pr_validate_impl(
         )
 
     # Step 6 - build
+    # `bash_command` raises on a non-zero exit code, so getting past it means
+    # everything has been built.
     bash_command(
         f"cmake --build {build_dir} -- -j {thread_count} all build_all_tests build_all_playgrounds"
     )
+    log_good("Everything has been built successfully")
 
     # Step 7 - test
     test_impl(build_dir=build_dir, thread_count=thread_count, timeout=60)
@@ -88,3 +92,5 @@ def pr_validate_impl(
 
     if clang_tidy_failed:
         exit_with_error("C++ clang-tidy check has failed")
+
+    log_good("PR validation has succeeded - every step has passed!")

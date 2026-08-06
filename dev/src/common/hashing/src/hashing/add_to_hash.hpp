@@ -1,5 +1,6 @@
 #pragma once
 
+#include "by_address.hpp"
 #include "hash_algorithm_utils.hpp"
 
 #include <base/comptime/type_traits.hpp>
@@ -53,9 +54,14 @@ namespace hashing {
 			if (t_copy == 0) t_copy = 0;
 			internal::hashAsBytes(hash_alg, t_copy);
 		}
-		// Specialization for pointers
+		// Pointers are intentionally not hashable on their own - hashing an address is almost
+		// never what one wants, so the intent has to be spelled out with the HashByAddress proxy
 		else if constexpr (std::is_pointer_v<T>) {
-			internal::hashAsBytes(hash_alg, t);
+			static_assert(
+				false,
+				"Raw pointers are not hashed implicitly. Hash the pointee ('*ptr'), or wrap the "
+				"pointer in 'hashing::HashByAddress{ ptr }' to hash the address itself"
+			);
 		}
 		// nullptr_t
 		else if constexpr (std::is_null_pointer_v<T>) {

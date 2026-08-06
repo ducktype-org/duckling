@@ -1,4 +1,4 @@
-use tracing::debug;
+use tracing::trace;
 
 use crate::duck::driver::subcommands::exec_for;
 
@@ -10,7 +10,7 @@ const BUILTIN_ALIASES: [(&str, &str); 3] = [("b", "build"), ("r", "run"), ("rs",
 
 /// Get expanded command for the alias `name`.
 pub fn get_builtin_alias_expansion(name: &str) -> Option<&'static str> {
-    debug!("getting the builtin alias for `{name}`");
+    trace!(?name, "getting the builtin alias");
     BUILTIN_ALIASES.iter().find_map(|(alias, expansion)| {
         if *alias == name {
             Some(*expansion)

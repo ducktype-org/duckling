@@ -78,6 +78,8 @@ namespace compiler::lir {
 			return { LIRAbi::DefaultAbi{} };
 
 		CORE_ASSERT(v_matches(sym_abi, helios::CAbi), "There are more than 3 abis.");
+		const auto& c_abi_info = v_get(sym_abi, helios::CAbi);
+
 		auto abi_type_or_panic = [&](CRef<tsl::TypeLayout> type) -> abi::types::AbiTypeCRef {
 			auto& result = ctx.query<tsl::QueryCAbiTypeOf>(type->getSourceType())
 			                   ->valueOrPanicMsg("Query failure.");
@@ -102,6 +104,7 @@ namespace compiler::lir {
 			.return_type = return_abi_or_empty(return_type),
 			.param_types = parameter_types | std::views::transform(abi_type_or_panic)
 			             | std::ranges::to<std::vector>(),
+			.num_fixed_params = c_abi_info.fixed_params,
 		};
 		return { LIRAbi::CAbi{
 			.function_info

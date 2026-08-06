@@ -10,7 +10,7 @@ fun main() -> i64 = {
     var ref_a: ref i32 = &a;
     builtin_output_i64(ref_a);
 
-    var box_a: box i32 = a;
+    var box_a: box i32 = new a;
     builtin_output_i64(box_a);
 
     var ref_ref_a = &ref_a;
@@ -19,7 +19,7 @@ fun main() -> i64 = {
     var ref_ref_a_2: ref ref i32 = ref_a;
     builtin_output_i64(ref_ref_a_2);
     
-    var box_box_a: box box i32 = a;
+    var box_box_a: box box i32 = new a;
     builtin_output_i64(box_box_a);
 
     # @TODO: #1894 This works, but causes double free since the box is moved. 
@@ -27,10 +27,10 @@ fun main() -> i64 = {
     # var box_ref_from_box: box ref i32 = box_a;
     # builtin_output_i64(box_ref_from_box);
 
-    var box_ref_from_ref: box ref i32 = ref_a;
+    var box_ref_from_ref: box ref i32 = new ref_a;
     builtin_output_i64(box_ref_from_ref);
 
-    var box_ref_from_direct: box ref i32 = a;
+    var box_ref_from_direct: box ref i32 = new a;
     builtin_output_i64(box_ref_from_direct);
 
     var ref_box_from_ref: ref box i32 = &box_a;
