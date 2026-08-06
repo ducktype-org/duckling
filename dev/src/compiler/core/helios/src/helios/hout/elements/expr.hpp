@@ -6,17 +6,25 @@
 #include <helios/symbols/symbol_id.hpp>
 #include <helios/tsh/expression_type.hpp>
 
+#include <base/collections/optional.hpp>
 #include <base/pointers/box.hpp>
 #include <base/pointers/shared_box.hpp>
 #include <base/types/ints.hpp>
 
 #include <token_parser_core/common_elements.hpp>
 
+#include <optional>
 #include <vector>
 
 namespace compiler::helios::code {
 	class HoutExprVisitor;
 	struct Stmt;
+
+	/**
+	 * @brief A block of statements, defined together with the statements in `stmt.hpp`, which
+	 * cannot be included here, as it includes this header itself.
+	 */
+	struct CodeBlock;
 
 #define FRIEND_MAKEBOX                              \
 	template<class T, class Deleter, class... Args> \
@@ -776,6 +784,49 @@ namespace compiler::helios::code {
 
 		DefaultValueExpr(
 			tsh::ExpressionType<> expression_type, ElementOrigin origin, tsh::AbstractType type
+		);
+	};
+
+	/**
+	 * @brief Constructs an aggregate value element-by-element, in place.
+	 *
+	 * Covers both record-like aggregates (struct/class/tuple), where the elements are the fields in
+	 * declaration order, and statically-sized arrays, where the elements are the array items in
+	 * index order, or a single value that fills all of the elements of the array.
+	 *
+	 * It stores the into uninitialized storage, with only the last store flagged as constructing
+	 * the destination, to avoid destructor insertion on assignment.
+	 */
+	struct CreateAggregateExpr final: public Expr {
+		tsh::AbstractType            type;
+		std::vector<base::Box<Expr>> values;
+
+		/// This is only used when we fill the array elements with a loop,
+		/// this statements will be lowered in a loop body.
+		base::Optional<base::CSharedBox<CodeBlock>> per_element_body;
+
+		CreateAggregateExpr(
+			query::Context&                             ctx,
+			ElementOrigin                               origin,
+			tsh::AbstractType                           type,
+			std::vector<base::Box<Expr>>                values,
+			base::Optional<base::CSharedBox<CodeBlock>> per_element_body = std::nullopt
+		);
+
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
+
+	private:
+		FRIEND_MAKEBOX
+
+		CreateAggregateExpr(
+			tsh::ExpressionType<>                       expression_type,
+			ElementOrigin                               origin,
+			tsh::AbstractType                           type,
+			std::vector<base::Box<Expr>>                values,
+			base::Optional<base::CSharedBox<CodeBlock>> per_element_body
 		);
 	};
 

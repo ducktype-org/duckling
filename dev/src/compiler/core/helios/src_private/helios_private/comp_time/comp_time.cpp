@@ -690,6 +690,14 @@ namespace compiler::helios {
 				result = CompileTimeValue{ CompileTimeValue::TupleCTV{ std::move(ctv_elements) } };
 			}
 
+			void visitCreateAggregateExpr(const code::CreateAggregateExpr& expr) final {
+				ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+					"Comp time aggregate lowering is not implemented.",
+					expr.origin.getStablePosition()
+				));
+				result = query::Failed();
+			}
+
 			void visitVariantTypeConstructorExpr(const code::VariantTypeConstructorExpr& expr
 			) final {
 				std::vector<tsh::SymbolType<>> subtypes;
