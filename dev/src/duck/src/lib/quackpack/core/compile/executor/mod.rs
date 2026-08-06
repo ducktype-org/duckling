@@ -42,7 +42,7 @@ pub trait Executor: Debug {
         self.get_executor_output(&graph, &*profile_layout, bcx)
     }
 
-    /// Callback invoke at the very start of [`compile`](Self::compile).
+    /// Callback invoked at the very start of [`compile`](Self::compile).
     fn pre_compilation(&self, graph: &UnitGraph, bcx: &BuildContext<'_, '_>);
 
     /// Create tasks which will be used for compiling the given [`Unit`].
