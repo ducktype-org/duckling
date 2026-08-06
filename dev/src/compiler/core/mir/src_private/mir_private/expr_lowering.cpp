@@ -8,6 +8,7 @@
 #include <helios/tsh/type_interface.hpp>
 #include <helios/utils/get_expr_symid.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
+#include <mir_private/stmt_lowering.hpp>
 #include <mir_private/utils/bounds_check.hpp>
 
 #include <base/except/exceptions.hpp>
@@ -345,16 +346,17 @@ namespace compiler::mir {
 		 *
 		 * The generated shape, where `dest` is the constructed array and `i` the counter:
 		 * ```
-		 * entry: i = 0                         -> jump cond
-		 * cond:  cond_tmp = i < size           -> branch cond_tmp ? body : continuation
-		 * body:  dest[i] = <value>; i = i + 1  -> jump cond
+		 * entry: i = 0                                              -> jump cond
+		 * cond:  cond_tmp = i < size                                -> branch cond_tmp ? body :
+		 * continuation body:  dest[i] = <value>; <per_element_body>; i = i + 1   -> jump cond
 		 * ```
 		 */
 		void lowerArrayFillLoop(
-			const tsh::SymbolType<>&                dest_type,
-			const hc::Expr&                         value,
-			usize                                   size,
-			base::Optional<dia_int::StablePosition> position
+			const tsh::SymbolType<>&                               dest_type,
+			const hc::Expr&                                        value,
+			usize                                                  size,
+			const base::Optional<base::CSharedBox<hc::CodeBlock>>& per_element_body,
+			base::Optional<dia_int::StablePosition>                position
 		) {
 			auto& ctx = function.getContext();
 
@@ -393,9 +395,15 @@ namespace compiler::mir {
 
 			// Temporaries of the value expression get their own scope, so that they are destructed
 			// at the end of every iteration instead of piling up over the whole loop.
-			auto body_scope   = function.newScope(expr_scope);
-			auto store_hole   = body_block->addHole();
-			auto value_result = lowerExpr(value, body_block, function, body_scope);
+			auto body_scope = function.newScope(expr_scope);
+
+			auto store_continuation = body_block;
+			if_opt_some(per_element_body, body) {
+				store_continuation = lowerCodeBlock(*body, body_block, function, body_scope).begin;
+			}
+
+			auto store_hole   = store_continuation->addHole();
+			auto value_result = lowerExpr(value, store_continuation, function, body_scope);
 			value_result.storeResultInGivenPlace(
 				MIRPlace(dest).withIndex(MIRValue(counter)), store_hole, {}, body_scope, { position }
 			);
@@ -446,21 +454,28 @@ namespace compiler::mir {
 		void visitCreateAggregateExpr(const hc::CreateAggregateExpr& expr) override {
 			auto& ctx = function.getContext();
 
-			// Static arrays project by index, every other aggregate projects by field.
-			if (expr.type.getKind() == tsh::Kind::StaticArray) {
-				const auto array_type = tsh::StaticArrayAbstractType(expr.type);
+			const bool is_static_array = expr.type.getKind() == tsh::Kind::StaticArray;
 
-				// A single value for a multi-element array fills all of its elements.
-				if (array_type.getSize() > 1 and expr.values.size() == 1) {
+			// Static arrays project by index, every other aggregate projects by field.
+			if (is_static_array) {
+				auto array_type = expr.type.as<tsh::StaticArrayAbstractType>();
+
+				// A single value for a multi-element static array fills all of its elements.
+				if (expr.values.size() == 1 and array_type.getSize() > 1) {
 					lowerArrayFillLoop(
 						expr.expression_type.getSymbolType(),
 						*expr.values.front(),
 						array_type.getSize(),
+						expr.per_element_body,
 						expr.getPosition()
 					);
 					return;
 				}
 
+				CORE_ASSERT(
+					expr.per_element_body.empty(),
+					"A per-element body is only valid for a static array in a loop."
+				);
 				CORE_ASSERT(
 					array_type.getSize() == expr.values.size(),
 					"CreateAggregateExpr value count must match the static array's size, unless it "
@@ -479,6 +494,11 @@ namespace compiler::mir {
 				);
 				return;
 			}
+
+			CORE_ASSERT(
+				expr.per_element_body.empty(),
+				"A per-element body is only valid for a static array in a loop."
+			);
 
 			// Field symbols of the aggregate, in declaration order — one per value.
 			auto                       interface = expr.type.getInterface(ctx);

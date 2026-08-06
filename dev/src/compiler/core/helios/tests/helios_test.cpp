@@ -3003,8 +3003,8 @@ private:
 				ASSERT_EQUAL_PRINT(1, aggregate.values.size());
 				assert_generated_copy(aggregate.values.at(0).get());
 
-				ASSERT_TRUE(aggregate.per_element_body != nullptr);
-				const auto& per_element = aggregate.per_element_body->statements;
+				ASSERT_TRUE(aggregate.per_element_body.has_value());
+				const auto& per_element = (*aggregate.per_element_body)->statements;
 				ASSERT_EQUAL_PRINT(1, per_element.size());
 				ASSERT_TRUE(dynamic_cast<const AssignmentStmt*>(per_element.at(0).get()) != nullptr);
 			}

@@ -29,10 +29,12 @@
 #include <helios_private/hout_creation/expressions/coercions.hpp>
 #include <helios_private/symbols/symbols.hpp>
 
+#include <base/collections/optional.hpp>
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/vector_utils.hpp>
 #include <base/pointers/box.hpp>
 #include <base/pointers/ref.hpp>
+#include <base/pointers/shared_box.hpp>
 #include <base/str/str_utils.hpp>
 
 #include <query_framework/context/context.hpp>
@@ -281,13 +283,12 @@ namespace compiler::helios::code::shorthands {
 		) const {
 			auto body = std::move(per_element_body).toCodeBlock();
 
+			base::Optional<base::CSharedBox<CodeBlock>> body_block;
+			if (!body.statements.empty())
+				body_block = base::makeSharedBox<CodeBlock>(std::move(body));
+
 			return makeBox<CreateAggregateExpr>(
-				*ctx,
-				generatedOrigin(),
-				type,
-				std::move(values),
-				body.statements.empty() ? nullptr
-										: std::make_shared<const CodeBlock>(std::move(body))
+				*ctx, generatedOrigin(), type, std::move(values), std::move(body_block)
 			);
 		}
 

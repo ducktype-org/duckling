@@ -1100,10 +1100,10 @@ namespace compiler::helios::code {
 
 	CreateAggregateExpr::CreateAggregateExpr(
 		query::Context&,
-		ElementOrigin                    origin,
-		tsh::AbstractType                type,
-		std::vector<Box<Expr>>           values,
-		std::shared_ptr<const CodeBlock> per_element_body
+		ElementOrigin                               origin,
+		tsh::AbstractType                           type,
+		std::vector<Box<Expr>>                      values,
+		base::Optional<base::CSharedBox<CodeBlock>> per_element_body
 	):
 		  Expr(
 			  tsh::ExpressionType<>(
@@ -1121,11 +1121,11 @@ namespace compiler::helios::code {
 		  per_element_body(std::move(per_element_body)) {}
 
 	CreateAggregateExpr::CreateAggregateExpr(
-		tsh::ExpressionType<>            expression_type,
-		ElementOrigin                    origin,
-		tsh::AbstractType                type,
-		std::vector<Box<Expr>>           values,
-		std::shared_ptr<const CodeBlock> per_element_body
+		tsh::ExpressionType<>                       expression_type,
+		ElementOrigin                               origin,
+		tsh::AbstractType                           type,
+		std::vector<Box<Expr>>                      values,
+		base::Optional<base::CSharedBox<CodeBlock>> per_element_body
 	):
 		  Expr(expression_type, origin),
 		  type(type),
@@ -1141,10 +1141,10 @@ namespace compiler::helios::code {
 		}
 		out << "}";
 
-		if (per_element_body == nullptr) return;
+		if (per_element_body.empty()) return;
 
 		out << " per_element {\n";
-		for (const auto& stmt: per_element_body->statements) stmt->debugPrint(out, 1);
+		for (const auto& stmt: (*per_element_body)->statements) stmt->debugPrint(out, 1);
 		out << "}";
 	}
 
