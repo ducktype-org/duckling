@@ -31,8 +31,13 @@ namespace compiler::helios::code {
 	}
 
 	Box<Parameter> Parameter::clone() const {
-
-		return makeBox<Parameter>(name, type, initial_value.map([](auto& value) { return value->clone(); }), helios_symbol, origin);
+		return makeBox<Parameter>(
+			name,
+			type,
+			initial_value.map([](auto& value) -> BoxOrCRef<Expr> { return value->clone(); }),
+			helios_symbol,
+			origin
+		);
 	}
 
 	void ReturnStmt::debugPrint(std::ostream& out, usize indent) const {

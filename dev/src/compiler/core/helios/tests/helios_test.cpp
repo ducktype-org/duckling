@@ -758,6 +758,7 @@ private:
 		const auto [func_module, func_scope]
 			= getModule(fs::File(path("test_modules/function_calls")));
 		const auto a_obj      = getChain("aObj", root_scope).back();
+		const auto a_member   = getChain("member_access", root_scope).back();
 		const auto square_sym = getChain("square", func_scope).back();
 
 		query::utils::withContextDo([&](query::Context& ctx) {
@@ -843,6 +844,20 @@ private:
 				makeBox<LiteralStringExpr>(ctx, generatedOrigin(), base::StrID("hello"))
 			);
 
+			// Build block expr
+			std::vector<base::Box<Stmt>> block_statements;
+			block_statements.emplace_back(makeBox<AssignmentStmt>(
+				generatedOrigin(),
+				makeBox<IdentifierExpr>(ctx, generatedOrigin(), a_member),
+				makeBox<LiteralNumericExpr>(ctx, generatedOrigin(), 0)
+			));
+			block_statements.emplace_back(makeBox<ExprStmt>(
+				generatedOrigin(),
+				makeBox<VariantTypeConstructorExpr>(
+					ctx, generatedOrigin(), std::move(variant_subtypes)
+				)
+			));
+
 			auto mega_expr = makeBox<TernaryOperatorExpr>(
 				ctx,
 				generatedOrigin(),
@@ -851,8 +866,10 @@ private:
 				// If true: SequenceExpr with nested expressions including CallExpr
 				makeBox<SequenceExpr>(ctx, generatedOrigin(), std::move(sequence_exprs)),
 				// If false: VariantTypeConstructorExpr(i64 | bool | string)
-				makeBox<VariantTypeConstructorExpr>(
-					ctx, generatedOrigin(), std::move(variant_subtypes)
+				makeBox<BlockExpr>(
+					ctx,
+					generatedOrigin(),
+					makeBox<BlockStmt>(generatedOrigin(), CodeBlock{ std::move(block_statements) })
 				)
 			);
 
