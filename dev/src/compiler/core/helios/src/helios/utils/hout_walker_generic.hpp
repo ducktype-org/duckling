@@ -155,6 +155,7 @@ namespace compiler::helios::code {
 		void visitCreateAggregateExpr(const CreateAggregateExpr& e) override {
 			handler(e);
 			for (const auto& value: e.values) walk(*value);
+			if (e.per_element_body != nullptr) walkBlock(*e.per_element_body);
 		}
 
 		void visitVariantTypeConstructorExpr(const VariantTypeConstructorExpr& e) override {

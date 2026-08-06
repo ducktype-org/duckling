@@ -6,6 +6,7 @@
 #include "expr.hpp"
 
 #include "../visitors.hpp"
+#include "stmt.hpp"
 
 #include <concurrent/base/collections/hash_map.hpp>
 #include <helios/mangler/mangler.hpp>
@@ -1098,7 +1099,11 @@ namespace compiler::helios::code {
 	}
 
 	CreateAggregateExpr::CreateAggregateExpr(
-		query::Context&, ElementOrigin origin, tsh::AbstractType type, std::vector<Box<Expr>> values
+		query::Context&,
+		ElementOrigin                    origin,
+		tsh::AbstractType                type,
+		std::vector<Box<Expr>>           values,
+		std::shared_ptr<const CodeBlock> per_element_body
 	):
 		  Expr(
 			  tsh::ExpressionType<>(
@@ -1112,17 +1117,20 @@ namespace compiler::helios::code {
 			  origin
 		  ),
 		  type(type),
-		  values(std::move(values)) {}
+		  values(std::move(values)),
+		  per_element_body(std::move(per_element_body)) {}
 
 	CreateAggregateExpr::CreateAggregateExpr(
-		tsh::ExpressionType<>  expression_type,
-		ElementOrigin          origin,
-		tsh::AbstractType      type,
-		std::vector<Box<Expr>> values
+		tsh::ExpressionType<>            expression_type,
+		ElementOrigin                    origin,
+		tsh::AbstractType                type,
+		std::vector<Box<Expr>>           values,
+		std::shared_ptr<const CodeBlock> per_element_body
 	):
 		  Expr(expression_type, origin),
 		  type(type),
-		  values(std::move(values)) {}
+		  values(std::move(values)),
+		  per_element_body(std::move(per_element_body)) {}
 
 	void CreateAggregateExpr::debugPrint(std::ostream& out) const {
 		out << "create_aggregate(" << expression_type.getSymbolType().toString() << ") {";
@@ -1132,13 +1140,21 @@ namespace compiler::helios::code {
 			add_comma = true;
 		}
 		out << "}";
+
+		if (per_element_body == nullptr) return;
+
+		out << " per_element {\n";
+		for (const auto& stmt: per_element_body->statements) stmt->debugPrint(out, 1);
+		out << "}";
 	}
 
 	Box<Expr> CreateAggregateExpr::clone() const {
 		std::vector<base::Box<Expr>> cloned;
 		cloned.reserve(values.size());
 		for (const auto& v: values) cloned.push_back(v->clone());
-		return makeBox<CreateAggregateExpr>(expression_type, origin, type, std::move(cloned));
+		return makeBox<CreateAggregateExpr>(
+			expression_type, origin, type, std::move(cloned), per_element_body
+		);
 	}
 
 	LiftToTypeExpr::LiftToTypeExpr(query::Context&, ElementOrigin origin, Box<Expr> value_expr):

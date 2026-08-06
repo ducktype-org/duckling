@@ -11,10 +11,17 @@
 
 #include <token_parser_core/common_elements.hpp>
 
+#include <memory>
 #include <vector>
 
 namespace compiler::helios::code {
 	class HoutExprVisitor;
+
+	/**
+	 * @brief A block of statements, defined together with the statements in `stmt.hpp`, which
+	 * cannot be included here, as it includes this header itself.
+	 */
+	struct CodeBlock;
 
 #define FRIEND_MAKEBOX                              \
 	template<class T, class Deleter, class... Args> \
@@ -791,11 +798,14 @@ namespace compiler::helios::code {
 		tsh::AbstractType            type;
 		std::vector<base::Box<Expr>> values;
 
+		std::shared_ptr<const CodeBlock> per_element_body;
+
 		CreateAggregateExpr(
-			query::Context&              ctx,
-			ElementOrigin                origin,
-			tsh::AbstractType            type,
-			std::vector<base::Box<Expr>> values
+			query::Context&                  ctx,
+			ElementOrigin                    origin,
+			tsh::AbstractType                type,
+			std::vector<base::Box<Expr>>     values,
+			std::shared_ptr<const CodeBlock> per_element_body = {}
 		);
 
 		void debugPrint(std::ostream& out) const final;
@@ -807,10 +817,11 @@ namespace compiler::helios::code {
 		FRIEND_MAKEBOX
 
 		CreateAggregateExpr(
-			tsh::ExpressionType<>        expression_type,
-			ElementOrigin                origin,
-			tsh::AbstractType            type,
-			std::vector<base::Box<Expr>> values
+			tsh::ExpressionType<>            expression_type,
+			ElementOrigin                    origin,
+			tsh::AbstractType                type,
+			std::vector<base::Box<Expr>>     values,
+			std::shared_ptr<const CodeBlock> per_element_body
 		);
 	};
 

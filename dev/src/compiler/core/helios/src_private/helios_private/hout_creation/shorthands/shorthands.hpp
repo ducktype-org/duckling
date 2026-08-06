@@ -274,15 +274,21 @@ namespace compiler::helios::code::shorthands {
 
 		/**
 		 * @brief An aggregate value built element-by-element, in place.
-		 *
-		 * @p values holds one expression per element — fields in declaration order for
-		 * struct/class/tuple types, items in index order for static array types.
 		 */
 		[[nodiscard]]
 		Box<CreateAggregateExpr> createAggregate(
-			tsh::AbstractType type, std::vector<Box<Expr>> values
+			tsh::AbstractType type, std::vector<Box<Expr>> values, StmtPack per_element_body = {}
 		) const {
-			return makeBox<CreateAggregateExpr>(*ctx, generatedOrigin(), type, std::move(values));
+			auto body = std::move(per_element_body).toCodeBlock();
+
+			return makeBox<CreateAggregateExpr>(
+				*ctx,
+				generatedOrigin(),
+				type,
+				std::move(values),
+				body.statements.empty() ? nullptr
+										: std::make_shared<const CodeBlock>(std::move(body))
+			);
 		}
 
 		/** @brief A field access `base.field`. */
