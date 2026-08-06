@@ -16,10 +16,10 @@ namespace os_utils {
 	void clearScreen();
 
 	/**
-	 * @brief RawTerminalMode
+	 * @brief RAII guard that switches the terminal to raw mode and restores it on destruction.
 	 *
-	 * Changes the operating mode of the terminal. Uses RAII to ensure terminal settings are
-	 * untouched upon exiting repl.
+	 * In raw mode, input is read character-by-character without line buffering or echo.
+	 * The original terminal settings are restored when the guard goes out of scope.
 	 */
 	class RawTerminalMode {
 	public:
