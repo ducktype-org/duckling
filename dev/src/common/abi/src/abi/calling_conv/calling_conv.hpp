@@ -79,6 +79,12 @@ namespace abi::calling_conv {
 	struct FunctionInfo final {
 		base::Optional<ReturnEntry> return_info;
 		std::vector<ArgEntry>       param_info;
+
+		/**
+		 * @brief Number of fixed (non-variadic) parameters, empty optional for a
+		 * non-variadic function. See `FunctionType::num_fixed_params`.
+		 */
+		base::Optional<usize> num_fixed_params;
 	};
 
 	/**
@@ -90,6 +96,12 @@ namespace abi::calling_conv {
 		 */
 		base::Optional<types::AbiTypeCRef> return_type;
 		std::vector<types::AbiTypeCRef>    param_types;
+
+		/**
+		 * @brief Number of fixed (non-variadic) parameters. An empty optional means the
+		 * function is not variadic.
+		 */
+		base::Optional<usize> num_fixed_params;
 	};
 
 	/**
