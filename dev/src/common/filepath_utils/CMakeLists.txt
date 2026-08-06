@@ -3,3 +3,5 @@ add_library(FilepathUtils
 )
 
 make_module(FilepathUtils USES Base)
+
+duck_add_test(common filepath_utils tests/filepath_utils_test.cpp USES FilepathUtils Tester)

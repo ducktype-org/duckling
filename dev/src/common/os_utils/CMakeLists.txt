@@ -13,3 +13,5 @@ add_library(OSUtils
 )
 
 make_module(OSUtils USES Base Filesystem)
+
+duck_add_test(common os_utils tests/os_utils_test.cpp USES OSUtils Tester)
