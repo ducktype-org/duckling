@@ -248,6 +248,7 @@ namespace compiler::helios::desugaring {
 			});
 		};
 
+		// @TODO: #3290 generated variables names
 		return {
 			.iterator
 			= ctx.query<QuerySymbolOfSTMT>({ stmt->getIteratorIdentifier() }).valueOrThrow(),
