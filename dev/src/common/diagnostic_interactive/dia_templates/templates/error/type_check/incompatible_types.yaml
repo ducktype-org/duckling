@@ -45,3 +45,4 @@ pointer_messages:
     content: 
       - "Expects `"
       - param: "expected_type"
+      - '`'

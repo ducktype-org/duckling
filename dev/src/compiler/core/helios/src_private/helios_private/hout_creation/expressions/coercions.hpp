@@ -44,7 +44,7 @@ namespace compiler::helios {
 			dia_int::StablePosition                 given_position,
 			Box<InteractiveType>                    actual_type,
 			Box<InteractiveType>                    expected_type,
-			base::Optional<dia_int::StablePosition> expected_position
+			base::Optional<dia_int::StablePosition> coercion_expects_pos
 		);
 	};
 
@@ -72,13 +72,6 @@ namespace compiler::helios {
 		void addExploreAcceptedType(
 			std::string accepted_type, Box<dia_int::MessageBase> coercion_error
 		);
-	};
-
-	/**
-	 * @brief Type used to indicate an invalid coercion, i.e. coercion that cannot be performed.
-	 */
-	struct InvalidCoercion final {
-		InvalidCoercionReason reason;
 	};
 
 	/**
@@ -149,17 +142,6 @@ namespace compiler::helios {
 			return { from_and_to, from_and_to, {} };
 		}
 
-		static Coercion invalid(
-			tsh::SymbolType<> validated_from, tsh::SymbolType<> to, InvalidCoercionReason invalid
-		) {
-			return { validated_from, to, invalid };
-		}
-
-		static Coercion valid(tsh::SymbolType<> validated_from, tsh::SymbolType<> to) {
-			return { validated_from, to, {} };
-		}
-
-
 	private:
 		Coercion(
 			tsh::SymbolType<>                     validated_from,
@@ -169,6 +151,20 @@ namespace compiler::helios {
 			  validated_from(validated_from),
 			  to(to),
 			  invalid_reason(invalid) {}
+
+		friend query::QResult<Coercion> canCoerce(
+			query::Context& ctx, const tsh::ExpressionType<>& from, const tsh::SymbolType<>& to
+		);
+
+		static Coercion invalid(
+			tsh::SymbolType<> validated_from, tsh::SymbolType<> to, InvalidCoercionReason invalid
+		) {
+			return { validated_from, to, invalid };
+		}
+
+		static Coercion valid(tsh::SymbolType<> validated_from, tsh::SymbolType<> to) {
+			return { validated_from, to, {} };
+		}
 
 		friend query::QResult<Coercion> canCoerce(
 			query::Context& ctx, const tsh::ExpressionType<>& from, const tsh::SymbolType<>& to
@@ -219,8 +215,8 @@ namespace compiler::helios {
 		Box<code::Expr>                         expr,
 		const tsh::SymbolType<>                 expected_type,
 		dia_int::StablePosition                 source_position,
-		base::Optional<dia_int::StablePosition> expected_position = {},
-		CoercionErrorOverrides                  error_overrides   = {}
+		base::Optional<dia_int::StablePosition> coercion_expects_pos = {},
+		CoercionErrorOverrides                  error_overrides      = {}
 	);
 
 	/**
@@ -231,7 +227,7 @@ namespace compiler::helios {
 		query::Context&                         ctx,
 		const Coercion&                         failed,
 		dia_int::StablePosition                 source_position,
-		base::Optional<dia_int::StablePosition> expected_position = {}
+		base::Optional<dia_int::StablePosition> coercion_expects_pos = {}
 	);
 
 	/**
@@ -242,7 +238,7 @@ namespace compiler::helios {
 		query::Context&                         ctx,
 		const Coercion&                         failed,
 		dia_int::StablePosition                 source_position,
-		base::Optional<dia_int::StablePosition> expected_position,
+		base::Optional<dia_int::StablePosition> coercion_expects_pos,
 		CoercionErrorOverrides                  error_overrides = {}
 	);
 

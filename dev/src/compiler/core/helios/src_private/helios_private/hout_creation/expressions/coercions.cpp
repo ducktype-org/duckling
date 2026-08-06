@@ -177,13 +177,13 @@ namespace compiler::helios {
 		dia_int::StablePosition                 given_position,
 		Box<InteractiveType>                    actual_type,
 		Box<InteractiveType>                    expected_type,
-		base::Optional<dia_int::StablePosition> expected_position
+		base::Optional<dia_int::StablePosition> coercion_expects_pos
 	):
 		  MessageWithCodeFragment(given_position) {
 		addArgument<dia_int::InteractiveArgument>("given_type", std::move(actual_type));
 		addArgument<dia_int::InteractiveArgument>("expected_type", std::move(expected_type));
 		addPointerMessage("given", given_position);
-		if_opt_some(expected_position, expected_pos) {
+		if_opt_some(coercion_expects_pos, expected_pos) {
 			addPointerMessage("expected", expected_pos);
 		}
 	}
@@ -317,7 +317,7 @@ namespace compiler::helios {
 		Box<code::Expr>                         expr,
 		const tsh::SymbolType<>                 expected_type,
 		dia_int::StablePosition                 source_position,
-		base::Optional<dia_int::StablePosition> expected_position,
+		base::Optional<dia_int::StablePosition> coercion_expects_pos,
 		CoercionErrorOverrides                  error_overrides
 	) {
 		const auto coercion_qresult = canCoerce(ctx, expr->expression_type, expected_type);
@@ -326,7 +326,7 @@ namespace compiler::helios {
 		if (coercion_result.isValid()) return coercion_result.coerce(ctx, std::move(expr));
 
 		logCoercionFailure(
-			ctx, coercion_result, source_position, expected_position, std::move(error_overrides)
+			ctx, coercion_result, source_position, coercion_expects_pos, std::move(error_overrides)
 		);
 		return {};
 	}
@@ -335,7 +335,7 @@ namespace compiler::helios {
 		query::Context&                         ctx,
 		const Coercion&                         failed,
 		dia_int::StablePosition                 source_position,
-		base::Optional<dia_int::StablePosition> expected_position
+		base::Optional<dia_int::StablePosition> coercion_expects_pos
 	) {
 		switch (failed.getInvalidReason()) {
 		case InvalidCoercionReason::IncompatibleTypes:
@@ -343,7 +343,7 @@ namespace compiler::helios {
 				source_position,
 				makeBox<InteractiveType>(ctx, failed.validated_from),
 				makeBox<InteractiveType>(ctx, failed.to),
-				expected_position
+				coercion_expects_pos
 			);
 		case InvalidCoercionReason::TypeNotCopyable:
 			return makeBox<dia_int::PlaceholderError>(
@@ -373,7 +373,7 @@ namespace compiler::helios {
 		query::Context&                         ctx,
 		const Coercion&                         failed,
 		dia_int::StablePosition                 source_position,
-		base::Optional<dia_int::StablePosition> expected_position,
+		base::Optional<dia_int::StablePosition> coercion_expects_pos,
 		CoercionErrorOverrides                  error_overrides
 	) {
 		// Use the caller's override if one is set, otherwise the default message.
@@ -394,7 +394,7 @@ namespace compiler::helios {
 			(*override)(ctx);
 			return;
 		}
-		ctx.logInt(getCoercionError(ctx, failed, source_position, expected_position));
+		ctx.logInt(getCoercionError(ctx, failed, source_position, coercion_expects_pos));
 	}
 
 	void logNoMatchingExpectedTypeFailure(

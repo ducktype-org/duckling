@@ -616,7 +616,9 @@ namespace compiler::helios::code {
 					};
 
 					for (auto sub_expr: sub_exprs) {
-						auto sub_expr_hout = subExprFromPSTWithType(ctx, sub_expr, meta_type);
+						auto sub_expr_hout = subExprFromPSTWithType(
+							ctx, sub_expr, meta_type, op->getStablePosition()
+						);
 						if (sub_expr_hout.hasFailed()) {
 							// Error has occurred.
 							return;
@@ -937,7 +939,7 @@ namespace compiler::helios {
 		query::Context&                                  ctx,
 		const pst::GenericPSTQueryKey<pst::ExprElement>& pst_expr,
 		const tsh::SymbolType<>                          expected_type,
-		base::Optional<dia_int::StablePosition>          expected_position,
+		base::Optional<dia_int::StablePosition>          coercion_expects_pos,
 		CoercionErrorOverrides                           error_overrides
 	) {
 		auto expr_hout_qresult = ctx.query<QueryHoutOfExpr>({ pst_expr.element });
@@ -952,7 +954,7 @@ namespace compiler::helios {
 		if (coercion_result.isValid()) return coercion_result.coerceFromRef(ctx, expr_hout);
 
 		logCoercionFailure(
-			ctx, coercion_result, source_position, expected_position, std::move(error_overrides)
+			ctx, coercion_result, source_position, coercion_expects_pos, std::move(error_overrides)
 		);
 		return query::Failed();
 	}
@@ -990,17 +992,23 @@ namespace compiler::helios {
 	}
 
 	query::QResult<Box<code::Expr>> code::subExprFromPSTWithType(
-		query::Context&                     ctx,
-		pst::AccessLocked<pst::ExprElement> element,
-		tsh::SymbolType<>                   expected_type,
-		helios::CoercionErrorOverrides      error_overrides
+		query::Context&                         ctx,
+		pst::AccessLocked<pst::ExprElement>     element,
+		tsh::SymbolType<>                       expected_type,
+		base::Optional<dia_int::StablePosition> coercion_expects_pos,
+		helios::CoercionErrorOverrides          error_overrides
 	) {
 		auto expr_hout_qresult = code::subExprFromPST(ctx, element);
 		UNPACK_QRESULT_MOVE(auto expr_hout =, expr_hout_qresult);
 		const auto source_position = element.unlock(ctx)->getStablePosition();
 
 		auto maybe_coerced = coerceFromBox(
-			ctx, std::move(expr_hout), expected_type, source_position, {}, std::move(error_overrides)
+			ctx,
+			std::move(expr_hout),
+			expected_type,
+			source_position,
+			coercion_expects_pos,
+			std::move(error_overrides)
 		);
 		if (maybe_coerced.has_value()) return std::move(maybe_coerced.value());
 		return query::Failed();
