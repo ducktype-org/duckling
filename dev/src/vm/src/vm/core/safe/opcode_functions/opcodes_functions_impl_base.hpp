@@ -952,6 +952,16 @@ namespace vm {
 		FUNCTION_CONT(2);
 	}
 
+	RETURN_TYPE OpFuns::OPCODE_NAME(cptrCast_p64_pptr)(FUNCTION_ARGS) {
+		{
+			const auto size = instr[1].arg0;
+			const auto src  = READ_FROM_PLACE_ARG(Pointer, instr->arg1);
+			auto       view = Memory::getPointerData(src, size);
+			WRITE_TO_PLACE_ARG(void*, instr->arg0, static_cast<void*>(view.getBegin()));
+		}
+		FUNCTION_CONT(2);
+	}
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(structLea_pptr_pptr)(FUNCTION_ARGS) {
 		{
 			const auto dst    = READ_FROM_PLACE_ARG(Pointer, instr->arg0);

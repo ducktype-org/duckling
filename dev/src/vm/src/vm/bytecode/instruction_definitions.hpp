@@ -586,6 +586,8 @@ DEF_INSTR(mov_pcptr_pcptr, (vm::opargs::PlaceCPtr, dst), (vm::opargs::PlaceCPtr,
 /// Reinterprets any cpointer type to any other cpointer type (the analogue of a C cast).
 DEF_INSTR(movCast_pcptr_pcptr, (vm::opargs::PlaceCPtr, dst), (vm::opargs::PlaceCPtr, src))
 
+DEF_INSTR(cast_pcptr_pptr, (vm::opargs::PlaceCPtr, dst), (vm::opargs::PlacePtr, src_ptr))
+
 /// Sets the flag if the C pointer is null (the native address 0). Works with any cpointer type.
 DEF_INSTR(cmpNull_pcptr, (vm::opargs::PlaceCPtr, ptr))
 
