@@ -3,7 +3,7 @@
 
 use tracing::instrument;
 
-use super::{UnitCompiler, unit_output};
+use super::{UnitCompiler, outputs};
 use crate::QuackResult;
 use crate::quackpack::core::compile::BuildContext;
 use crate::quackpack::core::compile::artifacts_layout::ProfileLayout;
@@ -63,7 +63,7 @@ fn create_task(
         // QuackPack only emits DVM executables; `DvmLib` is produced solely by the
         // C++ std library path, so it is intentionally unreachable here.
         ArtifactsType::Dvm => multipackage_schema::PackageCompilationStrategy::DvmExe {
-            output_file: unit_output(unit, graph, layout)?,
+            output_file: outputs::unit_output(unit, graph, layout)?,
         },
         task => unreachable!(
             "should create only DVM task for the root (attempted to create for `{task:?}`)"

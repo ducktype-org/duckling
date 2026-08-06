@@ -9,7 +9,7 @@ use tracing::info;
 use self::early_graph::creating_graph::create_early_graph_from_bcx;
 use self::profiles::Profile;
 use self::unit::graph::lower_early_graph;
-use self::unit_compiler::ExecutorOutput;
+use self::unit_compiler::UnitCompilerOutput;
 use crate::quackpack::core::identity::Identity;
 use crate::quackpack::core::storage::freeze::VenvFreeze;
 use crate::quackpack::core::storage::paths::Storage;
@@ -50,7 +50,7 @@ pub struct BuildContext<'duck, 'ctx> {
 
 /// Compile project inside the [`BuildContext`].
 #[tracing::instrument(skip_all)]
-pub fn compile(bcx: BuildContext<'_, '_>) -> QuackResult<ExecutorOutput> {
+pub fn compile(bcx: BuildContext<'_, '_>) -> QuackResult<UnitCompilerOutput> {
     info!(?bcx, "compiling");
     // @TODO: #2900 Unmock this.
     if bcx.pcx.package().is_script() {
@@ -58,5 +58,6 @@ pub fn compile(bcx: BuildContext<'_, '_>) -> QuackResult<ExecutorOutput> {
     }
     let graph = create_early_graph_from_bcx(&bcx)?;
     let unit_graph = lower_early_graph(graph, &bcx);
-    bcx.unit_compiler().compile(unit_graph, &bcx)
+    let compiler = bcx.unit_compiler();
+    unit_compiler::compile(&*compiler, unit_graph, &bcx)
 }

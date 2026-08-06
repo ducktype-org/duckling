@@ -16,6 +16,7 @@ pub trait ArtifactsLayout {
 
     /// Get the layout for a specific profile.
     fn for_profile(&self, profile: Profile) -> Box<dyn ProfileLayout>;
+
     /// Get the [`FileLockManager`] for this layout.
     fn file_lock_manager(&self) -> &FileLockManager;
 
@@ -34,6 +35,7 @@ pub trait ArtifactsLayout {
 pub trait ProfileLayout {
     /// Get the [`FileLockManager`] for this layout.
     fn file_lock_manager(&self) -> &FileLockManager;
+
     /// Get the layout for a specific dependency.
     fn for_dependency(
         &self,

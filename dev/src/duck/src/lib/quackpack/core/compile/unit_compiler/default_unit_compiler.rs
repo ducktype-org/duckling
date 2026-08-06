@@ -2,7 +2,7 @@
 
 use tracing::instrument;
 
-use super::{UnitCompiler, get_linker_options, unit_output};
+use super::{UnitCompiler, outputs};
 use crate::QuackResult;
 use crate::quackpack::core::compile::BuildContext;
 use crate::quackpack::core::compile::artifacts_layout::ProfileLayout;
@@ -61,8 +61,8 @@ fn create_task(
                 "only root should be compiled to binary"
             );
             multipackage_schema::PackageCompilationStrategy::Binary {
-                output_file: unit_output(unit, graph, layout)?,
-                linking_options: get_linker_options(unit, graph, layout)?,
+                output_file: outputs::unit_output(unit, graph, layout)?,
+                linking_options: outputs::get_linker_options(unit, graph, layout)?,
             }
         }
         ArtifactsType::IsADependencyArtifact => {

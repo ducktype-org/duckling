@@ -6,12 +6,12 @@ use std::process::Command;
 use clap::builder::OsStr;
 
 use crate::quackpack::core::compile::unit::ArtifactsType;
-use crate::quackpack::core::compile::unit_compiler::ExecutorOutput;
+use crate::quackpack::core::compile::unit_compiler::UnitCompilerOutput;
 use crate::util::command_ext::CommandExt;
 use crate::{QuackResult, QuackResultContext, qp_bail_internal};
 
 /// Execute an executable file (either .exe or .dbc).
-pub fn run(output: ExecutorOutput, args: Vec<OsString>) -> QuackResult<Infallible> {
+pub fn run(output: UnitCompilerOutput, args: Vec<OsString>) -> QuackResult<Infallible> {
     let (unit, path) = output.root;
     match unit.artifacts_type() {
         ArtifactsType::Binary => run_exe(&path, args),

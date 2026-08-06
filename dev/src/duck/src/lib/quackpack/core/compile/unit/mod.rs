@@ -3,6 +3,7 @@
 use std::collections::{HashSet, VecDeque};
 use std::convert::Infallible;
 use std::env::consts::{DLL_PREFIX, DLL_SUFFIX, EXE_SUFFIX};
+use std::fmt;
 use std::hash::Hash;
 use std::ops::ControlFlow;
 use std::sync::Arc;
@@ -27,10 +28,24 @@ const DVM_SUFFIX: &str = ".dbc";
 #[cfg(test)]
 mod tests;
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 /// Information required to invoke duckc once.
 pub struct Unit {
     inner: Arc<UnitInner>,
+}
+
+impl fmt::Debug for Unit {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let inner = &*self.inner;
+        f.debug_struct("Unit")
+            .field("unit_id", &inner.unit_id)
+            .field("name", &inner.package.package().name())
+            .field("version", &inner.package.package().version())
+            .field("identity", &inner.identity)
+            .field("dependencies_by_id", &inner.dependencies_by_id)
+            .field("package_type", &inner.package_type)
+            .finish()
+    }
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
@@ -52,7 +67,6 @@ pub enum ArtifactsType {
     IsADependencyArtifact,
 }
 
-#[derive(Debug)]
 struct UnitInner {
     /// An internal, but unique identifier.
     unit_id: u64,
