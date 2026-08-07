@@ -112,7 +112,7 @@ impl<'duck> GithubApiClient<'duck> {
             .or_insert(defaults::NO_VALUE);
         // Add header for the right API version.
         request.headers_mut().insert(
-            HeaderName::from_static("X-GitHub-Api-Version"),
+            HeaderName::from_static("x-github-api-version"),
             HeaderValue::from_static("2026-03-10"),
         );
         request.headers_mut().insert(
