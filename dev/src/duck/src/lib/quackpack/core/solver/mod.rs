@@ -127,7 +127,8 @@ impl<'duck, 'ctx> SolverGathererData<'duck, 'ctx> {
         prev_freeze_manifests.insert(self.root_pkg, Box::new(root_manifest.clone()));
         let (maximal_valid_freeze, is_root_satisfied) = self
             .current_freeze
-            .find_maximal_correct_dep_solution(&prev_freeze_manifests)?;
+            .find_maximal_correct_dep_solution(&prev_freeze_manifests, fetcher)
+            .await?;
 
         if is_root_satisfied {
             debug!("root has been satisfied");

@@ -1,6 +1,7 @@
 //! Ducknest registry communication.
 use std::io::Write;
 use std::path::Path;
+use std::sync::Arc;
 
 use endpoints::UrlExt;
 use http::{HeaderValue, header};
@@ -14,7 +15,7 @@ use super::util::http::traits_extensions::ResponseExt;
 use crate::quackpack::core::fetcher::util::http::defaults;
 use crate::quackpack::schemas::registry;
 use crate::util::file_locks::LockedFile;
-use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail_internal};
+use crate::{QuackResult, QuackResultContext, StrId, qp_bail_internal};
 
 mod endpoints;
 
@@ -24,15 +25,13 @@ mod tests;
 #[derive(Debug)]
 /// General client communicating with a registry instance over HTTP.
 pub struct DucknestClient<'duck> {
-    client: AsyncHttpClient<'duck>,
+    client: Arc<AsyncHttpClient<'duck>>,
 }
 
 impl<'duck> DucknestClient<'duck> {
     /// Construct a new [`DucknestClient`].
-    pub fn new(ctx: &'duck DuckContext) -> Self {
-        Self {
-            client: AsyncHttpClient::new(ctx),
-        }
+    pub fn new(client: Arc<AsyncHttpClient<'duck>>) -> Self {
+        Self { client }
     }
 
     /// Retrieve metadata for a specific package from a Ducknest instance.

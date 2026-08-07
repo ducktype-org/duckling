@@ -3,6 +3,7 @@ use std::collections::{HashMap, HashSet};
 
 use tracing::debug;
 
+use crate::quackpack::core::fetcher::Fetcher;
 use crate::quackpack::core::solver::gathering::fetch_types::{FetchResponse, FetchSuccess};
 use crate::quackpack::core::solver::gathering::gatherer::Gatherer;
 use crate::quackpack::core::solver::git_access::GitAccess;
@@ -57,22 +58,24 @@ impl SolverFreeze {
     ///
     /// Should be used as a preprocessing tool, before the freeze is passed through the solver.
     #[tracing::instrument(skip_all)]
-    pub fn find_maximal_correct_dep_solution(
+    pub async fn find_maximal_correct_dep_solution(
         mut self,
         manifests: &HashMap<PackageId, Box<Manifest>>,
+        fetcher: &Fetcher<'_>,
     ) -> QuackResult<(Self, bool)> {
-        self.retain_not_flawed_pkgs(manifests)?;
-        self.substitute_root_pkg(manifests)
+        self.retain_not_flawed_pkgs(manifests, fetcher).await?;
+        self.substitute_root_pkg(manifests, fetcher).await
     }
 
     /// Helper for [`Self::find_maximal_correct_dep_solution`]
     /// Retains freezes of the old root package (it is later substituted anyway)
     /// and all the packages which have dependencies transitively satisfied.
-    fn retain_not_flawed_pkgs(
+    async fn retain_not_flawed_pkgs(
         &mut self,
         manifests: &HashMap<PackageId, Box<Manifest>>,
+        fetcher: &Fetcher<'_>,
     ) -> QuackResult<()> {
-        let mut still_satisfied_pkgs = self.still_satisfied_pkgs(manifests)?;
+        let mut still_satisfied_pkgs = self.still_satisfied_pkgs(manifests, fetcher).await?;
         let reversed_graph = self.reversed_dependency_graph();
         let mut visited = HashSet::new();
         for pkg in reversed_graph.keys() {
@@ -98,9 +101,10 @@ impl SolverFreeze {
     /// Finds which packages from the freeze are not immediately flawed:
     ///     * we were able to obtain their manifests and the manifests agrees with the package,
     ///     * all manifest dependencies are satisfied by appropriate freeze-written realizations.
-    fn still_satisfied_pkgs(
+    async fn still_satisfied_pkgs(
         &self,
         manifests: &HashMap<PackageId, Box<Manifest>>,
+        fetcher: &Fetcher<'_>,
     ) -> QuackResult<HashSet<PackageId>> {
         let mut still_satisfied_pkgs = HashSet::new();
         for (pkg, freeze) in self.package_freezes.iter() {
@@ -115,17 +119,18 @@ impl SolverFreeze {
                     is_every_dep_satisfied = false;
                     break;
                 };
-                // We get rid of packages which depend on the main package, as they are not needed.
-                if *realization == self.main_pkg {
-                    is_every_dep_satisfied = false;
-                    break;
-                }
                 let Some(realization_freeze) = self.package_freezes.get(realization) else {
                     is_every_dep_satisfied = false;
                     break;
                 };
-                is_every_dep_satisfied &=
-                    Self::check_if_dep_is_satisfied(freeze, realization_freeze, dep)?;
+                is_every_dep_satisfied &= Self::check_if_dep_is_satisfied(
+                    freeze,
+                    *realization,
+                    realization_freeze,
+                    dep,
+                    fetcher,
+                )
+                .await?;
             }
             if is_every_dep_satisfied {
                 still_satisfied_pkgs.insert(*pkg);
@@ -172,16 +177,14 @@ impl SolverFreeze {
 
     /// Helper for [`Self::still_satisfied_pkgs`].
     /// Checks if a particular dependency is satisfied.
-    fn check_if_dep_is_satisfied(
+    async fn check_if_dep_is_satisfied(
         freeze: &SolverPackageFreeze,
+        realization: PackageId,
         realization_freeze: &SolverPackageFreeze,
         dep: &Dependency,
+        fetcher: &Fetcher<'_>,
     ) -> QuackResult<bool> {
-        let Some(realisation) = freeze.dependencies_realization.get(&dep.name()) else {
-            // We do not have a realization of such dependency so the answer is negative.
-            return Ok(false);
-        };
-        if !realisation.still_satisfies_dep(dep)? {
+        if !realization.still_satisfies_dep(dep, fetcher).await? {
             return Ok(false);
         }
         let forced_child_features =
@@ -230,9 +233,10 @@ impl SolverFreeze {
     /// Helper for [`Self::find_maximal_correct_dep_solution`].
     /// In the freeze, removes the old root and substitutes its package freeze as the new root's package freeze.
     /// Keeps only still satisfied realizations from the old root's package freeze.
-    fn substitute_root_pkg(
+    async fn substitute_root_pkg(
         mut self,
         manifests: &HashMap<PackageId, Box<Manifest>>,
+        fetcher: &Fetcher<'_>,
     ) -> QuackResult<(Self, bool)> {
         let Some(main_pkg_freeze) = self.package_freezes.get(&self.main_pkg) else {
             qp_bail_internal!("main package was not put into package freezes: {self:#?}")
@@ -245,7 +249,14 @@ impl SolverFreeze {
         for (alias, realization) in main_pkg_freeze.dependencies_realization.iter() {
             if let Some(dependency) = main_manifest.dependencies().get_by_effective_name(*alias)
                 && let Some(realization_freeze) = self.package_freezes.get(realization)
-                && Self::check_if_dep_is_satisfied(main_pkg_freeze, realization_freeze, dependency)?
+                && Self::check_if_dep_is_satisfied(
+                    main_pkg_freeze,
+                    *realization,
+                    realization_freeze,
+                    dependency,
+                    fetcher,
+                )
+                .await?
             {
                 still_satisfied_root_deps.insert(*alias);
             }
@@ -280,8 +291,10 @@ mod test {
     use std::collections::{HashMap, HashSet};
     use std::path::PathBuf;
 
+    use futures::executor::block_on;
     use tempfile::{TempDir, tempdir};
 
+    use crate::quackpack::core::fetcher::Fetcher;
     use crate::quackpack::core::full_identity::{FullIdentity, FullOrigin};
     use crate::quackpack::core::solver::solver_freeze::{SolverFreeze, SolverPackageFreeze};
     use crate::quackpack::core::{FeatureName, PackageId, Version, parse_manifest};
@@ -328,6 +341,7 @@ features:
 "#,
         );
         let ctx = DuckContext::default();
+        let fetcher = Fetcher::new(&ctx).unwrap();
         let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
         let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
         let registry_origin = FullOrigin::for_registry("http://localhost:9001".to_url().unwrap());
@@ -351,10 +365,12 @@ features:
             package_freezes: HashMap::from([(pkg_a, prev_a_freeze), (pkg_b, prev_b_freeze)]),
             main_pkg: pkg_a,
         };
-        let (new_freeze, _) = prev_freeze
-            .clone()
-            .find_maximal_correct_dep_solution(&manifests)
-            .unwrap();
+        let (new_freeze, _) = block_on(
+            prev_freeze
+                .clone()
+                .find_maximal_correct_dep_solution(&manifests, &fetcher),
+        )
+        .unwrap();
         assert_eq!(new_freeze, prev_freeze);
     }
 
@@ -385,6 +401,7 @@ metadata:
 "#,
         );
         let ctx = DuckContext::default();
+        let fetcher = Fetcher::new(&ctx).unwrap();
         let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
         let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
         let registry_origin = FullOrigin::for_registry("http://localhost:9001".to_url().unwrap());
@@ -408,10 +425,12 @@ metadata:
             package_freezes: HashMap::from([(pkg_a, prev_a_freeze), (pkg_b, prev_b_freeze)]),
             main_pkg: pkg_a,
         };
-        let (new_freeze, _) = prev_freeze
-            .clone()
-            .find_maximal_correct_dep_solution(&manifests)
-            .unwrap();
+        let (new_freeze, _) = block_on(
+            prev_freeze
+                .clone()
+                .find_maximal_correct_dep_solution(&manifests, &fetcher),
+        )
+        .unwrap();
         let freeze_a = new_freeze.package_freezes.get(&pkg_a).unwrap();
         assert_eq!(new_freeze.package_freezes.len(), 1);
         assert!(freeze_a.dependencies_realization.is_empty());
@@ -450,6 +469,7 @@ metadata:
 "#,
         );
         let ctx = DuckContext::default();
+        let fetcher = Fetcher::new(&ctx).unwrap();
         let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
         let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
         let manifest_c = parse_manifest(&path_c, &ctx).unwrap();
@@ -482,9 +502,8 @@ metadata:
             ]),
             main_pkg: pkg_a,
         };
-        let (new_freeze, _) = prev_freeze
-            .find_maximal_correct_dep_solution(&manifests)
-            .unwrap();
+        let (new_freeze, _) =
+            block_on(prev_freeze.find_maximal_correct_dep_solution(&manifests, &fetcher)).unwrap();
         let freeze_a = new_freeze.package_freezes.get(&pkg_a).unwrap();
         let freeze_c = new_freeze.package_freezes.get(&pkg_c).unwrap();
         assert_eq!(new_freeze.package_freezes.len(), 2);
@@ -535,6 +554,7 @@ metadata:
 "#,
         );
         let ctx = DuckContext::default();
+        let fetcher = Fetcher::new(&ctx).unwrap();
         let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
         let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
         let manifest_c = parse_manifest(&path_c, &ctx).unwrap();
@@ -576,9 +596,8 @@ metadata:
             ]),
             main_pkg: pkg_a,
         };
-        let (new_freeze, _) = prev_freeze
-            .find_maximal_correct_dep_solution(&manifests)
-            .unwrap();
+        let (new_freeze, _) =
+            block_on(prev_freeze.find_maximal_correct_dep_solution(&manifests, &fetcher)).unwrap();
         let freeze_a = new_freeze.package_freezes.get(&pkg_a).unwrap();
         let freeze_d = new_freeze.package_freezes.get(&pkg_d).unwrap();
         assert_eq!(new_freeze.package_freezes.len(), 2);
@@ -607,6 +626,7 @@ features:
 "#,
         );
         let ctx = DuckContext::default();
+        let fetcher = Fetcher::new(&ctx).unwrap();
         let manifest_a = parse_manifest(&path_a, &ctx).unwrap();
         let manifest_b = parse_manifest(&path_b, &ctx).unwrap();
         let registry_origin = FullOrigin::for_registry("http://localhost:9001".to_url().unwrap());
@@ -633,10 +653,12 @@ features:
             ]),
             main_pkg: pkg_a,
         };
-        let (new_freeze, _) = prev_freeze
-            .clone()
-            .find_maximal_correct_dep_solution(&manifests)
-            .unwrap();
+        let (new_freeze, _) = block_on(
+            prev_freeze
+                .clone()
+                .find_maximal_correct_dep_solution(&manifests, &fetcher),
+        )
+        .unwrap();
         assert_eq!(
             new_freeze,
             SolverFreeze {

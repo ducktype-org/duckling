@@ -1,4 +1,5 @@
 use std::path::Path;
+use std::pin::Pin;
 
 use crate::quackpack::core::fetcher::git::fast_path::GitFastPathExt;
 use crate::quackpack::core::fetcher::git::fast_path::gitlab_api_client::GitlabApiClient;
@@ -26,41 +27,59 @@ impl<'duck> GitlabClient<'duck> {
 }
 
 impl<'duck> GitFastPathExt for GitlabClient<'duck> {
-    fn get_commit_hash(&self, reference: GitReference) -> QuackResult<StrId> {
-        match reference {
-            GitReference::Default => {
-                let default_branch = self.client.retrieve_project(&self.repo_api_url)?;
-                self.get_commit_hash(GitReference::Branch(default_branch))
+    fn get_commit_hash(
+        &self,
+        reference: GitReference,
+    ) -> Pin<Box<dyn Future<Output = QuackResult<StrId>> + '_>> {
+        Box::pin(async move {
+            match reference {
+                GitReference::Default => {
+                    let default_branch = self.client.retrieve_project(&self.repo_api_url).await?;
+                    Box::pin(self.get_commit_hash(GitReference::Branch(default_branch))).await
+                }
+                GitReference::Tag(tag) => {
+                    let commit_hash = self
+                        .client
+                        .retrieve_a_commit(&self.repo_api_url, tag)
+                        .await?;
+                    Ok(commit_hash)
+                }
+                GitReference::Branch(branch) => {
+                    let commit_hash = self
+                        .client
+                        .retrieve_a_commit(&self.repo_api_url, branch)
+                        .await?;
+                    Ok(commit_hash)
+                }
+                GitReference::Rev(commit) => {
+                    // We also translate short commit ids to long ones.
+                    let commit_hash = self
+                        .client
+                        .retrieve_a_commit(&self.repo_api_url, commit)
+                        .await?;
+                    Ok(commit_hash)
+                }
             }
-            GitReference::Tag(tag) => {
-                let commit_hash = self.client.retrieve_a_commit(&self.repo_api_url, tag)?;
-                Ok(commit_hash)
-            }
-            GitReference::Branch(branch) => {
-                let commit_hash = self.client.retrieve_a_commit(&self.repo_api_url, branch)?;
-                Ok(commit_hash)
-            }
-            GitReference::Rev(commit) => {
-                // We also translate short commit ids to long ones.
-                let commit_hash = self.client.retrieve_a_commit(&self.repo_api_url, commit)?;
-                Ok(commit_hash)
-            }
-        }
+        })
     }
 
-    fn download_manifest(&self, commit: StrId) -> QuackResult<Manifest> {
-        let deserialized_manifest = self.client.download_file_from_commit(
-            &self.repo_api_url,
-            PackageLoader::MANIFEST_NAME,
-            commit,
-        )?;
-        let manifest_schema = parse_schema(&deserialized_manifest)?;
-        let manifest = manifest::parse(
-            &manifest_schema,
-            Path::new(""), // Dummy path.
-            ParseMode::Package,
-            self.client.ctx(),
-        )?;
-        Ok(manifest)
+    fn download_manifest(
+        &self,
+        commit: StrId,
+    ) -> Pin<Box<dyn Future<Output = QuackResult<Manifest>> + '_>> {
+        Box::pin(async move {
+            let deserialized_manifest = self
+                .client
+                .download_file_from_commit(&self.repo_api_url, PackageLoader::MANIFEST_NAME, commit)
+                .await?;
+            let manifest_schema = parse_schema(&deserialized_manifest)?;
+            let manifest = manifest::parse(
+                &manifest_schema,
+                Path::new(""), // Dummy path.
+                ParseMode::Package,
+                self.client.ctx(),
+            )?;
+            Ok(manifest)
+        })
     }
 }

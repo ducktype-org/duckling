@@ -1,5 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
+use crate::quackpack::core::fetcher::Fetcher;
 use crate::quackpack::core::full_identity::{FullIdentity, FullKind, FullOrigin};
 use crate::quackpack::core::solver::gathering::fetch_types::{
     ManifestsRequest, NotPinnedRequest, PinnedRequest, RequestIdentifier,
@@ -90,7 +91,11 @@ impl PackageId {
     ///  * the packages origin satisfies the source requirements,
     ///  * version requirements are satisfied,
     ///  * package's name coincides with the required name.
-    pub fn still_satisfies_dep(&self, dependency: &Dependency) -> QuackResult<bool> {
+    pub async fn still_satisfies_dep(
+        &self,
+        dependency: &Dependency,
+        fetcher: &Fetcher<'_>,
+    ) -> QuackResult<bool> {
         if !self.check_satisfaction_of_versions(dependency)? {
             return Ok(false);
         }
@@ -98,7 +103,10 @@ impl PackageId {
         if self.url() != source.url() || self.name() != dependency.name() {
             return Ok(false);
         }
-        Ok(self.kind().satisfies_source_kind(*source.kind()))
+        self.origin()
+            .satisfies_source(source)
+            .finish_check(fetcher)
+            .await
     }
 
     /// Helper for [`Self::still_satisfies_dep`].
