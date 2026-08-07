@@ -772,12 +772,8 @@ namespace compiler::helios {
 			}
 
 			void visitMoveExpr(const code::MoveExpr& expr) final {
-				if (expr.kind != code::MoveExpr::MoveKind::Implicit) {
-					result = CouldNotShortPath{};
-					return;
-				}
-
-				// Implicit moves of temporaries are allowed.
+				// @TODO: #3106 Once move constructors exist. Moves in TreeEval should only be
+				// allowed on trivially movable types, other should CouldNotShortPath.
 				auto sub_result = evalHoutExpr(ctx, expr.inner.ref());
 				if (sub_result.hasFailed()) {
 					result = query::Failed();

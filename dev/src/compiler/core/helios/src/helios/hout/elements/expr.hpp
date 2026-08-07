@@ -727,6 +727,9 @@ namespace compiler::helios::code {
 		 * - `Explicit` comes from the `move` keyword written in the code.
 		 * - `Implicit` is inserted by a coercion consuming an owned rvalue (a temporary) or when
 		 * moving the return value out of the function.
+		 *
+		 * @note: This is only used for testing and easier debugging purposes. The semantics between
+		 * the two don't differ.
 		 */
 		enum class MoveKind : std::uint8_t { Explicit, Implicit };
 
