@@ -234,7 +234,8 @@ namespace abi::calling_conv {
 		};
 		return FunctionInfo{ .return_info = ft.return_type.map(compute_return_entry),
 			                 .param_info = ft.param_types | std::views::transform(compute_arg_entry)
-			                             | std::ranges::to<std::vector>() };
+			                             | std::ranges::to<std::vector>(),
+			                 .num_fixed_params = ft.num_fixed_params };
 	}
 
 	/**
@@ -326,7 +327,8 @@ namespace abi::calling_conv {
 
 		return FunctionInfo{ .return_info = ft.return_type.map(compute_return_entry),
 			                 .param_info = ft.param_types | std::views::transform(compute_arg_entry)
-			                             | std::ranges::to<std::vector>() };
+			                             | std::ranges::to<std::vector>(),
+			                 .num_fixed_params = ft.num_fixed_params };
 	}
 
 	FunctionInfo computeCallingConv(const TargetABI& target, const FunctionType& ft) {

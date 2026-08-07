@@ -1,20 +1,30 @@
 #pragma once
 
 #include <ctv/numeric_value.hpp>
+#include <helios/hout/elements/stmt.hpp>
 #include <helios/hout/origin.hpp>
 #include <helios/symbols/symbol_id.hpp>
 #include <helios/tsh/expression_type.hpp>
 
+#include <base/collections/optional.hpp>
 #include <base/pointers/box.hpp>
 #include <base/pointers/shared_box.hpp>
 #include <base/types/ints.hpp>
 
 #include <token_parser_core/common_elements.hpp>
 
+#include <optional>
 #include <vector>
 
 namespace compiler::helios::code {
 	class HoutExprVisitor;
+	struct Stmt;
+
+	/**
+	 * @brief A block of statements, defined together with the statements in `stmt.hpp`, which
+	 * cannot be included here, as it includes this header itself.
+	 */
+	struct CodeBlock;
 
 #define FRIEND_MAKEBOX                              \
 	template<class T, class Deleter, class... Args> \
@@ -778,6 +788,49 @@ namespace compiler::helios::code {
 	};
 
 	/**
+	 * @brief Constructs an aggregate value element-by-element, in place.
+	 *
+	 * Covers both record-like aggregates (struct/class/tuple), where the elements are the fields in
+	 * declaration order, and statically-sized arrays, where the elements are the array items in
+	 * index order, or a single value that fills all of the elements of the array.
+	 *
+	 * It stores the into uninitialized storage, with only the last store flagged as constructing
+	 * the destination, to avoid destructor insertion on assignment.
+	 */
+	struct CreateAggregateExpr final: public Expr {
+		tsh::AbstractType            type;
+		std::vector<base::Box<Expr>> values;
+
+		/// This is only used when we fill the array elements with a loop,
+		/// this statements will be lowered in a loop body.
+		base::Optional<base::CSharedBox<CodeBlock>> per_element_body;
+
+		CreateAggregateExpr(
+			query::Context&                             ctx,
+			ElementOrigin                               origin,
+			tsh::AbstractType                           type,
+			std::vector<base::Box<Expr>>                values,
+			base::Optional<base::CSharedBox<CodeBlock>> per_element_body = std::nullopt
+		);
+
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
+
+	private:
+		FRIEND_MAKEBOX
+
+		CreateAggregateExpr(
+			tsh::ExpressionType<>                       expression_type,
+			ElementOrigin                               origin,
+			tsh::AbstractType                           type,
+			std::vector<base::Box<Expr>>                values,
+			base::Optional<base::CSharedBox<CodeBlock>> per_element_body
+		);
+	};
+
+	/**
 	 * @brief Represents a compile-time cast of a value to a type.
 	 *
 	 * This is meant to be added by coercions when a value of type `type` is expected,
@@ -799,6 +852,27 @@ namespace compiler::helios::code {
 		LiftToTypeExpr(
 			tsh::ExpressionType<> expression_type, ElementOrigin origin, Box<Expr> value_expr
 		);
+	};
+
+	/**
+	 * @brief Represents a block of statements that evaluates to a single value.
+	 */
+	struct BlockExpr final: public Expr {
+		// @TODO: #3292 Refactor once we figure out how a user should be able to use blocks in
+		// expressions.
+		Box<Stmt> block;
+
+		BlockExpr(query::Context& ctx, ElementOrigin origin, Box<Stmt> block);
+
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
+
+		[[nodiscard]] Box<Expr> clone() const final;
+
+	private:
+		FRIEND_MAKEBOX
+
+		BlockExpr(tsh::ExpressionType<> expression_type, ElementOrigin origin, Box<Stmt> block);
 	};
 
 	/**
