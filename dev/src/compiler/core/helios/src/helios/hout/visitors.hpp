@@ -39,8 +39,10 @@ namespace compiler::helios::code {
 		RefOfExpr,
 		DerefExpr,
 		DefaultValueExpr,
+		CreateAggregateExpr,
 		CastExpr,
 		LiftToTypeExpr,
+		BlockExpr,
 		ListPushExpr,
 		ListPopExpr
 	);
