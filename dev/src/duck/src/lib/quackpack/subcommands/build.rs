@@ -1,6 +1,6 @@
 //! `build` subcommand execution logic.
 use crate::quackpack::core::compile::profiles::Profile;
-use crate::quackpack::core::compile::unit_compiler::UnitCompilerOutput;
+use crate::quackpack::core::compile::unit_compiler::CompilationOutput;
 use crate::quackpack::core::compile::{self, BuildContext};
 use crate::quackpack::core::storage::{StorageSyncOptions, sync};
 use crate::quackpack::core::{FeatureName, PackageContext};
@@ -28,7 +28,7 @@ pub struct BuildOptions<'duck> {
 }
 
 /// Compile given options.
-pub fn compile(options: BuildOptions<'_>) -> QuackResult<UnitCompilerOutput> {
+pub fn compile(options: BuildOptions<'_>) -> QuackResult<CompilationOutput> {
     let BuildOptions {
         pcx,
         used_features,

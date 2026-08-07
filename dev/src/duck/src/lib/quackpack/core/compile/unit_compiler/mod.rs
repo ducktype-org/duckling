@@ -58,7 +58,7 @@ pub trait UnitCompiler: Debug {
 
 #[derive(Debug)]
 /// Output of [`compile`].
-pub struct UnitCompilerOutput {
+pub struct CompilationOutput {
     /// Root [`Unit`] and path to its output.
     pub root: (Unit, PathBuf),
 }
@@ -93,7 +93,7 @@ pub fn compile(
     compiler: &dyn UnitCompiler,
     graph: UnitGraph,
     bcx: &BuildContext<'_, '_>,
-) -> QuackResult<UnitCompilerOutput> {
+) -> QuackResult<CompilationOutput> {
     compiler.pre_compilation(&graph, bcx);
     let artifacts_layout = bcx.artifacts_layout(&graph);
     let profile_layout = artifacts_layout.for_profile(bcx.profile);

@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use itertools::Itertools;
 use tracing::{debug, instrument, trace};
 
-use super::UnitCompilerOutput;
+use super::CompilationOutput;
 use crate::quackpack::core::compile::artifacts_layout::ProfileLayout;
 use crate::quackpack::core::compile::duckc::multipackage_schema;
 use crate::quackpack::core::compile::unit::graph::UnitGraph;
@@ -13,19 +13,22 @@ use crate::quackpack::core::compile::unit::{ArtifactsType, Unit};
 use crate::{QuackError, QuackResult};
 
 #[instrument(skip_all)]
-/// Get the output of this [`UnitCompiler`](super::UnitCompiler).
+/// Get the output of this [`compile`](super::compile) pass.
+///
+/// Right now, this is deterministic (i.e. can be determined from the [`UnitGraph`] and
+/// [`ProfileLayout`]), but it may change in the future.
 pub fn get_compiler_output(
     graph: &UnitGraph,
     layout: &dyn ProfileLayout,
-) -> QuackResult<UnitCompilerOutput> {
+) -> QuackResult<CompilationOutput> {
     let root = graph.root_unit();
     let path = unit_output(root, graph, layout)?;
-    Ok(UnitCompilerOutput {
+    Ok(CompilationOutput {
         root: (root.clone(), path),
     })
 }
 
-/// Get a path to the output artifact of this `unit`.
+/// Get a path to the output artifact of this [`Unit`].
 #[instrument(skip_all)]
 pub fn unit_output(
     unit: &Unit,
