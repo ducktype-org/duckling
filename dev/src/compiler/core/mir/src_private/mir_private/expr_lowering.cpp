@@ -82,6 +82,19 @@ namespace compiler::mir {
 			out.emplace(ExprLowerRes(begin, ExprLowerRes::Finalizer(hole, instr, type)));
 		}
 
+		/**
+		 * @brief noValueOutput() for an instruction that hands the ownership of its result over.
+		 */
+		void noValueMovedOutput(
+			BlockBuilderRef                      begin,
+			const BlockBuilder::InstructionHole& hole,
+			const Instruction&                   instr,
+			const tsh::SymbolType<>&             type
+		) {
+			noValueOutput(begin, hole, instr, type);
+			out->hands_over_ownership = true;
+		}
+
 		ExprLowerRes lowerSubExpr(const hc::Expr& expr, BlockBuilderRef continuation) {
 			return lowerExpr(expr, continuation, function, expr_scope);
 		}
@@ -845,7 +858,7 @@ namespace compiler::mir {
 
 			const auto moved_local = inner_val.get<MIRPlace>().getBase<MIRLocalRef>();
 
-			noValueOutput(
+			noValueMovedOutput(
 				lowered_inner.begin,
 				hole,
 				Instruction(
@@ -859,7 +872,6 @@ namespace compiler::mir {
 				),
 				expr.expression_type.getSymbolType()
 			);
-			out->ownership_handed_over = true;
 		}
 
 		void visitRefOfExpr(const hc::RefOfExpr& expr) override {
@@ -1185,7 +1197,7 @@ namespace compiler::mir {
 			variant_case(Finalizer, res_data) {
 				auto result = function.addTmp(res_data.type, res_data.instr.scope);
 				// Don't destruct a temporary which is moved out.
-				if (ownership_handed_over) result->lifetime_flags |= LifetimeFlag::NoDestructor;
+				if (hands_over_ownership) result->lifetime_flags |= LifetimeFlag::NoDestructor;
 				res_data.instr.output.emplace(result);
 				res_data.instr.flags.push_back(flagConstruct(result));
 				res_data.hole.fill(res_data.instr);

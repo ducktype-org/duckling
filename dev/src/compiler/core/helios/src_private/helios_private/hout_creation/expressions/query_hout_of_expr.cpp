@@ -955,8 +955,7 @@ namespace compiler::helios {
 		query::Context&                                  ctx,
 		const pst::GenericPSTQueryKey<pst::ExprElement>& pst_expr,
 		const tsh::SymbolType<>                          expected_type,
-		CoercionErrorOverrides                           error_overrides,
-		const SourceLifetime                             source_lifetime
+		CoercionErrorOverrides                           error_overrides
 	) {
 		auto expr_hout_qresult = ctx.query<QueryHoutOfExpr>({ pst_expr.element });
 
@@ -964,8 +963,7 @@ namespace compiler::helios {
 
 		const auto source_symbol_type = expr_hout->expression_type.getSymbolType();
 		const auto source_position    = pst_expr.element.unlock(ctx)->getStablePosition();
-		const auto coercion_qresult
-			= canCoerce(ctx, expr_hout->expression_type, expected_type, source_lifetime);
+		const auto coercion_qresult   = canCoerce(ctx, expr_hout->expression_type, expected_type);
 		if (coercion_qresult.hasFailed()) return query::Failed();
 
 		const auto& coercion_result = coercion_qresult.valueOrThrow();

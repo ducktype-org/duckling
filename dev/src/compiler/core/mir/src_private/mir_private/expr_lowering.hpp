@@ -42,16 +42,24 @@ namespace compiler::mir {
 		std::variant<MIRValue, Finalizer> value;
 
 		/**
-		 * @brief Whether this result is a value whose ownership has already been handed over.
+		 * @brief Whether producing this result hands the ownership of the value over to whoever
+		 * consumes it. Set for the result of a move.
 		 *
-		 * Set for the result of a move. If such result has to be stored in a temporary to be
-		 * passed on (i.e. `goo(foo())`), that temporary cannot be destructed as it's passed to the
-		 * call.
+		 * For example:
+		 * `foo(goo())` (which in reality is `foo(implicit_move(goo()))`)
+		 * lowers to:
+		 * ```
+		 * tmp = goo()            // Move flag
+		 * foo(tmp)
+		 * ```
+		 *
+		 * `tmp` should not be destroyed after the scope ends since it's "in the process of moving"
+		 * to `foo()`, thus this bool makes sure to add a `NoDestructor` flag to it.
 		 *
 		 * When the result is written straight into a target dest instead, no such temporary is
 		 * created and this changes nothing.
 		 */
-		bool ownership_handed_over = false;
+		bool hands_over_ownership = false;
 
 		ExprLowerRes(BlockBuilderRef begin, std::variant<MIRValue, Finalizer> value);
 

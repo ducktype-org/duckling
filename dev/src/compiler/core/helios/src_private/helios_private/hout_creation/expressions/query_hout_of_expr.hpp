@@ -34,15 +34,13 @@ namespace compiler::helios {
 	 * @param pst_expr The PST expression.
 	 * @param expected_type The expected type of the expression.
 	 * @param error_overrides Optional overrides of the default coercion error logging.
-	 * @param source_lifetime Whether the place the expression reads outlives this coercion.
 	 * @return A HOUT Expression of the expected type, or an error if coercion is not possible.
 	 */
 	query::QResult<BoxOrCRef<code::Expr>> getHoutOfExprWithExpectedType(
 		query::Context&                                  ctx,
 		const pst::GenericPSTQueryKey<pst::ExprElement>& pst_expr,
 		tsh::SymbolType<>                                expected_type,
-		CoercionErrorOverrides                           error_overrides = {},
-		SourceLifetime source_lifetime = SourceLifetime::OutlivesUse
+		CoercionErrorOverrides                           error_overrides = {}
 	);
 
 	/**

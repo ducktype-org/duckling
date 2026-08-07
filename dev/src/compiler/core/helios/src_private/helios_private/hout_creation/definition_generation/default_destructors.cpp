@@ -69,21 +69,18 @@ namespace compiler::helios::defgen {
 
 				appendDestruction(ctx, body, s.deref(location->clone()));
 
-				// The box is handed over to be destroyed, not to be kept alive by a new owner, so
-				// it is passed as-is rather than moved into the call.
+				// `box_destructor` takes a `ref T`, so the box is passed by reference.
 				// For
 				// ```
 				// class HasBox {
 				// 	boxed: box i32;
 				// }
 				// ```
-				// The argument built here is `(*self).boxed`, a projection of a
-				// non-owned lvalue. Moving out of it is neither allowed by its value category nor
-				// expressible as a whole-local `Move` flag, and it would mean the opposite of what
-				// this call does. Thus we use the special `callDestroying` which doesn't consume
-				// it's parameter.
-				body.emplace_back(s.expr(s.callDestroying(
-					s.ident(boxDestructorSymForType(ctx, pointee_type)), std::move(location)
+				// The argument built here is `refof (*self).boxed`, and `(*self).boxed` on its own
+				// is a projection of a non-owned lvalue. Moving out of it is neither allowed by its
+				// value category nor expressible as a whole-local `Move` flag.
+				body.emplace_back(s.expr(s.call(
+					s.ident(boxDestructorSymForType(ctx, pointee_type)), s.refOf(std::move(location))
 				)));
 				return;
 			}

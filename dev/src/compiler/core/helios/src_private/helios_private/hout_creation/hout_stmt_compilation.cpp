@@ -76,40 +76,31 @@ namespace compiler::helios {
 			this->out.emplace(makeBox<std::remove_reference_t<T>>(std::forward<T>(value)));
 		}
 
-		/**
-		 * @brief Warns that the `move` in `return move x` is redundant.
-		 */
-		void warnOnRedundantReturnMove(const pst::GenericPSTQueryKey<pst::ExprElement>& pst_expr) {
-			auto expr_hout_qresult = ctx.query<QueryHoutOfExpr>({ pst_expr.element });
-			if (expr_hout_qresult->hasFailed()) return;
-
-			const auto& expr_hout = expr_hout_qresult->valueOrThrow();
-			if (not expr_hout->expression_type.getValueCategory().mustMove()) return;
-
-			ctx.logInt(makeBox<dia_int::PlaceholderWarning>(
-				"A returned value is moved out of implicitly, `move` is not needed here.",
-				pst_expr.element.unlock(ctx)->getStablePosition()
-			));
-		}
-
 		void visitReturn(pst::Access<pst::Return> stmt) override {
 			if (auto val = stmt->getValue()) {
 				const auto pst_expr = val.value().unlock(ctx)->getExpr();
 
-				warnOnRedundantReturnMove(pst_expr);
+				auto expr_hout_qresult = ctx.query<QueryHoutOfExpr>({ pst_expr });
+				if (expr_hout_qresult->hasFailed()) return;
 
+				const auto& expr_hout = expr_hout_qresult->valueOrThrow();
+				if (expr_hout->expression_type.getValueCategory().mustMove()) {
+					ctx.logInt(makeBox<dia_int::PlaceholderWarning>(
+						"A returned value is moved out of implicitly, `move` is not needed "
+						"here.",
+						pst_expr.unlock(ctx)->getStablePosition()
+					));
+				}
 
-				auto expr_coerced
-					= getHoutOfExprWithExpectedType(
-						  ctx,
-						  pst_expr,
-						  return_type,
-						  {},
-						  SourceLifetime::DiesWithUse  // The returned value effectively dies on the
-				                                       // return, thus we implicitly move it.
-					)
-				          .valueOrThrow();
-				output(code::ReturnStmt(code::pstOrigin(stmt), std::move(expr_coerced)));
+				// Move before the coercion, so the coercion knows about the changed value category.
+				auto returned = moveReturnedLocal(ctx, expr_hout->clone(), return_type);
+
+				auto expr_coerced = coerceFromBox(
+					ctx, std::move(returned), return_type, pst_expr.unlock(ctx)->getStablePosition()
+				);
+				if (expr_coerced.empty()) query::throwFailed();
+
+				output(code::ReturnStmt(code::pstOrigin(stmt), std::move(expr_coerced.value())));
 			} else {
 				output(code::VoidReturnStmt(code::pstOrigin(stmt)));
 			}

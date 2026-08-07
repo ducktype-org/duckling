@@ -119,47 +119,34 @@ namespace compiler::helios::code::shorthands {
 		/**
 		 * @brief Prepares an expression to be consumed by a new owner. Every builder that hands a
 		 * value to a new owner should pass it through this method.
-		 *
-		 * - A trivially copyable value is byte copied
-		 * - A literal is not owned by anything, so there is nothing to transfer,
-		 * - An owned rvalue (a temporary) is moved implicitly.
-		 * - An expression that already transfers ownership is left alone.
-		 *
-		 * Anything else is a non-trivially-copyable lvalue. In this case we panic and require an
-		 * explicit `s.copy(...)`/`s.move(...)`.
 		 */
 		[[nodiscard]]
-		Box<Expr> consume(
-			Box<Expr> value, const SourceLifetime source_lifetime = SourceLifetime::OutlivesUse
-		) const {
-			const tsh::ExpressionType<> type     = value->expression_type;
-			const tsh::PrimaryCategory  category = type.getValueCategory().getCategory();
-
-			if (type.getSymbolType().isTriviallyCopyable(*ctx)) return value;
-			if (category == tsh::PrimaryCategory::Literal) return value;
-			// Don't produce a move of a move.
-			if (type.getValueCategory().mustMove()) return value;
-
-			// A temporary is an owned rvalue and is implicitly moved
-			// An owned local dies with the function when the value is returned.
-			// Both cause an implicit `move` insertion.
-			const bool insert_implicit_move = category == tsh::PrimaryCategory::Temporary
-			                               || (category == tsh::PrimaryCategory::Local
-			                                   && source_lifetime == SourceLifetime::DiesWithUse);
-
-			if (insert_implicit_move) {
+		Box<Expr> consume(Box<Expr> value) const {
+			switch (passingMethod(*ctx, value->expression_type)) {
+			case PassingMethod::ByteCopy:
+				return value;
+			case PassingMethod::ImplicitMove: {
 				auto origin = value->origin.generatedFrom();
 				return makeBox<MoveExpr>(
 					*ctx, origin, std::move(value), MoveExpr::MoveKind::Implicit
 				);
 			}
-
-			CORE_PANIC(base::strConcat(
-				"Generated HOUT passes a non-trivially-copyable value of type `",
-				type.getSymbolType().toString(),
-				"` without saying how. Wrap it in `s.copy(...)` to copy it or `s.move(...)` to "
-				"move it."
-			));
+			case PassingMethod::ExplicitCopyOrMove:
+				CORE_PANIC(base::strConcat(
+					"Generated HOUT passes a non-trivially-copyable value of type `",
+					value->expression_type.getSymbolType().toString(),
+					"` without saying how. Wrap it in `s.copy(...)` to copy it or "
+					"`s.move(...)` "
+					"to move it."
+				));
+			case PassingMethod::NotCopyable:
+				CORE_PANIC(base::strConcat(
+					"Consumed value of type `",
+					value->expression_type.getSymbolType().toString(),
+					"` is not copyable. `s.move(...)` it."
+				));
+			}
+			CORE_UNREACHABLE();
 		}
 
 	private:
@@ -384,23 +371,6 @@ namespace compiler::helios::code::shorthands {
 			);
 		}
 
-		/**
-		 * @brief A call `callee(arguments...)` that passes its arguments exactly as given, without
-		 * running them through @ref consume.
-		 *
-		 * This is for the one generated call that takes a by-value argument without handing
-		 * its ownership to anybody: a destructor.
-		 */
-		[[nodiscard]]
-		Box<CallExpr> callDestroying(Box<Expr> callee, Box<Expr> destroyed_place) const {
-			return makeBox<CallExpr>(
-				*ctx,
-				generatedOrigin(),
-				std::move(callee),
-				base::packToVector<Box<Expr>>(std::move(destroyed_place))
-			);
-		}
-
 		/** @brief A sequence `expressions, ...` (comma operator); the last one is the result. */
 		[[nodiscard]]
 		Box<SequenceExpr> seq(std::vector<Box<Expr>> expressions) const {
@@ -555,8 +525,9 @@ namespace compiler::helios::code::shorthands {
 		 */
 		[[nodiscard]]
 		Box<ReturnStmt> ret(Box<Expr> value) const {
+			const auto value_type = value->expression_type.getSymbolType();
 			return makeBox<ReturnStmt>(
-				generatedOrigin(), consume(std::move(value), SourceLifetime::DiesWithUse)
+				generatedOrigin(), consume(moveReturnedLocal(*ctx, std::move(value), value_type))
 			);
 		}
 

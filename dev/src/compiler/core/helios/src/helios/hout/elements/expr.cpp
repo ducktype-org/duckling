@@ -245,21 +245,18 @@ namespace compiler::helios::code {
 	}
 
 	/**
-	 * @brief The expression type of a reusable expression.
+	 * @brief The `PrimaryCategory` of a reusable expression based on it's `inner` type.
 	 *
-	 * A reusable expression is evaluated once into storage that every use reads afterwards
-	 * This means an rvalue becomes an lvalue.
-	 * - a `Temporary` passes its ownership to the storage, so it becomes an owned lvalue and
-	 *   the storage is what gets destroyed at the end of the scope
-	 * - a `Local` is already an owned lvalue and stays one
-	 * - a `Global` or a `Dereferenced` place is not owned here, the storage only holds another
-	 *   view of it, so it stays non-owned and can never be moved out of
-	 * - a `Literal` owns nothing
+	 * A reusable expression is evaluated once into a hidden local that every use reads afterwards,
+	 * so a `Temporary` (an owned rvalue) becomes a `Local` (an owned lvalue). The hidden local is
+	 * what owns the value now and what gets destroyed at the end of the scope.
 	 *
-	 * We can't just inherit the `inner` category for temporaries, as this means each read looks
-	 * like a read form a temporary (although it isn't really a temporary) and inserts implicit
-	 * moves. Additionally, field reads from such reusable expression are counter as partial moves
-	 * which are NYI.
+	 * We can't just inherit the inner category of a `Temporary` here. As every read of the
+	 * `ReusableExpr` would be an implicit move which would move the same value multiple times.
+	 * Additionally, field reads off the reusable would be treated as partial moves, which are NYI.
+	 *
+	 * Every other category is already an lvalue or owns nothing (`Local`, `Global`, `Dereferenced`,
+	 * `Literal`) so reading it repeatedly is safe (in case of trivially copyable types).
 	 */
 	static tsh::ExpressionType<> reusableExpressionType(const Expr& inner) {
 		const tsh::ExpressionType<> inner_type = inner.expression_type;
@@ -1079,13 +1076,8 @@ namespace compiler::helios::code {
 			  tsh::ExpressionType<>(
 				  inner->expression_type.getSymbolType(),
 				  // `move` forces the move semantic.
-				  tsh::ValueCategory(
-					  tsh::PrimaryCategory::Temporary,
-					  true,
-					  tsh::ValueSemanticsOptions::MOVE | tsh::ValueSemanticsOptions::COPY
-						  | tsh::ValueSemanticsOptions::USE | tsh::ValueSemanticsOptions::DESTROY,
-					  tsh::ValueSemanticsOptions::MOVE
-				  )
+				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
+					  .withForceSemantics(tsh::ValueSemanticsOptions::MOVE)
 			  ),
 			  origin
 		  ),

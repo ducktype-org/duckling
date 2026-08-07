@@ -30,11 +30,29 @@ MAKE_STRINGIFYABLE_ENUM(compiler::helios, uint8_t, InvalidCoercionReason,
 
 namespace compiler::helios {
 	/**
-	 * @brief Whether the place a value is read from outlives the operation that reads it.
-	 * Currently `DiesWithUse` is only used in return statements and causes an implicit move to get
-	 * inserted.
+	 * @brief How a coercion may hand over a value.
 	 */
-	enum class SourceLifetime : std::uint8_t { OutlivesUse, DiesWithUse };
+	enum class PassingMethod {
+		ByteCopy,            ///< Trivially copyable, copied by copying its bytes.
+		ImplicitMove,        ///< Owned rvalue (a temporary), moved implicitly.
+		ExplicitCopyOrMove,  ///< Non-trivial assignable value (lvalue), needs an explicit
+		                     ///< `copy`/`move`.
+		NotCopyable,  ///< Non-trivial assignable value (lvalue) value with no copy constructor.
+	};
+
+	/**
+	 * @brief Decides how the given value may passed, based on its value category and the
+	 * abilities of its type.
+	 */
+	PassingMethod passingMethod(query::Context& ctx, const tsh::ExpressionType<>& value);
+
+	/**
+	 * @brief Wraps a value in an implicit move when a `return` is about to end the life of the
+	 * owned local it returns.
+	 */
+	[[nodiscard]] Box<code::Expr> moveReturnedLocal(
+		query::Context& ctx, Box<code::Expr> value, const tsh::SymbolType<>& return_type
+	);
 
 	class IncompatibleTypesError: public dia_int::MessageWithCodeFragmentAndCause {
 		dia_int::Metadata getMetadata() const final {
@@ -135,10 +153,7 @@ namespace compiler::helios {
 		}
 
 		friend CoercionQResult canCoerce(
-			query::Context&              ctx,
-			const tsh::ExpressionType<>& from,
-			const tsh::SymbolType<>&     to,
-			SourceLifetime               source_lifetime
+			query::Context& ctx, const tsh::ExpressionType<>& from, const tsh::SymbolType<>& to
 		);
 
 		[[nodiscard]] bool isEmptyCoercion() const noexcept {
@@ -215,10 +230,7 @@ namespace compiler::helios {
 	 * a function performing the coercion if it is.
 	 */
 	CoercionQResult canCoerce(
-		query::Context&              ctx,
-		const tsh::ExpressionType<>& from,
-		const tsh::SymbolType<>&     to,
-		SourceLifetime               source_lifetime = SourceLifetime::OutlivesUse
+		query::Context& ctx, const tsh::ExpressionType<>& from, const tsh::SymbolType<>& to
 	);
 
 	/**
