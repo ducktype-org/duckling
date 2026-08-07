@@ -2,7 +2,6 @@
 use std::fmt;
 use std::path::{Path, PathBuf};
 
-use super::compile::artifacts_layout::ArtifactsLayout;
 use super::identity::{Identity, Origin};
 use super::script::Script;
 use super::{Manifest, VenvConfig, Version};
@@ -62,14 +61,6 @@ impl AnyPackage {
         match self {
             Self::Package(package) => package.artifacts_directory(),
             Self::Script(script) => script.artifacts_directory(),
-        }
-    }
-
-    /// Get the artifacts layout.
-    pub fn artifacts_layout<T: ArtifactsLayout>(&self) -> T {
-        match self {
-            Self::Package(package) => package.artifacts_layout(),
-            Self::Script(script) => script.artifacts_layout(),
         }
     }
 
@@ -305,11 +296,6 @@ impl Package {
     /// Get the path to the artifacts directory.
     pub fn artifacts_directory(&self) -> &Path {
         &self.artifacts_dir
-    }
-
-    /// Get the the artifacts layout.
-    pub fn artifacts_layout<T: ArtifactsLayout>(&self) -> T {
-        T::new(self.artifacts_dir.clone())
     }
 
     /// Convert this package to an [`Identity`].

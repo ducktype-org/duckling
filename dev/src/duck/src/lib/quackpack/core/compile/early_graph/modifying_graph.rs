@@ -4,7 +4,7 @@ use std::collections::VecDeque;
 
 use tracing::debug;
 
-use super::*;
+use super::{DependencyGraph, EarlyGraph, HashMap, HashSet, Identity, PackagesSet, QuackResult};
 use crate::quackpack::core::FeatureName;
 use crate::quackpack::core::compile::missing_depenendcy_in_manifest;
 use crate::util::extend::QpExtend;
