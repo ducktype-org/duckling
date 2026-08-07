@@ -758,6 +758,7 @@ private:
 		const auto [func_module, func_scope]
 			= getModule(fs::File(path("test_modules/function_calls")));
 		const auto a_obj      = getChain("aObj", root_scope).back();
+		const auto a_member   = getChain("member_access", root_scope).back();
 		const auto square_sym = getChain("square", func_scope).back();
 
 		query::utils::withContextDo([&](query::Context& ctx) {
@@ -843,6 +844,20 @@ private:
 				makeBox<LiteralStringExpr>(ctx, generatedOrigin(), base::StrID("hello"))
 			);
 
+			// Build block expr
+			std::vector<base::Box<Stmt>> block_statements;
+			block_statements.emplace_back(makeBox<AssignmentStmt>(
+				generatedOrigin(),
+				makeBox<IdentifierExpr>(ctx, generatedOrigin(), a_member),
+				makeBox<LiteralNumericExpr>(ctx, generatedOrigin(), 0)
+			));
+			block_statements.emplace_back(makeBox<ExprStmt>(
+				generatedOrigin(),
+				makeBox<VariantTypeConstructorExpr>(
+					ctx, generatedOrigin(), std::move(variant_subtypes)
+				)
+			));
+
 			auto mega_expr = makeBox<TernaryOperatorExpr>(
 				ctx,
 				generatedOrigin(),
@@ -851,8 +866,10 @@ private:
 				// If true: SequenceExpr with nested expressions including CallExpr
 				makeBox<SequenceExpr>(ctx, generatedOrigin(), std::move(sequence_exprs)),
 				// If false: VariantTypeConstructorExpr(i64 | bool | string)
-				makeBox<VariantTypeConstructorExpr>(
-					ctx, generatedOrigin(), std::move(variant_subtypes)
+				makeBox<BlockExpr>(
+					ctx,
+					generatedOrigin(),
+					makeBox<BlockStmt>(generatedOrigin(), CodeBlock{ std::move(block_statements) })
 				)
 			);
 
@@ -3075,6 +3092,23 @@ private:
 		const auto* c_var = dynamic_cast<const VariableStmt*>(stmts.at(2).get());
 		ASSERT_TRUE(c_var != nullptr);
 		ASSERT_TRUE(dynamic_cast<const MoveExpr*>(c_var->initial_value.get()) != nullptr);
+
+		const HOUTFunction* through_ref = nullptr;
+		for (auto& f: hout.functions)
+			if (f->declaration->original_name == "copiesThroughRef") through_ref = &*f;
+		ASSERT_TRUE(through_ref != nullptr);
+
+		// var b = copy r;   (r: ref W)
+		// var c = copy bx;  (bx: box W)
+		// Both should lower to a copy ctor call.
+		const auto& ref_stmts = through_ref->body->statements;
+		ASSERT_EQUAL_PRINT(3, ref_stmts.size());
+
+		for (const usize i: { 0uz, 1uz }) {
+			const auto* var_stmt = dynamic_cast<const VariableStmt*>(ref_stmts.at(i).get());
+			ASSERT_TRUE(var_stmt != nullptr);
+			ASSERT_TRUE(dynamic_cast<const CallExpr*>(var_stmt->initial_value.get()) != nullptr);
+		}
 	}
 
 	void testDestructors() {

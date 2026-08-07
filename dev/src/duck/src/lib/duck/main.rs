@@ -81,7 +81,7 @@ fn print_message(msgs: &QuackError, term: &Terminal) -> QuackResult<()> {
             ErrorType::BareMessage => {
                 let _ = term.print(msg);
             }
-            _ => qp_bail_internal!("Errors and internal errors should not be printed on stdout"),
+            _ => qp_bail_internal!("errors and internal errors should not be printed on stdout"),
         }
     }
     Ok(())

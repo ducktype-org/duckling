@@ -11,7 +11,7 @@ use super::duckc::multipackage_schema;
 use crate::quackpack::core::compile::compiler_package::CompilerPackage;
 use crate::quackpack::core::identity::Identity;
 use crate::util::hash::sha256_string;
-use crate::{QuackResult, QuackResultContext};
+use crate::{QuackResult, qp_bail_internal};
 
 pub mod graph;
 pub mod unit_visitor;
@@ -166,7 +166,7 @@ impl Unit {
                     .get_by_name(dep_name)
                     .unwrap_or_else(|| {
                         panic!(
-                            "unit=({},{}) has dep=({},{}), but it's not in the manifest?!",
+                            "unit=({},{}) has dep=({},{}), but it's not in the manifest?! `{self:?}` {graph:#?}",
                             self.unit_id(),
                             import_name,
                             dep_id,
@@ -180,15 +180,17 @@ impl Unit {
             }
             result
         };
+        let Some(source_directory) = package.src() else {
+            qp_bail_internal!(
+                "asked for src directory of the global package or a script: {package:#?}"
+            )
+        };
         Ok(multipackage_schema::Package {
             id: self.unique_name().into(),
             import_name,
             version,
             features,
-            path_to_the_src_directory: package
-                .src()
-                .context_internal("asked for src directory of the global package or a script")?
-                .to_path_buf(),
+            path_to_the_src_directory: source_directory.to_path_buf(),
             dependencies,
         })
     }

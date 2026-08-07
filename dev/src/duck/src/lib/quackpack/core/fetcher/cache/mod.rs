@@ -142,8 +142,9 @@ impl ManifestCache {
             .context(SQL_ERROR_MESSAGE)?;
         maybe_json
             .map(|json| {
-                serde_json::from_str(&json)
-                    .context_internal("failed to deserialize previously serialized manifest json")
+                serde_json::from_str(&json).with_context_internal(|| {
+                    format!("failed to deserialize previously serialized manifest json: `{json}`")
+                })
             })
             .transpose()
     }
@@ -165,9 +166,12 @@ impl ManifestCache {
             .context(SQL_ERROR_MESSAGE)?;
         jsons
             .into_iter()
-            .map(|json| serde_json::from_str(&json))
-            .collect::<Result<_, _>>()
-            .context_internal("failed to deserialize previously serialized manifest json")
+            .map(|json| {
+                serde_json::from_str(&json).with_context_internal(|| {
+                    format!("failed to deserialize previously serialized manifest json: `{json}`")
+                })
+            })
+            .collect()
     }
 
     /// Add or replace manifest for package `package`.
@@ -179,8 +183,9 @@ impl ManifestCache {
         package: &types::PackageWithUrl,
         manifest: registry::Manifest,
     ) -> QuackResult<()> {
-        let json = serde_json::to_string(&manifest)
-            .context_internal("failed to serialize registry schema to JSON")?;
+        let json = serde_json::to_string(&manifest).with_context_internal(|| {
+            format!("failed to serialize registry schema to JSON: {manifest:#?}")
+        })?;
         self.connection
             .add_or_replace_manifest_json(package, json)
             .context(SQL_ERROR_MESSAGE)?;
@@ -203,8 +208,9 @@ impl ManifestCache {
         let package_manifest_pairs = multi_manifest
             .into_iter()
             .map(|manifest| {
-                let json = serde_json::to_string(&manifest)
-                    .context_internal("failed to serialize registry schema to JSON")?;
+                let json = serde_json::to_string(&manifest).with_context_internal(|| {
+                    format!("failed to serialize registry schema to JSON: {manifest:#?}")
+                })?;
                 let package = types::PackageWithUrl {
                     name: manifest.metadata.name.into(),
                     version: manifest.metadata.version,

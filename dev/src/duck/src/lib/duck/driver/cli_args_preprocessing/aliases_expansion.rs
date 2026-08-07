@@ -212,16 +212,11 @@ mod tests {
         ctx.duck_cfg_mut().set_aliases(fake_aliases);
         let external_cmds = HashMap::new();
         let visited = Vec::new();
-        let result = expand_aliases(args_matches, &ctx, &external_cmds, visited);
-        match result {
-            Ok(_) => panic!(""),
-            Err(err) => {
-                assert_eq!(
-                    err.to_string(),
-                    "user-defined alias `z` cycles: x -> y -> z -> x"
-                );
-            }
-        }
+        let err = expand_aliases(args_matches, &ctx, &external_cmds, visited).unwrap_err();
+        assert_eq!(
+            err.to_string(),
+            "user-defined alias `z` cycles: x -> y -> z -> x"
+        );
     }
 
     #[test]
@@ -237,12 +232,7 @@ mod tests {
         ctx.duck_cfg_mut().set_aliases(fake_aliases);
         let external_cmds = HashMap::new();
         let visited = Vec::new();
-        let result = expand_aliases(args_matches, &ctx, &external_cmds, visited);
-        match result {
-            Ok(new_args_matches) => {
-                assert_eq!(new_args_matches.subcommand_name().unwrap(), "build");
-            }
-            Err(_) => panic!(""),
-        }
+        let new_args_matches = expand_aliases(args_matches, &ctx, &external_cmds, visited).unwrap();
+        assert_eq!(new_args_matches.subcommand_name().unwrap(), "build");
     }
 }
