@@ -3092,6 +3092,23 @@ private:
 		const auto* c_var = dynamic_cast<const VariableStmt*>(stmts.at(2).get());
 		ASSERT_TRUE(c_var != nullptr);
 		ASSERT_TRUE(dynamic_cast<const MoveExpr*>(c_var->initial_value.get()) != nullptr);
+
+		const HOUTFunction* through_ref = nullptr;
+		for (auto& f: hout.functions)
+			if (f->declaration->original_name == "copiesThroughRef") through_ref = &*f;
+		ASSERT_TRUE(through_ref != nullptr);
+
+		// var b = copy r;   (r: ref W)
+		// var c = copy bx;  (bx: box W)
+		// Both should lower to a copy ctor call.
+		const auto& ref_stmts = through_ref->body->statements;
+		ASSERT_EQUAL_PRINT(3, ref_stmts.size());
+
+		for (const usize i: { 0uz, 1uz }) {
+			const auto* var_stmt = dynamic_cast<const VariableStmt*>(ref_stmts.at(i).get());
+			ASSERT_TRUE(var_stmt != nullptr);
+			ASSERT_TRUE(dynamic_cast<const CallExpr*>(var_stmt->initial_value.get()) != nullptr);
+		}
 	}
 
 	void testDestructors() {
