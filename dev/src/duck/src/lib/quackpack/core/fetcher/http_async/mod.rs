@@ -113,6 +113,10 @@ impl<'duck> AsyncHttpClient<'duck> {
         configure_easy2(&mut easy, self.ctx, request).context("failed to configure curl handle")?;
         Ok(easy)
     }
+
+    pub fn ctx(&self) -> &DuckContext {
+        self.ctx
+    }
 }
 
 impl Drop for AsyncHttpClient<'_> {

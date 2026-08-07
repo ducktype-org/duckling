@@ -183,8 +183,9 @@ fn write_schema(
     schema: multipackage_schema::MultiPackage,
     locked_manifest_file: &LockedFile,
 ) -> QuackResult<()> {
-    let manifest_json = serde_json::to_string_pretty(&schema)
-        .context_internal("failed to convert manifest into a JSON string")?;
+    let manifest_json = serde_json::to_string_pretty(&schema).with_context_internal(|| {
+        format!("failed to convert manifest into a JSON string: {schema:#?}")
+    })?;
     locked_manifest_file.file().set_len(0).with_context(|| {
         format!(
             "failed to truncate `{}`",

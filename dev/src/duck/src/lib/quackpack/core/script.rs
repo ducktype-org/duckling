@@ -402,7 +402,7 @@ impl FrontMatter {
     ) -> QuackResult<Self> {
         let script_folder = path
             .parent()
-            .context_internal("script path without parent")?;
+            .with_context_internal(|| format!("script path `{path:?}` without a parent"))?;
         // NOTE: `parse/manifest.rs` for frontmatters sets script name as a `metadata.name`.
         let script_name = manifest.name();
         let artifacts_dir = script_folder.join(".duck_build").join(script_name);

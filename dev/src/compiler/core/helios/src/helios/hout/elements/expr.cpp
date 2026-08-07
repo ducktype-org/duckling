@@ -6,6 +6,7 @@
 #include "expr.hpp"
 
 #include "../visitors.hpp"
+#include "stmt.hpp"
 
 #include <concurrent/base/collections/hash_map.hpp>
 #include <helios/mangler/mangler.hpp>
@@ -52,8 +53,10 @@ namespace compiler::helios::code {
 	EXPR_VISITOR(RefOfExpr)
 	EXPR_VISITOR(DerefExpr)
 	EXPR_VISITOR(DefaultValueExpr)
+	EXPR_VISITOR(CreateAggregateExpr)
 	EXPR_VISITOR(CastExpr)
 	EXPR_VISITOR(LiftToTypeExpr)
+	EXPR_VISITOR(BlockExpr)
 	EXPR_VISITOR(ListPushExpr)
 	EXPR_VISITOR(ListPopExpr)
 
@@ -1096,6 +1099,65 @@ namespace compiler::helios::code {
 		return makeBox<DefaultValueExpr>(expression_type, origin, type);
 	}
 
+	CreateAggregateExpr::CreateAggregateExpr(
+		query::Context&,
+		ElementOrigin                               origin,
+		tsh::AbstractType                           type,
+		std::vector<Box<Expr>>                      values,
+		base::Optional<base::CSharedBox<CodeBlock>> per_element_body
+	):
+		  Expr(
+			  tsh::ExpressionType<>(
+				  tsh::SymbolType<>{
+					  type,
+					  tsh::ReferenceKind::Direct,
+					  tsh::Mutability::Mutable,
+				  },
+				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
+			  ),
+			  origin
+		  ),
+		  type(type),
+		  values(std::move(values)),
+		  per_element_body(std::move(per_element_body)) {}
+
+	CreateAggregateExpr::CreateAggregateExpr(
+		tsh::ExpressionType<>                       expression_type,
+		ElementOrigin                               origin,
+		tsh::AbstractType                           type,
+		std::vector<Box<Expr>>                      values,
+		base::Optional<base::CSharedBox<CodeBlock>> per_element_body
+	):
+		  Expr(expression_type, origin),
+		  type(type),
+		  values(std::move(values)),
+		  per_element_body(std::move(per_element_body)) {}
+
+	void CreateAggregateExpr::debugPrint(std::ostream& out) const {
+		out << "create_aggregate(" << expression_type.getSymbolType().toString() << ") {";
+		for (bool add_comma = false; auto&& v: values) {
+			if (add_comma) out << ", ";
+			v->debugPrint(out);
+			add_comma = true;
+		}
+		out << "}";
+
+		if (per_element_body.empty()) return;
+
+		out << " per_element {\n";
+		for (const auto& stmt: (*per_element_body)->statements) stmt->debugPrint(out, 1);
+		out << "}";
+	}
+
+	Box<Expr> CreateAggregateExpr::clone() const {
+		std::vector<base::Box<Expr>> cloned;
+		cloned.reserve(values.size());
+		for (const auto& v: values) cloned.push_back(v->clone());
+		return makeBox<CreateAggregateExpr>(
+			expression_type, origin, type, std::move(cloned), per_element_body
+		);
+	}
+
 	LiftToTypeExpr::LiftToTypeExpr(query::Context&, ElementOrigin origin, Box<Expr> value_expr):
 		  Expr(
 			  tsh::ExpressionType(
@@ -1122,6 +1184,32 @@ namespace compiler::helios::code {
 
 	Box<Expr> LiftToTypeExpr::clone() const {
 		return makeBox<LiftToTypeExpr>(expression_type, origin, value_expr->clone());
+	}
+
+	BlockExpr::BlockExpr(query::Context&, ElementOrigin origin, Box<Stmt> block):
+		  Expr(
+			  tsh::ExpressionType(
+				  tsh::SymbolType<>::withDefaults(tsh::getUnitType()),
+				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
+			  ),
+			  origin
+		  ),
+		  block(std::move(block)) {}
+
+	BlockExpr::BlockExpr(
+		tsh::ExpressionType<> expression_type, ElementOrigin origin, Box<Stmt> block
+	):
+		  Expr(expression_type, origin),
+		  block(std::move(block)) {}
+
+	void BlockExpr::debugPrint(std::ostream& out) const {
+		out << "block(";
+		block->debugPrint(out);
+		out << ")";
+	}
+
+	Box<Expr> BlockExpr::clone() const {
+		return makeBox<BlockExpr>(expression_type, origin, block->clone());
 	}
 
 	ListPushExpr::ListPushExpr(ElementOrigin origin, Box<Expr> list, Box<Expr> element):

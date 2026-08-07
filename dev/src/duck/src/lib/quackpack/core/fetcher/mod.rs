@@ -5,12 +5,14 @@
 //! [`GitClient`](git::GitClient).
 use std::cell::RefCell;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use tempfile::TempDir;
 use tracing::{debug, error, info};
 use url::Url;
 
 use crate::quackpack::core::GitReference;
+use crate::quackpack::core::fetcher::http_async::AsyncHttpClient;
 use crate::quackpack::core::fetcher::types::{FetcherResponse, PackageWithUrl};
 use crate::quackpack::schemas::registry;
 use crate::quackpack::util::interned_url::InternedUrl;
@@ -34,6 +36,7 @@ pub struct Fetcher<'duck> {
     ctx: &'duck DuckContext,
     ducknest_client: ducknest::DucknestClient<'duck>,
     git_client: git::GitClient<'duck>,
+    git_fastpath_client: git::fast_path::GitFastPathClient<'duck>,
     cache: RefCell<cache::ManifestCache>,
     download_cache_path: FileLockManager,
     #[allow(unused)] // @TODO: #1905 Remove this
@@ -64,13 +67,16 @@ impl<'duck> Fetcher<'duck> {
             artifacts = %artifacts_cache_path.display(),
             downloads = %download_cache_path.display(),
         );
-        let ducknest_client = ducknest::DucknestClient::new(ctx);
+        let http_client = Arc::new(AsyncHttpClient::new(ctx));
+        let ducknest_client = ducknest::DucknestClient::new(http_client.clone());
         let cache = cache::ManifestCache::new(cache::CacheLocation::Path(metadata_path.as_path()))?;
         let git_client = git::GitClient::new(ctx);
+        let git_fastpath_client = git::fast_path::GitFastPathClient::new(http_client);
         Ok(Self {
             ctx,
             ducknest_client,
             git_client,
+            git_fastpath_client,
             cache: RefCell::new(cache),
             artifacts_cache_path,
             download_cache_path,
@@ -205,6 +211,17 @@ impl<'duck> Fetcher<'duck> {
         let dir = tempfile::tempdir().context("failed to create a temporary directory")?;
         let result = self.clone_from_git_to_directory(url, reference, dir.path())?;
         Ok((result, dir))
+    }
+
+    pub fn try_get_fastpath(
+        &self,
+        url: InternedUrl,
+    ) -> Option<Box<dyn git::fast_path::GitFastPathExt + '_>> {
+        if self.ctx().is_offline() {
+            None
+        } else {
+            self.git_fastpath_client.try_get_client(url)
+        }
     }
 
     /// Get the [`DuckContext`] used to construct this [`Fetcher`] instance.

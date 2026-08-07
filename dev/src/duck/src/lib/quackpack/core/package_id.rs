@@ -42,7 +42,7 @@ impl PackageId {
                 storage_name_for_registry(&self.name(), self.version(), self.url())
             }
             FullKind::Git { commit } => storage_name_for_git(self.url(), &commit),
-            FullKind::Local => unreachable!("local packages do not have storage names"),
+            FullKind::Local => unreachable!("local packages do not have storage names `{self:?}`"),
         }
     }
 }

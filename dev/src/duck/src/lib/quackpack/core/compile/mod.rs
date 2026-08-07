@@ -4,6 +4,8 @@
 //! - [`early_graph`][]: creating and modifying dependency graphs; notably, it checks for cycles,
 //!   expands features, and removes disabled dependencies,
 //! - [`duckc`][]: executing the compiler itself, it handles different compiler execution modes.
+use std::fmt;
+
 use tracing::info;
 
 use self::early_graph::creating_graph::create_early_graph_from_bcx;
@@ -25,13 +27,15 @@ pub mod unit;
 pub mod unit_compiler;
 
 /// A common message for panicking when a manifest is missing a dependency.
-pub fn missing_depenendcy_in_manifest_message(root_name: &str, dep: &str) -> String {
-    format!("malformed manifest of `{root_name}`: missing dependency `{dep}` in the manifest")
+pub fn missing_depenendcy_in_manifest(root_name: &str, dep: &str, context: &dyn fmt::Debug) -> ! {
+    panic!(
+        "malformed manifest of `{root_name}`: missing dependency `{dep}` in the manifest {context:#?}"
+    )
 }
 
 /// A common message for panicking when any graph is missing a key.
-pub fn missing_depenendcy_in_graph_message(id: Identity) -> String {
-    format!("missing dependency `{id}` in the graph")
+pub fn missing_depenendcy_in_graph(id: Identity, context: &dyn fmt::Debug) -> ! {
+    panic!("missing dependency `{id}` in the graph {context:#?}")
 }
 
 #[derive(Debug)]

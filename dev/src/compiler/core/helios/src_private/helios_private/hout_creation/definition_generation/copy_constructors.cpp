@@ -57,44 +57,25 @@ namespace compiler::helios::defgen {
 	namespace {
 		// Builds the copy-constructor body for a class or tuple.
 		std::vector<Box<code::Stmt>> buildAggregateCopyBody(
-			query::Context&          ctx,
-			const tsh::AbstractType& owner_type,
-			const SymID              copy_sym,
-			const SymID              source_symbol,
-			const tsh::SymbolType<>& result_symbol_type
+			query::Context& ctx, const tsh::AbstractType& owner_type, const SymID source_symbol
 		) {
-			using Variable = GeneratedFunctionVariable;
-
 			const std::vector<tsh::InterfaceElement> fields
 				= owner_type.getInterface(ctx)->getFieldsView() | std::ranges::to<std::vector>();
 
-			std::vector<Box<code::Stmt>> body;
-			body.reserve(1 + fields.size() + 1);
-
 			const Shorthand s{ ctx };
 
-			// @TODO: #2307 Classes with a field named `__result`.
-			// var __result: T = <zero>;
-			const SymID result_symbol = ctx.query<QueryGeneratedSymbol>({
-				.name                  = base::StrID("__result"),
-				.generated_symbol_data = Variable{ .function_symbol = copy_sym,
-			                                       .variable_index  = 0,
-			                                       .type            = result_symbol_type },
-			});
-			body.emplace_back(s.var(
-				result_symbol, result_symbol_type, s.defaultValue(result_symbol_type.getType())
-			));
+			// One value per field, in declaration order: a copy of the source's field.
+			std::vector<Box<code::Expr>> field_values;
+			field_values.reserve(fields.size());
+			for (const auto& field: fields)
+				field_values.emplace_back(
+					s.copyValue(s.access(s.deref(s.ident(source_symbol)), field.getSymbol()))
+				);
 
-			// __result.field = <copy of (*source).field>;
-			for (const auto& field: fields) {
-				auto field_copy
-					= s.copy(s.access(s.deref(s.ident(source_symbol)), field.getSymbol()));
-				body.emplace_back(s.assign(
-					s.access(s.ident(result_symbol), field.getSymbol()), std::move(field_copy)
-				));
-			}
-
-			body.emplace_back(s.ret(s.ident(result_symbol)));
+			// The whole value is built in place by a single expression:
+			// `return create_aggregate(T) { <copy of (*source).field>... };`
+			std::vector<Box<code::Stmt>> body;
+			body.emplace_back(s.ret(s.createAggregate(owner_type, std::move(field_values))));
 
 			return body;
 		}
@@ -103,70 +84,57 @@ namespace compiler::helios::defgen {
 			query::Context&                     ctx,
 			const tsh::StaticArrayAbstractType& array_type,
 			const SymID                         copy_sym,
-			const SymID                         source_symbol,
-			const tsh::SymbolType<>&            result_symbol_type
+			const SymID                         source_symbol
 		) {
 			using Variable = GeneratedFunctionVariable;
-
-			const usize size = array_type.getSize();
+			using enum code::BuiltinBinary;
 
 			std::vector<Box<code::Stmt>> body;
 
 			const Shorthand s{ ctx };
 
-			// var __result: T[N] = <zero>;
-			const SymID res_sym = ctx.query<QueryGeneratedSymbol>({
-				.name                  = base::StrID("__result"),
-				.generated_symbol_data = Variable{ .function_symbol = copy_sym,
-			                                       .variable_index  = 0,
-			                                       .type            = result_symbol_type },
-			});
-			body.emplace_back(
-				s.var(res_sym, result_symbol_type, s.defaultValue(result_symbol_type.getType()))
-			);
-
-			// Generate the copy loop only if the static array is not empty.
-			if (size > 0) {
-				using enum code::BuiltinBinary;
-
-				const auto u64_abs_type
-					= tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned);
-				const auto u64_type = tsh::SymbolType<>{ u64_abs_type,
-					                                     tsh::ReferenceKind::Direct,
-					                                     tsh::Mutability::Mutable };
-
-				// var __i: u64 = 0;
-				const SymID i_sym    = ctx.query<QueryGeneratedSymbol>({
-					   .name = base::StrID("__i"),
-					   .generated_symbol_data
-                    = Variable{ .function_symbol = copy_sym, .variable_index = 1, .type = u64_type },
-                });
-				auto        zero_val = numeric_value::NumericValue::createOfType(u64_abs_type)
-				                    .expect("u64 creation failed");
-				body.emplace_back(s.var(i_sym, u64_type, s.litNum(zero_val)));
-
-				auto size_val = numeric_value::NumericValue::createOfType(u64_abs_type, size)
-				                    .expect("u64 creation failed");
-				auto one_val = numeric_value::NumericValue::createOfType(u64_abs_type, 1)
-				                   .expect("u64 creation failed");
-
-				// while (__i < size) { __result[__i] = <copy of (*source)[__i]>; __i = __i + 1; }
-				body.emplace_back(s.whileStmt(
-					s.binOp(s.ident(i_sym), IntegerLt, s.litNum(size_val)),
-					{
-						s.assign(
-							s.index(s.ident(res_sym), s.ident(i_sym)),
-							s.copy(s.index(s.deref(s.ident(source_symbol)), s.ident(i_sym)))
-						),
-						s.assign(
-							s.ident(i_sym), s.binOp(s.ident(i_sym), IntegerAdd, s.litNum(one_val))
-						),
-					}
-				));
+			if (array_type.getSize() == 0) {
+				// There is no element to copy, so there is nothing for an aggregate to build.
+				// `return zero_initialized T[0];`
+				body.emplace_back(s.ret(s.defaultValue(array_type)));
+				return body;
 			}
 
-			// return __result;
-			body.emplace_back(s.ret(s.ident(res_sym)));
+			const auto u64_abs_type
+				= tsh::getIntegralType(ctx, 64, tsh::IntegralAbstractType::Signedness::Unsigned);
+			const auto u64_type = tsh::SymbolType<>{ u64_abs_type,
+				                                     tsh::ReferenceKind::Direct,
+				                                     tsh::Mutability::Mutable };
+
+			// The elements of the aggregate differ only in the index they copy, so the whole array
+			// is built by a single value that reads the index off a variable, advanced once per
+			// element by the per-element statements.
+			// var __i: u64 = 0;
+			const SymID i_sym    = ctx.query<QueryGeneratedSymbol>({
+				   .name = base::StrID("__i"),
+				   .generated_symbol_data
+                = Variable{ .function_symbol = copy_sym, .variable_index = 0, .type = u64_type },
+            });
+			auto        zero_val = numeric_value::NumericValue::createOfType(u64_abs_type)
+			                    .expect("u64 creation failed");
+			body.emplace_back(s.var(i_sym, u64_type, s.litNum(zero_val)));
+
+			auto one_val = numeric_value::NumericValue::createOfType(u64_abs_type, 1)
+			                   .expect("u64 creation failed");
+
+			std::vector<Box<code::Expr>> element_values;
+			element_values.emplace_back(
+				s.copyValue(s.index(s.deref(s.ident(source_symbol)), s.ident(i_sym)))
+			);
+
+			// return create_aggregate(T[N]) [ <copy of (*source)[__i]> ] per_element { __i = __i + 1; };
+			body.emplace_back(s.ret(s.createAggregate(
+				array_type,
+				std::move(element_values),
+				{
+					s.assign(s.ident(i_sym), s.binOp(s.ident(i_sym), IntegerAdd, s.litNum(one_val))),
+				}
+			)));
 
 			return body;
 		}
@@ -227,7 +195,7 @@ namespace compiler::helios::defgen {
 				{
 					s.expr(s.listPush(
 						s.ident(res_sym),
-						s.copy(s.index(s.deref(s.ident(source_symbol)), s.ident(i_sym)))
+						s.copyValue(s.index(s.deref(s.ident(source_symbol)), s.ident(i_sym)))
 					)),
 					s.assign(s.ident(i_sym), s.binOp(s.ident(i_sym), IntegerAdd, s.litNum(one_val))),
 				}
@@ -251,17 +219,11 @@ namespace compiler::helios::defgen {
 			switch (owner_type.getKind()) {
 			case tsh::Kind::Class:
 			case tsh::Kind::Tuple:
-				body = buildAggregateCopyBody(
-					ctx, owner_type, copy_sym, source_symbol, result_symbol_type
-				);
+				body = buildAggregateCopyBody(ctx, owner_type, source_symbol);
 				break;
 			case tsh::Kind::StaticArray:
 				body = buildStaticArrayCopyBody(
-					ctx,
-					owner_type.as<tsh::StaticArrayAbstractType>(),
-					copy_sym,
-					source_symbol,
-					result_symbol_type
+					ctx, owner_type.as<tsh::StaticArrayAbstractType>(), copy_sym, source_symbol
 				);
 				break;
 			case tsh::Kind::DynamicArray:

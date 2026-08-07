@@ -316,6 +316,7 @@ impl fmt::Debug for Package {
         f.debug_struct("Package")
             .field("manifest", &self.manifest)
             .field("root", &self.root)
+            .field("global", &self.is_global())
             .field("manifest_path", &self.manifest_path)
             .field("artifacts_dir", &self.artifacts_dir)
             .field("possible_source_dir", &self.possible_source_dir)

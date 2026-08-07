@@ -123,7 +123,9 @@ namespace base {
 
 			if (n_owners_before == 1) {
 				// NOLINTBEGIN(clang-analyzer-cplusplus.NewDelete,clang-analyzer-cplusplus.NewDeleteLeaks)
-				ctrl_ptr->del(data_ptr);
+				// The deleter of the control block is typed on the non-const type the object was
+				// created with, so a `SharedBox<const T>` has to drop the constness here.
+				ctrl_ptr->del(const_cast<std::remove_const_t<T>*>(data_ptr));
 				delete ctrl_ptr;
 				// NOLINTEND(clang-analyzer-cplusplus.NewDelete,clang-analyzer-cplusplus.NewDeleteLeaks)
 			}
