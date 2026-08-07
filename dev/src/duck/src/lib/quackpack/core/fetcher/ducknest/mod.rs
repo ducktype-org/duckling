@@ -1,6 +1,7 @@
 //! Ducknest registry communication.
 use std::io::Write;
 use std::path::Path;
+use std::sync::Arc;
 
 use endpoints::UrlExt;
 use http::{HeaderValue, header};
@@ -14,7 +15,7 @@ use super::util::http::traits_extensions::ResponseExt;
 use crate::quackpack::core::fetcher::util::http::defaults;
 use crate::quackpack::schemas::registry;
 use crate::util::file_locks::LockedFile;
-use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail_internal};
+use crate::{QuackResult, QuackResultContext, StrId, qp_bail_internal};
 
 mod endpoints;
 
@@ -24,15 +25,13 @@ mod tests;
 #[derive(Debug)]
 /// General client communicating with a registry instance over HTTP.
 pub struct DucknestClient<'duck> {
-    client: AsyncHttpClient<'duck>,
+    client: Arc<AsyncHttpClient<'duck>>,
 }
 
 impl<'duck> DucknestClient<'duck> {
     /// Construct a new [`DucknestClient`].
-    pub fn new(ctx: &'duck DuckContext) -> Self {
-        Self {
-            client: AsyncHttpClient::new(ctx),
-        }
+    pub fn new(client: Arc<AsyncHttpClient<'duck>>) -> Self {
+        Self { client }
     }
 
     /// Retrieve metadata for a specific package from a Ducknest instance.
@@ -137,8 +136,10 @@ fn create_http_request(url: &Url, method: http::Method, body: Vec<u8>) -> QuackR
     debug!(%method, %url, ?body, "building a request");
     http::Request::builder()
         .uri(url.as_str())
-        .method(method)
+        .method(&method)
         .version(http::Version::HTTP_2)
         .body(body)
-        .context_internal("failed to build an HTTP request")
+        .with_context_internal(|| {
+            format!("failed to build an HTTP request: url: `{url}`, method: `{method:#?}`")
+        })
 }

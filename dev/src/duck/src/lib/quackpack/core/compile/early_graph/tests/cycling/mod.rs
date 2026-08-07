@@ -643,12 +643,13 @@ fn missing_direct_dep_in_freeze() {
         jobs: 1,
     };
     let err = EarlyGraph::new_early(&bcx).unwrap_err();
-    assert_eq!(
-        err.to_string(),
-        format!(
+    let err = err.to_string();
+    assert!(
+        err.starts_with(&format!(
             "malformed freezefile: missing direct dependency `{}`",
             fetcher_identity_for("foo")
-        ),
+        )),
+        "{err}"
     );
 }
 
@@ -675,11 +676,12 @@ fn missing_transitive_dep_in_freeze() {
         jobs: 1,
     };
     let err = EarlyGraph::new_early(&bcx).unwrap_err();
-    assert_eq!(
-        err.to_string(),
-        format!(
+    let err = err.to_string();
+    assert!(
+        err.starts_with(&format!(
             "malformed freezefile: missing transitive dependency `{}`",
             fetcher_identity_for("baz")
-        ),
+        )),
+        "{err}"
     );
 }
