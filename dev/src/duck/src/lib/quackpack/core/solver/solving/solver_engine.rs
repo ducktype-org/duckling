@@ -10,7 +10,7 @@ use crate::quackpack::core::solver::solver_freeze::SolverFreeze;
 use crate::quackpack::core::solver::solving::solver_model::{FoundSolution, SolverModel};
 use crate::quackpack::core::solver::util::get_possible_realizations;
 use crate::quackpack::core::{Dependency, FeatureName, Manifest, PackageId, Source, Version};
-use crate::{QuackResult, QuackResultContext, StrId};
+use crate::{QuackResult, QuackResultContext, StrId, qp_bail_internal};
 
 /// Struct with all the necessary information for the solver to be run.
 #[derive(Debug)]
@@ -181,11 +181,13 @@ impl<'a> SolverEngine<'a> {
         // not present in the previous freeze.
         // We try to add them to the chosen realisation.
         let mut forcing = vec![];
-        let possible_child_features = self
-            .input
-            .all_possible_features
-            .get(&realisation)
-            .context_internal("Possible features map does not contain looked up package")?;
+        let Some(possible_child_features) = self.input.all_possible_features.get(&realisation)
+        else {
+            qp_bail_internal!(
+                "possible features map does not contain looked up package: `{realisation:?}`, {:#?}",
+                self.input.all_possible_features
+            )
+        };
         for parent_feature in self
             .input
             .all_possible_features
@@ -331,15 +333,20 @@ impl<'a> SolverEngine<'a> {
                 {
                     continue;
                 }
-                let manifest = self
-                    .input
-                    .gathered_manifests
-                    .get(pkg)
-                    .context_internal("Package without manifest")?;
+                let Some(manifest) = self.input.gathered_manifests.get(pkg) else {
+                    qp_bail_internal!(
+                        "package `{pkg:?}` without a manifest, {:#?}",
+                        self.input.gathered_manifests
+                    )
+                };
                 let mut expanded = manifest
                     .features()
                     .expand_features(once(*feature))
-                    .context_internal("No such feature")?;
+                    .with_context_internal(|| {
+                        format!(
+                            "package `{pkg:?}` does not have a feature `{feature:?}`; {manifest:#?}"
+                        )
+                    })?;
                 expanded.remove(feature);
                 if !expanded.is_empty() {
                     self.model

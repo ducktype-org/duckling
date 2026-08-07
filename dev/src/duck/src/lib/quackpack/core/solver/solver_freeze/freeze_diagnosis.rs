@@ -10,7 +10,7 @@ use crate::quackpack::core::solver::git_access::GitAccess;
 use crate::quackpack::core::solver::solver_freeze::{SolverFreeze, SolverPackageFreeze};
 use crate::quackpack::core::{Dependency, FeatureName, Manifest, PackageId};
 use crate::util::error::ErrorsLogger;
-use crate::{QuackResult, QuackResultContext};
+use crate::{QuackResult, qp_bail_internal};
 
 impl SolverFreeze {
     /// Fetches manifests of the packages mentioned in the freeze (but not the root package),
@@ -238,13 +238,12 @@ impl SolverFreeze {
         manifests: &HashMap<PackageId, Box<Manifest>>,
         fetcher: &Fetcher<'_>,
     ) -> QuackResult<(Self, bool)> {
-        let main_pkg_freeze = self
-            .package_freezes
-            .get(&self.main_pkg)
-            .context_internal("Main package was not put into package freezes")?;
-        let main_manifest = manifests
-            .get(&self.main_pkg)
-            .context_internal("Main package manifest not provided")?;
+        let Some(main_pkg_freeze) = self.package_freezes.get(&self.main_pkg) else {
+            qp_bail_internal!("main package was not put into package freezes: {self:#?}")
+        };
+        let Some(main_manifest) = manifests.get(&self.main_pkg) else {
+            qp_bail_internal!("main package manifest not provided: {self:#?} {manifests:#?}")
+        };
         // Check which main package dependencies are still satisfied.
         let mut still_satisfied_root_deps = HashSet::new();
         for (alias, realization) in main_pkg_freeze.dependencies_realization.iter() {
@@ -263,10 +262,9 @@ impl SolverFreeze {
             }
         }
         // Leave only still satisfied dependencies.
-        let main_pkg_freeze = self
-            .package_freezes
-            .get_mut(&self.main_pkg)
-            .context_internal("Main package was not put into package freezes")?;
+        let Some(main_pkg_freeze) = self.package_freezes.get_mut(&self.main_pkg) else {
+            qp_bail_internal!("main package manifest not provided: {self:#?}")
+        };
         main_pkg_freeze
             .dependencies_realization
             .retain(|alias, _| still_satisfied_root_deps.contains(alias));
@@ -280,10 +278,9 @@ impl SolverFreeze {
                     .contains_key(&dep.effective_name())
             });
         // Change the previous main package to the new root package.
-        let main_pkg_freeze = self
-            .package_freezes
-            .remove(&self.main_pkg)
-            .context_internal("Main package was not put into package freezes")?;
+        let Some(main_pkg_freeze) = self.package_freezes.remove(&self.main_pkg) else {
+            qp_bail_internal!("main package manifest not provided: {self:#?}")
+        };
         self.package_freezes.insert(self.main_pkg, main_pkg_freeze);
         Ok((self, all_main_pkg_deps_satisfied))
     }
