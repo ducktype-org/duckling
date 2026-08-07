@@ -8,7 +8,10 @@ use std::fmt;
 
 use tracing::info;
 
-use crate::quackpack::core::compile::profiles::Profile;
+use self::early_graph::creating_graph::create_early_graph_from_bcx;
+use self::profiles::Profile;
+use self::unit::graph::lower_early_graph;
+use self::unit_compiler::CompilationOutput;
 use crate::quackpack::core::identity::Identity;
 use crate::quackpack::core::storage::freeze::VenvFreeze;
 use crate::quackpack::core::storage::paths::Storage;
@@ -19,13 +22,9 @@ pub mod artifacts_layout;
 pub mod compiler_package;
 pub mod duckc;
 pub mod early_graph;
-pub mod executor;
 pub mod profiles;
 pub mod unit;
-
-use self::early_graph::creating_graph::create_early_graph_from_bcx;
-use self::executor::ExecutorOutput;
-use self::unit::graph::lower_early_graph;
+pub mod unit_compiler;
 
 /// A common message for panicking when a manifest is missing a dependency.
 pub fn missing_depenendcy_in_manifest(root_name: &str, dep: &str, context: &dyn fmt::Debug) -> ! {
@@ -55,7 +54,7 @@ pub struct BuildContext<'duck, 'ctx> {
 
 /// Compile project inside the [`BuildContext`].
 #[tracing::instrument(skip_all)]
-pub fn compile(bcx: BuildContext<'_, '_>) -> QuackResult<ExecutorOutput> {
+pub fn compile(bcx: BuildContext<'_, '_>) -> QuackResult<CompilationOutput> {
     info!(?bcx, "compiling");
     // @TODO: #2900 Unmock this.
     if bcx.pcx.package().is_script() {
@@ -63,5 +62,6 @@ pub fn compile(bcx: BuildContext<'_, '_>) -> QuackResult<ExecutorOutput> {
     }
     let graph = create_early_graph_from_bcx(&bcx)?;
     let unit_graph = lower_early_graph(graph, &bcx);
-    bcx.executor().compile(unit_graph, &bcx)
+    let compiler = bcx.unit_compiler();
+    unit_compiler::compile(&*compiler, unit_graph, &bcx)
 }

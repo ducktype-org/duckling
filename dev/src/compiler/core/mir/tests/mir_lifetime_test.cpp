@@ -94,8 +94,9 @@ private:
 			.expectDestruct("a")
 			.expectInstruction(compiler::mir::Operation::ReturnValue)
 			.expectScopeEnd("a")
-			// Second return: `return a` moves `a` out, so it is moved (not destructed) here.
-			.expectMove("a")
+			// Second return: `a` is a trivially copyable `i64`, so `return a` reads it without
+		    // moving it and the local is destructed.
+			.expectDestruct("a")
 			.expectInstruction(compiler::mir::Operation::ReturnValue)
 			.expectScopeEnd("a")
 			.validate(foo_mir);
