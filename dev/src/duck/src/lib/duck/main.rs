@@ -26,11 +26,17 @@ pub fn main() {
 
 /// Setup [`tracing`] loggers.
 pub fn setup_logger() {
+    use tracing::level_filters::LevelFilter;
     use tracing_subscriber::fmt::layer;
     use tracing_subscriber::fmt::time::Uptime;
     use tracing_subscriber::prelude::*;
     use tracing_subscriber::{EnvFilter, Layer, registry};
-    let subscriber = EnvFilter::from_env("DUCK_DEBUG");
+    let subscriber = EnvFilter::builder()
+        .with_env_var("DUCK_DEBUG")
+        // NOTE: This level determines which logs are _always_ visible, without any filter.
+        // The default is `ERROR`, which means every `error!` log is visible to a user by default.
+        .with_default_directive(LevelFilter::OFF.into())
+        .from_env_lossy();
     let layer = layer()
         .with_timer(Uptime::default())
         .with_ansi(true)
