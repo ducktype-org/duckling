@@ -4,7 +4,7 @@ use std::path::Path;
 use std::sync::Arc;
 
 use endpoints::UrlExt;
-use http::{HeaderValue, header};
+use http::header;
 use tracing::{debug, info};
 use url::Url;
 
@@ -124,11 +124,11 @@ fn create_get_request(url: &Url) -> QuackResult<Request> {
     request
         .headers_mut()
         .entry(header::PRAGMA)
-        .or_insert(HeaderValue::from_static(defaults::PRAGMA_HEADER_WITH_VALUE));
+        .or_insert(defaults::NO_VALUE);
     request
         .headers_mut()
         .entry(header::EXPECT)
-        .or_insert(HeaderValue::from_static(defaults::EXPECT_HEADER_WITH_VALUE));
+        .or_insert(defaults::NO_VALUE);
     Ok(request)
 }
 
