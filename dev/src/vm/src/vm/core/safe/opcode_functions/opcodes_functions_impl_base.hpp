@@ -958,7 +958,7 @@ namespace vm {
 			auto       view = Memory::getRemainingPointerData(src);
 			WRITE_TO_PLACE_ARG(void*, instr->arg0, static_cast<void*>(view.getBegin()));
 		}
-		FUNCTION_CONT(2);
+		FUNCTION_CONT(1);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(structLea_pptr_pptr)(FUNCTION_ARGS) {
