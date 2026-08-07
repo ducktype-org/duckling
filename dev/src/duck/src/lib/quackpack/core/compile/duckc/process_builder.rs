@@ -11,7 +11,7 @@ use super::Duckc;
 use crate::quackpack::core::Package;
 use crate::quackpack::core::compile::profiles::OptLevel;
 use crate::util::command_ext::CommandExt;
-use crate::{QuackResult, QuackResultContext};
+use crate::{QuackResult, QuackResultContext, qp_bail_internal};
 
 #[non_exhaustive]
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
@@ -75,9 +75,9 @@ impl DuckcProcessBuilder {
 
     /// Set source directory of the currently compiling package.
     pub fn set_src_dir(&mut self, package: &Package) -> QuackResult<&mut Self> {
-        let source_directory = package
-            .source_directory()
-            .context_internal("asked for src directory of the global package or a script")?;
+        let Some(source_directory) = package.source_directory() else {
+            qp_bail_internal!("asked for src directory of the global package: {package:#?}")
+        };
         self.inner.arg(source_directory);
         Ok(self)
     }
