@@ -76,7 +76,6 @@ impl PackageData {
 
 /// Type representing the state of a fetch.
 /// The requests in the Pending version signify which requests want to use the result of this fetch.
-// NOTE: When changing this enum, take under consideration comment on 400 line.
 #[derive(Debug, Clone)]
 enum QueryState {
     Failed,
