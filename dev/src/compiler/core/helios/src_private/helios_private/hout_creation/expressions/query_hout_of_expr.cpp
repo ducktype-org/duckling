@@ -495,30 +495,50 @@ namespace compiler::helios::code {
 					// copy: T -> T
 					// copy: ref T -> T
 					// copy: box T -> T
-					if (inner_type.getRefKind() != tsh::ReferenceKind::Direct) {
-						inner      = s.deref(std::move(inner));
-						inner_type = inner->expression_type.getSymbolType();
-					}
+					const bool is_indirect = inner_type.getRefKind() != tsh::ReferenceKind::Direct;
+					const tsh::SymbolType<> copied_type
+						= is_indirect ? inner_type.getPointeeSymbolType() : inner_type;
 
-					if (inner_type.isTriviallyCopyable(ctx)) {
+					if (copied_type.isTriviallyCopyable(ctx)) {
 						ctx.logInt(makeBox<dia_int::PlaceholderWarning>(
 							base::strConcat(
 								"Type `",
-								inner_type.toString(),
+								copied_type.toString(),
 								"` is trivially copyable. No need to use the explicit `copy` "
 								"keyword."
 							),
 							stmt->getStablePosition()
 						));
+						// Trivially copyable, so we just deref.
+						if (is_indirect)
+							node = s.deref(std::move(inner));
+						else
+							node = std::move(inner);
+						return;
 					}
-					if (not inner_type.getType().isCopyable(ctx)) {
+					if (not copied_type.getType().isCopyable(ctx)) {
 						ctx.logInt(makeBox<dia_int::PlaceholderError>(
-							base::strConcat("Type `", inner_type.toString(), "` cannot be copied."),
+							base::strConcat("Type `", copied_type.toString(), "` cannot be copied."),
 							stmt->getStablePosition()
 						));
 						return;
 					}
-					node = s.copy(std::move(inner));
+
+					const auto abstract_type = copied_type.getType();
+					const auto kind          = abstract_type.getKind();
+					CORE_ASSERT(
+						kind == tsh::Kind::Class or kind == tsh::Kind::StaticArray
+							or kind == tsh::Kind::Tuple or kind == tsh::Kind::DynamicArray,
+						"Tried to call a copy constructor of a type which shouldn't need one"
+					);
+
+					// The copy constructor takes a `const ref` and returns a direct value. `refOf`
+					// turns every type into a reference (including ref/box because of reference
+					// kind collapsing).
+					node = s.call(
+						s.ident(defgen::copyConstructorSymForType(ctx, abstract_type)),
+						s.refOf(std::move(inner))
+					);
 					return;
 				}
 
