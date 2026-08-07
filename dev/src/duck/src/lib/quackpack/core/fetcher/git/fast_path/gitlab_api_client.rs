@@ -12,13 +12,15 @@
 //! 1. Get the name of the default branch: `base_api_url`.
 //! 2. Get the commit hash for a given git reference: `base_api_url/repository/tags/<tag>` and `base_api_url/repository/heads/<branch_name>`.
 //! 3. Download the manifest (for a given commit): `base_api_url/repository/files/<manifest_path>/raw?ref=<commit_hash>`.
+use std::sync::Arc;
+
 use http::header;
 use percent_encoding::{AsciiSet, CONTROLS, utf8_percent_encode};
 use serde::Deserialize;
 use tracing::debug;
 use url::Url;
 
-use crate::quackpack::core::fetcher::http::HttpClient;
+use crate::quackpack::core::fetcher::http_async::AsyncHttpClient;
 use crate::quackpack::core::fetcher::util::http::traits_extensions::ResponseExt;
 use crate::quackpack::core::fetcher::util::http::{Request, Response, defaults};
 use crate::quackpack::util::to_url::ToUrl;
@@ -37,17 +39,16 @@ const PATH_ENCODE_SET: &AsciiSet = &CONTROLS
     .add(b'}')
     .add(b'/');
 
+#[derive(Debug)]
 /// Client for performing requests to Gitlab repositories.
 pub struct GitlabApiClient<'duck> {
-    client: HttpClient<'duck>,
+    client: Arc<AsyncHttpClient<'duck>>,
 }
 
 impl<'duck> GitlabApiClient<'duck> {
     /// Creates a new [`GitlabApiClient`].
-    pub fn new(ctx: &'duck DuckContext) -> Self {
-        Self {
-            client: HttpClient::new(ctx),
-        }
+    pub fn new(client: Arc<AsyncHttpClient<'duck>>) -> Self {
+        Self { client }
     }
 
     /// Get the base api for requests for this repository.
@@ -84,47 +85,52 @@ impl<'duck> GitlabApiClient<'duck> {
 
     /// Docs: <https://docs.gitlab.com/api/projects/#retrieve-a-project>.
     /// Get general information about the project, used to get the default branch name.
-    pub fn retrieve_project(&self, repo_api_url: &Url) -> QuackResult<StrId> {
-        let response = self.request(repo_api_url)?;
+    pub async fn retrieve_project(&self, repo_api_url: &Url) -> QuackResult<StrId> {
+        let response = self.request(repo_api_url).await?;
         get_default_branch_from_response(response)
     }
 
     /// Docs: <https://docs.gitlab.com/api/commits/#retrieve-a-commit>.
     /// Get information about a commit specified by branch, tag or 1-byte commit id.
     /// Used to get the full commit identifier.
-    pub fn retrieve_a_commit(&self, repo_api_url: &Url, reference: StrId) -> QuackResult<StrId> {
+    pub async fn retrieve_a_commit(
+        &self,
+        repo_api_url: &Url,
+        reference: StrId,
+    ) -> QuackResult<StrId> {
         let url = repo_api_url.join("repository/commits/")?.join(&reference)?;
-        let response = self.request(&url)?;
+        let response = self.request(&url).await?;
         get_commit_from_response(response)
     }
 
     /// Docs: <https://docs.gitlab.com/api/repository_files/#retrieve-a-raw-file-from-a-repository>.
     /// Download a raw file from the repository at specific commit.
     /// Used to download the manifest.
-    pub fn download_file_from_commit(
+    pub async fn download_file_from_commit(
         &self,
         repo_api_url: &Url,
         path_to_file: &str,
         commit: StrId,
     ) -> QuackResult<String> {
         let path_encoded = utf8_percent_encode(path_to_file, PATH_ENCODE_SET);
+        let path_encoded = format!("{path_encoded}/");
         let mut url = repo_api_url
             .join("repository/files/")?
-            .join(&path_encoded.to_string())?
-            .join("/raw")?;
+            .join(&path_encoded)?
+            .join("raw")?;
         url.set_query(Some(&format!("ref={}", commit)));
-        let response = self.request(&url)?;
+        let response = self.request(&url).await?;
         Ok(String::from_utf8(response.into_body())?)
     }
 
     /// Create a `GET` request for the specified `url`.
-    fn request(&self, url: &Url) -> QuackResult<Response> {
+    async fn request(&self, url: &Url) -> QuackResult<Response> {
         let mut request = Self::create_http_request(url, http::Method::GET, vec![])?;
         request
             .headers_mut()
             .entry(header::PRAGMA)
             .or_insert(defaults::NO_VALUE);
-        self.client.request(request)
+        self.client.request(request).await
     }
 
     /// Helper for [`Self::request`].
