@@ -491,10 +491,11 @@ namespace compiler::helios::code::shorthands {
 		/** @brief A variable declaration without type `var/let symbol = init;`. */
 		[[nodiscard]]
 		Box<VariableStmt> var(SymID symbol, Box<Expr> init) const {
+			const auto type = init->expression_type.getType();
 			return makeBox<VariableStmt>(
 				generatedOrigin(),
 				consume(std::move(init)),
-				tsh::SymbolType<>::withDefaults(init->expression_type.getType()),
+				tsh::SymbolType<>::withDefaults(type),
 				symbol
 			);
 		}
