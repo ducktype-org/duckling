@@ -86,26 +86,42 @@ compiler::backend_vm::LoweredEntitiesSnapshot ProgramLoweringContext::captureLow
 	return { lowered_type_order.size(),
 		     lowered_global_order.size(),
 		     lowered_function_order.size(),
-		     extra_bytecode_functions.size() };
+		     extra_bytecode_functions.size(),
+		     lowered_ffi_function_order.size() };
 }
 
 const vm::code::TypeOfData& ProgramLoweringContext::getOrInsertPointerType(
-	const vm::code::TypeOfData& pointee_type
+	const vm::code::TypeOfData& pointee_type, PointerKind kind
 ) {
-	return getOrInsertPointerType(vm::code::typeName(pointee_type));
+	return getOrInsertPointerType(vm::code::typeName(pointee_type), kind);
 }
 
 const vm::code::TypeOfData& ProgramLoweringContext::getOrInsertPointerType(
-	base::StrID pointee_type_name
+	base::StrID pointee_type_name, PointerKind kind
 ) {
-	auto pointer_name = base::StrID(base::strConcat("ptr_", pointee_type_name));
+	const bool is_cpointer = kind == PointerKind::CPointer;
+	auto       pointer_name
+		= base::StrID(base::strConcat(is_cpointer ? "cptr_" : "ptr_", pointee_type_name));
 
 	if (auto maybe_type = type_storage.dvm_types.atMaybe(pointer_name)) return **maybe_type;
 
-	vm::code::PointerType pointer_type(pointer_name, pointee_type_name);
-	type_storage.dvm_types.put(pointer_name, pointer_type);
+	vm::code::TypeOfData pointer_type
+		= is_cpointer
+		    ? vm::code::TypeOfData(vm::code::CPointerType(pointer_name, pointee_type_name))
+		    : vm::code::TypeOfData(vm::code::PointerType(pointer_name, pointee_type_name));
+	type_storage.dvm_types.put(pointer_name, std::move(pointer_type));
 	lowered_type_order.push_back(pointer_name);
 	return type_storage.dvm_types.at(pointer_name);
+}
+
+const vm::code::TypeOfData& ProgramLoweringContext::getVoidCPointerType() {
+	static const base::StrID VOID_CPOINTER_NAME{ "cptr" };
+
+	if (auto maybe_type = type_storage.dvm_types.atMaybe(VOID_CPOINTER_NAME)) return **maybe_type;
+
+	// `cptr` is a DVM builtin, so it is taken from the builtin table rather than synthesized, to
+	// keep the definition emitted here identical to the one the VM already knows.
+	return *keepVMType(vm::code::getBuiltinTypeByName(VOID_CPOINTER_NAME).value());
 }
 
 const DVMPlace& ProgramLoweringContext::getLirGlobal(CRef<lir::LIRGlobal> lir_global) {
@@ -168,6 +184,27 @@ const vm::code::ExternalCFunction& ProgramLoweringContext::getExternCFunction(
 		CORE_PANIC("Extern C function not found: ", func_name);
 }
 
+void ProgramLoweringContext::insertFFIFunction(vm::code::FFIFunction ffi_function) {
+	auto name = ffi_function.name.str;
+
+	IF_BUILD_TYPE_DEV({
+		auto maybe_existing = ffi_functions.atMaybe(name);
+		CORE_ASSERT(
+			!maybe_existing.has_value() || (*maybe_existing)->signature == ffi_function.signature,
+			"Conflicting signatures declared for the FFI function: ",
+			name
+		);
+	});
+
+	auto [_, inserted] = ffi_functions.put(name, std::move(ffi_function));
+	if (inserted) lowered_ffi_function_order.push_back(name);
+}
+
+void ProgramLoweringContext::insertFFIObjectFile(const std::string& object_file) {
+	if (std::ranges::contains(ffi_object_files, object_file)) return;
+	ffi_object_files.push_back(object_file);
+}
+
 void ProgramLoweringContext::insertRawBytecodeDefinitions(const vm::code::CodeCollection& bytecode) {
 	for (const auto& global: bytecode.global_data) {
 		if (!global_name_to_dvm_data.atMaybe(global.name).has_value())
@@ -177,6 +214,10 @@ void ProgramLoweringContext::insertRawBytecodeDefinitions(const vm::code::CodeCo
 
 	for (const auto& ext_func: bytecode.external_c_functions)
 		extern_c_functions.put(ext_func.name.str, ext_func);
+
+	for (const auto& ffi_func: bytecode.ffi_functions) insertFFIFunction(ffi_func);
+
+	for (const auto& object_file: bytecode.object_files) insertFFIObjectFile(object_file);
 
 	extra_bytecode_functions.insert(
 		extra_bytecode_functions.end(), bytecode.functions.begin(), bytecode.functions.end()
@@ -228,6 +269,18 @@ vm::code::CodeCollection ProgramLoweringContext::collectNewCodeSince(
 		return result;
 	};
 
+	auto collect_ffi_functions_since = [&](usize start_index) {
+		CORE_ASSERT(
+			start_index <= lowered_ffi_function_order.size(),
+			"Requested lowered FFI functions from an out-of-range start index"
+		);
+		std::vector<vm::code::FFIFunction> result;
+		result.reserve(lowered_ffi_function_order.size() - start_index);
+		for (usize i = start_index; i < lowered_ffi_function_order.size(); ++i)
+			result.push_back(ffi_functions.at(lowered_ffi_function_order[i]));
+		return result;
+	};
+
 	auto collect_extra_functions_since = [&](usize start_index) {
 		CORE_ASSERT(
 			start_index <= extra_bytecode_functions.size(),
@@ -239,10 +292,14 @@ vm::code::CodeCollection ProgramLoweringContext::collectNewCodeSince(
 	};
 
 	vm::code::CodeCollection collection;
-	collection.types       = collect_types_since(snapshot.lowered_type_count);
-	collection.global_data = collect_globals_since(snapshot.lowered_global_count);
-	collection.functions   = collect_functions_since(snapshot.lowered_function_count);
-	auto extra             = collect_extra_functions_since(snapshot.extra_bytecode_function_count);
+	collection.types         = collect_types_since(snapshot.lowered_type_count);
+	collection.global_data   = collect_globals_since(snapshot.lowered_global_count);
+	collection.functions     = collect_functions_since(snapshot.lowered_function_count);
+	collection.ffi_functions = collect_ffi_functions_since(snapshot.lowered_ffi_function_count);
+	// Object files are cheap declarations and the VM de-duplicates the resulting handles, so the
+	// full list is re-emitted rather than tracked incrementally.
+	collection.object_files = ffi_object_files;
+	auto extra              = collect_extra_functions_since(snapshot.extra_bytecode_function_count);
 	collection.functions.insert(collection.functions.end(), extra.begin(), extra.end());
 	return collection;
 }
@@ -370,6 +427,12 @@ base::Optional<vm::code::TypeOfData> ProgramLoweringContext::lowerTslTypeInterna
 			return vm::code::OpaqueType(base::StrID("opaque_ptr"), Bytes{ 8 });
 		}
 		variant_case(tsl::PointerTypeLayout, pointer_layout) {
+			// A cpointer may be untyped (C's `void*`), in which case there is no pointee to lower.
+			// The DVM models it with the builtin `cptr`, which carries no inner type.
+			if (pointer_layout.getPointerKind() == tsl::PointerTypeLayout::PointerKind::CPointer
+			    and not pointer_layout.hasPointee())
+				return getVoidCPointerType();
+
 			const vm::code::TypeOfData& pointee_type
 				= **lowerAndKeepTslType(pointer_layout.getPointee());
 			switch (pointer_layout.getPointerKind()) {
@@ -390,17 +453,8 @@ base::Optional<vm::code::TypeOfData> ProgramLoweringContext::lowerTslTypeInterna
 					base::StrID(pointer_type_name), typeName(dyntable_type)
 				);
 			}
-			case tsl::PointerTypeLayout::PointerKind::CPointer: {
-				query_ctx_for_errors.value()->logInt(makeBox<dia_int::NotYetImplementedCodeError>(
-					base::strConcat(
-						"CPointer types are not supported in DVM code generation yet: ",
-						layout->toStringDefinition(*query_ctx_for_errors.value())
-					),
-					""
-				));
-				query::throwFailed();
-				break;
-			}
+			case tsl::PointerTypeLayout::PointerKind::CPointer:
+				return getOrInsertPointerType(pointee_type, PointerKind::CPointer);
 			default:
 				CORE_PANIC("All cases should be covered.");
 			}
@@ -493,6 +547,15 @@ vm::code::CodeCollection ProgramLoweringContext::produceCodeCollection() {
 
 	collection.external_c_functions
 		= std::ranges::to<std::vector>(extern_c_functions | std::views::values);
+
+	collection.ffi_functions = std::ranges::to<std::vector>(ffi_functions | std::views::values);
+	std::ranges::sort(
+		collection.ffi_functions,
+		[](const vm::code::FFIFunction& lhs, const vm::code::FFIFunction& rhs) {
+			return lhs.name.str.strView() < rhs.name.str.strView();
+		}
+	);
+	collection.object_files = ffi_object_files;
 
 	return collection;
 }

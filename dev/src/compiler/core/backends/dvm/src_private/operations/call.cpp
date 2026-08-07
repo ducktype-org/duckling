@@ -28,6 +28,14 @@ namespace compiler::backend_vm::internal {
 			ctx->pushInstruction({ OpKind::mov, temp_arg.asArgument(), func_arg });
 		}
 
+		// A C-ABI callee is a native symbol reached through libffi, so it is called by the
+		// `ffifunc` flavour of `call`. Every other callee uses the DVM's own calling sequence.
+		CORE_ASSERT(
+			op.call_info.isCAbi()
+				== std::holds_alternative<DVMFFIFunctionName>(op.call_info.call_target),
+			"C-ABI calls must target an FFI function and vice versa: ",
+			VISIT(op.call_info.call_target, callable, return callable.name)
+		);
 		ctx->pushInstruction(
 			{ OpKind::call, VISIT(op.call_info.call_target, callable, return callable.asArgument()) }
 		);

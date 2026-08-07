@@ -123,7 +123,9 @@ void FunctionLoweringContext::maybeStoreResult(
 
 		switch (dest_place.getAccessKind()) {
 		case DVMPlace::AccessKind::Pointer:
-			// Store the value in memory.
+		case DVMPlace::AccessKind::CPointer:
+			// Store the value in memory. Whether this becomes `store_pptr_pany` or
+			// `store_pcptr_pany` follows from the type of the place holding the address.
 			pushInstruction({ vm::code::builders::OpKind::store,
 			                  dest_place.asArgument(),
 			                  src_arg.asAnyArgument() });
@@ -140,10 +142,6 @@ void FunctionLoweringContext::maybeStoreResult(
 			                  idx_temp });
 			break;
 		}
-		case DVMPlace::AccessKind::CPointer:
-			// @TODO: #2745 fix this
-			CORE_PANIC("Storing to CPointer is not supported yet");
-			break;
 		default:
 			break;
 		}
@@ -156,6 +154,9 @@ DVMPlace FunctionLoweringContext::loadFromPlace(
 	DVMPlace temp = pushTempLocal(pointee_type, "deref_tmp");
 	switch (place.getAccessKind()) {
 	case DVMPlace::AccessKind::Pointer:
+	case DVMPlace::AccessKind::CPointer:
+		// Whether this becomes `load_pany_pptr` or `load_pany_pcptr` follows from the type of the
+		// place holding the address.
 		pushInstruction({ vm::code::builders::OpKind::load, temp.asAnyArgument(), place });
 		break;
 	case DVMPlace::AccessKind::DynTablePointer: {
@@ -167,13 +168,63 @@ DVMPlace FunctionLoweringContext::loadFromPlace(
 		);
 		break;
 	}
-	case DVMPlace::AccessKind::CPointer:
-		// @TODO: #2745 fix this
-		CORE_PANIC("Dereferencing CPointer is not supported yet");
 	default:
 		CORE_PANIC("loadFromPlace called on a place with non-pointer access kind");
 	}
 	return temp;
+}
+
+DVMPlace FunctionLoweringContext::cPointerLea(
+	const DVMPlace&                  base_place,
+	CRef<tsl::TypeLayout>            target_layout,
+	const DVMValue&                  byte_offset,
+	base::Optional<std::string_view> name_hint
+) {
+	const vm::code::TypeOfData& vm_target_type
+		= **program_context.lowerAndKeepTslType(target_layout);
+	const vm::code::TypeOfData& cptr_to_target
+		= program_context.getOrInsertPointerType(vm_target_type, PointerKind::CPointer);
+
+	DVMPlace result = pushTempLocal(cptr_to_target, name_hint);
+
+	// The DVM has no cpointer opcode that both reinterprets and offsets, so the address is first
+	// copied into a cpointer of the target type and then advanced in place. `mov_pcptr_pcptr`
+	// demands identical types on both sides, hence the reinterpreting `movCast_pcptr_pcptr`.
+	pushInstruction({ vm::code::builders::OpKind::movCast, result, base_place });
+
+	// A zero constant offset (the first field of a class, index 0) needs no arithmetic at all.
+	const bool is_zero_offset
+		= byte_offset.is<DVMImmediate>() && byte_offset.get<DVMImmediate>().value == 0;
+	if (not is_zero_offset)
+		pushInstruction({ vm::code::builders::OpKind::add, result, byte_offset.asArgument() });
+
+	return result;
+}
+
+DVMValue FunctionLoweringContext::scaleIndexToByteOffset(
+	const DVMValue& index, const tsl::TypeLayout& element_layout
+) {
+	const auto element_stride
+		= static_cast<::i64>(usize(base::bits2bytesRoundUp(element_layout.getSize())));
+
+	// A constant index folds into a single immediate byte offset.
+	if (index.is<DVMImmediate>())
+		return {
+			DVMImmediate::i64(static_cast<::i64>(index.get<DVMImmediate>().value) * element_stride)
+		};
+
+	// `add_pcptr_p64` takes the offset from an `i64` local, so the scaling is done in a
+	// temporary of that exact type.
+	DVMPlace offset_tmp = copyToTempPlace(index, "cptr_index_offset");
+	CORE_ASSERT(
+		vm::code::typeName(offset_tmp.getType()) == base::StrID("i64"),
+		"Index used for cpointer arithmetic must be a 64-bit integer, got: ",
+		vm::code::typeName(offset_tmp.getType())
+	);
+	pushInstruction(
+		{ vm::code::builders::OpKind::mul, offset_tmp, DVMImmediate::i64(element_stride) }
+	);
+	return { offset_tmp };
 }
 
 DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
@@ -246,14 +297,33 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 				// Prepare the class type.
 				const auto& class_layout
 					= std::get<tsl::ClassTypeLayout>(current_layout->getVariant());
-				const vm::code::TypeOfData& vm_class_type
-					= **program_context.lowerAndKeepTslType(current_layout);
 
-				// Prepare the pointer to field type.
 				const usize field_index
 					= class_layout.getLayoutIndexOfFieldSymbol(field.field_id).value();
 				CRef<tsl::TypeLayout> field_layout
 					= class_layout.getFieldLayoutOfLayoutIndex(field_index);
+
+				if (current_place.getAccessKind() == DVMPlace::AccessKind::CPointer) {
+					// The struct lives in native memory, so `structLea` (which walks VM types)
+					// does not apply - the field address is the base address advanced by the
+					// field's own offset in the layout.
+					const auto field_offset
+						= class_layout.getOffsetOfFieldSymbol(field.field_id).value().asInt();
+					current_place = cPointerLea(
+										current_place,
+										field_layout,
+										{ DVMImmediate::u64(field_offset) },
+										"cptr_field_addr"
+					)
+					                    .withAccessKind(DVMPlace::AccessKind::CPointer);
+					current_layout = field_layout;
+					continue;
+				}
+
+				const vm::code::TypeOfData& vm_class_type
+					= **program_context.lowerAndKeepTslType(current_layout);
+
+				// Prepare the pointer to field type.
 				const vm::code::TypeOfData vm_field_type
 					= **program_context.lowerAndKeepTslType(field_layout);
 
@@ -285,7 +355,8 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 				);
 
 				// We can have in LIR an index projection on a pointer type, which should
-				// insert a deref before the index projection.
+				// insert a deref before the index projection. Only a ManyPointer can appear
+				// here - it is the sole indexable type that has a pointer layout.
 				if (not current_place.isDirect() and current_layout->is<tsl::PointerTypeLayout>()) {
 					const vm::code::TypeOfData& vm_pointer_type
 						= **program_context.lowerAndKeepTslType(current_layout);
@@ -308,23 +379,40 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 					return { pointer_layout.getPointee(), vm::code::builders::OpKind::dynTableLea };
 				}();
 
-				DVMPlace index_place = forceToPlace(lowerLirValue(*index.index), "index_tmp");
+				DVMValue index_value = lowerLirValue(*index.index);
 
-				// Prepare VM types
-				const vm::code::TypeOfData& vm_element_type
-					= **program_context.lowerAndKeepTslType(element_layout);
-				const vm::code::TypeOfData& ptr_to_element_type
-					= program_context.getOrInsertPointerType(vm_element_type);
+				// The indexed array is reached through a cpointer, so its elements live in
+				// native memory that the DVM table opcodes cannot describe. The element
+				// address is computed as `base + index * element_stride` instead.
+				if (current_place.getAccessKind() == DVMPlace::AccessKind::CPointer) {
+					current_place = cPointerLea(
+										current_place,
+										element_layout,
+										scaleIndexToByteOffset(index_value, *element_layout),
+										"cptr_index_addr"
+					)
+					                    .withAccessKind(DVMPlace::AccessKind::CPointer);
+					current_layout = element_layout;
+				} else {
+					DVMPlace index_place = forceToPlace(index_value, "index_tmp");
 
-				// Create a temporary to the element
-				DVMPlace element_ptr_tmp = pushTempLocal(ptr_to_element_type, "index_addr");
+					// Prepare VM types
+					const vm::code::TypeOfData& vm_element_type
+						= **program_context.lowerAndKeepTslType(element_layout);
+					const vm::code::TypeOfData& ptr_to_element_type
+						= program_context.getOrInsertPointerType(vm_element_type);
 
-				// Emit instruction (now unified)
-				pushInstruction({ op_kind, element_ptr_tmp, current_place, index_place.asArgument() }
-				);
+					// Create a temporary to the element
+					DVMPlace element_ptr_tmp = pushTempLocal(ptr_to_element_type, "index_addr");
 
-				current_place  = element_ptr_tmp.withAccessKind(DVMPlace::AccessKind::Pointer);
-				current_layout = element_layout;
+					// Emit instruction (now unified)
+					pushInstruction(
+						{ op_kind, element_ptr_tmp, current_place, index_place.asArgument() }
+					);
+
+					current_place  = element_ptr_tmp.withAccessKind(DVMPlace::AccessKind::Pointer);
+					current_layout = element_layout;
+				}
 			}
 		}
 	}

@@ -16,6 +16,12 @@
 namespace compiler::backend_vm::internal {
 	class CTVLowering;
 
+	/**
+	 * @brief Which flavour of pointer type to synthesize: a VM-managed pointer (`ptr_X`) or a raw
+	 * C pointer crossing the FFI boundary (`cptr_X`).
+	 */
+	enum class PointerKind : uint8_t { Pointer, CPointer };
+
 	class ProgramLoweringContext final {
 		friend class CTVLowering;
 
@@ -93,13 +99,23 @@ namespace compiler::backend_vm::internal {
 		 * @brief Creates and inserts a pointer type into the program lowering context.
 		 * It caches the result, so inserts the type into the program only if needed.
 		 */
-		const vm::code::TypeOfData& getOrInsertPointerType(const vm::code::TypeOfData& pointee_type);
+		const vm::code::TypeOfData& getOrInsertPointerType(
+			const vm::code::TypeOfData& pointee_type, PointerKind kind = PointerKind::Pointer
+		);
 
 		/**
 		 * @brief Creates and inserts a pointer type based on the type name.
 		 * It caches the result, so inserts the type into the program only if needed.
 		 */
-		const vm::code::TypeOfData& getOrInsertPointerType(base::StrID pointee_type_name);
+		const vm::code::TypeOfData& getOrInsertPointerType(
+			base::StrID pointee_type_name, PointerKind kind = PointerKind::Pointer
+		);
+
+		/**
+		 * @brief Returns the builtin `cptr` type - a cpointer with an unknown pointee, the DVM
+		 * counterpart of C's `void*`. Inserts it into the module on first use.
+		 */
+		const vm::code::TypeOfData& getVoidCPointerType();
 
 		/**
 		 * @brief Retrieves or lazily creates the DVM place for the given LIR global.
@@ -165,6 +181,22 @@ namespace compiler::backend_vm::internal {
 		 * @brief Inserts an extern C function into the program context.
 		 */
 		void insertExternCFunction(const vm::code::ExternalCFunction& extern_func);
+
+		/**
+		 * @brief Declares a native function called through libffi (`call_ffifunc`).
+		 *
+		 * Declaring the same function twice is a no-op; in dev builds a conflicting signature for
+		 * an already declared name is an assertion failure.
+		 */
+		void insertFFIFunction(vm::code::FFIFunction ffi_function);
+
+		/**
+		 * @brief Registers a shared object the DVM should search when resolving FFI symbols.
+		 *
+		 * The string is passed to `dlopen` verbatim, so it is either an absolute path or a bare
+		 * soname looked up in the system library paths. Duplicates are ignored.
+		 */
+		void insertFFIObjectFile(const std::string& object_file);
 
 		/**
 		 * @brief Insert raw bytecode into program context.
@@ -240,6 +272,13 @@ namespace compiler::backend_vm::internal {
 
 		// Extern function name to definition.
 		base::Map<base::StrID, vm::code::ExternalCFunction> extern_c_functions;
+
+		// FFI (libffi-called, C ABI) function name to declaration.
+		base::Map<base::StrID, vm::code::FFIFunction> ffi_functions;
+		// Maintains insertion order for FFI functions so REPL can emit only new declarations.
+		std::vector<base::StrID> lowered_ffi_function_order;
+		// Shared objects searched when resolving FFI symbols.
+		std::vector<std::string> ffi_object_files;
 
 		// Additional, non-lir functions loaded into a module. Used in CTE.
 		std::vector<vm::code::Function> extra_bytecode_functions;
