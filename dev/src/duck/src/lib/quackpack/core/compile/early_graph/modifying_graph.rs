@@ -6,7 +6,7 @@ use tracing::debug;
 
 use super::*;
 use crate::quackpack::core::FeatureName;
-use crate::quackpack::core::compile::missing_depenendcy_in_manifest_message;
+use crate::quackpack::core::compile::missing_depenendcy_in_manifest;
 use crate::util::extend::QpExtend;
 
 impl DependencyGraph {
@@ -24,13 +24,7 @@ impl DependencyGraph {
                     .dependencies()
                     .get_by_name(dep.name())
                     .unwrap_or_else(|| {
-                        panic!(
-                            "{}",
-                            missing_depenendcy_in_manifest_message(
-                                &this.package().name(),
-                                &dep.name()
-                            )
-                        )
+                        missing_depenendcy_in_manifest(&this.package().name(), &dep.name(), this)
                     })
                     .is_enabled_for(this.enabled_features().iter().copied());
                 debug!(
@@ -83,12 +77,10 @@ impl EarlyGraph {
                         .dependencies()
                         .get_by_name(dep.name())
                         .unwrap_or_else(|| {
-                            panic!(
-                                "{}",
-                                missing_depenendcy_in_manifest_message(
-                                    &this.package().name(),
-                                    &dep.name()
-                                )
+                            missing_depenendcy_in_manifest(
+                                &this.package().name(),
+                                &dep.name(),
+                                this,
                             )
                         });
                     entry_in_dep_manifest.enabled_features(this_features.iter().copied())

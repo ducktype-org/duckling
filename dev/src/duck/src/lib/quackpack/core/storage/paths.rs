@@ -83,7 +83,9 @@ impl Storage {
         match pkg_id.kind() {
             FullKind::Git { commit } => self.git_dir(pkg_id.url(), &commit),
             FullKind::Registry => self.registry_dir(&pkg_id.name(), pkg_id.version(), pkg_id.url()),
-            FullKind::Local => unreachable!("local packages should not be stored in storage"),
+            FullKind::Local => {
+                unreachable!("local packages should not be stored in storage `{self:?}`")
+            }
         }
     }
 

@@ -921,6 +921,15 @@ namespace compiler::mir {
 			valueOutput(result.begin, result.getResult(function));
 		}
 
+		void visitBlockExpr(const hc::BlockExpr& expr) override {
+			// @TODO: #3292 Refactor once we figure out how a user should be able to use blocks in
+			// expressions.
+			auto lowered_block = lowerStmt(*expr.block, continuation, function, expr_scope);
+			valueOutput(
+				lowered_block.begin, MIRValue{ MIRConstant{ ctv::CompileTimeValue::UnitCTV() } }
+			);
+		}
+
 		void visitListPushExpr(const hc::ListPushExpr& expr) override {
 			auto hole         = continuation->addHole();
 			auto lowered_elem = lowerSubExpr(*expr.element, continuation);

@@ -466,6 +466,17 @@ namespace compiler::helios::code::shorthands {
 			return makeBox<LiftToTypeExpr>(*ctx, generatedOrigin(), std::move(value));
 		}
 
+		/** @brief A block of statements evaluating to a unit. */
+		[[nodiscard]]
+		Box<BlockExpr> blockExpr(Box<BlockStmt> block) const {
+			return makeBox<BlockExpr>(*ctx, generatedOrigin(), std::move(block));
+		}
+
+		[[nodiscard]]
+		Box<BlockExpr> blockExpr(StmtPack body) const {
+			return makeBox<BlockExpr>(*ctx, generatedOrigin(), block(std::move(body)));
+		}
+
 		/************
 		 *   LIST   *
 		 ************/

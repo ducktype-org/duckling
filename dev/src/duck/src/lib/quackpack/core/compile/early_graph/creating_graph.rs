@@ -54,7 +54,9 @@ impl DependencyGraph {
                     } else {
                         PackageType::TransitiveDependency
                     };
-                    qp_bail_internal!("malformed freezefile: missing {dep_type} `{dep}`")
+                    qp_bail_internal!(
+                        "malformed freezefile: missing {dep_type} `{dep}`; {graph:#?}"
+                    )
                 }
             }
         }
