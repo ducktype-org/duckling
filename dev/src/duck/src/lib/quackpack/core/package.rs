@@ -287,6 +287,10 @@ impl Package {
         &self.root
     }
 
+    pub fn schema_mut(&mut self) -> &mut ManifestSchema {
+        &mut self.original_schema
+    }
+
     /// Get the path to the source directory.
     /// Global package has no src folder, so in that case this function returns [`None`].
     pub fn source_directory(&self) -> Option<&Path> {

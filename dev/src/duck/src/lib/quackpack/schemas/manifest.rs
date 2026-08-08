@@ -60,6 +60,20 @@ impl Manifest {
         }
         result
     }
+
+    pub fn dependencies_mut(&mut self) -> Option<&mut Dependencies> {
+        match self.dependencies {
+            Some(ref mut deps) => Some(deps),
+            None => None,
+        }
+    }
+
+    pub fn dev_dependencies_mut(&mut self) -> Option<&mut Dependencies> {
+        match self.dependencies {
+            Some(ref mut deps) => Some(deps),
+            None => None,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Deserialize)]
