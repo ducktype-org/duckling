@@ -214,6 +214,34 @@ void FunctionLoweringContext::cPointerArrayLea(
 	pushInstruction({ vm::code::builders::OpKind::add, dest, offset });
 }
 
+namespace {
+	using namespace compiler;
+
+	tsl::PointerTypeLayout::PointerKind pointerKindMatching(DVMPlace::AccessKind access_kind) {
+		switch (access_kind) {
+		case DVMPlace::AccessKind::Pointer:
+			return tsl::PointerTypeLayout::PointerKind::SinglePointer;
+		case DVMPlace::AccessKind::CPointer:
+			return tsl::PointerTypeLayout::PointerKind::CPointer;
+		case DVMPlace::AccessKind::DynTablePointer:
+			return tsl::PointerTypeLayout::PointerKind::ManyPointer;
+		default:
+			CORE_PANIC("Invalid pointerKindMatching call.");
+		}
+	}
+
+	DVMPlace::AccessKind accessKindForPointer(const tsl::PointerTypeLayout& pointer_kind) {
+		switch (pointer_kind.getPointerKind()) {
+		case tsl::PointerTypeLayout::PointerKind::SinglePointer:
+			return DVMPlace::AccessKind::Pointer;
+		case tsl::PointerTypeLayout::PointerKind::ManyPointer:
+			return DVMPlace::AccessKind::DynTablePointer;
+		case tsl::PointerTypeLayout::PointerKind::CPointer:
+			return DVMPlace::AccessKind::CPointer;
+		}
+	}
+}
+
 DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 	// First get the base place.
 	DVMPlace current_place = [&]() -> DVMPlace {
@@ -244,24 +272,11 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 					= std::get<tsl::PointerTypeLayout>(current_layout->getVariant());
 				auto pointee_layout = current_pointer_layout.getPointee();
 
-				auto access_for_layout = [](const tsl::PointerTypeLayout& pointer_layout) {
-					switch (pointer_layout.getPointerKind()) {
-					case tsl::PointerTypeLayout::PointerKind::SinglePointer:
-						return DVMPlace::AccessKind::Pointer;
-					case tsl::PointerTypeLayout::PointerKind::ManyPointer:
-						return DVMPlace::AccessKind::DynTablePointer;
-					case tsl::PointerTypeLayout::PointerKind::CPointer:
-						return DVMPlace::AccessKind::CPointer;
-					default:
-						return DVMPlace::AccessKind::Direct;
-					}
-				};
-
 				if (current_place.isDirect()) {
 					// In this case we have a direct stack variable which stores a pointer.
 					// Dereferencing means we now treat the local as a pointer.
 					current_place
-						= current_place.withAccessKind(access_for_layout(current_pointer_layout));
+						= current_place.withAccessKind(accessKindForPointer(current_pointer_layout));
 					current_layout = pointee_layout;
 				} else {
 					vm::code::TypeOfData vm_loaded_type
@@ -271,7 +286,8 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 
 					// Update types after the projection has been applied.
 					current_place
-						= loaded_val_tmp.withAccessKind(access_for_layout(current_pointer_layout));
+						= loaded_val_tmp.withAccessKind(accessKindForPointer(current_pointer_layout)
+					    );
 					current_layout = pointee_layout;
 				}
 			}
@@ -299,24 +315,30 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 
 				auto vm_field_name = base::strConcat("_", field_index);
 
+				// When we have a CPointer to a struct, we can obtain a CPointer to a field,
+				// and when we have a Pointer to a struct, we can get a Pointer to a field.
+				// current_place determines current access kind (Pointer, CPointer)
 				const vm::code::TypeOfData& ptr_to_field_type
-					= program_context
-				          .getOrInsertPointerType(vm_field_type /*@todo right kind here */);
-				// Create a temporary to the field
-				DVMPlace field_ptr_tmp
-					= pushTempLocal(ptr_to_field_type, "field_addr")
-				          .withAccessKind(DVMPlace::AccessKind::Pointer /*@todo right kind here */);
+					= program_context.getOrInsertPointerType(
+						vm_field_type, pointerKindMatching(current_place.getAccessKind())
+					);
+				// Create a temporary to the field, with the right access kind.
+				DVMPlace field_ptr_tmp = pushTempLocal(ptr_to_field_type, "field_addr")
+				                             .withAccessKind(current_place.getAccessKind());
 
-				if (current_place.getAccessKind() == DVMPlace::AccessKind::CPointer) {
+				switch (current_place.getAccessKind()) {
+				case DVMPlace::AccessKind::CPointer:
 					cPointerStructLea(current_place, field_ptr_tmp, class_layout, field.field_id);
-				} else {
-					// Emit the pointer move instruction. Based on the `current_place` type,
-					// `structLea_pptr_pptr_field` or `structLea_pptr_pste_field` will be picked.
+					break;
+				case DVMPlace::AccessKind::Pointer:
 					pushInstruction({ vm::code::builders::OpKind::structLea,
 					                  field_ptr_tmp,
 					                  current_place,
 					                  vm::opargs::Field{ typeName(vm_class_type),
 					                                     base::StrID(vm_field_name) } });
+					break;
+				default:
+					CORE_PANIC("Not expected access kind.");
 				}
 
 				// `field_ptr_tmp` now holds a pointer to the appropriate struct field.
@@ -327,61 +349,106 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 				CORE_ASSERT(
 					current_layout->is<tsl::StaticArrayTypeLayout>()
 						or current_layout->is<tsl::PointerTypeLayout>(),
-					"IndexProjection on non-array layout"
+					"Unsupported index projection"
 				);
-
-				// We can have in LIR an index projection on a pointer type, which should
-				// insert a deref before the index projection.
-				if (not current_place.isDirect() and current_layout->is<tsl::PointerTypeLayout>()
-				    and current_layout->as<tsl::PointerTypeLayout>().getPointerKind()
-				            == tsl::PointerTypeLayout::PointerKind::ManyPointer) {
-					const vm::code::TypeOfData& vm_pointer_type
-						= **program_context.lowerAndKeepTslType(current_layout);
-					current_place = loadFromPlace(current_place, vm_pointer_type);
-				}
-
-				// Resolve element layout + opcode in one place
-				auto [element_layout, op_kind]
-					= [&]() -> std::pair<CRef<tsl::TypeLayout>, vm::code::builders::OpKind> {
-					if (current_layout->is<tsl::StaticArrayTypeLayout>()) {
-						const auto& array_layout
-							= std::get<tsl::StaticArrayTypeLayout>(current_layout->getVariant());
-						return { array_layout.getElementLayout(),
-							     vm::code::builders::OpKind::fixedSizeTableLea };
-					}
-
-					const auto& pointer_layout
-						= std::get<tsl::PointerTypeLayout>(current_layout->getVariant());
-
-					return { pointer_layout.getPointee(), vm::code::builders::OpKind::dynTableLea };
-				}();
-
 				DVMValue index_value = lowerLirValue(*index.index);
 
+				auto element_layout = [&]() -> CRef<tsl::TypeLayout> {
+					if (current_layout->is<tsl::StaticArrayTypeLayout>())
+						return current_layout->as<tsl::StaticArrayTypeLayout>().getElementLayout();
+					if (current_layout->is<tsl::PointerTypeLayout>())
+						return current_layout->as<tsl::PointerTypeLayout>().getPointee();
+					CORE_PANIC("Type is not indexable");
+				}();
 
 				// Prepare VM types
 				const vm::code::TypeOfData& vm_element_type
 					= **program_context.lowerAndKeepTslType(element_layout);
 
-				const vm::code::TypeOfData& ptr_to_element_type
-					= program_context.getOrInsertPointerType(vm_element_type);
-				// Create a temporary to the element
-				DVMPlace element_ptr_tmp = pushTempLocal(ptr_to_element_type, "index_addr")
-				                               .withAccessKind(DVMPlace::AccessKind::Pointer);
+				// Case when we have a pointer to a static array type layout,
+				// for example a pointer to a class field Cls {field: i64[4]}
+				if (current_layout->is<tsl::StaticArrayTypeLayout>()) {
+					auto                        current_access = current_place.getAccessKind();
+					const vm::code::TypeOfData& ptr_to_element_type
+						= program_context.getOrInsertPointerType(
+							vm_element_type, pointerKindMatching(current_access)
+						);
+					// Create a temporary to the element
+					DVMPlace element_ptr_tmp = pushTempLocal(ptr_to_element_type, "index_addr")
+					                               .withAccessKind(current_access);
 
+					switch (current_access) {
+					case DVMPlace::AccessKind::Pointer: {
+						DVMPlace index_place = forceToPlace(index_value, "index_tmp");
+						pushInstruction({ OpKind::fixedSizeTableLea,
+						                  element_ptr_tmp,
+						                  current_place,
+						                  index_place.asArgument() });
+						break;
+					}
+					case DVMPlace::AccessKind::CPointer:
+						cPointerArrayLea(
+							current_place, element_ptr_tmp, element_layout, index_value
+						);
+						break;
+					default:
+						CORE_PANIC("Not expected access kind.");
+					}
 
-				if (current_place.getAccessKind() == DVMPlace::AccessKind::CPointer) {
-					cPointerArrayLea(current_place, element_ptr_tmp, element_layout, index_value);
-				} else {
-					// DBC index lea don't have immediate versions
-					DVMPlace index_place = forceToPlace(index_value, "index_tmp");
-					// Emit instruction (now unified)
-					pushInstruction(
-						{ op_kind, element_ptr_tmp, current_place, index_place.asArgument() }
-					);
+					current_place = element_ptr_tmp;
 				}
+				if (current_layout->is<tsl::PointerTypeLayout>()) {
+					// Case when we have a pointer to a field,
+					// and the field is of type Pointer, for example Cls {field: manyptr i64}
+					// obj -> access_proj field -> index_proj 10
+					// We have to insert deref, to get the manyptr loaded into temporary.
+					if (not current_place.isDirect()) {
+						const vm::code::TypeOfData& vm_pointer_type
+							= **program_context.lowerAndKeepTslType(current_layout);
+						current_place = loadFromPlace(current_place, vm_pointer_type);
+					}
 
-				current_place  = element_ptr_tmp;
+					switch (current_layout->as<tsl::PointerTypeLayout>().getPointerKind()) {
+					case tsl::PointerTypeLayout::PointerKind::ManyPointer: {
+						// Element pointer of a ManyPointer is a SinglePointer
+						const vm::code::TypeOfData& ptr_to_element_type
+							= program_context.getOrInsertPointerType(
+								vm_element_type, tsl::PointerTypeLayout::PointerKind::SinglePointer
+							);
+						// Create a temporary to the element
+						DVMPlace element_ptr_tmp
+							= pushTempLocal(ptr_to_element_type, "element_ptr")
+						          .withAccessKind(DVMPlace::AccessKind::Pointer);
+
+						DVMPlace index_place = forceToPlace(index_value, "index_tmp");
+						pushInstruction({ OpKind::dynTableLea,
+						                  element_ptr_tmp,
+						                  current_place,
+						                  index_place.asArgument() });
+
+						current_place = element_ptr_tmp;
+						break;
+					}
+					case tsl::PointerTypeLayout::PointerKind::CPointer: {
+						// Element pointer of a CPointer is a CPointer
+						const vm::code::TypeOfData& ptr_to_element_type
+							= program_context.getOrInsertPointerType(
+								vm_element_type, tsl::PointerTypeLayout::PointerKind::CPointer
+							);
+						DVMPlace element_ptr_tmp
+							= pushTempLocal(ptr_to_element_type, "element_ptr")
+						          .withAccessKind(DVMPlace::AccessKind::CPointer);
+
+						cPointerArrayLea(
+							current_place, element_ptr_tmp, element_layout, index_value
+						);
+						current_place = element_ptr_tmp;
+						break;
+					}
+					default:
+						CORE_PANIC("Not expected access kind.");
+					}
+				}
 				current_layout = element_layout;
 			}
 		}

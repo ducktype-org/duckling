@@ -218,8 +218,10 @@ namespace compiler::backend_vm::internal {
 			auto& field       = structure_type.fields[i];
 			auto& field_value = values[i];
 
-			auto ptr_to_field_type = ctor_ctx.program_context.getOrInsertPointerType(field.type);
-			DVMPlace field_ptr     = ctor_ctx.pushTempLocal(ptr_to_field_type, "str_slice_field");
+			auto ptr_to_field_type = ctor_ctx.program_context.getOrInsertPointerType(
+				ctor_ctx.program_context.type_storage.dvm_types.at(field.type)
+			);
+			DVMPlace field_ptr = ctor_ctx.pushTempLocal(ptr_to_field_type, "str_slice_field");
 			ctor_ctx.pushInstruction({ OpKind::structLea,
 			                           field_ptr,
 			                           destination,

@@ -95,12 +95,18 @@ namespace compiler::backend_vm::internal {
 		 */
 		CRef<vm::code::TypeOfData> keepVMType(vm::code::TypeOfData dvm_type);
 
+		const vm::code::TypeOfData lowerPointerType(
+			const vm::code::TypeOfData& pointee_type, tsl::PointerTypeLayout::PointerKind kind
+		);
+
 		/**
 		 * @brief Creates and inserts a pointer type into the program lowering context.
 		 * It caches the result, so inserts the type into the program only if needed.
 		 */
 		const vm::code::TypeOfData& getOrInsertPointerType(
-			const vm::code::TypeOfData& pointee_type, PointerKind kind = PointerKind::Pointer
+			const vm::code::TypeOfData&         pointee_type,
+			tsl::PointerTypeLayout::PointerKind kind
+			= tsl::PointerTypeLayout::PointerKind::SinglePointer
 		);
 
 		/**
@@ -108,7 +114,9 @@ namespace compiler::backend_vm::internal {
 		 * It caches the result, so inserts the type into the program only if needed.
 		 */
 		const vm::code::TypeOfData& getOrInsertPointerType(
-			base::StrID pointee_type_name, PointerKind kind = PointerKind::Pointer
+			base::StrID                         pointee_type_name,
+			tsl::PointerTypeLayout::PointerKind kind
+			= tsl::PointerTypeLayout::PointerKind::SinglePointer
 		);
 
 		/**

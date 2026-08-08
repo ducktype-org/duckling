@@ -15,6 +15,7 @@
 
 #include <logger/logger.hpp>
 
+#include "vm/bytecode/type_of_data.hpp"
 #include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/bytecode.hpp>
 
@@ -90,38 +91,49 @@ compiler::backend_vm::LoweredEntitiesSnapshot ProgramLoweringContext::captureLow
 		     lowered_ffi_function_order.size() };
 }
 
-const vm::code::TypeOfData& ProgramLoweringContext::getOrInsertPointerType(
-	const vm::code::TypeOfData& pointee_type, PointerKind kind
+const vm::code::TypeOfData ProgramLoweringContext::lowerPointerType(
+	const vm::code::TypeOfData& pointee_type, tsl::PointerTypeLayout::PointerKind kind
 ) {
-	return getOrInsertPointerType(vm::code::typeName(pointee_type), kind);
+	auto pointee_name = typeName(pointee_type);
+	switch (kind) {
+	case tsl::PointerTypeLayout::PointerKind::SinglePointer: {
+		auto pointer_type_name = base::strConcat("ptr_", pointee_name);
+		return vm::code::PointerType(base::StrID(pointer_type_name), pointee_name);
+	}
+	case tsl::PointerTypeLayout::PointerKind::ManyPointer: {
+		// Many pointer is a pointer to a dynamic table of the pointee type.
+		auto                       dyntable_type_name = base::strConcat("dyntable_", pointee_name);
+		vm::code::DynamicTableType dyntable_type(base::StrID(dyntable_type_name), pointee_name);
+		// Ensure the dynamic table type is stored in the context.
+		keepVMType(dyntable_type);
+		auto pointer_type_name = base::strConcat("ptr_", dyntable_type_name);
+		return vm::code::PointerType(base::StrID(pointer_type_name), typeName(dyntable_type));
+	}
+	case tsl::PointerTypeLayout::PointerKind::CPointer:
+		auto pointer_type_name = base::strConcat("ptr_", pointee_name);
+		return vm::code::CPointerType(base::StrID(pointer_type_name), pointee_name);
+	}
 }
 
 const vm::code::TypeOfData& ProgramLoweringContext::getOrInsertPointerType(
-	base::StrID pointee_type_name, PointerKind kind
+	const vm::code::TypeOfData& pointee_type, tsl::PointerTypeLayout::PointerKind kind
 ) {
-	const bool is_cpointer = kind == PointerKind::CPointer;
-	auto       pointer_name
-		= base::StrID(base::strConcat(is_cpointer ? "cptr_" : "ptr_", pointee_type_name));
+	auto lowered_pointer = lowerPointerType(pointee_type, kind);
+	auto name            = typeName(lowered_pointer);
 
-	if (auto maybe_type = type_storage.dvm_types.atMaybe(pointer_name)) return **maybe_type;
-
-	vm::code::TypeOfData pointer_type
-		= is_cpointer
-		    ? vm::code::TypeOfData(vm::code::CPointerType(pointer_name, pointee_type_name))
-		    : vm::code::TypeOfData(vm::code::PointerType(pointer_name, pointee_type_name));
-	type_storage.dvm_types.put(pointer_name, std::move(pointer_type));
-	lowered_type_order.push_back(pointer_name);
-	return type_storage.dvm_types.at(pointer_name);
+	auto result = type_storage.dvm_types.put(name, std::move(lowered_pointer));
+	if (result.second) lowered_type_order.push_back(name);
+	return result.first->second;
 }
 
 const vm::code::TypeOfData& ProgramLoweringContext::getVoidCPointerType() {
-	static const base::StrID VOID_CPOINTER_NAME{ "cptr" };
+	static const base::StrID void_cpointer_name{ "cptr" };
 
-	if (auto maybe_type = type_storage.dvm_types.atMaybe(VOID_CPOINTER_NAME)) return **maybe_type;
+	if (auto maybe_type = type_storage.dvm_types.atMaybe(void_cpointer_name)) return **maybe_type;
 
 	// `cptr` is a DVM builtin, so it is taken from the builtin table rather than synthesized, to
 	// keep the definition emitted here identical to the one the VM already knows.
-	return *keepVMType(vm::code::getBuiltinTypeByName(VOID_CPOINTER_NAME).value());
+	return *keepVMType(vm::code::getBuiltinTypeByName(void_cpointer_name).value());
 }
 
 const DVMPlace& ProgramLoweringContext::getLirGlobal(CRef<lir::LIRGlobal> lir_global) {
@@ -427,37 +439,13 @@ base::Optional<vm::code::TypeOfData> ProgramLoweringContext::lowerTslTypeInterna
 			return vm::code::OpaqueType(base::StrID("opaque_ptr"), Bytes{ 8 });
 		}
 		variant_case(tsl::PointerTypeLayout, pointer_layout) {
-			// A cpointer may be untyped (C's `void*`), in which case there is no pointee to lower.
-			// The DVM models it with the builtin `cptr`, which carries no inner type.
 			if (pointer_layout.getPointerKind() == tsl::PointerTypeLayout::PointerKind::CPointer
 			    and not pointer_layout.hasPointee())
 				return getVoidCPointerType();
 
 			const vm::code::TypeOfData& pointee_type
 				= **lowerAndKeepTslType(pointer_layout.getPointee());
-			switch (pointer_layout.getPointerKind()) {
-			case tsl::PointerTypeLayout::PointerKind::SinglePointer: {
-				auto pointer_type_name = base::strConcat("ptr_", typeName(pointee_type));
-				return vm::code::PointerType(base::StrID(pointer_type_name), typeName(pointee_type));
-			}
-			case tsl::PointerTypeLayout::PointerKind::ManyPointer: {
-				// Many pointer is a pointer to a dynamic table of the pointee type.
-				auto dyntable_type_name = base::strConcat("dyntable_", typeName(pointee_type));
-				vm::code::DynamicTableType dyntable_type(
-					base::StrID(dyntable_type_name), typeName(pointee_type)
-				);
-				// Ensure the dynamic table type is stored in the context.
-				keepVMType(dyntable_type);
-				auto pointer_type_name = base::strConcat("ptr_", dyntable_type_name);
-				return vm::code::PointerType(
-					base::StrID(pointer_type_name), typeName(dyntable_type)
-				);
-			}
-			case tsl::PointerTypeLayout::PointerKind::CPointer:
-				return getOrInsertPointerType(pointee_type, PointerKind::CPointer);
-			default:
-				CORE_PANIC("All cases should be covered.");
-			}
+			return lowerPointerType(pointee_type, pointer_layout.getPointerKind());
 		}
 		variant_case(tsl::ClassTypeLayout, class_layout) {
 			std::vector<vm::code::Field> fields;
