@@ -2,7 +2,6 @@
 use std::fmt;
 use std::path::{Path, PathBuf};
 
-use super::compile::artifacts_layout::ArtifactsLayout;
 use super::identity::{Identity, Origin};
 use super::script::Script;
 use super::{Manifest, VenvConfig, Version};
@@ -62,14 +61,6 @@ impl AnyPackage {
         match self {
             Self::Package(package) => package.artifacts_directory(),
             Self::Script(script) => script.artifacts_directory(),
-        }
-    }
-
-    /// Get the artifacts layout.
-    pub fn artifacts_layout<T: ArtifactsLayout>(&self) -> T {
-        match self {
-            Self::Package(package) => package.artifacts_layout(),
-            Self::Script(script) => script.artifacts_layout(),
         }
     }
 
@@ -307,11 +298,6 @@ impl Package {
         &self.artifacts_dir
     }
 
-    /// Get the the artifacts layout.
-    pub fn artifacts_layout<T: ArtifactsLayout>(&self) -> T {
-        T::new(self.artifacts_dir.clone())
-    }
-
     /// Convert this package to an [`Identity`].
     /// This will always (try to) return an [`Identity`] with [`Origin::for_local`] origin.
     pub fn as_a_local_identity(&self) -> QuackResult<Identity> {
@@ -330,6 +316,7 @@ impl fmt::Debug for Package {
         f.debug_struct("Package")
             .field("manifest", &self.manifest)
             .field("root", &self.root)
+            .field("global", &self.is_global())
             .field("manifest_path", &self.manifest_path)
             .field("artifacts_dir", &self.artifacts_dir)
             .field("possible_source_dir", &self.possible_source_dir)

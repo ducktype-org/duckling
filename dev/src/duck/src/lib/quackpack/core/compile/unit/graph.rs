@@ -7,7 +7,7 @@ use tracing::{debug, instrument};
 use super::{ArtifactsType, Unit};
 use crate::quackpack::core::compile::compiler_package::CompilerPackage;
 use crate::quackpack::core::compile::early_graph::{DependencyNode, EarlyGraph};
-use crate::quackpack::core::compile::{BuildContext, missing_depenendcy_in_graph_message};
+use crate::quackpack::core::compile::{BuildContext, missing_depenendcy_in_graph};
 use crate::quackpack::core::identity::Identity;
 
 #[derive(Debug)]
@@ -68,13 +68,13 @@ pub fn lower_early_graph(graph: EarlyGraph, bcx: &BuildContext<'_, '_>) -> UnitG
     let root_identity = graph.root();
     let root_id = *identity_to_id
         .get(&root_identity)
-        .unwrap_or_else(|| panic!("{}", missing_depenendcy_in_graph_message(root_identity)));
+        .unwrap_or_else(|| missing_depenendcy_in_graph(root_identity, &identity_to_id));
 
     let mut units = vec![];
     for identity in sorted_identities {
         let package = packages
             .remove(&identity)
-            .unwrap_or_else(|| panic!("{}", missing_depenendcy_in_graph_message(identity)));
+            .unwrap_or_else(|| missing_depenendcy_in_graph(identity, &identity_to_id));
         let node = graph.dependencies_for_package(&identity);
         let unit = create_single_unit(identity, root_identity, &identity_to_id, package, node, bcx);
         units.push(unit)
@@ -138,13 +138,13 @@ fn create_single_unit(
         .map(|dep| {
             *ids_map
                 .get(dep)
-                .unwrap_or_else(|| panic!("{}", missing_depenendcy_in_graph_message(*dep)))
+                .unwrap_or_else(|| missing_depenendcy_in_graph(*dep, ids_map))
         })
         .collect::<Vec<_>>();
     dependencies.sort();
     let unit_id = *ids_map
         .get(&unit_identity)
-        .unwrap_or_else(|| panic!("{}", missing_depenendcy_in_graph_message(unit_identity)));
+        .unwrap_or_else(|| missing_depenendcy_in_graph(unit_identity, ids_map));
     Unit::new(
         unit_id,
         package,
