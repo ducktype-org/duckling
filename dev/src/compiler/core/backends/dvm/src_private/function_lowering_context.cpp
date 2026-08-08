@@ -290,21 +290,6 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 				CRef<tsl::TypeLayout> field_layout
 					= class_layout.getFieldLayoutOfLayoutIndex(field_index);
 
-				if (current_place.getAccessKind() == DVMPlace::AccessKind::CPointer) {
-					// The struct lives in native memory, so `structLea` (which walks VM types)
-					// does not apply - the field address is the base address advanced by the
-					// field's own offset in the layout.
-					current_place = cPointerLea(
-										current_place,
-										field_layout,
-										{ DVMImmediate::u64(field_offset) },
-										"cptr_field_addr"
-					)
-					                    .withAccessKind(DVMPlace::AccessKind::CPointer);
-					current_layout = field_layout;
-					continue;
-				}
-
 				const vm::code::TypeOfData& vm_class_type
 					= **program_context.lowerAndKeepTslType(current_layout);
 
