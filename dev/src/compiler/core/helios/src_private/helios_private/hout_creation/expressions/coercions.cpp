@@ -76,17 +76,16 @@ namespace compiler::helios {
 			auto source_type = expr->expression_type.getType().as<tsh::TupleAbstractType>();
 			auto to_type     = to.getType().as<tsh::TupleAbstractType>();
 
-			// A tuple literal is coerced element by element in place. Reading the elements back out
-			// of a materialised tuple would lose the shape of the element expressions, which some
-			// coercions still need - lifting a value to a `type` for instance only works on the
-			// original expression. It also avoids materialising the source tuple altogether.
-			// Tuple literals are wrapped in the parenthesis they are written with, so those are
-			// looked through.
-			code::Expr* unwrapped = expr.get();
-			while (auto* parenthesis = dynamic_cast<code::ParenthesisExpr*>(unwrapped))
+			// A tuple literal is coerced element by element in place. It avoids materialising the
+			// source tuple altogether. Tuple literals are wrapped in the parenthesis they are
+			// written with, so those are looked through.
+			MRef<code::Expr> unwrapped = expr.get();
+			while (MRef<code::ParenthesisExpr> parenthesis
+			       = dynamic_cast<code::ParenthesisExpr*>(&*unwrapped))
 				unwrapped = parenthesis->inner.get();
 
-			if (auto* tuple_literal = dynamic_cast<code::TupleExpr*>(unwrapped)) {
+			MRef<code::TupleExpr> tuple_literal = dynamic_cast<code::TupleExpr*>(&*unwrapped);
+			if (tuple_literal != nullptr) {
 				std::vector<Box<code::Expr>> literal_elements;
 				literal_elements.reserve(tuple_literal->elements.size());
 
