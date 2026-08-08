@@ -5,6 +5,7 @@
 #include "debug_info_utils.hpp"
 #include "dvm_value.hpp"
 #include "program_lowering_context.hpp"
+#include "tsl/type_layout.hpp"
 
 #include <lir/lir_structure/lir_structure.hpp>
 
@@ -174,57 +175,43 @@ DVMPlace FunctionLoweringContext::loadFromPlace(
 	return temp;
 }
 
-DVMPlace FunctionLoweringContext::cPointerLea(
-	const DVMPlace&                  base_place,
-	CRef<tsl::TypeLayout>            target_layout,
-	const DVMValue&                  byte_offset,
-	base::Optional<std::string_view> name_hint
+void FunctionLoweringContext::cPointerStructLea(
+	const DVMPlace&             base_place,
+	const DVMPlace&             dest,
+	const tsl::ClassTypeLayout& class_layout,
+	helios::SymID               field_id
 ) {
-	const vm::code::TypeOfData& vm_target_type
-		= **program_context.lowerAndKeepTslType(target_layout);
-	const vm::code::TypeOfData& cptr_to_target
-		= program_context.getOrInsertPointerType(vm_target_type, PointerKind::CPointer);
-
-	DVMPlace result = pushTempLocal(cptr_to_target, name_hint);
-
-	// The DVM has no cpointer opcode that both reinterprets and offsets, so the address is first
-	// copied into a cpointer of the target type and then advanced in place. `mov_pcptr_pcptr`
-	// demands identical types on both sides, hence the reinterpreting `movCast_pcptr_pcptr`.
-	pushInstruction({ vm::code::builders::OpKind::movCast, result, base_place });
-
-	// A zero constant offset (the first field of a class, index 0) needs no arithmetic at all.
-	const bool is_zero_offset
-		= byte_offset.is<DVMImmediate>() && byte_offset.get<DVMImmediate>().value == 0;
-	if (not is_zero_offset)
-		pushInstruction({ vm::code::builders::OpKind::add, result, byte_offset.asArgument() });
-
-	return result;
+	const auto field_offset = class_layout.getOffsetOfFieldSymbol(field_id).value().asInt();
+	pushInstruction({ vm::code::builders::OpKind::movCast, dest, base_place });
+	pushInstruction({ vm::code::builders::OpKind::add, dest, DVMImmediate::u64(field_offset) });
 }
 
-DVMValue FunctionLoweringContext::scaleIndexToByteOffset(
-	const DVMValue& index, const tsl::TypeLayout& element_layout
+void FunctionLoweringContext::cPointerArrayLea(
+	const DVMPlace&        base_place,
+	const DVMPlace&        dest,
+	const tsl::TypeLayout& element_layout,
+	const DVMValue&        index
 ) {
+	pushInstruction({ vm::code::builders::OpKind::movCast, dest, base_place });
 	const auto element_stride
-		= static_cast<::i64>(usize(base::bits2bytesRoundUp(element_layout.getSize())));
+		= static_cast<i64>(base::bits2bytes(element_layout.getSize()).asInt());
 
+
+	base::Optional<DVMValue> dbc_index;
 	// A constant index folds into a single immediate byte offset.
 	if (index.is<DVMImmediate>())
-		return {
-			DVMImmediate::i64(static_cast<::i64>(index.get<DVMImmediate>().value) * element_stride)
+		dbc_index = DVMValue{
+			DVMImmediate::i64(element_stride * static_cast<i64>(index.get<DVMImmediate>().value))
 		};
 
-	// `add_pcptr_p64` takes the offset from an `i64` local, so the scaling is done in a
-	// temporary of that exact type.
-	DVMPlace offset_tmp = copyToTempPlace(index, "cptr_index_offset");
+	const DVMPlace& offset = copyToTempPlace(index, "cptr_index_offset");
 	CORE_ASSERT(
-		vm::code::typeName(offset_tmp.getType()) == base::StrID("i64"),
+		vm::code::typeName(offset.getType()) == base::StrID("i64"),
 		"Index used for cpointer arithmetic must be a 64-bit integer, got: ",
-		vm::code::typeName(offset_tmp.getType())
+		vm::code::typeName(offset.getType())
 	);
-	pushInstruction(
-		{ vm::code::builders::OpKind::mul, offset_tmp, DVMImmediate::i64(element_stride) }
-	);
-	return { offset_tmp };
+	pushInstruction({ vm::code::builders::OpKind::mul, offset, DVMImmediate::i64(element_stride) });
+	pushInstruction({ vm::code::builders::OpKind::add, dest, offset });
 }
 
 DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
@@ -307,8 +294,6 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 					// The struct lives in native memory, so `structLea` (which walks VM types)
 					// does not apply - the field address is the base address advanced by the
 					// field's own offset in the layout.
-					const auto field_offset
-						= class_layout.getOffsetOfFieldSymbol(field.field_id).value().asInt();
 					current_place = cPointerLea(
 										current_place,
 										field_layout,
@@ -330,21 +315,27 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 				auto vm_field_name = base::strConcat("_", field_index);
 
 				const vm::code::TypeOfData& ptr_to_field_type
-					= program_context.getOrInsertPointerType(vm_field_type);
-
+					= program_context
+				          .getOrInsertPointerType(vm_field_type /*@todo right kind here */);
 				// Create a temporary to the field
-				DVMPlace field_ptr_tmp = pushTempLocal(ptr_to_field_type, "field_addr");
+				DVMPlace field_ptr_tmp
+					= pushTempLocal(ptr_to_field_type, "field_addr")
+				          .withAccessKind(DVMPlace::AccessKind::Pointer /*@todo right kind here */);
 
-				// Emit the pointer move instruction. Based on the `current_place` type,
-				// `structLea_pptr_pptr_field` or `structLea_pptr_pste_field` will be picked.
-				pushInstruction({ vm::code::builders::OpKind::structLea,
-				                  field_ptr_tmp,
-				                  current_place,
-				                  vm::opargs::Field{ typeName(vm_class_type),
-				                                     base::StrID(vm_field_name) } });
+				if (current_place.getAccessKind() == DVMPlace::AccessKind::CPointer) {
+					cPointerStructLea(current_place, field_ptr_tmp, class_layout, field.field_id);
+				} else {
+					// Emit the pointer move instruction. Based on the `current_place` type,
+					// `structLea_pptr_pptr_field` or `structLea_pptr_pste_field` will be picked.
+					pushInstruction({ vm::code::builders::OpKind::structLea,
+					                  field_ptr_tmp,
+					                  current_place,
+					                  vm::opargs::Field{ typeName(vm_class_type),
+					                                     base::StrID(vm_field_name) } });
+				}
 
 				// `field_ptr_tmp` now holds a pointer to the appropriate struct field.
-				current_place  = field_ptr_tmp.withAccessKind(DVMPlace::AccessKind::Pointer);
+				current_place  = field_ptr_tmp;
 				current_layout = field_layout;
 			}
 			variant_case(lir::LIRPlace::IndexProjection, index) {
@@ -355,9 +346,10 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 				);
 
 				// We can have in LIR an index projection on a pointer type, which should
-				// insert a deref before the index projection. Only a ManyPointer can appear
-				// here - it is the sole indexable type that has a pointer layout.
-				if (not current_place.isDirect() and current_layout->is<tsl::PointerTypeLayout>()) {
+				// insert a deref before the index projection.
+				if (not current_place.isDirect() and current_layout->is<tsl::PointerTypeLayout>()
+				    and current_layout->as<tsl::PointerTypeLayout>().getPointerKind()
+				            == tsl::PointerTypeLayout::PointerKind::ManyPointer) {
 					const vm::code::TypeOfData& vm_pointer_type
 						= **program_context.lowerAndKeepTslType(current_layout);
 					current_place = loadFromPlace(current_place, vm_pointer_type);
@@ -381,38 +373,31 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 
 				DVMValue index_value = lowerLirValue(*index.index);
 
-				// The indexed array is reached through a cpointer, so its elements live in
-				// native memory that the DVM table opcodes cannot describe. The element
-				// address is computed as `base + index * element_stride` instead.
+
+				// Prepare VM types
+				const vm::code::TypeOfData& vm_element_type
+					= **program_context.lowerAndKeepTslType(element_layout);
+
+				const vm::code::TypeOfData& ptr_to_element_type
+					= program_context.getOrInsertPointerType(vm_element_type);
+				// Create a temporary to the element
+				DVMPlace element_ptr_tmp = pushTempLocal(ptr_to_element_type, "index_addr")
+				                               .withAccessKind(DVMPlace::AccessKind::Pointer);
+
+
 				if (current_place.getAccessKind() == DVMPlace::AccessKind::CPointer) {
-					current_place = cPointerLea(
-										current_place,
-										element_layout,
-										scaleIndexToByteOffset(index_value, *element_layout),
-										"cptr_index_addr"
-					)
-					                    .withAccessKind(DVMPlace::AccessKind::CPointer);
-					current_layout = element_layout;
+					cPointerArrayLea(current_place, element_ptr_tmp, element_layout, index_value);
 				} else {
+					// DBC index lea don't have immediate versions
 					DVMPlace index_place = forceToPlace(index_value, "index_tmp");
-
-					// Prepare VM types
-					const vm::code::TypeOfData& vm_element_type
-						= **program_context.lowerAndKeepTslType(element_layout);
-					const vm::code::TypeOfData& ptr_to_element_type
-						= program_context.getOrInsertPointerType(vm_element_type);
-
-					// Create a temporary to the element
-					DVMPlace element_ptr_tmp = pushTempLocal(ptr_to_element_type, "index_addr");
-
 					// Emit instruction (now unified)
 					pushInstruction(
 						{ op_kind, element_ptr_tmp, current_place, index_place.asArgument() }
 					);
-
-					current_place  = element_ptr_tmp.withAccessKind(DVMPlace::AccessKind::Pointer);
-					current_layout = element_layout;
 				}
+
+				current_place  = element_ptr_tmp;
+				current_layout = element_layout;
 			}
 		}
 	}

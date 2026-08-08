@@ -127,33 +127,18 @@ namespace compiler::backend_vm::internal {
 		 */
 		DVMPlace loadFromPlace(const DVMPlace& place, const vm::code::TypeOfData& pointee_type);
 
-		/**
-		 * @brief The cpointer counterpart of the `lea` opcodes: produces a temporary holding a
-		 * cpointer to @p target_layout that addresses @p byte_offset bytes past @p base_place.
-		 *
-		 * The DVM cannot walk native memory by type the way `structLea` / `fixedSizeTableLea` /
-		 * `dynTableLea` walk VM memory, so offsets are computed here from the TSL layouts and
-		 * applied as raw byte arithmetic (`add_pcptr_imm` for a constant offset, `add_pcptr_p64`
-		 * for a computed one) on a `movCast_pcptr_pcptr` copy of the base address.
-		 *
-		 * @param base_place A place holding a cpointer (of any pointee type).
-		 * @param target_layout Layout of what the resulting cpointer points to.
-		 * @param byte_offset Offset in bytes; an immediate is folded into the opcode and a zero
-		 * immediate skips the arithmetic entirely.
-		 */
-		DVMPlace cPointerLea(
-			const DVMPlace&                  base_place,
-			CRef<tsl::TypeLayout>            target_layout,
-			const DVMValue&                  byte_offset,
-			base::Optional<std::string_view> name_hint = {}
+		void cPointerStructLea(
+			const DVMPlace&             base_place,
+			const DVMPlace&             dest,
+			const tsl::ClassTypeLayout& class_layout,
+			helios::SymID               field_id
 		);
 
-		/**
-		 * @brief Converts an element index into the byte offset that C pointer arithmetic implies
-		 * for it, i.e. multiplies it by the stride of @p element_layout.
-		 */
-		DVMValue scaleIndexToByteOffset(
-			const DVMValue& index, const tsl::TypeLayout& element_layout
+		void cPointerArrayLea(
+			const DVMPlace&        base_place,
+			const DVMPlace&        dest,
+			const tsl::TypeLayout& element_layout,
+			const DVMValue&        index
 		);
 
 		/**
