@@ -48,7 +48,9 @@ namespace compiler::helios {
 			));
 		}
 
-		// Coerces a single tuple element to the i-th component of the target tuple type.
+		/**
+		 * @brief Coerces a single tuple element to the i-th component of the target tuple type.
+		 */
 		Box<code::Expr> coerceTupleElement(
 			query::Context&               ctx,
 			Box<code::Expr>               element,
@@ -56,7 +58,7 @@ namespace compiler::helios {
 			usize                         index
 		) {
 			auto element_coercion
-				= canCoerce(ctx, element->expression_type, to_type.getComponents()[index])
+				= canCoerce(ctx, element->expression_type, to_type.getComponents().at(index))
 			          .valueOrThrow();
 			CORE_ASSERT(
 				element_coercion.isValid(), "Coercion should always be valid at this point."
@@ -65,7 +67,9 @@ namespace compiler::helios {
 			return element_coercion.getCoercion().coerce(ctx, std::move(element));
 		}
 
-		// Performs element by element coercion.
+		/**
+		 * @brief Performs element by element coercion.
+		 */
 		Box<code::Expr> handleTupleCoercion(
 			query::Context& ctx, Box<code::Expr> expr, const tsh::SymbolType<>& to
 		) {
@@ -87,9 +91,9 @@ namespace compiler::helios {
 				literal_elements.reserve(tuple_literal->elements.size());
 
 				for (usize i = 0; i < tuple_literal->elements.size(); i++)
-					literal_elements.emplace_back(
-						coerceTupleElement(ctx, std::move(tuple_literal->elements[i]), to_type, i)
-					);
+					literal_elements.emplace_back(coerceTupleElement(
+						ctx, std::move(tuple_literal->elements.at(i)), to_type, i
+					));
 
 				return makeBox<code::TupleExpr>(
 					ctx, expr->origin.generatedFrom(), std::move(literal_elements)
