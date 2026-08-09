@@ -49,6 +49,13 @@ template(T: type)
 @builtin("construct_at")
 fundecl construct_at(pointer: ptr T, value: T) -> ();
 
+#{
+    Address of the element at `index`.
+#}
+template(T: type)
+@builtin("element_ptr")
+fundecl element_ptr(pointer: manyptr T, index: i64) -> ptr T;
+
 @builtin("alignment_of")
 fundecl alignment_of(v: type) -> i64;
 

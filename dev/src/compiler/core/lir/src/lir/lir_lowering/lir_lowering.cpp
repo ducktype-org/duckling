@@ -524,7 +524,8 @@ namespace compiler::lir {
 			 *
 			 * `move_out(pointer)` becomes a read of `*pointer` and `construct_at(pointer, value)`
 			 * a store into `*pointer`. Both are plain assignments: no copy constructor runs, and
-			 * nothing under `pointer` is destroyed.
+			 * nothing under `pointer` is destroyed. `element_ptr(pointer, index)` becomes the
+			 * address of `pointer[index]`.
 			 *
 			 * @return Whether the call was a builtin and got lowered here.
 			 */
@@ -539,34 +540,41 @@ namespace compiler::lir {
 					return false;
 
 				// The first argument is the callee, the pointer the builtin operates on follows it.
-				const auto pointed_at
-					= mir_instruction.arguments.at(1).get<mir::MIRPlace>().withDeref();
-
-				// Reading or writing a value that carries no information is a no-op.
-				if (not pointed_at.carriesInformation(ctx)) return true;
-				const auto pointee = getPlace(pointed_at);
+				const auto& pointer = mir_instruction.arguments.at(1).get<mir::MIRPlace>();
 
 				switch (builtin.value()) {
 				case helios::BuiltinKind::MoveOut: {
+					// Reading a value that carries no information is a no-op.
 					auto output = getOutput(mir_instruction.output);
 					if (output.has_value())
 						curr_block->instructions.emplace_back(
 							Operation::Assign,
 							output,
-							std::vector<LIRValue>{ pointee },
+							std::vector<LIRValue>{ getPlace(pointer.withDeref()) },
 							mir_instruction.metadata
 						);
 					return true;
 				}
 				case helios::BuiltinKind::ConstructAt: {
+					// Storing a value that carries no information is a no-op.
 					auto value = getLocation(mir_instruction.arguments.at(2));
 					if (value.has_value())
 						curr_block->instructions.emplace_back(
 							Operation::Assign,
-							pointee,
+							getPlace(pointer.withDeref()),
 							std::vector<LIRValue>{ value.value() },
 							mir_instruction.metadata
 						);
+					return true;
+				}
+				case helios::BuiltinKind::ElementPtr: {
+					const auto element = pointer.withIndex(mir_instruction.arguments.at(2));
+					curr_block->instructions.emplace_back(
+						Operation::AddressOf,
+						getOutput(mir_instruction.output),
+						std::vector<LIRValue>{ getPlace(element) },
+						mir_instruction.metadata
+					);
 					return true;
 				}
 				default:

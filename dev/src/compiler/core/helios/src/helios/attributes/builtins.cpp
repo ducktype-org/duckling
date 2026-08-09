@@ -38,6 +38,7 @@ namespace compiler::helios {
 				{ "alignment_of", BuiltinKind::AlignmentOf },
 				{ "move_out", BuiltinKind::MoveOut },
 				{ "construct_at", BuiltinKind::ConstructAt },
+				{ "element_ptr", BuiltinKind::ElementPtr },
 			};
 			return mapping;
 		}
@@ -67,6 +68,8 @@ namespace compiler::helios {
 			return base::StrID("move_out");
 		case BuiltinKind::ConstructAt:
 			return base::StrID("construct_at");
+		case BuiltinKind::ElementPtr:
+			return base::StrID("element_ptr");
 		case BuiltinKind::BoxAlloc:
 			return base::StrID("box_alloc");
 		case BuiltinKind::BoxFree:
@@ -258,6 +261,7 @@ namespace compiler::helios {
 			return BuiltinOrigin::HOUT;
 		case BuiltinKind::MoveOut:
 		case BuiltinKind::ConstructAt:
+		case BuiltinKind::ElementPtr:
 			return BuiltinOrigin::LIR;
 		case BuiltinKind::BoxAlloc:
 		case BuiltinKind::BoxFree:
