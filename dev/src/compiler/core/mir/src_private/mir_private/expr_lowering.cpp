@@ -1,6 +1,7 @@
 #include "expr_lowering.hpp"
 
 #include <diagnostic_interactive/placeholder.hpp>
+#include <helios/attributes/builtins.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/symbols/query_type_symbol_data.hpp>
@@ -13,6 +14,7 @@
 
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
+#include <base/str/str_utils.hpp>
 
 #include <query_framework/standard_query/query_impl.hpp>
 
@@ -748,12 +750,76 @@ namespace compiler::mir {
 			valueOutput(next_block, boolean_output);
 		}
 
+		/**
+		 * @brief Lowers `move_out(pointer)` into a read of `*pointer`.
+		 *
+		 * The value is taken as-is, without an explicit `copy`/`move` on the source and without
+		 * touching the storage under `pointer` - its ownership simply moves to the caller.
+		 */
+		void lowerMoveOutBuiltin(const hc::CallExpr& expr) {
+			CORE_ASSERT(expr.arguments.size() == 1, "`move_out` takes exactly one argument.");
+
+			auto hole        = continuation->addHole();
+			auto lowered_ptr = lowerSubExpr(*expr.arguments.at(0), continuation);
+			auto pointer_val = lowered_ptr.getResult(function);
+
+			CORE_ASSERT(
+				pointer_val.isLocal() || pointer_val.isGlobal(), "`move_out` needs a place."
+			);
+
+			noValueOutput(
+				lowered_ptr.begin,
+				hole,
+				Instruction(
+					Operation::Assign,
+					{},
+					{ pointer_val.get<MIRPlace>().withDeref() },
+					{},
+					expr_scope,
+					{},
+					{ expr.getPosition() }
+				),
+				expr.expression_type.getSymbolType()
+			);
+		}
+
+		/**
+		 * @brief Lowers `construct_at(pointer, value)` into a plain store into `*pointer`.
+		 *
+		 * The store treats the storage under `pointer` as uninitialized, so unlike an assignment
+		 * it never destroys what was there before.
+		 */
+		void lowerConstructAtBuiltin(const hc::CallExpr& expr) {
+			CORE_ASSERT(expr.arguments.size() == 2, "`construct_at` takes exactly two arguments.");
+
+			auto store = continuation->addHole();
+
+			// The chain is built back-to-front, so the value is lowered first to be evaluated last.
+			auto lowered_value = lowerSubExpr(*expr.arguments.at(1), continuation);
+
+			auto lowered_ptr = lowerSubExpr(*expr.arguments.at(0), lowered_value.begin);
+			auto pointer_val = lowered_ptr.getResult(function);
+
+			CORE_ASSERT(
+				pointer_val.isLocal() || pointer_val.isGlobal(), "`construct_at` needs a place."
+			);
+
+			// The value is written straight into `*pointer` instead of being materialized as an
+			// argument temporary. A temporary would be owned by this scope and destroyed at its
+			// end, which would take down the object that was just constructed under `pointer`.
+			//
+			// @TODO: #3106 Call the move hook of a non-trivial move here. Every move is a plain
+			// byte copy for now, so the store alone is the whole construction.
+			lowered_value.storeResultInGivenPlace(
+				pointer_val.get<MIRPlace>().withDeref(), store, {}, expr_scope, { expr.getPosition() }
+			);
+
+			valueOutput(
+				lowered_ptr.begin, MIRValue{ MIRConstant{ ctv::CompileTimeValue::UnitCTV() } }
+			);
+		}
+
 		void visitCallExpr(const hc::CallExpr& expr) override {
-			auto call = continuation->addHole();
-
-			auto                  sub_continuation = continuation;
-			std::vector<MIRValue> args;
-
 			auto function_symid = helios::getIdentifierExprSymID(expr.callee.ref());
 			if (not function_symid.has_value()) {
 				CORE_PANIC(
@@ -761,6 +827,32 @@ namespace compiler::mir {
 					"supported."
 				);
 			}
+
+			// Builtins implemented in MIR have no body, their calls are replaced by instructions.
+			const auto builtin = helios::isBuiltin(function_symid.value());
+			if (builtin.has_value()
+			    and helios::getBuiltinOrigins(builtin.value()).contains(helios::BuiltinOrigin::MIR)) {
+				switch (builtin.value()) {
+				case helios::BuiltinKind::MoveOut:
+					lowerMoveOutBuiltin(expr);
+					return;
+				case helios::BuiltinKind::ConstructAt:
+					lowerConstructAtBuiltin(expr);
+					return;
+				default:
+					CORE_PANIC(base::strConcat(
+						"Builtin `",
+						helios::builtinKindToStr(builtin.value()),
+						"` is not implemented in MIR"
+					));
+				}
+			}
+
+			auto call = continuation->addHole();
+
+			auto                  sub_continuation = continuation;
+			std::vector<MIRValue> args;
+
 			args.emplace_back(MIRFunctionLiteral{ function_symid.value() });
 			for (const auto& arg: expr.arguments) {
 				auto arg_lowered = lowerSubExpr(*arg, sub_continuation);
