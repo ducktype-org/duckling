@@ -770,7 +770,7 @@ namespace compiler::mir {
 				//  @TODO: #858 Issue of moving the tmp values or locals into the call should
 				// also fix this flags.
 				if (result.isLocal())
-					flags.push_back(flagMove(&result.get<MIRPlace>().getBase<MIRLocal>()));
+					flags.push_back(flagMove(result.get<MIRPlace>().getBase<MIRLocalRef>()));
 
 				args.push_back(std::move(result));
 				sub_continuation = arg_lowered.begin;

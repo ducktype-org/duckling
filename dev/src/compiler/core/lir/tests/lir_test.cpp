@@ -262,26 +262,26 @@ private:
 
 		auto module = getLIROfModule(path("modules/function_calls"));
 
-		auto isDeref = [](const LIRPlace& place) {
+		auto is_deref = [](const LIRPlace& place) {
 			return place.projection_chain.size() == 1
 			    && std::holds_alternative<LIRPlace::DerefProjection>(
 					   place.projection_chain.front().storage
 				);
 		};
 
-		auto firstInstruction = [](CRef<Function> function) {
+		auto first_instruction = [](CRef<Function> function) {
 			return function->block_order.front()->instructions.front();
 		};
 
 		// construct_at:{i64}(pointer, value) -> `(*pointer) := Assign value`
-		auto store = firstInstruction(module.lirFunc("writeInto"));
+		auto store = first_instruction(module.lirFunc("writeInto"));
 		ASSERT_TRUE(store.operation == Operation::Assign);
-		ASSERT_TRUE(isDeref(store.output.value()));
+		ASSERT_TRUE(is_deref(store.output.value()));
 
 		// move_out:{i64}(pointer) -> `<result> := Assign (*pointer)`
-		auto read = firstInstruction(module.lirFunc("readOut"));
+		auto read = first_instruction(module.lirFunc("readOut"));
 		ASSERT_TRUE(read.operation == Operation::Assign);
-		ASSERT_TRUE(isDeref(read.arguments.at(0).get<LIRPlace>()));
+		ASSERT_TRUE(is_deref(read.arguments.at(0).get<LIRPlace>()));
 	}
 
 /**
