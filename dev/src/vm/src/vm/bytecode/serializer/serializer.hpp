@@ -25,16 +25,19 @@ namespace vm::code {
 	void serializeGlobal(const GlobalData& type, std::ostream& out);
 
 	/**
-	 * @brief Serializes a declaration of a native function called through libffi into a
-	 * parse-able by the DVM text representation.
+	 * @brief Serializes an FFI function declaration into a parse-able by the DVM
+	 * text representation.
+	 * @note The resolved native symbol is runtime-only state and is not serialized.
 	 */
-	void serializeFFIFunction(const FFIFunction& ffi_function, std::ostream& out);
+	void serializeFFIFunction(const FFIFunction& function, std::ostream& out);
 
 	/**
-	 * @brief Serializes an `ffi object` declaration - a shared object the DVM has to load for
-	 * FFI symbol resolution - into a parse-able by the DVM text representation.
+	 * @brief Serializes an FFI shared object declaration into a parse-able by the DVM
+	 * text representation.
+	 * @param object_file The exact string handed to `dlopen` - an absolute path or a bare
+	 * library name.
 	 */
-	void serializeFFIObjectFile(const std::string& object_file, std::ostream& out);
+	void serializeObjectFile(const std::string& object_file, std::ostream& out);
 
 	/**
 	 * @brief Serializes code collection into a parse-able by the DVM
