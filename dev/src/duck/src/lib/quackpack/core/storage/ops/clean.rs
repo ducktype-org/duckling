@@ -13,7 +13,7 @@ use crate::quackpack::core::storage;
 use crate::quackpack::core::storage::venv::Venv;
 use crate::quackpack::core::storage::venv_id::{ToVenvId, VenvId};
 use crate::util::path_ops_ext::PathOpsExt;
-use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail};
+use crate::{DuckContext, QuackError, QuackResult, QuackResultContext, StrId, qp_bail};
 
 #[derive(Debug)]
 /// An output of a [`clean_storage`].
@@ -22,6 +22,8 @@ pub struct CleanOutput {
     pub removed_venvs: Vec<VenvId>,
     /// Paths to the removed packages.
     pub removed_packages: Vec<PathBuf>,
+    /// [`Some`] if this clean has been interrupted by an error.
+    pub maybe_error: Option<QuackError>,
 }
 
 /// Delete a virtual environment from storage.
@@ -69,7 +71,7 @@ pub fn clean_storage(ctx: &DuckContext, storage_root: &Path) -> QuackResult<Clea
     };
     debug!(?venvs, "removing venvs");
     for venv in venvs {
-        clean_venv_from_storage(
+        match clean_venv_from_storage(
             venv,
             &storage,
             temporary_lifetime,
@@ -77,7 +79,16 @@ pub fn clean_storage(ctx: &DuckContext, storage_root: &Path) -> QuackResult<Clea
             &mut removed_venvs,
             &mut all_deps,
             ctx,
-        )?;
+        ) {
+            Ok(()) => {}
+            Err(err) => {
+                return Ok(CleanOutput {
+                    removed_venvs,
+                    removed_packages: vec![],
+                    maybe_error: Some(err),
+                });
+            }
+        }
     }
     info!("removed venvs");
     locks::cleanup_locks(&storage)?;
@@ -96,14 +107,27 @@ pub fn clean_storage(ctx: &DuckContext, storage_root: &Path) -> QuackResult<Clea
         })
         .collect::<Vec<_>>();
     debug!(?packages_to_remove, "cleaning packages");
+    let mut removed_packages = vec![];
     for pkg in packages_to_remove.iter() {
-        pkg.rmtree()?;
+        match pkg.rmtree() {
+            Ok(()) => {
+                removed_packages.push(pkg.to_path_buf());
+            }
+            Err(err) => {
+                return Ok(CleanOutput {
+                    removed_venvs,
+                    removed_packages,
+                    maybe_error: Some(err),
+                });
+            }
+        }
     }
     info!(?packages_to_remove, "cleaned packages");
     ctx.console().info("successfully cleaned the storage")?;
     Ok(CleanOutput {
         removed_venvs,
-        removed_packages: packages_to_remove,
+        removed_packages,
+        maybe_error: None,
     })
 }
 

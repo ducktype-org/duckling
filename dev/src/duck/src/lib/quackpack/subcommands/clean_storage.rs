@@ -38,6 +38,7 @@ pub fn clean_storage(options: CleanStorageOptions) -> QuackResult<()> {
             let CleanOutput {
                 removed_venvs,
                 removed_packages,
+                maybe_error,
             } = storage::clean_storage(ctx, &storage_path)
                 .context("when trying to clean the storage")?;
             ctx.console().print(format!(
@@ -57,6 +58,10 @@ pub fn clean_storage(options: CleanStorageOptions) -> QuackResult<()> {
             for pkg_path in removed_packages {
                 ctx.console()
                     .print(indent(&format!("package at `{}`", pkg_path.display()), 2))?;
+            }
+            if let Some(error) = maybe_error {
+                ctx.console()
+                    .warning(format!("clean has been interrupted by an error: {error}"))?;
             }
             Ok(())
         }
