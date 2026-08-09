@@ -247,13 +247,23 @@ impl<'duck> Fetcher<'duck> {
                 }
                 Err(e) => {
                     error!(error = %e, "failed to fetch");
-                    if attempt != calls {
+                    let will_retry = attempt != calls;
+                    if will_retry {
                         debug!(%attempt, "retrying fetch");
                     }
+                    self.ctx.console().warning(format!(
+                        "failed to download {} version {} from `{}`: {e}",
+                        pkg.name, pkg.version, pkg.url
+                    ))?;
                 }
             }
         }
 
-        qp_bail!("failed to fetch a package {} {}", pkg.name, pkg.version)
+        let retries_string = if retries == 1 { "retry" } else { "retries" };
+        qp_bail!(
+            "failed to fetch a package {} {} after {retries} {retries_string}",
+            pkg.name,
+            pkg.version
+        )
     }
 }
