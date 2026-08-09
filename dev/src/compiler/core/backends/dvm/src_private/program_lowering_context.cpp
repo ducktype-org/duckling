@@ -9,6 +9,7 @@
 #include <debug_info/debug_info_builder.hpp>
 #include <tsl/type_layout.hpp>
 
+#include "base/except/exceptions.hpp"
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/str/str_utils.hpp>
 #include <base/types/bits_and_bytes.hpp>
@@ -113,6 +114,7 @@ const vm::code::TypeOfData ProgramLoweringContext::lowerPointerType(
 		auto pointer_type_name = base::strConcat("ptr_", pointee_name);
 		return vm::code::CPointerType(base::StrID(pointer_type_name), pointee_name);
 	}
+	CORE_UNREACHABLE();
 }
 
 const vm::code::TypeOfData& ProgramLoweringContext::getOrInsertPointerType(

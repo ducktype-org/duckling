@@ -86,24 +86,10 @@ namespace compiler::backend_vm::internal {
 		};
 
 		// A C-ABI function has no LIR body to lower - it is a native symbol the DVM resolves and
-		// calls through libffi, so it is declared in the module instead of being defined.
-		if (call_info.isCAbi()) {
+		// calls through libffi, so it is called through an FFI function name. The FFI declaration
+		// itself is inserted into the module by the call lowering.
+		if (call_info.isCAbi())
 			call_info.call_target = DVMFFIFunctionName{ .name = func_literal.mangled_name };
-
-			vm::code::FFIFunction ffi_function;
-			ffi_function.name = vm::code::Identifier(func_literal.mangled_name);
-			ffi_function.signature.parameters
-				= param_types | std::views::transform([](const auto& type) {
-					  return vm::code::Identifier(vm::code::typeName(type));
-				  })
-			    | std::ranges::to<std::vector>();
-			if_opt_some(called_result_type, result_type) {
-				ffi_function.signature.result_types
-					= { vm::code::Identifier(vm::code::typeName(result_type)) };
-			}
-
-			program_context.insertFFIFunction(std::move(ffi_function));
-		}
 
 		return call_info;
 	}
@@ -134,7 +120,8 @@ namespace compiler::backend_vm::internal {
 			.return_type = called_result_type,
 			.param_types = param_types,
 			.is_extern_c = true,
-			.abi         = lir::LIRAbi{ .value = lir::LIRAbi::DefaultAbi{} },
+			// An extern C function has no LIR counterpart, so there is no ABI to speak of.
+			.abi = {},
 		};
 	}
 

@@ -104,6 +104,11 @@ namespace compiler::backend_vm::internal {
 			bool                             tracked   = true
 		);
 
+		[[nodiscard]]
+		ProgramLoweringContext& programCtx() {
+			return program_context;
+		}
+
 	private:
 		/**
 		 * @brief Constructs a parameterless, void-returning context. Used to synthesize small
@@ -135,10 +140,10 @@ namespace compiler::backend_vm::internal {
 		);
 
 		void cPointerArrayLea(
-			const DVMPlace&        base_place,
-			const DVMPlace&        dest,
-			const tsl::TypeLayout& element_layout,
-			const DVMValue&        index
+			const DVMPlace&       base_place,
+			const DVMPlace&       dest,
+			CRef<tsl::TypeLayout> element_layout,
+			const DVMValue&       index
 		);
 
 		/**

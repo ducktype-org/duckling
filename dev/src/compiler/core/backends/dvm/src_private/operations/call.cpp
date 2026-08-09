@@ -1,8 +1,32 @@
 #include "../function_lowering_context.hpp"
+#include "../program_lowering_context.hpp"
 #include "dvm_operation.hpp"
 #include "instruction_lowerer.hpp"
 
 #include <logger/logger.hpp>
+
+namespace {
+	using namespace compiler::backend_vm::internal;
+
+	/**
+	 * @brief Builds the FFI declaration of a C-ABI callee out of its call info.
+	 */
+	vm::code::FFIFunction ffiFunctionOf(const FunctionCallInfo& call_info) {
+		vm::code::FFIFunction ffi_function;
+		ffi_function.name
+			= vm::code::Identifier(std::get<DVMFFIFunctionName>(call_info.call_target).name);
+		ffi_function.signature.parameters
+			= call_info.param_types | std::views::transform([](const auto& type) {
+				  return vm::code::Identifier(vm::code::typeName(type));
+			  })
+		    | std::ranges::to<std::vector>();
+		if_opt_some(call_info.return_type, result_type) {
+			ffi_function.signature.result_types
+				= { vm::code::Identifier(vm::code::typeName(result_type)) };
+		}
+		return ffi_function;
+	}
+}
 
 namespace compiler::backend_vm::internal {
 	void InstructionLowerer::lower(const CallOperation& op) {
@@ -36,6 +60,11 @@ namespace compiler::backend_vm::internal {
 			"C-ABI calls must target an FFI function and vice versa: ",
 			VISIT(op.call_info.call_target, callable, return callable.name)
 		);
+		// The callee has no LIR body to lower, so declare it in the module. The same native symbol
+		// may be called many times - `insertFFIFunction` keeps only the first declaration.
+		if (op.call_info.isCAbi())
+			ctx->program_context.insertFFIFunction(ffiFunctionOf(op.call_info));
+
 		ctx->pushInstruction(
 			{ OpKind::call, VISIT(op.call_info.call_target, callable, return callable.asArgument()) }
 		);

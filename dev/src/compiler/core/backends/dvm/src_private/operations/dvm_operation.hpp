@@ -26,12 +26,14 @@ namespace compiler::backend_vm::internal {
 		std::vector<vm::code::TypeOfData>    param_types;
 		bool                                 is_extern_c;
 
-		/// ABI of the called function. `LIRAbi::CAbi` means the callee is a native function
-		/// reached through libffi, so the call is lowered to `call_ffifunc`.
-		lir::LIRAbi abi;
+		/// ABI of the called function, empty when the callee comes from outside LIR (e.g. an extern
+		/// C function). `LIRAbi::CAbi` means the callee is a native function reached through
+		/// libffi, so the call is lowered to `call_ffifunc`.
+		base::Optional<lir::LIRAbi> abi;
 
 		[[nodiscard]] bool isCAbi() const {
-			return std::holds_alternative<lir::LIRAbi::CAbi>(abi.value);
+			if_opt_none(abi) return false;
+			return std::holds_alternative<lir::LIRAbi::CAbi>(abi.value().value);
 		}
 
 		/**

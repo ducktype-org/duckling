@@ -12,7 +12,6 @@ namespace compiler::backend_vm::internal {
 
 		vm::code::builders::OpKind getOpKindFromLIRLayouts(
 			Ref<FunctionLoweringContext>        ctx,
-			Ref<ProgramLoweringContext>         program_context,
 			const lir::CastParameters&          cast_params,
 			std::vector<vm::opargs::OpCodeArg>& out_arguments
 		) {
@@ -86,55 +85,40 @@ namespace compiler::backend_vm::internal {
 				variant_case(tsl::PointerTypeLayout, pointer_layout) {
 					variant_match(target_layout->getVariant()) {
 						variant_case(tsl::PointerTypeLayout, target_pointer_layout) {
-							using tsl::PointerTypeLayout::PointerKind::CPointer;
-							using tsl::PointerTypeLayout::PointerKind::ManyPointer;
-							using tsl::PointerTypeLayout::PointerKind::SinglePointer;
+							using enum tsl::PointerTypeLayout::PointerKind;
 
-							// The first element of a dynamic table is where the table's payload
-							// starts, so a ManyPointer is narrowed to a SinglePointer to it before
-							// anything else looks at the address.
-							auto lea_first_element
-								= [&](const vm::opargs::OpCodeArg& source) -> DVMPlace {
-								const vm::code::TypeOfData& vm_element_type
-									= **program_context->lowerAndKeepTslType(
-										pointer_layout.getPointee()
-									);
-								const vm::code::TypeOfData& ptr_to_element_type
-									= program_context->getOrInsertPointerType(vm_element_type);
-
-								const auto     zero_index = DVMImmediate::u64(u64(0));
-								const DVMPlace index_tmp
-									= ctx->pushTempLocal(zero_index.type, "cast_index_tmp");
-								ctx->pushInstruction({ OpKind::mov, index_tmp, zero_index });
-
-								const DVMPlace element_ptr_tmp
-									= ctx->pushTempLocal(ptr_to_element_type, "cast_elem_ptr_tmp");
-								ctx->pushInstruction(
-									{ OpKind::dynTableLea, element_ptr_tmp, source, index_tmp }
-								);
-								return element_ptr_tmp;
-							};
-
-							// CPointer -> CPointer
 							if (pointer_layout.getPointerKind() == CPointer
 							    && target_pointer_layout.getPointerKind() == CPointer) {
-								// Reinterpreting one native address as another is exactly what a C
-								// cast does; nothing about the address itself changes.
 								return OpKind::movCast;
-							} else if ((pointer_layout.getPointerKind() == SinglePointer
-							            || pointer_layout.getPointerKind() == ManyPointer)
+							} else if (pointer_layout.getPointerKind() == SinglePointer
 							           && target_pointer_layout.getPointerKind() == CPointer) {
-								// Pointer -> CPointer
-								// `cast_pcptr_pptr` demands that both sides agree on the pointee,
-								// so a ManyPointer (a pointer to a dynamic table) is first
-								// narrowed to a pointer to its first element.
-								if (pointer_layout.getPointerKind() == ManyPointer) {
-									CORE_ASSERT(
-										out_arguments.size() == 1,
-										"Expected the cast source as the only pending argument"
+								return OpKind::cast;
+							} else if (pointer_layout.getPointerKind() == ManyPointer
+							           && target_pointer_layout.getPointerKind() == CPointer) {
+								// FIrst ManyPointer -> Pointer, then Pointer -> CPointer
+								auto lea_first_element
+									= [&](const vm::opargs::OpCodeArg& source) -> DVMPlace {
+									const vm::code::TypeOfData& vm_element_type
+										= *ctx->programCtx()
+									           .lowerAndKeepTslType(pointer_layout.getPointee())
+									           .value();
+									const vm::code::TypeOfData& ptr_to_element_type
+										= ctx->programCtx().getOrInsertPointerType(vm_element_type);
+
+									const auto     zero_index = DVMImmediate::u64(u64(0));
+									const DVMPlace index_tmp
+										= ctx->pushTempLocal(zero_index.type, "cast_index_tmp");
+									ctx->pushInstruction({ OpKind::mov, index_tmp, zero_index });
+
+									const DVMPlace element_ptr_tmp = ctx->pushTempLocal(
+										ptr_to_element_type, "cast_elem_ptr_tmp"
 									);
-									out_arguments[0] = lea_first_element(out_arguments[0]);
-								}
+									ctx->pushInstruction(
+										{ OpKind::dynTableLea, element_ptr_tmp, source, index_tmp }
+									);
+									return element_ptr_tmp;
+								};
+								out_arguments[0] = lea_first_element(out_arguments[0]);
 								return OpKind::cast;
 							} else if (pointer_layout.getPointerKind() == ManyPointer
 							           && target_pointer_layout.getPointerKind() == SinglePointer) {
@@ -175,8 +159,7 @@ namespace compiler::backend_vm::internal {
 		std::vector<vm::opargs::OpCodeArg> arguments{ ctx->forceToPlace(op.src, "cast_src_tmp") };
 
 		// Operation in form a = OP b (like mov)
-		auto operation
-			= getOpKindFromLIRLayouts(ctx, &ctx->program_context, op.cast_params, arguments);
+		auto operation = getOpKindFromLIRLayouts(ctx, op.cast_params, arguments);
 		vm::code::builders::InstructionBuilder builder(operation);
 
 		if (op.dest && op.dest->isDirect()) {
