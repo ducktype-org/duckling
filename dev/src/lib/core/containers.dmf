@@ -300,20 +300,12 @@ class DuckList {
         }
     }
 
-    #{
-        The slot at `len` is uninitialized memory from the buffer, so the element is constructed
-        there instead of assigned - an assignment would destroy the garbage that is there.
-    #}
     fun push(value: T) -> () = {
         reserve(len + 1u64);
         builtins.construct_at:{T}(builtins.element_ptr:{T}(pointer, len as i64), move value);
         len = len + 1u64;
     }
 
-    #{
-        The popped element is taken out of the buffer as-is: `move_out` neither copies it nor
-        destroys the slot it came from, so its ownership passes to the caller.
-    #}
     fun pop() -> T = {
         if (len == 0u64) panicking.panic();
         len = len - 1u64;
