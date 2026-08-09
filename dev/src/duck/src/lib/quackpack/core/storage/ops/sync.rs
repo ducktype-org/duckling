@@ -10,7 +10,7 @@ use flate2::read::GzDecoder;
 use futures::executor::block_on;
 use futures::future::join_all;
 use tar::Archive;
-use tracing::{debug, error};
+use tracing::{debug, error, warn};
 
 use crate::quackpack::core::fetcher::Fetcher;
 use crate::quackpack::core::fetcher::types::PackageWithUrl;
@@ -29,9 +29,9 @@ use crate::quackpack::core::storage::venv_id::{ToVenvId, VenvId};
 use crate::quackpack::core::{
     AnyPackage, GitReference, Package, PackageContext, PackageId, PackageLoader, storage,
 };
-use crate::util::error::MessageError;
+use crate::util::error::{MessageError, split_results};
 use crate::util::path_ops_ext::PathOpsExt;
-use crate::{QuackError, QuackResult, QuackResultContext};
+use crate::{DuckContext, QuackError, QuackResult, QuackResultContext, qp_bail};
 
 // We want at most 3 calls, therefore we retry 2 times.
 const MAX_BLOB_RETRY_COUNT: u32 = 2;
@@ -54,6 +54,10 @@ pub fn sync(
     options: StorageSyncOptions,
 ) -> QuackResult<(TrySyncLock, Venv, Storage)> {
     debug!(root = %pcx.package().root().display(), ?options);
+    pcx.ctx().console().info(format!(
+        "starting a synchronization of a {}",
+        pcx.package().display()
+    ))?;
     let venv_config = pcx.package().venv();
     let storage = Storage::new(venv_config.storage_path());
     let fetcher = Fetcher::new(pcx.ctx())?;
@@ -234,6 +238,9 @@ fn get_solver_answer(
     mode: SolverMode,
 ) -> QuackResult<SolverAnswer> {
     debug!(?mode);
+    pcx.ctx()
+        .console()
+        .info("starting solving the dependency graph")?;
     let root_origin = FullOrigin::for_local(pcx.package().root())?;
     let root_identity = FullIdentity::new(pcx.package().name(), root_origin);
     let root_pkg = PackageId::new(root_identity, pcx.package().version());
@@ -248,8 +255,16 @@ fn get_solver_answer(
     drop(fetcher_lock);
     debug!(%should_run_engine);
     match should_run_engine {
-        ShouldRunSolverEngine::No(answer) => Ok(answer),
-        ShouldRunSolverEngine::Yes(solver) => solver.solve(),
+        ShouldRunSolverEngine::No(answer) => {
+            pcx.ctx()
+                .console()
+                .info("doesn't need to run the solver enginge")?;
+            Ok(answer)
+        }
+        ShouldRunSolverEngine::Yes(solver) => {
+            pcx.ctx().console().info("starting the solver engine")?;
+            solver.solve()
+        }
     }
 }
 
@@ -264,6 +279,16 @@ fn fetch_source_codes(
     git_access: &StorageGitAccess<'_>,
     pkgs: Vec<PackageId>,
 ) -> QuackResult<bool> {
+    if pkgs.is_empty() {
+        warn!("requested a download of 0 packages");
+        return Ok(false);
+    }
+    let count = pkgs.len();
+    let suffix = if count == 1 { "" } else { "s" };
+    fetcher
+        .ctx()
+        .console()
+        .info(format!("starting fetching {count} package{suffix}"))?;
     let fetcher_lock = fetcher
         .ctx()
         .duck_home()
@@ -273,8 +298,22 @@ fn fetch_source_codes(
         .map(|pkg| fetch_source_code(storage, fetcher, git_access, pkg));
     let fetches = block_on(join_all(fetches));
     drop(fetcher_lock);
-    let fetches = fetches.into_iter().collect::<Result<Vec<_>, _>>()?;
-    Ok(fetches.into_iter().any(identity))
+    let (successes, fails) = split_results(fetches);
+    bail_if_failed_to_fetch(fetcher.ctx(), fails)?;
+    Ok(successes.into_iter().any(identity))
+}
+
+/// Bail if we failed to download any package.
+fn bail_if_failed_to_fetch(ctx: &DuckContext, fails: Vec<QuackError>) -> QuackResult<()> {
+    if fails.is_empty() {
+        return Ok(());
+    }
+    let failed_count = fails.len();
+    let failed_suffix = if failed_count == 1 { "" } else { "s" };
+    for fail in fails {
+        ctx.error_console().error(fail)?;
+    }
+    qp_bail!("failed to fetch {failed_count} package{failed_suffix}")
 }
 
 /// Helper for [`fetch_source_codes`].

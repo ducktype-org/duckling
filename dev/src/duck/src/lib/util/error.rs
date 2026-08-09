@@ -571,6 +571,21 @@ impl IntoIterator for ErrorsLogger {
     }
 }
 
+/// Split an iterator of `QuackResult<T>` into vectors of `T`s and [`QuackError`]s.
+pub fn split_results<T>(
+    results: impl IntoIterator<Item = QuackResult<T>>,
+) -> (Vec<T>, Vec<QuackError>) {
+    let mut oks = vec![];
+    let mut errors = vec![];
+    for result in results {
+        match result {
+            Ok(ok) => oks.push(ok),
+            Err(err) => errors.push(err),
+        }
+    }
+    (oks, errors)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
