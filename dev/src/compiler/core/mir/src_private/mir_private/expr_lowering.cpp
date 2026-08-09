@@ -767,8 +767,8 @@ namespace compiler::mir {
 				auto arg_lowered = lowerSubExpr(*arg, sub_continuation);
 				auto result      = arg_lowered.getResult(function);
 
-				//  @TODO: #858 Issue of moving the tmp values or locals into the call is being
-				//  solved in
+				//  @TODO: #858 Issue of moving the tmp values or locals into the call should
+				// also fix this flags.
 				if (result.isLocal())
 					flags.push_back(flagMove(&result.get<MIRPlace>().getBase<MIRLocal>()));
 
@@ -779,7 +779,13 @@ namespace compiler::mir {
 			return noValueOutput(
 				sub_continuation,
 				call,
-				Instruction{ Operation::Call, {}, args, {}, expr_scope, {}, { expr.getPosition() } },
+				Instruction{ Operation::Call,
+			                 {},
+			                 args,
+			                 std::move(flags),
+			                 expr_scope,
+			                 {},
+			                 { expr.getPosition() } },
 				expr.expression_type.getSymbolType()
 			);
 		}

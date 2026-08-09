@@ -60,14 +60,12 @@ namespace compiler::helios {
 		AlignmentOf,
 		/**
 		 * `move_out(pointer: ptr T) -> T`: read the value under `pointer` without an explicit
-		 * `copy`/`move` on it. Lowered by LIR into a plain read of `*pointer`, so no copy
-		 * constructor runs and the source storage is left untouched.
+		 * `copy`/`move` on it.
 		 */
 		MoveOut,
 		/**
 		 * `construct_at(pointer: ptr T, value: T)`: write `value` into the storage under `pointer`
-		 * treating it as uninitialized. Lowered by LIR into a plain store, which is what makes it
-		 * different from an assignment: the previous content is never destroyed.
+		 * treating it as uninitialized. The previous content is never destroyed.
 		 */
 		ConstructAt,
 		/**
