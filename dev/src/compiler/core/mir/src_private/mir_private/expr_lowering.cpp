@@ -765,11 +765,16 @@ namespace compiler::mir {
 			std::vector<OperationFlag> flags;
 			for (const auto& arg: expr.arguments) {
 				auto arg_lowered = lowerSubExpr(*arg, sub_continuation);
-				auto result      = arg_lowered.getResult(function);
+
+				// Only a temporary materialized right here is owned by the call, so only it is
+				// moved into the callee. A named local keeps its own ownership and stays usable
+				// after the call.
+				const bool is_temporary = arg_lowered.getResultIfStored().empty();
+				auto       result       = arg_lowered.getResult(function);
 
 				//  @TODO: #858 Issue of moving the tmp values or locals into the call should
 				// also fix this flags.
-				if (result.isLocal())
+				if (is_temporary and result.isLocal())
 					flags.push_back(flagMove(result.get<MIRPlace>().getBase<MIRLocalRef>()));
 
 				args.push_back(std::move(result));
