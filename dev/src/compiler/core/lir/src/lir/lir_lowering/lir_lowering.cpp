@@ -539,11 +539,11 @@ namespace compiler::lir {
 				               .contains(helios::BuiltinOrigin::LIR))
 					return false;
 
-				// The first argument is the callee, the pointer the builtin operates on follows it.
-				const auto& pointer = mir_instruction.arguments.at(1).get<mir::MIRPlace>();
-
+				// The first argument is the callee, the arguments of the builtin follow it.
 				switch (builtin.value()) {
 				case helios::BuiltinKind::MoveOut: {
+					const auto& pointer = mir_instruction.arguments.at(1).get<mir::MIRPlace>();
+
 					// Reading a value that carries no information is a no-op.
 					auto output = getOutput(mir_instruction.output);
 					if (output.has_value())
@@ -556,6 +556,8 @@ namespace compiler::lir {
 					return true;
 				}
 				case helios::BuiltinKind::ConstructAt: {
+					const auto& pointer = mir_instruction.arguments.at(1).get<mir::MIRPlace>();
+
 					// Storing a value that carries no information is a no-op.
 					auto value = getLocation(mir_instruction.arguments.at(2));
 					if (value.has_value())
@@ -568,7 +570,9 @@ namespace compiler::lir {
 					return true;
 				}
 				case helios::BuiltinKind::ElementPtr: {
-					const auto element = pointer.withIndex(mir_instruction.arguments.at(2));
+					const auto& buffer  = mir_instruction.arguments.at(1).get<mir::MIRPlace>();
+					const auto  element = buffer.withIndex(mir_instruction.arguments.at(2));
+
 					curr_block->instructions.emplace_back(
 						Operation::AddressOf,
 						getOutput(mir_instruction.output),
