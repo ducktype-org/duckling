@@ -70,9 +70,7 @@ namespace compiler::helios {
 		ConstructAt,
 		/**
 		 * `element_ptr(pointer: manyptr T, index: i64) -> ptr T`: address of the element at
-		 * `index`. Lowered by LIR into an `AddressOf` of the indexed place. Unlike `&pointer[i]`
-		 * it builds its result from `T` itself, so it works for a `T` that is a reference kind
-		 * (e.g. `box U`), where taking a reference yields a reference to the pointee.
+		 * `index`. 
 		 */
 		ElementPtr,
 		/**
