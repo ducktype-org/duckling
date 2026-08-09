@@ -36,6 +36,14 @@ namespace compiler::driver {
 		base::deduplicateBy(code.types, [](const vm::code::TypeOfData& f) {
 			return vm::code::typeName(f);
 		});
+		// Modules of one package routinely declare the same native symbol and shared object; the
+		// validator rejects a duplicated `ffi function`, so the linked package must carry one each.
+		base::deduplicateBy(code.ffi_functions, [](const vm::code::FFIFunction& func) {
+			return func.name.str.strView();
+		});
+		// The key is a copy on purpose: filtering moves the elements around, so a `string_view`
+		// into one of them would dangle.
+		base::deduplicateBy(code.object_files, [](const std::string& file) { return file; });
 	}
 
 	base::OkBad linkDVMPackage(
