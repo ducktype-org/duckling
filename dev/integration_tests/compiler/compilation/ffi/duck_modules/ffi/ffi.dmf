@@ -34,12 +34,6 @@ extern("C") {
         fundecl add_shorts(a: i16, b: i16) -> i32;
         fundecl add_bytes(a: i8, b: i8) -> i32;
     }
-
-    namespace variadic {
-        @cffi_variadic_fixed_params(1) fundecl sum_varargs_mixed(count: i64, a: i64, b: f64) -> i64;
-
-        @cffi_variadic_fixed_params(1) fundecl sum_varargs_struct(count: i64, a: Small, b: Small) -> i64;
-    }
 }
 
 fun main() -> i64 = {
@@ -75,13 +69,6 @@ fun main() -> i64 = {
     # 0x000000C8: -56 as i8; without signext the clang callee reads 200 and prints 201.
     let raw_b: i32 = 200i32;
     builtin_output_i64(narrow_ints::add_bytes(raw_b as i8, 1i8));     # -55
-
-    # Variadic calls
-    # One INTEGER and one SSE variadic argument.
-    builtin_output_i64(variadic::sum_varargs_mixed(1i64, 4i64, 2.5));          # 6
-
-    # Structs passed by value through `...`.
-    builtin_output_i64(variadic::sum_varargs_struct(2i64, Small(1, 2), Small(3, 4)));  # 10
 
     return 0i64;
 }

@@ -408,7 +408,7 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 					current_place = element_ptr_tmp;
 				}
 				// Case when we have a manyptr indexed.
-				if (current_layout->is<tsl::PointerTypeLayout>()) {
+				else if (current_layout->is<tsl::PointerTypeLayout>()) {
 					using enum tsl::PointerTypeLayout::PointerKind;
 
 					// Situation when we have a pointer to a field,
@@ -469,9 +469,10 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 						CORE_PANIC("Not expected access kind.");
 					}
 
-					current_place  = element_ptr_tmp;
-					current_layout = element_layout;
+					current_place = element_ptr_tmp;
 				}
+
+				current_layout = element_layout;
 			}
 		}
 	}

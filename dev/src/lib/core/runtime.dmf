@@ -25,6 +25,7 @@ namespace dvm {
         #}
         fundecl builtin_output_i64(x: i64) -> i64;
         fundecl builtin_input_i64() -> i64;
+        fundecl abort() -> ();
     }
 }
 
