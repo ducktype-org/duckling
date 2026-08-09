@@ -111,7 +111,7 @@ const vm::code::TypeOfData ProgramLoweringContext::lowerPointerType(
 		return vm::code::PointerType(base::StrID(pointer_type_name), typeName(dyntable_type));
 	}
 	case tsl::PointerTypeLayout::PointerKind::CPointer:
-		auto pointer_type_name = base::strConcat("ptr_", pointee_name);
+		auto pointer_type_name = base::strConcat("cptr_", pointee_name);
 		return vm::code::CPointerType(base::StrID(pointer_type_name), pointee_name);
 	}
 	CORE_UNREACHABLE();
@@ -303,7 +303,7 @@ vm::code::CodeCollection ProgramLoweringContext::collectNewCodeSince(
 	collection.global_data   = collect_globals_since(snapshot.lowered_global_count);
 	collection.functions     = collect_functions_since(snapshot.lowered_function_count);
 	collection.ffi_functions = collect_ffi_functions_since(snapshot.lowered_ffi_function_count);
-	auto extra              = collect_extra_functions_since(snapshot.extra_bytecode_function_count);
+	auto extra = collect_extra_functions_since(snapshot.extra_bytecode_function_count);
 	collection.functions.insert(collection.functions.end(), extra.begin(), extra.end());
 	return collection;
 }

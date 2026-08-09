@@ -50,7 +50,7 @@ namespace compiler::driver {
 		/**
 		 * @brief Shared libraries that have to be loaded to run the code.
 		 */
-		std::vector<std::string> shared_libraries {};
+		std::vector<std::string> shared_libraries{};
 	};
 
 	/**
@@ -204,6 +204,5 @@ namespace compiler::driver {
 		const options_types::StdLibOptions&  stdlib_options
 	);
 
-	DVMRuntimeConfig constructDVMRuntimeConfig(const options_types::LinkingOptions& linking_options
-	);
+	DVMRuntimeConfig constructDVMRuntimeConfig(const options_types::LinkingOptions& linking_options);
 }

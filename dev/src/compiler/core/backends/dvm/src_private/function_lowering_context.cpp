@@ -9,6 +9,8 @@
 
 #include <lir/lir_structure/lir_structure.hpp>
 
+#include "base/except/exceptions.hpp"
+
 #include <string_id/string_id.hpp>
 
 #include <vm/bytecode/builtin_types.hpp>
@@ -216,23 +218,25 @@ void FunctionLoweringContext::cPointerArrayLea(
 		offset_value = DVMValue{ offset_place };
 	}
 
-	pushInstruction({ vm::code::builders::OpKind::add, dest, offset_value });
+	pushInstruction({ vm::code::builders::OpKind::add, dest, offset_value.value() });
 }
 
 namespace {
 	using namespace compiler;
 
-	tsl::PointerTypeLayout::PointerKind pointerKindMatching(DVMPlace::AccessKind access_kind) {
+	tsl::PointerTypeLayout::PointerKind pointerForAccess(DVMPlace::AccessKind access_kind) {
 		switch (access_kind) {
+		// When we have a structure with direct access, we will get
+		// SinglePointer to the field
+		case DVMPlace::AccessKind::Direct:
 		case DVMPlace::AccessKind::Pointer:
 			return tsl::PointerTypeLayout::PointerKind::SinglePointer;
 		case DVMPlace::AccessKind::CPointer:
 			return tsl::PointerTypeLayout::PointerKind::CPointer;
 		case DVMPlace::AccessKind::DynTablePointer:
 			return tsl::PointerTypeLayout::PointerKind::ManyPointer;
-		default:
-			CORE_PANIC("Invalid pointerKindMatching call.");
 		}
+		CORE_UNREACHABLE();
 	}
 
 	DVMPlace::AccessKind accessKindForPointer(tsl::PointerTypeLayout::PointerKind pointer_kind) {
@@ -328,18 +332,19 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 				// When we have a CPointer to a struct, we can obtain a CPointer to a field,
 				// and when we have a Pointer to a struct, we can get a Pointer to a field.
 				// current_place determines current access kind (Pointer, CPointer)
+				const auto field_pointer_kind = pointerForAccess(current_place.getAccessKind());
 				const vm::code::TypeOfData& ptr_to_field_type
-					= program_context.getOrInsertPointerType(
-						vm_field_type, pointerKindMatching(current_place.getAccessKind())
-					);
+					= program_context.getOrInsertPointerType(vm_field_type, field_pointer_kind);
 				// Create a temporary to the field, with the right access kind.
-				DVMPlace field_ptr_tmp = pushTempLocal(ptr_to_field_type, "field_addr")
-				                             .withAccessKind(current_place.getAccessKind());
+				DVMPlace field_ptr_tmp
+					= pushTempLocal(ptr_to_field_type, "field_addr")
+				          .withAccessKind(accessKindForPointer(field_pointer_kind));
 
 				switch (current_place.getAccessKind()) {
 				case DVMPlace::AccessKind::CPointer:
 					cPointerStructLea(current_place, field_ptr_tmp, class_layout, field.field_id);
 					break;
+				case DVMPlace::AccessKind::Direct:
 				case DVMPlace::AccessKind::Pointer:
 					pushInstruction({ vm::code::builders::OpKind::structLea,
 					                  field_ptr_tmp,
@@ -378,16 +383,19 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 				// Case when we have a pointer to a static array type layout,
 				// for example a pointer to a class field Cls {field: i64[4]}
 				if (current_layout->is<tsl::StaticArrayTypeLayout>()) {
-					auto current_access = current_place.getAccessKind();
+					auto       current_access       = current_place.getAccessKind();
+					const auto element_pointer_kind = pointerForAccess(current_access);
 
 					const vm::code::TypeOfData& ptr_to_element_type
 						= program_context.getOrInsertPointerType(
-							vm_element_type, pointerKindMatching(current_access)
+							vm_element_type, element_pointer_kind
 						);
-					DVMPlace element_ptr_tmp = pushTempLocal(ptr_to_element_type, "index_addr")
-					                               .withAccessKind(current_access);
+					DVMPlace element_ptr_tmp
+						= pushTempLocal(ptr_to_element_type, "index_addr")
+					          .withAccessKind(accessKindForPointer(element_pointer_kind));
 
 					switch (current_access) {
+					case DVMPlace::AccessKind::Direct:
 					case DVMPlace::AccessKind::Pointer: {
 						DVMPlace index_place = forceToPlace(index_value, "index_tmp");
 						pushInstruction({ OpKind::fixedSizeTableLea,

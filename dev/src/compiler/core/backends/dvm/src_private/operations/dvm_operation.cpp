@@ -119,7 +119,7 @@ namespace compiler::backend_vm::internal {
 			.return_type = called_result_type,
 			.param_types = param_types,
 			.is_extern_c = true,
-			.abi = {},
+			.abi         = {},
 		};
 	}
 

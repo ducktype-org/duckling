@@ -357,8 +357,38 @@ namespace vm::code {
 		out << '\n';
 	}
 
+	void serializeFFIFunction(const FFIFunction& ffi_function, std::ostream& out) {
+		auto type_list = [&out](const std::vector<Identifier>& types) {
+			out << "{ ";
+			bool first = true;
+			for (const auto& type: types) {
+				if (!first) out << ", ";
+				out << type.str.strView();
+				first = false;
+			}
+			out << " }";
+		};
+
+		out << "ffi function " << ffi_function.name.str.strView() << ' ';
+		type_list(ffi_function.signature.parameters);
+		out << " -> ";
+		type_list(ffi_function.signature.result_types);
+		out << ";\n";
+	}
+
+	void serializeFFIObjectFile(const std::string& object_file, std::ostream& out) {
+		out << "ffi object \"" << object_file << "\";\n";
+	}
+
 	void serializeCode(const CodeCollection& code, std::ostream& out) {
+		// The object files come first: FFI functions resolve their symbols from the objects
+		// loaded before them.
+		for (const auto& object_file: code.object_files) serializeFFIObjectFile(object_file, out);
+		out << '\n';
 		for (const auto& type: code.types) serializeType(type, out);
+		out << '\n';
+		// FFI declarations follow the types, as they refer to them by name.
+		for (const auto& ffi_function: code.ffi_functions) serializeFFIFunction(ffi_function, out);
 		out << '\n';
 		for (const auto& global_data: code.global_data) serializeGlobal(global_data, out);
 		out << '\n';

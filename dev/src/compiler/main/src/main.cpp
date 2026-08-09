@@ -650,13 +650,13 @@ clah::Clah getClahForMain() {
 						if (options.isFlag("emit-static-lib")) {
 							build_target = compiler::driver::BuildTargetDVMLibrary{
 								.output_file_name = base::StrID(output_file_name),
-								.runtime_config = std::move(runtime_config)
+								.runtime_config   = std::move(runtime_config)
 							};
 						} else {
 							build_target = compiler::driver::BuildTargetDVMExecutable{
 								.output_file_name  = base::StrID(output_file_name),
 								.link_std_packages = stdlib_options.stdActive(),
-								.runtime_config = std::move(runtime_config)
+								.runtime_config    = std::move(runtime_config)
 							};
 						}
 

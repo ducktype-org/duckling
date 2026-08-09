@@ -1,5 +1,7 @@
 #pragma once
 
+#include "driver/task/task.hpp"
+
 #include <base/types/ok_bad.hpp>
 
 #include <artifacts/artifacts.hpp>
@@ -27,6 +29,7 @@ namespace compiler::driver {
 	base::OkBad linkDVMPackage(
 		const std::vector<artifacts::FileArtifact>& objects,
 		const std::vector<artifacts::FileArtifact>& debug_info_artifacts,
+		const DVMRuntimeConfig&                     runtime_config,
 		artifacts::FileArtifact&                    output_file
 	);
 }
