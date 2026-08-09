@@ -258,7 +258,7 @@ namespace compiler::helios {
 			return BuiltinOrigin::HOUT;
 		case BuiltinKind::MoveOut:
 		case BuiltinKind::ConstructAt:
-			return BuiltinOrigin::MIR;
+			return BuiltinOrigin::LIR;
 		case BuiltinKind::BoxAlloc:
 		case BuiltinKind::BoxFree:
 		case BuiltinKind::ListFree:

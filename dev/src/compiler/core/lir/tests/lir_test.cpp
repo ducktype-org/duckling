@@ -40,6 +40,7 @@ public:
 		TESTER_ADD_TEST(noTest);
 		TESTER_ADD_TEST(simpleBools);
 		TESTER_ADD_TEST(functionCallTest);
+		TESTER_ADD_TEST(builtinCallTest);
 		TESTER_ADD_TEST(functionCallMetadataTest);
 		TESTER_ADD_TEST(functionParametersTest);
 		TESTER_ADD_TEST(testGlobals);
@@ -250,6 +251,37 @@ private:
 		auto module  = getLIROfModule(path("modules/function_calls"));
 		auto foo_lir = module.lirFunc("foo");
 		withContextDo([&](query::Context& ctx) { foo_lir->debugPrint(ctx, std::cerr); });
+	}
+
+	/**
+	 * @brief `move_out` and `construct_at` are implemented in LIR: their calls become a read of /
+	 * a store into `*pointer` instead of a `Call`.
+	 */
+	void builtinCallTest() {
+		using namespace compiler::lir;
+
+		auto module = getLIROfModule(path("modules/function_calls"));
+
+		auto isDeref = [](const LIRPlace& place) {
+			return place.projection_chain.size() == 1
+			    && std::holds_alternative<LIRPlace::DerefProjection>(
+					   place.projection_chain.front().storage
+				);
+		};
+
+		auto firstInstruction = [](CRef<Function> function) {
+			return function->block_order.front()->instructions.front();
+		};
+
+		// construct_at:{i64}(pointer, value) -> `(*pointer) := Assign value`
+		auto store = firstInstruction(module.lirFunc("writeInto"));
+		ASSERT_TRUE(store.operation == Operation::Assign);
+		ASSERT_TRUE(isDeref(store.output.value()));
+
+		// move_out:{i64}(pointer) -> `<result> := Assign (*pointer)`
+		auto read = firstInstruction(module.lirFunc("readOut"));
+		ASSERT_TRUE(read.operation == Operation::Assign);
+		ASSERT_TRUE(isDeref(read.arguments.at(0).get<LIRPlace>()));
 	}
 
 /**

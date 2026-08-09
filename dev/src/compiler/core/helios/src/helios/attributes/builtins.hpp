@@ -27,11 +27,11 @@ namespace compiler::helios::code {
  * is implemented in HOUT, but in the future some builtins will be implemented only
  * in DVM Backend or LLVM backend.
  *
- * A builtin with the `MIR` origin has no callable body at all: MIR replaces its call sites with
- * instructions, so the symbol never reaches LIR or the backends.
+ * A builtin with the `LIR` origin has no callable body at all: the MIR call to it is replaced by
+ * instructions while lowering to LIR, so the symbol never reaches the backends.
  */
 MAKE_FLAG_TYPE(
-	compiler::helios, BuiltinOrigin, BuiltinOrigins, HOUT, MIR, DVMBackend, NativeBackend
+	compiler::helios, BuiltinOrigin, BuiltinOrigins, HOUT, LIR, DVMBackend, NativeBackend
 );
 
 namespace compiler::helios {
@@ -60,13 +60,13 @@ namespace compiler::helios {
 		AlignmentOf,
 		/**
 		 * `move_out(pointer: ptr T) -> T`: read the value under `pointer` without an explicit
-		 * `copy`/`move` on it. Lowered by MIR into a plain read of `*pointer`, so no copy
+		 * `copy`/`move` on it. Lowered by LIR into a plain read of `*pointer`, so no copy
 		 * constructor runs and the source storage is left untouched.
 		 */
 		MoveOut,
 		/**
 		 * `construct_at(pointer: ptr T, value: T)`: write `value` into the storage under `pointer`
-		 * treating it as uninitialized. Lowered by MIR into a plain store, which is what makes it
+		 * treating it as uninitialized. Lowered by LIR into a plain store, which is what makes it
 		 * different from an assignment: the previous content is never destroyed.
 		 */
 		ConstructAt,

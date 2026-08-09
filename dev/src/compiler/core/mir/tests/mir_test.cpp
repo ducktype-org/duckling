@@ -2,8 +2,6 @@
  * @file mir_tests.cpp
  */
 
-#include "utils/test_utils.hpp"
-
 #include <ctv/ctv.hpp>
 #include <diagnostic_interactive/module_flags/module_flags.hpp>
 #include <helios/queries/function_queries.hpp>
@@ -37,7 +35,6 @@ public:
 		TESTER_ADD_TEST(testTerminatorSuccessors);
 		TESTER_ADD_TEST(simpleBools);
 		TESTER_ADD_TEST(simpleFunctionCalls);
-		TESTER_ADD_TEST(mirBuiltinCalls);
 		TESTER_ADD_TEST(numericLiteralsTest);
 		TESTER_ADD_TEST(functionParametersTest);
 		TESTER_ADD_TEST(functionEndTest);
@@ -339,8 +336,7 @@ private:
 		withContextDo([&](query::Context& ctx) {
 			auto& unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module)->valueOrPanic();
 			auto& functions = unit.functions;
-			// arg1, arg0, foo, and the two functions exercising the MIR builtins.
-			ASSERT_EQUAL(5, functions.size());
+			ASSERT_EQUAL(3, functions.size());
 
 			auto& foo_mir
 				= ctx.query<compiler::mir::LowerToMIRFunction>({ functions.at(2) })->valueOrThrow();
@@ -369,40 +365,6 @@ private:
 
 			ASSERT_EQUAL(count_of_calls, 6);
 		});
-	}
-
-	/**
-	 * @brief `move_out` and `construct_at` are implemented in MIR, so their call sites become a
-	 * read of / a store into `*pointer` instead of a `Call`.
-	 */
-	void mirBuiltinCalls() {
-		using namespace compiler::mir;
-
-		auto [module, scope] = getModule(fs::File(path("modules/function_calls")));
-
-		auto isDeref = [](const MIRPlace& place) {
-			return place.projection_chain.size() == 1
-			    && std::holds_alternative<MIRPlace::DerefProjection>(
-					   place.projection_chain.front().storage
-				);
-		};
-
-		auto firstInstruction = [](CRef<Function> function) {
-			return function->blocks[function->block_order.front()].instructions.front();
-		};
-
-		// construct_at:{i64}(pointer, value) -> `(*pointer) := Assign value`
-		auto store = firstInstruction(test_utils::getMIRFunctionByName(module, "writeInto"));
-		ASSERT_TRUE(store.operation == Operation::Assign);
-		ASSERT_TRUE(isDeref(store.output.value()));
-		ASSERT_EQUAL(
-			store.arguments.at(0).get<MIRPlace>().getBase<MIRLocalRef>()->getName(), "value"
-		);
-
-		// move_out:{i64}(pointer) -> `<result> := Assign (*pointer)`
-		auto read = firstInstruction(test_utils::getMIRFunctionByName(module, "readOut"));
-		ASSERT_TRUE(read.operation == Operation::Assign);
-		ASSERT_TRUE(isDeref(read.arguments.at(0).get<MIRPlace>()));
 	}
 
 	void numericLiteralsTest() {
