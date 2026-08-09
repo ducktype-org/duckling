@@ -258,7 +258,7 @@ fn get_solver_answer(
         ShouldRunSolverEngine::No(answer) => {
             pcx.ctx()
                 .console()
-                .info("doesn't need to run the solver enginge")?;
+                .info("doesn't need to run the solver engine")?;
             Ok(answer)
         }
         ShouldRunSolverEngine::Yes(solver) => {

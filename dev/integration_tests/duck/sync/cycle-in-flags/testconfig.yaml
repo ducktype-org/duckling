@@ -11,5 +11,11 @@ Tests:
       sync:
         test-cmd: duck -C foo sync
         Output:
-          String: 'info: successfully synchronized venv \`foo\`\n'
+          Run: |+
+            echo "info: starting a synchronization of a package at \`$DIT_TMP_DIR/foo\`
+            info: starting solving the dependency graph
+            info: starting gathering the dependency graph
+            info: doesn't need to run the solver engine
+            info: starting fetching 1 package
+            info: successfully synchronized venv \`foo\`"
         

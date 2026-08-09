@@ -9,8 +9,13 @@ Tests:
         test-cmd: duck -C foo build --features aaa
         ExitCode: 1
         Output:
-          String: |+
-            info: successfully synchronized venv \`foo\`
+          Run: |+
+            echo "info: starting a synchronization of a package at \`$DIT_TMP_DIR/foo\`
+            info: starting solving the dependency graph
+            info: starting gathering the dependency graph
+            info: doesn't need to run the solver engine
+            info: starting fetching 1 package
+            info: successfully synchronized venv \`foo\`"
         Err:
           String: |+
             error: while expanding features of the root package \`foo\`
