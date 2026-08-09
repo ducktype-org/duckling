@@ -766,9 +766,6 @@ namespace compiler::mir {
 			for (const auto& arg: expr.arguments) {
 				auto arg_lowered = lowerSubExpr(*arg, sub_continuation);
 
-				// Only a temporary materialized right here is owned by the call, so only it is
-				// moved into the callee. A named local keeps its own ownership and stays usable
-				// after the call.
 				const bool is_temporary = arg_lowered.getResultIfStored().empty();
 				auto       result       = arg_lowered.getResult(function);
 
