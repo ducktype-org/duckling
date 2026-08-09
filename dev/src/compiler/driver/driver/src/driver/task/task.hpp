@@ -43,6 +43,17 @@ namespace compiler::driver {
 	}  // namespace task
 
 	/**
+	 * @brief Config/metadata that needs to be saved in the generated DBC code,
+	 * in order to properly run the code.
+	 */
+	struct DVMRuntimeConfig {
+		/**
+		 * @brief Shared libraries that have to be loaded to run the code.
+		 */
+		std::vector<std::string> shared_libraries {};
+	};
+
+	/**
 	 * @brief Package build target.
 	 */
 	struct BuildTargetDVMLibrary final {
@@ -50,6 +61,11 @@ namespace compiler::driver {
 		 * @brief The output file path name for the compiled DVM package.
 		 */
 		base::StrID output_file_name = base::StrID("package_dvm.dbc");
+
+		/**
+		 * @brief Runtime config of the DVM.
+		 */
+		DVMRuntimeConfig runtime_config = {};
 
 		/**
 		 * @brief If a value is present, use this artifact collection
@@ -72,6 +88,11 @@ namespace compiler::driver {
 		 * library packages that the executable depends on.
 		 */
 		bool link_std_packages = false;
+
+		/**
+		 * @brief Runtime config of the DVM.
+		 */
+		DVMRuntimeConfig runtime_config = {};
 	};
 
 	/**
@@ -181,5 +202,8 @@ namespace compiler::driver {
 	linker::LinkingOptions constructNativeLinkerOptions(
 		const options_types::LinkingOptions& linking_options,
 		const options_types::StdLibOptions&  stdlib_options
+	);
+
+	DVMRuntimeConfig constructDVMRuntimeConfig(const options_types::LinkingOptions& linking_options
 	);
 }

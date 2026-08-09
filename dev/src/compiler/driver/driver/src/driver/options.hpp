@@ -110,6 +110,11 @@ namespace compiler::driver {
 			bool native_link_c_standard_lib = true;
 
 			/**
+			 * @brief The libraries that needs to be loaded by the VM to run the code.
+			 */
+			std::vector<std::string> dvm_shared_libraries;
+
+			/**
 			 * Options only supported on DVM backend.
 			 */
 			// Empty for now...

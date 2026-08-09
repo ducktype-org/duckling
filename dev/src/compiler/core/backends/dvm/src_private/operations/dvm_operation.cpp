@@ -86,8 +86,7 @@ namespace compiler::backend_vm::internal {
 		};
 
 		// A C-ABI function has no LIR body to lower - it is a native symbol the DVM resolves and
-		// calls through libffi, so it is called through an FFI function name. The FFI declaration
-		// itself is inserted into the module by the call lowering.
+		// calls through libffi, so it is called through an FFI function name.
 		if (call_info.isCAbi())
 			call_info.call_target = DVMFFIFunctionName{ .name = func_literal.mangled_name };
 
@@ -120,7 +119,6 @@ namespace compiler::backend_vm::internal {
 			.return_type = called_result_type,
 			.param_types = param_types,
 			.is_extern_c = true,
-			// An extern C function has no LIR counterpart, so there is no ABI to speak of.
 			.abi = {},
 		};
 	}

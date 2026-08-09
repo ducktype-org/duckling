@@ -199,14 +199,6 @@ namespace compiler::backend_vm::internal {
 		void insertFFIFunction(vm::code::FFIFunction ffi_function);
 
 		/**
-		 * @brief Registers a shared object the DVM should search when resolving FFI symbols.
-		 *
-		 * The string is passed to `dlopen` verbatim, so it is either an absolute path or a bare
-		 * soname looked up in the system library paths. Duplicates are ignored.
-		 */
-		void insertFFIObjectFile(const std::string& object_file);
-
-		/**
 		 * @brief Insert raw bytecode into program context.
 		 */
 		void insertRawBytecodeDefinitions(const vm::code::CodeCollection& bytecode);
@@ -285,8 +277,6 @@ namespace compiler::backend_vm::internal {
 		base::Map<base::StrID, vm::code::FFIFunction> ffi_functions;
 		// Maintains insertion order for FFI functions so REPL can emit only new declarations.
 		std::vector<base::StrID> lowered_ffi_function_order;
-		// Shared objects searched when resolving FFI symbols.
-		std::vector<std::string> ffi_object_files;
 
 		// Additional, non-lir functions loaded into a module. Used in CTE.
 		std::vector<vm::code::Function> extra_bytecode_functions;

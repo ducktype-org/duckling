@@ -214,11 +214,6 @@ void ProgramLoweringContext::insertFFIFunction(vm::code::FFIFunction ffi_functio
 	if (inserted) lowered_ffi_function_order.push_back(name);
 }
 
-void ProgramLoweringContext::insertFFIObjectFile(const std::string& object_file) {
-	if (std::ranges::contains(ffi_object_files, object_file)) return;
-	ffi_object_files.push_back(object_file);
-}
-
 void ProgramLoweringContext::insertRawBytecodeDefinitions(const vm::code::CodeCollection& bytecode) {
 	for (const auto& global: bytecode.global_data) {
 		if (!global_name_to_dvm_data.atMaybe(global.name).has_value())
@@ -230,8 +225,6 @@ void ProgramLoweringContext::insertRawBytecodeDefinitions(const vm::code::CodeCo
 		extern_c_functions.put(ext_func.name.str, ext_func);
 
 	for (const auto& ffi_func: bytecode.ffi_functions) insertFFIFunction(ffi_func);
-
-	for (const auto& object_file: bytecode.object_files) insertFFIObjectFile(object_file);
 
 	extra_bytecode_functions.insert(
 		extra_bytecode_functions.end(), bytecode.functions.begin(), bytecode.functions.end()
@@ -310,9 +303,6 @@ vm::code::CodeCollection ProgramLoweringContext::collectNewCodeSince(
 	collection.global_data   = collect_globals_since(snapshot.lowered_global_count);
 	collection.functions     = collect_functions_since(snapshot.lowered_function_count);
 	collection.ffi_functions = collect_ffi_functions_since(snapshot.lowered_ffi_function_count);
-	// Object files are cheap declarations and the VM de-duplicates the resulting handles, so the
-	// full list is re-emitted rather than tracked incrementally.
-	collection.object_files = ffi_object_files;
 	auto extra              = collect_extra_functions_since(snapshot.extra_bytecode_function_count);
 	collection.functions.insert(collection.functions.end(), extra.begin(), extra.end());
 	return collection;
@@ -545,7 +535,6 @@ vm::code::CodeCollection ProgramLoweringContext::produceCodeCollection() {
 			return lhs.name.str.strView() < rhs.name.str.strView();
 		}
 	);
-	collection.object_files = ffi_object_files;
 
 	return collection;
 }
