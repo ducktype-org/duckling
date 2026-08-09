@@ -9,14 +9,12 @@
 #include <debug_info/debug_info_builder.hpp>
 #include <tsl/type_layout.hpp>
 
-#include "base/except/exceptions.hpp"
 #include <base/extend_cpp/variant_match.hpp>
 #include <base/str/str_utils.hpp>
 #include <base/types/bits_and_bytes.hpp>
 
 #include <logger/logger.hpp>
 
-#include "vm/bytecode/type_of_data.hpp"
 #include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/bytecode.hpp>
 

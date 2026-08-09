@@ -1,7 +1,5 @@
 #include "dbc_linking.hpp"
 
-#include "driver/task/task.hpp"
-
 #include <debug_info/debug_info_io.hpp>
 #include <global_state/artifacts_location.hpp>
 #include <global_state/global_logger.hpp>

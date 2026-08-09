@@ -1,15 +1,11 @@
 #include "function_lowering_context.hpp"
 
-#include "common.hpp"
 #include "ctv_lowering.hpp"
 #include "debug_info_utils.hpp"
 #include "dvm_value.hpp"
 #include "program_lowering_context.hpp"
-#include "tsl/type_layout.hpp"
 
 #include <lir/lir_structure/lir_structure.hpp>
-
-#include "base/except/exceptions.hpp"
 
 #include <string_id/string_id.hpp>
 
@@ -127,8 +123,6 @@ void FunctionLoweringContext::maybeStoreResult(
 		switch (dest_place.getAccessKind()) {
 		case DVMPlace::AccessKind::Pointer:
 		case DVMPlace::AccessKind::CPointer:
-			// Store the value in memory. Whether this becomes `store_pptr_pany` or
-			// `store_pcptr_pany` follows from the type of the place holding the address.
 			pushInstruction({ vm::code::builders::OpKind::store,
 			                  dest_place.asArgument(),
 			                  src_arg.asAnyArgument() });
@@ -158,8 +152,6 @@ DVMPlace FunctionLoweringContext::loadFromPlace(
 	switch (place.getAccessKind()) {
 	case DVMPlace::AccessKind::Pointer:
 	case DVMPlace::AccessKind::CPointer:
-		// Whether this becomes `load_pany_pptr` or `load_pany_pcptr` follows from the type of the
-		// place holding the address.
 		pushInstruction({ vm::code::builders::OpKind::load, temp.asAnyArgument(), place });
 		break;
 	case DVMPlace::AccessKind::DynTablePointer: {
