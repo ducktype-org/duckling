@@ -849,6 +849,8 @@ namespace compiler::helios::code {
 						  return base_type.as<tsh::StaticArrayAbstractType>().getElementType();
 					  case tsh::Kind::ManyPointer:
 						  return base_type.as<tsh::ManyPointerAbstractType>().getPointee();
+					  case tsh::Kind::CPointer:
+						  return base_type.as<tsh::CPointerAbstractType>().getPointee();
 					  case tsh::Kind::Slice:
 						  return base_type.as<tsh::SliceAbstractType>().getElementType();
 					  default:

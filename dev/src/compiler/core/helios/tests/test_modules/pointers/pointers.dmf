@@ -16,6 +16,7 @@ fun test_pointers() -> i64 = {
 
     var deref_val: i32 = *from_ref;
     var sum: i32 = *from_ref + 1;
+    var c_elem: i32 = c[0];
 
     return 0;
 }

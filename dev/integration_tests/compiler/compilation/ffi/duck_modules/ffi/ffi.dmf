@@ -42,9 +42,16 @@ fun main() -> i64 = {
     builtin_output_i64(take_mid2(Mid2(10.0, 20.0, 30.0, 40.0)));       # 100
     builtin_output_i64(take_big(Big(100i64, 200i64, 300i64)));         # 600
 
-    let s = make_small(1i64);
+    var s = make_small(1i64);
     builtin_output_i64(s.x);                                           # 1
     builtin_output_i64(s.y);                                           # 2
+
+    # `Small` is two adjacent i32s, so indexing a `cptr` to its first field walks onto the
+    # second one - the stride comes from the pointee type.
+    let sp = &s.x as cptr i32;
+    builtin_output_i64(sp[1]);                                         # 2
+    sp[0] = 9;
+    builtin_output_i64(s.x);                                           # 9
 
     let m = make_mid(5i64);
     builtin_output_i64(m.inner.i);                                     # 5

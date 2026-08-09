@@ -444,7 +444,7 @@ DVMPlace FunctionLoweringContext::resolveLirPlace(const lir::LIRPlace& place) {
 
 					const vm::code::TypeOfData& ptr_to_element_type
 						= program_context.getOrInsertPointerType(
-							vm_element_type, tsl::PointerTypeLayout::PointerKind::SinglePointer
+							vm_element_type, element_pointer_kind
 						);
 					DVMPlace element_ptr_tmp
 						= pushTempLocal(ptr_to_element_type, "element_ptr")
