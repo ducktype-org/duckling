@@ -671,6 +671,8 @@ DEF_MICRO_INSTR(cptrRead_pptr_p64, vm::low::opargs::PlacePtr, vm::low::opargs::P
 // Requires `ext_imm`
 DEF_MICRO_INSTR(cptrWrite_p64_pptr, vm::low::opargs::Place64, vm::low::opargs::PlacePtr)
 
+DEF_MICRO_INSTR(cptrCast_p64_pptr, vm::low::opargs::Place64, vm::low::opargs::PlacePtr)
+
 // ========= EXT DEFINITIONS ========
 
 // passes additional argument to preceding instruction

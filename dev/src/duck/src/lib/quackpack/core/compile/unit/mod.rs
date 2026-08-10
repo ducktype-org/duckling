@@ -1,17 +1,20 @@
 //! [`Unit`] is supposed to be all information required to invoke a single instance of duckc.
 
 use std::collections::{HashSet, VecDeque};
+use std::convert::Infallible;
 use std::env::consts::{DLL_PREFIX, DLL_SUFFIX, EXE_SUFFIX};
+use std::fmt;
 use std::hash::Hash;
+use std::ops::ControlFlow;
 use std::sync::Arc;
 
 use self::graph::UnitGraph;
-use self::unit_visitor::UnitVisitor;
+use self::unit_visitor::{TryUnitVisitor, UnitVisitor};
+use super::compiler_package::CompilerPackage;
 use super::duckc::multipackage_schema;
-use crate::quackpack::core::compile::compiler_package::CompilerPackage;
 use crate::quackpack::core::identity::Identity;
 use crate::util::hash::sha256_string;
-use crate::{QuackResult, QuackResultContext};
+use crate::{QuackResult, qp_bail_internal};
 
 pub mod graph;
 pub mod unit_visitor;
@@ -25,10 +28,24 @@ const DVM_SUFFIX: &str = ".dbc";
 #[cfg(test)]
 mod tests;
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 /// Information required to invoke duckc once.
 pub struct Unit {
     inner: Arc<UnitInner>,
+}
+
+impl fmt::Debug for Unit {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let inner = &*self.inner;
+        f.debug_struct("Unit")
+            .field("unit_id", &inner.unit_id)
+            .field("name", &inner.package.package().name())
+            .field("version", &inner.package.package().version())
+            .field("identity", &inner.identity)
+            .field("dependencies_by_id", &inner.dependencies_by_id)
+            .field("package_type", &inner.package_type)
+            .finish()
+    }
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
@@ -50,7 +67,6 @@ pub enum ArtifactsType {
     IsADependencyArtifact,
 }
 
-#[derive(Debug)]
 struct UnitInner {
     /// An internal, but unique identifier.
     unit_id: u64,
@@ -166,7 +182,7 @@ impl Unit {
                     .get_by_name(dep_name)
                     .unwrap_or_else(|| {
                         panic!(
-                            "unit=({},{}) has dep=({},{}), but it's not in the manifest?!",
+                            "unit=({},{}) has dep=({},{}), but it's not in the manifest?! `{self:?}` {graph:#?}",
                             self.unit_id(),
                             import_name,
                             dep_id,
@@ -180,15 +196,17 @@ impl Unit {
             }
             result
         };
+        let Some(source_directory) = package.src() else {
+            qp_bail_internal!(
+                "asked for src directory of the global package or a script: {package:#?}"
+            )
+        };
         Ok(multipackage_schema::Package {
             id: self.unique_name().into(),
             import_name,
             version,
             features,
-            path_to_the_src_directory: package
-                .src()
-                .context_internal("asked for src directory of the global package or a script")?
-                .to_path_buf(),
+            path_to_the_src_directory: source_directory.to_path_buf(),
             dependencies,
         })
     }
@@ -196,11 +214,46 @@ impl Unit {
     /// Accept a [`UnitVisitor`].
     ///
     /// This method should only drive the visitor through dependencies of this [`Unit`].
+    ///
+    /// If visitor returns `ControlFlow::Break(b)`, we short circuit to `Some(b)`.
+    ///
+    /// Otherwise (no breaks), we return `None`.
     pub fn accept<V: UnitVisitor + ?Sized>(
         &self,
         visitor: &mut V,
         graph: &UnitGraph,
-    ) -> QuackResult<()> {
+    ) -> Option<V::Break> {
+        struct VisitorAsTryVisitor<'a, U: ?Sized> {
+            visitor: &'a mut U,
+        }
+        impl<U: UnitVisitor + ?Sized> TryUnitVisitor for VisitorAsTryVisitor<'_, U> {
+            type Err = Infallible;
+
+            type Break = U::Break;
+
+            fn try_visit(&mut self, unit: &Unit) -> Result<ControlFlow<Self::Break>, Self::Err> {
+                Ok(self.visitor.visit(unit))
+            }
+        }
+        let result = self.try_accept(&mut VisitorAsTryVisitor { visitor }, graph);
+        let Ok(result) = result;
+        result
+    }
+
+    /// Accept a [`TryUnitVisitor`].
+    ///
+    /// This method should only drive the visitor through dependencies of this [`Unit`].
+    ///
+    /// If visitor returns an `Err(e)`, we short circuit to `Err(e)`
+    ///
+    /// If it returns `Ok(ControlFlow::Break(b))`, we short circuit to `Ok(Some(b))`.
+    ///
+    /// Otherwise (no errors + no breaks), we return `Ok(None)`.
+    pub fn try_accept<V: TryUnitVisitor + ?Sized>(
+        &self,
+        visitor: &mut V,
+        graph: &UnitGraph,
+    ) -> Result<Option<V::Break>, V::Err> {
         let mut stack = VecDeque::from([self.unit_id()]);
         let mut visited = HashSet::new();
         while let Some(id) = stack.pop_front() {
@@ -209,10 +262,12 @@ impl Unit {
             }
             visited.insert(id);
             let unit = graph.unit_for(id);
-            visitor.visit(unit)?;
+            if let ControlFlow::Break(b) = visitor.try_visit(unit)? {
+                return Ok(Some(b));
+            }
             stack.extend(unit.deps_sorted_by_unit_id());
         }
-        Ok(())
+        Ok(None)
     }
 }
 

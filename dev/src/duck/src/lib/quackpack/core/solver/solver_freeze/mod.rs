@@ -7,7 +7,7 @@ use tracing::debug;
 
 use crate::quackpack::core::storage::freeze::{FreezePackage, RootPackage, VenvFreeze};
 use crate::quackpack::core::{FeatureName, PackageId};
-use crate::{QuackResult, QuackResultContext, StrId};
+use crate::{QuackResult, StrId, qp_bail_internal};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct SolverFreeze {
@@ -48,14 +48,14 @@ impl SolverFreeze {
         }
         let mut pkg_freezes = HashMap::new();
         for pkg_freeze in value.dependencies() {
-            let pkg = expanded_pkgs_by_name
-                .get(&pkg_freeze.name())
-                .context_internal("No package with given name")?;
+            let Some(pkg) = expanded_pkgs_by_name.get(&pkg_freeze.name()) else {
+                qp_bail_internal!("no package {pkg_freeze:?} in {expanded_pkgs_by_name:#?}")
+            };
             let mut dependencies = HashMap::new();
             for dep in pkg_freeze.dependencies() {
-                let realization = expanded_pkgs_by_name
-                    .get(&dep.name())
-                    .context_internal("No package with given name")?;
+                let Some(realization) = expanded_pkgs_by_name.get(&dep.name()) else {
+                    qp_bail_internal!("no package {dep:?} in {expanded_pkgs_by_name:#?}")
+                };
                 dependencies.insert(dep.name(), *realization);
             }
             pkg_freezes.insert(
@@ -69,9 +69,9 @@ impl SolverFreeze {
 
         let mut main_dependencies = HashMap::new();
         for dep in value.root().dependencies() {
-            let realization = expanded_pkgs_by_name
-                .get(&dep.name())
-                .context_internal("No package with given name")?;
+            let Some(realization) = expanded_pkgs_by_name.get(&dep.name()) else {
+                qp_bail_internal!("no package {dep:?} in {expanded_pkgs_by_name:#?}")
+            };
             if *realization != root {
                 main_dependencies.insert(dep.name(), *realization);
             }
@@ -105,11 +105,9 @@ impl SolverFreeze {
     pub fn generate_storage_freeze(self) -> QuackResult<VenvFreeze> {
         debug!(root = ?self.main_pkg, freeze = ?self.package_freezes);
         let mut pkg_freezes = vec![];
-        let root_freeze = self
-            .package_freezes
-            .get(&self.main_pkg)
-            .context_internal("No main freeze")?
-            .clone();
+        let Some(root_freeze) = self.package_freezes.get(&self.main_pkg).cloned() else {
+            qp_bail_internal!("no main freeze: {self:#?}")
+        };
         for (pkg, freeze) in self.package_freezes {
             if pkg == self.main_pkg {
                 continue;

@@ -11,6 +11,6 @@ pub trait ToPathBuf {
 impl ToPathBuf for Url {
     fn to_path_buf(&self) -> QuackResult<PathBuf> {
         self.to_file_path()
-            .map_err(|_| qp_internal!("local location but not a file url?!"))
+            .map_err(|_| qp_internal!("failed to convert url into a path: {self:?}"))
     }
 }

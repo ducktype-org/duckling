@@ -69,7 +69,7 @@ namespace compiler::helios::defgen {
 			field_values.reserve(fields.size());
 			for (const auto& field: fields)
 				field_values.emplace_back(
-					s.copy(s.access(s.deref(s.ident(source_symbol)), field.getSymbol()))
+					s.copyValue(s.access(s.deref(s.ident(source_symbol)), field.getSymbol()))
 				);
 
 			// The whole value is built in place by a single expression:
@@ -124,7 +124,7 @@ namespace compiler::helios::defgen {
 
 			std::vector<Box<code::Expr>> element_values;
 			element_values.emplace_back(
-				s.copy(s.index(s.deref(s.ident(source_symbol)), s.ident(i_sym)))
+				s.copyValue(s.index(s.deref(s.ident(source_symbol)), s.ident(i_sym)))
 			);
 
 			// return create_aggregate(T[N]) [ <copy of (*source)[__i]> ] per_element { __i = __i + 1; };
@@ -195,7 +195,7 @@ namespace compiler::helios::defgen {
 				{
 					s.expr(s.listPush(
 						s.ident(res_sym),
-						s.copy(s.index(s.deref(s.ident(source_symbol)), s.ident(i_sym)))
+						s.copyValue(s.index(s.deref(s.ident(source_symbol)), s.ident(i_sym)))
 					)),
 					s.assign(s.ident(i_sym), s.binOp(s.ident(i_sym), IntegerAdd, s.litNum(one_val))),
 				}

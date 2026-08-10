@@ -1,4 +1,4 @@
-use super::collect_packages;
+use super::outputs;
 use crate::quackpack::core::PackageLoader;
 use crate::quackpack::core::compile::BuildContext;
 use crate::quackpack::core::compile::early_graph::creating_graph::create_early_graph_from_bcx;
@@ -73,7 +73,7 @@ fn collects_packages_cycle() {
 }
 
 fn assert_packages_names(unit: &Unit, graph: &UnitGraph, expected: &[&str]) {
-    let mut names = collect_packages(unit, graph)
+    let mut names = outputs::collect_packages(unit, graph)
         .unwrap()
         .into_iter()
         .map(|package| package.import_name)

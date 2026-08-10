@@ -5,12 +5,14 @@
 //! [`GitClient`](git::GitClient).
 use std::cell::RefCell;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use tempfile::TempDir;
 use tracing::{debug, error, info};
 use url::Url;
 
 use crate::quackpack::core::GitReference;
+use crate::quackpack::core::fetcher::http_async::AsyncHttpClient;
 use crate::quackpack::core::fetcher::types::{FetcherResponse, PackageWithUrl};
 use crate::quackpack::schemas::registry;
 use crate::quackpack::util::interned_url::InternedUrl;
@@ -34,6 +36,7 @@ pub struct Fetcher<'duck> {
     ctx: &'duck DuckContext,
     ducknest_client: ducknest::DucknestClient<'duck>,
     git_client: git::GitClient<'duck>,
+    git_fastpath_client: git::fast_path::GitFastPathClient<'duck>,
     cache: RefCell<cache::ManifestCache>,
     download_cache_path: FileLockManager,
     #[allow(unused)] // @TODO: #1905 Remove this
@@ -64,13 +67,16 @@ impl<'duck> Fetcher<'duck> {
             artifacts = %artifacts_cache_path.display(),
             downloads = %download_cache_path.display(),
         );
-        let ducknest_client = ducknest::DucknestClient::new(ctx);
+        let http_client = Arc::new(AsyncHttpClient::new(ctx));
+        let ducknest_client = ducknest::DucknestClient::new(http_client.clone());
         let cache = cache::ManifestCache::new(cache::CacheLocation::Path(metadata_path.as_path()))?;
         let git_client = git::GitClient::new(ctx);
+        let git_fastpath_client = git::fast_path::GitFastPathClient::new(http_client);
         Ok(Self {
             ctx,
             ducknest_client,
             git_client,
+            git_fastpath_client,
             cache: RefCell::new(cache),
             artifacts_cache_path,
             download_cache_path,
@@ -146,10 +152,7 @@ impl<'duck> Fetcher<'duck> {
 
     /// Fetch a source of a `package`. Returns a path to the file where the blob has been saved.
     #[tracing::instrument(skip(self))]
-    pub async fn fetch_package_blob(
-        &self,
-        package: &types::PackageWithUrl,
-    ) -> QuackResult<PathBuf> {
+    async fn fetch_package_blob(&self, package: &types::PackageWithUrl) -> QuackResult<PathBuf> {
         let destination = self
             .download_cache_path
             .join(package.name)
@@ -207,6 +210,17 @@ impl<'duck> Fetcher<'duck> {
         Ok((result, dir))
     }
 
+    pub fn try_get_fastpath(
+        &self,
+        url: InternedUrl,
+    ) -> Option<Box<dyn git::fast_path::GitFastPathExt + '_>> {
+        if self.ctx().is_offline() {
+            None
+        } else {
+            self.git_fastpath_client.try_get_client(url)
+        }
+    }
+
     /// Get the [`DuckContext`] used to construct this [`Fetcher`] instance.
     pub fn ctx(&self) -> &DuckContext {
         self.ctx
@@ -220,6 +234,10 @@ impl<'duck> Fetcher<'duck> {
         retries: u32,
     ) -> QuackResult<PathBuf> {
         debug!("fetching with retries");
+        self.ctx.console().info(format!(
+            "starting a download of {} version {} from `{}`",
+            pkg.name, pkg.version, pkg.url
+        ))?;
         let calls = retries + 1;
         for attempt in 1..=calls {
             match self.fetch_package_blob(pkg).await {
@@ -229,13 +247,23 @@ impl<'duck> Fetcher<'duck> {
                 }
                 Err(e) => {
                     error!(error = %e, "failed to fetch");
-                    if attempt != retries {
+                    let will_retry = attempt != calls;
+                    if will_retry {
                         debug!(%attempt, "retrying fetch");
                     }
+                    self.ctx.console().warning(format!(
+                        "failed to download {} version {} from `{}`: {e}",
+                        pkg.name, pkg.version, pkg.url
+                    ))?;
                 }
             }
         }
 
-        qp_bail!("failed to fetch a package {} {}", pkg.name, pkg.version)
+        let retries_string = if retries == 1 { "retry" } else { "retries" };
+        qp_bail!(
+            "failed to fetch a package {} {} after {retries} {retries_string}",
+            pkg.name,
+            pkg.version
+        )
     }
 }
