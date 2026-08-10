@@ -55,7 +55,7 @@ pub fn sync(
 ) -> QuackResult<(TrySyncLock, Venv, Storage)> {
     debug!(root = %pcx.package().root().display(), ?options);
     pcx.ctx().console().info(format!(
-        "starting a synchronization of a {}",
+        "starting synchronization of the {}",
         pcx.package().display()
     ))?;
     let venv_config = pcx.package().venv();
@@ -258,7 +258,7 @@ fn get_solver_answer(
         ShouldRunSolverEngine::No(answer) => {
             pcx.ctx()
                 .console()
-                .info("doesn't need to run the solver engine")?;
+                .info("no need to run the solver engine")?;
             Ok(answer)
         }
         ShouldRunSolverEngine::Yes(solver) => {
