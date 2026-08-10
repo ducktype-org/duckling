@@ -915,11 +915,6 @@ namespace compiler::mir {
 			);
 		}
 
-		void visitLiftToTypeExpr(const hc::LiftToTypeExpr& expr) override {
-			auto result = lowerAndLiftToTypeRecursively(*expr.value_expr, continuation);
-			valueOutput(result.begin, result.getResult(function));
-		}
-
 		void visitBlockExpr(const hc::BlockExpr& expr) override {
 			// @TODO: #3292 Refactor once we figure out how a user should be able to use blocks in
 			// expressions.
@@ -961,84 +956,6 @@ namespace compiler::mir {
 
 
 	private:
-		/**
-		 * @brief Recursive helper used to lift expressions to meta-types, if they are wrapped in
-		 * LiftToTypeExpr. Handles specific HOUT nodes that construct meta-types (Tuple, Variant,
-		 * Unit). Other nodes are delegated back to the standard expression lowerer.
-		 */
-		ExprLowerRes lowerAndLiftToTypeRecursively(
-			const hc::Expr& expr, BlockBuilderRef continuation
-		) {
-			if (const auto* _ = dynamic_cast<const hc::LiteralUnitExpr*>(&expr)) {
-				tsh::SymbolType<> unit_sym_type{
-					tsh::getUnitType(),
-					tsh::ReferenceKind::Direct,
-					tsh::Mutability::Mutable,
-				};
-
-				return ExprLowerRes(continuation, MIRValue{ MIRConstant{ unit_sym_type } });
-			} else if (const auto* tuple_expr = dynamic_cast<const hc::TupleExpr*>(&expr)) {
-				auto                  hole    = continuation->addHole();
-				BlockBuilderRef       current = continuation;
-				std::vector<MIRValue> element_types;
-				element_types.reserve(tuple_expr->elements.size());
-
-				for (const auto& element: tuple_expr->elements | std::views::reverse) {
-					auto elem_result = lowerAndLiftToTypeRecursively(*element, current);
-					element_types.push_back(elem_result.getResult(function));
-					current = elem_result.begin;
-				}
-				std::ranges::reverse(element_types);
-
-				tsh::SymbolType<> result_type{
-					tsh::getMetaType(),
-					tsh::ReferenceKind::Direct,
-					tsh::Mutability::Mutable,
-				};
-
-				return ExprLowerRes(
-					current,
-					ExprLowerRes::Finalizer{
-						.hole  = hole,
-						.instr = Instruction(
-							Operation::MetaTypeOperation,
-							{},
-							element_types,
-							{},
-							expr_scope,
-							MetaParameters{ MetaKind::CreateTuple }
-						),
-						.type = result_type,
-					}
-				);
-			} else if (const auto* paren_expr = dynamic_cast<const hc::ParenthesisExpr*>(&expr)) {
-				return lowerAndLiftToTypeRecursively(*paren_expr->inner, continuation);
-			} else if (const auto* reusable_expr
-			           = dynamic_cast<const helios::code::ReusableExpr*>(&expr)) {
-				return lowerAndLiftToTypeRecursively(*reusable_expr->inner, continuation);
-			}
-
-			// Any other expression of unit type (a tuple element, a call, ...) is still lowered
-			// because it may have side effects, but the unit type has a single value, so what it
-			// lifts to is always the unit type itself.
-			if (expr.expression_type.getType().getKind() == tsh::Kind::Unit) {
-				auto lowered = lowerSubExpr(expr, continuation);
-				// Materialise the result so the lowered instructions stay well formed, then drop
-				// it - only its type is of interest here.
-				[[maybe_unused]] const auto unit_value = lowered.getResult(function);
-
-				tsh::SymbolType<> unit_sym_type{
-					tsh::getUnitType(),
-					tsh::ReferenceKind::Direct,
-					tsh::Mutability::Mutable,
-				};
-
-				return ExprLowerRes(lowered.begin, MIRValue{ MIRConstant{ unit_sym_type } });
-			}
-
-			return lowerSubExpr(expr, continuation);
-		}
-
 		static OperationWithParams builtinBinaryToOperation(const hc::BuiltinBinary builtin) {
 			using enum hc::BuiltinBinary;
 			switch (builtin) {

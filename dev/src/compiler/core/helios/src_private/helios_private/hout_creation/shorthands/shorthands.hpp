@@ -380,12 +380,6 @@ namespace compiler::helios::code::shorthands {
 			return makeBox<DefaultValueExpr>(*ctx, generatedOrigin(), type);
 		}
 
-		/** @brief A compile-time lift of `value` to a type. */
-		[[nodiscard]]
-		Box<LiftToTypeExpr> liftToType(Box<Expr> value) const {
-			return makeBox<LiftToTypeExpr>(*ctx, generatedOrigin(), std::move(value));
-		}
-
 		/** @brief A block of statements evaluating to a unit. */
 		[[nodiscard]]
 		Box<BlockExpr> blockExpr(Box<BlockStmt> block) const {

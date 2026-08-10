@@ -10,11 +10,13 @@
 #include <helios/tsh/symbol_type.hpp>
 #include <helios/tsh/types.hpp>
 #include <helios_private/symbols/symbols.hpp>
+#include <helios_private/hout_creation/shorthands/shorthands.hpp>
 
 #include <base/except/exceptions.hpp>
 #include <base/str/str_utils.hpp>
 
 #include <query_framework/context/context.hpp>
+#include <helios_private/comp_time/comp_time.hpp>
 
 namespace compiler::helios {
 	namespace {
@@ -87,7 +89,7 @@ namespace compiler::helios {
 				auto element = makeBox<code::AccessExpr>(
 					ctx,
 					tuple->origin.generatedFrom(),
-					tuple->clone(),
+					tuple->nextUse(),
 					ctx.query<defgen::QueryGeneratedSymbol>(
 						{ .name = base::StrID{ base::strConcat("_", i + 1) },
 				          .generated_symbol_data
@@ -184,6 +186,63 @@ namespace compiler::helios {
 			}
 			CORE_UNREACHABLE();
 		}
+
+		/**
+		 * @brief Handles lifting a value to a type, which is a special case of coercion. Only a unit or tuple can be lifted to a type.
+		 * @note Lifting a unit results in a sequence of expression to evaluate and the resulting meta unit literal.
+		 * @note Lifting a tuple is done by evaluating its components element by element and returning a meta tuple literal with the resulting types.
+		 */
+		Box<code::Expr> handleLiftToType(
+			query::Context& ctx, Box<code::Expr> expr
+		) {
+			using namespace code::shorthands;
+			Shorthand s{ctx};
+
+			if (expr->expression_type.getType().getKind() == tsh::Kind::Unit) {
+				return withOrigin(
+					expr->origin.generatedFrom(),
+					s.seq(std::move(expr), s.litType(tsh::getUnitType()))
+				);
+			}
+			if (expr->expression_type.getType().getKind() == tsh::Kind::Tuple) {
+				auto source_type = expr->expression_type.getType().as<tsh::TupleAbstractType>();
+
+				auto tuple = makeBox<code::ReusableExpr>(ctx, std::move(expr));
+
+				std::vector<tsh::SymbolType<>> elements;
+			elements.reserve(source_type.getComponents().size());
+
+				for (usize i = 0; i < source_type.getComponents().size(); i++) {
+					// We create a tuple expression with the correct type, and then let the
+					// TupleExpr coercion handler handle the coercion to the target tuple type.
+					auto element = makeBox<code::AccessExpr>(
+						ctx,
+						tuple->origin.generatedFrom(),
+						tuple->nextUse(),
+						ctx.query<defgen::QueryGeneratedSymbol>(
+							{ .name = base::StrID{ base::strConcat("_", i + 1) },
+							.generated_symbol_data
+							= defgen::Field{ .parent_type = source_type, .index = i } }
+						)
+					);
+
+					auto ctv = ctx.query<QueryEvaluateHOUTExpression>({ element.ref() }).valueOrThrow();
+
+					variant_match(ctv.getStorage()) {
+						variant_case(tsh::SymbolType<>, type) { elements.emplace_back(type); }
+						variant_default {
+							CORE_PANIC("When lifting a tuple to a type all components should evaluate to a type.");
+						}
+					}
+				}
+
+				return withOrigin(
+					expr->origin.generatedFrom(),
+					s.litType(ctx.query<tsh::QueryTupleType>({ std::move(elements) }))
+				);
+			}
+			CORE_UNREACHABLE();
+		}
 	}
 
 	IncompatibleTypesError::IncompatibleTypesError(
@@ -260,9 +319,7 @@ namespace compiler::helios {
 		            or source_type.getKind() == tsh::Kind::Tuple)
 		           and to.getType().getKind() == tsh::Kind::Meta) {
 			// Lift value to type
-			return makeBox<code::LiftToTypeExpr>(
-				ctx, current_expr->origin.generatedFrom(), std::move(current_expr)
-			);
+			return handleLiftToType(ctx, std::move(current_expr));
 		} else if (source_type.getKind() == tsh::Kind::Tuple
 		           and to.getType().getKind() == tsh::Kind::Tuple) {
 			return handleTupleCoercion(ctx, std::move(current_expr), to);
