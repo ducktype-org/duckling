@@ -366,10 +366,45 @@ mod tests {
         let path = Path::new("/home/../.");
         assert_eq!(path.resolve(), Path::new("/"));
 
-        let path = Path::new("/home/foo/./xd");
-        assert_eq!(path.resolve(), Path::new("/home/foo/xd"));
+        let path = Path::new("/home/duckling/./xd");
+        assert_eq!(path.resolve(), Path::new("/home/duckling/xd"));
 
-        let path = Path::new("/home/foo/./xd/..");
-        assert_eq!(path.resolve(), Path::new("/home/foo"));
+        let path = Path::new("/home/duckling/./xd/..");
+        assert_eq!(path.resolve(), Path::new("/home/duckling"));
+    }
+
+    #[test]
+    fn home_tests() {
+        let home = Path::new("/home/duckling");
+        let path = Path::new("~");
+        assert_eq!(path.expand_tilde_with(home), home);
+
+        let path = Path::new("~/");
+        assert_eq!(path.expand_tilde_with(home), home);
+
+        let path = Path::new("~/foo");
+        assert_eq!(path.expand_tilde_with(home), home.join("foo"));
+
+        let path = Path::new("~/foo/../bar");
+        assert_eq!(
+            path.expand_tilde_with(home),
+            home.join("foo").join("..").join("bar")
+        );
+
+        let path = Path::new(".");
+        assert_eq!(path.expand_tilde_with(home), path,);
+
+        let path = Path::new("/duckling");
+        assert_eq!(path.expand_tilde_with(home), path,);
+
+        let path = Path::new("duckling/ducktype");
+        assert_eq!(path.expand_tilde_with(home), path,);
+
+        // Other users' syntax is not supported.
+        let path = Path::new("~duck/");
+        assert_eq!(path.expand_tilde_with(home), path,);
+
+        let path = Path::new("~duck");
+        assert_eq!(path.expand_tilde_with(home), path,);
     }
 }
