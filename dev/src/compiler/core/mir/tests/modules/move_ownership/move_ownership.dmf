@@ -26,3 +26,7 @@ fun make() -> box i64 = { return new 5i64; }
 fun movedTemporary() = {
     sink(make());
 }
+
+fun initFromCall() = {
+    var b: box i64 = make();
+}

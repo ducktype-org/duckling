@@ -420,6 +420,20 @@ private:
 			ASSERT_TRUE(move_instr->operation == compiler::mir::Operation::Call);
 			ASSERT_EQUAL_PRINT(0, countFlag(func, Flag::Destruct, moved_name));
 		}
+
+		// A moved rvalue has no place to be moved out of, so the call writes its result straight
+		// into `b`.
+		{
+			auto func = getMIRFunctionByName(module, "initFromCall");
+			ASSERT_EQUAL_PRINT(1, func->local_list.size());
+
+			const auto* construct = onlyInstructionWithFlag(func, Flag::Construct, "b");
+			ASSERT_TRUE(construct->operation == compiler::mir::Operation::Call);
+			ASSERT_EQUAL_PRINT(1, countFlag(func, Flag::Destruct, "b"));
+
+			for (const auto* instr: allInstructions(func))
+				for (const auto& set: instr->flags) ASSERT_TRUE(set.flag != Flag::Move);
+		}
 	}
 
 	i32 countIntermediateDestructorBlocks(CRef<compiler::mir::Function> func) {

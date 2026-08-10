@@ -855,7 +855,22 @@ namespace compiler::mir {
 			// value is only read, otherwise `getResultTakingOwnership()` removes it.
 			auto hole          = continuation->addHole();
 			auto lowered_inner = lowerSubExpr(*expr.inner, continuation);
-			auto inner_val     = lowered_inner.getResult(function);
+
+			// An rvalue is not stored in any place yet, so there is no source to mark as moved out.
+			// We forward the result directly so the consumer can put the value in its final
+			// destination right away, so `var b = implicit_move make()` stays a single instruction
+			// instead of:
+			// ```
+			// temp = implicit_move make();
+			// b = move temp;
+			// ```
+			auto inner_val_opt = lowered_inner.getResultIfStored();
+			if (inner_val_opt.empty()) {
+				hole.fillNop(expr_scope);
+				output(std::move(lowered_inner));
+				return;
+			}
+			const auto inner_val = inner_val_opt.value();
 
 			// Moving anything that is not a plain local place (e.g. a temporary) has no source to
 			// mark, so just forward the value unchanged.
@@ -1248,7 +1263,14 @@ namespace compiler::mir {
 			flags.push_back(flagMove(pending.source_local));
 		}
 
-		return getResult(function);
+		// A result that is not stored anywhere yet has to go through a temporary to be passed on,
+		// and that temporary owns it.
+		const bool     needs_temporary = getResultIfStored().empty();
+		const MIRValue result          = getResult(function);
+		if (needs_temporary)
+			flags.push_back(flagMove(result.get<MIRPlace>().getBase<MIRLocalRef>()));
+
+		return result;
 	}
 
 	void ExprLowerRes::storeResultInGivenPlace(
