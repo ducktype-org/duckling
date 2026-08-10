@@ -257,18 +257,11 @@ pub(super) fn resolve_path_maybe_relative_to_dir(
     root: &Path,
     ctx: &DuckContext,
 ) -> QuackResult<PathBuf> {
-    let home = ctx.user_home();
-    let Some(home) = home.to_str() else {
-        qp_bail!(
-            "the user home directory `{}` is not a utf8 path, which is unsupported",
-            home.display(),
-        )
-    };
-    let expanded = path.expand_user_with(home)?;
+    let expanded = path.expand_tilde(ctx);
     if expanded.is_absolute() {
-        Ok(expanded.to_path_buf())
+        Ok(expanded)
     } else {
-        Ok(root.join(expanded).expand_user_with(home)?.resolve()?)
+        Ok(root.join(expanded).expand_tilde(ctx).resolve()?)
     }
 }
 

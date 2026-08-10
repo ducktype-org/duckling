@@ -1,3 +1,4 @@
+use std::ffi::OsStr;
 use std::fs::{
     File, OpenOptions, Permissions, copy, create_dir, create_dir_all, hard_link, read,
     read_to_string, remove_dir, remove_file, rename, write,
@@ -5,7 +6,9 @@ use std::fs::{
 use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
 
-use crate::{QuackResult, QuackResultContext, qp_bail};
+use tracing::warn;
+
+use crate::{DuckContext, QuackResult, QuackResultContext};
 
 const BUFFER_SIZE: usize = 4096;
 
@@ -52,32 +55,11 @@ pub trait PathOpsExt {
     /// This function requires the __full-resolve__ feature.
     fn resolve(&self) -> QuackResult<PathBuf>;
 
-    /// Canonicalize `self` fully: expand `~` into the `$HOME`.
-    ///
-    /// Also, because of the current implementation, this function will fail, if `self` is not a
-    /// utf8 path.
-    ///
-    /// This function requires the __expand-user__ feature.
-    fn expand_user(&self) -> QuackResult<PathBuf>;
+    /// Expand `~` into the `ctx.user_home()`.
+    fn expand_tilde(&self, ctx: &DuckContext) -> PathBuf;
 
-    /// Canonicalize `self` fully: expand `~` into a `home`.
-    ///
-    /// Also, because of the current implementation, this function will fail, if `self` is not a
-    /// ut8 path.
-    ///
-    /// This function requires the __expand-user__ feature.
-    fn expand_user_with(&self, home: impl AsRef<str>) -> QuackResult<PathBuf>;
-
-    /// Canonicalize `self` fully: expand `~` into a `home()`.
-    ///
-    /// Also, because of the current implementation, this function will fail, if `self` is not a
-    /// utf8 path.
-    ///
-    /// This function requires the __expand-user__ feature.
-    fn expand_user_with_fn<F, H>(&self, home: F) -> QuackResult<PathBuf>
-    where
-        H: AsRef<str>,
-        F: FnOnce() -> H;
+    /// Expand `~` into a `home`.
+    fn expand_tilde_with(&self, home: &Path) -> PathBuf;
 
     /// Returns `true` if path exists on a disk and points to an executable file.
     ///
@@ -296,30 +278,25 @@ impl PathOpsExt for Path {
         soft_canonicalize(self).with_context(|| format!("failed to resolve `{}`", self.display()))
     }
 
-    fn expand_user(&self) -> QuackResult<PathBuf> {
-        use shellexpand::tilde;
-        let Some(as_str) = self.to_str() else {
-            qp_bail!("path `{}` is not a utf8 string", self.display())
-        };
-        Ok(PathBuf::from(tilde(as_str).into_owned()))
+    fn expand_tilde(&self, ctx: &DuckContext) -> PathBuf {
+        self.expand_tilde_with(ctx.user_home())
     }
 
-    fn expand_user_with(&self, home: impl AsRef<str>) -> QuackResult<PathBuf> {
-        self.expand_user_with_fn(|| home)
-    }
-
-    fn expand_user_with_fn<F, H>(&self, home: F) -> QuackResult<PathBuf>
-    where
-        H: AsRef<str>,
-        F: FnOnce() -> H,
-    {
-        use shellexpand::tilde_with_context;
-        let Some(as_str) = self.to_str() else {
-            qp_bail!("path `{}` is not a utf8 string", self.display())
-        };
-        Ok(PathBuf::from(
-            tilde_with_context(as_str, || Some(home())).into_owned(),
-        ))
+    fn expand_tilde_with(&self, home: &Path) -> PathBuf {
+        match self.strip_prefix("~") {
+            Ok(rest) => home.join(rest),
+            Err(_) => {
+                let os_str = self.as_os_str();
+                let tilde = OsStr::new("~");
+                if os_str
+                    .as_encoded_bytes()
+                    .starts_with(tilde.as_encoded_bytes())
+                {
+                    warn!(path = ?self, "path (likely) contains a shell syntax for a different user's home directory (like `~user`), which is not supported");
+                }
+                self.to_path_buf()
+            }
+        }
     }
 }
 

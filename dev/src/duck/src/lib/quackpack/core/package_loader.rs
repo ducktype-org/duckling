@@ -88,7 +88,7 @@ impl PackageLoader {
         ctx: &'duck DuckContext,
         allow_global_package: AllowGlobalPackage,
     ) -> QuackResult<PackageContext<'duck>> {
-        let start = start.expand_user()?.resolve()?;
+        let start = start.expand_tilde(ctx).resolve()?;
         if !start.is_dir() {
             let err = qp_err!("the path `{}` is not a directory", start.display());
             return Err(io::Error::new(io::ErrorKind::NotADirectory, err).into());

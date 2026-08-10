@@ -24,6 +24,6 @@ pub fn duck_home_path(env: &Env, user_home: &Path) -> QuackResult<PathBuf> {
             home.push("duck");
             home
         })
-        .expand_user()?
+        .expand_tilde_with(user_home)
         .resolve()
 }
