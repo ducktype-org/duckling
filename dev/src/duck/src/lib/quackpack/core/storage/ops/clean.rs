@@ -114,7 +114,7 @@ pub fn clean_storage(ctx: &DuckContext, storage_root: &Path) -> QuackResult<Clea
         let _ = logger.log_result(pkg.rmtree());
     }
     info!(?packages_to_remove, "cleaned packages");
-    let _ = logger.log_result(ctx.console().info("successfully cleaned the storage"));
+    ctx.console().info("successfully cleaned the storage")?;
     Ok(CleanOutput {
         removed_venvs,
         removed_packages: packages_to_remove,
