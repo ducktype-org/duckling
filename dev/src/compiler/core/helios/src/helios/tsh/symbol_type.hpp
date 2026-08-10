@@ -157,6 +157,18 @@ namespace compiler::tsh {
 		}
 
 		/**
+		 * @brief Determines if the symbol type is a plain abstract type (has specifiers if someone
+		 * just wrote T in the code).
+		 * @note should be consistent with withDefaultsConst
+		 * @return true if the symbol type is a plain abstract type, false otherwise.
+		 */
+		[[nodiscard]]
+		bool isPlainAbstractType() const {
+			return reference_kind == ReferenceKind::Direct && mutability == Mutability::Mutable
+			    && leakage == Leakage::NonLeaking && uniqueness == Uniqueness::NonUnique;
+		}
+
+		/**
 		 * @brief Gets the underlying abstract type.
 		 * @return The underlying abstract type.
 		 */

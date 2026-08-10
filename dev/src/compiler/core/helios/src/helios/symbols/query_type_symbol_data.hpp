@@ -14,7 +14,7 @@ namespace compiler::helios {
 	/**
 	 * @brief Struct returned by the `QueryClassSymbolData` query.
 	 */
-	struct ClassSymbolData {
+	struct ClassSymbolData final {
 		/**
 		 * @brief Name of the class in the source code.
 		 */

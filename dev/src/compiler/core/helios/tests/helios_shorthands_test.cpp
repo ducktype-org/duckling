@@ -343,7 +343,8 @@ public:
 			                         ->valueOrThrow()
 			                         .getType()
 			                         .getInterface(ctx)
-			                         ->getElementsWithName(base::StrID("x"))
+			                         ->valueOrPanic()
+			                         .getElementsWithName(base::StrID("x"))
 			                         .back()
 			                         .getSymbol();
 
@@ -544,7 +545,8 @@ public:
 			                             ->valueOrThrow()
 			                             .getType()
 			                             .getInterface(ctx)
-			                             ->getElementsWithName(base::StrID("boxed"))
+			                             ->valueOrPanic()
+			                             .getElementsWithName(base::StrID("boxed"))
 			                             .back()
 			                             .getSymbol();
 			const auto box_copy = s.copyValue(s.access(s.ident(holder_var), boxed_field));

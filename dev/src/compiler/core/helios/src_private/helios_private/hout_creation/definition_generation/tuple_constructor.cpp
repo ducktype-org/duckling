@@ -22,7 +22,7 @@ namespace compiler::helios::defgen {
 			// Construct the constructor's type.
 			// @TODO: #1328 Properly handle value categories in class constructors.
 			const std::vector<tsh::InterfaceElement> fields
-				= tuple_interface->getFieldsView() | to<std::vector>();
+				= tuple_interface->valueOrThrow().getFieldsView() | to<std::vector>();
 			const u64 num_fields = fields.size();
 
 			// Prepare the ctor symbol and declaration.

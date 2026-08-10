@@ -25,7 +25,7 @@ namespace compiler::helios::defgen {
 		static PResult provide(Context& ctx, const QKey class_type) {
 			// Preamble, get some basic data.
 			const SymID class_symbol    = class_type.getSymbol();
-			auto        class_interface = class_type.getInterface(ctx);
+			Ref         class_interface = &class_type.getInterface(ctx)->valueOrThrow();
 
 			using std::ranges::to;
 			using std::views::transform;
@@ -116,7 +116,7 @@ namespace compiler::helios::defgen {
 	struct IMPLEMENT_QUERY(QueryDefaultTupleConstructor, query::QResult<HOUTFunction>) {
 		static PResult provide(Context& ctx, const QKey tuple_type) {
 			// Preamble, get some basic data.
-			auto tuple_interface = tuple_type.getInterface(ctx);
+			Ref tuple_interface = &tuple_type.getInterface(ctx)->valueOrThrow();
 
 			const std::vector<tsh::InterfaceElement> fields
 				= tuple_interface->getFieldsView() | std::ranges::to<std::vector>();

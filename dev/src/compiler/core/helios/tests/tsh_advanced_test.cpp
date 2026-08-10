@@ -33,7 +33,7 @@ private:
 
 
 		withContextDo([&](query::Context& ctx) {
-			CRef my_class_interface = my_class_type.getInterface(ctx);
+			CRef my_class_interface = &my_class_type.getInterface(ctx)->valueOrPanic();
 
 			// note: If the type interface is modified,
 			// these values might need to be updated.

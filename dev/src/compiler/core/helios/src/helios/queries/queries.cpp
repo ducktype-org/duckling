@@ -364,13 +364,15 @@ namespace compiler::helios {
 				"Invalid argument exception: expected class symbol"
 			);
 
-			const auto class_type = ctx.query<QueryTypeFromDefinition>(class_sym)
-			                            ->valueOrThrow()
-			                            .getType()
-			                            .as<tsh::ClassAbstractType>();
+			const auto class_type_qr = ctx.query<QueryTypeFromDefinition>(class_sym);
+			if (class_type_qr->hasFailed()) return base::BAD;
 
+			const auto class_type
+				= class_type_qr->valueOrPanic().getType().as<tsh::ClassAbstractType>();
 
-			auto methods = class_type.getInterface(ctx)->getMethodsView();
+			auto methods_qr = class_type.getInterface(ctx);
+			if (methods_qr->hasFailed()) return base::BAD;
+			auto methods = methods_qr->valueOrPanic().getMethodsView();
 
 			for (const auto& method: methods) {
 				auto method_sym = method.getSymbol();

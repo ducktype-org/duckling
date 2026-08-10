@@ -34,7 +34,8 @@ namespace compiler::helios::defgen {
 	 * @brief Get the symbol of the `toString` method for a given type.
 	 */
 	SymID toStringSymForType(query::Context& ctx, const tsh::AbstractType type) {
-		for (auto& elem: type.getInterface(ctx)->getElementsWithName(base::StrID("toString")))
+		for (auto& elem:
+		     type.getInterface(ctx)->valueOrThrow().getElementsWithName(base::StrID("toString")))
 			if (elem.specialKind() == tsh::InterfaceElement::SpecialKind::ToString)
 				return elem.getSymbol();
 		CORE_PANIC("Every symbol should have toString.");
@@ -253,7 +254,7 @@ namespace compiler::helios::defgen {
 		) {
 			const auto tuple_type
 				= to_string_decl.parameters.at(0).type.getType().as<tsh::TupleAbstractType>();
-			const auto tuple_interface = tuple_type.getInterface(ctx);
+			const Ref tuple_interface = &tuple_type.getInterface(ctx)->valueOrThrow();
 
 			stringifyAggregate(ctx, to_string_decl, body, base::StrID("("), tuple_interface);
 		}
@@ -266,7 +267,7 @@ namespace compiler::helios::defgen {
 			const auto class_type
 				= to_string_decl.parameters.at(0).type.getType().as<tsh::ClassAbstractType>();
 			const auto class_name      = name(class_type.getSymbol());
-			const auto class_interface = class_type.getInterface(ctx);
+			const Ref  class_interface = &class_type.getInterface(ctx)->valueOrThrow();
 
 			stringifyAggregate(
 				ctx, to_string_decl, body, base::StrID(class_name.str() + "("), class_interface

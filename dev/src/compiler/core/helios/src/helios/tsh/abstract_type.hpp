@@ -15,6 +15,7 @@
 
 #include <hashing/add_to_hash.hpp>
 #include <query_framework/context/context_fd.hpp>
+#include <query_framework/query_result.hpp>
 
 #include <string>
 
@@ -103,7 +104,7 @@ namespace compiler::tsh {
 		 * @return The TypeInterface of the type described by this object.
 		 */
 		[[nodiscard]]
-		CRef<TypeInterface> getInterface(query::Context& ctx) const;
+		CRef<query::QResult<TypeInterface>> getInterface(query::Context& ctx) const;
 
 		/**
 		 * @brief Check if the type is a simple type, which correlates heavily with the type being

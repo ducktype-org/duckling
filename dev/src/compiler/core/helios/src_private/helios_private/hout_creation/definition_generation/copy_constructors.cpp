@@ -60,7 +60,8 @@ namespace compiler::helios::defgen {
 			query::Context& ctx, const tsh::AbstractType& owner_type, const SymID source_symbol
 		) {
 			const std::vector<tsh::InterfaceElement> fields
-				= owner_type.getInterface(ctx)->getFieldsView() | std::ranges::to<std::vector>();
+				= owner_type.getInterface(ctx)->valueOrThrow().getFieldsView()
+			    | std::ranges::to<std::vector>();
 
 			const Shorthand s{ ctx };
 

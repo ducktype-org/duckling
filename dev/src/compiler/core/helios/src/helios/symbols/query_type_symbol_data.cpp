@@ -6,6 +6,7 @@
 #include <frontend/pst_parser/elements/hierarchy/declarations/class.hpp>
 #include <frontend/pst_parser/elements/includes/basic.hpp>
 #include <frontend/pst_parser/pst_visitor.hpp>
+#include <helios/errors/inherited_type_with_specifiers.hpp>
 #include <helios_private/comp_time/comp_time.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
@@ -69,24 +70,57 @@ namespace compiler::helios {
 			class_stmt->acceptVisitor(class_data_parser);
 			class_info.name = class_data_parser.name.value();
 
+			// A class inherits from a plain type, so specifiers (`ref`, `box`, `const`, ...) on
+			// the extended class or on an implemented interface are an error.
+			const auto check_no_specifiers
+				= [&](const tsh::SymbolType<>&                                inherited,
+			          const pst::AccessLocked<pst::ExprElement>               expr,
+			          const InheritedTypeWithSpecifiersError::InheritanceKind inheritance_kind
+			      ) -> base::OkBad {
+				if (inherited.isPlainAbstractType()) return base::OK;
+				ctx.logInt(makeBox<InheritedTypeWithSpecifiersError>(
+					ctx,
+					expr.unlock(ctx)->getStablePosition(),
+					class_info.name.str(),
+					inheritance_kind,
+					inherited
+				));
+				return base::BAD;
+			};
+
+			// Every offending inherited type is reported before failing, so that a class whose
+			// extended class *and* interfaces carry specifiers yields one error per type.
+			auto inheritance_status = base::OK;
+
 			if_opt_some(class_data_parser.base_class, base) {
 				UNPACK_QRESULT(auto ctv =, getTypeCTVFromPST(ctx, base));
-				// @TODO: #1630 Raise errors, here, or preferably earlier, if the symbol
-				// type of the base class has any specifiers.
-				class_info.base = ctv.get<tsh::SymbolType<>>()->getType();
-				class_info.implements.push_back(ctv.get<tsh::SymbolType<>>()->getType());
+				const auto base_type = *ctv.get<tsh::SymbolType<>>();
+
+				const auto specifiers = check_no_specifiers(
+					base_type, base, InheritedTypeWithSpecifiersError::InheritanceKind::ExtendedClass
+				);
+				if (specifiers.isBad()) inheritance_status = base::BAD;
+
+				class_info.base = base_type.getType();
+				class_info.implements.push_back(base_type.getType());
 			}
 
 			if_opt_some(class_data_parser.implements, implements) {
 				for (auto&& interface: *implements.unlock(ctx)) {
-					UNPACK_QRESULT(
-						auto ctv =, getTypeCTVFromPST(ctx, interface.unlock(ctx)->getExpr())
-					);
-					// @TODO: #1630 Raise errors, here, or preferably earlier, if the symbol
-					// type of the base class has any specifiers.
-					class_info.implements.push_back(ctv.get<tsh::SymbolType<>>()->getType());
+					const auto interface_expr = interface.unlock(ctx)->getExpr();
+					UNPACK_QRESULT(auto ctv =, getTypeCTVFromPST(ctx, interface_expr));
+					const auto interface_type = ctv.get<tsh::SymbolType<>>().value();
+					const auto specifiers     = check_no_specifiers(
+                        interface_type,
+                        interface_expr,
+                        InheritedTypeWithSpecifiersError::InheritanceKind::ImplementedInterface
+                    );
+					if (specifiers.isBad()) inheritance_status = base::BAD;
+					class_info.implements.push_back(interface_type.getType());
 				}
 			}
+
+			if (inheritance_status.isBad()) return query::Failed();
 
 			return class_info;
 		}

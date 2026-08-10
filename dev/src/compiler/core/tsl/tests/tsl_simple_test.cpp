@@ -352,7 +352,7 @@ private:
 				"Layout should have source type as constructed."
 			);
 
-			CRef<TypeInterface> tuple_interface = tuple_type.getInterface(ctx);
+			CRef<TypeInterface> tuple_interface = &tuple_type.getInterface(ctx)->valueOrPanic();
 
 			const compiler::helios::SymID first = [&] {
 				const auto& matching = tuple_interface->getElementsWithName(base::StrID("_1"));
@@ -404,8 +404,9 @@ private:
 		const SymID my_class_symbol = getChain("MyClass", root_scope).back();
 
 		withContextDo([&](query::Context& ctx) -> void {
-			const ClassAbstractType my_class_type      = ctx.query<QueryClassType>(my_class_symbol);
-			CRef<TypeInterface>     my_class_interface = my_class_type.getInterface(ctx);
+			const ClassAbstractType my_class_type = ctx.query<QueryClassType>(my_class_symbol);
+			CRef<TypeInterface>     my_class_interface
+				= &my_class_type.getInterface(ctx)->valueOrPanic();
 
 			const SymID a_field_symbol = [&] {
 				const auto& matching = my_class_interface->getElementsWithName(base::StrID("a"));
@@ -479,7 +480,7 @@ private:
 
 		withContextDo([&](query::Context& ctx) -> void {
 			const ClassAbstractType class_type      = ctx.query<QueryClassType>(class_symbol);
-			CRef<TypeInterface>     class_interface = class_type.getInterface(ctx);
+			CRef<TypeInterface>     class_interface = &class_type.getInterface(ctx)->valueOrPanic();
 
 			auto get_element_symbol = [&](const std::string& name) {
 				const auto& matching = class_interface->getElementsWithName(base::StrID(name));

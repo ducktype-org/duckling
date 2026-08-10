@@ -43,6 +43,7 @@ add_library(HELIOS STATIC
 
 	src/helios/errors/extern_c_class_empty.cpp
 	src/helios/errors/field_not_c_compatible.cpp
+	src/helios/errors/inherited_type_with_specifiers.cpp
 	src/helios/queries/queries.cpp
 	src/helios/queries/query_code_of_fun.cpp
 	src/helios/queries/query_decl_of_fun.cpp
