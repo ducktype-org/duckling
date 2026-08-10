@@ -85,7 +85,7 @@ namespace compiler::helios {
 		) {
 			auto to_type = to.getType().as<tsh::TupleAbstractType>();
 
-			auto saved_origin = expr->origin.generatedFrom();
+			auto saved_origin   = expr->origin.generatedFrom();
 			auto tuple_elements = accessTupleElements(ctx, std::move(expr));
 
 			auto elements
@@ -205,8 +205,7 @@ namespace compiler::helios {
 
 			if (expr->expression_type.getType().getKind() == tsh::Kind::Unit) {
 				return withOrigin(
-					saved_origin,
-					s.seq(std::move(expr), s.litType(tsh::getUnitType()))
+					saved_origin, s.seq(std::move(expr), s.litType(tsh::getUnitType()))
 				);
 			}
 			if (expr->expression_type.getType().getKind() == tsh::Kind::Tuple) {
@@ -223,7 +222,7 @@ namespace compiler::helios {
 								  variant_default {
 									  CORE_PANIC(
 										  "When lifting a tuple to a type all components should "
-							              "evaluate to a type."
+										  "evaluate to a type."
 									  );
 								  }
 							  }
@@ -233,8 +232,7 @@ namespace compiler::helios {
 				    | std::ranges::to<std::vector>();
 
 				return withOrigin(
-					saved_origin,
-					s.litType(ctx.query<tsh::QueryTupleType>({ std::move(elements) }))
+					saved_origin, s.litType(ctx.query<tsh::QueryTupleType>({ std::move(elements) }))
 				);
 			}
 			CORE_UNREACHABLE();
