@@ -201,14 +201,15 @@ namespace compiler::helios {
 			using namespace code::shorthands;
 			Shorthand s{ ctx };
 
+			auto saved_origin = expr->origin.generatedFrom();
+
 			if (expr->expression_type.getType().getKind() == tsh::Kind::Unit) {
 				return withOrigin(
-					expr->origin.generatedFrom(),
+					saved_origin,
 					s.seq(std::move(expr), s.litType(tsh::getUnitType()))
 				);
 			}
 			if (expr->expression_type.getType().getKind() == tsh::Kind::Tuple) {
-				auto saved_origin = expr->origin.generatedFrom();
 				auto tuple_elements = accessTupleElements(ctx, std::move(expr));
 				auto elements
 					= std::views::transform(
