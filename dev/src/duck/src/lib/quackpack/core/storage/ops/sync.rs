@@ -307,7 +307,7 @@ fn fetch_source_codes(
     Ok(fetches.into_iter().flatten().count())
 }
 
-/// Bail if we failed to download any package.
+/// Bail if we failed to download some package.
 fn bail_if_failed_to_fetch(ctx: &DuckContext, logger: ErrorsLogger) -> QuackResult<()> {
     if logger.is_empty() {
         return Ok(());
