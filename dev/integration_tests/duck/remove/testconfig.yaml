@@ -1,17 +1,14 @@
-dependencies: |+
-  dependencies:
-    a:
-      source:
-        path: ./a
-  dev-dependencies:
-    b:
-      source:
-        path: ./b
-
 PreCase: |+
   @{cd-tmp-dir}
   @{duck-exe} init foo
-  echo @{dependencies} >> foo/quackconfig.yaml
+  echo "dependencies:
+    a:
+      source:
+        path: ../a
+  dev-dependencies:
+    b:
+      source:
+        path: ../b" >> foo/quackconfig.yaml
 PostCase: python3 check.py @{expected-manifest} && @{cleanup_tmp_env}
 
 Tests:
