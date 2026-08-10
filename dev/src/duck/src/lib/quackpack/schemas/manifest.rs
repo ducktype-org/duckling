@@ -3,7 +3,8 @@ use std::collections::HashMap;
 use std::fmt;
 use std::path::PathBuf;
 
-use serde::{Deserialize, de};
+use itertools::Itertools;
+use serde::{Deserialize, Serialize, de, ser};
 use serde_untagged::UntaggedEnumVisitor;
 
 use crate::quackpack::core::Version;
@@ -11,7 +12,7 @@ use crate::quackpack::schemas::OneEntryMap;
 
 pub type Dependencies = HashMap<String, Dependency>;
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
 /// Schema of the [`quackconfig.yaml`](crate::quackpack::core::PackageLoader::MANIFEST_NAME) file.
 /// Also used by script frontmatters.
@@ -61,22 +62,18 @@ impl Manifest {
         result
     }
 
+    /// Get mutable access to the dependencies map.
     pub fn dependencies_mut(&mut self) -> Option<&mut Dependencies> {
-        match self.dependencies {
-            Some(ref mut deps) => Some(deps),
-            None => None,
-        }
+        self.dependencies.as_mut()
     }
 
+    /// Get mutable access to the dev-dependencies map.
     pub fn dev_dependencies_mut(&mut self) -> Option<&mut Dependencies> {
-        match self.dependencies {
-            Some(ref mut deps) => Some(deps),
-            None => None,
-        }
+        self.dev_dependencies.as_mut()
     }
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
 /// Schema of the `metadata:` table.
 pub struct Metadata {
@@ -92,7 +89,7 @@ pub struct Metadata {
     pub description: Option<String>,
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
 /// Single dependency of the package.
 pub struct Dependency {
@@ -154,6 +151,15 @@ impl<'de> Deserialize<'de> for OredSemver {
     }
 }
 
+impl Serialize for OredSemver {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: ser::Serializer {
+        let semver_string = self.0.iter().map(|x| x.to_string()).join(" or ");
+        serializer.serialize_str(&semver_string)
+    }
+}
+
 #[derive(Clone, Debug)]
 /// A dependency's source.
 pub enum DependencySource {
@@ -209,7 +215,18 @@ impl<'de> de::Deserialize<'de> for DependencySource {
     }
 }
 
-#[derive(Clone, Debug, Deserialize)]
+impl Serialize for DependencySource {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: ser::Serializer {
+        match self {
+            DependencySource::Simple(s) => serializer.serialize_str(s),
+            DependencySource::Detailed(detailed_source) => detailed_source.serialize(serializer),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
 /// A detailed source of a dependency.
 pub struct DetailedSource {
@@ -246,7 +263,7 @@ impl DetailedSource {
     }
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
 /// Conditions, from which any has to be true, in order to enable this dependency.
 pub struct DependencyCondition {
@@ -255,7 +272,7 @@ pub struct DependencyCondition {
     pub package_features: Option<Vec<String>>,
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case", transparent)]
 /// A feature + its conditions.
 pub struct DetailedFeature(pub OneEntryMap<String, DependencyCondition>);
@@ -282,7 +299,18 @@ impl<'de> de::Deserialize<'de> for DependencyFeature {
     }
 }
 
-#[derive(Clone, Debug, Deserialize)]
+impl Serialize for DependencyFeature {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: ser::Serializer {
+        match self {
+            DependencyFeature::Simple(simple) => serializer.serialize_str(simple),
+            DependencyFeature::Detailed(detailed_feature) => detailed_feature.serialize(serializer),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
 /// A single compilation profile.
 pub struct Profile {
@@ -317,7 +345,18 @@ impl<'de> de::Deserialize<'de> for OptLevel {
     }
 }
 
-#[derive(Clone, Debug, Deserialize)]
+impl Serialize for OptLevel {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: ser::Serializer {
+        match self {
+            OptLevel::Number(n) => serializer.serialize_u32(*n),
+            OptLevel::String(s) => serializer.serialize_str(s),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
 /// A venv's configuration.
 #[serde(rename_all = "kebab-case")]
 pub struct VenvConfig {
@@ -349,6 +388,17 @@ mod tests {
 
         let y = serde_json::from_str::<OredSemver>(r#"["1.0.0", "1.1.0", "2.0.0"]"#).unwrap();
         assert_eq!(x.0, y.0);
+    }
+
+    #[test]
+    fn test_ored_semver_serialization() {
+        let x = serde_json::to_string::<OredSemver>(&OredSemver(vec![Version::new(1, 0, 0)])).unwrap();
+        assert_eq!(x, "\"1.0.0\"");
+
+        
+        let x = serde_json::to_string::<OredSemver>(&OredSemver(vec![Version::new(1, 0, 0), Version::new(1, 1, 0),
+        Version::new(2, 0, 0)])).unwrap();
+        assert_eq!(x, "\"1.0.0 or 1.1.0 or 2.0.0\"");
     }
 
     #[test]

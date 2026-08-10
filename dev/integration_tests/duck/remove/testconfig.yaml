@@ -1,0 +1,24 @@
+dependencies: |+
+  dependencies:
+    a:
+      source:
+        path: ./a
+  dev-dependencies:
+    b:
+      source:
+        path: ./b
+
+PreCase: |+
+  @{cd-tmp-dir}
+  @{duck-exe} init foo
+  echo @{dependencies} >> foo/quackconfig.yaml
+
+Tests:
+  basic:
+    Description: properly removes dependencies from manifest
+    Cases:
+      dependency:
+        test-cmd: duck -C foo remove a
+        Output:
+          Run: |+
+            echo "info: successfully a dependency {a} from a project \`foo\` at \`$DIT_TMP_DIR/foo\`"

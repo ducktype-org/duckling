@@ -272,6 +272,11 @@ impl Package {
         &self.original_schema
     }
 
+    /// Transform into the original parsed manifest schema.
+    pub fn into_original_schema(self) -> ManifestSchema {
+        self.original_schema
+    }
+
     /// Get the high-level abstraction over the manifest.
     pub fn manifest(&self) -> &Manifest {
         &self.manifest
@@ -285,10 +290,6 @@ impl Package {
     /// Get the root directory of the package.
     pub fn root_directory(&self) -> &Path {
         &self.root
-    }
-
-    pub fn schema_mut(&mut self) -> &mut ManifestSchema {
-        &mut self.original_schema
     }
 
     /// Get the path to the source directory.
