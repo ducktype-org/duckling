@@ -41,6 +41,7 @@ pub fn remove(ctx: &DuckContext, options: RemoveOptions) -> QuackResult<()> {
     } else {
         schema.dependencies_mut()
     };
+    println!("{dependencies_map:?}");
     let _ = dependencies_map
         .and_then(|map| map.remove_entry(&name))
         .with_context(|| format!("no such dependency as `{name}` in project `{pkg_name}` at `{}`", pkg_root.display()))?;

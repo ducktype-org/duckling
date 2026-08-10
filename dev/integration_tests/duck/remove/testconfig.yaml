@@ -29,7 +29,7 @@ Tests:
         test-cmd: duck -C foo remove b
         Err:
           Run: |+
-            echo "error: no such dependency as \`a\` in project \`foo\` at \`$DIT_TMP_DIR/foo\`"
+            echo "error: no such dependency as \`b\` in project \`foo\` at \`$DIT_TMP_DIR/foo\`"
       dev-dependency-flag:
         expected-manifest: only-a
         test-cmd: duck -C foo remove b --dev
