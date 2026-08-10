@@ -13,7 +13,6 @@
 
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
-#include <base/extend_cpp/vector_utils.hpp>
 
 #include <query_framework/standard_query/query_impl.hpp>
 
@@ -303,11 +302,7 @@ namespace compiler::mir {
 			std::vector<OperationFlag> flags;
 			for (const auto& element: expr.elements | std::views::reverse) {
 				auto lowered_element = lowerSubExpr(*element, current);
-
-				const auto move_flags = lowered_element.takeOwnership();
-				base::appendToVector(flags, move_flags);
-
-				args.push_back(lowered_element.getResult(function));
+				args.push_back(lowered_element.getResultAndTakeOwnership(function, flags));
 				current = lowered_element.begin;
 			}
 			std::reverse(args.begin() + 1, args.end());
@@ -792,11 +787,7 @@ namespace compiler::mir {
 			std::vector<OperationFlag> flags;
 			for (const auto& arg: expr.arguments) {
 				auto arg_lowered = lowerSubExpr(*arg, sub_continuation);
-
-				const auto move_flags = arg_lowered.takeOwnership();
-				base::appendToVector(flags, move_flags);
-
-				args.push_back(arg_lowered.getResult(function));
+				args.push_back(arg_lowered.getResultAndTakeOwnership(function, flags));
 				sub_continuation = arg_lowered.begin;
 			}
 
@@ -861,7 +852,7 @@ namespace compiler::mir {
 			// later use is flagged by the move state/use-after-move analysis. The `Move` flag has
 			// to sit on an instruction that reads the local, and which instruction that is depends
 			// on who consumes the result. The `Assign` built here is the fallback used when the
-			// the value is only read, otherwise it is dropped by `takeOwnership()`.
+			// value is only read, otherwise `getResultTakingOwnership()` removes it.
 			auto hole          = continuation->addHole();
 			auto lowered_inner = lowerSubExpr(*expr.inner, continuation);
 			auto inner_val     = lowered_inner.getResult(function);
@@ -968,9 +959,9 @@ namespace compiler::mir {
 			auto hole         = continuation->addHole();
 			auto lowered_elem = lowerSubExpr(*expr.element, continuation);
 
-			const auto flags = lowered_elem.takeOwnership();
-
-			auto elem_val     = lowered_elem.getResult(function);
+			// The list owns the pushed element, so the push marks a moved element as moved-out.
+			std::vector<OperationFlag> flags;
+			auto elem_val     = lowered_elem.getResultAndTakeOwnership(function, flags);
 			auto lowered_list = lowerSubExpr(*expr.list, lowered_elem.begin);
 			auto list_val     = lowered_list.getResult(function);
 
@@ -1235,26 +1226,29 @@ namespace compiler::mir {
 	}
 
 	[[nodiscard]]
-	std::vector<OperationFlag> ExprLowerRes::takeOwnership() {
-		if (pending_move.empty()) return {};
+	MIRValue ExprLowerRes::getResultAndTakeOwnership(
+		FunctionBuilder& function, std::vector<OperationFlag>& flags
+	) {
+		if (pending_move.has_value()) {
+			const PendingMove pending = pending_move.value();
+			pending_move.reset();
 
-		const PendingMove pending = pending_move.value();
-		pending_move.reset();
+			// The `Assign` the move produced only exists to give the `Move` flag an instruction to
+			// sit on. The consumer carries the flag itself now, so the copy is not needed and the
+			// value is read straight from its source place. Thus we Nop-out the `move` assign.
+			variant_match(value) {
+				variant_case(Finalizer, res_data) {
+					res_data.hole.fillNop(res_data.instr.scope);
+					value = pending.source;
+				}
+				// A pending move always comes with the `Assign` that `visitMoveExpr` built.
+				variant_default { CORE_UNREACHABLE(); }
+			}
 
-		// The `Assign` the move produced only exists to give the `Move` flag an instruction to sit
-		// on. The consumer carries the flag itself now, so the copy is not needed and the value is
-		// read straight from its source place. This we Nop-out the `move` assign.
-		variant_match(value) {
-			variant_case(Finalizer, res_data) {
-				res_data.hole.fillNop(res_data.instr.scope);
-				value = pending.source;
-			}
-			variant_default {
-				CORE_PANIC("takeOwnership() has to run before the result is materialized.");
-			}
+			flags.push_back(flagMove(pending.source_local));
 		}
 
-		return { flagMove(pending.source_local) };
+		return getResult(function);
 	}
 
 	void ExprLowerRes::storeResultInGivenPlace(
