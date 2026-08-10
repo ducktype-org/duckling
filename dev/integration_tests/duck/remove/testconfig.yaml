@@ -12,13 +12,27 @@ PreCase: |+
   @{cd-tmp-dir}
   @{duck-exe} init foo
   echo @{dependencies} >> foo/quackconfig.yaml
+PostCase: python3 check.py @{expected-manifest} && @{cleanup_tmp_env}
 
 Tests:
   basic:
     Description: properly removes dependencies from manifest
     Cases:
       dependency:
+        expected-manifest: only-b
         test-cmd: duck -C foo remove a
         Output:
           Run: |+
-            echo "info: successfully a dependency {a} from a project \`foo\` at \`$DIT_TMP_DIR/foo\`"
+            echo "info: removed dependency \`a\` from package \`foo\` at \`$DIT_TMP_DIR/foo\`"
+      dev-dependency-no-flag-error:
+        expected-manifest: all
+        test-cmd: duck -C foo remove b
+        Err:
+          Run: |+
+            echo "error: no such dependency as \`a\` in project \`foo\` at \`$DIT_TMP_DIR/foo\`"
+      dev-dependency-flag:
+        expected-manifest: only-a
+        test-cmd: duck -C foo remove b --dev-dep
+        Output:
+          Run: |+
+            echo "info: removed dev-dependency \`b\` from package \`foo\` at \`$DIT_TMP_DIR/foo\`"

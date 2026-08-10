@@ -27,6 +27,8 @@ pub fn remove(ctx: &DuckContext, options: RemoveOptions) -> QuackResult<()> {
     }
     .into_package()
     .unwrap_package();
+    let pkg_name = pkg.name();
+    let pkg_root = pkg.root_directory().to_path_buf();
     let manifest_path = pkg.manifest_path().to_path_buf();
     let mut schema = pkg.into_original_schema();
     let dependencies_map = if dev_dep {
@@ -34,10 +36,10 @@ pub fn remove(ctx: &DuckContext, options: RemoveOptions) -> QuackResult<()> {
     } else {
         schema.dependencies_mut()
     };
-    ctx.console().info(format!("removing {}dependency {}", if dev_dep { "dev-" } else { "" }, name))?;
     let _ = dependencies_map
         .and_then(|map| map.remove_entry(&name))
-        .with_context(|| format!("no such dependency as {name}"))?;
+        .with_context(|| format!("no such dependency as `{name}` in project `{pkg_name}` at `{}`", pkg_root.display()))?;
+    ctx.console().info(format!("removed {}dependency `{name}` from project `{pkg_name}` at `{}`", if dev_dep { "dev-" } else { "" }, pkg_root.display()))?;
     let deserialized_schema = serde_yaml_ng::to_string(&schema)?;
     manifest_path.write(deserialized_schema)?;
     Ok(())
