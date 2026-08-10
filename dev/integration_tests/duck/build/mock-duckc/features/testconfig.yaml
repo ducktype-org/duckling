@@ -17,13 +17,23 @@ Tests:
         test-cmd: duck -C foo build --features foo
         features: "foo"
         Output:
-          String: |+
+          Run: |+
+            echo "info: starting synchronization of the package at \`$DIT_TMP_DIR/foo\`
+            info: starting solving the dependency graph
+            info: starting gathering the dependency graph
+            info: no need to run the solver engine
+            info: starting fetching 1 package
             info: successfully synchronized venv \`foo\`
-            info: compiling \`foo\`...
+            info: compiling \`foo\`..."
       pulling-feature:
         test-cmd: duck -C foo build --features bar
         features: bar foo
         Output:
-          String: |+
+          Run: |+
+            echo "info: starting synchronization of the package at \`$DIT_TMP_DIR/foo\`
+            info: starting solving the dependency graph
+            info: starting gathering the dependency graph
+            info: no need to run the solver engine
+            info: starting fetching 1 package
             info: successfully synchronized venv \`foo\`
-            info: compiling \`foo\`...
+            info: compiling \`foo\`..."

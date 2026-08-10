@@ -25,51 +25,86 @@ Tests:
         test-cmd: duck -C foo build
         profile-name: dev
         Output:
-          String: |+
+          Run: |+
+            echo "info: starting synchronization of the package at \`$DIT_TMP_DIR/foo\`
+            info: starting solving the dependency graph
+            info: starting gathering the dependency graph
+            info: no need to run the solver engine
+            info: starting fetching 1 package
             info: successfully synchronized venv \`foo\`
-            info: compiling \`foo\`...
+            info: compiling \`foo\`..."
       release:
         test-cmd: duck -C foo build --release
         profile-name: release
         Output:
-          String: |+
+          Run: |+
+            echo "info: starting synchronization of the package at \`$DIT_TMP_DIR/foo\`
+            info: starting solving the dependency graph
+            info: starting gathering the dependency graph
+            info: no need to run the solver engine
+            info: starting fetching 1 package
             info: successfully synchronized venv \`foo\`
-            info: compiling \`foo\`...
+            info: compiling \`foo\`..."
       release2:
         profile-name: release
         test-cmd: duck -C foo build --profile=release
         Output:
-          String: |+
+          Run: |+
+            echo "info: starting synchronization of the package at \`$DIT_TMP_DIR/foo\`
+            info: starting solving the dependency graph
+            info: starting gathering the dependency graph
+            info: no need to run the solver engine
+            info: starting fetching 1 package
             info: successfully synchronized venv \`foo\`
-            info: compiling \`foo\`...
+            info: compiling \`foo\`..."
       release3:
         profile-name: release
         test-cmd: duck --color=never -C foo build --profile release
         Output:
-          String: |+
+          Run: |+
+            echo "info: starting synchronization of the package at \`$DIT_TMP_DIR/foo\`
+            info: starting solving the dependency graph
+            info: starting gathering the dependency graph
+            info: no need to run the solver engine
+            info: starting fetching 1 package
             info: successfully synchronized venv \`foo\`
-            info: compiling \`foo\`...
+            info: compiling \`foo\`..."
       custom-profile:
         test-cmd: duck -C foo build --profile my-profile
         profile-name: my-profile
         Output:
-          String: |+
+          Run: |+
+            echo "info: starting synchronization of the package at \`$DIT_TMP_DIR/foo\`
+            info: starting solving the dependency graph
+            info: starting gathering the dependency graph
+            info: no need to run the solver engine
+            info: starting fetching 1 package
             info: successfully synchronized venv \`foo\`
-            info: compiling \`foo\`...
+            info: compiling \`foo\`..."
       overridden-builtin-profile:
         test-cmd: duck -C foo build --profile bench
         profile-name: bench
         Output:
-          String: |+
+          Run: |+
+            echo "info: starting synchronization of the package at \`$DIT_TMP_DIR/foo\`
+            info: starting solving the dependency graph
+            info: starting gathering the dependency graph
+            info: no need to run the solver engine
+            info: starting fetching 1 package
             info: successfully synchronized venv \`foo\`
-            info: compiling \`foo\`...
+            info: compiling \`foo\`..."
       custom-profile-inherited:
         test-cmd: duck -C foo build --profile my-profile2
         profile-name: my-profile2
         Output:
-          String: |+
+          Run: |+
+            echo "info: starting synchronization of the package at \`$DIT_TMP_DIR/foo\`
+            info: starting solving the dependency graph
+            info: starting gathering the dependency graph
+            info: no need to run the solver engine
+            info: starting fetching 1 package
             info: successfully synchronized venv \`foo\`
-            info: compiling \`foo\`...
+            info: compiling \`foo\`..."
       # @TODO: #3023 Reenable verbose itests
       verbose:
         test-cmd: duck -C foo build --verbose
