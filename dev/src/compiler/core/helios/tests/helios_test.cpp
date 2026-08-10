@@ -2207,7 +2207,8 @@ private:
 
 				assertTrue(
 					uses_reusable_source(tuple_expr),
-					"A tuple literal should be coerced element by element via a reusable expression."
+					"A tuple literal should be coerced element by element via a reusable "
+				    "expression."
 				);
 
 				(name == base::StrID("literal") ? literal_checked : parenthesised_checked) = true;
