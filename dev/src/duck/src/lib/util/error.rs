@@ -527,6 +527,7 @@ impl ErrorExt for dyn Error + Send + Sync + 'static {
 
 /// Structure for gathering errors.
 /// Should be used in situations when encountering many errors should not end the execution of the program.
+#[derive(Debug)]
 pub struct ErrorsLogger(Vec<QuackError>);
 
 impl ErrorsLogger {

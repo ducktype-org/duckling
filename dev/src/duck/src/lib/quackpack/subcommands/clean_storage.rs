@@ -38,7 +38,7 @@ pub fn clean_storage(options: CleanStorageOptions) -> QuackResult<()> {
             let CleanOutput {
                 removed_venvs,
                 removed_packages,
-                maybe_error,
+                encountered_errors,
             } = storage::clean_storage(ctx, &storage_path)
                 .context("when trying to clean the storage")?;
             ctx.console().print(format!(
@@ -59,9 +59,15 @@ pub fn clean_storage(options: CleanStorageOptions) -> QuackResult<()> {
                 ctx.console()
                     .print(indent(&format!("package at `{}`", pkg_path.display()), 2))?;
             }
-            if let Some(error) = maybe_error {
+            if encountered_errors.has_errors() {
+                let count = encountered_errors.logged_errors();
+                let plural = if count == 1 { "" } else { "s" };
                 ctx.console()
-                    .warning(format!("clean has been interrupted by an error: {error}"))?;
+                    .warning(format!("encountered {count} error{plural} during clean"))?;
+            }
+            for error in encountered_errors {
+                ctx.error_console()
+                    .error(format!("encountered error during clean: {error}"))?;
             }
             Ok(())
         }
