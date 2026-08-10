@@ -12,8 +12,9 @@ use tracing::{debug, error, info, warn};
 use crate::quackpack::core::storage;
 use crate::quackpack::core::storage::venv::Venv;
 use crate::quackpack::core::storage::venv_id::{ToVenvId, VenvId};
+use crate::util::error::ErrorsLogger;
 use crate::util::path_ops_ext::PathOpsExt;
-use crate::{DuckContext, QuackResult, QuackResultContext, StrId, qp_bail};
+use crate::{DuckContext, QuackError, QuackResult, QuackResultContext, StrId, qp_bail};
 
 #[derive(Debug)]
 /// An output of a [`clean_storage`].
@@ -22,6 +23,8 @@ pub struct CleanOutput {
     pub removed_venvs: Vec<VenvId>,
     /// Paths to the removed packages.
     pub removed_packages: Vec<PathBuf>,
+    /// Errors encountered during this clean operation.
+    pub encountered_errors: ErrorsLogger,
 }
 
 /// Delete a virtual environment from storage.
@@ -68,8 +71,9 @@ pub fn clean_storage(ctx: &DuckContext, storage_root: &Path) -> QuackResult<Clea
         venvs.into_iter().collect::<Result<Vec<_>, _>>()?
     };
     debug!(?venvs, "removing venvs");
+    let mut logger = ErrorsLogger::default();
     for venv in venvs {
-        clean_venv_from_storage(
+        let _ = logger.log_result(clean_venv_from_storage(
             venv,
             &storage,
             temporary_lifetime,
@@ -77,12 +81,22 @@ pub fn clean_storage(ctx: &DuckContext, storage_root: &Path) -> QuackResult<Clea
             &mut removed_venvs,
             &mut all_deps,
             ctx,
-        )?;
+        ));
     }
     info!("removed venvs");
-    locks::cleanup_locks(&storage)?;
+    let _ =
+        logger.log_result(locks::cleanup_locks(&storage).context("failed to cleanup some locks"));
     debug!(?all_deps, "used dependencies");
-    let all_pkgs = storage.iter_pkgs()?.collect::<Result<Vec<_>, _>>()?;
+    let all_pkgs = logger
+        .log_result(storage.iter_pkgs())
+        .unwrap_or(storage::DirContents::Empty);
+    let all_pkgs = logger
+        .log_result(
+            all_pkgs
+                .map(|entry| entry.map_err(QuackError::from))
+                .collect::<Result<Vec<_>, _>>(),
+        )
+        .unwrap_or_default();
     debug!(?all_pkgs, "all known packages");
     let packages_to_remove = all_pkgs
         .into_iter()
@@ -97,13 +111,14 @@ pub fn clean_storage(ctx: &DuckContext, storage_root: &Path) -> QuackResult<Clea
         .collect::<Vec<_>>();
     debug!(?packages_to_remove, "cleaning packages");
     for pkg in packages_to_remove.iter() {
-        pkg.rmtree()?;
+        let _ = logger.log_result(pkg.rmtree());
     }
     info!(?packages_to_remove, "cleaned packages");
     ctx.console().info("successfully cleaned the storage")?;
     Ok(CleanOutput {
         removed_venvs,
         removed_packages: packages_to_remove,
+        encountered_errors: logger,
     })
 }
 

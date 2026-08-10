@@ -195,6 +195,23 @@ impl AnyPackage {
     pub fn venv(&self) -> &VenvConfig {
         self.manifest().venv()
     }
+
+    /// Get a [`Display`](fmt::Display) impl.
+    pub fn display(&self) -> impl fmt::Display + '_ {
+        // !TODO: Use `fmt::from_fn` from Rust 1.93.
+        struct AnyPackageDisplay<'a> {
+            any_package: &'a AnyPackage,
+        }
+        impl fmt::Display for AnyPackageDisplay<'_> {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                match self.any_package {
+                    AnyPackage::Package(package) => write!(f, "{}", package.display()),
+                    AnyPackage::Script(script) => write!(f, "{}", script.display()),
+                }
+            }
+        }
+        AnyPackageDisplay { any_package: self }
+    }
 }
 
 #[derive(Clone)]
@@ -308,6 +325,20 @@ impl Package {
     /// Is this the global package.
     pub fn is_global(&self) -> bool {
         self.manifest().is_global()
+    }
+
+    /// Get a [`Display`](fmt::Display) impl.
+    pub fn display(&self) -> impl fmt::Display + '_ {
+        // !TODO: Use `fmt::from_fn` from Rust 1.93.
+        struct PackageDisplay<'a> {
+            package: &'a Package,
+        }
+        impl fmt::Display for PackageDisplay<'_> {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                write!(f, "package at `{}`", self.package.root.display())
+            }
+        }
+        PackageDisplay { package: self }
     }
 }
 

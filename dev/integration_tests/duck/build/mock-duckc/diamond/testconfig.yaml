@@ -49,9 +49,15 @@ Tests:
       build:
         test-cmd: duck -C root build
         Output:
-          String: |+
+          Run: |+
+            echo "info: starting synchronization of the package at \`$DIT_TMP_DIR/root\`
+            info: starting solving the dependency graph
+            info: starting gathering the dependency graph
+            info: running gathering
+            info: starting the solver engine
+            info: starting fetching 4 packages
             info: successfully synchronized venv \`root\`
             info: compiling \`baz\`...
             info: compiling \`foo\`...
             info: compiling \`bar\`...
-            info: compiling \`root\`...
+            info: compiling \`root\`..."
