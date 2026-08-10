@@ -36,6 +36,10 @@ namespace compiler::driver {
 		base::deduplicateBy(code.types, [](const vm::code::TypeOfData& f) {
 			return vm::code::typeName(f);
 		});
+		base::deduplicateBy(code.ffi_functions, [](const vm::code::FFIFunction& func) {
+			return func.name.str.strView();
+		});
+		base::deduplicateBy(code.object_files, [](const std::string& file) { return file; });
 	}
 
 	base::OkBad linkDVMPackage(

@@ -134,9 +134,8 @@ fun testTuples() -> () = {
         bool,        # false
         char,        # '\0'
         String,      # ""
-        # @TODO: #2988 uncomment when fixed
-        # List[i32],   # empty list
-        # type
+        List[i32],   # empty list
+        type
     );
     
     builtin_output_i64(primitiveTuple._1);                    # 0
@@ -144,6 +143,7 @@ fun testTuples() -> () = {
     builtin_output_i64(if primitiveTuple._3 then 1 else 0);   # 0
     builtin_output_char(primitiveTuple._4 - '\0' + 'A');      # 'A'
     print(&primitiveTuple._5);                                 # ""
+    builtin_output_u64(primitiveTuple._6.length());           # empty list -> 0
 }
 
 # ==================================== NESTED CLASSES ====================================

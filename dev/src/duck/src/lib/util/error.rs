@@ -527,6 +527,7 @@ impl ErrorExt for dyn Error + Send + Sync + 'static {
 
 /// Structure for gathering errors.
 /// Should be used in situations when encountering many errors should not end the execution of the program.
+#[derive(Debug)]
 pub struct ErrorsLogger(Vec<QuackError>);
 
 impl ErrorsLogger {
@@ -538,6 +539,29 @@ impl ErrorsLogger {
     /// Check if an [`ErrorsLogger`] logged any errors.
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
+    }
+
+    /// Check if an [`ErrorsLogger`] logged any errors.
+    pub fn has_errors(&self) -> bool {
+        !self.is_empty()
+    }
+
+    /// If `result` is `Ok(t)`, returns `Some(t)`.
+    ///
+    /// Otherwise logs [`QuackError`] from `result` and returns [`None`].
+    pub fn log_result<T>(&mut self, result: QuackResult<T>) -> Option<T> {
+        match result {
+            Ok(t) => Some(t),
+            Err(err) => {
+                self.log(err);
+                None
+            }
+        }
+    }
+
+    /// Get the number of logged [`QuackError`]s.
+    pub fn logged_errors(&self) -> usize {
+        self.0.len()
     }
 
     /// Add an error to the [`ErrorsLogger`].
@@ -569,6 +593,21 @@ impl IntoIterator for ErrorsLogger {
     fn into_iter(self) -> Self::IntoIter {
         self.0.into_iter()
     }
+}
+
+/// Split an iterator of `QuackResult<T>` into vectors of `T`s and [`QuackError`]s.
+pub fn split_results<T>(
+    results: impl IntoIterator<Item = QuackResult<T>>,
+) -> (Vec<T>, Vec<QuackError>) {
+    let mut oks = vec![];
+    let mut errors = vec![];
+    for result in results {
+        match result {
+            Ok(ok) => oks.push(ok),
+            Err(err) => errors.push(err),
+        }
+    }
+    (oks, errors)
 }
 
 #[cfg(test)]

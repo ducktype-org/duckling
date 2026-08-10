@@ -48,12 +48,53 @@ namespace compiler::helios {
 			));
 		}
 
+		// Coerces a single tuple element to the i-th component of the target tuple type.
+		Box<code::Expr> coerceTupleElement(
+			query::Context&               ctx,
+			Box<code::Expr>               element,
+			const tsh::TupleAbstractType& to_type,
+			usize                         index
+		) {
+			auto element_coercion
+				= canCoerce(ctx, element->expression_type, to_type.getComponents()[index])
+			          .valueOrThrow();
+			CORE_ASSERT(
+				element_coercion.isValid(), "Coercion should always be valid at this point."
+			);
+
+			return element_coercion.getCoercion().coerce(ctx, std::move(element));
+		}
+
 		// Performs element by element coercion.
 		Box<code::Expr> handleTupleCoercion(
 			query::Context& ctx, Box<code::Expr> expr, const tsh::SymbolType<>& to
 		) {
 			auto source_type = expr->expression_type.getType().as<tsh::TupleAbstractType>();
 			auto to_type     = to.getType().as<tsh::TupleAbstractType>();
+
+			// A tuple literal is coerced element by element in place. Reading the elements back out
+			// of a materialised tuple would lose the shape of the element expressions, which some
+			// coercions still need - lifting a value to a `type` for instance only works on the
+			// original expression. It also avoids materialising the source tuple altogether.
+			// Tuple literals are wrapped in the parenthesis they are written with, so those are
+			// looked through.
+			code::Expr* unwrapped = expr.get();
+			while (auto* parenthesis = dynamic_cast<code::ParenthesisExpr*>(unwrapped))
+				unwrapped = parenthesis->inner.get();
+
+			if (auto* tuple_literal = dynamic_cast<code::TupleExpr*>(unwrapped)) {
+				std::vector<Box<code::Expr>> literal_elements;
+				literal_elements.reserve(tuple_literal->elements.size());
+
+				for (usize i = 0; i < tuple_literal->elements.size(); i++)
+					literal_elements.emplace_back(
+						coerceTupleElement(ctx, std::move(tuple_literal->elements[i]), to_type, i)
+					);
+
+				return makeBox<code::TupleExpr>(
+					ctx, expr->origin.generatedFrom(), std::move(literal_elements)
+				);
+			}
 
 			auto tuple = makeBox<code::ReusableExpr>(ctx, std::move(expr));
 
@@ -74,15 +115,7 @@ namespace compiler::helios {
 					)
 				);
 
-				const auto& to_element_type = to_type.getComponents()[i];
-
-				auto element_coercion
-					= canCoerce(ctx, element->expression_type, to_element_type).valueOrThrow();
-				CORE_ASSERT(
-					element_coercion.isValid(), "Coercion should always be valid at this point."
-				);
-
-				elements.emplace_back(element_coercion.getCoercion().coerce(ctx, element->clone()));
+				elements.emplace_back(coerceTupleElement(ctx, std::move(element), to_type, i));
 			}
 
 			return makeBox<code::TupleExpr>(ctx, tuple->origin.generatedFrom(), std::move(elements));
