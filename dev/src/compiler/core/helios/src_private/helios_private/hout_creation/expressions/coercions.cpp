@@ -74,7 +74,7 @@ namespace compiler::helios {
 				));
 			}
 
-			return std::move(elements);
+			return elements;
 		}
 
 		/**
@@ -85,6 +85,7 @@ namespace compiler::helios {
 		) {
 			auto to_type = to.getType().as<tsh::TupleAbstractType>();
 
+			auto saved_origin = expr->origin.generatedFrom();
 			auto tuple_elements = accessTupleElements(ctx, std::move(expr));
 
 			auto elements
@@ -101,7 +102,7 @@ namespace compiler::helios {
 				  })
 			    | std::ranges::to<std::vector>();
 
-			return makeBox<code::TupleExpr>(ctx, expr->origin.generatedFrom(), std::move(elements));
+			return makeBox<code::TupleExpr>(ctx, saved_origin, std::move(elements));
 		}
 
 		/**
@@ -207,11 +208,12 @@ namespace compiler::helios {
 				);
 			}
 			if (expr->expression_type.getType().getKind() == tsh::Kind::Tuple) {
+				auto saved_origin = expr->origin.generatedFrom();
 				auto tuple_elements = accessTupleElements(ctx, std::move(expr));
 				auto elements
 					= std::views::transform(
 						  tuple_elements,
-						  [&](auto& element) {
+						  [&](auto& element) -> tsh::SymbolType<> {
 							  auto ctv = ctx.query<QueryEvaluateHOUTExpression>({ element.ref() })
 					                         .valueOrThrow();
 
@@ -224,12 +226,13 @@ namespace compiler::helios {
 									  );
 								  }
 							  }
+							  CORE_UNREACHABLE();
 						  }
 					  )
 				    | std::ranges::to<std::vector>();
 
 				return withOrigin(
-					expr->origin.generatedFrom(),
+					saved_origin,
 					s.litType(ctx.query<tsh::QueryTupleType>({ std::move(elements) }))
 				);
 			}

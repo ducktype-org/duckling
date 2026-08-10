@@ -2216,10 +2216,10 @@ private:
 				auto* tuple_expr = returned_tuple(function);
 				ASSERT_EQUAL(tuple_expr->elements.size(), 2u);
 
-				auto* lift = dynamic_cast<const compiler::helios::code::LiftToTypeExpr*>(
+				auto* type_literal = dynamic_cast<const compiler::helios::code::LiteralTypeExpr*>(
 					&*tuple_expr->elements[0]
 				);
-				assertTrue(lift != nullptr, "The unit element should be lifted to a type.");
+				assertTrue(type_literal != nullptr, "The unit element should be lifted to a type.");
 
 				lift_checked = true;
 			} else if (name == base::StrID("to_bool")) {
