@@ -20,7 +20,7 @@ Tests:
         test-cmd: duck -C foo remove a
         Output:
           Run: |+
-            echo "info: removed dependency \`a\` from package \`foo\` at \`$DIT_TMP_DIR/foo\`"
+            echo "info: removed dependency \`a\` from project \`foo\` at \`$DIT_TMP_DIR/foo\`"
       dev-dependency-no-flag-error:
         expected-manifest: all
         test-cmd: duck -C foo remove b
@@ -32,4 +32,4 @@ Tests:
         test-cmd: duck -C foo remove b --dev
         Output:
           Run: |+
-            echo "info: removed dev-dependency \`b\` from package \`foo\` at \`$DIT_TMP_DIR/foo\`"
+            echo "info: removed dev-dependency \`b\` from project \`foo\` at \`$DIT_TMP_DIR/foo\`"
