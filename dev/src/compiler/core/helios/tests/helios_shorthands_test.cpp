@@ -525,12 +525,12 @@ public:
 			const Shorthand s{ ctx };
 
 			// 1. Trivially-copyable primitive: returned as-is, no wrapping node.
-			const auto trivial = s.copy(s.litNum(5));
+			const auto trivial = s.copyValue(s.litNum(5));
 			ASSERT_TRUE(dynamic_cast<const LiteralNumericExpr*>(trivial.get()) != nullptr);
 
 			// 2. A non-trivially-copyable class: copied via a call to its copy constructor, taking
 			//    a reference to the source.
-			const auto class_copy = s.copy(s.ident(holder_var));
+			const auto class_copy = s.copyValue(s.ident(holder_var));
 			ASSERT_EQUAL(class_copy->expression_type.getType().getKind(), tsh::Kind::Class);
 			const auto* class_call = dynamic_cast<const CallExpr*>(class_copy.get());
 			ASSERT_TRUE(class_call != nullptr);
@@ -547,7 +547,7 @@ public:
 			                             ->getElementsWithName(base::StrID("boxed"))
 			                             .back()
 			                             .getSymbol();
-			const auto box_copy = s.copy(s.access(s.ident(holder_var), boxed_field));
+			const auto box_copy = s.copyValue(s.access(s.ident(holder_var), boxed_field));
 			ASSERT_EQUAL(
 				box_copy->expression_type.getSymbolType().getRefKind(), tsh::ReferenceKind::Box
 			);

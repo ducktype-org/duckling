@@ -2,7 +2,6 @@
 use std::fmt;
 use std::path::{Path, PathBuf};
 
-use super::compile::artifacts_layout::ArtifactsLayout;
 use super::identity::{Identity, Origin};
 use super::script::Script;
 use super::{Manifest, VenvConfig, Version};
@@ -62,14 +61,6 @@ impl AnyPackage {
         match self {
             Self::Package(package) => package.artifacts_directory(),
             Self::Script(script) => script.artifacts_directory(),
-        }
-    }
-
-    /// Get the artifacts layout.
-    pub fn artifacts_layout<T: ArtifactsLayout>(&self) -> T {
-        match self {
-            Self::Package(package) => package.artifacts_layout(),
-            Self::Script(script) => script.artifacts_layout(),
         }
     }
 
@@ -204,6 +195,23 @@ impl AnyPackage {
     pub fn venv(&self) -> &VenvConfig {
         self.manifest().venv()
     }
+
+    /// Get a [`Display`](fmt::Display) impl.
+    pub fn display(&self) -> impl fmt::Display + '_ {
+        // !TODO: Use `fmt::from_fn` from Rust 1.93.
+        struct AnyPackageDisplay<'a> {
+            any_package: &'a AnyPackage,
+        }
+        impl fmt::Display for AnyPackageDisplay<'_> {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                match self.any_package {
+                    AnyPackage::Package(package) => write!(f, "{}", package.display()),
+                    AnyPackage::Script(script) => write!(f, "{}", script.display()),
+                }
+            }
+        }
+        AnyPackageDisplay { any_package: self }
+    }
 }
 
 #[derive(Clone)]
@@ -314,11 +322,6 @@ impl Package {
         &self.artifacts_dir
     }
 
-    /// Get the the artifacts layout.
-    pub fn artifacts_layout<T: ArtifactsLayout>(&self) -> T {
-        T::new(self.artifacts_dir.clone())
-    }
-
     /// Convert this package to an [`Identity`].
     /// This will always (try to) return an [`Identity`] with [`Origin::for_local`] origin.
     pub fn as_a_local_identity(&self) -> QuackResult<Identity> {
@@ -330,6 +333,20 @@ impl Package {
     pub fn is_global(&self) -> bool {
         self.manifest().is_global()
     }
+
+    /// Get a [`Display`](fmt::Display) impl.
+    pub fn display(&self) -> impl fmt::Display + '_ {
+        // !TODO: Use `fmt::from_fn` from Rust 1.93.
+        struct PackageDisplay<'a> {
+            package: &'a Package,
+        }
+        impl fmt::Display for PackageDisplay<'_> {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                write!(f, "package at `{}`", self.package.root.display())
+            }
+        }
+        PackageDisplay { package: self }
+    }
 }
 
 impl fmt::Debug for Package {
@@ -337,6 +354,7 @@ impl fmt::Debug for Package {
         f.debug_struct("Package")
             .field("manifest", &self.manifest)
             .field("root", &self.root)
+            .field("global", &self.is_global())
             .field("manifest_path", &self.manifest_path)
             .field("artifacts_dir", &self.artifacts_dir)
             .field("possible_source_dir", &self.possible_source_dir)
