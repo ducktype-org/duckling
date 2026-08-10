@@ -34,6 +34,7 @@ public:
 		TESTER_ADD_TEST(moveValidationTest);
 		TESTER_ADD_TEST(reinitAfterMoveTest);
 		TESTER_ADD_TEST(moveDestructorTest);
+		TESTER_ADD_TEST(moveOwnershipTest);
 		TESTER_ADD_TEST(simpleLifetimeSequenceTest);
 		TESTER_ADD_TEST(lifetimeFlagsRepeatedBlocks);
 		TESTER_ADD_TEST(lifetimeFlagsSingleBlock);
@@ -286,6 +287,139 @@ private:
 			.expectInstruction(compiler::mir::Operation::DestructIf)
 			.expectDestruct("a")
 			.validate(maybe_move);
+	}
+
+	/**
+	 * @brief Every instruction of the function in block order.
+	 */
+	std::vector<const compiler::mir::Instruction*> allInstructions(CRef<compiler::mir::Function> func
+	) {
+		std::vector<const compiler::mir::Instruction*> instructions;
+		for (const auto& block_id: func->block_order) {
+			const auto& block = func->blocks.at(block_id);
+			for (const auto& instr: block->instructions) instructions.push_back(&instr);
+			instructions.push_back(&block->terminator);
+		}
+		return instructions;
+	}
+
+	/**
+	 * @brief How many times a given flag is set for the local.
+	 */
+	usize countFlag(
+		CRef<compiler::mir::Function>      func,
+		compiler::mir::OperationFlag::Flag flag,
+		std::string_view                   var_name
+	) {
+		usize count = 0;
+		for (const auto* instr: allInstructions(func))
+			for (const auto& set: instr->flags)
+				if (set.flag == flag && set.local->getName().strView() == var_name) count++;
+		return count;
+	}
+
+	/**
+	 * @brief The single instruction setting a given flag for the local.
+	 */
+	const compiler::mir::Instruction* onlyInstructionWithFlag(
+		CRef<compiler::mir::Function>      func,
+		compiler::mir::OperationFlag::Flag flag,
+		std::string_view                   var_name
+	) {
+		const compiler::mir::Instruction* found = nullptr;
+		for (const auto* instr: allInstructions(func))
+			for (const auto& set: instr->flags)
+				if (set.flag == flag && set.local->getName().strView() == var_name) {
+					ASSERT_TRUE(found == nullptr);
+					found = instr;
+				}
+		ASSERT_TRUE(found != nullptr);
+		return found;
+	}
+
+	bool hasFlagFor(
+		const compiler::mir::Instruction&  instr,
+		compiler::mir::OperationFlag::Flag flag,
+		std::string_view                   var_name
+	) {
+		return std::ranges::any_of(instr.flags, [&](const auto& set) {
+			return set.flag == flag && set.local->getName().strView() == var_name;
+		});
+	}
+
+	/**
+	 * @brief Asserts that the value moved out of `var_name` ends up in a temporary that owns it
+	 * and destructs it.
+	 */
+	void assertMovedIntoDestructedTemporary(
+		CRef<compiler::mir::Function> func, std::string_view var_name
+	) {
+		using Flag = compiler::mir::OperationFlag::Flag;
+
+		const auto* move_instr = onlyInstructionWithFlag(func, Flag::Move, var_name);
+		ASSERT_TRUE(move_instr->operation == compiler::mir::Operation::Assign);
+
+		// The source is moved out, so it must not be destructed.
+		ASSERT_EQUAL_PRINT(0, countFlag(func, Flag::Destruct, var_name));
+
+		usize owners = 0;
+		for (const auto& set: move_instr->flags) {
+			if (set.flag != Flag::Construct) continue;
+			owners++;
+			ASSERT_EQUAL_PRINT(1, countFlag(func, Flag::Destruct, set.local->getName().strView()));
+		}
+		ASSERT_EQUAL_PRINT(1, owners);
+	}
+
+	void moveOwnershipTest() {
+		using Flag = compiler::mir::OperationFlag::Flag;
+
+		auto [module, scope] = getModule(fs::File(path("modules/move_ownership")));
+
+
+		// The `Call` reading `a` marks it as moved out. No `Assign` into a temporary is built for
+		// the move, `a` is not destructed here any more.
+		{
+			auto        func       = getMIRFunctionByName(module, "handedToCall");
+			const auto* move_instr = onlyInstructionWithFlag(func, Flag::Move, "a");
+			ASSERT_TRUE(move_instr->operation == compiler::mir::Operation::Call);
+			ASSERT_EQUAL_PRINT(0, countFlag(func, Flag::Destruct, "a"));
+		}
+
+		// The initialised variable becomes the owner, so the store into it carries the move and
+		// `b` is the one that gets destructed.
+		{
+			auto        func       = getMIRFunctionByName(module, "storedInPlace");
+			const auto* move_instr = onlyInstructionWithFlag(func, Flag::Move, "a");
+			ASSERT_TRUE(move_instr->operation == compiler::mir::Operation::Assign);
+			ASSERT_TRUE(hasFlagFor(*move_instr, Flag::Construct, "b"));
+			ASSERT_EQUAL_PRINT(0, countFlag(func, Flag::Destruct, "a"));
+			ASSERT_EQUAL_PRINT(1, countFlag(func, Flag::Destruct, "b"));
+		}
+
+		// `move a;` hands the value to nobody, so a temporary owns it and destructs it.
+		assertMovedIntoDestructedTemporary(getMIRFunctionByName(module, "discarded"), "a");
+
+		// Reading the pointee out of the moved box does not hand the box over.
+		assertMovedIntoDestructedTemporary(getMIRFunctionByName(module, "readThrough"), "a");
+
+		// An implicitly moved argument goes straight to the callee.
+		{
+			auto                              func = getMIRFunctionByName(module, "movedTemporary");
+			usize                             moves      = 0;
+			const compiler::mir::Instruction* move_instr = nullptr;
+			std::string                       moved_name;
+			for (const auto* instr: allInstructions(func))
+				for (const auto& set: instr->flags)
+					if (set.flag == Flag::Move) {
+						moves++;
+						move_instr = instr;
+						moved_name = std::string(set.local->getName().strView());
+					}
+			ASSERT_EQUAL_PRINT(1, moves);
+			ASSERT_TRUE(move_instr->operation == compiler::mir::Operation::Call);
+			ASSERT_EQUAL_PRINT(0, countFlag(func, Flag::Destruct, moved_name));
+		}
 	}
 
 	i32 countIntermediateDestructorBlocks(CRef<compiler::mir::Function> func) {

@@ -1,0 +1,28 @@
+fun sink(x: box i64) = {}
+
+fun handedToCall() = {
+    var a: box i64 = new 1i64;
+    sink(move a);
+}
+
+fun storedInPlace() = {
+    var a: box i64 = new 2i64;
+    var b: box i64 = move a;
+}
+
+fun discarded() = {
+    var a: box i64 = new 3i64;
+    move a;
+}
+
+# Only the pointee is read out of the box, so the moved box itself still should be destructed.
+fun readThrough() -> i64 = {
+    var a: box i64 = new 4i64;
+    return move a;
+}
+
+fun make() -> box i64 = { return new 5i64; }
+
+fun movedTemporary() = {
+    sink(make());
+}

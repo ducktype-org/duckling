@@ -13,6 +13,7 @@
 
 #include <base/except/exceptions.hpp>
 #include <base/extend_cpp/variant_match.hpp>
+#include <base/extend_cpp/vector_utils.hpp>
 
 #include <query_framework/standard_query/query_impl.hpp>
 
@@ -83,16 +84,22 @@ namespace compiler::mir {
 		}
 
 		/**
-		 * @brief noValueOutput() for an instruction that hands the ownership of its result over.
+		 * @brief noValueOutput() for an instruction that hands the ownership of its result over
+		 * (the `Assign` a `move` produces).
 		 */
 		void noValueMovedOutput(
 			BlockBuilderRef                      begin,
 			const BlockBuilder::InstructionHole& hole,
 			const Instruction&                   instr,
-			const tsh::SymbolType<>&             type
+			const tsh::SymbolType<>&             type,
+			const MIRValue&                      source,
+			MIRLocalRef                          source_local
 		) {
 			noValueOutput(begin, hole, instr, type);
-			out->hands_over_ownership = true;
+			out->pending_move = ExprLowerRes::PendingMove{
+				.source       = source,
+				.source_local = source_local,
+			};
 		}
 
 		ExprLowerRes lowerSubExpr(const hc::Expr& expr, BlockBuilderRef continuation) {
@@ -293,8 +300,13 @@ namespace compiler::mir {
 			auto ctor_symid = expr.tuple_ctor_symbol;
 			args.emplace_back(MIRFunctionLiteral{ ctor_symid });
 
+			std::vector<OperationFlag> flags;
 			for (const auto& element: expr.elements | std::views::reverse) {
 				auto lowered_element = lowerSubExpr(*element, current);
+
+				const auto move_flags = lowered_element.takeOwnership();
+				base::appendToVector(flags, move_flags);
+
 				args.push_back(lowered_element.getResult(function));
 				current = lowered_element.begin;
 			}
@@ -303,7 +315,8 @@ namespace compiler::mir {
 			return noValueOutput(
 				current,
 				call,
-				Instruction{ Operation::Call, {}, args, {}, expr_scope, {}, { expr.getPosition() } },
+				Instruction{
+					Operation::Call, {}, args, flags, expr_scope, {}, { expr.getPosition() } },
 				expr.expression_type.getSymbolType()
 			);
 		}
@@ -775,8 +788,13 @@ namespace compiler::mir {
 				);
 			}
 			args.emplace_back(MIRFunctionLiteral{ function_symid.value() });
+
+			std::vector<OperationFlag> flags;
 			for (const auto& arg: expr.arguments) {
 				auto arg_lowered = lowerSubExpr(*arg, sub_continuation);
+
+				const auto move_flags = arg_lowered.takeOwnership();
+				base::appendToVector(flags, move_flags);
 
 				args.push_back(arg_lowered.getResult(function));
 				sub_continuation = arg_lowered.begin;
@@ -785,7 +803,8 @@ namespace compiler::mir {
 			return noValueOutput(
 				sub_continuation,
 				call,
-				Instruction{ Operation::Call, {}, args, {}, expr_scope, {}, { expr.getPosition() } },
+				Instruction{
+					Operation::Call, {}, args, flags, expr_scope, {}, { expr.getPosition() } },
 				expr.expression_type.getSymbolType()
 			);
 		}
@@ -840,8 +859,9 @@ namespace compiler::mir {
 		void visitMoveExpr(const hc::MoveExpr& expr) override {
 			// `move x` yields the value of `x` and marks the source local as moved-out, so any
 			// later use is flagged by the move state/use-after-move analysis. The `Move` flag has
-			// to sit on an instruction that reads the local, so we copy it into a fresh temporary
-			// and attach the flag there.
+			// to sit on an instruction that reads the local, and which instruction that is depends
+			// on who consumes the result. The `Assign` built here is the fallback used when the
+			// the value is only read, otherwise it is dropped by `takeOwnership()`.
 			auto hole          = continuation->addHole();
 			auto lowered_inner = lowerSubExpr(*expr.inner, continuation);
 			auto inner_val     = lowered_inner.getResult(function);
@@ -870,7 +890,9 @@ namespace compiler::mir {
 					{},
 					{ expr.getPosition() }
 				),
-				expr.expression_type.getSymbolType()
+				expr.expression_type.getSymbolType(),
+				inner_val,
+				moved_local
 			);
 		}
 
@@ -945,6 +967,9 @@ namespace compiler::mir {
 		void visitListPushExpr(const hc::ListPushExpr& expr) override {
 			auto hole         = continuation->addHole();
 			auto lowered_elem = lowerSubExpr(*expr.element, continuation);
+
+			const auto flags = lowered_elem.takeOwnership();
+
 			auto elem_val     = lowered_elem.getResult(function);
 			auto lowered_list = lowerSubExpr(*expr.list, lowered_elem.begin);
 			auto list_val     = lowered_list.getResult(function);
@@ -952,7 +977,7 @@ namespace compiler::mir {
 			noValueOutput(
 				lowered_list.begin,
 				hole,
-				Instruction(Operation::ListPush, {}, { list_val, elem_val }, {}, expr_scope),
+				Instruction(Operation::ListPush, {}, { list_val, elem_val }, flags, expr_scope),
 				expr.expression_type.getSymbolType()
 			);
 		}
@@ -1066,7 +1091,7 @@ namespace compiler::mir {
 			case IntegerNeq:
 				return { Operation::IntegerNeq };
 
-			/// Floating point arithmetic d///
+			/// Floating point arithmetic ///
 			case FloatAdd:
 				return { Operation::FloatAdd };
 			case FloatSub:
@@ -1192,12 +1217,13 @@ namespace compiler::mir {
 
 	[[nodiscard]]
 	MIRValue ExprLowerRes::getResult(FunctionBuilder& function) {
+		// Nobody took the value over, so the temporary built below becomes its owner.
+		pending_move.reset();
+
 		variant_match(value) {
 			variant_case(MIRValue, val) { return val; }
 			variant_case(Finalizer, res_data) {
 				auto result = function.addTmp(res_data.type, res_data.instr.scope);
-				// Don't destruct a temporary which is moved out.
-				if (hands_over_ownership) result->lifetime_flags |= LifetimeFlag::NoDestructor;
 				res_data.instr.output.emplace(result);
 				res_data.instr.flags.push_back(flagConstruct(result));
 				res_data.hole.fill(res_data.instr);
@@ -1208,6 +1234,29 @@ namespace compiler::mir {
 		CORE_UNREACHABLE();
 	}
 
+	[[nodiscard]]
+	std::vector<OperationFlag> ExprLowerRes::takeOwnership() {
+		if (pending_move.empty()) return {};
+
+		const PendingMove pending = pending_move.value();
+		pending_move.reset();
+
+		// The `Assign` the move produced only exists to give the `Move` flag an instruction to sit
+		// on. The consumer carries the flag itself now, so the copy is not needed and the value is
+		// read straight from its source place. This we Nop-out the `move` assign.
+		variant_match(value) {
+			variant_case(Finalizer, res_data) {
+				res_data.hole.fillNop(res_data.instr.scope);
+				value = pending.source;
+			}
+			variant_default {
+				CORE_PANIC("takeOwnership() has to run before the result is materialized.");
+			}
+		}
+
+		return { flagMove(pending.source_local) };
+	}
+
 	void ExprLowerRes::storeResultInGivenPlace(
 		const MIRPlace&                   target,
 		BlockBuilder::InstructionHole&    hole,
@@ -1215,6 +1264,9 @@ namespace compiler::mir {
 		ScopeRef                          scope,
 		InstructionMetadata               metadata
 	) {
+		// The target becomes the owner of the value.
+		pending_move.reset();
+
 		variant_match(value) {
 			variant_case(MIRValue, val) {
 				hole.fill(Instruction{

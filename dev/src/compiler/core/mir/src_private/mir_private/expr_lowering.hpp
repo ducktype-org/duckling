@@ -42,24 +42,25 @@ namespace compiler::mir {
 		std::variant<MIRValue, Finalizer> value;
 
 		/**
-		 * @brief Whether producing this result hands the ownership of the value over to whoever
-		 * consumes it. Set for the result of a move.
+		 * @brief An ownership transfer this result carries, set by a `move`.
 		 *
-		 * For example:
-		 * `foo(goo())` (which in reality is `foo(implicit_move(goo()))`)
-		 * lowers to:
-		 * ```
-		 * tmp = goo()            // Move flag
-		 * foo(tmp)
-		 * ```
-		 *
-		 * `tmp` should not be destroyed after the scope ends since it's "in the process of moving"
-		 * to `foo()`, thus this bool makes sure to add a `NoDestructor` flag to it.
-		 *
-		 * When the result is written straight into a target dest instead, no such temporary is
-		 * created and this changes nothing.
+		 * There are three consumers and each of them resolves it differently:
+		 * - `storeResultInGivenPlace()` writes the value into the target place, which becomes its
+		 *   owner. `var b = move a` gives `b := Assign a [Move a, Construct b]`.
+		 * - `takeOwnership()` is for a consumer that passes the value on as an operand and hands it
+		 *   to somebody else, i.e. a call argument. `f(move a)` gives `Call f, a [Move a]`.
+		 * - `getResult()` is for a consumer that only reads the value, i.e. `move a` used as a
+		 *   statement. Nobody takes the value over, so it is stored into a temporary which gets
+		 * 	 destructed at the end of its scope.
 		 */
-		bool hands_over_ownership = false;
+		struct PendingMove final {
+			/// The place the value is read from.
+			MIRValue source;
+			/// The local the `Move` flag moves.
+			MIRLocalRef source_local;
+		};
+
+		base::Optional<PendingMove> pending_move;
 
 		ExprLowerRes(BlockBuilderRef begin, std::variant<MIRValue, Finalizer> value);
 
@@ -79,15 +80,35 @@ namespace compiler::mir {
 		 * @brief If result of the expression is a value already returns it,
 		 * Otherwise creates temporary, makes last instruction save res there and returns it.
 		 * @note may use InstructionHole stored in structure, probably use only once.
+		 *
+		 * @warning This is the read-only path. A temporary it creates owns the value and is
+		 * destructed at the end of its scope. A consumer that hands the value over to somebody else
+		 * has to call `takeOwnership()` first, otherwise the value ends up with two owners.
 		 */
 		[[nodiscard]]
 		MIRValue getResult(FunctionBuilder& function);
+
+		/**
+		 * @brief Takes over the ownership of the value, if this result carries one.
+		 *
+		 * For a consumer that passes the result on as an operand and makes somebody else its owner,
+		 * i.e. a call argument. Returns the flags its instruction has to carry, so that the source
+		 * of the move is marked as moved-out on the instruction that reads it. Call it before
+		 * `getResult()`.
+		 *
+		 * @return The flags to append to the consuming instruction, empty if there is nothing to
+		 * take over.
+		 */
+		[[nodiscard]]
+		std::vector<OperationFlag> takeOwnership();
 
 		/**
 		 * @brief If the result of the expression is a value, it creates an
 		 * instruction that will assign the result to it. Otherwise, it makes the last instruction
 		 * of the expression save its result directly to the target.
 		 * @note May use InstructionHole stored in structure, should only be called once.
+		 *
+		 * The target becomes the owner of the value, so this also resolves a pending move.
 		 */
 		void storeResultInGivenPlace(
 			const MIRPlace&                   target,
