@@ -920,6 +920,15 @@ namespace compiler::mir {
 			valueOutput(result.begin, result.getResult(function));
 		}
 
+		void visitBlockExpr(const hc::BlockExpr& expr) override {
+			// @TODO: #3292 Refactor once we figure out how a user should be able to use blocks in
+			// expressions.
+			auto lowered_block = lowerStmt(*expr.block, continuation, function, expr_scope);
+			valueOutput(
+				lowered_block.begin, MIRValue{ MIRConstant{ ctv::CompileTimeValue::UnitCTV() } }
+			);
+		}
+
 		void visitListPushExpr(const hc::ListPushExpr& expr) override {
 			auto hole         = continuation->addHole();
 			auto lowered_elem = lowerSubExpr(*expr.element, continuation);
@@ -1007,6 +1016,24 @@ namespace compiler::mir {
 			} else if (const auto* reusable_expr
 			           = dynamic_cast<const helios::code::ReusableExpr*>(&expr)) {
 				return lowerAndLiftToTypeRecursively(*reusable_expr->inner, continuation);
+			}
+
+			// Any other expression of unit type (a tuple element, a call, ...) is still lowered
+			// because it may have side effects, but the unit type has a single value, so what it
+			// lifts to is always the unit type itself.
+			if (expr.expression_type.getType().getKind() == tsh::Kind::Unit) {
+				auto lowered = lowerSubExpr(expr, continuation);
+				// Materialise the result so the lowered instructions stay well formed, then drop
+				// it - only its type is of interest here.
+				[[maybe_unused]] const auto unit_value = lowered.getResult(function);
+
+				tsh::SymbolType<> unit_sym_type{
+					tsh::getUnitType(),
+					tsh::ReferenceKind::Direct,
+					tsh::Mutability::Mutable,
+				};
+
+				return ExprLowerRes(lowered.begin, MIRValue{ MIRConstant{ unit_sym_type } });
 			}
 
 			return lowerSubExpr(expr, continuation);

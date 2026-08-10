@@ -150,7 +150,7 @@ class String {
     }
 
     fun toString() -> String = {
-        return copy *(self as ptr String);
+        return copy self;
     }
 
     String.copy(other: const ref String) = {

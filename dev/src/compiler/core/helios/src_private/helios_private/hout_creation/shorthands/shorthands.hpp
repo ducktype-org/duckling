@@ -386,6 +386,17 @@ namespace compiler::helios::code::shorthands {
 			return makeBox<LiftToTypeExpr>(*ctx, generatedOrigin(), std::move(value));
 		}
 
+		/** @brief A block of statements evaluating to a unit. */
+		[[nodiscard]]
+		Box<BlockExpr> blockExpr(Box<BlockStmt> block) const {
+			return makeBox<BlockExpr>(*ctx, generatedOrigin(), std::move(block));
+		}
+
+		[[nodiscard]]
+		Box<BlockExpr> blockExpr(StmtPack body) const {
+			return makeBox<BlockExpr>(*ctx, generatedOrigin(), block(std::move(body)));
+		}
+
 		/************
 		 *   LIST   *
 		 ************/
@@ -539,15 +550,19 @@ namespace compiler::helios::code::shorthands {
 		}
 
 		/**
-		 * @brief Build a HOUT expression producing a copy of `source`.
+		 * @brief Build a HOUT expression producing a copy of `source` of the same type.
 		 *
-		 * Used by the `copy` operator and by generated copy constructors.
-		 * - Trivially-copyable sources are byte-copied.
-		 * - `box T` is deep-copied
-		 * - other non-trivial types are copied via their copy constructor.
+		 * Used by generated copy constructors.
+		 * - `T` is copied with its copy constructor, or byte-copied when trivially copyable
+		 * - `ref T` is byte-copied, meaning the reference is copied
+		 * - `box T` is deep-copied into a fresh allocation holding a copy of the pointee
+		 *
+		 * @warning This does not match the semantics of the language `copy` operator. The operator
+		 * always creates a direct value (`ref T -> T` and `box T -> T`), while this just copies the
+		 * value directly.
 		 */
 		[[nodiscard]]
-		Box<Expr> copy(Box<Expr> source) const {
+		Box<Expr> copyValue(Box<Expr> source) const {
 			const tsh::SymbolType<> type = source->expression_type.getSymbolType();
 			if (type.isTriviallyCopyable(*ctx)) return source;
 
@@ -556,7 +571,7 @@ namespace compiler::helios::code::shorthands {
 			// `box(*source)`.
 			if (type.getRefKind() == tsh::ReferenceKind::Box) {
 				// Produce a copy of the underlying type.
-				auto pointee_copy = copy(deref(std::move(source)));
+				auto pointee_copy = copyValue(deref(std::move(source)));
 				// Now wrap it in a heap allocation.
 				return makeBoxAllocCall(*ctx, generatedOrigin(), std::move(pointee_copy));
 			}
