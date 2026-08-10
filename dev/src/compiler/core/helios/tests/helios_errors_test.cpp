@@ -1222,6 +1222,55 @@ private:
 				{ "Symbol", "not found" },
 				1
 			);
+
+			// ==================== Access on a type instead of on a value ====================
+
+			const std::string_view type_access_msg
+				= "Access to a member of a type is not supported yet.";
+
+			checkForErrorOnCompileModule(
+				R"(
+				class T {
+					x: u64;
+				}
+				fun main() -> i64 = {
+					T.x;
+					return 0;
+				}
+			)",
+				{ type_access_msg },
+				1
+			);
+
+			checkForErrorOnCompileModule(
+				R"(
+				class T {
+					x: u64;
+
+					fun get() -> u64 = {
+						return self.x;
+					}
+				}
+				fun main() -> i64 = {
+					T.get();
+					return 0;
+				}
+			)",
+				{ type_access_msg },
+				1
+			);
+
+			// A builtin type name is a type value too, so it fails the same way.
+			checkForErrorOnCompileModule(
+				R"(
+				fun main() -> i64 = {
+					i64.x;
+					return 0;
+				}
+			)",
+				{ type_access_msg },
+				1
+			);
 		}
 	}
 

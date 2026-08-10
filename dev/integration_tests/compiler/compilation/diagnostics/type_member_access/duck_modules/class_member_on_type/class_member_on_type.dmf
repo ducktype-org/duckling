@@ -1,0 +1,9 @@
+# Accessing a field on the class itself instead of on an instance of it.
+class T {
+    x: u64;
+}
+
+fun main() -> i64 = {
+    T.x;
+    return 0;
+}

@@ -1,0 +1,32 @@
+# Accessing a member on a type itself (`T.x`) instead of on a value of that type is not supported
+# yet. The compiler must report a not-yet-implemented diagnostic for it and exit 1.
+#
+# The diagnostic is emitted by the frontend, so a single backend is enough to cover it.
+# `Err` would have to match the ANSI escapes and the absolute source path literally, so the
+# regex helper asserts the message instead.
+
+PreCase: "mkdir -p @{case_build}; @{copy_std_artifacts}"
+
+compile_cmd: "@{duckc_path} compile_package duck_modules/@{Name} -w @{duckc_worker_count}
+  -a @{case_build} -n package_@{Name} @{std_artifacts_path_flag}"
+
+Run: "@{expect_output} --expect-exit 1 --err-regex \"@{expected_error}\" -- @{compile_cmd}"
+
+expected_error: "Access to a member of a type is not supported yet\\."
+
+Tests:
+  class_member_on_type:
+    Cases:
+      llvm:
+        backend: llvm
+        ExitCode: 0
+  class_method_on_type:
+    Cases:
+      llvm:
+        backend: llvm
+        ExitCode: 0
+  builtin_type_member:
+    Cases:
+      llvm:
+        backend: llvm
+        ExitCode: 0

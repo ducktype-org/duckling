@@ -16,3 +16,4 @@ Run: "
   
 SubDirs:
   - initialization
+  - type_member_access

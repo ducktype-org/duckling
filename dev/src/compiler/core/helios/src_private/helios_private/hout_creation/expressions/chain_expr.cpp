@@ -712,6 +712,10 @@ namespace compiler::helios::code {
 		auto processPSTExpr(base::Box<Expr> current_expr, pst::Access<pst::expr::Access> expr_access)
 			-> query::QResult<ChainState> {
 			auto current_expr_type = current_expr->expression_type.getType();
+			if (isAccessOnTypeValue(current_expr_type)) {
+				reportAccessOnTypeValue(expr_access);
+				return query::Failed();
+			}
 			auto lookup_qresult
 				= HInterface::ofTypeInstance(current_expr_type)
 			          .lookup(query_ctx, expr_access->getName().unlock(query_ctx)->unwrap());
@@ -830,6 +834,10 @@ namespace compiler::helios::code {
 			switch (call_expr->getType()) {
 			case lexer::Token::Round: {
 				auto current_expr_type = current_expr->expression_type.getType();
+				if (isAccessOnTypeValue(current_expr_type)) {
+					reportAccessOnTypeValue(expr_access);
+					return query::Failed();
+				}
 				auto lookup_qresult
 					= HInterface::ofTypeInstance(current_expr_type)
 				          .lookup(query_ctx, expr_access->getName().unlock(query_ctx)->unwrap());
@@ -949,6 +957,32 @@ namespace compiler::helios::code {
 
 		// ======================== MAIN PROCESSING FUNCTIONS HELPERS ========================
 
+
+		/**
+		 * @brief Checks whether an access is performed on a type value, like `T.x` where `T` names
+		 * a class, instead of on an instance of a type.
+		 *
+		 * A type used as a value is an expression of the meta type, and the meta type has no
+		 * interface to look the accessed name up in, so a type-instance lookup on it would panic.
+		 *
+		 * @param accessed_type The type of the expression the access is performed on.
+		 * @return Whether the access is performed on a type value.
+		 */
+		[[nodiscard]] static bool isAccessOnTypeValue(const tsh::AbstractType accessed_type) {
+			return accessed_type.getKind() == tsh::Kind::Meta;
+		}
+
+		/**
+		 * @brief Reports that an access on a type value is not supported yet.
+		 * @param expr_access The access expression to report the error on.
+		 */
+		void reportAccessOnTypeValue(pst::Access<pst::expr::Access> expr_access) {
+			query_ctx.logInt(makeBox<dia_int::NotYetImplementedCodeError>(
+				"Access to a member of a type is not supported yet.",
+				expr_access->getStablePosition(),
+				"Members can only be accessed on a value, not on the type itself."
+			));
+		}
 
 		/**
 		 * Helper function of @p processPSTExpr that processes a value given the
